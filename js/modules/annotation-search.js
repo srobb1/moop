@@ -29,6 +29,14 @@ class AnnotationSearch {
             // {assemblies, gene_sets} from PHP, or null. The scope filter fetches the same
             // hierarchy over AJAX, so this is the only source available before it is opened.
             scopeCounts: config.scopeCounts || null,
+            // Where "narrow by gene set" should send the user. Defaults to opening the
+            // scope modal; pages with noScopeFilter give an on-page anchor instead, so the
+            // link never offers a control that page does not have.
+            scopeNoteTarget: config.scopeNoteTarget || null,
+            // What the page is scoped to, for the single-gene-set wording. The assembly
+            // page said "this organism's only gene set", which is wrong there -- the
+            // organism may have several, just not in THIS assembly.
+            scopeNoun: config.scopeNoun || 'organism',
             sitePath: config.sitePath || window.sitePath
         };
 
@@ -128,7 +136,9 @@ class AnnotationSearch {
                      + '<a href="#" class="scope-note-link">gene set</a>.';
         // On a single-organism page there is no organism list to jump to, so offer only
         // the control that exists.
-        const narrowGeneSetOnly = 'Narrow by <a href="#" class="scope-note-link">gene set</a>.';
+        const narrowGeneSetOnly = this.config.scopeNoteTarget
+            ? `See the <a href="${this.config.scopeNoteTarget}">gene sets</a> below.`
+            : 'Narrow by <a href="#" class="scope-note-link">gene set</a>.';
 
         if (n > 1) {
             note.html(`Searching <strong>${n}</strong> organisms. ${narrow}`);
@@ -162,7 +172,8 @@ class AnnotationSearch {
             } else {
                 // A single gene set cannot be narrowed, so a "narrow by" link would offer a
                 // modal that can do nothing. Name what is searched and stop there.
-                note.html(total === 1 ? 'Searching this organism\'s only gene set.' : '');
+                note.html(total === 1
+                    ? `Searching this ${this.config.scopeNoun}'s only gene set.` : '');
             }
         }
 

@@ -125,16 +125,69 @@
             <dt>Note</dt>
             <dd><?= htmlspecialchars($assembly_meta['note']) ?></dd>
             <?php endif; ?>
+            <?php /* Gene sets live HERE, in the overview, not in a full-width card of their
+                     own below. Measured across all 85 organisms: no assembly has more than
+                     one gene set -- six organisms have 2-3, but each on a DIFFERENT
+                     assembly. So the card was a list-group, a count badge and a chevron
+                     built for a list that is always one row, and being full width it put
+                     ~800px between the gene set's name and its own gene count. A chip
+                     keeps the two together and scales to several without changing shape. */ ?>
           </dl>
+
+          <?php /* Divider + section heading + chips -- the same shape the organism page uses
+                   for Taxonomy Lineage, Member of Groups and Assemblies, so a reader moving
+                   organism -> assembly meets one pattern rather than two. */ ?>
+          <?php if (!empty($gene_sets)): ?>
+          <div class="mt-4 pt-3 border-top">
+            <h6 class="text-muted mb-3" style="font-weight: 600;">
+              <?= count($gene_sets) === 1 ? 'Gene Set' : 'Gene Sets' ?>
+              <?= field_help(
+                  'A gene set is one round of gene predictions for this assembly. The counts '
+                  . 'are how many genes and transcripts it contains. Click one to open it.',
+                  'Gene sets'
+              ) ?>
+            </h6>
+            <div class="chip-container" id="assemblyGeneSets">
+              <?php foreach ($gene_sets as $gs): ?>
+                <a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_info['genome_accession']) ?>&gene_set=<?= urlencode($gs['gene_set_name']) ?>"
+                   class="gene-set-chip">
+                  <span class="fw-semibold"><?= htmlspecialchars($gs['gene_set_name']) ?></span>
+                  <span class="gene-set-chip-counts">
+                    <strong class="feature-color-gene"><?= number_format($gs['gene_count']) ?></strong> genes
+                    &middot;
+                    <strong class="feature-color-mrna"><?= number_format($gs['mrna_count']) ?></strong> transcripts
+                  </span>
+                </a>
+              <?php endforeach; ?>
+            </div>
+            <?php foreach ($gene_sets as $gs): if (!empty($gs['gene_set_description'])): ?>
+              <div class="small text-muted mt-1"><?= htmlspecialchars($gs['gene_set_description']) ?></div>
+            <?php endif; endforeach; ?>
+          </div>
+          <?php endif; ?>
           <?php if ($genome_file):
             $colorInfo = getColorClassOrStyle($genome_file['info']['color'] ?? '');
           ?>
-          <div class="mt-2 pt-2" style="border-top: 1px solid #dee2e6;">
+          <div class="mt-4 pt-3 border-top">
+            <h6 class="text-muted mb-3" style="font-weight: 600;">
+              Genome FASTA
+              <?= field_help(
+                  'The assembled genome sequence for this build, as a FASTA file. It is the '
+                  . 'sequence itself, without gene annotations -- those come from a gene set.',
+                  'Genome FASTA'
+              ) ?>
+            </h6>
+            <?php /* Labelled with the ASSEMBLY, not the file type. "Genome" told the user
+                     what kind of thing it was, which the heading above now says; the name
+                     and accession tell them WHICH build they are about to download -- the
+                     thing that actually differs when an organism has several. Through
+                     assembly_label() so it reads the same here as in the page title and
+                     everywhere else an assembly is named. */ ?>
             <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
                class="btn btn-sm <?= $colorInfo['class'] ?> fw-semibold text-white"
                style="border-radius: 16px; <?= $colorInfo['style'] ?>"
                download>
-              <i class="fa fa-download me-1"></i><?= htmlspecialchars($genome_file['info']['label']) ?>
+              <i class="fa fa-download me-1"></i><?= htmlspecialchars(assembly_label($assembly_info['genome_name'] ?? '', $assembly_info['genome_accession'] ?? '')) ?>
             </a>
           </div>
           <?php endif; ?>
@@ -143,49 +196,6 @@
     </div>
   </div>
 
-  <!-- Gene Sets Section -->
-  <?php if (!empty($gene_sets)): ?>
-  <div class="row mb-4" id="assemblyGeneSets">
-    <div class="col-12">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex align-items-center" style="background-color:#e11d48;">
-          <i class="fas fa-layer-group me-2 text-white"></i>
-          <span class="text-uppercase fw-semibold text-white" style="letter-spacing:0.1em; font-size:0.8rem;">Gene Sets</span>
-          <span class="badge bg-white text-gene-set ms-2" style="font-size:0.65em;"><?= count($gene_sets) ?></span>
-        </div>
-        <div class="card-body p-0">
-          <div class="list-group list-group-flush">
-            <?php foreach ($gene_sets as $gs): ?>
-            <a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_info['genome_accession']) ?>&gene_set=<?= urlencode($gs['gene_set_name']) ?>"
-               class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
-              <div class="flex-grow-1">
-                <div class="fw-semibold">
-                  <span class="badge bg-gene-set me-2">Gene Set</span>
-                  <?= htmlspecialchars($gs['gene_set_name']) ?>
-                </div>
-                <?php if (!empty($gs['gene_set_description'])): ?>
-                <div class="small text-muted mt-1"><?= htmlspecialchars($gs['gene_set_description']) ?></div>
-                <?php endif; ?>
-              </div>
-              <div class="d-flex gap-3 flex-shrink-0 text-center">
-                <div>
-                  <div class="fw-bold feature-color-gene"><?= number_format($gs['gene_count']) ?></div>
-                  <div class="small text-muted">genes</div>
-                </div>
-                <div>
-                  <div class="fw-bold feature-color-mrna"><?= number_format($gs['mrna_count']) ?></div>
-                  <div class="small text-muted">transcripts</div>
-                </div>
-              </div>
-              <i class="fas fa-chevron-right text-muted flex-shrink-0"></i>
-            </a>
-            <?php endforeach; ?>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <?php endif; ?>
 
 </div>
 

@@ -244,10 +244,11 @@ function resolveSourceSelection($organism, $assembly, $accessible_sources, $gene
  * sets than the modal then lists, and a note that disagrees with the control it points at
  * is worse than no note.
  *
- * @param  array $organisms organism names
+ * @param  array       $organisms organism names
+ * @param  string|null $assembly  restrict to one assembly accession (the assembly page)
  * @return array ['assemblies' => int, 'gene_sets' => int]
  */
-function countAccessibleScope(array $organisms): array {
+function countAccessibleScope(array $organisms, ?string $assembly = null): array {
     if (empty($organisms)) return ['assemblies' => 0, 'gene_sets' => 0];
 
     $assemblies = [];
@@ -257,6 +258,7 @@ function countAccessibleScope(array $organisms): array {
             if (!in_array($org, $organisms, true)) continue;
             foreach ($sources as $source) {
                 $accession = $source['genome_accession'] ?? $source['assembly'];
+                if ($assembly !== null && $accession !== $assembly) continue;
                 $assemblies[$org . '|' . $accession] = true;
                 $gene_sets[$org . '|' . $accession . '|' . ($source['gene_set'] ?? '')] = true;
             }

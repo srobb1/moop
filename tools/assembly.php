@@ -77,6 +77,10 @@ $display_config = [
         "const assemblyName = '" . addslashes($assembly_info['genome_name']) . "';",
         "const assemblyAccession = '" . addslashes($assembly_info['genome_accession'] ?? '') . "';",
         "const organismName = '" . addslashes($organism_name) . "';",
+        // Counts for the note under the search box, restricted to THIS assembly -- the page
+        // searches one assembly, so the organism-wide figure would overstate it.
+        "const scopeCounts = " . json_encode(countAccessibleScope(
+            [$organism_name], $assembly_info['genome_accession'] ?? null)) . ";",
         "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
     ]
 ];

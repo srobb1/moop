@@ -1111,6 +1111,38 @@ a:hover .link-icon {
   transform: translateY(-2px);
 }
 
+/* Gene set chip -- the assembly page's overview row.
+   Deliberately NOT a solid fill like .assembly-chip: it carries two numbers as well as a
+   name, and reversed white-on-crimson text at 0.8rem is hard to read for the counts. A
+   tinted chip with a crimson border keeps the gene-set colour coding while leaving the
+   figures in dark text. Wraps to several lines when an assembly has more than one. */
+.gene-set-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  background-color: #fff1f2;
+  border: 1px solid #e11d48;
+  color: #881337 !important;
+  text-decoration: none !important;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.gene-set-chip:hover {
+  background-color: #ffe4e6;
+  text-decoration: none !important;
+  transform: translateY(-2px);
+}
+
+.gene-set-chip-counts {
+  font-size: 0.82rem;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
 /* Downloads page colored bars */
 .dl-asm-bar,
 .dl-asm-bar:focus,
