@@ -892,14 +892,35 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
     // Deliberately NOT a filter and not a higher tier: an unnamed feature with a good
     // annotation is often exactly the target -- gene naming is incomplete, which is why
     // annotations are searchable in the first place.
+    // THE GENE'S OWN DESCRIPTION, above anything an annotation says about it.
+    //
+    // Searching "nexin" in Bats returned CYTIP -- cytohesin 1 interacting protein -- ABOVE
+    // SNX17, "sorting nexin 17". CYTIP matched on a single Drosophila ortholog call
+    // ("Snx27: Sorting nexin 27"); SNX17 matched 63 times and has the word in its own
+    // description. Every tier tied, so the alphabetical uniquename tiebreak decided it, and
+    // ACA1_..._013 sorts before ACA1_..._043.
+    //
+    // This signal used to exist twice and was lost twice. The pre-FTS ladder graded
+    // feature_description across three levels (d691848^); replacing it with FTS kept only
+    // the name and annotation tiers. bm25 then carried it implicitly -- its column weights
+    // were name 10, feature_description 5, annotation 2 -- until the quota pool removed
+    // bm25 from this path. Stating it explicitly is cheaper than either: the column is
+    // already selected and already joined, so the tier costs no additional read.
+    //
+    // Above the annotation tier, because what a gene IS beats what something else says it
+    // resembles. Below name_match, which stays the hard tier.
     $sql .= " ORDER BY name_match DESC,
+                       (f.feature_description LIKE ?) DESC,
                        (a.annotation_description LIKE ?) DESC,
                        $stem_tier(COALESCE(f.feature_name, '') <> '') DESC,
                        $rank_expr
                        f.feature_uniquename
               LIMIT " . moop_search_query_limit();
-    // These must be appended LAST, and in this order: both placeholders sit in the ORDER BY,
-    // which follows every scope/source filter added to the WHERE clause above.
+    // These must be appended LAST, and in this order: all three placeholders sit in the
+    // ORDER BY, which follows every scope/source filter added to the WHERE clause above.
+    // The first two are the same pattern against different columns -- feature_description
+    // then annotation_description -- and PDO binds positionally, so they cannot be merged.
+    $params[] = $name_like;
     $params[] = $name_like;
     if ($stem_like !== '') $params[] = $stem_like;
 
