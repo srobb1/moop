@@ -261,7 +261,9 @@
       <div class="col-12">
         <div class="card shadow-sm">
           <div class="card-body">
-            <h3 class="card-title mb-4">About <?= htmlspecialchars($organism_info['common_name'] ?? $organism_name) ?></h3>
+            <?php /* h5-weight, teal, matching the section headings on the info box above.
+                     An h3 here outweighed the organism's own name in the card beside it. */ ?>
+            <h2 class="card-title h5 mb-3" style="color:#0f766e; font-weight:600;">About <?= htmlspecialchars($organism_info['common_name'] ?? $organism_name) ?></h2>
             <div class="organism-text">
               <?php foreach ($organism_info['html_p'] as $paragraph): ?>
                 <p class="<?= htmlspecialchars($paragraph['class'] ?? '') ?>" 

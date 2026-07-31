@@ -338,13 +338,26 @@ table.dataTable thead th {
 
 /* ========== ORGANISM/GROUPS DISPLAY STYLES ========== */
 
+/* Prose, so it is set for READING rather than to fill the container.
+
+   max-width caps the measure at about 70 characters. The card is the full 1152px
+   container, which at this size is ~140 characters a line -- roughly double the point
+   where the eye starts losing its place on the return sweep.
+
+   NOT justified. Justification without hyphenation stretches word spacing to force each
+   line flush, which opens "rivers" of white down the paragraph; it looks tidy in a
+   screenshot and reads worse. Ragged right is the correct choice for web body text. */
 .organism-text {
-  text-align: justify;
-  line-height: 1.6;
+  max-width: 70ch;
+  line-height: 1.7;
 }
 
 .organism-text p {
   margin-bottom: 1rem;
+}
+
+.organism-text p:last-child {
+  margin-bottom: 0;
 }
 
 .resource-card {
