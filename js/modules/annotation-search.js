@@ -57,10 +57,15 @@ class AnnotationSearch {
         if (form.find('.search-controls').length === 0) {
             const submitBtn = form.find('button[type="submit"]');
 
-            // No separate "clear scope" button: clearing is reopening the modal and
-            // ticking things back on, which is where the user already is. A second
-            // icon that appears and disappears next to the first one costs more
+            // No separate "clear" button for EITHER filter: clearing is reopening the
+            // modal and ticking things back on, which is where the user already is. A
+            // second icon that appears and disappears next to the first one costs more
             // attention than the action it saves.
+            //
+            // The scope filter never had one; the source filter did, which made two
+            // controls that behave the same look like they behave differently. The
+            // filter button already shows a count badge when a filter is applied, so
+            // the state is visible without a second icon to explain it.
             const scopeBtn = this.config.noScopeFilter ? '' : `
                     <!-- Scope filter button (organisms / assemblies / gene sets) -->
                     <button type="button" class="btn btn-icon btn-scope-filter btn-outline-secondary"
@@ -78,13 +83,6 @@ class AnnotationSearch {
                         <i class="fa fa-sliders-h"></i>
                     </button>
 
-                    <!-- Clear source-filter button (hidden initially) -->
-                    <button type="button" class="btn btn-icon btn-clear-filters btn-outline-secondary"
-                            title="Clear Source Filter"
-                            data-bs-toggle="tooltip" data-bs-placement="bottom"
-                            style="display: none;">
-                        <i class="fa fa-times"></i>
-                    </button>
                     ${scopeBtn}
                 </div>
             `;
@@ -92,7 +90,6 @@ class AnnotationSearch {
             submitBtn.after(buttonGroup);
 
             form.find('.btn-advanced-filter').on('click', () => this.showFilterModal());
-            form.find('.btn-clear-filters').on('click', () => this.clearFilters());
 
             if (!this.config.noScopeFilter) {
                 form.find('.btn-scope-filter').on('click', () => this.showScopeFilterModal());
@@ -191,31 +188,20 @@ class AnnotationSearch {
     }
 
     /**
-     * Clear all applied filters
-     */
-    clearFilters() {
-        this.selectedSources = null;
-        this.updateFilterButtonState();
-    }
-
-    /**
      * Update filter button visual state based on applied filters
      */
     updateFilterButtonState() {
         const form = $(this.config.formSelector);
         const filterBtn = form.find('.btn-advanced-filter');
-        const clearBtn = form.find('.btn-clear-filters');
         const submitBtn = form.find('button[type="submit"]');
 
         if (this.selectedSources && this.selectedSources.length > 0) {
             filterBtn.removeClass('btn-outline-secondary').addClass('btn-primary');
             filterBtn.html('<i class="fa fa-sliders-h"></i><span class="badge badge-filter">' + this.selectedSources.length + '</span>');
-            clearBtn.show();
             submitBtn.addClass('btn-success');
         } else {
             filterBtn.removeClass('btn-primary').addClass('btn-outline-secondary');
             filterBtn.html('<i class="fa fa-sliders-h"></i>');
-            clearBtn.hide();
             submitBtn.removeClass('btn-success');
         }
     }
