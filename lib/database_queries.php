@@ -596,6 +596,107 @@ function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFil
 }
 
 /**
+ * Rows per annotation source in each interleave block. 25 keeps the biggest source to a
+ * quarter of the first screen while still letting a genuinely dominant source lead it.
+ */
+const MOOP_SEARCH_SOURCE_BLOCK = 25;
+
+/**
+ * Stop one annotation source from owning the first screen. REORDERS, never drops.
+ *
+ * The quota pool balances annotation TYPES, which is the curated concept -- but a user
+ * sees SOURCES, and one type can be served by very few of them. Gene Ontology is a single
+ * type fed mainly by EggNOG2GO and InterPro2GO, so giving it a fair type share handed it a
+ * larger source share than bm25 did: measured on Rhinolophus, "binding" went from 37 of
+ * the top 100 from its biggest source to 56, and "ubiquitin" 20 to 27. Better on types,
+ * worse on the thing displayed.
+ *
+ * So: take the first $cap rows of each source, then the next $cap of each, and so on.
+ * Rank order is preserved WITHIN each block, and every row is kept -- rows past the cap
+ * move down the list, they do not disappear. With ~7-24 sources and a cap of 25, block
+ * zero alone covers far more than one screen.
+ */
+function moop_interleave_by_source(array $rows, $cap) {
+    if ($cap < 1 || count($rows) <= $cap) return $rows;
+    $seen = $blocks = [];
+    foreach ($rows as $row) {
+        $src = (string)($row['annotation_source_name'] ?? '');
+        $n   = $seen[$src] = ($seen[$src] ?? 0) + 1;
+        $blocks[intdiv($n - 1, $cap)][] = $row;
+    }
+    ksort($blocks);
+    return array_merge(...array_values($blocks));
+}
+
+/**
+ * The FTS token identifying one annotation type inside feature_annotation_search.
+ *
+ * MUST mirror the expression in build_fts_index.sql exactly, or the pool silently
+ * selects nothing for that type and its quota is lost. strtolower(), not mb_strtolower():
+ * SQLite's lower() is ASCII-only, and a type with a non-ASCII capital must produce the
+ * same token on both sides. Separators are stripped rather than replaced because
+ * unicode61 splits on '_' and porter then stems the pieces -- "RBBH_Homolog" and
+ * "Homologs" both index "homolog", which made the Homologs filter return 870,674 rows
+ * where 69,398 qualify. One token per type has no shared stem with any other.
+ */
+function moop_fts_type_code($annotation_type) {
+    return 'atype' . strtolower(str_replace([' ', '-', '_'], '', (string)$annotation_type)) . 'z';
+}
+
+/**
+ * Does this organism's index carry annotation_type_code (i.e. has it been rebuilt)?
+ *
+ * Quota pooling needs that column. Databases indexed before it existed must keep working
+ * unchanged, so every caller falls back to the bm25 pool when this is false -- which is
+ * what makes the re-index a rolling operation rather than a flag day.
+ */
+function moop_fts_has_type_column($dbFile) {
+    static $cache = [];
+    if (array_key_exists($dbFile, $cache)) return $cache[$dbFile];
+    try {
+        $dbh  = getDbConnection($dbFile);
+        $stmt = $dbh->query("SELECT sql FROM sqlite_master WHERE name = 'feature_annotation_search'");
+        $ddl  = $stmt ? (string)$stmt->fetchColumn() : '';
+        $cache[$dbFile] = stripos($ddl, 'annotation_type_code') !== false;
+    } catch (PDOException $e) {
+        $cache[$dbFile] = false;
+    }
+    return $cache[$dbFile];
+}
+
+/**
+ * Annotation types present in this organism, in the order curated in annotation_config.json.
+ *
+ * Types the config does not mention are appended rather than dropped: an organism can load
+ * a source whose type nobody has curated yet, and silently excluding it from the pool would
+ * make those annotations unfindable. Same precedence rule getAnnotationSourcesGrouped() uses.
+ */
+function moop_curated_annotation_types($dbFile) {
+    static $cache = [];
+    if (array_key_exists($dbFile, $cache)) return $cache[$dbFile];
+
+    $present = [];
+    try {
+        $dbh = getDbConnection($dbFile);
+        foreach ($dbh->query("SELECT DISTINCT annotation_type FROM annotation_source") as $row) {
+            $type = trim((string)$row['annotation_type']);
+            if ($type !== '') $present[$type] = true;
+        }
+    } catch (PDOException $e) {
+        return $cache[$dbFile] = [];
+    }
+
+    global $config;
+    $cfg = loadJsonFile($config->getPath('metadata_path') . '/annotation_config.json', []);
+    $ordered = [];
+    foreach (($cfg['annotation_type_order'] ?? []) as $type) {
+        if (isset($present[$type])) { $ordered[] = $type; unset($present[$type]); }
+    }
+    foreach (array_keys($present) as $type) $ordered[] = $type;
+    return $cache[$dbFile] = $ordered;
+}
+
+/**
  * Search features and annotations by keyword or quoted phrase (the main search).
  * Used by annotation_search_ajax.php. Backed by the feature_annotation_search FTS
  * index (one row per feature×annotation pair). Returns feature×annotation rows; the
@@ -635,41 +736,93 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
     $filtered = ($assembly_accession !== '' || $gene_set_name !== ''
                  || !empty($scope_pairs) || !empty($source_names));
 
+    $quota_pool = false;
+
     if (!$filtered) {
-        // FAST PATH — rank inside the FTS index, then fetch only the survivors.
+        // FAST PATH — choose the pool inside the FTS index, then fetch only the survivors.
         //
         // The general shape below joins EVERY matched row and sorts the lot, so
         // "binding" reads 121,780 rows to display 2,500 of them. Measured on
-        // Nematostella, cold: 179 MB read and 3.4 s. bm25() needs only the index, so
-        // the pool can be chosen before touching feature/annotation at all: 53 MB read
-        // and 2.7 s, and across 85 organisms the working set for one cross-organism
-        // search drops from ~13.4 GB to ~3.6 GB -- from larger than the page cache to
-        // comfortably inside it, which is what lets a second search be warm (45 ms).
-        //
-        // Pool is TWICE the cap, not the cap: at 1x the top 100 already diverged for
-        // "transpos", because bm25 orders stem-noise arbitrarily and the finer tiers
-        // below re-rank within whatever it hands over. At 2x the top 100 is identical
-        // for every term tested, and "binding"/"kinase" match the old results outright.
+        // Nematostella, cold: 179 MB read and 3.4 s. Choosing the pool from the index
+        // first cut that to 53 MB and 2.7 s, and dropped the cross-organism working set
+        // from ~13.4 GB to ~3.6 GB -- from larger than the page cache to inside it.
         //
         // ONLY when nothing is filtered. Scope and source filters live on tables the
         // pool cannot see, so they would apply AFTER the pool was chosen -- a search
         // limited to one annotation source could come back near-empty because the pool
         // filled up with rows from other sources. Filtered searches take the general
         // shape, where the filter narrows before ranking.
-        $pool_size = (int) (moop_search_results_limit() * 2);
-        $sql = "WITH pool AS (
-                    SELECT rowid AS rid,
-                           bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0) AS rank
-                    FROM feature_annotation_search
-                    WHERE feature_annotation_search MATCH ?
-                    ORDER BY rank
-                    LIMIT $pool_size
-                )
-                SELECT $columns
-                FROM pool
-                " . str_replace('%ROWID%', 'pool.rid', $joins) . "
-                WHERE 1=1";
-        $params = [$match, $name_like];
+        $types = moop_fts_has_type_column($dbFile) ? moop_curated_annotation_types($dbFile) : [];
+
+        if (!empty($types)) {
+            // QUOTA POOL. Take a slice per annotation type, in the curated order, each slice
+            // ordered by rowid -- which is free -- instead of ranking the whole match set
+            // with bm25(), which is not. Measured on Rhinolophus: bm25 was 24.7 MB of
+            // helicase's 40.1 and 51.1 of binding's 73.5, because it reads a scattered
+            // docsize entry per MATCHED document. The quota pool reads none of that, and
+            // cost stops scaling with term frequency: binding matches 322,361 documents and
+            // now costs about what ubiquitin's 75,512 do. 1.6-4.5x less I/O, precision
+            // unchanged at 100/100. See notes/SEARCH_COST_MODEL_2026-07-31.md.
+            //
+            // Pool is 1.5x the cap, not 2x: measured better on BOTH axes than 2x (binding
+            // 23.9 -> 19.7 MB with the same six types on page one). Below 1.5x the type
+            // count starts dropping, which is the thing this exists to protect.
+            $pool_size = max(1, (int) round(moop_search_results_limit() * 1.5));
+            $per_type  = (int) ceil($pool_size / count($types));
+            $text_cols = '{feature_name feature_description annotation_description annotation_accession}';
+
+            $arms = [];
+            $params = [];
+            foreach (array_values($types) as $i => $type) {
+                // LIMIT is interpolated, not bound: PDO can hand a bound value to SQLite as
+                // a string, and only the MATCH expression here comes from user input. Both
+                // $i and $per_type are integers derived from config.
+                $arms[] = "SELECT rid, arm FROM (SELECT rowid AS rid, $i AS arm
+                             FROM feature_annotation_search
+                             WHERE feature_annotation_search MATCH ?
+                             ORDER BY rowid LIMIT $per_type)";
+                $params[] = '{annotation_type_code} : ' . moop_fts_type_code($type)
+                          . ' AND ' . $text_cols . ' : (' . $match . ')';
+            }
+            // Top-up arm, deliberately last. Without it a term whose matches all sit in one
+            // type would come back with only pool_size/count(types) rows -- a per-type quota
+            // starves a single-type result. MIN(arm) below keeps the balanced arms ahead of
+            // it, so the top-up only ever fills space the quotas could not.
+            $arms[] = "SELECT rid, arm FROM (SELECT rowid AS rid, 9999 AS arm
+                         FROM feature_annotation_search
+                         WHERE feature_annotation_search MATCH ?
+                         ORDER BY rowid LIMIT $pool_size)";
+            $params[] = $text_cols . ' : (' . $match . ')';
+
+            $sql = "WITH cand(rid, arm) AS (\n" . implode("\n UNION ALL\n", $arms) . "\n),
+                    pool AS (SELECT rid FROM cand GROUP BY rid ORDER BY MIN(arm) LIMIT $pool_size)
+                    SELECT $columns
+                    FROM pool
+                    " . str_replace('%ROWID%', 'pool.rid', $joins) . "
+                    WHERE 1=1";
+            $params[] = $name_like;
+            $quota_pool = true;
+        } else {
+            // Pre-rebuild databases keep the bm25 pool. Pool is TWICE the cap here, not
+            // the cap: at 1x the top 100 already diverged for "transpos", because bm25
+            // orders stem-noise arbitrarily and the finer tiers below re-rank within
+            // whatever it hands over. (The quota pool above wants 1.5x, not 2x -- it is
+            // not ordering by relevance, so it needs breadth rather than depth.)
+            $pool_size = (int) (moop_search_results_limit() * 2);
+            $sql = "WITH pool AS (
+                        SELECT rowid AS rid,
+                               bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0, 0.0) AS rank
+                        FROM feature_annotation_search
+                        WHERE feature_annotation_search MATCH ?
+                        ORDER BY rank
+                        LIMIT $pool_size
+                    )
+                    SELECT $columns
+                    FROM pool
+                    " . str_replace('%ROWID%', 'pool.rid', $joins) . "
+                    WHERE 1=1";
+            $params = [$match, $name_like];
+        }
     } else {
         $sql = "SELECT $columns
                 FROM feature_annotation_search fas
@@ -703,11 +856,20 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
     // tokenizer: 'unicode61' (no stemming) would destroy plural search, which is constant
     // in this domain -- "proteins" 716,560 -> 38,658 rows, "transposons" 3,082 -> 1.
     // Costs nothing measurable (cold 1516 vs 1524 ms, warm 47 vs 44 ms).
-    // On the fast path bm25() is already computed, as pool.rank -- and it CANNOT be
+    // On the bm25 fast path the score is already computed, as pool.rank -- and it CANNOT be
     // called again here, because the FTS table is no longer in the FROM clause.
+    //
+    // The quota pool computes NO score, deliberately: bm25 was 60% of a cold search's I/O
+    // while sitting fifth in this ORDER BY, below three tiers that do the real work. It
+    // was also actively harmful here -- its document-length normalisation favours short
+    // documents, which are ProtNLM's terse AI-generated protein names, so it filled 74 of
+    // the top 100 for "helicase" with the annotation type annotation_config.json ranks
+    // 8th of 10. With no score the tiers below decide alone, which is what they were
+    // written to do. Trailing comma included/omitted here so the ORDER BY stays valid
+    // either way -- an empty $rank_expr must not leave a dangling comma.
     $rank_expr = $filtered
-        ? 'bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0)'
-        : 'pool.rank';
+        ? 'bm25(feature_annotation_search, 10.0, 5.0, 2.0, 3.0, 0.0),'
+        : ($quota_pool ? '' : 'pool.rank,');
 
     // Beneath the literal tier, the same test against the STEM of the typed word, so a
     // plural search still credits the singular records that FTS5 actually matched. See
@@ -733,7 +895,7 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
     $sql .= " ORDER BY name_match DESC,
                        (a.annotation_description LIKE ?) DESC,
                        $stem_tier(COALESCE(f.feature_name, '') <> '') DESC,
-                       $rank_expr,
+                       $rank_expr
                        f.feature_uniquename
               LIMIT " . moop_search_query_limit();
     // These must be appended LAST, and in this order: both placeholders sit in the ORDER BY,
@@ -741,7 +903,15 @@ function searchFeaturesAndAnnotations($search_term, $is_quoted_search, $dbFile, 
     $params[] = $name_like;
     if ($stem_like !== '') $params[] = $stem_like;
 
-    return runFtsSearch($dbFile, $sql, $params);
+    $out = runFtsSearch($dbFile, $sql, $params);
+
+    // Only on the quota path: the bm25 pool does its own (accidental) source spreading,
+    // and the filtered path is already narrowed to what the user asked for, so neither
+    // wants this. Applied after the display cap so it reorders only what is shown.
+    if ($quota_pool && !empty($out['results'])) {
+        $out['results'] = moop_interleave_by_source($out['results'], MOOP_SEARCH_SOURCE_BLOCK);
+    }
+    return $out;
 }
 
 /**

@@ -57,24 +57,37 @@ DROP TABLE IF EXISTS feature_search;
 --    rowid = feature_annotation.feature_annotation_id, so MOOP joins straight back
 --    to feature_annotation for display. Includes the feature's own name/description
 --    so a gene whose NAME matches still turns up with its annotation rows.
+--    annotation_type_code exists so the candidate pool can be filtered BY TYPE inside
+--    the index, which is what lets search stop paying for bm25() -- see
+--    notes/SEARCH_COST_MODEL_2026-07-31.md. It is a CODE, never the type name:
+--    unicode61 splits on '_' and porter stems the pieces, so a column holding
+--    "RBBH_Homolog" indexes the token "homolog" and so does "Homologs". Filtering on
+--    Homologs then returned 870,674 rows where only 69,398 qualified (69,398 + 801,276
+--    RBBH = exactly that), silently filling the Homologs quota with RBBH rows.
+--    Stripping the separators instead yields one token per type with no shared stem.
+--    lib/database_queries.php::moop_fts_type_code() MUST mirror this expression.
 CREATE VIRTUAL TABLE feature_annotation_search USING fts5(
     feature_name,
     feature_description,
     annotation_description,
     annotation_accession,
+    annotation_type_code,
     content = '',
     tokenize = 'porter unicode61'
 );
 INSERT INTO feature_annotation_search(
-    rowid, feature_name, feature_description, annotation_description, annotation_accession)
+    rowid, feature_name, feature_description, annotation_description, annotation_accession,
+    annotation_type_code)
 SELECT fa.feature_annotation_id,
        f.feature_name,
        f.feature_description,
        a.annotation_description,
-       a.annotation_accession
+       a.annotation_accession,
+       'atype' || lower(replace(replace(replace(ans.annotation_type, ' ', ''), '-', ''), '_', '')) || 'z'
 FROM feature_annotation fa
-JOIN feature    f ON f.feature_id    = fa.feature_id
-JOIN annotation a ON a.annotation_id = fa.annotation_id;
+JOIN feature           f   ON f.feature_id            = fa.feature_id
+JOIN annotation        a   ON a.annotation_id         = fa.annotation_id
+JOIN annotation_source ans ON ans.annotation_source_id = a.annotation_source_id;
 
 -- 2) Gene-only search: one FTS row per feature (rowid = feature.feature_id).
 --    Every feature is indexed, INCLUDING features with no annotations (which #1 cannot cover).
