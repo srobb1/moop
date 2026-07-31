@@ -55,15 +55,6 @@
     </div>
   </div>
 
-  <style>
-    @media (min-width: 768px) {
-      .gene-set-stats-panel {
-        border-top: none !important;
-        border-left: 1px solid #dee2e6;
-      }
-    }
-  </style>
-
   <!-- Gene Set Header -->
   <div class="row mb-4" id="geneSetHeader">
     <div class="col-12">
@@ -95,14 +86,72 @@
                 <dd><?= htmlspecialchars($gene_set_meta['note']) ?></dd>
                 <?php endif; ?>
               </dl>
+              <?php /* Counts live in the flow of the card, above Downloads, not in a panel
+                       pinned to the right edge. As a right-hand panel they were vertically
+                       centred against whatever the left column happened to be, so they
+                       drifted as the info grid and downloads changed height -- and they
+                       read as a separate widget rather than as a property of the gene set,
+                       which is what they are. */ ?>
+              <div class="mt-4 pt-3 border-top">
+                <h6 class="text-muted mb-3" style="font-weight: 600;">
+                  Feature Counts
+                  <?= field_help(
+                      'How many genes this gene set contains, and how many transcripts they '
+                      . 'produce. One gene can have several transcripts, so transcripts are '
+                      . 'usually the larger number.',
+                      'Feature counts'
+                  ) ?>
+                </h6>
+                <div class="d-flex flex-wrap gap-4">
+                  <div>
+                    <span class="fw-bold feature-color-gene" style="font-size:1.5rem; line-height:1;"><?= number_format($gene_set_info['gene_count'] ?? 0) ?></span>
+                    <span class="text-muted fw-semibold ms-1" style="font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Genes</span>
+                  </div>
+                  <div>
+                    <span class="fw-bold feature-color-mrna" style="font-size:1.5rem; line-height:1;"><?= number_format($gene_set_info['mrna_count'] ?? 0) ?></span>
+                    <span class="text-muted fw-semibold ms-1" style="font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Transcripts</span>
+                  </div>
+                </div>
+              </div>
+
               <?php
               $gs_dir = $config->getPath('organism_data') . "/$organism_name/$genome_accession/$gene_set_name";
               $gff_name = genes_gff_filename();
               $has_gff = file_exists("$gs_dir/$gff_name") && filesize("$gs_dir/$gff_name") > 0;
-              $has_downloads = !empty($fasta_files) || $has_gff;
+
+              // The ASSEMBLY's genome FASTA, offered here as well as on the assembly page.
+              // Someone working with a gene set usually wants the sequence it was called
+              // against, and making them navigate up a level to get it is a step for
+              // nothing. Same file, same handler -- gene_set='' is what marks it
+              // assembly-level, which is also how the assembly page finds it.
+              $genome_file = null;
+              $genome_files = getAssemblyFastaFiles($organism_name, $genome_name ?? $genome_accession);
+              if (empty($genome_files)) {
+                  $genome_files = getAssemblyFastaFiles($organism_name, $genome_accession);
+              }
+              foreach ($genome_files as $gtype => $ginfo) {
+                  if (($ginfo['gene_set'] ?? '') === '') {
+                      $genome_file = ['type' => $gtype, 'info' => $ginfo];
+                      break;
+                  }
+              }
+              $has_downloads = !empty($fasta_files) || $has_gff || $genome_file;
               ?>
               <?php if ($has_downloads): ?>
-              <div class="mt-2 pt-2 d-flex flex-wrap gap-2" style="border-top: 1px solid #dee2e6;">
+              <?php /* Divider + heading + content, the shape the organism and assembly pages
+                       use. Without it these four buttons sat under a bare rule with nothing
+                       saying what they are -- and "Protein / mRNA / CDS / GFF3" names the
+                       formats without saying they are downloads for THIS gene set. */ ?>
+              <div class="mt-4 pt-3 border-top">
+                <h6 class="text-muted mb-3" style="font-weight: 600;">
+                  Downloads
+                  <?= field_help(
+                      'Sequence and annotation files for this gene set. Protein, mRNA and CDS '
+                      . 'are FASTA; GFF3 carries the gene models and their coordinates.',
+                      'Downloads'
+                  ) ?>
+                </h6>
+                <div class="d-flex flex-wrap gap-2">
                 <?php foreach ($fasta_files as $f):
                     $colorInfo = getColorClassOrStyle($f['color'] ?? '');
                 ?>
@@ -121,20 +170,24 @@
                   <i class="fa fa-download me-1"></i>GFF3
                 </a>
                 <?php endif; ?>
+                <?php if ($genome_file):
+                    $gColor = getColorClassOrStyle($genome_file['info']['color'] ?? '');
+                    $genome_directory = !empty($genome_files) && isset($genome_name) ? $genome_name : $genome_accession;
+                ?>
+                <?php /* Last, and labelled with the assembly, because it belongs to the
+                         assembly rather than to this gene set -- the ordering says so
+                         without needing a second heading. */ ?>
+                <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
+                   class="btn btn-sm <?= $gColor['class'] ?> fw-semibold text-white"
+                   style="border-radius: 16px; <?= $gColor['style'] ?>"
+                   title="The assembled genome sequence this gene set was called against"
+                   download>
+                  <i class="fa fa-download me-1"></i>Genome
+                </a>
+                <?php endif; ?>
+                </div>
               </div>
               <?php endif; ?>
-            </div>
-
-            <!-- Gene / Transcript counts -->
-            <div class="gene-set-stats-panel flex-shrink-0 d-flex border-top" style="min-width:200px;">
-              <div class="flex-fill d-flex flex-column align-items-center justify-content-center p-3 border-end">
-                <div class="fw-bold feature-color-gene mb-1" style="font-size:1.5rem; line-height:1;"><?= number_format($gene_set_info['gene_count'] ?? 0) ?></div>
-                <div class="text-muted fw-semibold" style="font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Genes</div>
-              </div>
-              <div class="flex-fill d-flex flex-column align-items-center justify-content-center p-3">
-                <div class="fw-bold feature-color-mrna mb-1" style="font-size:1.5rem; line-height:1;"><?= number_format($gene_set_info['mrna_count'] ?? 0) ?></div>
-                <div class="text-muted fw-semibold" style="font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Transcripts</div>
-              </div>
             </div>
 
           </div>
@@ -151,11 +204,27 @@
         <div class="card-header d-flex align-items-center" style="background-color:#e11d48;">
           <i class="fas fa-tag me-2 text-white"></i>
           <span class="text-uppercase fw-semibold text-white" style="letter-spacing:0.1em; font-size:0.8rem;">Annotation Summary</span>
+          <?php /* Nothing on the page connected these numbers to the search box above them.
+                   A reader sees 129,866 homologs and has no reason to know the text of those
+                   annotations is what the search box searches, nor that the filter icon can
+                   narrow a search to one kind. The sources in that filter are grouped by
+                   exactly these types (getAnnotationSourcesGrouped), so the two line up. */ ?>
+          <span class="ms-2"><?= field_help(
+              'These are the annotations attached to this gene set, counted by type. The '
+              . 'search box above searches their text, so a search for "kinase" looks '
+              . 'through all of them. To search just one kind, open the filter beside the '
+              . 'search box and pick its sources.',
+              'Annotation summary'
+          ) ?></span>
         </div>
         <div class="card-body p-0">
           <div class="d-flex flex-wrap">
+            <?php /* flex-fill so the cells SHARE the row. Fixed-width cells left the row
+                     short of the card edge, and the last cell's right border then read as
+                     the start of an empty eighth column -- a cell that looked like missing
+                     data rather than leftover space. */ ?>
             <?php foreach ($annot_type_totals as $type => $total): ?>
-            <div class="text-center p-3" style="min-width:120px; border-right:1px solid #dee2e6; border-bottom:1px solid #dee2e6;">
+            <div class="text-center p-3 flex-fill" style="min-width:120px; border-right:1px solid #dee2e6; border-bottom:1px solid #dee2e6;">
               <div class="fw-bold text-secondary" style="font-size:1.2rem; line-height:1;"><?= number_format($total) ?></div>
               <div class="text-muted fw-semibold mt-1" style="font-size:0.7rem; letter-spacing:0.06em; text-transform:uppercase;"><?= htmlspecialchars($type) ?></div>
             </div>
