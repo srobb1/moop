@@ -121,37 +121,33 @@
     <?php endif; ?>
 
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
-      <div class="card shadow-sm">
-                 <div class="card-body">
-           <h1 class="fw-bold mb-1 h2" style="color: #0f766e;">
+      <?php /* Same shell as the assembly and gene set pages -- .feature-header with a
+               coloured title bar and a .feature-info-grid -- so the three levels of one
+               hierarchy stop being built two different ways. The bar carries the scientific
+               name, matching how those pages put their identity there.
+
+               The common name stays LARGE inside the body rather than being folded into
+               the grid: it is what a reader recognises the animal by, and this is the page
+               they land on from search or from the front page. */ ?>
+      <div class="feature-header organism-header-custom shadow">
+        <h1><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
+            <span class="badge bg-white text-organism ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Organism</span></h1>
+        <div class="feature-overview-body">
+           <div class="fw-bold h4 mb-3" style="color: #0f766e;">
              <?= htmlspecialchars($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) ?>
-           </h1>
-           <p class="lead text-muted mb-4" style="font-size: 1.1rem; font-style: italic;">
-             <em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> 
-                 <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
-           </p>
-           
-           <!-- Metadata Section -->
-           <div class="organism-metadata-section mb-4">
-             <?php if (!empty($organism_info['taxon_id'])): ?>
-               <h6 class="text-muted mb-3" style="font-weight: 600;">NCBI Taxon ID</h6>
-               <div class="chip-container">
-                 <a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/<?= htmlspecialchars($organism_info['taxon_id']) ?>" 
-                    target="_blank" 
-                    class="taxon-id-chip">
-                   <?= htmlspecialchars($organism_info['taxon_id']) ?>
-                   <i class="fa fa-external-link-alt fa-xs"></i>
-                 </a>
-               </div>
-             <?php endif; ?>
- 
-             <?php if (!empty($organism_info['subclassification']['type']) && !empty($organism_info['subclassification']['value'])): ?>
-               <div class="metadata-item">
-                 <label class="text-muted small d-block mb-1"><?= htmlspecialchars($organism_info['subclassification']['type']) ?></label>
-                 <div><?= htmlspecialchars($organism_info['subclassification']['value']) ?></div>
-               </div>
-             <?php endif; ?>
            </div>
+
+           <dl class="feature-info-grid mb-0">
+             <?php if (!empty($organism_info['taxon_id'])): ?>
+             <dt>NCBI Taxon ID</dt>
+             <dd><a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/<?= htmlspecialchars($organism_info['taxon_id']) ?>"
+                    target="_blank"><?= htmlspecialchars($organism_info['taxon_id']) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+             <?php endif; ?>
+             <?php if (!empty($organism_info['subclassification']['type']) && !empty($organism_info['subclassification']['value'])): ?>
+             <dt><?= htmlspecialchars($organism_info['subclassification']['type']) ?></dt>
+             <dd><?= htmlspecialchars($organism_info['subclassification']['value']) ?></dd>
+             <?php endif; ?>
+           </dl>
 
           <!-- Taxonomic Breadcrumb -->
           <?php

@@ -774,6 +774,43 @@ a:hover .link-icon {
   color: #d97706;
 }
 
+/* Organism level of the same family as .assembly-header-custom and
+   .gene-set-header-custom -- teal, per the hierarchy's colour coding (organism teal,
+   assembly amber, gene set crimson). The organism page had been a plain .card with the
+   title inside the body, so the three pages in one hierarchy were built two different
+   ways. */
+.organism-header-custom {
+  background: white;
+  color: #333;
+  padding: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.organism-header-custom h1 {
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  margin: 0;
+  padding: 0.6rem 1.25rem;
+  color: white;
+  background-color: #0f766e;
+}
+
+.organism-header-custom .feature-info-grid a:hover {
+  color: #115e59;
+}
+
+.bg-organism {
+  background-color: #0f766e !important;
+  color: white !important;
+}
+
+.text-organism {
+  color: #0f766e;
+}
+
 .gene-set-header-custom {
   background: white;
   color: #333;
