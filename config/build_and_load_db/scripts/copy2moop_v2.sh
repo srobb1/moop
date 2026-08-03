@@ -310,19 +310,30 @@ copy_one_geneset() {
       "$ASSEMBLY_DATA/genome.fa" "$ASSEMBLY_DATA/genome.fa.fai" "$ASSEMBLY_DATA/genome.fa.n*"
   fi
 
-  ## Gene-set level: geneset.json + GFF + coords (genome-backed), FASTAs + BLAST indexes (always)
+  ## Gene-set level: geneset.json + GFF + coords (genome-backed), FASTAs + indexes (always)
+  ##
+  ## The ".fai" entries are NOT covered by the BLAST globs and have to be named. Those
+  ## globs are keyed on the BLAST database suffixes -- ".p*" catches .pdb/.phr/.pin/.psq
+  ## and ".n*" catches .ndb/.nhr/.nin/.nsq -- and a samtools index is ".fai", which starts
+  ## with neither. Without these lines the pipeline builds the indexes on compute and they
+  ## simply never arrive: MOOP falls back to blastdbcmd forever, nothing errors, and the
+  ## only symptom is that gene pages stay slow. The genome-level copy above already names
+  ## genome.fa.fai explicitly for the same reason.
+  ##
+  ## MOOP refuses an index older than its FASTA, so a .fai left behind by a partial copy
+  ## is ignored rather than trusted -- but that costs the speedup silently, so copy both.
   if $HAS_GENOME; then
     send "$REMOTE_GENESET_PATH" \
       geneset.json genes.gff feature_coords.tsv \
-      protein.aa.fa "protein.aa.fa.p*" \
-      transcript.nt.fa "transcript.nt.fa.n*" \
-      cds.nt.fa "cds.nt.fa.n*"
+      protein.aa.fa "protein.aa.fa.p*" protein.aa.fa.fai \
+      transcript.nt.fa "transcript.nt.fa.n*" transcript.nt.fa.fai \
+      cds.nt.fa "cds.nt.fa.n*" cds.nt.fa.fai
   else
     send "$REMOTE_GENESET_PATH" \
       geneset.json \
-      protein.aa.fa "protein.aa.fa.p*" \
-      transcript.nt.fa "transcript.nt.fa.n*" \
-      cds.nt.fa "cds.nt.fa.n*"
+      protein.aa.fa "protein.aa.fa.p*" protein.aa.fa.fai \
+      transcript.nt.fa "transcript.nt.fa.n*" transcript.nt.fa.fai \
+      cds.nt.fa "cds.nt.fa.n*" cds.nt.fa.fai
   fi
 
   verify_remote "$ORG_DATA/organism.sqlite" "$REMOTE_ORG_PATH/organism.sqlite"
