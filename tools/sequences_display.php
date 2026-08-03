@@ -33,6 +33,7 @@ if (!isset($sequence_types)) {
 include_once __DIR__ . '/../lib/moop_functions.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
+include_once __DIR__ . '/../lib/fasta_index.php';
 
 // Initialize download settings
 $enable_downloads = $enable_downloads ?? false;
@@ -322,6 +323,32 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
         }
     }
     
+    // FAST PATH: samtools .fai, read in pure PHP.
+    //
+    // blastdbcmd costs ~110ms per call and it is almost entirely PROCESS STARTUP --
+    // `blastdbcmd -version` alone is 100ms, so the price is the same for one sequence or
+    // fifty. Three calls per gene page made sequence extraction the whole server-side cost
+    // of the page (0.47s -> 0.09s on a 3-isoform gene when the calls were skipped, and
+    // 0.77s -> 0.06s on a 17-isoform one). The same lookup against a .fai is ~4ms.
+    //
+    // Verified byte-identical to blastdbcmd over 59 ids spread through a real gene set,
+    // headers included, before this was switched on. Falls through to blastdbcmd whenever
+    // there is no index, so a gene set the pipeline has not re-run yet keeps working.
+    if (moop_fasta_index_available($fasta_file)) {
+        $seqs = moop_fasta_fetch($fasta_file, $search_ids);
+        if (!empty($seqs)) {
+            $hdrs = moop_fasta_headers($fasta_file, array_keys($seqs));
+            foreach ($seqs as $sid => $residues) {
+                // Key on the FULL header, and wrap at 60, to match what the blastdbcmd
+                // branch below produces — callers index these by header text.
+                $header = $hdrs[$sid] ?? $sid;
+                $sequences[$header] = ">" . $header . "\n" . chunk_split($residues, 60, "\n");
+                $sequences[$header] = rtrim($sequences[$header], "\n");
+            }
+            return $sequences;
+        }
+    }
+
     // Use blastdbcmd to extract sequences - it accepts comma-separated IDs
     $config = ConfigManager::getInstance();
     $blast_tools = $config->getArray('blast_tools', []);

@@ -1,0 +1,168 @@
+<?php
+/**
+ * Point lookups into a FASTA using its samtools .fai index — pure PHP, no process spawn.
+ *
+ * WHY THIS EXISTS
+ *
+ * Fetching a handful of sequences used to shell out to blastdbcmd. That costs ~110ms per
+ * call and is almost entirely PROCESS STARTUP — `blastdbcmd -version` alone is 100ms, so
+ * the price is the same whether you ask for one sequence or fifty. The gene page makes
+ * three such calls (protein, transcript, cds), which made sequence extraction the ENTIRE
+ * server-side cost of the page. Measured by skipping the calls:
+ *
+ *     3-isoform gene    0.467s -> 0.093s
+ *     17-isoform gene   0.771s -> 0.059s
+ *
+ * The same lookup against a .fai is 4ms, and 4.8ms worst case with the ids at the very end
+ * of the file — scanning a 1.3MB text index is cheap and, unlike a process spawn, scales
+ * with what you actually asked for. api/get_sequence.php already uses this technique for
+ * genome.fa; this generalises it to the gene-set FASTAs.
+ *
+ * The BLAST databases stay: they are what BLAST itself searches. This is a different
+ * question — point lookup by id, not similarity search.
+ *
+ * WHAT A .fai LOOKS LIKE
+ *
+ *     name<TAB>length<TAB>offset<TAB>line_bases<TAB>line_width
+ *
+ * `offset` is the byte position of the first SEQUENCE byte (not the header). line_bases is
+ * residues per line; line_width includes the newline(s), so a CRLF file has width = bases+2
+ * and the arithmetic below still holds.
+ *
+ * Indexes are built by the pipeline (scripts/process_one_geneset.sh, beside makeblastdb).
+ * Callers must handle their absence — see moop_fasta_index_available().
+ */
+
+/**
+ * Is there a usable index for this FASTA?
+ *
+ * Also requires the index to be NO OLDER than the FASTA. A stale .fai does not fail
+ * loudly — its byte offsets simply point into the wrong place and you get whatever
+ * happens to sit there, which is worse than no index at all.
+ */
+function moop_fasta_index_available(string $fasta): bool
+{
+    $fai = $fasta . '.fai';
+    return is_readable($fasta)
+        && is_readable($fai)
+        && filesize($fai) > 0
+        && filemtime($fai) >= filemtime($fasta);
+}
+
+/**
+ * Read the .fai entries for the ids we actually want.
+ *
+ * Deliberately does NOT build a map of the whole file: a gene-set index runs to tens of
+ * thousands of entries and parsing all of them costs ~24ms, against ~4ms for scanning and
+ * keeping only the handful asked for. It stops as soon as every id is found.
+ *
+ * @param  list<string> $wanted
+ * @return array<string, array{len:int,off:int,lb:int,lw:int}>
+ */
+function moop_fai_lookup(string $fai, array $wanted): array
+{
+    $want = array_flip($wanted);
+    $need = count($want);
+    $out  = [];
+
+    $fh = @fopen($fai, 'r');
+    if ($fh === false) return $out;
+
+    while ($need > 0 && ($line = fgets($fh)) !== false) {
+        $tab = strpos($line, "\t");
+        if ($tab === false) continue;
+        $name = substr($line, 0, $tab);
+        if (!isset($want[$name])) continue;          // cheap reject before any parsing
+        $p = explode("\t", rtrim($line, "\r\n"));
+        if (count($p) < 5) continue;
+        $out[$name] = ['len' => (int)$p[1], 'off' => (int)$p[2],
+                       'lb'  => (int)$p[3], 'lw'  => (int)$p[4]];
+        $need--;
+    }
+    fclose($fh);
+    return $out;
+}
+
+/**
+ * Fetch sequences by exact id.
+ *
+ * Returns the residues with all line breaks removed; the caller decides how to wrap them.
+ * Ids not present in the index are simply absent from the result — the same contract
+ * blastdbcmd has when an entry does not exist, which callers already treat as "this id is
+ * not in this file type" rather than as an error.
+ *
+ * @param  list<string> $ids
+ * @return array<string,string>  id => sequence, in the order the ids were requested
+ */
+function moop_fasta_fetch(string $fasta, array $ids): array
+{
+    if ($ids === [] || !moop_fasta_index_available($fasta)) return [];
+
+    $idx = moop_fai_lookup($fasta . '.fai', $ids);
+    if ($idx === []) return [];
+
+    $fh = @fopen($fasta, 'rb');
+    if ($fh === false) return [];
+
+    $out = [];
+    foreach ($ids as $id) {                          // preserve caller order
+        if (!isset($idx[$id])) continue;
+        $e = $idx[$id];
+        if ($e['len'] <= 0 || $e['lb'] <= 0) continue;
+
+        // Bytes to read = residues + one line terminator per full line. lw - lb is the
+        // terminator width, so this is correct for LF and CRLF alike.
+        $lines = (int)ceil($e['len'] / $e['lb']);
+        $bytes = $e['len'] + ($lines * max(0, $e['lw'] - $e['lb']));
+
+        if (fseek($fh, $e['off']) !== 0) continue;
+        $raw = fread($fh, $bytes);
+        if ($raw === false) continue;
+
+        $seq = preg_replace('/\s+/', '', $raw);
+        // Guard against a stale index pointing somewhere plausible but wrong.
+        if ($seq === null || strlen($seq) !== $e['len']) continue;
+        $out[$id] = $seq;
+    }
+    fclose($fh);
+    return $out;
+}
+
+/**
+ * The full header line for an id, as it appears in the FASTA.
+ *
+ * The .fai stores only the id, but callers key their results on the WHOLE header —
+ * description included — because that is what blastdbcmd emits. Reading it back means one
+ * short seek per id to the byte before the sequence starts.
+ *
+ * @param  list<string> $ids
+ * @return array<string,string>  id => header text WITHOUT the leading '>'
+ */
+function moop_fasta_headers(string $fasta, array $ids): array
+{
+    if ($ids === [] || !moop_fasta_index_available($fasta)) return [];
+    $idx = moop_fai_lookup($fasta . '.fai', $ids);
+    if ($idx === []) return [];
+
+    $fh = @fopen($fasta, 'rb');
+    if ($fh === false) return [];
+
+    $out = [];
+    foreach ($ids as $id) {
+        if (!isset($idx[$id])) continue;
+        // The header ends with the newline immediately before the sequence offset. Read a
+        // generous window back from there; descriptions here run to a few hundred bytes
+        // (source, accession, e-value), so 4096 is comfortable headroom.
+        $back  = 4096;
+        $start = max(0, $idx[$id]['off'] - $back);
+        if (fseek($fh, $start) !== 0) continue;
+        $chunk = fread($fh, $idx[$id]['off'] - $start);
+        if ($chunk === false) continue;
+        $chunk = rtrim($chunk, "\r\n");
+        $nl    = strrpos($chunk, "\n");
+        $hdr   = $nl === false ? $chunk : substr($chunk, $nl + 1);
+        if ($hdr !== '' && $hdr[0] === '>') $out[$id] = substr($hdr, 1);
+    }
+    fclose($fh);
+    return $out;
+}
