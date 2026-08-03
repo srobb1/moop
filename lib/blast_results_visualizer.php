@@ -4,10 +4,8 @@
  * Parses BLAST XML/text output and creates interactive visualizations
  * Displays: summary table, coverage maps, alignment viewer
  * 
- * All code is original MOOP implementation using HTML/CSS
- * No code derived from other projects; HSP visualization concept
- * informed by study of locBLAST (https://github.com/cobilab/locBLAST)
- * See notes/THIRD_PARTY_LICENSES.md for details
+ * Inspired by locBLAST (https://github.com/AshokHub/locBLAST) -- no locBLAST code is used.
+ * See notes/THIRD_PARTY_LICENSES.md.
  */
 
 /**
@@ -95,7 +93,12 @@ function parseBlastResults($blast_xml) {
                         $qseq = $hsp->xpath('./Hsp_qseq');
                         $hseq = $hsp->xpath('./Hsp_hseq');
                         $midline = $hsp->xpath('./Hsp_midline');
-                        
+                        // Frames drive the alignment coordinate DIRECTION (negative frame
+                        // counts down). They were never extracted before, which left
+                        // formatBlastAlignment() unreachable behind an isset() gate.
+                        $query_frame = $hsp->xpath('./Hsp_query-frame');
+                        $hit_frame = $hsp->xpath('./Hsp_hit-frame');
+
                         $identities_int = !empty($identities) ? (int)$identities[0] : 0;
                         $align_len_int = !empty($align_len) ? (int)$align_len[0] : 0;
                         $evalue_float = !empty($evalue) ? (float)$evalue[0] : 0;
@@ -188,6 +191,8 @@ function parseBlastResults($blast_xml) {
                             'percent_identity' => $align_len_int > 0 ? round(($identities_int / $align_len_int) * 100, 2) : 0,
                             'query_from' => !empty($query_from) ? (int)$query_from[0] : 0,
                             'query_to' => !empty($query_to) ? (int)$query_to[0] : 0,
+                            'query_frame' => !empty($query_frame) ? (int)$query_frame[0] : 0,
+                            'hit_frame' => !empty($hit_frame) ? (int)$hit_frame[0] : 0,
                             'hit_from' => $hit_from_int,
                             'hit_to' => $hit_to_int,
                             'query_seq' => $query_seq,
@@ -653,39 +658,11 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
                        . '</div>';
             }
 
-            // Display alignment in monospace with frame-aware formatting
+            // Display the alignment in monospace, wrapped at the BLAST-conventional 60
+            // columns. Unwrapped, a long HSP is a single 400-character line whose closing
+            // coordinate sits off-screen behind a horizontal scrollbar.
             $html .= '<pre style="background: white; border: 1px solid #dee2e6; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 11px; margin: 0; font-family: \'Courier New\', monospace;">';
-            
-            // Use frame-aware alignment formatter if frames are available
-            if (isset($hsp['query_frame']) || isset($hsp['hit_frame'])) {
-                $query_frame = isset($hsp['query_frame']) ? (int)$hsp['query_frame'] : 0;
-                $hit_frame = isset($hsp['hit_frame']) ? (int)$hsp['hit_frame'] : 0;
-                $alignment_text = formatBlastAlignment(
-                    $hsp['alignment_length'],
-                    $hsp['query_seq'],
-                    $hsp['query_from'],
-                    $hsp['query_to'],
-                    $hsp['midline'],
-                    $hsp['hit_seq'],
-                    $hsp['hit_from'],
-                    $hsp['hit_to'],
-                    'Plus',
-                    $query_frame,
-                    $hit_frame
-                );
-                $html .= htmlspecialchars($alignment_text);
-            } else {
-                // Fallback to simple formatting
-                $label_width = 15;
-                $query_label = str_pad('Query  ' . $hsp['query_from'], $label_width);
-                $midline_label = str_pad('', $label_width);
-                $sbjct_label = str_pad('Sbjct  ' . $hsp['hit_from'], $label_width);
-                
-                $html .= $query_label . htmlspecialchars($hsp['query_seq']) . ' ' . $hsp['query_to'] . "\n";
-                $html .= $midline_label . htmlspecialchars($hsp['midline']) . "\n";
-                $html .= $sbjct_label . htmlspecialchars($hsp['hit_seq']) . ' ' . $hsp['hit_to'] . "\n";
-            }
-            
+            $html .= htmlspecialchars(formatBlastAlignment($hsp, $blast_program));
             $html .= '</pre>';
             
             $html .= '</div>';
@@ -1481,9 +1458,10 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
 
 /**
  * Get HSP color class based on bit score
- * Color scheme informed by locBLAST color_key function concept
- * Implementation is original MOOP code with independently chosen RGB values
- * 
+ *
+ * The bands (<=40, <=50, <=80, <=200, >200) are NCBI's published BLAST colour key, so a
+ * reader who knows the NCBI results page reads ours without a legend. RGB values are ours.
+ *
  * @param float $score Bit score
  * @return string CSS class name for color
  */
@@ -1520,156 +1498,128 @@ function getColorStyle($colorClass) {
 }
 
 /**
- * Format BLAST alignment output with frame-aware coordinate tracking
- * Frame-aware formatting approach inspired by locBLAST fmtprint() - handles frame shifts for BLASTx/tBLASTx
- * Implementation is original MOOP code independently developed from the concept
- * 
- * @param int $length Alignment length
- * @param string $query_seq Query sequence with gaps
- * @param int $query_seq_from Query start coordinate
- * @param int $query_seq_to Query end coordinate
- * @param string $align_seq Midline (match indicators)
- * @param string $sbjct_seq Subject sequence with gaps
- * @param int $sbjct_seq_from Subject start coordinate
- * @param int $sbjct_seq_to Subject end coordinate
- * @param string $p_m Plus/Minus strand
- * @param int $query_frame Query reading frame (0=none, ±1,2,3 for proteins)
- * @param int $hit_frame Subject reading frame
- * @return string Formatted alignment text
+ * Nucleotides consumed per aligned residue, for each side of the alignment.
+ *
+ * A translated side advances THREE bases per residue shown; an untranslated side
+ * advances one. Which side is translated is a property of the PROGRAM, not of the
+ * reported frame -- blastn reports frames of +/-1 while remaining nucleotide vs
+ * nucleotide, so deciding this from "frame != 0" would silently triple every
+ * blastn coordinate.
+ *
+ * @param string $blast_program blastn|blastp|blastx|tblastn|tblastx (and -short variants)
+ * @return array{query:int,hit:int}
  */
-function formatBlastAlignment($length, $query_seq, $query_seq_from, $query_seq_to, $align_seq, $sbjct_seq, $sbjct_seq_from, $sbjct_seq_to, $p_m = 'Plus', $query_frame = 0, $hit_frame = 0) {
-    $output = '';
-    $large = max(array((int)$query_seq_from, (int)$query_seq_to, (int)$sbjct_seq_from, (int)$sbjct_seq_to));
-    $large_len = strlen($large);
-    $n = (int)($length / 60);
-    $r = $length % 60;
-    if ($r > 0) $t = $n + 1;
-    else $t = $n;
-    
-    if ($query_frame != 0 && $hit_frame != 0) {
-        // Both query and subject are in frames (protein vs protein or translated)
-        for ($i = 0; $i < $t; $i++) {
-            if ($query_frame > 0) {
-                $xn4 = $query_seq_from;
-                $xs4 = substr($query_seq, 60*$i, 60);
-                $xs4 = preg_replace("/-/", "", $xs4);
-                $yn4 = $xn4 + (strlen($xs4) * 3) - 1;
-                $output .= "\nQuery  " . str_pad($xn4, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn4;
-                $xn4 = $yn4 + 1;
-                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
-            } else {
-                $xn = $query_seq_to;
-                $xs = substr($query_seq, 60*$i, 60);
-                $xs = preg_replace("/-/", "", $xs);
-                $yn = $xn - (strlen($xs) * 3) + 1;
-                $output .= "\nQuery  " . str_pad($xn, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn;
-                $xn = $yn - 1;
-                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
-            }
-            if ($hit_frame > 0) {
-                $an4 = $sbjct_seq_from;
-                $ys4 = substr($sbjct_seq, 60*$i, 60);
-                $ys4 = preg_replace("/-/", "", $ys4);
-                $bn4 = $an4 + (strlen($ys4) *3) - 1;
-                $output .= "\nSbjct  " . str_pad($an4, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn4 . "\n";
-                $an4 = $bn4 + 1;
-            } else {
-                $an = $sbjct_seq_to;
-                $ys = substr($sbjct_seq, 60*$i, 60);
-                $ys = preg_replace("/-/", "", $ys);
-                $bn = $an - (strlen($ys) *3) + 1;
-                $output .= "\nSbjct  " . str_pad($an, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn . "\n";
-                $an = $bn - 1;
-            }
-        }
-    } elseif ($query_frame != 0 && $hit_frame == 0) {
-        // Query is framed (tBLASTx, BLASTx), subject is not
-        if ($query_frame > 0) { $xn1 = $query_seq_from; } else { $xn1 = $query_seq_to; }
-        $an1 = $sbjct_seq_from;
-        for ($i = 0; $i < $t; $i++) {
-            if ($query_frame > 0) {
-                $xs1 = substr($query_seq, 60*$i, 60);
-                $xs1 = preg_replace("/-/", "", $xs1);
-                $yn1 = $xn1 + (strlen($xs1) * 3) - 1;
-                $output .= "\nQuery  " . str_pad($xn1, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn1;
-                $xn1 = $yn1 + 1;
-                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
-                $ys1 = substr($sbjct_seq, 60*$i, 60);
-                $ys1 = preg_replace("/-/", "", $ys1);
-                $bn1 = $an1 + strlen($ys1) - 1;
-                $output .= "\nSbjct  " . str_pad($an1, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn1 . "\n";
-                $an1 = $bn1 + 1;
-            } else {
-                $xs1 = substr($query_seq, 60*$i, 60);
-                $xs1 = preg_replace("/-/", "", $xs1);
-                $yn1 = $xn1 - (strlen($xs1) * 3) + 1;
-                $output .= "\nQuery  " . str_pad($xn1, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn1;
-                $xn1 = $yn1 - 1;
-                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
-                $ys1 = substr($sbjct_seq, 60*$i, 60);
-                $ys1 = preg_replace("/-/", "", $ys1);
-                $bn1 = $an1 + strlen($ys1) - 1;
-                $output .= "\nSbjct  " . str_pad($an1, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn1 . "\n";
-                $an1 = $bn1 + 1;
-            }
-        }
-    } elseif ($query_frame == 0 && $hit_frame != 0) {
-        // Subject is framed, query is not
-        if ($hit_frame > 0) { $an3 = $sbjct_seq_from; } else { $an3 = $sbjct_seq_to; }
-        $xn3 = $query_seq_from;
-        for ($i = 0; $i < $t; $i++) {
-            if ($hit_frame > 0) {
-                $xs3 = substr($query_seq, 60*$i, 60);
-                $xs3 = preg_replace("/-/", "", $xs3);
-                $yn3 = $xn3 + strlen($xs3) - 1;
-                $output .= "\nQuery  " . str_pad($xn3, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn3;
-                $xn3 = $yn3 + 1;
-                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
-                $ys3 = substr($sbjct_seq, 60*$i, 60);
-                $ys3 = preg_replace("/-/", "", $ys3);
-                $bn3 = $an3 + (strlen($ys3) * 3) - 1;
-                $output .= "\nSbjct  " . str_pad($an3, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn3 . "\n";
-                $an3 = $bn3 + 1;
-            } else {
-                $xs3 = substr($query_seq, 60*$i, 60);
-                $xs3 = preg_replace("/-/", "", $xs3);
-                $yn3 = $xn3 + strlen($xs3) - 1;
-                $output .= "\nQuery  " . str_pad($xn3, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn3;
-                $xn3 = $yn3 + 1;
-                $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
-                $ys3 = substr($sbjct_seq, 60*$i, 60);
-                $ys3 = preg_replace("/-/", "", $ys3);
-                $bn3 = $an3 - (strlen($ys3) * 3) + 1;
-                $output .= "\nSbjct  " . str_pad($an3, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn3 . "\n";
-                $an3 = $bn3 - 1;
-            }
-        }
-    } else {
-        // No frames - standard nucleotide vs nucleotide
-        $xn2 = $query_seq_from;
-        $an2 = $sbjct_seq_from;
-        for ($i = 0; $i < $t; $i++) {
-            $xs2 = substr($query_seq, 60*$i, 60);
-            $xs2 = preg_replace("/-/", "", $xs2);
-            $yn2 = $xn2 + strlen($xs2) - 1;
-            $output .= "\nQuery  " . str_pad($xn2, $large_len) . "  " . substr($query_seq, 60*$i, 60) . "  " . $yn2;
-            $xn2 = $yn2 + 1;
-            $output .= "\n       ". str_pad(" ", $large_len) . "  " . substr($align_seq, 60*$i, 60);
-            $ys2 = substr($sbjct_seq, 60*$i, 60);
-            $ys2 = preg_replace("/-/", "", $ys2);
-            if ($p_m == "Plus") {
-                $bn2 = $an2 + strlen($ys2) - 1;
-                $output .= "\nSbjct  " . str_pad($an2, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn2 . "\n";
-                $an2 = $bn2 + 1;
-            } else {
-                $bn2 = $an2 - strlen($ys2) + 1;
-                $output .= "\nSbjct  " . str_pad($an2, $large_len) . "  " . substr($sbjct_seq, 60*$i, 60) . "  " . $bn2 . "\n";
-                $an2 = $bn2 - 1;
-            }
-        }
+function blastAlignmentResidueSteps($blast_program) {
+    switch (strtolower(trim((string)$blast_program))) {
+        case 'blastx':  return ['query' => 3, 'hit' => 1]; // translated nt query vs protein db
+        case 'tblastn': return ['query' => 1, 'hit' => 3]; // protein query vs translated nt db
+        case 'tblastx': return ['query' => 3, 'hit' => 3]; // both sides translated
+        default:        return ['query' => 1, 'hit' => 1]; // blastn, blastp, *-short
     }
-    
-    return $output;
+}
+
+/**
+ * Render one side (Query or Sbjct) of a single alignment block.
+ *
+ * Gaps consume no coordinate on the side they appear, which is why the span is
+ * measured on the ungapped residue count and not on strlen($block).
+ *
+ * @return array{0:string,1:int} The rendered line, and where the next block starts.
+ */
+function blastAlignmentSide($label, $block, $start, $step, $descending, $coord_width) {
+    $residues = strlen($block) - substr_count($block, '-');
+
+    if ($residues === 0) {
+        // An all-gap block consumes no coordinate; stay where we are.
+        $end  = $start;
+        $next = $start;
+    } elseif ($descending) {
+        $end  = $start - ($residues * $step) + 1;
+        $next = $end - 1;
+    } else {
+        $end  = $start + ($residues * $step) - 1;
+        $next = $end + 1;
+    }
+
+    $line = sprintf('%-5s %' . $coord_width . 'd  %s  %d', $label, $start, $block, $end);
+    return [$line, $next];
+}
+
+/**
+ * Format a BLAST HSP as the conventional wrapped, three-line alignment.
+ *
+ *     Query   1  MKTAYIAKQR...   60
+ *                MKTAYIAKQR...
+ *     Sbjct  15  MKTAYIAKQR...   74
+ *
+ * Wrapping at 60 columns is the BLAST convention and the whole reason this exists:
+ * unwrapped, a 382-residue HSP is one 401-character line the reader has to scroll
+ * sideways to finish, with the closing coordinate off-screen.
+ *
+ * Two things drive the coordinate arithmetic, and neither is recoverable from the
+ * sequences alone -- the per-residue STEP (see blastAlignmentResidueSteps) and the
+ * DIRECTION. Minus-strand and negative-frame hits count DOWN, which NCBI signals
+ * either by reporting to < from or by a negative frame, so both are honoured.
+ *
+ * @param array  $hsp           An HSP as built by parseBlastResults()
+ * @param string $blast_program Program name, used for the per-residue step
+ * @param int    $width         Residues per block
+ * @return string Plain text, newline separated. The CALLER must escape it.
+ */
+function formatBlastAlignment(array $hsp, $blast_program = 'blastn', $width = 60) {
+    $query_seq = (string)($hsp['query_seq'] ?? '');
+    $hit_seq   = (string)($hsp['hit_seq'] ?? '');
+    $midline   = (string)($hsp['midline'] ?? '');
+
+    if ($query_seq === '' && $hit_seq === '') {
+        return '';
+    }
+
+    $width = max(1, (int)$width);
+
+    $query_from = (int)($hsp['query_from'] ?? 0);
+    $query_to   = (int)($hsp['query_to'] ?? 0);
+    $hit_from   = (int)($hsp['hit_from'] ?? 0);
+    $hit_to     = (int)($hsp['hit_to'] ?? 0);
+
+    // Frames are optional: absent for blastp, and absent from older parsed results.
+    $query_frame = (int)($hsp['query_frame'] ?? 0);
+    $hit_frame   = (int)($hsp['hit_frame'] ?? 0);
+
+    $steps = blastAlignmentResidueSteps($blast_program);
+
+    $query_descending = ($query_to < $query_from) || ($query_frame < 0);
+    $hit_descending   = ($hit_to   < $hit_from)   || ($hit_frame   < 0);
+
+    $coord_width = max(
+        strlen((string)$query_from), strlen((string)$query_to),
+        strlen((string)$hit_from),   strlen((string)$hit_to)
+    );
+
+    // 5 for the label, 1 space, the coordinate, then the two-space gutter.
+    $indent  = str_repeat(' ', 5 + 1 + $coord_width + 2);
+    $columns = max(strlen($query_seq), strlen($hit_seq));
+
+    $query_pos = $query_from;
+    $hit_pos   = $hit_from;
+    $blocks    = [];
+
+    for ($offset = 0; $offset < $columns; $offset += $width) {
+        list($query_line, $query_pos) = blastAlignmentSide(
+            'Query', substr($query_seq, $offset, $width),
+            $query_pos, $steps['query'], $query_descending, $coord_width
+        );
+        list($hit_line, $hit_pos) = blastAlignmentSide(
+            'Sbjct', substr($hit_seq, $offset, $width),
+            $hit_pos, $steps['hit'], $hit_descending, $coord_width
+        );
+
+        $blocks[] = $query_line . "\n"
+                  . $indent . substr($midline, $offset, $width) . "\n"
+                  . $hit_line;
+    }
+
+    return implode("\n\n", $blocks) . "\n";
 }
 
 /**

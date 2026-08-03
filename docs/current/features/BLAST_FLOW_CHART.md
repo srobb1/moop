@@ -102,33 +102,27 @@
   - Parses XML from BLAST output
   - Generates HTML/CSS formatted alignments
   - Calls supporting functions for HSP rendering
-  - **Does NOT call locBLAST code**
 
 ### Supporting Functions in blast_results_visualizer.php
 - `generateHspVisualizationWithLines()` - Creates HSP alignment display
-- `parseBlastXML()` - Parses BLAST XML output
+- `parseBlastResults()` - Parses BLAST XML output
+- `formatBlastAlignment()` - Wraps an HSP at 60 columns with per-block coordinates
 - Various helper functions for formatting and coloring
 
 ---
 
-## Code Attribution Review
+## Attribution
 
-### What we use from locBLAST
-**NOTHING** - We have NOT copied or adapted any code from locBLAST.
-
-### Why locBLAST was cloned
-- Reference implementation for BLAST XML parsing techniques
-- Understanding output format handling
-- Learning alignment visualization concepts
-- **Not used in production code**
+MOOP's BLAST viewer was inspired by locBLAST; no locBLAST code is used. See
+`notes/THIRD_PARTY_LICENSES.md` — that is the one home for this, so it does not
+drift.
 
 ### Current Implementation
 All MOOP BLAST visualization is:
-1. **Written from scratch** in lib/blast_results_visualizer.php
-2. **Pure PHP with HTML/CSS** - no JavaScript canvas/SVG rendering
-3. **Uses SimpleXML** for parsing BLAST output
-4. **Generates HTML tables and divs** for display
-5. **Color-coded by score** using CSS classes
+1. **Pure PHP with HTML/CSS** - no JavaScript canvas/SVG rendering
+2. **Uses SimpleXML** for parsing BLAST output
+3. **Generates HTML tables and divs** for display
+4. **Color-coded by score** using CSS classes
 
 ---
 

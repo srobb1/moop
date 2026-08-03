@@ -37,7 +37,7 @@ docs/
 │   ├── features/
 │   │   ├── BLAST_FLOW_CHART.md       - BLAST search system
 │   │   └── PHYLO_TREE_MANAGER.md     - Phylogenetic tree features
-│   └── THIRD_PARTY_LICENSES.md       - Legal/licensing info
+│                                      (attribution lives in notes/THIRD_PARTY_LICENSES.md)
 │
 ├── planning/                          ← Future features & ideas
 │   └── SEQUENCE_ALIGNER.md           - Galaxy UI integration (pending)
