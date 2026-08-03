@@ -206,9 +206,24 @@
                                         $parent_annot_count += count($annots);
                                     }
                                 }
-                                $parent_annot_anchor = preg_replace('/[^a-zA-Z0-9_]/', '_', $feature_uniquename . '_' . ($analysis_order[0] ?? 'annotation'));
+                                // The gene links to its OWN annotation sections, which are only
+                                // rendered when the gene itself carries annotations — usually it
+                                // does not, since annotations attach to the transcript. This used
+                                // to point at "$analysis_order[0]" unconditionally and was dead on
+                                // every gene without that one type.
+                                // Point at the first type the gene ACTUALLY has, not at
+                                // $analysis_order[0] — sections are rendered per type that has
+                                // results, so naming a type the gene lacks is a dead link.
+                                $parent_annot_anchor = '';
+                                foreach ($analysis_order as $__t) {
+                                    if (!empty($all_annotations[$feature_id][$__t])) {
+                                        $parent_annot_anchor = 'annot_section_' . preg_replace(
+                                            '/[^a-zA-Z0-9_]/', '_', $feature_uniquename . '_' . $__t);
+                                        break;
+                                    }
+                                }
                                 ?>
-                                <span class="feature-color-gene"><strong><a href="#annot_section_<?= htmlspecialchars($parent_annot_anchor) ?>" class="link-light-bordered text-decoration-none"><?= htmlspecialchars($feature_uniquename) ?></a></strong></span> 
+                                <span class="feature-color-gene"><strong><?php if ($parent_annot_anchor !== ''): ?><a href="#<?= htmlspecialchars($parent_annot_anchor) ?>" class="link-light-bordered text-decoration-none"><?= htmlspecialchars($feature_uniquename) ?></a><?php else: ?><?= htmlspecialchars($feature_uniquename) ?><?php endif; ?></strong></span> 
                                 <span class="badge bg-feature-gene text-white badge-sm"><?= htmlspecialchars($type) ?></span>
                                 <?php if ($parent_annot_count > 0): ?>
                                     <span class="badge bg-success text-white badge-sm"><?= $parent_annot_count ?> annotation<?= $parent_annot_count > 1 ? 's' : '' ?></span>

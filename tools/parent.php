@@ -577,7 +577,8 @@ echo render_display_page(
             "/$site/js/modules/parent-tools.js",
             "/$site/js/modules/gene-model-viewer.js",
             "/$site/js/modules/sequence-formatter.js",
-            "/$site/js/modules/parent-nav.js"
+            "/$site/js/modules/parent-nav.js",
+            "/$site/js/modules/isoform-minimap.js"
         ],
         'inline_scripts' => [
             "const geneModelData = " . json_encode($gene_model) . ";",

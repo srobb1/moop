@@ -380,3 +380,12 @@ a.badge:hover {
 .dt-toolbar .dt-buttons { margin: 0; float: none; }
 .dt-toolbar .dataTables_filter label { margin-bottom: 0; font-size: .85rem; }
 .dt-toolbar .dataTables_filter input { margin-left: .4rem; }
+
+/* Isoform thumbnail in the annotation card header (js/modules/isoform-minimap.js).
+   Decorative only — pointer-events:none in the JS keeps it from competing with the
+   header's collapse toggle. */
+.iso-minimap {
+  margin-left: .6rem;
+  flex: none;
+  opacity: .9;
+}

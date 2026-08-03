@@ -484,17 +484,31 @@ function generateTreeHTML(array $children, $all_annotations = [], $analysis_orde
             }
         }
         
-        // Link to the child's CARD. This used to target the child's section for
-        // $analysis_order[0], which does not exist unless the child happens to have that
-        // annotation type — see moop_annotation_card_anchor().
+        // Link to the child's CARD — but ONLY if that card is actually rendered.
+        //
+        // Cards exist for children that carry annotations; cds and protein rows do not get
+        // one, because there is no annotation section for them anywhere on the page. They
+        // were still linked, so 7 of the 10 hierarchy links on a 3-isoform gene went
+        // nowhere: a link that looks live, does nothing, and gives no reason why.
+        //
+        // Previously ALL of them were dead (they targeted "$analysis_order[0]", which only
+        // exists if the child happens to have that annotation type), so this was invisible
+        // — the mRNA rows started working first, which is what made the cds/protein rows
+        // stand out as broken rather than as uniformly inert.
         $child_annot_anchor = moop_annotation_card_anchor($row['feature_uniquename']);
-        
+        $child_has_card     = $child_annot_count > 0;
+
         // Tree character - └── for last child, ├── for others
         $tree_char = $is_last_child ? '└── ' : '├── ';
-        
+
         $html .= "<li>";
         $html .= "<span class=\"tree-char\">$tree_char</span>";
-        $html .= "<a href=\"#$child_annot_anchor\" class=\"link-light-bordered text-decoration-none\"><span class=\"text-dark\">$feature_name</span></a> ";
+        if ($child_has_card) {
+            $html .= "<a href=\"#$child_annot_anchor\" class=\"link-light-bordered text-decoration-none\"><span class=\"text-dark\">$feature_name</span></a> ";
+        } else {
+            // Plain text: nothing to jump to, so do not dress it as a link.
+            $html .= "<span class=\"text-dark\">$feature_name</span> ";
+        }
         $html .= "<span class=\"badge $badge_class $text_color\">$feature_type</span>";
         
         // Add annotation count badge if there are annotations
