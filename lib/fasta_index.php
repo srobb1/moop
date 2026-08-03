@@ -221,3 +221,74 @@ function moop_fasta_fetch_with_headers(string $fasta, array $ids): array
     fclose($fh);
     return $out;
 }
+
+/**
+ * Build the .fai if it is missing or stale, so one bad copy does not mean a full re-sync.
+ *
+ * The pipeline builds these on compute and copy2moop ships them, which is the normal path.
+ * This is the safety net for the case that path misses: a gene set copied before the
+ * indexing step existed, a FASTA replaced by hand, or an index left behind by a partial
+ * transfer. Without it, recovering a single gene set means re-running and re-copying the
+ * whole thing — and the symptom that prompts it is invisible, because the blastdbcmd
+ * fallback keeps working and only the speed suffers.
+ *
+ * Costs ~0.14s for a 48MB FASTA, once — the request that triggers it pays, every request
+ * after is served from the index. Worst case measured on this corpus is 2.86s for a 301MB
+ * transcript FASTA, so a gene set with three large files could cost one visitor ~6-8s the
+ * first time. That is within the 30s max_execution_time, and in any case PHP does not
+ * count time spent in exec() against it. Verified NOT to repeat: six consecutive loads
+ * reuse the same index (same inode), because rename() stamps the new .fai with the current
+ * time, which is always >= the FASTA's mtime that the freshness test compares against.
+ *
+ * WRITTEN ATOMICALLY. samtools writes <fasta>.fai in place, so a concurrent reader could
+ * otherwise pick up a half-written index — and a truncated .fai is worse than none, since
+ * its byte offsets are read as authoritative. Building to a temp file in the SAME directory
+ * (rename is only atomic within a filesystem) and renaming over means a reader sees either
+ * the old index or the complete new one, never a partial. Two requests racing both produce
+ * a valid file, so last-writer-wins is harmless.
+ *
+ * Returns false rather than throwing when samtools is absent or the directory is not
+ * writable — callers fall back to blastdbcmd, which is slower but correct.
+ */
+function moop_fasta_ensure_index(string $fasta): bool
+{
+    if (moop_fasta_index_available($fasta)) return true;      // nothing to do
+    if (!is_readable($fasta)) return false;
+
+    $dir = dirname($fasta);
+    if (!is_writable($dir)) return false;                     // read-only tree: give up quietly
+
+    // Only try once per request per file. A FASTA that cannot be indexed (no samtools, a
+    // malformed file) would otherwise re-attempt for every sequence type on the page.
+    static $tried = [];
+    if (isset($tried[$fasta])) return false;
+    $tried[$fasta] = true;
+
+    $samtools = 'samtools';
+    if (class_exists('ConfigManager')) {
+        $tools    = ConfigManager::getInstance()->getArray('blast_tools', []);
+        $samtools = $tools['samtools'] ?? 'samtools';
+    }
+
+    $tmp = @tempnam($dir, '.fai.');
+    if ($tmp === false) return false;
+
+    $cmd = escapeshellcmd($samtools) . ' faidx -o ' . escapeshellarg($tmp)
+         . ' ' . escapeshellarg($fasta) . ' 2>/dev/null';
+    $out = []; $rc = 1;
+    @exec($cmd, $out, $rc);
+
+    if ($rc !== 0 || !is_file($tmp) || filesize($tmp) === 0) {
+        @unlink($tmp);
+        return false;
+    }
+
+    // Match the FASTA's own permissions so the index is readable by everything that can
+    // read the sequence it indexes; tempnam() creates 0600.
+    @chmod($tmp, (fileperms($fasta) & 0777) ?: 0664);
+    if (!@rename($tmp, $fasta . '.fai')) {                    // atomic within the directory
+        @unlink($tmp);
+        return false;
+    }
+    return moop_fasta_index_available($fasta);
+}
