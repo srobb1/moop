@@ -439,3 +439,19 @@ a.badge:hover {
 }
 /* Inside a btn-group the shared edge doubles up without this. */
 .btn-group > .moop-data-btn + .moop-data-btn { border-left-color: #b9e0ea; }
+
+/* Annotation total in the transcript card header — a magnitude cue beside the name, not a
+   control, so it takes the same quiet teal tint as the data buttons. Most useful when the
+   card is collapsed and the header is all there is. */
+.child-annot-count {
+  background-color: #e6f5f9;
+  color: #0b6b80;
+  border: 1px solid #cbe9f1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.child-annot-count.bg-secondary {   /* the "No annotations" case keeps its grey */
+  background-color: #6c757d !important;
+  color: #fff;
+  border-color: #6c757d;
+}

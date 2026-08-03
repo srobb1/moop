@@ -45,9 +45,13 @@ $(document).ready(function () {
     var $btn = $('#toggle-all-transcripts');
     if (!$btn.length) return;
 
-    // Only the per-transcript cards, not the page's own top-level sections.
+    // Scoped to #pnav-annotations. `.annotation-card` is NOT unique to transcripts — the
+    // Sequences box builds its Protein / mRNA / CDS sub-boxes with the same class, so a
+    // page-wide selector matched 20 things on a 17-transcript gene and "Collapse all"
+    // folded the sequence boxes too. Reading the DOM page-wide in a UI that renders the
+    // same component in several places is the recurring bug here; scope every such read.
     function triggers() {
-        return $('.annotation-card > .card-header .collapse-section');
+        return $('#pnav-annotations .annotation-card > .card-header .collapse-section');
     }
 
     $btn.on('click', function () {

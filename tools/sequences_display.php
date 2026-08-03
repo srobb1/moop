@@ -216,9 +216,10 @@ if (!empty($sequence_errors)) {
                 <i class="fas fa-minus toggle-icon text-primary"></i>
                 <strong class="ms-2">Sequences</strong>
             </div>
-            <a href="#" class="btn btn-sm btn-outline-secondary" title="Back to top">
-                <i class="fas fa-arrow-up"></i> Back to Top
-            </a>
+            <?php /* "Back to Top" removed: the gene page's section nav returns you there from
+                     anywhere, so this duplicated it in one spot. It was also an href="#",
+                     which on a page with smooth scrolling crawls the full height rather
+                     than jumping. */ ?>
         </div>
         <div id="sequencesSection" class="collapse show">
             <div class="card-body">

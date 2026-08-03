@@ -586,10 +586,22 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
     $html .= "    <span class=\"ms-2 text-white px-2 py-1 rounded child-feature-badge $badge_class badge-md\">$child_uniquename ($child_type)</span>";
     
     // Annotation-type navigation now lives in the section sidebar (parent-nav.js),
-    // so per-type chips are no longer shown next to the child name. Children with
-    // no annotations still get a clear indicator here.
+    // so per-type chips are no longer shown next to the child name.
+    //
+    // The TOTAL earns its place when the card is COLLAPSED: folded shut, the header is all
+    // a reader has, and "which of these 17 transcripts is worth opening" is exactly what
+    // the count answers. Zero is stated in words rather than as "0", because a transcript
+    // with nothing on it is a different thing from one you have not opened yet.
     if ($child_annotation_count === 0) {
-        $html .= " <span class=\"badge bg-secondary ms-2\">No annotations</span>";
+        $html .= " <span class=\"badge bg-secondary ms-2 child-annot-count\">No annotations</span>";
+    } else {
+        // The NUMBER alone. "12 annotations" repeated down seventeen headers is the same
+        // word seventeen times; the count is the only part that varies, and it matches the
+        // pills already used on the type badges and in the section nav. The full phrasing
+        // stays in the tooltip for anyone who needs it spelled out.
+        $n = number_format($child_annotation_count);
+        $html .= " <span class=\"badge rounded-pill ms-2 child-annot-count\" title=\"$n annotation"
+               . ($child_annotation_count === 1 ? '' : 's') . " across all types\">" . $n . "</span>";
     }
     
     $html .= '  </div>';

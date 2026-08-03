@@ -96,9 +96,12 @@
             svg.style.pointerEvents = "none";            // never intercept the collapse toggle
             svg.innerHTML = parts.join("");
 
-            // After the name badge, before the annotation-count badge and buttons.
-            var badge = header.querySelector(".child-feature-badge");
-            if (badge && badge.parentNode) badge.parentNode.insertBefore(svg, badge.nextSibling);
+            // Order is ID, count, then picture. The count is what a reader scans when
+            // deciding whether to open a collapsed card, so it should not sit behind the
+            // drawing. Falls back to the name badge if a transcript has no count element.
+            var after = header.querySelector(".child-annot-count") ||
+                        header.querySelector(".child-feature-badge");
+            if (after && after.parentNode) after.parentNode.insertBefore(svg, after.nextSibling);
             else header.appendChild(svg);
         });
     });
