@@ -197,11 +197,39 @@
       }
     }
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // How close to the top of the document a target has to be before we go to the top
+    // outright. The first section starts a few hundred px down, below the banner and the
+    // page title, so scrolling exactly to it left that header cut off and read as "it
+    // didn't go to the top" rather than as a precise landing. Nothing useful sits in that
+    // band, so there is no reason to preserve it.
+    var TOP_SNAP_PX = 600;
+
+    // Smooth scrolling is animated over a browser-chosen duration that does NOT scale with
+    // distance, so a jump of tens of thousands of pixels crawls for seconds. A gene page
+    // with 17 isoforms is 63,000px tall: clicking Overview from the bottom appeared to move
+    // "about half way", so the reader clicked again, interrupting the animation and
+    // restarting it — three clicks to travel one link. Past a few screens the animation has
+    // stopped conveying where you went and is only costing time, so jump outright.
+    var SMOOTH_MAX_PX = 3;   // in viewport heights
+
+    // "instant", NOT "auto". Per spec `auto` means "use the CSS scroll-behavior", and
+    // css/parent.css sets `html { scroll-behavior: smooth }` — so `auto` here stayed smooth
+    // and the long jumps still crawled. Only `instant` overrides the stylesheet.
+    function scrollBehaviorFor(targetTop) {
+      if (reduce) return "instant";
+      var distance = Math.abs(targetTop - window.scrollY);
+      return distance > SMOOTH_MAX_PX * window.innerHeight ? "instant" : "smooth";
+    }
+
     function goTo(key) {
       var node = reg[key];
       if (!node) return;
       expandAncestors(node.el);
-      node.el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+
+      var top = node.el.getBoundingClientRect().top + window.scrollY;
+      if (top <= TOP_SNAP_PX) top = 0;
+
+      window.scrollTo({ top: top, behavior: scrollBehaviorFor(top) });
     }
 
     function wireLinks(root, isDropdown) {

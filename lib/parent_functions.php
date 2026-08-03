@@ -220,6 +220,29 @@ function _buildChildTree($parent_id, array &$by_parent, array $seen = []) {
  * @param string $annotation_type_key - Database key for annotation type (used for anchor ID)
  * @return string - HTML for the annotation table section
  */
+/**
+ * The anchor for a child's annotation card.
+ *
+ * ONE definition, because there were three and they disagreed. Both the gene-structure
+ * diagram and the Feature Hierarchy used to link to
+ * "annot_section_{uniquename}_{$analysis_order[0]}" — the child's section for whichever
+ * annotation type happens to be FIRST IN THE ADMIN'S CONFIGURED ORDER. Sections are only
+ * rendered for types that actually have results, so every child lacking that one type had
+ * a dead link. Gene 5500758 has no Orthologs, so all 17 of its isoforms pointed at
+ * "..._Orthologs", which does not exist, and nothing happened on click.
+ *
+ * The diagram had a second, independent break: it built the anchor from the GFF ID, which
+ * on RefSeq gene sets carries an "rna-" prefix the database uniquename does not
+ * ("rna-XM_048723428.1" vs "XM_048723428.1"), so its links missed even for types that were
+ * present. NV2-style gene sets matched by luck, which is why this looked fine there.
+ *
+ * A child's CARD is always rendered — including when it has no annotations at all — so it
+ * is the one target that cannot go missing.
+ */
+function moop_annotation_card_anchor(string $uniquename): string {
+    return 'annot_card_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $uniquename);
+}
+
 function generateAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = 'warning', $organism = '', $annotation_type_key = '') {
     if (empty($results)) {
         return '';
@@ -461,15 +484,17 @@ function generateTreeHTML(array $children, $all_annotations = [], $analysis_orde
             }
         }
         
-        // Generate anchor for first annotation type (or use first one available)
-        $child_annot_anchor = preg_replace('/[^a-zA-Z0-9_]/', '_', $row['feature_uniquename'] . '_' . ($analysis_order[0] ?? 'annotation'));
+        // Link to the child's CARD. This used to target the child's section for
+        // $analysis_order[0], which does not exist unless the child happens to have that
+        // annotation type — see moop_annotation_card_anchor().
+        $child_annot_anchor = moop_annotation_card_anchor($row['feature_uniquename']);
         
         // Tree character - └── for last child, ├── for others
         $tree_char = $is_last_child ? '└── ' : '├── ';
         
         $html .= "<li>";
         $html .= "<span class=\"tree-char\">$tree_char</span>";
-        $html .= "<a href=\"#annot_section_$child_annot_anchor\" class=\"link-light-bordered text-decoration-none\"><span class=\"text-dark\">$feature_name</span></a> ";
+        $html .= "<a href=\"#$child_annot_anchor\" class=\"link-light-bordered text-decoration-none\"><span class=\"text-dark\">$feature_name</span></a> ";
         $html .= "<span class=\"badge $badge_class $text_color\">$feature_type</span>";
         
         // Add annotation count badge if there are annotations
@@ -536,7 +561,10 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
     
     // data-annot-total feeds the same count into the section nav for the CHILD row, so a
     // reader can see how much sits under an mRNA without expanding it.
-    $html = '<div class="card annotation-card border-info" data-annot-total="' . (int)$child_annotation_count . '">';
+    $html = '<div class="card annotation-card border-info"'
+          . ' id="' . htmlspecialchars(moop_annotation_card_anchor($child_uniquename)) . '"'
+          . ' style="scroll-margin-top:20px;"'
+          . ' data-annot-total="' . (int)$child_annotation_count . '">';
     $html .= "  <div class=\"card-header d-flex align-items-center $header_class\">";
     $html .= "    <span class=\"collapse-section\" data-bs-toggle=\"collapse\" data-bs-target=\"#child_$child_feature_id\" aria-expanded=\"true\" role=\"button\">";
     $html .= "      <i class=\"fas fa-minus toggle-icon text-info\"></i>";

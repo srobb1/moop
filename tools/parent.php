@@ -418,6 +418,80 @@ foreach ($children as $child) {
 }
 $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 
+// Repoint the gene-model diagram's row links at the annotation CARDS.
+//
+// The isoform ids in $gene_model come from the GFF, and the cards are keyed by the DATABASE
+// uniquename. Those differ on RefSeq gene sets, where the GFF prefixes transcripts with
+// "rna-": the diagram linked to "rna-XM_048723428.1" and the card is "XM_048723428.1", so
+// every row click on gene 5500758 did nothing. NV2-style sets matched by coincidence, which
+// is why the diagram looked fine there.
+//
+// Done here rather than where the model is built, because that runs before the children are
+// fetched — the database is the only thing that can say which transcript a GFF id is.
+if (!empty($gene_model['isoforms']) && !empty($children)) {
+    $by_uniquename = [];
+    foreach ($children as $__c) {
+        $by_uniquename[$__c['feature_uniquename']] = $__c['feature_uniquename'];
+    }
+    foreach ($gene_model['isoforms'] as &$__iso) {
+        $gff_id = (string)($__iso['id'] ?? '');
+        $match  = $by_uniquename[$gff_id] ?? null;
+
+        if ($match === null) {
+            // Strip a leading GFF-flavour prefix ("rna-", "transcript:", "mRNA:") and retry.
+            $stripped = preg_replace('/^[A-Za-z]+[-:]/', '', $gff_id);
+            $match = $by_uniquename[$stripped] ?? null;
+        }
+        if ($match === null) {
+            // Last resort: the uniquename is a suffix of the GFF id.
+            foreach ($by_uniquename as $u) {
+                if ($u !== '' && substr($gff_id, -strlen($u)) === $u) { $match = $u; break; }
+            }
+        }
+        // No match leaves the row unlinked, which is honest — better than a link that
+        // silently scrolls nowhere.
+        $__iso['anchor'] = $match !== null ? moop_annotation_card_anchor($match) : null;
+    }
+    unset($__iso);
+}
+
+// Do all the isoforms carry the SAME annotations?
+//
+// Worth saying out loud, because it is a real biological observation and the page cannot
+// show it: the annotation tables are grouped per transcript, so a reader comparing five
+// isoforms has to scan five sets to notice they are identical. Measured over a 372-gene
+// sample of this organism, a third of multi-isoform genes are in exactly that position.
+//
+// NOT a licence to render them once. The annotation genuinely belongs to the transcript,
+// and collapsing would make the page structure depend on the data — some genes grouped,
+// some not. Telling the reader costs one line and hides nothing.
+//
+// "Same" means the same set of (annotation type, accession) pairs. Scores and descriptions
+// are deliberately excluded: two isoforms hit by the same domain at slightly different
+// scores still carry the same annotations, which is what the sentence claims.
+$isoform_annotation_signature = static function (array $by_type): string {
+    $keys = [];
+    foreach ($by_type as $type => $rows) {
+        foreach ($rows as $r) {
+            $keys[] = $type . "\x1f" . ($r['annotation_accession'] ?? '');
+        }
+    }
+    sort($keys, SORT_STRING);
+    return implode("\x1e", array_unique($keys));
+};
+
+$isoforms_share_annotations = false;
+$annotated_isoform_count    = 0;
+if (count($children_hierarchical) > 1) {
+    $sigs = [];
+    foreach ($children_hierarchical as $__child) {
+        $sigs[] = $isoform_annotation_signature($all_annotations[$__child['feature_id']] ?? []);
+    }
+    // An all-empty set is not an interesting thing to announce.
+    $isoforms_share_annotations = count(array_unique($sigs)) === 1 && $sigs[0] !== '';
+    $annotated_isoform_count    = count($sigs);
+}
+
 // Build typed ID map and sequence list (parent + all children).
 //
 // The map comes from the shared expansion so every sequence-retrieval path in the app
@@ -479,6 +553,8 @@ echo render_display_page(
         'gene_set_name' => $gene_set_name,
         'children' => $children,
         'children_hierarchical' => $children_hierarchical,
+        'isoforms_share_annotations' => $isoforms_share_annotations,
+        'annotated_isoform_count'    => $annotated_isoform_count,
         'db' => $db,
         'all_annotations' => $all_annotations,
         'analysis_order' => $analysis_order,

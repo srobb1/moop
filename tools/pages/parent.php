@@ -230,6 +230,18 @@
                     <i class="fas fa-minus toggle-icon text-primary"></i>
                 </span>
                 <span class="ms-2 text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Annotations</span>
+                <?php if (!empty($isoforms_share_annotations)): ?>
+                    <?php /* Stated, not acted on. The tables stay per transcript — an annotation
+                             belongs to the transcript, and grouping only the genes where the sets
+                             happen to match would make the page structure depend on the data.
+                             This is the one thing the per-transcript layout cannot show: that a
+                             reader comparing N isoforms would find them identical. */ ?>
+                    <span class="badge rounded-pill ms-2 fw-normal"
+                          style="background-color:#e0f2f1; color:#0f5132; font-size:0.72rem;"
+                          title="Every transcript of this gene carries the same set of annotation types and accessions. Scores and descriptions may still differ.">
+                        <i class="fa fa-equals me-1" aria-hidden="true"></i>all <?= (int)$annotated_isoform_count ?> transcripts annotated the same
+                    </span>
+                <?php endif; ?>
                 <?= help_modal_trigger('annotations-help', '', 'Help: what is an annotation?') ?>
             </div>
             <div class="d-flex gap-2">
@@ -263,15 +275,39 @@
                 
                 // Children annotations (with hierarchical support for grandchildren)
                 if (!empty($children_hierarchical)) {
-                    // Add summary if multiple children
-                    // TO DO: have the 'alternative transcripts/isoforms (mRNA)' statment only be generated for gene-mRNA parent-child relations, and have something more general for other relationships
-                    // TO DO: also find every hardcoded 'gene' and 'mRNA' (transcript,isoform) and replace with code generated from the types we pull from the db
+                    // Summary when there is more than one child.
+                    //
+                    // This used to say "Each may have different annotations" unconditionally.
+                    // We now compute whether they actually do, so "may" was both vaguer than
+                    // necessary and — on a gene where the sets are identical — a flat
+                    // contradiction of the badge in the section header above.
+                    //
+                    // The parent and child TYPE now come from the data too, rather than the
+                    // hardcoded "gene"/"mRNA" this carried a TO DO about. A gene with mRNAs
+                    // reads the same as before; a hierarchy of any other shape now describes
+                    // itself correctly instead of calling its children isoforms.
                     if (count($children_hierarchical) > 1) {
-                        echo '<div class="alert alert-info mt-3">';
-                        echo '  <i class="fas fa-info-circle"></i> ';
-                        echo '  <strong>Multiple Children:</strong> This gene has ' . count($children_hierarchical) . ' alternative transcripts/isoforms (mRNA). ';
-                        echo '  Each may have different annotations.';
-                        echo '</div>';
+                        $n_children  = count($children_hierarchical);
+                        $child_type  = $children_hierarchical[0]['feature_type'] ?? 'child';
+                        $is_transcript = in_array(strtolower($child_type), ['mrna', 'transcript'], true);
+                        $child_word  = $is_transcript ? 'transcripts' : (htmlspecialchars($child_type) . ' children');
+
+                        if (!empty($isoforms_share_annotations)) {
+                            echo '<div class="alert alert-success mt-3 mb-3 py-2">';
+                            echo '  <i class="fas fa-equals me-1"></i> ';
+                            echo '  <strong>All ' . $n_children . ' ' . $child_word . ' carry the same annotations.</strong> ';
+                            echo '  They are listed separately below because an annotation belongs to the '
+                               . htmlspecialchars(strtolower($child_type)) . ', not to the '
+                               . htmlspecialchars(strtolower($type)) . '. Scores and descriptions may still differ.';
+                            echo '</div>';
+                        } else {
+                            echo '<div class="alert alert-info mt-3 mb-3 py-2">';
+                            echo '  <i class="fas fa-info-circle me-1"></i> ';
+                            echo '  <strong>This ' . htmlspecialchars(strtolower($type)) . ' has ' . $n_children . ' '
+                               . $child_word . '</strong>, and their annotations differ. ';
+                            echo '  Compare the sections below rather than reading only the first.';
+                            echo '</div>';
+                        }
                     }
                     
                     // Render children with hierarchical nesting support
