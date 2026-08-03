@@ -335,9 +335,11 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
     // headers included, before this was switched on. Falls through to blastdbcmd whenever
     // there is no index, so a gene set the pipeline has not re-run yet keeps working.
     if (moop_fasta_index_available($fasta_file)) {
-        $seqs = moop_fasta_fetch($fasta_file, $search_ids);
-        if (!empty($seqs)) {
-            $hdrs = moop_fasta_headers($fasta_file, array_keys($seqs));
+        // One index scan for both, not two — see moop_fasta_fetch_with_headers().
+        $found = moop_fasta_fetch_with_headers($fasta_file, $search_ids);
+        if (!empty($found)) {
+            $seqs = []; $hdrs = [];
+            foreach ($found as $sid => $rec) { $seqs[$sid] = $rec['seq']; $hdrs[$sid] = $rec['header']; }
             foreach ($seqs as $sid => $residues) {
                 // Key on the FULL header, and wrap at 60, to match what the blastdbcmd
                 // branch below produces — callers index these by header text.
