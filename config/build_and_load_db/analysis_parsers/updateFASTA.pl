@@ -44,6 +44,13 @@ while (my $line = <NAMES>){
 	$names{$id}{name}=$sym; 
 	$names{$id}{source}=$source;
 }
+# A truncated or failed geneNames.tsv would otherwise blank EVERY header below, since
+# nothing would match. Dying here leaves the FASTA untouched and fails the build loudly,
+# which is recoverable; a silently emptied FASTA is not.
+if (!%names){
+  die "updateFASTA: no usable rows in $names -- refusing to rewrite $fasta\n";
+}
+
 while (my $line = <FASTA>){
   chomp $line;
 	my ($tid, $main_tid);
@@ -84,7 +91,15 @@ while (my $line = <FASTA>){
 		$key =~ s/^(?:cds-|CDS:)//;
 		$key =~ s/:(?:pep|cds)$//;
 
-		if (exists $names{$key}){
+		if (!exists $names{$key}){
+			# Not in geneNames.tsv: this feature has no name any more. Strip whatever the
+			# header carried, so a description cannot outlive the annotation that produced
+			# it -- the same retraction rule as the has-a-row-but-nothing-to-say case below.
+			# Previously such lines passed through untouched and kept a stale description
+			# indefinitely.
+			$line = ">$id";
+		}
+		elsif (exists $names{$key}){
 			 my $name = $names{$key}{name};
 			 my $note = $names{$key}{note};
 			 my $source = $names{$key}{source};

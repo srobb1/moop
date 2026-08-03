@@ -656,6 +656,25 @@ if $HAS_GFF; then
     needs_rebuild "$FA" "${FA}.ndb" && makeblastdb -in "$FA" -dbtype nucl -parse_seqids
   done
 
+  # samtools .fai alongside the BLAST databases.
+  #
+  # MOOP's gene page extracts a handful of sequences per request. It did that with
+  # blastdbcmd, which costs ~110ms per call and is almost entirely PROCESS STARTUP --
+  # `blastdbcmd -version` alone is 100ms. Three calls per page (protein, transcript, cds)
+  # made sequence extraction the ENTIRE server-side cost of a gene page: 0.47s -> 0.09s on
+  # a 3-isoform gene and 0.77s -> 0.06s on a 17-isoform one when the calls were skipped.
+  #
+  # With a .fai the same lookup is pure PHP fseek/fread -- no process spawn at all,
+  # measured 4ms against blastdbcmd's 110ms, and barely affected by where the id sits in
+  # the file. api/get_sequence.php already uses exactly this technique for genome.fa.
+  #
+  # The BLAST databases stay: they are what BLAST itself searches. This is an ADDITIONAL
+  # index for point lookups, ~1.3MB per FASTA and ~0.1s to build.
+  for FA in protein.aa.fa transcript.nt.fa cds.nt.fa; do
+    [ -e "$FA" ] || continue
+    needs_rebuild "$FA" "${FA}.fai" && samtools faidx "$FA"
+  done
+
 # ═════════════════════════════════════════════════════════════════════════════
 # T2G PATH — transcriptome-only geneset (no genome, no GFF)
 # ═════════════════════════════════════════════════════════════════════════════
@@ -771,6 +790,25 @@ else
   for FA in transcript.nt.fa cds.nt.fa; do
     [ -e "$FA" ] || continue
     needs_rebuild "$FA" "${FA}.ndb" && makeblastdb -in "$FA" -dbtype nucl -parse_seqids
+  done
+
+  # samtools .fai alongside the BLAST databases.
+  #
+  # MOOP's gene page extracts a handful of sequences per request. It did that with
+  # blastdbcmd, which costs ~110ms per call and is almost entirely PROCESS STARTUP --
+  # `blastdbcmd -version` alone is 100ms. Three calls per page (protein, transcript, cds)
+  # made sequence extraction the ENTIRE server-side cost of a gene page: 0.47s -> 0.09s on
+  # a 3-isoform gene and 0.77s -> 0.06s on a 17-isoform one when the calls were skipped.
+  #
+  # With a .fai the same lookup is pure PHP fseek/fread -- no process spawn at all,
+  # measured 4ms against blastdbcmd's 110ms, and barely affected by where the id sits in
+  # the file. api/get_sequence.php already uses exactly this technique for genome.fa.
+  #
+  # The BLAST databases stay: they are what BLAST itself searches. This is an ADDITIONAL
+  # index for point lookups, ~1.3MB per FASTA and ~0.1s to build.
+  for FA in protein.aa.fa transcript.nt.fa cds.nt.fa; do
+    [ -e "$FA" ] || continue
+    needs_rebuild "$FA" "${FA}.fai" && samtools faidx "$FA"
   done
 
 fi
