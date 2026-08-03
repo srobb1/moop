@@ -45,15 +45,6 @@ function downloadResultsXML() {
     if (!div) { alert('No XML results to download'); return; }
     blastDownloadPost(div.textContent, 'blast_results_{date}.xml', 'xml');
 }
-
-function clearResults() {
-    const resultsCard = document.querySelector('.mt-4.card');
-    if (resultsCard) {
-        resultsCard.remove();
-    }
-    document.getElementById('query').focus();
-}
-
 function clearBlastSourceFilters() {
     window.clearSourceFilters('sourceFilter', 'selected_source', 'fasta-source-line', null, 'blastForm');
 }

@@ -71,43 +71,6 @@ function getBlastDatabases($assembly_path) {
 }
 
 /**
- * Filter BLAST databases by program type
- * Returns only databases compatible with the selected BLAST program
- * 
- * @param array $databases Array of databases from getBlastDatabases()
- * @param string $blast_program BLAST program: blastn, blastp, blastx, tblastn, tblastx
- * @return array Filtered array of compatible databases
- */
-function filterDatabasesByProgram($databases, $blast_program) {
-    $filtered = [];
-    
-    // Determine which database types are compatible with the program
-    $compatible_types = [];
-    switch ($blast_program) {
-        case 'blastn':
-        case 'blastn-short':
-        case 'tblastn':
-        case 'tblastx':
-            $compatible_types = ['nucleotide'];
-            break;
-        case 'blastp':
-        case 'blastx':
-            $compatible_types = ['protein'];
-            break;
-        default:
-            return $databases; // Unknown program, return all
-    }
-    
-    foreach ($databases as $db) {
-        if (in_array($db['type'], $compatible_types)) {
-            $filtered[] = $db;
-        }
-    }
-    
-    return $filtered;
-}
-
-/**
  * Execute BLAST search
  * Runs BLAST command with outfmt 11 (ASN.1), then converts using blast_formatter
  * 
