@@ -389,3 +389,53 @@ a.badge:hover {
   flex: none;
   opacity: .9;
 }
+
+/* Page title bar: ID on the left, the page-level (i) on the right. The help button
+   inherits white from the bar so it reads as part of it rather than as a stray control. */
+.feature-header .feature-header-id {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+}
+.feature-header .feature-header-id .field-help {
+    color: #fff;
+    opacity: .75;
+}
+.feature-header .feature-header-id .field-help:hover,
+.feature-header .feature-header-id .field-help:focus {
+    opacity: 1;
+}
+
+/* Data actions — one treatment for every "get this gene's data out" control
+   ------------------------------------------------------------------------
+   Format sequence, FASTA, GFF and Download-all were outline-secondary, outline-primary
+   and outline-success: three colours for one kind of action, so the colour signalled
+   nothing.
+
+   FILLED with a faint teal tint, not an outline on white. An outlined button with a white
+   interior reads as unfinished — as though the fill were still to come — and the site
+   convention is that secondary elements get a faint teal tint rather than white or grey.
+   These stay a tint rather than a solid because they are secondary to the content: the
+   Toolbox above uses solid fills for the primary tools, and a second row of solid buttons
+   would out-shout the diagram they sit over. */
+.moop-data-btn {
+  --moop-teal: #0891b2;
+  color: #0b6b80;
+  background-color: #e6f5f9;
+  border: 1px solid #cbe9f1;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.moop-data-btn:hover,
+.moop-data-btn:focus {
+  color: #fff;
+  background-color: var(--moop-teal);
+  border-color: var(--moop-teal);
+}
+.moop-data-btn:focus-visible {
+  outline: 2px solid var(--moop-teal);
+  outline-offset: 1px;
+}
+/* Inside a btn-group the shared edge doubles up without this. */
+.btn-group > .moop-data-btn + .moop-data-btn { border-left-color: #b9e0ea; }

@@ -51,7 +51,13 @@
       <!-- Feature Header Column -->
       <div class="col-lg-8">
         <div class="feature-header shadow h-100">
-            <div class="feature-header-id"><?= htmlspecialchars($feature_uniquename) ?></div>
+            <div class="feature-header-id">
+                <span><?= htmlspecialchars($feature_uniquename) ?></span>
+                <?php /* The page-level (i) sits in the title bar, matching every other
+                         section on this page — Gene Structure and Annotations each carry
+                         theirs in their own card header. */ ?>
+                <?= help_modal_trigger('gene-page-help', '', 'Help: what this page shows') ?>
+            </div>
             <div class="feature-overview-body">
                 <?php
                 $overview_title = !empty($description)
@@ -144,12 +150,25 @@
                 <?= count($gene_model['isoforms']) ?> isoform<?= count($gene_model['isoforms']) !== 1 ? 's' : '' ?>
             </span>
             <?= help_modal_trigger('gene-model-help', '', 'Help: reading the gene structure diagram') ?>
-            <div class="ms-auto d-flex gap-1">
+            <?php /* One treatment for all of these: they are all "get this gene's data out".
+                     They used to be outline-secondary, outline-primary and outline-success,
+                     so the colours implied three different kinds of thing and signalled
+                     nothing. The VERB is carried by the icon instead — palette opens a
+                     viewer, download downloads — and the two downloads are grouped because
+                     they are the same action in two formats. */ ?>
+            <div class="ms-auto d-flex gap-2 align-items-center">
                 <?php if (!empty($genome_seq_available)): ?>
-                <button class="btn btn-sm btn-outline-secondary" id="gene-model-fmt-btn" title="Format sequence by feature type with custom highlighting"><i class="fas fa-palette me-1"></i>Sequence</button>
-                <button class="btn btn-sm btn-outline-primary" id="gene-model-seq-btn" title="Fetch full genomic sequence — gene locus + each isoform span"><i class="fas fa-download me-1"></i>Genomic</button>
+                <button class="btn btn-sm moop-data-btn" id="gene-model-fmt-btn"
+                        title="Open the sequence with each feature type highlighted"><i class="fas fa-palette me-1"></i>Format sequence</button>
                 <?php endif; ?>
-                <button class="btn btn-sm btn-outline-success" id="gene-model-gff-btn" title="Fetch GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features"><i class="fas fa-download me-1"></i>GFF</button>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Download this gene">
+                    <?php if (!empty($genome_seq_available)): ?>
+                    <button class="btn moop-data-btn" id="gene-model-seq-btn"
+                            title="Download the genomic sequence — gene locus plus each isoform span"><i class="fas fa-download me-1"></i>FASTA</button>
+                    <?php endif; ?>
+                    <button class="btn moop-data-btn" id="gene-model-gff-btn"
+                            title="Download GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features"><i class="fas fa-download me-1"></i>GFF</button>
+                </div>
             </div>
         </div>
         <div id="geneModelSection" class="collapse show">
@@ -259,14 +278,24 @@
                 <?php endif; ?>
                 <?= help_modal_trigger('annotations-help', '', 'Help: what is an annotation?') ?>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-center">
+                <?php /* Collapse-all: on a gene with 17 transcripts, getting from the first
+                         to the last means scrolling past every annotation table in between.
+                         There was no way to fold them and no keyboard shortcut either. Only
+                         shown when there is more than one transcript to fold. */ ?>
+                <?php if (count($children_hierarchical) > 1): ?>
+                <button type="button" class="btn btn-sm moop-data-btn" id="toggle-all-transcripts"
+                        data-state="expanded"
+                        title="Collapse every transcript so the list fits on one screen">
+                    <i class="fas fa-compress-alt me-1"></i><span class="label">Collapse all</span>
+                </button>
+                <?php endif; ?>
                 <a href="/<?= htmlspecialchars($config->getString('site', 'moop')) ?>/api/download_annotations.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($feature_uniquename) ?>"
-                   class="btn btn-sm btn-outline-success" title="Download all annotations as CSV">
-                    <i class="fas fa-download"></i> Download All Annotations
+                   class="btn btn-sm moop-data-btn" title="Download every annotation on this page as one CSV">
+                    <i class="fas fa-download me-1"></i>Download all
                 </a>
-                <a href="#" class="btn btn-sm btn-outline-secondary" title="Back to top">
-                    <i class="fas fa-arrow-up"></i> Back to Top
-                </a>
+                <?php /* "Back to Top" removed: the section nav on the left already returns
+                         you there from anywhere, and it duplicated that in one spot only. */ ?>
             </div>
         </div>
         <div id="annotationsSection" class="collapse show">
@@ -417,6 +446,53 @@ echo help_modal(
         ]],
     ],
     ['intro' => 'Every isoform of this gene, drawn to scale against the genome.']
+);
+
+// ── Page-level orientation ───────────────────────────────────────────────────
+// A gene page is dense — five sections, a diagram, and a table per annotation type per
+// transcript. This is the "where am I and what am I looking at" card, not a manual: the
+// sections each carry their own (i) for detail. One card = one thing, ~20 words.
+//
+// The section cards are built conditionally so the help never describes a section that is
+// not on the page — Gene Structure is absent when there is no gene model, and Annotations
+// when nothing is annotated.
+$page_sections = [];
+if (!empty($gene_model)) {
+    $page_sections[] = ['label' => 'Gene Structure',
+        'text' => 'Every transcript drawn to scale against the genome. Click a feature for its sequence, or a row to jump to its annotations.'];
+}
+$page_sections[] = ['label' => 'Feature Hierarchy',
+    'text' => 'What belongs to what: the ' . htmlspecialchars(strtolower($type)) . ', its transcripts, and their coding sequences and proteins.'];
+if (!empty($children_hierarchical) || !empty($all_annotations[$feature_id])) {
+    $page_sections[] = ['label' => 'Annotations',
+        'text' => 'What analyses found for this sequence, grouped by transcript and then by type. One table per type.'];
+}
+$page_sections[] = ['label' => 'Sequences',
+    'text' => 'Download the genomic, transcript, coding or protein sequence for anything on this page.'];
+
+echo help_modal(
+    'gene-page-help',
+    'What this page shows',
+    [
+        ['heading' => 'In short', 'cards' => [
+            ['label' => 'One ' . htmlspecialchars(strtolower($type)),
+             'text'  => 'Everything this site holds about it: its structure, its transcripts, what is known about them, and their sequences.'],
+            ['label' => 'You may have searched for a transcript',
+             'text'  => 'A transcript, CDS or protein ID all land here. The page always opens at the ' . htmlspecialchars(strtolower($type)) . ' they belong to.'],
+        ]],
+        ['heading' => 'The sections', 'cards' => $page_sections],
+        ['heading' => 'Worth knowing', 'cards' => [
+            ['label' => 'Annotations belong to the transcript',
+             'text'  => 'Not to the ' . htmlspecialchars(strtolower($type)) . '. That is why they are listed separately under each one, even when they match.'],
+            ['label' => 'Use the list on the left',
+             'text'  => 'It mirrors the page and carries the count beside each entry, so you can see where the results are before scrolling.'],
+            ['label' => 'Every section folds',
+             'text'  => 'Click a section heading to collapse it, and again to reopen. Nothing is lost — it is only hidden.'],
+            ['label' => 'Collapse all transcripts',
+             'text'  => 'The button by Annotations folds every transcript at once, which on a long gene turns the whole page into one screen.'],
+        ]],
+    ],
+    ['intro' => 'A long page — this is what is on it and in what order.']
 );
 
 // Annotation-type cards are generated from $annotation_labels / $analysis_desc — the same
