@@ -104,8 +104,12 @@ function filterBlastPrograms(sequenceType, programSelectId) {
     // tblastn (Protein→DNA): needs protein query
     // tblastx (DNA→DNA): needs nucleotide query
     
+    // Every selectable program must appear in exactly one of these lists. A program in
+    // NEITHER list is disabled for protein AND for nucleotide, so it is only reachable
+    // when detection returns 'unknown' -- which is how blastn-short became permanently
+    // greyed out for the nucleotide queries it exists to serve.
     const proteinPrograms = ['blastp', 'tblastn'];        // Protein input programs
-    const nucleotidePrograms = ['blastn', 'blastx', 'tblastx'];  // Nucleotide input programs
+    const nucleotidePrograms = ['blastn', 'blastn-short', 'blastx', 'tblastx'];  // Nucleotide input programs
     
     // Disable/enable options based on sequence type
     document.querySelectorAll('#' + programSelectId + ' option').forEach(opt => {
