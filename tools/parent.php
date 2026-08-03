@@ -197,9 +197,34 @@ if ($tabix_available || $gff_available) {
     $region_lines = [];   // all GFF lines for this gene's region
 
     // ── Step 1: get coordinates from feature_coords.tsv ─────────────────────
-    $coord_out = [];
+    //
+    // The file is keyed on the TRANSCRIPT in column 1, with that transcript's GENE in
+    // column 2:
+    //
+    //     NV2t011319001.1      NV2g011319000.1   chr2   6033193   6048126   +
+    //     NV2t011319001.1:cds  NV2g011319000.1   chr2   6033193   6048126   +
+    //
+    // So a column-1 lookup can never match on a GENE page, which is what this page shows
+    // in almost every case -- the controller resolves whatever was requested up to its
+    // gene. The lookup missed every time, Step 2 found only the bare gene record, and the
+    // model was then rebuilt by two more scans of the whole genes.gff further down.
+    // Three full passes over 49 MB for Nematostella NV2, on every load, while the tabix
+    // index that answers the same question in one seek sat unused on 69 of 72 gene sets.
+    // Measured: 0.59s -> 0.08s cold, 0.44s -> 0.08s warm.
+    $coord_out    = [];
+    $matched_self = false;   // did we match THIS feature, or its gene?
     if (file_exists($feature_coords_tsv)) {
         exec('grep -m1 ' . escapeshellarg('^' . $feature_uniquename . "\t") . ' ' . escapeshellarg($feature_coords_tsv), $coord_out);
+        $matched_self = !empty($coord_out[0]);
+
+        if (!$matched_self) {
+            // Not a transcript — try column 2, i.e. treat it as a gene id. awk rather than
+            // grep so the field is matched exactly and cannot hit a coordinate or a
+            // neighbouring column; it exits at the first hit, so it is one partial pass.
+            exec('awk -F "\t" -v u=' . escapeshellarg($feature_uniquename)
+                 . ' ' . escapeshellarg('$2==u {print; exit}')
+                 . ' ' . escapeshellarg($feature_coords_tsv), $coord_out);
+        }
     }
 
     if (!empty($coord_out[0])) {
@@ -215,7 +240,12 @@ if ($tabix_available || $gff_available) {
             $region = escapeshellarg($cp[2] . ':' . $cp[3] . '-' . $cp[4]);
             if ($tabix_available) {
                 exec('tabix ' . escapeshellarg($tabix_gff) . ' ' . $region, $region_lines);
-            } elseif ($gff_available) {
+            } elseif ($gff_available && $matched_self) {
+                // Only safe when the row IS this feature. On a gene, `grep -F <gene id>`
+                // returns the gene and its mRNAs but NOT the exons, whose Parent is the
+                // mRNA -- which would populate $isoforms just enough to skip the targeted
+                // greps below and render isoforms with no structure. Without an index a
+                // gene falls through to Step 2, exactly as it did before.
                 exec('grep -F ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $region_lines);
             }
         }
@@ -249,7 +279,28 @@ if ($tabix_available || $gff_available) {
         $isoforms    = [];
         $exon_like   = ['exon', 'five_prime_utr', 'three_prime_utr', 'utr'];
 
-        // First pass: find the gene's GFF ID and collect mRNA children
+        // Resolve THIS gene's GFF id before looking at any child.
+        //
+        // A tabix region returns every line OVERLAPPING the span, so a neighbouring gene
+        // that overlaps this one arrives in the same batch — and its mRNAs are perfectly
+        // valid mRNA records. Without knowing our own id first we cannot tell them apart,
+        // and the ids are not sorted in our favour: an overlapping neighbour starting
+        // earlier is emitted first. NV2g007734000.1 (5 mRNAs) drew 6, the extra being
+        // NV2t007735001.1 — a different gene's transcript, in the diagram and in the
+        // sequence list built from it.
+        foreach ($region_lines as $line) {
+            $p = explode("\t", $line);
+            if (count($p) < 9) continue;
+            if (strtolower($p[2]) !== strtolower($type)) continue;
+            if (!preg_match('/\bID=([^;]+)/', $p[8], $gid_m)) continue;
+            if (strpos($p[8], $feature_uniquename) !== false ||
+                preg_match('/\bID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)/', $p[8])) {
+                $gff_gene_id = $gid_m[1];
+                break;
+            }
+        }
+
+        // First pass: collect the mRNA children OF THIS GENE
         foreach ($region_lines as $line) {
             $p = explode("\t", $line);
             if (count($p) < 9) continue;
@@ -266,9 +317,12 @@ if ($tabix_available || $gff_available) {
                 continue;
             }
 
-            // mRNA / transcript child
+            // mRNA / transcript child — only if its Parent IS this gene. $parent was read
+            // here before and never compared, which is what let a neighbour's transcript
+            // into the diagram once the region fetch started returning more than one gene.
             if (preg_match('/\bParent=([^;,]+)/', $p[8], $par_m)) {
                 $parent = $par_m[1];
+                if ($parent !== $gff_gene_id) continue;
                 if (in_array($ft, ['mrna', 'transcript', 'mrna_with_minus_1_frameshift']) || strpos($ft, 'rna') !== false) {
                     $mid = $id_m[1];
                     $isoforms[$mid] = [

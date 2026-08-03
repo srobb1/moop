@@ -46,10 +46,37 @@ function moop_cache_root(): string
  * Returns false rather than throwing: a cache we cannot write is a performance
  * problem, never a correctness one, so every caller is expected to carry on
  * without caching rather than fail the request.
+ *
+ * The chmod after mkdir is NOT redundant. mkdir()'s mode argument is masked by the
+ * process umask, so `mkdir($dir, 0775)` under the usual umask 022 produces 0755 — group
+ * readable, group NOT writable. When a CLI script (running as the owner) creates the
+ * directory first, php-fpm can then never write into it.
+ *
+ * That is not hypothetical: on 2026-08-03, 281 of 282 directories under cache_path were
+ * 2750, so php-fpm could not write a single cache file. Nothing errored, because callers
+ * fall back to computing the value live and ignore the failed write — which meant 95 of
+ * 96 gene sets re-ran getAnnotatedFeatureTypesInGeneSet() on EVERY gene page load, at
+ * 349ms cold each time. A cache that cannot be written is invisible by construction, so
+ * the mode has to be forced at creation. lib/permission_check.php now also sweeps this
+ * tree, because the same drift can arrive from outside this function.
  */
 function moop_ensure_cache_dir(string $dir): bool
 {
-    return is_dir($dir) || @mkdir($dir, 0775, true) || is_dir($dir);
+    if (is_dir($dir)) return true;
+
+    if (@mkdir($dir, 0775, true) || is_dir($dir)) {
+        // Walk back up to cache root, fixing every level mkdir() just created: with
+        // recursive mkdir the umask applies to the intermediate directories too.
+        $root = rtrim(moop_cache_root(), '/');
+        $p    = rtrim($dir, '/');
+        while ($p !== '' && $p !== '/' && strpos($p, $root) === 0) {
+            @chmod($p, 02775);
+            if ($p === $root) break;
+            $p = dirname($p);
+        }
+        return is_dir($dir);
+    }
+    return false;
 }
 
 /**

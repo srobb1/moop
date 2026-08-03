@@ -936,6 +936,80 @@ function moop_collect_permission_checks($config): array {
     // It matters for the realistic workflow: an admin scp's in a new organism with
     // pre-built BLAST databases, and whatever modes the source had come with it. A pattern
     // list will never cover that; a sweep does. ~9ms over the whole tree.
+    // Cache SUBDIRECTORIES — the same "one path checked, a whole tree unchecked" trap.
+    //
+    // The 'Cache Directory' rule above checks only $cache_path itself. On 2026-08-03 that
+    // root was a correct 2775 apache:apache and the dashboard reported clean, while 281 of
+    // its 282 subdirectories were 2750 smr:apache — created by CLI scripts running as the
+    // owner, so the group never got write. php-fpm could not write a single cache file.
+    //
+    // Nothing errored. getAnnotatedFeatureTypesInGeneSet() falls back to a live query when
+    // its cache file is missing or older than the database, and file_put_contents() failing
+    // afterwards is ignored, so the cache could never repair itself: 95 of 96 gene sets
+    // re-ran that query on EVERY gene page load, costing 349ms cold / 111ms warm each time.
+    // A regenerable cache that cannot be regenerated is invisible by construction — which
+    // is exactly why the sweep has to look below the top directory.
+    $cache_dir_issues = [];
+    if ($cache_path !== '' && is_dir($cache_path)) {
+        // Resolve the web user's numeric ids ONCE, then predict its view from the mode
+        // bits. Testing `! -perm -g+w` alone is the owner-biased mistake this file warns
+        // about elsewhere: two dirs here are apache-owned at 2755, so apache writes them
+        // through the OWNER bit and a group-write test cries wolf. is_writable() is worse
+        // — from CLI it answers for smr, not apache.
+        $web_uid = null;
+        $web_gid = null;
+        if (function_exists('posix_getpwnam')) {
+            $pw = @posix_getpwnam($web_user);
+            if ($pw !== false) $web_uid = $pw['uid'];
+            $gr = @posix_getgrnam($web_group);
+            if ($gr !== false) $web_gid = $gr['gid'];
+        } else {
+            $o = []; @exec('id -u ' . escapeshellarg($web_user)  . ' 2>/dev/null', $o);
+            if (!empty($o[0]) && is_numeric(trim($o[0]))) $web_uid = (int)trim($o[0]);
+            $o = []; @exec('getent group ' . escapeshellarg($web_group) . ' 2>/dev/null', $o);
+            if (!empty($o[0])) { $p = explode(':', $o[0]); if (isset($p[2])) $web_gid = (int)$p[2]; }
+        }
+
+        $found = [];
+        // -mindepth 1: the root itself is already covered by the rule above.
+        @exec('find ' . escapeshellarg($cache_path) . ' -mindepth 1 -type d -print 2>/dev/null', $found);
+        foreach ($found as $path) {
+            $path = trim($path);
+            if ($path === '') continue;
+
+            $st = @stat($path);
+            if ($st === false) continue;
+            $m = $st['mode'];
+            // Same predicate as setup-check.php::webCanWrite().
+            $writable = ($web_uid !== null && $st['uid'] === $web_uid && ($m & 0200))
+                     || ($web_gid !== null && $st['gid'] === $web_gid && ($m & 0020))
+                     || ($m & 0002);
+            // Ids unresolvable: do not guess, and do not cry wolf.
+            if ($web_uid === null && $web_gid === null) continue;
+            if ($writable) continue;
+            $cache_dir_issues[] = [
+                'name'           => 'Cache Directory',
+                'path'           => $path,
+                'type'           => 'directory',
+                'check_mode'     => 'writable',
+                'exists'         => true,
+                'current_perms'  => substr(sprintf('%o', @fileperms($path)), -4),
+                'current_owner'  => '',
+                'current_group'  => '',
+                'is_readable'    => true,
+                'is_writable'    => false,
+                // high: this is not "will bite later". The web server cannot write here
+                // NOW, so every cache under it is recomputed on every request.
+                'severity'       => 'high',
+                'required_group' => $web_group,
+                'required_perms' => '2775',
+                'reason'         => 'Cache subdirectories must be group-writable or php-fpm silently recomputes every cached value.',
+                'why_write'      => 'Caches under cache_path are written by the web server; a read-only subdirectory disables the cache without any error',
+                'issues'         => ['Not writable by the web server group — cached values are recomputed on every page load'],
+            ];
+        }
+    }
+
     $exec_file_issues = [];
     if (is_dir($organism_data)) {
         $found = [];
@@ -1089,6 +1163,7 @@ function moop_collect_permission_checks($config): array {
         'assembly_subdir_issues' => $assembly_subdir_issues,
         'fasta_file_issues'      => $fasta_file_issues,
         'exec_file_issues'       => $exec_file_issues,
+        'cache_dir_issues'       => $cache_dir_issues,
         'web_user'               => $web_user,
         'web_group'              => $web_group,
         'moop_owner'             => $moop_owner,
@@ -1115,7 +1190,8 @@ function moop_permission_findings($config, ?array $collected = null): array {
         $collected['checks'],
         $collected['assembly_subdir_issues'],
         $collected['fasta_file_issues'],
-        $collected['exec_file_issues'] ?? []
+        $collected['exec_file_issues'] ?? [],
+        $collected['cache_dir_issues'] ?? []
     );
     $rank = ['low' => 1, 'medium' => 2, 'high' => 3];
     $cats = [];
