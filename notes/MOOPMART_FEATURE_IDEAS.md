@@ -41,7 +41,7 @@ counts "all features" or "features matching the other filled sections" before bu
 the second is more useful and more honest about query size.
 
 Related: the organism Select-All warning (`tools/pages/moopmart.php` #mm-select-all-modal),
-`notes/SEARCH_COLD_CACHE_PLAN.md` (query cost), the annotation-count wiring in
+`notes/QUERY_PERFORMANCE.md` (query cost), the annotation-count wiring in
 `js/modules/moopmart.js`.
 
 ---

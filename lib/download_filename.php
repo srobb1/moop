@@ -11,7 +11,8 @@
  *
  *     {what}_{scope}_{Y-m-d}[_MARKER].{ext}
  *
- * Before this existed the app produced (audited 2026-07-30, notes/DOWNLOAD_FILENAME_AUDIT.md):
+ * Before this existed the app produced (audited 2026-07-30/31, all 13 producers verified by
+ * downloading each file; the audit note is closed and was deleted):
  *
  *   - three date formats -- Y-m-d, Ymd_His and Y-m-d_His -- of which only Y-m-d sorts
  *     correctly in a file listing;

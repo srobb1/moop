@@ -211,6 +211,25 @@ Practical consequence: after the reload, keeping only the feature-search objects
 (e.g. `vmtouch`) makes the primary search path fast with **no hardware change**. Deep
 annotation search is the part that needs more memory or faster storage.
 
+### Two rules for any prewarming task
+
+Carried over from the 2026-07-23 cold-cache plan, which is otherwise superseded by this
+document and by `SEARCH_COST_MODEL_2026-07-31.md`:
+
+- **Warming is eviction, not free storage.** Reading the ~37 GB of annotation indexes on a
+  15 GB box evicts everything else, including whatever the last user warmed, and can leave
+  the site *slower* under concurrent load. Any prewarm task needs a hard byte budget and
+  must be judged by what it evicts, not by what it loads. This is why the feature-search
+  set (~5.5 GB, fits) is the only one worth warming wholesale.
+- **"Warm the largest databases first" is backwards.** The largest databases have the
+  largest annotation indexes, so warming them spends the most cache on the fewest
+  organisms. If the goal is that *most* searches feel fast, warm small-and-likely over
+  large. Warming large only wins if the largest organisms are also the most searched —
+  and MOOP does not log searches, so that cannot currently be answered.
+
+Any such task belongs in `lib/housekeeping.php` (CLAUDE.md §10), interval-throttled, never
+inline in a request.
+
 ### PRAGMA mmap_size — tested, NOT adopted
 
 Tested at 256 MB against the FTS hot path: **0.3 ms/query without, 0.4 ms/query with** —
