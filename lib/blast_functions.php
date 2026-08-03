@@ -161,11 +161,73 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
         $cmd[] = '-matrix ' . escapeshellarg($matrix);
     }
     
-    // Add task if specified
+    // Advanced options.
+    //
+    // These were collected by the form and passed in $options from the very first
+    // commit that added the Advanced panel, but nothing here ever read them -- the
+    // panel set word size, strand, percent identity and the rest, and BLAST never saw
+    // any of it. Checked with `git log -S`: word_size has never appeared in this file.
+    //
+    // Each flag is emitted ONLY for the programs that accept it. This is not caution:
+    // -perc_identity to blastp, or -strand to tblastn, is a hard usage error that makes
+    // BLAST exit non-zero and return nothing. The matrix below was read off
+    // `<program> -help` for all five programs rather than assumed.
+    $supported_by = [
+        'word_size'     => ['blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'],
+        'gapopen'       => ['blastn', 'blastp', 'blastx', 'tblastn'],
+        'gapextend'     => ['blastn', 'blastp', 'blastx', 'tblastn'],
+        'max_hsps'      => ['blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'],
+        'perc_identity' => ['blastn'],
+        'culling_limit' => ['blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'],
+        'threshold'     => ['blastp', 'blastx', 'tblastn', 'tblastx'],
+        'soft_masking'  => ['blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'],
+        'strand'        => ['blastn', 'blastx', 'tblastx'],
+        'ungapped'      => ['blastn', 'blastp', 'blastx', 'tblastn'],
+    ];
+    $accepts = function ($opt) use ($supported_by, $program) {
+        return in_array($program, $supported_by[$opt], true);
+    };
+
+    // Numeric options: 0 and '' both mean "not set", since the form uses empty inputs
+    // for "use the program default" and casts to int on the way in.
+    foreach (['word_size', 'gapopen', 'gapextend', 'max_hsps', 'culling_limit'] as $opt) {
+        $val = $options[$opt] ?? 0;
+        if ($accepts($opt) && $val !== '' && (int)$val > 0) {
+            $cmd[] = '-' . $opt . ' ' . escapeshellarg((int)$val);
+        }
+    }
+
+    // These two are floats and 0 is a legitimate value the user may want.
+    foreach (['perc_identity', 'threshold'] as $opt) {
+        $val = $options[$opt] ?? '';
+        if ($accepts($opt) && $val !== '' && is_numeric($val)) {
+            $cmd[] = '-' . $opt . ' ' . escapeshellarg($val);
+        }
+    }
+
+    if ($accepts('strand') && !empty($options['strand'])
+        && in_array($options['strand'], ['plus', 'minus', 'both'], true)) {
+        $cmd[] = '-strand ' . escapeshellarg($options['strand']);
+    }
+
+    if ($accepts('soft_masking') && isset($options['soft_masking'])) {
+        $cmd[] = '-soft_masking ' . ($options['soft_masking'] ? 'true' : 'false');
+    }
+
+    // -ungapped is a bare flag, not a valued option.
+    if ($accepts('ungapped') && !empty($options['ungapped'])) {
+        $cmd[] = '-ungapped';
+    }
+
+    // Add task if specified.
+    //
+    // -task must come LAST so it cannot clobber an explicit flag above -- though note
+    // BLAST resolves task defaults first and explicit flags win regardless of order,
+    // which is exactly how -evalue 10 used to defeat blastn-short's own default of 1000.
     if (!empty($task)) {
         $cmd[] = '-task ' . escapeshellarg($task);
     }
-    
+
     $command = 'printf ' . escapeshellarg($query_seq) . ' | ' . implode(' ', $cmd);
     
     // Execute BLAST with proc_open for better control
