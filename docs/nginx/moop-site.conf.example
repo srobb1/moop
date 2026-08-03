@@ -78,14 +78,17 @@ location = /<site>/jbrowse2/index.html {
 #   control copy in a normal location; a 404 can just mean the web user cannot read the
 #   file. See the VERIFY block in docs/nginx/moop-security.conf.
 
-# ── COMPRESSION — an http-level setting, NOT part of this file ───────────────────────
+# ── COMPRESSION ─────────────────────────────────────────────────────────────────────
 #
-# Put this in the `http { }` block of /etc/nginx/nginx.conf, once per HOST. It is not a
-# per-site directive, which is exactly why it is easy to miss: nothing in MOOP's own
-# config touches it, `setup-check.php` does not test it, and an uncompressed site looks
-# completely healthy from the LAN.
+# These are LIVE directives, not a comment — gzip is valid in `server` context, so they
+# work in this file as-is. A server-level setting OVERRIDES any http-level one rather than
+# colliding with it, so deploying this is safe even on a host that already sets gzip
+# globally. (Two `gzip on;` in the SAME context would be a duplicate-directive error and
+# `nginx -t` would fail — that only happens if you also paste these into nginx.conf.)
 #
-# Measured on this deployment, 2026-08-03, before enabling it:
+# Worth doing because MOOP's pages are mostly repeated table markup — a gene page can carry
+# a thousand annotation rows of near-identical HTML — so they compress unusually hard.
+# Measured on the original deployment 2026-08-03, before enabling it:
 #
 #     gene page (3 isoforms)    786 KB  ->  115 KB      85%
 #     gene page (17 isoforms)   359 KB  ->   33 KB      91%
@@ -93,27 +96,37 @@ location = /<site>/jbrowse2/index.html {
 #     home page                 154 KB  ->   25 KB      84%
 #     CSS / JS                                          66%
 #
-# MOOP's pages are almost entirely repeated table markup — a gene page can carry a
-# thousand annotation rows of near-identical HTML — so they compress unusually well.
+# Who it helps: on a LAN, nobody — transfer is ~1ms either way, which is exactly why it sat
+# off here unnoticed for so long. It is worth ~0.5s per page on home broadband and ~1.8s on
+# mobile, so it matters for the remote users who have not seen the site yet, and not for the
+# internal testers who try it first.
 #
-#     gzip              on;
-#     gzip_vary         on;
-#     gzip_proxied      any;
-#     gzip_comp_level   5;
-#     gzip_min_length   1024;
-#     gzip_types        text/plain text/css text/javascript
-#                       application/javascript application/json
-#                       application/xml image/svg+xml;
+# VERIFY — the config testing OK proves nothing:
 #
-# text/html is deliberately absent: it is ALWAYS compressed when gzip is on, and naming
-# it makes nginx warn "duplicate MIME type text/html".
+#     curl -s -o /dev/null -D- -H 'Accept-Encoding: gzip' http://<host>/<site>/ \
+#       | grep -i -e content-encoding -e vary
 #
-# comp_level 5, not 9: level 9 costs noticeably more CPU for roughly 2% smaller output,
-# and this host is already CPU-bound generating the HTML.
-#
-# Check for an existing `gzip` directive before adding one — the last one wins, so a
-# stray `gzip off;` further down silently undoes this.
-#
-# Worth knowing who this helps: on a LAN it changes nothing measurable (transfer is ~1ms
-# either way). It is worth ~0.5s on home broadband and ~1.8s on mobile, so it matters for
-# real remote users and not for the internal testers who will try the site first.
+# Expect `Content-Encoding: gzip` and `Vary: Accept-Encoding`. setup-check.php runs this
+# same request and reports the result, because a directive that reads correctly in a file
+# is not evidence that responses are actually compressed.
+
+gzip              on;
+gzip_vary         on;
+gzip_proxied      any;
+
+# 5, not 9: level 9 costs noticeably more CPU for roughly 2% smaller output, and this host
+# is already CPU-bound generating the HTML rather than shipping it.
+gzip_comp_level   5;
+
+# Below ~1 KB the gzip header and the extra work cost more than they save.
+gzip_min_length   1024;
+
+# text/html is deliberately ABSENT: it is ALWAYS compressed when gzip is on, and naming it
+# makes nginx warn "duplicate MIME type text/html".
+gzip_types        text/plain
+                  text/css
+                  text/javascript
+                  application/javascript
+                  application/json
+                  application/xml
+                  image/svg+xml;
