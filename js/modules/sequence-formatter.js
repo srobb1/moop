@@ -187,7 +187,12 @@
         const c = {};
         for (const t of types) {
             c[t] = {
-                visible:   true,
+                // Introns start HIDDEN, so the sequence opens as the spliced transcript —
+                // which is what it is usually wanted for (BLAST, primers, ORFs). Hiding a
+                // type cuts it from the output rather than just unstyling it, and on a
+                // 15 kb gene the intronic bases otherwise bury the exonic ones. The eye
+                // toggle brings them back, and the row is still listed either way.
+                visible:   t !== 'intron',
                 hl:        true,
                 caseMode:  t === 'intron' ? 'lower' : 'upper',
                 bold:      false,
