@@ -668,6 +668,66 @@ if ($server_flavor === 'unknown') {
     }
 }
 
+// ── Section 5d: Response Compression ────────────────────────────────────────
+//
+// Off by default on a stock nginx/Apache, and nothing else here would notice. It is an
+// http-level setting, not a per-site one, so no file MOOP ships touches it; and an
+// uncompressed site is completely healthy from a LAN, where transfer is ~1ms either way.
+// It was off on the original deployment until 2026-08-03.
+//
+// It matters because MOOP's pages are mostly repeated table markup — a gene page can carry
+// a thousand annotation rows of near-identical HTML — so they compress unusually hard:
+// 84-91% measured across page types. That is ~1.8s per page for someone on mobile.
+//
+// TESTED BY FETCHING A PAGE, not by grepping a config. The directive can live in
+// nginx.conf, conf.d/*, or a per-site file, and a later `gzip off;` silently wins over an
+// earlier `gzip on;` — so the only thing that settles it is the response header. Same
+// reasoning as the execution guard above: a config that looks right proves nothing.
+
+section("Response Compression");
+
+// $site is not resolved until the summary further down, so read it here rather than
+// interpolating an undefined variable into the URL.
+$compress_site = $config['site'] ?? 'moop';
+$compress_url  = "http://127.0.0.1/$compress_site/";
+$compress_ctx = stream_context_create(['http' => [
+    'method'        => 'GET',
+    'header'        => "Accept-Encoding: gzip\r\n",
+    'timeout'       => 5,
+    'ignore_errors' => true,
+]]);
+$compress_body = @file_get_contents($compress_url, false, $compress_ctx);
+
+if ($compress_body === false) {
+    // Not a failure: the checker often runs before the vhost answers on 127.0.0.1, or
+    // where the site is only reachable by its external name.
+    warn("Could not fetch $compress_url to test compression",
+         "Check by hand once the site serves:\n" .
+         "         curl -s -o /dev/null -D- -H 'Accept-Encoding: gzip' http://<host>/$compress_site/ | grep -i content-encoding");
+} else {
+    $compress_hdrs = implode("\n", $http_response_header ?? []);
+    if (stripos($compress_hdrs, 'Content-Encoding: gzip') !== false
+        || stripos($compress_hdrs, 'Content-Encoding: br') !== false) {
+        pass("Responses are compressed");
+        if (stripos($compress_hdrs, 'Vary: Accept-Encoding') === false) {
+            warn("Compression is on but `Vary: Accept-Encoding` is missing",
+                 "Without it a shared cache can serve a gzipped body to a client that cannot\n" .
+                 "         read it. Add `gzip_vary on;` (nginx) or mod_deflate's Header append Vary.");
+        }
+    } else {
+        warn("Responses are NOT compressed",
+             "MOOP pages are 84-91% smaller gzipped (a gene page: 786 KB -> 115 KB). Invisible\n" .
+             "         on a LAN; worth ~1.8s per page on mobile. Add to the http { } block of\n" .
+             "         nginx.conf, then `sudo nginx -t && sudo systemctl reload nginx`:\n" .
+             "             gzip on; gzip_vary on; gzip_proxied any; gzip_comp_level 5;\n" .
+             "             gzip_min_length 1024;\n" .
+             "             gzip_types text/plain text/css text/javascript application/javascript\n" .
+             "                        application/json application/xml image/svg+xml;\n" .
+             "         Do NOT list text/html — always compressed when gzip is on, and naming it\n" .
+             "         makes nginx warn. See docs/nginx/moop-site.conf.example.");
+    }
+}
+
 // ── Section 5c: SELinux ─────────────────────────────────────────────────────
 //
 // This is how an admin finds out fix_moop_selinux.sh exists. The admin dashboard
