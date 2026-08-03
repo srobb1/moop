@@ -77,3 +77,43 @@ location = /<site>/jbrowse2/index.html {
 #   The guard is the OTHER file's job. Test it with a real .php that would execute, plus a
 #   control copy in a normal location; a 404 can just mean the web user cannot read the
 #   file. See the VERIFY block in docs/nginx/moop-security.conf.
+
+# ── COMPRESSION — an http-level setting, NOT part of this file ───────────────────────
+#
+# Put this in the `http { }` block of /etc/nginx/nginx.conf, once per HOST. It is not a
+# per-site directive, which is exactly why it is easy to miss: nothing in MOOP's own
+# config touches it, `setup-check.php` does not test it, and an uncompressed site looks
+# completely healthy from the LAN.
+#
+# Measured on this deployment, 2026-08-03, before enabling it:
+#
+#     gene page (3 isoforms)    786 KB  ->  115 KB      85%
+#     gene page (17 isoforms)   359 KB  ->   33 KB      91%
+#     BLAST page                239 KB  ->   26 KB      89%
+#     home page                 154 KB  ->   25 KB      84%
+#     CSS / JS                                          66%
+#
+# MOOP's pages are almost entirely repeated table markup — a gene page can carry a
+# thousand annotation rows of near-identical HTML — so they compress unusually well.
+#
+#     gzip              on;
+#     gzip_vary         on;
+#     gzip_proxied      any;
+#     gzip_comp_level   5;
+#     gzip_min_length   1024;
+#     gzip_types        text/plain text/css text/javascript
+#                       application/javascript application/json
+#                       application/xml image/svg+xml;
+#
+# text/html is deliberately absent: it is ALWAYS compressed when gzip is on, and naming
+# it makes nginx warn "duplicate MIME type text/html".
+#
+# comp_level 5, not 9: level 9 costs noticeably more CPU for roughly 2% smaller output,
+# and this host is already CPU-bound generating the HTML.
+#
+# Check for an existing `gzip` directive before adding one — the last one wins, so a
+# stray `gzip off;` further down silently undoes this.
+#
+# Worth knowing who this helps: on a LAN it changes nothing measurable (transfer is ~1ms
+# either way). It is worth ~0.5s on home broadband and ~1.8s on mobile, so it matters for
+# real remote users and not for the internal testers who will try the site first.
