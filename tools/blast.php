@@ -59,18 +59,37 @@ $search_query = trim($_POST['query'] ?? '');
 $blast_program = trim($_POST['blast_program'] ?? 'blastx');
 $blast_db = trim($_POST['blast_db'] ?? '');
 
-// blastn-short is a task preset, not a separate binary — translate here
+// blastn-short is a task preset, not a separate binary — translate here.
+//
+// Only fill in what the user did not choose. Anything set here is passed as an EXPLICIT
+// flag, and an explicit flag beats the task's own default -- which is exactly how the
+// old '10' here defeated blastn-short's built-in E-value of 1000 and cut a real 20nt
+// primer from 566 hits to 26.
+// $blast_program_selected keeps what the USER picked, for re-rendering the form.
+// $blast_program becomes what we EXECUTE. Without the split, running a short search
+// returned a page whose dropdown said plain "BLASTn" while the short parameters were
+// still sitting in the advanced fields and the "adjusted" badge had vanished -- so the
+// form disagreed with the search that had just run.
+$blast_program_selected = $blast_program;
+
 if ($blast_program === 'blastn-short') {
     $blast_program = 'blastn';
     $_POST['task']      = 'blastn-short';
-    $_POST['evalue']    = $_POST['evalue']    ?? '10';
+    // 1000 is blastn-short's own default (`blastn -help`). A 20nt perfect match scores
+    // ~40 bits, which is not significant at E=10 against a whole gene set, so the real
+    // hit is discarded. Short queries need the threshold RAISED, not lowered.
+    $_POST['evalue']    = $_POST['evalue']    ?? '1000';
     $_POST['word_size'] = $_POST['word_size'] ?? '7';
     $_POST['gapopen']   = $_POST['gapopen']   ?? '5';
     $_POST['gapextend'] = $_POST['gapextend'] ?? '2';
-    // unset filter_seq so low-complexity filtering is off by default
-    if (!isset($_POST['filter_seq'])) {
-        unset($_POST['filter_seq']);
-    }
+    // Low-complexity filtering OFF, matching blastn-short upstream (-dust no). Left on,
+    // a primer containing a simple repeat is masked to nothing and returns ZERO hits
+    // with no warning: ATATATATATATATATATAT goes 202 -> 0, poly-A 2236 -> 0.
+    //
+    // This used to read `if (!isset($_POST['filter_seq'])) unset($_POST['filter_seq']);`
+    // which is a no-op in both directions -- it unset the key only when it was already
+    // absent. The comment claimed filtering was off by default; nothing made it so.
+    unset($_POST['filter_seq']);
 }
 
 // Get the assembly parameter from URL/POST (could be name or accession)
@@ -319,7 +338,8 @@ $data = [
     'filter_organisms' => $filter_organisms,
     'filter_organisms_string' => $filter_organisms_string,
     'search_query' => $search_query,
-    'blast_program' => $blast_program,
+    // The form must re-render the user's CHOICE, not the binary we translated it to.
+    'blast_program' => $blast_program_selected,
     'selected_source' => $selected_source,
     'selected_organism' => $selected_organism,
     'selected_assembly_name' => $selected_assembly_name,

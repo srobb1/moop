@@ -103,6 +103,8 @@
                         <i class="fa fa-circle-info me-1"></i>
                         Optimized for short sequences: word size 7, E-value 1000, adjusted gap costs, no low-complexity filter.
                         Advanced options have been pre-filled — you can override them.
+                        <?php // Plain '&' -- help_modal_trigger() escapes the label itself. ?>
+                        <?= help_modal_trigger('blast-short-help', 'Primers & short sequences', 'Help: searching with primers and other short sequences') ?>
                     </div>
                 </div>
             </div>
@@ -139,7 +141,21 @@
             <!-- Advanced Options (unnumbered — optional) -->
             <div class="mb-3">
                 <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#advOptions" aria-expanded="false" aria-controls="advOptions">
-                    <span><i class="fas fa-sliders-h me-2"></i><strong>Advanced Options</strong></span>
+                    <span>
+                        <i class="fas fa-sliders-h me-2"></i><strong>Advanced Options</strong>
+                        <?php // Shown only when a preset has changed these values. The panel stays
+                              // CLOSED -- opening it confronts a first-time user with a dozen
+                              // controls they did not ask for. This says something changed and
+                              // where to look, without making them look. ?>
+                        <?php // Initial state comes from the SERVER, like the notice above it.
+                              // Toggled only by the onchange handler, the badge vanished on the
+                              // page returned after a short search -- the one moment the values
+                              // most obviously are adjusted. ?>
+                        <span id="adv-modified-badge" class="badge rounded-pill ms-2 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>"
+                              style="background-color:#cff4e4; color:#0f5132; font-weight:600;">
+                            <i class="fa fa-circle-check me-1"></i>Adjusted for short sequences
+                        </span>
+                    </span>
                     <i class="fa fa-chevron-down adv-chevron" style="font-size:0.8rem; transition:transform 0.2s;"></i>
                 </button>
                 
@@ -154,6 +170,7 @@
                             <div class="col-md-6">
                                 <label for="evalue" class="form-label adv-short-param"><strong>E-value Threshold</strong></label>
                                 <select id="evalue" name="evalue" class="form-select" onchange="toggleEvalueCustom()">
+                                    <option value="1000" <?= $evalue === '1000' ? 'selected' : '' ?>>1000 (short queries / primers)</option>
                                     <option value="10" <?= $evalue === '10' ? 'selected' : '' ?>>10</option>
                                     <option value="1" <?= $evalue === '1' ? 'selected' : '' ?>>1</option>
                                     <option value="0.1" <?= $evalue === '0.1' ? 'selected' : '' ?>>0.1</option>
@@ -161,10 +178,10 @@
                                     <option value="1e-6" <?= $evalue === '1e-6' ? 'selected' : '' ?>>1e-6</option>
                                     <option value="1e-9" <?= $evalue === '1e-9' ? 'selected' : '' ?>>1e-9</option>
                                     <option value="1e-12" <?= $evalue === '1e-12' ? 'selected' : '' ?>>1e-12</option>
-                                    <option value="custom" <?= !in_array($evalue, ['10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? 'selected' : '' ?>>Custom</option>
+                                    <option value="custom" <?= !in_array($evalue, ['1000', '10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? 'selected' : '' ?>>Custom</option>
                                 </select>
-                                <div id="evalue_custom_container" style="display: <?= !in_array($evalue, ['10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? 'block' : 'none' ?>; margin-top: 8px;">
-                                    <input type="text" id="evalue_custom" name="evalue_custom" class="form-control" placeholder="e.g., 1e-15, 0.05" value="<?= !in_array($evalue, ['10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? htmlspecialchars($evalue) : htmlspecialchars($evalue_custom) ?>">
+                                <div id="evalue_custom_container" style="display: <?= !in_array($evalue, ['1000', '10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? 'block' : 'none' ?>; margin-top: 8px;">
+                                    <input type="text" id="evalue_custom" name="evalue_custom" class="form-control" placeholder="e.g., 1e-15, 0.05" value="<?= !in_array($evalue, ['1000', '10', '1', '0.1', '1e-3', '1e-6', '1e-9', '1e-12']) && !empty($evalue) ? htmlspecialchars($evalue) : htmlspecialchars($evalue_custom) ?>">
                                 </div>
                             </div>
                             
@@ -298,6 +315,17 @@
                     <button type="submit" class="btn btn-lg fw-semibold text-white w-100" id="searchBtn" style="background-color:#6366f1; border-color:#6366f1;">
                         <i class="fa fa-search me-1"></i>Run BLAST
                     </button>
+                    <?php /* Start over. Navigates to the bare page rather than resetting fields
+                             in JS: a reset built from a list of fields silently stops covering
+                             any control added later, and after a POST the browser's own
+                             form.reset() restores the SUBMITTED values, not the defaults. A
+                             clean GET is the only definition of "default" that cannot drift. */ ?>
+                    <div class="text-center mt-2">
+                        <a href="<?= htmlspecialchars('/' . $site . '/tools/blast.php') ?>"
+                           class="btn btn-sm btn-link text-secondary" id="resetBlastBtn">
+                            <i class="fa fa-rotate-left me-1"></i>Clear form and start over
+                        </a>
+                    </div>
                     <?php /* Inline "uh-oh" for a missed assembly/database, in place of a browser
                              alert(); js/blast-manager.js toggles it. */ ?>
                     <div id="blast-select-hint" class="tools-select-hint small mt-2" style="display:none;">
@@ -352,6 +380,11 @@
 </div>
 
 <?php
+// Short-sequence help, opened from the BLASTn-short notice in step 2. Its own modal
+// rather than a section of the general one, because the advice INVERTS: everywhere else
+// a strict E-value is what makes results trustworthy, and here it is what hides them.
+include __DIR__ . '/../../includes/blast_short_help_modal.php';
+
 // How-to-use help, opened by the (i) on the page header. A card modal rather than the
 // hand-rolled data-bs-html popover it replaces: the popover needed a per-page init
 // (blast-manager.js initPopovers, now removed), and a modal opens from the Bootstrap
@@ -387,23 +420,32 @@ document.getElementById('advOptions')?.addEventListener('hide.bs.collapse', func
     document.querySelector('.adv-chevron')?.classList.remove('open');
 });
 
+// Whether the BLASTn-short preset currently owns the advanced values, so that switching
+// away can put them back. Initialised from what the server rendered, so a page returning
+// from a short search knows the preset is in effect.
+let blastShortPresetApplied = <?= $blast_program === 'blastn-short' ? 'true' : 'false' ?>;
+
 function applyBlastProgramDefaults(program) {
     const notice    = document.getElementById('blastn-short-notice');
     const advNotice = document.getElementById('adv-short-notice');
+    const badge     = document.getElementById('adv-modified-badge');
     const isShort   = program === 'blastn-short';
 
     notice?.classList.toggle('d-none', !isShort);
     advNotice?.classList.toggle('d-none', !isShort);
+    // The collapsed bar carries the signal instead of the panel being forced open.
+    badge?.classList.toggle('d-none', !isShort);
     document.querySelectorAll('.adv-short-param').forEach(el => {
         el.classList.toggle('blast-short-highlight', isShort);
     });
 
     if (isShort) {
-        // Open advanced options so user can see what was set
-        const advEl = document.getElementById('advOptions');
-        if (advEl && !advEl.classList.contains('show')) {
-            bootstrap.Collapse.getOrCreateInstance(advEl).show();
-        }
+        // Advanced Options stays CLOSED on purpose. It used to spring open here so the
+        // user could "see what was set", which meant a first-time user picking a primer
+        // search was immediately faced with a dozen controls they had not asked for. The
+        // badge in the bar says the values changed; anyone who wants the detail opens it,
+        // and the changed fields are still highlighted when they do.
+
         // Pre-fill advanced fields
         const wordSize  = document.getElementById('word_size');
         const evalue    = document.getElementById('evalue');
@@ -411,8 +453,13 @@ function applyBlastProgramDefaults(program) {
         const gapopen   = document.getElementById('gapopen');
         const gapextend = document.getElementById('gapextend');
         if (wordSize)  wordSize.value   = '7';
-        if (evalue)    evalue.value     = '10';
-        if (filterCb)  filterCb.checked = true;
+        // 1000, not 10. blastn-short's own default IS 1000 (`blastn -help`); passing 10
+        // overrode it and cut a real 20nt primer from 566 hits to 26. The notice below
+        // has always SAID 1000 -- only the code disagreed.
+        if (evalue)    evalue.value     = '1000';
+        // DUST off. It is `no` for blastn-short upstream, and left on it silently
+        // returns ZERO hits for any primer with a simple repeat (ATATAT..., poly-A).
+        if (filterCb)  filterCb.checked = false;
         if (gapopen)   gapopen.value    = '5';
         if (gapextend) gapextend.value  = '2';
         // Auto-select genome database if available
@@ -426,6 +473,26 @@ function applyBlastProgramDefaults(program) {
             });
             if (genomeRadio) genomeRadio.checked = true;
         }
+    } else if (blastShortPresetApplied) {
+        // Switching AWAY from the short preset must put the values back, or the user runs
+        // an ordinary blastn at E-value 1000 with word size 7 and no filter, with nothing
+        // on screen saying so -- the badge has just been hidden.
+        //
+        // This was harmless until 2026-08-03 only because word_size and friends were never
+        // passed to BLAST at all. Now that they are, leaving them behind is a real wrong
+        // result. Blank means "use the program default" on the server side.
+        const wordSize  = document.getElementById('word_size');
+        const evalue    = document.getElementById('evalue');
+        const filterCb  = document.getElementById('filter_seq');
+        const gapopen   = document.getElementById('gapopen');
+        const gapextend = document.getElementById('gapextend');
+        if (wordSize)  wordSize.value   = '';
+        if (evalue)    evalue.value     = '1e-3';
+        if (filterCb)  filterCb.checked = true;
+        if (gapopen)   gapopen.value    = '';
+        if (gapextend) gapextend.value  = '';
     }
+
+    blastShortPresetApplied = isShort;
 }
 </script>
