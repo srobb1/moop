@@ -240,10 +240,23 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     $key_for_anchor = $annotation_type_key ?: $annotation_type;
     $section_id = "annot_section_" . preg_replace('/[^a-zA-Z0-9_]/', '_', $uniquename . '_' . $key_for_anchor);
     
-    $html = '<div class="annotation-section mb-3 ' . htmlspecialchars($border_class) . '" id="' . htmlspecialchars($section_id) . '">';
+    // data-annot-count is the ONE source of this number. The section nav (parent-nav.js)
+    // reads the attribute rather than scraping the badge text, so the sidebar count and
+    // the heading count cannot drift, and rewording the badge cannot silently break the nav.
+    $html = '<div class="annotation-section mb-3 ' . htmlspecialchars($border_class) . '"'
+          . ' id="' . htmlspecialchars($section_id) . '"'
+          . ' data-annot-count="' . (int)$result_count . '">';
     $html .= '<div class="d-flex justify-content-between align-items-center mb-2">';
-    $html .= "<h5 class=\"mb-0\"><span class=\"badge bg-" . htmlspecialchars($color) . " $text_color badge-lg\">" . htmlspecialchars($annotation_type) . "</span>";
-    $html .= " <span class=\"badge bg-secondary badge-lg\">" . htmlspecialchars($result_count) . " result" . ($result_count > 1 ? 's' : '') . "</span>";
+    // The count rides the CORNER of the type badge, the same treatment as the scope-filter
+    // button in css/search-controls.css. It replaces a second full-size "N results" pill:
+    // the word "results" is identical on every one of these headings down the page, so it
+    // is pure repetition after the first two, and the number is what is actually scanned.
+    // The wrapper must be position:relative for the absolute badge to hang off it.
+    $html .= "<h5 class=\"mb-0\"><span class=\"annot-type-badge badge bg-" . htmlspecialchars($color) . " $text_color badge-lg\">"
+           . htmlspecialchars($annotation_type)
+           . "<span class=\"badge annot-count-badge\" title=\"" . htmlspecialchars($result_count)
+           . " result" . ($result_count > 1 ? 's' : '') . "\">" . htmlspecialchars($result_count) . "</span>"
+           . "</span>";
     
     if ($desc) {
         $html .= "&nbsp;<button class=\"btn btn-sm btn-link p-0 annotation-info-btn\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#" . htmlspecialchars($desc_id) . "\" aria-expanded=\"false\">";
@@ -521,7 +534,9 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
         }
     }
     
-    $html = '<div class="card annotation-card border-info">';
+    // data-annot-total feeds the same count into the section nav for the CHILD row, so a
+    // reader can see how much sits under an mRNA without expanding it.
+    $html = '<div class="card annotation-card border-info" data-annot-total="' . (int)$child_annotation_count . '">';
     $html .= "  <div class=\"card-header d-flex align-items-center $header_class\">";
     $html .= "    <span class=\"collapse-section\" data-bs-toggle=\"collapse\" data-bs-target=\"#child_$child_feature_id\" aria-expanded=\"true\" role=\"button\">";
     $html .= "      <i class=\"fas fa-minus toggle-icon text-info\"></i>";

@@ -413,7 +413,10 @@
         if (document.getElementById('seq-region-modal')) return;
         const html = `
 <div class="modal fade" id="seq-region-modal" tabindex="-1" aria-labelledby="seq-region-modal-label" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <!-- centered: this modal is raised by clicking an exon/CDS in the diagram, which sits
+       mid-page. Anchored at the top it opened ~28px from the viewport top, so the eye had
+       to travel from the clicked feature all the way up and back. -->
+  <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header py-2">
         <h6 class="modal-title fw-semibold" id="seq-region-modal-label">Region Sequence</h6>
@@ -451,6 +454,12 @@
           </div>
         </div>
         <div id="seq-region-error" class="alert alert-danger mb-0" style="display:none;"></div>
+      </div>
+      <!-- Footer Close as well as the header X. The dialog is near full height, so from a
+           feature clicked low in the diagram the X is a long way up; this one sits where
+           the eye already is after reading. Escape and a backdrop click also dismiss. -->
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>

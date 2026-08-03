@@ -323,3 +323,60 @@ a.badge:hover {
     0% { background-color: rgba(255, 193, 7, 0.3); }
     100% { background-color: transparent; }
 }
+
+/* Annotation type heading — count rides the badge corner
+   ------------------------------------------------------
+   Same treatment as the scope-filter button (css/search-controls.css .badge-filter):
+   a small pill hanging off the top-right corner, rather than a second full-size
+   "N results" badge beside the type name. "results" reads identically on every one
+   of these headings down a gene page, so it stops carrying information after the
+   first two; the number is what a reader scans for.
+
+   .annot-type-badge must be position:relative so the count can be absolute against
+   it. The `.badge .badge` selector is scoped the same way .btn .badge.badge-filter is,
+   because Bootstrap's own .badge sets position:relative and would otherwise pull the
+   count back into the flow and stretch the type badge. */
+.annot-type-badge {
+  position: relative;
+  overflow: visible;
+  /* The pill overhangs the right edge by 10px, so without this it crowds whatever comes
+     next in the heading — the (i) button sat directly against it. */
+  margin-right: .75rem;
+}
+.annot-type-badge .badge.annot-count-badge,
+.annot-count-badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 .35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: #0f5132;
+  background-color: #fff;
+  /* 1px, not 2. At 2px the ring read as heavy as the type badge behind it and the two
+     competed; the pill is a magnitude cue, so it should sit quietly on the badge. */
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+/* The pill sits on a coloured badge, so it borrows that colour for its ring and text
+   and stays white inside — legible on teal, purple, amber or grey alike. */
+.annot-type-badge .badge.annot-count-badge { color: inherit; }
+.annot-type-badge.text-white .badge.annot-count-badge { color: #1f2937; }
+
+/* DataTables toolbar (export buttons + search) on one line
+   -------------------------------------------------------
+   The dom string in js/modules/datatable-config.js wraps B and f in .dt-toolbar. These
+   rules only remove the stacking margins DataTables ships on each part, so the flex row
+   reads as one control strip rather than two half-height rows with dead space. */
+.dt-toolbar .dataTables_filter,
+.dt-toolbar .dt-buttons { margin: 0; float: none; }
+.dt-toolbar .dataTables_filter label { margin-bottom: 0; font-size: .85rem; }
+.dt-toolbar .dataTables_filter input { margin-left: .4rem; }

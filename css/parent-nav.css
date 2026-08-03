@@ -100,6 +100,16 @@
 .pnav-link .pnav-tag--protein,
 .pnav-link .pnav-tag--polypeptide { color:#55b317; background:rgba(85,179,23,.16); }
 .pnav-link .pnav-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Annotation count. Pushed to the right edge with margin-left:auto so the numbers form
+   a scannable column instead of sitting at ragged positions after each label. Quiet by
+   default — it is a magnitude cue, not the thing being clicked. */
+.pnav-link .pnav-count{
+  flex:none;margin-left:auto;font-variant-numeric:tabular-nums;
+  font-size:.68rem;font-weight:600;color:var(--pnav-muted);
+  background:rgba(15,30,43,.06);padding:.05rem .32rem;border-radius:6px;
+}
+.pnav-link:hover .pnav-count,
+.pnav-link.is-active .pnav-count{color:var(--pnav-accent-strong);background:rgba(8,145,178,.14)}
 .pnav-link.is-active{background:var(--pnav-wash);border-left-color:var(--pnav-accent);
   color:var(--pnav-accent-ink);font-weight:700}
 /* ancestors get no highlight — only the current section lights up (kept subtle

@@ -384,7 +384,12 @@ const DataTableExportConfig = {
 
     // Standard DataTable options
     defaultOptions: {
-        dom: 'Bfrtlip',
+        // B (export buttons) and f (search box) are block-level in DataTables' default
+        // layout, so they stacked into two separate full-width rows on top of the heading
+        // — three near-empty rows before every annotation table, repeated ~20 times down a
+        // gene page. Wrapping both in one flex row puts the buttons left and the search
+        // right on a single line. `<"class"Bf>` is DataTables' own dom-wrapper syntax.
+        dom: '<"dt-toolbar d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"Bf>rtlip',
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         order: [[4, 'asc']],

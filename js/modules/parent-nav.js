@@ -30,9 +30,16 @@
         return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
       });
     }
+    // The count pill is rendered INSIDE the type badge so it can hang off its corner, so a
+    // plain textContent read returns "RBBH Homolog18". Clone and drop the pill rather than
+    // string-stripping the number — a label can legitimately contain digits.
     function typeLabel(section) {
       var b = section.querySelector("h5 .badge");
-      return b ? b.textContent.trim() : (section.id || "Annotations");
+      if (!b) return section.id || "Annotations";
+      var c = b.cloneNode(true);
+      var pill = c.querySelector(".annot-count-badge");
+      if (pill) pill.remove();
+      return c.textContent.trim();
     }
     // split "NAME (mRNA)" -> {label:"NAME", tag:"mRNA"}
     function splitChild(text) {
@@ -44,8 +51,20 @@
     var reg = {};       // key -> node
     var order = [];     // node keys in document order (for scrollspy)
     var kc = 0;
+    // How many annotations sit behind a nav row. Read from the attribute the PHP writes
+    // (data-annot-count on a type section, data-annot-total on a child card) rather than
+    // scraped from the badge text, so rewording a badge cannot silently blank the nav.
+    function countFor(el) {
+      if (!el) return "";
+      var v = el.getAttribute("data-annot-count");
+      if (v === null) v = el.getAttribute("data-annot-total");
+      if (v === null) return "";
+      var n = parseInt(v, 10);
+      return isNaN(n) || n <= 0 ? "" : String(n);
+    }
     function mk(el, label, lvl, tag) {
-      var node = { key: "pn" + kc++, el: el, label: label, lvl: lvl, tag: tag || "", children: [], parent: null };
+      var node = { key: "pn" + kc++, el: el, label: label, lvl: lvl, tag: tag || "",
+                   count: countFor(el), children: [], parent: null };
       reg[node.key] = node;
       return node;
     }
@@ -112,9 +131,13 @@
           : '<span class="pnav-spacer"></span>';
         var tagSlug = n.tag ? n.tag.toLowerCase().replace(/[^a-z0-9]+/g, "") : "";
         var tag = n.tag ? '<span class="pnav-tag pnav-tag--' + tagSlug + '">' + esc(n.tag) + "</span>" : "";
+        var cnt = n.count
+          ? '<span class="pnav-count" aria-label="' + esc(n.count) + ' annotations">' + esc(n.count) + "</span>"
+          : "";
         var link =
-          '<a class="pnav-link lvl-' + n.lvl + '" href="#" data-key="' + n.key + '" title="' + esc(n.label) + '">' +
-          tag + '<span class="pnav-label">' + esc(n.label) + "</span></a>";
+          '<a class="pnav-link lvl-' + n.lvl + '" href="#" data-key="' + n.key + '" title="' +
+          esc(n.label) + (n.count ? " — " + n.count + " annotations" : "") + '">' +
+          tag + '<span class="pnav-label">' + esc(n.label) + "</span>" + cnt + "</a>";
         var sub = hasKids ? '<div class="pnav-sub">' + renderList(n.children) + "</div>" : "";
         return '<li class="pnav-item"><div class="pnav-row">' + caret + link + "</div>" + sub + "</li>";
       }).join("") + "</ul>";

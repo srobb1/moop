@@ -143,9 +143,7 @@
             <span class="ms-2 text-muted small">
                 <?= count($gene_model['isoforms']) ?> isoform<?= count($gene_model['isoforms']) !== 1 ? 's' : '' ?>
             </span>
-            <button class="btn btn-sm btn-link p-0 ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#geneModelInfo" aria-expanded="false" title="Diagram legend">
-                <i class="fas fa-info-circle"></i>
-            </button>
+            <?= help_modal_trigger('gene-model-help', '', 'Help: reading the gene structure diagram') ?>
             <div class="ms-auto d-flex gap-1">
                 <?php if (!empty($genome_seq_available)): ?>
                 <button class="btn btn-sm btn-outline-secondary" id="gene-model-fmt-btn" title="Format sequence by feature type with custom highlighting"><i class="fas fa-palette me-1"></i>Sequence</button>
@@ -156,33 +154,29 @@
         </div>
         <div id="geneModelSection" class="collapse show">
             <div class="card-body p-3">
-                <div class="collapse mb-3" id="geneModelInfo">
-                    <div class="alert alert-info mb-0 font-size-xsmall">
-                        <div class="mb-2">
-                            The diagram is always drawn 5&prime;&rarr;3&prime; left to right. Reverse-strand genes are flipped accordingly.
-                        </div>
-                        <?php if (!empty($genome_seq_available)): ?>
-                        <div class="mb-2">
-                            <strong>Click any feature to view its sequence</strong> &mdash; exons, CDS blocks, introns, and flanking upstream/downstream regions are all clickable. The sequence appears in a popup; adjust flanking region size inside the modal.
-                        </div>
-                        <?php endif; ?>
-                        <div class="mb-0">
-                            For bulk sequence downloads &mdash; full mRNA, CDS, protein, genomic, or upstream/downstream regions across multiple isoforms &mdash; use <a href="/<?= htmlspecialchars($config->getString('site', 'moop')) ?>/tools/moopmart.php?organism=<?= urlencode($organism_name) ?>" class="alert-link">MOOPmart</a>.
-                        </div>
-                    </div>
-                </div>
-
                 <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"></svg>
 
+                <?php
+                // ONE definition of the diagram's colour key, shared by this legend and the
+                // help modal at the foot of the page. Hexes mirror the COLOR_* constants in
+                // js/modules/gene-model-viewer.js, which is what actually paints the SVG —
+                // the modal previously approximated them with Bootstrap colour names and got
+                // Downstream (purple) rendering as grey.
+                $gene_model_legend = [
+                    ['label' => 'UTR',    'hex' => '#e8833a', 'text' => 'Untranslated region — transcribed but not coding. Drawn as the thin part of an exon.'],
+                    ['label' => 'CDS',    'hex' => '#2171b5', 'text' => 'The coding stretch within the exons — what becomes protein. Drawn thick.'],
+                    ['label' => 'Exon',   'hex' => '#17becf', 'text' => 'A transcribed block on an isoform with no CDS, so nothing here is known to code.'],
+                    ['label' => 'Intron', 'hex' => '#888888', 'text' => 'The thin line joining exons. Spliced out of the mature transcript.'],
+                ];
+                if (!empty($genome_seq_available)) {
+                    $gene_model_legend[] = ['label' => 'Upstream',   'hex' => '#31a354', 'text' => 'Flanking sequence before the transcript start.'];
+                    $gene_model_legend[] = ['label' => 'Downstream', 'hex' => '#756bb1', 'text' => 'Flanking sequence after the transcript end.'];
+                }
+                ?>
                 <div class="mt-2 d-flex flex-wrap gap-3" style="font-size:0.78rem; font-weight:600; letter-spacing:0.02em;">
-                    <span style="color:#e8833a;">UTR</span>
-                    <span style="color:#2171b5;">CDS</span>
-                    <span style="color:#17becf;">Exon</span>
-                    <span style="color:#888;">Intron</span>
-                    <?php if (!empty($genome_seq_available)): ?>
-                    <span style="color:#31a354;">Upstream</span>
-                    <span style="color:#756bb1;">Downstream</span>
-                    <?php endif; ?>
+                    <?php foreach ($gene_model_legend as $__l): ?>
+                    <span style="color:<?= htmlspecialchars($__l['hex']) ?>;"><?= htmlspecialchars($__l['label']) ?></span>
+                    <?php endforeach; ?>
                 </div>
 
             </div>
@@ -236,9 +230,7 @@
                     <i class="fas fa-minus toggle-icon text-primary"></i>
                 </span>
                 <span class="ms-2 text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Annotations</span>
-                <button class="btn btn-sm btn-link p-0 ms-2 annotation-info-btn" type="button" data-bs-toggle="collapse" data-bs-target="#annotationsInfo" aria-expanded="false" title="What is an annotation?">
-                    <i class="fas fa-info-circle"></i>
-                </button>
+                <?= help_modal_trigger('annotations-help', '', 'Help: what is an annotation?') ?>
             </div>
             <div class="d-flex gap-2">
                 <a href="/<?= htmlspecialchars($config->getString('site', 'moop')) ?>/api/download_annotations.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($feature_uniquename) ?>"
@@ -252,18 +244,6 @@
         </div>
         <div id="annotationsSection" class="collapse show">
             <div class="card-body">
-                <div class="collapse mb-3" id="annotationsInfo">
-                    <div class="alert alert-info mb-3 font-size-xsmall">
-                        <strong>What is an annotation?</strong> An annotation is a functional or comparative hit that this sequence obtains through computational analysis. Examples include:
-                        <ul class="mb-0 mt-2">
-                            <li><strong>Homologs:</strong> Homologous sequences found in other organisms using tools like BLAST</li>
-                            <li><strong>Orthologs:</strong> Orthologous sequences found in other organisms using tools like OMA or EggNOG</li>
-                            <li><strong>Protein Domains:</strong> Conserved structural domains identified using InterProScan or similar tools</li>
-                        </ul>
-                        <p class="mb-0 mt-2"><small><strong>Note:</strong> Annotation sections are only displayed if the sequence has results for that type. If a sequence has no annotations of a specific type, that section will not appear.</small></p>
-                        <p class="mb-0 mt-2"><strong>Download buttons:</strong> <strong>Download All Annotations</strong> exports every annotation for this feature as a single CSV file. Individual annotation tables also have their own <i class="fas fa-download fa-xs"></i> download button to export just that result set.</p>
-                    </div>
-                </div>
                 <?php
                 // Parent annotations - using cached results
                 $count = 0;
@@ -332,3 +312,109 @@
 
 </div>
 </div><!-- End page_container -->
+
+<?php
+// ── Page help ────────────────────────────────────────────────────────────────
+// Card modals, not the collapsible alert boxes these replace. A collapsible pushes the
+// page down when it opens, so what you were reading moves; and collapsed content is
+// invisible content, which is how the old help drifted unnoticed. Modals need no JS init
+// (Bootstrap data-api), so they cannot sit dead the way a per-page-init popover can.
+
+// "How to read it" varies with whether genome sequence is actually present — otherwise the
+// help promises a click that does nothing.
+$gm_read_cards = [
+    ['label' => 'Always 5′ → 3′', 'html' => true,
+     'text'  => 'Drawn left to right in the direction of transcription. A reverse-strand gene is flipped, so the diagram reads the same way on either strand.'],
+    ['label' => 'One row per isoform',
+     'text'  => 'The gene spans the top; each mRNA below is one alternative transcript. Rows are aligned, so exon differences line up vertically.'],
+    ['label' => 'Click a row',
+     'text'  => 'Jumps to that isoform\'s annotations further down the page.'],
+];
+if (!empty($genome_seq_available)) {
+    $gm_read_cards[] = ['label' => 'Click a feature',
+        'text' => 'Exons, CDS blocks, introns and both flanking regions open their sequence. Flank size is adjustable inside that popup.'];
+}
+
+echo help_modal(
+    'gene-model-help',
+    'Reading the gene structure diagram',
+    [
+        ['heading' => 'What the parts are', 'cards' => array_map(
+            // A swatch in the exact colour the SVG is painted, not a Bootstrap colour name.
+            // The names have no orange/purple that matches, so 'secondary' turned Downstream
+            // grey — and a legend whose colours disagree with the picture is worse than none.
+            function (array $l) {
+                return [
+                    'label' => $l['label'],
+                    'html'  => true,
+                    'text'  => '<span style="display:inline-block;width:.75rem;height:.75rem;'
+                             . 'border-radius:3px;vertical-align:-1px;margin-right:.4rem;'
+                             . 'background:' . htmlspecialchars($l['hex']) . ';"></span>'
+                             . htmlspecialchars($l['text']),
+                ];
+            },
+            $gene_model_legend
+        )],
+        ['heading' => 'How to read it', 'cards' => $gm_read_cards],
+        ['heading' => 'Getting sequence out', 'cards' => [
+            ['label' => 'This gene',
+             'text'  => 'Use Genomic or GFF in the header of this box, or the Sequences section at the foot of the page.'],
+            ['label' => 'Many genes at once', 'html' => true,
+             'text'  => 'For mRNA, CDS, protein, genomic or flanking sequence across many features, use <a href="/'
+                      . htmlspecialchars($config->getString('site', 'moop')) . '/tools/moopmart.php?organism='
+                      . urlencode($organism_name) . '">MOOPmart</a>.'],
+        ]],
+    ],
+    ['intro' => 'Every isoform of this gene, drawn to scale against the genome.']
+);
+
+// Annotation-type cards are generated from $annotation_labels / $analysis_desc — the same
+// arrays that colour the badges on this page — so the help lists exactly the types this
+// site has configured, in the admin's own order, and cannot describe a type that is gone.
+$annot_cards = [];
+foreach ($analysis_order as $__t) {
+    $__desc = trim((string)($analysis_desc[$__t] ?? ''));
+    if ($__desc === '') continue;
+    // These descriptions are ADMIN-SUPPLIED (metadata/annotation_config.json) and some
+    // legitimately carry emphasis — 2 of the 10 types here use <strong>. Escaped, that
+    // showed as literal "<strong>orthologs</strong>" in the modal; passed raw it would make
+    // an admin-editable field into stored HTML, which is exactly the injection risk
+    // lib/help_ui.php cites for defaulting card text to escaped.
+    //
+    // So: allow a small inline whitelist and escape everything else. strip_tags() removes
+    // any tag outside the list (including <script> and any attribute-bearing tag, since it
+    // drops whole tags rather than sanitising them).
+    $annot_cards[] = [
+        'label' => $annotation_labels[$__t] ?? $__t,
+        'color' => $annotation_colors[$__t] ?? 'secondary',
+        'html'  => true,
+        'text'  => strip_tags($__desc, '<strong><b><em><i><code><sub><sup>'),
+    ];
+}
+
+$annot_sections = [
+    ['heading' => 'What an annotation is', 'cards' => [
+        ['label' => 'A computed hit',
+         'text'  => 'Not a curated statement about this gene — a result some analysis produced for this sequence.'],
+        ['label' => 'Attached per transcript', 'html' => true,
+         'text'  => 'Annotations belong to an ' . gloss('mRNA') . ', not to the ' . gloss('gene') . ', which is why they are grouped under each isoform.'],
+        ['label' => 'Only what exists',
+         'text'  => 'A type with no results is not shown at all, so a missing section means no hits, not an error.'],
+        ['label' => 'The number on each badge',
+         'text'  => 'How many rows that type has for that transcript. The same counts appear in the section list on the left.'],
+    ]],
+];
+if ($annot_cards) {
+    $annot_sections[] = ['heading' => 'The types on this site', 'cards' => $annot_cards];
+}
+$annot_sections[] = ['heading' => 'Getting them out', 'cards' => [
+    ['label' => 'Download All Annotations',
+     'text'  => 'Every annotation for this gene, all types and all transcripts, as one CSV.'],
+    ['label' => 'Per-table export', 'html' => true,
+     'text'  => 'Each table has its own <strong>Copy</strong>, <strong>CSV</strong> and <strong>Excel</strong> buttons for just that type.'],
+    ['label' => 'Search within a type',
+     'text'  => 'The box beside those buttons filters that one table as you type.'],
+]];
+
+echo help_modal('annotations-help', 'Annotations on this page', $annot_sections,
+    ['intro' => 'What these results are, and where each one came from.']);

@@ -27,22 +27,18 @@
     // hl      = pastel highlight colour for the sequence background
     // swatch  = diagram colour shown in the controls row label
     const TMETA = {
-        CDS:             { label: 'CDS',              hl: '#bbdefb', swatch: '#2171b5' },
-        exon:            { label: 'Exon',             hl: '#b2f0f0', swatch: '#17becf' },  // teal — no-CDS isoform
-        exon_implied_utr:{ label: 'Exon / Impl. UTR', hl: '#ffd8a8', swatch: '#e8833a' },  // orange — has CDS
-        five_prime_utr:  { label: "5' UTR",           hl: '#ffd8a8', swatch: '#e8833a' },
-        three_prime_utr: { label: "3' UTR",           hl: '#ffd8a8', swatch: '#e8833a' },
-        utr:             { label: 'UTR',              hl: '#ffd8a8', swatch: '#e8833a' },
-        intron:          { label: 'Intron',           hl: '#e8eaed', swatch: '#aaaaaa' },
+        CDS:             { label: 'CDS',    hl: '#bbdefb', swatch: '#2171b5' },
+        exon:            { label: 'Exon',   hl: '#b2f0f0', swatch: '#17becf' },  // teal — non-coding transcript
+        five_prime_utr:  { label: "5' UTR", hl: '#ffd8a8', swatch: '#e8833a' },
+        three_prime_utr: { label: "3' UTR", hl: '#ffd8a8', swatch: '#e8833a' },
+        utr:             { label: 'UTR',    hl: '#ffd8a8', swatch: '#e8833a' },
+        intron:          { label: 'Intron', hl: '#e8eaed', swatch: '#aaaaaa' },
     };
-    // 'exon' colour/label depends on whether the active isoform has CDS.
-    // With CDS: exon regions outside CDS are implied UTR → orange.
-    // Without CDS: plain non-coding exon → teal.
+    // Every region now arrives already labelled for what it is — buildIntervals() splits a
+    // coding transcript's exons into CDS and real 5'/3' UTR, so there is no longer an
+    // "Exon / Impl. UTR" case for this to disambiguate. `exon` only reaches here from a
+    // transcript with no CDS at all, where Exon is simply the right word.
     function tmeta(t) {
-        if (t === 'exon') {
-            const hasCds = activeIso && activeIso.cds && activeIso.cds.length > 0;
-            return hasCds ? TMETA['exon_implied_utr'] : TMETA['exon'];
-        }
         return TMETA[t] || { label: t, hl: '#f0f0f0', swatch: '#999' };
     }
 
@@ -90,8 +86,48 @@
             out.push({ s, e, type });
         };
 
-        for (const c of (isoform.cds   || [])) push(c.start, c.end, 'CDS');
-        for (const x of (isoform.exons || [])) push(x.start, x.end, (x.type || 'exon').toLowerCase());
+        const cdsList = (isoform.cds || []).slice().sort((a, b) => a.start - b.start);
+        const hasCds  = cdsList.length > 0;
+
+        for (const c of cdsList) push(c.start, c.end, 'CDS');
+
+        // On a CODING transcript, the part of an exon that is not CDS is UTR. Not
+        // "implied UTR" — UTR. The hedge existed because many GFFs give only exon+CDS
+        // records and leave the UTR to be worked out, but that is a fact about the file
+        // we read, not about the biology, and the reader does not have it and cannot use
+        // it. So the exon is SPLIT here and each piece labelled for what it is, which
+        // also gives every base exactly one identity: a segment carrying both `exon` and
+        // `five_prime_utr` would blend two highlight colours into a muddy third.
+        //
+        // A NON-coding transcript keeps plain `exon`, which is equally correct — with no
+        // CDS there is nothing for a region to be untranslated relative to.
+        const codingStart = hasCds ? Math.min(...cdsList.map(c => c.start)) : 0;
+        const codingEnd   = hasCds ? Math.max(...cdsList.map(c => c.end))   : 0;
+
+        // Genomic "before the CDS" is 5' on the plus strand and 3' on the minus strand.
+        const utrBefore = flip ? 'three_prime_utr' : 'five_prime_utr';
+        const utrAfter  = flip ? 'five_prime_utr'  : 'three_prime_utr';
+
+        for (const x of (isoform.exons || [])) {
+            const type = (x.type || 'exon').toLowerCase();
+
+            // Already-declared UTR records pass straight through, and so does every exon
+            // on a non-coding transcript.
+            if (type !== 'exon' || !hasCds) { push(x.start, x.end, type); continue; }
+
+            // Subtract the CDS blocks from this exon; whatever remains is untranslated.
+            let cursor = x.start;
+            for (const c of cdsList) {
+                if (c.end < cursor || c.start > x.end) continue;      // no overlap
+                if (c.start > cursor) {
+                    push(cursor, c.start - 1, c.start - 1 < codingStart ? utrBefore : utrAfter);
+                }
+                cursor = Math.max(cursor, c.end + 1);
+            }
+            if (cursor <= x.end) {
+                push(cursor, x.end, cursor > codingEnd ? utrAfter : utrBefore);
+            }
+        }
 
         // Derive introns: gaps between merged exon + CDS intervals
         const raw = [...(isoform.cds || []), ...(isoform.exons || [])]
@@ -341,7 +377,9 @@
         if (document.getElementById('sf-modal')) return;
         document.body.insertAdjacentHTML('beforeend', `
 <div class="modal fade" id="sf-modal" tabindex="-1" aria-labelledby="sf-modal-label" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+  <!-- centered for the same reason as the region modal in gene-model-viewer.js: it is
+       opened from the gene structure box, not from the top of the page. -->
+  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header py-2">
         <div>
@@ -383,6 +421,11 @@
             <small class="text-muted ms-1">Rich text preserves highlight and style when pasting into Word or Google&nbsp;Docs.</small>
           </div>
         </div>
+      </div>
+      <!-- Footer Close as well as the header X — see the note in gene-model-viewer.js.
+           This dialog is modal-xl and scrollable, so the X can be a whole screen away. -->
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
