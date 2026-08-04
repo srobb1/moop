@@ -553,6 +553,7 @@ README;
     // Copy files
     $changed = false;
     $copied_count = 0;
+    $failed = [];          // destinations the web server could not write
     foreach ($files as $source => $dest_relative) {
         if (!file_exists($source)) {
             continue;
@@ -570,7 +571,25 @@ README;
         $source_content = @file_get_contents($source);
         $dest_content = @file_get_contents($dest);
         if ($source_content !== false && $source_content !== $dest_content) {
-            @file_put_contents($dest, $source_content);
+            // CHECK THE RETURN. This used to be a bare `@file_put_contents(...)` followed
+            // unconditionally by $copied_count++, so a write that failed was counted as a
+            // backup: the dashboard reported "backed up N files", the task showed a tick,
+            // and the file had not moved.
+            //
+            // It was not hypothetical. metadata/glossary.json in the backup was mode 640
+            // owned by smr while every sibling was 664 apache — housekeeping runs as
+            // apache, so it had read but not write. Every run from 2026-07-23 to
+            // 2026-08-04 "succeeded" while the file sat unchanged, which means a dozen
+            // days of Manage Glossary edits were never backed up by the thing whose only
+            // job is to back them up. A backup that reports success without writing is
+            // worse than no backup, because nobody goes looking.
+            if (@file_put_contents($dest, $source_content) === false) {
+                $failed[] = $dest_relative;
+                error_log("MOOP housekeeping: FAILED to back up $dest_relative to "
+                        . "$site_data_path — check ownership and mode on the destination "
+                        . "(it must be writable by the web server user)");
+                continue;
+            }
             $changed = true;
             $copied_count++;
         }
@@ -584,11 +603,14 @@ README;
 
     // Store status for the dashboard
     $status = [
-        'status' => 'ok',
+        'status' => $failed ? 'error' : 'ok',
         'is_git' => $is_git,
         'git' => $is_git ? housekeeping_git_status($site_data_path) : null,
         'last_run' => date('Y-m-d H:i:s'),
         'files_copied' => $copied_count,
+        // Surfaced so a write the web server cannot perform is visible on the dashboard
+        // instead of hiding behind a success count. Empty is the normal case.
+        'files_failed' => $failed,
         'path' => $site_data_path,
     ];
     $_SESSION['site_data_backup'] = $status;
