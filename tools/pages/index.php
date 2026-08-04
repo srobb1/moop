@@ -152,13 +152,22 @@
   </div>
 
   <!-- Browse & Select collapsible header -->
-  <div class="browse-select-header mb-0" id="browse-select-header"
-       data-bs-toggle="collapse" data-bs-target="#browse-select-body"
-       role="button" aria-expanded="false" aria-controls="browse-select-body">
-    <span class="d-flex align-items-center gap-2">
+  <?php /* The collapse toggle moved from this outer div onto the label span below, so the
+           help (i) can sit in the bar WITHOUT being inside the toggle.
+           ⚠️ Do not "simplify" this by putting the toggle back on the wrapper and stopping
+           propagation on the button: Bootstrap 5 registers its delegated data-api handlers
+           in the CAPTURE phase, so they fire on the way down to the target and a
+           bubble-phase stopPropagation at the button is too late to stop them. Measured
+           here — a document-level bubble listener never fired, proving propagation was
+           stopped, while the collapse toggled anyway. Structure is the only fix. */ ?>
+  <div class="browse-select-header mb-0" id="browse-select-header">
+    <span class="d-flex align-items-center gap-2"
+          data-bs-toggle="collapse" data-bs-target="#browse-select-body"
+          role="button" aria-expanded="false" aria-controls="browse-select-body">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
       <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Search in a Custom Selection of Organisms</span>
     </span>
+    <?= help_modal_trigger('how-to-modal', '', 'Help: searching a custom selection of organisms') ?>
   </div>
 
   <?php
@@ -208,65 +217,50 @@
   );
   ?>
 
-  <!-- How-to modal -->
-  <div class="modal fade" id="how-to-modal" tabindex="-1" aria-labelledby="how-to-modal-label" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title fw-bold" id="how-to-modal-label">
-            <i class="fas fa-info-circle text-info me-2"></i>How to use <?= htmlspecialchars($siteTitle) ?>
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
+  <?php
+  // How the Browse & Select workflow works. Was 60 lines of hand-written modal markup with
+  // no trigger anywhere on the page -- unreachable since it was written, which is why the
+  // home page scored zero help. Rebuilt on help_modal() like every other help on the site.
+  //
+  // THE TOOL LIST IS GENERATED, not typed. It reads the same source the Tool Box renders
+  // from -- getAvailableTools() filtered on the `toolbox` flag -- so it cannot drift from
+  // what is actually on the page. The hand-written version had already gone stale by two
+  // tools. Annotation Search and MOOPmart are deliberately NOT here: they carry
+  // 'toolbox' => false in tools_config.php because they are dense pages that should not be
+  // one casual click from the front door, and this help follows that decision rather than
+  // quietly reversing it.
+  $__box_tools = array_filter(
+      getAvailableTools(createToolContext('index', ['use_onclick_handler' => true])),
+      fn($t) => ($t['toolbox'] ?? true) !== false
+  );
+  $__tool_cards = [];
+  foreach ($__box_tools as $__t) {
+      $__tool_cards[] = ['label' => $__t['name'], 'text' => $__t['description'] ?? ''];
+  }
 
-          <!-- Two-step workflow -->
-          <div class="row g-3 mb-4">
-            <div class="col-md-6">
-              <div class="info-step-card">
-                <div class="info-step-num">1</div>
-                <div>
-                  <div class="fw-semibold mb-1">Select your organisms</div>
-                  <p class="text-muted small mb-0">
-                    Pick one or more organisms using any of the four selection modes below.
-                    You can mix and match — selections carry over between tabs.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="info-step-card">
-                <div class="info-step-num">2</div>
-                <div>
-                  <div class="fw-semibold mb-1">Choose a tool</div>
-                  <p class="text-muted small mb-0">
-                    Click a tool in the <strong>Tool Box</strong>. It opens in a new tab,
-                    pre-filtered to exactly the organisms you selected.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Available tools -->
-          <h6 class="fw-semibold text-dark mb-2">Available tools</h6>
-          <div class="row g-2 mb-3">
-            <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-emerald me-2">Retrieve Sequences</span><span class="text-muted small">Download gene, mRNA, CDS, or protein FASTA</span></div></div>
-            <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-orange me-2">BLAST Search</span><span class="text-muted small">Search a query sequence against selected genomes</span></div></div>
-            <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-violet me-2">Search Organisms</span><span class="text-muted small">Cross-organism annotation comparison table</span></div></div>
-            <div class="col-sm-6 col-lg-4"><div class="info-tool-row"><span class="badge btn-tool-sky me-2">Downloads</span><span class="text-muted small">Browse and download genome assembly files</span></div></div>
-          </div>
-
-          <p class="text-muted small mb-0">
-            <i class="fas fa-info-circle text-info me-1"></i>
-            <strong>Tip:</strong> Selections are remembered as you switch between tabs.
-            Use the <strong>Selected Organisms</strong> panel on the right to review your list and remove any entries before running a tool.
-          </p>
-
-        </div>
-      </div>
-    </div>
-  </div>
+  echo help_modal(
+      'how-to-modal',
+      'Searching a selection of organisms',
+      [
+          ['heading' => 'Two steps', 'cards' => [
+              ['label' => 'Pick your organisms',
+               'text' => 'Use any of the selection modes in this section — by group, by taxonomy, or by name. Mix them freely; your list carries over as you switch.'],
+              ['label' => 'Then choose a tool',
+               'text' => 'Every tool in the box opens in a new tab, already limited to the organisms you picked.'],
+          ]],
+          ['heading' => 'Tools in the box', 'cards' => $__tool_cards],
+          ['heading' => 'Worth knowing', 'cards' => [
+              ['label' => 'Your selection persists',
+               'text' => 'It survives switching between the selection modes, so you can build a list from more than one of them.'],
+              ['label' => 'Check it before you run',
+               'text' => 'The Selected Organisms panel lists everything currently picked, and lets you drop any entry.'],
+              ['label' => 'More tools in the menu',
+               'text' => 'The Tools menu at the top carries the heavier ones — annotation search and the data exporter — which work the same way but ask more of you.'],
+          ]],
+      ],
+      ['intro' => 'Build a list of organisms, then run any tool across all of them at once.']
+  );
+  ?>
 
   <!-- Browse & Select: selected organisms full-width top row, then step 1 + step 2 below -->
   <div class="collapse" id="browse-select-body">

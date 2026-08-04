@@ -399,4 +399,5 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.index-group-chip[data-group]').forEach(el => {
         el.style.background = groupColor(el.dataset.group);
     });
+
 });
