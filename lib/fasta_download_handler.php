@@ -104,12 +104,25 @@ if (!file_exists($fasta_file)) {
     die('Error: FASTA file does not exist.');
 }
 
-// Generate download filename with organism and assembly prefix
-// Dots separated the parts here and nowhere else, which reads as a chain of file
-// extensions. Underscores between parts; the pattern keeps its own extension.
+// Download filename.
+//
+// 🔴 This was building the name from $pattern — a variable that is never assigned in this
+// file. It evaluated to '', so the one part that said WHICH sequence you asked for was
+// empty and moop_download_filename() dropped it. Every type produced the identical name:
+//
+//     sequences_Anoura_caudifer_GCA_004027475.1_2026-08-04.fa
+//
+// Download protein, then CDS, then transcript from the gene set page and the browser hands
+// you that name three times, so you get " (1)" and " (2)" and no way to tell which is
+// which. Reported from a real Downloads folder 2026-08-04.
+//
+// Named by TYPE rather than the generic "sequences": the type IS the thing that
+// distinguishes these files, so it leads. The gene set joins the scope for the same reason
+// it is in the GFF download's name — one assembly can carry more than one.
+$pattern      = sequence_filename($type) ?? '';
 $pattern_base = preg_replace('/\.(fa|fasta|faa|fna|txt|gz)$/i', '', $pattern);
 $pattern_ext  = ltrim(substr($pattern, strlen($pattern_base)), '.') ?: 'fa';
-$filename = moop_download_filename('sequences', [$organism, $assembly, $pattern_base], $pattern_ext);
+$filename = moop_download_filename($type, [$organism, $assembly, $gene_set], $pattern_ext);
 
 // Get file size
 $file_size = filesize($fasta_file);
@@ -122,7 +135,22 @@ header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-// Stream the file
+// Stream the file.
+//
+// 🔴 DISCARD THE GUARD BUFFER FIRST. This file opens ob_start() at the top to swallow stray
+// output from includes, and readfile() writes into whatever buffer is open — so with it
+// still active the ENTIRE file is accumulated in memory before anything reaches the client.
+// genome.fa for Anoura_caudifer is 2.2 GB against memory_limit 128M: fatal, and the browser
+// gets a 500 with no clue why. protein.aa.fa is 15 MB, fits under the limit, and worked —
+// which is exactly why this looked like "genome downloads are broken" rather than a
+// buffering bug. Reported 2026-08-04.
+//
+// ob_end_clean() rather than ob_end_flush(): anything sitting in that buffer is by
+// definition stray output, and prepending it to a FASTA would corrupt the file. Headers are
+// unaffected — header() queues them independently of the output buffer.
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
 readfile($fasta_file);
 exit;
 ?>
