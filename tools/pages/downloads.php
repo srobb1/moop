@@ -156,7 +156,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                      for="cb-<?= $asm_id ?>"
                      style="cursor:pointer;"
                      onclick="event.stopPropagation()">
-                <?= htmlspecialchars($assembly) ?>
+                <?= htmlspecialchars($assembly_labels[$organism][$assembly] ?? $assembly) ?>
               </label>
               <small class="me-3 flex-shrink-0" style="opacity:0.8;">
                 <?= $asm_total_files ?> file<?= $asm_total_files !== 1 ? 's' : '' ?>

@@ -29,6 +29,11 @@ $excluded_exts = array_flip([
     'ndb', 'nhr', 'nin', 'njs', 'nog', 'nos', 'not', 'nsq', 'ntf', 'nto',
     // BLAST protein DB
     'pdb', 'phr', 'pin', 'pjs', 'pog', 'pos', 'pot', 'psq', 'ptf', 'pto',
+    // Sequence index — regenerable from the FASTA beside it (samtools faidx, or MOOP's
+    // own moop_fasta_ensure_index), meaningless on its own, and stale the moment the
+    // FASTA it points into is rebuilt. Offering it invites someone to download a .fai
+    // without its .fa, or an old pair whose byte offsets no longer line up.
+    'fai',
     // Internal system files
     'sqlite', 'json',
 ]);
@@ -97,6 +102,7 @@ $ext_priority = array_flip(['fa', 'fasta', 'faa', 'gff', 'gff3', 'gtf', 'bed', '
 
 // Build download tree: $download_tree[organism][assembly] = ['files' => [...], 'file_count' => N, 'total_label' => '...']
 $download_tree = [];
+$assembly_labels = [];   // [organism][accession] => "Name (Accession)"
 
 foreach ($unique_sources as $source) {
     $organism      = $source['organism'];
@@ -165,6 +171,11 @@ foreach ($unique_sources as $source) {
     if (!isset($download_tree[$organism][$assembly])) {
         $download_tree[$organism][$assembly] = [];
     }
+    // Display label for the assembly heading, via the ONE formatter — assembly_label()
+    // gives "Name (Accession)", or the accession alone when there is no distinct name.
+    // The tree is keyed by accession because that is what identifies the directory, so
+    // the human-readable form has to be carried alongside rather than derived in the view.
+    $assembly_labels[$organism][$assembly] = assembly_label($source['genome_name'] ?? '', $assembly);
     $download_tree[$organism][$assembly][$gene_set] = [
         'files'       => $files,
         'file_count'  => count($files),
@@ -208,6 +219,7 @@ $data = [
     'site'             => $site,
     'siteTitle'        => $siteTitle,
     'download_tree'    => $download_tree,
+    'assembly_labels'  => $assembly_labels,
     'context_organism' => $context_organism,
     'context_assembly' => $context_assembly,
     'context_gene_set' => $context_gene_set,
