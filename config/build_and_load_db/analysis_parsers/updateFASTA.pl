@@ -87,11 +87,61 @@ while (my $line = <FASTA>){
 		# The suffix alternation is deliberately exact -- ":pep" and ":cds", nothing else.
 		# A generic /:\w+$/ would be wrong here: Ensembl descriptions are full of colons
 		# and the id itself can carry one.
-		my $key = $id;
-		$key =~ s/^(?:cds-|CDS:)//;
-		$key =~ s/:(?:pep|cds)$//;
+		#
+		#   TransDecoder ORF MARKER       bkew.kc1.000000_0_1.16.p1       appended to the
+		#                                 bkew.kc1.000000_0_1.16.p1:pep   TRANSCRIPT id when
+		#                                                                 ORFs were called
+		#
+		# The third convention was missed until 2026-08-04 and cost Bipalium_kewense every
+		# one of its 45,518 protein and CDS descriptions on a re-run that was supposed to
+		# restore them. Its transcript ids are bare (bkew.kc1.000000_0_1.16) and match
+		# geneNames.tsv, so transcript.nt.fa came out perfect -- 17,489 descriptions, exactly
+		# what organism.sqlite holds -- while protein.aa.fa and cds.nt.fa carry ".p1" on top
+		# of ":pep"/":cds", missed every lookup, and were cleared to bare ids by the
+		# not-found branch below. Compare Bradypodion_ventrale, whose ids are just
+		# id/:pep/:cds with no ORF marker: all three files landed on 20,232 of 20,232.
+		#
+		# ⚠️ The not-found branch RETRACTS (rewrites to ">$id"), so a missed lookup does not
+		# merely fail to add a description -- it DELETES one. Thirteen further gene sets
+		# share this id shape and still hold 50-90% real protein descriptions from an older
+		# pipeline; without this ladder, re-running them would zero every one.
+		#
+		# CANDIDATE LADDER, most specific first, first hit wins. Not an unconditional strip:
+		# a gene set whose geneNames.tsv really is keyed on the full suffixed id still
+		# matches at candidate 1 and is untouched by the looser rules below it. Each rung
+		# builds on the previous, so the last is prefix + suffix + ORF marker removed.
+		#
+		# 🔑 THE EMITTED ID IS NEVER REWRITTEN -- every branch below interpolates $id, not
+		# $key. The header id has to keep matching features_coords.tsv, features.tsv and
+		# feature_uniquename in organism.sqlite, or a BLAST hit and a gene page can no longer
+		# say which feature they belong to, and neither can retrieve its GFF lines or build a
+		# JBrowse link. Normalising is for FINDING the description, nothing else. This is the
+		# same rule that makes Ensembl's "CDS:" prefix safe to look past but never to remove:
+		# strip it for real and 30,802 FlyBase CDS ids collide with their protein ids.
+		my @candidates;
+		my $c = $id;
+		push @candidates, $c;                                    # 1. exact, as it appears
+		(my $c_np = $c)    =~ s/^(?:cds-|CDS:)//;
+		push @candidates, $c_np    if $c_np    ne $c;             # 2. type prefix dropped
+		(my $c_nps = $c_np) =~ s/:(?:pep|cds)$//;
+		push @candidates, $c_nps   if $c_nps   ne $c_np;          # 3. + type suffix dropped
+		(my $c_npso = $c_nps) =~ s/\.p\d+$//;
+		push @candidates, $c_npso  if $c_npso  ne $c_nps;         # 4. + ORF marker dropped
 
-		if (!exists $names{$key}){
+		my $key;
+		foreach my $candidate (@candidates){
+			if (exists $names{$candidate}){
+				$key = $candidate;
+				last;
+			}
+		}
+
+		# Every form of the id we considered. The have-a-description test below asks "is this
+		# text just the id repeated?", and geneNames.tsv may store any one of these shapes,
+		# so the comparison has to cover all of them rather than the single matched key.
+		my %is_id_like = map { $_ => 1 } (@candidates, $id);
+
+		if (!defined $key){
 			# Not in geneNames.tsv: this feature has no name any more. Strip whatever the
 			# header carried, so a description cannot outlive the annotation that produced
 			# it -- the same retraction rule as the has-a-row-but-nothing-to-say case below.
@@ -99,7 +149,7 @@ while (my $line = <FASTA>){
 			# indefinitely.
 			$line = ">$id";
 		}
-		elsif (exists $names{$key}){
+		else {
 			 my $name = $names{$key}{name};
 			 my $note = $names{$key}{note};
 			 my $source = $names{$key}{source};
@@ -122,11 +172,13 @@ while (my $line = <FASTA>){
        # so the description survived there. That is why the same feature reads
        # "Histone H4" in the GFF and in organism.sqlite, and was blank in the FASTA.
        #
-       # $key, not $id, on both comparisons -- a ":pep"/":cds" header must not be mistaken
-       # for a symbol that happens to differ from its own id.
-       my $have_desc = ($note ne $key and $note ne $id);
+       # Compared against %is_id_like, not $id alone -- a ":pep"/":cds"/".p1" header must not
+       # be mistaken for a symbol that happens to differ from its own id. Checking every rung
+       # of the ladder rather than just the matched $key means it does not matter which id
+       # shape geneNames.tsv happened to store.
+       my $have_desc = !exists $is_id_like{$note};
        if ($have_desc){
-         my $label = ($name ne $key and $name ne $id) ? $name : $key;
+         my $label = !exists $is_id_like{$name} ? $name : $key;
          $line = ">$id $label $note $source";
        }else{
          # No description to give. Clearing to a bare id is INTENTIONAL -- it is how a
