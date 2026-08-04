@@ -8,7 +8,7 @@
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#d97706;">
           <span class="fw-semibold" style="letter-spacing:0.04em; font-size:0.85rem;"><?= htmlspecialchars(assembly_label($assembly_info['genome_name'] ?? '', $assembly_info['genome_accession'] ?? '')) ?></span>
-          <span class="badge bg-white text-assembly" style="font-size:0.65em; opacity:0.9;">search limited to this assembly</span>
+          <span class="badge bg-white text-assembly" style="font-size:0.65em; opacity:0.9;">search limited to this <?= gloss('assembly') ?></span>
         </div>
 
         <!-- Search Section -->

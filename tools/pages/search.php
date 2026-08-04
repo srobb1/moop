@@ -70,7 +70,7 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
     <div class="card mb-3 shadow-sm">
       <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
         <span class="step-badge me-2">1</span>
-        <span class="fw-semibold" style="font-size:0.9rem;">Enter a gene ID or annotation keyword</span>
+        <span class="fw-semibold" style="font-size:0.9rem;">Enter a <?= gloss('gene') ?> ID or <?= gloss('annotation') ?> keyword</span>
         <?= help_modal_trigger('search-help', '', 'How to search') ?>
       </div>
       <div class="card-body py-3">

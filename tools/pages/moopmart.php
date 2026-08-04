@@ -379,7 +379,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
               <!-- Column headers -->
               <div class="row g-2 mb-1 text-muted" style="font-size:0.75rem;">
-                <div class="col-sm-4">Annotation type</div>
+                <div class="col-sm-4"><?= gloss('annotation type', 'Annotation type') ?></div>
                 <div class="col-sm-4">Accession <span class="text-muted">(exact)</span></div>
                 <div class="col-sm-4">Keyword
                   <?= help_modal_trigger('search-help', '', 'How to search') ?>
@@ -421,7 +421,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                        (i) sits with the note instead of floating. updateCoordState() swaps the
                        note text but leaves the sibling (i) in place. */ ?>
               <div class="d-flex align-items-baseline gap-1 mb-2">
-                <span class="small text-muted fst-italic" id="mm-coord-note">Select exactly one assembly in Step <span class="step-ref">1</span> to enable location search.</span>
+                <span class="small text-muted fst-italic" id="mm-coord-note">Select exactly one <?= gloss('assembly') ?> in Step <span class="step-ref">1</span> to enable location search.</span>
                 <?= field_help(
                     'Location search works on one assembly at a time. The chromosome and scaffold names '
                     . 'are read from that assembly\'s own reference sequences — they differ between '
