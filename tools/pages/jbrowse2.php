@@ -11,7 +11,8 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   <!-- Header -->
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Genome Browser</span>
+      <?php /* h1, not a styled span — see the note on retrieve_sequences.php. */ ?>
+      <h1 class="text-uppercase fw-semibold mb-0 d-inline" style="letter-spacing:0.1em; font-size:0.8rem;">Genome Browser</h1>
     </div>
     <div class="card-body py-2">
       <p class="text-muted small mb-0">Select an organism and assembly to explore in JBrowse2. Navigate genes, tracks, and sequence annotations interactively.</p>

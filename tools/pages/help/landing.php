@@ -47,9 +47,10 @@ $topic_card = function (array $t) use ($site) {
 
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">
+      <?php /* h1, not a styled span — see the note on retrieve_sequences.php. */ ?>
+      <h1 class="text-uppercase fw-semibold mb-0 d-inline" style="letter-spacing:0.1em; font-size:0.8rem;">
         <i class="fa fa-book me-2"></i>Help &amp; Documentation
-      </span>
+      </h1>
     </div>
     <div class="card-body p-4">
       <p class="text-muted mb-0">
