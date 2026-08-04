@@ -282,8 +282,21 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
            . "</span>";
     
     if ($desc) {
-        $html .= "&nbsp;<button class=\"btn btn-sm btn-link p-0 annotation-info-btn\" type=\"button\" data-bs-toggle=\"collapse\" data-bs-target=\"#" . htmlspecialchars($desc_id) . "\" aria-expanded=\"false\">";
-        $html .= "<i class=\"fas fa-info-circle\"></i>";
+        // NAME THE BUTTON. This is icon-only, so without an accessible name a screen
+        // reader announces bare "button" and a mouse user gets no tooltip -- on a page
+        // that renders seven of them, one per annotation section, all identical. The
+        // label carries the annotation type so the seven are distinguishable rather than
+        // seven copies of "More information".
+        //
+        // aria-controls pairs with the aria-expanded Bootstrap already toggles, so the
+        // control is properly associated with the region it opens.
+        $info_label = 'About ' . $annotation_type . ' annotations';
+        $html .= "&nbsp;<button class=\"btn btn-sm btn-link p-0 annotation-info-btn\" type=\"button\""
+               . " data-bs-toggle=\"collapse\" data-bs-target=\"#" . htmlspecialchars($desc_id) . "\""
+               . " aria-controls=\"" . htmlspecialchars($desc_id) . "\" aria-expanded=\"false\""
+               . " aria-label=\"" . htmlspecialchars($info_label) . "\""
+               . " title=\"" . htmlspecialchars($info_label) . "\">";
+        $html .= "<i class=\"fas fa-info-circle\" aria-hidden=\"true\"></i>";
         $html .= "</button>";
     }
     
