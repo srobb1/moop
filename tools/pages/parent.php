@@ -251,6 +251,7 @@
                 <i class="fas fa-sitemap toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Feature Hierarchy</span>
+            <?= help_modal_trigger('hierarchy-help', '', 'Help: reading the feature hierarchy') ?>
         </div>
         <div id="hierarchySection" class="collapse show">
             <div class="card-body">
@@ -487,6 +488,40 @@ echo help_modal(
         ]],
     ],
     ['intro' => 'Every isoform of this gene, drawn to scale against the genome.']
+);
+
+// ── Feature Hierarchy ────────────────────────────────────────────────────────
+// The tree is the one place the page states the parent/child model outright, and three of
+// its four signals are silent: the green badge, the fact that an ID is sometimes a link
+// and sometimes not, and why the count sits on the transcript rather than the gene. The
+// not-a-link case is the one that reads as broken — cds and protein rows are deliberately
+// plain text because no annotation section exists for them anywhere on the page, and
+// without saying so the user is left clicking something that looks live. (Those rows WERE
+// links once, and dead ones; see moop_annotation_card_anchor().)
+echo help_modal(
+    'hierarchy-help',
+    'Reading the feature hierarchy',
+    [
+        ['heading' => 'What it shows', 'cards' => [
+            ['label' => 'What belongs to what',
+             'text'  => 'The ' . htmlspecialchars(strtolower($type)) . ', the transcripts it produces, and the coding sequence and protein each transcript gives.'],
+            ['label' => 'Colour = feature type',
+             'text'  => 'The badge after each ID uses the same colour for a type everywhere on the site.'],
+        ]],
+        ['heading' => 'The green count', 'cards' => [
+            ['label' => 'How many annotations',
+             'text'  => 'A green badge counts every annotation on that feature, across all types. No badge means none.'],
+            ['label' => 'Usually on the transcript',
+             'text'  => 'Annotations attach to the transcript, so the ' . htmlspecialchars(strtolower($type)) . ' itself often carries none even when the page is full of results.'],
+        ]],
+        ['heading' => 'Clicking', 'cards' => [
+            ['label' => 'An ID that is a link jumps to its annotations',
+             'text'  => 'It scrolls to that feature\'s section further down the page.'],
+            ['label' => 'Plain text means there is nothing to jump to',
+             'text'  => 'Coding sequences and proteins have no annotation section of their own, so their IDs are not links rather than links that do nothing.'],
+        ]],
+    ],
+    ['intro' => 'How this ' . htmlspecialchars(strtolower($type)) . ' is built, and where its annotations sit.']
 );
 
 // ── Page-level orientation ───────────────────────────────────────────────────
