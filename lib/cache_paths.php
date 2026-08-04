@@ -134,6 +134,25 @@ function moop_annotation_sources_cache_file(string $organism): string
 }
 
 /**
+ * Per-organism Wikipedia lookup cache.
+ *
+ * Sits beside annotation_sources_cache.json, same per-organism subdirectory pattern, so
+ * it needs no new entry in the writable allowlist or the SELinux script (CLAUDE.md §11) —
+ * the cache root already carries httpd_sys_rw_content_t and this is a directory under it.
+ *
+ * Exists because the organism page called the Wikipedia API live on every single page
+ * load. Measured 2026-08-04: 348 ms of a 428 ms page, all 85 organisms affected (every
+ * one lacks both a stored description and a stored image, so nothing took the fast path),
+ * and the worst case is far uglier than the average — getWikipediaOrganismData() tries up
+ * to three titles and then a search fallback, four sequential calls at a 10 s timeout each.
+ */
+function moop_wikipedia_cache_file(string $organism): string
+{
+    $dir = moop_cache_root() . '/' . $organism;
+    return moop_ensure_cache_dir($dir) ? "$dir/wikipedia.json" : '';
+}
+
+/**
  * Lock file coordinating the background organism-cache refresh. Lives beside the
  * organism cache it guards. Was: organisms/.organism_cache_lock — moved out with
  * the cache so the organisms/ tree can be read-only to the web server.

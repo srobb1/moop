@@ -194,7 +194,78 @@ function getWikipediaTaxonomyDataFromSearch($rank_name) {
  * @param string $scientific_name Scientific name to try first (optional)
  * @return array Array with 'description', 'image_url', 'wikipedia_url', 'source'
  */
+/**
+ * Cached organism lookup — THE entry point. Callers must not reach past this.
+ *
+ * The uncached fetch below can make FOUR sequential network calls (three title attempts
+ * then a search fallback) at moop_curl_get's 10 s ceiling each, i.e. up to 40 s inside a
+ * user's page request. Measured on this deployment 2026-08-04: 348 ms of a 428 ms organism
+ * page on a good day, and 85 of 85 organisms took that path, because the fast path needs a
+ * stored description *and* a stored image and no organism.json has either.
+ *
+ * Same principle as the housekeeping health checks: expensive work does not belong in a
+ * page load. Here it is worse than a stale card — it is an external service in the request
+ * path, so a slow or unreachable Wikipedia becomes a slow or hanging MOOP.
+ *
+ * Negative results are cached too, on a shorter TTL. An organism with no article is
+ * exactly the case that costs all four calls, so not caching the miss would leave the
+ * worst case permanently uncached.
+ */
 function getWikipediaOrganismData($organism_name, $scientific_name = '') {
+    $empty = ['description' => '', 'image_url' => '', 'wikipedia_url' => '', 'source' => 'Wikipedia'];
+
+    if (empty($organism_name) && empty($scientific_name)) {
+        return $empty;
+    }
+
+    $HIT_TTL  = 30 * 86400;  // article intros change rarely
+    $MISS_TTL = 7  * 86400;  // but a new article should be picked up within the week
+
+    $cache_file = function_exists('moop_wikipedia_cache_file')
+        ? moop_wikipedia_cache_file((string) $organism_name)
+        : '';
+
+    if ($cache_file && is_readable($cache_file)) {
+        $cached = json_decode((string) @file_get_contents($cache_file), true);
+        if (is_array($cached) && isset($cached['fetched_at'], $cached['data'])) {
+            $age = time() - (int) $cached['fetched_at'];
+            $ttl = empty($cached['data']['description']) && empty($cached['data']['image_url'])
+                 ? $MISS_TTL : $HIT_TTL;
+            if ($age < $ttl) {
+                return $cached['data'];
+            }
+        }
+    }
+
+    $reached = false;
+    $data = moop_wikipedia_fetch_organism_uncached($organism_name, $scientific_name, $reached);
+
+    // Cache an EMPTY result only when Wikipedia actually answered and had nothing. A
+    // transport failure returns the same empty array as a genuine "no such article", and
+    // storing that would freeze a momentary blip for the whole miss TTL. This bit me while
+    // building it: the first web request cached an empty Nematostella, which reads exactly
+    // like the organism having no page — the retry a minute later returned 719 characters.
+    if ($cache_file && ($reached || !empty($data['description']) || !empty($data['image_url']))) {
+        @file_put_contents(
+            $cache_file,
+            json_encode(['fetched_at' => time(), 'organism' => $organism_name, 'data' => $data]),
+            LOCK_EX
+        );
+    }
+
+    return $data;
+}
+
+/**
+ * The live Wikipedia fetch. Call getWikipediaOrganismData() instead — see the note there
+ * about why this must not sit in a page request unguarded.
+ *
+ * @param bool $reached OUT. True once any request actually got a response, whatever it
+ *                      said. Lets the caller tell "Wikipedia has no article" (cacheable)
+ *                      from "we could not reach Wikipedia" (must not be cached).
+ */
+function moop_wikipedia_fetch_organism_uncached($organism_name, $scientific_name = '', &$reached = false) {
+    $reached = false;
     $result = [
         'description' => '',
         'image_url' => '',
@@ -231,11 +302,14 @@ function getWikipediaOrganismData($organism_name, $scientific_name = '') {
         $response = moop_curl_get($wiki_search_url);
 
         if ($response === false) {
-            continue;
+            continue;   // transport failure — leaves $reached false, so nothing is cached
         }
-        
+
+        // Wikipedia answered. Whatever it says, this was not a network problem.
+        $reached = true;
+
         $data = json_decode($response, true);
-        
+
         if (empty($data['query']['pages'])) {
             continue;
         }
