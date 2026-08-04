@@ -103,7 +103,11 @@
 
     var roots = [];
     main.querySelectorAll("[data-nav-label]").forEach(function (el) {
-      var node = mk(el, el.getAttribute("data-nav-label"), 1);
+      // data-nav-tag is optional and gives a top-level section the same type badge the
+      // child rows get from splitChild(). Used by the overview row so the parent feature
+      // is listed the way its children are -- ID plus type -- instead of the generic word
+      // "Overview", which named the section rather than the thing the page is about.
+      var node = mk(el, el.getAttribute("data-nav-label"), 1, el.getAttribute("data-nav-tag") || "");
       roots.push(node);
       if (el.id === "pnav-annotations") {
         directSections(el, null).forEach(function (sec) {         // gene-level types

@@ -29,7 +29,10 @@
         Jump to
         <svg class="pnav-jb-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
       </button>
-      <span class="pnav-jb-current" id="pnavJbCurrent">Overview</span>
+      <?php /* Matches the first sidebar entry, which is the feature's own ID — see the
+               note on #pnav-overview. The JS overwrites this on scroll; it only has to be
+               right before the first scrollspy tick. */ ?>
+      <span class="pnav-jb-current" id="pnavJbCurrent"><?= htmlspecialchars($feature_uniquename) ?></span>
       <div class="pnav-jb-dd" id="pnavJbDd"></div>
     </div>
 
@@ -47,7 +50,14 @@
       <div class="pnav-main">
 
     <!-- Feature Header and Tools Row -->
-    <div class="row gy-3 mb-3" id="pnav-overview" data-nav-label="Overview">
+    <?php /* The nav lists this row by the feature's own ID and type, exactly as it lists
+             the child transcripts below it, rather than by the generic word "Overview".
+             The sidebar is a map of the page's features; naming the first entry after the
+             section instead of the feature made the parent the one row that did not say
+             what it was. */ ?>
+    <div class="row gy-3 mb-3" id="pnav-overview"
+         data-nav-label="<?= htmlspecialchars($feature_uniquename) ?>"
+         data-nav-tag="<?= htmlspecialchars($type) ?>">
       <!-- Feature Header Column -->
       <div class="col-lg-8">
         <div class="feature-header shadow h-100">
