@@ -27,11 +27,37 @@ header('Content-Type: application/json');
 // answer beats returning immediately with nothing to show.
 @set_time_limit(120);
 
+// Optional targeted re-run: `task=permission_check` runs THAT task alone.
+//
+// Why targeted matters: the dashboard's permission card is a cached snapshot, so right
+// after fixing something in the Permission Manager it keeps reporting the problem you
+// just fixed. The full sweep answers that, but it also re-walks the organism tree, hits
+// the annotation caches and can kick off an organism-cache rebuild — a lot of work to
+// refresh one card. Running just the one task is seconds instead, which is what makes it
+// reasonable to fire automatically after a fix.
+//
+// Validated against the registry (not passed through to call_user_func), so this cannot
+// become a way to invoke an arbitrary function name.
+$only = [];
+$requested = isset($_POST['task']) ? trim((string) $_POST['task']) : '';
+if ($requested !== '') {
+    $known = array_column(housekeeping_task_registry(), 'name');
+    if (!in_array($requested, $known, true)) {
+        echo json_encode([
+            'success' => false,
+            'reason'  => 'no_such_task',
+            'message' => 'Unknown housekeeping task: ' . $requested,
+        ]);
+        exit;
+    }
+    $only = [$requested];
+}
+
 // housekeeping_run_tasks() does the work inline and ignores the interval — the throttle
 // is for the automatic path, and the admin has explicitly asked. It still honours the
 // lock, so this cannot stampede a background run already in flight.
 $started = microtime(true);
-$result  = housekeeping_run_tasks();
+$result  = housekeeping_run_tasks($only);
 $elapsed = (int) round((microtime(true) - $started) * 1000);
 
 if (!$result['ran']) {
@@ -51,13 +77,33 @@ $failed = array_values(array_filter($result['tasks'], fn($t) => !$t['ok']));
 
 // Report per-task outcomes, not just "done" — the caller renders them as a list so the
 // admin can see what actually ran and what each one cost.
-echo json_encode([
+$response = [
     'success'     => true,
     'elapsed_ms'  => $elapsed,
     'task_count'  => count($result['tasks']),
     'failed'      => count($failed),
     'tasks'       => $result['tasks'],
+    'partial'     => (bool) $only,
     'message'     => $failed
         ? count($failed) . ' of ' . count($result['tasks']) . ' tasks failed — see the log'
-        : 'All ' . count($result['tasks']) . ' tasks completed',
-]);
+        : ($only
+            ? 'Re-checked: ' . implode(', ', $only)
+            : 'All ' . count($result['tasks']) . ' tasks completed'),
+];
+
+// Hand back the freshly written summary when the permission scan was one of the tasks, so
+// the caller can say what the answer IS ("no issues") instead of only that it re-ran. The
+// task has already written this to $_SESSION and logs/.housekeeping_status.json.
+if (in_array('permission_check', array_column($result['tasks'], 'name'), true)) {
+    $ps = $_SESSION['perm_summary'] ?? null;
+    $response['perm_summary'] = [
+        'finding_count' => $ps['finding_count'] ?? 0,
+        'high'          => $ps['high'] ?? 0,
+        'medium'        => $ps['medium'] ?? 0,
+        'low'           => $ps['low'] ?? 0,
+        'worst'         => $ps['worst'] ?? null,
+        'checked_at'    => $ps['checked_at'] ?? null,
+    ];
+}
+
+echo json_encode($response);

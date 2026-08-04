@@ -31,6 +31,20 @@ $web_user               = $collected['web_user'];
 $web_group              = $collected['web_group'];
 $moop_owner             = $collected['moop_owner'];
 
+// Publish this scan to the dashboard's cached summary.
+//
+// The dashboard permission card is a snapshot taken once per housekeeping interval, so
+// after fixing something it kept reporting the problem for up to an hour — and the page
+// you naturally land on to confirm the fix is THIS one, which already re-checks live.
+// Nothing was feeding that fresh answer back, so the two views disagreed by design.
+//
+// Free: moop_permission_issue_summary() takes the $collected result above rather than
+// re-walking the tree, so this is arithmetic over data already in memory — no second scan.
+// Writing to both $_SESSION and the status file matches what housekeeping_permission_check()
+// does, so the card is correct on this request and after the session is rehydrated.
+$_SESSION['perm_summary'] = moop_permission_issue_summary($config, $collected);
+housekeeping_persist_status('perm_summary', $_SESSION['perm_summary']);
+
 // Prepare data for display
 $site = $config->getString('site');
 $data = [

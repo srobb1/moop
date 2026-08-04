@@ -216,10 +216,23 @@
         &middot; the Permission Manager re-checks live.
       </span>
     </div>
-    <a href="manage_filesystem_permissions.php" class="btn btn-sm btn-<?= $cls ?> flex-shrink-0">
-      <i class="fa fa-lock"></i> Permission Manager
-    </a>
+    <div class="d-flex flex-column align-items-stretch gap-1 flex-shrink-0">
+      <a href="manage_filesystem_permissions.php" class="btn btn-sm btn-<?= $cls ?>">
+        <i class="fa fa-lock"></i> Permission Manager
+      </a>
+      <!-- Re-check THIS card only. The card is a cached snapshot, so after fixing
+           something it keeps reporting the problem until the next sweep — and the full
+           "Run housekeeping now" below is a lot of unrelated work to answer one question.
+           Runs the permission task alone (seconds) and reloads so the card re-renders,
+           including disappearing entirely when nothing is left to report. -->
+      <button type="button" id="recheckPermissionsBtn"
+              class="btn btn-sm btn-outline-<?= $cls ?>"
+              data-task="permission_check">
+        <i class="fa fa-rotate"></i> Re-check now
+      </button>
+    </div>
   </div>
+  <div id="recheckPermissionsResult" class="small text-muted mb-4" style="display:none;"></div>
   <?php endif; ?>
 
 
@@ -348,7 +361,11 @@
         </div>
       </div>
       <div id="dashCacheProgressWrap" class="mt-2" style="display: <?= $refreshing ? 'block' : 'none' ?>;">
-        <div class="progress" style="height: 6px;">
+        <!-- 20px, not the 6px this started as: the bar was a bare sliver until the poll
+             JS began writing a percentage into it (bar.textContent), and Bootstrap's
+             .progress-bar label is 0.75rem/12px, so the digits were clipped top and
+             bottom. 20px leaves 4px of breathing room either side. -->
+        <div class="progress" style="height: 20px;">
           <div id="dashCacheProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
         </div>
         <small class="text-muted" id="dashCacheProgressText">Checking status…</small>

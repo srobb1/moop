@@ -272,13 +272,25 @@ function housekeeping_spawn_background(): bool {
  * admin/api/rerun_housekeeping.php (the dashboard's "Run now" button, where blocking is
  * correct — the admin asked and is waiting for the answer).
  *
+ * @param list<string> $only Task names to run. Empty = the full sweep. Unknown names are
+ *                           ignored; if nothing survives filtering the run is refused with
+ *                           reason 'no_such_task' rather than silently doing nothing.
  * @return array{ran:bool, reason:?string, tasks:list<array{name:string,ok:bool,ms:int,error:?string}>}
  */
-function housekeeping_run_tasks(): array {
+function housekeeping_run_tasks(array $only = []): array {
     $result = ['ran' => false, 'reason' => null, 'tasks' => []];
 
     $logs_dir  = ConfigManager::getInstance()->getPath('site_path') . '/logs';
     $lock_file = housekeeping_lock_file();
+
+    $tasks = housekeeping_task_registry();
+    if ($only) {
+        $tasks = array_values(array_filter($tasks, fn($t) => in_array($t['name'], $only, true)));
+        if (!$tasks) {
+            $result['reason'] = 'no_such_task';
+            return $result;
+        }
+    }
 
     if (housekeeping_is_running()) {
         $result['reason'] = 'already_running';
@@ -288,9 +300,14 @@ function housekeeping_run_tasks(): array {
     if (!is_dir($logs_dir)) @mkdir($logs_dir, 0755, true);
     @file_put_contents($lock_file, (string) getmypid());
     // Touch the marker before running: a slow task must not let other requests pile up.
-    @touch(housekeeping_marker_file());
-
-    $tasks = housekeeping_task_registry();
+    //
+    // ONLY for a full sweep. A targeted re-run (the permission card's "Re-check now")
+    // must not satisfy the interval for the other nine tasks — touching the marker there
+    // would mean re-checking one card silently postpones every other check by a full
+    // interval, so the more an admin used the button the staler everything else got.
+    if (!$only) {
+        @touch(housekeeping_marker_file());
+    }
 
     foreach ($tasks as $task) {
         $t0 = microtime(true);
