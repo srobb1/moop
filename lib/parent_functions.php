@@ -243,6 +243,26 @@ function moop_annotation_card_anchor(string $uniquename): string {
     return 'annot_card_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $uniquename);
 }
 
+/**
+ * A feature type as it should read inside a sentence.
+ *
+ * `strtolower()` is wrong here and was producing "an annotation belongs to the mrna" on
+ * every multi-transcript gene page. Sequence-ontology types are not ordinary words: mRNA,
+ * CDS, ncRNA, tRNA and rRNA carry capitals that are part of the name, while gene, exon and
+ * protein are lowercased for prose exactly as strtolower would.
+ *
+ * Rule: leave the type alone if it has a capital anywhere but the first character (mRNA,
+ * ncRNA) or is entirely capitals (CDS). Otherwise lowercase it, so a stored "Gene" still
+ * reads "gene" mid-sentence.
+ */
+function moop_type_word(?string $type): string {
+    $type = trim((string) $type);
+    if ($type === '') return '';
+    if ($type === strtoupper($type))        return $type;   // CDS
+    if (preg_match('/[A-Z]/', substr($type, 1))) return $type;   // mRNA, ncRNA
+    return strtolower($type);
+}
+
 function generateAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = 'warning', $organism = '', $annotation_type_key = '') {
     if (empty($results)) {
         return '';

@@ -325,7 +325,13 @@
                     <span class="badge rounded-pill ms-2 fw-normal"
                           style="background-color:#e0f2f1; color:#0f5132; font-size:0.72rem;"
                           title="Every transcript of this gene carries the same set of annotation types and accessions. Scores and descriptions may still differ.">
-                        <i class="fa fa-equals me-1" aria-hidden="true"></i>all <?= (int)$annotated_isoform_count ?> transcripts annotated the same
+                        <?php /* "identical", not "annotated the same": the point is that the
+                                 N sets below are the same set, which is the exception. About
+                                 a third of multi-isoform genes are like this, so the normal
+                                 expectation on arriving is that they differ and must be
+                                 compared. "Annotated the same" read as a neutral description
+                                 of how the data was produced rather than as a finding. */ ?>
+                        <i class="fa fa-equals me-1" aria-hidden="true"></i>identical on all <?= (int)$annotated_isoform_count ?> transcripts
                     </span>
                 <?php endif; ?>
                 <?= help_modal_trigger('annotations-help', '', 'Help: what is an annotation?') ?>
@@ -388,19 +394,26 @@
                         $is_transcript = in_array(strtolower($child_type), ['mrna', 'transcript'], true);
                         $child_word  = $is_transcript ? 'transcripts' : (htmlspecialchars($child_type) . ' children');
 
+                        // Both states are ORIENTATION, not alerts. A full-width coloured
+                        // alert block is the page's loudest device, and nothing here is a
+                        // warning: one says "you need not compare these", the other says
+                        // "you should". Using alert-success/alert-info made a routine fact
+                        // about the data shout louder than the annotation tables it
+                        // introduces -- and the differing case, which is roughly two thirds
+                        // of multi-isoform genes, was the louder of the two. A quiet line
+                        // with a left rule says the same thing without competing.
                         if (!empty($isoforms_share_annotations)) {
-                            echo '<div class="alert alert-success mt-3 mb-3 py-2">';
-                            echo '  <i class="fas fa-equals me-1"></i> ';
-                            echo '  <strong>All ' . $n_children . ' ' . $child_word . ' carry the same annotations.</strong> ';
-                            echo '  They are listed separately below because an annotation belongs to the '
-                               . htmlspecialchars(strtolower($child_type)) . ', not to the '
-                               . htmlspecialchars(strtolower($type)) . '. Scores and descriptions may still differ.';
+                            echo '<div class="isoform-note isoform-note-same">';
+                            echo '  <i class="fas fa-equals" aria-hidden="true"></i> ';
+                            echo '  <strong>Identical on all ' . $n_children . ' ' . $child_word . '.</strong> ';
+                            echo '  Listed separately because an annotation belongs to the '
+                               . htmlspecialchars(moop_type_word($child_type)) . ', not the '
+                               . htmlspecialchars(moop_type_word($type)) . '; scores and descriptions may still differ.';
                             echo '</div>';
                         } else {
-                            echo '<div class="alert alert-info mt-3 mb-3 py-2">';
-                            echo '  <i class="fas fa-info-circle me-1"></i> ';
-                            echo '  <strong>This ' . htmlspecialchars(strtolower($type)) . ' has ' . $n_children . ' '
-                               . $child_word . '</strong>, and their annotations differ. ';
+                            echo '<div class="isoform-note">';
+                            echo '  <i class="fas fa-info-circle" aria-hidden="true"></i> ';
+                            echo '  <strong>' . $n_children . ' ' . $child_word . ', annotated differently.</strong> ';
                             echo '  Compare the sections below rather than reading only the first.';
                             echo '</div>';
                         }
@@ -514,7 +527,7 @@ echo help_modal(
     [
         ['heading' => 'What it shows', 'cards' => [
             ['label' => 'What belongs to what',
-             'text'  => 'The ' . htmlspecialchars(strtolower($type)) . ', the transcripts it produces, and the coding sequence and protein each transcript gives.'],
+             'text'  => 'The ' . htmlspecialchars(moop_type_word($type)) . ', the transcripts it produces, and the coding sequence and protein each transcript gives.'],
             ['label' => 'Colour = feature type',
              'text'  => 'The badge after each ID uses the same colour for a type everywhere on the site.'],
         ]],
@@ -522,7 +535,7 @@ echo help_modal(
             ['label' => 'How many annotations',
              'text'  => 'A green badge counts every annotation on that feature, across all types. No badge means none.'],
             ['label' => 'Usually on the transcript',
-             'text'  => 'Annotations attach to the transcript, so the ' . htmlspecialchars(strtolower($type)) . ' itself often carries none even when the page is full of results.'],
+             'text'  => 'Annotations attach to the transcript, so the ' . htmlspecialchars(moop_type_word($type)) . ' itself often carries none even when the page is full of results.'],
         ]],
         ['heading' => 'Clicking', 'cards' => [
             ['label' => 'An ID that is a link jumps to its annotations',
@@ -531,7 +544,7 @@ echo help_modal(
              'text'  => 'Coding sequences and proteins have no annotation section of their own, so their IDs are not links rather than links that do nothing.'],
         ]],
     ],
-    ['intro' => 'How this ' . htmlspecialchars(strtolower($type)) . ' is built, and where its annotations sit.']
+    ['intro' => 'How this ' . htmlspecialchars(moop_type_word($type)) . ' is built, and where its annotations sit.']
 );
 
 // ── Page-level orientation ───────────────────────────────────────────────────
@@ -548,7 +561,7 @@ if (!empty($gene_model)) {
         'text' => 'Every transcript drawn to scale against the genome. Click a feature for its sequence, or a row to jump to its annotations.'];
 }
 $page_sections[] = ['label' => 'Feature Hierarchy',
-    'text' => 'What belongs to what: the ' . htmlspecialchars(strtolower($type)) . ', its transcripts, and their coding sequences and proteins.'];
+    'text' => 'What belongs to what: the ' . htmlspecialchars(moop_type_word($type)) . ', its transcripts, and their coding sequences and proteins.'];
 if (!empty($children_hierarchical) || !empty($all_annotations[$feature_id])) {
     $page_sections[] = ['label' => 'Annotations',
         'text' => 'What analyses found for this sequence, grouped by transcript and then by type. One table per type.'];
@@ -561,15 +574,15 @@ echo help_modal(
     'What this page shows',
     [
         ['heading' => 'In short', 'cards' => [
-            ['label' => 'One ' . htmlspecialchars(strtolower($type)),
+            ['label' => 'One ' . htmlspecialchars(moop_type_word($type)),
              'text'  => 'Everything this site holds about it: its structure, its transcripts, what is known about them, and their sequences.'],
             ['label' => 'You may have searched for a transcript',
-             'text'  => 'A transcript, CDS or protein ID all land here. The page always opens at the ' . htmlspecialchars(strtolower($type)) . ' they belong to.'],
+             'text'  => 'A transcript, CDS or protein ID all land here. The page always opens at the ' . htmlspecialchars(moop_type_word($type)) . ' they belong to.'],
         ]],
         ['heading' => 'The sections', 'cards' => $page_sections],
         ['heading' => 'Worth knowing', 'cards' => [
             ['label' => 'Annotations belong to the transcript',
-             'text'  => 'Not to the ' . htmlspecialchars(strtolower($type)) . '. That is why they are listed separately under each one, even when they match.'],
+             'text'  => 'Not to the ' . htmlspecialchars(moop_type_word($type)) . '. That is why they are listed separately under each one, even when they match.'],
             ['label' => 'Use the list on the left',
              'text'  => 'It mirrors the page and carries the count beside each entry, so you can see where the results are before scrolling.'],
             ['label' => 'Every section folds',

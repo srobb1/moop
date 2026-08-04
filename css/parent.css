@@ -474,3 +474,31 @@ a.badge:hover {
   opacity: 1;
   background: rgba(255,255,255,.15);
 }
+
+/* ── Isoform annotation note ───────────────────────────────────────────────
+   Orientation above the annotation tables: either "these N sets are identical"
+   or "they differ, so compare them". Both were full-width Bootstrap alerts
+   (alert-success / alert-info), which is the loudest device on the page and
+   is meant for warnings. Neither is a warning, and the louder of the two fired
+   on the COMMON case -- roughly two thirds of multi-isoform genes have
+   differing annotations -- so the page shouted hardest at the situation the
+   reader should expect.
+
+   Quiet line, left rule, muted text: same information, reads as a caption to
+   the tables it introduces rather than competing with them. */
+.isoform-note {
+  margin: 0.75rem 0 1rem;
+  padding: 0.35rem 0 0.35rem 0.7rem;
+  border-left: 3px solid #cbd5e1;
+  color: #475569;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+.isoform-note strong { color: #334155; font-weight: 600; }
+.isoform-note .fas   { color: #94a3b8; margin-right: 0.15rem; }
+
+/* The identical case is the notable one (about a third of multi-isoform genes),
+   so it gets the teal accent; the differing case stays neutral grey. */
+.isoform-note-same             { border-left-color: #0891b2; }
+.isoform-note-same strong      { color: #0f5132; }
+.isoform-note-same .fas        { color: #0891b2; }
