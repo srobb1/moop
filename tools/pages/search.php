@@ -218,28 +218,33 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
       <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
         <span class="step-badge me-2">3</span>
         <span class="fw-semibold" style="font-size:0.9rem;">Choose which <?= gloss('annotation type', 'annotation types') ?> to search</span>
-        <?= help_modal_trigger('ann-types-modal', '', 'About annotation types') ?>
+        <?php /* The header (i) explains THIS STEP, matching Steps 1 and 2 — theirs are
+                 "How to search" and "How to select organisms". This slot used to hold
+                 ann-types-modal, a reference list of what each type covers, so the one
+                 header button on the page that did not describe its own box was this one.
+                 That modal is still reachable, from the line beside "annotation types"
+                 in the panel below, which is where a definition belongs. */ ?>
+        <?= help_modal_trigger('ann-types-step-help', '', 'About this step') ?>
         <button type="button" class="btn btn-sm btn-light py-0 ms-auto sources-toggle-all">
           <span class="sources-toggle-all-label">Select all</span>
         </button>
-      </div>
-
-      <!-- Inline field help — visible, no JS. Deliberately does NOT repeat the
-           modal: it gives the actionable rule and points at the modal for the
-           per-type detail, so each fact keeps one home. -->
-      <div class="px-3 pt-3">
-        <div class="form-text moop-help">
-          <i class="fa fa-circle-info"></i>Search looks only inside the types you select here —
-          leave one unselected and its annotations are skipped. Not sure what a type covers?
-          Open <strong>About annotation types</strong> (<i class="fa fa-info-circle"></i> above)
-          for a description of each.
-        </div>
       </div>
 
       <div class="row g-0" style="min-height:120px;">
 
         <!-- Left: annotation types list -->
         <div class="col-lg-8 border-end d-flex flex-column">
+          <?php /* One line, inside this column rather than full-width above the row.
+                   It was four lines spanning the whole card, which pushed the row down and
+                   left the "Selected" panel floating below its own header instead of flush
+                   with it as Step 2's is. Most of that text also duplicated the annotation
+                   types modal, and one of its sentences existed only to point at a button
+                   sitting next to it. The (i) here IS that pointer. */ ?>
+          <div class="px-3 pt-3">
+            <div class="form-text moop-help">
+              Search only the annotation types <?= help_modal_trigger('ann-types-modal', '', 'What each annotation type covers') ?> you select.
+            </div>
+          </div>
           <div class="px-2 pt-2 pb-1 border-bottom" id="sources-filter-wrap" style="display:none;">
             <input type="text" class="form-control form-control-sm moop-input" id="sources-filter"
                    placeholder="Filter annotation types…" autocomplete="off">
@@ -292,6 +297,28 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
   </form>
 
   <?php
+  // Step 3 help — how to use the step, in the same shape as Steps 1 and 2. Short on
+  // purpose: what the tick does, and why the list is empty until Step 2 is answered. What
+  // each individual TYPE means stays in ann-types-modal, reachable from the line beside
+  // "annotation types" in the panel, so neither has to repeat the other.
+  echo help_modal(
+      'ann-types-step-help',
+      'Choosing annotation types',
+      [[
+          'heading' => '',
+          'cards'   => [
+              ['label' => 'Only what you tick is searched',
+               'text'  => 'Leave a type unselected and its annotations are skipped.'],
+              // No "the list follows Step 2" card: the panel itself says that, in place,
+              // exactly when it is true — and stops saying it once types have loaded, which
+              // a modal cannot do.
+              ['label' => 'Not sure what a type is?',
+               'text'  => 'Open the (i) beside "annotation types" for a description of each.'],
+          ],
+      ]],
+      ['intro' => 'Narrow the search to particular kinds of annotation.']
+  );
+
   // Step 2 help. Was a hand-written modal of <h6>/<p> prose whose opening paragraph
   // contradicted itself — "you must select at least one row before searching" immediately
   // followed by "if nothing is selected, all organisms will be searched". Only the first
