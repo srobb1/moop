@@ -109,6 +109,49 @@ and a human ticks. Mechanical to find, cheap to review, and it cannot silently r
 page. Scratch harness for the finding pass:
 `scratchpad/audit/glossterms.js` (session-local, disposable).
 
+## Who decides what, and why wrapping has no admin screen
+
+Three surfaces, and only one of them needs a developer:
+
+| | where | who |
+|---|---|---|
+| **Which terms exist, and their wording** | Admin → Manage Glossary | admin, anytime, no code |
+| **Terms rendered from DATA** (annotation Source column) | follows the glossary automatically | admin, anytime, no code |
+| **Terms in static page text** | a `gloss()` call in the template | developer |
+
+The middle row is the one worth knowing about. Because
+`lib/parent_functions.php` calls `gloss_terms_in()` on the source name rather than
+hard-coding anything, **adding a term in Manage Glossary immediately starts glossing it on
+every gene page, and deleting one stops it.** No deploy. `gloss()` falls back to the escaped
+plain word for unknown terms, so neither direction can break a page.
+
+⛔ **There is deliberately no admin UI for wrapping words in page text.** Doing that means
+writing to `.php` files inside the document root, which is precisely what the no-exec guard
+in `docs/nginx/moop-security.conf` exists to prevent — one file-write bug there is a
+persistent webshell (CLAUDE.md §11). Definitions are data and belong in the admin UI;
+wrapping is source and does not.
+
+## ⭐ The rule: gloss labels and controls, not prose
+
+From reviewing the finder's first output together, 2026-08-04. Most candidates were **no**,
+and for one consistent reason:
+
+- **Yes** — form labels, column headers, field names, mode selectors, instructional text
+  where the term is load-bearing. `moopmart.php:382` "Annotation type" is a field label whose
+  choice depends on understanding the word.
+- **No** — descriptive prose. `index.php:14` "Browse genes, genomes, and annotations" is the
+  first line a visitor reads; dotted underlines there make the page look broken. Section
+  headings in caps are the same.
+
+A word in a label is one the reader is being asked to *act on*. A word in a sentence is one
+they are just *reading*, and underlining it interrupts.
+
+⚠️ **This makes most of the 158 not worth doing.** `gene`, `annotation`, `assembly` and
+`feature` are 90 of them, and they are words the audience arrives knowing — they appear
+mostly in prose. The genuine gaps were the source acronyms, and those are now handled
+automatically wherever they appear. Prefer wrapping a new label as the page is written over
+running a sweep.
+
 ## Suggested order
 
 1. **Tier 1 sources** — biggest gap, smallest list, and they are proper nouns so the
