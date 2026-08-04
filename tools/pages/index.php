@@ -152,22 +152,13 @@
   </div>
 
   <!-- Browse & Select collapsible header -->
-  <?php /* The collapse toggle moved from this outer div onto the label span below, so the
-           help (i) can sit in the bar WITHOUT being inside the toggle.
-           ⚠️ Do not "simplify" this by putting the toggle back on the wrapper and stopping
-           propagation on the button: Bootstrap 5 registers its delegated data-api handlers
-           in the CAPTURE phase, so they fire on the way down to the target and a
-           bubble-phase stopPropagation at the button is too late to stop them. Measured
-           here — a document-level bubble listener never fired, proving propagation was
-           stopped, while the collapse toggled anyway. Structure is the only fix. */ ?>
-  <div class="browse-select-header mb-0" id="browse-select-header">
-    <span class="d-flex align-items-center gap-2"
-          data-bs-toggle="collapse" data-bs-target="#browse-select-body"
-          role="button" aria-expanded="false" aria-controls="browse-select-body">
+  <div class="browse-select-header mb-0" id="browse-select-header"
+       data-bs-toggle="collapse" data-bs-target="#browse-select-body"
+       role="button" aria-expanded="false" aria-controls="browse-select-body">
+    <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
       <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Search in a Custom Selection of Organisms</span>
     </span>
-    <?= help_modal_trigger('how-to-modal', '', 'Help: searching a custom selection of organisms') ?>
   </div>
 
   <?php
@@ -270,6 +261,15 @@
     then
     <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#6366f1;color:#fff;font-size:0.62rem;font-weight:700;vertical-align:middle;">2</span>
     below.
+    <?php /* The (i) lives HERE, in the panel body, not on the collapse header above.
+             The header bar is the collapse toggle, and Bootstrap 5 registers its delegated
+             data-api in the CAPTURE phase — so a button anywhere inside that bar fires the
+             collapse on the way down and no stopPropagation at the button can stop it.
+             Putting the help beside the panel's own intro sentence sidesteps that entirely,
+             keeps the whole bar clickable, and puts the explanation next to the thing it
+             explains: you are reading this line precisely when you are working out what
+             "complete 1 then 2" means. */ ?>
+    <?= help_modal_trigger('how-to-modal', '', 'Help: searching a custom selection of organisms') ?>
   </p>
   <div class="bs-grid" id="organism-tabs-anchor">
 

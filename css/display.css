@@ -1526,14 +1526,7 @@ a:hover .link-icon {
   margin-bottom: 0 !important;
   border-radius: 0.5rem 0.5rem 0 0;
 }
-/* Two shapes, because the custom-selection header carries a help (i) that must NOT be
-   inside the collapse toggle — Bootstrap 5's delegated data-api fires in the capture
-   phase, so a click anywhere inside the toggle reaches it no matter what the button does.
-   That header therefore puts data-bs-toggle on its inner label span, which is where
-   Bootstrap writes aria-expanded; the group header still carries it on the bar itself.
-   Match either, so the open/closed styling is identical for both. */
-#browse-select-header[aria-expanded="true"],
-#browse-select-header:has([aria-expanded="true"]) {
+#browse-select-header[aria-expanded="true"] {
   border-radius: 0.5rem 0.5rem 0 0;
 }
 .browse-select-panel {
@@ -1626,8 +1619,7 @@ a:hover .link-icon {
   font-size: 0.7rem;
   transition: transform 0.2s ease;
 }
-.browse-select-header[aria-expanded="false"] .browse-select-chevron,
-.browse-select-header:has([aria-expanded="false"]) .browse-select-chevron {
+.browse-select-header[aria-expanded="false"] .browse-select-chevron {
   transform: rotate(-90deg);
 }
 
