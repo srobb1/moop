@@ -1,7 +1,17 @@
 # Page-by-Page UI/Consistency Audit — Findings & Plan
 
 Status: **findings verified against the live site; most of A–D fixed across later sprints**
-(last updated 2026-07-17 — see the `[x]`/`[ ]` marks on each item). This doc covers the
+(last updated 2026-08-04 — see the `[x]`/`[ ]` marks on each item).
+
+⚠️ **Every mark was re-verified against the live tree on 2026-08-04 and five were wrong** — in
+both directions. #5, #6 and #9 were ticked while the defect was live or had returned; #7 and the
+`api/jbrowse2/archive/` item were finished and never ticked. **Do not trust a mark in this file
+without re-checking it.** The pattern: each wrong mark was true when written. Items that declare
+themselves complete stop being checked, and nothing here notices a regression — #6 in particular
+read as fixed in the PHP for weeks while `getComputedStyle` on the rendered page said otherwise.
+Verify by rendering the page, not by reading the source that was changed.
+
+This doc covers the
 **public/tool** pages. The parallel **admin-page** truth/UX pass (Manage Organisms, its modals,
 Manage Users, users.json relocation) is tracked separately — see the `project_admin_page_audit`
 and `project_manage_organisms_overhaul` memories — and it advanced #8 below.
@@ -78,7 +88,23 @@ CLAUDE.md access-control section (contradicted by #3).
       documented snake_case one. **Fix:** delete `requireAccess()`, repoint `groups.php` to
       `require_access()`.
 
-- [x] **#5 JSON loading done two ways** — ✅ **COMPLETE (2026-07-13)**. Started at **89** raw
+- [ ] **#5 JSON loading done two ways** — ⚠️ **REOPENED 2026-08-04: the count has drifted from 7
+      to 9, and the "COMPLETE, do not fix these" framing is exactly what let three new ones land
+      in shipped code.** Two of the seven listed as intentional no longer exist (both lived in
+      `api/jbrowse2/archive/`, since deleted). Four are present and NOT on the list:
+      - `tools/downloads.php:183` — directly contradicts "0 raw left in tools/".
+      - `scripts/sync_ncbi_taxonomy_dump.php:42` — the doc records this one as converted.
+      - `scripts/warm_organism_cache.php:224` — the doc converted `:60`; this is a **different,
+        newer** line in the same file.
+      - `tests/smoke_tests.php:279` — a test, and arguably right to stay raw: a corrupt fixture
+        should fail loudly rather than be swallowed into a default.
+
+      So the real remaining work is three shipped-code sites, not a re-run of the 82-site sweep.
+      **The generalisable lesson: a checklist item that declares itself finished stops being
+      checked, and this file has no mechanism that would notice a new raw call.** A `grep` in CI
+      would; the sweep below never needed to be repeated, only guarded.
+
+      Original: ✅ **COMPLETE (2026-07-13)**. Started at **89** raw
       `json_decode(file_get_contents(...))` calls across ~50 files. **82 converted** to
       `loadJsonFile()` across 8 batches; **7 remain, all by deliberate decision** (see "final state"
       below) — there is no pending work left on this item. The raw form had no missing/corrupt-file
@@ -356,15 +382,24 @@ CLAUDE.md access-control section (contradicted by #3).
 
 ## D. UX / display-consistency — same data shouldn't look different
 
-- [x] **#6 Species name UPPERCASED on organism page only** — DONE. Dropped `text-uppercase` from the
-      binomial span (now proper-case italic, matching every other page).
-      `tools/pages/organism.php:32` wraps
-      the binomial in `text-uppercase`, rendering `NEMATOSTELLA VECTENSIS`. Every other page
-      (assembly, gene_set, parent, groups) shows proper-case italic `Nematostella vectensis`.
-      Uppercasing a scientific name is both inconsistent and taxonomically wrong.
-      **Fix:** drop `text-uppercase` from that span; keep the `<em>` italic.
+- [x] **#6 Species name UPPERCASED on organism page only** — **RE-FIXED 2026-08-04. The first fix
+      did not work and this item was ticked for weeks while the page still rendered
+      `NEMATOSTELLA VECTENSIS`.** Dropping the inline `text-uppercase` class removed one cause;
+      `css/parent.css:3` `.feature-header h1 { text-transform: uppercase; }` was the other, and
+      `parent.css` is loaded on the organism page. Verifying by reading the PHP said "fixed";
+      `getComputedStyle` on the rendered page said otherwise.
+      **The rule, from the user:** an organism is *always* `Nematostella vectensis` — sentence
+      case, italic. Now expressed once as `.sci-name` in `css/moop.css` (site-wide), whose
+      `text-transform: none` makes it immune to whatever a future header rule does, and applied
+      to every binomial: organism ×2, assembly, gene_set, parent, plus `includes/source-list.php`
+      and the index example chip (see §P).
 
-- [ ] **#7 Three separate help mechanisms coexist — MOSTLY RESOLVED, verified 2026-07-21.**
+- [x] **#7 Three separate help mechanisms coexist — CLOSED 2026-08-04.** The remaining work
+      described below is done: `info-icon` is now at **zero occurrences in any `tools/pages/`
+      file** (it migrated to `help_modal_trigger()`), and the "at minimum add guided help to
+      parent.php" ask is satisfied — the gene page carries 3 help triggers. Was still marked open
+      only because nobody came back to tick it.
+      Original: **MOSTLY RESOLVED, verified 2026-07-21.**
       The doc listed the JS `info-icon`→modal on **7** pages; only **`tools/pages/organism.php`**
       still uses it (4 occurrences). assembly, gene_set, groups, multi_organism, search and
       moopmart are all clean. What remains is finishing that one page, not a 7-page migration.
@@ -400,7 +435,13 @@ CLAUDE.md access-control section (contradicted by #3).
       user-facing "Name (Accession)" label rendered in JS). If a JS label surface appears later, add a
       JS twin of `assembly_label()`. Organism-page instances still fold into the section J design pass.
 
-- [x] **#9 Heading hierarchy disagrees between pages** — DONE. Every page now has exactly one
+- [x] **#9 Heading hierarchy disagrees between pages** — **RE-VERIFIED 2026-08-04, and it had
+      regressed: `retrieve_sequences`, `jbrowse2` and `help` had ZERO `<h1>`** while this item was
+      ticked. All three used the same styled `<span>` eyebrow as their title. Converted to `<h1>`
+      with the size and margin pinned inline, so there is no visual change. Re-measured across 11
+      pages: every one is now exactly 1. The lesson is that "every page" claims decay as pages are
+      added — this item needs re-running, not trusting.
+      Original: DONE. Every page now has exactly one
       semantic `<h1>` (verified live: index, blast, downloads, search, moopmart, groups, organism +
       the already-correct assembly/gene_set/parent). No visual change anywhere. Fresh audit: 7/10 pages had
       **zero** `<h1>` (index, groups, organism, search, blast, moopmart, downloads); only
@@ -433,7 +474,10 @@ CLAUDE.md access-control section (contradicted by #3).
       [UNUSED_FUNCTIONS_CLEANUP_PLAN.md](UNUSED_FUNCTIONS_CLEANUP_PLAN.md). Superseded
       by `get_annotation_sources_grouped.php` (4 refs).
 
-- [ ] **`api/jbrowse2/archive/` is dead code** — found 2026-07-14. Zero references anywhere
+- [x] **`api/jbrowse2/archive/` is dead code** — **DONE (verified 2026-08-04: the directory no
+      longer exists).** Was still marked open. Note this also silently retired two of the seven
+      "intentional" raw `json_decode` sites listed under #5, which is part of why that count
+      drifted. Original finding: found 2026-07-14. Zero references anywhere
       (`grep --include=*.php --include=*.js`); web-reachable and 500s when hit;
       `assembly-cached.php` does a `mkdir` into `data/`. Delete the directory (recoverable from git).
 
@@ -730,7 +774,38 @@ them so the next pass does not repeat them:
       organism already showed both. All 85 `organism.json` carry a `common_name`; it was purely a
       display gap. Now `Anoura caudifer · Tailed Tailless Bat`.
 
+- [x] **Scientific names were not consistently sentence-case italic** — closes #6 properly and
+      goes wider than it. **The rule, from the user: an organism is ALWAYS `Nematostella
+      vectensis` — sentence case, italic.** Now one class, `.sci-name` in `css/moop.css`
+      (site-wide), applied at every binomial. Found by rendering each page and reading
+      `getComputedStyle` on any leaf whose *raw* `textContent` looks like a binomial — which is
+      the only way to separate "stored uppercase" from "uppercased by CSS", and is what caught
+      #6 still being broken after being ticked.
+      Two real defects beyond #6:
+      - `includes/source-list.php:102` rendered the raw **directory key** — `Ptychodera_flava`,
+        underscore and all, non-italic — **95 times per page**, on both pages that include the
+        component (BLAST and Retrieve Sequences).
+      - `tools/pages/index.php:52` — the `Anoura caudifer` example chip was not italic.
+      Verified after: 95 badges on each page now read `Ptychodera flava`, computed
+      `text-transform: none / font-style: italic`. The one underscored string left on those pages
+      is `Ma_sr-lr_union100 (GCF_902729225.1)` — an **assembly** name, where underscores are
+      legitimate. Pages already correct and left alone: downloads, search, moopmart, jbrowse2,
+      groups, gene_set.
+
+- [x] **Three pages had no `<h1>`** — see #9, re-verified and fixed the same day.
+
 ### Open
+
+- [ ] **Admin pages — organism names and the general UX pass. DEFERRED BY DECISION (user,
+      2026-08-04): finish the public/tool pages first, then do admin.** The `.sci-name` rule is
+      site-wide CSS, so admin pages get the styling for free the moment their binomials are
+      wrapped — but nothing wraps them yet, and admin renders organism names in many places
+      (Manage Organisms, the checklist, group assignment, user access lists, JBrowse track
+      management). Two things to do when this comes up: apply `.sci-name` at every admin binomial,
+      and run the same rendered-page detector over the admin pages rather than reading markup.
+      The parallel admin truth/UX pass is tracked in the `project_admin_page_audit` and
+      `project_manage_organisms_overhaul` memories and `ADMIN_UI_FOLLOWUPS.md`; this is the
+      naming/consistency slice of it.
 
 - [ ] **Assembly page never shows the common name** — the last page that doesn't. Organism, gene
       set and gene pages all render it (the gene page as `Nematostella vectensis (Starlet Sea
@@ -741,7 +816,7 @@ them so the next pass does not repeat them:
       highest-traffic page after search.
 - [ ] **`index.php` has zero help triggers** — confirmed again. It is the page users reach from
       nowhere, and the one with no way to ask what anything means.
-- [ ] **No `<h1>` on `retrieve_sequences`, `jbrowse2`, `help`** — the visible title is styled text,
+- [x] **No `<h1>` on `retrieve_sequences`, `jbrowse2`, `help`** — FIXED 2026-08-04. The visible title was styled text,
       so the document has no heading for structure or assistive tech.
 - [ ] **LATENT — the assembly page omits the scope filter safely only by accident of the data.**
       `assembly-display.js` sets `noScopeFilter: true`, which is correct *today* because **no
