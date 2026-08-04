@@ -35,17 +35,25 @@
       <div class="tab-pane fade show active" id="tab-quick">
         <div class="card border-0 border-top rounded-0 rounded-bottom qs-card">
           <div class="card-body p-3" style="min-height:88px;">
-            <div class="qs-input-wrap">
-              <div class="input-group">
-                <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
-                  <i class="fa fa-search"></i>
-                </span>
-                <input type="search" id="qs-input" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control border-start-0 border-end-0 ps-1 moop-input"
-                       placeholder="Search organisms, groups, assemblies, gene sets…"
-                       autocomplete="off" spellcheck="false">
-                <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
+            <?php /* The (i) sits OUTSIDE .qs-input-wrap. The suggestions dropdown is
+                     absolutely positioned to that wrapper with left:0;right:0, so putting
+                     the button inside would stretch the dropdown wider than the field it
+                     drops from. */ ?>
+            <div class="d-flex align-items-center gap-2">
+              <div class="qs-input-wrap flex-grow-1" style="min-width:0;">
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
+                    <i class="fa fa-search"></i>
+                  </span>
+                  <input type="search" id="qs-input" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control border-start-0 border-end-0 ps-1 moop-input"
+                         placeholder="Search organisms, groups, assemblies, gene sets…"
+                         aria-label="Search organisms, groups, assemblies and gene sets"
+                         autocomplete="off" spellcheck="false">
+                  <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
+                </div>
+                <div id="qs-dropdown" class="qs-dropdown"></div>
               </div>
-              <div id="qs-dropdown" class="qs-dropdown"></div>
+              <?= help_modal_trigger('qs-help', '', 'Help: searching for an organism, group, assembly or gene set') ?>
             </div>
             <div class="qs-examples mt-2">
               <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
@@ -63,16 +71,20 @@
       <div class="tab-pane fade" id="tab-feature">
         <div class="card border-0 border-top rounded-0 rounded-bottom qs-card">
           <div class="card-body p-3" style="min-height:88px;">
-            <div class="qs-input-wrap">
-              <div class="input-group">
-                <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
-                  <i class="fa fa-search"></i>
-                </span>
-                <input type="search" id="fs-input" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control border-start-0 border-end-0 ps-1 moop-input"
-                       placeholder="Enter Accession ID…"
-                       autocomplete="off" spellcheck="false">
-                <button id="fs-go" class="btn btn-primary px-3" type="button">Search</button>
+            <div class="d-flex align-items-center gap-2">
+              <div class="qs-input-wrap flex-grow-1" style="min-width:0;">
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0 pe-1 text-muted">
+                    <i class="fa fa-search"></i>
+                  </span>
+                  <input type="search" id="fs-input" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control border-start-0 border-end-0 ps-1 moop-input"
+                         placeholder="Enter Accession ID…"
+                         aria-label="Find a gene, transcript, CDS or protein by its exact accession ID"
+                         autocomplete="off" spellcheck="false">
+                  <button id="fs-go" class="btn btn-primary px-3" type="button">Search</button>
+                </div>
               </div>
+              <?= help_modal_trigger('fs-help', '', 'Help: finding a gene by its ID') ?>
             </div>
             <div class="qs-examples mt-2">
               <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
@@ -148,6 +160,47 @@
       <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Search in a Custom Selection of Organisms</span>
     </span>
   </div>
+
+  <?php
+  // Help for the two quick searches. They look identical — same box, same button — and do
+  // entirely different things, which is the one confusion this page can create. The Genes
+  // box is an EXACT id lookup, so a reader who types "kinase" into it gets nothing and has
+  // no way to find out why; that is what the second modal exists to prevent.
+  echo help_modal(
+      'qs-help',
+      'Finding an organism, group, assembly or gene set',
+      [
+          ['heading' => 'What you can type', 'cards' => [
+              ['label' => 'A species', 'text' => 'Scientific or common name — "Nematostella vectensis" or "Starlet Sea Anemone". Both work.'],
+              ['label' => 'A group',   'text' => 'A curated set such as Bats or Planaria, to search every organism in it at once.'],
+              ['label' => 'An assembly or gene set', 'text' => 'An accession like GCA_004027475.1, or a gene set name like SIMR_2025-01-24.'],
+          ]],
+          ['heading' => 'What happens', 'cards' => [
+              ['label' => 'It takes you there', 'text' => 'Choosing a suggestion opens that page, and searches you run from it stay scoped to what you picked.'],
+              ['label' => 'The examples are live', 'text' => 'Click any chip under the box to run it and see the shape of the answer.'],
+          ]],
+      ],
+      ['intro' => 'Jump to an organism, a group of organisms, an assembly, or one gene set.']
+  );
+
+  echo help_modal(
+      'fs-help',
+      'Finding a gene by its ID',
+      [
+          ['heading' => 'What this does', 'cards' => [
+              ['label' => 'Exact IDs only', 'text' => 'Paste the accession of a gene, transcript, CDS or protein. It must match exactly — this is a lookup, not a search.'],
+              ['label' => 'Everywhere at once', 'text' => 'Every gene set you have access to is checked, so you need not know which organism the ID belongs to.'],
+              ['label' => 'Lands on the gene', 'text' => 'A transcript, CDS or protein ID all open the gene page they belong to.'],
+          ]],
+          ['heading' => 'Looking for a word, not an ID?', 'cards' => [
+              ['label' => 'Use the annotation search', 'html' => true,
+               'text' => 'For a protein name, a domain or a GO term — "kinase", "zinc finger" — use <a href="/'
+                       . htmlspecialchars($site) . '/tools/search.php">Search</a>. This box will not find them.'],
+          ]],
+      ],
+      ['intro' => 'Go straight to one feature when you already have its accession.']
+  );
+  ?>
 
   <!-- How-to modal -->
   <div class="modal fade" id="how-to-modal" tabindex="-1" aria-labelledby="how-to-modal-label" aria-hidden="true">

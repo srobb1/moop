@@ -199,6 +199,9 @@ echo render_display_page(
     __DIR__ . '/tools/pages/index.php',
     [
         'siteTitle'          => $config->getString('siteTitle'),
+        // Needed by the content file to build in-app links (the search-help modal points
+        // at the annotation search). Every other page already has it.
+        'site'               => $site,
         'organism_count'     => count($organism_list),
         'assembly_count'     => count($seen_assemblies),
         'featured_groups'    => $featured_groups,

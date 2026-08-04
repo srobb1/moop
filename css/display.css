@@ -1549,6 +1549,12 @@ a:hover .link-icon {
 .index-group-chip-list {
   display: flex;
   flex-wrap: wrap;
+  /* Centre each wrapped line, not just the first. Without this the list defaulted to
+     flex-start, so a full first row followed by a short second row left that second row
+     hugging the left edge under a centred heading and a centred featured-group strip --
+     the one block on the page that did not line up with the rest. justify-content applies
+     per line, so every row centres, however the chips happen to break. */
+  justify-content: center;
   gap: 8px;
   padding: 4px 0;
 }
