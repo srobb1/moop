@@ -73,8 +73,16 @@
             }
             $copy_lines[] = $badges;
             $copy_lines[] = trim($genus . ' ' . $species . ($common_name ? " ($common_name)" : ''));
-            $copy_lines[] = assembly_label($genome_name, $genome_accession);
-            $copy_lines[] = $gene_set_name;
+            // Assembly and gene set are LABELLED; the rest are not.
+            //
+            // The other lines say what they are from their content — an accession, a
+            // species name, a genomic range. These two are bare identifiers whose meaning
+            // comes entirely from their position, and on 19 of 92 gene sets they are near
+            // identical: "bvag.kc1 (bvag.kc1.ref)" sits directly above "bvag.kc1". Pasted
+            // into notes unlabelled, those are indistinguishable later. It is the whole
+            // in-house .kc1 family, not an edge case.
+            $copy_lines[] = 'Assembly: ' . assembly_label($genome_name, $genome_accession);
+            $copy_lines[] = 'Gene set: ' . $gene_set_name;
             if (!empty($feature_loc)) {
                 $copy_lines[] = $feature_loc['seqname'] . ':' . number_format($feature_loc['start'])
                               . '-' . number_format($feature_loc['end'])
