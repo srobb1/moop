@@ -58,6 +58,8 @@ function moop_permission_check_mode(string $name): string {
         'Logs Directory'                  => 1,  // error.log, login_attempts.json
         'Site Configuration Files'        => 1,  // config/config_editable.json (admin UI)
         'Metadata Configuration Files'    => 1,  // metadata/*.json
+        'Site Data Backup Directory'      => 1,  // site_data_path — housekeeping writes here
+        'Site Data Backup Files'          => 1,  // the snapshot rewrites these in place
         'Taxonomy Lineage Cache'          => 1,  // metadata/taxonomy_lineage_cache.json
         'Metadata Directory'              => 1,
         'Metadata Backups Directory'      => 1,
@@ -477,6 +479,7 @@ function moop_build_permission_items($config, array $ctx): array {
     $site_path            = $ctx['site_path'];
     $absolute_images_path = $ctx['absolute_images_path'];
     $docs_path            = $ctx['docs_path'];
+    $site_data_path       = $ctx['site_data_path'] ?? '';
 
     return [
         // Site Configuration Files - Require Write
@@ -504,12 +507,67 @@ function moop_build_permission_items($config, array $ctx): array {
                 $metadata_path . '/taxonomy_tree_config.json',
                 $metadata_path . '/group_descriptions.json',
                 $metadata_path . '/organism_assembly_groups.json',
+                // Admin-editable through Manage Glossary, so the web server writes it.
+                // Absent here — and therefore unchecked — until 2026-08-04.
+                $metadata_path . '/glossary.json',
             ],
             'required_perms' => '664',
             'required_owner' => $moop_owner,
             'required_group' => $web_group,
             'reason' => 'Configuration files are edited by admins and read by the web server',
             'why_write' => 'Admin interface needs to modify these files when you change settings',
+        ],
+
+        // Site Data Backup — the housekeeping snapshot writes here every run.
+        //
+        // This had NO rule at all until 2026-08-04, and the cost was exactly what §11
+        // predicts: metadata/glossary.json in the backup was mode 640 owned by smr while
+        // housekeeping runs as apache, so every snapshot from 2026-07-23 onward failed to
+        // write it and reported success anyway. Twelve days of Manage Glossary edits were
+        // never backed up, and nothing on this page could have said so, because the
+        // directory the backup lives in was not among the things it looks at.
+        //
+        // scripts/fix_moop_selinux.sh ALREADY labels this path — so the SELinux half was
+        // covered and the ownership half was not, which is why the failure was invisible
+        // rather than loud. A correct label on an unwritable file looks fine from every
+        // angle except the one that matters.
+        [
+            'name' => 'Site Data Backup Directory',
+            'description' => 'Where housekeeping snapshots config, metadata and user accounts',
+            'type' => 'directory',
+            'paths' => array_values(array_filter([$site_data_path])),
+            'required_perms' => '2775',
+            // No required_owner: the web server CREATES these files, so apache owning
+            // them is correct, not a fault. The writable branch does not evaluate
+            // required_owner anyway — it checks is_writable, the SELinux label,
+            // required_group and world-writable — so asserting an owner here would
+            // be inert today and wrong the day it stopped being inert.
+            'required_group' => $web_group,
+            'reason' => 'Housekeeping copies site data here on every run',
+            'why_write' => 'The snapshot task writes config, metadata and organism.json files into this directory',
+        ],
+
+        [
+            'name' => 'Site Data Backup Files',
+            'description' => 'The snapshot copies themselves — overwritten in place on each run',
+            'type' => 'file',
+            'paths' => $site_data_path === '' ? [] : array_values(array_filter([
+                $site_data_path . '/metadata/annotation_config.json',
+                $site_data_path . '/metadata/organism_assembly_groups.json',
+                $site_data_path . '/metadata/taxonomy_tree_config.json',
+                $site_data_path . '/metadata/group_descriptions.json',
+                $site_data_path . '/metadata/glossary.json',
+                $site_data_path . '/config/config_editable.json',
+            ], 'file_exists')),
+            'required_perms' => '664',
+            // No required_owner: the web server CREATES these files, so apache owning
+            // them is correct, not a fault. The writable branch does not evaluate
+            // required_owner anyway — it checks is_writable, the SELinux label,
+            // required_group and world-writable — so asserting an owner here would
+            // be inert today and wrong the day it stopped being inert.
+            'required_group' => $web_group,
+            'reason' => 'Each is rewritten in place by the snapshot, not recreated',
+            'why_write' => 'The snapshot overwrites these files; if one is not writable the backup silently stops updating it',
         ],
 
         // Taxonomy Lineage Cache - Write Required
@@ -891,6 +949,7 @@ function moop_collect_permission_checks($config): array {
         'site_path'            => $site_path,
         'absolute_images_path' => $absolute_images_path,
         'docs_path'            => $docs_path,
+        'site_data_path'       => $config->getPath('site_data_path'),
     ]);
 
     // Paths that carry their own writable rule. The read-only evidence scan must not
