@@ -155,6 +155,15 @@ class ScopeFilter {
             const org        = orgEntry.organism;
             const orgDisplay = org.replace(/_/g, ' ');
             const orgId      = this.sanitizeId(org);
+            // Common name beside the binomial. A group like Bats lists 49 organisms, and
+            // scientific names alone give a reader nothing they recognise the animal by --
+            // every other page that names an organism already shows both. Served by
+            // tools/get_organism_hierarchy.php; all 85 organism.json files carry one, but
+            // fall back to the binomial alone rather than render an empty separator.
+            const commonName = (orgEntry.common_name || '').trim();
+            const commonNameLabel = commonName
+                ? ` <span class="text-muted fw-normal">· ${escapeHtml(commonName)}</span>`
+                : '';
             const orgState   = this.getOrgState(org);
             const orgChecked = orgState === 'all' ? 'checked' : '';
 
@@ -212,7 +221,7 @@ class ScopeFilter {
                                data-org="${escapeHtml(org)}"
                                ${orgChecked}>
                         <label class="form-check-label fw-semibold" for="scope-org-${orgId}">
-                            <em>${escapeHtml(orgDisplay)}</em>
+                            <em>${escapeHtml(orgDisplay)}</em>${commonNameLabel}
                         </label>
                     </div>
                     ${asmHtml}

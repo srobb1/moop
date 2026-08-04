@@ -16,6 +16,7 @@ if (empty($organisms_param)) {
 
 $requested = array_values(array_filter(array_map('trim', explode(',', $organisms_param))));
 $accessible = getAccessibleGeneSets();
+$organism_data = ConfigManager::getInstance()->getPath('organism_data');
 
 // Flatten group-keyed result into $by_organism[$org][$accession|$gene_set] = source
 // Using a composite key to deduplicate across groups.
@@ -56,9 +57,23 @@ foreach ($requested as $org) {
         }
     }
 
+    // Common name for the scope tree's organism row. The tree previously showed only
+    // the directory name with underscores swapped for spaces, so a reader scanning a
+    // group of 49 bats got 49 scientific binomials and nothing they recognise the
+    // animal by -- while every other page that names an organism (organism, gene set,
+    // gene) already shows the common name. All 85 organism.json files carry one, so
+    // this is a display gap, not missing data.
+    //
+    // Read per organism rather than from the cache: loadOrganismInfo() is a small JSON
+    // read, the list here is the organisms already in scope, and it keeps this endpoint
+    // independent of whether the organism cache happens to be fresh.
+    $org_info    = loadOrganismInfo($org, $organism_data);
+    $common_name = trim((string) ($org_info['common_name'] ?? ''));
+
     $result[] = [
-        'organism'   => $org,
-        'assemblies' => array_values($assemblies),
+        'organism'    => $org,
+        'common_name' => $common_name,
+        'assemblies'  => array_values($assemblies),
     ];
 }
 
