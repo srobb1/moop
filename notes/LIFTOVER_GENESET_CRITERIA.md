@@ -110,19 +110,24 @@ rule 2 is).
 
 **So a criteria-respecting load yields ~1,491 proteins from 45,553 transcripts.** Whether a
 gene set that is 3% usable belongs on the site is a scientific call, not a technical one.
-Three options, in increasing cost:
 
-- **A. Do not load it.** Mark the gene set inactive; leave the assembly without a protein
-  layer. Cheapest and honest.
-- **B. Load transcripts, no protein layer.** Gene/mRNA/exon features are valid liftover
-  output regardless of frame; the 3% protein layer is what is not worth having. Gives
-  browsable gene models and JBrowse tracks with no misleading proteins.
-- **C. Load the 1,491.** Full pipeline on the clean subset, named by our own analyses.
-  Correct but small, and the gene set then silently contains far fewer proteins than
-  transcripts, which needs saying on the page.
+⚠️ **All annotations are generated at the PROTEIN level, for speed** (user, 2026-08-04) —
+computed on the protein and then floated up to the transcript at load time, see
+`reference_annotations_attach_to_mrna`. **No protein means no annotation.** That kills the
+obvious middle option: a transcripts-only load is not "most of the value minus the
+proteins", it is browsable gene models with *nothing known about them*.
 
-**B is the recommendation** — it matches what the data actually supports, and the criteria
-above are what decides between B and C for the next liftover gene set that arrives.
+- **A. Do not load it.** Mark the gene set inactive. Cheapest and honest.
+- **B. Transcripts only, no protein layer.** ❌ **Not viable.** Yields gene models and
+  JBrowse tracks with zero functional annotation, because there is no protein to compute
+  from. Worth stating explicitly so it is not proposed again as the safe compromise.
+- **C. All transcripts, plus the 1,491 valid proteins.** The only option that produces any
+  annotation. Gene models for all 45,553; the protein layer holds the 3% that survived,
+  named by our own analyses. The gene set then contains far fewer proteins than
+  transcripts, which the page must say plainly or it reads as missing data.
+
+**C is the recommendation**, with the caveat that 3% is small enough that A is defensible
+— and the criteria above are what decides A vs C for the next liftover gene set.
 
 ## 6. Implementation sketch (not started)
 
