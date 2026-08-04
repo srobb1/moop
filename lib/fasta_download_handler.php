@@ -137,17 +137,23 @@ header('Expires: 0');
 
 // Stream the file.
 //
-// 🔴 DISCARD THE GUARD BUFFER FIRST. This file opens ob_start() at the top to swallow stray
-// output from includes, and readfile() writes into whatever buffer is open — so with it
-// still active the ENTIRE file is accumulated in memory before anything reaches the client.
-// genome.fa for Anoura_caudifer is 2.2 GB against memory_limit 128M: fatal, and the browser
-// gets a 500 with no clue why. protein.aa.fa is 15 MB, fits under the limit, and worked —
-// which is exactly why this looked like "genome downloads are broken" rather than a
-// buffering bug. Reported 2026-08-04.
+// 🔴 CLOSE EVERY REMAINING OUTPUT BUFFER BEFORE STREAMING.
 //
-// ob_end_clean() rather than ob_end_flush(): anything sitting in that buffer is by
-// definition stray output, and prepending it to a FASTA would corrupt the file. Headers are
-// unaffected — header() queues them independently of the output buffer.
+// Not the guard buffer from line 11 — that one is already discarded at line 35, and it is
+// still doing its job of keeping stray include whitespace out of the FASTA. The one left
+// open here is PHP's own: php.ini sets `output_buffering = 4096`, so every FPM request
+// begins inside an implicit buffer that no ob_end_clean() in this file had closed.
+//
+// readfile() writes into whatever buffer is open, so the ENTIRE file was accumulating in
+// memory before a byte reached the client. genome.fa for Anoura_caudifer is 2.2 GB against
+// memory_limit 128M: fatal, and the browser gets a bare 500. protein.aa.fa is 15 MB, fits
+// under the limit, and worked — which is why this presented as "genome downloads are
+// broken" rather than as a buffering bug. Reported 2026-08-04, and confirmed by A/B on this
+// hunk alone: with it 200, without it 500, restored 200.
+//
+// ob_end_clean() rather than ob_end_flush(): nothing legitimate is in that buffer at this
+// point, and flushing stray bytes ahead of a FASTA would corrupt it. Headers are unaffected
+// — header() queues them independently of the output buffer.
 while (ob_get_level() > 0) {
     ob_end_clean();
 }
