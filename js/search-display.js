@@ -279,8 +279,14 @@ $(document).ready(function () {
 
     function loadAnnotationSources(organisms) {
         if (!organisms.length) {
-            $('#sourcesPanel').html('<p class="text-muted small p-3">Choose organisms in Step <span class="step-ref">2</span> — the types listed here are the ones those organisms actually carry.</p>');
+            // One message at a time. The static "only the types you tick are searched"
+            // line is hidden here for the same reason the filter box is: with no types
+            // listed there is nothing to tick and nothing to filter, so both would be
+            // rules about a control that is not on screen. Shown again in
+            // renderSourcesPanel() once there IS a list.
+            $('#sourcesPanel').html('<p class="text-muted small p-3">Choose organisms in Step <span class="step-ref">2</span> — the types they carry appear here.</p>');
             $('#sources-filter-wrap').hide();
+            $('#sources-help-line').hide();
             updateSourcesSummary();
             updateAnnotTypesPanel();
             return;
@@ -351,6 +357,7 @@ $(document).ready(function () {
         syncAllTypeRows();
 
         $('#sources-filter-wrap').show();
+        $('#sources-help-line').show();
         filterSources();
         updateSourcesSummary();
         updateAnnotTypesPanel();

@@ -234,15 +234,16 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 
         <!-- Left: annotation types list -->
         <div class="col-lg-8 border-end d-flex flex-column">
-          <?php /* One line, inside this column rather than full-width above the row.
-                   It was four lines spanning the whole card, which pushed the row down and
-                   left the "Selected" panel floating below its own header instead of flush
-                   with it as Step 2's is. Most of that text also duplicated the annotation
-                   types modal, and one of its sentences existed only to point at a button
-                   sitting next to it. The (i) here IS that pointer. */ ?>
-          <div class="px-3 pt-3">
+          <?php /* ONE message at a time, never two. This line and the panel's empty state
+                   used to print together and pulled against each other: a rule about ticking
+                   boxes, sitting directly above "Choose organisms in Step 2" — i.e. above a
+                   panel with nothing to tick. The rule is meaningless until a list exists, so
+                   js/search-display.js reveals this line with the types and hides it with
+                   them, on exactly the condition it already uses for the filter box below.
+                   Starts hidden because the panel starts empty. */ ?>
+          <div class="px-3 pt-3" id="sources-help-line" style="display:none;">
             <div class="form-text moop-help">
-              Search only the annotation types <?= help_modal_trigger('ann-types-modal', '', 'What each annotation type covers') ?> you select.
+              Only the types you tick are searched. <?= help_modal_trigger('ann-types-modal', '', 'What each annotation type covers') ?>
             </div>
           </div>
           <div class="px-2 pt-2 pb-1 border-bottom" id="sources-filter-wrap" style="display:none;">
