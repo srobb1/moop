@@ -693,6 +693,88 @@ misleading; reword to note it is intentionally read-only to httpd_t.
 
 ---
 
+## P. Second browser walk — performance, help, buttons (2026-08-04)
+
+Method: headless Chrome (puppeteer-core + the cached Chrome in `~/.cache/puppeteer`) over 17
+user-facing pages from `172.16.2.52`, plus `curl` for honest server-side timings. **All 17
+returned 200 with zero console errors and zero failed requests** — the defects below are all
+things a green status code does not catch.
+
+⚠️ **Two method traps, both of which produced a wrong finding before being caught.** Record
+them so the next pass does not repeat them:
+- **Bootstrap moves `title` to `data-bs-original-title`** once a Tooltip is constructed. Reading
+  `getAttribute('title')` said every scope-filter button had lost its tooltip. It had not.
+- **The scope modal is built lazily.** A 900 ms wait after `.click()` showed nothing and read as
+  "the button does nothing"; 2500 ms shows it working normally. Do not conclude "dead control"
+  from one short wait.
+
+### Fixed in this pass
+
+- [x] **Organism page called Wikipedia live on every page load, uncached** — `3752205`.
+      `getWikipediaOrganismData()` fires whenever an organism has no stored description OR no
+      stored image, and **no organism.json on this deployment has either — 85 of 85 took that
+      path, every view**. 348–428 ms for a 38 KB page (MOOPmart serves 294 KB in 11 ms). The
+      average understated it: the uncached path makes up to **four sequential calls** — three
+      title attempts then a search fallback — at `moop_curl_get`'s 10 s ceiling each, so the
+      worst case was **40 s inside a user request**, and a slow Wikipedia meant a slow MOOP.
+      Now cached per organism (30 d hit / 7 d miss) beside `annotation_sources_cache.json`.
+      **Result: 125–190 ms**, in line with assembly (164 ms) and gene_set (100 ms).
+      ⚠️ An empty result is cached **only when Wikipedia actually answered** — a transport
+      failure returns the same empty array as a genuine "no article", and the first run of the
+      new code cached an empty Nematostella that a retry a minute later filled with 719
+      characters. Caching that blip would have frozen it for the whole miss TTL.
+      **Image caching was already correct and is untouched** — `downloadWikimediaImage()` checks
+      `file_exists` before calling out; 97 wikimedia + 39 NCBI images are served locally.
+- [x] **Scope filter showed binomials only** — `0ca0612`. The Bats group listed 49 scientific
+      names with nothing a reader recognises the animal by, while every other page that names an
+      organism already showed both. All 85 `organism.json` carry a `common_name`; it was purely a
+      display gap. Now `Anoura caudifer · Tailed Tailless Bat`.
+
+### Open
+
+- [ ] **Assembly page never shows the common name** — the last page that doesn't. Organism, gene
+      set and gene pages all render it (the gene page as `Nematostella vectensis (Starlet Sea
+      Anemone)`); the assembly page shows the binomial once and nothing else. Measured: zero
+      visible occurrences of the common name. Small fix, same data already loaded.
+- [ ] **Gene page: 7 icon-only buttons with no accessible name** — `.annotation-info-btn` has no
+      `title` and no `aria-label`, so there is nothing on hover and nothing announced. It is the
+      highest-traffic page after search.
+- [ ] **`index.php` has zero help triggers** — confirmed again. It is the page users reach from
+      nowhere, and the one with no way to ask what anything means.
+- [ ] **No `<h1>` on `retrieve_sequences`, `jbrowse2`, `help`** — the visible title is styled text,
+      so the document has no heading for structure or assistive tech.
+- [ ] **LATENT — the assembly page omits the scope filter safely only by accident of the data.**
+      `assembly-display.js` sets `noScopeFilter: true`, which is correct *today* because **no
+      assembly in the site has more than one gene set**, so there is nothing to narrow. The day a
+      second gene set lands under one assembly, that page will offer no way to scope and nothing
+      will flag it. Related to `ASSEMBLY_WITHOUT_GENE_SET_PLAN.md`, which is the same class of
+      latent-until-the-data-changes bug. (`gene_set` and `search` also set `noScopeFilter`, both
+      genuinely correct — a single gene set cannot be narrowed, and search uses its inline tree.)
+
+### Server-side timings, all HTTP 200 with real payloads
+
+| page | time | size |
+|---|---|---|
+| groups (one group) | 1.8 ms | 40 KB |
+| index | 2.5 ms | 154 KB |
+| blast | 7.1 ms | 239 KB |
+| search | 7.2 ms | 209 KB |
+| jbrowse2 | 8.8 ms | — |
+| moopmart | 11.0 ms | 294 KB |
+| downloads | 19 ms | — |
+| gene page | 66 ms | 82 KB |
+| gene_set | 100 ms | — |
+| assembly | 164 ms | — |
+| organism | **125–190 ms** (was 348–428) | 38 KB |
+
+Organism-page controller profile after the fix — no second hot spot, so do not go looking for
+one: `config_init` 3.9 ms · lib includes 17.4 ms · `loadOrganismInfo` 0.1 · `getGroupData` 0.1 ·
+`getTaxonomyTreeUserAccess` 0.0 · taxonomy tree JSON 0.2 · `load_lineage_cache` 0.4 ·
+**`getWikipediaOrganismData` 0.0** · `getOrganismImageWithCaption` 0.0 · `getAccessibleGeneSets`
+8.1 → **30.4 ms total**. The rest is the shared framework render every page pays.
+
+---
+
 ## Suggested order
 
 1. #1, #2, #3 — exposure/correctness, small diffs.
