@@ -578,7 +578,11 @@ echo render_display_page(
             "/$site/js/modules/gene-model-viewer.js",
             "/$site/js/modules/sequence-formatter.js",
             "/$site/js/modules/parent-nav.js",
-            "/$site/js/modules/isoform-minimap.js"
+            "/$site/js/modules/isoform-minimap.js",
+            // Loaded here, not left to sequences_display.php: that include only runs when
+            // there are sequences to show, so the overview Copy button would be dead on a
+            // gene with none.
+            "/$site/js/modules/copy-to-clipboard.js"
         ],
         'inline_scripts' => [
             "const geneModelData = " . json_encode($gene_model) . ";",

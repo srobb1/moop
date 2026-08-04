@@ -455,3 +455,22 @@ a.badge:hover {
   color: #fff;
   border-color: #6c757d;
 }
+
+/* Copy-summary button in the page title bar. Inherits the bar's white on purple so it
+   reads as part of the header, not as a control bolted onto it. */
+.feature-header .feature-header-copy {
+  background: none;
+  border: 1px solid rgba(255,255,255,.35);
+  color: #fff;
+  opacity: .8;
+  font-size: .72rem;
+  line-height: 1;
+  padding: .2rem .5rem;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.feature-header .feature-header-copy:hover,
+.feature-header .feature-header-copy:focus {
+  opacity: 1;
+  background: rgba(255,255,255,.15);
+}

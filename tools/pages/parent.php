@@ -51,19 +51,52 @@
       <!-- Feature Header Column -->
       <div class="col-lg-8">
         <div class="feature-header shadow h-100">
+            <?php
+            // Computed here, above both the copy payload and the heading below, so the two
+            // cannot disagree about what this gene is called.
+            $overview_title = !empty($description)
+                ? decodeAnnotationText($description)
+                : (!empty($name) ? $name : '');
+
+            // Plain-text summary for pasting into notes. Built here rather than scraped
+            // from the DOM: the overview is a <dl> of labels and links, so a hand
+            // selection drags in blank lines and layout whitespace. Same fields, same
+            // order as the box, one per line, no headings — the user asked for exactly
+            // what they would have highlighted, minus the mess.
+            $copy_lines = [$feature_uniquename];
+            if ($overview_title !== '') $copy_lines[] = $overview_title;
+            $badges = htmlspecialchars_decode(strip_tags($type));
+            if (!empty($children_hierarchical)) {
+                $n = count($children_hierarchical);
+                $badges .= ' ' . $n . ' ' . ($children_hierarchical[0]['feature_type'] ?? 'mRNA')
+                         . ' child' . ($n > 1 ? 'ren' : '');
+            }
+            $copy_lines[] = $badges;
+            $copy_lines[] = trim($genus . ' ' . $species . ($common_name ? " ($common_name)" : ''));
+            $copy_lines[] = assembly_label($genome_name, $genome_accession);
+            $copy_lines[] = $gene_set_name;
+            if (!empty($feature_loc)) {
+                $copy_lines[] = $feature_loc['seqname'] . ':' . number_format($feature_loc['start'])
+                              . '-' . number_format($feature_loc['end'])
+                              . (in_array($feature_loc['strand'], ['+','-'], true) ? ' (' . $feature_loc['strand'] . ')' : '');
+            }
+            $copy_text = implode("\n", array_filter($copy_lines, fn($l) => trim((string)$l) !== ''));
+            ?>
             <div class="feature-header-id">
                 <span><?= htmlspecialchars($feature_uniquename) ?></span>
                 <?php /* The page-level (i) sits in the title bar, matching every other
                          section on this page — Gene Structure and Annotations each carry
                          theirs in their own card header. */ ?>
-                <?= help_modal_trigger('gene-page-help', '', 'Help: what this page shows') ?>
+                <span class="ms-auto d-flex align-items-center gap-2">
+                    <button type="button" class="feature-header-copy"
+                            data-copy-text="<?= htmlspecialchars($copy_text, ENT_QUOTES) ?>"
+                            title="Copy this summary as plain text, ready to paste into notes">
+                        <i class="fa fa-copy"></i> <span class="copy-label">Copy</span>
+                    </button>
+                    <?= help_modal_trigger('gene-page-help', '', 'Help: what this page shows') ?>
+                </span>
             </div>
             <div class="feature-overview-body">
-                <?php
-                $overview_title = !empty($description)
-                    ? decodeAnnotationText($description)
-                    : (!empty($name) ? $name : '');
-                ?>
                 <h1 class="feature-title">
                     <?php if ($overview_title !== ''): ?>
                         <?= htmlspecialchars($overview_title) ?>

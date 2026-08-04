@@ -103,3 +103,55 @@ if (document.readyState === 'loading') {
     // Already loaded
     initializeCopyToClipboard();
 }
+
+/* ── Copy an explicit payload, not an element's own text ─────────────────────
+ *
+ * .copyable above copies what the element displays, which is right for a sequence block.
+ * This copies a string prepared server-side and carried in data-copy-text, for the case
+ * where what you want on the clipboard is NOT what is on screen — the gene overview is a
+ * definition list with labels and links, and selecting it by hand picks up stray blank
+ * lines and layout whitespace.
+ *
+ * Same HTTP-safe fallback as above: navigator.clipboard is unavailable on plain http://,
+ * which is how this site is served today (see the DNS/HTTPS blocker), so the textarea +
+ * execCommand path is the one that actually runs here, not a legacy nicety.
+ */
+function initializeCopyPayload() {
+    document.querySelectorAll("[data-copy-text]").forEach(el => {
+        if (el.dataset.copyBound) return;          // idempotent — safe to re-init
+        el.dataset.copyBound = "1";
+
+        el.addEventListener("click", function (e) {
+            e.preventDefault();
+            const text = el.getAttribute("data-copy-text") || "";
+            const done = () => {
+                const label = el.querySelector(".copy-label");
+                const icon  = el.querySelector("i");
+                const oldL  = label ? label.textContent : null;
+                const oldI  = icon ? icon.className : null;
+                if (label) label.textContent = "Copied";
+                if (icon)  icon.className = "fa fa-check";
+                setTimeout(() => {
+                    if (label && oldL !== null) label.textContent = oldL;
+                    if (icon  && oldI !== null) icon.className = oldI;
+                }, 1500);
+            };
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done)
+                    .catch(err => console.error("Copy failed:", err));
+            } else {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                ta.style.position = "fixed";
+                ta.style.opacity = "0";
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand("copy"); done(); }
+                catch (err) { console.error("Copy fallback failed:", err); }
+                document.body.removeChild(ta);
+            }
+        });
+    });
+}
+document.addEventListener("DOMContentLoaded", initializeCopyPayload);
