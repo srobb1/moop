@@ -91,7 +91,10 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
                      the same class — no extra JS. Only the gated index/custom-selection case has
                      it; organism and group pages already carry an organism in context. */ ?>
             <div class="tools-select-hint small mb-2">
-                <i class="fa fa-arrow-up me-1"></i> Pick an organism above first — then these tools run on your selection.
+                <?php /* No direction and no arrow: this block sits under the selection on a
+                         narrow window and beside it on a wide one, so "above" was wrong half
+                         the time and the arrow pointed at nothing. */ ?>
+                <i class="fa fa-circle-exclamation me-1"></i> Pick an organism first — then these tools run on your selection.
             </div>
         <?php endif; ?>
         <div class="d-flex flex-wrap gap-2">

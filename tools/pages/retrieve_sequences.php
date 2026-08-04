@@ -146,7 +146,9 @@
                     <?php /* "uh-oh, do this first" for a missed assembly. Inline and soft, in place
                              of a jarring browser alert(); js/sequence-retrieval.js toggles it. */ ?>
                     <div id="retrieve-select-hint" class="tools-select-hint small mt-2" style="display:none;">
-                        <i class="fa fa-arrow-up me-1"></i> Select an assembly above before retrieving.
+                        <?php /* Step number, not a direction — see the note on the same hint
+                                 in blast.php. */ ?>
+                        <i class="fa fa-circle-exclamation me-1"></i> Choose an organism and assembly in step 1 before retrieving.
                     </div>
                 </div>
             </div>

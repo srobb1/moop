@@ -329,7 +329,11 @@
                     <?php /* Inline "uh-oh" for a missed assembly/database, in place of a browser
                              alert(); js/blast-manager.js toggles it. */ ?>
                     <div id="blast-select-hint" class="tools-select-hint small mt-2" style="display:none;">
-                        <i class="fa fa-arrow-up me-1"></i> Select an organism and database above before running BLAST.
+                        <?php /* Names the numbered step, not a direction. "above" with an
+                                 up-arrow bakes in one layout: the steps stack on a narrow
+                                 window but sit differently on a wide one, and the arrow is
+                                 then pointing at nothing. A step number does not move. */ ?>
+                        <i class="fa fa-circle-exclamation me-1"></i> Choose an organism and database in step 3 before running BLAST.
                     </div>
                 </div>
             </div>

@@ -192,10 +192,16 @@
               ['label' => 'Everywhere at once', 'text' => 'Every gene set you have access to is checked, so you need not know which organism the ID belongs to.'],
               ['label' => 'Lands on the gene', 'text' => 'A transcript, CDS or protein ID all open the gene page they belong to.'],
           ]],
+          // Two routes, because they answer different questions and the choice is the
+          // thing a newcomer cannot guess. Naming only the annotation search would send
+          // someone hunting one organism across all 85.
           ['heading' => 'Looking for a word, not an ID?', 'cards' => [
-              ['label' => 'Use the annotation search', 'html' => true,
-               'text' => 'For a protein name, a domain or a GO term — "kinase", "zinc finger" — use <a href="/'
-                       . htmlspecialchars($site) . '/tools/search.php">Search</a>. This box will not find them.'],
+              ['label' => 'In one organism, or one group',
+               'text' => 'Use the Organisms tab to open that organism or group, then search from its page — results stay scoped to what you picked.'],
+              ['label' => 'Across everything, or your own list', 'html' => true,
+               'text' => 'Use the <a href="/' . htmlspecialchars($site) . '/tools/search.php">annotation search</a>, where you can search every organism at once or build a custom selection.'],
+              ['label' => 'Not this box',
+               'text' => 'A protein name, domain or GO term — "kinase", "zinc finger" — will not match here. This field compares accessions exactly.'],
           ]],
       ],
       ['intro' => 'Go straight to one feature when you already have its accession.']
