@@ -143,3 +143,44 @@ function moop_organism_cache_lock_file(): string
     $root = moop_cache_root();
     return moop_ensure_cache_dir($root) ? "$root/.organism_cache_lock" : '';
 }
+
+/**
+ * Is a background organism-cache refresh actually running right now?
+ *
+ * THE ONE definition of "refreshing". Three callers used to answer this question
+ * separately -- admin/api/refresh_organism_cache.php (PID liveness), lib/housekeeping.php
+ * (PID liveness) and admin/pages/admin.php via admin/admin.php (lock exists AND mtime
+ * < 600s). The dashboard's mtime variant is what wedged the UI on 2026-08-04: a refresh
+ * completed at 08:17:32 but its background shell never reached the `rm -f` that drops the
+ * lock, so the lock sat there holding a fresh mtime. The dashboard read that as "in
+ * progress" and rendered the spinner; the status endpoint read the same lock, saw the PID
+ * was dead, reported `idle` and the JS jumped the bar to 100%. Banner and bar disagreed
+ * until a poll happened to unlink the lock. Two answers to one question, so one of them
+ * was always going to be wrong.
+ *
+ * mtime cannot answer this. It says when the lock was CREATED, not whether the worker
+ * lives -- an orphan under 600s reads as running, and a genuine scan past 600s reads as
+ * finished. The PID does answer it, so that is the only check here.
+ *
+ * Side effect by design: a lock whose process is gone is REMOVED. That is what makes the
+ * wedge self-healing rather than something an admin has to clear by hand -- whichever
+ * caller notices first cleans up for everyone.
+ */
+function moop_organism_cache_refresh_active(): bool
+{
+    $lock_file = moop_organism_cache_lock_file();
+    if (!$lock_file || !file_exists($lock_file)) return false;
+
+    $pid = (int) trim((string) @file_get_contents($lock_file));
+    // A just-created lock holds the placeholder '0' until the child shell overwrites it
+    // with its real PID (see the launchers). Treat that as running for a short grace
+    // window; otherwise a status poll landing inside the race would delete a lock whose
+    // worker is about to start, and a second click could launch a duplicate scan.
+    if ($pid <= 0) {
+        return (time() - (int) @filemtime($lock_file)) < 30;
+    }
+    if (file_exists("/proc/$pid")) return true;
+
+    @unlink($lock_file);
+    return false;
+}

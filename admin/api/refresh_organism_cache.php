@@ -28,17 +28,14 @@ function read_cache_meta($cache_file) {
     ];
 }
 
+// Liveness lives in ONE place — moop_organism_cache_refresh_active() in lib/cache_paths.php,
+// which also drops a lock whose process is gone. This wrapper only adds the progress-file
+// cleanup, which is local to this endpoint's contract. Do not reintroduce a second
+// definition here: the dashboard once had its own mtime-based one and the two disagreed,
+// leaving the UI showing "Refresh in progress…" over a finished scan.
 function lock_is_active($lock_file, $progress_file) {
-    if (!file_exists($lock_file)) return false;
-    $pid = (int)trim(file_get_contents($lock_file));
-    // Check if the process that created the lock is still running.
-    // This works regardless of how long the scan takes — no arbitrary timeout.
-    if ($pid > 0 && file_exists("/proc/$pid")) {
-        return true;
-    }
-    // Process is gone — clean up stale lock and any leftover progress file.
-    @unlink($lock_file);
-    @unlink($progress_file);
+    if (moop_organism_cache_refresh_active()) return true;
+    @unlink($progress_file);   // no worker → any progress file is leftover
     return false;
 }
 

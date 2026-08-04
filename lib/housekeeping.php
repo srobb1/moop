@@ -896,12 +896,9 @@ function housekeeping_refresh_organism_cache_if_stale() {
 
     if (!$script_path || !file_exists($script_path)) return;
 
-    // Already running (same PID-liveness check as refresh_organism_cache.php)
-    if (file_exists($lock_file)) {
-        $pid = (int)trim(@file_get_contents($lock_file));
-        if ($pid > 0 && file_exists("/proc/$pid")) return;
-        @unlink($lock_file); // stale lock
-    }
+    // Already running? One shared definition — moop_organism_cache_refresh_active() also
+    // drops the lock when its process is gone, so a crashed worker cannot wedge refreshes.
+    if (moop_organism_cache_refresh_active()) return;
 
     // Only refresh when the underlying data actually changed — a DB rebuilt/copied over,
     // groups or taxonomy edited — detected via the same fingerprints the warm script and

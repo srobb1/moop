@@ -58,9 +58,12 @@ if (file_exists($cache_file)) {
         }
     }
 }
-if (file_exists($lock_file) && (time() - filemtime($lock_file)) < 600) {
-    $cache_info['refreshing'] = true;
-}
+// Same liveness test the status endpoint and housekeeping use — see
+// moop_organism_cache_refresh_active(). This was `file_exists($lock_file) && mtime < 600`,
+// which answered a different question (was a lock created recently) and so disagreed with
+// the endpoint whenever a worker died without dropping its lock: the banner said
+// "Refresh in progress…" while the poller said idle and pinned the bar at 100%.
+$cache_info['refreshing'] = moop_organism_cache_refresh_active();
 // Data health alerts — computed by a shared helper so the dashboard and the manage
 // organisms page always show the SAME issues (single source of truth).
 $_health = computeDataHealthAlerts($organism_data);
