@@ -112,7 +112,12 @@
             <dt>Accession</dt>
             <dd><?= htmlspecialchars($assembly_info['genome_accession']) ?></dd>
             <dt>Organism</dt>
-            <dd><em class="sci-name"><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?><i class="fa fa-external-link-alt link-icon"></i></a></em></dd>
+            <?php /* Identical shape to the gene set page's Organism row: binomial in
+                     .sci-name, common name after it in parentheses and NOT italic (a common
+                     name is not a scientific name), then the external-link icon. The icon
+                     used to sit inside the <em>, so it was being italicised too. This was
+                     the last page that named an organism without its common name. */ ?>
+            <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em><?php if (!empty($organism_info['common_name'])): ?> (<?= htmlspecialchars($organism_info['common_name']) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
             <?php if (!empty($assembly_meta['source'])): ?>
             <dt>Source</dt>
             <dd><?= htmlspecialchars($assembly_meta['source']) ?></dd>
