@@ -29,7 +29,7 @@
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0f766e;">
-          <span class="fw-semibold" style="letter-spacing:0.03em; font-size:0.9rem;"><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
+          <span class="fw-semibold" style="letter-spacing:0.03em; font-size:0.9rem;"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
           <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;">search limited to this organism</span>
         </div>
 
@@ -130,7 +130,7 @@
                the grid: it is what a reader recognises the animal by, and this is the page
                they land on from search or from the front page. */ ?>
       <div class="feature-header organism-header-custom shadow">
-        <h1><em><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
+        <h1><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
             <span class="badge bg-white text-organism ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Organism</span></h1>
         <div class="feature-overview-body">
            <div class="fw-bold h4 mb-3" style="color: #0f766e;">

@@ -852,3 +852,26 @@ footer .footer-meta {
      fault rather than as an example. */
   white-space: nowrap;
 }
+
+/* ── Scientific names ──────────────────────────────────────────────────────
+   A binomial is ALWAYS sentence case and italic: "Nematostella vectensis".
+   Never NEMATOSTELLA VECTENSIS, never nematostella vectensis. That is a
+   nomenclature rule, not a design preference, so it is expressed once here
+   rather than left to each page to remember.
+
+   `text-transform: none` is the load-bearing half. Every binomial on the site
+   is already wrapped in <em>, so italics mostly came for free -- but the
+   organism page puts one inside .feature-header h1, which sets
+   `text-transform: uppercase` for the assembly and gene-set codes that
+   legitimately want caps. The result was NEMATOSTELLA VECTENSIS on the one
+   page whose subject IS the organism.
+
+   That defect was recorded and "fixed" once already (PAGE_BY_PAGE_AUDIT_PLAN
+   #6) by dropping an inline `text-uppercase` class from the span. The inline
+   class went; the cascade rule stayed; the page kept rendering caps and the
+   item stayed ticked. Hence a class that states the invariant and is immune to
+   whatever a future header rule does, instead of a second removal. */
+.sci-name {
+  font-style: italic;
+  text-transform: none;
+}

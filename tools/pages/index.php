@@ -49,7 +49,7 @@
             </div>
             <div class="qs-examples mt-2">
               <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
-              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">Anoura caudifer</button>
+              <button class="qs-example-chip sci-name" type="button" style="font-size:0.62rem;">Anoura caudifer</button>
               <button class="qs-example-chip" type="button" style="font-size:0.62rem;">Pallid Bat</button>
               <button class="qs-example-chip" type="button" style="font-size:0.62rem;">Bats</button>
               <button class="qs-example-chip" type="button" style="font-size:0.62rem;">GCA_004027475.1</button>

@@ -98,8 +98,13 @@ foreach ($sources_by_group as $group_name => $organisms) {
                         <span class="badge badge-sm bg-<?= $group_color ?> text-white">
                             <?= htmlspecialchars($group_name) ?>
                         </span>
+                        <?php /* The organism is a SCIENTIFIC NAME: sentence case, italic,
+                                 and spaces rather than the underscores of the directory
+                                 name it comes from. This badge rendered the raw directory
+                                 key -- "Ptychodera_flava" -- 95 times per page on both
+                                 pages that include this component. */ ?>
                         <span class="badge badge-sm bg-secondary text-white">
-                            <?= htmlspecialchars($organism) ?>
+                            <em class="sci-name"><?= htmlspecialchars(str_replace('_', ' ', $organism)) ?></em>
                         </span>
                         <span class="badge badge-sm bg-info text-white">
                             <?= htmlspecialchars(assembly_label($source['genome_name'] ?? '', $source['assembly'])) ?>

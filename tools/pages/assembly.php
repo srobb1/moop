@@ -112,7 +112,7 @@
             <dt>Accession</dt>
             <dd><?= htmlspecialchars($assembly_info['genome_accession']) ?></dd>
             <dt>Organism</dt>
-            <dd><em><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?><i class="fa fa-external-link-alt link-icon"></i></a></em></dd>
+            <dd><em class="sci-name"><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?><i class="fa fa-external-link-alt link-icon"></i></a></em></dd>
             <?php if (!empty($assembly_meta['source'])): ?>
             <dt>Source</dt>
             <dd><?= htmlspecialchars($assembly_meta['source']) ?></dd>
