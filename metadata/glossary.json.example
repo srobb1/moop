@@ -8,5 +8,13 @@
   "mRNA": "Messenger RNA — a gene's spliced transcript: exons joined, introns removed, including the untranslated regions (UTRs).",
   "CDS": "Coding sequence — the part of an mRNA that is translated into protein, without the untranslated regions.",
   "protein": "The amino-acid sequence translated from a feature's coding sequence (CDS).",
-  "gene": "A stretch of DNA that encodes a functional product. A gene is transcribed into one or more mRNAs, which can be translated into proteins."
+  "gene": "A stretch of DNA that encodes a functional product. A gene is transcribed into one or more mRNAs, which can be translated into proteins.",
+  "PANTHER": "A database that sorts proteins into families and subfamilies by their evolutionary relationships, then assigns likely functions from that classification. Here it appears as the source of family and Gene Ontology annotations.",
+  "RBBH": "Reciprocal Best BLAST Hit — two sequences in different species that each find the other as their single best match. It is a conservative way to infer that a pair are orthologs rather than merely similar.",
+  "EggNOG": "A database of orthologous groups built across thousands of genomes. A new sequence inherits functional descriptions from the group it falls into.",
+  "InterPro": "A service that combines the signatures of several member databases — PANTHER and Pfam among them — into a single classification, so a protein is described once rather than once per database.",
+  "Pfam": "A collection of protein families, each defined by a statistical profile built from an alignment of known members. A match means the region belongs to that family.",
+  "UniProt": "A central database of protein sequences and their functions. Its manually reviewed section is Swiss-Prot; the much larger automatically generated section is TrEMBL.",
+  "Swiss-Prot": "The manually reviewed section of UniProt. Entries have been read and curated by a person, which makes them higher-confidence than automatically generated records.",
+  "ProtNLM": "A machine-learning model that proposes a protein's name from its sequence alone. These names are predictions rather than curated assignments, and are best treated as a starting point."
 }
