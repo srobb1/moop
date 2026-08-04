@@ -70,6 +70,44 @@ function glossary_terms(): array {
  * @param string      $term    Glossary key (case-insensitive), e.g. 'annotation'.
  * @param string|null $display Text to show, if different from the key (e.g. a plural).
  */
+/**
+ * Gloss every known term inside a compound label, leaving the rest alone.
+ *
+ * For values that come from DATA rather than from a template, where the useful word is
+ * wrapped in a name we do not control. Annotation sources are the case this exists for:
+ * of the 46 distinct source names on this deployment, only two — EggNOG and ProtNLM — are
+ * a bare glossary term. The rest are compounds:
+ *
+ *     InterProScan (PANTHER)      25 of 46 have this shape
+ *     UniProtKB/Swiss-Prot
+ *     Ensembl Anolis carolinensis 17 of 46, the RBBH comparison species
+ *
+ * Passing those to gloss() whole matches nothing, so the acronym a reader actually needs
+ * explained stays unexplained. Splitting on the separators and glossing each recognised
+ * part gives "InterProScan" and "PANTHER" their own popovers while the parentheses, the
+ * slash and the species name pass through untouched.
+ *
+ * Everything not glossed is escaped, so this is safe wherever htmlspecialchars() was.
+ */
+function gloss_terms_in(string $text): string {
+    $known = glossary_terms();
+    if ($text === '' || !$known) {
+        return htmlspecialchars($text);
+    }
+    // Whole label first: a source that IS a term should gloss as one unit rather than be
+    // taken apart (so "GO term" stays one popover, not "GO" plus "term").
+    if (isset($known[strtolower($text)])) {
+        return gloss($text);
+    }
+    // Keep the delimiters so the label rebuilds exactly, punctuation and spacing intact.
+    $parts = preg_split('/([()\/,]|\s+)/u', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+    $out = '';
+    foreach ($parts as $p) {
+        $out .= ($p !== '' && isset($known[strtolower($p)])) ? gloss($p) : htmlspecialchars($p);
+    }
+    return $out;
+}
+
 function gloss(string $term, ?string $display = null): string {
     $label = $display ?? $term;
     $def   = glossary_terms()[strtolower($term)] ?? '';

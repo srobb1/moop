@@ -361,7 +361,23 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
         $hit_score = ($row['score'] === null || $row['score'] === '')
             ? '<span class="text-muted">—</span>'
             : htmlspecialchars((string) $row['score']);
-        $annotation_source = htmlspecialchars($row['annotation_source_name']);
+        // gloss() rather than htmlspecialchars(): a source name like PANTHER, RBBH, EggNOG,
+        // InterPro or ProtNLM is an opaque acronym that nothing else on the site explains.
+        // The annotation TYPE has a description (annotation_config.json, opened by the (i)
+        // beside each section); the source that produced the call did not.
+        //
+        // Safe as a drop-in. gloss() falls back to the escaped plain word when the term is
+        // not in the glossary, so every other source renders exactly as before, and it
+        // escapes internally — this is not a lost htmlspecialchars().
+        //
+        // Export is unaffected: DataTableExportConfig's format.body strips tags with
+        // /<[^>]+>/, so the cell exports as "PANTHER", and the definition — escaped into a
+        // data- attribute — goes with the tag.
+        //
+        // gloss_terms_in(), not gloss(): source names are compounds. Only 2 of the 46 on
+        // this deployment are a bare term; 25 are "InterProScan (member)" and 17 are
+        // "Ensembl species". Glossing the whole string would match almost none of them.
+        $annotation_source = gloss_terms_in($row['annotation_source_name']);
         $annotation_accession_url = htmlspecialchars(trim($row['annotation_accession_url']));
         $hit_id_link = $annotation_accession_url . urlencode(trim($row['annotation_accession']));
         
