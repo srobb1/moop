@@ -1,0 +1,124 @@
+{
+    "generated": "2026-08-05T21:45:51+00:00",
+    "routes": [
+        {
+            "page": "index",
+            "title": "Home",
+            "link": "/",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/",
+            "status": 200,
+            "purpose": "Pick the organism or organisms you want to work with \u2014 there are several ways to find them \u2014 or search straight for a gene by its ID."
+        },
+        {
+            "page": "search",
+            "title": "Annotation Search",
+            "link": "/tools/search.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/search.php",
+            "status": 200,
+            "purpose": "Find genes across one or more organisms by what is known about them \u2014 a keyword, an annotation term, or an ID."
+        },
+        {
+            "page": "blast",
+            "title": "BLAST",
+            "link": "/tools/blast.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/blast.php",
+            "status": 200,
+            "purpose": "Search genome assemblies by sequence similarity. Paste a DNA or protein sequence, select a program and database, and run."
+        },
+        {
+            "page": "moopmart",
+            "title": "MOOPmart",
+            "link": "/tools/moopmart.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/moopmart.php",
+            "status": 200,
+            "purpose": "Export annotation data or sequences."
+        },
+        {
+            "page": "downloads",
+            "title": "Downloads",
+            "link": "/tools/downloads.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/downloads.php",
+            "status": 200,
+            "purpose": "Browse and download genome sequence and annotation files for organisms you have access to."
+        },
+        {
+            "page": "retrieve_sequences",
+            "title": "Retrieve Sequences",
+            "link": "/tools/retrieve_sequences.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/retrieve_sequences.php",
+            "status": 200,
+            "purpose": "Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs and retrieve genomic, CDS, protein, and flanking sequences."
+        },
+        {
+            "page": "groups",
+            "title": "Several organisms at once",
+            "link": null,
+            "linkable": false,
+            "reached_by": [
+                "From the home page \u2014 choose a curated group of organisms.",
+                "From the home page \u2014 or build your own selection of organisms."
+            ],
+            "combine": "multi",
+            "url": "/tools/groups.php?group=Cnidaria",
+            "status": 200,
+            "purpose": "Search genes across every organism in a curated group, filtering both the organism list and the results."
+        },
+        {
+            "page": "organism",
+            "title": "Organism page",
+            "link": null,
+            "linkable": false,
+            "reached_by": [
+                "From the home page \u2014 pick an organism."
+            ],
+            "combine": "",
+            "url": "/tools/organism.php?organism=Nematostella_vectensis",
+            "status": 200,
+            "purpose": "Search genes across all the assemblies and gene sets held for one organism, filtering both the sources searched and the results."
+        },
+        {
+            "page": "assembly",
+            "title": "Assembly page",
+            "link": null,
+            "linkable": false,
+            "reached_by": [
+                "From an organism page \u2014 pick one of its assemblies."
+            ],
+            "combine": "",
+            "url": "/tools/assembly.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1",
+            "status": 200,
+            "purpose": "Search genes within a single assembly, choosing which of its gene sets to search."
+        },
+        {
+            "page": "gene_set",
+            "title": "Gene set page",
+            "link": null,
+            "linkable": false,
+            "reached_by": [
+                "From an assembly page \u2014 pick one of its gene sets."
+            ],
+            "combine": "",
+            "url": "/tools/gene_set.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2",
+            "status": 200,
+            "purpose": "Search genes within a single gene set, filtering the results by annotation source."
+        }
+    ]
+}

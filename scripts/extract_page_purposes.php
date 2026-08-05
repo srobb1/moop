@@ -45,6 +45,7 @@ $pages = [
     'organism'           => '/tools/organism.php?organism=Nematostella_vectensis',
     'assembly'           => '/tools/assembly.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1',
     'gene_set'           => '/tools/gene_set.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2',
+    'multi_organism'     => '/tools/multi_organism.php?organisms=Nematostella_vectensis',
     'jbrowse2'           => '/jbrowse2.php',
     'about'              => '/about.php',
     'help'               => '/help.php',
@@ -59,10 +60,25 @@ $meta = [
     'moopmart'           => ['title' => 'MOOPmart',           'link' => '/tools/moopmart.php',        'linkable' => true],
     'downloads'          => ['title' => 'Downloads',          'link' => '/tools/downloads.php',       'linkable' => true],
     'retrieve_sequences' => ['title' => 'Retrieve Sequences', 'link' => '/tools/retrieve_sequences.php', 'linkable' => true],
-    'groups'             => ['title' => 'Group page',         'link' => null, 'linkable' => false],
-    'organism'           => ['title' => 'Organism page',      'link' => null, 'linkable' => false],
-    'assembly'           => ['title' => 'Assembly page',      'link' => null, 'linkable' => false],
-    'gene_set'           => ['title' => 'Gene set page',      'link' => null, 'linkable' => false],
+    // reached_by: written per route, not a generic line appended to whatever has no link.
+    // These pages sit in a chain — organism -> assembly -> gene set — and saying "pick an
+    // organism first" on the gene-set card is simply wrong. Each says the step that actually
+    // gets you there.
+    // groups and multi_organism LOOK alike and ACT alike — same page shape, same search,
+    // differing only in how the organism set is chosen. Two near-identical cards would be
+    // the same duplication this whole effort removes, so they render as ONE.
+    'groups'   => ['title' => 'Several organisms at once', 'link' => null, 'linkable' => false,
+                   'combine' => 'multi',
+                   'reached_by' => 'From the home page — choose a curated group of organisms.'],
+    'multi_organism' => ['title' => 'Several organisms at once', 'link' => null, 'linkable' => false,
+                   'combine' => 'multi',
+                   'reached_by' => 'From the home page — or build your own selection of organisms.'],
+    'organism' => ['title' => 'Organism page', 'link' => null, 'linkable' => false,
+                   'reached_by' => 'From the home page — pick an organism.'],
+    'assembly' => ['title' => 'Assembly page', 'link' => null, 'linkable' => false,
+                   'reached_by' => 'From an organism page — pick one of its assemblies.'],
+    'gene_set' => ['title' => 'Gene set page', 'link' => null, 'linkable' => false,
+                   'reached_by' => 'From an assembly page — pick one of its gene sets.'],
     'jbrowse2'           => ['title' => 'Genome Browser',     'link' => '/jbrowse2.php',              'linkable' => true],
 ];
 
@@ -95,6 +111,8 @@ foreach ($pages as $name => $path) {
         'title'    => $m['title'],
         'link'     => $m['link'],
         'linkable' => $m['linkable'],
+        'reached_by' => $m['reached_by'] ?? '',
+        'combine'    => $m['combine'] ?? '',
         'url'      => $path,
         'status'   => $status,
         'purpose'  => $purpose,
@@ -106,13 +124,31 @@ if ($write) {
     // organism and annotation caches. Only routes that actually declared a purpose are
     // written, so the router can never list a page that no longer says what it is for.
     $out = array_values(array_filter($rows, fn($r) => $r['purpose'] !== '' && isset($meta[$r['page']])));
-    $file = __DIR__ . '/../metadata/page_purposes.json';
+
+    // Collapse routes sharing a 'combine' key into one card: first purpose wins, and every
+    // way of reaching it is listed. Keeps the page list honest (both pages still probed and
+    // still required to declare a purpose) while the reader sees one concept.
+    $merged = [];
+    foreach ($out as $r) {
+        $k = $r['combine'] !== '' ? 'c:' . $r['combine'] : 'p:' . $r['page'];
+        if (!isset($merged[$k])) {
+            $merged[$k] = $r;
+            $merged[$k]['reached_by'] = $r['reached_by'] !== '' ? [$r['reached_by']] : [];
+        } elseif ($r['reached_by'] !== '') {
+            $merged[$k]['reached_by'][] = $r['reached_by'];
+        }
+    }
+    $out = array_values($merged);
+    // docs/, not metadata/: metadata/*.json is gitignored SITE data managed through the
+    // admin UI, and this is derived from the app's own pages — reproducible from a checkout.
+    // Same home and same reasoning as docs/function_registry.json, which is tracked.
+    $file = __DIR__ . '/../docs/page_purposes.json';
     file_put_contents($file, json_encode([
         'generated' => date('c'),
         'routes'    => $out,
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
     @chmod($file, 0664);
-    echo "Wrote " . count($out) . " routes to metadata/page_purposes.json\n";
+    echo "Wrote " . count($out) . " routes to docs/page_purposes.json\n";
     exit(0);
 }
 

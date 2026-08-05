@@ -6,6 +6,8 @@
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center justify-content-between tool-header">
           <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow">Multi-Organism Search</h1>
+          <?php /* Declared, not shown — the heading already says where you are. */ ?>
+          <?= page_purpose('Search genes across a set of organisms you choose yourself, rather than a curated group.', '', false, false) ?>
           <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0891b2;">search across selected organisms</span>
         </div>
 

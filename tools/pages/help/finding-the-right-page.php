@@ -2,7 +2,7 @@
 /**
  * "Which page do I want?" — the router.
  *
- * Renders from metadata/page_purposes.json, which scripts/extract_page_purposes.php builds
+ * Renders from docs/page_purposes.json, which scripts/extract_page_purposes.php builds
  * by reading each page's own page_purpose() declaration off the RENDERED page. So every
  * sentence here is the sentence that page actually shows or declares — there is no second
  * copy to drift, and a page that stops declaring one simply drops out.
@@ -11,14 +11,16 @@
  *
  * ⚠️ Not every page can be linked. organism / assembly / gene set / group pages need a real
  * id in the URL, and any link written here would hard-code whichever organism happened to be
- * public the day it was written. Those say how to reach them instead — start at the home page
- * and pick one — which is both stable and the thing the reader actually has to do.
+ * public the day it was written. Those carry a per-route "how you get there" instead, written
+ * in the extractor's $meta — NOT a generic line appended to anything without a link. These
+ * pages form a chain (organism -> assembly -> gene set), so "pick an organism first" is wrong
+ * on the gene-set card. A card can list more than one route when two pages were combined.
  *
  * Available: $config, $siteTitle
  */
 
 $site = $config->getString('site');
-$file = __DIR__ . '/../../../metadata/page_purposes.json';
+$file = __DIR__ . '/../../../docs/page_purposes.json';
 $data = function_exists('loadJsonFile') ? loadJsonFile($file, []) : [];
 $routes = $data['routes'] ?? [];
 ?>
@@ -72,11 +74,16 @@ $routes = $data['routes'] ?? [];
                 Go to <?= htmlspecialchars($r['title']) ?> <i class="fa fa-arrow-right ms-1"></i>
               </a>
             <?php else: ?>
-              <?php /* No link on purpose — see the header comment. Say the route instead. */ ?>
-              <span class="small text-muted align-self-start">
-                <i class="fa fa-circle-info me-1"></i>Reached from the
-                <a href="/<?= htmlspecialchars($site) ?>/">home page</a> — pick an organism first.
-              </span>
+              <?php /* No link on purpose — see the header comment. The route is written PER
+                       PAGE rather than appended generically: these pages form a chain
+                       (organism -> assembly -> gene set), so "pick an organism first" is
+                       simply wrong on the gene-set card. A card can carry more than one route
+                       when two pages were combined. */ ?>
+              <?php foreach ((array)($r['reached_by'] ?? []) as $how): ?>
+                <span class="small text-muted align-self-start d-block">
+                  <i class="fa fa-circle-info me-1"></i><?= htmlspecialchars($how) ?>
+                </span>
+              <?php endforeach; ?>
             <?php endif; ?>
           </div>
         </div>
