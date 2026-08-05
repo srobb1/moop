@@ -63,7 +63,24 @@ Resolving rather than filtering on the ID path also settles the asymmetry introd
 GLOB version-tolerance work (`b746c77`): `NV2t021704001` currently returns mRNA + `:pep`
 while `NV2t021704001.1` returns 1 row. After this they agree.
 
-### ⚠️ Resolve ONE STEP. Never recurse.
+### ⚠️ CORRECTION (2026-08-05): "one step" was wrong — it is a BOUNDED CLIMB
+
+An earlier revision of this file said a single child→parent step was sufficient because
+`:cds` and `:pep` both hang off the transcript. **They do not.** Measured on Nematostella:
+
+```
+NV2t021704001.1       mRNA     parent -> 43100 (gene)
+NV2t021704001.1:cds   cds      parent -> 43101 (the mRNA)
+NV2t021704001.1:pep   protein  parent -> 43102 (the CDS)
+```
+
+The chain is mRNA → cds → protein, so a protein is **two** steps from the annotation-bearing
+level. Resolving one step turned a protein hit into a CDS hit and the duplicate reappeared
+one row down — the implementation looked like it worked and returned 2 rows instead of 1.
+
+The guard below still applies; it just needs a depth cap rather than a hard stop at 1.
+
+### ⚠️ Bound the climb. Never recurse without a guard.
 
 `parent_feature_id` is corrupt in ways that are still live:
 
@@ -127,3 +144,56 @@ that discriminate:
 
 Related: `SEARCH_FEATURE_LEVEL_INCONSISTENCY.md` (the original diagnosis, still accurate on
 the problem), `notes/SEARCH_RANKING_LITERAL_TIER.md`, [[annotations-attach-to-mrna]].
+
+---
+
+## ⚠️ This is the FOURTH implementation of "walk up the hierarchy" (user, 2026-08-05)
+
+The user flagged it mid-implementation — *"I feel like this is a problem we have addressed a
+few times. maybe on the parent page, on moopmart, on sequence retrieval"* — and they are
+right. All four exist today:
+
+| where | function | stops at |
+|---|---|---|
+| gene page | `lib/parent_functions.php::getAncestors()` | returns the whole chain |
+| MOOPmart | `lib/moopmart_functions.php::moopmartResolveInputIds()` | the ROOT (`parent IS NULL`) |
+| sequence retrieval | `lib/extract_search_helpers.php::expandFeaturesToAllSequenceTypes()` | walks BOTH directions |
+| search (new) | `lib/database_queries.php::moop_resolve_hits_to_level()` | the annotation-bearing level |
+
+The new one deliberately **reuses the established shape** — same recursive CTE, same cycle
+guard (`f.feature_id <> c.feature_id` plus `MOOP_HIERARCHY_MAX_DEPTH`), same
+`require_once parent_functions.php` for the constant that MOOPmart already needed for exactly
+this reason. The first draft was a hand-rolled PHP loop; it was thrown away in favour of the
+pattern already in the tree.
+
+But it is still a fourth copy, and CLAUDE.md §9b is explicit about saying so. **They differ
+only in where the climb STOPS.** One shared helper taking a stop-condition (whole chain /
+root / a set of types) would collapse all four. That is a real consolidation, not a
+tidy-up — the four have already drifted on cycle-guarding once (the guards were added to
+parent_functions and moopmart separately, after a hang).
+
+**Not done now** because it touches the gene page, MOOPmart and sequence retrieval, which is
+too wide a change to fold into a search fix pre-launch. Do it as its own pass, with the four
+call sites' behaviour pinned by tests first.
+
+## Status
+
+- [x] name/description path — filter to the derived level, with unfiltered fallback (`66cfca2`)
+- [x] feature-ID path (search page) — bounded climb to the annotation level, dedupe, never drop
+- [ ] **`api/feature_search.php` (index-page ID box) — NOT done.** Still returns 2 rows for
+      `NV2t021704001`. It is a different shape: cross-organism, many ATTACHed databases, so the
+      per-database climb has to run per attached DB rather than once.
+- [ ] UI: surface `matched_uniquename` ("matched …:pep") in the results table.
+
+Measured after the search-page change:
+
+| organism | term | before | after |
+|---|---|---|---|
+| Nematostella | `NV2t021704001` | 3 | **1** |
+| Schmidtea_lugubris | `SlugcT0000001` | 3 | **1** |
+| Bradyrhizobium | `WP_011083461` | 2 | **1** |
+| Petromyzon | `PM00915` | 4 | **2** |
+
+Petromyzon keeps 2 by design: the term matches the gene `PM00915` *and* the mRNA
+`PM00915.1`, and a gene cannot be lifted to mRNA because mRNA is its DESCENDANT, not its
+ancestor. Both rows are genuine literal matches at different levels.

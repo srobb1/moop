@@ -1058,7 +1058,8 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
     if ($organism_name) {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description, 
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                         g.genome_accession, g.genome_name, gs.gene_set_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name,
+                         f.feature_id, f.parent_feature_id
                   FROM feature f, organism o, gene_set gs, genome g
                   WHERE f.organism_id = o.organism_id
                     AND f.gene_set_id = gs.gene_set_id
@@ -1090,7 +1091,8 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
     } else {
         $query = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
                          o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
-                         g.genome_accession, g.genome_name, gs.gene_set_name
+                         g.genome_accession, g.genome_name, gs.gene_set_name,
+                         f.feature_id, f.parent_feature_id
                   FROM feature f, organism o, gene_set gs, genome g
                   WHERE f.organism_id = o.organism_id
                     AND f.gene_set_id = gs.gene_set_id
@@ -1120,7 +1122,148 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
         $query .= " ORDER BY f.feature_uniquename";
     }
 
-    return fetchData($query, $dbFile, $params);
+    return moop_resolve_hits_to_level(fetchData($query, $dbFile, $params), $dbFile, $organism_name);
+}
+
+// Required outright rather than relied on transitively: moop_resolve_hits_to_level()'s
+// climb uses MOOP_HIERARCHY_MAX_DEPTH, and an undefined constant is a fatal Error in PHP 8.
+// tools/annotation_search_ajax.php does NOT include parent_functions.php, so without this
+// the ID search would fatal the moment a hit needed lifting. Same reasoning, and the same
+// idempotent require_once, as lib/moopmart_functions.php:20.
+require_once __DIR__ . '/parent_functions.php';
+
+/**
+ * Collapse ID-search hits onto ONE level per gene, by RESOLVING rather than filtering.
+ *
+ * An ID search cannot return one row today: MOOP derives child uniquenames by suffixing the
+ * parent (`…:cds`, `…:pep`), so a transcript ID is ALWAYS a substring of its own CDS and
+ * protein IDs, and `LIKE '%term%'` matches all three. "NV2t021704001" returns 3 rows for one
+ * gene, forever, until this runs.
+ *
+ * ⚠️ FILTERING (what the name/description path does) IS WRONG HERE. Dropping every row that
+ * is not at the annotation-bearing level means a user pasting a protein accession
+ * (`…​.1:pep`) gets NOTHING — a gene that exists reported as missing. That is a worse and
+ * quieter failure than the duplication. So a child hit is replaced by its parent instead of
+ * being discarded, and the row that survives carries `matched_uniquename` so the UI can say
+ * "matched …:pep" rather than silently showing an ID the user never typed.
+ *
+ * ⚠️ BOUNDED WALK, never an unbounded recursive one. `parent_feature_id` has held self-loops
+ * in the wild — Schmidtea_lugubris carried 14,313 before its 2026-08-05 reload, and the other
+ * databases are not reloaded yet. An unbounded walk pins a php-fpm worker (SQLite 3.34.1 here
+ * has no CYCLE clause). This climbs at most MOOP_RESOLVE_MAX_DEPTH levels, in batched
+ * queries, and stops early when nothing moved.
+ *
+ * ⚠️ A SINGLE step is NOT enough, which is easy to assume and wrong. The chain is
+ * mRNA → cds → protein: `:cds` hangs off the transcript but `:pep` hangs off the CDS, so a
+ * protein is TWO steps from the annotation-bearing level. Resolving one step turned a
+ * protein hit into a CDS hit and the duplicate simply reappeared one row down.
+ *
+ * ⚠️ NEVER DROPS A ROW. A hit whose parent cannot be resolved — missing, self-referential,
+ * or one of the 'NULL'/'' text values the old loaders wrote — is kept exactly as it was.
+ * Losing a result to a failed lookup is the "a miss deletes" shape that has bitten this
+ * codebase before.
+ *
+ * See notes/SEARCH_FEATURE_LEVEL_DECISION.md.
+ */
+function moop_resolve_hits_to_level(array $rows, $dbFile, $organism_name = '') {
+    if (count($rows) < 2) return $rows;
+
+    $levels = moop_annotation_levels($dbFile, $organism_name);
+    $at_level = array_flip(array_map('strtolower', $levels));
+
+    // Which hits need lifting? Anything not already at the target level.
+    $need = [];
+    foreach ($rows as $r) {
+        $u = (string)($r['feature_uniquename'] ?? '');
+        if ($u !== '' && !isset($at_level[strtolower((string)($r['feature_type'] ?? ''))])) $need[$u] = true;
+    }
+    if (empty($need)) return $rows;
+
+    // ONE batched climb for every hit at once -- the same shape as
+    // moopmartResolveInputIds() and getAncestors(), including their cycle guard:
+    // f.feature_id <> c.feature_id stops a self-parent, and the depth cap stops a
+    // multi-row cycle. SQLite 3.34.1 here has no CYCLE clause, so both are required.
+    // The only difference from MOOPmart is where the climb STOPS: MOOPmart wants the
+    // root (a gene), this wants the annotation-bearing level, so that ID search agrees
+    // with the annotation and name paths rather than with a fourth answer.
+    $ids    = array_keys($need);
+    $ph_ids = implode(',', array_fill(0, count($ids), '?'));
+    $ph_lv  = implode(',', array_fill(0, count($levels), '?'));
+
+    $sql = "WITH RECURSIVE chain AS (
+                SELECT f.feature_uniquename AS input_name, f.feature_id,
+                       f.feature_uniquename AS node_name, f.feature_type,
+                       f.parent_feature_id, 0 AS depth
+                FROM   feature f
+                WHERE  f.feature_uniquename IN ($ph_ids)
+                UNION ALL
+                SELECT c.input_name, f.feature_id,
+                       f.feature_uniquename, f.feature_type,
+                       f.parent_feature_id, c.depth + 1
+                FROM   feature f
+                JOIN   chain c ON f.feature_id = c.parent_feature_id
+                WHERE  c.depth < " . MOOP_HIERARCHY_MAX_DEPTH . "
+                  AND  f.feature_id <> c.feature_id
+            )
+            SELECT input_name, node_name, MIN(depth) AS depth
+            FROM   chain
+            WHERE  LOWER(feature_type) IN ($ph_lv)
+            GROUP  BY input_name";
+
+    $lift = [];
+    foreach (fetchData($sql, $dbFile, array_merge($ids, array_map('strtolower', $levels))) as $row) {
+        $lift[(string)$row['input_name']] = (string)$row['node_name'];
+    }
+
+    // Fetch the rows we lifted TO that are not already in the result set.
+    $missing = [];
+    $have    = [];
+    foreach ($rows as $r) $have[(string)($r['feature_uniquename'] ?? '')] = true;
+    foreach ($lift as $target) if (!isset($have[$target])) $missing[$target] = true;
+
+    $extra = [];
+    if (!empty($missing)) {
+        $mids = array_keys($missing);
+        $ph_m = implode(',', array_fill(0, count($mids), '?'));
+        $msql = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
+                        o.genus, o.species, o.common_name, o.subtype, f.feature_type, f.organism_id,
+                        g.genome_accession, g.genome_name, gs.gene_set_name,
+                        f.feature_id, f.parent_feature_id
+                 FROM feature f, organism o, gene_set gs, genome g
+                 WHERE f.organism_id = o.organism_id
+                   AND f.gene_set_id = gs.gene_set_id
+                   AND gs.genome_id  = g.genome_id
+                   AND f.feature_uniquename IN ($ph_m)";
+        foreach (fetchData($msql, $dbFile, $mids) as $m) {
+            $extra[(string)$m['feature_uniquename']] = $m;
+        }
+    }
+
+    // Rebuild in the original order, de-duplicating on the surviving uniquename.
+    // A hit whose climb found nothing is KEPT AS IT WAS -- losing a result to a failed
+    // lookup is the "a miss deletes" shape that has bitten this codebase before.
+    $out = [];
+    foreach ($rows as $r) {
+        $matched = (string)($r['feature_uniquename'] ?? '');
+        $row     = $r;
+        if (isset($lift[$matched])) {
+            $t = $lift[$matched];
+            if ($t !== $matched) {
+                if (isset($extra[$t]))        $row = $extra[$t];
+                else {
+                    foreach ($rows as $cand) { if (($cand['feature_uniquename'] ?? '') === $t) { $row = $cand; break; } }
+                }
+            }
+        }
+        $key = (string)($row['feature_uniquename'] ?? $matched);
+        if (!isset($out[$key])) {
+            $row['matched_uniquename'] = ($matched === $key) ? '' : $matched;
+            $out[$key] = $row;
+        } elseif ($matched === $key) {
+            $out[$key]['matched_uniquename'] = '';
+        }
+    }
+    return array_values($out);
 }
 
 
