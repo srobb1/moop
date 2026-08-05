@@ -181,6 +181,13 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
         <span class="mm-toggle-all-label">Select all</span>
       </button>
     </div>
+    <?php /* Two columns, mirroring Annotation Search: the list on the left, what you have
+             actually picked on the right. Both capped at 180px so the pair reads as ONE
+             rectangle rather than a ragged pair -- the same reasoning (and the same number)
+             as search.php. The list height itself is deliberate; see .org-select-list in
+             css/display.css. */ ?>
+    <div class="row g-0">
+      <div class="col-lg-8 border-end d-flex flex-column">
     <div class="px-2 pt-2 pb-1 border-bottom d-flex align-items-center gap-2">
       <input type="text" class="form-control form-control-sm moop-input" id="mm-scope-filter"
              placeholder="Filter by group, organism, assembly, gene set…" autocomplete="off">
@@ -229,11 +236,17 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
            data-search="<?= htmlspecialchars($search) ?>"
            data-search-simple="<?= htmlspecialchars($searchSimple) ?>"
            data-search-detail="<?= htmlspecialchars($searchDetail) ?>">
+        <?php /* label / cn / asm-display are already rendered as visible text in this row;
+                 they are repeated here so the Selected panel can be built from the checkboxes
+                 alone, without scraping sibling DOM. Same attribute set as search.php. */ ?>
         <input type="checkbox" class="mm-gs-cb visually-hidden"
                id="<?= $gsid ?>"
                data-org="<?= htmlspecialchars($organism) ?>"
                data-asm="<?= htmlspecialchars($asm) ?>"
-               data-gs="<?= htmlspecialchars($gs) ?>">
+               data-gs="<?= htmlspecialchars($gs) ?>"
+               data-label="<?= htmlspecialchars($label) ?>"
+               data-cn="<?= htmlspecialchars($cn) ?>"
+               data-asm-display="<?= htmlspecialchars($asmDisplay) ?>">
         <span class="org-groups flex-shrink-0">
           <?php foreach ($groups as $g): ?>
           <span class="org-group-chip" style="background:<?= $groupColor($g) ?>"><?= htmlspecialchars($g) ?></span>
@@ -250,6 +263,24 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       <?php endforeach; endforeach; endforeach; ?>
       <?php endif; ?>
     </div>
+      </div><!-- /col-lg-8 -->
+
+      <div class="col-lg-4 d-flex flex-column">
+        <div class="px-2 py-1 border-bottom d-flex justify-content-between align-items-center"
+             style="background:#f8f9fa;">
+          <span class="small fw-semibold text-muted">Selected</span>
+          <span class="badge bg-secondary" id="mm-selected-count">0</span>
+        </div>
+        <?php /* Empty text says what to DO, not what will happen -- with nothing selected
+                 MOOPmart cannot build a list at all, so "none = all organisms" would be both
+                 wrong and an invitation to the query we least want run by accident. Same
+                 wording as search.php for the same reason. */ ?>
+        <div style="overflow-y:auto; max-height:180px; font-size:0.82rem;" id="mm-selected-panel">
+          <div class="text-muted small p-2 fst-italic">None yet — pick at least one organism</div>
+        </div>
+      </div>
+    </div><!-- /row -->
+
     <div class="px-3 py-1 border-top" style="background:#f8f9fa; font-size:0.8rem;">
       <span class="text-muted" id="mm-scope-counts">Select at least one organism above</span>
       <div id="mm-scope-names" class="text-muted mt-1" style="font-size:0.78rem; font-style:italic;"></div>

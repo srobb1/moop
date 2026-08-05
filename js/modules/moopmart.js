@@ -22,9 +22,17 @@
     // Step 1 — Organism scope (flat list)
     // -------------------------------------------------------
 
+    // Handle for the shared Selected panel (js/modules/scope-selected-panel.js).
+    let scopePanel = null;
+
     function updateScopeSummary() {
         const el        = document.getElementById('mm-scope-counts');
         const namesEl   = document.getElementById('mm-scope-names');
+        // Re-render the panel FIRST, and outside the `if (!el)` guard below, so it stays in
+        // step even on a page variant without the counts bar. Called from here rather than
+        // relying on the module's own change listener because row clicks tick the checkbox
+        // PROGRAMMATICALLY, and assigning .checked fires no change event.
+        if (scopePanel) scopePanel.render();
         if (!el) return;
         refreshAnnotationCounts();   // keep Step 3 availability counts in sync with the selection
         // Toggle label states its next action (and thus the current all-selected state).
@@ -180,6 +188,20 @@
     function initScopeList() {
         const list = document.getElementById('mm-scope-list');
         if (!list) return;
+
+        // Shared Selected panel — one implementation, also used by Annotation Search.
+        if (typeof initScopeSelectedPanel === 'function') {
+            scopePanel = initScopeSelectedPanel({
+                checkbox: '.mm-gs-cb',
+                row:      '.mm-scope-row',
+                panel:    'mm-selected-panel',
+                count:    'mm-selected-count',
+                // The × in the panel unticks an organism, which must feed back into the
+                // counts bar, Step 3's annotation availability, and the location filter's
+                // single-assembly gate — exactly as unticking in the list does.
+                onChange: () => { updateScopeSummary(); updateCoordState(); },
+            });
+        }
 
         // Row click → toggle selection.
         // In SIMPLE view a row stands for a whole organism (the per-gene-set rows are

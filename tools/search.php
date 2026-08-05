@@ -107,6 +107,8 @@ $display_config = [
     'title'        => 'Search — ' . htmlspecialchars($siteTitle),
     'content_file' => __DIR__ . '/pages/search.php',
     'page_script'  => [
+        // Before search-display.js, which calls initScopeSelectedPanel().
+        "/$site/js/modules/scope-selected-panel.js",
         "/$site/js/search-display.js",
     ],
     'page_styles'  => [

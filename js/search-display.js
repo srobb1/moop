@@ -52,60 +52,27 @@ $(document).ready(function () {
         onScopeChange();
     });
 
-    // Gene-set checkbox change → sync row highlight + panel
-    $(document).on('change', '.scope-gs-cb', function () {
-        $(this).closest('.scope-gs-full-row').toggleClass('selected', this.checked);
-        onScopeChange();
-    });
-
-    function updateSearchSelectedPanel() {
-        const panel     = document.getElementById('scope-selected-panel');
-        const countBadge = document.getElementById('scope-selected-count');
-        if (!panel) return;
-
-        // Collect selected gene-sets grouped by organism
-        const byOrg = {};
-        $('.scope-gs-cb:checked').each(function () {
-            const org = $(this).data('org');
-            if (!byOrg[org]) byOrg[org] = { label: '', cn: '', rows: [] };
-            byOrg[org].label = $(this).data('label') || org.replace(/_/g, ' ');
-            byOrg[org].cn    = $(this).data('cn') || '';
-            const asmDisplay = $(this).data('asm-display') || $(this).data('asm');
-            const gs         = $(this).data('gs');
-            byOrg[org].rows.push(asmDisplay + ' › ' + gs);
+    // Gene-set checkbox change, the Selected panel and its × are all handled by the shared
+    // module (js/modules/scope-selected-panel.js), which MOOPmart uses too. This page used to
+    // carry its own copy; MOOPmart had none, and the two selectors drifted far enough apart
+    // that notes/SHARED_SCOPE_SELECTOR_PLAN.md recorded the wrong page as the more advanced
+    // one. One implementation is the point.
+    let scopePanel = null;
+    if (typeof initScopeSelectedPanel === 'function') {
+        scopePanel = initScopeSelectedPanel({
+            checkbox: '.scope-gs-cb',
+            row:      '.scope-gs-full-row',
+            panel:    'scope-selected-panel',
+            count:    'scope-selected-count',
+            onChange: () => onScopeChange(),
         });
-
-        const orgCount = Object.keys(byOrg).length;
-        if (countBadge) countBadge.textContent = orgCount;
-
-        if (!orgCount) {
-            panel.innerHTML = '<div class="text-muted small p-2 fst-italic">None yet — pick at least one organism</div>';
-            return;
-        }
-
-        let html = '';
-        for (const [org, d] of Object.entries(byOrg)) {
-            html += `<div class="px-2 py-1 border-bottom">
-                <div class="d-flex justify-content-between align-items-start">
-                  <span><strong><em>${d.label}</em></strong>${d.cn ? ' <span class="text-muted small">· ' + d.cn + '</span>' : ''}</span>
-                  <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger scope-deselect-org flex-shrink-0"
-                          data-org="${org}" title="Remove"><i class="fas fa-times"></i></button>
-                </div>
-                ${d.rows.map(r => `<div class="text-muted ps-2" style="font-size:0.75rem;">› ${r}</div>`).join('')}
-              </div>`;
-        }
-        panel.innerHTML = html;
     }
 
-    // Remove organism from selected panel (× button)
-    $(document).on('click', '.scope-deselect-org', function () {
-        const org = $(this).data('org');
-        $('[data-org="' + org + '"].scope-gs-cb').each(function () {
-            $(this).prop('checked', false);
-            $(this).closest('.scope-gs-full-row').removeClass('selected');
-        });
-        onScopeChange();
-    });
+    // Programmatic ticks (row clicks, select-all) assign .checked and fire no change event,
+    // so the panel is re-rendered from onScopeChange() rather than left to the listener.
+    function updateSearchSelectedPanel() {
+        if (scopePanel) scopePanel.render();
+    }
 
     // Save original HTML of each detail span so we can restore after highlight
     $('.scope-row-detail').each(function () {
