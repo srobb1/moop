@@ -49,6 +49,30 @@
             </p>
           </div>
 
+          <?php /* Harvested from help/getting-started.php before that page was deleted
+                   2026-08-05: everything else on it had been superseded by on-page (i) help,
+                   but this had no other home. It belongs here rather than in any one tool's
+                   help, because it explains why a page shows FEWER organisms than someone
+                   expects — which is felt everywhere, not in one place.
+                   The original listed three levels and omitted IP-based access, which is how
+                   most people on an institutional network actually arrive. */ ?>
+          <div>
+            <h5 class="fw-semibold text-dark mb-2">Who can see what</h5>
+            <p class="text-muted mb-2">
+              Not every organism and assembly is visible to everyone, so the lists you see may be
+              shorter than the full contents of the site.
+            </p>
+            <ul class="text-muted">
+              <li><strong>Not logged in</strong> &mdash; you can browse and search the assemblies that
+                  have been made public, without an account.</li>
+              <li><strong>On the institutional network</strong> &mdash; you are recognised by network
+                  address and see the full data without logging in.</li>
+              <li><strong>Collaborator</strong> &mdash; a logged-in account granted access to particular
+                  organisms or assemblies by the administrator.</li>
+              <li><strong>Administrator</strong> &mdash; full access, plus the admin panel.</li>
+            </ul>
+          </div>
+
           <div>
             <h5 class="fw-semibold text-dark mb-2">Need Help?</h5>
             <p class="text-muted">

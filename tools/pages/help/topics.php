@@ -18,20 +18,6 @@
 return [
     // ── For users ────────────────────────────────────────────────────────────
     [
-        'id' => 'getting-started',
-        'title' => 'Getting Started',
-        'description' => 'Learn the basics of MOOP and how to navigate the platform.',
-        'icon' => 'fa-rocket',
-        'category' => 'general',
-    ],
-    [
-        'id' => 'organism-selection',
-        'title' => 'Selecting Organisms',
-        'description' => 'Choose organisms by group or use the interactive taxonomy tree for custom selections.',
-        'icon' => 'fa-dna',
-        'category' => 'general',
-    ],
-    [
         'id' => 'search-and-filter',
         'title' => 'Search &amp; Filter',
         'description' => 'Use advanced search and filtering to find specific sequences and annotations.',
@@ -39,38 +25,10 @@ return [
         'category' => 'general',
     ],
     [
-        'id' => 'blast-tutorial',
-        'title' => 'BLAST Search',
-        'description' => 'Compare a DNA or protein sequence against genome assemblies to find homologs and conserved regions.',
-        'icon' => 'fa-exchange-alt',
-        'category' => 'general',
-    ],
-    [
-        'id' => 'moopmart',
-        'title' => 'MOOPmart — Gene List Builder',
-        'description' => 'Build custom gene lists by ID, name, annotation, or location and export as TSV or FASTA.',
-        'icon' => 'fa-shopping-cart',
-        'category' => 'general',
-    ],
-    [
-        'id' => 'sequence-retrieval',
-        'title' => 'Sequence Retrieval',
-        'description' => 'Look up sequences by feature ID and download genomic, transcript, CDS, and protein sequences.',
-        'icon' => 'fa-dna',
-        'category' => 'general',
-    ],
-    [
         'id' => 'multi-organism-analysis',
         'title' => 'Multi-Organism Analysis',
         'description' => 'Compare and analyze data across multiple organisms simultaneously.',
         'icon' => 'fa-project-diagram',
-        'category' => 'general',
-    ],
-    [
-        'id' => 'data-export',
-        'title' => 'Exporting Data',
-        'description' => 'Download sequences and data in various formats for external analysis.',
-        'icon' => 'fa-download',
         'category' => 'general',
     ],
 

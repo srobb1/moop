@@ -51,6 +51,31 @@ restating it here. The router says "for THIS task, go THERE"; the tool's own ove
 
 ---
 
+## 2b. ⭐ SEED CONTENT — harvested from help/multi-organism-analysis.php (2026-08-05)
+
+That page was deleted in the general-help cleanup, but its **"Which Tool to Use"** table is
+the router in embryo — the only place on the site that answered "which tool for this job?".
+Cross-tool comparison cannot live in any single tool's `(i)`, which is precisely the gap the
+router fills. Preserved here verbatim so it is not lost with the page:
+
+| Task | Tool |
+|---|---|
+| Find genes matching a keyword or annotation term across many organisms | Annotation Search |
+| Build a gene list by ID, name, description, or GO term across multiple assemblies, then export TSV/FASTA sequences | MOOPmart |
+| Compare a sequence against multiple genome assemblies | BLAST Search |
+| Retrieve sequences by ID from a single assembly | Retrieve Sequences |
+
+Four cards' worth. The router needs more, and these are phrased tool-first ("here is the
+tool") where the router should be task-first ("here is what you want to do") — but the four
+task descriptions themselves are already good use-case wording and can be lifted directly.
+
+Gaps these four do NOT cover, worth adding when the router is built: downloading a whole
+genome or GFF (Downloads), viewing a gene in its genomic context (Genome Browser), finding
+what annotation sources exist for an organism, and getting every annotation for one gene
+(the gene page).
+
+---
+
 ## 3. "Send your use case to admin" button — needs a decision
 
 The user wants a button: *"send your use case to admin to make a new card or tutorial or
