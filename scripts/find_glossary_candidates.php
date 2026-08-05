@@ -73,7 +73,12 @@ if (isset($opts['term'])) {
 $term_keys = array_keys($terms);
 usort($term_keys, fn($a, $b) => strlen($b) <=> strlen($a));
 
-$dirs = ['tools/pages', 'includes'];
+// 'tools' NOT 'tools/pages' — the view files are mostly in tools/pages/, but not all of
+// them: tools/sequences_display.php renders the whole Sequences section of the gene page and
+// was invisible to this scan, so its Protein / mRNA / CDS labels never appeared as candidates
+// despite all three being defined terms. Anything rendered from tools/*.php had the same
+// blind spot. tools/pages/ is a subdirectory, so the recursive walk still covers it.
+$dirs = ['tools', 'includes'];
 if (isset($opts['all'])) { $dirs[] = 'lib'; $dirs[] = 'admin/pages'; }
 
 $files = [];
@@ -85,6 +90,7 @@ foreach ($dirs as $d) {
         if ($f->isFile() && strtolower($f->getExtension()) === 'php') $files[] = $f->getPathname();
     }
 }
+$files = array_values(array_unique($files));
 sort($files);
 
 /**

@@ -446,6 +446,17 @@ both plainly had it. A style check run against a cached copy will confirm any ch
 like, including one that never happened. `waitUntil: 'networkidle2'` does NOT save you.
 The same applies to a real browser: hard-reload (Ctrl/Cmd+Shift+R), never a plain reload.
 
+⚠️ **`hover()` needs the element genuinely IN THE VIEWPORT.** `scrollIntoView()` then
+`page.hover()` is not enough — if the element still sits outside the viewport the pointer
+lands on nothing, no event fires, and the feature reads as broken. This produced THREE false
+"glossary popovers do not work" findings in one session; the tell is
+`document.elementFromPoint(centreX, centreY)` returning `null`. Assert the element's
+`getBoundingClientRect()` is inside the viewport before hovering, and check that
+`elementFromPoint` actually returns the element or a child of it — something else on top is
+a different failure from something off-screen, and they need different fixes. Synthetic
+`new Event('mouseenter')` does NOT work either: Bootstrap's handlers ignore it. Use a real
+pointer.
+
 ⚠️ **Do not put the class name in the compared string.** An early version of that check
 printed `TAG.classList "text" bg=… fg=…`, so 17 rows "differed" purely because the class
 list was the thing that changed, while every computed value was identical. Compare values;

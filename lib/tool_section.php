@@ -82,6 +82,15 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
             <i class="fa fa-toolbox me-2"></i>
             <span class="fw-semibold" style="font-size:0.9rem;">Toolbox</span>
         <?php endif; ?>
+        <?php /* The (i) lives in the SHARED component, not on each page that includes it —
+                 the toolbox appears on seven pages (index, organism, group, multi-organism,
+                 assembly, gene set, gene) and a per-page copy is how help ends up present on
+                 some and missing on others. The index variant already explains itself in its
+                 header text ("Choose a tool — it runs on your selection"); everywhere else
+                 the header just said "Toolbox", so the one thing a user needs to know — that
+                 a tool arrives already narrowed to what they are looking at — was never
+                 stated. */ ?>
+        <?= help_modal_trigger('toolbox-help', '', 'Help: what the Toolbox tools do') ?>
     </div>
     <div class="card-body p-2">
         <?php if ($use_onclick_handler): ?>
@@ -121,3 +130,45 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
         </div>
     </div>
 </div>
+
+<?php
+// Emitted here rather than by each including page, for the same reason the trigger is here.
+// Guarded because a page could legitimately render more than one toolbox (a future
+// multi-panel layout), and duplicate modal ids would make the trigger open the wrong one.
+if (!defined('MOOP_TOOLBOX_HELP_EMITTED')) {
+    define('MOOP_TOOLBOX_HELP_EMITTED', true);
+    echo help_modal(
+        'toolbox-help',
+        'What the Toolbox does',
+        [[
+            'heading' => '',
+            'cards'   => [
+                [
+                    'label' => 'Tools arrive pre-filled',
+                    'text'  => 'Every tool opens already narrowed to whatever you are looking at, '
+                             . 'so you do not have to re-pick the organism, assembly or gene.',
+                ],
+                [
+                    'label' => 'From an organism page',
+                    'text'  => 'BLAST opens with that organism\'s databases already selected, rather '
+                             . 'than the full site-wide list.',
+                ],
+                [
+                    'label' => 'From a gene page',
+                    'text'  => 'View in Genome Browser opens JBrowse at that gene\'s location, not at '
+                             . 'the start of the assembly. Sequence and download tools act on that feature.',
+                ],
+                [
+                    'label'  => 'Which tools appear',
+                    'accent' => true,
+                    'text'   => 'The list changes with the page, because a tool only shows where it has '
+                              . 'enough context to run — View in Genome Browser needs a location, so it '
+                              . 'appears on a gene page and not on a group page.',
+                ],
+            ],
+        ]],
+        ['intro' => 'The Toolbox is a shortcut, not a separate place to start: each tool carries your '
+                  . 'current organism, assembly or gene across with you.']
+    );
+}
+?>
