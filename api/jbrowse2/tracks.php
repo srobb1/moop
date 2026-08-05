@@ -139,17 +139,14 @@ if (!empty($range_header)) {
         }
         
         $length = $end - $start + 1;
-        
+
         // Send partial content
         http_response_code(206); // Partial Content
         header('Accept-Ranges: bytes');
         header("Content-Range: bytes $start-$end/$file_size");
         header("Content-Length: $length");
-        
-        $fp = fopen($file_path, 'rb');
-        fseek($fp, $start);
-        echo fread($fp, $length);
-        fclose($fp);
+
+        moop_stream_file_range($file_path, $start, $length);
         exit;
     }
 }
@@ -157,7 +154,58 @@ if (!empty($range_header)) {
 // 8. SEND FULL FILE
 header('Accept-Ranges: bytes');
 header('Content-Length: ' . $file_size);
-readfile($file_path);
+moop_stream_file_range($file_path, 0, $file_size);
+
+/**
+ * Stream $length bytes of $path starting at $start, without ever holding more than one
+ * chunk in memory.
+ *
+ * Two separate memory hazards were being fixed here, both fatal above memory_limit (128M):
+ *
+ *  1. php.ini sets `output_buffering = 4096`, so under php-fpm EVERY request begins inside
+ *     an implicit output buffer that nothing in this file had closed. `readfile()` and
+ *     `echo` write into whatever buffer is open, so the response accumulated in memory
+ *     before a byte reached the client. Same root cause as the genome-download 500 fixed in
+ *     `lib/fasta_download_handler.php` (30ad553); `api/download_file.php` already did the
+ *     right thing at its :130. This file simply never got the pattern.
+ *  2. `echo fread($fp, $length)` read the ENTIRE requested range into a PHP string first.
+ *     An open-ended `Range: bytes=0-` sets $end = filesize-1, which JBrowse does send, so
+ *     "partial content" could mean the whole BAM. The range path was therefore no safer
+ *     than the full-file path, which is easy to miss because the name says otherwise.
+ *
+ * ob_end_clean() rather than ob_end_flush(): nothing legitimate is in that buffer at this
+ * point, and flushing stray bytes ahead of binary track data would corrupt it. header()
+ * queues headers independently of the output buffer, so those are unaffected.
+ *
+ * Track files are BAM/bigWig and are large by nature — this endpoint is the one place in
+ * MOOP where a multi-GB body is the normal case, not the edge case.
+ */
+function moop_stream_file_range(string $path, int $start, int $length): void {
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    $fp = fopen($path, 'rb');
+    if ($fp === false) {
+        return;
+    }
+    if ($start > 0) {
+        fseek($fp, $start);
+    }
+
+    $chunk_size = 1024 * 1024; // 1 MB
+    $remaining  = $length;
+    while ($remaining > 0 && !feof($fp)) {
+        $buffer = fread($fp, (int)min($chunk_size, $remaining));
+        if ($buffer === false || $buffer === '') {
+            break;
+        }
+        echo $buffer;
+        flush();
+        $remaining -= strlen($buffer);
+    }
+    fclose($fp);
+}
 
 /**
  * Determine content type from file extension
