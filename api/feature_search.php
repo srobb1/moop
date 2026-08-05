@@ -16,6 +16,13 @@
 include_once __DIR__ . '/../tools/tool_init.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
+// Required outright rather than relied on transitively: the hit resolution below calls
+// moop_annotation_levels() and moop_hierarchy_nearest_of_type(), and an undefined function
+// is a fatal Error. database_queries.php itself require_once's parent_functions.php (for
+// MOOP_HIERARCHY_MAX_DEPTH and the walker), so this one line brings in both. Same reasoning
+// as lib/moopmart_functions.php:20.
+require_once __DIR__ . '/../lib/database_queries.php';
+
 header('Content-Type: application/json');
 
 $q = trim($_GET['q'] ?? '');
@@ -172,4 +179,95 @@ if (empty($results) && preg_match('/^(.+)\.\d+$/', $q, $m)) {
     }
 }
 
+// Collapse to one row per gene, exactly as the search page does — same shared walker, same
+// per-database level derivation, so the index box and the search page cannot disagree about
+// how many rows one gene is.
+//
+// The batched UNION above cannot do this itself: it runs against many ATTACHed databases at
+// once, while the walk is per-database (parent_feature_id is only meaningful inside one).
+// So the walk runs AFTER, once per organism that actually returned hits — which for an ID
+// lookup is normally one. That is why "cross-organism with ATTACH" does not block reuse: it
+// only decides WHERE the helper is called, not whether it can be.
+$results = moop_resolve_feature_search_hits($results, $db_map, $site);
+
 echo json_encode(['results' => $results]);
+
+/**
+ * Lift ID-search hits to one row per gene, per organism.
+ *
+ * Mirrors moop_resolve_hits_to_level() in lib/database_queries.php — same stop condition
+ * (nearest ancestor whose type carries annotations in THAT database) and the same
+ * never-drop rule: a hit whose climb finds nothing is kept exactly as it was.
+ */
+function moop_resolve_feature_search_hits(array $results, array $db_map, string $site): array {
+    if (count($results) < 2) return $results;
+
+    // organism => sqlite path, from the map already built for the ATTACH batches.
+    $path_for = [];
+    foreach ($db_map as $entry) $path_for[$entry['organism']] = $entry['path'];
+
+    // Group by organism: the hierarchy only exists inside one database.
+    $by_org = [];
+    foreach ($results as $i => $r) $by_org[$r['organism']][] = $i;
+
+    $lift = [];
+    foreach ($by_org as $org => $idxs) {
+        $db = $path_for[$org] ?? '';
+        if ($db === '' || !file_exists($db)) continue;
+
+        $levels   = moop_annotation_levels($db, $org);
+        $at_level = array_flip(array_map('strtolower', $levels));
+
+        $need = [];
+        foreach ($idxs as $i) {
+            if (!isset($at_level[strtolower((string)$results[$i]['type'])])) {
+                $need[$results[$i]['uniquename']] = true;
+            }
+        }
+        if (empty($need)) continue;
+
+        foreach (moop_hierarchy_nearest_of_type(array_keys($need), $db, $levels) as $from => $to) {
+            $lift[$org . "\0" . $from] = $to;
+        }
+    }
+    if (empty($lift)) return $results;
+
+    // Rebuild, de-duplicating on organism + surviving uniquename.
+    $out = [];
+    foreach ($results as $r) {
+        $matched = (string)$r['uniquename'];
+        $key     = $r['organism'] . "\0" . $matched;
+        $row     = $r;
+
+        if (isset($lift[$key]) && $lift[$key] !== $matched) {
+            $target = $lift[$key];
+            // Reuse a row for the target if the search already returned one; otherwise
+            // carry the hit's own scope forward — same organism, assembly and gene set.
+            $found = null;
+            foreach ($results as $cand) {
+                if ($cand['organism'] === $r['organism'] && $cand['uniquename'] === $target) { $found = $cand; break; }
+            }
+            $row = $found ?? [
+                'uniquename' => $target,
+                'type'       => '',
+                'organism'   => $r['organism'],
+                'assembly'   => $r['assembly'],
+                'gene_set'   => $r['gene_set'],
+                'url'        => "/$site/tools/parent.php"
+                              . '?organism='    . urlencode($r['organism'])
+                              . '&uniquename='  . urlencode($target)
+                              . '&assembly='    . urlencode($r['assembly'])
+                              . '&gene_set='    . urlencode($r['gene_set']),
+            ];
+        }
+
+        $k = $row['organism'] . "\0" . $row['uniquename'];
+        if (!isset($out[$k])) {
+            $row['matched_uniquename'] = ($row['uniquename'] === $matched) ? '' : $matched;
+            $out[$k] = $row;
+        } elseif ($row['uniquename'] === $matched) {
+            $out[$k]['matched_uniquename'] = '';
+        }
+    }
+    return array_values($out);
+}
