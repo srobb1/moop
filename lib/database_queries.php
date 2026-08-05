@@ -1135,10 +1135,18 @@ require_once __DIR__ . '/parent_functions.php';
 /**
  * Collapse ID-search hits onto ONE level per gene, by RESOLVING rather than filtering.
  *
- * An ID search cannot return one row today: MOOP derives child uniquenames by suffixing the
- * parent (`…:cds`, `…:pep`), so a transcript ID is ALWAYS a substring of its own CDS and
- * protein IDs, and `LIKE '%term%'` matches all three. "NV2t021704001" returns 3 rows for one
- * gene, forever, until this runs.
+ * An ID search returns several rows for one gene whenever the child IDs happen to nest inside
+ * the parent's, and `LIKE '%term%'` then matches all of them. "NV2t021704001" returns 3 rows.
+ *
+ * ⚠️ That nesting is NOT a universal MOOP rule, and assuming it is would be wrong. Depositor
+ * IDs are preserved (see [[feedback_original_data_stays_original]]); `…:cds`/`…:pep` is
+ * specifically the transcript2gene path suffixing MOOP's OWN copies to disambiguate them.
+ * Other sources nest differently or not at all:
+ *     T2G      NV2t021704001.1        :cds / :pep   -> children CONTAIN the parent id
+ *     RefSeq   WP_011083461.1         cds-…         -> child contains it via a PREFIX
+ *     Ensembl  FBtr0070000 / FBpp…    independent   -> no nesting, no duplication at all
+ * Which is exactly why this resolves through the hierarchy rather than pattern-matching
+ * IDs: a string rule that fits one convention silently misses the others.
  *
  * ⚠️ FILTERING (what the name/description path does) IS WRONG HERE. Dropping every row that
  * is not at the annotation-bearing level means a user pasting a protein accession

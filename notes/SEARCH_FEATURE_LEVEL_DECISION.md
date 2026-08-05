@@ -90,12 +90,14 @@ The guard below still applies; it just needs a depth cap rather than a hard stop
 | `Schmidtea_lugubris` | 0 | 33,716 | **14,313** |
 
 All of it sits on **top-level** features, where those values correctly mean "no parent", and
-**zero protein/CDS features lack a valid parent**. So a single-step child→parent lookup is
-safe, while a recursive walk would hang on those 14,313 self-loops — the failure recorded in
-[[project_db_loader_hierarchy_bugs]]. One step is also sufficient: `:cds` and `:pep` hang
-directly off the transcript, which is the annotation-bearing level.
+**zero protein/CDS features lack a valid parent**. An *unguarded* climb would hang on those
+14,313 self-loops — the failure recorded in [[project_db_loader_hierarchy_bugs]] — so the
+climb carries both guards the existing walkers use: `f.feature_id <> c.feature_id` (stops a
+self-parent) and `depth < MOOP_HIERARCHY_MAX_DEPTH` (stops a multi-row cycle). SQLite 3.34.1
+here has no `CYCLE` clause, so both are required.
 
-Guard anyway: treat `parent == self` as "no parent" rather than trusting the data.
+(lugubris was reloaded 2026-08-05 and is now clean — 0 self-loops, real SQL NULL roots. The
+other databases are not, so the guards stay.)
 
 ### UI consequence to accept
 
@@ -175,6 +177,26 @@ parent_functions and moopmart separately, after a hang).
 **Not done now** because it touches the gene page, MOOPmart and sequence retrieval, which is
 too wide a change to fold into a search fix pre-launch. Do it as its own pass, with the four
 call sites' behaviour pinned by tests first.
+
+
+## ⚠️ ID nesting is per-source, not a MOOP rule (user correction, 2026-08-05)
+
+An earlier draft of this file and of the commit message said "MOOP derives child uniquenames
+by suffixing the parent (:cds, :pep)". **That is wrong as a general statement.** Depositor IDs
+are preserved — see [[feedback_original_data_stays_original]] — and `:cds`/`:pep` is
+specifically the **transcript2gene** path suffixing MOOP's own copies to disambiguate them.
+Measured:
+
+| source | transcript | child ids | nests? |
+|---|---|---|---|
+| T2G | `NV2t021704001.1` | `…:cds`, `…:pep` | yes, as a SUFFIX |
+| RefSeq | — | `cds-WP_011083461.1` vs `WP_011083461.1` | yes, as a PREFIX |
+| Ensembl/FlyBase | `FBtr0070000` | `FBpp0291548` | **no — independent ids** |
+
+This is the whole reason the fix resolves through the HIERARCHY instead of pattern-matching
+IDs. Stripping `:pep`/`:cds` would be five lines, would work for T2G gene sets, and would
+silently do nothing for RefSeq's prefix form. Drosophila needs no fix at all — with
+independent ids there is no duplication to remove.
 
 ## Status
 
