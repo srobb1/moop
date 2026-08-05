@@ -13,7 +13,10 @@ They were true on 2026-07-23 and are not now. Measured today by rendering both p
 | gene-set count chip | ✅ | ✅ |
 | group colour chips | ✅ | ✅ |
 | **Selected panel + × deselect** | ✅ | ✅ **as of `0c758f4`** |
-| **`mark.scope-hl` match highlighting** | ✅ | ❌ **the only remaining gap** |
+| **`mark.scope-hl` match highlighting** | ✅ | ✅ **as of `14c664c`** |
+
+**As of 2026-08-05 the two selectors are behaviourally IDENTICAL.** What remains is
+structural only: two class vocabularies and two copies of the row markup (see below).
 
 So the doc's claim that "MOOPmart now has both behaviours and search.php has neither" and
 that the extraction "should take MOOPmart's versions as the reference" is **backwards
@@ -37,10 +40,16 @@ side currently wins.
       fails on the most common interaction.
       Verified by rendering search.php before and after: the HTML diff is EXACTLY the one new
       `<script>` tag.
-- [ ] **`mark.scope-hl` highlighting → MOOPmart.** The last behaviour search.php has and
-      MOOPmart does not. It matters because in simple view the assembly/gene-set text is
-      hidden; both pages force-reveal a matched row, but only search.php shows WHICH part
-      matched, so on MOOPmart a row just appears with no visible reason.
+- [x] **`mark.scope-hl` highlighting → MOOPmart — DONE 2026-08-05 (`14c664c`).**
+      `highlightScopeDetail()` now sits beside the panel in the shared module and both pages
+      call it; search-display.js's copy is deleted and the CSS moved to `css/display.css`.
+      Two things worth remembering: the original-HTML capture had to become LAZY and
+      per-element (capturing after a previous highlight snapshots the `<mark>` tags and
+      compounds them every keystroke), and MOOPmart's filter has four early-return branches
+      where the highlight must be CLEARED, not just set on the match — a stale mark otherwise
+      highlights text the current query never matched.
+      **The two selectors are now behaviourally identical.** Verified in a browser on both:
+      "GCA_0339" → 1 row / 1 mark, "NV2" → 1 row / 1 mark, cleared → 85 rows / 0 marks.
 - [ ] **Class + markup unification.** The panel is shared; everything around it is not, so
       the drift can continue. Eight paired names for the same things
       (`.mm-scope-row`/`.scope-gs-full-row`, `.mm-gs-cb`/`.scope-gs-cb`, …), and the row
