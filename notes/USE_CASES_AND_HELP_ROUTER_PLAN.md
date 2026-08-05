@@ -1,5 +1,36 @@
 # Use-case router page, and per-tool "what is this" overviews
 
+⭐ **START HERE 2026-08-06 — use cases are the next task, and the groundwork is done.**
+
+What exists now, so none of it gets rebuilt:
+
+- **The page finder is BUILT and live** — `help.php?topic=finding-the-right-page`, registered
+  as the first help topic. It answers "which PAGE do I want": 10 cards, 6 with direct links,
+  4 with written directions, task-first filter. §2 below described it; it is no longer a plan.
+- **Every page declares its own purpose** via `page_purpose()` (`lib/help_ui.php`), rendered
+  visibly or `hidden`, and read off the RENDERED page by
+  `scripts/extract_page_purposes.php --write` into `docs/page_purposes.json`. The finder
+  renders from that, so the sentences cannot drift.
+  ⚠️ Write purposes to read IN A LIST — no "this assembly"; the reader is not standing on it.
+- **Seed material is gathered** — see §2b: the four task/tool pairs, a worked example in the
+  right shape, three operational tips (one a performance fact stated nowhere else), and the
+  gene-set granularity point.
+
+So the remaining question is NOT "what is a use case" but **how use cases differ from the
+finder**. The finder answers *which page*; a use case answers *how do I do X*, and may span
+several pages. Decide whether they are:
+  (a) a second card list on the finder page (one search box, two card types), or
+  (b) their own topic that links into the finder.
+The user's earlier framing — "a searchable page that is easy to use" — and the fact that the
+finder already has a working task-first filter both point at (a).
+
+⚠️ Do NOT re-survey the help section. It was reviewed and cut on 2026-08-05: eight general
+topics down to two (the finder, and `search-and-filter` — which the user says repeats the
+page and is the next deletion candidate). The deleted pages' content was harvested first.
+
+---
+
+
 Status: **ideas recorded, not built.** Raised by the user 2026-07-23 while converting the
 tool help. Two related but separable pieces.
 
