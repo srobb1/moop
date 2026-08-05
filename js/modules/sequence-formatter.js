@@ -331,50 +331,136 @@
     }
 
     // ── Copy ──────────────────────────────────────────────────────────────────
-    function copyFeedback(btn, label) {
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
-        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    //
+    // ⚠️ navigator.clipboard EXISTS ONLY IN A SECURE CONTEXT. MOOP is served over plain
+    // http:// for real users (no DNS hostname yet — see CLAUDE.md "Known Issues"), so
+    // window.isSecureContext is FALSE and navigator.clipboard is UNDEFINED. Every copy here
+    // therefore takes the fallback path, always. The modern path only ever runs for someone
+    // testing on localhost or https, which is exactly why both buttons looked fine in
+    // development and failed for users.
+    //
+    // So the fallback is the REAL implementation, not a safety net, and it has to report
+    // honestly: document.execCommand('copy') returns a boolean, and the old code discarded
+    // it and showed "Copied!" unconditionally. A copy that silently did nothing while
+    // claiming success is the same shape as the site-data backup that reported ✓ while
+    // writing nothing.
+
+    function copyFeedback(btn, ok) {
+        const orig = btn.dataset.origHtml || btn.innerHTML;
+        btn.dataset.origHtml = orig;
+        btn.innerHTML = ok
+            ? '<i class="fas fa-check me-1"></i>Copied!'
+            : '<i class="fas fa-triangle-exclamation me-1"></i>Copy failed — select and press Ctrl+C';
+        setTimeout(() => { btn.innerHTML = orig; }, ok ? 2000 : 4000);
+    }
+
+    /** Copy plain text. Returns true only if the text really reached the clipboard. */
+    async function writeText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            try { await navigator.clipboard.writeText(text); return true; } catch { /* fall through */ }
+        }
+        return copyViaSelection(text, null);
+    }
+
+    /**
+     * Copy by putting a DETACHED node into the document selection and running execCommand.
+     *
+     * ⚠️ execCommand('copy') copies THE CURRENT SELECTION, and the user's own selection is
+     * part of that state. Someone who drags across two lines of sequence and then clicks
+     * away leaves a collapsed-but-present selection which competes with ours; the copy then
+     * no-ops and the clipboard silently keeps its PREVIOUS contents, so the next paste
+     * returns the last thing that copied. Reported from the UI 2026-08-05 as "my copy
+     * buffer doesn't get overwritten". So: clear any existing ranges FIRST, install ours,
+     * copy, then restore what the user had.
+     *
+     * A textarea was tried here and is worse — inside a Bootstrap modal the focus trap pulls
+     * focus back off it, so its selection never holds. Selection over a detached node needs
+     * no focus at all.
+     *
+     * @param {string}  text  plain text to copy
+     * @param {string?} html  markup to copy instead, for rich copy; null = plain
+     */
+    function copyViaSelection(text, html) {
+        // Mount inside the open modal: a body-mounted node is outside the modal's focus and
+        // selection scope in some engines.
+        const host  = document.querySelector('.modal.show') || document.body;
+        const stage = document.createElement(html ? 'div' : 'pre');
+        stage.setAttribute('style', 'position:fixed;left:-9999px;top:0;font-family:monospace;white-space:pre;');
+        if (html) stage.innerHTML = html; else stage.textContent = text;
+        host.appendChild(stage);
+
+        const sel = window.getSelection();
+        const saved = sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+        sel.removeAllRanges();                       // drop the user's selection, or ours loses
+        const range = document.createRange();
+        range.selectNodeContents(stage);
+        sel.addRange(range);
+
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch { ok = false; }
+
+        sel.removeAllRanges();
+        if (saved) sel.addRange(saved);              // put the user's selection back
+        stage.remove();
+        return ok;
     }
 
     async function copyRich() {
         const el  = document.getElementById('sf-seq');
         const btn = document.getElementById('sf-copy-rich');
-        const htmlContent = `<div style="font-family:monospace;white-space:pre;">${el.innerHTML}</div>`;
-        try {
-            await navigator.clipboard.write([
-                new ClipboardItem({ 'text/html': new Blob([htmlContent], { type: 'text/html' }) })
-            ]);
-            copyFeedback(btn, btn.innerHTML);
-        } catch {
-            // Fallback: select element content and execCommand
-            const sel   = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(el);
-            sel.removeAllRanges();
-            sel.addRange(range);
-            document.execCommand('copy');
-            sel.removeAllRanges();
-            copyFeedback(btn, btn.innerHTML);
+        const inner = el.innerHTML;
+        const htmlContent = `<div style="font-family:monospace;white-space:pre;">${inner}</div>`;
+        let ok = false;
+
+        if (navigator.clipboard && window.ClipboardItem && window.isSecureContext) {
+            try {
+                await navigator.clipboard.write([new ClipboardItem({
+                    'text/html':  new Blob([htmlContent], { type: 'text/html' }),
+                    'text/plain': new Blob([(el.textContent || '').trimEnd()], { type: 'text/plain' }),
+                })]);
+                ok = true;
+            } catch { ok = false; }
         }
+
+        if (!ok) {
+            // Copy a DETACHED copy of the markup — never the live #sf-seq element.
+            // selectNodeContents() on the live node copied the rendered BOX with it (its
+            // background, border and padding come from CSS on the container), so pasting
+            // produced a framed panel instead of a sequence.
+            ok = copyViaSelection((el.textContent || '').trimEnd(), inner);
+        }
+        copyFeedback(btn, ok);
     }
 
     async function copyPlain() {
         const el  = document.getElementById('sf-seq');
         const btn = document.getElementById('sf-copy-plain');
-        const text = (el.textContent || '').trimEnd();
-        try {
-            await navigator.clipboard.writeText(text);
-        } catch {
-            const ta = document.createElement('textarea');
-            ta.value = text;
-            ta.style.position = 'fixed'; ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            ta.remove();
+        const ok  = await writeText((el.textContent || '').trimEnd());
+        copyFeedback(btn, ok);
+    }
+
+    /**
+     * Put every control back to the state the modal opened in.
+     *
+     * defaultCfg() IS that state — showModal() calls `cfg = defaultCfg(present)` on every
+     * open — so reset is exact by construction rather than a second list of defaults that
+     * could drift from the real ones. It restores the deliberate opening choices too:
+     * introns hidden (so the sequence opens as the spliced transcript) and intron bases
+     * lower-case.
+     */
+    function resetControls() {
+        if (!present.length) return;
+        cfg = defaultCfg(present);
+        buildControls();
+        wireControls();
+        render();
+        const btn = document.getElementById('sf-reset');
+        if (btn) {
+            const orig = btn.dataset.origHtml || btn.innerHTML;
+            btn.dataset.origHtml = orig;
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>Reset';
+            setTimeout(() => { btn.innerHTML = orig; }, 1200);
         }
-        copyFeedback(btn, btn.innerHTML);
     }
 
     // ── Modal ─────────────────────────────────────────────────────────────────
@@ -423,6 +509,10 @@
             <button class="btn btn-sm btn-outline-secondary" id="sf-copy-plain">
               <i class="fas fa-copy me-1"></i>Copy (plain text)
             </button>
+            <button class="btn btn-sm btn-outline-secondary ms-auto" id="sf-reset"
+                    title="Put every highlight, case and style control back to how it was when this opened">
+              <i class="fas fa-rotate-left me-1"></i>Reset
+            </button>
             <small class="text-muted ms-1">Rich text preserves highlight and style when pasting into Word or Google&nbsp;Docs.</small>
           </div>
         </div>
@@ -438,6 +528,7 @@
 
         document.getElementById('sf-copy-rich').addEventListener('click',  copyRich);
         document.getElementById('sf-copy-plain').addEventListener('click', copyPlain);
+        document.getElementById('sf-reset').addEventListener('click', resetControls);
     }
 
     function showModal() {
