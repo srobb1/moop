@@ -5,7 +5,7 @@
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center justify-content-between tool-header">
-          <span class="text-uppercase fw-semibold section-eyebrow">Multi-Organism Search</span>
+          <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow">Multi-Organism Search</h1>
           <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0891b2;">search across selected organisms</span>
         </div>
 
