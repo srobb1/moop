@@ -196,7 +196,7 @@
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#geneModelSection" aria-expanded="true" role="button">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
             </span>
-            <span class="ms-2 text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Gene Structure</span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Gene Structure</span>
             <span class="ms-2 text-muted small">
                 <?= count($gene_model['isoforms']) ?> isoform<?= count($gene_model['isoforms']) !== 1 ? 's' : '' ?>
             </span>
@@ -260,7 +260,7 @@
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true" role="button">
                 <i class="fas fa-sitemap toggle-icon text-primary"></i>
             </span>
-            <span class="ms-2 text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Feature Hierarchy</span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Feature Hierarchy</span>
             <?= help_modal_trigger('hierarchy-help', '', 'Help: reading the feature hierarchy') ?>
         </div>
         <div id="hierarchySection" class="collapse show">
@@ -315,7 +315,7 @@
                 <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true" role="button">
                     <i class="fas fa-minus toggle-icon text-primary"></i>
                 </span>
-                <span class="ms-2 text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Annotations</span>
+                <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Annotations</span>
                 <?php if (!empty($isoforms_share_annotations)): ?>
                     <?php /* Stated, not acted on. The tables stay per transcript — an annotation
                              belongs to the transcript, and grouping only the genes where the sets

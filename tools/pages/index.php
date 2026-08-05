@@ -130,7 +130,7 @@
        role="button" aria-expanded="false" aria-controls="browse-group-body">
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Search in a Group of Organisms</span>
+      <span class="text-uppercase fw-semibold section-eyebrow">Search in a Group of Organisms</span>
     </span>
   </div>
   <div class="collapse mb-3" id="browse-group-body">
@@ -157,7 +157,7 @@
        role="button" aria-expanded="false" aria-controls="browse-select-body">
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
-      <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Search in a Custom Selection of Organisms</span>
+      <span class="text-uppercase fw-semibold section-eyebrow">Search in a Custom Selection of Organisms</span>
     </span>
   </div>
 

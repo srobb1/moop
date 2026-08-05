@@ -22,7 +22,7 @@
 <div class="container mt-5">
 
     <div class="card shadow-sm mb-4">
-      <div class="card-header text-white d-flex align-items-center gap-2" style="background-color:#0891b2;">
+      <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
         <?= page_title('BLAST Search', 'fa fa-dna') ?>
         <?= help_modal_trigger('blast-help', '', 'How to use BLAST') ?>
       </div>
@@ -56,7 +56,7 @@
 
             <!-- Step 1: Sequence Input -->
             <div class="card mb-3 shadow-sm">
-                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">1</span>
                     <span class="fw-semibold" style="font-size:0.9rem;">Paste a sequence</span>
                 </div>
@@ -71,10 +71,10 @@
                     ><?= htmlspecialchars($search_query) ?></textarea>
                     <small class="form-text text-muted">FASTA format (with &gt;) or plain sequence.</small>
                     <div class="mt-2 d-flex gap-2">
-                        <button type="button" class="btn btn-sm fw-semibold text-white" style="background-color:#0891b2; border-color:#0891b2;" onclick="loadSampleSequence('protein')">
+                        <button type="button" class="btn btn-sm fw-semibold text-white btn-moop-teal" onclick="loadSampleSequence('protein')">
                             <i class="fa fa-flask me-1"></i>Sample Protein
                         </button>
-                        <button type="button" class="btn btn-sm fw-semibold text-white" style="background-color:#0891b2; border-color:#0891b2;" onclick="loadSampleSequence('nucleotide')">
+                        <button type="button" class="btn btn-sm fw-semibold text-white btn-moop-teal" onclick="loadSampleSequence('nucleotide')">
                             <i class="fa fa-flask me-1"></i>Sample Nucleotide
                         </button>
                     </div>
@@ -83,7 +83,7 @@
 
             <!-- Step 2: BLAST Program -->
             <div class="card mb-3 shadow-sm">
-                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">2</span>
                     <span class="fw-semibold" style="font-size:0.9rem;">Select a BLAST program</span>
                 </div>
@@ -111,7 +111,7 @@
 
             <!-- Step 3: Organism and Database -->
             <div class="card mb-3 shadow-sm">
-                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">3</span>
                     <span class="fw-semibold" style="font-size:0.9rem;">Select organism and database</span>
                 </div>
@@ -307,7 +307,7 @@
 
             <!-- Step 4: Run -->
             <div class="card mb-3 shadow-sm">
-                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">4</span>
                     <span class="fw-semibold" style="font-size:0.9rem;">Run BLAST</span>
                 </div>
@@ -342,8 +342,8 @@
         <!-- Results Section -->
         <?php if (isset($blast_result) && !empty($blast_result)): ?>
             <div class="card mt-5 shadow-sm" id="blastResultsCard">
-                <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
-                    <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-chart-bar me-2"></i>BLAST Results</span>
+                <div class="card-header text-white d-flex align-items-center tool-header">
+                    <span class="text-uppercase fw-semibold section-eyebrow"><i class="fa fa-chart-bar me-2"></i>BLAST Results</span>
                 </div>
                 <div class="card-body">
                     <div class="mb-4 d-flex gap-2 flex-wrap">
@@ -414,7 +414,7 @@ echo help_modal(
 .adv-chevron { transition: transform 0.2s; }
 #advOptions.show ~ * .adv-chevron,
 .adv-chevron.open { transform: rotate(180deg); }
-.blast-short-highlight { color: #0891b2 !important; }
+.blast-short-highlight { color: var(--moop-tool-header) !important; }
 </style>
 <script>
 document.getElementById('advOptions')?.addEventListener('show.bs.collapse', function () {

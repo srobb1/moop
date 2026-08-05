@@ -26,7 +26,7 @@
 
   <!-- Header -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white d-flex align-items-center gap-2" style="background-color:#0891b2;">
+    <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
       <?= page_title('Search Features by Annotation') ?>
       <?= help_modal_trigger('search-page-help', '', 'What this page does') ?>
     </div>
@@ -68,7 +68,7 @@
 
     <!-- ① Keyword -->
     <div class="card mb-3 shadow-sm">
-      <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+      <div class="card-header py-2 d-flex align-items-center tool-header">
         <span class="step-badge me-2">1</span>
         <span class="fw-semibold" style="font-size:0.9rem;">Enter a <?= gloss('gene') ?> ID or <?= gloss('annotation') ?> keyword</span>
         <?= help_modal_trigger('search-help', '', 'How to search') ?>
@@ -81,7 +81,7 @@
 
     <!-- ② Organisms -->
     <div class="card mb-3 shadow-sm">
-      <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
+      <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
         <span class="step-badge me-2">2</span>
         <span class="fw-semibold" style="font-size:0.9rem;">Choose organisms to search</span>
         <?= help_modal_trigger('scope-info-modal', '', 'How to select organisms') ?>
@@ -215,7 +215,7 @@
 
     <!-- ③ Annotation Types -->
     <div class="card mb-3 shadow-sm">
-      <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
+      <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
         <span class="step-badge me-2">3</span>
         <span class="fw-semibold" style="font-size:0.9rem;">Choose which <?= gloss('annotation type', 'annotation types') ?> to search</span>
         <?php /* The header (i) explains THIS STEP, matching Steps 1 and 2 — theirs are
@@ -274,14 +274,14 @@
 
     <!-- ④ Search -->
     <div class="card mb-3 shadow-sm">
-      <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+      <div class="card-header py-2 d-flex align-items-center tool-header">
         <span class="step-badge me-2">4</span>
         <span class="fw-semibold" style="font-size:0.9rem;">Search</span>
       </div>
       <div class="card-body py-3">
         <div class="d-flex gap-2">
           <button type="submit" class="btn btn-lg fw-semibold text-white flex-grow-1" id="searchBtn"
-                  style="background:#6366f1; border-color:#6366f1;">
+                  style="background:var(--moop-action); border-color:var(--moop-action);">
             <i class="fa fa-search me-2"></i>Search
           </button>
           <button type="button" class="btn btn-lg btn-outline-danger" id="search-cancel-btn" style="display:none;">
@@ -387,7 +387,7 @@
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-5">
       <div class="card-header bg-search-results">
-        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
+        <span class="fw-semibold text-uppercase section-eyebrow"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>

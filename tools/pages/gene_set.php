@@ -10,7 +10,7 @@
           <span class="badge bg-white text-gene-set" style="font-size:0.65em; opacity:0.9;">search limited to this gene set</span>
         </div>
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="geneSetSearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -45,7 +45,7 @@
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-4">
       <div class="card-header bg-search-results">
-        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
+        <span class="fw-semibold text-uppercase section-eyebrow"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>
@@ -234,7 +234,7 @@
       <div class="card shadow-sm">
         <div class="card-header d-flex align-items-center" style="background-color:#e11d48;">
           <i class="fas fa-tag me-2 text-white"></i>
-          <span class="text-uppercase fw-semibold text-white" style="letter-spacing:0.1em; font-size:0.8rem;">Annotation Summary</span>
+          <span class="text-uppercase fw-semibold text-white section-eyebrow">Annotation Summary</span>
           <?php /* Nothing on the page connected these numbers to the search box above them.
                    A reader sees 129,866 homologs and has no reason to know the text of those
                    annotations is what the search box searches, nor that the filter icon can

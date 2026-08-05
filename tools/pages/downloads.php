@@ -15,7 +15,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
 <div class="container mt-5">
 
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white d-flex align-items-center gap-2" style="background-color:#0891b2;">
+    <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
       <?= page_title('Downloads', 'fas fa-download') ?>
       <?= help_modal_trigger('downloads-help', '', 'How to use Downloads') ?>
     </div>
@@ -88,7 +88,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
       <button id="deselect-all-btn" class="btn btn-sm btn-outline-secondary">
         <i class="far fa-square me-1"></i>Deselect All
       </button>
-      <button id="download-selected-btn" class="btn btn-sm fw-semibold text-white" style="background-color:#6366f1; border-color:#6366f1;" disabled>
+      <button id="download-selected-btn" class="btn btn-sm fw-semibold text-white btn-moop-action" disabled>
         <i class="fas fa-download me-1"></i>Download Selected
         (<span id="selected-count">0</span> files<span id="selected-size-label"></span>)
       </button>

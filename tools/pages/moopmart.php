@@ -13,7 +13,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- Header -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white d-flex align-items-center gap-2" style="background-color:#0891b2;">
+    <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
       <?= page_title('MOOPmart — Data Exporter') ?>
       <?= help_modal_trigger('mm-help', '', 'What MOOPmart does') ?>
     </div>
@@ -173,7 +173,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- ① Select Organisms -->
   <div class="card mb-3 shadow-sm">
-    <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
+    <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
       <span class="step-badge me-2">1</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Select organisms</span>
       <?= help_modal_trigger('mm-scope-help', '', 'How to select organisms') ?>
@@ -289,7 +289,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- ② Build Your List -->
   <div class="card mb-3 shadow-sm">
-    <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
+    <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
       <span class="step-badge me-2">2</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Select Genes</span>
       <?= help_modal_trigger('mm-build-help', '', 'How to build your list') ?>
@@ -308,7 +308,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                data-bs-toggle="collapse" data-bs-target="#mm-ids-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">By Feature IDs</span>
+              <span class="text-uppercase fw-semibold section-eyebrow">By Feature IDs</span>
             </span>
           </div>
           <div class="collapse" id="mm-ids-body">
@@ -335,7 +335,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                data-bs-toggle="collapse" data-bs-target="#mm-name-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">By Feature Name</span>
+              <span class="text-uppercase fw-semibold section-eyebrow">By Feature Name</span>
             </span>
           </div>
           <div class="collapse" id="mm-name-body">
@@ -356,7 +356,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                data-bs-toggle="collapse" data-bs-target="#mm-desc-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">By Feature Description</span>
+              <span class="text-uppercase fw-semibold section-eyebrow">By Feature Description</span>
             </span>
           </div>
           <div class="collapse" id="mm-desc-body">
@@ -393,7 +393,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                data-bs-toggle="collapse" data-bs-target="#mm-ann-filter-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">By Annotation</span>
+              <span class="text-uppercase fw-semibold section-eyebrow">By Annotation</span>
             </span>
           </div>
           <div class="collapse" id="mm-ann-filter-body">
@@ -443,7 +443,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                data-bs-toggle="collapse" data-bs-target="#mm-loc-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">By Chromosomal Location</span>
+              <span class="text-uppercase fw-semibold section-eyebrow">By Chromosomal Location</span>
             </span>
           </div>
           <div class="collapse" id="mm-loc-body">
@@ -491,7 +491,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
              help_modal_trigger() with no event-propagation fight. A modal opens by document
              delegation, so a stopPropagation hack on a nested trigger would also swallow the
              modal; keeping the two controls separate is cleaner than reconciling them. */ ?>
-    <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
+    <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
       <div class="d-flex align-items-center gap-2 cursor-pointer"
            data-bs-toggle="collapse" data-bs-target="#mm-design-body" aria-expanded="false" aria-controls="mm-design-body">
         <span class="step-badge me-2">3</span>
@@ -764,7 +764,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- ④ Preview & Download -->
   <div class="card mb-3 shadow-sm">
-    <div class="card-header py-2 d-flex align-items-center gap-2" style="background:#0891b2; color:#fff;">
+    <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
       <span class="step-badge me-2">4</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Preview &amp; Download</span>
       <?= field_help(
@@ -880,19 +880,19 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 #mm-fasta-options .form-check-input[type="radio"] { border-color: #6c757d; }
 /* Segmented pill toggles (Output format, Table layout) — the selected side fills teal.
    Clearer than a slider, which leaves "which side is on?" to guesswork. */
-.mm-seg .btn { color: #0891b2; border-color: #0891b2; font-weight: 600; }
-.mm-seg .btn:hover { background: rgba(8,145,178,0.08); color: #0891b2; }
-.mm-seg .btn-check:checked + .btn { background: #0891b2; border-color: #0891b2; color: #fff; }
+.mm-seg .btn { color: var(--moop-tool-header); border-color: var(--moop-tool-header); font-weight: 600; }
+.mm-seg .btn:hover { background: rgba(8,145,178,0.08); color: var(--moop-tool-header); }
+.mm-seg .btn-check:checked + .btn { background: var(--moop-tool-header); border-color: var(--moop-tool-header); color: #fff; }
 .mm-seg .btn-check:focus-visible + .btn { box-shadow: 0 0 0 0.2rem rgba(8,145,178,0.35); }
-/* Step 4: Download is the primary action, in the site's action-button indigo (#6366f1) —
+/* Step 4: Download is the primary action, in the site's action-button indigo (var(--moop-action)) —
    the same colour as Run BLAST and Retrieve Sequences — so final actions read alike across
    tools. Teal is the section/accent colour, not the action colour.
    Preview is the SAME hue one shade lighter (outline, not fill): same family, clearly the
    lesser commitment, and it reads as a step rather than a footnote. It was a quiet text
    link until 2026-08-05; that made the recommended first action the least visible thing in
    the card. */
-.mm-dl-primary { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 600; }
-.mm-dl-primary:hover, .mm-dl-primary:focus { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+.mm-dl-primary { background: var(--moop-action); border-color: var(--moop-action); color: #fff; font-weight: 600; }
+.mm-dl-primary:hover, .mm-dl-primary:focus { background: var(--moop-action-hover); border-color: var(--moop-action-hover); color: #fff; }
 .mm-dl-secondary { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; font-weight: 600; }
 .mm-dl-secondary:hover, .mm-dl-secondary:focus { background: #e0e7ff; border-color: #a5b4fc; color: #3730a3; }
 /* The arrow carries the order (preview THEN download). Muted so it guides without competing

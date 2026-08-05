@@ -24,7 +24,7 @@
         <?php else: ?>
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="groupSearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -55,7 +55,7 @@
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-5">
       <div class="card-header bg-search-results">
-        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
+        <span class="fw-semibold text-uppercase section-eyebrow"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>
@@ -101,7 +101,7 @@
       <div class="<?= (!empty($group_info['images'][0]['file']) || !empty($group_info['wikipedia_image'])) ? 'col-md-8' : 'col-12' ?>">
         <div class="card shadow-sm">
           <div class="card-header text-white" style="background-color:#0f766e;">
-            <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">About <?= htmlspecialchars($group_name) ?></span>
+            <span class="text-uppercase fw-semibold section-eyebrow">About <?= htmlspecialchars($group_name) ?></span>
           </div>
           <div class="card-body">
             <?php if (!empty($group_info['html_p'])): ?>
@@ -123,7 +123,7 @@
       <div class="card shadow-sm">
         <div class="card-header text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color:#0f766e;">
           <div class="d-flex align-items-center gap-2">
-            <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;">Organisms in <?= htmlspecialchars($group_name) ?></span>
+            <span class="text-uppercase fw-semibold section-eyebrow">Organisms in <?= htmlspecialchars($group_name) ?></span>
             <?php if (!empty($group_organisms)): ?>
               <span class="organism-count-badge"><span class="oc-n">0</span> of <span class="oc-t">0</span></span>
             <?= field_help(

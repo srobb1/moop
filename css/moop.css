@@ -24,6 +24,76 @@
   background-color: #67e8f9 !important;
 }
 
+/* ========== TOOL-PAGE PALETTE ==========
+   The six colours the public tool pages actually use, in ONE place.
+   
+   They were 24 inline `style="background-color:#…"` literals across 15 files (surveyed
+   2026-07-21, notes/ADMIN_UI_FOLLOWUPS.md §6). The pages looked consistent, but only because
+   the copies happened to still agree — changing the site teal meant finding every one, and
+   missing one is invisible until someone spots two slightly different headers. Same fragility
+   that produced the admin-card drift b2a2474 had to unpick.
+
+   These are NOT arbitrary: each tracks the entity a page is about, which is why the move is
+   1:1 and the class names describe the ROLE, not the colour.
+
+   ⚠️ Do NOT merge these with the admin look (css/admin-cards.css). Tools are solid fill +
+   white text and are deliberately BOLDER than the admin pale wash: public pages announce,
+   admin pages get out of the way. This is about where the values live, not making them match. */
+:root {
+  --moop-tool-header:     #0891b2;  /* tool page header (MOOP teal) */
+  --moop-organism-header: #0f766e;  /* organism-level header (dark teal) */
+  --moop-assembly-header: #e11d48;  /* assembly / gene-set header (rose) */
+  --moop-action:          #6366f1;  /* the committed action on a tool page (indigo) */
+  --moop-action-hover:    #4f46e5;
+  --moop-accent-amber:    #d97706;
+  --moop-accent-slate:    #475569;
+}
+
+/* Solid tool-page header: teal fill, white text. The card-header variant most tool pages use. */
+.tool-header {
+  background-color: var(--moop-tool-header) !important;
+  color: #fff;
+}
+
+/* The committed action on a tool page — Run BLAST, Retrieve Sequences, Download.
+   One definition so "the action button" cannot mean two different indigos. */
+.btn-moop-action {
+  background-color: var(--moop-action);
+  border-color: var(--moop-action);
+  color: #fff;
+  font-weight: 600;
+}
+.btn-moop-action:hover, .btn-moop-action:focus {
+  background-color: var(--moop-action-hover);
+  border-color: var(--moop-action-hover);
+  color: #fff;
+}
+
+/* A small teal button INSIDE a tool section — BLAST's "Sample Protein"/"Sample Nucleotide"
+   and Retrieve Sequences' "Load sample IDs". A different role from the header (an affordance,
+   not a banner), so its own class even though the hue matches.
+
+   ⚠️ NOT named .btn-tool-teal. That name is TAKEN and LIVE: css/display.css:1252 defines it at
+   #14b8a6, and it is applied to the gene page's "View in Genome Browser" button — but from
+   config/tools_config.php:71 via a `btn_class` key rendered in lib/tool_section.php:104, so no
+   template contains the literal string and grepping the pages for it finds nothing.
+   Reusing the name silently repainted BOTH these buttons (#0891b2 -> #14b8a6) AND would have
+   repainted the genome-browser button. Caught because the computed-style check demanded zero
+   visual change, and because config-driven class names do not show up in a template grep. */
+.btn-moop-teal {
+  background-color: var(--moop-tool-header);
+  border-color: var(--moop-tool-header);
+  color: #fff;
+}
+
+/* The small uppercase section eyebrow ("BLAST Results", "Gene Structure", "Annotations").
+   The single most-duplicated inline style in the tool pages — 11 files carried the identical
+   `letter-spacing:0.1em; font-size:0.8rem;` pair. */
+.section-eyebrow {
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+}
+
 /* ========== HEADER BACKGROUND COLORS ========== */
 .bg-search-results {
   background-color: #b3d8ed !important;

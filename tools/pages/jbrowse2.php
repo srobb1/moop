@@ -10,9 +10,9 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- Header -->
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+    <div class="card-header text-white d-flex align-items-center tool-header">
       <?php /* h1, not a styled span — see the note on retrieve_sequences.php. */ ?>
-      <h1 class="text-uppercase fw-semibold mb-0 d-inline" style="letter-spacing:0.1em; font-size:0.8rem;">Genome Browser</h1>
+      <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow">Genome Browser</h1>
     </div>
     <div class="card-body py-2">
       <p class="text-muted small mb-0">Select an organism and assembly to explore in JBrowse2. Navigate genes, tracks, and sequence annotations interactively.</p>
@@ -25,7 +25,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 
   <!-- Selector (shown when no deep-link params) -->
   <div class="card shadow-sm mb-4" id="jb-selector-card">
-    <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+    <div class="card-header py-2 d-flex align-items-center tool-header">
       <span class="step-badge me-2">1</span>
       <span class="fw-semibold" style="font-size:0.9rem;">Select an organism and assembly</span>
     </div>

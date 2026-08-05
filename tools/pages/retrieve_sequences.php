@@ -30,12 +30,12 @@
 
     <!-- Page header -->
     <div class="card shadow-sm mb-4">
-      <div class="card-header text-white d-flex align-items-center gap-2" style="background-color:#0891b2;">
+      <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
         <?php /* h1, not a styled span: this is the page's title and the document had no
                  heading at all. Inline font-size and margin keep it visually identical to
                  the sibling tool pages -- audit #9 claimed every page had exactly one h1,
                  and this was one of three that had none. */ ?>
-        <h1 class="text-uppercase fw-semibold mb-0 d-inline" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-dna me-2"></i>Sequence Retrieval</h1>
+        <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow"><i class="fa fa-dna me-2"></i>Sequence Retrieval</h1>
         <?= help_modal_trigger('retrieve-help', '', 'How to use Sequence Retrieval') ?>
       </div>
       <div class="card-body py-2">
@@ -70,7 +70,7 @@
 
             <!-- Step 1: Select organism -->
             <div class="card mb-3 shadow-sm">
-                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">1</span>
                     <span class="fw-semibold" style="font-size:0.9rem;">Select organism and assembly</span>
                 </div>
@@ -90,7 +90,7 @@
 
             <!-- Step 2: Enter IDs -->
             <div class="card mb-3 shadow-sm">
-                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">2</span>
                     <span class="fw-semibold" style="font-size:0.9rem;">Enter feature or gene IDs</span>
                 </div>
@@ -106,7 +106,7 @@
                     <?php if (!empty($sample_feature_ids)): ?>
                     <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
                         <small class="text-muted">Examples: <?= htmlspecialchars(implode(', ', array_slice($sample_feature_ids, 0, 2))) ?><?= count($sample_feature_ids) > 2 ? '…' : '' ?></small>
-                        <button type="button" class="btn btn-sm fw-semibold text-white ms-auto" style="background-color:#0891b2; border-color:#0891b2;" onclick="loadSampleIds()">
+                        <button type="button" class="btn btn-sm fw-semibold text-white ms-auto btn-moop-teal" onclick="loadSampleIds()">
                             <i class="fa fa-bookmark me-1"></i>Load examples
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearFeatureIds()">
@@ -135,12 +135,12 @@
 
             <!-- Step 3: Retrieve -->
             <div class="card mb-3 shadow-sm">
-                <div class="card-header py-2 d-flex align-items-center" style="background:#0891b2; color:#fff;">
+                <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">3</span>
                     <span class="fw-semibold" style="font-size:0.9rem;">Retrieve sequences</span>
                 </div>
                 <div class="card-body py-3">
-                    <button type="submit" class="btn btn-lg fw-semibold text-white w-100" style="background-color:#6366f1; border-color:#6366f1;">
+                    <button type="submit" class="btn btn-lg fw-semibold text-white w-100 btn-moop-action">
                         <i class="fa fa-eye me-1"></i>Retrieve Sequences
                     </button>
                     <?php /* "uh-oh, do this first" for a missed assembly. Inline and soft, in place

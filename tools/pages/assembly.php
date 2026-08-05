@@ -13,7 +13,7 @@
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="assemblySearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -47,7 +47,7 @@
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-4">
       <div class="card-header bg-search-results">
-        <span class="fw-semibold text-uppercase" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
+        <span class="fw-semibold text-uppercase section-eyebrow"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
       </div>
 
       <div class="card-body">
