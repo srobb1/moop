@@ -35,6 +35,11 @@ $pages = [
     'downloads'          => '/tools/downloads.php',
     'retrieve_sequences' => '/tools/retrieve_sequences.php',
     'groups'             => '/tools/groups.php?group=Cnidaria',
+    // Data pages need real ids or they redirect. These use the first PUBLIC assembly, so the
+    // check keeps working for an anonymous visitor — which is who the router is written for.
+    'organism'           => '/tools/organism.php?organism=Nematostella_vectensis',
+    'assembly'           => '/tools/assembly.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1',
+    'gene_set'           => '/tools/gene_set.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2',
     'jbrowse2'           => '/jbrowse2.php',
     'about'              => '/about.php',
     'help'               => '/help.php',

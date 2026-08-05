@@ -131,6 +131,9 @@
                they land on from search or from the front page. */ ?>
       <div class="feature-header organism-header-custom shadow">
         <h1><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em>
+        <?php /* Declared, not shown — the heading and badges above already say where you
+                 are; this exists so the page declares its PURPOSE for the router. */ ?>
+        <?= page_purpose('Search genes across every assembly and gene set held for this organism; you can filter both the sources searched and your results.', '', false, false) ?>
             <span class="badge bg-white text-organism ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Organism</span></h1>
         <div class="feature-overview-body">
            <div class="fw-bold h4 mb-3" style="color: #0f766e;">

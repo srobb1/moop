@@ -12,7 +12,9 @@
             <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;">search limited to this group</span>
           <?php endif; ?>
         </div>
-        <?= page_purpose('Search genes across every organism in this group; you can filter both the organism list and your results.') ?>
+        <?php /* Declared, not shown — the group name and the "search limited to this group"
+         badge above already say where you are. */ ?>
+            <?= page_purpose('Search genes across every organism in this group; you can filter both the organism list and your results.', '', false, false) ?>
 
         <?php /* No search box when there is nothing to search. A form scoped to a grouping
                 holding no organisms can only ever return nothing, and a search that always
