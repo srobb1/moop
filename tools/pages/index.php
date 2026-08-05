@@ -257,9 +257,9 @@
   <div class="collapse" id="browse-select-body">
   <div class="browse-select-panel">
   <p class="text-muted small mb-2 px-1">Build a custom collection of organisms to focus your searches — complete
-    <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#6366f1;color:#fff;font-size:0.62rem;font-weight:700;vertical-align:middle;">1</span>
+    <span class="step-ref">1</span>
     then
-    <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#6366f1;color:#fff;font-size:0.62rem;font-weight:700;vertical-align:middle;">2</span>
+    <span class="step-ref">2</span>
     below.
     <?php /* The (i) lives HERE, in the panel body, not on the collapse header above.
              The header bar is the collapse toggle, and Bootstrap 5 registers its delegated
