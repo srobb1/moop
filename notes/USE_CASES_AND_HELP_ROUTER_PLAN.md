@@ -69,6 +69,29 @@ Four cards' worth. The router needs more, and these are phrased tool-first ("her
 tool") where the router should be task-first ("here is what you want to do") — but the four
 task descriptions themselves are already good use-case wording and can be lifted directly.
 
+### More seed material from the same page (harvested 2026-08-05 before deletion)
+
+**A worked example, ready to become a use-case card.** This is the shape the router wants —
+a concrete task with a concrete payoff, not a tool description:
+
+> Select 10 bat assemblies, search by feature name for TP53, and download a TSV with all
+> matching features and their annotations across every assembly — in one click. (MOOPmart)
+
+**Three operational tips. The third is a real finding stated nowhere else on the site:**
+
+- Start with a small selection of organisms to test a query before expanding to all of them.
+- Annotation Search returns up to 2,500 results per organism — use specific terms or limit
+  annotation types to stay under it. (The cap IS surfaced in the UI now, naming which
+  organisms capped; this tip is the advice, not the warning.)
+- ⭐ **For large cross-organism exports, MOOPmart is more efficient than exporting search
+  results: it runs a single optimised query rather than one per organism.** That is a
+  performance fact about how the two tools differ, and it is not documented anywhere else —
+  it belongs wherever "MOOPmart vs Annotation Search" is finally answered.
+
+**One granularity point worth keeping somewhere:** Annotation Search's scope step selects
+organism → assembly → gene set, so an organism with two gene sets can have one included and
+the other excluded. Coarser organism-level pickers cannot express that.
+
 Gaps these four do NOT cover, worth adding when the router is built: downloading a whole
 genome or GFF (Downloads), viewing a gene in its genomic context (Genome Browser), finding
 what annotation sources exist for an organism, and getting every annotation for one gene

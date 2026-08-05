@@ -34,13 +34,6 @@ return [
         'icon' => 'fa-search',
         'category' => 'general',
     ],
-    [
-        'id' => 'multi-organism-analysis',
-        'title' => 'Multi-Organism Analysis',
-        'description' => 'Compare and analyze data across multiple organisms simultaneously.',
-        'icon' => 'fa-project-diagram',
-        'category' => 'general',
-    ],
 
     // ── For administrators: setup and maintenance ────────────────────────────
     [
