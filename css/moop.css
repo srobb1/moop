@@ -86,6 +86,22 @@
   color: #fff;
 }
 
+/* An optional, secondary control on a tool page — BLAST's "Advanced Options" collapse.
+   Outline in the tool teal rather than Bootstrap's grey: it is a real affordance, and
+   btn-outline-secondary rendered it as flat grey-on-white, indistinguishable from disabled
+   text on a page whose every other control carries colour. Outline, not fill, keeps it below
+   the committed action (.btn-moop-action) in the hierarchy. */
+.btn-outline-moop {
+  color: var(--moop-tool-header);
+  border-color: var(--moop-tool-header);
+  background-color: transparent;
+}
+.btn-outline-moop:hover, .btn-outline-moop:focus {
+  color: #fff;
+  background-color: var(--moop-tool-header);
+  border-color: var(--moop-tool-header);
+}
+
 /* The small uppercase section eyebrow ("BLAST Results", "Gene Structure", "Annotations").
    The single most-duplicated inline style in the tool pages — 11 files carried the identical
    `letter-spacing:0.1em; font-size:0.8rem;` pair. */

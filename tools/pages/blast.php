@@ -140,7 +140,7 @@
 
             <!-- Advanced Options (unnumbered — optional) -->
             <div class="mb-3">
-                <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#advOptions" aria-expanded="false" aria-controls="advOptions">
+                <button class="btn btn-outline-moop w-100 d-flex align-items-center justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#advOptions" aria-expanded="false" aria-controls="advOptions">
                     <span>
                         <i class="fas fa-sliders-h me-2"></i><strong>Advanced Options</strong>
                         <?php // Shown only when a preset has changed these values. The panel stays
@@ -312,7 +312,7 @@
                     <span class="fw-semibold" style="font-size:0.9rem;">Run BLAST</span>
                 </div>
                 <div class="card-body py-3">
-                    <button type="submit" class="btn btn-lg fw-semibold text-white w-100" id="searchBtn" style="background-color:#6366f1; border-color:#6366f1;">
+                    <button type="submit" class="btn btn-lg fw-semibold text-white w-100 btn-moop-action" id="searchBtn">
                         <i class="fa fa-search me-1"></i>Run BLAST
                     </button>
                     <?php /* Start over. Navigates to the bare page rather than resetting fields

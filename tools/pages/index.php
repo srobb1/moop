@@ -104,7 +104,7 @@
   <?php if (!empty($featured_groups)): ?>
   <!-- Featured groups -->
   <div class="mb-3 text-center pt-2">
-    <div class="text-uppercase fw-semibold mb-2" style="letter-spacing:0.1em;font-size:0.8rem;color:#0891b2;">
+    <div class="text-uppercase fw-semibold mb-2 section-eyebrow" style="color:var(--moop-tool-header);">
       Focus Your Search by Group
     </div>
     <hr class="mx-auto page-header-divider mb-3">

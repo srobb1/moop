@@ -561,7 +561,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
             ?>
             <div class="mm-col-item d-flex align-items-center gap-2 px-2 py-1 mb-1 rounded border"
                  data-col="<?= $val ?>" style="cursor:pointer; user-select:none;">
-              <span class="mm-col-num badge" style="min-width:1.5em; text-align:center; font-size:0.72rem; padding:0.25em 0.4em; background:#0891b2;"></span>
+              <span class="mm-col-num badge mm-col-num-badge"></span>
               <span class="mm-col-label small"><?= $lbl ?></span>
               <div class="ms-auto d-flex" style="gap:2px;">
                 <button type="button" class="mm-col-up border-0 rounded p-0 lh-1 text-muted"
@@ -651,7 +651,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
             ?>
             <div class="mm-col-item d-flex align-items-center gap-2 px-2 py-1 mb-1 rounded border"
                  data-col="<?= $val ?>" style="cursor:pointer; user-select:none;">
-              <span class="mm-col-num badge" style="min-width:1.5em; text-align:center; font-size:0.72rem; padding:0.25em 0.4em; background:#0891b2;"></span>
+              <span class="mm-col-num badge mm-col-num-badge"></span>
               <span class="mm-col-label small"><?= $lbl ?></span>
               <div class="ms-auto d-flex" style="gap:2px;">
                 <button type="button" class="mm-col-up border-0 rounded p-0 lh-1 text-muted"
@@ -880,6 +880,11 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 #mm-fasta-options .form-check-input[type="radio"] { border-color: #6c757d; }
 /* Segmented pill toggles (Output format, Table layout) — the selected side fills teal.
    Clearer than a slider, which leaves "which side is on?" to guesswork. */
+/* The little numbered order-badge on a chosen output column. Identical markup appeared
+   twice in this file; one class so the pair cannot drift apart. */
+.mm-col-num-badge { min-width:1.5em; text-align:center; font-size:0.72rem; padding:0.25em 0.4em;
+                    background: var(--moop-tool-header); }
+
 .mm-seg .btn { color: var(--moop-tool-header); border-color: var(--moop-tool-header); font-weight: 600; }
 .mm-seg .btn:hover { background: rgba(8,145,178,0.08); color: var(--moop-tool-header); }
 .mm-seg .btn-check:checked + .btn { background: var(--moop-tool-header); border-color: var(--moop-tool-header); color: #fff; }
