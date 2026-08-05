@@ -179,18 +179,41 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
     } else {
         // Get BLAST databases for this assembly
         $all_dbs = getBlastDatabases($selected_source_obj['path']);
-        
-        // Find the selected database
+
+        // Find the selected database.
+        //
+        // The client posts 'organism|assembly|gene_set|seq_type', not a filesystem path. The
+        // path is resolved here, server-side, from the already access-checked
+        // $selected_source_obj. See the $client_databasesByAssembly comment below for why the
+        // path must never travel to the browser.
+        //
+        // The scope prefix is verified rather than trusted: the database radio and the
+        // assembly radio are two independent controls, so a posted database that names a
+        // DIFFERENT assembly than the selected source means the two disagree. Resolving it
+        // against the selected source anyway would run the query on one assembly's sequences
+        // while the page reports another's -- a wrong result, not a wrong-looking page.
+        $db_parts     = explode('|', $blast_db);
+        $db_seq_type  = array_pop($db_parts);
+        $db_scope_key = implode('|', $db_parts);
+
         $selected_db_obj = null;
-        foreach ($all_dbs as $db) {
-            if ($db['path'] === $blast_db) {
-                $selected_db_obj = $db;
-                break;
+        if ($db_scope_key !== $selected_source) {
+            $search_error = "The selected database does not belong to the selected assembly.";
+        } else {
+            // seq_type is unique within one assembly's database list (it is the sequence_types
+            // config key), so this identifies exactly one entry.
+            foreach ($all_dbs as $db) {
+                if (($db['seq_type'] ?? '') === $db_seq_type) {
+                    $selected_db_obj = $db;
+                    break;
+                }
             }
         }
-        
+
         if (!$selected_db_obj) {
-            $search_error = "Selected BLAST database not found.";
+            // Keep the scope-mismatch message if that is what failed -- it says something
+            // different and more specific than "not found".
+            $search_error = $search_error ?: "Selected BLAST database not found.";
         } else {
             // Validate sequence
             $validation = validateBlastSequence($search_query);
@@ -222,7 +245,9 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
                     'strand' => $strand
                 ];
                 
-                $blast_result = executeBlastSearch($query_with_header, $blast_db, $blast_program, $blast_options);
+                // $selected_db_obj['path'], NOT $blast_db -- $blast_db is now the client-supplied
+                // sequence type, and the path comes from the server-side lookup above.
+                $blast_result = executeBlastSearch($query_with_header, $selected_db_obj['path'], $blast_program, $blast_options);
 
                 if (!$blast_result['success']) {
                     $search_error = $blast_result['error'];
@@ -305,6 +330,30 @@ foreach ($sources_by_group as $group => $organisms) {
     }
 }
 
+// Client-safe copy: everything the dropdown needs, and NO filesystem path.
+//
+// getBlastDatabases() returns an absolute 'path' because the server needs it to run BLAST.
+// Handing that same array to json_encode() put strings like
+//   /var/www/html/moop/organisms/Nematostella_vectensis/GCF_932526225.1/RS_101/protein.aa.fa
+// into the page source of every visitor, including anonymous ones -- 4 per gene set, so it
+// grew with each assembly made PUBLIC. It disclosed the docroot layout for no benefit: the
+// browser only ever used 'path' as a radio VALUE and a DOM id, never as a path.
+//
+// It was not exploitable -- the posted value was matched against a freshly built list from an
+// already access-checked source, so a forged path matched nothing -- but "not exploitable"
+// is a property of the current validation, whereas not sending it at all is a property of
+// the data. seq_type identifies the database just as well and means nothing off-box.
+$client_databasesByAssembly = [];
+foreach ($databasesByAssembly as $key => $dbs) {
+    $client_databasesByAssembly[$key] = array_map(static function (array $db): array {
+        return [
+            'name'     => $db['name'],
+            'type'     => $db['type'],
+            'seq_type' => $db['seq_type'] ?? '',
+        ];
+    }, $dbs);
+}
+
 // Configure display template
 $display_config = [
     'title' => 'BLAST Search - ' . htmlspecialchars($siteTitle),
@@ -318,7 +367,7 @@ $display_config = [
         "const previouslySelectedDb = '" . addslashes($blast_db) . "';",
         "const previouslySelectedSource = '" . addslashes($selected_source) . "';",
         "const sampleSequences = " . json_encode($config->getArray('blast_sample_sequences', [])) . ";",
-        "const databasesByAssembly = " . json_encode($databasesByAssembly) . ";"
+        "const databasesByAssembly = " . json_encode($client_databasesByAssembly) . ";"
     ]
 ];
 

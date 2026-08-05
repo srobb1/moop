@@ -206,18 +206,35 @@ function updateDatabaseList() {
         const typeLabel = db.type === 'nucleotide' ? 'DNA' : 'Protein';
         const badgeClass = db.type === 'nucleotide' ? 'bg-primary' : 'bg-success';
         const isChecked = index === 0 ? 'checked' : '';
-        const dbId = 'db_' + db.path.replace(/[^\w]/g, '_');
-        
+
+        // The badge says what KIND of sequence the database holds; the name says WHICH
+        // database. For CDS/Transcript/Genome those differ and the badge earns its place
+        // ("DNA — CDS"). For the protein database both read "Protein", so the badge only
+        // repeated the label back. Show it when it adds something, drop it when it does not.
+        const badgeHtml = typeLabel.toLowerCase() === String(db.name).toLowerCase()
+            ? ''
+            : `<span class="badge badge-sm ${badgeClass} text-white">${typeLabel}</span>`;
+        // organism|assembly|gene_set|seq_type -- NOT a filesystem path.
+        //
+        // The seq_type alone would be enough to find the database, but carrying the scope
+        // with it lets the server check that the database the user ticked belongs to the
+        // assembly the user selected. Those are two independent controls on this page, and
+        // a value that cannot say which assembly it came from is exactly the shape that
+        // produced the "FASTA read the assembly from the first ticked row anywhere on the
+        // page" bug. The server rejects a mismatch rather than resolving it.
+        const dbValue = `${sourceKey}|${db.seq_type}`;
+        const dbId = 'db_' + dbValue.replace(/[^\w]/g, '_');
+
         html += `
             <div class="fasta-source-line">
-                <input 
-                    type="radio" 
-                    name="blast_db" 
-                    value="${db.path}"
+                <input
+                    type="radio"
+                    name="blast_db"
+                    value="${dbValue}"
                     ${isChecked}
                     id="${dbId}"
                 >
-                <span class="badge badge-sm ${badgeClass} text-white">${typeLabel}</span>
+                ${badgeHtml}
                 <label for="${dbId}" style="margin: 0; cursor: pointer; flex: 1;">
                     <strong>${db.name}</strong>
                 </label>

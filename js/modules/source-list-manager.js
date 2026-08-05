@@ -207,9 +207,17 @@ function updateCurrentSelectionDisplay(selectionDivId = 'currentSelection', sour
         const isHidden = (showHiddenWarning && line && !isSourceVisible(line)) ? ' ⚠️ (HIDDEN - FILTERED OUT)' : '';
         const gsLabel  = geneSet ? ` > ${geneSet}` : '';
 
+        // dataset.organism is the DIRECTORY KEY ("Ptychodera_flava"), not a display name.
+        // Printing it raw put an underscored, non-italic binomial on BLAST and Retrieve
+        // Sequences -- the same defect already fixed in includes/source-list.php. The site
+        // rule is that an organism is always "Ptychodera flava": sentence case, italic, via
+        // the site-wide .sci-name class. Assembly and gene-set names keep their underscores,
+        // which are legitimate there (e.g. Ma_sr-lr_union100).
+        const organismLabel = `<span class="sci-name">${organism.replace(/_/g, ' ')}</span>`;
+
         selectionDiv.innerHTML = `
             <div style="color: #28a745; font-weight: bold;">
-                ${group} > ${organism} > ${assembly}${gsLabel}${isHidden}
+                ${group} > ${organismLabel} > ${assembly}${gsLabel}${isHidden}
             </div>
         `;
     } else {
