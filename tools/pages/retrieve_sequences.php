@@ -39,7 +39,7 @@
         <?= help_modal_trigger('retrieve-help', '', 'How to use Sequence Retrieval') ?>
       </div>
       <div class="card-body py-2">
-        <p class="text-muted small mb-0">Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs and retrieve genomic, CDS, protein, and flanking sequences.</p>
+        <?= page_purpose('Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs and retrieve genomic, CDS, protein, and flanking sequences.') ?>
       </div>
     </div>
 

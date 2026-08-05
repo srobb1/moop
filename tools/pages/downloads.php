@@ -20,7 +20,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
       <?= help_modal_trigger('downloads-help', '', 'How to use Downloads') ?>
     </div>
     <div class="card-body py-2">
-      <p class="text-muted small mb-0">Browse and download genome sequence and annotation files for organisms you have access to.</p>
+      <?= page_purpose('Browse and download genome sequence and annotation files for organisms you have access to.') ?>
     </div>
   </div>
 

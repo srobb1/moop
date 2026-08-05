@@ -27,7 +27,7 @@
         <?= help_modal_trigger('blast-help', '', 'How to use BLAST') ?>
       </div>
       <div class="card-body py-2">
-        <p class="text-muted small mb-0">Search genome assemblies by sequence similarity. Paste a DNA or protein sequence, select a program and database, and run.</p>
+        <?= page_purpose('Search genome assemblies by sequence similarity. Paste a DNA or protein sequence, select a program and database, and run.') ?>
       </div>
     </div>
 

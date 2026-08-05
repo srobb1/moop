@@ -239,3 +239,37 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
     $h .= '</div></div></div></div>';
     return $h;
 }
+
+/**
+ * The one sentence saying what a page is FOR — rendered on the page, and extractable.
+ *
+ * Answers two needs with one declaration, which is the whole point:
+ *   1. A visitor landing cold sees, in plain language, what this page does.
+ *   2. `scripts/extract_page_purposes.php` reads it back off the RENDERED page to build
+ *      the "which page do I want?" router, so the router can never describe a page that
+ *      no longer says that — or exist for a page that was deleted.
+ *
+ * ⚠️ Declared IN THE PAGE, deliberately, not in a config file. A sentence kept somewhere
+ * else is a sentence nobody updates when the page changes: the description and the page
+ * drift apart, and only the config gets read. Putting it in the page means editing the
+ * page IS editing the description.
+ *
+ * ⚠️ Extraction reads the rendered HTML, not the source. A grep over source cannot tell
+ * whether a page still renders a line, or renders it conditionally — the same lesson that
+ * cost three false findings elsewhere this session (CLAUDE.md §12b).
+ *
+ * Keep it to ONE sentence, in the user's language, and say what you get rather than what
+ * the machinery does: "Compare a sequence against one or more assemblies", not "runs BLAST
+ * against selected databases".
+ *
+ * @param string $text  the sentence
+ * @param string $extra additional classes for spacing on a particular page
+ */
+function page_purpose(string $text, string $extra = '', bool $html = false): string {
+    $cls = trim('page-purpose text-muted small mb-0 ' . $extra);
+    // $html is for a sentence carrying gloss() terms — MOOPmart's names two. Extraction
+    // reads textContent, so markup inside is harmless there; it is opt-in rather than the
+    // default so an ordinary sentence cannot inject markup by accident.
+    return '<p class="' . htmlspecialchars($cls, ENT_QUOTES) . '" data-page-purpose>'
+         . ($html ? $text : htmlspecialchars($text)) . '</p>';
+}
