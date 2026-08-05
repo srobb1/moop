@@ -742,18 +742,21 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
       ) ?>
     </div>
     <div class="card-body py-3">
-      <?php /* Preview first (a light link that reveals the count and the first 100 rows),
-               then the full-width Download as the committed action below it. */ ?>
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none mm-preview-link" id="mm-preview-btn">
-          <span id="mm-count-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
-          <i class="fa fa-eye me-1"></i> Preview first
+      <?php /* Two buttons, one line, with the arrow showing the intended order:
+               Preview -> Download. Preview used to be a quiet text link set apart from a
+               full-width Download, which read as a footnote rather than a step — a user
+               could easily not register it as the thing to do first. */ ?>
+      <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+        <button type="button" class="btn mm-dl-secondary" id="mm-preview-btn">
+          <span id="mm-count-spinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+          <i class="fa fa-eye me-1"></i> Preview
         </button>
-        <span id="mm-count-result" class="small text-muted"></span>
+        <i class="fa fa-arrow-right mm-step-arrow" aria-hidden="true"></i>
+        <button type="button" class="btn mm-dl-primary flex-grow-1" id="mm-dl-btn">
+          <i class="fa fa-download me-1"></i> <span id="mm-dl-label">Download TSV</span>
+        </button>
       </div>
-      <button type="button" class="btn mm-dl-primary w-100" id="mm-dl-btn">
-        <i class="fa fa-download me-1"></i> <span id="mm-dl-label">Download TSV</span>
-      </button>
+      <div id="mm-count-result" class="small text-muted"></div>
     </div>
   </div>
 
@@ -852,14 +855,18 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
 .mm-seg .btn-check:focus-visible + .btn { box-shadow: 0 0 0 0.2rem rgba(8,145,178,0.35); }
 /* Step 4: Download is the primary action, in the site's action-button indigo (#6366f1) —
    the same colour as Run BLAST and Retrieve Sequences — so final actions read alike across
-   tools. Teal is the section/accent colour, not the action colour. Preview is a quiet link. */
+   tools. Teal is the section/accent colour, not the action colour.
+   Preview is the SAME hue one shade lighter (outline, not fill): same family, clearly the
+   lesser commitment, and it reads as a step rather than a footnote. It was a quiet text
+   link until 2026-08-05; that made the recommended first action the least visible thing in
+   the card. */
 .mm-dl-primary { background: #6366f1; border-color: #6366f1; color: #fff; font-weight: 600; }
 .mm-dl-primary:hover, .mm-dl-primary:focus { background: #4f46e5; border-color: #4f46e5; color: #fff; }
-/* Preview link: muted text, but keep the eye icon in the action indigo so it still reads
-   as the same button family. */
-.mm-preview-link { color: #6c757d; }
-.mm-preview-link:hover { color: #495057; }
-.mm-preview-link .fa { color: #6366f1; }
+.mm-dl-secondary { background: #eef2ff; border-color: #c7d2fe; color: #4338ca; font-weight: 600; }
+.mm-dl-secondary:hover, .mm-dl-secondary:focus { background: #e0e7ff; border-color: #a5b4fc; color: #3730a3; }
+/* The arrow carries the order (preview THEN download). Muted so it guides without competing
+   with either button. */
+.mm-step-arrow { color: #a5b4fc; font-size: 0.85rem; }
 /* .step-ref (the inline "Step N" badge) now lives in css/display.css — Annotation Search
    needed it too, so it moved to the shared sheet rather than being copied. */
 </style>
