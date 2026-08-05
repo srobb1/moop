@@ -16,6 +16,16 @@
  */
 
 return [
+    // ── Finding your way ─────────────────────────────────────────────────────
+    [
+        'id'          => 'finding-the-right-page',
+        'title'       => 'Which page do I want?',
+        'description' => 'What each page is for, in one sentence — start here if you know what you '
+                       . 'want to do but not where to do it.',
+        'icon'        => 'fa-map-signs',
+        'category'    => 'general',
+    ],
+
     // ── For users ────────────────────────────────────────────────────────────
     [
         'id' => 'search-and-filter',

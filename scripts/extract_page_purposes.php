@@ -27,6 +27,11 @@ $base = 'http://127.0.0.1/moop';
 
 // Pages a visitor can land on. Data pages need real ids in the query string or they
 // redirect; these are resolved from the first accessible organism at runtime.
+// label      => [probe url, linkable?, human title]
+// 'linkable' false = the page needs an organism/assembly/gene-set id, so there is no stable
+// URL to send someone to. Those are reached by starting at the home page and picking one —
+// which is exactly what the router tells the reader to do, rather than inventing a link that
+// only works for whichever organism happened to be public when the page was written.
 $pages = [
     'index'              => '/',
     'search'             => '/tools/search.php',
@@ -45,8 +50,25 @@ $pages = [
     'help'               => '/help.php',
 ];
 
-$json = in_array('--json', $argv, true);
-$rows = [];
+// Per-route presentation data. Kept here, beside the probe list, so a page cannot be probed
+// without also declaring how a reader reaches it.
+$meta = [
+    'index'              => ['title' => 'Home',               'link' => '/',                          'linkable' => true],
+    'search'             => ['title' => 'Annotation Search',  'link' => '/tools/search.php',          'linkable' => true],
+    'blast'              => ['title' => 'BLAST',              'link' => '/tools/blast.php',           'linkable' => true],
+    'moopmart'           => ['title' => 'MOOPmart',           'link' => '/tools/moopmart.php',        'linkable' => true],
+    'downloads'          => ['title' => 'Downloads',          'link' => '/tools/downloads.php',       'linkable' => true],
+    'retrieve_sequences' => ['title' => 'Retrieve Sequences', 'link' => '/tools/retrieve_sequences.php', 'linkable' => true],
+    'groups'             => ['title' => 'Group page',         'link' => null, 'linkable' => false],
+    'organism'           => ['title' => 'Organism page',      'link' => null, 'linkable' => false],
+    'assembly'           => ['title' => 'Assembly page',      'link' => null, 'linkable' => false],
+    'gene_set'           => ['title' => 'Gene set page',      'link' => null, 'linkable' => false],
+    'jbrowse2'           => ['title' => 'Genome Browser',     'link' => '/jbrowse2.php',              'linkable' => true],
+];
+
+$json  = in_array('--json',  $argv, true);
+$write = in_array('--write', $argv, true);
+$rows  = [];
 
 foreach ($pages as $name => $path) {
     $ch = curl_init($base . $path);
@@ -67,7 +89,31 @@ foreach ($pages as $name => $path) {
         // sentence wrapped across source lines compares equal to one that is not.
         $purpose = trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($m[2]))));
     }
-    $rows[] = ['page' => $name, 'url' => $path, 'status' => $status, 'purpose' => $purpose];
+    $m = $meta[$name] ?? ['title' => $name, 'link' => null, 'linkable' => false];
+    $rows[] = [
+        'page'     => $name,
+        'title'    => $m['title'],
+        'link'     => $m['link'],
+        'linkable' => $m['linkable'],
+        'url'      => $path,
+        'status'   => $status,
+        'purpose'  => $purpose,
+    ];
+}
+
+if ($write) {
+    // Generated artifact, refreshed by re-running this script — the same idiom as the
+    // organism and annotation caches. Only routes that actually declared a purpose are
+    // written, so the router can never list a page that no longer says what it is for.
+    $out = array_values(array_filter($rows, fn($r) => $r['purpose'] !== '' && isset($meta[$r['page']])));
+    $file = __DIR__ . '/../metadata/page_purposes.json';
+    file_put_contents($file, json_encode([
+        'generated' => date('c'),
+        'routes'    => $out,
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+    @chmod($file, 0664);
+    echo "Wrote " . count($out) . " routes to metadata/page_purposes.json\n";
+    exit(0);
 }
 
 if ($json) {
