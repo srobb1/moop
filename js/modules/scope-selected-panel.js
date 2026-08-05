@@ -1,5 +1,13 @@
 /**
- * The "Selected" panel that sits beside an organism → assembly → gene-set scope list.
+ * Shared UI for the organism → assembly → gene-set scope list: the "Selected" panel, and the
+ * filter-match highlight. Both are used by Annotation Search and MOOPmart.
+ *
+ * (When the class/markup unification lands — see notes/SHARED_SCOPE_SELECTOR_PLAN.md — the
+ * selector arguments below disappear and this becomes the whole scope component. The file
+ * name will want revisiting then.)
+ *
+ * ── The "Selected" panel ──────────────────────────────────────────────────────────────
+ * Sits beside the scope list and shows what has actually been picked.
  *
  * ONE implementation, used by Annotation Search and MOOPmart. Those two pages had already
  * drifted apart badly enough that notes/SHARED_SCOPE_SELECTOR_PLAN.md recorded the wrong
@@ -106,6 +114,40 @@ function initScopeSelectedPanel(opts) {
     return { render };
 }
 
+/**
+ * Highlight the filter match inside a scope row's hidden detail text.
+ *
+ * Shared by Annotation Search and MOOPmart. In SIMPLE view the `assembly › gene set` text
+ * is hidden, so a row matched on that text is force-revealed — but without this the row
+ * simply appears with no visible reason, and the user cannot tell why "GCA_0339" produced
+ * it. The highlight is what makes a force-reveal legible.
+ *
+ * Restores the row's ORIGINAL html when the query is empty. That original is captured once,
+ * on the element itself, the first time the row is highlighted — re-reading innerHTML after
+ * a previous highlight would capture the <mark> tags and compound them on every keystroke.
+ *
+ * The replace runs only on text OUTSIDE tags (`/([^<>]+)/g`), so a query that happens to
+ * match an attribute name or a class cannot corrupt the markup.
+ *
+ * @param {Element} row          the scope row
+ * @param {string}  query        the (lowercased) filter text; '' restores the original
+ * @param {string}  detailSel    selector for the detail span within the row
+ */
+function highlightScopeDetail(row, query, detailSel) {
+    const detail = row ? row.querySelector(detailSel) : null;
+    if (!detail) return;
+
+    if (detail._moopOrigHtml === undefined) detail._moopOrigHtml = detail.innerHTML;
+    const orig = detail._moopOrigHtml;
+
+    if (!query) { detail.innerHTML = orig; return; }
+
+    const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    detail.innerHTML = orig.replace(/([^<>]+)/g, (text) =>
+        text.replace(new RegExp(esc, 'gi'), (m) => `<mark class="scope-hl">${m}</mark>`)
+    );
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { initScopeSelectedPanel };
+    module.exports = { initScopeSelectedPanel, highlightScopeDetail };
 }

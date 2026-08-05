@@ -20,7 +20,7 @@
 #scope-org-list.scope-detail-hidden .scope-gs-full-row.scope-detail-forced .scope-row-detail { display: inline; }
 #scope-org-list.scope-detail-hidden .scope-gs-full-row.scope-detail-forced .scope-gs-count   { display: none; }
 /* Highlighted matched text within the detail span */
-mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; padding: 0 1px; color: inherit; }
+/* mark.scope-hl moved to css/display.css — MOOPmart's scope filter needs it too. */
 </style>
 <div class="container mt-4">
 

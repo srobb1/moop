@@ -74,22 +74,10 @@ $(document).ready(function () {
         if (scopePanel) scopePanel.render();
     }
 
-    // Save original HTML of each detail span so we can restore after highlight
-    $('.scope-row-detail').each(function () {
-        $(this).data('orig-html', this.innerHTML);
-    });
-
-    // Wrap matched text in text nodes only (skip HTML tags) with <mark class="scope-hl">
+    // Delegates to the shared helper (js/modules/scope-selected-panel.js) so MOOPmart's
+    // filter highlights identically. The original-HTML capture moved in there with it.
     function highlightInDetail($row, query) {
-        const $detail = $row.find('.scope-row-detail');
-        if (!$detail.length) return;
-        const orig = $detail.data('orig-html');
-        if (orig === undefined) return;
-        if (!query) { $detail[0].innerHTML = orig; return; }
-        const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        $detail[0].innerHTML = orig.replace(/([^<>]+)/g, text =>
-            text.replace(new RegExp(esc, 'gi'), m => `<mark class="scope-hl">${m}</mark>`)
-        );
+        highlightScopeDetail($row[0], query, '.scope-row-detail');
     }
 
     // Scope filter — show/hide rows; if the match is in hidden detail, force-reveal + highlight

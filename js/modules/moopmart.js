@@ -253,8 +253,14 @@
             const detailOn = document.getElementById('mm-scope-detail')?.checked;
             list.querySelectorAll('.mm-scope-row').forEach(row => {
                 row.classList.remove('mm-scope-detail-forced');
+                // hl(): the shared filter-match highlight, same as Annotation Search. Clearing
+                // it on every non-matching branch matters as much as setting it — a stale
+                // <mark> from a previous keystroke would highlight text the current query
+                // never matched.
+                const hl = (query) => highlightScopeDetail(row, query, '.mm-scope-row-detail');
                 if (!q) {
                     row.style.display = '';   // back to CSS (secondary rows hidden in simple)
+                    hl('');
                     return;
                 }
                 const all    = row.dataset.search || '';
@@ -262,11 +268,14 @@
                 const detail = row.dataset.searchDetail || '';
                 if (!all.includes(q)) {
                     row.style.display = 'none';
+                    hl('');
                     return;
                 }
-                const detailOnly = detail.includes(q) && !simple.includes(q);
+                const detailMatch = detail.includes(q);
+                const detailOnly  = detailMatch && !simple.includes(q);
                 if (detailOn) {
                     row.style.display = '';   // detail view: every gene-set row shows normally
+                    hl(detailMatch ? q : '');
                     return;
                 }
                 // Simple view. The representative row shows on any match. A SECONDARY row
@@ -275,10 +284,12 @@
                 // the very duplicate rows the collapse hid.
                 if (row.classList.contains('mm-scope-row-secondary') && !detailOnly) {
                     row.style.display = 'none';
+                    hl('');
                     return;
                 }
                 row.style.display = 'flex';
                 if (detailOnly) row.classList.add('mm-scope-detail-forced');
+                hl(detailMatch ? q : '');
             });
         });
 

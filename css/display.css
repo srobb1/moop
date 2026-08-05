@@ -1743,3 +1743,10 @@ a:hover .link-icon {
   color: #0891b2;
 }
 
+
+/* Filter-match highlight inside a scope row's detail text (organism → assembly → gene set).
+   Shared: Annotation Search and MOOPmart both highlight the matched substring, which is what
+   makes a force-revealed row legible — in simple view the detail text is hidden, so without
+   this a matched row appears with no visible reason. Was inline in tools/pages/search.php
+   until 2026-08-05; moved here rather than copied into MOOPmart. */
+mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; padding: 0 1px; color: inherit; }
