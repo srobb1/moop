@@ -153,6 +153,29 @@ function moop_wikipedia_cache_file(string $organism): string
 }
 
 /**
+ * Per-organism cache of WHICH feature levels actually carry annotations in that database.
+ *
+ * Same per-organism directory as annotation_sources_cache.json, so it needs no new entry in
+ * the writable allowlist or fix_moop_selinux.sh (CLAUDE.md §11).
+ *
+ * Exists because there is NO single annotation-bearing level across this deployment, and
+ * assuming 'mRNA' is wrong for 6 of 85 databases in a way that fails silently. Measured
+ * 2026-08-05: mRNA 2,980,598 rows / 79 organisms, transcript 48,562 / 2 (Schmidtea_lugubris,
+ * Schmidtea_nova), gene 7,812 / 9 (7,708 of them Bradyrhizobium_diazoefficiens — a bacterium,
+ * gene-level by nature, not by defect). Hardcoding 'mRNA' returns ZERO annotation results for
+ * Bradyrhizobium. See notes/SEARCH_FEATURE_LEVEL_DECISION.md.
+ *
+ * Cached because the derivation is a GROUP BY over feature_annotation joined to feature —
+ * cheap warm, but this sits on the search path, and CLAUDE.md §9 is explicit that cold row
+ * fetching is what dominates here. The answer only changes when the database is rebuilt.
+ */
+function moop_annotation_levels_cache_file(string $organism): string
+{
+    $dir = moop_cache_root() . '/' . $organism;
+    return moop_ensure_cache_dir($dir) ? "$dir/annotation_levels.json" : '';
+}
+
+/**
  * Lock file coordinating the background organism-cache refresh. Lives beside the
  * organism cache it guards. Was: organisms/.organism_cache_lock — moved out with
  * the cache so the organisms/ tree can be read-only to the web server.

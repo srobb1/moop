@@ -130,7 +130,7 @@ $warning_message = null;
 // If no results by uniquename, search by annotation or gene fields depending on source selection
 if (!$uniquename_search) {
     if ($gene_only_search) {
-        $search_result = searchFeaturesByNameDescription($search_input, $quoted_search, $db, $assembly, $gene_set, $scope_pairs);
+        $search_result = searchFeaturesByNameDescription($search_input, $quoted_search, $db, $assembly, $gene_set, $scope_pairs, $organism);
     } else {
         $search_result = searchFeaturesAndAnnotations($search_input, $quoted_search, $db, $source_filter, $assembly, $gene_set, $scope_pairs);
     }

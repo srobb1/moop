@@ -549,17 +549,112 @@ function runFtsSearch($dbFile, $sql, $params) {
 }
 
 /**
+ * The feature levels that actually carry annotations in ONE database.
+ *
+ * Returns e.g. ['mRNA'], or ['gene'] for Bradyrhizobium, or ['transcript'] for the two
+ * Schmidtea that use it. Falls back to ['mRNA'] only when the query cannot run at all.
+ *
+ * ⚠️ DO NOT replace this with the literal 'mRNA'. That is the whole point of the function.
+ * Measured across all 85 databases 2026-08-05:
+ *     mRNA        2,980,598 annotated features   79 organisms
+ *     transcript     48,562                       2 organisms
+ *     gene            7,812                       9 organisms (7,708 = Bradyrhizobium)
+ * A hardcoded 'mRNA' silently returns ZERO annotation results for Bradyrhizobium — a
+ * bacterium, whose annotations are gene-level by nature — and drops 48,562 rows across the
+ * two Schmidtea. Correct for 79 of 85 is not correct.
+ *
+ * The 1% cutoff drops noise rather than structure: Petromyzon_marinus carries 83,343
+ * mRNA-level annotations and 13 stray gene-level ones. Those 13 are a data artifact, and
+ * admitting 'gene' on their account would re-introduce the gene+mRNA duplication for that
+ * organism's entire name search. A level has to be genuinely used to count.
+ *
+ * See notes/SEARCH_FEATURE_LEVEL_DECISION.md.
+ *
+ * @return string[] Non-empty list of feature_type values.
+ */
+function moop_annotation_levels($dbFile, $organism = '') {
+    static $memo = [];
+    if (isset($memo[$dbFile])) return $memo[$dbFile];
+
+    // Cache keyed by organism when we know it; the answer only changes on a DB rebuild.
+    $cache_file = '';
+    if ($organism !== '' && function_exists('moop_annotation_levels_cache_file')) {
+        $cache_file = moop_annotation_levels_cache_file($organism);
+        if ($cache_file !== '' && file_exists($cache_file) && file_exists($dbFile)
+            && filemtime($cache_file) >= filemtime($dbFile)) {
+            $cached = loadJsonFile($cache_file, null);
+            if (is_array($cached) && !empty($cached['levels']) && is_array($cached['levels'])) {
+                return $memo[$dbFile] = $cached['levels'];
+            }
+        }
+    }
+
+    $levels = [];
+    try {
+        $dbh  = getDbConnection($dbFile);
+        $stmt = $dbh->query(
+            'SELECT f.feature_type AS t, COUNT(DISTINCT fa.feature_id) AS n
+               FROM feature f
+               JOIN feature_annotation fa ON fa.feature_id = f.feature_id
+              GROUP BY f.feature_type'
+        );
+        $rows  = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        $total = 0;
+        foreach ($rows as $r) $total += (int)$r['n'];
+        foreach ($rows as $r) {
+            if ($total > 0 && ((int)$r['n'] / $total) >= 0.01) $levels[] = $r['t'];
+        }
+    } catch (Exception $e) {
+        error_log('moop_annotation_levels: ' . $e->getMessage());
+    }
+
+    // An unannotated database legitimately yields nothing; mRNA is the right shape to
+    // assume for the name/description path there, and no annotation row can contradict it.
+    if (empty($levels)) $levels = ['mRNA'];
+
+    if ($cache_file !== '') {
+        @file_put_contents($cache_file, json_encode(['levels' => $levels, 'built' => time()]));
+        @chmod($cache_file, 0664);
+    }
+    return $memo[$dbFile] = $levels;
+}
+
+/**
  * Search features by name and description only (gene-centric) — no annotation join.
  * Used when the user has explicitly deselected all annotation sources. Backed by the
  * feature_search FTS index, which covers EVERY feature (including unannotated ones).
  * Returns rows in the same column shape as searchFeaturesAndAnnotations (annotation
  * columns NULL) so the result-formatting code in the AJAX endpoint is unchanged.
  */
-function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFile, $assembly_accession = '', $gene_set_name = '', $scope_pairs = []) {
+function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFile, $assembly_accession = '', $gene_set_name = '', $scope_pairs = [], $organism = '') {
     $match = buildFtsMatchExpr($search_term, $is_quoted_search);
     if ($match === '') return ['results' => [], 'capped' => false, 'warning' => null];
 
     $name_like = '%' . ftsPrimaryTerm($search_term, $is_quoted_search) . '%';
+
+    // Collapse the gene model to ONE level, so a name search returns one row per gene
+    // instead of four (gene + mRNA + cds + protein). The FTS index deliberately covers
+    // every level -- a user searching a protein ID must still find something -- so this
+    // filters RESULTS, not the index.
+    //
+    // The level is derived per database, never assumed: see moop_annotation_levels().
+    // Filtering to the annotation-bearing level makes this path agree with the annotation
+    // path, which returns that level already (the loader floats annotations up to it).
+    //
+    // Safe because a filtered-out row carries nothing findable here: of 2,232,940 genes,
+    // the 3,331 with no child are all in Petromyzon_marinus and every one has no name AND
+    // no annotations, so no name/description query can match them. They stay reachable by
+    // exact ID, which is a different path and is not filtered.
+    //
+    // ⚠️ FALLS BACK TO UNFILTERED, and that is not belt-and-braces — it is load-bearing.
+    // The annotation-bearing level and the TEXT-bearing level are not the same level in
+    // every database. Schmidtea_lugubris and Schmidtea_nova annotate at `transcript`, and
+    // their transcript rows carry NO name and NO description at all (0 of 66,510); the
+    // searchable text sits on `gene`. Filtering those to `transcript` turns 719 hits for
+    // "kinase" into 0. They also happen to need no de-duplication, because only `gene`
+    // carries description there — so the unfiltered answer is already one row per gene.
+    // Retrying unfiltered costs a second query ONLY when the filtered one found nothing.
+    $levels = moop_annotation_levels($dbFile, $organism);
 
     $sql = "SELECT f.feature_uniquename, f.feature_name, f.feature_description,
                    NULL AS annotation_accession, NULL AS annotation_description,
@@ -575,7 +670,16 @@ function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFil
             WHERE feature_search MATCH ?";
     $params = [$name_like, $match];
 
+    // Keep an unfiltered twin for the fallback, built BEFORE the scope filters so both
+    // carry identical scoping — the fallback drops the LEVEL filter, nothing else.
+    $sql_unfiltered    = $sql;
+    $params_unfiltered = $params;
+
+    $sql .= ' AND f.feature_type IN (' . implode(',', array_fill(0, count($levels), '?')) . ')';
+    array_push($params, ...$levels);
+
     appendScopeFilters($sql, $params, $assembly_accession, $gene_set_name, $scope_pairs);
+    appendScopeFilters($sql_unfiltered, $params_unfiltered, $assembly_accession, $gene_set_name, $scope_pairs);
 
     // Named genes first (hard tier), then -- among rows bm25 cannot tell apart -- the ones
     // that carry a name at all, then bm25 relevance (name col weighted 10, desc 5), then a
@@ -586,13 +690,18 @@ function searchFeaturesByNameDescription($search_term, $is_quoted_search, $dbFil
     // annotation source, which is a toggle on the same screen, not a different feature.
     // Without it "transposases" put an unnamed MARINER MOS1 TRANSPOSASE-LIKE PROTEIN above
     // the named mariner transposases carrying the same description.
-    $sql .= " ORDER BY name_match DESC,
-                       (COALESCE(f.feature_name, '') <> '') DESC,
-                       bm25(feature_search, 10.0, 5.0),
-                       f.feature_uniquename
-              LIMIT " . moop_search_query_limit();
+    $order = " ORDER BY name_match DESC,
+                        (COALESCE(f.feature_name, '') <> '') DESC,
+                        bm25(feature_search, 10.0, 5.0),
+                        f.feature_uniquename
+               LIMIT " . moop_search_query_limit();
 
-    return runFtsSearch($dbFile, $sql, $params);
+    $out = runFtsSearch($dbFile, $sql . $order, $params);
+    if (!empty($out['results'])) return $out;
+
+    // Filtered to a level that holds no matching text — see the comment above. Retry with
+    // the level filter dropped rather than reporting "no results" for a gene that is there.
+    return runFtsSearch($dbFile, $sql_unfiltered . $order, $params_unfiltered);
 }
 
 /**
