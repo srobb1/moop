@@ -14,6 +14,10 @@
       Browse genes, genomes, and annotations<?php if (!empty($organism_count)): ?> across <strong style="font-weight:500;"><?= $organism_count ?></strong> organism<?= $organism_count !== 1 ? 's' : '' ?><?php if (!empty($assembly_count)): ?> and <strong style="font-weight:500;"><?= $assembly_count ?></strong> assembl<?= $assembly_count !== 1 ? 'ies' : 'y' ?><?php endif; ?><?php endif; ?>
     </p>
   </div>
+  <?php /* Declared, not shown: the tagline above already tells a visitor what is here,
+           and live counts do it better than a second sentence would. This exists so the
+           page still declares its PURPOSE for the router. */ ?>
+  <?= page_purpose('Pick the organism or organisms you want to work with — there are several ways to find them — or search straight for a gene by its ID.', '', false, false) ?>
 
   <!-- Quick search — tabbed -->
   <div class="qs-wrap mb-3">

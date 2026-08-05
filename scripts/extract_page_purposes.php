@@ -55,10 +55,12 @@ foreach ($pages as $name => $path) {
     curl_close($ch);
 
     $purpose = '';
-    if ($html !== false && preg_match('/<p[^>]*data-page-purpose[^>]*>(.*?)<\/p>/s', $html, $m)) {
+    // Matches either form page_purpose() emits: a visible <p>, or a hidden <span> on a page
+    // that already says the same thing visually and declares its purpose for the router only.
+    if ($html !== false && preg_match('/<(p|span)[^>]*data-page-purpose[^>]*>(.*?)<\/\1>/s', $html, $m)) {
         // strip_tags because the sentence may carry gloss() spans; collapse whitespace so a
         // sentence wrapped across source lines compares equal to one that is not.
-        $purpose = trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($m[1]))));
+        $purpose = trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($m[2]))));
     }
     $rows[] = ['page' => $name, 'url' => $path, 'status' => $status, 'purpose' => $purpose];
 }

@@ -265,11 +265,30 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
  * @param string $text  the sentence
  * @param string $extra additional classes for spacing on a particular page
  */
-function page_purpose(string $text, string $extra = '', bool $html = false): string {
+function page_purpose(string $text, string $extra = '', bool $html = false, bool $visible = true): string {
+    $body = $html ? $text : htmlspecialchars($text);
+
+    // $visible = false: declared for extraction, but NOT shown.
+    //
+    // Some pages already carry a good visible line of their own — index.php's
+    // "Browse genes, genomes, and annotations across N organisms and M assemblies" is the
+    // site's tagline and shows live counts. Adding a second sentence beneath it says the
+    // same thing twice, which is the redundancy this whole help effort is trying to remove.
+    // The page still needs to DECLARE its purpose for the router, so the declaration stays
+    // and the rendering stops.
+    //
+    // `hidden` rather than a visually-hidden class: this is a duplicate of what the page
+    // already communicates visually, so announcing it to screen-reader users only would be
+    // an inconsistency, not an improvement. `hidden` keeps it out of the accessibility tree
+    // while leaving it in the DOM for scripts/extract_page_purposes.php.
+    if (!$visible) {
+        return '<span hidden data-page-purpose>' . $body . '</span>';
+    }
+
     $cls = trim('page-purpose text-muted small mb-0 ' . $extra);
     // $html is for a sentence carrying gloss() terms — MOOPmart's names two. Extraction
-    // reads textContent, so markup inside is harmless there; it is opt-in rather than the
-    // default so an ordinary sentence cannot inject markup by accident.
+    // strips tags, so markup inside is harmless; it is opt-in rather than the default so an
+    // ordinary sentence cannot inject markup by accident.
     return '<p class="' . htmlspecialchars($cls, ENT_QUOTES) . '" data-page-purpose>'
-         . ($html ? $text : htmlspecialchars($text)) . '</p>';
+         . $body . '</p>';
 }
