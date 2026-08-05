@@ -11,6 +11,17 @@ themselves complete stop being checked, and nothing here notices a regression �
 read as fixed in the PHP for weeks while `getComputedStyle` on the rendered page said otherwise.
 Verify by rendering the page, not by reading the source that was changed.
 
+⚠️ **Re-verified again 2026-08-05, and THREE MORE were wrong — all in the same direction this
+time: work that was finished and never ticked.** The whole §P "Open" list was checked; the
+assembly-page common name, the gene-page icon-button accessible names, and "`index.php` has zero
+help triggers" were all already done. **The §P open list overstated the remaining work by about
+half.** Note the asymmetry with 2026-08-04: that pass found items ticked while broken, this one
+found items broken-marked while fixed. Both directions cost real time, and neither is caught by
+anything except re-checking. **The cheapest new lever found this pass: `curl http://127.0.0.1/...`
+renders the true PUBLIC view** (loopback is outside `auto_login_ip_ranges`), so "what does an
+anonymous visitor actually see" is now a one-line check rather than a PHP harness — see
+[[reference_headless_browser_debugging]].
+
 This doc covers the
 **public/tool** pages. The parallel **admin-page** truth/UX pass (Manage Organisms, its modals,
 Manage Users, users.json relocation) is tracked separately — see the `project_admin_page_audit`
@@ -807,17 +818,32 @@ them so the next pass does not repeat them:
       `project_manage_organisms_overhaul` memories and `ADMIN_UI_FOLLOWUPS.md`; this is the
       naming/consistency slice of it.
 
-- [ ] **Assembly page never shows the common name** — the last page that doesn't. Organism, gene
-      set and gene pages all render it (the gene page as `Nematostella vectensis (Starlet Sea
-      Anemone)`); the assembly page shows the binomial once and nothing else. Measured: zero
-      visible occurrences of the common name. Small fix, same data already loaded.
-- [ ] **Gene page: 7 icon-only buttons with no accessible name** — `.annotation-info-btn` has no
-      `title` and no `aria-label`, so there is nothing on hover and nothing announced. It is the
-      highest-traffic page after search.
-- [ ] **`index.php` has zero help triggers** — confirmed again. It is the page users reach from
-      nowhere, and the one with no way to ask what anything means.
+- [x] **Assembly page never shows the common name** — **DONE (verified live 2026-08-05).** The
+      assembly page now renders it twice: the image `alt` and a ` (Starlet Sea Anemone)` suffix
+      beside the binomial. Was still marked open only because nobody re-checked.
+- [x] **Gene page: 7 icon-only buttons with no accessible name** — **DONE (verified 2026-08-05).**
+      `.annotation-info-btn` (`lib/parent_functions.php:314`) now emits BOTH `aria-label` and
+      `title`, built from `'About ' . $annotation_type . ' annotations'`, plus `aria-controls` /
+      `aria-expanded` for the collapse it drives. There is exactly one emit site, so all 7 buttons
+      are fixed by it.
+- [x] **`index.php` has zero help triggers** — **DONE (verified 2026-08-05).** `tools/pages/index.php`
+      now carries 3 `help_modal_trigger()` calls (organism quick-search, gene-ID search, and the
+      how-to modal), and all 3 render as `class="field-help"` buttons for **both** PUBLIC and
+      IP_IN_RANGE. Landed via `9c2f3d4` / `6c5d7ca` / `58541ad` after this line was written.
 - [x] **No `<h1>` on `retrieve_sequences`, `jbrowse2`, `help`** — FIXED 2026-08-04. The visible title was styled text,
       so the document has no heading for structure or assistive tech.
+- [ ] **BLAST emits absolute server filesystem paths into HTML sent to anonymous visitors.**
+      Found 2026-08-05. `tools/blast.php` passes each database's `path` to the client as an inline
+      JS map, so a PUBLIC visitor's page source contains
+      `\/var\/www\/html\/moop\/organisms\/Nematostella_vectensis\/GCF_932526225.1\/RS_101\/protein.aa.fa`
+      — 8 occurrences today, and it scales with the number of PUBLIC assemblies (4 per gene set).
+      **Not exploitable:** the POSTed `blast_db` must match a path from
+      `getBlastDatabases($selected_source_obj['path'])`, and `$selected_source_obj` must already be
+      in `$accessible_sources` — an allowlist identity check, so there is no traversal and no
+      access bypass. It is disclosure of the docroot layout only. Fix is to key the client map by
+      an opaque identifier (organism|assembly|gene_set|seq_type) and resolve it back to a path
+      server-side, so no filesystem path ever reaches the browser.
+
 - [ ] **LATENT — the assembly page omits the scope filter safely only by accident of the data.**
       `assembly-display.js` sets `noScopeFilter: true`, which is correct *today* because **no
       assembly in the site has more than one gene set**, so there is nothing to narrow. The day a

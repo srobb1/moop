@@ -73,12 +73,29 @@ about *reading* being insufficient, and still under-specified the test.
 - [ ] **Re-check the other producers for the same two classes**, not just for a plausible
       name: fetch at least TWO files from each producer and compare, and include one
       genuinely large file. Producers list is in the 2026-07-31 audit.
-- [ ] **`api/jbrowse2/tracks.php:160` calls `readfile()` with NO buffer handling at all** —
-      same exposure, on files that are large by nature. Already swept: `api/download_file.php`
-      does `if (ob_get_level()) ob_end_clean();` before its readfile and is **correct**, so
-      the pattern was known and `fasta_download_handler.php` simply never got it. tracks.php
-      is the one left. (It runs on the tracks server — see `reference_tracks_deploy_verify` —
-      so fixing it means redeploying there, not just committing here.)
+- [x] **`api/jbrowse2/tracks.php:160` `readfile()` with NO buffer handling** — **FIXED here
+      2026-08-05, but NOT deployed, and LOWER PRIORITY than this entry implied.** Replaced both
+      send paths with a chunked `moop_stream_file_range()` (1 MB chunks + `ob_end_clean()`).
+      A second hazard was found that this entry missed: the **206 range path** did
+      `echo fread($fp, $length)`, and an open-ended `Range: bytes=0-` sets `$end = filesize-1`,
+      so "partial content" could mean the whole file. The range path was no safer than the
+      full-file path.
+
+      ⚠️ **MEASURED AGAINST THE LIVE TRACKS SERVER, and the practical impact is much smaller
+      than "same exposure" suggested.** Driving the real JBrowse in headless Chrome over two
+      sessions (bigWig + `.gff.gz`): **24 requests, all 206, zero failures, median 256 KB,
+      largest 512 KB.** JBrowse uses fixed 256/512 KB blocks — 64–128× below the failure
+      threshold. The old code's real failures, both confirmed live on the 1.25 GB
+      `MOLNG-2707_S1-body-wall.bam`: a no-`Range` GET returns **500**, and a `Range` ≥ 64 MB
+      returns **206 headers then zero bytes** (silent truncation; 32 MB still OK). Neither is
+      reachable through JBrowse. It bites only a non-JBrowse client — a pasted track URL,
+      `curl`, IGV, or anything fetching a whole file.
+
+      **So: correct, worth deploying, but not urgent and not a launch blocker.** The lesson is
+      the mirror of this file's own theme — that pass under-tested a size-dependent fatal, and
+      this one over-claimed its blast radius by reasoning about the code instead of measuring
+      what the actual client asks for. Deploy = copy to the tracks box + php-fpm reload; verify
+      with a before/after `md5sum` of the same 1 KB range (must be identical).
 - [ ] **Consider whether `moop_download_filename()` should refuse an empty scope part**
       rather than silently dropping it. Dropping is what turned an unassigned variable into
       three identically-named files instead of an obvious error.
