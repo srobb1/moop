@@ -67,18 +67,20 @@ $meta = [
     // groups and multi_organism LOOK alike and ACT alike — same page shape, same search,
     // differing only in how the organism set is chosen. Two near-identical cards would be
     // the same duplication this whole effort removes, so they render as ONE.
-    'groups'   => ['title' => 'Several organisms at once', 'link' => null, 'linkable' => false,
+    'groups'   => ['title' => 'Group page', 'link' => null, 'linkable' => false,
                    'combine' => 'multi',
                    'reached_by' => 'From the home page — choose a curated group of organisms.'],
-    'multi_organism' => ['title' => 'Several organisms at once', 'link' => null, 'linkable' => false,
+    'multi_organism' => ['title' => 'Group page', 'link' => null, 'linkable' => false,
                    'combine' => 'multi',
                    'reached_by' => 'From the home page — or build your own selection of organisms.'],
     'organism' => ['title' => 'Organism page', 'link' => null, 'linkable' => false,
                    'reached_by' => 'From the home page — pick an organism.'],
     'assembly' => ['title' => 'Assembly page', 'link' => null, 'linkable' => false,
-                   'reached_by' => 'From an organism page — pick one of its assemblies.'],
+                   'reached_by' => ['From an organism page — pick one of its assemblies.',
+                                    'Or search for it by name from the home page.']],
     'gene_set' => ['title' => 'Gene set page', 'link' => null, 'linkable' => false,
-                   'reached_by' => 'From an assembly page — pick one of its gene sets.'],
+                   'reached_by' => ['From an assembly page — pick one of its gene sets.',
+                                    'Or search for it by name from the home page.']],
     'jbrowse2'           => ['title' => 'Genome Browser',     'link' => '/jbrowse2.php',              'linkable' => true],
 ];
 
@@ -111,7 +113,7 @@ foreach ($pages as $name => $path) {
         'title'    => $m['title'],
         'link'     => $m['link'],
         'linkable' => $m['linkable'],
-        'reached_by' => $m['reached_by'] ?? '',
+        'reached_by' => (array)($m['reached_by'] ?? []),
         'combine'    => $m['combine'] ?? '',
         'url'      => $path,
         'status'   => $status,
@@ -133,9 +135,10 @@ if ($write) {
         $k = $r['combine'] !== '' ? 'c:' . $r['combine'] : 'p:' . $r['page'];
         if (!isset($merged[$k])) {
             $merged[$k] = $r;
-            $merged[$k]['reached_by'] = $r['reached_by'] !== '' ? [$r['reached_by']] : [];
-        } elseif ($r['reached_by'] !== '') {
-            $merged[$k]['reached_by'][] = $r['reached_by'];
+        } else {
+            $merged[$k]['reached_by'] = array_values(array_unique(
+                array_merge($merged[$k]['reached_by'], $r['reached_by'])
+            ));
         }
     }
     $out = array_values($merged);

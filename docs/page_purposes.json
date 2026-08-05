@@ -1,5 +1,5 @@
 {
-    "generated": "2026-08-05T21:45:51+00:00",
+    "generated": "2026-08-05T21:47:45+00:00",
     "routes": [
         {
             "page": "index",
@@ -69,7 +69,7 @@
         },
         {
             "page": "groups",
-            "title": "Several organisms at once",
+            "title": "Group page",
             "link": null,
             "linkable": false,
             "reached_by": [
@@ -100,7 +100,8 @@
             "link": null,
             "linkable": false,
             "reached_by": [
-                "From an organism page \u2014 pick one of its assemblies."
+                "From an organism page \u2014 pick one of its assemblies.",
+                "Or search for it by name from the home page."
             ],
             "combine": "",
             "url": "/tools/assembly.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1",
@@ -113,7 +114,8 @@
             "link": null,
             "linkable": false,
             "reached_by": [
-                "From an assembly page \u2014 pick one of its gene sets."
+                "From an assembly page \u2014 pick one of its gene sets.",
+                "Or search for it by name from the home page."
             ],
             "combine": "",
             "url": "/tools/gene_set.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2",
