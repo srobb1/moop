@@ -93,7 +93,7 @@
         <h1><?= htmlspecialchars($gene_set_name) ?> <span class="badge bg-white text-gene-set ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Gene Set</span></h1>
         <?php /* Declared, not shown — the heading and badges above already say where you
                  are; this exists so the page declares its PURPOSE for the router. */ ?>
-        <?= page_purpose('Search genes within this gene set; you can filter your results by annotation source.', '', false, false) ?>
+        <?= page_purpose('Search genes within a single gene set, filtering the results by annotation source.', '', false, false) ?>
         <div class="feature-overview-body" style="padding:0;">
           <div class="d-flex flex-column flex-md-row align-items-stretch">
 

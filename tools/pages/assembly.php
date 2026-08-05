@@ -109,7 +109,7 @@
         <h1><?= htmlspecialchars($assembly_info['genome_name']) ?> <span class="badge bg-white text-assembly ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Assembly</span></h1>
         <?php /* Declared, not shown — the heading and badges above already say where you
                  are; this exists so the page declares its PURPOSE for the router. */ ?>
-        <?= page_purpose('Search genes within this assembly; you can filter which gene sets are searched and narrow your results.', '', false, false) ?>
+        <?= page_purpose('Search genes within a single assembly, choosing which of its gene sets to search.', '', false, false) ?>
         <div class="feature-overview-body">
           <dl class="feature-info-grid mb-0">
             <dt>Accession</dt>

@@ -262,6 +262,13 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
  * the machinery does: "Compare a sequence against one or more assemblies", not "runs BLAST
  * against selected databases".
  *
+ * ⚠️ WRITE IT TO READ IN A LIST, NOT ONLY ON THE PAGE. These sentences are collected onto a
+ * single "which page do I want?" router, where the reader is NOT standing on the page — so
+ * "Search genes within THIS assembly" has no referent and reads as a bug. Say "a single
+ * assembly", "one organism", "a curated group". The four browse pages were written the
+ * deictic way first and had to be redone; it is easy to miss because on the page itself the
+ * wrong version reads perfectly well. Avoid this / these / here / above / below.
+ *
  * @param string $text  the sentence
  * @param string $extra additional classes for spacing on a particular page
  */
