@@ -68,4 +68,10 @@ echo json_encode([
     'count'           => $res['row_count'],
     'rows'            => $built['rows'],
     'ann_col_headers' => $built['ann_col_headers'],
+    // IDs the user typed that match nothing in THIS organism. Reported so a partial result
+    // is visibly partial: pasting 50 ids of which 3 are stale used to produce a smaller
+    // export and say nothing. Per-organism by nature — an id absent here may well exist in
+    // the next organism, so the UI must intersect across organisms before calling one
+    // "not found" anywhere.
+    'unresolved_ids'  => $res['unresolved_ids'] ?? [],
 ]);

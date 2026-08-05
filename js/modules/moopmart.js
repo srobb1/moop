@@ -719,33 +719,53 @@
         const accRows = [];
         let totalRows = 0, totalGenes = 0, completed = 0, failed = 0, annHeaders = null;
 
+        // id -> how many organisms failed to resolve it. An id absent from one organism may
+        // exist in the next, so nothing is reported until the run finishes and the count
+        // equals the number of organisms that actually ANSWERED. Reporting per-organism
+        // misses would flag almost every id in a multi-organism search.
+        const unresolvedTally = new Map();
+
         const showStatus = (done) => {
             if (!result) return;
             // A partial run must never look complete: the totals below only cover the
             // organisms that answered, so say so rather than reporting an exact-looking
             // number that silently omits the ones that failed.
             const failNote = failed ? ` · ${failed} organism${failed !== 1 ? 's' : ''} failed` : '';
+
+            // Ids that matched nothing in ANY organism that answered. Shown only when the run
+            // is complete, because a miss in organism 1 of 40 means nothing on its own.
+            const answered = completed - failed;
+            const missing  = (done && answered > 0)
+                ? [...unresolvedTally.entries()].filter(([, n]) => n >= answered).map(([id]) => id)
+                : [];
+            const missNote = missing.length
+                ? ` · ${missing.length} ID${missing.length !== 1 ? 's' : ''} not found: `
+                  + missing.slice(0, 5).join(', ') + (missing.length > 5 ? ` +${missing.length - 5} more` : '')
+                : '';
             if (totalRows > 0) {
                 result.textContent =
                     `${totalGenes.toLocaleString()} gene${totalGenes !== 1 ? 's' : ''} → `
                     + `${totalRows.toLocaleString()} transcript row${totalRows !== 1 ? 's' : ''}`
                     + (done ? '' : ` · ${completed}/${total} organism${total !== 1 ? 's' : ''}…`)
-                    + failNote;
-                result.className = 'small ' + (failed ? 'text-warning' : 'text-success');
+                    + failNote + missNote;
+                result.className = 'small ' + ((failed || missNote) ? 'text-warning' : 'text-success');
             } else if (done && failed) {
                 result.textContent = `Preview failed for all ${failed} organism${failed !== 1 ? 's' : ''}.`;
                 result.className = 'small text-danger';
             } else {
-                result.textContent = done
+                result.textContent = (done
                     ? 'No features matched'
-                    : `Searching… ${completed}/${total} organism${total !== 1 ? 's' : ''}`;
-                result.className = 'small text-muted';
+                    : `Searching… ${completed}/${total} organism${total !== 1 ? 's' : ''}`) + missNote;
+                result.className = 'small ' + (missNote ? 'text-warning' : 'text-muted');
             }
         };
 
         const onData = (data) => {
             totalGenes += data.gene_count ?? 0;
             totalRows  += data.count ?? 0;
+            for (const id of (data.unresolved_ids || [])) {
+                unresolvedTally.set(id, (unresolvedTally.get(id) || 0) + 1);
+            }
             if (annHeaders === null) annHeaders = data.ann_col_headers ?? [];
 
             const before = accRows.length;

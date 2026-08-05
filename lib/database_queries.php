@@ -549,6 +549,103 @@ function runFtsSearch($dbFile, $sql, $params) {
 }
 
 /**
+ * The version-tolerance ladder for matching a user-supplied feature ID.
+ *
+ * Returns the match attempts IN ORDER, each as ['op' => '=' | 'GLOB', 'val' => …]. Callers
+ * run them until one produces rows; exact-as-typed is always first, so an ID that genuinely
+ * exists as typed is never shadowed by a versioned near-match.
+ *
+ * Extracted 2026-08-05 because a THIRD surface needed it. MOOP displays versioned accessions
+ * (NV2t021704001.1) while users paste IDs from papers, spreadsheets and older releases where
+ * the version is absent or stale. Each surface that got this wrong failed differently and
+ * silently: the index box said "no results", and MOOPmart's By-Feature-IDs resolved nothing
+ * and exported an empty file with no explanation.
+ *
+ * ⚠️ GLOB, never LIKE. Both express "starts with", but SQLite's LIKE is case-insensitive by
+ * default and therefore cannot use the BINARY-collated feature_uniquename index — it
+ * degrades to a full scan, which matters enormously on an endpoint that fans out across
+ * every accessible database. GLOB is case-sensitive and keeps the index seek.
+ *
+ * @param string $q The ID as the user typed it.
+ * @return array<int, array{op:string, val:string}>
+ */
+function moop_id_match_ladder($q) {
+    $q = trim((string)$q);
+    if ($q === '') return [];
+
+    $rungs = [
+        ['op' => '=',    'val' => $q],         // exact, as typed
+        ['op' => 'GLOB', 'val' => $q . '.*'],  // typed unversioned, stored versioned
+    ];
+
+    // Typed versioned: also try the bare stem, then the stem at ANY version.
+    if (preg_match('/^(.+)\.\d+$/', $q, $m)) {
+        $rungs[] = ['op' => '=',    'val' => $m[1]];
+        $rungs[] = ['op' => 'GLOB', 'val' => $m[1] . '.*'];
+    }
+    return $rungs;
+}
+
+/**
+ * Resolve user-typed feature IDs to the uniquenames that actually exist in ONE database.
+ *
+ * Version-tolerant via moop_id_match_ladder(). Returns [input_id => [uniquename, …]] for
+ * everything that resolved, and fills $unresolved with the inputs that matched nothing.
+ *
+ * ⚠️ AMBIGUITY IS REPORTED, NOT RESOLVED. If "X" matches both X.1 and X.2 the caller gets
+ * BOTH (user decision, 2026-08-05: "list both, export both, report it"). Silently picking
+ * one would mean an export whose contents depend on a tie-break nobody can see.
+ *
+ * ⚠️ The unresolved list is the point, not a nicety. Before this, an unmatched ID was simply
+ * absent from the result, so pasting 50 IDs of which 3 were stale produced a smaller export
+ * and said nothing — the "a miss deletes, silently" shape this codebase keeps hitting.
+ */
+function moop_resolve_input_ids($input_ids, $dbFile, array $gene_set_ids = [], &$unresolved = null) {
+    $unresolved = [];
+    $resolved   = [];
+    if (empty($input_ids) || !file_exists($dbFile)) {
+        $unresolved = array_values((array)$input_ids);
+        return $resolved;
+    }
+
+    $gs_clause = '';
+    $gs_params = [];
+    if (!empty($gene_set_ids)) {
+        $gs_clause = ' AND f.gene_set_id IN (' . implode(',', array_fill(0, count($gene_set_ids), '?')) . ')';
+        $gs_params = array_values($gene_set_ids);
+    }
+
+    foreach (array_unique((array)$input_ids) as $raw) {
+        $hits = [];
+        foreach (moop_id_match_ladder($raw) as $rung) {
+            $sql  = "SELECT f.feature_uniquename FROM feature f
+                     WHERE f.feature_uniquename {$rung['op']} ?" . $gs_clause;
+            $rows = fetchData($sql, $dbFile, array_merge([$rung['val']], $gs_params));
+            if (empty($rows)) continue;
+
+            $names = array_map(static fn($r) => (string)$r['feature_uniquename'], $rows);
+
+            // A GLOB rung asks for "the same ID at any version", but `stem.*` also matches
+            // the DERIVED children — NV2t021704001.* catches .1, .1:cds and .1:pep alike.
+            // Keep only true version forms (stem + .digits) when any exist, so an ambiguous
+            // stem reports its VERSIONS (.1 and .2), which is what "list both" meant, rather
+            // than one version's whole feature family.
+            if ($rung['op'] === 'GLOB') {
+                $stem     = substr($rung['val'], 0, -2);            // strip the trailing '.*'
+                $versions = preg_grep('/^' . preg_quote($stem, '/') . '\.\d+$/', $names);
+                if (!empty($versions)) $names = array_values($versions);
+            }
+
+            foreach ($names as $n) $hits[] = $n;
+            break; // first rung that matches wins; lower rungs are fallbacks only
+        }
+        if (empty($hits)) $unresolved[] = (string)$raw;
+        else              $resolved[(string)$raw] = array_values(array_unique($hits));
+    }
+    return $resolved;
+}
+
+/**
  * The feature levels that actually carry annotations in ONE database.
  *
  * Returns e.g. ['mRNA'], or ['gene'] for Bradyrhizobium, or ['transcript'] for the two

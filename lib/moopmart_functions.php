@@ -19,6 +19,13 @@
 // is idempotent.
 require_once __DIR__ . '/parent_functions.php';
 
+// Also required outright: moopmartResolveInputIds() calls moop_resolve_input_ids() for
+// version-tolerant ID matching. Same reasoning as the line above — an undefined function is
+// a fatal Error, and this file is included from endpoints that do not otherwise pull in
+// database_queries.php. (That file require_once's parent_functions.php itself; the order
+// here is harmless because neither has include-time side effects.)
+require_once __DIR__ . '/database_queries.php';
+
 /** Max rows a preview endpoint materialises and returns. Counts stay exact regardless. */
 const MOOPMART_PREVIEW_ROW_CAP = 100;
 
@@ -30,27 +37,47 @@ const MOOPMART_PREVIEW_ROW_CAP = 100;
  * Resolve raw input IDs (gene, mRNA, protein, CDS, etc.) to gene-level uniquenames
  * with a provenance string explaining why each gene was included.
  *
- * Uses getAncestors() to walk the full hierarchy regardless of depth, so
+ * Uses the shared walker (moop_hierarchy_walk) to climb regardless of depth, so
  * protein→CDS→mRNA→gene (3 levels) works just as well as mRNA→gene (1 level).
  * Multiple input IDs that resolve to the same gene accumulate their reasons.
  *
- * Requires parent_functions.php (included transitively via blast_functions.php).
+ * IDs are matched version-tolerantly (moop_resolve_input_ids): MOOP displays
+ * NV2t021704001.1 but users paste NV2t021704001, and an exact-only match resolved nothing
+ * and exported an empty file with no explanation. Reported 2026-08-05 from the UI.
  *
  * @param string[] $input_ids    Raw IDs from user input
  * @param string   $db_path      Path to organism.sqlite
  * @param int[]    $gene_set_ids Accessible gene_set_ids for this organism
+ * @param string[] $unresolved   OUT: inputs that matched nothing in this database. Callers
+ *                               MUST surface these -- a silently smaller export is the
+ *                               failure this parameter exists to prevent.
  * @return array   [gene_uniquename => reason_string]
  */
-function moopmartResolveInputIds(array $input_ids, string $db_path, array $gene_set_ids): array
+function moopmartResolveInputIds(array $input_ids, string $db_path, array $gene_set_ids, &$unresolved = null): array
 {
     if (empty($input_ids) || empty($gene_set_ids)) return [];
 
-    // Delegates to the shared walker (moop_hierarchy_walk). Was its own recursive CTE;
-    // the cycle guards now live in ONE place. Behaviour is unchanged, including the
-    // deliberate part: a self-parented feature terminates at the guard and never satisfies
-    // "parent_feature_id IS NULL", so it resolves to nothing. That is still right -- the
-    // cure is reloading the data, not teaching this to accept a broken hierarchy as a root.
-    $rows = moop_hierarchy_walk($input_ids, $db_path, 'up', $gene_set_ids);
+    // Version-tolerant ID resolution FIRST, then the climb.
+    //
+    // Ambiguity is kept, not resolved: if a stem matches .1 and .2 both are seeded, both
+    // export, and the reason string says so (user decision, 2026-08-05 -- "list both, export
+    // both, report it"). Silently picking one would make an export depend on a tie-break
+    // nobody can see.
+    $resolved = moop_resolve_input_ids($input_ids, $db_path, $gene_set_ids, $unresolved);
+    if (empty($resolved)) return [];
+
+    // uniquename -> the id the USER typed, for the reason label.
+    $typed_as = [];
+    $seeds    = [];
+    foreach ($resolved as $typed => $names) {
+        foreach ($names as $n) { $seeds[] = $n; $typed_as[$n] = (string)$typed; }
+    }
+
+    // The shared walker carries the cycle guards. Note what it does NOT do, deliberately: a
+    // self-parented feature terminates at the guard and never satisfies "no parent" below, so
+    // it resolves to nothing. The cure is reloading the data, not teaching this to accept a
+    // broken hierarchy as a root.
+    $rows = moop_hierarchy_walk($seeds, $db_path, 'up', $gene_set_ids);
     if (empty($rows)) return [];
 
     // The seed's OWN type, for the reason label. Depth 0 is the seed itself.
@@ -67,9 +94,14 @@ function moopmartResolveInputIds(array $input_ids, string $db_path, array $gene_
 
         $input = (string)$r['seed_name'];
         $gene  = (string)$r['feature_uniquename'];
-        $reason = ($input === $gene)
+        $typed = $typed_as[$input] ?? $input;
+
+        // Say what MATCHED when it differs from what was typed, so a row that came back
+        // under a version the user did not enter is explained rather than surprising.
+        $shown = ($typed === $input) ? $input : "{$input} (matched {$typed})";
+        $reason = ($input === $gene && $typed === $input)
             ? "Gene ID: {$input}"
-            : moopmartFeatureTypeLabel($seed_type[$input] ?? '') . ": {$input}";
+            : moopmartFeatureTypeLabel($seed_type[$input] ?? '') . ": {$shown}";
         $by_gene[$gene][] = $reason;
     }
 
@@ -1030,10 +1062,14 @@ function moopmartCollectOrganismRows(string $org, array $org_sources, array $fil
 
     // Resolve input IDs for this organism and build per-gene reason map
     $id_reasons  = [];
+    $unresolved  = [];
     $org_filters = $filters;
     if (!empty($raw_input_ids)) {
-        $id_reasons = moopmartResolveInputIds($raw_input_ids, $db, $gene_set_ids);
-        if (empty($id_reasons)) return $empty;
+        $id_reasons = moopmartResolveInputIds($raw_input_ids, $db, $gene_set_ids, $unresolved);
+        // Report the misses even when NOTHING resolved -- an all-miss preview used to return
+        // a bare empty result, which reads as "this organism has none of your genes" when the
+        // truth may be "none of those IDs exist here". Those are different answers.
+        if (empty($id_reasons)) return $empty + ['unresolved_ids' => $unresolved];
         $org_filters['feature_ids'] = array_keys($id_reasons);
     }
 
@@ -1086,7 +1122,8 @@ function moopmartCollectOrganismRows(string $org, array $org_sources, array $fil
         $mrna_rows = array_slice($mrna_rows, 0, $row_cap);
     }
 
-    return ['gene_count' => count($gene_rows), 'row_count' => $row_count, 'rows' => $mrna_rows];
+    return ['gene_count' => count($gene_rows), 'row_count' => $row_count, 'rows' => $mrna_rows,
+            'unresolved_ids' => $unresolved];
 }
 
 /**
