@@ -430,6 +430,36 @@ exit status of `tail`, so a suite that aborts mid-run reads as a pass. The JS su
 an `uncaughtException` handler that turns a mid-run throw into a reported failure and
 `exit 1` — but the piping trap is yours to avoid.
 
+### 12b. Verifying a VISUAL change — drive the page, and disable the cache
+
+A CSS/markup change cannot be verified from a source diff. Moving `style="…"` into a class
+changes the HTML by design, so the diff is guaranteed to be non-empty and tells you nothing
+about whether anything *looks* different. **Capture `getComputedStyle()` for the affected
+elements before and after; identical output is the proof.** That is what caught a live
+regression on 2026-08-05 — a new class named `.btn-tool-teal` collided with an existing
+definition in `css/display.css` and silently repainted BLAST's sample buttons.
+
+⚠️ **`await page.setCacheEnabled(false)` — puppeteer caches, and a cached page compares
+equal to itself.** Without it the "after" measurement came back byte-identical to the
+"before" and the change read as *not applied*, while the file on disk and the served HTML
+both plainly had it. A style check run against a cached copy will confirm any change you
+like, including one that never happened. `waitUntil: 'networkidle2'` does NOT save you.
+The same applies to a real browser: hard-reload (Ctrl/Cmd+Shift+R), never a plain reload.
+
+⚠️ **Do not put the class name in the compared string.** An early version of that check
+printed `TAG.classList "text" bg=… fg=…`, so 17 rows "differed" purely because the class
+list was the thing that changed, while every computed value was identical. Compare values;
+identify elements some other way.
+
+⚠️ **A grep proves what a string does, not what a pattern means.** Three wrong conclusions
+in one session, all from grepping: (a) the `btn-tool-*` family looked dead because the class
+names come from `config/tools_config.php` via a `btn_class` key rendered in
+`lib/tool_section.php` — no template contains the literal; (b) "eyebrow inline: 0" was false
+because one copy was written without the space after the semicolon; (c) two numbered circles
+looked like a one-off in `index.php` while the same component is used on six tool pages.
+Check the config that feeds the renderer, allow for whitespace and attribute order, and ask
+whether the pattern is site-wide before calling it unique.
+
 ---
 
 ## Security Notes (Recent Sprint — March 2026)
