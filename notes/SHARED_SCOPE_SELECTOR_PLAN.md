@@ -1,5 +1,58 @@
 # Extract ONE shared organism/gene-set scope selector
 
+⚠️⚠️ **RE-VERIFIED AGAINST THE LIVE PAGES 2026-08-05, AND THE "WHICH PAGE IS AHEAD"
+SECTIONS BELOW ARE STALE. Do not act on them without re-checking.**
+
+They were true on 2026-07-23 and are not now. Measured today by rendering both pages:
+
+| feature | search.php | MOOPmart |
+|---|---|---|
+| one-row-per-organism collapse | ✅ | ✅ |
+| simple/detail toggle | ✅ | ✅ |
+| filter force-reveal | ✅ | ✅ |
+| gene-set count chip | ✅ | ✅ |
+| group colour chips | ✅ | ✅ |
+| **Selected panel + × deselect** | ✅ | ✅ **as of `0c758f4`** |
+| **`mark.scope-hl` match highlighting** | ✅ | ❌ **the only remaining gap** |
+
+So the doc's claim that "MOOPmart now has both behaviours and search.php has neither" and
+that the extraction "should take MOOPmart's versions as the reference" is **backwards
+today** — search.php caught up on the collapse and the force-reveal, and was the only page
+with a Selected panel. The extraction took **search.php** as the reference.
+
+**The generalisable lesson, and it is the same one PAGE_BY_PAGE_AUDIT_PLAN.md keeps
+learning: a doc that records which of two copies is ahead goes stale the moment either is
+touched, and nothing here notices.** This is the third stale claim found in a notes file in
+a single session. Prefer recording WHAT DIFFERS AND HOW TO MEASURE IT over recording which
+side currently wins.
+
+## Progress
+
+- [x] **Selected panel — DONE 2026-08-05 (`0c758f4`).** `js/modules/scope-selected-panel.js`
+      is the single implementation, used by both pages. Reads everything from the checkboxes
+      (never sibling DOM). ⚠️ The trap worth remembering: both pages tick checkboxes
+      PROGRAMMATICALLY (row clicks, select-all, the panel's own ×), and assigning `.checked`
+      fires no `change` event — so the module exposes `render()` and each page calls it from
+      its existing scope-change function. A module relying on its listener alone silently
+      fails on the most common interaction.
+      Verified by rendering search.php before and after: the HTML diff is EXACTLY the one new
+      `<script>` tag.
+- [ ] **`mark.scope-hl` highlighting → MOOPmart.** The last behaviour search.php has and
+      MOOPmart does not. It matters because in simple view the assembly/gene-set text is
+      hidden; both pages force-reveal a matched row, but only search.php shows WHICH part
+      matched, so on MOOPmart a row just appears with no visible reason.
+- [ ] **Class + markup unification.** The panel is shared; everything around it is not, so
+      the drift can continue. Eight paired names for the same things
+      (`.mm-scope-row`/`.scope-gs-full-row`, `.mm-gs-cb`/`.scope-gs-cb`, …), and the row
+      markup is duplicated INLINE — 65 lines in moopmart.php, 68 in search.php, neither an
+      include. Unify the names, move the rows into one partial (the pattern
+      `includes/source-list.php` already proves), and the shared JS needs no
+      `checkbox:`/`row:` parameters at all. ~59 `mm-*` + ~43 `scope-*` occurrences; mechanical,
+      with a rendered-HTML diff on both pages as the check — that diff is what proved the
+      panel extraction safe.
+
+---
+
 Status: **recommended, not built.** Raised by the user 2026-07-23: "should we break out
 the code and use it in both places?" Yes — and the evidence is that a fix just had to be
 made twice and one copy was missed.
