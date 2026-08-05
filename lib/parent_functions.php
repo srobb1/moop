@@ -37,6 +37,108 @@ if (!defined('MOOP_HIERARCHY_MAX_DEPTH')) {
 }
 
 /**
+ * THE hierarchy walker. One batched, cycle-guarded traversal that every caller uses.
+ *
+ * Written 2026-08-05 to collapse FOUR near-identical recursive CTEs that had grown up
+ * separately — the gene page (`getAncestors`), MOOPmart (`moopmartResolveInputIds`),
+ * sequence retrieval (`expandFeaturesToAllSequenceTypes`) and search
+ * (`moop_resolve_hits_to_level`). They differed only in DIRECTION and in WHERE THE CLIMB
+ * STOPS, but each carried its own copy of the cycle guard, and the guards were added at
+ * different times after separate hangs. That is the drift CLAUDE.md §9b is about: the same
+ * logic in four places, discovering the same bug four times.
+ *
+ * This returns the RAW traversal — every visited node, tagged with the seed it came from and
+ * its depth. Callers post-process into whatever shape they need; the graph walk itself is
+ * not their business.
+ *
+ * ⚠️ BOTH cycle guards are mandatory and neither is redundant:
+ *   - `f.feature_id <> c.feature_id` stops a SELF-PARENT. Schmidtea_lugubris carried 14,313
+ *     of these before its 2026-08-05 reload, and most databases are still unreloaded.
+ *   - `depth < MOOP_HIERARCHY_MAX_DEPTH` stops a MULTI-ROW cycle, which the first guard
+ *     cannot see.
+ * SQLite 3.34.1 here has no `CYCLE` clause, so this is done by hand. Without them the query
+ * does not error — it pins a php-fpm worker until the request times out.
+ *
+ * @param string[] $seeds        feature_uniquename values to start from
+ * @param string   $dbFile       path to organism.sqlite
+ * @param string   $direction    'up' (ancestors, default) or 'down' (descendants)
+ * @param int[]    $gene_set_ids optional access-control scoping; empty = no filter
+ * @return array rows of [seed_name, feature_id, feature_uniquename, feature_name,
+ *               feature_description, feature_type, parent_feature_id, depth]
+ *               INCLUDING the seed itself at depth 0.
+ */
+function moop_hierarchy_walk(array $seeds, $dbFile, $direction = 'up', array $gene_set_ids = []) {
+    $seeds = array_values(array_unique(array_filter($seeds, static fn($s) => $s !== '' && $s !== null)));
+    if (empty($seeds) || !file_exists($dbFile)) return [];
+
+    $ph_seed = implode(',', array_fill(0, count($seeds), '?'));
+    $params  = $seeds;
+
+    $gs_seed = $gs_step = '';
+    if (!empty($gene_set_ids)) {
+        $ph_gs   = implode(',', array_fill(0, count($gene_set_ids), '?'));
+        $gs_seed = "AND f.gene_set_id IN ($ph_gs)";
+        $gs_step = "AND f.gene_set_id IN ($ph_gs)";
+    }
+
+    // The ONLY difference between the two directions is which way the JOIN points.
+    $step_join = ($direction === 'down')
+        ? 'f.parent_feature_id = w.feature_id'   // descend: my parent is the current node
+        : 'f.feature_id = w.parent_feature_id';  // ascend:  the current node's parent is me
+
+    $sql = "WITH RECURSIVE walk AS (
+                SELECT f.feature_uniquename AS seed_name, f.feature_id, f.feature_uniquename,
+                       f.feature_name, f.feature_description, f.feature_type,
+                       f.parent_feature_id, 0 AS depth
+                FROM   feature f
+                WHERE  f.feature_uniquename IN ($ph_seed) $gs_seed
+                UNION ALL
+                SELECT w.seed_name, f.feature_id, f.feature_uniquename,
+                       f.feature_name, f.feature_description, f.feature_type,
+                       f.parent_feature_id, w.depth + 1
+                FROM   feature f
+                JOIN   walk w ON $step_join
+                WHERE  w.depth < " . MOOP_HIERARCHY_MAX_DEPTH . "
+                  AND  f.feature_id <> w.feature_id
+                  $gs_step
+            )
+            SELECT seed_name, feature_id, feature_uniquename, feature_name,
+                   feature_description, feature_type, parent_feature_id, depth
+            FROM   walk";
+
+    if (!empty($gene_set_ids)) {
+        array_push($params, ...$gene_set_ids);   // seed clause
+        array_push($params, ...$gene_set_ids);   // step clause
+    }
+    return fetchData($sql, $dbFile, $params);
+}
+
+/**
+ * Walk UP and return, per seed, the nearest ancestor whose feature_type is in $types.
+ * The seed itself counts when it is already of an accepted type (depth 0).
+ *
+ * This is the "stop condition" search needs: lift a CDS or protein hit to the level that
+ * carries annotations. Returns [seed_uniquename => target_uniquename]; a seed whose climb
+ * finds no accepted type is ABSENT from the result, never mapped to something wrong —
+ * callers must treat "missing" as "leave it alone", not as "drop it".
+ */
+function moop_hierarchy_nearest_of_type(array $seeds, $dbFile, array $types, array $gene_set_ids = []) {
+    if (empty($types)) return [];
+    $want = array_flip(array_map('strtolower', $types));
+
+    $best = [];
+    foreach (moop_hierarchy_walk($seeds, $dbFile, 'up', $gene_set_ids) as $row) {
+        if (!isset($want[strtolower((string)$row['feature_type'])])) continue;
+        $seed = (string)$row['seed_name'];
+        $d    = (int)$row['depth'];
+        if (!isset($best[$seed]) || $d < $best[$seed]['d']) {
+            $best[$seed] = ['d' => $d, 'name' => (string)$row['feature_uniquename']];
+        }
+    }
+    return array_map(static fn($b) => $b['name'], $best);
+}
+
+/**
  * Get hierarchy of features (ancestors)
  * Traverses up the feature hierarchy from a given feature to its parents/grandparents
  * Optionally filters by genome_ids for permission-based access
@@ -56,40 +158,26 @@ if (!defined('MOOP_HIERARCHY_MAX_DEPTH')) {
  * @return array [self, parent, grandparent, ...] — empty if feature not found
  */
 function getAncestors($feature_uniquename, $dbFile, $gene_set_ids = []) {
-    $params = [$feature_uniquename];
+    // Delegates to the shared walker (moop_hierarchy_walk). Was its own recursive CTE;
+    // the cycle guards now live in one place instead of four. Column set and order are
+    // unchanged -- callers still get [self, parent, grandparent, ...] with the same six
+    // fields -- so this is a pure extraction.
+    $rows = moop_hierarchy_walk([$feature_uniquename], $dbFile, 'up', $gene_set_ids);
 
-    $gs_clause = '';
-    if (!empty($gene_set_ids)) {
-        $ph        = implode(',', array_fill(0, count($gene_set_ids), '?'));
-        $gs_clause = "AND f.gene_set_id IN ($ph)";
-        array_push($params, ...$gene_set_ids);
+    usort($rows, static fn($a, $b) => (int)$a['depth'] <=> (int)$b['depth']);
+
+    $out = [];
+    foreach ($rows as $r) {
+        $out[] = [
+            'feature_id'          => $r['feature_id'],
+            'feature_uniquename'  => $r['feature_uniquename'],
+            'feature_name'        => $r['feature_name'],
+            'feature_description' => $r['feature_description'],
+            'feature_type'        => $r['feature_type'],
+            'parent_feature_id'   => $r['parent_feature_id'],
+        ];
     }
-
-    // Cycle-guarded: never step onto the row we are already on (a self-parent,
-    // which is what exists in the data today), and never climb deeper than a real
-    // hierarchy goes (which also catches multi-row cycles). See
-    // MOOP_HIERARCHY_MAX_DEPTH above. 'depth' is bookkeeping and is dropped by the
-    // outer SELECT, so callers see the same six columns as before.
-    $query = "WITH RECURSIVE ancestors AS (
-        SELECT f.feature_id, f.feature_uniquename, f.feature_name,
-               f.feature_description, f.feature_type, f.parent_feature_id,
-               0 AS depth
-        FROM   feature f
-        WHERE  f.feature_uniquename = ? $gs_clause
-        UNION ALL
-        SELECT f.feature_id, f.feature_uniquename, f.feature_name,
-               f.feature_description, f.feature_type, f.parent_feature_id,
-               a.depth + 1
-        FROM   feature f
-        JOIN   ancestors a ON f.feature_id = a.parent_feature_id
-        WHERE  a.depth < " . MOOP_HIERARCHY_MAX_DEPTH . "
-          AND  f.feature_id <> a.feature_id
-    )
-    SELECT feature_id, feature_uniquename, feature_name,
-           feature_description, feature_type, parent_feature_id
-    FROM   ancestors";
-
-    return fetchData($query, $dbFile, $params);
+    return $out;
 }
 
 /**

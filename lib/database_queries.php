@@ -1176,7 +1176,7 @@ require_once __DIR__ . '/parent_functions.php';
 function moop_resolve_hits_to_level(array $rows, $dbFile, $organism_name = '') {
     if (count($rows) < 2) return $rows;
 
-    $levels = moop_annotation_levels($dbFile, $organism_name);
+    $levels   = moop_annotation_levels($dbFile, $organism_name);
     $at_level = array_flip(array_map('strtolower', $levels));
 
     // Which hits need lifting? Anything not already at the target level.
@@ -1187,46 +1187,15 @@ function moop_resolve_hits_to_level(array $rows, $dbFile, $organism_name = '') {
     }
     if (empty($need)) return $rows;
 
-    // ONE batched climb for every hit at once -- the same shape as
-    // moopmartResolveInputIds() and getAncestors(), including their cycle guard:
-    // f.feature_id <> c.feature_id stops a self-parent, and the depth cap stops a
-    // multi-row cycle. SQLite 3.34.1 here has no CYCLE clause, so both are required.
-    // The only difference from MOOPmart is where the climb STOPS: MOOPmart wants the
-    // root (a gene), this wants the annotation-bearing level, so that ID search agrees
-    // with the annotation and name paths rather than with a fourth answer.
-    $ids    = array_keys($need);
-    $ph_ids = implode(',', array_fill(0, count($ids), '?'));
-    $ph_lv  = implode(',', array_fill(0, count($levels), '?'));
+    // The shared walker does the climb and the cycle guarding; this only decides the STOP
+    // condition (nearest ancestor of an accepted type) and the display shape.
+    $lift = moop_hierarchy_nearest_of_type(array_keys($need), $dbFile, $levels);
+    if (empty($lift)) return $rows;
 
-    $sql = "WITH RECURSIVE chain AS (
-                SELECT f.feature_uniquename AS input_name, f.feature_id,
-                       f.feature_uniquename AS node_name, f.feature_type,
-                       f.parent_feature_id, 0 AS depth
-                FROM   feature f
-                WHERE  f.feature_uniquename IN ($ph_ids)
-                UNION ALL
-                SELECT c.input_name, f.feature_id,
-                       f.feature_uniquename, f.feature_type,
-                       f.parent_feature_id, c.depth + 1
-                FROM   feature f
-                JOIN   chain c ON f.feature_id = c.parent_feature_id
-                WHERE  c.depth < " . MOOP_HIERARCHY_MAX_DEPTH . "
-                  AND  f.feature_id <> c.feature_id
-            )
-            SELECT input_name, node_name, MIN(depth) AS depth
-            FROM   chain
-            WHERE  LOWER(feature_type) IN ($ph_lv)
-            GROUP  BY input_name";
-
-    $lift = [];
-    foreach (fetchData($sql, $dbFile, array_merge($ids, array_map('strtolower', $levels))) as $row) {
-        $lift[(string)$row['input_name']] = (string)$row['node_name'];
-    }
-
-    // Fetch the rows we lifted TO that are not already in the result set.
-    $missing = [];
-    $have    = [];
+    // Fetch full display rows for lift targets not already present in the result set.
+    $have = [];
     foreach ($rows as $r) $have[(string)($r['feature_uniquename'] ?? '')] = true;
+    $missing = [];
     foreach ($lift as $target) if (!isset($have[$target])) $missing[$target] = true;
 
     $extra = [];
@@ -1254,12 +1223,13 @@ function moop_resolve_hits_to_level(array $rows, $dbFile, $organism_name = '') {
     foreach ($rows as $r) {
         $matched = (string)($r['feature_uniquename'] ?? '');
         $row     = $r;
-        if (isset($lift[$matched])) {
+        if (isset($lift[$matched]) && $lift[$matched] !== $matched) {
             $t = $lift[$matched];
-            if ($t !== $matched) {
-                if (isset($extra[$t]))        $row = $extra[$t];
-                else {
-                    foreach ($rows as $cand) { if (($cand['feature_uniquename'] ?? '') === $t) { $row = $cand; break; } }
+            if (isset($extra[$t])) {
+                $row = $extra[$t];
+            } else {
+                foreach ($rows as $cand) {
+                    if (($cand['feature_uniquename'] ?? '') === $t) { $row = $cand; break; }
                 }
             }
         }
