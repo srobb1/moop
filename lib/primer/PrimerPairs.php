@@ -42,24 +42,61 @@ class PrimerPairs
     const MAX_PRODUCT_DEFAULT = 10000;
 
     /**
-     * What standard PCR is expected to amplify: a product under AMPLIFIABLE_MAX bp
-     * whose worse primer carries at most AMPLIFIABLE_MAX_MISMATCH mismatches.
+     * Largest product standard PCR realistically makes, in bp.
      *
-     * Both are distinct from MAX_PRODUCT_DEFAULT, which governs what is REPORTED.
-     * These govern what COUNTS: a real 8 kb off-target, or one with 4 mismatches,
-     * is still listed because it exists, but it will not amplify under normal
-     * conditions and so must not turn an otherwise clean pair ambiguous.
+     * Distinct from MAX_PRODUCT_DEFAULT, which governs what is REPORTED. This
+     * governs what COUNTS: a real 8 kb off-target is still listed because it
+     * exists, but it will not amplify under normal conditions and so must not turn
+     * an otherwise clear pair ambiguous.
      */
     const AMPLIFIABLE_MAX = 2000;
-    const AMPLIFIABLE_MAX_MISMATCH = 2;
+
+    /**
+     * Ignore a site outright at this many total mismatches or more.
+     *
+     * NCBI Primer-BLAST's default. Beyond this the site is not a plausible primer
+     * binding event at all.
+     */
+    const IGNORE_AT_TOTAL_MISMATCH = 6;
+
+    /**
+     * Mismatches within the 3'-end window that stop a site priming.
+     *
+     * Primer-BLAST dismisses an unintended target when a primer carries 2 or more
+     * mismatches in its last 5 bases, because the polymerase extends from the 3'
+     * end: a mismatch there all but prevents extension, while the same mismatch
+     * near the 5' end is tolerated. Position, not count, is the dominant factor —
+     * which is why a total-mismatch threshold alone was the wrong test.
+     */
+    const THREE_PRIME_BLOCKING = 2;
 
     /**
      * Would standard PCR make this product?
+     *
+     * Three conditions, in the order they matter:
+     *   1. short enough to amplify at all;
+     *   2. neither primer so mismatched that the site is implausible;
+     *   3. neither primer blocked at its 3' end.
+     *
+     * Condition 3 is the one a mismatch COUNT cannot express, and it is the one
+     * that decides most real cases.
      */
     public static function isAmplifiable(array $product)
     {
-        return $product['size'] <= self::AMPLIFIABLE_MAX
-            && $product['max_mismatch'] <= self::AMPLIFIABLE_MAX_MISMATCH;
+        if ($product['size'] > self::AMPLIFIABLE_MAX) {
+            return false;
+        }
+
+        foreach ($product['hits'] as $hit) {
+            if ($hit['mismatch'] >= self::IGNORE_AT_TOTAL_MISMATCH) {
+                return false;
+            }
+            if (($hit['three_prime_mismatch'] ?? 0) >= self::THREE_PRIME_BLOCKING) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

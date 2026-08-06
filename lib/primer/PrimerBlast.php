@@ -30,6 +30,14 @@ class PrimerBlast
     const WORD_SIZE = 7;
 
     /**
+     * The 3'-end window that decides whether a site can prime, in bases.
+     *
+     * 5 follows NCBI Primer-BLAST, whose default dismisses an unintended target
+     * when a primer carries 2 or more mismatches within its last 5 bases.
+     */
+    const THREE_PRIME_WINDOW = 5;
+
+    /**
      * Hits shorter than this fraction of the primer are not priming events under
      * any interpretation -- this is the generous hard floor, not a judgement call.
      * 4,087 raw hits for two 20-mers is unusable; something must go.
@@ -107,7 +115,11 @@ class PrimerBlast
              . ' -dust no'
              . ' -db ' . escapeshellarg($db)
              . ' -query ' . escapeshellarg($query_file)
-             . ' -outfmt ' . escapeshellarg('6 qseqid sseqid length mismatch gapopen qstart qend sstart send')
+             // btop carries WHERE the mismatches are. Position dominates count for
+             // priming -- a mismatch in the last few bases at the 3' end all but
+             // stops extension, while the same mismatch at the 5' end is tolerated --
+             // and plain outfmt 6 gives only a total, which cannot express that.
+             . ' -outfmt ' . escapeshellarg('6 qseqid sseqid length mismatch gapopen qstart qend sstart send btop')
              . ' 2>&1';
 
         exec($cmd, $output, $return_code);
@@ -133,6 +145,7 @@ class PrimerBlast
             }
 
             list($qid, $sid, $length, $mismatch, $gapopen, $qstart, $qend, $sstart, $send) = $f;
+            $btop = $f[9] ?? '';
 
             if (!isset($id_map[$qid])) {
                 continue;
@@ -173,11 +186,71 @@ class PrimerBlast
                 'qstart'   => (int)$qstart,
                 'qend'     => (int)$qend,
                 'qlength'  => $lengths[$qid],
+                // Mismatches inside the 3'-end window, INCLUDING any part of that
+                // window the alignment never reached: an unaligned 3' tail is not a
+                // match, and treating it as one would call a truncated hit clean.
+                'three_prime_mismatch' => self::threePrimeMismatches(
+                    $btop, (int)$qstart, (int)$qend, $lengths[$qid]
+                ),
             ];
         }
 
         $result['success'] = true;
         return $result;
+    }
+
+    /**
+     * How many of the last THREE_PRIME_WINDOW bases of the primer fail to match.
+     *
+     * BTOP alternates run-lengths of matches with pairs of characters for each
+     * mismatch or gap: "7AG10" is 7 matches, a query A against a subject G, then
+     * 10 matches. Walking it gives the query position of every mismatch, which is
+     * what a total count cannot provide.
+     *
+     * @param string $btop    BLAST traceback operations for the alignment.
+     * @param int    $qstart  1-based query start of the alignment.
+     * @param int    $qend    1-based query end.
+     * @param int    $qlength Full primer length.
+     */
+    public static function threePrimeMismatches($btop, $qstart, $qend, $qlength)
+    {
+        $window_start = max(1, $qlength - self::THREE_PRIME_WINDOW + 1);
+
+        // Bases of the window the alignment never covered count against it.
+        $unaligned = max(0, $qlength - $qend);
+
+        $bad = 0;
+        $pos = $qstart;
+        $i   = 0;
+        $len = strlen($btop);
+
+        while ($i < $len) {
+            if (ctype_digit($btop[$i])) {
+                $run = '';
+                while ($i < $len && ctype_digit($btop[$i])) {
+                    $run .= $btop[$i];
+                    $i++;
+                }
+                $pos += (int)$run;          // a run of matches
+                continue;
+            }
+
+            // A two-character operation: query base then subject base.
+            $q = $btop[$i];
+            $s = $btop[$i + 1] ?? '';
+            $i += 2;
+
+            if ($q === '-') {
+                continue;                    // insertion in the subject: query does not advance
+            }
+
+            if ($pos >= $window_start && $pos <= $qlength) {
+                $bad++;
+            }
+            $pos++;                          // mismatch or query gap consumes a query base
+        }
+
+        return $bad + min($unaligned, self::THREE_PRIME_WINDOW);
     }
 
     /**

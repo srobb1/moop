@@ -647,12 +647,11 @@ echo help_modal(
                 'label' => 'Only what would really amplify counts',
                 'accent' => true,
                 'html'  => true,
-                'text'  => 'A product is expected to amplify under standard PCR when it is '
-                         . '<strong>under 2 kb</strong> and carries <strong>fewer than 3 mismatches</strong>. '
-                         . 'Only those count toward the grade: one such product is clear, more than one is '
-                         . 'ambiguous. Anything outside those bounds — an 8 kb off-target, a 4-mismatch '
-                         . 'site — is still listed because it is real, but it will not amplify, so it does '
-                         . 'not downgrade the pair.',
+                'text'  => 'A product is expected to amplify when it is <strong>under 2 kb</strong> and '
+                         . 'neither primer is blocked: fewer than 6 mismatches overall, and fewer than 2 '
+                         . 'within the <strong>last 5 bases of the 3′ end</strong>. Only those count toward '
+                         . 'the grade — one is clear, more than one is ambiguous. Anything outside is still '
+                         . 'listed because it is real, it simply will not amplify.',
             ],
             [
                 'label' => 'The size limit does not change the grade',
@@ -690,12 +689,15 @@ echo help_modal(
                 'accent' => true,
             ],
             [
-                'label' => 'Mismatches on a product',
+                'label' => 'Why 3′ position matters more than count',
+                'accent' => true,
                 'html'  => true,
-                'text'  => 'The number shown is the <strong>worst</strong> of the two primers at that site. '
-                         . '0 is a perfect match for both. Higher numbers still amplify in principle, but '
-                         . 'less efficiently — and mismatches near the 3′ end hurt most, because that is '
-                         . 'where the polymerase extends.',
+                'text'  => 'The polymerase extends from the 3′ end, so a mismatch in the last few bases '
+                         . 'all but stops extension while the same mismatch near the 5′ end is tolerated. '
+                         . 'Two primers with an identical mismatch <em>count</em> can therefore behave '
+                         . 'completely differently. These thresholds follow NCBI Primer-BLAST, which '
+                         . 'dismisses an unintended target when a primer carries 2 or more mismatches in '
+                         . 'its last 5 bases. The number in the table is the worse of the two primers.',
             ],
             [
                 'label' => 'gDNA: N products',

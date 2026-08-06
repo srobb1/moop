@@ -136,12 +136,13 @@ ok(count($r['pairs']) === 1 && empty($r['errors']), 'IUPAC ambiguity codes are a
 require_once "$BASE/lib/primer/PrimerPairs.php";
 
 /** Build a hit the way PrimerBlast emits one. */
-function hit($subject, $start, $end, $strand, $mismatch = 0) {
+function hit($subject, $start, $end, $strand, $mismatch = 0, $three_prime = 0) {
     return [
         'subject'  => $subject, 'strand' => $strand,
         'start'    => $start,   'end'    => $end,
         'length'   => 20,       'mismatch' => $mismatch,
         'gapopen'  => 0, 'qstart' => 1, 'qend' => 20, 'qlength' => 20,
+        'three_prime_mismatch' => $three_prime,
     ];
 }
 
@@ -246,6 +247,53 @@ $primary = PrimerPairs::primaryProduct($p);
 ok($primary['max_mismatch'] === 0, 'fewest mismatches beats smallest size');
 
 ok(PrimerPairs::primaryProduct(['products' => []]) === null, 'no products yields null, not a crash');
+
+group('PrimerBlast — locating 3\' mismatches from BTOP');
+
+require_once "$BASE/lib/primer/PrimerBlast.php";
+
+ok(PrimerBlast::threePrimeMismatches('20', 1, 20, 20) === 0,
+   'a perfect 20/20 alignment has no 3\' mismatches');
+ok(PrimerBlast::threePrimeMismatches('7AG12', 1, 20, 20) === 0,
+   'a mismatch at query position 8 is outside the last-5 window');
+ok(PrimerBlast::threePrimeMismatches('17AG2', 1, 20, 20) === 1,
+   'a mismatch at position 18 is inside the window');
+ok(PrimerBlast::threePrimeMismatches('17AG1AG', 1, 20, 20) === 2,
+   'two mismatches at 18 and 20 are both counted');
+ok(PrimerBlast::threePrimeMismatches('15', 1, 15, 20) === 5,
+   'an unaligned 3\' tail counts against the window — it is not a match');
+
+group('PrimerPairs — amplification test uses POSITION, not just count');
+
+// Same total mismatch count, opposite verdicts: position is what decides.
+$five_prime = PrimerPairs::findProducts([
+    'forward' => [hit('chr1', 1000, 1019, '+', 2, 0)],   // 2 mismatches, none near the 3' end
+    'reverse' => [hit('chr1', 1500, 1519, '-', 0, 0)],
+], $BIG);
+$three_prime = PrimerPairs::findProducts([
+    'forward' => [hit('chr1', 1000, 1019, '+', 2, 2)],   // same 2, both at the 3' end
+    'reverse' => [hit('chr1', 1500, 1519, '-', 0, 0)],
+], $BIG);
+ok(PrimerPairs::isAmplifiable($five_prime['products'][0]),
+   '2 mismatches away from the 3\' end still amplifies');
+ok(!PrimerPairs::isAmplifiable($three_prime['products'][0]),
+   'the SAME 2 mismatches at the 3\' end do not');
+
+// Total-mismatch cutoff.
+$many = PrimerPairs::findProducts([
+    'forward' => [hit('chr1', 1000, 1019, '+', 6, 0)],
+    'reverse' => [hit('chr1', 1500, 1519, '-', 0, 0)],
+], $BIG);
+ok(!PrimerPairs::isAmplifiable($many['products'][0]),
+   '6 total mismatches is implausible regardless of position');
+
+// Size still rules it out on its own.
+$big = PrimerPairs::findProducts([
+    'forward' => [hit('chr1', 1000, 1019, '+', 0, 0)],
+    'reverse' => [hit('chr1', 9000, 9019, '-', 0, 0)],
+], $BIG);
+ok(!PrimerPairs::isAmplifiable($big['products'][0]),
+   'a perfect-match product over 2 kb still does not amplify');
 
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
