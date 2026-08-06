@@ -400,10 +400,16 @@ $db_section_label = function ($key) {
                                     $notes[] = number_format($found['over_max']) . ' over ' . number_format($max_product) . ' bp';
                                 }
                                 if (!empty($found['below_floor'])) {
-                                    $notes[] = number_format($found['below_floor']) . ' too short to prime';
+                                    // Name the RULE, not just the verdict: "too short to prime" left
+                                    // the reader guessing what the threshold was.
+                                    $notes[] = number_format($found['below_floor'])
+                                        . ' partial matches (under '
+                                        . (int)round(PrimerBlast::MIN_LENGTH_FRACTION * 100) . '% of the primer)';
                                 }
                                 if (!empty($found['over_mismatch'])) {
-                                    $notes[] = number_format($found['over_mismatch']) . ' over the mismatch limit';
+                                    $notes[] = number_format($found['over_mismatch'])
+                                        . ' with more than ' . (int)$max_mismatch . ' mismatch'
+                                        . ($max_mismatch === 1 ? '' : 'es');
                                 }
                                 $hits = $found['primer_hits'];
                                 ?>
@@ -416,7 +422,10 @@ $db_section_label = function ($key) {
                                         . 'still give one clean product, because a product only forms where the '
                                         . 'two primers land on opposite strands close enough to amplify between '
                                         . 'them. Judge the pair by the products above; these counts tell you which '
-                                        . 'primer is carrying the specificity.',
+                                        . 'primer is carrying the specificity. '
+                                        . 'Anything listed as discarded was ruled out before pairing: partial matches '
+                                        . 'cover too little of the primer to prime, and the mismatch and size limits '
+                                        . 'are the two settings above — raise either one to see more.',
                                         'Individual primer matches'
                                     ) ?>
                                     <?= $notes ? ' · discarded: ' . htmlspecialchars(implode(' · ', $notes)) : '' ?>

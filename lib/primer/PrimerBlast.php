@@ -46,8 +46,12 @@ class PrimerBlast
      *     @type bool   $success
      *     @type string $error
      *     @type array  $hits      Keyed by pair index, then 'forward'/'reverse'.
-     *     @type int    $below_floor  Hits discarded by the length floor.
-     *     @type int    $over_mismatch Hits discarded by the mismatch bound.
+     *     @type int    $below_floor  Hits discarded by the length floor (whole run).
+     *     @type int    $over_mismatch Hits discarded by the mismatch bound (whole run).
+     *     @type array  $discards     PER PAIR index => ['below_floor'=>n,'over_mismatch'=>n].
+     *                                Reporting the run-wide total against each pair would
+     *                                show every pair the same number, which is wrong the
+     *                                moment more than one pair is searched.
      * }
      */
     public static function run(array $pairs, $db, array $options = [])
@@ -58,6 +62,7 @@ class PrimerBlast
             'hits'          => [],
             'below_floor'   => 0,
             'over_mismatch' => 0,
+            'discards'      => [],
         ];
 
         if (empty($pairs)) {
@@ -117,7 +122,8 @@ class PrimerBlast
         }
 
         foreach ($pairs as $i => $pair) {
-            $result['hits'][$i] = ['forward' => [], 'reverse' => []];
+            $result['hits'][$i]     = ['forward' => [], 'reverse' => []];
+            $result['discards'][$i] = ['below_floor' => 0, 'over_mismatch' => 0];
         }
 
         foreach ($output as $line) {
@@ -135,13 +141,17 @@ class PrimerBlast
             $mismatch = (int)$mismatch;
             $length   = (int)$length;
 
+            $pair_index = $id_map[$qid]['index'];
+
             if ($length < $lengths[$qid] * self::MIN_LENGTH_FRACTION) {
                 $result['below_floor']++;
+                $result['discards'][$pair_index]['below_floor']++;
                 continue;
             }
 
             if ($mismatch > $max_mismatch) {
                 $result['over_mismatch']++;
+                $result['discards'][$pair_index]['over_mismatch']++;
                 continue;
             }
 

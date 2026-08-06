@@ -272,8 +272,10 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
                             $blast['hits'][$i] ?? [],
                             ['max_product' => $max_product]
                         );
-                        $found['below_floor']   = $blast['below_floor'];
-                        $found['over_mismatch'] = $blast['over_mismatch'];
+                        // Per pair, not the run-wide total: every pair would otherwise
+                        // report the same number as soon as more than one was searched.
+                        $found['below_floor']   = $blast['discards'][$i]['below_floor'] ?? 0;
+                        $found['over_mismatch'] = $blast['discards'][$i]['over_mismatch'] ?? 0;
                         $results[$i]['by_db'][$label] = $found;
                     }
                 }
