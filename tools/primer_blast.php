@@ -276,6 +276,10 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
                         // report the same number as soon as more than one was searched.
                         $found['below_floor']   = $blast['discards'][$i]['below_floor'] ?? 0;
                         $found['over_mismatch'] = $blast['discards'][$i]['over_mismatch'] ?? 0;
+                        // The individual matches, so the page can SHOW them rather than
+                        // only counting them. A match that forms no product was otherwise
+                        // invisible, which is the opposite of the over-report rule.
+                        $found['matches']       = $blast['hits'][$i] ?? ['forward' => [], 'reverse' => []];
                         $results[$i]['by_db'][$label] = $found;
                     }
                 }

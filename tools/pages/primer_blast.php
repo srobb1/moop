@@ -393,62 +393,20 @@ $db_section_label = function ($key) {
                                 <?php endif; ?>
 
                                 <?php
-                                // Everything discarded, on ONE muted line. It must be stated --
-                                // a specificity tool that quietly drops candidates is worse than
-                                // one that shows too many -- but it is footnote, not headline.
-                                $notes = [];
-                                if (!empty($found['over_max']) && !empty($found['products'])) {
-                                    $notes[] = number_format($found['over_max']) . ' over ' . number_format($max_product) . ' bp';
-                                }
-                                if (!empty($found['below_floor'])) {
-                                    // Name the RULE, not just the verdict: "too short to prime" left
-                                    // the reader guessing what the threshold was.
-                                    $notes[] = number_format($found['below_floor'])
-                                        . ' partial matches (under '
-                                        . (int)round(PrimerBlast::MIN_LENGTH_FRACTION * 100) . '% of the primer)';
-                                }
-                                if (!empty($found['over_mismatch'])) {
-                                    $notes[] = number_format($found['over_mismatch'])
-                                        . ' with more than ' . (int)$max_mismatch . ' mismatch'
-                                        . ($max_mismatch === 1 ? '' : 'es');
-                                }
-                                $hits = $found['primer_hits'];
+                                // Report ONLY things that could be a product. Individual primer
+                                // matches, partial alignments and over-mismatch hits are not
+                                // products and cannot become one without changing a setting, so
+                                // listing them buried the answer in noise. What remains is the one
+                                // case where a real product exists but is not shown: it was larger
+                                // than the size limit.
                                 ?>
-                                <?php
-                                $paired   = $found['paired_hits'] ?? ['forward' => 0, 'reverse' => 0];
-                                $unpaired = ($hits['forward'] - $paired['forward'])
-                                          + ($hits['reverse'] - $paired['reverse']);
-                                ?>
-                                <div class="text-muted" style="font-size:0.8rem;">
-                                    each primer alone matched
-                                    <?= number_format($hits['forward']) ?> / <?= number_format($hits['reverse']) ?> place<?= ($hits['forward'] === 1 && $hits['reverse'] === 1) ? '' : 's' ?><?php
-                                    // Account for the matches that were KEPT. Without this a user
-                                    // who raises the mismatch limit watches the match count go up
-                                    // with nothing new to show, and no explanation why.
-                                    if ($unpaired > 0): ?>, of which
-                                    <?= number_format($unpaired) ?> found no partner and so made no product<?php
-                                    endif; ?>
-                                    <?= field_help(
-                                        'How many places each primer matched on its own — forward first, then '
-                                        . 'reverse. These are NOT products. A primer can match in many places and '
-                                        . 'still give one clean product, because a product only forms where the '
-                                        . 'two primers land on opposite strands close enough to amplify between '
-                                        . 'them. Judge the pair by the products above; these counts tell you which '
-                                        . 'primer is carrying the specificity. '
-                                        . 'A match that found no partner made nothing: a product needs BOTH '
-                                        . 'primers landing on opposite strands close enough to amplify between '
-                                        . 'them, so raising a limit can add matches without adding products. '
-                                        . 'Anything listed as discarded was ruled out before pairing: partial matches '
-                                        . 'cover too little of the primer to prime, and the mismatch and size limits '
-                                        . 'are the two settings above — raise either one to see more.',
-                                        'Individual primer matches'
-                                    ) ?>
-                                    <?= $notes ? ' · discarded: ' . htmlspecialchars(implode(' · ', $notes)) : '' ?>
-                                    <?php if (!empty($found['carried_by'])): ?>
-                                        · <span class="text-warning-emphasis">specificity rests on the
-                                        <?= htmlspecialchars($found['carried_by']) ?> primer alone</span>
-                                    <?php endif; ?>
-                                </div>
+                                <?php if (!empty($found['over_max'])): ?>
+                                    <div class="text-muted" style="font-size:0.8rem;">
+                                        <?= number_format($found['over_max']) ?> further product<?= $found['over_max'] === 1 ? '' : 's' ?>
+                                        larger than <?= number_format($max_product) ?> bp — raise the size limit to see <?= $found['over_max'] === 1 ? 'it' : 'them' ?>.
+                                    </div>
+                                <?php endif; ?>
+
                             </div>
                         <?php endforeach; ?>
                     </div>
