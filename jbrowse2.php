@@ -76,7 +76,10 @@ if (!empty($_GET['sessionTracks'])) {
 }
 
 $session_track_id = '';
-if (!empty($_GET['sessionTrackId']) && preg_match('/^[a-zA-Z0-9_]+$/', $_GET['sessionTrackId']))
+// Comma-separated: a linkout may add more than one session track — e.g. the
+// primer tool sends the boxes and the arc, which must be different tracks
+// because a track shows one display at a time.
+if (!empty($_GET['sessionTrackId']) && preg_match('/^[a-zA-Z0-9_,]+$/', $_GET['sessionTrackId']))
     $session_track_id = $_GET['sessionTrackId'];
 
 // Build per-assembly metadata: gene tracks + first gene loc (or first scaffold fallback).

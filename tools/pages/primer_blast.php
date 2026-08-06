@@ -11,6 +11,111 @@
  * - $site
  */
 
+/**
+ * Colours for the primer binding sites drawn in JBrowse.
+ *
+ * Okabe-Ito blue and vermillion: distinguishable under the common forms of colour
+ * blindness, which a red/green pair would not be.
+ */
+const PRIMER_COLOR_FORWARD = '#0072B2';
+const PRIMER_COLOR_REVERSE = '#D55E00';
+const PRIMER_COLOR_PRODUCT = '#999999';
+
+/**
+ * A JBrowse2 session track drawing one predicted product: the amplicon as the
+ * parent feature, with each primer's binding site as a coloured subfeature.
+ *
+ * Same mechanism as the BLAST hit linkout (lib/blast_results_visualizer.php) —
+ * a FromConfigAdapter track passed in the URL — with an explicit renderer added,
+ * because JBrowse's default colouring cannot tell the two primers apart.
+ */
+$primer_session_track = function (array $prod, $pair_name, $jb2_assembly_id) {
+    $track_id = 'primer_' . substr(md5($pair_name . $prod['subject'] . $prod['start']), 0, 10);
+
+    $subfeatures = [];
+    foreach ($prod['hits'] as $n => $hit) {
+        $is_forward = ($hit['primer'] === 'forward');
+        $subfeatures[] = [
+            'uniqueId' => $track_id . '_p' . $n,
+            'refName'  => $prod['subject'],
+            'start'    => $hit['start'] - 1,          // JBrowse features are 0-based
+            'end'      => $hit['end'],
+            'strand'   => $hit['strand'] === '-' ? -1 : 1,
+            'name'     => ($is_forward ? 'forward' : 'reverse') . ' primer'
+                        . ($hit['mismatch'] > 0 ? ' (' . $hit['mismatch'] . ' mismatch'
+                           . ($hit['mismatch'] === 1 ? '' : 'es') . ')' : ''),
+            'type'     => 'primer_binding_site',
+            'color'    => $is_forward ? PRIMER_COLOR_FORWARD : PRIMER_COLOR_REVERSE,
+        ];
+    }
+
+    $features = [[
+        'uniqueId'    => $track_id . '_product',
+        'refName'     => $prod['subject'],
+        'start'       => $prod['start'] - 1,
+        'end'         => $prod['end'],
+        'name'        => $pair_name . ' — ' . number_format($prod['size']) . ' bp product',
+        'type'        => 'PCR_product',
+        'color'       => PRIMER_COLOR_PRODUCT,
+        'subfeatures' => $subfeatures,
+    ]];
+
+    return [
+        [
+            'type'          => 'FeatureTrack',
+            'trackId'       => $track_id,
+            'name'          => 'Primer BLAST: ' . $pair_name,
+            'assemblyNames' => [$jb2_assembly_id],
+            'adapter'       => ['type' => 'FromConfigAdapter', 'features' => $features],
+            // Without this the two primers render identically and the picture
+            // loses the one thing it is being drawn to show. The parent has
+            // subfeatures, so JBrowse uses its segments glyph: a box per primer
+            // joined by a straight connector across the intervening sequence.
+            'displays'      => [[
+                'type'      => 'LinearBasicDisplay',
+                'displayId' => $track_id . '-LinearBasicDisplay',
+                'renderer'  => [
+                    'type'   => 'SvgFeatureRenderer',
+                    'color1' => "jexl:get(feature,'color') || '" . PRIMER_COLOR_PRODUCT . "'",
+                ],
+            ]],
+        ],
+        [
+            // A second track drawing the amplicon as an ARCH from one primer to the
+            // other. Separate because arcs are a display type, and a track shows one
+            // display at a time -- so the boxes and the arch cannot come from one
+            // track. LinearArcDisplay and ArcRenderer are both present in the
+            // deployed JBrowse bundle (checked, not assumed).
+            'type'          => 'FeatureTrack',
+            'trackId'       => $track_id . '_arc',
+            'name'          => 'Primer BLAST: ' . $pair_name . ' (product arc)',
+            'assemblyNames' => [$jb2_assembly_id],
+            'adapter'       => ['type' => 'FromConfigAdapter', 'features' => [[
+                'uniqueId' => $track_id . '_arcfeat',
+                'refName'  => $prod['subject'],
+                'start'    => $prod['start'] - 1,
+                'end'      => $prod['end'],
+                'name'     => number_format($prod['size']) . ' bp',
+            ]]],
+            'displays'      => [[
+                'type'      => 'LinearArcDisplay',
+                'displayId' => $track_id . '-LinearArcDisplay',
+                'renderer'  => [
+                    'type'         => 'ArcRenderer',
+                    // Literals throughout: the ArcRenderer defaults are jexl
+                    // expressions over a 'score' attribute these features do not
+                    // carry, which would leave the arc unrendered.
+                    'color'        => PRIMER_COLOR_PRODUCT,
+                    'thickness'    => 3,
+                    'height'       => 80,
+                    'label'        => "jexl:get(feature,'name')",
+                    'displayMode'  => 'arcs',
+                ],
+            ]],
+        ],
+    ];
+};
+
 /** Short label, for the "Searched: …" line in the results header. */
 $db_label = function ($key) {
     return $key === 'genome' ? 'Genome' : 'Transcriptome';
@@ -316,9 +421,9 @@ $db_section_label = function ($key) {
                     if ($total === 0) {
                         $verdict = ['none', 'bg-secondary', 'no product'];
                     } elseif (!$reasons) {
-                        $verdict = ['clear', 'bg-success', 'clear'];
+                        $verdict = ['specific', 'bg-success', 'specific'];
                     } else {
-                        $verdict = ['ambiguous', 'bg-warning text-dark', 'ambiguous'];
+                        $verdict = ['nonspecific', 'bg-warning text-dark', 'non-specific'];
                     }
                     ?>
                     <div class="pb-pair mb-4 pb-3 border-bottom">
@@ -327,7 +432,7 @@ $db_section_label = function ($key) {
                         <div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
                             <h5 class="mb-0"><?= htmlspecialchars($pair['name']) ?></h5>
                             <span class="badge <?= $verdict[1] ?>"><?= htmlspecialchars($verdict[2]) ?></span>
-                            <?= help_modal_trigger('results-help', '', 'What clear and ambiguous mean') ?>
+                            <?= help_modal_trigger('results-help', '', 'What specific and non-specific mean') ?>
                         </div>
 
                         <?php if ($total === 0): ?>
@@ -449,10 +554,19 @@ $db_section_label = function ($key) {
                                                         // The genomic product IS a locus, so it links straight into
                                                         // the browser -- where the gap between the cDNA and genomic
                                                         // sizes is visible as the introns it crosses.
-                                                        $loc = $subject . ':' . $prod['start'] . '..' . $prod['end'];
+                                                        // A little context either side, so the primers are not
+                                                        // flush against the edge of the view.
+                                                        $pad   = max(50, (int)($prod['size'] * 0.1));
+                                                        $loc   = $subject . ':' . max(1, $prod['start'] - $pad)
+                                                               . '..' . ($prod['end'] + $pad);
+                                                        $track = $primer_session_track(
+                                                            $prod, $pair['name'], $result_organism . '_' . $result_assembly
+                                                        );
                                                         $jb  = '/' . $site . '/jbrowse2.php?organism=' . urlencode($result_organism)
                                                              . '&assembly=' . urlencode($result_assembly)
-                                                             . '&loc=' . urlencode($loc);
+                                                             . '&loc=' . urlencode($loc)
+                                                             . '&sessionTracks=' . urlencode(json_encode($track))
+                                                             . '&sessionTrackId=' . urlencode(implode(',', array_column($track, 'trackId')));
                                                         ?>
                                                         <a href="<?= htmlspecialchars($jb) ?>" target="_blank" rel="noopener"
                                                            class="btn btn-sm btn-outline-secondary">
@@ -619,7 +733,7 @@ echo help_modal(
         'heading' => '',
         'cards'   => [
             [
-                'label' => 'clear',
+                'label' => 'specific',
                 'color' => 'success',
                 'html'  => true,
                 'text'  => 'Exactly one product could amplify — one on your template, and nothing else. '
@@ -627,12 +741,12 @@ echo help_modal(
                          . 'expected: that is the same place with its introns included.',
             ],
             [
-                'label' => 'ambiguous',
+                'label' => 'non-specific',
                 'color' => 'warning',
                 'html'  => true,
                 'text'  => 'More than one product could amplify. The reasons are listed under the name: '
                          . 'several products on your template, extra genomic products, or a self-pairing '
-                         . 'primer. Ambiguous is not unusable — read the reasons and decide.',
+                         . 'primer. Non-specific is not unusable — read the reasons and decide.',
             ],
             [
                 'label' => 'no product',
@@ -650,7 +764,7 @@ echo help_modal(
                 'text'  => 'A product is expected to amplify when it is <strong>under 2 kb</strong> and '
                          . 'neither primer is blocked: fewer than 6 mismatches overall, and fewer than 2 '
                          . 'within the <strong>last 5 bases of the 3′ end</strong>. Only those count toward '
-                         . 'the grade — one is clear, more than one is ambiguous. Anything outside is still '
+                         . 'the grade — one is specific, more than one is non-specific. Anything outside is still '
                          . 'listed because it is real, it simply will not amplify.',
             ],
             [
@@ -659,8 +773,22 @@ echo help_modal(
                 'html'  => true,
                 'text'  => '<strong>Largest product to report</strong> controls what is LISTED, nothing '
                          . 'more. The grade is always computed over amplifiable products, so lowering the '
-                         . 'limit hides rows without quietly turning an ambiguous pair clear. A display '
+                         . 'limit hides rows without quietly turning a non-specific pair specific. A display '
                          . 'control should never change a scientific conclusion.',
+            ],
+            [
+                'label' => 'Viewing a product in the browser',
+                'html'  => true,
+                'text'  => '<strong>Browser</strong> opens the product in JBrowse with two tracks added: '
+                         . 'the binding sites as boxes joined by a straight connector, and the amplicon '
+                         . 'drawn as an arc from one primer to the other. '
+                         . '<span style="display:inline-block;width:0.8em;height:0.8em;background:'
+                         . PRIMER_COLOR_FORWARD . ';vertical-align:middle;border-radius:2px;"></span> '
+                         . 'blue is the <strong>forward</strong> primer, '
+                         . '<span style="display:inline-block;width:0.8em;height:0.8em;background:'
+                         . PRIMER_COLOR_REVERSE . ';vertical-align:middle;border-radius:2px;"></span> '
+                         . 'orange the <strong>reverse</strong>. Only genomic products get a link — a '
+                         . 'cDNA product has no genomic coordinates to open.',
             ],
             [
                 'label' => 'What counts as a product',

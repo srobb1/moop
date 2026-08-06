@@ -31,7 +31,9 @@
             ...(Array.isArray(jbGeneTracks) && jbGeneTracks.length
                 ? jbGeneTracks
                 : (meta.geneTracks || [])),
-            ...(jbSessionTrackId ? [jbSessionTrackId] : []),
+            // May be a comma-separated list: a linkout can add several session
+            // tracks that all need opening, not just the first.
+            ...(jbSessionTrackId ? String(jbSessionTrackId).split(',').filter(Boolean) : []),
         ];
 
         let url = `${site}/jbrowse2/index.html?config=${encodeURIComponent(configUrl)}`
