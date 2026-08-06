@@ -115,6 +115,35 @@ if ($posted_source !== '') {
     $selected_source = $posted_source;
 }
 
+// ------------------------------------------------- which sources are usable here
+//
+// Computed for the source list so a dead end is visible BEFORE it is chosen, not
+// only after a search fails. This tool needs the assembly's GENOME index; a
+// transcriptome assembly legitimately has none, and 20 of the sources on this
+// deployment are in that state.
+//
+// One stat per source; the list is ~95 entries, so this is cheap enough to run
+// per page load, unlike the scans that CLAUDE.md §10 pushes into housekeeping.
+$source_availability = [];
+foreach ($accessible_sources as $source) {
+    $key = $source['organism'] . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
+    $asm = dirname($source['path']);
+
+    if (PrimerBlast::databaseExists($asm . '/genome.fa')) {
+        $source_availability[$key] = ['ok' => true, 'reason' => ''];
+    } elseif (PrimerBlast::databaseExists($source['path'] . '/transcript.nt.fa')) {
+        $source_availability[$key] = [
+            'ok'     => false,
+            'reason' => 'No genome — transcriptome assembly. Usable with PCR input set to cDNA.',
+        ];
+    } else {
+        $source_availability[$key] = [
+            'ok'     => false,
+            'reason' => 'No genome or transcriptome BLAST index — nothing to search.',
+        ];
+    }
+}
+
 // ------------------------------------------------------------------- results
 $search_error   = $upload_error;
 $parse_result   = null;
@@ -257,6 +286,7 @@ $data = [
     'filter_organisms'            => $filter_organisms,
     'filter_organisms_string'     => $filter_organisms_string,
     'selected_source'             => $selected_source,
+    'source_availability'         => $source_availability,
     'selected_organism'           => $selected_organism,
     'selected_assembly_name'      => $selected_assembly_name,
     'selected_assembly_accession' => $selected_assembly_accession,

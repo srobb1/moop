@@ -151,6 +151,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (resetBtn) {
         resetBtn.addEventListener('click', resetPrimerForm);
     }
+
+    // Bootstrap tooltips are initialised per module in this codebase, not globally,
+    // so the "!" markers on unusable sources need it here. Without this they still
+    // work -- the title attribute gives a native tooltip -- just unstyled.
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+            new bootstrap.Tooltip(el);
+        });
+    }
 });
 
 /**
@@ -198,6 +207,19 @@ function resetPrimerForm() {
     var modeRadio = form.querySelector('input[name="search_mode"][value="' + mode + '"]');
     if (modeRadio) {
         modeRadio.checked = true;
+    }
+
+    // Take away the previous search's output as well. It is server-rendered HTML
+    // sitting above and below the form, so clearing the INPUTS alone leaves an
+    // error or a result table describing a search the form no longer represents --
+    // which reads as "clearing did nothing".
+    var stale = document.getElementById('primerSearchError');
+    if (stale) {
+        stale.remove();
+    }
+    var results = document.getElementById('primerResults');
+    if (results) {
+        results.innerHTML = '';
     }
 
     if (textarea) {

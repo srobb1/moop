@@ -55,7 +55,7 @@ $db_section_label = function ($key) use ($search_mode) {
     <?php else: ?>
 
         <?php if (!empty($search_error)): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <div class="alert alert-danger alert-dismissible fade show" role="alert" id="primerSearchError">
                 <strong><i class="fa fa-exclamation-circle"></i> Error:</strong> <?= htmlspecialchars($search_error) ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
@@ -218,6 +218,10 @@ $db_section_label = function ($key) use ($search_mode) {
         </form>
 
         <?php // ---------------------------------------------------------- results ?>
+        <?php // Everything below describes the SEARCH THAT RAN. Clearing the form must
+              // take it away too, or the page shows an answer to a question the form no
+              // longer asks. ?>
+        <div id="primerResults">
         <?php if (!empty($parse_result)): ?>
 
             <?php foreach (($parse_result['errors'] ?? []) as $err): ?>
@@ -369,6 +373,7 @@ $db_section_label = function ($key) use ($search_mode) {
                 </div>
             </div>
         <?php endif; ?>
+        </div><!-- /#primerResults -->
 
     <?php endif; ?>
 </div>

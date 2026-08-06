@@ -95,6 +95,24 @@ foreach ($sources_by_group as $group_name => $organisms) {
                             <?= $is_selected ? 'checked' : '' ?>
                             >
                         
+                        <?php
+                        // OPTIONAL, opt-in per calling page: $source_availability maps
+                        // "organism|assembly|gene_set" => ['ok' => bool, 'reason' => string].
+                        //
+                        // It must come from the CALLER because "is this source usable" is
+                        // a different question per tool -- BLAST wants any database, the
+                        // primer tool wants the genome index specifically. A rule baked in
+                        // here would be right for one page and wrong for the next.
+                        //
+                        // Pages that do not set it are unaffected: no marker, no change.
+                        $avail = $source_availability[$source_value] ?? null;
+                        if ($avail !== null && empty($avail['ok'])):
+                        ?>
+                        <span class="badge badge-sm bg-warning text-dark source-unavailable"
+                              title="<?= htmlspecialchars($avail['reason'] ?? 'Not available for this tool') ?>"
+                              data-bs-toggle="tooltip">!</span>
+                        <?php endif; ?>
+
                         <span class="badge badge-sm bg-<?= $group_color ?> text-white">
                             <?= htmlspecialchars($group_name) ?>
                         </span>
