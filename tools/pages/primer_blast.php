@@ -282,30 +282,64 @@ $db_section_label = function ($key) {
                     $total = $r['by_db'][$intended_db]['product_count'] ?? 0;
                     $contam = ($intended_db === 'transcript')
                         ? ($r['by_db']['genome']['product_count'] ?? null) : null;
+
+                    // ONE quality call, with the reasons it is not clean. Counts alone made
+                    // the reader do this arithmetic themselves, and "specific — 1 product"
+                    // beside "gDNA: 2 products" read as a contradiction.
+                    $reasons = [];
+                    if ($total > 1) {
+                        $reasons[] = $total . ' different products on your template';
+                    }
+                    if ($contam !== null && $contam > 1) {
+                        $reasons[] = 'genomic DNA would give ' . $contam . ' products, not just the one matching locus';
+                    }
+                    foreach ($r['by_db'] as $f) {
+                        foreach ($f['products'] as $pr) {
+                            if (!empty($pr['self_pairing'])) {
+                                $reasons[] = 'one primer amplifies on its own (self-pairing)';
+                                break 2;
+                            }
+                        }
+                    }
+                    $primary_mm = ($p0 = PrimerPairs::primaryProduct($r['by_db'][$intended_db] ?? ['products' => []]))
+                        ? $p0['max_mismatch'] : 0;
+                    if ($total >= 1 && $primary_mm > 0) {
+                        $reasons[] = 'your product is not a perfect match (' . $primary_mm . ' mismatch'
+                                   . ($primary_mm === 1 ? '' : 'es') . ')';
+                    }
+
+                    if ($total === 0) {
+                        $verdict = ['none', 'bg-secondary', 'no product'];
+                    } elseif (!$reasons) {
+                        $verdict = ['clean', 'bg-success', 'clean'];
+                    } else {
+                        $verdict = ['ambiguous', 'bg-warning text-dark', 'ambiguous'];
+                    }
                     ?>
                     <div class="pb-pair mb-4 pb-3 border-bottom">
 
                         <?php // ---- headline: name, sequences, and the verdict together ---- ?>
                         <div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
                             <h5 class="mb-0"><?= htmlspecialchars($pair['name']) ?></h5>
-                            <?php if ($total === 0): ?>
-                                <span class="badge bg-secondary">no product</span>
-                            <?php elseif ($total === 1): ?>
-                                <span class="badge bg-success">specific — 1 product</span>
-                            <?php else: ?>
-                                <span class="badge bg-warning text-dark"><?= (int)$total ?> products</span>
-                            <?php endif; ?>
-                            <?php if ($contam !== null && $contam > 1): ?>
-                                <?php // Shown only when gDNA yields MORE THAN ONE product. Exactly one
-                                      // is expected -- it is the same locus the cDNA product came from.
-                                      // More than one means the primers also pair somewhere else, which
-                                      // the cDNA count cannot reveal. ?>
-                                <span class="badge bg-warning text-dark"
-                                      title="Genomic DNA in the sample would give more than one product">
-                                    gDNA: <?= (int)$contam ?> products
-                                </span>
-                            <?php endif; ?>
+                            <span class="badge <?= $verdict[1] ?>"><?= htmlspecialchars($verdict[2]) ?></span>
+                            <?= help_modal_trigger('results-help', '', 'What clean and ambiguous mean') ?>
                         </div>
+
+                        <?php if ($total === 0): ?>
+                            <?php // Say this even when there are reasons: otherwise "no product"
+                                  // sits above a note about a self-pairing gDNA product and reads
+                                  // as a contradiction. ?>
+                            <div class="small text-muted mb-2">
+                                Nothing amplifies on your template at these settings.
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($reasons): ?>
+                            <ul class="small text-warning-emphasis mb-2 ps-3">
+                                <?php foreach ($reasons as $why): ?>
+                                    <li><?= htmlspecialchars($why) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
 
                         <div class="small text-muted mb-3" style="font-family:monospace;">
                             F <?= htmlspecialchars($pair['forward']) ?> (<?= strlen($pair['forward']) ?>)
@@ -568,6 +602,33 @@ echo help_modal(
     [[
         'heading' => '',
         'cards'   => [
+            [
+                'label' => 'clean',
+                'color' => 'success',
+                'html'  => true,
+                'text'  => 'Exactly one product forms on your template, it is a perfect match, and '
+                         . 'nothing else amplifies. If your input is cDNA, genomic DNA gives only the '
+                         . 'one matching locus — which is expected, since that is the same place with '
+                         . 'its introns.',
+            ],
+            [
+                'label' => 'ambiguous',
+                'color' => 'warning',
+                'html'  => true,
+                'text'  => 'Something more than the one clean product would amplify. The reasons are '
+                         . 'listed under the name — more than one product on your template, extra '
+                         . 'genomic products, a self-pairing primer, or a product that is not a perfect '
+                         . 'match. Ambiguous is not unusable: read the reasons and decide.',
+            ],
+            [
+                'label' => 'no product',
+                'color' => 'secondary',
+                'html'  => true,
+                'text'  => 'Nothing amplifies on your template <em>at these settings</em>. That is not '
+                         . 'the same as "these primers do not work" — a primer with more mismatches than '
+                         . 'the limit is invisible, so raising <strong>Mismatches allowed</strong> or '
+                         . '<strong>Largest product to report</strong> may reveal it.',
+            ],
             [
                 'label' => 'What counts as a product',
                 'html'  => true,
