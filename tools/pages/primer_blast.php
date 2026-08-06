@@ -356,7 +356,11 @@ $db_section_label = function ($key) {
                                                 $db_key === 'genome' ? 'genomic' : 'cDNA',
                                                 $subject, $prod['start'], $prod['end'], $prod['size'],
                                                 $prod['max_mismatch'],
-                                                $prod['self_pairing'] ? 'self-pairing' : 'forward+reverse',
+                                                // Name WHICH primer: a downloaded row has no badge to
+                                                // hover, so "self-pairing" alone loses the fact.
+                                                $prod['self_pairing']
+                                                    ? $prod['primers'][0] . ' self-pairing'
+                                                    : 'forward+reverse',
                                             ];
                                             ?>
                                             <tr>
@@ -369,14 +373,14 @@ $db_section_label = function ($key) {
                                                 <td style="width:8rem;">
                                                     <span class="text-muted small"><?= (int)$prod['max_mismatch'] ?> mismatch<?= $prod['max_mismatch'] === 1 ? '' : 'es' ?></span>
                                                 </td>
-                                                <td style="width:8rem;">
+                                                <td style="width:11rem;">
                                                     <?php if (!empty($prod['self_pairing'])): ?>
                                                         <?php // Both ends of this product are the SAME oligo. A pair is
                                                               // implicit for normal products, so only this case is labelled,
                                                               // and compactly -- the loop icon carries the idea, the popover
                                                               // and the Results help carry the explanation. ?>
                                                         <span class="badge bg-danger" title="<?= htmlspecialchars($prod['primers'][0]) ?> primer at both ends">
-                                                            <i class="fa fa-repeat"></i> 1 primer
+                                                            <i class="fa fa-repeat"></i> <?= htmlspecialchars($prod['primers'][0]) ?> self-pairing
                                                         </span>
                                                         <?= field_help(
                                                             'Both ends of this product use the SAME primer, not one of each. '
@@ -607,14 +611,14 @@ echo help_modal(
                          . 'somewhere else in the genome, which the cDNA result alone cannot show you.',
             ],
             [
-                'label' => '1 primer — a product from one oligo',
+                'label' => 'Self-pairing',
                 'html'  => true,
-                'text'  => 'Marked <span class="badge bg-danger"><i class="fa fa-repeat"></i> 1 primer</span>. '
+                'text'  => 'Marked <span class="badge bg-danger"><i class="fa fa-repeat"></i> reverse self-pairing</span>. '
                          . 'One primer can match twice on opposite strands, facing itself, and amplify the '
                          . 'fragment between — so both ends of that product are the same oligo, and the other '
                          . 'primer is not involved at all. A real source of unexpected bands, and one you '
-                         . 'would never predict by thinking about the pair. Hover the badge to see which '
-                         . 'primer it was.',
+                         . 'would never predict by thinking about the pair. The badge names the primer '
+                         . 'responsible, and so does the TSV download.',
             ],
             [
                 'label' => 'Likely spans an intron',
