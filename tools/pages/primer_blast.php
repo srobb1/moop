@@ -307,25 +307,25 @@ $db_section_label = function ($key) {
                         </div>
 
                         <?php if ($t_size !== null && $g_size !== null): ?>
-                            <div class="alert <?= $g_size > $t_size ? 'alert-success' : 'alert-warning' ?> py-2 px-3 mb-3">
+                            <?php // A note, not a verdict: the intron is INFERRED from the two
+                                  // sizes differing, never observed directly, so the wording says
+                                  // "likely" and shows the two numbers it was inferred from. ?>
+                            <div class="small mb-3">
                                 <?php if ($g_size > $t_size): ?>
-                                    <i class="fa fa-check-circle"></i>
-                                    <strong>Spans at least one intron.</strong>
-                                    cDNA <strong><?= number_format($t_size) ?> bp</strong> vs genomic
-                                    <strong><?= number_format($g_size) ?> bp</strong> — genomic DNA in the sample
-                                    gives a larger product, or none.
+                                    <i class="fa fa-circle-info text-success"></i>
+                                    <span class="text-success-emphasis">Likely spans an intron</span>
+                                    <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
                                 <?php else: ?>
-                                    <i class="fa fa-exclamation-triangle"></i>
-                                    <strong>Both primers sit within one exon.</strong>
-                                    cDNA and genomic products are both <?= number_format($t_size) ?> bp, so this pair
-                                    cannot tell cDNA from genomic DNA in the sample.
+                                    <i class="fa fa-circle-info text-warning"></i>
+                                    <span class="text-warning-emphasis">No intron between the primers</span>
+                                    <span class="text-muted">— cDNA and gDNA products are both <?= number_format($t_size) ?> bp</span>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
 
                         <?php foreach ($r['by_db'] as $db_key => $found): ?>
                             <div class="mb-3">
-                                <div class="fw-semibold small text-uppercase text-muted mb-1">
+                                <div class="fw-semibold small text-muted mb-1">
                                     <?= htmlspecialchars($db_section_label($db_key)) ?>
                                 </div>
 
