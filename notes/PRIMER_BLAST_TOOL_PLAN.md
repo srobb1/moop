@@ -35,6 +35,65 @@ UCSC ships in-silico PCR as one of its five main tools, so the demand is not nic
 
 ---
 
+# ⏭️ RESUME HERE — split primers across exons (2026-08-06, end of session)
+
+**Where it stopped.** Phase 1 is shipped and working. `exon_coords.tsv` is generated at
+gene-set registration (`generateExonCoordsIndex()` in `lib/jbrowse/gene_set_functions.php`,
+committed). Nothing consumes it yet — that is the next step.
+
+**The goal.** A primer that sits across an exon junction has no continuous genomic match, so
+today it gets **no Browser link at all** (verified: a junction-spanning Nematostella pair
+reports "No genomic product" and zero links). Mapping its *transcript* hit back through the exon
+structure gives **two genomic blocks**, which JBrowse's segments glyph draws as two boxes joined
+by a connector — the split primer picture.
+
+**The file, already generated:**
+
+```
+XM_001635385.3  NC_064041.1  +  11298700,11305572  11298700,11298855;11301951,11302269;11305070,11305572
+transcript_id   chr          strand  outer_span     exon spans, ascending
+```
+
+Both `rna-XM_…` and bare `XM_…` rows are written, because BLAST subjects from
+`transcript.nt.fa` carry the bare accession. Measured: 1.72 s, 18 MB, 106,708 rows for
+Nematostella RS_101.
+
+**Steps, in order:**
+
+1. **`lib/primer/ExonMap.php`** — load one transcript's exon list from `exon_coords.tsv`, and
+   map a transcript range `[a,b]` to genomic blocks. Pure arithmetic, hermetically testable with
+   no site data, so write the tests first. ⚠️ **Minus-strand transcripts reverse the mapping**:
+   transcript position 1 is the HIGHEST genomic coordinate, so walk the exons in reverse. That is
+   the case most likely to be silently wrong, and the wallaby work already proved the codebase
+   gets minus-strand wrong when nobody checks (`$strand` computed and never used).
+2. **Use it in the track builder** (`$primer_session_track`, `tools/pages/primer_blast.php`):
+   for a **cDNA** product, map each primer hit to blocks and emit one subfeature per block,
+   keeping the forward/reverse colours. A junction primer then renders as two coloured boxes.
+3. **Give cDNA products a Browser link.** Currently gated on `$db_key === 'genome'` because a
+   transcript hit had no genomic coordinates; once mapped it does. The `loc` should be the mapped
+   genomic span.
+4. **Backfill.** Only Nematostella RS_101 has the file so far — every other gene set needs a
+   registration re-run, or a loop over `generateExonCoordsIndex()`.
+5. **Admin regeneration endpoint**, mirroring `admin/api/generate_feature_coords.php`, plus a
+   status column beside the feature-coords one on `admin/manage_blast_linkouts.php`.
+
+⚠️ **Do not read the GFF per request instead.** It was measured: 240 MB, ~1 s per lookup. The
+flat file exists precisely to avoid that.
+
+**Test primers to resume with** (Nematostella, GCF_932526225.1 / RS_101):
+
+```
+>NvCofilin_F        GCCGCACCTCTAATCAATTC     exon 1        → cDNA 494 bp, gDNA 6,389 bp, links OK
+>NvCofilin_R        TAGGTGCTTCGTCACTACAC     exon 3
+>NvJunction_F       CCTTCAGCCATTATGTCGAA     exon1/exon2 junction → cDNA 349 bp, NO gDNA, no link
+>NvJunction_R       TAGGTGCTTCGTCACTACAC     exon 3
+```
+
+`NvJunction` is the one to watch: when step 3 lands it should gain a Browser link showing its
+forward primer split into two blocks either side of the intron.
+
+---
+
 # 🚧 BUILD STATUS — phase 1 engine started 2026-08-06
 
 **Written and green** (56 assertions, `php tests/primer_smoke_tests.php`; the two existing suites
