@@ -296,8 +296,13 @@ $db_section_label = function ($key) {
                                 <span class="badge bg-warning text-dark"><?= (int)$total ?> products</span>
                             <?php endif; ?>
                             <?php if ($contam !== null && $contam > 1): ?>
-                                <span class="badge bg-warning text-dark">
-                                    <?= (int)$contam ?> from genomic DNA
+                                <?php // Shown only when gDNA yields MORE THAN ONE product. Exactly one
+                                      // is expected -- it is the same locus the cDNA product came from.
+                                      // More than one means the primers also pair somewhere else, which
+                                      // the cDNA count cannot reveal. ?>
+                                <span class="badge bg-warning text-dark"
+                                      title="Genomic DNA in the sample would give more than one product">
+                                    gDNA: <?= (int)$contam ?> products
                                 </span>
                             <?php endif; ?>
                         </div>
@@ -592,6 +597,14 @@ echo help_modal(
                          . '0 is a perfect match for both. Higher numbers still amplify in principle, but '
                          . 'less efficiently — and mismatches near the 3′ end hurt most, because that is '
                          . 'where the polymerase extends.',
+            ],
+            [
+                'label' => 'gDNA: N products',
+                'html'  => true,
+                'text'  => 'Appears when genomic DNA would give <strong>more than one</strong> product. '
+                         . 'Exactly one is expected — it is the same locus your cDNA product came from, '
+                         . 'just with the introns included. More than one means the primers also pair '
+                         . 'somewhere else in the genome, which the cDNA result alone cannot show you.',
             ],
             [
                 'label' => '1 primer — a product from one oligo',
