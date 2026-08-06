@@ -268,9 +268,14 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
                     $searched_dbs[$label] = basename($db);
 
                     foreach ($parse_result['pairs'] as $i => $pair) {
+                        // Always look at least as far as AMPLIFIABLE_MAX, whatever the
+                        // display limit is. The quality badge is computed from products up
+                        // to that size, so bounding the SEARCH by the display setting would
+                        // let "Largest product to report" silently change the verdict --
+                        // a display control quietly altering a scientific conclusion.
                         $found = PrimerPairs::findProducts(
                             $blast['hits'][$i] ?? [],
-                            ['max_product' => $max_product]
+                            ['max_product' => max($max_product, PrimerPairs::AMPLIFIABLE_MAX)]
                         );
                         // Per pair, not the run-wide total: every pair would otherwise
                         // report the same number as soon as more than one was searched.

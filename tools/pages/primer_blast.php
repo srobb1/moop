@@ -286,27 +286,39 @@ $db_section_label = function ($key) {
                     // ONE quality call, with the reasons it is not clean. Counts alone made
                     // the reader do this arithmetic themselves, and "specific — 1 product"
                     // beside "gDNA: 2 products" read as a contradiction.
+                    // Only products that would REALISTICALLY AMPLIFY count against a pair.
+                    // A real but 8 kb off-target is listed because it exists, yet standard
+                    // PCR will not make it, so it must not downgrade an otherwise clean pair.
+                    $amp = function (array $found) {
+                        return array_values(array_filter($found['products'] ?? [], function ($pr) {
+                            return $pr['size'] <= PrimerPairs::AMPLIFIABLE_MAX;
+                        }));
+                    };
+                    $amp_intended = count($amp($r['by_db'][$intended_db] ?? []));
+                    $amp_contam   = ($intended_db === 'transcript' && isset($r['by_db']['genome']))
+                        ? count($amp($r['by_db']['genome'])) : 0;
+
                     $reasons = [];
-                    if ($total > 1) {
-                        $reasons[] = $total . ' different products on your template';
+                    if ($amp_intended > 1) {
+                        $reasons[] = $amp_intended . ' different products on your template';
                     }
-                    if ($contam !== null && $contam > 1) {
-                        $reasons[] = 'genomic DNA would give ' . $contam . ' products, not just the one matching locus';
+                    if ($amp_contam > 1) {
+                        $reasons[] = 'genomic DNA would give ' . $amp_contam . ' products, not just the one matching locus';
                     }
                     foreach ($r['by_db'] as $f) {
-                        foreach ($f['products'] as $pr) {
+                        foreach ($amp($f) as $pr) {
                             if (!empty($pr['self_pairing'])) {
                                 $reasons[] = 'one primer amplifies on its own (self-pairing)';
                                 break 2;
                             }
                         }
                     }
+
+                    // Match quality is a SEPARATE axis from specificity. A pair that makes
+                    // exactly one product is specific whether or not that product is a
+                    // perfect match, so mismatches are noted rather than counted against it.
                     $primary_mm = ($p0 = PrimerPairs::primaryProduct($r['by_db'][$intended_db] ?? ['products' => []]))
                         ? $p0['max_mismatch'] : 0;
-                    if ($total >= 1 && $primary_mm > 0) {
-                        $reasons[] = 'your product is not a perfect match (' . $primary_mm . ' mismatch'
-                                   . ($primary_mm === 1 ? '' : 'es') . ')';
-                    }
 
                     if ($total === 0) {
                         $verdict = ['none', 'bg-secondary', 'no product'];
@@ -340,6 +352,11 @@ $db_section_label = function ($key) {
                                 <?php endforeach; ?>
                             </ul>
                         <?php endif; ?>
+                        <?php if ($total > 0 && $primary_mm > 0): ?>
+                            <div class="small text-muted mb-2">
+                                Your product is not a perfect match — <?= (int)$primary_mm ?> mismatch<?= $primary_mm === 1 ? '' : 'es' ?>.
+                            </div>
+                        <?php endif; ?>
 
                         <div class="small text-muted mb-3" style="font-family:monospace;">
                             F <?= htmlspecialchars($pair['forward']) ?> (<?= strlen($pair['forward']) ?>)
@@ -369,11 +386,21 @@ $db_section_label = function ($key) {
                                     <?= htmlspecialchars($db_section_label($db_key)) ?>
                                 </div>
 
-                                <?php if (empty($found['products'])): ?>
+                                <?php
+                                // Split what the engine found into what this display limit shows
+                                // and what it does not. The verdict above used AMPLIFIABLE_MAX and
+                                // is unaffected by either.
+                                $shown = array_values(array_filter($found['products'], function ($pr) use ($max_product) {
+                                    return $pr['size'] <= $max_product;
+                                }));
+                                $hidden_by_display = count($found['products']) - count($shown);
+                                $over_display = $hidden_by_display + (int)$found['over_max'];
+                                ?>
+                                <?php if (empty($shown)): ?>
                                     <div class="text-muted small mb-1">
-                                        <?php if ($found['over_max'] > 0): ?>
+                                        <?php if ($over_display > 0): ?>
                                             None under <?= number_format($max_product) ?> bp —
-                                            <?= number_format($found['over_max']) ?> larger.
+                                            <?= number_format($over_display) ?> larger.
                                         <?php else: ?>
                                             No products.
                                         <?php endif; ?>
@@ -382,7 +409,7 @@ $db_section_label = function ($key) {
                                     <div class="table-responsive">
                                     <table class="table table-sm align-middle mb-1">
                                         <tbody>
-                                        <?php foreach ($found['products'] as $prod): ?>
+                                        <?php foreach ($shown as $prod): ?>
                                             <?php
                                             $subject = $clean_id($prod['subject']);
                                             $export[] = [
@@ -459,10 +486,10 @@ $db_section_label = function ($key) {
                                 // case where a real product exists but is not shown: it was larger
                                 // than the size limit.
                                 ?>
-                                <?php if (!empty($found['over_max'])): ?>
+                                <?php if (!empty($over_display) && !empty($shown)): ?>
                                     <div class="text-muted" style="font-size:0.8rem;">
-                                        <?= number_format($found['over_max']) ?> further product<?= $found['over_max'] === 1 ? '' : 's' ?>
-                                        larger than <?= number_format($max_product) ?> bp — raise the size limit to see <?= $found['over_max'] === 1 ? 'it' : 'them' ?>.
+                                        <?= number_format($over_display) ?> further product<?= $over_display === 1 ? '' : 's' ?>
+                                        larger than <?= number_format($max_product) ?> bp — raise the size limit to see <?= $over_display === 1 ? 'it' : 'them' ?>.
                                     </div>
                                 <?php endif; ?>
 
@@ -606,19 +633,17 @@ echo help_modal(
                 'label' => 'clean',
                 'color' => 'success',
                 'html'  => true,
-                'text'  => 'Exactly one product forms on your template, it is a perfect match, and '
-                         . 'nothing else amplifies. If your input is cDNA, genomic DNA gives only the '
-                         . 'one matching locus — which is expected, since that is the same place with '
-                         . 'its introns.',
+                'text'  => 'Exactly one thing would amplify: one product on your template, and nothing '
+                         . 'else. If your input is cDNA, genomic DNA gives only the one matching locus — '
+                         . 'expected, since that is the same place with its introns included.',
             ],
             [
                 'label' => 'ambiguous',
                 'color' => 'warning',
                 'html'  => true,
-                'text'  => 'Something more than the one clean product would amplify. The reasons are '
-                         . 'listed under the name — more than one product on your template, extra '
-                         . 'genomic products, a self-pairing primer, or a product that is not a perfect '
-                         . 'match. Ambiguous is not unusable: read the reasons and decide.',
+                'text'  => 'More than one thing would amplify. The reasons are listed under the name: '
+                         . 'several products on your template, extra genomic products, or a self-pairing '
+                         . 'primer. Ambiguous is not unusable — read the reasons and decide.',
             ],
             [
                 'label' => 'no product',
@@ -628,6 +653,25 @@ echo help_modal(
                          . 'the same as "these primers do not work" — a primer with more mismatches than '
                          . 'the limit is invisible, so raising <strong>Mismatches allowed</strong> or '
                          . '<strong>Largest product to report</strong> may reveal it.',
+            ],
+            [
+                'label' => 'Only what would really amplify counts',
+                'accent' => true,
+                'html'  => true,
+                'text'  => 'The grade considers products up to about <strong>2 kb</strong>, which is what '
+                         . 'standard PCR realistically makes. A real off-target of 8 kb is still listed, '
+                         . 'because it exists — but it will not amplify, so it does not make an otherwise '
+                         . 'clean pair ambiguous. Mismatches are noted separately: a pair that makes one '
+                         . 'product is specific whether or not that product is a perfect match.',
+            ],
+            [
+                'label' => 'The size limit does not change the grade',
+                'accent' => true,
+                'html'  => true,
+                'text'  => '<strong>Largest product to report</strong> controls what is LISTED, nothing '
+                         . 'more. The grade is always computed over amplifiable products, so lowering the '
+                         . 'limit hides rows without quietly turning an ambiguous pair clean. A display '
+                         . 'control should never change a scientific conclusion.',
             ],
             [
                 'label' => 'What counts as a product',

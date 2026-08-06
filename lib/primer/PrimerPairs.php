@@ -42,6 +42,16 @@ class PrimerPairs
     const MAX_PRODUCT_DEFAULT = 10000;
 
     /**
+     * Largest product standard PCR realistically makes, in bp.
+     *
+     * Distinct from MAX_PRODUCT_DEFAULT, which governs what is REPORTED. This one
+     * governs what COUNTS AGAINST a pair: an off-target 8 kb product is listed
+     * because it is real, but it will not amplify under normal conditions, so it
+     * must not turn an otherwise clean pair into an ambiguous one.
+     */
+    const AMPLIFIABLE_MAX = 2000;
+
+    /**
      * Find every product a pair's hits could form on a single database.
      *
      * @param array $hits    ['forward' => [...], 'reverse' => [...]] from PrimerBlast.
