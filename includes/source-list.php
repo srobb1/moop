@@ -106,6 +106,7 @@ foreach ($sources_by_group as $group_name => $organisms) {
                             if ($a !== null): ?>
                             data-available="<?= !empty($a['ok']) ? '1' : '0' ?>"
                             data-unavailable-reason="<?= htmlspecialchars($a['reason'] ?? '') ?>"
+                            data-usable-mode="<?= htmlspecialchars($a['usable_mode'] ?? '') ?>"
                             <?php endif; ?>
                             <?= !empty($on_change_function) ? 'onchange="' . htmlspecialchars($on_change_function) . '();"' : '' ?>
                             <?= $is_selected ? 'checked' : '' ?>

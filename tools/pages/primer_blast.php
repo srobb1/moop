@@ -144,7 +144,10 @@ $db_section_label = function ($key) use ($search_mode) {
                         <div class="col-md-4">
                           <div class="card h-100 border">
                             <div class="card-body py-3">
-                              <label class="form-label mb-2">
+                              <?php // d-block: Bootstrap's .form-label is inline-block, and so are
+                                    // the .form-check-inline radios that follow -- without this they
+                                    // flow up onto the label's line. ?>
+                              <label class="form-label d-block mb-2">
                                 <strong>PCR input</strong>
                                 <?= help_modal_trigger('pcr-input-help', '', 'What each PCR input searches') ?>
                               </label>

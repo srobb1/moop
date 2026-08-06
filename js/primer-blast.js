@@ -85,10 +85,21 @@ function applySourceConstraints(chosen) {
     }
 
     if (available === '0') {
-        genomeRadio.disabled = true;
-        if (genomeRadio.checked) {
-            cdnaRadio.checked = true;   // the only choice this assembly can answer
+        var usable = chosen.getAttribute('data-usable-mode') || '';
+
+        // Only steer to cDNA when cDNA can actually answer. For a source with no
+        // searchable index at all, switching would trade one dead end for another
+        // and imply a fix that does not exist -- so leave the choice alone and let
+        // the note say plainly that nothing can be searched.
+        if (usable === 'transcript') {
+            genomeRadio.disabled = true;
+            if (genomeRadio.checked) {
+                cdnaRadio.checked = true;
+            }
+        } else {
+            genomeRadio.disabled = false;
         }
+
         if (note) {
             note.textContent = chosen.getAttribute('data-unavailable-reason') || '';
             note.classList.remove('d-none');

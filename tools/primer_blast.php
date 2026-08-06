@@ -130,16 +130,21 @@ foreach ($accessible_sources as $source) {
     $asm = dirname($source['path']);
 
     if (PrimerBlast::databaseExists($asm . '/genome.fa')) {
-        $source_availability[$key] = ['ok' => true, 'reason' => ''];
+        $source_availability[$key] = ['ok' => true, 'reason' => '', 'usable_mode' => ''];
     } elseif (PrimerBlast::databaseExists($source['path'] . '/transcript.nt.fa')) {
         $source_availability[$key] = [
-            'ok'     => false,
-            'reason' => 'No genome — transcriptome assembly. Usable with PCR input set to cDNA.',
+            'ok'          => false,
+            'reason'      => 'No genome — transcriptome assembly. Usable with PCR input set to cDNA.',
+            // Still usable, just not for the genomic question.
+            'usable_mode' => 'transcript',
         ];
     } else {
         $source_availability[$key] = [
-            'ok'     => false,
-            'reason' => 'No genome or transcriptome BLAST index — nothing to search.',
+            'ok'          => false,
+            'reason'      => 'No genome or transcriptome BLAST index — nothing to search.',
+            // Nothing works here, so the page must NOT steer the user to cDNA as
+            // though it would: that would trade one dead end for another.
+            'usable_mode' => '',
         ];
     }
 }
