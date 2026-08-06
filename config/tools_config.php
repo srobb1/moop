@@ -99,6 +99,18 @@ return [
         'toolbox'        => false,
     ],
 
+    'primer_blast' => [
+        'id'             => 'primer_blast',
+        'name'           => 'Primer BLAST',
+        'icon'           => 'fa-vials',
+        'description'    => 'Check primer pairs against a genome and transcriptome — product sizes and how many places they amplify',
+        'btn_class'      => 'btn-tool-orange',
+        'url_path'       => '/tools/primer_blast.php',
+        'context_params' => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
+        'pages'          => 'all',
+        'toolbox'        => false,
+    ],
+
     // HOW TO ADD A NEW TOOL:
     // 1. Choose a unique 'id' (use snake_case, like 'my_new_tool')
     // 2. Create the tool PHP file in /data/moop/tools/ (or subdirectory)
