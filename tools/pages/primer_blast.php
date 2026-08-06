@@ -196,7 +196,7 @@ $db_section_label = function ($key) use ($search_mode) {
                                 ) ?>
                               </label>
                               <input type="number" class="form-control" id="max_product" name="max_product"
-                                     min="100" max="1000000" step="500" value="<?= (int)$max_product ?>">
+                                     min="100" max="1000000" step="100" value="<?= (int)$max_product ?>">
                               <div class="form-text mt-2">Bigger ones are counted, not hidden.</div>
                             </div>
                           </div>
