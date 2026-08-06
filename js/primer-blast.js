@@ -208,6 +208,11 @@ document.addEventListener('DOMContentLoaded', function () {
         resetBtn.addEventListener('click', resetPrimerForm);
     }
 
+    var dl = document.getElementById('downloadPrimerResults');
+    if (dl) {
+        dl.addEventListener('click', downloadPrimerResults);
+    }
+
     // Bootstrap tooltips are initialised per module in this codebase, not globally,
     // so the "!" markers on unusable sources need it here. Without this they still
     // work -- the title attribute gives a native tooltip -- just unstyled.
@@ -281,4 +286,46 @@ function resetPrimerForm() {
     if (textarea) {
         textarea.focus();
     }
+}
+
+/**
+ * Download the results as TSV.
+ *
+ * Built from the JSON the server embedded, NOT by scraping the rendered table.
+ * The table formats sizes with thousands separators for reading, and re-parsing
+ * those back out is exactly how an export ends up subtly wrong — "6,389" becoming
+ * 6 in a spreadsheet. One source of truth, formatted once for the eye and once
+ * for the file.
+ */
+function downloadPrimerResults() {
+    var node = document.getElementById('primerExportData');
+    if (!node) { return; }
+
+    var rows;
+    try {
+        rows = JSON.parse(node.textContent);
+    } catch (e) {
+        return;
+    }
+    if (!rows || !rows.length) { return; }
+
+    var header = ['pair', 'forward', 'reverse', 'template', 'subject',
+                  'start', 'end', 'product_size', 'max_mismatch', 'formed_by'];
+
+    var tsv = [header.join('\t')];
+    rows.forEach(function (r) {
+        tsv.push(r.map(function (c) {
+            return String(c).replace(/[\t\r\n]/g, ' ');
+        }).join('\t'));
+    });
+
+    var blob = new Blob([tsv.join('\n') + '\n'], {type: 'text/tab-separated-values'});
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url;
+    a.download = 'primer_blast_results.tsv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }

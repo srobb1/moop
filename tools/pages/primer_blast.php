@@ -17,22 +17,17 @@ $db_label = function ($key) {
 };
 
 /**
- * Label for a result section — says what the products MEAN, which depends on the
- * PCR input.
+ * Label for a result section: what template the product would come from.
  *
- * The same genome search answers two different questions. With genomic DNA in the
- * tube it lists the products you are trying to make; with cDNA in the tube it
- * lists what a genomic carry-over would amplify instead. Labelling both "Genome"
- * leaves the reader to work that out, and gets it wrong in exactly the case that
- * matters — a contaminating band read as the intended one.
+ * Naming the template rather than interpreting it ("your intended product",
+ * "contamination") keeps the two sections symmetrical and lets the reader draw
+ * the comparison themselves — which is the point, since the two sizes differing
+ * IS the intron answer. The intended template is already listed first.
  */
-$db_section_label = function ($key) use ($search_mode) {
-    if ($key === 'transcript') {
-        return 'From cDNA — your intended product';
-    }
-    return $search_mode === 'transcript'
-        ? 'From contaminating genomic DNA'
-        : 'From genomic DNA — your intended product';
+$db_section_label = function ($key) {
+    return $key === 'transcript'
+        ? 'Predicted Product from cDNA'
+        : 'Predicted Product from gDNA';
 };
 ?>
 
@@ -244,83 +239,149 @@ $db_section_label = function ($key) use ($search_mode) {
         <?php endif; ?>
 
         <?php if (!empty($results)): ?>
+            <?php
+            /** BLAST wraps subject ids as ref|ACC| — noise in a results table. */
+            $clean_id = function ($s) {
+                if (preg_match('/^(?:ref|gb|emb|dbj|lcl)\|([^|]+)\|?$/', $s, $m)) {
+                    return $m[1];
+                }
+                return $s;
+            };
+            // Canonical rows for the download, so the file is built from the DATA
+            // rather than re-parsed out of the rendered table -- a table formats
+            // numbers with commas, and re-reading them back is how an export ends
+            // up subtly wrong.
+            $export = [];
+            ?>
             <div class="card shadow-sm mb-4">
                 <div class="card-header text-white d-flex align-items-center tool-header">
                     <span class="fw-semibold">Results</span>
                     <span class="ms-auto small">
-                        Searched: <?= htmlspecialchars(implode(', ', array_map($db_label, array_keys($searched_dbs)))) ?>
+                        <?= htmlspecialchars(implode(' + ', array_map($db_label, array_keys($searched_dbs)))) ?>
                         · up to <?= (int)$max_mismatch ?> mismatch<?= $max_mismatch === 1 ? '' : 'es' ?>
+                        · products to <?= number_format($max_product) ?> bp
                     </span>
                 </div>
                 <div class="card-body">
 
                 <?php foreach ($results as $r): ?>
-                    <?php $pair = $r['pair']; ?>
-                    <div class="mb-4">
-                        <h5 class="mb-1"><?= htmlspecialchars($pair['name']) ?></h5>
-                        <div class="small text-muted mb-2" style="font-family:monospace;">
-                            F <?= htmlspecialchars($pair['forward']) ?> (<?= strlen($pair['forward']) ?> nt)
-                            &nbsp;·&nbsp;
-                            R <?= htmlspecialchars($pair['reverse']) ?> (<?= strlen($pair['reverse']) ?> nt)
+                    <?php
+                    $pair   = $r['pair'];
+                    $t_prod = isset($r['by_db']['transcript']) ? PrimerPairs::primaryProduct($r['by_db']['transcript']) : null;
+                    $g_prod = isset($r['by_db']['genome'])     ? PrimerPairs::primaryProduct($r['by_db']['genome'])     : null;
+                    $t_size = $t_prod['size'] ?? null;
+                    $g_size = $g_prod['size'] ?? null;
+                    // Specificity is judged against the INTENDED template only. Summing
+                    // across databases counts one amplicon twice -- the cDNA product and
+                    // the genomic product are the same fragment seen against two
+                    // templates -- and a perfectly specific pair then reads "2 products".
+                    $intended_db = ($search_mode === 'transcript' && isset($r['by_db']['transcript']))
+                        ? 'transcript' : 'genome';
+                    $total = $r['by_db'][$intended_db]['product_count'] ?? 0;
+                    $contam = ($intended_db === 'transcript')
+                        ? ($r['by_db']['genome']['product_count'] ?? null) : null;
+                    ?>
+                    <div class="pb-pair mb-4 pb-3 border-bottom">
+
+                        <?php // ---- headline: name, sequences, and the verdict together ---- ?>
+                        <div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
+                            <h5 class="mb-0"><?= htmlspecialchars($pair['name']) ?></h5>
+                            <?php if ($total === 0): ?>
+                                <span class="badge bg-secondary">no product</span>
+                            <?php elseif ($total === 1): ?>
+                                <span class="badge bg-success">specific — 1 product</span>
+                            <?php else: ?>
+                                <span class="badge bg-warning text-dark"><?= (int)$total ?> products</span>
+                            <?php endif; ?>
+                            <?php if ($contam !== null && $contam > 1): ?>
+                                <span class="badge bg-warning text-dark">
+                                    <?= (int)$contam ?> from genomic DNA
+                                </span>
+                            <?php endif; ?>
                         </div>
 
-                        <?php foreach ($r['by_db'] as $db_key => $found): ?>
-                            <div class="mb-3 ps-3 border-start">
-                                <div class="mb-1">
-                                    <strong><?= htmlspecialchars($db_section_label($db_key)) ?>:</strong>
-                                    <?php if ($found['product_count'] === 0 && $found['over_max'] > 0): ?>
-                                        <?php // "no products" would be a lie here: products DID form, they were
-                                              // just larger than the reporting limit. Saying so points at the
-                                              // control that would reveal them. ?>
-                                        <span class="badge bg-secondary">none under <?= number_format($max_product) ?> bp</span>
-                                        <span class="small ms-1">— raise the size limit to see the
-                                        <?= number_format($found['over_max']) ?> larger one<?= $found['over_max'] === 1 ? '' : 's' ?>.</span>
-                                    <?php elseif ($found['product_count'] === 0): ?>
-                                        <span class="badge bg-secondary">no products</span>
-                                    <?php elseif ($found['product_count'] === 1): ?>
-                                        <span class="badge bg-success">1 product</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-warning text-dark"><?= (int)$found['product_count'] ?> products</span>
-                                    <?php endif; ?>
+                        <div class="small text-muted mb-3" style="font-family:monospace;">
+                            F <?= htmlspecialchars($pair['forward']) ?> (<?= strlen($pair['forward']) ?>)
+                            &nbsp;&nbsp;R <?= htmlspecialchars($pair['reverse']) ?> (<?= strlen($pair['reverse']) ?>)
+                        </div>
 
-                                    <span class="text-muted small ms-2">
-                                        primer hits: forward <?= (int)$found['primer_hits']['forward'] ?>,
-                                        reverse <?= (int)$found['primer_hits']['reverse'] ?>
-                                    </span>
+                        <?php if ($t_size !== null && $g_size !== null): ?>
+                            <div class="alert <?= $g_size > $t_size ? 'alert-success' : 'alert-warning' ?> py-2 px-3 mb-3">
+                                <?php if ($g_size > $t_size): ?>
+                                    <i class="fa fa-check-circle"></i>
+                                    <strong>Spans at least one intron.</strong>
+                                    cDNA <strong><?= number_format($t_size) ?> bp</strong> vs genomic
+                                    <strong><?= number_format($g_size) ?> bp</strong> — genomic DNA in the sample
+                                    gives a larger product, or none.
+                                <?php else: ?>
+                                    <i class="fa fa-exclamation-triangle"></i>
+                                    <strong>Both primers sit within one exon.</strong>
+                                    cDNA and genomic products are both <?= number_format($t_size) ?> bp, so this pair
+                                    cannot tell cDNA from genomic DNA in the sample.
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php foreach ($r['by_db'] as $db_key => $found): ?>
+                            <div class="mb-3">
+                                <div class="fw-semibold small text-uppercase text-muted mb-1">
+                                    <?= htmlspecialchars($db_section_label($db_key)) ?>
                                 </div>
 
-                                <?php if (!empty($found['carried_by'])): ?>
-                                    <div class="alert alert-info py-1 px-2 small mb-2">
-                                        <i class="fa fa-info-circle"></i>
-                                        Specificity here rests on the <strong><?= htmlspecialchars($found['carried_by']) ?></strong>
-                                        primer alone — the other one matches in many places. Keep it if you revise this pair.
+                                <?php if (empty($found['products'])): ?>
+                                    <div class="text-muted small mb-1">
+                                        <?php if ($found['over_max'] > 0): ?>
+                                            None under <?= number_format($max_product) ?> bp —
+                                            <?= number_format($found['over_max']) ?> larger.
+                                        <?php else: ?>
+                                            No products.
+                                        <?php endif; ?>
                                     </div>
-                                <?php endif; ?>
-
-                                <?php if (!empty($found['products'])): ?>
+                                <?php else: ?>
                                     <div class="table-responsive">
-                                    <table class="table table-sm table-bordered mb-1">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Product size</th>
-                                                <th>Location</th>
-                                                <th>Mismatches</th>
-                                                <th>Formed by</th>
-                                            </tr>
-                                        </thead>
+                                    <table class="table table-sm align-middle mb-1">
                                         <tbody>
                                         <?php foreach ($found['products'] as $prod): ?>
+                                            <?php
+                                            $subject = $clean_id($prod['subject']);
+                                            $export[] = [
+                                                $pair['name'], $pair['forward'], $pair['reverse'],
+                                                $db_key === 'genome' ? 'genomic' : 'cDNA',
+                                                $subject, $prod['start'], $prod['end'], $prod['size'],
+                                                $prod['max_mismatch'],
+                                                $prod['self_pairing'] ? 'self-pairing' : 'forward+reverse',
+                                            ];
+                                            ?>
                                             <tr>
-                                                <td class="fw-semibold"><?= number_format($prod['size']) ?> bp</td>
-                                                <td style="font-family:monospace; font-size:0.85rem;">
-                                                    <?= htmlspecialchars($prod['subject']) ?>:<?= number_format($prod['start']) ?>–<?= number_format($prod['end']) ?>
+                                                <td class="fw-bold" style="width:7rem; white-space:nowrap;">
+                                                    <?= number_format($prod['size']) ?> bp
                                                 </td>
-                                                <td><?= (int)$prod['max_mismatch'] ?></td>
-                                                <td>
+                                                <td style="font-family:monospace; font-size:0.85rem;">
+                                                    <?= htmlspecialchars($subject) ?>:<?= number_format($prod['start']) ?>–<?= number_format($prod['end']) ?>
+                                                </td>
+                                                <td style="width:8rem;">
+                                                    <span class="text-muted small"><?= (int)$prod['max_mismatch'] ?> mismatch<?= $prod['max_mismatch'] === 1 ? '' : 'es' ?></span>
+                                                </td>
+                                                <td style="width:9rem;">
                                                     <?php if (!empty($prod['self_pairing'])): ?>
-                                                        <span class="badge bg-danger">the <?= htmlspecialchars($prod['primers'][0]) ?> primer with itself</span>
-                                                    <?php else: ?>
-                                                        forward + reverse
+                                                        <span class="badge bg-danger">one primer with itself</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="text-end" style="width:8rem;">
+                                                    <?php if ($db_key === 'genome' && !empty($result_organism) && !empty($result_assembly)): ?>
+                                                        <?php
+                                                        // The genomic product IS a locus, so it links straight into
+                                                        // the browser -- where the gap between the cDNA and genomic
+                                                        // sizes is visible as the introns it crosses.
+                                                        $loc = $subject . ':' . $prod['start'] . '..' . $prod['end'];
+                                                        $jb  = '/' . $site . '/jbrowse2.php?organism=' . urlencode($result_organism)
+                                                             . '&assembly=' . urlencode($result_assembly)
+                                                             . '&loc=' . urlencode($loc);
+                                                        ?>
+                                                        <a href="<?= htmlspecialchars($jb) ?>" target="_blank" rel="noopener"
+                                                           class="btn btn-sm btn-outline-secondary">
+                                                            <i class="fa fa-dna"></i> Browser
+                                                        </a>
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>
@@ -330,54 +391,55 @@ $db_section_label = function ($key) use ($search_mode) {
                                     </div>
                                 <?php endif; ?>
 
-                                <div class="small text-muted">
-                                    <?php if ($found['over_max'] > 0): ?>
-                                        <?= number_format($found['over_max']) ?> further combination<?= $found['over_max'] === 1 ? '' : 's' ?>
-                                        exceeded the <?= number_format($max_product) ?> bp limit.
-                                    <?php endif; ?>
-                                    <?php if (!empty($found['below_floor'])): ?>
-                                        <?= number_format($found['below_floor']) ?> partial alignments were too short to be priming sites.
-                                    <?php endif; ?>
-                                    <?php if (!empty($found['over_mismatch'])): ?>
-                                        <?= number_format($found['over_mismatch']) ?> alignments exceeded the mismatch limit.
+                                <?php
+                                // Everything discarded, on ONE muted line. It must be stated --
+                                // a specificity tool that quietly drops candidates is worse than
+                                // one that shows too many -- but it is footnote, not headline.
+                                $notes = [];
+                                if (!empty($found['over_max']) && !empty($found['products'])) {
+                                    $notes[] = number_format($found['over_max']) . ' over ' . number_format($max_product) . ' bp';
+                                }
+                                if (!empty($found['below_floor'])) {
+                                    $notes[] = number_format($found['below_floor']) . ' too short to prime';
+                                }
+                                if (!empty($found['over_mismatch'])) {
+                                    $notes[] = number_format($found['over_mismatch']) . ' over the mismatch limit';
+                                }
+                                $hits = $found['primer_hits'];
+                                ?>
+                                <div class="text-muted" style="font-size:0.8rem;">
+                                    each primer alone matched
+                                    <?= number_format($hits['forward']) ?> / <?= number_format($hits['reverse']) ?> place<?= ($hits['forward'] === 1 && $hits['reverse'] === 1) ? '' : 's' ?>
+                                    <?= field_help(
+                                        'How many places each primer matched on its own — forward first, then '
+                                        . 'reverse. These are NOT products. A primer can match in many places and '
+                                        . 'still give one clean product, because a product only forms where the '
+                                        . 'two primers land on opposite strands close enough to amplify between '
+                                        . 'them. Judge the pair by the products above; these counts tell you which '
+                                        . 'primer is carrying the specificity.',
+                                        'Individual primer matches'
+                                    ) ?>
+                                    <?= $notes ? ' · discarded: ' . htmlspecialchars(implode(' · ', $notes)) : '' ?>
+                                    <?php if (!empty($found['carried_by'])): ?>
+                                        · <span class="text-warning-emphasis">specificity rests on the
+                                        <?= htmlspecialchars($found['carried_by']) ?> primer alone</span>
                                     <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
-
-                        <?php
-                        // Genomic and cDNA sizes differ exactly when the primers sit in
-                        // different exons -- the genomic-contamination question, answered
-                        // without any exon coordinates.
-                        $g_prod = isset($r['by_db']['genome'])
-                            ? PrimerPairs::primaryProduct($r['by_db']['genome']) : null;
-                        $t_prod = isset($r['by_db']['transcript'])
-                            ? PrimerPairs::primaryProduct($r['by_db']['transcript']) : null;
-                        $g = $g_prod['size'] ?? null;
-                        $t = $t_prod['size'] ?? null;
-                        ?>
-                        <?php if ($g !== null && $t !== null): ?>
-                            <div class="alert <?= $g > $t ? 'alert-success' : 'alert-warning' ?> py-2 small">
-                                <?php if ($g > $t): ?>
-                                    <i class="fa fa-check-circle"></i>
-                                    <strong>Spans at least one intron.</strong>
-                                    Genomic product <?= number_format($g) ?> bp vs cDNA <?= number_format($t) ?> bp, so
-                                    contaminating genomic DNA would give a larger product — or none at all.
-                                <?php else: ?>
-                                    <i class="fa fa-exclamation-triangle"></i>
-                                    <strong>Both primers appear to sit within one exon.</strong>
-                                    Genomic and cDNA products are the same size (<?= number_format($t) ?> bp), so this pair
-                                    cannot distinguish cDNA from contaminating genomic DNA.
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
                     </div>
-                    <hr>
                 <?php endforeach; ?>
+
+                <?php // Download built from the canonical rows collected above. ?>
+                <script type="application/json" id="primerExportData"><?= json_encode($export) ?></script>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="downloadPrimerResults">
+                    <i class="fa fa-download"></i> Download results (TSV)
+                </button>
 
                 </div>
             </div>
         <?php endif; ?>
+
         </div><!-- /#primerResults -->
 
     <?php endif; ?>
@@ -514,7 +576,7 @@ echo help_modal(
                 'text'  => 'Searches the <strong>transcriptome and the genome</strong> — both, always. '
                          . 'The transcriptome gives the product you actually want, at its true cDNA size. '
                          . 'The genome is searched as well because <em>any reaction on cDNA can carry '
-                         . 'over genomic DNA</em> — not just RT-PCR. It shows what that contamination '
+                         . 'over genomic DNA</em> — not just RT-PCR. It shows what that genomic DNA '
                          . 'would amplify, and how big it would be.',
             ],
             [
@@ -524,7 +586,7 @@ echo help_modal(
                          . 'pair as clean while gDNA in the sample amplified something else entirely. '
                          . 'Searching both is also what lets the tool tell you whether your pair '
                          . '<strong>spans an intron</strong>: if the genomic product is bigger than the '
-                         . 'cDNA product, it does — and gDNA contamination will give a different-sized '
+                         . 'cDNA product, it does — and genomic DNA in the sample gives a different-sized '
                          . 'band, or none at all.',
             ],
         ],

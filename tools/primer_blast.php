@@ -184,6 +184,13 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
         if (!$source_obj) {
             $search_error = 'You do not have access to the selected assembly.';
         } else {
+            // These drive the JBrowse links on genomic products. They must come
+            // from the POSTED source, not from prepareSourceSelection(), which
+            // never sees the radio (it reads organism/assembly hidden fields that
+            // only tools/blast.php's JS populates).
+            $result_organism = $sel_organism;
+            $result_assembly = $sel_assembly;
+
             $gene_set_path = $source_obj['path'];
             $assembly_path = dirname($gene_set_path);
 
@@ -222,7 +229,7 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
                         . 'assembly. Set PCR input to "cDNA" to check these primers against its '
                         . 'transcripts.';
                 } elseif ($search_mode === 'transcript' && $has_transcript) {
-                    $db_notes[] = 'This assembly has no genome sequence, so contaminating genomic DNA '
+                    $db_notes[] = 'This assembly has no genome sequence, so genomic DNA in the sample '
                         . 'could not be checked — only the cDNA products below are reported.';
                 } else {
                     $search_error = 'This source has neither a genome nor a transcriptome BLAST index, '
@@ -232,7 +239,7 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
 
             // Report the user's INTENDED product first. With cDNA in the tube the
             // transcriptome result is the answer they came for and the genomic one
-            // is the contamination warning beneath it; listing the genome first
+            // is the genomic-DNA check beneath it; listing the genome first
             // buries the answer under a caveat.
             if ($search_mode === 'transcript' && isset($dbs['transcript'])) {
                 $dbs = ['transcript' => $dbs['transcript']]
@@ -292,6 +299,8 @@ $data = [
     'filter_organisms_string'     => $filter_organisms_string,
     'selected_source'             => $selected_source,
     'source_availability'         => $source_availability,
+    'result_organism'             => $result_organism ?? '',
+    'result_assembly'             => $result_assembly ?? '',
     'selected_organism'           => $selected_organism,
     'selected_assembly_name'      => $selected_assembly_name,
     'selected_assembly_accession' => $selected_assembly_accession,
