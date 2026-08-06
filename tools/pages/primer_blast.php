@@ -364,12 +364,14 @@ $db_section_label = function ($key) {
                                                 <td style="width:8rem;">
                                                     <span class="text-muted small"><?= (int)$prod['max_mismatch'] ?> mismatch<?= $prod['max_mismatch'] === 1 ? '' : 'es' ?></span>
                                                 </td>
-                                                <td style="width:11rem;">
+                                                <td style="width:8rem;">
                                                     <?php if (!empty($prod['self_pairing'])): ?>
                                                         <?php // Both ends of this product are the SAME oligo. A pair is
-                                                              // implicit for normal products, so only this case is labelled. ?>
-                                                        <span class="badge bg-danger">
-                                                            <?= htmlspecialchars($prod['primers'][0]) ?> primer at both ends
+                                                              // implicit for normal products, so only this case is labelled,
+                                                              // and compactly -- the loop icon carries the idea, the popover
+                                                              // and the Results help carry the explanation. ?>
+                                                        <span class="badge bg-danger" title="<?= htmlspecialchars($prod['primers'][0]) ?> primer at both ends">
+                                                            <i class="fa fa-repeat"></i> 1 primer
                                                         </span>
                                                         <?= field_help(
                                                             'Both ends of this product use the SAME primer, not one of each. '
@@ -592,12 +594,14 @@ echo help_modal(
                          . 'where the polymerase extends.',
             ],
             [
-                'label' => 'Same primer at both ends',
+                'label' => '1 primer — a product from one oligo',
                 'html'  => true,
-                'text'  => 'One primer can match twice on opposite strands, facing itself, and amplify the '
-                         . 'fragment between. Both ends of that product are the same oligo. It is a real '
-                         . 'source of unexpected bands and you would not predict it from the pair, so it is '
-                         . 'labelled.',
+                'text'  => 'Marked <span class="badge bg-danger"><i class="fa fa-repeat"></i> 1 primer</span>. '
+                         . 'One primer can match twice on opposite strands, facing itself, and amplify the '
+                         . 'fragment between — so both ends of that product are the same oligo, and the other '
+                         . 'primer is not involved at all. A real source of unexpected bands, and one you '
+                         . 'would never predict by thinking about the pair. Hover the badge to see which '
+                         . 'primer it was.',
             ],
             [
                 'label' => 'Likely spans an intron',
