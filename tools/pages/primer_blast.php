@@ -61,7 +61,10 @@ $db_section_label = function ($key) use ($search_mode) {
             </div>
         <?php endif; ?>
 
-        <form method="POST" id="primerBlastForm" enctype="multipart/form-data">
+        <form method="POST" id="primerBlastForm" enctype="multipart/form-data"
+              data-default-mismatch="1"
+              data-default-product="<?= (int)PrimerPairs::MAX_PRODUCT_DEFAULT ?>"
+              data-default-mode="genome">
             <?= csrf_input_field() ?>
             <input type="hidden" name="context_organism" value="<?= htmlspecialchars($context_organism) ?>">
             <input type="hidden" name="context_assembly" value="<?= htmlspecialchars($context_assembly) ?>">
@@ -104,11 +107,6 @@ $db_section_label = function ($key) use ($search_mode) {
                         <span id="fileOverrideName"></span>
                     </div>
 
-                    <div class="mt-3">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="resetPrimerForm">
-                            <i class="fa fa-rotate-left"></i> Clear
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -208,10 +206,14 @@ $db_section_label = function ($key) use ($search_mode) {
                 </div>
             </div>
 
-            <div class="mb-4">
+            <div class="mb-4 d-flex align-items-center gap-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="fa fa-search"></i> Check primers
                 </button>
+                <button type="button" class="btn btn-outline-secondary" id="resetPrimerForm">
+                    <i class="fa fa-rotate-left"></i> Clear form
+                </button>
+                <span class="text-muted small">Clears the primers, the assembly, and the options.</span>
             </div>
         </form>
 

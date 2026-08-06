@@ -149,13 +149,58 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var resetBtn = document.getElementById('resetPrimerForm');
     if (resetBtn) {
-        resetBtn.addEventListener('click', function () {
-            var textarea = document.getElementById('primers');
-            if (textarea) {
-                textarea.value = '';
-                textarea.focus();
-            }
-            clearPrimerFile();
-        });
+        resetBtn.addEventListener('click', resetPrimerForm);
     }
 });
+
+/**
+ * Return the whole form to its starting state: primers, assembly, and options.
+ *
+ * The form's native reset() is NOT enough. After a search the page re-renders
+ * with the SUBMITTED values as the field defaults, so reset() would restore the
+ * last search rather than clear it -- the opposite of what the button says.
+ * Defaults therefore come from data attributes written by PHP, so they cannot
+ * drift from the server's idea of them.
+ */
+function resetPrimerForm() {
+    var form = document.getElementById('primerBlastForm');
+    if (!form) { return; }
+
+    var textarea = document.getElementById('primers');
+    if (textarea) {
+        textarea.value = '';
+    }
+
+    clearPrimerFile();
+
+    // Deselect the assembly, and clear the filter that may be hiding most of the list.
+    form.querySelectorAll('input[name="selected_source"]:checked').forEach(function (radio) {
+        radio.checked = false;
+    });
+    var filter = document.getElementById('sourceFilter');
+    if (filter) {
+        filter.value = '';
+    }
+    filterPrimerSources();
+    updatePrimerSelection();
+
+    var mismatch = document.getElementById('max_mismatch');
+    if (mismatch) {
+        mismatch.value = form.getAttribute('data-default-mismatch') || '1';
+    }
+
+    var product = document.getElementById('max_product');
+    if (product) {
+        product.value = form.getAttribute('data-default-product') || '10000';
+    }
+
+    var mode = form.getAttribute('data-default-mode') || 'genome';
+    var modeRadio = form.querySelector('input[name="search_mode"][value="' + mode + '"]');
+    if (modeRadio) {
+        modeRadio.checked = true;
+    }
+
+    if (textarea) {
+        textarea.focus();
+    }
+}
