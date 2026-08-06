@@ -42,14 +42,25 @@ class PrimerPairs
     const MAX_PRODUCT_DEFAULT = 10000;
 
     /**
-     * Largest product standard PCR realistically makes, in bp.
+     * What standard PCR is expected to amplify: a product under AMPLIFIABLE_MAX bp
+     * whose worse primer carries at most AMPLIFIABLE_MAX_MISMATCH mismatches.
      *
-     * Distinct from MAX_PRODUCT_DEFAULT, which governs what is REPORTED. This one
-     * governs what COUNTS AGAINST a pair: an off-target 8 kb product is listed
-     * because it is real, but it will not amplify under normal conditions, so it
-     * must not turn an otherwise clean pair into an ambiguous one.
+     * Both are distinct from MAX_PRODUCT_DEFAULT, which governs what is REPORTED.
+     * These govern what COUNTS: a real 8 kb off-target, or one with 4 mismatches,
+     * is still listed because it exists, but it will not amplify under normal
+     * conditions and so must not turn an otherwise clean pair ambiguous.
      */
     const AMPLIFIABLE_MAX = 2000;
+    const AMPLIFIABLE_MAX_MISMATCH = 2;
+
+    /**
+     * Would standard PCR make this product?
+     */
+    public static function isAmplifiable(array $product)
+    {
+        return $product['size'] <= self::AMPLIFIABLE_MAX
+            && $product['max_mismatch'] <= self::AMPLIFIABLE_MAX_MISMATCH;
+    }
 
     /**
      * Find every product a pair's hits could form on a single database.

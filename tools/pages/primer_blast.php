@@ -279,20 +279,17 @@ $db_section_label = function ($key) {
                     // templates -- and a perfectly specific pair then reads "2 products".
                     $intended_db = ($search_mode === 'transcript' && isset($r['by_db']['transcript']))
                         ? 'transcript' : 'genome';
-                    $total = $r['by_db'][$intended_db]['product_count'] ?? 0;
-                    $contam = ($intended_db === 'transcript')
-                        ? ($r['by_db']['genome']['product_count'] ?? null) : null;
 
                     // ONE quality call, with the reasons it is not clean. Counts alone made
                     // the reader do this arithmetic themselves, and "specific — 1 product"
                     // beside "gDNA: 2 products" read as a contradiction.
-                    // Only products that would REALISTICALLY AMPLIFY count against a pair.
-                    // A real but 8 kb off-target is listed because it exists, yet standard
-                    // PCR will not make it, so it must not downgrade an otherwise clean pair.
+                    // THE RULE (user, 2026-08-06): with traditional PCR a product under
+                    // 2 kb carrying fewer than 3 mismatches is expected to amplify. Count
+                    // those; one is clean, more than one is ambiguous. Everything else is
+                    // still LISTED -- it is real -- it just does not count.
                     $amp = function (array $found) {
-                        return array_values(array_filter($found['products'] ?? [], function ($pr) {
-                            return $pr['size'] <= PrimerPairs::AMPLIFIABLE_MAX;
-                        }));
+                        return array_values(array_filter($found['products'] ?? [],
+                            ['PrimerPairs', 'isAmplifiable']));
                     };
                     $amp_intended = count($amp($r['by_db'][$intended_db] ?? []));
                     $amp_contam   = ($intended_db === 'transcript' && isset($r['by_db']['genome']))
@@ -300,10 +297,10 @@ $db_section_label = function ($key) {
 
                     $reasons = [];
                     if ($amp_intended > 1) {
-                        $reasons[] = $amp_intended . ' different products on your template';
+                        $reasons[] = $amp_intended . ' products on your template could amplify';
                     }
                     if ($amp_contam > 1) {
-                        $reasons[] = 'genomic DNA would give ' . $amp_contam . ' products, not just the one matching locus';
+                        $reasons[] = 'genomic DNA could give ' . $amp_contam . ' products, not just the one matching locus';
                     }
                     foreach ($r['by_db'] as $f) {
                         foreach ($amp($f) as $pr) {
@@ -314,16 +311,12 @@ $db_section_label = function ($key) {
                         }
                     }
 
-                    // Match quality is a SEPARATE axis from specificity. A pair that makes
-                    // exactly one product is specific whether or not that product is a
-                    // perfect match, so mismatches are noted rather than counted against it.
-                    $primary_mm = ($p0 = PrimerPairs::primaryProduct($r['by_db'][$intended_db] ?? ['products' => []]))
-                        ? $p0['max_mismatch'] : 0;
+                    $total = $amp_intended;
 
                     if ($total === 0) {
                         $verdict = ['none', 'bg-secondary', 'no product'];
                     } elseif (!$reasons) {
-                        $verdict = ['clean', 'bg-success', 'clean'];
+                        $verdict = ['clear', 'bg-success', 'clear'];
                     } else {
                         $verdict = ['ambiguous', 'bg-warning text-dark', 'ambiguous'];
                     }
@@ -334,7 +327,7 @@ $db_section_label = function ($key) {
                         <div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
                             <h5 class="mb-0"><?= htmlspecialchars($pair['name']) ?></h5>
                             <span class="badge <?= $verdict[1] ?>"><?= htmlspecialchars($verdict[2]) ?></span>
-                            <?= help_modal_trigger('results-help', '', 'What clean and ambiguous mean') ?>
+                            <?= help_modal_trigger('results-help', '', 'What clear and ambiguous mean') ?>
                         </div>
 
                         <?php if ($total === 0): ?>
@@ -352,11 +345,7 @@ $db_section_label = function ($key) {
                                 <?php endforeach; ?>
                             </ul>
                         <?php endif; ?>
-                        <?php if ($total > 0 && $primary_mm > 0): ?>
-                            <div class="small text-muted mb-2">
-                                Your product is not a perfect match — <?= (int)$primary_mm ?> mismatch<?= $primary_mm === 1 ? '' : 'es' ?>.
-                            </div>
-                        <?php endif; ?>
+
 
                         <div class="small text-muted mb-3" style="font-family:monospace;">
                             F <?= htmlspecialchars($pair['forward']) ?> (<?= strlen($pair['forward']) ?>)
@@ -630,18 +619,18 @@ echo help_modal(
         'heading' => '',
         'cards'   => [
             [
-                'label' => 'clean',
+                'label' => 'clear',
                 'color' => 'success',
                 'html'  => true,
-                'text'  => 'Exactly one thing would amplify: one product on your template, and nothing '
-                         . 'else. If your input is cDNA, genomic DNA gives only the one matching locus — '
-                         . 'expected, since that is the same place with its introns included.',
+                'text'  => 'Exactly one product could amplify — one on your template, and nothing else. '
+                         . 'If your input is cDNA, genomic DNA gives only the one matching locus, which is '
+                         . 'expected: that is the same place with its introns included.',
             ],
             [
                 'label' => 'ambiguous',
                 'color' => 'warning',
                 'html'  => true,
-                'text'  => 'More than one thing would amplify. The reasons are listed under the name: '
+                'text'  => 'More than one product could amplify. The reasons are listed under the name: '
                          . 'several products on your template, extra genomic products, or a self-pairing '
                          . 'primer. Ambiguous is not unusable — read the reasons and decide.',
             ],
@@ -658,11 +647,12 @@ echo help_modal(
                 'label' => 'Only what would really amplify counts',
                 'accent' => true,
                 'html'  => true,
-                'text'  => 'The grade considers products up to about <strong>2 kb</strong>, which is what '
-                         . 'standard PCR realistically makes. A real off-target of 8 kb is still listed, '
-                         . 'because it exists — but it will not amplify, so it does not make an otherwise '
-                         . 'clean pair ambiguous. Mismatches are noted separately: a pair that makes one '
-                         . 'product is specific whether or not that product is a perfect match.',
+                'text'  => 'A product is expected to amplify under standard PCR when it is '
+                         . '<strong>under 2 kb</strong> and carries <strong>fewer than 3 mismatches</strong>. '
+                         . 'Only those count toward the grade: one such product is clear, more than one is '
+                         . 'ambiguous. Anything outside those bounds — an 8 kb off-target, a 4-mismatch '
+                         . 'site — is still listed because it is real, but it will not amplify, so it does '
+                         . 'not downgrade the pair.',
             ],
             [
                 'label' => 'The size limit does not change the grade',
@@ -670,7 +660,7 @@ echo help_modal(
                 'html'  => true,
                 'text'  => '<strong>Largest product to report</strong> controls what is LISTED, nothing '
                          . 'more. The grade is always computed over amplifiable products, so lowering the '
-                         . 'limit hides rows without quietly turning an ambiguous pair clean. A display '
+                         . 'limit hides rows without quietly turning an ambiguous pair clear. A display '
                          . 'control should never change a scientific conclusion.',
             ],
             [
