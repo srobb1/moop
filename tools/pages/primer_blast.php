@@ -120,6 +120,7 @@ $db_section_label = function ($key) use ($search_mode) {
                     <?php
                     $clear_filter_function = 'clearPrimerSourceFilters';
                     $on_change_function    = 'updatePrimerSelection';
+                    $source_list_help_id   = 'source-list-help';
                     include __DIR__ . '/../../includes/source-list.php';
                     ?>
                     <div class="mt-3 p-3 bg-light border rounded">
@@ -434,6 +435,49 @@ echo help_modal(
     ]],
     ['intro' => 'This applies to both the text box and an uploaded file. '
               . 'Anything that cannot be read is reported by name — nothing is dropped quietly.']
+);
+
+/**
+ * How the source list works, including what the "!" means.
+ *
+ * The marker is tool-specific — here it means "no genome index" — so the
+ * explanation belongs with the page, not inside the shared partial.
+ */
+echo help_modal(
+    'source-list-help',
+    'Choosing an assembly',
+    [[
+        'heading' => '',
+        'cards'   => [
+            [
+                'label' => 'What is in the list',
+                'html'  => true,
+                'text'  => 'Every assembly you have access to, one row per gene set. The badges '
+                         . 'on each row read left to right as <strong>group</strong>, '
+                         . '<strong>organism</strong>, <strong>assembly</strong>, and '
+                         . '<strong>gene set</strong>.',
+            ],
+            [
+                'label' => 'Filtering',
+                'html'  => true,
+                'text'  => 'The box above the list narrows it as you type, matching against all '
+                         . 'four of those at once — so a group name, a species, an accession or a '
+                         . 'gene set name all work. <strong>Clear Filters</strong> restores the '
+                         . 'full list.',
+            ],
+            [
+                'label' => '<span class="badge bg-warning text-dark">!</span> — not usable here',
+                'html'  => true,
+                'text'  => 'This tool needs the assembly\'s <strong>genome</strong> to report where '
+                         . 'products land, and some assemblies have no genome — they are '
+                         . 'transcriptome assemblies, where that is correct rather than missing. '
+                         . 'Hover the marker for the specific reason. Most of these are still '
+                         . 'usable with <strong>PCR input</strong> set to <strong>cDNA</strong>, '
+                         . 'which searches their transcripts; a few have no searchable index at all.',
+            ],
+        ],
+    ]],
+    ['intro' => 'One row per gene set, filtered live as you type.']
 );
 
 /**
