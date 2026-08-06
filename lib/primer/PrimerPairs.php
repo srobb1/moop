@@ -50,6 +50,11 @@ class PrimerPairs
      *     @type array $products      Each: subject, start, end, size, primers, mismatch info.
      *     @type int   $product_count
      *     @type array $primer_hits   ['forward' => n, 'reverse' => n]
+     *     @type array $paired_hits   How many of those matches actually ended up in a
+     *                                product. The difference is matches that found no
+     *                                partner -- which is the normal fate of most of them,
+     *                                and needs saying, or a user who RAISES a limit sees
+     *                                the match count rise with nothing to show for it.
      *     @type int   $over_max      Combinations discarded by the size bound.
      *     @type string|null $carried_by  'forward'|'reverse' when specificity rests on one primer.
      * }
@@ -67,6 +72,7 @@ class PrimerPairs
             'products'      => [],
             'product_count' => 0,
             'primer_hits'   => ['forward' => count($forward), 'reverse' => count($reverse)],
+            'paired_hits'   => ['forward' => 0, 'reverse' => 0],
             'over_max'      => 0,
             'carried_by'    => null,
         ];
@@ -100,6 +106,19 @@ class PrimerPairs
         });
 
         $result['product_count'] = count($result['products']);
+
+        // Which individual matches actually took part in a product. Counted by
+        // identity rather than by summing, since one match can pair more than once.
+        $used = ['forward' => [], 'reverse' => []];
+        foreach ($result['products'] as $prod) {
+            foreach ($prod['hits'] as $h) {
+                $used[$h['primer']][$h['subject'] . ':' . $h['start'] . '-' . $h['end'] . $h['strand']] = true;
+            }
+        }
+        $result['paired_hits'] = [
+            'forward' => count($used['forward']),
+            'reverse' => count($used['reverse']),
+        ];
 
         // Flag the asymmetric case: one primer is promiscuous, the other is what
         // makes the pair specific. Revising the unique one would destroy the assay.

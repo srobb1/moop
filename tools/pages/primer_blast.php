@@ -170,9 +170,10 @@ $db_section_label = function ($key) {
                               <label for="max_mismatch" class="form-label mb-2">
                                 <strong>Mismatches allowed</strong>
                                 <?= field_help(
-                                    'Counted per primer, per site. Raise it to see more potential products, '
-                                    . 'including ones that would only prime weakly. Lower it to see just the '
-                                    . 'clean matches.',
+                                    'The most mismatches a match may have and still be kept. The default of 1 '
+                                    . 'keeps single-mismatch sites, because those can still prime and amplify — '
+                                    . 'a perfect-match-only search would hide real off-targets. Raise it to see '
+                                    . 'weaker sites too; set it to 0 for exact matches only.',
                                     'Mismatches allowed'
                                 ) ?>
                               </label>
@@ -413,9 +414,20 @@ $db_section_label = function ($key) {
                                 }
                                 $hits = $found['primer_hits'];
                                 ?>
+                                <?php
+                                $paired   = $found['paired_hits'] ?? ['forward' => 0, 'reverse' => 0];
+                                $unpaired = ($hits['forward'] - $paired['forward'])
+                                          + ($hits['reverse'] - $paired['reverse']);
+                                ?>
                                 <div class="text-muted" style="font-size:0.8rem;">
                                     each primer alone matched
-                                    <?= number_format($hits['forward']) ?> / <?= number_format($hits['reverse']) ?> place<?= ($hits['forward'] === 1 && $hits['reverse'] === 1) ? '' : 's' ?>
+                                    <?= number_format($hits['forward']) ?> / <?= number_format($hits['reverse']) ?> place<?= ($hits['forward'] === 1 && $hits['reverse'] === 1) ? '' : 's' ?><?php
+                                    // Account for the matches that were KEPT. Without this a user
+                                    // who raises the mismatch limit watches the match count go up
+                                    // with nothing new to show, and no explanation why.
+                                    if ($unpaired > 0): ?>, of which
+                                    <?= number_format($unpaired) ?> found no partner and so made no product<?php
+                                    endif; ?>
                                     <?= field_help(
                                         'How many places each primer matched on its own — forward first, then '
                                         . 'reverse. These are NOT products. A primer can match in many places and '
@@ -423,6 +435,9 @@ $db_section_label = function ($key) {
                                         . 'two primers land on opposite strands close enough to amplify between '
                                         . 'them. Judge the pair by the products above; these counts tell you which '
                                         . 'primer is carrying the specificity. '
+                                        . 'A match that found no partner made nothing: a product needs BOTH '
+                                        . 'primers landing on opposite strands close enough to amplify between '
+                                        . 'them, so raising a limit can add matches without adding products. '
                                         . 'Anything listed as discarded was ruled out before pairing: partial matches '
                                         . 'cover too little of the primer to prime, and the mismatch and size limits '
                                         . 'are the two settings above — raise either one to see more.',
