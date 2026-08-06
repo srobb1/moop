@@ -148,17 +148,19 @@ $db_section_label = function ($key) use ($search_mode) {
                                 <strong>PCR input</strong>
                                 <?= help_modal_trigger('pcr-input-help', '', 'What each PCR input searches') ?>
                               </label>
-                              <div class="form-check">
+                              <?php // Inline: only two mutually exclusive choices with short
+                                    // labels, so stacking them wasted the card's height and made
+                                    // this card taller than its two siblings for no reason. ?>
+                              <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="search_mode" id="mode_genome"
                                        value="genome" <?= $search_mode === 'genome' ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="mode_genome">Genomic DNA</label>
                               </div>
-                              <div class="form-check">
+                              <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="search_mode" id="mode_transcript"
                                        value="transcript" <?= $search_mode === 'transcript' ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="mode_transcript">cDNA</label>
                               </div>
-                              <div class="form-text mt-2">What you put in the reaction.</div>
                             </div>
                           </div>
                         </div>
@@ -177,7 +179,6 @@ $db_section_label = function ($key) use ($search_mode) {
                               </label>
                               <input type="number" class="form-control" id="max_mismatch" name="max_mismatch"
                                      min="0" max="5" value="<?= (int)$max_mismatch ?>">
-                              <div class="form-text mt-2">Per primer, per site.</div>
                             </div>
                           </div>
                         </div>
@@ -198,7 +199,6 @@ $db_section_label = function ($key) use ($search_mode) {
                               </label>
                               <input type="number" class="form-control" id="max_product" name="max_product"
                                      min="100" max="1000000" step="100" value="<?= (int)$max_product ?>">
-                              <div class="form-text mt-2">Bigger ones are counted, not hidden.</div>
                             </div>
                           </div>
                         </div>
@@ -466,14 +466,18 @@ echo help_modal(
                          . 'full list.',
             ],
             [
-                'label' => '<span class="badge bg-warning text-dark">!</span> — not usable here',
+                // 'color' is the API's badge form, for exactly this case: the card title
+                // renders as the same badge the page shows, so the eye matches the help to
+                // the thing it just looked at. Putting markup in 'label' does NOT work —
+                // labels are always escaped, and the tag showed as literal text.
+                'label' => '!',
+                'color' => 'warning',
                 'html'  => true,
-                'text'  => 'This tool needs the assembly\'s <strong>genome</strong> to report where '
-                         . 'products land, and some assemblies have no genome — they are '
-                         . 'transcriptome assemblies, where that is correct rather than missing. '
-                         . 'Hover the marker for the specific reason. Most of these are still '
-                         . 'usable with <strong>PCR input</strong> set to <strong>cDNA</strong>, '
-                         . 'which searches their transcripts; a few have no searchable index at all.',
+                'text'  => '<strong>Not usable here.</strong> This tool needs the assembly\'s '
+                         . 'genome to say where a product lands, and some assemblies have none — '
+                         . 'they are transcriptome assemblies, so that is correct, not missing '
+                         . 'data. Most are still usable with <strong>PCR input</strong> set to '
+                         . '<strong>cDNA</strong>. Hover a marker for its own reason.',
             ],
         ],
     ]],
