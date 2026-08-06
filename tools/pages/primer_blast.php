@@ -93,39 +93,6 @@ $primer_session_track = function (array $prod, $pair_name, $jb2_assembly_id) use
                 ],
             ]],
         ],
-        [
-            // A second track drawing the amplicon as an ARCH from one primer to the
-            // other. Separate because arcs are a display type, and a track shows one
-            // display at a time -- so the boxes and the arch cannot come from one
-            // track. LinearArcDisplay and ArcRenderer are both present in the
-            // deployed JBrowse bundle (checked, not assumed).
-            'type'          => 'FeatureTrack',
-            'trackId'       => $track_id . '_arc',
-            'name'          => 'Primer BLAST: ' . $pair_name . ' (product arc)',
-            'assemblyNames' => [$jb2_assembly_id],
-            'adapter'       => ['type' => 'FromConfigAdapter', 'features' => [[
-                'uniqueId' => $track_id . '_arcfeat',
-                'refName'  => $ref,
-                'start'    => $prod['start'] - 1,
-                'end'      => $prod['end'],
-                'name'     => number_format($prod['size']) . ' bp',
-            ]]],
-            'displays'      => [[
-                'type'      => 'LinearArcDisplay',
-                'displayId' => $track_id . '-LinearArcDisplay',
-                'renderer'  => [
-                    'type'         => 'ArcRenderer',
-                    // Literals throughout: the ArcRenderer defaults are jexl
-                    // expressions over a 'score' attribute these features do not
-                    // carry, which would leave the arc unrendered.
-                    'color'        => PRIMER_COLOR_PRODUCT,
-                    'thickness'    => 3,
-                    'height'       => 80,
-                    'label'        => "jexl:get(feature,'name')",
-                    'displayMode'  => 'arcs',
-                ],
-            ]],
-        ],
     ];
 };
 
@@ -463,6 +430,30 @@ $db_section_label = function ($key) {
                             &nbsp;&nbsp;R <?= htmlspecialchars($pair['reverse']) ?> (<?= strlen($pair['reverse']) ?>)
                         </div>
 
+                        <?php
+                        // No genomic product at all, with a cDNA product present: the
+                        // strongest RT-PCR result there is, and previously reported only as
+                        // a bare "None under 10,000 bp", which reads as a shortfall rather
+                        // than the win it is. Usually means a primer spans an exon junction
+                        // and so has no continuous genomic match.
+                        // NO genomic product at all -- not merely one too large to amplify.
+                        // $amp_contam would be 0 in both cases, which wrongly gave this note
+                        // to an intron-spanning pair whose 6,389 bp genomic product exists
+                        // and is simply over the size threshold.
+                        $no_gdna = $intended_db === 'transcript'
+                                && $t_size !== null
+                                && isset($r['by_db']['genome'])
+                                && $g_size === null;
+                        ?>
+                        <?php if ($no_gdna): ?>
+                            <div class="small mb-3">
+                                <i class="fa fa-circle-check text-success"></i>
+                                <span class="text-success-emphasis">No genomic product</span>
+                                <span class="text-muted">— genomic DNA in the sample would not amplify at
+                                all. Usually means a primer spans an exon junction.</span>
+                            </div>
+                        <?php endif; ?>
+
                         <?php if ($t_size !== null && $g_size !== null): ?>
                             <?php // A note, not a verdict: the intron is INFERRED from the two
                                   // sizes differing, never observed directly, so the wording says
@@ -785,9 +776,9 @@ echo help_modal(
             [
                 'label' => 'Viewing a product in the browser',
                 'html'  => true,
-                'text'  => '<strong>Browser</strong> opens the product in JBrowse with two tracks added: '
-                         . 'the binding sites as boxes joined by a straight connector, and the amplicon '
-                         . 'drawn as an arc from one primer to the other. '
+                'text'  => '<strong>Browser</strong> opens the product in JBrowse with a track showing '
+                         . 'both binding sites as boxes, joined by a connector across the sequence '
+                         . 'between them. '
                          . '<span style="display:inline-block;width:0.8em;height:0.8em;background:'
                          . PRIMER_COLOR_FORWARD . ';vertical-align:middle;border-radius:2px;"></span> '
                          . 'blue is the <strong>forward</strong> primer, '
@@ -850,6 +841,15 @@ echo help_modal(
                          . 'primer is not involved at all. A real source of unexpected bands, and one you '
                          . 'would never predict by thinking about the pair. The badge names the primer '
                          . 'responsible, and so does the TSV download.',
+            ],
+            [
+                'label' => 'No genomic product',
+                'html'  => true,
+                'text'  => 'The strongest result for RT-PCR: your cDNA product forms, and genomic DNA '
+                         . 'gives nothing at all — not a bigger band, no band. Usually it means a primer '
+                         . 'sits across an exon junction, so it has no continuous match in the genome to '
+                         . 'bind to. Such a pair also gets no <strong>Browser</strong> link, because there '
+                         . 'is no genomic product to show.',
             ],
             [
                 'label' => 'Likely spans an intron',
