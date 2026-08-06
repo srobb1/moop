@@ -12,6 +12,18 @@
  */
 
 /**
+ * BLAST wraps subject ids as ref|ACC| — noise in a table, and FATAL in a JBrowse
+ * track: refName must be the reference sequence's real name or the track silently
+ * renders nothing at all.
+ */
+$clean_id = function ($s) {
+    if (preg_match('/^(?:ref|gb|emb|dbj|lcl)\|([^|]+)\|?$/', $s, $m)) {
+        return $m[1];
+    }
+    return $s;
+};
+
+/**
  * Colours for the primer binding sites drawn in JBrowse.
  *
  * Okabe-Ito blue and vermillion: distinguishable under the common forms of colour
@@ -29,7 +41,8 @@ const PRIMER_COLOR_PRODUCT = '#999999';
  * a FromConfigAdapter track passed in the URL — with an explicit renderer added,
  * because JBrowse's default colouring cannot tell the two primers apart.
  */
-$primer_session_track = function (array $prod, $pair_name, $jb2_assembly_id) {
+$primer_session_track = function (array $prod, $pair_name, $jb2_assembly_id) use ($clean_id) {
+    $ref = $clean_id($prod['subject']);
     $track_id = 'primer_' . substr(md5($pair_name . $prod['subject'] . $prod['start']), 0, 10);
 
     $subfeatures = [];
@@ -37,7 +50,7 @@ $primer_session_track = function (array $prod, $pair_name, $jb2_assembly_id) {
         $is_forward = ($hit['primer'] === 'forward');
         $subfeatures[] = [
             'uniqueId' => $track_id . '_p' . $n,
-            'refName'  => $prod['subject'],
+            'refName'  => $ref,
             'start'    => $hit['start'] - 1,          // JBrowse features are 0-based
             'end'      => $hit['end'],
             'strand'   => $hit['strand'] === '-' ? -1 : 1,
@@ -51,7 +64,7 @@ $primer_session_track = function (array $prod, $pair_name, $jb2_assembly_id) {
 
     $features = [[
         'uniqueId'    => $track_id . '_product',
-        'refName'     => $prod['subject'],
+        'refName'     => $ref,
         'start'       => $prod['start'] - 1,
         'end'         => $prod['end'],
         'name'        => $pair_name . ' — ' . number_format($prod['size']) . ' bp product',
@@ -92,7 +105,7 @@ $primer_session_track = function (array $prod, $pair_name, $jb2_assembly_id) {
             'assemblyNames' => [$jb2_assembly_id],
             'adapter'       => ['type' => 'FromConfigAdapter', 'features' => [[
                 'uniqueId' => $track_id . '_arcfeat',
-                'refName'  => $prod['subject'],
+                'refName'  => $ref,
                 'start'    => $prod['start'] - 1,
                 'end'      => $prod['end'],
                 'name'     => number_format($prod['size']) . ' bp',
@@ -346,13 +359,6 @@ $db_section_label = function ($key) {
 
         <?php if (!empty($results)): ?>
             <?php
-            /** BLAST wraps subject ids as ref|ACC| — noise in a results table. */
-            $clean_id = function ($s) {
-                if (preg_match('/^(?:ref|gb|emb|dbj|lcl)\|([^|]+)\|?$/', $s, $m)) {
-                    return $m[1];
-                }
-                return $s;
-            };
             // Canonical rows for the download, so the file is built from the DATA
             // rather than re-parsed out of the rendered table -- a table formats
             // numbers with commas, and re-reading them back is how an export ends
