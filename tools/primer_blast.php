@@ -156,21 +156,43 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
             $dbs = [];
 
             // Genome is always searched, in both modes.
-            $genome_db = $assembly_path . '/genome.fa';
-            if (PrimerBlast::databaseExists($genome_db)) {
+            // 20 of 95 sources on this deployment have NO genome — they are
+            // transcriptome assemblies, where that is correct rather than missing
+            // data. So "the genome is always searched" cannot be an invariant; it
+            // is a default that some sources genuinely cannot satisfy.
+            $genome_db     = $assembly_path . '/genome.fa';
+            $transcript_db = $gene_set_path . '/transcript.nt.fa';
+            $has_genome    = PrimerBlast::databaseExists($genome_db);
+            $has_transcript = PrimerBlast::databaseExists($transcript_db);
+
+            if ($has_genome) {
                 $dbs['genome'] = $genome_db;
-            } else {
-                $db_notes[] = 'No genome BLAST index for this assembly, so genomic products '
-                    . 'could not be checked. Build it from Admin → Organism Checklist.';
             }
 
-            if ($search_mode === 'transcript') {
-                $transcript_db = $gene_set_path . '/transcript.nt.fa';
-                if (PrimerBlast::databaseExists($transcript_db)) {
-                    $dbs['transcript'] = $transcript_db;
+            if ($search_mode === 'transcript' && $has_transcript) {
+                $dbs['transcript'] = $transcript_db;
+            }
+
+            if ($search_mode === 'transcript' && !$has_transcript) {
+                $db_notes[] = 'This gene set has no transcriptome index, so cDNA product sizes '
+                    . 'could not be calculated.';
+            }
+
+            // Say WHICH of the two situations this is. "No BLAST databases are
+            // available" named neither the cause nor the fix, and on a
+            // transcriptome-only assembly it fired every time, because Genomic DNA
+            // is the default PCR input.
+            if (!$has_genome) {
+                if ($search_mode === 'genome' && $has_transcript) {
+                    $search_error = 'This assembly has no genome sequence — it is a transcriptome '
+                        . 'assembly. Set PCR input to "cDNA" to check these primers against its '
+                        . 'transcripts.';
+                } elseif ($search_mode === 'transcript' && $has_transcript) {
+                    $db_notes[] = 'This assembly has no genome sequence, so contaminating genomic DNA '
+                        . 'could not be checked — only the cDNA products below are reported.';
                 } else {
-                    $db_notes[] = 'No transcriptome BLAST index for this gene set, so cDNA '
-                        . 'product sizes could not be calculated.';
+                    $search_error = 'This source has neither a genome nor a transcriptome BLAST index, '
+                        . 'so there is nothing to search. Build them from Admin → Organism Checklist.';
                 }
             }
 
@@ -183,9 +205,11 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
                      + (isset($dbs['genome']) ? ['genome' => $dbs['genome']] : []);
             }
 
-            if (empty($dbs)) {
+            if (empty($dbs) && $search_error === null) {
                 $search_error = 'No BLAST databases are available for the selected source.';
-            } else {
+            }
+
+            if (!empty($dbs) && $search_error === null) {
                 foreach ($parse_result['pairs'] as $i => $pair) {
                     $results[$i] = ['pair' => $pair, 'by_db' => []];
                 }
