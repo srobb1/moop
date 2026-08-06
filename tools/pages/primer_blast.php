@@ -257,6 +257,7 @@ $db_section_label = function ($key) {
             <div class="card shadow-sm mb-4">
                 <div class="card-header text-white d-flex align-items-center tool-header">
                     <span class="fw-semibold">Results</span>
+                    <?= help_modal_trigger('results-help', '', 'How to read these results') ?>
                     <span class="ms-auto small">
                         <?= htmlspecialchars(implode(' + ', array_map($db_label, array_keys($searched_dbs)))) ?>
                         · up to <?= (int)$max_mismatch ?> mismatch<?= $max_mismatch === 1 ? '' : 'es' ?>
@@ -363,9 +364,22 @@ $db_section_label = function ($key) {
                                                 <td style="width:8rem;">
                                                     <span class="text-muted small"><?= (int)$prod['max_mismatch'] ?> mismatch<?= $prod['max_mismatch'] === 1 ? '' : 'es' ?></span>
                                                 </td>
-                                                <td style="width:9rem;">
+                                                <td style="width:11rem;">
                                                     <?php if (!empty($prod['self_pairing'])): ?>
-                                                        <span class="badge bg-danger">one primer with itself</span>
+                                                        <?php // Both ends of this product are the SAME oligo. A pair is
+                                                              // implicit for normal products, so only this case is labelled. ?>
+                                                        <span class="badge bg-danger">
+                                                            <?= htmlspecialchars($prod['primers'][0]) ?> primer at both ends
+                                                        </span>
+                                                        <?= field_help(
+                                                            'Both ends of this product use the SAME primer, not one of each. '
+                                                            . 'A single primer can match in two nearby places on opposite '
+                                                            . 'strands, facing each other — and then it amplifies the fragment '
+                                                            . 'between them on its own. It is a real source of unexpected '
+                                                            . 'bands, and one you would not predict by thinking about the pair, '
+                                                            . 'which is why it is called out here.',
+                                                            'Same primer at both ends'
+                                                        ) ?>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td class="text-end" style="width:8rem;">
@@ -530,6 +544,79 @@ echo help_modal(
         ],
     ]],
     ['intro' => 'One row per gene set, filtered live as you type.']
+);
+
+/**
+ * How to read the results. Built from the questions actually asked while using
+ * the tool, in the order they came up — which is why it leads with "what counts
+ * as a product" rather than with a feature tour.
+ */
+echo help_modal(
+    'results-help',
+    'Reading the results',
+    [[
+        'heading' => '',
+        'cards'   => [
+            [
+                'label' => 'What counts as a product',
+                'html'  => true,
+                'text'  => 'Both primers must land on the <strong>same sequence</strong>, on '
+                         . '<strong>opposite strands</strong>, <strong>facing each other</strong>, and close '
+                         . 'enough to amplify between them. A primer that matches somewhere on its own '
+                         . 'makes nothing, so only products are listed.',
+            ],
+            [
+                'label' => 'Mismatches allowed',
+                'html'  => true,
+                'text'  => 'A match is kept if it has this many mismatches <em>or fewer</em>. The default of '
+                         . '1 keeps single-mismatch sites because those can still prime. <strong>A primer '
+                         . 'with more mismatches than the limit is simply not there</strong> — so a pair can '
+                         . 'show no product until you raise it.',
+                'accent' => true,
+            ],
+            [
+                'label' => 'Worked example',
+                'html'  => true,
+                'text'  => 'A pair whose reverse primer carries 2 mismatches against the target: at a limit '
+                         . 'of <strong>1</strong> it reports <em>no product</em>; at <strong>2</strong> the '
+                         . 'same pair reports its real 494 bp product, marked "2 mismatches". Nothing changed '
+                         . 'but the setting — the product was always there, below the threshold.',
+                'accent' => true,
+            ],
+            [
+                'label' => 'Mismatches on a product',
+                'html'  => true,
+                'text'  => 'The number shown is the <strong>worst</strong> of the two primers at that site. '
+                         . '0 is a perfect match for both. Higher numbers still amplify in principle, but '
+                         . 'less efficiently — and mismatches near the 3′ end hurt most, because that is '
+                         . 'where the polymerase extends.',
+            ],
+            [
+                'label' => 'Same primer at both ends',
+                'html'  => true,
+                'text'  => 'One primer can match twice on opposite strands, facing itself, and amplify the '
+                         . 'fragment between. Both ends of that product are the same oligo. It is a real '
+                         . 'source of unexpected bands and you would not predict it from the pair, so it is '
+                         . 'labelled.',
+            ],
+            [
+                'label' => 'Likely spans an intron',
+                'html'  => true,
+                'text'  => 'Shown when the gDNA product is larger than the cDNA one — the extra length is '
+                         . 'intron. It is <em>inferred</em> from the two sizes, not observed, hence '
+                         . '"likely". Equal sizes mean both primers sit in one exon, and the pair cannot '
+                         . 'tell cDNA from genomic DNA.',
+            ],
+            [
+                'label' => 'Products over the size limit',
+                'html'  => true,
+                'text'  => 'Counted but not listed, because very long products do not amplify under normal '
+                         . 'PCR. They are still real pairings, so the count is shown rather than hidden — '
+                         . 'raise <strong>Largest product to report</strong> to see them.',
+            ],
+        ],
+    ]],
+    ['intro' => 'Only products are reported — combinations that could actually amplify.']
 );
 
 /**
