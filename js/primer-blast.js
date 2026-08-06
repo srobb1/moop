@@ -39,8 +39,11 @@ function updatePrimerSelection() {
 
     if (!chosen) {
         target.innerHTML = '<span class="text-muted">None selected</span>';
+        applySourceConstraints(null);
         return;
     }
+
+    applySourceConstraints(chosen);
 
     var organism = chosen.getAttribute('data-organism') || '';
     var assembly = chosen.getAttribute('data-assembly') || '';
@@ -52,6 +55,48 @@ function updatePrimerSelection() {
     }
 
     target.textContent = label;
+}
+
+/**
+ * Keep the PCR input consistent with what the chosen assembly can actually answer.
+ *
+ * An assembly with no genome cannot answer the Genomic DNA question at all, and
+ * submitting that combination produced an error the user then had to read and
+ * undo. Worse, the error survived a page reload — reloading a POST result
+ * re-submits the POST, so the same failing search ran again — which made it look
+ * stuck. Preventing the combination is better than explaining it afterwards.
+ *
+ * The radio is disabled rather than hidden, with the reason beside it, so the
+ * option is still visible and its absence is explained rather than mysterious.
+ */
+function applySourceConstraints(chosen) {
+    var genomeRadio = document.getElementById('mode_genome');
+    var cdnaRadio   = document.getElementById('mode_transcript');
+    var note        = document.getElementById('pcrInputNote');
+    if (!genomeRadio || !cdnaRadio) { return; }
+
+    var available = chosen ? chosen.getAttribute('data-available') : null;
+
+    // No availability information (another page, or nothing selected): leave it alone.
+    if (available === null) {
+        genomeRadio.disabled = false;
+        if (note) { note.classList.add('d-none'); }
+        return;
+    }
+
+    if (available === '0') {
+        genomeRadio.disabled = true;
+        if (genomeRadio.checked) {
+            cdnaRadio.checked = true;   // the only choice this assembly can answer
+        }
+        if (note) {
+            note.textContent = chosen.getAttribute('data-unavailable-reason') || '';
+            note.classList.remove('d-none');
+        }
+    } else {
+        genomeRadio.disabled = false;
+        if (note) { note.classList.add('d-none'); }
+    }
 }
 
 /** Largest file we will load into the box, matching the server-side limit. */

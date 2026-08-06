@@ -161,6 +161,7 @@ $db_section_label = function ($key) use ($search_mode) {
                                        value="transcript" <?= $search_mode === 'transcript' ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="mode_transcript">cDNA</label>
                               </div>
+                              <div class="form-text text-warning-emphasis mt-1 d-none" id="pcrInputNote"></div>
                             </div>
                           </div>
                         </div>

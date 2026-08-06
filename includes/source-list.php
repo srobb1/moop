@@ -99,6 +99,14 @@ foreach ($sources_by_group as $group_name => $organisms) {
                             data-organism="<?= htmlspecialchars($organism) ?>"
                             data-assembly="<?= htmlspecialchars($source['assembly']) ?>"
                             data-gene-set="<?= htmlspecialchars($source['gene_set'] ?? '') ?>"
+                            <?php // Availability travels with the radio so a page can react to a
+                                  // selection BEFORE the form is submitted. Only emitted when the
+                                  // caller supplied $source_availability.
+                            $a = $source_availability[$source_value] ?? null;
+                            if ($a !== null): ?>
+                            data-available="<?= !empty($a['ok']) ? '1' : '0' ?>"
+                            data-unavailable-reason="<?= htmlspecialchars($a['reason'] ?? '') ?>"
+                            <?php endif; ?>
                             <?= !empty($on_change_function) ? 'onchange="' . htmlspecialchars($on_change_function) . '();"' : '' ?>
                             <?= $is_selected ? 'checked' : '' ?>
                             >
