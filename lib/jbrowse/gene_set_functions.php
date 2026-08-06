@@ -252,6 +252,15 @@ function prepareGeneSetForJBrowse(
         $log[] = "$gene_set: generated feature_coords.tsv";
     }
 
+    // ── Exon coords index (maps transcript hits back to genomic blocks) ──────
+    $exon_path  = "$gene_set_path/exon_coords.tsv";
+    $exon_mtime = file_exists($exon_path) ? filemtime($exon_path) : 0;
+    if ($exon_mtime >= $gff_mtime && $exon_mtime > 0) {
+        $log[] = "$gene_set: exon_coords.tsv is up to date — skipped";
+    } elseif (generateExonCoordsIndex($gene_set_path)) {
+        $log[] = "$gene_set: generated exon_coords.tsv";
+    }
+
     return true;
 }
 
@@ -517,6 +526,108 @@ function buildGeneSetTextIndex(
     file_put_contents($track_file, json_encode($track_def, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
     return ['success' => true];
+}
+
+/**
+ * Build exon_coords.tsv from a sorted GFF3 file.
+ *
+ * Sibling of generateFeatureCoordsIndex(), and deliberately the same shape:
+ * streamed, flushed one gene family at a time, regenerated at registration.
+ * Where feature_coords.tsv gives a feature's OUTER span, this gives a
+ * transcript's EXON STRUCTURE — the thing an outer span cannot express.
+ *
+ * It exists so a hit in transcript coordinates can be mapped back to the genome.
+ * A primer sitting across an exon junction has no continuous genomic match, so it
+ * can only be drawn correctly as two blocks, and that split needs the exon
+ * boundaries. Reading them from the GFF on demand is not viable: Nematostella's
+ * genes.gff is 240 MB and a filtered pass costs about a second per search.
+ *
+ * Output: transcript_id \t chr \t strand \t start,end \t s1,e1;s2,e2;...
+ *
+ * Rows are emitted for the GFF ID and for the id with any rna-/cds-/gene-
+ * prefix stripped, because FASTA headers carry the bare accession while the GFF
+ * carries "rna-ACC" — looking up one by the other silently finds nothing.
+ *
+ * No list of transcript types is used. Anything that ends up with exon children
+ * is treated as a transcript, so lncRNA, tRNA and pseudogenic_transcript are
+ * handled without being enumerated — a type list is exactly what makes this class
+ * of script quietly skip whole categories of gene.
+ */
+function generateExonCoordsIndex(string $gene_set_path): bool {
+    $gff_file = $gene_set_path . '/' . genes_gff_filename();
+    $tsv_file = $gene_set_path . '/exon_coords.tsv';
+
+    if (!file_exists($gff_file) || filesize($gff_file) === 0) {
+        return false;
+    }
+
+    $fh = fopen($gff_file, 'r');
+    if (!$fh) return false;
+    $out = fopen($tsv_file, 'w');
+    if (!$out) { fclose($fh); return false; }
+
+    $features = [];   // id => [chr, strand, start, end]   within the current gene family
+    $exons    = [];   // parent id => [[start, end], ...]
+
+    $flush = function () use ($out, &$features, &$exons): void {
+        foreach ($exons as $parent => $blocks) {
+            if (!isset($features[$parent])) {
+                continue;   // exons whose parent never appeared: nothing to anchor them to
+            }
+            [$chr, $strand, $start, $end] = $features[$parent];
+
+            usort($blocks, function ($a, $b) { return $a[0] <=> $b[0]; });
+            $spans = [];
+            foreach ($blocks as [$s, $e]) {
+                $spans[] = $s . ',' . $e;
+            }
+            $row = "\t" . $chr . "\t" . $strand . "\t" . $start . ',' . $end
+                 . "\t" . implode(';', $spans) . "\n";
+
+            fwrite($out, $parent . $row);
+            $bare = preg_replace('/^(?:rna|cds|gene|id)-/', '', $parent);
+            if ($bare !== $parent) {
+                fwrite($out, $bare . $row);
+            }
+        }
+        $features = [];
+        $exons    = [];
+    };
+
+    while (($line = fgets($fh)) !== false) {
+        if ($line[0] === '#') continue;
+        $parts = explode("\t", rtrim($line), 9);
+        if (count($parts) < 9) continue;
+
+        $id = $parent = null;
+        foreach (explode(';', $parts[8]) as $attr) {
+            $kv = explode('=', $attr, 2);
+            if (count($kv) !== 2) continue;
+            $k = trim($kv[0]);
+            if ($k === 'ID')     $id     = trim($kv[1]);
+            if ($k === 'Parent') $parent = trim($kv[1]);
+        }
+
+        if (strtolower($parts[2]) === 'exon') {
+            if ($parent) {
+                $exons[$parent][] = [(int)$parts[3], (int)$parts[4]];
+            }
+            continue;
+        }
+
+        if (!$id) continue;
+
+        // A root feature starts a new family; everything buffered belongs to the last one.
+        if (!$parent) {
+            $flush();
+        }
+        $features[$id] = [$parts[0], $parts[6], (int)$parts[3], (int)$parts[4]];
+    }
+    $flush();
+
+    fclose($fh);
+    fclose($out);
+    return true;
 }
 
 /**
