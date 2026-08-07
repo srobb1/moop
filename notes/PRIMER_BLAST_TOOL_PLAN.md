@@ -35,63 +35,100 @@ UCSC ships in-silico PCR as one of its five main tools, so the demand is not nic
 
 ---
 
-# ⏭️ RESUME HERE — split primers across exons (2026-08-06, end of session)
+# ✅ PHASE 2 COMPLETE — split primers across exons (2026-08-07)
 
-**Where it stopped.** Phase 1 is shipped and working. `exon_coords.tsv` is generated at
-gene-set registration (`generateExonCoordsIndex()` in `lib/jbrowse/gene_set_functions.php`,
-committed). Nothing consumes it yet — that is the next step.
+**Shipped.** A primer sitting across an exon-exon junction now maps back through the exon
+structure to genomic blocks, so it gets a Browser link and draws as two boxes either side of
+the intron. Before this it got no link at all — the picture explaining *why* it is a good
+RT-PCR primer was the one picture the user never saw.
 
-**The goal.** A primer that sits across an exon junction has no continuous genomic match, so
-today it gets **no Browser link at all** (verified: a junction-spanning Nematostella pair
-reports "No genomic product" and zero links). Mapping its *transcript* hit back through the exon
-structure gives **two genomic blocks**, which JBrowse's segments glyph draws as two boxes joined
-by a connector — the split primer picture.
+| file | what |
+|---|---|
+| `lib/primer/ExonMap.php` | transcript range → genomic blocks; `mapProduct()` places a whole cDNA product |
+| `lib/primer/PrimerBlast.php` | `cleanSubjectId()` — one definition of the `ref\|ACC\|` strip, was duplicated |
+| `tools/primer_blast.php` | maps every cDNA product ONCE per request, not once per row |
+| `tools/pages/primer_blast.php` | blocks in the session track, Browser link on cDNA, junction badge |
+| `admin/api/generate_exon_coords.php` | regeneration endpoint |
+| `admin/pages/manage_blast_linkouts.php` | exon-index column beside the feature-index one |
+| `scripts/backfill_exon_coords.php` | bulk backfill |
+| `scripts/design_exon_testers.php` | generates fixture primers with KNOWN exon behaviour |
 
-**The file, already generated:**
+**Backfill done:** 70 gene sets generated in 3.4 min, 0 failures; all 72 now have the index,
+862.9 MB total.
 
-```
-XM_001635385.3  NC_064041.1  +  11298700,11305572  11298700,11298855;11301951,11302269;11305070,11305572
-transcript_id   chr          strand  outer_span     exon spans, ascending
-```
+### Verification — three independent levels, because the arithmetic looks right when it isn't
 
-Both `rna-XM_…` and bare `XM_…` rows are written, because BLAST subjects from
-`transcript.nt.fa` carry the bare accession. Measured: 1.72 s, 18 MB, 106,708 rows for
-Nematostella RS_101.
+1. **Unit** — 53 new assertions in `tests/primer_smoke_tests.php` (109 total). Falsified
+   against a mapper with the strand handling removed: 5 minus-strand assertions go red,
+   exit 1. A test that has never failed is not evidence.
+2. **Ground truth against real sequence** — 30 Nematostella transcripts (15 plus, 15 minus),
+   787 ranges, 757 of them junction-spanning: genomic sequence pulled at the mapped blocks,
+   reverse-complemented on minus-strand transcripts, compared to the transcript subsequence.
+   **0 mismatches, 0 length disagreements.**
+3. **Driven live** — real POSTs to the page, checking the rendered verdict and the decoded
+   `sessionTracks` JSON, not a source diff.
 
-**Steps, in order:**
+⚠️ **The minus strand is where this breaks silently.** Ignoring strand puts the primer up to
+**70 kb from the truth** on a real Nematostella transcript, and the drawing still looks
+entirely reasonable. Measured, not assumed — see the negative control above.
 
-1. **`lib/primer/ExonMap.php`** — load one transcript's exon list from `exon_coords.tsv`, and
-   map a transcript range `[a,b]` to genomic blocks. Pure arithmetic, hermetically testable with
-   no site data, so write the tests first. ⚠️ **Minus-strand transcripts reverse the mapping**:
-   transcript position 1 is the HIGHEST genomic coordinate, so walk the exons in reverse. That is
-   the case most likely to be silently wrong, and the wallaby work already proved the codebase
-   gets minus-strand wrong when nobody checks (`$strand` computed and never used).
-2. **Use it in the track builder** (`$primer_session_track`, `tools/pages/primer_blast.php`):
-   for a **cDNA** product, map each primer hit to blocks and emit one subfeature per block,
-   keeping the forward/reverse colours. A junction primer then renders as two coloured boxes.
-3. **Give cDNA products a Browser link.** Currently gated on `$db_key === 'genome'` because a
-   transcript hit had no genomic coordinates; once mapped it does. The `loc` should be the mapped
-   genomic span.
-4. **Backfill.** Only Nematostella RS_101 has the file so far — every other gene set needs a
-   registration re-run, or a loop over `generateExonCoordsIndex()`.
-5. **Admin regeneration endpoint**, mirroring `admin/api/generate_feature_coords.php`, plus a
-   status column beside the feature-coords one on `admin/manage_blast_linkouts.php`.
+### Tester primers — VERIFIED, Nematostella GCF_932526225.1 / RS_101
 
-⚠️ **Do not read the GFF per request instead.** It was measured: 240 MB, ~1 s per lookup. The
-flat file exists precisely to avoid that.
-
-**Test primers to resume with** (Nematostella, GCF_932526225.1 / RS_101):
+Each was *placed* from the exon index, so the answer was known before the tool ran; every one
+was then confirmed against the live page. Regenerate for any gene set with
+`php scripts/design_exon_testers.php <gene-set-path> [--fasta]`.
 
 ```
->NvCofilin_F        GCCGCACCTCTAATCAATTC     exon 1        → cDNA 494 bp, gDNA 6,389 bp, links OK
->NvCofilin_R        TAGGTGCTTCGTCACTACAC     exon 3
->NvJunction_F       CCTTCAGCCATTATGTCGAA     exon1/exon2 junction → cDNA 349 bp, NO gDNA, no link
->NvJunction_R       TAGGTGCTTCGTCACTACAC     exon 3
+>junction_plus_F     CTTGCCTCAGGTGAGCCATG    XM_001626548.3 (+), F straddles a junction 10+10
+>junction_plus_R     TGTTCCTCTGACCAGCTCAC    → cDNA 224 bp, NO gDNA product, junction badge ✓
+
+>junction_minus_F    CAAGTCCTAGTTGACTTGAC    XM_032374171.2 (−), the REVERSED mapping
+>junction_minus_R    ATCATTGTCTTGATGCACTC    → cDNA 245 bp, NO gDNA product, junction badge ✓
+
+>intron_span_F       AGAGTTCGCAGGCTCATCAG    XM_001626548.3 (+), both primers internal
+>intron_span_R       TGACTTCAGCATACAGACTG    → cDNA 274 vs gDNA 1,255 bp, "Spans 2 introns" ✓
+
+>single_exon_F       TCGTGAAGGACTGTGGGTAC    XM_001626548.3 (+), negative control
+>single_exon_R       TGCGCTGTAACATGAGAAAC    → cDNA and gDNA both 318 bp, "no intron" ✓
 ```
 
-`NvJunction` is the one to watch: when step 3 lands it should gain a Browser link showing its
-forward primer split into two blocks either side of the intron.
+`junction_minus` is the one to keep: it is the only fixture that fails if the minus-strand
+walk regresses. Its forward primer splits **638932-638941 | 637585-637594**, exactly 10+10 at
+the junction, with the genomic strand flipped to −1.
 
+The original pair from phase 1 still works and is worth keeping for continuity:
+
+```
+>NvCofilin_F   GCCGCACCTCTAATCAATTC   → cDNA 494 bp, gDNA 6,389 bp, now "Spans 2 introns"
+>NvCofilin_R   TAGGTGCTTCGTCACTACAC
+>NvJunction_F  CCTTCAGCCATTATGTCGAA   → cDNA 349 bp, NO gDNA, NOW HAS A BROWSER LINK
+>NvJunction_R  TAGGTGCTTCGTCACTACAC
+```
+
+⚠️ **`scripts/design_exon_testers.php` does NOT check specificity** — it never runs BLAST. On
+Amphimedon it produced a junction pair landing in a three-member paralog family, which is a
+realistic case but not a clean fixture. Always confirm a generated pair on the page.
+
+### Decisions worth not re-litigating
+
+- **The verdicts now state fact, not inference.** With the index present, "Likely spans an
+  intron" becomes "Spans 2 introns" and "Usually means a primer spans an exon junction"
+  becomes "The forward primer sits across an exon junction". Both fall back to the old
+  hedged wording when a gene set has no index — most did until the backfill.
+- **`ExonMap::toGenomicBlocks()` requires STRICT containment** and returns `[]` otherwise. A
+  BLAST hit cannot run off its own subject, so an out-of-range request means the index and
+  the FASTA disagree (stale index, CDS-only FASTA, poly-A tail). The right answer there is no
+  picture, not a picture shifted by an unknown offset.
+- **`mapProduct()` is all-or-nothing.** One primer placed and the other missing would draw as
+  a lone box that reads like a finding.
+- **The amplicon parent is drawn as a single span, not as its exon blocks.** Considered and
+  left out: the parent already carries the primers as subfeatures, and adding grey exon
+  blocks under coloured primer boxes muddied the one thing the picture is for. Revisit only
+  if someone asks to see the amplicon's exon structure.
+- **Index files are `chmod 0660`.** They are written both by apache (registration, the admin
+  button) and by the deploying user (the backfill); the default `0640` leaves whichever did
+  NOT create it unable to overwrite, so Regenerate fails on exactly the files a backfill
+  produced. Found on the one pre-existing file, which was `0640`.
 ---
 
 # 🚧 BUILD STATUS — phase 1 engine started 2026-08-06

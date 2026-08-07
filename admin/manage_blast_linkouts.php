@@ -182,14 +182,24 @@ if (is_dir($assemblies_meta_dir)) {
             $tsv_size_mb = file_exists($tsv)
                 ? round(filesize($tsv) / 1048576, 1) . ' MB'
                 : null;
+            // The exon index is a SECOND file from the same GFF, written by the
+            // same registration step. Tracked in the same row because they share
+            // a cause: a gene set registered before either index existed has
+            // neither, and one button per file in one place is how that gets fixed.
+            $exon = $gs_dir . '/exon_coords.tsv';
             $feature_coord_status[] = [
-                'organism'     => $org,
-                'assembly'     => $asm,
-                'gene_set'     => $gene_set,
-                'has_tsv'      => file_exists($tsv),
-                'has_gff'      => file_exists($gff),
-                'tsv_modified' => file_exists($tsv) ? date('Y-m-d H:i', filemtime($tsv)) : null,
-                'tsv_size'     => $tsv_size_mb,
+                'organism'      => $org,
+                'assembly'      => $asm,
+                'gene_set'      => $gene_set,
+                'has_tsv'       => file_exists($tsv),
+                'has_gff'       => file_exists($gff),
+                'tsv_modified'  => file_exists($tsv) ? date('Y-m-d H:i', filemtime($tsv)) : null,
+                'tsv_size'      => $tsv_size_mb,
+                'has_exon'      => file_exists($exon),
+                'exon_modified' => file_exists($exon) ? date('Y-m-d H:i', filemtime($exon)) : null,
+                'exon_size'     => file_exists($exon)
+                    ? round(filesize($exon) / 1048576, 1) . ' MB'
+                    : null,
             ];
         }
     }

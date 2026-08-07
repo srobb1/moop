@@ -240,8 +240,10 @@
       <!-- Feature coordinate index (outside form — AJAX buttons) -->
       <div class="card mt-4 mb-4">
         <div class="card-header adm-head">
-          <strong>Feature Coordinate Index</strong>
-          <span class="text-muted ms-2 small">— Required for Genome Browser linkouts on feature BLAST databases (protein / mRNA / CDS). Stored as <code>feature_coords.tsv</code> in each gene set directory. Generated automatically when registering an assembly in JBrowse.</span>
+          <strong>Coordinate Indexes</strong>
+          <span class="text-muted ms-2 small">— Two flat files per gene set, both written automatically when an assembly is registered in JBrowse, and both regenerable here for gene sets registered before they existed.
+          <code>feature_coords.tsv</code> powers Genome Browser linkouts on feature BLAST databases (protein / mRNA / CDS);
+          <code>exon_coords.tsv</code> lets Primer BLAST place a cDNA product on the genome, which is what gives a junction-spanning primer a browser link.</span>
         </div>
         <div class="card-body p-0">
 
@@ -278,16 +280,62 @@
           <?php if (empty($feature_coord_status)): ?>
             <p class="text-muted small p-3 mb-0">No JBrowse-registered assemblies found.</p>
           <?php else: ?>
+          <?php
+          /**
+           * One cell per index file. Both indexes come from the same GFF and the
+           * same registration step, so they sit side by side rather than in two
+           * tables that would always be regenerated together.
+           *
+           * Every field the JS updates is named with data-field and scoped to
+           * this cell. The previous version addressed them as row.cells[3..5],
+           * which is fine until a column is added — and adding a column is
+           * exactly what this change does.
+           */
+          $index_cell = function (array $row, $kind) {
+              $has  = $kind === 'exon' ? $row['has_exon'] : $row['has_tsv'];
+              $size = $kind === 'exon' ? $row['exon_size'] : $row['tsv_size'];
+              $when = $kind === 'exon' ? $row['exon_modified'] : $row['tsv_modified'];
+              $endpoint = $kind === 'exon' ? 'generate_exon_coords.php' : 'generate_feature_coords.php';
+              ?>
+              <td data-index="<?= $kind ?>">
+                <span data-field="status">
+                  <?php if ($has): ?>
+                    <span class="badge bg-success">Ready</span>
+                  <?php elseif ($row['has_gff']): ?>
+                    <span class="badge bg-warning text-dark">Not generated</span>
+                  <?php else: ?>
+                    <span class="badge bg-secondary">No <?= genes_gff_filename() ?></span>
+                  <?php endif; ?>
+                </span>
+                <div class="small text-muted">
+                  <span data-field="size"><?= htmlspecialchars($size ?? '—') ?></span>
+                  · <span data-field="modified"><?= htmlspecialchars($when ?? '—') ?></span>
+                </div>
+                <?php if ($row['has_gff']): ?>
+                  <button type="button" class="btn btn-sm btn-outline-primary mt-1 gen-index-btn"
+                          data-endpoint="<?= $endpoint ?>"
+                          data-organism="<?= htmlspecialchars($row['organism']) ?>"
+                          data-assembly="<?= htmlspecialchars($row['assembly']) ?>"
+                          data-gene-set="<?= htmlspecialchars($row['gene_set']) ?>">
+                    <i class="fa fa-sync-alt"></i> <?= $has ? 'Regenerate' : 'Generate' ?>
+                  </button>
+                <?php endif; ?>
+              </td>
+              <?php
+          };
+          ?>
           <table class="table table-sm mb-0">
             <thead class="table-light">
               <tr>
                 <th>Organism</th>
                 <th>Assembly</th>
                 <th>Gene Set</th>
-                <th>Status</th>
-                <th>File size</th>
-                <th>Last generated</th>
-                <th></th>
+                <th>Feature index
+                  <div class="fw-normal small text-muted"><code>feature_coords.tsv</code> — BLAST linkouts</div>
+                </th>
+                <th>Exon index
+                  <div class="fw-normal small text-muted"><code>exon_coords.tsv</code> — Primer BLAST cDNA linkouts</div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -297,27 +345,8 @@
                 <td class="small"><?= htmlspecialchars($row['organism']) ?></td>
                 <td class="small"><?= htmlspecialchars($row['assembly']) ?></td>
                 <td class="small"><?= htmlspecialchars($row['gene_set']) ?></td>
-                <td>
-                  <?php if ($row['has_tsv']): ?>
-                    <span class="badge bg-success">Ready</span>
-                  <?php elseif ($row['has_gff']): ?>
-                    <span class="badge bg-warning text-dark">Not generated</span>
-                  <?php else: ?>
-                    <span class="badge bg-secondary">No <?= genes_gff_filename() ?></span>
-                  <?php endif; ?>
-                </td>
-                <td class="small"><?= $row['tsv_size'] ?? '—' ?></td>
-                <td class="small text-muted"><?= htmlspecialchars($row['tsv_modified'] ?? '—') ?></td>
-                <td>
-                  <?php if ($row['has_gff']): ?>
-                  <button type="button" class="btn btn-sm btn-outline-primary gen-feature-coords-btn"
-                          data-organism="<?= htmlspecialchars($row['organism']) ?>"
-                          data-assembly="<?= htmlspecialchars($row['assembly']) ?>"
-                          data-gene-set="<?= htmlspecialchars($row['gene_set']) ?>">
-                    <i class="fa fa-sync-alt"></i> <?= $row['has_tsv'] ? 'Regenerate' : 'Generate' ?>
-                  </button>
-                  <?php endif; ?>
-                </td>
+                <?php $index_cell($row, 'feature'); ?>
+                <?php $index_cell($row, 'exon'); ?>
               </tr>
               <?php endforeach; ?>
             </tbody>
@@ -398,12 +427,13 @@ document.getElementById('perDbBody')?.addEventListener('click', e => {
 });
 
 // --- Feature coords generation ---
-document.querySelectorAll('.gen-feature-coords-btn').forEach(btn => {
+// One handler for both index files: they differ only in which endpoint they
+// call. Every element it touches is found INSIDE the button's own cell, so a
+// row with two of these cannot update the wrong one — and no part of it depends
+// on a column position, which is what made adding this second column safe.
+document.querySelectorAll('.gen-index-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
-    const organism = btn.dataset.organism;
-    const assembly = btn.dataset.assembly;
-    const geneSet  = btn.dataset.geneSet;
-    const row = document.getElementById('fcs-' + organism + '_' + assembly + '_' + geneSet);
+    const cell = btn.closest('td');
     const origText = btn.innerHTML;
 
     btn.disabled = true;
@@ -411,19 +441,20 @@ document.querySelectorAll('.gen-feature-coords-btn').forEach(btn => {
 
     try {
       const fd = new FormData();
-      fd.append('organism', organism);
-      fd.append('assembly', assembly);
-      fd.append('gene_set', geneSet);
+      fd.append('organism', btn.dataset.organism);
+      fd.append('assembly', btn.dataset.assembly);
+      fd.append('gene_set', btn.dataset.geneSet);
       const csrfMeta = document.querySelector('meta[name="csrf-token"]');
       if (csrfMeta) fd.append('csrf_token', csrfMeta.content);
 
-      const res = await fetch(window.sitePath + '/admin/api/generate_feature_coords.php', { method: 'POST', body: fd });
+      const res = await fetch(window.sitePath + '/admin/api/' + btn.dataset.endpoint,
+                              { method: 'POST', body: fd });
       const data = await res.json();
 
       if (data.success) {
-        row.cells[3].innerHTML = '<span class="badge bg-success">Ready</span>';
-        row.cells[4].textContent = data.tsv_size ?? '—';
-        row.cells[5].textContent = data.modified;
+        cell.querySelector('[data-field="status"]').innerHTML = '<span class="badge bg-success">Ready</span>';
+        cell.querySelector('[data-field="size"]').textContent = data.tsv_size ?? '—';
+        cell.querySelector('[data-field="modified"]').textContent = data.modified ?? '—';
         btn.innerHTML = '<i class="fa fa-sync-alt"></i> Regenerate';
       } else {
         alert('Error: ' + data.message);

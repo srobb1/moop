@@ -627,6 +627,14 @@ function generateExonCoordsIndex(string $gene_set_path): bool {
 
     fclose($fh);
     fclose($out);
+
+    // Group-writable ON PURPOSE. This file is written both from the web (as
+    // apache, at registration) and from the CLI (as the deploying user, when
+    // backfilling), and the default 0640 leaves whichever of the two did NOT
+    // create it unable to overwrite it -- so "Regenerate" fails on exactly the
+    // files a backfill produced. Group is apache via the setgid on organisms/.
+    @chmod($tsv_file, 0660);
+
     return true;
 }
 
