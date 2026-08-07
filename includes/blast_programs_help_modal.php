@@ -51,32 +51,40 @@ foreach (blast_programs() as $prog) {
     ];
 }
 
-// Gotchas belong WITH the programs, not before them: they only make sense once
-// you know there are six things to choose between.
-$program_cards[] = [
-    'label' => 'Translated means six frames',
-    'html'  => true,
-    'text'  => '<code>BLASTx</code>, <code>tBLASTn</code> and <code>tBLASTx</code> convert DNA '
-             . 'to protein in all six reading frames, so you never have to know the frame.',
-];
-$program_cards[] = [
-    'label' => 'Greyed out means wrong query type',
-    'html'  => true,
-    'text'  => 'Not a missing database and not a permission — that program wants the OTHER kind '
-             . 'of sequence. <code>tBLASTn</code> and <code>BLASTp</code> need protein; the rest '
-             . 'need DNA.',
-];
-$program_cards[] = [
-    'label' => 'The database list follows the program',
-    'html'  => true,
-    'text'  => 'Pick a program and only the databases it can search remain. '
-             . '<code>BLASTp</code> and <code>BLASTx</code> leave the protein databases; the rest '
-             . 'leave the DNA ones. You cannot pair them wrongly by accident.',
-];
-$program_cards[] = [
-    'label' => '"No compatible databases"',
-    'text'  => 'Means this assembly has none of the type your program needs — commonly a '
-             . 'transcriptome with no protein set. Change program, or pick another source.',
+// Their own section, because they are SYMPTOMS. A reader meets these with
+// something already looking wrong on the page, and scans for the symptom — so
+// burying them after six reference cards is the wrong place, and it also left
+// the heading "The six programs" sitting above ten cards.
+//
+// There is deliberately no "translated means six frames" card: every program
+// whose answer that is already says so in its own text above, and a card that
+// repeats the cards above it is the duplication this modal keeps growing.
+$trouble_cards = [
+    [
+        'label' => 'A program is greyed out',
+        'html'  => true,
+        'text'  => 'Not a missing database and not a permission — it wants the OTHER kind of '
+                 . 'sequence than the one you pasted. <code>tBLASTn</code> and '
+                 . '<code>BLASTp</code> need protein; the rest need DNA.',
+    ],
+    [
+        'label' => 'Fewer databases than I expected',
+        'html'  => true,
+        'text'  => 'The list follows your program: <code>BLASTp</code> and <code>BLASTx</code> '
+                 . 'leave the protein databases, the rest leave the DNA ones. It is stopping you '
+                 . 'pairing them wrongly.',
+    ],
+    [
+        'label' => '"No compatible databases"',
+        'text'  => 'This assembly holds none of the type your program needs — commonly a '
+                 . 'transcriptome with no protein set. Change program, or pick another source.',
+    ],
+    [
+        'label' => 'I found nothing and expected a match',
+        'text'  => 'If you searched DNA against DNA across species, that is why — go through '
+                 . 'protein instead. For a short query, it is almost always the wrong program '
+                 . 'rather than a missing match.',
+    ],
 ];
 
 echo help_modal(
@@ -90,13 +98,17 @@ echo help_modal(
             'heading' => 'What do you want to do?',
             'cards' => [
                 [
+                    // States the RULE and stops. It used to end by naming BLASTx, tBLASTn
+                    // and tBLASTx together — which pointed a reader holding DNA at
+                    // tBLASTn, a program the page greys out for exactly that reader.
+                    // Which program the rule means depends on what you have, and that is
+                    // what the next three cards are for.
                     'label' => 'ACROSS SPECIES? Search protein',
                     'color' => 'success',
-                    'html'  => true,
-                    'text'  => 'The rule behind most of the cards below. Protein stays conserved '
-                             . 'where DNA has long since drifted, so never compare DNA to DNA '
-                             . 'between organisms — go through protein with <code>BLASTx</code>, '
-                             . '<code>tBLASTn</code> or <code>tBLASTx</code>.',
+                    'text'  => 'The rule behind the cards below. Protein stays conserved where '
+                             . 'DNA has long since drifted, so never compare DNA to DNA between '
+                             . 'organisms. Which program that means depends on what you have — '
+                             . 'the next three cards say which.',
                 ],
                 [
                     'label' => 'Find my gene (nucleotide) in the SAME species',
@@ -150,35 +162,31 @@ echo help_modal(
                              . 'product size for you.'
                              . $bp_more,
                 ],
-                [
-                    'label' => 'I found nothing and expected a match',
-                    'color' => 'info',
-                    'html'  => true,
-                    'text'  => 'If you searched DNA against DNA across species, that is why — go '
-                             . 'through protein instead. For a short query, the cause is almost '
-                             . 'always the wrong program rather than a missing match.',
-                ],
             ],
         ],
         [
+            // Exactly the six, so the heading names a count a reader can check.
             'heading' => 'The six programs',
             'cards' => $program_cards,
         ],
         [
+            'heading' => 'If something looks wrong',
+            'cards' => $trouble_cards,
+        ],
+        [
             'heading' => 'Short sequences, and primer pairs',
             'cards' => [
+                // Only what the use-case cards above do NOT already carry: WHY the default
+                // fails, what a good result looks like, and the handoff. "It is not only
+                // for primers" and "Stay here for a single oligo" were cut — the task
+                // cards and the BLASTn-short program card already say both, and repeating
+                // them is what made the earlier "Start here" section redundant.
                 [
-                    'label' => 'Under 30 nt needs BLASTn-short',
+                    'label' => 'Why the default throws them away',
                     'color' => 'success',
-                    'text'  => 'A perfect 20 nt match returns ZERO hits on a default search. The '
-                             . 'word size is too big to seed and the E-value throws the score '
-                             . 'away. The preset fixes both.',
-                ],
-                [
-                    'label' => 'It is not only for primers',
-                    'text'  => 'In-situ and qPCR probes, CRISPR guide RNAs, siRNA targets, '
-                             . 'sequencing adapters, sample barcodes, cloning sites and tags all '
-                             . 'behave the same way.',
+                    'text'  => 'A perfect 20 nt match returns ZERO hits on an ordinary search. '
+                             . 'The word size is too big for it to seed, and the E-value discards '
+                             . 'the score as unremarkable. The preset fixes both.',
                 ],
                 [
                     'label' => 'Expect a lot of hits',
@@ -191,15 +199,11 @@ echo help_modal(
                     'html'  => true,
                     'text'  => 'It pairs the hits, keeps only those facing each other, reports '
                              . 'every product size, searches genome and transcriptome together, '
-                             . 'and draws the products in the browser.<br>'
+                             . 'and draws the products in the browser. It needs a PAIR — to '
+                             . 'locate a single oligo, stay on this page.<br>'
                              . '<a href="' . htmlspecialchars($bp_site . '/tools/primer_blast.php')
                              . '" class="btn btn-sm btn-tool-orange mt-2">'
                              . '<i class="fa fa-vials me-1"></i>Open Primer BLAST</a>',
-                ],
-                [
-                    'label' => 'Stay here for a single oligo',
-                    'text'  => 'Primer BLAST needs a pair. To find where one probe or guide RNA '
-                             . 'lands, and how many times, this page is the right tool.',
                 ],
             ],
         ],
