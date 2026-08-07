@@ -35,6 +35,67 @@ UCSC ships in-silico PCR as one of its five main tools, so the demand is not nic
 
 ---
 
+# ⏭️ RESUME MONDAY — Primer Maker is a working first draft (2026-08-07, end of day)
+
+**primer3 is INSTALLED** on this host: `/usr/local/bin/primer3_core` (2.6.1) with tables in
+`/usr/local/share/primer3_config/`. MOOP auto-detects both — nothing configured.
+`php setup-check.php` reports `[PASS] primer3_core (parameters in …)`.
+
+**What works end to end, driven and verified — not assumed:**
+
+- `tools/primer_maker.php` — ONE page for every primer kind (standard / qPCR / RT-PCR /
+  sequencing), because the difference is Primer3 PARAMETERS, not workflow.
+- **RT-PCR really constrains the junction.** Verified on `XM_001635385.3`: junctions at 156
+  and 475, designed reverse primer spans 473-492 — across 475. Junction positions come from
+  `exon_coords.tsv` via `ExonMap`, which is what this morning's work bought.
+- **Two ways in from a gene page.** The toolbox link, and per-sequence "Design primers from
+  this sequence" buttons in the Sequences section (transcript → RT-PCR, CDS → standard).
+  Hand-off is BY ID, not by posting the sequence — an earlier version shipped a 12 kB hidden
+  field per sequence type.
+- **Isoform handling**: one transcript prefills silently; several give a picker with lengths
+  and nothing pre-chosen; transcripts with no sequence are listed but disabled.
+- **Chaining**: a Check button per results row POSTs to Primer BLAST and it RUNS. Confirmed:
+  "specific, spans 1 intron — cDNA 374 bp vs gDNA 3,469 bp".
+
+### ⏭️ Monday, in rough order
+
+1. **5′ cloning tails (T4P and "other").** The one substantial piece left. ⚠️ THE ORDERING IS
+   THE SPEC, not an accident — see PRODUCT SPEC §5 below: design on the bare template,
+   compute every statistic on the untailed primer, check specificity untailed, and only THEN
+   append and report BOTH forms. Tails must never reach Tm calculation or the genome check.
+   Also worth doing: search the tail alone against the assembly once and warn if it matches.
+2. **Genomic template.** `genome.fa` holds chromosomes, so a gene id is not a record in it —
+   genomic sequence needs a coordinate slice, the way `sequences_display.php` does it. Until
+   that lands the hand-off button appears only for transcript and CDS, so standard gDNA
+   primers cannot be designed from a gene page. This is the biggest functional gap.
+3. **Should Retrieve Sequences offer the hand-off too?** It shares
+   `tools/sequences_display.php`; the button is opted into by the gene page alone
+   (`$enable_primer_design`). User raised this and it is unresolved.
+4. **Multi-record input.** Only the first FASTA record is used. The results table and the
+   junction logic both need to say WHICH sequence a row came from before that changes.
+5. Dash-separated pasted sequence as an alternative junction marker (`runPrimer3_web.pl`
+   trick), for users without a registered transcript.
+6. Port the rest of the Perl properly — ⚠️ `/home/smr/primer3_tab` targets primer3 **1.x**:
+   `PRIMER_SEQUENCE_ID`→`SEQUENCE_ID`, `SEQUENCE`→`SEQUENCE_TEMPLATE`,
+   `PRIMER_SELF_ANY`→`PRIMER_LEFT_0_SELF_ANY_TH`. Transliterating finds primers but never the
+   record they belong to. Build against real 2.6.1 output.
+
+### 🪤 Traps this cost time on today — do not rediscover them
+
+- **`tools/parent.php` takes `uniquename`, NOT `feature`.** Wrong-parameter URLs return an
+  error page, which looks exactly like "the toolbox is not rendering".
+- **`createToolContext()` used to silently DROP any context key not on a hardcoded list.**
+  Fixed by deriving the list from every tool's `context_params` — but that is the shape to
+  watch: declaring a param in `tools_config.php` is now enough, and used not to be.
+- **`primer3_core` EXITS 0 EVEN WHEN IT FAILS.** A bad thermodynamic path gives
+  `PRIMER_ERROR=Unable to open file …/dangle.dh` on stdout with status 0. Read the OUTPUT.
+- **`/tmp` is mounted `noexec` here.** A binary built there tests as non-executable
+  (`[ -x ]` is false) even though `make` succeeded. It broke the installer once and a test once.
+- **`buildInput()` must stay free of ConfigManager** or the smoke suite stops being hermetic —
+  and the fatal was hidden by the summary line until the exit code was checked.
+
+---
+
 # ✅ PHASE 2 COMPLETE — split primers across exons (2026-08-07)
 
 **Shipped.** A primer sitting across an exon-exon junction now maps back through the exon
