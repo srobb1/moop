@@ -316,7 +316,14 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // Passed to primer3 as the PRIMER_THERMODYNAMIC_PARAMETERS_PATH tag in the
     // boulder-IO input — it is an input tag, NOT a command-line flag. primer3
     // wants a TRAILING SLASH.
-    'primer3_config_path' => '/usr/local/share/primer3_config/',
+    //
+    // EMPTY MEANS AUTO-DETECT, and that is the default on purpose: the location
+    // depends on how primer3 was installed, and hardcoding either one is wrong
+    // on the other route. A Debian/Ubuntu package puts the tables in
+    // /etc/primer3_config/; a source build puts them under the install prefix.
+    // Primer3::configPath() (lib/primer/Primer3.php) probes the known locations
+    // for a file primer3 actually opens. Set this only for an unusual install.
+    'primer3_config_path' => '',
 
     // ======== BLAST RESULT LINKOUTS ========
     // Controls which linkout buttons appear on BLAST hit results.

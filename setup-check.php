@@ -430,20 +430,34 @@ if (toolExists('jq')) {
 // broken install as a good one — so the parameters directory is checked too,
 // and a missing one is louder than a missing binary because it is the state
 // that looks fine.
-$primer3_config_dir = '/usr/local/share/primer3_config';
+// The tables land in DIFFERENT places depending on how primer3 arrived — a
+// Debian/Ubuntu package puts them in /etc/primer3_config/, a source build under
+// the install prefix — so probe the known locations rather than name one. The
+// file looked for is one primer3 actually opens: an empty primer3_config/
+// directory is a real state and would pass a bare is_dir() while failing every
+// query. Same list as Primer3::CONFIG_CANDIDATES; kept inline because this
+// script runs before there is any config to read.
+$primer3_config_dir = '';
+foreach (['/etc/primer3_config', '/usr/local/share/primer3_config',
+          '/usr/share/primer3_config', '/usr/share/primer3/primer3_config'] as $cand) {
+    if (is_readable("$cand/dangle.dh")) { $primer3_config_dir = $cand; break; }
+}
+
 if (!toolExists('primer3_core')) {
     warn("primer3_core not found in PATH",
-         "Optional — required for the primer designer. Not packaged for RHEL/EPEL, and\n"
-         . "         upstream ships a binary only for Windows, so it is a source build:\n"
+         "Optional — required for the primer designer. Debian and Ubuntu package it;\n"
+         . "         RHEL/EPEL do not, and upstream ships a binary only for Windows.\n"
+         . "         This handles either case:\n"
          . "         sudo bash scripts/install_primer3.sh");
-} elseif (!is_dir($primer3_config_dir) || !is_readable("$primer3_config_dir/stack.ds")) {
+} elseif ($primer3_config_dir === '') {
     warn("primer3_core is installed but its thermodynamic parameters are missing",
-         "primer3 will FAIL ON EVERY QUERY. Its own `make install` does not copy\n"
-         . "         primer3_config/ — that is what this script's installer adds:\n"
+         "primer3 will FAIL ON EVERY QUERY, with PRIMER_ERROR and exit status 0.\n"
+         . "         Its own `make install` does not copy primer3_config/ — that is what\n"
+         . "         the installer adds:\n"
          . "         sudo bash scripts/install_primer3.sh\n"
-         . "         Or point primer3_config_path at an existing copy.");
+         . "         Or set primer3_config_path if the tables are somewhere unusual.");
 } else {
-    pass("primer3_core (with thermodynamic parameters)");
+    pass("primer3_core (parameters in $primer3_config_dir)");
 }
 
 // jbrowse CLI — needed for text-index (gene name search) and sort-gff

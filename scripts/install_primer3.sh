@@ -2,11 +2,21 @@
 #
 # Install primer3 for MOOP.
 #
-# WHY THIS SCRIPT EXISTS: primer3 is not packaged for every distribution — there
-# is no primer3 in RHEL 9 BaseOS, AppStream or EPEL — and upstream publishes a
-# binary only for Windows. On Linux it is a source build. That is not hard, but
-# it has one trap that silently produces a broken install, so it is scripted
-# rather than written down.
+# WHY THIS SCRIPT EXISTS: primer3 is packaged on some distributions and not
+# others, and the two installs put their files in DIFFERENT PLACES.
+#
+#   Debian / Ubuntu   packaged:  /usr/bin/primer3_core, tables in /etc/primer3_config/
+#   RHEL / Rocky      no package in BaseOS, AppStream or EPEL — source build
+#   upstream releases a binary for Windows only
+#
+# So the script asks the package manager first and builds only when it has to.
+# The distro package is preferred where it exists: it is seconds rather than a
+# 32 MB download and a six-minute build, it needs no compiler toolchain, and it
+# gets security updates the normal way. Debian ships 2.6.1, which IS the current
+# upstream release, so building gains nothing there.
+#
+# Whichever route it takes, it reports the two paths MOOP needs — they differ
+# between the routes, which is exactly why MOOP keeps them as separate settings.
 #
 # ⚠️ THE TRAP: `make install` installs the EXECUTABLES ONLY (primer3's
 # src/Makefile, install: target). It does NOT install src/primer3_config/, the
@@ -25,19 +35,24 @@
 # (config/site_config.php: primer3_tools, primer3_config_path) so a deployment
 # that puts them elsewhere needs no code change.
 #
-# Usage:  sudo bash scripts/install_primer3.sh [--version 2.6.1] [--prefix /usr/local]
+# Usage:  sudo bash scripts/install_primer3.sh
+#           [--from-source]   ignore any distro package and build
+#           [--version 2.6.1] source build only
+#           [--prefix DIR]    source build only; implies --from-source behaviour
 #
 set -euo pipefail
 
 VERSION="2.6.1"
 PREFIX="/usr/local"
 KEEP_BUILD=0
+FROM_SOURCE=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --version) VERSION="$2"; shift 2 ;;
         --prefix)  PREFIX="$2";  shift 2 ;;
         --keep)    KEEP_BUILD=1; shift ;;
+        --from-source) FROM_SOURCE=1; shift ;;
         -h|--help) sed -n '2,32p' "$0"; exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
@@ -55,6 +70,82 @@ fail() { printf '\n\033[31mERROR: %s\033[0m\n' "$*" >&2; exit 1; }
 if ! { [ -w "$PREFIX" ] || { [ ! -e "$PREFIX" ] && [ -w "$(dirname "$PREFIX")" ]; }; }; then
     [ "$(id -u)" -eq 0 ] || fail "$PREFIX is not writable — re-run with sudo, or pass --prefix somewhere you own."
 fi
+
+# ------------------------------------------------------- distro package first
+#
+# Debian and Ubuntu DO package primer3 (verified against packages.debian.org and
+# packages.ubuntu.com): /usr/bin/primer3_core, with the thermodynamic tables at
+# /etc/primer3_config/ — a different location from the source build, which is
+# exactly why MOOP treats the tables as their own setting.
+#
+# RHEL/Rocky/Alma have no such package in BaseOS, AppStream or EPEL, so there the
+# probe simply finds nothing and we fall through to building.
+#
+# Probed, never assumed: asking the package manager whether it HAS primer3 costs
+# one command and is right on distributions nobody here has tested.
+pkg_offers_primer3() {
+    if   command -v apt-get >/dev/null 2>&1; then apt-cache show primer3 >/dev/null 2>&1
+    elif command -v dnf     >/dev/null 2>&1; then dnf    list --available primer3 >/dev/null 2>&1
+    elif command -v yum     >/dev/null 2>&1; then yum    list available  primer3 >/dev/null 2>&1
+    elif command -v zypper  >/dev/null 2>&1; then zypper --non-interactive info primer3 >/dev/null 2>&1
+    elif command -v pacman  >/dev/null 2>&1; then pacman -Si primer3 >/dev/null 2>&1
+    elif command -v apk     >/dev/null 2>&1; then apk info primer3 >/dev/null 2>&1
+    else return 1
+    fi
+}
+
+pkg_install_primer3() {
+    if   command -v apt-get >/dev/null 2>&1; then apt-get update -qq && apt-get install -y primer3
+    elif command -v dnf     >/dev/null 2>&1; then dnf install -y primer3
+    elif command -v yum     >/dev/null 2>&1; then yum install -y primer3
+    elif command -v zypper  >/dev/null 2>&1; then zypper --non-interactive install primer3
+    elif command -v pacman  >/dev/null 2>&1; then pacman -Sy --noconfirm primer3
+    elif command -v apk     >/dev/null 2>&1; then apk add --no-cache primer3
+    else return 1
+    fi
+}
+
+# Where a packaged primer3 keeps its tables. Checked in order; the file probed
+# for is one primer3 actually opens, so a directory that exists but is empty
+# does not pass.
+find_packaged_config() {
+    local d
+    for d in /etc/primer3_config /usr/share/primer3_config /usr/share/primer3/primer3_config \
+             /usr/local/share/primer3_config; do
+        [ -r "$d/dangle.dh" ] && { printf '%s' "$d"; return 0; }
+    done
+    return 1
+}
+
+if [ "$FROM_SOURCE" -eq 0 ] && [ "$PREFIX" = "/usr/local" ]; then
+    say "Looking for a packaged primer3"
+    if pkg_offers_primer3; then
+        echo "Your distribution packages primer3 — installing that instead of building."
+        pkg_install_primer3 || fail "Package install failed. Re-run with --from-source to build instead."
+
+        command -v primer3_core >/dev/null 2>&1 \
+            || fail "Package installed but primer3_core is not on the PATH. Re-run with --from-source."
+
+        PKG_CONFIG="$(find_packaged_config)" \
+            || fail "Package installed but its thermodynamic tables were not found. Re-run with --from-source."
+
+        BIN_DEST="$(dirname "$(command -v primer3_core)")"
+        CONFIG_DEST="$PKG_CONFIG"
+        PACKAGED=1
+        echo "  binary        $BIN_DEST/primer3_core"
+        echo "  thermodynamic $CONFIG_DEST/"
+    else
+        echo "No primer3 package available here — building from source."
+    fi
+fi
+
+cleanup() {
+    [ "$KEEP_BUILD" -eq 1 ] || rm -rf "${BUILD_DIR:-}"
+    rm -f "${TEST_OUT:-}"
+}
+trap cleanup EXIT
+
+if [ "${PACKAGED:-0}" -eq 0 ]; then
 
 # ---------------------------------------------------------------- build deps
 # primer3 is mostly C, but libprimer3.cc is C++, so a C compiler alone is not
@@ -111,8 +202,6 @@ BUILD_DIR="$(pick_build_root)" \
     || fail "No writable directory that allows execution (tried \$TMPDIR, /var/tmp, /tmp, \$HOME). All are mounted noexec?"
 rm -f "$BUILD_DIR/probe"
 echo "Build directory: $BUILD_DIR"
-cleanup() { [ "$KEEP_BUILD" -eq 1 ] || rm -rf "$BUILD_DIR"; }
-trap cleanup EXIT
 
 say "Downloading primer3 $VERSION"
 # The archive is ~32 MB because it bundles the test suite, and it can be slow
@@ -160,6 +249,23 @@ cp -r "$SRC/primer3_config/." "$CONFIG_DEST/"
 chmod -R a+rX "$CONFIG_DEST"
 echo "  $(find "$CONFIG_DEST" -type f | wc -l) parameter files"
 
+fi   # end of the source-build branch
+
+# A distro could ship something far older than the designer expects. 2.3.6 is the
+# floor: it is the first release with PRIMER_THERMODYNAMIC_OLIGO_ALIGNMENT, which
+# everything here depends on. Below that, build instead of arguing about it.
+if [ "${PACKAGED:-0}" -eq 1 ]; then
+    PKG_VER="$("$BIN_DEST/primer3_core" --about 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+    echo "  packaged version $PKG_VER"
+    if [ -n "$PKG_VER" ]; then
+        PKG_MAJOR="${PKG_VER%%.*}"
+        PKG_MINOR="$(printf '%s' "$PKG_VER" | cut -d. -f2)"
+        if [ "$PKG_MAJOR" -lt 2 ] || { [ "$PKG_MAJOR" -eq 2 ] && [ "$PKG_MINOR" -lt 3 ]; }; then
+            fail "Packaged primer3 $PKG_VER is older than the 2.3.6 minimum. Re-run with --from-source."
+        fi
+    fi
+fi
+
 # ------------------------------------------------------------------- verify
 # A real query, not `--version`. The whole point is that a broken thermodynamic
 # path only shows up when something actually asks for a primer, and the web
@@ -177,7 +283,9 @@ say "Verifying with a real query"
 # yields pairs. An earlier version used a short synthetic sequence with Ns in
 # it, which primer3 handled perfectly correctly by returning no primers at all
 # -- and the check then reported a WORKING install as broken.
-TEST_OUT="$BUILD_DIR/verify.out"
+# mktemp, not "$BUILD_DIR/verify.out": there is no build directory when primer3
+# came from a package. Removed by cleanup() above.
+TEST_OUT="$(mktemp)"
 "$BIN_DEST/primer3_core" >"$TEST_OUT" 2>&1 <<EOF || true
 SEQUENCE_ID=install_check
 SEQUENCE_TEMPLATE=AGCCGCACCTCTAATCAATTCACATCACGTGGCTTTCTCATCCAATGAGATTGCTCGTTGCTTCAACATAGTGCAACCGGGCATTTGATCCGAGTTCGCATCGTGCTGCGACAGTCGAAGCTTTCGTCTTTCTCGATCTTCCAGTTCCTTCAGCCATTATGTCGAAGTCAATGTCAGGTATAGAGATGACAGAGGAGTGCATAGAGCTCTTCAAGGACATGAAGATTACAACTAAAGGCGCTGATAGACCCAGGTTCAAATACGCGATATTCAAGCTGTCAGATGATAACACTAAAGTGGAGCTGGAGGAAAAAGTTGAAGCAAAATGCCTTGCAAACAATCGTGAAGAAGATGAGGAAATATTTGAAGAGTTAAAGGGAAAACTGTCCAAGAAAGAGCCTAGATTTATTCTGTATGACATGAGATTCTGCAGCAAGTCTGGCTCCCTCAAGGAAATATTGACTTTCATCAAATGGTGTAGTGACGAAGCACCTATCAAGAAGAAAATGTTGGCCGGCTCTACATGGGAGTACTTGAAAAAGAAGTTTGACGGTTTGAAAAAGTACTTCGAAGCTTCTGAAATATGCGAGATGTGTTACA

@@ -209,13 +209,24 @@ bigWigSummary 2>&1 | head -1
 
 ## primer3
 
-Used by the primer designer. **Not packaged for RHEL/EPEL, and upstream publishes a binary
-only for Windows** — on Linux it is a source build. MOOP ships a script that does the whole
-thing, including the part below that `make install` leaves out:
+Used by the primer designer. The script asks your package manager first and only builds when
+it has to:
 
 ```bash
-sudo bash scripts/install_primer3.sh
+sudo bash scripts/install_primer3.sh      # add --from-source to force a build
 ```
+
+| | primer3 | binary | thermodynamic tables |
+|---|---|---|---|
+| **Debian / Ubuntu** | packaged (`apt install primer3`) | `/usr/bin/primer3_core` | `/etc/primer3_config/` |
+| **RHEL / Rocky / Alma** | not in BaseOS, AppStream or EPEL — source build | `/usr/local/bin/primer3_core` | `/usr/local/share/primer3_config/` |
+
+Prefer the package where there is one: it needs no compiler, installs in seconds instead of a
+32 MB download and a six-minute build, and updates with the rest of the system. Debian ships
+2.6.1, which **is** the current upstream release, so building gains nothing there.
+
+Note the tables land in **different places** on the two routes. MOOP auto-detects both, so
+`primer3_config_path` only needs setting for an unusual install.
 
 > ⚠️ **If you install it by hand, do not stop at `make install`.** primer3's own install
 > target copies the EXECUTABLES ONLY — it does not copy `src/primer3_config/`, the

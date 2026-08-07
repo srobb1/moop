@@ -740,34 +740,28 @@ function housekeeping_environment_check() {
     // renders alert-{level} — so it must be one Bootstrap defines. 'notice' is
     // not, and would have produced an unstyled div that still showed the text:
     // wrong enough to look broken, right enough not to be noticed.
-    $primer3 = $config->getArray('primer3_tools')['primer3_core'] ?? 'primer3_core';
-    $p3_path = (strpos($primer3, '/') === 0 && is_executable($primer3))
-        ? $primer3
-        : trim(shell_exec('which ' . escapeshellarg($primer3) . ' 2>/dev/null') ?? '');
-    if ($p3_path === '' && file_exists('/usr/local/bin/primer3_core')) {
-        $p3_path = '/usr/local/bin/primer3_core';
-    }
+    require_once __DIR__ . '/primer/Primer3.php';
+    $p3 = Primer3::status();
 
-    $p3_config = rtrim((string)$config->getString('primer3_config_path'), '/');
-
-    if ($p3_path === '') {
+    if ($p3['problem'] === 'missing') {
         $warnings[] = [
             'level'   => 'info',
             'message' => 'Primer design tool <code>primer3_core</code> is not installed — the '
-                       . 'primer designer will be unavailable. It is not packaged for most '
-                       . 'distributions; install it with '
-                       . '<code>sudo bash scripts/install_primer3.sh</code>.',
+                       . 'primer designer will be unavailable. Install it with '
+                       . '<code>sudo bash scripts/install_primer3.sh</code>, which uses your '
+                       . 'distribution\'s package where there is one (Debian and Ubuntu have it) '
+                       . 'and builds from source otherwise.',
         ];
-    } elseif ($p3_config === '' || !is_dir($p3_config) || !is_readable($p3_config . '/stack.ds')) {
+    } elseif ($p3['problem'] === 'no_parameters') {
         $warnings[] = [
             'level'   => 'warning',
             'message' => '<code>primer3_core</code> is installed at <code>'
-                       . htmlspecialchars($p3_path) . '</code> but its thermodynamic parameters '
-                       . 'directory is missing or unreadable at <code>'
-                       . htmlspecialchars($p3_config ?: '(unset)') . '</code>. primer3 will fail '
-                       . 'on every query. primer3\'s own <code>make install</code> does not copy '
-                       . 'this directory — re-run <code>scripts/install_primer3.sh</code>, or set '
-                       . '<code>primer3_config_path</code>.',
+                       . htmlspecialchars($p3['binary']) . '</code> but its thermodynamic '
+                       . 'parameters were not found in any known location. primer3 will fail on '
+                       . 'every query with <code>PRIMER_ERROR=Unable to open file …</code>. Its '
+                       . 'own <code>make install</code> does not copy that directory — re-run '
+                       . '<code>scripts/install_primer3.sh</code>, or set '
+                       . '<code>primer3_config_path</code> if it is somewhere unusual.',
         ];
     }
 
