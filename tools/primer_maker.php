@@ -29,15 +29,21 @@
  *     specificity untailed, and only THEN append the tail and report both forms.
  *     See the PRODUCT SPEC in notes/PRIMER_BLAST_TOOL_PLAN.md — the existing
  *     workflow's ordering is the spec, not an accident.
- *   - Chaining: hand a designed pair straight to Primer BLAST without a
- *     copy-paste round trip.
+ *   - Genomic sequence as a template. genome.fa holds chromosomes, so a gene id
+ *     is not a record in it and the sequence has to come from a coordinate
+ *     slice — which is how the Sequences section does it. Until then the
+ *     hand-off button appears only for transcript and CDS.
  *   - Dash-separated pasted sequence as an alternative way to mark a junction.
+ *   - Whether Retrieve Sequences should offer the same hand-off; it shares
+ *     sequences_display.php, and the button is currently opted into by the gene
+ *     page alone.
  */
 
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/primer/Primer3.php';
 include_once __DIR__ . '/../lib/primer/Primer3Design.php';
 include_once __DIR__ . '/../lib/primer/ExonMap.php';
+include_once __DIR__ . '/../lib/gene_isoforms.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../includes/source-selector-helpers.php';
 
@@ -85,7 +91,10 @@ $PRESETS = [
 ];
 
 // --------------------------------------------------------------------- input
-$primer_type = $_POST['primer_type'] ?? 'standard';
+// GET too: the Sequences section on a gene page links here with the type
+// already chosen (a transcript means RT-PCR), and reading POST only made
+// that link silently fall back to Standard PCR.
+$primer_type = $_POST['primer_type'] ?? $_GET['primer_type'] ?? 'standard';
 if (!isset($PRESETS[$primer_type])) {
     $primer_type = 'standard';
 }
@@ -109,8 +118,62 @@ $template_id = '';
 
 $p3 = Primer3::status();
 
+// ------------------------------------------------- isoforms, when we came from a gene
+//
+// Arriving from a gene page, the useful thing is the sequence already in the
+// box. A gene can have several transcripts though — 7 for one Nematostella gene
+// here — and they differ in exactly the way that matters for primer design, so
+// picking one for the user would be guessing. One isoform: prefill it, no
+// question asked. Several: ask, and prefill on choosing.
+$isoforms        = [];
+$selected_isoform = trim($_POST['isoform'] ?? $_GET['isoform'] ?? '');
+$gene_set_path   = '';
+
+// Which FASTA to take the sequence from. The Sequences section on a gene page
+// links here with this set, so "Design primers from this sequence" fetches the
+// SAME sequence the reader was looking at — by id, rather than the page posting
+// a copy of it.
+$seq_type = trim($_GET['seq_type'] ?? $_POST['seq_type'] ?? 'transcript');
+if (!in_array($seq_type, moop_primer_sequence_types(), true)) {
+    $seq_type = 'transcript';
+}
+
+if ($context_organism !== '' && $context_assembly !== '' && $context_gene_set !== '' && $context_feature !== '') {
+    $gene_set_path = $config->getPath('organism_data') . '/' . $context_organism
+                   . '/' . $context_assembly . '/' . $context_gene_set;
+    $isoforms = moop_gene_isoforms($gene_set_path, $context_feature);
+
+    // Only isoforms that actually have sequence can be offered. One that does
+    // not is still listed, disabled, rather than silently dropped — a gene that
+    // shows 6 of 7 transcripts with no explanation looks like missing data.
+    $with_seq = array_values(array_filter($isoforms, fn($i) => $i['fasta_id'] !== ''));
+
+    if ($selected_isoform === '' && count($with_seq) === 1) {
+        $selected_isoform = $with_seq[0]['id'];
+    }
+
+    // Prefill when the box is empty, or when the user explicitly asked to load
+    // a transcript. Never silently overwrite something they pasted — that is
+    // why "Load this sequence" is its own button rather than an onchange.
+    $load_isoform = isset($_POST['load_isoform']);
+    if ($selected_isoform !== ''
+        && ($load_isoform || $_SERVER['REQUEST_METHOD'] !== 'POST' || trim($_POST['sequence'] ?? '') === '')) {
+        $seq = moop_transcript_sequence($gene_set_path, $selected_isoform, $seq_type);
+        if ($seq !== '') {
+            $sequence_text = '>' . preg_replace('/^(?:rna|cds|gene|id)-/', '', $selected_isoform)
+                           . "\n" . chunk_split($seq, 60, "\n");
+        }
+    }
+}
+
 // ------------------------------------------------------------------ the run
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// "Load this sequence" is a POST, but it is not a request to DESIGN anything —
+// it just swaps the transcript into the box. Running primer3 on it would answer
+// a question the user has not asked yet, and would bury the newly loaded
+// sequence under a table.
+if ($_SERVER['REQUEST_METHOD'] === 'POST'
+    && !isset($_POST['load_isoform'])   // "load this transcript" — swap the box, do not design
+    && !isset($_POST['prefill'])) {     // arrived from a gene page's Sequences section
     if (!$p3['ok']) {
         $run_error = $p3['problem'] === 'missing'
             ? 'primer3 is not installed on this server, so primers cannot be designed. '
@@ -226,6 +289,9 @@ $data = [
     'context_assembly' => $context_assembly,
     'context_gene_set' => $context_gene_set,
     'context_feature'  => $context_feature,
+    'isoforms'         => $isoforms,
+    'selected_isoform' => $selected_isoform,
+    'seq_type'         => $seq_type,
 
     'page_styles'      => [
         '/' . $site . '/css/display.css',

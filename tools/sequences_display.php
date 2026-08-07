@@ -256,6 +256,39 @@ if (!empty($sequence_errors)) {
                         // Concatenate all sequences for this type
                         $concatenated_sequences = implode("\n\n", $sequences);
                         
+                        // Hand off to Primer Maker by ID, not by shipping the sequence.
+                        //
+                        // An earlier version POSTed the whole sequence in a hidden field. That
+                        // put a copy of every sequence type into the page a second time — 12 kB
+                        // per transcript here — for data the maker can fetch itself from the
+                        // same FASTA. A link also survives being bookmarked or shared, which a
+                        // hidden POST field does not.
+                        //
+                        // Only for types fetchable BY ID: genome.fa holds chromosomes, so a
+                        // gene id is not a record in it, and protein is not what primers are
+                        // made of. Offering a button that leads nowhere is worse than no button.
+                        //
+                        // Opt-in via $enable_primer_design, because this component is shared
+                        // with Retrieve Sequences and Primer Maker is a gene-page tool.
+                        if (!empty($enable_primer_design)
+                            && function_exists('moop_primer_sequence_types')
+                            && in_array($seq_type, moop_primer_sequence_types(), true)) {
+                            $pd_ctx = $primer_design_context ?? [];
+                            $pd_url = '/' . $config->getString('site') . '/tools/primer_maker.php?'
+                                    . http_build_query([
+                                        'organism' => $pd_ctx['organism'] ?? '',
+                                        'assembly' => $pd_ctx['assembly'] ?? '',
+                                        'gene_set' => $pd_ctx['gene_set'] ?? '',
+                                        'feature'  => $pd_ctx['feature'] ?? '',
+                                        'seq_type' => $seq_type,
+                                        // A transcript is what RT-PCR needs; anything else is
+                                        // ordinary PCR.
+                                        'primer_type' => $seq_type === 'transcript' ? 'rtpcr' : 'standard',
+                                    ]);
+                            echo '      <a href="' . htmlspecialchars($pd_url) . '" class="btn btn-sm btn-tool-indigo mb-2">'
+                               . '<i class="fa fa-wand-magic-sparkles me-1"></i>Design primers from this sequence</a>';
+                        }
+
                         echo '      <div class="card bg-light">';
                         echo '        <div class="card-body copyable font-monospace-small cursor-pointer preserve-whitespace">';
                         echo htmlspecialchars($concatenated_sequences);

@@ -181,6 +181,11 @@
             'assembly'     => $genome_accession,
             'gene_set'     => $gene_set_name,
             'display_name' => $feature_uniquename,
+            // The gene's own id, separate from display_name: Primer Maker uses it
+            // to list the gene's transcripts and prefill one. Passing it as
+            // display_name would have worked by accident today and broken the
+            // moment either meaning changed.
+            'feature'      => $feature_uniquename,
             'loc'          => $jbrowse_loc,
         ]);
         include_once TOOL_SECTION_PATH;
@@ -442,6 +447,17 @@
     <?php
     // $gene_name is built in the controller and passed via $data
     $enable_downloads = true;
+    // Gene pages only. sequences_display.php is shared with Retrieve Sequences,
+    // and Primer Maker is deliberately a gene-page tool (user, 2026-08-07) — so
+    // the send-to-maker button is opted INTO here rather than appearing wherever
+    // this component happens to be included.
+    $enable_primer_design = true;
+    $primer_design_context = [
+        'organism' => $organism_name,
+        'assembly' => $genome_accession,
+        'gene_set' => $gene_set_name,
+        'feature'  => $feature_uniquename,
+    ];
     $assembly_name    = $genome_accession;
     $organism_data    = $config->getPath('organism_data');
 

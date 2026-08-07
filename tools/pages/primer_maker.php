@@ -47,6 +47,7 @@
         <input type="hidden" name="assembly" value="<?= htmlspecialchars($context_assembly) ?>">
         <input type="hidden" name="gene_set" value="<?= htmlspecialchars($context_gene_set) ?>">
         <input type="hidden" name="feature"  value="<?= htmlspecialchars($context_feature) ?>">
+        <input type="hidden" name="seq_type" value="<?= htmlspecialchars($seq_type) ?>">
 
         <!-- Step 1 — sequence -->
         <div class="card mb-4 shadow-sm">
@@ -61,11 +62,66 @@
                 </p>
                 <textarea name="sequence" class="form-control" rows="8" style="font-family:monospace; font-size:0.85rem;"
                           placeholder="&gt;my_gene&#10;ATGGCTAGCTAGCTAGCATCGATCGATCG..."><?= htmlspecialchars($sequence_text) ?></textarea>
-                <?php if ($context_feature): ?>
+                <?php
+                $with_seq = array_values(array_filter($isoforms, fn($i) => $i['fasta_id'] !== ''));
+                ?>
+                <?php if (count($with_seq) === 1 && $selected_isoform !== ''): ?>
+                    <?php // One transcript: nothing to ask, so do not ask. ?>
+                    <div class="form-text">
+                        <i class="fa fa-circle-check text-success me-1"></i>
+                        Filled in with <strong><?= htmlspecialchars($with_seq[0]['fasta_id']) ?></strong>,
+                        the only transcript of <?= htmlspecialchars($context_feature) ?>
+                        (<?= number_format((int)$with_seq[0]['length']) ?> bp).
+                    </div>
+                <?php elseif (count($with_seq) > 1): ?>
+                    <?php // Several: picking one for them would be guessing, and the
+                          // transcripts differ in exactly the way that matters here. ?>
+                    <div class="mt-3">
+                        <label for="isoform" class="form-label mb-1">
+                            <strong><?= htmlspecialchars($context_feature) ?></strong> has
+                            <?= count($with_seq) ?> transcripts — which one?
+                            <?= field_help(
+                                'Isoforms of the same gene differ in which exons they contain, so a primer '
+                                . 'pair that works on one may not amplify another — and for RT-PCR the exon '
+                                . 'junctions themselves differ. Pick the transcript you actually care about. '
+                                . 'Choosing one replaces the sequence box with its sequence.',
+                                'Which transcript?'
+                            ) ?>
+                        </label>
+                        <div class="d-flex gap-2 align-items-start flex-wrap">
+                            <select name="isoform" id="isoform" class="form-select" style="max-width:32rem;">
+                                <?php foreach ($isoforms as $iso): ?>
+                                    <option value="<?= htmlspecialchars($iso['id']) ?>"
+                                            <?= $iso['fasta_id'] === '' ? 'disabled' : '' ?>
+                                            <?= $selected_isoform === $iso['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($iso['fasta_id'] ?: $iso['id']) ?>
+                                        — <?= htmlspecialchars($iso['type']) ?><?php
+                                        echo $iso['length'] !== null
+                                            ? ', ' . number_format((int)$iso['length']) . ' bp'
+                                            : ' (no sequence available)'; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php // A plain submit, not JS: it re-renders the page with the
+                                  // chosen transcript prefilled, and works with no scripting. ?>
+                            <button type="submit" name="load_isoform" value="1" class="btn btn-outline-secondary">
+                                <i class="fa fa-arrow-down me-1"></i>Load this sequence
+                            </button>
+                        </div>
+                        <?php $missing = count($isoforms) - count($with_seq); ?>
+                        <?php if ($missing > 0): ?>
+                            <div class="form-text">
+                                <?= $missing ?> further transcript<?= $missing === 1 ? ' has' : 's have' ?>
+                                no sequence in this gene set, so <?= $missing === 1 ? 'it is' : 'they are' ?>
+                                listed but cannot be chosen.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php elseif ($context_feature): ?>
                     <div class="form-text">
                         <i class="fa fa-link me-1"></i>Arrived from
-                        <strong><?= htmlspecialchars($context_feature) ?></strong>.
-                        Paste its sequence above — automatic fetching lands next.
+                        <strong><?= htmlspecialchars($context_feature) ?></strong>, but no transcript
+                        sequence was found for it in this gene set. Paste a sequence above.
                     </div>
                 <?php endif; ?>
             </div>
@@ -191,7 +247,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle">
                         <thead class="table-light">
-                            <tr><?php foreach ($columns as $label): ?><th><?= htmlspecialchars($label) ?></th><?php endforeach; ?></tr>
+                            <tr><?php foreach ($columns as $label): ?><th><?= htmlspecialchars($label) ?></th><?php endforeach; ?><th></th></tr>
                         </thead>
                         <tbody>
                         <?php foreach ($entry['pairs'] as $pair): ?>
@@ -215,6 +271,37 @@
                                     <td class="<?= in_array($key, ['left_sequence','right_sequence'], true) ? '' : 'small' ?>"
                                         <?= in_array($key, ['left_sequence','right_sequence'], true) ? 'style="font-family:monospace;"' : '' ?>><?= htmlspecialchars((string)$v) ?></td>
                                 <?php endforeach; ?>
+                                <td class="text-end">
+                                    <?php
+                                    // Chaining, per row: design → check, with no copy-paste
+                                    // round trip. A real POST rather than a link, so Primer
+                                    // BLAST RUNS rather than just arriving with its box
+                                    // filled — the question "is this pair specific" is the
+                                    // reason the button exists.
+                                    //
+                                    // Named _F/_R so Primer BLAST's own input parser pairs
+                                    // them by suffix, which is its first supported shape.
+                                    $chain_name = preg_replace('/[^A-Za-z0-9_.-]/', '_', $entry['id']) . '_p' . $pair['rank'];
+                                    $chain_fasta = ">{$chain_name}_F\n" . ($pair['left_sequence'] ?? '')
+                                                 . "\n>{$chain_name}_R\n" . ($pair['right_sequence'] ?? '');
+                                    ?>
+                                    <form method="post" action="<?= htmlspecialchars('/' . $site . '/tools/primer_blast.php') ?>"
+                                          target="_blank" class="d-inline">
+                                        <?= csrf_input_field() ?>
+                                        <input type="hidden" name="primers" value="<?= htmlspecialchars($chain_fasta) ?>">
+                                        <?php if ($context_organism && $context_assembly && $context_gene_set): ?>
+                                            <input type="hidden" name="selected_source"
+                                                   value="<?= htmlspecialchars($context_organism . '|' . $context_assembly . '|' . $context_gene_set) ?>">
+                                            <?php // cDNA: these were designed on a transcript, so the
+                                                  // transcriptome is the template they came from — and it
+                                                  // is what makes the intron comparison meaningful. ?>
+                                            <input type="hidden" name="search_mode" value="transcript">
+                                        <?php endif; ?>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Check this pair for specificity and product size">
+                                            <i class="fa fa-vials me-1"></i>Check
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
