@@ -1,7 +1,11 @@
-# A dedicated primer BLAST tool
+# The primer tools
 
-Status: **idea recorded, not built.** Raised by the user 2026-08-03 while fixing the
-short-sequence BLAST bugs. Post-launch — this is a new tool, not a launch blocker.
+Status: **both tools are BUILT and live** (2026-08-07). Primer BLAST checks pairs; Primer
+Maker designs them. primer3 is installed. Read the RESUME section immediately below for where
+things stand and what is left — the sections further down are the original planning and the
+product spec, which are still the reference for the tails work but no longer describe status.
+
+Raised by the user 2026-08-03 while fixing the short-sequence BLAST bugs.
 
 ⭐ **SCOPE GREW 2026-08-06 — the user wants primer *design*, not only primer checking.**
 Their words: *"i think a primer making tool might be good. i have some perl code using primer3
