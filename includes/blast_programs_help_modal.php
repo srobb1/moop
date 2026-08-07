@@ -2,13 +2,17 @@
 /**
  * Help for choosing a BLAST program.
  *
- * Cards are GENERATED from blast_programs() (lib/blast_functions.php), which is
+ * Ordered the way a new user arrives at it: what am I trying to DO, then which
+ * program does that, then the special case. Not the other way round — a reader
+ * who already knew the program names would not have opened this.
+ *
+ * The program cards are GENERATED from blast_programs() (lib/blast_functions.php),
  * the same array the dropdown renders from. That is the point: the option text
  * and its explanation cannot drift apart, because there is only one of them.
  *
  * Kept out of the general BLAST help because this answers a question asked
- * BEFORE searching — "which of these six do I want" — and picking wrong returns
- * an empty result that reads as "not in this genome" rather than "wrong tool".
+ * BEFORE searching, and picking wrong returns an empty result that reads as
+ * "not in this genome" rather than "wrong tool".
  *
  * Requires lib/help_ui.php (loaded globally via config_init) and
  * lib/blast_functions.php.
@@ -40,70 +44,62 @@ foreach (blast_programs() as $prog) {
     ];
 }
 
+// Gotchas belong WITH the programs, not before them: they only make sense once
+// you know there are six things to choose between.
+$program_cards[] = [
+    'label' => 'Translated means six frames',
+    'html'  => true,
+    'text'  => '<code>BLASTx</code>, <code>tBLASTn</code> and <code>tBLASTx</code> convert DNA '
+             . 'to protein in all six reading frames, so you never have to know the frame.',
+];
+$program_cards[] = [
+    'label' => 'Greyed out means wrong query type',
+    'html'  => true,
+    'text'  => 'Not a missing database and not a permission — that program wants the OTHER kind '
+             . 'of sequence. <code>tBLASTn</code> and <code>BLASTp</code> need protein; the rest '
+             . 'need DNA.',
+];
+$program_cards[] = [
+    'label' => 'The database list follows the program',
+    'html'  => true,
+    'text'  => 'Pick a program and only the databases it can search remain. '
+             . '<code>BLASTp</code> and <code>BLASTx</code> leave the protein databases; the rest '
+             . 'leave the DNA ones. You cannot pair them wrongly by accident.',
+];
+$program_cards[] = [
+    'label' => '"No compatible databases"',
+    'text'  => 'Means this assembly has none of the type your program needs — commonly a '
+             . 'transcriptome with no protein set. Change program, or pick another source.',
+];
+
 echo help_modal(
     'blast-programs-help',
     'Choosing a BLAST program',
     [
         [
-            'heading' => 'Start here',
+            // Tasks first. A reader opens this because they have a job, not
+            // because they want to compare six algorithms — so the job is the
+            // way in, and every card ends at a program name.
+            'heading' => 'What do you want to do?',
             'cards' => [
                 [
-                    'label' => 'Paste your sequence first',
+                    'label' => 'ACROSS SPECIES? Search protein',
                     'color' => 'success',
-                    'text'  => 'The page works out whether you pasted DNA or protein and '
-                             . 'suggests a program. If that is all you need, you can stop here.',
-                ],
-                [
-                    'label' => 'Across species? Search PROTEIN',
-                    'color' => 'success',
-                    'text'  => 'Protein stays conserved where DNA has long since drifted. For a '
-                             . 'homologue in another organism, always search a protein database — '
-                             . 'never DNA against DNA.',
-                ],
-                [
-                    'label' => 'So do not reach for BLASTn',
                     'html'  => true,
-                    'text'  => 'Having DNA is not a reason to pick it. Aim DNA at a protein '
-                             . 'database and it becomes <code>BLASTx</code>; aim it at another '
-                             . 'genome and it becomes <code>tBLASTx</code>. Both translate for '
-                             . 'you.',
+                    'text'  => 'The rule behind most of the cards below. Protein stays conserved '
+                             . 'where DNA has long since drifted, so never compare DNA to DNA '
+                             . 'between organisms — go through protein with <code>BLASTx</code>, '
+                             . '<code>tBLASTn</code> or <code>tBLASTx</code>.',
                 ],
                 [
-                    'label' => 'Two things have to match',
-                    'text'  => 'What YOU have, and what the database holds. Most wrong choices '
-                             . 'are a protein query aimed at a DNA database, or the reverse.',
-                ],
-                [
-                    'label' => 'Wrong program looks like no result',
-                    'text'  => 'It does not warn you. It returns nothing, which reads as "this '
-                             . 'gene is not in this genome" when the search was never possible.',
-                ],
-                [
-                    'label' => 'Translated means six frames',
-                    'text'  => 'BLASTx, tBLASTn and tBLASTx convert DNA to protein in all six '
-                             . 'reading frames, so you do not need to know the frame yourself.',
-                ],
-            ],
-        ],
-        [
-            'heading' => 'The six programs',
-            'cards' => $program_cards,
-        ],
-        [
-            // Use cases, not reference. Every card in this section carries the same
-            // badge colour so the section reads as a different KIND of card at a
-            // glance -- you arrive here with a task, not with a program name.
-            'heading' => 'Which one do I want?',
-            'cards' => [
-                [
-                    'label' => 'My gene, in the SAME species',
+                    'label' => 'Find my gene in the SAME species',
                     'color' => 'info',
                     'html'  => true,
                     'text'  => '<code>BLASTn</code> — both sides are DNA, and within a species '
                              . 'the DNA still matches.',
                 ],
                 [
-                    'label' => 'My gene, in ANOTHER species\' genome',
+                    'label' => 'Find my gene in ANOTHER species\' genome',
                     'color' => 'info',
                     'html'  => true,
                     'text'  => '<code>tBLASTx</code> — your DNA and the genome are both '
@@ -119,43 +115,48 @@ echo help_modal(
                              . 'gene annotation at all.',
                 ],
                 [
-                    'label' => 'Why is tBLASTn greyed out?',
-                    'color' => 'info',
-                    'html'  => true,
-                    'text'  => 'You pasted DNA, and tBLASTn needs a protein query. Paste the '
-                             . 'protein, or use <code>tBLASTx</code> instead.',
-                ],
-                [
-                    'label' => 'My transcript — what does it code for?',
+                    'label' => 'Work out what my transcript codes for',
                     'color' => 'info',
                     'html'  => true,
                     'text'  => '<code>BLASTx</code> — translates your DNA and searches proteins.',
                 ],
                 [
-                    'label' => 'A protein from another species',
+                    'label' => 'Find relatives of a protein',
                     'color' => 'info',
                     'html'  => true,
                     'text'  => '<code>BLASTp</code> against proteins, or <code>tBLASTn</code> '
                              . 'against a genome if the protein set is missing or incomplete.',
                 ],
                 [
-                    'label' => 'Nothing found, and I expected a match',
+                    'label' => 'Locate a primer, probe or guide RNA',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => 'If you searched DNA against DNA across species, that is why. '
-                             . 'Go through protein: <code>BLASTx</code>, <code>tBLASTn</code> '
-                             . 'or <code>tBLASTx</code>.',
+                    'text'  => '<code>BLASTn-short</code> — anything under about 30 nt. See the '
+                             . 'last section; the ordinary settings throw these away.',
                 ],
                 [
-                    'label' => 'A primer, probe or guide RNA',
+                    'label' => 'Check a primer PAIR',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => '<code>BLASTn-short</code> — see the next section.',
+                    'text'  => 'Not this page — Primer BLAST pairs the hits and reports product '
+                             . 'sizes. Link in the last section.',
+                ],
+                [
+                    'label' => 'I found nothing and expected a match',
+                    'color' => 'info',
+                    'html'  => true,
+                    'text'  => 'If you searched DNA against DNA across species, that is why — go '
+                             . 'through protein instead. For a short query, the cause is almost '
+                             . 'always the wrong program rather than a missing match.',
                 ],
             ],
         ],
         [
-            'heading' => 'Short sequences and primer pairs',
+            'heading' => 'The six programs',
+            'cards' => $program_cards,
+        ],
+        [
+            'heading' => 'Short sequences, and primer pairs',
             'cards' => [
                 [
                     'label' => 'Under 30 nt needs BLASTn-short',
@@ -169,6 +170,11 @@ echo help_modal(
                     'text'  => 'In-situ and qPCR probes, CRISPR guide RNAs, siRNA targets, '
                              . 'sequencing adapters, sample barcodes, cloning sites and tags all '
                              . 'behave the same way.',
+                ],
+                [
+                    'label' => 'Expect a lot of hits',
+                    'text'  => 'The permissive threshold is doing its job. Sort by identity and '
+                             . 'length: a usable site is full-length and 100%.',
                 ],
                 [
                     'label' => 'Checking a primer PAIR? Use Primer BLAST',
@@ -190,7 +196,7 @@ echo help_modal(
         ],
     ],
     [
-        'intro' => 'Six programs, and the difference is only ever two things: what you paste, '
-                 . 'and what it is compared against.',
+        'intro' => 'Paste your sequence first — the page detects DNA or protein and disables the '
+                 . 'programs that cannot take it, so the list narrows itself before you choose.',
     ]
 );
