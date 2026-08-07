@@ -109,6 +109,14 @@ The original pair from phase 1 still works and is worth keeping for continuity:
 Amphimedon it produced a junction pair landing in a three-member paralog family, which is a
 realistic case but not a clean fixture. Always confirm a generated pair on the page.
 
+### ⏭️ UI follow-ups — not done, small
+
+- **Step 3 "Search options" is visually unbalanced** (user, 2026-08-07; screenshot
+  `primerblast-options.png` in the repo root). "Mismatches allowed" and "Largest product to
+  report" each hold a bordered form control, while "PCR input" holds bare radio buttons — so
+  the three cards in that row do not read as a set. Put a matching box around the
+  Genomic DNA / cDNA radios. `tools/pages/primer_blast.php`, step 3.
+
 ### Decisions worth not re-litigating
 
 - **The verdicts now state fact, not inference.** With the index present, "Likely spans an

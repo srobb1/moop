@@ -364,6 +364,9 @@
             <div class="card mt-5 shadow-sm" id="blastResultsCard">
                 <div class="card-header text-white d-flex align-items-center tool-header">
                     <span class="text-uppercase fw-semibold section-eyebrow"><i class="fa fa-chart-bar me-2"></i>BLAST Results</span>
+                    <?php // Asked at the results, answered by controls back at step 2 — so the
+                          // help has to be reachable from HERE, where the question occurs. ?>
+                    <?= help_modal_trigger('blast-results-help', '', 'Help: reading and tuning your results') ?>
                 </div>
                 <div class="card-body">
                     <div class="mb-4 d-flex gap-2 flex-wrap">
@@ -411,6 +414,9 @@ include __DIR__ . '/../../includes/blast_short_help_modal.php';
 
 // Program chooser, opened from the (i) beside the program select in step 2.
 include __DIR__ . '/../../includes/blast_programs_help_modal.php';
+
+// Reading and tuning results, opened from the (i) in the results card header.
+include __DIR__ . '/../../includes/blast_results_help_modal.php';
 
 // How-to-use help, opened by the (i) on the page header. A card modal rather than the
 // hand-rolled data-bs-html popover it replaces: the popover needed a per-page init
