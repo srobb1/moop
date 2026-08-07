@@ -24,6 +24,7 @@ include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/primer/PrimerInput.php';
 include_once __DIR__ . '/../lib/primer/PrimerBlast.php';
 include_once __DIR__ . '/../lib/primer/PrimerPairs.php';
+include_once __DIR__ . '/../lib/primer/ExonMap.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../includes/source-selector-helpers.php';
 
@@ -286,6 +287,50 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
                         // invisible, which is the opposite of the over-report rule.
                         $found['matches']       = $blast['hits'][$i] ?? ['forward' => [], 'reverse' => []];
                         $results[$i]['by_db'][$label] = $found;
+                    }
+                }
+
+                // ---- place cDNA products on the genome, through the exons ----
+                // A primer sitting across an exon junction has no continuous
+                // genomic match — which is exactly why it was designed that way —
+                // so its only hit is on the transcript, and a transcript
+                // coordinate cannot be shown in a browser. Mapped through the
+                // exon structure it becomes two genomic blocks and can be.
+                //
+                // Done HERE, once for the whole page: ExonMap::load() reads an
+                // 18 MB index, and asking per product in the view would read it
+                // again for every row to get the same answer back.
+                if (isset($dbs['transcript'])) {
+                    $subject_ids = [];
+                    foreach ($results as $r) {
+                        foreach ($r['by_db']['transcript']['products'] ?? [] as $prod) {
+                            $subject_ids[PrimerBlast::cleanSubjectId($prod['subject'])] = true;
+                        }
+                    }
+
+                    $exon_records = ExonMap::load($gene_set_path, array_keys($subject_ids));
+
+                    // No index yet is the NORMAL state for most gene sets — it is
+                    // written at JBrowse registration, and only re-registered sets
+                    // have one. Say so rather than leaving the missing links
+                    // looking like a bug, but only when there was something to map.
+                    if (empty($exon_records) && !empty($subject_ids)) {
+                        $db_notes[] = 'cDNA products cannot be shown in the browser for this gene set: '
+                            . 'its exon index has not been built yet. Re-register the gene set from '
+                            . 'Admin → JBrowse Management to enable it.';
+                    }
+
+                    foreach ($results as $i => $r) {
+                        foreach ($r['by_db']['transcript']['products'] ?? [] as $j => $prod) {
+                            $record = $exon_records[PrimerBlast::cleanSubjectId($prod['subject'])] ?? null;
+                            if ($record === null) {
+                                continue;
+                            }
+                            $mapped = ExonMap::mapProduct($record, $prod);
+                            if ($mapped !== null) {
+                                $results[$i]['by_db']['transcript']['products'][$j]['genomic'] = $mapped;
+                            }
+                        }
                     }
                 }
             }

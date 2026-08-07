@@ -296,6 +296,161 @@ ok(!PrimerPairs::isAmplifiable($big['products'][0]),
    'a perfect-match product over 2 kb still does not amplify');
 
 // ----------------------------------------------------------------------------
+group('ExonMap — transcript coordinates to genomic blocks');
+
+require_once "$BASE/lib/primer/ExonMap.php";
+
+/** Blocks as a comparable string, so a failure prints what it actually got. */
+function bstr($blocks) {
+    $out = [];
+    foreach ($blocks as list($s, $e)) { $out[] = "$s-$e"; }
+    return implode(',', $out);
+}
+
+// A three-exon transcript, 35 nt total:
+//   exon 1  100-109   transcript  1-10
+//   exon 2  200-219   transcript 11-30
+//   exon 3  300-304   transcript 31-35
+$EXONS = [[100, 109], [200, 219], [300, 304]];
+$plus  = ['chr' => 'chr1', 'strand' => '+', 'exons' => $EXONS];
+$minus = ['chr' => 'chr1', 'strand' => '-', 'exons' => $EXONS];
+
+ok(ExonMap::transcriptLength($plus) === 35, 'transcript length is the total exonic length');
+
+// --- plus strand ---
+ok(bstr(ExonMap::toGenomicBlocks($plus, 1, 10)) === '100-109',
+   'a range filling exon 1 maps to one block');
+ok(bstr(ExonMap::toGenomicBlocks($plus, 3, 7)) === '102-106',
+   'a range inside one exon maps to one block, offset correctly');
+ok(bstr(ExonMap::toGenomicBlocks($plus, 8, 13)) === '107-109,200-202',
+   'a JUNCTION-SPANNING range splits into two blocks either side of the intron');
+ok(bstr(ExonMap::toGenomicBlocks($plus, 29, 32)) === '218-219,300-301',
+   'the second junction splits too');
+ok(bstr(ExonMap::toGenomicBlocks($plus, 1, 35)) === '100-109,200-219,300-304',
+   'the whole transcript maps back to exactly the exon list');
+
+// --- minus strand: transcript position 1 is the HIGHEST genomic coordinate ---
+ok(bstr(ExonMap::toGenomicBlocks($minus, 1, 5)) === '300-304',
+   'on the minus strand transcript 1-5 is the LAST exon, not the first');
+ok(bstr(ExonMap::toGenomicBlocks($minus, 1, 3)) === '302-304',
+   'within a minus-strand exon the range runs right to left');
+ok(bstr(ExonMap::toGenomicBlocks($minus, 4, 8)) === '217-219,300-301',
+   'a minus-strand junction range splits, in ascending genomic order');
+ok(bstr(ExonMap::toGenomicBlocks($minus, 26, 35)) === '100-109',
+   'the END of a minus-strand transcript is the FIRST exon');
+ok(bstr(ExonMap::toGenomicBlocks($minus, 1, 35)) === '100-109,200-219,300-304',
+   'the whole minus-strand transcript also maps back to the exon list');
+
+// The regression that matters: strand must actually be USED. The codebase has
+// form here -- the wallaby work found a $strand computed and never read.
+ok(ExonMap::toGenomicBlocks($plus, 3, 7) !== ExonMap::toGenomicBlocks($minus, 3, 7),
+   'the SAME range maps somewhere different on the minus strand');
+
+// --- containment: no picture beats a picture in the wrong place ---
+ok(ExonMap::toGenomicBlocks($plus, 30, 40) === [],
+   'a range running past the transcript maps to nothing, rather than being clipped');
+ok(ExonMap::toGenomicBlocks($plus, 0, 5) === [],
+   'a range starting before position 1 maps to nothing');
+ok(bstr(ExonMap::toGenomicBlocks($plus, 13, 8)) === '107-109,200-202',
+   'a reversed range is normalised — BLAST reports sstart > send on the minus strand');
+
+// --- abutting exons are one box, not two ---
+$abut = ['chr' => 'chr1', 'strand' => '+', 'exons' => [[100, 109], [110, 119]]];
+ok(bstr(ExonMap::toGenomicBlocks($abut, 1, 20)) === '100-119',
+   'exons with no intron between them merge into a single block');
+
+ok(ExonMap::span(ExonMap::toGenomicBlocks($plus, 8, 13)) === [107, 202],
+   'span() gives the outer region a browser link needs');
+ok(ExonMap::span([]) === null, 'span() of nothing is null, not a bogus region');
+
+// --- a hit's genomic strand is the transcript strand applied to it ---
+ok(ExonMap::genomicStrand('+', '+') === '+' && ExonMap::genomicStrand('+', '-') === '-',
+   'on a plus-strand transcript the hit strand is already genomic');
+ok(ExonMap::genomicStrand('-', '+') === '-' && ExonMap::genomicStrand('-', '-') === '+',
+   'on a MINUS-strand transcript both hit strands flip');
+
+// --- mapProduct: the whole amplicon, both primers ---
+$product = [
+    'subject' => 'XM_1.1', 'start' => 5, 'end' => 33, 'size' => 29,
+    'hits' => [
+        ['start' => 5,  'end' => 12, 'strand' => '+', 'mismatch' => 0, 'primer' => 'forward'],
+        ['start' => 26, 'end' => 33, 'strand' => '-', 'mismatch' => 1, 'primer' => 'reverse'],
+    ],
+];
+$m = ExonMap::mapProduct($plus, $product);
+ok($m !== null && $m['chr'] === 'chr1', 'a cDNA product maps onto its chromosome');
+ok($m['span'] === [104, 302], 'the amplicon span is the outer edge of the mapped blocks');
+ok($m['introns'] === 2, 'the amplicon is reported as crossing both introns');
+ok($m['spliced'] === true, 'the product is flagged because a primer crosses a junction');
+ok(bstr($m['hits'][0]['blocks']) === '104-109,200-201' && $m['hits'][0]['spliced'] === true,
+   'the forward primer straddling the junction becomes two blocks');
+ok(bstr($m['hits'][1]['blocks']) === '215-219,300-302' && $m['hits'][1]['spliced'] === true,
+   'the reverse primer straddling the second junction becomes two blocks');
+ok($m['hits'][1]['mismatch'] === 1, 'per-primer mismatch counts survive the mapping');
+
+// Wholly within one exon: one block, and NOT flagged as spliced.
+$inside = [
+    'subject' => 'XM_1.1', 'start' => 12, 'end' => 28, 'size' => 17,
+    'hits' => [
+        ['start' => 12, 'end' => 16, 'strand' => '+', 'mismatch' => 0, 'primer' => 'forward'],
+        ['start' => 24, 'end' => 28, 'strand' => '-', 'mismatch' => 0, 'primer' => 'reverse'],
+    ],
+];
+$mi = ExonMap::mapProduct($plus, $inside);
+ok($mi['spliced'] === false && $mi['introns'] === 0,
+   'a product inside one exon is neither spliced nor intron-crossing');
+ok(count($mi['hits'][0]['blocks']) === 1, 'a primer inside one exon stays one block');
+
+// On the minus strand the primers keep their roles but flip genomic strand.
+$mm = ExonMap::mapProduct($minus, $product);
+ok($mm['hits'][0]['strand'] === '-' && $mm['hits'][1]['strand'] === '+',
+   'both primers flip genomic strand on a minus-strand transcript');
+
+// All or nothing: half a product drawn is worse than none.
+$runs_off = [
+    'subject' => 'XM_1.1', 'start' => 1, 'end' => 34, 'size' => 34,
+    'hits' => [
+        ['start' => 1,  'end' => 8,  'strand' => '+', 'mismatch' => 0, 'primer' => 'forward'],
+        ['start' => 30, 'end' => 99, 'strand' => '-', 'mismatch' => 0, 'primer' => 'reverse'],
+    ],
+];
+ok(ExonMap::mapProduct($plus, $runs_off) === null,
+   'a product with one unmappable primer maps to nothing at all, not to half a picture');
+
+// --- parsing ---
+$row = ExonMap::parseRow("rna-XM_1.1\tNC_1\t-\t100,304\t100,109;200,219;300,304\n");
+ok($row !== null && $row['strand'] === '-' && count($row['exons']) === 3,
+   'a well-formed index row parses');
+ok(ExonMap::parseRow("rna-XM_1.1\tNC_1\t+\t100,304\n") === null,
+   'a truncated row is rejected outright, not parsed into half a transcript');
+ok(ExonMap::parseRow("rna-XM_1.1\tNC_1\t+\t100,304\t100,109;200\n") === null,
+   'a malformed exon span rejects the whole row');
+
+// --- loading by id ---
+$tmp = sys_get_temp_dir() . '/moop_exonmap_test_' . getmypid();
+@mkdir($tmp, 0777, true);
+file_put_contents($tmp . '/exon_coords.tsv',
+    "rna-XM_1.1\tNC_1\t+\t100,304\t100,109;200,219;300,304\n" .
+    "XM_1.1\tNC_1\t+\t100,304\t100,109;200,219;300,304\n" .
+    "XM_2.1\tNC_1\t-\t900,999\t900,999\n");
+
+$loaded = ExonMap::load($tmp, ['XM_1.1', 'XM_2.1']);
+ok(count($loaded) === 2, 'both requested transcripts load in one pass');
+ok(($loaded['XM_2.1']['strand'] ?? '') === '-', 'the right record came back for each id');
+ok(ExonMap::load($tmp, ['XM_missing']) === [],
+   'an id with no row is simply absent — the caller draws no link');
+ok(ExonMap::load($tmp . '/nope', ['XM_1.1']) === [],
+   'a gene set with no exon index yields nothing, and does not error');
+
+// Ids are matched on the id FIELD only. "NC_1" appears in every line as the
+// chromosome; a substring match would return another transcript's exons.
+ok(ExonMap::load($tmp, ['NC_1']) === [],
+   'a value that only appears in another column never matches');
+
+@unlink($tmp . '/exon_coords.tsv');
+@rmdir($tmp);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Primer smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

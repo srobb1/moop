@@ -254,6 +254,24 @@ class PrimerBlast
     }
 
     /**
+     * The real sequence name behind a BLAST subject id.
+     *
+     * BLAST wraps ids from some databases as "ref|ACC|". That is noise in a
+     * table, but it is FATAL in two places: a JBrowse track whose refName
+     * carries the wrapper silently renders nothing at all, and an exon-index
+     * lookup by the wrapped form finds no row and quietly drops the link.
+     * Both failures look like missing data rather than a formatting problem,
+     * which is why this lives in one place and not at each call site.
+     */
+    public static function cleanSubjectId($id)
+    {
+        if (preg_match('/^(?:ref|gb|emb|dbj|lcl)\|([^|]+)\|?$/', $id, $m)) {
+            return $m[1];
+        }
+        return $id;
+    }
+
+    /**
      * A BLAST database is present if any of its index files are.
      */
     public static function databaseExists($db)

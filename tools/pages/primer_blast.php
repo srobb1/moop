@@ -14,13 +14,11 @@
 /**
  * BLAST wraps subject ids as ref|ACC| — noise in a table, and FATAL in a JBrowse
  * track: refName must be the reference sequence's real name or the track silently
- * renders nothing at all.
+ * renders nothing at all. One definition, in PrimerBlast, because the controller
+ * needs the same cleaning to look transcripts up in the exon index.
  */
 $clean_id = function ($s) {
-    if (preg_match('/^(?:ref|gb|emb|dbj|lcl)\|([^|]+)\|?$/', $s, $m)) {
-        return $m[1];
-    }
-    return $s;
+    return PrimerBlast::cleanSubjectId($s);
 };
 
 /**
@@ -40,34 +38,71 @@ const PRIMER_COLOR_PRODUCT = '#999999';
  * Same mechanism as the BLAST hit linkout (lib/blast_results_visualizer.php) —
  * a FromConfigAdapter track passed in the URL — with an explicit renderer added,
  * because JBrowse's default colouring cannot tell the two primers apart.
+ *
+ * Two kinds of product arrive here and both end up as genomic coordinates:
+ *   - a GENOMIC product, whose coordinates are already genomic;
+ *   - a cDNA product carrying $prod['genomic'], mapped back through the exon
+ *     structure by ExonMap. A primer crossing an exon junction then has TWO
+ *     blocks, and is drawn as two boxes either side of the intron — the picture
+ *     that shows why such a primer cannot amplify contaminating gDNA.
  */
 $primer_session_track = function (array $prod, $pair_name, $jb2_assembly_id) use ($clean_id) {
-    $ref = $clean_id($prod['subject']);
+    $mapped = $prod['genomic'] ?? null;
+
+    $ref = $mapped ? $mapped['chr'] : $clean_id($prod['subject']);
     $track_id = 'primer_' . substr(md5($pair_name . $prod['subject'] . $prod['start']), 0, 10);
 
-    $subfeatures = [];
-    foreach ($prod['hits'] as $n => $hit) {
-        $is_forward = ($hit['primer'] === 'forward');
-        $subfeatures[] = [
-            'uniqueId' => $track_id . '_p' . $n,
-            'refName'  => $ref,
-            'start'    => $hit['start'] - 1,          // JBrowse features are 0-based
-            'end'      => $hit['end'],
-            'strand'   => $hit['strand'] === '-' ? -1 : 1,
-            'name'     => ($is_forward ? 'forward' : 'reverse') . ' primer'
-                        . ($hit['mismatch'] > 0 ? ' (' . $hit['mismatch'] . ' mismatch'
-                           . ($hit['mismatch'] === 1 ? '' : 'es') . ')' : ''),
-            'type'     => 'primer_binding_site',
-            'color'    => $is_forward ? PRIMER_COLOR_FORWARD : PRIMER_COLOR_REVERSE,
-        ];
+    // Normalise both cases to the same shape: one entry per primer, each with a
+    // list of genomic blocks. A genomic hit is simply a primer with one block.
+    $parts = [];
+    if ($mapped) {
+        $parts = $mapped['hits'];
+    } else {
+        foreach ($prod['hits'] as $hit) {
+            $parts[] = [
+                'primer'   => $hit['primer'],
+                'mismatch' => $hit['mismatch'],
+                'strand'   => $hit['strand'],
+                'blocks'   => [[$hit['start'], $hit['end']]],
+                'spliced'  => false,
+            ];
+        }
     }
+
+    $subfeatures = [];
+    foreach ($parts as $n => $part) {
+        $is_forward = ($part['primer'] === 'forward');
+        $label = ($is_forward ? 'forward' : 'reverse') . ' primer'
+               . ($part['mismatch'] > 0 ? ' (' . $part['mismatch'] . ' mismatch'
+                  . ($part['mismatch'] === 1 ? '' : 'es') . ')' : '')
+               // Both halves carry the same label, so hovering either one says
+               // the true thing. Unlabelled, a split primer is indistinguishable
+               // from two separate primers — the opposite of what it shows.
+               . ($part['spliced'] ? ' — spans an exon junction' : '');
+
+        foreach ($part['blocks'] as $b => list($start, $end)) {
+            $subfeatures[] = [
+                'uniqueId' => $track_id . '_p' . $n . '_' . $b,
+                'refName'  => $ref,
+                'start'    => $start - 1,          // JBrowse features are 0-based
+                'end'      => $end,
+                'strand'   => $part['strand'] === '-' ? -1 : 1,
+                'name'     => $label,
+                'type'     => 'primer_binding_site',
+                'color'    => $is_forward ? PRIMER_COLOR_FORWARD : PRIMER_COLOR_REVERSE,
+            ];
+        }
+    }
+
+    list($p_start, $p_end) = $mapped ? $mapped['span'] : [$prod['start'], $prod['end']];
 
     $features = [[
         'uniqueId'    => $track_id . '_product',
         'refName'     => $ref,
-        'start'       => $prod['start'] - 1,
-        'end'         => $prod['end'],
-        'name'        => $pair_name . ' — ' . number_format($prod['size']) . ' bp product',
+        'start'       => $p_start - 1,
+        'end'         => $p_end,
+        'name'        => $pair_name . ' — ' . number_format($prod['size']) . ' bp '
+                       . ($mapped ? 'cDNA product' : 'product'),
         'type'        => 'PCR_product',
         'color'       => PRIMER_COLOR_PRODUCT,
         'subfeatures' => $subfeatures,
@@ -445,21 +480,47 @@ $db_section_label = function ($key) {
                                 && isset($r['by_db']['genome'])
                                 && $g_size === null;
                         ?>
+                        <?php
+                        // Where the exon index was available, the intron structure is now
+                        // OBSERVED rather than inferred from two sizes differing. Both
+                        // notes below say so when it is, and fall back to the inferred
+                        // wording when it is not -- most gene sets have no exon index yet.
+                        $t_mapped     = $t_prod['genomic'] ?? null;
+                        $junction     = $t_mapped['spliced'] ?? false;
+                        $junction_p   = null;
+                        if ($junction) {
+                            foreach ($t_mapped['hits'] as $h) {
+                                if (!empty($h['spliced'])) { $junction_p = $h['primer']; break; }
+                            }
+                        }
+                        ?>
                         <?php if ($no_gdna): ?>
                             <div class="small mb-3">
                                 <i class="fa fa-circle-check text-success"></i>
                                 <span class="text-success-emphasis">No genomic product</span>
                                 <span class="text-muted">— genomic DNA in the sample would not amplify at
-                                all. Usually means a primer spans an exon junction.</span>
+                                all.
+                                <?php if ($junction): ?>
+                                    The <?= htmlspecialchars($junction_p) ?> primer sits across an exon
+                                    junction, so that sequence exists only in spliced mRNA.
+                                <?php else: ?>
+                                    Usually means a primer spans an exon junction.
+                                <?php endif; ?></span>
                             </div>
                         <?php endif; ?>
 
                         <?php if ($t_size !== null && $g_size !== null): ?>
-                            <?php // A note, not a verdict: the intron is INFERRED from the two
-                                  // sizes differing, never observed directly, so the wording says
-                                  // "likely" and shows the two numbers it was inferred from. ?>
+                            <?php // Without the exon index this is INFERRED from the two sizes
+                                  // differing, never observed -- hence "likely", and the two
+                                  // numbers it was inferred from. With the index the intron
+                                  // count is read off the mapping and can be stated outright. ?>
                             <div class="small mb-3">
-                                <?php if ($g_size > $t_size): ?>
+                                <?php if (!empty($t_mapped) && $t_mapped['introns'] > 0): ?>
+                                    <i class="fa fa-circle-info text-success"></i>
+                                    <span class="text-success-emphasis">Spans <?= (int)$t_mapped['introns'] ?>
+                                        intron<?= $t_mapped['introns'] === 1 ? '' : 's' ?></span>
+                                    <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
+                                <?php elseif ($g_size > $t_size): ?>
                                     <i class="fa fa-circle-info text-success"></i>
                                     <span class="text-success-emphasis">Likely spans an intron</span>
                                     <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
@@ -544,18 +605,48 @@ $db_section_label = function ($key) {
                                                             'Same primer at both ends'
                                                         ) ?>
                                                     <?php endif; ?>
+                                                    <?php if (!empty($prod['genomic']['spliced'])): ?>
+                                                        <?php // The reason to design an RT-PCR primer this way, and
+                                                              // it is invisible in the size and coordinates alone.
+                                                              // Stated here so it does not depend on the reader
+                                                              // opening the browser to notice. ?>
+                                                        <span class="badge bg-success" title="A primer sits across an exon-exon junction">
+                                                            <i class="fa fa-scissors"></i> junction primer
+                                                        </span>
+                                                        <?= field_help(
+                                                            'One of these primers sits across an exon-exon junction — half of it '
+                                                            . 'binds the end of one exon and half binds the start of the next. '
+                                                            . 'That sequence exists only in spliced mRNA, so the pair cannot '
+                                                            . 'amplify contaminating genomic DNA. Open the browser to see the '
+                                                            . 'primer drawn as two boxes either side of the intron.',
+                                                            'Spans an exon junction'
+                                                        ) ?>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td class="text-end" style="width:8rem;">
-                                                    <?php if ($db_key === 'genome' && !empty($result_organism) && !empty($result_assembly)): ?>
+                                                    <?php
+                                                    // A genomic product IS a locus. A cDNA product becomes one
+                                                    // once ExonMap has placed it -- which is what gives a
+                                                    // junction-spanning primer a browser link at all.
+                                                    $mapped_g = $prod['genomic'] ?? null;
+                                                    $can_link = !empty($result_organism) && !empty($result_assembly)
+                                                              && ($db_key === 'genome' || $mapped_g !== null);
+                                                    ?>
+                                                    <?php if ($can_link): ?>
                                                         <?php
-                                                        // The genomic product IS a locus, so it links straight into
-                                                        // the browser -- where the gap between the cDNA and genomic
-                                                        // sizes is visible as the introns it crosses.
                                                         // A little context either side, so the primers are not
                                                         // flush against the edge of the view.
-                                                        $pad   = max(50, (int)($prod['size'] * 0.1));
-                                                        $loc   = $subject . ':' . max(1, $prod['start'] - $pad)
-                                                               . '..' . ($prod['end'] + $pad);
+                                                        //
+                                                        // Padded by the DISPLAYED span, not by the product size:
+                                                        // a cDNA product mapped across introns covers far more
+                                                        // genomic sequence than its own length, so padding by
+                                                        // that length would give a 349 bp margin on a 6 kb view.
+                                                        list($loc_ref, $loc_start, $loc_end) = $mapped_g
+                                                            ? [$mapped_g['chr'], $mapped_g['span'][0], $mapped_g['span'][1]]
+                                                            : [$subject, $prod['start'], $prod['end']];
+                                                        $pad   = max(50, (int)(($loc_end - $loc_start + 1) * 0.1));
+                                                        $loc   = $loc_ref . ':' . max(1, $loc_start - $pad)
+                                                               . '..' . ($loc_end + $pad);
                                                         $track = $primer_session_track(
                                                             $prod, $pair['name'], $result_organism . '_' . $result_assembly
                                                         );
