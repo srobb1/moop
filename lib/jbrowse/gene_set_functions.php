@@ -248,8 +248,12 @@ function prepareGeneSetForJBrowse(
     $tsv_mtime     = file_exists($tsv_path) ? filemtime($tsv_path) : 0;
     if ($tsv_mtime >= $gff_mtime && $tsv_mtime > 0) {
         $log[] = "$gene_set: feature_coords.tsv is up to date — skipped";
-    } elseif (generateFeatureCoordsIndex($gene_set_path)) {
-        $log[] = "$gene_set: generated feature_coords.tsv";
+    } else {
+        $log[] = moop_log_index_build(
+            $gene_set, 'feature_coords.tsv', $tsv_path,
+            generateFeatureCoordsIndex($gene_set_path),
+            'BLAST linkouts on feature databases will not work'
+        );
     }
 
     // ── Exon coords index (maps transcript hits back to genomic blocks) ──────
@@ -257,11 +261,63 @@ function prepareGeneSetForJBrowse(
     $exon_mtime = file_exists($exon_path) ? filemtime($exon_path) : 0;
     if ($exon_mtime >= $gff_mtime && $exon_mtime > 0) {
         $log[] = "$gene_set: exon_coords.tsv is up to date — skipped";
-    } elseif (generateExonCoordsIndex($gene_set_path)) {
-        $log[] = "$gene_set: generated exon_coords.tsv";
+    } else {
+        $log[] = moop_log_index_build(
+            $gene_set, 'exon_coords.tsv', $exon_path,
+            generateExonCoordsIndex($gene_set_path),
+            'Primer BLAST cannot place cDNA products on the genome, so junction-spanning '
+            . 'primers get no browser link'
+        );
     }
 
     return true;
+}
+
+/**
+ * One log line for an index build, saying plainly when it did NOT work.
+ *
+ * ⚠️ This exists because both index builds used to be written as
+ *
+ *     } elseif (generateFooIndex($path)) {
+ *         $log[] = "generated foo.tsv";
+ *     }
+ *
+ * with no else -- so a FALSE return logged nothing at all and registration
+ * reported success. The gene set then looked fully registered while the feature
+ * quietly did not work, which is this codebase's most repeated failure shape:
+ * a write the web server could not do, unchecked, reported as success.
+ *
+ * An EMPTY file is treated as a failure too. The generators return true once
+ * they have opened their input and output, so a GFF with no exon features
+ * produces a zero-byte index and a cheerful "generated" line -- green status,
+ * missing feature.
+ *
+ * @param bool $ok What the generator returned.
+ * @param string $consequence What breaks if this index is missing, in plain words.
+ */
+function moop_log_index_build(string $gene_set, string $name, string $path, bool $ok, string $consequence): string {
+    if (!$ok) {
+        return "$gene_set: WARNING — could not generate $name. Check that " . genes_gff_filename()
+             . " is readable and the gene set directory is writable by the web server. $consequence.";
+    }
+
+    // filesize() is cached per path, and the file may have existed before this
+    // build, so a stale stat here would hide exactly the case being checked.
+    clearstatcache(true, $path);
+
+    if (!file_exists($path) || filesize($path) === 0) {
+        return "$gene_set: WARNING — $name is empty; no matching features found in "
+             . genes_gff_filename() . ". $consequence.";
+    }
+
+    // KB below a megabyte: "0.0 MB" on a real 40 KB index reads like nothing
+    // was written, which is the very state the line above is reporting is fine.
+    $bytes = filesize($path);
+    $size  = $bytes >= 1048576
+        ? number_format($bytes / 1048576, 1) . ' MB'
+        : number_format($bytes / 1024, 1) . ' KB';
+
+    return "$gene_set: generated $name ($size)";
 }
 
 /**
