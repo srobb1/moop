@@ -309,13 +309,17 @@ function downloadPrimerResults() {
     }
     if (!rows || !rows.length) { return; }
 
-    var header = ['pair', 'forward', 'reverse', 'template', 'subject',
-                  'start', 'end', 'product_size', 'max_mismatch', 'formed_by'];
+    // The header comes from the DATA, not from a list kept here. It used to be
+    // hardcoded, which meant this file and tools/pages/primer_blast.php had to
+    // agree on column ORDER with nothing enforcing it -- add a column in one
+    // and every heading after it silently labels the wrong values.
+    var header = Object.keys(rows[0]);
 
     var tsv = [header.join('\t')];
     rows.forEach(function (r) {
-        tsv.push(r.map(function (c) {
-            return String(c).replace(/[\t\r\n]/g, ' ');
+        tsv.push(header.map(function (k) {
+            var c = r[k];
+            return (c === null || c === undefined ? '' : String(c)).replace(/[\t\r\n]/g, ' ');
         }).join('\t'));
     });
 

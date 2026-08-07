@@ -564,16 +564,49 @@ $db_section_label = function ($key) {
                                         <?php foreach ($shown as $prod): ?>
                                             <?php
                                             $subject = $clean_id($prod['subject']);
+
+                                            // The intron facts the page shows as text and a badge.
+                                            // A download has neither, so without these columns the
+                                            // single most important property of an RT-PCR pair --
+                                            // that it cannot amplify gDNA -- survives only as the
+                                            // absence of a genomic row, which reads as missing data.
+                                            //
+                                            // '' means NOT DETERMINED (a genomic row, or a gene set
+                                            // with no exon index); 0 and 'none' are real answers.
+                                            // Collapsing the two would make "no intron here" and
+                                            // "we could not tell" the same cell.
+                                            $mapped_x = $prod['genomic'] ?? null;
+                                            $introns  = $mapped_x ? (int)$mapped_x['introns'] : '';
+                                            $junction = '';
+                                            if ($mapped_x) {
+                                                $which = [];
+                                                foreach ($mapped_x['hits'] as $h) {
+                                                    if (!empty($h['spliced'])) $which[] = $h['primer'];
+                                                }
+                                                $junction = $which ? implode('+', array_unique($which)) : 'none';
+                                            }
+
+                                            // Keyed by NAME, and the download derives its header from
+                                            // these keys. The header used to be a separate hardcoded
+                                            // list in js/primer-blast.js, so the two files had to agree
+                                            // on column ORDER with nothing checking that they did.
                                             $export[] = [
-                                                $pair['name'], $pair['forward'], $pair['reverse'],
-                                                $db_key === 'genome' ? 'genomic' : 'cDNA',
-                                                $subject, $prod['start'], $prod['end'], $prod['size'],
-                                                $prod['max_mismatch'],
+                                                'pair'            => $pair['name'],
+                                                'forward'         => $pair['forward'],
+                                                'reverse'         => $pair['reverse'],
+                                                'template'        => $db_key === 'genome' ? 'genomic' : 'cDNA',
+                                                'subject'         => $subject,
+                                                'start'           => $prod['start'],
+                                                'end'             => $prod['end'],
+                                                'product_size'    => $prod['size'],
+                                                'max_mismatch'    => $prod['max_mismatch'],
                                                 // Name WHICH primer: a downloaded row has no badge to
                                                 // hover, so "self-pairing" alone loses the fact.
-                                                $prod['self_pairing']
+                                                'formed_by'       => $prod['self_pairing']
                                                     ? $prod['primers'][0] . ' self-pairing'
                                                     : 'forward+reverse',
+                                                'introns_spanned' => $introns,
+                                                'junction_primer' => $junction,
                                             ];
                                             ?>
                                             <tr>
