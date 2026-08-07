@@ -68,10 +68,30 @@ UCSC ships in-silico PCR as one of its five main tools, so the demand is not nic
    compute every statistic on the untailed primer, check specificity untailed, and only THEN
    append and report BOTH forms. Tails must never reach Tm calculation or the genome check.
    Also worth doing: search the tail alone against the assembly once and warn if it matches.
-2. **Genomic template.** `genome.fa` holds chromosomes, so a gene id is not a record in it —
-   genomic sequence needs a coordinate slice, the way `sequences_display.php` does it. Until
-   that lands the hand-off button appears only for transcript and CDS, so standard gDNA
-   primers cannot be designed from a gene page. This is the biggest functional gap.
+2. **Genomic template — WIRING, not new capability.** ⚠️ I called this the biggest gap and
+   that was wrong; the user pointed out MOOP already gets genomic sequence three ways, and
+   none of them needs writing:
+
+   - **`api/get_sequence.php`** — takes `organism, assembly, seqname, start, end, strand` and
+     returns JSON. This is what the gene page's own gene-structure FASTA button already uses
+     (`js/modules/gene-model-viewer.js:399`), and the gene model already knows the locus and
+     each isoform span.
+   - **Retrieve Sequences supports SLICES** — `g24397.t1:1-500`, and `:1..500`, ` 1-500`,
+     ` 1..500` are all equivalent. It also returns genomic and flanking, not just transcript.
+   - **The gene page's "FASTA" button** under the gene structure already downloads "the
+     genomic sequence — gene locus plus each isoform span".
+
+   So the work is a hand-off, and there are three candidate shapes. Decide Monday:
+   (a) a "Design primers" button beside the gene-structure FASTA button, same pattern as the
+       Sequences-section buttons, calling `api/get_sequence.php` for the locus — smallest and
+       most direct for the gene page;
+   (b) teach Primer Maker to accept a slice spec and resolve it the way Retrieve Sequences
+       does, which also serves people who want flanking sequence around a locus;
+   (c) just document a use case — take a slice from Retrieve Sequences, paste it in — which
+       costs no code and may be enough for the first release.
+
+   ⭐ Whichever is chosen, note the gene-structure button is the one already sitting next to
+   what a user is looking at when they think "I want primers for this gene".
 3. **Should Retrieve Sequences offer the hand-off too?** It shares
    `tools/sequences_display.php`; the button is opted into by the gene page alone
    (`$enable_primer_design`). User raised this and it is unresolved.
