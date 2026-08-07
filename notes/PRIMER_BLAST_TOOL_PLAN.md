@@ -109,13 +109,15 @@ The original pair from phase 1 still works and is worth keeping for continuity:
 Amphimedon it produced a junction pair landing in a three-member paralog family, which is a
 realistic case but not a clean fixture. Always confirm a generated pair on the page.
 
-### ⏭️ UI follow-ups — not done, small
+### UI follow-ups
 
-- **Step 3 "Search options" is visually unbalanced** (user, 2026-08-07; screenshot
-  `primerblast-options.png` in the repo root). "Mismatches allowed" and "Largest product to
-  report" each hold a bordered form control, while "PCR input" holds bare radio buttons — so
-  the three cards in that row do not read as a set. Put a matching box around the
-  Genomic DNA / cDNA radios. `tools/pages/primer_blast.php`, step 3.
+- ✅ **Step 3 "Search options" balance** (user, 2026-08-07; screenshot
+  `primerblast-options.png`). "Mismatches allowed" and "Largest product to report" each held a
+  bordered form control while "PCR input" held bare radios, so the three cards did not read as
+  a set. The radios are now wrapped in a `.form-control` div — **the same class the sibling
+  inputs use**, so the frame is identical by construction rather than matched by eye and left
+  to drift. Nothing in `css/` overrides `.form-control`, so that is Bootstrap's rule set
+  unchanged.
 
 ### Decisions worth not re-litigating
 

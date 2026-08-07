@@ -268,16 +268,30 @@ $db_section_label = function ($key) {
                               </label>
                               <?php // Inline: only two mutually exclusive choices with short
                                     // labels, so stacking them wasted the card's height and made
-                                    // this card taller than its two siblings for no reason. ?>
-                              <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="search_mode" id="mode_genome"
-                                       value="genome" <?= $search_mode === 'genome' ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="mode_genome">Genomic DNA</label>
-                              </div>
-                              <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="search_mode" id="mode_transcript"
-                                       value="transcript" <?= $search_mode === 'transcript' ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="mode_transcript">cDNA</label>
+                                    // this card taller than its two siblings for no reason.
+                                    //
+                                    // Boxed in .form-control so this card reads as a set with its
+                                    // two siblings, which each hold a bordered input. Bare radios
+                                    // beside two framed fields made the row look unfinished.
+                                    //
+                                    // .form-control ON A DIV is deliberate: it is the SAME class
+                                    // the sibling inputs use, so border, radius, padding and
+                                    // background are identical by construction rather than
+                                    // matched by eye and left to drift. Nothing in css/ overrides
+                                    // .form-control, so this is Bootstrap's rule set unchanged.
+                                    // The radios keep their own semantics; only the frame is
+                                    // borrowed. ?>
+                              <div class="form-control">
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="search_mode" id="mode_genome"
+                                         value="genome" <?= $search_mode === 'genome' ? 'checked' : '' ?>>
+                                  <label class="form-check-label" for="mode_genome">Genomic DNA</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                  <input class="form-check-input" type="radio" name="search_mode" id="mode_transcript"
+                                         value="transcript" <?= $search_mode === 'transcript' ? 'checked' : '' ?>>
+                                  <label class="form-check-label" for="mode_transcript">cDNA</label>
+                                </div>
                               </div>
                               <div class="form-text text-warning-emphasis mt-1 d-none" id="pcrInputNote"></div>
                             </div>
