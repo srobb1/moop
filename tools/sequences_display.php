@@ -270,8 +270,13 @@ if (!empty($sequence_errors)) {
                         //
                         // Opt-in via $enable_primer_design, because this component is shared
                         // with Retrieve Sequences and Primer Maker is a gene-page tool.
+                        // require_once, not function_exists: guarding on the latter meant
+                        // the button silently did not render on the one page that enables
+                        // it, because nothing there had included the file. A missing
+                        // dependency should be loaded, or fail loudly — not quietly turn a
+                        // feature off.
+                        require_once __DIR__ . '/../lib/gene_isoforms.php';
                         if (!empty($enable_primer_design)
-                            && function_exists('moop_primer_sequence_types')
                             && in_array($seq_type, moop_primer_sequence_types(), true)) {
                             $pd_ctx = $primer_design_context ?? [];
                             $pd_url = '/' . $config->getString('site') . '/tools/primer_maker.php?'

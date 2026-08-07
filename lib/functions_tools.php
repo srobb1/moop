@@ -99,7 +99,28 @@ function _tool_visible_on_page($tool, $page) {
 function createToolContext($page, $params = []) {
     $context = ['page' => $page];
 
-    $optional_keys = ['organism', 'assembly', 'gene_set', 'group', 'organisms', 'display_name', 'use_onclick_handler', 'loc'];
+    // ⚠️ This list used to be hardcoded, and it silently DROPPED any key not on
+    // it. A tool could declare 'feature' in its context_params, a page could
+    // pass 'feature' here, and the parameter would simply never reach the URL —
+    // no error, no warning, just a tool that arrives with nothing to work on.
+    // That cost a debugging session on Primer Maker, which was written, wired
+    // and committed before anyone noticed the key was being discarded.
+    //
+    // Now the tools themselves say what they accept, so declaring a context
+    // param in config/tools_config.php is all it takes. The base keys stay
+    // because some are consumed HERE rather than by any one tool
+    // (use_onclick_handler, page) or are used to derive display_name below.
+    $declared = [];
+    foreach (ConfigManager::getInstance()->getAllTools() as $tool) {
+        foreach (($tool['context_params'] ?? []) as $p) {
+            $declared[$p] = true;
+        }
+    }
+    $optional_keys = array_unique(array_merge(
+        ['organism', 'assembly', 'gene_set', 'group', 'organisms', 'display_name', 'use_onclick_handler', 'loc'],
+        array_keys($declared)
+    ));
+
     foreach ($optional_keys as $key) {
         if (!empty($params[$key])) {
             $context[$key] = $params[$key];
