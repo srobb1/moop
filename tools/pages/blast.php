@@ -86,18 +86,26 @@
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">2</span>
                     <span class="fw-semibold" style="font-size:0.9rem;">Select a BLAST program</span>
+                    <?php
+                    // The program decides what CAN be compared, and picking the wrong one
+                    // returns an empty result that looks like "no match in this genome"
+                    // rather than "wrong tool" -- so the chooser belongs at the control,
+                    // not only in the general help.
+                    ?>
+                    <?= help_modal_trigger('blast-programs-help', 'Which program?', 'Help: choosing a BLAST program') ?>
                 </div>
                 <div class="card-body py-3">
                     <div id="sequenceTypeInfo" class="sequence-type-info mb-2" style="display:none;">
                         <small id="sequenceTypeMessage"></small>
                     </div>
                     <select id="blast_program" name="blast_program" class="form-select" onchange="updateDatabaseList(); applyBlastProgramDefaults(this.value);">
-                        <option value="blastn"       <?= $blast_program === 'blastn'       ? 'selected' : '' ?>>BLASTn — DNA query vs DNA database</option>
-                        <option value="blastp"       <?= $blast_program === 'blastp'       ? 'selected' : '' ?>>BLASTp — Protein query vs protein database</option>
-                        <option value="blastx"       <?= $blast_program === 'blastx'       ? 'selected' : '' ?>>BLASTx — DNA query vs protein database (translated)</option>
-                        <option value="tblastn"      <?= $blast_program === 'tblastn'      ? 'selected' : '' ?>>tBLASTn — Protein query vs DNA database (translated)</option>
-                        <option value="tblastx"      <?= $blast_program === 'tblastx'      ? 'selected' : '' ?>>tBLASTx — DNA query vs DNA database (both translated)</option>
-                        <option value="blastn-short" <?= $blast_program === 'blastn-short' ? 'selected' : '' ?>>BLASTn-short — Short DNA query (primers, ~20nt)</option>
+                        <?php
+                        // Rendered from blast_programs(), the same array the help modal builds
+                        // its cards from. Written out six times by hand before, so the option
+                        // text and the explanation of it could disagree with nothing to notice.
+                        foreach (blast_programs() as $prog_id => $prog): ?>
+                        <option value="<?= htmlspecialchars($prog_id) ?>" <?= $blast_program === $prog_id ? 'selected' : '' ?>><?= htmlspecialchars($prog['label'] . ' — ' . $prog['summary']) ?></option>
+                        <?php endforeach; ?>
                     </select>
                     <div id="blastn-short-notice" class="alert alert-info py-2 mt-2 small mb-0 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>">
                         <i class="fa fa-circle-info me-1"></i>
@@ -105,6 +113,18 @@
                         Advanced options have been pre-filled — you can override them.
                         <?php // Plain '&' -- help_modal_trigger() escapes the label itself. ?>
                         <?= help_modal_trigger('blast-short-help', 'Primers & short sequences', 'Help: searching with primers and other short sequences') ?>
+                        <?php
+                        // Named on the PAGE, not only inside the help modal. Someone with a
+                        // primer pair has already picked a program by this point and has no
+                        // reason to open help -- they would run the search, read the HSPs by
+                        // hand, and never learn the pair could be judged in one step.
+                        ?>
+                        <div class="mt-2 pt-2 border-top">
+                            <i class="fa fa-vials me-1"></i>
+                            Checking a primer <strong>pair</strong>? <a href="<?= htmlspecialchars('/' . $site . '/tools/primer_blast.php') ?>">Primer BLAST</a>
+                            pairs the hits for you, reports every product size, and shows the products in the genome browser.
+                            This page is the right tool for locating a <em>single</em> short sequence.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -388,6 +408,9 @@
 // rather than a section of the general one, because the advice INVERTS: everywhere else
 // a strict E-value is what makes results trustworthy, and here it is what hides them.
 include __DIR__ . '/../../includes/blast_short_help_modal.php';
+
+// Program chooser, opened from the (i) beside the program select in step 2.
+include __DIR__ . '/../../includes/blast_programs_help_modal.php';
 
 // How-to-use help, opened by the (i) on the page header. A card modal rather than the
 // hand-rolled data-bs-html popover it replaces: the popover needed a per-page init

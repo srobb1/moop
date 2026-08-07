@@ -285,6 +285,57 @@ ok(($after['blast_linkouts']['gene_page_label'] ?? null) === 'SMOKE_LABEL',
 array_map('unlink', glob("$cfgtmp/*") ?: []); @rmdir($cfgtmp);
 
 // ----------------------------------------------------------------------------
+group('BLAST programs — the dropdown and the JS filter must know the same set');
+
+require_once dirname(__DIR__) . '/lib/blast_functions.php';
+
+$programs = blast_programs();
+ok(count($programs) >= 6, 'blast_programs() defines the program list');
+
+foreach ($programs as $pid => $prog) {
+    ok(!empty($prog['label']) && !empty($prog['summary']) && !empty($prog['when'])
+       && !empty($prog['query']) && !empty($prog['db']),
+       "$pid declares label, summary, query, db and when");
+}
+
+// js/modules/utilities.js partitions the programs by the query type they accept, and
+// filterBlastPrograms() disables everything not in the matching list. A program in
+// NEITHER list is therefore disabled for protein AND for nucleotide — permanently
+// unreachable. That is not hypothetical: it is exactly how blastn-short was greyed
+// out for the nucleotide queries it exists to serve, per the comment in that file.
+//
+// Adding a program is now a one-line edit to blast_programs(), which makes it EASIER
+// to reintroduce, so the invariant is asserted rather than trusted.
+$utils = file_get_contents(dirname(__DIR__) . '/js/modules/utilities.js');
+$list = function ($name) use ($utils) {
+    if (!preg_match('/const ' . $name . '\s*=\s*\[([^\]]*)\]/', $utils, $m)) {
+        return null;
+    }
+    return array_values(array_filter(array_map(
+        fn($s) => trim($s, " \t'\"" ),
+        explode(',', $m[1])
+    ), fn($s) => $s !== ''));
+};
+
+$protein_progs    = $list('proteinPrograms');
+$nucleotide_progs = $list('nucleotidePrograms');
+
+ok(is_array($protein_progs) && is_array($nucleotide_progs),
+   'both program lists are found in js/modules/utilities.js');
+
+foreach (array_keys($programs) as $pid) {
+    $in = (int)in_array($pid, $protein_progs ?? [], true)
+        + (int)in_array($pid, $nucleotide_progs ?? [], true);
+    ok($in === 1, "$pid appears in exactly one JS query-type list (found in $in)");
+}
+
+// The reverse direction too: a JS list naming a program the page no longer offers is
+// dead weight, and hides the fact that the real one was never added.
+foreach (array_merge($protein_progs ?? [], $nucleotide_progs ?? []) as $pid) {
+    ok(isset($programs[$pid]), "JS list entry '$pid' is a program the page actually offers");
+}
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

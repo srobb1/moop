@@ -1032,3 +1032,76 @@ function reverseComplement(string $seq): string
     return strrev(strtr(strtoupper($seq), ['A' => 'T', 'T' => 'A', 'C' => 'G', 'G' => 'C']));
 }
 }
+
+/**
+ * The BLAST programs offered on the search page, in the order they are listed.
+ *
+ * ONE definition, because the dropdown and the help modal must agree about what
+ * each program does. They were separate before: the <option> text lived in
+ * tools/pages/blast.php and any explanation lived wherever it was last written,
+ * so a correction to one silently left the other saying something else.
+ * js/modules/utilities.js still keeps its own list of which programs take a
+ * nucleotide query -- that one drives sequence-type detection, not description,
+ * and is left alone rather than half-merged.
+ *
+ * 'summary' completes the option label after the em dash. 'when' is the card
+ * text in the help modal and is deliberately about 25 words: the format is the
+ * constraint that keeps the help readable (see help_modal() in lib/help_ui.php).
+ */
+if (!function_exists('blast_programs')) {
+function blast_programs(): array
+{
+    return [
+        'blastn' => [
+            'query'   => 'DNA',
+            'db'      => 'DNA',
+            'label'   => 'BLASTn',
+            'summary' => 'DNA query vs DNA database',
+            'when'    => 'The everyday choice for DNA. Finds a gene, transcript or genomic '
+                       . 'region in an assembly when both sides are nucleotide.',
+        ],
+        'blastp' => [
+            'query'   => 'Protein',
+            'db'      => 'Protein',
+            'label'   => 'BLASTp',
+            'summary' => 'Protein query vs protein database',
+            'when'    => 'Protein on both sides. Use it to find homologues of a protein you '
+                       . 'already have in amino-acid form.',
+        ],
+        'blastx' => [
+            'query'   => 'DNA',
+            'db'      => 'Protein',
+            'label'   => 'BLASTx',
+            'summary' => 'DNA query vs protein database (translated)',
+            'when'    => 'You have DNA and want to know what it CODES FOR. Translates your '
+                       . 'query in all six frames and searches proteins.',
+        ],
+        'tblastn' => [
+            'query'   => 'Protein',
+            'db'      => 'DNA',
+            'label'   => 'tBLASTn',
+            'summary' => 'Protein query vs DNA database (translated)',
+            'when'    => 'You have a protein and want to find its gene in a genome that is '
+                       . 'not annotated yet. Translates the database, not your query.',
+        ],
+        'tblastx' => [
+            'query'   => 'DNA',
+            'db'      => 'DNA',
+            'label'   => 'tBLASTx',
+            'summary' => 'DNA query vs DNA database (both translated)',
+            'when'    => 'Translates BOTH sides. For distant relationships where the protein '
+                       . 'is conserved but the DNA is not. Thorough, and by far the slowest.',
+        ],
+        'blastn-short' => [
+            'query'   => 'Short DNA',
+            'db'      => 'DNA',
+            'label'   => 'BLASTn-short',
+            'summary' => 'Short DNA query (primer, probe, guide RNA, ~20nt)',
+            'when'    => 'Anything under about 30 nt: primers, probes, guide RNAs, adapters, '
+                       . 'barcodes. The ordinary settings discard perfect short matches, so '
+                       . 'this preset is not optional for them.',
+            'color'   => 'success',
+        ],
+    ];
+}
+}

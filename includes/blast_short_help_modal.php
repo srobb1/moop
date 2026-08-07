@@ -17,17 +17,31 @@ if (!function_exists('help_modal')) {
     require_once __DIR__ . '/../lib/help_ui.php';
 }
 
+// Resolved rather than assumed: this modal is included from blast.php, where $site
+// is in scope, but a link built from a missing variable would render as "//tools/…"
+// and fail silently on whatever page borrows this next.
+$short_help_site = '/' . ($site ?? ConfigManager::getInstance()->getString('site'));
+$primer_blast_url = htmlspecialchars($short_help_site . '/tools/primer_blast.php');
+
 echo help_modal(
     'blast-short-help',
     'Searching with primers and other short sequences',
     [
         [
-            'heading' => 'Why a normal BLAST misses your primer',
+            'heading' => 'Why a normal BLAST misses your short sequence',
             'cards' => [
                 [
                     'label' => 'It is not you',
-                    'text'  => 'A 20 nt primer that matches PERFECTLY can return zero hits '
+                    'text'  => 'A 20 nt sequence that matches PERFECTLY can return zero hits '
                              . 'on a default search. The match is real; the search threw it away.',
+                ],
+                [
+                    'label' => 'What counts as short',
+                    'text'  => 'Anything under about 30 nt: PCR and qPCR primers, sequencing '
+                             . 'primers, in-situ and qPCR probes, CRISPR guide RNAs, siRNA and '
+                             . 'shRNA targets, sequencing adapters and linkers, sample barcodes, '
+                             . 'and cloning-site or tag sequences. All of them fail the same way '
+                             . 'for the same two reasons.',
                 ],
                 [
                     'label' => 'Too short to seed',
@@ -82,7 +96,75 @@ echo help_modal(
             ],
         ],
         [
-            'heading' => 'Two primers at once, and product size',
+            'heading' => 'Good uses for a short search',
+            'cards' => [
+                [
+                    'label' => 'Locate one oligo',
+                    'text'  => 'Where does this probe, guide RNA or single primer land, and how '
+                             . 'many times? This is what a short BLAST is for, and no other tool '
+                             . 'here answers it.',
+                ],
+                [
+                    'label' => 'Check a probe is unique',
+                    'text'  => 'One full-length 100% hit and nothing else close means an in-situ '
+                             . 'or qPCR probe is specific. Several equally good hits mean it is '
+                             . 'not, whatever the target gene was.',
+                ],
+                [
+                    'label' => 'Guide RNA off-targets',
+                    'text'  => 'The permissive settings are the point: near-matches are exactly '
+                             . 'what you are looking for, and a strict search would hide them.',
+                ],
+                [
+                    'label' => 'Identify a stray sequence',
+                    'text'  => 'An adapter, barcode or vector fragment found in your data — search '
+                             . 'it to see whether it is genuinely in the genome or contamination.',
+                ],
+            ],
+        ],
+        [
+            'heading' => 'Checking a primer PAIR? There is a tool for that',
+            'cards' => [
+                [
+                    'label' => 'Use Primer BLAST instead',
+                    'color' => 'success',
+                    'html'  => true,
+                    'text'  => 'Everything in the next section is done FOR you, and correctly: it '
+                             . 'pairs the hits, keeps only those facing each other on the same '
+                             . 'sequence, reports every product size, and searches the genome and '
+                             . 'the transcriptome together so you can see whether the pair spans '
+                             . 'an intron.<br>'
+                             // btn-tool-orange, not btn-primary: this is the colour the tool
+                             // already wears in the toolbox (config/tools_config.php), so the
+                             // button here and the one they will look for match. blast.php uses
+                             // btn-primary nowhere, so Bootstrap blue would be off-palette too.
+                             . '<a href="' . $primer_blast_url . '" class="btn btn-sm btn-tool-orange mt-2">'
+                             . '<i class="fa fa-vials me-1"></i>Open Primer BLAST</a>',
+                ],
+                [
+                    'label' => 'What it catches that reading by hand does not',
+                    'text'  => 'A primer pairing with a SECOND copy of itself, facing the other '
+                             . 'way — a real source of unexpected bands that nobody finds by '
+                             . 'scanning forward-versus-reverse combinations. It also judges which '
+                             . 'products would actually amplify, using 3\'-end mismatch position '
+                             . 'rather than a raw mismatch count.',
+                ],
+                [
+                    'label' => 'And it draws the result',
+                    'text'  => 'Each product links into the genome browser with both primer sites '
+                             . 'marked. A primer sitting across an exon junction is drawn as two '
+                             . 'blocks either side of the intron, which is the picture that shows '
+                             . 'why it cannot amplify contaminating genomic DNA.',
+                ],
+                [
+                    'label' => 'When to stay here',
+                    'text'  => 'Primer BLAST needs a PAIR. To locate a single primer, or to search '
+                             . 'a database it does not offer, the by-hand method below still works.',
+                ],
+            ],
+        ],
+        [
+            'heading' => 'Two primers at once, by hand',
             'cards' => [
                 [
                     'label' => 'Join them with a run of Ns',
@@ -143,7 +225,10 @@ echo help_modal(
         ],
     ],
     [
-        'intro' => 'Primers, oligos, siRNA and probes need different settings from a normal '
-                 . 'search — the usual defaults hide perfect matches rather than finding them.',
+        'intro' => 'Primers, probes, guide RNAs, siRNA, adapters and barcodes need different '
+                 . 'settings from a normal search — the usual defaults hide perfect matches '
+                 . 'rather than finding them. To check a primer PAIR rather than locate one '
+                 . 'sequence, use Primer BLAST: it pairs the hits and reports product sizes for '
+                 . 'you.',
     ]
 );
