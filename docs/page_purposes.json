@@ -1,5 +1,5 @@
 {
-    "generated": "2026-08-05T21:47:45+00:00",
+    "generated": "2026-08-07T15:19:27+00:00",
     "routes": [
         {
             "page": "index",
@@ -33,6 +33,17 @@
             "url": "/tools/blast.php",
             "status": 200,
             "purpose": "Search genome assemblies by sequence similarity. Paste a DNA or protein sequence, select a program and database, and run."
+        },
+        {
+            "page": "primer_blast",
+            "title": "Primer BLAST",
+            "link": "/tools/primer_blast.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/primer_blast.php",
+            "status": 200,
+            "purpose": "Check primer pairs against a genome and transcriptome: how many products they would amplify, where those land, and how big each one is."
         },
         {
             "page": "moopmart",

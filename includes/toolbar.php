@@ -52,6 +52,7 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/search.php">Annotation Search</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/moopmart.php">MOOPmart: Data Exporter</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/blast.php">BLAST Search</a></li>
+            <li><a class="dropdown-item" href="/<?= $site ?>/tools/primer_blast.php">Primer BLAST</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/retrieve_sequences.php">Retrieve Sequences</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/downloads.php">Downloads</a></li>
           </ul>

@@ -108,7 +108,12 @@ return [
         'url_path'       => '/tools/primer_blast.php',
         'context_params' => ['organism', 'assembly', 'gene_set', 'group', 'display_name', 'organisms'],
         'pages'          => 'all',
-        'toolbox'        => false,
+        // IN the toolbox, unlike annotation_search and moopmart which sit in the
+        // navbar only. The exception is deliberate: picking the source is this
+        // tool's first and fiddliest step, and the toolbox passes the organism,
+        // assembly and gene set of the page you came from — so arriving from a
+        // gene set page lands with the right databases already selected.
+        'toolbox'        => true,
     ],
 
     // HOW TO ADD A NEW TOOL:
