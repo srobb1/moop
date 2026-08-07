@@ -29,6 +29,13 @@ if (!function_exists('blast_programs')) {
 // "//tools/…" and fails silently on whatever page borrows this next.
 $bp_site = '/' . ($site ?? ConfigManager::getInstance()->getString('site'));
 
+// Both short-sequence use cases hand off to the last section rather than repeating
+// it. One string so the two cards close identically — a pointer phrased two ways
+// reads as two different promises.
+$bp_more = '<br><span class="d-inline-block mt-1 fw-semibold">'
+         . '<i class="fa fa-arrow-down me-1" aria-hidden="true"></i>See below for more info.'
+         . '</span>';
+
 // One card per program. The query→database line carries the mechanical fact and
 // the sentence carries the judgement, so a reader scanning for "which one takes
 // a protein" never has to read prose to find out.
@@ -92,14 +99,14 @@ echo help_modal(
                              . '<code>tBLASTn</code> or <code>tBLASTx</code>.',
                 ],
                 [
-                    'label' => 'Find my gene in the SAME species',
+                    'label' => 'Find my gene (nucleotide) in the SAME species',
                     'color' => 'info',
                     'html'  => true,
                     'text'  => '<code>BLASTn</code> — both sides are DNA, and within a species '
                              . 'the DNA still matches.',
                 ],
                 [
-                    'label' => 'Find my gene in ANOTHER species\' genome',
+                    'label' => 'Find my gene (nucleotide) in ANOTHER species\' genome',
                     'color' => 'info',
                     'html'  => true,
                     'text'  => '<code>tBLASTx</code> — your DNA and the genome are both '
@@ -107,11 +114,11 @@ echo help_modal(
                              . 'similarity survives. Slow: narrow the database first.',
                 ],
                 [
-                    'label' => 'Same, but I have the PROTEIN',
+                    'label' => 'Find my gene (amino acids) in ANOTHER species\' genome',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => '<code>tBLASTn</code> — much faster than tBLASTx and the usual '
-                             . 'choice once the protein is to hand. Works on genomes with no '
+                    'text'  => '<code>tBLASTn</code> — much faster than tBLASTx and the better '
+                             . 'choice whenever the protein is to hand. Works on genomes with no '
                              . 'gene annotation at all.',
                 ],
                 [
@@ -131,15 +138,17 @@ echo help_modal(
                     'label' => 'Locate a primer, probe or guide RNA',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => '<code>BLASTn-short</code> — anything under about 30 nt. See the '
-                             . 'last section; the ordinary settings throw these away.',
+                    'text'  => '<code>BLASTn-short</code> — anything under about 30 nt. The '
+                             . 'ordinary settings throw these away.'
+                             . $bp_more,
                 ],
                 [
                     'label' => 'Check a primer PAIR',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => 'Not this page — Primer BLAST pairs the hits and reports product '
-                             . 'sizes. Link in the last section.',
+                    'text'  => 'Not this page — Primer BLAST pairs the hits and reports every '
+                             . 'product size for you.'
+                             . $bp_more,
                 ],
                 [
                     'label' => 'I found nothing and expected a match',
