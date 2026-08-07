@@ -116,6 +116,22 @@ return [
         'toolbox'        => true,
     ],
 
+    'primer_maker' => [
+        'id'             => 'primer_maker',
+        'name'           => 'Primer Maker',
+        'icon'           => 'fa-wand-magic-sparkles',
+        'description'    => 'Design PCR, qPCR, RT-PCR or sequencing primers from a sequence',
+        'btn_class'      => 'btn-tool-orange',
+        'url_path'       => '/tools/primer_maker.php',
+        'context_params' => ['organism', 'assembly', 'gene_set', 'feature', 'display_name'],
+        // Gene pages only, and the Tools menu — by decision (user, 2026-08-07),
+        // NOT 'all' like Primer BLAST. Designing primers is something you do
+        // about a specific gene, so an organism or group page has no sequence to
+        // offer it and the entry would be a dead end.
+        'pages'          => ['parent'],
+        'toolbox'        => true,
+    ],
+
     // HOW TO ADD A NEW TOOL:
     // 1. Choose a unique 'id' (use snake_case, like 'my_new_tool')
     // 2. Create the tool PHP file in /data/moop/tools/ (or subdirectory)

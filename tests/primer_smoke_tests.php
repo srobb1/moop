@@ -451,6 +451,68 @@ ok(ExonMap::load($tmp, ['NC_1']) === [],
 @rmdir($tmp);
 
 // ----------------------------------------------------------------------------
+group('Primer3Design — parsing real primer3 2.6.1 output');
+
+require_once "$BASE/lib/primer/Primer3Design.php";
+
+// A verbatim excerpt of what primer3 2.6.1 emits, NOT a hand-written guess.
+// The tag names matter: the Perl this is ported from targets primer3 1.x and
+// looks for PRIMER_SEQUENCE_ID and SEQUENCE=, neither of which 2.6.1 produces.
+$p3out = "SEQUENCE_ID=demo\n"
+       . "SEQUENCE_TEMPLATE=ACGTACGTAC\n"
+       . "PRIMER_PAIR_NUM_RETURNED=1\n"
+       . "PRIMER_PAIR_0_PENALTY=0.063740\n"
+       . "PRIMER_LEFT_0_SEQUENCE=GGCATTTGATCCGAGTTCGC\n"
+       . "PRIMER_RIGHT_0_SEQUENCE=CCTTGAGGGAGCCAGACTTG\n"
+       . "PRIMER_LEFT_0=79,20\n"
+       . "PRIMER_RIGHT_0=452,20\n"
+       . "PRIMER_LEFT_0_TM=59.972\n"
+       . "PRIMER_RIGHT_0_TM=60.036\n"
+       . "PRIMER_LEFT_0_GC_PERCENT=55.000\n"
+       . "PRIMER_LEFT_0_HAIRPIN_TH=38.18\n"
+       . "PRIMER_PAIR_0_PRODUCT_SIZE=374\n"
+       . "=\n";
+
+$parsed = Primer3Design::parseOutput($p3out);
+ok(count($parsed) === 1, 'one record parsed');
+ok($parsed[0]['id'] === 'demo', 'record id comes from SEQUENCE_ID, not PRIMER_SEQUENCE_ID');
+ok(count($parsed[0]['pairs']) === 1, 'one pair parsed');
+
+$pair = $parsed[0]['pairs'][0];
+ok($pair['left_sequence'] === 'GGCATTTGATCCGAGTTCGC', 'forward sequence read');
+ok($pair['product_size'] === '374', 'product size read');
+ok($pair['left_hairpin'] === '38.18', 'thermodynamic tags use the _TH names 2.6 emits');
+
+// Coordinates: primer3 gives "start,length" 0-based, and the RIGHT primer's
+// start is its 5' end — the HIGHEST coordinate, because it is on the other
+// strand. Getting this backwards puts every reverse primer one product-length
+// away from where it really is.
+ok($pair['left_start'] === 80 && $pair['left_end'] === 99,
+   'left primer converted to a 1-based inclusive span');
+ok($pair['right_end'] === 453 && $pair['right_start'] === 434,
+   'right primer span runs BACK from its 5\' end, not forward');
+ok($pair['right_end'] - $pair['left_start'] + 1 === 374,
+   'the two spans reproduce the product size primer3 reported');
+
+// A record that failed still has to appear, or bad input silently vanishes.
+$err = Primer3Design::parseOutput("SEQUENCE_ID=bad\nPRIMER_ERROR=Unable to open file x\n=\n");
+ok(count($err) === 1 && $err[0]['error'] !== '', 'a failed record is returned WITH its error');
+ok($err[0]['pairs'] === [], 'a failed record has no pairs');
+
+// Input building.
+$input = Primer3Design::buildInput(
+    [['id' => 'a b/c', 'template' => "acgt\nACGT", 'junctions' => [156, 475]]],
+    ['PRIMER_NUM_RETURN' => 3]
+);
+ok(strpos($input, 'SEQUENCE_ID=a_b_c') !== false, 'record id is sanitised');
+ok(strpos($input, 'SEQUENCE_TEMPLATE=ACGTACGT') !== false,
+   'template is upper-cased and stripped of whitespace');
+ok(strpos($input, 'SEQUENCE_OVERLAP_JUNCTION_LIST=156 475') !== false,
+   'junction positions become the overlap list — this is what makes RT-PCR primers');
+ok(strpos($input, 'PRIMER_NUM_RETURN=3') !== false, 'caller parameters override the defaults');
+ok(substr_count($input, "\n=\n") === 1, 'the record is terminated with a lone =');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Primer smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {
