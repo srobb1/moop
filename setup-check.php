@@ -421,6 +421,31 @@ if (toolExists('jq')) {
     warn("jq not found in PATH", "Optional — install with: sudo $pkg jq");
 }
 
+// primer3 — TWO things have to be present, and only one of them is a binary.
+//
+// primer3's own `make install` installs the executables and NOT
+// src/primer3_config/, the thermodynamic parameter tables. So primer3_core can
+// be on the PATH, look installed to every check that asks "is the binary
+// there", and fail on every query. Checking the binary alone would report a
+// broken install as a good one — so the parameters directory is checked too,
+// and a missing one is louder than a missing binary because it is the state
+// that looks fine.
+$primer3_config_dir = '/usr/local/share/primer3_config';
+if (!toolExists('primer3_core')) {
+    warn("primer3_core not found in PATH",
+         "Optional — required for the primer designer. Not packaged for RHEL/EPEL, and\n"
+         . "         upstream ships a binary only for Windows, so it is a source build:\n"
+         . "         sudo bash scripts/install_primer3.sh");
+} elseif (!is_dir($primer3_config_dir) || !is_readable("$primer3_config_dir/stack.ds")) {
+    warn("primer3_core is installed but its thermodynamic parameters are missing",
+         "primer3 will FAIL ON EVERY QUERY. Its own `make install` does not copy\n"
+         . "         primer3_config/ — that is what this script's installer adds:\n"
+         . "         sudo bash scripts/install_primer3.sh\n"
+         . "         Or point primer3_config_path at an existing copy.");
+} else {
+    pass("primer3_core (with thermodynamic parameters)");
+}
+
 // jbrowse CLI — needed for text-index (gene name search) and sort-gff
 $jbrowse_local = "$base/tools/jbrowse-cli/node_modules/.bin/jbrowse";
 if (toolExists('jbrowse') || file_exists($jbrowse_local)) {

@@ -26,6 +26,7 @@ added afterwards; MOOP degrades feature-by-feature rather than failing to start.
 | samtools, bgzip, tabix | genome/GFF indexing for JBrowse2 | yes — no genome browser |
 | Node.js 18+ / `@jbrowse/cli` | `jbrowse text-index` feature search | yes — no feature-name search |
 | bigWigSummary | Expression Explorer | yes — that feature is unavailable |
+| primer3 | the primer designer | yes — that tool is unavailable |
 | jq | convenience for editing JSON by hand | yes |
 
 ---
@@ -40,6 +41,7 @@ added afterwards; MOOP degrades feature-by-feature rather than failing to start.
 - [samtools, bgzip, tabix](#samtools-bgzip-and-tabix)
 - [Node.js and the JBrowse CLI](#nodejs-and-the-jbrowse-cli)
 - [bigWigSummary](#bigwigsummary)
+- [primer3](#primer3)
 - [jq](#jq)
 - [Identifying your web server user](#identifying-your-web-server-user)
 - [Manual setup, without the installer](#manual-setup-without-the-installer)
@@ -204,6 +206,40 @@ bigWigSummary 2>&1 | head -1
 > Anything MOOP executes from a web request runs under php-fpm's `PrivateTmp`, so it gets
 > its own `/tmp` that you cannot see from a shell. Pass kent tools an explicit cache
 > directory (`-udcDir=…`) — "it works in my terminal" proves nothing here.
+
+## primer3
+
+Used by the primer designer. **Not packaged for RHEL/EPEL, and upstream publishes a binary
+only for Windows** — on Linux it is a source build. MOOP ships a script that does the whole
+thing, including the part below that `make install` leaves out:
+
+```bash
+sudo bash scripts/install_primer3.sh
+```
+
+> ⚠️ **If you install it by hand, do not stop at `make install`.** primer3's own install
+> target copies the EXECUTABLES ONLY — it does not copy `src/primer3_config/`, the
+> thermodynamic parameter tables. `primer3_core` then builds, installs, appears on the
+> PATH, and fails on every query. Copy that directory too:
+>
+> ```bash
+> sudo dnf install -y gcc gcc-c++ make        # apt: build-essential
+> curl -fLO https://codeload.github.com/primer3-org/primer3/tar.gz/refs/tags/v2.6.1
+> tar xzf v2.6.1 && cd primer3-2.6.1/src && make
+> sudo install -m 755 primer3_core /usr/local/bin/
+> sudo mkdir -p /usr/local/share/primer3_config
+> sudo cp -r primer3_config/. /usr/local/share/primer3_config/
+> ```
+>
+> The archive is ~32 MB because it bundles the test suite. Only `libprimer3.cc` needs a
+> C++ compiler, so a box with `gcc` but no `gcc-c++` gets all the way to the last object
+> file before failing.
+
+MOOP looks for the binary on the PATH and the tables at
+`/usr/local/share/primer3_config/`. Both are config-driven (`primer3_tools`,
+`primer3_config_path`) if you install elsewhere. `php setup-check.php` reports the
+half-installed state separately from the missing one, because that is the state that looks
+fine from the outside.
 
 ## jq
 
