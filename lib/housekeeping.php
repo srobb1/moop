@@ -113,7 +113,7 @@ function housekeeping_task_registry(): array {
             'name'  => 'environment_check',
             'fn'    => 'housekeeping_environment_check',
             'label' => 'Environment check',
-            'desc'  => 'Detects degraded requirements that cause silent failures: missing PHP extensions, missing JWT keys, unwritable directories, absent CLI tools (blastn, samtools, makeblastdb).',
+            'desc'  => 'Detects degraded requirements that cause silent failures: missing PHP extensions, missing JWT keys, unwritable directories, absent CLI tools (blastn, samtools, makeblastdb), and a primer3 installed without its thermodynamic parameters — which runs but fails every query.',
         ],
         [
             'name'  => 'permission_check',
@@ -721,6 +721,54 @@ function housekeeping_environment_check() {
                 'message' => "CLI tool <code>$tool</code> not found in PATH — $impact.",
             ];
         }
+    }
+
+    // 4b. primer3, which needs TWO things present, not one.
+    //
+    // Checked apart from the list above because "the binary exists" is not the
+    // same as "primer3 works": its own `make install` installs the executables
+    // and NOT the thermodynamic parameter tables, so a perfectly ordinary
+    // install leaves primer3_core on the PATH failing every query. Reporting it
+    // as present on the strength of the binary alone would be exactly the
+    // silent-success shape this codebase keeps hitting.
+    //
+    // Absent entirely is INFO, not a warning: primer design is an optional
+    // feature and most deployments will not have installed it. Half-installed
+    // is a warning, because that one looks fine from the outside.
+    //
+    // The level is used directly as a Bootstrap class — admin/pages/admin.php
+    // renders alert-{level} — so it must be one Bootstrap defines. 'notice' is
+    // not, and would have produced an unstyled div that still showed the text:
+    // wrong enough to look broken, right enough not to be noticed.
+    $primer3 = $config->getArray('primer3_tools')['primer3_core'] ?? 'primer3_core';
+    $p3_path = (strpos($primer3, '/') === 0 && is_executable($primer3))
+        ? $primer3
+        : trim(shell_exec('which ' . escapeshellarg($primer3) . ' 2>/dev/null') ?? '');
+    if ($p3_path === '' && file_exists('/usr/local/bin/primer3_core')) {
+        $p3_path = '/usr/local/bin/primer3_core';
+    }
+
+    $p3_config = rtrim((string)$config->getString('primer3_config_path'), '/');
+
+    if ($p3_path === '') {
+        $warnings[] = [
+            'level'   => 'info',
+            'message' => 'Primer design tool <code>primer3_core</code> is not installed — the '
+                       . 'primer designer will be unavailable. It is not packaged for most '
+                       . 'distributions; install it with '
+                       . '<code>sudo bash scripts/install_primer3.sh</code>.',
+        ];
+    } elseif ($p3_config === '' || !is_dir($p3_config) || !is_readable($p3_config . '/stack.ds')) {
+        $warnings[] = [
+            'level'   => 'warning',
+            'message' => '<code>primer3_core</code> is installed at <code>'
+                       . htmlspecialchars($p3_path) . '</code> but its thermodynamic parameters '
+                       . 'directory is missing or unreadable at <code>'
+                       . htmlspecialchars($p3_config ?: '(unset)') . '</code>. primer3 will fail '
+                       . 'on every query. primer3\'s own <code>make install</code> does not copy '
+                       . 'this directory — re-run <code>scripts/install_primer3.sh</code>, or set '
+                       . '<code>primer3_config_path</code>.',
+        ];
     }
 
     // 5. Composer dependencies installed

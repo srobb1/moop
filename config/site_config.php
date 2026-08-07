@@ -293,6 +293,31 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // Raise this value when moving to a larger server.
     'blast_num_threads' => 2,
 
+    // ======== PRIMER3 TOOL PATHS ========
+    // Same convention as blast_tools above: bare name means "on the system PATH",
+    // or give a full path (e.g. '/opt/primer3/bin/primer3_core').
+    //
+    // primer3 is NOT packaged for every distribution — there is none in RHEL 9
+    // BaseOS, AppStream or EPEL, and upstream ships a binary only for Windows —
+    // so on Linux it is a source build. Use scripts/install_primer3.sh, which
+    // also handles the part `make install` leaves out (see below).
+    'primer3_tools' => [
+        'primer3_core' => 'primer3_core',
+    ],
+
+    // Directory holding primer3's thermodynamic parameter tables.
+    //
+    // ⚠️ SEPARATE FROM THE BINARY ON PURPOSE, because primer3's own `make install`
+    // installs the executables and NOT this directory. A primer3 that is on the
+    // PATH and has no parameters directory builds, runs, and fails on every
+    // query — so "primer3_core exists" is not enough to report it as working,
+    // and housekeeping_environment_check() checks for both.
+    //
+    // Passed to primer3 as the PRIMER_THERMODYNAMIC_PARAMETERS_PATH tag in the
+    // boulder-IO input — it is an input tag, NOT a command-line flag. primer3
+    // wants a TRAILING SLASH.
+    'primer3_config_path' => '/usr/local/share/primer3_config/',
+
     // ======== BLAST RESULT LINKOUTS ========
     // Controls which linkout buttons appear on BLAST hit results.
     // gene_page: link to parent.php if organism.sqlite exists for the assembly
