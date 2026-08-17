@@ -95,8 +95,14 @@ class PrimerTails
             'label'   => 'T4P cloning adapter',
             'forward' => 'CATTACCATCCCG',
             'reverse' => 'CCAATTCTACCCG',
-            'note'    => '13-base adapters, one for each primer, so the PCR product can be cloned '
-                       . 'directly without a separate restriction step.',
+            // ⚠️ PLACEHOLDER WORDING, awaiting the user (2026-08-17). An earlier draft said
+            // "so the PCR product can be cloned directly without a separate restriction step",
+            // which was INFERRED from how tails were described, not stated — and the user
+            // rejected it. What is below claims only what this file actually knows: two
+            // 13-base sequences, one per primer, that end up in the product. Do not add a
+            // mechanism or a downstream workflow here without being told what it is.
+            'note'    => '13-base adapters, one for each primer. They are not part of the '
+                       . 'sequence that anneals to your template — they end up in the PCR product.',
         ],
         [
             'id'      => 't7',
