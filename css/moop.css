@@ -102,6 +102,30 @@
   border-color: var(--moop-tool-header);
 }
 
+/* The chevron on a collapse toggle: points down when shut, up when open.
+   A disclosure control has to LOOK like one before it is clicked — a label alone
+   reads as a heading, and the panel's own presence is the only other clue, which
+   is invisible precisely when it is collapsed.
+
+   Driven entirely by aria-expanded, which Bootstrap maintains on the toggle, so
+   the arrow cannot disagree with the panel and no JavaScript is involved. Two
+   idioms for this already existed and neither was reusable: blast.php rotates
+   `.adv-chevron` from a page-local <style> plus two JS listeners, and
+   display.css keys `.browse-select-chevron` off aria-expanded but names it after
+   one specific header. This is the second, generalised — reach for it rather
+   than starting a third.
+
+   The direct-child selector is listed first for the common case; the descendant
+   form covers a chevron nested inside a span. */
+.collapse-chevron {
+  font-size: 0.8rem;
+  transition: transform 0.2s ease;
+}
+[aria-expanded="true"] > .collapse-chevron,
+[aria-expanded="true"] .collapse-chevron {
+  transform: rotate(180deg);
+}
+
 /* The small uppercase section eyebrow ("BLAST Results", "Gene Structure", "Annotations").
    The single most-duplicated inline style in the tool pages — 11 files carried the identical
    `letter-spacing:0.1em; font-size:0.8rem;` pair. */

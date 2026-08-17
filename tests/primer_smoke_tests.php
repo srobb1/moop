@@ -507,10 +507,256 @@ $input = Primer3Design::buildInput(
 ok(strpos($input, 'SEQUENCE_ID=a_b_c') !== false, 'record id is sanitised');
 ok(strpos($input, 'SEQUENCE_TEMPLATE=ACGTACGT') !== false,
    'template is upper-cased and stripped of whitespace');
-ok(strpos($input, 'SEQUENCE_OVERLAP_JUNCTION_LIST=156 475') !== false,
-   'junction positions become the overlap list — this is what makes RT-PCR primers');
+// 🚨 THE OFF-BY-ONE THAT WAS SHIPPING. Callers say "the junction FOLLOWS 1-based
+// base K"; primer3 counts the junction as following base N+1, so K goes in as
+// K−1. Measured on 2.6.1, against the manual's own "# 1-based indexes" comment:
+// holding a junction at 450 and lowering PRIMER_MIN_3_PRIME_OVERLAP_OF_JUNCTION
+// from 4 to 3 moved the chosen primer's edge from 3 bases left of base 450 to 2 —
+// always one fewer than the constraint demands.
+//
+// This assertion read "=156 475" until 2026-08-07 and was wrong. A primer built
+// on the old numbers still LOOKS junction-spanning; it just has one fewer real
+// base past the boundary than promised, which is the margin that decides whether
+// it rejects genomic DNA.
+ok(strpos($input, 'SEQUENCE_OVERLAP_JUNCTION_LIST=155 474') !== false,
+   'a junction following base K is emitted as K-1, primer3\'s own numbering');
 ok(strpos($input, 'PRIMER_NUM_RETURN=3') !== false, 'caller parameters override the defaults');
 ok(substr_count($input, "\n=\n") === 1, 'the record is terminated with a lone =');
+
+// ----------------------------------------------------------------------------
+group('Primer3Design — design options a user can set');
+
+// Blank is not zero. Every option is optional, and the difference between "left
+// alone" and "set to 0" is real: a GC clamp of 0 is a legitimate choice.
+$o = Primer3Design::optionParams(['gc_clamp' => '', 'tm_opt' => '']);
+ok($o['params'] === [] && $o['errors'] === [], 'blank fields set nothing and complain about nothing');
+
+$o = Primer3Design::optionParams(['gc_clamp' => '0']);
+ok(($o['params']['PRIMER_GC_CLAMP'] ?? null) === 0, 'an explicit 0 IS applied — blank and zero differ');
+
+$o = Primer3Design::optionParams(['tm_min' => '55', 'tm_max' => '68', 'tm_opt' => '62']);
+ok($o['errors'] === [], 'a consistent Tm triple is accepted');
+ok($o['params']['PRIMER_MIN_TM'] === 55.0 && $o['params']['PRIMER_MAX_TM'] === 68.0,
+   'Tm values reach the tags primer3 reads');
+
+$o = Primer3Design::optionParams(['gc_min' => '30', 'gc_max' => '70', 'gc_opt' => '50']);
+ok($o['errors'] === [] && $o['params']['PRIMER_MIN_GC'] === 30.0, 'GC content is settable');
+
+// ⚠️ The values that fail SILENTLY in primer3 — zero pairs, no error, no
+// explanation — so the bound has to be enforced here or the user is told their
+// sequence is difficult when their setting is out of range. Measured on 2.6.1.
+$o = Primer3Design::optionParams(['salt_corr' => '3']);
+ok($o['errors'] !== [] && !isset($o['params']['PRIMER_SALT_CORRECTIONS']),
+   'a salt correction of 3 is rejected, not passed through to return zero primers silently');
+$o = Primer3Design::optionParams(['gc_clamp' => '6']);
+ok($o['errors'] !== [], 'a GC clamp of 6 is rejected — primer3 accepts it and finds nothing');
+
+// primer3's own built-in ceiling, verified against the binary.
+$o = Primer3Design::optionParams(['size_max' => '37']);
+ok($o['errors'] !== [], 'a primer length above 36 is rejected — primer3 refuses it too');
+$o = Primer3Design::optionParams(['size_max' => '36', 'size_opt' => '20', 'size_min' => '18']);
+ok($o['errors'] === [], '36 exactly is allowed — it is the documented maximum, not one past it');
+
+$o = Primer3Design::optionParams(['tm_opt' => 'sixty']);
+ok($o['errors'] !== [], 'a non-numeric value is an error, not a silent 0');
+
+// Ordering is checked against what will REALLY run, so a value that conflicts
+// with the chosen primer type is caught even though the user set only one box.
+$o = Primer3Design::optionParams(['tm_min' => '65']);
+ok($o['errors'] !== [], 'a minimum Tm above the default maximum is caught');
+$o = Primer3Design::optionParams(['tm_min' => '65'], ['PRIMER_MAX_TM' => 70.0, 'PRIMER_OPT_TM' => 68.0]);
+ok($o['errors'] === [], 'the same value passes when the preset raises the maximum');
+
+$o = Primer3Design::optionParams(['tm_opt' => '70', 'tm_min' => '50', 'tm_max' => '65']);
+ok($o['errors'] !== [], 'an optimum outside its own min/max is caught');
+
+// The "as long as possible" ladder, ported from the workflow this replaces.
+// primer3 tries ranges IN ORDER, so listing them descending is what asks for the
+// longest product rather than merely allowing one.
+ok(Primer3Design::productSizeLadder(900) === '675-900 450-900 225-900 100-900',
+   'the ladder reproduces the original 75/50/25/floor sequence exactly');
+ok(Primer3Design::productSizeLadder(300) === '225-300 150-300 100-300',
+   'steps that fall below the floor are dropped rather than inverted');
+ok(Primer3Design::productSizeLadder(80) === '',
+   'a template too short for the floor yields no ladder, so the caller keeps its own range');
+
+// The salt-correction select cannot be blank, so the page has to preselect
+// primer3's own default explicitly. Get this number wrong and every Tm on the
+// page is computed with a formula the user did not choose — a difference that
+// picks a DIFFERENT primer, not just a different displayed number.
+ok((Primer3Design::OPTIONS['salt_corr']['p3_default'] ?? null) === 1,
+   'the salt-correction default matches primer3\'s own (SantaLucia 1998), measured against 2.6.1');
+
+// The flag without which PRIMER_*_EXPLAIN is never emitted at all — and the "no
+// primers found" message has nothing to report but "no explanation given".
+ok((Primer3Design::DEFAULTS['PRIMER_EXPLAIN_FLAG'] ?? 0) == 1,
+   'PRIMER_EXPLAIN_FLAG is set, so primer3 says WHY a design found nothing');
+
+// A newline in a value truncates the boulder-IO record: primer3 stops reading,
+// emits no primers, no error, and exits 0.
+$dirty = Primer3Design::buildInput(
+    [['id' => 'x', 'template' => str_repeat('ACGT', 30)]],
+    ['PRIMER_THERMODYNAMIC_PARAMETERS_PATH' => "/tmp/config/\n"]
+);
+ok(strpos($dirty, "\n\n") === false, 'a newline inside a parameter value cannot blank-line the record');
+
+// "The product must span this region", start,length.
+// ⚠️ The box is 1-based and SEQUENCE_TARGET is 0-based. An off-by-one here would
+// shift every amplicon by one base and NOTHING would report it, so it is pinned.
+$t = Primer3Design::parseTarget('300,100', 900);
+ok($t['target'] === [299, 100], 'a 1-based start becomes primer3\'s 0-based SEQUENCE_TARGET');
+ok($t['first'] === 300 && $t['last'] === 399, 'the region is reported back in the user\'s own 1-based terms');
+ok(Primer3Design::parseTarget('', 900)['target'] === null, 'no target is not an error');
+ok(Primer3Design::parseTarget('300', 900)['error'] !== '', 'a target without a length is rejected');
+ok(Primer3Design::parseTarget('880,100', 900)['error'] !== '', 'a target running past the template is caught here, not by primer3');
+ok(Primer3Design::parseTarget('801,100', 900)['target'] === [800, 100], 'a target ending exactly at the last base is allowed');
+ok(Primer3Design::parseTarget('0,100', 900)['error'] !== '', 'position 0 is rejected — the box counts from 1');
+
+// primer3 reports errors by tag name; the commonest one is worth saying in the
+// words of the person who caused it.
+$friendly = Primer3Design::friendlyError('SEQUENCE_INCLUDED_REGION length < min PRIMER_PRODUCT_SIZE_RANGE', 900);
+ok(strpos($friendly, '900 bp') !== false && strpos($friendly, 'SEQUENCE_INCLUDED_REGION') === false,
+   'asking for a product longer than the template is explained in the user\'s terms');
+ok(Primer3Design::friendlyError('Unable to open file /x/dangle.dh') === 'Unable to open file /x/dangle.dh',
+   'an unrecognised error is passed through UNCHANGED rather than replaced by something vaguer');
+
+// ----------------------------------------------------------------------------
+group('SequenceMarkup — | and [ ] in a pasted sequence');
+
+require_once "$BASE/lib/primer/SequenceMarkup.php";
+
+$m = SequenceMarkup::parse('ACGTACGT');
+ok($m['sequence'] === 'ACGTACGT' && $m['junctions'] === [] && $m['targets'] === [],
+   'a plain sequence carries no marks and is returned untouched');
+
+// The core convention: a bar typed AFTER base 4 is a junction following base 4.
+$m = SequenceMarkup::parse('ACGT|ACGT');
+ok($m['sequence'] === 'ACGTACGT', 'the mark is removed from the sequence primer3 sees');
+ok($m['junctions'] === [4], 'a "|" after base 4 is recorded as a junction following base 4');
+
+$m = SequenceMarkup::parse("acgt|acg\nt|ac");
+ok($m['sequence'] === 'ACGTACGTAC', 'case and line breaks do not shift positions');
+ok($m['junctions'] === [4, 8], 'several marks are all kept, in order');
+
+$m = SequenceMarkup::parse('ACGT-ACGT');
+ok($m['junctions'] === [4], 'a dash works too — the workflow this replaces used dashes');
+ok(count($m['notes']) >= 1, 'and using a dash says so, because it is also an alignment gap character');
+
+$m = SequenceMarkup::parse('|ACGT');
+ok($m['junctions'] === [] && $m['sequence'] === 'ACGT',
+   'a mark before the first base is dropped, not recorded as a junction at 0');
+$m = SequenceMarkup::parse('ACGT||ACGT');
+ok($m['junctions'] === [4], 'a doubled mark is one junction, not two');
+
+// [ ] regions the product must contain.
+$m = SequenceMarkup::parse('ACGT[ACGT]ACGT');
+ok($m['sequence'] === 'ACGTACGTACGT', 'brackets are removed from the sequence');
+ok($m['targets'] === [[5, 4]], 'the bracketed region is 1-based start 5, length 4');
+
+$m = SequenceMarkup::parse('AC[GT]AC[GT]AC');
+ok(count($m['targets']) === 2, 'more than one bracketed region is allowed');
+
+ok(SequenceMarkup::parse('ACGT[ACGT')['errors'] !== [], 'an unclosed "[" is an error');
+ok(SequenceMarkup::parse('ACGT]ACGT')['errors'] !== [], 'a "]" with no "[" is an error');
+ok(SequenceMarkup::parse('AC[G[T]]AC')['errors'] !== [], 'nested brackets are an error');
+ok(SequenceMarkup::parse('ACGT[]ACGT')['errors'] !== [], 'an empty "[]" is an error');
+
+// Both marks together — the RT-PCR-plus-target case.
+$m = SequenceMarkup::parse('ACGTAC|GT[ACGT]AC');
+ok($m['sequence'] === 'ACGTACGTACGTAC', 'both kinds of mark can be used at once');
+ok($m['junctions'] === [6], 'the junction position ignores bracket characters');
+ok($m['targets'] === [[9, 4]], 'the target position ignores junction marks');
+
+ok(SequenceMarkup::hasMarkup('ACGT') === false, 'plain sequence reports no markup');
+ok(SequenceMarkup::hasMarkup('ACGT|ACGT') === true, 'a junction mark is detected');
+ok(SequenceMarkup::hasMarkup('ACGT[AC]GT') === true, 'a bracket is detected');
+
+// annotate() is parse() run backwards, for showing a looked-up exon structure.
+ok(SequenceMarkup::annotate('ACGTACGT', [4]) === 'ACGT|ACGT', 'annotate puts a mark after base 4');
+ok(SequenceMarkup::parse(SequenceMarkup::annotate('ACGTACGTAC', [3, 7]))['junctions'] === [3, 7],
+   'annotate and parse round-trip, so a displayed sequence means what it shows');
+ok(SequenceMarkup::annotate('ACGTACGT', [8]) === 'ACGTACGT',
+   'a mark after the last base is a no-op, not a trailing bar');
+
+// ----------------------------------------------------------------------------
+group('PrimerTails — 5\' cloning adapters');
+
+require_once "$BASE/lib/primer/PrimerTails.php";
+
+$cat = PrimerTails::catalogue();
+ok(isset($cat['t4p']), 'the T4P adapter is built in');
+ok($cat['t4p']['forward'] === 'CATTACCATCCCG' && $cat['t4p']['reverse'] === 'CCAATTCTACCCG',
+   'T4P carries the two sequences from the original workflow, forward and reverse distinct');
+
+$cat2 = PrimerTails::catalogue([
+    ['id' => 'mine', 'label' => 'Mine', 'forward' => 'acgtacgt', 'reverse' => 'TTTTGGGG'],
+]);
+ok(isset($cat2['mine']) && $cat2['mine']['forward'] === 'ACGTACGT',
+   'a configured adapter is offered, upper-cased');
+$cat3 = PrimerTails::catalogue([['id' => 't4p', 'label' => 'Local T4P', 'forward' => 'AAAA', 'reverse' => 'TTTT']]);
+ok(count(array_filter(array_keys($cat3), fn($k) => $k === 't4p')) === 1 && $cat3['t4p']['forward'] === 'AAAA',
+   'a configured entry REPLACES the built-in with the same id rather than duplicating its label');
+$cat4 = PrimerTails::catalogue([['id' => 'bad', 'forward' => 'ACGTXX', 'reverse' => '']]);
+ok(!isset($cat4['bad']), 'an adapter with an unorderable base is dropped, not offered');
+
+ok(PrimerTails::validate('') === '', 'an empty tail is valid — it means no tail on that side');
+ok(PrimerTails::validate('ACGTN') !== '', 'N is rejected: an oligo is synthesised exactly as written');
+ok(PrimerTails::validate(str_repeat('A', 61)) !== '', 'a tail past the length cap is rejected');
+ok(PrimerTails::validate(' acg tac g ') === '', 'whitespace is not a reason to reject a tail');
+
+$t = PrimerTails::resolve('none', '', '', $cat);
+ok($t['forward'] === '' && $t['errors'] === [], '"none" resolves to no tail and no complaint');
+$t = PrimerTails::resolve('custom', 'aaccgg', '', $cat);
+ok($t['forward'] === 'AACCGG' && $t['reverse'] === '' && $t['errors'] === [],
+   'a custom tail on one side only is allowed');
+$t = PrimerTails::resolve('custom', '', '', $cat);
+ok($t['errors'] !== [], 'asking for a custom tail and giving none is an error, not a silent no-tail');
+$t = PrimerTails::resolve('nonexistent', '', '', $cat);
+ok($t['errors'] !== [], 'an unknown adapter id is reported rather than ignored');
+
+// ⛔ THE INVARIANT THE WHOLE FEATURE RESTS ON (user, 2026-08-17): tails go on the
+// OUTPUT and nowhere else. left_sequence/right_sequence must still hold the bare
+// primer afterwards, because that is what every statistic was computed on and
+// what the Check button hands to Primer BLAST for the genome alignment.
+$pair = [
+    'rank' => 1,
+    'left_sequence'  => 'GCTTGAGCTGTTATCTGTGC',
+    'right_sequence' => 'GCGGTGCTTCTGGGCTGAGT',
+    'left_tm' => '60.1', 'right_tm' => '60.4', 'product_size' => '250',
+];
+$tailed = PrimerTails::apply($pair, $cat['t4p']);
+ok($tailed['left_sequence'] === 'GCTTGAGCTGTTATCTGTGC',
+   'apply() does NOT touch left_sequence — the checker must receive the untailed primer');
+ok($tailed['right_sequence'] === 'GCGGTGCTTCTGGGCTGAGT',
+   'apply() does NOT touch right_sequence');
+ok($tailed['left_tm'] === '60.1' && $tailed['right_tm'] === '60.4',
+   'Tm is left exactly as primer3 computed it — a tail never reaches a Tm calculation');
+ok($tailed['left_tailed'] === 'CATTACCATCCCGGCTTGAGCTGTTATCTGTGC',
+   'the tailed form is the tail followed by the primer, 5\' to 3\'');
+ok($tailed['right_tailed'] === 'CCAATTCTACCCGGCGGTGCTTCTGGGCTGAGT',
+   'the reverse primer gets the REVERSE tail, not the forward one');
+ok($tailed['left_oligo_length'] === 33, 'the length you order is reported, tail included');
+ok($tailed['product_size_tailed'] === 250 + 13 + 13,
+   'the product with both tails is reported alongside the insert — that is the band on the gel');
+ok($tailed['product_size'] === '250', 'the untailed product size is still there too');
+
+$untouched = PrimerTails::apply($pair, ['forward' => '', 'reverse' => '']);
+ok(!isset($untouched['left_tailed']) && $untouched === $pair,
+   'no tail selected leaves the pair byte-identical — no empty columns to explain');
+
+// One code path feeds the table, the FASTA and the TSV. The workflow this
+// replaces had the FASTA emitting only untailed sequences while the table beside
+// it showed both, so the download disagreed with the screen.
+$recs = PrimerTails::oligoRecords('XM_001.1', [$tailed], $cat['t4p']);
+ok(count($recs) === 4, 'both forms of both primers appear — bare and tailed, forward and reverse');
+$bare = array_values(array_filter($recs, fn($r) => !$r['tailed']));
+ok($bare[0]['sequence'] === 'GCTTGAGCTGTTATCTGTGC' && $bare[0]['name'] === 'XM_001.1_p1_F',
+   'the bare oligo keeps the _F name Primer BLAST pairs on');
+$with = array_values(array_filter($recs, fn($r) => $r['tailed']));
+ok($with[0]['length'] === 33, 'the tailed record reports the ordered length');
+
+$plain = PrimerTails::oligoRecords('seq', [$pair], ['forward' => '', 'reverse' => '', 'id' => 'none']);
+ok(count($plain) === 2, 'with no tail there are two records, not two empty extras');
 
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";

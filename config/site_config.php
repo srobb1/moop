@@ -325,6 +325,34 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // for a file primer3 actually opens. Set this only for an unusual install.
     'primer3_config_path' => '',
 
+    // ======== PRIMER 5' TAILS (CLONING ADAPTERS) ========
+    // Extra sequence added to the 5' end of an ordered oligo — it is not part of
+    // the primer, does not anneal to the template, and ends up in the amplicon
+    // for whatever comes after the PCR.
+    //
+    // ⛔ TAILS ARE AN OUTPUT, AND NOTHING ELSE (user, 2026-08-17). They never
+    // reach primer3, never reach a Tm or GC calculation, and never reach a
+    // genome alignment — the specificity checker must always be given the bare
+    // primer. lib/primer/PrimerTails.php enforces this by only ever ADDING keys.
+    //
+    // Entries here are MERGED OVER the built-ins in PrimerTails::BUILTIN (T4P and
+    // T7), matched by id — so reusing an id replaces that adapter rather than
+    // producing two entries with the same label. 'forward' goes on the forward
+    // primer, 'reverse' on the reverse one; they are independent sequences, NOT
+    // reverse complements of each other. A, C, G and T only: a tail is
+    // synthesised exactly as written, so an ambiguity code is unorderable.
+    //
+    //   'primer_tails' => [
+    //       [
+    //           'id'      => 'gateway_attb1',
+    //           'label'   => 'Gateway attB1 / attB2',
+    //           'forward' => 'GGGGACAAGTTTGTACAAAAAAGCAGGCT',
+    //           'reverse' => 'GGGGACCACTTTGTACAAGAAAGCTGGGT',
+    //           'note'    => 'For BP recombination into a Gateway donor vector.',
+    //       ],
+    //   ],
+    'primer_tails' => [],
+
     // ======== BLAST RESULT LINKOUTS ========
     // Controls which linkout buttons appear on BLAST hit results.
     // gene_page: link to parent.php if organism.sqlite exists for the assembly

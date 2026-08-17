@@ -61,14 +61,190 @@ UCSC ships in-silico PCR as one of its five main tools, so the demand is not nic
 - **Chaining**: a Check button per results row POSTs to Primer BLAST and it RUNS. Confirmed:
   "specific, spans 1 intron — cDNA 374 bp vs gDNA 3,469 bp".
 
-### ⏭️ Monday, in rough order
+### ✅ DONE 2026-08-07 — design options and 5′ tails
 
-1. **5′ cloning tails (T4P and "other").** The one substantial piece left. ⚠️ THE ORDERING IS
-   THE SPEC, not an accident — see PRODUCT SPEC §5 below: design on the bare template,
-   compute every statistic on the untailed primer, check specificity untailed, and only THEN
-   append and report BOTH forms. Tails must never reach Tm calculation or the genome check.
-   Also worth doing: search the tail alone against the assembly once and warn if it matches.
-2. **Genomic template — WIRING, not new capability.** ⚠️ I called this the biggest gap and
+**1. Design options are exposed** — primer length, Tm, GC content (each min/opt/max), GC clamp,
+max Tm difference within a pair, longest single-base run, and salt correction. Plus the
+original's **"as long as possible"** product sizing, which builds primer3's descending ladder
+(`675-900 450-900 225-900 100-900` for a 900 bp template — byte-identical to the Perl) instead
+of one wide range, because primer3 tries ranges IN ORDER and a single `100-900` will happily
+return 120 bp.
+
+Every box is **blank by default and blank means "use the primer type's value"**, shown as a
+placeholder that updates in the browser when the primer type changes. The field table, the
+bounds and the min ≤ opt ≤ max rules live in `Primer3Design::OPTIONS` / `::ORDERED`, so the
+form's `min`/`max` attributes and the server's validation are the same table.
+
+⚠️ **Bounds exist because two settings fail SILENTLY.** Measured against 2.6.1:
+`PRIMER_SALT_CORRECTIONS=3` and `PRIMER_GC_CLAMP=6` each return **zero pairs with no error and
+no explanation** — indistinguishable from "your sequence is difficult". Out-of-range values are
+therefore **rejected, never clamped**: silently substituting a number would run a design the
+user did not ask for and report it as theirs. Salt correction became a `<select>` for the same
+reason (the original took it as free text).
+
+Also verified against the binary, not the manual: `PRIMER_MAX_SIZE` caps at **36** (37 errors),
+and primer3's own defaults are GC clamp **0**, poly-X **5**, salt correction **1**, pair Tm
+difference **100** — confirmed by reproducing `PRIMER_PAIR_0_PENALTY=0.064143` with each set
+explicitly, which the wrong value does not.
+
+**2. 5′ tails ship** — `lib/primer/PrimerTails.php`, with T4P and a T7-both-ends adapter built
+in, a free-text custom option, and a `primer_tails` config key so a deployment can add more.
+
+⛔ **The user restated the rule on 2026-08-17 and it is now enforced by construction:** *"i dont
+want to add the oligos to the input, but only to the output. they should not be involved in the
+testing of the output alignment to the genome either. users should only add their primers minus
+oligos for the testing in our other tool."* `PrimerTails::apply()` **only ever ADDS keys** —
+`left_sequence`/`right_sequence` keep holding the bare primer — so the per-row Check button
+hands Primer BLAST the untailed pair without anyone having to remember to strip. Verified live,
+not by reading: the rendered form POSTs `TGCTTGCCTCAGGTGAGCCA` while the table beside it shows
+`CATTACCATCCCGTGCTTGCCTCAGGTGAGCCA`. There is a test that goes red if that ever changes.
+
+🚫 **The tail-vs-genome QC in the old §5 was BUILT AND THEN REMOVED**, because it puts a tail
+into a genome alignment, which the instruction above rules out. Keeping the measurement in case
+it is ever wanted: it is close to worthless anyway. Against Amphimedon (164 Mb), the 13-base T4P
+forward tail gives **2,509 raw blastn-short rows, 923 clearing a 75% length floor, and exactly
+ONE full-length perfect match** — against ~5 predicted by chance for a 13-mer. So the raw count
+is pure noise, and the meaningful count is unremarkable. Any future version must compare
+observed against expected-by-chance, never report a bare hit count.
+
+Both product sizes are reported (insert, and insert + both tails — the band you actually see),
+and a note fires when the tail pushes an oligo past 45 nt, where vendors charge more and suggest
+purification beyond desalting.
+
+**Also ported:** the original's **`SEQUENCE_TARGET`** field, as "Region to include" — the product
+must span a given `start,length`. ⚠️ The box is **1-based** (how a user reads a sequence) and
+primer3's tag is **0-based**; the conversion lives in `Primer3Design::parseTarget()` with a test,
+because an off-by-one would shift every amplicon by one base and nothing would ever report it.
+
+### 🐛 Five defects found while building this — all silent, none visible in a diff
+
+⭐ **Two of them were found by LOOKING AT A SCREENSHOT, not by reading code or running tests** —
+both live in the `<select>`, which is the one control that cannot express "left alone":
+
+1. 🚨 **The salt-correction select silently changed the Tm formula on every untouched submit.**
+   Every other option is blank-by-default and blank means "use the preset"; a `<select>` has no
+   blank state, so the browser preselected the FIRST entry — Schildkraut & Lifson (0) — while
+   primer3's default is SantaLucia (1). Submitting the form without touching anything therefore
+   designed with a formula the user never chose. **Material, not cosmetic:** on the test template
+   it returns `ACGCGCTCATTCCCTTGTCG` instead of `CGAAACTTGTTGGCCCAGTG` — a different primer, and
+   the second one is exactly what primer3 gives at its own default.
+2. **And no option was EVER marked selected**, because PHP coerces the numeric string keys
+   `'0'`/`'1'`/`'2'` of the options array to **integers**, so `$chosen === $value` compared a
+   string to an int and was always false. The chosen value did not survive a round trip either.
+   Both fixed; `(string)$value` in that comparison is load-bearing, not noise.
+
+   ➡️ **The general shape: any control with no empty state needs its default made explicit.**
+   Worth checking the other `<select>`s on the tool pages for the same thing.
+
+3. 🚨 **`PRIMER_EXPLAIN_FLAG` was never set**, so `PRIMER_*_EXPLAIN` was never emitted, so the
+   "No primers met the criteria. Primer3 says: …" message **read "no explanation given" every
+   single time**. It is now in `DEFAULTS`. This mattered much more once users could tighten Tm
+   and GC themselves — the explain counts are the only thing saying which knob to turn back.
+4. **The explanation shown was the wrong one.** The code preferred `PRIMER_PAIR_EXPLAIN`, but
+   when no individual primer survives, that line reads `considered 0, ok 0` — true and useless —
+   while the left/right lines carry the real tally. Now: use the pair line only when pairs were
+   actually considered, otherwise show forward and reverse. An impossible Tm now says
+   *"forward: considered 6408, GC content failed 1878, low tm 4530, ok 0"*.
+5. **`$none + ['errors' => [...]]` threw the error away.** PHP's `+` keeps the LEFT operand for a
+   duplicate key, and `$none` already had an empty `errors` — so an unknown tail id resolved to
+   a clean "no tail" and designed untailed primers **saying nothing**. Caught by a test, not by
+   reading the line. `array_merge` now.
+
+### 🚨 SEQUENCE MARKUP, AND THE OFF-BY-ONE IT UNCOVERED (2026-08-07)
+
+**`|` and `[ ]` can now be typed into the sequence**, parsed by `lib/primer/SequenceMarkup.php`:
+
+- `|` — a primer must CROSS this point. `ACGT|ACGT` = junction follows base 4.
+- `[ ]` — every product must CONTAIN this stretch. Equivalent to the "Region to include" box;
+  using both at once is an **error**, not a silent precedence rule.
+- `-` is accepted too (the old CGI split on it) but always reported, because a dash is also the
+  gap character in an alignment and would otherwise create junctions silently.
+
+⭐ **`|` IS NOT AN RT-PCR FEATURE** (user: *"i think a mark to indicate a primer must be here would
+be useful for more than just qrt primers"*). primer3's tag is `SEQUENCE_OVERLAP_JUNCTION_LIST` —
+generic. It works on every primer type; a fusion breakpoint, a vector/insert boundary and a
+scaffold join all want it. RT-PCR is simply the case where MOOP fills the marks in for you.
+Verified live on a **Standard PCR** run: one `|` at 450 and the reverse primer lands across it.
+
+⚠️ **Multiple marks are free.** primer3 requires a primer to cross AT LEAST ONE and ignores the
+rest — measured: `3 450 880` gives byte-identical output to `450` alone, since 3 and 880 are too
+near the ends. No selection logic on our side.
+
+🚨 **THE OFF-BY-ONE — every RT-PCR junction was one base wrong, and had been all along.**
+primer3's manual prints `SEQUENCE_OVERLAP_JUNCTION_LIST=20 # 1-based indexes` beside an example
+whose junction follows the 20th base. **2.6.1 does not behave that way.** Holding a junction at
+450 and lowering `PRIMER_MIN_3_PRIME_OVERLAP_OF_JUNCTION` from 4 to 3 moved the chosen primer's
+edge from 3 bases left of base 450 to 2 — always exactly one fewer than the constraint demands.
+So primer3 counts the junction as following base **N+1**; the values are effectively 0-based.
+
+`ExonMap` passes the cumulative exon length (the 1-based last base of the exon), so **every
+junction was enforced one base 3′ of the true boundary.** The primer still *looks* like it spans —
+it just has one fewer genuine base on the far side than the constraint promised, which is exactly
+the margin that decides whether it rejects genomic DNA. Nothing in the output would ever say so.
+Corroborated by the phase-2 record above: *"junctions at 156 and 475, reverse primer spans
+473-492"* → 3 bases past 475, the same signature.
+
+**Fixed in ONE place** — `Primer3Design::buildInput()` emits `K−1`; callers everywhere speak
+"the junction follows 1-based base K". Confirmed live: the primer moved from 448..468 to
+**447..468**, now exactly meeting the documented minimum of 4. The old test asserted `=156 475`
+and was wrong; it now asserts `=155 474` and goes red against the previous behaviour.
+
+🚨 **AND: we never checked the sequence was the transcript we looked up.** The exon index is keyed
+by the FASTA header — text in a textarea. Keeping the header `>XM_001626548.3` and pasting an
+unrelated 900 bp sequence reported *"5 exon junctions found"* and designed primers from a 1,332 bp
+transcript's positions. ⭐ **A "came from a gene page" flag would NOT have fixed it** — provenance
+survives an edit; the bases do not. Now the stored transcript is re-read and compared, and on a
+mismatch the index is refused with a message telling the user to mark junctions with `|`.
+
+**Also exposed:** `PRIMER_MIN_5_PRIME_OVERLAP_OF_JUNCTION` / `..._3_PRIME_...` (defaults confirmed
+7 and 4 by reproducing the identical primer with them set explicitly). The 3′ default of 4 is a
+thin margin — 4 bases hanging over the boundary still anneal to genomic DNA reasonably well — so
+it is worth raising when a junction pair has to be strict.
+
+Two ordering bugs found by driving it: an unclosed `[` reported *"that sequence is too short"*
+(parse returns an empty sequence, so the length check fired first), and the `[ ]`-plus-box
+conflict printed the error **and** a note claiming the region had been applied.
+
+### 🎨 The "More options" toggle, and the invisible icons behind it (2026-08-07)
+
+User: *"where you click to get more options. lets write More options (Primer Length, Tm, and
+more). can we make it obvious that it will expand/open on click"*. It was a `.btn-link` labelled
+"Primer length, Tm and GC content", which reads as a section **heading**, not a control. Now the
+same idiom as `blast.php`'s Advanced Options: full-width `.btn-outline-moop` (css/moop.css
+already records that Bootstrap's grey outline is *"indistinguishable from disabled text on a page
+whose every other control carries colour"*), label left, chevron right.
+
+The chevron is a new **shared** `.collapse-chevron` in `css/moop.css`, rotated purely by
+`[aria-expanded="true"]`, which Bootstrap maintains — so the arrow cannot disagree with the panel
+and no JS is involved. Two idioms already existed and neither was reusable: `blast.php` rotates
+`.adv-chevron` from a page-local `<style>` plus two JS listeners, and `display.css` keys
+`.browse-select-chevron` off aria-expanded but names it after one specific header. **Reach for
+`.collapse-chevron` rather than starting a fourth.**
+
+🚨 **And the icon in that button was invisible — as were five others already on the page.**
+`css/fontawesome/all.css` is **Font Awesome 5**, and a name it does not know renders as
+**nothing**: `content: none`, width 0, no error, no missing-glyph box. `fa-sliders`,
+`fa-wand-magic-sparkles`, `fa-circle-info`, `fa-circle-check`, `fa-triangle-exclamation` and
+`fa-circle-exclamation` were all blank and all shipped. Fixed on both primer pages (8 replacements
+each); mappings verified by asking the **browser** for `::before` content, not by reading a
+migration table.
+
+⚠️ **Do not size this with grep.** Matching `fa-[a-z-]*` against `all.css` says 32 names across 57
+files, but that sweeps in **modifier classes with no glyph of their own** — `fa-spin` alone is 42
+of them, plus `fa-fw`, `fa-xs`, `fa-2x`. CLAUDE.md §12b, exactly. The reliable test walks the
+rendered DOM for `getComputedStyle(el,'::before').content === 'none'`. Measured that way, the two
+primer pages and `downloads` are clean; **`index.php`, `blast.php`, `search.php` and
+`moopmart.php` still show blank icons** (5 distinct names) — a lower bound, since conditional
+markup never renders during a sweep. Not fixed here: outside the primer tool, and worth its own
+commit. See [[bug_fontawesome_5_vs_6_icon_names]].
+
+Plus one guard: **a newline inside a boulder-IO value truncates the record silently** — primer3
+echoes the tags up to that point, emits no primers, no `PRIMER_ERROR`, and **exits 0**. No
+current caller can produce one, but the failure is invisible and the guard is one `str_replace`.
+
+### ⏭️ Next, in rough order
+
+1. **Genomic template — WIRING, not new capability.** ⚠️ I called this the biggest gap and
    that was wrong; the user pointed out MOOP already gets genomic sequence three ways, and
    none of them needs writing:
 
@@ -92,14 +268,14 @@ UCSC ships in-silico PCR as one of its five main tools, so the demand is not nic
 
    ⭐ Whichever is chosen, note the gene-structure button is the one already sitting next to
    what a user is looking at when they think "I want primers for this gene".
-3. **Should Retrieve Sequences offer the hand-off too?** It shares
+2. **Should Retrieve Sequences offer the hand-off too?** It shares
    `tools/sequences_display.php`; the button is opted into by the gene page alone
    (`$enable_primer_design`). User raised this and it is unresolved.
-4. **Multi-record input.** Only the first FASTA record is used. The results table and the
+3. **Multi-record input.** Only the first FASTA record is used. The results table and the
    junction logic both need to say WHICH sequence a row came from before that changes.
-5. Dash-separated pasted sequence as an alternative junction marker (`runPrimer3_web.pl`
+4. Dash-separated pasted sequence as an alternative junction marker (`runPrimer3_web.pl`
    trick), for users without a registered transcript.
-6. Port the rest of the Perl properly — ⚠️ `/home/smr/primer3_tab` targets primer3 **1.x**:
+5. Port the rest of the Perl properly — ⚠️ `/home/smr/primer3_tab` targets primer3 **1.x**:
    `PRIMER_SEQUENCE_ID`→`SEQUENCE_ID`, `SEQUENCE`→`SEQUENCE_TEMPLATE`,
    `PRIMER_SELF_ANY`→`PRIMER_LEFT_0_SELF_ANY_TH`. Transliterating finds primers but never the
    record they belong to. Build against real 2.6.1 output.

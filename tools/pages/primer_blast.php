@@ -346,7 +346,7 @@ $db_section_label = function ($key) {
                     <i class="fa fa-search"></i> Check primers
                 </button>
                 <button type="button" class="btn btn-outline-secondary" id="resetPrimerForm">
-                    <i class="fa fa-rotate-left"></i> Clear form
+                    <i class="fa fa-undo"></i> Clear form
                 </button>
                 <span class="text-muted small">Clears the primers, the assembly, and the options.</span>
             </div>
@@ -510,7 +510,7 @@ $db_section_label = function ($key) {
                         ?>
                         <?php if ($no_gdna): ?>
                             <div class="small mb-3">
-                                <i class="fa fa-circle-check text-success"></i>
+                                <i class="fa fa-check-circle text-success"></i>
                                 <span class="text-success-emphasis">No genomic product</span>
                                 <span class="text-muted">— genomic DNA in the sample would not amplify at
                                 all.
@@ -530,16 +530,16 @@ $db_section_label = function ($key) {
                                   // count is read off the mapping and can be stated outright. ?>
                             <div class="small mb-3">
                                 <?php if (!empty($t_mapped) && $t_mapped['introns'] > 0): ?>
-                                    <i class="fa fa-circle-info text-success"></i>
+                                    <i class="fa fa-info-circle text-success"></i>
                                     <span class="text-success-emphasis">Spans <?= (int)$t_mapped['introns'] ?>
                                         intron<?= $t_mapped['introns'] === 1 ? '' : 's' ?></span>
                                     <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
                                 <?php elseif ($g_size > $t_size): ?>
-                                    <i class="fa fa-circle-info text-success"></i>
+                                    <i class="fa fa-info-circle text-success"></i>
                                     <span class="text-success-emphasis">Likely spans an intron</span>
                                     <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
                                 <?php else: ?>
-                                    <i class="fa fa-circle-info text-warning"></i>
+                                    <i class="fa fa-info-circle text-warning"></i>
                                     <span class="text-warning-emphasis">No intron between the primers</span>
                                     <span class="text-muted">— cDNA and gDNA products are both <?= number_format($t_size) ?> bp</span>
                                 <?php endif; ?>
@@ -640,7 +640,7 @@ $db_section_label = function ($key) {
                                                               // and compactly -- the loop icon carries the idea, the popover
                                                               // and the Results help carry the explanation. ?>
                                                         <span class="badge bg-danger" title="<?= htmlspecialchars($prod['primers'][0]) ?> primer at both ends">
-                                                            <i class="fa fa-repeat"></i> <?= htmlspecialchars($prod['primers'][0]) ?> self-pairing
+                                                            <i class="fa fa-redo"></i> <?= htmlspecialchars($prod['primers'][0]) ?> self-pairing
                                                         </span>
                                                         <?= field_help(
                                                             'Both ends of this product use the SAME primer, not one of each. '
@@ -658,7 +658,7 @@ $db_section_label = function ($key) {
                                                               // Stated here so it does not depend on the reader
                                                               // opening the browser to notice. ?>
                                                         <span class="badge bg-success" title="A primer sits across an exon-exon junction">
-                                                            <i class="fa fa-scissors"></i> junction primer
+                                                            <i class="fa fa-cut"></i> junction primer
                                                         </span>
                                                         <?= field_help(
                                                             'One of these primers sits across an exon-exon junction — half of it '
@@ -973,7 +973,7 @@ echo help_modal(
             [
                 'label' => 'Self-pairing',
                 'html'  => true,
-                'text'  => 'Marked <span class="badge bg-danger"><i class="fa fa-repeat"></i> reverse self-pairing</span>. '
+                'text'  => 'Marked <span class="badge bg-danger"><i class="fa fa-redo"></i> reverse self-pairing</span>. '
                          . 'One primer can match twice on opposite strands, facing itself, and amplify the '
                          . 'fragment between — so both ends of that product are the same oligo, and the other '
                          . 'primer is not involved at all. A real source of unexpected bands, and one you '
