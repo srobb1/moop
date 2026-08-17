@@ -46,7 +46,7 @@
               <input type="password" class="form-control form-control-lg" id="password" name="password" required>
             </div>
             <button type="submit" class="btn btn-primary btn-lg w-100">
-              <i class="fa fa-sign-in"></i> Login
+              <i class="fa fa-sign-in-alt"></i> Login
             </button>
           </form>
         </div>

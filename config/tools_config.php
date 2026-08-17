@@ -119,7 +119,7 @@ return [
     'primer_maker' => [
         'id'             => 'primer_maker',
         'name'           => 'Primer Maker',
-        'icon'           => 'fa-wand-magic-sparkles',
+        'icon'           => 'fa-magic',
         'description'    => 'Design PCR, qPCR, RT-PCR or sequencing primers from a sequence',
         'btn_class'      => 'btn-tool-indigo',
         'url_path'       => '/tools/primer_maker.php',

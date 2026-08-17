@@ -136,7 +136,7 @@
 
   <!-- Section 2: File Organization -->
   <section id="file-organization" class="mt-5">
-    <h4 class="fw-semibold mb-3"><i class="fa fa-folder-tree me-2"></i>File Organization</h4>
+    <h4 class="fw-semibold mb-3"><i class="fa fa-folder-open me-2"></i>File Organization</h4>
 
     <div class="alert alert-light border">
       <strong>Root directory:</strong> <code>organisms/</code> (symlinked from <code>/data/moop/organisms/</code>)

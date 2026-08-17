@@ -350,7 +350,7 @@
                 <button type="button" class="btn btn-sm moop-data-btn" id="toggle-all-transcripts"
                         data-state="expanded"
                         title="Collapse every transcript so the list fits on one screen">
-                    <i class="fas fa-compress-alt me-1"></i><span class="label">Collapse all</span>
+                    <i class="fas fa-compress me-1"></i><span class="label">Collapse all</span>
                 </button>
                 <?php endif; ?>
                 <a href="/<?= htmlspecialchars($config->getString('site', 'moop')) ?>/api/download_annotations.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($feature_uniquename) ?>"

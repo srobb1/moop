@@ -828,7 +828,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-warning">
       <div class="modal-header bg-warning bg-opacity-10 py-2">
-        <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Select all organisms?</h5>
+        <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i>Select all organisms?</h5>
       </div>
       <div class="modal-body">
         This will select all <strong id="mm-select-all-count"></strong> across all organisms.
@@ -847,7 +847,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-warning">
       <div class="modal-header bg-warning bg-opacity-10 py-2">
-        <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Export every feature?</h5>
+        <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i>Export every feature?</h5>
       </div>
       <div class="modal-body">
         No filters are set in Step 2, so this exports <strong>every feature</strong> across

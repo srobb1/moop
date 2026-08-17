@@ -350,7 +350,7 @@
         btn.dataset.origHtml = orig;
         btn.innerHTML = ok
             ? '<i class="fas fa-check me-1"></i>Copied!'
-            : '<i class="fas fa-triangle-exclamation me-1"></i>Copy failed — select and press Ctrl+C';
+            : '<i class="fas fa-exclamation-triangle me-1"></i>Copy failed — select and press Ctrl+C';
         setTimeout(() => { btn.innerHTML = orig; }, ok ? 2000 : 4000);
     }
 
@@ -511,7 +511,7 @@
             </button>
             <button class="btn btn-sm btn-outline-secondary ms-auto" id="sf-reset"
                     title="Put every highlight, case and style control back to how it was when this opened">
-              <i class="fas fa-rotate-left me-1"></i>Reset
+              <i class="fas fa-undo me-1"></i>Reset
             </button>
             <small class="text-muted ms-1">Rich text preserves highlight and style when pasting into Word or Google&nbsp;Docs.</small>
           </div>

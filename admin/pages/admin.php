@@ -228,7 +228,7 @@
       <button type="button" id="recheckPermissionsBtn"
               class="btn btn-sm btn-outline-<?= $cls ?>"
               data-task="permission_check">
-        <i class="fa fa-rotate"></i> Re-check now
+        <i class="fa fa-sync"></i> Re-check now
       </button>
     </div>
   </div>

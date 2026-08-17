@@ -143,7 +143,7 @@ if ($has_health_issues):
     <div class="alert alert-danger mb-0 border-0 rounded-0 <?= $_after_orphaned_jb ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
       <?php if ($orphaned_jbrowse_systemic): ?>
       <div>
-        <i class="fa fa-plug-circle-exclamation me-2"></i>
+        <i class="fa fa-plug me-2"></i>
         <strong>Organism data appears to be unavailable.</strong>
         All <?= $health_alerts['orphaned_jbrowse'] ?> JBrowse registrations report missing source
         data at once, which points at the <code>organisms/</code> directory itself rather than at

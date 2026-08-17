@@ -81,7 +81,7 @@ $routes = $data['routes'] ?? [];
                        when two pages were combined. */ ?>
               <?php foreach ((array)($r['reached_by'] ?? []) as $how): ?>
                 <span class="small text-muted align-self-start d-block">
-                  <i class="fa fa-circle-info me-1"></i><?= htmlspecialchars($how) ?>
+                  <i class="fa fa-info-circle me-1"></i><?= htmlspecialchars($how) ?>
                 </span>
               <?php endforeach; ?>
             <?php endif; ?>

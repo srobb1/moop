@@ -388,7 +388,7 @@
   <?php endif; ?>
 
   <!-- Manage Group Descriptions Section -->
-  <h3 class="mt-5 mb-4"><i class="fa fa-file-text"></i> Group Descriptions</h3>
+  <h3 class="mt-5 mb-4"><i class="fa fa-file-alt"></i> Group Descriptions</h3>
 
   <?php 
     echo generatePermissionAlert(

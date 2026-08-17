@@ -68,7 +68,7 @@ $(document).ready(function () {
 
         $btn.attr('data-state', collapsing ? 'collapsed' : 'expanded');
         $btn.find('.label').text(collapsing ? 'Expand all' : 'Collapse all');
-        $btn.find('i').attr('class', collapsing ? 'fas fa-expand-alt me-1' : 'fas fa-compress-alt me-1');
+        $btn.find('i').attr('class', collapsing ? 'fas fa-expand me-1' : 'fas fa-compress me-1');
         $btn.attr('title', collapsing
             ? 'Expand every transcript again'
             : 'Collapse every transcript so the list fits on one screen');

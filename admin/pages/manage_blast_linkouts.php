@@ -250,7 +250,7 @@
           <?php if (!empty($orphan_registrations)): ?>
             <div class="alert alert-warning rounded-0 border-0 border-bottom mb-0">
               <h6 class="alert-heading">
-                <i class="fa fa-triangle-exclamation"></i>
+                <i class="fa fa-exclamation-triangle"></i>
                 <?= count($orphan_registrations) ?> JBrowse
                 <?= count($orphan_registrations) === 1 ? 'registration is' : 'registrations are' ?>
                 not listed below

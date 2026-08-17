@@ -126,7 +126,7 @@
 
   <!-- Section 2: Detailed Setup Steps -->
   <section id="setup-steps" class="mt-5">
-    <h3><i class="fa fa-list-check"></i> Detailed Setup Steps</h3>
+    <h3><i class="fa fa-tasks"></i> Detailed Setup Steps</h3>
 
     <h4 class="mt-4">Step 1: Prepare & Copy Files</h4>
     <div class="card mb-4">
@@ -763,7 +763,7 @@ Display results with:
 
   <!-- Section 5: Parent Page -->
   <section id="parent-page" class="mt-5">
-    <h3><i class="fa fa-circle-nodes"></i> Feature Detail Page (Parent Page)</h3>
+    <h3><i class="fa fa-project-diagram"></i> Feature Detail Page (Parent Page)</h3>
 
     <h4 class="mt-4">What is the Parent Page?</h4>
     <div class="card mb-4">
@@ -1154,7 +1154,7 @@ ORDER BY feature_name;</code></pre>
         in progress.</p>
 
         <div class="alert alert-warning mt-3">
-          <strong><i class="fa fa-triangle-exclamation"></i> Note:</strong> If the web server user
+          <strong><i class="fa fa-exclamation-triangle"></i> Note:</strong> If the web server user
           (<code>apache</code> or <code>www-data</code>) does not have write permission to the
           cache file location, cache updates will silently fail and data will always appear stale.
           Verify filesystem permissions with <strong>Admin → Manage Filesystem Permissions</strong>.

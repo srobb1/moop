@@ -1122,7 +1122,7 @@ function render_status_modal($organism, $data, $groups_data, $taxonomy_tree_file
       <div class="card mb-3">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0"><i class="fa fa-list-check"></i> <strong>Setup Checklist</strong></h6>
+            <h6 class="mb-0"><i class="fa fa-tasks"></i> <strong>Setup Checklist</strong></h6>
             <span class="badge <?= $status['all_pass'] ? 'bg-success' : 'bg-warning text-dark' ?> fs-6"><?= $pass_count ?>/<?= $status['total_count'] ?> Complete</span>
           </div>
           <div class="list-group">

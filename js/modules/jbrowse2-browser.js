@@ -114,7 +114,7 @@
                 : `<span class="small font-monospace">${asm}</span>`;
             return `<div class="jb-asm-row px-3 py-2 border-bottom d-flex align-items-center gap-2"
                  style="cursor:pointer;" data-asm="${asm}">
-              <i class="fas fa-circle-dot text-muted small jb-asm-radio"></i>
+              <i class="fas fa-dot-circle text-muted small jb-asm-radio"></i>
               <div>${label}</div>
             </div>`;
         }).join('');
@@ -133,12 +133,12 @@
         document.querySelectorAll('.jb-asm-row.jb-selected').forEach(r => {
             r.classList.remove('jb-selected');
             r.style.background = '';
-            r.querySelector('.jb-asm-radio')?.setAttribute('class', 'fas fa-circle-dot text-muted small jb-asm-radio');
+            r.querySelector('.jb-asm-radio')?.setAttribute('class', 'fas fa-dot-circle text-muted small jb-asm-radio');
         });
 
         row.classList.add('jb-selected');
         row.style.background = 'rgba(8,145,178,0.08)';
-        row.querySelector('.jb-asm-radio')?.setAttribute('class', 'fas fa-circle-dot small jb-asm-radio');
+        row.querySelector('.jb-asm-radio')?.setAttribute('class', 'fas fa-dot-circle small jb-asm-radio');
         row.querySelector('.jb-asm-radio').style.color = '#0891b2';
 
         selectedAsm = asm;

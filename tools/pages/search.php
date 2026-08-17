@@ -370,7 +370,7 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content border-warning">
         <div class="modal-header bg-warning bg-opacity-10 py-2">
-          <h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Select all organisms?</h5>
+          <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i>Select all organisms?</h5>
         </div>
         <div class="modal-body">
           This will select all <strong id="select-all-orgs-count"></strong> organisms.

@@ -609,7 +609,7 @@ function generateRegistry() {
     .then(response => response.json())
     .then(data => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa fa-refresh"></i> Generate/Update Registry';
+        btn.innerHTML = '<i class="fa fa-sync"></i> Generate/Update Registry';
         
         if (data.success) {
             // Show success message
@@ -636,7 +636,7 @@ function generateRegistry() {
     })
     .catch(error => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa fa-refresh"></i> Generate/Update Registry';
+        btn.innerHTML = '<i class="fa fa-sync"></i> Generate/Update Registry';
         
         if (msg) {
             msg.innerHTML = '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +

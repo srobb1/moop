@@ -47,7 +47,7 @@ function updateRegistry(type) {
         
         const timestampEl = document.querySelector('#' + type + 'Result').previousElementSibling;
         if (timestampEl && timestampEl.textContent.includes('Last updated')) {
-          timestampEl.innerHTML = '<i class="fa fa-clock-o"></i> Last updated: <strong>' + timestamp + '</strong>';
+          timestampEl.innerHTML = '<i class="fa fa-clock"></i> Last updated: <strong>' + timestamp + '</strong>';
         }
         
         setTimeout(() => {

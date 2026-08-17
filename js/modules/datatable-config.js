@@ -116,7 +116,7 @@ const DataTableExportConfig = {
             if ($buttons.length) $buttons.after($note);
             else                 $container.prepend($note);
         }
-        $note.html('<i class="fa fa-circle-info me-1"></i> ' + message).css('display', 'flex');
+        $note.html('<i class="fa fa-info-circle me-1"></i> ' + message).css('display', 'flex');
         clearTimeout($note.data('hide-timer'));
         $note.data('hide-timer', setTimeout(() => $note.fadeOut(200), 8000));
     },

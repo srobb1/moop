@@ -50,7 +50,7 @@ $statusMessage = $statusMessage ?? '';
             <div class="row mb-3">
                 <div class="col-md-6">
                     <button class="btn btn-primary w-100" onclick="generateRegistry()" id="generateBtn" data-registry-type="js">
-                        <i class="fa fa-refresh"></i> Generate/Update Registry
+                        <i class="fa fa-sync"></i> Generate/Update Registry
                     </button>
                 </div>
                 <div class="col-md-6">
@@ -60,7 +60,7 @@ $statusMessage = $statusMessage ?? '';
                 </div>
             </div>
             <small class="text-muted">
-                <i class="fa fa-clock-o"></i> Last updated: <strong><?php echo $lastUpdate; ?></strong>
+                <i class="fa fa-clock"></i> Last updated: <strong><?php echo $lastUpdate; ?></strong>
                 <?php if ($registry): ?>
                     <?php if ($isStale): ?>
                         <span class="badge bg-warning text-dark ms-2" title="Some JavaScript files are newer than the registry">
@@ -80,7 +80,7 @@ $statusMessage = $statusMessage ?? '';
     <!-- Statistics -->
     <div class="card mb-4">
         <div class="card-header adm-head">
-            <h5 class="mb-0"><i class="fa fa-bar-chart"></i> Statistics</h5>
+            <h5 class="mb-0"><i class="fa fa-chart-bar"></i> Statistics</h5>
         </div>
         <div class="card-body">
             <div class="row text-center">
@@ -195,7 +195,7 @@ $statusMessage = $statusMessage ?? '';
     <?php if (!$registry): ?>
         <!-- No Registry Alert -->
         <div class="alert alert-warning">
-            <i class="fa fa-warning"></i> Registry not yet generated. Click "Generate Registry" to create it.
+            <i class="fa fa-exclamation-triangle"></i> Registry not yet generated. Click "Generate Registry" to create it.
         </div>
     <?php else: ?>
         <!-- Registry Content -->

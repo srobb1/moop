@@ -108,7 +108,7 @@
                         <?php endforeach; ?>
                     </select>
                     <div id="blastn-short-notice" class="alert alert-info py-2 mt-2 small mb-0 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>">
-                        <i class="fa fa-circle-info me-1"></i>
+                        <i class="fa fa-info-circle me-1"></i>
                         Optimized for short sequences: word size 7, E-value 1000, adjusted gap costs, no low-complexity filter.
                         Advanced options have been pre-filled — you can override them.
                         <?php // Plain '&' -- help_modal_trigger() escapes the label itself. ?>
@@ -173,7 +173,7 @@
                               // most obviously are adjusted. ?>
                         <span id="adv-modified-badge" class="badge rounded-pill ms-2 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>"
                               style="background-color:#cff4e4; color:#0f5132; font-weight:600;">
-                            <i class="fa fa-circle-check me-1"></i>Adjusted for short sequences
+                            <i class="fa fa-check-circle me-1"></i>Adjusted for short sequences
                         </span>
                     </span>
                     <i class="fa fa-chevron-down adv-chevron" style="font-size:0.8rem; transition:transform 0.2s;"></i>
@@ -183,7 +183,7 @@
                     <div class="card card-body">
                         <!-- blastn-short preset notice -->
                         <div id="adv-short-notice" class="d-none mb-3 small fw-semibold" style="color:#0891b2;">
-                            <i class="fa fa-circle-check me-1"></i>Optimized for short searches — highlighted parameters have been adjusted.
+                            <i class="fa fa-check-circle me-1"></i>Optimized for short searches — highlighted parameters have been adjusted.
                         </div>
                         <!-- Basic Parameters -->
                         <div class="row">
@@ -343,7 +343,7 @@
                     <div class="text-center mt-2">
                         <a href="<?= htmlspecialchars('/' . $site . '/tools/blast.php') ?>"
                            class="btn btn-sm btn-link text-secondary" id="resetBlastBtn">
-                            <i class="fa fa-rotate-left me-1"></i>Clear form and start over
+                            <i class="fa fa-undo me-1"></i>Clear form and start over
                         </a>
                     </div>
                     <?php /* Inline "uh-oh" for a missed assembly/database, in place of a browser
@@ -353,7 +353,7 @@
                                  up-arrow bakes in one layout: the steps stack on a narrow
                                  window but sit differently on a wide one, and the arrow is
                                  then pointing at nothing. A step number does not move. */ ?>
-                        <i class="fa fa-circle-exclamation me-1"></i> Choose an organism and database in step 3 before running BLAST.
+                        <i class="fa fa-exclamation-circle me-1"></i> Choose an organism and database in step 3 before running BLAST.
                     </div>
                 </div>
             </div>

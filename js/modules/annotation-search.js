@@ -207,7 +207,7 @@ class AnnotationSearch {
             modalEl.innerHTML =
                 '<div class="modal-dialog modal-dialog-centered"><div class="modal-content">' +
                 '<div class="modal-header py-2">' +
-                  '<h5 class="modal-title fw-bold"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Search every organism?</h5>' +
+                  '<h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i>Search every organism?</h5>' +
                   '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
                 '</div>' +
                 '<div class="modal-body">' +

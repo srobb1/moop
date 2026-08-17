@@ -25,7 +25,7 @@
             variants, and more.
           </p>
           
-          <h5 class="mt-4"><i class="fa fa-list-check text-success"></i> Installation Steps</h5>
+          <h5 class="mt-4"><i class="fa fa-tasks text-success"></i> Installation Steps</h5>
           <div class="alert alert-info">
             <strong>Note:</strong> Installation requires command-line access to the server.
           </div>
@@ -48,7 +48,7 @@
               <a href="https://github.com/NAL-i5K/jbrowse2-server-install" 
                  class="btn btn-primary" 
                  target="_blank">
-                <i class="fa fa-external-link"></i> View JBrowse2 Installation Guide
+                <i class="fa fa-external-link-alt"></i> View JBrowse2 Installation Guide
               </a>
             </li>
             
@@ -143,7 +143,7 @@
                 <td><code>jbrowse2/index.html</code></td>
               </tr>
               <tr>
-                <td><i class="fa fa-folder-tree text-muted"></i> Core libraries</td>
+                <td><i class="fa fa-folder-open text-muted"></i> Core libraries</td>
                 <td>
                   <?php 
                   $has_jbrowse = is_dir($site_path . '/jbrowse2/@jbrowse');

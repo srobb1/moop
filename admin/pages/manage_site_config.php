@@ -241,7 +241,7 @@
                         </small>
 
                         <div class="alert alert-light border mt-3 mb-0 small">
-                            <p class="mb-2"><strong><i class="fa fa-circle-info"></i> What the file name means</strong></p>
+                            <p class="mb-2"><strong><i class="fa fa-info-circle"></i> What the file name means</strong></p>
                             <p class="mb-2">
                                 This is the <strong>exact file name</strong> that every organism must use for this
                                 sequence type. It is not a search pattern and not a wildcard — the site looks for
@@ -257,7 +257,7 @@
                                     &nbsp;<span class="text-danger fw-semibold">not found</span></li>
                             </ul>
                             <p class="mb-2">
-                                <i class="fa fa-triangle-exclamation text-warning"></i>
+                                <i class="fa fa-exclamation-triangle text-warning"></i>
                                 Changing this changes what the site looks for <strong>everywhere at once</strong> —
                                 BLAST databases, FASTA downloads and sequence search all use it. It does not rename
                                 anything on disk, so a new name only works once every organism's files already use it.
@@ -289,7 +289,7 @@
                         </div>
 
                         <div class="alert alert-light border small mb-3">
-                            <p class="mb-2"><strong><i class="fa fa-shuffle"></i> How the banner is chosen</strong></p>
+                            <p class="mb-2"><strong><i class="fa fa-random"></i> How the banner is chosen</strong></p>
                             <ul class="mb-2">
                                 <li><strong>The home page always shows the image selected below</strong>, so the
                                     site's front door looks the same on every visit.</li>
@@ -301,7 +301,7 @@
                             </ul>
                             <p class="mb-0">
                                 <?php $_bn = count($banner_images ?? []); ?>
-                                <i class="fa fa-circle-info"></i>
+                                <i class="fa fa-info-circle"></i>
                                 <strong><?= $_bn ?> image<?= $_bn === 1 ? '' : 's' ?></strong> in the rotation.
                             </p>
                         </div>

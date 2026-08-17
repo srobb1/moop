@@ -291,7 +291,7 @@ if (!empty($sequence_errors)) {
                                         'primer_type' => $seq_type === 'transcript' ? 'rtpcr' : 'standard',
                                     ]);
                             echo '      <a href="' . htmlspecialchars($pd_url) . '" class="btn btn-sm btn-tool-indigo mb-2">'
-                               . '<i class="fa fa-wand-magic-sparkles me-1"></i>Design primers from this sequence</a>';
+                               . '<i class="fa fa-magic me-1"></i>Design primers from this sequence</a>';
                         }
 
                         echo '      <div class="card bg-light">';

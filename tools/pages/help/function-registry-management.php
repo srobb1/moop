@@ -18,7 +18,7 @@
 
   <div class="row justify-content-center">
     <div class="col-lg-9">
-      <h1 class="fw-bold mb-4"><i class="fa fa-list-check"></i> Function Registry Management</h1>
+      <h1 class="fw-bold mb-4"><i class="fa fa-tasks"></i> Function Registry Management</h1>
 
       <!-- Overview Section -->
       <div class="card shadow-sm border-0 rounded-3 mb-4">

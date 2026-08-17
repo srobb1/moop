@@ -101,7 +101,7 @@
             <?php if ($dir_error): ?>
                 <div class="alert alert-danger alert-dismissible fade show">
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    <h4><i class="fa fa-folder-times"></i> Directory Setup Required</h4>
+                    <h4><i class="fa fa-folder-minus"></i> Directory Setup Required</h4>
                     
                     <?php if ($dir_error['type'] === 'missing'): ?>
                         <p><strong>Problem:</strong> The image cache directory does not exist.</p>

@@ -59,7 +59,7 @@
 
   <!-- Checklist Steps -->
   <div class="mt-5">
-    <h3 class="mb-3"><i class="fa fa-list-check"></i> Setup Steps</h3>
+    <h3 class="mb-3"><i class="fa fa-tasks"></i> Setup Steps</h3>
 
     <?php
     // Load all organisms in system once (used by all steps)

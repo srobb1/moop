@@ -1085,7 +1085,7 @@ Optimal with BLAST = Cores × 2 (hyperthreading helps)</code></pre>
 
   <!-- Section 6: Monitoring -->
   <section id="monitoring" class="mt-5">
-    <h3><i class="fa fa-bar-chart"></i> Monitoring & Alerts</h3>
+    <h3><i class="fa fa-chart-bar"></i> Monitoring & Alerts</h3>
 
     <h4 class="mt-4">Key Metrics to Monitor</h4>
     <div class="row">

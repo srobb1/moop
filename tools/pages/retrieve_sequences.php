@@ -148,7 +148,7 @@
                     <div id="retrieve-select-hint" class="tools-select-hint small mt-2" style="display:none;">
                         <?php /* Step number, not a direction — see the note on the same hint
                                  in blast.php. */ ?>
-                        <i class="fa fa-circle-exclamation me-1"></i> Choose an organism and assembly in step 1 before retrieving.
+                        <i class="fa fa-exclamation-circle me-1"></i> Choose an organism and assembly in step 1 before retrieving.
                     </div>
                 </div>
             </div>

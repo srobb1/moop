@@ -28,7 +28,7 @@
 
   <?php if ($file_write_error): ?>
     <div class="alert alert-warning">
-      <i class="fa fa-triangle-exclamation me-1"></i>
+      <i class="fa fa-exclamation-triangle me-1"></i>
       <strong>Read-only:</strong> the web server cannot write the glossary file
       (<code><?= htmlspecialchars($glossary_file) ?></code>). Editing is disabled until this is
       fixed. Run:
