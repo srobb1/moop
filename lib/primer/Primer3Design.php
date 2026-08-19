@@ -532,6 +532,45 @@ class Primer3Design
     }
 
     /**
+     * The amplicon: the stretch of template this pair actually copies.
+     *
+     * DERIVED, not parsed — primer3 reports a product's SIZE but never its
+     * sequence. parseOutput has already converted both coordinates to 1-based
+     * inclusive, including the reverse primer's awkward "5' end is the highest
+     * base" convention, so the span is a plain substr rather than a strand
+     * argument re-litigated at every call site.
+     *
+     * ⚠️ RETURNS '' RATHER THAN A GUESS when the coordinates and product_size
+     * disagree. They cannot in practice — both come from the same primer3
+     * record — but this is a sequence someone pastes into a synthesis order or
+     * an alignment, so a blank cell (a question) beats a plausible wrong one
+     * (an answer). The same reason the length is cross-checked at all.
+     *
+     * @param string $template Sequence primer3 was given, as it echoed it back.
+     * @param array  $pair     One pair from parseOutput().
+     * @return string Bare A/C/G/T/N, no line breaks — or '' if underivable.
+     */
+    public static function productSequence($template, array $pair)
+    {
+        $template = (string)$template;
+        $start    = isset($pair['left_start']) ? (int)$pair['left_start'] : 0;
+        $end      = isset($pair['right_end'])  ? (int)$pair['right_end']  : 0;
+
+        if ($template === '' || $start < 1 || $end < $start || $end > strlen($template)) {
+            return '';
+        }
+
+        $amplicon = substr($template, $start - 1, $end - $start + 1);
+
+        if (isset($pair['product_size']) && $pair['product_size'] !== ''
+            && strlen($amplicon) !== (int)$pair['product_size']) {
+            return '';
+        }
+
+        return $amplicon;
+    }
+
+    /**
      * Parse a "region the product must span", written start,length.
      *
      * ⚠️ THE BOX IS 1-BASED AND primer3's SEQUENCE_TARGET IS 0-BASED. A user

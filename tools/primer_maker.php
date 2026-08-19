@@ -552,6 +552,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             } else {
                 $results = $run['results'];
 
+                // The amplicon itself, derived from the template primer3 echoed
+                // back to us. Done BEFORE tails go on, because the tailed form is
+                // built from this one — and done here rather than in the view so
+                // there is one amplicon per pair, not one per surface that wants
+                // to show it.
+                foreach ($results as $ri => $r) {
+                    foreach ($r['pairs'] as $pi => $pair) {
+                        $results[$ri]['pairs'][$pi]['product_sequence']
+                            = Primer3Design::productSequence($r['template'], $pair);
+                    }
+                }
+
                 // Tails go on HERE — after every statistic has been computed on
                 // the bare primer, and as extra keys beside it rather than over
                 // it. left_sequence/right_sequence still hold the untailed

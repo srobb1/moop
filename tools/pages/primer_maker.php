@@ -784,6 +784,19 @@
         // workflow this replaces only ever reported the first number, which is
         // the one you do NOT measure.
         'product_size_tailed' => ['Product + tags', $has_tail ? 'both' : 'no'],
+        // ⭐ THE AMPLICON, FILE-ONLY (user, 2026-08-19). A 300 bp string cannot be
+        // read in a table cell and would push every other column off the screen —
+        // but it is exactly what gets pasted into a synthesis order, a restriction
+        // map or an alignment, which is work done in the file, not on the page.
+        // Single-line by construction (substr of a template already stripped of
+        // whitespace), and downloadTsv() strips tabs and newlines from every cell
+        // besides, so a stray line break cannot split one row into two.
+        'product_sequence' => ['Product sequence', 'file'],
+        // The band that actually comes out of the tube once the tags are on it —
+        // paired with 'Product + tags' above for the same reason that column
+        // exists, and gated the same way so it never appears as a copy of the
+        // untagged sequence.
+        'product_sequence_tailed' => ['Product sequence + tags', $has_tail ? 'file' : 'no'],
         'pair_penalty'  => ['Penalty',         'file'],
         // Empty on every designed row; on a failure row it is the whole point.
         'note'          => ['Note',            'file'],

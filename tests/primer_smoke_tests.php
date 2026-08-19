@@ -822,6 +822,61 @@ ok(count($empty_rec) === 2 && $empty_rec[0]['body'] === '',
    'a header with no sequence survives the split, so the caller can report it by name');
 
 // ----------------------------------------------------------------------------
+group('Primer3Design::productSequence — the amplicon, derived not parsed');
+
+// A template where the coordinates are checkable by eye: the pair spans
+// positions 11..30, so the product is 20 bp and the flanks are all T.
+$tmpl = str_repeat('T', 10) . 'ACGTACGTAAGGCCTTAACC' . str_repeat('T', 10);
+$amp_pair = [
+    'left_start'     => 11,
+    'right_end'      => 30,
+    'product_size'   => '20',
+    'left_sequence'  => 'ACGTACGTAA',
+    'right_sequence' => 'GGTTAAGGCC',   // revcomp of the last 10 bases
+];
+ok(Primer3Design::productSequence($tmpl, $amp_pair) === 'ACGTACGTAAGGCCTTAACC',
+   'the amplicon is the 1-based inclusive span from left_start to right_end');
+ok(strlen(Primer3Design::productSequence($tmpl, $amp_pair)) === (int)$amp_pair['product_size'],
+   'its length is the product size primer3 reported');
+ok(str_starts_with(Primer3Design::productSequence($tmpl, $amp_pair), $amp_pair['left_sequence']),
+   'it begins with the forward primer');
+$rc_right = strrev(strtr($amp_pair['right_sequence'], 'ACGT', 'TGCA'));
+ok(str_ends_with(Primer3Design::productSequence($tmpl, $amp_pair), $rc_right),
+   'it ends with the reverse complement of the reverse primer');
+ok(strpos(Primer3Design::productSequence($tmpl, $amp_pair), "\n") === false,
+   'there are no line breaks in it — it goes into one TSV cell');
+
+// A wrong amplicon is a sequence someone ORDERS, so every underivable case is
+// blank rather than a plausible-looking substring.
+ok(Primer3Design::productSequence('', $amp_pair) === '',
+   'no template gives no amplicon');
+ok(Primer3Design::productSequence($tmpl, ['left_start' => 11]) === '',
+   'a pair with no right_end gives no amplicon');
+ok(Primer3Design::productSequence($tmpl, ['left_start' => 11, 'right_end' => 999]) === '',
+   'coordinates past the end of the template give no amplicon, not a short one');
+ok(Primer3Design::productSequence($tmpl, ['left_start' => 30, 'right_end' => 11]) === '',
+   'a reversed span gives no amplicon');
+ok(Primer3Design::productSequence($tmpl, array_merge($amp_pair, ['product_size' => '21'])) === '',
+   'coordinates that disagree with product_size give no amplicon rather than a guess');
+
+// ----------------------------------------------------------------------------
+group('PrimerTails — the tagged product sequence');
+
+$amp_pair['product_sequence'] = Primer3Design::productSequence($tmpl, $amp_pair);
+$tagged = PrimerTails::apply($amp_pair, ['id' => 'custom', 'forward' => 'AAAA', 'reverse' => 'GGGG']);
+
+ok($tagged['product_sequence_tailed'] === 'AAAA' . 'ACGTACGTAAGGCCTTAACC' . 'CCCC',
+   'the reverse tag is reverse-complemented onto the top strand, not written as typed');
+ok(strlen($tagged['product_sequence_tailed']) === (int)$tagged['product_size_tailed'],
+   'the tagged sequence is exactly as long as the tagged size says');
+ok(substr($tagged['product_sequence_tailed'], -4) !== 'GGGG',
+   'writing the reverse tag unreversed would be the right LENGTH and the wrong molecule');
+
+$untagged = PrimerTails::apply($amp_pair, ['id' => 'none', 'forward' => '', 'reverse' => '']);
+ok(!isset($untagged['product_sequence_tailed']),
+   'with no tag there is no tagged product sequence to disagree with the bare one');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Primer smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

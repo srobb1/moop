@@ -312,7 +312,37 @@ class PrimerTails
                                          + strlen($forward) + strlen($reverse);
         }
 
+        // ...and so does its SEQUENCE. The forward tag is copied onto the top
+        // strand as written; the reverse tag is copied onto the BOTTOM strand,
+        // so on the top strand it reads as its reverse complement at the far
+        // end. Writing $reverse here unreversed would produce a string that
+        // looks right, is the right LENGTH — product_size_tailed agrees with it
+        // either way — and is not the molecule.
+        if (($pair['product_sequence'] ?? '') !== '') {
+            $pair['product_sequence_tailed'] = $forward . $pair['product_sequence']
+                                             . self::reverseComplement($reverse);
+        }
+
         return $pair;
+    }
+
+    /**
+     * Reverse complement, for reading the reverse tag off the top strand.
+     *
+     * ⚠️ lib/blast_functions.php defines a reverseComplement() too, and this is
+     * deliberately not that one: it sits in 1,100 lines of BLAST plumbing that
+     * the primer libraries otherwise never load, and pulling all of it in to
+     * borrow a one-liner buys a dependency far heavier than the duplication.
+     * Tails are validated to A/C/G/T before they reach here (see validate()),
+     * so the degenerate codes it would also need are not a gap.
+     *
+     * @param string $seq Tail sequence.
+     * @return string
+     */
+    private static function reverseComplement($seq)
+    {
+        return strrev(strtr(strtoupper((string)$seq),
+                            ['A' => 'T', 'T' => 'A', 'C' => 'G', 'G' => 'C']));
     }
 
     /**
