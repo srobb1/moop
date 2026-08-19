@@ -475,6 +475,63 @@ class Primer3Design
     }
 
     /**
+     * Most sequences one paste will design from.
+     *
+     * A cap rather than a promise: primer3 handles a long boulder-IO document
+     * fine, but the page renders a card and a table per sequence, and a pasted
+     * transcriptome would produce a browser-melting page rather than an error
+     * anyone can act on.
+     */
+    const MAX_RECORDS = 50;
+
+    /**
+     * Split pasted text into sequences.
+     *
+     * ⭐ SEVERAL SEQUENCES ONLY IN FASTA (user, 2026-08-18). A '>' line starts a
+     * new record; without one the whole paste is a single sequence, exactly as
+     * before — so someone pasting bare DNA across 20 wrapped lines still gets one
+     * design, not twenty.
+     *
+     * Text before the first '>' is kept as a headerless record rather than
+     * dropped. It is unusual input, but silently discarding sequence a user can
+     * see in the box is the failure shape this codebase keeps paying for.
+     *
+     * @param string $text Raw textarea contents.
+     * @return array Each: ['header' => string (no '>'), 'body' => string as typed]
+     */
+    public static function splitRecords($text)
+    {
+        $records = [];
+        $current = null;
+
+        foreach (preg_split('/\r\n|\r|\n/', (string)$text) as $line) {
+            if (strlen($line) && $line[0] === '>') {
+                if ($current !== null) {
+                    $records[] = $current;
+                }
+                $current = ['header' => trim(substr($line, 1)), 'body' => ''];
+                continue;
+            }
+            if ($current === null) {
+                $current = ['header' => '', 'body' => ''];
+            }
+            $current['body'] .= $line;
+        }
+        if ($current !== null) {
+            $records[] = $current;
+        }
+
+        // A header with nothing under it, or leading blank lines, are not
+        // sequences. A header with no sequence IS worth reporting, so it is left
+        // for the caller to notice — only the genuinely empty lead-in goes.
+        if ($records && $records[0]['header'] === '' && trim($records[0]['body']) === '') {
+            array_shift($records);
+        }
+
+        return $records;
+    }
+
+    /**
      * Parse a "region the product must span", written start,length.
      *
      * ⚠️ THE BOX IS 1-BASED AND primer3's SEQUENCE_TARGET IS 0-BASED. A user

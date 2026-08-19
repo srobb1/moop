@@ -54,6 +54,7 @@ include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/primer/Primer3.php';
 include_once __DIR__ . '/../lib/primer/Primer3Design.php';
 include_once __DIR__ . '/../lib/primer/PrimerTails.php';
+include_once __DIR__ . '/../lib/primer/PrimerNames.php';
 include_once __DIR__ . '/../lib/primer/SequenceMarkup.php';
 include_once __DIR__ . '/../lib/primer/ExonMap.php';
 include_once __DIR__ . '/../lib/gene_isoforms.php';
@@ -161,6 +162,7 @@ $run_error     = null;
 $notes         = [];
 $junctions     = [];
 $template_id   = '';
+$name_generated = false;   // true when the sequence had no header and MOOP named it
 $option_errors = $tail['errors'];   // a bad tail is a design option like any other
 
 $p3 = Primer3::status();
@@ -230,45 +232,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
     } elseif ($sequence_text === '') {
         $run_error = 'Paste a sequence to design primers from.';
     } else {
-        // Accept FASTA or bare sequence. Only the first record is used for now;
-        // multi-record input is a Monday question, because the results table and
-        // the junction handling both need to say WHICH sequence a row came from.
-        $template_id = 'sequence';
-        $lines = preg_split('/\r\n|\r|\n/', $sequence_text);
-        $marked = '';
-        foreach ($lines as $line) {
-            if (strlen($line) && $line[0] === '>') {
-                if ($marked !== '') break;              // second record: stop
-                $template_id = trim(substr($line, 1)) ?: 'sequence';
-                continue;
-            }
+        // ⭐ SEVERAL SEQUENCES, BUT ONLY IN FASTA (user, 2026-08-18). Every '>'
+        // starts a record; a paste with no header is one sequence however many
+        // lines it spans. Each record is named, marked up, junction-checked and
+        // reported on INDEPENDENTLY — the reason multi-record input waited this
+        // long is that a results table has to say which sequence a row came from,
+        // and it now does, in the primer names themselves.
+        $raw_records  = Primer3Design::splitRecords($sequence_text);
+        $records      = [];   // what primer3 is given
+        $markup_notes = [];   // held back until we know a design will run
+        $used_names   = [];
+        $no_junctions = [];   // RT-PCR records with nothing to span
+        $min_length   = 0;
+
+        // ⭐ A SEQUENCE THAT PRODUCED NOTHING IS A RESULT (user, 2026-08-18), and
+        // it has to survive into the file as well as onto the page. Two ways to
+        // get here and they are equally worth reporting: rejected before primer3
+        // ran (too short, not DNA, unclosed bracket), or run and returned no
+        // pairs. Both land in ONE list, so "which of my sequences worked" is
+        // answered in one place rather than by counting tables.
+        //
+        // Silence here is the failure mode that matters: paste 20 sequences, get
+        // 17 tables, and nothing tells you which three are missing or why.
+        $failures = [];
+
+        if (count($raw_records) > Primer3Design::MAX_RECORDS) {
+            $run_error = 'That is ' . count($raw_records) . ' sequences. '
+                       . Primer3Design::MAX_RECORDS . ' at a time is the limit — design these in '
+                       . 'batches, so the results stay readable.';
+            $raw_records = [];
+        }
+
+        $multi = count($raw_records) > 1;
+
+        foreach ($raw_records as $index => $raw) {
             // Keep the markup characters; SequenceMarkup separates DNA from
             // instructions. Stripping to [A-Za-z] here, as this used to, silently
             // ate every mark the user typed.
-            $marked .= preg_replace('/[^A-Za-z|\[\]-]/', '', $line);
-        }
+            $marked = preg_replace('/[^A-Za-z|\[\]-]/', '', $raw['body']);
 
-        $markup = SequenceMarkup::parse($marked);
-        $seq    = $markup['sequence'];
+            // What to CALL it before it has earned a real name. A rejected record
+            // is never named by PrimerNames — the generated name is built FROM a
+            // usable sequence, and there isn't one — so the header, or its
+            // position in the paste, is all there is. "Sequence 3" beats "your
+            // sequence" the moment there are several.
+            $label = $raw['header'] !== '' ? $raw['header'] : 'sequence ' . ($index + 1);
 
-        // ⚠️ Markup notes are held back until we know the design will actually
-        // run. Merged here, an unclosed bracket printed "Every product will
-        // contain bases 301–400" beside the error saying nothing was designed.
-        $markup_notes = $markup['notes'];
+            $markup = SequenceMarkup::parse($marked);
+            $seq    = $markup['sequence'];
 
-        if ($markup['errors']) {
-            // Report a markup problem AS a markup problem. parse() returns an
-            // empty sequence when it gives up, so falling through to the checks
-            // below answered an unclosed "[" with "that sequence is too short to
-            // design primers from" — true of the empty string, and useless.
-            $run_error = implode(' ', $markup['errors']);
-        } elseif (strlen($seq) < 60) {
-            $run_error = 'That sequence is too short to design primers from — 60 bp is about the '
-                       . 'minimum, and more is better.';
-        } elseif (preg_match('/[^ACGTN]/', $seq)) {
-            $run_error = 'The sequence contains characters that are not DNA bases (A, C, G, T, N).';
-        } else {
+            // ⚠️ A BAD RECORD IS NAMED AND SKIPPED, NOT DESIGNED AROUND SILENTLY.
+            // With one sequence these were fatal, and stayed fatal — nothing else
+            // was going to run. With several, refusing the whole paste because
+            // sequence 7 has a typo throws away six good designs; dropping it
+            // quietly is worse still, since the user counts the tables and finds
+            // one missing with no explanation.
+            if ($markup['errors']) {
+                // Report a markup problem AS a markup problem. parse() returns an
+                // empty sequence when it gives up, so falling through to the
+                // checks below answered an unclosed "[" with "that sequence is
+                // too short to design primers from" — true of the empty string,
+                // and useless.
+                $failures[] = ['name' => $label, 'reason' => implode(' ', $markup['errors'])];
+                continue;
+            }
+            if ($seq === '') {
+                $failures[] = ['name' => $label, 'reason' => 'There is no sequence under that header.'];
+                continue;
+            }
+            if (strlen($seq) < 60) {
+                $failures[] = ['name' => $label, 'reason' => 'Too short to design primers from at '
+                             . strlen($seq) . ' bp — 60 bp is about the minimum, and more is better.'];
+                continue;
+            }
+            if (preg_match('/[^ACGTN]/', $seq)) {
+                $failures[] = ['name' => $label,
+                               'reason' => 'Contains characters that are not DNA bases (A, C, G, T, N).'];
+                continue;
+            }
+
+            // Named only now that the sequence is known to be usable, because a
+            // generated name is BUILT from it. Every primer designed from pasted
+            // DNA used to be called sequence_p1_F — the same name for every
+            // sequence, every session and every user, which stops being a name
+            // the moment two designs share a spreadsheet or an order form.
+            $template_id = PrimerNames::template($raw['header'], $seq);
+
+            // Two records CAN arrive with the same name — the same header twice,
+            // or two headerless sequences of equal length starting with the same
+            // five bases. Renaming is the only way the tables and the order form
+            // stay unambiguous, but a silent rename is its own bug, so it is said
+            // out loud.
+            if (isset($used_names[$template_id])) {
+                $original = $template_id;
+                $template_id .= '_' . (++$used_names[$original]);
+                $notes[] = 'Two sequences are both called ' . $original . '; the second is shown as '
+                         . $template_id . ' so its primers can be told apart.';
+            }
+            $used_names[$template_id] = 1;
+
+            if ($raw['header'] === '') {
+                $notes[] = ($multi ? 'Sequence ' . ($index + 1) . ' has no FASTA header, so it is called '
+                                   : 'No FASTA header was given, so this sequence is called ')
+                         . $template_id . ' — today\'s date, its first five bases and its length. '
+                         . 'Primers below are named after it. Put a ">name" line above your sequence '
+                         . 'to choose the name yourself.';
+            }
+
             $record = ['id' => $template_id, 'template' => $seq];
+            $min_length = $min_length === 0 ? strlen($seq) : min($min_length, strlen($seq));
+
+            foreach ($markup['notes'] as $note) {
+                $markup_notes[] = $multi ? $template_id . ': ' . $note : $note;
+            }
 
             // A region the product must span — a SNP, an exon, a domain. Checked
             // against THIS template rather than left to primer3, whose answer to
@@ -278,19 +354,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             // Two ways to say it, and saying it twice is ambiguous rather than
             // emphatic — so both at once is an error, not a silent precedence rule.
             $targets = $markup['targets'];
-            $parsed_target = Primer3Design::parseTarget($target, strlen($seq));
-            if ($parsed_target['error'] !== '') {
-                $option_errors[] = $parsed_target['error'];
-            } elseif ($parsed_target['target'] !== null) {
-                if ($targets) {
-                    $option_errors[] = 'You marked a region with [ ] in the sequence AND filled in '
-                                     . '"Region to include". Use one or the other, so it is clear '
-                                     . 'which you meant.';
-                } else {
-                    $targets[] = $parsed_target['target'];
-                    $notes[] = 'Every pair below amplifies across positions '
-                             . number_format($parsed_target['first']) . '–'
-                             . number_format($parsed_target['last']) . '.';
+            $parsed_target = ['target' => null];
+
+            if ($target !== '' && $multi) {
+                // One box, one set of coordinates, several sequences of different
+                // lengths: position 300 means a different place in each. The [ ]
+                // mark travels WITH its sequence, which is what this needs.
+                $option_errors['multi_target'] =
+                    '"Region to include" describes one sequence, but you pasted ' . count($raw_records)
+                    . '. Mark the region in each sequence with [ ] instead, or design them one at a time.';
+            } elseif ($target !== '') {
+                $parsed_target = Primer3Design::parseTarget($target, strlen($seq));
+                if ($parsed_target['error'] !== '') {
+                    $option_errors[] = $parsed_target['error'];
+                } elseif ($parsed_target['target'] !== null) {
+                    if ($targets) {
+                        $option_errors[] = 'You marked a region with [ ] in the sequence AND filled in '
+                                         . '"Region to include". Use one or the other, so it is clear '
+                                         . 'which you meant.';
+                    } else {
+                        $targets[] = $parsed_target['target'];
+                        $notes[] = 'Every pair below amplifies across positions '
+                                 . number_format($parsed_target['first']) . '–'
+                                 . number_format($parsed_target['last']) . '.';
+                    }
                 }
             }
             if ($targets) {
@@ -355,10 +442,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                              . '; a primer must cross one of them.';
                 }
             } elseif ($primer_type === 'rtpcr') {
-                $notes[] = 'No exon junctions are known for this sequence, so nothing forced a primer '
-                         . 'across one — these are ordinary primers. Either arrive from a gene page, '
-                         . 'or mark the junctions yourself by putting "|" in the sequence.';
+                $no_junctions[] = $template_id;
             }
+
+            $records[] = $record;
+        }
+
+        // One line however many sequences lack junctions — the same paragraph
+        // repeated 20 times is not 20 times as informative.
+        if ($no_junctions) {
+            $notes[] = (count($no_junctions) === 1 && !$multi
+                           ? 'No exon junctions are known for this sequence, so nothing forced a primer '
+                           : 'No exon junctions are known for ' . count($no_junctions) . ' of these '
+                             . 'sequences (' . implode(', ', array_slice($no_junctions, 0, 3))
+                             . (count($no_junctions) > 3 ? ', …' : '') . '), so nothing forced a primer ')
+                     . 'across one — these are ordinary primers. Either arrive from a gene page, '
+                     . 'or mark the junctions yourself by putting "|" in the sequence.';
+        }
+
+        if ($run_error !== null) {
+            // Already fatal (too many records); nothing below applies.
+        } elseif (!$records) {
+            // Nothing to run. With a SINGLE sequence this is the whole story, so
+            // it stays a plain error message — a card listing one row, above an
+            // empty page, would be ceremony. With several, the card does the
+            // work and the error just says to read it.
+            $run_error = count($failures) === 1
+                ? $failures[0]['reason']
+                : 'None of those ' . count($failures) . ' sequences could be used.';
+        } else {
+            $template_id = $records[0]['id'];
+            $seq = $records[0]['template'];
 
             $params = $PRESETS[$primer_type]['params'];
             $params['PRIMER_NUM_RETURN'] = $num_return;
@@ -370,13 +484,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             //                            what the old "biggest product you would
             //                            want" field meant
             if ($longest) {
-                $ladder = Primer3Design::productSizeLadder(strlen($seq));
+                // ⚠️ Built from the SHORTEST sequence. The product size range is a
+                // GLOBAL primer3 tag — one range for every record in the run — so
+                // a ladder sized to the longest would ask for products that do not
+                // fit in the others, and they would return nothing while looking
+                // like difficult sequences.
+                $ladder = Primer3Design::productSizeLadder($min_length);
                 if ($ladder !== '') {
                     $params['PRIMER_PRODUCT_SIZE_RANGE'] = $ladder;
-                    $notes[] = 'Asking for the longest product this sequence allows, trying '
-                             . str_replace(' ', ' bp, then ', $ladder) . ' bp.';
+                    $notes[] = 'Asking for the longest product '
+                             . ($multi ? 'the shortest of these sequences (' . number_format($min_length)
+                                         . ' bp) allows' : 'this sequence allows')
+                             . ', trying ' . str_replace(' ', ' bp, then ', $ladder) . ' bp.';
                 } else {
-                    $notes[] = 'This sequence is too short to ask for the longest possible product, '
+                    $notes[] = ($multi ? 'The shortest sequence here is' : 'This sequence is')
+                             . ' too short to ask for the longest possible product, '
                              . 'so the usual range for ' . strtolower($PRESETS[$primer_type]['label'])
                              . ' was used instead.';
                 }
@@ -417,11 +539,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
             // Safe to say what the marks did, now that we know the run happens.
             $notes = array_merge($markup_notes, $notes);
 
-            $run = Primer3Design::run([$record], $params);
+            // One primer3 run for every sequence. boulder-IO is record-oriented
+            // and buildInput writes the globals once, so N sequences cost one
+            // process rather than N.
+            $run = Primer3Design::run($records, $params);
             if (!$run['success']) {
                 // primer3 speaks in tag names. Translated where we can, passed
                 // through untouched where we cannot — see friendlyError().
-                $run_error = Primer3Design::friendlyError($run['error'], strlen($seq));
+                // Sized by the SHORTEST template: "your product is longer than
+                // your sequence" has to name the sequence that made it true.
+                $run_error = Primer3Design::friendlyError($run['error'], $min_length);
             } else {
                 $results = $run['results'];
 
@@ -447,11 +574,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                     // tail is what pushes an oligo over the threshold: a 20-mer is
                     // fine, the same primer with a T7 promoter is 40.
                     if ($longest_oligo > PrimerTails::LONG_OLIGO) {
-                        $notes[] = 'With the tail, the longest oligo here is ' . $longest_oligo
+                        $notes[] = 'With the tag, the longest oligo here is ' . $longest_oligo
                                  . ' bases. Above about ' . PrimerTails::LONG_OLIGO . ' most vendors '
                                  . 'charge more and suggest purification beyond standard desalting — '
                                  . 'worth checking before you order. The primer itself is unaffected: '
-                                 . 'every Tm, GC and length figure below is for the untailed primer, '
+                                 . 'every Tm, GC and length figure below is for the untagged primer, '
                                  . 'which is the part that anneals.';
                     }
                 }
@@ -486,11 +613,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
                             $explain = implode('; ', $sides);
                         }
 
-                        $notes[] = $explain !== ''
-                            ? 'No primers met the criteria. Primer3 says — ' . $explain
-                              . '. The largest count names the setting to loosen first.'
-                            : 'No primers met the criteria. Try widening the product size range, '
-                              . 'the Tm window, or the GC range.';
+                        // Reported the same way as a sequence rejected before the
+                        // run: one list, one row per sequence, on the page AND in
+                        // the file. It used to be a note above the tables, which
+                        // with several sequences is the easiest thing on the page
+                        // to scroll past — and it never reached the download at
+                        // all, so a saved file quietly held 17 of 20 sequences.
+                        $failures[] = [
+                            'name'   => $r['id'],
+                            'reason' => $explain !== ''
+                                ? 'No primers met the criteria. Primer3 says — ' . $explain
+                                  . '. The largest count names the setting to loosen first.'
+                                : 'No primers met the criteria. Try widening the product size range, '
+                                  . 'the Tm window, or the GC range.',
+                        ];
                     }
                 }
             }
@@ -536,6 +672,9 @@ $data = [
     'notes'            => $notes,
     'junctions'        => $junctions,
     'template_id'      => $template_id,
+    // Sequences that produced no primers, each with the reason. Rendered as its
+    // own card and written into the TSV — see the view.
+    'failures'         => $failures ?? [],
     'primer3_ok'       => $p3['ok'],
     'primer3_problem'  => $p3['problem'],
     'context_organism' => $context_organism,
@@ -573,7 +712,14 @@ $data = [
 $display_config = [
     'title'        => 'Primer Maker',
     'content_file' => __DIR__ . '/pages/primer_maker.php',
-    'page_script'  => '/' . $site . '/js/primer-maker.js',
+    // ⚠️ copy-to-clipboard is NOT loaded globally — every page that wants the
+    // .copyable behaviour asks for it (parent.php and sequences_display.php each
+    // do). Without it the oligo FASTA block silently stops being clickable: it
+    // still LOOKS copyable, cursor and all, because the classes are pure CSS.
+    'page_script'  => [
+        '/' . $site . '/js/modules/copy-to-clipboard.js',
+        '/' . $site . '/js/primer-maker.js',
+    ],
     'inline_scripts' => [
         // Every primer type's fallback values, so switching the radio updates
         // the placeholders without a round trip. Passing PHP values to JS is

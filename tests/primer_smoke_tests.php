@@ -758,6 +758,69 @@ ok($with[0]['length'] === 33, 'the tailed record reports the ordered length');
 $plain = PrimerTails::oligoRecords('seq', [$pair], ['forward' => '', 'reverse' => '', 'id' => 'none']);
 ok(count($plain) === 2, 'with no tail there are two records, not two empty extras');
 
+// A custom tail may be forward-only — resolve() rejects only the case where BOTH
+// boxes are empty. apply() used to test the PRIMER for emptiness rather than that
+// side's TAIL, so the reverse primer got a right_tailed key holding the bare
+// primer: invisible in the table, but a duplicate record in the order form.
+$one_sided = PrimerTails::apply($pair, ['id' => 'custom', 'forward' => 'AAAACCCC', 'reverse' => '']);
+ok(isset($one_sided['left_tailed']) && !isset($one_sided['right_tailed']),
+   'a forward-only tail tails the forward primer and leaves the reverse alone');
+$one_recs = PrimerTails::oligoRecords('seq', [$one_sided], ['id' => 'custom', 'forward' => 'AAAACCCC', 'reverse' => '']);
+ok(count($one_recs) === 3,
+   'a forward-only tail gives three oligos, not a fourth that duplicates the bare reverse');
+ok(count(array_filter($one_recs, fn($r) => $r['tailed'])) === 1,
+   'only the side that HAS a tail is reported as tailed');
+
+// ----------------------------------------------------------------------------
+group('PrimerNames — what a sequence and its primers are called');
+
+require_once "$BASE/lib/primer/PrimerNames.php";
+
+$today = date('Ymd');
+ok(PrimerNames::template('XM_001626548.3', 'ACGTACGTAC') === 'XM_001626548.3',
+   'a supplied header names the sequence');
+ok(PrimerNames::template('XM_001626548.3 heat shock protein, mRNA', 'ACGT') === 'XM_001626548.3',
+   'the name is the header up to the first space — a description is not part of a primer name');
+ok(PrimerNames::template('', 'ATGGCTAGCTAGCTAGC') === $today . '-ATGGC-17bp',
+   'no header gives date-first5bp-length, not the literal string "sequence"');
+ok(PrimerNames::template('', 'atggctagc') === $today . '-ATGGC-9bp',
+   'the generated name is upper-cased however the sequence was typed');
+ok(PrimerNames::template('', 'ACGTACGTAC') === PrimerNames::template('', 'ACGTACGTAC'),
+   'the same sequence names the same way twice — a re-run must not rename its primers');
+ok(PrimerNames::base('my gene|weird/name') === 'my_gene_weird_name',
+   'anything a FASTA id or a filename cannot carry is replaced');
+ok(PrimerNames::primer('XM_001.1', 2, 'left') === 'XM_001.1_p2_F'
+   && PrimerNames::primer('XM_001.1', 2, 'right') === 'XM_001.1_p2_R',
+   'primer names carry the _F/_R suffix PrimerInput pairs on');
+
+// The names in the order form and the names in the table are the same function.
+$named = PrimerTails::oligoRecords(PrimerNames::template('', 'ATGGCTAGCTAGCTAGC'), [$pair], $cat['t4p']);
+ok($named[0]['name'] === PrimerNames::primer($today . '-ATGGC-17bp', 1, 'left'),
+   'the FASTA record and the table row are named by the same call, not by two copies of the rule');
+
+// ----------------------------------------------------------------------------
+group('Primer3Design::splitRecords — several sequences, but only in FASTA');
+
+$one = Primer3Design::splitRecords("ACGTACGT\nACGTACGT\nACGTACGT");
+ok(count($one) === 1 && $one[0]['header'] === '' && $one[0]['body'] === 'ACGTACGTACGTACGTACGTACGT',
+   'a bare paste is ONE sequence however many lines it spans');
+
+$three = Primer3Design::splitRecords(">a\nACGT\nACGT\n>b\nTTTT\n>c desc here\nGGGG");
+ok(count($three) === 3, 'each ">" starts a new sequence');
+ok($three[0]['body'] === 'ACGTACGT', 'wrapped lines are joined within a record');
+ok($three[2]['header'] === 'c desc here', 'the header is kept whole; naming decides what to use of it');
+
+$lead = Primer3Design::splitRecords("\n\n>a\nACGT");
+ok(count($lead) === 1, 'blank lines before the first header are not a sequence');
+
+$junk = Primer3Design::splitRecords("ACGTACGT\n>a\nTTTT");
+ok(count($junk) === 2 && $junk[0]['header'] === '',
+   'sequence before the first header is kept as a headerless record, never silently dropped');
+
+$empty_rec = Primer3Design::splitRecords(">a\n>b\nACGT");
+ok(count($empty_rec) === 2 && $empty_rec[0]['body'] === '',
+   'a header with no sequence survives the split, so the caller can report it by name');
+
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Primer smoke tests: $PASS passed, $FAIL failed\n";

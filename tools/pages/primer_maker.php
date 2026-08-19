@@ -3,8 +3,12 @@
  * PRIMER MAKER — content file. FIRST DRAFT 2026-08-07.
  *
  * Variables from $data: $presets, $primer_type, $sequence_text, $num_return,
- * $size_range, $results, $run_error, $notes, $template_id, $primer3_ok,
- * $primer3_problem, $context_*, $site
+ * $size_range, $results, $run_error, $notes, $template_id, $failures,
+ * $primer3_ok, $primer3_problem, $context_*, $site
+ *
+ * $results holds the sequences that produced primers and $failures the ones that
+ * did not — every pasted sequence is in exactly one of them, which is what lets
+ * the page and the TSV account for all of them.
  *
  * Step numbering and card styling follow tools/pages/primer_blast.php so the two
  * primer tools look like siblings rather than two different applications.
@@ -59,6 +63,9 @@
                 <p class="small text-muted mb-2">
                     Paste DNA, with or without a FASTA header. Primers are designed from this
                     sequence, so include the region you want to amplify plus some room either side.
+                    <strong>Several sequences at once</strong> works too — give each one a
+                    <code>&gt;name</code> line, up to <?= (int)Primer3Design::MAX_RECORDS ?>. Without
+                    headers the whole box counts as one sequence, however many lines it spans.
                 </p>
                 <textarea name="sequence" class="form-control" rows="8" style="font-family:monospace; font-size:0.85rem;"
                           placeholder="&gt;my_gene&#10;ATGGCTAGCTAGCTAGCATCGATCGATCG..."><?= htmlspecialchars($sequence_text) ?></textarea>
@@ -97,8 +104,9 @@
                             <div class="mt-1">
                                 <i class="fa fa-check-circle text-success me-1"></i>
                                 You arrived from a gene page, so for <strong>RT-PCR</strong> the exon
-                                junctions are looked up for you — you do not need to mark them. They
-                                are only used if the sequence still matches the stored transcript.
+                                junctions are looked up for you — you do not need to mark them.
+                                Do not edit the sequence, or the junction positions no longer
+                                match it and cannot be used.
                             </div>
                         <?php endif; ?>
                     </div>
@@ -262,16 +270,30 @@
                . 'value="' . htmlspecialchars($options[$field] ?? '') . '">';
         };
 
-        // Open the advanced panel when it holds something — a value the user
-        // typed, or an error about one. Collapsed over a rejected value would
-        // show an error pointing at a box that is not on screen.
-        // Derived from the option table itself, so a field added to
-        // Primer3Design::OPTIONS cannot be left out of this check and quietly
-        // fail to open the panel that holds it.
-        $advanced_open = (bool)$run_error;
+        // How many settings the user actually CHANGED. Derived from the option
+        // table itself, so a field added to Primer3Design::OPTIONS is counted
+        // without anyone remembering to add it here.
+        //
+        // 🚨 "NON-EMPTY" IS NOT "CHOSEN". Salt correction is a <select>, so it
+        // posts a value on every submit whether or not anyone touched it — which
+        // is why this panel used to spring open after EVERY design, looking like
+        // the tool had changed something. Compare against what a blank control
+        // would use instead; a select sitting on its default then counts as
+        // untouched, which is what the user means by it.
+        $advanced_set = 0;
         foreach (array_keys($option_specs) as $f) {
-            if (($options[$f] ?? '') !== '') { $advanced_open = true; break; }
+            $v = trim((string)($options[$f] ?? ''));
+            if ($v !== '' && $v !== trim((string)($option_defaults[$f] ?? ''))) {
+                $advanced_set++;
+            }
         }
+
+        // Open the panel when it holds something the user still has to deal with:
+        // an error about a value, or a value with no results yet. Once primers are
+        // on the page the design worked, and re-opening it just pushes the results
+        // down (user, 2026-08-18) — the badge on the button says the settings are
+        // still there.
+        $advanced_open = (bool)$run_error || ($advanced_set > 0 && !$results);
         ?>
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
@@ -377,6 +399,12 @@
                     <span>
                         <i class="fa fa-sliders-h me-2"></i><strong>More options</strong>
                         <span class="fw-normal">(Primer Length, Tm, and more)</span>
+                        <?php // A collapsed panel with values in it must not look like an
+                              // empty one, or the next design silently uses settings the
+                              // user cannot see. ?>
+                        <?php if ($advanced_set): ?>
+                            <span class="badge bg-secondary ms-1"><?= $advanced_set ?> set</span>
+                        <?php endif; ?>
                     </span>
                     <?php // No text-muted on the parenthetical: this button INVERTS to
                           // solid teal on hover, and muted grey on teal is unreadable. ?>
@@ -574,43 +602,59 @@
             </div>
         </div>
 
-        <!-- Step 4 — 5' tails -->
+        <!-- Step 4 — 5' primer tag -->
         <?php
+        // ⭐ CALLED A "5′ PRIMER TAG" ON SCREEN (user, 2026-08-18). The code says
+        // "tail" throughout — the config key, the class, every variable — and that
+        // is deliberate: "tailed primer" is what the literature and the vendors
+        // call this, so it is the right word to find the code by. What the user
+        // objected to is what it reads like in a form ("tail" pulling against
+        // "5′ end"), and a tag covers both things in the catalogue: a cloning
+        // adapter is a tag, a T7 promoter is a tag, but a promoter is not an
+        // adapter. ⚠️ So the mapping is one-way and deliberate — do not "fix" the
+        // code to match the label, and do not let the label drift back.
         $tail_selected = $tail_choice !== '' && $tail_choice !== 'none';
         ?>
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="step-badge me-2">4</span>
-                <span class="fw-semibold" style="font-size:0.9rem;">5′ tail <span class="fw-normal">(optional)</span></span>
+                <span class="fw-semibold" style="font-size:0.9rem;">5′ primer tag <span class="fw-normal">(optional)</span></span>
             </div>
             <div class="card-body py-3">
-                <?php // What a tail IS lives behind the (i), not in a paragraph above the
-                      // control. And the "every number is for the untailed primer" caveat
+                <?php // What a tag IS lives behind the (i), not in a paragraph above the
+                      // control. And the "every number is for the untagged primer" caveat
                       // is NOT here at all: at this point the user has no numbers and no
-                      // tail, so it answers a question they have not asked yet and reads
+                      // tag, so it answers a question they have not asked yet and reads
                       // as a warning about something they cannot see. It now appears with
-                      // the results, and only when a tail was actually used. ?>
+                      // the results, and only when a tag was actually used. ?>
+                <p class="small text-muted mb-3">
+                    <?php // One line under the heading, because "tag" alone could be read as a
+                          // barcode or a protein tag. Saying what it IS costs a sentence and
+                          // removes the ambiguity before the user reaches the control. ?>
+                    Extra sequence added to the 5′ end of each primer: a cloning adapter, a
+                    promoter, or your own.
+                </p>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="tail" class="form-label mb-1">
-                            <strong>Add a tail</strong>
+                            <strong>Add a tag</strong>
                             <?= field_help(
                                 'Extra sequence added to the 5′ end of each primer when you order it — a '
                                 . 'cloning adapter, a promoter, a barcode. It is not part of the primer and '
                                 . 'does not bind the template; it ends up in the PCR product, ready for '
-                                . 'whatever you do next.',
-                                '5′ tails'
+                                . 'whatever you do next. Also called a 5′ tail, or a tailed primer.',
+                                '5′ primer tags'
                             ) ?>
                         </label>
                         <select name="tail" id="tail" class="form-select">
-                            <option value="none" <?= $tail_selected ? '' : 'selected' ?>>No tail — plain primers</option>
+                            <option value="none" <?= $tail_selected ? '' : 'selected' ?>>No tag — plain primers</option>
                             <?php foreach ($tail_catalogue as $entry): ?>
                                 <option value="<?= htmlspecialchars($entry['id']) ?>"
                                         <?= $tail_choice === $entry['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($entry['label']) ?>
                                 </option>
                             <?php endforeach; ?>
-                            <option value="custom" <?= $tail_choice === 'custom' ? 'selected' : '' ?>>Custom tail…</option>
+                            <option value="custom" <?= $tail_choice === 'custom' ? 'selected' : '' ?>>Custom tag…</option>
                         </select>
 
                         <?php // Each adapter's own sequences and purpose, so choosing one
@@ -638,13 +682,13 @@
 
                     <div class="col-md-6" id="customTailFields" <?= $tail_choice === 'custom' ? '' : 'hidden' ?>>
                         <label for="tail_custom_forward" class="form-label mb-1">
-                            <strong>Your own tail</strong>
+                            <strong>Your own tag</strong>
                             <?= field_help(
-                                'The two tails are independent sequences — they are NOT reverse complements '
+                                'The two tags are independent sequences — they are NOT reverse complements '
                                 . 'of one another, so enter each as you want it synthesised, written 5′ to 3′. '
-                                . 'Leave one blank to tail only the other primer. A, C, G and T only: an oligo '
+                                . 'Leave one blank to tag only the other primer. A, C, G and T only: an oligo '
                                 . 'is made exactly as written, so an ambiguity code is not orderable.',
-                                'Custom tail'
+                                'Custom tag'
                             ) ?>
                         </label>
                         <div class="input-group input-group-sm mb-2">
@@ -689,52 +733,144 @@
     // pasted into a spreadsheet.
     $has_tail = ($tail['forward'] ?? '') !== '' || ($tail['reverse'] ?? '') !== '';
 
-    $columns = ['rank' => '#', 'left_sequence' => 'Forward primer'];
-    if ($has_tail && ($tail['forward'] ?? '') !== '') {
-        $columns['left_tailed'] = 'Forward to order';
-    }
-    $columns += [
-        'left_tm'        => 'F Tm',
-        'left_gc'        => 'F GC%',
-        'left_start'     => 'F start',
-        'right_sequence' => 'Reverse primer',
-    ];
-    if ($has_tail && ($tail['reverse'] ?? '') !== '') {
-        $columns['right_tailed'] = 'Reverse to order';
-    }
-    $columns += [
-        'right_tm'      => 'R Tm',
-        'right_gc'      => 'R GC%',
-        'right_end'     => 'R end',
-        'product_size'  => 'Product (bp)',
-    ];
-    if ($has_tail) {
+    // Only the sequences that produced primers get a card; the ones that did not
+    // are already named in the notes above, with primer3's reason.
+    $entries = array_values(array_filter($results, fn($e) => !empty($e['pairs'])));
+    $multi   = count($entries) > 1;
+
+    // ONE table of columns, with where each one appears.
+    //
+    // ⭐ THE SCREEN SHOWS A SUBSET OF THE FILE (user, 2026-08-18): the screen is
+    // for judging a pair — name, sequence, length, Tm, GC, product size — while
+    // the file is for keeping, so it also carries each primer's start position
+    // and the pair penalty. Declaring that ONCE, as 'file' versus 'both', is what
+    // stops the two drifting; two hand-written lists is how the other results
+    // table grew four silent defects (CLAUDE.md §9b).
+    //
+    // Each primer's NAME travels with it in both. Same string in the table, the
+    // TSV, the FASTA below and the pair handed to Primer BLAST — all from
+    // PrimerNames::primer(), so a row cannot be called one thing on screen and
+    // another in the file you order from.
+    //
+    // 📍 START ONLY, AND ALWAYS THE LOWEST COORDINATE (user). primer3 reports the
+    // reverse primer by its 5' end, which is its HIGHEST coordinate — the opposite
+    // convention from the forward primer, in the same column of the same table.
+    // parseOutput already computes right_start as the lowest base, so both
+    // columns mean "where this primer begins in the sequence you pasted".
+    $column_spec = [
+        // On screen only when there IS more than one sequence — with one, the card
+        // header already names it and the column would repeat that on every row.
+        // Always in the file: it is what lets a sequence that produced NO primers
+        // occupy a row, and what lets a spreadsheet group rows by sequence without
+        // parsing a primer name.
+        'sequence'      => ['Sequence',        $multi ? 'both' : 'file'],
+        'rank'          => ['#',               'both'],
+        'left_name'     => ['Forward name',    'both'],
+        'left_sequence' => ['Forward primer',  'both'],
+        'left_tailed'   => ['Forward to order', ($tail['forward'] ?? '') !== '' ? 'both' : 'no'],
+        'left_length'   => ['F len',           'both'],
+        'left_tm'       => ['F Tm',            'both'],
+        'left_gc'       => ['F GC%',           'both'],
+        'left_start'    => ['F start',         'file'],
+        'right_name'     => ['Reverse name',   'both'],
+        'right_sequence' => ['Reverse primer', 'both'],
+        'right_tailed'   => ['Reverse to order', ($tail['reverse'] ?? '') !== '' ? 'both' : 'no'],
+        'right_length'   => ['R len',          'both'],
+        'right_tm'       => ['R Tm',           'both'],
+        'right_gc'       => ['R GC%',          'both'],
+        'right_start'    => ['R start',        'file'],
+        'product_size'   => ['Product (bp)',   'both'],
         // The band you actually see on a gel: the insert plus both tails. The
         // workflow this replaces only ever reported the first number, which is
         // the one you do NOT measure.
-        $columns['product_size_tailed'] = 'Product + tails';
+        'product_size_tailed' => ['Product + tags', $has_tail ? 'both' : 'no'],
+        'pair_penalty'  => ['Penalty',         'file'],
+        // Empty on every designed row; on a failure row it is the whole point.
+        'note'          => ['Note',            'file'],
+    ];
+
+    $columns = [];          // on screen
+    $export_columns = [];   // in the file
+    foreach ($column_spec as $key => list($label, $where)) {
+        if ($where === 'no') { continue; }
+        if ($where === 'both') { $columns[$key] = $label; }
+        $export_columns[$key] = $label;
     }
-    $columns['pair_penalty'] = 'Penalty';
 
     // Which columns hold a sequence, so the monospace rule is keyed by NAME
     // rather than by position — positional column identity is what produced four
     // silent defects in the other results table (CLAUDE.md §9b).
     $sequence_columns = ['left_sequence', 'right_sequence', 'left_tailed', 'right_tailed'];
 
-    $export = [];
+    // Names are identifiers, not prose — kept on one line so a column of them
+    // stays scannable and so a copied cell is the whole name.
+    $name_columns = ['left_name', 'right_name'];
+
+    $export = [];       // every row, every sequence — one table, one file
     $oligos = [];
+
+    // ⭐ ONE TABLE FOR EVERY SEQUENCE (user, 2026-08-18: "i dont like that we have
+    // to download each separately"). A card per sequence meant a download per
+    // sequence, and the combined file sat at the bottom of the page behind all of
+    // them — so the obvious button was always the wrong one. One table means one
+    // thing to copy into a spreadsheet and one thing to download, which is what
+    // this tool was for in the first place. Which sequence a row belongs to is
+    // carried by the Sequence column and by the primer names, not by which card
+    // it sits in.
+    $total_pairs = 0;
+    foreach ($entries as $entry) {
+        $total_pairs += count($entry['pairs']);
+
+        // Every output surface — table, FASTA, TSV — is rendered from ONE set of
+        // records. The workflow this replaces had the table showing tagged and
+        // untagged side by side while the FASTA block below it emitted only the
+        // untagged form, its tagged branch commented out. So the file you
+        // downloaded quietly disagreed with the table you were reading.
+        //
+        // Built up here rather than inside the table loop because the count is
+        // needed on a button that renders ABOVE the table.
+        $oligos = array_merge($oligos, PrimerTails::oligoRecords($entry['id'], $entry['pairs'], $tail));
+    }
+
+    // Named after the sequence when there is one, after the day when there are
+    // several — there is no one sequence to name a combined file after.
+    $download_name = count($entries) === 1
+        ? PrimerNames::base($entries[0]['id']) . '_primers.tsv'
+        : 'primers_' . date('Ymd') . '.tsv';
     ?>
 
-    <?php foreach ($results as $entry): ?>
-        <?php if (empty($entry['pairs'])) continue; ?>
+    <?php if ($entries): ?>
         <div class="card mt-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="text-uppercase fw-semibold section-eyebrow">
-                    <i class="fa fa-table me-2"></i><?= count($entry['pairs']) ?> primer pair<?= count($entry['pairs']) === 1 ? '' : 's' ?>
-                    for <?= htmlspecialchars($entry['id']) ?>
+                    <i class="fa fa-table me-2"></i><?= $total_pairs ?> primer pair<?= $total_pairs === 1 ? '' : 's' ?>
+                    <?= $multi
+                        ? 'from ' . count($entries) . ' sequences'
+                        : 'for ' . htmlspecialchars($entries[0]['id']) ?>
                 </span>
             </div>
             <div class="card-body">
+                <?php // Actions at the TOP (user, 2026-08-18). Below a table of a hundred
+                      // rows, the download is something you have to go looking for. ?>
+                <div class="d-flex gap-2 flex-wrap align-items-center mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-secondary js-download-tsv"
+                            data-rows="primerMakerExport"
+                            data-filename="<?= htmlspecialchars($download_name) ?>">
+                        <i class="fa fa-download me-1"></i>Download table (TSV)
+                    </button>
+                    <?php // "See FASTA" (user, 2026-08-18), not "Oligos to order": what the
+                          // block holds is a FASTA, and SEE is the honest verb — this expands
+                          // in place, it does not hand you a file. Same disclosure affordance
+                          // as the options toggle above, so it keeps the chevron rather than
+                          // looking like the download button beside it. ?>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
+                            data-bs-target="#oligoFasta" aria-expanded="false" aria-controls="oligoFasta">
+                        <i class="fa fa-align-left me-1"></i>See FASTA
+                        <span class="badge bg-secondary ms-1"><?= count($oligos) ?></span>
+                        <i class="fa fa-chevron-down collapse-chevron ms-1"></i>
+                    </button>
+                </div>
+
                 <?php if ($has_tail): ?>
                     <?php // Moved here from the tail step (user, 2026-08-07): above the form
                           // it warned about numbers that did not exist yet. Here it sits
@@ -743,10 +879,10 @@
                     <div class="alert alert-info py-2 small">
                         <i class="fa fa-info-circle me-1"></i>
                         <strong>Tm, GC and length below are for the primer without its
-                        <?= htmlspecialchars($tail['label']) ?> tail</strong> — that is the part that
+                        <?= htmlspecialchars($tail['label']) ?> tag</strong> — that is the part that
                         anneals, so it is what sets your annealing temperature. Both sequences are in
-                        the table, and <strong>Check</strong> sends the untailed primer to Primer
-                        BLAST, since the tail is not in the genome.
+                        the table, and <strong>Check</strong> sends the untagged primer to Primer
+                        BLAST, since the tag is not in the genome.
                     </div>
                 <?php endif; ?>
                 <div class="table-responsive">
@@ -755,10 +891,19 @@
                             <tr><?php foreach ($columns as $label): ?><th><?= htmlspecialchars($label) ?></th><?php endforeach; ?><th></th></tr>
                         </thead>
                         <tbody>
+                        <?php foreach ($entries as $entry): ?>
                         <?php foreach ($entry['pairs'] as $pair): ?>
                             <?php
+                            $pair['left_name']  = PrimerNames::primer($entry['id'], $pair['rank'] ?? 0, 'left');
+                            $pair['right_name'] = PrimerNames::primer($entry['id'], $pair['rank'] ?? 0, 'right');
+                            $pair['sequence']   = $entry['id'];
+                            $pair['note']       = '';
+                            // Built over the FILE's columns, which are the superset;
+                            // the screen then renders the ones marked for it. One
+                            // pass, so a value cannot be formatted one way in the
+                            // table and another in the download.
                             $row = [];
-                            foreach (array_keys($columns) as $key) {
+                            foreach (array_keys($export_columns) as $key) {
                                 $v = $pair[$key] ?? '';
                                 // Trim primer3's float padding — 59.972000 is not
                                 // more accurate than 60.0, it is just wider.
@@ -772,10 +917,14 @@
                             $export[] = $row;
                             ?>
                             <tr>
-                                <?php foreach ($row as $key => $v): ?>
-                                    <?php $is_seq = in_array($key, $sequence_columns, true); ?>
-                                    <td class="<?= $is_seq ? '' : 'small' ?>"
-                                        <?= $is_seq ? 'style="font-family:monospace;"' : '' ?>><?php
+                                <?php foreach ($columns as $key => $unused_label): ?>
+                                    <?php $v = $row[$key] ?? ''; ?>
+                                    <?php
+                                    $is_seq  = in_array($key, $sequence_columns, true);
+                                    $is_name = in_array($key, $name_columns, true);
+                                    ?>
+                                    <td class="<?= $is_seq ? '' : 'small' ?><?= $is_name ? ' text-nowrap' : '' ?>"
+                                        <?= $is_seq || $is_name ? 'style="font-family:monospace;"' : '' ?>><?php
                                         if ($is_seq && in_array($key, ['left_tailed','right_tailed'], true) && $v !== '') {
                                             // The tail is drawn apart from the primer so it is
                                             // obvious which part anneals and which part is
@@ -800,9 +949,10 @@
                                     //
                                     // Named _F/_R so Primer BLAST's own input parser pairs
                                     // them by suffix, which is its first supported shape.
-                                    $chain_name = preg_replace('/[^A-Za-z0-9_.-]/', '_', $entry['id']) . '_p' . $pair['rank'];
-                                    $chain_fasta = ">{$chain_name}_F\n" . ($pair['left_sequence'] ?? '')
-                                                 . "\n>{$chain_name}_R\n" . ($pair['right_sequence'] ?? '');
+                                    // The names come from PrimerNames, so what arrives in
+                                    // Primer BLAST is what the row above says it is.
+                                    $chain_fasta = '>' . $row['left_name'] . "\n" . ($pair['left_sequence'] ?? '')
+                                                 . "\n>" . $row['right_name'] . "\n" . ($pair['right_sequence'] ?? '');
                                     ?>
                                     <form method="post" action="<?= htmlspecialchars('/' . $site . '/tools/primer_blast.php') ?>"
                                           target="_blank" class="d-inline">
@@ -822,68 +972,138 @@
                                     </form>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php endforeach; /* pairs */ ?>
+                        <?php endforeach; /* sequences */ ?>
                         </tbody>
                     </table>
                 </div>
 
-                <?php // The Check/tail caveat used to be repeated here, below the table.
+                <?php // The Check/tag caveat used to be repeated here, below the table.
                       // It is stated once now, in the block ABOVE the table — where it is
                       // read before the numbers rather than after them. ?>
-                <?php
-                // Every output surface — table, FASTA, TSV — is rendered from ONE
-                // set of records. The workflow this replaces had the table showing
-                // tailed and untailed side by side while the FASTA block below it
-                // emitted only the untailed form, its tailed branch commented out.
-                // So the file you downloaded quietly disagreed with the table you
-                // were reading.
-                $entry_oligos = PrimerTails::oligoRecords($entry['id'], $entry['pairs'], $tail);
-                $oligos = array_merge($oligos, $entry_oligos);
-                ?>
-
-                <div class="d-flex gap-2 flex-wrap align-items-center">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadPrimerTsv">
-                        <i class="fa fa-download me-1"></i>Download table (TSV)
-                    </button>
-                    <?php // Same disclosure affordance as the options toggle above — it
-                          // expands in place, so it gets the same chevron rather than
-                          // looking like a button that does something. ?>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
-                            data-bs-target="#oligoFasta" aria-expanded="false" aria-controls="oligoFasta">
-                        <i class="fa fa-align-left me-1"></i>Oligos to order
-                        <span class="badge bg-secondary ms-1"><?= count($entry_oligos) ?></span>
-                        <i class="fa fa-chevron-down collapse-chevron ms-1"></i>
-                    </button>
-                </div>
-
                 <div class="collapse mt-3" id="oligoFasta">
                     <p class="small text-muted mb-2">
                         <?php if ($has_tail): ?>
                             Both forms of every primer: the bare primer, and the full oligo with its
-                            <?= htmlspecialchars($tail['label']) ?> tail. <strong>Order the tailed
+                            <?= htmlspecialchars($tail['label']) ?> tag. <strong>Order the tagged
                             ones</strong> — the bare sequences are here so you can check specificity
                             and paste them into Primer BLAST.
                         <?php else: ?>
                             Every primer in the table, ready to paste into an order form or a FASTA file.
                         <?php endif; ?>
                     </p>
-                    <textarea class="form-control" rows="<?= min(20, max(4, count($entry_oligos) * 2)) ?>"
-                              readonly style="font-family:monospace; font-size:0.8rem;"><?php
-                        foreach ($entry_oligos as $oligo) {
-                            echo '>' . htmlspecialchars($oligo['name'])
-                               . ' len=' . (int)$oligo['length']
-                               . ($oligo['tailed'] ? ' (with tail)' : '')
-                               . "\n" . htmlspecialchars($oligo['sequence']) . "\n";
-                        }
-                    ?></textarea>
+                    <?php // Click to copy, the same way every other sequence block on the
+                          // site works (sequences_display.php uses this exact class set):
+                          // .copyable + a "Click to copy" tooltip + a green flash, from
+                          // js/modules/copy-to-clipboard.js.
+                          //
+                          // ⚠️ It has to be a DIV, not the textarea it replaces. The module
+                          // copies el.innerText, and a textarea's text lives in .value —
+                          // innerText on one is not its contents, so the button would have
+                          // flashed green and copied nothing.
+                          //
+                          // ⚠️ And the module is NOT loaded globally — the two other pages
+                          // using it each pull it in themselves, so this page does too. ?>
+                    <div class="card bg-light">
+                        <div class="card-body copyable font-monospace-small cursor-pointer preserve-whitespace"
+                             style="max-height:26rem; overflow:auto;"><?php
+                            foreach ($oligos as $oligo) {
+                                echo '>' . htmlspecialchars($oligo['name'])
+                                   . ' len=' . (int)$oligo['length']
+                                   . ($oligo['tailed'] ? ' (with tag)' : '')
+                                   . "\n" . htmlspecialchars($oligo['sequence']) . "\n";
+                            }
+                        ?></div>
+                    </div>
                 </div>
             </div>
         </div>
-    <?php endforeach; ?>
+    <?php endif; ?>
+
+    <?php
+    // ⭐ SEQUENCES THAT PRODUCED NOTHING ARE PART OF THE RESULT (user, 2026-08-18).
+    // One row each, on the page and in the file, so "which of my sequences worked"
+    // is answered by reading rather than by counting tables. The file rows carry
+    // the sequence name and the reason with every primer column blank — a shape a
+    // spreadsheet can sort and filter, unlike a comment line.
+    //
+    // Shown UNLESS it would only restate the red error above — one sequence in,
+    // one reason out, nothing else on the page.
+    //
+    // ⚠️ The condition is about $run_error, NOT about whether anything succeeded.
+    // Keying it on "$entries || more than one failure" looked equivalent and was
+    // not: one sequence that RUNS and returns no pairs sets no run_error, so that
+    // version rendered an empty page — no table, no card, no reason. The one
+    // outcome this card exists to prevent.
+    $show_failures = $failures && !($run_error !== null && count($failures) === 1);
+
+    foreach ($failures as $failure) {
+        $row = [];
+        foreach (array_keys($export_columns) as $key) {
+            $row[$key] = '';
+        }
+        $row['sequence'] = $failure['name'];
+        $row['note']     = $failure['reason'];
+        if ($show_failures) {
+            $export[] = $row;
+        }
+    }
+
+    // The results table above carries the one download, and the failure rows are
+    // in it — so this card needs its own button only when there is no table at
+    // all, i.e. every sequence failed.
+    $has_results_download = (bool)$entries;
+    ?>
+
+    <?php if ($show_failures): ?>
+        <div class="card mt-4 shadow-sm">
+            <?php // adm-head-warn is for a state that needs attention, and this is one:
+                  // it is the only place a user finds out a sequence they pasted is not
+                  // in the results. ?>
+            <div class="card-header text-white tool-header">
+                <span class="text-uppercase fw-semibold section-eyebrow">
+                    <?php // FA5 name. fa-triangle-exclamation is the FA6 spelling and this
+                          // build does not know it — an unknown icon renders as NOTHING. ?>
+                    <i class="fa fa-exclamation-triangle me-2"></i>
+                    <?= count($failures) ?> sequence<?= count($failures) === 1 ? '' : 's' ?> with no primers
+                </span>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-2">
+                    <?= count($failures) === 1 ? 'This sequence' : 'These sequences' ?>
+                    produced no primer pairs. <?= count($entries) ? 'They are in the download above too, '
+                        . 'one row each, so the file says what happened to every sequence you pasted.' : '' ?>
+                </p>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th style="width:16rem;">Sequence</th><th>Why not</th></tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($failures as $failure): ?>
+                            <tr>
+                                <td class="small text-nowrap" style="font-family:monospace;"><?= htmlspecialchars($failure['name']) ?></td>
+                                <td class="small"><?= htmlspecialchars($failure['reason']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php if (!$has_results_download): ?>
+                    <?php // Nothing else on the page carries a download, so this does. ?>
+                    <button type="button" class="btn btn-sm btn-outline-secondary mt-3 js-download-tsv"
+                            data-rows="primerMakerExport"
+                            data-filename="primers_<?= date('Ymd') ?>.tsv">
+                        <i class="fa fa-download me-1"></i>Download this list (TSV)
+                    </button>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <?php if ($export): ?>
-        <?php // Data for the TSV download. The header is derived from the row keys
-              // in js/primer-maker.js, so it cannot drift from the table above. ?>
+        <?php // Every row from every sequence. The TSV header is derived from the row
+              // keys in js/primer-maker.js, so it cannot drift from the tables above. ?>
         <script type="application/json" id="primerMakerExport"><?= json_encode($export) ?></script>
         <script type="application/json" id="primerMakerOligos"><?= json_encode($oligos) ?></script>
     <?php endif; ?>

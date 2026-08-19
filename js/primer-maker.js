@@ -123,11 +123,18 @@
         // addEventListener rather than an onclick attribute: the site's CSP is
         // Report-Only pending the removal of inline handlers (CLAUDE.md), and
         // adding another would push that further away.
-        var tsvButton = document.getElementById('downloadPrimerTsv');
-        if (tsvButton) {
-            tsvButton.addEventListener('click', function () {
-                downloadTsv(readJson('primerMakerExport'), 'primer_maker_results.tsv');
+        // One handler, many buttons: a card per sequence, each downloading its own
+        // rows, plus a combined one when there are several. Both the rows and the
+        // filename come from the button's own dataset — reading a single global
+        // id here is what would give every card the same whole-page file, and it
+        // would look right with one sequence on the page.
+        document.querySelectorAll('.js-download-tsv').forEach(function (button) {
+            button.addEventListener('click', function () {
+                downloadTsv(
+                    readJson(button.dataset.rows || 'primerMakerExport'),
+                    button.dataset.filename || 'primer_maker_results.tsv'
+                );
             });
-        }
+        });
     });
 }());

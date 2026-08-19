@@ -7,6 +7,14 @@
  * incorporated into the amplicon so the product can be cloned, transcribed, or
  * barcoded downstream.
  *
+ * 🏷️ THE PAGE CALLS IT A "5' PRIMER TAG" (user, 2026-08-18); the code calls it a
+ * tail, here and in the 'primer_tails' config key. That split is deliberate.
+ * "Tailed primer" is the term the literature and the vendors use, so it is what
+ * you would search this codebase for — but read in a form, "tail" pulls against
+ * "5' end", and "tag" covers both things in the catalogue where "adapter" does
+ * not (a T7 promoter is a tag; it is not an adapter). Do not rename the code to
+ * match the label, and do not let the label drift back.
+ *
  * ⭐ THE ORDER OF OPERATIONS IS THE SPEC, NOT AN IMPLEMENTATION DETAIL.
  * From the workflow this tool replaces (user, 2026-08-06): "when i ran the
  * checker, i didn't include the t4p, only the primer without it, which is why i
@@ -53,6 +61,8 @@
  *
  * @package MOOP\Primer
  */
+
+include_once __DIR__ . '/PrimerNames.php';
 
 class PrimerTails
 {
@@ -184,10 +194,10 @@ class PrimerTails
         if (preg_match('/[^ACGT]/', $seq)) {
             // Not N, and not degenerate codes: a tail is synthesised exactly as
             // written, so an ambiguity code is an order the vendor cannot fill.
-            return 'A tail can only contain A, C, G and T — it is synthesised exactly as written.';
+            return 'A tag can only contain A, C, G and T — it is synthesised exactly as written.';
         }
         if (strlen($seq) > self::MAX_LENGTH) {
-            return 'That tail is ' . strlen($seq) . ' bases; ' . self::MAX_LENGTH
+            return 'That tag is ' . strlen($seq) . ' bases; ' . self::MAX_LENGTH
                  . ' is the most this tool accepts. Check you have not pasted a template sequence.';
         }
         return '';
@@ -219,7 +229,7 @@ class PrimerTails
             foreach (['forward' => $forward, 'reverse' => $reverse] as $side => $seq) {
                 $err = self::validate($seq);
                 if ($err !== '') {
-                    $errors[] = ucfirst($side) . ' tail: ' . $err;
+                    $errors[] = ucfirst($side) . ' tag: ' . $err;
                 }
             }
 
@@ -227,12 +237,12 @@ class PrimerTails
             // naming. Falling through to "no tail" would design exactly what was
             // asked for and quietly ignore the part the user cared about.
             if ($errors === [] && $forward === '' && $reverse === '') {
-                $errors[] = 'You chose a custom tail but did not enter a sequence for either primer.';
+                $errors[] = 'You chose a custom tag but did not enter a sequence for either primer.';
             }
 
             return [
                 'id'      => 'custom',
-                'label'   => 'Custom tail',
+                'label'   => 'Custom tag',
                 'forward' => $forward,
                 'reverse' => $reverse,
                 'note'    => '',
@@ -248,7 +258,7 @@ class PrimerTails
             // untailed primers and say nothing, which is precisely the silent
             // failure this class exists to avoid. Caught by a test, not by
             // reading it.
-            return array_merge($none, ['errors' => ['That tail is not one this site offers.']]);
+            return array_merge($none, ['errors' => ['That tag is not one this site offers.']]);
         }
 
         return array_merge($catalogue[$id], ['errors' => []]);
@@ -277,11 +287,18 @@ class PrimerTails
         $left  = (string)($pair['left_sequence']  ?? '');
         $right = (string)($pair['right_sequence'] ?? '');
 
-        if ($left !== '') {
+        // ⚠️ THE SIDE'S OWN TAIL DECIDES, not "a tail was chosen". A custom tail
+        // may be forward-only (resolve() rejects only the case where BOTH boxes
+        // are empty), and this branch used to test the PRIMER for emptiness — so
+        // the untailed side got a *_tailed key holding the bare primer. The table
+        // hid it, but oligoRecords() emitted it as a second FASTA record labelled
+        // "(with tail)", identical to the first: a duplicate oligo on the order
+        // form, and an inflated count on the button beside it.
+        if ($forward !== '' && $left !== '') {
             $pair['left_tailed'] = $forward . $left;
             $pair['left_oligo_length'] = strlen($pair['left_tailed']);
         }
-        if ($right !== '') {
+        if ($reverse !== '' && $right !== '') {
             $pair['right_tailed'] = $reverse . $right;
             $pair['right_oligo_length'] = strlen($pair['right_tailed']);
         }
@@ -313,20 +330,24 @@ class PrimerTails
      */
     public static function oligoRecords($record_id, array $pairs, array $tail)
     {
-        $base    = preg_replace('/[^A-Za-z0-9_.-]/', '_', (string)$record_id);
         $tailed  = ($tail['forward'] ?? '') !== '' || ($tail['reverse'] ?? '') !== '';
         $records = [];
 
         foreach ($pairs as $pair) {
             $rank = $pair['rank'] ?? 0;
-            foreach ([['left', 'F'], ['right', 'R']] as list($side, $tag)) {
+            foreach (['left', 'right'] as $side) {
                 $seq = $pair[$side . '_sequence'] ?? '';
                 if ($seq === '') {
                     continue;
                 }
 
+                // Naming is PrimerNames' job, not this class's — the table, the
+                // TSV and the Check hand-off all have to read the same name, and
+                // this file is about tails.
+                $name = PrimerNames::primer($record_id, $rank, $side);
+
                 $records[] = [
-                    'name'     => "{$base}_p{$rank}_{$tag}",
+                    'name'     => $name,
                     'sequence' => $seq,
                     'side'     => $side,
                     'rank'     => $rank,
@@ -336,7 +357,7 @@ class PrimerTails
 
                 if ($tailed && !empty($pair[$side . '_tailed'])) {
                     $records[] = [
-                        'name'     => "{$base}_p{$rank}_{$tag}_" . ($tail['id'] ?? 'tail'),
+                        'name'     => $name . '_' . ($tail['id'] ?? 'tail'),
                         'sequence' => $pair[$side . '_tailed'],
                         'side'     => $side,
                         'rank'     => $rank,
