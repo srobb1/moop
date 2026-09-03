@@ -30,6 +30,7 @@ my %annot;
 
 while (my $line = <TH>){
   chomp $line;
+  next if $line =~ /^qseqid/;
   #ACI1_HiC_scaffold_1000_000001.1	Q9BWM5	Zinc finger protein 416 OS=Homo sapiens OX=9606 GN=ZNF416 PE=1 SV=1	3.94e-110
   #ACI1_HiC_scaffold_1_000001.1	sp|Q16342|PDCD2_HUMAN	sp|Q16342|PDCD2_HUMAN Programmed cell death protein 2 OS=Homo sapiens OX=9606 GN=PDCD2 PE=1 SV=2	2.04e-210
   # ENSAMXP00000035529.1  ENSAMXP00000035529.1 pep primary_assembly:Astyanax_mexicanus-2.0:20:11140888:11159592:1 gene:ENSAMXG00000032087.1 transcript:ENSAMXT00000039164.1 gene_biotype:protein_coding transcript_biotype:protein_coding gene_symbol:HRH2 description:histamine receptor H2 [Source:HGNC Symbol;Acc:HGNC:5183]

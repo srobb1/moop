@@ -8,6 +8,12 @@ my $src = shift; # Ensembl Human
 my $src_version = shift; # release-113
 my $src_url = shift; # https://www.ensembl.org
 my $id_url = shift; # https://www.ensembl.org/Multi/Search/Results?q=
+my $desc_file = shift; # OPTIONAL: hit_id<TAB>description<TAB>symbol table.
+                       # Defaults to $dir/desc.txt (where the old RBBH runs left it).
+                       # The rbh_eross runs do NOT leave a desc.txt, so the caller
+                       # regenerates one from the reference peptide FASTA and passes
+                       # its path here -- see make_rbbh_ensembl_moop_files.sh.
+$desc_file = "$dir/desc.txt" unless defined $desc_file && length $desc_file;
 
 =pod
 query	best_hit	evalue	reciprocal_score	query_gene	hit_gene
@@ -22,13 +28,17 @@ NV2t000008001.1 XP_001626599.1  6.64e-63  4 NV2t000008001.1
 
 
 my %desc;
-open DESC, "$dir/desc.txt";
-while (my $line =<DESC>){
-  chomp $line;
-  my ($id,$desc,$sym) = split "\t", $line;
-  $desc{$id}{desc}=$desc;
-  $desc{$id}{sym}=$sym;
-} 
+if (open DESC, '<', $desc_file){
+  while (my $line =<DESC>){
+    chomp $line;
+    my ($id,$desc,$sym) = split "\t", $line;
+    $desc{$id}{desc}=$desc;
+    $desc{$id}{sym}=$sym;
+  }
+  close DESC;
+} else {
+  warn "WARNING: no RBBH description file at $desc_file -- Accession_Description column will be empty\n";
+}
 
 
 my %isoforms; 

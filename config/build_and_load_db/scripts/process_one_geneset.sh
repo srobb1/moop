@@ -153,11 +153,11 @@ check_missing_files_gff() {
   [ -s "$GENESET_DIR/cds.nt.fa" ]                                      || log_missing "cds.nt.fa"
   [ -s "$GENESET_DIR/transcript.nt.fa" ]                               || log_missing "transcript.nt.fa"
   [ -s "$GENESET_DIR/metadata.yaml" ]                                  || log_missing "metadata.yaml"
-  [ -f "$ANALYSIS_DIR/diamond_blast/UNIPROT_sprot/tophit.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/diamond_blast/UNIPROT_sprot/tophit.tsv" ]     || log_missing "diamond_blast/UNIPROT_sprot/tophit.tsv(.gz)"
-  [ -f "$ANALYSIS_DIR/eggnog_mapper/emapper.annotations" ]             || log_missing "eggnog_mapper/emapper.annotations"
-  [ -f "$ANALYSIS_DIR/interproscan/iprscan_results.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/interproscan/iprscan_results.tsv" ]            || log_missing "interproscan/iprscan_results.tsv(.gz)"
+  [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv.gz" ] || \
+    [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv" ]     || log_missing "diamond/UNIPROT_sprot/diamond_results.tsv(.gz)"
+  [ -f "$ANALYSIS_DIR/eggnog_mapper/eggnog_mapper_results.tsv" ]             || log_missing "eggnog_mapper/eggnog_mapper_results.tsv"
+  [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" ] || \
+    [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.tsv" ]            || log_missing "interproscan/interproscan_results.tsv.tsv(.gz)"
   [ -f "$ANALYSIS_DIR/protnlm/protnlm_pred_results.tsv" ]             || log_missing "protnlm/protnlm_pred_results.tsv"
 }
 
@@ -167,11 +167,11 @@ check_missing_files_t2g() {
   [ -s "$GENESET_DIR/protein.aa.fa" ]                                  || log_missing "protein.aa.fa"
   [ -s "$GENESET_DIR/transcript.nt.fa" ]                               || log_missing "transcript.nt.fa"
   [ -s "$GENESET_DIR/metadata.yaml" ]                                  || log_missing "metadata.yaml"
-  [ -f "$ANALYSIS_DIR/diamond_blast/UNIPROT_sprot/tophit.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/diamond_blast/UNIPROT_sprot/tophit.tsv" ]     || log_missing "diamond_blast/UNIPROT_sprot/tophit.tsv(.gz)"
-  [ -f "$ANALYSIS_DIR/eggnog_mapper/emapper.annotations" ]             || log_missing "eggnog_mapper/emapper.annotations"
-  [ -f "$ANALYSIS_DIR/interproscan/iprscan_results.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/interproscan/iprscan_results.tsv" ]            || log_missing "interproscan/iprscan_results.tsv(.gz)"
+  [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv.gz" ] || \
+    [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv" ]     || log_missing "diamond/UNIPROT_sprot/diamond_results.tsv(.gz)"
+  [ -f "$ANALYSIS_DIR/eggnog_mapper/eggnog_mapper_results.tsv" ]             || log_missing "eggnog_mapper/eggnog_mapper_results.tsv"
+  [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" ] || \
+    [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.tsv" ]            || log_missing "interproscan/interproscan_results.tsv.tsv(.gz)"
   [ -f "$ANALYSIS_DIR/protnlm/protnlm_pred_results.tsv" ]             || log_missing "protnlm/protnlm_pred_results.tsv"
 }
 
@@ -211,16 +211,16 @@ fi
 
 # ── Diamond / BLAST homologs ──────────────────────────────────────────────────
 make_diamond_moop() {
-  local DBLAST_DIR="$ANALYSIS_DIR/diamond_blast"
+  local DBLAST_DIR="$ANALYSIS_DIR/diamond"
   local SPROT_DIR="$DBLAST_DIR/UNIPROT_sprot"
   local VERSION
   VERSION=$(head -1 "$SPROT_DIR/db_version.txt" 2>/dev/null)
 
   [ -e tophit.tsv ] && rm tophit.tsv
-  if [ -e "$SPROT_DIR/tophit.tsv.gz" ]; then
-    zcat "$SPROT_DIR/tophit.tsv.gz" > tophit.tsv
+  if [ -e "$SPROT_DIR/diamond_results.tsv.gz" ]; then
+    zcat "$SPROT_DIR/diamond_results.tsv.gz" > tophit.tsv
   else
-    ln -s "$SPROT_DIR/tophit.tsv" tophit.tsv
+    ln -s "$SPROT_DIR/diamond_results.tsv" tophit.tsv
   fi
   ls -l tophit.tsv
   perl "$REPO/analysis_parsers/parse_DIAMOND_to_MOOP_TSV.pl" tophit.tsv \
@@ -229,15 +229,15 @@ make_diamond_moop() {
   shopt -s nullglob
   for RESULTS in "$DBLAST_DIR"/ENS_*/; do
     shopt -u nullglob
-    RBBH_ORG=$(basename "$RESULTS")
-    ORGSTRING="${RBBH_ORG#ENS_}"
+    TARGET_ORG=$(basename "$RESULTS")
+    ORGSTRING="${TARGET_ORG#ENS_}"
     ORG=$(echo "$ORGSTRING" | perl -pe 's/^(\w)/\u$1/; s/_(\w)/ \L$1/g')
     VERSION=$(head -1 "$RESULTS/db_version.txt" 2>/dev/null)
     [ -e tophit.tsv ] && rm tophit.tsv
-    if [ -e "$RESULTS/tophit.tsv.gz" ]; then
-      zcat "$RESULTS/tophit.tsv.gz" > tophit.tsv
-    elif [ -e "$RESULTS/tophit.tsv" ]; then
-      ln -s "$RESULTS/tophit.tsv" tophit.tsv
+    if [ -e "$RESULTS/diamond_results.tsv.gz" ]; then
+      zcat "$RESULTS/diamond_results.tsv.gz" > tophit.tsv
+    elif [ -e "$RESULTS/diamond_results.tsv" ]; then
+      ln -s "$RESULTS/diamond_results.tsv" tophit.tsv
     else
       echo "$RESULTS/tophit.tsv does not exist"; continue
     fi
@@ -254,13 +254,13 @@ has_data UniProtKB_Swiss-Prot.homologs.moop.tsv \
 make_eggnog_moop() {
   local EDIR="$ANALYSIS_DIR/eggnog_mapper"
   local MAPPERVERSION DBVERSION VERSION
-  MAPPERVERSION=$(grep emapper "$EDIR/version.txt" 2>/dev/null \
+  MAPPERVERSION=$(grep emapper "$EDIR/db_version.txt" 2>/dev/null \
                   | perl -pe 's/.*(emapper-\S+).*/$1/')
-  DBVERSION=$(grep 'eggNOG DB version:' "$EDIR/version.txt" 2>/dev/null \
+  DBVERSION=$(grep 'eggNOG DB version:' "$EDIR/db_version.txt" 2>/dev/null \
               | perl -pe 's/.*?eggNOG DB version: (\S+).*/$1/')
   VERSION="$MAPPERVERSION DB_$DBVERSION"
-  echo "perl $REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl $EDIR/emapper.annotations $VERSION"
-  perl "$REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl" "$EDIR/emapper.annotations" "$VERSION"
+  echo "perl $REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl $EDIR/eggnog_mapper_results.tsv $VERSION"
+  perl "$REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl" "$EDIR/eggnog_mapper_results.tsv" "$VERSION"
   source /home/smr/miniconda3/etc/profile.d/conda.sh
   conda activate goatools
   python3 "$REPO/analysis_parsers/reduce_eggnog_go.moop.py" EggNOG2GO.eggnog.moop.tsv
@@ -272,12 +272,12 @@ has_data EggNOG2GO.eggnog.moop.tsv \
 make_interproscan_moop() {
   local IDIR="$ANALYSIS_DIR/interproscan"
   local VERSION
-  VERSION=$(cat "$IDIR/version.txt" 2>/dev/null)
+  VERSION=$(cat "$IDIR/db_version.txt" 2>/dev/null)
   rm -f iprscan.tsv
-  if [ -e "$IDIR/iprscan_results.tsv.gz" ]; then
-    zcat "$IDIR/iprscan_results.tsv.gz" > iprscan.tsv
+  if [ -e "$IDIR/interproscan_results.tsv.tsv.gz" ]; then
+    zcat "$IDIR/interproscan_results.tsv.gz" > iprscan.tsv
   else
-    ln -s "$IDIR/iprscan_results.tsv" iprscan.tsv
+    ln -s "$IDIR/interproscan_results.tsv" iprscan.tsv
   fi
   perl "$REPO/analysis_parsers/parse_InterProScan_to_MOOP_TSV.pl" iprscan.tsv "$VERSION"
 }
@@ -292,17 +292,64 @@ make_protnlm_moop() {
 has_data protnlm.moop.tsv \
   || { echo "Building ProtNLM moop files"; make_protnlm_moop; }
 
-# ── RBBH ─────────────────────────────────────────────────────────────────────
-RBBH_BASE="/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/RBBH_v2/RESULTS/$THIS_ORG/$ASSEMBLY/$GENE_SET"
-for RBBH_RESULTS in "$RBBH_BASE"/*/*results.tsv; do
-  [[ -f "$RBBH_RESULTS" ]] || continue
-  PARENT_DIR="${RBBH_RESULTS%/*}"
-  RBBH_ORG="${PARENT_DIR##*/}"
-  RBBH_PRETTY="${RBBH_ORG#ENS_}"; RBBH_PRETTY="${RBBH_PRETTY//_/ }"; RBBH_PRETTY="${RBBH_PRETTY^}"
-  has_data "Ensembl_${RBBH_PRETTY// /_}.RBBH.moop.tsv" \
-    || { echo "Processing RBBH for $THIS_ORG and $RBBH_ORG"
-         sh "$SCRIPTS/make_rbbh_ensembl_moop_files.sh" "$THIS_ORG" "$RBBH_BASE" "$RBBH_ORG"; }
-done
+# ── RBBH — reciprocal best BLAST hits ────────────────────────────────────────
+make_rbbh_moop() {
+  local RBBH_BASE="$ANALYSIS_DIR/rbh_eross"
+  local RESULTS TARGET_ORG ORG OUT VERSION REF_DIR DESC cand
+  local -a RESULT_TSV FASTA
+
+  shopt -s nullglob
+  for RESULTS in "$RBBH_BASE"/*/; do
+    shopt -u nullglob
+    RESULTS="${RESULTS%/}"
+    shopt -s nullglob
+    RESULT_TSV=("$RESULTS"/*results.tsv)
+    shopt -u nullglob
+    [ "${#RESULT_TSV[@]}" -gt 0 ] || continue
+
+    TARGET_ORG=$(basename "$RESULTS")                             # ENS_homo_sapiens
+    ORG="${TARGET_ORG#ENS_}"; ORG="${ORG//_/ }"; ORG="${ORG^}"    # Homo sapiens
+    OUT="Ensembl_${ORG// /_}.RBBH.moop.tsv"
+    has_data "$OUT" && continue
+
+    ## Version follows the reference DB's 'current' symlink (release-113 is the fallback).
+    REF_DIR="$REF_DB/$TARGET_ORG/current"
+    VERSION=$(basename "$(readlink -f "$REF_DIR" 2>/dev/null)" 2>/dev/null)
+    [[ "$VERSION" == release-* ]] || VERSION=release-113
+
+    ## desc.txt (hit_id<TAB>description<TAB>symbol) fills the Accession_Description
+    ## column. Look, in order: shipped with the results (old RBBH_v2 tree) -> a shared
+    ## copy next to the reference FASTA -> a copy an earlier run left here -> else
+    ## generate one here from $REF_DIR/*.pep.all.fa.gz and reuse it next time. The
+    ## rbh_eross runs ship no desc.txt, so without this every homolog loads blank.
+    DESC=""
+    for cand in "$RESULTS/desc.txt" "$REF_DIR/desc.txt" "$TARGET_ORG.desc.txt"; do
+      [ -s "$cand" ] && { DESC="$cand"; break; }
+    done
+    if [ -z "$DESC" ]; then
+      shopt -s nullglob
+      FASTA=("$REF_DIR"/*.pep.all.fa.gz "$REF_DIR"/*.pep.all.fa)
+      shopt -u nullglob
+      if [ "${#FASTA[@]}" -gt 0 ]; then
+        echo "Building RBBH desc.txt for $TARGET_ORG from ${FASTA[0]}"
+        { [[ "${FASTA[0]}" == *.gz ]] && zcat "${FASTA[0]}" || cat "${FASTA[0]}"; } \
+          | perl "$REPO/analysis_parsers/rbbh/getDesc_ENS_FA.pl" /dev/stdin > "$TARGET_ORG.desc.txt" \
+          && DESC="$TARGET_ORG.desc.txt"
+      else
+        echo "WARNING: no peptide FASTA under $REF_DIR — $TARGET_ORG RBBH descriptions will be blank" >&2
+      fi
+    fi
+
+    echo "Building RBBH moop files for $TARGET_ORG"
+    perl "$REPO/analysis_parsers/parse_RBBH_to_MOOP_TSV.pl" "$RESULTS" "Ensembl $ORG" "$VERSION" \
+      https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q=" "$DESC"
+  done
+  shopt -u nullglob
+}
+## One .RBBH.moop.tsv per target organism, so the has_data gate is per-target
+## inside the loop rather than the single driver line the blocks above use.
+make_rbbh_moop
+
 
 # ── OMA (standalone, optional) ────────────────────────────────────────────────
 ## Not part of the big per-org ANALYSIS_DIR pipeline — OMA is run by hand and

@@ -21,8 +21,14 @@
 #
 # ANNOTATIONS carries a DATE. When the analysis is regenerated under a new name,
 # change it HERE, once.
+#
+# REF_DB is the reference-database tree ($REF_DB/ENS_<species>/current/*.pep.all.fa.gz,
+# $REF_DB/UNIPROT_sprot/..., etc). make_rbbh_ensembl_moop_files.sh reads the Ensembl
+# peptide FASTA from here to regenerate a target's desc.txt when the RBBH run did not
+# leave one behind (the rbh_eross runs do not).
 
 : "${GENOMES:=/n/sci/SCI-004223-SBGENOMES/genomes/v2}"
-: "${ANNOTATIONS:=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/annotations/SBGENOMES_2026-05-21}"
+: "${ANNOTATIONS:=/n/sci/SCI-004223-SBGENOMES/annotations/sbgenomes_2}"
+: "${REF_DB:=/n/sci/SCI-004223-SBGENOMES/db}"
 
-export GENOMES ANNOTATIONS
+export GENOMES ANNOTATIONS REF_DB
