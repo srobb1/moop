@@ -1,8 +1,30 @@
 # Group / taxonomy consistency checker
 
-Status: **idea recorded, not built.** Raised by the user 2026-07-23 after noticing that
-`Cnidaria` means two different sets depending on which list you click it from. Deferred
-deliberately — "any discrepancies is something I'll have to address in the future".
+Status: **BUILT 2026-09-10, as suggestions on Manage Groups.** Raised by the user 2026-07-23
+after noticing that `Cnidaria` means two different sets depending on which list you click
+it from.
+
+What exists:
+- `lib/group_taxonomy_check.php` — the logic; reads two JSON files, no organism DB. Two
+  bases: `name` (a group named after a rank — check 1 below) and `cover` (an informal group
+  whose members all sit under one rank, e.g. `Bats` == Chiroptera), with the size guards
+  documented at the top of the file. Covered in `tests/smoke_tests.php`.
+- Manage Groups: a dashed "Cnidaria?" chip on each affected row — click opens the row
+  editor with the group pre-ticked and **unsaved**; × marks it "not applicable" — plus a
+  summary card at `#taxonomy-suggestions` whose "Add in editor" turns the paginated table
+  to the right row.
+- Dismissals go to `metadata/group_taxon_exceptions.json` via
+  `admin/api/dismiss_group_suggestion.php`, which never touches group membership.
+- The shared data-health card (dashboard + Manage Organisms) carries one line and links
+  here — check 4, as a router.
+
+Not built:
+- **A hint before a gene set's FIRST save.** Suggestions are computed only for rows already
+  in `organism_assembly_groups.json`, so a brand-new gene set is flagged one page load
+  after it is saved, not while its groups are being ticked — and that first tick is exactly
+  where the Scolanthus mistake was made.
+- Checks 2 and 3 below.
+- "Make a group from this lineage" — still needs the snapshot-vs-mirrored decision.
 
 ---
 

@@ -184,6 +184,33 @@
                 <span class="text-muted fst-italic small">no groups</span>
               <?php endif; ?>
             </span>
+            <?php
+              // ⚠️ Suggestion chips live OUTSIDE .groups-display on purpose. The row editor
+              // in js/modules/manage-groups.js builds its tag list from the TEXT of every
+              // .tag-chip inside .groups-display, so a chip placed in there would be saved
+              // as a real group named "+ Bats?".
+              $_row_key  = $data['organism'] . '/' . $data['assembly'] . '/' . $row_gs;
+              $_row_sugg = $gt_by_row[$_row_key] ?? [];
+              if ($_row_sugg):
+            ?>
+            <span class="groups-suggestions">
+              <?php foreach ($_row_sugg as $_s):
+                $_why = $_s['basis'] === 'name'
+                  ? sprintf('The taxonomy tree places %s under %s, and there is a curated group of the same name that it is not in.',
+                            str_replace('_', ' ', $_s['organism']), $_s['rank'])
+                  : sprintf('All %d members of "%s" are %s. %s is %s too, but is not in the group.',
+                            $_s['group_size'], $_s['group'], $_s['rank'], str_replace('_', ' ', $_s['organism']), $_s['rank']);
+              ?>
+              <span class="tag-chip suggested"
+                    data-group="<?= htmlspecialchars($_s['group']) ?>"
+                    data-organism="<?= htmlspecialchars($_s['organism']) ?>"
+                    data-rank="<?= htmlspecialchars($_s['rank']) ?>"
+                    title="<?= htmlspecialchars($_why) ?> Click to add it in the editor — nothing is saved until you press Save."
+                    ><i class="fa fa-lightbulb"></i> <?= htmlspecialchars($_s['group']) ?>?<span
+                       class="suggestion-dismiss" title="Not applicable — record this as deliberate">&times;</span></span>
+              <?php endforeach; ?>
+            </span>
+            <?php endif; ?>
           </td>
           <td>
             <?php if ($data['_fs_exists']):
@@ -383,6 +410,121 @@
             <?php endforeach; ?>
           </tbody>
         </table>
+      </div>
+    </div>
+  <?php endif; ?>
+
+  <?php
+    // ── Taxonomy suggestions ────────────────────────────────────────────────────
+    // Curated groups drift from taxonomy because they are maintained by hand. This
+    // section lists gene sets the tree says probably belong to a group they are not in.
+    // Nothing here writes to the groups file: "Add" opens the row editor with the group
+    // pre-ticked, and the admin still presses Save.
+    $_sugg_by_group = [];
+    foreach ($gt_suggestions as $_s) { $_sugg_by_group[$_s['group']][] = $_s; }
+    ksort($_sugg_by_group);
+    $_dismissed_by_group = [];
+    foreach ($gt_dismissed as $_s) { $_dismissed_by_group[$_s['group']][] = $_s; }
+    ksort($_dismissed_by_group);
+  ?>
+  <?php if (!empty($_sugg_by_group) || !empty($_dismissed_by_group)): ?>
+    <hr class="my-5">
+    <div class="card mb-4" id="taxonomy-suggestions-section">
+      <div class="card-header adm-head d-flex flex-wrap align-items-center gap-2" id="taxonomy-suggestions">
+        <span class="badge bg-secondary fs-6">
+          <i class="fa fa-lightbulb"></i> Taxonomy Suggestions (<?= count($gt_suggestions) ?>)
+        </span>
+        <span class="text-muted small">— gene sets the taxonomy tree says probably belong to a group they're not in</span>
+      </div>
+      <div class="card-body">
+        <p class="text-muted">
+          Curated groups are maintained by hand, so they drift from the taxonomy tree. These are
+          <strong>suggestions, not errors</strong> — a group is allowed to be non-taxonomic
+          (<em>Corals</em>, <em>Fish</em> and <em>Sea anemone</em> deliberately are).
+          <strong>Add</strong> opens that row's group editor with the group already ticked;
+          nothing is written until you press <strong>Save</strong>.
+          <strong>Not applicable</strong> records the difference as deliberate so it stops being suggested.
+        </p>
+        <div id="taxonomy-suggestions-alert"></div>
+
+        <?php if (empty($_sugg_by_group)): ?>
+          <p class="mb-0 text-success"><i class="fa fa-check-circle"></i>
+            No outstanding suggestions — every curated group that maps onto a taxonomy rank is complete.</p>
+        <?php endif; ?>
+
+        <?php foreach ($_sugg_by_group as $_g => $_items): ?>
+          <div class="mb-3 taxonomy-suggestion-group" data-group="<?= htmlspecialchars($_g) ?>">
+            <h6 class="mb-1">
+              <span class="tag-chip selected" style="cursor:default;"><?= htmlspecialchars($_g) ?></span>
+              <span class="text-muted small">
+                <?= count($_items) ?> suggested
+                — <?= $_items[0]['basis'] === 'name'
+                      ? 'this group is named after the rank <code>' . htmlspecialchars($_items[0]['rank']) . '</code>'
+                      : 'all ' . (int)$_items[0]['group_size'] . ' current members are <code>' . htmlspecialchars($_items[0]['rank']) . '</code>' ?>
+              </span>
+            </h6>
+            <table class="table table-sm table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Organism</th><th>Common Name</th><th>Assembly</th><th>Gene Set</th><th style="width:260px;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($_items as $_s): ?>
+                  <tr class="taxonomy-suggestion-row"
+                      data-organism="<?= htmlspecialchars($_s['organism']) ?>"
+                      data-assembly="<?= htmlspecialchars($_s['assembly']) ?>"
+                      data-gene-set="<?= htmlspecialchars($_s['gene_set']) ?>"
+                      data-group="<?= htmlspecialchars($_s['group']) ?>">
+                    <td><?= htmlspecialchars($_s['organism']) ?></td>
+                    <td class="text-muted"><?= htmlspecialchars($organism_meta[$_s['organism']]['common_name'] ?? '') ?></td>
+                    <td><?= htmlspecialchars($_s['assembly']) ?></td>
+                    <td class="small text-muted"><?= htmlspecialchars($_s['gene_set']) ?></td>
+                    <td class="text-nowrap">
+                      <button type="button" class="btn btn-sm btn-outline-primary suggestion-goto"
+                              <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
+                        <i class="fa fa-arrow-up"></i> Add in editor
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-secondary suggestion-dismiss-btn"
+                              <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
+                        Not applicable
+                      </button>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endforeach; ?>
+
+        <?php if (!empty($_dismissed_by_group)): ?>
+          <hr>
+          <p class="mb-2">
+            <a class="small text-muted" data-bs-toggle="collapse" href="#acceptedDifferences" role="button">
+              <i class="fa fa-chevron-down"></i>
+              Accepted differences (<?= count($gt_dismissed) ?>) — marked deliberate, not suggested again
+            </a>
+          </p>
+          <div class="collapse" id="acceptedDifferences">
+            <table class="table table-sm mb-0">
+              <thead><tr><th>Organism</th><th>Group</th><th>Reason</th><th>Marked by</th><th>When</th><th></th></tr></thead>
+              <tbody>
+                <?php foreach ($gt_dismissed as $_d): ?>
+                  <tr class="taxonomy-dismissed-row"
+                      data-organism="<?= htmlspecialchars($_d['organism']) ?>"
+                      data-group="<?= htmlspecialchars($_d['group']) ?>">
+                    <td><?= htmlspecialchars($_d['organism']) ?></td>
+                    <td><?= htmlspecialchars($_d['group']) ?></td>
+                    <td class="text-muted small"><?= htmlspecialchars($_d['reason'] ?? '') ?: '<em>no reason given</em>' ?></td>
+                    <td class="text-muted small"><?= htmlspecialchars($_d['dismissed_by'] ?? '') ?></td>
+                    <td class="text-muted small"><?= htmlspecialchars(substr((string)($_d['dismissed_at'] ?? ''), 0, 10)) ?></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-secondary suggestion-restore-btn">Restore</button></td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
       </div>
     </div>
   <?php endif; ?>

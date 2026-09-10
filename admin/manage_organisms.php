@@ -316,6 +316,7 @@ $data = [
     'orphaned_jbrowse_systemic' => $_health['orphaned_jbrowse_systemic'],
     'no_database_organisms' => $_health['no_database_organisms'],
     'new_gene_set_tuples' => $_health['new_gene_set_tuples'],
+    'taxonomy_suggestions' => $_health['taxonomy_suggestions'],
     // Reuse this page's existing staleness computation for the shared health card's
     // "cache out of date" notice ($stale_organisms = per-org changes; reason covers
     // the config-only case where no individual organism file changed).

@@ -306,6 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'metadata/organism_assembly_groups.json',
         'metadata/taxonomy_tree_config.json',
         'metadata/glossary.json',
+        'metadata/group_taxon_exceptions.json',
     ];
 
     $copied = 0;

@@ -487,6 +487,7 @@ function housekeeping_snapshot_site_data() {
         $site_path . '/metadata/organism_assembly_groups.json'  => 'metadata/organism_assembly_groups.json',
         $site_path . '/metadata/taxonomy_tree_config.json'      => 'metadata/taxonomy_tree_config.json',
         $site_path . '/metadata/glossary.json'                  => 'metadata/glossary.json',
+        $site_path . '/metadata/group_taxon_exceptions.json'    => 'metadata/group_taxon_exceptions.json',
         $users_file                                             => 'users.json',
     ];
 
@@ -523,6 +524,7 @@ access control configuration.
 | `metadata/organism_assembly_groups.json` | Which organisms belong to which groups |
 | `metadata/taxonomy_tree_config.json` | Taxonomy tree structure |
 | `metadata/glossary.json` | Admin-editable glossary term definitions |
+| `metadata/group_taxon_exceptions.json` | Group/taxonomy differences marked deliberate |
 | `users.json` | User accounts and access levels |
 | `organisms/{name}/organism.json` | Per-organism metadata (one file per organism) |
 

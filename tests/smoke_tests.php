@@ -359,6 +359,109 @@ foreach (array_keys($programs) as $pid) {
 }
 
 // ----------------------------------------------------------------------------
+group('group/taxonomy suggestions — curated groups drifting from the tree');
+
+require_once "$BASE/lib/group_taxonomy_check.php";
+
+// Hermetic fixture: 3 "bats" under Chiroptera, 2 anemones under Actiniaria, all inside
+// Metazoa. No site data is read.
+$gt_tree = ['name' => 'Life', 'children' => [
+    ['name' => 'Metazoa', 'children' => [
+        ['name' => 'Chordata', 'children' => [
+            ['name' => 'Chiroptera', 'children' => [
+                ['name' => 'Bat one',   'organism' => 'Bat_one'],
+                ['name' => 'Bat two',   'organism' => 'Bat_two'],
+                ['name' => 'Bat three', 'organism' => 'Bat_three'],
+            ]],
+        ]],
+        ['name' => 'Cnidaria', 'children' => [
+            ['name' => 'Actiniaria', 'children' => [
+                ['name' => 'Anemone one', 'organism' => 'Anemone_one'],
+                ['name' => 'Anemone two', 'organism' => 'Anemone_two'],
+            ]],
+        ]],
+    ]],
+]];
+
+$mk = function ($org, $groups) {
+    return ['organism' => $org, 'assembly' => 'GCA_1', 'gene_set' => 'gs1', 'groups' => $groups];
+};
+
+// All three bats tagged: nothing to suggest.
+$gt_clean = [
+    $mk('Bat_one', ['Bats']), $mk('Bat_two', ['Bats']), $mk('Bat_three', ['Bats']),
+    $mk('Anemone_one', ['Cnidaria']), $mk('Anemone_two', ['Cnidaria']),
+];
+$r = moop_gt_compute($gt_clean, $gt_tree);
+ok(count($r['suggestions']) === 0,          'a consistent set produces no suggestions');
+ok(isset($r['groups_checked']['Bats']) && $r['groups_checked']['Bats']['rank'] === 'Chiroptera',
+                                            'informal group "Bats" is matched to the Chiroptera rank by cover');
+ok(($r['groups_checked']['Bats']['basis'] ?? '') === 'cover',
+                                            'that match is recorded as basis=cover, not name');
+
+// One bat left untagged — the case a NAME-based check can never see, because no group
+// is called "Chiroptera".
+$gt_missing = [
+    $mk('Bat_one', ['Bats']), $mk('Bat_two', ['Bats']), $mk('Bat_three', ['Bats']),
+    $mk('Bat_four', []),
+];
+$gt_tree_4 = $gt_tree;
+$gt_tree_4['children'][0]['children'][0]['children'][0]['children'][] =
+    ['name' => 'Bat four', 'organism' => 'Bat_four'];
+$r = moop_gt_compute($gt_missing, $gt_tree_4);
+ok(count($r['suggestions']) === 1,          'an untagged organism under the cover rank is suggested');
+ok(($r['suggestions'][0]['group'] ?? '') === 'Bats',
+                                            'the suggestion names the GROUP (Bats), never the rank');
+ok(($r['suggestions'][0]['organism'] ?? '') === 'Bat_four',
+                                            'the suggestion names the untagged organism');
+
+// A group whose name IS a rank: the Scolanthus/Cnidaria shape.
+$gt_name = [
+    $mk('Anemone_one', ['Cnidaria']),
+    $mk('Anemone_two', []),
+];
+$r = moop_gt_compute($gt_name, $gt_tree);
+$named = array_values(array_filter($r['suggestions'], function ($s) { return $s['group'] === 'Cnidaria'; }));
+ok(count($named) === 1 && $named[0]['basis'] === 'name',
+                                            'a group named after a rank is checked by name');
+
+// Guard: a small, polyphyletic group must NOT drag in its whole containing rank.
+// "Odd pair" = one bat + one anemone, jointly contained only by Metazoa (5 organisms).
+$gt_poly = [
+    $mk('Bat_one', ['Odd pair']), $mk('Anemone_one', ['Odd pair']),
+    $mk('Bat_two', []), $mk('Bat_three', []), $mk('Anemone_two', []),
+];
+$r = moop_gt_compute($gt_poly, $gt_tree);
+$poly = array_filter($r['suggestions'], function ($s) { return $s['group'] === 'Odd pair'; });
+ok(count($poly) === 0,                      'a 2-member polyphyletic group suggests nothing (Fish/Chordata guard)');
+ok(!isset($r['groups_checked']['Odd pair']),'…and that group is not claimed as taxonomic at all');
+
+// Guard: a single-member group must not adopt a broad rank as its cover.
+$gt_single = [
+    $mk('Bat_one', ['Solo']),
+    $mk('Bat_two', []), $mk('Bat_three', []),
+];
+$r = moop_gt_compute($gt_single, $gt_tree);
+$solo = array_filter($r['suggestions'], function ($s) { return $s['group'] === 'Solo'; });
+ok(count($solo) === 0,                      'a 1-member group produces no cover suggestions');
+
+// Dismissals suppress a suggestion without touching membership.
+$ex = [['organism' => 'Bat_four', 'group' => 'Bats', 'reason' => 'deliberate', 'by' => 't', 'at' => 'now']];
+$r  = moop_gt_compute($gt_missing, $gt_tree_4, $ex);
+ok(count($r['suggestions']) === 0,          'a dismissed suggestion stops being suggested');
+ok(count($r['dismissed']) === 1,            '…and is still listed as an accepted difference');
+ok(($r['dismissed'][0]['reason'] ?? '') === 'deliberate',
+                                            '…carrying the reason it was dismissed for');
+
+// A suggestion must never name a group that does not exist, or the chip would ask the
+// admin to tick a checkbox that is not there.
+$r = moop_gt_compute($gt_missing, $gt_tree_4);
+$existing = [];
+foreach ($gt_missing as $e) { foreach ($e['groups'] as $g) { $existing[$g] = true; } }
+$phantom = array_filter($r['suggestions'], function ($s) use ($existing) { return !isset($existing[$s['group']]); });
+ok(count($phantom) === 0,                   'every suggested group already exists in the groups file');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

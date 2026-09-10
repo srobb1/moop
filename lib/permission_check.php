@@ -510,6 +510,11 @@ function moop_build_permission_items($config, array $ctx): array {
                 // Admin-editable through Manage Glossary, so the web server writes it.
                 // Absent here — and therefore unchecked — until 2026-08-04.
                 $metadata_path . '/glossary.json',
+                // Written by admin/api/dismiss_group_suggestion.php when a curated
+                // group is deliberately allowed to differ from the taxonomy tree.
+                // Seeded from .example by setup.php: a MISSING path is reported as a
+                // medium issue here, so it must exist rather than appear on first use.
+                $metadata_path . '/group_taxon_exceptions.json',
             ],
             'required_perms' => '664',
             'required_owner' => $moop_owner,

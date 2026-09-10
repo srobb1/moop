@@ -409,6 +409,18 @@ $stale_entries = array_filter($groups_data_with_status, function($data) {
 // this case since the directory is still there. Cache-driven — see getOrphanedGeneSetTuples().
 $db_orphaned_tuples = getOrphanedGeneSetTuples($organism_data_path);
 
+// Gene sets the taxonomy says probably belong to a curated group they are not in.
+// Suggestions only — see lib/group_taxonomy_check.php. Keyed per row for the table chips,
+// and grouped for the summary card.
+$gt_result       = moop_gt_suggestions();
+$gt_suggestions  = $gt_result['suggestions'];
+$gt_dismissed    = $gt_result['dismissed'];
+$gt_groups_checked = $gt_result['groups_checked'];
+$gt_by_row = [];
+foreach ($gt_suggestions as $_s) {
+    $gt_by_row[$_s['organism'] . '/' . $_s['assembly'] . '/' . $_s['gene_set']][] = $_s;
+}
+
 // Configure display
 $display_config = [
     'title' => 'Manage Groups - ' . $siteTitle,
@@ -432,13 +444,18 @@ $data = [
     'stale_entries' => $stale_entries,
     'db_orphaned_tuples' => $db_orphaned_tuples,
     'existing_groups' => $all_existing_groups,
+    'gt_suggestions' => $gt_suggestions,
+    'gt_dismissed' => $gt_dismissed,
+    'gt_groups_checked' => $gt_groups_checked,
+    'gt_by_row' => $gt_by_row,
     'config' => $config,
     'page_styles' => [
         '/' . $site . '/css/manage-groups.css'
     ],
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',
-        '/' . $site . '/js/modules/manage-groups.js'
+        '/' . $site . '/js/modules/manage-groups.js',
+        '/' . $site . '/js/modules/group-taxonomy-suggestions.js'
     ],
     'inline_scripts' => [
         "const sitePath = '/" . $site . "';",

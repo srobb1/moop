@@ -26,7 +26,7 @@ $organism_data = $config->getPath('organism_data');
 $cache_file    = moop_organism_cache_file();
 $lock_file     = moop_organism_cache_lock_file();
 $cache_info    = ['generated' => null, 'organism_count' => 0, 'refreshing' => false];
-$health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0];
+$health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0];
 $_raw_cache_data = [];
 $cache_stale = false;      // true when live data fingerprints differ from the cache's
 $cache_changed_orgs = [];  // organisms whose data changed since the cache was built
@@ -74,6 +74,7 @@ $_orphaned_jbrowse_regs    = $_health['orphaned_jbrowse_registrations'];
 $_orphaned_jbrowse_systemic = $_health['orphaned_jbrowse_systemic'];
 $_no_database_organisms    = $_health['no_database_organisms'];
 $_new_gene_set_tuples      = $_health['new_gene_set_tuples'];
+$_taxonomy_suggestions     = $_health['taxonomy_suggestions'];
 unset($_raw_cache_data, $_health);
 
 // Prepare data for content file
@@ -91,6 +92,7 @@ $data = [
     'cache_changed_orgs' => $cache_changed_orgs,
     'health_alerts' => $health_alerts,
     'new_gene_set_tuples' => $_new_gene_set_tuples,
+    'taxonomy_suggestions' => $_taxonomy_suggestions,
     'orphaned_gene_set_tuples' => $_orphaned_gene_set_tuples,
     'orphaned_assembly_tuples' => $_orphaned_assembly_tuples,
     'orphaned_jbrowse_registrations' => $_orphaned_jbrowse_regs,

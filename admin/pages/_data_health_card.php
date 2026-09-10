@@ -5,7 +5,8 @@
  * Included by both the admin dashboard (admin/pages/admin.php) and the manage
  * organisms page (admin/pages/manage_organisms.php) so both show the SAME warnings.
  * Expects these variables in scope (extracted from the page's $data):
- *   $health_alerts            — ['ungrouped','not_in_tree','stale_groups','new_gene_sets','orphaned_gene_sets','orphaned_assemblies','orphaned_jbrowse','no_database']
+ *   $health_alerts            — ['ungrouped','not_in_tree','stale_groups','new_gene_sets','orphaned_gene_sets','orphaned_assemblies','orphaned_jbrowse','no_database','taxonomy_suggestions']
+ *   $taxonomy_suggestions     — list of ['organism','assembly','gene_set','group','rank','basis']
  *   $orphaned_gene_set_tuples — list of ['organism','assembly','gene_set']
  *   $orphaned_assembly_tuples — list of ['organism','assembly']
  *   $orphaned_jbrowse_registrations — list of ['organism','assembly','reason','detail']
@@ -14,8 +15,9 @@
 $health_alerts = ($health_alerts ?? []) + [
     'ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0,
     'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0,
-    'no_database' => 0,
+    'no_database' => 0, 'taxonomy_suggestions' => 0,
 ];
+$taxonomy_suggestions = $taxonomy_suggestions ?? [];
 $orphaned_gene_set_tuples = $orphaned_gene_set_tuples ?? [];
 $orphaned_assembly_tuples = $orphaned_assembly_tuples ?? [];
 $orphaned_jbrowse_registrations = $orphaned_jbrowse_registrations ?? [];
@@ -34,17 +36,19 @@ $_p_oa    = $health_alerts['orphaned_assemblies'] > 0;
 $_p_ojb   = $health_alerts['orphaned_jbrowse'] > 0;
 $_p_nodb  = $health_alerts['no_database'] > 0;
 $_p_nit   = $health_alerts['not_in_tree'] > 0;
+$_p_tax   = $health_alerts['taxonomy_suggestions'] > 0;
 
-$_any_data_issue = ($_p_ung || $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit);
+$_any_data_issue = ($_p_ung || $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax);
 $has_health_issues = $cache_stale || $_any_data_issue;
 if ($has_health_issues):
-    $_after_ungrouped    = $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit;
-    $_after_new_gs       = $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit;
-    $_after_stale        = $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit;
-    $_after_orphaned_gs  = $_p_oa || $_p_ojb || $_p_nodb || $_p_nit;
-    $_after_orphaned_asm = $_p_ojb || $_p_nodb || $_p_nit;
-    $_after_orphaned_jb  = $_p_nodb || $_p_nit;
-    $_after_no_db        = $_p_nit;
+    $_after_ungrouped    = $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
+    $_after_new_gs       = $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
+    $_after_stale        = $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
+    $_after_orphaned_gs  = $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
+    $_after_orphaned_asm = $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
+    $_after_orphaned_jb  = $_p_nodb || $_p_nit || $_p_tax;
+    $_after_no_db        = $_p_nit || $_p_tax;
+    $_after_nit          = $_p_tax;
 ?>
 <div class="card mb-4 border-warning">
   <div class="card-header adm-head-warn">
@@ -189,7 +193,7 @@ if ($has_health_issues):
     </div>
     <?php endif; ?>
     <?php if ($health_alerts['not_in_tree'] > 0): ?>
-    <div class="alert alert-info mb-0 border-0 rounded-0 d-flex align-items-center justify-content-between gap-3">
+    <div class="alert alert-info mb-0 border-0 rounded-0 <?= $_after_nit ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
       <div>
         <i class="fa fa-sitemap me-2"></i>
         <strong><?= $health_alerts['not_in_tree'] ?> organism<?= $health_alerts['not_in_tree'] > 1 ? 's' : '' ?></strong>
@@ -197,6 +201,38 @@ if ($has_health_issues):
         Check that <code>taxon_id</code> is set in <code>organism.json</code> and run Refresh Cache.
       </div>
       <a href="manage_organisms.php" class="btn btn-sm btn-info flex-shrink-0">View Organisms</a>
+    </div>
+    <?php endif; ?>
+    <?php if ($_p_tax):
+      // Group the suggestions by the group they point at, so 49 untagged bats read as
+      // "Bats: 49" rather than 49 separate lines.
+      $_by_group = [];
+      foreach ($taxonomy_suggestions as $_s) { $_by_group[$_s['group']][] = $_s; }
+      ksort($_by_group);
+      $_n_groups = count($_by_group);
+    ?>
+    <div class="alert alert-info mb-0 border-0 rounded-0 d-flex align-items-center justify-content-between gap-3">
+      <div>
+        <i class="fa fa-lightbulb me-2"></i>
+        <strong><?= $health_alerts['taxonomy_suggestions'] ?> gene set<?= $health_alerts['taxonomy_suggestions'] > 1 ? 's' : '' ?></strong>
+        sit<?= $health_alerts['taxonomy_suggestions'] > 1 ? '' : 's' ?> under a taxonomy rank that matches
+        <?= $_n_groups > 1 ? 'curated groups they are' : 'a curated group it is' ?> not in — usually an
+        oversight when the organism was added. <strong>Suggestions only:</strong> nothing changes until you accept one,
+        and you can mark any of them as deliberate.
+        <?php foreach ($_by_group as $_g => $_items):
+          $_names = array_values(array_unique(array_map(function ($x) { return $x['organism']; }, $_items)));
+          $_shown = array_slice($_names, 0, 4);
+        ?>
+          <br><small class="text-muted">
+            <strong><?= htmlspecialchars($_g) ?></strong><?php
+              // For a name-basis group the rank IS the group name; printing it again
+              // reads as "Cnidaria (Cnidaria)".
+              if ($_items[0]['rank'] !== $_g): ?> (<?= htmlspecialchars($_items[0]['rank']) ?>)<?php endif; ?>
+            — <?= htmlspecialchars(implode(', ', $_shown)) ?><?= count($_names) > 4 ? ' +' . (count($_names) - 4) . ' more' : '' ?>
+          </small>
+        <?php endforeach; ?>
+      </div>
+      <a href="manage_groups.php#taxonomy-suggestions" class="btn btn-sm btn-info flex-shrink-0">Review Suggestions</a>
     </div>
     <?php endif; ?>
   </div>

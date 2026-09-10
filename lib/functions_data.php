@@ -14,6 +14,7 @@ require_once __DIR__ . '/blast_functions.php';
 require_once __DIR__ . '/wikipedia_functions.php';   // Wikipedia enrichment helpers (split out 2026-07-07)
 require_once __DIR__ . '/taxonomy_functions.php';    // NCBI taxonomy/lineage helpers (split out 2026-07-07)
 require_once __DIR__ . '/organism_cache.php';        // .organism_cache.json layer + fingerprints (split out 2026-07-07)
+require_once __DIR__ . '/group_taxonomy_check.php';  // curated-group vs taxonomy-rank drift suggestions
 
 /**
  * cURL GET with connect + total timeouts — avoids D-state hangs from file_get_contents.
@@ -1159,13 +1160,14 @@ function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
  *
  * @param string $organism_data_path
  * @return array{
- *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int,orphaned_assemblies:int,orphaned_jbrowse:int,no_database:int},
+ *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int,orphaned_assemblies:int,orphaned_jbrowse:int,no_database:int,taxonomy_suggestions:int},
  *   orphaned_jbrowse_registrations: array,
  *   orphaned_jbrowse_systemic: bool,
  *   orphaned_gene_set_tuples: array,
  *   orphaned_assembly_tuples: array,
  *   no_database_organisms: array,
- *   new_gene_set_tuples: array
+ *   new_gene_set_tuples: array,
+ *   taxonomy_suggestions: array
  * }
  */
 function computeDataHealthAlerts(string $organism_data_path): array {
@@ -1174,7 +1176,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     $cache_file    = moop_organism_cache_file();
     $groups_file   = "$metadata_path/organism_assembly_groups.json";
 
-    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0];
+    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0];
 
     // Cache-driven: taxonomy-tree membership + the list of assemblies per organism.
     $cache_data = [];
@@ -1234,6 +1236,13 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     $new_gene_set_tuples = getUnrepresentedGeneSetTuples(getOrganismsWithAssemblies($organism_data_path), $organism_data_path, $gd);
     $health_alerts['new_gene_sets'] = count($new_gene_set_tuples);
 
+    // Gene sets the taxonomy says probably belong to a curated group they are not in.
+    // Suggestions, never auto-applied — see lib/group_taxonomy_check.php. Sub-millisecond
+    // (two JSON files, no organism DB), so it runs live rather than through housekeeping.
+    $gt = moop_gt_compute($gd, loadJsonFile("$metadata_path/taxonomy_tree_config.json", [])['tree'] ?? [], moop_gt_load_exceptions());
+    $taxonomy_suggestions = $gt['suggestions'];
+    $health_alerts['taxonomy_suggestions'] = count($taxonomy_suggestions);
+
     return [
         'health_alerts'            => $health_alerts,
         'orphaned_gene_set_tuples' => $orphaned_gene_set_tuples,
@@ -1242,6 +1251,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
         'orphaned_jbrowse_systemic'      => $orphaned_jbrowse_systemic,
         'no_database_organisms'    => $no_database_organisms,
         'new_gene_set_tuples'      => $new_gene_set_tuples,
+        'taxonomy_suggestions'     => $taxonomy_suggestions,
     ];
 }
 
