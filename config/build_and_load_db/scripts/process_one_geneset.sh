@@ -272,7 +272,7 @@ has_data EggNOG2GO.eggnog.moop.tsv \
 make_interproscan_moop() {
   local IDIR="$ANALYSIS_DIR/interproscan"
   local VERSION
-  VERSION=$(cat "$IDIR/db_version.txt" 2>/dev/null)
+  VERSION=$(cat "$IDIR/interproscan_version.txt" 2>/dev/null)
   rm -f iprscan.tsv
   if [ -e "$IDIR/interproscan_results.tsv.tsv.gz" ]; then
     zcat "$IDIR/interproscan_results.tsv.gz" > iprscan.tsv
@@ -576,7 +576,34 @@ if $HAS_GFF; then
         && mv transcript.nt.fa.tmp transcript.nt.fa \
         || { rm -f transcript.nt.fa.tmp; echo "ERROR: failed to build transcript.nt.fa"; exit 1; }
     else
-      perl "$REPO/analysis_parsers/get_names_from_gff.pl" "$GENESET_DIR/genes.gff" > geneNames.tsv.tmp \
+      # RefSeq/Ensembl ship their own gene name + description, and we keep
+      # those by default -- but "keep the source's name" used to mean ONLY the
+      # source's name, even when it was "uncharacterized protein" or a bare
+      # LOC/CG/Gm placeholder symbol. Now we also build the SAME homology
+      # ranking every other gene set gets (build_gene_name_params ->
+      # assign_gene_names.pl; the RBBH/OMA/Swiss-Prot/PANTHER inputs it needs
+      # are already mandatory for every GFF gene set via check_missing_files_gff,
+      # regardless of source), and get_names_from_gff.pl keeps the native name
+      # per gene unless GeneNameInformativeness::is_informative_name says it's
+      # a placeholder, in which case it substitutes the homology row for that
+      # gene's whole group.
+      #
+      # geneNames.tsv must always cover every gene, never just the ones being
+      # renamed: updateFASTA.pl/updateGFF.pl elsewhere in this pipeline treat an
+      # id ABSENT from a names file as "this feature has no name any more" and
+      # blank it out. get_names_from_gff.pl already guarantees full coverage
+      # (native row or homology row, never neither), which is what keeps this
+      # path from tripping that.
+      #
+      # geneNames.homology.tsv is left on disk (not just piped through) so a
+      # renamed gene's homology basis can be inspected directly against the
+      # final geneNames.tsv, same as tophit.tsv/iprscan.tsv are kept nearby.
+      build_gene_name_params
+      perl "$REPO/analysis_parsers/assign_gene_names.pl" "${PARAMS[@]}" > geneNames.homology.tsv.tmp \
+        && mv geneNames.homology.tsv.tmp geneNames.homology.tsv \
+        || { rm -f geneNames.homology.tsv.tmp; echo "ERROR: failed to build geneNames.homology.tsv"; exit 1; }
+
+      perl "$REPO/analysis_parsers/get_names_from_gff.pl" "$GENESET_DIR/genes.gff" geneNames.homology.tsv > geneNames.tsv.tmp \
         && mv geneNames.tsv.tmp geneNames.tsv \
         || { rm -f geneNames.tsv.tmp; echo "ERROR: failed to build geneNames.tsv"; exit 1; }
     fi
@@ -650,8 +677,14 @@ if $HAS_GFF; then
   has_data features.tsv || REBUILD=true
   if $REBUILD; then
     echo "Building features.tsv"
+    # geneNames.tsv as a 5th arg only matters on the refseq/ensembl branch --
+    # that's the only case parse_GFF3_to_MOOP_TSV.pl's emit_ensembl/emit_refseq
+    # consult it (see its own comments). The "other"-format emitter reads
+    # Name=/Note= off genes.gff itself (already rewritten by updateGFF.pl
+    # above) and ignores this argument, so passing it here unconditionally is
+    # a no-op for that path rather than a second, conflicting naming source.
     perl "$REPO/analysis_parsers/parse_GFF3_to_MOOP_TSV.pl" genes.gff \
-      "$GENESET_DIR/metadata.yaml" cds.nt.fa protein.aa.fa > features.tsv.tmp \
+      "$GENESET_DIR/metadata.yaml" cds.nt.fa protein.aa.fa geneNames.tsv > features.tsv.tmp \
       && mv features.tsv.tmp features.tsv \
       || { rm -f features.tsv.tmp; echo "ERROR: failed to build features.tsv"; exit 1; }
   fi

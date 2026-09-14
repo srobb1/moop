@@ -2,6 +2,9 @@
 use strict;
 use warnings;
 use Data::Dumper;
+use FindBin;
+use lib "$FindBin::Bin";
+use GeneNameInformativeness qw(is_informative_name);
 
 
 my $isoforms = shift; 
@@ -15,6 +18,11 @@ my %tgroups;
 my %selected_ids;
 my %group_names;
 my %names;
+
+# Set once a group's stored candidate is INFORMATIVE (GeneNameInformativeness)
+# -- see the storage decision below. Until then, a group can still be
+# overridden by a later (lower-priority) source.
+my %group_resolved;
 
 # Annotation ids that are not a transcript of this gene set. Counted, reported
 # once at the end, and otherwise ignored -- see the skip in the annotation loop.
@@ -116,17 +124,46 @@ foreach my $annotation_file (@annotation_files){
     }
 
     # if we already have a selected id, record the info here, we dont want to record anyohter id's hit info
+    #
+    # A pre-selected id is a deliberate manual override (isoforms.tsv's optional
+    # "selected transcript" column, e.g. the Chamaeleo/Nematostella BEST_MAPPING
+    # entries in process_one_geneset.sh) -- an informativeness check has no
+    # business second-guessing a curator, so this branch is untouched.
     if(exists $selected_ids{$group_id} and $selected_ids{$group_id} eq $id){
       $group_names{$group_id}{$rank}{$sort_score}{hit_desc}=$hit_desc;
       $group_names{$group_id}{$rank}{$sort_score}{hit_id}=$hit_id;
       $group_names{$group_id}{$rank}{$sort_score}{this_id}=$id;
       $group_names{$group_id}{$rank}{$sort_score}{score}=$score;
     }
-    elsif(!exists $group_names{$group_id}){
-      $group_names{$group_id}{$rank}{$sort_score}{hit_desc}=$hit_desc;
-      $group_names{$group_id}{$rank}{$sort_score}{hit_id}=$hit_id;
-      $group_names{$group_id}{$rank}{$sort_score}{this_id}=$id;
-      $group_names{$group_id}{$rank}{$sort_score}{score}=$score;
+    elsif(!$group_resolved{$group_id}){
+      # Sources are tried in preference order (rank 0 = best). The FIRST
+      # source with any hit used to win outright, even when that hit's own
+      # name was itself a placeholder ("uncharacterized protein", a bare LOC/
+      # Gm/predicted-gene symbol, ...) -- a real risk here, since some of the
+      # RBBH targets (e.g. ENS_mus_musculus, ENS_gallus_gallus) are themselves
+      # draft-annotated genomes that carry plenty of their own placeholders.
+      #
+      # Now: keep walking down the preference order past an uninformative hit
+      # instead of locking onto it. The first INFORMATIVE hit found (at any
+      # rank) wins outright and nothing lower-priority is considered further
+      # for this gene. If nothing ever turns out informative, fall back to
+      # the FIRST hit seen (highest-priority source) -- the old behaviour --
+      # rather than ending with no name at all.
+      my $informative = is_informative_name($id, '', $hit_desc);
+      if ($informative) {
+        delete $group_names{$group_id}; # discard any earlier uninformative fallback
+        $group_names{$group_id}{$rank}{$sort_score}{hit_desc}=$hit_desc;
+        $group_names{$group_id}{$rank}{$sort_score}{hit_id}=$hit_id;
+        $group_names{$group_id}{$rank}{$sort_score}{this_id}=$id;
+        $group_names{$group_id}{$rank}{$sort_score}{score}=$score;
+        $group_resolved{$group_id} = 1;
+      }
+      elsif(!exists $group_names{$group_id}){
+        $group_names{$group_id}{$rank}{$sort_score}{hit_desc}=$hit_desc;
+        $group_names{$group_id}{$rank}{$sort_score}{hit_id}=$hit_id;
+        $group_names{$group_id}{$rank}{$sort_score}{this_id}=$id;
+        $group_names{$group_id}{$rank}{$sort_score}{score}=$score;
+      }
     }
   }
   close INFILE;

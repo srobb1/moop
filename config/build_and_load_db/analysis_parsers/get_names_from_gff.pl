@@ -2,6 +2,9 @@
 use strict;
 use warnings;
 use URI::Escape;
+use FindBin;
+use lib "$FindBin::Bin";
+use GeneNameInformativeness qw(is_informative_name);
 
 # Unified gene-names extractor. Auto-detects GFF format from gene-line attributes:
 #   ensembl : ID=gene:   -> uses Name= and description= from gene lines
@@ -9,8 +12,22 @@ use URI::Escape;
 #   generic : not supported for name extraction (use assign_gene_names.pl instead)
 #
 # Output columns: ID  MAINID  GroupId  Desc  Note
+#
+# Optional 2nd arg: a homology-derived geneNames.tsv (assign_gene_names.pl's
+# output, built from the SAME homology sources as every other gene set --
+# RBBH/OMA/Swiss-Prot/PANTHER, all built unconditionally earlier in the
+# pipeline regardless of GFF source). When a gene's own RefSeq/Ensembl name is
+# judged uninformative (GeneNameInformativeness::is_informative_name), that
+# gene's rows are replaced with the homology row for the whole group -- same
+# Desc/Note, same per-id MAINID convention (SELF for the selected id, the
+# selected id itself for every other id in the group) that assign_gene_names.pl
+# already uses. Genes with an informative native name are untouched. Coverage
+# stays total either way: this never drops a gene to a blank row, so a
+# consumer that treats a missing id as "no name any more" (updateFASTA.pl)
+# can't be handed a partial file.
 
-my $gff = shift or die "Usage: $0 genomic.gff\n";
+my $gff           = shift or die "Usage: $0 genomic.gff [homology_geneNames.tsv]\n";
+my $homology_file = shift;
 
 my $format = detect_format($gff);
 if ($format eq 'generic') {
@@ -28,6 +45,17 @@ my %prot_to_tx;   # protein_id -> transcript_id
 my %prot_desc;    # protein_id -> product desc     (RefSeq)
 my %groups;       # gene_id -> { id -> type }
 my %cds_len;      # protein_id -> cumulative CDS bp
+
+# RefSeq's product= (and gene=, harmlessly) arrives percent-encoded, same as
+# Ensembl's description= -- but only description= was ever decoded here, so
+# every RefSeq desc shipped with literal "%2C" etc. into geneNames.tsv. Decode
+# both the same way parse_GFF3_to_MOOP_TSV.pl::emit_refseq already does.
+sub decode_attr {
+    my ($v) = @_;
+    return $v unless defined $v;
+    $v =~ s/%([0-9A-Fa-f]{2})/chr(hex($1))/ge;
+    return $v;
+}
 
 open my $GFF, '<', $gff or die "Can't open GFF: $!\n";
 while (my $line = <$GFF>) {
@@ -78,7 +106,7 @@ while (my $line = <$GFF>) {
             my ($gn_id) = $attrs =~ /\bGeneID:([^;,]+)/;
             next unless defined $gn_id;
             my ($sym)   = $attrs =~ /\bgene=([^;]+)/;
-            $gene_sym{$gn_id}  = $sym // $gn_id;
+            $gene_sym{$gn_id}  = defined $sym ? decode_attr($sym) : $gn_id;
             $gene_desc{$gn_id} = '';  # filled below from MAINID protein product
         }
         elsif ($type eq 'mRNA') {
@@ -87,7 +115,7 @@ while (my $line = <$GFF>) {
             next unless defined $tx_id && defined $gn_id;
             my ($prod)  = $attrs =~ /\bproduct=([^;]+)/;
             $tx_to_gene{$tx_id} = $gn_id;
-            $tx_desc{$tx_id}    = $prod // '';
+            $tx_desc{$tx_id}    = defined $prod ? decode_attr($prod) : '';
             $groups{$gn_id}{$tx_id} = 'mRNA';
         }
         elsif ($type eq 'CDS') {
@@ -104,7 +132,7 @@ while (my $line = <$GFF>) {
             $groups{$gn_id}{$prot_id} = 'protein';
             $groups{$gn_id}{$cds_id}  = 'CDS';
             $prot_to_tx{$prot_id}    = $tx_id // '';
-            $prot_desc{$prot_id}     = $prod  // '';
+            $prot_desc{$prot_id}     = defined $prod ? decode_attr($prod) : '';
             $cds_len{$prot_id}      += ($end - $start + 1);
         }
     }
@@ -144,12 +172,55 @@ if ($format eq 'refseq') {
 
 my $src = $format eq 'ensembl' ? 'Ensembl' : 'RefSeq';
 
+# ── Optional homology fallback (assign_gene_names.pl's output) ────────────────
+# Columns: ID  MAINID  GroupId  Desc  Note. Desc/Note are constant across a
+# group; MAINID is 'SELF' on the row for the selected id and that id's own
+# value everywhere else -- read straight out of any row rather than
+# recomputed, so this can't disagree with what assign_gene_names.pl decided.
+my %homology; # group_id -> { selected_id, desc, note }
+if (defined $homology_file) {
+    open my $HOM, '<', $homology_file or die "Can't open homology names file: $homology_file $!\n";
+    my $header = <$HOM>; # ID MAINID GroupId Desc Note
+    while (my $line = <$HOM>) {
+        chomp $line;
+        next unless length $line;
+        my ($id, $mainid, $group_id, $desc, $note) = split /\t/, $line;
+        next unless defined $group_id;
+        my $h = $homology{$group_id} //= {};
+        $h->{desc} = $desc;
+        $h->{note} = $note;
+        $h->{selected_id} = $id if defined $mainid && $mainid eq 'SELF';
+    }
+    close $HOM;
+}
+
 print join("\t", qw(ID MAINID GroupId Desc Note)), "\n";
 
 for my $gn_id (sort keys %groups) {
     my $sym     = $gene_sym{$gn_id}  // $gn_id;
     my $gn_desc = $gene_desc{$gn_id} // '';
     my $main    = $main_id{$gn_id}   // '';
+
+    my $hom = $homology{$gn_id};
+    my $use_homology = $hom && defined $hom->{selected_id}
+        && !is_informative_name($gn_id, $sym, $gn_desc);
+
+    if ($use_homology) {
+        my $sel = $hom->{selected_id};
+
+        # assign_gene_names.pl never emits a row for the bare gene id -- its
+        # rows come from isoforms.tsv, which only lists transcript/protein/CDS
+        # children. But the "gene" feature itself still needs a name (the
+        # native branch below prints one), so add it here the same way,
+        # self-pointing like the native gene row does.
+        print join("\t", $gn_id, $gn_id, $gn_id, $hom->{desc}, $hom->{note}), "\n";
+
+        for my $id (sort keys %{$groups{$gn_id}}) {
+            my $mainid = ($id eq $sel) ? 'SELF' : $sel;
+            print join("\t", $id, $mainid, $gn_id, $hom->{desc}, $hom->{note}), "\n";
+        }
+        next;
+    }
 
     print join("\t", $gn_id, $gn_id, $gn_id, "$sym: $gn_desc", $src), "\n";
 

@@ -12,10 +12,21 @@ use URI::Escape;
 # Side output: feature_coords.tsv in current directory (no header)
 #   cols: feature_uniquename, gene_id, chr, start, end, strand
 
-my $gff        = shift or die "Usage: $0 genomic.gff metadata.yaml [cds.nt.fa protein.aa.fa]\n";
-my $metadata   = shift or die "Usage: $0 genomic.gff metadata.yaml [cds.nt.fa protein.aa.fa]\n";
+my $gff        = shift or die "Usage: $0 genomic.gff metadata.yaml [cds.nt.fa protein.aa.fa] [geneNames.tsv]\n";
+my $metadata   = shift or die "Usage: $0 genomic.gff metadata.yaml [cds.nt.fa protein.aa.fa] [geneNames.tsv]\n";
 my $cds_fasta  = shift;   # optional — used only by emit_generic
 my $prot_fasta = shift;   # optional — used only by emit_generic
+
+# Optional: a geneNames.tsv already resolved to "the name worth keeping" per
+# gene -- native RefSeq/Ensembl name where informative, homology-derived
+# otherwise (get_names_from_gff.pl merges the two). ensembl/refseq gene sets
+# never rewrite genes.gff itself (see process_one_geneset.sh's RENAME=false
+# path — the file stays a pristine symlink to what NCBI/Ensembl shipped), so
+# this is the ONLY place that naming choice reaches organism.sqlite. Without
+# it, emit_ensembl/emit_refseq fall back to parsing Name=/description=/gene=/
+# product= straight off the raw GFF, exactly as before this existed.
+my $gene_names_file = shift;
+my $gene_names       = load_gene_names($gene_names_file);
 
 # Parse metadata (identical fields for all formats)
 my ($genus, $species, $commonname, $taxon_id,
@@ -46,17 +57,43 @@ print "## Genus: $genus
 
 my $format = detect_format($gff);
 
-if    ($format eq 'ensembl') { emit_ensembl($gff) }
-elsif ($format eq 'refseq')  { emit_refseq($gff)  }
+if    ($format eq 'ensembl') { emit_ensembl($gff, $gene_names) }
+elsif ($format eq 'refseq')  { emit_refseq($gff, $gene_names)  }
 else                          { emit_generic($gff, $cds_fasta, $prot_fasta) }
 
 open my $COORDS_FH, '>', 'feature_coords.tsv' or die "Can't write feature_coords.tsv: $!\n";
 write_feature_coords($gff, $format, $COORDS_FH);
 close $COORDS_FH;
 
+# geneNames.tsv columns: ID  MAINID  GroupId  Desc  Note, Desc formatted
+# "SYMBOL: description" -- same convention parse_transcript2gene_to_MOOP_TSV.pl
+# already reads for the T2G path. Keyed by every id in the file (gene, mRNA,
+# protein, CDS all carry the same Desc within a gene's group), so a lookup by
+# gene id alone is enough here.
+sub load_gene_names {
+    my ($file) = @_;
+    my %names;
+    return \%names unless defined $file && -f $file;
+    open my $fh, '<', $file or die "Can't open $file: $!\n";
+    my $header = <$fh>; # ID MAINID GroupId Desc Note
+    while (my $line = <$fh>) {
+        chomp $line;
+        next unless length $line;
+        my ($id, undef, undef, $desc) = split /\t/, $line;
+        next unless defined $id;
+        my ($sym, $description) = ('', $desc // '');
+        if (defined $desc && $desc =~ /^(\S+):\s*(.*)$/) {
+            ($sym, $description) = ($1, $2);
+        }
+        $names{$id} = { name => $sym, desc => $description };
+    }
+    close $fh;
+    return \%names;
+}
+
 # --- Ensembl: two-pass ---
 sub emit_ensembl {
-    my $gff = shift;
+    my ($gff, $gene_names) = @_;
     my (%gene_name, %gene_desc, %tx_to_gene, %printed, %printed_gene);
 
     # Pass 1: collect gene name/desc and tx->gene map
@@ -71,6 +108,17 @@ sub emit_ensembl {
         if ($type eq 'gene') {
             my ($gn_id)    = $attrs =~ /\bID=gene:([^;]+)/;
             next unless defined $gn_id;
+
+            # geneNames.tsv, when supplied, is authoritative -- it already
+            # decided native-vs-homology per gene. Only fall back to parsing
+            # the GFF's own Name=/description= when no override exists (no
+            # file passed, or this id somehow isn't in it).
+            if (my $o = $gene_names->{$gn_id}) {
+                $gene_name{$gn_id} = $o->{name};
+                $gene_desc{$gn_id} = $o->{desc};
+                next;
+            }
+
             my ($name)     = $attrs =~ /\bName=([^;]+)/;
             my ($raw_desc) = $attrs =~ /\bdescription=([^;]+)/;
             my $desc = '';
@@ -122,7 +170,7 @@ sub emit_ensembl {
 
 # --- RefSeq: single-pass state machine ---
 sub emit_refseq {
-    my $gff = shift;
+    my ($gff, $gene_names) = @_;
     my (%printed_prot, %printed_gene);
     my ($gene_id, $mrna_id) = ('', '');
 
@@ -154,6 +202,13 @@ sub emit_refseq {
             my ($note) = $attrs =~ /\bproduct=([^;]+)/;
             $note //= '';
             $note =~ s/%([0-9A-Fa-f]{2})/chr(hex($1))/ge;
+
+            # geneNames.tsv, when supplied, is authoritative for this gene --
+            # see the comment in emit_ensembl.
+            if (my $o = $gene_names->{$gene_id}) {
+                $name = $o->{name};
+                $note = $o->{desc};
+            }
 
             my $parent_id   = $mrna_id || $gene_id;
             my $parent_type = $mrna_id ? 'mRNA' : 'gene';
