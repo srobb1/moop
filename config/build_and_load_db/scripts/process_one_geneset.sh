@@ -438,14 +438,18 @@ build_gene_name_params() {
   ## already — apollo_moop.tsv only matched 43/45 IDs when MENDER_20260701
   ## replaced MENDER_20260623 for Chamaeleo_calyptratus). Bare-organism keys
   ## are not accepted at all — every entry must be geneset-specific.
-  declare -A BEST_MAPPING BEST_MAPPING_2
+  declare -A BEST_MAPPING
   BEST_MAPPING["Nematostella_vectensis/GCA_033964005.1/NV2"]="/n/sci/SCI-003939-SBNVEC/genomes/Nvec200/aligned/tcs_v2/analysis/rbbh_2026_02_09/jaNemVect1/RefSeq_jaNemVect1.RBBH.moop.tsv"
   BEST_MAPPING["Chamaeleo_calyptratus/CCA3/MENDER_20260701"]="/n/sci/SCI-004219-SBCHAMELEO/Chamaeleo_calyptratus/genomes/CCA3-ref/analysis/apollo_moop.tsv"
 
-  ## TODO: revisit per-organism overrides to force a specific ortholog file into the
-  ## naming workflow (e.g. a non-Human OMA mapping). Path below is stale — it's the
-  ## pre-OMA_v2 manual run (org code HOMSAP, no $db segment) — left here as a reminder.
-  # BEST_MAPPING_2["Chamaeleo_calyptratus/CCA3/MENDER_20260701"]="/n/sci/SCI-004219-SBCHAMELEO/Chamaeleo_calyptratus/genomes/CCA3-ref/analysis/combinedModels/orthologs/HOMSAP.oma_orthologs.moop.tsv"
+  ## There used to be a BEST_MAPPING_2 slot here (rank between BEST_MAPPING and the
+  ## automatic OMA-vs-Human pickup below), for forcing a specific non-Human ortholog
+  ## file when a gene set's OMA run didn't live at the standard discovery path. Its
+  ## only-ever example was a stale, pre-OMA_v2 manual Chamaeleo path -- superseded once
+  ## Chamaeleo got a proper OMA_v2 run symlinked in at the standard location, which the
+  ## automatic discovery below already picks up with no override needed. Removed
+  ## 2026-09-14 rather than carry an unused slot forward; see
+  ## PER_GENESET_CONFIG_PLAN.md for the planned replacement (an oma_dir override).
 
   declare -A NEXT_BEST_MAPPING
   NEXT_BEST_MAPPING["Montipora_capitata/HIv3/HIv3_geneset"]="/n/sci/SCI-004111-SBCORAL/Montipora_capitata/genomes/Montipora_capitata_HIv3/analysis/RBBH/RefSeq_jaNemVect1.RBBH.moop.tsv"
@@ -460,11 +464,9 @@ build_gene_name_params() {
   }
 
   PARAMS=("isoforms.tsv")
-  local best_mapping best_mapping_2 next_best_mapping
+  local best_mapping next_best_mapping
   best_mapping=$(override_lookup BEST_MAPPING)
   [[ -n "$best_mapping" ]] && PARAMS+=("$best_mapping")
-  best_mapping_2=$(override_lookup BEST_MAPPING_2)
-  [[ -n "$best_mapping_2" ]] && PARAMS+=("$best_mapping_2")
   ## NOTE: only the first match is used (sorts to Ensembl before RefSeq, which is fine
   ## for now). If both HUMAN.Ensembl.* and HUMAN.RefSeq.* exist, the RefSeq one is
   ## silently dropped — revisit if we ever want both sources fed into naming.
