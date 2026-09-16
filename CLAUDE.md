@@ -376,6 +376,20 @@ any new host; `setup-check.php` verifies it.
   and the feature dies **silently** — that is exactly how banner upload and organism image
   upload stayed broken for three days in July 2026. If you add code that writes somewhere
   new, add the path to that allowlist and to `scripts/fix_moop_selinux.sh`.
+- **A path that holds credentials needs `'sensitive' => true` on its rule** — a SEPARATE axis
+  from `check_mode`, because a path can be web-written *and* secret (the site-data backup is
+  both). `sensitive` is the single source of truth: it drives the world-access check, the fix
+  commands on the permissions page, and the `chmod` the dashboard suggests
+  (`moop_permission_sensitive_paths()` / `moop_permission_dir_mode()` — never hardcode 2775
+  or 2770 at a call site). Added 2026-09-16, after `/var/www/moop-site-data/users.json` sat at
+  mode 664 in a world-traversable directory — every local user could read the bcrypt hashes —
+  while the checker reported nothing, because no rule covered the file and the `writable`
+  branch tests world-*write* (0002) and never world-*read*. The dashboard had meanwhile been
+  telling the admin to `chmod 2775` that very directory, which is how it got that way.
+- **Credential directories are `2770`, not `2775`.** `2775` is for trees that are served
+  anyway (cache, `organisms/`). And never advise `chmod 640` on a *directory* — it strips the
+  traverse bit and locks the web server out of the files it must read; `moop_permission_fix_commands()`
+  used to print exactly that for `certs/`.
 
 **Gotchas that will cost you an afternoon:**
 - **Edited PHP files save as `640 smr:smr`, which php-fpm cannot read → site-wide 500.**

@@ -36,6 +36,18 @@
  *   'secret'   — private key material (JWT). Must be readable by the web user and NOT
  *                exposed to other users on the host.
  */
+/**
+ * Resolve a rule's check_mode: an explicit 'check_mode' on the rule wins, else by name.
+ *
+ * Exists because there were two ways to ask. performPermissionCheck honoured an explicit
+ * 'check_mode', while the writable-paths scan called moop_permission_check_mode($name)
+ * directly and silently ignored it — so a rule that set its own mode was treated as one
+ * mode by the checker and another by the scan. Ask through here, always.
+ */
+function moop_permission_item_mode(array $item): string {
+    return (string)($item['check_mode'] ?? moop_permission_check_mode((string)$item['name']));
+}
+
 function moop_permission_check_mode(string $name): string {
     // 'secret' — private key material.
     if ($name === 'JWT Key Files' || $name === 'JWT Certificates Directory') return 'secret';
@@ -94,20 +106,63 @@ function moop_permission_check_mode(string $name): string {
  * checker: it told admins to make restricted data world-readable, and painted rows
  * red for modes that pass perfectly well by impact (660, 640, ...).
  */
-function moop_permission_expectation(string $mode, string $type): string {
+function moop_permission_expectation(string $mode, string $type, bool $sensitive = false): string {
     $is_dir = ($type === 'directory');
+    // Sensitivity is a separate axis from the check_mode — a path can be web-writable AND
+    // hold credentials — so it is appended rather than switched on.
+    $suffix = $sensitive ? '; holds credentials, so must not be readable by other users on the host' : '';
     switch ($mode) {
         case 'secret':
             return 'Readable by the web server; not accessible to any other user on the host';
         case 'writable':
-            return $is_dir
+            return ($is_dir
                 ? 'Writable by the web server; SGID so new files inherit the group; not world-writable'
-                : 'Writable by the web server; not world-writable; not executable';
+                : 'Writable by the web server; not world-writable; not executable') . $suffix;
         default:
-            return $is_dir
+            return ($is_dir
                 ? 'Readable and traversable by the web server; not world-writable'
-                : 'Readable by the web server; not world-writable; not executable';
+                : 'Readable by the web server; not world-writable; not executable') . $suffix;
     }
+}
+
+/**
+ * Every path any rule marks as credential-bearing, keyed by path.
+ *
+ * SINGLE SOURCE OF TRUTH for "does this hold secrets": mark a rule 'sensitive' and the
+ * checker, the permissions page's fix commands, and the dashboard warning all follow.
+ *
+ * Before this existed the dashboard hardcoded `sudo chmod 2775` for every directory it
+ * warned about — including the site-data backup, which holds users.json and secrets.php.
+ * The app handed the admin a command that made its own credential store world-readable,
+ * and re-handed it every time the directory looked unwritable. That is how it became 2775.
+ */
+function moop_permission_sensitive_paths($config, array $ctx): array {
+    $paths = [];
+    foreach (moop_build_permission_items($config, $ctx) as $item) {
+        if (empty($item['sensitive'])) continue;
+        foreach (($item['paths'] ?? []) as $p) {
+            $p = rtrim((string)$p, '/');
+            if ($p !== '') $paths[$p] = true;
+        }
+    }
+    return $paths;
+}
+
+/**
+ * The mode an admin should chmod a directory to: 2770 when credentials live in or under
+ * it, 2775 otherwise. Never hardcode either number at a call site.
+ *
+ * A directory that merely CONTAINS a credential file counts: world-traverse on the parent
+ * is what makes the file reachable in the first place.
+ */
+function moop_permission_dir_mode(string $dir, array $sensitive_paths): string {
+    $dir = rtrim($dir, '/');
+    if ($dir === '') return '2775';
+    if (isset($sensitive_paths[$dir])) return '2770';
+    foreach (array_keys($sensitive_paths) as $p) {
+        if (strpos($p, $dir . '/') === 0) return '2770';
+    }
+    return '2775';
 }
 
 /**
@@ -129,6 +184,7 @@ function moop_permission_fix_commands(array $check, string $moop_owner): array {
     $R      = $is_dir ? '-R ' : '';
     $bits   = octdec((string)($check['current_perms'] ?? '0'));
     $group  = (string)($check['required_group'] ?? '');
+    $sensitive = !empty($check['sensitive']);
     $cmds   = [];
 
     // A wrong SELinux label cannot be fixed with chmod — say so first, it is the real gate.
@@ -150,9 +206,22 @@ function moop_permission_fix_commands(array $check, string $moop_owner): array {
             $cmds[] = $is_dir ? "sudo chmod -R g+rwX $q && sudo chmod g+s $q" : "sudo chmod g+rw $q";
         }
     } elseif ($mode === 'secret') {
-        if (empty($check['is_readable']) || ($bits & 0007) !== 0) $cmds[] = "sudo chmod 640 $q";
+        if (empty($check['is_readable'])) {
+            $cmds[] = $is_dir ? "sudo chmod 2770 $q" : "sudo chmod 640 $q";
+        }
     } else {
         if (empty($check['is_readable'])) $cmds[] = "sudo chmod {$R}g+rX $q";
+    }
+
+    // A path holding credentials that is open to `other`. Independent of check_mode: the
+    // site-data backup is written by housekeeping AND holds users.json/secrets.php.
+    //
+    // 2770 for a directory, NOT 640 — which is what this used to print for every 'secret'
+    // path regardless of type. `chmod 640 certs/` strips the traverse bit and locks the web
+    // server out of the very keys it exists to read, so the advice broke the thing it was
+    // fixing. 2770 keeps owner+group (the web server) working and drops world entirely.
+    if (($sensitive || $mode === 'secret') && ($bits & 0007) !== 0) {
+        $cmds[] = $is_dir ? "sudo chmod 2770 $q" : "sudo chmod 640 $q";
     }
     if (($bits & 0002) === 0002) $cmds[] = "sudo chmod {$R}o-w $q";
     if (!$is_dir && ($bits & 0111) !== 0) $cmds[] = "sudo chmod a-x $q";
@@ -308,18 +377,20 @@ function moop_web_owned_evidence(string $dir, string $web_user, array $prune_pat
  *   low    — cosmetic only (accessible, not exposed).
  */
 function performPermissionCheck($path, $item, $web_group = 'www-data') {
-    $mode = $item['check_mode'] ?? moop_permission_check_mode($item['name']);
+    $mode = moop_permission_item_mode($item);
+    $sensitive = !empty($item['sensitive']);
     $result = [
         'name' => $item['name'],
         'path' => $path,
         'exists' => file_exists($path),
         'type' => $item['type'],
-        'required_perms' => $item['required_perms'],
+        'required_perms' => $item['required_perms'] ?? '',
         'required_group' => $item['required_group'] ?? $web_group,
         'reason' => $item['reason'] ?? '',
         'why_write' => $item['why_write'] ?? '',
         'sticky_bit' => $item['sticky_bit'] ?? false,
         'check_mode' => $mode,
+        'sensitive' => $sensitive,
         'category' => moop_permission_category($item['name']),
         'severity' => 'low',
         'issues' => [],
@@ -421,10 +492,6 @@ function performPermissionCheck($path, $item, $web_group = 'www-data') {
             $result['issues'][] = "Not readable by the web server — JWT signing/verification will fail";
             $bump('high');
         }
-        if ($world_any) {
-            $result['issues'][] = "Accessible to other users on the host ($perms) — private key should not be world-accessible";
-            $bump('high');
-        }
     } else { // 'writable'
         // Under enforcing SELinux the LABEL decides writability, not the Unix mode —
         // is_writable() below sees only DAC and would false-green a wrong label.
@@ -456,6 +523,20 @@ function performPermissionCheck($path, $item, $web_group = 'www-data') {
             $result['issues'][] = "Marked executable ($perms) — data files should not be executable";
             $bump('medium');
         }
+    }
+
+    // Credentials must not be readable by other users on the host.
+    //
+    // Deliberately OUTSIDE the mode branches, because sensitivity is a SEPARATE AXIS from
+    // writability. The site-data backup directory holds users.json and secrets.php *and* is
+    // rewritten by housekeeping, so it is 'writable' and secret at the same time — and the
+    // 'writable' branch tests only world-WRITE (0002), never world-READ. That is exactly why
+    // a mode 664 users.json full of bcrypt hashes passed this checker clean: no rule covered
+    // the file, and the mode that did cover its directory could not see the problem.
+    if ($sensitive && $world_any) {
+        $result['issues'][] = "Readable by other users on the host ($perms) — this path holds credentials "
+            . "and must not be accessible to `other`";
+        $bump('high');
     }
 
     $result['severity'] = empty($result['issues']) ? 'low' : $sev;
@@ -540,8 +621,14 @@ function moop_build_permission_items($config, array $ctx): array {
             'name' => 'Site Data Backup Directory',
             'description' => 'Where housekeeping snapshots config, metadata and user accounts',
             'type' => 'directory',
+            'sensitive' => true,   // holds users.json (bcrypt hashes) and config/secrets.php
             'paths' => array_values(array_filter([$site_data_path])),
-            'required_perms' => '2775',
+            // 2770, NOT 2775. This field drives no logic (nothing reads required_perms — see
+            // moop_permission_fix_commands), but admins read it and act on it, and the value
+            // here said 2775 on a directory whose own description says it holds user accounts.
+            // housekeeping_snapshot_site_data() creates this directory 0750; 2775 was never
+            // the intent, it was advice drift.
+            'required_perms' => '2770',
             // No required_owner: the web server CREATES these files, so apache owning
             // them is correct, not a fault. The writable branch does not evaluate
             // required_owner anyway — it checks is_writable, the SELinux label,
@@ -825,9 +912,53 @@ function moop_build_permission_items($config, array $ctx): array {
             'sgid_bit' => true,
         ],
 
+        // Credential files — the ONLY files on the host that hold secrets.
+        //
+        // These had NO rule at all until 2026-09-16, which is the §11 failure shape: a path
+        // absent from the rules is not checked, and the absence is silent. The backup copy of
+        // users.json sat at 664 in a world-traversable directory — every local user on the box
+        // could read the bcrypt hashes — while the checker reported no issue, because the only
+        // rule that touched that tree was the DIRECTORY rule, and 'writable' tests world-WRITE
+        // and not world-READ.
+        //
+        // Split by who writes them, because that is what check_mode means. Both carry
+        // 'sensitive', which is what actually closes the world-read hole.
+        [
+            'name' => 'Credential Files (web-written)',
+            'required_perms' => '640',
+            'description' => 'User accounts and API keys that php-fpm itself writes',
+            'type' => 'file',
+            'check_mode' => 'writable',
+            'sensitive' => true,
+            'paths' => array_values(array_filter(array_unique(array_filter([
+                $config->getPath('users_file'),               // Manage Users writes this
+                $site_data_path === '' ? '' : $site_data_path . '/users.json',
+                $site_data_path === '' ? '' : $site_data_path . '/config/secrets.php',
+            ])), 'file_exists')),
+            'required_group' => $web_group,
+            'reason' => 'Bcrypt password hashes and API keys — readable by the web server only',
+            'why_write' => 'Manage Users rewrites users.json; the snapshot rewrites the backup copies in place',
+        ],
+
+        [
+            'name' => 'Credential Files (read-only)',
+            'required_perms' => '640',
+            'description' => 'API keys the web server reads but never writes',
+            'type' => 'file',
+            'check_mode' => 'data',
+            'sensitive' => true,
+            'paths' => array_values(array_filter([
+                $site_path . '/config/secrets.php',
+            ], 'file_exists')),
+            'required_group' => $web_group,
+            'reason' => 'Maintained by hand; php-fpm only ever reads it, so group-read is enough',
+            'why_write' => 'Never written by the web server — an admin edits this file directly',
+        ],
+
         // JWT Certificates Directory
         [
             'name' => 'JWT Certificates Directory',
+            'sensitive' => true,
             'description' => 'Private and public keys for JBrowse2 track authentication',
             'type' => 'directory',
             'paths' => [$config->getPath('certs_directory')],
@@ -842,6 +973,7 @@ function moop_build_permission_items($config, array $ctx): array {
         // JWT Key Files
         [
             'name' => 'JWT Key Files',
+            'sensitive' => true,
             'description' => 'RSA private and public keys used to sign JBrowse2 track tokens',
             'type' => 'file',
             'paths' => [
@@ -962,7 +1094,7 @@ function moop_collect_permission_checks($config): array {
     // its own cache subdir would be a false alarm.
     $writable_paths = [];
     foreach ($permission_items as $item) {
-        if (moop_permission_check_mode($item['name']) !== 'writable') continue;
+        if (moop_permission_item_mode($item) !== 'writable') continue;
         foreach ($item['paths'] ?? [] as $p) {
             $writable_paths[] = rtrim($p, '/');
         }

@@ -544,6 +544,93 @@ foreach (glob(dirname(__DIR__) . '/lib/jbrowse/TrackTypes/*.php') as $_ts_file) 
 ok($_ts_lists > 0, "found the track types' metadata field lists to check");
 
 // ----------------------------------------------------------------------------
+group('permission checker — credentials must not be readable by other users');
+
+// On 2026-09-16 /var/www/moop-site-data/users.json was mode 664 in a world-traversable
+// directory: every local user on the host could read the bcrypt hashes. The checker
+// reported NO issue, for two compounding reasons — no rule covered the file at all, and
+// the 'writable' branch tests world-WRITE (0002) and never world-READ. These assertions
+// fail against the code as it stood before the 'sensitive' axis was added.
+require_once dirname(__DIR__) . '/lib/permission_check.php';
+
+$_pc_dir  = sys_get_temp_dir() . '/moop_pc_' . getmypid();
+@mkdir($_pc_dir, 0777, true);
+$_pc_file = $_pc_dir . '/users.json';
+file_put_contents($_pc_file, '{}');
+
+// A credential file the web server also writes — exactly users.json's situation.
+$_pc_item = [
+    'name' => 'Credential Files (web-written)',
+    'type' => 'file',
+    'check_mode' => 'writable',
+    'sensitive' => true,
+    'required_perms' => '640',
+    'required_group' => 'apache',
+];
+
+chmod($_pc_file, 0664); clearstatcache(true, $_pc_file);   // group-writable AND world-readable
+$_pc = performPermissionCheck($_pc_file, $_pc_item, 'apache');
+$_pc_world = array_filter($_pc['issues'], function ($i) {
+    return stripos($i, 'other users on the host') !== false;
+});
+ok(!empty($_pc_world),          'a world-readable credential file is flagged (664)');
+ok($_pc['severity'] === 'high', 'and it is high severity, not a footnote');
+
+chmod($_pc_file, 0660); clearstatcache(true, $_pc_file);   // same file, world bits cleared
+$_pc_ok = performPermissionCheck($_pc_file, $_pc_item, 'apache');
+$_pc_ok_world = array_filter($_pc_ok['issues'], function ($i) {
+    return stripos($i, 'other users on the host') !== false;
+});
+ok(empty($_pc_ok_world),        'the same file at 660 is not flagged — the check is world-access, not an exact mode');
+
+// A non-sensitive writable file at 664 must stay clean: 664 is normal for site data.
+$_pc_plain = ['name' => 'Site Data Backup Files', 'type' => 'file', 'required_perms' => '664',
+              'required_group' => 'apache'];
+chmod($_pc_file, 0664); clearstatcache(true, $_pc_file);
+$_pc_p = performPermissionCheck($_pc_file, $_pc_plain, 'apache');
+$_pc_p_world = array_filter($_pc_p['issues'], function ($i) {
+    return stripos($i, 'other users on the host') !== false;
+});
+ok(empty($_pc_p_world),         'a NON-sensitive 664 file is still fine — no blanket tightening');
+
+// The advice. A world-open sensitive DIRECTORY must be told 2770, never 640: `chmod 640`
+// on a directory strips the traverse bit and locks the web server out of the keys it
+// exists to read. The old 'secret' branch printed 640 regardless of type.
+$_pc_fix_dir = moop_permission_fix_commands([
+    'path' => '/tmp/moop_certs', 'type' => 'directory', 'check_mode' => 'secret',
+    'sensitive' => true, 'current_perms' => '2755', 'exists' => true, 'is_readable' => true,
+], 'smr');
+ok(in_array('sudo chmod 2770 ' . escapeshellarg('/tmp/moop_certs'), $_pc_fix_dir, true),
+   'a world-open sensitive directory is told 2770');
+ok(!in_array('sudo chmod 640 ' . escapeshellarg('/tmp/moop_certs'), $_pc_fix_dir, true),
+   'and is NOT told 640, which would strip its traverse bit');
+
+$_pc_fix_file = moop_permission_fix_commands([
+    'path' => $_pc_file, 'type' => 'file', 'check_mode' => 'writable', 'sensitive' => true,
+    'current_perms' => '664', 'exists' => true, 'is_readable' => true, 'is_writable' => true,
+], 'smr');
+ok(in_array('sudo chmod 640 ' . escapeshellarg($_pc_file), $_pc_fix_file, true),
+   'a world-readable sensitive file is told 640');
+
+// moop_permission_dir_mode: the dashboard's number, derived not hardcoded.
+$_pc_sens = ['/var/www/moop-site-data' => true, '/var/www/html/moop/config/secrets.php' => true];
+ok(moop_permission_dir_mode('/var/www/moop-site-data', $_pc_sens) === '2770',
+   'the site-data backup directory is advised 2770, not 2775');
+ok(moop_permission_dir_mode('/var/www/html/moop/config', $_pc_sens) === '2770',
+   'a directory CONTAINING a credential file is advised 2770 too');
+ok(moop_permission_dir_mode('/var/www/html/moop/logs', $_pc_sens) === '2775',
+   'an ordinary writable directory is still advised 2775');
+
+// An explicit check_mode on a rule must win over the name lookup, in BOTH places that ask.
+ok(moop_permission_item_mode(['name' => 'Credential Files (web-written)', 'check_mode' => 'writable']) === 'writable',
+   "an explicit check_mode wins over the rule's name");
+ok(moop_permission_item_mode(['name' => 'Logs Directory']) === 'writable',
+   'and a rule without one still resolves by name');
+
+@unlink($_pc_file);
+@rmdir($_pc_dir);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

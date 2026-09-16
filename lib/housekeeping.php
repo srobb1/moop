@@ -693,9 +693,37 @@ function housekeeping_environment_check() {
         $writable_dirs['site data backup'] = $site_data_path;
     }
     $web_info = getWebServerUser();
+
+    // 2770 for a directory that holds credentials, 2775 for the rest — resolved from the
+    // permission rules' 'sensitive' flags, never hardcoded here. This used to print 2775
+    // for every directory including the site-data backup, so following the dashboard's own
+    // advice made users.json (bcrypt hashes) and secrets.php readable by every local user.
+    // permission_check.php is otherwise pulled in later (the permission_check task); this is
+    // require_once, so loading it here costs nothing and keeps the guard below from silently
+    // falling through to the default.
+    require_once $site_path . '/lib/permission_check.php';
+
+    $sensitive_paths = [];
+    if (function_exists('moop_permission_sensitive_paths')) {
+        $sensitive_paths = moop_permission_sensitive_paths($config, [
+            'web_group'            => $web_info['group'],
+            'moop_owner'           => function_exists('getMoopOwner') ? getMoopOwner() : '',
+            'metadata_path'        => $config->getPath('metadata_path'),
+            'organism_data'        => $config->getPath('organism_data'),
+            'cache_path'           => $config->getPath('cache_path'),
+            'site_path'            => $site_path,
+            'absolute_images_path' => $config->getPath('absolute_images_path'),
+            'docs_path'            => $config->getPath('docs_path'),
+            'site_data_path'       => $site_data_path,
+        ]);
+    }
+
     foreach ($writable_dirs as $label => $dir) {
         if (is_dir($dir) && !is_writable($dir)) {
-            $fix_cmd = "sudo chgrp " . $web_info['group'] . " " . htmlspecialchars($dir) . " && sudo chmod 2775 " . htmlspecialchars($dir);
+            $dir_mode = function_exists('moop_permission_dir_mode')
+                ? moop_permission_dir_mode($dir, $sensitive_paths)
+                : '2770';   // fail CLOSED: never advise widening when we cannot tell
+            $fix_cmd = "sudo chgrp " . $web_info['group'] . " " . htmlspecialchars($dir) . " && sudo chmod " . $dir_mode . " " . htmlspecialchars($dir);
             $warnings[] = [
                 'level' => 'warning',
                 'message' => "Directory <code>$label/</code> is not writable — admin changes may not save. Fix with: <code>$fix_cmd</code>",

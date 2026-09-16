@@ -255,7 +255,7 @@ foreach ($grouped as $group_name => $items):
                     <div class="perm-value <?= $clean ? 'text-success' : 'text-danger' ?>">
                         <?= htmlspecialchars($check['current_perms'] ?? 'N/A') ?>
                     </div>
-                    <small class="text-muted"><?= htmlspecialchars(moop_permission_expectation($mode_of, $check['type'] ?? 'file')) ?></small>
+                    <small class="text-muted"><?= htmlspecialchars(moop_permission_expectation($mode_of, $check['type'] ?? 'file', !empty($check['sensitive']))) ?></small>
                 </div>
                 <div class="perm-item">
                     <strong>Owner</strong>
