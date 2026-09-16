@@ -57,7 +57,7 @@ try {
     // Parse header
     $header = str_getcsv(trim($lines[0]), "\t");
     $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]); // Remove BOM
-    $header = array_map('strtolower', $header);
+    $header = array_map([GoogleSheetsParser::class, 'normalizeColumnName'], $header);
     
     // Check required columns
     $requiredColumns = ['track_id', 'name', 'track_path'];

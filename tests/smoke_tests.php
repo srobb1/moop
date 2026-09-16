@@ -462,6 +462,88 @@ $phantom = array_filter($r['suggestions'], function ($s) use ($existing) { retur
 ok(count($phantom) === 0,                   'every suggested group already exists in the groups file');
 
 // ----------------------------------------------------------------------------
+group('track sheet → track JSON — no metadata column is dropped on the way');
+
+// Registration reads a Google Sheet, GoogleSheetsParser turns each row into track data, and a
+// track type copies the metadata fields it publishes into the track JSON. Until 2026-09-14 the
+// parser silently lost six of them for EVERY track: headers were only lowercased, so
+// "developmental-stage" became a key nothing read, and cleanTrackData() returned a fixed
+// eight-field list without citation, project, accession, date or analyst. Nvec's sheet had
+// 1,138 stage values and not one reached a track.
+require_once dirname(__DIR__) . '/lib/jbrowse/GoogleSheetsParser.php';
+require_once dirname(__DIR__) . '/lib/jbrowse/TrackTypes/BigWigTrack.php';
+
+// Headers as the real sheet has them: mixed case, one hyphenated, Windows line endings.
+$_ts_header = ['TRACK_ID', 'NAME', 'technique', 'CATEGORY', 'institute', 'source', 'experiment',
+               'developmental-stage', 'tissue', 'condition', 'summary', 'citation', 'project',
+               'accession', 'date', 'analyst', 'SCIPRJ', 'ACCESS', 'biosample', 'NGS_file', 'MLONG',
+               'TRACK_PATH', 'Notes'];
+$_ts_row    = ['t1.pos.bw', 'sample-1 +', 'RNASeq', 'Gene Expression', 'Institute A', 'Lab A',
+               'Experiment A', '0hpf', '', 'time post fertilization', 'Summary A', 'PMID:1', 'PRJNA1',
+               'SRR1', '2019-01-01', 'analyst-a', 'SCI-1', 'Public', 'SAMN1', 'ngs-1', 'MOLNG-1',
+               'https://tracks.example.org/t1.pos.bw', ''];
+$_ts_tsv    = implode("\t", $_ts_header) . "\r\n" . implode("\t", $_ts_row) . "\r\n";
+$_ts_expect = [
+    'technique' => 'RNASeq', 'institute' => 'Institute A', 'source' => 'Lab A',
+    'experiment' => 'Experiment A', 'developmental_stage' => '0hpf',
+    'condition' => 'time post fertilization', 'summary' => 'Summary A', 'citation' => 'PMID:1',
+    'project' => 'PRJNA1', 'accession' => 'SRR1', 'date' => '2019-01-01', 'analyst' => 'analyst-a',
+];
+
+$_ts_parser = new GoogleSheetsParser();
+$_ts_tracks = $_ts_parser->parseTracks($_ts_tsv, 'OrgA', 'GCA_1');
+$_ts_track  = $_ts_tracks['regular'][0] ?? [];
+ok(count($_ts_tracks['regular']) === 1, 'the sheet row parses to one track');
+foreach ($_ts_expect as $_ts_f => $_ts_v) {
+    ok(($_ts_track[$_ts_f] ?? null) === $_ts_v, "parser carries $_ts_f to the track data");
+}
+
+// parseTSV() is the other header path (column validation); it must normalize the same way.
+$_ts_rows = $_ts_parser->parseTSV($_ts_tsv);
+ok(array_key_exists('developmental_stage', $_ts_rows[0] ?? []),
+   'parseTSV() reads the hyphenated header as developmental_stage too');
+
+// End to end for the track type that matters most today, RNA-seq bigWigs: the fields must reach
+// google_sheets_metadata in the JSON, and an empty cell must not be written at all. A stub
+// resolver and dry_run keep it hermetic — no network, no file written.
+$_ts_resolver = new class {
+    public function isRemote($path) { return true; }
+    public function toWebUri($path) { return $path; }
+    public function toFilesystemPath($path) { return $path; }
+    public function fileExists($path) { return false; }
+};
+ob_start();
+(new BigWigTrack($_ts_resolver, ConfigManager::getInstance()))
+    ->generate($_ts_track, 'OrgA', 'GCA_1', ['dry_run' => true]);
+$_ts_out  = ob_get_clean();
+$_ts_json = preg_match('/Metadata: (\{.*\})\s*$/s', $_ts_out, $_ts_m) ? json_decode($_ts_m[1], true) : null;
+$_ts_gsm  = $_ts_json['metadata']['google_sheets_metadata'] ?? [];
+ok(is_array($_ts_json), 'a BigWigTrack dry run emits the track JSON');
+foreach (['developmental_stage', 'citation', 'project', 'accession', 'date', 'analyst'] as $_ts_f) {
+    ok(($_ts_gsm[$_ts_f] ?? null) === $_ts_expect[$_ts_f], "the bigWig track JSON gets $_ts_f");
+}
+ok(!array_key_exists('tissue', $_ts_gsm), 'an empty sheet cell is not written as an empty field');
+
+// The drift guard. Each track type keeps its own list of the sheet fields it publishes, and the
+// parser must carry every one of them — a field a track type asks for but the parser drops is
+// exactly this bug. Asserted rather than trusted: adding a column to one track type's list
+// looks complete from inside that file.
+$_ts_fields = defined('GoogleSheetsParser::METADATA_FIELDS') ? GoogleSheetsParser::METADATA_FIELDS : [];
+ok(!empty($_ts_fields), 'GoogleSheetsParser::METADATA_FIELDS lists the fields it carries');
+$_ts_lists = 0;
+foreach (glob(dirname(__DIR__) . '/lib/jbrowse/TrackTypes/*.php') as $_ts_file) {
+    preg_match_all("/\[\s*'technique'[^\]]*\]/", file_get_contents($_ts_file), $_ts_found);
+    foreach ($_ts_found[0] as $_ts_list) {
+        $_ts_lists++;
+        preg_match_all("/'([a-z0-9_]+)'/", $_ts_list, $_ts_names);
+        $_ts_missing = array_diff($_ts_names[1], $_ts_fields);
+        ok(empty($_ts_missing), basename($_ts_file) . ' publishes only fields the parser carries'
+           . (empty($_ts_missing) ? '' : ' (dropped: ' . implode(', ', $_ts_missing) . ')'));
+    }
+}
+ok($_ts_lists > 0, "found the track types' metadata field lists to check");
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

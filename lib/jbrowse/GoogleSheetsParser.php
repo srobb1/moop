@@ -22,7 +22,39 @@ class GoogleSheetsParser
      * Required columns for regular tracks
      */
     private $requiredColumns = ['track_id', 'name', 'track_path'];
-    
+
+    /**
+     * Sheet metadata columns carried through to the track types.
+     *
+     * Each track type decides what it publishes and copies only its own list into the track
+     * JSON (BigWig, BAM, BED, CRAM, VCF, GFF and GTF list 13; MAF, PAF and MCScan add four
+     * more). This list's job is to lose none of them on the way, so it is the union of theirs.
+     * tests/smoke_tests.php fails if a track type names a field that is missing here.
+     *
+     * Keys are normalized column names (see normalizeColumnName()).
+     */
+    const METADATA_FIELDS = [
+        'technique', 'institute', 'source', 'experiment',
+        'developmental_stage', 'tissue', 'condition',
+        'summary', 'citation', 'project', 'accession',
+        'date', 'analyst', 'sciprj', 'biosample', 'ngs_file', 'mlong',
+    ];
+
+    /**
+     * Normalize a sheet column header to the key the code reads.
+     *
+     * Lowercase and trimmed, with each run of hyphens or whitespace turned into one underscore,
+     * so the sheet's "developmental-stage" is read as developmental_stage. Lowercasing alone
+     * left that column under a key nothing looked up, and it was empty on every track.
+     *
+     * @param string $name Header as it appears in the sheet
+     * @return string Normalized column name
+     */
+    public static function normalizeColumnName($name)
+    {
+        return preg_replace('/[\s-]+/', '_', strtolower(trim((string) $name)));
+    }
+
     /**
      * Download Google Sheet as TSV
      * 
@@ -72,8 +104,8 @@ class GoogleSheetsParser
         $header = str_getcsv(trim($lines[0]), "\t");
         $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]); // Remove BOM
         
-        // Normalize column names to lowercase for consistency
-        $header = array_map('strtolower', $header);
+        // Normalize column names (lowercase; hyphens and spaces become underscores)
+        $header = array_map([self::class, 'normalizeColumnName'], $header);
         
         // Filter out columns starting with #
         $validColumns = [];
@@ -211,8 +243,8 @@ class GoogleSheetsParser
         // Remove BOM if present
         $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
         
-        // Normalize column names to lowercase for consistency
-        $header = array_map('strtolower', $header);
+        // Normalize column names (lowercase; hyphens and spaces become underscores)
+        $header = array_map([self::class, 'normalizeColumnName'], $header);
         
         $rows = [];
         
@@ -362,7 +394,7 @@ class GoogleSheetsParser
         // Map ACCESS column to access_level
         $accessLevel = trim($row['access'] ?? $row['access_level'] ?? 'PUBLIC');
         
-        return [
+        $track = [
             'track_id' => trim($row['track_id']),
             'browser_track_id' => trim($row['browser_track_id'] ?? ''),
             'name' => trim($row['name']),
@@ -373,17 +405,14 @@ class GoogleSheetsParser
             'description' => trim($row['description'] ?? ''),
             'organism' => $row['organism'],
             'assembly' => $row['assembly'],
-            
-            // Optional metadata fields
-            'technique' => trim($row['technique'] ?? ''),
-            'institute' => trim($row['institute'] ?? ''),
-            'source' => trim($row['source'] ?? ''),
-            'experiment' => trim($row['experiment'] ?? ''),
-            'developmental_stage' => trim($row['developmental_stage'] ?? ''),
-            'tissue' => trim($row['tissue'] ?? ''),
-            'condition' => trim($row['condition'] ?? ''),
-            'summary' => trim($row['summary'] ?? ''),
         ];
+
+        // Optional metadata: every field some track type publishes (see METADATA_FIELDS)
+        foreach (self::METADATA_FIELDS as $field) {
+            $track[$field] = trim($row[$field] ?? '');
+        }
+
+        return $track;
     }
     
     /**
