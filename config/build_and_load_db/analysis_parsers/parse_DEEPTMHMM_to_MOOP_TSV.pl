@@ -54,7 +54,13 @@ my $flush = sub {
   if ($tmr_count > 0) {
     my $accession = $bs_count > $th_count ? 'Beta sheet' : 'TMhelix';
     my $type_desc = $accession eq 'Beta sheet' ? 'beta-strand' : 'alpha-helical';
-    print OUT join("\t",$id,$accession,"$tmr_count transmembrane segments of $type_desc type are predicted",$tmr_count),"\n";
+    ## Inflect: a single transmembrane segment is the COMMONEST case, not an edge one --
+    ## 1,857 of Anoura's 4,415 DeepTMHMM rows (42%) predict exactly one, so "1 transmembrane
+    ## segments ... are predicted" would be the wording most readers actually see. The
+    ## previous phrasing ("Number of predicted TMRs: N") sidestepped this by not inflecting.
+    my $noun = $tmr_count == 1 ? 'segment' : 'segments';
+    my $verb = $tmr_count == 1 ? 'is'      : 'are';
+    print OUT join("\t",$id,$accession,"$tmr_count transmembrane $noun of $type_desc type $verb predicted",$tmr_count),"\n";
   }
   $id = undef;
 };
