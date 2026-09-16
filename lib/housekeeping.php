@@ -682,6 +682,51 @@ function housekeeping_environment_check() {
         ];
     }
 
+    // 2b. Git permission hooks armed
+    //
+    // Any checkout, merge, rebase, cherry-pick or reset that writes a served .php leaves it
+    // mode 640, which php-fpm cannot read -> EVERY page 500s, thrown before MOOP's error
+    // handler is installed, so logs/error.log stays empty and the real error is in root-only
+    // /var/log/php-fpm/www-error.log. It took the site down twice on 2026-09-16.
+    //
+    // .githooks/ repairs it automatically, but git will not run a tracked hook until the
+    // clone opts in -- cloning a repo must never execute its code -- so a fresh clone is
+    // silently unprotected. setup-check.php checks this too, but it is a CLI tool that 403s
+    // over HTTP and nothing links to it; this is the copy an admin actually sees.
+    //
+    // 'danger', not 'warning', even though nothing is broken yet: the blast radius is the
+    // whole site rather than one feature, and the fix is a single command.
+    //
+    // .git/config is read directly rather than shelling out to `git config`, because this
+    // runs as the web user and git refuses a repo owned by someone else ("dubious
+    // ownership") unless safe.directory is set.
+    if (is_dir($site_path . '/.git')) {
+        $hook_script = $site_path . '/.githooks/moop-fix-web-perms';
+        $hooks_path  = null;
+        $git_config  = $site_path . '/.git/config';
+        if (is_readable($git_config)) {
+            if (preg_match('/^\s*hooksPath\s*=\s*(\S+)/mi', (string) @file_get_contents($git_config), $m)) {
+                $hooks_path = rtrim(trim($m[1]), '/');
+            }
+        }
+        // core.hooksPath FIRST: .git/config is world-readable, so this arm is reliable from
+        // the web user. The script check below is not — .githooks/ created under a 027 umask
+        // is 750, and then file_exists() is false for apache whether the script is missing or
+        // merely unreadable. Reporting "missing" there sent the admin after the wrong fix, so
+        // that arm now names both causes and only runs once the config arm is satisfied.
+        if ($hooks_path !== '.githooks') {
+            $warnings[] = [
+                'level' => 'danger',
+                'message' => 'Git is not running MOOP\'s permission hooks — this clone is unprotected. Any checkout, merge or rebase that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with: <code>git config core.hooksPath .githooks</code>',
+            ];
+        } elseif (!file_exists($hook_script)) {
+            $warnings[] = [
+                'level' => 'danger',
+                'message' => 'Git is set to use <code>.githooks/</code> but the web server cannot see <code>moop-fix-web-perms</code> there — it is missing, or the directory is not traversable by the web user. Until it runs, a checkout that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with: <code>chmod 755 .githooks .githooks/*</code> (or restore the file from the repo).',
+            ];
+        }
+    }
+
     // 3. Critical directories writable
     $writable_dirs = [
         'logs'     => $site_path . '/logs',
