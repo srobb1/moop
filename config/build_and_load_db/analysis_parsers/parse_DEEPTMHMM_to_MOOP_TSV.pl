@@ -53,7 +53,8 @@ my $flush = sub {
   return unless defined $id;
   if ($tmr_count > 0) {
     my $accession = $bs_count > $th_count ? 'Beta sheet' : 'TMhelix';
-    print OUT join("\t",$id,$accession,"Number of predicted TMRs: $tmr_count",$tmr_count),"\n";
+    my $type_desc = $accession eq 'Beta sheet' ? 'beta-strand' : 'alpha-helical';
+    print OUT join("\t",$id,$accession,"$tmr_count transmembrane segments of $type_desc type are predicted",$tmr_count),"\n";
   }
   $id = undef;
 };
