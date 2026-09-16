@@ -466,15 +466,26 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
         // this deployment are a bare term; 25 are "InterProScan (member)" and 17 are
         // "Ensembl species". Glossing the whole string would match almost none of them.
         $annotation_source = gloss_terms_in($row['annotation_source_name']);
-        $annotation_accession_url = htmlspecialchars(trim($row['annotation_accession_url']));
-        $hit_id_link = $annotation_accession_url . urlencode(trim($row['annotation_accession']));
-        
+        // NULL when the source has no per-accession page to link to (SignalP,
+        // DeepTMHMM -- see load_annotations_sqlite.pl). Render plain text
+        // instead of a broken relative link, and guard against NULL the same
+        // way $hit_score does above (trim()/htmlspecialchars() on null is
+        // deprecated in PHP 8.1+).
+        $raw_accession_url = $row['annotation_accession_url'];
+        $has_link = $raw_accession_url !== null && trim($raw_accession_url) !== '';
+        $hit_id_cell = $hit_id;
+        if ($has_link) {
+            $annotation_accession_url = htmlspecialchars(trim($raw_accession_url));
+            $hit_id_link = $annotation_accession_url . urlencode(trim($row['annotation_accession']));
+            $hit_id_cell = "<a href=\"" . htmlspecialchars($hit_id_link) . "\" target=\"_blank\">" . $hit_id . "</a>";
+        }
+
         $html .= "<tr>";
         $html .= "<td class=\"export-only\">" . htmlspecialchars($organism) . "</td>";
         $html .= "<td class=\"export-only\">" . htmlspecialchars($uniquename) . "</td>";
         $html .= "<td class=\"export-only\">" . htmlspecialchars($type) . "</td>";
         $html .= "<td class=\"export-only\">" . htmlspecialchars($annotation_type) . "</td>";
-        $html .= "<td><a href=\"" . htmlspecialchars($hit_id_link) . "\" target=\"_blank\">" . $hit_id . "</a></td>";
+        $html .= "<td>" . $hit_id_cell . "</td>";
         $html .= "<td>" . $hit_description . "</td>";
         $html .= "<td>" . $hit_score . "</td>";
         $html .= "<td>" . $annotation_source . "</td>";

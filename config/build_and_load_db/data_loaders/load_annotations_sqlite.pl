@@ -349,7 +349,11 @@ sub load_one_file {
             if    ($line =~ /^## Annotation Source:\s*(.+?)\s*$/)         { $source          = $1 }
             elsif ($line =~ /^## Annotation Source Version:\s*(.+?)\s*$/) { $source_version  = $1 }
             elsif ($line =~ /^## Annotation Source URL:\s*(.+?)\s*$/)     { $source_url      = $1 }
-            elsif ($line =~ /^## Annotation Accession URL:\s*(.+?)\s*$/)  { $accession_url   = $1 }
+            ## .* (not .+?) so a genuinely blank URL captures '' rather than
+            ## failing to match at all. Some sources (SignalP, DeepTMHMM) have
+            ## no per-accession page to link to -- '' means "no link", and is
+            ## normalized to a real NULL below, never a placeholder string.
+            elsif ($line =~ /^## Annotation Accession URL:\s*(.*?)\s*$/)  { $accession_url   = $1 }
             elsif ($line =~ /^## Annotation Creation Date:\s*(.+?)\s*$/)  { $date            = $1 }
             elsif ($line =~ /^## Annotation Type:\s*(.+?)\s*$/)           { $annotation_type = $1 }
             next;
@@ -380,6 +384,11 @@ These are required for a load
     $source_version //= die "## Annotation Source Version: is required in header of $annot_file\n";
     $source_url     //= die "## Annotation Source URL is required in header of $annot_file\n";
     $accession_url  //= die "## Annotation Accession URL: is required in header of $annot_file\n";
+    # A present-but-empty header (SignalP, DeepTMHMM: no per-accession page to
+    # link to) becomes a real NULL here, not the empty string -- same
+    # NULL-means-"no value" discipline as feature_annotation.score below,
+    # never a placeholder that renders as a broken link or an empty href.
+    $accession_url  = undef if $accession_url eq '';
     $date           //= die "## Annotation Creation Date: is required in header of $annot_file\n";
     $annotation_type//= die "## Annotation Type: is required in header of $annot_file\n";
 

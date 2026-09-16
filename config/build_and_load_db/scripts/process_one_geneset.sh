@@ -159,6 +159,8 @@ check_missing_files_gff() {
   [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" ] || \
     [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.tsv" ]            || log_missing "interproscan/interproscan_results.tsv.tsv(.gz)"
   [ -f "$ANALYSIS_DIR/protnlm/protnlm_pred_results.tsv" ]             || log_missing "protnlm/protnlm_pred_results.tsv"
+  [ -f "$ANALYSIS_DIR/signalp6/signalp6_results.tsv" ]                || log_missing "signalp6/signalp6_results.tsv"
+  [ -f "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3" ]             || log_missing "deeptmhmm/deeptmhmm_results.gff3"
 }
 
 check_missing_files_t2g() {
@@ -173,6 +175,8 @@ check_missing_files_t2g() {
   [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" ] || \
     [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.tsv" ]            || log_missing "interproscan/interproscan_results.tsv.tsv(.gz)"
   [ -f "$ANALYSIS_DIR/protnlm/protnlm_pred_results.tsv" ]             || log_missing "protnlm/protnlm_pred_results.tsv"
+  [ -f "$ANALYSIS_DIR/signalp6/signalp6_results.tsv" ]                || log_missing "signalp6/signalp6_results.tsv"
+  [ -f "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3" ]             || log_missing "deeptmhmm/deeptmhmm_results.gff3"
 }
 
 mkdir -p "$GENESET_DATA"
@@ -291,6 +295,40 @@ make_protnlm_moop() {
 }
 has_data protnlm.moop.tsv \
   || { echo "Building ProtNLM moop files"; make_protnlm_moop; }
+
+# ── SignalP 6 ─────────────────────────────────────────────────────────────────
+make_signalp_moop() {
+  local SDIR="$ANALYSIS_DIR/signalp6"
+  if [ ! -s "$SDIR/signalp6_results.tsv" ]; then
+    echo "No SignalP results at $SDIR — skipping"
+    return 0
+  fi
+  perl "$REPO/analysis_parsers/parse_SIGNALP_to_MOOP_TSV.pl" "$SDIR/signalp6_results.tsv"
+}
+has_data SignalP.domains.moop.tsv \
+  || { echo "Building SignalP moop files"; make_signalp_moop; }
+
+# ── DeepTMHMM ─────────────────────────────────────────────────────────────────
+make_deeptmhmm_moop() {
+  local TDIR="$ANALYSIS_DIR/deeptmhmm"
+  local VERSION
+  if [ ! -s "$TDIR/deeptmhmm_results.gff3" ]; then
+    echo "No DeepTMHMM results at $TDIR — skipping"
+    return 0
+  fi
+  ## deeptmhmm_version.txt holds a banner like
+  ##   "### DeepTMHMM 1.0 - Academic Version ###"
+  ## Strip it to the bare version number -- annotation_source_version is part
+  ## of a uniqueness key and is shown as-is in the source picker/MOOPmart, so
+  ## the full banner text must not land there.
+  VERSION=$(sed -n 's/^#*[[:space:]]*DeepTMHMM[[:space:]]*\([0-9.]*\).*/\1/p' \
+              "$TDIR/deeptmhmm_version.txt" 2>/dev/null | head -1)
+  VERSION=${VERSION:-1.0}
+  perl "$REPO/analysis_parsers/parse_DEEPTMHMM_to_MOOP_TSV.pl" \
+    "$TDIR/deeptmhmm_results.gff3" "$VERSION"
+}
+has_data DeepTMHMM.domains.moop.tsv \
+  || { echo "Building DeepTMHMM moop files"; make_deeptmhmm_moop; }
 
 # ── RBBH — reciprocal best BLAST hits ────────────────────────────────────────
 make_rbbh_moop() {
