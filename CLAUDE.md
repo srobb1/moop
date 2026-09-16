@@ -395,6 +395,19 @@ any new host; `setup-check.php` verifies it.
 - **Edited PHP files save as `640 smr:smr`, which php-fpm cannot read → site-wide 500.**
   `chmod 644` any web-served file you edit. The real error is in
   `/var/log/php-fpm/www-error.log` (root-only) — it is not an opcache problem.
+- **git does the same thing, and that IS handled — but only in a clone that opted in.**
+  Any checkout/merge/rebase/cherry-pick/reset that writes a served `.php` leaves it 640 and
+  500s the whole site (2026-09-16). `.githooks/` fixes it automatically, but **git will not
+  run a tracked hook until the clone is pointed at it** — cloning a repo must never execute
+  its code. So a fresh clone is silently unprotected until:
+
+      git config core.hooksPath .githooks
+
+  `setup-check.php` fails if that is not set, because "silently" is the whole problem. The
+  hook is scoped to `git ls-files` on purpose, so it can never widen an untracked secret,
+  and uses `o+r` not `644` so a legitimately-660 file keeps its group-write bit.
+  ⚠️ **The suites cannot catch this class** — they run as the repo owner, who reads 640 fine.
+  Verify with a real URL (a gene page, plus a `.css`, which fails 403 rather than 500).
 - **php-fpm has `PrivateTmp`.** Anything exec'd from a web request gets its own `/tmp`,
   invisible from your shell. "It works in my terminal" proves nothing; pass an explicit
   temp/cache dir.

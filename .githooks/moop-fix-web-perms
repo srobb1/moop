@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# Restore world-read on web-served files after git rewrites them.
+#
+# WHY: git creates files honouring the umask, which on the deployment host yields
+# 640 smr:smr. php-fpm runs as `apache` and is in neither the owner nor the group,
+# so it cannot read them -> site-wide 500, thrown before MOOP's error handler is
+# installed (so logs/error.log stays silent and the real error is only in
+# /var/log/php-fpm/www-error.log, which is root-only). This fires on any checkout,
+# merge, rebase, cherry-pick, stash pop or reset that writes a served file, and the
+# test suites CANNOT catch it: they run as the repo owner, who reads 640 fine.
+# See CLAUDE.md §11 "Gotchas that will cost you an afternoon".
+#
+# INSTALL (per clone — git will not run a tracked hook without this):
+#     git config core.hooksPath .githooks
+# setup-check.php verifies it, because a clone without it is silently unprotected.
+#
+# Scope is deliberately `git ls-files` (tracked files only), so this can never widen
+# an untracked secret: config/secrets.php and certs/ are gitignored and unreachable
+# from here. `o+r` rather than `644` so a file that is legitimately 660 becomes 664
+# instead of losing its group-write bit.
+
+repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+cd "$repo" || exit 0
+
+git ls-files -z -- '*.php' '*.js' '*.css' \
+    ':(exclude)tests/*' ':(exclude)testing/*' 2>/dev/null \
+  | xargs -0 -r chmod o+r 2>/dev/null
+
+exit 0

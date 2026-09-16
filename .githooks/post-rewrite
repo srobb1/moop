@@ -1,0 +1,3 @@
+#!/bin/sh
+# Dispatcher — see moop-fix-web-perms in this directory for what and why.
+exec "$(cd "$(dirname "$0")" && pwd)/moop-fix-web-perms" "$@"

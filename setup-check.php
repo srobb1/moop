@@ -707,6 +707,61 @@ if ($server_flavor === 'unknown') {
     }
 }
 
+// ── Section 5c2: Git Permission Hooks ───────────────────────────────────────
+//
+// Git creates files honouring the umask, which on a serving host yields 640 owned by the
+// admin -- unreadable to php-fpm. Any checkout, merge, rebase, cherry-pick or reset that
+// writes a served .php therefore 500s the WHOLE SITE, and does it before MOOP's error
+// handler is installed, so logs/error.log stays empty and the real error is in
+// /var/log/php-fpm/www-error.log (root-only). It happened on 2026-09-16.
+//
+// The test suites cannot catch this: they run as the repo owner, who reads 640 fine.
+//
+// .githooks/ fixes it automatically, but git will NOT run a tracked hook without being
+// pointed at it -- cloning a repo must never execute its code. So a fresh clone is
+// silently unprotected, and "silently" is the whole problem. This check is the alarm.
+//
+// .git/config is read directly rather than shelling out to `git config`: setup-check runs
+// as the web user, and git refuses to operate on a repo owned by someone else
+// ("dubious ownership") unless safe.directory is set. Reading the file has no such issue.
+
+section("Git Permission Hooks");
+
+if (!is_dir("$base/.git")) {
+    pass("Not a git working copy — hooks do not apply");
+} else {
+    $hook_script = "$base/.githooks/moop-fix-web-perms";
+    $git_config  = "$base/.git/config";
+    $hooks_path  = null;
+
+    if (is_readable($git_config)) {
+        // Match `hooksPath = .githooks` in any section, tolerating whitespace and case.
+        if (preg_match('/^\s*hooksPath\s*=\s*(\S+)/mi', (string) file_get_contents($git_config), $m)) {
+            $hooks_path = trim($m[1]);
+        }
+    }
+
+    if (!file_exists($hook_script)) {
+        fail("Permission hook script is missing (.githooks/moop-fix-web-perms)",
+             "Without it, the next checkout/merge/rebase that writes a served .php\n" .
+             "         will 500 the entire site. Restore it from the repo.");
+    } elseif (!is_executable($hook_script)) {
+        fail("Permission hook script is not executable",
+             "chmod +x .githooks/moop-fix-web-perms");
+    } elseif ($hooks_path === null) {
+        fail("Git is not using .githooks — this clone is unprotected",
+             "git config core.hooksPath .githooks\n" .
+             "         Until then, any checkout/merge/rebase that writes a served .php\n" .
+             "         leaves it mode 640 and 500s the whole site.");
+    } elseif (rtrim($hooks_path, '/') !== '.githooks') {
+        warn("Git core.hooksPath is '$hooks_path', not '.githooks'",
+             "MOOP's permission hooks live in .githooks/. If that path does not chain\n" .
+             "         to them, a checkout can still leave served files unreadable.");
+    } else {
+        pass("Git permission hooks active (core.hooksPath = .githooks)");
+    }
+}
+
 // ── Section 5d: Response Compression ────────────────────────────────────────
 //
 // Off by default on a stock nginx/Apache, and nothing else here would notice. It is an
