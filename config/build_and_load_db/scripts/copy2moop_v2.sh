@@ -146,16 +146,38 @@ send() {
   ## every run looks identical in the log whether it copied 36 files or zero.
   local out; out=$(mktemp)
 
-  ## --partial keeps the bytes of an interrupted transfer so a retry resumes instead
+  ## --partial-dir keeps the bytes of an interrupted transfer so a retry resumes instead
   ## of restarting a 2 GB genome from zero; --timeout turns a silently wedged
   ## connection into a failure the retry can act on, rather than a hung job.
+  ##
+  ## --partial-dir, NOT the bare --partial this used to pass. Both resume; they differ
+  ## in what an interrupted transfer leaves at the DESTINATION, which is a live file the
+  ## web server is serving. Measured on rsync 3.2.5 -- an 80 MB source replacing a 70 MB
+  ## destination, SIGINT mid-transfer:
+  ##
+  ##   --partial                    destination = 24.7 MB fragment -- the good file is GONE
+  ##   --partial-dir=.rsync-partial destination = still the intact 70 MB file; the 24.7 MB
+  ##                                fragment parks in .rsync-partial/, the retry resumes
+  ##                                from it, and rsync removes the directory on success
+  ##
+  ## (Beware measuring this: with -a, rsync skips a file whose size AND mtime already
+  ## match, so a test using two same-sized files transfers nothing and every flag looks
+  ## safe. Differ the size to be sure a transfer actually happened.)
+  ##
+  ## Both write via a temp file and rename on SUCCESS, so a completed copy was always
+  ## atomic; the difference is only on the failure path. But this script's own history
+  ## (see the 2026-07-28 note above) is that rsync here does fail, and --timeout=120
+  ## exists precisely because transfers wedge. A truncated organism.sqlite left at the
+  ## live path is a corrupt database for every visitor to that organism until a retry
+  ## succeeds -- and if the job dies, it simply stays corrupt. The old good file is the
+  ## right thing to leave behind on failure.
   ##
   ## The exit status reported here used to be `$?` read inside `if ! rsync ...; then`,
   ## which is the status of the `!` -- always 0. Every transport failure logged
   ## "returned 0", which is precisely the message that sends you looking at the data
   ## instead of the network. retry() captures the real status.
   if ! retry "rsync to $dest" \
-       rsync -azL --partial --timeout=120 --itemize-changes "${RSYNC_EXTRA[@]}" \
+       rsync -azL --partial-dir=.rsync-partial --timeout=120 --itemize-changes "${RSYNC_EXTRA[@]}" \
          -e "ssh ${SSH_OPTS[*]}" \
          "${to_send[@]}" "$REMOTE:$dest/" >"$out"; then
     logerr "      files: ${to_send[*]}"
