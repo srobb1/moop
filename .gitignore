@@ -143,3 +143,16 @@ smallscreen.png
 #
 # scripts/fetch_vendor_assets.sh records where each file came from and verifies it; it is for
 # auditing and upgrading, NOT a required deployment step.
+
+# ── Local scratch / diagnostics (never part of the app) ──────
+# testing/ is a ~9 GB local corpus of trimmed organism data used to exercise
+# the loaders. It lives here for convenience, is NOT part of the app repo, and
+# is ignored so a stray `git add -A` can never try to stage it.
+testing/
+
+# Editor swap files and ad-hoc scratch buffers.
+*.swp
+*.swo
+
+# Reproducible diagnostic dumps (regenerate them rather than committing).
+status.*.log
