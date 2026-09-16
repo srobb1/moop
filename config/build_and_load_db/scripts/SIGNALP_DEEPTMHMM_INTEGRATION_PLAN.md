@@ -196,6 +196,153 @@ a broken relative link on whatever page the user is on.
    live `organism.sqlite` until the above passes and the user has reviewed the
    diff.
 
+## ⚠️ ACTIVE INCIDENT (2026-09-16, ~19:57 UTC) — production site down
+
+**Status when we stopped: NOT YET RESOLVED. Site was still down.** This section
+is not committed to git (deliberately — don't touch git state further mid-incident
+without a reason). Read this before doing anything else next session.
+
+**What happened:**
+1. Anoura_caudifer reload (SLURM job 5297076) completed successfully — this
+   part is fine and confirmed correct, not in question. `feature_annotation`
+   counts: 4,415 DeepTMHMM (4,410 TMhelix / 5 Beta sheet) + 1,904 SignalP,
+   100% attached, 0 not-found, source rows correct (`DeepTMHMM|1.0`,
+   `SignalP|SignalP-6.0`, both with NULL accession URL).
+2. On the **production web root** (`/var/www/html/moop` on host
+   `simrbasenew` — this is the LIVE site, not a test copy, learned the hard
+   way), switched from `main` to branch `signalp-deeptmhmm-integration`
+   (`d359bd6`). A pre-existing uncommitted local change to `tests/smoke_tests.php`
+   (a wanted, in-progress track-sheet-metadata test the user wants to keep) was
+   stashed first with `git stash` — **still stashed, not popped, do not lose
+   this.** `git stash list` on that host will show it.
+3. `lib/parent_functions.php` came out of the checkout as `640 smr:smr`
+   (the documented CLAUDE.md gotcha) — chmod'd to `644`.
+4. **Whole site still would not load after that.**
+5. Confirmed the DB sync to this host's `organisms/Anoura_caudifer/organism.sqlite`
+   did pick up today's reload (SignalP/DeepTMHMM sources present) — the outage
+   is NOT a data-sync problem.
+6. `php -l lib/parent_functions.php` → **clean, no syntax errors.** Our edit
+   is NOT the bug.
+7. Real fatal error, from `/var/log/php-fpm/www-error.log`:
+   ```
+   PHP Warning:  require_once(/var/www/html/moop/lib/functions_data.php):
+     Failed to open stream: Permission denied in
+     /var/www/html/moop/lib/moop_functions.php on line 23
+   PHP Fatal error:  Uncaught Error: Failed opening required
+     '/var/www/html/moop/lib/functions_data.php' ...
+     thrown in /var/www/html/moop/lib/moop_functions.php on line 23
+   ```
+   `moop_functions.php` is included from `index.php:17`, which is why
+   **every** page is down, not just gene pages.
+
+**Key open question: `lib/functions_data.php` is NOT part of the
+`signalp-deeptmhmm-integration` branch's diff.** Our commit never touches it.
+Why would a git branch switch make an unrelated, previously-working file
+suddenly unreadable? Two live theories, neither confirmed:
+- User's theory: the production checkout is a **sparse checkout and/or
+  partial clone**, and `lib/functions_data.php` got (re-)materialized by the
+  checkout with bad default permissions/ownership, the same way
+  `parent_functions.php` did — worth checking whether it's *new* to the
+  working tree from git's perspective vs. genuinely pre-existing and untouched.
+- Alternative: a **pre-existing, latent bad-permission/SELinux-label file**
+  that was being served fine via OPcache/a warm php-fpm worker, and only
+  started failing now because something (worker restart, cache eviction)
+  coincided with our testing — i.e. correlation, not causation with the
+  branch switch.
+
+**Diagnostics requested, NOT yet confirmed returned when we stopped:**
+```bash
+cd /var/www/html/moop
+ls -l lib/functions_data.php
+ls -Z lib/functions_data.php                          # SELinux context
+stat -c '%Y %n' lib/functions_data.php; date +%s       # did this just change?
+git status                                             # does git see it as modified?
+git diff HEAD -- lib/functions_data.php
+git sparse-checkout list
+git config remote.origin.partialclonefilter
+```
+
+**Mitigation given, NOT yet confirmed applied/tested:**
+```bash
+chmod 644 lib/functions_data.php
+sudo restorecon -v lib/functions_data.php
+# retest the site
+```
+If that doesn't fix it, full rollback of the branch switch:
+```bash
+git checkout main
+# git stash pop   -- only once things are stable, to bring back the
+#                    tests/smoke_tests.php work-in-progress
+```
+
+**Do NOT forget once the site is back up:** actually verify the
+`parent_functions.php` fix (the whole reason we were on this branch) by
+loading these three real Anoura features and checking the accession renders
+as plain text, not a link:
+- `ACA1_PVKU01000001.1_000002.1` — SignalP SP
+- `ACA1_PVKU01000002.1_000008.1` — DeepTMHMM TMhelix
+- `ACA1_PVKU01001747.1_000002.1` — DeepTMHMM Beta sheet (the mislabeling fix)
+
+A separate Claude Code session was started directly on `simrbasenew` to work
+this incident locally (I only have shell access to the dev/compute host, not
+that web server) — check whether that session already made progress before
+redoing diagnostics.
+
+### UPDATE — likely root cause found (not yet confirmed)
+
+Diagnostics came back:
+```
+-rw-r-----. 1 smr smr 55344 Sep 16 14:54 lib/functions_data.php
+unconfined_u:object_r:httpd_sys_content_t:s0 lib/functions_data.php   <- SELinux label is CORRECT
+mtime: 1789588452  (== exact same second as parent_functions.php's mtime)
+```
+**Not a SELinux problem** — the label is right. It's the same `umask`-driven
+`640` issue as `parent_functions.php`, just on a file our branch never
+touches. Fix applied: `chmod 644 lib/functions_data.php` — retest pending,
+not yet confirmed the site is back up.
+
+**Working theory for WHY git touched an unrelated file:** the earlier `git
+stash` message read `Saved working directory and index state WIP on main:
+468ce67` — meaning local `main` on this production host was sitting at
+`468ce67`, **one commit ahead of `origin/main` (`beacd6f`)**: an unpushed
+local commit ("manage groups: suggest groups the taxonomy tree says are
+missing") that exists ONLY on this host, never reached GitHub. Our branch was
+cut from `beacd6f` on the dev host — one commit *behind* that local `main`.
+So `git checkout signalp-deeptmhmm-integration` didn't just add our 7 files —
+it also reverted whatever `468ce67` changed back to the `beacd6f` version. If
+`468ce67` touched `lib/functions_data.php`, that fully explains why an
+untouched-by-us file got rewritten (different blob) and landed at `640`
+(git checkout writes every rewritten file as `0666 & ~umask`; this host's
+`smr` umask is apparently `027`, which yields exactly `640`). This also
+explains the earlier `git pull` "divergent branches" error on `main`.
+
+**To confirm, next session:**
+```bash
+git show 468ce67 --stat        # does it touch lib/functions_data.php?
+git diff 468ce67 beacd6f -- lib/functions_data.php
+```
+
+**If confirmed — real consequence, not just cosmetic:** the production site
+is currently running *without* whatever `468ce67` added, until that commit is
+reconciled (rebase our branch on top of it, cherry-pick it onto our branch,
+or push it to `origin/main` and merge). Don't lose track of "manage groups:
+suggest groups the taxonomy tree says are missing" — it was live on
+production and currently is not, and it exists in exactly one place: local
+git history on `simrbasenew`. Should probably `git push` that commit (or a
+branch containing it) from that host before anyone runs `git checkout main`
+there again, so it isn't at risk of being lost.
+
+**Every OTHER file this branch's checkout could have similarly reverted**
+(anything `468ce67` touched besides `functions_data.php`) should be treated
+as suspect for the same `640`-permission problem — don't assume
+`functions_data.php` was the only casualty. A blanket sweep once the site is
+back up:
+```bash
+find /var/www/html/moop -name '*.php' -newermt '2026-09-16 14:53:00' -not -newermt '2026-09-16 14:55:00' -ls
+```
+(files touched in that one-minute window = files git rewrote during the
+checkout) — chmod 644 anything found there that isn't already.
+
 ## Explicitly out of scope for this round
 
 - `.3line` FASTA linking (fast-follow, see Decisions above).
