@@ -72,6 +72,13 @@ function validateDatabaseIntegrity($dbFile) {
         'row_counts' => [],
         'feature_counts' => [],
         'data_issues' => [],
+        // Machine-readable twin of data_issues, same order, one code per message.
+        // Callers that need to BRANCH on a specific problem read this; data_issues is
+        // prose for humans. Keeping them separate is deliberate: the admin pages used to
+        // have no choice but to lump every data issue under one "DB invalid" badge,
+        // and string-matching the prose to tell them apart is exactly the positional/
+        // by-text identity that CLAUDE.md section 9b says to replace with names.
+        'data_issue_codes' => [],
         'errors' => []
     ];
     
@@ -161,6 +168,7 @@ function validateDatabaseIntegrity($dbFile) {
             $orphaned_count = $stmt->fetchColumn();
             if ($orphaned_count > 0) {
                 $result['data_issues'][] = "Orphaned annotations (no source): $orphaned_count";
+                $result['data_issue_codes'][] = 'orphaned-annotations';
             }
         }
         
@@ -173,6 +181,7 @@ function validateDatabaseIntegrity($dbFile) {
             $missing_accession = $stmt->fetchColumn();
             if ($missing_accession > 0) {
                 $result['data_issues'][] = "Annotations with missing accession: $missing_accession";
+                $result['data_issue_codes'][] = 'annotations-missing-accession';
             }
         }
         
@@ -186,6 +195,7 @@ function validateDatabaseIntegrity($dbFile) {
             $orphaned_features = $stmt->fetchColumn();
             if ($orphaned_features > 0) {
                 $result['data_issues'][] = "Features without organism: $orphaned_features";
+                $result['data_issue_codes'][] = 'features-without-organism';
             }
         }
 
@@ -199,6 +209,7 @@ function validateDatabaseIntegrity($dbFile) {
             $orphaned_gs_features = $stmt->fetchColumn();
             if ($orphaned_gs_features > 0) {
                 $result['data_issues'][] = "Features with invalid gene_set_id: $orphaned_gs_features";
+                $result['data_issue_codes'][] = 'features-invalid-gene-set';
             }
         }
 
@@ -212,9 +223,61 @@ function validateDatabaseIntegrity($dbFile) {
             $orphaned_gene_sets = $stmt->fetchColumn();
             if ($orphaned_gene_sets > 0) {
                 $result['data_issues'][] = "Gene sets with invalid genome_id: $orphaned_gene_sets";
+                $result['data_issue_codes'][] = 'gene-sets-invalid-genome';
             }
         }
-        
+
+        // ── Emptiness checks ────────────────────────────────────────────────────
+        // Checks 1-5 above are all REFERENTIAL: they ask whether a row points at
+        // something valid. None of them asks whether any rows exist at all, so a
+        // database that loaded nothing scored a clean bill of health from every admin
+        // page -- Parastichopus_parvimensis sat at 0 features / 10-of-10 checks passed
+        // for weeks (found 2026-09-17). This docblock has claimed "Tables have data"
+        // since it was written; checks 6-7 are that claim finally implemented.
+        //
+        // No extra queries: every count here was already fetched into row_counts above.
+        // fetchColumn() returns them as STRINGS ("0"), so cast before comparing --
+        // relying on "0" being falsy works by luck and breaks the moment someone
+        // switches to a >= test.
+
+        // 6. Core tables that carry the organism's data, but hold no rows.
+        $must_have_rows = [
+            'feature'    => 'features',
+            'annotation' => 'annotations',
+            'genome'     => 'assemblies',
+            'gene_set'   => 'gene sets',
+        ];
+        foreach ($must_have_rows as $table => $noun) {
+            if (!in_array($table, $result['tables_present'], true)) continue;
+            if ((int)($result['row_counts'][$table] ?? 0) === 0) {
+                $result['data_issues'][]      = "No $noun loaded (0 rows in `$table`)";
+                $result['data_issue_codes'][] = "empty-$table";
+            }
+        }
+
+        // 7. Annotations loaded but linked to nothing.
+        //
+        // The failure this exists to catch: BOTH halves load, the join table stays
+        // empty, and every count on every admin page looks healthy. Annotation search
+        // then returns 0 results with HTTP 200 and no warning. Medicago_truncatula
+        // (54,918 annotations) and Turritopsis_dohrnii (304,529) were both in this
+        // state, undetected, while the annotation-source cache reported Parastichopus
+        // as better annotated than Nematostella -- because that cache counts
+        // annotation_source -> annotation and never crosses feature_annotation.
+        if (in_array('annotation', $result['tables_present'], true) &&
+            in_array('feature_annotation', $result['tables_present'], true)) {
+            $annotation_rows = (int)($result['row_counts']['annotation'] ?? 0);
+            $link_rows       = (int)($result['row_counts']['feature_annotation'] ?? 0);
+            if ($annotation_rows > 0 && $link_rows === 0) {
+                // Stated as the FACT only. The consequence ("search returns nothing")
+                // belongs to whoever is displaying it -- the dashboard card says it once
+                // for the whole group; repeating it per organism just made the card noisy.
+                $result['data_issues'][]      = "Annotations are not linked to any feature ("
+                    . number_format($annotation_rows) . " annotations, 0 rows in `feature_annotation`)";
+                $result['data_issue_codes'][] = 'annotations-unlinked';
+            }
+        }
+
     } catch (PDOException $e) {
         $result['errors'][] = 'Data quality check failed: ' . $e->getMessage();
     }

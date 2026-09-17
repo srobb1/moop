@@ -214,7 +214,12 @@
   // Pre-compute filter counts for the status filter bar
   $filter_counts = ['needs-attention' => 0, 'blast' => 0, 'fai' => 0,
                     'missing-genome-fa' => 0, 'missing-other-fasta' => 0,
-                    'groups' => 0, 'tree' => 0, 'metadata' => 0, 'stale' => 0];
+                    'groups' => 0, 'tree' => 0, 'metadata' => 0, 'stale' => 0,
+                    'db-content' => 0];
+  // Codes that mean the database loaded but holds nothing usable. Same list the row
+  // loop and the DB tint use; kept here so the chip count cannot drift from the badges.
+  $db_content_codes = ['empty-feature', 'empty-annotation', 'empty-genome',
+                       'empty-gene_set', 'annotations-unlinked'];
   foreach ($organisms as $_org => $_d) {
       $_c = $_d['overall_status']['checks'];
       $_g = $fasta_gaps($_d);
@@ -227,6 +232,9 @@
       if (!$_c['in_taxonomy_tree'])             $filter_counts['tree']++;
       if (!$_c['metadata_complete'])            $filter_counts['metadata']++;
       if (in_array($_org, $stale_organisms ?? [])) $filter_counts['stale']++;
+      if (array_intersect($_d['db_validation']['data_issue_codes'] ?? [], $db_content_codes)) {
+          $filter_counts['db-content']++;
+      }
   }
   unset($_org, $_d, $_c, $_g);
   ?>
@@ -265,6 +273,7 @@
               <div><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</span> <span class="text-muted">valid, assembly issues</span></div>
               <div><span class="badge bg-danger"><i class="fa fa-lock"></i> Unreadable</span> <span class="text-muted">server can't read file</span></div>
               <div><span class="badge bg-danger"><i class="fa fa-times-circle"></i> Invalid</span> <span class="text-muted">corrupted / bad schema</span></div>
+              <div><span class="badge bg-danger"><i class="fa fa-inbox"></i> Empty / Unlinked</span> <span class="text-muted">loads, but holds no usable rows</span></div>
             </div>
           </div>
           <div class="col-md-6 col-xl-3">
@@ -380,6 +389,7 @@
           // a glance without cluttering the bar with clickable dead ends.
           $filter_defs = [
             ['needs-attention',     'Needs Attention',      'warning',   'Any organism that is not fully complete'],
+            ['db-content',          'Empty / Unlinked DB',  'danger',    'The database loaded but holds no usable data — no features, no annotations, or annotations linked to nothing. Users see an organism that returns no search results.'],
             ['missing-genome-fa',   'Missing genome FASTA', 'info',      'No reference genome (genome.fa). Often expected — transcriptome/proteome-only organisms have none.'],
             ['missing-other-fasta', 'Missing other FASTA',  'info',      'A gene-set FASTA (protein / transcript / CDS) is missing'],
             ['blast',               'Missing BLAST',        'secondary', 'One or more BLAST indexes are missing'],
@@ -430,6 +440,31 @@
                foreach ($row_issue_map as $chk => $lbl) {
                    if (isset($row_checks[$chk]) && !$row_checks[$chk]) $row_issues[] = $lbl;
                }
+               // The generic 'database_valid' check collapses every data problem into one
+               // "DB invalid" badge. When the validator named a specific cause, say that
+               // instead: an organism whose database is structurally perfect and merely
+               // EMPTY is not invalid, and that badge sends the admin hunting the wrong
+               // problem. Keyed on data_issue_codes, never on the prose (CLAUDE.md 9b).
+               $db_issue_tags = [
+                   'empty-feature'        => 'no-features',
+                   'empty-annotation'     => 'no-annotations',
+                   'empty-genome'         => 'no-genomes-in-db',
+                   'empty-gene_set'       => 'no-gene-sets-in-db',
+                   'annotations-unlinked' => 'annotations-unlinked',
+               ];
+               $row_db_codes = $data['db_validation']['data_issue_codes'] ?? [];
+               $row_db_named = [];
+               foreach ($row_db_codes as $__code) {
+                   if (isset($db_issue_tags[$__code])) $row_db_named[] = $db_issue_tags[$__code];
+               }
+               // Only drop the generic badge when EVERY issue has a specific name -- an
+               // unmapped referential issue must keep its 'DB invalid' or it vanishes.
+               if ($row_db_named && !array_diff($row_db_codes, array_keys($db_issue_tags))) {
+                   $row_issues = array_values(array_diff($row_issues, ['db-invalid']));
+               }
+               $row_issues = array_merge($row_issues, $row_db_named);
+               if ($row_db_named) $row_issues[] = 'db-content';
+
                $row_gaps = $fasta_gaps($data);
                if ($row_gaps['genome_fa'])   $row_issues[] = 'missing-genome-fa';
                if ($row_gaps['other_fasta']) $row_issues[] = 'missing-other-fasta';
@@ -581,9 +616,17 @@
                    if ($data['db_validation']) {
                        $v = $data['db_validation']; $ai = $data['assembly_validation'];
                        $db_bad_dirs = $ai && (!$ai['valid'] || !empty($ai['mismatches']));
-                       if ($v['readable'] && $v['database_valid'] && !empty($v['tables_present']) && !$db_bad_dirs) $db_class = 'success';
-                       elseif (!$v['readable'] || !$v['database_valid'])                                          $db_class = 'danger';
-                       else                                                                                       $db_class = 'warning';
+                       // This tested database_valid -- "does it open as SQLite" -- and so
+                       // ignored data_issues entirely: an organism with zero features, or
+                       // with orphaned annotations, still lit up green. Content problems
+                       // that make the organism unusable are red; everything else warns.
+                       $db_unusable = (bool)array_intersect($v['data_issue_codes'] ?? [], [
+                           'empty-feature', 'empty-annotation', 'empty-genome',
+                           'empty-gene_set', 'annotations-unlinked',
+                       ]);
+                       if (!$v['readable'] || !$v['database_valid'] || $db_unusable)              $db_class = 'danger';
+                       elseif (empty($v['tables_present']) || !empty($v['data_issues']) || $db_bad_dirs) $db_class = 'warning';
+                       else                                                                       $db_class = 'success';
                    }
                    // Metadata inspector tint
                    $jv = $data['json_validation'];
@@ -596,6 +639,11 @@
                      'no-fasta'            => ['No FASTA',               'danger'],
                      'no-database'         => ['No database',            'danger'],
                      'db-invalid'          => ['DB invalid',             'danger'],
+                     'no-features'         => ['No features in DB',     'danger'],
+                     'no-annotations'      => ['No annotations in DB',  'danger'],
+                     'no-genomes-in-db'    => ['No assemblies in DB',   'danger'],
+                     'no-gene-sets-in-db'  => ['No gene sets in DB',    'danger'],
+                     'annotations-unlinked'=> ['Annotations unlinked',  'danger'],
                      'dir-mismatch'        => ['Dir / DB mismatch',      'warning'],
                      'blast'               => ['No BLAST index',         'warning'],
                      'fai'                 => ['No FAI index',           'warning'],

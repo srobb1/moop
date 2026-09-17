@@ -968,6 +968,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
 }
 
 
+
 /**
  * Read organisms/.organism_cache.json and pull out every gene_set directory that
  * exists on disk but has no matching row in that organism's database — see
@@ -1160,12 +1161,13 @@ function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
  *
  * @param string $organism_data_path
  * @return array{
- *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int,orphaned_assemblies:int,orphaned_jbrowse:int,no_database:int,taxonomy_suggestions:int},
+ *   health_alerts: array{ungrouped:int,not_in_tree:int,stale_groups:int,new_gene_sets:int,orphaned_gene_sets:int,orphaned_assemblies:int,orphaned_jbrowse:int,no_database:int,taxonomy_suggestions:int,empty_database:int},
  *   orphaned_jbrowse_registrations: array,
  *   orphaned_jbrowse_systemic: bool,
  *   orphaned_gene_set_tuples: array,
  *   orphaned_assembly_tuples: array,
  *   no_database_organisms: array,
+ *   empty_database_organisms: array,
  *   new_gene_set_tuples: array,
  *   taxonomy_suggestions: array
  * }
@@ -1176,7 +1178,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     $cache_file    = moop_organism_cache_file();
     $groups_file   = "$metadata_path/organism_assembly_groups.json";
 
-    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0];
+    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0];
 
     // Cache-driven: taxonomy-tree membership + the list of assemblies per organism.
     $cache_data = [];
@@ -1184,12 +1186,39 @@ function computeDataHealthAlerts(string $organism_data_path): array {
         $raw = loadJsonFile($cache_file, []);
         $cache_data = $raw['data'] ?? [];
     }
-    foreach ($cache_data as $org_data) {
+    //
+    // Every OTHER check in this function asks a structural question: is the organism
+    // grouped, in the tree, registered, does a database FILE exist. None of them opens a
+    // database to ask whether it holds anything -- getNoDatabaseOrganisms() is a
+    // file_exists() test -- so an organism that loaded nothing scored a clean bill of
+    // health everywhere. Parastichopus_parvimensis sat at 0 features with 10 of 10 checks
+    // passing, and Medicago_truncatula and Turritopsis_dohrnii returned 0 annotation
+    // search results with HTTP 200, for weeks (found 2026-09-17).
+    //
+    // The counts were already there: validateDatabaseIntegrity() writes row_counts into
+    // the organism cache. This reads the codes it now emits -- no database is opened here.
+    $empty_db_codes = ['empty-feature', 'empty-annotation', 'empty-genome',
+                       'empty-gene_set', 'annotations-unlinked'];
+    $empty_database_organisms = [];
+    foreach ($cache_data as $org_name => $org_data) {
         $checks = $org_data['overall_status']['checks'] ?? [];
         if (isset($checks['in_taxonomy_tree']) && !$checks['in_taxonomy_tree']) {
             $health_alerts['not_in_tree']++;
         }
+
+        // data_issues (prose) and data_issue_codes (machine) are built in lockstep, so the
+        // index that matched a code selects that code's own message.
+        $codes  = $org_data['db_validation']['data_issue_codes'] ?? [];
+        $issues = $org_data['db_validation']['data_issues'] ?? [];
+        $hits   = [];
+        foreach ($codes as $i => $code) {
+            if (in_array($code, $empty_db_codes, true)) $hits[] = $issues[$i] ?? $code;
+        }
+        if ($hits) {
+            $empty_database_organisms[] = ['organism' => $org_name, 'issues' => $hits];
+        }
     }
+    $health_alerts['empty_database'] = count($empty_database_organisms);
 
     // Gene-set dirs on disk with no matching DB row (dropped in a rebuild, not cleaned up).
     $orphaned_gene_set_tuples = getOrphanedGeneSetTuples($organism_data_path);
@@ -1250,6 +1279,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
         'orphaned_jbrowse_registrations' => $orphaned_jbrowse_registrations,
         'orphaned_jbrowse_systemic'      => $orphaned_jbrowse_systemic,
         'no_database_organisms'    => $no_database_organisms,
+        'empty_database_organisms' => $empty_database_organisms,
         'new_gene_set_tuples'      => $new_gene_set_tuples,
         'taxonomy_suggestions'     => $taxonomy_suggestions,
     ];

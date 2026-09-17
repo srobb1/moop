@@ -36,7 +36,13 @@
 // no matching DB row ('orphaned_gene_set_directory' mismatch type).
 // v4: validateAssemblyDirectories() now also detects whole assembly directories on disk
 // with no matching genome row ('orphaned_assembly_directory' mismatch type).
-define('ORGANISM_CACHE_SCHEMA_VERSION', 4);
+// v5: validateDatabaseIntegrity() gained emptiness checks (a database that loaded NOTHING
+// used to pass every check) and a data_issue_codes array the admin pages branch on. A
+// cache written by v4 carries neither, so without this bump the new checks would stay
+// invisible until something unrelated changed an organism's fingerprint -- the checks
+// would look shipped and report nothing, which is the exact silent-staleness failure
+// they exist to catch.
+define('ORGANISM_CACHE_SCHEMA_VERSION', 5);
 
 /**
  * Write organism cache atomically: write to a temp file then rename().

@@ -22,6 +22,7 @@ $_SESSION = [];
 
 require_once "$BASE/includes/access_control.php";   // also bootstraps ConfigManager via config_init.php
 require_once "$BASE/lib/database_queries.php";
+require_once "$BASE/lib/functions_database.php";  // validateDatabaseIntegrity() + getDbConnection()
 require_once "$BASE/lib/functions_data.php";
 
 // ----------------------------------------------------------------------------
@@ -629,6 +630,82 @@ ok(moop_permission_item_mode(['name' => 'Logs Directory']) === 'writable',
 
 @unlink($_pc_file);
 @rmdir($_pc_dir);
+
+// ----------------------------------------------------------------------------
+group('database integrity — emptiness is a data issue');
+
+// Hermetic: a temp SQLite database with the real table names and no rows. Guards the
+// class where BOTH halves of the data load and the join table stays empty, which every
+// count on every admin page reported as healthy.
+$_db_dir  = sys_get_temp_dir() . '/moop_dbtest_' . getmypid();
+@mkdir($_db_dir, 0700, true);
+$_mk = function(string $name, callable $fill) use ($_db_dir) {
+    $f = "$_db_dir/$name.sqlite";
+    @unlink($f);
+    $h = new PDO('sqlite:' . $f);
+    foreach ([
+        'organism'    => 'organism_id INTEGER PRIMARY KEY',
+        'genome'      => 'genome_id INTEGER PRIMARY KEY',
+        'gene_set'    => 'gene_set_id INTEGER PRIMARY KEY, genome_id INTEGER',
+        'feature'     => 'feature_id INTEGER PRIMARY KEY, feature_type TEXT, organism_id INTEGER, gene_set_id INTEGER',
+        'annotation_source' => 'annotation_source_id INTEGER PRIMARY KEY',
+        'annotation'  => 'annotation_id INTEGER PRIMARY KEY, annotation_source_id INTEGER, annotation_accession TEXT',
+        'feature_annotation' => 'feature_id INTEGER, annotation_id INTEGER',
+    ] as $t => $cols) $h->exec("CREATE TABLE $t ($cols)");
+    $fill($h);
+    $h = null;
+    return $f;
+};
+
+// A database where everything loaded.
+$_healthy = $_mk('healthy', function (PDO $h) {
+    $h->exec("INSERT INTO organism (organism_id) VALUES (1)");
+    $h->exec("INSERT INTO genome (genome_id) VALUES (1)");
+    $h->exec("INSERT INTO gene_set (gene_set_id, genome_id) VALUES (1, 1)");
+    $h->exec("INSERT INTO feature (feature_id, feature_type, organism_id, gene_set_id) VALUES (1,'gene',1,1)");
+    $h->exec("INSERT INTO annotation_source (annotation_source_id) VALUES (1)");
+    $h->exec("INSERT INTO annotation (annotation_id, annotation_source_id, annotation_accession) VALUES (1,1,'GO:1')");
+    $h->exec("INSERT INTO feature_annotation (feature_id, annotation_id) VALUES (1,1)");
+});
+$_r = validateDatabaseIntegrity($_healthy);
+ok($_r['valid'] === true, 'a fully populated database is valid');
+ok($_r['data_issue_codes'] === [], 'and reports no issue codes');
+
+// Annotations loaded, join table empty -- the silent case.
+$_unlinked = $_mk('unlinked', function (PDO $h) {
+    $h->exec("INSERT INTO organism (organism_id) VALUES (1)");
+    $h->exec("INSERT INTO genome (genome_id) VALUES (1)");
+    $h->exec("INSERT INTO gene_set (gene_set_id, genome_id) VALUES (1, 1)");
+    $h->exec("INSERT INTO feature (feature_id, feature_type, organism_id, gene_set_id) VALUES (1,'gene',1,1)");
+    $h->exec("INSERT INTO annotation_source (annotation_source_id) VALUES (1)");
+    $h->exec("INSERT INTO annotation (annotation_id, annotation_source_id, annotation_accession) VALUES (1,1,'GO:1')");
+});
+$_r = validateDatabaseIntegrity($_unlinked);
+ok(in_array('annotations-unlinked', $_r['data_issue_codes'], true),
+   'annotations with an empty feature_annotation are flagged');
+ok($_r['valid'] === false, 'and that makes the database invalid');
+
+// No features at all.
+$_nofeat = $_mk('nofeat', function (PDO $h) {
+    $h->exec("INSERT INTO organism (organism_id) VALUES (1)");
+    $h->exec("INSERT INTO genome (genome_id) VALUES (1)");
+    $h->exec("INSERT INTO gene_set (gene_set_id, genome_id) VALUES (1, 1)");
+    $h->exec("INSERT INTO annotation_source (annotation_source_id) VALUES (1)");
+    $h->exec("INSERT INTO annotation (annotation_id, annotation_source_id, annotation_accession) VALUES (1,1,'GO:1')");
+});
+$_r = validateDatabaseIntegrity($_nofeat);
+ok(in_array('empty-feature', $_r['data_issue_codes'], true), 'a database with no features is flagged');
+
+// The twin arrays must stay index-aligned -- the dashboard picks a message BY the index
+// its code matched, so a drift here would attribute the wrong message to an organism.
+foreach ([$_healthy, $_unlinked, $_nofeat] as $_f) {
+    $_r = validateDatabaseIntegrity($_f);
+    ok(count($_r['data_issues']) === count($_r['data_issue_codes']),
+       'data_issues and data_issue_codes stay the same length (' . basename($_f) . ')');
+}
+
+array_map('unlink', glob("$_db_dir/*.sqlite"));
+@rmdir($_db_dir);
 
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";

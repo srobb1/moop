@@ -726,13 +726,27 @@ $(document).ready(function() {
   });
 
   // Filter bar: toggle active class and re-draw DataTables
-  document.getElementById('statusFilterBar')?.addEventListener('click', function(e) {
+  const statusFilterBar = document.getElementById('statusFilterBar');
+  statusFilterBar?.addEventListener('click', function(e) {
     const btn = e.target.closest('[data-filter]');
     if (!btn) return;
     activeStatusFilter = btn.dataset.filter;
     this.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b === btn));
     $('#organismsTable').DataTable().draw();
   });
+
+  // Arrive pre-filtered from ?filter=<key>, so a dashboard alert can point at the exact
+  // rows it is complaining about. The dashboard is a router ("N issues -> go look"), and
+  // until this existed every one of its links dropped the admin on the full 85-row table
+  // to find them by hand. Unknown or zero-count (disabled) keys fall through to no filter,
+  // which is the same view as before.
+  const requestedFilter = new URLSearchParams(window.location.search).get('filter');
+  if (requestedFilter) {
+    const target = statusFilterBar?.querySelector(
+      `[data-filter="${CSS.escape(requestedFilter)}"]:not([disabled])`
+    );
+    if (target) target.click();
+  }
 });
 
 /**

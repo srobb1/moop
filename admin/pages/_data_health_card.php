@@ -11,11 +11,12 @@
  *   $orphaned_assembly_tuples — list of ['organism','assembly']
  *   $orphaned_jbrowse_registrations — list of ['organism','assembly','reason','detail']
  *   $no_database_organisms    — list of organism-name strings
+ *   $empty_database_organisms — list of ['organism' => string, 'issues' => string[]]
  */
 $health_alerts = ($health_alerts ?? []) + [
     'ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0,
     'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0,
-    'no_database' => 0, 'taxonomy_suggestions' => 0,
+    'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0,
 ];
 $taxonomy_suggestions = $taxonomy_suggestions ?? [];
 $orphaned_gene_set_tuples = $orphaned_gene_set_tuples ?? [];
@@ -23,6 +24,7 @@ $orphaned_assembly_tuples = $orphaned_assembly_tuples ?? [];
 $orphaned_jbrowse_registrations = $orphaned_jbrowse_registrations ?? [];
 $orphaned_jbrowse_systemic      = $orphaned_jbrowse_systemic ?? false;
 $no_database_organisms    = $no_database_organisms ?? [];
+$empty_database_organisms = $empty_database_organisms ?? [];
 $cache_stale        = $cache_stale ?? false;
 $cache_changed_orgs = $cache_changed_orgs ?? [];
 
@@ -35,19 +37,21 @@ $_p_ogs   = $health_alerts['orphaned_gene_sets'] > 0;
 $_p_oa    = $health_alerts['orphaned_assemblies'] > 0;
 $_p_ojb   = $health_alerts['orphaned_jbrowse'] > 0;
 $_p_nodb  = $health_alerts['no_database'] > 0;
+$_p_edb   = $health_alerts['empty_database'] > 0;
 $_p_nit   = $health_alerts['not_in_tree'] > 0;
 $_p_tax   = $health_alerts['taxonomy_suggestions'] > 0;
 
-$_any_data_issue = ($_p_ung || $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax);
+$_any_data_issue = ($_p_ung || $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_edb || $_p_nit || $_p_tax);
 $has_health_issues = $cache_stale || $_any_data_issue;
 if ($has_health_issues):
-    $_after_ungrouped    = $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
-    $_after_new_gs       = $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
-    $_after_stale        = $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
-    $_after_orphaned_gs  = $_p_oa || $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
-    $_after_orphaned_asm = $_p_ojb || $_p_nodb || $_p_nit || $_p_tax;
-    $_after_orphaned_jb  = $_p_nodb || $_p_nit || $_p_tax;
-    $_after_no_db        = $_p_nit || $_p_tax;
+    $_after_ungrouped    = $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_edb || $_p_nit || $_p_tax;
+    $_after_new_gs       = $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_edb || $_p_nit || $_p_tax;
+    $_after_stale        = $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_edb || $_p_nit || $_p_tax;
+    $_after_orphaned_gs  = $_p_oa || $_p_ojb || $_p_nodb || $_p_edb || $_p_nit || $_p_tax;
+    $_after_orphaned_asm = $_p_ojb || $_p_nodb || $_p_edb || $_p_nit || $_p_tax;
+    $_after_orphaned_jb  = $_p_nodb || $_p_edb || $_p_nit || $_p_tax;
+    $_after_no_db        = $_p_edb || $_p_nit || $_p_tax;
+    $_after_empty_db     = $_p_nit || $_p_tax;
     $_after_nit          = $_p_tax;
 ?>
 <div class="card mb-4 border-warning">
@@ -190,6 +194,25 @@ if ($has_health_issues):
         <?php endforeach; ?>
       </div>
       <a href="manage_organisms.php" class="btn btn-sm btn-danger flex-shrink-0">View Organisms</a>
+    </div>
+    <?php endif; ?>
+    <?php if ($health_alerts['empty_database'] > 0): ?>
+    <div class="alert alert-danger mb-0 border-0 rounded-0 <?= $_after_empty_db ? 'border-bottom' : '' ?> d-flex align-items-center justify-content-between gap-3">
+      <div>
+        <i class="fa fa-database me-2"></i>
+        <strong><?= $health_alerts['empty_database'] ?> organism<?= $health_alerts['empty_database'] > 1 ? 's' : '' ?></strong>
+        <?= $health_alerts['empty_database'] > 1 ? 'have' : 'has' ?> a database that loaded but holds
+        nothing usable. The organism looks completely normal on every other check — it is listed,
+        grouped and searchable — but returns <strong>no results</strong>, with no error shown to the user.
+        Reload the organism's database.
+        <?php foreach ($empty_database_organisms as $_edb): ?>
+          <br><small class="text-muted">
+            <strong><?= htmlspecialchars($_edb['organism']) ?></strong>
+            — <?= htmlspecialchars(implode('; ', $_edb['issues'])) ?>
+          </small>
+        <?php endforeach; ?>
+      </div>
+      <a href="manage_organisms.php?filter=db-content" class="btn btn-sm btn-danger flex-shrink-0">View Organisms</a>
     </div>
     <?php endif; ?>
     <?php if ($health_alerts['not_in_tree'] > 0): ?>
