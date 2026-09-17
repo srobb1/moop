@@ -18,10 +18,14 @@
 <div class="container mt-5">
 
     <div class="card mb-4 shadow-sm">
-        <div class="card-header text-white d-flex align-items-center tool-header">
-            <span class="text-uppercase fw-semibold section-eyebrow">
-                <i class="fa fa-magic me-2"></i>Primer Maker
-            </span>
+        <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
+            <?php // page_title() rather than a hand-rolled eyebrow span: it emits the page's
+                  // single <h1> (audit #9), which this page did not have, and it makes the bar
+                  // match Primer BLAST's -- which this file's docblock already says it follows.
+                  // Measured 2026-09-17: the span rendered a 36px bar against Primer BLAST's
+                  // 32px, purely from line-height. ?>
+            <?= page_title('Primer Maker', 'fa fa-magic') ?>
+            <?= help_modal_trigger('pm-help', '', 'What Primer Maker does') ?>
         </div>
         <div class="card-body">
             <?= page_purpose('Design PCR, qPCR, RT-PCR or sequencing primers from a sequence, and get a table you can paste straight into a spreadsheet.') ?>
@@ -1121,6 +1125,51 @@
             </div>
         </div>
     <?php endif; ?>
+
+    <?php
+    // Opened by the (i) on the page header: the "what is this tool" overview. One card per
+    // numbered step below, carrying the SAME .step-badge number, so it reads as a map of the
+    // page rather than a second copy of it -- the per-step detail stays at each step.
+    //
+    // NON-REDUNDANCY, deliberately: the preset cards in step 2 already render each type's
+    // real numbers from $preset_options, and step 1 already explains the markup characters
+    // in place. Neither is repeated here. What this modal adds is the two things no single
+    // step can say -- when to reach for Primer BLAST instead, and that a 5' tag never
+    // touches the numbers.
+    echo help_modal(
+        'pm-help',
+        'What Primer Maker does',
+        [[
+            'heading' => '',
+            'cards'   => [
+                ['num' => '1', 'label' => 'Your sequence',
+                 'text' => 'Paste the DNA to design from, with or without a FASTA header, and '
+                         . 'several sequences at once if you name each one. Or arrive from a gene '
+                         . 'page with the transcript already chosen.'],
+                ['num' => '2', 'label' => 'What are you making?',
+                 'text' => 'Standard PCR, qPCR, RT-PCR or sequencing. Each option shows the '
+                         . 'product size, Tm, GC and length it will hand Primer3, so you can see '
+                         . 'what you are choosing before you choose it.'],
+                ['num' => '3', 'label' => 'Options',
+                 'text' => 'Every field here is blank by default and falls back to the type you '
+                         . 'picked above. Fill in only what you actually want to override.'],
+                ['num' => '4', 'label' => '5′ primer tag',
+                 'text' => 'Optional. Adds a tag such as T4P to the sequence you would order. It '
+                         . 'is applied <strong>after</strong> design, so it never changes a Tm, GC '
+                         . 'or length figure &mdash; those describe the part that anneals.',
+                 'html' => true],
+                ['label' => 'What you get',
+                 'text' => 'A table of pairs you can paste into a spreadsheet or download as TSV. '
+                         . '<strong>Check</strong> on any row sends that pair to Primer BLAST &mdash; '
+                         . 'without its tag, since the tag is not in the genome.',
+                 'html' => true],
+            ],
+        ]],
+        ['intro' => 'Primer3 designs the primers; this page hands it your sequence and your '
+                  . 'constraints. If you already have a pair and want to know what they would '
+                  . 'amplify and where, that is Primer BLAST.']
+    );
+    ?>
 
     <?php if ($export): ?>
         <?php // Every row from every sequence. The TSV header is derived from the row

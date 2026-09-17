@@ -1,5 +1,5 @@
 {
-    "generated": "2026-08-07T15:19:27+00:00",
+    "generated": "2026-09-17T18:17:56+00:00",
     "routes": [
         {
             "page": "index",
@@ -44,6 +44,17 @@
             "url": "/tools/primer_blast.php",
             "status": 200,
             "purpose": "Check primer pairs against a genome and transcriptome: how many products they would amplify, where those land, and how big each one is."
+        },
+        {
+            "page": "primer_maker",
+            "title": "Primer Maker",
+            "link": "/tools/primer_maker.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/primer_maker.php",
+            "status": 200,
+            "purpose": "Design PCR, qPCR, RT-PCR or sequencing primers from a sequence, and get a table you can paste straight into a spreadsheet."
         },
         {
             "page": "moopmart",
