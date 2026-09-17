@@ -31,11 +31,10 @@
     <!-- Page header -->
     <div class="card shadow-sm mb-4">
       <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
-        <?php /* h1, not a styled span: this is the page's title and the document had no
-                 heading at all. Inline font-size and margin keep it visually identical to
-                 the sibling tool pages -- audit #9 claimed every page had exactly one h1,
-                 and this was one of three that had none. */ ?>
-        <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow"><i class="fa fa-dna me-2"></i>Sequence Retrieval</h1>
+        <?php /* This page's title, and the document had none at all until audit #9 --
+                 which was then fixed by writing the eyebrow classes out by hand here.
+                 page_title() emits the same markup from one place; measured identical. */ ?>
+        <?= page_title('Sequence Retrieval', 'fa fa-dna') ?>
         <?= help_modal_trigger('retrieve-help', '', 'How to use Sequence Retrieval') ?>
       </div>
       <div class="card-body py-2">
