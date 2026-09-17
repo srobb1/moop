@@ -16,7 +16,24 @@
 <div class="container">
     <div class="mb-4"></div>
 
-    <h2 class="mb-4"><i class="fa fa-dna"></i> Download Selected Sequences</h2>
+    <?php /* A header card like every other tool page, replacing a bare <h2>. This page's
+             highest heading was level 2, so the document read as a fragment of something
+             else rather than a page: it had no <h1> at all, which is the same audit #9 gap
+             the sibling Sequence Retrieval page records fixing. page_title() rather than a
+             hand-rolled <h1> so the markup lives in one place -- measured identical.
+
+             NOT added to the page finder, deliberately (decision 2026-09-17). The finder
+             answers "which page do I want for this task", and nobody sets out to come here:
+             it is a step in a flow that starts on a results table. The purpose sentence is
+             for the person standing on the page, which is everyone who reaches it. */ ?>
+    <div class="card shadow-sm mb-4">
+      <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
+        <?= page_title('Download Selected Sequences', 'fa fa-dna') ?>
+      </div>
+      <div class="card-body py-2">
+        <?= page_purpose('Download protein, mRNA, CDS or genomic sequences for a set of features chosen from a results table.') ?>
+      </div>
+    </div>
 
     <div class="alert alert-info">
         <strong>Organism:</strong> <em><?= htmlspecialchars($organism_name) ?></em><br>

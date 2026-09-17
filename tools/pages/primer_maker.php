@@ -1149,7 +1149,11 @@
                 ['num' => '2', 'label' => 'What are you making?',
                  'text' => 'Standard PCR, qPCR, RT-PCR or sequencing. Each option shows the '
                          . 'product size, Tm, GC and length it will hand Primer3, so you can see '
-                         . 'what you are choosing before you choose it.'],
+                         . 'what you are choosing before you choose it. RT-PCR also needs to know '
+                         . 'where the exon junctions are: arriving from a gene page looks them up, '
+                         . 'and for a sequence you pasted you mark them yourself with '
+                         . '<code>|</code> in step 1.',
+                 'html' => true],
                 ['num' => '3', 'label' => 'Options',
                  'text' => 'Every field here is blank by default and falls back to the type you '
                          . 'picked above. Fill in only what you actually want to override.'],
