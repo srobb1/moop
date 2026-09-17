@@ -51,9 +51,28 @@ while (my $line = <TH>){
   ## trailing empty fields -- don't trust $line[-1] blindly. Fall back to a
   ## plain description if it's missing or doesn't look like a CS position.
   my $position = $line[8];
-  my $description = (defined $position && $position =~ /^CS pos:/)
-    ? "Signal Peptide $position"
-    : "Signal Peptide";
+
+  ## Say it in words rather than pasting SignalP's own string through.
+  ##
+  ## That string is "CS pos: 26-27. Pr: 0.9751", and the row it lands in already
+  ## carries a Score of, say, 0.999357. The two numbers are NOT the same quantity:
+  ## Score is column 4, SP(Sec/SPI) -- the probability the protein HAS a signal
+  ## peptide -- while "Pr" is the probability of THAT PARTICULAR CLEAVAGE SITE.
+  ## Displayed side by side, unlabelled, one reads as a rounding of the other. So
+  ## the description names which probability it is, and spells out CS and Pr.
+  my $description;
+  if (defined $position && $position =~ /^CS pos:\s*(\d+)-(\d+)\.\s*Pr:\s*([0-9.]+)/) {
+    $description = "Signal peptide with cleavage site between residues $1 and $2 "
+                 . "(cleavage site probability $3)";
+  }
+  elsif (defined $position && $position =~ /^CS pos:/) {
+    ## Recognisably a CS position but not the shape above -- keep SignalP's text
+    ## rather than dropping information we failed to parse.
+    $description = "Signal peptide ($position)";
+  }
+  else {
+    $description = "Signal peptide predicted";
+  }
 
   print OUT join("\t",$t_id,"SP",$description,$score),"\n";
 }
