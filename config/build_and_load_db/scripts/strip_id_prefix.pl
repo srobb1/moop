@@ -66,6 +66,22 @@ use File::Basename qw(dirname);
 # while these describe something MOOP does TO its own copy. Same distinction as
 # ":pep"/":cds".
 # ---------------------------------------------------------------------------
+# PREPEND-ONLY MODE (--strip omitted or empty): moop-lift-prefix
+#
+# A liftover gene set (LiftOn/Liftoff) carries genuine accessions BORROWED from
+# whatever genome it was lifted from -- there is nothing redundant to strip, the
+# whole id needs a marker so a borrowed XM_/XP_ accession is never mistaken for
+# this organism's own. `--add` alone (no `--strip`) means "prepend this to every
+# id", not "replace nothing with this". It reuses every guard below unchanged:
+# the same four attributes, the same distinct-id-count check, the same 50-char
+# limit -- and it is idempotent by construction (a value already carrying the
+# add-prefix is left alone), because unlike a strip+replace there is no target
+# substring that naturally disappears after the first application to make a
+# second one a no-op on its own.
+#
+# Opt-in via `moop-lift-prefix:` in metadata.yaml (process_one_geneset.sh maps
+# that key to `--add` with no `--strip`). See notes/LIFTOVER_GENESET_CRITERIA.md.
+# ---------------------------------------------------------------------------
 
 my ($strip, $add) = ('', '');
 my @files;
@@ -77,7 +93,9 @@ while (@ARGV) {
     else                      { push @files, $arg }
 }
 die "Usage: $0 --strip <prefix> [--add <prefix>] <genes.gff> [fasta ...]\n"
-    unless length $strip && @files;
+    . "       (at least one of --strip/--add is required; --strip alone with no\n"
+    . "       --add means \"delete this prefix\", --add alone means \"prepend this\")\n"
+    unless (length $strip || length $add) && @files;
 
 # The GFF attributes that carry a feature ID. `namesrc` matters and is easy to
 # miss: the ID sits mid-string inside a pipe-delimited provenance value,
@@ -123,7 +141,21 @@ sub rewrite_gff {
             my $key = substr($attr, 0, $eq);
             next unless grep { $_ eq $key } @ID_ATTRS;
             my $value = substr($attr, $eq + 1);
-            my $n = ($value =~ s/\Q$strip\E/$add/g);
+            my $n;
+            if (length $strip) {
+                # Anchored, not global: the redundant string this was built for
+                # (an organism-name prefix) only ever sits once, at the start.
+                $n = ($value =~ s/^\Q$strip\E/$add/);
+            }
+            elsif (length $add && $value !~ /^\Q$add\E/) {
+                # Prepend-only mode. An UNANCHORED s///g here would be a bug:
+                # with $strip empty, Perl's empty-pattern-with-/g matches at
+                # EVERY position, not just the front, so this must stay a
+                # single anchored insert -- and the guard above is what makes a
+                # second run a no-op (see PREPEND-ONLY MODE note above).
+                $value = "$add$value";
+                $n = 1;
+            }
             next unless $n;
             $attr = "$key=$value";
             $touched = 1;
@@ -155,7 +187,12 @@ sub rewrite_fasta {
         my $rest = $header;
         $rest =~ s/^>\S+//;
         my $new = defined $id ? $id : '';
-        $new =~ s/^\Q$strip\E/$add/;
+        if (length $strip) {
+            $new =~ s/^\Q$strip\E/$add/;
+        }
+        elsif (length $add && $new !~ /^\Q$add\E/) {
+            $new = "$add$new";
+        }
         $after{$new} = 1;
         $longest = length($new) if length($new) > $longest;
         print $out ">$new$rest\n";
@@ -199,7 +236,11 @@ foreach my $file (@files) {
     }
 }
 
-print STDERR "ID prefix '$strip' -> '" . ($add eq '' ? '' : $add) . "':\n";
+if (length $strip) {
+    print STDERR "ID prefix '$strip' -> '$add':\n";
+} else {
+    print STDERR "ID prefix: prepending '$add' (no strip):\n";
+}
 print STDERR "$_\n" foreach @report;
 
 # Record what was ACTUALLY done, beside the files it was done to. The annotation

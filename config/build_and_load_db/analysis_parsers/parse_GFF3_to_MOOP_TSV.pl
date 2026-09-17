@@ -549,14 +549,42 @@ sub detect_format {
     my $file = shift;
     open my $fh, '<', $file or die "Can't open $file: $!\n";
     my $fmt = 'generic';
+    my $source = '';
     while (my $line = <$fh>) {
         next if $line =~ /^#/;
         my @f = split /\t/, $line;
+        $source ||= $f[1] if @f >= 9;
         next unless @f >= 9 && $f[2] eq 'gene';
         if    ($f[8] =~ /\bID=gene:/)                                 { $fmt = 'ensembl'; last }
         elsif ($f[8] =~ /\bID=gene-/ || $f[8] =~ /\bDbxref=GeneID:/) { $fmt = 'refseq';  last }
         last;
     }
     close $fh;
+
+    # LiftOn/Liftoff output matches the refseq id-namespace pattern above (real
+    # RefSeq accessions, carried over by the liftover) but its CDS lines never
+    # carry ID= -- emit_refseq needs that (both $cds_id and $prot_id) and would
+    # silently emit nothing rather than die, which is worse than the shell-level
+    # rename_RefSeq_cds_fasta.pl's loud failure. Mirrors the same override in
+    # process_one_geneset.sh's shell-level detector; the two are duplicated the
+    # same way the original ensembl/refseq detection already was, and must be
+    # kept in sync. See notes/LIFTOVER_GENESET_CRITERIA.md.
+    if ($fmt eq 'refseq' && ($source =~ /^lift(on|off)$/i || !_any_cds_has_id($file))) {
+        $fmt = 'generic';
+    }
     return $fmt;
+}
+
+sub _any_cds_has_id {
+    my ($file) = @_;
+    open my $fh, '<', $file or die "Can't open $file: $!\n";
+    my $found = 0;
+    while (my $line = <$fh>) {
+        next if $line =~ /^#/;
+        my @f = split /\t/, $line;
+        next unless @f >= 9 && $f[2] eq 'CDS';
+        if ($f[8] =~ /\bID=/) { $found = 1; last }
+    }
+    close $fh;
+    return $found;
 }

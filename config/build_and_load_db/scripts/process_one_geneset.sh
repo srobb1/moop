@@ -533,6 +533,19 @@ if $HAS_GFF; then
 
   echo "Detecting GFF format and setting up symlinks"
 
+  ## Reads a top-level "key: value" line from this gene set's metadata.yaml.
+  ## Defined here (rather than beside its other callers further down) because
+  ## the lift-prefix-required gate right below needs it immediately after
+  ## GFF_SOURCE is classified, before any other work on this gene set.
+  read_meta_key() {
+    local value
+    value=$(sed -n "s/^$1:[[:space:]]*//p" "$GENESET_DIR/metadata.yaml" 2>/dev/null | head -1)
+    value=${value%$'\r'}
+    value=${value%\"}; value=${value#\"}
+    value=${value%\'}; value=${value#\'}
+    printf '%s' "$value"
+  }
+
   GFF_SOURCE=$(perl -ne '
     next if /^#/;
     my @f = split /\t/;
@@ -542,11 +555,59 @@ if $HAS_GFF; then
     print "other"; exit
   ' "$GENESET_DIR/genes.gff")
   GFF_SOURCE=${GFF_SOURCE:-other}
+
+  ## LiftOn/Liftoff output carries genuine RefSeq accessions (the liftover
+  ## source's), which is exactly what the refseq match above keys on -- but the
+  ## file SHAPE is the liftover tool's, not RefSeq's, and its CDS lines never
+  ## carry the ID= that RefSeq always gives them (LiftOn omits it precisely
+  ## when the liftover produced no usable protein). Neither
+  ## rename_RefSeq_cds_fasta.pl nor emit_refseq can do anything with that, so a
+  ## file matching either signal below is rerouted to "lift", handled
+  ## identically to "other" from here on -- the generic emitter needs no CDS
+  ## ID=/protein_id= at all (already proven for this exact shape: Nematostella
+  ## NV2's CDS lines also carry no ID=, and it loads fine because it was never
+  ## misclassified as refseq in the first place). See
+  ## notes/LIFTOVER_GENESET_CRITERIA.md. Kept in sync with the same override in
+  ## parse_GFF3_to_MOOP_TSV.pl::detect_format.
+  if [ "$GFF_SOURCE" = "refseq" ]; then
+    LIFT_TOOL=$(awk -F'\t' '!/^#/ && NF>=9 {print $2; exit}' "$GENESET_DIR/genes.gff")
+    CDS_HAS_ID=$(awk -F'\t' '$3=="CDS" && index($9,"ID=")>0 {print 1; exit}' "$GENESET_DIR/genes.gff")
+    if echo "$LIFT_TOOL" | grep -qiE '^lift(on|off)$' || [ -z "$CDS_HAS_ID" ]; then
+      GFF_SOURCE=lift
+    fi
+  fi
   echo "GFF format: $GFF_SOURCE"
+
+  ## A liftover gene set MUST have moop-lift-prefix before anything else here
+  ## runs. Without it, every downstream step (naming, features.tsv, the load
+  ## itself) would still "succeed" using borrowed XM_/XP_ accessions as this
+  ## organism's own feature ids -- exactly the kind of looks-fine-but-empty-or-
+  ## wrong state notes/LIFTOVER_GENESET_CRITERIA.md was written about. Stopping
+  ## here, before any work happens, is cheaper than stopping after and it can
+  ## never let a bad organism.sqlite reach the copy-to-moop step.
+  if [ "$GFF_SOURCE" = "lift" ] && [ -z "$(read_meta_key moop-lift-prefix)" ]; then
+    echo "ERROR: $THIS_ORG/$ASSEMBLY/$GENE_SET -- this looks like liftover output" >&2
+    echo "       (LiftOn/Liftoff), not a native RefSeq/Ensembl download:" >&2
+    [ -n "$LIFT_TOOL" ]    && echo "         genes.gff column 2 (source) = '$LIFT_TOOL'" >&2
+    [ -z "$CDS_HAS_ID" ]   && echo "         no CDS line in genes.gff carries an ID= attribute" >&2
+    echo "       Its feature ids are borrowed accessions from whatever genome the" >&2
+    echo "       annotation was lifted from, and must be given a prefix before" >&2
+    echo "       loading so they are never mistaken for this organism's own --" >&2
+    echo "       see notes/LIFTOVER_GENESET_CRITERIA.md." >&2
+    echo "" >&2
+    echo "       Add a line to:" >&2
+    echo "         $GENESET_DIR/metadata.yaml" >&2
+    echo "       e.g.:" >&2
+    echo "         moop-lift-prefix: <ShortCode>" >&2
+    echo "       (a trailing underscore is added automatically if you omit one)" >&2
+    echo "       then re-run this gene set." >&2
+    exit 1
+  fi
 
   case "$GFF_SOURCE" in
     refseq)  write_geneset_json "RefSeq"   ;;
     ensembl) write_geneset_json "Ensembl"  ;;
+    lift)    write_geneset_json "Liftover (LiftOn/Liftoff)" ;;
     *)       write_geneset_json "$(infer_source "$GENE_SET")" ;;
   esac
 
@@ -664,20 +725,37 @@ if $HAS_GFF; then
   ##
   ## Absent key = no invocation = IDs untouched. That is what makes a run over
   ## everything safe for the ~90 gene sets that do not opt in.
-  read_meta_key() {
-    local value
-    value=$(sed -n "s/^$1:[[:space:]]*//p" "$GENESET_DIR/metadata.yaml" 2>/dev/null | head -1)
-    value=${value%$'\r'}
-    value=${value%\"}; value=${value#\"}
-    value=${value%\'}; value=${value#\'}
-    printf '%s' "$value"
-  }
+  ## (read_meta_key is defined earlier in this block, above the GFF_SOURCE
+  ## classification -- the lift-prefix-required gate needs it before this point.)
   STRIP_PREFIX=$(read_meta_key moop-strip-id-prefix)
   ADD_PREFIX=$(read_meta_key moop-add-id-prefix)
   if [ -n "$STRIP_PREFIX" ]; then
     perl "$SCRIPTS/strip_id_prefix.pl" --strip "$STRIP_PREFIX" --add "$ADD_PREFIX" \
       genes.gff protein.aa.fa cds.nt.fa transcript.nt.fa \
       || { echo "ERROR: strip_id_prefix.pl failed for $THIS_ORG [$ASSEMBLY/$GENE_SET]"; exit 1; }
+  fi
+
+  ## moop-lift-prefix: a liftover gene set's (GFF_SOURCE=lift) feature IDs are
+  ## borrowed accessions from whatever genome the annotation was lifted from --
+  ## see notes/LIFTOVER_GENESET_CRITERIA.md. Prepending a short organism code
+  ## means a borrowed XM_/XP_ accession is never mistaken for this organism's
+  ## own. Same script as above, empty --strip means "prepend, don't replace"
+  ## (see strip_id_prefix.pl's own header) -- same four id attributes, same
+  ## distinct-id-count and 50-char guards, same position (before every other
+  ## rename) for the same reason STRIP_PREFIX runs here: everything derived
+  ## further down inherits the prefixed ids without knowing this happened.
+  LIFT_PREFIX=$(read_meta_key moop-lift-prefix)
+  if [ -n "$LIFT_PREFIX" ]; then
+    ## Curator writes the short code alone (e.g. "Ppar1"); a separator is added
+    ## automatically unless they already included one, so "parpar1_rna-XM_..."
+    ## reads cleanly either way without requiring the curator to remember it.
+    case "$LIFT_PREFIX" in
+      *_) ;;
+      *)  LIFT_PREFIX="${LIFT_PREFIX}_" ;;
+    esac
+    perl "$SCRIPTS/strip_id_prefix.pl" --add "$LIFT_PREFIX" \
+      genes.gff protein.aa.fa cds.nt.fa transcript.nt.fa \
+      || { echo "ERROR: strip_id_prefix.pl (moop-lift-prefix) failed for $THIS_ORG [$ASSEMBLY/$GENE_SET]"; exit 1; }
   fi
 
   if [[ "$GFF_SOURCE" == "refseq" ]]; then
@@ -693,7 +771,7 @@ if $HAS_GFF; then
     && mv protein.aa.fa.tmp protein.aa.fa \
     || { rm -f protein.aa.fa.tmp; echo "ERROR: failed to clean protein.aa.fa"; exit 1; }
 
-  if [[ "$GFF_SOURCE" == "other" ]]; then
+  if [[ "$GFF_SOURCE" == "other" || "$GFF_SOURCE" == "lift" ]]; then
     [ -s cds.nt.fa ]     && perl "$SCRIPTS/rename_generic_fasta.pl" cds.nt.fa     :cds genes.gff
     [ -s protein.aa.fa ] && perl "$SCRIPTS/rename_generic_fasta.pl" protein.aa.fa :pep genes.gff cds.nt.fa
   fi

@@ -20,10 +20,12 @@ my @annot_files = @ARGV;
 die "Usage: $0 genes.sqlite annotations.tsv [annotations2.tsv ...]\n"
     if !$dbfile or !@annot_files;
 
-## MOOP may have stripped a per-organism prefix from the feature IDs in its own copy
-## of this gene set -- strip_id_prefix.pl, opt-in via `moop-strip-id-prefix` in
-## metadata.yaml. The annotation files predate that: they were produced by analyses
-## run against the depositor's sequences, so they still carry the full IDs.
+## MOOP may have rewritten a per-organism prefix onto the feature IDs in its own
+## copy of this gene set -- strip_id_prefix.pl, opt-in via `moop-strip-id-prefix`
+## (strip+replace) or `moop-lift-prefix` (prepend-only, for a liftover gene set's
+## borrowed accessions) in metadata.yaml. The annotation files predate that: they
+## were produced by analyses run against the depositor's sequences, so they still
+## carry the original IDs.
 ##
 ## Read what was ACTUALLY DONE from the manifest the strip step wrote beside these
 ## files, not from metadata.yaml. One source of truth: whatever normalization the
@@ -43,7 +45,7 @@ my ($strip_prefix, $add_prefix) = ('', '');
         $add_prefix   = '' unless defined $add_prefix;
         print "Feature IDs were rewritten by MOOP: '$strip_prefix' -> '$add_prefix'; "
             . "annotation IDs will be normalized to match\n"
-            if length $strip_prefix;
+            if length $strip_prefix || length $add_prefix;
     }
 }
 
@@ -499,7 +501,13 @@ These are required for a load
             ## the extra candidates are never pushed, so this behaves byte-identically
             ## to before for every gene set that has not opted in.
             my @candidates = ("$unique_name:pep", "$unique_name:cds");
-            if (length $strip_prefix) {
+            ## Covers both strip_id_prefix.pl modes: strip+replace (Bradypodion,
+            ## $strip_prefix set) and prepend-only (a liftover gene set's
+            ## moop-lift-prefix, $strip_prefix empty). The substitution below is
+            ## correct for both -- with $strip_prefix empty, `s/^\Q\E/$add_prefix/`
+            ## is an anchored, non-global, zero-width match at position 0, i.e.
+            ## exactly "prepend once", not a global insert-everywhere.
+            if (length $strip_prefix || length $add_prefix) {
                 my $rewritten = $unique_name;
                 if ($rewritten =~ s/^\Q$strip_prefix\E/$add_prefix/) {
                     push @candidates, $rewritten, "$rewritten:pep", "$rewritten:cds";
