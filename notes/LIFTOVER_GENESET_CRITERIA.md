@@ -183,7 +183,7 @@ found`; 27,913 roots (`parent_feature_id IS NULL`) matching the gene count exact
 (prefix first, MOOP's own `:pep`/`:cds` suffix after); FTS5 search index populated
 (164,629 rows); copied to the moop web server.
 
-### 7a. Open: gene names and descriptions are still empty
+### 7a. Fixed: gene names and descriptions were empty
 
 Discovered immediately after the above load succeeded — every gene/mRNA has
 `feature_name`/`feature_description` empty. **Not a bug in `strip_id_prefix.pl` or
@@ -218,14 +218,22 @@ homology files therefore matches nothing, and `geneNames.tsv` silently ends up a
 bare header — the same failure shape as the original bug, one file further
 downstream of where this fix stopped looking.
 
-**The fix**: add the same lift-detection override to
-`make_isoforms_from_gff.pl::detect_format` (source-column sniff is enough here; this
-detector's "refseq" branch already keys off per-line `protein_id=` presence rather
-than a whole-file signal, so the "no CDS has `protein_id=`" style check used
-elsewhere doesn't map as directly — the column-2 sniff alone should suffice and is
-cheaper). Once rerouted to "generic", that branch already reads `ID=`/`Parent=` off
-mRNA/transcript lines, matching what `genes.gff`'s own structure — and therefore
+**Fixed**: added the same lift-detection override (source column is
+LiftOn/Liftoff, OR no CDS line anywhere carries `ID=`) to
+`make_isoforms_from_gff.pl::detect_format`, identical in shape to the other two.
+Once rerouted to "generic", that branch reads `ID=`/`Parent=` off mRNA/transcript
+lines directly, matching what `genes.gff`'s own structure — and therefore
 `protein.aa.fa`/`cds.nt.fa` after `rename_generic_fasta.pl` — actually uses.
+
+Verified directly: `isoforms.tsv` went from 3,391 wrong-shaped lines
+(`XM_071954504.1`, `cds-XP_...`, bare numeric gene ids) to 22,974 correctly-shaped
+lines (`rna-XM_...`, `gene-LOC...`/`gene-ATP6`-style). Rebuilding `geneNames.tsv`
+from the corrected `isoforms.tsv` against the same homology files produced real
+names/descriptions for every one of 37,911 rows (`NEUROTROPHIN 1-RELATED` via
+PANTHER, `SLC35F3: solute carrier family 35 member F3` via human RBBH, etc.) where
+it previously produced zero. Regression-checked against Medicago_truncatula
+(genuine RefSeq, unchanged: still 31,928 correctly-shaped lines) and Nematostella
+NV2 (already generic, unchanged: still 24,526 lines).
 
 **There are likely more copies, not yet audited.** A sweep
 (`grep -rl "sub detect_format\|ID=gene-.*Dbxref=GeneID"`) found the same signature in
@@ -243,7 +251,10 @@ dead/superseded before deciding whether it needs the same override:
 - `analysis_parsers/rbbh/make_isoforms_rbbh_REFSEQGFF.pl` — RBBH-specific variant;
   unclear if reachable for a GFF-path gene set.
 
-Before calling the liftover gene-set fix complete: grep for callers of each of the
-four above, confirm live/dead, patch whichever are live and reachable, then rerun
-Parastichopus's reload and confirm `geneNames.tsv` has real rows and gene pages show
-names/descriptions.
+Before calling the liftover gene-set fix fully complete: grep for callers of each of
+the four above, confirm live/dead, and patch whichever are live and reachable. None
+of them block Parastichopus specifically (its path only ever touches
+`make_isoforms_from_gff.pl`, now fixed) — this is about the next liftover gene set,
+not this one. Still need: rerun Parastichopus's reload with this fix in place and
+confirm the live gene pages actually show names/descriptions (verified so far only
+by rebuilding `geneNames.tsv` standalone, not through the full pipeline + copy-to-moop).
