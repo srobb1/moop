@@ -366,7 +366,15 @@ copy_one_geneset() {
   fi
 
   if [ "$XFER" -eq 0 ]; then
-    log "SAME  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — remote already matches, nothing to do"
+    ## "Same" alone doesn't say WHETHER that's this run's fresh build already
+    ## published (e.g. by a job that was killed after copying but before
+    ## logging) or something older that was never rebuilt -- both look
+    ## identical without checking. Naming the local build's own mtime lets
+    ## that be told apart at a glance instead of by hand-diffing local vs
+    ## remote.
+    local built
+    built=$(stat -c '%y' "$ORG_DATA/organism.sqlite" 2>/dev/null | cut -d. -f1)
+    log "SAME  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — remote already matches this build (local built $built), nothing to do"
   elif $DRY_RUN; then
     log "WOULD $THIS_ORG  [$ASSEMBLY/$GENE_SET] — $XFER file(s) differ"
   else
