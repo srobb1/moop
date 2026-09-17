@@ -43,6 +43,33 @@
 set -uo pipefail
 
 REPO=${SLURM_SUBMIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
+
+## ── Step timing ───────────────────────────────────────────────────────────────
+## "Is this run slow?" used to be unanswerable from these logs: they carried no
+## timestamps at all, so a 15:01 run and a 4:44 run doing byte-identical work
+## (same steps, same 43 annotation loads, same counts) could only be told apart
+## afterwards with sacct -- and even then sacct gives a total, never which step.
+##
+## The answer that time was I/O wait, not extra work: TotalCPU was 2:48 vs 3:06
+## for those two runs, so ~10 extra minutes of wall clock bought 17 seconds of
+## CPU. This job only reaches ~59% CPU even on a good run, so its wall time
+## swings with whatever else is hitting the shared filesystem. Knowing WHICH
+## step absorbed it is the part a log can answer and sacct cannot.
+##
+## step() prints the wall clock, elapsed since job start, and how long the
+## PREVIOUS step took -- that last column is the one that localises a stall.
+MOOP_T0=$SECONDS
+MOOP_TPREV=$SECONDS
+_moop_hms() { printf '%02d:%02d' $(( $1 / 60 )) $(( $1 % 60 )); }
+step() {
+  local now=$SECONDS
+  printf '[%s  +%s  prev %s]  %s\n' \
+    "$(date '+%H:%M:%S')" \
+    "$(_moop_hms $(( now - MOOP_T0 )))" \
+    "$(_moop_hms $(( now - MOOP_TPREV )))" \
+    "$*"
+  MOOP_TPREV=$now
+}
 SCRIPTS=$REPO/scripts
 DATA=$REPO/data
 
@@ -208,7 +235,7 @@ fi
 for entry in "${GENESETS[@]}"; do
   IFS=$'\t' read -r asm gs <<< "$entry"
   echo ""
-  echo "═══ $THIS_ORG / $asm / $gs ═══"
+  step "═══ $THIS_ORG / $asm / $gs ═══"
   bash "$SCRIPTS/process_one_geneset.sh" "$THIS_ORG" "$asm" "$gs" || {
     echo "ERROR: gene set $asm/$gs failed for $THIS_ORG — stopping." >&2
     echo "       Not running the whole-database steps and not copying to moop:" >&2
@@ -224,9 +251,9 @@ if [ ! -s "$DB" ]; then
 fi
 
 echo ""
-echo "═══ $THIS_ORG: whole-database steps ═══"
+step "═══ $THIS_ORG: whole-database steps ═══"
 
-echo "Generating annotation_sources_cache.json"
+step "Generating annotation_sources_cache.json"
 perl "$REPO/data_loaders/make_annotation_sources_cache.pl" \
   "$DB" "$ORG_DATA/annotation_sources_cache.json" || exit 1
 
@@ -241,7 +268,7 @@ perl "$REPO/data_loaders/make_annotation_sources_cache.pl" \
 # because the database being written already lives there.
 export SQLITE_TMPDIR="${SQLITE_TMPDIR:-$ORG_DATA}"
 
-echo "Building FTS5 search index"
+step "Building FTS5 search index"
 sqlite3 "$DB" < "$REPO/data_loaders/build_fts_index.sql" || exit 1
 
 # The FTS index is contentless, and a rebuild frees the old pages inside the file
@@ -260,7 +287,7 @@ sqlite3 "$DB" < "$REPO/data_loaders/build_fts_index.sql" || exit 1
 # optimisation -- and the organism would then be missing from the site entirely, which
 # is far worse than a fragmented file.
 if [ "${MOOP_SKIP_VACUUM:-0}" != "1" ]; then
-  echo "Compacting database (VACUUM)"
+  step "Compacting database (VACUUM)"
   if ! sqlite3 "$DB" "VACUUM;"; then
     echo "WARNING: VACUUM failed for $THIS_ORG -- database is correct but not compacted."
     echo "WARNING: re-run 'sqlite3 $DB \"VACUUM;\"' with space available in $SQLITE_TMPDIR."
@@ -273,6 +300,7 @@ fi
 if [ "${SKIP_COPY:-0}" -eq 1 ]; then
   echo "SKIP_COPY=1: not copying $THIS_ORG to moop."
 else
+  step "Copying $THIS_ORG to moop"
   for entry in "${GENESETS[@]}"; do
     IFS=$'\t' read -r asm gs <<< "$entry"
     ## Pass REPO explicitly. This script has it from $SLURM_SUBMIT_DIR; letting the
@@ -283,4 +311,6 @@ else
 fi
 
 echo ""
-echo "Done: $THIS_ORG (${#GENESETS[@]} gene set(s))"
+step "Done: $THIS_ORG (${#GENESETS[@]} gene set(s))"
+## Total on its own line: the `prev` column above reports the copy, not the job.
+echo "Total elapsed: $(_moop_hms $(( SECONDS - MOOP_T0 )))"
