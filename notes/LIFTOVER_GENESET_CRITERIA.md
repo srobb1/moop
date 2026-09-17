@@ -141,3 +141,109 @@ proteins", it is browsable gene models with *nothing known about them*.
 - `geneset.json` source should say what it is (liftover from RefSeq), not "RefSeq".
 - If option C is ever chosen, the `mutation=` filter is the gate, applied when building
   `features.tsv`.
+
+## 7. Implemented (2026-09-17, commit 322b7d7a): classification, prefix, load
+
+Fixed and verified end-to-end for Parastichopus. Chose **B** (load everything, no
+`mutation=` filter) rather than the plan above, after a data point sections 1-6 didn't
+have: MOOP's own homology pipeline, run blind to `mutation=`, independently found
+Diamond/EggNOG hits for ~72-82% of the frameshifted transcripts too (vs. ~86-95% for the
+structurally clean 3.3%) — filtering by `mutation=` would have thrown away genes already
+supported by real annotation evidence, not just LiftOn's own self-assessment.
+
+What shipped, across four files (`process_one_geneset.sh`, `parse_GFF3_to_MOOP_TSV.pl`,
+`strip_id_prefix.pl`, `load_annotations_sqlite.pl`):
+
+- **Classifier**: a GFF matching the refseq id pattern AND (source column is
+  LiftOn/Liftoff, case-insensitive, OR no CDS line anywhere carries `ID=`) is
+  classified `"lift"` and handled identically to `"other"` — not the `"liftoff"`
+  branch sketched above, since `"other"`'s generic emitter already needs neither CDS
+  `ID=` nor `protein_id=` (proven by Nematostella NV2 loading fine today with the
+  same missing-CDS-ID shape). Duplicated in `parse_GFF3_to_MOOP_TSV.pl::detect_format`
+  too — see the open item below, this turned out to need a third copy.
+- **`geneset.json`** now says `"Liftover (LiftOn/Liftoff)"`, not `"RefSeq"`.
+- **`moop-lift-prefix`** (new metadata.yaml key): every borrowed accession needs a
+  short organism-code prefix so it's never mistaken for this organism's own.
+  `strip_id_prefix.pl` gained a prepend-only mode (`--add` with no `--strip`) —
+  anchored, idempotent, reusing the existing distinct-id-count and 50-char guards.
+  Curator writes the code alone (e.g. `parpar1`); a trailing `_` is added
+  automatically if missing.
+- **`load_annotations_sqlite.pl`**: its prefix-reconciliation candidate list now
+  covers prepend-only too, so Diamond/EggNOG/InterProScan/RBBH/OMA — all computed
+  against the un-prefixed depositor sequences — still attach to the now-prefixed
+  features. Verified: 904,475 EggNOG2GO rows alone, 0 "not found".
+- **Hard gate**: a `"lift"`-classified gene set with no `moop-lift-prefix` set now
+  stops before any work happens, naming exactly what was detected (source column
+  value and/or missing CDS `ID=`) and what to add to `metadata.yaml`.
+
+Verified against the real load (job 5299056): `OK - no parent/hierarchy problems
+found`; 27,913 roots (`parent_feature_id IS NULL`) matching the gene count exactly
+(was 0); full protein layer loaded (44,298 `cds`/44,298 `protein` rows, not just the
+3.3% clean subset); ids correctly composited as `parpar1_rna-XM_071999466.1:pep`
+(prefix first, MOOP's own `:pep`/`:cds` suffix after); FTS5 search index populated
+(164,629 rows); copied to the moop web server.
+
+### 7a. Open: gene names and descriptions are still empty
+
+Discovered immediately after the above load succeeded — every gene/mRNA has
+`feature_name`/`feature_description` empty. **Not a bug in `strip_id_prefix.pl` or
+`moop-lift-prefix`** — verified the prefix mechanism is working correctly (see
+above). The actual cause is a **third, unfixed copy** of the same
+ensembl/refseq/generic detector:
+
+`isoforms.tsv` — what `assign_gene_names.pl` joins against the homology files
+(`UniProtKB_Swiss-Prot.homologs.moop.tsv`, `PANTHER.iprscan.moop.tsv`, etc., both
+present and populated: 31,956 / 35,192 lines) to build `geneNames.tsv` — is built
+from the *original* `$GENESET_DIR/genes.gff` (before any prefixing) by
+`analysis_parsers/make_isoforms_from_gff.pl`, which has **its own independent
+`detect_format()`**, never touched by this fix. It still matches Parastichopus's
+`Dbxref=GeneID:` pattern and takes the "refseq" branch:
+
+```perl
+if ($line =~ /\tCDS\t.*\bParent=rna-([^;]+).*\bGeneID:([^;,]+).*\bprotein_id=([^;]+)/) {
+    my ($tx_id, $gn_id, $prot_id) = ($1, $2, $3);
+    ...
+```
+
+This requires **all three** of `Parent=rna-`, `GeneID:`, and `protein_id=` on the
+*same* CDS line. Only ~38,340 of 497,556 CDS lines carry `protein_id=` (LiftOn's
+usable-protein minority), so this branch only ever emits rows for that subset —
+measured: 3,391 isoforms.tsv lines, not 21,055 genes. Worse, even for the genes it
+does capture, the ids it extracts (`XM_071954504.1`, `cds-XP_071810605.1`, bare
+numeric `139954605`) don't match the `rna-XM_...`/`gene-LOC...` ids used everywhere
+else (`protein.aa.fa`, `cds.nt.fa`, `genes.gff`'s own `ID=`/`Parent=`) — this
+branch's regex deliberately strips the `rna-` literal and synthesizes `cds-$prot_id`
+itself, correct for genuine RefSeq, wrong for this file. The join against the
+homology files therefore matches nothing, and `geneNames.tsv` silently ends up as a
+bare header — the same failure shape as the original bug, one file further
+downstream of where this fix stopped looking.
+
+**The fix**: add the same lift-detection override to
+`make_isoforms_from_gff.pl::detect_format` (source-column sniff is enough here; this
+detector's "refseq" branch already keys off per-line `protein_id=` presence rather
+than a whole-file signal, so the "no CDS has `protein_id=`" style check used
+elsewhere doesn't map as directly — the column-2 sniff alone should suffice and is
+cheaper). Once rerouted to "generic", that branch already reads `ID=`/`Parent=` off
+mRNA/transcript lines, matching what `genes.gff`'s own structure — and therefore
+`protein.aa.fa`/`cds.nt.fa` after `rename_generic_fasta.pl` — actually uses.
+
+**There are likely more copies, not yet audited.** A sweep
+(`grep -rl "sub detect_format\|ID=gene-.*Dbxref=GeneID"`) found the same signature in
+four more files, each needing a check for whether it's live on the "lift" path or
+dead/superseded before deciding whether it needs the same override:
+
+- `analysis_parsers/get_names_from_gff.pl` — used on the RENAME=false
+  refseq/ensembl path (native-name-keeping); not currently reached by `"lift"`
+  (which is RENAME=true), but confirm this rather than assume it.
+- `analysis_parsers/parse_RefSeq_GFF_to_MOOP_TSV.pl` — possibly superseded by the
+  "Unified" `parse_GFF3_to_MOOP_TSV.pl`; check for remaining callers.
+- `analysis_parsers/make_isoforms_refseq_gff.pl` — possibly superseded by the
+  "Unified isoforms builder" (`make_isoforms_from_gff.pl`'s own header comment
+  claims this); check for remaining callers.
+- `analysis_parsers/rbbh/make_isoforms_rbbh_REFSEQGFF.pl` — RBBH-specific variant;
+  unclear if reachable for a GFF-path gene set.
+
+Before calling the liftover gene-set fix complete: grep for callers of each of the
+four above, confirm live/dead, patch whichever are live and reachable, then rerun
+Parastichopus's reload and confirm `geneNames.tsv` has real rows and gene pages show
+names/descriptions.
