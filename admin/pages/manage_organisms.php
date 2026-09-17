@@ -469,8 +469,7 @@
                if ($row_gaps['genome_fa'])   $row_issues[] = 'missing-genome-fa';
                if ($row_gaps['other_fasta']) $row_issues[] = 'missing-other-fasta';
                if ($is_stale) $row_issues[] = 'stale';
-               $row_status = $row_status_info['all_pass'] ? 'complete'
-                           : ($row_status_info['pass_count'] > 0 ? 'incomplete' : 'critical');
+               $row_status = moop_organism_severity($row_status_info);
              ?>
              <tr data-status="<?= $row_status ?>"
                  data-issues="<?= implode(' ', $row_issues) ?>"
@@ -608,9 +607,14 @@
                  <?php
                    // ── Consolidated Health cell (replaces the old Tree/DB/Metadata/Status columns) ──
                    $status = $data['overall_status'] ?? getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types);
-                   $hstate = $status['all_pass']       ? ['success', 'check-circle',        'Complete']
-                           : ($status['pass_count'] > 0 ? ['warning', 'exclamation-triangle', 'Incomplete']
-                                                        : ['danger',  'times-circle',         'Critical']);
+                   // Graded by IMPACT, not by how many checks passed -- see
+                   // moop_organism_severity(). Both this cell and the row's data-status
+                   // above call it, so the badge and the filter cannot disagree.
+                   $hstate = [
+                       'complete'   => ['success', 'check-circle',         'Complete'],
+                       'critical'   => ['danger',  'times-circle',         'Critical'],
+                       'incomplete' => ['warning', 'exclamation-triangle', 'Incomplete'],
+                   ][moop_organism_severity($status)];
                    // DB inspector tint (mirrors the old DB Status column's states)
                    $db_class = 'secondary';
                    if ($data['db_validation']) {

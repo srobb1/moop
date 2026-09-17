@@ -632,6 +632,50 @@ ok(moop_permission_item_mode(['name' => 'Logs Directory']) === 'writable',
 @rmdir($_pc_dir);
 
 // ----------------------------------------------------------------------------
+group('organism severity — graded by impact, not by count');
+
+// The bug this guards: severity used to be `all_pass ? complete : (pass_count > 0 ?
+// incomplete : critical)`, which made 'critical' unreachable -- it needed ALL TEN checks
+// to fail at once. Measured on the real site, the minimum pass_count was 9 and 'critical'
+// fired for 0 of 85 organisms, so an empty database wore the same amber badge as a missing
+// .fai index. These assertions fail against that old expression.
+$_sev_all = ['has_assemblies'=>true,'has_fasta'=>true,'has_blast_indexes'=>true,
+             'has_fai_index'=>true,'has_database'=>true,'database_valid'=>true,
+             'directories_match_db'=>true,'assemblies_in_groups'=>true,
+             'in_taxonomy_tree'=>true,'metadata_complete'=>true];
+$_sev = function(array $overrides) use ($_sev_all) {
+    $c = array_merge($_sev_all, $overrides);
+    return ['checks' => $c, 'all_pass' => !in_array(false, $c, true),
+            'pass_count' => count(array_filter($c)), 'total_count' => count($c)];
+};
+
+ok(moop_organism_severity($_sev([])) === 'complete',
+   'every check passing is complete');
+ok(moop_organism_severity($_sev(['database_valid' => false])) === 'critical',
+   'an invalid/empty database is CRITICAL even at 9 of 10 passing');
+ok(moop_organism_severity($_sev(['has_database' => false])) === 'critical',
+   'no database at all is critical');
+ok(moop_organism_severity($_sev(['has_assemblies' => false])) === 'critical',
+   'no assemblies is critical');
+ok(moop_organism_severity($_sev(['has_fasta' => false])) === 'critical',
+   'no FASTA is critical');
+ok(moop_organism_severity($_sev(['has_fai_index' => false])) === 'incomplete',
+   'a missing .fai index is only incomplete -- it does not stop the organism serving data');
+ok(moop_organism_severity($_sev(['has_blast_indexes' => false])) === 'incomplete',
+   'a missing BLAST index is only incomplete');
+ok(moop_organism_severity($_sev(['in_taxonomy_tree' => false, 'assemblies_in_groups' => false])) === 'incomplete',
+   'group/tree membership is admin config, not a data failure');
+// All three states must be reachable -- that is the whole point of the change.
+ok(count(array_unique([
+       moop_organism_severity($_sev([])),
+       moop_organism_severity($_sev(['database_valid' => false])),
+       moop_organism_severity($_sev(['has_fai_index' => false])),
+   ])) === 3, 'all three severity states are reachable');
+// A check the caller never supplied is not a failure.
+ok(moop_organism_severity(['checks' => ['has_fai_index' => false], 'all_pass' => false]) === 'incomplete',
+   'an ABSENT critical check is not treated as failed');
+
+// ----------------------------------------------------------------------------
 group('database integrity — emptiness is a data issue');
 
 // Hermetic: a temp SQLite database with the real table names and no rows. Guards the

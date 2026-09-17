@@ -967,6 +967,42 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
     ];
 }
 
+/**
+ * Grade an organism's overall_status into a severity: 'complete' | 'critical' | 'incomplete'.
+ *
+ * WHY THIS EXISTS. Severity used to be derived from how MANY checks passed:
+ *
+ *     $all_pass ? 'complete' : ($pass_count > 0 ? 'incomplete' : 'critical')
+ *
+ * which made 'critical' unreachable. It required an organism to fail ALL TEN checks --
+ * simultaneously no assemblies, no FASTA, no database, no metadata, not in the tree --
+ * which cannot happen for anything that exists on disk. Measured across all 85 organisms
+ * on 2026-09-17: the minimum pass_count was 9, and 'critical' fired for ZERO of them. So a
+ * three-state scale was really two, and a database that returns nothing to every user wore
+ * the same amber "Incomplete" as a missing .fai index.
+ *
+ * Count is an arithmetic proxy with no relation to consequence. This grades by IMPACT
+ * instead -- the same principle CLAUDE.md section 11 applies to filesystem permissions
+ * ("judge by IMPACT, not an exact mode").
+ *
+ * CRITICAL means: the organism is listed, but cannot serve data to a user. Group and
+ * taxonomy-tree membership are deliberately NOT here -- they are admin configuration an
+ * organism passes through on its way in, they have their own badges, and they do not mean
+ * the data is broken.
+ *
+ * @param array $overall_status The 'overall_status' array from getOrganismOverallStatus()
+ * @return string 'complete' | 'critical' | 'incomplete'
+ */
+function moop_organism_severity(array $overall_status): string {
+    if (!empty($overall_status['all_pass'])) return 'complete';
+
+    $checks = $overall_status['checks'] ?? [];
+    foreach (['has_database', 'database_valid', 'has_assemblies', 'has_fasta'] as $critical) {
+        // A check that is absent is not a failure -- only an explicit false is.
+        if (array_key_exists($critical, $checks) && !$checks[$critical]) return 'critical';
+    }
+    return 'incomplete';
+}
 
 
 /**
