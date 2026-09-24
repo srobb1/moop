@@ -531,13 +531,14 @@ if [ -n "$OMA_CODE" ]; then
       || { echo "ERROR: failed to build OMA HOG orthologs"; exit 1; }
   fi
 
-  ## OMA's GO predictions are for gene sets with a run of their own (reference genomes
-  ## carry their own GO annotation)
-  if [ -z "$OMA_ID_MAP" ] && [ -s "$OMA_DIR/mapGO/go.tsv" ] && [ -s "$OMA_DIR/Output/Map-SeqNum-ID.txt" ] && [ -s "$OMA_DIR/Output/gene_function.gaf" ]; then
+  ## OMA GO terms: the target's predictions, or for a reference genome (reference run) its
+  ## exported GO annotation plus OMA's predictions, mapped to this gene set's ids.
+  ## go.tsv comes from the run's mapGO/get_OMA_GO_terms.sh.
+  if [ -s "$OMA_SRC/mapGO/go.tsv" ] && [ -s "$OMA_SRC/Output/Map-SeqNum-ID.txt" ] && [ -s "$OMA_SRC/Output/gene_function.gaf" ]; then
     has_data "${OMA_CODE}.OMA2GO.moop.tsv" \
       || { echo "Building OMA2GO for $OMA_CODE"
            perl "$REPO/analysis_parsers/parse_OMA2GO_to_MOOP_TSV.pl" "$OMA_CODE" "$OMA_VERSION" \
-             "$OMA_DIR/mapGO/go.tsv" "$OMA_DIR/Output/Map-SeqNum-ID.txt" "$OMA_DIR/Output/gene_function.gaf" \
+             "$OMA_SRC/mapGO/go.tsv" "$OMA_SRC/Output/Map-SeqNum-ID.txt" "$OMA_SRC/Output/gene_function.gaf" $OMA_ID_MAP \
              > "${OMA_CODE}.OMA2GO.moop.tsv.tmp" \
              && mv "${OMA_CODE}.OMA2GO.moop.tsv.tmp" "${OMA_CODE}.OMA2GO.moop.tsv" \
              || { rm -f "${OMA_CODE}.OMA2GO.moop.tsv.tmp"; echo "ERROR: failed to build OMA2GO"; exit 1; }
