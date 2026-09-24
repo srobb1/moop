@@ -24,7 +24,9 @@ while(my $line = <FA>){
   if ($line =~ /gene:(\S+)/){
     $gene = $1;
   }
-  my $sym = $id;
+  # no gene_symbol: leave it empty -- falling back to the protein id made names like
+  # "ENSP00000490264.2: novel ... protein"
+  my $sym = '';
   if ($line =~ /gene_symbol:(\S+)/){
    $sym = $1;
   }

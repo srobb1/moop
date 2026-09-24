@@ -98,7 +98,11 @@ foreach my $id (sort keys %hits){
     my $sym = $desc{$hit}{sym};
     my $gene = $isoforms{$id};
     my $h_gene = $isoforms{$hit};
-    if (defined $sym and $sym ne 'None' and $sym ne '0'){
+    # a symbol equal to the hit id is the old getDesc_ENS_FA.pl fallback (desc.txt files
+    # made before it was fixed), not a gene symbol
+    (my $hit_unversioned = $hit) =~ s/\.\d+$//;
+    if (defined $sym and $sym ne '' and $sym ne 'None' and $sym ne '0'
+        and $sym ne $hit and $sym ne $hit_unversioned){
       $desc = "$sym: $desc";
     } 
     # changing print out to be hit not hit gene
