@@ -289,9 +289,18 @@ has_data PANTHER.iprscan.moop.tsv \
   || { echo "Building InterProScan moop files"; make_interproscan_moop; }
 
 # ── ProtNLM ───────────────────────────────────────────────────────────────────
+## Not currently run for any organism (checked 2026-09-21: zero protnlm/ directories
+## anywhere under $ANNOTATIONS) -- decided to leave it off for now rather than run
+## it. Same skip pattern as SignalP/DeepTMHMM below, so a future organism that DOES
+## ship protnlm_pred_results.tsv is picked up automatically, with no code change
+## needed to turn it back on.
 make_protnlm_moop() {
-  perl "$REPO/analysis_parsers/parse_ProtNLM_to_MOOP_TSV.pl" \
-    "$ANALYSIS_DIR/protnlm/protnlm_pred_results.tsv"
+  local PDIR="$ANALYSIS_DIR/protnlm"
+  if [ ! -s "$PDIR/protnlm_pred_results.tsv" ]; then
+    echo "No ProtNLM results at $PDIR — skipping"
+    return 0
+  fi
+  perl "$REPO/analysis_parsers/parse_ProtNLM_to_MOOP_TSV.pl" "$PDIR/protnlm_pred_results.tsv"
 }
 has_data protnlm.moop.tsv \
   || { echo "Building ProtNLM moop files"; make_protnlm_moop; }
