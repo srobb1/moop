@@ -7,7 +7,8 @@ use warnings;
 #   parse_MMSEQS_RBH_to_MOOP_TSV.pl rbh_mmseq_results.tsv ref.pep.all.fa[.gz] "Ensembl Homo sapiens" \
 #       release-113 https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q="
 #
-# Writes <Source_with_underscores>.MMseqs_RBBH.moop.tsv, e.g. Ensembl_Homo_sapiens.MMseqs_RBBH.moop.tsv
+# Writes <Source_with_underscores>.MMseqs.RBBH.moop.tsv, e.g. Ensembl_Homo_sapiens.MMseqs.RBBH.moop.tsv
+# (matches the loader's *.RBBH.moop.tsv pattern; the eross file is Ensembl_Homo_sapiens.RBBH.moop.tsv)
 #
 # Input: the 12 BLAST-style columns of `mmseqs easy-rbh` with a header line
 #   query target pident alnlen mismatch gapopen qstart qend tstart tend evalue bits
@@ -74,7 +75,7 @@ warn "WARNING: $missing_ref of $lines hits have no header in $ref_fasta; their d
 my $date = `date '+%Y-%m-%d' -r '$results_file'`;
 $date =~ s/\s+//g;
 (my $source_file = $source) =~ s/\s+/_/g;
-my $out_file = "$source_file.MMseqs_RBBH.moop.tsv";
+my $out_file = "$source_file.MMseqs.RBBH.moop.tsv";
 
 open my $out_fh, '>', $out_file or die "cant write $out_file $!\n";
 print $out_fh "## Annotation Source: $source (MMseqs2 RBH)

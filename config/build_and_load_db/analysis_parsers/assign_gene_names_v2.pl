@@ -40,11 +40,14 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header);
 # or, with --native, per id in the native file). The Closest Human Gene moop table has a row
 # for the gene and for every isoform.
 
-my %opt = (override => []);
+# --extra-hits FILE: a per-gene-set moop TSV of similarity hits (e.g. reciprocal best hits to a
+# RefSeq proteome no other source covers) added as naming candidates, ranked like any other hit
+# (E-value only, so after hits that report a bitscore). Species label: --extra-hits-species.
+my %opt = (override => [], 'extra-hits' => []);
 GetOptions(\%opt, 'isoforms=s', 'protein-fasta=s', 'protein2gene=s', 'hgnc-dir=s',
            'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
            'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'panther=s', 'native=s',
-           'override=s@', 'out-names=s', 'out-moop=s')
+           'override=s@', 'extra-hits=s@', 'extra-hits-species=s', 'out-names=s', 'out-moop=s')
   or die "bad options\n";
 foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-moop)) {
   die "--$required is required\n" unless defined $opt{$required};
@@ -91,6 +94,9 @@ if (defined $opt{'mmseqs-dir'}) {
 if (defined $opt{'diamond-dir'}) {
   collect_diamond();
   link_swissprot_hits() if defined $opt{'uniprot-dir'};
+}
+foreach my $extra_file (@{$opt{'extra-hits'}}) {
+  read_extra_hits($extra_file);
 }
 resolve_compara();
 name_species();
@@ -694,6 +700,29 @@ sub read_panther {
   }
   close $fh;
   return %best;
+}
+
+sub read_extra_hits {
+  my ($file) = @_;
+  open my $fh, '<', $file or die "cant open extra hits $file $!\n";
+  my $source = $file;
+  while (my $line = <$fh>) {
+    if ($line =~ /^## Annotation Source:\s*(.+?)\s*$/) {
+      $source = $1;
+    }
+    next if $line =~ /^#/;
+    chomp $line;
+    my ($id, $accession, $description, $score) = split /\t/, $line;
+    my $group = group_for($id) or next;
+    my %hit = (evalue => (($score // '') =~ /^[0-9.eE+-]+$/ ? $score : 1));
+    next unless passes(\%hit, \%NORMAL);
+    my ($symbol, $name) = split_symbol($description // '');
+    (my $source_tag = $source) =~ s/\s+/_/g;
+    push @{$hits{$group}}, { %hit, source => $source_tag, type => 'Homologs', id => $id, hit => $accession,
+                             reciprocal => 0, symbol => $symbol, description => clean_name($name),
+                             species => $opt{'extra-hits-species'} // $source };
+  }
+  close $fh;
 }
 
 sub read_override {

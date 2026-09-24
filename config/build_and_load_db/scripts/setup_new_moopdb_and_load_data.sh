@@ -150,6 +150,8 @@ load_files() {
 # Load all annotation types
 load_files "*.oma_orthologs.moop.tsv" "OMA Orthologs"
 load_files "*.oma_pairs.moop.tsv" "OMA Pairwise Orthologs"
+load_files "*.oma_hog.moop.tsv" "OMA HOG Orthologs"
+load_files "closest_human.moop.tsv" "Closest Human Gene"
 load_files "eggnog_orthologs.moop.tsv" "EGGNOG Orthologs"
 load_files "*.homologs.moop.tsv" "Blast homologs"
 load_files "*.RBBH.moop.tsv" "Reciprocal Blast Best Hit homologs"

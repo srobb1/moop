@@ -63,6 +63,16 @@ cd "$REPO"
 # empty directories, so a fresh clone has none and every job would lose its output.
 mkdir -p slurm_logs
 
+# Reference data for gene naming (HGNC, Ensembl Compara per release, UniProt Swiss-Prot
+# cross-references, NCBI taxonomy): checked once here, before any per-organism job, so
+# the jobs never download anything and never race each other. Downloads only what is
+# new or missing (e.g. a Compara release for a newly added reference species); a failed
+# download keeps the existing copy and warns (non-zero exit), which does not stop the run.
+source "$REPO/scripts/paths.sh"
+echo "Checking reference data in $REFERENCE_DATA"
+bash "$REFERENCE_DATA/update_reference_data.sh" \
+  || echo "WARNING: update_reference_data.sh reported problems (above); continuing with the existing copies" >&2
+
 # The array task list is a PER-RUN SNAPSHOT, and nothing else ever writes it.
 #
 # A SLURM array task finds its work by line number:

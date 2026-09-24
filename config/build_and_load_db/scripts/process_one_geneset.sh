@@ -395,14 +395,45 @@ make_rbbh_moop() {
 ## inside the loop rather than the single driver line the blocks above use.
 make_rbbh_moop
 
+# ── MMseqs2 RBH (rbh_mmseq) ───────────────────────────────────────────────────
+## Same reference species as rbh_eross, from a second tool; separate files and a
+## separate source ("... (MMseqs2 RBH)") so both show on the gene page. Named
+## <Source>.MMseqs.RBBH.moop.tsv so the loader's *.RBBH.moop.tsv pattern takes them.
+make_mmseqs_rbh_moop() {
+  local RESULTS TARGET_ORG ORG OUT VERSION REF_FASTA
+  local -a FASTA
+  shopt -s nullglob
+  for RESULTS in "$ANALYSIS_DIR/rbh_mmseq"/ENS_*/; do
+    RESULTS="${RESULTS%/}"
+    [ -s "$RESULTS/rbh_mmseq_results.tsv" ] || continue
+    TARGET_ORG=$(basename "$RESULTS")                             # ENS_homo_sapiens
+    ORG="${TARGET_ORG#ENS_}"; ORG="${ORG//_/ }"; ORG="${ORG^}"    # Homo sapiens
+    OUT="Ensembl_${ORG// /_}.MMseqs.RBBH.moop.tsv"
+    has_data "$OUT" && continue
+    FASTA=("$REF_DB/$TARGET_ORG/current"/*.pep.all.fa.gz)
+    if [ "${#FASTA[@]}" -eq 0 ]; then
+      echo "WARNING: no peptide FASTA under $REF_DB/$TARGET_ORG/current — skipping MMseqs2 RBH for $TARGET_ORG" >&2
+      continue
+    fi
+    VERSION=$(awk '{print $NF; exit}' "$RESULTS/db_version.txt" 2>/dev/null)
+    echo "Building MMseqs2 RBH moop file for $TARGET_ORG"
+    perl "$REPO/analysis_parsers/parse_MMSEQS_RBH_to_MOOP_TSV.pl" "$RESULTS/rbh_mmseq_results.tsv" "${FASTA[0]}" \
+      "Ensembl $ORG" "${VERSION:-unknown}" https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q="
+  done
+  shopt -u nullglob
+}
+make_mmseqs_rbh_moop
+
 
 # ── OMA (standalone, optional) ────────────────────────────────────────────────
-## Not part of the big per-org ANALYSIS_DIR pipeline — OMA is run by hand and
-## symlinked in under OMA_BASE/<organism>/<assembly>/<geneset>/{Output,mapGO},
-## pointing back at wherever the actual OMA run lives. Silently skipped for any
-## organism/assembly/geneset that has no such symlinks.
-OMA_BASE="/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/OMA_v2"
+## Not part of the big per-org ANALYSIS_DIR pipeline — OMA is run by hand under
+## $OMA_BASE/<organism>/<assembly>/<geneset> (paths.sh). Silently skipped for any
+## gene set without an Output/ there. One moop table per partner species for the
+## pairwise orthologs and for the HOG orthologs, so users can pick the species they
+## care about; the relationship (1:1, many:1, ...) is in each row's description.
 OMA_DIR="$OMA_BASE/$THIS_ORG/$ASSEMBLY/$GENE_SET"
+OMA_CODE=""
+HGNC_TABLE="$REFERENCE_DATA/hgnc/hgnc_complete_set.txt"
 if [ -d "$OMA_DIR/Output" ]; then
   FIRST_PROT_ID=$(grep -m1 ">" "$GENESET_DIR/protein.aa.fa" 2>/dev/null | sed 's/^>//' | awk '{print $1}')
   OMA_CODE=$(grep -F -m1 "$FIRST_PROT_ID" "$OMA_DIR/Output/Map-SeqNum-ID.txt" 2>/dev/null | cut -f1)
@@ -410,7 +441,9 @@ if [ -d "$OMA_DIR/Output" ]; then
   if [ -z "$OMA_CODE" ]; then
     echo "WARNING: OMA dir found ($OMA_DIR) but couldn't determine this organism's OMA species code from Map-SeqNum-ID.txt"
   else
-    OMA_VERSION=$(basename "$(dirname "$(realpath "$OMA_DIR/Output")")")
+    ## the template a run was made from (README.exportedAllAll), else the run dir name
+    OMA_TEMPLATE=$(sed -n 's/^OMA template:[[:space:]]*//p' "$OMA_DIR/README.exportedAllAll" 2>/dev/null | head -1)
+    OMA_VERSION="OMA 2.7.0 ${OMA_TEMPLATE:-$(basename "$(dirname "$(realpath "$OMA_DIR/Output")")")}"
     echo "OMA species code: $OMA_CODE (version: $OMA_VERSION)"
 
     ## parse_OMA_orthologs_to_MOOP_TSV.pl writes one file per *partner* org found in the
@@ -426,36 +459,36 @@ if [ -d "$OMA_DIR/Output" ]; then
         "$OMA_DIR/Output/OrthologousGroups.txt" "$OMA_CODE" "$OMA_VERSION"
     fi
 
+    ## Pairwise files are named <A>-<B>.txt; only the ones with our code as a whole
+    ## side are ours (a substring match would take NEMVE-HUMAN.txt for NEMVEC).
     shopt -s nullglob
-    ## Filename just needs to contain our species code to be relevant (filters out
-    ## the many pairwise files between two *other* reference species, e.g.
-    ## ANOCA-CHICK.txt, which have nothing to do with us). Orientation within the
-    ## relevant files is then derived from content, not the filename, below.
-    for PAIR_FILE in "$OMA_DIR/Output/PairwiseOrthologs/"*"$OMA_CODE"*.txt; do
-      ## Every organism other than ours is written as "CODE12345 | xref1; xref2 | ..."
-      ## (pipe-delimited), while our own ids are bare gene IDs with no pipes.
-      ## Whichever of ids1/ids2 has no "|" is us; the other one's leading letters
-      ## are the OTHERORG code.
-      FIRST_DATA_LINE=$(grep -v '^#' "$PAIR_FILE" | head -1)
-      [ -z "$FIRST_DATA_LINE" ] && continue
-      IDS1=$(echo "$FIRST_DATA_LINE" | cut -f3)
-      IDS2=$(echo "$FIRST_DATA_LINE" | cut -f4)
-      if [[ "$IDS1" != *"|"* ]]; then
+    for PAIR_FILE in "$OMA_DIR/Output/PairwiseOrthologs/"*.txt; do
+      PAIR_NAME=$(basename "$PAIR_FILE" .txt)
+      if [[ "$PAIR_NAME" == "$OMA_CODE-"* ]]; then
         THISORG_FIRST=1
-        OTHERORG=$(echo "$IDS2" | grep -oE '^[A-Za-z]+')
-      elif [[ "$IDS2" != *"|"* ]]; then
+        OTHERORG="${PAIR_NAME#"$OMA_CODE-"}"
+      elif [[ "$PAIR_NAME" == *"-$OMA_CODE" ]]; then
         THISORG_FIRST=0
-        OTHERORG=$(echo "$IDS1" | grep -oE '^[A-Za-z]+')
+        OTHERORG="${PAIR_NAME%"-$OMA_CODE"}"
       else
-        echo "WARNING: couldn't determine orientation for $PAIR_FILE, skipping"
         continue
       fi
-      has_data "${OTHERORG}."*".oma_pairs.moop.tsv" \
+      has_data "${OTHERORG}.OMA.oma_pairs.moop.tsv" \
         || { echo "Building OMA pairs for $OMA_CODE vs $OTHERORG"
              perl "$REPO/analysis_parsers/parse_OMA_pairs_to_MOOP_TSV.pl" \
-               "$PAIR_FILE" "$OMA_CODE" "$OTHERORG" "$THISORG_FIRST" "$OMA_VERSION"; }
+               "$PAIR_FILE" "$OMA_CODE" "$OTHERORG" "$THISORG_FIRST" "$OMA_VERSION" "$HGNC_TABLE"; }
     done
     shopt -u nullglob
+
+    shopt -s nullglob
+    existing_hogs=(*.oma_hog.moop.tsv)
+    shopt -u nullglob
+    if [ ${#existing_hogs[@]} -eq 0 ] && [ -s "$OMA_DIR/Output/HierarchicalGroups.orthoxml" ]; then
+      echo "Building OMA HOG orthologs for $OMA_CODE"
+      perl "$REPO/analysis_parsers/parse_OMA_HOG_to_MOOP_TSV.pl" \
+        "$OMA_DIR/Output/HierarchicalGroups.orthoxml" "$OMA_CODE" "$OMA_VERSION" "$HGNC_TABLE" \
+        || { echo "ERROR: failed to build OMA HOG orthologs"; exit 1; }
+    fi
 
     if [ -s "$OMA_DIR/mapGO/go.tsv" ] && [ -s "$OMA_DIR/Output/Map-SeqNum-ID.txt" ] && [ -s "$OMA_DIR/Output/gene_function.gaf" ]; then
       has_data "${OMA_CODE}.OMA2GO.moop.tsv" \
@@ -473,64 +506,73 @@ fi
 ## remove previous entries for this org and check for missing files
 sed -i "/^${THIS_ORG}\t/d" "$MISSING_LOG" 2>/dev/null
 
-# ── Build gene name params (shared by both RENAME and T2G paths) ──────────────
-## Assembles the ordered source list for assign_gene_names.pl.
-## RBBH/OMA-to-Homo-sapiens mappings are optional — only included if the file exists.
-build_gene_name_params() {
-  ## Override maps are keyed by "<org>/<assembly>/<geneset>" so a mapping is
-  ## explicitly opted into per gene-set, instead of silently inherited by any
-  ## future geneset that happens to share an organism name (bit us once
-  ## already — apollo_moop.tsv only matched 43/45 IDs when MENDER_20260701
-  ## replaced MENDER_20260623 for Chamaeleo_calyptratus). Bare-organism keys
-  ## are not accepted at all — every entry must be geneset-specific.
-  declare -A BEST_MAPPING
-  BEST_MAPPING["Nematostella_vectensis/GCA_033964005.1/NV2"]="/n/sci/SCI-003939-SBNVEC/genomes/Nvec200/aligned/tcs_v2/analysis/rbbh_2026_02_09/jaNemVect1/RefSeq_jaNemVect1.RBBH.moop.tsv"
-  BEST_MAPPING["Chamaeleo_calyptratus/CCA3/MENDER_20260701"]="/n/sci/SCI-004219-SBCHAMELEO/Chamaeleo_calyptratus/genomes/CCA3-ref/analysis/apollo_moop.tsv"
+# ── Gene naming v2 (notes/NAMING_V2_PLAN.md) ──────────────────────────────────
+## assign_gene_names_v2.pl gives every gene a name and, separately, its closest human
+## gene (geneNames.tsv columns 6-9 and closest_human.moop.tsv). It reads the analysis
+## results directly (OMA, MMseqs2 RBH, DIAMOND, PANTHER) plus the reference data in
+## $REFERENCE_DATA; run $REFERENCE_DATA/update_reference_data.sh before a full reprocess.
+## Fills NAMING_ARGS; the caller adds --isoforms/--out-names/--out-moop (and --native).
+build_naming_args() {
+  ## Per-gene-set extras, keyed by "<org>/<assembly>/<geneset>" so a mapping is
+  ## explicitly opted into per gene set, never inherited by a later gene set of the
+  ## same organism (apollo_moop.tsv only matched 43/45 IDs when MENDER_20260701
+  ## replaced MENDER_20260623 for Chamaeleo_calyptratus).
+  ##   CURATED_NAMES: names that win over everything (manual curation, or a mapping
+  ##                  to another annotation of the same species).
+  ##   EXTRA_HITS:    extra similarity hits ranked with the others, e.g. reciprocal
+  ##                  best hits to a proteome no other source covers.
+  declare -A CURATED_NAMES
+  CURATED_NAMES["Nematostella_vectensis/GCA_033964005.1/NV2"]="/n/sci/SCI-003939-SBNVEC/genomes/Nvec200/aligned/tcs_v2/analysis/rbbh_2026_02_09/jaNemVect1/RefSeq_jaNemVect1.RBBH.moop.tsv"
+  CURATED_NAMES["Chamaeleo_calyptratus/CCA3/MENDER_20260701"]="/n/sci/SCI-004219-SBCHAMELEO/Chamaeleo_calyptratus/genomes/CCA3-ref/analysis/apollo_moop.tsv"
 
-  ## There used to be a BEST_MAPPING_2 slot here (rank between BEST_MAPPING and the
-  ## automatic OMA-vs-Human pickup below), for forcing a specific non-Human ortholog
-  ## file when a gene set's OMA run didn't live at the standard discovery path. Its
-  ## only-ever example was a stale, pre-OMA_v2 manual Chamaeleo path -- superseded once
-  ## Chamaeleo got a proper OMA_v2 run symlinked in at the standard location, which the
-  ## automatic discovery below already picks up with no override needed. Removed
-  ## 2026-09-14 rather than carry an unused slot forward; see
-  ## PER_GENESET_CONFIG_PLAN.md for the planned replacement (an oma_dir override).
-
-  declare -A NEXT_BEST_MAPPING
-  NEXT_BEST_MAPPING["Montipora_capitata/HIv3/HIv3_geneset"]="/n/sci/SCI-004111-SBCORAL/Montipora_capitata/genomes/Montipora_capitata_HIv3/analysis/RBBH/RefSeq_jaNemVect1.RBBH.moop.tsv"
+  declare -A EXTRA_HITS EXTRA_HITS_SPECIES
+  EXTRA_HITS["Montipora_capitata/HIv3/HIv3_geneset"]="/n/sci/SCI-004111-SBCORAL/Montipora_capitata/genomes/Montipora_capitata_HIv3/analysis/RBBH/RefSeq_jaNemVect1.RBBH.moop.tsv"
+  EXTRA_HITS_SPECIES["Montipora_capitata/HIv3/HIv3_geneset"]="sea anemone"
 
   local GENESET_KEY="$THIS_ORG/$ASSEMBLY/$GENE_SET"
 
-  ## Looks up $1 (an associative array name) at the geneset-specific key
-  ## only. Bare-organism keys are never honored, even as a fallback.
-  override_lookup() {
-    local -n _map=$1
-    [[ -n "${_map[$GENESET_KEY]:-}" ]] && echo "${_map[$GENESET_KEY]}"
-  }
+  NAMING_ARGS=(--protein-fasta "$GENESET_DIR/protein.aa.fa"
+               --hgnc-dir "$REFERENCE_DATA/hgnc"
+               --compara-dir "$REFERENCE_DATA/ensembl_compara"
+               --uniprot-dir "$REFERENCE_DATA/uniprot"
+               --taxonomy-dir "$REFERENCE_DATA/ncbi_taxonomy"
+               --ref-db "$REF_DB"
+               --panther PANTHER.iprscan.moop.tsv)
+  [ -s "$GENESET_DIR/protein2gene.txt" ] && NAMING_ARGS+=(--protein2gene "$GENESET_DIR/protein2gene.txt")
+  [ -n "$OMA_CODE" ]                     && NAMING_ARGS+=(--oma-dir "$OMA_DIR" --oma-code "$OMA_CODE")
+  [ -d "$ANALYSIS_DIR/rbh_mmseq" ]       && NAMING_ARGS+=(--mmseqs-dir "$ANALYSIS_DIR/rbh_mmseq")
+  [ -d "$ANALYSIS_DIR/diamond" ]         && NAMING_ARGS+=(--diamond-dir "$ANALYSIS_DIR/diamond")
+  [ -n "${CURATED_NAMES[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--override "${CURATED_NAMES[$GENESET_KEY]}")
+  if [ -n "${EXTRA_HITS[$GENESET_KEY]:-}" ]; then
+    NAMING_ARGS+=(--extra-hits "${EXTRA_HITS[$GENESET_KEY]}")
+    [ -n "${EXTRA_HITS_SPECIES[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--extra-hits-species "${EXTRA_HITS_SPECIES[$GENESET_KEY]}")
+  fi
 
-  PARAMS=("isoforms.tsv")
-  local best_mapping next_best_mapping
-  best_mapping=$(override_lookup BEST_MAPPING)
-  [[ -n "$best_mapping" ]] && PARAMS+=("$best_mapping")
-  ## NOTE: only the first match is used (sorts to Ensembl before RefSeq, which is fine
-  ## for now). If both HUMAN.Ensembl.* and HUMAN.RefSeq.* exist, the RefSeq one is
-  ## silently dropped — revisit if we ever want both sources fed into naming.
-  shopt -s nullglob
-  local human_oma=(HUMAN.*.oma_orthologs.moop.tsv)
-  shopt -u nullglob
-  [[ -n "${human_oma[0]:-}" ]] && PARAMS+=("${human_oma[0]}")
-  [ -f "Ensembl_Homo_sapiens.RBBH.moop.tsv" ] && PARAMS+=("Ensembl_Homo_sapiens.RBBH.moop.tsv")
-  next_best_mapping=$(override_lookup NEXT_BEST_MAPPING)
-  [[ -n "$next_best_mapping" ]] && PARAMS+=("$next_best_mapping")
-  PARAMS+=("UniProtKB_Swiss-Prot.homologs.moop.tsv")
-  PARAMS+=("PANTHER.iprscan.moop.tsv")
-
-  for file in "${PARAMS[@]}"; do
-    if [ ! -f "$file" ]; then
+  local file
+  for file in "$REFERENCE_DATA/hgnc/hgnc_complete_set.txt" PANTHER.iprscan.moop.tsv \
+              ${CURATED_NAMES[$GENESET_KEY]:-} ${EXTRA_HITS[$GENESET_KEY]:-}; do
+    if [ ! -s "$file" ]; then
       echo "ERROR: Required file $file is missing! Gene naming will fail."
       exit 1
     fi
   done
+}
+
+## geneNames.tsv in the naming v2 format (closest-human columns) and closest_human.moop.tsv
+## both present; otherwise naming reruns (gene sets named before naming v2 have neither)
+naming_outputs_current() {
+  has_data geneNames.tsv && has_data closest_human.moop.tsv \
+    && head -1 geneNames.tsv | grep -q $'\tclosestHGNC\t'
+}
+
+## run assign_gene_names_v2.pl into geneNames.tsv + closest_human.moop.tsv (args: extra options)
+run_naming_v2() {
+  build_naming_args
+  perl "$REPO/analysis_parsers/assign_gene_names_v2.pl" "${NAMING_ARGS[@]}" --isoforms isoforms.tsv "$@" \
+    --out-names geneNames.tsv.tmp --out-moop closest_human.moop.tsv.tmp \
+    && mv geneNames.tsv.tmp geneNames.tsv \
+    && mv closest_human.moop.tsv.tmp closest_human.moop.tsv \
+    || { rm -f geneNames.tsv.tmp closest_human.moop.tsv.tmp; echo "ERROR: gene naming (assign_gene_names_v2.pl) failed"; exit 1; }
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -661,19 +703,17 @@ if $HAS_GFF; then
       || { rm -f isoforms.tsv.tmp; echo "ERROR: failed to build isoforms.tsv"; exit 1; }
   fi
 
-  has_data geneNames.tsv || REBUILD=true
+  naming_outputs_current || REBUILD=true
   if $REBUILD; then
     echo "Building geneNames.tsv"
     if $RENAME; then
-      build_gene_name_params
-      perl "$REPO/analysis_parsers/assign_gene_names.pl" "${PARAMS[@]}" > geneNames.tsv.tmp \
-        && mv geneNames.tsv.tmp geneNames.tsv \
-        || { rm -f geneNames.tsv.tmp; echo "ERROR: failed to build geneNames.tsv"; exit 1; }
+      run_naming_v2
 
       echo "Updating GFF and FASTAs"
       perl "$REPO/analysis_parsers/updateGFF.pl"   "$GENESET_DIR/genes.gff"         geneNames.tsv > genes.gff.tmp \
-        && mv genes.gff.tmp genes.gff \
-        || { rm -f genes.gff.tmp;      echo "ERROR: failed to build genes.gff";     exit 1; }
+        && perl "$REPO/analysis_parsers/addClosestHumanToGFF.pl" genes.gff.tmp geneNames.tsv > genes.gff.closest.tmp \
+        && mv genes.gff.closest.tmp genes.gff && rm -f genes.gff.tmp \
+        || { rm -f genes.gff.tmp genes.gff.closest.tmp; echo "ERROR: failed to build genes.gff"; exit 1; }
       perl "$REPO/analysis_parsers/updateFASTA.pl" "$GENESET_DIR/protein.aa.fa"     geneNames.tsv > protein.aa.fa.tmp \
         && mv protein.aa.fa.tmp protein.aa.fa \
         || { rm -f protein.aa.fa.tmp;    echo "ERROR: failed to build protein.aa.fa";   exit 1; }
@@ -684,37 +724,31 @@ if $HAS_GFF; then
         && mv transcript.nt.fa.tmp transcript.nt.fa \
         || { rm -f transcript.nt.fa.tmp; echo "ERROR: failed to build transcript.nt.fa"; exit 1; }
     else
-      # RefSeq/Ensembl ship their own gene name + description, and we keep
-      # those by default -- but "keep the source's name" used to mean ONLY the
-      # source's name, even when it was "uncharacterized protein" or a bare
-      # LOC/CG/Gm placeholder symbol. Now we also build the SAME homology
-      # ranking every other gene set gets (build_gene_name_params ->
-      # assign_gene_names.pl; the RBBH/OMA/Swiss-Prot/PANTHER inputs it needs
-      # are already mandatory for every GFF gene set via check_missing_files_gff,
-      # regardless of source), and get_names_from_gff.pl keeps the native name
-      # per gene unless GeneNameInformativeness::is_informative_name says it's
-      # a placeholder, in which case it substitutes the homology row for that
-      # gene's whole group.
+      # RefSeq/Ensembl ship their own gene name + description, and we keep them
+      # exactly as provided -- unless the native name is uninformative ("uncharacterized
+      # protein", a bare LOC/CG/Gm symbol, ...; GeneNamingV2.pm decides), in which case
+      # the naming v2 name replaces it for that gene. Every gene still gets its closest
+      # human gene (geneNames.tsv columns 6-9, closest_human.moop.tsv, and the GFF below).
       #
-      # geneNames.tsv must always cover every gene, never just the ones being
-      # renamed: updateFASTA.pl/updateGFF.pl elsewhere in this pipeline treat an
-      # id ABSENT from a names file as "this feature has no name any more" and
-      # blank it out. get_names_from_gff.pl already guarantees full coverage
-      # (native row or homology row, never neither), which is what keeps this
-      # path from tripping that.
-      #
-      # geneNames.homology.tsv is left on disk (not just piped through) so a
-      # renamed gene's homology basis can be inspected directly against the
-      # final geneNames.tsv, same as tophit.tsv/iprscan.tsv are kept nearby.
-      build_gene_name_params
-      perl "$REPO/analysis_parsers/assign_gene_names.pl" "${PARAMS[@]}" > geneNames.homology.tsv.tmp \
-        && mv geneNames.homology.tsv.tmp geneNames.homology.tsv \
-        || { rm -f geneNames.homology.tsv.tmp; echo "ERROR: failed to build geneNames.homology.tsv"; exit 1; }
-
-      perl "$REPO/analysis_parsers/get_names_from_gff.pl" "$GENESET_DIR/genes.gff" geneNames.homology.tsv > geneNames.tsv.tmp \
-        && mv geneNames.tsv.tmp geneNames.tsv \
-        || { rm -f geneNames.tsv.tmp; echo "ERROR: failed to build geneNames.tsv"; exit 1; }
+      # geneNames.native.tsv (the source's own names, from get_names_from_gff.pl) is left
+      # on disk so a replaced name can be compared with what the source called it.
+      # geneNames.tsv covers every id in it: updateFASTA.pl/updateGFF.pl treat an id
+      # ABSENT from a names file as "no name any more".
+      perl "$REPO/analysis_parsers/get_names_from_gff.pl" "$GENESET_DIR/genes.gff" > geneNames.native.tsv.tmp \
+        && mv geneNames.native.tsv.tmp geneNames.native.tsv \
+        || { rm -f geneNames.native.tsv.tmp; echo "ERROR: failed to build geneNames.native.tsv"; exit 1; }
+      run_naming_v2 --native geneNames.native.tsv
     fi
+  fi
+
+  ## Native RefSeq/Ensembl GFFs keep their names, but get the closest human gene on every
+  ## gene and mRNA. genes.gff is a symlink to the source at this point (re-made on every
+  ## run above), so write a real copy -- never edit through the link into the datastore.
+  if ! $RENAME && [ -s geneNames.tsv ]; then
+    rm -f genes.gff
+    perl "$REPO/analysis_parsers/addClosestHumanToGFF.pl" "$GENESET_DIR/genes.gff" geneNames.tsv > genes.gff.tmp \
+      && mv genes.gff.tmp genes.gff \
+      || { rm -f genes.gff.tmp; ln -sf "$GENESET_DIR/genes.gff" genes.gff; echo "ERROR: failed to add closest human genes to genes.gff"; exit 1; }
   fi
 
   ## MOOP's own ID normalization, opt-in per gene set via metadata.yaml:
@@ -906,13 +940,10 @@ else
       || { rm -f isoforms.tsv.tmp; echo "ERROR: failed to build isoforms.tsv"; exit 1; }
   fi
 
-  has_data geneNames.tsv || REBUILD=true
+  naming_outputs_current || REBUILD=true
   if $REBUILD; then
     echo "Building geneNames.tsv"
-    build_gene_name_params
-    perl "$REPO/analysis_parsers/assign_gene_names.pl" "${PARAMS[@]}" > geneNames.tsv.tmp \
-      && mv geneNames.tsv.tmp geneNames.tsv \
-      || { rm -f geneNames.tsv.tmp; echo "ERROR: failed to build geneNames.tsv"; exit 1; }
+    run_naming_v2
 
     echo "Updating FASTAs with gene names"
     perl "$REPO/analysis_parsers/updateFASTA.pl" "$GENESET_DIR/protein.aa.fa" \

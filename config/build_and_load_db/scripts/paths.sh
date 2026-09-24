@@ -24,9 +24,15 @@
 #
 # REF_DB is the reference-database tree ($REF_DB/ENS_<species>/current/*.pep.all.fa.gz,
 # $REF_DB/UNIPROT_sprot/..., etc).
+#
+# REFERENCE_DATA holds what gene naming v2 downloads itself (hgnc/, ensembl_compara/,
+# uniprot/, ncbi_taxonomy/), kept current by $REFERENCE_DATA/update_reference_data.sh.
+# OMA_BASE is where the OMA runs live, one <organism>/<assembly>/<geneset> dir each.
 
 : "${GENOMES:=/n/sci/SCI-004223-SBGENOMES/genomes/v2}"
 : "${ANNOTATIONS:=/n/sci/SCI-004223-SBGENOMES/annotations/sbgenomes_2}"
 : "${REF_DB:=/n/sci/SCI-004223-SBGENOMES/db}"
+: "${REFERENCE_DATA:=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop}"
+: "${OMA_BASE:=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/OMA_v2}"
 
-export GENOMES ANNOTATIONS REF_DB
+export GENOMES ANNOTATIONS REF_DB REFERENCE_DATA OMA_BASE
