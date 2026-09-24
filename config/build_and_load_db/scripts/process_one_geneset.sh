@@ -436,16 +436,17 @@ make_mmseqs_rbh_moop
 ## from the template's reference run ($OMA_REFERENCE_RUN) under the reference's code, with
 ## every OMA id mapped back to this gene set's own protein ids by identical sequence
 ## (oma_reference_id_map.tsv), so nothing downstream ever shows the reference's OMA ids.
-## This is checked whenever the gene set has no OMA output of its own, or its OMA dir has the
-## REFERENCE_GENOME.txt marker (make_oma_db_files.pl) -- nobody has to know it is a reference.
+## This is checked for every gene set (cached in oma_reference_check.tsv), so nobody has to
+## know it is a reference -- and a reference genome's own OMA run (e.g. one made before this
+## check existed) is ignored, since it has the genome in OMA twice.
 OMA_DIR="$OMA_BASE/$THIS_ORG/$ASSEMBLY/$GENE_SET"
 OMA_SRC="$OMA_DIR"      # the run whose Output/ is read
 OMA_CODE=""
 OMA_ID_MAP=""
 HGNC_TABLE="$REFERENCE_DATA/hgnc/hgnc_complete_set.txt"
 
-if { [ -e "$OMA_DIR/REFERENCE_GENOME.txt" ] || [ ! -d "$OMA_DIR/Output" ]; } \
-   && [ -d "$OMA_REFERENCE_RUN/DB" ] && [ -s "$GENESET_DIR/protein.aa.fa" ]; then
+IS_REFERENCE_GENOME=false
+if [ -d "$OMA_REFERENCE_RUN/DB" ] && [ -s "$GENESET_DIR/protein.aa.fa" ]; then
   ## cached: redone only when protein.aa.fa or the reference run's genomes change
   if [ ! -s oma_reference_check.tsv ] || [ "$GENESET_DIR/protein.aa.fa" -nt oma_reference_check.tsv ] \
      || [ "$OMA_REFERENCE_RUN/DB" -nt oma_reference_check.tsv ]; then
@@ -460,6 +461,9 @@ if { [ -e "$OMA_DIR/REFERENCE_GENOME.txt" ] || [ ! -d "$OMA_DIR/Output" ]; } \
     REF_CODE=$(head -1 oma_reference_check.tsv | cut -f1)
     REF_PERCENT=$(head -1 oma_reference_check.tsv | cut -f2)
     echo "This gene set is the OMA reference genome $REF_CODE ($REF_PERCENT% identical proteins)"
+    IS_REFERENCE_GENOME=true
+    [ -d "$OMA_DIR/Output" ] && [ ! -e "$OMA_DIR/REFERENCE_GENOME.txt" ] \
+      && echo "WARNING: ignoring the gene set's own OMA run in $OMA_DIR (it has $REF_CODE in OMA twice); using the reference run. Move that run aside and run make_oma_db_files.pl there to record this." >&2
     if [ -s "$OMA_REFERENCE_RUN/Output/HierarchicalGroups.orthoxml" ]; then
       OMA_SRC="$OMA_REFERENCE_RUN"
       OMA_CODE="$REF_CODE"
@@ -472,7 +476,7 @@ if { [ -e "$OMA_DIR/REFERENCE_GENOME.txt" ] || [ ! -d "$OMA_DIR/Output" ]; } \
   fi
 fi
 
-if [ -z "$OMA_CODE" ] && [ -d "$OMA_DIR/Output" ] && [ ! -e "$OMA_DIR/REFERENCE_GENOME.txt" ]; then
+if [ -z "$OMA_CODE" ] && ! $IS_REFERENCE_GENOME && [ -d "$OMA_DIR/Output" ] && [ ! -e "$OMA_DIR/REFERENCE_GENOME.txt" ]; then
   FIRST_PROT_ID=$(grep -m1 ">" "$GENESET_DIR/protein.aa.fa" 2>/dev/null | sed 's/^>//' | awk '{print $1}')
   OMA_CODE=$(grep -F -m1 "$FIRST_PROT_ID" "$OMA_DIR/Output/Map-SeqNum-ID.txt" 2>/dev/null | cut -f1)
   [ -z "$OMA_CODE" ] && echo "WARNING: OMA dir found ($OMA_DIR) but couldn't determine this organism's OMA species code from Map-SeqNum-ID.txt"
