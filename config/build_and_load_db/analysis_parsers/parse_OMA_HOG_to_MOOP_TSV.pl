@@ -1,96 +1,91 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Data::Dumper;
+use FindBin;
+use lib "$FindBin::Bin";
+use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header);
 
-my $HOG_dir    = shift;    # Output/HOGFasta
-my $THISORG       = shift;
-my $OMA_DB_V      = shift;
+# OMA HOG orthologs of the target species -> one moop TSV (Orthologs) per partner species.
+#
+#   parse_OMA_HOG_to_MOOP_TSV.pl Output/HierarchicalGroups.orthoxml TARGET_CODE OMA_VERSION [hgnc_complete_set.txt]
+#
+# Writes <PARTNER>.oma_hog.moop.tsv for every other species in the run (HUMAN, MOUSE, ...).
+# Orthology comes from the HOG tree (OmaHogOrthologs.pm): the target gene and the partner gene
+# meet at a speciation node. Each row carries the relationship (1:1, 1:many, many:1,
+# many:many; target:partner) and the HOG id in the description, since the moop Score column
+# only holds numbers.
+#
+# Accession is the partner's UniProt accession when OMA lists one, otherwise its first protein
+# id; the accession URL is EBI search, which resolves UniProt, Ensembl and RefSeq ids alike.
+# With the optional HGNC table, HUMAN rows get the current HGNC symbol ("TUBB8: tubulin beta 8
+# class VIII") from the HGNC id in OMA's header.
 
-warn "HOGs Path: $HOG_dir\n";
-warn "Your Organism: $THISORG\n";
-warn "DB VERSION: $OMA_DB_V\n";
+my $usage = "usage: $0 HierarchicalGroups.orthoxml TARGET_CODE OMA_VERSION [hgnc_complete_set.txt]\n";
+my $orthoxml    = shift or die $usage;
+my $target      = shift or die $usage;
+my $oma_version = shift or die $usage;
+my $hgnc_file   = shift;
 
-#head ~/sciproj/Malabaricus/orthologs/DANRE_HUMAN_MOUSE_NOTFU_RATNO_RATRT/OMA.2.7.0/Output/HOGFasta/HOG21250.fa
-#>DANMAL_NP_001121707.1 [DANMAL]
-#MKSTSPPPPPAFVRVSERDLTEIELHSVDSINDLHRTHSEQHSKGVQPPRPPPPSTNGSLHMQDRPVVYRTVQAGRRPCM
-#SRLNKICTSTWGHYFLACTAVIAFLIILILIFSSL
-#>ENSDARG00000102199.3 [DANRE]
-#MSCSLEKVLGDARTLLERLKEHDTAAESLIEQSSVLGQKIHSMKEVGNTLPDKYMEENTEYQELSRYKPHVLLSQENTQI
-#KELQQENRELWLSLEEHQYALELIMGRYRKQMLQMMMEKKELDTKPVLSLHQNHAKEVQSQLGRICEMGQVMRQAVQMDD
-#QHYCSVKERLAQLEIENKELRGLLSISSVKQHREEKNPPETTSETVEKQES
-#>ENSG00000052723.12 [HUMAN]
-#MSCTIEKILTDAKTLLERLREHDAAAESLVDQSAALHRRVAAMREAGTALPDQVRQRYQEDASDMKDMSKYKPHILLSQE
-#NTQIRDLQQENRELWISLEEHQDALELIMSKYRKQMLQLMVAKKAVDAEPVLKAHQSHSAEIESQIDRICEMGEVMRKAV
-#QVDDDQFCKIQEKLAQLELENKELRELLSISSESLQARKENSMDTASQAIK
-
-my %hogs;
-
-my @hog_fastas = <$HOG_dir/HOG*.fa>;
-foreach my $hog_file (@hog_fastas){
-  open HOG, $hog_file or die "Cant open HOG FASTA Dir: $hog_file $! \n";
-  my ($hog_group) = $hog_file =~ /(HOG\d+)/;
-  while (my $line = <HOG>){
+my %hgnc_symbol;
+if (defined $hgnc_file) {
+  open my $hgnc_fh, '<', $hgnc_file or die "cant open $hgnc_file $!\n";
+  my $header = <$hgnc_fh>;
+  chomp $header;
+  my @columns = split /\t/, $header;
+  my %column_index;
+  foreach my $index (0 .. $#columns) {
+    $column_index{$columns[$index]} = $index;
+  }
+  die "no hgnc_id/symbol/name columns in $hgnc_file\n"
+    unless defined $column_index{hgnc_id} and defined $column_index{symbol} and defined $column_index{name};
+  while (my $line = <$hgnc_fh>) {
     chomp $line;
-    next if $line !~ /^>/;
-    my ($id,$org) = $line =~ /^>(\S+).*\[(\S+)\]$/;
-    $hogs{$hog_group}{$id}++;
+    my @fields = split /\t/, $line;
+    $hgnc_symbol{$fields[$column_index{hgnc_id}]} = { symbol => $fields[$column_index{symbol}], name => $fields[$column_index{name}] };
   }
-}
-my $db_url = 'test';
-my $date = `date '+%Y-%m-%d' -r $hog_fastas[0]`;
-  $date =~ s/\s+//g;
-  my $outfile = "$OTHERORG.$db.oma_hog.moop.tsv";
-  print "Starting: $outfile\n";
-  open OUT, ">$outfile" or die "Can't open $outfile for writing $! \n";
-  print OUT "## Annotation Source: OMA HOMOLOGOUS ORTHOLOGS GROUPS
-## Annotation Source Version: $OMA_DB_V
-## Annotation Accession URL: https://omabrowser.org/oma/home/
-## Annotation Source URL: $db_url
-## Annotation Type: Orthologs
-## Annotation Creation Date: $date\n";
-  print OUT join("\t","## Gene","HOG_ID","Description","ORTHOLOG_TYPE"),"\n";
-  foreach my $each (sort keys %{$hogs{$db}{$group}{}){
-    print OUT "$hits{$db}{$each}\n";
-  }
-  close OUT;
+  close $hgnc_fh;
 }
 
-foreach my $group (sort keys %hogs){
-    my @members;
-  if (exists $hogs{$group}{$THISORG}){
-    foreach my $org (sort keys %{$hogs{$group}}){
-      foreach my $id  (sort keys %{$hogs{$group}{$org}}){
-        push @members, "$org:$id";
+my $result = read_hog_orthologs($orthoxml, $target);
+my $genes  = $result->{genes};
+
+my $date = `date '+%Y-%m-%d' -r '$orthoxml'`;
+$date =~ s/\s+//g;
+
+foreach my $partner (sort keys %{$result->{pairs}}) {
+  my $out_file = "$partner.oma_hog.moop.tsv";
+  open my $out_fh, '>', $out_file or die "cant write $out_file $!\n";
+  print $out_fh "## Annotation Source: OMA HOG orthologs ($partner)
+## Annotation Source Version: $oma_version
+## Annotation Source URL: https://omabrowser.org/oma/home/
+## Annotation Accession URL: https://www.ebi.ac.uk/ebisearch/search?query=
+## Annotation Type: Orthologs
+## Annotation Creation Date: $date
+";
+  print $out_fh join("\t", "## Gene", "${partner}_ORTHOLOG", "Description", "Score"), "\n";
+
+  my $rows = 0;
+  foreach my $target_gene (sort keys %{$result->{pairs}{$partner}}) {
+    foreach my $partner_gene (sort keys %{$result->{pairs}{$partner}{$target_gene}}) {
+      my $pair    = $result->{pairs}{$partner}{$target_gene}{$partner_gene};
+      my $type    = $result->{type}{$partner}{$target_gene}{$partner_gene};
+      my $header  = parse_oma_header($genes->{$partner_gene}{header});
+      my @uniprot = @{$header->{uniprot}};
+      my @protein_ids = @{$header->{protein_ids}};
+      my $accession = @uniprot ? $uniprot[0] : (@protein_ids ? $protein_ids[0] : $genes->{$partner_gene}{prot_id});
+
+      my $label = $header->{description};
+      if ($header->{hgnc_id} ne '' and exists $hgnc_symbol{$header->{hgnc_id}}) {
+        my $current = $hgnc_symbol{$header->{hgnc_id}};
+        $label = "$current->{symbol}: $current->{name}";
       }
+      $label = $accession if $label eq '';
+      $label .= " ($type, $pair->{hog})";
+
+      print $out_fh join("\t", $genes->{$target_gene}{prot_id}, $accession, $label, '-'), "\n";
+      $rows++;
     }
-    print "$group\t", join(";",@members),"\n";
   }
+  close $out_fh;
+  warn sprintf("wrote %s: %d rows for %d %s genes\n", $out_file, $rows, scalar(keys %{$result->{pairs}{$partner}}), $target);
 }
-
-
-__END__
-foreach my $db (sort keys %hits){
-  my $db_url = "https://www.ensembl.org/Multi/Search/Results?q=";
-  if ($db =~ /RefSeq/){
-    $db_url = "https://www.ncbi.nlm.nih.gov/search/all/?term=";
-  }
-  my $date = `date '+%Y-%m-%d' -r $pairs_file`;
-  $date =~ s/\s+//g;
-  my $outfile = "$OTHERORG.$db.oma_pairs.moop.tsv";
-  print "Starting: $outfile\n";
-  open OUT, ">$outfile" or die "Can't open $outfile for writing $! \n";
-  print OUT "## Annotation Source: OMA PAIRWISE ORTHOLOGS ($OTHERORG)
-## Annotation Source Version: $OMA_DB_V
-## Annotation Accession URL: https://omabrowser.org/oma/home/
-## Annotation Source URL: $db_url
-## Annotation Type: Orthologs
-## Annotation Creation Date: $date\n";
-  print OUT join("\t","## Gene","${OTHERORG}_ORTHOLOG","Description","ORTHOLOG_TYPE"),"\n";
-  foreach my $each (sort keys %{$hits{$db}}){
-    print OUT "$hits{$db}{$each}\n";
-  }
-  close OUT;
-}
-
-print "Finished\n";
