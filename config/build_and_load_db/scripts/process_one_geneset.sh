@@ -510,7 +510,7 @@ sed -i "/^${THIS_ORG}\t/d" "$MISSING_LOG" 2>/dev/null
 ## assign_gene_names_v2.pl gives every gene a name and, separately, its closest human
 ## gene (geneNames.tsv columns 6-9 and closest_human.moop.tsv). It reads the analysis
 ## results directly (OMA, MMseqs2 RBH, DIAMOND, PANTHER) plus the reference data in
-## $REFERENCE_DATA; run $REFERENCE_DATA/update_reference_data.sh before a full reprocess.
+## $REFERENCE_DATA; run scripts/update_reference_data.sh before a full reprocess.
 ## Fills NAMING_ARGS; the caller adds --isoforms/--out-names/--out-moop (and --native).
 build_naming_args() {
   ## Per-gene-set extras, keyed by "<org>/<assembly>/<geneset>" so a mapping is

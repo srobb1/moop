@@ -516,19 +516,26 @@ sub link_swissprot_hits {
   <$fh>;
   while (my $line = <$fh>) {
     chomp $line;
-    my ($accession, $taxid, $gene_name, $hgnc_ids, $genes, $proteins, $panther) = split /\t/, $line, -1;
+    my ($accession, $taxid, $gene_name, $hgnc_ids, $genes, $proteins, $panther, $secondary) = split /\t/, $line, -1;
     if ($taxid eq '9606') {
       my ($hgnc_id) = split /;/, $hgnc_ids;
       foreach my $family (split /;/, $panther) {
         $human_in_subfamily{$family}{$hgnc_id} = 1 if $family =~ /:SF/ and defined $hgnc_id and $hgnc_id ne '';
       }
     }
-    next unless $wanted{$accession};
+    # a hit may carry an older accession since merged into this entry
+    my @hit_accessions;
+    foreach my $candidate ($accession, split /;/, $secondary // '') {
+      push @hit_accessions, $candidate if $wanted{$candidate};
+    }
+    next unless @hit_accessions;
     my @subfamilies;
     foreach my $family (split /;/, $panther) {
       push @subfamilies, $family if $family =~ /:SF/;
     }
-    $xref{$accession} = { taxid => $taxid, genes => [ split /;/, $genes ], subfamilies => \@subfamilies };
+    foreach my $hit_accession (@hit_accessions) {
+      $xref{$hit_accession} = { taxid => $taxid, genes => [ split /;/, $genes ], subfamilies => \@subfamilies };
+    }
   }
   close $fh;
 

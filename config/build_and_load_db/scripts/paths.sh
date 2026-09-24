@@ -26,7 +26,7 @@
 # $REF_DB/UNIPROT_sprot/..., etc).
 #
 # REFERENCE_DATA holds what gene naming v2 downloads itself (hgnc/, ensembl_compara/,
-# uniprot/, ncbi_taxonomy/), kept current by $REFERENCE_DATA/update_reference_data.sh.
+# uniprot/, ncbi_taxonomy/), kept current by scripts/update_reference_data.sh.
 # OMA_BASE is where the OMA runs live, one <organism>/<assembly>/<geneset> dir each.
 
 : "${GENOMES:=/n/sci/SCI-004223-SBGENOMES/genomes/v2}"

@@ -30,7 +30,7 @@ The analysis → moop TSV parsing, loading, and copy-to-MOOP steps stay as they 
 | NCBI taxonomy | `$REFERENCE_DATA/ncbi_taxonomy/names.dmp` | Common names for Swiss-Prot species ("turkey"); also OMA species-tree lineages |
 | PANTHER | `PANTHER.iprscan.moop.tsv` (family only); JSON requested (`-f tsv,json`) for subfamily (`model-ac`) | Naming fallback |
 
-`$REFERENCE_DATA` (`dev/smr_dev/moop`) is refreshed by `update_reference_data.sh`, which
+`$REFERENCE_DATA` (`dev/smr_dev/moop`) is refreshed by `scripts/update_reference_data.sh`, which
 `run_all_v2.sh` runs once before any job: a Compara file for every main-Ensembl release in
 `$REF_DB` (Ensembl Genomes releases such as bacteria/plants are skipped), HGNC when newer,
 UniProt when a new release is out, NCBI taxonomy when its md5 changed (checked at most monthly).
