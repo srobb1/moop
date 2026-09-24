@@ -456,7 +456,7 @@ if [ -d "$OMA_DIR/Output" ]; then
     if [ ${#existing_orthologs[@]} -eq 0 ]; then
       echo "Building OMA orthologs for $OMA_CODE"
       perl "$REPO/analysis_parsers/parse_OMA_orthologs_to_MOOP_TSV.pl" \
-        "$OMA_DIR/Output/OrthologousGroups.txt" "$OMA_CODE" "$OMA_VERSION"
+        "$OMA_DIR/Output/OrthologousGroups.txt" "$OMA_CODE" "$OMA_VERSION" "$HGNC_TABLE"
     fi
 
     ## Pairwise files are named <A>-<B>.txt; only the ones with our code as a whole
@@ -473,7 +473,7 @@ if [ -d "$OMA_DIR/Output" ]; then
       else
         continue
       fi
-      has_data "${OTHERORG}.OMA.oma_pairs.moop.tsv" \
+      has_data "${OTHERORG}."*".oma_pairs.moop.tsv" \
         || { echo "Building OMA pairs for $OMA_CODE vs $OTHERORG"
              perl "$REPO/analysis_parsers/parse_OMA_pairs_to_MOOP_TSV.pl" \
                "$PAIR_FILE" "$OMA_CODE" "$OTHERORG" "$THISORG_FIRST" "$OMA_VERSION" "$HGNC_TABLE"; }

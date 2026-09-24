@@ -92,9 +92,15 @@ uninformative names (§5) are replaced, using the rules below.
 - **`closest_human.moop.tsv`**, type `Closest Human Gene`: a row for the gene and every isoform:
   `HGNC:nnnn` (genenames.org link), `SYMBOL: name [evidence]`, score = tier.
 - **Ortholog / homolog tables** (one per partner species, so users can pick theirs):
-  `<PARTNER>.OMA.oma_pairs.moop.tsv`, `<PARTNER>.oma_hog.moop.tsv` (relationship and HOG id in the
-  description; HUMAN rows with the current HGNC symbol), `Ensembl_<Species>.MMseqs.RBBH.moop.tsv`
-  (next to the eross `Ensembl_<Species>.RBBH.moop.tsv`).
+  - OMA groups, pairs and HOGs: `<PARTNER>.<Namespace>.{oma_orthologs,oma_pairs,oma_hog}.moop.tsv`.
+    Each partner gene is shown with the id of the database its annotation came from, one file
+    per database so the accession links resolve: `Ensembl` (ENS…P; HUMAN MOUSE CALMI LEPOC),
+    `FlyBase` (FBpp; DROME), `RefSeq` (XP_; BRAFL NEMVE), `UniProt` (CAPTE LOTGI MONBE), and
+    `OMA` for the few genes with none of these. The version line carries the partner's source
+    release from the run's `README.exportedAllAll` (e.g. "HUMAN Ensembl 102; GRCh38"). The
+    relationship (pairs, HOGs), HOG id or OMA group id is in the description; HUMAN rows show
+    the current HGNC symbol.
+  - `Ensembl_<Species>.MMseqs.RBBH.moop.tsv`, next to the eross `Ensembl_<Species>.RBBH.moop.tsv`.
 
 Per-gene-set settings in `build_naming_args()` (`process_one_geneset.sh`): `CURATED_NAMES`
 (Chamaeleo Apollo names; NV2 mapping to Nematostella RefSeq) and `EXTRA_HITS` (Montipora RBBH to

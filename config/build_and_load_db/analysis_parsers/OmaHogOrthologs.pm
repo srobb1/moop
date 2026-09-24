@@ -3,7 +3,8 @@ use strict;
 use warnings;
 use Exporter 'import';
 
-our @EXPORT_OK = qw(read_hog_orthologs parse_oma_header best_accession);
+our @EXPORT_OK = qw(read_hog_orthologs parse_oma_header best_accession accession_for
+                    read_export_sources find_export_readme write_ortholog_tables read_hgnc_symbols);
 
 # Orthologs of one target species implied by OMA's HierarchicalGroups.orthoxml.
 #
@@ -131,42 +132,188 @@ sub relationship_types {
   return \%type;
 }
 
-# OMA export header: "CODE000001 | ids; ids | gene | uniprot; entry | HOG:... | description [Source...]; transcript_id=..."
+# OMA export header, fields separated by " | ":
+#   CODE000001 | protein/transcript ids | gene id | [UniProt accession; entry name] | [HOG:...] | description
+# The UniProt field is missing entirely when a gene has none, the HOG field may be empty, and
+# some descriptions contain "|" themselves (JGI: "jgi|Lotgi1|51275|gw1.4.3.1"), so fields are
+# found by content, not only by position.
 # Returns { oma_id, protein_ids => [...], gene_id, uniprot => [...], description, hgnc_id }
+my $UNIPROT_ACCESSION = qr/^(?:[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9](?:[A-Z][A-Z0-9]{2}[0-9]){1,2})(?:-\d+)?$/;
+
 sub parse_oma_header {
   my ($header) = @_;
-  my @fields = split_trimmed($header, qr/\|/);
+  my @fields;
+  foreach my $field (split /\|/, $header // '', -1) {
+    $field =~ s/^\s+|\s+$//g;
+    push @fields, $field;
+  }
   my %parsed = (oma_id => $fields[0] // '', protein_ids => [], gene_id => '', uniprot => [], description => '', hgnc_id => '');
   return \%parsed if @fields < 3;
-  my $description = $fields[-1];
+  $parsed{protein_ids} = [ split_trimmed($fields[1], qr/;/) ];
+  $parsed{gene_id} = $fields[2];
+
+  # fields 3.. : optional UniProt field, optional/empty HOG field, then the description
+  my $next = 3;
+  if (defined $fields[$next] and $fields[$next] ne '' and $fields[$next] !~ /^HOG:/) {
+    my @accessions;
+    my $all_uniprot = 1;
+    foreach my $piece (split_trimmed($fields[$next], qr/;/)) {
+      if ($piece =~ $UNIPROT_ACCESSION) {
+        push @accessions, $piece;
+      } elsif ($piece !~ /^[A-Z0-9]+_[A-Z0-9]+$/) {   # entry names (Q3ZCM7 / TBB8_HUMAN) are fine
+        $all_uniprot = 0;
+      }
+    }
+    if ($all_uniprot) {
+      $parsed{uniprot} = \@accessions;
+      $next++;
+    }
+  }
+  $next++ if defined $fields[$next] and ($fields[$next] eq '' or $fields[$next] =~ /^HOG:/);
+
+  my $description = join(' | ', @fields[$next .. $#fields]);
   # "description; transcript_id=..." or, with no description, just "transcript_id=..."
   $description =~ s/(?:^|;)\s*transcript_id=.*$//;
   ($parsed{hgnc_id}) = $description =~ /Acc:(HGNC:\d+)/;
   $parsed{hgnc_id} //= '';
   $description =~ s/\s*\[Source:[^\]]*\]//;
+  $description = '' if $description =~ /^jgi \| /;   # a JGI model id, not a description
+  $description =~ s/^\s+|\s+$//g;
   $parsed{description} = $description;
-  $parsed{protein_ids} = [ split_trimmed($fields[1], qr/;/) ];
-  $parsed{gene_id} = $fields[2] // '';
-  if (@fields >= 5) {
-    # UniProt accessions, not entry names (which contain "_")
-    foreach my $uniprot_id (split_trimmed($fields[3], qr/;/)) {
-      push @{$parsed{uniprot}}, $uniprot_id unless $uniprot_id =~ /_/;
-    }
-  }
   return \%parsed;
 }
 
-# The accession shown for a partner gene: UniProt accession, else a protein id (Ensembl
-# ...P..., RefSeq XP_/NP_), else the first listed id, else the OMA id. OMA lists transcript
-# and protein ids in no fixed order, so the protein id is picked explicitly.
+# The id a partner gene is shown with, and which database it links to. Chosen from the ids the
+# gene carries, so each species gets the database its annotation came from:
+#   Ensembl protein (ENS...P) > FlyBase protein (FBpp) > RefSeq protein (XP_/NP_) > UniProt
+#   accession > the OMA export id.
+# Returns (namespace, accession).
+sub accession_for {
+  my ($parsed) = @_;
+  foreach my $id (@{$parsed->{protein_ids}}) {
+    return ('Ensembl', $id) if $id =~ /^ENS[A-Z]*P\d/;
+  }
+  foreach my $id (@{$parsed->{protein_ids}}) {
+    return ('FlyBase', $id) if $id =~ /^FBpp\d/;
+  }
+  foreach my $id (@{$parsed->{protein_ids}}) {
+    return ('RefSeq', $id) if $id =~ /^[XN]P_\d/;
+  }
+  return ('UniProt', $parsed->{uniprot}[0]) if @{$parsed->{uniprot}};
+  return ('OMA', $parsed->{oma_id});
+}
+
+# kept for callers that only need the accession
 sub best_accession {
   my ($parsed) = @_;
-  return $parsed->{uniprot}[0] if @{$parsed->{uniprot}};
-  foreach my $id (@{$parsed->{protein_ids}}) {
-    return $id if $id =~ /^ENS[A-Z]*P\d/ or $id =~ /^[XN]P_/;
+  my ($namespace, $accession) = accession_for($parsed);
+  return $accession;
+}
+
+my %NAMESPACE = (
+  Ensembl => { source_url => 'https://www.ensembl.org', accession_url => 'https://www.ensembl.org/Multi/Search/Results?q=' },
+  FlyBase => { source_url => 'https://flybase.org', accession_url => 'https://flybase.org/reports/' },
+  RefSeq  => { source_url => 'https://www.ncbi.nlm.nih.gov/refseq/', accession_url => 'https://www.ncbi.nlm.nih.gov/protein/' },
+  UniProt => { source_url => 'https://www.uniprot.org', accession_url => 'https://www.uniprot.org/uniprotkb/' },
+  OMA     => { source_url => 'https://omabrowser.org', accession_url => 'https://www.ebi.ac.uk/ebisearch/search?query=' },
+);
+
+# "  - HUMAN: Homo sapiens (DB release: Ensembl 102; GRCh38)" -> { HUMAN => 'Ensembl 102; GRCh38' }
+sub read_export_sources {
+  my ($readme) = @_;
+  my %release;
+  return \%release unless defined $readme and open my $fh, '<', $readme;
+  while (my $line = <$fh>) {
+    if ($line =~ /^\s*-\s*([A-Za-z0-9]+):.*\(DB release:\s*(.+)\)\s*$/) {
+      $release{$1} = $2;
+    }
   }
-  return $parsed->{protein_ids}[0] if @{$parsed->{protein_ids}};
-  return $parsed->{oma_id};
+  close $fh;
+  return \%release;
+}
+
+# README.exportedAllAll of the OMA run a file belongs to: the nearest one up to 3 levels up
+sub find_export_readme {
+  my ($file) = @_;
+  (my $dir = $file) =~ s{/[^/]*$}{};
+  $dir = '.' if $dir eq $file;
+  foreach my $level (0 .. 3) {
+    return "$dir/README.exportedAllAll" if -e "$dir/README.exportedAllAll";
+    $dir .= '/..';
+  }
+  return undef;
+}
+
+# Write one moop TSV per partner species and id namespace, so every file's accession links
+# resolve: <PARTNER>.<Namespace>.<kind>.moop.tsv (kind: oma_pairs, oma_hog, oma_orthologs).
+#   write_ortholog_tables(kind => 'oma_pairs', label => 'OMA pairwise orthologs', version => ...,
+#                         sources => read_export_sources(...), hgnc => {HGNC:n => {symbol,name}},
+#                         date => 'YYYY-MM-DD', rows => [ [partner, target_id, parsed_header, suffix], ... ])
+# The description is the partner gene's description (HUMAN: current HGNC symbol and name when
+# known) plus the suffix, e.g. " (1:1)".
+sub write_ortholog_tables {
+  my (%arg) = @_;
+  my %by_file;
+  foreach my $row (@{$arg{rows}}) {
+    my ($partner, $target_id, $parsed, $suffix) = @$row;
+    my ($namespace, $accession) = accession_for($parsed);
+    my $label = $parsed->{description};
+    if ($parsed->{hgnc_id} ne '' and $arg{hgnc} and exists $arg{hgnc}{$parsed->{hgnc_id}}) {
+      my $current = $arg{hgnc}{$parsed->{hgnc_id}};
+      $label = "$current->{symbol}: $current->{name}";
+    }
+    $label = $accession if $label eq '';
+    push @{$by_file{$partner}{$namespace}}, join("\t", $target_id, $accession, "$label$suffix", '-');
+  }
+
+  my @written;
+  foreach my $partner (sort keys %by_file) {
+    foreach my $namespace (sort keys %{$by_file{$partner}}) {
+      my $out_file = "$partner.$namespace.$arg{kind}.moop.tsv";
+      my $release = $arg{sources}{$partner};
+      my $version = $arg{version} . (defined $release ? "; $partner $release" : '');
+      open my $out_fh, '>', $out_file or die "cant write $out_file $!\n";
+      print $out_fh "## Annotation Source: $arg{label} ($partner)
+## Annotation Source Version: $version
+## Annotation Source URL: $NAMESPACE{$namespace}{source_url}
+## Annotation Accession URL: $NAMESPACE{$namespace}{accession_url}
+## Annotation Type: Orthologs
+## Annotation Creation Date: $arg{date}
+";
+      print $out_fh join("\t", "## Gene", "${partner}_ORTHOLOG", "Description", "Score"), "\n";
+      my %seen;
+      foreach my $line (sort @{$by_file{$partner}{$namespace}}) {
+        print $out_fh "$line\n" unless $seen{$line}++;
+      }
+      close $out_fh;
+      push @written, "$out_file (" . scalar(keys %seen) . ")";
+    }
+  }
+  return @written;
+}
+
+# HGNC table -> { 'HGNC:n' => { symbol, name } }
+sub read_hgnc_symbols {
+  my ($file) = @_;
+  my %symbol_of;
+  return \%symbol_of unless defined $file;
+  open my $fh, '<', $file or die "cant open $file $!\n";
+  my $header = <$fh>;
+  chomp $header;
+  my @columns = split /\t/, $header;
+  my %index;
+  foreach my $column_number (0 .. $#columns) {
+    $index{$columns[$column_number]} = $column_number;
+  }
+  die "no hgnc_id/symbol/name columns in $file\n"
+    unless defined $index{hgnc_id} and defined $index{symbol} and defined $index{name};
+  while (my $line = <$fh>) {
+    chomp $line;
+    my @fields = split /\t/, $line;
+    $symbol_of{$fields[$index{hgnc_id}]} = { symbol => $fields[$index{symbol}], name => $fields[$index{name}] };
+  }
+  close $fh;
+  return \%symbol_of;
 }
 
 # split and trim, dropping empty pieces
