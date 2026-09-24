@@ -23,9 +23,7 @@
 # change it HERE, once.
 #
 # REF_DB is the reference-database tree ($REF_DB/ENS_<species>/current/*.pep.all.fa.gz,
-# $REF_DB/UNIPROT_sprot/..., etc). make_rbbh_ensembl_moop_files.sh reads the Ensembl
-# peptide FASTA from here to regenerate a target's desc.txt when the RBBH run did not
-# leave one behind (the rbh_eross runs do not).
+# $REF_DB/UNIPROT_sprot/..., etc).
 
 : "${GENOMES:=/n/sci/SCI-004223-SBGENOMES/genomes/v2}"
 : "${ANNOTATIONS:=/n/sci/SCI-004223-SBGENOMES/annotations/sbgenomes_2}"

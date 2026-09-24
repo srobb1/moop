@@ -157,8 +157,7 @@ check_missing_files_gff() {
     [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv" ]     || log_missing "diamond/UNIPROT_sprot/diamond_results.tsv(.gz)"
   [ -f "$ANALYSIS_DIR/eggnog_mapper/eggnog_mapper_results.tsv" ]             || log_missing "eggnog_mapper/eggnog_mapper_results.tsv"
   [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.tsv" ]            || log_missing "interproscan/interproscan_results.tsv.tsv(.gz)"
-  [ -f "$ANALYSIS_DIR/protnlm/protnlm_pred_results.tsv" ]             || log_missing "protnlm/protnlm_pred_results.tsv"
+    [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv" ]                || log_missing "interproscan/interproscan_results.tsv(.gz)"
   [ -f "$ANALYSIS_DIR/signalp6/signalp6_results.tsv" ]                || log_missing "signalp6/signalp6_results.tsv"
   [ -f "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3" ]             || log_missing "deeptmhmm/deeptmhmm_results.gff3"
 }
@@ -173,8 +172,7 @@ check_missing_files_t2g() {
     [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv" ]     || log_missing "diamond/UNIPROT_sprot/diamond_results.tsv(.gz)"
   [ -f "$ANALYSIS_DIR/eggnog_mapper/eggnog_mapper_results.tsv" ]             || log_missing "eggnog_mapper/eggnog_mapper_results.tsv"
   [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.tsv" ]            || log_missing "interproscan/interproscan_results.tsv.tsv(.gz)"
-  [ -f "$ANALYSIS_DIR/protnlm/protnlm_pred_results.tsv" ]             || log_missing "protnlm/protnlm_pred_results.tsv"
+    [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv" ]                || log_missing "interproscan/interproscan_results.tsv(.gz)"
   [ -f "$ANALYSIS_DIR/signalp6/signalp6_results.tsv" ]                || log_missing "signalp6/signalp6_results.tsv"
   [ -f "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3" ]             || log_missing "deeptmhmm/deeptmhmm_results.gff3"
 }
@@ -278,7 +276,7 @@ make_interproscan_moop() {
   local VERSION
   VERSION=$(cat "$IDIR/interproscan_version.txt" 2>/dev/null)
   rm -f iprscan.tsv
-  if [ -e "$IDIR/interproscan_results.tsv.tsv.gz" ]; then
+  if [ -e "$IDIR/interproscan_results.tsv.gz" ]; then
     zcat "$IDIR/interproscan_results.tsv.gz" > iprscan.tsv
   else
     ln -s "$IDIR/interproscan_results.tsv" iprscan.tsv

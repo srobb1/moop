@@ -15,13 +15,9 @@
 # every active geneset (run_all_v2.sh --reload with no target), it's worth knowing
 # in advance which ones would just repeat this.
 #
-# This intentionally does NOT reuse process_one_geneset.sh's own
-# check_missing_files_gff/check_missing_files_t2g: those check for
-# interproscan/interproscan_results.tsv.gz or interproscan_results.tsv.tsv, but
-# every interproscan/ directory actually on disk (checked 2026-09-21) holds plain
-# interproscan_results.tsv -- so that check would log a false "missing" on data
-# that is really there, or miss a real gap. This script checks the SAME paths
-# make_diamond_moop() / make_interproscan_moop() actually read.
+# This checks the SAME paths make_diamond_moop() / make_interproscan_moop() read
+# (interproscan_results.tsv or .tsv.gz). ProtNLM is not checked: it is not used
+# for any organism.
 #
 # Usage:
 #   bash scripts/check_required_data.sh              # every active geneset
@@ -106,16 +102,14 @@ while IFS=$'\t' read -r ORG ASM GS; do
 
     # InterProScan — feeds PANTHER.iprscan.moop.tsv, unconditionally required.
     IDIR="$ANALYSIS_DIR/interproscan"
-    if [ ! -s "$IDIR/interproscan_results.tsv" ] && [ ! -s "$IDIR/interproscan_results.tsv.tsv.gz" ]; then
-      hard_missing+=("interproscan/interproscan_results.tsv")
+    if [ ! -s "$IDIR/interproscan_results.tsv" ] && [ ! -s "$IDIR/interproscan_results.tsv.gz" ]; then
+      hard_missing+=("interproscan/interproscan_results.tsv(.gz)")
     fi
 
     # Optional inputs: missing ones are logged/printed by process_one_geneset.sh
     # but do not stop the run (no set -e, and each has its own skip path).
     [ -s "$ANALYSIS_DIR/eggnog_mapper/eggnog_mapper_results.tsv" ] \
       || soft_missing+=("eggnog_mapper/eggnog_mapper_results.tsv")
-    [ -s "$ANALYSIS_DIR/protnlm/protnlm_pred_results.tsv" ] \
-      || soft_missing+=("protnlm/protnlm_pred_results.tsv")
     [ -s "$ANALYSIS_DIR/signalp6/signalp6_results.tsv" ] \
       || soft_missing+=("signalp6/signalp6_results.tsv (skipped cleanly if absent)")
     [ -s "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3" ] \
