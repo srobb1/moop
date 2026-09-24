@@ -14,7 +14,8 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header);
 #   assign_gene_names_v2.pl --isoforms isoforms.tsv --protein-fasta protein.aa.fa \
 #       --hgnc-dir moop/hgnc [--oma-dir OMA_v2/<org>/<asm>/<gs> --oma-code CODE] \
 #       [--mmseqs-dir <analysis>/rbh_mmseq] [--diamond-dir <analysis>/diamond] [--ref-db REF_DB] \
-#       [--compara-dir moop/ensembl_compara] [--panther PANTHER.iprscan.moop.tsv] \
+#       [--compara-dir moop/ensembl_compara] [--uniprot-dir moop/uniprot] \
+#       [--taxonomy-dir moop/ncbi_taxonomy] [--panther PANTHER.iprscan.moop.tsv] \
 #       [--native native_geneNames.tsv] [--override curated.moop.tsv ...] \
 #       --out-names geneNames.tsv --out-moop closest_human.moop.tsv
 #
@@ -23,22 +24,27 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header);
 #   2 OMA HOG co-ortholog with HUMAN (only when parameters.drw has a fixed SpeciesTree)
 #   3 MMseqs2 reciprocal best hit to Ensembl human (filtered)
 #   4 via another species: OMA ortholog in a reference species -> its OMA HUMAN ortholog, or
-#     MMseqs2 reciprocal best hit -> Ensembl Compara human ortholog
+#     MMseqs2 reciprocal best hit -> Ensembl Compara human ortholog (same Ensembl release)
 #   5 DIAMOND best hit to a human protein (Ensembl human or a Swiss-Prot HUMAN entry, filtered)
+#   6 DIAMOND Swiss-Prot hit in another species -> its Ensembl gene -> Ensembl Compara
+#   7 DIAMOND Swiss-Prot hit in another species -> its PANTHER subfamily -> the human
+#     Swiss-Prot genes in that subfamily
 #
 # Names: curated override > native name if informative > tier 1-2 human ortholog
 # (1:1 plain, many:1 "(n of X)", 1:many family) > best hit by bitscore (human reciprocal hit
-# plain unless its human gene is already another gene's ortholog; everything else "-like")
-# > PANTHER family > gene id.
+# plain unless its human gene is already another gene's ortholog; everything else "-like",
+# with the species when it is not human: "acrosin-like (turkey)") > PANTHER family > None.
 #
 # Output geneNames.tsv: ID MAINID GroupId Desc Note closestHGNC closestHumanSym
 # closestHumanDesc closestHumanEvidence (first five as before; one row per id in isoforms.tsv
-# or, with --native, per id in the native file).
+# or, with --native, per id in the native file). The Closest Human Gene moop table has a row
+# for the gene and for every isoform.
 
 my %opt = (override => []);
 GetOptions(\%opt, 'isoforms=s', 'protein-fasta=s', 'protein2gene=s', 'hgnc-dir=s',
            'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
-           'compara-dir=s', 'panther=s', 'native=s', 'override=s@', 'out-names=s', 'out-moop=s')
+           'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'panther=s', 'native=s',
+           'override=s@', 'out-names=s', 'out-moop=s')
   or die "bad options\n";
 foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-moop)) {
   die "--$required is required\n" unless defined $opt{$required};
@@ -73,6 +79,7 @@ my $hgnc = load_hgnc("$opt{'hgnc-dir'}/hgnc_complete_set.txt", "$opt{'hgnc-dir'}
 # ============================================================== evidence
 my %human_links;   # group -> [ link ]   link = {tier, human => [records], type, evidence, bits, id, hit}
 my %hits;          # group -> [ naming candidates from similarity ]
+my @pending_compara;  # links through another species' Ensembl gene, resolved in one Compara pass
 
 my %reference_fasta_cache;
 if (defined $opt{'oma-dir'}) {
@@ -83,7 +90,10 @@ if (defined $opt{'mmseqs-dir'}) {
 }
 if (defined $opt{'diamond-dir'}) {
   collect_diamond();
+  link_swissprot_hits() if defined $opt{'uniprot-dir'};
 }
+resolve_compara();
+name_species();
 my %panther = defined $opt{panther} ? read_panther($opt{panther}) : ();
 my %override;
 foreach my $override_file (@{$opt{override}}) {
@@ -349,7 +359,6 @@ sub collect_mmseqs {
     my $release = read_release("$base/$species_dir/db_version.txt");
     my $reference = reference_proteome($species_dir);
     next unless $reference;
-    my $compara = $species eq 'homo_sapiens' ? undef : compara_orthologs($release, $species);
 
     open my $fh, '<', "$base/$species_dir/rbh_mmseq_results.tsv" or die "cant open mmseqs results $!\n";
     while (my $line = <$fh>) {
@@ -380,16 +389,10 @@ sub collect_mmseqs {
       } else {
         push @{$hits{$group}}, { %hit, source => "MMseqs2_RBH_$species", type => 'RBBH_Homolog',
                                  id => $query, hit => $target, reciprocal => 1, species => $common,
-                                 symbol => $info->{symbol}, description => $info->{description},
-                                 human_chain => $compara ? $compara->{$info->{gene}} : undef };
-        if ($compara and $compara->{$info->{gene}}) {
-          foreach my $ortholog (@{$compara->{$info->{gene}}}) {
-            my $human = human_record(ensembl_gene => $ortholog->{human_gene}) or next;
-            add_link($group, tier => 4, human => [$human], type => $ortholog->{type}, id => $query, bits => $bits,
-                     evidence => "via $common reciprocal best hit (MMseqs2) > Ensembl Compara ($ortholog->{type})",
-                     hit => $target);
-          }
-        }
+                                 symbol => $info->{symbol}, description => $info->{description} };
+        push @pending_compara, { group => $group, release => $release, genes => [ $info->{gene} ],
+                                 tier => 4, id => $query, hit => $target, bits => $bits,
+                                 via => "via $common reciprocal best hit (MMseqs2)" };
       }
     }
     close $fh;
@@ -401,8 +404,9 @@ sub read_release {
   open my $fh, '<', $file or return '';
   my $line = <$fh> // '';
   close $fh;
-  # main Ensembl only ("release-113"); Ensembl Genomes ("release-61_bacteria_...") has no human Compara
-  my ($release) = $line =~ /^release-(\d+)\s*$/;
+  # "release-113" or "ENS_<species><TAB>release-113"; main Ensembl only -- Ensembl Genomes
+  # ("release-61_bacteria_...") has no human Compara
+  my ($release) = $line =~ /(?:^|\s)release-(\d+)\s*$/;
   return $release // '';
 }
 
@@ -436,31 +440,142 @@ sub reference_proteome {
   return \%proteins;
 }
 
-# Compara: species gene -> [ { human_gene, type } ] from release-N/homo_sapiens.orthologs.tsv.gz
-my %compara_cache;
-sub compara_orthologs {
-  my ($release, $species) = @_;
-  return undef unless defined $opt{'compara-dir'} and $release ne '';
-  my $file = "$opt{'compara-dir'}/release-$release/homo_sapiens.orthologs.tsv.gz";
-  if (!-s $file) {
-    $stats{"warning: no Compara release $release (run update_reference_data.sh)"} = 1;
-    return undef;
+# Links through another species' Ensembl gene (MMseqs2 hits, Swiss-Prot cross-references):
+# one pass over each Compara release file, keeping only the genes asked for.
+# A link without a release uses the newest release downloaded.
+my %compara_releases_used;
+sub resolve_compara {
+  return unless @pending_compara and defined $opt{'compara-dir'};
+  my @available;
+  foreach my $release_dir (glob "$opt{'compara-dir'}/release-*") {
+    push @available, $1 if $release_dir =~ /release-(\d+)$/ and -s "$release_dir/homo_sapiens.orthologs.tsv.gz";
   }
-  if (!exists $compara_cache{$release}) {
-    my %by_species;
+  @available = sort { $a <=> $b } @available;
+  return unless @available;
+
+  my %wanted;   # release -> gene -> 1
+  foreach my $pending (@pending_compara) {
+    my $release = $pending->{release} ne '' ? $pending->{release} : $available[-1];
+    $pending->{release} = $release;
+    foreach my $gene (@{$pending->{genes}}) {
+      $wanted{$release}{$gene} = 1;
+    }
+  }
+  my %orthologs;   # release -> gene -> [ { human_gene, type } ]
+  foreach my $release (sort keys %wanted) {
+    my $file = "$opt{'compara-dir'}/release-$release/homo_sapiens.orthologs.tsv.gz";
+    if (!-s $file) {
+      $stats{"warning: no Compara release $release (run update_reference_data.sh)"} = 1;
+      next;
+    }
+    $compara_releases_used{$release} = 1;
     open my $fh, "gzip -dc '$file' |" or die "cant read $file\n";
     <$fh>;
     while (my $line = <$fh>) {
-      chomp $line;
-      my ($human_gene, $human_protein, $human_species, $identity, $type,
-          $other_gene, $other_protein, $other_species) = split /\t/, $line;
+      my ($human_gene, $human_protein, $human_species, $identity, $type, $other_gene) = split /\t/, $line, 7;
+      next unless $wanted{$release}{$other_gene};
       (my $short_type = $type) =~ s/^ortholog_//;
-      push @{$by_species{$other_species}{$other_gene}}, { human_gene => $human_gene, type => $short_type };
+      push @{$orthologs{$release}{$other_gene}}, { human_gene => $human_gene, type => $short_type };
     }
     close $fh;
-    $compara_cache{$release} = \%by_species;
   }
-  return $compara_cache{$release}{$species};
+  foreach my $pending (@pending_compara) {
+    foreach my $gene (@{$pending->{genes}}) {
+      foreach my $ortholog (@{$orthologs{$pending->{release}}{$gene} // []}) {
+        my $human = human_record(ensembl_gene => $ortholog->{human_gene}) or next;
+        add_link($pending->{group}, tier => $pending->{tier}, human => [$human], type => $ortholog->{type},
+                 id => $pending->{id}, bits => $pending->{bits}, hit => $pending->{hit},
+                 evidence => "$pending->{via} > Ensembl Compara ($ortholog->{type})");
+      }
+    }
+  }
+}
+
+# Non-human Swiss-Prot hits: Ensembl gene -> Compara (tier 6, resolved with the rest), or
+# PANTHER subfamily -> the human Swiss-Prot genes in it (tier 7). Also records each hit's taxon.
+sub link_swissprot_hits {
+  my $file = "$opt{'uniprot-dir'}/sprot_xrefs.tsv.gz";
+  if (!-s $file) {
+    $stats{'warning: no uniprot/sprot_xrefs.tsv.gz (run update_reference_data.sh)'} = 1;
+    return;
+  }
+  my %wanted;
+  foreach my $group (keys %hits) {
+    foreach my $hit (@{$hits{$group}}) {
+      $wanted{$hit->{accession}} = 1 if defined $hit->{accession};
+    }
+  }
+  my (%xref, %human_in_subfamily);
+  open my $fh, "gzip -dc '$file' |" or die "cant read $file\n";
+  <$fh>;
+  while (my $line = <$fh>) {
+    chomp $line;
+    my ($accession, $taxid, $gene_name, $hgnc_ids, $genes, $proteins, $panther) = split /\t/, $line, -1;
+    if ($taxid eq '9606') {
+      my ($hgnc_id) = split /;/, $hgnc_ids;
+      foreach my $family (split /;/, $panther) {
+        $human_in_subfamily{$family}{$hgnc_id} = 1 if $family =~ /:SF/ and defined $hgnc_id and $hgnc_id ne '';
+      }
+    }
+    next unless $wanted{$accession};
+    my @subfamilies;
+    foreach my $family (split /;/, $panther) {
+      push @subfamilies, $family if $family =~ /:SF/;
+    }
+    $xref{$accession} = { taxid => $taxid, genes => [ split /;/, $genes ], subfamilies => \@subfamilies };
+  }
+  close $fh;
+
+  foreach my $group (keys %hits) {
+    foreach my $hit (@{$hits{$group}}) {
+      next unless defined $hit->{accession} and !$hit->{human};
+      my $cross = $xref{$hit->{accession}} or next;
+      $hit->{taxid} = $cross->{taxid};
+      my $what = "$hit->{species_scientific} Swiss-Prot hit" . ($hit->{symbol} ne '' ? " $hit->{symbol}" : '');
+      if (@{$cross->{genes}}) {
+        push @pending_compara, { group => $group, release => '', genes => $cross->{genes}, tier => 6,
+                                 id => $hit->{id}, hit => $hit->{hit}, bits => $hit->{bits}, via => "via $what" };
+      }
+      foreach my $subfamily (@{$cross->{subfamilies}}) {
+        my @hgnc_ids = sort keys %{$human_in_subfamily{$subfamily} // {}};
+        next unless @hgnc_ids;
+        my @humans;
+        foreach my $hgnc_id (@hgnc_ids) {
+          my $human = human_record(hgnc_id => $hgnc_id);
+          push @humans, $human if $human;
+        }
+        next unless @humans;
+        add_link($group, tier => 7, human => \@humans, type => 'PANTHER subfamily', id => $hit->{id},
+                 bits => $hit->{bits}, hit => $hit->{hit},
+                 evidence => "via $what > PANTHER subfamily $subfamily");
+      }
+    }
+  }
+}
+
+# common names for the species of Swiss-Prot hits ("turkey"), from NCBI genbank common names
+sub name_species {
+  my %wanted;
+  foreach my $group (keys %hits) {
+    foreach my $hit (@{$hits{$group}}) {
+      $wanted{$hit->{taxid}} = 1 if defined $hit->{taxid};
+    }
+  }
+  my %common;
+  if (%wanted and defined $opt{'taxonomy-dir'} and open my $fh, '<', "$opt{'taxonomy-dir'}/names.dmp") {
+    while (my $line = <$fh>) {
+      next unless $line =~ /genbank common name/;
+      my ($taxid, $name) = split /\t\|\t/, $line;
+      $common{$taxid} = $name if $wanted{$taxid};
+    }
+    close $fh;
+  }
+  foreach my $group (keys %hits) {
+    foreach my $hit (@{$hits{$group}}) {
+      next unless defined $hit->{taxid};
+      $hit->{species} = $common{$hit->{taxid}} // $hit->{species_scientific};
+    }
+  }
 }
 
 # ##############################################################################
@@ -515,7 +630,9 @@ sub diamond_candidate {
     my ($description) = $title =~ /^\S+\s+(.*?)\s+OS=/;
     my ($organism) = $title =~ /\bOS=(.*?)\s+OX=/;
     my ($symbol) = $title =~ /\bGN=(\S+)/;
+    my ($taxid) = $title =~ /\bOX=(\d+)/;
     my $candidate = { source => 'UniProtKB/Swiss-Prot', type => 'Homologs', species => $organism // '',
+                      species_scientific => $organism // '', taxid => $taxid, accession => $accession,
                       symbol => $symbol // '', description => clean_name($description // ''),
                       label => 'Swiss-Prot' };
     if (defined $organism and $organism eq 'Homo sapiens' and defined $accession) {
@@ -819,6 +936,10 @@ sub hit_name {
   $stats{'name: ' . ($hit->{human} ? 'human' : 'other species') . ' hit (-like)'}++;
   my $like_symbol = $symbol ne '' ? add_like_to_symbol($symbol) : '';
   my $like_description = add_like_to_description($description);
+  # a name from another species says which: "acrosin-like (turkey)"
+  if (!$hit->{human} and defined $hit->{species} and $hit->{species} ne '') {
+    $like_description .= " ($hit->{species})";
+  }
   return { desc => ($like_symbol ne '' ? "$like_symbol: $like_description" : $like_description),
            selected => $selected, note => $note };
 }
@@ -880,11 +1001,17 @@ sub write_outputs {
   foreach my $group (sort keys %members) {
     my $closest = $closest{$group} or next;
     $stats{"closest human: tier $closest->{tier}"}++;
-    my $selected = $name{$group}{selected};
-    foreach my $human (@{$closest->{human}}) {
-      my $accession = $human->{hgnc_id} ne '' ? $human->{hgnc_id} : $human->{key};
-      my $label = $human->{symbol} ne '' && $human->{name} ne '' ? "$human->{symbol}: $human->{name}" : ($human->{name} || $human->{symbol});
-      print $moop_fh join("\t", $selected, $accession, "$label [$closest->{evidence}]", $closest->{tier}), "\n";
+    # the gene and every isoform carry the same final pick
+    my %features = ($group => 1);
+    foreach my $member (@{$members{$group}}) {
+      $features{$member} = 1;
+    }
+    foreach my $feature (sort keys %features) {
+      foreach my $human (@{$closest->{human}}) {
+        my $accession = $human->{hgnc_id} ne '' ? $human->{hgnc_id} : $human->{key};
+        my $label = $human->{symbol} ne '' && $human->{name} ne '' ? "$human->{symbol}: $human->{name}" : ($human->{name} || $human->{symbol});
+        print $moop_fh join("\t", $feature, $accession, "$label [$closest->{evidence}]", $closest->{tier}), "\n";
+      }
     }
   }
   close $moop_fh;
@@ -940,10 +1067,11 @@ sub reference_versions {
     }
     close $readme_fh;
   }
-  my %releases;
-  foreach my $release (keys %compara_cache) {
-    $releases{$release} = 1;
+  push @parts, 'Ensembl Compara ' . join('/', sort keys %compara_releases_used) if %compara_releases_used;
+  if (defined $opt{'uniprot-dir'} and open my $uniprot_fh, '<', "$opt{'uniprot-dir'}/VERSION.txt") {
+    my $line = <$uniprot_fh> // '';
+    close $uniprot_fh;
+    push @parts, "UniProt $1" if $line =~ /UniProt release ([0-9_]+)/;
   }
-  push @parts, 'Ensembl Compara ' . join('/', sort keys %releases) if %releases;
   return @parts ? join('; ', @parts) : 'unknown';
 }

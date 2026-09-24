@@ -122,9 +122,14 @@ sub is_informative_hit {
 sub add_like_to_description {
   my ($description) = @_;
   my $name = clean_name($description);
-  return $name if $name =~ /-like\b/i;
+  # already a similarity name: "...-like", "...-like protein", "...-like protein 2"
+  return $name if $name =~ /-like(?:\s+protein)?(?:\s+\d+[A-Za-z]?)?$/i;
   # qualifiers read better after "-like" is removed than with it glued on
   $name =~ s/,\s*(?:mitochondrial|chloroplastic|cytoplasmic|nuclear|peroxisomal)\s*$//i;
+  # a trailing bracketed part stays last: "BCL2-like 12-like (proline rich)"
+  if ($name =~ /^(.*\S)\s+(\([^()]*\))$/) {
+    return "$1-like $2";
+  }
   return "$name-like";
 }
 
