@@ -4,7 +4,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin";
 use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_export_sources find_export_readme
-                       write_ortholog_tables read_hgnc_symbols);
+                       write_ortholog_tables read_hgnc_symbols read_id_map target_ids);
 
 # OMA HOG orthologs of the target species -> moop TSVs (Orthologs), one per partner species and
 # id database.
@@ -15,13 +15,15 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_export_sources f
 # comes from the HOG tree (OmaHogOrthologs.pm): the target gene and the partner gene meet at a
 # speciation node. Each row carries the relationship (1:1, 1:many, many:1, many:many;
 # target:partner) and the HOG id in the description, since the Score column only holds numbers.
-# Partner ids, links and source releases as in parse_OMA_pairs_to_MOOP_TSV.pl.
+# Partner ids, links, source releases and the optional id map as in parse_OMA_pairs_to_MOOP_TSV.pl.
 
-my $usage = "usage: $0 HierarchicalGroups.orthoxml TARGET_CODE OMA_VERSION [hgnc_complete_set.txt]\n";
+my $usage = "usage: $0 HierarchicalGroups.orthoxml TARGET_CODE OMA_VERSION [hgnc_complete_set.txt|-] [id_map.tsv]\n";
 my $orthoxml    = shift or die $usage;
 my $target      = shift or die $usage;
 my $oma_version = shift or die $usage;
 my $hgnc_file   = shift;
+my $id_map      = read_id_map(shift);
+$hgnc_file = undef if defined $hgnc_file and $hgnc_file eq '-';
 
 my $result = read_hog_orthologs($orthoxml, $target);
 my $genes  = $result->{genes};
@@ -32,8 +34,10 @@ foreach my $partner (sort keys %{$result->{pairs}}) {
     foreach my $partner_gene (keys %{$result->{pairs}{$partner}{$target_gene}}) {
       my $pair = $result->{pairs}{$partner}{$target_gene}{$partner_gene};
       my $type = $result->{type}{$partner}{$target_gene}{$partner_gene};
-      push @rows, [ $partner, $genes->{$target_gene}{prot_id}, parse_oma_header($genes->{$partner_gene}{header}),
-                    " ($type, $pair->{hog})" ];
+      my $partner_header = parse_oma_header($genes->{$partner_gene}{header});
+      foreach my $own_id (target_ids($id_map, $genes->{$target_gene}{prot_id})) {
+        push @rows, [ $partner, $own_id, $partner_header, " ($type, $pair->{hog})" ];
+      }
     }
   }
 }

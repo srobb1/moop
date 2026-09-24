@@ -4,7 +4,35 @@ use warnings;
 use Exporter 'import';
 
 our @EXPORT_OK = qw(read_hog_orthologs parse_oma_header best_accession accession_for
-                    read_export_sources find_export_readme write_ortholog_tables read_hgnc_symbols);
+                    read_export_sources find_export_readme write_ortholog_tables read_hgnc_symbols
+                    read_id_map target_ids);
+
+# A gene set that IS a reference genome takes its orthologs from the template's reference run,
+# where its genes carry the reference's OMA ids (NEMVE000123). find_reference_genome.pl maps
+# those to the gene set's own protein ids by identical sequence:
+#   reference_id <TAB> target_protein_id      (one reference id may map to several targets)
+# read_id_map(file) -> { reference_id => [ target ids ] }; undef file -> undef (no mapping).
+sub read_id_map {
+  my ($file) = @_;
+  return undef unless defined $file and $file ne '' and $file ne '-';
+  my %map;
+  open my $fh, '<', $file or die "cant open id map $file $!\n";
+  while (my $line = <$fh>) {
+    chomp $line;
+    my ($reference_id, $target_id) = split /\t/, $line;
+    push @{$map{$reference_id}}, $target_id if defined $target_id and $target_id ne '';
+  }
+  close $fh;
+  return \%map;
+}
+
+# the gene set's own ids for a target id seen in OMA output: itself without a map, else the
+# mapped ids (none when the reference gene has no identical protein in the gene set)
+sub target_ids {
+  my ($id_map, $id) = @_;
+  return ($id) unless $id_map;
+  return @{$id_map->{$id} // []};
+}
 
 # Orthologs of one target species implied by OMA's HierarchicalGroups.orthoxml.
 #

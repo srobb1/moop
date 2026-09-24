@@ -6,7 +6,7 @@ use FindBin;
 use lib "$FindBin::Bin";
 use GeneNamingV2 qw(clean_name split_symbol is_placeholder_symbol is_informative_hit
                     add_like_to_description add_like_to_symbol load_hgnc hgnc_record);
-use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header);
+use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_ids);
 
 # Gene naming v2: a name for every gene and, separately, its closest human gene.
 # Design: notes/NAMING_V2_PLAN.md.
@@ -46,7 +46,7 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header);
 my %opt = (override => [], 'extra-hits' => []);
 GetOptions(\%opt, 'isoforms=s', 'protein-fasta=s', 'protein2gene=s', 'hgnc-dir=s',
            'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
-           'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'panther=s', 'native=s',
+           'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'panther=s', 'native=s', 'oma-id-map=s',
            'override=s@', 'extra-hits=s@', 'extra-hits-species=s', 'out-names=s', 'out-moop=s')
   or die "bad options\n";
 foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-moop)) {
@@ -246,6 +246,21 @@ sub add_link {
 # ##############################################################################
 # OMA: pairwise (tier 1), HOGs (tier 2), reference-species chains (tier 4)
 
+# OMA ids of the target -> (gene set protein id, group) pairs. Normally the OMA id is the gene
+# set's own id; for a gene set that IS a reference genome (--oma-id-map, run through the
+# template's reference run) it is the reference's id (NEMVE000123), mapped by identical sequence.
+my $oma_id_map;
+sub own_ids_and_groups {
+  my ($oma_target_id) = @_;
+  $oma_id_map = read_id_map($opt{'oma-id-map'}) if defined $opt{'oma-id-map'} and !$oma_id_map;
+  my @found;
+  foreach my $own_id (target_ids($oma_id_map, $oma_target_id)) {
+    my $group = group_for($own_id);
+    push @found, [$own_id, $group] if defined $group;
+  }
+  return @found;
+}
+
 sub collect_oma {
   my $output = "$opt{'oma-dir'}/Output";
   my $code = $opt{'oma-code'} or die "--oma-code is required with --oma-dir\n";
@@ -253,12 +268,14 @@ sub collect_oma {
 
   # tier 1
   my $direct = read_oma_pairs($output, $code, 'HUMAN');
-  foreach my $target_id (keys %$direct) {
-    my $group = group_for($target_id) or next;
-    foreach my $pair (@{$direct->{$target_id}}) {
-      my $human = human_from_oma_header($pair->{partner_header}) or next;
-      add_link($group, tier => 1, human => [$human], type => $pair->{type}, id => $target_id,
-               evidence => "OMA ortholog ($pair->{type})", hit => $pair->{partner_id});
+  foreach my $oma_target_id (keys %$direct) {
+    foreach my $own (own_ids_and_groups($oma_target_id)) {
+      my ($target_id, $group) = @$own;
+      foreach my $pair (@{$direct->{$oma_target_id}}) {
+        my $human = human_from_oma_header($pair->{partner_header}) or next;
+        add_link($group, tier => 1, human => [$human], type => $pair->{type}, id => $target_id,
+                 evidence => "OMA ortholog ($pair->{type})", hit => $pair->{partner_id});
+      }
     }
   }
 
@@ -275,13 +292,14 @@ sub collect_oma {
     my $hogs = read_hog_orthologs("$output/HierarchicalGroups.orthoxml", $code);
     my $human_pairs = $hogs->{pairs}{HUMAN} // {};
     foreach my $target_gene (keys %$human_pairs) {
-      my $target_id = $hogs->{genes}{$target_gene}{prot_id};
-      my $group = group_for($target_id) or next;
-      foreach my $human_gene (keys %{$human_pairs->{$target_gene}}) {
-        my $human = human_from_oma_header($hogs->{genes}{$human_gene}{header}) or next;
-        my $type = $hogs->{type}{HUMAN}{$target_gene}{$human_gene};
-        add_link($group, tier => 2, human => [$human], type => $type, id => $target_id,
-                 evidence => "OMA HOG co-ortholog ($type)", hit => $hogs->{genes}{$human_gene}{prot_id});
+      foreach my $own (own_ids_and_groups($hogs->{genes}{$target_gene}{prot_id})) {
+        my ($target_id, $group) = @$own;
+        foreach my $human_gene (keys %{$human_pairs->{$target_gene}}) {
+          my $human = human_from_oma_header($hogs->{genes}{$human_gene}{header}) or next;
+          my $type = $hogs->{type}{HUMAN}{$target_gene}{$human_gene};
+          add_link($group, tier => 2, human => [$human], type => $type, id => $target_id,
+                   evidence => "OMA HOG co-ortholog ($type)", hit => $hogs->{genes}{$human_gene}{prot_id});
+        }
       }
     }
   } else {
@@ -301,15 +319,17 @@ sub collect_oma {
   foreach my $reference (sort keys %references) {
     my $to_reference = read_oma_pairs($output, $code, $reference);
     my $reference_to_human = read_oma_pairs($output, $reference, 'HUMAN');
-    foreach my $target_id (keys %$to_reference) {
-      my $group = group_for($target_id) or next;
-      foreach my $first (@{$to_reference->{$target_id}}) {
-        foreach my $second (@{$reference_to_human->{$first->{partner_id}} // []}) {
-          my $human = human_from_oma_header($second->{partner_header}) or next;
-          my $common = $COMMON_NAME{$reference} // $reference;
-          add_link($group, tier => 4, human => [$human], type => $second->{type}, id => $target_id,
-                   evidence => "via $common ortholog (OMA $first->{type}) > OMA ortholog ($second->{type})",
-                   hit => $second->{partner_id});
+    foreach my $oma_target_id (keys %$to_reference) {
+      foreach my $own (own_ids_and_groups($oma_target_id)) {
+        my ($target_id, $group) = @$own;
+        foreach my $first (@{$to_reference->{$oma_target_id}}) {
+          foreach my $second (@{$reference_to_human->{$first->{partner_id}} // []}) {
+            my $human = human_from_oma_header($second->{partner_header}) or next;
+            my $common = $COMMON_NAME{$reference} // $reference;
+            add_link($group, tier => 4, human => [$human], type => $second->{type}, id => $target_id,
+                     evidence => "via $common ortholog (OMA $first->{type}) > OMA ortholog ($second->{type})",
+                     hit => $second->{partner_id});
+          }
         }
       }
     }

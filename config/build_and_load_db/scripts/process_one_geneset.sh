@@ -427,79 +427,117 @@ make_mmseqs_rbh_moop
 
 # ── OMA (standalone, optional) ────────────────────────────────────────────────
 ## Not part of the big per-org ANALYSIS_DIR pipeline — OMA is run by hand under
-## $OMA_BASE/<organism>/<assembly>/<geneset> (paths.sh). Silently skipped for any
-## gene set without an Output/ there. One moop table per partner species for the
-## pairwise orthologs and for the HOG orthologs, so users can pick the species they
-## care about; the relationship (1:1, many:1, ...) is in each row's description.
+## $OMA_BASE/<organism>/<assembly>/<geneset> (paths.sh). One moop table per partner
+## species and id database for the OMA groups, pairwise orthologs and HOG orthologs, so
+## users can pick the species they care about; the relationship is in each description.
+##
+## A gene set that IS one of the template's reference genomes (e.g. Nematostella RefSeq =
+## NEMVE, Drosophila FlyBase = DROME) must not have an OMA run of its own. Its orthologs come
+## from the template's reference run ($OMA_REFERENCE_RUN) under the reference's code, with
+## every OMA id mapped back to this gene set's own protein ids by identical sequence
+## (oma_reference_id_map.tsv), so nothing downstream ever shows the reference's OMA ids.
+## This is checked whenever the gene set has no OMA output of its own, or its OMA dir has the
+## REFERENCE_GENOME.txt marker (make_oma_db_files.pl) -- nobody has to know it is a reference.
 OMA_DIR="$OMA_BASE/$THIS_ORG/$ASSEMBLY/$GENE_SET"
+OMA_SRC="$OMA_DIR"      # the run whose Output/ is read
 OMA_CODE=""
+OMA_ID_MAP=""
 HGNC_TABLE="$REFERENCE_DATA/hgnc/hgnc_complete_set.txt"
-if [ -d "$OMA_DIR/Output" ]; then
+
+if { [ -e "$OMA_DIR/REFERENCE_GENOME.txt" ] || [ ! -d "$OMA_DIR/Output" ]; } \
+   && [ -d "$OMA_REFERENCE_RUN/DB" ] && [ -s "$GENESET_DIR/protein.aa.fa" ]; then
+  ## cached: redone only when protein.aa.fa or the reference run's genomes change
+  if [ ! -s oma_reference_check.tsv ] || [ "$GENESET_DIR/protein.aa.fa" -nt oma_reference_check.tsv ] \
+     || [ "$OMA_REFERENCE_RUN/DB" -nt oma_reference_check.tsv ]; then
+    echo "Checking whether this gene set is one of the OMA reference genomes"
+    perl "$REPO/analysis_parsers/find_reference_genome.pl" "$OMA_REFERENCE_RUN/DB" \
+      "$GENESET_DIR/protein.aa.fa" oma_reference_id_map.tsv > oma_reference_check.tsv.tmp
+    REF_STATUS=$?
+    mv oma_reference_check.tsv.tmp oma_reference_check.tsv
+    [ $REF_STATUS -eq 0 ] || rm -f oma_reference_id_map.tsv
+  fi
+  if [ -s oma_reference_id_map.tsv ]; then
+    REF_CODE=$(head -1 oma_reference_check.tsv | cut -f1)
+    REF_PERCENT=$(head -1 oma_reference_check.tsv | cut -f2)
+    echo "This gene set is the OMA reference genome $REF_CODE ($REF_PERCENT% identical proteins)"
+    if [ -s "$OMA_REFERENCE_RUN/Output/HierarchicalGroups.orthoxml" ]; then
+      OMA_SRC="$OMA_REFERENCE_RUN"
+      OMA_CODE="$REF_CODE"
+      OMA_ID_MAP="$PWD/oma_reference_id_map.tsv"
+    else
+      echo "WARNING: the reference run ($OMA_REFERENCE_RUN) has not finished; no OMA orthologs for this gene set yet" >&2
+    fi
+  elif [ -e "$OMA_DIR/REFERENCE_GENOME.txt" ]; then
+    echo "WARNING: $OMA_DIR/REFERENCE_GENOME.txt says this is a reference genome, but under 50% of its proteins are identical to one (see oma_reference_check.tsv)" >&2
+  fi
+fi
+
+if [ -z "$OMA_CODE" ] && [ -d "$OMA_DIR/Output" ] && [ ! -e "$OMA_DIR/REFERENCE_GENOME.txt" ]; then
   FIRST_PROT_ID=$(grep -m1 ">" "$GENESET_DIR/protein.aa.fa" 2>/dev/null | sed 's/^>//' | awk '{print $1}')
   OMA_CODE=$(grep -F -m1 "$FIRST_PROT_ID" "$OMA_DIR/Output/Map-SeqNum-ID.txt" 2>/dev/null | cut -f1)
+  [ -z "$OMA_CODE" ] && echo "WARNING: OMA dir found ($OMA_DIR) but couldn't determine this organism's OMA species code from Map-SeqNum-ID.txt"
+fi
 
-  if [ -z "$OMA_CODE" ]; then
-    echo "WARNING: OMA dir found ($OMA_DIR) but couldn't determine this organism's OMA species code from Map-SeqNum-ID.txt"
-  else
-    ## the template a run was made from (README.exportedAllAll), else the run dir name
-    OMA_TEMPLATE=$(sed -n 's/^OMA template:[[:space:]]*//p' "$OMA_DIR/README.exportedAllAll" 2>/dev/null | head -1)
-    OMA_VERSION="OMA 2.7.0 ${OMA_TEMPLATE:-$(basename "$(dirname "$(realpath "$OMA_DIR/Output")")")}"
-    echo "OMA species code: $OMA_CODE (version: $OMA_VERSION)"
+if [ -n "$OMA_CODE" ]; then
+  ## the template a run was made from (README.exportedAllAll), else the run dir name
+  OMA_TEMPLATE=$(sed -n 's/^OMA template:[[:space:]]*//p' "$OMA_SRC/README.exportedAllAll" 2>/dev/null | head -1)
+  OMA_VERSION="OMA 2.7.0 ${OMA_TEMPLATE:-$(basename "$(dirname "$(realpath "$OMA_SRC/Output")")")}"
+  [ -n "$OMA_ID_MAP" ] && OMA_VERSION="$OMA_VERSION reference run"
+  echo "OMA species code: $OMA_CODE (version: $OMA_VERSION)"
 
-    ## parse_OMA_orthologs_to_MOOP_TSV.pl writes one file per *partner* org found in the
-    ## groups file (named "$PARTNER.$db.oma_orthologs.moop.tsv") — never one
-    ## named after $OMA_CODE itself — so the skip-check has to look for any
-    ## such file, not "${OMA_CODE}.*.oma_orthologs.moop.tsv" (which can never exist).
-    shopt -s nullglob
-    existing_orthologs=(*.oma_orthologs.moop.tsv)
-    shopt -u nullglob
-    if [ ${#existing_orthologs[@]} -eq 0 ]; then
-      echo "Building OMA orthologs for $OMA_CODE"
-      perl "$REPO/analysis_parsers/parse_OMA_orthologs_to_MOOP_TSV.pl" \
-        "$OMA_DIR/Output/OrthologousGroups.txt" "$OMA_CODE" "$OMA_VERSION" "$HGNC_TABLE"
+  ## one file per partner and id database ("$PARTNER.$NAMESPACE.oma_orthologs.moop.tsv"),
+  ## never one named after $OMA_CODE itself, so the skip-check looks for any such file
+  shopt -s nullglob
+  existing_orthologs=(*.oma_orthologs.moop.tsv)
+  shopt -u nullglob
+  if [ ${#existing_orthologs[@]} -eq 0 ]; then
+    echo "Building OMA orthologs for $OMA_CODE"
+    perl "$REPO/analysis_parsers/parse_OMA_orthologs_to_MOOP_TSV.pl" \
+      "$OMA_SRC/Output/OrthologousGroups.txt" "$OMA_CODE" "$OMA_VERSION" "$HGNC_TABLE" $OMA_ID_MAP
+  fi
+
+  ## Pairwise files are named <A>-<B>.txt; only the ones with our code as a whole
+  ## side are ours (a substring match would take NEMVE-HUMAN.txt for NEMVEC).
+  shopt -s nullglob
+  for PAIR_FILE in "$OMA_SRC/Output/PairwiseOrthologs/"*.txt; do
+    PAIR_NAME=$(basename "$PAIR_FILE" .txt)
+    if [[ "$PAIR_NAME" == "$OMA_CODE-"* ]]; then
+      THISORG_FIRST=1
+      OTHERORG="${PAIR_NAME#"$OMA_CODE-"}"
+    elif [[ "$PAIR_NAME" == *"-$OMA_CODE" ]]; then
+      THISORG_FIRST=0
+      OTHERORG="${PAIR_NAME%"-$OMA_CODE"}"
+    else
+      continue
     fi
+    has_data "${OTHERORG}."*".oma_pairs.moop.tsv" \
+      || { echo "Building OMA pairs for $OMA_CODE vs $OTHERORG"
+           perl "$REPO/analysis_parsers/parse_OMA_pairs_to_MOOP_TSV.pl" \
+             "$PAIR_FILE" "$OMA_CODE" "$OTHERORG" "$THISORG_FIRST" "$OMA_VERSION" "$HGNC_TABLE" $OMA_ID_MAP; }
+  done
+  shopt -u nullglob
 
-    ## Pairwise files are named <A>-<B>.txt; only the ones with our code as a whole
-    ## side are ours (a substring match would take NEMVE-HUMAN.txt for NEMVEC).
-    shopt -s nullglob
-    for PAIR_FILE in "$OMA_DIR/Output/PairwiseOrthologs/"*.txt; do
-      PAIR_NAME=$(basename "$PAIR_FILE" .txt)
-      if [[ "$PAIR_NAME" == "$OMA_CODE-"* ]]; then
-        THISORG_FIRST=1
-        OTHERORG="${PAIR_NAME#"$OMA_CODE-"}"
-      elif [[ "$PAIR_NAME" == *"-$OMA_CODE" ]]; then
-        THISORG_FIRST=0
-        OTHERORG="${PAIR_NAME%"-$OMA_CODE"}"
-      else
-        continue
-      fi
-      has_data "${OTHERORG}."*".oma_pairs.moop.tsv" \
-        || { echo "Building OMA pairs for $OMA_CODE vs $OTHERORG"
-             perl "$REPO/analysis_parsers/parse_OMA_pairs_to_MOOP_TSV.pl" \
-               "$PAIR_FILE" "$OMA_CODE" "$OTHERORG" "$THISORG_FIRST" "$OMA_VERSION" "$HGNC_TABLE"; }
-    done
-    shopt -u nullglob
+  shopt -s nullglob
+  existing_hogs=(*.oma_hog.moop.tsv)
+  shopt -u nullglob
+  if [ ${#existing_hogs[@]} -eq 0 ] && [ -s "$OMA_SRC/Output/HierarchicalGroups.orthoxml" ]; then
+    echo "Building OMA HOG orthologs for $OMA_CODE"
+    perl "$REPO/analysis_parsers/parse_OMA_HOG_to_MOOP_TSV.pl" \
+      "$OMA_SRC/Output/HierarchicalGroups.orthoxml" "$OMA_CODE" "$OMA_VERSION" "$HGNC_TABLE" $OMA_ID_MAP \
+      || { echo "ERROR: failed to build OMA HOG orthologs"; exit 1; }
+  fi
 
-    shopt -s nullglob
-    existing_hogs=(*.oma_hog.moop.tsv)
-    shopt -u nullglob
-    if [ ${#existing_hogs[@]} -eq 0 ] && [ -s "$OMA_DIR/Output/HierarchicalGroups.orthoxml" ]; then
-      echo "Building OMA HOG orthologs for $OMA_CODE"
-      perl "$REPO/analysis_parsers/parse_OMA_HOG_to_MOOP_TSV.pl" \
-        "$OMA_DIR/Output/HierarchicalGroups.orthoxml" "$OMA_CODE" "$OMA_VERSION" "$HGNC_TABLE" \
-        || { echo "ERROR: failed to build OMA HOG orthologs"; exit 1; }
-    fi
-
-    if [ -s "$OMA_DIR/mapGO/go.tsv" ] && [ -s "$OMA_DIR/Output/Map-SeqNum-ID.txt" ] && [ -s "$OMA_DIR/Output/gene_function.gaf" ]; then
-      has_data "${OMA_CODE}.OMA2GO.moop.tsv" \
-        || { echo "Building OMA2GO for $OMA_CODE"
-             perl "$REPO/analysis_parsers/parse_OMA2GO_to_MOOP_TSV.pl" "$OMA_CODE" "$OMA_VERSION" \
-               "$OMA_DIR/mapGO/go.tsv" "$OMA_DIR/Output/Map-SeqNum-ID.txt" "$OMA_DIR/Output/gene_function.gaf" \
-               > "${OMA_CODE}.OMA2GO.moop.tsv.tmp" \
-               && mv "${OMA_CODE}.OMA2GO.moop.tsv.tmp" "${OMA_CODE}.OMA2GO.moop.tsv" \
-               || { rm -f "${OMA_CODE}.OMA2GO.moop.tsv.tmp"; echo "ERROR: failed to build OMA2GO"; exit 1; }
-           }
-    fi
+  ## OMA's GO predictions are for gene sets with a run of their own (reference genomes
+  ## carry their own GO annotation)
+  if [ -z "$OMA_ID_MAP" ] && [ -s "$OMA_DIR/mapGO/go.tsv" ] && [ -s "$OMA_DIR/Output/Map-SeqNum-ID.txt" ] && [ -s "$OMA_DIR/Output/gene_function.gaf" ]; then
+    has_data "${OMA_CODE}.OMA2GO.moop.tsv" \
+      || { echo "Building OMA2GO for $OMA_CODE"
+           perl "$REPO/analysis_parsers/parse_OMA2GO_to_MOOP_TSV.pl" "$OMA_CODE" "$OMA_VERSION" \
+             "$OMA_DIR/mapGO/go.tsv" "$OMA_DIR/Output/Map-SeqNum-ID.txt" "$OMA_DIR/Output/gene_function.gaf" \
+             > "${OMA_CODE}.OMA2GO.moop.tsv.tmp" \
+             && mv "${OMA_CODE}.OMA2GO.moop.tsv.tmp" "${OMA_CODE}.OMA2GO.moop.tsv" \
+             || { rm -f "${OMA_CODE}.OMA2GO.moop.tsv.tmp"; echo "ERROR: failed to build OMA2GO"; exit 1; }
+         }
   fi
 fi
 
@@ -539,7 +577,8 @@ build_naming_args() {
                --ref-db "$REF_DB"
                --panther PANTHER.iprscan.moop.tsv)
   [ -s "$GENESET_DIR/protein2gene.txt" ] && NAMING_ARGS+=(--protein2gene "$GENESET_DIR/protein2gene.txt")
-  [ -n "$OMA_CODE" ]                     && NAMING_ARGS+=(--oma-dir "$OMA_DIR" --oma-code "$OMA_CODE")
+  [ -n "$OMA_CODE" ]                     && NAMING_ARGS+=(--oma-dir "$OMA_SRC" --oma-code "$OMA_CODE")
+  [ -n "$OMA_ID_MAP" ]                   && NAMING_ARGS+=(--oma-id-map "$OMA_ID_MAP")
   [ -d "$ANALYSIS_DIR/rbh_mmseq" ]       && NAMING_ARGS+=(--mmseqs-dir "$ANALYSIS_DIR/rbh_mmseq")
   [ -d "$ANALYSIS_DIR/diamond" ]         && NAMING_ARGS+=(--diamond-dir "$ANALYSIS_DIR/diamond")
   [ -n "${CURATED_NAMES[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--override "${CURATED_NAMES[$GENESET_KEY]}")

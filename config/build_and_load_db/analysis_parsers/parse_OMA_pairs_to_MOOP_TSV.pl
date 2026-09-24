@@ -3,7 +3,8 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin";
-use OmaHogOrthologs qw(parse_oma_header read_export_sources find_export_readme write_ortholog_tables read_hgnc_symbols);
+use OmaHogOrthologs qw(parse_oma_header read_export_sources find_export_readme write_ortholog_tables read_hgnc_symbols
+                       read_id_map target_ids);
 
 # OMA pairwise orthologs between the target and one partner species -> moop TSV (Orthologs).
 #
@@ -15,15 +16,19 @@ use OmaHogOrthologs qw(parse_oma_header read_export_sources find_export_readme w
 # database so the accession links resolve; the partner's source release (README.exportedAllAll
 # of the run) is in the version line. The relationship (1:1, 1:many, many:1, many:many;
 # target:partner) is in the description, since the Score column only holds numbers. With the
-# optional HGNC table, HUMAN rows get the current HGNC symbol and name.
+# optional HGNC table, HUMAN rows get the current HGNC symbol and name. With the optional id map
+# (a gene set that IS a reference genome, run through the template's reference run), target ids
+# are translated to the gene set's own protein ids (OmaHogOrthologs::read_id_map).
 
-my $usage = "usage: $0 pairs.txt THISORG OTHERORG THISORG_FIRST OMA_VERSION [hgnc_complete_set.txt]\n";
+my $usage = "usage: $0 pairs.txt THISORG OTHERORG THISORG_FIRST OMA_VERSION [hgnc_complete_set.txt|-] [id_map.tsv]\n";
 my $pairs_file    = shift or die $usage;
 my $this_org      = shift or die $usage;
 my $other_org     = shift or die $usage;
 my $this_first    = shift;
 my $oma_version   = shift or die $usage;
 my $hgnc_file     = shift;
+my $id_map        = read_id_map(shift);
+$hgnc_file = undef if defined $hgnc_file and $hgnc_file eq '-';
 die $usage unless defined $this_first and $this_first =~ /^[01]$/;
 
 my @rows;
@@ -38,7 +43,10 @@ while (my $line = <$pairs_fh>) {
     $type = "$right:$left";
   }
   my ($this_id) = $this_header =~ /^(\S+)/;
-  push @rows, [ $other_org, $this_id, parse_oma_header($other_header), " ($type)" ];
+  my $other = parse_oma_header($other_header);
+  foreach my $own_id (target_ids($id_map, $this_id)) {
+    push @rows, [ $other_org, $own_id, $other, " ($type)" ];
+  }
 }
 close $pairs_fh;
 

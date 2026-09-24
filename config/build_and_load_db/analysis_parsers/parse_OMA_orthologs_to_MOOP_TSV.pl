@@ -3,7 +3,8 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin";
-use OmaHogOrthologs qw(parse_oma_header read_export_sources find_export_readme write_ortholog_tables read_hgnc_symbols);
+use OmaHogOrthologs qw(parse_oma_header read_export_sources find_export_readme write_ortholog_tables read_hgnc_symbols
+                       read_id_map target_ids);
 
 # OMA groups (Output/OrthologousGroups.txt) -> moop TSVs (Orthologs), one per partner species
 # and id database.
@@ -19,11 +20,13 @@ use OmaHogOrthologs qw(parse_oma_header read_export_sources find_export_readme w
 #
 # Group line: OMA00001 <TAB> CALMI:CALMI020393 | ids | ... <TAB> CHACAL:CCA3t011306001.1 <TAB> ...
 
-my $usage = "usage: $0 OrthologousGroups.txt THISORG OMA_VERSION [hgnc_complete_set.txt]\n";
+my $usage = "usage: $0 OrthologousGroups.txt THISORG OMA_VERSION [hgnc_complete_set.txt|-] [id_map.tsv]\n";
 my $groups_file = shift or die $usage;
 my $this_org    = shift or die $usage;
 my $oma_version = shift or die $usage;
 my $hgnc_file   = shift;
+my $id_map      = read_id_map(shift);   # see parse_OMA_pairs_to_MOOP_TSV.pl
+$hgnc_file = undef if defined $hgnc_file and $hgnc_file eq '-';
 
 my @rows;
 open my $groups_fh, '<', $groups_file or die "cant open $groups_file $!\n";
@@ -36,7 +39,7 @@ while (my $line = <$groups_fh>) {
     my ($code, $rest) = $member =~ /^([A-Za-z0-9]+):(.*)$/ or next;
     if ($code eq $this_org) {
       my ($target_id) = $rest =~ /^(\S+)/;
-      push @target_ids, $target_id;
+      push @target_ids, target_ids($id_map, $target_id);
     } else {
       push @partners, [ $code, parse_oma_header($rest) ];
     }

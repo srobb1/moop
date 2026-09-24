@@ -28,11 +28,14 @@
 # REFERENCE_DATA holds what gene naming v2 downloads itself (hgnc/, ensembl_compara/,
 # uniprot/, ncbi_taxonomy/), kept current by scripts/update_reference_data.sh.
 # OMA_BASE is where the OMA runs live, one <organism>/<assembly>/<geneset> dir each.
+# OMA_REFERENCE_RUN is the default template's reference run (its reference genomes only):
+# gene sets that ARE a reference genome take their orthologs from it (process_one_geneset.sh).
 
 : "${GENOMES:=/n/sci/SCI-004223-SBGENOMES/genomes/v2}"
 : "${ANNOTATIONS:=/n/sci/SCI-004223-SBGENOMES/annotations/sbgenomes_2}"
 : "${REF_DB:=/n/sci/SCI-004223-SBGENOMES/db}"
 : "${REFERENCE_DATA:=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop}"
 : "${OMA_BASE:=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/OMA_v2}"
+: "${OMA_REFERENCE_RUN:=$OMA_BASE/OMA_TEMPLATE_RUNS/BRAFL_CALMI_CAPTE_DROME_HUMAN_LEPOC_LOTGI_MONBE_MOUSE_NEMVE/reference_run}"
 
-export GENOMES ANNOTATIONS REF_DB REFERENCE_DATA OMA_BASE
+export GENOMES ANNOTATIONS REF_DB REFERENCE_DATA OMA_BASE OMA_REFERENCE_RUN
