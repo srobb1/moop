@@ -30,7 +30,9 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #   7 DIAMOND Swiss-Prot hit in another species -> its PANTHER subfamily -> the human
 #     Swiss-Prot genes in that subfamily
 #
-# Names: curated override > native name if informative > tier 1-2 human ortholog
+# Names: curated override > native name if informative > same-species reference (another
+# annotation of the same species, --same-species-code / --same-species-hits: OMA 1:1 or many:1
+# ortholog, else the hits file, when informative) > tier 1-2 human ortholog
 # (1:1 plain, many:1 "(n of X)", 1:many family) > best hit by bitscore (human reciprocal hit
 # plain unless its human gene is already another gene's ortholog; everything else "-like",
 # with the species when it is not human: "acrosin-like (turkey)") > PANTHER family > None.
@@ -47,7 +49,7 @@ my %opt = (override => [], 'extra-hits' => []);
 GetOptions(\%opt, 'isoforms=s', 'protein-fasta=s', 'protein2gene=s', 'hgnc-dir=s',
            'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
            'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'panther=s', 'native=s', 'oma-id-map=s',
-           'override=s@', 'extra-hits=s@', 'extra-hits-species=s', 'out-names=s', 'out-moop=s')
+           'override=s@', 'extra-hits=s@', 'extra-hits-species=s', 'same-species-code=s', 'same-species-hits=s', 'out-names=s', 'out-moop=s')
   or die "bad options\n";
 foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-moop)) {
   die "--$required is required\n" unless defined $opt{$required};
@@ -98,6 +100,7 @@ if (defined $opt{'diamond-dir'}) {
 foreach my $extra_file (@{$opt{'extra-hits'}}) {
   read_extra_hits($extra_file);
 }
+collect_same_species();
 resolve_compara();
 name_species();
 my %panther = defined $opt{panther} ? read_panther($opt{panther}) : ();
@@ -805,6 +808,73 @@ sub choose_closest_human {
 # ##############################################################################
 # names
 
+my (%same_species_oma, %same_species_hit);
+sub same_species_name {
+  my ($group) = @_;
+  # OMA orthologs in the same-species reference: 1:1, or several of our genes to one of theirs
+  foreach my $candidate (sort { $a->{rank} <=> $b->{rank} } @{$same_species_oma{$group} // []}) {
+    my $parsed = $candidate->{parsed};
+    my $symbol = is_placeholder_symbol($parsed->{gene_id}) ? '' : $parsed->{gene_id};
+    my $description = clean_name($parsed->{description});
+    next unless is_informative_hit($symbol, $description, $candidate->{hit});
+    $stats{"name: same-species reference $opt{'same-species-code'} (OMA $candidate->{type})"}++;
+    return { desc => ($symbol ne '' ? "$symbol: $description" : $description),
+             selected => selected_id($group, $candidate->{id}),
+             note => "OMA_pairwise_$opt{'same-species-code'}|Orthologs|" . strip_suffixes($candidate->{id}) . "|$candidate->{hit}|$candidate->{type}" };
+  }
+  # the same-species hits file (e.g. reciprocal best hits to that annotation)
+  if (my $hit = $same_species_hit{$group}) {
+    my ($symbol, $description) = split_symbol($hit->{description});
+    $symbol = '' if is_placeholder_symbol($symbol);
+    $description = clean_name($description);
+    if (is_informative_hit($symbol, $description, $hit->{hit})) {
+      $stats{'name: same-species hits file'}++;
+      return { desc => ($symbol ne '' ? "$symbol: $description" : $description),
+               selected => selected_id($group, $hit->{id}),
+               note => "$hit->{source}|Same_species|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{score}" };
+    }
+  }
+  return undef;
+}
+
+# --same-species-code CODE: OMA pairs with that reference (read from the same --oma-dir run);
+# --same-species-hits FILE: moop TSV (id accession "SYMBOL: description" score)
+sub collect_same_species {
+  if (defined $opt{'same-species-code'} and defined $opt{'oma-dir'} and defined $opt{'oma-code'}) {
+    my $pairs = read_oma_pairs("$opt{'oma-dir'}/Output", $opt{'oma-code'}, $opt{'same-species-code'});
+    foreach my $oma_target_id (keys %$pairs) {
+      foreach my $own (own_ids_and_groups($oma_target_id)) {
+        my ($target_id, $group) = @$own;
+        foreach my $pair (@{$pairs->{$oma_target_id}}) {
+          next unless $pair->{type} eq '1:1' or $pair->{type} eq 'many:1';
+          push @{$same_species_oma{$group}}, { id => $target_id, hit => $pair->{partner_id}, type => $pair->{type},
+                                               rank => ($pair->{type} eq '1:1' ? 0 : 1),
+                                               parsed => parse_oma_header($pair->{partner_header}) };
+        }
+      }
+    }
+  }
+  if (defined $opt{'same-species-hits'}) {
+    open my $fh, '<', $opt{'same-species-hits'} or die "cant open $opt{'same-species-hits'} $!\n";
+    my $source = $opt{'same-species-hits'};
+    while (my $line = <$fh>) {
+      if ($line =~ /^## Annotation Source:\s*(.+?)\s*$/) {
+        ($source = $1) =~ s/\s+/_/g;
+      }
+      next if $line =~ /^#/;
+      chomp $line;
+      my ($id, $accession, $description, $score) = split /\t/, $line;
+      my $group = group_for($id) or next;
+      my $evalue = ($score // '') =~ /^[0-9.eE+-]+$/ ? $score : 1;
+      if (!exists $same_species_hit{$group} or $evalue < $same_species_hit{$group}{evalue}) {
+        $same_species_hit{$group} = { id => $id, hit => $accession, description => $description // '',
+                                      score => $score // '-', evalue => $evalue, source => $source };
+      }
+    }
+    close $fh;
+  }
+}
+
 sub choose_name {
   my ($group) = @_;
 
@@ -813,6 +883,12 @@ sub choose_name {
     (my $source = $curated->{source}) =~ s/\s+/_/g;
     return { desc => $curated->{description}, selected => selected_id($group, $curated->{id}),
              note => "$source|Curated|$curated->{id}|$curated->{hit}|$curated->{score}" };
+  }
+
+  # same species, other annotation (e.g. in-house NV2 genes -> Nematostella RefSeq): the same
+  # genes, so their name is used as is -- when it is informative
+  if (my $same = same_species_name($group)) {
+    return $same;
   }
 
   my $closest = $closest{$group};

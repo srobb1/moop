@@ -559,13 +559,20 @@ build_naming_args() {
   ## explicitly opted into per gene set, never inherited by a later gene set of the
   ## same organism (apollo_moop.tsv only matched 43/45 IDs when MENDER_20260701
   ## replaced MENDER_20260623 for Chamaeleo_calyptratus).
-  ##   CURATED_NAMES: names that win over everything (manual curation, or a mapping
-  ##                  to another annotation of the same species).
+  ##   CURATED_NAMES: names that win over everything (manual curation).
+  ##   SAME_SPECIES_CODE / SAME_SPECIES_HITS: another annotation of the same species (e.g.
+  ##                  in-house NV2 genes vs Nematostella RefSeq, which is also the OMA
+  ##                  reference NEMVE). Its name is used when informative: the OMA 1:1 /
+  ##                  many:1 ortholog in that reference, else the hits file; otherwise the
+  ##                  gene falls through to the human name.
   ##   EXTRA_HITS:    extra similarity hits ranked with the others, e.g. reciprocal
   ##                  best hits to a proteome no other source covers.
   declare -A CURATED_NAMES
-  CURATED_NAMES["Nematostella_vectensis/GCA_033964005.1/NV2"]="/n/sci/SCI-003939-SBNVEC/genomes/Nvec200/aligned/tcs_v2/analysis/rbbh_2026_02_09/jaNemVect1/RefSeq_jaNemVect1.RBBH.moop.tsv"
   CURATED_NAMES["Chamaeleo_calyptratus/CCA3/MENDER_20260701"]="/n/sci/SCI-004219-SBCHAMELEO/Chamaeleo_calyptratus/genomes/CCA3-ref/analysis/apollo_moop.tsv"
+
+  declare -A SAME_SPECIES_CODE SAME_SPECIES_HITS
+  SAME_SPECIES_CODE["Nematostella_vectensis/GCA_033964005.1/NV2"]="NEMVE"
+  SAME_SPECIES_HITS["Nematostella_vectensis/GCA_033964005.1/NV2"]="/n/sci/SCI-003939-SBNVEC/genomes/Nvec200/aligned/tcs_v2/analysis/rbbh_2026_02_09/jaNemVect1/RefSeq_jaNemVect1.RBBH.moop.tsv"
 
   declare -A EXTRA_HITS EXTRA_HITS_SPECIES
   EXTRA_HITS["Montipora_capitata/HIv3/HIv3_geneset"]="/n/sci/SCI-004111-SBCORAL/Montipora_capitata/genomes/Montipora_capitata_HIv3/analysis/RBBH/RefSeq_jaNemVect1.RBBH.moop.tsv"
@@ -586,6 +593,8 @@ build_naming_args() {
   [ -d "$ANALYSIS_DIR/rbh_mmseq" ]       && NAMING_ARGS+=(--mmseqs-dir "$ANALYSIS_DIR/rbh_mmseq")
   [ -d "$ANALYSIS_DIR/diamond" ]         && NAMING_ARGS+=(--diamond-dir "$ANALYSIS_DIR/diamond")
   [ -n "${CURATED_NAMES[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--override "${CURATED_NAMES[$GENESET_KEY]}")
+  [ -n "${SAME_SPECIES_CODE[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--same-species-code "${SAME_SPECIES_CODE[$GENESET_KEY]}")
+  [ -n "${SAME_SPECIES_HITS[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--same-species-hits "${SAME_SPECIES_HITS[$GENESET_KEY]}")
   if [ -n "${EXTRA_HITS[$GENESET_KEY]:-}" ]; then
     NAMING_ARGS+=(--extra-hits "${EXTRA_HITS[$GENESET_KEY]}")
     [ -n "${EXTRA_HITS_SPECIES[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--extra-hits-species "${EXTRA_HITS_SPECIES[$GENESET_KEY]}")
@@ -593,7 +602,7 @@ build_naming_args() {
 
   local file
   for file in "$REFERENCE_DATA/hgnc/hgnc_complete_set.txt" PANTHER.iprscan.moop.tsv \
-              ${CURATED_NAMES[$GENESET_KEY]:-} ${EXTRA_HITS[$GENESET_KEY]:-}; do
+              ${CURATED_NAMES[$GENESET_KEY]:-} ${SAME_SPECIES_HITS[$GENESET_KEY]:-} ${EXTRA_HITS[$GENESET_KEY]:-}; do
     if [ ! -s "$file" ]; then
       echo "ERROR: Required file $file is missing! Gene naming will fail."
       exit 1

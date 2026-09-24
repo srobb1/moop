@@ -63,6 +63,7 @@ uninformative names (§5) are replaced, using the rules below.
 | Evidence | Relationship | Name |
 |---|---|---|
 | Curated (per gene set) | | as given, wins over everything |
+| Same species, other annotation (per gene set) | OMA 1:1 / many:1, else hits file | that annotation's name, if informative |
 | Tier 1–2 (OMA pair / HOG) | 1:1 | `ABC1: <HGNC name>` |
 | | many:1 | `ABC1: <HGNC name> (1 of 3)`, numbered by bitscore to the human protein; counts only tier 1–2 orthologs |
 | | 1:many, many:many | most specific shared HGNC `gene_group` (fewest members): `ABC1/ABC2: <group> family member`; no symbol when more than 3 human genes |
@@ -103,8 +104,11 @@ uninformative names (§5) are replaced, using the rules below.
   - `Ensembl_<Species>.MMseqs.RBBH.moop.tsv`, next to the eross `Ensembl_<Species>.RBBH.moop.tsv`.
 
 Per-gene-set settings in `build_naming_args()` (`process_one_geneset.sh`): `CURATED_NAMES`
-(Chamaeleo Apollo names; NV2 mapping to Nematostella RefSeq) and `EXTRA_HITS` (Montipora RBBH to
-Nematostella RefSeq, labelled "sea anemone").
+(Chamaeleo Apollo names; always win), `SAME_SPECIES_CODE` / `SAME_SPECIES_HITS` (NV2: another
+annotation of the same species, Nematostella RefSeq = OMA reference NEMVE; its name is used when
+informative -- OMA 1:1/many:1 ortholog first, else the RBBH file -- otherwise the gene falls
+through to the human name), and `EXTRA_HITS` (Montipora RBBH to Nematostella RefSeq, labelled
+"sea anemone").
 
 ## 5. Name cleanup and "uninformative" (`GeneNamingV2.pm`)
 
