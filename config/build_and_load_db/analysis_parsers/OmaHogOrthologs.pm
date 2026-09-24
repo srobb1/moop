@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use Exporter 'import';
 
-our @EXPORT_OK = qw(read_hog_orthologs parse_oma_header);
+our @EXPORT_OK = qw(read_hog_orthologs parse_oma_header best_accession);
 
 # Orthologs of one target species implied by OMA's HierarchicalGroups.orthoxml.
 #
@@ -154,6 +154,19 @@ sub parse_oma_header {
     }
   }
   return \%parsed;
+}
+
+# The accession shown for a partner gene: UniProt accession, else a protein id (Ensembl
+# ...P..., RefSeq XP_/NP_), else the first listed id, else the OMA id. OMA lists transcript
+# and protein ids in no fixed order, so the protein id is picked explicitly.
+sub best_accession {
+  my ($parsed) = @_;
+  return $parsed->{uniprot}[0] if @{$parsed->{uniprot}};
+  foreach my $id (@{$parsed->{protein_ids}}) {
+    return $id if $id =~ /^ENS[A-Z]*P\d/ or $id =~ /^[XN]P_/;
+  }
+  return $parsed->{protein_ids}[0] if @{$parsed->{protein_ids}};
+  return $parsed->{oma_id};
 }
 
 # split and trim, dropping empty pieces

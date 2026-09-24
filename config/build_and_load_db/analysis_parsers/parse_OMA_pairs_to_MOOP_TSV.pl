@@ -1,88 +1,92 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Data::Dumper;
+use FindBin;
+use lib "$FindBin::Bin";
+use OmaHogOrthologs qw(parse_oma_header best_accession);
 
-my $pairs_file    = shift;    # Output/PairwiseOrthologs/<THISORG>-<OTHERORG>.txt
-my $THISORG       = shift;
-my $OTHERORG      = shift;
-my $THISORG_first = shift;    # 1|0 means True|False
-my $OMA_DB_V      = shift;
+# OMA pairwise orthologs between the target and one partner species -> moop TSV (Orthologs).
+#
+#   parse_OMA_pairs_to_MOOP_TSV.pl Output/PairwiseOrthologs/<A>-<B>.txt THISORG OTHERORG THISORG_FIRST OMA_VERSION [hgnc_complete_set.txt]
+#
+# THISORG_FIRST is 1 when the target is species A of the file name, else 0.
+# Writes <OTHERORG>.OMA.oma_pairs.moop.tsv: one row per ortholog pair, for every partner
+# species (earlier versions kept only Ensembl/RefSeq-style ids, so LOTGI, MONBE and CAPTE got
+# no table). Accession is the partner's UniProt accession when OMA lists one, else its first
+# protein id, linked through EBI search. The relationship (1:1, 1:many, many:1, many:many;
+# target:partner) is in the description, since the Score column only holds numbers. With the
+# optional HGNC table, HUMAN rows get the current HGNC symbol and name.
 
-warn "Pairs Path: $pairs_file\n";
-warn "Your Organism: $THISORG\n";
-warn "Other Organism: $OTHERORG\n";
-warn "DB VERSION: $OMA_DB_V\n";
+my $usage = "usage: $0 pairs.txt THISORG OTHERORG THISORG_FIRST OMA_VERSION [hgnc_complete_set.txt]\n";
+my $pairs_file    = shift or die $usage;
+my $this_org      = shift or die $usage;
+my $other_org     = shift or die $usage;
+my $this_first    = shift;
+my $oma_version   = shift or die $usage;
+my $hgnc_file     = shift;
+die $usage unless defined $this_first and $this_first =~ /^[01]$/;
 
-open PAIRS, $pairs_file or die "Cant open pairsfile: $pairs_file $! \n";
-## Format: Protein 1<tab>Protein 2<tab>Protein ID1<tab>ProteinID2<tab>Orthology type<tab>OMA group (if any)
-#9	29551	CCA3t004838004.1	HUMAN029551 | ENSP00000497736.1; ENST00000647773.1 | ENSG00000167377.18 | HOG:F0769924 | zinc finger protein 23 [Source:HGNC Symbol;Acc:HGNC:13023]; transcript_id=ENST00000647773.1	many:many
-#7 4712  DANMAL_XP_005163249.1 NP_001070058.1 uncharacterized protein LOC767650 [Danio rerio]  many:many
+my %hgnc_symbol = defined $hgnc_file ? read_hgnc($hgnc_file) : ();
 
-my %hits;
-
-while (my $line = <PAIRS>){
+my @rows;
+open my $pairs_fh, '<', $pairs_file or die "cant open pairs file $pairs_file $!\n";
+while (my $line = <$pairs_fh>) {
   chomp $line;
-  next if $line =~ /^#/;
-  my ($omaid1,$omaid2,$ids1,$ids2,$type,$oma_group) = split "\t", $line;
-  my ($this_id,$other_org_ids);
-  if ($THISORG_first){
-    ($this_id) = $ids1 =~ /^(\S+)/;
-    $other_org_ids = $ids2;
-  }else{
-    ($this_id) = $ids2 =~ /^(\S+)/;
-    $other_org_ids = $ids1;
-    my @parts = split ":", $type;
-    $type = "$parts[1]:$parts[0]";
+  next if $line =~ /^#/ or $line !~ /\S/;
+  my ($number_1, $number_2, $header_1, $header_2, $type) = split /\t/, $line;
+  my ($this_header, $other_header) = $this_first ? ($header_1, $header_2) : ($header_2, $header_1);
+  unless ($this_first) {
+    my ($left, $right) = split /:/, $type;
+    $type = "$right:$left";
   }
-  my @parts = split /\|/, $other_org_ids;
-  my $last  = pop @parts;
-  my @other_ids = ($other_org_ids);
-  if ($last =~ /transcript_id=(\S+)\.?\d*/){
-    push @other_ids, $1;
-    $last =~ s/; transcript_id=.*//;
-  }
-  my $description = $last;
-  $description =~ s/^\s*(.*?)\s*$/$1/;
-  foreach my $part (@parts){
-    foreach my $each (split /\;/, $part){
-      $each =~ s/\s*(\S+)\s*/$1/;
-      push @other_ids, $each;
-    }
-  }
+  my ($this_id) = $this_header =~ /^(\S+)/;
+  my $other = parse_oma_header($other_header);
+  my $accession = best_accession($other);
 
-  foreach my $oid (@other_ids){
-    $description = 'None' if !defined $description || length($description) < 2;
-    my $out = join("\t", $this_id, $oid, $description, $type);
-    if ($oid =~ /ENS.*P\d+/){
-      $hits{'Ensembl'}{"$this_id-$oid"} = $out;
-    }elsif ($oid =~ /XP_/ or $oid =~ /NP_/){
-      $hits{'RefSeq'}{"$this_id-$oid"} = $out;
-    }
+  my $label = $other->{description};
+  if ($other->{hgnc_id} ne '' and exists $hgnc_symbol{$other->{hgnc_id}}) {
+    my $current = $hgnc_symbol{$other->{hgnc_id}};
+    $label = "$current->{symbol}: $current->{name}";
   }
+  $label = $accession if $label eq '';
+  push @rows, join("\t", $this_id, $accession, "$label ($type)", '-');
 }
+close $pairs_fh;
 
-foreach my $db (sort keys %hits){
-  my $db_url = "https://www.ensembl.org/Multi/Search/Results?q=";
-  if ($db =~ /RefSeq/){
-    $db_url = "https://www.ncbi.nlm.nih.gov/search/all/?term=";
-  }
-  my $date = `date '+%Y-%m-%d' -r $pairs_file`;
-  $date =~ s/\s+//g;
-  my $outfile = "$OTHERORG.$db.oma_pairs.moop.tsv";
-  print "Starting: $outfile\n";
-  open OUT, ">$outfile" or die "Can't open $outfile for writing $! \n";
-  print OUT "## Annotation Source: OMA PAIRWISE ORTHOLOGS ($OTHERORG)
-## Annotation Source Version: $OMA_DB_V
-## Annotation Accession URL: https://omabrowser.org/oma/home/
-## Annotation Source URL: $db_url
+my $date = `date '+%Y-%m-%d' -r '$pairs_file'`;
+$date =~ s/\s+//g;
+my $out_file = "$other_org.OMA.oma_pairs.moop.tsv";
+open my $out_fh, '>', $out_file or die "cant write $out_file $!\n";
+print $out_fh "## Annotation Source: OMA pairwise orthologs ($other_org)
+## Annotation Source Version: $oma_version
+## Annotation Source URL: https://omabrowser.org/oma/home/
+## Annotation Accession URL: https://www.ebi.ac.uk/ebisearch/search?query=
 ## Annotation Type: Orthologs
-## Annotation Creation Date: $date\n";
-  print OUT join("\t","## Gene","${OTHERORG}_ORTHOLOG","Description","ORTHOLOG_TYPE"),"\n";
-  foreach my $each (sort keys %{$hits{$db}}){
-    print OUT "$hits{$db}{$each}\n";
-  }
-  close OUT;
+## Annotation Creation Date: $date
+";
+print $out_fh join("\t", "## Gene", "${other_org}_ORTHOLOG", "Description", "Score"), "\n";
+foreach my $row (sort @rows) {
+  print $out_fh "$row\n";
 }
+close $out_fh;
+warn "wrote $out_file: " . scalar(@rows) . " pairs\n";
 
-print "Finished\n";
+sub read_hgnc {
+  my ($file) = @_;
+  my %symbol_of;
+  open my $fh, '<', $file or die "cant open $file $!\n";
+  my $header = <$fh>;
+  chomp $header;
+  my @columns = split /\t/, $header;
+  my %index;
+  foreach my $column_number (0 .. $#columns) {
+    $index{$columns[$column_number]} = $column_number;
+  }
+  while (my $line = <$fh>) {
+    chomp $line;
+    my @fields = split /\t/, $line;
+    $symbol_of{$fields[$index{hgnc_id}]} = { symbol => $fields[$index{symbol}], name => $fields[$index{name}] };
+  }
+  close $fh;
+  return %symbol_of;
+}

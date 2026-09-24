@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use FindBin;
 use lib "$FindBin::Bin";
-use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header);
+use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header best_accession);
 
 # OMA HOG orthologs of the target species -> one moop TSV (Orthologs) per partner species.
 #
@@ -70,9 +70,7 @@ foreach my $partner (sort keys %{$result->{pairs}}) {
       my $pair    = $result->{pairs}{$partner}{$target_gene}{$partner_gene};
       my $type    = $result->{type}{$partner}{$target_gene}{$partner_gene};
       my $header  = parse_oma_header($genes->{$partner_gene}{header});
-      my @uniprot = @{$header->{uniprot}};
-      my @protein_ids = @{$header->{protein_ids}};
-      my $accession = @uniprot ? $uniprot[0] : (@protein_ids ? $protein_ids[0] : $genes->{$partner_gene}{prot_id});
+      my $accession = best_accession($header);
 
       my $label = $header->{description};
       if ($header->{hgnc_id} ne '' and exists $hgnc_symbol{$header->{hgnc_id}}) {
