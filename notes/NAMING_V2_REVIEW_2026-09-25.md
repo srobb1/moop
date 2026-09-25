@@ -124,3 +124,39 @@ Some InterPro names still name one gene (for example "Histone-lysine N-methyltra
 **Implementation note.** The PANTHER moop TSV drops the coordinates. The step should instead read the raw InterProScan results, which are already passed as `--interproscan` for domains, and then `--panther` goes away. The HMM length comes from:
 - the JSON, when present;
 - otherwise a lengths table extracted once from binHmm (belongs in update_reference_data.sh).
+
+## PANTHER step rework: DECIDED, PARTLY IMPLEMENTED (uncommitted, 2026-09-25)
+
+User decisions:
+- a family names a gene only if the match covers **≥80% of the family model** (protein coverage is not checked);
+- use **InterPro's curated name** when the family is integrated in an InterPro Family entry, otherwise PANTHER's name, run through a stricter filter.
+
+Done in the working tree (not committed; `perl -c` OK, not yet run):
+- `assign_gene_names_v2.pl`:
+  - `$FAMILY_MODEL_COVERAGE`;
+  - `read_panther_families()` reads the raw `--interproscan` TSV, merges each protein's match regions per family, and computes coverage against `--panther-hmm-lengths`;
+  - `read_interpro_entries()` is shared by the family and domain readers;
+  - `panther_name()` tidies names (", ISOFORM A", "-RELATED-RELATED", "PRECURSOR.");
+  - the `family_member()` wording fix ("... FAMILY MEMBER member");
+  - the provenance text gives model coverage and InterPro vs PANTHER name;
+  - the `--panther` option was REMOVED;
+  - header doc updated;
+  - the domain reader's `\bUPF\d` now reads `UPF\d{4}`. It used to drop real UPF1/UPF3 domains; this is a pre-existing bug.
+- `GeneNamingV2.pm` has new uninformative patterns: LD39211P, AGAP…-PA, OS10G… PROTEIN, SLR1189 PROTEIN, EXPRESSED/UNNAMED PROTEIN, TRANSMEMBRANE PROTEIN, DUF\d+/UPF\d{4}. These were checked against all HGNC names, and none is flagged.
+
+Still to do before the change works:
+1. **Update callers.** `scripts/process_one_geneset.sh` build_naming_args still passes `--panther PANTHER.iprscan.moop.tsv`, which now dies as an unknown option. Replace it with `--panther-hmm-lengths "$REFERENCE_DATA/panther/hmm_lengths.tsv"` next to `--interproscan`, and fix REQUIRED_FILES.
+2. **Make the lengths table.**
+   - Add `INTERPROSCAN_DIR` to paths.sh (default `/n/projects/sm2699/SBG_v4/src/interproscan/interproscan-5.78-109.0`).
+   - Add `update_panther()` to update_reference_data.sh. It should:
+     - run `grep -a -E '^(NAME|LENG) ' $INTERPROSCAN_DIR/data/panther/*/famhmm/binHmm`, strip `.orig.30.pir`, and write family\tlength;
+     - write VERSION.txt with the release.
+   - All installs use the same PANTHER 19.0 binHmm (the md5 is the same), and all 90 gene sets used IPS 5.78.
+   - A draft of the table is at scratchpad/panther/hl.tsv.
+3. **Update the e2e test fixture** (`tests/naming_end_to_end.pl`, G6/G7/G9). Replace the PANTHER moop TSV with PANTHER rows in iprscan.tsv plus a lengths file. Add cases:
+   - a domain-only match (<80% of the model) falls through to the domain name;
+   - an integrated family takes the InterPro name;
+   - a clone-id family gives None.
+4. **Rerun** Congeria, fly and Miniopterus (`scratchpad/run_naming.sh`, now with `--interproscan … --interpro-entries … --panther-hmm-lengths …`), then compare against v8.
+5. **Update the docs:** GENE_NAMING_METHODS.md (step 5), and the "Gene Name Source" description in annotation_config_descriptions.json.
+6. **Run** the guard and the e2e test, then commit.
