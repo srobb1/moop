@@ -85,13 +85,51 @@ uninformative names (§5) are replaced, using the rules below.
 ## 4. Outputs
 
 - **GFF** (gene and every mRNA): `closestHGNC`, `closestHumanSym`, `closestHumanDesc`,
-  `closestHumanEvidence` (several human genes as comma lists in matching order, GFF3-escaped).
-  Written by `addClosestHumanToGFF.pl`; native GFFs get a real copy instead of the symlink.
-- **`geneNames.tsv`**: `ID MAINID GroupId Desc Note` as before (Note = where the name came from) +
-  `closestHGNC closestHumanSym closestHumanDesc closestHumanEvidence`. Native gene sets also keep
-  `geneNames.native.tsv` (the source's own names).
-- **`closest_human.moop.tsv`**, type `Closest Human Gene`: a row for the gene and every isoform:
-  `HGNC:nnnn` (genenames.org link), `SYMBOL: name [evidence]`, score = tier.
+  `closestHumanEvidence` (several human genes as comma lists in matching order, GFF3-escaped),
+  and `closest<Tag>Id/Sym/Desc/Evidence` for each `closest_species` in `geneset_config.yaml`.
+  Written by `addClosestToGFF.pl`, which takes the attribute names from each file's header;
+  native GFFs get a real copy instead of the symlink.
+- **`geneNames.tsv`**: `ID MAINID GroupId Desc Note` (Note = where the name came from). Native
+  gene sets also keep `geneNames.native.tsv` (the source's own names). (Until 2026-09-25 the
+  closest-human columns were columns 6-9 here; they moved to `closest_human.tsv`.)
+- **One closest entry per gene, every species (2026-09-25).** OMA gives one gene: that gene.
+  Several genes (1:many, many:many), or tier 7: the family as one entry -- "<HGNC group>
+  family" / "A/B-family" / "family of N genes", no gene id. No member is ever picked by score:
+  a gene that predates a duplication is equally related to every copy, and the best-scoring
+  copy is only the slowest-evolving one. (A BLAST-agreement "resolution" was built and then
+  removed the same day for that reason.) Links are ordered by pair type, BLAST agreement,
+  HGNC record, then ids, so output never depends on Perl hash order. Later tiers without a
+  bitscore rank by E-value.
+- **Simplified naming (2026-09-25):** plain names only from OMA orthology; full-length human
+  hits (>= 80% of both proteins) always "-like", reciprocal or not; OMA families named by HGNC
+  group or not at all (never handed to a BLAST hit); no names from other species; no borrowed
+  symbols; similarity hits without coverage not used. Benchmarked on Drosophila against Ensembl
+  Compara: see notes/GENE_NAMING_METHODS.md section 9.
+- **Same day, after reviewing real names:** many:1 copies share the plain name (no "(k of n)";
+  the count moved to provenance); family names carry no symbol; PANTHER names must be
+  informative (drops "- family member" and "PROTEIN CBG26694"-style locus ids); family/PANTHER
+  names never contain a colon; "family N family member" -> "family N member". New annotation
+  type "Gene Name Source" (gene_name_source.<kind>.moop.tsv) records why each gene has its name.
+  Left as is on purpose: transposon copies (no TE annotation to go on; a documented
+  limitation), PANTHER names as reported, unnamed genes keep their transcript id.
+- **Step 6, InterPro domain (2026-09-25):** "<domain> domain-containing protein" from the best
+  InterPro Domain/Repeat entry (no DUF/UPF), InterPro entry.list via update_reference_data.sh.
+  Named +3,145 Congeria / +4,804 Montipora / +514 fly genes, many of them transposon proteins
+  by their transposase/integrase domain. OMA ortholog tables now score the relationship
+  (1 = 1:1 ... 4 = many:many). Provenance text rewritten to say why in words.
+- **HGNC from Ensembl's own description.** Ensembl human proteins state their HGNC gene
+  (`[Source:HGNC Symbol;Acc:HGNC:9455]`), also for genes on alternate haplotypes/patches whose
+  ENSG id HGNC does not list (ENSG00000274382 = PROP1 on HSCHR5_3_CTG5); that accession is used
+  when the ENSG lookup fails. Montipora: Ensembl-only closest genes 336 -> 90. A gene with no
+  HGNC record keeps its ENSG id and no symbol; the internal `desc:` key is never written.
+- **`closest_<tag>.tsv`**, `<tag>` lowercased (`human` always): the `geneNames.tsv` rows, `ID
+  GroupId` + four columns headed by their GFF attribute names.
+- **`closest_<tag>[.ensembl|.family].moop.tsv`**, all annotation type `Closest Gene`, one source per
+  file so each source has one accession link (2026-09-25; replaced the per-species types
+  `Closest Human Gene` / `Closest <species> Gene`): `Closest human gene (HGNC)` -> genenames.org,
+  `Closest human gene (Ensembl, no HGNC record)` -> Ensembl gene page, `Closest human gene
+  family` -> no link; `Closest <species> gene` -> NCBI, `Closest <species> gene family` -> no
+  link. A row for the gene and every isoform; score = tier (human) or 1 = OMA, 2 = hits file.
 - **Ortholog / homolog tables** (one per partner species, so users can pick theirs):
   - OMA groups, pairs and HOGs: `<PARTNER>.<Namespace>.{oma_orthologs,oma_pairs,oma_hog}.moop.tsv`.
     Each partner gene is shown with the id of the database its annotation came from, one file

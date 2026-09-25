@@ -1,5 +1,29 @@
 # Per-gene-set config file — planning notes
 
+> **Status 2026-09-25: implemented, for naming v2.** Everything below this box is the
+> 2026-09-14 plan, written against naming v1 (`BEST_MAPPING`/`NEXT_BEST_MAPPING`,
+> `build_gene_name_params()`), and is kept as history. What was built:
+>
+> - `config/build_and_load_db/scripts/geneset_config.yaml` -- nested org > assembly > gene set, with
+>   the naming order documented in its header. Settings: `human_curated_gene_names` (used as
+>   given, never checked), `preferred_naming_species` (`oma_code`, `hits`, `label`,
+>   `same_species`), `extra_similarity_hits`.
+> - `scripts/geneset_config.pl` -- `CPAN::Meta::YAML` (core Perl). Validates the whole file
+>   on every build: unknown setting, gene set not under `$GENOMES`, missing file -> stop.
+> - `process_one_geneset.sh` `build_naming_args()` calls it; the `CURATED_NAMES` /
+>   `SAME_SPECIES_*` / `EXTRA_HITS` arrays are gone.
+> - `assign_gene_names_v2.pl`: step 3 generalised from "same species" to "preferred naming
+>   species", before the human ortholog (decided 2026-09-25: the human gene still shows in
+>   the closestHuman columns). A different species is named "X-like (label)".
+>
+> Decided differently from the plan: `preferred_reference_organism` (Ensembl RBBH slot) is
+> dropped -- v2 has no such slot; `preferred_naming_species` covers the need. `paths.sh`
+> stays separate (reconfirmed). `metadata.yaml` keys stay with the gene set. `oma_dir` not
+> built yet.
+>
+> Verified: NV2 old vs new naming byte-identical (35,881 rows); Montipora closest-human
+> byte-identical, 9,127 genes now named from NVEC (were last-resort extra hits).
+
 Not started. Captured 2026-09-14 after adding the homology-naming-fallback feature
 (see `analysis_parsers/GeneNameInformativeness.pm` and the commit that added it) —
 picking curated overrides back up made it obvious they're one of at least two

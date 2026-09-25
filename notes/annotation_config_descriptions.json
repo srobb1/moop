@@ -1,0 +1,85 @@
+{
+    "_comment": "Draft annotation_types descriptions for MOOP's annotation_config.json (2026-09-25). Each says what the type is and what its Score column means, since the results table uses the same headers for every type. Score meanings were checked against the loaded databases (Congeria_kusceri, Miniopterus_natalensis) and the parsers that write each table. Merge the description fields into the live config; display_name/color/order/synonyms are carried over from the current config, and the two new types (Closest Gene, Gene Name Source) need a color and order chosen.",
+    "annotation_types": {
+        "Closest Gene": {
+            "display_name": "Closest Gene",
+            "color": "primary",
+            "order": 1,
+            "description": "For each gene, the <strong>one</strong> gene in human (and in any other species chosen for this gene set) that it is most closely related to, and the evidence. Orthology is used first (OMA), then reciprocal best hits, then sequence similarity. When the evidence places the gene equally close to several genes (for example one gene here and three human copies from a vertebrate duplication), the <strong>family</strong> is reported (an HGNC gene group), never one member picked by score. Reported for every gene, whatever its name.<br><strong>Score:</strong> human: the evidence tier, 1 (strongest) to 7 &mdash; 1 OMA pairwise ortholog; 2 OMA hierarchical-group co-ortholog; 3 MMseqs2 reciprocal best hit; 4 through another species' ortholog; 5 DIAMOND best hit; 6 a Swiss-Prot hit's Ensembl Compara ortholog; 7 a PANTHER subfamily. Other species: 1 OMA ortholog, 2 best hit in a hits file.",
+            "enabled": true,
+            "synonyms": [
+                "Closest Human Gene"
+            ]
+        },
+        "Gene Name Source": {
+            "display_name": "Gene Name Source",
+            "color": "secondary",
+            "order": 2,
+            "description": "Why this gene has its name, in words, with the evidence behind it. The accession is what the name came from (an HGNC gene, an HGNC gene group, a PANTHER family, an InterPro domain, a curated file, or the gene set's own annotation). Names follow the strength of the evidence: a plain name only from an orthology call (OMA); <em>-like</em> for a full-length match (at least 80% of both proteins aligned) to a human protein; <em>family member</em> when the evidence identifies only the family; <em>domain-containing protein</em> when only a protein domain is known; otherwise no name.<br><strong>Score:</strong> the naming step, 1 to 6 &mdash; 1 human-curated; 2 the gene set's own name or another annotation of the same species; 3 OMA ortholog to human; 4 full-length similarity to a human protein (<em>-like</em>); 5 PANTHER family; 6 InterPro domain.",
+            "enabled": true,
+            "synonyms": []
+        },
+        "Orthologs": {
+            "display_name": "Orthologs",
+            "color": "primary",
+            "order": 3,
+            "description": "Genes in other species descended from a single gene in their last common ancestor &mdash; separated by <strong>speciation</strong>, not by duplication (genes separated by duplication are paralogs). Orthologs usually keep the same function, which is why names are transferred between them. Sources: OMA (pairwise orthologs and hierarchical orthologous groups) run against a 10-species reference set, and EggNOG-mapper seed orthologs. The description gives the relationship: 1:1 (one gene in each species), 1:many or many:1 (a duplication in one lineage), many:many.<br><strong>Score:</strong> OMA &mdash; the relationship, cleanest first: 1 = 1:1, 2 = many:1, 3 = 1:many, 4 = many:many (OMA groups are always 1: a group holds at most one gene per species, all mutually orthologous); EggNOG &mdash; E-value of the alignment to the seed ortholog (lower is better).",
+            "enabled": true,
+            "synonyms": [
+                "Orthology"
+            ],
+            "display_label": "Orthologs"
+        },
+        "RBBH Homolog": {
+            "display_name": "RBBH Homolog",
+            "display_label": "RBBH Homolog",
+            "color": "pink",
+            "order": 4,
+            "description": "Reciprocal best hits: this gene's best match in the other species' proteome has this gene as <em>its</em> best match in return. A stricter test than a one-way best hit and a common stand-in for orthology, but not proof of it &mdash; after a gene loss, a paralog can become the reciprocal best hit. Computed with DIAMOND and MMseqs2 against Ensembl proteomes.<br><strong>Score:</strong> E-value of the alignment (lower is better; 0 means below the reporting limit).",
+            "enabled": true,
+            "synonyms": []
+        },
+        "Homologs": {
+            "display_name": "Homologs",
+            "color": "info",
+            "order": 5,
+            "description": "Genes sharing common ancestry, found by sequence similarity: each protein's best DIAMOND match in UniProtKB/Swiss-Prot and in Ensembl proteomes. A homolog can be an ortholog (separated by speciation) or a paralog (separated by duplication); similarity alone does not tell which, and a match may cover only part of the protein (for example one shared domain).<br><strong>Score:</strong> E-value of the alignment &mdash; how many matches this good would be expected by chance; lower is better (0 means below the reporting limit).",
+            "enabled": true
+        },
+        "Gene Families": {
+            "display_name": "Gene Families",
+            "color": "danger",
+            "order": 6,
+            "description": "Groups of related genes that share sequence and usually function, mostly arising from gene duplication: PANTHER, FunFam and Gene3D (CATH), SUPERFAMILY (SCOP), NCBIfam, PIRSF, PRINTS, HAMAP and SFLD, all found with InterProScan. A family match says the protein belongs to the group, not which member it corresponds to. PANTHER family names are reported as PANTHER gives them.<br><strong>Score:</strong> E-value for most sources (lower is better); a match score for HAMAP (higher is better).",
+            "enabled": true
+        },
+        "Domains": {
+            "display_name": "Domains",
+            "color": "success",
+            "order": 7,
+            "description": "Conserved regions within a protein &mdash; domains, motifs, repeats, coiled coils, disordered regions, signal peptides and transmembrane helices &mdash; found with InterProScan (Pfam, SMART, CDD, PROSITE, Coils, MobiDB-lite, Phobius, TMHMM, SignalP), SignalP 6 and DeepTMHMM. InterPro entries combine matching signatures from several of these databases into one entry.<br><strong>Score:</strong> depends on the source &mdash; E-value for Pfam, SMART and CDD (lower is better; Pfam and SMART accept matches by their own score thresholds, so short repeated domains can show large E-values); a match score for PROSITE profiles (higher is better); the probability of a signal peptide for SignalP 6; the number of transmembrane helices for DeepTMHMM; none for InterPro, PROSITE patterns, Coils, MobiDB-lite, Phobius and TMHMM.",
+            "enabled": true,
+            "synonyms": [
+                "Protein Domains"
+            ]
+        },
+        "Gene Ontology": {
+            "display_name": "Gene Ontology",
+            "color": "warning",
+            "order": 8,
+            "description": "Gene Ontology (GO) terms &mdash; molecular function, biological process and cellular component &mdash; from InterPro2GO and PANTHER2GO (terms attached to the InterPro entries and PANTHER families the protein matches), EggNOG-mapper (terms of its orthologous group) and OMA (terms of its orthologs). These are computational predictions transferred from related proteins, not experimental results for this gene.<br><strong>Score:</strong> none.",
+            "enabled": true
+        },
+        "AI Annotations": {
+            "display_name": "AI Annotations",
+            "color": "purple",
+            "order": 9,
+            "description": "Protein names predicted by ProtNLM, a protein language model trained on UniProt and used by UniProt to name unreviewed entries. A prediction from the sequence alone, not from an alignment to a characterised protein &mdash; treat it as a hypothesis.<br><strong>Score:</strong> the model's confidence, from 0.2 (the lowest reported, UniProt's cutoff) to 1.",
+            "enabled": true,
+            "synonyms": [
+                "ProtNLM"
+            ],
+            "display_label": "ProtNLM"
+        }
+    }
+}
