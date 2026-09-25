@@ -278,7 +278,10 @@ sub find_export_readme {
 #                         sources => read_export_sources(...), hgnc => {HGNC:n => {symbol,name}},
 #                         date => 'YYYY-MM-DD', rows => [ [partner, target_id, parsed_header, suffix], ... ])
 # The description is the partner gene's description (HUMAN: current HGNC symbol and name when
-# known) plus the suffix, e.g. " (1:1)".
+# known) plus the suffix, e.g. " (1:1)". The Score is the relationship, cleanest first:
+# 1 = 1:1, 2 = many:1, 3 = 1:many, 4 = many:many (read from the suffix); OMA groups (kind
+# oma_orthologs) are 1: a group holds at most one gene per species, all mutually orthologous.
+my %RELATIONSHIP_SCORE = ('1:1' => 1, 'many:1' => 2, '1:many' => 3, 'many:many' => 4);
 sub write_ortholog_tables {
   my (%arg) = @_;
   my %by_file;
@@ -291,7 +294,9 @@ sub write_ortholog_tables {
       $label = "$current->{symbol}: $current->{name}";
     }
     $label = $accession if $label eq '';
-    push @{$by_file{$partner}{$namespace}}, join("\t", $target_id, $accession, "$label$suffix", '-');
+    my ($relationship) = $suffix =~ /\((1:1|many:1|1:many|many:many)\b/;
+    my $score = $arg{kind} eq 'oma_orthologs' ? 1 : defined $relationship ? $RELATIONSHIP_SCORE{$relationship} : '-';
+    push @{$by_file{$partner}{$namespace}}, join("\t", $target_id, $accession, "$label$suffix", $score);
   }
 
   my @written;

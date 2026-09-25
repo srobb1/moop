@@ -20,6 +20,10 @@
 #       secondary accessions, parsed from uniprot_sprot.dat.gz (parse_uniprot_dat.pl, next to
 #       this script; the flat file itself is not kept). Rebuilt when UniProt publishes a new
 #       release, so it is never older than the Swiss-Prot the annotation pipeline searched.
+#   interpro/entry.list
+#       every InterPro entry: accession, type (Domain, Repeat, Family, ...) and curated name.
+#       Gene naming's last step names a gene after its InterPro domain or repeat; the type is
+#       what tells a domain from a family. Downloaded when InterPro publishes a new release.
 #
 # A failed download keeps the existing copy and prints a WARNING; the exit code is the number
 # of warnings (0 = everything current).
@@ -201,10 +205,40 @@ update_uniprot() {
   echo "uniprot: release $remote_release saved ($(( $(gzip -dc "$dir/sprot_xrefs.tsv.gz" | wc -l) - 1 )) entries)"
 }
 
+# ---------------------------------------------------------------- InterPro entry list
+update_interpro() {
+  local dir="$MOOP_DIR/interpro" base=https://ftp.ebi.ac.uk/pub/databases/interpro/current_release
+  local remote_release local_release tmp
+  mkdir -p "$dir"
+  remote_release=$(curl -sS -m 120 "$base/release_notes.txt" | sed -n 's/^.*Release \([0-9][0-9.]*\),.*/\1/p' | head -1)
+  local_release=$(sed -n 's/^InterPro release \([0-9.]*\).*/\1/p' "$dir/VERSION.txt" 2>/dev/null)
+  if [ -z "$remote_release" ]; then
+    warn "interpro: could not read the current release from $base/release_notes.txt; keeping the existing copy"
+    return
+  fi
+  if [ "$remote_release" = "$local_release" ] && [ -s "$dir/entry.list" ]; then
+    echo "interpro: release $local_release current"
+    return
+  fi
+  echo "interpro: downloading entry.list for release $remote_release"
+  tmp="$dir/entry.list.tmp"
+  if ! curl -sS -m 600 -o "$tmp" "$base/entry.list" \
+     || [ "$(head -1 "$tmp" 2>/dev/null)" != "$(printf 'ENTRY_AC\tENTRY_TYPE\tENTRY_NAME')" ] \
+     || [ "$(wc -l < "$tmp")" -lt 30000 ]; then
+    rm -f "$tmp"
+    warn "interpro: download failed or entry.list looks wrong; keeping the existing copy"
+    return
+  fi
+  mv "$tmp" "$dir/entry.list"
+  echo "InterPro release $remote_release: entry.list downloaded $TODAY from $base/entry.list" > "$dir/VERSION.txt"
+  echo "interpro: release $remote_release saved ($(( $(wc -l < "$dir/entry.list") - 1 )) entries)"
+}
+
 update_compara
 update_hgnc
 update_taxonomy
 update_uniprot
+update_interpro
 
 [ $WARNINGS -gt 0 ] && echo "$WARNINGS warning(s); see above" >&2
 [ $WARNINGS -gt 255 ] && WARNINGS=255

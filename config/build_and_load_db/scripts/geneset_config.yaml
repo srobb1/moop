@@ -1,0 +1,119 @@
+# geneset_config.yaml -- per-gene-set naming inputs, keyed organism > assembly > gene set
+# (the directory names under $GENOMES). Every setting is optional; a gene set not listed
+# here is named from its analysis results alone. Read by scripts/geneset_config.pl on every
+# build: a problem in the gene set being built (unknown setting, missing file, ...) stops
+# that build; a problem in any OTHER entry -- including a gene set name that does not exist,
+# i.e. a curation that would silently never apply -- is a WARNING in every build's log.
+# After editing, check the whole file:
+#   perl scripts/geneset_config.pl --check scripts/geneset_config.yaml   (source paths.sh first)
+#
+# A change here is NOT picked up by a normal build (existing names are kept). Reload the organism:
+#   MOOP_RELOAD=1 sbatch scripts/moop_process_genome_data_v2.sbatch <Organism>
+#
+# How a gene gets its name -- the first step that yields one wins. A plain name only from an
+# orthology call; "-like" for full-length similarity; a family name when the evidence stops at
+# the family; otherwise no name (better none than a wrong one):
+#   1. human_curated_gene_names   names a person assigned; used exactly as given, never checked
+#   2. the gene set's own name    RefSeq/Ensembl gene sets only; or a closest_species with
+#      use_for_names: true        its OMA 1:1 / many:1 ortholog, else its hits file -- turn on
+#                                 only after review (in Montipora it replaced ~2,200 human names)
+#   3. OMA human ortholog         1:1 and many:1 "SYM: name" (every copy of a lineage-specific
+#                                 duplication carries it); a 1:many or many:many family
+#                                 "<HGNC group> family member", no symbol (no shared group:
+#                                 straight to 5 -- never a member picked by score)
+#   4. full-length human hit      MMseqs2 or DIAMOND, >= 80% of both proteins: "SYM-like: name-like"
+#   5. PANTHER family             "<family> family member"
+#   6. InterPro domain or repeat  "<domain> domain-containing protein" (UniProt's convention for a
+#                                 protein known only by a domain; no "unknown function" entries)
+#   7. None
+# Steps 2-6 use a name only if it is informative. Hits to other species never name a gene; a
+# similarity hit without coverage information is not used at all. Why each gene has its name is
+# loaded as annotation type "Gene Name Source" (accession = what the name came from).
+#
+# Closest genes are recorded separately from names, whatever step named the gene: the closest
+# human gene always, and the closest gene in each closest_species. Each goes to
+# closest_<tag>.tsv, GFF attributes closest<Tag>Id/Sym/Desc/Evidence (human: closestHGNC/
+# closestHumanSym/...), and the database, annotation type "Closest Gene", one source per species
+# and kind ("Closest human gene (HGNC)", "Closest Nematostella vectensis gene family", ...).
+#
+# Every species, human included, reports ONE closest entry per gene:
+#   - OMA gives one gene: that gene.
+#   - OMA gives a family: the member that lower evidence singles out (human: BLAST agreement,
+#     else the next tier if it lands inside the family; other species: the hits file's best
+#     hit), with "1 of N, resolved by ..." in the evidence. A gene NAMED from such a pick is
+#     "-like": the family's vagueness is kept.
+#   - nothing singles one out: the family itself -- "<HGNC group> family", "A/B-family", or
+#     "family of N genes" -- with "family of N, unresolved" and no gene id.
+#
+# closest_species -- how the closest gene is found, per gene:
+#   1. OMA: the ortholog to oma_code in this gene set's OMA run. oma_code IS the species: it
+#      is the prefix OMA uses (NEMVE000123), so there is no doubt which organism it is.
+#   2. hits: for genes OMA gave nothing for. The pipeline CANNOT check which organism a
+#      hits file is -- listing it under this species is your statement that every accession
+#      in it is this species. Evidence reads "hits file (<Annotation Source>)", so the two
+#      sources stay distinguishable.
+#
+# Settings:
+#   human_curated_gene_names: FILE        names a person assigned (format below)
+#   closest_species:                      a list; at most one entry with use_for_names: true
+#     - species: Nematostella vectensis   full name; titles the database table
+#       tag: Nvec                         short; GFF attributes and file names (letters/digits)
+#       label: sea anemone                in names: "brachyury-like (sea anemone)"
+#       oma_code: NEMVE                   the species' prefix in this gene set's OMA run
+#       hits: FILE                        optional, moop hits file (format below)
+#       use_for_names: false              true = naming step 3 (default false)
+#       same_species: false               true = another annotation of THIS species: names
+#                                         copied as is, no "-like", no label needed
+#
+# File formats -- "moop TSV": optional "## " header lines, then 4 tab-separated columns.
+#   hits files (closest_species hits):
+#     our_id      accession       SYMBOL: description        evalue
+#     RNAseq.10187_t   XP_048579986.1   LOC5513653: major facilitator ... protein 12   1.78e-186
+#     our_id is a protein/transcript id of this gene set; the lowest E-value per gene wins.
+#     "## Annotation Source: RefSeq jaNemVect1" names the source in the evidence text.
+#     NOT a raw DIAMOND/BLAST table (qseqid sseqid stitle evalue ...); geneset_config.pl
+#     rejects one. For Swiss-Prot or Ensembl DIAMOND results, convert with
+#       perl analysis_parsers/parse_DIAMOND_to_MOOP_TSV.pl diamond_results.tsv \
+#         "Ensembl Homo sapiens" release-113 https://www.ensembl.org/ ""
+#     which writes <source>.homologs.moop.tsv in the current directory. It does NOT convert
+#     RefSeq titles (e.g. REFSEQ_nematostella_vectensis): nothing does yet.
+#   human_curated_gene_names:
+#     our_id      gene_id         SYMBOL: description        anything (e.g. Manual_Curation)
+
+Chamaeleo_calyptratus:
+  CCA3:
+    MENDER_20260701:
+      human_curated_gene_names: /n/sci/SCI-004219-SBCHAMELEO/Chamaeleo_calyptratus/genomes/CCA3-ref/analysis/apollo_moop.tsv
+
+Nematostella_vectensis:
+  GCA_033964005.1:
+    NV2:
+      # in-house NV2 genes vs Nematostella RefSeq (OMA reference species NEMVE)
+      closest_species:
+        - species: Nematostella vectensis
+          tag: Nvec
+          oma_code: NEMVE
+          hits: /n/sci/SCI-003939-SBNVEC/genomes/Nvec200/aligned/tcs_v2/analysis/rbbh_2026_02_09/jaNemVect1/RefSeq_jaNemVect1.RBBH.moop.tsv
+          use_for_names: true
+          same_species: true
+
+Montipora_capitata:
+  HIv3:
+    HIv3_geneset:
+      closest_species:
+        - species: Nematostella vectensis
+          tag: Nvec
+          label: sea anemone
+          oma_code: NEMVE
+          hits: /n/sci/SCI-004111-SBCORAL/Montipora_capitata/genomes/Montipora_capitata_HIv3/analysis/RBBH/RefSeq_jaNemVect1.RBBH.moop.tsv
+          use_for_names: false
+
+Acropora_millepora:
+  GCF_013753865.1:
+    RS_101:
+      closest_species:
+        - species: Nematostella vectensis
+          tag: Nvec
+          label: sea anemone
+          oma_code: NEMVE
+          use_for_names: false

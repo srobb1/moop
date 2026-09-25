@@ -111,6 +111,22 @@ geneset_loaded() {
   [ "${n:-0}" -gt 0 ]
 }
 
+## Refuse to load a gene set on top of itself. Both loaders add and update rows but never
+## remove them (see delete_gene_set.sh), so a rebuilt gene set loaded over its old rows keeps
+## every row the new files no longer contain -- old names, old closest genes -- next to the
+## new ones, and nothing reports it. Organism databases are rebuilt, not patched: the build
+## stops and says how. A reload (MOOP_RELOAD=1) drops the database, or for a narrowed run
+## deletes this gene set, before anything is loaded, so it never reaches this.
+refuse_load_on_top() {
+  if [ "${MOOP_RELOAD:-0}" != "1" ] && geneset_loaded; then
+    echo "ERROR: $THIS_ORG/$ASSEMBLY/$GENE_SET changed and must be loaded again, but it is already" >&2
+    echo "       in organism.sqlite, and loading on top would leave its old rows in place." >&2
+    echo "       Rebuild the organism's database instead:" >&2
+    echo "         MOOP_RELOAD=1 sbatch scripts/moop_process_genome_data_v2.sbatch $THIS_ORG" >&2
+    exit 1
+  fi
+}
+
 infer_source() {
   case "$1" in
     GCF_*) echo "RefSeq"  ;;
@@ -550,36 +566,23 @@ fi
 sed -i "/^${THIS_ORG}\t/d" "$MISSING_LOG" 2>/dev/null
 
 # ── Gene naming v2 (notes/NAMING_V2_PLAN.md) ──────────────────────────────────
-## assign_gene_names_v2.pl gives every gene a name and, separately, its closest human
-## gene (geneNames.tsv columns 6-9 and closest_human.moop.tsv). It reads the analysis
+## assign_gene_names_v2.pl gives every gene a name (geneNames.tsv) and, separately, its
+## closest human gene and closest gene in each closest_species of geneset_config.yaml
+## (closest_<tag>.tsv for the GFF, closest_<tag>.moop.tsv for the database). It reads the analysis
 ## results directly (OMA, MMseqs2 RBH, DIAMOND, PANTHER) plus the reference data in
 ## $REFERENCE_DATA; run scripts/update_reference_data.sh before a full reprocess.
-## Fills NAMING_ARGS; the caller adds --isoforms/--out-names/--out-moop (and --native).
+## Fills NAMING_ARGS; run_naming_v2 adds --isoforms and the outputs (the caller, --native).
 build_naming_args() {
-  ## Per-gene-set extras, keyed by "<org>/<assembly>/<geneset>" so a mapping is
-  ## explicitly opted into per gene set, never inherited by a later gene set of the
-  ## same organism (apollo_moop.tsv only matched 43/45 IDs when MENDER_20260701
-  ## replaced MENDER_20260623 for Chamaeleo_calyptratus).
-  ##   CURATED_NAMES: names that win over everything (manual curation).
-  ##   SAME_SPECIES_CODE / SAME_SPECIES_HITS: another annotation of the same species (e.g.
-  ##                  in-house NV2 genes vs Nematostella RefSeq, which is also the OMA
-  ##                  reference NEMVE). Its name is used when informative: the OMA 1:1 /
-  ##                  many:1 ortholog in that reference, else the hits file; otherwise the
-  ##                  gene falls through to the human name.
-  ##   EXTRA_HITS:    extra similarity hits ranked with the others, e.g. reciprocal
-  ##                  best hits to a proteome no other source covers.
-  declare -A CURATED_NAMES
-  CURATED_NAMES["Chamaeleo_calyptratus/CCA3/MENDER_20260701"]="/n/sci/SCI-004219-SBCHAMELEO/Chamaeleo_calyptratus/genomes/CCA3-ref/analysis/apollo_moop.tsv"
-
-  declare -A SAME_SPECIES_CODE SAME_SPECIES_HITS
-  SAME_SPECIES_CODE["Nematostella_vectensis/GCA_033964005.1/NV2"]="NEMVE"
-  SAME_SPECIES_HITS["Nematostella_vectensis/GCA_033964005.1/NV2"]="/n/sci/SCI-003939-SBNVEC/genomes/Nvec200/aligned/tcs_v2/analysis/rbbh_2026_02_09/jaNemVect1/RefSeq_jaNemVect1.RBBH.moop.tsv"
-
-  declare -A EXTRA_HITS EXTRA_HITS_SPECIES
-  EXTRA_HITS["Montipora_capitata/HIv3/HIv3_geneset"]="/n/sci/SCI-004111-SBCORAL/Montipora_capitata/genomes/Montipora_capitata_HIv3/analysis/RBBH/RefSeq_jaNemVect1.RBBH.moop.tsv"
-  EXTRA_HITS_SPECIES["Montipora_capitata/HIv3/HIv3_geneset"]="sea anemone"
-
-  local GENESET_KEY="$THIS_ORG/$ASSEMBLY/$GENE_SET"
+  ## Per-gene-set naming inputs (human-curated names, closest species, naming species) live
+  ## in scripts/geneset_config.yaml, not here. geneset_config.pl checks the whole file: a problem in THIS gene set's entry stops the build, one in any
+  ## other entry is a warning; it prints this gene set's options NUL-separated.
+  local CONFIG_ARGS=()
+  local REQUIRED_FILES=()
+  perl "$SCRIPTS/geneset_config.pl" "$SCRIPTS/geneset_config.yaml" "$THIS_ORG" "$ASSEMBLY" "$GENE_SET" \
+    > geneset_config.args \
+    || { rm -f geneset_config.args; echo "ERROR: geneset_config.yaml is invalid (above)"; exit 1; }
+  mapfile -d '' -t CONFIG_ARGS < geneset_config.args
+  rm -f geneset_config.args
 
   NAMING_ARGS=(--protein-fasta "$GENESET_DIR/protein.aa.fa"
                --hgnc-dir "$REFERENCE_DATA/hgnc"
@@ -587,45 +590,58 @@ build_naming_args() {
                --uniprot-dir "$REFERENCE_DATA/uniprot"
                --taxonomy-dir "$REFERENCE_DATA/ncbi_taxonomy"
                --ref-db "$REF_DB"
-               --panther PANTHER.iprscan.moop.tsv)
+               --panther PANTHER.iprscan.moop.tsv
+               "${CONFIG_ARGS[@]}")
   [ -s "$GENESET_DIR/protein2gene.txt" ] && NAMING_ARGS+=(--protein2gene "$GENESET_DIR/protein2gene.txt")
   [ -n "$OMA_CODE" ]                     && NAMING_ARGS+=(--oma-dir "$OMA_SRC" --oma-code "$OMA_CODE")
   [ -n "$OMA_ID_MAP" ]                   && NAMING_ARGS+=(--oma-id-map "$OMA_ID_MAP")
   [ -d "$ANALYSIS_DIR/rbh_mmseq" ]       && NAMING_ARGS+=(--mmseqs-dir "$ANALYSIS_DIR/rbh_mmseq")
   [ -d "$ANALYSIS_DIR/diamond" ]         && NAMING_ARGS+=(--diamond-dir "$ANALYSIS_DIR/diamond")
-  [ -n "${CURATED_NAMES[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--override "${CURATED_NAMES[$GENESET_KEY]}")
-  [ -n "${SAME_SPECIES_CODE[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--same-species-code "${SAME_SPECIES_CODE[$GENESET_KEY]}")
-  [ -n "${SAME_SPECIES_HITS[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--same-species-hits "${SAME_SPECIES_HITS[$GENESET_KEY]}")
-  if [ -n "${EXTRA_HITS[$GENESET_KEY]:-}" ]; then
-    NAMING_ARGS+=(--extra-hits "${EXTRA_HITS[$GENESET_KEY]}")
-    [ -n "${EXTRA_HITS_SPECIES[$GENESET_KEY]:-}" ] && NAMING_ARGS+=(--extra-hits-species "${EXTRA_HITS_SPECIES[$GENESET_KEY]}")
-  fi
+  ## last naming step: the gene's InterPro domain ("X domain-containing protein"); the entry
+  ## list (update_reference_data.sh) is what tells a domain from a family
+  local IPRSCAN_RESULTS
+  for IPRSCAN_RESULTS in "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" "$ANALYSIS_DIR/interproscan/interproscan_results.tsv"; do
+    if [ -s "$IPRSCAN_RESULTS" ]; then
+      NAMING_ARGS+=(--interproscan "$IPRSCAN_RESULTS" --interpro-entries "$REFERENCE_DATA/interpro/entry.list")
+      REQUIRED_FILES+=("$REFERENCE_DATA/interpro/entry.list")
+      break
+    fi
+  done
 
   local file
-  for file in "$REFERENCE_DATA/hgnc/hgnc_complete_set.txt" PANTHER.iprscan.moop.tsv \
-              ${CURATED_NAMES[$GENESET_KEY]:-} ${SAME_SPECIES_HITS[$GENESET_KEY]:-} ${EXTRA_HITS[$GENESET_KEY]:-}; do
+  for file in "$REFERENCE_DATA/hgnc/hgnc_complete_set.txt" PANTHER.iprscan.moop.tsv "${REQUIRED_FILES[@]}"; do
     if [ ! -s "$file" ]; then
       echo "ERROR: Required file $file is missing! Gene naming will fail."
+      case "$file" in "$REFERENCE_DATA"/*) echo "       Reference data: run scripts/update_reference_data.sh" ;; esac
       exit 1
     fi
   done
 }
 
-## geneNames.tsv in the naming v2 format (closest-human columns) and closest_human.moop.tsv
-## both present; otherwise naming reruns (gene sets named before naming v2 have neither)
+## geneNames.tsv and closest_human.tsv/.moop.tsv present; otherwise naming reruns (gene sets
+## named before closest_<tag>.tsv existed have none). A geneset_config.yaml change is NOT
+## detected here -- that needs MOOP_RELOAD=1, which deletes the *.moop.tsv files.
 naming_outputs_current() {
-  has_data geneNames.tsv && has_data closest_human.moop.tsv \
-    && head -1 geneNames.tsv | grep -q $'\tclosestHGNC\t'
+  has_data geneNames.tsv && has_data closest_human.tsv && has_data closest_human.moop.tsv
 }
 
-## run assign_gene_names_v2.pl into geneNames.tsv + closest_human.moop.tsv (args: extra options)
+## run assign_gene_names_v2.pl into geneNames.tsv, closest_<tag>.tsv/.moop.tsv and
+## gene_name_source.<kind>.moop.tsv (args: extra options). Built in a scratch directory, then
+## swapped in: every old closest_* and gene_name_source file goes, so nothing stale is loaded.
 run_naming_v2() {
   build_naming_args
+  rm -rf naming.tmp && mkdir naming.tmp
   perl "$REPO/analysis_parsers/assign_gene_names_v2.pl" "${NAMING_ARGS[@]}" --isoforms isoforms.tsv "$@" \
-    --out-names geneNames.tsv.tmp --out-moop closest_human.moop.tsv.tmp \
-    && mv geneNames.tsv.tmp geneNames.tsv \
-    && mv closest_human.moop.tsv.tmp closest_human.moop.tsv \
-    || { rm -f geneNames.tsv.tmp closest_human.moop.tsv.tmp; echo "ERROR: gene naming (assign_gene_names_v2.pl) failed"; exit 1; }
+    --out-names naming.tmp/geneNames.tsv --out-dir naming.tmp \
+    || { rm -rf naming.tmp; echo "ERROR: gene naming (assign_gene_names_v2.pl) failed"; exit 1; }
+  rm -f closest_*.tsv gene_name_source.*.moop.tsv
+  mv naming.tmp/* . && rmdir naming.tmp
+}
+
+## the closest_<tag>.tsv files, human first, for addClosestToGFF.pl
+closest_files() {
+  printf '%s\n' closest_human.tsv
+  ls closest_*.tsv 2>/dev/null | grep -v -e '^closest_human\.tsv$' -e '\.moop\.tsv$'
 }
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -764,7 +780,7 @@ if $HAS_GFF; then
 
       echo "Updating GFF and FASTAs"
       perl "$REPO/analysis_parsers/updateGFF.pl"   "$GENESET_DIR/genes.gff"         geneNames.tsv > genes.gff.tmp \
-        && perl "$REPO/analysis_parsers/addClosestHumanToGFF.pl" genes.gff.tmp geneNames.tsv > genes.gff.closest.tmp \
+        && perl "$REPO/analysis_parsers/addClosestToGFF.pl" genes.gff.tmp $(closest_files) > genes.gff.closest.tmp \
         && mv genes.gff.closest.tmp genes.gff && rm -f genes.gff.tmp \
         || { rm -f genes.gff.tmp genes.gff.closest.tmp; echo "ERROR: failed to build genes.gff"; exit 1; }
       perl "$REPO/analysis_parsers/updateFASTA.pl" "$GENESET_DIR/protein.aa.fa"     geneNames.tsv > protein.aa.fa.tmp \
@@ -781,7 +797,7 @@ if $HAS_GFF; then
       # exactly as provided -- unless the native name is uninformative ("uncharacterized
       # protein", a bare LOC/CG/Gm symbol, ...; GeneNamingV2.pm decides), in which case
       # the naming v2 name replaces it for that gene. Every gene still gets its closest
-      # human gene (geneNames.tsv columns 6-9, closest_human.moop.tsv, and the GFF below).
+      # genes (closest_<tag>.tsv/.moop.tsv, and the GFF below).
       #
       # geneNames.native.tsv (the source's own names, from get_names_from_gff.pl) is left
       # on disk so a replaced name can be compared with what the source called it.
@@ -794,14 +810,14 @@ if $HAS_GFF; then
     fi
   fi
 
-  ## Native RefSeq/Ensembl GFFs keep their names, but get the closest human gene on every
+  ## Native RefSeq/Ensembl GFFs keep their names, but get the closest genes on every
   ## gene and mRNA. genes.gff is a symlink to the source at this point (re-made on every
   ## run above), so write a real copy -- never edit through the link into the datastore.
-  if ! $RENAME && [ -s geneNames.tsv ]; then
+  if ! $RENAME && [ -s closest_human.tsv ]; then
     rm -f genes.gff
-    perl "$REPO/analysis_parsers/addClosestHumanToGFF.pl" "$GENESET_DIR/genes.gff" geneNames.tsv > genes.gff.tmp \
+    perl "$REPO/analysis_parsers/addClosestToGFF.pl" "$GENESET_DIR/genes.gff" $(closest_files) > genes.gff.tmp \
       && mv genes.gff.tmp genes.gff \
-      || { rm -f genes.gff.tmp; ln -sf "$GENESET_DIR/genes.gff" genes.gff; echo "ERROR: failed to add closest human genes to genes.gff"; exit 1; }
+      || { rm -f genes.gff.tmp; ln -sf "$GENESET_DIR/genes.gff" genes.gff; echo "ERROR: failed to add closest genes to genes.gff"; exit 1; }
   fi
 
   ## MOOP's own ID normalization, opt-in per gene set via metadata.yaml:
@@ -910,6 +926,7 @@ if $HAS_GFF; then
   fi
 
   if $REBUILD; then
+    refuse_load_on_top
     sh "$SCRIPTS/setup_new_moopdb_and_load_data.sh" "$THIS_ORG" "$GENE_SET" "$DATA/$THIS_ORG" "$GENESET_DATA" || {
       echo "ERROR: loading $THIS_ORG/$ASSEMBLY/$GENE_SET failed — not continuing." >&2
       exit 1
@@ -1059,6 +1076,7 @@ else
   fi
 
   if $REBUILD; then
+    refuse_load_on_top
     sh "$SCRIPTS/setup_new_moopdb_and_load_data.sh" "$THIS_ORG" "$GENE_SET" "$DATA/$THIS_ORG" "$GENESET_DATA" || {
       echo "ERROR: loading $THIS_ORG/$ASSEMBLY/$GENE_SET failed — not continuing." >&2
       exit 1

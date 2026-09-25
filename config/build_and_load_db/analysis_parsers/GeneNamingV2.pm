@@ -80,6 +80,11 @@ my @UNINFORMATIVE_DESCRIPTION_RE = (
   qr/unlikely\s+to\s+encode\s+a\s+functional\s+protein/i,
   qr/^putative\s+protein$/i,
   qr/^protein$/i,
+  # "protein <locus id>": PANTHER families named after another species' unnamed locus
+  # ("PROTEIN CBG26694", "PROTEIN CBG12054-RELATED", "PROTEIN CBR-CLEC-78", "PROTEIN FAM167A").
+  # Narrow on purpose: "protein S100-A1" is a real name. No HGNC approved name matches.
+  qr/^protein\s+(?:[A-Za-z]{2,4}\d{4,}[A-Za-z]?(?:-related)?|cbr-\S+|fam\d+[a-z]?(?:-related)?)$/i,
+  qr/^eg:\S+(?:\s+protein(?:-related)?)?$/i,   # fly clone names ("EG:114D9.1 PROTEIN-RELATED")
   qr/^(?:si|zgc|wu):/i,
 );
 
@@ -95,7 +100,7 @@ sub is_placeholder_symbol {
 sub is_uninformative_description {
   my ($description, @ids) = @_;
   my $test = clean_name($description);
-  return 1 if $test eq '' or $test eq 'None' or $test eq 'none';
+  return 1 if $test eq '' or $test eq 'None' or $test eq 'none' or $test !~ /[A-Za-z0-9]/;   # "-", "."
   foreach my $pattern (@UNINFORMATIVE_DESCRIPTION_RE) {
     return 1 if $test =~ $pattern;
   }
@@ -143,7 +148,7 @@ sub add_like_to_symbol {
 # HGNC
 
 # load_hgnc(hgnc_complete_set.txt, [withdrawn.txt]) -> {
-#   by_id => { 'HGNC:20773' => { hgnc_id, symbol, name, gene_group, ensembl_gene_id, uniprot_ids => [...] } },
+#   by_id => { 'HGNC:20773' => { hgnc_id, symbol, name, gene_group, gene_group_id, ensembl_gene_id, uniprot_ids => [...] } },
 #   by_ensembl_gene => { ENSG... => record }, by_uniprot => { P12345 => record },
 #   by_symbol => { SYMBOL => record }, by_previous_symbol => { OLD => [records] },
 #   replaced_by => { 'HGNC:old' => 'HGNC:new' }   (merged/withdrawn ids)
@@ -161,7 +166,7 @@ sub load_hgnc {
   foreach my $column_number (0 .. $#columns) {
     $index{$columns[$column_number]} = $column_number;
   }
-  foreach my $needed (qw(hgnc_id symbol name gene_group ensembl_gene_id uniprot_ids prev_symbol)) {
+  foreach my $needed (qw(hgnc_id symbol name gene_group gene_group_id ensembl_gene_id uniprot_ids prev_symbol)) {
     die "column $needed missing from $complete_file\n" unless defined $index{$needed};
   }
   while (my $line = <$fh>) {
@@ -172,10 +177,12 @@ sub load_hgnc {
       symbol          => $fields[$index{symbol}],
       name            => $fields[$index{name}],
       gene_group      => $fields[$index{gene_group}] // '',
+      gene_group_id   => $fields[$index{gene_group_id}] // '',   # parallel to gene_group, "|"-separated
       ensembl_gene_id => $fields[$index{ensembl_gene_id}] // '',
       uniprot_ids     => [ split /\|/, ($fields[$index{uniprot_ids}] // '') ],
     };
     $record->{gene_group} =~ s/^"|"$//g;
+    $record->{gene_group_id} =~ s/^"|"$//g;
     $table{by_id}{$record->{hgnc_id}} = $record;
     $table{by_symbol}{$record->{symbol}} = $record;
     $table{by_ensembl_gene}{$record->{ensembl_gene_id}} = $record if $record->{ensembl_gene_id} ne '';

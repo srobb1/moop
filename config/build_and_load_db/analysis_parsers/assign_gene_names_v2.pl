@@ -16,48 +16,99 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #       [--mmseqs-dir <analysis>/rbh_mmseq] [--diamond-dir <analysis>/diamond] [--ref-db REF_DB] \
 #       [--compara-dir moop/ensembl_compara] [--uniprot-dir moop/uniprot] \
 #       [--taxonomy-dir moop/ncbi_taxonomy] [--panther PANTHER.iprscan.moop.tsv] \
-#       [--native native_geneNames.tsv] [--override curated.moop.tsv ...] \
-#       --out-names geneNames.tsv --out-moop closest_human.moop.tsv
+#       [--native native_geneNames.tsv] [--human-curated-gene-names curated.moop.tsv ...] \
+#       [--closest-species 'tag=Nvec|species=Nematostella vectensis|label=sea anemone|oma_code=NEMVE|hits=FILE|use_for_names=0|same_species=0' ...] \
+#       --out-names geneNames.tsv --out-dir DIR
 #
 # Closest human gene, strongest first (the tier is the Score of the moop table):
 #   1 OMA pairwise ortholog to HUMAN
 #   2 OMA HOG co-ortholog with HUMAN (only when parameters.drw has a fixed SpeciesTree)
-#   3 MMseqs2 reciprocal best hit to Ensembl human (filtered)
+#   3 MMseqs2 reciprocal best hit to Ensembl human (NORMAL filter)
 #   4 via another species: OMA ortholog in a reference species -> its OMA HUMAN ortholog, or
 #     MMseqs2 reciprocal best hit -> Ensembl Compara human ortholog (same Ensembl release)
-#   5 DIAMOND best hit to a human protein (Ensembl human or a Swiss-Prot HUMAN entry, filtered)
+#   5 DIAMOND best hit to a human protein (Ensembl human or a Swiss-Prot HUMAN entry, NORMAL)
 #   6 DIAMOND Swiss-Prot hit in another species -> its Ensembl gene -> Ensembl Compara
 #   7 DIAMOND Swiss-Prot hit in another species -> its PANTHER subfamily -> the human
 #     Swiss-Prot genes in that subfamily
+# Similarity hits must report coverage (NORMAL: E <= 1e-10, both coverages >= 50%); DIAMOND
+# output without coverage columns is not used. Several human genes (a 1:many or many:many
+# family), or tier 7 (a PANTHER subfamily), are reported as ONE family entry, never as a
+# member picked by score. Notes/GENE_NAMING_METHODS.md has the full method.
 #
-# Names: curated override > native name if informative > same-species reference (another
-# annotation of the same species, --same-species-code / --same-species-hits: OMA 1:1 or many:1
-# ortholog, else the hits file, when informative) > tier 1-2 human ortholog
-# (1:1 plain, many:1 "(n of X)", 1:many family) > best hit by bitscore (human reciprocal hit
-# plain unless its human gene is already another gene's ortholog; everything else "-like",
-# with the species when it is not human: "acrosin-like (turkey)") > PANTHER family > None.
+# Closest gene in another species (--closest-species, from geneset_config.yaml): OMA ortholog to
+# oma_code (1:1, many:1, 1:many, many:many, in that order; several genes = a family), else the
+# best hit in its hits file.
 #
-# Output geneNames.tsv: ID MAINID GroupId Desc Note closestHGNC closestHumanSym
-# closestHumanDesc closestHumanEvidence (first five as before; one row per id in isoforms.tsv
-# or, with --native, per id in the native file). The Closest Human Gene moop table has a row
-# for the gene and for every isoform.
+# Names -- a plain name only from an orthology call, "-like" for full-length similarity, a
+# family name when the evidence stops at the family, else no name:
+#   1 human-curated name, as given (never checked)
+#   2 native name if informative; or the closest-species entry with use_for_names (its OMA 1:1
+#     or many:1 ortholog, else its hits file; "-like (label)" unless same_species)
+#   3 OMA human ortholog (tier 1-2): 1:1 "SYM: name"; many:1 "SYM: name (k of n)"; a family
+#     "<HGNC group> family member", or -- no shared group -- straight to step 5
+#   4 best full-length human hit (FULL: both coverages >= 80%), reciprocal or not: "SYM-like:
+#     name-like"; symbol only from HGNC. Other species never name a gene.
+#   5 PANTHER family: "<family> family member"
+#   6 None
+#
+# Output geneNames.tsv: ID MAINID GroupId Desc Note (one row per id in isoforms.tsv or, with
+# --native, per id in the native file). In --out-dir, per species (human always, then
+# each --closest-species; <tag> lowercased): closest_<tag>.tsv, the same rows as geneNames.tsv
+# with ID GroupId and four columns whose header names ARE the GFF attributes
+# (addClosestToGFF.pl): closestHGNC closestHumanSym closestHumanDesc closestHumanEvidence, or
+# closest<Tag>Id closest<Tag>Sym closest<Tag>Desc closest<Tag>Evidence; and
+# closest_<tag>[.ensembl|.family].moop.tsv, annotation type "Closest Gene", a row for the gene
+# and every isoform. And gene_name_source.<kind>.moop.tsv, annotation type "Gene Name Source":
+# for every named gene, what its name came from (accession), the name and the rule
+# (description), and the naming step (score) -- one file per kind of accession link.
 
-# --extra-hits FILE: a per-gene-set moop TSV of similarity hits (e.g. reciprocal best hits to a
-# RefSeq proteome no other source covers) added as naming candidates, ranked like any other hit
-# (E-value only, so after hits that report a bitscore). Species label: --extra-hits-species.
-my %opt = (override => [], 'extra-hits' => []);
-GetOptions(\%opt, 'isoforms=s', 'protein-fasta=s', 'protein2gene=s', 'hgnc-dir=s',
-           'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
-           'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'panther=s', 'native=s', 'oma-id-map=s',
-           'override=s@', 'extra-hits=s@', 'extra-hits-species=s', 'same-species-code=s', 'same-species-hits=s', 'out-names=s', 'out-moop=s')
-  or die "bad options\n";
-foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-moop)) {
-  die "--$required is required\n" unless defined $opt{$required};
-}
+# Per-gene-set inputs come from geneset_config.yaml through scripts/geneset_config.pl.
+#
+# LAYOUT -- constants and shared state at file level, ALL the work in main(), called on the
+# LAST line of this file. A file-level "my %X = (...)" is assigned only when execution reaches
+# its line; with the work at the top of the file, a table defined further down was still EMPTY
+# when used, and Perl says nothing (no error under strict, no warning). That silently broke
+# this script three times on 2026-09-25 (OMA pair ranks, the Closest Gene type, InterProScan
+# E-value analyses). With main() last, every file-level assignment has run before any work
+# starts, wherever it sits. tests/check_perl_file_scope.pl fails CI if the trap comes back.
 
 # ---- filters (percent; see the plan)
+# A hit must report coverage to be used at all: an E-value alone says two proteins share
+# something (often one domain), not that they are the same kind of protein.
+#   NORMAL -- evidence for the closest human gene
+#   FULL   -- a name: the whole of both proteins aligns
 my %NORMAL = (evalue => 1e-10, qcov => 50, tcov => 50);
-my %STRONG = (evalue => 1e-50, qcov => 80, tcov => 80, pident => 50, bits => 200);
+my %FULL   = (evalue => 1e-10, qcov => 80, tcov => 80);
+
+# ---- closest gene in a --closest-species species
+my %OMA_RANK = ('1:1' => 0, 'many:1' => 1, '1:many' => 2, 'many:many' => 3);
+# the one database annotation type for every closest-gene table; the sources tell them apart
+my $CLOSEST_TYPE = 'Closest Gene';
+# InterProScan member databases whose score column is an E-value (the others report a match
+# score, or nothing) -- used to pick a gene's best InterPro domain
+my %EVALUE_ANALYSIS = map { $_ => 1 } qw(Pfam SMART CDD NCBIfam PRINTS PIRSF SFLD Gene3D SUPERFAMILY FunFam);
+# Gene Name Source: why each gene has its name. One database source (and file) per kind of
+# accession, because a source has one accession link.
+my $NAME_SOURCE_TYPE = 'Gene Name Source';
+my %NAME_SOURCE = (
+  hgnc       => ['Gene name source: HGNC gene', 'https://www.genenames.org',
+                 'https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/'],
+  hgnc_group => ['Gene name source: HGNC gene group', 'https://www.genenames.org',
+                 'https://www.genenames.org/data/genegroup/#!/group/'],
+  ensembl    => ['Gene name source: Ensembl gene', 'https://www.ensembl.org',
+                 'https://www.ensembl.org/Homo_sapiens/Gene/Summary?g='],
+  panther    => ['Gene name source: PANTHER family', 'https://www.ebi.ac.uk/interpro/',
+                 'https://www.ebi.ac.uk/interpro/entry/panther/'],
+  ncbi       => ['Gene name source: naming species', 'https://www.ncbi.nlm.nih.gov',
+                 'https://www.ncbi.nlm.nih.gov/search/all/?term='],
+  curated    => ['Gene name source: human-curated', '', ''],
+  native     => ["Gene name source: the gene set's own name", '', ''],
+  nolink     => ['Gene name source: human gene without an id', '', ''],
+  interpro   => ['Gene name source: InterPro domain', 'https://www.ebi.ac.uk/interpro/',
+                 'https://www.ebi.ac.uk/interpro/entry/InterPro/'],
+);
+# closest human: OMA pair types, and Ensembl Compara's for the via-another-species links
+my %LINK_TYPE_RANK = (%OMA_RANK, one2one => 0, one2many => 2, many2many => 3);
 
 my %COMMON_NAME = (
   MOUSE => 'mouse', DROME => 'fly', LOTGI => 'limpet', CAPTE => 'annelid (Capitella)',
@@ -71,69 +122,108 @@ my %COMMON_NAME = (
   saccharomyces_cerevisiae => 'yeast', xenopus_tropicalis => 'frog', escherichia_coli => 'E. coli',
 );
 
+# ---- shared state: declared here, filled by main() (declarations only -- see LAYOUT above)
+my %opt;
+my (@closest_species, $naming_species);
 my %stats;
-
-# ============================================================== genes and ids
-my (%group_of, %members, %curated_selected);
-read_isoforms($opt{isoforms});
-my %gene_of_protein = read_protein2gene($opt{protein2gene});
-my %query_length = fasta_lengths($opt{'protein-fasta'});
-
-my $hgnc = load_hgnc("$opt{'hgnc-dir'}/hgnc_complete_set.txt", "$opt{'hgnc-dir'}/withdrawn.txt");
-
-# ============================================================== evidence
-my %human_links;   # group -> [ link ]   link = {tier, human => [records], type, evidence, bits, id, hit}
-my %hits;          # group -> [ naming candidates from similarity ]
+my (%group_of, %members, %curated_selected);   # isoform groups
+my (%gene_of_protein, %query_length);
+my $hgnc;
+my %human_links;      # group -> [ link ]   link = {tier, human => [records], type, evidence, bits, id, hit}
+my %hits;             # group -> [ naming candidates from similarity ]
 my @pending_compara;  # links through another species' Ensembl gene, resolved in one Compara pass
-
 my %reference_fasta_cache;
-if (defined $opt{'oma-dir'}) {
-  collect_oma();
-}
-if (defined $opt{'mmseqs-dir'}) {
-  collect_mmseqs();
-}
-if (defined $opt{'diamond-dir'}) {
-  collect_diamond();
-  link_swissprot_hits() if defined $opt{'uniprot-dir'};
-}
-foreach my $extra_file (@{$opt{'extra-hits'}}) {
-  read_extra_hits($extra_file);
-}
-collect_same_species();
-resolve_compara();
-name_species();
-my %panther = defined $opt{panther} ? read_panther($opt{panther}) : ();
-my %override;
-foreach my $override_file (@{$opt{override}}) {
-  read_override($override_file, \%override);
-}
+my (%panther, %domain, %curated);
+my %closest;          # group -> { tier, human => [records], evidence, id }
+my %claimed_human;    # human key -> { group => 1 }: the co-orthologs a many:1 name is shared by
+my %name;             # group -> { desc, note, selected, origin }
 
-# ============================================================== decide
-my %claimed_human;   # human key -> { group => 1 } for tier 1-2 orthologs
-foreach my $group (keys %human_links) {
-  foreach my $link (@{$human_links{$group}}) {
-    next unless $link->{tier} <= 2;
-    foreach my $human (@{$link->{human}}) {
-      $claimed_human{$human->{key}}{$group} = 1;
-    }
+# ============================================================== main
+sub main {
+  %opt = ('human-curated-gene-names' => []);
+  GetOptions(\%opt, 'isoforms=s', 'protein-fasta=s', 'protein2gene=s', 'hgnc-dir=s',
+             'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
+             'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'panther=s', 'native=s', 'oma-id-map=s',
+             'human-curated-gene-names=s@',
+             'closest-species=s@', 'interproscan=s', 'interpro-entries=s', 'out-names=s', 'out-dir=s')
+    or die "bad options\n";
+  foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-dir)) {
+    die "--$required is required\n" unless defined $opt{$required};
   }
-}
 
-my %closest;   # group -> { tier, human => [records], evidence, id }
-foreach my $group (keys %members) {
-  $closest{$group} = choose_closest_human($group);
-}
+  # --closest-species: one species each, key=value fields joined by |
+  foreach my $spec (@{$opt{'closest-species'} // []}) {
+    my %species;
+    foreach my $field (split /\|/, $spec) {
+      my ($key, $value) = split /=/, $field, 2;
+      $species{$key} = $value;
+    }
+    foreach my $key (qw(tag species)) {
+      die "--closest-species needs $key: $spec\n" unless defined $species{$key} and $species{$key} ne '';
+    }
+    die "--closest-species tag must be letters/digits, not 'human': $spec\n"
+      if $species{tag} !~ /^[A-Za-z][A-Za-z0-9]*$/ or lc $species{tag} eq 'human';
+    die "--closest-species needs oma_code or hits: $spec\n" unless $species{oma_code} or $species{hits};
+    $species{$_} = $species{$_} ? 1 : 0 foreach qw(use_for_names same_species);
+    die "--closest-species needs a label unless same_species: $spec\n" unless $species{same_species} or $species{label};
+    push @closest_species, \%species;
+  }
+  my @naming_species = grep { $_->{use_for_names} } @closest_species;
+  die "only one --closest-species may have use_for_names\n" if @naming_species > 1;
+  $naming_species = $naming_species[0];
 
-my %name;      # group -> { desc, note, selected }
-foreach my $group (keys %members) {
-  $name{$group} = choose_name($group);
-}
+  # ============================================================== genes and ids
+  read_isoforms($opt{isoforms});
+  %gene_of_protein = read_protein2gene($opt{protein2gene});
+  %query_length = fasta_lengths($opt{'protein-fasta'});
 
-# ============================================================== write
-write_outputs();
-foreach my $key (sort keys %stats) {
-  warn sprintf("%-40s %d\n", $key, $stats{$key});
+  $hgnc = load_hgnc("$opt{'hgnc-dir'}/hgnc_complete_set.txt", "$opt{'hgnc-dir'}/withdrawn.txt");
+
+  # ============================================================== evidence
+  if (defined $opt{'oma-dir'}) {
+    collect_oma();
+  }
+  if (defined $opt{'mmseqs-dir'}) {
+    collect_mmseqs();
+  }
+  if (defined $opt{'diamond-dir'}) {
+    collect_diamond();
+    link_swissprot_hits() if defined $opt{'uniprot-dir'};
+  }
+  collect_closest_species($_) foreach @closest_species;
+  resolve_compara();
+  name_species();
+  %panther = defined $opt{panther} ? read_panther($opt{panther}) : ();
+  die "--interproscan needs --interpro-entries (update_reference_data.sh downloads it)\n"
+    if defined $opt{interproscan} and !defined $opt{'interpro-entries'};
+  %domain = defined $opt{interproscan} ? read_interpro_domains($opt{interproscan}, $opt{'interpro-entries'}) : ();
+  foreach my $curated_file (@{$opt{'human-curated-gene-names'}}) {
+    read_curated($curated_file, \%curated);
+  }
+
+  # ============================================================== decide
+
+  foreach my $group (keys %members) {
+    $closest{$group} = choose_closest_human($group);
+  }
+
+  # many:1 co-orthologs: genes whose closest human is that ONE gene by OMA (tier 1-2). Counted
+  # from the final picks, so a copy that ended up in a family is not counted.
+  foreach my $group (keys %closest) {
+    my $closest = $closest{$group} or next;
+    next if $closest->{family} or $closest->{tier} > 2;
+    $claimed_human{$closest->{human}[0]{key}}{$group} = 1;
+  }
+
+  foreach my $group (keys %members) {
+    $name{$group} = choose_name($group);
+  }
+
+  # ============================================================== write
+  write_outputs();
+  foreach my $key (sort keys %stats) {
+    warn sprintf("%-40s %d\n", $key, $stats{$key});
+  }
 }
 
 # ##############################################################################
@@ -221,10 +311,16 @@ sub query_length_of {
 # key a human gene by HGNC id when there is one, else by Ensembl gene
 sub human_record {
   my (%keys) = @_;
+  # Ensembl states the HGNC gene in its description ("... [Source:HGNC Symbol;Acc:HGNC:9455]"),
+  # also for genes on alternate haplotypes and patches, whose own ENSG id HGNC does not list
+  # (ENSG00000274382 is PROP1 on HSCHR5_3_CTG5). Without this they had no HGNC record at all.
+  if (!$keys{hgnc_id} and ($keys{description} // '') =~ /\bAcc:(HGNC:\d+)/) {
+    $keys{hgnc_id} = $1;
+  }
   my $record = hgnc_record($hgnc, %keys);
   if ($record) {
     return { key => $record->{hgnc_id}, hgnc_id => $record->{hgnc_id}, symbol => $record->{symbol},
-             name => $record->{name}, gene_group => $record->{gene_group} };
+             name => $record->{name}, gene_group => $record->{gene_group}, gene_group_id => $record->{gene_group_id} };
   }
   my $ensembl_gene = $keys{ensembl_gene} // '';
   $ensembl_gene =~ s/\.\d+$//;
@@ -409,7 +505,7 @@ sub collect_mmseqs {
       my $common = $COMMON_NAME{$species} // $species;
 
       if ($species eq 'homo_sapiens') {
-        my $human = human_record(ensembl_gene => $info->{gene}, description => $info->{description}) or next;
+        my $human = human_record(hgnc_id => $info->{hgnc_id}, ensembl_gene => $info->{gene}, description => $info->{description}) or next;
         add_link($group, tier => 3, human => [$human], type => '1:1', id => $query, bits => $bits,
                  evidence => 'reciprocal best hit (MMseqs2)', hit => $target);
         push @{$hits{$group}}, { %hit, source => 'MMseqs2_RBH_Homo_sapiens', type => 'RBBH_Homolog',
@@ -420,7 +516,7 @@ sub collect_mmseqs {
                                  id => $query, hit => $target, reciprocal => 1, species => $common,
                                  symbol => $info->{symbol}, description => $info->{description} };
         push @pending_compara, { group => $group, release => $release, genes => [ $info->{gene} ],
-                                 tier => 4, id => $query, hit => $target, bits => $bits,
+                                 tier => 4, id => $query, hit => $target, bits => $bits, evalue => $evalue,
                                  via => "via $common reciprocal best hit (MMseqs2)" };
       }
     }
@@ -458,7 +554,9 @@ sub reference_proteome {
       my ($gene)   = $line =~ /\bgene:(\S+)/;
       my ($symbol) = $line =~ /\bgene_symbol:(\S+)/;
       my ($desc)   = $line =~ /\bdescription:(.+?)\s*$/;
-      $proteins{$id} = { gene => $gene // $id, symbol => $symbol // '', description => clean_name($desc // ''), length => 0 };
+      my ($hgnc_id) = $line =~ /\bAcc:(HGNC:\d+)/;   # read before clean_name drops the [Source:...] part
+      $proteins{$id} = { gene => $gene // $id, symbol => $symbol // '', description => clean_name($desc // ''),
+                         hgnc_id => $hgnc_id // '', length => 0 };
     } elsif (defined $id) {
       $line =~ s/\s//g;
       $proteins{$id}{length} += length $line;
@@ -513,7 +611,7 @@ sub resolve_compara {
       foreach my $ortholog (@{$orthologs{$pending->{release}}{$gene} // []}) {
         my $human = human_record(ensembl_gene => $ortholog->{human_gene}) or next;
         add_link($pending->{group}, tier => $pending->{tier}, human => [$human], type => $ortholog->{type},
-                 id => $pending->{id}, bits => $pending->{bits}, hit => $pending->{hit},
+                 id => $pending->{id}, bits => $pending->{bits}, evalue => $pending->{evalue}, hit => $pending->{hit},
                  evidence => "$pending->{via} > Ensembl Compara ($ortholog->{type})");
       }
     }
@@ -570,7 +668,7 @@ sub link_swissprot_hits {
       my $what = "$hit->{species_scientific} Swiss-Prot hit" . ($hit->{symbol} ne '' ? " $hit->{symbol}" : '');
       if (@{$cross->{genes}}) {
         push @pending_compara, { group => $group, release => '', genes => $cross->{genes}, tier => 6,
-                                 id => $hit->{id}, hit => $hit->{hit}, bits => $hit->{bits}, via => "via $what" };
+                                 id => $hit->{id}, hit => $hit->{hit}, bits => $hit->{bits}, evalue => $hit->{evalue}, via => "via $what" };
       }
       foreach my $subfamily (@{$cross->{subfamilies}}) {
         my @hgnc_ids = sort keys %{$human_in_subfamily{$subfamily} // {}};
@@ -582,7 +680,7 @@ sub link_swissprot_hits {
         }
         next unless @humans;
         add_link($group, tier => 7, human => \@humans, type => 'PANTHER subfamily', id => $hit->{id},
-                 bits => $hit->{bits}, hit => $hit->{hit},
+                 bits => $hit->{bits}, evalue => $hit->{evalue}, hit => $hit->{hit},
                  evidence => "via $what > PANTHER subfamily $subfamily");
       }
     }
@@ -650,11 +748,11 @@ sub collect_diamond {
       push @{$hits{$group}}, { %hit, %$candidate, id => $query, hit => $subject, reciprocal => 0 };
       if ($candidate->{human}) {
         add_link($group, tier => 5, human => [$candidate->{human}], type => 'best hit', id => $query,
-                 bits => $hit{bits}, evidence => "best BLAST hit ($candidate->{label})", hit => $subject);
+                 bits => $hit{bits}, evalue => $hit{evalue}, evidence => "best BLAST hit ($candidate->{label})", hit => $subject);
       }
     }
     close $fh;
-    $stats{"note: DIAMOND $db without coverage columns (E-value only)"} = 1 unless $has_coverage;
+    $stats{"note: DIAMOND $db has no coverage columns: NOT USED (needs the 17-column output)"} = 1 unless $has_coverage;
   }
 }
 
@@ -694,25 +792,18 @@ sub diamond_candidate {
   return undef;
 }
 
-# E-value always; the rest only when the hit reports it
+# E-value and both coverages; a hit that does not report coverage fails
 sub passes {
   my ($hit, $filter) = @_;
   return 0 unless defined $hit->{evalue} and $hit->{evalue} <= $filter->{evalue};
   foreach my $measure (qw(qcov tcov)) {
-    next unless defined $filter->{$measure};
-    return 0 if defined $hit->{$measure} and $hit->{$measure} < $filter->{$measure};
-  }
-  if (defined $filter->{pident}) {
-    return 0 unless defined $hit->{qcov} and defined $hit->{tcov};
-    my $identity_ok = defined $hit->{pident} && $hit->{pident} >= $filter->{pident};
-    my $bits_ok     = defined $hit->{bits}   && $hit->{bits}   >= $filter->{bits};
-    return 0 unless $identity_ok or $bits_ok;
+    return 0 unless defined $hit->{$measure} and $hit->{$measure} >= $filter->{$measure};
   }
   return 1;
 }
 
 # ##############################################################################
-# PANTHER and curated overrides (moop TSV: id accession description score)
+# PANTHER and human-curated names (moop TSV: id accession description score)
 
 sub read_panther {
   my ($file) = @_;
@@ -732,32 +823,56 @@ sub read_panther {
   return %best;
 }
 
-sub read_extra_hits {
-  my ($file) = @_;
-  open my $fh, '<', $file or die "cant open extra hits $file $!\n";
-  my $source = $file;
-  while (my $line = <$fh>) {
-    if ($line =~ /^## Annotation Source:\s*(.+?)\s*$/) {
-      $source = $1;
-    }
-    next if $line =~ /^#/;
+# InterProScan TSV (the gene set's own results) + InterPro's entry.list: per gene, the best match
+# to an InterPro Domain or Repeat entry, leaving out "unknown function" entries (DUF, UPF,
+# uncharacterised). Best = lowest E-value among member databases that report one (Pfam, SMART,
+# CDD, ...), then entries without an E-value (PROSITE profiles report a score), then accession.
+sub read_interpro_domains {
+  my ($results, $entries) = @_;
+  my %entry;
+  open my $entries_fh, '<', $entries or die "cant open $entries $!\n";
+  while (my $line = <$entries_fh>) {
     chomp $line;
-    my ($id, $accession, $description, $score) = split /\t/, $line;
+    my ($accession, $type, $name) = split /\t/, $line;
+    next unless defined $name and ($type eq 'Domain' or $type eq 'Repeat');
+    next if $name =~ /unknown function|\bDUF\d|\bUPF\d|uncharacteri[sz]ed/i;
+    $entry{$accession} = { type => $type, name => $name };
+  }
+  close $entries_fh;
+  my %best;
+  my $open = $results =~ /\.gz$/ ? "gzip -dc '$results' |" : "< $results";
+  open my $fh, $open or die "cant read $results\n";
+  while (my $line = <$fh>) {
+    chomp $line;
+    my @fields = split /\t/, $line;
+    my ($id, $analysis, $signature, $score, $interpro) = @fields[0, 3, 4, 8, 11];
+    next unless defined $interpro and exists $entry{$interpro};
     my $group = group_for($id) or next;
-    my %hit = (evalue => (($score // '') =~ /^[0-9.eE+-]+$/ ? $score : 1));
-    next unless passes(\%hit, \%NORMAL);
-    my ($symbol, $name) = split_symbol($description // '');
-    (my $source_tag = $source) =~ s/\s+/_/g;
-    push @{$hits{$group}}, { %hit, source => $source_tag, type => 'Homologs', id => $id, hit => $accession,
-                             reciprocal => 0, symbol => $symbol, description => clean_name($name),
-                             species => $opt{'extra-hits-species'} // $source };
+    my $evalue = $EVALUE_ANALYSIS{$analysis} && defined $score && $score =~ /^[0-9.eE+-]+$/ ? $score : undef;
+    my $candidate = { id => $id, entry => $interpro, %{$entry{$interpro}}, analysis => $analysis,
+                      signature => $signature // '', evalue => $evalue };
+    my $current = $best{$group};
+    if (!$current or better_domain($candidate, $current)) {
+      $best{$group} = $candidate;
+    }
   }
   close $fh;
+  return %best;
 }
 
-sub read_override {
-  my ($file, $override) = @_;
-  open my $fh, '<', $file or die "cant open override $file $!\n";
+sub better_domain {
+  my ($new, $old) = @_;
+  return 1 if defined $new->{evalue} and !defined $old->{evalue};
+  return 0 if !defined $new->{evalue} and defined $old->{evalue};
+  if (defined $new->{evalue} and $new->{evalue} != $old->{evalue}) {
+    return $new->{evalue} < $old->{evalue} ? 1 : 0;
+  }
+  return ($new->{entry} cmp $old->{entry} or $new->{id} cmp $old->{id}) < 0 ? 1 : 0;
+}
+
+sub read_curated {
+  my ($file, $curated) = @_;
+  open my $fh, '<', $file or die "cant open human-curated names $file $!\n";
   my $source = $file;
   while (my $line = <$fh>) {
     if ($line =~ /^## Annotation Source:\s*(.+?)\s*$/) {
@@ -767,8 +882,8 @@ sub read_override {
     chomp $line;
     my ($id, $accession, $description, $score) = split /\t/, $line;
     my $group = group_for($id) or next;
-    next if exists $override->{$group};
-    $override->{$group} = { id => $id, hit => $accession, description => $description // '',
+    next if exists $curated->{$group};
+    $curated->{$group} = { id => $id, hit => $accession, description => $description // '',
                             score => $score // '-', source => $source };
   }
   close $fh;
@@ -776,6 +891,18 @@ sub read_override {
 
 # ##############################################################################
 # closest human gene
+
+# human gene key -> best bitscore of this gene's similarity hits (MMseqs2 RBH, DIAMOND) to it
+sub human_support {
+  my ($group) = @_;
+  my %support;
+  foreach my $hit (@{$hits{$group} // []}) {
+    next unless $hit->{human} and defined $hit->{bits};
+    my $key = $hit->{human}{key};
+    $support{$key} = $hit->{bits} if !defined $support{$key} or $hit->{bits} > $support{$key};
+  }
+  return \%support;
+}
 
 sub choose_closest_human {
   my ($group) = @_;
@@ -789,11 +916,10 @@ sub choose_closest_human {
   foreach my $link (@links) {
     push @tier_links, $link if $link->{tier} == $best_tier;
   }
-  # tiers 1-2: every co-ortholog; later tiers: the single best-scoring link
-  if ($best_tier > 2) {
-    my @sorted = sort { ($b->{bits} // 0) <=> ($a->{bits} // 0) } @tier_links;
-    @tier_links = ($sorted[0]);
-  }
+  my $support = human_support($group);
+  @tier_links = order_links($best_tier, $support, @tier_links);
+  # tiers 1-2: every co-ortholog, in that order; later tiers: the single best link
+  @tier_links = ($tier_links[0]) if $best_tier > 2;
   my (%seen, @humans);
   foreach my $link (@tier_links) {
     foreach my $human (@{$link->{human}}) {
@@ -801,62 +927,200 @@ sub choose_closest_human {
       push @humans, $human;
     }
   }
-  return { tier => $best_tier, human => \@humans, evidence => $tier_links[0]{evidence},
-           type => $tier_links[0]{type}, id => $tier_links[0]{id}, hit => $tier_links[0]{hit} };
+  my $closest = { tier => $best_tier, human => \@humans, evidence => $tier_links[0]{evidence},
+                  type => $tier_links[0]{type}, id => $tier_links[0]{id}, hit => $tier_links[0]{hit} };
+  # One human gene: that gene. Several (a 1:many or many:many family), or a PANTHER
+  # subfamily (tier 7, family-level evidence even with one human member): the family, never
+  # one member picked by score -- a gene that predates a duplication is equally related to
+  # every copy, and the best-scoring copy is only the slowest-evolving one.
+  return $closest if @humans == 1 and $best_tier != 7;
+  my $size = @humans;
+  $stats{'closest human: family'}++;
+  return { %$closest, family_size => $size, family => 1,
+           evidence => "$closest->{evidence}, family of $size" };
 }
 
-# ##############################################################################
-# names
+# Order links so the result never depends on hash order (the links arrive in whatever order
+# the OMA/hit files were walked through hashes). Tiers 1-2 are OMA and carry no score: the pair
+# type first (1:1 > many:1 > 1:many > many:many; Compara's one2one > one2many > many2many
+# likewise), then how strongly this gene's own MMseqs2/DIAMOND hits agree (best bitscore to
+# that same human gene). Later tiers: their own bitscore first, then the same two. Then a human
+# gene with an HGNC record over one without (it has a symbol). Ids last, only for exact ties.
+sub order_links {
+  my ($tier, $support, @links) = @_;
+  my %agreement;
+  foreach my $link (@links) {
+    my $best = 0;
+    foreach my $human (@{$link->{human}}) {
+      my $bits = $support->{$human->{key}} // 0;
+      $best = $bits if $bits > $best;
+    }
+    $agreement{$link} = $best;
+  }
+  my $by_type      = sub { ($LINK_TYPE_RANK{$_[0]{type} // ''} // 9) <=> ($LINK_TYPE_RANK{$_[1]{type} // ''} // 9) };
+  my $by_agreement = sub { $agreement{$_[1]} <=> $agreement{$_[0]} };
+  my $has_hgnc     = sub { ($_[0]{human}[0]{hgnc_id} // '') ne '' ? 1 : 0 };
+  my $by_hgnc      = sub { $has_hgnc->($_[1]) <=> $has_hgnc->($_[0]) };
+  my $by_ids       = sub { (($_[0]{human}[0]{key} // '') cmp ($_[1]{human}[0]{key} // ''))
+                             or (($_[0]{id} // '') cmp ($_[1]{id} // ''))
+                             or (($_[0]{hit} // '') cmp ($_[1]{hit} // '')) };
+  if ($tier <= 2) {
+    return sort { $by_type->($a, $b) or $by_agreement->($a, $b) or $by_hgnc->($a, $b) or $by_ids->($a, $b) } @links;
+  }
+  # E-value next: DIAMOND without its coverage columns reports no bitscore, and ranking those
+  # hits by id instead picked a closest gene that disagreed with the E-value-ranked name
+  return sort { (($b->{bits} // 0) <=> ($a->{bits} // 0)) or (($a->{evalue} // 1e9) <=> ($b->{evalue} // 1e9))
+                or $by_agreement->($a, $b)
+                or $by_type->($a, $b) or $by_hgnc->($a, $b) or $by_ids->($a, $b) } @links;
+}
 
-my (%same_species_oma, %same_species_hit);
-sub same_species_name {
+# the smallest HGNC gene group every member shares ("Integrin alpha subunits" rather than
+# "CD molecules"), or nothing
+sub shared_hgnc_group {
+  my ($humans) = @_;
+  my %groups_seen;
+  foreach my $human (@$humans) {
+    my %own_groups;
+    foreach my $gene_group (split /\|/, $human->{gene_group} // '') {
+      $own_groups{$gene_group} = 1 if $gene_group ne '';
+    }
+    $groups_seen{$_}++ foreach keys %own_groups;
+  }
+  my @shared = grep { $groups_seen{$_} == scalar @$humans } keys %groups_seen;
+  @shared = sort { hgnc_group_size($a) <=> hgnc_group_size($b) or $a cmp $b } @shared;
+  return $shared[0];
+}
+
+# a family as ONE closest entry: symbol column "<HGNC group> family" when the
+# members share one, else "A/B-family" for up to 3 members -- "(N genes)" added when some
+# members have no symbol, so "SCYGR2-family" never reads as one gene -- else "family of N genes"
+sub family_entry {
+  my ($size, $symbols, $descriptions, $group_name) = @_;
+  my @symbols = grep { $_ ne '' } @$symbols;
+  my $label = defined $group_name ? ($group_name =~ /family$/i ? $group_name : "$group_name family")
+            : (@symbols and $size <= 3) ? join('/', @symbols) . '-family' . (@symbols < $size ? " ($size genes)" : '')
+            : "family of $size genes";
+  my %seen;
+  my @descriptions = grep { $_ ne '' and !$seen{$_}++ } @$descriptions;
+  my $description = join(' / ', @descriptions[0 .. ($#descriptions < 2 ? $#descriptions : 2)]);
+  $description .= " ... ($size genes)" if $size > 3;
+  return { id => '', symbol => $label, description => $description };
+}
+
+my (%species_oma, %species_hit);   # tag -> group -> [ OMA pairs ] / best hit in the hits file
+my %species_hit_source;            # tag -> the hits file's Annotation Source, else its file name
+
+# a name from the naming species: plain for another annotation of this same species,
+# otherwise "-like (label)", as for any other species' hit
+sub naming_species_text {
+  my ($symbol, $description) = @_;
+  return ($symbol ne '' ? "$symbol: $description" : $description) if $naming_species->{same_species};
+  my $like_symbol = $symbol ne '' ? add_like_to_symbol($symbol) : '';
+  my $like_description = add_like_to_description($description ne '' ? $description : $symbol)
+                       . " ($naming_species->{label})";
+  return $like_symbol ne '' ? "$like_symbol: $like_description" : $like_description;
+}
+
+# naming step 3: the use_for_names species' OMA 1:1 / many:1 ortholog, else its hits file
+sub naming_species_name {
   my ($group) = @_;
-  # OMA orthologs in the same-species reference: 1:1, or several of our genes to one of theirs
-  foreach my $candidate (sort { $a->{rank} <=> $b->{rank} } @{$same_species_oma{$group} // []}) {
+  return undef unless $naming_species;
+  my $tag = $naming_species->{tag};
+  my $code = $naming_species->{oma_code} // '';
+  foreach my $candidate (@{$species_oma{$tag}{$group} // []}) {
+    next unless $candidate->{type} eq '1:1' or $candidate->{type} eq 'many:1';
     my $parsed = $candidate->{parsed};
     my $symbol = is_placeholder_symbol($parsed->{gene_id}) ? '' : $parsed->{gene_id};
     my $description = clean_name($parsed->{description});
     next unless is_informative_hit($symbol, $description, $candidate->{hit});
-    $stats{"name: same-species reference $opt{'same-species-code'} (OMA $candidate->{type})"}++;
-    return { desc => ($symbol ne '' ? "$symbol: $description" : $description),
+    $stats{"name: $tag (OMA $candidate->{type})"}++;
+    my $partner = $parsed->{protein_ids}[0] // $candidate->{hit};
+    my $rule = $naming_species->{same_species}
+      ? "Same gene in another annotation of this species ($naming_species->{species} $partner; OMA, $candidate->{type})"
+      : "Ortholog of $naming_species->{species} $partner (OMA, $candidate->{type}); named after it, marked -like";
+    return { origin => { kind => 'ncbi', accession => $partner, step => 2, rule => $rule },
+             desc => naming_species_text($symbol, $description),
              selected => selected_id($group, $candidate->{id}),
-             note => "OMA_pairwise_$opt{'same-species-code'}|Orthologs|" . strip_suffixes($candidate->{id}) . "|$candidate->{hit}|$candidate->{type}" };
+             note => "OMA_pairwise_$code|Orthologs|" . strip_suffixes($candidate->{id}) . "|$candidate->{hit}|$candidate->{type}" };
   }
-  # the same-species hits file (e.g. reciprocal best hits to that annotation)
-  if (my $hit = $same_species_hit{$group}) {
+  if (my $hit = $species_hit{$tag}{$group}) {
     my ($symbol, $description) = split_symbol($hit->{description});
     $symbol = '' if is_placeholder_symbol($symbol);
     $description = clean_name($description);
     if (is_informative_hit($symbol, $description, $hit->{hit})) {
-      $stats{'name: same-species hits file'}++;
-      return { desc => ($symbol ne '' ? "$symbol: $description" : $description),
+      $stats{"name: $tag hits file"}++;
+      my $type = $naming_species->{same_species} ? 'Same_species' : 'Naming_species';
+      my $rule = $naming_species->{same_species}
+        ? "Same gene in another annotation of this species ($naming_species->{species} $hit->{hit}; best hit in $hit->{source}, E=" . e_value($hit->{evalue}) . ")"
+        : "Best hit $naming_species->{species} $hit->{hit} ($hit->{source}, E=" . e_value($hit->{evalue}) . "); named after it, marked -like";
+      return { origin => { kind => 'ncbi', accession => $hit->{hit}, step => 2, rule => $rule },
+               desc => naming_species_text($symbol, $description),
                selected => selected_id($group, $hit->{id}),
-               note => "$hit->{source}|Same_species|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{score}" };
+               note => "$hit->{source}|$type|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{score}" };
     }
   }
   return undef;
 }
 
-# --same-species-code CODE: OMA pairs with that reference (read from the same --oma-dir run);
-# --same-species-hits FILE: moop TSV (id accession "SYMBOL: description" score)
-sub collect_same_species {
-  if (defined $opt{'same-species-code'} and defined $opt{'oma-dir'} and defined $opt{'oma-code'}) {
-    my $pairs = read_oma_pairs("$opt{'oma-dir'}/Output", $opt{'oma-code'}, $opt{'same-species-code'});
+# closest gene in a --closest-species species, informative or not, by the same rule as the
+# closest human gene: the best-ranked OMA relationship, a family of several genes reported as
+# the family; no OMA relationship at all: the best hit in the hits file
+sub choose_closest_species {
+  my ($species, $group) = @_;
+  my $tag = $species->{tag};
+  my $hit = $species_hit{$tag}{$group};
+  my @pairs = @{$species_oma{$tag}{$group} // []};
+  if (@pairs) {
+    my $type = $pairs[0]{type};
+    my (%seen, @genes);
+    foreach my $pair (@pairs) {
+      last if $pair->{type} ne $type;
+      next if $seen{$pair->{hit}}++;
+      my $parsed = $pair->{parsed};
+      push @genes, { id => $parsed->{protein_ids}[0] // $pair->{hit}, oma_id => $pair->{hit},
+                     symbol => $parsed->{gene_id} // '', description => clean_name($parsed->{description} // '') };
+    }
+    return { rank => 1, genes => \@genes, evidence => "OMA ortholog ($type)" } if @genes == 1;
+
+    # a family: reported as the family (see choose_closest_human)
+    my $size = @genes;
+    $stats{"closest $tag: family"}++;
+    return { rank => 1, genes => [ family_entry($size, [map { $_->{symbol} } @genes], [map { $_->{description} } @genes]) ],
+             evidence => "OMA ortholog ($type), family of $size" };
+  }
+  if ($hit) {
+    my ($symbol, $description) = split_symbol($hit->{description});
+    return { rank => 2, genes => [ { id => $hit->{hit}, symbol => $symbol // '', description => clean_name($description // '') } ],
+             evidence => "hits file ($hit->{source})" };
+  }
+  return undef;
+}
+
+# OMA pairs with oma_code (from the same --oma-dir run), best rank first; the hits file
+# (moop TSV: id accession "SYMBOL: description" score), best E-value per gene
+sub collect_closest_species {
+  my ($species) = @_;
+  my $tag = $species->{tag};
+  if ($species->{oma_code} and defined $opt{'oma-dir'} and defined $opt{'oma-code'}) {
+    my $pairs = read_oma_pairs("$opt{'oma-dir'}/Output", $opt{'oma-code'}, $species->{oma_code});
     foreach my $oma_target_id (keys %$pairs) {
       foreach my $own (own_ids_and_groups($oma_target_id)) {
         my ($target_id, $group) = @$own;
         foreach my $pair (@{$pairs->{$oma_target_id}}) {
-          next unless $pair->{type} eq '1:1' or $pair->{type} eq 'many:1';
-          push @{$same_species_oma{$group}}, { id => $target_id, hit => $pair->{partner_id}, type => $pair->{type},
-                                               rank => ($pair->{type} eq '1:1' ? 0 : 1),
-                                               parsed => parse_oma_header($pair->{partner_header}) };
+          next unless exists $OMA_RANK{$pair->{type}};
+          push @{$species_oma{$tag}{$group}}, { id => $target_id, hit => $pair->{partner_id}, type => $pair->{type},
+                                                parsed => parse_oma_header($pair->{partner_header}) };
         }
       }
     }
+    foreach my $group (keys %{$species_oma{$tag} // {}}) {
+      @{$species_oma{$tag}{$group}} = sort { $OMA_RANK{$a->{type}} <=> $OMA_RANK{$b->{type}} or $a->{hit} cmp $b->{hit} }
+                                      @{$species_oma{$tag}{$group}};
+    }
   }
-  if (defined $opt{'same-species-hits'}) {
-    open my $fh, '<', $opt{'same-species-hits'} or die "cant open $opt{'same-species-hits'} $!\n";
-    my $source = $opt{'same-species-hits'};
+  if ($species->{hits}) {
+    open my $fh, '<', $species->{hits} or die "cant open $species->{hits} $!\n";
+    my $source = $species->{hits};
     while (my $line = <$fh>) {
       if ($line =~ /^## Annotation Source:\s*(.+?)\s*$/) {
         ($source = $1) =~ s/\s+/_/g;
@@ -866,50 +1130,77 @@ sub collect_same_species {
       my ($id, $accession, $description, $score) = split /\t/, $line;
       my $group = group_for($id) or next;
       my $evalue = ($score // '') =~ /^[0-9.eE+-]+$/ ? $score : 1;
-      if (!exists $same_species_hit{$group} or $evalue < $same_species_hit{$group}{evalue}) {
-        $same_species_hit{$group} = { id => $id, hit => $accession, description => $description // '',
-                                      score => $score // '-', evalue => $evalue, source => $source };
+      if (!exists $species_hit{$tag}{$group} or $evalue < $species_hit{$tag}{$group}{evalue}) {
+        $species_hit{$tag}{$group} = { id => $id, hit => $accession, description => $description // '',
+                                       score => $score // '-', evalue => $evalue, source => $source };
       }
     }
     close $fh;
+    ($species_hit_source{$tag} = $source) =~ s{.*/}{};
   }
 }
 
 sub choose_name {
   my ($group) = @_;
 
-  if (my $curated = $override{$group}) {
-    $stats{'name: curated override'}++;
+  # human-curated names (a person named these genes, e.g. Chamaeleo's Apollo file) are kept
+  # as is: deliberately NOT subject to is_informative_hit, unlike every step below
+  if (my $curated = $curated{$group}) {
+    $stats{'name: human-curated'}++;
     (my $source = $curated->{source}) =~ s/\s+/_/g;
     return { desc => $curated->{description}, selected => selected_id($group, $curated->{id}),
-             note => "$source|Curated|$curated->{id}|$curated->{hit}|$curated->{score}" };
+             note => "$source|Curated|$curated->{id}|$curated->{hit}|$curated->{score}",
+             origin => { kind => 'curated', accession => $curated->{hit}, step => 1, rule => "Named by a curator ($curated->{source})" } };
   }
 
-  # same species, other annotation (e.g. in-house NV2 genes -> Nematostella RefSeq): the same
-  # genes, so their name is used as is -- when it is informative
-  if (my $same = same_species_name($group)) {
-    return $same;
+  # the closest-species entry with use_for_names (e.g. NV2's own RefSeq annotation, or
+  # Nematostella for a coral once reviewed) -- when informative
+  if (my $named = naming_species_name($group)) {
+    return $named;
   }
 
+  # OMA orthology to human. A family OMA could not narrow is not handed to step 4 either:
+  # the best BLAST hit would just be picking one member by score again.
   my $closest = $closest{$group};
+  my $oma_family = 0;
   if ($closest and $closest->{tier} <= 2) {
     my $named = ortholog_name($group, $closest);
     if ($named) {
-      $stats{"name: OMA tier $closest->{tier} ($closest->{type})"}++;
+      $stats{"name: OMA " . ($closest->{family} ? 'family' : $closest->{type})}++;
       return $named;
     }
+    $oma_family = $closest->{family} ? 1 : 0;
   }
 
-  my $best = best_hit($group);
-  if ($best) {
+  if (!$oma_family and my $best = best_hit($group)) {
     return hit_name($group, $best);
   }
 
-  if (my $family = $panther{$group}) {
+  my $family = $panther{$group};
+  if ($family and is_informative_hit('', $family->{description}, $family->{family})) {
     $stats{'name: PANTHER family'}++;
     my $description = family_member($family->{description});
     return { desc => $description, selected => selected_id($group, $family->{id}),
-             note => "PANTHER|Gene_Families|$family->{id}|$family->{family}|$family->{evalue}" };
+             note => "PANTHER|Gene_Families|$family->{id}|$family->{family}|$family->{evalue}",
+             origin => { kind => 'panther', accession => $family->{family}, step => 5, rule => "Member of PANTHER family $family->{family} (InterProScan, E=" . e_value($family->{evalue}) . ")" } };
+  }
+
+  # the gene's best InterPro domain or repeat: "X domain-containing protein" (UniProt's
+  # convention for a protein known only by a domain) -- claims the domain, not a gene identity
+  if (my $domain = $domain{$group}) {
+    my $name = $domain->{name};
+    $name =~ s/,\s+/ /g;   # "Zinc finger, RING-type" -> "Zinc finger RING-type"; keeps "1,2-lyase"
+    $name =~ s/\s+/ /g;
+    my $description = $name =~ /(?:domain|repeats?)(?:\s+\d+)?$/i ? "$name-containing protein" : "$name domain-containing protein";
+    if (is_informative_hit('', $name, $domain->{entry})) {
+      $stats{"name: InterPro $domain->{type}"}++;
+      my $signature = $domain->{analysis} . ($domain->{signature} ne '' ? " $domain->{signature}" : '')
+                    . (defined $domain->{evalue} ? ", E=" . e_value($domain->{evalue}) : '');
+      return { desc => $description, selected => selected_id($group, $domain->{id}),
+               note => "InterPro|Domains|$domain->{id}|$domain->{entry}|" . ($domain->{evalue} // '-'),
+               origin => { kind => 'interpro', accession => $domain->{entry}, step => 6,
+                           rule => "Contains InterPro " . lc($domain->{type}) . " $domain->{entry} \"$domain->{name}\" ($signature); no homolog or family evidence" } };
+    }
   }
 
   $stats{'name: none'}++;
@@ -923,66 +1214,76 @@ sub ortholog_name {
   my $note_tail = strip_suffixes($closest->{id}) . "|$closest->{hit}|$closest->{type}";
   my $selected = selected_id($group, $closest->{id});
 
-  if (@humans == 1) {
+  if (!$closest->{family}) {
     my $human = $humans[0];
     return undef unless is_informative_hit($human->{symbol}, $human->{name}, $human->{key});
     my $symbol = $human->{hgnc_id} ? $human->{symbol} : '';
     my $description = $human->{name};
-    # many:1 -- several genes here share this human gene
-    my @copies = sort { ortholog_rank($a, $human) <=> ortholog_rank($b, $human) or $a cmp $b }
-                 keys %{$claimed_human{$human->{key}} // {}};
-    if (@copies > 1) {
-      my $position = 1;
-      foreach my $copy (@copies) {
-        last if $copy eq $group;
-        $position++;
-      }
-      $description .= " ($position of " . scalar(@copies) . ")";
-    }
+    # many:1 (a duplication in this lineage): every copy is an ortholog of the human gene and
+    # carries its name; how many copies share it is provenance, not part of the name
+    my $copies = scalar keys %{$claimed_human{$human->{key}} // {}};
+    my $rule = ($closest->{tier} == 1 ? 'Ortholog' : 'Co-ortholog') . " of human " . human_label($human)
+             . " (" . ($closest->{tier} == 1 ? 'OMA' : 'OMA HOG') . ", $closest->{type})"
+             . ($copies > 1 ? ": one of $copies copies in this genome" : '');
     return { desc => ($symbol ne '' ? "$symbol: $description" : $description), selected => $selected,
-             note => "$source|Orthologs|$note_tail" };
+             note => "$source|Orthologs|$note_tail", origin => human_origin($human, $rule, 3) };
   }
 
-  # 1:many -- a family; name it after the most specific HGNC gene group they all share
-  # (fewest members, so "Integrin alpha subunits" rather than "CD molecules")
-  my %groups_seen;
-  foreach my $human (@humans) {
-    my %own_groups;
-    foreach my $gene_group (split /\|/, $human->{gene_group}) {
-      $own_groups{$gene_group} = 1 if $gene_group ne '';
+  # a family: named after the most specific HGNC gene group they all share, or not named here
+  # at all -- never after a member picked by score or by spelling
+  # No symbol: the symbol is what users search as the gene's identity, and a family has none.
+  my $shared = shared_hgnc_group(\@humans) or return undef;
+  return { desc => family_member($shared), selected => $selected, note => "$source|Orthologs|$note_tail",
+           origin => { kind => 'hgnc_group', accession => hgnc_group_id(\@humans, $shared), step => 3,
+                       rule => "Co-ortholog of " . scalar(@humans) . " human genes in the HGNC group \"$shared\" ("
+                               . ($closest->{tier} == 1 ? 'OMA' : 'OMA HOG') . ", $closest->{type}); no single ortholog" } };
+}
+
+# a human gene in provenance text: its HGNC symbol, else its Ensembl id or description
+sub human_label {
+  my ($human) = @_;
+  return $human->{hgnc_id} ne '' ? $human->{symbol} : $human->{key} =~ /^ENSG/ ? $human->{key} : "\"$human->{name}\"";
+}
+
+# an E-value as provenance shows it: 2e-95, 0
+sub e_value {
+  my ($evalue) = @_;
+  return '?' unless defined $evalue and $evalue =~ /^[0-9.eE+-]+$/;
+  return $evalue == 0 ? '0' : sprintf('%.0e', $evalue);
+}
+
+# the provenance of a name taken from one human gene: its HGNC record, else its Ensembl gene
+sub human_origin {
+  my ($human, $rule, $step) = @_;
+  return $human->{hgnc_id} ne '' ? { kind => 'hgnc', accession => $human->{hgnc_id}, rule => $rule, step => $step }
+       : $human->{key} =~ /^ENSG/ ? { kind => 'ensembl', accession => $human->{key}, rule => $rule, step => $step }
+       : { kind => 'nolink', accession => $human->{name}, rule => $rule, step => $step };
+}
+
+# HGNC's id for one of the members' group names (names and ids are parallel "|" lists)
+sub hgnc_group_id {
+  my ($humans, $group_name) = @_;
+  foreach my $human (@$humans) {
+    my @names = split /\|/, $human->{gene_group} // '';
+    my @ids = split /\|/, $human->{gene_group_id} // '';
+    foreach my $index (0 .. $#names) {
+      return $ids[$index] if $names[$index] eq $group_name and defined $ids[$index] and $ids[$index] ne '';
     }
-    foreach my $gene_group (keys %own_groups) {
-      $groups_seen{$gene_group}++;
-    }
   }
-  my @shared;
-  foreach my $gene_group (keys %groups_seen) {
-    push @shared, $gene_group if $groups_seen{$gene_group} == scalar @humans;
-  }
-  @shared = sort { hgnc_group_size($a) <=> hgnc_group_size($b) or $a cmp $b } @shared;
-  my @symbols;
-  foreach my $human (@humans) {
-    push @symbols, $human->{symbol} if $human->{hgnc_id};
-  }
-  @symbols = sort @symbols;
-  my $description;
-  if (@shared) {
-    $description = family_member($shared[0]);
-  } elsif (@symbols) {
-    $description = family_member(join('/', @symbols[0 .. ($#symbols < 2 ? $#symbols : 2)]));
-  } else {
-    return undef;
-  }
-  my $symbol = @symbols && @symbols <= 3 ? join('/', @symbols) : '';
-  return { desc => ($symbol ne '' ? "$symbol: $description" : $description), selected => $selected,
-           note => "$source|Orthologs|$note_tail" };
+  return $group_name;
 }
 
 # "Integrin alpha subunits" -> "Integrin alpha subunits family member";
 # "Tubulin beta family" -> "Tubulin beta family member"
 sub family_member {
   my ($family) = @_;
-  return $family =~ /family$/i ? "$family member" : "$family family member";
+  # a colon would be read downstream as "SYMBOL: description" (updateGFF.pl takes what precedes
+  # the first colon as the symbol): "DUMPY: SHORTER THAN WILD-TYPE" -> "DUMPY - SHORTER ..."
+  (my $name = $family) =~ s/\s*:\s*/ - /g;
+  $name =~ s/\s+/ /g;   # stray double spaces in PANTHER / HGNC names
+  $name =~ s/^ | $//g;
+  # "Solute carrier family 5 member", "... superfamily member", else "X family member"
+  return $name =~ /family\b/i ? "$name member" : "$name family member";
 }
 
 my %group_size_cache;
@@ -999,81 +1300,43 @@ sub hgnc_group_size {
 }
 
 # lower = earlier copy: best bitscore to that human gene, from any hit of the group
-sub ortholog_rank {
-  my ($group, $human) = @_;
-  my $best = 0;
-  foreach my $hit (@{$hits{$group} // []}) {
-    next unless $hit->{human} and $hit->{human}{key} eq $human->{key};
-    $best = $hit->{bits} if ($hit->{bits} // 0) > $best;
-  }
-  return -$best;
-}
 
-# informative hits; the best by bitscore (hits without a bitscore rank by E-value after);
-# a non-human hit must be strong to win
+# Naming step 4: the best full-length hit to a HUMAN protein (FULL filter, informative), by
+# bitscore then E-value. Hits to other species never name a gene: a transferred name may be a
+# lineage-specific paralog ("member 4a" in fish), which we cannot tell and should not copy.
 sub best_hit {
   my ($group) = @_;
-  my $has_human_hit = 0;
-  foreach my $hit (@{$hits{$group} // []}) {
-    $has_human_hit = 1 if $hit->{human};
-  }
   my @candidates;
   foreach my $hit (@{$hits{$group} // []}) {
-    my ($symbol, $description) = hit_label($hit);
-    next unless is_informative_hit($symbol, $description, $hit->{hit});
-    next if !$hit->{human} and $has_human_hit and !passes($hit, \%STRONG);
+    next unless $hit->{human} and passes($hit, \%FULL);
+    next unless is_informative_hit($hit->{human}{symbol}, $hit->{human}{name}, $hit->{hit});
     push @candidates, $hit;
   }
   return undef unless @candidates;
-  my @sorted = sort {
-    (defined $b->{bits} <=> defined $a->{bits})
-      or (($b->{bits} // 0) <=> ($a->{bits} // 0))
-      or ($a->{evalue} <=> $b->{evalue})
-      or ((defined $b->{human}) <=> (defined $a->{human}))
-  } @candidates;
+  my @sorted = sort { (($b->{bits} // 0) <=> ($a->{bits} // 0)) or ($a->{evalue} <=> $b->{evalue})
+                      or ($a->{hit} cmp $b->{hit}) } @candidates;
   return $sorted[0];
 }
 
-sub hit_label {
-  my ($hit) = @_;
-  if ($hit->{human} and $hit->{human}{hgnc_id}) {
-    return ($hit->{human}{symbol}, $hit->{human}{name});
-  }
-  return ($hit->{symbol} // '', $hit->{description} // '');
-}
-
+# similarity is not orthology, reciprocal or not: always "-like". The symbol is the human
+# gene's HGNC symbol, or none -- never borrowed from another gene.
 sub hit_name {
   my ($group, $hit) = @_;
-  my ($symbol, $description) = hit_label($hit);
-  my $selected = selected_id($group, $hit->{id});
-  my $score = $hit->{evalue};
-  my $note = "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$score";
-
-  if ($hit->{human} and $hit->{reciprocal} and !exists $claimed_human{$hit->{human}{key}}) {
-    $stats{'name: human reciprocal best hit'}++;
-    $symbol = '' unless $hit->{human}{hgnc_id};
-    return { desc => ($symbol ne '' ? "$symbol: $description" : $description), selected => $selected, note => $note };
-  }
-
-  # everything else is similarity: "-like", and a placeholder symbol is replaced by the
-  # closest human symbol when there is one
-  if (is_placeholder_symbol($symbol)) {
-    my $closest = $closest{$group};
-    $symbol = ($closest and @{$closest->{human}} == 1 and $closest->{human}[0]{hgnc_id})
-            ? $closest->{human}[0]{symbol} : '';
-  }
-  if ($description eq '' or !is_informative_hit('', $description, $hit->{hit})) {
-    $description = $symbol;
-  }
-  $stats{'name: ' . ($hit->{human} ? 'human' : 'other species') . ' hit (-like)'}++;
+  my $human = $hit->{human};
+  my $symbol = $human->{hgnc_id} ? $human->{symbol} : '';
+  my $description = $human->{name} ne '' ? $human->{name} : $symbol;
+  $stats{'name: full-length human hit (-like)' . ($hit->{reciprocal} ? ', reciprocal' : '')}++;
   my $like_symbol = $symbol ne '' ? add_like_to_symbol($symbol) : '';
   my $like_description = add_like_to_description($description);
-  # a name from another species says which: "acrosin-like (turkey)"
-  if (!$hit->{human} and defined $hit->{species} and $hit->{species} ne '') {
-    $like_description .= " ($hit->{species})";
-  }
+  my $tool = $hit->{source} =~ /MMseqs2/ ? 'MMseqs2' : 'DIAMOND';
+  my $label = human_label($human);
+  my $rule = sprintf('Similar to human %s along its length: %s, %.0f%% of this protein and %.0f%% of %s aligned, E=%s (%s)',
+                     $label, ($hit->{reciprocal} ? 'reciprocal best hit' : 'best hit'), $hit->{qcov}, $hit->{tcov},
+                     $label, e_value($hit->{evalue}), $tool);
   return { desc => ($like_symbol ne '' ? "$like_symbol: $like_description" : $like_description),
-           selected => $selected, note => $note };
+           selected => selected_id($group, $hit->{id}),
+           note => "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}",
+           origin => human_origin($human, $rule, 4) };
 }
 
 sub selected_id {
@@ -1090,68 +1353,155 @@ sub selected_id {
 # ##############################################################################
 # output
 
-sub closest_columns {
-  my ($group) = @_;
-  my $closest = defined $group ? $closest{$group} : undef;
-  return ('', '', '', '') unless $closest;
-  my (@ids, @symbols, @names);
-  foreach my $human (@{$closest->{human}}) {
-    push @ids, $human->{hgnc_id} ne '' ? $human->{hgnc_id} : $human->{key};
-    push @symbols, $human->{symbol};
-    (my $name = $human->{name}) =~ s/,/%2C/g;   # commas separate multiple human genes
-    push @names, $name;
-  }
-  return (join(',', @ids), join(',', @symbols), join(',', @names), $closest->{evidence});
-}
+# every geneNames.tsv row: [ id, main, GroupId column, desc, note, group, origin ]
+my @name_rows;
 
 sub write_outputs {
-  open my $names_fh, '>', $opt{'out-names'} or die "cant write $opt{'out-names'} $!\n";
-  print $names_fh join("\t", qw(ID MAINID GroupId Desc Note closestHGNC closestHumanSym closestHumanDesc closestHumanEvidence)), "\n";
-
   if (defined $opt{native}) {
-    write_native_names($names_fh);
+    collect_native_rows();
   } else {
     foreach my $group (sort keys %members) {
       my $named = $name{$group};
       foreach my $id (sort @{$members{$group}}) {
         my $main = $id eq $named->{selected} ? 'SELF' : $named->{selected};
-        print $names_fh join("\t", $id, $main, $group, $named->{desc}, $named->{note}, closest_columns($group)), "\n";
+        push @name_rows, [$id, $main, $group, $named->{desc}, $named->{note}, $group, $named->{origin}];
       }
     }
   }
+  open my $names_fh, '>', $opt{'out-names'} or die "cant write $opt{'out-names'} $!\n";
+  print $names_fh join("\t", qw(ID MAINID GroupId Desc Note)), "\n";
+  foreach my $row (@name_rows) {
+    print $names_fh join("\t", @{$row}[0 .. 4]), "\n";
+  }
   close $names_fh;
 
-  open my $moop_fh, '>', $opt{'out-moop'} or die "cant write $opt{'out-moop'} $!\n";
-  my $version = reference_versions();
-  print $moop_fh "## Annotation Source: Closest human gene (SBGENOMES)
-## Annotation Source Version: $version
-## Annotation Source URL: https://www.genenames.org
-## Annotation Accession URL: https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/
-## Annotation Type: Closest Human Gene
-## Annotation Creation Date: " . `date '+%Y-%m-%d'`;
-  print $moop_fh join("\t", '## Gene', 'Accession', 'Accession_Description', 'Score'), "\n";
-  foreach my $group (sort keys %members) {
+  # human: its closest pick, as HGNC records
+  my %human_closest;
+  foreach my $group (keys %closest) {
     my $closest = $closest{$group} or next;
+    my @genes = $closest->{family}
+      ? (family_entry($closest->{family_size}, [map { $_->{hgnc_id} ? $_->{symbol} : '' } @{$closest->{human}}],
+                      [map { $_->{name} } @{$closest->{human}}], shared_hgnc_group($closest->{human})))
+      : map { { id => ($_->{hgnc_id} ne '' ? $_->{hgnc_id} : $_->{key} =~ /^ENSG/ ? $_->{key} : ''),
+                symbol => ($_->{hgnc_id} ne '' ? $_->{symbol} : ''), description => $_->{name} } } @{$closest->{human}};
+    $human_closest{$group} = { rank => $closest->{tier}, genes => \@genes, evidence => $closest->{evidence} };
     $stats{"closest human: tier $closest->{tier}"}++;
+  }
+  my $version = reference_versions();
+  write_name_source($version);
+  write_closest('human', [qw(closestHGNC closestHumanSym closestHumanDesc closestHumanEvidence)], \%human_closest, [
+    { file => '', source => 'Closest human gene (HGNC)', version => $version, url => 'https://www.genenames.org',
+      accession_url => 'https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/', match => sub { $_[0]{id} =~ /^HGNC:/ } },
+    { file => '.ensembl', source => 'Closest human gene (Ensembl, no HGNC record)', version => $version,
+      url => 'https://www.ensembl.org', accession_url => 'https://www.ensembl.org/Homo_sapiens/Gene/Summary?g=',
+      match => sub { $_[0]{id} ne '' } },
+    { file => '.family', source => 'Closest human gene family', version => $version, url => 'https://www.genenames.org',
+      accession_url => '', match => sub { 1 } },
+  ]);
+
+  foreach my $species (@closest_species) {
+    my $tag = $species->{tag};
+    my %species_closest;
+    foreach my $group (keys %members) {
+      my $closest = choose_closest_species($species, $group) or next;
+      $species_closest{$group} = $closest;
+      $stats{"closest $tag: " . ($closest->{rank} == 1 ? 'OMA' : 'hits file')}++;
+    }
+    my @sources;
+    push @sources, "OMA $opt{'oma-code'}-$species->{oma_code}" if $species->{oma_code} and defined $opt{'oma-code'};
+    push @sources, $species_hit_source{$tag} if defined $species_hit_source{$tag};
+    my $species_version = join('; ', @sources);
+    write_closest(lc $tag, [map { "closest$tag$_" } qw(Id Sym Desc Evidence)], \%species_closest, [
+      { file => '', source => "Closest $species->{species} gene", version => $species_version,
+        url => 'https://www.ncbi.nlm.nih.gov', accession_url => 'https://www.ncbi.nlm.nih.gov/search/all/?term=',
+        match => sub { $_[0]{id} ne '' } },
+      { file => '.family', source => "Closest $species->{species} gene family", version => $species_version,
+        url => 'https://www.ncbi.nlm.nih.gov', accession_url => '', match => sub { 1 } },
+    ]);
+  }
+}
+
+sub open_closest_moop {
+  my ($file, $source, $type) = @_;
+  $type //= $CLOSEST_TYPE;
+  open my $fh, '>', $file or die "cant write $file $!\n";
+  print $fh "## Annotation Source: $source->{source}
+## Annotation Source Version: $source->{version}
+## Annotation Source URL: $source->{url}
+## Annotation Accession URL: $source->{accession_url}
+## Annotation Type: $type
+## Annotation Creation Date: " . `date '+%Y-%m-%d'`;
+  print $fh join("\t", '## Gene', 'Accession', 'Accession_Description', 'Score'), "\n";
+  return $fh;
+}
+
+# gene_name_source.<kind>.moop.tsv: a row for every named id and its gene. Accession = what the
+# name came from; description = why, in words (the name itself is its own column on the site);
+# score = the naming step.
+sub write_name_source {
+  my ($version) = @_;
+  my (%fh, %done);
+  foreach my $row (@name_rows) {
+    my $origin = $row->[6] or next;
+    my $kind = $origin->{kind};
+    my $meta = $NAME_SOURCE{$kind} or die "unknown name source kind $kind\n";
+    my $fh = $fh{$kind} //= open_closest_moop("$opt{'out-dir'}/gene_name_source.$kind.moop.tsv",
+      { source => $meta->[0], version => $version, url => $meta->[1], accession_url => $meta->[2] }, $NAME_SOURCE_TYPE);
+    foreach my $feature ($row->[0], $row->[2]) {   # the id, and its gene
+      next if !defined $feature or $done{$feature}++;
+      print $fh join("\t", $feature, $origin->{accession}, $origin->{rule}, $origin->{step}), "\n";
+    }
+  }
+  close $_ foreach values %fh;
+}
+
+# closest_<file_tag>.tsv (geneNames.tsv rows, columns named by the GFF attributes) and one
+# closest_<file_tag><source file>.moop.tsv per source that has rows (gene and every isoform)
+sub write_closest {
+  my ($file_tag, $columns, $closest_of, $sources) = @_;
+  my $base = "$opt{'out-dir'}/closest_$file_tag";
+  open my $fh, '>', "$base.tsv" or die "cant write $base.tsv $!\n";
+  print $fh join("\t", 'ID', 'GroupId', @$columns), "\n";
+  foreach my $row (@name_rows) {
+    my $closest = defined $row->[5] ? $closest_of->{$row->[5]} : undef;
+    my (@ids, @symbols, @names);
+    foreach my $gene (@{$closest ? $closest->{genes} : []}) {
+      push @ids, $gene->{id};
+      push @symbols, $gene->{symbol};
+      (my $name = $gene->{description}) =~ s/,/%2C/g;   # commas separate multiple genes
+      push @names, $name;
+    }
+    print $fh join("\t", $row->[0], $row->[2], join(',', @ids), join(',', @symbols), join(',', @names),
+                   $closest ? $closest->{evidence} : ''), "\n";
+  }
+  close $fh;
+
+  # one database file per source: each source has one accession link (a family has none),
+  # and every source shares the one annotation type, so the site shows and filters them together
+  my %moop_fh;
+  foreach my $group (sort keys %members) {
+    my $closest = $closest_of->{$group} or next;
     # the gene and every isoform carry the same final pick
     my %features = ($group => 1);
     foreach my $member (@{$members{$group}}) {
       $features{$member} = 1;
     }
-    foreach my $feature (sort keys %features) {
-      foreach my $human (@{$closest->{human}}) {
-        my $accession = $human->{hgnc_id} ne '' ? $human->{hgnc_id} : $human->{key};
-        my $label = $human->{symbol} ne '' && $human->{name} ne '' ? "$human->{symbol}: $human->{name}" : ($human->{name} || $human->{symbol});
-        print $moop_fh join("\t", $feature, $accession, "$label [$closest->{evidence}]", $closest->{tier}), "\n";
+    foreach my $gene (@{$closest->{genes}}) {
+      my ($source) = grep { $_->{match}->($gene) } @$sources;
+      my $fh = $moop_fh{$source->{file}} //= open_closest_moop("$base$source->{file}.moop.tsv", $source);
+      my $label = $gene->{symbol} ne '' && $gene->{description} ne '' ? "$gene->{symbol}: $gene->{description}"
+                : ($gene->{description} || $gene->{symbol});
+      foreach my $feature (sort keys %features) {
+        print $fh join("\t", $feature, ($gene->{id} ne '' ? $gene->{id} : $gene->{symbol}),
+                       "$label [$closest->{evidence}]", $closest->{rank}), "\n";
       }
     }
   }
-  close $moop_fh;
+  close $_ foreach values %moop_fh;
 }
 
 # native RefSeq/Ensembl names are kept as provided unless uninformative
-sub write_native_names {
-  my ($names_fh) = @_;
+sub collect_native_rows {
   my (%native_rows, %native_group_informative);
   open my $fh, '<', $opt{native} or die "cant open $opt{native} $!\n";
   while (my $line = <$fh>) {
@@ -1175,10 +1525,12 @@ sub write_native_names {
     $stats{$keep_native ? 'native name kept' : 'native name replaced (uninformative)'}++;
     foreach my $row (@{$native_rows{$native_group}}) {
       my ($id, $main, $native_group_id, $desc, $note) = @$row;
+      my $origin = $desc ne '' && $desc ne 'None'
+        ? { kind => 'native', accession => $native_group_id, step => 2, rule => "Name from this gene set's own annotation" } : undef;
       if (!$keep_native and defined $group) {
-        ($desc, $note) = ($name{$group}{desc}, $name{$group}{note});
+        ($desc, $note, $origin) = ($name{$group}{desc}, $name{$group}{note}, $name{$group}{origin});
       }
-      print $names_fh join("\t", $id, $main, $native_group_id, $desc, $note, closest_columns($group)), "\n";
+      push @name_rows, [$id, $main, $native_group_id, $desc, $note, $group, $origin];
     }
   }
 }
@@ -1207,3 +1559,6 @@ sub reference_versions {
   }
   return @parts ? join('; ', @parts) : 'unknown';
 }
+
+# LAST LINE: run only now, when every file-level assignment above has been made (see LAYOUT)
+main();
