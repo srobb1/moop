@@ -83,3 +83,44 @@ The PANTHER step (5) names more Congeria genes than OMA does. Yet it has **none*
 - Merge notes/annotation_config_descriptions.json into the live annotation_config.json (the user does this). If the PANTHER step changes, the Score text needs updating.
 - Plain names from BLAST (3b) once the eross columns exist.
 - A PANTHER audit of 100 names. This is now the priority, per Finding 1.
+
+## PANTHER step: measurements (Congeria, 12,918 PANTHER-named proteins)
+
+Sources:
+- raw `interproscan/interproscan_results.tsv` (InterProScan 5.78-109.0, family level only, no :SF);
+- PANTHER 19.0 HMM lengths, taken from the `NAME`/`LENG` lines of `data/panther/19.0/famhmm/binHmm` in the InterProScan install (15,683 families).
+
+Model coverage here is a proxy: aligned protein residues divided by the family HMM length. The JSON output has the exact `hmm-start`/`hmm-end`/`hmm-length`.
+
+**Model coverage separates the wrong names.**
+- The "KMT5A" family (100 genes): mean model coverage 38%; none has both coverages ≥ 80%.
+- "RNF213" (41 genes): 15%.
+- "TRPM6" (54 genes): 32%.
+- These are SET, RZ and ion-channel domain hits, not family members. InterProScan's PANTHER E-value alone does not show this.
+
+| model coverage ≥ | all | integrated in InterPro | not integrated |
+|---|---|---|---|
+| 0 (today) | 12,918 | 8,108 | 4,810 |
+| 50% | 6,599 | 4,133 | 2,466 |
+| 70% | 4,182 | 2,706 | 1,476 |
+| 80% | 3,326 | 2,179 | 1,147 |
+
+**Where the dropped genes go.** Most still get an InterPro domain name at step 6, which claims less.
+- With both coverages ≥ 50%: 5,485 of the 7,172 dropped get a domain name.
+- With both coverages ≥ 80%: 8,206 of the 10,940 dropped get a domain name.
+
+**Protein coverage is the wrong test for families.** Multi-domain proteins that contain the whole family model (for example F5/8 type C proteins and multicopper oxidases) have protein coverage below 50%. "Member of family X" means the protein contains X's model, so what matters is model coverage.
+
+**InterPro's curated entry names are much better than raw PANTHER names.** 63% of the named families are integrated in InterPro (7,943 Family entries, 10 Domain entries). Examples:
+- BONUS, ISOFORM C-RELATED → TRIM45/56/19-like
+- NF-E2 INDUCIBLE PROTEIN → MINDY deubiquitinase
+- MYOSIN LIGHT CHAIN 1, 3 → Calmodulin/Myosin light chain/Troponin C-like
+- RIBOSOMAL PROTEIN L13 → Large ribosomal subunit protein uL13
+
+Some InterPro names still name one gene (for example "Histone-lysine N-methyltransferase KMT5A" and "E3 ubiquitin-protein ligase RNF213"). The coverage rule removes those cases in Congeria.
+
+**The clone and locus-id names are all non-integrated families:** EXPRESSED PROTEIN, LD39211P, AGAP001331-PA-RELATED, OS10G0105400 PROTEIN and similar.
+
+**Implementation note.** The PANTHER moop TSV drops the coordinates. The step should instead read the raw InterProScan results, which are already passed as `--interproscan` for domains, and then `--panther` goes away. The HMM length comes from:
+- the JSON, when present;
+- otherwise a lengths table extracted once from binHmm (belongs in update_reference_data.sh).
