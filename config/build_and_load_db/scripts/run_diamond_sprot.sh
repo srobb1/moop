@@ -15,5 +15,5 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ANNOTATIONS_DIR=$(bash "$SCRIPT_DIR/pick_annotations_run.sh")
 QUERY_FASTA=$(bash "$SCRIPT_DIR/make_clean_query_fasta.sh" "$ORG" "$ASSEMBLY" "$GENESET")
 
-sbatch --export=ALL,ANNOTATIONS_DIR="$ANNOTATIONS_DIR",QUERY_FASTA="$QUERY_FASTA" \
+sbatch --export=ALL,ANNOTATIONS_DIR="$ANNOTATIONS_DIR",QUERY_FASTA="$QUERY_FASTA",SCRIPTS_DIR="$SCRIPT_DIR" \
   "$SCRIPT_DIR/run_diamond_sprot.sbatch" "$ORG" "$ASSEMBLY" "$GENESET"

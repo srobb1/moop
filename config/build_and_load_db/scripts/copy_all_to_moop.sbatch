@@ -10,7 +10,10 @@ SCRIPTS="$REPO/scripts"
 
 ## Copy every *active* organism/assembly/geneset (same detection as run_all_v2.sh):
 ## GENOMES/<organism>/<assembly>/<geneset>/metadata.yaml exists and contains "active: true".
-source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
+## From $SCRIPTS, not $(dirname "${BASH_SOURCE[0]}"): SLURM runs a COPY of this file from
+## its spool directory, so that dirname is the spool, paths.sh is not there, and every
+## sbatch of this script failed at this line.
+source "$SCRIPTS/paths.sh" || { echo "ERROR: cannot read $SCRIPTS/paths.sh" >&2; exit 1; }
 GENESETS_FILE="$REPO/active_genesets.tsv"
 
 > "$GENESETS_FILE"
@@ -26,5 +29,8 @@ done
 
 while IFS=$'\t' read -r THIS_ORG ASSEMBLY GENE_SET <&3; do
   echo "--- $THIS_ORG [$ASSEMBLY/$GENE_SET]"
-  bash "$SCRIPTS/copy2moop_v2.sh" "$THIS_ORG" "$ASSEMBLY" "$GENE_SET"
+  ## REPO passed explicitly, as moop_process_genome_data_v2.sbatch does: left to derive it
+  ## from its own location, copy2moop_v2.sh follows the scripts/ symlink into the git
+  ## checkout, which has no data/ -- the build writes one tree and the copy reads another.
+  REPO="$REPO" bash "$SCRIPTS/copy2moop_v2.sh" "$THIS_ORG" "$ASSEMBLY" "$GENE_SET"
 done 3< "$GENESETS_FILE"
