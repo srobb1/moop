@@ -14,323 +14,291 @@ use POSIX qw(_exit);
 # genesets these tables can be large, and reloading them per file made a
 # geneset's ~35 annotation files scale as O(files * db_size) instead of
 # O(db_size + total_rows).
-my $dbfile      = shift;
-my @annot_files = @ARGV;
-
-die "Usage: $0 genes.sqlite annotations.tsv [annotations2.tsv ...]\n"
-    if !$dbfile or !@annot_files;
-
-## MOOP may have rewritten a per-organism prefix onto the feature IDs in its own
-## copy of this gene set -- strip_id_prefix.pl, opt-in via `moop-strip-id-prefix`
-## (strip+replace) or `moop-lift-prefix` (prepend-only, for a liftover gene set's
-## borrowed accessions) in metadata.yaml. The annotation files predate that: they
-## were produced by analyses run against the depositor's sequences, so they still
-## carry the original IDs.
-##
-## Read what was ACTUALLY DONE from the manifest the strip step wrote beside these
-## files, not from metadata.yaml. One source of truth: whatever normalization the
-## features received, the join applies the same one. Two independent readers of the
-## same intent is precisely how a rename quietly stops matching -- see the Bipalium
-## vagum note further down, where a suffix MOOP itself added silently cost 21,199
-## annotations.
-my ($strip_prefix, $add_prefix) = ('', '');
-{
-    my $dir = dirname($annot_files[0]);
-    if (open my $manifest, '<', "$dir/.id_prefix_stripped") {
-        my $line = <$manifest>;
-        close $manifest;
-        chomp($line) if defined $line;
-        ($strip_prefix, $add_prefix) = split /\t/, ($line // ''), 2;
-        $strip_prefix = '' unless defined $strip_prefix;
-        $add_prefix   = '' unless defined $add_prefix;
-        print "Feature IDs were rewritten by MOOP: '$strip_prefix' -> '$add_prefix'; "
-            . "annotation IDs will be normalized to match\n"
-            if length $strip_prefix || length $add_prefix;
-    }
-}
-
-# Connect with AutoCommit off for one big transaction
-my $dbh = DBI->connect(
-    "dbi:SQLite:dbname=$dbfile", "", "",
-    { RaiseError => 1, PrintError => 0, AutoCommit => 1 }
-) or die $DBI::errstr;
-
-# Foreign keys are OFF by default and the setting is per-CONNECTION, so it cannot
-# live in create_schema_sqlite.sql. Without it every FK and ON DELETE CASCADE in
-# the schema is decorative.
-$dbh->do("PRAGMA foreign_keys = ON");
-
-# Speedup PRAGMAs for bulk load.
-#
-# WARNING: synchronous=OFF with journal_mode=MEMORY means a crash or power loss
-# mid-load can leave the database CORRUPT, not merely incomplete -- there is no
-# on-disk rollback journal to recover from. Acceptable only because these
-# databases are rebuildable from source. Keep the previous organism.sqlite until
-# the load finishes and its checks pass.
-$dbh->do("PRAGMA synchronous = OFF");
-$dbh->do("PRAGMA journal_mode = MEMORY");
-$dbh->do("PRAGMA temp_store = MEMORY");
-
-# Now start transaction for bulk insert
-$dbh->{AutoCommit} = 0;
-
-# Prepare statements (reused across all files)
-my $sth_get_annotation_source = $dbh->prepare(q{
-    SELECT annotation_source_id, annotation_accession_url, annotation_source_url, annotation_type, annotation_date
-    FROM annotation_source
-    WHERE annotation_source_name = ? AND annotation_source_version = ?
-});
-
-my $sth_insert_annotation_source = $dbh->prepare(q{
-    INSERT INTO annotation_source (annotation_source_name, annotation_source_version, annotation_accession_url, annotation_source_url, annotation_type, annotation_date)
-    VALUES (?, ?, ?, ?, ?, ?)
-});
-
-my $sth_update_annotation_source = $dbh->prepare(q{
-    UPDATE annotation_source
-    SET annotation_accession_url = ? , annotation_source_url = ?, annotation_type = ?, annotation_date = ?
-    WHERE annotation_source_id = ?
-});
-
-my $sth_insert_annotation = $dbh->prepare(q{
-    INSERT INTO annotation (annotation_source_id, annotation_accession, annotation_description)
-    VALUES (?, ?, ?)
-});
-
-my $sth_get_annotations_for_source = $dbh->prepare(q{
-    SELECT annotation_id, annotation_accession, annotation_description
-    FROM annotation
-    WHERE annotation_source_id = ?
-});
-
-# No date column here: the annotation date is one value per SOURCE (from the file's
-# "## Annotation Creation Date" header) and now lives on annotation_source.
-my $sth_insert_feature_annotation = $dbh->prepare(q{
-    INSERT INTO feature_annotation (feature_id, annotation_id, score)
-    VALUES (?, ?, ?)
-});
-
-my $sth_update_feature_annotation = $dbh->prepare(q{
-    UPDATE feature_annotation
-    SET score = ?
-    WHERE feature_annotation_id = ?
-});
-
+# ---- Layout: shared state declared here, ALL the work in main(), called on the last line.
+# A file-level "my $x = ..." is assigned only when execution reaches its line, so state set
+# below the work would still be empty when a sub read it -- silently (no error, no warning).
+# With main() last, every file-level assignment has run first. tests/check_perl_file_scope.pl.
+my ($dbfile, @annot_files);
+my ($strip_prefix, $add_prefix) = ('', '');   # from the .id_prefix_stripped manifest, in main()
+my $dbh;
+my ($sth_get_annotation_source, $sth_insert_annotation_source, $sth_update_annotation_source, $sth_insert_annotation, $sth_get_annotations_for_source, $sth_insert_feature_annotation, $sth_update_feature_annotation);
 # Caches - shared across every file processed in this invocation
 my (%annotation_cache, %feature_cache, %feature_annotation_cache,
     %feature_type_cache, %parent_cache, %source_cache_loaded, %ambiguous_uniquename);
-
 my $count_not_found = 0;
 # Annotations whose id only matched after undoing MOOP's own :pep/:cds rename.
 # Reported at the end: a large number is normal and means the rename is doing its
 # job silently; it is NOT a warning.
 my $count_renamed_match = 0;
-
-# Preload feature cache once for the whole run
-{
-    my $sth = $dbh->prepare(q{
-        SELECT feature_id, feature_uniquename, feature_type, parent_feature_id FROM feature
-    });
-    $sth->execute();
-    while (my ($fid, $uname, $ftype, $parent_fid) = $sth->fetchrow_array) {
-        if (defined $uname) {
-            # feature_uniquename is unique per GENE SET, not globally, so the same
-            # ID can legitimately exist in two gene sets. An annotation file names
-            # features by uniquename alone and carries no gene set, so such an ID
-            # is genuinely ambiguous -- record it and refuse it rather than
-            # silently annotating whichever one happened to load last.
-            if (exists $feature_cache{$uname}) {
-                $ambiguous_uniquename{$uname} = 1;
-            } else {
-                $feature_cache{$uname} = $fid;
-            }
-        }
-        $feature_type_cache{$fid} = $ftype  if defined $ftype;
-        $parent_cache{$fid}       = $parent_fid if defined $parent_fid;
-    }
-}
-
-# Preload feature_annotation cache once for the whole run
-{
-    my $sth = $dbh->prepare(q{
-        SELECT feature_annotation_id, feature_id, annotation_id, score FROM feature_annotation
-    });
-    $sth->execute();
-    while (my ($faid, $fid, $aid, $score) = $sth->fetchrow_array) {
-        # Keep score as-is (possibly undef): NULL and 0.0 are different facts.
-        $feature_annotation_cache{ join('|', $fid, $aid) } = {
-            id    => $faid,
-            score => $score,
-        };
-    }
-}
-
-# Walk up parent chain to find the mRNA/transcript to associate annotations with.
-# For eukaryotes:  protein -> CDS -> mRNA  (returns mRNA)
-# For bacteria:    protein -> CDS -> gene  (no mRNA; returns CDS, one level above protein)
-# For mRNA input:  returns immediately
-#
-# Memoized per starting feature, and guarded against cycles in
-# parent_feature_id (seen in the wild: T2G-path genesets whose protein IDs
-# have no ".p<N>" ORF suffix make parse_transcript2gene_to_MOOP_TSV.pl
-# emit a protein row with the same uniquename as its own parent mRNA row,
-# which load_genes_sqlite.pl then collapses into one self-parented row —
-# parent_feature_id = feature_id. Without this guard that's an infinite
-# loop; every annotation row for such a feature hits it, so this can hang
-# forever within seconds of starting. On a cycle we just attach the
-# annotation to the starting feature itself instead of hanging.
-my %target_cache;
-sub find_annotation_target {
-    my ($fid) = @_;
-    return $target_cache{$fid} if exists $target_cache{$fid};
-    my $cur  = $fid;
-    my $last = $fid;
-    my %visited;
-    while (defined $cur) {
-        if ($visited{$cur}++) {
-            warn "WARNING: cyclic parent_feature_id chain detected starting at feature $fid (loop back to $cur) — attaching annotations directly to $fid\n";
-            return $target_cache{$fid} = $fid;
-        }
-        my $type = $feature_type_cache{$cur} // '';
-        return $target_cache{$fid} = $cur if $type eq 'mRNA' || $type eq 'transcript';
-        $last = $cur;
-        $cur  = $parent_cache{$cur};
-    }
-
-    # No mRNA/transcript anywhere in the chain. Organelle and bacterial genes go
-    # gene -> CDS with no transcript level, so this is normal, not an error.
-    #
-    # Attach to the ROOT reached (the gene), not the input's direct parent. The
-    # old fallback returned the direct parent, which stranded mitochondrial
-    # annotations on the CDS -- 13 YP_ features were enough to put 'cds' in the
-    # annotated-types list for a whole organism and render an empty CDS card on
-    # every transcript page. A gene with no isoforms IS the unit.
-    return $target_cache{$fid} = $last;
-}
-
 # Totals across all files in this invocation
 my ($total_annotations, $total_insert, $total_update, $total_existing) = (0, 0, 0, 0);
 
-for my $annot_file (@annot_files) {
-    load_one_file($annot_file);
-}
+sub main {
+    $dbfile      = shift @ARGV;
+    @annot_files = @ARGV;
 
-# Commit safely
-eval { $dbh->commit; 1 }
-    or do {
-        my $err = $@ || 'Unknown error';
-        warn "Transaction commit failed: $err\nRolling back...\n";
-        eval { $dbh->rollback };
-    };
+    die "Usage: $0 genes.sqlite annotations.tsv [annotations2.tsv ...]\n"
+        if !$dbfile or !@annot_files;
 
-# Now turn AutoCommit back on
-$dbh->{AutoCommit} = 1;
-
-# Restore defaults for future ops
-$dbh->do("PRAGMA journal_mode = DELETE");
-$dbh->do("PRAGMA synchronous = FULL");
-
-$sth_get_annotation_source->finish();
-$sth_insert_annotation_source->finish();
-$sth_update_annotation_source->finish();
-$sth_insert_annotation->finish();
-$sth_get_annotations_for_source->finish();
-$sth_insert_feature_annotation->finish();
-$sth_update_feature_annotation->finish();
-
-# NOTE: the handle is NOT disconnected here. The whitespace check below queries
-# annotation_source, and disconnecting first made it die on its first statement --
-#   DBD::SQLite::db selectrow_array failed: attempt to prepare on inactive database handle
-# Because setup_new_moopdb_and_load_data.sh runs under `set -e`, that death aborted
-# the whole annotation phase at whichever load_files() call happened to be running.
-# On Bipalium_kewense that was the 3rd of 9, so homologs, RBBH, InterProScan, ProtNLM,
-# Eggnog2GO and OMA2GO were never loaded at all: 17,065 annotations were written where
-# the organism really has 606,190, and the run still reported "OK ... Done".
-# The disconnect now happens after every check that needs the handle.
-
-print "Total Annotations processed: $total_annotations\n";
-print "Inserted feature_annotation rows: $total_insert\n";
-print "Updated feature_annotation rows: $total_update\n";
-print "Already existing: $total_existing\n";
-print "Features not found: $count_not_found\n";
-print "Matched after undoing MOOP's :pep/:cds rename: $count_renamed_match\n"
-    if $count_renamed_match;
-
-# ----------------------------------------------------------------------
-# Load sanity check. A load that attaches nothing is a FAILED load even though
-# every statement succeeded -- that is how an organism ended up with 306,781
-# annotations and zero features while this script printed "Done."
-#
-# Exits via _exit() rather than die() for the same reason the success path does:
-# global destruction of these caches has been seen to segfault.
-# ----------------------------------------------------------------------
-my $attached = $total_insert + $total_update + $total_existing;
-
-if ($total_annotations && !$attached) {
-    print STDERR "\n!! LOAD FAILED: $total_annotations annotation line(s) read, but NONE\n"
-               . "!! could be attached to a feature. Every feature lookup missed.\n"
-               . "!! Check that the gene set was loaded into $dbfile BEFORE the\n"
-               . "!! annotations, and that the IDs match feature_uniquename.\n";
-    STDOUT->flush; STDERR->flush;
-    _exit(1);
-}
-
-# Whitespace on an annotation source name is silent poison, and it is USER-VISIBLE:
-# annotation_source_name is what the Annotation Search step-3 list, the source filter
-# modal and MOOPmart's criteria dropdown are built from. "Ensembl Homo sapiens " and
-# "Ensembl Homo sapiens" appear as two indistinguishable entries, and picking one
-# searches half the annotations. 17 such pairs existed in the sampled organism.
-#
-# The header parse now trims (\s*(.+?)\s*$), and the schema has
-# UNIQUE(annotation_source_name, annotation_source_version) -- so this should be
-# impossible. Check anyway: the cost is one query, and the failure mode is invisible.
-{
-    my ($untrimmed) = $dbh->selectrow_array(
-        "SELECT COUNT(*) FROM annotation_source
-          WHERE annotation_source_name    <> TRIM(annotation_source_name)
-             OR annotation_source_version <> TRIM(annotation_source_version)");
-
-    if ($untrimmed) {
-        my $rows = $dbh->selectall_arrayref(
-            "SELECT annotation_source_name, annotation_source_version
-               FROM annotation_source
-              WHERE annotation_source_name    <> TRIM(annotation_source_name)
-                 OR annotation_source_version <> TRIM(annotation_source_version)
-              LIMIT 10");
-        print STDERR "\n!! WARNING: $untrimmed annotation source(s) have leading or trailing\n"
-                   . "!! whitespace in their name or version. Users see these as duplicate,\n"
-                   . "!! indistinguishable entries, and selecting one searches only half the\n"
-                   . "!! annotations. Offenders (up to 10):\n";
-        foreach my $row (@$rows) {
-            print STDERR sprintf("!!   [%s] version [%s]\n", $row->[0] // '', $row->[1] // '');
+    ## MOOP may have rewritten a per-organism prefix onto the feature IDs in its own
+    ## copy of this gene set -- strip_id_prefix.pl, opt-in via `moop-strip-id-prefix`
+    ## (strip+replace) or `moop-lift-prefix` (prepend-only, for a liftover gene set's
+    ## borrowed accessions) in metadata.yaml. The annotation files predate that: they
+    ## were produced by analyses run against the depositor's sequences, so they still
+    ## carry the original IDs.
+    ##
+    ## Read what was ACTUALLY DONE from the manifest the strip step wrote beside these
+    ## files, not from metadata.yaml. One source of truth: whatever normalization the
+    ## features received, the join applies the same one. Two independent readers of the
+    ## same intent is precisely how a rename quietly stops matching -- see the Bipalium
+    ## vagum note further down, where a suffix MOOP itself added silently cost 21,199
+    ## annotations.
+    {
+        my $dir = dirname($annot_files[0]);
+        if (open my $manifest, '<', "$dir/.id_prefix_stripped") {
+            my $line = <$manifest>;
+            close $manifest;
+            chomp($line) if defined $line;
+            ($strip_prefix, $add_prefix) = split /\t/, ($line // ''), 2;
+            $strip_prefix = '' unless defined $strip_prefix;
+            $add_prefix   = '' unless defined $add_prefix;
+            print "Feature IDs were rewritten by MOOP: '$strip_prefix' -> '$add_prefix'; "
+                . "annotation IDs will be normalized to match\n"
+                if length $strip_prefix || length $add_prefix;
         }
-        print STDERR "!! A fresh load should never produce these -- the header parse trims.\n"
-                   . "!! Seeing them means this database predates that fix and needs a reload.\n\n";
     }
+
+    # Connect with AutoCommit off for one big transaction
+    $dbh = DBI->connect(
+        "dbi:SQLite:dbname=$dbfile", "", "",
+        { RaiseError => 1, PrintError => 0, AutoCommit => 1 }
+    ) or die $DBI::errstr;
+
+    # Foreign keys are OFF by default and the setting is per-CONNECTION, so it cannot
+    # live in create_schema_sqlite.sql. Without it every FK and ON DELETE CASCADE in
+    # the schema is decorative.
+    $dbh->do("PRAGMA foreign_keys = ON");
+
+    # Speedup PRAGMAs for bulk load.
+    #
+    # WARNING: synchronous=OFF with journal_mode=MEMORY means a crash or power loss
+    # mid-load can leave the database CORRUPT, not merely incomplete -- there is no
+    # on-disk rollback journal to recover from. Acceptable only because these
+    # databases are rebuildable from source. Keep the previous organism.sqlite until
+    # the load finishes and its checks pass.
+    $dbh->do("PRAGMA synchronous = OFF");
+    $dbh->do("PRAGMA journal_mode = MEMORY");
+    $dbh->do("PRAGMA temp_store = MEMORY");
+
+    # Now start transaction for bulk insert
+    $dbh->{AutoCommit} = 0;
+
+    # Prepare statements (reused across all files)
+    $sth_get_annotation_source = $dbh->prepare(q{
+        SELECT annotation_source_id, annotation_accession_url, annotation_source_url, annotation_type, annotation_date
+        FROM annotation_source
+        WHERE annotation_source_name = ? AND annotation_source_version = ?
+    });
+
+    $sth_insert_annotation_source = $dbh->prepare(q{
+        INSERT INTO annotation_source (annotation_source_name, annotation_source_version, annotation_accession_url, annotation_source_url, annotation_type, annotation_date)
+        VALUES (?, ?, ?, ?, ?, ?)
+    });
+
+    $sth_update_annotation_source = $dbh->prepare(q{
+        UPDATE annotation_source
+        SET annotation_accession_url = ? , annotation_source_url = ?, annotation_type = ?, annotation_date = ?
+        WHERE annotation_source_id = ?
+    });
+
+    $sth_insert_annotation = $dbh->prepare(q{
+        INSERT INTO annotation (annotation_source_id, annotation_accession, annotation_description)
+        VALUES (?, ?, ?)
+    });
+
+    $sth_get_annotations_for_source = $dbh->prepare(q{
+        SELECT annotation_id, annotation_accession, annotation_description
+        FROM annotation
+        WHERE annotation_source_id = ?
+    });
+
+    # No date column here: the annotation date is one value per SOURCE (from the file's
+    # "## Annotation Creation Date" header) and now lives on annotation_source.
+    $sth_insert_feature_annotation = $dbh->prepare(q{
+        INSERT INTO feature_annotation (feature_id, annotation_id, score)
+        VALUES (?, ?, ?)
+    });
+
+    $sth_update_feature_annotation = $dbh->prepare(q{
+        UPDATE feature_annotation
+        SET score = ?
+        WHERE feature_annotation_id = ?
+    });
+
+
+
+    # Preload feature cache once for the whole run
+    {
+        my $sth = $dbh->prepare(q{
+            SELECT feature_id, feature_uniquename, feature_type, parent_feature_id FROM feature
+        });
+        $sth->execute();
+        while (my ($fid, $uname, $ftype, $parent_fid) = $sth->fetchrow_array) {
+            if (defined $uname) {
+                # feature_uniquename is unique per GENE SET, not globally, so the same
+                # ID can legitimately exist in two gene sets. An annotation file names
+                # features by uniquename alone and carries no gene set, so such an ID
+                # is genuinely ambiguous -- record it and refuse it rather than
+                # silently annotating whichever one happened to load last.
+                if (exists $feature_cache{$uname}) {
+                    $ambiguous_uniquename{$uname} = 1;
+                } else {
+                    $feature_cache{$uname} = $fid;
+                }
+            }
+            $feature_type_cache{$fid} = $ftype  if defined $ftype;
+            $parent_cache{$fid}       = $parent_fid if defined $parent_fid;
+        }
+    }
+
+    # Preload feature_annotation cache once for the whole run
+    {
+        my $sth = $dbh->prepare(q{
+            SELECT feature_annotation_id, feature_id, annotation_id, score FROM feature_annotation
+        });
+        $sth->execute();
+        while (my ($faid, $fid, $aid, $score) = $sth->fetchrow_array) {
+            # Keep score as-is (possibly undef): NULL and 0.0 are different facts.
+            $feature_annotation_cache{ join('|', $fid, $aid) } = {
+                id    => $faid,
+                score => $score,
+            };
+        }
+    }
+
+
+
+    for my $annot_file (@annot_files) {
+        load_one_file($annot_file);
+    }
+
+    # Commit safely
+    eval { $dbh->commit; 1 }
+        or do {
+            my $err = $@ || 'Unknown error';
+            warn "Transaction commit failed: $err\nRolling back...\n";
+            eval { $dbh->rollback };
+        };
+
+    # Now turn AutoCommit back on
+    $dbh->{AutoCommit} = 1;
+
+    # Restore defaults for future ops
+    $dbh->do("PRAGMA journal_mode = DELETE");
+    $dbh->do("PRAGMA synchronous = FULL");
+
+    $sth_get_annotation_source->finish();
+    $sth_insert_annotation_source->finish();
+    $sth_update_annotation_source->finish();
+    $sth_insert_annotation->finish();
+    $sth_get_annotations_for_source->finish();
+    $sth_insert_feature_annotation->finish();
+    $sth_update_feature_annotation->finish();
+
+    # NOTE: the handle is NOT disconnected here. The whitespace check below queries
+    # annotation_source, and disconnecting first made it die on its first statement --
+    #   DBD::SQLite::db selectrow_array failed: attempt to prepare on inactive database handle
+    # Because setup_new_moopdb_and_load_data.sh runs under `set -e`, that death aborted
+    # the whole annotation phase at whichever load_files() call happened to be running.
+    # On Bipalium_kewense that was the 3rd of 9, so homologs, RBBH, InterProScan, ProtNLM,
+    # Eggnog2GO and OMA2GO were never loaded at all: 17,065 annotations were written where
+    # the organism really has 606,190, and the run still reported "OK ... Done".
+    # The disconnect now happens after every check that needs the handle.
+
+    print "Total Annotations processed: $total_annotations\n";
+    print "Inserted feature_annotation rows: $total_insert\n";
+    print "Updated feature_annotation rows: $total_update\n";
+    print "Already existing: $total_existing\n";
+    print "Features not found: $count_not_found\n";
+    print "Matched after undoing MOOP's :pep/:cds rename: $count_renamed_match\n"
+        if $count_renamed_match;
+
+    # ----------------------------------------------------------------------
+    # Load sanity check. A load that attaches nothing is a FAILED load even though
+    # every statement succeeded -- that is how an organism ended up with 306,781
+    # annotations and zero features while this script printed "Done."
+    #
+    # Exits via _exit() rather than die() for the same reason the success path does:
+    # global destruction of these caches has been seen to segfault.
+    # ----------------------------------------------------------------------
+    my $attached = $total_insert + $total_update + $total_existing;
+
+    if ($total_annotations && !$attached) {
+        print STDERR "\n!! LOAD FAILED: $total_annotations annotation line(s) read, but NONE\n"
+                   . "!! could be attached to a feature. Every feature lookup missed.\n"
+                   . "!! Check that the gene set was loaded into $dbfile BEFORE the\n"
+                   . "!! annotations, and that the IDs match feature_uniquename.\n";
+        STDOUT->flush; STDERR->flush;
+        _exit(1);
+    }
+
+    # Whitespace on an annotation source name is silent poison, and it is USER-VISIBLE:
+    # annotation_source_name is what the Annotation Search step-3 list, the source filter
+    # modal and MOOPmart's criteria dropdown are built from. "Ensembl Homo sapiens " and
+    # "Ensembl Homo sapiens" appear as two indistinguishable entries, and picking one
+    # searches half the annotations. 17 such pairs existed in the sampled organism.
+    #
+    # The header parse now trims (\s*(.+?)\s*$), and the schema has
+    # UNIQUE(annotation_source_name, annotation_source_version) -- so this should be
+    # impossible. Check anyway: the cost is one query, and the failure mode is invisible.
+    {
+        my ($untrimmed) = $dbh->selectrow_array(
+            "SELECT COUNT(*) FROM annotation_source
+              WHERE annotation_source_name    <> TRIM(annotation_source_name)
+                 OR annotation_source_version <> TRIM(annotation_source_version)");
+
+        if ($untrimmed) {
+            my $rows = $dbh->selectall_arrayref(
+                "SELECT annotation_source_name, annotation_source_version
+                   FROM annotation_source
+                  WHERE annotation_source_name    <> TRIM(annotation_source_name)
+                     OR annotation_source_version <> TRIM(annotation_source_version)
+                  LIMIT 10");
+            print STDERR "\n!! WARNING: $untrimmed annotation source(s) have leading or trailing\n"
+                       . "!! whitespace in their name or version. Users see these as duplicate,\n"
+                       . "!! indistinguishable entries, and selecting one searches only half the\n"
+                       . "!! annotations. Offenders (up to 10):\n";
+            foreach my $row (@$rows) {
+                print STDERR sprintf("!!   [%s] version [%s]\n", $row->[0] // '', $row->[1] // '');
+            }
+            print STDERR "!! A fresh load should never produce these -- the header parse trims.\n"
+                       . "!! Seeing them means this database predates that fix and needs a reload.\n\n";
+        }
+    }
+
+    if ($count_not_found) {
+        my $pct = sprintf '%.1f', 100 * $count_not_found / ($total_annotations || 1);
+        print STDERR "\n!! WARNING: $count_not_found of $total_annotations annotation line(s) "
+                   . "($pct%) referenced a\n!! feature not in the database, and were skipped. A "
+                   . "sequence-ID mismatch between\n!! the annotation file and the gene set is the "
+                   . "usual cause (scripts/check_sequence_id_match.sh).\n\n";
+    }
+
+    ## Every check that needs the database has now run.
+    $dbh->disconnect;
+
+    print "Done.\n";
+
+    ## All work is committed and the DB handle is disconnected just above, so
+    ## skip Perl's normal global destruction here: with the large caches this
+    ## script builds (feature/feature_annotation tables for genesets with tens
+    ## of thousands of rows), destroying them via Perl's ordinary teardown has
+    ## been observed to segfault on process exit (DBD::SQLite + large nested
+    ## hash cleanup) even though all data was already written successfully.
+    ## _exit() skips DESTROY/END processing entirely and just exits cleanly.
+    STDOUT->flush;
+    _exit(0);
 }
-
-if ($count_not_found) {
-    my $pct = sprintf '%.1f', 100 * $count_not_found / ($total_annotations || 1);
-    print STDERR "\n!! WARNING: $count_not_found of $total_annotations annotation line(s) "
-               . "($pct%) referenced a\n!! feature not in the database, and were skipped. A "
-               . "sequence-ID mismatch between\n!! the annotation file and the gene set is the "
-               . "usual cause (scripts/check_sequence_id_match.sh).\n\n";
-}
-
-## Every check that needs the database has now run.
-$dbh->disconnect;
-
-print "Done.\n";
-
-## All work is committed and the DB handle is disconnected just above, so
-## skip Perl's normal global destruction here: with the large caches this
-## script builds (feature/feature_annotation tables for genesets with tens
-## of thousands of rows), destroying them via Perl's ordinary teardown has
-## been observed to segfault on process exit (DBD::SQLite + large nested
-## hash cleanup) even though all data was already written successfully.
-## _exit() skips DESTROY/END processing entirely and just exits cleanly.
-STDOUT->flush;
-_exit(0);
 
 sub load_one_file {
     my ($annot_file) = @_;
@@ -576,3 +544,49 @@ These are required for a load
     $total_update       += $count_update;
     $total_existing     += $count_existing;
 }
+
+# Walk up parent chain to find the mRNA/transcript to associate annotations with.
+# For eukaryotes:  protein -> CDS -> mRNA  (returns mRNA)
+# For bacteria:    protein -> CDS -> gene  (no mRNA; returns CDS, one level above protein)
+# For mRNA input:  returns immediately
+#
+# Memoized per starting feature, and guarded against cycles in
+# parent_feature_id (seen in the wild: T2G-path genesets whose protein IDs
+# have no ".p<N>" ORF suffix make parse_transcript2gene_to_MOOP_TSV.pl
+# emit a protein row with the same uniquename as its own parent mRNA row,
+# which load_genes_sqlite.pl then collapses into one self-parented row —
+# parent_feature_id = feature_id. Without this guard that's an infinite
+# loop; every annotation row for such a feature hits it, so this can hang
+# forever within seconds of starting. On a cycle we just attach the
+# annotation to the starting feature itself instead of hanging.
+my %target_cache;
+sub find_annotation_target {
+    my ($fid) = @_;
+    return $target_cache{$fid} if exists $target_cache{$fid};
+    my $cur  = $fid;
+    my $last = $fid;
+    my %visited;
+    while (defined $cur) {
+        if ($visited{$cur}++) {
+            warn "WARNING: cyclic parent_feature_id chain detected starting at feature $fid (loop back to $cur) — attaching annotations directly to $fid\n";
+            return $target_cache{$fid} = $fid;
+        }
+        my $type = $feature_type_cache{$cur} // '';
+        return $target_cache{$fid} = $cur if $type eq 'mRNA' || $type eq 'transcript';
+        $last = $cur;
+        $cur  = $parent_cache{$cur};
+    }
+
+    # No mRNA/transcript anywhere in the chain. Organelle and bacterial genes go
+    # gene -> CDS with no transcript level, so this is normal, not an error.
+    #
+    # Attach to the ROOT reached (the gene), not the input's direct parent. The
+    # old fallback returned the direct parent, which stranded mitochondrial
+    # annotations on the CDS -- 13 YP_ features were enough to put 'cds' in the
+    # annotated-types list for a whole organism and render an empty CDS card on
+    # every transcript page. A gene with no isoforms IS the unit.
+    return $target_cache{$fid} = $last;
+}
+
+# LAST LINE: run only now, when every file-level assignment above has been made
+main();

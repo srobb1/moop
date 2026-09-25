@@ -83,20 +83,6 @@ use File::Basename qw(dirname);
 # that key to `--add` with no `--strip`). See notes/LIFTOVER_GENESET_CRITERIA.md.
 # ---------------------------------------------------------------------------
 
-my ($strip, $add) = ('', '');
-my @files;
-while (@ARGV) {
-    my $arg = shift @ARGV;
-    if    ($arg eq '--strip') { $strip = shift @ARGV // '' }
-    elsif ($arg eq '--add')   { $add   = shift @ARGV // '' }
-    elsif ($arg =~ /^--/)     { die "Unknown option: $arg\n" }
-    else                      { push @files, $arg }
-}
-die "Usage: $0 --strip <prefix> [--add <prefix>] <genes.gff> [fasta ...]\n"
-    . "       (at least one of --strip/--add is required; --strip alone with no\n"
-    . "       --add means \"delete this prefix\", --add alone means \"prepend this\")\n"
-    unless (length $strip || length $add) && @files;
-
 # The GFF attributes that carry a feature ID. `namesrc` matters and is easy to
 # miss: the ID sits mid-string inside a pipe-delimited provenance value,
 # "Ensembl_Homo_sapiens|RBBH_Homolog|<id>|ENSP00000476446.1|6". `Name` matters
@@ -105,6 +91,67 @@ die "Usage: $0 --strip <prefix> [--add <prefix>] <genes.gff> [fasta ...]\n"
 my @ID_ATTRS = qw(ID Parent Name namesrc);
 
 my $MAX_LOCAL_ID = 50;   # NCBI makeblastdb -parse_seqids
+
+# Layout: constants and shared state at file level, the work in main(), called on the last
+# line -- every file-level assignment has run before any work starts (tests/check_perl_file_scope.pl).
+my ($strip, $add) = ('', '');   # the prefixes, read by the rewrite subs
+
+sub main {
+    my @files;
+    while (@ARGV) {
+        my $arg = shift @ARGV;
+        if    ($arg eq '--strip') { $strip = shift @ARGV // '' }
+        elsif ($arg eq '--add')   { $add   = shift @ARGV // '' }
+        elsif ($arg =~ /^--/)     { die "Unknown option: $arg\n" }
+        else                      { push @files, $arg }
+    }
+    die "Usage: $0 --strip <prefix> [--add <prefix>] <genes.gff> [fasta ...]\n"
+        . "       (at least one of --strip/--add is required; --strip alone with no\n"
+        . "       --add means \"delete this prefix\", --add alone means \"prepend this\")\n"
+        unless (length $strip || length $add) && @files;
+
+    my @report;
+    foreach my $file (@files) {
+        unless (-e $file) {
+            print STDERR "  skip (absent): $file\n";
+            next;
+        }
+        my $was_link = materialize($file);
+        if ($file =~ /\.gff$/) {
+            my ($lines, $changed) = rewrite_gff($file);
+            push @report, sprintf("  %-22s %d/%d feature line(s) rewritten%s",
+                $file, $changed, $lines, $was_link ? "  [dereferenced]" : "");
+        }
+        else {
+            my ($records, $distinct, $longest) = rewrite_fasta($file);
+            die "ERROR: $file -- longest ID is $longest characters after rewriting "
+              . "'$strip' -> '$add'; makeblastdb -parse_seqids allows $MAX_LOCAL_ID.\n"
+                if $longest > $MAX_LOCAL_ID;
+            push @report, sprintf("  %-22s %d record(s), %d distinct, longest ID %d%s",
+                $file, $records, $distinct, $longest, $was_link ? "  [dereferenced]" : "");
+        }
+    }
+
+    if (length $strip) {
+        print STDERR "ID prefix '$strip' -> '$add':\n";
+    } else {
+        print STDERR "ID prefix: prepending '$add' (no strip):\n";
+    }
+    print STDERR "$_\n" foreach @report;
+
+    # Record what was ACTUALLY done, beside the files it was done to. The annotation
+    # loader reads this rather than re-reading metadata.yaml, so the two cannot drift:
+    # whatever transformation the IDs received, the join applies the same one. Two
+    # independent sources of truth for "what was renamed" is how a rename quietly
+    # stops matching -- see load_annotations_sqlite.pl and Bipalium_vagum.
+    my $dir = dirname($files[0]);
+    open my $mf, '>', "$dir/.id_prefix_stripped"
+        or die "Cannot write $dir/.id_prefix_stripped: $!\n";
+    print $mf "$strip\t$add\n";
+    close $mf;
+
+    exit 0;
+}
 
 ## A symlink here points into $GENOMES. Replace it with a real file before any
 ## write, so the source tree cannot be modified even by accident.
@@ -214,44 +261,4 @@ sub rewrite_fasta {
     return ($records, $n_after, $longest);
 }
 
-my @report;
-foreach my $file (@files) {
-    unless (-e $file) {
-        print STDERR "  skip (absent): $file\n";
-        next;
-    }
-    my $was_link = materialize($file);
-    if ($file =~ /\.gff$/) {
-        my ($lines, $changed) = rewrite_gff($file);
-        push @report, sprintf("  %-22s %d/%d feature line(s) rewritten%s",
-            $file, $changed, $lines, $was_link ? "  [dereferenced]" : "");
-    }
-    else {
-        my ($records, $distinct, $longest) = rewrite_fasta($file);
-        die "ERROR: $file -- longest ID is $longest characters after rewriting "
-          . "'$strip' -> '$add'; makeblastdb -parse_seqids allows $MAX_LOCAL_ID.\n"
-            if $longest > $MAX_LOCAL_ID;
-        push @report, sprintf("  %-22s %d record(s), %d distinct, longest ID %d%s",
-            $file, $records, $distinct, $longest, $was_link ? "  [dereferenced]" : "");
-    }
-}
-
-if (length $strip) {
-    print STDERR "ID prefix '$strip' -> '$add':\n";
-} else {
-    print STDERR "ID prefix: prepending '$add' (no strip):\n";
-}
-print STDERR "$_\n" foreach @report;
-
-# Record what was ACTUALLY done, beside the files it was done to. The annotation
-# loader reads this rather than re-reading metadata.yaml, so the two cannot drift:
-# whatever transformation the IDs received, the join applies the same one. Two
-# independent sources of truth for "what was renamed" is how a rename quietly
-# stops matching -- see load_annotations_sqlite.pl and Bipalium_vagum.
-my $dir = dirname($files[0]);
-open my $mf, '>', "$dir/.id_prefix_stripped"
-    or die "Cannot write $dir/.id_prefix_stripped: $!\n";
-print $mf "$strip\t$add\n";
-close $mf;
-
-exit 0;
+main();

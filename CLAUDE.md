@@ -435,6 +435,28 @@ they pass on any checkout. Exit 0 = all pass. `.github/workflows/ci.yml` runs bo
 push, each preceded by a syntax sweep (`php -l` over all PHP, `node --check` over all
 non-vendor JS).
 
+**The build pipeline (Perl) has its own CI job** — run these before committing pipeline changes:
+
+```bash
+perl config/build_and_load_db/tests/check_perl_file_scope.pl   # the file-scope assignment trap
+perl config/build_and_load_db/tests/naming_end_to_end.pl       # gene naming, one gene per rule
+```
+
+⚠️ **The Perl file-scope trap.** `my %TABLE = (...)` at file level is *declared* at compile time
+but *assigned* only when execution reaches its line. If the script's work runs above it, a sub
+reads `%TABLE` **empty** — no error under `use strict`, no warning, plausible output. It broke
+gene naming silently three times on 2026-09-25 (OMA pair ranks; InterPro E-values, so the
+"best" domain was picked by accession). The fix is the layout: constants and shared state at
+file level, all work in `sub main`, and `main();` as the **last line** —
+`assign_gene_names_v2.pl`, `load_annotations_sqlite.pl`, `geneset_config.pl` and
+`strip_id_prefix.pl` use it. `check_perl_file_scope.pl` fails CI if any pipeline script assigns
+a file-level variable after work has started and a sub reads it.
+
+`naming_end_to_end.pl` builds a made-up gene set in which each gene hits exactly one naming rule
+and asserts the exact names, provenance and closest genes. It was proven against both silent
+bugs (red on the broken versions, green on the fixed code) — keep it that way when a rule
+changes.
+
 **The JS suite exists because search behaviour lives in JavaScript.** Which input is usable
 and what gets highlighted in a results row are pure functions in `js/modules/search-terms.js`
 and `js/modules/shared-results-table.js`, and no PHP test can see them. It loads the real

@@ -37,6 +37,21 @@ my $SKIP_GTF            = 0;
 my $GFFREAD             = 'gffread';
 my $PROTEIN_CODING_ONLY = 0;
 
+# counters, set before any work (a file-level assignment below the work would still be empty
+# when a sub read it -- tests/check_perl_file_scope.pl)
+my %stats = (
+    gtf_generated  => 0,
+    gtf_exists     => 0,
+    t2g_written    => 0,
+    p2g_written    => 0,
+    t2g_exists     => 0,
+    p2g_exists     => 0,
+    t2g_no_data    => 0,
+    p2g_no_data    => 0,
+    inactive       => 0,
+    errors         => 0,
+);
+
 GetOptions(
     'base-dir=s'          => \$BASE_DIR,
     'dry-run'             => \$DRY_RUN,
@@ -56,18 +71,6 @@ if (@ARGV) {
 
 check_gffread() unless $SKIP_GTF;
 
-my %stats = (
-    gtf_generated  => 0,
-    gtf_exists     => 0,
-    t2g_written    => 0,
-    p2g_written    => 0,
-    t2g_exists     => 0,
-    p2g_exists     => 0,
-    t2g_no_data    => 0,
-    p2g_no_data    => 0,
-    inactive       => 0,
-    errors         => 0,
-);
 
 # Walk the hierarchy. --base-dir can point at any level (root, organism, assembly,
 # or geneset). A directory is treated as a geneset if it contains data files;

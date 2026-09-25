@@ -73,3 +73,43 @@ jobs:
 
       - name: Run JS smoke tests
         run: node tests/js_smoke_tests.js
+
+  # The build pipeline (config/build_and_load_db) is Perl. Three steps, each for a failure that
+  # otherwise shows up only as wrong data on the site:
+  #   - perl -c: a syntax or missing-module error (every pipeline script and module).
+  #   - check_perl_file_scope.pl: the "file-scope assignment" trap -- a table assigned below
+  #     the code that uses it is still EMPTY when read, with no error and no warning. It
+  #     silently broke gene naming three times on 2026-09-25.
+  #   - naming_end_to_end.pl: gene naming on a tiny made-up gene set, one gene per naming rule,
+  #     asserting the exact names and provenance. Hermetic; it caught both silent bugs when run
+  #     against the broken versions.
+  pipeline:
+    name: pipeline perl checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Perl modules the pipeline loads
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libdbi-perl libdbd-sqlite3-perl liburi-perl
+
+      - name: Compile every pipeline Perl file (perl -c)
+        run: |
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! perl -Iconfig/build_and_load_db/analysis_parsers -c "$file" >/dev/null 2>&1; then
+              echo "::error file=$file::Perl does not compile"
+              perl -Iconfig/build_and_load_db/analysis_parsers -c "$file" || true
+              status=1
+            fi
+          done < <(find config/build_and_load_db \( -path '*/old' -o -path '*/data' -o -path '*/slurm_logs' \) -prune \
+                   -o \( -name '*.pl' -o -name '*.pm' \) -print0)
+          if [ "$status" -eq 0 ]; then echo "All pipeline Perl files compile"; fi
+          exit $status
+
+      - name: No file-scope assignment after work
+        run: perl config/build_and_load_db/tests/check_perl_file_scope.pl
+
+      - name: Gene naming end to end
+        run: perl config/build_and_load_db/tests/naming_end_to_end.pl
