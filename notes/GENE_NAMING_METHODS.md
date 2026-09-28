@@ -237,15 +237,15 @@ domesticated human genes (PF14291 ZMYM1/FAM200, PF27041 ZBED1), which Pfam does 
 transposases.
 
 **Step 5 — full-length human similarity.** Human genes are compared by identity and
-bitscore (§3), over every hit with E ≤ 1e-10:
-1. **Only the best-matching human gene can give the name.** First find the human gene the
-   protein matches best (highest bitscore among hits with E ≤ 1e-10), counting every hit,
-   short or long. That gene names the protein only if it has an alignment — to any of its
-   isoforms — with E ≤ 1e-10 that covers most of both proteins (≥ 80% of each). If its
-   alignment is only partial, the protein gets no `-like` name — even when some other, weaker
-   human hit happens to be full-length, because that weaker gene is not the one the protein
-   is most like. Example: a protein matching WDR90 strongly (562 bits) but over only part of
-   WDR90, and CFAP52 weakly (119 bits) along its whole length, is **not** named
+bitscore (§3).
+1. **The top human hit, if it is full-length.** The top hit is the human gene with the
+   highest bitscore, with E ≤ 1e-10 (our cutoff). Its alignment must cover at least 80% of
+   both proteins — the query (this gene's protein) and the target (the human protein; any
+   isoform of that human gene counts). If the top hit passes, the gene is named after that
+   human gene with `-like` appended. If the top hit does not pass, step 5 gives no name and
+   naming moves on to the next step (PANTHER family) — a weaker hit further down the list is
+   not used instead. Example: a protein whose top hit is WDR90 (562 bits) over only part of
+   WDR90, and whose weaker hit to CFAP52 (119 bits) is full-length, is **not** named
    `CFAP52-like`.
 2. If another human gene scores within 5% of its bitscore, the paralogs are a **tie**. A
    reciprocal best hit (MMseqs2) to exactly one of the tied genes, itself full-length, decides
