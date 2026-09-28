@@ -290,3 +290,8 @@ TODO when the pipeline keeps the InterProScan JSON: require a domain match to co
   §5; the step-5 rule reworded ("only the best-matching human gene can give the name").
 - No domain E-value floor; DUF/UPF pattern narrowed; unsupported OMA orthologs set aside — see "Decision (user)"
   and "Final comparison runs" above.
+- InterProScan 5.78 JSON checked (276 Congeria merged proteins): per match location, hmmStart / hmmEnd /
+  hmmLength / hmmBounds are reported for Pfam, SMART, PANTHER, NCBIfam, Gene3D, FunFam, PIRSF (PIRSR, SFLD without
+  hmmBounds); NOT for CDD, PROSITE profiles/patterns, PRINTS, HAMAP, SUPERFAMILY (hmmLength only). So the JSON gives
+  exact model coverage for the PANTHER step (replacing the lengths table) and for most domain databases; CDD and
+  PROSITE-profile domains need another rule (keep as now, or require a second database to agree).
