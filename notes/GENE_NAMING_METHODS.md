@@ -157,15 +157,23 @@ otherwise no name.**
 
 Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr=]` (full list in §5.1). In short:
 
-- **Evidence type** (first part): `ISO` orthology (OMA) · `ISS` similarity (`-like`) · `ISM`
-  sequence model (PANTHER family, InterPro domain, transposon domain) · `TAS` curated ·
-  `SRC` the gene set's own name
-- **What kind:** `1to1`, `Nto1`, `fam` (OMA relationship) · `rbh` / `bh` (reciprocal / best
-  hit) · `tie-rbh` / `tie-grp` (paralog tie resolved) · `pthr`, `rpt`, `ipr`, `te` (family,
-  repeat, domain, transposon)
-- **Support:** `sim+` / `sim~` / `sim-` (best human hit / a hit but not the best / no hit) ·
-  `pthr=` / `pthrX` (same / different PANTHER family) · `hog` (OMA's HOG agrees) · `te`
-  (carries a transposon domain) · `omaX` (an unsupported OMA ortholog was set aside)
+- **Evidence type** (first part; the first four are Gene Ontology evidence codes):
+  - `ISO` — **I**nferred from **S**equence **O**rthology: an OMA ortholog
+  - `ISS` — **I**nferred from **S**equence **S**imilarity: a `-like` name
+  - `ISM` — **I**nferred from **S**equence **M**odel: a PANTHER family, InterPro domain or transposon domain
+  - `TAS` — **T**raceable **A**uthor **S**tatement: a curator's name
+  - `SRC` — **S**ou**RC**e: the gene set's own (RefSeq/Ensembl) name (our code; not GO)
+- **What kind:**
+  - `1to1` one-to-one · `Nto1` N copies here to one human gene · `fam` family (co-orthologs) — the OMA relationship
+  - `rbh` **r**eciprocal **b**est **h**it · `bh` **b**est **h**it
+  - `tie-rbh` a paralog tie decided by the reciprocal best hit · `tie-grp` a paralog tie named for the HGNC **gr**ou**p**
+  - `pthr` **P**AN**TH**E**R** family · `rpt` re**p**ea**t** · `ipr` **I**nter**Pr**o domain · `te` **t**ransposable **e**lement
+- **Support:**
+  - `sim+` / `sim~` / `sim-` — **sim**ilarity: the named human gene is the best human hit / a hit but not the best / not a hit
+  - `pthr=` / `pthrX` — the gene's **P**AN**TH**E**R** family is the same as / different from the named human gene's
+  - `hog` — OMA's **H**ierarchical **O**rthologous **G**roup agrees
+  - `te` (on an `ISO` name) — the ortholog carries a **t**ransposable-**e**lement domain
+  - `omaX` — an **OMA** ortholog was e**x**cluded (set aside: nothing supported it)
 
 | Step | Source | Condition | Name form | Tag |
 |---|---|---|---|---|
