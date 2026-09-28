@@ -238,10 +238,14 @@ transposases.
 
 **Step 5 — full-length human similarity.** Human genes are compared by identity and
 bitscore (§3), over every hit with E ≤ 1e-10:
-1. The human gene the protein is **most** similar to, at any coverage, must itself have a
-   full-length hit (both coverages ≥ 80%). A weaker full-length hit to another gene never
-   names the protein (a WD40 protein hitting WDR90 at 562 bits over part of WDR90 is not
-   named `CFAP52-like` from a 119-bit full-length hit).
+1. **Only the best-matching human gene can give the name.** First find the human gene the
+   protein matches best (highest score), counting every hit, short or long. That gene names
+   the protein only if the alignment covers most of both proteins (≥ 80% of each). If its
+   alignment is only partial, the protein gets no `-like` name — even when some other, weaker
+   human hit happens to be full-length, because that weaker gene is not the one the protein
+   is most like. Example: a protein matching WDR90 strongly (562 bits) but over only part of
+   WDR90, and CFAP52 weakly (119 bits) along its whole length, is **not** named
+   `CFAP52-like`.
 2. If another human gene scores within 5% of its bitscore, the paralogs are a **tie**. A
    reciprocal best hit (MMseqs2) to exactly one of the tied genes, itself full-length, decides
    (tag `tie-rbh`); otherwise the tied genes' shared HGNC group names the gene
