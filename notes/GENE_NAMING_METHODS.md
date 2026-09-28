@@ -181,14 +181,20 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr=]` (full list in �
 | 2 | **Native name** | RefSeq/Ensembl gene sets | the source's own name, kept unless uninformative | `SRC` |
 | 2 | **Naming species** (optional, per gene set) | its OMA 1:1 or many:1 ortholog, else its hits file; informative | `NAME` for another annotation of the same species; otherwise `NAME-like (label)` | `SRC` / `ISO` / `ISS` |
 | 3 | **OMA orthology to human** | closest human gene from OMA (§6, tier 1 or 2), supported (§5.2) | see below | `ISO` |
-| 6* | **Transposable element** | a transposable-element Pfam domain (see below) | `<class> transposase domain-containing protein` | `ISM\|te` |
+| 6 † | **Transposable element** | a transposable-element Pfam domain (see below) | `<class> transposase domain-containing protein` | `ISM\|te` |
 | 4 | **Full-length human similarity** | see below | `SYMBOL-like: approved name-like`, or `<HGNC group> family member` | `ISS` |
 | 5 | **PANTHER family** | the match covers ≥ 80% of the family's model; informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
 | 6 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
 | 7 | — | nothing above | `None` (the gene keeps its own transcript id as name and description) | — |
 
-\* Transposable-element names are applied after step 3 and before step 4, and are recorded
-as step 6 (a domain-based name).
+The rows are in the order they are tried. The step number is what the Gene Name Source table
+records as the Score; it groups names by the kind of evidence, so two rows can share a number.
+
+† **Why transposable elements are tried before step 4 but numbered 6.** A transposon copy is
+named for its transposase domain — a domain-based name, so it is step 6, like other domain
+names. It is tried early, before steps 4 and 5, because otherwise the transposon would be named
+after the human gene domesticated from such an element (`HARBI1-like`) or after a PANTHER family,
+which would describe it as that gene.
 
 **Step 3 — OMA orthology.**
 - One human gene, 1:1: `SYMBOL: approved name`.
