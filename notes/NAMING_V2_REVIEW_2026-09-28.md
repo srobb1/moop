@@ -279,3 +279,14 @@ CDD 11; e.g. HECT, Macro, MAM, cyclin N, RRM, B-box). PROSITE patterns stay excl
 Pfam's threshold (so ZMYM1 copies' hAT dimerisation domain now counts). e2e G9 updated (Sushi at E 0.08 names it).
 TODO when the pipeline keeps the InterProScan JSON: require a domain match to cover enough of its model
 (hmmStart/hmmEnd/hmmLength, hmmBounds), e.g. >= 50% or COMPLETE for single domains; exact PANTHER coverage too.
+
+## Later changes (2026-09-28 evening) — read these before the numbers above
+- **Naming steps renumbered** (commit e73da279) so the number is the order the steps are tried:
+  1 curated · 2 native / naming species · 3 OMA ortholog · **4 transposable element** · 5 full-length `-like` ·
+  6 PANTHER family (or repeat) · 7 InterPro domain · none. Earlier sections of these notes use the OLD numbers
+  (4 -like, 5 PANTHER, 6 domain, TE recorded as 6) — e.g. "step 4" above means today's step 5.
+  Item 17 ("TE names stay step 6") is superseded: TE names are now step 4.
+- Methods: terms (naming steps, closest-human tiers) defined in §1; the tag codes spelled out at the start of
+  §5; the step-5 rule reworded ("only the best-matching human gene can give the name").
+- No domain E-value floor; DUF/UPF pattern narrowed; unsupported OMA orthologs set aside — see "Decision (user)"
+  and "Final comparison runs" above.
