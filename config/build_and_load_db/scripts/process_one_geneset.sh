@@ -569,7 +569,7 @@ sed -i "/^${THIS_ORG}\t/d" "$MISSING_LOG" 2>/dev/null
 ## assign_gene_names_v2.pl gives every gene a name (geneNames.tsv) and, separately, its
 ## closest human gene and closest gene in each closest_species of geneset_config.yaml
 ## (closest_<tag>.tsv for the GFF, closest_<tag>.moop.tsv for the database). It reads the analysis
-## results directly (OMA, MMseqs2 RBH, DIAMOND, PANTHER) plus the reference data in
+## results directly (OMA, MMseqs2 RBH, DIAMOND, InterProScan) plus the reference data in
 ## $REFERENCE_DATA; run scripts/update_reference_data.sh before a full reprocess.
 ## Fills NAMING_ARGS; run_naming_v2 adds --isoforms and the outputs (the caller, --native).
 build_naming_args() {
@@ -590,26 +590,27 @@ build_naming_args() {
                --uniprot-dir "$REFERENCE_DATA/uniprot"
                --taxonomy-dir "$REFERENCE_DATA/ncbi_taxonomy"
                --ref-db "$REF_DB"
-               --panther PANTHER.iprscan.moop.tsv
                "${CONFIG_ARGS[@]}")
   [ -s "$GENESET_DIR/protein2gene.txt" ] && NAMING_ARGS+=(--protein2gene "$GENESET_DIR/protein2gene.txt")
   [ -n "$OMA_CODE" ]                     && NAMING_ARGS+=(--oma-dir "$OMA_SRC" --oma-code "$OMA_CODE")
   [ -n "$OMA_ID_MAP" ]                   && NAMING_ARGS+=(--oma-id-map "$OMA_ID_MAP")
   [ -d "$ANALYSIS_DIR/rbh_mmseq" ]       && NAMING_ARGS+=(--mmseqs-dir "$ANALYSIS_DIR/rbh_mmseq")
   [ -d "$ANALYSIS_DIR/diamond" ]         && NAMING_ARGS+=(--diamond-dir "$ANALYSIS_DIR/diamond")
-  ## last naming step: the gene's InterPro domain ("X domain-containing protein"); the entry
-  ## list (update_reference_data.sh) is what tells a domain from a family
+  ## the raw InterProScan results name genes twice: by PANTHER family, when the match covers
+  ## most of the family's model (the model lengths, from update_reference_data.sh), and by
+  ## InterPro domain ("X domain-containing protein"; the entry list tells a domain from a family)
   local IPRSCAN_RESULTS
   for IPRSCAN_RESULTS in "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" "$ANALYSIS_DIR/interproscan/interproscan_results.tsv"; do
     if [ -s "$IPRSCAN_RESULTS" ]; then
-      NAMING_ARGS+=(--interproscan "$IPRSCAN_RESULTS" --interpro-entries "$REFERENCE_DATA/interpro/entry.list")
-      REQUIRED_FILES+=("$REFERENCE_DATA/interpro/entry.list")
+      NAMING_ARGS+=(--interproscan "$IPRSCAN_RESULTS" --interpro-entries "$REFERENCE_DATA/interpro/entry.list"
+                    --panther-hmm-lengths "$REFERENCE_DATA/panther/hmm_lengths.tsv")
+      REQUIRED_FILES+=("$REFERENCE_DATA/interpro/entry.list" "$REFERENCE_DATA/panther/hmm_lengths.tsv")
       break
     fi
   done
 
   local file
-  for file in "$REFERENCE_DATA/hgnc/hgnc_complete_set.txt" PANTHER.iprscan.moop.tsv "${REQUIRED_FILES[@]}"; do
+  for file in "$REFERENCE_DATA/hgnc/hgnc_complete_set.txt" "${REQUIRED_FILES[@]}"; do
     if [ ! -s "$file" ]; then
       echo "ERROR: Required file $file is missing! Gene naming will fail."
       case "$file" in "$REFERENCE_DATA"/*) echo "       Reference data: run scripts/update_reference_data.sh" ;; esac

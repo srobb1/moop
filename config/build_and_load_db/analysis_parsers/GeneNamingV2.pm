@@ -86,6 +86,17 @@ my @UNINFORMATIVE_DESCRIPTION_RE = (
   qr/^protein\s+(?:[A-Za-z]{2,4}\d{4,}[A-Za-z]?(?:-related)?|cbr-\S+|fam\d+[a-z]?(?:-related)?)$/i,
   qr/^eg:\S+(?:\s+protein(?:-related)?)?$/i,   # fly clone names ("EG:114D9.1 PROTEIN-RELATED")
   qr/^(?:si|zgc|wu):/i,
+  # ... and "<locus id> protein", the other word order ("RGD1565685 PROTEIN", "SLR1189 PROTEIN",
+  # rice/Arabidopsis loci "OS10G0105400 PROTEIN-RELATED", "AT1G01010 PROTEIN")
+  qr/^(?:[A-Za-z]{2,4}\d{4,}[A-Za-z]?|[A-Za-z]{2}\d{1,2}g\d{5,})\s+protein(?:-related)?$/i,
+  qr/^[A-Z]{2,3}\d{4,}p\d*(?:-related)?$/i,           # fly cDNA clones ("LD39211P", "GEO02494P1", "FI19922P1-RELATED"); not KIAA1143P1
+  qr/^[A-Z]{2,6}\d{5,}-p[A-Z](?:-related)?$/i,        # mosquito etc. locus ("AGAP001331-PA-RELATED")
+  qr/^(?:expressed|unnamed)\s+(?:protein|product)$/i,
+  qr/^transmembrane\s+protein$/i,
+  # a DUF/UPF id and nothing else that identifies a gene ("UNCHARACTERIZED DUF1308", "DUF4605
+  # DOMAIN-CONTAINING PROTEIN", "UPF0462 PROTEIN"); NOT "UPF0565 protein C2orf69 homolog" (it names
+  # a gene) and not UPF1/UPF3 (genes). Checked against HGNC and RefSeq names.
+  qr/^(?:uncharacteri[sz]ed\s+)?(?:protein\s+)?(?:DUF\d+|UPF\d{4})(?:[\s-]+(?:domain-containing|domain|family|protein|member|related))*$/i,
 );
 
 sub is_placeholder_symbol {

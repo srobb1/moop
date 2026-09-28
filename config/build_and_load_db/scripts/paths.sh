@@ -30,6 +30,9 @@
 # OMA_BASE is where the OMA runs live, one <organism>/<assembly>/<geneset> dir each.
 # OMA_REFERENCE_RUN is the default template's reference run (its reference genomes only):
 # gene sets that ARE a reference genome take their orthologs from it (process_one_geneset.sh).
+# INTERPROSCAN_DIR is the InterProScan install the annotation pipeline runs; gene naming reads
+# PANTHER's HMM lengths from its data/panther/ (update_reference_data.sh), which must be the
+# PANTHER release the gene sets' InterProScan results came from.
 
 : "${GENOMES:=/n/sci/SCI-004223-SBGENOMES/genomes/v2}"
 : "${ANNOTATIONS:=/n/sci/SCI-004223-SBGENOMES/annotations/sbgenomes_2}"
@@ -37,5 +40,6 @@
 : "${REFERENCE_DATA:=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop}"
 : "${OMA_BASE:=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/OMA_v2}"
 : "${OMA_REFERENCE_RUN:=$OMA_BASE/OMA_TEMPLATE_RUNS/BRAFL_CALMI_CAPTE_DROME_HUMAN_LEPOC_LOTGI_MONBE_MOUSE_NEMVE/reference_run}"
+: "${INTERPROSCAN_DIR:=/n/projects/sm2699/SBG_v4/src/interproscan/interproscan-5.78-109.0}"
 
-export GENOMES ANNOTATIONS REF_DB REFERENCE_DATA OMA_BASE OMA_REFERENCE_RUN
+export GENOMES ANNOTATIONS REF_DB REFERENCE_DATA OMA_BASE OMA_REFERENCE_RUN INTERPROSCAN_DIR

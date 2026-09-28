@@ -24,6 +24,12 @@
 #       every InterPro entry: accession, type (Domain, Repeat, Family, ...) and curated name.
 #       Gene naming's last step names a gene after its InterPro domain or repeat; the type is
 #       what tells a domain from a family. Downloaded when InterPro publishes a new release.
+#   panther/hmm_lengths.tsv
+#       PANTHER family HMM lengths (family<TAB>length), read from the NAME/LENG lines of the
+#       famhmm/binHmm in $INTERPROSCAN_DIR (paths.sh). Gene naming names a gene after its
+#       PANTHER family only when the match covers most of the family's model; InterProScan's
+#       TSV has no model coordinates, so the model length comes from here. Rebuilt when the
+#       binHmm changes (md5), so it always matches the PANTHER release InterProScan ran.
 #
 # A failed download keeps the existing copy and prints a WARNING; the exit code is the number
 # of warnings (0 = everything current).
@@ -234,11 +240,48 @@ update_interpro() {
   echo "interpro: release $remote_release saved ($(( $(wc -l < "$dir/entry.list") - 1 )) entries)"
 }
 
+# ---------------------------------------------------------------- PANTHER HMM lengths
+update_panther() {
+  local dir="$MOOP_DIR/panther" hmm hmms release md5 tmp
+  mkdir -p "$dir"
+  hmms=("$INTERPROSCAN_DIR"/data/panther/*/famhmm/binHmm)
+  if [ ! -s "${hmms[0]}" ]; then
+    warn "panther: no data/panther/*/famhmm/binHmm under INTERPROSCAN_DIR=$INTERPROSCAN_DIR; keeping the existing copy"
+    return
+  fi
+  if [ ${#hmms[@]} -gt 1 ]; then
+    warn "panther: several PANTHER releases under $INTERPROSCAN_DIR/data/panther (${hmms[*]}); keeping the existing copy"
+    return
+  fi
+  hmm=${hmms[0]}
+  release=$(basename "$(dirname "$(dirname "$hmm")")")
+  md5=$(md5sum "$hmm" | cut -d' ' -f1)
+  if [ -s "$dir/hmm_lengths.tsv" ] && grep -q "md5 $md5" "$dir/VERSION.txt" 2>/dev/null; then
+    echo "panther: release $release current"
+    return
+  fi
+  echo "panther: reading HMM lengths from $hmm"
+  tmp="$dir/hmm_lengths.tsv.tmp"
+  ## binHmm holds one "NAME PTHR12345.orig.30.pir" and one "LENG 290" line per family model
+  grep -a -E '^(NAME|LENG) ' "$hmm" \
+    | awk '$1 == "NAME" { family = $2; sub(/\.orig\.30\.pir$/, "", family) }
+           $1 == "LENG" && family != "" { print family "\t" $2; family = "" }' > "$tmp"
+  if [ "$(wc -l < "$tmp")" -lt 10000 ] || grep -qv -P '^PTHR\d+\t\d+$' "$tmp"; then
+    rm -f "$tmp"
+    warn "panther: $hmm gave an unexpected lengths table; keeping the existing copy"
+    return
+  fi
+  mv "$tmp" "$dir/hmm_lengths.tsv"
+  echo "PANTHER release $release: family HMM lengths read $TODAY from $hmm (md5 $md5)" > "$dir/VERSION.txt"
+  echo "panther: release $release saved ($(wc -l < "$dir/hmm_lengths.tsv") families)"
+}
+
 update_compara
 update_hgnc
 update_taxonomy
 update_uniprot
 update_interpro
+update_panther
 
 [ $WARNINGS -gt 0 ] && echo "$WARNINGS warning(s); see above" >&2
 [ $WARNINGS -gt 255 ] && WARNINGS=255
