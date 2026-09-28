@@ -27,6 +27,23 @@ more genes; fragmentary gene models are left unnamed until the models are repair
 made per gene. The isoform whose evidence was used is recorded as the gene's main id
 (`MAINID`); when the isoform file nominates a selected isoform, that one is used instead.
 
+**Terms used below.** The two outputs are each decided by an ordered list of evidence;
+the tables in §2 refer to positions in these lists.
+
+- **Naming steps** (§5): the kinds of evidence a name can come from, tried in this order;
+  the first that gives an informative name wins. 1 a curator's name; 2 the gene set's own
+  (RefSeq/Ensembl) name, or a chosen naming species; **3 an OMA ortholog of a human gene**;
+  4 full-length similarity to one human gene (`-like`); 5 a PANTHER family; 6 an InterPro
+  domain or a transposable-element domain; otherwise no name. The step is the Score of the
+  Gene Name Source table.
+- **Closest-human tiers** (§6): the kinds of evidence for a gene's closest human gene,
+  strongest first; the lowest tier with any evidence is used. **Tier 1: an OMA pairwise
+  ortholog** (OMA calls the gene and a human gene orthologs directly). **Tier 2: an OMA HOG
+  co-ortholog** (OMA's hierarchical orthologous groups, built on the species tree, place the
+  gene with a human gene). Tier 3: a reciprocal best hit; tier 4: through another species'
+  ortholog; tiers 5–7: best similarity hits (directly, or through another species' gene or
+  its PANTHER subfamily). The tier is the Score of the Closest Gene table.
+
 ## 2. Evidence sources
 
 | Source | Method | Used for |
