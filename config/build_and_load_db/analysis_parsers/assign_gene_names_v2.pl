@@ -47,13 +47,16 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #   2 native name if informative; or the closest-species entry with use_for_names (its OMA 1:1
 #     or many:1 ortholog, else its hits file; "-like (label)" unless same_species)
 #   3 OMA human ortholog (tier 1-2): 1:1 and many:1 "SYM: name" (every many:1 copy the same);
-#     a family "<HGNC group> family member", or -- no shared group -- straight to step 5
-#   4 best full-length human hit (FULL: both coverages >= 80%), reciprocal or not: "SYM-like:
+#     a family "<HGNC group> family member", or -- no shared group -- straight to step 6
+#   4 transposable element: a TE Pfam domain -> "<class> transposase domain-containing protein"
+#     (before 5 and 6, which would name it after a gene domesticated from such an element)
+#   5 best full-length human hit (FULL: both coverages >= 80%), reciprocal or not: "SYM-like:
 #     name-like"; symbol only from HGNC. Other species never name a gene.
-#   5 PANTHER family whose match covers >= 80% of the family model: "<family> family member",
+#   6 PANTHER family whose match covers >= 80% of the family model: "<family> family member",
 #     with InterPro's curated name when the family is in InterPro, else PANTHER's (if informative)
-#   6 InterPro domain or repeat: "<domain> domain-containing protein"
-#   7 None (the transcript id stays the name)
+#   7 InterPro domain or repeat: "<domain> domain-containing protein"
+#   - None (the transcript id stays the name)
+# The step is the Score of the Gene Name Source table: the order the steps are tried.
 #
 # Output geneNames.tsv: ID MAINID GroupId Desc Note (one row per id in isoforms.tsv or, with
 # --native, per id in the native file). In --out-dir, per species (human always, then
@@ -1418,7 +1421,7 @@ sub choose_name {
     return $named;
   }
 
-  # OMA orthology to human. A family OMA could not narrow is not handed to step 4 either:
+  # OMA orthology to human. A family OMA could not narrow is not handed to step 5 either:
   # the best BLAST hit would just be picking one member by score again.
   my $closest = $closest{$group};
   my $oma_family = 0;
@@ -1452,7 +1455,7 @@ sub choose_name {
       $stats{'name: repeat (PANTHER family built of repeats)'}++;
       return { desc => domain_description($family->{repeat_name}), selected => selected_id($group, $family->{id}), tag => ['ISM', 'rpt'],
                note => "PANTHER|Gene_Families|$family->{id}|$family->{family}|$family->{evalue}",
-               origin => { kind => 'panther', accession => $family->{family}, step => 5,
+               origin => { kind => 'panther', accession => $family->{family}, step => 6,
                            rule => "Its PANTHER family $family->{family} (\"$family->{description}\") match is "
                                  . sprintf('%.0f%%', 100 * $family->{repeat_fraction}) . " repeat units ($family->{repeat_name}), "
                                  . "which any protein with such repeats fills; named for the repeat, not the family" } };
@@ -1467,7 +1470,7 @@ sub choose_name {
       $stats{'name: PANTHER family' . (defined $family->{interpro_name} && $label eq $family->{interpro_name} ? ' (InterPro name)' : ' (PANTHER name)')}++;
       return { desc => family_member($label), selected => selected_id($group, $family->{id}), tag => ['ISM', 'pthr'],
                note => "PANTHER|Gene_Families|$family->{id}|$family->{family}|$family->{evalue}",
-               origin => { kind => 'panther', accession => $family->{family}, step => 5,
+               origin => { kind => 'panther', accession => $family->{family}, step => 6,
                            rule => "Member of PANTHER family $family->{family} ($named_by): "
                                  . "$family->{model_coverage}% of the family model aligned, E=" . e_value($family->{evalue}) . " (InterProScan)" } };
     }
@@ -1489,7 +1492,7 @@ sub choose_name {
                             . ", E=" . e_value($best->[1]{best}{evalue}) . ")" : '';
       return { desc => $description, selected => selected_id($group, $domain->{id}), tag => ['ISM', 'ipr', ($best ? 'sim~' : ())],
                note => "InterPro|Domains|$domain->{id}|$domain->{entry}|" . ($domain->{evalue} // '-'),
-               origin => { kind => 'interpro', accession => $domain->{entry}, step => 6,
+               origin => { kind => 'interpro', accession => $domain->{entry}, step => 7,
                            rule => "Contains InterPro " . lc($domain->{type}) . " $domain->{entry} \"$domain->{name}\" ($signature); "
                                  . "no ortholog, full-length homolog or family to name it by$partial" } };
     }
@@ -1630,7 +1633,7 @@ sub transposon_name {
   }
   return { desc => domain_description($domain), selected => selected_id($group, $te->{id}), tag => ['ISM', 'te'],
            note => "Pfam|Transposable_element|$te->{id}|$te->{signature}|$te->{evalue}",
-           origin => { kind => 'pfam', accession => $te->{signature}, step => 6, rule => $rule } };
+           origin => { kind => 'pfam', accession => $te->{signature}, step => 4, rule => $rule } };
 }
 
 sub ortholog_name {
@@ -1754,7 +1757,7 @@ sub hgnc_group_size {
   return $group_size_cache{$gene_group} // 1e9;
 }
 
-# Naming step 4: "-like" from similarity to ONE human gene along the whole length. Hits to other
+# Naming step 5: "-like" from similarity to ONE human gene along the whole length. Hits to other
 # species never name a gene: a transferred name may be a lineage-specific paralog ("member 4a" in
 # fish), which we cannot tell and should not copy. Human genes are compared by gene id (HGNC,
 # else Ensembl gene) and bitscore, never by name text, over every human hit (record_human_hit):
@@ -1791,7 +1794,7 @@ sub like_name {
       my $members = join(', ', map { human_label($_) } @tie_genes);
       return { desc => family_member($shared), selected => selected_id($group, $hit->{id}), tag => ['ISS', ($top->{rbh} ? 'rbh' : 'bh'), 'tie-grp'],
                note => "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}",
-               origin => { kind => 'hgnc_group', accession => hgnc_group_id(\@tie_genes, $shared), step => 4,
+               origin => { kind => 'hgnc_group', accession => hgnc_group_id(\@tie_genes, $shared), step => 5,
                            rule => "Similar along its length to human genes of the HGNC group \"$shared\" that score within "
                                  . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE)) . " of each other ($members); no one of them is closest, "
                                  . "and no single reciprocal best hit decides; named for the group" } };
@@ -1824,7 +1827,7 @@ sub like_text {
   return { desc => ($like_symbol ne '' ? "$like_symbol: $like_description" : $like_description),
            selected => selected_id($group, $hit->{id}), tag => ['ISS', ($entry->{rbh} ? 'rbh' : 'bh'), ($tie_flag ? $tie_flag : ())],
            note => "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}",
-           origin => human_origin($human, $rule, 4) };
+           origin => human_origin($human, $rule, 5) };
 }
 
 sub selected_id {

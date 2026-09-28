@@ -275,14 +275,14 @@ check(($source{G4}[3] // '') eq 'hgnc_group' && ($source{G4}[0] // '') eq '10'
       && ($source{G4}[1] // '') =~ /^Co-ortholog of 2 human genes in the HGNC group "Beta proteins" \(OMA, 1:many\); no single ortholog; one of these genes is its best human similarity hit$/,
       'G4 provenance: HGNC gene group id 10, linked as a group', $p->('G4'));
 check(($source{G5}[1] // '') eq 'Similar to human DELTA along its length: reciprocal best hit, 95% of this protein and 95% of DELTA aligned, E=1e-50 (MMseqs2)'
-      && ($source{G5}[2] // '') eq '4', 'G5 provenance: coverage and E-value, step 4', $p->('G5'));
-check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '5'
+      && ($source{G5}[2] // '') eq '5', 'G5 provenance: coverage and E-value, step 5', $p->('G5'));
+check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '6'
       && ($source{G6}[1] // '') eq 'Member of PANTHER family PTHR00006 ("WIDGET PROTEIN", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
-      'G6 provenance: PANTHER family, model coverage, step 5', $p->('G6'));
+      'G6 provenance: PANTHER family, model coverage, step 6', $p->('G6'));
 check(($source{G10}[1] // '') eq 'Member of PANTHER family PTHR00010 (InterPro IPR000010 "Gadget family"): 96% of the family model aligned, E=1e-60 (InterProScan)',
       'G10 provenance: InterPro name, merged model coverage', $p->('G10'));
-check(($source{G7}[0] // '') eq 'IPR000002' && ($source{G7}[1] // '') =~ /\(SMART SM00002, E=1e-20\); no ortholog, full-length homolog or family to name it by$/ && ($source{G7}[2] // '') eq '6',
-      'G7 provenance: the chosen domain with its E-value, step 6', $p->('G7'));
+check(($source{G7}[0] // '') eq 'IPR000002' && ($source{G7}[1] // '') =~ /\(SMART SM00002, E=1e-20\); no ortholog, full-length homolog or family to name it by$/ && ($source{G7}[2] // '') eq '7',
+      'G7 provenance: the chosen domain with its E-value, step 7', $p->('G7'));
 check(scalar(($source{G11}[1] // '') =~ /; similar to human DELTA over part of its length only \(30% of this protein, 60% of DELTA, E=1e-12\)$/),
       'G11 provenance: the partial human homolog is stated, not denied', $p->('G11'));
 check(scalar(($source{G13}[1] // '') =~ /; one of these genes is its best human similarity hit/), 'G13 provenance: support of a family is said of "one of these genes"', $p->('G13'));
@@ -291,7 +291,8 @@ check(($source{G13}[3] // '') eq 'hgnc_group' && ($source{G13}[0] // '') eq '30'
       'G13 provenance: pairwise 1:1 vs HOG, named for the group', $p->('G13'));
 check(($source{G14}[0] // '') eq 'HGNC:8' && ($source{G14}[1] // '') =~ /ANO1, ANO2 score within 5% of each other, and only ANO2 is a reciprocal best hit$/,
       'G14 provenance: the tie and what decided it', $p->('G14'));
-check(($source{G15}[0] // '') eq '21' && ($source{G15}[2] // '') eq '4', 'G15 provenance: HGNC group 21, step 4', $p->('G15'));
+check(($source{G15}[0] // '') eq '21' && ($source{G15}[2] // '') eq '5', 'G15 provenance: HGNC group 21, step 5', $p->('G15'));
+check(($source{G17}[3] // '') eq 'pfam' && ($source{G17}[2] // '') eq '4', 'G17 provenance: a transposable element is step 4', $p->('G17'));
 check(!exists $source{G8} && !exists $source{G12} && !exists $source{G16}, 'unnamed genes have no provenance row');
 check(($source{G18}[3] // '') eq 'pfam' && ($source{G18}[0] // '') eq 'PF13359'
       && ($source{G18}[1] // '') =~ /; OMA pairs it with human HARB1 \(many:1\) together with 4 other copies in this genome -- a transposon family, not one ortholog$/,

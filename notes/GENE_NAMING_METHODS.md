@@ -33,8 +33,8 @@ the tables in §2 refer to positions in these lists.
 - **Naming steps** (§5): the kinds of evidence a name can come from, tried in this order;
   the first that gives an informative name wins. 1 a curator's name; 2 the gene set's own
   (RefSeq/Ensembl) name, or a chosen naming species; **3 an OMA ortholog of a human gene**;
-  4 full-length similarity to one human gene (`-like`); 5 a PANTHER family; 6 an InterPro
-  domain or a transposable-element domain; otherwise no name. The step is the Score of the
+  4 a transposable-element domain; 5 full-length similarity to one human gene (`-like`);
+  6 a PANTHER family; 7 an InterPro domain; otherwise no name. The step is the Score of the
   Gene Name Source table.
 - **Closest-human tiers** (§6): the kinds of evidence for a gene's closest human gene,
   strongest first; the lowest tier with any evidence is used. **Tier 1: an OMA pairwise
@@ -51,13 +51,13 @@ the tables in §2 refer to positions in these lists.
 | OMA pairwise orthologs | OMA standalone 2.7.0, 10-species template (§2.1) | closest human tier 1; naming step 3; closest other species |
 | OMA hierarchical orthologous groups (HOGs) | same run; only when `parameters.drw` fixes a species tree | closest human tier 2; co-ortholog families (§5, step 3) |
 | OMA orthologs of reference species | same run | closest human tier 4 |
-| MMseqs2 reciprocal best hits (RBH) | `mmseqs easy-rbh` (commit 7e28409), defaults, against every protein of the Ensembl proteomes | closest human tiers 3–4; naming step 4; support of OMA names |
-| DIAMOND hits | DIAMOND 2.1.6 `blastp --ultra-sensitive`, E ≤ 1e-5, 17-column output with query and subject coverage; against Ensembl human (all isoforms) and UniProtKB/Swiss-Prot **[TODO: production `--max-target-seqs`: 50 for human, 5 otherwise]** | closest human tiers 5–7; naming step 4; support of OMA names |
+| MMseqs2 reciprocal best hits (RBH) | `mmseqs easy-rbh` (commit 7e28409), defaults, against every protein of the Ensembl proteomes | closest human tiers 3–4; naming step 5; support of OMA names |
+| DIAMOND hits | DIAMOND 2.1.6 `blastp --ultra-sensitive`, E ≤ 1e-5, 17-column output with query and subject coverage; against Ensembl human (all isoforms) and UniProtKB/Swiss-Prot **[TODO: production `--max-target-seqs`: 50 for human, 5 otherwise]** | closest human tiers 5–7; naming step 5; support of OMA names |
 | Ensembl Compara homologies | same Ensembl release as the proteome hit | closest human tiers 4 and 6 |
 | UniProtKB/Swiss-Prot cross-references | Ensembl gene, HGNC id and PANTHER family and subfamily per entry | closest human tiers 6–7; PANTHER family of each human gene (support of OMA names) |
-| PANTHER | PANTHER 19.0 family HMMs, via InterProScan 5.78-109.0 (the gene set's own results); family model lengths from the same release's HMM file | naming step 5; support of OMA names |
-| InterPro domains, repeats | the gene set's InterProScan results + InterPro `entry.list` (entry types and names) | naming step 6; repeat-built families (step 5) |
-| Pfam transposable-element domains | the gene set's InterProScan results (Pfam, as shipped with InterProScan 5.78) | transposable-element names (§5, step 6) |
+| PANTHER | PANTHER 19.0 family HMMs, via InterProScan 5.78-109.0 (the gene set's own results); family model lengths from the same release's HMM file | naming step 6; support of OMA names |
+| InterPro domains, repeats | the gene set's InterProScan results + InterPro `entry.list` (entry types and names) | naming step 7; repeat-built families (step 6) |
+| Pfam transposable-element domains | the gene set's InterProScan results (Pfam, as shipped with InterProScan 5.78) | transposable-element names (§5, step 4) |
 | HGNC | complete set + withdrawn ids | all human symbols, approved names and gene groups |
 | NCBI Taxonomy | GenBank common names | species of other-species hits (evidence only; no name comes from another species) |
 
@@ -96,9 +96,9 @@ columns is not used at all.
 
 | Filter | E-value | Query and target coverage | Used for |
 |---|---|---|---|
-| **support** | ≤ 1e-5 | any | which human gene a protein is most similar to (§5 step 4); support of OMA names (§5.2) |
+| **support** | ≤ 1e-5 | any | which human gene a protein is most similar to (§5, step 5); support of OMA names (§5.2) |
 | **normal** | ≤ 1e-10 | each ≥ 50% | evidence for the closest human gene (§6) |
-| **full-length** | ≤ 1e-10 | each ≥ 80% | a `-like` name (§5, step 4) |
+| **full-length** | ≤ 1e-10 | each ≥ 80% | a `-like` name (§5, step 5) |
 
 **Human genes are compared by identity, never by name text.** Every human hit is resolved to
 its HGNC record — by HGNC id, then Ensembl gene id, then UniProt accession, following
@@ -181,20 +181,13 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr=]` (full list in �
 | 2 | **Native name** | RefSeq/Ensembl gene sets | the source's own name, kept unless uninformative | `SRC` |
 | 2 | **Naming species** (optional, per gene set) | its OMA 1:1 or many:1 ortholog, else its hits file; informative | `NAME` for another annotation of the same species; otherwise `NAME-like (label)` | `SRC` / `ISO` / `ISS` |
 | 3 | **OMA orthology to human** | closest human gene from OMA (§6, tier 1 or 2), supported (§5.2) | see below | `ISO` |
-| 6 † | **Transposable element** | a transposable-element Pfam domain (see below) | `<class> transposase domain-containing protein` | `ISM\|te` |
-| 4 | **Full-length human similarity** | see below | `SYMBOL-like: approved name-like`, or `<HGNC group> family member` | `ISS` |
-| 5 | **PANTHER family** | the match covers ≥ 80% of the family's model; informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
-| 6 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
-| 7 | — | nothing above | `None` (the gene keeps its own transcript id as name and description) | — |
+| 4 | **Transposable element** | a transposable-element Pfam domain (see below) | `<class> transposase domain-containing protein` | `ISM\|te` |
+| 5 | **Full-length human similarity** | see below | `SYMBOL-like: approved name-like`, or `<HGNC group> family member` | `ISS` |
+| 6 | **PANTHER family** | the match covers ≥ 80% of the family's model; informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
+| 7 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
+| – | — | nothing above | `None` (the gene keeps its own transcript id as name and description) | — |
 
-The rows are in the order they are tried. The step number is what the Gene Name Source table
-records as the Score; it groups names by the kind of evidence, so two rows can share a number.
-
-† **Why transposable elements are tried before step 4 but numbered 6.** A transposon copy is
-named for its transposase domain — a domain-based name, so it is step 6, like other domain
-names. It is tried early, before steps 4 and 5, because otherwise the transposon would be named
-after the human gene domesticated from such an element (`HARBI1-like`) or after a PANTHER family,
-which would describe it as that gene.
+The steps are tried in this order; the step number is the Score of the Gene Name Source table.
 
 **Step 3 — OMA orthology.**
 - One human gene, 1:1: `SYMBOL: approved name`.
@@ -207,7 +200,7 @@ which would describe it as that gene.
   search as a gene's identity, and a family has none. **No member is singled out.** A gene that
   predates a duplication is equally related to every copy; the best BLAST score only
   identifies the slowest-evolving copy. If the members share no HGNC group, the gene goes
-  directly to step 5 — not to step 4, which would pick a member by score after all. HGNC
+  directly to step 6 — not to step 5, which would pick a member by score after all. HGNC
   groups are sometimes defined by a shared domain (`EF-hand domain containing`); the name
   still reads `… family member`.
 - **Pairwise 1:1, HOG several.** OMA's pairwise file can pair a gene 1:1 with one human copy of
@@ -217,11 +210,11 @@ which would describe it as that gene.
 - **Supported OMA calls only** (§5.2). An OMA human ortholog that no other evidence backs is
   set aside; the next step names the gene, and its tag carries `omaX`.
 
-**Transposable elements.** A gene with the catalytic or signature domain of a transposable
-element (a Pfam match InterProScan reports, i.e. past Pfam's own threshold; table below) is named
-for its element class. This comes before
-step 4 and 5, which would otherwise name it after a human gene domesticated from such an
-element (HARBI1, ZBED1). It replaces an OMA name only when OMA pairs ≥ 5 genes of this gene
+**Step 4 — transposable elements.** A gene with the catalytic or signature domain of a
+transposable element (a Pfam match InterProScan reports, i.e. past Pfam's own threshold; table
+below) is named for its element class. It comes before the similarity and family steps, which
+would otherwise name a transposon after a human gene domesticated from such an element
+(`HARBI1-like`) or after a PANTHER family. It replaces an OMA name only when OMA pairs ≥ 5 genes of this gene
 set with the same human gene (many:1): a transposon family next to one domesticated human
 gene. A 1:1 OMA ortholog carrying such a domain keeps its OMA name and is flagged `te`.
 
@@ -243,7 +236,7 @@ transcriptase alone (telomerase has one), and RNase H-like domains Pfam names af
 domesticated human genes (PF14291 ZMYM1/FAM200, PF27041 ZBED1), which Pfam does not describe as
 transposases.
 
-**Step 4 — full-length human similarity.** Human genes are compared by identity and
+**Step 5 — full-length human similarity.** Human genes are compared by identity and
 bitscore (§3), over every hit with E ≤ 1e-10:
 1. The human gene the protein is **most** similar to, at any coverage, must itself have a
    full-length hit (both coverages ≥ 80%). A weaker full-length hit to another gene never
@@ -252,17 +245,17 @@ bitscore (§3), over every hit with E ≤ 1e-10:
 2. If another human gene scores within 5% of its bitscore, the paralogs are a **tie**. A
    reciprocal best hit (MMseqs2) to exactly one of the tied genes, itself full-length, decides
    (tag `tie-rbh`); otherwise the tied genes' shared HGNC group names the gene
-   (`Heat shock 70kDa proteins family member`, tag `tie-grp`); otherwise step 4 gives no name.
+   (`Heat shock 70kDa proteins family member`, tag `tie-grp`); otherwise step 5 gives no name.
 3. The name is **always** `-like`, reciprocal or not: sequence similarity, even reciprocal, is
    not an orthology call (§9). The symbol is the human gene's HGNC symbol, or none; it is
    never taken from another gene.
 
-**Step 5 — PANTHER family.** A family names the gene only when the gene's PANTHER match covers
+**Step 6 — PANTHER family.** A family names the gene only when the gene's PANTHER match covers
 ≥ 80% of the family's HMM (model coverage: the protein residues in the family's match
 regions, merged, over the model length). Protein coverage is not required: a multidomain
 protein that contains the whole family model is a member. Below the threshold the match is
 usually one shared domain (a SET domain matching the KMT5A family at 38% of its model), which
-step 6 names honestly. Among qualifying families the lowest E-value wins. The name is
+step 7 names honestly. Among qualifying families the lowest E-value wins. The name is
 InterPro's curated name when the family is integrated into an InterPro *Family* entry
 (`BONUS, ISOFORM C-RELATED` → `TRIM45/56/19-like`), else PANTHER's own name, cleaned (§4).
 **Repeat-built families:** when repeat units (InterPro *Repeat* entries, and the C2H2 zinc
@@ -272,9 +265,9 @@ says nothing — any protein with such repeats fills the model (a mollusc C2H2 p
 named for the repeat covering most of the match instead (`Zinc finger C2H2-type
 domain-containing protein`, tag `rpt`).
 
-**Step 6 — InterPro domain.** The name states the one thing known: a domain. This is
+**Step 7 — InterPro domain.** The name states the one thing known: a domain. This is
 UniProt's convention for such proteins (`SET domain-containing protein`). Only InterPro
-entries of type *Domain* or *Repeat* are used (families are step 5; homologous superfamilies
+entries of type *Domain* or *Repeat* are used (families are step 6; homologous superfamilies
 are too broad; sites are not domains), and not entries of unknown function (DUF, UPF,
 uncharacterised). Every match InterProScan reports has already passed its member database's
 curated threshold (Pfam's per-family gathering thresholds, SMART, CDD, PROSITE profiles); no
@@ -392,7 +385,7 @@ the database table: 1 = OMA, 2 = hits file.
 | File | Content |
 |---|---|
 | `geneNames.tsv` | `ID MAINID GroupId Desc Note`; Desc is the name with its evidence tag; Note records the source, evidence type, ids and score of the name. A gene with no name keeps its own transcript id as name and description |
-| `gene_name_source.<kind>.moop.tsv` | database annotation type "Gene Name Source" — the provenance of every name, one row per gene and isoform. Accession = what the name came from, description = why, in words (`Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)`), score = the naming step (1–6). One source per kind of accession link: HGNC gene, HGNC gene group, Ensembl gene, PANTHER family, InterPro domain, Pfam (transposable element), naming species (NCBI), human-curated, the gene set's own name |
+| `gene_name_source.<kind>.moop.tsv` | database annotation type "Gene Name Source" — the provenance of every name, one row per gene and isoform. Accession = what the name came from, description = why, in words (`Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)`), score = the naming step (1–7). One source per kind of accession link: HGNC gene, HGNC gene group, Ensembl gene, PANTHER family, InterPro domain, Pfam (transposable element), naming species (NCBI), human-curated, the gene set's own name |
 | `closest_<species>.tsv` | per id: gene id, symbol, description, evidence |
 | `closest_<species>[.ensembl\|.family].moop.tsv` | database annotation type "Closest Gene", one source per file so each has one link: human — `Closest human gene (HGNC)` (genenames.org), `Closest human gene (Ensembl, no HGNC record)` (Ensembl), `Closest human gene family` (no link); other species — `Closest <species> gene`, `Closest <species> gene family`. A row for the gene and each isoform; score = tier (human) or 1 = OMA, 2 = hits file |
 | `genes.gff` | attributes `closestHGNC`, `closestHumanSym`, `closestHumanDesc`, `closestHumanEvidence`; `closest<Tag>Id/Sym/Desc/Evidence` for other species |
