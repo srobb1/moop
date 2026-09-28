@@ -238,15 +238,20 @@ transposases.
 
 **Step 5 — full-length human similarity.** Human genes are compared by identity and
 bitscore (§3).
-1. **The top human hit, if it is full-length.** The top hit is the human gene with the
-   highest bitscore, with E ≤ 1e-10 (our cutoff). Its alignment must cover at least 80% of
-   both proteins — the query (this gene's protein) and the target (the human protein; any
-   isoform of that human gene counts). If the top hit passes, the gene is named after that
-   human gene with `-like` appended. If the top hit does not pass, step 5 gives no name and
-   naming moves on to the next step (PANTHER family) — a weaker hit further down the list is
-   not used instead. Example: a protein whose top hit is WDR90 (562 bits) over only part of
-   WDR90, and whose weaker hit to CFAP52 (119 bits) is full-length, is **not** named
-   `CFAP52-like`.
+1. **The top human hit names the gene only if all of these are true:**
+   - it is the human gene with the highest bitscore (the top hit);
+   - E ≤ 1e-10;
+   - the alignment covers at least 80% of both proteins — the query (this gene's protein)
+     and the target (the human protein; any isoform of that human gene counts);
+   - its name passes the informative-name test (§4).
+
+   If all are true, the gene is named after that human gene with `-like` appended. If any
+   one is false, step 5 gives no name and naming moves on to the next step (PANTHER family).
+   A weaker hit further down the list is never used instead — not when the top hit is
+   partial, and not when the top hit's name is uninformative but a weaker hit has a better
+   one: the weaker gene is not the one this protein is most like. Example: a protein whose
+   top hit is WDR90 (562 bits) over only part of WDR90, and whose weaker hit to CFAP52
+   (119 bits) is full-length, is **not** named `CFAP52-like`.
 2. If another human gene scores within 5% of its bitscore, the paralogs are a **tie**. A
    reciprocal best hit (MMseqs2) to exactly one of the tied genes, itself full-length, decides
    (tag `tie-rbh`); otherwise the tied genes' shared HGNC group names the gene
