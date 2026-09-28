@@ -239,8 +239,9 @@ transposases.
 **Step 5 — full-length human similarity.** Human genes are compared by identity and
 bitscore (§3), over every hit with E ≤ 1e-10:
 1. **Only the best-matching human gene can give the name.** First find the human gene the
-   protein matches best (highest score), counting every hit, short or long. That gene names
-   the protein only if the alignment covers most of both proteins (≥ 80% of each). If its
+   protein matches best (highest bitscore among hits with E ≤ 1e-10), counting every hit,
+   short or long. That gene names the protein only if it has an alignment — to any of its
+   isoforms — with E ≤ 1e-10 that covers most of both proteins (≥ 80% of each). If its
    alignment is only partial, the protein gets no `-like` name — even when some other, weaker
    human hit happens to be full-length, because that weaker gene is not the one the protein
    is most like. Example: a protein matching WDR90 strongly (562 bits) but over only part of
