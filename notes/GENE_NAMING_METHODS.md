@@ -155,6 +155,18 @@ The principle: **a plain name only from a supported orthology call; `-like` for 
 similarity to one human gene; a family or domain name when the evidence stops there;
 otherwise no name.**
 
+Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr=]` (full list in §5.1). In short:
+
+- **Evidence type** (first part): `ISO` orthology (OMA) · `ISS` similarity (`-like`) · `ISM`
+  sequence model (PANTHER family, InterPro domain, transposon domain) · `TAS` curated ·
+  `SRC` the gene set's own name
+- **What kind:** `1to1`, `Nto1`, `fam` (OMA relationship) · `rbh` / `bh` (reciprocal / best
+  hit) · `tie-rbh` / `tie-grp` (paralog tie resolved) · `pthr`, `rpt`, `ipr`, `te` (family,
+  repeat, domain, transposon)
+- **Support:** `sim+` / `sim~` / `sim-` (best human hit / a hit but not the best / no hit) ·
+  `pthr=` / `pthrX` (same / different PANTHER family) · `hog` (OMA's HOG agrees) · `te`
+  (carries a transposon domain) · `omaX` (an unsupported OMA ortholog was set aside)
+
 | Step | Source | Condition | Name form | Tag |
 |---|---|---|---|---|
 | 1 | **Human-curated names** | a curator's file lists the gene | exactly as given — the only step not checked for informativeness | `TAS` |
