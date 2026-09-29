@@ -146,7 +146,12 @@ matched.
 Ensembl `[Source:…]`, `LOW QUALITY PROTEIN:`, isoform and transcript-variant suffixes,
 `(Fragment)`, `, partial`, a trailing `precursor`, and all but the first of a `;`-separated
 list of names. PANTHER family names are tidied further: `, ISOFORM X`, repeated `-RELATED`,
-a trailing `PRECURSOR` or full stop. Native names (§5, step 2) are kept exactly as the source
+a trailing `PRECURSOR` or full stop — and, being written in capitals, put in sentence case word by
+word: a word HGNC's approved names use takes HGNC's most frequent spelling (`dehydrogenase`,
+`GTPase`, `CoA`, `tRNA`, `SET`); a word HGNC does not use is lowered from 6 letters on
+(`METALLOPROTEASE`) and kept as an acronym when shorter (`NACHT`, `DOMON`); words with digits stay
+(`9C`, `E2`). `SHORT-CHAIN DEHYDROGENASE/REDUCTASE FAMILY 9C` becomes `Short-chain
+dehydrogenase/reductase family 9C`. The provenance keeps PANTHER's own spelling. Native names (§5, step 2) are kept exactly as the source
 gives them.
 
 ## 5. Naming — the first step that yields a name wins
@@ -201,9 +206,14 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   search as a gene's identity, and a family has none. **No member is singled out.** A gene that
   predates a duplication is equally related to every copy; the best BLAST score only
   identifies the slowest-evolving copy. Only an HGNC group that is a **family by descent** is
-  used (below); failing that, the PANTHER family all the human members belong to and the gene
-  itself matches names it (`<family> family member`); failing that, the gene goes directly to
-  step 6 — not to step 5, which would pick a member by score after all.
+  used (below); failing that, the PANTHER family all the human members belong to names it
+  (`<family> family member`) — only when the gene is a whole member of that family: its own match
+  covers ≥ 50% of the family's model, or it has a full-length hit (§3) to one of the human members
+  (model coverage from the InterProScan TSV counts protein residues against the model's length and
+  underestimates short or compact members: ACBP 35%, yet 99%/100% to DBI); failing that, the gene
+  goes directly to step 6 — not to step 5, which would pick a member by score after all. In
+  *C. kusceri* the whole-member condition removed 24 family names, mostly Sushi-domain proteins
+  and fragments (a collagen piece hitting 18% of COL1A2), which are then named by their domain.
 - **Which HGNC groups are families.** HGNC groups are also made by a shared domain (`EF-hand
   domain containing`, `Sushi domain containing`) or a function (`CD molecules`, `BAF complex
   subunits`), and "family member" would claim a common ancestry those do not have. A group's
@@ -473,8 +483,8 @@ with the code. Reference data (HGNC, Ensembl Compara, UniProt, NCBI Taxonomy, In
 list, PANTHER model lengths) are fetched and versioned by `update_reference_data.sh`.
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
-synthetic gene set of 27 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 75 checks), run on every change to the code. Each rule was also
+synthetic gene set of 29 genes, each made to hit one rule, asserting the exact name, tag,
+provenance and closest genes, plus checks of the informative-name rules; 79 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

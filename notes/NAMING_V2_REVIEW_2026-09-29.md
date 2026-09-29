@@ -143,3 +143,15 @@ EF-hand 0.09, Sushi 0.16, BAF complex 0.15, RING E3 0.21); RABs 0.26 (PANTHER sp
 Congeria: threshold 0.8 changes 1,095 names, 0.6 changes 899; 0.6 keeps Peroxiredoxins, Cathepsins,
 RAS type GTPase, Fucosyltransferases as HGNC names. Recommended 0.6. Open: InterPro family labels
 that are functional categories ("Complement & Cell Adhesion Regulators") when no group qualifies.
+
+## Whole-member condition and sentence case (2026-09-29, committed)
+- 50% own-model-coverage alone was tested and rejected: it removed 57 names, many of whole members
+  with full-length human hits (ACBP x5 35% of the model / 99%/100% to DBI; RNF2; SHC1; BTF3L4) --
+  TSV model coverage (protein residues / model length) underestimates short members. Adopted:
+  >= 50% OR a full-length hit to a human member -> 24 names change (9 Sushi functional labels,
+  fragments such as a collagen piece at 18%/18%); ~6 borderline (hits 77-80%).
+- SLC25, RAB, SDR, E2 genes (families PANTHER splits) now carry several PANTHER labels each
+  (SLC25: 6 labels for 12 genes) -- accurate, less uniform than the HGNC name. Follow-up idea.
+- PANTHER names in sentence case: HGNC's most frequent spelling per word, unknown words lowered from
+  6 letters, shorter kept as acronyms. Leftovers: "SUGAR kinase", "Eukaryote specific DSRNA", and a
+  mouse clone-id family "CDNA sequence BC048562" that the informative-name filter should catch.

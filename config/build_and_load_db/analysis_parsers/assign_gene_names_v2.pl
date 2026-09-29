@@ -105,6 +105,12 @@ my $LIKE_TIE = 0.95;
 # Tetraspanin 0.94, Cathepsins 0.73, HSP70 0.65), domain and function groups 0.06-0.21 (CD
 # molecules 0.07, EF-hand 0.09, Sushi 0.16). The threshold sits in that gap.
 my $HGNC_GROUP_MIN_COHERENCE = 0.6;
+# A PANTHER family names a co-ortholog family or a paralog tie only when the gene is a whole member:
+# its own match covers at least this much of the family's model, OR it has a full-length (FULL) hit
+# to one of the human members. Model coverage from the InterProScan TSV (protein residues over the
+# model's length) underestimates short and compact members -- the TSV has no model coordinates --
+# so a full-length human hit also counts (ACBP: 35% of the model, 99%/100% to DBI).
+my $FAMILY_NAME_MIN_OWN_COVERAGE = 50;
 
 # ---- closest gene in a --closest-species species
 my %OMA_RANK = ('1:1' => 0, 'many:1' => 1, '1:many' => 2, 'many:many' => 3);
@@ -201,6 +207,7 @@ my %closest;          # group -> { tier, human => [records], evidence, id }
 my %claimed_human;    # human key -> { group => 1 }: the co-orthologs a many:1 name is shared by
 my %name;             # group -> { desc, note, selected, origin }
 my %panther_label;    # PANTHER family -> InterPro's Family name when integrated, else PANTHER's cleaned name
+my %gene_family_coverage;   # group -> PANTHER family -> the gene's best model coverage (%, any isoform)
 
 # ============================================================== main
 sub main {
@@ -992,6 +999,7 @@ sub read_panther_families {
     }
     my $coverage = int(100 * aligned_residues($match->{regions}) / $length);
     $coverage = 100 if $coverage > 100;
+    $gene_family_coverage{$group}{$family_only} = $coverage if $coverage > ($gene_family_coverage{$group}{$family_only} // -1);
     if ($coverage < $FAMILY_MODEL_COVERAGE) {
       $stats{'PANTHER match: below model coverage'}++;
       next;
@@ -1298,8 +1306,8 @@ sub hgnc_group_coherence {
   return $group_coherence{$gene_group} // 1;
 }
 
-# A PANTHER family every human member is in (Swiss-Prot) AND the gene itself matches (its
-# InterProScan PANTHER matches, any coverage), with an informative label -- what a co-ortholog
+# A PANTHER family every human member is in (Swiss-Prot) AND the gene itself matches, as a whole
+# member (see $FAMILY_NAME_MIN_OWN_COVERAGE), with an informative label -- what a co-ortholog
 # family or a paralog tie is named for when no HGNC group they share is a family by descent.
 # Several: by family id.
 sub shared_panther_family {
@@ -1311,8 +1319,12 @@ sub shared_panther_family {
       $count{$family}++;
     }
   }
-  my @shared = sort grep { $count{$_} == @$humans and $gene_panther{$group}{$_} and defined $panther_label{$_}
-                           and is_informative_hit('', $panther_label{$_}, $_) } keys %count;
+  my $full_length = grep { my $human = $_; ($human_hit{$group}{$human->{key}} // {})->{best_full} } @$humans;
+  my @shared = sort grep { $count{$_} == @$humans and $gene_panther{$group}{$_}
+                           and ($full_length or ($gene_family_coverage{$group}{$_} // 0) >= $FAMILY_NAME_MIN_OWN_COVERAGE)
+                           and defined $panther_label{$_} and is_informative_hit('', $panther_label{$_}, $_) } keys %count;
+  $stats{'PANTHER family shared, but the gene is not a whole member (< 50% of the model, no full-length hit): not used'}++
+    if !@shared and grep { $count{$_} == @$humans and $gene_panther{$group}{$_} } keys %count;
   return $shared[0];
 }
 
@@ -1552,9 +1564,18 @@ sub choose_name {
       # what the gene lacks, said truthfully: it may well have a human homolog, just not one
       # that could name it (no ortholog, no full-length hit, no family)
       my ($best) = ranked_human_hits($group);
-      my $partial = $best ? "; similar to human " . human_label($best->[1]{human}) . " over part of its length only ("
-                            . sprintf('%.0f%% of this protein, %.0f%% of %s', $best->[1]{best}{qcov}, $best->[1]{best}{tcov}, human_label($best->[1]{human}))
-                            . ", E=" . e_value($best->[1]{best}{evalue}) . ")" : '';
+      my $partial = '';
+      if ($best) {
+        my $label = human_label($best->[1]{human});
+        my $numbers = sprintf('%.0f%% of this protein, %.0f%% of %s', $best->[1]{best}{qcov}, $best->[1]{best}{tcov}, $label)
+                    . ", E=" . e_value($best->[1]{best}{evalue});
+        # a full-length homolog that still did not name it: one of a family of co-orthologs, a
+        # paralog tie, or a gene whose name is uninformative
+        $partial = $best->[1]{best_full}
+          ? "; similar to human $label along its length ($numbers), but that gene's name could not be used "
+            . "(a family of co-orthologs, a paralog tie, or an uninformative name)"
+          : "; similar to human $label over part of its length only ($numbers)";
+      }
       return { desc => $description, selected => selected_id($group, $domain->{id}), tag => ['ISM', 'ipr', ($best ? 'sim~' : ())],
                note => "InterPro|Domains|$domain->{id}|$domain->{entry}|" . ($domain->{evalue} // '-'),
                origin => { kind => 'interpro', accession => $domain->{entry}, step => 7,
@@ -1854,7 +1875,45 @@ sub panther_name {
   $name =~ s/\s+PRECURSOR$//i;
   $name =~ s/\s+/ /g;
   $name =~ s/^ | $//g;
-  return $name;
+  return sentence_case($name);
+}
+
+# PANTHER writes its family names in capitals ("SHORT-CHAIN DEHYDROGENASE/REDUCTASE FAMILY 9C").
+# Sentence case, word by word, keeping acronyms: a word HGNC's approved names use takes HGNC's most
+# frequent spelling of it ("dehydrogenase", "zinc", "GTPase", "CoA", "tRNA", but "SET", "RNA");
+# a word HGNC does not use is lowered when it has at least 6 letters (METALLOPROTEASE, PERMEASE)
+# and kept as an acronym when shorter (NACHT, DOMON, RECQ). Words with digits (9C, E2) stay. The
+# first letter is a capital. Names with any lower-case letter are left alone.
+my %hgnc_spelling;   # upper-case word -> HGNC's most frequent spelling of it
+sub sentence_case {
+  my ($name) = @_;
+  return $name if $name =~ /[a-z]/ or $name !~ /[A-Z]/;
+  if (!%hgnc_spelling) {
+    my %count;
+    foreach my $record (values %{$hgnc->{by_id}}) {
+      foreach my $word (split /[^A-Za-z]+/, $record->{name} // '') {
+        $count{uc $word}{$word}++ if length $word >= 2;
+      }
+    }
+    foreach my $upper (keys %count) {
+      # most frequent spelling; a tie goes to the one with fewer capitals, then alphabetically
+      my ($spelling) = sort { $count{$upper}{$b} <=> $count{$upper}{$a} or ($a =~ tr/A-Z//) <=> ($b =~ tr/A-Z//) or $a cmp $b }
+                       keys %{$count{$upper}};
+      $hgnc_spelling{$upper} = $spelling;
+    }
+    $hgnc_spelling{''} = '';   # filled once
+  }
+  my @parts = split /([A-Za-z]+)/, $name;
+  foreach my $part (@parts) {
+    next unless $part =~ /^[A-Za-z]{2,}$/;
+    if (exists $hgnc_spelling{uc $part}) {
+      $part = $hgnc_spelling{uc $part};
+    } elsif (length $part >= 6) {
+      $part = lc $part;
+    }
+  }
+  my $cased = join('', @parts);
+  return ucfirst $cased;
 }
 
 my %group_size_cache;

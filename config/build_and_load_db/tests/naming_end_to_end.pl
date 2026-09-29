@@ -37,11 +37,11 @@ sub write_file {
   close $fh;
 }
 
-# ---- the gene set: one protein per gene, G1..G27 (G2/G3 are two copies of one human gene; G18-G22 five)
+# ---- the gene set: one protein per gene, G1..G29 (G2/G3 are two copies of one human gene; G18-G22 five)
 my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, T7 => 200, T8 => 150, T9 => 120,
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
-              T25 => 250, T26 => 300, T27 => 300);
+              T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300);
 write_file("$dir/isoforms.tsv", join('', map { my $n = substr($_, 1); "$_.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { ">$_.1\n" . ('M' x $length{$_}) . "\n" } sort keys %length));
 
@@ -71,6 +71,9 @@ write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name 
   ['HGNC:20', 'MIX2', 'mix protein 2', 'Mixed molecules', '40', 'ENSG20', '', ''],
   ['HGNC:21', 'MIX3', 'mix protein 3', 'Mixed molecules', '40', 'ENSG21', '', ''],
   ['HGNC:22', 'MIX4', 'mix protein 4', 'Mixed molecules', '40', 'ENSG22', '', ''],
+  # its name puts "widget" and "sprocket" in HGNC's lower-case vocabulary: PANTHER's capitals are
+  # sentence-cased word by word from it (SMC, not an HGNC lower-case word, stays)
+  ['HGNC:23', 'WSA1', 'widget sprocket associated 1', '', '', 'ENSG23', '', ''],
 ));
 # ---- Swiss-Prot cross-references: the PANTHER families of human genes (orthology support)
 my $xrefs = join("\t", qw(accession taxid gene_name hgnc_ids ensembl_genes ensembl_proteins panther_ids secondary_accessions)) . "\n"
@@ -111,6 +114,12 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { jo
   # T27: co-ortholog (1:many) of MIX1 and MIX2, whose only shared HGNC group is not a family by descent
   [27, 19, 'T27.1', $human->(19), '1:many'],
   [27, 20, 'T27.1', $human->(20), '1:many'],
+  # T28: the same co-orthologs, but T28 matches their PANTHER family over only 20% of its model
+  [28, 19, 'T28.1', $human->(19), '1:many'],
+  [28, 20, 'T28.1', $human->(20), '1:many'],
+  # T29: the same co-orthologs; T29 is not in their PANTHER family at all, but hits MIX1 along its length
+  [29, 19, 'T29.1', $human->(19), '1:many'],
+  [29, 20, 'T29.1', $human->(20), '1:many'],
 ));
 write_file("$dir/oma/Output/PairwiseOrthologs/TEST-NEMVE.txt", join('', map { join("\t", @$_) . "\n" }
   [1, 11, 'T1.1', 'NEMVE00011 | XP_000011.1 | LOC11 | anemone alpha', '1:1'],
@@ -178,7 +187,10 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   # T26: THETA full-length and far the best (400 bits); its OMA partner ZETA only over part (150)
   . $dhit->('T26', '18', 'THETA', 'theta ligase', '1e-120', 400, 300, 300, 95, 95)
   . $dhit->('T26', '17', 'ZETA', 'zeta ligase', '1e-30', 150, 300, 300, 40, 45)
-  . $dhit->('T27', '19', 'MIX1', 'mix protein 1', '1e-80', 300, 300, 300, 90, 90));
+  . $dhit->('T27', '19', 'MIX1', 'mix protein 1', '1e-80', 300, 300, 300, 90, 90)
+  # T28: a partial hit only -- with 20% of the family model, not a whole member of the family
+  . $dhit->('T28', '19', 'MIX1', 'mix protein 1', '1e-30', 150, 300, 300, 40, 40)
+  . $dhit->('T29', '19', 'MIX1', 'mix protein 1', '1e-80', 300, 300, 300, 90, 90));
 
 # ---- InterProScan TSV (PANTHER families and InterPro domains), InterPro entry list, PANTHER model lengths
 # PANTHER names a gene only when its match covers >= 80% of the family model:
@@ -193,7 +205,7 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
 my $row = sub { my ($id, $len, $analysis, $sig, $desc, $start, $end, $score, $ipr, $ipr_desc) = @_;
   return join("\t", "$id.1", 'md5', $len, $analysis, $sig, $desc, $start, $end, $score, 'T', '04-08-2026', $ipr, $ipr_desc, '-', '-') . "\n" };
 write_file("$dir/iprscan.tsv", join('',
-  $row->('T6',  100, 'PANTHER', 'PTHR00006', 'WIDGET PROTEIN',   3,  97,  '1.0E-30', '-', '-'),
+  $row->('T6',  100, 'PANTHER', 'PTHR00006', 'WIDGET PROTEIN SMC', 3, 97, '1.0E-30', '-', '-'),
   $row->('T7',  200, 'PANTHER', 'PTHR00007', '-',                1,  190, '1.0E-25', '-', '-'),
   $row->('T7',  200, 'Pfam',    'PF00001',   'kinase',           1,  100, '1.0E-5',  'IPR000001', 'Kinase domain'),
   $row->('T7',  200, 'SMART',   'SM00002',   'RING',             120, 180, '1.0E-20', 'IPR000002', 'Zinc finger, RING-type'),
@@ -221,18 +233,26 @@ write_file("$dir/iprscan.tsv", join('',
   $row->('T25', 250, 'Pfam',    'PF00001',   'kinase',           10, 200, '1.0E-30', 'IPR000001', 'Kinase domain'),
   # T26: in PTHR00018, not ZETA's PTHR00017 (a partial match, so it does not name T26 itself)
   $row->('T26', 300, 'PANTHER', 'PTHR00018', 'THETA LIGASE',     1,  60,  '1.0E-20', '-', '-'),
-  # T27: in PTHR00027, MIX1's and MIX2's family (a partial match: it labels the family, it does not name T27 by step 6)
-  $row->('T27', 300, 'PANTHER', 'PTHR00027', 'SPROCKET PROTEIN', 1,  60,  '1.0E-20', '-', '-'),
+  # T27: in PTHR00027, MIX1's and MIX2's family, over 60% of its model (>= 50%: the family can name
+  # a co-ortholog family; < 80%: it does not name T27 by step 6)
+  $row->('T27', 300, 'PANTHER', 'PTHR00027', 'SPROCKET PROTEIN', 1,  180, '1.0E-20', '-', '-'),
+  # T28: the same family over 20% of its model -> not used; its InterPro domain names it
+  $row->('T28', 300, 'PANTHER', 'PTHR00027', 'SPROCKET PROTEIN', 1,  60,  '1.0E-20', '-', '-'),
+  $row->('T28', 300, 'Pfam',    'PF00028',   'sprocket',         1,  60,  '1.0E-20', 'IPR000028', 'Sprocket domain'),
+  # T29: in MIX3's family (PTHR00028), not MIX1's and MIX2's; its domain names it
+  $row->('T29', 300, 'PANTHER', 'PTHR00028', 'COG PROTEIN',      1,  60,  '1.0E-20', '-', '-'),
+  $row->('T29', 300, 'Pfam',    'PF00028',   'sprocket',         1,  60,  '1.0E-20', 'IPR000028', 'Sprocket domain'),
   (map { $row->('T24', 200, 'SMART', 'SM00355', 'ZnF_C2H2', $_, $_ + 20, '1.0E-3', 'IPR013087', 'Zinc finger C2H2-type') } 20, 60, 100, 140),
 ));
 write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDomain\tKinase domain\n"
   . "IPR000002\tDomain\tZinc finger, RING-type\nIPR000003\tDomain\tDomain of unknown function DUF1\n"
   . "IPR000010\tFamily\tGadget family\nIPR001214\tDomain\tSET domain\n"
   . "IPR013087\tDomain\tZinc finger C2H2-type\nIPR000436\tDomain\tSushi/SCR/CCP domain\n"
-  . "IPR027806\tDomain\tHarbinger transposase-derived nuclease domain\n");
+  . "IPR027806\tDomain\tHarbinger transposase-derived nuclease domain\n"
+  . "IPR000028\tDomain\tSprocket domain\n");
 write_file("$dir/hmm_lengths.tsv", join('', map { "$_->[0]\t$_->[1]\n" }
   ['PTHR00006', 100], ['PTHR00007', 200], ['PTHR00009', 120], ['PTHR00010', 250], ['PTHR00011', 200], ['PTHR00012', 150],
-  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300]));
+  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300]));
 
 # ---- run it (twice, with different hash seeds: the output must not depend on hash order)
 my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/protein.aa.fa", '--hgnc-dir', "$dir/hgnc",
@@ -268,7 +288,7 @@ my %expect = (
   G3  => ['GAMMA: gamma transferase [ISO|2to1|sim+|pthrC]', 'the other copy, same name'],
   G4  => ['Beta proteins family member [ISO|fam|sim+]', 'OMA 1:many -> the HGNC group, no symbol, no member picked'],
   G5  => ['DELTA-like: delta kinase-like [ISS|rbh]', 'full-length reciprocal hit -> "-like", never plain'],
-  G6  => ['WIDGET PROTEIN family member [ISM|pthr]', 'partial hit cannot name; PANTHER family (95% of its model) does'],
+  G6  => ['Widget protein SMC family member [ISM|pthr]', 'partial hit cannot name; PANTHER family (95% of its model) does; its capitals sentence-cased, the acronym kept'],
   G7  => ['Zinc finger RING-type domain-containing protein [ISM|ipr]', 'PANTHER "-" skipped; the LOWER E-value InterPro domain names it, comma dropped'],
   G8  => ['None', 'only a "unknown function" domain -> None'],
   G9  => ['Sushi/SCR/CCP domain-containing protein [ISM|ipr]', 'a locus-id PANTHER family is skipped; a Pfam match (E=0.08, past Pfam\'s own threshold) names it'],
@@ -284,7 +304,9 @@ my %expect = (
   G23 => ['CENPQ: centromere protein Q [ISO|1to1|sim+|te]', 'a 1:1 OMA ortholog with a transposase domain keeps its name, flagged te'],
   G25 => ['Kinase domain-containing protein [ISM|ipr|omaX]', 'an OMA pair nothing supports is set aside (omaX); the next evidence names it'],
   G24 => ['Zinc finger C2H2-type domain-containing protein [ISM|rpt]', 'a PANTHER family match that is 44% C2H2 repeats -> named for the repeat, not "KRAB"'],
-  G27 => ['SPROCKET PROTEIN family member [ISO|fam|sim+|pthr+]', 'OMA co-orthologs share only a scattered HGNC group (coherence 0.50) -> their shared PANTHER family names it'],
+  G27 => ['Sprocket protein family member [ISO|fam|sim+|pthr+]', 'OMA co-orthologs share only a scattered HGNC group (coherence 0.50) -> their shared PANTHER family names it'],
+  G28 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'the same, but not a whole member (20% of the family model, only a partial human hit) -> not named for the family; its domain names it'],
+  G29 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'co-orthologs whose PANTHER family it is not in -> its domain names it'],
   G26 => ['THETA-like: theta ligase-like [ISS|bh|omaC]', 'OMA 1:1 to ZETA, but the best hit is THETA and the PANTHER family differs -> withheld (omaC); the full-length THETA hit names it'],
 );
 foreach my $gene (sort { substr($a, 1) <=> substr($b, 1) } keys %expect) {
@@ -307,8 +329,12 @@ check(($source{G26}[0] // '') eq 'HGNC:18' && ($source{G26}[2] // '') eq '5'
       && scalar(($source{G26}[1] // '') =~ /; OMA pairs it with human ZETA \(1:1\), but its best human similarity hit is THETA and its PANTHER family differs, so ZETA does not name it$/),
       'G26 provenance: the withheld OMA pair and both reasons', $p->('G26'));
 check(($source{G27}[3] // '') eq 'panther' && ($source{G27}[0] // '') eq 'PTHR00027' && ($source{G27}[2] // '') eq '3'
-      && scalar(($source{G27}[1] // '') =~ /^Co-ortholog of 2 human genes \(OMA, 1:many\), all in PANTHER family PTHR00027 \("SPROCKET PROTEIN"\), which it matches too; the HGNC group they share \("Mixed molecules"\) is not a family by descent \(PANTHER coherence 0\.50\)/),
+      && scalar(($source{G27}[1] // '') =~ /^Co-ortholog of 2 human genes \(OMA, 1:many\), all in PANTHER family PTHR00027 \("Sprocket protein"\), which it matches too; the HGNC group they share \("Mixed molecules"\) is not a family by descent \(PANTHER coherence 0\.50\)/),
       'G27 provenance: the PANTHER family, and why the HGNC group was not used', $p->('G27'));
+check(scalar(($source{G28}[1] // '') =~ /; similar to human MIX1 over part of its length only \(40% of this protein, 40% of MIX1, E=1e-30\)$/),
+      'G28 provenance: the partial homolog is stated', $p->('G28'));
+check(scalar(($source{G29}[1] // '') =~ /; similar to human MIX1 along its length \(90% of this protein, 90% of MIX1, E=1e-80\), but that gene's name could not be used/),
+      'G29 provenance: a full-length homolog is not described as partial', $p->('G29'));
 check(($closest_human{G27}[3] // '') eq 'MIX1/MIX2-family', 'closest human G27: no scattered HGNC group in the family label', join(' | ', @{$closest_human{G27} // []}));
 check(($closest_human{G26}[2] // '') eq 'HGNC:17', 'closest human G26: still the OMA partner ZETA (OMA made that call)', join(' | ', @{$closest_human{G26} // []}));
 check(($source{G4}[3] // '') eq 'hgnc_group' && ($source{G4}[0] // '') eq '10'
@@ -317,7 +343,7 @@ check(($source{G4}[3] // '') eq 'hgnc_group' && ($source{G4}[0] // '') eq '10'
 check(($source{G5}[1] // '') eq 'Similar to human DELTA along its length: reciprocal best hit, 95% of this protein and 95% of DELTA aligned, E=1e-50 (MMseqs2)'
       && ($source{G5}[2] // '') eq '5', 'G5 provenance: coverage and E-value, step 5', $p->('G5'));
 check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '6'
-      && ($source{G6}[1] // '') eq 'Member of PANTHER family PTHR00006 ("WIDGET PROTEIN", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
+      && ($source{G6}[1] // '') eq 'Member of PANTHER family PTHR00006 ("WIDGET PROTEIN SMC", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
       'G6 provenance: PANTHER family, model coverage, step 6', $p->('G6'));
 check(($source{G10}[1] // '') eq 'Member of PANTHER family PTHR00010 (InterPro IPR000010 "Gadget family"): 96% of the family model aligned, E=1e-60 (InterProScan)',
       'G10 provenance: InterPro name, merged model coverage', $p->('G10'));
