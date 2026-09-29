@@ -97,6 +97,14 @@ my $HIT_MAX_EVALUE = 1e-5;
 # A -like name picks one human gene only when no OTHER human gene scores within this fraction of
 # its bitscore; closer than that the paralogs are a tie (UBE2D2 vs UBE2D4) -- see like_name.
 my $LIKE_TIE = 0.95;
+# An HGNC gene group names a family ("X family member") only when it is a family by descent. HGNC
+# groups are also made by a shared domain ("EF-hand domain containing") or a function ("CD
+# molecules", "BAF complex subunits"), and "family member" would claim common descent those do not
+# have. Coherence = the fraction of the group's human genes (those with a Swiss-Prot PANTHER family)
+# in the group's most common PANTHER family: families by descent score 0.6-1.0 (Tubulin beta 1.00,
+# Tetraspanin 0.94, Cathepsins 0.73, HSP70 0.65), domain and function groups 0.06-0.21 (CD
+# molecules 0.07, EF-hand 0.09, Sushi 0.16). The threshold sits in that gap.
+my $HGNC_GROUP_MIN_COHERENCE = 0.6;
 
 # ---- closest gene in a --closest-species species
 my %OMA_RANK = ('1:1' => 0, 'many:1' => 1, '1:many' => 2, 'many:many' => 3);
@@ -192,6 +200,7 @@ my (%panther, %domain, %curated, %transposon);
 my %closest;          # group -> { tier, human => [records], evidence, id }
 my %claimed_human;    # human key -> { group => 1 }: the co-orthologs a many:1 name is shared by
 my %name;             # group -> { desc, note, selected, origin }
+my %panther_label;    # PANTHER family -> InterPro's Family name when integrated, else PANTHER's cleaned name
 
 # ============================================================== main
 sub main {
@@ -972,6 +981,10 @@ sub read_panther_families {
     # every family matched, any coverage: what an orthology name's human gene is checked against
     (my $family_only = $match->{family}) =~ s/:SF\d+$//;
     $gene_panther{$group}{$family_only} = 1;
+    # the family's label, for naming a co-ortholog family by it (shared_panther_family)
+    my $family_entry = defined $match->{interpro} ? $entries->{$match->{interpro}} : undef;
+    $panther_label{$family_only} //= ($family_entry and $family_entry->{type} eq 'Family') ? $family_entry->{name}
+                                                                                           : panther_name($match->{description});
     my $length = $model_length{$match->{family}};
     if (!$length) {
       $no_length++;
@@ -1235,10 +1248,10 @@ sub order_links {
                 or $by_type->($a, $b) or $by_hgnc->($a, $b) or $by_ids->($a, $b) } @links;
 }
 
-# the smallest HGNC gene group every member shares ("Integrin alpha subunits" rather than
-# "CD molecules"), or nothing
+# the smallest HGNC gene group every member shares that is a family by descent (coherence, see
+# $HGNC_GROUP_MIN_COHERENCE: "Integrin alpha subunits", not "CD molecules"), or nothing
 sub shared_hgnc_group {
-  my ($humans) = @_;
+  my ($humans, $all) = @_;   # $all: every shared group, coherent or not (for provenance text)
   my %groups_seen;
   foreach my $human (@$humans) {
     my %own_groups;
@@ -1249,6 +1262,57 @@ sub shared_hgnc_group {
   }
   my @shared = grep { $groups_seen{$_} == scalar @$humans } keys %groups_seen;
   @shared = sort { hgnc_group_size($a) <=> hgnc_group_size($b) or $a cmp $b } @shared;
+  return $shared[0] if $all;
+  foreach my $gene_group (@shared) {
+    return $gene_group if hgnc_group_coherence($gene_group) >= $HGNC_GROUP_MIN_COHERENCE;
+  }
+  $stats{'HGNC group not a family by descent (PANTHER coherence), not used'}++ if @shared;
+  return undef;
+}
+
+# How much an HGNC group is a family by descent: the fraction of its human genes that have a
+# Swiss-Prot PANTHER family which are in the group's most common one (see
+# $HGNC_GROUP_MIN_COHERENCE). A group with fewer than two such genes, or no Swiss-Prot data at
+# all, cannot be judged and counts as coherent (1).
+my %group_coherence;
+sub hgnc_group_coherence {
+  my ($gene_group) = @_;
+  if (!%group_coherence) {
+    my (%judged, %in_family);
+    foreach my $record (values %{$hgnc->{by_id}}) {
+      my $families = $human_panther{$record->{hgnc_id}} or next;
+      foreach my $name (split /\|/, $record->{gene_group} // '') {
+        next if $name eq '';
+        $judged{$name}++;
+        foreach my $family (keys %$families) {
+          $in_family{$name}{$family}++;
+        }
+      }
+    }
+    foreach my $name (keys %judged) {
+      my ($largest) = sort { $b <=> $a } values %{$in_family{$name}};
+      $group_coherence{$name} = $judged{$name} < 2 ? 1 : $largest / $judged{$name};
+    }
+    $group_coherence{''} = 1;   # filled once, even when there is no Swiss-Prot data
+  }
+  return $group_coherence{$gene_group} // 1;
+}
+
+# A PANTHER family every human member is in (Swiss-Prot) AND the gene itself matches (its
+# InterProScan PANTHER matches, any coverage), with an informative label -- what a co-ortholog
+# family or a paralog tie is named for when no HGNC group they share is a family by descent.
+# Several: by family id.
+sub shared_panther_family {
+  my ($group, $humans) = @_;
+  my %count;
+  foreach my $human (@$humans) {
+    return undef unless $human->{hgnc_id};
+    foreach my $family (keys %{$human_panther{$human->{hgnc_id}} // {}}) {
+      $count{$family}++;
+    }
+  }
+  my @shared = sort grep { $count{$_} == @$humans and $gene_panther{$group}{$_} and defined $panther_label{$_}
+                           and is_informative_hit('', $panther_label{$_}, $_) } keys %count;
   return $shared[0];
 }
 
@@ -1699,7 +1763,23 @@ sub ortholog_name {
   # a family: named after the most specific HGNC gene group they all share, or not named here
   # at all -- never after a member picked by score or by spelling
   # No symbol: the symbol is what users search as the gene's identity, and a family has none.
-  my $shared = shared_hgnc_group(\@humans) or return undef;
+  my $shared = shared_hgnc_group(\@humans);
+  if (!defined $shared) {
+    # no HGNC group they share is a family by descent: the PANTHER family they all belong to, and
+    # the gene matches, names them; else step 6
+    my $family = shared_panther_family($group, \@humans) or return undef;
+    my ($flags, $support) = oma_support($group, \@humans, $closest);
+    return undef if oma_conflicts($group, \@humans, $closest, $flags);
+    my $scattered = shared_hgnc_group(\@humans, 'all');
+    my $not_group = defined $scattered
+      ? sprintf('; the HGNC group they share ("%s") is not a family by descent (PANTHER coherence %.2f)', $scattered, hgnc_group_coherence($scattered)) : '';
+    $stats{'name: OMA family, named for its PANTHER family'}++;
+    return { desc => family_member($panther_label{$family}), selected => $selected, note => "$source|Orthologs|$note_tail",
+             tag => ['ISO', 'fam', @$flags],
+             origin => { kind => 'panther', accession => $family, step => 3,
+                         rule => "Co-ortholog of " . scalar(@humans) . " human genes ($method, $closest->{type}), all in PANTHER family $family "
+                               . "(\"$panther_label{$family}\"), which it matches too$not_group$support" } };
+  }
   my ($flags, $support) = oma_support($group, \@humans, $closest);
   return undef if oma_conflicts($group, \@humans, $closest, $flags);
   my $why = $closest->{hog_family}
@@ -1818,6 +1898,19 @@ sub like_name {
       ($chosen, $tie_flag) = ($reciprocal[0][1], 'tie-rbh');
     } else {
       my $shared = (grep { !$_->{hgnc_id} } @tie_genes) ? undef : shared_hgnc_group(\@tie_genes);
+      my $family = defined $shared ? undef : shared_panther_family($group, \@tie_genes);
+      if (defined $family) {
+        $stats{'name: full-length human hit, paralog tie (PANTHER family)'}++;
+        my $hit = $top->{best_full};
+        my $members = join(', ', map { human_label($_) } @tie_genes);
+        return { desc => family_member($panther_label{$family}), selected => selected_id($group, $hit->{id}),
+                 tag => ['ISS', ($top->{rbh} ? 'rbh' : 'bh'), 'tie-grp'],
+                 note => "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}",
+                 origin => { kind => 'panther', accession => $family, step => 5,
+                             rule => "Similar along its length to human genes of PANTHER family $family (\"$panther_label{$family}\") that score within "
+                                   . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE)) . " of each other ($members); no one of them is closest, "
+                                   . "no single reciprocal best hit decides, and they share no HGNC group that is a family by descent; named for the PANTHER family" } };
+      }
       if (!defined $shared) {
         $stats{'no -like name: paralog tie, no reciprocal hit or shared HGNC group'}++;
         return undef;

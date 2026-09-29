@@ -200,10 +200,26 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   members share (`EPH receptors family member`), with **no symbol** — a symbol is what users
   search as a gene's identity, and a family has none. **No member is singled out.** A gene that
   predates a duplication is equally related to every copy; the best BLAST score only
-  identifies the slowest-evolving copy. If the members share no HGNC group, the gene goes
-  directly to step 6 — not to step 5, which would pick a member by score after all. HGNC
-  groups are sometimes defined by a shared domain (`EF-hand domain containing`); the name
-  still reads `… family member`.
+  identifies the slowest-evolving copy. Only an HGNC group that is a **family by descent** is
+  used (below); failing that, the PANTHER family all the human members belong to and the gene
+  itself matches names it (`<family> family member`); failing that, the gene goes directly to
+  step 6 — not to step 5, which would pick a member by score after all.
+- **Which HGNC groups are families.** HGNC groups are also made by a shared domain (`EF-hand
+  domain containing`, `Sushi domain containing`) or a function (`CD molecules`, `BAF complex
+  subunits`), and "family member" would claim a common ancestry those do not have. A group's
+  **PANTHER coherence** is the fraction of its human genes — those whose Swiss-Prot entry names a
+  PANTHER family — that are in the group's most common PANTHER family. PANTHER families are
+  built as phylogenetic families (HMMs and gene trees), so a family by descent falls mostly in one:
+  Tubulin beta family 1.00, Tetraspanin family 0.94, Cathepsins 0.73, Heat shock 70kDa proteins
+  0.65, Kelch like 0.60; domain and function groups scatter: CD molecules 0.07, EF-hand domain
+  containing 0.09, Sushi domain containing 0.16, BAF complex subunits 0.15, RING finger E3
+  ubiquitin protein ligases 0.21. A group names a family only at coherence ≥ 0.6, a value chosen
+  in that gap (0.8 was also tested: 1,095 *C. kusceri* names changed instead of 899, and coherent
+  groups such as Cathepsins and Peroxiredoxins lost their HGNC names). A group with fewer than
+  two genes in PANTHER, or with no Swiss-Prot data, cannot be judged and is used. Known edge
+  case: RAB GTPases (0.26) are one family, but PANTHER splits them into many small families; RAB
+  genes are named by their PANTHER family instead. The same rule applies to paralog ties
+  (step 5) and to the closest-human family label (§6.2).
 - **Pairwise 1:1, HOG several.** OMA's pairwise file can pair a gene 1:1 with one human copy of
   a vertebrate duplication (HDAC1 of HDAC1/HDAC2) while OMA's HOG, computed on the fixed
   species tree, makes it co-ortholog of every copy. The HOG is then the more complete call: the
@@ -262,7 +278,9 @@ bitscore (§3).
 2. If another human gene scores within 5% of its bitscore, the paralogs are a **tie**. A
    reciprocal best hit (MMseqs2) to exactly one of the tied genes, itself full-length, decides
    (tag `tie-rbh`); otherwise the tied genes' shared HGNC group names the gene
-   (`Heat shock 70kDa proteins family member`, tag `tie-grp`); otherwise step 5 gives no name.
+   (`Heat shock 70kDa proteins family member`, tag `tie-grp`) if that group is a family by
+   descent (step 3), else the PANTHER family they all belong to and the gene matches; otherwise
+   step 5 gives no name.
 3. The name is **always** `-like`, reciprocal or not: sequence similarity, even reciprocal, is
    not an orthology call (§9). The symbol is the human gene's HGNC symbol, or none; it is
    never taken from another gene.
@@ -419,7 +437,7 @@ would claim a precision the evidence does not have (§5, step 3). Each gene ther
 1. **One human gene:** that gene.
 2. **Several human genes, or tier 7** (a PANTHER subfamily — family-level evidence even with
    a single human member): the family, as one entry — `<HGNC gene group> family` when the
-   members share one, else `A/B-family` for up to three members (with `(N genes)` when not
+   members share one that is a family by descent (§5, step 3), else `A/B-family` for up to three members (with `(N genes)` when not
    every member has a symbol), else `family of N genes`. The evidence reads `…, family of N`;
    no gene id is given.
 
@@ -455,8 +473,8 @@ with the code. Reference data (HGNC, Ensembl Compara, UniProt, NCBI Taxonomy, In
 list, PANTHER model lengths) are fetched and versioned by `update_reference_data.sh`.
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
-synthetic gene set of 26 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 72 checks), run on every change to the code. Each rule was also
+synthetic gene set of 27 genes, each made to hit one rule, asserting the exact name, tag,
+provenance and closest genes, plus checks of the informative-name rules; 75 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 
