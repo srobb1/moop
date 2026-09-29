@@ -68,6 +68,9 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 # and every isoform. And gene_name_source.<kind>.moop.tsv, annotation type "Gene Name Source":
 # for every named gene, what its name came from (accession), the name and the rule
 # (description), and the naming step (score) -- one file per kind of accession link.
+# And naming_decisions.tsv, for people to read: one row per gene -- the name, its step and
+# reason, the key scores whatever the cutoffs, every step's own result, the closest human; a "#"
+# header with the run, the programs and data, every cutoff and the abbreviations.
 
 # Per-gene-set inputs come from geneset_config.yaml through scripts/geneset_config.pl.
 #
@@ -193,6 +196,7 @@ my %COMMON_NAME = (
 
 # ---- shared state: declared here, filled by main() (declarations only -- see LAYOUT above)
 my %opt;
+my @command_line;     # the command as given, for the decision table's header
 my (@closest_species, $naming_species);
 my %stats;
 my (%group_of, %members, %curated_selected);   # isoform groups
@@ -221,6 +225,7 @@ my %gene_family_coverage;   # group -> PANTHER family -> the gene's best model c
 # ============================================================== main
 sub main {
   %opt = ('human-curated-gene-names' => []);
+  @command_line = ($0, @ARGV);
   GetOptions(\%opt, 'isoforms=s', 'protein-fasta=s', 'protein2gene=s', 'hgnc-dir=s',
              'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
              'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'native=s', 'oma-id-map=s',
@@ -307,6 +312,7 @@ sub main {
 
   # ============================================================== write
   write_outputs();
+  write_decisions("$opt{'out-dir'}/naming_decisions.tsv");
   foreach my $key (sort keys %stats) {
     warn sprintf("%-40s %d\n", $key, $stats{$key});
   }
@@ -1604,6 +1610,8 @@ sub decide_name {
     return 3 if $try->(3);
     $conflicting_oma{$group} = $candidate->{3}{conflict} if $candidate->{3}{conflict};
     $oma_family = $closest->{family} ? 1 : 0;
+  } else {
+    $try->(3);   # tried: no OMA human ortholog (or one set aside, omaX)
   }
 
   # a transposable-element protein: named for its TE class before similarity or family names,
@@ -2395,6 +2403,222 @@ sub reference_versions {
     push @parts, "UniProt $1" if $line =~ /UniProt release ([0-9_]+)/;
   }
   return @parts ? join('; ', @parts) : 'unknown';
+}
+
+# ##############################################################################
+# decision table: naming_decisions.tsv, for people to read -- one row per gene: the name, the
+# step that gave it and why, every step's own result (named / not used and why / not reached),
+# the key scores whatever their cutoffs, and the closest human gene. A "#" header records the
+# run, every cutoff, the abbreviations, and the programs and data it read.
+
+# a file's modification date, for the header
+sub file_date {
+  my ($file) = @_;
+  my $mtime = (stat $file)[9] or return 'missing';
+  my @time = localtime $mtime;
+  return sprintf('%04d-%02d-%02d', $time[5] + 1900, $time[4] + 1, $time[3]);
+}
+
+# the first line of a small version file, tabs as spaces
+sub first_line {
+  my ($file) = @_;
+  open my $fh, '<', $file or return '';
+  my $line = <$fh> // '';
+  close $fh;
+  chomp $line;
+  $line =~ s/\t/ /g;
+  return $line;
+}
+
+# the programs and data this run read, one "#" line each
+sub input_lines {
+  my @lines;
+  push @lines, "gene set: $opt{isoforms} (" . file_date($opt{isoforms}) . "); proteins $opt{'protein-fasta'} (" . file_date($opt{'protein-fasta'}) . ")";
+  if (defined $opt{'oma-dir'}) {
+    push @lines, "OMA: $opt{'oma-dir'} (all-vs-all and orthologs, " . file_date("$opt{'oma-dir'}/Output") . "), this genome's OMA code "
+               . ($opt{'oma-code'} // '?');
+  }
+  foreach my $search (['mmseqs-dir', 'MMseqs2 reciprocal best hits', 'rbh_mmseq_results.tsv', 'rbh_mmseq_version.txt'],
+                      ['diamond-dir', 'DIAMOND blastp', 'diamond_results.tsv', 'diamond_version.txt']) {
+    my ($option, $label, $results, $version_file) = @$search;
+    my $base = $opt{$option} // next;
+    opendir my $dir_handle, $base or next;
+    foreach my $entry (sort readdir $dir_handle) {
+      my ($file) = grep { my $candidate = $_; -e $candidate } ("$base/$entry/$results", "$base/$entry/$results.gz");
+      next unless $file;
+      my $database = first_line("$base/$entry/db_version.txt") || $entry;
+      my $version = first_line("$base/$entry/$version_file");
+      push @lines, "$label vs $database: " . ($version ne '' ? "$version; " : '') . "$file (" . file_date($file) . ")";
+    }
+    closedir $dir_handle;
+  }
+  if (defined $opt{interproscan}) {
+    (my $dir = $opt{interproscan}) =~ s{/[^/]+$}{};
+    my $version = first_line("$dir/interproscan_version.txt");
+    push @lines, "InterProScan " . ($version ne '' ? "$version: " : '') . "$opt{interproscan} (" . file_date($opt{interproscan}) . ")";
+    push @lines, "InterPro entries: $opt{'interpro-entries'} (" . file_date($opt{'interpro-entries'}) . "); "
+               . "PANTHER model lengths: $opt{'panther-hmm-lengths'} (" . file_date($opt{'panther-hmm-lengths'}) . ")";
+  }
+  push @lines, "HGNC: " . (first_line("$opt{'hgnc-dir'}/VERSION.txt") || "$opt{'hgnc-dir'}");
+  push @lines, "UniProt: " . first_line("$opt{'uniprot-dir'}/VERSION.txt") if defined $opt{'uniprot-dir'};
+  push @lines, "Ensembl Compara: $opt{'compara-dir'}, release(s) used " . (join('/', sort keys %compara_releases_used) || 'none')
+    if defined $opt{'compara-dir'};
+  push @lines, "NCBI taxonomy: $opt{'taxonomy-dir'}" if defined $opt{'taxonomy-dir'};
+  push @lines, "native names: $opt{native} (" . file_date($opt{native}) . ")" if defined $opt{native};
+  foreach my $file (@{$opt{'human-curated-gene-names'}}) {
+    push @lines, "human-curated names: $file (" . file_date($file) . ")";
+  }
+  foreach my $species (@closest_species) {
+    push @lines, "closest species $species->{tag} ($species->{species}): "
+               . join(', ', ($species->{oma_code} ? "OMA code $species->{oma_code}" : ()),
+                            ($species->{hits} ? "hits $species->{hits} (" . file_date($species->{hits}) . ")" : ()))
+               . ($species->{use_for_names} ? '; names genes (step 2)' : '');
+  }
+  return @lines;
+}
+
+sub decision_header {
+  my $commit = `git -C '$FindBin::Bin' log -1 --format='%h %cs' 2>/dev/null` // '';
+  chomp $commit;
+  my $dirty = `git -C '$FindBin::Bin' status --porcelain -- '$FindBin::Script' 2>/dev/null` // '';
+  $commit .= ' (with uncommitted changes)' if $dirty ne '';
+  my @header = (
+    'Gene naming decisions: one row per gene. For people to read; the names themselves are in geneNames.tsv,',
+    'and the database tables (Gene Name Source, Closest Gene) come from the same decisions.',
+    '',
+    'RUN',
+    '  date: ' . `date '+%Y-%m-%d %H:%M'` =~ s/\n//r,
+    "  script: $FindBin::Bin/$FindBin::Script" . ($commit ne '' ? " (git $commit)" : ''),
+    '  command: ' . join(' ', @command_line),
+    '',
+    'PROGRAMS AND DATA',
+    (map { my $line = $_; "  $line" } input_lines()),
+    '',
+    'NAMING STEPS (tried in this order; the first that gives a name names the gene)',
+    '  1 human-curated name, as given',
+    '  2 naming species (closest species with use_for_names): its OMA 1:1 / many:1 ortholog, else its best hit;',
+    '    or, with --native, the gene set\'s own name when informative (then Step says "2 native name")',
+    '  3 OMA human ortholog (closest human tier 1-2): 1:1 / many:1 -> the gene\'s name; co-orthologs -> their HGNC group',
+    '    (if a family by descent) or PANTHER family; withheld when omaC',
+    "  4 transposable element (a TE Pfam domain); before step 3 when >= $TE_MIN_COPIES copies share one OMA human gene",
+    '  5 full-length human hit -> "SYM-like"; skipped after an OMA co-ortholog family step 3 could not name',
+    '  6 PANTHER family -> "<family> family member"',
+    '  7 InterPro domain or repeat -> "<domain> domain-containing protein"',
+    '  - none',
+    '',
+    'CUTOFFS',
+    "  full-length hit (names, step 5): E <= " . e_value($FULL{evalue}) . ", >= $FULL{qcov}% of this protein and >= $FULL{tcov}% of the other aligned",
+    "  normal hit (closest human, tiers 3-7): E <= " . e_value($NORMAL{evalue}) . ", >= $NORMAL{qcov}% of both proteins",
+    "  any hit (support of an OMA name, best human gene): E <= " . e_value($HIT_MAX_EVALUE) . ", any coverage",
+    "  paralog tie: another human gene scoring within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE)) . " of the best bitscore",
+    "  PANTHER family name (step 6): the match covers >= $FAMILY_MODEL_COVERAGE% of the family model",
+    "  PANTHER family for co-orthologs / a tie: the gene's own match >= $FAMILY_NAME_MIN_OWN_COVERAGE% of the model, or a full-length hit to a member",
+    "  HGNC group as a family: PANTHER coherence >= $HGNC_GROUP_MIN_COHERENCE (share of the group's human genes in its main PANTHER family)",
+    "  repeat-built PANTHER family: repeat units >= " . sprintf('%.0f%%', 100 * $REPEAT_FAMILY_FRACTION) . " of the match -> named for the repeat",
+    "  transposon family: >= $TE_MIN_COPIES copies sharing one OMA human gene (chosen by testing; arbitrary)",
+    '',
+    'ABBREVIATIONS (the tag at the end of a name)',
+    '  evidence: ISO orthology (OMA); ISS similarity (-like); ISM sequence model (PANTHER, InterPro, Pfam);',
+    '            TAS human-curated; SRC the gene set\'s own name or another annotation of this species',
+    '  relationship: 1to1; Nto1 (N copies here share the human gene); mto1; fam (co-ortholog of several human genes)',
+    '  similarity: rbh reciprocal best hit; bh best hit; tie-rbh / tie-grp a paralog tie resolved by a reciprocal hit / a family',
+    '  model: pthr PANTHER family; ipr InterPro domain; rpt repeat; te transposable element',
+    '  support marks: + agrees, ~ partly (similar, not the best), C contradicts, - no evidence, X excluded',
+    '    sim+ / sim~ / sim- the named human gene is the best human hit / a hit but not the best / not a hit',
+    '    pthr+ / pthrC same / different PANTHER family as the named human gene; hog OMA\'s HOG agrees',
+    '    omaX an OMA pair nothing supports was set aside; omaC an OMA name withheld (best hit another gene AND PANTHER family differs)',
+    '  closest human tiers: 1 OMA pairwise; 2 OMA HOG; 3 MMseqs2 RBH; 4 via another species\' ortholog; 5 DIAMOND best hit;',
+    '    6 Swiss-Prot hit -> Ensembl Compara; 7 Swiss-Prot hit -> PANTHER subfamily',
+    '',
+    'COLUMNS',
+    '  ID: the transcript whose evidence named the gene; GroupId: the gene',
+    '  Name: as in geneNames.tsv; Step: the step that named it; Reason: why, in full',
+    '  Native_name / Pipeline_name (--native only): the gene set\'s own name, and the name the steps give without it',
+    '  Best_human_hit ...: the gene\'s best hit to a human gene (E <= ' . e_value($HIT_MAX_EVALUE) . ', any coverage), whatever the cutoffs:',
+    '    coverage of this protein / of the human protein (%), E-value, bitscore, rbh or bh, full-length yes/no;',
+    '    Second_human_hit: the next human gene and its bitscore as % of the best (a paralog close behind)',
+    '  PANTHER_best / PANTHER_model_cov: the gene\'s best-covered PANTHER family and how much of the model it covers (%)',
+    '  S1 ... S7: each step\'s own result --',
+    '    NAMED: this step named the gene',
+    '    not used: the step was tried and gives no name (why)',
+    '    passed over / skipped: a rule set the step aside (why)',
+    '    not reached: an earlier step named the gene; what this step would have said follows',
+    '  Closest_human: the closest human gene (tier: gene, evidence), as in closest_human.tsv',
+  );
+  return join('', map { my $line = $_; "# $line\n" } @header);
+}
+
+# one step's cell: its status, then what it found. $native: the gene set's own name was kept
+# (--native), so no step named the gene -- step 2 stands for the native name.
+sub step_cell {
+  my ($group, $step, $native) = @_;
+  my $candidate = $candidates{$group}{$step};
+  my $decision = $decision{$group};
+  my %reached = map { my $number = $_; ($number => 1) } @{$decision->{reached}};
+  my $found = is_named($candidate)
+    ? $candidate->{desc} . ($candidate->{tag} ? ' [' . join('|', @{$candidate->{tag}}) . ']' : '')
+      . ($candidate->{origin} ? " -- $candidate->{origin}{rule}" : '')
+    : $candidate->{why};
+  if ($native) {
+    return "NAMED: the gene set's own name (--native), informative so kept" if $step == 2;
+    return "not reached; the pipeline's pick without the native name: $found" if $decision->{step} == $step;
+    return is_named($candidate) ? "not reached; would name: $found" : "not reached; $found";
+  }
+  return "NAMED: $found" if $decision->{step} == $step;
+  if (my $passed = $decision->{passed}{$step}) {
+    return is_named($candidate) ? "$passed; would name: $found" : "$passed; $found";
+  }
+  return "not used: $found" if $reached{$step};
+  return is_named($candidate) ? "not reached; would name: $found" : "not reached; $found";
+}
+
+sub write_decisions {
+  my ($file) = @_;
+  open my $fh, '>', $file or die "cant write $file $!\n";
+  print $fh decision_header();
+  my %step_label = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
+  print $fh join("\t", qw(ID GroupId Name Step Reason Native_name Pipeline_name Best_human_hit Best_hit_qcov Best_hit_tcov Best_hit_evalue
+                          Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit PANTHER_best PANTHER_model_cov),
+                 (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
+                 'Closest_human'), "\n";
+  # --native: the gene set's own informative names replace the decision (collect_native_rows)
+  my %native_kept;
+  foreach my $row (@name_rows) {
+    next unless defined $row->[5] and $row->[1] eq 'SELF' and $row->[6] and $row->[6]{kind} eq 'native';
+    $native_kept{$row->[5]} //= { desc => $row->[3], selected => $row->[0], origin => $row->[6] };
+  }
+  foreach my $group (sort keys %members) {
+    my $native = $native_kept{$group};
+    my $named = $native // $name{$group};
+    my $step = $decision{$group}{step};
+    my @ranked = ranked_human_hits($group);
+    my @best = ('') x 8;
+    if (@ranked) {
+      my $top = $ranked[0][1];
+      @best = (human_label($top->{human}), sprintf('%.0f', $top->{best}{qcov} // 0), sprintf('%.0f', $top->{best}{tcov} // 0),
+               e_value($top->{best}{evalue}), sprintf('%.0f', $top->{best}{bits}), ($top->{rbh} ? 'rbh' : 'bh'),
+               ($top->{best_full} ? 'yes' : 'no'),
+               (@ranked > 1 ? sprintf('%s (%.0f%%)', human_label($ranked[1][1]{human}), 100 * $ranked[1][1]{best}{bits} / $top->{best}{bits}) : ''));
+    }
+    my $coverage = $gene_family_coverage{$group} // {};
+    my ($family) = sort { $coverage->{$b} <=> $coverage->{$a} or $a cmp $b } keys %$coverage;
+    my $family_text = defined $family ? $family . (defined $panther_label{$family} ? " \"$panther_label{$family}\"" : '') : '';
+    my $closest = $closest{$group};
+    my $closest_text = $closest
+      ? "tier $closest->{tier}: " . ($closest->{family} ? join('/', map { my $human = $_; human_label($human) } @{$closest->{human}})
+                                                       : human_label($closest->{human}[0])) . " ($closest->{evidence})"
+      : '';
+    my @cells = ($named->{selected}, $group, $named->{desc},
+                 ($native ? '2 native name' : $step ? "$step $step_label{$step}" : 'none'),
+                 ($named->{origin} ? $named->{origin}{rule} : 'no step gave a name'),
+                 ($native ? $native->{desc} : ''),
+                 ($native ? $name{$group}{desc} . ' (' . ($step ? "step $step" : 'no step') . ')' : ''),
+                 @best, $family_text, (defined $family ? $coverage->{$family} : ''),
+                 (map { my $naming_step = $_; step_cell($group, $naming_step->[0], $native ? 1 : 0) } @NAMING_STEPS),
+                 $closest_text);
+    print $fh join("\t", map { my $cell = $_ // ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";
+  }
+  close $fh;
 }
 
 # LAST LINE: run only now, when every file-level assignment above has been made (see LAYOUT)

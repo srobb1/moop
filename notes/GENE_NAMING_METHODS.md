@@ -160,6 +160,10 @@ gives them.
 
 ## 5. Naming — the first step that yields a name wins
 
+Every step is evaluated for every gene; the name is taken from the first step, in order, that
+gives one (with the rules below that tie steps together). What every step found — and why each
+step before the chosen one gave no name — is in `naming_decisions.tsv` (§7).
+
 The principle: **a plain name only from a supported orthology call; `-like` for full-length
 similarity to one human gene; a family or domain name when the evidence stops there;
 otherwise no name.**
@@ -484,6 +488,7 @@ the database table: 1 = OMA, 2 = hits file.
 | `gene_name_source.<kind>.moop.tsv` | database annotation type "Gene Name Source" — the provenance of every name, one row per gene and isoform. Accession = what the name came from, description = why, in words (`Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)`), score = the naming step (1–7). One source per kind of accession link: HGNC gene, HGNC gene group, Ensembl gene, PANTHER family, InterPro domain, Pfam (transposable element), naming species (NCBI), human-curated, the gene set's own name |
 | `closest_<species>.tsv` | per id: gene id, symbol, description, evidence |
 | `closest_<species>[.ensembl\|.family].moop.tsv` | database annotation type "Closest Gene", one source per file so each has one link: human — `Closest human gene (HGNC)` (genenames.org), `Closest human gene (Ensembl, no HGNC record)` (Ensembl), `Closest human gene family` (no link); other species — `Closest <species> gene`, `Closest <species> gene family`. A row for the gene and each isoform; score = tier (human) or 1 = OMA, 2 = hits file |
+| `naming_decisions.tsv` | for people to read, not loaded anywhere: one row per gene — the name, the step that gave it and the full reason; the gene's best and second human hits and best PANTHER family with their scores **whatever the cutoffs**; and every step's own result (`NAMED`, `not used:` why, `passed over`/`skipped:` the rule that set it aside, `not reached;` what it would have said), plus the closest human gene. With `--native`, also the gene set's own name and the name the steps give without it. A `#` header records the run (date, script and git commit, command), the programs and data read (versions, file dates), the naming steps, every cutoff, the abbreviations and the columns — written from the code's own constants, so it always matches the run |
 | `genes.gff` | attributes `closestHGNC`, `closestHumanSym`, `closestHumanDesc`, `closestHumanEvidence`; `closest<Tag>Id/Sym/Desc/Evidence` for other species |
 
 ## 8. Reproducibility

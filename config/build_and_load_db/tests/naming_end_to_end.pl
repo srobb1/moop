@@ -404,7 +404,11 @@ foreach my $file (glob("$out/*.moop.tsv")) {
 my $differs = 0;
 foreach my $file (map { s{.*/}{}r } glob "$dir/out1/*") {
   next if $file =~ /\.log$/;
-  $differs++ if `grep -v 'Creation Date' \Q$dir/out1/$file\E` ne `grep -v 'Creation Date' \Q$dir/out2/$file\E`;
+  # the run's date and command (its --out-dir) differ by design
+  my $skip = "grep -v -e 'Creation Date' -e '^#   date: ' -e '^#   command: '";
+  my $first  = `$skip \Q$dir/out1/$file\E`;
+  my $second = `$skip \Q$dir/out2/$file\E`;
+  $differs++ if $first ne $second;
 }
 check($differs == 0, 'identical output under two hash seeds', "$differs file(s) differ");
 
