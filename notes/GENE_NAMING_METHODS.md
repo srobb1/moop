@@ -52,7 +52,7 @@ the tables in §2 refer to positions in these lists.
 | OMA hierarchical orthologous groups (HOGs) | same run; only when `parameters.drw` fixes a species tree | closest human tier 2; co-ortholog families (§5, step 3) |
 | OMA orthologs of reference species | same run | closest human tier 4 |
 | MMseqs2 reciprocal best hits (RBH) | `mmseqs easy-rbh` (commit 7e28409), defaults, against every protein of the Ensembl proteomes | closest human tiers 3–4; naming step 6; support of OMA names |
-| DIAMOND hits | DIAMOND 2.1.6 `blastp --ultra-sensitive`, E ≤ 1e-5, 17-column output with query and subject coverage; against Ensembl human (all isoforms) and UniProtKB/Swiss-Prot **[TODO: production `--max-target-seqs`: 50 for human, 5 otherwise]** | closest human tiers 5–7; naming step 6; support of OMA names |
+| DIAMOND hits | DIAMOND 2.1.6 `blastp --ultra-sensitive`, E ≤ 1e-5, 17-column output with query and subject coverage; against Ensembl human (canonical proteins, `--max-target-seqs 25`: enough genes to see the named ortholog behind its paralogs) and the other databases (`--max-target-seqs 5`) **[TODO: confirm after the pipeline rerun]** | closest human tiers 5–7; naming step 6; support of OMA names |
 | Ensembl Compara homologies | same Ensembl release as the proteome hit | closest human tiers 4 and 6 |
 | UniProtKB/Swiss-Prot cross-references | Ensembl gene, HGNC id and PANTHER family and subfamily per entry | closest human tiers 6–7; PANTHER family of each human gene (support of OMA names) |
 | PANTHER | PANTHER 19.0 family HMMs, via InterProScan 5.78-109.0 (the gene set's own results); family model lengths from the same release's HMM file | naming step 7; support of OMA names |
