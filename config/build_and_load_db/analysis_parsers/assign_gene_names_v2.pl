@@ -1541,7 +1541,7 @@ sub oma_supported {
 
 # An OMA name is withheld when both independent checks go against it: the gene's best human
 # similarity hit is ANOTHER gene (sim~) AND its PANTHER family differs from the named gene's
-# (pthrX). Each alone is common and weak -- a close paralog can outscore the ortholog, and PANTHER
+# (pthrC). Each alone is common and weak -- a close paralog can outscore the ortholog, and PANTHER
 # families are split and renamed -- but together they are the signature of hidden paralogy
 # (each lineage kept a different copy of an old duplication) or of an OMA pair made through a
 # shared repeat or domain (Congeria: APOH x18, selectins, matrilins through Sushi / vWA domains).
@@ -1550,22 +1550,24 @@ sub oma_supported {
 sub oma_conflicts {
   my ($group, $humans, $closest, $flags) = @_;
   my %flag = map { my $flag = $_; ($flag => 1) } @$flags;
-  return 0 unless $flag{'sim~'} and $flag{'pthrX'};
+  return 0 unless $flag{'sim~'} and $flag{'pthrC'};
   my ($best) = ranked_human_hits($group);
   $conflicting_oma{$group} = { humans => [@$humans], type => $closest->{type}, best => $best ? $best->[1]{human} : undef };
   $stats{'OMA name withheld: best hit another gene and a different PANTHER family'}++;
   return 1;
 }
 
-# the evidence tag every name ends with, GO-style: " [ISO|1to1|sim+|pthr=]" (no colon inside --
+# the evidence tag every name ends with, GO-style: " [ISO|1to1|sim+|pthr+]" (no colon inside --
 # downstream, the text before a name's first colon is its symbol). The full reasoning is in the
 # Gene Name Source table; the tag is the short form a reader sees next to the name.
 #   ISO  orthology (OMA)          1to1, Nto1 (N copies share the human gene), mto1, fam (co-orthologs)
 #   ISS  similarity (-like)        rbh (reciprocal best hit) or bh; tie-rbh / tie-grp: a paralog tie resolved
 #   ISM  sequence model            pthr (PANTHER family), ipr (InterPro domain)
 #   TAS  human-curated name;  SRC  the gene set's own name, or another annotation of the same species
+# Support marks, one meaning each: + agrees, ~ partly (similar, not the best), C contradicts (the
+# evidence points elsewhere), - no evidence, X excluded (set aside).
 # support of an orthology name: sim+ its human gene is the best human similarity hit, sim~ a hit but
-# not the best, sim- no hit; pthr= / pthrX same / conflicting PANTHER family; hog OMA's HOG agrees.
+# not the best, sim- no hit; pthr+ / pthrC same / conflicting PANTHER family; hog OMA's HOG agrees.
 # sim~ on an ISM name: the gene has a human homolog, but only a partial one.
 # omaX: an OMA pair nothing supports was set aside; omaC: an OMA name was withheld because the best
 # human hit is another gene AND the PANTHER family differs (oma_conflicts).
@@ -1620,11 +1622,11 @@ sub oma_support {
   if (%gene_families and %human_families) {
     my @shared = sort grep { $human_families{$_} } keys %gene_families;
     if (@shared) {
-      push @flags, 'pthr=';
+      push @flags, 'pthr+';
       push @said, "same PANTHER family ($shared[0])";
       $same_family = 1;
     } else {
-      push @flags, 'pthrX';
+      push @flags, 'pthrC';
       push @said, "a different PANTHER family (" . join('/', sort keys %gene_families) . "; human: " . join('/', sort keys %human_families) . ")";
     }
   }

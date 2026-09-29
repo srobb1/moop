@@ -43,7 +43,21 @@ repeat / motif ... containing, zinc fingers, F-boxes, regulators and receptors; 
 falls to PANTHER. Separate issue seen: "Pregnancy specific glycoproteins family member" in a
 mussel (a mammal-specific group).
 
-### 4. Closest human, tier 4: orthology is not transitive — TESTING
+**Results (Congeria, runs/exp0929_*):** ignoring domain-named HGNC groups (regex) changed 271
+names, but function-defined groups then took over ("CD molecules", "BAF complex subunits",
+"RING finger E3 ubiquitin protein ligases") -- a pattern list always leaks, HGNC does not label
+which groups are families by descent. PANTHER first (the family all human members are in and the
+gene matches) changed 1,743 names: better tags for the same name (137 ISM|pthr -> ISO|fam), new
+names (17 from None, 33 from domains), but uneven labels -- good (Tubulin, Tetraspanin/Peripherin,
+Peptidase C1A), still domain-named (Sushi / I-set / C-type lectin domain containing), functional
+InterPro names ("Complement & Cell Adhesion Regulators", "Extracellular Matrix Assembly and
+Organization"), one fly gene ("CADHERIN-87A").
+**Next proposal (to test):** use PANTHER to decide whether an HGNC group is a family by descent
+-- the fraction of the group's human genes in its main PANTHER family (Swiss-Prot); a coherent
+group ("Tubulin beta", "Anoctamins") keeps its HGNC name, a scattered one ("CD molecules",
+"EF-hand domain containing") is not used and the PANTHER family (later subfamily, JSON) names it.
+
+### 4. Closest human, tier 4: orthology is not transitive — TESTED, kept and defined in the Methods
 target -> reference ortholog -> reference's human ortholog is safe only for 1:1 -> 1:1 (DROME
 has many lineage-specific duplications and losses). Test: tier 4 only through 1:1 (OMA) /
 one2one (Compara) links. If few are lost, restrict; if many, keep and DEFINE "closest human
@@ -97,3 +111,35 @@ reciprocal best hit copies the name as is. First use: NV2 vs RefSeq jaNemVect1
   gene's; add to the tag and the provenance ("has the core domains of ALPHA: X, Y" / "lacks
   ALPHA's X domain"). Needs human InterPro domains per HGNC gene (UniProt human proteome with
   InterPro cross-references, via update_reference_data.sh).
+
+## Tag vocabulary (decision, 2026-09-29)
+One meaning per support mark: `+` agrees, `~` partly (similar, not the best), `C` contradicts,
+`-` no evidence, `X` excluded. Renamed: `pthr=` -> `pthr+`, `pthrX` -> `pthrC` (`X` now only
+means excluded, `omaX`). `sim~` stays `~`, not `C`: a close paralog outscoring the ortholog is
+common and alone does not contradict OMA (dropping on `sim~` alone lost 700 sound names).
+Table in GENE_NAMING_METHODS.md §5.1. Earlier notes use the old spellings.
+
+## Direction: consensus, not ranking (user, 2026-09-29)
+Collect independent methods (OMA pairwise, OMA HOG, MMseqs2 RBH, DIAMOND full-length best hit,
+PANTHER family/subfamily -- later TreeGrafter placement -- and orthology via another species) and
+count how many point to the same human gene or family; the name follows the agreement (plain when
+several agree on one gene, -like when only similarity does, a family name when they agree only at
+family level, none when they disagree), and the tag can show the count. `omaX` / `omaC` are
+already "count the dissent" rules. First step: measure agreement on the current Congeria names.
+
+## Direction: PANTHER trees as the backbone for family decisions (after the JSON)
+Paralog ties (5% rule), the proposed outgroup test, HGNC-group coherence and "does the gene predate
+the human duplication" are all approximations of a gene tree. TreeGrafter's graft point (JSON)
+places the gene on the PANTHER family tree and answers them directly. Plan: PANTHER trees for
+family/subfamily decisions and ties; OMA kept as the independent genome-wide call, checked
+against the tree; HGNC for the names; InterPro domains as the fallback. Validate on the fly
+benchmark (Ensembl Compara) before it replaces the heuristics.
+
+## HGNC-group coherence (tested, awaiting decision)
+Coherence = fraction of an HGNC group's human genes (with a Swiss-Prot PANTHER family) in its main
+PANTHER family. Families by descent 0.6-1.0 (Tubulin beta 1.00, Tetraspanin 0.94, Anoctamins 1.00,
+Cathepsins 0.73, HSP70 0.65, Kelch-like 0.60); domain/function groups 0.06-0.21 (CD molecules 0.07,
+EF-hand 0.09, Sushi 0.16, BAF complex 0.15, RING E3 0.21); RABs 0.26 (PANTHER splits them finely).
+Congeria: threshold 0.8 changes 1,095 names, 0.6 changes 899; 0.6 keeps Peroxiredoxins, Cathepsins,
+RAS type GTPase, Fucosyltransferases as HGNC names. Recommended 0.6. Open: InterPro family labels
+that are functional categories ("Complement & Cell Adhesion Regulators") when no group qualifies.

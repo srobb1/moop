@@ -244,9 +244,9 @@ my %closest_nvec  = map { $_->[1] => $_ } read_tsv("$out/closest_nvec.tsv");
 
 # ---- names: one rule per gene, each ending in its evidence tag
 my %expect = (
-  G1  => ['ALPHA: alpha synthase [ISO|1to1|sim+|pthr=]', 'OMA 1:1, backed by the best human hit and the same PANTHER family'],
-  G2  => ['GAMMA: gamma transferase [ISO|2to1|sim+|pthrX]', 'OMA many:1: every copy the plain name, copies in the tag; similar, but a conflicting family'],
-  G3  => ['GAMMA: gamma transferase [ISO|2to1|sim+|pthrX]', 'the other copy, same name'],
+  G1  => ['ALPHA: alpha synthase [ISO|1to1|sim+|pthr+]', 'OMA 1:1, backed by the best human hit and the same PANTHER family'],
+  G2  => ['GAMMA: gamma transferase [ISO|2to1|sim+|pthrC]', 'OMA many:1: every copy the plain name, copies in the tag; similar, but a conflicting family'],
+  G3  => ['GAMMA: gamma transferase [ISO|2to1|sim+|pthrC]', 'the other copy, same name'],
   G4  => ['Beta proteins family member [ISO|fam|sim+]', 'OMA 1:many -> the HGNC group, no symbol, no member picked'],
   G5  => ['DELTA-like: delta kinase-like [ISS|rbh]', 'full-length reciprocal hit -> "-like", never plain'],
   G6  => ['WIDGET PROTEIN family member [ISM|pthr]', 'partial hit cannot name; PANTHER family (95% of its model) does'],

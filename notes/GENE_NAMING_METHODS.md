@@ -155,7 +155,7 @@ The principle: **a plain name only from a supported orthology call; `-like` for 
 similarity to one human gene; a family or domain name when the evidence stops there;
 otherwise no name.**
 
-Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr=]` (full list in §5.1). In short:
+Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in §5.1). In short:
 
 - **Evidence type** (first part; the first four are Gene Ontology evidence codes):
   - `ISO` — **I**nferred from **S**equence **O**rthology: an OMA ortholog
@@ -170,7 +170,7 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr=]` (full list in �
   - `pthr` **P**AN**TH**E**R** family · `rpt` re**p**ea**t** · `ipr` **I**nter**Pr**o domain · `te` **t**ransposable **e**lement
 - **Support:**
   - `sim+` / `sim~` / `sim-` — **sim**ilarity: the named human gene is the best human hit / a hit but not the best / not a hit
-  - `pthr=` / `pthrX` — the gene's **P**AN**TH**E**R** family is the same as / different from the named human gene's
+  - `pthr+` / `pthrC` — the gene's **P**AN**TH**E**R** family is the same as / **c**onflicts with the named human gene's
   - `hog` — OMA's **H**ierarchical **O**rthologous **G**roup agrees
   - `te` (on an `ISO` name) — the ortholog carries a **t**ransposable-**e**lement domain
   - `omaX` — an **OMA** ortholog was e**x**cluded (set aside: nothing supported it)
@@ -306,8 +306,23 @@ homolog tables in the database.
 
 ### 5.1 Evidence tags
 
+**Support marks.** Every kind of support is written with the same five marks, so a mark means
+the same thing wherever it appears:
+
+| Mark | Meaning | Tags |
+|---|---|---|
+| `+` | agrees | `sim+` (the named human gene is the best human similarity hit), `pthr+` (same PANTHER family) |
+| `~` | partly: similar, but not the best | `sim~` (the named gene is a hit, another human gene scores higher) |
+| `C` | contradicts: the evidence points elsewhere | `pthrC` (a different PANTHER family), `omaC` (an OMA name withheld: `sim~` and `pthrC` together) |
+| `-` | no evidence | `sim-` (no similarity hit to the named gene) |
+| `X` | excluded: set aside | `omaX` (an OMA pair nothing supports) |
+
+`~` is deliberately not `C`: a close paralog outscoring the true ortholog is common and does not by
+itself contradict an orthology call; only together with a conflicting PANTHER family (`pthrC`) is
+the call withheld (`omaC`, §5.2).
+
 Every name ends in a tag, modelled on the Gene Ontology evidence codes, so a reader sees the
-kind of evidence next to the name: `ALPHA: alpha synthase [ISO|1to1|sim+|pthr=]`. The tag
+kind of evidence next to the name: `ALPHA: alpha synthase [ISO|1to1|sim+|pthr+]`. The tag
 contains no colon. The full reasoning is in the Gene Name Source table (§7).
 
 | Part | Meaning |
@@ -322,7 +337,7 @@ contains no colon. The full reasoning is in the Gene Name Source table (§7).
 | `tie-rbh`, `tie-grp` | a paralog tie decided by a reciprocal best hit, or named for the group |
 | `pthr`, `rpt`, `ipr`, `te` | PANTHER family; repeat-built family; InterPro domain; transposable element |
 | `sim+`, `sim~`, `sim-` | the named human gene is the protein's best human hit; a hit but not the best; no hit (E ≤ 1e-5). On an `ISM` name, `sim~`: the gene has only a partial human homolog |
-| `pthr=`, `pthrX` | the gene's PANTHER family is the same as / different from the named human gene's |
+| `pthr+`, `pthrC` | the gene's PANTHER family is the same as / conflicts with the named human gene's |
 | `hog` | OMA's HOG agrees with the call |
 | `te` (on `ISO`) | the ortholog carries a transposable-element domain |
 | `omaX` | an OMA human ortholog was set aside for lack of support (§5.2) |
@@ -350,7 +365,7 @@ run, OMA calls cannot be checked and are used as they are.
 **Conflicting evidence.** Support removes calls nothing backs, but hidden paralogy passes it:
 paralogs share domains and PANTHER families. Two checks that OMA does not use can each speak
 *against* a call: the gene's best human similarity hit is another gene (`sim~`), and its PANTHER
-family differs from the named gene's (`pthrX`). Each alone is common and weak — a close paralog
+family differs from the named gene's (`pthrC`). Each alone is common and weak — a close paralog
 can outscore the ortholog, and PANTHER families are split and renamed between releases (in
 *C. kusceri*, withholding names on either one alone changed 700 names, many of them sound). Both
 together are the signature of hidden paralogy or of an OMA pair made through a shared repeat or
