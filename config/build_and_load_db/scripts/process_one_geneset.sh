@@ -609,6 +609,33 @@ build_naming_args() {
     fi
   done
 
+  ## the gene set's species, taxon and accessions, for the header of naming_decisions.tsv
+  [ -s "$GENESET_DIR/metadata.yaml" ] && NAMING_ARGS+=(--metadata "$GENESET_DIR/metadata.yaml")
+
+  ## PANTHER tree placements: where TreeGrafter puts each protein on its PANTHER family tree
+  ## (graft points are only in InterProScan's JSON), traced to human genes with PANTHER's
+  ## TreeGrafter data (update_reference_data.sh panther_trees) and the species' lineage (its
+  ## ncbi-taxon-id). Without the JSON, the trees or the taxon id, naming runs without the tree.
+  local IPRSCAN_JSON PANTHER_RELEASE TREES TAXID
+  PANTHER_RELEASE=$(sed -n 's/^PANTHER release \([0-9.]*\):.*/\1/p' "$REFERENCE_DATA/panther/VERSION.txt" 2>/dev/null | head -1)
+  TREES="$REFERENCE_DATA/panther/treegrafter/$PANTHER_RELEASE/PANTHER${PANTHER_RELEASE}_data"
+  TAXID=$(sed -n 's/^ncbi-taxon-id:[[:space:]]*//p' "$GENESET_DIR/metadata.yaml" 2>/dev/null | head -1 | tr -d "\"' \r")
+  for IPRSCAN_JSON in "$ANALYSIS_DIR/interproscan/interproscan_results.json.gz" "$ANALYSIS_DIR/interproscan/interproscan_results.json"; do
+    [ -s "$IPRSCAN_JSON" ] || continue
+    if [ -z "$PANTHER_RELEASE" ] || [ ! -d "$TREES/Tree_MSF" ]; then
+      echo "WARNING: no PANTHER TreeGrafter data at $TREES (scripts/update_reference_data.sh panther_trees); naming without the tree"
+    elif [ -z "$TAXID" ]; then
+      echo "WARNING: no ncbi-taxon-id in $GENESET_DIR/metadata.yaml; naming without the PANTHER tree"
+    elif python3 "$SCRIPTS/panther_placements.py" --json "$IPRSCAN_JSON" --trees "$TREES" \
+           --hmm-lengths "$REFERENCE_DATA/panther/hmm_lengths.tsv" --taxonomy-dir "$REFERENCE_DATA/ncbi_taxonomy" \
+           --taxid "$TAXID" --out panther_placements.tsv; then
+      NAMING_ARGS+=(--panther-placements panther_placements.tsv)
+    else
+      echo "ERROR: panther_placements.py failed"; exit 1
+    fi
+    break
+  done
+
   local file
   for file in "$REFERENCE_DATA/hgnc/hgnc_complete_set.txt" "${REQUIRED_FILES[@]}"; do
     if [ ! -s "$file" ]; then

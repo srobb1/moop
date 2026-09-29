@@ -18,6 +18,7 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #       [--taxonomy-dir moop/ncbi_taxonomy] [--native native_geneNames.tsv] \
 #       [--interproscan interproscan_results.tsv[.gz] --interpro-entries moop/interpro/entry.list \
 #        --panther-hmm-lengths moop/panther/hmm_lengths.tsv] \
+#       [--panther-placements panther_placements.tsv (scripts/panther_placements.py)] [--metadata metadata.yaml] \
 #       [--human-curated-gene-names curated.moop.tsv ...] \
 #       [--closest-species 'tag=Nvec|species=Nematostella vectensis|label=sea anemone|oma_code=NEMVE|hits=FILE|use_for_names=0|same_species=0' ...] \
 #       --out-names geneNames.tsv --out-dir DIR
@@ -50,11 +51,13 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #     a family "<HGNC group> family member", or -- no shared group -- straight to step 6
 #   4 transposable element: a TE Pfam domain -> "<class> transposase domain-containing protein"
 #     (before 5 and 6, which would name it after a gene domesticated from such an element)
-#   5 best full-length human hit (FULL: both coverages >= 80%), reciprocal or not: "SYM-like:
+#   5 PANTHER tree placement: a trusted TreeGrafter placement with exactly one human ortholog, which
+#     is also the closest human gene by similarity (tier 3-5): "SYM: name"
+#   6 best full-length human hit (FULL: both coverages >= 80%), reciprocal or not: "SYM-like:
 #     name-like"; symbol only from HGNC. Other species never name a gene.
-#   6 PANTHER family whose match covers >= 80% of the family model: "<family> family member",
+#   7 PANTHER family whose match covers >= 80% of the family model: "<family> family member",
 #     with InterPro's curated name when the family is in InterPro, else PANTHER's (if informative)
-#   7 InterPro domain or repeat: "<domain> domain-containing protein"
+#   8 InterPro domain or repeat: "<domain> domain-containing protein"
 #   - None (the transcript id stays the name)
 # The step is the Score of the Gene Name Source table: the order the steps are tried.
 #
@@ -121,6 +124,17 @@ my $FAMILY_NAME_MIN_OWN_COVERAGE = 50;
 # carry roles known from other organisms, often vertebrates. Then PANTHER's own name is used, if
 # informative ("Cerebellin-related", "Collagen alpha", "Serum amyloid A").
 my $FUNCTION_WORDS = qr/\b(?:Regulators?|Regulatory|Organi[sz]ers?|Organi[sz]ation|Assembly|Signal(?:l)?ing|Immunity|Immune|Development(?:al)?|Defen[cs]e|Roles?|Pathways?|Perception|Multifunctional|Diverse|Barrier|Stress|Proliferation|Biosynthetic|Modification|Apoptosis|Clearance|Associated)\b/;
+
+# PANTHER tree placement (--panther-placements, from scripts/panther_placements.py: TreeGrafter's
+# graft point traced to the human genes on the PANTHER family tree). A placement counts only when
+# its PANTHER match is strong and covers most of both the protein and the family model: a
+# placement made from one shared domain says little about the whole gene. On the Congeria sample
+# (2026-09-29) placements meeting this agreed with OMA's named gene 215 times out of 221.
+my $TREE_MAX_EVALUE   = 1e-10;
+my $TREE_MIN_COVERAGE = 50;     # % of the protein, and % of the family model
+# closest human tiers whose gene a tree placement must agree with to name a gene (step 5): one
+# gene found by similarity (3 MMseqs2 RBH, 4 via another species' ortholog, 5 DIAMOND best hit)
+my %TREE_AGREEING_TIER = map { my $tier = $_; ($tier => 1) } (3, 4, 5);
 
 # ---- closest gene in a --closest-species species
 my %OMA_RANK = ('1:1' => 0, 'many:1' => 1, '1:many' => 2, 'many:many' => 3);
@@ -221,6 +235,7 @@ my %candidates;       # group -> naming step -> its candidate: a name, or { why 
 my %decision;         # group -> { step (0: none), reached => [steps tried], passed => { step => why } }
 my %panther_label;    # PANTHER family -> InterPro's Family name when integrated, else PANTHER's cleaned name
 my %gene_family_coverage;   # group -> PANTHER family -> the gene's best model coverage (%, any isoform)
+my %tree;             # group -> its PANTHER tree placement (read_panther_placements)
 
 # ============================================================== main
 sub main {
@@ -230,7 +245,8 @@ sub main {
              'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
              'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'native=s', 'oma-id-map=s',
              'human-curated-gene-names=s@', 'closest-species=s@',
-             'interproscan=s', 'interpro-entries=s', 'panther-hmm-lengths=s', 'out-names=s', 'out-dir=s')
+             'interproscan=s', 'interpro-entries=s', 'panther-hmm-lengths=s', 'panther-placements=s', 'metadata=s',
+             'out-names=s', 'out-dir=s')
     or die "bad options\n";
   foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-dir)) {
     die "--$required is required\n" unless defined $opt{$required};
@@ -290,6 +306,7 @@ sub main {
   foreach my $curated_file (@{$opt{'human-curated-gene-names'}}) {
     read_curated($curated_file, \%curated);
   }
+  read_panther_placements($opt{'panther-placements'}) if defined $opt{'panther-placements'};
 
   # ============================================================== decide
 
@@ -1530,9 +1547,10 @@ my @NAMING_STEPS = (
   [2, 'naming species',        \&naming_species_name],
   [3, 'OMA human ortholog',    \&oma_name],
   [4, 'transposable element',  \&te_name],
-  [5, 'full-length human hit', \&like_name],
-  [6, 'PANTHER family',        \&panther_family_name],
-  [7, 'InterPro domain',       \&domain_name],
+  [5, 'PANTHER tree placement', \&tree_name],
+  [6, 'full-length human hit', \&like_name],
+  [7, 'PANTHER family',        \&panther_family_name],
+  [8, 'InterPro domain',       \&domain_name],
 );
 
 # a candidate that gives no name, and why
@@ -1618,12 +1636,17 @@ sub decide_name {
   # which would give it the name of a human gene domesticated from such an element
   return 4 if $try->(4);
 
-  if ($oma_family) {
-    $passed->{5} = 'skipped: OMA makes it co-ortholog of several human genes (step 3) that could not name it; a best hit would pick one of them by score';
-  } elsif ($try->(5)) {
-    return 5;
+  # an OMA co-ortholog family step 3 could not name is not handed to the tree or the best hit:
+  # both would pick one member of the family again
+  foreach my $step (5, 6) {
+    if ($oma_family) {
+      $passed->{$step} = 'skipped: OMA makes it co-ortholog of several human genes (step 3) that could not name it; '
+                       . ($step == 5 ? 'the tree placement' : 'a best hit') . ' would pick one of them';
+    } elsif ($try->($step)) {
+      return $step;
+    }
   }
-  foreach my $step (6, 7) {
+  foreach my $step (7, 8) {
     return $step if $try->($step);
   }
   return 0;
@@ -1669,7 +1692,113 @@ sub te_name {
   return $named;
 }
 
-# naming step 6: PANTHER family (only matches covering most of the family's model;
+# ##############################################################################
+# PANTHER tree placement (--panther-placements)
+
+# per gene, its best PANTHER placement: one that meets the trust bar ($TREE_MAX_EVALUE,
+# $TREE_MIN_COVERAGE) before one that does not, then the lowest E-value, then ids
+sub read_panther_placements {
+  my ($file) = @_;
+  open my $fh, '<', $file or die "cant open PANTHER placements $file $!\n";
+  my @columns;
+  while (my $line = <$fh>) {
+    next if $line =~ /^#/;
+    chomp $line;
+    my @fields = split /\t/, $line, -1;
+    if (!@columns) {
+      @columns = @fields;
+      next;
+    }
+    my %row;
+    @row{@columns} = @fields;
+    my $group = group_for($row{protein}) or next;
+    my $evalue = ($row{evalue} // '') =~ /^[0-9.eE+-]+$/ ? $row{evalue} : 1;
+    my $trusted = ($evalue <= $TREE_MAX_EVALUE and ($row{protein_cov_pct} || 0) >= $TREE_MIN_COVERAGE
+                   and ($row{model_cov_pct} || 0) >= $TREE_MIN_COVERAGE) ? 1 : 0;
+    my @humans;
+    foreach my $gene_id (grep { my $id = $_; $id ne '' } split /;/, $row{human_genes} // '') {
+      my $human = $gene_id =~ /^HGNC:/ ? human_record(hgnc_id => $gene_id)
+                : $gene_id =~ /^ENSG/ ? human_record(ensembl_gene => $gene_id)
+                : $gene_id =~ /^UniProtKB:(.+)$/ ? human_record(uniprot => [$1]) : undef;
+      push @humans, $human // { key => $gene_id, hgnc_id => '', symbol => $gene_id, name => $gene_id, gene_group => '' };
+    }
+    my $placement = { %row, evalue => $evalue, trusted => $trusted, humans => \@humans };
+    my $current = $tree{$group};
+    if (!$current or $trusted > $current->{trusted}
+        or ($trusted == $current->{trusted}
+            and ($evalue < $current->{evalue}
+                 or ($evalue == $current->{evalue} and ($row{protein} cmp $current->{protein} or $row{panther_match} cmp $current->{panther_match}) < 0)))) {
+      $tree{$group} = $placement;
+    }
+  }
+  close $fh;
+  die "no rows in PANTHER placements $file\n" unless @columns;
+}
+
+# a placement in words: "TreeGrafter places it with human X (ortholog_1: joins at a speciation
+# node, Bilateria; PANTHER PTHR1:SF2 E=1e-50, 90% of the protein, 85% of the model)"
+sub tree_text {
+  my ($placement) = @_;
+  my $humans = join('/', map { my $human = $_; human_label($human) } @{$placement->{humans}});
+  my $where = $placement->{joining_event} eq 'duplication' ? 'at a duplication node'
+            : "at a speciation node" . ($placement->{joining_taxon} ne '' ? ", $placement->{joining_taxon}" : '');
+  $where .= ' (grafted inside another lineage, moved up to this one)' if $placement->{moved_to_lineage} eq 'yes';
+  return "TreeGrafter places it with human " . ($humans ne '' ? $humans : 'none') . " ($placement->{placement}: joins $where; "
+       . "PANTHER $placement->{panther_match} E=" . e_value($placement->{evalue}) . ", $placement->{protein_cov_pct}% of the protein, "
+       . "$placement->{model_cov_pct}% of the family model)";
+}
+
+# The tree's vote on a name given by another method: tree+ when a trusted placement joins the
+# gene to (one of) the named human gene(s) at a speciation node, treeC when it joins it to other
+# human genes; nothing when there is no trusted placement, or it only reaches paralogs.
+sub tree_support {
+  my ($group, $humans) = @_;
+  my $placement = $tree{$group} or return;
+  return unless $placement->{trusted} and ($placement->{placement} eq 'ortholog_1' or $placement->{placement} eq 'co-orthologs');
+  my %named = map { my $human = $_; ($human->{key} => 1) } @$humans;
+  my $agrees = grep { my $human = $_; $named{$human->{key}} } @{$placement->{humans}};
+  return ($agrees ? 'tree+' : 'treeC', ($agrees ? '' : 'but ') . tree_text($placement));
+}
+
+sub with_tree_vote {
+  my ($group, $humans, $named) = @_;
+  my ($flag, $text) = tree_support($group, $humans);
+  return $named unless $flag;
+  return { %$named, tag => [@{$named->{tag}}, $flag], origin => { %{$named->{origin}}, rule => "$named->{origin}{rule}; $text" } };
+}
+
+# naming step 5: the PANTHER tree and similarity agree on one human gene -- a trusted placement
+# joins the gene to exactly one human gene at a speciation node (orthology by the gene tree), and
+# that gene is also its closest human gene by similarity (tier 3-5). Two independent methods on
+# one gene: a plain name, as for an OMA ortholog.
+sub tree_name {
+  my ($group) = @_;
+  my $placement = $tree{$group} or return not_named(defined $opt{'panther-placements'} ? 'no PANTHER tree placement' : 'no PANTHER placements file');
+  my $text = tree_text($placement);
+  return not_named("placement not trusted (needs E <= " . e_value($TREE_MAX_EVALUE) . " and >= $TREE_MIN_COVERAGE% of the protein and of the model): $text")
+    unless $placement->{trusted};
+  return not_named("not one human ortholog: $text") unless $placement->{placement} eq 'ortholog_1';
+  my $human = $placement->{humans}[0];
+  my $closest = $closest{$group};
+  if (!$closest or !$TREE_AGREEING_TIER{$closest->{tier}} or $closest->{family} or $closest->{human}[0]{key} ne $human->{key}) {
+    my $other = !$closest ? 'it has no closest human gene'
+              : $closest->{family} ? "its closest human genes are a family (tier $closest->{tier})"
+              : "its closest human gene is " . human_label($closest->{human}[0]) . " (tier $closest->{tier})";
+    return not_named("$text, but $other");
+  }
+  return not_named("the name of human " . human_label($human) . " is not informative")
+    unless is_informative_hit($human->{symbol}, $human->{name}, $human->{key});
+  $stats{'name: PANTHER tree placement agreeing with the closest human'}++;
+  my $symbol = $human->{hgnc_id} ? $human->{symbol} : '';
+  my $rule = "Ortholog of human " . human_label($human) . " by its place on the PANTHER family tree: $text; and "
+           . human_label($human) . " is also its closest human gene by similarity ($closest->{evidence})";
+  return { desc => ($symbol ne '' ? "$symbol: $human->{name}" : $human->{name}), selected => selected_id($group, $placement->{protein}),
+           tag => ['ISO', 'tree', ($closest->{tier} == 3 ? 'rbh' : $closest->{tier} == 4 ? 'via' : 'bh')],
+           note => "PANTHER_TreeGrafter|Orthologs|$placement->{protein}|$placement->{panther_match}|$placement->{evalue}",
+           origin => human_origin($human, $rule, 5) };
+}
+
+# naming step 7: PANTHER family (only matches covering most of the family's model;
 # read_panther_families). InterPro's curated name for the family when InterPro has taken it in,
 # else PANTHER's own.
 sub panther_family_name {
@@ -1686,7 +1815,7 @@ sub panther_family_name {
     $stats{'name: repeat (PANTHER family built of repeats)'}++;
     return { desc => domain_description($family->{repeat_name}), selected => selected_id($group, $family->{id}), tag => ['ISM', 'rpt'],
              note => "PANTHER|Gene_Families|$family->{id}|$family->{family}|$family->{evalue}",
-             origin => { kind => 'panther', accession => $family->{family}, step => 6,
+             origin => { kind => 'panther', accession => $family->{family}, step => 7,
                          rule => "Its PANTHER family $family->{family} (\"$family->{description}\") match is "
                                . sprintf('%.0f%%', 100 * $family->{repeat_fraction}) . " repeat units ($family->{repeat_name}), "
                                . "which any protein with such repeats fills; named for the repeat, not the family" } };
@@ -1703,12 +1832,12 @@ sub panther_family_name {
   $stats{'name: PANTHER family' . (defined $family->{interpro_name} && $label eq $family->{interpro_name} ? ' (InterPro name)' : ' (PANTHER name)')}++;
   return { desc => family_member($label), selected => selected_id($group, $family->{id}), tag => ['ISM', 'pthr'],
            note => "PANTHER|Gene_Families|$family->{id}|$family->{family}|$family->{evalue}",
-           origin => { kind => 'panther', accession => $family->{family}, step => 6,
+           origin => { kind => 'panther', accession => $family->{family}, step => 7,
                        rule => "Member of PANTHER family $family->{family} ($named_by): "
                              . "$family->{model_coverage}% of the family model aligned, E=" . e_value($family->{evalue}) . " (InterProScan)" } };
 }
 
-# naming step 7: the gene's best InterPro domain or repeat: "X domain-containing protein"
+# naming step 8: the gene's best InterPro domain or repeat: "X domain-containing protein"
 # (UniProt's convention for a protein known only by a domain) -- claims the domain, not a gene
 # identity
 sub domain_name {
@@ -1737,7 +1866,7 @@ sub domain_name {
   }
   return { desc => $description, selected => selected_id($group, $domain->{id}), tag => ['ISM', 'ipr', ($best ? 'sim~' : ())],
            note => "InterPro|Domains|$domain->{id}|$domain->{entry}|" . ($domain->{evalue} // '-'),
-           origin => { kind => 'interpro', accession => $domain->{entry}, step => 7,
+           origin => { kind => 'interpro', accession => $domain->{entry}, step => 8,
                        rule => "Contains InterPro " . lc($domain->{type}) . " $domain->{entry} \"$domain->{name}\" ($signature); "
                              . "no ortholog, full-length homolog or family to name it by$partial" } };
 }
@@ -1874,6 +2003,11 @@ sub oma_support {
   }
   my $hog = $closest->{tier} == 2 || $closest->{hog_family}
          || grep { $_->{tier} == 2 and $named{$_->{human}[0]{key} // ''} } @{$human_links{$group} // []};
+  my ($tree_flag, $tree_text) = tree_support($group, $humans);
+  if ($tree_flag) {
+    push @flags, $tree_flag;
+    push @said, $tree_text;
+  }
   push @flags, 'hog' if $hog;
   my $text = @said ? '; ' . join('; ', @said) : '';
   return (\@flags, $text);
@@ -2126,13 +2260,13 @@ sub like_name {
         $stats{'name: full-length human hit, paralog tie (PANTHER family)'}++;
         my $hit = $top->{best_full};
         my $members = join(', ', map { human_label($_) } @tie_genes);
-        return { desc => family_member($panther_label{$family}), selected => selected_id($group, $hit->{id}),
+        return with_tree_vote($group, \@tie_genes, { desc => family_member($panther_label{$family}), selected => selected_id($group, $hit->{id}),
                  tag => ['ISS', ($top->{rbh} ? 'rbh' : 'bh'), 'tie-grp'],
                  note => "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}",
-                 origin => { kind => 'panther', accession => $family, step => 5,
+                 origin => { kind => 'panther', accession => $family, step => 6,
                              rule => "Similar along its length to human genes of PANTHER family $family (\"$panther_label{$family}\") that score within "
                                    . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE)) . " of each other ($members); no one of them is closest, "
-                                   . "no single reciprocal best hit decides, and they share no HGNC group that is a family by descent; named for the PANTHER family" } };
+                                   . "no single reciprocal best hit decides, and they share no HGNC group that is a family by descent; named for the PANTHER family" } });
       }
       if (!defined $shared) {
         $stats{'no -like name: paralog tie, no reciprocal hit or shared HGNC group'}++;
@@ -2143,12 +2277,12 @@ sub like_name {
       $stats{'name: full-length human hit, paralog tie (HGNC group)'}++;
       my $hit = $top->{best_full};
       my $members = join(', ', map { human_label($_) } @tie_genes);
-      return { desc => family_member($shared), selected => selected_id($group, $hit->{id}), tag => ['ISS', ($top->{rbh} ? 'rbh' : 'bh'), 'tie-grp'],
+      return with_tree_vote($group, \@tie_genes, { desc => family_member($shared), selected => selected_id($group, $hit->{id}), tag => ['ISS', ($top->{rbh} ? 'rbh' : 'bh'), 'tie-grp'],
                note => "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}",
-               origin => { kind => 'hgnc_group', accession => hgnc_group_id(\@tie_genes, $shared), step => 5,
+               origin => { kind => 'hgnc_group', accession => hgnc_group_id(\@tie_genes, $shared), step => 6,
                            rule => "Similar along its length to human genes of the HGNC group \"$shared\" that score within "
                                  . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE)) . " of each other ($members); no one of them is closest, "
-                                 . "and no single reciprocal best hit decides; named for the group" } };
+                                 . "and no single reciprocal best hit decides; named for the group" } });
     }
   }
   my $human = $chosen->{human};
@@ -2176,10 +2310,11 @@ sub like_text {
     $rule .= "; " . join(', ', map { human_label($_) } @$tie_genes) . " score within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE))
            . " of each other, and only $label is a reciprocal best hit";
   }
-  return { desc => ($like_symbol ne '' ? "$like_symbol: $like_description" : $like_description),
+  return with_tree_vote($group, [$human], {
+           desc => ($like_symbol ne '' ? "$like_symbol: $like_description" : $like_description),
            selected => selected_id($group, $hit->{id}), tag => ['ISS', ($entry->{rbh} ? 'rbh' : 'bh'), ($tie_flag ? $tie_flag : ())],
            note => "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}",
-           origin => human_origin($human, $rule, 5) };
+           origin => human_origin($human, $rule, 6) });
 }
 
 sub selected_id {
@@ -2430,6 +2565,29 @@ sub first_line {
   return $line;
 }
 
+# the gene set, from its metadata.yaml (--metadata): species, taxon, gene set and assembly
+sub gene_set_lines {
+  return ('(no --metadata given)') unless defined $opt{metadata};
+  my %meta;
+  open my $fh, '<', $opt{metadata} or die "cant open metadata $opt{metadata} $!\n";
+  while (my $line = <$fh>) {
+    next unless $line =~ /^([A-Za-z][A-Za-z0-9_-]*):\s*(.*?)\s*$/;
+    my ($key, $value) = ($1, $2);
+    $value =~ s/^(["'])(.*)\1$/$2/;
+    $meta{$key} //= $value;
+  }
+  close $fh;
+  my $species = join(' ', grep { my $part = $_; defined $part and $part ne '' } @meta{qw(genus species)});
+  my @lines;
+  push @lines, "species: $species" . (($meta{'common-name'} // '') ne '' ? " ($meta{'common-name'})" : '') if $species ne '';
+  push @lines, "NCBI taxon id: $meta{'ncbi-taxon-id'}" if ($meta{'ncbi-taxon-id'} // '') ne '';
+  push @lines, "gene set: $meta{'geneset-accession'}" if ($meta{'geneset-accession'} // '') ne '';
+  my $assembly = join(' ', grep { my $part = $_; defined $part and $part ne '' } @meta{qw(genome-accession genome-name)});
+  push @lines, "assembly: $assembly" if $assembly ne '';
+  push @lines, "metadata: $opt{metadata}";
+  return @lines;
+}
+
 # the programs and data this run read, one "#" line each
 sub input_lines {
   my @lines;
@@ -2464,6 +2622,17 @@ sub input_lines {
   push @lines, "Ensembl Compara: $opt{'compara-dir'}, release(s) used " . (join('/', sort keys %compara_releases_used) || 'none')
     if defined $opt{'compara-dir'};
   push @lines, "NCBI taxonomy: $opt{'taxonomy-dir'}" if defined $opt{'taxonomy-dir'};
+  if (defined $opt{'panther-placements'}) {
+    my $about = '';
+    if (open my $placements_fh, '<', $opt{'panther-placements'}) {
+      while (my $line = <$placements_fh>) {
+        last unless $line =~ /^#/;
+        $about = "; $1" if $line =~ /^# (InterProScan JSON: .*)$/;
+      }
+      close $placements_fh;
+    }
+    push @lines, "PANTHER tree placements (TreeGrafter): $opt{'panther-placements'} (" . file_date($opt{'panther-placements'}) . ")$about";
+  }
   push @lines, "native names: $opt{native} (" . file_date($opt{native}) . ")" if defined $opt{native};
   foreach my $file (@{$opt{'human-curated-gene-names'}}) {
     push @lines, "human-curated names: $file (" . file_date($file) . ")";
@@ -2486,6 +2655,9 @@ sub decision_header {
     'Gene naming decisions: one row per gene. For people to read; the names themselves are in geneNames.tsv,',
     'and the database tables (Gene Name Source, Closest Gene) come from the same decisions.',
     '',
+    'GENE SET',
+    (map { my $line = $_; "  $line" } gene_set_lines()),
+    '',
     'RUN',
     '  date: ' . `date '+%Y-%m-%d %H:%M'` =~ s/\n//r,
     "  script: $FindBin::Bin/$FindBin::Script" . ($commit ne '' ? " (git $commit)" : ''),
@@ -2501,17 +2673,21 @@ sub decision_header {
     '  3 OMA human ortholog (closest human tier 1-2): 1:1 / many:1 -> the gene\'s name; co-orthologs -> their HGNC group',
     '    (if a family by descent) or PANTHER family; withheld when omaC',
     "  4 transposable element (a TE Pfam domain); before step 3 when >= $TE_MIN_COPIES copies share one OMA human gene",
-    '  5 full-length human hit -> "SYM-like"; skipped after an OMA co-ortholog family step 3 could not name',
-    '  6 PANTHER family -> "<family> family member"',
-    '  7 InterPro domain or repeat -> "<domain> domain-containing protein"',
+    '  5 PANTHER tree placement: a trusted placement with exactly one human gene at a speciation node, and that gene is',
+    '    also the closest human gene by similarity (tier 3-5) -> the gene\'s name, plain',
+    '  6 full-length human hit -> "SYM-like"',
+    '    (5 and 6 are skipped after an OMA co-ortholog family step 3 could not name: both would pick one member)',
+    '  7 PANTHER family -> "<family> family member"',
+    '  8 InterPro domain or repeat -> "<domain> domain-containing protein"',
     '  - none',
     '',
     'CUTOFFS',
-    "  full-length hit (names, step 5): E <= " . e_value($FULL{evalue}) . ", >= $FULL{qcov}% of this protein and >= $FULL{tcov}% of the other aligned",
+    "  full-length hit (names, step 6): E <= " . e_value($FULL{evalue}) . ", >= $FULL{qcov}% of this protein and >= $FULL{tcov}% of the other aligned",
     "  normal hit (closest human, tiers 3-7): E <= " . e_value($NORMAL{evalue}) . ", >= $NORMAL{qcov}% of both proteins",
     "  any hit (support of an OMA name, best human gene): E <= " . e_value($HIT_MAX_EVALUE) . ", any coverage",
     "  paralog tie: another human gene scoring within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE)) . " of the best bitscore",
-    "  PANTHER family name (step 6): the match covers >= $FAMILY_MODEL_COVERAGE% of the family model",
+    "  PANTHER tree placement trusted: its PANTHER match E <= " . e_value($TREE_MAX_EVALUE) . ", >= $TREE_MIN_COVERAGE% of the protein and of the family model",
+    "  PANTHER family name (step 7): the match covers >= $FAMILY_MODEL_COVERAGE% of the family model",
     "  PANTHER family for co-orthologs / a tie: the gene's own match >= $FAMILY_NAME_MIN_OWN_COVERAGE% of the model, or a full-length hit to a member",
     "  HGNC group as a family: PANTHER coherence >= $HGNC_GROUP_MIN_COHERENCE (share of the group's human genes in its main PANTHER family)",
     "  repeat-built PANTHER family: repeat units >= " . sprintf('%.0f%%', 100 * $REPEAT_FAMILY_FRACTION) . " of the match -> named for the repeat",
@@ -2520,13 +2696,15 @@ sub decision_header {
     'ABBREVIATIONS (the tag at the end of a name)',
     '  evidence: ISO orthology (OMA); ISS similarity (-like); ISM sequence model (PANTHER, InterPro, Pfam);',
     '            TAS human-curated; SRC the gene set\'s own name or another annotation of this species',
-    '  relationship: 1to1; Nto1 (N copies here share the human gene); mto1; fam (co-ortholog of several human genes)',
+    '  relationship: 1to1; Nto1 (N copies here share the human gene); mto1; fam (co-ortholog of several human genes);',
+    '    tree (orthology by the PANTHER tree placement, step 5; then rbh / bh / via: how the closest human gene agrees)',
     '  similarity: rbh reciprocal best hit; bh best hit; tie-rbh / tie-grp a paralog tie resolved by a reciprocal hit / a family',
     '  model: pthr PANTHER family; ipr InterPro domain; rpt repeat; te transposable element',
     '  support marks: + agrees, ~ partly (similar, not the best), C contradicts, - no evidence, X excluded',
     '    sim+ / sim~ / sim- the named human gene is the best human hit / a hit but not the best / not a hit',
     '    pthr+ / pthrC same / different PANTHER family as the named human gene; hog OMA\'s HOG agrees',
     '    omaX an OMA pair nothing supports was set aside; omaC an OMA name withheld (best hit another gene AND PANTHER family differs)',
+    '    tree+ / treeC a trusted PANTHER tree placement joins it to the named human gene / to other human genes',
     '  closest human tiers: 1 OMA pairwise; 2 OMA HOG; 3 MMseqs2 RBH; 4 via another species\' ortholog; 5 DIAMOND best hit;',
     '    6 Swiss-Prot hit -> Ensembl Compara; 7 Swiss-Prot hit -> PANTHER subfamily',
     '',
@@ -2538,6 +2716,8 @@ sub decision_header {
     '    coverage of this protein / of the human protein (%), E-value, bitscore, rbh or bh, full-length yes/no;',
     '    Second_human_hit: the next human gene and its bitscore as % of the best (a paralog close behind)',
     '  PANTHER_best / PANTHER_model_cov: the gene\'s best-covered PANTHER family and how much of the model it covers (%)',
+    '  Tree_placement: where TreeGrafter puts it on the PANTHER tree -- placement (ortholog_1, co-orthologs, paralog_family,',
+    '    no_human, lineage_not_in_tree, no_graft), trusted or weak, the human genes, the joining node, the match\'s scores',
     '  S1 ... S7: each step\'s own result --',
     '    NAMED: this step named the gene',
     '    not used: the step was tried and gives no name (why)',
@@ -2578,7 +2758,7 @@ sub write_decisions {
   print $fh decision_header();
   my %step_label = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
   print $fh join("\t", qw(ID GroupId Name Step Reason Native_name Pipeline_name Best_human_hit Best_hit_qcov Best_hit_tcov Best_hit_evalue
-                          Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit PANTHER_best PANTHER_model_cov),
+                          Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit PANTHER_best PANTHER_model_cov Tree_placement),
                  (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
                  'Closest_human'), "\n";
   # --native: the gene set's own informative names replace the decision (collect_native_rows)
@@ -2614,6 +2794,7 @@ sub write_decisions {
                  ($native ? $native->{desc} : ''),
                  ($native ? $name{$group}{desc} . ' (' . ($step ? "step $step" : 'no step') . ')' : ''),
                  @best, $family_text, (defined $family ? $coverage->{$family} : ''),
+                 ($tree{$group} ? ($tree{$group}{trusted} ? 'trusted: ' : 'weak: ') . tree_text($tree{$group}) : ''),
                  (map { my $naming_step = $_; step_cell($group, $naming_step->[0], $native ? 1 : 0) } @NAMING_STEPS),
                  $closest_text);
     print $fh join("\t", map { my $cell = $_ // ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";

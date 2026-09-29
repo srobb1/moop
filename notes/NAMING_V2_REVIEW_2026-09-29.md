@@ -155,3 +155,35 @@ that are functional categories ("Complement & Cell Adhesion Regulators") when no
 - PANTHER names in sentence case: HGNC's most frequent spelling per word, unknown words lowered from
   6 letters, shorter kept as acronyms. Leftovers: "SUGAR kinase", "Eukaryote specific DSRNA", and a
   mouse clone-id family "CDNA sequence BC048562" that the informative-name filter should catch.
+
+## TreeGrafter placements — first results (2026-09-29, prototype, naming code unchanged)
+Scripts: `naming_review/treegrafter/graft_to_human.py` (JSON graftPoint -> PAINT PTN->AN ->
+`Tree_MSF/<family>.tree` NHX -> human genes), `compare_tree_names.py`. Data: PANTHER 19.0
+TreeGrafter download (update_reference_data.sh panther_trees); family HMM lengths from famhmm
+(`panther19_hmm_lengths.tsv`) because the JSON's `hmmLength` is always 0.
+- Placement = the event joining the query to its nearest human genes: speciation -> `ortholog_1`
+  (one human gene) or `co-orthologs` (several, human-lineage duplication); duplication ->
+  `paralog_family`. Grafts inside another lineage (PANTHER 19 has no lophotrochozoan; ~half of the
+  Congeria grafts land on Deuterostomia/Chordata/Xenopus nodes or other species' leaves) are moved up
+  to the first speciation node of the query's lineage (Protostomia, Bilateria, ... -- hard-coded for
+  Congeria; to derive per species from NCBI taxonomy). Moving up only adds human genes.
+- "Confident" = E <= 1e-10 and >= 50% of the protein and of the family HMM covered.
+- Congeria sample (3,235 proteins; InterProScan 5.78 `-appl PANTHER -f JSON,TSV`, 27 min on 4 CPU):
+  419 ortholog_1, 1,155 co-orthologs, 357 paralog_family, 319 no human gene in the family
+  (invertebrate-only families: Tyr recombinase, NACHT/NOD...), 308 no graft point (family-level
+  match only; large GPCR-like families), 38 family tree without a node of the query's lineage.
+- Against run tree0929_labels (confident placements): OMA gene names -- the named gene is in the
+  tree's human set 215 times, not 6 (AQP8 -> AQP1/2/4/5/6/MIP, PSMB4 -> PSMB1, EPB41L5 -> EPB41s,
+  BCL3 -> NFKBIA, SLC60A1 -> SLC60A2, SLC67A2 -> SLC67A1); `-like` names 39 in / 7 not (mostly SLC
+  families; TACR1-like -> GPR83). The disagreements look like tree misplacements more often than OMA
+  errors (PSMB4: OMA, best hit and PANTHER family all agree) -> the tree is a vote, not a decider.
+- Would-be new gene names (confident ortholog_1, currently family/domain/None): 162; DIAMOND closest
+  human is the same gene in 70, contains it in 28, differs in 32, none in 32. Examples: JTB, SNAPC1,
+  PNKP, LIPE, CLINT1, SMARCE1, NOC4L, CPT2, BDH1; weaker: ACR for trypsins (closest CTRB1/PRSS48),
+  PHEX for three Peptidase M13 genes (many:1), DNAH12 (closest DNAH5), PGBD4 (TE: TE rule must win).
+- OMA family names vs tree ortholog_1 (20, e.g. PPP2R5C/D, HMGB1/2/3, CYB5A/B): OMA says the query
+  is co-orthologous to several; the tree picks one. Granularity conflict -- keep the family name
+  unless another method also picks the single gene.
+- Proposed use (not coded): tree as one vote in the consensus; a tree-only name needs agreement from
+  the closest human (full-length best hit or RBH); tree disagreement with OMA -> tag (`treeC`), not a
+  drop, until checked on the fly benchmark (Compara as truth).

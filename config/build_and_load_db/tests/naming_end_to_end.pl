@@ -37,11 +37,12 @@ sub write_file {
   close $fh;
 }
 
-# ---- the gene set: one protein per gene, G1..G30 (G2/G3 are two copies of one human gene; G18-G22 five)
+# ---- the gene set: one protein per gene, G1..G35 (G2/G3 are two copies of one human gene; G18-G22 five)
 my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, T7 => 200, T8 => 150, T9 => 120,
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
-              T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200);
+              T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300);
 write_file("$dir/isoforms.tsv", join('', map { my $n = substr($_, 1); "$_.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { ">$_.1\n" . ('M' x $length{$_}) . "\n" } sort keys %length));
 
@@ -120,6 +121,8 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { jo
   # T29: the same co-orthologs; T29 is not in their PANTHER family at all, but hits MIX1 along its length
   [29, 19, 'T29.1', $human->(19), '1:many'],
   [29, 20, 'T29.1', $human->(20), '1:many'],
+  # T34: OMA 1:1 with CENPQ; the PANTHER tree places it with THETA instead -> treeC, the name stays
+  [34, 16, 'T34.1', $human->(16), '1:1'],
 ));
 write_file("$dir/oma/Output/PairwiseOrthologs/TEST-NEMVE.txt", join('', map { join("\t", @$_) . "\n" }
   [1, 11, 'T1.1', 'NEMVE00011 | XP_000011.1 | LOC11 | anemone alpha', '1:1'],
@@ -144,7 +147,9 @@ write_file("$dir/mmseqs/ENS_homo_sapiens/db_version.txt", "ENS_homo_sapiens\trel
 write_file("$dir/mmseqs/ENS_homo_sapiens/rbh_mmseq_results.tsv", "query\ttarget\tpident\talnlen\tmismatch\tgapopen\tqstart\tqend\ttstart\ttend\tevalue\tbits\n"
   . "T5.1\tENSP05.1\t0.62\t95\t30\t0\t1\t95\t1\t95\t1e-50\t300\n"
   . "T6.1\tENSP06.1\t0.40\t90\t50\t2\t1\t90\t1\t120\t1e-20\t120\n"
-  . "T14.1\tENSP08.1\t0.50\t480\t200\t2\t10\t490\t5\t495\t1e-150\t480\n");
+  . "T14.1\tENSP08.1\t0.50\t480\t200\t2\t10\t490\t5\t495\t1e-150\t480\n"
+  # T31-T33: a partial RBH to EPS (70% / 60%): EPS is their closest human gene (tier 3), not a -like name
+  . join('', map { "T$_.1\tENSP06.1\t0.45\t140\t60\t1\t1\t140\t1\t120\t1e-40\t200\n" } 31 .. 33));
 my $pep = '';
 foreach my $row (['ENSP05.1', 'ENSG05.1', 'DELTA', 'delta kinase', 5, 100], ['ENSP06.1', 'ENSG06.1', 'EPS', 'epsilon protein', 6, 200],
                  ['ENSP08.1', 'ENSG08.1', 'ANO2', 'anoctamin 2', 8, 500]) {
@@ -190,7 +195,10 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   . $dhit->('T27', '19', 'MIX1', 'mix protein 1', '1e-80', 300, 300, 300, 90, 90)
   # T28: a partial hit only -- with 20% of the family model, not a whole member of the family
   . $dhit->('T28', '19', 'MIX1', 'mix protein 1', '1e-30', 150, 300, 300, 40, 40)
-  . $dhit->('T29', '19', 'MIX1', 'mix protein 1', '1e-80', 300, 300, 300, 90, 90));
+  . $dhit->('T29', '19', 'MIX1', 'mix protein 1', '1e-80', 300, 300, 300, 90, 90)
+  . $dhit->('T34', '16', 'CENPQ', 'centromere protein Q', '1e-50', 200, 300, 300, 90, 90)
+  # T35: full length to WSA1 -> WSA1-like; the tree places it with WSA1 among co-orthologs -> tree+
+  . $dhit->('T35', '23', 'WSA1', 'widget sprocket associated 1', '1e-100', 400, 300, 300, 95, 95));
 
 # ---- InterProScan TSV (PANTHER families and InterPro domains), InterPro entry list, PANTHER model lengths
 # PANTHER names a gene only when its match covers >= 80% of the family model:
@@ -257,11 +265,30 @@ write_file("$dir/hmm_lengths.tsv", join('', map { "$_->[0]\t$_->[1]\n" }
   ['PTHR00006', 100], ['PTHR00007', 200], ['PTHR00009', 120], ['PTHR00010', 250], ['PTHR00011', 200], ['PTHR00012', 150],
   ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300], ['PTHR00030', 200]));
 
+# ---- PANTHER tree placements (scripts/panther_placements.py output)
+#   T31: one human ortholog, EPS, and EPS is its closest human gene (RBH) -> named EPS by the tree (step 5)
+#   T32: one human ortholog, DELTA, but its closest human gene is EPS -> the tree does not name it
+#   T33: EPS again, but the PANTHER match is weak (E=1e-5) -> not trusted, not used
+#   T34: THETA, against OMA's CENPQ -> treeC on the OMA name
+#   T35: co-orthologs WSA1 and MIX4 -> tree+ on the WSA1-like name
+my $placement = sub { my ($id, $match, $evalue, $pcov, $mcov, $placement, $humans) = @_;
+  return join("\t", "$id.1", $match, 'NAME', $evalue, $pcov, $mcov, 'PTN0001', 'PTHR00031:AN5', 'speciation', 'Deuterostomia',
+              'PTHR00031:AN3', 'speciation', 'Bilateria', 'yes', $placement, $humans) . "\n" };
+write_file("$dir/panther_placements.tsv", "# test placements\n"
+  . join("\t", qw(protein panther_match match_name evalue protein_cov_pct model_cov_pct graft_point graft_node graft_event graft_taxon
+                  joining_node joining_event joining_taxon moved_to_lineage placement human_genes)) . "\n"
+  . $placement->('T31', 'PTHR00031:SF1', '1e-50', 90, 85, 'ortholog_1', 'HGNC:6')
+  . $placement->('T32', 'PTHR00031:SF2', '1e-50', 90, 85, 'ortholog_1', 'HGNC:5')
+  . $placement->('T33', 'PTHR00031:SF1', '1e-5', 90, 85, 'ortholog_1', 'HGNC:6')
+  . $placement->('T34', 'PTHR00031:SF3', '1e-60', 90, 85, 'ortholog_1', 'HGNC:18')
+  . $placement->('T35', 'PTHR00031:SF4', '1e-80', 95, 90, 'co-orthologs', 'HGNC:22;HGNC:23'));
+
 # ---- run it (twice, with different hash seeds: the output must not depend on hash order)
 my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/protein.aa.fa", '--hgnc-dir', "$dir/hgnc",
   '--oma-dir', "$dir/oma", '--oma-code', 'TEST', '--mmseqs-dir', "$dir/mmseqs", '--ref-db', "$dir/refdb",
   '--diamond-dir', "$dir/diamond", '--uniprot-dir', "$dir/uniprot",
   '--interproscan', "$dir/iprscan.tsv", '--interpro-entries', "$dir/entry.list", '--panther-hmm-lengths', "$dir/hmm_lengths.tsv",
+  '--panther-placements', "$dir/panther_placements.tsv",
   '--closest-species', 'species=Nematostella vectensis|tag=Nvec|label=sea anemone|oma_code=NEMVE|hits=|use_for_names=0|same_species=0');
 foreach my $seed (1, 2) {
   my $out = "$dir/out$seed";
@@ -311,6 +338,11 @@ my %expect = (
   G28 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'the same, but not a whole member (20% of the family model, only a partial human hit) -> not named for the family; its domain names it'],
   G30 => ['Cerebellin-related family member [ISM|pthr]', 'InterPro names the family by a function ("Cerebellin Synaptic Organizer") -> PANTHER\'s own name'],
   G29 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'co-orthologs whose PANTHER family it is not in -> its domain names it'],
+  G31 => ['EPS: epsilon protein [ISO|tree|rbh]', 'the PANTHER tree places it with EPS alone, and EPS is its closest human gene -> plain name (step 5)'],
+  G32 => ['None', 'the tree says DELTA, its closest human gene is EPS -> no tree name, nothing else names it'],
+  G33 => ['None', 'a weak PANTHER match (E=1e-5): the placement is not trusted'],
+  G34 => ['CENPQ: centromere protein Q [ISO|1to1|sim+|treeC]', 'OMA 1:1 CENPQ; the tree places it with THETA -> treeC, the OMA name stays'],
+  G35 => ['WSA1-like: widget sprocket associated 1-like [ISS|bh|tree+]', 'a -like name the tree agrees with (WSA1 among its co-orthologs) -> tree+'],
   G26 => ['THETA-like: theta ligase-like [ISS|bh|omaC]', 'OMA 1:1 to ZETA, but the best hit is THETA and the PANTHER family differs -> withheld (omaC); the full-length THETA hit names it'],
 );
 foreach my $gene (sort { substr($a, 1) <=> substr($b, 1) } keys %expect) {
@@ -329,7 +361,7 @@ check(($source{G2}[1] // '') eq 'Ortholog of human GAMMA (OMA, many:1), one of 2
       'G2 provenance: copy count, and each kind of support', $p->('G2'));
 check(scalar(($source{G25}[1] // '') =~ /; OMA pairs it with human EPS \(1:1\), but no similarity hit or PANTHER family supports that pair, so it does not name the gene$/),
       'G25 provenance: the set-aside OMA pair is stated', $p->('G25'));
-check(($source{G26}[0] // '') eq 'HGNC:18' && ($source{G26}[2] // '') eq '5'
+check(($source{G26}[0] // '') eq 'HGNC:18' && ($source{G26}[2] // '') eq '6'
       && scalar(($source{G26}[1] // '') =~ /; OMA pairs it with human ZETA \(1:1\), but its best human similarity hit is THETA and its PANTHER family differs, so ZETA does not name it$/),
       'G26 provenance: the withheld OMA pair and both reasons', $p->('G26'));
 check(($source{G27}[3] // '') eq 'panther' && ($source{G27}[0] // '') eq 'PTHR00027' && ($source{G27}[2] // '') eq '3'
@@ -345,16 +377,16 @@ check(($source{G4}[3] // '') eq 'hgnc_group' && ($source{G4}[0] // '') eq '10'
       && ($source{G4}[1] // '') =~ /^Co-ortholog of 2 human genes in the HGNC group "Beta proteins" \(OMA, 1:many\); no single ortholog; one of these genes is its best human similarity hit$/,
       'G4 provenance: HGNC gene group id 10, linked as a group', $p->('G4'));
 check(($source{G5}[1] // '') eq 'Similar to human DELTA along its length: reciprocal best hit, 95% of this protein and 95% of DELTA aligned, E=1e-50 (MMseqs2)'
-      && ($source{G5}[2] // '') eq '5', 'G5 provenance: coverage and E-value, step 5', $p->('G5'));
-check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '6'
+      && ($source{G5}[2] // '') eq '6', 'G5 provenance: coverage and E-value, step 6', $p->('G5'));
+check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '7'
       && ($source{G6}[1] // '') eq 'Member of PANTHER family PTHR00006 ("WIDGET PROTEIN SMC", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
-      'G6 provenance: PANTHER family, model coverage, step 6', $p->('G6'));
+      'G6 provenance: PANTHER family, model coverage, step 7', $p->('G6'));
 check(($source{G30}[1] // '') eq 'Member of PANTHER family PTHR00030 ("CEREBELLIN-RELATED", InterPro\'s name "Cerebellin Synaptic Organizer" describes a function, not the family): 95% of the family model aligned, E=1e-40 (InterProScan)',
       'G30 provenance: why InterPro\'s name was not used', $p->('G30'));
 check(($source{G10}[1] // '') eq 'Member of PANTHER family PTHR00010 (InterPro IPR000010 "Gadget family"): 96% of the family model aligned, E=1e-60 (InterProScan)',
       'G10 provenance: InterPro name, merged model coverage', $p->('G10'));
-check(($source{G7}[0] // '') eq 'IPR000002' && ($source{G7}[1] // '') =~ /\(SMART SM00002, E=1e-20\); no ortholog, full-length homolog or family to name it by$/ && ($source{G7}[2] // '') eq '7',
-      'G7 provenance: the chosen domain with its E-value, step 7', $p->('G7'));
+check(($source{G7}[0] // '') eq 'IPR000002' && ($source{G7}[1] // '') =~ /\(SMART SM00002, E=1e-20\); no ortholog, full-length homolog or family to name it by$/ && ($source{G7}[2] // '') eq '8',
+      'G7 provenance: the chosen domain with its E-value, step 8', $p->('G7'));
 check(scalar(($source{G11}[1] // '') =~ /; similar to human DELTA over part of its length only \(30% of this protein, 60% of DELTA, E=1e-12\)$/),
       'G11 provenance: the partial human homolog is stated, not denied', $p->('G11'));
 check(scalar(($source{G13}[1] // '') =~ /; one of these genes is its best human similarity hit/), 'G13 provenance: support of a family is said of "one of these genes"', $p->('G13'));
@@ -363,7 +395,11 @@ check(($source{G13}[3] // '') eq 'hgnc_group' && ($source{G13}[0] // '') eq '30'
       'G13 provenance: pairwise 1:1 vs HOG, named for the group', $p->('G13'));
 check(($source{G14}[0] // '') eq 'HGNC:8' && ($source{G14}[1] // '') =~ /ANO1, ANO2 score within 5% of each other, and only ANO2 is a reciprocal best hit$/,
       'G14 provenance: the tie and what decided it', $p->('G14'));
-check(($source{G15}[0] // '') eq '21' && ($source{G15}[2] // '') eq '5', 'G15 provenance: HGNC group 21, step 5', $p->('G15'));
+check(($source{G15}[0] // '') eq '21' && ($source{G15}[2] // '') eq '6', 'G15 provenance: HGNC group 21, step 6', $p->('G15'));
+check(($source{G31}[0] // '') eq 'HGNC:6' && ($source{G31}[2] // '') eq '5'
+      && scalar(($source{G31}[1] // '') =~ /^Ortholog of human EPS by its place on the PANTHER family tree: TreeGrafter places it with human EPS \(ortholog_1: joins at a speciation node, Bilateria \(grafted inside another lineage, moved up to this one\); PANTHER PTHR00031:SF1 E=1e-50, 90% of the protein, 85% of the family model\); and EPS is also its closest human gene by similarity/),
+      'G31 provenance: the tree placement and the agreeing closest human, step 5', $p->('G31'));
+check(scalar(($source{G34}[1] // '') =~ /; but TreeGrafter places it with human THETA \(ortholog_1/), 'G34 provenance: the tree\'s dissent is stated', $p->('G34'));
 check(($source{G17}[3] // '') eq 'pfam' && ($source{G17}[2] // '') eq '4', 'G17 provenance: a transposable element is step 4', $p->('G17'));
 check(!exists $source{G8} && !exists $source{G12} && !exists $source{G16}, 'unnamed genes have no provenance row');
 check(($source{G18}[3] // '') eq 'pfam' && ($source{G18}[0] // '') eq 'PF13359'

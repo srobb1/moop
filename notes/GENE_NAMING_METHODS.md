@@ -51,13 +51,14 @@ the tables in §2 refer to positions in these lists.
 | OMA pairwise orthologs | OMA standalone 2.7.0, 10-species template (§2.1) | closest human tier 1; naming step 3; closest other species |
 | OMA hierarchical orthologous groups (HOGs) | same run; only when `parameters.drw` fixes a species tree | closest human tier 2; co-ortholog families (§5, step 3) |
 | OMA orthologs of reference species | same run | closest human tier 4 |
-| MMseqs2 reciprocal best hits (RBH) | `mmseqs easy-rbh` (commit 7e28409), defaults, against every protein of the Ensembl proteomes | closest human tiers 3–4; naming step 5; support of OMA names |
-| DIAMOND hits | DIAMOND 2.1.6 `blastp --ultra-sensitive`, E ≤ 1e-5, 17-column output with query and subject coverage; against Ensembl human (all isoforms) and UniProtKB/Swiss-Prot **[TODO: production `--max-target-seqs`: 50 for human, 5 otherwise]** | closest human tiers 5–7; naming step 5; support of OMA names |
+| MMseqs2 reciprocal best hits (RBH) | `mmseqs easy-rbh` (commit 7e28409), defaults, against every protein of the Ensembl proteomes | closest human tiers 3–4; naming step 6; support of OMA names |
+| DIAMOND hits | DIAMOND 2.1.6 `blastp --ultra-sensitive`, E ≤ 1e-5, 17-column output with query and subject coverage; against Ensembl human (all isoforms) and UniProtKB/Swiss-Prot **[TODO: production `--max-target-seqs`: 50 for human, 5 otherwise]** | closest human tiers 5–7; naming step 6; support of OMA names |
 | Ensembl Compara homologies | same Ensembl release as the proteome hit | closest human tiers 4 and 6 |
 | UniProtKB/Swiss-Prot cross-references | Ensembl gene, HGNC id and PANTHER family and subfamily per entry | closest human tiers 6–7; PANTHER family of each human gene (support of OMA names) |
-| PANTHER | PANTHER 19.0 family HMMs, via InterProScan 5.78-109.0 (the gene set's own results); family model lengths from the same release's HMM file | naming step 6; support of OMA names |
-| InterPro domains, repeats | the gene set's InterProScan results + InterPro `entry.list` (entry types and names) | naming step 7; repeat-built families (step 6) |
+| PANTHER | PANTHER 19.0 family HMMs, via InterProScan 5.78-109.0 (the gene set's own results); family model lengths from the same release's HMM file | naming step 7; support of OMA names |
+| InterPro domains, repeats | the gene set's InterProScan results + InterPro `entry.list` (entry types and names) | naming step 8; repeat-built families (step 7) |
 | Pfam transposable-element domains | the gene set's InterProScan results (Pfam, as shipped with InterProScan 5.78) | transposable-element names (§5, step 4) |
+| PANTHER tree placements | TreeGrafter graft points from the gene set's InterProScan JSON, traced on PANTHER 19.0's TreeGrafter data (family trees with speciation/duplication events; `scripts/panther_placements.py`), with the species' NCBI lineage (`ncbi-taxon-id` in metadata.yaml) | naming step 5; `tree+`/`treeC` support of OMA and `-like` names |
 | HGNC | complete set + withdrawn ids | all human symbols, approved names and gene groups |
 | NCBI Taxonomy | GenBank common names | species of other-species hits (evidence only; no name comes from another species) |
 
@@ -96,9 +97,9 @@ columns is not used at all.
 
 | Filter | E-value | Query and target coverage | Used for |
 |---|---|---|---|
-| **support** | ≤ 1e-5 | any | which human gene a protein is most similar to (§5, step 5); support of OMA names (§5.2) |
+| **support** | ≤ 1e-5 | any | which human gene a protein is most similar to (§5, step 6); support of OMA names (§5.2) |
 | **normal** | ≤ 1e-10 | each ≥ 50% | evidence for the closest human gene (§6) |
-| **full-length** | ≤ 1e-10 | each ≥ 80% | a `-like` name (§5, step 5) |
+| **full-length** | ≤ 1e-10 | each ≥ 80% | a `-like` name (§5, step 6) |
 
 **Human genes are compared by identity, never by name text.** Every human hit is resolved to
 its HGNC record — by HGNC id, then Ensembl gene id, then UniProt accession, following
@@ -196,9 +197,10 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
 | 2 | **Naming species** (optional, per gene set) | its OMA 1:1 or many:1 ortholog, else its hits file; informative | `NAME` for another annotation of the same species; otherwise `NAME-like (label)` | `SRC` / `ISO` / `ISS` |
 | 3 | **OMA orthology to human** | closest human gene from OMA (§6, tier 1 or 2), supported (§5.2) | see below | `ISO` |
 | 4 | **Transposable element** | a transposable-element Pfam domain (see below) | `<class> transposase domain-containing protein` | `ISM\|te` |
-| 5 | **Full-length human similarity** | see below | `SYMBOL-like: approved name-like`, or `<HGNC group> family member` | `ISS` |
-| 6 | **PANTHER family** | the match covers ≥ 80% of the family's model; informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
-| 7 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
+| 5 | **PANTHER tree placement** | a trusted placement joins the gene to exactly one human gene at a speciation node, and that gene is also its closest human gene by similarity (§6, tiers 3–5) | `SYMBOL: approved name` | `ISO\|tree` |
+| 6 | **Full-length human similarity** | see below | `SYMBOL-like: approved name-like`, or `<HGNC group> family member` | `ISS` |
+| 7 | **PANTHER family** | the match covers ≥ 80% of the family's model; informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
+| 8 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
 | – | — | nothing above | `None` (the gene keeps its own transcript id as name and description) | — |
 
 The steps are tried in this order; the step number is the Score of the Gene Name Source table.
@@ -219,7 +221,7 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   covers ≥ 50% of the family's model, or it has a full-length hit (§3) to one of the human members
   (model coverage from the InterProScan TSV counts protein residues against the model's length and
   underestimates short or compact members: ACBP 35%, yet 99%/100% to DBI); failing that, the gene
-  goes directly to step 6 — not to step 5, which would pick a member by score after all. In
+  goes directly to step 7 — not to steps 5 or 6, which would pick one member after all. In
   *C. kusceri* the whole-member condition removed 24 family names, mostly Sushi-domain proteins
   and fragments (a collagen piece hitting 18% of COL1A2), which are then named by their domain.
 - **Which HGNC groups are families.** HGNC groups are also made by a shared domain (`EF-hand
@@ -237,7 +239,7 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   two genes in PANTHER, or with no Swiss-Prot data, cannot be judged and is used. Known edge
   case: RAB GTPases (0.26) are one family, but PANTHER splits them into many small families; RAB
   genes are named by their PANTHER family instead. The same rule applies to paralog ties
-  (step 5) and to the closest-human family label (§6.2).
+  (step 6) and to the closest-human family label (§6.2).
 - **Pairwise 1:1, HOG several.** OMA's pairwise file can pair a gene 1:1 with one human copy of
   a vertebrate duplication (HDAC1 of HDAC1/HDAC2) while OMA's HOG, computed on the fixed
   species tree, makes it co-ortholog of every copy. The HOG is then the more complete call: the
@@ -277,7 +279,31 @@ transcriptase alone (telomerase has one), and RNase H-like domains Pfam names af
 domesticated human genes (PF14291 ZMYM1/FAM200, PF27041 ZBED1), which Pfam does not describe as
 transposases.
 
-**Step 5 — full-length human similarity.** Human genes are compared by identity and
+**Step 5 — PANTHER tree placement.** InterProScan's PANTHER step runs TreeGrafter, which
+places each protein on its PANTHER family tree (the graft point, in the JSON output only).
+`scripts/panther_placements.py` traces the graft point on PANTHER's own trees to the human genes:
+where the protein joins the human lineage, a **speciation** node makes those human genes its
+orthologs (one gene: `ortholog_1`; several, from a duplication on the human side: `co-orthologs`),
+a **duplication** node makes them paralogs (`paralog_family`). PANTHER holds few invertebrates, so
+TreeGrafter often grafts an invertebrate protein inside a lineage it cannot belong to (a mollusc
+protein on a deuterostome or *Xenopus* node: about half of the *C. kusceri* placements); such a
+graft is moved up to the first speciation node of the species' own lineage (NCBI taxonomy),
+which can only add human genes, never narrow them. A placement is **trusted** only when its
+PANTHER match has E ≤ 1e-10 and covers ≥ 50% of both the protein and the family model.
+
+The tree names a gene only when a trusted placement gives exactly one human ortholog **and** that
+gene is also the gene's closest human gene by similarity (MMseqs2 RBH, orthology via another
+species, or the DIAMOND best hit: §6, tiers 3–5) — two independent methods on one gene, so the
+name is plain, as for OMA. Like step 6, it is skipped after an OMA co-ortholog family that step 3
+could not name. Elsewhere the tree is one vote: on OMA and `-like` names it adds `tree+` (it
+places the gene with the named human gene) or `treeC` (with other human genes), and never changes
+the name. On a 3,235-protein *C. kusceri* sample: trusted placements put the gene with OMA's named
+gene 215 times out of 221; the step named 78 genes (63 previously a PANTHER family name, 9 a
+`-like` name, 5 a domain, 1 none), and `tree+`/`treeC` marked 749/20 OMA and 57/8 `-like` names.
+The disagreements with OMA (AQP8 → AQP1/2/4/5/6/MIP, PSMB4 → PSMB1) look like tree misplacements
+more often than OMA errors, which is why the tree does not overrule OMA.
+
+**Step 6 — full-length human similarity.** Human genes are compared by identity and
 bitscore (§3).
 1. **The top human hit names the gene only if all of these are true:**
    - it is the human gene with the highest bitscore (the top hit);
@@ -287,7 +313,7 @@ bitscore (§3).
    - its name passes the informative-name test (§4).
 
    If all are true, the gene is named after that human gene with `-like` appended. If any
-   one is false, step 5 gives no name and naming moves on to the next step (PANTHER family).
+   one is false, step 6 gives no name and naming moves on to the next step (PANTHER family).
    A weaker hit further down the list is never used instead — not when the top hit is
    partial, and not when the top hit's name is uninformative but a weaker hit has a better
    one: the weaker gene is not the one this protein is most like. Example: a protein whose
@@ -298,17 +324,17 @@ bitscore (§3).
    (tag `tie-rbh`); otherwise the tied genes' shared HGNC group names the gene
    (`Heat shock 70kDa proteins family member`, tag `tie-grp`) if that group is a family by
    descent (step 3), else the PANTHER family they all belong to and the gene matches; otherwise
-   step 5 gives no name.
+   step 6 gives no name.
 3. The name is **always** `-like`, reciprocal or not: sequence similarity, even reciprocal, is
    not an orthology call (§9). The symbol is the human gene's HGNC symbol, or none; it is
    never taken from another gene.
 
-**Step 6 — PANTHER family.** A family names the gene only when the gene's PANTHER match covers
+**Step 7 — PANTHER family.** A family names the gene only when the gene's PANTHER match covers
 ≥ 80% of the family's HMM (model coverage: the protein residues in the family's match
 regions, merged, over the model length). Protein coverage is not required: a multidomain
 protein that contains the whole family model is a member. Below the threshold the match is
 usually one shared domain (a SET domain matching the KMT5A family at 38% of its model), which
-step 7 names honestly. Among qualifying families the lowest E-value wins. The name is
+step 8 names honestly. Among qualifying families the lowest E-value wins. The name is
 InterPro's curated name when the family is integrated into an InterPro *Family* entry
 (`BONUS, ISOFORM C-RELATED` → `TRIM45/56/19-like`), else PANTHER's own name, cleaned (§4) —
 except when InterPro's name describes a function or a process rather than naming a family
@@ -319,7 +345,7 @@ Antiviral Defense Nuclease`). Such names carry roles known from other organisms,
 vertebrates; PANTHER's own name is used instead when it is informative (`Cerebellin-related`,
 `Serum amyloid A`, `ATP/GTP phosphatase`), and the provenance says why. In *C. kusceri* this
 changed 97 names. The same label choice applies wherever a PANTHER family names a gene (step 3
-co-ortholog families, step 5 ties).
+co-ortholog families, step 6 ties).
 **Repeat-built families:** when repeat units (InterPro *Repeat* entries, and the C2H2 zinc
 finger, which InterPro types as a *Domain*) cover ≥ 25% of the family match, model coverage
 says nothing — any protein with such repeats fills the model (a mollusc C2H2 protein fills
@@ -327,9 +353,9 @@ says nothing — any protein with such repeats fills the model (a mollusc C2H2 p
 named for the repeat covering most of the match instead (`Zinc finger C2H2-type
 domain-containing protein`, tag `rpt`).
 
-**Step 7 — InterPro domain.** The name states the one thing known: a domain. This is
+**Step 8 — InterPro domain.** The name states the one thing known: a domain. This is
 UniProt's convention for such proteins (`SET domain-containing protein`). Only InterPro
-entries of type *Domain* or *Repeat* are used (families are step 6; homologous superfamilies
+entries of type *Domain* or *Repeat* are used (families are step 7; homologous superfamilies
 are too broad; sites are not domains), and not entries of unknown function (DUF, UPF,
 uncharacterised). Every match InterProScan reports has already passed its member database's
 curated threshold (Pfam's per-family gathering thresholds, SMART, CDD, PROSITE profiles); no
@@ -356,9 +382,9 @@ the same thing wherever it appears:
 
 | Mark | Meaning | Tags |
 |---|---|---|
-| `+` | agrees | `sim+` (the named human gene is the best human similarity hit), `pthr+` (same PANTHER family) |
+| `+` | agrees | `sim+` (the named human gene is the best human similarity hit), `pthr+` (same PANTHER family), `tree+` (the PANTHER tree places it with the named gene) |
 | `~` | partly: similar, but not the best | `sim~` (the named gene is a hit, another human gene scores higher) |
-| `C` | contradicts: the evidence points elsewhere | `pthrC` (a different PANTHER family), `omaC` (an OMA name withheld: `sim~` and `pthrC` together) |
+| `C` | contradicts: the evidence points elsewhere | `pthrC` (a different PANTHER family), `treeC` (the PANTHER tree places it with other human genes), `omaC` (an OMA name withheld: `sim~` and `pthrC` together) |
 | `-` | no evidence | `sim-` (no similarity hit to the named gene) |
 | `X` | excluded: set aside | `omaX` (an OMA pair nothing supports) |
 
@@ -378,6 +404,7 @@ contains no colon. The full reasoning is in the Gene Name Source table (§7).
 | `TAS` | human-curated name |
 | `SRC` | the gene set's own name, or another annotation of the same species |
 | `1to1`, `Nto1`, `mto1`, `fam` | OMA relationship: one-to-one; N genes of this gene set share the human gene; many-to-one; co-ortholog family |
+| `tree` (on `ISO`) | orthology from the PANTHER tree placement (step 5), followed by how the closest human gene agrees: `rbh`, `via` (another species' ortholog) or `bh` |
 | `rbh`, `bh` | the `-like` hit is a reciprocal best hit, or a best hit |
 | `tie-rbh`, `tie-grp` | a paralog tie decided by a reciprocal best hit, or named for the group |
 | `pthr`, `rpt`, `ipr`, `te` | PANTHER family; repeat-built family; InterPro domain; transposable element |
@@ -387,6 +414,7 @@ contains no colon. The full reasoning is in the Gene Name Source table (§7).
 | `te` (on `ISO`) | the ortholog carries a transposable-element domain |
 | `omaX` | an OMA human ortholog was set aside for lack of support (§5.2) |
 | `omaC` | an OMA name was withheld: best human hit another gene and a different PANTHER family (§5.2) |
+| `tree+`, `treeC` | a trusted PANTHER tree placement puts the gene with the named human gene / with other human genes (step 5) |
 
 ### 5.2 Support of OMA calls
 
@@ -498,11 +526,11 @@ made by the ordering rules above, never by the order in which data were read (ve
 running with different Perl hash seeds). Per-gene-set inputs (curated names, closest
 species, a naming species) are declared in `geneset_config.yaml`, which is version-controlled
 with the code. Reference data (HGNC, Ensembl Compara, UniProt, NCBI Taxonomy, InterPro entry
-list, PANTHER model lengths) are fetched and versioned by `update_reference_data.sh`.
+list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versioned by `update_reference_data.sh`.
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
-synthetic gene set of 30 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 88 checks), run on every change to the code. Each rule was also
+synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
+provenance and closest genes, plus checks of the informative-name rules; 95 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 
