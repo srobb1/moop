@@ -174,6 +174,7 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr=]` (full list in �
   - `hog` — OMA's **H**ierarchical **O**rthologous **G**roup agrees
   - `te` (on an `ISO` name) — the ortholog carries a **t**ransposable-**e**lement domain
   - `omaX` — an **OMA** ortholog was e**x**cluded (set aside: nothing supported it)
+  - `omaC` — an **OMA** name was withheld: the evidence **c**onflicts with it (best human hit another gene, and a different PANTHER family)
 
 | Step | Source | Condition | Name form | Tag |
 |---|---|---|---|---|
@@ -209,6 +210,9 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   gene is treated as a co-ortholog family, as above.
 - **Supported OMA calls only** (§5.2). An OMA human ortholog that no other evidence backs is
   set aside; the next step names the gene, and its tag carries `omaX`.
+- **Conflicting OMA calls are not used for the name** (§5.2). When the gene's best human
+  similarity hit is another gene **and** its PANTHER family differs from the named gene's, the
+  OMA name is withheld; the next step names the gene, and its tag carries `omaC`.
 
 **Step 4 — transposable elements.** A gene with the catalytic or signature domain of a
 transposable element (a Pfam match InterProScan reports, i.e. past Pfam's own threshold; table
@@ -216,7 +220,10 @@ below) is named for its element class. It comes before the similarity and family
 would otherwise name a transposon after a human gene domesticated from such an element
 (`HARBI1-like`) or after a PANTHER family. It replaces an OMA name only when OMA pairs ≥ 5 genes of this gene
 set with the same human gene (many:1): a transposon family next to one domesticated human
-gene. A 1:1 OMA ortholog carrying such a domain keeps its OMA name and is flagged `te`.
+gene. The threshold of 5 was chosen by inspecting *C. kusceri* and is otherwise arbitrary: it
+catches some transposon families, not all, and those it catches get a cleaner name; a genuine
+lineage expansion of a domesticated gene with ≥ 5 copies would be named as a transposon. A 1:1
+OMA ortholog carrying such a domain keeps its OMA name and is flagged `te`.
 
 | Pfam | Pfam name | Class | Name |
 |---|---|---|---|
@@ -319,6 +326,7 @@ contains no colon. The full reasoning is in the Gene Name Source table (§7).
 | `hog` | OMA's HOG agrees with the call |
 | `te` (on `ISO`) | the ortholog carries a transposable-element domain |
 | `omaX` | an OMA human ortholog was set aside for lack of support (§5.2) |
+| `omaC` | an OMA name was withheld: best human hit another gene and a different PANTHER family (§5.2) |
 
 ### 5.2 Support of OMA calls
 
@@ -339,7 +347,29 @@ the next evidence decides, the name's tag carries `omaX`, and the provenance nam
 The pair remains in the database's OMA ortholog tables. When no human similarity search was
 run, OMA calls cannot be checked and are used as they are.
 
+**Conflicting evidence.** Support removes calls nothing backs, but hidden paralogy passes it:
+paralogs share domains and PANTHER families. Two checks that OMA does not use can each speak
+*against* a call: the gene's best human similarity hit is another gene (`sim~`), and its PANTHER
+family differs from the named gene's (`pthrX`). Each alone is common and weak — a close paralog
+can outscore the ortholog, and PANTHER families are split and renamed between releases (in
+*C. kusceri*, withholding names on either one alone changed 700 names, many of them sound). Both
+together are the signature of hidden paralogy or of an OMA pair made through a shared repeat or
+domain, and the OMA name is then withheld: 136 of 43,768 *C. kusceri* names (97 single genes,
+39 families), mostly repeat- and domain-rich proteins — 18 copies paired many:1 with APOH, and
+selectins, matrilins and cadherins paired through Sushi, vWA and cadherin domains — which the
+next steps name by their domain or family. The closest human gene stays the OMA partner (OMA did
+make the call); the name's provenance states the conflict.
+
 ## 6. Closest gene
+
+**Definition.** The closest human gene is the human gene most closely related to this gene by
+the strongest evidence available. It is an **ortholog only at tiers 1–2** (OMA's pairwise and
+hierarchical orthology calls). Lower tiers report the closest relative found by other means — a
+reciprocal best hit (tier 3), orthology through another species (tier 4), or similarity (tiers
+5–7) — and are not orthology calls; the evidence column says which. Orthology is not transitive:
+a tier-4 chain through a 1:many or many:1 link can reach a paralog, and its evidence shows the
+link types. (Restricting tier 4 to 1:1 chains was tested on *C. kusceri*: of 2,046 genes with a
+tier-4 closest human, 574 would have none at all, so tier 4 is kept and labelled.)
 
 ### 6.1 Closest human gene — tiers (the tier is the score in the database table)
 
@@ -347,7 +377,7 @@ run, OMA calls cannot be checked and are used as they are.
 |---|---|
 | 1 | OMA pairwise ortholog to HUMAN (supported, §5.2) |
 | 2 | OMA HOG co-ortholog with HUMAN (only when the OMA run fixes a species tree; supported) |
-| 3 | MMseqs2 reciprocal best hit to the Ensembl human proteome (normal filter, §3) |
+| 3 | MMseqs2 reciprocal best hit to the Ensembl human proteome (normal filter, §3); not an orthology call |
 | 4 | via another species: OMA ortholog in a reference species → that species' OMA human ortholog; or MMseqs2 RBH to an Ensembl species → its Ensembl Compara human ortholog |
 | 5 | DIAMOND best hit to a human protein (Ensembl human, or a human Swiss-Prot entry; normal filter, §3) |
 | 6 | DIAMOND Swiss-Prot hit in another species → its Ensembl gene → Ensembl Compara human ortholog |
@@ -410,8 +440,8 @@ with the code. Reference data (HGNC, Ensembl Compara, UniProt, NCBI Taxonomy, In
 list, PANTHER model lengths) are fetched and versioned by `update_reference_data.sh`.
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
-synthetic gene set of 25 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 68 checks), run on every change to the code. Each rule was also
+synthetic gene set of 26 genes, each made to hit one rule, asserting the exact name, tag,
+provenance and closest genes, plus checks of the informative-name rules; 72 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

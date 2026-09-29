@@ -37,11 +37,11 @@ sub write_file {
   close $fh;
 }
 
-# ---- the gene set: one protein per gene, G1..G25 (G2/G3 are two copies of one human gene; G18-G22 five)
+# ---- the gene set: one protein per gene, G1..G26 (G2/G3 are two copies of one human gene; G18-G22 five)
 my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, T7 => 200, T8 => 150, T9 => 120,
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
-              T25 => 250);
+              T25 => 250, T26 => 300);
 write_file("$dir/isoforms.tsv", join('', map { my $n = substr($_, 1); "$_.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { ">$_.1\n" . ('M' x $length{$_}) . "\n" } sort keys %length));
 
@@ -63,18 +63,22 @@ write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name 
   ['HGNC:14', 'HDA2', 'histone deacetylase 2', 'Class I HDACs', '30', 'ENSG14', '', ''],
   ['HGNC:15', 'HARB1', 'harbinger transposase derived 1', '', '', 'ENSG15', '', ''],
   ['HGNC:16', 'CENPQ', 'centromere protein Q', '', '', 'ENSG16', '', ''],
+  ['HGNC:17', 'ZETA', 'zeta ligase', '', '', 'ENSG17', '', ''],
+  ['HGNC:18', 'THETA', 'theta ligase', '', '', 'ENSG18', '', ''],
 ));
 # ---- Swiss-Prot cross-references: the PANTHER families of human genes (orthology support)
 my $xrefs = join("\t", qw(accession taxid gene_name hgnc_ids ensembl_genes ensembl_proteins panther_ids secondary_accessions)) . "\n"
   . "P00001\t9606\tALPHA\tHGNC:1\tENSG01\tENSP01\tPTHR00001:SF3\t\n"
-  . "P00004\t9606\tGAMMA\tHGNC:4\tENSG04\tENSP04\tPTHR00004\t\n";
+  . "P00004\t9606\tGAMMA\tHGNC:4\tENSG04\tENSP04\tPTHR00004\t\n"
+  . "P00017\t9606\tZETA\tHGNC:17\tENSG17\tENSP17\tPTHR00017\t\n";
 system('mkdir', '-p', "$dir/uniprot") == 0 or die;
 gzip(\$xrefs => "$dir/uniprot/sprot_xrefs.tsv.gz") or die $GzipError;
 
 # ---- OMA: pairwise orthologs to HUMAN (1:1, many:1, 1:many) and to NEMVE
 my $human = sub { my ($n) = @_; my %name = (1 => 'alpha synthase', 2 => 'beta protein 1', 3 => 'beta protein 2', 4 => 'gamma transferase',
                                             13 => 'histone deacetylase 1', 14 => 'histone deacetylase 2',
-                                            15 => 'harbinger transposase derived 1', 16 => 'centromere protein Q', 6 => 'epsilon protein');
+                                            15 => 'harbinger transposase derived 1', 16 => 'centromere protein Q', 6 => 'epsilon protein',
+                                            17 => 'zeta ligase');
   return "HUMAN0000$n | ENSP0$n | ENSG0$n | $name{$n} [Source:HGNC Symbol;Acc:HGNC:$n]" };
 write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { join("\t", @$_) . "\n" }
   [1, 1, 'T1.1', $human->(1), '1:1'],
@@ -89,6 +93,8 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { jo
   [23, 16, 'T23.1', $human->(16), '1:1'],
   # T25: an OMA 1:1 pair to EPS that nothing else supports (no similarity, no PANTHER family) -> set aside
   [25, 6, 'T25.1', $human->(6), '1:1'],
+  # T26: an OMA 1:1 pair to ZETA with both checks against it (best hit THETA, another PANTHER family) -> withheld
+  [26, 17, 'T26.1', $human->(17), '1:1'],
 ));
 write_file("$dir/oma/Output/PairwiseOrthologs/TEST-NEMVE.txt", join('', map { join("\t", @$_) . "\n" }
   [1, 11, 'T1.1', 'NEMVE00011 | XP_000011.1 | LOC11 | anemone alpha', '1:1'],
@@ -152,7 +158,10 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   . $dhit->('T15', '09', 'KAPPA1', 'kappa channel 1', '1e-90', 300, 300, 300, 95, 95)
   . $dhit->('T15', '10', 'KAPPA2', 'kappa channel 2', '1e-88', 295, 300, 300, 95, 95)
   . $dhit->('T16', '11', 'WDR90', 'WD repeat domain 90', '1e-160', 562, 200, 700, 90, 30)
-  . $dhit->('T16', '12', 'CFAP52', 'cilia and flagella associated protein 52', '1e-30', 119, 200, 210, 85, 85));
+  . $dhit->('T16', '12', 'CFAP52', 'cilia and flagella associated protein 52', '1e-30', 119, 200, 210, 85, 85)
+  # T26: THETA full-length and far the best (400 bits); its OMA partner ZETA only over part (150)
+  . $dhit->('T26', '18', 'THETA', 'theta ligase', '1e-120', 400, 300, 300, 95, 95)
+  . $dhit->('T26', '17', 'ZETA', 'zeta ligase', '1e-30', 150, 300, 300, 40, 45));
 
 # ---- InterProScan TSV (PANTHER families and InterPro domains), InterPro entry list, PANTHER model lengths
 # PANTHER names a gene only when its match covers >= 80% of the family model:
@@ -193,6 +202,8 @@ write_file("$dir/iprscan.tsv", join('',
   $row->('T24', 200, 'PANTHER', 'PTHR00024', 'KRAB AND ZINC FINGER DOMAIN-CONTAINING', 1, 190, '1.0E-40', '-', '-'),
   # T25: its unsupported OMA pair is set aside; its kinase domain names it
   $row->('T25', 250, 'Pfam',    'PF00001',   'kinase',           10, 200, '1.0E-30', 'IPR000001', 'Kinase domain'),
+  # T26: in PTHR00018, not ZETA's PTHR00017 (a partial match, so it does not name T26 itself)
+  $row->('T26', 300, 'PANTHER', 'PTHR00018', 'THETA LIGASE',     1,  60,  '1.0E-20', '-', '-'),
   (map { $row->('T24', 200, 'SMART', 'SM00355', 'ZnF_C2H2', $_, $_ + 20, '1.0E-3', 'IPR013087', 'Zinc finger C2H2-type') } 20, 60, 100, 140),
 ));
 write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDomain\tKinase domain\n"
@@ -202,7 +213,7 @@ write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDoma
   . "IPR027806\tDomain\tHarbinger transposase-derived nuclease domain\n");
 write_file("$dir/hmm_lengths.tsv", join('', map { "$_->[0]\t$_->[1]\n" }
   ['PTHR00006', 100], ['PTHR00007', 200], ['PTHR00009', 120], ['PTHR00010', 250], ['PTHR00011', 200], ['PTHR00012', 150],
-  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200]));
+  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300]));
 
 # ---- run it (twice, with different hash seeds: the output must not depend on hash order)
 my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/protein.aa.fa", '--hgnc-dir', "$dir/hgnc",
@@ -254,6 +265,7 @@ my %expect = (
   G23 => ['CENPQ: centromere protein Q [ISO|1to1|sim+|te]', 'a 1:1 OMA ortholog with a transposase domain keeps its name, flagged te'],
   G25 => ['Kinase domain-containing protein [ISM|ipr|omaX]', 'an OMA pair nothing supports is set aside (omaX); the next evidence names it'],
   G24 => ['Zinc finger C2H2-type domain-containing protein [ISM|rpt]', 'a PANTHER family match that is 44% C2H2 repeats -> named for the repeat, not "KRAB"'],
+  G26 => ['THETA-like: theta ligase-like [ISS|bh|omaC]', 'OMA 1:1 to ZETA, but the best hit is THETA and the PANTHER family differs -> withheld (omaC); the full-length THETA hit names it'],
 );
 foreach my $gene (sort { substr($a, 1) <=> substr($b, 1) } keys %expect) {
   check(($name{$gene} // '') eq $expect{$gene}[0], "$gene: $expect{$gene}[1]", $name{$gene});
@@ -271,6 +283,10 @@ check(($source{G2}[1] // '') eq 'Ortholog of human GAMMA (OMA, many:1), one of 2
       'G2 provenance: copy count, and each kind of support', $p->('G2'));
 check(scalar(($source{G25}[1] // '') =~ /; OMA pairs it with human EPS \(1:1\), but no similarity hit or PANTHER family supports that pair, so it does not name the gene$/),
       'G25 provenance: the set-aside OMA pair is stated', $p->('G25'));
+check(($source{G26}[0] // '') eq 'HGNC:18' && ($source{G26}[2] // '') eq '5'
+      && scalar(($source{G26}[1] // '') =~ /; OMA pairs it with human ZETA \(1:1\), but its best human similarity hit is THETA and its PANTHER family differs, so ZETA does not name it$/),
+      'G26 provenance: the withheld OMA pair and both reasons', $p->('G26'));
+check(($closest_human{G26}[2] // '') eq 'HGNC:17', 'closest human G26: still the OMA partner ZETA (OMA made that call)', join(' | ', @{$closest_human{G26} // []}));
 check(($source{G4}[3] // '') eq 'hgnc_group' && ($source{G4}[0] // '') eq '10'
       && ($source{G4}[1] // '') =~ /^Co-ortholog of 2 human genes in the HGNC group "Beta proteins" \(OMA, 1:many\); no single ortholog; one of these genes is its best human similarity hit$/,
       'G4 provenance: HGNC gene group id 10, linked as a group', $p->('G4'));

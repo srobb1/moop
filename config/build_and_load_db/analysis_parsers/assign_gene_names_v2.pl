@@ -185,6 +185,7 @@ my %gene_panther;     # group -> { PANTHER family => 1 }: every PANTHER match, a
 my %human_panther;    # HGNC id -> { PANTHER family => 1 } (Swiss-Prot human entries)
 my $human_searched = 0;   # a similarity search against human proteins was read (else "no hit" means nothing)
 my %unsupported_oma;      # group -> { humans, type }: an OMA human ortholog set aside (oma_supported)
+my %conflicting_oma;      # group -> { humans, type, best }: an OMA name withheld, both checks against it (oma_conflicts)
 my @pending_compara;  # links through another species' Ensembl gene, resolved in one Compara pass
 my %reference_fasta_cache;
 my (%panther, %domain, %curated, %transposon);
@@ -1506,6 +1507,14 @@ sub choose_name {
 # pair in its provenance
 sub set_aside_note {
   my ($group, $named) = @_;
+  if (my $conflict = $conflicting_oma{$group}) {
+    return $named unless $named->{tag} and $named->{origin};
+    my $humans = join('/', map { human_label($_) } @{$conflict->{humans}});
+    my $best = $conflict->{best} ? human_label($conflict->{best}) : 'another gene';
+    return { %$named, tag => [@{$named->{tag}}, 'omaC'],
+             origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . "; OMA pairs it with human $humans ($conflict->{type}), "
+                                                     . "but its best human similarity hit is $best and its PANTHER family differs, so $humans does not name it" } };
+  }
   my $set_aside = $unsupported_oma{$group} or return $named;
   return $named unless $named->{tag} and $named->{origin};
   my $humans = join('/', map { human_label($_) } @{$set_aside->{humans}});
@@ -1530,6 +1539,24 @@ sub oma_supported {
   return (grep { $human_families{$_} } keys %{$gene_panther{$group} // {}}) ? 1 : 0;
 }
 
+# An OMA name is withheld when both independent checks go against it: the gene's best human
+# similarity hit is ANOTHER gene (sim~) AND its PANTHER family differs from the named gene's
+# (pthrX). Each alone is common and weak -- a close paralog can outscore the ortholog, and PANTHER
+# families are split and renamed -- but together they are the signature of hidden paralogy
+# (each lineage kept a different copy of an old duplication) or of an OMA pair made through a
+# shared repeat or domain (Congeria: APOH x18, selectins, matrilins through Sushi / vWA domains).
+# The next step names the gene; the tag carries omaC and the provenance says why. The closest
+# human gene is left as OMA called it.
+sub oma_conflicts {
+  my ($group, $humans, $closest, $flags) = @_;
+  my %flag = map { my $flag = $_; ($flag => 1) } @$flags;
+  return 0 unless $flag{'sim~'} and $flag{'pthrX'};
+  my ($best) = ranked_human_hits($group);
+  $conflicting_oma{$group} = { humans => [@$humans], type => $closest->{type}, best => $best ? $best->[1]{human} : undef };
+  $stats{'OMA name withheld: best hit another gene and a different PANTHER family'}++;
+  return 1;
+}
+
 # the evidence tag every name ends with, GO-style: " [ISO|1to1|sim+|pthr=]" (no colon inside --
 # downstream, the text before a name's first colon is its symbol). The full reasoning is in the
 # Gene Name Source table; the tag is the short form a reader sees next to the name.
@@ -1540,6 +1567,8 @@ sub oma_supported {
 # support of an orthology name: sim+ its human gene is the best human similarity hit, sim~ a hit but
 # not the best, sim- no hit; pthr= / pthrX same / conflicting PANTHER family; hog OMA's HOG agrees.
 # sim~ on an ISM name: the gene has a human homolog, but only a partial one.
+# omaX: an OMA pair nothing supports was set aside; omaC: an OMA name was withheld because the best
+# human hit is another gene AND the PANTHER family differs (oma_conflicts).
 sub tagged {
   my ($named) = @_;
   return $named unless $named->{tag} and $named->{desc} ne 'None';
@@ -1653,6 +1682,7 @@ sub ortholog_name {
     # carries its name; how many copies share it is in the tag and the provenance
     my $copies = scalar keys %{$claimed_human{$human->{key}} // {}};
     my ($flags, $support) = oma_support($group, [$human], $closest);
+    return undef if oma_conflicts($group, [$human], $closest, $flags);
     my $rule = ($closest->{tier} == 1 ? 'Ortholog' : 'Co-ortholog') . " of human " . human_label($human)
              . " ($method, $closest->{type})" . ($copies > 1 ? ", one of $copies copies in this genome" : '') . $support;
     if (my $te = $transposon{$group}) {
@@ -1669,6 +1699,7 @@ sub ortholog_name {
   # No symbol: the symbol is what users search as the gene's identity, and a family has none.
   my $shared = shared_hgnc_group(\@humans) or return undef;
   my ($flags, $support) = oma_support($group, \@humans, $closest);
+  return undef if oma_conflicts($group, \@humans, $closest, $flags);
   my $why = $closest->{hog_family}
     ? "OMA pairs it $closest->{type} with human " . human_label($closest->{pairwise_human}) . ", but OMA's HOG makes it co-ortholog of "
       . scalar(@humans) . " human genes in the HGNC group \"$shared\" (copies duplicated on the human side after the two lineages split); named for the group"
