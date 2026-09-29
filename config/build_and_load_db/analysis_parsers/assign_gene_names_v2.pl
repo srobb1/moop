@@ -111,6 +111,13 @@ my $HGNC_GROUP_MIN_COHERENCE = 0.6;
 # model's length) underestimates short and compact members -- the TSV has no model coordinates --
 # so a full-length human hit also counts (ACBP: 35% of the model, 99%/100% to DBI).
 my $FAMILY_NAME_MIN_OWN_COVERAGE = 50;
+# InterPro's curated name for a PANTHER family is used before PANTHER's own ("TRIM45/56/19-like", not
+# "BONUS, ISOFORM C-RELATED") -- unless it describes a function or a process rather than naming a
+# family ("Complement & Cell Adhesion Regulators", "Cerebellin Synaptic Organizer", "Bacterial
+# Antiviral Defense Nuclease", "Synovial Proliferation Regulator" for serum amyloid A): such names
+# carry roles known from other organisms, often vertebrates. Then PANTHER's own name is used, if
+# informative ("Cerebellin-related", "Collagen alpha", "Serum amyloid A").
+my $FUNCTION_WORDS = qr/\b(?:Regulators?|Regulatory|Organi[sz]ers?|Organi[sz]ation|Assembly|Signal(?:l)?ing|Immunity|Immune|Development(?:al)?|Defen[cs]e|Roles?|Pathways?|Perception|Multifunctional|Diverse|Barrier|Stress|Proliferation|Biosynthetic|Modification|Apoptosis|Clearance|Associated)\b/;
 
 # ---- closest gene in a --closest-species species
 my %OMA_RANK = ('1:1' => 0, 'many:1' => 1, '1:many' => 2, 'many:many' => 3);
@@ -990,8 +997,9 @@ sub read_panther_families {
     $gene_panther{$group}{$family_only} = 1;
     # the family's label, for naming a co-ortholog family by it (shared_panther_family)
     my $family_entry = defined $match->{interpro} ? $entries->{$match->{interpro}} : undef;
-    $panther_label{$family_only} //= ($family_entry and $family_entry->{type} eq 'Family') ? $family_entry->{name}
-                                                                                           : panther_name($match->{description});
+    $panther_label{$family_only} //= ($family_entry and $family_entry->{type} eq 'Family'
+                                      and usable_interpro_family_name($family_entry->{name}, $match->{description}))
+                                   ? $family_entry->{name} : panther_name($match->{description});
     my $length = $model_length{$match->{family}};
     if (!$length) {
       $no_length++;
@@ -1015,7 +1023,13 @@ sub read_panther_families {
       }
     }
     my $entry = defined $match->{interpro} ? $entries->{$match->{interpro}} : undef;
-    $match->{interpro_name} = $entry->{name} if $entry and $entry->{type} eq 'Family';
+    if ($entry and $entry->{type} eq 'Family') {
+      if (usable_interpro_family_name($entry->{name}, $match->{description})) {
+        $match->{interpro_name} = $entry->{name};
+      } else {
+        $match->{interpro_set_aside} = $entry->{name};
+      }
+    }
     my $current = $best{$group};
     if (!$current or $match->{evalue} < $current->{evalue}
         or ($match->{evalue} == $current->{evalue}
@@ -1027,6 +1041,16 @@ sub read_panther_families {
   warn "WARNING: $no_length PANTHER matches have no model length in $lengths_file (a different PANTHER release?)\n"
     if $no_length;
   return %best;
+}
+
+# InterPro's Family name is used for a PANTHER family unless it describes a function or process
+# ($FUNCTION_WORDS) and PANTHER's own name is informative -- then PANTHER's is used instead
+sub usable_interpro_family_name {
+  my ($interpro_name, $panther_description) = @_;
+  return 1 unless $interpro_name =~ $FUNCTION_WORDS;
+  my $panther_own = panther_name($panther_description // '');
+  return 0 if is_informative_hit('', $panther_own, 'x');
+  return 1;
 }
 
 # residues covered by a list of [start, end] regions, overlaps counted once
@@ -1541,7 +1565,9 @@ sub choose_name {
     if (defined $family->{interpro_name} and is_informative_hit('', $family->{interpro_name}, $family->{interpro})) {
       ($label, $named_by) = ($family->{interpro_name}, "InterPro $family->{interpro} \"$family->{interpro_name}\"");
     } elsif (is_informative_hit('', panther_name($family->{description}), $family->{family})) {
-      ($label, $named_by) = (panther_name($family->{description}), "\"$family->{description}\", not in InterPro");
+      my $why = defined $family->{interpro_set_aside}
+        ? "InterPro's name \"$family->{interpro_set_aside}\" describes a function, not the family" : 'not in InterPro';
+      ($label, $named_by) = (panther_name($family->{description}), "\"$family->{description}\", $why");
     }
     if (defined $label) {
       $stats{'name: PANTHER family' . (defined $family->{interpro_name} && $label eq $family->{interpro_name} ? ' (InterPro name)' : ' (PANTHER name)')}++;
@@ -1869,7 +1895,7 @@ sub family_member {
 # ("LD39211P", "AGAP001331-PA-RELATED") are left for is_informative_hit to reject.
 sub panther_name {
   my ($name) = @_;
-  $name =~ s/,\s*ISOFORM\s+[A-Z0-9]+\b//gi;
+  $name =~ s/,\s*ISOFORM\s+[A-Z0-9_]+\b//gi;
   $name =~ s/(?:-RELATED)+/-RELATED/gi;
   $name =~ s/\s*\.$//;
   $name =~ s/\s+PRECURSOR$//i;

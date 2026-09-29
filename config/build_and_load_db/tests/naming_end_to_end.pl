@@ -37,11 +37,11 @@ sub write_file {
   close $fh;
 }
 
-# ---- the gene set: one protein per gene, G1..G29 (G2/G3 are two copies of one human gene; G18-G22 five)
+# ---- the gene set: one protein per gene, G1..G30 (G2/G3 are two copies of one human gene; G18-G22 five)
 my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, T7 => 200, T8 => 150, T9 => 120,
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
-              T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300);
+              T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200);
 write_file("$dir/isoforms.tsv", join('', map { my $n = substr($_, 1); "$_.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { ">$_.1\n" . ('M' x $length{$_}) . "\n" } sort keys %length));
 
@@ -242,6 +242,8 @@ write_file("$dir/iprscan.tsv", join('',
   # T29: in MIX3's family (PTHR00028), not MIX1's and MIX2's; its domain names it
   $row->('T29', 300, 'PANTHER', 'PTHR00028', 'COG PROTEIN',      1,  60,  '1.0E-20', '-', '-'),
   $row->('T29', 300, 'Pfam',    'PF00028',   'sprocket',         1,  60,  '1.0E-20', 'IPR000028', 'Sprocket domain'),
+  # T30: a family InterPro names by a function ("Synaptic Organizer") -> PANTHER's own name instead
+  $row->('T30', 200, 'PANTHER', 'PTHR00030', 'CEREBELLIN-RELATED', 1, 190, '1.0E-40', 'IPR000030', 'Cerebellin Synaptic Organizer'),
   (map { $row->('T24', 200, 'SMART', 'SM00355', 'ZnF_C2H2', $_, $_ + 20, '1.0E-3', 'IPR013087', 'Zinc finger C2H2-type') } 20, 60, 100, 140),
 ));
 write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDomain\tKinase domain\n"
@@ -249,10 +251,11 @@ write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDoma
   . "IPR000010\tFamily\tGadget family\nIPR001214\tDomain\tSET domain\n"
   . "IPR013087\tDomain\tZinc finger C2H2-type\nIPR000436\tDomain\tSushi/SCR/CCP domain\n"
   . "IPR027806\tDomain\tHarbinger transposase-derived nuclease domain\n"
-  . "IPR000028\tDomain\tSprocket domain\n");
+  . "IPR000028\tDomain\tSprocket domain\n"
+  . "IPR000030\tFamily\tCerebellin Synaptic Organizer\n");
 write_file("$dir/hmm_lengths.tsv", join('', map { "$_->[0]\t$_->[1]\n" }
   ['PTHR00006', 100], ['PTHR00007', 200], ['PTHR00009', 120], ['PTHR00010', 250], ['PTHR00011', 200], ['PTHR00012', 150],
-  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300]));
+  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300], ['PTHR00030', 200]));
 
 # ---- run it (twice, with different hash seeds: the output must not depend on hash order)
 my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/protein.aa.fa", '--hgnc-dir', "$dir/hgnc",
@@ -306,6 +309,7 @@ my %expect = (
   G24 => ['Zinc finger C2H2-type domain-containing protein [ISM|rpt]', 'a PANTHER family match that is 44% C2H2 repeats -> named for the repeat, not "KRAB"'],
   G27 => ['Sprocket protein family member [ISO|fam|sim+|pthr+]', 'OMA co-orthologs share only a scattered HGNC group (coherence 0.50) -> their shared PANTHER family names it'],
   G28 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'the same, but not a whole member (20% of the family model, only a partial human hit) -> not named for the family; its domain names it'],
+  G30 => ['Cerebellin-related family member [ISM|pthr]', 'InterPro names the family by a function ("Cerebellin Synaptic Organizer") -> PANTHER\'s own name'],
   G29 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'co-orthologs whose PANTHER family it is not in -> its domain names it'],
   G26 => ['THETA-like: theta ligase-like [ISS|bh|omaC]', 'OMA 1:1 to ZETA, but the best hit is THETA and the PANTHER family differs -> withheld (omaC); the full-length THETA hit names it'],
 );
@@ -345,6 +349,8 @@ check(($source{G5}[1] // '') eq 'Similar to human DELTA along its length: recipr
 check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '6'
       && ($source{G6}[1] // '') eq 'Member of PANTHER family PTHR00006 ("WIDGET PROTEIN SMC", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
       'G6 provenance: PANTHER family, model coverage, step 6', $p->('G6'));
+check(($source{G30}[1] // '') eq 'Member of PANTHER family PTHR00030 ("CEREBELLIN-RELATED", InterPro\'s name "Cerebellin Synaptic Organizer" describes a function, not the family): 95% of the family model aligned, E=1e-40 (InterProScan)',
+      'G30 provenance: why InterPro\'s name was not used', $p->('G30'));
 check(($source{G10}[1] // '') eq 'Member of PANTHER family PTHR00010 (InterPro IPR000010 "Gadget family"): 96% of the family model aligned, E=1e-60 (InterProScan)',
       'G10 provenance: InterPro name, merged model coverage', $p->('G10'));
 check(($source{G7}[0] // '') eq 'IPR000002' && ($source{G7}[1] // '') =~ /\(SMART SM00002, E=1e-20\); no ortholog, full-length homolog or family to name it by$/ && ($source{G7}[2] // '') eq '7',
@@ -413,6 +419,13 @@ check($differs == 0, 'identical output under two hash seeds', "$differs file(s) 
   check($informative->('UNCHARACTERIZED DUF1308') == 0, '"UNCHARACTERIZED DUF1308" is uninformative');
   check($informative->('UPF0462 PROTEIN') == 0, 'a UPF-only name is uninformative');
   check($informative->('regulator of nonsense transcripts 1') == 1, 'UPF1 (a real gene name) stays informative');
+  check($informative->('CDNA sequence BC048562') == 0, 'a mouse "cDNA sequence" clone name is uninformative');
+  check($informative->('RIKEN cDNA 1110002E22 gene') == 0, 'a RIKEN cDNA clone name is uninformative');
+  check($informative->('expressed sequence AI413582') == 0, 'an "expressed sequence" EST name is uninformative');
+  check($informative->('DNA segment, Chr 1, ERATO Doi 1') == 0, 'a "DNA segment" name is uninformative');
+  check($informative->('MCG131172, isoform CRA_a') == 0, 'a Celera MCG id is uninformative');
+  check($informative->('Binding oxidoreductase, putative (AFU_orthologue AFUA_1G17690)-related') == 0, 'an Aspergillus locus label is uninformative');
+  check($informative->('complementary DNA binding protein') == 1, 'a name that only mentions DNA stays informative');
 }
 
 print $failed ? "\n$failed FAILED, $passed passed\n" : "all $passed checks passed\n";

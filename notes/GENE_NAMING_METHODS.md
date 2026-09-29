@@ -129,8 +129,12 @@ placeholder symbol, has no letters or digits (PANTHER's `-`), or is another spec
 locus id: `protein` followed by a locus id (`PROTEIN CBG26694`, `PROTEIN CBR-CLEC-78`,
 `PROTEIN FAM167A`), a locus id followed by `protein` (`RGD1565685 PROTEIN`, `OS10G0105400
 PROTEIN-RELATED`), fly cDNA clones (`LD39211P`, `GEO02494P1`, `FI19922P1-RELATED`), mosquito
-and other locus ids (`AGAP001331-PA-RELATED`), `EG:114D9.1 PROTEIN-RELATED`. None of these
-patterns matches an HGNC approved symbol or name (checked September 2026).
+and other locus ids (`AGAP001331-PA-RELATED`), `EG:114D9.1 PROTEIN-RELATED`, mouse clone- and
+EST-based names (`cDNA sequence BC048562`, `RIKEN cDNA 1110002E22 gene`, `expressed sequence
+AI413582`, `DNA segment, Chr 1, …`), human cDNA clone labels (`cDNA FLJ12345 fis`), Celera mouse
+ids (`MCG131172, isoform CRA_a`) and *Aspergillus* locus labels (`… putative (AFU_orthologue
+AFUA_1G17690)`). None of these patterns matches an HGNC approved symbol or name (all 45,083
+approved names checked, September 2026).
 
 A family or PANTHER name never contains a colon (`DUMPY: SHORTER THAN WILD-TYPE` becomes
 `DUMPY - SHORTER THAN WILD-TYPE`): downstream, the text before a name's first colon is read as
@@ -302,7 +306,16 @@ protein that contains the whole family model is a member. Below the threshold th
 usually one shared domain (a SET domain matching the KMT5A family at 38% of its model), which
 step 7 names honestly. Among qualifying families the lowest E-value wins. The name is
 InterPro's curated name when the family is integrated into an InterPro *Family* entry
-(`BONUS, ISOFORM C-RELATED` → `TRIM45/56/19-like`), else PANTHER's own name, cleaned (§4).
+(`BONUS, ISOFORM C-RELATED` → `TRIM45/56/19-like`), else PANTHER's own name, cleaned (§4) —
+except when InterPro's name describes a function or a process rather than naming a family
+(words such as *regulator, organizer, assembly, signaling, immunity, development, defense,
+roles, pathway, stress, apoptosis*: `Complement & Cell Adhesion Regulators`, `Cerebellin
+Synaptic Organizer`, `Synovial Proliferation Regulator` for serum amyloid A, `Bacterial
+Antiviral Defense Nuclease`). Such names carry roles known from other organisms, often
+vertebrates; PANTHER's own name is used instead when it is informative (`Cerebellin-related`,
+`Serum amyloid A`, `ATP/GTP phosphatase`), and the provenance says why. In *C. kusceri* this
+changed 97 names. The same label choice applies wherever a PANTHER family names a gene (step 3
+co-ortholog families, step 5 ties).
 **Repeat-built families:** when repeat units (InterPro *Repeat* entries, and the C2H2 zinc
 finger, which InterPro types as a *Domain*) cover ≥ 25% of the family match, model coverage
 says nothing — any protein with such repeats fills the model (a mollusc C2H2 protein fills
@@ -483,8 +496,8 @@ with the code. Reference data (HGNC, Ensembl Compara, UniProt, NCBI Taxonomy, In
 list, PANTHER model lengths) are fetched and versioned by `update_reference_data.sh`.
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
-synthetic gene set of 29 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 79 checks), run on every change to the code. Each rule was also
+synthetic gene set of 30 genes, each made to hit one rule, asserting the exact name, tag,
+provenance and closest genes, plus checks of the informative-name rules; 88 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

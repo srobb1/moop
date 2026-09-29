@@ -91,6 +91,16 @@ my @UNINFORMATIVE_DESCRIPTION_RE = (
   qr/^(?:[A-Za-z]{2,4}\d{4,}[A-Za-z]?|[A-Za-z]{2}\d{1,2}g\d{5,})\s+protein(?:-related)?$/i,
   qr/^[A-Z]{2,3}\d{4,}p\d*(?:-related)?$/i,           # fly cDNA clones ("LD39211P", "GEO02494P1", "FI19922P1-RELATED"); not KIAA1143P1
   qr/^[A-Z]{2,6}\d{5,}-p[A-Z](?:-related)?$/i,        # mosquito etc. locus ("AGAP001331-PA-RELATED")
+  # mouse clone- and EST-based names ("cDNA sequence BC048562", "RIKEN cDNA 1110002E22 gene",
+  # "expressed sequence AI413582", "DNA segment, Chr 1, ERATO Doi 1"), human cDNA clone labels
+  # ("cDNA FLJ12345 fis") and Celera mouse ids ("MCG131172, isoform CRA_a"). No HGNC approved name
+  # matches (checked September 2026).
+  qr/^(?:cDNA\s+sequence|expressed\s+sequence)\s+\S+(?:[\s-]+related)?$/i,
+  qr/^RIKEN\s+cDNA\s+\S+(?:\s+gene)?(?:[\s-]+related)?$/i,
+  qr/^DNA\s+segment,\s+Chr\b/i,
+  qr/\bcDNA\s+FLJ\d+/i,
+  qr/^MCG\d+(?:,\s*isoform\s+\S+)?(?:[\s-]+related)?$/i,
+  qr/\(AFU_orthologue\s/i,                              # Aspergillus locus labels ("... putative (AFU_orthologue AFUA_1G17690)")
   qr/^(?:expressed|unnamed)\s+(?:protein|product)$/i,
   qr/^transmembrane\s+protein$/i,
   # a DUF/UPF id and nothing else that identifies a gene ("UNCHARACTERIZED DUF1308", "DUF4605
