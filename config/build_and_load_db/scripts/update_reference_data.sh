@@ -2,7 +2,9 @@
 # Check and refresh the shared reference data used by gene naming v2 and the OMA setup.
 # Run once before a full reprocess (run_all_v2.sh calls it); safe to run any time.
 #
-#   bash scripts/update_reference_data.sh
+#   bash scripts/update_reference_data.sh              every step
+#   bash scripts/update_reference_data.sh hgnc panther_trees   only these steps
+#       (compara hgnc taxonomy uniprot interpro panther panther_trees)
 #
 # Writes only under $REFERENCE_DATA (paths.sh; dev/smr_dev/moop); $REF_DB is only read.
 #
@@ -30,6 +32,13 @@
 #       PANTHER family only when the match covers most of the family's model; InterProScan's
 #       TSV has no model coordinates, so the model length comes from here. Rebuilt when the
 #       binHmm changes (md5), so it always matches the PANTHER release InterProScan ran.
+#   panther/treegrafter/<release>/
+#       PANTHER's TreeGrafter data for the release InterProScan uses (PANTHER<release>_data.tar.gz
+#       from data.pantherdb.org/ftp/downloads/TreeGrafter/, ~3 GB): the family trees with every
+#       node's type (speciation / duplication) and every leaf's gene (e.g. HUMAN|HGNC=..|UniProtKB=..).
+#       InterProScan's own copy has the trees without leaf genes; with these, the graft point
+#       InterProScan's JSON reports for a protein can be traced to the human genes it is
+#       orthologous to. Downloaded once per PANTHER release.
 #
 # A failed download keeps the existing copy and prints a WARNING; the exit code is the number
 # of warnings (0 = everything current).
@@ -276,12 +285,47 @@ update_panther() {
   echo "panther: release $release saved ($(wc -l < "$dir/hmm_lengths.tsv") families)"
 }
 
-update_compara
-update_hgnc
-update_taxonomy
-update_uniprot
-update_interpro
-update_panther
+# ---------------------------------------------------------------- PANTHER trees (TreeGrafter data)
+update_panther_trees() {
+  local base="$MOOP_DIR/panther/treegrafter" hmms release dir tarball url
+  hmms=("$INTERPROSCAN_DIR"/data/panther/*/famhmm/binHmm)
+  if [ ! -s "${hmms[0]}" ] || [ ${#hmms[@]} -gt 1 ]; then
+    warn "panther_trees: cannot tell the PANTHER release from INTERPROSCAN_DIR=$INTERPROSCAN_DIR; skipped"
+    return
+  fi
+  release=$(basename "$(dirname "$(dirname "${hmms[0]}")")")
+  dir="$base/$release"
+  if [ -s "$dir/VERSION.txt" ]; then
+    echo "panther_trees: release $release present"
+    return
+  fi
+  mkdir -p "$dir"
+  url="https://data.pantherdb.org/ftp/downloads/TreeGrafter/PANTHER${release}_data.tar.gz"
+  tarball="$dir/PANTHER${release}_data.tar.gz"
+  echo "panther_trees: downloading $url (~3 GB)"
+  if ! curl -fsSL --retry 3 -o "$tarball.part" "$url"; then
+    rm -f "$tarball.part"
+    warn "panther_trees: download of $url failed"
+    return
+  fi
+  mv "$tarball.part" "$tarball"
+  if ! tar -xzf "$tarball" -C "$dir"; then
+    warn "panther_trees: $tarball did not unpack; kept for a look"
+    return
+  fi
+  rm -f "$tarball"
+  echo "PANTHER release $release: TreeGrafter data downloaded $TODAY from $url" > "$dir/VERSION.txt"
+  echo "panther_trees: release $release saved in $dir"
+}
+
+STEPS=("$@")
+[ ${#STEPS[@]} -eq 0 ] && STEPS=(compara hgnc taxonomy uniprot interpro panther panther_trees)
+for step in "${STEPS[@]}"; do
+  case "$step" in
+    compara|hgnc|taxonomy|uniprot|interpro|panther|panther_trees) "update_$step" ;;
+    *) warn "unknown step '$step' (compara hgnc taxonomy uniprot interpro panther panther_trees)" ;;
+  esac
+done
 
 [ $WARNINGS -gt 0 ] && echo "$WARNINGS warning(s); see above" >&2
 [ $WARNINGS -gt 255 ] && WARNINGS=255
