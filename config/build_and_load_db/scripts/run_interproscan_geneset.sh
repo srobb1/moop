@@ -11,6 +11,9 @@
 ## in a shell you might disconnect from.
 ##
 ## Usage: bash run_interproscan_geneset.sh <organism> <assembly> <geneset>
+##        MERGE_ONLY=1 bash run_interproscan_geneset.sh <organism> <assembly> <geneset>
+##          (no new array: combine the chunk results an earlier run left in the temp dir,
+##           e.g. after the combine step failed)
 
 set -euo pipefail
 
@@ -30,13 +33,16 @@ JOB_TAG="${ORG}_${ASSEMBLY}_${GENESET}"
 TMP_DIR=/scratch/$USER/tmp/interproscan/$JOB_TAG
 ## start clean: chunk results left by an earlier run (another InterProScan version, or a failed
 ## run) would otherwise be counted and merged below as if this run had written them
-rm -rf "$TMP_DIR"
-mkdir -p "$TMP_DIR"
-
-echo "Submitting InterProScan array for $ORG/$ASSEMBLY/$GENESET (blocks until done)..."
 N_CHUNKS=100
-sbatch --wait --array=1-$N_CHUNKS \
-  "$SCRIPT_DIR/run_interproscan_geneset.sbatch" "$QUERY_FASTA" "$TMP_DIR"
+if [ "${MERGE_ONLY:-0}" = 1 ]; then
+  echo "MERGE_ONLY: combining the chunk results already in $TMP_DIR (no new array)"
+else
+  rm -rf "$TMP_DIR"
+  mkdir -p "$TMP_DIR"
+  echo "Submitting InterProScan array for $ORG/$ASSEMBLY/$GENESET (blocks until done)..."
+  sbatch --wait --array=1-$N_CHUNKS \
+    "$SCRIPT_DIR/run_interproscan_geneset.sbatch" "$QUERY_FASTA" "$TMP_DIR"
+fi
 
 ## a chunk without output would otherwise just be missing from the combined files
 shopt -s nullglob
@@ -54,25 +60,13 @@ tsv_header="seq_id\tprotein_md5\tprotein_length\tanalysis\tsignature_id\tsignatu
 sort -t $'\t' -k 1,1 "$TMP_DIR/comb_chunks_result.tsv" > "$TMP_DIR/sorted_comb_chunks_result.tsv"
 { echo -e "$tsv_header"; cat "$TMP_DIR/sorted_comb_chunks_result.tsv"; } > "$OUT_DIR/interproscan_results.tsv"
 
-## one JSON document, as a single InterProScan run writes: the chunks' "results" joined
-python3 - "$OUT_DIR/interproscan_results.json" "${JSON_CHUNKS[@]}" <<'PY'
-import json, sys
-out_path, chunks = sys.argv[1], sys.argv[2:]
-merged = None
-for chunk in chunks:
-    with open(chunk) as fh:
-        doc = json.load(fh)
-    if merged is None:
-        merged = {k: v for k, v in doc.items() if k != "results"}
-        merged["results"] = []
-    merged["results"].extend(doc["results"])
-with open(out_path, "w") as fh:
-    json.dump(merged, fh)
-print(f"JSON: {len(merged['results'])} proteins from {len(chunks)} chunks", file=sys.stderr)
-PY
+## one JSON document, as a single InterProScan run writes: the chunks' "results" joined. Streamed,
+## one chunk in memory at a time: loading all 100 at once (2.2 GB of JSON for Congeria's 43,768
+## proteins) was killed for memory in a 16 GB session.
+python3 "$SCRIPT_DIR/merge_interproscan_json.py" --out "$OUT_DIR/interproscan_results.json.gz" "${JSON_CHUNKS[@]}"
 
 echo "$IPRSCAN_VER" > "$OUT_DIR/interproscan_version.txt"
-gzip -f "$OUT_DIR/interproscan_results.tsv" "$OUT_DIR/interproscan_results.json"
+gzip -f "$OUT_DIR/interproscan_results.tsv"
 
 echo "Done: $OUT_DIR/interproscan_results.tsv.gz"
 echo "      $OUT_DIR/interproscan_results.json.gz"
