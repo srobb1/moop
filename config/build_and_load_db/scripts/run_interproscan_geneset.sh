@@ -28,6 +28,9 @@ mkdir -p "$OUT_DIR"
 
 JOB_TAG="${ORG}_${ASSEMBLY}_${GENESET}"
 TMP_DIR=/scratch/$USER/tmp/interproscan/$JOB_TAG
+## start clean: chunk results left by an earlier run (another InterProScan version, or a failed
+## run) would otherwise be counted and merged below as if this run had written them
+rm -rf "$TMP_DIR"
 mkdir -p "$TMP_DIR"
 
 echo "Submitting InterProScan array for $ORG/$ASSEMBLY/$GENESET (blocks until done)..."

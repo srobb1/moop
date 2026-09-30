@@ -16,11 +16,13 @@
 IPRSCAN_VER=5.78-109.0   # as the annotation pipeline; PANTHER 19.0 (model lengths, TreeGrafter data)
 BASE=/n/sci/SCI-004223-SBGENOMES
 IPRSCAN=$BASE/src/interproscan/interproscan-${IPRSCAN_VER}/interproscan.sh
-FASTA2CHUNKS=$BASE/pipeline/accessory/fasta2chunks
+FASTA2CHUNKS=$BASE/repos/pipeline_v1/accessory/fasta2chunks   # was $BASE/pipeline/accessory (moved)
 
 QUERY_FASTA=$1
 TMP_DIR=$2
 [ -s "$QUERY_FASTA" ] || { echo "ERROR: missing $QUERY_FASTA"; exit 1; }
+[ -x "$FASTA2CHUNKS" ] || { echo "ERROR: fasta2chunks not found at $FASTA2CHUNKS"; exit 1; }
+[ -x "$IPRSCAN" ] || { echo "ERROR: InterProScan not found at $IPRSCAN"; exit 1; }
 
 mkdir -p "$TMP_DIR/in_fasta_chunks"
 mkdir -p "$TMP_DIR/out_${SLURM_ARRAY_TASK_ID}_of_${SLURM_ARRAY_TASK_MAX}"
@@ -35,7 +37,11 @@ FASTA_CHUNK_FILE=$TMP_DIR/in_fasta_chunks/${SLURM_ARRAY_TASK_ID}_of_${SLURM_ARRA
 "$FASTA2CHUNKS" \
   -c "$SLURM_ARRAY_TASK_ID" \
   -n "$SLURM_ARRAY_TASK_MAX" \
-  -f "$QUERY_FASTA" > "$FASTA_CHUNK_FILE"
+  -f "$QUERY_FASTA" > "$FASTA_CHUNK_FILE" \
+  || { echo "ERROR: fasta2chunks failed"; exit 1; }
+## InterProScan exits 0 on an empty FASTA ("no sequences to analyse"): a broken chunking step
+## must fail the task, not pass as done (2026-09-30: every task of a run "completed" in 20 s)
+[ -s "$FASTA_CHUNK_FILE" ] || { echo "ERROR: empty chunk $FASTA_CHUNK_FILE"; exit 1; }
 
 "$IPRSCAN" --cpu "$SLURM_CPUS_PER_TASK" \
   -i "$FASTA_CHUNK_FILE" \
