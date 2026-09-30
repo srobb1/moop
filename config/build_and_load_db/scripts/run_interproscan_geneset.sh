@@ -17,7 +17,7 @@ set -euo pipefail
 ORG=${1:-}; ASSEMBLY=${2:-}; GENESET=${3:-}
 [ -n "$GENESET" ] || { echo "Usage: $0 <organism> <assembly> <geneset>"; exit 1; }
 
-IPRSCAN_VER=5.76-107.0
+IPRSCAN_VER=5.78-109.0   # as the annotation pipeline; PANTHER 19.0 (model lengths, TreeGrafter data)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ANNOTATIONS_DIR=$(bash "$SCRIPT_DIR/pick_annotations_run.sh")

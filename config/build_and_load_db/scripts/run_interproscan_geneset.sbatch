@@ -13,7 +13,7 @@
 #
 # Usage: sbatch --array=1-100 run_interproscan_geneset.sbatch <query_fasta> <tmp_dir>
 
-IPRSCAN_VER=5.76-107.0
+IPRSCAN_VER=5.78-109.0   # as the annotation pipeline; PANTHER 19.0 (model lengths, TreeGrafter data)
 BASE=/n/sci/SCI-004223-SBGENOMES
 IPRSCAN=$BASE/src/interproscan/interproscan-${IPRSCAN_VER}/interproscan.sh
 FASTA2CHUNKS=$BASE/pipeline/accessory/fasta2chunks
@@ -43,4 +43,5 @@ FASTA_CHUNK_FILE=$TMP_DIR/in_fasta_chunks/${SLURM_ARRAY_TASK_ID}_of_${SLURM_ARRA
   --disable-precalc \
   --goterms \
   --enable-tsv-residue-annot \
-  --pathways --output-tsv-version
+  --pathways --output-tsv-version \
+  -f TSV,JSON   # naming v2 needs both: TSV for families and domains, JSON for TreeGrafter graft points
