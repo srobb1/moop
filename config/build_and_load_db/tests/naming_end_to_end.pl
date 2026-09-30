@@ -42,12 +42,14 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
 # ---- human genes (HGNC)
-write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name gene_group gene_group_id ensembl_gene_id uniprot_ids prev_symbol)) . "\n" . join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
+# locus_type is the ninth column: "gene with protein product" unless a row gives another (a readthrough)
+write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name gene_group gene_group_id ensembl_gene_id uniprot_ids prev_symbol locus_type)) . "\n"
+  . join('', map { my $fields = $_; join("\t", @$fields, (@$fields < 9 ? ('gene with protein product') : ())) . "\n" }
   ['HGNC:1', 'ALPHA', 'alpha synthase', '', '', 'ENSG01', '', ''],   # not "alpha protein": a name that only repeats the symbol is uninformative
   ['HGNC:2', 'BETA1', 'beta protein 1', 'Beta proteins', '10', 'ENSG02', '', ''],
   ['HGNC:3', 'BETA2', 'beta protein 2', 'Beta proteins', '10', 'ENSG03', '', ''],
@@ -76,6 +78,12 @@ write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name 
   # sentence-cased word by word from it (SMC, not an HGNC lower-case word, stays)
   ['HGNC:23', 'WSA1', 'widget sprocket associated 1', '', '', 'ENSG23', '', ''],
   ['HGNC:24', 'IOTA', 'iota kinase', '', '', 'ENSG24', '', ''],
+  # a readthrough joining LAMB and KAPA (its protein contains most of KAPA), and its two genes
+  ['HGNC:25', 'KAPA', 'kappa-a synthase', '', '', 'ENSG25', '', ''],
+  ['HGNC:26', 'LAMB-KAPA', 'LAMB-KAPA readthrough', '', '', 'ENSG26', '', '', 'readthrough'],
+  ['HGNC:27', 'LAMB', 'lambda protein', '', '', 'ENSG27', '', ''],
+  ['HGNC:28', 'MU', 'mu oxidase', '', '', 'ENSG28', '', ''],
+  ['HGNC:30', 'NU', 'nu reductase', '', '', 'ENSG30', '', ''],
 ));
 # ---- Swiss-Prot cross-references: the PANTHER families of human genes (orthology support)
 my $xrefs = join("\t", qw(accession taxid gene_name hgnc_ids ensembl_genes ensembl_proteins panther_ids secondary_accessions)) . "\n"
@@ -96,7 +104,8 @@ gzip(\$xrefs => "$dir/uniprot/sprot_xrefs.tsv.gz") or die $GzipError;
 my $human = sub { my ($n) = @_; my %name = (1 => 'alpha synthase', 2 => 'beta protein 1', 3 => 'beta protein 2', 4 => 'gamma transferase',
                                             13 => 'histone deacetylase 1', 14 => 'histone deacetylase 2',
                                             15 => 'harbinger transposase derived 1', 16 => 'centromere protein Q', 6 => 'epsilon protein',
-                                            17 => 'zeta ligase', 19 => 'mix protein 1', 20 => 'mix protein 2', 24 => 'iota kinase');
+                                            17 => 'zeta ligase', 19 => 'mix protein 1', 20 => 'mix protein 2', 24 => 'iota kinase',
+                                            25 => 'kappa-a synthase', 26 => 'LAMB-KAPA readthrough', 28 => 'mu oxidase', 30 => 'nu reductase');
   return "HUMAN0000$n | ENSP0$n | ENSG0$n | $name{$n} [Source:HGNC Symbol;Acc:HGNC:$n]" };
 write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
   [1, 1, 'T1.1', $human->(1), '1:1'],
@@ -127,7 +136,28 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { my
   # T34: OMA 1:1 with IOTA; the PANTHER tree places it with THETA instead -> treeC, the name stays
   # (its own partner: pairwise OMA never pairs two genes 1:1 with one human gene)
   [34, 24, 'T34.1', $human->(24), '1:1'],
+  # T40: OMA 1:many with KAPA and the readthrough LAMB-KAPA; T40 matches KAPA only -> KAPA, the readthrough not counted
+  [40, 25, 'T40.1', $human->(25), '1:many'],
+  [40, 26, 'T40.1', $human->(26), '1:many'],
+  # T41: the same pair, but T41 hits LAMB and KAPA on different stretches -> maybe two genes fused: not named after either
+  [41, 25, 'T41.1', $human->(25), '1:many'],
+  [41, 26, 'T41.1', $human->(26), '1:many'],
+  # T42: MU and a "novel protein" with no HGNC record that is MU's own sequence -> MU
+  [42, 28, 'T42.1', $human->(28), '1:many'],
+  [42, 29, 'T42.1', 'HUMAN000029 | ENSP00000000029 | ENSG00000000029 | novel protein', '1:many'],
+  # T43: NU and a "novel protein" with a sequence of its own (a possible real paralog) -> stays a family of 2
+  [43, 30, 'T43.1', $human->(30), '1:many'],
+  [43, 31, 'T43.1', 'HUMAN000031 | ENSP00000000031 | ENSG00000000031 | novel protein', '1:many'],
 ));
+# ---- the OMA run's human proteome (DB/HUMAN.fa): sequences for recognising another model of the same gene
+my $mu_sequence = 'MKVLAAGIVGLSSQRPTEWYHDNCFKLMAAGIVGLSSQRPTEWYHDNCFKL';
+my $nu_sequence = 'MSTPQRRNDEEGLKKHWAYCVIPPSTGRMDEQLLKHYFNWCAAPTSRGDEV';
+my $novel_sequence = 'MDDHLRRWQYPGSKNTEVCAFMLIPGHWRQSDDKNYETVAGGPFLLMWSQK';
+write_file("$dir/oma/DB/HUMAN.fa",
+    ">HUMAN000028 | ENSP028; ENST028 | ENSG028 | | mu oxidase [Source:HGNC Symbol;Acc:HGNC:28]\n$mu_sequence\n"
+  . ">HUMAN000029 | ENSP00000000029 | ENSG00000000029 | | novel protein\n$mu_sequence\n"
+  . ">HUMAN000030 | ENSP030; ENST030 | ENSG030 | | nu reductase [Source:HGNC Symbol;Acc:HGNC:30]\n$nu_sequence\n"
+  . ">HUMAN000031 | ENSP00000000031 | ENSG00000000031 | | novel protein\n$novel_sequence\n");
 write_file("$dir/oma/Output/PairwiseOrthologs/TEST-NEMVE.txt", join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
   [1, 11, 'T1.1', 'NEMVE00011 | XP_000011.1 | LOC11 | anemone alpha', '1:1'],
   [4, 12, 'T4.1', 'NEMVE00012 | XP_000012.1 | LOC12 | anemone beta A', '1:many'],
@@ -193,6 +223,12 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   . $dhit->('T15', '10', 'KAPPA2', 'kappa channel 2', '1e-88', 295, 300, 300, 95, 95)
   . $dhit->('T16', '11', 'WDR90', 'WD repeat domain 90', '1e-160', 562, 200, 700, 90, 30)
   . $dhit->('T16', '12', 'CFAP52', 'cilia and flagella associated protein 52', '1e-30', 119, 200, 210, 85, 85)
+  . $dhit->('T40', '25', 'KAPA', 'kappa-a synthase', '1e-80', 300, 200, 200, 95, 95)
+  . $dhit->('T42', '28', 'MU', 'mu oxidase', '1e-80', 300, 200, 200, 95, 95)
+  . $dhit->('T43', '30', 'NU', 'nu reductase', '1e-80', 300, 200, 200, 95, 95)
+  # T41: LAMB over residues 1-100, KAPA over 150-300: two genes' worth of protein
+  . join("\t", 'T41.1', 'ENSP27.1', $title->('27', 'LAMB', 'lambda protein'), '1e-40', 50, 100, 40, 1, 1, 100, 1, 100, 150, 320, 110, 31, 90) . "\n"
+  . join("\t", 'T41.1', 'ENSP25.1', $title->('25', 'KAPA', 'kappa-a synthase'), '1e-60', 50, 150, 40, 1, 150, 300, 1, 150, 250, 320, 200, 47, 75) . "\n"
   # T36: THETA far the best; GAMMA only over part -> with another PANTHER family, its GAMMA name is withheld
   . $dhit->('T36', '18', 'THETA', 'theta ligase', '1e-120', 400, 250, 300, 95, 85)
   . $dhit->('T36', '04', 'GAMMA', 'gamma transferase', '1e-30', 150, 250, 250, 40, 45)
@@ -395,6 +431,8 @@ my %expect = (
   G28 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'the same, but not a whole member (20% of the family model, only a partial human hit) -> not named for the family; its domain names it'],
   G38 => ['Spindle domain-containing protein [ISM|ipr]', 'PANTHER 95% by protein residues, but 55% of the model (JSON) -> no family name; its domain names it'],
   G39 => ['Nut domain-containing protein [ISM|ipr]', 'the best-scoring domain (Bolt) covers 30% of its model, a fragment -> the next domain names it'],
+  G40 => ['KAPA: kappa-a synthase [ISO|1to1|sim+]', 'OMA 1:many with KAPA and its readthrough LAMB-KAPA -> the readthrough is not counted: KAPA'],
+  G42 => ['MU: mu oxidase [ISO|1to1|sim+]', 'OMA 1:many with MU and a novel protein that is MU\'s own sequence -> MU'],
   G30 => ['Cerebellin-related family member [ISM|pthr]', 'InterPro names the family by a function ("Cerebellin Synaptic Organizer") -> PANTHER\'s own name'],
   G29 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'co-orthologs whose PANTHER family it is not in -> its domain names it'],
   G31 => ['EPS: epsilon protein [ISO|tree|rbh]', 'the PANTHER tree places it with EPS alone, and EPS is its closest human gene -> plain name (step 5)'],
@@ -467,6 +505,14 @@ check(($source{G31}[0] // '') eq 'HGNC:6' && ($source{G31}[2] // '') eq '5'
       && scalar(($source{G31}[1] // '') =~ /^Ortholog of human EPS by its place on the PANTHER family tree: TreeGrafter places it with human EPS \(ortholog_1: joins at a speciation node, Bilateria \(grafted inside another lineage, moved up to this one\); PANTHER PTHR00031:SF1 E=1e-50, 90% of the protein, 85% of the family model\); and EPS is also its closest human gene by similarity/),
       'G31 provenance: the tree placement and the agreeing closest human, step 5', $p->('G31'));
 check(scalar(($source{G34}[1] // '') =~ /; but TreeGrafter places it with human THETA \(ortholog_1/), 'G34 provenance: the tree\'s dissent is stated', $p->('G34'));
+check(scalar(($source{G40}[1] // '') =~ /; not counted: LAMB-KAPA \(a readthrough joining LAMB and KAPA\)$/), 'G40 provenance: the readthrough not counted', $p->('G40'));
+check(scalar(($source{G42}[1] // '') =~ /; not counted: ENSG00000000029 \(another model of MU: 100% of its protein is MU sequence\)$/), 'G42 provenance: the same-gene model not counted', $p->('G42'));
+{
+  my %decision = read_decisions("$out/naming_decisions.tsv");
+  check(scalar(($decision{G41}{S3_OMA_human_ortholog} // '') =~ /its protein covers both LAMB \(residues 1-100\) and KAPA \(residues 150-300\).*possibly two genes fused in one model/)
+        && ($name{G41} // '') !~ /KAPA|LAMB/, 'G41: spans both genes of the readthrough -> not named after either', "$name{G41} | $decision{G41}{S3_OMA_human_ortholog}");
+  check(scalar(($decision{G43}{S3_OMA_human_ortholog} // '') =~ /co-ortholog of 2 human genes/), 'G43: a novel protein with its own sequence stays in the family', $decision{G43}{S3_OMA_human_ortholog});
+}
 check(scalar(($source{G38}[1] // '') =~ /\(Pfam PF00038, E=1e-20, 90% of the domain model\)/), 'G38 provenance: the domain model coverage is stated', $p->('G38'));
 check(($source{G6}[3] // '') eq 'panther', 'G6: a family match with no model coverage in the JSON file keeps the residue measure', $p->('G6'));
 check(($source{G17}[3] // '') eq 'pfam' && ($source{G17}[2] // '') eq '4', 'G17 provenance: a transposable element is step 4', $p->('G17'));

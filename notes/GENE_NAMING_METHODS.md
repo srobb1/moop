@@ -274,6 +274,23 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   case: RAB GTPases (0.26) are one family, but PANTHER splits them into many small families; RAB
   genes are named by their PANTHER family instead. The same rule applies to paralog ties
   (step 6) and to the closest-human family label (§6.2).
+- **Human genes that are not genes of their own are not counted.** OMA's set can include an
+  HGNC *readthrough* (BIVM-ERCC5: one transcript joining two neighbouring genes, so its protein
+  contains most of ERCC5) or an Ensembl gene with no HGNC record that is another model of the same
+  gene (a "novel protein" whose 20-residue words are ≥ 50% those of an HGNC member of the set, in
+  the human proteome OMA used). Counted, they turn one ortholog into a "family of 2" and the gene
+  loses its name. They are left out when the set keeps a real gene; the provenance names them
+  ("not counted: BIVM-ERCC5 (a readthrough joining BIVM and ERCC5)"). A set made only of such genes
+  gives no OMA ortholog (the next evidence decides). A no-HGNC member with a sequence of its own
+  stays: it may be a real paralog (3 of 246 in Congeria and *M. capitata*; the others share
+  ≥ 50%, and all placeable ones overlap their HGNC gene's locus). **But** when this gene's best hits
+  to *both* genes of a readthrough lie on different stretches of its protein (overlapping by ≤ 20
+  residues; Ensembl and Swiss-Prot human hits), it may itself be two genes fused in one model: it is
+  not named after either (a case for mender). None of the 57 Congeria and 66 *M. capitata* genes
+  with a readthrough in their set did; each matched one half. Effect: Congeria 152 names change
+  (about 95 genes gain their single ortholog's name, e.g. ERCC5, IDS, NDUFB8, BACC1; 43 an OMA
+  family name; 4 lose a name that came from a readthrough, e.g. three GPCRs named
+  "LINC02210-CRHR1 readthrough").
 - **Pairwise 1:1, HOG several.** OMA's pairwise file can pair a gene 1:1 with one human copy of
   a vertebrate duplication (HDAC1 of HDAC1/HDAC2) while OMA's HOG, computed on the fixed
   species tree, makes it co-ortholog of every copy. The HOG is then the more complete call: the
@@ -591,7 +608,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 133 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 139 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

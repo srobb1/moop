@@ -113,6 +113,21 @@ my $FAMILY_MODEL_COVERAGE = 80;
 # PROSITE, whose model coordinates InterProScan does not report): less is a fragment of the domain,
 # and "X domain-containing protein" would claim the domain. Congeria: 4% of Pfam matches are below.
 my $DOMAIN_MIN_MODEL_COVERAGE = 50;
+# Human genes that are not genes of their own. OMA's co-ortholog sets can include (1) an HGNC
+# "readthrough" (BIVM-ERCC5: one transcript joining two neighbouring genes, so its protein contains
+# most of ERCC5) and (2) an Ensembl gene with no HGNC record that is another model of the same gene
+# (a "novel protein" sharing its sequence). Counted as members, they turn one ortholog into a
+# "family of 2" and the gene loses its name (Congeria: ~95 genes; M. capitata ~94). They are left
+# out of an OMA set when it keeps a real gene; a no-HGNC member counts as the same gene when at least
+# this fraction of its protein's 20-residue words occur in an HGNC member of the set (Congeria and
+# M. capitata: 243 of 246 such members share >= 50%; the 3 others share <= 1% and stay, as possible
+# real paralogs).
+my $SAME_GENE_MIN_SHARED = 0.5;
+my $SAME_GENE_WORD = 20;
+# Our gene "spans both halves" of a readthrough A-B when its best hits to A and to B lie on different
+# stretches of our protein (overlapping by no more than this many residues): then it may be two genes
+# fused in one model, and it is not named after either.
+my $FUSED_MAX_OVERLAP = 20;
 # Similarity to a human gene at all (any coverage): the E-value a hit needs to count as support
 # for an orthology name, or as the "best human gene" a -like name must agree with.
 my $HIT_MAX_EVALUE = 1e-5;
@@ -240,6 +255,8 @@ my (%gene_of_protein, %query_length);
 my $hgnc;
 my %human_links;      # group -> [ link ]   link = {tier, human => [records], type, evidence, bits, id, hit}
 my %all_human_links;  # the same, before choose_closest_human sets unsupported OMA links aside (Evidence_by_method column)
+my %oma_human_sequences;   # Ensembl gene (no version) or HGNC id -> [ protein sequences ] from the OMA run's DB/HUMAN.fa
+my $oma_human_sequences_read = 0;
 my %any_evidence;     # group -> kind of evidence -> 1: ANY homology evidence, whatever its strength
                       # ("None: no hits" versus "None: hits did not pass the naming tests")
 my %hits;             # group -> [ naming candidates from similarity ]
@@ -472,7 +489,8 @@ sub human_record {
   my $record = hgnc_record($hgnc, %keys);
   if ($record) {
     return { key => $record->{hgnc_id}, hgnc_id => $record->{hgnc_id}, symbol => $record->{symbol},
-             name => $record->{name}, gene_group => $record->{gene_group}, gene_group_id => $record->{gene_group_id} };
+             name => $record->{name}, gene_group => $record->{gene_group}, gene_group_id => $record->{gene_group_id},
+             locus_type => $record->{locus_type} // '' };
   }
   my $ensembl_gene = $keys{ensembl_gene} // '';
   $ensembl_gene =~ s/\.\d+$//;
@@ -656,7 +674,7 @@ sub collect_mmseqs {
         next;
       }
       my %hit = (
-        evalue => $evalue, bits => $bits, pident => $pident * 100,
+        evalue => $evalue, bits => $bits, pident => $pident * 100, qstart => $qstart, qend => $qend,
         qcov => 100 * ($qend - $qstart + 1) / $query_len,
         tcov => 100 * ($tend - $tstart + 1) / $target_len,
       );
@@ -930,7 +948,7 @@ sub collect_diamond {
       $any_evidence{$group}{"DIAMOND $db"} = 1;
       my %hit = (evalue => $evalue);
       if (@fields >= 17) {
-        @hit{qw(pident bits qcov tcov)} = ($fields[4], $fields[12], $fields[15], $fields[16]);
+        @hit{qw(pident bits qcov tcov qstart qend)} = ($fields[4], $fields[12], $fields[15], $fields[16], $fields[8], $fields[9]);
         $has_coverage = 1;
       }
       next unless @fields >= 17;   # no coverage, no bitscore: not used at all (see the note below)
@@ -1336,6 +1354,35 @@ sub choose_closest_human {
       @humans = @hog_humans;
     }
   }
+  # human genes that are not genes of their own (readthroughs, other models of one gene) are not
+  # counted in an OMA set (tiers 1-2, and tier 4 through another species' OMA ortholog)
+  if ($best_tier <= 2 or $best_tier == 4) {
+    my ($kept, $not_counted, $fused) = without_same_gene_members($group, \@humans);
+    if ($fused) {
+      $stats{'OMA set: this gene spans both genes of a human readthrough (possible fused model)'}++;
+      $closest = { %$closest, fused => $fused };
+    } elsif (@$not_counted) {
+      my $note = '; not counted: ' . join('; ', map { my $dropped = $_; human_label($dropped->{human}) . " ($dropped->{why})" } @$not_counted);
+      $stats{'OMA set: readthrough or same-gene model not counted'}++;
+      if (!@$kept) {
+        # the set was nothing but such genes: no OMA ortholog to use; the next evidence decides
+        $stats{'OMA set: only readthroughs or same-gene models'}++;
+        $human_links{$group} = [ grep { my $link = $_; $link->{tier} != $best_tier } @links ];
+        my $next = choose_closest_human($group) or return undef;
+        return { %$next, evidence => "$next->{evidence}; OMA pairs it only with " . join('/', map { my $dropped = $_; human_label($dropped->{human}) } @$not_counted)
+                                     . ", not genes of their own$note" };
+      }
+      my %type_of_one = ('1:many' => '1:1', 'many:many' => 'many:1');
+      if (@$kept == 1 and $closest->{hog_family} and $closest->{pairwise_human}{key} eq $kept->[0]{key}) {
+        # the HOG's second gene was the readthrough: back to OMA's pairwise call
+        $closest = { %$closest, hog_family => 0, evidence => "OMA ortholog ($closest->{type})" };
+      } elsif (@$kept == 1) {
+        $closest = { %$closest, type => $type_of_one{$closest->{type}} // $closest->{type} };
+      }
+      @humans = @$kept;
+      $closest = { %$closest, human => [@humans], not_counted => $note, evidence => "$closest->{evidence}$note" };
+    }
+  }
   # OMA is precise but not infallible: repetitive and compositionally biased proteins, and hidden
   # paralogy (each lineage lost a different copy of an old duplication) give OMA pairs that no
   # other evidence backs. An OMA human ortholog is used only when the gene is also similar to it
@@ -1359,6 +1406,120 @@ sub choose_closest_human {
   $stats{'closest human: family'}++;
   return { %$closest, family_size => $size, family => 1,
            evidence => "$closest->{evidence}, family of $size" };
+}
+
+# An OMA set's members that are not genes of their own: an HGNC readthrough, or an Ensembl gene with
+# no HGNC record that shares most of its protein with an HGNC member of the set (another model of the
+# same gene). Returns (members kept, [ { human, why } ] not counted, fused text). When this gene's best
+# hits to BOTH genes a readthrough joins lie on different stretches of its protein, it may itself be
+# two genes fused in one model: the set is left as it is and the fused text says why.
+sub without_same_gene_members {
+  my ($group, $humans) = @_;
+  my (@kept, @not_counted);
+  my @genes = grep { my $human = $_; ($human->{locus_type} // '') ne 'readthrough' and $human->{hgnc_id} ne '' } @$humans;
+  foreach my $human (@$humans) {
+    if (($human->{locus_type} // '') eq 'readthrough') {
+      my @parts = readthrough_parts($human->{symbol});
+      my $joins = @parts ? join(' and ', map { my $part = $_; $part->{symbol} } @parts) : 'two neighbouring genes';
+      if (@parts == 2) {
+        my @spans = map { my $part = $_; my $hit = ($human_hit{$group}{$part->{hgnc_id}} // {})->{best}; $hit } @parts;
+        if ($spans[0] and $spans[1] and defined $spans[0]{qstart} and defined $spans[1]{qstart}) {
+          my $first_end = $spans[0]{qend} < $spans[1]{qend} ? $spans[0]{qend} : $spans[1]{qend};
+          my $last_start = $spans[0]{qstart} > $spans[1]{qstart} ? $spans[0]{qstart} : $spans[1]{qstart};
+          my $overlap = $first_end - $last_start + 1;
+          if ($overlap <= $FUSED_MAX_OVERLAP) {
+            return ($humans, [], "its protein covers both $parts[0]{symbol} (residues $spans[0]{qstart}-$spans[0]{qend}) and "
+                                 . "$parts[1]{symbol} (residues $spans[1]{qstart}-$spans[1]{qend}), the two genes joined in the human readthrough "
+                                 . "$human->{symbol}: possibly two genes fused in one model");
+          }
+        }
+      }
+      push @not_counted, { human => $human, why => "a readthrough joining $joins" };
+      next;
+    }
+    if ($human->{hgnc_id} eq '' and @genes) {
+      my ($best_share, $best_gene) = (0, undef);
+      foreach my $gene (@genes) {
+        my $share = shared_word_fraction($human->{key}, $gene->{hgnc_id});
+        ($best_share, $best_gene) = ($share, $gene) if $share > $best_share;
+      }
+      if ($best_share >= $SAME_GENE_MIN_SHARED) {
+        push @not_counted, { human => $human, why => sprintf('another model of %s: %.0f%% of its protein is %s sequence', human_label($best_gene), 100 * $best_share, human_label($best_gene)) };
+        next;
+      }
+    }
+    push @kept, $human;
+  }
+  return (\@kept, \@not_counted, undef);
+}
+
+# the two genes a readthrough joins, from its symbol "A-B" (current or previous HGNC symbols: C17orf49 is now BACC1)
+sub readthrough_parts {
+  my ($symbol) = @_;
+  my @words = split /-/, $symbol;
+  foreach my $cut (1 .. $#words) {
+    my @parts = map { my $part = $_; hgnc_by_symbol($part) } (join('-', @words[0 .. $cut - 1]), join('-', @words[$cut .. $#words]));
+    return @parts if $parts[0] and $parts[1];
+  }
+  return ();
+}
+
+sub hgnc_by_symbol {
+  my ($symbol) = @_;
+  return $hgnc->{by_symbol}{$symbol} if $hgnc->{by_symbol}{$symbol};
+  my @previous = @{$hgnc->{by_previous_symbol}{$symbol} // []};
+  return @previous == 1 ? $previous[0] : undef;
+}
+
+# the fraction of one human gene's protein (its best-sharing protein in OMA's human proteome) whose
+# 20-residue words occur in another human gene's proteins
+sub shared_word_fraction {
+  my ($ensembl_gene, $hgnc_id) = @_;
+  read_oma_human_sequences() unless $oma_human_sequences_read;
+  my %words_of_gene;
+  foreach my $sequence (@{$oma_human_sequences{$hgnc_id} // []}) {
+    foreach my $start (0 .. length($sequence) - $SAME_GENE_WORD) {
+      $words_of_gene{substr($sequence, $start, $SAME_GENE_WORD)} = 1;
+    }
+  }
+  my $best = 0;
+  foreach my $sequence (@{$oma_human_sequences{$ensembl_gene} // []}) {
+    my ($words, $shared) = (0, 0);
+    foreach my $start (0 .. length($sequence) - $SAME_GENE_WORD) {
+      $words++;
+      $shared++ if $words_of_gene{substr($sequence, $start, $SAME_GENE_WORD)};
+    }
+    $best = $shared / $words if $words and $shared / $words > $best;
+  }
+  return $best;
+}
+
+# the human proteome of the OMA run (DB/HUMAN.fa: "HUMAN000001 | ENSP..; ENST.. | ENSG.. | ... [Source:HGNC Symbol;Acc:HGNC:20773]")
+sub read_oma_human_sequences {
+  $oma_human_sequences_read = 1;
+  my $fasta = defined $opt{'oma-dir'} ? "$opt{'oma-dir'}/DB/HUMAN.fa" : '';
+  if ($fasta eq '' or !-s $fasta) {
+    $stats{'note: no OMA DB/HUMAN.fa: same-gene models cannot be recognised by sequence'} = 1;
+    return;
+  }
+  open my $fh, '<', $fasta or die "cant read $fasta\n";
+  my @keys;
+  while (my $line = <$fh>) {
+    chomp $line;
+    if ($line =~ /^>/) {
+      my ($gene) = $line =~ /\|\s*(ENSG\d+)/;
+      my ($hgnc_id) = $line =~ /\bAcc:(HGNC:\d+)/;
+      @keys = grep { my $key = $_; defined $key } ($gene, $hgnc_id);
+      foreach my $key (@keys) {
+        push @{$oma_human_sequences{$key}}, '';
+      }
+    } else {
+      foreach my $key (@keys) {
+        $oma_human_sequences{$key}[-1] .= $line;
+      }
+    }
+  }
+  close $fh;
 }
 
 # Order links so the result never depends on hash order (the links arrive in whatever order
@@ -1884,6 +2045,7 @@ sub oma_name {
                      ? 'OMA human ortholog set aside (omaX): no similarity hit or PANTHER family supports it'
                      : 'no OMA human ortholog');
   }
+  return not_named("OMA human ortholog not used: $closest->{fused} (see mender)") if $closest->{fused};
   my $named = ortholog_name($group, $closest);
   return $named unless is_named($named);
   $stats{"name: OMA " . ($closest->{family} ? 'family' : $closest->{type})}++;
@@ -2226,6 +2388,8 @@ sub oma_support {
   }
   push @flags, 'hog' if $hog;
   my $text = @said ? '; ' . join('; ', @said) : '';
+  # members of OMA's set that were not counted (readthroughs, other models of one gene) are named here
+  $text .= $closest->{not_counted} if $closest and $closest->{not_counted};
   return (\@flags, $text);
 }
 

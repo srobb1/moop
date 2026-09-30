@@ -201,6 +201,8 @@ sub load_hgnc {
       gene_group_id   => $fields[$index{gene_group_id}] // '',   # parallel to gene_group, "|"-separated
       ensembl_gene_id => $fields[$index{ensembl_gene_id}] // '',
       uniprot_ids     => [ split /\|/, ($fields[$index{uniprot_ids}] // '') ],
+      # "readthrough" marks a transcript joining two neighbouring genes (BIVM-ERCC5), not a gene of its own
+      locus_type      => defined $index{locus_type} ? ($fields[$index{locus_type}] // '') : '',
     };
     $record->{gene_group} =~ s/^"|"$//g;
     $record->{gene_group_id} =~ s/^"|"$//g;
