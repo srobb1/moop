@@ -576,7 +576,7 @@ check(($source{G26}[0] // '') eq 'HGNC:18' && ($source{G26}[2] // '') eq '6'
 check(($source{G27}[3] // '') eq 'panther' && ($source{G27}[0] // '') eq 'PTHR00027' && ($source{G27}[2] // '') eq '3'
       && scalar(($source{G27}[1] // '') =~ /^Co-ortholog of 2 human genes \(OMA, 1:many\), all in PANTHER family PTHR00027 \("Sprocket protein"\), which it matches too; the HGNC group they share \("Mixed molecules"\) is not a family by descent \(PANTHER coherence 0\.50\)/),
       'G27 provenance: the PANTHER family, and why the HGNC group was not used', $p->('G27'));
-check(scalar(($source{G28}[1] // '') =~ /; similar to human MIX1 over part of its length only \(40% of this protein, 40% of MIX1, E=1e-30\): a shared domain or region only -- MIX1 is a distant relative, not this gene's identity$/),
+check(scalar(($source{G28}[1] // '') =~ /; similar to human MIX1 over part of its length \(40% of this protein, 40% of MIX1, E=1e-30\): a shared domain or region -- MIX1 is a distant relative, not this gene's identity$/),
       'G28 provenance: the partial homolog is stated', $p->('G28'));
 check(scalar(($source{G29}[1] // '') =~ /; similar to human MIX1 along its length \(90% of this protein, 90% of MIX1, E=1e-80\), but that gene's name could not be used/),
       'G29 provenance: a full-length homolog is not described as partial', $p->('G29'));
@@ -607,7 +607,7 @@ check(($source{G7}[0] // '') eq 'IPR000002' && scalar(($source{G7}[1] // '') =~ 
   check(defined $unnamed && $decision{$unnamed}{Relationship} eq 'none', 'Relationship of an unnamed gene: none', $unnamed);
   check(scalar(($source{G7}[1] // '') =~ /^Domain homolog: contains InterPro/), 'G7 provenance opens with "Domain homolog"', $p->('G7'));
 }
-check(scalar(($source{G11}[1] // '') =~ /; similar to human DELTA over part of its length only \(30% of this protein, 60% of DELTA, E=1e-12\)$/),
+check(scalar(($source{G11}[1] // '') =~ /; similar to human DELTA over part of its length \(30% of this protein, 60% of DELTA, E=1e-12\)$/),
       'G11 provenance: the partial human homolog is stated, not denied', $p->('G11'));
 check(scalar(($source{G13}[1] // '') =~ /; one of these genes is its best human similarity hit/), 'G13 provenance: support of a family is said of "one of these genes"', $p->('G13'));
 check(($source{G13}[3] // '') eq 'hgnc_group' && ($source{G13}[0] // '') eq '30'
@@ -651,7 +651,7 @@ check(($source{G8}[3] // '') eq 'none' && ($source{G8}[0] // '') eq 'None' && ($
       && scalar(($source{G8}[1] // '') =~ /^None: hits did not pass the naming tests \(found: .*InterProScan Pfam/),
       'unnamed G8: a "none" provenance row -- it has hits (a DUF domain) that no step could use', $p->('G8'));
 check(($name{G57} // '') eq 'None' && ($source{G57}[1] // '') eq 'None: no hits (no similarity hit in any database searched, no OMA ortholog in any species, '
-      . 'no InterProScan homology match); a short protein, only 80 aa; expressed: a transcript matches it in adult gill (Trinity) (99% identity over 100% of the protein); in veliger larvae (97% identity over 98% of the protein); '
+      . 'no InterProScan homology match); a short protein, 80 aa; expressed: a transcript matches it in adult gill (Trinity) (99% identity over 100% of the protein); in veliger larvae (97% identity over 98% of the protein); '
       . 'predicted: signal peptide (SignalP 6); 1 transmembrane helix (DeepTMHMM); location cell membrane (DeepLoc 2: signal peptide, transmembrane domain)',
       'unnamed G57: short, expressed, and its predicted features (no name from them)', $p->('G57'));
 {
@@ -723,7 +723,7 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
   check(scalar($said->('G6', 'identity') =~ /^Member of the .* family; which member is not known; by PANTHER family$/), 'statement G6 identity (family)', $said->('G6', 'identity'));
   check(scalar($said->('G7', 'identity') =~ /^Shares a domain \([^\[\]]+\); not identified as a particular gene; by InterPro domain$/),
         'statement G7 identity (domain, no tags)', $said->('G7', 'identity'));
-  check($said->('G57', 'no_name') =~ /^No hits: / && $said->('G57', 'cautions') eq 'A short protein, only 80 aa'
+  check($said->('G57', 'no_name') =~ /^No hits: / && $said->('G57', 'cautions') eq 'A short protein, 80 aa'
         && $said->('G57', 'features') =~ /^Predicted: signal peptide \(SignalP 6\); 1 transmembrane helix/
         && $said->('G57', 'expression') =~ /^Expressed: a transcript matches it in adult gill \(Trinity\) .*; in veliger larvae /
         && !$statement{G57}{identity},

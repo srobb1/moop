@@ -177,13 +177,12 @@ my %TREE_AGREEING_TIER = map { my $tier = $_; ($tier => 1) } (3, 4, 5);
 my %RELATIONSHIP_LEAD = ('homolog'        => 'Homolog, orthology not shown (may be a paralog)',
                          'family homolog' => 'Family homolog, orthology not shown',
                          'domain homolog' => 'Domain homolog');
-# A plain human name (steps 3 and 5) carries a caution when its evidence is narrow or the gene is a
-# small part of the human protein: a tree name with < $STRONG_MIN_AGREE methods agreeing (tree + a
-# one-way best hit alone is two), and one human gene with < $STRONG_MIN_HUMAN_COVERAGE% of its
-# protein aligned (a knockdown or antibody designed from the human gene assumes the whole gene)
+# A plain human name (steps 3 and 5) on a gene aligning to < $STRONG_MIN_HUMAN_COVERAGE% of the one human
+# protein carries a caution (a knockdown or antibody designed from the human gene assumes the whole gene); a
+# tree name with < $STRONG_MIN_AGREE methods agreeing says how many in its provenance (not a caution)
 my $STRONG_MIN_AGREE          = 3;
 my $STRONG_MIN_HUMAN_COVERAGE = 50;
-my $SHORT_PROTEIN             = 100;   # aa: a None gene's provenance says "a short protein, only N aa"
+my $SHORT_PROTEIN             = 100;   # aa: a None gene's provenance says "a short protein, N aa"
 # an own-transcriptome ORF "matches" a protein at >= 95% identity over >= 90% of it (the same gene, allowing
 # for assembly and sequencing differences); Congeria: 61% of named genes, 3% of no-hit proteins under 100 aa
 my $TRANSCRIPT_MIN_IDENTITY   = 95;
@@ -2410,7 +2409,7 @@ sub choose_name {
   # a short protein with nothing known is often not a real gene (Congeria: 3% of those under
   # 100 aa have an own-transcript ORF, against 61% of named genes); the length is worth knowing
   my $length = max_member_length($group);
-  $rule .= "; a short protein, only $length aa" if $length and $length < $SHORT_PROTEIN;
+  $rule .= "; a short protein, $length aa" if $length and $length < $SHORT_PROTEIN;
   my $transcript = transcript_text($group);
   $rule .= "; $transcript" if $transcript ne '';
   my $features = protein_features_text($group);
@@ -2676,7 +2675,7 @@ sub domain_name {
   if (!$domain) {
     my $partial = $partial_domain{$group}
       or return not_named('no InterPro domain or repeat');
-    return not_named("only part of a domain: InterPro $partial->{entry} \"$partial->{name}\" ($partial->{analysis} $partial->{signature}) "
+    return not_named("part of a domain: InterPro $partial->{entry} \"$partial->{name}\" ($partial->{analysis} $partial->{signature}) "
                    . "covers $partial->{model_coverage}% of its model (needs $DOMAIN_MIN_MODEL_COVERAGE%)");
   }
   return not_named("InterPro $domain->{entry} \"$domain->{name}\" is not an informative name")
@@ -2699,7 +2698,7 @@ sub domain_name {
     $partial = $best->[1]{best_full}
       ? "; similar to human $label along its length ($numbers), but that gene's name could not be used "
         . "(a family of co-orthologs, a paralog tie, or an uninformative name)"
-      : "; similar to human $label over part of its length only ($numbers)" . shape_note($best->[1]);
+      : "; similar to human $label over part of its length ($numbers)" . shape_note($best->[1]);
   }
   return { desc => $description, selected => selected_id($group, $domain->{id}), tag => ['ISM', 'ipr', ($best ? 'sim~' : ())],
            note => "InterPro|Domains|$domain->{id}|$domain->{entry}|" . ($domain->{evalue} // '-'),
@@ -2826,14 +2825,16 @@ sub with_relationship {
   my $relationship = relationship($named, $step);
   # reasons for doubt that no evidence mark states: said as cautions (no summary word -- the
   # relationship says what the name claims, and each doubt is spelled out)
-  my @cautions;
+  my (@cautions, $agreement_note);
   if ($step == 3 or $step == 5) {
     my $agreeing = (agreement($group))[1];
-    push @cautions, "only $agreeing methods agree on this gene" if $step == 5 and $agreeing < $STRONG_MIN_AGREE;
+    # fewer than 3 methods behind a tree name: said plainly in the provenance (the Support statement names them),
+    # not as a caution -- two agreeing methods is good evidence
+    $agreement_note = "$agreeing methods agree on this gene" if $step == 5 and $agreeing < $STRONG_MIN_AGREE;
     my $closest = $closest{$group};
     if ($closest and !$closest->{family} and @{$closest->{human}} == 1) {
       my ($hit) = best_alignment($group, $closest->{human});
-      push @cautions, sprintf('aligns to only %.0f%% of %s', $hit->{tcov}, human_label($closest->{human}[0]))
+      push @cautions, sprintf('aligns to %.0f%% of %s', $hit->{tcov}, human_label($closest->{human}[0]))
         if $hit and defined $hit->{tcov} and $hit->{tcov} < $STRONG_MIN_HUMAN_COVERAGE;
     }
   }
@@ -2843,6 +2844,7 @@ sub with_relationship {
   }
   my $rule = $named->{origin}{rule};
   $rule = "$RELATIONSHIP_LEAD{$relationship}: " . lcfirst($rule) if $RELATIONSHIP_LEAD{$relationship};
+  $rule .= "; $agreement_note" if defined $agreement_note;
   $rule .= '; caution: ' . join('; ', @cautions) if @cautions;
   return { %$named, relationship => $relationship, cautions => \@cautions, origin => { %{$named->{origin}}, rule => $rule } };
 }
@@ -2941,7 +2943,7 @@ sub shape_note {
   return ": most of this protein aligns to part of $label -- possibly a fragment of a larger $label-like gene "
        . '(the gene model may be incomplete)' if $shape eq 'fragment';
   return ": all of $label aligns within a longer protein here -- possibly a fusion, or two gene models merged" if $shape eq 'fusion';
-  return ": a shared domain or region only -- $label is a distant relative, not this gene's identity";
+  return ": a shared domain or region -- $label is a distant relative, not this gene's identity";
 }
 
 # gene_model_flags.tsv: every gene whose best human hit has the shape of a fragment (most of this
@@ -3630,7 +3632,7 @@ sub gene_statements {
   push @cautions, (@unsaid == 1 ? 'one method points' : scalar(@unsaid) . ' methods point') . ' to other human genes: ' . join(', ', @unsaid)
     if @humans and @unsaid;
   my $length = max_member_length($group);
-  push @cautions, "a short protein, only $length aa" if $length and $length < $SHORT_PROTEIN;
+  push @cautions, "a short protein, $length aa" if $length and $length < $SHORT_PROTEIN;
   $said{cautions} = ucfirst join('; ', @cautions) if @cautions;
   my $features = protein_features_text($group);
   $said{features} = 'Predicted: ' . $features if $features ne '';

@@ -330,7 +330,7 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   whose best human hit is partial, the provenance says what the shape suggests: ≥ 80% of this
   protein on < 50% of the human one — "possibly a fragment of a larger X-like gene (the gene model
   may be incomplete)"; ≥ 80% of the human protein within < 50% of this one — "possibly a fusion, or
-  two gene models merged"; < 50% of each — "a shared domain or region only — X is a distant
+  two gene models merged"; < 50% of each — "a shared domain or region — X is a distant
   relative, not this gene's identity". A domain comparison would repeat what the domain name says;
   the shape says whether the human gene is this gene's identity or a relative, and whether the
   model may be broken. Every fragment- or fusion-shaped gene, whatever its name, is listed in
@@ -517,12 +517,16 @@ doubts that are better stated. Instead:
 
 - the **relationship** says what the name claims (below);
 - every reason for doubt is a **caution**, in words: the evidence marks (best hit another gene, PANTHER family
-  differs, tree elsewhere, OMA pair set aside or withheld), and three that no mark states -- a PANTHER-tree name with
-  fewer than 3 methods agreeing ("only 2 methods agree on this gene"; Congeria 128), a plain human name on a gene
-  aligning to under half the human protein ("aligns to only 48% of RNF213"; 96), a `-like` name from a one-way best
-  hit ("a one-way best hit, not reciprocal"; 245). They end the provenance line ("; caution: ...") and form the
-  Cautions statement (5.3);
-- the methods that **agree** are named in the Support statement (5.3).
+  differs, tree elsewhere, OMA pair set aside or withheld), and two that no mark states -- a plain human name on a
+  gene aligning to under half the human protein ("aligns to 48% of RNF213"; Congeria 96), a `-like` name from a
+  one-way best hit ("a one-way best hit, not reciprocal"; 245). They end the provenance line ("; caution: ...") and
+  form the Cautions statement (5.3);
+- the methods that **agree** are named in the Support statement (5.3); a PANTHER-tree name with fewer than 3 says
+  how many in its provenance ("2 methods agree on this gene"; 128) -- a count, not a caution: two agreeing methods
+  is good evidence.
+
+Wording: no "only". It judged numbers the reader can judge ("only 2 methods", "only 63 aa"); the statements give the
+number and the fact ("a short protein, 63 aa", "over part of its length", "a shared domain or region").
 
 Checked on Congeria: every gene-level name the words had rated Weak, and every Moderate one but 221, carries a caution;
 the 221 are `-like` names from a clean full-length reciprocal best hit, whose relationship already says "orthology not
@@ -544,7 +548,7 @@ Orthology is claimed only where a method tested it (OMA, the PANTHER tree): simi
 closest human gene by similarity may be a paralog of the true ortholog. Congeria: 3,953 ortholog, 3,074 co-ortholog,
 500 homolog, 2,324 family homolog, 10,318 domain homolog, 23,599 none.
 
-A gene with no name and a protein under 100 aa says so ("a short protein, only 63 aa"): with nothing known about it,
+A gene with no name and a protein under 100 aa says so ("a short protein, 63 aa"): with nothing known about it,
 the length is the most useful fact -- in Congeria only 3% of no-hit proteins under 100 aa have an ORF in the species'
 own transcriptome (Trinity, >= 95% identity over >= 90% of the protein), against 61% of named genes; many are likely
 not real genes (10,922 genes).
