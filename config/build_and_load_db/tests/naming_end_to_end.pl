@@ -485,8 +485,14 @@ check(($closest_smed{G16}[2] // '') eq 'SMED16' && ($closest_smed{G16}[4] // 'x'
       'closest Smed G16: a partial RBH passes the normal filter; no title, no description', join(' | ', @{$closest_smed{G16} // []}));
 check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', join(' | ', @{$closest_smed{G1} // []}));
 {
-  my %score;
-  foreach my $row (read_tsv("$out/closest_smed.moop.tsv")) { $score{$row->[0]} = $row->[3] if $row->[0] =~ /^G\d+$/; }
+  my (%score, %label);
+  foreach my $row (read_tsv("$out/closest_smed.moop.tsv")) {
+    next unless $row->[0] =~ /^G\d+$/;
+    $score{$row->[0]} = $row->[3];
+    $label{$row->[0]} = "$row->[1] | $row->[2]";
+  }
+  check(scalar(($label{G16} // '') =~ /^SMED16 \| \[reciprocal best hit \(MMseqs2/),
+        'closest Smed moop G16: a partner with no description is kept by its id, no stray space', $label{G16});
   check(($score{G5} // '') eq '2' && ($score{G8} // '') eq '3', 'closest Smed moop scores: 2 = RBH, 3 = DIAMOND', "G5 $score{G5}, G8 $score{G8}");
   my %decision = read_decisions("$out/naming_decisions.tsv");
   check(scalar(($decision{G5}{Closest_Smed} // '') =~ /^rank 2: SMED5 SmDELTA: smed delta kinase \(reciprocal best hit/),
@@ -507,6 +513,8 @@ check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', 
         'naming species G8: a full-length DIAMOND best hit names another species\' gene -like', $named{G8});
   check(($named{G12} // '') eq 'None', 'naming species G12: its best hit is partial -> no name from the weaker full-length hit', $named{G12});
   check(($named{G9} // '') ne '' && ($named{G9} // '') !~ /planarian/, 'naming species G9: a partner protein with no description names nothing', $named{G9});
+  check(scalar(($decision{G9}{S2_naming_species} // '') =~ /full-length Schmidtea mediterranea hit SMED9 \(no description\) has no informative name/),
+        'decision table G9: step 2 says the full-length hit is known only by its id', $decision{G9}{S2_naming_species});
   check(($named{G16} // '') !~ /planarian/, 'naming species G16: a partial RBH names nothing', $named{G16});
   check(($named{G1} // '') eq 'ALPHA: alpha synthase [ISO|1to1|sim+|pthr+]', 'naming species: a gene it has no hit for keeps its name', $named{G1});
   my %same = map { my $row = $_; ($row->[2] => $row->[3]) } read_tsv("$dir/out_same/geneNames.tsv");

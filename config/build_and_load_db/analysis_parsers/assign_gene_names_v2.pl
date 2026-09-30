@@ -1460,13 +1460,18 @@ sub naming_species_name {
   my @searched = ([$rbh ? $rbh->{full} : undef, 'rbh', 'reciprocal best hit (MMseqs2)', "MMseqs2_RBH_$tag"]);
   push @searched, [$diamond && passes($diamond->{top}, \%FULL) ? $diamond->{top} : undef, 'diamond', 'best hit (DIAMOND)', "DIAMOND_$tag"]
     unless $naming_species->{same_species};
+  my @without_name;   # full-length hits that cannot name: the partner protein has no informative description
   foreach my $searched (@searched) {
     my ($hit, $kind, $how, $source) = @$searched;
     next unless $hit;
     my ($symbol, $description) = split_symbol($hit->{description});
     $symbol = '' if is_placeholder_symbol($symbol);
     $description = clean_name($description);
-    next unless is_informative_hit($symbol, $description, $hit->{hit});
+    if (!is_informative_hit($symbol, $description, $hit->{hit})) {
+      my $text = "$hit->{hit} (" . ($hit->{description} ne '' ? "\"$hit->{description}\"" : 'no description') . ')';
+      push @without_name, $text unless grep { my $listed = $_; $listed eq $text } @without_name;   # RBH and DIAMOND: often one partner
+      next;
+    }
     $stats{"name: $tag $kind"}++;
     my $partner = "$naming_species->{species} $hit->{hit} (full-length $how, $species_search_label{$tag}{$kind}; " . coverage_text($hit) . ')';
     my $rule = $naming_species->{same_species}
@@ -1496,6 +1501,8 @@ sub naming_species_name {
                note => "$hit->{source}|$type|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{score}" };
     }
   }
+  return not_named("full-length $naming_species->{species} hit " . join(', ', @without_name)
+                   . ' has no informative name: a hit known only by its id does not name a gene') if @without_name;
   return not_named((@{$species_oma{$tag}{$group} // []} or $species_hit{$tag}{$group} or $rbh or $diamond)
                    ? "no $naming_species->{species} OMA 1:1 or many:1 ortholog or full-length hit with an informative name"
                    : "no $naming_species->{species} OMA ortholog or hit");
@@ -2598,7 +2605,7 @@ sub write_closest {
                 : ($gene->{description} || $gene->{symbol});
       foreach my $feature (sort keys %features) {
         print $fh join("\t", $feature, ($gene->{id} ne '' ? $gene->{id} : $gene->{symbol}),
-                       "$label [$closest->{evidence}]", $closest->{rank}), "\n";
+                       ($label ne '' ? "$label " : '') . "[$closest->{evidence}]", $closest->{rank}), "\n";
       }
     }
   }
