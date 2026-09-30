@@ -72,12 +72,13 @@ flowchart TD
    `pthr+/C` (same PANTHER family?), `tree+/C` (does a trusted PANTHER placement agree?), `hog`
    (OMA's HOG agrees), `te` (the ortholog carries a transposon domain), and, on a name given after
    OMA was not used, `omaX` (set aside), `omaC` (withheld) or `omaR` (pairing mostly rejected).
-2. **A confidence word** starts the provenance: **Strong** (an orthology name with no mark against
-   it), **Moderate** (one mark against it, or a full-length reciprocal `-like`), **Weak** (two marks
-   against it, a best-hit or tie `-like`, a family or domain name), **Curated**, **Source
-   annotation**.
-3. **The provenance** says why, in words: the relationship, the support, the alignment coverage of
-   both proteins, the copies carrying the same name, and anything not counted.
+2. **The relationship** opens the provenance: ortholog, co-ortholog, homolog ("orthology not shown
+   (may be a paralog)"), family homolog, domain homolog, curated, source annotation (decision table
+   `Relationship`). There is no confidence word (dropped 2026-09-30: it mixed a name's specificity
+   with its support).
+3. **The provenance** says why, in words: the support, the alignment coverage of both proteins, the
+   copies carrying the same name, anything not counted, and every doubt as a caution. The same
+   findings, one sentence per type, are the gene statements (Methods 5.3).
 
 ## Where the human genes come from (closest human gene, strongest first)
 
