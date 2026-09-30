@@ -510,20 +510,25 @@ homolog tables in the database.
 
 ### 5.1 Confidence and evidence tags
 
-**A plain word starts every provenance**, for a reader choosing genes to work on:
+**No confidence word.** An earlier version opened every provenance with Strong / Moderate / Weak. It was dropped
+(2026-09-30): it mixed how specific a name is with how well it is supported -- a domain name from an excellent InterPro
+hit read "Weak" only because a domain cannot say which gene it is -- and among gene-level names it only summarized
+doubts that are better stated. Instead:
 
-| Word | Meaning |
-|---|---|
-| Strong | an orthology name (`ISO`) with no mark against it -- and, for a plain human name (steps 3, 5), at least half of the human protein aligned, and for a PANTHER-tree name at least 3 methods agreeing (Evidence_by_method) |
-| Moderate | an orthology name with one mark against it (`sim~`, `sim-`, `pthrC`, `treeC`), or Strong evidence limited as above (the reason in brackets: "Moderate (only 2 methods agree)", "Moderate (aligns to only 48% of RNF213)"), or a `-like` name from a full-length reciprocal best hit with no tie and no mark against it |
-| Weak | an orthology name with two or more marks against it; a `-like` name from a best hit, a paralog tie or with a mark against it; a family or domain name (`ISM`) |
-| Curated / Source annotation | a curator's name / the gene set's own |
+- the **relationship** says what the name claims (below);
+- every reason for doubt is a **caution**, in words: the evidence marks (best hit another gene, PANTHER family
+  differs, tree elsewhere, OMA pair set aside or withheld), and three that no mark states -- a PANTHER-tree name with
+  fewer than 3 methods agreeing ("only 2 methods agree on this gene"; Congeria 128), a plain human name on a gene
+  aligning to under half the human protein ("aligns to only 48% of RNF213"; 96), a `-like` name from a one-way best
+  hit ("a one-way best hit, not reciprocal"; 245). They end the provenance line ("; caution: ...") and form the
+  Cautions statement (5.3);
+- the methods that **agree** are named in the Support statement (5.3).
 
-Congeria (2026-09-30, with the PANTHER tree): 6,205 Strong, 1,002 Moderate, 12,962 Weak, 23,599 None. A tree name backed
-by only the tree and a one-way best hit, or a plain name on a gene covering under half the human protein, was Strong
-before; 185 such names are now Moderate (163 tree, 22 OMA).
+Checked on Congeria: every gene-level name the words had rated Weak, and every Moderate one but 221, carries a caution;
+the 221 are `-like` names from a clean full-length reciprocal best hit, whose relationship already says "orthology not
+shown".
 
-**The relationship comes next**, in a fixed vocabulary (the decision table's `Relationship` column), so the line says
+**The relationship opens the provenance line**, in a fixed vocabulary (the decision table's `Relationship` column), so the line says
 what kind of claim the name is before why:
 
 | Relationship | Name | The provenance line opens |
@@ -648,19 +653,21 @@ the statements that apply to a gene are written; nothing negative is said about 
 
 | Order | Type | Says | Backed by (table on the page) |
 |---|---|---|---|
-| 1 | Identity | the relationship, the confidence (with its limits), the step: "Co-ortholog of human EPDR1 -- Strong; by PANTHER tree placement" | orthologs, closest human |
+| 1 | Identity | the relationship and the step: "Co-ortholog of human EPDR1; by PANTHER tree placement" | orthologs, closest human |
 | 1 | No name | why no step named it: "No hits: ..." / "Hits did not pass the naming tests (found: ...)" | -- |
-| 2 | Copies | "One of 10 genes in this genome named after it (the others: ...)" | OMA |
-| 3 | Alignment | how much of each protein aligns to the named human gene; for a family, domain or no name, the best human hit and its shape (fragment, fusion) | homologs |
-| 4 | Domains | has or lacks the named human gene's Pfam domains | InterProScan |
-| 5 | Tree | where TreeGrafter places it, and whether that agrees with the name | PANTHER |
-| 6 | Cautions | marks against the name in words (best hit another gene, PANTHER family differs, tree elsewhere, OMA pair set aside or withheld), Strong limits, a transposon domain, a short protein | -- |
-| 7 | Features | signal peptide, transmembrane helices, a DeepLoc location with its signal | SignalP, DeepTMHMM, DeepLoc |
-| 8 | Expression | each own transcriptome that has it (a tissue, a stage) | transcriptome |
+| 2 | Support | the methods that agree on the named human gene(s), and a shared PANTHER family: "Supported by 4 methods: MMseqs2 reciprocal best hit, ortholog via another species' ortholog, partial best human hit, PANTHER tree placement; the same PANTHER family (PTHR12460) as the human gene" (Evidence_by_method; these methods share one signal, sequence similarity -- a report, not independent votes) | closest human, homologs |
+| 3 | Copies | "One of 10 genes in this genome named after it (the others: ...)" | OMA |
+| 4 | Alignment | how much of each protein aligns to the named human gene; for a family, domain or no name, the best human hit and its shape (fragment, fusion) | homologs |
+| 5 | Domains | has or lacks the named human gene's Pfam domains | InterProScan |
+| 6 | Tree | where TreeGrafter places it, and whether that agrees with the name | PANTHER |
+| 7 | Cautions | every reason for doubt in words: the evidence marks, other methods pointing to other human genes, few methods agreeing, a small part of the human protein, a one-way best hit, a transposon domain, a short protein | -- |
+| 8 | Features | signal peptide, transmembrane helices, a DeepLoc location with its signal | SignalP, DeepTMHMM, DeepLoc |
+| 9 | Expression | each own transcriptome that has it (a tissue, a stage) | transcriptome |
 
 Example (Congeria COKUS1KC_0014560):
 
-> Identity: Co-ortholog of human EPDR1 -- Strong; by PANTHER tree placement
+> Identity: Co-ortholog of human EPDR1; by PANTHER tree placement
+> Support: Supported by 3 methods: ortholog via another species' ortholog, partial best human hit, PANTHER tree placement; the same PANTHER family (PTHR10697) as the human gene
 > Copies: One of 10 genes in this genome named after it (the others: COKUS1KC_0014561, ...)
 > Alignment: Aligned over 90% of this protein and 77% of EPDR1 (partial)
 > Domains: Has EPDR1's Pfam domain (PF00811 Ependymin)

@@ -177,9 +177,9 @@ my %TREE_AGREEING_TIER = map { my $tier = $_; ($tier => 1) } (3, 4, 5);
 my %RELATIONSHIP_LEAD = ('homolog'        => 'Homolog, orthology not shown (may be a paralog)',
                          'family homolog' => 'Family homolog, orthology not shown',
                          'domain homolog' => 'Domain homolog');
-# A plain human name (steps 3 and 5) is Strong only when the evidence is broad and the gene is
-# most of the human protein: a tree name needs >= $STRONG_MIN_AGREE methods agreeing (tree + a
-# one-way best hit alone is two), and one human gene needs >= $STRONG_MIN_HUMAN_COVERAGE% of its
+# A plain human name (steps 3 and 5) carries a caution when its evidence is narrow or the gene is a
+# small part of the human protein: a tree name with < $STRONG_MIN_AGREE methods agreeing (tree + a
+# one-way best hit alone is two), and one human gene with < $STRONG_MIN_HUMAN_COVERAGE% of its
 # protein aligned (a knockdown or antibody designed from the human gene assumes the whole gene)
 my $STRONG_MIN_AGREE          = 3;
 my $STRONG_MIN_HUMAN_COVERAGE = 50;
@@ -460,7 +460,7 @@ sub main {
   # gene is decided (a copy may be named as a transposon, withheld, or curated instead)
   count_named_copies(\%chosen);
   foreach my $group (keys %members) {
-    $name{$group} = with_confidence($group, tagged(set_aside_note($group, $chosen{$group})));
+    $name{$group} = with_relationship($group, tagged(set_aside_note($group, $chosen{$group})));
   }
 
   # ============================================================== write
@@ -2802,21 +2802,6 @@ sub tagged {
 #   Weak      an orthology name with two or more marks against it; a -like name from a best hit, a
 #             paralog tie or with a mark against it; a family or domain name (ISM)
 #   Curated / Source annotation   a curator's name / the gene set's own
-sub confidence_word {
-  my ($tags) = @_;
-  my %tag = map { my $mark = $_; ($mark => 1) } @$tags;
-  return 'Curated' if $tag{TAS};
-  return 'Source annotation' if $tag{SRC};
-  my $against = grep { my $mark = $_; $tag{$mark} } qw(sim~ sim- pthrC treeC);
-  if ($tag{ISO}) {
-    return $against == 0 ? 'Strong' : $against == 1 ? 'Moderate' : 'Weak';
-  }
-  if ($tag{ISS}) {
-    return ($tag{rbh} and !$tag{'tie-grp'} and !$against) ? 'Moderate' : 'Weak';
-  }
-  return 'Weak';
-}
-
 # the name's relationship to the human gene(s) it comes from, in a fixed vocabulary (the decision
 # table's Relationship column; the provenance line says it first). Orthology is claimed only where
 # a method tested it (OMA, the PANTHER tree); similarity alone is homology, which may be paralogy.
@@ -2834,32 +2819,32 @@ sub relationship {
   return 'homolog';
 }
 
-sub with_confidence {
+sub with_relationship {
   my ($group, $named) = @_;
   return $named unless $named->{tag} and $named->{origin} and $named->{desc} ne 'None';
   my $step = $decision{$group}{step} // 0;
   my $relationship = relationship($named, $step);
-  my $word = confidence_word($named->{tag});
-  my @limits;
-  if ($word eq 'Strong' and ($step == 3 or $step == 5)) {
+  # reasons for doubt that no evidence mark states: said as cautions (no summary word -- the
+  # relationship says what the name claims, and each doubt is spelled out)
+  my @cautions;
+  if ($step == 3 or $step == 5) {
     my $agreeing = (agreement($group))[1];
-    push @limits, "only $agreeing methods agree" if $step == 5 and $agreeing < $STRONG_MIN_AGREE;
+    push @cautions, "only $agreeing methods agree on this gene" if $step == 5 and $agreeing < $STRONG_MIN_AGREE;
     my $closest = $closest{$group};
     if ($closest and !$closest->{family} and @{$closest->{human}} == 1) {
       my ($hit) = best_alignment($group, $closest->{human});
-      push @limits, sprintf('aligns to only %.0f%% of %s', $hit->{tcov}, human_label($closest->{human}[0]))
+      push @cautions, sprintf('aligns to only %.0f%% of %s', $hit->{tcov}, human_label($closest->{human}[0]))
         if $hit and defined $hit->{tcov} and $hit->{tcov} < $STRONG_MIN_HUMAN_COVERAGE;
     }
-    if (@limits) {
-      $word = 'Moderate';
-      $stats{'confidence: Strong evidence limited to Moderate (' . ($step == 5 ? 'tree' : 'OMA') . ')'}++;
-    }
+  }
+  push @cautions, 'a one-way best hit, not reciprocal' if $relationship eq 'homolog' and ($named->{tag}[1] // '') eq 'bh';
+  foreach my $caution (@cautions) {
+    $stats{'caution: ' . ($caution =~ s/\d+/N/gr =~ s/ of \S+$/ of X/r)}++;
   }
   my $rule = $named->{origin}{rule};
   $rule = "$RELATIONSHIP_LEAD{$relationship}: " . lcfirst($rule) if $RELATIONSHIP_LEAD{$relationship};
-  my $label = $word . (@limits ? ' (' . join('; ', @limits) . ')' : '');
-  return { %$named, confidence => $word, relationship => $relationship, limits => \@limits,
-           origin => { %{$named->{origin}}, rule => "$label: $rule" } };
+  $rule .= '; caution: ' . join('; ', @cautions) if @cautions;
+  return { %$named, relationship => $relationship, cautions => \@cautions, origin => { %{$named->{origin}}, rule => $rule } };
 }
 
 # OMA relationship as the tag writes it (no colon)
@@ -3519,13 +3504,14 @@ my @STATEMENT_TYPES = (
   # [file key, source (the statement type as shown), order]
   ['identity',   'Gene statement: Identity',   1],
   ['no_name',    'Gene statement: No name',    1],
-  ['copies',     'Gene statement: Copies',     2],
-  ['alignment',  'Gene statement: Alignment',  3],
-  ['domains',    'Gene statement: Domains',    4],
-  ['tree',       'Gene statement: Tree',       5],
-  ['cautions',   'Gene statement: Cautions',   6],
-  ['features',   'Gene statement: Features',   7],
-  ['expression', 'Gene statement: Expression', 8],
+  ['support',    'Gene statement: Support',    2],
+  ['copies',     'Gene statement: Copies',     3],
+  ['alignment',  'Gene statement: Alignment',  4],
+  ['domains',    'Gene statement: Domains',    5],
+  ['tree',       'Gene statement: Tree',       6],
+  ['cautions',   'Gene statement: Cautions',   7],
+  ['features',   'Gene statement: Features',   8],
+  ['expression', 'Gene statement: Expression', 9],
 );
 my $STATEMENT_TYPE = 'Gene Statement';
 
@@ -3567,9 +3553,7 @@ sub identity_statement {
   my $text = $text{$relationship} // return '';
   my $step = $decision{$group}{step} // 0;
   my %method = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
-  my $confidence = $named->{confidence} // '';
-  $confidence .= ' (' . join('; ', @{$named->{limits}}) . ')' if $confidence ne '' and @{$named->{limits} // []};
-  return "$text -- " . ($confidence ne '' ? "$confidence; " : '') . 'by ' . ($method{$step} // 'its own annotation');
+  return "$text; by " . ($method{$step} // 'its own annotation');
 }
 
 # the human gene(s) a name is about: the closest human for human-gene names; none for family/domain names
@@ -3594,6 +3578,14 @@ sub gene_statements {
     $said{copies} = ucfirst $named->{copies_text} if $named->{copies_text};
   }
   my @humans = $named && $named->{desc} ne 'None' ? named_humans($group, $named) : ();
+  my (undef, $agreeing, undef, $agreeing_words, $elsewhere_words, $same_family) = agreement($group);
+  if (@humans) {
+    my @support = @$agreeing_words;
+    my $text = @support ? 'Supported by ' . scalar(@support) . ' method' . (@support == 1 ? '' : 's') . ': ' . join(', ', @support) : '';
+    $text .= ($text ne '' ? '; ' : 'Supported by ') . "the same PANTHER family ($same_family) as the human gene" . (@humans > 1 ? 's' : '')
+      if defined $same_family;
+    $said{support} = $text if $text ne '';
+  }
   if (@humans == 1) {
     my $coverage = alignment_coverage_text($group, \@humans);
     $said{alignment} = ucfirst $coverage if $coverage ne '';
@@ -3632,6 +3624,11 @@ sub gene_statements {
   push @cautions, 'an OMA pairing was withheld: its best hit and PANTHER family point to another gene' if $tag{omaC};
   push @cautions, "OMA's many:1 pairing was mostly rejected" if $tag{omaR};
   push @cautions, 'it carries a transposable-element domain' if $tag{te};
+  push @cautions, @{$named->{cautions} // []} if $named;
+  # methods pointing to other human genes that no mark above states (the best hit and the tree have theirs)
+  my @unsaid = grep { my $words = $_; $words !~ /best human hit|PANTHER tree/ } @{$elsewhere_words // []};
+  push @cautions, (@unsaid == 1 ? 'one method points' : scalar(@unsaid) . ' methods point') . ' to other human genes: ' . join(', ', @unsaid)
+    if @humans and @unsaid;
   my $length = max_member_length($group);
   push @cautions, "a short protein, only $length aa" if $length and $length < $SHORT_PROTEIN;
   $said{cautions} = ucfirst join('; ', @cautions) if @cautions;
@@ -4067,18 +4064,25 @@ sub agreement {
     return '' unless %reference;
     return (grep { my $human = $_; $reference{$human->{key}} } @$humans) ? '+' : 'C';
   };
-  my (%by_tier, @parts, $agree, $differ);
+  my (%by_tier, @parts, $agree, $differ, @agreeing, @elsewhere, $same_family);
   foreach my $link (@{$all_human_links{$group} // []}) {
     foreach my $human (@{$link->{human}}) {
       $by_tier{$link->{tier}}{$human->{key}} //= $human;
     }
   }
+  # which methods agree / point elsewhere, in words (the Support and Cautions statements)
   my $count = sub {
-    my ($flag) = @_;
-    $agree++ if $flag eq '+';
-    $differ++ if $flag eq 'C';
+    my ($flag, $method, $humans) = @_;
+    if ($flag eq '+') {
+      $agree++;
+      push @agreeing, $method;
+    } elsif ($flag eq 'C') {
+      $differ++;
+      push @elsewhere, "$method (" . join('/', map { my $human = $_; human_label($human) } @$humans) . ')';
+    }
     return $flag;
   };
+  my %method_words = (1 => 'OMA pairwise ortholog', 2 => 'OMA HOG', 3 => 'MMseqs2 reciprocal best hit', 4 => "ortholog via another species' ortholog");
   foreach my $method (['OMA', 1], ['HOG', 2], ['RBH', 3], ['VIA', 4]) {
     my ($label, $tier) = @$method;
     my @humans = map { my $key = $_; $by_tier{$tier}{$key} } sort keys %{$by_tier{$tier} // {}};
@@ -4086,20 +4090,20 @@ sub agreement {
       push @parts, "$label=-";
       next;
     }
-    my $flag = ($tier <= 2 and $unsupported_oma{$group}) ? 'X' : $count->($mark->(\@humans));
+    my $flag = ($tier <= 2 and $unsupported_oma{$group}) ? 'X' : $count->($mark->(\@humans), $method_words{$tier}, \@humans);
     push @parts, "$label=" . join('/', map { my $human = $_; human_label($human) } @humans) . ($flag ne '' ? "($flag)" : '');
   }
   my @ranked = ranked_human_hits($group);
   if (@ranked) {
     my $top = $ranked[0][1];
-    my $flag = $count->($mark->([$top->{human}]));
+    my $flag = $count->($mark->([$top->{human}]), ($top->{best_full} ? 'full-length' : 'partial') . ' best human hit', [$top->{human}]);
     push @parts, 'BH=' . human_label($top->{human}) . '(' . ($top->{best_full} ? 'full' : 'partial') . ($flag ne '' ? ",$flag" : '') . ')';
   } else {
     push @parts, 'BH=-';
   }
   my $placement = $tree{$group};
   if ($placement and $placement->{trusted} and @{$placement->{humans} // []}) {
-    my $flag = $count->($mark->($placement->{humans}));
+    my $flag = $count->($mark->($placement->{humans}), 'PANTHER tree placement', $placement->{humans});
     push @parts, 'TREE=' . join('/', map { my $human = $_; human_label($human) } @{$placement->{humans}}) . ($flag ne '' ? "($flag)" : '');
   } else {
     push @parts, 'TREE=' . ($placement ? 'weak' : '-');
@@ -4114,13 +4118,15 @@ sub agreement {
       }
     }
     push @parts, "PTHR=$family(" . (%reference_families ? ($reference_families{$family} ? '+' : 'C') : '?') . ')';
+    $same_family = $family if $reference_families{$family};
   } else {
     push @parts, 'PTHR=' . ($family // '-');
   }
-  return (join(' ', @parts), 0, 0) unless %reference;
+  return (join(' ', @parts), 0, 0, [], [], undef) unless %reference;
   my $reference_label = $closest->{family} ? 'family of ' . scalar(@{$closest->{human}}) : human_label($closest->{human}[0]);
+  # (cell, methods agreeing, methods pointing elsewhere, their words, the shared PANTHER family if any)
   return (join(' ', @parts) . " | vs $reference_label: " . ($agree // 0) . ' agree, ' . ($differ // 0) . ' point elsewhere',
-          $agree // 0, $differ // 0);
+          $agree // 0, $differ // 0, \@agreeing, \@elsewhere, $same_family);
 }
 
 # the decision table's Closest_<tag> cell: "rank N: gene (evidence)"

@@ -555,9 +555,9 @@ check(!grep({ my $symbol = /^([^:]*):/ ? $1 : ''; $symbol =~ /[\[|]/ } values %n
 # ---- provenance: why each name, as loaded into MOOP (accession, description, step, source)
 my $p = sub { my ($gene) = @_; return $source{$gene} ? join(' | ', @{$source{$gene}}) : '(no row)'; };
 check(($source{G1}[0] // '') eq 'HGNC:1' && ($source{G1}[2] // '') eq '3'
-      && ($source{G1}[1] // '') eq 'Strong: Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001); aligned over 95% of this protein and 95% of ALPHA (full-length); has 2 of ALPHA\'s 3 Pfam domains; no Pfam match here to PF00099 SH2x',
+      && ($source{G1}[1] // '') eq 'Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001); aligned over 95% of this protein and 95% of ALPHA (full-length); has 2 of ALPHA\'s 3 Pfam domains; no Pfam match here to PF00099 SH2x',
       'G1 provenance: HGNC:1, OMA 1:1, its support, step 3', $p->('G1'));
-check(($source{G2}[1] // '') eq 'Moderate: Co-ortholog of human GAMMA (OMA, many:1), one of 2 genes in this genome named after it (the others: G3); '
+check(($source{G2}[1] // '') eq 'Co-ortholog of human GAMMA (OMA, many:1), one of 2 genes in this genome named after it (the others: G3); '
       . 'OMA pairs 3 genes here with it, 1 of them named by other evidence; GAMMA is its best human similarity hit; '
       . 'a different PANTHER family (PTHR00099; human: PTHR00004); aligned over 90% of this protein and 90% of GAMMA (full-length)',
       'G2 provenance: the genes carrying the name (2), and how many OMA paired (3)', $p->('G2'));
@@ -571,10 +571,10 @@ check(scalar(($name{G36} // '') =~ /^THETA-like: theta ligase-like \[ISS\|bh\|om
 check(scalar(($source{G25}[1] // '') =~ /; OMA pairs it with human EPS \(1:1\), but no similarity hit or PANTHER family supports that pair, so it does not name the gene$/),
       'G25 provenance: the set-aside OMA pair is stated', $p->('G25'));
 check(($source{G26}[0] // '') eq 'HGNC:18' && ($source{G26}[2] // '') eq '6'
-      && scalar(($source{G26}[1] // '') =~ /; OMA pairs it with human ZETA \(1:1\), but its best human similarity hit is THETA and its PANTHER family differs, so ZETA does not name it$/),
+      && scalar(($source{G26}[1] // '') =~ /; OMA pairs it with human ZETA \(1:1\), but its best human similarity hit is THETA and its PANTHER family differs, so ZETA does not name it; caution: a one-way best hit, not reciprocal$/),
       'G26 provenance: the withheld OMA pair and both reasons', $p->('G26'));
 check(($source{G27}[3] // '') eq 'panther' && ($source{G27}[0] // '') eq 'PTHR00027' && ($source{G27}[2] // '') eq '3'
-      && scalar(($source{G27}[1] // '') =~ /^Strong: Co-ortholog of 2 human genes \(OMA, 1:many\), all in PANTHER family PTHR00027 \("Sprocket protein"\), which it matches too; the HGNC group they share \("Mixed molecules"\) is not a family by descent \(PANTHER coherence 0\.50\)/),
+      && scalar(($source{G27}[1] // '') =~ /^Co-ortholog of 2 human genes \(OMA, 1:many\), all in PANTHER family PTHR00027 \("Sprocket protein"\), which it matches too; the HGNC group they share \("Mixed molecules"\) is not a family by descent \(PANTHER coherence 0\.50\)/),
       'G27 provenance: the PANTHER family, and why the HGNC group was not used', $p->('G27'));
 check(scalar(($source{G28}[1] // '') =~ /; similar to human MIX1 over part of its length only \(40% of this protein, 40% of MIX1, E=1e-30\): a shared domain or region only -- MIX1 is a distant relative, not this gene's identity$/),
       'G28 provenance: the partial homolog is stated', $p->('G28'));
@@ -583,16 +583,16 @@ check(scalar(($source{G29}[1] // '') =~ /; similar to human MIX1 along its lengt
 check(($closest_human{G27}[3] // '') eq 'MIX1/MIX2-family', 'closest human G27: no scattered HGNC group in the family label', join(' | ', @{$closest_human{G27} // []}));
 check(($closest_human{G26}[2] // '') eq 'HGNC:17', 'closest human G26: still the OMA partner ZETA (OMA made that call)', join(' | ', @{$closest_human{G26} // []}));
 check(($source{G4}[3] // '') eq 'hgnc_group' && ($source{G4}[0] // '') eq '10'
-      && scalar(($source{G4}[1] // '') =~ /^Strong: Co-ortholog of 2 human genes in the HGNC group "Beta proteins" \(OMA, 1:many\); no single ortholog; one of these genes is its best human similarity hit; aligned over 90% of this protein and 90% of BETA1 \(full-length\)$/),
+      && scalar(($source{G4}[1] // '') =~ /^Co-ortholog of 2 human genes in the HGNC group "Beta proteins" \(OMA, 1:many\); no single ortholog; one of these genes is its best human similarity hit; aligned over 90% of this protein and 90% of BETA1 \(full-length\)$/),
       'G4 provenance: HGNC gene group id 10, linked as a group', $p->('G4'));
-check(($source{G5}[1] // '') eq 'Moderate: Homolog, orthology not shown (may be a paralog): similar to human DELTA along its length: reciprocal best hit, 95% of this protein and 95% of DELTA aligned, E=1e-50 (MMseqs2)'
+check(($source{G5}[1] // '') eq 'Homolog, orthology not shown (may be a paralog): similar to human DELTA along its length: reciprocal best hit, 95% of this protein and 95% of DELTA aligned, E=1e-50 (MMseqs2)'
       && ($source{G5}[2] // '') eq '6', 'G5 provenance: coverage and E-value, step 6', $p->('G5'));
 check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '7'
-      && ($source{G6}[1] // '') eq 'Weak: Family homolog, orthology not shown: member of PANTHER family PTHR00006 ("WIDGET PROTEIN SMC", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
+      && ($source{G6}[1] // '') eq 'Family homolog, orthology not shown: member of PANTHER family PTHR00006 ("WIDGET PROTEIN SMC", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
       'G6 provenance: PANTHER family, model coverage, step 7', $p->('G6'));
-check(($source{G30}[1] // '') eq 'Weak: Family homolog, orthology not shown: member of PANTHER family PTHR00030 ("CEREBELLIN-RELATED", InterPro\'s name "Cerebellin Synaptic Organizer" describes a function, not the family): 95% of the family model aligned, E=1e-40 (InterProScan)',
+check(($source{G30}[1] // '') eq 'Family homolog, orthology not shown: member of PANTHER family PTHR00030 ("CEREBELLIN-RELATED", InterPro\'s name "Cerebellin Synaptic Organizer" describes a function, not the family): 95% of the family model aligned, E=1e-40 (InterProScan)',
       'G30 provenance: why InterPro\'s name was not used', $p->('G30'));
-check(($source{G10}[1] // '') eq 'Weak: Family homolog, orthology not shown: member of PANTHER family PTHR00010 (InterPro IPR000010 "Gadget family"): 96% of the family model aligned, E=1e-60 (InterProScan)',
+check(($source{G10}[1] // '') eq 'Family homolog, orthology not shown: member of PANTHER family PTHR00010 (InterPro IPR000010 "Gadget family"): 96% of the family model aligned, E=1e-60 (InterProScan)',
       'G10 provenance: InterPro name, merged model coverage', $p->('G10'));
 check(($source{G7}[0] // '') eq 'IPR000002' && scalar(($source{G7}[1] // '') =~ /\(SMART SM00002, E=1e-20\); no ortholog, full-length homolog or family to name it by$/) && ($source{G7}[2] // '') eq '8',
       'G7 provenance: the chosen domain with its E-value, step 8', $p->('G7'));
@@ -605,19 +605,19 @@ check(($source{G7}[0] // '') eq 'IPR000002' && scalar(($source{G7}[1] // '') =~ 
   }
   my ($unnamed) = grep { my $gene = $_; ($decision{$gene}{Name} // '') eq 'None' } sort keys %decision;
   check(defined $unnamed && $decision{$unnamed}{Relationship} eq 'none', 'Relationship of an unnamed gene: none', $unnamed);
-  check(scalar(($source{G7}[1] // '') =~ /^Weak: Domain homolog: contains InterPro/), 'G7 provenance opens with "Domain homolog"', $p->('G7'));
+  check(scalar(($source{G7}[1] // '') =~ /^Domain homolog: contains InterPro/), 'G7 provenance opens with "Domain homolog"', $p->('G7'));
 }
 check(scalar(($source{G11}[1] // '') =~ /; similar to human DELTA over part of its length only \(30% of this protein, 60% of DELTA, E=1e-12\)$/),
       'G11 provenance: the partial human homolog is stated, not denied', $p->('G11'));
 check(scalar(($source{G13}[1] // '') =~ /; one of these genes is its best human similarity hit/), 'G13 provenance: support of a family is said of "one of these genes"', $p->('G13'));
 check(($source{G13}[3] // '') eq 'hgnc_group' && ($source{G13}[0] // '') eq '30'
-      && scalar(($source{G13}[1] // '') =~ /^Strong: OMA pairs it 1:1 with human HDA1, but OMA's HOG makes it co-ortholog of 2 human genes in the HGNC group "Class I HDACs"/),
+      && scalar(($source{G13}[1] // '') =~ /^OMA pairs it 1:1 with human HDA1, but OMA's HOG makes it co-ortholog of 2 human genes in the HGNC group "Class I HDACs"/),
       'G13 provenance: pairwise 1:1 vs HOG, named for the group', $p->('G13'));
 check(($source{G14}[0] // '') eq 'HGNC:8' && scalar(($source{G14}[1] // '') =~ /ANO1, ANO2 score within 5% of each other, and only ANO2 is a reciprocal best hit$/),
       'G14 provenance: the tie and what decided it', $p->('G14'));
 check(($source{G15}[0] // '') eq '21' && ($source{G15}[2] // '') eq '6', 'G15 provenance: HGNC group 21, step 6', $p->('G15'));
 check(($source{G31}[0] // '') eq 'HGNC:6' && ($source{G31}[2] // '') eq '5'
-      && scalar(($source{G31}[1] // '') =~ /^Strong: Ortholog of human EPS by its place on the PANTHER family tree: TreeGrafter places it with human EPS \(ortholog_1: joins at a speciation node, Bilateria \(grafted inside another lineage, moved up to this one\); PANTHER PTHR00031:SF1 E=1e-50, 90% of the protein, 85% of the family model\); and EPS is also its closest human gene by similarity/),
+      && scalar(($source{G31}[1] // '') =~ /^Ortholog of human EPS by its place on the PANTHER family tree: TreeGrafter places it with human EPS \(ortholog_1: joins at a speciation node, Bilateria \(grafted inside another lineage, moved up to this one\); PANTHER PTHR00031:SF1 E=1e-50, 90% of the protein, 85% of the family model\); and EPS is also its closest human gene by similarity/),
       'G31 provenance: the tree placement and the agreeing closest human, step 5', $p->('G31'));
 check(scalar(($source{G34}[1] // '') =~ /; but TreeGrafter places it with human THETA \(ortholog_1/), 'G34 provenance: the tree\'s dissent is stated', $p->('G34'));
 check(($name{G55} // '') eq 'None' && scalar(($source{G55}[1] // '') =~ /; its best human hit, PSI, covers 95% of this protein and 30% of PSI: most of this protein aligns to part of PSI -- possibly a fragment of a larger PSI-like gene \(the gene model may be incomplete\)$/),
@@ -712,13 +712,16 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
     close $fh;
   }
   my $said = sub { my ($gene, $type) = @_; return ($statement{$gene}{$type} // [''])->[0]; };
-  check($said->('G1', 'identity') eq 'Ortholog of human ALPHA -- Strong; by OMA human ortholog', 'statement G1 identity', $said->('G1', 'identity'));
+  check($said->('G1', 'identity') eq 'Ortholog of human ALPHA; by OMA human ortholog', 'statement G1 identity', $said->('G1', 'identity'));
+  check(scalar($said->('G1', 'support') =~ /^Supported by \d+ methods?: .*OMA pairwise ortholog.*full-length best human hit.*; the same PANTHER family \(PTHR00001\) as the human gene$/),
+        'statement G1 support: the methods that agree, and the shared PANTHER family', $said->('G1', 'support'));
+  check(!$statement{G7}{support}, 'no Support statement for a domain name (no human gene to agree on)', $said->('G7', 'support'));
   check(scalar($said->('G1', 'domains') =~ /^Has 2 of ALPHA's 3 Pfam domains; no Pfam match here to PF00099/), 'statement G1 domains', $said->('G1', 'domains'));
-  check(scalar($said->('G2', 'identity') =~ /^Co-ortholog of human GAMMA -- /) && scalar($said->('G2', 'copies') =~ /^One of 2 genes in this genome named after it \(the others: G3\)$/),
+  check(scalar($said->('G2', 'identity') =~ /^Co-ortholog of human GAMMA; by /) && scalar($said->('G2', 'copies') =~ /^One of 2 genes in this genome named after it \(the others: G3\)$/),
         'statement G2: co-ortholog, and its copy', $said->('G2', 'identity') . ' | ' . $said->('G2', 'copies'));
-  check(scalar($said->('G5', 'identity') =~ /^Homolog of human DELTA; orthology not shown \(may be a paralog\) -- Moderate; by /), 'statement G5 identity (-like)', $said->('G5', 'identity'));
-  check(scalar($said->('G6', 'identity') =~ /^Member of the .* family; which member is not known -- Weak; by PANTHER family$/), 'statement G6 identity (family)', $said->('G6', 'identity'));
-  check(scalar($said->('G7', 'identity') =~ /^Shares a domain \([^\[\]]+\); not identified as a particular gene -- Weak; by InterPro domain$/),
+  check(scalar($said->('G5', 'identity') =~ /^Homolog of human DELTA; orthology not shown \(may be a paralog\); by /), 'statement G5 identity (-like)', $said->('G5', 'identity'));
+  check(scalar($said->('G6', 'identity') =~ /^Member of the .* family; which member is not known; by PANTHER family$/), 'statement G6 identity (family)', $said->('G6', 'identity'));
+  check(scalar($said->('G7', 'identity') =~ /^Shares a domain \([^\[\]]+\); not identified as a particular gene; by InterPro domain$/),
         'statement G7 identity (domain, no tags)', $said->('G7', 'identity'));
   check($said->('G57', 'no_name') =~ /^No hits: / && $said->('G57', 'cautions') eq 'A short protein, only 80 aa'
         && $said->('G57', 'features') =~ /^Predicted: signal peptide \(SignalP 6\); 1 transmembrane helix/
@@ -727,7 +730,7 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
         'statements G57: no name, short, predicted features, expressed in two transcriptomes', join(' | ', map { my $type = $_; "$type: " . $said->('G57', $type) } sort keys %{$statement{G57} // {}}));
   check(!$statement{G37}{expression} && !$statement{G37}{features}, 'statements G37: no expression, no default location (nothing negative said)',
         join(' | ', sort keys %{$statement{G37} // {}}));
-  check(($statement{G1}{identity}[1] // '') eq '1' && ($statement{G1}{domains}[1] // '') eq '4', 'statement order in Score', '');
+  check(($statement{G1}{identity}[1] // '') eq '1' && ($statement{G1}{domains}[1] // '') eq '5', 'statement order in Score', '');
 }
 
 # ---- moop files load cleanly: 4 columns, the headers MOOP requires, one type per family
