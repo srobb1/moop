@@ -599,7 +599,7 @@ sub protein_features_text {
   my $protein = longest_member($group) // return '';
   my @parts;
   push @parts, "$signal_peptide{$protein} (SignalP 6)" if $signal_peptide{$protein};
-  push @parts, "$tm_helices{$protein} transmembrane helix" . ($tm_helices{$protein} == 1 ? '' : 'es') . ' (DeepTMHMM)'
+  push @parts, "$tm_helices{$protein} transmembrane " . ($tm_helices{$protein} == 1 ? 'helix' : 'helices') . ' (DeepTMHMM)'
     if $tm_helices{$protein};
   if (my $where = $location{$protein}) {
     push @parts, 'location ' . join(' or ', map { my $place = $_; lc $place } split /\|/, $where->{places})
@@ -2858,7 +2858,7 @@ sub with_confidence {
   my $rule = $named->{origin}{rule};
   $rule = "$RELATIONSHIP_LEAD{$relationship}: " . lcfirst($rule) if $RELATIONSHIP_LEAD{$relationship};
   my $label = $word . (@limits ? ' (' . join('; ', @limits) . ')' : '');
-  return { %$named, confidence => $word, relationship => $relationship,
+  return { %$named, confidence => $word, relationship => $relationship, limits => \@limits,
            origin => { %{$named->{origin}}, rule => "$label: $rule" } };
 }
 
@@ -3123,6 +3123,7 @@ sub count_named_copies {
       }
       # several copies of one human gene's ortholog are its co-orthologs (in-paralogs of each other)
       my $start = $copies > 1 ? $copies_of->{start} =~ s/^Ortholog of/Co-ortholog of/r : $copies_of->{start};
+      $named->{copies_text} = "one of $copies genes in this genome named after it (the others: $listed)" if $copies > 1;
       $named->{origin}{rule} = $start . $text . $copies_of->{end};
       # the count in the name too, as Ensembl writes one-to-many orthologs: every copy is "1 of N"
       $named->{desc} .= " (1 of $copies)" if $copies > 1;
@@ -3461,6 +3462,7 @@ sub write_outputs {
   }
   my $version = reference_versions();
   write_name_source($version);
+  write_statements($version);
   write_closest('human', [qw(closestHGNC closestHumanSym closestHumanDesc closestHumanEvidence)], \%human_closest, [
     { file => '', source => 'Closest human gene (HGNC)', version => $version, url => 'https://www.genenames.org',
       accession_url => 'https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/', match => sub { $_[0]{id} =~ /^HGNC:/ } },
@@ -3507,6 +3509,159 @@ sub open_closest_moop {
 ## Annotation Creation Date: " . `date '+%Y-%m-%d'`;
   print $fh join("\t", '## Gene', 'Accession', 'Accession_Description', 'Score'), "\n";
   return $fh;
+}
+
+# ##############################################################################
+# Gene statements: what the naming found about each gene, as a short series of typed statements a gene
+# page can show above its (collapsed) evidence tables. gene_statement.<type>.moop.tsv, one per type, annotation
+# type "Gene Statement"; Score = the statement's place in the series. Built from the same data as the name.
+my @STATEMENT_TYPES = (
+  # [file key, source (the statement type as shown), order]
+  ['identity',   'Gene statement: Identity',   1],
+  ['no_name',    'Gene statement: No name',    1],
+  ['copies',     'Gene statement: Copies',     2],
+  ['alignment',  'Gene statement: Alignment',  3],
+  ['domains',    'Gene statement: Domains',    4],
+  ['tree',       'Gene statement: Tree',       5],
+  ['cautions',   'Gene statement: Cautions',   6],
+  ['features',   'Gene statement: Features',   7],
+  ['expression', 'Gene statement: Expression', 8],
+);
+my $STATEMENT_TYPE = 'Gene Statement';
+
+# what the name is about, from the name itself: "human ANO1" for a human gene's name ("ANO1-like: ..."
+# -> ANO1), the family for a family name, the domain for a domain name
+sub name_subject {
+  my ($desc, $relationship) = @_;
+  my $plain = $desc =~ s/\s*\[[^\]]*\]$//r;   # the evidence tags
+  $plain =~ s/ \(1 of \d+\)$//;
+  if ($relationship eq 'family homolog' or ($relationship eq 'co-ortholog' and $plain =~ / family member$/)) {
+    return $plain =~ s/ family member$//r . ' family';
+  }
+  return $plain =~ s/(?: domain)?-containing protein$//r if $relationship eq 'domain homolog';
+  my ($symbol) = $plain =~ /^([^:\s]+): /;
+  return 'human ' . ($symbol =~ s/-like$//r) if defined $symbol;
+  return 'human ' . ($plain =~ s/-like$//r);
+}
+
+sub identity_statement {
+  my ($group, $named) = @_;
+  my $relationship = $named->{relationship} // 'none';
+  my $subject = name_subject($named->{desc}, $relationship);
+  my %text = (
+    'ortholog'          => "Ortholog of $subject",
+    'co-ortholog'       => $subject =~ / family$/ ? "Co-ortholog of the human genes of the $subject" : "Co-ortholog of $subject",
+    'homolog'           => "Homolog of $subject; orthology not shown (may be a paralog)",
+    'family homolog'    => "Member of the $subject; which member is not known",
+    'domain homolog'    => "Shares a domain ($subject); not identified as a particular gene",
+    'curated'           => 'Named by a curator',
+    'source annotation' => "Named by the gene set's own annotation",
+  );
+  # co-ortholog of several human genes: say which
+  my $humans = $closest{$group} ? $closest{$group}{human} : [];
+  if ($relationship eq 'co-ortholog' and @$humans > 1) {
+    my @labels = map { my $human = $_; human_label($human) } @$humans;
+    $text{'co-ortholog'} = 'Co-ortholog of ' . scalar(@labels) . ' human genes (' . join(', ', @labels[0 .. ($#labels < 5 ? $#labels : 5)])
+                         . (@labels > 6 ? ' and ' . (@labels - 6) . ' more' : '') . ')';
+  }
+  my $text = $text{$relationship} // return '';
+  my $step = $decision{$group}{step} // 0;
+  my %method = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
+  my $confidence = $named->{confidence} // '';
+  $confidence .= ' (' . join('; ', @{$named->{limits}}) . ')' if $confidence ne '' and @{$named->{limits} // []};
+  return "$text -- " . ($confidence ne '' ? "$confidence; " : '') . 'by ' . ($method{$step} // 'its own annotation');
+}
+
+# the human gene(s) a name is about: the closest human for human-gene names; none for family/domain names
+sub named_humans {
+  my ($group, $named) = @_;
+  my $relationship = $named->{relationship} // 'none';
+  return () unless $relationship eq 'ortholog' or $relationship eq 'co-ortholog' or $relationship eq 'homolog';
+  my $closest = $closest{$group} or return ();
+  return @{$closest->{human}};
+}
+
+sub gene_statements {
+  my ($group) = @_;
+  my $named = $name{$group};
+  my %said;
+  if (!$named or $named->{desc} eq 'None') {
+    my @found = sort keys %{$any_evidence{$group} // {}};
+    $said{no_name} = @found ? 'Hits did not pass the naming tests (found: ' . join(', ', @found) . ')'
+                            : 'No hits: no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match';
+  } else {
+    $said{identity} = identity_statement($group, $named);
+    $said{copies} = ucfirst $named->{copies_text} if $named->{copies_text};
+  }
+  my @humans = $named && $named->{desc} ne 'None' ? named_humans($group, $named) : ();
+  if (@humans == 1) {
+    my $coverage = alignment_coverage_text($group, \@humans);
+    $said{alignment} = ucfirst $coverage if $coverage ne '';
+    my $domains = domain_text($group, $humans[0]);
+    $said{domains} = ucfirst $domains if $domains ne '';
+  } elsif (!@humans) {
+    # no human gene in the name: the best human hit, as a relative (with its shape when partial)
+    my ($best) = ranked_human_hits($group);
+    if ($best) {
+      my $entry = $best->[1];
+      my $hit = $entry->{best_full} // $entry->{best};
+      $said{alignment} = sprintf('Best human hit %s: aligned over %.0f%% of this protein and %.0f%% of %s (%s)',
+                                 human_label($entry->{human}), $hit->{qcov}, $hit->{tcov}, human_label($entry->{human}),
+                                 $entry->{best_full} ? 'full-length' : 'partial')
+                       . ($entry->{best_full} ? '' : shape_note($entry));
+    }
+  }
+  my $placement = $tree{$group};
+  if ($placement and $placement->{trusted} and @{$placement->{humans} // []}) {
+    my %named_key = map { my $human = $_; ($human->{key} => 1) } @humans;
+    my $agrees = grep { my $human = $_; $named_key{$human->{key}} } @{$placement->{humans} // []};
+    $said{tree} = ucfirst(tree_text($placement))
+                . (!@humans ? '' : $agrees ? '; agrees with the name' : '; the name comes from other evidence');
+  }
+  my @cautions;
+  my %tag = map { my $mark = $_; ($mark => 1) } @{$named ? $named->{tag} // [] : []};
+  my $human_label = @humans == 1 ? human_label($humans[0]) : 'the named human genes';
+  if ($tag{'sim~'} and @humans) {   # a family or domain name has no human gene to compare: the Alignment statement gives the best hit
+    my ($best) = ranked_human_hits($group);
+    push @cautions, "its best human similarity hit is " . ($best ? human_label($best->[1]{human}) : 'another gene') . ", not $human_label";
+  }
+  push @cautions, "no similarity hit to $human_label" if $tag{'sim-'} and @humans;
+  push @cautions, "its PANTHER family differs from that of $human_label" if $tag{pthrC} and @humans;
+  push @cautions, 'the PANTHER tree places it with other human genes' if $tag{treeC};
+  push @cautions, 'an OMA pairing that nothing else supports was set aside' if $tag{omaX};
+  push @cautions, 'an OMA pairing was withheld: its best hit and PANTHER family point to another gene' if $tag{omaC};
+  push @cautions, "OMA's many:1 pairing was mostly rejected" if $tag{omaR};
+  push @cautions, 'it carries a transposable-element domain' if $tag{te};
+  my $length = max_member_length($group);
+  push @cautions, "a short protein, only $length aa" if $length and $length < $SHORT_PROTEIN;
+  $said{cautions} = ucfirst join('; ', @cautions) if @cautions;
+  my $features = protein_features_text($group);
+  $said{features} = 'Predicted: ' . $features if $features ne '';
+  my $expression = transcript_text($group);
+  $said{expression} = ucfirst $expression if $expression ne '';
+  return %said;
+}
+
+sub write_statements {
+  my ($version) = @_;
+  my %fh;
+  foreach my $group (sort keys %members) {
+    my %said = gene_statements($group);
+    my $named = $name{$group};
+    my %accession = (identity => ($named && $named->{origin} ? $named->{origin}{accession} : '') // '',
+                     tree => ($tree{$group} ? $tree{$group}{panther_match} : ''));
+    foreach my $type (@STATEMENT_TYPES) {
+      my ($key, $source, $order) = @$type;
+      my $text = $said{$key} // next;
+      my $fh = $fh{$key} //= open_closest_moop("$opt{'out-dir'}/gene_statement.$key.moop.tsv",
+        { source => $source, version => $version, url => '', accession_url => '' }, $STATEMENT_TYPE);
+      print $fh join("\t", $group, ($accession{$key} // '') ne '' ? $accession{$key} : $key, $text =~ s/[\t\n]/ /gr, $order), "\n";
+      $stats{"statement: $key"}++;
+    }
+  }
+  foreach my $handle (values %fh) {
+    close $handle;
+  }
 }
 
 # gene_name_source.<kind>.moop.tsv: a row for every named id and its gene. Accession = what the

@@ -682,15 +682,16 @@ naming_outputs_current() {
 }
 
 ## run assign_gene_names_v2.pl into geneNames.tsv, closest_<tag>.tsv/.moop.tsv and
-## gene_name_source.<kind>.moop.tsv (args: extra options). Built in a scratch directory, then
-## swapped in: every old closest_* and gene_name_source file goes, so nothing stale is loaded.
+## gene_name_source.<kind>.moop.tsv and gene_statement.<type>.moop.tsv (args: extra options). Built in a
+## scratch directory, then swapped in: every old closest_*, gene_name_source and gene_statement file goes,
+## so nothing stale is loaded.
 run_naming_v2() {
   build_naming_args
   rm -rf naming.tmp && mkdir naming.tmp
   perl "$REPO/analysis_parsers/assign_gene_names_v2.pl" "${NAMING_ARGS[@]}" --isoforms isoforms.tsv "$@" \
     --out-names naming.tmp/geneNames.tsv --out-dir naming.tmp \
     || { rm -rf naming.tmp; echo "ERROR: gene naming (assign_gene_names_v2.pl) failed"; exit 1; }
-  rm -f closest_*.tsv gene_name_source.*.moop.tsv
+  rm -f closest_*.tsv gene_name_source.*.moop.tsv gene_statement.*.moop.tsv
   mv naming.tmp/* . && rmdir naming.tmp
 }
 

@@ -638,6 +638,36 @@ selectins, matrilins and cadherins paired through Sushi, vWA and cadherin domain
 next steps name by their domain or family. The closest human gene stays the OMA partner (OMA did
 make the call); the name's provenance states the conflict.
 
+### 5.3 Gene statements -- what a gene page says first
+
+The provenance line is complete but long. For a gene page, the same findings are written as a short series of
+**typed statements**, each one sentence, in a fixed order; the page can show them above its evidence tables (collapsed),
+with "see the data below". One moop file per type, `gene_statement.<type>.moop.tsv` (annotation type "Gene Statement",
+source "Gene statement: <Type>", Score = the place in the series), loaded by `setup_new_moopdb_and_load_data.sh`. Only
+the statements that apply to a gene are written; nothing negative is said about expression or location.
+
+| Order | Type | Says | Backed by (table on the page) |
+|---|---|---|---|
+| 1 | Identity | the relationship, the confidence (with its limits), the step: "Co-ortholog of human EPDR1 -- Strong; by PANTHER tree placement" | orthologs, closest human |
+| 1 | No name | why no step named it: "No hits: ..." / "Hits did not pass the naming tests (found: ...)" | -- |
+| 2 | Copies | "One of 10 genes in this genome named after it (the others: ...)" | OMA |
+| 3 | Alignment | how much of each protein aligns to the named human gene; for a family, domain or no name, the best human hit and its shape (fragment, fusion) | homologs |
+| 4 | Domains | has or lacks the named human gene's Pfam domains | InterProScan |
+| 5 | Tree | where TreeGrafter places it, and whether that agrees with the name | PANTHER |
+| 6 | Cautions | marks against the name in words (best hit another gene, PANTHER family differs, tree elsewhere, OMA pair set aside or withheld), Strong limits, a transposon domain, a short protein | -- |
+| 7 | Features | signal peptide, transmembrane helices, a DeepLoc location with its signal | SignalP, DeepTMHMM, DeepLoc |
+| 8 | Expression | each own transcriptome that has it (a tissue, a stage) | transcriptome |
+
+Example (Congeria COKUS1KC_0014560):
+
+> Identity: Co-ortholog of human EPDR1 -- Strong; by PANTHER tree placement
+> Copies: One of 10 genes in this genome named after it (the others: COKUS1KC_0014561, ...)
+> Alignment: Aligned over 90% of this protein and 77% of EPDR1 (partial)
+> Domains: Has EPDR1's Pfam domain (PF00811 Ependymin)
+> Tree: TreeGrafter places it with human EPDR1 (ortholog_1: joins at a speciation node, Eumetazoa ...); agrees with the name
+> Features: Predicted: signal peptide (SignalP 6); location extracellular (DeepLoc 2: signal peptide)
+> Expression: Expressed: a transcript matches it in its own transcriptome (100% identity over 100% of the protein)
+
 ## 6. Closest gene
 
 **Definition.** The closest human gene is the human gene most closely related to this gene by

@@ -697,6 +697,39 @@ check(($closest_nvec{G4}[2] // 'x') eq '' && scalar(($closest_nvec{G4}[5] // '')
 check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_human{G13}[5] // '') eq 'OMA ortholog (1:1) of HDA1; OMA HOG co-ortholog of 2 human genes, family of 2',
       'closest human G13: the HOG family, with the pairwise gene named in the evidence', join(' | ', @{$closest_human{G13} // []}));
 
+# ---- gene statements: the typed series a gene page shows (gene_statement.<type>.moop.tsv)
+{
+  my %statement;   # gene -> type -> [text, order]
+  foreach my $file (glob "$out/gene_statement.*.moop.tsv") {
+    my ($type) = $file =~ /gene_statement\.(\w+)\.moop\.tsv$/;
+    open my $fh, '<', $file or die;
+    while (my $line = <$fh>) {
+      next if $line =~ /^#/;
+      chomp $line;
+      my ($gene, undef, $text, $order) = split /\t/, $line;
+      $statement{$gene}{$type} = [$text, $order];
+    }
+    close $fh;
+  }
+  my $said = sub { my ($gene, $type) = @_; return ($statement{$gene}{$type} // [''])->[0]; };
+  check($said->('G1', 'identity') eq 'Ortholog of human ALPHA -- Strong; by OMA human ortholog', 'statement G1 identity', $said->('G1', 'identity'));
+  check(scalar($said->('G1', 'domains') =~ /^Has 2 of ALPHA's 3 Pfam domains; no Pfam match here to PF00099/), 'statement G1 domains', $said->('G1', 'domains'));
+  check(scalar($said->('G2', 'identity') =~ /^Co-ortholog of human GAMMA -- /) && scalar($said->('G2', 'copies') =~ /^One of 2 genes in this genome named after it \(the others: G3\)$/),
+        'statement G2: co-ortholog, and its copy', $said->('G2', 'identity') . ' | ' . $said->('G2', 'copies'));
+  check(scalar($said->('G5', 'identity') =~ /^Homolog of human DELTA; orthology not shown \(may be a paralog\) -- Moderate; by /), 'statement G5 identity (-like)', $said->('G5', 'identity'));
+  check(scalar($said->('G6', 'identity') =~ /^Member of the .* family; which member is not known -- Weak; by PANTHER family$/), 'statement G6 identity (family)', $said->('G6', 'identity'));
+  check(scalar($said->('G7', 'identity') =~ /^Shares a domain \([^\[\]]+\); not identified as a particular gene -- Weak; by InterPro domain$/),
+        'statement G7 identity (domain, no tags)', $said->('G7', 'identity'));
+  check($said->('G57', 'no_name') =~ /^No hits: / && $said->('G57', 'cautions') eq 'A short protein, only 80 aa'
+        && $said->('G57', 'features') =~ /^Predicted: signal peptide \(SignalP 6\); 1 transmembrane helix/
+        && $said->('G57', 'expression') =~ /^Expressed: a transcript matches it in adult gill \(Trinity\) .*; in veliger larvae /
+        && !$statement{G57}{identity},
+        'statements G57: no name, short, predicted features, expressed in two transcriptomes', join(' | ', map { my $type = $_; "$type: " . $said->('G57', $type) } sort keys %{$statement{G57} // {}}));
+  check(!$statement{G37}{expression} && !$statement{G37}{features}, 'statements G37: no expression, no default location (nothing negative said)',
+        join(' | ', sort keys %{$statement{G37} // {}}));
+  check(($statement{G1}{identity}[1] // '') eq '1' && ($statement{G1}{domains}[1] // '') eq '4', 'statement order in Score', '');
+}
+
 # ---- moop files load cleanly: 4 columns, the headers MOOP requires, one type per family
 foreach my $file (glob("$out/*.moop.tsv")) {
   open my $fh, '<', $file or die;
@@ -709,7 +742,8 @@ foreach my $file (glob("$out/*.moop.tsv")) {
   }
   close $fh;
   (my $short = $file) =~ s{.*/}{};
-  check($bad == 0 && ($type eq 'Closest Gene' || $type eq 'Gene Name Source'), "$short: 4 columns, type $type", "$bad bad rows");
+  check($bad == 0 && ($type eq 'Closest Gene' || $type eq 'Gene Name Source' || ($short =~ /^gene_statement\./ && $type eq 'Gene Statement')),
+        "$short: 4 columns, type $type", "$bad bad rows");
 }
 
 # ---- closest gene in a species searched with closest_species_rbh.sh / closest_species_diamond.sh
