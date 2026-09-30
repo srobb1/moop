@@ -972,7 +972,7 @@ sub domain_text {
   return '' unless @human_domains;
   my $own = $gene_pfam{$group} // {};
   my %own_clan;
-  foreach my $pfam (keys %$own) {
+  foreach my $pfam (sort keys %$own) {   # sorted: the first of a clan is its stand-in
     $own_clan{$pfam_clan{$pfam}} //= $pfam if defined $pfam_clan{$pfam};
   }
   my $named = sub { my ($pfam) = @_; $pfam . (defined $pfam_name{$pfam} ? " $pfam_name{$pfam}" : '') };
@@ -1890,13 +1890,17 @@ sub shared_panther_family {
       $count{$family}++;
     }
   }
-  my $full_length = grep { my $human = $_; ($human_hit{$group}{$human->{key}} // {})->{best_full} } @$humans;
+  # read once, guarded: a nested lookup on a gene with no entry would create one
+  my $gene_hits     = $human_hit{$group} // {};
+  my $gene_families = $gene_panther{$group} // {};
+  my $own_coverage  = $gene_family_coverage{$group} // {};
+  my $full_length = grep { my $human = $_; ($gene_hits->{$human->{key}} // {})->{best_full} } @$humans;
   my @shared = sort grep { my $family = $_;
-                           $count{$family} == @$humans and $gene_panther{$group}{$family}
-                           and ($full_length or ($gene_family_coverage{$group}{$family} // 0) >= $FAMILY_NAME_MIN_OWN_COVERAGE)
+                           $count{$family} == @$humans and $gene_families->{$family}
+                           and ($full_length or ($own_coverage->{$family} // 0) >= $FAMILY_NAME_MIN_OWN_COVERAGE)
                            and defined $panther_label{$family} and is_informative_hit('', $panther_label{$family}, $family) } keys %count;
   $stats{'PANTHER family shared, but the gene is not a whole member (< 50% of the model, no full-length hit): not used'}++
-    if !@shared and grep { my $family = $_; $count{$family} == @$humans and $gene_panther{$group}{$family} } keys %count;
+    if !@shared and grep { my $family = $_; $count{$family} == @$humans and $gene_families->{$family} } keys %count;
   return $shared[0];
 }
 
@@ -2569,7 +2573,7 @@ sub oma_supported {
   my ($group, $humans) = @_;
   return 1 unless $human_searched;
   foreach my $human (@$humans) {
-    return 1 if $human_hit{$group}{$human->{key}};
+    return 1 if ($human_hit{$group} // {})->{$human->{key}};
   }
   my %human_families;
   foreach my $human (@$humans) {
