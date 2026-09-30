@@ -302,6 +302,18 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   case: RAB GTPases (0.26) are one family, but PANTHER splits them into many small families; RAB
   genes are named by their PANTHER family instead. The same rule applies to paralog ties
   (step 6) and to the closest-human family label (§6.2).
+- **A many:1 pairing mostly rejected is not used.** When OMA pairs at least 5 genes of this gene
+  set with one human gene and fewer than half pass the support and conflict checks (set aside,
+  `omaX`, or withheld, `omaC`), the pairing was made through a shared domain or repeat, not
+  orthology: none of them is named after that gene; the next step names them and the tag carries
+  `omaR`. Congeria: 6 names (APOH ×3 — 18 Sushi-domain proteins paired with a vertebrate plasma
+  protein, 15 rejected; NCAN, TNN).
+- **The copies are listed.** A many:1 name's provenance names the other genes carrying it ("one of 3
+  genes in this genome named after it (the others: …)"; up to 10, then "and N more"), so specific
+  primers, RNAi or antibodies can be designed.
+- **Alignment coverage is stated.** Every orthology name (and a tree name) says how much of this
+  protein and of the human protein the best alignment to the named gene covers, and whether it is
+  full-length ("aligned over 95% of this protein and 88% of ALPHA (full-length)").
 - **Human genes that are not genes of their own are not counted.** OMA's set can include an
   HGNC *readthrough* (BIVM-ERCC5: one transcript joining two neighbouring genes, so its protein
   contains most of ERCC5) or an Ensembl gene with no HGNC record that is another model of the same
@@ -470,7 +482,20 @@ lineage-specific paralog (`solute carrier family 37 member 4a` in fish), which c
 detected and would be wrong in the new organism. Other-species hits remain available as
 homolog tables in the database.
 
-### 5.1 Evidence tags
+### 5.1 Confidence and evidence tags
+
+**A plain word starts every provenance**, for a reader choosing genes to work on:
+
+| Word | Meaning |
+|---|---|
+| Strong | an orthology name (`ISO`) with no mark against it |
+| Moderate | an orthology name with one mark against it (`sim~`, `sim-`, `pthrC`, `treeC`), or a `-like` name from a full-length reciprocal best hit with no tie and no mark against it |
+| Weak | an orthology name with two or more marks against it; a `-like` name from a best hit, a paralog tie or with a mark against it; a family or domain name (`ISM`) |
+| Curated / Source annotation | a curator's name / the gene set's own |
+
+Congeria: 5,747 Strong, 986 Moderate, 13,834 Weak, 23,201 None.
+
+#### Evidence tags
 
 **Support marks.** Every kind of support is written with the same five marks, so a mark means
 the same thing wherever it appears:
@@ -509,6 +534,7 @@ contains no colon. The full reasoning is in the Gene Name Source table (§7).
 | `te` (on `ISO`) | the ortholog carries a transposable-element domain |
 | `omaX` | an OMA human ortholog was set aside for lack of support (§5.2) |
 | `omaC` | an OMA name was withheld: best human hit another gene and a different PANTHER family (§5.2) |
+| `omaR` | an OMA many:1 pairing mostly rejected (≥ 5 genes paired, fewer than half pass): not named after that gene |
 | `tree+`, `treeC` | a trusted PANTHER tree placement puts the gene with the named human gene / with other human genes (step 5) |
 
 ### 5.2 Support of OMA calls
@@ -652,7 +678,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 146 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 147 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

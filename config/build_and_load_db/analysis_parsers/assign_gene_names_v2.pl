@@ -191,6 +191,13 @@ my %REPEAT_LIKE_ENTRY = map { my $entry = $_; ($entry => 1) } qw(IPR013087);   #
 # a human ortholog -- except when OMA's "ortholog" is shared by >= $TE_MIN_COPIES copies here
 # (a TE family, next to a human gene domesticated from one: HARBI1, ZBED1, ZMYM1).
 my $TE_MIN_COPIES = 5;
+# A many:1 pairing mostly rejected: when OMA pairs at least this many genes of this gene set with one
+# human gene and fewer than half of them pass the support and conflict checks, the pairing was made
+# through a shared domain or repeat, not orthology, and the rest are not named after it either
+# (Congeria: APOH, 18 Sushi-domain proteins, 15 rejected; NCAN 1 of 5). Tag omaR.
+my $PAIRING_MIN_COPIES = 5;
+# a name's provenance lists at most this many of the other copies named after the same human gene
+my $COPIES_LISTED = 10;
 my %TE_PFAM = (
   PF13359 => ['PIF/Harbinger', 'DNA transposon', 'PIF/Harbinger transposase'],
   PF13358 => ['Tc1/mariner',   'DNA transposon', 'Tc1/mariner transposase'],
@@ -271,6 +278,7 @@ my %human_panther;    # HGNC id -> { PANTHER family => 1 } (Swiss-Prot human ent
 my $human_searched = 0;   # a similarity search against human proteins was read (else "no hit" means nothing)
 my %unsupported_oma;      # group -> { humans, type }: an OMA human ortholog set aside (oma_supported)
 my %conflicting_oma;      # group -> { humans, type, best }: an OMA name withheld, both checks against it (oma_conflicts)
+my %rejected_pairing;     # group -> { human, paired, passed }: a many:1 pairing mostly rejected (omaR)
 my @pending_compara;  # links through another species' Ensembl gene, resolved in one Compara pass
 my %reference_fasta_cache;
 my %reference_fasta_file;   # species dir -> the protein FASTA read (for the decision table's header)
@@ -387,13 +395,16 @@ sub main {
   my %chosen;
   foreach my $group (keys %members) {
     $candidates{$group} = collect_candidates($group);
+  }
+  reject_mostly_failed_pairings();
+  foreach my $group (keys %members) {
     $chosen{$group} = choose_name($group);
   }
   # many:1 names: how many genes CARRY each human gene's name is known only now that every
   # gene is decided (a copy may be named as a transposon, withheld, or curated instead)
   count_named_copies(\%chosen);
   foreach my $group (keys %members) {
-    $name{$group} = tagged(set_aside_note($group, $chosen{$group}));
+    $name{$group} = with_confidence(tagged(set_aside_note($group, $chosen{$group})));
   }
 
   # ============================================================== write
@@ -2320,8 +2331,10 @@ sub tree_name {
     unless is_informative_hit($human->{symbol}, $human->{name}, $human->{key});
   $stats{'name: PANTHER tree placement agreeing with the closest human'}++;
   my $symbol = $human->{hgnc_id} ? $human->{symbol} : '';
+  my $coverage = alignment_coverage_text($group, [$human]);
   my $rule = "Ortholog of human " . human_label($human) . " by its place on the PANTHER family tree: $text; and "
-           . human_label($human) . " is also its closest human gene by similarity ($closest->{evidence})";
+           . human_label($human) . " is also its closest human gene by similarity ($closest->{evidence})"
+           . ($coverage ne '' ? "; $coverage" : '');
   return { desc => ($symbol ne '' ? "$symbol: $human->{name}" : $human->{name}), selected => selected_id($group, $placement->{protein}),
            tag => ['ISO', 'tree', ($closest->{tier} == 3 ? 'rbh' : $closest->{tier} == 4 ? 'via' : 'bh')],
            note => "PANTHER_TreeGrafter|Orthologs|$placement->{protein}|$placement->{panther_match}|$placement->{evalue}",
@@ -2408,6 +2421,14 @@ sub domain_name {
 # pair in its provenance
 sub set_aside_note {
   my ($group, $named) = @_;
+  if (my $rejected = $rejected_pairing{$group}) {
+    return $named unless $named->{tag} and $named->{origin} and ($decision{$group}{step} // 0) != 3;
+    my $label = human_label($rejected->{human});
+    return { %$named, tag => [@{$named->{tag}}, 'omaR'],
+             origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . "; OMA pairs it with human $label together with "
+                                                     . ($rejected->{paired} - 1) . " other genes here, but " . ($rejected->{paired} - $rejected->{passed})
+                                                     . " of the $rejected->{paired} fail the similarity and PANTHER checks, so $label names none of them" } };
+  }
   if (my $conflict = $conflicting_oma{$group}) {
     return $named unless $named->{tag} and $named->{origin};
     my $humans = join('/', map { my $human = $_; human_label($human) } @{$conflict->{humans}});
@@ -2483,6 +2504,35 @@ sub tagged {
   return { %$named, desc => "$named->{desc} [" . join('|', @{$named->{tag}}) . "]" };
 }
 
+# A plain word before the provenance, for a reader choosing genes to work on:
+#   Strong    an orthology name (ISO) with no evidence against it
+#   Moderate  an orthology name with one mark against it (sim~, sim-, pthrC, treeC), or a -like name
+#             from a full-length reciprocal best hit with no tie and no mark against it
+#   Weak      an orthology name with two or more marks against it; a -like name from a best hit, a
+#             paralog tie or with a mark against it; a family or domain name (ISM)
+#   Curated / Source annotation   a curator's name / the gene set's own
+sub confidence_word {
+  my ($tags) = @_;
+  my %tag = map { my $mark = $_; ($mark => 1) } @$tags;
+  return 'Curated' if $tag{TAS};
+  return 'Source annotation' if $tag{SRC};
+  my $against = grep { my $mark = $_; $tag{$mark} } qw(sim~ sim- pthrC treeC);
+  if ($tag{ISO}) {
+    return $against == 0 ? 'Strong' : $against == 1 ? 'Moderate' : 'Weak';
+  }
+  if ($tag{ISS}) {
+    return ($tag{rbh} and !$tag{'tie-grp'} and !$against) ? 'Moderate' : 'Weak';
+  }
+  return 'Weak';
+}
+
+sub with_confidence {
+  my ($named) = @_;
+  return $named unless $named->{tag} and $named->{origin} and $named->{desc} ne 'None';
+  my $word = confidence_word($named->{tag});
+  return { %$named, confidence => $word, origin => { %{$named->{origin}}, rule => "$word: $named->{origin}{rule}" } };
+}
+
 # OMA relationship as the tag writes it (no colon)
 sub relationship_tag {
   my ($type, $copies) = @_;
@@ -2546,10 +2596,33 @@ sub oma_support {
     push @said, $tree_text;
   }
   push @flags, 'hog' if $hog;
+  # how much of each protein the best alignment to the named gene(s) covers: a reader choosing genes
+  # for experiments sees at once whether the gene here holds the whole of the human protein
+  my $coverage = alignment_coverage_text($group, $humans);
+  push @said, $coverage if $coverage ne '';
   my $text = @said ? '; ' . join('; ', @said) : '';
   # members of OMA's set that were not counted (readthroughs, other models of one gene) are named here
   $text .= $closest->{not_counted} if $closest and $closest->{not_counted};
   return (\@flags, $text);
+}
+
+# "aligned over 95% of this protein and 88% of ALPHA (full-length)": the best-scoring alignment to
+# the named human gene(s), full-length ones first; '' when there is none
+sub alignment_coverage_text {
+  my ($group, $humans) = @_;
+  my ($best, $best_human);
+  foreach my $human (@$humans) {
+    my $entry = $human_hit{$group}{$human->{key}} or next;
+    my $hit = $entry->{best_full} // $entry->{best} or next;
+    my $full = $entry->{best_full} ? 1 : 0;
+    if (!$best or $full > $best->[1] or ($full == $best->[1] and better_hit($hit, $best->[0]))) {
+      ($best, $best_human) = ([$hit, $full], $human);
+    }
+  }
+  return '' unless $best;
+  my ($hit, $full) = @$best;
+  return sprintf('aligned over %.0f%% of this protein and %.0f%% of %s (%s)', $hit->{qcov}, $hit->{tcov}, human_label($best_human),
+                 $full ? 'full-length' : 'partial');
 }
 
 # an InterPro domain or repeat name as a protein name, UniProt's convention: "Zinc finger, RING-type"
@@ -2586,6 +2659,41 @@ sub transposon_name {
 # "one of N genes named after it" count the genes that carry the name, and the provenance adds how
 # many OMA paired with it when some of them were named otherwise. Rewrites the chosen candidates in
 # place, so the decision table shows the same counts.
+# Many genes OMA pairs with ONE human gene (many:1) are copies of a duplication in this lineage --
+# or, when most of them fail the support and conflict checks, genes OMA grouped through a shared
+# domain or repeat. Then none is named after that gene: step 3 gives no name, and the name the next
+# step gives carries omaR.
+sub reject_mostly_failed_pairings {
+  my (%passed, %groups_of);
+  foreach my $group (sort keys %candidates) {
+    my $closest = $closest{$group} or next;
+    next if $closest->{family} or $closest->{tier} > 2;
+    my $key = $closest->{human}[0]{key};
+    push @{$groups_of{$key}}, $group;
+    $passed{$key}++ if is_named($candidates{$group}{3});
+  }
+  # the pairs OMA made that were set aside for lack of support (omaX) are rejected pairings too
+  my %set_aside;
+  foreach my $group (keys %unsupported_oma) {
+    my @humans = @{$unsupported_oma{$group}{humans}};
+    $set_aside{$humans[0]{key}}++ if @humans == 1;
+  }
+  foreach my $key (sort keys %groups_of) {
+    my $paired = scalar(keys %{$claimed_human{$key} // {}}) + ($set_aside{$key} // 0);
+    my $passed = $passed{$key} // 0;
+    next unless $paired >= $PAIRING_MIN_COPIES and $passed < $paired / 2;
+    my $human = $closest{$groups_of{$key}[0]}{human}[0];
+    foreach my $group (@{$groups_of{$key}}) {
+      $rejected_pairing{$group} = { human => $human, paired => $paired, passed => $passed };
+      next unless is_named($candidates{$group}{3});
+      $stats{'OMA name withheld: many:1 pairing mostly rejected (omaR)'}++;
+      $candidates{$group}{3} = not_named(sprintf('withheld (omaR): OMA pairs %d genes here with human %s, and %d of them fail the '
+                                                 . 'similarity and PANTHER checks -- a pairing through a shared domain or repeat, not orthology',
+                                                 $paired, human_label($human), $paired - $passed));
+    }
+  }
+}
+
 sub count_named_copies {
   my ($chosen) = @_;
   my %named_after;   # human key -> [ groups named after that one human gene at step 3 ]
@@ -2604,7 +2712,10 @@ sub count_named_copies {
       # several genes here carrying one human gene's name are copies of a duplication in this
       # lineage, whatever OMA's pairwise type (pairwise 1:1 for one copy, the HOG adding the other)
       $named->{tag}[1] = $copies > 1 ? "${copies}to1" : relationship_tag($copies_of->{type}, $copies);
-      my $text = $copies > 1 ? ", one of $copies genes in this genome named after it" : '';
+      my @others = grep { my $other = $_; $other ne $group } @groups;
+      my $listed = join(', ', @others[0 .. ($#others < $COPIES_LISTED - 1 ? $#others : $COPIES_LISTED - 1)])
+                 . (@others > $COPIES_LISTED ? ' and ' . (@others - $COPIES_LISTED) . ' more' : '');
+      my $text = $copies > 1 ? ", one of $copies genes in this genome named after it (the others: $listed)" : '';
       if ($paired > $copies) {
         $text .= "; OMA pairs $paired genes here with it, " . ($paired - $copies) . ' of them named by other evidence';
         $stats{'many:1 names: fewer genes carry the name than OMA paired'}++;
