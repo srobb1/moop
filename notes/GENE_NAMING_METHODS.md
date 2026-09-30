@@ -194,7 +194,7 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
 |---|---|---|---|---|
 | 1 | **Human-curated names** | a curator's file lists the gene | exactly as given — the only step not checked for informativeness | `TAS` |
 | 2 | **Native name** | RefSeq/Ensembl gene sets | the source's own name, kept unless uninformative | `SRC` |
-| 2 | **Naming species** (optional, per gene set) | its OMA 1:1 or many:1 ortholog, else its hits file; informative | `NAME` for another annotation of the same species; otherwise `NAME-like (label)` | `SRC` / `ISO` / `ISS` |
+| 2 | **Naming species** (optional, per gene set) | its OMA 1:1 or many:1 ortholog; else its full-length (≥ 80% of both proteins) reciprocal best hit; else, for another species only, its DIAMOND best hit if that hit is full-length; else its hits file; informative | `NAME` for another annotation of the same species; otherwise `NAME-like (label)` | `SRC` / `ISO` / `ISS` |
 | 3 | **OMA orthology to human** | closest human gene from OMA (§6, tier 1 or 2), supported (§5.2) | see below | `ISO` |
 | 4 | **Transposable element** | a transposable-element Pfam domain (see below) | `<class> transposase domain-containing protein` | `ISM\|te` |
 | 5 | **PANTHER tree placement** | a trusted placement joins the gene to exactly one human gene at a speciation node, and that gene is also its closest human gene by similarity (§6, tiers 3–5) | `SYMBOL: approved name` | `ISO\|tree` |
@@ -499,14 +499,31 @@ would claim a precision the evidence does not have (§5, step 3). Each gene ther
 ### 6.3 Closest gene in other species
 
 Any other species can be added per gene set (for example *Nematostella vectensis* for
-corals). The species is identified by its OMA code; its closest gene is:
+corals, *Schmidtea mediterranea* for flatworms). Its closest gene is, strongest first (the
+rank is the score in the database table):
 
-1. the gene's OMA relationship to that species, best type first (1:1, many:1, 1:many,
-   many:many); several genes are reported as a family, as in §6.2;
-2. if OMA gives nothing, the best hit (lowest E-value) in the optional hits file.
+1. the gene's OMA relationship to that species (its OMA code in this gene set's run), best
+   type first (1:1, many:1, 1:many, many:many); several genes are reported as a family, as in §6.2;
+2. an MMseqs2 reciprocal best hit to the species' proteome (normal filter, §3);
+3. the DIAMOND best hit to the species' proteome (normal filter);
+4. the best hit (lowest E-value) in an optional moop hits file, which carries no coverage.
 
-The hits file is supplied by the user; the pipeline cannot verify its species. Scores in
-the database table: 1 = OMA, 2 = hits file.
+The searches for ranks 2 and 3 are run by hand, once per gene set and partner, with
+`scripts/closest_species_rbh.sh` and `scripts/closest_species_diamond.sh`: the same programs,
+versions and settings as the human searches (MMseqs2 `easy-rbh` with coverage columns; DIAMOND
+2.1.6 `--ultra-sensitive`, E ≤ 1e-5, `--max-target-seqs 5`, 17 columns). A partner protein's
+description is its FASTA title, taken from the DIAMOND table. The pipeline cannot verify the
+species of a partner proteome or a hits file.
+
+**Naming species.** When the species is used for names (`use_for_names`, step 2), its OMA 1:1
+or many:1 ortholog is used first; then a reciprocal best hit covering ≥ 80% of both proteins;
+then, for another species only, the DIAMOND best hit, if that best hit is itself full-length (a
+weaker full-length hit is never used instead, as for a human `-like` name, §5 step 6); then the
+hits file. Another annotation of the same species (`same_species`) copies a name only from OMA,
+a full-length reciprocal best hit, or the hits file: a best hit alone does not make two
+proteins the same gene. The decision table records, for every gene, the name the steps would
+give without the naming species (`Name_without_<tag>`), so its effect can be judged before it
+is trusted.
 
 ## 7. Outputs
 
@@ -515,8 +532,8 @@ the database table: 1 = OMA, 2 = hits file.
 | `geneNames.tsv` | `ID MAINID GroupId Desc Note`; Desc is the name with its evidence tag; Note records the source, evidence type, ids and score of the name. A gene with no name keeps its own transcript id as name and description |
 | `gene_name_source.<kind>.moop.tsv` | database annotation type "Gene Name Source" — the provenance of every name, one row per gene and isoform. Accession = what the name came from, description = why, in words (`Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)`), score = the naming step (1–7). One source per kind of accession link: HGNC gene, HGNC gene group, Ensembl gene, PANTHER family, InterPro domain, Pfam (transposable element), naming species (NCBI), human-curated, the gene set's own name |
 | `closest_<species>.tsv` | per id: gene id, symbol, description, evidence |
-| `closest_<species>[.ensembl\|.family].moop.tsv` | database annotation type "Closest Gene", one source per file so each has one link: human — `Closest human gene (HGNC)` (genenames.org), `Closest human gene (Ensembl, no HGNC record)` (Ensembl), `Closest human gene family` (no link); other species — `Closest <species> gene`, `Closest <species> gene family`. A row for the gene and each isoform; score = tier (human) or 1 = OMA, 2 = hits file |
-| `naming_decisions.tsv` | for people to read, not loaded anywhere: one row per gene — the name, the step that gave it and the full reason; the gene's best and second human hits and best PANTHER family with their scores **whatever the cutoffs**; and every step's own result (`NAMED`, `not used:` why, `passed over`/`skipped:` the rule that set it aside, `not reached;` what it would have said), plus the closest human gene. With `--native`, also the gene set's own name and the name the steps give without it. A `#` header records the run (date, script and git commit, command), the programs and data read (versions, file dates), the naming steps, every cutoff, the abbreviations and the columns — written from the code's own constants, so it always matches the run |
+| `closest_<species>[.ensembl\|.family].moop.tsv` | database annotation type "Closest Gene", one source per file so each has one link: human — `Closest human gene (HGNC)` (genenames.org), `Closest human gene (Ensembl, no HGNC record)` (Ensembl), `Closest human gene family` (no link); other species — `Closest <species> gene`, `Closest <species> gene family`. A row for the gene and each isoform; score = tier (human) or rank (other species: 1 OMA, 2 reciprocal best hit, 3 DIAMOND best hit, 4 hits file) |
+| `naming_decisions.tsv` | for people to read, not loaded anywhere: one row per gene — the name, the step that gave it and the full reason; the gene's best and second human hits and best PANTHER family with their scores **whatever the cutoffs**; and every step's own result (`NAMED`, `not used:` why, `passed over`/`skipped:` the rule that set it aside, `not reached;` what it would have said), plus the closest human gene and the closest gene in each other species (`Closest_<tag>`); with a naming species, the name without it (`Name_without_<tag>`). With `--native`, also the gene set's own name and the name the steps give without it. A `#` header records the run (date, script and git commit, command), the programs and data read (versions, file dates), the naming steps, every cutoff, the abbreviations and the columns — written from the code's own constants, so it always matches the run |
 | `genes.gff` | attributes `closestHGNC`, `closestHumanSym`, `closestHumanDesc`, `closestHumanEvidence`; `closest<Tag>Id/Sym/Desc/Evidence` for other species |
 
 ## 8. Reproducibility
@@ -530,7 +547,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 95 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 116 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

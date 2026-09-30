@@ -20,7 +20,7 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #        --panther-hmm-lengths moop/panther/hmm_lengths.tsv] \
 #       [--panther-placements panther_placements.tsv (scripts/panther_placements.py)] [--metadata metadata.yaml] \
 #       [--human-curated-gene-names curated.moop.tsv ...] \
-#       [--closest-species 'tag=Nvec|species=Nematostella vectensis|label=sea anemone|oma_code=NEMVE|hits=FILE|use_for_names=0|same_species=0' ...] \
+#       [--closest-species 'tag=Nvec|species=Nematostella vectensis|label=sea anemone|oma_code=NEMVE|hits=FILE|diamond=DIR|rbh=DIR|use_for_names=0|same_species=0' ...] \
 #       --out-names geneNames.tsv --out-dir DIR
 #
 # Closest human gene, strongest first (the tier is the Score of the moop table):
@@ -38,15 +38,20 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 # family), or tier 7 (a PANTHER subfamily), are reported as ONE family entry, never as a
 # member picked by score. Notes/GENE_NAMING_METHODS.md has the full method.
 #
-# Closest gene in another species (--closest-species, from geneset_config.yaml): OMA ortholog to
-# oma_code (1:1, many:1, 1:many, many:many, in that order; several genes = a family), else the
-# best hit in its hits file.
+# Closest gene in another species (--closest-species, from geneset_config.yaml), strongest first
+# (the rank is the Score of its moop table):
+#   1 OMA ortholog to oma_code (1:1, many:1, 1:many, many:many, in that order; several genes = a family)
+#   2 MMseqs2 reciprocal best hit (rbh=DIR, from scripts/closest_species_rbh.sh; NORMAL filter)
+#   3 DIAMOND best hit (diamond=DIR, from scripts/closest_species_diamond.sh; NORMAL filter)
+#   4 the best hit in its hits file (a moop TSV: no coverage, so no filter but the E-value)
 #
 # Names -- a plain name only from an orthology call, "-like" for full-length similarity, a
 # family name when the evidence stops at the family, else no name:
 #   1 human-curated name, as given (never checked)
-#   2 native name if informative; or the closest-species entry with use_for_names (its OMA 1:1
-#     or many:1 ortholog, else its hits file; "-like (label)" unless same_species)
+#   2 native name if informative; or the closest-species entry with use_for_names: its OMA 1:1
+#     or many:1 ortholog, else its full-length (FULL) reciprocal best hit, else -- not for
+#     same_species -- its best DIAMOND hit if that is full-length, else its hits file;
+#     "-like (label)" unless same_species
 #   3 OMA human ortholog (tier 1-2): 1:1 and many:1 "SYM: name" (every many:1 copy the same);
 #     a family "<HGNC group> family member", or -- no shared group -- straight to step 6
 #   4 transposable element: a TE Pfam domain -> "<class> transposase domain-containing protein"
@@ -142,13 +147,13 @@ my %OMA_RANK = ('1:1' => 0, 'many:1' => 1, '1:many' => 2, 'many:many' => 3);
 my $CLOSEST_TYPE = 'Closest Gene';
 # InterProScan member databases whose score column is an E-value (the others report a match
 # score, or nothing) -- used to pick a gene's best InterPro domain
-my %EVALUE_ANALYSIS = map { $_ => 1 } qw(Pfam SMART CDD NCBIfam PRINTS PIRSF SFLD Gene3D SUPERFAMILY FunFam);
+my %EVALUE_ANALYSIS = map { my $analysis = $_; ($analysis => 1) } qw(Pfam SMART CDD NCBIfam PRINTS PIRSF SFLD Gene3D SUPERFAMILY FunFam);
 # Repeat-built PANTHER families: when repeat units (InterPro Repeat entries, and the C2H2 zinc
 # finger, which InterPro types as a Domain) cover this much of a gene's PANTHER family match,
 # model coverage says nothing -- any C2H2 protein fills a "KRAB AND ZINC FINGER" model -- and the
 # gene is named for its repeat ("WD40 repeat-containing protein") instead of the family.
 my $REPEAT_FAMILY_FRACTION = 0.25;
-my %REPEAT_LIKE_ENTRY = map { $_ => 1 } qw(IPR013087);   # Zinc finger C2H2-type
+my %REPEAT_LIKE_ENTRY = map { my $entry = $_; ($entry => 1) } qw(IPR013087);   # Zinc finger C2H2-type
 # Transposable elements: Pfam families of the catalytic or signature domain of each TE class
 # (checked against Pfam as shipped with InterProScan 5.78). Left out on purpose: DNA-binding
 # helper domains (HTH_Tnp_4, CENP-B HTH) and reverse transcriptase alone (TERT has one).
@@ -264,12 +269,15 @@ sub main {
     }
     die "--closest-species tag must be letters/digits, not 'human': $spec\n"
       if $species{tag} !~ /^[A-Za-z][A-Za-z0-9]*$/ or lc $species{tag} eq 'human';
-    die "--closest-species needs oma_code or hits: $spec\n" unless $species{oma_code} or $species{hits};
-    $species{$_} = $species{$_} ? 1 : 0 foreach qw(use_for_names same_species);
+    die "--closest-species needs oma_code, hits, diamond or rbh: $spec\n"
+      unless grep { my $key = $_; $species{$key} } qw(oma_code hits diamond rbh);
+    foreach my $flag (qw(use_for_names same_species)) {
+      $species{$flag} = $species{$flag} ? 1 : 0;
+    }
     die "--closest-species needs a label unless same_species: $spec\n" unless $species{same_species} or $species{label};
     push @closest_species, \%species;
   }
-  my @naming_species = grep { $_->{use_for_names} } @closest_species;
+  my @naming_species = grep { my $species = $_; $species->{use_for_names} } @closest_species;
   die "only one --closest-species may have use_for_names\n" if @naming_species > 1;
   $naming_species = $naming_species[0];
 
@@ -291,7 +299,9 @@ sub main {
     collect_diamond();
     link_swissprot_hits() if defined $opt{'uniprot-dir'};
   }
-  collect_closest_species($_) foreach @closest_species;
+  foreach my $species (@closest_species) {
+    collect_closest_species($species);
+  }
   resolve_compara();
   name_species();
   read_human_panther() if defined $opt{'uniprot-dir'};
@@ -814,7 +824,9 @@ sub read_human_panther {
     next unless $taxid eq '9606' and $hgnc_ids ne '' and $panther ne '';
     foreach my $family (split /;/, $panther) {
       $family =~ s/:SF\d+$//;
-      $human_panther{$_}{$family} = 1 foreach split /;/, $hgnc_ids;
+      foreach my $hgnc_id (split /;/, $hgnc_ids) {
+        $human_panther{$hgnc_id}{$family} = 1;
+      }
     }
   }
   close $fh;
@@ -966,7 +978,7 @@ sub better_hit {
 sub ranked_human_hits {
   my ($group) = @_;
   my $genes = $human_hit{$group} or return ();
-  return map { [$_, $genes->{$_}] }
+  return map { my $key = $_; [$key, $genes->{$key}] }
          sort { better_hit($genes->{$a}{best}, $genes->{$b}{best}) ? -1 : better_hit($genes->{$b}{best}, $genes->{$a}{best}) ? 1 : $a cmp $b }
          keys %$genes;
 }
@@ -1040,9 +1052,10 @@ sub read_panther_families {
     }
     $match->{model_coverage} = $coverage;
     # repeat units inside the family match: the repeat covering most of it, and how much
-    my %in_match = map { $_ => 1 } map { $_->[0] .. $_->[1] } @{$match->{regions}};
+    my %in_match = map { my $position = $_; ($position => 1) } map { my $region = $_; $region->[0] .. $region->[1] } @{$match->{regions}};
     foreach my $repeat_name (sort keys %{$repeat{$match->{id}} // {}}) {
-      my %covered = map { $_ => 1 } grep { $in_match{$_} } map { $_->[0] .. $_->[1] } @{$repeat{$match->{id}}{$repeat_name}};
+      my %covered = map { my $position = $_; ($position => 1) } grep { my $position = $_; $in_match{$position} }
+                    map { my $region = $_; $region->[0] .. $region->[1] } @{$repeat{$match->{id}}{$repeat_name}};
       my $fraction = (scalar keys %covered) / (scalar keys %in_match);
       if ($fraction > ($match->{repeat_fraction} // 0)) {
         @{$match}{qw(repeat_name repeat_fraction)} = ($repeat_name, $fraction);
@@ -1235,7 +1248,7 @@ sub choose_closest_human {
   # co-ortholog of every copy. Then the HOG is the more complete call: the family, not one copy.
   if ($best_tier == 1 and @humans == 1) {
     my (%hog_seen, @hog_humans);
-    foreach my $link (sort { ($a->{human}[0]{key} // '') cmp ($b->{human}[0]{key} // '') } grep { $_->{tier} == 2 } @links) {
+    foreach my $link (sort { ($a->{human}[0]{key} // '') cmp ($b->{human}[0]{key} // '') } grep { my $link = $_; $link->{tier} == 2 } @links) {
       foreach my $human (@{$link->{human}}) {
         push @hog_humans, $human unless $hog_seen{$human->{key}}++;
       }
@@ -1256,9 +1269,9 @@ sub choose_closest_human {
   if ($best_tier <= 2 and !oma_supported($group, \@humans)) {
     $stats{'OMA human ortholog set aside: no homology support'}++;
     $unsupported_oma{$group} = { humans => [@humans], type => $closest->{type} };
-    $human_links{$group} = [ grep { $_->{tier} > 2 } @links ];
+    $human_links{$group} = [ grep { my $link = $_; $link->{tier} > 2 } @links ];
     my $next = choose_closest_human($group) or return undef;
-    return { %$next, evidence => "$next->{evidence}; OMA ortholog " . join('/', map { human_label($_) } @humans)
+    return { %$next, evidence => "$next->{evidence}; OMA ortholog " . join('/', map { my $human = $_; human_label($human) } @humans)
                                  . " not used (no similarity or PANTHER family supports it)" };
   }
   # One human gene: that gene. Several (a 1:many or many:many family), or a PANTHER
@@ -1316,9 +1329,11 @@ sub shared_hgnc_group {
     foreach my $gene_group (split /\|/, $human->{gene_group} // '') {
       $own_groups{$gene_group} = 1 if $gene_group ne '';
     }
-    $groups_seen{$_}++ foreach keys %own_groups;
+    foreach my $group_id (keys %own_groups) {
+      $groups_seen{$group_id}++;
+    }
   }
-  my @shared = grep { $groups_seen{$_} == scalar @$humans } keys %groups_seen;
+  my @shared = grep { my $group_id = $_; $groups_seen{$group_id} == scalar @$humans } keys %groups_seen;
   @shared = sort { hgnc_group_size($a) <=> hgnc_group_size($b) or $a cmp $b } @shared;
   return $shared[0] if $all;
   foreach my $gene_group (@shared) {
@@ -1370,11 +1385,12 @@ sub shared_panther_family {
     }
   }
   my $full_length = grep { my $human = $_; ($human_hit{$group}{$human->{key}} // {})->{best_full} } @$humans;
-  my @shared = sort grep { $count{$_} == @$humans and $gene_panther{$group}{$_}
-                           and ($full_length or ($gene_family_coverage{$group}{$_} // 0) >= $FAMILY_NAME_MIN_OWN_COVERAGE)
-                           and defined $panther_label{$_} and is_informative_hit('', $panther_label{$_}, $_) } keys %count;
+  my @shared = sort grep { my $family = $_;
+                           $count{$family} == @$humans and $gene_panther{$group}{$family}
+                           and ($full_length or ($gene_family_coverage{$group}{$family} // 0) >= $FAMILY_NAME_MIN_OWN_COVERAGE)
+                           and defined $panther_label{$family} and is_informative_hit('', $panther_label{$family}, $family) } keys %count;
   $stats{'PANTHER family shared, but the gene is not a whole member (< 50% of the model, no full-length hit): not used'}++
-    if !@shared and grep { $count{$_} == @$humans and $gene_panther{$group}{$_} } keys %count;
+    if !@shared and grep { my $family = $_; $count{$family} == @$humans and $gene_panther{$group}{$family} } keys %count;
   return $shared[0];
 }
 
@@ -1383,12 +1399,12 @@ sub shared_panther_family {
 # members have no symbol, so "SCYGR2-family" never reads as one gene -- else "family of N genes"
 sub family_entry {
   my ($size, $symbols, $descriptions, $group_name) = @_;
-  my @symbols = grep { $_ ne '' } @$symbols;
+  my @symbols = grep { my $symbol = $_; $symbol ne '' } @$symbols;
   my $label = defined $group_name ? ($group_name =~ /family$/i ? $group_name : "$group_name family")
             : (@symbols and $size <= 3) ? join('/', @symbols) . '-family' . (@symbols < $size ? " ($size genes)" : '')
             : "family of $size genes";
   my %seen;
-  my @descriptions = grep { $_ ne '' and !$seen{$_}++ } @$descriptions;
+  my @descriptions = grep { my $description = $_; $description ne '' and !$seen{$description}++ } @$descriptions;
   my $description = join(' / ', @descriptions[0 .. ($#descriptions < 2 ? $#descriptions : 2)]);
   $description .= " ... ($size genes)" if $size > 3;
   return { id => '', symbol => $label, description => $description };
@@ -1396,6 +1412,10 @@ sub family_entry {
 
 my (%species_oma, %species_hit);   # tag -> group -> [ OMA pairs ] / best hit in the hits file
 my %species_hit_source;            # tag -> the hits file's Annotation Source, else its file name
+# tag -> group -> { top => the best hit at any coverage, normal => the best NORMAL hit, full => the best
+# FULL hit }, from the closest_species_rbh.sh / closest_species_diamond.sh results (read_species_search)
+my (%species_rbh, %species_diamond);
+my %species_search_label;          # tag -> rbh|diamond -> the partner's label (db_version.txt)
 
 # a name from the naming species: plain for another annotation of this same species,
 # otherwise "-like (label)", as for any other species' hit
@@ -1408,7 +1428,11 @@ sub naming_species_text {
   return $like_symbol ne '' ? "$like_symbol: $like_description" : $like_description;
 }
 
-# naming step 2: the use_for_names species' OMA 1:1 / many:1 ortholog, else its hits file
+# naming step 2: the use_for_names species' OMA 1:1 / many:1 ortholog; else its full-length (FULL)
+# reciprocal best hit; else -- for another species only -- its best DIAMOND hit, if that best hit is
+# full-length (a weaker full-length hit is never used instead, as for a human -like name); else its
+# hits file. For another annotation of the same species (same_species), only a full-length
+# reciprocal best hit is the same gene: the name is copied as is.
 sub naming_species_name {
   my ($group) = @_;
   return not_named('no naming species') unless $naming_species;
@@ -1431,6 +1455,30 @@ sub naming_species_name {
              selected => selected_id($group, $candidate->{id}),
              note => "OMA_pairwise_$code|Orthologs|" . strip_suffixes($candidate->{id}) . "|$candidate->{hit}|$candidate->{type}" };
   }
+  my $rbh = $species_rbh{$tag}{$group};
+  my $diamond = $species_diamond{$tag}{$group};
+  my @searched = ([$rbh ? $rbh->{full} : undef, 'rbh', 'reciprocal best hit (MMseqs2)', "MMseqs2_RBH_$tag"]);
+  push @searched, [$diamond && passes($diamond->{top}, \%FULL) ? $diamond->{top} : undef, 'diamond', 'best hit (DIAMOND)', "DIAMOND_$tag"]
+    unless $naming_species->{same_species};
+  foreach my $searched (@searched) {
+    my ($hit, $kind, $how, $source) = @$searched;
+    next unless $hit;
+    my ($symbol, $description) = split_symbol($hit->{description});
+    $symbol = '' if is_placeholder_symbol($symbol);
+    $description = clean_name($description);
+    next unless is_informative_hit($symbol, $description, $hit->{hit});
+    $stats{"name: $tag $kind"}++;
+    my $partner = "$naming_species->{species} $hit->{hit} (full-length $how, $species_search_label{$tag}{$kind}; " . coverage_text($hit) . ')';
+    my $rule = $naming_species->{same_species}
+      ? "Same gene in another annotation of this species: $partner"
+      : "$partner; named after it, marked -like";
+    return { origin => { kind => 'ncbi', accession => $hit->{hit}, step => 2, rule => $rule },
+             desc => naming_species_text($symbol, $description),
+             tag => [($naming_species->{same_species} ? 'SRC' : 'ISS'), ($kind eq 'rbh' ? 'rbh' : 'bh'), lc $tag],
+             selected => selected_id($group, $hit->{id}),
+             note => "$source|" . ($naming_species->{same_species} ? 'Same_species' : 'Naming_species') . '|'
+                   . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}" };
+  }
   if (my $hit = $species_hit{$tag}{$group}) {
     my ($symbol, $description) = split_symbol($hit->{description});
     $symbol = '' if is_placeholder_symbol($symbol);
@@ -1448,8 +1496,8 @@ sub naming_species_name {
                note => "$hit->{source}|$type|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{score}" };
     }
   }
-  return not_named((@{$species_oma{$tag}{$group} // []} or $species_hit{$tag}{$group})
-                   ? "no $naming_species->{species} OMA 1:1 or many:1 ortholog or best hit with an informative name"
+  return not_named((@{$species_oma{$tag}{$group} // []} or $species_hit{$tag}{$group} or $rbh or $diamond)
+                   ? "no $naming_species->{species} OMA 1:1 or many:1 ortholog or full-length hit with an informative name"
                    : "no $naming_species->{species} OMA ortholog or hit");
 }
 
@@ -1476,15 +1524,29 @@ sub choose_closest_species {
     # a family: reported as the family (see choose_closest_human)
     my $size = @genes;
     $stats{"closest $tag: family"}++;
-    return { rank => 1, genes => [ family_entry($size, [map { $_->{symbol} } @genes], [map { $_->{description} } @genes]) ],
+    return { rank => 1, genes => [ family_entry($size, [map { my $gene = $_; $gene->{symbol} } @genes], [map { my $gene = $_; $gene->{description} } @genes]) ],
              evidence => "OMA ortholog ($type), family of $size" };
+  }
+  foreach my $searched ([2, $species_rbh{$tag}{$group}, 'reciprocal best hit (MMseqs2', 'rbh'],
+                        [3, $species_diamond{$tag}{$group}, 'best hit (DIAMOND', 'diamond']) {
+    my ($rank, $found, $how, $kind) = @$searched;
+    my $normal = $found ? $found->{normal} : undef or next;
+    my ($symbol, $description) = split_symbol($normal->{description});
+    return { rank => $rank, genes => [ { id => $normal->{hit}, symbol => $symbol // '', description => clean_name($description // '') } ],
+             evidence => "$how, $species_search_label{$tag}{$kind}; " . coverage_text($normal) . ')' };
   }
   if ($hit) {
     my ($symbol, $description) = split_symbol($hit->{description});
-    return { rank => 2, genes => [ { id => $hit->{hit}, symbol => $symbol // '', description => clean_name($description // '') } ],
+    return { rank => 4, genes => [ { id => $hit->{hit}, symbol => $symbol // '', description => clean_name($description // '') } ],
              evidence => "hits file ($hit->{source})" };
   }
   return undef;
+}
+
+# E-value and how much of each protein the hit covers, for evidence text
+sub coverage_text {
+  my ($hit) = @_;
+  return sprintf('E=%s, %.0f%%/%.0f%% of the two proteins', e_value($hit->{evalue}), $hit->{qcov}, $hit->{tcov});
 }
 
 # OMA pairs with oma_code (from the same --oma-dir run), best rank first; the hits file
@@ -1529,6 +1591,62 @@ sub collect_closest_species {
     close $fh;
     ($species_hit_source{$tag} = $source) =~ s{.*/}{};
   }
+  # the partner's FASTA titles, from the DIAMOND table (the RBH table has ids only)
+  my %title;
+  if ($species->{diamond}) {
+    read_species_search($species, 'diamond', \%title);
+  }
+  if ($species->{rbh}) {
+    read_species_search($species, 'rbh', \%title);
+  }
+}
+
+# one closest_species_*.sh result directory: for each gene, its best hit at any coverage, its best
+# NORMAL hit and its best FULL hit (over all its isoforms). DIAMOND is read first: its subject titles
+# are the only descriptions of the partner's proteins, and the RBH hits take theirs from it.
+sub read_species_search {
+  my ($species, $kind, $title) = @_;
+  my ($tag, $dir) = ($species->{tag}, $species->{$kind});
+  # db_version.txt: "LABEL<tab>md5:..." (first_line would turn the tab into a space, and a label has spaces)
+  my $label = '';
+  if (open my $version_fh, '<', "$dir/db_version.txt") {
+    ($label) = split /\t/, (<$version_fh> // '');
+    close $version_fh;
+    $label //= '';
+    chomp $label;
+  }
+  $species_search_label{$tag}{$kind} = $label ne '' ? $label : $dir;
+  my $store = $kind eq 'rbh' ? \%species_rbh : \%species_diamond;
+  my ($file) = grep { my $candidate = $_; -e $candidate }
+               $kind eq 'rbh' ? ("$dir/rbh_mmseq_results.tsv") : ("$dir/diamond_results.tsv", "$dir/diamond_results.tsv.gz");
+  die "no results in $dir for --closest-species $tag $kind\n" unless $file;
+  my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
+  open my $fh, $open or die "cant read $file\n";
+  while (my $line = <$fh>) {
+    chomp $line;
+    next if $line =~ /^(?:query|qseqid)\t/ or $line !~ /\S/;
+    my @fields = split /\t/, $line;
+    my %hit;
+    if ($kind eq 'rbh') {
+      # query target fident alnlen mismatch gapopen qstart qend tstart tend evalue bits qlen tlen qcov tcov
+      die "$file: expected 16 columns (scripts/closest_species_rbh.sh)\n" unless @fields >= 16;
+      %hit = (id => $fields[0], hit => $fields[1], evalue => $fields[10], bits => $fields[11],
+              qcov => 100 * $fields[14], tcov => 100 * $fields[15], description => $title->{$fields[1]} // '');
+    } else {
+      # the pipeline's 17 columns: qseqid sseqid stitle evalue ... bitscore qlen slen qcovhsp scovhsp
+      die "$file: expected 17 columns (scripts/closest_species_diamond.sh)\n" unless @fields >= 17;
+      my ($subject_id, $description) = split /\s+/, $fields[2], 2;
+      $title->{$fields[1]} //= $description // '';
+      %hit = (id => $fields[0], hit => $fields[1], evalue => $fields[3], bits => $fields[12],
+              qcov => $fields[15], tcov => $fields[16], description => $description // '');
+    }
+    my $group = group_for($hit{id}) or next;
+    my $entry = $store->{$tag}{$group} //= {};
+    $entry->{top} = \%hit if better_hit(\%hit, $entry->{top});
+    $entry->{normal} = \%hit if passes(\%hit, \%NORMAL) and better_hit(\%hit, $entry->{normal});
+    $entry->{full} = \%hit if passes(\%hit, \%FULL) and better_hit(\%hit, $entry->{full});
+  }
+  close $fh;
 }
 
 # ##############################################################################
@@ -1877,7 +1995,7 @@ sub set_aside_note {
   my ($group, $named) = @_;
   if (my $conflict = $conflicting_oma{$group}) {
     return $named unless $named->{tag} and $named->{origin};
-    my $humans = join('/', map { human_label($_) } @{$conflict->{humans}});
+    my $humans = join('/', map { my $human = $_; human_label($human) } @{$conflict->{humans}});
     my $best = $conflict->{best} ? human_label($conflict->{best}) : 'another gene';
     return { %$named, tag => [@{$named->{tag}}, 'omaC'],
              origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . "; OMA pairs it with human $humans ($conflict->{type}), "
@@ -1885,7 +2003,7 @@ sub set_aside_note {
   }
   my $set_aside = $unsupported_oma{$group} or return $named;
   return $named unless $named->{tag} and $named->{origin};
-  my $humans = join('/', map { human_label($_) } @{$set_aside->{humans}});
+  my $humans = join('/', map { my $human = $_; human_label($human) } @{$set_aside->{humans}});
   return { %$named, tag => [@{$named->{tag}}, 'omaX'],
            origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . "; OMA pairs it with human $humans ($set_aside->{type}), "
                                                    . "but no similarity hit or PANTHER family supports that pair, so it does not name the gene" } };
@@ -1902,9 +2020,11 @@ sub oma_supported {
   }
   my %human_families;
   foreach my $human (@$humans) {
-    $human_families{$_} = 1 foreach keys %{$human_panther{$human->{hgnc_id} // ''} // {}};
+    foreach my $family (keys %{$human_panther{$human->{hgnc_id} // ''} // {}}) {
+      $human_families{$family} = 1;
+    }
   }
-  return (grep { $human_families{$_} } keys %{$gene_panther{$group} // {}}) ? 1 : 0;
+  return (grep { my $family = $_; $human_families{$family} } keys %{$gene_panther{$group} // {}}) ? 1 : 0;
 }
 
 # An OMA name is withheld when both independent checks go against it: the gene's best human
@@ -1964,7 +2084,7 @@ sub relationship_tag {
 # stays -- but a reader is told when nothing else supports it. Returns (tag flags, provenance text).
 sub oma_support {
   my ($group, $humans, $closest) = @_;
-  my %named = map { $_->{key} => 1 } @$humans;
+  my %named = map { my $human = $_; ($human->{key} => 1) } @$humans;
   my $one = @$humans == 1;
   my $label = $one ? human_label($humans->[0]) : 'these genes';
   my (@flags, @said);
@@ -1975,7 +2095,7 @@ sub oma_support {
       push @flags, 'sim+';
       push @said, ($one ? $label : 'one of ' . $label) . ' is its best human similarity hit';
       $similar = 1;
-    } elsif (grep { $named{$_->[0]} } @ranked) {
+    } elsif (grep { my $ranked_hit = $_; $named{$ranked_hit->[0]} } @ranked) {
       push @flags, 'sim~';
       push @said, "similar to " . ($one ? $label : 'one of ' . $label) . ", but its best human hit is " . human_label($ranked[0][1]{human});
       $similar = 1;
@@ -1987,11 +2107,13 @@ sub oma_support {
   my %gene_families = %{$gene_panther{$group} // {}};
   my %human_families;
   foreach my $human (@$humans) {
-    $human_families{$_} = 1 foreach keys %{$human_panther{$human->{hgnc_id} // ''} // {}};
+    foreach my $family (keys %{$human_panther{$human->{hgnc_id} // ''} // {}}) {
+      $human_families{$family} = 1;
+    }
   }
   my $same_family = 0;
   if (%gene_families and %human_families) {
-    my @shared = sort grep { $human_families{$_} } keys %gene_families;
+    my @shared = sort grep { my $family = $_; $human_families{$family} } keys %gene_families;
     if (@shared) {
       push @flags, 'pthr+';
       push @said, "same PANTHER family ($shared[0])";
@@ -2002,7 +2124,7 @@ sub oma_support {
     }
   }
   my $hog = $closest->{tier} == 2 || $closest->{hog_family}
-         || grep { $_->{tier} == 2 and $named{$_->{human}[0]{key} // ''} } @{$human_links{$group} // []};
+         || grep { my $link = $_; $link->{tier} == 2 and $named{$link->{human}[0]{key} // ''} } @{$human_links{$group} // []};
   my ($tree_flag, $tree_text) = tree_support($group, $humans);
   if ($tree_flag) {
     push @flags, $tree_flag;
@@ -2238,28 +2360,28 @@ sub hgnc_group_size {
 #     names the gene; else no -like name.
 sub like_name {
   my ($group) = @_;
-  my @ranked = grep { $_->[1]{best}{evalue} <= $FULL{evalue} } ranked_human_hits($group);
+  my @ranked = grep { my $ranked_hit = $_; $ranked_hit->[1]{best}{evalue} <= $FULL{evalue} } ranked_human_hits($group);
   return not_named($human_searched ? 'no human hit with E <= ' . e_value($FULL{evalue}) : 'no search against human proteins') unless @ranked;
   my ($top_key, $top) = @{$ranked[0]};
   if (!$top->{best_full}) {
-    $stats{'no -like name: best human gene not full-length'}++ if grep { $_->[1]{best_full} } @ranked;
+    $stats{'no -like name: best human gene not full-length'}++ if grep { my $ranked_hit = $_; $ranked_hit->[1]{best_full} } @ranked;
     return not_named(sprintf('best human hit %s is not full-length: %.0f%% of this protein, %.0f%% of %s (needs %d%% of both)',
                              human_label($top->{human}), $top->{best}{qcov}, $top->{best}{tcov}, human_label($top->{human}), $FULL{qcov}));
   }
-  my @tied = grep { $_->[1]{best}{bits} >= $LIKE_TIE * $top->{best}{bits} } @ranked[1 .. $#ranked];
+  my @tied = grep { my $ranked_hit = $_; $ranked_hit->[1]{best}{bits} >= $LIKE_TIE * $top->{best}{bits} } @ranked[1 .. $#ranked];
   my ($chosen, $tie_flag, @tie_genes) = ($top, '');
   if (@tied) {
-    @tie_genes = map { $_->[1]{human} } ($ranked[0], @tied);
-    my @reciprocal = grep { $_->[1]{rbh} and $_->[1]{best_full} } ($ranked[0], @tied);
+    @tie_genes = map { my $ranked_hit = $_; $ranked_hit->[1]{human} } ($ranked[0], @tied);
+    my @reciprocal = grep { my $ranked_hit = $_; $ranked_hit->[1]{rbh} and $ranked_hit->[1]{best_full} } ($ranked[0], @tied);
     if (@reciprocal == 1) {
       ($chosen, $tie_flag) = ($reciprocal[0][1], 'tie-rbh');
     } else {
-      my $shared = (grep { !$_->{hgnc_id} } @tie_genes) ? undef : shared_hgnc_group(\@tie_genes);
+      my $shared = (grep { my $human = $_; !$human->{hgnc_id} } @tie_genes) ? undef : shared_hgnc_group(\@tie_genes);
       my $family = defined $shared ? undef : shared_panther_family($group, \@tie_genes);
       if (defined $family) {
         $stats{'name: full-length human hit, paralog tie (PANTHER family)'}++;
         my $hit = $top->{best_full};
-        my $members = join(', ', map { human_label($_) } @tie_genes);
+        my $members = join(', ', map { my $human = $_; human_label($human) } @tie_genes);
         return with_tree_vote($group, \@tie_genes, { desc => family_member($panther_label{$family}), selected => selected_id($group, $hit->{id}),
                  tag => ['ISS', ($top->{rbh} ? 'rbh' : 'bh'), 'tie-grp'],
                  note => "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}",
@@ -2276,7 +2398,7 @@ sub like_name {
       }
       $stats{'name: full-length human hit, paralog tie (HGNC group)'}++;
       my $hit = $top->{best_full};
-      my $members = join(', ', map { human_label($_) } @tie_genes);
+      my $members = join(', ', map { my $human = $_; human_label($human) } @tie_genes);
       return with_tree_vote($group, \@tie_genes, { desc => family_member($shared), selected => selected_id($group, $hit->{id}), tag => ['ISS', ($top->{rbh} ? 'rbh' : 'bh'), 'tie-grp'],
                note => "$hit->{source}|$hit->{type}|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{evalue}",
                origin => { kind => 'hgnc_group', accession => hgnc_group_id(\@tie_genes, $shared), step => 6,
@@ -2307,7 +2429,7 @@ sub like_text {
                      $label, ($entry->{rbh} ? 'reciprocal best hit' : 'best hit'), $hit->{qcov}, $hit->{tcov},
                      $label, e_value($hit->{evalue}), $hit->{tool});
   if ($tie_flag) {
-    $rule .= "; " . join(', ', map { human_label($_) } @$tie_genes) . " score within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE))
+    $rule .= "; " . join(', ', map { my $human = $_; human_label($human) } @$tie_genes) . " score within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE))
            . " of each other, and only $label is a reciprocal best hit";
   }
   return with_tree_vote($group, [$human], {
@@ -2358,10 +2480,11 @@ sub write_outputs {
   foreach my $group (keys %closest) {
     my $closest = $closest{$group} or next;
     my @genes = $closest->{family}
-      ? (family_entry($closest->{family_size}, [map { $_->{hgnc_id} ? $_->{symbol} : '' } @{$closest->{human}}],
-                      [map { $_->{name} } @{$closest->{human}}], shared_hgnc_group($closest->{human})))
-      : map { { id => ($_->{hgnc_id} ne '' ? $_->{hgnc_id} : $_->{key} =~ /^ENSG/ ? $_->{key} : ''),
-                symbol => ($_->{hgnc_id} ne '' ? $_->{symbol} : ''), description => $_->{name} } } @{$closest->{human}};
+      ? (family_entry($closest->{family_size}, [map { my $human = $_; $human->{hgnc_id} ? $human->{symbol} : '' } @{$closest->{human}}],
+                      [map { my $human = $_; $human->{name} } @{$closest->{human}}], shared_hgnc_group($closest->{human})))
+      : map { my $human = $_;
+              +{ id => ($human->{hgnc_id} ne '' ? $human->{hgnc_id} : $human->{key} =~ /^ENSG/ ? $human->{key} : ''),
+                symbol => ($human->{hgnc_id} ne '' ? $human->{symbol} : ''), description => $human->{name} } } @{$closest->{human}};
     $human_closest{$group} = { rank => $closest->{tier}, genes => \@genes, evidence => $closest->{evidence} };
     $stats{"closest human: tier $closest->{tier}"}++;
   }
@@ -2383,13 +2506,15 @@ sub write_outputs {
     foreach my $group (keys %members) {
       my $closest = choose_closest_species($species, $group) or next;
       $species_closest{$group} = $closest;
-      $stats{"closest $tag: " . ($closest->{rank} == 1 ? 'OMA' : 'hits file')}++;
+      $stats{"closest $tag: " . (qw(- OMA RBH DIAMOND), 'hits file')[$closest->{rank}]}++;
     }
     my @sources;
     push @sources, "OMA $opt{'oma-code'}-$species->{oma_code}" if $species->{oma_code} and defined $opt{'oma-code'};
+    push @sources, "MMseqs2 RBH vs $species_search_label{$tag}{rbh}" if defined $species_search_label{$tag}{rbh};
+    push @sources, "DIAMOND vs $species_search_label{$tag}{diamond}" if defined $species_search_label{$tag}{diamond};
     push @sources, $species_hit_source{$tag} if defined $species_hit_source{$tag};
     my $species_version = join('; ', @sources);
-    write_closest(lc $tag, [map { "closest$tag$_" } qw(Id Sym Desc Evidence)], \%species_closest, [
+    write_closest(lc $tag, [map { my $field = $_; "closest$tag$field" } qw(Id Sym Desc Evidence)], \%species_closest, [
       { file => '', source => "Closest $species->{species} gene", version => $species_version,
         url => 'https://www.ncbi.nlm.nih.gov', accession_url => 'https://www.ncbi.nlm.nih.gov/search/all/?term=',
         match => sub { $_[0]{id} ne '' } },
@@ -2430,7 +2555,9 @@ sub write_name_source {
       print $fh join("\t", $feature, $origin->{accession}, $origin->{rule}, $origin->{step}), "\n";
     }
   }
-  close $_ foreach values %fh;
+  foreach my $handle (values %fh) {
+    close $handle;
+  }
 }
 
 # closest_<file_tag>.tsv (geneNames.tsv rows, columns named by the GFF attributes) and one
@@ -2465,7 +2592,7 @@ sub write_closest {
       $features{$member} = 1;
     }
     foreach my $gene (@{$closest->{genes}}) {
-      my ($source) = grep { $_->{match}->($gene) } @$sources;
+      my ($source) = grep { my $candidate = $_; $candidate->{match}->($gene) } @$sources;
       my $fh = $moop_fh{$source->{file}} //= open_closest_moop("$base$source->{file}.moop.tsv", $source);
       my $label = $gene->{symbol} ne '' && $gene->{description} ne '' ? "$gene->{symbol}: $gene->{description}"
                 : ($gene->{description} || $gene->{symbol});
@@ -2475,7 +2602,9 @@ sub write_closest {
       }
     }
   }
-  close $_ foreach values %moop_fh;
+  foreach my $handle (values %moop_fh) {
+    close $handle;
+  }
 }
 
 # native RefSeq/Ensembl names are kept as provided unless uninformative
@@ -2640,7 +2769,10 @@ sub input_lines {
   foreach my $species (@closest_species) {
     push @lines, "closest species $species->{tag} ($species->{species}): "
                . join(', ', ($species->{oma_code} ? "OMA code $species->{oma_code}" : ()),
-                            ($species->{hits} ? "hits $species->{hits} (" . file_date($species->{hits}) . ")" : ()))
+                            ($species->{hits} ? "hits $species->{hits} (" . file_date($species->{hits}) . ")" : ()),
+                            (map { my $kind = $_; $species->{$kind}
+                                     ? "$kind $species->{$kind} (" . ($species_search_label{$species->{tag}}{$kind} // '?') . ', '
+                                       . file_date($species->{$kind}) . ')' : () } qw(rbh diamond)))
                . ($species->{use_for_names} ? '; names genes (step 2)' : '');
   }
   return @lines;
@@ -2668,7 +2800,8 @@ sub decision_header {
     '',
     'NAMING STEPS (tried in this order; the first that gives a name names the gene)',
     '  1 human-curated name, as given',
-    '  2 naming species (closest species with use_for_names): its OMA 1:1 / many:1 ortholog, else its best hit;',
+    '  2 naming species (closest species with use_for_names): its OMA 1:1 / many:1 ortholog, else its full-length',
+    '    reciprocal best hit, else (another species only) its best DIAMOND hit if full-length, else its hits file;',
     '    or, with --native, the gene set\'s own name when informative (then Step says "2 native name")',
     '  3 OMA human ortholog (closest human tier 1-2): 1:1 / many:1 -> the gene\'s name; co-orthologs -> their HGNC group',
     '    (if a family by descent) or PANTHER family; withheld when omaC',
@@ -2724,6 +2857,14 @@ sub decision_header {
     '    passed over / skipped: a rule set the step aside (why)',
     '    not reached: an earlier step named the gene; what this step would have said follows',
     '  Closest_human: the closest human gene (tier: gene, evidence), as in closest_human.tsv',
+    (map { my $species = $_;
+           "  Closest_$species->{tag}: the closest $species->{species} gene (rank: gene, evidence), as in closest_" . lc($species->{tag}) . '.tsv' }
+         @closest_species),
+    '    closest-species ranks: 1 OMA ortholog; 2 MMseqs2 reciprocal best hit; 3 DIAMOND best hit; 4 hits file',
+    ($naming_species
+      ? ("  Name_without_$naming_species->{tag}: the name the steps give without the naming species (step 2 left out),",
+         '    so its effect can be judged before it is trusted')
+      : ()),
   );
   return join('', map { my $line = $_; "# $line\n" } @header);
 }
@@ -2752,6 +2893,28 @@ sub step_cell {
   return is_named($candidate) ? "not reached; would name: $found" : "not reached; $found";
 }
 
+# the decision table's Closest_<tag> cell: "rank N: gene (evidence)"
+sub closest_species_text {
+  my ($species, $group) = @_;
+  my $closest = choose_closest_species($species, $group) or return '';
+  my @genes = map { my $gene = $_; join(' ', grep { my $part = $_; $part ne '' }
+                                         $gene->{id}, ($gene->{symbol} ne '' ? "$gene->{symbol}:" : ''), $gene->{description}) }
+              @{$closest->{genes}};
+  return "rank $closest->{rank}: " . join(' / ', @genes) . " ($closest->{evidence})";
+}
+
+# the decision table's Name_without_<tag> cell: the same decision with step 2 (the naming species)
+# left out -- the name the gene would have without it
+sub name_without_naming_species {
+  my ($group) = @_;
+  my %candidate = (%{$candidates{$group}}, 2 => not_named('left out'));
+  # decide_name records an OMA conflict for set_aside_note; keep the real decision's record
+  local $conflicting_oma{$group} = $conflicting_oma{$group};
+  my $step = decide_name($group, \%candidate, [], {});
+  return 'None (no step)' unless $step;
+  return tagged(set_aside_note($group, $candidate{$step}))->{desc} . " (step $step)";
+}
+
 sub write_decisions {
   my ($file) = @_;
   open my $fh, '>', $file or die "cant write $file $!\n";
@@ -2760,7 +2923,8 @@ sub write_decisions {
   print $fh join("\t", qw(ID GroupId Name Step Reason Native_name Pipeline_name Best_human_hit Best_hit_qcov Best_hit_tcov Best_hit_evalue
                           Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit PANTHER_best PANTHER_model_cov Tree_placement),
                  (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
-                 'Closest_human'), "\n";
+                 'Closest_human', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species),
+                 ($naming_species ? "Name_without_$naming_species->{tag}" : ())), "\n";
   # --native: the gene set's own informative names replace the decision (collect_native_rows)
   my %native_kept;
   foreach my $row (@name_rows) {
@@ -2796,8 +2960,10 @@ sub write_decisions {
                  @best, $family_text, (defined $family ? $coverage->{$family} : ''),
                  ($tree{$group} ? ($tree{$group}{trusted} ? 'trusted: ' : 'weak: ') . tree_text($tree{$group}) : ''),
                  (map { my $naming_step = $_; step_cell($group, $naming_step->[0], $native ? 1 : 0) } @NAMING_STEPS),
-                 $closest_text);
-    print $fh join("\t", map { my $cell = $_ // ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";
+                 $closest_text,
+                 (map { my $species = $_; closest_species_text($species, $group) } @closest_species),
+                 ($naming_species ? ($native ? '' : name_without_naming_species($group)) : ()));
+    print $fh join("\t", map { my $cell = $_; $cell //= ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";
   }
   close $fh;
 }

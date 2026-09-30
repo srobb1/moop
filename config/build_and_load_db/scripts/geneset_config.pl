@@ -22,8 +22,10 @@ use CPAN::Meta::YAML;
 # Layout: fixed tables and shared state at file level, the work in main(), called on the last
 # line -- so every file-level assignment has run before any work starts (a file-level "my %X =
 # (...)" below the work would still be EMPTY when a sub reads it; tests/check_perl_file_scope.pl).
-my %SETTINGS = map { $_ => 1 } qw(human_curated_gene_names closest_species);
-my %CLOSEST = map { $_ => 1 } qw(species tag label oma_code hits use_for_names same_species);
+my %SETTINGS = map { my $setting = $_; ($setting => 1) } qw(human_curated_gene_names closest_species);
+my %CLOSEST = map { my $key = $_; ($key => 1) } qw(species tag label oma_code hits diamond rbh use_for_names same_species);
+# closest_species diamond: / rbh: -- the OUT_DIR of scripts/closest_species_diamond.sh / closest_species_rbh.sh
+my %SEARCH_RESULTS = (diamond => ['diamond_results.tsv.gz', 'diamond_results.tsv'], rbh => ['rbh_mmseq_results.tsv']);
 
 # every message starts with the entry it is about: "Org", "Org/Asm" or "Org/Asm/GeneSet"
 my @errors;
@@ -63,7 +65,7 @@ sub main {
   }
 
   if ($check_only) {
-    print map { "PROBLEM: $_\n" } @errors;
+    print map { my $error = $_; "PROBLEM: $error\n" } @errors;
     print @errors ? scalar(@errors) . " problem(s) in $config_file\n" : "$config_file: OK\n";
     exit(@errors ? 1 : 0);
   }
@@ -77,8 +79,8 @@ sub main {
       push @warnings, $error;
     }
   }
-  warn map { "WARNING: $config_file (not this gene set): $_\n" } @warnings if @warnings;   # warn() with nothing prints "something's wrong"
-  die map { "ERROR: $config_file: $_\n" } @fatal if @fatal;
+  warn map { my $warning = $_; "WARNING: $config_file (not this gene set): $warning\n" } @warnings if @warnings;   # warn() with nothing prints "something's wrong"
+  die map { my $error = $_; "ERROR: $config_file: $error\n" } @fatal if @fatal;
   print join("\0", @args), (@args ? "\0" : '');
 }
 
@@ -120,7 +122,8 @@ sub check_geneset {
           unless defined $entry->{tag} and $entry->{tag} =~ /^[A-Za-z][A-Za-z0-9]*$/ and lc $entry->{tag} ne 'human';
         push @errors, "$where closest_species: tag $entry->{tag} used twice (tags are case-insensitive)"
           if defined $entry->{tag} and $tags{lc $entry->{tag}}++;
-        push @errors, "$what: needs oma_code, hits, or both" unless defined $entry->{oma_code} or defined $entry->{hits};
+        push @errors, "$what: needs oma_code, hits, diamond or rbh"
+          unless grep { my $key = $_; defined $entry->{$key} } qw(oma_code hits diamond rbh);
         push @errors, "$what: needs a label (or same_species: true)" unless $flag{same_species} or defined $entry->{label};
         push @errors, "$where: only one closest_species may have use_for_names: true" if $flag{use_for_names} and $naming++;
         foreach my $key (qw(species tag label oma_code)) {
@@ -128,8 +131,16 @@ sub check_geneset {
         }
         my $hits_ok = !defined $entry->{hits} || hits_file_ok("$what hits", $entry->{hits});
         push @errors, "$what: hits path may not contain |" if defined $entry->{hits} and !ref $entry->{hits} and $entry->{hits} =~ /\|/;
-        my @fields = map { "$_=" . ($entry->{$_} // '') } qw(species tag label oma_code);
-        push @fields, 'hits=' . ($hits_ok ? $entry->{hits} // '' : ''), "use_for_names=$flag{use_for_names}", "same_species=$flag{same_species}";
+        my @fields = map { my $key = $_; "$key=" . ($entry->{$key} // '') } qw(species tag label oma_code);
+        my %search_ok;
+        foreach my $search (qw(diamond rbh)) {
+          next unless defined $entry->{$search};
+          $search_ok{$search} = search_dir_ok("$what $search", $entry->{$search}, $SEARCH_RESULTS{$search});
+          push @errors, "$what: $search path may not contain |" if $search_ok{$search} and $entry->{$search} =~ /\|/;
+        }
+        push @fields, 'hits=' . ($hits_ok ? $entry->{hits} // '' : ''),
+                      (map { my $search = $_; "$search=" . ($search_ok{$search} ? $entry->{$search} : '') } qw(diamond rbh)),
+                      "use_for_names=$flag{use_for_names}", "same_species=$flag{same_species}";
         push @options, '--closest-species', join('|', @fields);
       }
     }
@@ -165,6 +176,20 @@ sub hits_file_ok {
     push @errors, "$what: $file: column 4 is not an E-value in most lines (moop TSV: id accession description evalue)";
   }
   return !($raw and $raw >= $lines / 2) && !$short && $bad_score <= $lines / 2;
+}
+
+# a closest_species diamond: / rbh: path: the OUT_DIR a closest_species_*.sh script wrote, with its
+# results file and db_version.txt (the partner's label, used in the evidence text)
+sub search_dir_ok {
+  my ($what, $dir, $results) = @_;
+  if (ref $dir or !-d $dir) {
+    push @errors, "$what: not a directory " . (ref $dir ? '(not a single path)' : $dir);
+    return 0;
+  }
+  my ($found) = grep { my $file = $_; -s "$dir/$file" } @$results;
+  push @errors, "$what: $dir has no " . join(' or ', @$results) . " (run scripts/closest_species_*.sh into it)" unless $found;
+  push @errors, "$what: $dir has no db_version.txt (written by scripts/closest_species_*.sh)" unless -s "$dir/db_version.txt";
+  return $found && -s "$dir/db_version.txt" ? 1 : 0;
 }
 
 sub file_ok {

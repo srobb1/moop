@@ -48,10 +48,22 @@
 # closest_species -- how the closest gene is found, per gene:
 #   1. OMA: the ortholog to oma_code in this gene set's OMA run. oma_code IS the species: it
 #      is the prefix OMA uses (NEMVE000123), so there is no doubt which organism it is.
-#   2. hits: for genes OMA gave nothing for. The pipeline CANNOT check which organism a
-#      hits file is -- listing it under this species is your statement that every accession
-#      in it is this species. Evidence reads "hits file (<Annotation Source>)", so the two
-#      sources stay distinguishable.
+#   2. rbh: an MMseqs2 reciprocal best hit (E <= 1e-10, >= 50% of both proteins), for genes
+#      OMA gave nothing for.
+#   3. diamond: the DIAMOND best hit, same filter.
+#   4. hits: the best E-value in a moop hits file (no coverage, so no other filter).
+#   The rbh: and diamond: directories are made by scripts/closest_species_rbh.sh and
+#   closest_species_diamond.sh (gene set proteins vs the partner's proteome); their LABEL goes
+#   in the evidence text. Descriptions of the partner's proteins come from the DIAMOND table
+#   (the FASTA titles): give diamond: too, or an RBH partner is reported by id only.
+#   The pipeline CANNOT check which organism a hits file or a partner proteome is -- listing
+#   it under this species is your statement that it is this species. The evidence says
+#   which source gave the gene, and the database score is the rank (1-4 above).
+#   Naming (use_for_names: true), after OMA: a full-length (>= 80% of both proteins) reciprocal
+#   best hit; then, for another species only, the DIAMOND best hit if IT is full-length; then
+#   the hits file. same_species copies a name only from OMA, a full-length RBH, or the hits file.
+#   The decision table (naming_decisions.tsv) gets Closest_<tag> columns, and with
+#   use_for_names a Name_without_<tag> column: the name each gene gets without this species.
 #
 # Settings:
 #   human_curated_gene_names: FILE        names a person assigned (format below)
@@ -60,8 +72,10 @@
 #       tag: Nvec                         short; GFF attributes and file names (letters/digits)
 #       label: sea anemone                in names: "brachyury-like (sea anemone)"
 #       oma_code: NEMVE                   the species' prefix in this gene set's OMA run
+#       rbh: DIR                          optional, OUT_DIR of scripts/closest_species_rbh.sh
+#       diamond: DIR                      optional, OUT_DIR of scripts/closest_species_diamond.sh
 #       hits: FILE                        optional, moop hits file (format below)
-#       use_for_names: false              true = naming step 3 (default false)
+#       use_for_names: false              true = naming step 2 (default false)
 #       same_species: false               true = another annotation of THIS species: names
 #                                         copied as is, no "-like", no label needed
 #

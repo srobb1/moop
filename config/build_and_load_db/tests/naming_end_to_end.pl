@@ -43,11 +43,11 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
               T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300);
-write_file("$dir/isoforms.tsv", join('', map { my $n = substr($_, 1); "$_.1\tNone\tG$n\n" } sort keys %length));
-write_file("$dir/protein.aa.fa", join('', map { ">$_.1\n" . ('M' x $length{$_}) . "\n" } sort keys %length));
+write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
+write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
 # ---- human genes (HGNC)
-write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name gene_group gene_group_id ensembl_gene_id uniprot_ids prev_symbol)) . "\n" . join('', map { join("\t", @$_) . "\n" }
+write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name gene_group gene_group_id ensembl_gene_id uniprot_ids prev_symbol)) . "\n" . join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
   ['HGNC:1', 'ALPHA', 'alpha synthase', '', '', 'ENSG01', '', ''],   # not "alpha protein": a name that only repeats the symbol is uninformative
   ['HGNC:2', 'BETA1', 'beta protein 1', 'Beta proteins', '10', 'ENSG02', '', ''],
   ['HGNC:3', 'BETA2', 'beta protein 2', 'Beta proteins', '10', 'ENSG03', '', ''],
@@ -97,7 +97,7 @@ my $human = sub { my ($n) = @_; my %name = (1 => 'alpha synthase', 2 => 'beta pr
                                             15 => 'harbinger transposase derived 1', 16 => 'centromere protein Q', 6 => 'epsilon protein',
                                             17 => 'zeta ligase', 19 => 'mix protein 1', 20 => 'mix protein 2');
   return "HUMAN0000$n | ENSP0$n | ENSG0$n | $name{$n} [Source:HGNC Symbol;Acc:HGNC:$n]" };
-write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { join("\t", @$_) . "\n" }
+write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
   [1, 1, 'T1.1', $human->(1), '1:1'],
   [2, 4, 'T2.1', $human->(4), 'many:1'],
   [3, 4, 'T3.1', $human->(4), 'many:1'],
@@ -105,7 +105,7 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { jo
   [4, 3, 'T4.1', $human->(3), '1:many'],
   [13, 13, 'T13.1', $human->(13), '1:1'],
   # T18-T22: five copies OMA pairs many:1 with HARB1, each a Harbinger transposase -> a TE family
-  (map { [$_, 15, "T$_.1", $human->(15), 'many:1'] } 18 .. 22),
+  (map { my $n = $_; [$n, 15, "T$n.1", $human->(15), 'many:1'] } 18 .. 22),
   # T23: a 1:1 ortholog that carries a transposase domain keeps its OMA name (flagged te)
   [23, 16, 'T23.1', $human->(16), '1:1'],
   # T25: an OMA 1:1 pair to EPS that nothing else supports (no similarity, no PANTHER family) -> set aside
@@ -124,7 +124,7 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { jo
   # T34: OMA 1:1 with CENPQ; the PANTHER tree places it with THETA instead -> treeC, the name stays
   [34, 16, 'T34.1', $human->(16), '1:1'],
 ));
-write_file("$dir/oma/Output/PairwiseOrthologs/TEST-NEMVE.txt", join('', map { join("\t", @$_) . "\n" }
+write_file("$dir/oma/Output/PairwiseOrthologs/TEST-NEMVE.txt", join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
   [1, 11, 'T1.1', 'NEMVE00011 | XP_000011.1 | LOC11 | anemone alpha', '1:1'],
   [4, 12, 'T4.1', 'NEMVE00012 | XP_000012.1 | LOC12 | anemone beta A', '1:many'],
   [4, 13, 'T4.1', 'NEMVE00013 | XP_000013.1 | LOC13 | anemone beta B', '1:many'],
@@ -149,7 +149,7 @@ write_file("$dir/mmseqs/ENS_homo_sapiens/rbh_mmseq_results.tsv", "query\ttarget\
   . "T6.1\tENSP06.1\t0.40\t90\t50\t2\t1\t90\t1\t120\t1e-20\t120\n"
   . "T14.1\tENSP08.1\t0.50\t480\t200\t2\t10\t490\t5\t495\t1e-150\t480\n"
   # T31-T33: a partial RBH to EPS (70% / 60%): EPS is their closest human gene (tier 3), not a -like name
-  . join('', map { "T$_.1\tENSP06.1\t0.45\t140\t60\t1\t1\t140\t1\t120\t1e-40\t200\n" } 31 .. 33));
+  . join('', map { my $n = $_; "T$n.1\tENSP06.1\t0.45\t140\t60\t1\t1\t140\t1\t120\t1e-40\t200\n" } 31 .. 33));
 my $pep = '';
 foreach my $row (['ENSP05.1', 'ENSG05.1', 'DELTA', 'delta kinase', 5, 100], ['ENSP06.1', 'ENSG06.1', 'EPS', 'epsilon protein', 6, 200],
                  ['ENSP08.1', 'ENSG08.1', 'ANO2', 'anoctamin 2', 8, 500]) {
@@ -179,7 +179,7 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   . $dhit->('T2', '04', 'GAMMA', 'gamma transferase', '1e-60', 250, 250, 250, 90, 90)
   . $dhit->('T3', '04', 'GAMMA', 'gamma transferase', '1e-60', 250, 250, 250, 90, 90)
   . $dhit->('T4', '02', 'BETA1', 'beta protein 1', '1e-60', 250, 400, 400, 90, 90)
-  . join('', map { $dhit->("T$_", '15', 'HARB1', 'harbinger transposase derived 1', '1e-40', 150, 400, 350, 60, 70) } 18 .. 22)
+  . join('', map { my $n = $_; $dhit->("T$n", '15', 'HARB1', 'harbinger transposase derived 1', '1e-40', 150, 400, 350, 60, 70) } 18 .. 22)
   . $dhit->('T23', '16', 'CENPQ', 'centromere protein Q', '1e-50', 200, 300, 300, 90, 90)
   . $dhit->('T11', '05', 'DELTA', 'delta kinase', '1e-12', 60, 200, 100, 30, 60)
   . $dhit->('T13', '13', 'HDA1', 'histone deacetylase 1', '1e-120', 450, 300, 300, 95, 95)
@@ -234,7 +234,7 @@ write_file("$dir/iprscan.tsv", join('',
   $row->('T2',  250, 'PANTHER', 'PTHR00099', 'OTHER FAMILY',     1,  60,  '1.0E-20', '-', '-'),
   $row->('T3',  250, 'PANTHER', 'PTHR00099', 'OTHER FAMILY',     1,  60,  '1.0E-20', '-', '-'),
   # transposases (Pfam DDE_Tnp_4, the PIF/Harbinger transposase): T17 has no OMA ortholog
-  (map { $row->("T$_", 400, 'Pfam', 'PF13359', 'DDE superfamily endonuclease', 50, 250, '1.0E-30', 'IPR027806', 'Harbinger transposase-derived nuclease domain') } 17 .. 23),
+  (map { my $n = $_; $row->("T$n", 400, 'Pfam', 'PF13359', 'DDE superfamily endonuclease', 50, 250, '1.0E-30', 'IPR027806', 'Harbinger transposase-derived nuclease domain') } 17 .. 23),
   # T24: a "KRAB AND ZINC FINGER" family match (95% of its model) that is 44% C2H2 repeats -> named for the repeat
   $row->('T24', 200, 'PANTHER', 'PTHR00024', 'KRAB AND ZINC FINGER DOMAIN-CONTAINING', 1, 190, '1.0E-40', '-', '-'),
   # T25: its unsupported OMA pair is set aside; its kinase domain names it
@@ -252,7 +252,7 @@ write_file("$dir/iprscan.tsv", join('',
   $row->('T29', 300, 'Pfam',    'PF00028',   'sprocket',         1,  60,  '1.0E-20', 'IPR000028', 'Sprocket domain'),
   # T30: a family InterPro names by a function ("Synaptic Organizer") -> PANTHER's own name instead
   $row->('T30', 200, 'PANTHER', 'PTHR00030', 'CEREBELLIN-RELATED', 1, 190, '1.0E-40', 'IPR000030', 'Cerebellin Synaptic Organizer'),
-  (map { $row->('T24', 200, 'SMART', 'SM00355', 'ZnF_C2H2', $_, $_ + 20, '1.0E-3', 'IPR013087', 'Zinc finger C2H2-type') } 20, 60, 100, 140),
+  (map { my $start = $_; $row->('T24', 200, 'SMART', 'SM00355', 'ZnF_C2H2', $start, $start + 20, '1.0E-3', 'IPR013087', 'Zinc finger C2H2-type') } 20, 60, 100, 140),
 ));
 write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDomain\tKinase domain\n"
   . "IPR000002\tDomain\tZinc finger, RING-type\nIPR000003\tDomain\tDomain of unknown function DUF1\n"
@@ -261,7 +261,7 @@ write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDoma
   . "IPR027806\tDomain\tHarbinger transposase-derived nuclease domain\n"
   . "IPR000028\tDomain\tSprocket domain\n"
   . "IPR000030\tFamily\tCerebellin Synaptic Organizer\n");
-write_file("$dir/hmm_lengths.tsv", join('', map { "$_->[0]\t$_->[1]\n" }
+write_file("$dir/hmm_lengths.tsv", join('', map { my $model = $_; "$model->[0]\t$model->[1]\n" }
   ['PTHR00006', 100], ['PTHR00007', 200], ['PTHR00009', 120], ['PTHR00010', 250], ['PTHR00011', 200], ['PTHR00012', 150],
   ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300], ['PTHR00030', 200]));
 
@@ -283,6 +283,34 @@ write_file("$dir/panther_placements.tsv", "# test placements\n"
   . $placement->('T34', 'PTHR00031:SF3', '1e-60', 90, 85, 'ortholog_1', 'HGNC:18')
   . $placement->('T35', 'PTHR00031:SF4', '1e-80', 95, 90, 'co-orthologs', 'HGNC:22;HGNC:23'));
 
+# ---- a closest species searched by scripts/closest_species_rbh.sh and closest_species_diamond.sh
+# (a planarian stand-in; real Schmidtea FASTA titles carry ids only, like SMED9 here)
+#   G5:  full-length RBH and DIAMOND hit to SMED5 -> closest rank 2 (RBH); names it when used for names
+#   G8:  full-length DIAMOND best hit only -> closest rank 3; names another species' gene -like, never same_species
+#   G12: best DIAMOND hit partial (60%), a weaker hit full-length -> closest is the best normal hit; no name
+#   G16: a partial RBH (70% / 60%) -> closest rank 2 (normal filter), no name
+#   G9:  full-length RBH to a protein with no description -> closest rank 2 by id, no name
+my $smed_rbh = "$dir/closest_smed/rbh";
+my $smed_diamond = "$dir/closest_smed/diamond";
+write_file("$smed_rbh/db_version.txt", "Test Smed v1\tmd5:0\n");
+write_file("$smed_diamond/db_version.txt", "Test Smed v1\tmd5:0\n");
+write_file("$smed_rbh/rbh_mmseq_results.tsv", join("\t", qw(query target pident alnlen mismatch gapopen qstart qend tstart tend evalue bits qlen tlen qcov tcov)) . "\n"
+  . join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
+    ['T5.1', 'SMED5', 0.6, 95, 0, 0, 1, 95, 1, 95, '1e-40', 150, 100, 100, 0.95, 0.95],
+    ['T16.1', 'SMED16', 0.4, 140, 0, 0, 1, 140, 1, 180, '1e-20', 80, 200, 300, 0.70, 0.60],
+    ['T9.1', 'SMED9', 0.5, 110, 0, 0, 1, 110, 1, 110, '1e-40', 150, 120, 120, 0.92, 0.92]));
+my $smed_hit = sub { my ($q, $s, $title, $evalue, $bits, $qlen, $slen, $qcov, $scov) = @_;
+  return join("\t", $q, $s, $title, $evalue, 50, 100, 0, 0, 1, 100, 1, 100, $bits, $qlen, $slen, $qcov, $scov) . "\n"; };
+write_file("$smed_diamond/diamond_results.tsv", join("\t", qw(qseqid sseqid stitle evalue pident length mismatch gapopen qstart qend sstart send bitscore qlen slen qcovhsp scovhsp)) . "\n"
+  . $smed_hit->('T5.1', 'SMED5', 'SMED5 SmDELTA: smed delta kinase', '1e-40', 150, 100, 100, 95, 95)
+  . $smed_hit->('T8.1', 'SMED8', 'SMED8 wnt signalling protein', '1e-50', 200, 150, 150, 90, 90)
+  . $smed_hit->('T12.1', 'SMED12', 'SMED12 frizzled receptor', '1e-30', 180, 150, 300, 60, 60)
+  . $smed_hit->('T12.1', 'SMED12b', 'SMED12b frizzled-like receptor', '1e-20', 90, 150, 150, 85, 85)
+  . $smed_hit->('T9.1', 'SMED9', 'SMED9', '1e-40', 150, 120, 120, 92, 92));
+my $smed = sub { my ($names, $same) = @_;
+  return ('--closest-species', "species=Schmidtea mediterranea|tag=Smed|label=planarian|diamond=$smed_diamond|rbh=$smed_rbh"
+                             . "|use_for_names=$names|same_species=$same"); };
+
 # ---- run it (twice, with different hash seeds: the output must not depend on hash order)
 my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/protein.aa.fa", '--hgnc-dir', "$dir/hgnc",
   '--oma-dir', "$dir/oma", '--oma-code', 'TEST', '--mmseqs-dir', "$dir/mmseqs", '--ref-db', "$dir/refdb",
@@ -294,9 +322,18 @@ foreach my $seed (1, 2) {
   my $out = "$dir/out$seed";
   system('mkdir', '-p', $out) == 0 or die;
   local $ENV{PERL_HASH_SEED} = $seed;
-  my $status = system("\Q$^X\E \Q$script\E " . join(' ', map { "\Q$_\E" } @arguments)
+  my $status = system("\Q$^X\E \Q$script\E " . join(' ', map { my $argument = $_; "\Q$argument\E" } @arguments, $smed->(0, 0))
                       . " --out-names \Q$out/geneNames.tsv\E --out-dir \Q$out\E > \Q$out.log\E 2>&1");
   check($status == 0, "assign_gene_names_v2.pl runs (seed $seed)", `tail -3 \Q$out.log\E`);
+}
+# the planarian as the naming species: for another species (-like), and as another annotation of this species
+foreach my $run (['names', 0], ['same', 1]) {
+  my ($label, $same) = @$run;
+  my $out = "$dir/out_$label";
+  system('mkdir', '-p', $out) == 0 or die;
+  my $status = system("\Q$^X\E \Q$script\E " . join(' ', map { my $argument = $_; "\Q$argument\E" } @arguments, $smed->(1, $same))
+                      . " --out-names \Q$out/geneNames.tsv\E --out-dir \Q$out\E > \Q$out.log\E 2>&1");
+  check($status == 0, "assign_gene_names_v2.pl runs with a naming species ($label)", `tail -3 \Q$out.log\E`);
 }
 my $out = "$dir/out1";
 
@@ -308,8 +345,9 @@ foreach my $file (glob "$out/gene_name_source.*.moop.tsv") {
   my ($kind) = $file =~ /gene_name_source\.(\w+)\.moop/;
   foreach my $row (read_tsv($file)) { $source{$row->[0]} = [ @$row[1 .. 3], $kind ] if $row->[0] =~ /^G\d+$/; }
 }
-my %closest_human = map { $_->[1] => $_ } read_tsv("$out/closest_human.tsv");
-my %closest_nvec  = map { $_->[1] => $_ } read_tsv("$out/closest_nvec.tsv");
+my %closest_human = map { my $row = $_; ($row->[1] => $row) } read_tsv("$out/closest_human.tsv");
+my %closest_nvec  = map { my $row = $_; ($row->[1] => $row) } read_tsv("$out/closest_nvec.tsv");
+my %closest_smed  = map { my $row = $_; ($row->[1] => $row) } read_tsv("$out/closest_smed.tsv");
 
 # ---- names: one rule per gene, each ending in its evidence tag
 my %expect = (
@@ -330,7 +368,7 @@ my %expect = (
   G15 => ['Kappa channels family member [ISS|bh|tie-grp]', 'paralog tie without a reciprocal hit -> the shared HGNC group'],
   G16 => ['None', 'best human gene (WDR90) not full-length -> no -like from the weaker CFAP52 hit'],
   G17 => ['PIF/Harbinger transposase domain-containing protein [ISM|te]', 'a transposase, no ortholog -> named for its TE class'],
-  (map { ("G$_" => ['PIF/Harbinger transposase domain-containing protein [ISM|te]', 'OMA many:1 x5 to a transposon-derived human gene, each a transposase -> TE, not the human name']) } 18 .. 22),
+  (map { my $n = $_; ("G$n" => ['PIF/Harbinger transposase domain-containing protein [ISM|te]', 'OMA many:1 x5 to a transposon-derived human gene, each a transposase -> TE, not the human name']) } 18 .. 22),
   G23 => ['CENPQ: centromere protein Q [ISO|1to1|sim+|te]', 'a 1:1 OMA ortholog with a transposase domain keeps its name, flagged te'],
   G25 => ['Kinase domain-containing protein [ISM|ipr|omaX]', 'an OMA pair nothing supports is set aside (omaX); the next evidence names it'],
   G24 => ['Zinc finger C2H2-type domain-containing protein [ISM|rpt]', 'a PANTHER family match that is 44% C2H2 repeats -> named for the repeat, not "KRAB"'],
@@ -436,6 +474,46 @@ foreach my $file (glob("$out/*.moop.tsv")) {
   check($bad == 0 && ($type eq 'Closest Gene' || $type eq 'Gene Name Source'), "$short: 4 columns, type $type", "$bad bad rows");
 }
 
+# ---- closest gene in a species searched with closest_species_rbh.sh / closest_species_diamond.sh
+check(($closest_smed{G5}[2] // '') eq 'SMED5' && ($closest_smed{G5}[3] // '') eq 'SmDELTA'
+      && scalar(($closest_smed{G5}[5] // '') =~ /^reciprocal best hit \(MMseqs2, Test Smed v1; E=1e-40, 95%\/95% of the two proteins\)$/),
+      'closest Smed G5: the reciprocal best hit (rank 2) before the DIAMOND hit, described from the DIAMOND title', join(' | ', @{$closest_smed{G5} // []}));
+check(($closest_smed{G8}[2] // '') eq 'SMED8' && scalar(($closest_smed{G8}[5] // '') =~ /^best hit \(DIAMOND, Test Smed v1;/),
+      'closest Smed G8: no RBH -> the DIAMOND best hit (rank 3)', join(' | ', @{$closest_smed{G8} // []}));
+check(($closest_smed{G12}[2] // '') eq 'SMED12', 'closest Smed G12: the best normal hit, not the weaker full-length one', join(' | ', @{$closest_smed{G12} // []}));
+check(($closest_smed{G16}[2] // '') eq 'SMED16' && ($closest_smed{G16}[4] // 'x') eq '',
+      'closest Smed G16: a partial RBH passes the normal filter; no title, no description', join(' | ', @{$closest_smed{G16} // []}));
+check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', join(' | ', @{$closest_smed{G1} // []}));
+{
+  my %score;
+  foreach my $row (read_tsv("$out/closest_smed.moop.tsv")) { $score{$row->[0]} = $row->[3] if $row->[0] =~ /^G\d+$/; }
+  check(($score{G5} // '') eq '2' && ($score{G8} // '') eq '3', 'closest Smed moop scores: 2 = RBH, 3 = DIAMOND', "G5 $score{G5}, G8 $score{G8}");
+  my %decision = read_decisions("$out/naming_decisions.tsv");
+  check(scalar(($decision{G5}{Closest_Smed} // '') =~ /^rank 2: SMED5 SmDELTA: smed delta kinase \(reciprocal best hit/),
+        'decision table: a Closest_Smed column', $decision{G5}{Closest_Smed});
+  check(!exists $decision{G5}{Name_without_Smed}, 'decision table: no Name_without column when the species does not name genes');
+  check(($name{G5} // '') eq 'DELTA-like: delta kinase-like [ISS|rbh]', 'Smed with use_for_names=0 names nothing (G5 keeps its human -like name)', $name{G5});
+}
+
+# ---- the planarian as the naming species (step 2): full-length hits only
+{
+  my %named = map { my $row = $_; ($row->[2] => $row->[3]) } read_tsv("$dir/out_names/geneNames.tsv");
+  my %decision = read_decisions("$dir/out_names/naming_decisions.tsv");
+  check(($named{G5} // '') eq 'SmDELTA-like: smed delta kinase-like (planarian) [ISS|rbh|smed]',
+        'naming species G5: its full-length RBH names it, -like, labelled', $named{G5});
+  check(($decision{G5}{Name_without_Smed} // '') eq 'DELTA-like: delta kinase-like [ISS|rbh] (step 6)',
+        'decision table G5: the name without the naming species', $decision{G5}{Name_without_Smed});
+  check(scalar(($named{G8} // '') =~ /^Wnt signalling protein-like \(planarian\) \[ISS\|bh\|smed\]$|^wnt signalling protein-like \(planarian\) \[ISS\|bh\|smed\]$/),
+        'naming species G8: a full-length DIAMOND best hit names another species\' gene -like', $named{G8});
+  check(($named{G12} // '') eq 'None', 'naming species G12: its best hit is partial -> no name from the weaker full-length hit', $named{G12});
+  check(($named{G9} // '') ne '' && ($named{G9} // '') !~ /planarian/, 'naming species G9: a partner protein with no description names nothing', $named{G9});
+  check(($named{G16} // '') !~ /planarian/, 'naming species G16: a partial RBH names nothing', $named{G16});
+  check(($named{G1} // '') eq 'ALPHA: alpha synthase [ISO|1to1|sim+|pthr+]', 'naming species: a gene it has no hit for keeps its name', $named{G1});
+  my %same = map { my $row = $_; ($row->[2] => $row->[3]) } read_tsv("$dir/out_same/geneNames.tsv");
+  check(($same{G5} // '') eq 'SmDELTA: smed delta kinase [SRC|rbh|smed]', 'same species G5: a full-length RBH copies the name as is', $same{G5});
+  check(($same{G8} // '') eq 'None', 'same species G8: a DIAMOND best hit alone is not the same gene', $same{G8});
+}
+
 # ---- same output whatever the hash seed
 my $differs = 0;
 foreach my $file (map { s{.*/}{}r } glob "$dir/out1/*") {
@@ -470,6 +548,24 @@ check($differs == 0, 'identical output under two hash seeds', "$differs file(s) 
 
 print $failed ? "\n$failed FAILED, $passed passed\n" : "all $passed checks passed\n";
 exit($failed ? 1 : 0);
+
+# naming_decisions.tsv: GroupId -> column name -> cell
+sub read_decisions {
+  my ($file) = @_;
+  open my $fh, '<', $file or do { check(0, "output exists: $file"); return (); };
+  my (@columns, %row);
+  while (my $line = <$fh>) {
+    next if $line =~ /^#/;
+    chomp $line;
+    my @cells = split /\t/, $line, -1;
+    if (!@columns) { @columns = @cells; next; }
+    my %cell;
+    @cell{@columns} = @cells;
+    $row{$cell{GroupId}} = \%cell;
+  }
+  close $fh;
+  return %row;
+}
 
 sub read_tsv {
   my ($file) = @_;
