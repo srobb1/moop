@@ -184,6 +184,10 @@ my %RELATIONSHIP_LEAD = ('homolog'        => 'Homolog, orthology not shown (may 
 my $STRONG_MIN_AGREE          = 3;
 my $STRONG_MIN_HUMAN_COVERAGE = 50;
 my $SHORT_PROTEIN             = 100;   # aa: a None gene's provenance says "a short protein, only N aa"
+# an own-transcriptome ORF "matches" a protein at >= 95% identity over >= 90% of it (the same gene, allowing
+# for assembly and sequencing differences); Congeria: 61% of named genes, 3% of no-hit proteins under 100 aa
+my $TRANSCRIPT_MIN_IDENTITY   = 95;
+my $TRANSCRIPT_MIN_COVERAGE   = 90;
 
 # ---- closest gene in a --closest-species species
 my %OMA_RANK = ('1:1' => 0, 'many:1' => 1, '1:many' => 2, 'many:many' => 3);
@@ -319,6 +323,10 @@ my %model_coverage;   # "protein\tanalysis\tsignature" -> % of the signature's m
 my %gene_pfam;        # group -> Pfam accession -> 1: the gene's Pfam domains (InterProScan; fragments of a model left out)
 my %human_pfam;       # HGNC id -> Pfam accession -> 1 (uniprot/human_pfam.tsv.gz)
 my (%pfam_name, %pfam_clan);   # Pfam accession -> short name / clan (--pfam-names)
+my %signal_peptide;   # protein -> SignalP 6 prediction, as words ("signal peptide", "lipoprotein signal peptide", ...)
+my %tm_helices;       # protein -> DeepTMHMM transmembrane helix count
+my %location;         # protein -> { places => "Cytoplasm|Nucleus", signals => "Nuclear export signal" } (DeepLoc 2, signal found)
+my %transcript_match; # protein -> [identity %, % of the protein] of its best own-transcriptome ORF match (--transcript-hits)
 
 # ============================================================== main
 sub main {
@@ -329,6 +337,7 @@ sub main {
              'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'native=s', 'oma-id-map=s',
              'human-curated-gene-names=s@', 'closest-species=s@',
              'interproscan=s', 'interpro-entries=s', 'panther-hmm-lengths=s', 'panther-placements=s', 'model-coverage=s', 'pfam-names=s', 'metadata=s',
+             'signalp=s', 'deeptmhmm=s', 'deeploc=s', 'transcript-hits=s',
              'out-names=s', 'out-dir=s')
     or die "bad options\n";
   foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-dir)) {
@@ -367,6 +376,11 @@ sub main {
   read_isoforms($opt{isoforms});
   %gene_of_protein = read_protein2gene($opt{protein2gene});
   %query_length = fasta_lengths($opt{'protein-fasta'});
+  # protein features, reported for genes with no name (and in the decision table): nothing is named by them
+  %signal_peptide   = read_signalp($opt{signalp})             if defined $opt{signalp};
+  %tm_helices       = read_deeptmhmm($opt{deeptmhmm})         if defined $opt{deeptmhmm};
+  %location         = read_deeploc($opt{deeploc})             if defined $opt{deeploc};
+  %transcript_match = read_transcript_hits($opt{'transcript-hits'}) if defined $opt{'transcript-hits'};
 
   $hgnc = load_hgnc("$opt{'hgnc-dir'}/hgnc_complete_set.txt", "$opt{'hgnc-dir'}/withdrawn.txt");
 
@@ -476,6 +490,122 @@ sub read_protein2gene {
   }
   close $fh;
   return %map;
+}
+
+# SignalP 6 (signalp6_results.tsv): ID (the FASTA title; its first word is the protein), Prediction
+sub read_signalp {
+  my ($file) = @_;
+  my %word = ('SP' => 'signal peptide', 'LIPO' => 'lipoprotein signal peptide', 'TAT' => 'Tat signal peptide',
+              'TATLIPO' => 'Tat lipoprotein signal peptide', 'PILIN' => 'pilin-like signal peptide');
+  my %prediction;
+  open my $fh, '<', $file or die "cant open SignalP results $file $!\n";
+  while (my $line = <$fh>) {
+    next if $line =~ /^#/;
+    chomp $line;
+    my ($title, $call) = split /\t/, $line;
+    next unless defined $call;
+    my ($protein) = split /\s+/, $title;
+    my ($kind) = $call =~ /^([A-Z]+)/;
+    $prediction{$protein} = $word{$kind} if defined $kind and $word{$kind};
+  }
+  close $fh;
+  return %prediction;
+}
+
+# DeepTMHMM (deeptmhmm_results.gff3): "# <protein> Number of predicted TMRs: N"
+sub read_deeptmhmm {
+  my ($file) = @_;
+  my %count;
+  open my $fh, '<', $file or die "cant open DeepTMHMM results $file $!\n";
+  while (my $line = <$fh>) {
+    $count{$1} = $2 if $line =~ /^#\s*(\S+)\s+Number of predicted TMRs:\s*(\d+)/;
+  }
+  close $fh;
+  return %count;
+}
+
+# DeepLoc 2 (deeploc2_results.tsv): Protein_ID, Localizations ("Cytoplasm|Nucleus"), Signals, by column
+# name. Kept only where DeepLoc found a sorting signal: without one its location is a default (Congeria:
+# 15,440 proteins with no signal, mostly "Cytoplasm" / "Nucleus"), which would read like a finding
+sub read_deeploc {
+  my ($file) = @_;
+  my %where;
+  open my $fh, '<', $file or die "cant open DeepLoc results $file $!\n";
+  my $header = <$fh> // '';
+  chomp $header;
+  my @columns = split /\t/, $header;
+  my %column = map { my $index = $_; ($columns[$index] => $index) } 0 .. $#columns;
+  die "$file: no Protein_ID / Localizations / Signals columns\n"
+    unless defined $column{Protein_ID} and defined $column{Localizations} and defined $column{Signals};
+  while (my $line = <$fh>) {
+    chomp $line;
+    my @fields = split /\t/, $line;
+    my ($protein) = split /\s+/, $fields[$column{Protein_ID}] // '';
+    my ($places, $signals) = ($fields[$column{Localizations}] // '', $fields[$column{Signals}] // '');
+    next if $protein eq '' or $places eq '' or $signals eq '';
+    $where{$protein} = { places => $places, signals => $signals };
+  }
+  close $fh;
+  return %where;
+}
+
+# the gene set's proteins searched against the species' own transcriptome ORFs (DIAMOND or BLAST
+# tabular; only the standard first columns are read: qseqid sseqid pident length mismatch gapopen
+# qstart qend). Per protein, the best match by the share of the protein it covers, then identity.
+sub read_transcript_hits {
+  my ($file) = @_;
+  my %best;
+  my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
+  open my $fh, $open or die "cant open transcript hits $file $!\n";
+  while (my $line = <$fh>) {
+    next if $line =~ /^#/;
+    my ($protein, undef, $identity, undef, undef, undef, $start, $end) = split /\t/, $line;
+    next unless defined $end and $end =~ /^\d+$/ and $query_length{$protein};
+    my $covered = 100 * (abs($end - $start) + 1) / $query_length{$protein};
+    $covered = 100 if $covered > 100;
+    my $current = $best{$protein};
+    $best{$protein} = [$identity, $covered]
+      if !$current or $covered > $current->[1] or ($covered == $current->[1] and $identity > $current->[0]);
+  }
+  close $fh;
+  return %best;
+}
+
+# the protein a gene's features are read from: its longest (ties by id)
+sub longest_member {
+  my ($group) = @_;
+  my ($longest) = sort { ($query_length{$b} // 0) <=> ($query_length{$a} // 0) or $a cmp $b } @{$members{$group} // []};
+  return $longest;
+}
+
+# "signal peptide (SignalP 6); 2 transmembrane helices (DeepTMHMM); located: extracellular (DeepLoc 2: signal
+# peptide)" -- what is predicted, positives only; '' when nothing is
+sub protein_features_text {
+  my ($group) = @_;
+  my $protein = longest_member($group) // return '';
+  my @parts;
+  push @parts, "$signal_peptide{$protein} (SignalP 6)" if $signal_peptide{$protein};
+  push @parts, "$tm_helices{$protein} transmembrane helix" . ($tm_helices{$protein} == 1 ? '' : 'es') . ' (DeepTMHMM)'
+    if $tm_helices{$protein};
+  if (my $where = $location{$protein}) {
+    push @parts, 'location ' . join(' or ', map { my $place = $_; lc $place } split /\|/, $where->{places})
+               . ' (DeepLoc 2: ' . join(', ', map { my $signal = $_; lc $signal } split /\|/, $where->{signals}) . ')';
+  }
+  return join('; ', @parts);
+}
+
+# own-transcriptome evidence that the gene model is expressed: a match of >= $TRANSCRIPT_MIN_IDENTITY%
+# identity over >= $TRANSCRIPT_MIN_COVERAGE% of the protein. Positive only: a transcriptome samples some
+# tissues and stages at some depth, so no match is not evidence that a gene is not expressed -- and is
+# not reported. '' without --transcript-hits or without a match.
+sub transcript_text {
+  my ($group) = @_;
+  return '' unless defined $opt{'transcript-hits'};
+  my $protein = longest_member($group) // return '';
+  my $match = $transcript_match{$protein};
+  return sprintf('expressed: an ORF of its own transcriptome matches it (%.0f%% identity over %.0f%% of the protein)', @$match)
+    if $match and $match->[0] >= $TRANSCRIPT_MIN_IDENTITY and $match->[1] >= $TRANSCRIPT_MIN_COVERAGE;
+  return '';
 }
 
 sub fasta_lengths {
@@ -2262,6 +2392,10 @@ sub choose_name {
   # 100 aa have an own-transcript ORF, against 61% of named genes); the length is worth knowing
   my $length = max_member_length($group);
   $rule .= "; a short protein, only $length aa" if $length and $length < $SHORT_PROTEIN;
+  my $transcript = transcript_text($group);
+  $rule .= "; $transcript" if $transcript ne '';
+  my $features = protein_features_text($group);
+  $rule .= "; predicted: $features" if $features ne '';
   $stats{'name: none (' . (@found ? 'hits did not pass the naming tests' : 'no hits') . ')'}++;
   return { desc => 'None', selected => selected_id($group, undef), note => 'none|none|none|none|-',
            origin => { kind => 'none', accession => 'None', step => 0, rule => $rule } };
@@ -3681,6 +3815,10 @@ sub decision_header {
     '  ID: the transcript whose evidence named the gene; GroupId: the gene',
     '  Name: as in geneNames.tsv; Step: the step that named it; Reason: why, in full. A gene with no name is',
     '    "none: no hits" (no homology evidence at all) or "none: hits did not pass the naming tests"',
+    '  Protein_features: SignalP 6 signal peptide, DeepTMHMM helices, DeepLoc 2 location of its longest protein (--signalp,',
+    '    --deeptmhmm, --deeploc); reported only, never used to name. Transcript_support (--transcript-hits): an ORF of the',
+    "    species' own transcriptome matches it (>= $TRANSCRIPT_MIN_IDENTITY% identity over >= $TRANSCRIPT_MIN_COVERAGE% of the protein): evidence it is",
+    '    expressed. Empty otherwise -- no match is not evidence it is not expressed (a transcriptome samples some tissues and stages)',
     '  Relationship: what the name claims about the gene and the human gene(s) it comes from -- ortholog (OMA 1:1 or',
     '    one human gene on the PANTHER tree), co-ortholog (one of several copies here, or several human genes),',
     '    homolog (similar along its length, "-like": orthology not shown, may be a paralog), family homolog (member of',
@@ -3842,7 +3980,7 @@ sub write_decisions {
   print $fh join("\t", qw(ID GroupId Name Step Relationship Reason Native_name Pipeline_name Best_human_hit Best_hit_qcov Best_hit_tcov Best_hit_evalue
                           Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit PANTHER_best PANTHER_model_cov Tree_placement),
                  (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
-                 'Closest_human', 'Evidence_by_method', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species)), "\n";
+                 'Closest_human', 'Evidence_by_method', 'Protein_features', 'Transcript_support', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species)), "\n";
   # --native: the gene set's own informative names replace the decision (collect_native_rows)
   my %native_kept;
   foreach my $row (@name_rows) {
@@ -3880,7 +4018,7 @@ sub write_decisions {
                  @best, $family_text, (defined $family ? $coverage->{$family} : ''),
                  ($tree{$group} ? ($tree{$group}{trusted} ? 'trusted: ' : 'weak: ') . tree_text($tree{$group}) : ''),
                  (map { my $naming_step = $_; step_cell($group, $naming_step->[0], $native ? 1 : 0) } @NAMING_STEPS),
-                 $closest_text, agreement_text($group),
+                 $closest_text, agreement_text($group), protein_features_text($group), transcript_text($group),
                  (map { my $species = $_; closest_species_text($species, $group) } @closest_species));
     print $fh join("\t", map { my $cell = $_; $cell //= ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";
   }

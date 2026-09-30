@@ -617,6 +617,11 @@ build_naming_args() {
   ## human domains themselves are read from $REFERENCE_DATA/uniprot/human_pfam.tsv.gz
   [ -s "$REFERENCE_DATA/pfam/pfam_names.tsv" ] && NAMING_ARGS+=(--pfam-names "$REFERENCE_DATA/pfam/pfam_names.tsv")
 
+  ## protein features, reported (never used to name) for genes with no name and in naming_decisions.tsv
+  [ -s "$ANALYSIS_DIR/signalp6/signalp6_results.tsv" ]   && NAMING_ARGS+=(--signalp "$ANALYSIS_DIR/signalp6/signalp6_results.tsv")
+  [ -s "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3" ] && NAMING_ARGS+=(--deeptmhmm "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3")
+  [ -s "$ANALYSIS_DIR/deeploc2/deeploc2_results.tsv" ]   && NAMING_ARGS+=(--deeploc "$ANALYSIS_DIR/deeploc2/deeploc2_results.tsv")
+
   ## the gene set's species, taxon and accessions, for the header of naming_decisions.tsv
   [ -s "$GENESET_DIR/metadata.yaml" ] && NAMING_ARGS+=(--metadata "$GENESET_DIR/metadata.yaml")
 

@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200, T55 => 200, T56 => 200);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200, T55 => 200, T56 => 200, T57 => 80);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -434,13 +434,27 @@ my $smed = sub { my ($names, $same) = @_;
   return ('--closest-species', "species=Schmidtea mediterranea|tag=Smed|label=planarian|diamond=$smed_diamond|rbh=$smed_rbh"
                              . "|use_for_names=$names|same_species=$same"); };
 
+# ---- protein features and own-transcriptome hits (reported for unnamed genes, never used to name):
+# G57 (80 aa, no homology) is secreted, one helix, placed by a signal, and expressed; G37 has a DeepLoc
+# location without a signal (a default: not reported) and no transcript match
+write_file("$dir/signalp6_results.tsv", "# SignalP-6.0\tOrganism: Other\n# ID\tPrediction\tOTHER\tSP(Sec/SPI)\n"
+  . "T57.1 protein AED:0.1\tSP\t0.01\t0.99\nT37.1 protein\tOTHER\t0.99\t0.01\n");
+write_file("$dir/deeptmhmm_results.gff3", "##gff-version 3\n# T57.1 Length: 80\n# T57.1 Number of predicted TMRs: 1\n"
+  . "T57.1\tsignal\t1\t20\nT57.1\tTMhelix\t50\t70\n//\n# T37.1 Length: 150\n# T37.1 Number of predicted TMRs: 0\nT37.1\tinside\t1\t150\n//\n");
+write_file("$dir/deeploc2_results.tsv", "Protein_ID\tLocalizations\tSignals\tMembrane types\n"
+  . "T57.1\tCell membrane\tSignal peptide|Transmembrane domain\tTransmembrane\nT37.1\tCytoplasm\t\tSoluble\n");
+write_file("$dir/transcript_hits.tsv", "T57.1\tTRINITY_DN1_c0_g1_i1.p1\t99.0\t80\t1\t0\t1\t80\t1\t80\t1e-40\t160\n"
+  . "T37.1\tTRINITY_DN2_c0_g1_i1.p1\t99.0\t30\t0\t0\t1\t30\t1\t30\t1e-10\t60\n");
+
 # ---- run it (twice, with different hash seeds: the output must not depend on hash order)
 my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/protein.aa.fa", '--hgnc-dir', "$dir/hgnc",
   '--oma-dir', "$dir/oma", '--oma-code', 'TEST', '--mmseqs-dir', "$dir/mmseqs", '--ref-db', "$dir/refdb",
   '--diamond-dir', "$dir/diamond", '--uniprot-dir', "$dir/uniprot",
   '--interproscan', "$dir/iprscan.tsv", '--interpro-entries', "$dir/entry.list", '--panther-hmm-lengths', "$dir/hmm_lengths.tsv",
   '--panther-placements', "$dir/panther_placements.tsv", '--model-coverage', "$dir/model_coverage.tsv", '--pfam-names', "$dir/pfam_names.tsv",
-  '--closest-species', 'species=Nematostella vectensis|tag=Nvec|label=sea anemone|oma_code=NEMVE|hits=|use_for_names=0|same_species=0');
+  '--closest-species', 'species=Nematostella vectensis|tag=Nvec|label=sea anemone|oma_code=NEMVE|hits=|use_for_names=0|same_species=0',
+  '--signalp', "$dir/signalp6_results.tsv", '--deeptmhmm', "$dir/deeptmhmm_results.gff3", '--deeploc', "$dir/deeploc2_results.tsv",
+  '--transcript-hits', "$dir/transcript_hits.tsv");
 foreach my $seed (1, 2) {
   my $out = "$dir/out$seed";
   system('mkdir', '-p', $out) == 0 or die;
@@ -630,6 +644,16 @@ check(($source{G17}[3] // '') eq 'pfam' && ($source{G17}[2] // '') eq '4', 'G17 
 check(($source{G8}[3] // '') eq 'none' && ($source{G8}[0] // '') eq 'None' && ($source{G8}[2] // '') eq '0'
       && scalar(($source{G8}[1] // '') =~ /^None: hits did not pass the naming tests \(found: .*InterProScan Pfam/),
       'unnamed G8: a "none" provenance row -- it has hits (a DUF domain) that no step could use', $p->('G8'));
+check(($name{G57} // '') eq 'None' && ($source{G57}[1] // '') eq 'None: no hits (no similarity hit in any database searched, no OMA ortholog in any species, '
+      . 'no InterProScan homology match); a short protein, only 80 aa; expressed: an ORF of its own transcriptome matches it (99% identity over 100% of the protein); '
+      . 'predicted: signal peptide (SignalP 6); 1 transmembrane helix (DeepTMHMM); location cell membrane (DeepLoc 2: signal peptide, transmembrane domain)',
+      'unnamed G57: short, expressed, and its predicted features (no name from them)', $p->('G57'));
+{
+  my %decision = read_decisions("$out/naming_decisions.tsv");
+  check(($decision{G37}{Protein_features} // 'x') eq '' && ($decision{G37}{Transcript_support} // 'x') eq '',
+        'G37: a DeepLoc location without a signal is not reported; a 20%-of-protein transcript match is not a match, and no match says nothing',
+        ($decision{G37}{Protein_features} // '') . ' | ' . ($decision{G37}{Transcript_support} // ''));
+}
 check(($name{G37} // '') eq 'None' && ($source{G37}[1] // '') eq 'None: no hits (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match)',
       'unnamed G37: no evidence at all -> "None: no hits"', $p->('G37'));
 {

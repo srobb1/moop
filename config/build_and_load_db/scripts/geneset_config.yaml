@@ -12,21 +12,23 @@
 #
 # How a gene gets its name -- the first step that yields one wins. A plain name only from an
 # orthology call; "-like" for full-length similarity; a family name when the evidence stops at
-# the family; otherwise no name (better none than a wrong one):
+# the family; otherwise no name (better none than a wrong one). Full rules and the decision tree:
+# notes/GENE_NAMING_METHODS.md, notes/NAMING_DECISION_TREE.md.
 #   1. human_curated_gene_names   names a person assigned; used exactly as given, never checked
 #   2. the gene set's own name    RefSeq/Ensembl gene sets only; or a closest_species with
 #      use_for_names: true        its OMA 1:1 / many:1 ortholog, else its hits file -- turn on
 #                                 only after review (in Montipora it replaced ~2,200 human names)
-#   3. OMA human ortholog         1:1 and many:1 "SYM: name" (every copy of a lineage-specific
-#                                 duplication carries it); a 1:many or many:many family
-#                                 "<HGNC group> family member", no symbol (no shared group:
-#                                 straight to 5 -- never a member picked by score)
-#   4. full-length human hit      MMseqs2 or DIAMOND, >= 80% of both proteins: "SYM-like: name-like"
-#   5. PANTHER family             "<family> family member"
-#   6. InterPro domain or repeat  "<domain> domain-containing protein" (UniProt's convention for a
-#                                 protein known only by a domain; no "unknown function" entries)
-#   7. None
-# Steps 2-6 use a name only if it is informative. Hits to other species never name a gene; a
+#   3. OMA human ortholog         1:1 and many:1 "SYM: name" ("(1 of N)" for copies); 1:many or
+#                                 many:many: the HGNC group or PANTHER family they share
+#   4. transposable element       named for its TE class
+#   5. PANTHER tree placement     one human gene on the family tree, agreeing with the closest human
+#   6. full-length human hit      >= 80% of both proteins: "SYM-like: name-like"
+#   7. PANTHER family             "<family> family member" (>= 75% of the family model)
+#   8. InterPro domain or repeat  "<domain> domain-containing protein" (>= 50% of its model)
+#   None                          with why; a gene with no name also gets its protein features
+#                                 (SignalP 6, DeepTMHMM, DeepLoc 2 from the annotation run) and,
+#                                 with transcript_hits, whether its own transcriptome shows it expressed
+# Steps 2-8 use a name only if it is informative. Hits to other species never name a gene; a
 # similarity hit without coverage information is not used at all. Why each gene has its name is
 # loaded as annotation type "Gene Name Source" (accession = what the name came from).
 #
@@ -67,6 +69,15 @@
 #
 # Settings:
 #   human_curated_gene_names: FILE        names a person assigned (format below)
+#   transcript_hits: FILE                 optional: the gene set's proteins searched against the
+#                                         species' OWN transcriptome ORFs (e.g. TransDecoder of a
+#                                         Trinity assembly), DIAMOND/BLAST tabular (outfmt 6; only
+#                                         qseqid ... qstart qend are read). Ids need not agree: the
+#                                         search pairs them. A gene with an ORF match (>= 95%
+#                                         identity over >= 90% of the protein) is reported as
+#                                         expressed; no match is NOT reported (a transcriptome
+#                                         samples some tissues and stages -- absence is no evidence
+#                                         a gene is not expressed). Nothing is named from it.
 #   closest_species:                      a list; at most one entry with use_for_names: true
 #     - species: Nematostella vectensis   full name; titles the database table
 #       tag: Nvec                         short; GFF attributes and file names (letters/digits)

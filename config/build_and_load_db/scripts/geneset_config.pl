@@ -22,7 +22,7 @@ use CPAN::Meta::YAML;
 # Layout: fixed tables and shared state at file level, the work in main(), called on the last
 # line -- so every file-level assignment has run before any work starts (a file-level "my %X =
 # (...)" below the work would still be EMPTY when a sub reads it; tests/check_perl_file_scope.pl).
-my %SETTINGS = map { my $setting = $_; ($setting => 1) } qw(human_curated_gene_names closest_species);
+my %SETTINGS = map { my $setting = $_; ($setting => 1) } qw(human_curated_gene_names closest_species transcript_hits);
 my %CLOSEST = map { my $key = $_; ($key => 1) } qw(species tag label oma_code hits diamond rbh use_for_names same_species);
 # closest_species diamond: / rbh: -- the OUT_DIR of scripts/closest_species_diamond.sh / closest_species_rbh.sh
 my %SEARCH_RESULTS = (diamond => ['diamond_results.tsv.gz', 'diamond_results.tsv'], rbh => ['rbh_mmseq_results.tsv']);
@@ -91,6 +91,11 @@ sub check_geneset {
   foreach my $key (sort keys %$settings) {
     push @errors, "$where: unknown setting '$key' (known: " . join(', ', sort keys %SETTINGS) . ")"
       unless $SETTINGS{$key};
+  }
+  # transcript_hits: the gene set's proteins searched against the species' own transcriptome ORFs
+  # (DIAMOND/BLAST tabular) -- whether a gene with no name is expressed
+  if (defined(my $transcript_hits = $settings->{transcript_hits})) {
+    push @options, '--transcript-hits', $transcript_hits if file_ok("$where transcript_hits", $transcript_hits);
   }
   if (defined(my $curated = $settings->{human_curated_gene_names})) {
     if (file_ok("$where human_curated_gene_names", $curated)) {
