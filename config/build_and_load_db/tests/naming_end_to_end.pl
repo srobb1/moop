@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -84,6 +84,12 @@ write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name 
   ['HGNC:27', 'LAMB', 'lambda protein', '', '', 'ENSG27', '', ''],
   ['HGNC:28', 'MU', 'mu oxidase', '', '', 'ENSG28', '', ''],
   ['HGNC:30', 'NU', 'nu reductase', '', '', 'ENSG30', '', ''],
+  ['HGNC:32', 'PIE', 'pie kinase', '', '', 'ENSG32', '', ''],
+  ['HGNC:33', 'PIE-RHO', 'PIE-RHO readthrough', '', '', 'ENSG33', '', '', 'readthrough'],
+  ['HGNC:34', 'RHO', 'rho protein', '', '', 'ENSG34', '', ''],
+  ['HGNC:35', 'SIGMA', 'sigma synthase', '', '', 'ENSG35', '', ''],
+  ['HGNC:36', 'TAU', 'tau oxidase', '', '', 'ENSG36', '', ''],
+  ['HGNC:37', 'UPS', 'upsilon protein', '', '', 'ENSG37', '', ''],
 ));
 # ---- Swiss-Prot cross-references: the PANTHER families of human genes (orthology support)
 my $xrefs = join("\t", qw(accession taxid gene_name hgnc_ids ensembl_genes ensembl_proteins panther_ids secondary_accessions)) . "\n"
@@ -191,6 +197,22 @@ foreach my $row (['ENSP05.1', 'ENSG05.1', 'DELTA', 'delta kinase', 5, 100], ['EN
   $pep .= ">$protein pep chromosome:GRCh38:1:1:100:1 gene:$gene transcript:ENST0$n gene_biotype:protein_coding "
         . "transcript_biotype:protein_coding gene_symbol:$symbol description:$name [Source:HGNC Symbol;Acc:HGNC:$n]\n" . ('M' x $len) . "\n";
 }
+# SIGMA, and an Ensembl model with no HGNC record inside its locus, with its sequence (another model of SIGMA)
+my $sigma_sequence = 'MPLKVWERTGHYDDASNQQLRRSTIFVCAEGHLMNPWKKRTSDLLVGEQA';
+$pep .= ">ENSP35.1 pep chromosome:GRCh38:2:1000:5000:1 gene:ENSG35.1 transcript:ENST35 gene_biotype:protein_coding "
+      . "transcript_biotype:protein_coding gene_symbol:SIGMA description:sigma synthase [Source:HGNC Symbol;Acc:HGNC:35]\n$sigma_sequence\n"
+      . ">ENSP00000000047.1 pep chromosome:GRCh38:2:1500:4000:1 gene:ENSG00000000047.1 transcript:ENST47 gene_biotype:protein_coding "
+      . "transcript_biotype:protein_coding description:novel protein\n$sigma_sequence\n";
+# TAU and UPS side by side, and an unnamed model across both whose isoforms carry each one's sequence (a readthrough)
+my ($tau_sequence, $ups_sequence) = ('MQWERTYHKLPASDFGHKLCVBNMQWERTYIPASDFGHKLZXCVBNMQWE', 'MNBVCXZLKJHGFDSAPOIUYTREWQMNBVCXZASDFGHJKLPOIUYTRE');
+$pep .= ">ENSP36.1 pep chromosome:GRCh38:3:1000:2000:1 gene:ENSG36.1 transcript:ENST36 gene_biotype:protein_coding "
+      . "transcript_biotype:protein_coding gene_symbol:TAU description:tau oxidase [Source:HGNC Symbol;Acc:HGNC:36]\n$tau_sequence\n"
+      . ">ENSP37.1 pep chromosome:GRCh38:3:3000:4000:1 gene:ENSG37.1 transcript:ENST37 gene_biotype:protein_coding "
+      . "transcript_biotype:protein_coding gene_symbol:UPS description:upsilon protein [Source:HGNC Symbol;Acc:HGNC:37]\n$ups_sequence\n"
+      . ">ENSP00000000048.1 pep chromosome:GRCh38:3:1500:3500:1 gene:ENSG00000000048.1 transcript:ENST48a gene_biotype:protein_coding "
+      . "transcript_biotype:protein_coding description:novel protein\n$tau_sequence\n"
+      . ">ENSP00000000049.1 pep chromosome:GRCh38:3:1500:3500:1 gene:ENSG00000000048.1 transcript:ENST48b gene_biotype:protein_coding "
+      . "transcript_biotype:protein_coding description:novel protein\n$ups_sequence\n";
 system('mkdir', '-p', "$dir/refdb/ENS_homo_sapiens/current") == 0 or die;
 gzip(\$pep => "$dir/refdb/ENS_homo_sapiens/current/Homo_sapiens.test.pep.all.fa.gz") or die $GzipError;
 
@@ -224,6 +246,17 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   . $dhit->('T16', '11', 'WDR90', 'WD repeat domain 90', '1e-160', 562, 200, 700, 90, 30)
   . $dhit->('T16', '12', 'CFAP52', 'cilia and flagella associated protein 52', '1e-30', 119, 200, 210, 85, 85)
   . $dhit->('T40', '25', 'KAPA', 'kappa-a synthase', '1e-80', 300, 200, 200, 95, 95)
+  # T46: the readthrough PIE-RHO scores just above PIE (it contains PIE) -> not a gene of its own: PIE-like
+  . $dhit->('T46', '33', 'PIE-RHO', 'PIE-RHO readthrough', '1e-80', 305, 200, 400, 95, 48)
+  . $dhit->('T46', '32', 'PIE', 'pie kinase', '1e-80', 300, 200, 200, 95, 95)
+  # T47: best hit an Ensembl model with no HGNC record, inside SIGMA and with its sequence -> counted as SIGMA
+  . join("\t", 'T47.1', 'ENSP00000000047.1', 'ENSP00000000047.1 pep chromosome:GRCh38:2:1500:4000:1 gene:ENSG00000000047.1 transcript:ENST47 '
+         . 'gene_biotype:protein_coding transcript_biotype:protein_coding description:novel protein', '1e-80', 50, 100, 40, 1, 1, 190, 1, 190, 310, 200, 200, 95, 95) . "\n"
+  . $dhit->('T47', '35', 'SIGMA', 'sigma synthase', '1e-80', 300, 200, 200, 95, 95)
+  # T48: best hit an unnamed model joining TAU and UPS (an unnamed readthrough) -> not used: TAU-like
+  . join("\t", 'T48.1', 'ENSP00000000048.1', 'ENSP00000000048.1 pep chromosome:GRCh38:3:1500:3500:1 gene:ENSG00000000048.1 transcript:ENST48a '
+         . 'gene_biotype:protein_coding transcript_biotype:protein_coding description:novel protein', '1e-80', 50, 100, 40, 1, 1, 190, 1, 190, 310, 200, 200, 95, 95) . "\n"
+  . $dhit->('T48', '36', 'TAU', 'tau oxidase', '1e-80', 300, 200, 200, 95, 95)
   . $dhit->('T42', '28', 'MU', 'mu oxidase', '1e-80', 300, 200, 200, 95, 95)
   . $dhit->('T43', '30', 'NU', 'nu reductase', '1e-80', 300, 200, 200, 95, 95)
   # T41: LAMB over residues 1-100, KAPA over 150-300: two genes' worth of protein
@@ -438,6 +471,9 @@ my %expect = (
   G39 => ['Nut domain-containing protein [ISM|ipr]', 'the best-scoring domain (Bolt) covers 30% of its model, a fragment -> the next domain names it'],
   G44 => ['Osprey protein family member [ISM|pthr]', '77% of the family model (JSON) passes the 75% bar on the model'],
   G45 => ['None', '78% by protein residues, no JSON: the 80% residue bar applies'],
+  G46 => ['PIE-like: pie kinase-like [ISS|bh]', 'best hit the readthrough PIE-RHO, just above PIE -> the readthrough is not a gene of its own: PIE-like, no tie'],
+  G47 => ['SIGMA-like: sigma synthase-like [ISS|bh]', 'best hit another Ensembl model of SIGMA (no HGNC record, same locus and sequence) -> counted as SIGMA'],
+  G48 => ['TAU-like: tau oxidase-like [ISS|bh]', 'best hit an unnamed model sharing the sequence of both TAU and UPS (a readthrough) -> not used: TAU-like'],
   G40 => ['KAPA: kappa-a synthase [ISO|1to1|sim+]', 'OMA 1:many with KAPA and its readthrough LAMB-KAPA -> the readthrough is not counted: KAPA'],
   G42 => ['MU: mu oxidase [ISO|1to1|sim+]', 'OMA 1:many with MU and a novel protein that is MU\'s own sequence -> MU'],
   G30 => ['Cerebellin-related family member [ISM|pthr]', 'InterPro names the family by a function ("Cerebellin Synaptic Organizer") -> PANTHER\'s own name'],

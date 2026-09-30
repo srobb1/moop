@@ -514,6 +514,12 @@ sub human_from_oma_header {
 
 sub add_link {
   my ($group, %link) = @_;
+  # a readthrough is no gene of its own (hit_human); OMA's own sets (tiers 1-2) keep it, to say
+  # in the provenance that it was not counted
+  if ($link{tier} >= 3) {
+    $link{human} = [ grep { my $human = $_; ($human->{locus_type} // '') ne 'readthrough' } @{$link{human}} ];
+    return unless @{$link{human}};
+  }
   push @{$human_links{$group}}, \%link;
 }
 
@@ -547,7 +553,7 @@ sub collect_oma {
       my ($target_id, $group) = @$own;
       foreach my $pair (@{$direct->{$oma_target_id}}) {
         $any_evidence{$group}{'OMA HUMAN'} = 1;
-        my $human = human_from_oma_header($pair->{partner_header}) or next;
+        my $human = as_hgnc_gene(human_from_oma_header($pair->{partner_header})) or next;
         add_link($group, tier => 1, human => [$human], type => $pair->{type}, id => $target_id,
                  evidence => "OMA ortholog ($pair->{type})", hit => $pair->{partner_id});
       }
@@ -570,7 +576,7 @@ sub collect_oma {
       foreach my $own (own_ids_and_groups($hogs->{genes}{$target_gene}{prot_id})) {
         my ($target_id, $group) = @$own;
         foreach my $human_gene (keys %{$human_pairs->{$target_gene}}) {
-          my $human = human_from_oma_header($hogs->{genes}{$human_gene}{header}) or next;
+          my $human = as_hgnc_gene(human_from_oma_header($hogs->{genes}{$human_gene}{header})) or next;
           my $type = $hogs->{type}{HUMAN}{$target_gene}{$human_gene};
           add_link($group, tier => 2, human => [$human], type => $type, id => $target_id,
                    evidence => "OMA HOG co-ortholog ($type)", hit => $hogs->{genes}{$human_gene}{prot_id});
@@ -600,7 +606,7 @@ sub collect_oma {
         foreach my $first (@{$to_reference->{$oma_target_id}}) {
           $any_evidence{$group}{"OMA $reference"} = 1;
           foreach my $second (@{$reference_to_human->{$first->{partner_id}} // []}) {
-            my $human = human_from_oma_header($second->{partner_header}) or next;
+            my $human = as_hgnc_gene(human_from_oma_header($second->{partner_header})) or next;
             my $common = $COMMON_NAME{$reference} // $reference;
             add_link($group, tier => 4, human => [$human], type => $second->{type}, id => $target_id,
                      evidence => "via $common ortholog (OMA $first->{type}) > OMA ortholog ($second->{type})",
@@ -686,7 +692,7 @@ sub collect_mmseqs {
       my $info = $reference->{$target};
       my $common = $COMMON_NAME{$species} // $species;
       my $human = $species eq 'homo_sapiens'
-        ? human_record(hgnc_id => $info->{hgnc_id}, ensembl_gene => $info->{gene}, description => $info->{description}) : undef;
+        ? hit_human(human_record(hgnc_id => $info->{hgnc_id}, ensembl_gene => $info->{gene}, description => $info->{description})) : undef;
       record_human_hit($group, $human, { %hit, id => $query, hit => $target, reciprocal => 1, tool => 'MMseqs2',
                                                 source => 'MMseqs2_RBH_Homo_sapiens', type => 'RBBH_Homolog' }) if $human;
       next unless passes(\%hit, \%NORMAL);
@@ -989,7 +995,9 @@ sub diamond_candidate {
                       symbol => $symbol // '', description => clean_name($description // ''),
                       label => 'Swiss-Prot' };
     if (defined $organism and $organism eq 'Homo sapiens' and defined $accession) {
-      $candidate->{human} = human_record(uniprot => [$accession], description => $description);
+      my $record = human_record(uniprot => [$accession], description => $description);
+      $candidate->{human} = hit_human($record);
+      return undef if $record and !$candidate->{human};   # a readthrough: not a gene of its own
       $candidate->{symbol} = $candidate->{human}{symbol} if $candidate->{human} and $candidate->{human}{hgnc_id};
     }
     return $candidate;
@@ -1003,7 +1011,7 @@ sub diamond_candidate {
                       symbol => $symbol // '', description => clean_name($desc // ''),
                       label => "Ensembl $species" };
     if ($species eq 'homo_sapiens') {
-      $candidate->{human} = human_record(ensembl_gene => $gene, description => $desc);
+      $candidate->{human} = hit_human(human_record(ensembl_gene => $gene, description => $desc)) or return undef;
       $candidate->{label} = 'Ensembl human';
     }
     return $candidate;
@@ -1335,15 +1343,36 @@ sub choose_closest_human {
   @tier_links = order_links($best_tier, $support, @tier_links);
   # tiers 1-2: every co-ortholog, in that order; later tiers: the single best link
   @tier_links = ($tier_links[0]) if $best_tier > 2;
-  my (%seen, @humans);
+  # another Ensembl model of a gene (as_hgnc_gene) is that gene, not a second one: one entry per gene,
+  # the gene's own record before a model's, whatever order the links came in
+  my (%entry_of, @keys, %merged);
   foreach my $link (@tier_links) {
     foreach my $human (@{$link->{human}}) {
-      next if $seen{$human->{key}}++;
-      push @humans, $human;
+      my $current = $entry_of{$human->{key}};
+      push @keys, $human->{key} unless $current;
+      $entry_of{$human->{key}} = $human if !$current or ($current->{model_of} and !$human->{model_of});
+      $merged{$human->{key}}{$human->{model_of}} = 1 if $human->{model_of};
+      $merged{$human->{key}}{''} = 1 unless $human->{model_of};
     }
+  }
+  my @humans = map { my $key = $_; $entry_of{$key} } @keys;
+  my @merged;
+  foreach my $key (@keys) {
+    my @models = grep { my $model = $_; $model ne '' } sort keys %{$merged{$key}};
+    # counted as one gene only when the set had the gene itself or several models of it
+    next unless @models and (keys %{$merged{$key}}) > 1;
+    push @merged, map { my $model = $_; "$model (another Ensembl model of " . human_label($entry_of{$key}) . ')' } @models;
   }
   my $closest = { tier => $best_tier, human => \@humans, evidence => $tier_links[0]{evidence},
                   type => $tier_links[0]{type}, id => $tier_links[0]{id}, hit => $tier_links[0]{hit} };
+  if (@merged and $best_tier <= 2) {
+    my %type_of_one = ('1:many' => '1:1', 'many:many' => 'many:1');
+    $closest->{type} = $type_of_one{$closest->{type}} // $closest->{type} if @humans == 1;
+    my $note = '; not counted: ' . join('; ', sort @merged);
+    $closest->{not_counted} = $note;
+    $closest->{evidence} .= $note;
+    $stats{'OMA set: another Ensembl model of a gene in it not counted'}++;
+  }
   # OMA's pairwise file can pair a gene 1:1 with ONE human copy of a vertebrate duplication
   # (HDAC1 of HDAC1/HDAC2) while OMA's own HOGs, which follow the species tree, make it
   # co-ortholog of every copy. Then the HOG is the more complete call: the family, not one copy.
@@ -1387,7 +1416,7 @@ sub choose_closest_human {
         $closest = { %$closest, type => $type_of_one{$closest->{type}} // $closest->{type} };
       }
       @humans = @$kept;
-      $closest = { %$closest, human => [@humans], not_counted => $note, evidence => "$closest->{evidence}$note" };
+      $closest = { %$closest, human => [@humans], not_counted => ($closest->{not_counted} // '') . $note, evidence => "$closest->{evidence}$note" };
     }
   }
   # OMA is precise but not infallible: repetitive and compositionally biased proteins, and hidden
@@ -1426,7 +1455,7 @@ sub without_same_gene_members {
   my @genes = grep { my $human = $_; ($human->{locus_type} // '') ne 'readthrough' and $human->{hgnc_id} ne '' } @$humans;
   foreach my $human (@$humans) {
     if (($human->{locus_type} // '') eq 'readthrough') {
-      my @parts = readthrough_parts($human->{symbol});
+      my @parts = $human->{joins} ? @{$human->{joins}} : readthrough_parts($human->{symbol});
       my $joins = @parts ? join(' and ', map { my $part = $_; $part->{symbol} } @parts) : 'two neighbouring genes';
       if (@parts == 2) {
         my @spans = map { my $part = $_; my $hit = ($human_hit{$group}{$part->{hgnc_id}} // {})->{best}; $hit } @parts;
@@ -1460,6 +1489,99 @@ sub without_same_gene_members {
   return (\@kept, \@not_counted, undef);
 }
 
+# The human gene a similarity hit (DIAMOND, MMseqs2) counts for. A readthrough -- an HGNC readthrough,
+# or an Ensembl model with no HGNC record that Ensembl calls a readthrough -- is no gene of its own:
+# the hit is not used (undef), so the gene inside it, whose own hit is right behind, is read from its
+# own model. An Ensembl model with no HGNC record that overlaps an HGNC gene on the same strand and
+# shares most of its protein with it ($SAME_GENE_MIN_SHARED of its 20-residue words) is another model
+# of that gene: the hit counts for the HGNC gene (a nested gene shares no sequence and stays apart).
+# Loci and sequences come from the human proteome under --ref-db.
+my (%model_resolved, %human_gene_locus, %human_genes_on, %human_gene_sequences, $human_models_read);   # %human_genes_on: "chromosome:strand" -> genes
+sub hit_human {
+  my ($human) = @_;
+  return undef unless $human;
+  if (($human->{locus_type} // '') eq 'readthrough') {
+    $stats{'human hit not used: a readthrough (HGNC)'}++;
+    return undef;
+  }
+  return $human if $human->{hgnc_id} ne '' or $human->{key} !~ /^ENSG/;
+  if (($human->{name} // '') =~ /readthrough/i) {
+    $stats{'human hit not used: a readthrough (Ensembl, no HGNC record)'}++;
+    return undef;
+  }
+  my $resolved = as_hgnc_gene($human);
+  if (($resolved->{locus_type} // '') eq 'readthrough') {
+    $stats{'human hit not used: an Ensembl model joining two HGNC genes (readthrough)'}++;
+    return undef;
+  }
+  $stats{'human hit counted for the HGNC gene it is another model of'}++ if $resolved != $human;
+  return $resolved;
+}
+
+# an Ensembl model with no HGNC record that is another model of an HGNC gene (overlapping it on the
+# same strand, >= $SAME_GENE_MIN_SHARED of its 20-residue words in that gene's proteins) is that
+# gene; anything else is returned as it is. Used for similarity hits (hit_human) and for OMA's own
+# human partners, so the two always name the same gene.
+sub as_hgnc_gene {
+  my ($human) = @_;
+  return $human unless $human and $human->{hgnc_id} eq '' and $human->{key} =~ /^ENSG/;
+  my $gene = $human->{key};
+  if (!exists $model_resolved{$gene}) {
+    $model_resolved{$gene} = undef;
+    read_human_models() unless $human_models_read;
+    my $locus = $human_gene_locus{$gene};
+    my @same;   # [ share, HGNC record ] of every overlapping HGNC gene it shares most of its protein with
+    foreach my $other (sort keys %{$locus ? $human_genes_on{"$locus->[0]:$locus->[3]"} // {} : {}}) {
+      next if $other eq $gene;
+      my $other_locus = $human_gene_locus{$other};
+      next unless $other_locus->[1] <= $locus->[2] and $locus->[1] <= $other_locus->[2];
+      my $record = hgnc_record($hgnc, ensembl_gene => $other) or next;
+      my $share = word_share($human_gene_sequences{$gene} // [], $human_gene_sequences{$other} // []);
+      push @same, [$share, $record] if $share >= $SAME_GENE_MIN_SHARED;
+    }
+    @same = sort { $b->[0] <=> $a->[0] or $a->[1]{symbol} cmp $b->[1]{symbol} } @same;
+    if (@same > 1) {
+      # the sequence of two neighbouring genes in one model: an unnamed readthrough (ENSG00000258529,
+      # ALG9 76% and FDXACB1 94%)
+      $model_resolved{$gene} = { %$human, locus_type => 'readthrough', joins => [ map { my $pair = $_; $pair->[1] } @same[0, 1] ] };
+    } elsif (@same == 1) {
+      $model_resolved{$gene} = human_record(hgnc_id => $same[0][1]{hgnc_id});
+      $model_resolved{$gene}{model_of} = $gene;
+    }
+  }
+  return $model_resolved{$gene} // $human;
+}
+
+# the human proteome's gene loci (chromosome, start, end, strand, from the Ensembl FASTA headers) and
+# protein sequences, for recognising another model of the same gene
+sub read_human_models {
+  $human_models_read = 1;
+  my $reference = reference_proteome('ENS_homo_sapiens');
+  my $fasta = $reference_fasta_file{ENS_homo_sapiens};
+  if (!$reference or !$fasta) {
+    $stats{'note: no human proteome under --ref-db: other models of one gene cannot be recognised'} = 1;
+    return;
+  }
+  open my $fh, "gzip -dc '$fasta' |" or die "cant read $fasta\n";
+  my $gene;
+  while (my $line = <$fh>) {
+    chomp $line;
+    if ($line =~ /^>/) {
+      my ($chromosome, $start, $end, $strand) = $line =~ /chromosome:[^:\s]+:([^:\s]+):(\d+):(\d+):(-?1)/;
+      ($gene) = $line =~ /\bgene:(ENSG\d+)/;
+      next unless defined $gene;
+      if (defined $chromosome and !$human_gene_locus{$gene}) {
+        $human_gene_locus{$gene} = [$chromosome, $start, $end, $strand];
+        $human_genes_on{"$chromosome:$strand"}{$gene} = 1;
+      }
+      push @{$human_gene_sequences{$gene}}, '';
+    } elsif (defined $gene) {
+      $human_gene_sequences{$gene}[-1] .= $line;
+    }
+  }
+  close $fh;
+}
+
 # the two genes a readthrough joins, from its symbol "A-B" (current or previous HGNC symbols: C17orf49 is now BACC1)
 sub readthrough_parts {
   my ($symbol) = @_;
@@ -1483,14 +1605,21 @@ sub hgnc_by_symbol {
 sub shared_word_fraction {
   my ($ensembl_gene, $hgnc_id) = @_;
   read_oma_human_sequences() unless $oma_human_sequences_read;
+  return word_share($oma_human_sequences{$ensembl_gene} // [], $oma_human_sequences{$hgnc_id} // []);
+}
+
+# the best fraction, over the first list's proteins, of a protein's 20-residue words found in any
+# protein of the second list
+sub word_share {
+  my ($sequences, $other_sequences) = @_;
   my %words_of_gene;
-  foreach my $sequence (@{$oma_human_sequences{$hgnc_id} // []}) {
+  foreach my $sequence (@$other_sequences) {
     foreach my $start (0 .. length($sequence) - $SAME_GENE_WORD) {
       $words_of_gene{substr($sequence, $start, $SAME_GENE_WORD)} = 1;
     }
   }
   my $best = 0;
-  foreach my $sequence (@{$oma_human_sequences{$ensembl_gene} // []}) {
+  foreach my $sequence (@$sequences) {
     my ($words, $shared) = (0, 0);
     foreach my $start (0 .. length($sequence) - $SAME_GENE_WORD) {
       $words++;

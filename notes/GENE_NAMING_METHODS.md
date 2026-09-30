@@ -137,6 +137,33 @@ isoforms of one human gene are one entry; for each human gene the protein's best
 bitscore, then E-value), its best full-length hit, and whether any hit was a reciprocal best
 hit are kept.
 
+### 3.1 Human genes that are not genes of their own
+
+The human proteome holds, besides one model per gene, *readthrough* genes (BIVM-ERCC5: one
+transcript joining two neighbouring genes, whose protein contains most of each) and Ensembl gene
+models with no HGNC record that are other models of an HGNC gene. Both score about as well as the
+gene inside them, so they made false paralog ties (INO80B vs INO80B-WBP1), took the best-hit place
+from the real gene (an OMA name marked `sim~` instead of `sim+`), and even gave names
+(`CYP3A7-CYP3A51P readthrough-like`). For every human gene a similarity hit (DIAMOND, MMseqs2) or an
+OMA partner points to:
+
+- an **HGNC readthrough**, or an Ensembl model with no HGNC record that Ensembl calls a
+  readthrough, is not a gene of its own: the hit is not used (its gene's own hit is right behind);
+  in an OMA set it is not counted and the provenance says so (§5, step 3);
+- an Ensembl model with **no HGNC record** that overlaps an HGNC gene on the same strand (the
+  coordinates in the Ensembl FASTA header) and shares ≥ 50% of its protein's 20-residue words with
+  it **is that gene** (hits and OMA partners are counted for the HGNC gene; the provenance names the
+  model). Overlap alone is not enough: a gene nested in another's intron shares no sequence;
+- such a model sharing ≥ 50% with **two** overlapping HGNC genes is an unnamed readthrough
+  (ENSG00000258529: 76% ALG9, 94% FDXACB1) and is treated as one;
+- anything else is used as it is.
+
+Effect (Congeria, all else equal): 34 names change — false ties resolved, readthrough names
+replaced (RAD51L3-RFFL readthrough → RAD51D), genes gain their OMA ortholog's name (DEPDC5, CLN3,
+CCND2, SQOR, ACE, PRKCH), OMA names go from `sim~` to `sim+`; *M. capitata* 51. Where OMA's pairwise
+set had been inflated by a duplicate model, the gene now reaches the HOG rule as intended (PAOX →
+"Polyamine oxidases family member": OMA's HOG makes it co-ortholog of SMOX and PAOX).
+
 ## 4. Informative names
 
 A candidate name is used only if it is informative. A description is **uninformative** if,
@@ -610,7 +637,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 141 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 144 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 
@@ -650,7 +677,7 @@ proteins).
 
 - **Fragmentary gene models.** A protein that is a fragment of a real gene aligns over its
   own length but covers under half of its human homolog, and fails the normal and full-length
-  filters; likewise it covers under 80% of its PANTHER family's model. Such genes are left
+  filters; likewise it covers under 75% of its PANTHER family's model. Such genes are left
   unnamed or named by a domain rather than named on partial evidence. In *C. kusceri* (BUSCO
   complete 84.1%, fragmented 5.3%; 27% of proteins under 100 residues), 3,496 genes with no
   closest human gene had a DIAMOND human hit covering under 50% of the human protein. The
