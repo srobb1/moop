@@ -100,6 +100,7 @@ needs them in this form, or the rule that depends on them is silently weaker:
 | DIAMOND targets | `--max-target-seqs 25` against human, `5` against every other database | same | 1 target: no paralog ties, no second human gene, and `sim~` / `sim-` cannot be judged |
 | Human search database | **canonical** Ensembl proteins, one per gene, with Ensembl's own FASTA headers (`gene:`, `gene_symbol:`, `description:` with `[Source:HGNC Symbol;Acc:HGNC:…]`); `$REF_DB/ENS_homo_sapiens/current/peptide.fa.gz` is the FASTA the database was built from | `--ref-db` | headers without `gene:`/`Acc:HGNC`: hits cannot be resolved to HGNC genes |
 | MMseqs2 RBH | `mmseqs easy-rbh` against each Ensembl proteome; the protein FASTA it searched must be `peptide.fa.gz` (or the release's `*.pep.all.fa.gz`, same ids) under `--ref-db` | `<analysis>/rbh_mmseq/ENS_<species>/rbh_mmseq_results.tsv` | a hit whose protein is not in that FASTA is skipped (counted in stats: coverage cannot be computed) |
+| Reference proteomes | `--ref-db`: required whenever OMA, MMseqs2 or DIAMOND results are given (coverage of hits, human gene loci and sequences); the script stops at the start without it | `$REF_DB/ENS_<species>/current/` | — |
 | Gene set metadata | `metadata.yaml` with `ncbi-taxon-id` | `$GENESET_DIR/metadata.yaml` | no taxon id: no PANTHER tree placement |
 | Reference data | `scripts/update_reference_data.sh`: HGNC, UniProt cross-references, Ensembl Compara, NCBI taxonomy, InterPro `entry.list`, PANTHER model lengths, PANTHER TreeGrafter trees (`panther_trees`) | `$REFERENCE_DATA` | missing required files stop the build |
 
@@ -371,8 +372,12 @@ PANTHER match has E ≤ 1e-10 and covers ≥ 50% of both the protein and the fam
 
 The tree names a gene only when a trusted placement gives exactly one human ortholog **and** that
 gene is also the gene's closest human gene by similarity (MMseqs2 RBH, orthology via another
-species, or the DIAMOND best hit: §6, tiers 3–5) — two independent methods on one gene, so the
-name is plain, as for OMA. Like step 6, it is skipped after an OMA co-ortholog family that step 3
+species, or the DIAMOND best hit: §6, tiers 3–5) — two methods agreeing on one gene, so the name is
+plain, as for OMA. The two are not fully independent (both rest on sequence similarity; the tree's
+placement is itself scored by an HMM), but they reach the gene differently: one through the whole
+PANTHER family tree, the other through pairwise hits. When the closest gene is a family (a chain
+through another species reaching several copies), the tree's choice of one copy is shown as a vote
+(`tree+`) but does not name the gene: one method alone would be picking the copy. Like step 6, it is skipped after an OMA co-ortholog family that step 3
 could not name. Elsewhere the tree is one vote: on OMA and `-like` names it adds `tree+` (it
 places the gene with the named human gene) or `treeC` (with other human genes), and never changes
 the name. On a 3,235-protein *C. kusceri* sample: trusted placements put the gene with OMA's named
@@ -561,6 +566,16 @@ tier-4 closest human, 574 would have none at all, so tier 4 is kept and labelled
 | 6 | DIAMOND Swiss-Prot hit in another species → its Ensembl gene → Ensembl Compara human ortholog |
 | 7 | DIAMOND Swiss-Prot hit in another species → its PANTHER subfamily → the human Swiss-Prot genes in that subfamily |
 
+**Orthology through another species (tiers 4 and 6) keeps the whole chain.** One chain is our
+gene → one ortholog in another species → that ortholog's human orthologs. When that ortholog
+predates a human duplication, the chain reaches every copy, and the gene is reported as their
+family — never one copy picked by score (the same principle as for OMA's own co-ortholog sets).
+Until 2026-09-30 only the best-scoring copy was kept (Congeria: 649 closest-human genes are now a
+family); since the PANTHER tree step (step 5) needs a single closest gene, two tree names in a
+3,235-protein Congeria sample now fall back: TTR (true transthyretin is vertebrate-specific; the
+invertebrate proteins are 5-hydroxyisourate hydrolases) → "Uricase and transthyretin-related family
+member", and GPR21 → its PANTHER family. A chain is ranked by the weaker of its two links.
+
 The lowest (strongest) tier with any evidence is used. When tier 1 gives one human gene and
 tier 2 (the HOG) gives several including it, the HOG's set is used (a family, §6.2). An
 unsupported OMA ortholog is set aside (§5.2) and the next tier is used; its evidence text says
@@ -637,7 +652,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 144 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 146 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 
@@ -674,6 +689,11 @@ proteins that have one, 25 targets for 99.4% and 50 for 100% (2,000 random *C. k
 proteins).
 
 ## 10. Limitations
+
+- **Sequence only; no synteny.** Every method here rests on sequence similarity. Conserved gene order
+  (synteny with a close, well-assembled relative) is the one truly independent way to separate
+  orthologs from paralogs, but a synteny analysis (e.g. MCScan) for every organism is too costly to
+  run routinely; with it, hidden paralogy would be caught where sequence cannot.
 
 - **Fragmentary gene models.** A protein that is a fragment of a real gene aligns over its
   own length but covers under half of its human homolog, and fails the normal and full-length

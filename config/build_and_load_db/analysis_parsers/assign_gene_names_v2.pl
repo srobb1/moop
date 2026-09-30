@@ -300,6 +300,10 @@ sub main {
   foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-dir)) {
     die "--$required is required\n" unless defined $opt{$required};
   }
+  # the reference proteomes give hit coverage, human gene loci and sequences (other models of one
+  # gene); a pipeline run always has them
+  die "--ref-db is required with --oma-dir, --mmseqs-dir or --diamond-dir (the reference proteomes the searches used)\n"
+    if !defined $opt{'ref-db'} and grep { my $option = $_; defined $opt{$option} } qw(oma-dir mmseqs-dir diamond-dir);
 
   # --closest-species: one species each, key=value fields joined by |
   foreach my $spec (@{$opt{'closest-species'} // []}) {
@@ -608,7 +612,11 @@ sub collect_oma {
           foreach my $second (@{$reference_to_human->{$first->{partner_id}} // []}) {
             my $human = as_hgnc_gene(human_from_oma_header($second->{partner_header})) or next;
             my $common = $COMMON_NAME{$reference} // $reference;
-            add_link($group, tier => 4, human => [$human], type => $second->{type}, id => $target_id,
+            # one chain = one reference ortholog; every human gene it reaches stays together (a family
+            # when several), ranked by the weaker of its two links
+            my $chain_type = ($LINK_TYPE_RANK{$first->{type}} // 9) > ($LINK_TYPE_RANK{$second->{type}} // 9) ? $first->{type} : $second->{type};
+            add_link($group, tier => 4, human => [$human], type => $chain_type, id => $target_id,
+                     chain => "OMA $reference $first->{partner_id}",
                      evidence => "via $common ortholog (OMA $first->{type}) > OMA ortholog ($second->{type})",
                      hit => $second->{partner_id});
           }
@@ -807,8 +815,9 @@ sub resolve_compara {
   foreach my $pending (@pending_compara) {
     foreach my $gene (@{$pending->{genes}}) {
       foreach my $ortholog (@{$orthologs{$pending->{release}}{$gene} // []}) {
-        my $human = human_record(ensembl_gene => $ortholog->{human_gene}) or next;
+        my $human = as_hgnc_gene(human_record(ensembl_gene => $ortholog->{human_gene})) or next;
         add_link($pending->{group}, tier => $pending->{tier}, human => [$human], type => $ortholog->{type},
+                 chain => "$pending->{via} $pending->{hit} $gene",
                  id => $pending->{id}, bits => $pending->{bits}, evalue => $pending->{evalue}, hit => $pending->{hit},
                  evidence => "$pending->{via} > Ensembl Compara ($ortholog->{type})");
       }
@@ -1129,9 +1138,12 @@ sub read_panther_families {
       $coverage = 100 if $coverage > 100;
       $stats{'PANTHER model coverage: from protein residues (TSV)'}++ if %model_coverage;
     }
-    $gene_family_coverage{$group}{$family_only} = $coverage if $coverage > ($gene_family_coverage{$group}{$family_only} // -1);
     my $needed = defined $model_coverage{"$match->{id}\tPANTHER\t$family_only"} ? $FAMILY_MODEL_COVERAGE : $FAMILY_RESIDUE_COVERAGE;
-    $family_coverage_needed{$group}{$family_only} = $needed;
+    if ($coverage > ($gene_family_coverage{$group}{$family_only} // -1)) {
+      # the bar that applies to the isoform with the best coverage (JSON or residues), for the reason text
+      $gene_family_coverage{$group}{$family_only} = $coverage;
+      $family_coverage_needed{$group}{$family_only} = $needed;
+    }
     if ($coverage < $needed) {
       $stats{'PANTHER match: below model coverage'}++;
       next;
@@ -1341,8 +1353,17 @@ sub choose_closest_human {
   }
   my $support = human_support($group);
   @tier_links = order_links($best_tier, $support, @tier_links);
-  # tiers 1-2: every co-ortholog, in that order; later tiers: the single best link
-  @tier_links = ($tier_links[0]) if $best_tier > 2;
+  # tiers 1-2: every co-ortholog, in that order. Tiers 4 and 6 (orthology through another
+  # species): every human gene the best chain reaches -- a chain through a gene that predates a
+  # human duplication reaches all its copies, and picking one by score would claim a precision
+  # the evidence does not have (Congeria: 1,123 of 2,047 such genes had been one pick of several).
+  # Other tiers: the single best link.
+  if ($best_tier == 4 or $best_tier == 6) {
+    my $chain = $tier_links[0]{chain};
+    @tier_links = defined $chain ? grep { my $link = $_; ($link->{chain} // '') eq $chain } @tier_links : ($tier_links[0]);
+  } elsif ($best_tier > 2) {
+    @tier_links = ($tier_links[0]);
+  }
   # another Ensembl model of a gene (as_hgnc_gene) is that gene, not a second one: one entry per gene,
   # the gene's own record before a model's, whatever order the links came in
   my (%entry_of, @keys, %merged);

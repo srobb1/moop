@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -111,6 +111,7 @@ my $human = sub { my ($n) = @_; my %name = (1 => 'alpha synthase', 2 => 'beta pr
                                             13 => 'histone deacetylase 1', 14 => 'histone deacetylase 2',
                                             15 => 'harbinger transposase derived 1', 16 => 'centromere protein Q', 6 => 'epsilon protein',
                                             17 => 'zeta ligase', 19 => 'mix protein 1', 20 => 'mix protein 2', 24 => 'iota kinase',
+                                            7 => 'anoctamin 1', 8 => 'anoctamin 2',
                                             25 => 'kappa-a synthase', 26 => 'LAMB-KAPA readthrough', 28 => 'mu oxidase', 30 => 'nu reductase');
   return "HUMAN0000$n | ENSP0$n | ENSG0$n | $name{$n} [Source:HGNC Symbol;Acc:HGNC:$n]" };
 write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
@@ -168,6 +169,13 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-NEMVE.txt", join('', map { my
   [1, 11, 'T1.1', 'NEMVE00011 | XP_000011.1 | LOC11 | anemone alpha', '1:1'],
   [4, 12, 'T4.1', 'NEMVE00012 | XP_000012.1 | LOC12 | anemone beta A', '1:many'],
   [4, 13, 'T4.1', 'NEMVE00013 | XP_000013.1 | LOC13 | anemone beta B', '1:many'],
+  # T49: its only way to human is its sea anemone ortholog, which is 1:many with ANO1 and ANO2 (below)
+  [49, 49, 'T49.1', 'NEMVE00049 | XP_000049.1 | LOC49 | anemone anoctamin', '1:1'],
+));
+# the sea anemone gene predates the human duplication: co-ortholog of ANO1 and ANO2
+write_file("$dir/oma/Output/PairwiseOrthologs/NEMVE-HUMAN.txt", join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
+  [49, 7, 'NEMVE00049 | XP_000049.1 | LOC49 | anemone anoctamin', $human->(7), '1:many'],
+  [49, 8, 'NEMVE00049 | XP_000049.1 | LOC49 | anemone anoctamin', $human->(8), '1:many'],
 ));
 
 # ---- OMA HOGs (fixed species tree): T13 is paired 1:1 with HDA1 above, but its HOG makes it
@@ -430,6 +438,17 @@ foreach my $run (['names', 0], ['same', 1]) {
 }
 my $out = "$dir/out1";
 
+# ---- a search or OMA directory without --ref-db stops at once, saying why
+{
+  my @without_ref_db;
+  for (my $index = 0; $index < @arguments; $index++) {
+    if ($arguments[$index] eq '--ref-db') { $index++; next; }
+    push @without_ref_db, $arguments[$index];
+  }
+  my $message = `\Q$^X\E \Q$script\E @{[ join(' ', map { my $argument = $_; "\Q$argument\E" } @without_ref_db) ]} --out-names \Q$dir/x.tsv\E --out-dir \Q$dir\E 2>&1`;
+  check($? != 0 && scalar($message =~ /^--ref-db is required with --oma-dir, --mmseqs-dir or --diamond-dir/), 'no --ref-db: stops at the start with a clear message', $message);
+}
+
 # ---- read the outputs
 my %name;
 foreach my $row (read_tsv("$out/geneNames.tsv")) { $name{$row->[2]} //= $row->[3]; }
@@ -588,6 +607,9 @@ check(($closest_human{G1}[2] // '') eq 'HGNC:1', 'closest human G1: HGNC:1');
 check(($closest_human{G25}[2] // 'x') eq '' && ($closest_human{G25}[5] // 'x') eq '', 'closest human G25: the set-aside OMA pair is not reported', join(' | ', @{$closest_human{G25} // []}));
 check(($closest_human{G4}[2] // 'x') eq '' && ($closest_human{G4}[3] // '') eq 'Beta proteins family' && ($closest_human{G4}[5] // '') =~ /family of 2$/,
       'closest human G4: the family, no gene id', join(' | ', @{$closest_human{G4} // []}));
+check(($closest_human{G49}[2] // 'x') eq '' && ($closest_human{G49}[3] // '') eq 'Anoctamins family'
+      && scalar(($closest_human{G49}[5] // '') =~ /^via sea anemone ortholog \(OMA 1:1\) > OMA ortholog \(1:many\), family of 2$/),
+      'closest human G49: through another species reaching two human genes -> the family, not one picked by score', join(' | ', @{$closest_human{G49} // []}));
 check(($closest_human{G6}[2] // '') eq 'HGNC:6' && ($closest_human{G6}[5] // '') =~ /reciprocal best hit/,
       'closest human G6: a partial RBH still counts as evidence (normal filter)', join(' | ', @{$closest_human{G6} // []}));
 check(($closest_nvec{G1}[2] // '') eq 'XP_000011.1' && ($closest_nvec{G1}[5] // '') eq 'OMA ortholog (1:1)',
