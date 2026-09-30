@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -261,17 +261,28 @@ write_file("$dir/iprscan.tsv", join('',
   # T30: a family InterPro names by a function ("Synaptic Organizer") -> PANTHER's own name instead
   $row->('T30', 200, 'PANTHER', 'PTHR00030', 'CEREBELLIN-RELATED', 1, 190, '1.0E-40', 'IPR000030', 'Cerebellin Synaptic Organizer'),
   (map { my $start = $_; $row->('T24', 200, 'SMART', 'SM00355', 'ZnF_C2H2', $start, $start + 20, '1.0E-3', 'IPR013087', 'Zinc finger C2H2-type') } 20, 60, 100, 140),
+  # T38: 95% of the family model by protein residues, but only 55% of the model's positions (JSON) -> no family name; its domain
+  $row->('T38', 200, 'PANTHER', 'PTHR00038', 'SPINDLE PROTEIN',  1, 190, '1.0E-50', '-', '-'),
+  $row->('T38', 200, 'Pfam',    'PF00038',   'spindle',          1, 100, '1.0E-20', 'IPR000038', 'Spindle domain'),
+  # T39: the best-scoring domain covers 30% of its model (a fragment) -> the next domain names it
+  $row->('T39', 300, 'Pfam',    'PF00039',   'bolt',             1,  60, '1.0E-30', 'IPR000039', 'Bolt domain'),
+  $row->('T39', 300, 'Pfam',    'PF00040.12', 'nut',            100, 250, '1.0E-10', 'IPR000040', 'Nut domain'),
 ));
+# ---- InterProScan model coverage from the JSON (scripts/interproscan_model_coverage.py)
+write_file("$dir/model_coverage.tsv", "# test\nprotein\tanalysis\tsignature\tmodel_length\tmodel_coverage_pct\n"
+  . "T38.1\tPANTHER\tPTHR00038\t200\t55\nT38.1\tPfam\tPF00038\t100\t90\n"
+  . "T39.1\tPfam\tPF00039\t200\t30\nT39.1\tPfam\tPF00040\t160\t95\n");
 write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDomain\tKinase domain\n"
   . "IPR000002\tDomain\tZinc finger, RING-type\nIPR000003\tDomain\tDomain of unknown function DUF1\n"
   . "IPR000010\tFamily\tGadget family\nIPR001214\tDomain\tSET domain\n"
   . "IPR013087\tDomain\tZinc finger C2H2-type\nIPR000436\tDomain\tSushi/SCR/CCP domain\n"
   . "IPR027806\tDomain\tHarbinger transposase-derived nuclease domain\n"
   . "IPR000028\tDomain\tSprocket domain\n"
-  . "IPR000030\tFamily\tCerebellin Synaptic Organizer\n");
+  . "IPR000030\tFamily\tCerebellin Synaptic Organizer\n"
+  . "IPR000038\tDomain\tSpindle domain\nIPR000039\tDomain\tBolt domain\nIPR000040\tDomain\tNut domain\n");
 write_file("$dir/hmm_lengths.tsv", join('', map { my $model = $_; "$model->[0]\t$model->[1]\n" }
   ['PTHR00006', 100], ['PTHR00007', 200], ['PTHR00009', 120], ['PTHR00010', 250], ['PTHR00011', 200], ['PTHR00012', 150],
-  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300], ['PTHR00030', 200]));
+  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300], ['PTHR00030', 200], ['PTHR00038', 200]));
 
 # ---- PANTHER tree placements (scripts/panther_placements.py output)
 #   T31: one human ortholog, EPS, and EPS is its closest human gene (RBH) -> named EPS by the tree (step 5)
@@ -324,7 +335,7 @@ my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/pro
   '--oma-dir', "$dir/oma", '--oma-code', 'TEST', '--mmseqs-dir', "$dir/mmseqs", '--ref-db', "$dir/refdb",
   '--diamond-dir', "$dir/diamond", '--uniprot-dir', "$dir/uniprot",
   '--interproscan', "$dir/iprscan.tsv", '--interpro-entries', "$dir/entry.list", '--panther-hmm-lengths', "$dir/hmm_lengths.tsv",
-  '--panther-placements', "$dir/panther_placements.tsv",
+  '--panther-placements', "$dir/panther_placements.tsv", '--model-coverage', "$dir/model_coverage.tsv",
   '--closest-species', 'species=Nematostella vectensis|tag=Nvec|label=sea anemone|oma_code=NEMVE|hits=|use_for_names=0|same_species=0');
 foreach my $seed (1, 2) {
   my $out = "$dir/out$seed";
@@ -382,6 +393,8 @@ my %expect = (
   G24 => ['Zinc finger C2H2-type domain-containing protein [ISM|rpt]', 'a PANTHER family match that is 44% C2H2 repeats -> named for the repeat, not "KRAB"'],
   G27 => ['Sprocket protein family member [ISO|fam|sim+|pthr+]', 'OMA co-orthologs share only a scattered HGNC group (coherence 0.50) -> their shared PANTHER family names it'],
   G28 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'the same, but not a whole member (20% of the family model, only a partial human hit) -> not named for the family; its domain names it'],
+  G38 => ['Spindle domain-containing protein [ISM|ipr]', 'PANTHER 95% by protein residues, but 55% of the model (JSON) -> no family name; its domain names it'],
+  G39 => ['Nut domain-containing protein [ISM|ipr]', 'the best-scoring domain (Bolt) covers 30% of its model, a fragment -> the next domain names it'],
   G30 => ['Cerebellin-related family member [ISM|pthr]', 'InterPro names the family by a function ("Cerebellin Synaptic Organizer") -> PANTHER\'s own name'],
   G29 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'co-orthologs whose PANTHER family it is not in -> its domain names it'],
   G31 => ['EPS: epsilon protein [ISO|tree|rbh]', 'the PANTHER tree places it with EPS alone, and EPS is its closest human gene -> plain name (step 5)'],
@@ -454,6 +467,8 @@ check(($source{G31}[0] // '') eq 'HGNC:6' && ($source{G31}[2] // '') eq '5'
       && scalar(($source{G31}[1] // '') =~ /^Ortholog of human EPS by its place on the PANTHER family tree: TreeGrafter places it with human EPS \(ortholog_1: joins at a speciation node, Bilateria \(grafted inside another lineage, moved up to this one\); PANTHER PTHR00031:SF1 E=1e-50, 90% of the protein, 85% of the family model\); and EPS is also its closest human gene by similarity/),
       'G31 provenance: the tree placement and the agreeing closest human, step 5', $p->('G31'));
 check(scalar(($source{G34}[1] // '') =~ /; but TreeGrafter places it with human THETA \(ortholog_1/), 'G34 provenance: the tree\'s dissent is stated', $p->('G34'));
+check(scalar(($source{G38}[1] // '') =~ /\(Pfam PF00038, E=1e-20, 90% of the domain model\)/), 'G38 provenance: the domain model coverage is stated', $p->('G38'));
+check(($source{G6}[3] // '') eq 'panther', 'G6: a family match with no model coverage in the JSON file keeps the residue measure', $p->('G6'));
 check(($source{G17}[3] // '') eq 'pfam' && ($source{G17}[2] // '') eq '4', 'G17 provenance: a transposable element is step 4', $p->('G17'));
 check(($source{G8}[3] // '') eq 'none' && ($source{G8}[0] // '') eq 'None' && ($source{G8}[2] // '') eq '0'
       && scalar(($source{G8}[1] // '') =~ /^None: hits did not pass the naming tests \(found: .*InterProScan Pfam/),

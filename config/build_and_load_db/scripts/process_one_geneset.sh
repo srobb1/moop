@@ -616,6 +616,21 @@ build_naming_args() {
   ## the gene set's species, taxon and accessions, for the header of naming_decisions.tsv
   [ -s "$GENESET_DIR/metadata.yaml" ] && NAMING_ARGS+=(--metadata "$GENESET_DIR/metadata.yaml")
 
+  ## Model coverage from the InterProScan JSON (model coordinates; the TSV has only protein
+  ## coordinates): the PANTHER family rules and the InterPro domain step measure on the model.
+  ## Without the JSON, naming falls back to protein residues over the model length.
+  local COVERAGE_JSON
+  for COVERAGE_JSON in "$ANALYSIS_DIR/interproscan/interproscan_results.json.gz" "$ANALYSIS_DIR/interproscan/interproscan_results.json"; do
+    [ -s "$COVERAGE_JSON" ] || continue
+    if python3 "$SCRIPTS/interproscan_model_coverage.py" --json "$COVERAGE_JSON" \
+         --panther-hmm-lengths "$REFERENCE_DATA/panther/hmm_lengths.tsv" --out model_coverage.tsv; then
+      NAMING_ARGS+=(--model-coverage model_coverage.tsv)
+    else
+      echo "ERROR: interproscan_model_coverage.py failed"; exit 1
+    fi
+    break
+  done
+
   ## PANTHER tree placements: where TreeGrafter puts each protein on its PANTHER family tree
   ## (graft points are only in InterProScan's JSON), traced to human genes with PANTHER's
   ## TreeGrafter data (update_reference_data.sh panther_trees) and the species' lineage (its

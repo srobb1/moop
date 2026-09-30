@@ -95,7 +95,7 @@ needs them in this form, or the rule that depends on them is silently weaker:
 
 | Input | Required form | Where naming looks | Without it |
 |---|---|---|---|
-| InterProScan | `-f TSV,JSON`: both the TSV and the JSON | `<analysis>/interproscan/interproscan_results.tsv[.gz]` and `interproscan_results.json[.gz]` | no JSON: no PANTHER tree placement (step 5, `tree+`/`treeC`); the TSV alone gives PANTHER families and InterPro domains |
+| InterProScan | `-f TSV,JSON`: both the TSV and the JSON | `<analysis>/interproscan/interproscan_results.tsv[.gz]` and `interproscan_results.json[.gz]` | no JSON: no PANTHER tree placement (step 5, `tree+`/`treeC`), and model coverage falls back to protein residues (overestimates; no domain-fragment check); the TSV alone gives PANTHER families and InterPro domains |
 | DIAMOND | 2.1.6 `blastp --ultra-sensitive`, E ≤ 1e-5, the 17 columns `qseqid sseqid stitle evalue pident length mismatch gapopen qstart qend sstart send bitscore qlen slen qcovhsp scovhsp` **with the header line** | `<analysis>/diamond/<db>/diamond_results.tsv[.gz]` + `db_version.txt` | fewer than 17 columns: the table is **not used at all** (no coverage) |
 | DIAMOND targets | `--max-target-seqs 25` against human, `5` against every other database | same | 1 target: no paralog ties, no second human gene, and `sim~` / `sim-` cannot be judged |
 | Human search database | **canonical** Ensembl proteins, one per gene, with Ensembl's own FASTA headers (`gene:`, `gene_symbol:`, `description:` with `[Source:HGNC Symbol;Acc:HGNC:…]`); `$REF_DB/ENS_homo_sapiens/current/peptide.fa.gz` is the FASTA the database was built from | `--ref-db` | headers without `gene:`/`Acc:HGNC`: hits cannot be resolved to HGNC genes |
@@ -252,8 +252,9 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   used (below); failing that, the PANTHER family all the human members belong to names it
   (`<family> family member`) — only when the gene is a whole member of that family: its own match
   covers ≥ 50% of the family's model, or it has a full-length hit (§3) to one of the human members
-  (model coverage from the InterProScan TSV counts protein residues against the model's length and
-  underestimates short or compact members: ACBP 35%, yet 99%/100% to DBI); failing that, the gene
+  (model coverage as in step 7; the full-length alternative matters for members much shorter than
+  the family model: ACBP covers 36-38% of its family's model by either measure, yet aligns 99%/100%
+  to DBI); failing that, the gene
   goes directly to step 7 — not to steps 5 or 6, which would pick one member after all. In
   *C. kusceri* the whole-member condition removed 24 family names, mostly Sushi-domain proteins
   and fragments (a collagen piece hitting 18% of COL1A2), which are then named by their domain.
@@ -363,8 +364,14 @@ bitscore (§3).
    never taken from another gene.
 
 **Step 7 — PANTHER family.** A family names the gene only when the gene's PANTHER match covers
-≥ 80% of the family's HMM (model coverage: the protein residues in the family's match
-regions, merged, over the model length). Protein coverage is not required: a multidomain
+≥ 80% of the family's HMM. **Model coverage** is measured on the model: the model positions
+(hmmStart–hmmEnd) of all the match's locations, merged, over the family model's length, from the
+InterProScan JSON (`scripts/interproscan_model_coverage.py`; the coordinates are on the family
+model — none of 2,755 checked locations passes its end). Without the JSON it falls back to the
+TSV's protein residues over the model length, which overestimates when the protein has
+insertions: on a 3,130-protein Congeria sample, 320 of the 1,935 matches at ≥ 80% by residues
+cover less than 80% of the model (PTHR10133: 100% by residues, 57% of the model); 31 go the other
+way. The decision table's header says which measure a run used. Protein coverage is not required: a multidomain
 protein that contains the whole family model is a member. Below the threshold the match is
 usually one shared domain (a SET domain matching the KMT5A family at 38% of its model), which
 step 8 names honestly. Among qualifying families the lowest E-value wins. The name is
@@ -395,8 +402,12 @@ curated threshold (Pfam's per-family gathering thresholds, SMART, CDD, PROSITE p
 E-value floor is added, because an E-value depends on domain length and a single floor would
 remove short domains (zinc fingers, repeats) however real — the reason Pfam uses per-family
 bit-score thresholds. PROSITE patterns are not used (a short regular expression with no score
-or threshold). **[TODO: with the InterProScan JSON, require a match to cover enough of its
-domain model (hmmStart/hmmEnd/hmmLength, hmmBounds).]** The gene's best match is chosen by the
+or threshold). InterProScan's thresholds are for significance, not coverage: a significant match
+can be a fragment of the domain. So where the JSON gives the model coordinates (Pfam, Gene3D,
+FunFam, NCBIfam, PIRSF, SFLD — not SMART, which reports every match as the whole model, nor CDD,
+PROSITE or PRINTS, which report none), a match must cover **≥ 50% of its domain model** to name
+the gene; a fragment is skipped and the next domain is considered. In Congeria 4% of Pfam matches
+are below 50% (median 95%). The provenance states the domain model coverage. The gene's best match is chosen by the
 lowest E-value, then entries without one (PROSITE profiles), then by accession. The name is InterPro's curated entry name, with
 "comma + space" removed (`Zinc finger, RING-type` → `Zinc finger RING-type domain-containing
 protein`; `1,2-lyase` is untouched) and `-containing protein` appended when the name already
@@ -580,7 +591,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 129 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 133 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

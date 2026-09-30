@@ -19,6 +19,7 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #       [--interproscan interproscan_results.tsv[.gz] --interpro-entries moop/interpro/entry.list \
 #        --panther-hmm-lengths moop/panther/hmm_lengths.tsv] \
 #       [--panther-placements panther_placements.tsv (scripts/panther_placements.py)] [--metadata metadata.yaml] \
+#       [--model-coverage model_coverage.tsv (scripts/interproscan_model_coverage.py)] \
 #       [--human-curated-gene-names curated.moop.tsv ...] \
 #       [--closest-species 'tag=Nvec|species=Nematostella vectensis|label=sea anemone|oma_code=NEMVE|hits=FILE|diamond=DIR|rbh=DIR|use_for_names=0|same_species=0' ...] \
 #       --out-names geneNames.tsv --out-dir DIR
@@ -102,6 +103,16 @@ my %FULL   = (evalue => 1e-10, qcov => 80, tcov => 80);
 # domains is still a member. Below it the match is usually one shared domain (a SET domain
 # matching the KMT5A family at 38% of its model), which the InterPro domain step names honestly.
 my $FAMILY_MODEL_COVERAGE = 80;
+# Model coverage is measured on the MODEL (hmmStart-hmmEnd, from the InterProScan JSON through
+# scripts/interproscan_model_coverage.py, --model-coverage) when available; without it, from the
+# TSV's protein residues over the model length, which overestimates when the protein has insertions
+# (Congeria sample 2026-09-30: 320 of 1,935 PANTHER matches at >= 80% by residues are below 80% of the
+# model -- PTHR10133 100% by residues, 57% of the model).
+# An InterPro domain names a gene only when its match covers at least this much of the domain's model
+# (where the model coverage is known: Pfam, Gene3D, FunFam, NCBIfam, PIRSF, SFLD; not SMART, CDD,
+# PROSITE, whose model coordinates InterProScan does not report): less is a fragment of the domain,
+# and "X domain-containing protein" would claim the domain. Congeria: 4% of Pfam matches are below.
+my $DOMAIN_MIN_MODEL_COVERAGE = 50;
 # Similarity to a human gene at all (any coverage): the E-value a hit needs to count as support
 # for an orthology name, or as the "best human gene" a -like name must agree with.
 my $HIT_MAX_EVALUE = 1e-5;
@@ -251,6 +262,7 @@ my %decision;         # group -> { step (0: none), reached => [steps tried], pas
 my %panther_label;    # PANTHER family -> InterPro's Family name when integrated, else PANTHER's cleaned name
 my %gene_family_coverage;   # group -> PANTHER family -> the gene's best model coverage (%, any isoform)
 my %tree;             # group -> its PANTHER tree placement (read_panther_placements)
+my %model_coverage;   # "protein\tanalysis\tsignature" -> % of the signature's model aligned (--model-coverage)
 
 # ============================================================== main
 sub main {
@@ -260,7 +272,7 @@ sub main {
              'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
              'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'native=s', 'oma-id-map=s',
              'human-curated-gene-names=s@', 'closest-species=s@',
-             'interproscan=s', 'interpro-entries=s', 'panther-hmm-lengths=s', 'panther-placements=s', 'metadata=s',
+             'interproscan=s', 'interpro-entries=s', 'panther-hmm-lengths=s', 'panther-placements=s', 'model-coverage=s', 'metadata=s',
              'out-names=s', 'out-dir=s')
     or die "bad options\n";
   foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-dir)) {
@@ -319,6 +331,7 @@ sub main {
     foreach my $needed (qw(interpro-entries panther-hmm-lengths)) {
       die "--interproscan needs --$needed (update_reference_data.sh makes it)\n" unless defined $opt{$needed};
     }
+    read_model_coverage($opt{'model-coverage'}) if defined $opt{'model-coverage'};
     my $entries = read_interpro_entries($opt{'interpro-entries'});
     %panther = read_panther_families($opt{interproscan}, $entries, $opt{'panther-hmm-lengths'});
     %domain  = read_interpro_domains($opt{interproscan}, $entries);
@@ -1076,8 +1089,15 @@ sub read_panther_families {
       $no_length++;
       next;
     }
-    my $coverage = int(100 * aligned_residues($match->{regions}) / $length);
-    $coverage = 100 if $coverage > 100;
+    # on the model (JSON) when known; else protein residues over the model length (TSV)
+    my $coverage = $model_coverage{"$match->{id}\tPANTHER\t$family_only"};
+    if (defined $coverage) {
+      $stats{'PANTHER model coverage: from the model (JSON)'}++;
+    } else {
+      $coverage = int(100 * aligned_residues($match->{regions}) / $length);
+      $coverage = 100 if $coverage > 100;
+      $stats{'PANTHER model coverage: from protein residues (TSV)'}++ if %model_coverage;
+    }
     $gene_family_coverage{$group}{$family_only} = $coverage if $coverage > ($gene_family_coverage{$group}{$family_only} // -1);
     if ($coverage < $FAMILY_MODEL_COVERAGE) {
       $stats{'PANTHER match: below model coverage'}++;
@@ -1164,6 +1184,21 @@ sub read_interpro_entries {
 # Pfam itself uses per-family bit-score thresholds. PROSITE patterns are not used at all: a
 # short regular expression with no score or threshold, which unrelated proteins match by chance.
 # (With the InterProScan JSON, a match covering too little of its domain model can be rejected.)
+# scripts/interproscan_model_coverage.py: protein analysis signature model_length model_coverage_pct
+sub read_model_coverage {
+  my ($file) = @_;
+  open my $fh, '<', $file or die "cant open $file $!\n";
+  while (my $line = <$fh>) {
+    next if $line =~ /^#/ or $line =~ /^protein\t/;
+    chomp $line;
+    my ($protein, $analysis, $signature, $length, $percent) = split /\t/, $line;
+    next unless defined $percent and $percent =~ /^\d+$/;
+    $model_coverage{"$protein\t$analysis\t$signature"} = $percent;
+  }
+  close $fh;
+  die "no model coverage rows in $file\n" unless %model_coverage;
+}
+
 sub read_interpro_domains {
   my ($results, $entries) = @_;
   my %entry;
@@ -1199,8 +1234,13 @@ sub read_interpro_domains {
     next if $analysis eq 'ProSitePatterns';
     my $group = group_for($id) or next;
     my $evalue = $EVALUE_ANALYSIS{$analysis} && defined $score && $score =~ /^[0-9.eE+-]+$/ ? $score : undef;
+    my $model_percent = defined $signature ? $model_coverage{"$id\t$analysis\t" . ($signature =~ s/\.\d+$//r)} : undef;
+    if (defined $model_percent and $model_percent < $DOMAIN_MIN_MODEL_COVERAGE) {
+      $stats{"InterPro domain match: below $DOMAIN_MIN_MODEL_COVERAGE% of its model (a fragment), not used"}++;
+      next;
+    }
     my $candidate = { id => $id, entry => $interpro, %{$entry{$interpro}}, analysis => $analysis,
-                      signature => $signature // '', evalue => $evalue };
+                      signature => $signature // '', evalue => $evalue, model_coverage => $model_percent };
     my $current = $best{$group};
     if (!$current or better_domain($candidate, $current)) {
       $best{$group} = $candidate;
@@ -2019,7 +2059,8 @@ sub domain_name {
   my $description = domain_description($domain->{name});
   $stats{"name: InterPro $domain->{type}"}++;
   my $signature = $domain->{analysis} . ($domain->{signature} ne '' ? " $domain->{signature}" : '')
-                . (defined $domain->{evalue} ? ", E=" . e_value($domain->{evalue}) : '');
+                . (defined $domain->{evalue} ? ", E=" . e_value($domain->{evalue}) : '')
+                . (defined $domain->{model_coverage} ? ", $domain->{model_coverage}% of the domain model" : '');
   # what the gene lacks, said truthfully: it may well have a human homolog, just not one
   # that could name it (no ortholog, no full-length hit, no family)
   my ($best) = ranked_human_hits($group);
@@ -2847,6 +2888,8 @@ sub input_lines {
   push @lines, "Ensembl Compara: $opt{'compara-dir'}, release(s) used " . (join('/', sort keys %compara_releases_used) || 'none')
     if defined $opt{'compara-dir'};
   push @lines, "NCBI taxonomy: $opt{'taxonomy-dir'}" if defined $opt{'taxonomy-dir'};
+  push @lines, "InterProScan model coverage (JSON): $opt{'model-coverage'} (" . file_date($opt{'model-coverage'}) . ')'
+    if defined $opt{'model-coverage'};
   if (defined $opt{'panther-placements'}) {
     my $about = '';
     if (open my $placements_fh, '<', $opt{'panther-placements'}) {
@@ -2916,7 +2959,10 @@ sub decision_header {
     "  any hit (support of an OMA name, best human gene): E <= " . e_value($HIT_MAX_EVALUE) . ", any coverage",
     "  paralog tie: another human gene scoring within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE)) . " of the best bitscore",
     "  PANTHER tree placement trusted: its PANTHER match E <= " . e_value($TREE_MAX_EVALUE) . ", >= $TREE_MIN_COVERAGE% of the protein and of the family model",
-    "  PANTHER family name (step 7): the match covers >= $FAMILY_MODEL_COVERAGE% of the family model",
+    "  PANTHER family name (step 7): the match covers >= $FAMILY_MODEL_COVERAGE% of the family model"
+      . (%model_coverage ? ' (model positions, InterProScan JSON)' : ' (protein residues over the model length: no JSON)'),
+    "  InterPro domain name (step 8): " . (%model_coverage ? "the match covers >= $DOMAIN_MIN_MODEL_COVERAGE% of its domain model where known (not SMART, CDD, PROSITE)"
+                                                            : 'no model-coverage check (no InterProScan JSON)'),
     "  PANTHER family for co-orthologs / a tie: the gene's own match >= $FAMILY_NAME_MIN_OWN_COVERAGE% of the model, or a full-length hit to a member",
     "  HGNC group as a family: PANTHER coherence >= $HGNC_GROUP_MIN_COHERENCE (share of the group's human genes in its main PANTHER family)",
     "  repeat-built PANTHER family: repeat units >= " . sprintf('%.0f%%', 100 * $REPEAT_FAMILY_FRACTION) . " of the match -> named for the repeat",
