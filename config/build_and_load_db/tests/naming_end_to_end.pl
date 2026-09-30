@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200, T55 => 200, T56 => 200);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -90,6 +90,8 @@ write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name 
   ['HGNC:35', 'SIGMA', 'sigma synthase', '', '', 'ENSG35', '', ''],
   ['HGNC:36', 'TAU', 'tau oxidase', '', '', 'ENSG36', '', ''],
   ['HGNC:38', 'OMEGA', 'omega hydrolase', '', '', 'ENSG38', '', ''],
+  ['HGNC:39', 'PSI', 'psi motor protein', '', '', 'ENSG39', '', ''],
+  ['HGNC:40', 'CHI', 'chi kinase', '', '', 'ENSG40', '', ''],
   ['HGNC:37', 'UPS', 'upsilon protein', '', '', 'ENSG37', '', ''],
 ));
 # ---- Swiss-Prot cross-references: the PANTHER families of human genes (orthology support)
@@ -264,6 +266,10 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   . $dhit->('T16', '11', 'WDR90', 'WD repeat domain 90', '1e-160', 562, 200, 700, 90, 30)
   . $dhit->('T16', '12', 'CFAP52', 'cilia and flagella associated protein 52', '1e-30', 119, 200, 210, 85, 85)
   . $dhit->('T40', '25', 'KAPA', 'kappa-a synthase', '1e-80', 300, 200, 200, 95, 95)
+  # T55: 95% of itself on 30% of PSI -- the shape of a fragment of a larger gene
+  . $dhit->('T55', '39', 'PSI', 'psi motor protein', '1e-60', 250, 200, 660, 95, 30)
+  # T56: 95% of CHI within 30% of itself -- the shape of a fusion or a merged model
+  . $dhit->('T56', '40', 'CHI', 'chi kinase', '1e-40', 150, 200, 60, 30, 95)
   # T50, T51: partial hits to OMEGA (support for their OMA pair); T52-T54 none
   . $dhit->('T50', '38', 'OMEGA', 'omega hydrolase', '1e-20', 80, 200, 400, 40, 20)
   . $dhit->('T51', '38', 'OMEGA', 'omega hydrolase', '1e-20', 80, 200, 400, 40, 20)
@@ -550,7 +556,7 @@ check(($source{G26}[0] // '') eq 'HGNC:18' && ($source{G26}[2] // '') eq '6'
 check(($source{G27}[3] // '') eq 'panther' && ($source{G27}[0] // '') eq 'PTHR00027' && ($source{G27}[2] // '') eq '3'
       && scalar(($source{G27}[1] // '') =~ /^Strong: Co-ortholog of 2 human genes \(OMA, 1:many\), all in PANTHER family PTHR00027 \("Sprocket protein"\), which it matches too; the HGNC group they share \("Mixed molecules"\) is not a family by descent \(PANTHER coherence 0\.50\)/),
       'G27 provenance: the PANTHER family, and why the HGNC group was not used', $p->('G27'));
-check(scalar(($source{G28}[1] // '') =~ /; similar to human MIX1 over part of its length only \(40% of this protein, 40% of MIX1, E=1e-30\)$/),
+check(scalar(($source{G28}[1] // '') =~ /; similar to human MIX1 over part of its length only \(40% of this protein, 40% of MIX1, E=1e-30\): a shared domain or region only -- MIX1 is a distant relative, not this gene's identity$/),
       'G28 provenance: the partial homolog is stated', $p->('G28'));
 check(scalar(($source{G29}[1] // '') =~ /; similar to human MIX1 along its length \(90% of this protein, 90% of MIX1, E=1e-80\), but that gene's name could not be used/),
       'G29 provenance: a full-length homolog is not described as partial', $p->('G29'));
@@ -583,6 +589,16 @@ check(($source{G31}[0] // '') eq 'HGNC:6' && ($source{G31}[2] // '') eq '5'
       && scalar(($source{G31}[1] // '') =~ /^Strong: Ortholog of human EPS by its place on the PANTHER family tree: TreeGrafter places it with human EPS \(ortholog_1: joins at a speciation node, Bilateria \(grafted inside another lineage, moved up to this one\); PANTHER PTHR00031:SF1 E=1e-50, 90% of the protein, 85% of the family model\); and EPS is also its closest human gene by similarity/),
       'G31 provenance: the tree placement and the agreeing closest human, step 5', $p->('G31'));
 check(scalar(($source{G34}[1] // '') =~ /; but TreeGrafter places it with human THETA \(ortholog_1/), 'G34 provenance: the tree\'s dissent is stated', $p->('G34'));
+check(($name{G55} // '') eq 'None' && scalar(($source{G55}[1] // '') =~ /; its best human hit, PSI, covers 95% of this protein and 30% of PSI: most of this protein aligns to part of PSI -- possibly a fragment of a larger PSI-like gene \(the gene model may be incomplete\)$/),
+      'G55: a partial hit shaped like a fragment of a larger gene, said in words', $p->('G55'));
+check(scalar(($source{G56}[1] // '') =~ /: all of CHI aligns within a longer protein here -- possibly a fusion, or two gene models merged$/),
+      'G56: a partial hit shaped like a fusion, said in words', $p->('G56'));
+{
+  my %flag;
+  foreach my $row (read_tsv("$out/gene_model_flags.tsv")) { $flag{$row->[0]} = "$row->[2] $row->[3] $row->[5]/$row->[6]" if $row->[0] =~ /^G\d+$/; }
+  check(($flag{G55} // '') eq 'fragment PSI 95/30' && ($flag{G56} // '') eq 'fusion CHI 30/95' && !exists $flag{G1} && !exists $flag{G28},
+        'gene_model_flags.tsv: the fragment and the fusion, not a full-length or a shared-region hit', join('; ', map { my $gene = $_; "$gene $flag{$gene}" } sort keys %flag));
+}
 {
   my %decision = read_decisions("$out/naming_decisions.tsv");
   check(scalar(($decision{G50}{S3_OMA_human_ortholog} // '') =~ /withheld \(omaR\): OMA pairs 5 genes here with human OMEGA, and 3 of them fail/)

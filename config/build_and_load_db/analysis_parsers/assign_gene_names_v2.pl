@@ -199,6 +199,14 @@ my $TE_MIN_COPIES = 5;
 my $PAIRING_MIN_COPIES = 5;
 # a name's provenance lists at most this many of the other copies named after the same human gene
 my $COPIES_LISTED = 10;
+# The shape of a partial best human hit, in plain words for a reader (and gene_model_flags.tsv):
+#   fragment  >= $SHAPE_MOST% of this protein aligns, to under $SHAPE_PART% of the human one: possibly a
+#             fragment of a larger gene (the gene model may be incomplete -- or a real shorter protein)
+#   fusion    >= $SHAPE_MOST% of the human protein aligns, within under $SHAPE_PART% of this one: possibly
+#             a fusion, or two gene models merged
+#   shared    under $SHAPE_PART% of each: a shared domain or region, a distant relative
+my $SHAPE_MOST = 80;
+my $SHAPE_PART = 50;
 my %TE_PFAM = (
   PF13359 => ['PIF/Harbinger', 'DNA transposon', 'PIF/Harbinger transposase'],
   PF13358 => ['Tc1/mariner',   'DNA transposon', 'Tc1/mariner transposase'],
@@ -416,6 +424,7 @@ sub main {
   # ============================================================== write
   write_outputs();
   write_decisions("$opt{'out-dir'}/naming_decisions.tsv");
+  write_gene_model_flags("$opt{'out-dir'}/gene_model_flags.tsv");
   foreach my $key (sort keys %stats) {
     warn sprintf("%-40s %d\n", $key, $stats{$key});
   }
@@ -2215,8 +2224,15 @@ sub choose_name {
   # no name: 'None' stays the name (updateGFF.pl and updateFASTA.pl read it as "no name"); why is
   # in the Gene Name Source table -- no homology evidence at all, or evidence that no step could use
   my @found = sort keys %{$any_evidence{$group} // {}};
+  my ($best) = ranked_human_hits($group);
+  my $partial = '';
+  if ($best and !$best->[1]{best_full}) {
+    $partial = sprintf('; its best human hit, %s, covers %.0f%% of this protein and %.0f%% of %s',
+                       human_label($best->[1]{human}), $best->[1]{best}{qcov}, $best->[1]{best}{tcov}, human_label($best->[1]{human}))
+             . shape_note($best->[1]);
+  }
   my $rule = @found
-    ? 'None: hits did not pass the naming tests (found: ' . join(', ', @found) . ')'
+    ? 'None: hits did not pass the naming tests (found: ' . join(', ', @found) . ")$partial"
     : 'None: no hits (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match)';
   $stats{'name: none (' . (@found ? 'hits did not pass the naming tests' : 'no hits') . ')'}++;
   return { desc => 'None', selected => selected_id($group, undef), note => 'none|none|none|none|-',
@@ -2495,7 +2511,7 @@ sub domain_name {
     $partial = $best->[1]{best_full}
       ? "; similar to human $label along its length ($numbers), but that gene's name could not be used "
         . "(a family of co-orthologs, a paralog tie, or an uninformative name)"
-      : "; similar to human $label over part of its length only ($numbers)";
+      : "; similar to human $label over part of its length only ($numbers)" . shape_note($best->[1]);
   }
   return { desc => $description, selected => selected_id($group, $domain->{id}), tag => ['ISM', 'ipr', ($best ? 'sim~' : ())],
            note => "InterPro|Domains|$domain->{id}|$domain->{entry}|" . ($domain->{evalue} // '-'),
@@ -2693,6 +2709,52 @@ sub oma_support {
   # members of OMA's set that were not counted (readthroughs, other models of one gene) are named here
   $text .= $closest->{not_counted} if $closest and $closest->{not_counted};
   return (\@flags, $text);
+}
+
+# the shape of a partial best human hit: 'fragment', 'fusion', 'shared', or '' (in between, or full-length)
+sub hit_shape {
+  my ($entry) = @_;
+  return '' if !$entry or $entry->{best_full};
+  my ($ours, $theirs) = ($entry->{best}{qcov} // 0, $entry->{best}{tcov} // 0);
+  return 'fragment' if $ours >= $SHAPE_MOST and $theirs < $SHAPE_PART;
+  return 'fusion' if $theirs >= $SHAPE_MOST and $ours < $SHAPE_PART;
+  return 'shared' if $ours < $SHAPE_PART and $theirs < $SHAPE_PART;
+  return '';
+}
+
+# the same, in words, after a partial hit's numbers
+sub shape_note {
+  my ($entry) = @_;
+  my $shape = hit_shape($entry) or return '';
+  my $label = human_label($entry->{human});
+  return ": most of this protein aligns to part of $label -- possibly a fragment of a larger $label-like gene "
+       . '(the gene model may be incomplete)' if $shape eq 'fragment';
+  return ": all of $label aligns within a longer protein here -- possibly a fusion, or two gene models merged" if $shape eq 'fusion';
+  return ": a shared domain or region only -- $label is a distant relative, not this gene's identity";
+}
+
+# gene_model_flags.tsv: every gene whose best human hit has the shape of a fragment (most of this
+# protein on part of the human one) or a fusion (all of the human one within a part of this one),
+# whatever its name -- candidates to check against mender's split and merge calls
+sub write_gene_model_flags {
+  my ($file) = @_;
+  open my $fh, '>', $file or die "cant write $file $!\n";
+  print $fh "# Gene models whose best human hit has the shape of a fragment or a fusion (assign_gene_names_v2.pl).\n"
+          . "# fragment: >= $SHAPE_MOST% of this protein aligns to < $SHAPE_PART% of the human protein -- possibly part of a larger\n"
+          . "#   gene (a split model), or a real shorter protein. fusion: >= $SHAPE_MOST% of the human protein aligns within\n"
+          . "#   < $SHAPE_PART% of this one -- possibly a fusion, or two models merged. Check against mender.\n";
+  print $fh join("\t", qw(GroupId ID shape human_gene human_hit this_protein_pct human_protein_pct evalue bits name)), "\n";
+  foreach my $group (sort keys %members) {
+    my ($best) = ranked_human_hits($group) or next;
+    my $shape = hit_shape($best->[1]);
+    next unless $shape eq 'fragment' or $shape eq 'fusion';
+    my $hit = $best->[1]{best};
+    $stats{"gene model flag: $shape"}++;
+    print $fh join("\t", $group, $hit->{id}, $shape, human_label($best->[1]{human}), $hit->{hit},
+                   sprintf('%.0f', $hit->{qcov}), sprintf('%.0f', $hit->{tcov}), e_value($hit->{evalue}), $hit->{bits},
+                   $name{$group}{desc}), "\n";
+  }
+  close $fh;
 }
 
 # "aligned over 95% of this protein and 88% of ALPHA (full-length)": the best-scoring alignment to

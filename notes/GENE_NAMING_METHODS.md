@@ -326,6 +326,17 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   Pfam's threshold. Reported only: it does not change the name. Congeria: of 4,705 single-gene
   orthology names, 4,093 (87%) have all their human gene's Pfam domains, 537 (11%) have no match to
   at least one, 75 have no Pfam data; `-like` names 70% / 23% / 7%.
+- **A partial best human hit is described by its shape.** For a gene named by a domain, or not named,
+  whose best human hit is partial, the provenance says what the shape suggests: ≥ 80% of this
+  protein on < 50% of the human one — "possibly a fragment of a larger X-like gene (the gene model
+  may be incomplete)"; ≥ 80% of the human protein within < 50% of this one — "possibly a fusion, or
+  two gene models merged"; < 50% of each — "a shared domain or region only — X is a distant
+  relative, not this gene's identity". A domain comparison would repeat what the domain name says;
+  the shape says whether the human gene is this gene's identity or a relative, and whether the
+  model may be broken. Every fragment- or fusion-shaped gene, whatever its name, is listed in
+  `gene_model_flags.tsv` for checking against mender. Congeria: 2,533 fragment, 122 fusion; only
+  12% of the fragments are pieces of a mender merge (mender joins neighbouring annotated pieces;
+  a lone fragment whose missing part was never annotated is out of its reach).
 - **Alignment coverage is stated.** Every orthology name (and a tree name) says how much of this
   protein and of the human protein the best alignment to the named gene covers, and whether it is
   full-length ("aligned over 95% of this protein and 88% of ALPHA (full-length)").
@@ -679,6 +690,7 @@ is trusted.
 | `gene_name_source.<kind>.moop.tsv` | database annotation type "Gene Name Source" — the provenance of every name, one row per gene and isoform. Accession = what the name came from, description = why, in words (`Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)`), score = the naming step (1–8; 0 for no name). One source per kind of accession link: HGNC gene, HGNC gene group, Ensembl gene, PANTHER family, InterPro domain, Pfam (transposable element), naming species (NCBI), human-curated, the gene set's own name — and `Gene name source: none` for genes with no name (accession `None`; the description says "None: no hits" or "None: hits did not pass the naming tests") |
 | `closest_<species>.tsv` | per id: gene id, symbol, description, evidence |
 | `closest_<species>[.ensembl\|.family].moop.tsv` | database annotation type "Closest Gene", one source per file so each has one link: human — `Closest human gene (HGNC)` (genenames.org), `Closest human gene (Ensembl, no HGNC record)` (Ensembl), `Closest human gene family` (no link); other species — `Closest <species> gene`, `Closest <species> gene family`. A row for the gene and each isoform; score = tier (human) or rank (other species: 1 OMA, 2 reciprocal best hit, 3 DIAMOND best hit, 4 hits file) |
+| `gene_model_flags.tsv` | for people to read, not loaded: every gene whose best human hit has the shape of a fragment (≥ 80% of this protein on < 50% of the human one) or a fusion (≥ 80% of the human protein within < 50% of this one) — candidates for mender |
 | `naming_decisions.tsv` | for people to read, not loaded anywhere: one row per gene — the name, the step that gave it and the full reason; the gene's best and second human hits and best PANTHER family with their scores **whatever the cutoffs**; and every step's own result (`NAMED`, `not used:` why, `passed over`/`skipped:` the rule that set it aside, `not reached;` what it would have said), plus the closest human gene, what each method points to (`Evidence_by_method`: OMA pairwise, OMA HOG, reciprocal best hit, via another species, best human hit, PANTHER tree placement and PANTHER family, each marked `+` if it includes the closest human gene, `C` if it points elsewhere, `X` if set aside — a report, not a vote, since the methods share one signal), and the closest gene in each other species (`Closest_<tag>`); and `Pipeline_name`, the name moop's own steps give with step 2 left out (no native name, no naming species) — the same as the name unless step 2 named the gene, so the columns never change between runs. With `--native`, also the gene set's own name. A `#` header records the run (date, script and git commit, command), the programs and data read (versions, file dates), the naming steps, every cutoff, the abbreviations and the columns — written from the code's own constants, so it always matches the run |
 | `genes.gff` | attributes `closestHGNC`, `closestHumanSym`, `closestHumanDesc`, `closestHumanEvidence`; `closest<Tag>Id/Sym/Desc/Evidence` for other species |
 
@@ -693,7 +705,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 148 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 151 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 
