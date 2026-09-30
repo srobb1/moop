@@ -296,7 +296,7 @@ my %tree;             # group -> its PANTHER tree placement (read_panther_placem
 my %model_coverage;   # "protein\tanalysis\tsignature" -> % of the signature's model aligned (--model-coverage)
 my %gene_pfam;        # group -> Pfam accession -> 1: the gene's Pfam domains (InterProScan; fragments of a model left out)
 my %human_pfam;       # HGNC id -> Pfam accession -> 1 (uniprot/human_pfam.tsv.gz)
-my %pfam_name;        # Pfam accession -> short name (--pfam-names)
+my (%pfam_name, %pfam_clan);   # Pfam accession -> short name / clan (--pfam-names)
 
 # ============================================================== main
 sub main {
@@ -934,37 +934,54 @@ sub read_human_pfam {
   close $fh;
 }
 
-# Pfam accession -> short name (pfam_names.tsv: accession name description)
+# Pfam accession -> short name and clan (pfam_names.tsv: accession name clan description)
 sub read_pfam_names {
   my ($file) = @_;
   open my $fh, '<', $file or die "cant open $file $!\n";
   while (my $line = <$fh>) {
     chomp $line;
-    my ($pfam, $short) = split /\t/, $line;
-    $pfam_name{$pfam} = $short if defined $short;
+    my ($pfam, $short, $clan) = split /\t/, $line;
+    next unless defined $short;
+    $pfam_name{$pfam} = $short;
+    $pfam_clan{$pfam} = $clan if defined $clan and $clan =~ /^CL\d+$/;
   }
   close $fh;
 }
 
-# "has all 3 of ALPHA's Pfam domains (Kinase, SH2, SH3)" / "has 2 of ALPHA's 3 Pfam domains; lacks
-# PF00017 SH2": the domains of the human gene a name comes from, found or not in this gene
-# (InterProScan's Pfam matches; a fragment of a model does not count). Reported only; it does not
-# change the name. '' when either side has no Pfam data.
+# "has all 3 of ALPHA's Pfam domains (Kinase, SH2, SH3)" / "has 2 of ALPHA's 3 Pfam domains; no Pfam
+# match here to PF00017 SH2": the domains of the human gene a name comes from, found or not in this
+# gene (InterProScan's Pfam matches; a fragment of a model does not count). A sister family of the
+# same Pfam clan counts as the domain (the mussel MYD88's TIR domain matches PF01582 TIR, human
+# MYD88's is annotated PF13676 TIR_2, both clan CL0173). "No match" is what is known: the domain
+# may be too diverged for Pfam's threshold. Reported only; it does not change the name. '' when
+# either side has no Pfam data.
 sub domain_text {
   my ($group, $human) = @_;
   return '' unless defined $opt{interproscan} and $human and $human->{hgnc_id};
   my @human_domains = sort keys %{$human_pfam{$human->{hgnc_id}} // {}};
   return '' unless @human_domains;
   my $own = $gene_pfam{$group} // {};
-  my @found = grep { my $pfam = $_; $own->{$pfam} } @human_domains;
-  my @missing = grep { my $pfam = $_; !$own->{$pfam} } @human_domains;
+  my %own_clan;
+  foreach my $pfam (keys %$own) {
+    $own_clan{$pfam_clan{$pfam}} //= $pfam if defined $pfam_clan{$pfam};
+  }
   my $named = sub { my ($pfam) = @_; $pfam . (defined $pfam_name{$pfam} ? " $pfam_name{$pfam}" : '') };
+  my (@found, @missing);
+  foreach my $pfam (@human_domains) {
+    if ($own->{$pfam}) {
+      push @found, $named->($pfam);
+    } elsif (defined $pfam_clan{$pfam} and my $sister = $own_clan{$pfam_clan{$pfam}}) {
+      push @found, $named->($pfam) . ' as ' . ($pfam_name{$sister} // $sister) . " (same clan $pfam_clan{$pfam})";
+    } else {
+      push @missing, $pfam;
+    }
+  }
   my $label = human_label($human);
   my $count = scalar @human_domains;
-  return "has " . ($count == 1 ? "${label}'s Pfam domain" : "all $count of ${label}'s Pfam domains")
-       . ' (' . join(', ', map { my $pfam = $_; $named->($pfam) } @found) . ')' unless @missing;
+  return "has " . ($count == 1 ? "${label}'s Pfam domain" : "all $count of ${label}'s Pfam domains") . ' (' . join(', ', @found) . ')'
+    unless @missing;
   my @listed = @missing[0 .. ($#missing < 3 ? $#missing : 3)];
-  return "has " . scalar(@found) . " of ${label}'s $count Pfam domain" . ($count == 1 ? '' : 's') . '; lacks '
+  return "has " . scalar(@found) . " of ${label}'s $count Pfam domain" . ($count == 1 ? '' : 's') . '; no Pfam match here to '
        . join(', ', map { my $pfam = $_; $named->($pfam) } @listed) . (@missing > 4 ? ' and ' . (@missing - 4) . ' more' : '');
 }
 

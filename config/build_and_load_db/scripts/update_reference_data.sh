@@ -38,9 +38,10 @@
 #       TSV has no model coordinates, so the model length comes from here. Rebuilt when the
 #       binHmm changes (md5), so it always matches the PANTHER release InterProScan ran.
 #   pfam/pfam_names.tsv
-#       Pfam accession, short name and description, from pfam_a.dat in $INTERPROSCAN_DIR (the Pfam
-#       release InterProScan ran): the names of the human gene's domains a gene lacks. Rebuilt when
-#       pfam_a.dat changes (md5).
+#       Pfam accession, short name, clan and description, from pfam_a.dat in $INTERPROSCAN_DIR (the
+#       Pfam release InterProScan ran): the names of the human gene's domains, and their clans -- a
+#       domain matched by a sister family of the same clan (TIR / TIR_2, clan CL0173) is the same
+#       domain. Rebuilt when pfam_a.dat changes (md5).
 #   panther/treegrafter/<release>/
 #       PANTHER's TreeGrafter data for the release InterProScan uses (PANTHER<release>_data.tar.gz
 #       from data.pantherdb.org/ftp/downloads/TreeGrafter/, ~3 GB): the family trees with every
@@ -334,17 +335,19 @@ update_pfam() {
     return
   fi
   tmp="$dir/pfam_names.tsv.tmp"
-  ## one "#=GF ID", "#=GF AC" and "#=GF DE" line per family, in that order
+  ## one record per family ending in "//": "#=GF ID", "#=GF AC", "#=GF DE" and, for a family in a clan, "#=GF CL"
   awk '/^#=GF ID/ { id = $3 }
        /^#=GF AC/ { accession = $3; sub(/\.[0-9]+$/, "", accession) }
-       /^#=GF DE/ { description = $0; sub(/^#=GF DE +/, "", description); print accession "\t" id "\t" description }' "$dat" > "$tmp"
-  if [ "$(wc -l < "$tmp")" -lt 10000 ] || grep -qv -P '^PF\d+\t\S+\t' "$tmp"; then
+       /^#=GF DE/ { description = $0; sub(/^#=GF DE +/, "", description) }
+       /^#=GF CL/ { clan = $3 }
+       /^\/\// { if (accession != "") print accession "\t" id "\t" clan "\t" description; id = accession = clan = description = "" }' "$dat" > "$tmp"
+  if [ "$(wc -l < "$tmp")" -lt 10000 ] || grep -qv -P '^PF\d+\t\S+\t(CL\d+)?\t' "$tmp"; then
     rm -f "$tmp"
     warn "pfam: $dat gave an unexpected names table; keeping the existing copy"
     return
   fi
   mv "$tmp" "$dir/pfam_names.tsv"
-  echo "Pfam release $release: accession, name, description read $TODAY from $dat (md5 $md5)" > "$dir/VERSION.txt"
+  echo "Pfam release $release: accession, name, clan, description read $TODAY from $dat (md5 $md5)" > "$dir/VERSION.txt"
   echo "pfam: release $release saved ($(wc -l < "$dir/pfam_names.tsv") families)"
 }
 

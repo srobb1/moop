@@ -315,11 +315,17 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   primers, RNAi or antibodies can be designed.
 - **Domains are compared.** Every single-gene orthology, tree and `-like` name says whether the gene
   has the Pfam domains of the human gene it is named after ("has all 3 of ALPHA's Pfam domains
-  (…)" / "has 2 of ALPHA's 3 Pfam domains; lacks PF00017 SH2"): the human gene's domains from its
-  reviewed UniProt entries (`uniprot/human_pfam.tsv.gz`, same UniProt release as the Swiss-Prot
-  table), the gene's from its InterProScan Pfam matches (a fragment under 50% of its model does not
-  count), the names from the Pfam release InterProScan ran (`pfam/pfam_names.tsv`). Reported only:
-  it does not change the name.
+  (…)" / "has 2 of ALPHA's 3 Pfam domains; no Pfam match here to PF00017 SH2"): the human gene's
+  domains from its reviewed UniProt entries (`uniprot/human_pfam.tsv.gz`, same UniProt release as
+  the Swiss-Prot table), the gene's from its InterProScan Pfam matches (a fragment under 50% of its
+  model does not count), names and clans from the Pfam release InterProScan ran
+  (`pfam/pfam_names.tsv`). **A sister family of the same Pfam clan counts as the domain**: the
+  mussel MYD88's TIR domain matches PF01582 TIR while human MYD88 is annotated PF13676 TIR_2 (clan
+  CL0173); comparing accessions alone called 240 of Congeria's orthologs short of a domain they have.
+  A domain with no match is reported as "no Pfam match", not as absent: it may be too diverged for
+  Pfam's threshold. Reported only: it does not change the name. Congeria: of 4,705 single-gene
+  orthology names, 4,093 (87%) have all their human gene's Pfam domains, 537 (11%) have no match to
+  at least one, 75 have no Pfam data; `-like` names 70% / 23% / 7%.
 - **Alignment coverage is stated.** Every orthology name (and a tree name) says how much of this
   protein and of the human protein the best alignment to the named gene covers, and whether it is
   full-length ("aligned over 95% of this protein and 88% of ALPHA (full-length)").

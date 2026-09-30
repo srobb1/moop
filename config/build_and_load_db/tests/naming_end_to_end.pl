@@ -107,9 +107,11 @@ my $xrefs = join("\t", qw(accession taxid gene_name hgnc_ids ensembl_genes ensem
 system('mkdir', '-p', "$dir/uniprot") == 0 or die;
 gzip(\$xrefs => "$dir/uniprot/sprot_xrefs.tsv.gz") or die $GzipError;
 # ---- the Pfam domains of human genes (update_reference_data.sh human_domains), and Pfam's names
-my $human_pfam = "# UniProt release test\naccession\thgnc_ids\tpfam_ids\nP00001\tHGNC:1\tPF00001;PF00099\n";
+# ALPHA: PF00001 (T1 has it), PF00099 (T1 has no match), PF00098 (T1 has PF00097 of the same clan)
+my $human_pfam = "# UniProt release test\naccession\thgnc_ids\tpfam_ids\nP00001\tHGNC:1\tPF00001;PF00099;PF00098\n";
 gzip(\$human_pfam => "$dir/uniprot/human_pfam.tsv.gz") or die $GzipError;
-write_file("$dir/pfam_names.tsv", "PF00001\tKinase\tkinase domain\nPF00099\tSH2x\tan SH2-like domain\n");
+write_file("$dir/pfam_names.tsv", "PF00001\tKinase\tCL0016\tkinase domain\nPF00099\tSH2x\t\tan SH2-like domain\n"
+                                 . "PF00098\tSH2y\tCL0099\tan SH2-like domain\nPF00097\tSH2z\tCL0099\ta sister SH2-like domain\n");
 
 # ---- OMA: pairwise orthologs to HUMAN (1:1, many:1, 1:many) and to NEMVE
 my $human = sub { my ($n) = @_; my %name = (1 => 'alpha synthase', 2 => 'beta protein 1', 3 => 'beta protein 2', 4 => 'gamma transferase',
@@ -310,6 +312,7 @@ my $row = sub { my ($id, $len, $analysis, $sig, $desc, $start, $end, $score, $ip
 write_file("$dir/iprscan.tsv", join('',
   # T1 carries one of ALPHA's two Pfam domains
   $row->('T1',  300, 'Pfam',    'PF00001.9', 'kinase',          10, 250, '1.0E-40', 'IPR000001', 'Kinase domain'),
+  $row->('T1',  300, 'Pfam',    'PF00097.3', 'sh2z',           260, 290, '1.0E-8',  '-', '-'),
   $row->('T6',  100, 'PANTHER', 'PTHR00006', 'WIDGET PROTEIN SMC', 3, 97, '1.0E-30', '-', '-'),
   $row->('T7',  200, 'PANTHER', 'PTHR00007', '-',                1,  190, '1.0E-25', '-', '-'),
   $row->('T7',  200, 'Pfam',    'PF00001',   'kinase',           1,  100, '1.0E-5',  'IPR000001', 'Kinase domain'),
@@ -526,7 +529,7 @@ check(!grep({ my $symbol = /^([^:]*):/ ? $1 : ''; $symbol =~ /[\[|]/ } values %n
 # ---- provenance: why each name, as loaded into MOOP (accession, description, step, source)
 my $p = sub { my ($gene) = @_; return $source{$gene} ? join(' | ', @{$source{$gene}}) : '(no row)'; };
 check(($source{G1}[0] // '') eq 'HGNC:1' && ($source{G1}[2] // '') eq '3'
-      && ($source{G1}[1] // '') eq 'Strong: Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001); aligned over 95% of this protein and 95% of ALPHA (full-length); has 1 of ALPHA\'s 2 Pfam domains; lacks PF00099 SH2x',
+      && ($source{G1}[1] // '') eq 'Strong: Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001); aligned over 95% of this protein and 95% of ALPHA (full-length); has 2 of ALPHA\'s 3 Pfam domains; no Pfam match here to PF00099 SH2x',
       'G1 provenance: HGNC:1, OMA 1:1, its support, step 3', $p->('G1'));
 check(($source{G2}[1] // '') eq 'Moderate: Ortholog of human GAMMA (OMA, many:1), one of 2 genes in this genome named after it (the others: G3); '
       . 'OMA pairs 3 genes here with it, 1 of them named by other evidence; GAMMA is its best human similarity hit; '
