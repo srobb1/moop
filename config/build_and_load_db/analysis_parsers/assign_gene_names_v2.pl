@@ -3567,6 +3567,15 @@ sub named_humans {
   return @{$closest->{human}};
 }
 
+# the human gene has no Pfam domain to compare (UniProt): said, so an empty Domains line is not read as
+# "not checked"; '' when the comparison could not be made at all (no InterProScan, no HGNC gene)
+sub no_domains_text {
+  my ($human) = @_;
+  return '' unless defined $opt{interproscan} and $human and $human->{hgnc_id};
+  return '' if %{$human_pfam{$human->{hgnc_id}} // {}};
+  return 'No Pfam domain is annotated for ' . human_label($human) . ' in UniProt, so there are no domains to compare';
+}
+
 sub gene_statements {
   my ($group) = @_;
   my $named = $name{$group};
@@ -3588,12 +3597,15 @@ sub gene_statements {
       if defined $same_family;
     $said{support} = $text if $text ne '';
   }
-  if (@humans == 1) {
+  if (@humans) {
+    # the named human gene -- of several (co-orthologs of a family), the one this gene aligns to best
+    my (undef, undef, $aligned) = best_alignment($group, \@humans);
     my $coverage = alignment_coverage_text($group, \@humans);
     $said{alignment} = ucfirst $coverage if $coverage ne '';
-    my $domains = domain_text($group, $humans[0]);
-    $said{domains} = ucfirst $domains if $domains ne '';
-  } elsif (!@humans) {
+    my $domains = domain_text($group, $aligned // $humans[0]);
+    $said{domains} = ucfirst($domains ne '' ? $domains : no_domains_text($aligned // $humans[0]));
+    delete $said{domains} if $said{domains} eq '';
+  } else {
     # no human gene in the name: the best human hit, as a relative (with its shape when partial)
     my ($best) = ranked_human_hits($group);
     if ($best) {
@@ -3603,6 +3615,11 @@ sub gene_statements {
                                  human_label($entry->{human}), $hit->{qcov}, $hit->{tcov}, human_label($entry->{human}),
                                  $entry->{best_full} ? 'full-length' : 'partial')
                        . ($entry->{best_full} ? '' : shape_note($entry));
+      # the best hit's domains, found here or not (a domain or family name, or none: which of the
+      # human gene's domains this gene has)
+      my $domains = domain_text($group, $entry->{human});
+      $said{domains} = ucfirst($domains ne '' ? $domains : no_domains_text($entry->{human}));
+      delete $said{domains} if $said{domains} eq '';
     }
   }
   my $placement = $tree{$group};
