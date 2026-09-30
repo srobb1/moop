@@ -497,7 +497,9 @@ check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', 
   my %decision = read_decisions("$out/naming_decisions.tsv");
   check(scalar(($decision{G5}{Closest_Smed} // '') =~ /^rank 2: SMED5 SmDELTA: smed delta kinase \(reciprocal best hit/),
         'decision table: a Closest_Smed column', $decision{G5}{Closest_Smed});
-  check(!exists $decision{G5}{Name_without_Smed}, 'decision table: no Name_without column when the species does not name genes');
+  check(($decision{G5}{Pipeline_name} // '') eq 'DELTA-like: delta kinase-like [ISS|rbh] (step 6)',
+        'decision table: Pipeline_name in every run (here the same as Name)', $decision{G5}{Pipeline_name});
+  check(($decision{G8}{Pipeline_name} // '') eq 'None', 'decision table: Pipeline_name None when no step names it', $decision{G8}{Pipeline_name});
   check(($name{G5} // '') eq 'DELTA-like: delta kinase-like [ISS|rbh]', 'Smed with use_for_names=0 names nothing (G5 keeps its human -like name)', $name{G5});
 }
 
@@ -507,8 +509,8 @@ check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', 
   my %decision = read_decisions("$dir/out_names/naming_decisions.tsv");
   check(($named{G5} // '') eq 'SmDELTA-like: smed delta kinase-like (planarian) [ISS|rbh|smed]',
         'naming species G5: its full-length RBH names it, -like, labelled', $named{G5});
-  check(($decision{G5}{Name_without_Smed} // '') eq 'DELTA-like: delta kinase-like [ISS|rbh] (step 6)',
-        'decision table G5: the name without the naming species', $decision{G5}{Name_without_Smed});
+  check(($decision{G5}{Pipeline_name} // '') eq 'DELTA-like: delta kinase-like [ISS|rbh] (step 6)',
+        'decision table G5: Pipeline_name is the name without the naming species', $decision{G5}{Pipeline_name});
   check(scalar(($named{G8} // '') =~ /^Wnt signalling protein-like \(planarian\) \[ISS\|bh\|smed\]$|^wnt signalling protein-like \(planarian\) \[ISS\|bh\|smed\]$/),
         'naming species G8: a full-length DIAMOND best hit names another species\' gene -like', $named{G8});
   check(($named{G12} // '') eq 'None', 'naming species G12: its best hit is partial -> no name from the weaker full-length hit', $named{G12});

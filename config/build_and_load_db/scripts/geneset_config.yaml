@@ -63,7 +63,7 @@
 #   best hit; then, for another species only, the DIAMOND best hit if IT is full-length; then
 #   the hits file. same_species copies a name only from OMA, a full-length RBH, or the hits file.
 #   The decision table (naming_decisions.tsv) gets Closest_<tag> columns, and with
-#   use_for_names a Name_without_<tag> column: the name each gene gets without this species.
+#   a Pipeline_name column (every run): the name moop's own steps give, without this species.
 #
 # Settings:
 #   human_curated_gene_names: FILE        names a person assigned (format below)

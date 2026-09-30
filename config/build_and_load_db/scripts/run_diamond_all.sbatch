@@ -36,6 +36,13 @@ COLUMNS=(qseqid sseqid stitle evalue pident length mismatch gapopen qstart qend 
 mkdir -p "$OUT_DIR"
 echo "DIAMOND: $QUERY_FASTA vs $DB_NAME"
 
+## as the annotation pipeline runs it: 25 targets against human (enough genes to see the
+## ortholog behind its paralogs, and a second gene for the paralog-tie rule), 5 against the
+## rest. The pipeline searches CANONICAL human proteins (one per gene); this stand-in searches
+## $DB_DIR/peptide.dmnd as it is, so with all isoforms 25 targets cover fewer genes.
+MAX_TARGETS=5
+[ "$DB_NAME" = ENS_homo_sapiens ] && MAX_TARGETS=25
+
 module purge
 module load diamond/2.1.6
 TMP=/scratch/$USER/tmp/diamond/${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}
@@ -48,7 +55,7 @@ diamond blastp --ultra-sensitive \
   --query "$QUERY_FASTA" \
   --db "$DB_DIR/peptide" \
   --out "$OUT_FILE.body" \
-  --max-target-seqs 1 \
+  --max-target-seqs "$MAX_TARGETS" \
   --outfmt 6 "${COLUMNS[@]}"
 
 ## header line, as the annotation pipeline writes (naming v2 reads it for scovhsp)

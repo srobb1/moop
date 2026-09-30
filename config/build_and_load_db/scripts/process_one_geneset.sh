@@ -426,7 +426,11 @@ make_mmseqs_rbh_moop() {
     ORG="${TARGET_ORG#ENS_}"; ORG="${ORG//_/ }"; ORG="${ORG^}"    # Homo sapiens
     OUT="Ensembl_${ORG// /_}.MMseqs.RBBH.moop.tsv"
     has_data "$OUT" && continue
-    FASTA=("$REF_DB/$TARGET_ORG/current"/*.pep.all.fa.gz)
+    ## the FASTA the search database was built from, else the release's full proteome
+    FASTA=()
+    for REF_FASTA in "$REF_DB/$TARGET_ORG/current"/peptide.fa.gz "$REF_DB/$TARGET_ORG/current"/*.pep.all.fa.gz; do
+      [ -s "$REF_FASTA" ] && FASTA+=("$REF_FASTA")
+    done
     if [ "${#FASTA[@]}" -eq 0 ]; then
       echo "WARNING: no peptide FASTA under $REF_DB/$TARGET_ORG/current — skipping MMseqs2 RBH for $TARGET_ORG" >&2
       continue

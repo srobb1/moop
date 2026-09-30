@@ -613,8 +613,12 @@ sub collect_mmseqs {
           $qstart, $qend, $tstart, $tend, $evalue, $bits) = split /\t/, $line;
       my $group = group_for($query) or next;
       my $query_len  = query_length_of($query);
-      my $target_len = $reference->{$target}{length};
-      next unless $query_len and $target_len;
+      my $target_len = $reference->{$target} ? $reference->{$target}{length} : 0;
+      if (!$query_len or !$target_len) {
+        # a search against a different proteome than --ref-db holds: coverage cannot be computed
+        $stats{"note: MMseqs2 $species hits skipped: " . ($query_len ? 'target' : 'query') . ' not in the protein FASTA'}++;
+        next;
+      }
       my %hit = (
         evalue => $evalue, bits => $bits, pident => $pident * 100,
         qcov => 100 * ($qend - $qstart + 1) / $query_len,
@@ -664,7 +668,11 @@ sub reference_proteome {
   my ($species_dir) = @_;
   return $reference_fasta_cache{$species_dir} if exists $reference_fasta_cache{$species_dir};
   my $ref_db = $opt{'ref-db'} or die "--ref-db is required for MMseqs2/DIAMOND hits\n";
-  my @fastas = glob "$ref_db/$species_dir/current/*.pep.all.fa.gz";
+  # peptide.fa.gz is the FASTA the search databases are built from (for human, the canonical
+  # proteins once the annotation pipeline uses them); the release's full *.pep.all.fa.gz, a superset
+  # with the same ids and headers, is the fallback
+  my @fastas = grep { my $fasta = $_; -s $fasta }
+               ("$ref_db/$species_dir/current/peptide.fa.gz", glob "$ref_db/$species_dir/current/*.pep.all.fa.gz");
   if (!@fastas) {
     warn "WARNING: no reference proteome for $species_dir under $ref_db\n";
     $reference_fasta_cache{$species_dir} = undef;
@@ -2851,7 +2859,9 @@ sub decision_header {
     'COLUMNS',
     '  ID: the transcript whose evidence named the gene; GroupId: the gene',
     '  Name: as in geneNames.tsv; Step: the step that named it; Reason: why, in full',
-    '  Native_name / Pipeline_name (--native only): the gene set\'s own name, and the name the steps give without it',
+    '  Native_name (--native only): the gene set\'s own name',
+    '  Pipeline_name: the name moop\'s own steps give, with step 2 left out -- no native name, no naming species --',
+    '    and the step that gave it; the same as Name unless one of those named the gene',
     '  Best_human_hit ...: the gene\'s best hit to a human gene (E <= ' . e_value($HIT_MAX_EVALUE) . ', any coverage), whatever the cutoffs:',
     '    coverage of this protein / of the human protein (%), E-value, bitscore, rbh or bh, full-length yes/no;',
     '    Second_human_hit: the next human gene and its bitscore as % of the best (a paralog close behind)',
@@ -2868,10 +2878,6 @@ sub decision_header {
            "  Closest_$species->{tag}: the closest $species->{species} gene (rank: gene, evidence), as in closest_" . lc($species->{tag}) . '.tsv' }
          @closest_species),
     '    closest-species ranks: 1 OMA ortholog; 2 MMseqs2 reciprocal best hit; 3 DIAMOND best hit; 4 hits file',
-    ($naming_species
-      ? ("  Name_without_$naming_species->{tag}: the name the steps give without the naming species (step 2 left out),",
-         '    so its effect can be judged before it is trusted')
-      : ()),
   );
   return join('', map { my $line = $_; "# $line\n" } @header);
 }
@@ -2910,15 +2916,16 @@ sub closest_species_text {
   return "rank $closest->{rank}: " . join(' / ', @genes) . " ($closest->{evidence})";
 }
 
-# the decision table's Name_without_<tag> cell: the same decision with step 2 (the naming species)
-# left out -- the name the gene would have without it
-sub name_without_naming_species {
+# the decision table's Pipeline_name cell, in every run so the columns never change: the same
+# decision with step 2 left out (no native name, no naming species) -- the name moop's own steps
+# give, and its step. Equal to Name unless step 2 named the gene.
+sub pipeline_name {
   my ($group) = @_;
   my %candidate = (%{$candidates{$group}}, 2 => not_named('left out'));
   # decide_name records an OMA conflict for set_aside_note; keep the real decision's record
   local $conflicting_oma{$group} = $conflicting_oma{$group};
   my $step = decide_name($group, \%candidate, [], {});
-  return 'None (no step)' unless $step;
+  return 'None' unless $step;
   return tagged(set_aside_note($group, $candidate{$step}))->{desc} . " (step $step)";
 }
 
@@ -2930,8 +2937,7 @@ sub write_decisions {
   print $fh join("\t", qw(ID GroupId Name Step Reason Native_name Pipeline_name Best_human_hit Best_hit_qcov Best_hit_tcov Best_hit_evalue
                           Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit PANTHER_best PANTHER_model_cov Tree_placement),
                  (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
-                 'Closest_human', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species),
-                 ($naming_species ? "Name_without_$naming_species->{tag}" : ())), "\n";
+                 'Closest_human', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species)), "\n";
   # --native: the gene set's own informative names replace the decision (collect_native_rows)
   my %native_kept;
   foreach my $row (@name_rows) {
@@ -2963,13 +2969,12 @@ sub write_decisions {
                  ($native ? '2 native name' : $step ? "$step $step_label{$step}" : 'none'),
                  ($named->{origin} ? $named->{origin}{rule} : 'no step gave a name'),
                  ($native ? $native->{desc} : ''),
-                 ($native ? $name{$group}{desc} . ' (' . ($step ? "step $step" : 'no step') . ')' : ''),
+                 pipeline_name($group),
                  @best, $family_text, (defined $family ? $coverage->{$family} : ''),
                  ($tree{$group} ? ($tree{$group}{trusted} ? 'trusted: ' : 'weak: ') . tree_text($tree{$group}) : ''),
                  (map { my $naming_step = $_; step_cell($group, $naming_step->[0], $native ? 1 : 0) } @NAMING_STEPS),
                  $closest_text,
-                 (map { my $species = $_; closest_species_text($species, $group) } @closest_species),
-                 ($naming_species ? ($native ? '' : name_without_naming_species($group)) : ()));
+                 (map { my $species = $_; closest_species_text($species, $group) } @closest_species));
     print $fh join("\t", map { my $cell = $_; $cell //= ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";
   }
   close $fh;
