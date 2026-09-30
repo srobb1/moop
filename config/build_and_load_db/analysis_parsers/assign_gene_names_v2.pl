@@ -292,6 +292,7 @@ my @pending_compara;  # links through another species' Ensembl gene, resolved in
 my %reference_fasta_cache;
 my %reference_fasta_file;   # species dir -> the protein FASTA read (for the decision table's header)
 my (%panther, %domain, %curated, %transposon);
+my %partial_domain;   # group -> its best InterPro domain match below $DOMAIN_MIN_MODEL_COVERAGE of its model (the reason it has no domain name)
 my %closest;          # group -> { tier, human => [records], evidence, id }
 my %claimed_human;    # human key -> { group => 1 }: the co-orthologs a many:1 name is shared by
 my %name;             # group -> { desc, note, selected, origin }
@@ -1387,6 +1388,12 @@ sub read_interpro_domains {
     my $model_percent = defined $signature ? $model_coverage{"$id\t$analysis\t" . ($signature =~ s/\.\d+$//r)} : undef;
     if (defined $model_percent and $model_percent < $DOMAIN_MIN_MODEL_COVERAGE) {
       $stats{"InterPro domain match: below $DOMAIN_MIN_MODEL_COVERAGE% of its model (a fragment), not used"}++;
+      my $partial = $partial_domain{$group};
+      if (!$partial or $model_percent > $partial->{model_coverage}
+          or ($model_percent == $partial->{model_coverage} and "$interpro\t$signature" lt "$partial->{entry}\t$partial->{signature}")) {
+        $partial_domain{$group} = { entry => $interpro, name => $entry{$interpro}{name}, analysis => $analysis,
+                                    signature => $signature =~ s/\.\d+$//r, model_coverage => $model_percent };
+      }
       next;
     }
     my $candidate = { id => $id, entry => $interpro, %{$entry{$interpro}}, analysis => $analysis,
@@ -2441,7 +2448,8 @@ sub tree_name {
   return { desc => ($symbol ne '' ? "$symbol: $human->{name}" : $human->{name}), selected => selected_id($group, $placement->{protein}),
            tag => ['ISO', 'tree', ($closest->{tier} == 3 ? 'rbh' : $closest->{tier} == 4 ? 'via' : 'bh')],
            note => "PANTHER_TreeGrafter|Orthologs|$placement->{protein}|$placement->{panther_match}|$placement->{evalue}",
-           origin => human_origin($human, $rule, 5) };
+           origin => human_origin($human, $rule, 5),
+           copies_of => { human => $human->{key}, start => $rule, end => '' } };
 }
 
 # naming step 7: PANTHER family (only matches covering most of the family's model;
@@ -2490,7 +2498,13 @@ sub panther_family_name {
 # identity
 sub domain_name {
   my ($group) = @_;
-  my $domain = $domain{$group} or return not_named('no InterPro domain or repeat');
+  my $domain = $domain{$group};
+  if (!$domain) {
+    my $partial = $partial_domain{$group}
+      or return not_named('no InterPro domain or repeat');
+    return not_named("only part of a domain: InterPro $partial->{entry} \"$partial->{name}\" ($partial->{analysis} $partial->{signature}) "
+                   . "covers $partial->{model_coverage}% of its model (needs $DOMAIN_MIN_MODEL_COVERAGE%)");
+  }
   return not_named("InterPro $domain->{entry} \"$domain->{name}\" is not an informative name")
     unless is_informative_hit('', $domain->{name}, $domain->{entry});
   my $description = domain_description($domain->{name});
@@ -2847,10 +2861,13 @@ sub reject_mostly_failed_pairings {
 
 sub count_named_copies {
   my ($chosen) = @_;
-  my %named_after;   # human key -> [ groups named after that one human gene at step 3 ]
+  # human key -> [ groups named after that one human gene: by OMA (step 3) or by their place on the
+  # PANTHER tree (step 5) -- counted together, since both give the human gene's own name (ten
+  # tandem Congeria copies each placed with human EPDR1 on the tree read "EPDR1", none saying so)
+  my %named_after;
   foreach my $group (sort keys %$chosen) {
     my $copies_of = $chosen->{$group}{copies_of} or next;
-    next unless $decision{$group}{step} == 3;
+    next unless $decision{$group}{step} == 3 or $decision{$group}{step} == 5;
     push @{$named_after{$copies_of->{human}}}, $group;
   }
   foreach my $human_key (sort keys %named_after) {
@@ -2860,14 +2877,16 @@ sub count_named_copies {
     foreach my $group (@groups) {
       my $named = $chosen->{$group};
       my $copies_of = $named->{copies_of};
+      my $by_oma = $decision{$group}{step} == 3;
       # several genes here carrying one human gene's name are copies of a duplication in this
-      # lineage, whatever OMA's pairwise type (pairwise 1:1 for one copy, the HOG adding the other)
-      $named->{tag}[1] = $copies > 1 ? "${copies}to1" : relationship_tag($copies_of->{type}, $copies);
+      # lineage, whatever OMA's pairwise type (pairwise 1:1 for one copy, the HOG adding the other);
+      # a tree-placed name keeps its "tree" tag
+      $named->{tag}[1] = $copies > 1 ? "${copies}to1" : relationship_tag($copies_of->{type}, $copies) if $by_oma;
       my @others = grep { my $other = $_; $other ne $group } @groups;
       my $listed = join(', ', @others[0 .. ($#others < $COPIES_LISTED - 1 ? $#others : $COPIES_LISTED - 1)])
                  . (@others > $COPIES_LISTED ? ' and ' . (@others - $COPIES_LISTED) . ' more' : '');
-      my $text = $copies > 1 ? ", one of $copies genes in this genome named after it (the others: $listed)" : '';
-      if ($paired > $copies) {
+      my $text = $copies > 1 ? ($by_oma ? ', ' : '; ') . "one of $copies genes in this genome named after it (the others: $listed)" : '';
+      if ($by_oma and $paired > $copies) {
         $text .= "; OMA pairs $paired genes here with it, " . ($paired - $copies) . ' of them named by other evidence';
         $stats{'many:1 names: fewer genes carry the name than OMA paired'}++;
       }
