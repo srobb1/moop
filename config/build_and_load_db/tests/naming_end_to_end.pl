@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -360,8 +360,8 @@ my %closest_smed  = map { my $row = $_; ($row->[1] => $row) } read_tsv("$out/clo
 # ---- names: one rule per gene, each ending in its evidence tag
 my %expect = (
   G1  => ['ALPHA: alpha synthase [ISO|1to1|sim+|pthr+]', 'OMA 1:1, backed by the best human hit and the same PANTHER family'],
-  G2  => ['GAMMA: gamma transferase [ISO|2to1|sim+|pthrC]', 'OMA many:1: every copy the plain name, copies in the tag; similar, but a conflicting family'],
-  G3  => ['GAMMA: gamma transferase [ISO|2to1|sim+|pthrC]', 'the other copy, same name'],
+  G2  => ['GAMMA: gamma transferase (1 of 2) [ISO|2to1|sim+|pthrC]', 'OMA many:1: every copy the plain name, copies in the tag; similar, but a conflicting family'],
+  G3  => ['GAMMA: gamma transferase (1 of 2) [ISO|2to1|sim+|pthrC]', 'the other copy, same name'],
   G4  => ['Beta proteins family member [ISO|fam|sim+]', 'OMA 1:many -> the HGNC group, no symbol, no member picked'],
   G5  => ['DELTA-like: delta kinase-like [ISS|rbh]', 'full-length reciprocal hit -> "-like", never plain'],
   G6  => ['Widget protein SMC family member [ISM|pthr]', 'partial hit cannot name; PANTHER family (95% of its model) does; its capitals sentence-cased, the acronym kept'],
@@ -410,7 +410,7 @@ check(scalar(($name{G36} // '') =~ /^THETA-like: theta ligase-like \[ISS\|bh\|om
       'G36: the third GAMMA copy, withheld (omaC), named by its own best hit', $name{G36});
 {
   my %decision = read_decisions("$out/naming_decisions.tsv");
-  check(scalar(($decision{G2}{S3_OMA_human_ortholog} // '') =~ /^NAMED: GAMMA: gamma transferase \[ISO\|2to1\|.*one of 2 genes in this genome named after it/),
+  check(scalar(($decision{G2}{S3_OMA_human_ortholog} // '') =~ /^NAMED: GAMMA: gamma transferase \(1 of 2\) \[ISO\|2to1\|.*one of 2 genes in this genome named after it/),
         'decision table G2: the same count as the name (2to1)', $decision{G2}{S3_OMA_human_ortholog});
 }
 check(scalar(($source{G25}[1] // '') =~ /; OMA pairs it with human EPS \(1:1\), but no similarity hit or PANTHER family supports that pair, so it does not name the gene$/),
@@ -455,7 +455,24 @@ check(($source{G31}[0] // '') eq 'HGNC:6' && ($source{G31}[2] // '') eq '5'
       'G31 provenance: the tree placement and the agreeing closest human, step 5', $p->('G31'));
 check(scalar(($source{G34}[1] // '') =~ /; but TreeGrafter places it with human THETA \(ortholog_1/), 'G34 provenance: the tree\'s dissent is stated', $p->('G34'));
 check(($source{G17}[3] // '') eq 'pfam' && ($source{G17}[2] // '') eq '4', 'G17 provenance: a transposable element is step 4', $p->('G17'));
-check(!exists $source{G8} && !exists $source{G12} && !exists $source{G16}, 'unnamed genes have no provenance row');
+check(($source{G8}[3] // '') eq 'none' && ($source{G8}[0] // '') eq 'None' && ($source{G8}[2] // '') eq '0'
+      && scalar(($source{G8}[1] // '') =~ /^None: hits did not pass the naming tests \(found: .*InterProScan Pfam/),
+      'unnamed G8: a "none" provenance row -- it has hits (a DUF domain) that no step could use', $p->('G8'));
+check(($name{G37} // '') eq 'None' && ($source{G37}[1] // '') eq 'None: no hits (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match)',
+      'unnamed G37: no evidence at all -> "None: no hits"', $p->('G37'));
+{
+  my %decision = read_decisions("$out/naming_decisions.tsv");
+  check(($decision{G37}{Step} // '') eq 'none: no hits' && ($decision{G8}{Step} // '') eq 'none: hits did not pass the naming tests',
+        'decision table: the two kinds of no name', "G37 $decision{G37}{Step}; G8 $decision{G8}{Step}");
+  check(($decision{G1}{Evidence_by_method} // '') eq 'OMA=ALPHA(+) HOG=- RBH=- VIA=- BH=ALPHA(full,+) TREE=- PTHR=PTHR00001(+) | vs ALPHA: 2 agree, 0 point elsewhere',
+        'Evidence_by_method G1: OMA and the best hit agree; same PANTHER family', $decision{G1}{Evidence_by_method});
+  check(($decision{G26}{Evidence_by_method} // '') eq 'OMA=ZETA(+) HOG=- RBH=- VIA=- BH=THETA(full,C) TREE=- PTHR=PTHR00018(C) | vs ZETA: 1 agree, 1 point elsewhere',
+        'Evidence_by_method G26 (omaC): the best hit and the PANTHER family point elsewhere', $decision{G26}{Evidence_by_method});
+  check(($decision{G25}{Evidence_by_method} // '') eq 'OMA=EPS(X) HOG=- RBH=- VIA=- BH=- TREE=- PTHR=-',
+        'Evidence_by_method G25 (omaX): the set-aside OMA pair is shown, marked X', $decision{G25}{Evidence_by_method});
+  check(($decision{G34}{Evidence_by_method} // '') eq 'OMA=IOTA(+) HOG=- RBH=- VIA=- BH=IOTA(full,+) TREE=THETA(C) PTHR=- | vs IOTA: 2 agree, 1 point elsewhere',
+        'Evidence_by_method G34: the tree dissents', $decision{G34}{Evidence_by_method});
+}
 check(($source{G18}[3] // '') eq 'pfam' && ($source{G18}[0] // '') eq 'PF13359'
       && ($source{G18}[1] // '') =~ /; OMA pairs it with human HARB1 \(many:1\) together with 4 other copies in this genome -- a transposon family, not one ortholog$/,
       'G18 provenance: Pfam link, and why the OMA name was not used', $p->('G18'));

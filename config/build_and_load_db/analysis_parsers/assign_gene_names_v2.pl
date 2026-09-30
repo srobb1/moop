@@ -197,7 +197,13 @@ my %NAME_SOURCE = (
                  'https://www.ebi.ac.uk/interpro/entry/InterPro/'],
   pfam       => ['Gene name source: transposable element domain (Pfam)', 'https://www.ebi.ac.uk/interpro/',
                  'https://www.ebi.ac.uk/interpro/entry/pfam/'],
+  none       => ['Gene name source: none', '', ''],
 );
+# InterProScan analyses that predict a feature, not homology: a match to one of these alone does not
+# make a gene "with hits" (coiled coils, disorder, signal peptides, membrane helices, a short
+# PROSITE pattern, AntiFam's spurious-ORF models)
+my @NOT_HOMOLOGY = qw(Coils MobiDBLite Phobius SignalP_EUK SignalP_GRAM_NEGATIVE SignalP_GRAM_POSITIVE TMHMM DeepTMHMM ProSitePatterns AntiFam);
+my %NOT_HOMOLOGY_ANALYSIS = map { my $analysis = $_; ($analysis => 1) } @NOT_HOMOLOGY;
 # closest human: OMA pair types, and Ensembl Compara's for the via-another-species links
 my %LINK_TYPE_RANK = (%OMA_RANK, one2one => 0, one2many => 2, many2many => 3);
 
@@ -222,6 +228,9 @@ my (%group_of, %members, %curated_selected);   # isoform groups
 my (%gene_of_protein, %query_length);
 my $hgnc;
 my %human_links;      # group -> [ link ]   link = {tier, human => [records], type, evidence, bits, id, hit}
+my %all_human_links;  # the same, before choose_closest_human sets unsupported OMA links aside (Evidence_by_method column)
+my %any_evidence;     # group -> kind of evidence -> 1: ANY homology evidence, whatever its strength
+                      # ("None: no hits" versus "None: hits did not pass the naming tests")
 my %hits;             # group -> [ naming candidates from similarity ]
 my %human_hit;        # group -> human key -> { best => hit, best_full => hit, rbh => 0|1 }: every human hit
                       # with E <= $HIT_MAX_EVALUE, any coverage (record_human_hit)
@@ -321,6 +330,9 @@ sub main {
 
   # ============================================================== decide
 
+  foreach my $group (keys %human_links) {
+    $all_human_links{$group} = [ @{$human_links{$group}} ];
+  }
   foreach my $group (keys %members) {
     $closest{$group} = choose_closest_human($group);
   }
@@ -498,6 +510,7 @@ sub collect_oma {
     foreach my $own (own_ids_and_groups($oma_target_id)) {
       my ($target_id, $group) = @$own;
       foreach my $pair (@{$direct->{$oma_target_id}}) {
+        $any_evidence{$group}{'OMA HUMAN'} = 1;
         my $human = human_from_oma_header($pair->{partner_header}) or next;
         add_link($group, tier => 1, human => [$human], type => $pair->{type}, id => $target_id,
                  evidence => "OMA ortholog ($pair->{type})", hit => $pair->{partner_id});
@@ -549,6 +562,7 @@ sub collect_oma {
       foreach my $own (own_ids_and_groups($oma_target_id)) {
         my ($target_id, $group) = @$own;
         foreach my $first (@{$to_reference->{$oma_target_id}}) {
+          $any_evidence{$group}{"OMA $reference"} = 1;
           foreach my $second (@{$reference_to_human->{$first->{partner_id}} // []}) {
             my $human = human_from_oma_header($second->{partner_header}) or next;
             my $common = $COMMON_NAME{$reference} // $reference;
@@ -620,6 +634,7 @@ sub collect_mmseqs {
       my ($query, $target, $pident, $alnlen, $mismatch, $gapopen,
           $qstart, $qend, $tstart, $tend, $evalue, $bits) = split /\t/, $line;
       my $group = group_for($query) or next;
+      $any_evidence{$group}{"MMseqs2 $species"} = 1;
       my $query_len  = query_length_of($query);
       my $target_len = $reference->{$target} ? $reference->{$target}{length} : 0;
       if (!$query_len or !$target_len) {
@@ -899,6 +914,7 @@ sub collect_diamond {
       my @fields = split /\t/, $line;
       my ($query, $subject, $title, $evalue) = @fields[0 .. 3];
       my $group = group_for($query) or next;
+      $any_evidence{$group}{"DIAMOND $db"} = 1;
       my %hit = (evalue => $evalue);
       if (@fields >= 17) {
         @hit{qw(pident bits qcov tcov)} = ($fields[4], $fields[12], $fields[15], $fields[16]);
@@ -1164,6 +1180,9 @@ sub read_interpro_domains {
     chomp $line;
     my @fields = split /\t/, $line;
     my ($id, $analysis, $signature, $score, $interpro) = @fields[0, 3, 4, 8, 11];
+    if (defined $analysis and !$NOT_HOMOLOGY_ANALYSIS{$analysis} and (my $evidence_group = group_for($id))) {
+      $any_evidence{$evidence_group}{"InterProScan $analysis"} = 1;
+    }
     if ($analysis eq 'Pfam' and defined $signature and $TE_PFAM{$signature =~ s/\.\d+$//r}) {
       my $te_group = group_for($id);
       my $te_evalue = defined $score && $score =~ /^[0-9.eE+-]+$/ ? $score : undef;
@@ -1585,6 +1604,7 @@ sub collect_closest_species {
         my ($target_id, $group) = @$own;
         foreach my $pair (@{$pairs->{$oma_target_id}}) {
           next unless exists $OMA_RANK{$pair->{type}};
+          $any_evidence{$group}{"OMA $species->{oma_code}"} = 1;
           push @{$species_oma{$tag}{$group}}, { id => $target_id, hit => $pair->{partner_id}, type => $pair->{type},
                                                 parsed => parse_oma_header($pair->{partner_header}) };
         }
@@ -1606,6 +1626,7 @@ sub collect_closest_species {
       chomp $line;
       my ($id, $accession, $description, $score) = split /\t/, $line;
       my $group = group_for($id) or next;
+      $any_evidence{$group}{"hits file $tag"} = 1;
       my $evalue = ($score // '') =~ /^[0-9.eE+-]+$/ ? $score : 1;
       if (!exists $species_hit{$tag}{$group} or $evalue < $species_hit{$tag}{$group}{evalue}) {
         $species_hit{$tag}{$group} = { id => $id, hit => $accession, description => $description // '',
@@ -1665,6 +1686,7 @@ sub read_species_search {
               qcov => $fields[15], tcov => $fields[16], description => $description // '');
     }
     my $group = group_for($hit{id}) or next;
+    $any_evidence{$group}{"$kind $tag"} = 1;
     my $entry = $store->{$tag}{$group} //= {};
     $entry->{top} = \%hit if better_hit(\%hit, $entry->{top});
     $entry->{normal} = \%hit if passes(\%hit, \%NORMAL) and better_hit(\%hit, $entry->{normal});
@@ -1736,8 +1758,15 @@ sub choose_name {
   }
   $decision{$group} = { step => $chosen, reached => \@reached, passed => \%passed };
   return $candidate->{$chosen} if $chosen;
-  $stats{'name: none'}++;
-  return { desc => 'None', selected => selected_id($group, undef), note => 'none|none|none|none|-' };
+  # no name: 'None' stays the name (updateGFF.pl and updateFASTA.pl read it as "no name"); why is
+  # in the Gene Name Source table -- no homology evidence at all, or evidence that no step could use
+  my @found = sort keys %{$any_evidence{$group} // {}};
+  my $rule = @found
+    ? 'None: hits did not pass the naming tests (found: ' . join(', ', @found) . ')'
+    : 'None: no hits (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match)';
+  $stats{'name: none (' . (@found ? 'hits did not pass the naming tests' : 'no hits') . ')'}++;
+  return { desc => 'None', selected => selected_id($group, undef), note => 'none|none|none|none|-',
+           origin => { kind => 'none', accession => 'None', step => 0, rule => $rule } };
 }
 
 # returns the chosen step (0: none); fills @$reached (steps tried, in order) and %$passed (a
@@ -2217,6 +2246,8 @@ sub count_named_copies {
         $stats{'many:1 names: fewer genes carry the name than OMA paired'}++;
       }
       $named->{origin}{rule} = $copies_of->{start} . $text . $copies_of->{end};
+      # the count in the name too, as Ensembl writes one-to-many orthologs: every copy is "1 of N"
+      $named->{desc} .= " (1 of $copies)" if $copies > 1;
     }
   }
 }
@@ -2908,7 +2939,8 @@ sub decision_header {
     '',
     'COLUMNS',
     '  ID: the transcript whose evidence named the gene; GroupId: the gene',
-    '  Name: as in geneNames.tsv; Step: the step that named it; Reason: why, in full',
+    '  Name: as in geneNames.tsv; Step: the step that named it; Reason: why, in full. A gene with no name is',
+    '    "none: no hits" (no homology evidence at all) or "none: hits did not pass the naming tests"',
     '  Native_name (--native only): the gene set\'s own name',
     '  Pipeline_name: the name moop\'s own steps give, with step 2 left out -- no native name, no naming species --',
     '    and the step that gave it; the same as Name unless one of those named the gene',
@@ -2924,6 +2956,11 @@ sub decision_header {
     '    passed over / skipped: a rule set the step aside (why)',
     '    not reached: an earlier step named the gene; what this step would have said follows',
     '  Closest_human: the closest human gene (tier: gene, evidence), as in closest_human.tsv',
+    '  Evidence_by_method: what each method points to, marked against the closest human gene: OMA pairwise, OMA HOG,',
+    '    MMseqs2 reciprocal best hit (RBH), via another species (VIA), best human hit (BH, full or partial length),',
+    '    trusted PANTHER tree placement (TREE), best PANTHER family (PTHR: + the closest human gene\'s family,',
+    '    C another, ? unknown); + includes the closest gene, C points elsewhere, X an OMA pair set aside, - none.',
+    '    A report, not a vote: these methods share one signal (sequence similarity), so agreement is not independence',
     (map { my $species = $_;
            "  Closest_$species->{tag}: the closest $species->{species} gene (rank: gene, evidence), as in closest_" . lc($species->{tag}) . '.tsv' }
          @closest_species),
@@ -2954,6 +2991,73 @@ sub step_cell {
   }
   return "not used: $found" if $reached{$step};
   return is_named($candidate) ? "not reached; would name: $found" : "not reached; $found";
+}
+
+# the decision table's Evidence_by_method cell: what each method says, each marked against the closest human
+# gene (or family) -- + includes it, C points elsewhere, X set aside (an OMA pair nothing supports).
+# A report, not a vote: these methods share one signal, sequence similarity (review 2026-09-30).
+sub agreement_text {
+  my ($group) = @_;
+  my $closest = $closest{$group};
+  my %reference = map { my $human = $_; ($human->{key} => 1) } @{$closest ? $closest->{human} : []};
+  my $mark = sub {
+    my ($humans) = @_;
+    return '' unless %reference;
+    return (grep { my $human = $_; $reference{$human->{key}} } @$humans) ? '+' : 'C';
+  };
+  my (%by_tier, @parts, $agree, $differ);
+  foreach my $link (@{$all_human_links{$group} // []}) {
+    foreach my $human (@{$link->{human}}) {
+      $by_tier{$link->{tier}}{$human->{key}} //= $human;
+    }
+  }
+  my $count = sub {
+    my ($flag) = @_;
+    $agree++ if $flag eq '+';
+    $differ++ if $flag eq 'C';
+    return $flag;
+  };
+  foreach my $method (['OMA', 1], ['HOG', 2], ['RBH', 3], ['VIA', 4]) {
+    my ($label, $tier) = @$method;
+    my @humans = map { my $key = $_; $by_tier{$tier}{$key} } sort keys %{$by_tier{$tier} // {}};
+    if (!@humans) {
+      push @parts, "$label=-";
+      next;
+    }
+    my $flag = ($tier <= 2 and $unsupported_oma{$group}) ? 'X' : $count->($mark->(\@humans));
+    push @parts, "$label=" . join('/', map { my $human = $_; human_label($human) } @humans) . ($flag ne '' ? "($flag)" : '');
+  }
+  my @ranked = ranked_human_hits($group);
+  if (@ranked) {
+    my $top = $ranked[0][1];
+    my $flag = $count->($mark->([$top->{human}]));
+    push @parts, 'BH=' . human_label($top->{human}) . '(' . ($top->{best_full} ? 'full' : 'partial') . ($flag ne '' ? ",$flag" : '') . ')';
+  } else {
+    push @parts, 'BH=-';
+  }
+  my $placement = $tree{$group};
+  if ($placement and $placement->{trusted} and @{$placement->{humans} // []}) {
+    my $flag = $count->($mark->($placement->{humans}));
+    push @parts, 'TREE=' . join('/', map { my $human = $_; human_label($human) } @{$placement->{humans}}) . ($flag ne '' ? "($flag)" : '');
+  } else {
+    push @parts, 'TREE=' . ($placement ? 'weak' : '-');
+  }
+  my $coverage = $gene_family_coverage{$group} // {};
+  my ($family) = sort { $coverage->{$b} <=> $coverage->{$a} or $a cmp $b } keys %$coverage;
+  if (defined $family and %reference) {
+    my %reference_families;
+    foreach my $human (@{$closest->{human}}) {
+      foreach my $reference_family (keys %{$human_panther{$human->{hgnc_id} // ''} // {}}) {
+        $reference_families{$reference_family} = 1;
+      }
+    }
+    push @parts, "PTHR=$family(" . (%reference_families ? ($reference_families{$family} ? '+' : 'C') : '?') . ')';
+  } else {
+    push @parts, 'PTHR=' . ($family // '-');
+  }
+  return join(' ', @parts) unless %reference;
+  my $reference_label = $closest->{family} ? 'family of ' . scalar(@{$closest->{human}}) : human_label($closest->{human}[0]);
+  return join(' ', @parts) . " | vs $reference_label: " . ($agree // 0) . ' agree, ' . ($differ // 0) . ' point elsewhere';
 }
 
 # the decision table's Closest_<tag> cell: "rank N: gene (evidence)"
@@ -2987,7 +3091,7 @@ sub write_decisions {
   print $fh join("\t", qw(ID GroupId Name Step Reason Native_name Pipeline_name Best_human_hit Best_hit_qcov Best_hit_tcov Best_hit_evalue
                           Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit PANTHER_best PANTHER_model_cov Tree_placement),
                  (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
-                 'Closest_human', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species)), "\n";
+                 'Closest_human', 'Evidence_by_method', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species)), "\n";
   # --native: the gene set's own informative names replace the decision (collect_native_rows)
   my %native_kept;
   foreach my $row (@name_rows) {
@@ -3016,14 +3120,15 @@ sub write_decisions {
                                                        : human_label($closest->{human}[0])) . " ($closest->{evidence})"
       : '';
     my @cells = ($named->{selected}, $group, $named->{desc},
-                 ($native ? '2 native name' : $step ? "$step $step_label{$step}" : 'none'),
+                 ($native ? '2 native name' : $step ? "$step $step_label{$step}"
+                  : %{$any_evidence{$group} // {}} ? 'none: hits did not pass the naming tests' : 'none: no hits'),
                  ($named->{origin} ? $named->{origin}{rule} : 'no step gave a name'),
                  ($native ? $native->{desc} : ''),
                  pipeline_name($group),
                  @best, $family_text, (defined $family ? $coverage->{$family} : ''),
                  ($tree{$group} ? ($tree{$group}{trusted} ? 'trusted: ' : 'weak: ') . tree_text($tree{$group}) : ''),
                  (map { my $naming_step = $_; step_cell($group, $naming_step->[0], $native ? 1 : 0) } @NAMING_STEPS),
-                 $closest_text,
+                 $closest_text, agreement_text($group),
                  (map { my $species = $_; closest_species_text($species, $group) } @closest_species));
     print $fh join("\t", map { my $cell = $_; $cell //= ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";
   }

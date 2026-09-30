@@ -227,7 +227,7 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
 | 6 | **Full-length human similarity** | see below | `SYMBOL-like: approved name-like`, or `<HGNC group> family member` | `ISS` |
 | 7 | **PANTHER family** | the match covers ≥ 80% of the family's model; informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
 | 8 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
-| – | — | nothing above | `None` (the gene keeps its own transcript id as name and description) | — |
+| – | — | nothing above | `None` (the gene keeps its own transcript id as name and description); the Gene Name Source table says which kind: **None: no hits** (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match) or **None: hits did not pass the naming tests** (with the kinds of evidence found) | — |
 
 The steps are tried in this order; the step number is the Score of the Gene Name Source table.
 
@@ -235,7 +235,8 @@ The steps are tried in this order; the step number is the Score of the Gene Name
 - One human gene, 1:1: `SYMBOL: approved name`.
 - One human gene shared by several genes of this gene set (many:1, a lineage-specific
   duplication): every copy is an ortholog of that gene and carries the same name. The number of
-  copies is in the tag (`4to1`) and the provenance, not in the name. N is counted after every
+  copies is in the name, as Ensembl writes one-to-many orthologs (`ALPHA: alpha synthase (1 of 4)`:
+  each copy is one of four), in the tag (`4to1`) and in the provenance. N is counted after every
   gene is named: the genes that **carry** the name, not the genes OMA paired with the human gene
   (a copy may be named as a transposon, withheld, or curated instead); the provenance then adds
   "OMA pairs M genes here with it, K of them named by other evidence". Copies named from one
@@ -562,10 +563,10 @@ is trusted.
 | File | Content |
 |---|---|
 | `geneNames.tsv` | `ID MAINID GroupId Desc Note`; Desc is the name with its evidence tag; Note records the source, evidence type, ids and score of the name. A gene with no name keeps its own transcript id as name and description |
-| `gene_name_source.<kind>.moop.tsv` | database annotation type "Gene Name Source" — the provenance of every name, one row per gene and isoform. Accession = what the name came from, description = why, in words (`Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)`), score = the naming step (1–7). One source per kind of accession link: HGNC gene, HGNC gene group, Ensembl gene, PANTHER family, InterPro domain, Pfam (transposable element), naming species (NCBI), human-curated, the gene set's own name |
+| `gene_name_source.<kind>.moop.tsv` | database annotation type "Gene Name Source" — the provenance of every name, one row per gene and isoform. Accession = what the name came from, description = why, in words (`Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)`), score = the naming step (1–8; 0 for no name). One source per kind of accession link: HGNC gene, HGNC gene group, Ensembl gene, PANTHER family, InterPro domain, Pfam (transposable element), naming species (NCBI), human-curated, the gene set's own name — and `Gene name source: none` for genes with no name (accession `None`; the description says "None: no hits" or "None: hits did not pass the naming tests") |
 | `closest_<species>.tsv` | per id: gene id, symbol, description, evidence |
 | `closest_<species>[.ensembl\|.family].moop.tsv` | database annotation type "Closest Gene", one source per file so each has one link: human — `Closest human gene (HGNC)` (genenames.org), `Closest human gene (Ensembl, no HGNC record)` (Ensembl), `Closest human gene family` (no link); other species — `Closest <species> gene`, `Closest <species> gene family`. A row for the gene and each isoform; score = tier (human) or rank (other species: 1 OMA, 2 reciprocal best hit, 3 DIAMOND best hit, 4 hits file) |
-| `naming_decisions.tsv` | for people to read, not loaded anywhere: one row per gene — the name, the step that gave it and the full reason; the gene's best and second human hits and best PANTHER family with their scores **whatever the cutoffs**; and every step's own result (`NAMED`, `not used:` why, `passed over`/`skipped:` the rule that set it aside, `not reached;` what it would have said), plus the closest human gene and the closest gene in each other species (`Closest_<tag>`); and `Pipeline_name`, the name moop's own steps give with step 2 left out (no native name, no naming species) — the same as the name unless step 2 named the gene, so the columns never change between runs. With `--native`, also the gene set's own name. A `#` header records the run (date, script and git commit, command), the programs and data read (versions, file dates), the naming steps, every cutoff, the abbreviations and the columns — written from the code's own constants, so it always matches the run |
+| `naming_decisions.tsv` | for people to read, not loaded anywhere: one row per gene — the name, the step that gave it and the full reason; the gene's best and second human hits and best PANTHER family with their scores **whatever the cutoffs**; and every step's own result (`NAMED`, `not used:` why, `passed over`/`skipped:` the rule that set it aside, `not reached;` what it would have said), plus the closest human gene, what each method points to (`Evidence_by_method`: OMA pairwise, OMA HOG, reciprocal best hit, via another species, best human hit, PANTHER tree placement and PANTHER family, each marked `+` if it includes the closest human gene, `C` if it points elsewhere, `X` if set aside — a report, not a vote, since the methods share one signal), and the closest gene in each other species (`Closest_<tag>`); and `Pipeline_name`, the name moop's own steps give with step 2 left out (no native name, no naming species) — the same as the name unless step 2 named the gene, so the columns never change between runs. With `--native`, also the gene set's own name. A `#` header records the run (date, script and git commit, command), the programs and data read (versions, file dates), the naming steps, every cutoff, the abbreviations and the columns — written from the code's own constants, so it always matches the run |
 | `genes.gff` | attributes `closestHGNC`, `closestHumanSym`, `closestHumanDesc`, `closestHumanEvidence`; `closest<Tag>Id/Sym/Desc/Evidence` for other species |
 
 ## 8. Reproducibility
@@ -579,7 +580,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 122 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 129 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 
