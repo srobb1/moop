@@ -106,6 +106,10 @@ my $xrefs = join("\t", qw(accession taxid gene_name hgnc_ids ensembl_genes ensem
   . "P00022\t9606\tMIX4\tHGNC:22\tENSG22\tENSP22\tPTHR00029\t\n";
 system('mkdir', '-p', "$dir/uniprot") == 0 or die;
 gzip(\$xrefs => "$dir/uniprot/sprot_xrefs.tsv.gz") or die $GzipError;
+# ---- the Pfam domains of human genes (update_reference_data.sh human_domains), and Pfam's names
+my $human_pfam = "# UniProt release test\naccession\thgnc_ids\tpfam_ids\nP00001\tHGNC:1\tPF00001;PF00099\n";
+gzip(\$human_pfam => "$dir/uniprot/human_pfam.tsv.gz") or die $GzipError;
+write_file("$dir/pfam_names.tsv", "PF00001\tKinase\tkinase domain\nPF00099\tSH2x\tan SH2-like domain\n");
 
 # ---- OMA: pairwise orthologs to HUMAN (1:1, many:1, 1:many) and to NEMVE
 my $human = sub { my ($n) = @_; my %name = (1 => 'alpha synthase', 2 => 'beta protein 1', 3 => 'beta protein 2', 4 => 'gamma transferase',
@@ -304,6 +308,8 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
 my $row = sub { my ($id, $len, $analysis, $sig, $desc, $start, $end, $score, $ipr, $ipr_desc) = @_;
   return join("\t", "$id.1", 'md5', $len, $analysis, $sig, $desc, $start, $end, $score, 'T', '04-08-2026', $ipr, $ipr_desc, '-', '-') . "\n" };
 write_file("$dir/iprscan.tsv", join('',
+  # T1 carries one of ALPHA's two Pfam domains
+  $row->('T1',  300, 'Pfam',    'PF00001.9', 'kinase',          10, 250, '1.0E-40', 'IPR000001', 'Kinase domain'),
   $row->('T6',  100, 'PANTHER', 'PTHR00006', 'WIDGET PROTEIN SMC', 3, 97, '1.0E-30', '-', '-'),
   $row->('T7',  200, 'PANTHER', 'PTHR00007', '-',                1,  190, '1.0E-25', '-', '-'),
   $row->('T7',  200, 'Pfam',    'PF00001',   'kinase',           1,  100, '1.0E-5',  'IPR000001', 'Kinase domain'),
@@ -424,7 +430,7 @@ my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/pro
   '--oma-dir', "$dir/oma", '--oma-code', 'TEST', '--mmseqs-dir', "$dir/mmseqs", '--ref-db', "$dir/refdb",
   '--diamond-dir', "$dir/diamond", '--uniprot-dir', "$dir/uniprot",
   '--interproscan', "$dir/iprscan.tsv", '--interpro-entries', "$dir/entry.list", '--panther-hmm-lengths', "$dir/hmm_lengths.tsv",
-  '--panther-placements', "$dir/panther_placements.tsv", '--model-coverage', "$dir/model_coverage.tsv",
+  '--panther-placements', "$dir/panther_placements.tsv", '--model-coverage', "$dir/model_coverage.tsv", '--pfam-names', "$dir/pfam_names.tsv",
   '--closest-species', 'species=Nematostella vectensis|tag=Nvec|label=sea anemone|oma_code=NEMVE|hits=|use_for_names=0|same_species=0');
 foreach my $seed (1, 2) {
   my $out = "$dir/out$seed";
@@ -520,7 +526,7 @@ check(!grep({ my $symbol = /^([^:]*):/ ? $1 : ''; $symbol =~ /[\[|]/ } values %n
 # ---- provenance: why each name, as loaded into MOOP (accession, description, step, source)
 my $p = sub { my ($gene) = @_; return $source{$gene} ? join(' | ', @{$source{$gene}}) : '(no row)'; };
 check(($source{G1}[0] // '') eq 'HGNC:1' && ($source{G1}[2] // '') eq '3'
-      && ($source{G1}[1] // '') eq 'Strong: Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001); aligned over 95% of this protein and 95% of ALPHA (full-length)',
+      && ($source{G1}[1] // '') eq 'Strong: Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001); aligned over 95% of this protein and 95% of ALPHA (full-length); has 1 of ALPHA\'s 2 Pfam domains; lacks PF00099 SH2x',
       'G1 provenance: HGNC:1, OMA 1:1, its support, step 3', $p->('G1'));
 check(($source{G2}[1] // '') eq 'Moderate: Ortholog of human GAMMA (OMA, many:1), one of 2 genes in this genome named after it (the others: G3); '
       . 'OMA pairs 3 genes here with it, 1 of them named by other evidence; GAMMA is its best human similarity hit; '
@@ -702,6 +708,10 @@ check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', 
   my ($line) = grep { my $header_line = $_; $header_line =~ /^#   reference proteome ENS_homo_sapiens/ } <$header_fh>;
   close $header_fh;
   check(scalar(($line // '') =~ m{Homo_sapiens\.test\.pep\.all\.fa\.gz}), 'decision table header: the reference proteome file read', $line);
+  open my $pfam_header_fh, '<', "$out/naming_decisions.tsv" or die;
+  my ($pfam_line) = grep { my $header_line = $_; $header_line =~ /^#   human Pfam domains:/ } <$pfam_header_fh>;
+  close $pfam_header_fh;
+  check(scalar(($pfam_line // '') =~ /^#   human Pfam domains: UniProt release test \(/), 'decision table header: the human Pfam table, read as text', $pfam_line);
 }
 
 # ---- same output whatever the hash seed

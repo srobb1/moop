@@ -313,6 +313,13 @@ The steps are tried in this order; the step number is the Score of the Gene Name
 - **The copies are listed.** A many:1 name's provenance names the other genes carrying it ("one of 3
   genes in this genome named after it (the others: …)"; up to 10, then "and N more"), so specific
   primers, RNAi or antibodies can be designed.
+- **Domains are compared.** Every single-gene orthology, tree and `-like` name says whether the gene
+  has the Pfam domains of the human gene it is named after ("has all 3 of ALPHA's Pfam domains
+  (…)" / "has 2 of ALPHA's 3 Pfam domains; lacks PF00017 SH2"): the human gene's domains from its
+  reviewed UniProt entries (`uniprot/human_pfam.tsv.gz`, same UniProt release as the Swiss-Prot
+  table), the gene's from its InterProScan Pfam matches (a fragment under 50% of its model does not
+  count), the names from the Pfam release InterProScan ran (`pfam/pfam_names.tsv`). Reported only:
+  it does not change the name.
 - **Alignment coverage is stated.** Every orthology name (and a tree name) says how much of this
   protein and of the human protein the best alignment to the named gene covers, and whether it is
   full-length ("aligned over 95% of this protein and 88% of ALPHA (full-length)").
@@ -680,7 +687,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 147 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 148 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

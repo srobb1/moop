@@ -4,7 +4,7 @@
 #
 #   bash scripts/update_reference_data.sh              every step
 #   bash scripts/update_reference_data.sh hgnc panther_trees   only these steps
-#       (compara hgnc taxonomy uniprot interpro panther panther_trees)
+#       (compara hgnc taxonomy uniprot human_domains interpro panther pfam panther_trees)
 #
 # Writes only under $REFERENCE_DATA (paths.sh; dev/smr_dev/moop); $REF_DB is only read.
 #
@@ -22,6 +22,11 @@
 #       secondary accessions, parsed from uniprot_sprot.dat.gz (parse_uniprot_dat.pl, next to
 #       this script; the flat file itself is not kept). Rebuilt when UniProt publishes a new
 #       release, so it is never older than the Swiss-Prot the annotation pipeline searched.
+#   uniprot/human_pfam.tsv.gz
+#       per reviewed human UniProt entry: HGNC ids and Pfam domains (fetch_human_domains.py, paged
+#       from rest.uniprot.org and checked against UniProt's total). Gene naming says whether a gene
+#       has the Pfam domains of the human gene it is named after. Rebuilt when sprot_xrefs.tsv.gz
+#       moves to a new UniProt release, so the two always come from the same release.
 #   interpro/entry.list
 #       every InterPro entry: accession, type (Domain, Repeat, Family, ...) and curated name.
 #       Gene naming's last step names a gene after its InterPro domain or repeat; the type is
@@ -32,6 +37,10 @@
 #       PANTHER family only when the match covers most of the family's model; InterProScan's
 #       TSV has no model coordinates, so the model length comes from here. Rebuilt when the
 #       binHmm changes (md5), so it always matches the PANTHER release InterProScan ran.
+#   pfam/pfam_names.tsv
+#       Pfam accession, short name and description, from pfam_a.dat in $INTERPROSCAN_DIR (the Pfam
+#       release InterProScan ran): the names of the human gene's domains a gene lacks. Rebuilt when
+#       pfam_a.dat changes (md5).
 #   panther/treegrafter/<release>/
 #       PANTHER's TreeGrafter data for the release InterProScan uses (PANTHER<release>_data.tar.gz
 #       from data.pantherdb.org/ftp/downloads/TreeGrafter/, ~3 GB): the family trees with every
@@ -285,6 +294,60 @@ update_panther() {
   echo "panther: release $release saved ($(wc -l < "$dir/hmm_lengths.tsv") families)"
 }
 
+# ---------------------------------------------------------------- human Pfam domains (UniProt)
+update_human_domains() {
+  local dir="$MOOP_DIR/uniprot" release have
+  release=$(sed -n 's/^UniProt release \([0-9_]*\).*/\1/p' "$dir/VERSION.txt" 2>/dev/null)
+  have=$(gzip -dc "$dir/human_pfam.tsv.gz" 2>/dev/null | head -1 | sed -n 's/^# UniProt release \([0-9_]*\).*/\1/p')
+  if [ -n "$have" ] && [ "$have" = "$release" ]; then
+    echo "human_domains: UniProt release $have current"
+    return
+  fi
+  echo "human_domains: fetching reviewed human Pfam domains (UniProt ${release:-current})"
+  if ! python3 "$SCRIPTS/fetch_human_domains.py" --out "$dir/human_pfam.tsv.gz"; then
+    warn "human_domains: download failed; keeping the existing copy"
+    return
+  fi
+  have=$(gzip -dc "$dir/human_pfam.tsv.gz" | head -1 | sed -n 's/^# UniProt release \([0-9_]*\).*/\1/p')
+  [ -n "$release" ] && [ "$have" != "$release" ] \
+    && warn "human_domains: UniProt served release $have, sprot_xrefs.tsv.gz is $release; run the uniprot step too"
+}
+
+# ---------------------------------------------------------------- Pfam names (InterProScan's Pfam)
+update_pfam() {
+  local dir="$MOOP_DIR/pfam" dats dat release md5 tmp
+  mkdir -p "$dir"
+  dats=("$INTERPROSCAN_DIR"/data/pfam/*/pfam_a.dat)
+  if [ ! -s "${dats[0]}" ]; then
+    warn "pfam: no data/pfam/*/pfam_a.dat under INTERPROSCAN_DIR=$INTERPROSCAN_DIR; keeping the existing copy"
+    return
+  fi
+  if [ ${#dats[@]} -gt 1 ]; then
+    warn "pfam: several Pfam releases under $INTERPROSCAN_DIR/data/pfam (${dats[*]}); keeping the existing copy"
+    return
+  fi
+  dat=${dats[0]}
+  release=$(basename "$(dirname "$dat")")
+  md5=$(md5sum "$dat" | cut -d' ' -f1)
+  if [ -s "$dir/pfam_names.tsv" ] && grep -q "md5 $md5" "$dir/VERSION.txt" 2>/dev/null; then
+    echo "pfam: release $release current"
+    return
+  fi
+  tmp="$dir/pfam_names.tsv.tmp"
+  ## one "#=GF ID", "#=GF AC" and "#=GF DE" line per family, in that order
+  awk '/^#=GF ID/ { id = $3 }
+       /^#=GF AC/ { accession = $3; sub(/\.[0-9]+$/, "", accession) }
+       /^#=GF DE/ { description = $0; sub(/^#=GF DE +/, "", description); print accession "\t" id "\t" description }' "$dat" > "$tmp"
+  if [ "$(wc -l < "$tmp")" -lt 10000 ] || grep -qv -P '^PF\d+\t\S+\t' "$tmp"; then
+    rm -f "$tmp"
+    warn "pfam: $dat gave an unexpected names table; keeping the existing copy"
+    return
+  fi
+  mv "$tmp" "$dir/pfam_names.tsv"
+  echo "Pfam release $release: accession, name, description read $TODAY from $dat (md5 $md5)" > "$dir/VERSION.txt"
+  echo "pfam: release $release saved ($(wc -l < "$dir/pfam_names.tsv") families)"
+}
+
 # ---------------------------------------------------------------- PANTHER trees (TreeGrafter data)
 update_panther_trees() {
   local base="$MOOP_DIR/panther/treegrafter" hmms release dir tarball url
@@ -319,11 +382,11 @@ update_panther_trees() {
 }
 
 STEPS=("$@")
-[ ${#STEPS[@]} -eq 0 ] && STEPS=(compara hgnc taxonomy uniprot interpro panther panther_trees)
+[ ${#STEPS[@]} -eq 0 ] && STEPS=(compara hgnc taxonomy uniprot human_domains interpro panther pfam panther_trees)
 for step in "${STEPS[@]}"; do
   case "$step" in
-    compara|hgnc|taxonomy|uniprot|interpro|panther|panther_trees) "update_$step" ;;
-    *) warn "unknown step '$step' (compara hgnc taxonomy uniprot interpro panther panther_trees)" ;;
+    compara|hgnc|taxonomy|uniprot|human_domains|interpro|panther|pfam|panther_trees) "update_$step" ;;
+    *) warn "unknown step '$step' (compara hgnc taxonomy uniprot human_domains interpro panther pfam panther_trees)" ;;
   esac
 done
 

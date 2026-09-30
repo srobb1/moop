@@ -613,6 +613,10 @@ build_naming_args() {
     fi
   done
 
+  ## Pfam names, for the human gene's domains a gene lacks (update_reference_data.sh pfam); the
+  ## human domains themselves are read from $REFERENCE_DATA/uniprot/human_pfam.tsv.gz
+  [ -s "$REFERENCE_DATA/pfam/pfam_names.tsv" ] && NAMING_ARGS+=(--pfam-names "$REFERENCE_DATA/pfam/pfam_names.tsv")
+
   ## the gene set's species, taxon and accessions, for the header of naming_decisions.tsv
   [ -s "$GENESET_DIR/metadata.yaml" ] && NAMING_ARGS+=(--metadata "$GENESET_DIR/metadata.yaml")
 

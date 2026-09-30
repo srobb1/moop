@@ -20,6 +20,7 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #        --panther-hmm-lengths moop/panther/hmm_lengths.tsv] \
 #       [--panther-placements panther_placements.tsv (scripts/panther_placements.py)] [--metadata metadata.yaml] \
 #       [--model-coverage model_coverage.tsv (scripts/interproscan_model_coverage.py)] \
+#       [--pfam-names moop/pfam/pfam_names.tsv (update_reference_data.sh pfam)] \
 #       [--human-curated-gene-names curated.moop.tsv ...] \
 #       [--closest-species 'tag=Nvec|species=Nematostella vectensis|label=sea anemone|oma_code=NEMVE|hits=FILE|diamond=DIR|rbh=DIR|use_for_names=0|same_species=0' ...] \
 #       --out-names geneNames.tsv --out-dir DIR
@@ -293,6 +294,9 @@ my %gene_family_coverage;   # group -> PANTHER family -> the gene's best model c
 my %family_coverage_needed; # group -> PANTHER family -> the bar that applied (model 75, residues 80)
 my %tree;             # group -> its PANTHER tree placement (read_panther_placements)
 my %model_coverage;   # "protein\tanalysis\tsignature" -> % of the signature's model aligned (--model-coverage)
+my %gene_pfam;        # group -> Pfam accession -> 1: the gene's Pfam domains (InterProScan; fragments of a model left out)
+my %human_pfam;       # HGNC id -> Pfam accession -> 1 (uniprot/human_pfam.tsv.gz)
+my %pfam_name;        # Pfam accession -> short name (--pfam-names)
 
 # ============================================================== main
 sub main {
@@ -302,7 +306,7 @@ sub main {
              'oma-dir=s', 'oma-code=s', 'mmseqs-dir=s', 'diamond-dir=s', 'ref-db=s',
              'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'native=s', 'oma-id-map=s',
              'human-curated-gene-names=s@', 'closest-species=s@',
-             'interproscan=s', 'interpro-entries=s', 'panther-hmm-lengths=s', 'panther-placements=s', 'model-coverage=s', 'metadata=s',
+             'interproscan=s', 'interpro-entries=s', 'panther-hmm-lengths=s', 'panther-placements=s', 'model-coverage=s', 'pfam-names=s', 'metadata=s',
              'out-names=s', 'out-dir=s')
     or die "bad options\n";
   foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-dir)) {
@@ -361,6 +365,8 @@ sub main {
   resolve_compara();
   name_species();
   read_human_panther() if defined $opt{'uniprot-dir'};
+  read_human_pfam() if defined $opt{'uniprot-dir'};
+  read_pfam_names($opt{'pfam-names'}) if defined $opt{'pfam-names'};
   if (defined $opt{interproscan}) {
     foreach my $needed (qw(interpro-entries panther-hmm-lengths)) {
       die "--interproscan needs --$needed (update_reference_data.sh makes it)\n" unless defined $opt{$needed};
@@ -905,6 +911,63 @@ sub link_swissprot_hits {
   }
 }
 
+# Pfam domains of human genes (uniprot/human_pfam.tsv.gz: accession hgnc_ids pfam_ids, from
+# update_reference_data.sh human_domains); every entry of a gene counts
+sub read_human_pfam {
+  my $file = "$opt{'uniprot-dir'}/human_pfam.tsv.gz";
+  if (!-s $file) {
+    $stats{'note: no uniprot/human_pfam.tsv.gz: no domain comparison (update_reference_data.sh human_domains)'} = 1;
+    return;
+  }
+  open my $fh, "gzip -dc '$file' |" or die "cant read $file\n";
+  while (my $line = <$fh>) {
+    next if $line =~ /^#/ or $line =~ /^accession\t/;
+    chomp $line;
+    my ($accession, $hgnc_ids, $pfam_ids) = split /\t/, $line, -1;
+    next unless defined $pfam_ids and $pfam_ids ne '' and $hgnc_ids ne '';
+    foreach my $hgnc_id (split /;/, $hgnc_ids) {
+      foreach my $pfam (split /;/, $pfam_ids) {
+        $human_pfam{$hgnc_id}{$pfam} = 1;
+      }
+    }
+  }
+  close $fh;
+}
+
+# Pfam accession -> short name (pfam_names.tsv: accession name description)
+sub read_pfam_names {
+  my ($file) = @_;
+  open my $fh, '<', $file or die "cant open $file $!\n";
+  while (my $line = <$fh>) {
+    chomp $line;
+    my ($pfam, $short) = split /\t/, $line;
+    $pfam_name{$pfam} = $short if defined $short;
+  }
+  close $fh;
+}
+
+# "has all 3 of ALPHA's Pfam domains (Kinase, SH2, SH3)" / "has 2 of ALPHA's 3 Pfam domains; lacks
+# PF00017 SH2": the domains of the human gene a name comes from, found or not in this gene
+# (InterProScan's Pfam matches; a fragment of a model does not count). Reported only; it does not
+# change the name. '' when either side has no Pfam data.
+sub domain_text {
+  my ($group, $human) = @_;
+  return '' unless defined $opt{interproscan} and $human and $human->{hgnc_id};
+  my @human_domains = sort keys %{$human_pfam{$human->{hgnc_id}} // {}};
+  return '' unless @human_domains;
+  my $own = $gene_pfam{$group} // {};
+  my @found = grep { my $pfam = $_; $own->{$pfam} } @human_domains;
+  my @missing = grep { my $pfam = $_; !$own->{$pfam} } @human_domains;
+  my $named = sub { my ($pfam) = @_; $pfam . (defined $pfam_name{$pfam} ? " $pfam_name{$pfam}" : '') };
+  my $label = human_label($human);
+  my $count = scalar @human_domains;
+  return "has " . ($count == 1 ? "${label}'s Pfam domain" : "all $count of ${label}'s Pfam domains")
+       . ' (' . join(', ', map { my $pfam = $_; $named->($pfam) } @found) . ')' unless @missing;
+  my @listed = @missing[0 .. ($#missing < 3 ? $#missing : 3)];
+  return "has " . scalar(@found) . " of ${label}'s $count Pfam domain" . ($count == 1 ? '' : 's') . '; lacks '
+       . join(', ', map { my $pfam = $_; $named->($pfam) } @listed) . (@missing > 4 ? ' and ' . (@missing - 4) . ' more' : '');
+}
+
 # PANTHER families of human genes, from their Swiss-Prot entries: an orthology name is supported
 # when the gene's own PANTHER family (InterProScan) is one of its human gene's (oma_support)
 sub read_human_panther {
@@ -1273,6 +1336,11 @@ sub read_interpro_domains {
     my ($id, $analysis, $signature, $score, $interpro) = @fields[0, 3, 4, 8, 11];
     if (defined $analysis and !$NOT_HOMOLOGY_ANALYSIS{$analysis} and (my $evidence_group = group_for($id))) {
       $any_evidence{$evidence_group}{"InterProScan $analysis"} = 1;
+      if ($analysis eq 'Pfam' and defined $signature) {
+        my $pfam = $signature =~ s/\.\d+$//r;
+        my $percent = $model_coverage{"$id\tPfam\t$pfam"};
+        $gene_pfam{$evidence_group}{$pfam} = 1 unless defined $percent and $percent < $DOMAIN_MIN_MODEL_COVERAGE;
+      }
     }
     if ($analysis eq 'Pfam' and defined $signature and $TE_PFAM{$signature =~ s/\.\d+$//r}) {
       my $te_group = group_for($id);
@@ -2335,6 +2403,8 @@ sub tree_name {
   my $rule = "Ortholog of human " . human_label($human) . " by its place on the PANTHER family tree: $text; and "
            . human_label($human) . " is also its closest human gene by similarity ($closest->{evidence})"
            . ($coverage ne '' ? "; $coverage" : '');
+  my $domains = domain_text($group, $human);
+  $rule .= "; $domains" if $domains ne '';
   return { desc => ($symbol ne '' ? "$symbol: $human->{name}" : $human->{name}), selected => selected_id($group, $placement->{protein}),
            tag => ['ISO', 'tree', ($closest->{tier} == 3 ? 'rbh' : $closest->{tier} == 4 ? 'via' : 'bh')],
            note => "PANTHER_TreeGrafter|Orthologs|$placement->{protein}|$placement->{panther_match}|$placement->{evalue}",
@@ -2600,6 +2670,8 @@ sub oma_support {
   # for experiments sees at once whether the gene here holds the whole of the human protein
   my $coverage = alignment_coverage_text($group, $humans);
   push @said, $coverage if $coverage ne '';
+  my $domains = @$humans == 1 ? domain_text($group, $humans->[0]) : '';
+  push @said, $domains if $domains ne '';
   my $text = @said ? '; ' . join('; ', @said) : '';
   # members of OMA's set that were not counted (readthroughs, other models of one gene) are named here
   $text .= $closest->{not_counted} if $closest and $closest->{not_counted};
@@ -2994,6 +3066,8 @@ sub like_text {
   my $rule = sprintf('Similar to human %s along its length: %s, %.0f%% of this protein and %.0f%% of %s aligned, E=%s (%s)',
                      $label, ($entry->{rbh} ? 'reciprocal best hit' : 'best hit'), $hit->{qcov}, $hit->{tcov},
                      $label, e_value($hit->{evalue}), $hit->{tool});
+  my $domains = domain_text($group, $human);
+  $rule .= "; $domains" if $domains ne '';
   if ($tie_flag) {
     $rule .= "; " . join(', ', map { my $human = $_; human_label($human) } @$tie_genes) . " score within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE))
            . " of each other, and only $label is a reciprocal best hit";
@@ -3324,6 +3398,14 @@ sub input_lines {
   push @lines, "NCBI taxonomy: $opt{'taxonomy-dir'}" if defined $opt{'taxonomy-dir'};
   push @lines, "InterProScan model coverage (JSON): $opt{'model-coverage'} (" . file_date($opt{'model-coverage'}) . ')'
     if defined $opt{'model-coverage'};
+  my $human_pfam_file = defined $opt{'uniprot-dir'} ? "$opt{'uniprot-dir'}/human_pfam.tsv.gz" : '';
+  if ($human_pfam_file ne '' and -s $human_pfam_file and open my $pfam_fh, "gzip -dc '$human_pfam_file' |") {
+    my $about = <$pfam_fh> // '';
+    close $pfam_fh;
+    chomp $about;
+    push @lines, 'human Pfam domains: ' . ($about =~ s/^# //r) . " ($human_pfam_file, " . file_date($human_pfam_file) . ')';
+  }
+  push @lines, "Pfam names: $opt{'pfam-names'} (" . file_date($opt{'pfam-names'}) . ')' if defined $opt{'pfam-names'};
   if (defined $opt{'panther-placements'}) {
     my $about = '';
     if (open my $placements_fh, '<', $opt{'panther-placements'}) {
