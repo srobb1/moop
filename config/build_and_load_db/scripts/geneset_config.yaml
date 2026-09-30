@@ -70,10 +70,12 @@
 # Settings:
 #   human_curated_gene_names: FILE        names a person assigned (format below)
 #   transcript_hits: FILE                 optional: the gene set's proteins searched against the
-#                                         species' OWN transcriptome ORFs (e.g. TransDecoder of a
-#                                         Trinity assembly), DIAMOND/BLAST tabular (outfmt 6; only
-#                                         qseqid ... qstart qend are read). Ids need not agree: the
-#                                         search pairs them. A gene with an ORF match (>= 95%
+#                                         species' OWN experimental transcriptome -- made by
+#                                         scripts/transcriptome_search.sh (its OUT_DIR/
+#                                         transcript_hits.tsv.gz; the LABEL in db_version.txt beside
+#                                         it is shown). Any BLAST-tabular search works (only qseqid
+#                                         ... qstart qend are read). Ids need not agree: the search
+#                                         pairs them. A gene with an ORF match (>= 95%
 #                                         identity over >= 90% of the protein) is reported as
 #                                         expressed; no match is NOT reported (a transcriptome
 #                                         samples some tissues and stages -- absence is no evidence

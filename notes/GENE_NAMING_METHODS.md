@@ -550,11 +550,13 @@ present): SignalP 6 (`--signalp`: signal peptide and its kind), DeepTMHMM (`--de
 when there are some) and DeepLoc 2 (`--deeploc`: its location, only where DeepLoc found a sorting signal -- without
 one the location is a default, mostly "cytoplasm", and would read like a finding; 15,440 Congeria proteins).
 Optional per gene set (`transcript_hits:` in geneset_config.yaml, `--transcript-hits`): the proteins searched against
-the species' own transcriptome ORFs; a match of >= 95% identity over >= 90% of the protein is reported as
-"expressed: an ORF of its own transcriptome matches it". **Positive only**: a transcriptome samples some tissues and
+the species' own experimental transcriptome with `scripts/transcriptome_search.sh` (MMseqs2; nucleotide transcripts
+searched translated, or predicted ORFs as proteins; the search pairs ids, which need not agree; its LABEL -- what the
+transcriptome is, tissues and stages -- is shown). A match of >= 95% identity over >= 90% of the protein is reported as
+"expressed: a transcript of its own transcriptome (Trinity, adult gill and mantle) matches it". **Positive only**: a transcriptome samples some tissues and
 stages at some depth, so no match is not evidence a gene is not expressed, and is not reported. Both appear in the
 decision table (`Protein_features`, `Transcript_support`) for every gene, and in the provenance of genes with no name:
-"None: no hits (...); expressed: an ORF of its own transcriptome matches it (100% identity over 100% of the protein);
+"None: no hits (...); expressed: a transcript of its own transcriptome matches it (100% identity over 100% of the protein);
 predicted: signal peptide (SignalP 6); 1 transmembrane helix (DeepTMHMM); location cell membrane (DeepLoc 2: signal
 peptide, transmembrane domain)". Congeria (Trinity ORFs from mender's search): 2,553 no-hit genes are expressed,
 1,970 of them with a predicted feature (857 a nuclear signal, 558 membrane, 421 secreted) -- candidates for genes new

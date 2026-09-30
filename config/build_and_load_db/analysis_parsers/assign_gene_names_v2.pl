@@ -327,6 +327,7 @@ my %signal_peptide;   # protein -> SignalP 6 prediction, as words ("signal pepti
 my %tm_helices;       # protein -> DeepTMHMM transmembrane helix count
 my %location;         # protein -> { places => "Cytoplasm|Nucleus", signals => "Nuclear export signal" } (DeepLoc 2, signal found)
 my %transcript_match; # protein -> [identity %, % of the protein] of its best own-transcriptome ORF match (--transcript-hits)
+my $transcriptome_label = '';   # what the transcriptome is (db_version.txt next to --transcript-hits, scripts/transcriptome_search.sh)
 
 # ============================================================== main
 sub main {
@@ -380,7 +381,16 @@ sub main {
   %signal_peptide   = read_signalp($opt{signalp})             if defined $opt{signalp};
   %tm_helices       = read_deeptmhmm($opt{deeptmhmm})         if defined $opt{deeptmhmm};
   %location         = read_deeploc($opt{deeploc})             if defined $opt{deeploc};
-  %transcript_match = read_transcript_hits($opt{'transcript-hits'}) if defined $opt{'transcript-hits'};
+  if (defined $opt{'transcript-hits'}) {
+    %transcript_match = read_transcript_hits($opt{'transcript-hits'});
+    my $version_file = ($opt{'transcript-hits'} =~ s{[^/]*$}{}r) . 'db_version.txt';
+    if (-s $version_file) {
+      open my $fh, '<', $version_file or die "cant open $version_file $!\n";
+      ($transcriptome_label) = split /\t/, (<$fh> // '');
+      close $fh;
+      chomp $transcriptome_label;
+    }
+  }
 
   $hgnc = load_hgnc("$opt{'hgnc-dir'}/hgnc_complete_set.txt", "$opt{'hgnc-dir'}/withdrawn.txt");
 
@@ -603,7 +613,8 @@ sub transcript_text {
   return '' unless defined $opt{'transcript-hits'};
   my $protein = longest_member($group) // return '';
   my $match = $transcript_match{$protein};
-  return sprintf('expressed: an ORF of its own transcriptome matches it (%.0f%% identity over %.0f%% of the protein)', @$match)
+  return sprintf('expressed: a transcript of its own transcriptome%s matches it (%.0f%% identity over %.0f%% of the protein)',
+                 ($transcriptome_label ne '' ? " ($transcriptome_label)" : ''), @$match)
     if $match and $match->[0] >= $TRANSCRIPT_MIN_IDENTITY and $match->[1] >= $TRANSCRIPT_MIN_COVERAGE;
   return '';
 }
