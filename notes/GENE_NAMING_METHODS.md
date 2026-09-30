@@ -225,7 +225,7 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
 | 4 | **Transposable element** | a transposable-element Pfam domain (see below) | `<class> transposase domain-containing protein` | `ISM\|te` |
 | 5 | **PANTHER tree placement** | a trusted placement joins the gene to exactly one human gene at a speciation node, and that gene is also its closest human gene by similarity (§6, tiers 3–5) | `SYMBOL: approved name` | `ISO\|tree` |
 | 6 | **Full-length human similarity** | see below | `SYMBOL-like: approved name-like`, or `<HGNC group> family member` | `ISS` |
-| 7 | **PANTHER family** | the match covers ≥ 80% of the family's model; informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
+| 7 | **PANTHER family** | the match covers ≥ 75% of the family model's positions (≥ 80% by protein residues when there is no InterProScan JSON); informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
 | 8 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
 | – | — | nothing above | `None` (the gene keeps its own transcript id as name and description); the Gene Name Source table says which kind: **None: no hits** (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match) or **None: hits did not pass the naming tests** (with the kinds of evidence found) | — |
 
@@ -381,14 +381,16 @@ bitscore (§3).
    never taken from another gene.
 
 **Step 7 — PANTHER family.** A family names the gene only when the gene's PANTHER match covers
-≥ 80% of the family's HMM. **Model coverage** is measured on the model: the model positions
+≥ 75% of the family's HMM. **Model coverage** is measured on the model: the model positions
 (hmmStart–hmmEnd) of all the match's locations, merged, over the family model's length, from the
 InterProScan JSON (`scripts/interproscan_model_coverage.py`; the coordinates are on the family
 model — none of 2,755 checked locations passes its end). Without the JSON it falls back to the
 TSV's protein residues over the model length, which overestimates when the protein has
 insertions: on a 3,130-protein Congeria sample, 320 of the 1,935 matches at ≥ 80% by residues
 cover less than 80% of the model (PTHR10133: 100% by residues, 57% of the model); 31 go the other
-way. The decision table's header says which measure a run used. Protein coverage is not required: a multidomain
+way. The bar is 75% on the model (chosen 2026-09-30: on that sample 80% on the model kept 1,646 of the
+1,935 matches the residue measure passed, 75% kept 1,811, 70% the same number but 126 different
+matches); the residue fallback keeps its 80%. The decision table's header says which measure a run used. Protein coverage is not required: a multidomain
 protein that contains the whole family model is a member. Below the threshold the match is
 usually one shared domain (a SET domain matching the KMT5A family at 38% of its model), which
 step 8 names honestly. Among qualifying families the lowest E-value wins. The name is
@@ -608,7 +610,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 139 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 141 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

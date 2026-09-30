@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -303,11 +303,16 @@ write_file("$dir/iprscan.tsv", join('',
   # T39: the best-scoring domain covers 30% of its model (a fragment) -> the next domain names it
   $row->('T39', 300, 'Pfam',    'PF00039',   'bolt',             1,  60, '1.0E-30', 'IPR000039', 'Bolt domain'),
   $row->('T39', 300, 'Pfam',    'PF00040.12', 'nut',            100, 250, '1.0E-10', 'IPR000040', 'Nut domain'),
+  # T44: 77% of the family model by its positions (JSON) -> a family name (75% on the model)
+  $row->('T44', 200, 'PANTHER', 'PTHR00044', 'OSPREY PROTEIN',   1, 190, '1.0E-50', '-', '-'),
+  # T45: 78% by protein residues, no JSON coverage -> no family name (80% by residues)
+  $row->('T45', 200, 'PANTHER', 'PTHR00045', 'FALCON PROTEIN',   1, 156, '1.0E-50', '-', '-'),
 ));
 # ---- InterProScan model coverage from the JSON (scripts/interproscan_model_coverage.py)
 write_file("$dir/model_coverage.tsv", "# test\nprotein\tanalysis\tsignature\tmodel_length\tmodel_coverage_pct\n"
   . "T38.1\tPANTHER\tPTHR00038\t200\t55\nT38.1\tPfam\tPF00038\t100\t90\n"
-  . "T39.1\tPfam\tPF00039\t200\t30\nT39.1\tPfam\tPF00040\t160\t95\n");
+  . "T39.1\tPfam\tPF00039\t200\t30\nT39.1\tPfam\tPF00040\t160\t95\n"
+  . "T44.1\tPANTHER\tPTHR00044\t200\t77\n");
 write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDomain\tKinase domain\n"
   . "IPR000002\tDomain\tZinc finger, RING-type\nIPR000003\tDomain\tDomain of unknown function DUF1\n"
   . "IPR000010\tFamily\tGadget family\nIPR001214\tDomain\tSET domain\n"
@@ -318,7 +323,7 @@ write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDoma
   . "IPR000038\tDomain\tSpindle domain\nIPR000039\tDomain\tBolt domain\nIPR000040\tDomain\tNut domain\n");
 write_file("$dir/hmm_lengths.tsv", join('', map { my $model = $_; "$model->[0]\t$model->[1]\n" }
   ['PTHR00006', 100], ['PTHR00007', 200], ['PTHR00009', 120], ['PTHR00010', 250], ['PTHR00011', 200], ['PTHR00012', 150],
-  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300], ['PTHR00030', 200], ['PTHR00038', 200]));
+  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300], ['PTHR00030', 200], ['PTHR00038', 200], ['PTHR00044', 200], ['PTHR00045', 200]));
 
 # ---- PANTHER tree placements (scripts/panther_placements.py output)
 #   T31: one human ortholog, EPS, and EPS is its closest human gene (RBH) -> named EPS by the tree (step 5)
@@ -431,6 +436,8 @@ my %expect = (
   G28 => ['Sprocket domain-containing protein [ISM|ipr|sim~]', 'the same, but not a whole member (20% of the family model, only a partial human hit) -> not named for the family; its domain names it'],
   G38 => ['Spindle domain-containing protein [ISM|ipr]', 'PANTHER 95% by protein residues, but 55% of the model (JSON) -> no family name; its domain names it'],
   G39 => ['Nut domain-containing protein [ISM|ipr]', 'the best-scoring domain (Bolt) covers 30% of its model, a fragment -> the next domain names it'],
+  G44 => ['Osprey protein family member [ISM|pthr]', '77% of the family model (JSON) passes the 75% bar on the model'],
+  G45 => ['None', '78% by protein residues, no JSON: the 80% residue bar applies'],
   G40 => ['KAPA: kappa-a synthase [ISO|1to1|sim+]', 'OMA 1:many with KAPA and its readthrough LAMB-KAPA -> the readthrough is not counted: KAPA'],
   G42 => ['MU: mu oxidase [ISO|1to1|sim+]', 'OMA 1:many with MU and a novel protein that is MU\'s own sequence -> MU'],
   G30 => ['Cerebellin-related family member [ISM|pthr]', 'InterPro names the family by a function ("Cerebellin Synaptic Organizer") -> PANTHER\'s own name'],

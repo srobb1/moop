@@ -102,7 +102,11 @@ my %FULL   = (evalue => 1e-10, qcov => 80, tcov => 80);
 # same "full length" bar as FULL, measured on the model alone: a protein that also carries other
 # domains is still a member. Below it the match is usually one shared domain (a SET domain
 # matching the KMT5A family at 38% of its model), which the InterPro domain step names honestly.
-my $FAMILY_MODEL_COVERAGE = 80;
+# Measured on the model (JSON) the bar is 75% (user, 2026-09-30: on a Congeria sample, 80% on the
+# model kept 1,646 of the 1,935 matches the old residue measure passed, 75% kept 1,811); measured by
+# protein residues (no JSON), which overestimates, it stays 80%.
+my $FAMILY_MODEL_COVERAGE = 75;
+my $FAMILY_RESIDUE_COVERAGE = 80;
 # Model coverage is measured on the MODEL (hmmStart-hmmEnd, from the InterProScan JSON through
 # scripts/interproscan_model_coverage.py, --model-coverage) when available; without it, from the
 # TSV's protein residues over the model length, which overestimates when the protein has insertions
@@ -278,6 +282,7 @@ my %candidates;       # group -> naming step -> its candidate: a name, or { why 
 my %decision;         # group -> { step (0: none), reached => [steps tried], passed => { step => why } }
 my %panther_label;    # PANTHER family -> InterPro's Family name when integrated, else PANTHER's cleaned name
 my %gene_family_coverage;   # group -> PANTHER family -> the gene's best model coverage (%, any isoform)
+my %family_coverage_needed; # group -> PANTHER family -> the bar that applied (model 75, residues 80)
 my %tree;             # group -> its PANTHER tree placement (read_panther_placements)
 my %model_coverage;   # "protein\tanalysis\tsignature" -> % of the signature's model aligned (--model-coverage)
 
@@ -1117,7 +1122,9 @@ sub read_panther_families {
       $stats{'PANTHER model coverage: from protein residues (TSV)'}++ if %model_coverage;
     }
     $gene_family_coverage{$group}{$family_only} = $coverage if $coverage > ($gene_family_coverage{$group}{$family_only} // -1);
-    if ($coverage < $FAMILY_MODEL_COVERAGE) {
+    my $needed = defined $model_coverage{"$match->{id}\tPANTHER\t$family_only"} ? $FAMILY_MODEL_COVERAGE : $FAMILY_RESIDUE_COVERAGE;
+    $family_coverage_needed{$group}{$family_only} = $needed;
+    if ($coverage < $needed) {
       $stats{'PANTHER match: below model coverage'}++;
       next;
     }
@@ -2181,7 +2188,9 @@ sub panther_family_name {
     my $coverage = $gene_family_coverage{$group} // {};
     my ($best) = sort { $coverage->{$b} <=> $coverage->{$a} or $a cmp $b } keys %$coverage;
     return not_named(defined $best
-                     ? "best PANTHER match $best covers $coverage->{$best}% of the family model (needs $FAMILY_MODEL_COVERAGE%)"
+                     ? "best PANTHER match $best covers $coverage->{$best}% of the family model (needs "
+                       . ($family_coverage_needed{$group}{$best} // $FAMILY_MODEL_COVERAGE) . '%'
+                       . (($family_coverage_needed{$group}{$best} // 0) == $FAMILY_RESIDUE_COVERAGE ? ', measured by protein residues' : '') . ')'
                      : 'no PANTHER match');
   }
   if (($family->{repeat_fraction} // 0) >= $REPEAT_FAMILY_FRACTION) {
@@ -3123,8 +3132,8 @@ sub decision_header {
     "  any hit (support of an OMA name, best human gene): E <= " . e_value($HIT_MAX_EVALUE) . ", any coverage",
     "  paralog tie: another human gene scoring within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE)) . " of the best bitscore",
     "  PANTHER tree placement trusted: its PANTHER match E <= " . e_value($TREE_MAX_EVALUE) . ", >= $TREE_MIN_COVERAGE% of the protein and of the family model",
-    "  PANTHER family name (step 7): the match covers >= $FAMILY_MODEL_COVERAGE% of the family model"
-      . (%model_coverage ? ' (model positions, InterProScan JSON)' : ' (protein residues over the model length: no JSON)'),
+    "  PANTHER family name (step 7): the match covers >= $FAMILY_MODEL_COVERAGE% of the family model's positions (InterProScan JSON),"
+      . " or >= $FAMILY_RESIDUE_COVERAGE% by protein residues over the model length where the JSON has no coverage" . (%model_coverage ? '' : ' (this run: no JSON)'),
     "  InterPro domain name (step 8): " . (%model_coverage ? "the match covers >= $DOMAIN_MIN_MODEL_COVERAGE% of its domain model where known (not SMART, CDD, PROSITE)"
                                                             : 'no model-coverage check (no InterProScan JSON)'),
     "  PANTHER family for co-orthologs / a tie: the gene's own match >= $FAMILY_NAME_MIN_OWN_COVERAGE% of the model, or a full-length hit to a member",
