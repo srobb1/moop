@@ -24,7 +24,9 @@ Output (tab-separated, after "#" provenance lines):
 analysis and signature are spelled as in the InterProScan TSV (signature without a version suffix).
 """
 
-import argparse, datetime, gzip, json, os, sys
+import argparse, datetime, os, sys
+
+from interproscan_json import read_results
 
 # JSON library -> the TSV's analysis name, for the analyses with real model coordinates
 ANALYSIS = {
@@ -33,8 +35,14 @@ ANALYSIS = {
 }
 
 
-def open_text(path):
-    return gzip.open(path, 'rt') if path.endswith('.gz') else open(path)
+def union_length(intervals):
+    """positions covered by a list of (start, end) intervals, counting overlaps once"""
+    total, reached = 0, 0
+    for start, end in sorted(intervals):
+        if end > reached:
+            total += end - max(start, reached + 1) + 1
+            reached = end
+    return total
 
 
 def main():
@@ -51,12 +59,11 @@ def main():
             if len(fields) > 1 and fields[1].isdigit():
                 panther_length[fields[0]] = int(fields[1])
 
-    with open_text(args.json) as handle:
-        document = json.load(handle)
-
-    covered = {}   # (protein, analysis, signature) -> [model length, set of model positions]
+    # the JSON is read one protein result at a time (a gene set's is gigabytes)
+    version, results = read_results(args.json)
+    covered = {}   # (protein, analysis, signature) -> [model length, [(model start, model end), ...]]
     skipped = {}
-    for result in document['results']:
+    for result in results:
         proteins = [xref['id'] for xref in result.get('xref', [])]
         for match in result['matches']:
             library = match['signature']['signatureLibraryRelease']['library']
@@ -71,19 +78,19 @@ def main():
                 if not start or not end or not length:
                     continue
                 for protein in proteins:
-                    entry = covered.setdefault((protein, analysis, signature), [length, set()])
-                    entry[1].update(range(start, end + 1))
+                    entry = covered.setdefault((protein, analysis, signature), [length, []])
+                    entry[1].append((start, end))
 
     with open(args.out, 'w') as out:
         out.write(f"# InterProScan model coverage from {os.path.abspath(args.json)} "
-                  f"(InterProScan {document.get('interproscan-version', '?')}); PANTHER model lengths {os.path.abspath(args.panther_hmm_lengths)}; "
+                  f"(InterProScan {version}); PANTHER model lengths {os.path.abspath(args.panther_hmm_lengths)}; "
                   f"{datetime.date.today().isoformat()}\n")
         out.write('# not written (no real model coordinates): '
                   + ', '.join(f'{library} {count}' for library, count in sorted(skipped.items())) + '\n')
         out.write('protein\tanalysis\tsignature\tmodel_length\tmodel_coverage_pct\n')
         for (protein, analysis, signature) in sorted(covered):
-            length, positions = covered[(protein, analysis, signature)]
-            percent = min(100, round(100 * len(positions) / length))
+            length, intervals = covered[(protein, analysis, signature)]
+            percent = min(100, round(100 * union_length(intervals) / length))
             out.write(f'{protein}\t{analysis}\t{signature}\t{length}\t{percent}\n')
     print(f'{len(covered)} matches with model coverage written to {args.out}', file=sys.stderr)
 

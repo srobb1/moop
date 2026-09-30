@@ -26,6 +26,8 @@ of the family model it covers (so naming can decide how far to trust it).
 """
 import argparse, csv, datetime, gzip, json, os, re, sys
 
+from interproscan_json import read_results
+
 # PANTHER taxon names that are not NCBI names, and the NCBI name each stands for
 PANTHER_TAXON_ALIAS = {
     'Opisthokonts': 'Opisthokonta', 'Unikonts': 'Amorphea', 'Eubacteria': 'Bacteria',
@@ -243,14 +245,14 @@ def main():
             trees[family] = FamilyTree(path) if os.path.exists(path) else None
         return trees[family]
 
-    with open_text(args.json) as handle:
-        document = json.load(handle)
+    # the JSON is read one protein result at a time (a gene set's is gigabytes)
+    _, results = read_results(args.json)
     release = ''
     columns = ['protein', 'panther_match', 'match_name', 'evalue', 'protein_cov_pct', 'model_cov_pct', 'graft_point',
                'graft_node', 'graft_event', 'graft_taxon', 'joining_node', 'joining_event', 'joining_taxon',
                'moved_to_lineage', 'placement', 'human_genes']
     rows = []
-    for result in document['results']:
+    for result in results:
         protein_length = len(result.get('sequence', ''))
         protein_ids = [xref['id'] for xref in result.get('xref', [])]
         for match in result.get('matches', []):
