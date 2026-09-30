@@ -215,6 +215,8 @@ gives them.
 
 ## 5. Naming — the first step that yields a name wins
 
+The whole decision, as a diagram: [NAMING_DECISION_TREE.md](NAMING_DECISION_TREE.md).
+
 Every step is evaluated for every gene; the name is taken from the first step, in order, that
 gives one (with the rules below that tie steps together). What every step found — and why each
 step before the chosen one gave no name — is in `naming_decisions.tsv` (§7).
