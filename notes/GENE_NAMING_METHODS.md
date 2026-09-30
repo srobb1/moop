@@ -103,6 +103,13 @@ needs them in this form, or the rule that depends on them is silently weaker:
 | Gene set metadata | `metadata.yaml` with `ncbi-taxon-id` | `$GENESET_DIR/metadata.yaml` | no taxon id: no PANTHER tree placement |
 | Reference data | `scripts/update_reference_data.sh`: HGNC, UniProt cross-references, Ensembl Compara, NCBI taxonomy, InterPro `entry.list`, PANTHER model lengths, PANTHER TreeGrafter trees (`panther_trees`) | `$REFERENCE_DATA` | missing required files stop the build |
 
+**To verify once the annotation pipeline has changed** (it will filter the human proteome to
+canonical proteins, keeping every FASTA header as Ensembl writes it): that
+`$REF_DB/ENS_homo_sapiens/current/peptide.fa.gz` is the canonical FASTA the DIAMOND and MMseqs2
+databases were built from, that naming reads it (not the `*.pep.all.fa.gz` fallback: the
+decision table's header lists the files read), and that the stats show no "MMseqs2 ... hits
+skipped: target not in the protein FASTA".
+
 With 25 human targets, `sim-` means "the named gene is not among the protein's 25 best human
 genes (E ≤ 1e-5)", not "no similarity at all". Canonical proteins make those 25 targets 25 genes;
 against all isoforms they would be fewer.
@@ -197,7 +204,7 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
   - `TAS` — **T**raceable **A**uthor **S**tatement: a curator's name
   - `SRC` — **S**ou**RC**e: the gene set's own (RefSeq/Ensembl) name (our code; not GO)
 - **What kind:**
-  - `1to1` one-to-one · `Nto1` N copies here to one human gene · `fam` family (co-orthologs) — the OMA relationship
+  - `1to1` one-to-one · `Nto1` N genes here carry this human gene's name · `fam` family (co-orthologs) — the OMA relationship
   - `rbh` **r**eciprocal **b**est **h**it · `bh` **b**est **h**it
   - `tie-rbh` a paralog tie decided by the reciprocal best hit · `tie-grp` a paralog tie named for the HGNC **gr**ou**p**
   - `pthr` **P**AN**TH**E**R** family · `rpt` re**p**ea**t** · `ipr` **I**nter**Pr**o domain · `te` **t**ransposable **e**lement
@@ -228,7 +235,13 @@ The steps are tried in this order; the step number is the Score of the Gene Name
 - One human gene, 1:1: `SYMBOL: approved name`.
 - One human gene shared by several genes of this gene set (many:1, a lineage-specific
   duplication): every copy is an ortholog of that gene and carries the same name. The number of
-  copies is in the tag (`4to1`) and the provenance, not in the name.
+  copies is in the tag (`4to1`) and the provenance, not in the name. N is counted after every
+  gene is named: the genes that **carry** the name, not the genes OMA paired with the human gene
+  (a copy may be named as a transposon, withheld, or curated instead); the provenance then adds
+  "OMA pairs M genes here with it, K of them named by other evidence". Copies named from one
+  human gene are `Nto1` whatever OMA's pairwise type: OMA can call one copy 1:1 pairwise while
+  its HOG adds the other. (Before 2026-09-30 N was OMA's pairing count, so 26 Congeria and 28
+  *M. capitata* names had tags that did not match the genes carrying them; now none.)
 - Several human genes (1:many, many:many — typically duplications in the human lineage, such
   as the vertebrate genome duplications): named after the most specific HGNC gene group all
   members share (`EPH receptors family member`), with **no symbol** — a symbol is what users
@@ -422,7 +435,7 @@ contains no colon. The full reasoning is in the Gene Name Source table (§7).
 | `ISM` | inferred from a sequence model (PANTHER family, InterPro domain, TE domain) |
 | `TAS` | human-curated name |
 | `SRC` | the gene set's own name, or another annotation of the same species |
-| `1to1`, `Nto1`, `mto1`, `fam` | OMA relationship: one-to-one; N genes of this gene set share the human gene; many-to-one; co-ortholog family |
+| `1to1`, `Nto1`, `mto1`, `fam` | OMA relationship: one-to-one; N genes of this gene set carry the human gene's name (counted after naming); many-to-one, one copy named; co-ortholog family |
 | `tree` (on `ISO`) | orthology from the PANTHER tree placement (step 5), followed by how the closest human gene agrees: `rbh`, `via` (another species' ortholog) or `bh` |
 | `rbh`, `bh` | the `-like` hit is a reciprocal best hit, or a best hit |
 | `tie-rbh`, `tie-grp` | a paralog tie decided by a reciprocal best hit, or named for the group |
@@ -566,7 +579,7 @@ list, PANTHER model lengths, PANTHER TreeGrafter trees) are fetched and versione
 
 Each naming rule is covered by an automated end-to-end test (`tests/naming_end_to_end.pl`: a
 synthetic gene set of 35 genes, each made to hit one rule, asserting the exact name, tag,
-provenance and closest genes, plus checks of the informative-name rules; 119 checks), run on every change to the code. Each rule was also
+provenance and closest genes, plus checks of the informative-name rules; 122 checks), run on every change to the code. Each rule was also
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 

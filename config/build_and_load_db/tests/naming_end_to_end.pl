@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -75,6 +75,7 @@ write_file("$dir/hgnc/hgnc_complete_set.txt", join("\t", qw(hgnc_id symbol name 
   # its name puts "widget" and "sprocket" in HGNC's lower-case vocabulary: PANTHER's capitals are
   # sentence-cased word by word from it (SMC, not an HGNC lower-case word, stays)
   ['HGNC:23', 'WSA1', 'widget sprocket associated 1', '', '', 'ENSG23', '', ''],
+  ['HGNC:24', 'IOTA', 'iota kinase', '', '', 'ENSG24', '', ''],
 ));
 # ---- Swiss-Prot cross-references: the PANTHER families of human genes (orthology support)
 my $xrefs = join("\t", qw(accession taxid gene_name hgnc_ids ensembl_genes ensembl_proteins panther_ids secondary_accessions)) . "\n"
@@ -95,12 +96,14 @@ gzip(\$xrefs => "$dir/uniprot/sprot_xrefs.tsv.gz") or die $GzipError;
 my $human = sub { my ($n) = @_; my %name = (1 => 'alpha synthase', 2 => 'beta protein 1', 3 => 'beta protein 2', 4 => 'gamma transferase',
                                             13 => 'histone deacetylase 1', 14 => 'histone deacetylase 2',
                                             15 => 'harbinger transposase derived 1', 16 => 'centromere protein Q', 6 => 'epsilon protein',
-                                            17 => 'zeta ligase', 19 => 'mix protein 1', 20 => 'mix protein 2');
+                                            17 => 'zeta ligase', 19 => 'mix protein 1', 20 => 'mix protein 2', 24 => 'iota kinase');
   return "HUMAN0000$n | ENSP0$n | ENSG0$n | $name{$n} [Source:HGNC Symbol;Acc:HGNC:$n]" };
 write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
   [1, 1, 'T1.1', $human->(1), '1:1'],
   [2, 4, 'T2.1', $human->(4), 'many:1'],
   [3, 4, 'T3.1', $human->(4), 'many:1'],
+  # T36: a third copy OMA pairs many:1 with GAMMA, whose name is withheld (omaC) -> G2/G3 are 2to1, not 3to1
+  [36, 4, 'T36.1', $human->(4), 'many:1'],
   [4, 2, 'T4.1', $human->(2), '1:many'],
   [4, 3, 'T4.1', $human->(3), '1:many'],
   [13, 13, 'T13.1', $human->(13), '1:1'],
@@ -121,8 +124,9 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { my
   # T29: the same co-orthologs; T29 is not in their PANTHER family at all, but hits MIX1 along its length
   [29, 19, 'T29.1', $human->(19), '1:many'],
   [29, 20, 'T29.1', $human->(20), '1:many'],
-  # T34: OMA 1:1 with CENPQ; the PANTHER tree places it with THETA instead -> treeC, the name stays
-  [34, 16, 'T34.1', $human->(16), '1:1'],
+  # T34: OMA 1:1 with IOTA; the PANTHER tree places it with THETA instead -> treeC, the name stays
+  # (its own partner: pairwise OMA never pairs two genes 1:1 with one human gene)
+  [34, 24, 'T34.1', $human->(24), '1:1'],
 ));
 write_file("$dir/oma/Output/PairwiseOrthologs/TEST-NEMVE.txt", join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
   [1, 11, 'T1.1', 'NEMVE00011 | XP_000011.1 | LOC11 | anemone alpha', '1:1'],
@@ -189,6 +193,9 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   . $dhit->('T15', '10', 'KAPPA2', 'kappa channel 2', '1e-88', 295, 300, 300, 95, 95)
   . $dhit->('T16', '11', 'WDR90', 'WD repeat domain 90', '1e-160', 562, 200, 700, 90, 30)
   . $dhit->('T16', '12', 'CFAP52', 'cilia and flagella associated protein 52', '1e-30', 119, 200, 210, 85, 85)
+  # T36: THETA far the best; GAMMA only over part -> with another PANTHER family, its GAMMA name is withheld
+  . $dhit->('T36', '18', 'THETA', 'theta ligase', '1e-120', 400, 250, 300, 95, 85)
+  . $dhit->('T36', '04', 'GAMMA', 'gamma transferase', '1e-30', 150, 250, 250, 40, 45)
   # T26: THETA full-length and far the best (400 bits); its OMA partner ZETA only over part (150)
   . $dhit->('T26', '18', 'THETA', 'theta ligase', '1e-120', 400, 300, 300, 95, 95)
   . $dhit->('T26', '17', 'ZETA', 'zeta ligase', '1e-30', 150, 300, 300, 40, 45)
@@ -196,7 +203,7 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   # T28: a partial hit only -- with 20% of the family model, not a whole member of the family
   . $dhit->('T28', '19', 'MIX1', 'mix protein 1', '1e-30', 150, 300, 300, 40, 40)
   . $dhit->('T29', '19', 'MIX1', 'mix protein 1', '1e-80', 300, 300, 300, 90, 90)
-  . $dhit->('T34', '16', 'CENPQ', 'centromere protein Q', '1e-50', 200, 300, 300, 90, 90)
+  . $dhit->('T34', '24', 'IOTA', 'iota kinase', '1e-50', 200, 300, 300, 90, 90)
   # T35: full length to WSA1 -> WSA1-like; the tree places it with WSA1 among co-orthologs -> tree+
   . $dhit->('T35', '23', 'WSA1', 'widget sprocket associated 1', '1e-100', 400, 300, 300, 95, 95));
 
@@ -241,6 +248,7 @@ write_file("$dir/iprscan.tsv", join('',
   $row->('T25', 250, 'Pfam',    'PF00001',   'kinase',           10, 200, '1.0E-30', 'IPR000001', 'Kinase domain'),
   # T26: in PTHR00018, not ZETA's PTHR00017 (a partial match, so it does not name T26 itself)
   $row->('T26', 300, 'PANTHER', 'PTHR00018', 'THETA LIGASE',     1,  60,  '1.0E-20', '-', '-'),
+  $row->('T36', 250, 'PANTHER', 'PTHR00018', 'THETA LIGASE',     1,  60,  '1.0E-20', '-', '-'),
   # T27: in PTHR00027, MIX1's and MIX2's family, over 60% of its model (>= 50%: the family can name
   # a co-ortholog family; < 80%: it does not name T27 by step 6)
   $row->('T27', 300, 'PANTHER', 'PTHR00027', 'SPROCKET PROTEIN', 1,  180, '1.0E-20', '-', '-'),
@@ -269,7 +277,7 @@ write_file("$dir/hmm_lengths.tsv", join('', map { my $model = $_; "$model->[0]\t
 #   T31: one human ortholog, EPS, and EPS is its closest human gene (RBH) -> named EPS by the tree (step 5)
 #   T32: one human ortholog, DELTA, but its closest human gene is EPS -> the tree does not name it
 #   T33: EPS again, but the PANTHER match is weak (E=1e-5) -> not trusted, not used
-#   T34: THETA, against OMA's CENPQ -> treeC on the OMA name
+#   T34: THETA, against OMA's IOTA -> treeC on the OMA name
 #   T35: co-orthologs WSA1 and MIX4 -> tree+ on the WSA1-like name
 my $placement = sub { my ($id, $match, $evalue, $pcov, $mcov, $placement, $humans) = @_;
   return join("\t", "$id.1", $match, 'NAME', $evalue, $pcov, $mcov, 'PTN0001', 'PTHR00031:AN5', 'speciation', 'Deuterostomia',
@@ -379,7 +387,7 @@ my %expect = (
   G31 => ['EPS: epsilon protein [ISO|tree|rbh]', 'the PANTHER tree places it with EPS alone, and EPS is its closest human gene -> plain name (step 5)'],
   G32 => ['None', 'the tree says DELTA, its closest human gene is EPS -> no tree name, nothing else names it'],
   G33 => ['None', 'a weak PANTHER match (E=1e-5): the placement is not trusted'],
-  G34 => ['CENPQ: centromere protein Q [ISO|1to1|sim+|treeC]', 'OMA 1:1 CENPQ; the tree places it with THETA -> treeC, the OMA name stays'],
+  G34 => ['IOTA: iota kinase [ISO|1to1|sim+|treeC]', 'OMA 1:1 IOTA; the tree places it with THETA -> treeC, the OMA name stays'],
   G35 => ['WSA1-like: widget sprocket associated 1-like [ISS|bh|tree+]', 'a -like name the tree agrees with (WSA1 among its co-orthologs) -> tree+'],
   G26 => ['THETA-like: theta ligase-like [ISS|bh|omaC]', 'OMA 1:1 to ZETA, but the best hit is THETA and the PANTHER family differs -> withheld (omaC); the full-length THETA hit names it'],
 );
@@ -394,9 +402,17 @@ my $p = sub { my ($gene) = @_; return $source{$gene} ? join(' | ', @{$source{$ge
 check(($source{G1}[0] // '') eq 'HGNC:1' && ($source{G1}[2] // '') eq '3'
       && ($source{G1}[1] // '') eq 'Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)',
       'G1 provenance: HGNC:1, OMA 1:1, its support, step 3', $p->('G1'));
-check(($source{G2}[1] // '') eq 'Ortholog of human GAMMA (OMA, many:1), one of 2 copies in this genome; GAMMA is its best human similarity hit; '
+check(($source{G2}[1] // '') eq 'Ortholog of human GAMMA (OMA, many:1), one of 2 genes in this genome named after it; '
+      . 'OMA pairs 3 genes here with it, 1 of them named by other evidence; GAMMA is its best human similarity hit; '
       . 'a different PANTHER family (PTHR00099; human: PTHR00004)',
-      'G2 provenance: copy count, and each kind of support', $p->('G2'));
+      'G2 provenance: the genes carrying the name (2), and how many OMA paired (3)', $p->('G2'));
+check(scalar(($name{G36} // '') =~ /^THETA-like: theta ligase-like \[ISS\|bh\|omaC\]$/),
+      'G36: the third GAMMA copy, withheld (omaC), named by its own best hit', $name{G36});
+{
+  my %decision = read_decisions("$out/naming_decisions.tsv");
+  check(scalar(($decision{G2}{S3_OMA_human_ortholog} // '') =~ /^NAMED: GAMMA: gamma transferase \[ISO\|2to1\|.*one of 2 genes in this genome named after it/),
+        'decision table G2: the same count as the name (2to1)', $decision{G2}{S3_OMA_human_ortholog});
+}
 check(scalar(($source{G25}[1] // '') =~ /; OMA pairs it with human EPS \(1:1\), but no similarity hit or PANTHER family supports that pair, so it does not name the gene$/),
       'G25 provenance: the set-aside OMA pair is stated', $p->('G25'));
 check(($source{G26}[0] // '') eq 'HGNC:18' && ($source{G26}[2] // '') eq '6'
@@ -522,6 +538,14 @@ check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', 
   my %same = map { my $row = $_; ($row->[2] => $row->[3]) } read_tsv("$dir/out_same/geneNames.tsv");
   check(($same{G5} // '') eq 'SmDELTA: smed delta kinase [SRC|rbh|smed]', 'same species G5: a full-length RBH copies the name as is', $same{G5});
   check(($same{G8} // '') eq 'None', 'same species G8: a DIAMOND best hit alone is not the same gene', $same{G8});
+}
+
+# ---- the decision table's header names the reference proteome read (canonical peptide.fa.gz or the fallback)
+{
+  open my $header_fh, '<', "$out/naming_decisions.tsv" or die;
+  my ($line) = grep { my $header_line = $_; $header_line =~ /^#   reference proteome ENS_homo_sapiens/ } <$header_fh>;
+  close $header_fh;
+  check(scalar(($line // '') =~ m{Homo_sapiens\.test\.pep\.all\.fa\.gz}), 'decision table header: the reference proteome file read', $line);
 }
 
 # ---- same output whatever the hash seed

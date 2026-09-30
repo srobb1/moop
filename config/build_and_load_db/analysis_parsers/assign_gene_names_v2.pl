@@ -232,6 +232,7 @@ my %unsupported_oma;      # group -> { humans, type }: an OMA human ortholog set
 my %conflicting_oma;      # group -> { humans, type, best }: an OMA name withheld, both checks against it (oma_conflicts)
 my @pending_compara;  # links through another species' Ensembl gene, resolved in one Compara pass
 my %reference_fasta_cache;
+my %reference_fasta_file;   # species dir -> the protein FASTA read (for the decision table's header)
 my (%panther, %domain, %curated, %transposon);
 my %closest;          # group -> { tier, human => [records], evidence, id }
 my %claimed_human;    # human key -> { group => 1 }: the co-orthologs a many:1 name is shared by
@@ -332,9 +333,16 @@ sub main {
     $claimed_human{$closest->{human}[0]{key}}{$group} = 1;
   }
 
+  my %chosen;
   foreach my $group (keys %members) {
     $candidates{$group} = collect_candidates($group);
-    $name{$group} = tagged(set_aside_note($group, choose_name($group)));
+    $chosen{$group} = choose_name($group);
+  }
+  # many:1 names: how many genes CARRY each human gene's name is known only now that every
+  # gene is decided (a copy may be named as a transposon, withheld, or curated instead)
+  count_named_copies(\%chosen);
+  foreach my $group (keys %members) {
+    $name{$group} = tagged(set_aside_note($group, $chosen{$group}));
   }
 
   # ============================================================== write
@@ -679,6 +687,7 @@ sub reference_proteome {
     return undef;
   }
   my (%proteins, $id);
+  $reference_fasta_file{$species_dir} = $fastas[0];
   open my $fh, "gzip -dc '$fastas[0]' |" or die "cant read $fastas[0]\n";
   while (my $line = <$fh>) {
     if ($line =~ /^>(\S+)/) {
@@ -2180,6 +2189,38 @@ sub transposon_name {
            origin => { kind => 'pfam', accession => $te->{signature}, step => 4, rule => $rule } };
 }
 
+# The many:1 copy count of every gene NAMED after one human gene at step 3: the tag's N (Nto1) and
+# "one of N genes named after it" count the genes that carry the name, and the provenance adds how
+# many OMA paired with it when some of them were named otherwise. Rewrites the chosen candidates in
+# place, so the decision table shows the same counts.
+sub count_named_copies {
+  my ($chosen) = @_;
+  my %named_after;   # human key -> [ groups named after that one human gene at step 3 ]
+  foreach my $group (sort keys %$chosen) {
+    my $copies_of = $chosen->{$group}{copies_of} or next;
+    next unless $decision{$group}{step} == 3;
+    push @{$named_after{$copies_of->{human}}}, $group;
+  }
+  foreach my $human_key (sort keys %named_after) {
+    my @groups = @{$named_after{$human_key}};
+    my $copies = scalar @groups;
+    my $paired = scalar keys %{$claimed_human{$human_key} // {}};
+    foreach my $group (@groups) {
+      my $named = $chosen->{$group};
+      my $copies_of = $named->{copies_of};
+      # several genes here carrying one human gene's name are copies of a duplication in this
+      # lineage, whatever OMA's pairwise type (pairwise 1:1 for one copy, the HOG adding the other)
+      $named->{tag}[1] = $copies > 1 ? "${copies}to1" : relationship_tag($copies_of->{type}, $copies);
+      my $text = $copies > 1 ? ", one of $copies genes in this genome named after it" : '';
+      if ($paired > $copies) {
+        $text .= "; OMA pairs $paired genes here with it, " . ($paired - $copies) . ' of them named by other evidence';
+        $stats{'many:1 names: fewer genes carry the name than OMA paired'}++;
+      }
+      $named->{origin}{rule} = $copies_of->{start} . $text . $copies_of->{end};
+    }
+  }
+}
+
 sub ortholog_name {
   my ($group, $closest) = @_;
   my @humans = @{$closest->{human}};
@@ -2195,20 +2236,24 @@ sub ortholog_name {
     my $symbol = $human->{hgnc_id} ? $human->{symbol} : '';
     my $description = $human->{name};
     # many:1 (a duplication in this lineage): every copy is an ortholog of the human gene and
-    # carries its name; how many copies share it is in the tag and the provenance
+    # carries its name. $copies here is how many genes OMA pairs with it; how many CARRY the name
+    # is set after every gene is decided (count_named_copies), in the tag and the provenance
     my $copies = scalar keys %{$claimed_human{$human->{key}} // {}};
     my ($flags, $support) = oma_support($group, [$human], $closest);
     my $conflict = oma_conflicts($group, [$human], $closest, $flags);
     return not_named($conflict->{why}, conflict => $conflict) if $conflict;
-    my $rule = ($closest->{tier} == 1 ? 'Ortholog' : 'Co-ortholog') . " of human " . human_label($human)
-             . " ($method, $closest->{type})" . ($copies > 1 ? ", one of $copies copies in this genome" : '') . $support;
+    my $rule_start = ($closest->{tier} == 1 ? 'Ortholog' : 'Co-ortholog') . " of human " . human_label($human)
+                   . " ($method, $closest->{type})";
+    my $rule_end = $support;
     if (my $te = $transposon{$group}) {
       push @$flags, 'te';
-      $rule .= "; it carries a $TE_PFAM{$te->{signature}}[2] domain (Pfam $te->{signature}), as do human genes domesticated from transposons";
+      $rule_end .= "; it carries a $TE_PFAM{$te->{signature}}[2] domain (Pfam $te->{signature}), as do human genes domesticated from transposons";
     }
     return { desc => ($symbol ne '' ? "$symbol: $description" : $description), selected => $selected,
              tag => ['ISO', relationship_tag($closest->{type}, $copies), @$flags],
-             note => "$source|Orthologs|$note_tail", origin => human_origin($human, $rule, 3) };
+             note => "$source|Orthologs|$note_tail",
+             origin => human_origin($human, $rule_start . ($copies > 1 ? ", one of $copies genes OMA pairs with it in this genome" : '') . $rule_end, 3),
+             copies_of => { human => $human->{key}, type => $closest->{type}, start => $rule_start, end => $rule_end } };
   }
 
   # a family: named after the most specific HGNC gene group they all share, or not named here
@@ -2753,6 +2798,11 @@ sub input_lines {
       push @lines, "$label vs $database: " . ($version ne '' ? "$version; " : '') . "$file (" . file_date($file) . ")";
     }
     closedir $dir_handle;
+  }
+  foreach my $species_dir (sort keys %reference_fasta_file) {
+    my $file = $reference_fasta_file{$species_dir};
+    push @lines, "reference proteome $species_dir (protein lengths and names for MMseqs2 hits): $file"
+               . (-l $file ? ' -> ' . readlink($file) : '') . ' (' . file_date($file) . ')';
   }
   if (defined $opt{interproscan}) {
     (my $dir = $opt{interproscan}) =~ s{/[^/]+$}{};
