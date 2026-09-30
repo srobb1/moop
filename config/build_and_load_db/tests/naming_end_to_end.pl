@@ -444,7 +444,11 @@ write_file("$dir/deeptmhmm_results.gff3", "##gff-version 3\n# T57.1 Length: 80\n
 write_file("$dir/deeploc2_results.tsv", "Protein_ID\tLocalizations\tSignals\tMembrane types\n"
   . "T57.1\tCell membrane\tSignal peptide|Transmembrane domain\tTransmembrane\nT37.1\tCytoplasm\t\tSoluble\n");
 system('mkdir', '-p', "$dir/transcriptome") == 0 or die;
-write_file("$dir/transcriptome/db_version.txt", "Trinity, test gill\tmd5:0\n");   # scripts/transcriptome_search.sh
+write_file("$dir/transcriptome/db_version.txt", "adult gill (Trinity)\tmd5:0\n");   # scripts/transcriptome_search.sh
+# a second transcriptome (a developmental stage): G57 is in both, G37 in neither
+system('mkdir', '-p', "$dir/transcriptome2") == 0 or die;
+write_file("$dir/transcriptome2/db_version.txt", "veliger larvae\tmd5:1\n");
+write_file("$dir/transcriptome2/transcript_hits.tsv", "T57.1\tVEL_1\t97.0\t78\t2\t0\t3\t80\t1\t78\t1e-38\t150\n");
 write_file("$dir/transcriptome/transcript_hits.tsv", "T57.1\tTRINITY_DN1_c0_g1_i1.p1\t99.0\t80\t1\t0\t1\t80\t1\t80\t1e-40\t160\n"
   . "T37.1\tTRINITY_DN2_c0_g1_i1.p1\t99.0\t30\t0\t0\t1\t30\t1\t30\t1e-10\t60\n");
 
@@ -456,7 +460,7 @@ my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/pro
   '--panther-placements', "$dir/panther_placements.tsv", '--model-coverage', "$dir/model_coverage.tsv", '--pfam-names', "$dir/pfam_names.tsv",
   '--closest-species', 'species=Nematostella vectensis|tag=Nvec|label=sea anemone|oma_code=NEMVE|hits=|use_for_names=0|same_species=0',
   '--signalp', "$dir/signalp6_results.tsv", '--deeptmhmm', "$dir/deeptmhmm_results.gff3", '--deeploc', "$dir/deeploc2_results.tsv",
-  '--transcript-hits', "$dir/transcriptome/transcript_hits.tsv");
+  '--transcript-hits', "$dir/transcriptome/transcript_hits.tsv", '--transcript-hits', "$dir/transcriptome2/transcript_hits.tsv");
 foreach my $seed (1, 2) {
   my $out = "$dir/out$seed";
   system('mkdir', '-p', $out) == 0 or die;
@@ -647,7 +651,7 @@ check(($source{G8}[3] // '') eq 'none' && ($source{G8}[0] // '') eq 'None' && ($
       && scalar(($source{G8}[1] // '') =~ /^None: hits did not pass the naming tests \(found: .*InterProScan Pfam/),
       'unnamed G8: a "none" provenance row -- it has hits (a DUF domain) that no step could use', $p->('G8'));
 check(($name{G57} // '') eq 'None' && ($source{G57}[1] // '') eq 'None: no hits (no similarity hit in any database searched, no OMA ortholog in any species, '
-      . 'no InterProScan homology match); a short protein, only 80 aa; expressed: a transcript of its own transcriptome (Trinity, test gill) matches it (99% identity over 100% of the protein); '
+      . 'no InterProScan homology match); a short protein, only 80 aa; expressed: a transcript matches it in adult gill (Trinity) (99% identity over 100% of the protein); in veliger larvae (97% identity over 98% of the protein); '
       . 'predicted: signal peptide (SignalP 6); 1 transmembrane helix (DeepTMHMM); location cell membrane (DeepLoc 2: signal peptide, transmembrane domain)',
       'unnamed G57: short, expressed, and its predicted features (no name from them)', $p->('G57'));
 {

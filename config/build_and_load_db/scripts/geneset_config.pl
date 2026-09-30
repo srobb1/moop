@@ -94,8 +94,11 @@ sub check_geneset {
   }
   # transcript_hits: the gene set's proteins searched against the species' own transcriptome ORFs
   # (DIAMOND/BLAST tabular) -- whether a gene with no name is expressed
+  # one file, or a list of them (one per transcriptome: a tissue, a developmental stage, ...)
   if (defined(my $transcript_hits = $settings->{transcript_hits})) {
-    push @options, '--transcript-hits', $transcript_hits if file_ok("$where transcript_hits", $transcript_hits);
+    foreach my $hits_file (ref $transcript_hits eq 'ARRAY' ? @$transcript_hits : ($transcript_hits)) {
+      push @options, '--transcript-hits', $hits_file if file_ok("$where transcript_hits", $hits_file);
+    }
   }
   if (defined(my $curated = $settings->{human_curated_gene_names})) {
     if (file_ok("$where human_curated_gene_names", $curated)) {

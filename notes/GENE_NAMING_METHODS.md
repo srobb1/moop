@@ -553,10 +553,12 @@ Optional per gene set (`transcript_hits:` in geneset_config.yaml, `--transcript-
 the species' own experimental transcriptome with `scripts/transcriptome_search.sh` (MMseqs2; nucleotide transcripts
 searched translated, or predicted ORFs as proteins; the search pairs ids, which need not agree; its LABEL -- what the
 transcriptome is, tissues and stages -- is shown). A match of >= 95% identity over >= 90% of the protein is reported as
-"expressed: a transcript of its own transcriptome (Trinity, adult gill and mantle) matches it". **Positive only**: a transcriptome samples some tissues and
+"expressed: a transcript matches it in adult gill (Trinity)". Several transcriptomes (a tissue, a developmental stage)
+are searched one by one and listed together under `transcript_hits:`; the statement names each that has the gene
+("...in adult gill (Trinity) (100% identity over 100% of the protein); in veliger larvae (97% ...)"). **Positive only**: a transcriptome samples some tissues and
 stages at some depth, so no match is not evidence a gene is not expressed, and is not reported. Both appear in the
 decision table (`Protein_features`, `Transcript_support`) for every gene, and in the provenance of genes with no name:
-"None: no hits (...); expressed: a transcript of its own transcriptome matches it (100% identity over 100% of the protein);
+"None: no hits (...); expressed: a transcript matches it in its own transcriptome (100% identity over 100% of the protein);
 predicted: signal peptide (SignalP 6); 1 transmembrane helix (DeepTMHMM); location cell membrane (DeepLoc 2: signal
 peptide, transmembrane domain)". Congeria (Trinity ORFs from mender's search): 2,553 no-hit genes are expressed,
 1,970 of them with a predicted feature (857 a nuclear signal, 558 membrane, 421 secreted) -- candidates for genes new

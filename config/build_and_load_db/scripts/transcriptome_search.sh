@@ -13,8 +13,10 @@
 #     TRANSCRIPTOME  nucleotide transcripts (e.g. a Trinity assembly; searched translated, as tblastn)
 #                    or their predicted ORFs (e.g. TransDecoder .pep; searched as proteins) -- detected
 #                    from the sequence; plain or gzipped
-#     LABEL          what the transcriptome is, as it will read in the statement, e.g.
-#                    "Trinity, adult gill and mantle" -- say the tissues/stages: they are its limits
+#     LABEL          what the transcriptome is, as it reads in the statement after "in", e.g.
+#                    "adult gill (Trinity)" -> "expressed: a transcript matches it in adult gill (Trinity)".
+#                    Say the tissue/stage: it is the transcriptome's limit. Several transcriptomes: run
+#                    once each (its own OUT_DIR and LABEL) and list them all under transcript_hits:
 #     THREADS        default: the job's CPUs under sbatch, else 4
 #
 # Runs where it is started: `bash transcriptome_search.sh ...` in an interactive allocation, or

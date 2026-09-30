@@ -326,8 +326,9 @@ my (%pfam_name, %pfam_clan);   # Pfam accession -> short name / clan (--pfam-nam
 my %signal_peptide;   # protein -> SignalP 6 prediction, as words ("signal peptide", "lipoprotein signal peptide", ...)
 my %tm_helices;       # protein -> DeepTMHMM transmembrane helix count
 my %location;         # protein -> { places => "Cytoplasm|Nucleus", signals => "Nuclear export signal" } (DeepLoc 2, signal found)
-my %transcript_match; # protein -> [identity %, % of the protein] of its best own-transcriptome ORF match (--transcript-hits)
-my $transcriptome_label = '';   # what the transcriptome is (db_version.txt next to --transcript-hits, scripts/transcriptome_search.sh)
+# the species' own experimental transcriptomes (--transcript-hits, one per transcriptome): { label (what it is,
+# from db_version.txt beside the hits -- scripts/transcriptome_search.sh), match: protein -> [identity %, % of the protein] }
+my @transcriptomes;
 
 # ============================================================== main
 sub main {
@@ -338,7 +339,7 @@ sub main {
              'compara-dir=s', 'uniprot-dir=s', 'taxonomy-dir=s', 'native=s', 'oma-id-map=s',
              'human-curated-gene-names=s@', 'closest-species=s@',
              'interproscan=s', 'interpro-entries=s', 'panther-hmm-lengths=s', 'panther-placements=s', 'model-coverage=s', 'pfam-names=s', 'metadata=s',
-             'signalp=s', 'deeptmhmm=s', 'deeploc=s', 'transcript-hits=s',
+             'signalp=s', 'deeptmhmm=s', 'deeploc=s', 'transcript-hits=s@',
              'out-names=s', 'out-dir=s')
     or die "bad options\n";
   foreach my $required (qw(isoforms protein-fasta hgnc-dir out-names out-dir)) {
@@ -381,15 +382,18 @@ sub main {
   %signal_peptide   = read_signalp($opt{signalp})             if defined $opt{signalp};
   %tm_helices       = read_deeptmhmm($opt{deeptmhmm})         if defined $opt{deeptmhmm};
   %location         = read_deeploc($opt{deeploc})             if defined $opt{deeploc};
-  if (defined $opt{'transcript-hits'}) {
-    %transcript_match = read_transcript_hits($opt{'transcript-hits'});
-    my $version_file = ($opt{'transcript-hits'} =~ s{[^/]*$}{}r) . 'db_version.txt';
+  foreach my $hits_file (@{$opt{'transcript-hits'} // []}) {
+    my $label = '';
+    my $version_file = ($hits_file =~ s{[^/]*$}{}r) . 'db_version.txt';
     if (-s $version_file) {
       open my $fh, '<', $version_file or die "cant open $version_file $!\n";
-      ($transcriptome_label) = split /\t/, (<$fh> // '');
+      ($label) = split /\t/, (<$fh> // '');
       close $fh;
-      chomp $transcriptome_label;
+      chomp $label;
     }
+    # unlabeled: "its own transcriptome", numbered when there are several
+    $label = @{$opt{'transcript-hits'}} > 1 ? 'transcriptome ' . (@transcriptomes + 1) : 'its own transcriptome' if $label eq '';
+    push @transcriptomes, { label => $label, match => { read_transcript_hits($hits_file) } };
   }
 
   $hgnc = load_hgnc("$opt{'hgnc-dir'}/hgnc_complete_set.txt", "$opt{'hgnc-dir'}/withdrawn.txt");
@@ -608,15 +612,19 @@ sub protein_features_text {
 # identity over >= $TRANSCRIPT_MIN_COVERAGE% of the protein. Positive only: a transcriptome samples some
 # tissues and stages at some depth, so no match is not evidence that a gene is not expressed -- and is
 # not reported. '' without --transcript-hits or without a match.
+# With several transcriptomes (a tissue, a developmental stage, ...) each one that has it is named:
+# "expressed: a transcript matches it in adult gill (100% identity over 100% of the protein); in veliger larvae (...)"
 sub transcript_text {
   my ($group) = @_;
-  return '' unless defined $opt{'transcript-hits'};
+  return '' unless @transcriptomes;
   my $protein = longest_member($group) // return '';
-  my $match = $transcript_match{$protein};
-  return sprintf('expressed: a transcript of its own transcriptome%s matches it (%.0f%% identity over %.0f%% of the protein)',
-                 ($transcriptome_label ne '' ? " ($transcriptome_label)" : ''), @$match)
-    if $match and $match->[0] >= $TRANSCRIPT_MIN_IDENTITY and $match->[1] >= $TRANSCRIPT_MIN_COVERAGE;
-  return '';
+  my @found;
+  foreach my $transcriptome (@transcriptomes) {
+    my $match = $transcriptome->{match}{$protein} or next;
+    next unless $match->[0] >= $TRANSCRIPT_MIN_IDENTITY and $match->[1] >= $TRANSCRIPT_MIN_COVERAGE;
+    push @found, sprintf('in %s (%.0f%% identity over %.0f%% of the protein)', $transcriptome->{label}, @$match);
+  }
+  return @found ? 'expressed: a transcript matches it ' . join('; ', @found) : '';
 }
 
 sub fasta_lengths {
