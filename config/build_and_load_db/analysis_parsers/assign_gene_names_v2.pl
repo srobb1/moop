@@ -172,6 +172,19 @@ my $TREE_MIN_COVERAGE = 50;     # % of the protein, and % of the family model
 # gene found by similarity (3 MMseqs2 RBH, 4 via another species' ortholog, 5 DIAMOND best hit)
 my %TREE_AGREEING_TIER = map { my $tier = $_; ($tier => 1) } (3, 4, 5);
 
+# the words that open the provenance line of a homology name (an ortholog's line already says
+# "Ortholog of" / "Co-ortholog of"); see relationship()
+my %RELATIONSHIP_LEAD = ('homolog'        => 'Homolog, orthology not shown (may be a paralog)',
+                         'family homolog' => 'Family homolog, orthology not shown',
+                         'domain homolog' => 'Domain homolog');
+# A plain human name (steps 3 and 5) is Strong only when the evidence is broad and the gene is
+# most of the human protein: a tree name needs >= $STRONG_MIN_AGREE methods agreeing (tree + a
+# one-way best hit alone is two), and one human gene needs >= $STRONG_MIN_HUMAN_COVERAGE% of its
+# protein aligned (a knockdown or antibody designed from the human gene assumes the whole gene)
+my $STRONG_MIN_AGREE          = 3;
+my $STRONG_MIN_HUMAN_COVERAGE = 50;
+my $SHORT_PROTEIN             = 100;   # aa: a None gene's provenance says "a short protein, only N aa"
+
 # ---- closest gene in a --closest-species species
 my %OMA_RANK = ('1:1' => 0, 'many:1' => 1, '1:many' => 2, 'many:many' => 3);
 # the one database annotation type for every closest-gene table; the sources tell them apart
@@ -419,7 +432,7 @@ sub main {
   # gene is decided (a copy may be named as a transposon, withheld, or curated instead)
   count_named_copies(\%chosen);
   foreach my $group (keys %members) {
-    $name{$group} = with_confidence(tagged(set_aside_note($group, $chosen{$group})));
+    $name{$group} = with_confidence($group, tagged(set_aside_note($group, $chosen{$group})));
   }
 
   # ============================================================== write
@@ -2245,6 +2258,10 @@ sub choose_name {
   my $rule = @found
     ? 'None: hits did not pass the naming tests (found: ' . join(', ', @found) . ")$partial"
     : 'None: no hits (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match)';
+  # a short protein with nothing known is often not a real gene (Congeria: 3% of those under
+  # 100 aa have an own-transcript ORF, against 61% of named genes); the length is worth knowing
+  my $length = max_member_length($group);
+  $rule .= "; a short protein, only $length aa" if $length and $length < $SHORT_PROTEIN;
   $stats{'name: none (' . (@found ? 'hits did not pass the naming tests' : 'no hits') . ')'}++;
   return { desc => 'None', selected => selected_id($group, undef), note => 'none|none|none|none|-',
            origin => { kind => 'none', accession => 'None', step => 0, rule => $rule } };
@@ -2647,11 +2664,49 @@ sub confidence_word {
   return 'Weak';
 }
 
+# the name's relationship to the human gene(s) it comes from, in a fixed vocabulary (the decision
+# table's Relationship column; the provenance line says it first). Orthology is claimed only where
+# a method tested it (OMA, the PANTHER tree); similarity alone is homology, which may be paralogy.
+sub relationship {
+  my ($named, $step) = @_;
+  return 'none' if !$named or $named->{desc} eq 'None';
+  my %tag = map { my $mark = $_; ($mark => 1) } @{$named->{tag} // []};
+  return 'curated' if $tag{TAS};
+  return 'source annotation' if $tag{SRC} or ($named->{origin}{kind} // '') eq 'native';
+  return ($named->{tag}[1] // '') eq '1to1' ? 'ortholog' : 'co-ortholog' if $step == 3;
+  return $named->{desc} =~ /\(1 of \d+\)/ ? 'co-ortholog' : 'ortholog' if $step == 5;
+  return $tag{'tie-grp'} ? 'family homolog' : 'homolog' if $step == 6;
+  return $tag{rpt} ? 'domain homolog' : 'family homolog' if $step == 7;
+  return 'domain homolog' if $step == 4 or $step == 8;
+  return 'homolog';
+}
+
 sub with_confidence {
-  my ($named) = @_;
+  my ($group, $named) = @_;
   return $named unless $named->{tag} and $named->{origin} and $named->{desc} ne 'None';
+  my $step = $decision{$group}{step} // 0;
+  my $relationship = relationship($named, $step);
   my $word = confidence_word($named->{tag});
-  return { %$named, confidence => $word, origin => { %{$named->{origin}}, rule => "$word: $named->{origin}{rule}" } };
+  my @limits;
+  if ($word eq 'Strong' and ($step == 3 or $step == 5)) {
+    my $agreeing = (agreement($group))[1];
+    push @limits, "only $agreeing methods agree" if $step == 5 and $agreeing < $STRONG_MIN_AGREE;
+    my $closest = $closest{$group};
+    if ($closest and !$closest->{family} and @{$closest->{human}} == 1) {
+      my ($hit) = best_alignment($group, $closest->{human});
+      push @limits, sprintf('aligns to only %.0f%% of %s', $hit->{tcov}, human_label($closest->{human}[0]))
+        if $hit and defined $hit->{tcov} and $hit->{tcov} < $STRONG_MIN_HUMAN_COVERAGE;
+    }
+    if (@limits) {
+      $word = 'Moderate';
+      $stats{'confidence: Strong evidence limited to Moderate (' . ($step == 5 ? 'tree' : 'OMA') . ')'}++;
+    }
+  }
+  my $rule = $named->{origin}{rule};
+  $rule = "$RELATIONSHIP_LEAD{$relationship}: " . lcfirst($rule) if $RELATIONSHIP_LEAD{$relationship};
+  my $label = $word . (@limits ? ' (' . join('; ', @limits) . ')' : '');
+  return { %$named, confidence => $word, relationship => $relationship,
+           origin => { %{$named->{origin}}, rule => "$label: $rule" } };
 }
 
 # OMA relationship as the tag writes it (no colon)
@@ -2777,19 +2832,38 @@ sub write_gene_model_flags {
 
 # "aligned over 95% of this protein and 88% of ALPHA (full-length)": the best-scoring alignment to
 # the named human gene(s), full-length ones first; '' when there is none
-sub alignment_coverage_text {
+# the longest protein of a gene (its isoforms), in aa; 0 when none is in --protein-fasta
+sub max_member_length {
+  my ($group) = @_;
+  my $longest = 0;
+  foreach my $id (@{$members{$group} // []}) {
+    my $length = $query_length{$id} // 0;
+    $longest = $length if $length > $longest;
+  }
+  return $longest;
+}
+
+# the best alignment of this gene to one of the human genes (a full-length hit first): (hit, full?, human)
+sub best_alignment {
   my ($group, $humans) = @_;
   my ($best, $best_human);
+  my $gene_hits = $human_hit{$group} // {};
   foreach my $human (@$humans) {
-    my $entry = $human_hit{$group}{$human->{key}} or next;
+    my $entry = $gene_hits->{$human->{key}} or next;
     my $hit = $entry->{best_full} // $entry->{best} or next;
     my $full = $entry->{best_full} ? 1 : 0;
     if (!$best or $full > $best->[1] or ($full == $best->[1] and better_hit($hit, $best->[0]))) {
       ($best, $best_human) = ([$hit, $full], $human);
     }
   }
-  return '' unless $best;
-  my ($hit, $full) = @$best;
+  return () unless $best;
+  return ($best->[0], $best->[1], $best_human);
+}
+
+sub alignment_coverage_text {
+  my ($group, $humans) = @_;
+  my ($hit, $full, $best_human) = best_alignment($group, $humans);
+  return '' unless $hit;
   return sprintf('aligned over %.0f%% of this protein and %.0f%% of %s (%s)', $hit->{qcov}, $hit->{tcov}, human_label($best_human),
                  $full ? 'full-length' : 'partial');
 }
@@ -2894,7 +2968,9 @@ sub count_named_copies {
         $text .= "; OMA pairs $paired genes here with it, " . ($paired - $copies) . ' of them named by other evidence';
         $stats{'many:1 names: fewer genes carry the name than OMA paired'}++;
       }
-      $named->{origin}{rule} = $copies_of->{start} . $text . $copies_of->{end};
+      # several copies of one human gene's ortholog are its co-orthologs (in-paralogs of each other)
+      my $start = $copies > 1 ? $copies_of->{start} =~ s/^Ortholog of/Co-ortholog of/r : $copies_of->{start};
+      $named->{origin}{rule} = $start . $text . $copies_of->{end};
       # the count in the name too, as Ensembl writes one-to-many orthologs: every copy is "1 of N"
       $named->{desc} .= " (1 of $copies)" if $copies > 1;
     }
@@ -3605,6 +3681,10 @@ sub decision_header {
     '  ID: the transcript whose evidence named the gene; GroupId: the gene',
     '  Name: as in geneNames.tsv; Step: the step that named it; Reason: why, in full. A gene with no name is',
     '    "none: no hits" (no homology evidence at all) or "none: hits did not pass the naming tests"',
+    '  Relationship: what the name claims about the gene and the human gene(s) it comes from -- ortholog (OMA 1:1 or',
+    '    one human gene on the PANTHER tree), co-ortholog (one of several copies here, or several human genes),',
+    '    homolog (similar along its length, "-like": orthology not shown, may be a paralog), family homolog (member of',
+    '    a family, which member not known), domain homolog (shares a domain only), curated, source annotation, none',
     '  Native_name (--native only): the gene set\'s own name',
     '  Pipeline_name: the name moop\'s own steps give, with step 2 left out -- no native name, no naming species --',
     '    and the step that gave it; the same as Name unless one of those named the gene',
@@ -3661,6 +3741,12 @@ sub step_cell {
 # gene (or family) -- + includes it, C points elsewhere, X set aside (an OMA pair nothing supports).
 # A report, not a vote: these methods share one signal, sequence similarity (review 2026-09-30).
 sub agreement_text {
+  my ($group) = @_;
+  return (agreement($group))[0];
+}
+
+# (cell text, methods agreeing with the closest human, methods pointing elsewhere)
+sub agreement {
   my ($group) = @_;
   my $closest = $closest{$group};
   my %reference = map { my $human = $_; ($human->{key} => 1) } @{$closest ? $closest->{human} : []};
@@ -3719,9 +3805,10 @@ sub agreement_text {
   } else {
     push @parts, 'PTHR=' . ($family // '-');
   }
-  return join(' ', @parts) unless %reference;
+  return (join(' ', @parts), 0, 0) unless %reference;
   my $reference_label = $closest->{family} ? 'family of ' . scalar(@{$closest->{human}}) : human_label($closest->{human}[0]);
-  return join(' ', @parts) . " | vs $reference_label: " . ($agree // 0) . ' agree, ' . ($differ // 0) . ' point elsewhere';
+  return (join(' ', @parts) . " | vs $reference_label: " . ($agree // 0) . ' agree, ' . ($differ // 0) . ' point elsewhere',
+          $agree // 0, $differ // 0);
 }
 
 # the decision table's Closest_<tag> cell: "rank N: gene (evidence)"
@@ -3752,7 +3839,7 @@ sub write_decisions {
   open my $fh, '>', $file or die "cant write $file $!\n";
   print $fh decision_header();
   my %step_label = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
-  print $fh join("\t", qw(ID GroupId Name Step Reason Native_name Pipeline_name Best_human_hit Best_hit_qcov Best_hit_tcov Best_hit_evalue
+  print $fh join("\t", qw(ID GroupId Name Step Relationship Reason Native_name Pipeline_name Best_human_hit Best_hit_qcov Best_hit_tcov Best_hit_evalue
                           Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit PANTHER_best PANTHER_model_cov Tree_placement),
                  (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
                  'Closest_human', 'Evidence_by_method', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species)), "\n";
@@ -3786,6 +3873,7 @@ sub write_decisions {
     my @cells = ($named->{selected}, $group, $named->{desc},
                  ($native ? '2 native name' : $step ? "$step $step_label{$step}"
                   : %{$any_evidence{$group} // {}} ? 'none: hits did not pass the naming tests' : 'none: no hits'),
+                 ($native ? 'source annotation' : $named->{relationship} // 'none'),
                  ($named->{origin} ? $named->{origin}{rule} : 'no step gave a name'),
                  ($native ? $native->{desc} : ''),
                  pipeline_name($group),

@@ -537,7 +537,7 @@ my $p = sub { my ($gene) = @_; return $source{$gene} ? join(' | ', @{$source{$ge
 check(($source{G1}[0] // '') eq 'HGNC:1' && ($source{G1}[2] // '') eq '3'
       && ($source{G1}[1] // '') eq 'Strong: Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001); aligned over 95% of this protein and 95% of ALPHA (full-length); has 2 of ALPHA\'s 3 Pfam domains; no Pfam match here to PF00099 SH2x',
       'G1 provenance: HGNC:1, OMA 1:1, its support, step 3', $p->('G1'));
-check(($source{G2}[1] // '') eq 'Moderate: Ortholog of human GAMMA (OMA, many:1), one of 2 genes in this genome named after it (the others: G3); '
+check(($source{G2}[1] // '') eq 'Moderate: Co-ortholog of human GAMMA (OMA, many:1), one of 2 genes in this genome named after it (the others: G3); '
       . 'OMA pairs 3 genes here with it, 1 of them named by other evidence; GAMMA is its best human similarity hit; '
       . 'a different PANTHER family (PTHR00099; human: PTHR00004); aligned over 90% of this protein and 90% of GAMMA (full-length)',
       'G2 provenance: the genes carrying the name (2), and how many OMA paired (3)', $p->('G2'));
@@ -565,17 +565,28 @@ check(($closest_human{G26}[2] // '') eq 'HGNC:17', 'closest human G26: still the
 check(($source{G4}[3] // '') eq 'hgnc_group' && ($source{G4}[0] // '') eq '10'
       && scalar(($source{G4}[1] // '') =~ /^Strong: Co-ortholog of 2 human genes in the HGNC group "Beta proteins" \(OMA, 1:many\); no single ortholog; one of these genes is its best human similarity hit; aligned over 90% of this protein and 90% of BETA1 \(full-length\)$/),
       'G4 provenance: HGNC gene group id 10, linked as a group', $p->('G4'));
-check(($source{G5}[1] // '') eq 'Moderate: Similar to human DELTA along its length: reciprocal best hit, 95% of this protein and 95% of DELTA aligned, E=1e-50 (MMseqs2)'
+check(($source{G5}[1] // '') eq 'Moderate: Homolog, orthology not shown (may be a paralog): similar to human DELTA along its length: reciprocal best hit, 95% of this protein and 95% of DELTA aligned, E=1e-50 (MMseqs2)'
       && ($source{G5}[2] // '') eq '6', 'G5 provenance: coverage and E-value, step 6', $p->('G5'));
 check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '7'
-      && ($source{G6}[1] // '') eq 'Weak: Member of PANTHER family PTHR00006 ("WIDGET PROTEIN SMC", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
+      && ($source{G6}[1] // '') eq 'Weak: Family homolog, orthology not shown: member of PANTHER family PTHR00006 ("WIDGET PROTEIN SMC", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
       'G6 provenance: PANTHER family, model coverage, step 7', $p->('G6'));
-check(($source{G30}[1] // '') eq 'Weak: Member of PANTHER family PTHR00030 ("CEREBELLIN-RELATED", InterPro\'s name "Cerebellin Synaptic Organizer" describes a function, not the family): 95% of the family model aligned, E=1e-40 (InterProScan)',
+check(($source{G30}[1] // '') eq 'Weak: Family homolog, orthology not shown: member of PANTHER family PTHR00030 ("CEREBELLIN-RELATED", InterPro\'s name "Cerebellin Synaptic Organizer" describes a function, not the family): 95% of the family model aligned, E=1e-40 (InterProScan)',
       'G30 provenance: why InterPro\'s name was not used', $p->('G30'));
-check(($source{G10}[1] // '') eq 'Weak: Member of PANTHER family PTHR00010 (InterPro IPR000010 "Gadget family"): 96% of the family model aligned, E=1e-60 (InterProScan)',
+check(($source{G10}[1] // '') eq 'Weak: Family homolog, orthology not shown: member of PANTHER family PTHR00010 (InterPro IPR000010 "Gadget family"): 96% of the family model aligned, E=1e-60 (InterProScan)',
       'G10 provenance: InterPro name, merged model coverage', $p->('G10'));
 check(($source{G7}[0] // '') eq 'IPR000002' && scalar(($source{G7}[1] // '') =~ /\(SMART SM00002, E=1e-20\); no ortholog, full-length homolog or family to name it by$/) && ($source{G7}[2] // '') eq '8',
       'G7 provenance: the chosen domain with its E-value, step 8', $p->('G7'));
+{
+  # the Relationship column: what each name claims, in a fixed vocabulary
+  my %decision = read_decisions("$out/naming_decisions.tsv");
+  my %expected = (G1 => 'ortholog', G2 => 'co-ortholog', G4 => 'co-ortholog', G5 => 'homolog', G6 => 'family homolog', G7 => 'domain homolog');
+  foreach my $gene (sort keys %expected) {
+    check(($decision{$gene}{Relationship} // '') eq $expected{$gene}, "Relationship $gene: $expected{$gene}", $decision{$gene}{Relationship});
+  }
+  my ($unnamed) = grep { my $gene = $_; ($decision{$gene}{Name} // '') eq 'None' } sort keys %decision;
+  check(defined $unnamed && $decision{$unnamed}{Relationship} eq 'none', 'Relationship of an unnamed gene: none', $unnamed);
+  check(scalar(($source{G7}[1] // '') =~ /^Weak: Domain homolog: contains InterPro/), 'G7 provenance opens with "Domain homolog"', $p->('G7'));
+}
 check(scalar(($source{G11}[1] // '') =~ /; similar to human DELTA over part of its length only \(30% of this protein, 60% of DELTA, E=1e-12\)$/),
       'G11 provenance: the partial human homolog is stated, not denied', $p->('G11'));
 check(scalar(($source{G13}[1] // '') =~ /; one of these genes is its best human similarity hit/), 'G13 provenance: support of a family is said of "one of these genes"', $p->('G13'));

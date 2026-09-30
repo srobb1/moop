@@ -514,12 +514,35 @@ homolog tables in the database.
 
 | Word | Meaning |
 |---|---|
-| Strong | an orthology name (`ISO`) with no mark against it |
-| Moderate | an orthology name with one mark against it (`sim~`, `sim-`, `pthrC`, `treeC`), or a `-like` name from a full-length reciprocal best hit with no tie and no mark against it |
+| Strong | an orthology name (`ISO`) with no mark against it -- and, for a plain human name (steps 3, 5), at least half of the human protein aligned, and for a PANTHER-tree name at least 3 methods agreeing (Evidence_by_method) |
+| Moderate | an orthology name with one mark against it (`sim~`, `sim-`, `pthrC`, `treeC`), or Strong evidence limited as above (the reason in brackets: "Moderate (only 2 methods agree)", "Moderate (aligns to only 48% of RNF213)"), or a `-like` name from a full-length reciprocal best hit with no tie and no mark against it |
 | Weak | an orthology name with two or more marks against it; a `-like` name from a best hit, a paralog tie or with a mark against it; a family or domain name (`ISM`) |
 | Curated / Source annotation | a curator's name / the gene set's own |
 
-Congeria: 5,747 Strong, 986 Moderate, 13,834 Weak, 23,201 None.
+Congeria (2026-09-30, with the PANTHER tree): 6,205 Strong, 1,002 Moderate, 12,962 Weak, 23,599 None. A tree name backed
+by only the tree and a one-way best hit, or a plain name on a gene covering under half the human protein, was Strong
+before; 185 such names are now Moderate (163 tree, 22 OMA).
+
+**The relationship comes next**, in a fixed vocabulary (the decision table's `Relationship` column), so the line says
+what kind of claim the name is before why:
+
+| Relationship | Name | The provenance line opens |
+|---|---|---|
+| ortholog | OMA 1:1, or one human gene on the PANTHER tree | "Ortholog of human X ..." |
+| co-ortholog | one of several copies here named after one human gene ("(1 of N)"), or several human genes (OMA 1:many, many:many) | "Co-ortholog of ..." |
+| homolog | `-like` (step 6) | "Homolog, orthology not shown (may be a paralog): similar to human X ..." |
+| family homolog | a PANTHER family or HGNC group name (steps 6 tie, 7) | "Family homolog, orthology not shown: member of ..." |
+| domain homolog | a domain, repeat or transposon-domain name (steps 4, 7 repeat, 8) | "Domain homolog: contains ..." |
+| curated / source annotation / none | steps 1, 2 / no name | -- |
+
+Orthology is claimed only where a method tested it (OMA, the PANTHER tree): similarity alone shows homology, and the
+closest human gene by similarity may be a paralog of the true ortholog. Congeria: 3,953 ortholog, 3,074 co-ortholog,
+500 homolog, 2,324 family homolog, 10,318 domain homolog, 23,599 none.
+
+A gene with no name and a protein under 100 aa says so ("a short protein, only 63 aa"): with nothing known about it,
+the length is the most useful fact -- in Congeria only 3% of no-hit proteins under 100 aa have an ORF in the species'
+own transcriptome (Trinity, >= 95% identity over >= 90% of the protein), against 61% of named genes; many are likely
+not real genes (10,922 genes).
 
 #### Evidence tags
 
