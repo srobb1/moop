@@ -713,7 +713,7 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
   }
   my $said = sub { my ($gene, $type) = @_; return ($statement{$gene}{$type} // [''])->[0]; };
   check($said->('G1', 'identity') eq 'Ortholog of human ALPHA; by OMA human ortholog', 'statement G1 identity', $said->('G1', 'identity'));
-  check(scalar($said->('G1', 'support') =~ /^Supported by \d+ methods?: .*OMA pairwise ortholog.*full-length best human hit.*; the same PANTHER family \(PTHR00001\) as the human gene$/),
+  check(scalar($said->('G1', 'support') =~ /^Supported by \d+ methods?: .*OMA pairwise ortholog.*best human hit \(full-length\).*; the same PANTHER family \(PTHR00001\) as the human gene$/),
         'statement G1 support: the methods that agree, and the shared PANTHER family', $said->('G1', 'support'));
   check(!$statement{G7}{support}, 'no Support statement for a domain name (no human gene to agree on)', $said->('G7', 'support'));
   check(scalar($said->('G1', 'domains') =~ /^Has 2 of ALPHA's 3 Pfam domains; no Pfam match here to PF00099/), 'statement G1 domains', $said->('G1', 'domains'));

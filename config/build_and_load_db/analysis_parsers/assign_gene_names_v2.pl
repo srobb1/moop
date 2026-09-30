@@ -4084,7 +4084,22 @@ sub agreement {
     }
     return $flag;
   };
-  my %method_words = (1 => 'OMA pairwise ortholog', 2 => 'OMA HOG', 3 => 'MMseqs2 reciprocal best hit', 4 => "ortholog via another species' ortholog");
+  # tier 4 is orthology by transitivity: our gene's ortholog (OMA, or an MMseqs2 reciprocal best hit) in another
+  # species is itself a human gene's ortholog -- named with the species it runs through
+  # (the species whose chains reach the reference gene(s); all of them when none does)
+  my (%through, %through_any);
+  foreach my $link (@{$all_human_links{$group} // []}) {
+    next unless $link->{tier} == 4;
+    my ($species) = ($link->{evidence} // '') =~ /^via (.+?) (?:ortholog|reciprocal best hit)/;
+    next unless defined $species;
+    $through_any{$species} = 1;
+    $through{$species} = 1 if grep { my $human = $_; $reference{$human->{key}} } @{$link->{human}};
+  }
+  my %reaching = %through ? %through : %through_any;
+  my @through = sort keys %reaching;
+  my %method_words = (1 => 'OMA pairwise ortholog', 2 => 'OMA HOG', 3 => 'MMseqs2 reciprocal best hit',
+                      4 => 'transitive ortholog through ' . (!@through ? 'another species' : @through <= 3 ? join(', ', @through)
+                                                                : scalar(@through) . ' species'));
   foreach my $method (['OMA', 1], ['HOG', 2], ['RBH', 3], ['VIA', 4]) {
     my ($label, $tier) = @$method;
     my @humans = map { my $key = $_; $by_tier{$tier}{$key} } sort keys %{$by_tier{$tier} // {}};
@@ -4098,7 +4113,7 @@ sub agreement {
   my @ranked = ranked_human_hits($group);
   if (@ranked) {
     my $top = $ranked[0][1];
-    my $flag = $count->($mark->([$top->{human}]), ($top->{best_full} ? 'full-length' : 'partial') . ' best human hit', [$top->{human}]);
+    my $flag = $count->($mark->([$top->{human}]), 'best human hit (' . ($top->{best_full} ? 'full-length' : 'partial alignment') . ')', [$top->{human}]);
     push @parts, 'BH=' . human_label($top->{human}) . '(' . ($top->{best_full} ? 'full' : 'partial') . ($flag ne '' ? ",$flag" : '') . ')';
   } else {
     push @parts, 'BH=-';

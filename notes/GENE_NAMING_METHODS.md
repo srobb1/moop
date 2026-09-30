@@ -647,6 +647,63 @@ selectins, matrilins and cadherins paired through Sushi, vWA and cadherin domain
 next steps name by their domain or family. The closest human gene stays the OMA partner (OMA did
 make the call); the name's provenance states the conflict.
 
+### 5.2a Definitions -- the relationship words, and when this pipeline uses each
+
+Each word has its textbook meaning, and a rule here that decides when a gene gets it. The rules are strict on
+purpose: a word is used only when the evidence tested it.
+
+**Homolog.** Two genes descended from one ancestral gene. The umbrella term: orthologs and paralogs are both
+homologs. Here, similarity is counted as a hit at E <= 1e-5 (support for another call); "similar along its length"
+means a hit covering >= 80% of both proteins at E <= 1e-10.
+
+**Ortholog.** Two genes that split when their species split (at a speciation), so they are "the same gene" in two
+species -- the relationship that best predicts a shared function. Used when:
+- OMA pairs the gene 1:1 with one human gene (pairwise orthology, the 10-species OMA template run), and that
+  pairing is not contradicted: an OMA pair that no similarity hit or shared PANTHER family supports is set aside
+  (`omaX`), and one whose best human hit is another gene AND whose PANTHER family differs is withheld (`omaC`); or
+- the PANTHER tree places it with exactly one human gene: TreeGrafter's graft point, traced to the first node that
+  has human genes, is a speciation node with one human gene below it (`ortholog_1`); the placement is trusted at
+  E <= 1e-10 over >= 50% of the protein and >= 50% of the family model; and the closest human gene by similarity (an
+  MMseqs2 reciprocal best hit, a transitive ortholog, or the best hit) is that same gene.
+The name is the human gene's own: "IFT88: intraflagellar transport 88".
+
+**Co-ortholog.** Orthologs when a gene was duplicated after the species split, in one lineage or both: every copy is
+an ortholog of the other side's gene(s). Used when:
+- several genes here are orthologs of one human gene (OMA many:1, or OMA's HOG; or several genes placed with one
+  human gene on the tree): each carries its name with "(1 of N)" and the others are listed; or
+- one gene here is an ortholog of several human genes (OMA 1:many, many:many, a HOG): named after what they share --
+  their HGNC gene group when it is a family by descent (>= 60% of its members in one PANTHER family), else their
+  shared PANTHER family; never after one member picked by score.
+
+**Transitive ortholog.** Orthology inferred through a third species: this gene's ortholog in another species (OMA,
+or an MMseqs2 reciprocal best hit) is itself an ortholog of a human gene (OMA, Ensembl Compara). Transitivity holds
+cleanly only when no duplication lies along the chain, so it never names a gene on its own: it supports a name
+("transitive ortholog through fly") and gives the closest human gene when OMA gives none (tier 4), with every human
+gene a chain reaches kept together (a family when several).
+
+**Paralog.** Two genes that split at a duplication, within one lineage. Paralogs often diverge in function, so a
+paralog's name is never given. The word appears only as a warning: a `-like` name "may be a paralog"; a gene whose
+PANTHER tree placement joins human genes at a duplication node (`paralog_family`) is not named by the tree; a
+"paralog tie" (two human genes scoring within 95% of each other) blocks a single-gene `-like` name.
+
+**Homolog, orthology not shown** (`-like`). Similar along its length (>= 80% of both proteins, E <= 1e-10) to one human
+gene -- its best human hit, reciprocal or one-way -- with no other human gene within 95% of that score (or the tie
+resolved by the one reciprocal hit). No method tested orthology, so the name says "-like": "BLTP1-like: bridge-like
+lipid transfer protein family member 1-like". The closest human gene by similarity may be a paralog of the true
+ortholog.
+
+**Family homolog.** A member of a gene family; which member is not known. Used when the gene's PANTHER family match
+covers >= 75% of the family's model (measured on the model, from the InterProScan JSON; >= 80% of it by protein
+residues when there is no JSON) -- "<family> family member" -- or when a `-like` hit ties between human genes of one
+HGNC group or PANTHER family.
+
+**Domain homolog.** Shares a domain (or repeat) with other proteins, and nothing more is known: InterPro's best domain
+or repeat match covering >= 50% of the domain's model (where the model coverage is known), named as UniProt names such
+proteins: "C-type lectin-like domain-containing protein". Also a PANTHER family built of repeats, and a transposable-
+element domain. It says what the protein contains, not which gene it is.
+
+**None.** No step gave a name: "no hits", or "hits did not pass the naming tests" -- with what was found.
+
 ### 5.3 Gene statements -- what a gene page says first
 
 The provenance line is complete but long. For a gene page, the same findings are written as a short series of
@@ -659,7 +716,7 @@ the statements that apply to a gene are written; nothing negative is said about 
 |---|---|---|---|
 | 1 | Identity | the relationship and the step: "Co-ortholog of human EPDR1; by PANTHER tree placement" | orthologs, closest human |
 | 1 | No name | why no step named it: "No hits: ..." / "Hits did not pass the naming tests (found: ...)" | -- |
-| 2 | Support | the methods that agree on the named human gene(s), and a shared PANTHER family: "Supported by 4 methods: MMseqs2 reciprocal best hit, ortholog via another species' ortholog, partial best human hit, PANTHER tree placement; the same PANTHER family (PTHR12460) as the human gene" (Evidence_by_method; these methods share one signal, sequence similarity -- a report, not independent votes) | closest human, homologs |
+| 2 | Support | the methods that agree on the named human gene(s), and a shared PANTHER family: "Supported by 4 methods: MMseqs2 reciprocal best hit, transitive ortholog through fly, best human hit (partial alignment), PANTHER tree placement; the same PANTHER family (PTHR12460) as the human gene" (a transitive ortholog names up to 3 species, else "through 8 species") (Evidence_by_method; these methods share one signal, sequence similarity -- a report, not independent votes) | closest human, homologs |
 | 3 | Copies | "One of 10 genes in this genome named after it (the others: ...)" | OMA |
 | 4 | Alignment | how much of each protein aligns to the named human gene; for a family, domain or no name, the best human hit and its shape (fragment, fusion) | homologs |
 | 5 | Domains | has or lacks the named human gene's Pfam domains | InterProScan |
@@ -671,7 +728,7 @@ the statements that apply to a gene are written; nothing negative is said about 
 Example (Congeria COKUS1KC_0014560):
 
 > Identity: Co-ortholog of human EPDR1; by PANTHER tree placement
-> Support: Supported by 3 methods: ortholog via another species' ortholog, partial best human hit, PANTHER tree placement; the same PANTHER family (PTHR10697) as the human gene
+> Support: Supported by 3 methods: transitive ortholog through choanoflagellate, best human hit (partial alignment), PANTHER tree placement; the same PANTHER family (PTHR10697) as the human gene
 > Copies: One of 10 genes in this genome named after it (the others: COKUS1KC_0014561, ...)
 > Alignment: Aligned over 90% of this protein and 77% of EPDR1 (partial)
 > Domains: Has EPDR1's Pfam domain (PF00811 Ependymin)
