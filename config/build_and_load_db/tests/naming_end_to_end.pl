@@ -701,7 +701,7 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
 {
   my %statement;   # gene -> type -> [text, order]
   foreach my $file (glob "$out/gene_statement.*.moop.tsv") {
-    my ($type) = $file =~ /gene_statement\.(\w+)\.moop\.tsv$/;
+    my ($type) = $file =~ /gene_statement\.(\w+)(?:\.\w+)?\.moop\.tsv$/;   # identity.<kind>: split by accession database
     open my $fh, '<', $file or die;
     while (my $line = <$fh>) {
       next if $line =~ /^#/;

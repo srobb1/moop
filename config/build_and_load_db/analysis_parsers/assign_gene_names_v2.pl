@@ -3447,7 +3447,15 @@ sub write_outputs {
     $human_closest{$group} = { rank => $closest->{tier}, genes => \@genes, evidence => $closest->{evidence} };
     $stats{"closest human: tier $closest->{tier}"}++;
   }
-  my $version = reference_versions();
+  # The source version shown on the site is one date: the HGNC release the names were made with
+  # (the day of the run when there is none). Every reference release and search behind the run
+  # is written to naming_versions.txt beside the outputs.
+  my $full_version = reference_versions();
+  my ($version) = $full_version =~ /HGNC (\d{4}-\d{2}-\d{2})/;
+  if (!defined $version) {
+    $version = `date '+%Y-%m-%d'`;
+    chomp $version;
+  }
   write_name_source($version);
   write_statements($version);
   write_closest('human', [qw(closestHGNC closestHumanSym closestHumanDesc closestHumanEvidence)], \%human_closest, [
@@ -3460,6 +3468,7 @@ sub write_outputs {
       accession_url => '', match => sub { 1 } },
   ]);
 
+  my @species_versions;   # "closest <species>: <its searches>", for naming_versions.txt
   foreach my $species (@closest_species) {
     my $tag = $species->{tag};
     my %species_closest;
@@ -3474,6 +3483,7 @@ sub write_outputs {
     push @sources, "DIAMOND vs $species_search_label{$tag}{diamond}" if defined $species_search_label{$tag}{diamond};
     push @sources, $species_hit_source{$tag} if defined $species_hit_source{$tag};
     my $species_version = join('; ', @sources);
+    push @species_versions, "closest $species->{species}: $species_version";
     write_closest(lc $tag, [map { my $field = $_; "closest$tag$field" } qw(Id Sym Desc Evidence)], \%species_closest, [
       { file => '', source => "Closest $species->{species} gene", version => $species_version,
         url => 'https://www.ncbi.nlm.nih.gov', accession_url => 'https://www.ncbi.nlm.nih.gov/search/all/?term=',
@@ -3482,6 +3492,23 @@ sub write_outputs {
         url => 'https://www.ncbi.nlm.nih.gov', accession_url => '', match => sub { 1 } },
     ]);
   }
+  write_naming_versions($version, $full_version, @species_versions);
+}
+
+# naming_versions.txt: the short version on every source (MOOP gene naming, one date) spelled out
+sub write_naming_versions {
+  my ($version, $full_version, @species_versions) = @_;
+  my $file = "$opt{'out-dir'}/naming_versions.txt";
+  open my $fh, '>', $file or die "cant write $file $!\n";
+  my $today = `date '+%Y-%m-%d'`;
+  chomp $today;
+  print $fh "MOOP gene naming (assign_gene_names_v2.pl), run $today\n";
+  print $fh "Annotation Source Version on the naming sources: $version (the HGNC release date)\n";
+  print $fh "Reference data: $full_version\n";
+  foreach my $line (@species_versions) {
+    print $fh "$line\n";
+  }
+  close $fh;
 }
 
 sub open_closest_moop {
@@ -3502,18 +3529,21 @@ sub open_closest_moop {
 # Gene statements: what the naming found about each gene, as a short series of typed statements a gene
 # page can show above its (collapsed) evidence tables. gene_statement.<type>.moop.tsv, one per type, annotation
 # type "Gene Statement"; Score = the statement's place in the series. Built from the same data as the name.
+# Sources are named MOOP-NAMING-<TYPE>. The Identity statements are split by the database of their
+# accession (gene_statement.identity.<kind>.moop.tsv, source MOOP-NAMING-IDENTITY-<KIND>, the kinds
+# and links of %NAME_SOURCE), so every file's accessions link out to one database.
 my @STATEMENT_TYPES = (
-  # [file key, source (the statement type as shown), order]
-  ['identity',   'Gene statement: Identity',   1],
-  ['no_name',    'Gene statement: No name',    1],
-  ['support',    'Gene statement: Support',    2],
-  ['copies',     'Gene statement: Copies',     3],
-  ['alignment',  'Gene statement: Alignment',  4],
-  ['domains',    'Gene statement: Domains',    5],
-  ['tree',       'Gene statement: Tree',       6],
-  ['cautions',   'Gene statement: Cautions',   7],
-  ['features',   'Gene statement: Features',   8],
-  ['expression', 'Gene statement: Expression', 9],
+  # [file key, source, order]
+  ['identity',   'MOOP-NAMING-IDENTITY',   1],
+  ['no_name',    'MOOP-NAMING-NO-NAME',    1],
+  ['support',    'MOOP-NAMING-SUPPORT',    2],
+  ['copies',     'MOOP-NAMING-COPIES',     3],
+  ['alignment',  'MOOP-NAMING-ALIGNMENT',  4],
+  ['domains',    'MOOP-NAMING-DOMAINS',    5],
+  ['tree',       'MOOP-NAMING-TREE',       6],
+  ['cautions',   'MOOP-NAMING-CAUTIONS',   7],
+  ['features',   'MOOP-NAMING-FEATURES',   8],
+  ['expression', 'MOOP-NAMING-EXPRESSION', 9],
 );
 my $STATEMENT_TYPE = 'Gene Statement';
 
@@ -3669,8 +3699,16 @@ sub write_statements {
     foreach my $type (@STATEMENT_TYPES) {
       my ($key, $source, $order) = @$type;
       my $text = $said{$key} // next;
-      my $fh = $fh{$key} //= open_closest_moop("$opt{'out-dir'}/gene_statement.$key.moop.tsv",
-        { source => $source, version => $version, url => '', accession_url => '' }, $STATEMENT_TYPE);
+      # an Identity statement goes to the file of its accession's database
+      my ($file_key, $url, $accession_url) = ($key, '', '');
+      if ($key eq 'identity' and $named and $named->{origin} and $NAME_SOURCE{ $named->{origin}{kind} // '' }) {
+        my $kind = $named->{origin}{kind};
+        $file_key = "identity.$kind";
+        $source .= '-' . uc($kind =~ s/_/-/gr);
+        (undef, $url, $accession_url) = @{ $NAME_SOURCE{$kind} };
+      }
+      my $fh = $fh{$file_key} //= open_closest_moop("$opt{'out-dir'}/gene_statement.$file_key.moop.tsv",
+        { source => $source, version => $version, url => $url, accession_url => $accession_url }, $STATEMENT_TYPE);
       print $fh join("\t", $group, ($accession{$key} // '') ne '' ? $accession{$key} : $key, $text =~ s/[\t\n]/ /gr, $order), "\n";
       $stats{"statement: $key"}++;
     }

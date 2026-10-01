@@ -709,7 +709,12 @@ element domain. It says what the protein contains, not which gene it is.
 The provenance line is complete but long. For a gene page, the same findings are written as a short series of
 **typed statements**, each one sentence, in a fixed order; the page can show them above its evidence tables (collapsed),
 with "see the data below". One moop file per type, `gene_statement.<type>.moop.tsv` (annotation type "Gene Statement",
-source "Gene statement: <Type>", Score = the place in the series), loaded by `setup_new_moopdb_and_load_data.sh`. Only
+source `MOOP-NAMING-<TYPE>`, Score = the place in the series), loaded by `setup_new_moopdb_and_load_data.sh`. The
+Identity statements are split by the database of their accession, `gene_statement.identity.<kind>.moop.tsv` with source
+`MOOP-NAMING-IDENTITY-<KIND>` (HGNC, HGNC-GROUP, INTERPRO, PANTHER, PFAM, ...), so each file's accessions link out to one
+database. The source version of the naming sources (statements, name source, closest human gene) is one date, the HGNC
+release the names were made with; `naming_versions.txt` beside the outputs lists every reference release and search
+behind the run. On a reload the loader replaces a gene set's earlier rows of these types. Only
 the statements that apply to a gene are written; nothing negative is said about expression or location.
 
 | Order | Type | Says | Backed by (table on the page) |
