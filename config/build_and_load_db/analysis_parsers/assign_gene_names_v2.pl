@@ -2644,6 +2644,9 @@ sub panther_family_name {
     $stats{'name: repeat (PANTHER family built of repeats)'}++;
     return { desc => domain_description($family->{repeat_name}), selected => selected_id($group, $family->{id}), tag => ['ISM', 'rpt'],
              note => "PANTHER|Gene_Families|$family->{id}|$family->{family}|$family->{evalue}",
+             basis => "Its PANTHER family $family->{family} (\"$family->{description}\") match is "
+                    . sprintf('%.0f%%', 100 * $family->{repeat_fraction}) . " repeat units ($family->{repeat_name}), "
+                    . "which any protein with such repeats fills; named for the repeat, not the family",
              origin => { kind => 'panther', accession => $family->{family}, step => 7,
                          rule => "Its PANTHER family $family->{family} (\"$family->{description}\") match is "
                                . sprintf('%.0f%%', 100 * $family->{repeat_fraction}) . " repeat units ($family->{repeat_name}), "
@@ -2661,6 +2664,8 @@ sub panther_family_name {
   $stats{'name: PANTHER family' . (defined $family->{interpro_name} && $label eq $family->{interpro_name} ? ' (InterPro name)' : ' (PANTHER name)')}++;
   return { desc => family_member($label), selected => selected_id($group, $family->{id}), tag => ['ISM', 'pthr'],
            note => "PANTHER|Gene_Families|$family->{id}|$family->{family}|$family->{evalue}",
+           basis => "Member of PANTHER family $family->{family} ($named_by): "
+                  . "$family->{model_coverage}% of the family model aligned, E=" . e_value($family->{evalue}) . " (InterProScan)",
            origin => { kind => 'panther', accession => $family->{family}, step => 7,
                        rule => "Member of PANTHER family $family->{family} ($named_by): "
                              . "$family->{model_coverage}% of the family model aligned, E=" . e_value($family->{evalue}) . " (InterProScan)" } };
@@ -2700,39 +2705,58 @@ sub domain_name {
         . "(a family of co-orthologs, a paralog tie, or an uninformative name)"
       : "; similar to human $label over part of its length ($numbers)" . shape_note($best->[1]);
   }
+  # the basis: what the name rests on, said in the Support statement of a gene with no human gene in its name
+  my $basis = "Contains InterPro " . lc($domain->{type}) . " $domain->{entry} \"$domain->{name}\" ($signature); "
+            . "no ortholog, full-length homolog or family to name it by";
   return { desc => $description, selected => selected_id($group, $domain->{id}), tag => ['ISM', 'ipr', ($best ? 'sim~' : ())],
            note => "InterPro|Domains|$domain->{id}|$domain->{entry}|" . ($domain->{evalue} // '-'),
-           origin => { kind => 'interpro', accession => $domain->{entry}, step => 8,
-                       rule => "Contains InterPro " . lc($domain->{type}) . " $domain->{entry} \"$domain->{name}\" ($signature); "
-                             . "no ortholog, full-length homolog or family to name it by$partial" } };
+           basis => $basis,
+           origin => { kind => 'interpro', accession => $domain->{entry}, step => 8, rule => "$basis$partial" } };
 }
 
 # a name given after an unsupported OMA ortholog was set aside says so: "omaX" in its tag, and the
 # pair in its provenance
+# An OMA pairing that did not name the gene, in words: which human gene, and why not. One wording for
+# the provenance (set_aside_note) and for the Cautions statement, which is all the site shows.
+sub rejected_pairing_text {
+  my ($group) = @_;
+  my $rejected = $rejected_pairing{$group} or return undef;
+  my $label = human_label($rejected->{human});
+  return "OMA pairs it with human $label together with " . ($rejected->{paired} - 1) . " other genes here, but "
+       . ($rejected->{paired} - $rejected->{passed}) . " of the $rejected->{paired} fail the similarity and PANTHER checks, so $label names none of them";
+}
+sub conflicting_oma_text {
+  my ($group) = @_;
+  my $conflict = $conflicting_oma{$group} or return undef;
+  my $humans = join('/', map { my $human = $_; human_label($human) } @{$conflict->{humans}});
+  my $best = $conflict->{best} ? human_label($conflict->{best}) : 'another gene';
+  return "OMA pairs it with human $humans ($conflict->{type}), "
+       . "but its best human similarity hit is $best and its PANTHER family differs, so $humans does not name it";
+}
+sub unsupported_oma_text {
+  my ($group) = @_;
+  my $set_aside = $unsupported_oma{$group} or return undef;
+  my $humans = join('/', map { my $human = $_; human_label($human) } @{$set_aside->{humans}});
+  return "OMA pairs it with human $humans ($set_aside->{type}), "
+       . "but no similarity hit or PANTHER family supports that pair, so it does not name the gene";
+}
+
 sub set_aside_note {
   my ($group, $named) = @_;
-  if (my $rejected = $rejected_pairing{$group}) {
+  if ($rejected_pairing{$group}) {
     return $named unless $named->{tag} and $named->{origin} and ($decision{$group}{step} // 0) != 3;
-    my $label = human_label($rejected->{human});
     return { %$named, tag => [@{$named->{tag}}, 'omaR'],
-             origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . "; OMA pairs it with human $label together with "
-                                                     . ($rejected->{paired} - 1) . " other genes here, but " . ($rejected->{paired} - $rejected->{passed})
-                                                     . " of the $rejected->{paired} fail the similarity and PANTHER checks, so $label names none of them" } };
+             origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . '; ' . rejected_pairing_text($group) } };
   }
-  if (my $conflict = $conflicting_oma{$group}) {
+  if ($conflicting_oma{$group}) {
     return $named unless $named->{tag} and $named->{origin};
-    my $humans = join('/', map { my $human = $_; human_label($human) } @{$conflict->{humans}});
-    my $best = $conflict->{best} ? human_label($conflict->{best}) : 'another gene';
     return { %$named, tag => [@{$named->{tag}}, 'omaC'],
-             origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . "; OMA pairs it with human $humans ($conflict->{type}), "
-                                                     . "but its best human similarity hit is $best and its PANTHER family differs, so $humans does not name it" } };
+             origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . '; ' . conflicting_oma_text($group) } };
   }
-  my $set_aside = $unsupported_oma{$group} or return $named;
+  $unsupported_oma{$group} or return $named;
   return $named unless $named->{tag} and $named->{origin};
-  my $humans = join('/', map { my $human = $_; human_label($human) } @{$set_aside->{humans}});
   return { %$named, tag => [@{$named->{tag}}, 'omaX'],
-           origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . "; OMA pairs it with human $humans ($set_aside->{type}), "
-                                                   . "but no similarity hit or PANTHER family supports that pair, so it does not name the gene" } };
+           origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . '; ' . unsupported_oma_text($group) } };
 }
 
 # an OMA human ortholog (or co-ortholog set) is supported when the gene has a similarity hit to one
@@ -3028,6 +3052,7 @@ sub transposon_name {
   $stats{'name: transposable element' . ($closest ? ' (instead of an OMA many:1 name)' : '')}++;
   my $rule = "Contains Pfam $te->{signature} (\"$te->{pfam_name}\", E=" . e_value($te->{evalue}) . "), the $domain domain of $class ${kind}s; "
            . "named as a transposable-element protein";
+  my $basis = $rule;   # the domain evidence, before any note on an OMA pairing
   if ($closest) {
     my $copies = scalar keys %{$claimed_human{$closest->{human}[0]{key}}};
     $rule .= "; OMA pairs it with human " . human_label($closest->{human}[0]) . " ($closest->{type}) together with "
@@ -3035,6 +3060,7 @@ sub transposon_name {
   }
   return { desc => domain_description($domain), selected => selected_id($group, $te->{id}), tag => ['ISM', 'te'],
            note => "Pfam|Transposable_element|$te->{id}|$te->{signature}|$te->{evalue}",
+           basis => $basis,
            origin => { kind => 'pfam', accession => $te->{signature}, step => 4, rule => $rule } };
 }
 
@@ -3649,6 +3675,8 @@ sub gene_statements {
       if defined $same_family;
     $said{support} = $text if $text ne '';
   }
+  # a name with no human gene behind it rests on a domain or a family match: that evidence is its Support
+  $said{support} //= ucfirst $named->{basis} if $named and $named->{desc} ne 'None' and $named->{basis};
   if (@humans) {
     # the named human gene -- of several (co-orthologs of a family), the one this gene aligns to best
     my (undef, undef, $aligned) = best_alignment($group, \@humans);
@@ -3691,9 +3719,10 @@ sub gene_statements {
   push @cautions, "no similarity hit to $human_label" if $tag{'sim-'} and @humans;
   push @cautions, "its PANTHER family differs from that of $human_label" if $tag{pthrC} and @humans;
   push @cautions, 'the PANTHER tree places it with other human genes' if $tag{treeC};
-  push @cautions, 'an OMA pairing that nothing else supports was set aside' if $tag{omaX};
-  push @cautions, 'an OMA pairing was withheld: its best hit and PANTHER family point to another gene' if $tag{omaC};
-  push @cautions, "OMA's many:1 pairing was mostly rejected" if $tag{omaR};
+  # an OMA pairing that did not name the gene: which human gene, and why (the same words as the provenance)
+  push @cautions, unsupported_oma_text($group) // 'an OMA pairing that nothing else supports was set aside' if $tag{omaX};
+  push @cautions, conflicting_oma_text($group) // 'an OMA pairing was withheld: its best hit and PANTHER family point to another gene' if $tag{omaC};
+  push @cautions, rejected_pairing_text($group) // "OMA's many:1 pairing was mostly rejected" if $tag{omaR};
   push @cautions, 'it carries a transposable-element domain' if $tag{te};
   push @cautions, @{$named->{cautions} // []} if $named;
   # methods pointing to other human genes that no mark above states (the best hit and the tree have theirs)

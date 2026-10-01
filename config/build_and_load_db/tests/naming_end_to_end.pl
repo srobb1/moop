@@ -716,7 +716,12 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
   check($said->('G1', 'identity') eq 'Ortholog of human ALPHA; by OMA human ortholog', 'statement G1 identity', $said->('G1', 'identity'));
   check(scalar($said->('G1', 'support') =~ /^Supported by \d+ methods?: .*OMA pairwise ortholog.*best human hit \(full-length\).*; the same PANTHER family \(PTHR00001\) as the human gene$/),
         'statement G1 support: the methods that agree, and the shared PANTHER family', $said->('G1', 'support'));
-  check(!$statement{G7}{support}, 'no Support statement for a domain name (no human gene to agree on)', $said->('G7', 'support'));
+  check($said->('G7', 'support') eq 'Contains InterPro domain IPR000002 "Zinc finger, RING-type" (SMART SM00002, E=1e-20); no ortholog, full-length homolog or family to name it by',
+        'statement G7 support: a domain name rests on the domain match (member database, E-value) and says nothing better was found', $said->('G7', 'support'));
+  check(scalar($said->('G25', 'cautions') =~ /OMA pairs it with human \S+ \([^)]+\), but no similarity hit or PANTHER family supports that pair, so it does not name the gene/),
+        'statement G25 cautions (omaX): the set-aside OMA pairing, with its human gene and why', $said->('G25', 'cautions'));
+  check(scalar($said->('G26', 'cautions') =~ /OMA pairs it with human ZETA \([^)]+\), but its best human similarity hit is THETA and its PANTHER family differs, so ZETA does not name it/),
+        'statement G26 cautions (omaC): the withheld OMA pairing, with both human genes', $said->('G26', 'cautions'));
   check(scalar($said->('G1', 'domains') =~ /^Has 2 of ALPHA's 3 Pfam domains; no Pfam match here to PF00099/), 'statement G1 domains', $said->('G1', 'domains'));
   check(scalar($said->('G2', 'identity') =~ /^Co-ortholog of human GAMMA; by /) && scalar($said->('G2', 'copies') =~ /^One of 2 genes in this genome named after it \(the others: G3\)$/),
         'statement G2: co-ortholog, and its copy', $said->('G2', 'identity') . ' | ' . $said->('G2', 'copies'));
