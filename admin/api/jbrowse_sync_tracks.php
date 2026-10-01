@@ -9,6 +9,7 @@
 // check AND verifies the CSRF token on POST. Using the bare access check left this
 // endpoint authenticated but forgeable.
 require_once __DIR__ . '/../admin_init.php';
+require_once __DIR__ . '/../../lib/functions_data.php';
 
 header('Content-Type: application/json');
 set_time_limit(0);
@@ -23,6 +24,7 @@ $syncMode = $_POST['syncMode'] ?? 'single';
 $organism = $_POST['syncOrganism'] ?? '';
 $assembly = $_POST['syncAssembly'] ?? '';
 $forceRegenerate = isset($_POST['forceRegenerate']);
+$removeMissing = isset($_POST['removeMissing']);
 $dryRun = isset($_POST['dryRun']);
 
 $config        = ConfigManager::getInstance();
@@ -70,6 +72,11 @@ foreach ($assembliesToSync as $item) {
     $org = $item['organism'];
     $asm = $item['assembly'];
     
+    if (!isJBrowseAssemblyRegistered($org, $asm)) {
+        $errors[] = "$org/$asm: not registered in JBrowse — register the assembly first";
+        continue;
+    }
+    
     $sheetFile = "$sheets_base/$org/$asm/jbrowse_tracks_sheet.txt";
     
     if (!file_exists($sheetFile)) {
@@ -94,8 +101,14 @@ foreach ($assembliesToSync as $item) {
     $cmd .= "--organism " . escapeshellarg($org) . " ";
     $cmd .= "--assembly " . escapeshellarg($asm) . " ";
     
+    // Two separate choices. They used to be one checkbox, ticked by default, so every
+    // ordinary sync also deleted whatever was not in the sheet.
     if ($forceRegenerate) {
-        $cmd .= "--force --clean ";
+        $cmd .= "--force ";
+    }
+    
+    if ($removeMissing) {
+        $cmd .= "--clean ";
     }
     
     if ($dryRun) {

@@ -1145,6 +1145,27 @@ function countJBrowseRegistrations(): int {
     return is_dir($dir) ? count(glob("$dir/*.json") ?: []) : 0;
 }
 
+/**
+ * Is this organism/assembly registered in JBrowse?
+ *
+ * The gate for anything that hangs tracks off an assembly (sheet registration, sheet sync).
+ * The page only offers registered assemblies in its dropdowns, but the endpoints took any
+ * string — and built a filesystem path from it. Names are checked here too, so a caller
+ * that passes this gate may safely use both values as path components.
+ */
+function isJBrowseAssemblyRegistered(string $organism, string $assembly): bool {
+    foreach ([$organism, $assembly] as $name) {
+        if ($name === '' || $name[0] === '.' || !preg_match('/^[A-Za-z0-9._-]+$/', $name)) {
+            return false;
+        }
+    }
+    $file = ConfigManager::getInstance()->getPath('metadata_path')
+          . "/jbrowse2-configs/assemblies/{$organism}_{$assembly}.json";
+    if (!is_file($file)) return false;
+    $def = loadJsonFile($file, []);
+    return ($def['organism'] ?? '') === $organism && ($def['assemblyId'] ?? '') === $assembly;
+}
+
 function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
     $config        = ConfigManager::getInstance();
     $metadata_path = $config->getPath('metadata_path');

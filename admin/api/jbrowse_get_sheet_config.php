@@ -21,6 +21,14 @@ if (empty($organism) || empty($assembly)) {
     exit;
 }
 
+// Both values become path components below.
+foreach ([$organism, $assembly] as $name) {
+    if ($name[0] === '.' || !preg_match('/^[A-Za-z0-9._-]+$/', $name)) {
+        echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
+        exit;
+    }
+}
+
 $config          = ConfigManager::getInstance();
 $metadata_path   = $config->getPath('metadata_path');
 $sheetConfigPath = "$metadata_path/jbrowse2-configs/sheets/$organism/$assembly/jbrowse_tracks_sheet.txt";

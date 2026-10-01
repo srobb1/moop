@@ -37,7 +37,7 @@ function setupOrganismDropdowns() {
     const regOrganism = document.getElementById('organism');
     if (regOrganism) {
         regOrganism.addEventListener('change', function() {
-            updateAssemblyDropdown(this.value, 'assembly', window.registeredOrganisms);
+            updateAssemblyDropdown(this.value, 'assembly', registeredOrganisms);
         });
     }
     
@@ -57,7 +57,7 @@ function setupOrganismDropdowns() {
     const syncOrganism = document.getElementById('syncOrganism');
     if (syncOrganism) {
         syncOrganism.addEventListener('change', function() {
-            updateAssemblyDropdown(this.value, 'syncAssembly', window.registeredOrganisms);
+            updateAssemblyDropdown(this.value, 'syncAssembly', registeredOrganisms);
         });
     }
     
@@ -123,7 +123,7 @@ function initTracksTable() {
             { data: 'status' },
             { data: 'actions', orderable: false, searchable: false }
         ],
-        pageLength: 20,
+        pageLength: 25,
         order: [[1, 'asc']]
     });
 }
@@ -169,11 +169,9 @@ function loadExistingSheetConfig(organism, assembly) {
                 // Populate form with existing data
                 const sheetId = data.config.SHEET_ID || '';
                 const gid = data.config.GID || '0';
-                const autoSync = data.config.AUTO_SYNC === 'true';
                 
                 document.getElementById('sheetUrl').value = sheetId;
                 document.getElementById('gid').value = gid;
-                document.getElementById('autoSync').checked = autoSync;
                 
                 // Show info message
                 const resultDiv = document.getElementById('sheetValidationResult');
@@ -189,7 +187,6 @@ function loadExistingSheetConfig(organism, assembly) {
                 // No existing sheet
                 document.getElementById('sheetUrl').value = '';
                 document.getElementById('gid').value = '0';
-                document.getElementById('autoSync').checked = true;
                 document.getElementById('sheetValidationResult').style.display = 'none';
             }
         })
@@ -556,7 +553,12 @@ function registerAssembly(organism, assembly, buttonEl) {
                 row.cells[row.cells.length - 1].innerHTML =
                     '<span class="text-success"><i class="fa fa-check"></i> Registered</span>';
             }
-            setTimeout(() => window.location.reload(), 2000);
+            // Land on the sheet form with this assembly already chosen, so the next step
+            // is one paste away rather than three cards and two dropdowns away.
+            const next = new URL(window.location.href);
+            next.searchParams.set('sheet_for', organism + '/' + assembly);
+            next.hash = 'sheetRegistration';
+            setTimeout(() => window.location.assign(next.toString()), 2000);
         } else {
             logOutput.textContent += '✗ Error: ' + data.error + '\n';
             logOutput.scrollTop = logOutput.scrollHeight;
@@ -718,50 +720,92 @@ $(document).ready(function() {
             });
     });
     
-    // Sheet registration form
+    // Sheet registration form: saving a sheet also syncs it. They were two cards and two
+    // more dropdowns, and a registered-but-never-synced sheet does nothing at all.
     $('#registerSheetForm').on('submit', function(e) {
         e.preventDefault();
-        
+
         const formData = new FormData(this);
         formData.append('action', 'register');
-        
+        const organism = formData.get('organism');
+        const assembly = formData.get('assembly');
+
         const resultDiv = document.getElementById('sheetValidationResult');
-        resultDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Registering sheet...</div>';
-        resultDiv.style.display = 'block';
-        
-        fetch(`/${siteUrl}/admin/api/jbrowse_register_sheet.php`, {
-            method: 'POST',
-            body: formData
-        })
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const showStatus = (cls, icon, text, log) => {
+            resultDiv.innerHTML = `<div class="alert alert-${cls}"><i class="fa ${icon}"></i> <span></span></div>`;
+            resultDiv.querySelector('span').textContent = text;
+            if (log) {
+                const pre = document.createElement('pre');
+                pre.className = 'border rounded p-3 bg-light small';
+                pre.style.cssText = 'max-height:300px;overflow-y:auto;';
+                pre.textContent = log;
+                resultDiv.appendChild(pre);
+                pre.scrollTop = pre.scrollHeight;
+            }
+            resultDiv.style.display = 'block';
+        };
+
+        submitBtn.disabled = true;
+        showStatus('info', 'fa-spinner fa-spin', 'Step 1 of 2: checking and saving the sheet…');
+
+        fetch(`/${siteUrl}/admin/api/jbrowse_register_sheet.php`, { method: 'POST', body: formData })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                resultDiv.innerHTML = `
-                    <div class="alert alert-success">
-                        <i class="fa fa-check-circle"></i> Sheet registered successfully!
-                        ${data.message ? '<p class="mb-0 mt-2">' + data.message + '</p>' : ''}
-                    </div>
-                `;
-                setTimeout(() => {
-                    clearSheetForm();
-                }, 3000);
-            } else {
-                resultDiv.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fa fa-times-circle"></i> ${data.error}
-                    </div>
-                `;
-            }
+            if (!data.success) throw new Error(data.error || 'Sheet could not be saved');
+
+            showStatus('info', 'fa-spinner fa-spin',
+                `Sheet saved (${data.trackCount} rows). Step 2 of 2: creating tracks — a large sheet can take a minute…`);
+
+            const syncData = new FormData();
+            syncData.append('syncMode', 'single');
+            syncData.append('syncOrganism', organism);
+            syncData.append('syncAssembly', assembly);
+            syncData.append('forceRegenerate', 'on');
+            return fetch(`/${siteUrl}/admin/api/jbrowse_sync_tracks.php`, { method: 'POST', body: syncData })
+                .then(response => response.json())
+                .then(sync => {
+                    if (sync.success) {
+                        showStatus('success', 'fa-check-circle',
+                            `Sheet saved and tracks synced for ${organism} / ${assembly}.`, sync.output);
+                        if (tracksTable) tracksTable.ajax.reload();
+                    } else {
+                        showStatus('warning', 'fa-exclamation-triangle',
+                            'The sheet was saved, but the sync reported a problem: ' + (sync.error || (sync.errors || []).join('; ')),
+                            sync.output);
+                    }
+                });
         })
-        .catch(error => {
-            resultDiv.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fa fa-times-circle"></i> ${error.message}
-                </div>
-            `;
-        });
+        .catch(error => showStatus('danger', 'fa-times-circle', error.message))
+        .finally(() => { submitBtn.disabled = false; });
     });
-    
+
+    // Arriving from an assembly registration (?sheet_for=Organism/Assembly): pre-select it
+    // and ask for the sheet, which is the only thing left to do.
+    const sheetFor = new URLSearchParams(window.location.search).get('sheet_for');
+    if (sheetFor && sheetFor.includes('/')) {
+        const [org, asm] = sheetFor.split('/');
+        const orgSel = document.getElementById('organism');
+        if (orgSel && (registeredOrganisms[org] || []).includes(asm)) {
+            orgSel.value = org;
+            updateAssemblyDropdown(org, 'assembly', registeredOrganisms);
+            document.getElementById('assembly').value = asm;
+            loadExistingSheetConfig(org, asm);
+
+            const prompt = document.createElement('div');
+            prompt.className = 'alert alert-success';
+            prompt.innerHTML = '<i class="fa fa-check-circle"></i> <strong></strong> is registered and its gene track is in place. ' +
+                'If it has other tracks (RNA-seq, alignments…), paste the Google Sheet link below and press ' +
+                '<strong>Save sheet &amp; sync tracks</strong>. If not, you are done.';
+            prompt.querySelector('strong').textContent = `${org} / ${asm}`;
+            const form = document.getElementById('registerSheetForm');
+            form.parentNode.insertBefore(prompt, form);
+
+            document.getElementById('sheetRegistration').scrollIntoView({ block: 'start' });
+            document.getElementById('sheetUrl').focus({ preventScroll: true });
+        }
+    }
+
     // Track sync form
     $('#syncTracksForm').on('submit', function(e) {
         e.preventDefault();

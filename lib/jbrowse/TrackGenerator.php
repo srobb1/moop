@@ -472,7 +472,8 @@ class TrackGenerator
                     'type' => $typeDir,
                     'name' => $metadata['name'] ?? $trackId,
                     'category' => $metadata['category'] ?? 'Unknown',
-                    'file' => $file
+                    'file' => $file,
+                    'sheet_origin' => self::isSheetOriginTrack($typeDir, $metadata)
                 ];
             }
         }
@@ -499,26 +500,76 @@ class TrackGenerator
     }
     
     /**
+     * Did this track JSON come from a Google Sheet?
+     *
+     * Only sheet-origin tracks may be removed by a sheet sync. The gene annotation track
+     * ({gene_set}_genes.json) is written by gene-set registration into the same gff/
+     * directory and is never a sheet row, so "not in the sheet" says nothing about it.
+     *
+     * The test is a POSITIVE marker rather than a list of things to protect, so a track
+     * of unknown origin is kept: every sheet track type records google_sheets_metadata,
+     * and combo/ is written only by ComboTrack. A sheet row with no metadata columns at
+     * all carries no marker and is therefore never cleaned — delete it from the track
+     * listing instead. Leaving a stale track is recoverable; deleting a gene track is
+     * what took the Congeria gene models out of the browser on 2026-10-01.
+     *
+     * @param string $typeDir Track type directory the JSON lives in
+     * @param array $trackJson Decoded track JSON
+     * @return bool True if a sheet sync wrote this track
+     */
+    public static function isSheetOriginTrack($typeDir, $trackJson)
+    {
+        if ($typeDir === 'combo') {
+            return true;
+        }
+        $metadata = $trackJson['metadata'] ?? [];
+        return is_array($metadata) && array_key_exists('google_sheets_metadata', $metadata);
+    }
+    
+    /**
+     * Pick the tracks a clean should remove: sheet-origin tracks whose id is no longer
+     * in the sheet. Combo files are named by the lowercased track id, so ids are
+     * compared case-insensitively.
+     *
+     * @param array $existingTracks Tracks as returned by getTrackStatus()
+     * @param array $sheetTrackIds Track IDs from sheet (regular AND combo)
+     * @return array The subset of $existingTracks to remove
+     */
+    public static function selectOrphanedTracks($existingTracks, $sheetTrackIds)
+    {
+        $inSheet = array_flip(array_map('strtolower', $sheetTrackIds));
+        $orphans = [];
+        foreach ($existingTracks as $track) {
+            if (empty($track['sheet_origin'])) {
+                continue;
+            }
+            if (!isset($inSheet[strtolower($track['track_id'])])) {
+                $orphans[] = $track;
+            }
+        }
+        return $orphans;
+    }
+    
+    /**
      * Clean orphaned tracks
      * 
-     * Removes tracks that are not in the current sheet.
+     * Removes sheet-origin tracks that are no longer in the sheet. Tracks that did not
+     * come from a sheet (the gene annotation track) are never touched.
      * 
-     * @param array $sheetTrackIds Track IDs from sheet
+     * @param array $sheetTrackIds Track IDs from sheet (regular AND combo)
      * @param string $organism Organism name
      * @param string $assembly Assembly ID
-     * @return int Number of tracks removed
+     * @param bool $dryRun Report what would be removed without removing it
+     * @return array Track IDs removed (or that would be, on a dry run)
      */
-    public function cleanOrphanedTracks($sheetTrackIds, $organism, $assembly)
+    public function cleanOrphanedTracks($sheetTrackIds, $organism, $assembly, $dryRun = false)
     {
-        $existingTracks = $this->getTrackStatus($organism, $assembly);
-        $removed = 0;
+        $orphans = self::selectOrphanedTracks($this->getTrackStatus($organism, $assembly), $sheetTrackIds);
+        $removed = [];
         
-        foreach ($existingTracks as $track) {
-            if (!in_array($track['track_id'], $sheetTrackIds)) {
-                // Remove orphaned track
-                if (unlink($track['file'])) {
-                    $removed++;
-                }
+        foreach ($orphans as $track) {
+            if ($dryRun || unlink($track['file'])) {
+                $removed[] = $track['track_id'];
             }
         }
         

@@ -166,7 +166,7 @@ if ($options['dry_run']) {
 }
 
 if ($options['clean']) {
-    echo "  Clean: Remove orphaned tracks\n";
+    echo "  Clean: Remove sheet tracks no longer in the sheet\n";
 }
 
 echo "\n";
@@ -281,9 +281,18 @@ try {
     // Clean orphaned tracks
     if ($options['clean']) {
         echo "\nCleaning orphaned tracks...\n";
-        $sheetTrackIds = array_column($tracks['regular'], 'track_id');
-        $removed = $generator->cleanOrphanedTracks($sheetTrackIds, $options['organism'], $options['assembly']);
-        echo "✓ Removed $removed orphaned tracks\n";
+        // Regular AND combo ids: comparing against regular ids alone unlinked every combo
+        // the same run had just written.
+        $sheetTrackIds = array_merge(
+            array_column($tracks['regular'], 'track_id'),
+            array_column($tracks['combo'], 'track_id')
+        );
+        // Dry run must be passed through — clean used to unlink regardless of --dry-run.
+        $removed = $generator->cleanOrphanedTracks($sheetTrackIds, $options['organism'], $options['assembly'], $options['dry_run']);
+        foreach ($removed as $removedId) {
+            echo "  ✗ $removedId\n";
+        }
+        echo ($options['dry_run'] ? "Would remove " : "✓ Removed ") . count($removed) . " sheet tracks no longer in the sheet\n";
     }
     
     echo "\n";

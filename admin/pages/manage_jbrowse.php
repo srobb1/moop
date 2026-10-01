@@ -27,9 +27,9 @@
         <p><strong>Purpose:</strong> Centralized management for JBrowse assemblies, tracks, and configurations.</p>
         <p><strong>Workflow:</strong></p>
         <ol>
-          <li>Register an assembly in JBrowse (prepares genome files)</li>
-          <li>Register a Google Sheet URL as the track source for that assembly</li>
-          <li>Sync tracks from the sheet to populate the track listing</li>
+          <li>Register an assembly in JBrowse (prepares genome files and the gene annotation track)</li>
+          <li>If it has other tracks, paste its Google Sheet link — saving the sheet also creates the tracks</li>
+          <li>After editing a sheet later, use Sync Tracks to pick up the changes</li>
         </ol>
       </div>
     </div>
@@ -155,7 +155,7 @@
           <i class="fa fa-info-circle"></i>
           These assemblies exist on disk but are not yet registered in JBrowse.
           Registering prepares genome files (FASTA index, compressed GFF) and creates the assembly config.
-          After registering, use <strong>Register Google Sheet</strong> below to add tracks.
+          After registering you are taken to the sheet form for that assembly, in case it has other tracks.
         </p>
         <table class="table table-sm table-hover mb-0">
           <thead>
@@ -349,17 +349,12 @@
             <small class="text-muted">Tab identifier (usually 0 for first tab, found in URL: gid=XXXXX)</small>
           </div>
 
-          <div class="mb-3 form-check">
-            <input type="checkbox" class="form-check-input" id="autoSync" name="autoSync" checked>
-            <label class="form-check-label" for="autoSync">Auto-sync tracks when generating configs</label>
-          </div>
-
           <div class="d-flex gap-2">
             <button type="button" class="btn btn-outline-primary" onclick="testSheet()">
               <i class="fa fa-check-circle"></i> Test Connection
             </button>
             <button type="submit" class="btn btn-primary">
-              <i class="fa fa-save"></i> Register Sheet
+              <i class="fa fa-save"></i> Save sheet &amp; sync tracks
             </button>
             <button type="button" class="btn btn-outline-secondary" onclick="clearSheetForm()">
               <i class="fa fa-times"></i> Clear
@@ -384,7 +379,7 @@
       <div class="card-body">
         <p class="text-muted">
           <i class="fa fa-info-circle"></i>
-          After registering a Google Sheet or editing it, sync here to update the track listing.
+          Saving a sheet above already syncs it. Come back here after <strong>editing</strong> a sheet, to update the tracks.
           Configs are generated per-user automatically when they load JBrowse.
         </p>
         <form id="syncTracksForm">
@@ -426,7 +421,12 @@
             <label class="form-label">Options</label>
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="forceRegenerate" name="forceRegenerate" checked>
-              <label class="form-check-label" for="forceRegenerate">Force regenerate all tracks (ignore existing)</label>
+              <label class="form-check-label" for="forceRegenerate">Rewrite existing tracks from the sheet (picks up edited rows)</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="removeMissing" name="removeMissing">
+              <label class="form-check-label" for="removeMissing">Remove tracks that are no longer in the sheet</label>
+              <small class="text-muted d-block">Only tracks that came from a sheet. The gene annotation track is never removed by a sync.</small>
             </div>
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="dryRun" name="dryRun">

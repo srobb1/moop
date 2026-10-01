@@ -9,6 +9,7 @@
 // check AND verifies the CSRF token on POST. Using the bare access check left this
 // endpoint authenticated but forgeable.
 require_once __DIR__ . '/../admin_init.php';
+require_once __DIR__ . '/../../lib/functions_data.php';
 require_once __DIR__ . '/../../lib/jbrowse/GoogleSheetsParser.php';
 
 header('Content-Type: application/json');
@@ -24,11 +25,22 @@ $organism = $_POST['organism'] ?? '';
 $assembly = $_POST['assembly'] ?? '';
 $sheetUrl = $_POST['sheetUrl'] ?? '';
 $gid = $_POST['gid'] ?? '0';
-$autoSync = isset($_POST['autoSync']);
 
 // Validate inputs
 if (empty($organism) || empty($assembly) || empty($sheetUrl)) {
     echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+    exit;
+}
+
+// A sheet only adds tracks to an assembly JBrowse already knows. Without this the sheet
+// registers and syncs "successfully" against nothing, and the browser has no assembly to
+// open them in.
+if (!isJBrowseAssemblyRegistered($organism, $assembly)) {
+    echo json_encode([
+        'success' => false,
+        'error'   => "$organism / $assembly is not registered in JBrowse. "
+                   . 'Register the assembly first (Register Assemblies in JBrowse), then add its sheet.',
+    ]);
     exit;
 }
 
@@ -129,7 +141,6 @@ try {
         $configContent  = "SHEET_ID=$sheetId\n";
         $configContent .= "GID=$gid\n";
         $configContent .= "REGISTERED_DATE=" . date('Y-m-d H:i:s') . "\n";
-        $configContent .= "AUTO_SYNC=" . ($autoSync ? 'true' : 'false') . "\n";
 
         if (file_put_contents($sheetConfigPath, $configContent) === false) {
             echo json_encode([
