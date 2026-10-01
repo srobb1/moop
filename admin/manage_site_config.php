@@ -368,6 +368,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['cache_path'] = trim($_POST['cache_path']);
         }
 
+        // Parse time zone ('' = use PHP's own setting)
+        if (isset($_POST['timezone'])) {
+            $data['timezone'] = trim($_POST['timezone']);
+        }
+
         // Parse footer settings
         if (isset($_POST['footer']) && is_array($_POST['footer'])) {
             $f = $_POST['footer'];

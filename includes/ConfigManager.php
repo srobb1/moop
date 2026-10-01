@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -596,6 +596,17 @@ class ConfigManager
                     }
                 }
 
+                // Validate timezone: empty (use PHP's own setting) or a real identifier
+                if ($key === 'timezone') {
+                    $tz = trim((string)$data[$key]);
+                    if ($tz !== '' && !moop_is_valid_timezone($tz)) {
+                        return [
+                            'success' => false,
+                            'message' => "Unknown time zone '$tz'. Choose one from the list."
+                        ];
+                    }
+                }
+
                 // Validate cache_path (same rule: absolute, or empty for the in-tree default)
                 if ($key === 'cache_path') {
                     $path = trim($data[$key]);
@@ -815,6 +826,12 @@ class ConfigManager
                 'type' => 'text',
                 'current_value' => $this->getPath('cache_path', ''),
                 'note' => 'Pointing this outside the document root lets the organisms/ tree be read-only to the web server. The directory must exist and be writable by the web server (correct owner/permission and, on SELinux hosts, the httpd_sys_rw_content_t label) — it is auto-created on the next admin login if missing.',
+            ],
+            'timezone' => [
+                'label' => 'Time Zone',
+                'description' => 'The time zone dates and times are shown in across the site and admin pages. "Server default" uses whatever PHP is configured with, which is UTC when php.ini sets none — even if the machine clock is set to a local zone.',
+                'type' => 'timezone',
+                'current_value' => $this->getString('timezone', ''),
             ],
             'turnstile' => [
                 'label'         => 'Cloudflare Turnstile',

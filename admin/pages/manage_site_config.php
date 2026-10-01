@@ -694,6 +694,31 @@
                     </div>
                 </div>
 
+                <!-- Time Zone -->
+                <div class="card adm-card mb-3" id="pnav-timezone" data-nav-label="Time Zone">
+                    <div class="card-header adm-head">
+                        <h5 class="mb-0"><i class="fa fa-clock"></i> <?= htmlspecialchars($editable_config['timezone']['label']) ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small"><?= htmlspecialchars($editable_config['timezone']['description']) ?></p>
+                        <?php
+                        $tz_current = $editable_config['timezone']['current_value'];
+                        // What the server itself would use, for the "Server default" label.
+                        $tz_php = ini_get('date.timezone') ?: 'UTC';
+                        ?>
+                        <select id="timezone" name="timezone" class="form-select" style="max-width: 28rem;">
+                            <option value=""<?= $tz_current === '' ? ' selected' : '' ?>>Server default (<?= htmlspecialchars($tz_php) ?>)</option>
+                            <?php foreach (timezone_identifiers_list() as $tz_id): ?>
+                                <option value="<?= htmlspecialchars($tz_id) ?>"<?= $tz_id === $tz_current ? ' selected' : '' ?>><?= htmlspecialchars($tz_id) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted mt-1 d-block">
+                            The site's time right now: <strong><?= date('Y-m-d H:i') ?></strong> (<?= htmlspecialchars(date_default_timezone_get()) ?>).
+                            Dates saved before a change were written in the old zone and are not rewritten.
+                        </small>
+                    </div>
+                </div>
+
                 <!-- Footer Settings Card -->
                 <div class="card adm-card mb-3" id="pnav-footer" data-nav-label="Footer">
                     <div class="card-header adm-head">

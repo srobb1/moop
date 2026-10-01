@@ -649,6 +649,23 @@ ok($_gp_call !== false && $_gp_guard !== false
    'the gene structure help is built only when there is a gene model');
 
 // ----------------------------------------------------------------------------
+group('time zone setting — applied when valid, ignored when not');
+
+// PHP with no date.timezone runs in UTC whatever the machine clock says, which showed every
+// admin time five hours ahead on a Central-time host. The site setting fixes that; a blank
+// or mistyped value must leave PHP's own zone alone rather than break the site.
+$_tz_before = date_default_timezone_get();
+ok(moop_is_valid_timezone('America/Chicago') && !moop_is_valid_timezone('Mars/Olympus') && !moop_is_valid_timezone(''),
+   'only real time zone identifiers are accepted');
+ok(moop_apply_timezone('Mars/Olympus') === false && date_default_timezone_get() === $_tz_before,
+   'an unknown time zone changes nothing');
+ok(moop_apply_timezone('') === false && date_default_timezone_get() === $_tz_before,
+   'an empty setting leaves the server default in place');
+ok(moop_apply_timezone('America/Chicago') === true && date_default_timezone_get() === 'America/Chicago',
+   'a valid time zone is applied');
+date_default_timezone_set($_tz_before);
+
+// ----------------------------------------------------------------------------
 group('permission checker — credentials must not be readable by other users');
 
 // On 2026-09-16 /var/www/moop-site-data/users.json was mode 664 in a world-traversable

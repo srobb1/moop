@@ -53,6 +53,13 @@ ConfigManager::getInstance()->initialize(
     __DIR__ . '/../config/tools_config.php'
 );
 
+// Apply the site's time zone before anything formats a date. Done here because this is the
+// one file every entry point (pages, AJAX endpoints, CLI scripts) passes through; set any
+// later and the first date() call would already have used PHP's default. With php.ini
+// silent, that default is UTC whatever the machine's clock says — which showed every time
+// on the admin pages five hours ahead on a Central-time host.
+moop_apply_timezone(ConfigManager::getInstance()->getString('timezone', ''));
+
 // Validate configuration on boot (can be disabled in production with env var)
 if (getenv('VALIDATE_CONFIG') !== 'false') {
     $config = ConfigManager::getInstance();

@@ -13,6 +13,25 @@ if (!function_exists('array_is_list')) {
 }
 
 /**
+ * Is this a time zone identifier PHP knows ('America/Chicago', 'UTC', ...)?
+ */
+function moop_is_valid_timezone($timezone): bool {
+    return is_string($timezone) && $timezone !== ''
+        && in_array($timezone, timezone_identifiers_list(), true);
+}
+
+/**
+ * Set PHP's default time zone from the site setting.
+ *
+ * Empty or unrecognised leaves PHP's own setting alone and returns false: a typo in a config
+ * file must not take the site down or silently move it to some other zone.
+ */
+function moop_apply_timezone($timezone): bool {
+    if (!moop_is_valid_timezone($timezone)) return false;
+    return date_default_timezone_set($timezone);
+}
+
+/**
  * Load JSON file safely with error handling
  * 
  * @param string $path Path to JSON file

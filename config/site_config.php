@@ -168,6 +168,13 @@ return [
     // organisms/ tree, exactly where earlier versions put them.
     'cache_path' => '',
 
+    // ======== Time zone ========
+    // The time zone MOOP shows dates and times in (an identifier such as
+    // 'America/Chicago'). Leave as '' to use whatever PHP itself is configured with —
+    // which, when php.ini sets no date.timezone, is UTC regardless of the machine's clock.
+    // Set per site in Admin → Manage Site Configuration; applied in includes/config_init.php.
+    'timezone' => '',
+
     // ======== OPTIONAL: IP-Based Auto-Login ========
     // IP ranges for automatic login with full access (e.g., institutional/campus networks)
     // Format: Array of ranges, each with 'start' and 'end' IP addresses (IPv4 only)
