@@ -11,6 +11,8 @@
  * - $orphaned_registrations array of ['organism','assembly','reason','detail'] — registered
  *                           in JBrowse but the source data under organisms/ is gone
  * - $track_stats            ['total','by_type','by_access','warnings']
+ * - $assembly_rows          one entry per registered assembly (gene sets + sheet status);
+ *                           also passed to JS as jbrowseAssemblyRows, which renders the table
  */
 ?>
 
@@ -28,8 +30,8 @@
         <p><strong>Workflow:</strong></p>
         <ol>
           <li>Register an assembly in JBrowse (prepares genome files and the gene annotation track)</li>
-          <li>If it has other tracks, paste its Google Sheet link — saving the sheet also creates the tracks</li>
-          <li>After editing a sheet later, use Sync Tracks to pick up the changes</li>
+          <li>If it has other tracks, press <strong>Add sheet</strong> on its row and paste the Google Sheet link — saving also creates the tracks</li>
+          <li>After editing a sheet later, press <strong>Sync</strong> on its row</li>
         </ol>
       </div>
     </div>
@@ -155,7 +157,7 @@
           <i class="fa fa-info-circle"></i>
           These assemblies exist on disk but are not yet registered in JBrowse.
           Registering prepares genome files (FASTA index, compressed GFF) and creates the assembly config.
-          After registering you are taken to the sheet form for that assembly, in case it has other tracks.
+          After registering you are asked for that assembly's track sheet, in case it has other tracks.
         </p>
         <table class="table table-sm table-hover mb-0">
           <thead>
@@ -202,253 +204,83 @@
   </div>
   <?php endif; ?>
 
-  <!-- Gene Annotation Tracks -->
-  <?php
-  $has_any_gene_sets = !empty($gene_sets_info);
-  $unregistered_gs   = array_filter($gene_sets_info, fn($r) => !$r['is_registered']);
-  $unprepped_gs      = array_filter($gene_sets_info, fn($r) => !$r['gff_prepped']);
-  ?>
-  <?php if ($has_any_gene_sets): ?>
-  <div class="card mb-4">
-    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#geneSetTracks">
-      <h5 class="mb-0">
-        <i class="fa fa-dna"></i> Gene Annotation Tracks
-        <?php if (!empty($unregistered_gs)): ?>
-          <span class="badge bg-warning ms-2"><?= count($unregistered_gs) ?> unregistered</span>
-        <?php elseif (!empty($unprepped_gs)): ?>
-          <span class="badge bg-warning ms-2"><?= count($unprepped_gs) ?> not prepped</span>
-        <?php else: ?>
-          <span class="badge bg-success ms-2"><i class="fa fa-check"></i> All ready</span>
-        <?php endif; ?>
-        <i class="fa fa-chevron-down float-end"></i>
+  <!-- Assemblies & Tracks: one row per registered assembly. Rendered by js/jbrowse-admin.js
+       from jbrowseAssemblyRows, so a row is redrawn in place after a sync or a sheet change. -->
+  <div class="card adm-card mb-4" id="assemblyTracks">
+    <div class="card-header adm-head d-flex align-items-center flex-wrap gap-2">
+      <h5 class="mb-0 me-auto">
+        <i class="fa fa-table"></i> Assemblies &amp; Tracks
+        <span class="badge bg-secondary ms-2" id="asmRowCount"></span>
       </h5>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#syncOptions">
+        <i class="fa fa-sliders-h"></i> Sync options
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="syncAllBtn">
+        <i class="fa fa-sync"></i> Sync all sheets
+      </button>
     </div>
-    <div class="collapse <?= (!empty($unregistered_gs) || !empty($unprepped_gs)) ? 'show' : '' ?>" id="geneSetTracks">
-      <div class="card-body">
-        <p class="text-muted">
-          <i class="fa fa-info-circle"></i>
-          Each gene set needs its GFF sorted, compressed, and tabix-indexed before JBrowse can display it.
-          Registering a gene set creates the compressed GFF, the gene annotation track config, and the
-          feature coordinate index used by BLAST linkouts and MOOPmart.
-        </p>
-        <table class="table table-sm table-hover mb-0">
-          <thead>
+    <div class="card-body">
+      <p class="text-muted small mb-2">
+        Every assembly registered in JBrowse, with its gene annotation track and the Google Sheet
+        that supplies its other tracks (RNA-seq, alignments…). <strong>Add sheet</strong> saves the
+        link and creates the tracks in one step. Press <strong>Sync</strong> after editing a sheet.
+      </p>
+
+      <div class="collapse mb-3" id="syncOptions">
+        <div class="border rounded p-3 bg-light">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="optRewrite" checked>
+            <label class="form-check-label" for="optRewrite">Rewrite existing tracks from the sheet (picks up edited rows)</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="optRemove">
+            <label class="form-check-label" for="optRemove">Remove tracks that are no longer in the sheet</label>
+            <small class="text-muted d-block">Only tracks that came from a sheet. The gene annotation track is never removed by a sync.</small>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="optDryRun">
+            <label class="form-check-label" for="optDryRun">Dry run (report what would change, change nothing)</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-2 align-items-center mb-2">
+        <div class="col-md-5">
+          <input type="search" class="form-control form-control-sm" id="asmFilter" placeholder="Filter by organism or assembly…">
+        </div>
+        <div class="col-md-7">
+          <div class="form-check form-check-inline mb-0">
+            <input class="form-check-input" type="checkbox" id="asmOnlySheet">
+            <label class="form-check-label small" for="asmOnlySheet">Has a sheet</label>
+          </div>
+          <div class="form-check form-check-inline mb-0">
+            <input class="form-check-input" type="checkbox" id="asmOnlyAttention">
+            <label class="form-check-label small" for="asmOnlyAttention">Gene track needs attention</label>
+          </div>
+        </div>
+      </div>
+
+      <div id="asmLog" class="mb-3" style="display:none;">
+        <div class="alert py-2 mb-2" id="asmLogStatus"></div>
+        <pre class="border rounded p-3 bg-light small mb-0" id="asmLogOutput"
+             style="max-height:260px;overflow-y:auto;white-space:pre-wrap;"></pre>
+      </div>
+
+      <div class="table-responsive" style="max-height:520px;overflow-y:auto;">
+        <table class="table table-sm table-hover align-middle mb-0" id="asmTable">
+          <thead class="sticky-top bg-white">
             <tr>
               <th>Organism</th>
               <th>Assembly</th>
-              <th>Gene Set</th>
-              <th>GFF Size</th>
-              <th>GFF Prepped</th>
-              <th>Track Registered</th>
+              <th>Gene track</th>
+              <th>Track sheet</th>
               <th></th>
             </tr>
           </thead>
-          <tbody>
-            <?php foreach ($gene_sets_info as $gs): ?>
-            <?php
-              $row_id = htmlspecialchars($gs['organism'] . '_' . $gs['assembly'] . '_' . $gs['gene_set']);
-              $size_fmt = $gs['gff_size'] > 1048576
-                  ? round($gs['gff_size'] / 1048576, 1) . ' MB'
-                  : round($gs['gff_size'] / 1024, 0) . ' KB';
-            ?>
-            <tr id="gs-row-<?= $row_id ?>">
-              <td><?= htmlspecialchars($gs['organism']) ?></td>
-              <td><?= htmlspecialchars($gs['assembly']) ?></td>
-              <td><code><?= htmlspecialchars($gs['gene_set']) ?></code></td>
-              <td class="text-muted small"><?= $gs['gff_size'] === 0 ? '<span class="text-danger">empty</span>' : $size_fmt ?></td>
-              <td>
-                <?php if ($gs['gff_prepped']): ?>
-                  <span class="text-success"><i class="fa fa-check-circle"></i></span>
-                <?php else: ?>
-                  <span class="text-warning"><i class="fa fa-clock"></i> pending</span>
-                <?php endif; ?>
-              </td>
-              <td>
-                <?php if ($gs['is_registered']): ?>
-                  <span class="text-success"><i class="fa fa-check-circle"></i></span>
-                <?php else: ?>
-                  <span class="text-warning"><i class="fa fa-exclamation-circle"></i> no</span>
-                <?php endif; ?>
-              </td>
-              <td>
-                <?php if (!$gs['is_registered']): ?>
-                  <button class="btn btn-sm btn-primary gs-register-btn"
-                          data-organism="<?= htmlspecialchars($gs['organism']) ?>"
-                          data-assembly="<?= htmlspecialchars($gs['assembly']) ?>"
-                          data-gene-set="<?= htmlspecialchars($gs['gene_set']) ?>"
-                          data-row="<?= $row_id ?>"
-                          <?= $gs['gff_size'] === 0 ? 'disabled title="GFF is empty"' : '' ?>>
-                    <i class="fa fa-plus"></i> Register
-                  </button>
-                <?php else: ?>
-                  <button class="btn btn-sm btn-outline-secondary gs-reprep-btn"
-                          data-organism="<?= htmlspecialchars($gs['organism']) ?>"
-                          data-assembly="<?= htmlspecialchars($gs['assembly']) ?>"
-                          data-gene-set="<?= htmlspecialchars($gs['gene_set']) ?>"
-                          data-row="<?= $row_id ?>">
-                    <i class="fa fa-sync"></i> Re-prep GFF
-                  </button>
-                <?php endif; ?>
-              </td>
-            </tr>
-            <?php endforeach; ?>
-          </tbody>
+          <tbody><!-- rendered by jbrowse-admin.js --></tbody>
         </table>
-        <div id="gsActionLog" class="mt-3" style="display:none;">
-          <pre class="border rounded p-3 bg-light mb-0 small" id="gsActionLogOutput"
-               style="max-height:220px;overflow-y:auto;white-space:pre-wrap;"></pre>
-        </div>
       </div>
-    </div>
-  </div>
-  <?php endif; ?>
-
-  <!-- Register Google Sheets Track Source (starts open) -->
-  <div class="card mb-4">
-    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#sheetRegistration">
-      <h5 class="mb-0">
-        <i class="fa fa-table"></i> Register Google Sheets Track Source
-        <i class="fa fa-chevron-down float-end"></i>
-      </h5>
-    </div>
-    <div class="collapse show" id="sheetRegistration">
-      <div class="card-body">
-        <div class="alert alert-info py-2">
-          <i class="fa fa-lightbulb"></i>
-          Only registered assemblies appear here. If an organism is missing, expand <strong>Register Assemblies in JBrowse</strong> above and register it first.
-        </div>
-        <form id="registerSheetForm">
-          <div class="row mb-3">
-            <div class="col-md-6">
-              <label for="organism" class="form-label">Organism <span class="text-danger">*</span></label>
-              <select class="form-select" id="organism" name="organism" required>
-                <option value="">Select organism...</option>
-                <?php foreach ($registered_assemblies as $org => $assemblies): ?>
-                <option value="<?php echo htmlspecialchars($org); ?>"><?php echo htmlspecialchars($org); ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label for="assembly" class="form-label">Assembly <span class="text-danger">*</span></label>
-              <select class="form-select" id="assembly" name="assembly" required disabled>
-                <option value="">Select organism first...</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="sheetUrl" class="form-label">Google Sheet URL or ID <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="sheetUrl" name="sheetUrl"
-                   placeholder="https://docs.google.com/spreadsheets/d/SHEET_ID/... or just SHEET_ID" required>
-            <small class="text-muted">Enter full URL or just the Sheet ID</small>
-          </div>
-
-          <div class="mb-3">
-            <label for="gid" class="form-label">GID (Sheet Tab) <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="gid" name="gid" value="0" required>
-            <small class="text-muted">Tab identifier (usually 0 for first tab, found in URL: gid=XXXXX)</small>
-          </div>
-
-          <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-primary" onclick="testSheet()">
-              <i class="fa fa-check-circle"></i> Test Connection
-            </button>
-            <button type="submit" class="btn btn-primary">
-              <i class="fa fa-save"></i> Save sheet &amp; sync tracks
-            </button>
-            <button type="button" class="btn btn-outline-secondary" onclick="clearSheetForm()">
-              <i class="fa fa-times"></i> Clear
-            </button>
-          </div>
-        </form>
-
-        <div id="sheetValidationResult" class="mt-3" style="display: none;"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Sync Tracks (starts closed) -->
-  <div class="card mb-4">
-    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#syncTracks">
-      <h5 class="mb-0">
-        <i class="fa fa-sync"></i> Sync Tracks from Google Sheets
-        <i class="fa fa-chevron-down float-end"></i>
-      </h5>
-    </div>
-    <div class="collapse" id="syncTracks">
-      <div class="card-body">
-        <p class="text-muted">
-          <i class="fa fa-info-circle"></i>
-          Saving a sheet above already syncs it. Come back here after <strong>editing</strong> a sheet, to update the tracks.
-          Configs are generated per-user automatically when they load JBrowse.
-        </p>
-        <form id="syncTracksForm">
-          <div class="mb-3">
-            <label class="form-label">Sync Mode</label>
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="syncMode" id="syncModeAll" value="all">
-              <label class="form-check-label" for="syncModeAll">
-                Sync All Registered Sheets
-              </label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="radio" name="syncMode" id="syncModeSingle" value="single" checked>
-              <label class="form-check-label" for="syncModeSingle">
-                Single Assembly
-              </label>
-            </div>
-          </div>
-
-          <div class="row mb-3" id="singleAssemblySelect">
-            <div class="col-md-6">
-              <label for="syncOrganism" class="form-label">Organism</label>
-              <select class="form-select" id="syncOrganism" name="syncOrganism">
-                <option value="">Select organism...</option>
-                <?php foreach ($registered_assemblies as $org => $assemblies): ?>
-                <option value="<?php echo htmlspecialchars($org); ?>"><?php echo htmlspecialchars($org); ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label for="syncAssembly" class="form-label">Assembly</label>
-              <select class="form-select" id="syncAssembly" name="syncAssembly" disabled>
-                <option value="">Select organism first...</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Options</label>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="forceRegenerate" name="forceRegenerate" checked>
-              <label class="form-check-label" for="forceRegenerate">Rewrite existing tracks from the sheet (picks up edited rows)</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="removeMissing" name="removeMissing">
-              <label class="form-check-label" for="removeMissing">Remove tracks that are no longer in the sheet</label>
-              <small class="text-muted d-block">Only tracks that came from a sheet. The gene annotation track is never removed by a sync.</small>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="dryRun" name="dryRun">
-              <label class="form-check-label" for="dryRun">Dry run (preview changes without saving)</label>
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-success">
-            <i class="fa fa-sync"></i> Sync Tracks
-          </button>
-        </form>
-
-        <div id="syncProgress" class="mt-3" style="display: none;">
-          <div class="progress">
-            <div id="syncProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
-                 role="progressbar" style="width: 0%"></div>
-          </div>
-          <div id="syncLog" class="mt-2 border rounded p-3" style="max-height: 300px; overflow-y: auto; background: #f8f9fa;">
-            <pre class="mb-0" id="syncLogOutput"></pre>
-          </div>
-        </div>
-      </div>
+      <p class="text-muted small mt-2 mb-0" id="asmEmpty" style="display:none;">No assemblies match.</p>
     </div>
   </div>
 
@@ -615,10 +447,7 @@
 
       <!-- Bulk Actions -->
       <div class="mt-3">
-        <button class="btn btn-sm btn-outline-primary" onclick="generateSelectedConfigs()" disabled id="bulkGenerateBtn">
-          <i class="fa fa-cog"></i> Generate Configs for Selected
-        </button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteSelected()" disabled id="bulkDeleteBtn">
+        <button class="btn btn-sm btn-outline-danger" disabled id="bulkDeleteBtn">
           <i class="fa fa-trash"></i> Delete Selected
         </button>
         <span id="selectedCount" class="ms-2 text-muted">0 selected</span>
@@ -628,86 +457,63 @@
 
 </div>
 
-<script>
-// ── Gene Set register / re-prep ───────────────────────────────────────────────
+<!-- Track details modal (View Details in the track listing) -->
+<div class="modal fade" id="trackDetailsModal" tabindex="-1" aria-labelledby="trackDetailsTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header adm-head">
+        <h5 class="modal-title" id="trackDetailsTitle">Track details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="trackDetailsBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-async function geneSetAction(organism, assembly, geneSet, endpoint, rowId, btn) {
-    const logDiv = document.getElementById('gsActionLog');
-    const logPre = document.getElementById('gsActionLogOutput');
+<!-- Track sheet modal (Add sheet / Edit sheet) -->
+<div class="modal fade" id="sheetModal" tabindex="-1" aria-labelledby="sheetModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header adm-head">
+        <h5 class="modal-title" id="sheetModalTitle">Track sheet</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="sheetForm">
+        <div class="modal-body">
+          <div class="alert alert-success py-2" id="sheetModalIntro" style="display:none;"></div>
+          <div class="mb-3">
+            <label for="sheetUrl" class="form-label">Google Sheet link <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="sheetUrl" required
+                   placeholder="https://docs.google.com/spreadsheets/d/…/edit#gid=…">
+            <small class="text-muted">Paste the link with the right tab open — the tab is read from it.</small>
+          </div>
+          <div class="mb-3" style="max-width:220px;">
+            <label for="sheetGid" class="form-label small text-muted mb-1">Tab id (gid), if not in the link</label>
+            <input type="text" class="form-control form-control-sm" id="sheetGid" value="0" inputmode="numeric" pattern="[0-9]+">
+          </div>
+          <div id="sheetModalResult" style="display:none;">
+            <div class="alert py-2 mb-2" id="sheetModalStatus"></div>
+            <pre class="border rounded p-3 bg-light small mb-0" id="sheetModalLog"
+                 style="display:none;max-height:240px;overflow-y:auto;white-space:pre-wrap;"></pre>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary me-auto" id="sheetTestBtn">
+            <i class="fa fa-check-circle"></i> Test link
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary" id="sheetSaveBtn">
+            <i class="fa fa-save"></i> Save &amp; sync tracks
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-    const origHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
-
-    logDiv.style.display = 'block';
-    logPre.textContent   = `Running ${endpoint} for ${organism}/${assembly}/${geneSet}…`;
-
-    const form = new URLSearchParams({
-        organism, assembly, gene_set: geneSet,
-        text_index: '0',
-    });
-
-    try {
-        const resp = await fetch(`/${sitePath}/admin/api/${endpoint}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-            },
-            body: form,
-        });
-        const data = await resp.json();
-        logPre.textContent = data.output ?? '(no output)';
-
-        if (data.success) {
-            // Swap Register → Re-prep GFF in place
-            const cell = btn.closest('td');
-            btn.className = 'btn btn-sm btn-outline-secondary gs-reprep-btn';
-            btn.innerHTML = '<i class="fa fa-sync"></i> Re-prep GFF';
-            btn.removeEventListener('click', btn._gsHandler);
-            btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'jbrowse_reprep_gff.php', rowId, btn);
-            btn.addEventListener('click', btn._gsHandler);
-            btn.disabled = false;
-
-            // Mark prepped + registered cells.
-            // getElementById, NOT querySelector('#gs-row-...'): rowId contains the
-            // assembly accession (e.g. GCA_033964005.1) and the dot makes it an
-            // invalid CSS selector, which threw *after* the request had succeeded
-            // and made the UI report "Request failed" on work that actually worked.
-            const row   = document.getElementById(`gs-row-${rowId}`);
-            const cells = row ? row.querySelectorAll('td') : [];
-            if (cells[4]) cells[4].innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i></span>';
-            if (cells[5]) cells[5].innerHTML = '<span class="text-success"><i class="fa fa-check-circle"></i></span>';
-        } else {
-            logPre.textContent = 'ERROR: ' + (data.error ?? 'unknown') + '\n\n' + (data.output ?? '');
-            btn.disabled = false;
-            btn.innerHTML = origHtml;
-        }
-    } catch (err) {
-        logPre.textContent = 'Request failed: ' + err.message;
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.gs-register-btn').forEach(btn => {
-        const { organism, assembly } = btn.dataset;
-        const geneSet = btn.dataset.geneSet;
-        const rowId   = btn.dataset.row;
-        btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'jbrowse_register_gene_set.php', rowId, btn);
-        btn.addEventListener('click', btn._gsHandler);
-    });
-
-    document.querySelectorAll('.gs-reprep-btn').forEach(btn => {
-        const { organism, assembly } = btn.dataset;
-        const geneSet = btn.dataset.geneSet;
-        const rowId   = btn.dataset.row;
-        btn._gsHandler = () => geneSetAction(organism, assembly, geneSet, 'jbrowse_reprep_gff.php', rowId, btn);
-        btn.addEventListener('click', btn._gsHandler);
-    });
-});
-</script>
 
 <!-- GFF Action Modal (Rebuild / Index Names) -->
 <div class="modal fade" id="gffActionModal" tabindex="-1" aria-labelledby="gffActionModalTitle" aria-hidden="true">

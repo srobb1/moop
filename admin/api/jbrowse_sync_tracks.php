@@ -125,11 +125,23 @@ foreach ($assembliesToSync as $item) {
     $outputText = implode("\n", $output);
     
     if ($returnCode === 0) {
+        // Record when the tracks were last brought in line with the sheet. Checked, not
+        // assumed: an unwritable sheet file would otherwise leave the table showing an old
+        // date after a sync that worked.
+        if (!$dryRun) {
+            $sheetCfg = parse_ini_file($sheetFile, false, INI_SCANNER_RAW) ?: [];
+            unset($sheetCfg['AUTO_SYNC']);   // never read by anything
+            $sheetCfg['LAST_SYNC'] = date('Y-m-d H:i:s');
+            if (!writeJBrowseSheetConfig($org, $asm, $sheetCfg)) {
+                $errors[] = "$org/$asm: tracks synced, but the sync date could not be saved to $sheetFile";
+            }
+        }
         $results[] = [
             'organism' => $org,
             'assembly' => $asm,
             'success' => true,
-            'output' => $outputText
+            'output' => $outputText,
+            'sheet' => getJBrowseSheetStatus($org, $asm)
         ];
     } else {
         $errors[] = "$org/$asm: Sync failed (exit code $returnCode)";
@@ -137,7 +149,8 @@ foreach ($assembliesToSync as $item) {
             'organism' => $org,
             'assembly' => $asm,
             'success' => false,
-            'output' => $outputText
+            'output' => $outputText,
+            'sheet' => getJBrowseSheetStatus($org, $asm)
         ];
     }
 }

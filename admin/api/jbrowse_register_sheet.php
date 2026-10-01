@@ -112,9 +112,7 @@ try {
     // Register: Save sheet configuration
     if ($action === 'register') {
         $config          = ConfigManager::getInstance();
-        $metadata_path   = $config->getPath('metadata_path');
-        $sheetsBase      = "$metadata_path/jbrowse2-configs/sheets";
-        $sheetConfigPath = "$sheetsBase/$organism/$assembly/jbrowse_tracks_sheet.txt";
+        $sheetConfigPath = jbrowseSheetConfigPath($organism, $assembly);
         $site            = $config->getString('site', 'moop');
 
         // Ensure directory exists
@@ -137,12 +135,18 @@ try {
             exit;
         }
 
-        // Create config file
-        $configContent  = "SHEET_ID=$sheetId\n";
-        $configContent .= "GID=$gid\n";
-        $configContent .= "REGISTERED_DATE=" . date('Y-m-d H:i:s') . "\n";
+        // Keep LAST_SYNC when only the link changes: the tracks on disk still date from it.
+        $previous = getJBrowseSheetStatus($organism, $assembly);
+        $sheetCfg = [
+            'SHEET_ID'        => $sheetId,
+            'GID'             => $gid,
+            'REGISTERED_DATE' => date('Y-m-d H:i:s'),
+        ];
+        if ($previous['last_sync'] !== '') {
+            $sheetCfg['LAST_SYNC'] = $previous['last_sync'];
+        }
 
-        if (file_put_contents($sheetConfigPath, $configContent) === false) {
+        if (!writeJBrowseSheetConfig($organism, $assembly, $sheetCfg)) {
             echo json_encode([
                 'success' => false,
                 'error'   => "Write failed for $sheetConfigPath even though the directory appears writable — check disk space and SELinux/AppArmor. "
@@ -154,7 +158,8 @@ try {
         echo json_encode([
             'success' => true,
             'message' => "Sheet registered for $organism/$assembly with $trackCount tracks",
-            'trackCount' => $trackCount
+            'trackCount' => $trackCount,
+            'sheet' => getJBrowseSheetStatus($organism, $assembly)
         ]);
         exit;
     }
