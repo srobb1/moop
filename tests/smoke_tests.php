@@ -595,6 +595,22 @@ foreach (['jbrowse_register_sheet.php', 'jbrowse_sync_tracks.php'] as $_cl_ep) {
 }
 
 // ----------------------------------------------------------------------------
+group('gene page — no GFF means no gene structure, not a fatal error');
+
+// The Gene Structure help reuses a legend defined inside the Gene Structure card, which is
+// drawn only when a gene model exists. Outside that condition the help read an undefined
+// variable and the page died — for every gene of a gene set with no GFF (15 organisms).
+$_gp_src   = file_get_contents(dirname(__DIR__) . '/tools/pages/parent.php');
+// Anchored on the help_modal() CALL, not the id alone: the id also appears earlier, on the
+// trigger button inside the card.
+$_gp_call  = strpos($_gp_src, "help_modal(\n        'gene-model-help'");
+$_gp_guard = $_gp_call === false ? false : strrpos(substr($_gp_src, 0, $_gp_call), 'if (!empty($gene_model)) {');
+ok($_gp_call !== false && $_gp_guard !== false, 'the gene structure help call and a gene-model guard before it are both present');
+ok($_gp_call !== false && $_gp_guard !== false
+   && strpos(substr($_gp_src, $_gp_guard, $_gp_call - $_gp_guard), "\n}\n") === false,
+   'the gene structure help is built only when there is a gene model');
+
+// ----------------------------------------------------------------------------
 group('permission checker — credentials must not be readable by other users');
 
 // On 2026-09-16 /var/www/moop-site-data/users.json was mode 664 in a world-traversable

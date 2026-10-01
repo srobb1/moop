@@ -481,53 +481,61 @@
 // invisible content, which is how the old help drifted unnoticed. Modals need no JS init
 // (Bootstrap data-api), so they cannot sit dead the way a per-page-init popover can.
 
-// "How to read it" varies with whether genome sequence is actually present — otherwise the
-// help promises a click that does nothing.
-$gm_read_cards = [
-    ['label' => 'Always 5′ → 3′', 'html' => true,
-     'text'  => 'Drawn left to right in the direction of transcription. A reverse-strand gene is flipped, so the diagram reads the same way on either strand.'],
-    ['label' => 'One row per isoform',
-     'text'  => 'The gene spans the top; each mRNA below is one alternative transcript. Rows are aligned, so exon differences line up vertically.'],
-    ['label' => 'Click a row',
-     'text'  => 'Jumps to that isoform\'s annotations further down the page.'],
-];
-if (!empty($genome_seq_available)) {
-    $gm_read_cards[] = ['label' => 'Click a feature',
-        'text' => 'Exons, CDS blocks, introns and both flanking regions open their sequence. Flank size is adjustable inside that popup.'];
-}
+// The Gene Structure help exists only when the Gene Structure card does. That card (and the
+// legend it defines, which this help reuses) is drawn only when the gene set has a GFF to
+// build a gene model from. Without this guard the help read an undefined $gene_model_legend
+// and the whole gene page died with a fatal error for every gene in a gene set with no GFF
+// (15 organisms on 2026-10-01, mostly transcriptome-only planarians). The rule for this
+// page: no GFF means the GFF-dependent parts are left out, never that the page fails.
+if (!empty($gene_model)) {
+    // "How to read it" varies with whether genome sequence is actually present — otherwise the
+    // help promises a click that does nothing.
+    $gm_read_cards = [
+        ['label' => 'Always 5′ → 3′', 'html' => true,
+         'text'  => 'Drawn left to right in the direction of transcription. A reverse-strand gene is flipped, so the diagram reads the same way on either strand.'],
+        ['label' => 'One row per isoform',
+         'text'  => 'The gene spans the top; each mRNA below is one alternative transcript. Rows are aligned, so exon differences line up vertically.'],
+        ['label' => 'Click a row',
+         'text'  => 'Jumps to that isoform\'s annotations further down the page.'],
+    ];
+    if (!empty($genome_seq_available)) {
+        $gm_read_cards[] = ['label' => 'Click a feature',
+            'text' => 'Exons, CDS blocks, introns and both flanking regions open their sequence. Flank size is adjustable inside that popup.'];
+    }
 
-echo help_modal(
-    'gene-model-help',
-    'Reading the gene structure diagram',
-    [
-        ['heading' => 'What the parts are', 'cards' => array_map(
-            // A swatch in the exact colour the SVG is painted, not a Bootstrap colour name.
-            // The names have no orange/purple that matches, so 'secondary' turned Downstream
-            // grey — and a legend whose colours disagree with the picture is worse than none.
-            function (array $l) {
-                return [
-                    'label' => $l['label'],
-                    'html'  => true,
-                    'text'  => '<span style="display:inline-block;width:.75rem;height:.75rem;'
-                             . 'border-radius:3px;vertical-align:-1px;margin-right:.4rem;'
-                             . 'background:' . htmlspecialchars($l['hex']) . ';"></span>'
-                             . htmlspecialchars($l['text']),
-                ];
-            },
-            $gene_model_legend
-        )],
-        ['heading' => 'How to read it', 'cards' => $gm_read_cards],
-        ['heading' => 'Getting sequence out', 'cards' => [
-            ['label' => 'This gene',
-             'text'  => 'Use Genomic or GFF in the header of this box, or the Sequences section at the foot of the page.'],
-            ['label' => 'Many genes at once', 'html' => true,
-             'text'  => 'For mRNA, CDS, protein, genomic or flanking sequence across many features, use <a href="/'
-                      . htmlspecialchars($config->getString('site', 'moop')) . '/tools/moopmart.php?organism='
-                      . urlencode($organism_name) . '">MOOPmart</a>.'],
-        ]],
-    ],
-    ['intro' => 'Every isoform of this gene, drawn to scale against the genome.']
-);
+    echo help_modal(
+        'gene-model-help',
+        'Reading the gene structure diagram',
+        [
+            ['heading' => 'What the parts are', 'cards' => array_map(
+                // A swatch in the exact colour the SVG is painted, not a Bootstrap colour name.
+                // The names have no orange/purple that matches, so 'secondary' turned Downstream
+                // grey — and a legend whose colours disagree with the picture is worse than none.
+                function (array $l) {
+                    return [
+                        'label' => $l['label'],
+                        'html'  => true,
+                        'text'  => '<span style="display:inline-block;width:.75rem;height:.75rem;'
+                                 . 'border-radius:3px;vertical-align:-1px;margin-right:.4rem;'
+                                 . 'background:' . htmlspecialchars($l['hex']) . ';"></span>'
+                                 . htmlspecialchars($l['text']),
+                    ];
+                },
+                $gene_model_legend
+            )],
+            ['heading' => 'How to read it', 'cards' => $gm_read_cards],
+            ['heading' => 'Getting sequence out', 'cards' => [
+                ['label' => 'This gene',
+                 'text'  => 'Use Genomic or GFF in the header of this box, or the Sequences section at the foot of the page.'],
+                ['label' => 'Many genes at once', 'html' => true,
+                 'text'  => 'For mRNA, CDS, protein, genomic or flanking sequence across many features, use <a href="/'
+                          . htmlspecialchars($config->getString('site', 'moop')) . '/tools/moopmart.php?organism='
+                          . urlencode($organism_name) . '">MOOPmart</a>.'],
+            ]],
+        ],
+        ['intro' => 'Every isoform of this gene, drawn to scale against the genome.']
+    );
+}
 
 // ── Feature Hierarchy ────────────────────────────────────────────────────────
 // The tree is the one place the page states the parent/child model outright, and three of
