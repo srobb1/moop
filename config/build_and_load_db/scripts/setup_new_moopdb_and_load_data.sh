@@ -151,6 +151,7 @@ load_files() {
 load_files "*.oma_orthologs.moop.tsv" "OMA Orthologs"
 load_files "*.oma_pairs.moop.tsv" "OMA Pairwise Orthologs"
 load_files "*.oma_hog.moop.tsv" "OMA HOG Orthologs"
+load_files "*.oma_hog_paralogs.moop.tsv" "OMA HOG Paralogs (the species' own genes in the same HOG)"
 load_files "closest_*.moop.tsv" "Closest genes (human, and each closest_species in geneset_config.yaml)"
 load_files "gene_name_source.*.moop.tsv" "Gene Name Source (why each gene has its name)"
 load_files "gene_statement.*.moop.tsv" "Gene Statements (the typed series for a gene page: identity, copies, alignment, domains, tree, cautions, features, expression)"

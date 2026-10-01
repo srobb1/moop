@@ -5,7 +5,7 @@ use Exporter 'import';
 
 our @EXPORT_OK = qw(read_hog_orthologs parse_oma_header best_accession accession_for
                     read_export_sources find_export_readme write_ortholog_tables read_hgnc_symbols
-                    read_id_map target_ids);
+                    read_id_map target_ids write_paralog_table);
 
 # A gene set that IS a reference genome takes its orthologs from the template's reference run,
 # where its genes carry the reference's OMA ids (NEMVE000123). find_reference_genome.pl maps
@@ -48,6 +48,13 @@ sub target_ids {
 #   pairs   => { PARTNER_SPECIES => { target_gene_id => { partner_gene_id => { hog => "HOG:...", level => "/A/B/..." } } } }
 #   type    => { PARTNER_SPECIES => { target_gene_id => { partner_gene_id => "1:1" | "1:many" | "many:1" | "many:many" } } }
 # "1:many" = one target gene to several partner genes (the OMA pairwise convention).
+#   duplications => [ { hog => root HOG, level => TaxRange of the enclosing orthologGroup,
+#                       species => [ every species below the duplication, sorted ],
+#                       copies => [ [target gene ids of one copy], [of another], ... ] } ]
+# One entry per <paralogGroup> that has the target species in two or more of its children:
+# target genes in different copies are paralogs, and this is their lowest common group.
+#   same_species_at_speciation => number of orthologGroups with the target species in two
+#                                 children (not expected from a tree with a fixed species tree)
 #
 # OMA writes one tag per line; tags are read one at a time, so no XML module is needed.
 
@@ -63,6 +70,8 @@ sub read_hog_orthologs {
   my $current_species;
   my @stack;          # open groups: { kind => 'O'|'P', hog => ..., level => ..., children => [ {species => [gene ids]} ] }
   my %pairs;
+  my @duplications;
+  my $same_species_at_speciation = 0;
 
   while ($xml =~ /<([^>]+)>/g) {
     my $tag = $1;
@@ -94,12 +103,33 @@ sub read_hog_orthologs {
       my $node = pop @stack;
       if ($node->{kind} eq 'O') {
         record_orthologs($node, $target_species, \%pairs);
+        my $children_with_target = 0;
+        foreach my $child (@{$node->{children}}) {
+          $children_with_target++ if $child->{$target_species};
+        }
+        $same_species_at_speciation++ if $children_with_target > 1;
       }
       # the whole subtree becomes one child of the enclosing group
       my %merged;
       foreach my $child (@{$node->{children}}) {
         foreach my $species (keys %$child) {
           push @{$merged{$species}}, @{$child->{$species}};
+        }
+      }
+      if ($node->{kind} eq 'P') {
+        my @copies;
+        foreach my $child (@{$node->{children}}) {
+          push @copies, [ @{$child->{$target_species}} ] if $child->{$target_species};
+        }
+        if (@copies > 1) {
+          my $level = '';
+          foreach my $open_group (reverse @stack) {
+            next unless $open_group->{kind} eq 'O';
+            $level = $open_group->{level};
+            last;
+          }
+          push @duplications, { hog => $stack[0]{hog}, level => $level,
+                                species => [ sort keys %merged ], copies => \@copies };
         }
       }
       push @{$stack[-1]{children}}, \%merged if @stack;
@@ -112,7 +142,8 @@ sub read_hog_orthologs {
   }
   die "no genes for target species $target_species in $orthoxml_file\n" unless $target_gene_count;
 
-  return { genes => \%genes, pairs => \%pairs, type => relationship_types(\%pairs) };
+  return { genes => \%genes, pairs => \%pairs, type => relationship_types(\%pairs),
+           duplications => \@duplications, same_species_at_speciation => $same_species_at_speciation };
 }
 
 # at one orthologGroup: target genes in one child x other-species genes in another child
@@ -323,6 +354,63 @@ sub write_ortholog_tables {
     }
   }
   return @written;
+}
+
+# The target species' own genes that share a HOG: <TARGET>.oma_hog_paralogs.moop.tsv, one row
+# per gene and paralog (both directions).
+#   write_paralog_table(target => CODE, version => ..., date => 'YYYY-MM-DD', id_map => read_id_map(...),
+#                       result => read_hog_orthologs(...))
+# The description says which species of the OMA run share the duplication: "duplicated within
+# CONKUS" when the copies are found in the target species and no other, else "duplication shared
+# with CAPTE, LOTGI". Both are relative to the species in the run. The Score is the number of
+# species that share the duplication (1 = within the target species), so the newest copies sort
+# first. The accession is the paralog's own protein id; it has no outside link.
+sub write_paralog_table {
+  my (%arg) = @_;
+  my $target = $arg{target};
+  my $genes  = $arg{result}{genes};
+  my %lines;
+  foreach my $duplication (@{$arg{result}{duplications}}) {
+    my @shared_with;
+    foreach my $species (@{$duplication->{species}}) {
+      push @shared_with, $species unless $species eq $target;
+    }
+    my $when = @shared_with ? 'duplication shared with ' . join(', ', @shared_with) : "duplicated within $target";
+    my $score = scalar @{$duplication->{species}};
+    my @copies = @{$duplication->{copies}};
+    foreach my $i (0 .. $#copies) {
+      foreach my $j (0 .. $#copies) {
+        next if $i == $j;
+        foreach my $gene (@{$copies[$i]}) {
+          foreach my $paralog (@{$copies[$j]}) {
+            foreach my $own_id (target_ids($arg{id_map}, $genes->{$gene}{prot_id})) {
+              foreach my $paralog_id (target_ids($arg{id_map}, $genes->{$paralog}{prot_id})) {
+                next if $own_id eq $paralog_id;
+                $lines{join("\t", $own_id, $paralog_id, "paralog, $when ($duplication->{hog})", $score)} = 1;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return () unless %lines;
+
+  my $out_file = "$target.oma_hog_paralogs.moop.tsv";
+  open my $out_fh, '>', $out_file or die "cant write $out_file $!\n";
+  print $out_fh "## Annotation Source: OMA HOG paralogs ($target)
+## Annotation Source Version: $arg{version}
+## Annotation Source URL: https://omabrowser.org/standalone/
+## Annotation Accession URL: 
+## Annotation Type: Paralogs
+## Annotation Creation Date: $arg{date}
+";
+  print $out_fh join("\t", "## Gene", "${target}_PARALOG", "Description", "Score"), "\n";
+  foreach my $line (sort keys %lines) {
+    print $out_fh "$line\n";
+  }
+  close $out_fh;
+  return ("$out_file (" . scalar(keys %lines) . ")");
 }
 
 # HGNC table -> { 'HGNC:n' => { symbol, name } }

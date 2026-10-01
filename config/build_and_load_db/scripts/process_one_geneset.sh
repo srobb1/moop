@@ -544,8 +544,11 @@ if [ -n "$OMA_CODE" ]; then
   shopt -s nullglob
   existing_hogs=(*.oma_hog.moop.tsv)
   shopt -u nullglob
-  if [ ${#existing_hogs[@]} -eq 0 ] && [ -s "$OMA_SRC/Output/HierarchicalGroups.orthoxml" ]; then
-    echo "Building OMA HOG orthologs for $OMA_CODE"
+  ## The same parser writes the species' own paralogs ($OMA_CODE.oma_hog_paralogs.moop.tsv), so a
+  ## gene set built before that table existed is parsed again.
+  if { [ ${#existing_hogs[@]} -eq 0 ] || ! has_data "$OMA_CODE.oma_hog_paralogs.moop.tsv"; } \
+     && [ -s "$OMA_SRC/Output/HierarchicalGroups.orthoxml" ]; then
+    echo "Building OMA HOG orthologs and paralogs for $OMA_CODE"
     perl "$REPO/analysis_parsers/parse_OMA_HOG_to_MOOP_TSV.pl" \
       "$OMA_SRC/Output/HierarchicalGroups.orthoxml" "$OMA_CODE" "$OMA_VERSION" "$HGNC_TABLE" $OMA_ID_MAP \
       || { echo "ERROR: failed to build OMA HOG orthologs"; exit 1; }
