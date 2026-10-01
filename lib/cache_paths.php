@@ -134,6 +134,41 @@ function moop_annotation_sources_cache_file(string $organism): string
 }
 
 /**
+ * Drop sources that have no annotations, and types left with no sources.
+ *
+ * A database can hold an annotation_source row with nothing loaded under it (10 of 85 did
+ * on 2026-10-01 — Congeria's ProtNLM and EggNOG among them). Offering one in a picker is a
+ * filter that can only ever return nothing. The query that builds the cache now leaves
+ * them out, but cache files written before that still carry them and are only rebuilt
+ * when the database changes — so every reader goes through this.
+ *
+ * @param array $by_type [type => [['name' => ..., 'count' => ...], ...]]
+ */
+function moop_drop_empty_annotation_sources(array $by_type): array
+{
+    $kept = [];
+    foreach ($by_type as $type => $sources) {
+        if (!is_array($sources)) continue;
+        $sources = array_values(array_filter($sources, fn($s) => (int)($s['count'] ?? 0) > 0));
+        if ($sources) $kept[$type] = $sources;
+    }
+    return $kept;
+}
+
+/**
+ * Read an organism's annotation-sources cache, empty sources removed.
+ *
+ * @return array|null [type => sources], or null when there is no cache file to read
+ */
+function moop_load_annotation_sources_cache(string $organism): ?array
+{
+    $file = moop_annotation_sources_cache_file($organism);
+    if ($file === '' || !is_file($file)) return null;
+    $data = json_decode((string)@file_get_contents($file), true);
+    return is_array($data) ? moop_drop_empty_annotation_sources($data) : null;
+}
+
+/**
  * Per-organism Wikipedia lookup cache.
  *
  * Sits beside annotation_sources_cache.json, same per-organism subdirectory pattern, so

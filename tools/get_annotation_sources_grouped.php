@@ -59,6 +59,8 @@ foreach ($organisms as $organism) {
         $source_types = getAnnotationSourcesByType($db);
         file_put_contents($cache_file, json_encode($source_types));
     }
+    // A cache written before empty sources were excluded still lists them.
+    $source_types = moop_drop_empty_annotation_sources($source_types);
 
     // Aggregate counts
     foreach ($source_types as $type => $sources) {

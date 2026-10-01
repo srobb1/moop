@@ -871,6 +871,22 @@ function moop_fts_has_type_column($dbFile) {
 }
 
 /**
+ * Narrow the types a database declares to those the sources cache says have annotations.
+ *
+ * Fails toward searching MORE, never less: if the cache names none of the declared types
+ * (a stale cache from before a reload, say), the declared set is returned unchanged rather
+ * than leaving search with no types at all.
+ *
+ * @param array $present      [type => true] from annotation_source
+ * @param array $cached_types type names that have annotations, per the cache
+ * @return array [type => true]
+ */
+function moop_types_with_annotations(array $present, array $cached_types) {
+    $kept = array_intersect_key($present, array_flip(array_map('trim', $cached_types)));
+    return $kept ?: $present;
+}
+
+/**
  * Annotation types present in this organism, in the order curated in annotation_config.json.
  *
  * Types the config does not mention are appended rather than dropped: an organism can load
@@ -890,6 +906,18 @@ function moop_curated_annotation_types($dbFile) {
         }
     } catch (PDOException $e) {
         return $cache[$dbFile] = [];
+    }
+
+    // Keep only types that actually have annotations. Each type gets an equal slice of the
+    // search pool, so a type with nothing in it shrinks every real type's slice for no gain.
+    // The answer comes from the organism's sources cache, never from the annotation table:
+    // nothing indexes annotation by source, so asking the database means scanning the whole
+    // table on every search, cold. No cache yet means no filtering — the old behaviour.
+    $cached = function_exists('moop_load_annotation_sources_cache')
+        ? moop_load_annotation_sources_cache(basename(dirname($dbFile)))
+        : null;
+    if ($cached) {
+        $present = moop_types_with_annotations($present, array_keys($cached));
     }
 
     global $config;
@@ -1355,7 +1383,7 @@ function getAnnotationSources($dbFile) {
                          ans.annotation_source_name as name,
                          COUNT(a.annotation_id) as count
                   FROM annotation_source ans
-                  LEFT JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
+                  JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
                   GROUP BY ans.annotation_source_id
                   ORDER BY count DESC";
         
@@ -1374,13 +1402,15 @@ function getAnnotationSources($dbFile) {
  */
 function getAnnotationSourcesByType($dbFile) {
     try {
-        // Get all sources with their annotation types from the database
+        // Sources with their annotation types — only those that HAVE annotations (an inner
+        // join). A source row with nothing under it is a picker entry that can only return
+        // nothing; 10 of 85 databases had one on 2026-10-01.
         $query = "SELECT 
                     ans.annotation_source_name as name,
                     ans.annotation_type as type,
                     COUNT(a.annotation_id) as count
                   FROM annotation_source ans
-                  LEFT JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
+                  JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
                   GROUP BY ans.annotation_source_id, ans.annotation_type
                   ORDER BY ans.annotation_type, COUNT(a.annotation_id) DESC";
         
@@ -1465,6 +1495,7 @@ function getAnnotationTypesFromDB($dbFile) {
                   LEFT JOIN feature_annotation fa ON a.annotation_id = fa.annotation_id
                   WHERE ans.annotation_type IS NOT NULL AND TRIM(ans.annotation_type) != ''
                   GROUP BY TRIM(ans.annotation_type)
+                  HAVING COUNT(DISTINCT a.annotation_id) > 0
                   ORDER BY feature_count DESC, TRIM(ans.annotation_type) ASC";
 
         $results = fetchData($query, $dbFile, []);

@@ -595,6 +595,44 @@ foreach (['jbrowse_register_sheet.php', 'jbrowse_sync_tracks.php'] as $_cl_ep) {
 }
 
 // ----------------------------------------------------------------------------
+group('annotation sources — a source with no annotations is not listed');
+
+// A database can hold an annotation_source row with nothing loaded under it (10 of 85 did
+// on 2026-10-01). The pickers offered it with a count of 0, and every empty TYPE took an
+// equal slice of the search pool away from the types that have results.
+$_as_db = sys_get_temp_dir() . '/moop_as_' . getmypid() . '.sqlite';
+@unlink($_as_db);
+$_as_pdo = new PDO('sqlite:' . $_as_db);
+$_as_pdo->exec("CREATE TABLE annotation_source (annotation_source_id INTEGER PRIMARY KEY, annotation_source_name TEXT, annotation_type TEXT);
+                CREATE TABLE annotation (annotation_id INTEGER PRIMARY KEY, annotation_source_id INTEGER, annotation_accession TEXT, annotation_description TEXT);
+                CREATE TABLE feature_annotation (feature_annotation_id INTEGER PRIMARY KEY, feature_id INTEGER, annotation_id INTEGER);
+                INSERT INTO annotation_source VALUES (1, 'InterPro', 'Domains'), (2, 'EggNOG', 'Orthologs');
+                INSERT INTO annotation VALUES (1, 1, 'IPR000436', 'Sushi');
+                INSERT INTO feature_annotation VALUES (1, 10, 1);");
+$_as_pdo = null;
+
+$_as_names = array_column(getAnnotationSources($_as_db), 'name');
+ok($_as_names === ['InterPro'],                       'getAnnotationSources() leaves out a source with no annotations');
+$_as_types = getAnnotationTypesFromDB($_as_db);
+ok(isset($_as_types['Domains']),                      'a type with annotations is reported');
+ok(!isset($_as_types['Orthologs']),                   'a type whose only source is empty is not reported');
+@unlink($_as_db);
+
+// Cache files written before the fix still list empty sources; every reader filters.
+$_as_cache = ['Orthologs' => [['name' => 'EggNOG', 'count' => '0']],
+              'Domains'   => [['name' => 'InterPro', 'count' => '8'], ['name' => 'Pfam', 'count' => 0]]];
+$_as_kept = moop_drop_empty_annotation_sources($_as_cache);
+ok(array_keys($_as_kept) === ['Domains'],             'a type left with no sources is dropped from the cache view');
+ok(array_column($_as_kept['Domains'], 'name') === ['InterPro'], 'an empty source is dropped, its siblings kept');
+
+// The search type list narrows to types that have annotations — but never to nothing.
+$_as_present = ['Domains' => true, 'Orthologs' => true];
+ok(array_keys(moop_types_with_annotations($_as_present, ['Domains'])) === ['Domains'],
+   'search drops a type the cache says is empty');
+ok(moop_types_with_annotations($_as_present, ['Something else']) === $_as_present,
+   'a cache naming none of the declared types does not leave search with no types');
+
+// ----------------------------------------------------------------------------
 group('gene page — no GFF means no gene structure, not a fatal error');
 
 // The Gene Structure help reuses a legend defined inside the Gene Structure card, which is
