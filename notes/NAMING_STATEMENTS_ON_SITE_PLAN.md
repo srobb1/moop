@@ -235,3 +235,19 @@ Search picker, and every empty type shrinks the real types' slices in the search
 Mockup"), which uses real Congeria Identity and Name Source sentences. Open: how much of the
 point-by-point list to show beside the Name Source sentence, since they overlap; what the
 title says for a gene with no name; open or collapsed by default.
+
+## Display decided 2026-10-01 (user, from the sketch)
+
+- **Layout:** the "full statement list" card — gene name, the short Identity sentence with its
+  link, then the labelled point-by-point statements in `sort_order`
+  (Support, Copies, Alignment, Domains, Tree, Cautions, Features, Expression).
+- **Name Source is not shown**, and the user intends **not to load it** (`kind = 'name_source'`).
+  The typed statements carry the same evidence in the form the user prefers. The sentence is
+  still written to the `gene_name_source.*.moop.tsv` files and `naming_decisions.tsv`, so it
+  can be loaded later without re-running naming.
+  - Site code must therefore not assume a `name_source` row exists, and should ignore one if
+    a database happens to have it.
+  - Worth one check before it is dropped for good: on a gene with a long sentence (the
+    Sushi-domain example, COKUS1KC_0000001), confirm every fact in the Name Source sentence
+    also appears in one of that gene's statements.
+- Still open: what the title says for a gene with no name; list open or collapsed by default.
