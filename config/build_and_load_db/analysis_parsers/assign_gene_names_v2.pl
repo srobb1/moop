@@ -3511,6 +3511,27 @@ sub write_naming_versions {
   close $fh;
 }
 
+# A gene naming file (gene statements, the gene name source): loaded into the gene_naming tables,
+# not the annotation tables, so its header says "Naming", not "Annotation":
+#   Naming Kind          identity | no_name | support | ... | expression | name_source
+#   Naming Link          the database the accessions link to (hgnc, interpro, ...); blank = no link
+#   Naming Data Version  the date of the data (the HGNC release)
+#   Naming Source URL / Naming Accession URL   the link database's home page and accession prefix
+#   Naming Run Date      the day this ran
+sub open_naming_moop {
+  my ($file, $naming) = @_;
+  open my $fh, '>', $file or die "cant write $file $!\n";
+  my $link = ($naming->{accession_url} // '') ne '' ? $naming->{link} : '';   # a link needs an accession URL
+  print $fh "## Naming Kind: $naming->{kind}
+## Naming Link: $link
+## Naming Data Version: $naming->{version}
+## Naming Source URL: $naming->{url}
+## Naming Accession URL: $naming->{accession_url}
+## Naming Run Date: " . `date '+%Y-%m-%d'`;
+  print $fh join("\t", '## Gene', 'Accession', 'Naming_Text', 'Sort_Order'), "\n";
+  return $fh;
+}
+
 sub open_closest_moop {
   my ($file, $source, $type) = @_;
   $type //= $CLOSEST_TYPE;
@@ -3529,21 +3550,22 @@ sub open_closest_moop {
 # Gene statements: what the naming found about each gene, as a short series of typed statements a gene
 # page can show above its (collapsed) evidence tables. gene_statement.<type>.moop.tsv, one per type, annotation
 # type "Gene Statement"; Score = the statement's place in the series. Built from the same data as the name.
-# Sources are named MOOP-NAMING-<TYPE>. The Identity statements are split by the database of their
-# accession (gene_statement.identity.<kind>.moop.tsv, source MOOP-NAMING-IDENTITY-<KIND>, the kinds
-# and links of %NAME_SOURCE), so every file's accessions link out to one database.
+# These files go to the gene_naming tables, not the annotation tables: their headers are "Naming"
+# lines (open_naming_moop). The Identity statements are split by the database of their accession
+# (gene_statement.identity.<link>.moop.tsv, the kinds and links of %NAME_SOURCE), so every file's
+# accessions link out to one database.
 my @STATEMENT_TYPES = (
-  # [file key, source, order]
-  ['identity',   'MOOP-NAMING-IDENTITY',   1],
-  ['no_name',    'MOOP-NAMING-NO-NAME',    1],
-  ['support',    'MOOP-NAMING-SUPPORT',    2],
-  ['copies',     'MOOP-NAMING-COPIES',     3],
-  ['alignment',  'MOOP-NAMING-ALIGNMENT',  4],
-  ['domains',    'MOOP-NAMING-DOMAINS',    5],
-  ['tree',       'MOOP-NAMING-TREE',       6],
-  ['cautions',   'MOOP-NAMING-CAUTIONS',   7],
-  ['features',   'MOOP-NAMING-FEATURES',   8],
-  ['expression', 'MOOP-NAMING-EXPRESSION', 9],
+  # [kind (also the file key), order]
+  ['identity',   1],
+  ['no_name',    1],
+  ['support',    2],
+  ['copies',     3],
+  ['alignment',  4],
+  ['domains',    5],
+  ['tree',       6],
+  ['cautions',   7],
+  ['features',   8],
+  ['expression', 9],
 );
 my $STATEMENT_TYPE = 'Gene Statement';
 
@@ -3697,18 +3719,17 @@ sub write_statements {
     my %accession = (identity => ($named && $named->{origin} ? $named->{origin}{accession} : '') // '',
                      tree => ($tree{$group} ? $tree{$group}{panther_match} : ''));
     foreach my $type (@STATEMENT_TYPES) {
-      my ($key, $source, $order) = @$type;
+      my ($key, $order) = @$type;
       my $text = $said{$key} // next;
       # an Identity statement goes to the file of its accession's database
-      my ($file_key, $url, $accession_url) = ($key, '', '');
+      my ($file_key, $link, $url, $accession_url) = ($key, '', '', '');
       if ($key eq 'identity' and $named and $named->{origin} and $NAME_SOURCE{ $named->{origin}{kind} // '' }) {
-        my $kind = $named->{origin}{kind};
-        $file_key = "identity.$kind";
-        $source .= '-' . uc($kind =~ s/_/-/gr);
-        (undef, $url, $accession_url) = @{ $NAME_SOURCE{$kind} };
+        $link = $named->{origin}{kind};
+        $file_key = "identity.$link";
+        (undef, $url, $accession_url) = @{ $NAME_SOURCE{$link} };
       }
-      my $fh = $fh{$file_key} //= open_closest_moop("$opt{'out-dir'}/gene_statement.$file_key.moop.tsv",
-        { source => $source, version => $version, url => $url, accession_url => $accession_url }, $STATEMENT_TYPE);
+      my $fh = $fh{$file_key} //= open_naming_moop("$opt{'out-dir'}/gene_statement.$file_key.moop.tsv",
+        { kind => $key, link => $link, version => $version, url => $url, accession_url => $accession_url });
       print $fh join("\t", $group, ($accession{$key} // '') ne '' ? $accession{$key} : $key, $text =~ s/[\t\n]/ /gr, $order), "\n";
       $stats{"statement: $key"}++;
     }
@@ -3718,7 +3739,8 @@ sub write_statements {
   }
 }
 
-# gene_name_source.<kind>.moop.tsv: a row for every named id and its gene. Accession = what the
+# gene_name_source.<kind>.moop.tsv: a row for the GENE of every named id (the loader puts it in
+# the gene_naming table, which holds genes alone). Accession = what the
 # name came from; description = why, in words (the name itself is its own column on the site);
 # score = the naming step.
 sub write_name_source {
@@ -3728,9 +3750,9 @@ sub write_name_source {
     my $origin = $row->[6] or next;
     my $kind = $origin->{kind};
     my $meta = $NAME_SOURCE{$kind} or die "unknown name source kind $kind\n";
-    my $fh = $fh{$kind} //= open_closest_moop("$opt{'out-dir'}/gene_name_source.$kind.moop.tsv",
-      { source => $meta->[0], version => $version, url => $meta->[1], accession_url => $meta->[2] }, $NAME_SOURCE_TYPE);
-    foreach my $feature ($row->[0], $row->[2]) {   # the id, and its gene
+    my $fh = $fh{$kind} //= open_naming_moop("$opt{'out-dir'}/gene_name_source.$kind.moop.tsv",
+      { kind => 'name_source', link => $kind, version => $version, url => $meta->[1], accession_url => $meta->[2] });
+    foreach my $feature ($row->[2] // $row->[0]) {   # its gene (the id itself when it has none)
       next if !defined $feature or $done{$feature}++;
       print $fh join("\t", $feature, $origin->{accession}, $origin->{rule}, $origin->{step}), "\n";
     }
@@ -3766,11 +3788,14 @@ sub write_closest {
   my %moop_fh;
   foreach my $group (sort keys %members) {
     my $closest = $closest_of->{$group} or next;
-    # the gene and every isoform carry the same final pick
-    my %features = ($group => 1);
+    # every isoform carries the same final pick. The annotation is loaded at ONE level, the
+    # transcript, like other annotations: on the gene as well, a gene page drew the table twice.
+    # (A gene set with no ids below the gene keeps the gene.)
+    my %features;
     foreach my $member (@{$members{$group}}) {
       $features{$member} = 1;
     }
+    %features = ($group => 1) unless %features;
     foreach my $gene (@{$closest->{genes}}) {
       my ($source) = grep { my $candidate = $_; $candidate->{match}->($gene) } @$sources;
       my $fh = $moop_fh{$source->{file}} //= open_closest_moop("$base$source->{file}.moop.tsv", $source);

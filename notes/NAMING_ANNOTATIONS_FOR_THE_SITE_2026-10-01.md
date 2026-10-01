@@ -1,5 +1,58 @@
 # Naming annotations: what the pipeline loads, for the site code (2026-10-01)
 
+> **SUPERSEDED IN PART, same day.** Gene statements and the gene name source are no longer
+> annotation types. They are loaded into their own tables (`gene_naming`, `gene_naming_link`,
+> `gene_naming_run`): see "As built" just below and `notes/NAMING_STATEMENTS_ON_SITE_PLAN.md`
+> (FINAL DESIGN). The sections after "As built" describe the earlier annotation-table design
+> and are kept for the texts, counts and wording rules, which have not changed. `Closest Gene`
+> and `Paralogs` are still ordinary annotation types.
+
+## As built (naming-v2)
+
+**Tables** (`config/build_and_load_db/data_loaders/create_schema_sqlite.sql`)
+
+| Table | One row per | Columns |
+|---|---|---|
+| `gene_naming` | gene and kind | `gene_naming_id`, `feature_id` (the gene), `kind`, `sort_order`, `naming_text`, `accession` (NULL where none), `link_kind` (NULL when the accession has no link); `UNIQUE (feature_id, kind)`; `feature_id` cascades on delete |
+| `gene_naming_link` | link database | `link_kind` (hgnc, hgnc_group, interpro, panther, pfam, ...), `source_url`, `accession_url` (link = `accession_url` + accession) |
+| `gene_naming_run` | gene set | `gene_set_id`, `data_version` (the date of the data: the HGNC release), `run_date` (the day naming ran), `details` (naming_versions.txt) |
+
+`kind`: `identity`, `no_name`, `support`, `copies`, `alignment`, `domains`, `tree`, `cautions`,
+`features`, `expression`, and `name_source` (the long evidence sentence).
+
+`sort_order`: 1 to 9 for the statements. For `name_source` it is the naming step (0 = none,
+3 to 8), NOT a place in the series: select it by `kind`, do not sort it in with the statements.
+
+The card's query:
+
+    SELECT n.kind, n.sort_order, n.naming_text, n.accession, l.accession_url
+    FROM gene_naming n
+    LEFT JOIN gene_naming_link l ON l.link_kind = n.link_kind
+    WHERE n.feature_id = ? AND n.kind <> 'name_source'
+    ORDER BY n.sort_order;
+
+- An accession with no link (`tree`: a PANTHER subfamily such as `PTHR12493:SF0`) is stored with
+  `link_kind` NULL: show it as plain text, no `<a href>`.
+- Rows exist for the gene alone (a feature with no parent), never for a transcript.
+- Congeria: 200,673 rows for 43,768 genes; links hgnc, hgnc_group, interpro, panther, pfam.
+- A database built before these tables existed is not loaded into: the loader stops and asks
+  for a rebuild from the current schema. (Every database is rebuilt from scratch.)
+- A load replaces the gene set's `gene_naming` rows and its `gene_naming_run` row.
+  `delete_gene_set.sh` removes them through the cascades (it sets `PRAGMA foreign_keys = ON`);
+  `gene_naming_link` is shared by all gene sets and stays.
+
+**Files.** `gene_statement.*.moop.tsv` and `gene_name_source.*.moop.tsv` keep their names but are
+"naming" files, not annotation files: header lines `## Naming Kind:`, `## Naming Link:`,
+`## Naming Data Version:`, `## Naming Source URL:`, `## Naming Accession URL:`, `## Naming Run Date:`,
+columns Gene, Accession, Naming_Text, Sort_Order. The loader recognises them by `## Naming Kind:`.
+They have gene rows alone. The `MOOP-NAMING-*` source names no longer exist.
+
+**Closest Gene** is an annotation type as before, now on the TRANSCRIPT alone (it was on the gene
+and each transcript, which drew the same table twice on a gene page). A reload replaces the gene
+set's rows of this type. **Paralogs** unchanged.
+
+---
+
 For planning the gene page (`tools/parent.php`, `tools/pages/parent.php`, `lib/parent_functions.php`),
 annotation search and the source pickers. Written from the naming code on branch `naming-v2`
 (`assign_gene_names_v2.pl`, `load_annotations_sqlite.pl`) and a Congeria run

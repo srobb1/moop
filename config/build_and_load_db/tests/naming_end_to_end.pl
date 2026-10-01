@@ -701,9 +701,10 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
 {
   my %statement;   # gene -> type -> [text, order]
   foreach my $file (glob "$out/gene_statement.*.moop.tsv") {
-    my ($type) = $file =~ /gene_statement\.(\w+)(?:\.\w+)?\.moop\.tsv$/;   # identity.<kind>: split by accession database
+    my $type;   # the kind, from the file's "## Naming Kind:" header
     open my $fh, '<', $file or die;
     while (my $line = <$fh>) {
+      $type = $1 if $line =~ /^## Naming Kind:\s*(\w+)/;
       next if $line =~ /^#/;
       chomp $line;
       my ($gene, undef, $text, $order) = split /\t/, $line;
@@ -733,20 +734,34 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
   check(($statement{G1}{identity}[1] // '') eq '1' && ($statement{G1}{domains}[1] // '') eq '5', 'statement order in Score', '');
 }
 
-# ---- moop files load cleanly: 4 columns, the headers MOOP requires, one type per family
+# ---- moop files load cleanly: 4 columns and the headers the loader requires. The closest genes are an
+# annotation type, on the transcripts alone; the statements and the name source are gene naming files
+# ("Naming" header lines, loaded into the gene_naming tables), on the genes alone
 foreach my $file (glob("$out/*.moop.tsv")) {
   open my $fh, '<', $file or die;
-  my ($type, $bad) = ('', 0);
+  my ($type, $bad, %header, %level) = ('', 0);
   while (my $line = <$fh>) {
     $type = $1 if $line =~ /^## Annotation Type: (.+)$/;
+    $header{$1} = $2 if $line =~ /^## Naming ([A-Za-z ]+): ?(.*)$/;
     next if $line =~ /^#/;
     chomp $line;
-    $bad++ if (split /\t/, $line, -1) != 4;
+    my @fields = split /\t/, $line, -1;
+    $bad++ if @fields != 4;
+    $level{ $fields[0] =~ /^G\d+$/ ? 'gene' : 'transcript' }++;
   }
   close $fh;
   (my $short = $file) =~ s{.*/}{};
-  check($bad == 0 && ($type eq 'Closest Gene' || $type eq 'Gene Name Source' || ($short =~ /^gene_statement\./ && $type eq 'Gene Statement')),
-        "$short: 4 columns, type $type", "$bad bad rows");
+  if ($short =~ /^closest_/) {
+    check($bad == 0 && $type eq 'Closest Gene' && !$level{gene}, "$short: 4 columns, type Closest Gene, transcript rows alone",
+          "$bad bad rows, type $type, gene rows " . ($level{gene} // 0));
+  } else {
+    my $want_kind = $short =~ /^gene_name_source\./ ? 'name_source' : ($short =~ /^gene_statement\.(\w+?)\./)[0];
+    check($bad == 0 && $type eq '' && ($header{Kind} // '') eq $want_kind && ($header{'Data Version'} // '') ne ''
+          && ($header{'Run Date'} // '') =~ /^\d{4}-\d\d-\d\d$/ && !$level{transcript}
+          && (($header{Link} // '') eq '') == (($header{'Accession URL'} // '') eq ''),
+          "$short: a gene naming file (kind $want_kind, data version, run date, a link with its URL), gene rows alone",
+          "$bad bad rows, kind " . ($header{Kind} // '?') . ', link ' . ($header{Link} // '?') . ', transcript rows ' . ($level{transcript} // 0));
+  }
 }
 
 # ---- closest gene in a species searched with closest_species_rbh.sh / closest_species_diamond.sh
@@ -762,9 +777,9 @@ check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', 
 {
   my (%score, %label);
   foreach my $row (read_tsv("$out/closest_smed.moop.tsv")) {
-    next unless $row->[0] =~ /^G\d+$/;
-    $score{$row->[0]} = $row->[3];
-    $label{$row->[0]} = "$row->[1] | $row->[2]";
+    my ($number) = $row->[0] =~ /^T(\d+)\.1$/ or next;   # the rows are on the transcripts: T5.1 of gene G5
+    $score{"G$number"} = $row->[3];
+    $label{"G$number"} = "$row->[1] | $row->[2]";
   }
   check(scalar(($label{G16} // '') =~ /^SMED16 \| \[reciprocal best hit \(MMseqs2/),
         'closest Smed moop G16: a partner with no description is kept by its id, no stray space', $label{G16});

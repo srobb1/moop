@@ -305,16 +305,19 @@ sub main {
     _exit(0);
 }
 
-# Annotation types that describe a whole gene set and are written anew by every naming run
-# (assign_gene_names_v2.pl): a statement, a name source or a closest gene REPLACES the one the
-# gene had. This loader only ever adds, so after a second naming run a gene whose Identity
-# statement changed showed both texts, and a gene that lost its Cautions statement kept it;
-# a new reference release in the version string added a second source beside the first.
-# For each such type among the files of this run, every feature_annotation row of that type on
-# the features of the files' gene sets is deleted first, then the annotations and sources of
-# the type left with no rows. Other gene sets of the organism, and all other types, are not
-# touched. The gene set is found from the features the file names (the first that resolve).
-my %REPLACED_ON_RELOAD = ('Gene Statement' => 1, 'Gene Name Source' => 1, 'Closest Gene' => 1);
+# What a naming run (assign_gene_names_v2.pl) writes describes a whole gene set and is written
+# anew by every run: it REPLACES what the gene set had. This loader otherwise only adds, so
+# after a second naming run a gene whose closest gene changed would show both.
+#   Closest Gene: an ordinary annotation type. For each gene set of this run's files, every
+#     feature_annotation row of the type is deleted first, then the annotations and sources of
+#     the type left with no rows.
+#   Gene naming files (gene statements, the gene name source; a "## Naming Kind:" header):
+#     not annotations. They go to the gene_naming tables (load_naming_file); the gene set's
+#     gene_naming rows and its gene_naming_run row are deleted first.
+# Other gene sets of the organism, and all other types, are not touched. The gene set is found
+# from the features the file names (the first that resolve).
+my %REPLACED_ON_RELOAD = ('Closest Gene' => 1);
+my $NAMING = 'gene naming';   # stands in for an annotation type when sorting this run's files
 
 sub replace_reloaded_types {
     my %gene_sets_of_type;   # annotation type -> { gene_set_id => 1 }
@@ -325,8 +328,10 @@ sub replace_reloaded_types {
         while (my $line = <$fh>) {
             chomp $line;
             if ($line =~ /^## Annotation Type:\s*(.+?)\s*$/) { $annotation_type = $1; next }
+            if ($line =~ /^## Naming Kind:/)                 { $annotation_type = $NAMING; next }
             next if $line =~ /^#/ || $line =~ /^\s*$/;
-            last unless defined $annotation_type && $REPLACED_ON_RELOAD{$annotation_type};
+            last unless defined $annotation_type
+                     && ($REPLACED_ON_RELOAD{$annotation_type} || $annotation_type eq $NAMING);
             my ($unique_name) = split /\t/, $line;
             $unique_name //= '';
             $unique_name =~ s/^\s+|\s+$//g;
@@ -364,7 +369,24 @@ sub replace_reloaded_types {
         WHERE annotation_type = ?
           AND NOT EXISTS (SELECT 1 FROM annotation a WHERE a.annotation_source_id = annotation_source.annotation_source_id)
     });
+    # the gene_naming tables: one clearing per gene set, whichever of the two types named it
+    my %naming_gene_set;
     foreach my $annotation_type (sort keys %gene_sets_of_type) {
+        next unless $annotation_type eq $NAMING;
+        foreach my $gene_set_id (keys %{ $gene_sets_of_type{$annotation_type} }) { $naming_gene_set{$gene_set_id} = 1 }
+    }
+    if (%naming_gene_set) {
+        require_naming_tables();
+        foreach my $gene_set_id (sort keys %naming_gene_set) {
+            my $n_rows = $dbh->do(q{DELETE FROM gene_naming
+                                    WHERE feature_id IN (SELECT feature_id FROM feature WHERE gene_set_id = ?)},
+                                  undef, $gene_set_id) + 0;
+            $dbh->do(q{DELETE FROM gene_naming_run WHERE gene_set_id = ?}, undef, $gene_set_id);
+            print "Reload of gene naming (gene set $gene_set_id): removed $n_rows earlier gene_naming rows\n";
+        }
+    }
+    foreach my $annotation_type (sort keys %gene_sets_of_type) {
+        next unless $REPLACED_ON_RELOAD{$annotation_type};
         my $n_rows = 0;
         foreach my $gene_set_id (sort keys %{ $gene_sets_of_type{$annotation_type} }) {
             $n_rows += $sth_delete_rows->execute($gene_set_id, $annotation_type);
@@ -380,8 +402,112 @@ sub replace_reloaded_types {
     $sth_delete_sources->finish();
 }
 
+sub require_naming_tables {
+    my ($found) = $dbh->selectrow_array(q{SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'
+                                          AND name IN ('gene_naming', 'gene_naming_link', 'gene_naming_run')});
+    die "This database has no gene_naming tables (create_schema_sqlite.sql adds gene_naming, gene_naming_link "
+      . "and gene_naming_run): rebuild it from the current schema before loading gene statements\n" unless $found == 3;
+}
+
+# A gene naming file (gene statements, the gene name source) goes to the gene_naming tables,
+# not to the annotation tables (see create_schema_sqlite.sql). Everything the load needs is in
+# the file's header, which the naming run writes as "Naming" lines:
+#   ## Naming Kind: identity            (required; the kind of every row of the file)
+#   ## Naming Link: hgnc                (the database the accessions link to; blank = no link)
+#   ## Naming Data Version: 2026-09-24  (required; the date of the data)
+#   ## Naming Source URL: ...           ## Naming Accession URL: ...   (of the link database)
+#   ## Naming Run Date: 2026-10-01      (required)
+# Columns: gene, accession, text, sort order. Rows are kept for the feature the naming is about,
+# the gene: a feature with no parent. An accession that is the kind word, or None, is no
+# accession; an accession with no link is stored and shown as plain text.
+my ($total_naming_rows, $total_naming_skipped) = (0, 0);
+sub naming_header {
+    my ($annot_file) = @_;
+    my %header;
+    open my $fh, '<', $annot_file or die "Cannot open file $annot_file: $!\n";
+    while (my $line = <$fh>) {
+        last unless $line =~ /^##/;
+        $header{ lc $1 } = $2 if $line =~ /^## Naming ([A-Za-z ]+?):\s*(.*?)\s*$/;
+    }
+    close $fh;
+    return exists $header{kind} ? \%header : undef;
+}
+
+sub load_naming_file {
+    my ($annot_file, $header) = @_;
+    my $file_name = basename($annot_file);
+    my ($kind, $link_kind) = ($header->{kind}, $header->{link});
+    my ($source_version, $source_url, $accession_url, $date) = @{$header}{'data version', 'source url', 'accession url', 'run date'};
+    die "## Naming Kind: has no value in the header of $annot_file\n" if !defined $kind || $kind eq '';
+    die "## Naming Data Version: is required in the header of $annot_file\n" if !defined $source_version || $source_version eq '';
+    die "## Naming Run Date: is required in the header of $annot_file\n"     if !defined $date || $date eq '';
+    require_naming_tables();
+    # a link needs a name and an accession URL
+    $link_kind = undef unless defined $link_kind && $link_kind ne '' && defined $accession_url && $accession_url ne '';
+    $source_url = undef if defined $source_url && $source_url eq '';
+    open my $FH, '<', $annot_file or die "Cannot open file $annot_file: $!\n";
+    $dbh->do(q{INSERT OR REPLACE INTO gene_naming_link (link_kind, source_url, accession_url) VALUES (?, ?, ?)},
+             undef, $link_kind, $source_url, $accession_url) if defined $link_kind;
+    my $sth_insert = $dbh->prepare(q{
+        INSERT OR REPLACE INTO gene_naming (feature_id, kind, sort_order, naming_text, accession, link_kind)
+        VALUES (?, ?, ?, ?, ?, ?)
+    });
+    my $sth_gene_set = $dbh->prepare(q{SELECT gene_set_id FROM feature WHERE feature_id = ?});
+    my ($n_rows, $n_skipped, %gene_set_seen) = (0, 0);
+    while (my $line = <$FH>) {
+        chomp $line;
+        next if $line =~ /^#/ || $line =~ /^\s*$/;
+        my ($unique_name, $accession, $text, $order) = split /\t/, $line, 4;
+        foreach my $field ($unique_name, $accession, $text, $order) {
+            $field = '' if !defined $field;
+            $field =~ s/^\s+|\s+$//g;
+        }
+        my $feature_id = $ambiguous_uniquename{$unique_name} ? undef : $feature_cache{$unique_name};
+        if (!defined $feature_id && (length $strip_prefix || length $add_prefix)) {
+            (my $rewritten = $unique_name) =~ s/^\Q$strip_prefix\E/$add_prefix/;
+            $feature_id = $feature_cache{$rewritten} unless $ambiguous_uniquename{$rewritten};
+        }
+        # the feature the naming is about, the gene: a feature with a parent is a transcript or below
+        if (!defined $feature_id || defined $parent_cache{$feature_id} || $text eq '') { $n_skipped++; next }
+        my $row_accession = ($accession eq '' || $accession eq $kind || $accession eq 'None') ? undef : $accession;
+        my $sort_order = $order =~ /^\d+$/ ? $order : 0;
+        $sth_insert->execute($feature_id, $kind, $sort_order, $text, $row_accession,
+                             (defined $row_accession ? $link_kind : undef));
+        $n_rows++;
+        unless (%gene_set_seen) {
+            $sth_gene_set->execute($feature_id);
+            my ($gene_set_id) = $sth_gene_set->fetchrow_array;
+            $gene_set_seen{$gene_set_id} = 1 if defined $gene_set_id;
+        }
+    }
+    close $FH;
+    $sth_insert->finish();
+    $sth_gene_set->finish();
+    # the run: the date of the data, the day it ran, and the full list of what it used
+    my $details;
+    if (open my $versions, '<', dirname($annot_file) . '/naming_versions.txt') {
+        local $/;
+        $details = <$versions>;
+        close $versions;
+    }
+    foreach my $gene_set_id (keys %gene_set_seen) {
+        $dbh->do(q{INSERT OR REPLACE INTO gene_naming_run (gene_set_id, data_version, run_date, details) VALUES (?, ?, ?, ?)},
+                 undef, $gene_set_id, $source_version, $date, $details);
+    }
+    $total_naming_rows    += $n_rows;
+    $total_naming_skipped += $n_skipped;
+    print "Gene naming: $file_name -> $n_rows gene_naming rows (kind $kind"
+        . (defined $link_kind ? ", links to $link_kind" : '') . "); $n_skipped rows not for a gene of this database\n";
+}
+
 sub load_one_file {
     my ($annot_file) = @_;
+
+    # a gene naming file is not an annotation file: its own tables, no annotation_source row
+    if (my $naming = naming_header($annot_file)) {
+        load_naming_file($annot_file, $naming);
+        return;
+    }
 
     my ($source, $source_version, $source_url, $accession_url, $date, $annotation_type);
     open my $FH, '<', $annot_file or die "Cannot open file $annot_file: $!\n";

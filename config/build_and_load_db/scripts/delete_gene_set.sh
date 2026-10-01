@@ -60,6 +60,10 @@ DELETE FROM feature_annotation
  WHERE feature_id IN (SELECT feature_id FROM feature
                        WHERE gene_set_id IN (SELECT gene_set_id FROM doomed_gs));
 
+-- The gene naming rows (gene_naming, gene_naming_run) are not deleted by name here: they
+-- go with their genes and their gene set through ON DELETE CASCADE, which is in force
+-- because of the PRAGMA above. gene_naming_link is shared by every gene set and stays.
+
 DELETE FROM feature   WHERE gene_set_id IN (SELECT gene_set_id FROM doomed_gs);
 DELETE FROM gene_set  WHERE gene_set_id IN (SELECT gene_set_id FROM doomed_gs);
 
