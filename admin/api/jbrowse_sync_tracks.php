@@ -9,6 +9,7 @@
 // check AND verifies the CSRF token on POST. Using the bare access check left this
 // endpoint authenticated but forgeable.
 require_once __DIR__ . '/../admin_init.php';
+require_once __DIR__ . '/../../lib/functions_data.php';
 
 header('Content-Type: application/json');
 set_time_limit(0);
@@ -23,6 +24,7 @@ $syncMode = $_POST['syncMode'] ?? 'single';
 $organism = $_POST['syncOrganism'] ?? '';
 $assembly = $_POST['syncAssembly'] ?? '';
 $forceRegenerate = isset($_POST['forceRegenerate']);
+$removeMissing = isset($_POST['removeMissing']);
 $dryRun = isset($_POST['dryRun']);
 
 $config        = ConfigManager::getInstance();
@@ -70,6 +72,11 @@ foreach ($assembliesToSync as $item) {
     $org = $item['organism'];
     $asm = $item['assembly'];
     
+    if (!isJBrowseAssemblyRegistered($org, $asm)) {
+        $errors[] = "$org/$asm: not registered in JBrowse — register the assembly first";
+        continue;
+    }
+    
     $sheetFile = "$sheets_base/$org/$asm/jbrowse_tracks_sheet.txt";
     
     if (!file_exists($sheetFile)) {
@@ -94,8 +101,14 @@ foreach ($assembliesToSync as $item) {
     $cmd .= "--organism " . escapeshellarg($org) . " ";
     $cmd .= "--assembly " . escapeshellarg($asm) . " ";
     
+    // Two separate choices. They used to be one checkbox, ticked by default, so every
+    // ordinary sync also deleted whatever was not in the sheet.
     if ($forceRegenerate) {
-        $cmd .= "--force --clean ";
+        $cmd .= "--force ";
+    }
+    
+    if ($removeMissing) {
+        $cmd .= "--clean ";
     }
     
     if ($dryRun) {
@@ -112,11 +125,23 @@ foreach ($assembliesToSync as $item) {
     $outputText = implode("\n", $output);
     
     if ($returnCode === 0) {
+        // Record when the tracks were last brought in line with the sheet. Checked, not
+        // assumed: an unwritable sheet file would otherwise leave the table showing an old
+        // date after a sync that worked.
+        if (!$dryRun) {
+            $sheetCfg = parse_ini_file($sheetFile, false, INI_SCANNER_RAW) ?: [];
+            unset($sheetCfg['AUTO_SYNC']);   // never read by anything
+            $sheetCfg['LAST_SYNC'] = date('Y-m-d H:i:s');
+            if (!writeJBrowseSheetConfig($org, $asm, $sheetCfg)) {
+                $errors[] = "$org/$asm: tracks synced, but the sync date could not be saved to $sheetFile";
+            }
+        }
         $results[] = [
             'organism' => $org,
             'assembly' => $asm,
             'success' => true,
-            'output' => $outputText
+            'output' => $outputText,
+            'sheet' => getJBrowseSheetStatus($org, $asm)
         ];
     } else {
         $errors[] = "$org/$asm: Sync failed (exit code $returnCode)";
@@ -124,7 +149,8 @@ foreach ($assembliesToSync as $item) {
             'organism' => $org,
             'assembly' => $asm,
             'success' => false,
-            'output' => $outputText
+            'output' => $outputText,
+            'sheet' => getJBrowseSheetStatus($org, $asm)
         ];
     }
 }

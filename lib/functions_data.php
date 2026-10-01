@@ -1145,6 +1145,86 @@ function countJBrowseRegistrations(): int {
     return is_dir($dir) ? count(glob("$dir/*.json") ?: []) : 0;
 }
 
+/**
+ * Is this organism/assembly registered in JBrowse?
+ *
+ * The gate for anything that hangs tracks off an assembly (sheet registration, sheet sync).
+ * The page only offers registered assemblies in its dropdowns, but the endpoints took any
+ * string — and built a filesystem path from it. Names are checked here too, so a caller
+ * that passes this gate may safely use both values as path components.
+ */
+function isJBrowseAssemblyRegistered(string $organism, string $assembly): bool {
+    foreach ([$organism, $assembly] as $name) {
+        if ($name === '' || $name[0] === '.' || !preg_match('/^[A-Za-z0-9._-]+$/', $name)) {
+            return false;
+        }
+    }
+    $file = ConfigManager::getInstance()->getPath('metadata_path')
+          . "/jbrowse2-configs/assemblies/{$organism}_{$assembly}.json";
+    if (!is_file($file)) return false;
+    $def = loadJsonFile($file, []);
+    return ($def['organism'] ?? '') === $organism && ($def['assemblyId'] ?? '') === $assembly;
+}
+
+/**
+ * Path of the file that records which Google Sheet feeds an assembly's tracks.
+ * Callers must have passed isJBrowseAssemblyRegistered() — both names become path parts.
+ */
+function jbrowseSheetConfigPath(string $organism, string $assembly): string {
+    return ConfigManager::getInstance()->getPath('metadata_path')
+         . "/jbrowse2-configs/sheets/$organism/$assembly/jbrowse_tracks_sheet.txt";
+}
+
+/**
+ * Write an assembly's sheet config (KEY=value lines). One writer, so the register and
+ * sync endpoints cannot disagree about the format.
+ */
+function writeJBrowseSheetConfig(string $organism, string $assembly, array $cfg): bool {
+    $lines = '';
+    foreach ($cfg as $key => $value) {
+        $lines .= $key . '=' . str_replace(["\r", "\n"], '', (string)$value) . "\n";
+    }
+    return file_put_contents(jbrowseSheetConfigPath($organism, $assembly), $lines) !== false;
+}
+
+/**
+ * What the Manage JBrowse table shows for one assembly's track sheet.
+ *
+ * track_count is every track JSON that is NOT a gene annotation track. A gene track is
+ * gff/{gene_set}_genes.json for a gene set that exists on disk — matched against the real
+ * gene-set directories, not the file name alone, because a sheet may legitimately contain
+ * its own "*_genes" GFF row (Nematostella's NV2g_genes is one).
+ *
+ * Globs only; no JSON is read, so this is cheap enough to run for every assembly per load.
+ *
+ * @return array ['sheet_id','gid','registered','last_sync','track_count']
+ */
+function getJBrowseSheetStatus(string $organism, string $assembly): array {
+    $config = ConfigManager::getInstance();
+    $file   = jbrowseSheetConfigPath($organism, $assembly);
+    $cfg    = is_file($file) ? (parse_ini_file($file, false, INI_SCANNER_RAW) ?: []) : [];
+
+    $tracks_dir = $config->getPath('metadata_path') . "/jbrowse2-configs/tracks/$organism/$assembly";
+    $asm_dir    = $config->getPath('organism_data') . "/$organism/$assembly";
+    $count = 0;
+    foreach (glob("$tracks_dir/*/*.json") ?: [] as $track_file) {
+        $name = basename($track_file, '.json');
+        if (basename(dirname($track_file)) === 'gff' && substr($name, -6) === '_genes'
+            && is_dir("$asm_dir/" . substr($name, 0, -6))) {
+            continue;
+        }
+        $count++;
+    }
+
+    return [
+        'sheet_id'    => $cfg['SHEET_ID'] ?? '',
+        'gid'         => $cfg['GID'] ?? '',
+        'registered'  => $cfg['REGISTERED_DATE'] ?? '',
+        'last_sync'   => $cfg['LAST_SYNC'] ?? '',
+        'track_count' => $count,
+    ];
+}
+
 function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
     $config        = ConfigManager::getInstance();
     $metadata_path = $config->getPath('metadata_path');

@@ -545,6 +545,56 @@ foreach (glob(dirname(__DIR__) . '/lib/jbrowse/TrackTypes/*.php') as $_ts_file) 
 ok($_ts_lists > 0, "found the track types' metadata field lists to check");
 
 // ----------------------------------------------------------------------------
+group('sheet sync clean — only removes tracks a sheet wrote');
+
+// On 2026-10-01 a sheet was registered for Congeria and synced with the page defaults. The
+// clean step unlinked every track JSON whose id was not a sheet row — including
+// COKUS1KC_genes.json, which gene-set registration writes into the same gff/ directory and
+// which is never in a sheet. The gene models vanished from the browser with no error. The
+// same comparison ignored combo ids, so a sync deleted every combo it had just created.
+require_once dirname(__DIR__) . '/lib/jbrowse/TrackGenerator.php';
+
+$_cl_gene  = ['metadata' => ['gene_set' => 'GS1', 'is_primary_gene_track' => true]];
+$_cl_sheet = ['metadata' => ['google_sheets_metadata' => ['technique' => 'RNASeq']]];
+ok(TrackGenerator::isSheetOriginTrack('gff', $_cl_gene) === false,   'a gene-set track is not sheet-origin');
+ok(TrackGenerator::isSheetOriginTrack('gff', $_cl_sheet) === true,   'a gff track with sheet metadata is sheet-origin');
+ok(TrackGenerator::isSheetOriginTrack('bigwig', []) === false,       'a track of unknown origin is kept, not assumed to be from a sheet');
+ok(TrackGenerator::isSheetOriginTrack('combo', []) === true,         'combo tracks only ever come from a sheet');
+
+$_cl_existing = [
+    ['track_id' => 'GS1_genes',  'type' => 'gff',    'file' => 'a', 'sheet_origin' => false],
+    ['track_id' => 'kept.bw',    'type' => 'bigwig', 'file' => 'b', 'sheet_origin' => true],
+    ['track_id' => 'gone.bw',    'type' => 'bigwig', 'file' => 'c', 'sheet_origin' => true],
+    ['track_id' => 'my_combo',   'type' => 'combo',  'file' => 'd', 'sheet_origin' => true],
+    ['track_id' => 'old_combo',  'type' => 'combo',  'file' => 'e', 'sheet_origin' => true],
+];
+$_cl_orphans = array_column(TrackGenerator::selectOrphanedTracks($_cl_existing, ['kept.bw', 'My_Combo']), 'track_id');
+ok(!in_array('GS1_genes', $_cl_orphans, true), 'clean never selects the gene annotation track');
+ok(!in_array('kept.bw', $_cl_orphans, true),   'clean keeps a sheet track still in the sheet');
+ok(!in_array('my_combo', $_cl_orphans, true),  'clean keeps a combo still in the sheet (file name is the lowercased id)');
+ok($_cl_orphans === ['gone.bw', 'old_combo'],  'clean selects exactly the sheet tracks that left the sheet');
+
+// The script must hand clean the combo ids and the dry-run flag; both were missing.
+$_cl_script = file_get_contents(dirname(__DIR__) . '/scripts/generate_tracks_from_sheet.php');
+ok(preg_match('/cleanOrphanedTracks\([^;]*\$options\[\'dry_run\'\]\)/s', $_cl_script) === 1,
+   'the sync script passes --dry-run through to clean');
+ok(strpos($_cl_script, "array_column(\$tracks['combo'], 'track_id')") !== false,
+   'the sync script counts combo ids as being in the sheet');
+
+// Force and clean are separate choices in the endpoint; one ticked-by-default box used to mean both.
+$_cl_sync = file_get_contents(dirname(__DIR__) . '/admin/api/jbrowse_sync_tracks.php');
+ok(strpos($_cl_sync, '--force --clean') === false, 'the sync endpoint no longer ties --clean to force');
+
+// A sheet can only be registered or synced for an assembly JBrowse knows.
+require_once dirname(__DIR__) . '/lib/functions_data.php';
+ok(isJBrowseAssemblyRegistered('../../etc', 'x') === false,         'a traversal name is never a registered assembly');
+ok(isJBrowseAssemblyRegistered('No_such_organism', 'GCA_0') === false, 'an unregistered assembly is refused');
+foreach (['jbrowse_register_sheet.php', 'jbrowse_sync_tracks.php'] as $_cl_ep) {
+    ok(strpos(file_get_contents(dirname(__DIR__) . "/admin/api/$_cl_ep"), 'isJBrowseAssemblyRegistered(') !== false,
+       "$_cl_ep refuses an assembly that is not registered in JBrowse");
+}
+
+// ----------------------------------------------------------------------------
 group('permission checker — credentials must not be readable by other users');
 
 // On 2026-09-16 /var/www/moop-site-data/users.json was mode 664 in a world-traversable

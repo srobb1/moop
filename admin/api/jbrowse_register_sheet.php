@@ -9,6 +9,7 @@
 // check AND verifies the CSRF token on POST. Using the bare access check left this
 // endpoint authenticated but forgeable.
 require_once __DIR__ . '/../admin_init.php';
+require_once __DIR__ . '/../../lib/functions_data.php';
 require_once __DIR__ . '/../../lib/jbrowse/GoogleSheetsParser.php';
 
 header('Content-Type: application/json');
@@ -24,11 +25,22 @@ $organism = $_POST['organism'] ?? '';
 $assembly = $_POST['assembly'] ?? '';
 $sheetUrl = $_POST['sheetUrl'] ?? '';
 $gid = $_POST['gid'] ?? '0';
-$autoSync = isset($_POST['autoSync']);
 
 // Validate inputs
 if (empty($organism) || empty($assembly) || empty($sheetUrl)) {
     echo json_encode(['success' => false, 'error' => 'Missing required fields']);
+    exit;
+}
+
+// A sheet only adds tracks to an assembly JBrowse already knows. Without this the sheet
+// registers and syncs "successfully" against nothing, and the browser has no assembly to
+// open them in.
+if (!isJBrowseAssemblyRegistered($organism, $assembly)) {
+    echo json_encode([
+        'success' => false,
+        'error'   => "$organism / $assembly is not registered in JBrowse. "
+                   . 'Register the assembly first (Register Assemblies in JBrowse), then add its sheet.',
+    ]);
     exit;
 }
 
@@ -100,9 +112,7 @@ try {
     // Register: Save sheet configuration
     if ($action === 'register') {
         $config          = ConfigManager::getInstance();
-        $metadata_path   = $config->getPath('metadata_path');
-        $sheetsBase      = "$metadata_path/jbrowse2-configs/sheets";
-        $sheetConfigPath = "$sheetsBase/$organism/$assembly/jbrowse_tracks_sheet.txt";
+        $sheetConfigPath = jbrowseSheetConfigPath($organism, $assembly);
         $site            = $config->getString('site', 'moop');
 
         // Ensure directory exists
@@ -125,13 +135,18 @@ try {
             exit;
         }
 
-        // Create config file
-        $configContent  = "SHEET_ID=$sheetId\n";
-        $configContent .= "GID=$gid\n";
-        $configContent .= "REGISTERED_DATE=" . date('Y-m-d H:i:s') . "\n";
-        $configContent .= "AUTO_SYNC=" . ($autoSync ? 'true' : 'false') . "\n";
+        // Keep LAST_SYNC when only the link changes: the tracks on disk still date from it.
+        $previous = getJBrowseSheetStatus($organism, $assembly);
+        $sheetCfg = [
+            'SHEET_ID'        => $sheetId,
+            'GID'             => $gid,
+            'REGISTERED_DATE' => date('Y-m-d H:i:s'),
+        ];
+        if ($previous['last_sync'] !== '') {
+            $sheetCfg['LAST_SYNC'] = $previous['last_sync'];
+        }
 
-        if (file_put_contents($sheetConfigPath, $configContent) === false) {
+        if (!writeJBrowseSheetConfig($organism, $assembly, $sheetCfg)) {
             echo json_encode([
                 'success' => false,
                 'error'   => "Write failed for $sheetConfigPath even though the directory appears writable — check disk space and SELinux/AppArmor. "
@@ -143,7 +158,8 @@ try {
         echo json_encode([
             'success' => true,
             'message' => "Sheet registered for $organism/$assembly with $trackCount tracks",
-            'trackCount' => $trackCount
+            'trackCount' => $trackCount,
+            'sheet' => getJBrowseSheetStatus($organism, $assembly)
         ]);
         exit;
     }

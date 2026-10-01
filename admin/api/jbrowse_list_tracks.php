@@ -10,6 +10,7 @@
 // check AND verifies the CSRF token on POST. Using the bare access check left this
 // endpoint authenticated but forgeable.
 require_once __DIR__ . '/../admin_init.php';
+require_once __DIR__ . '/../../lib/jbrowse/TrackGenerator.php';
 
 header('Content-Type: application/json');
 
@@ -155,8 +156,30 @@ foreach ($paginatedTracks as $item) {
         ? '<button class="btn btn-outline-info btn-sm" onclick="indexTrackNames(\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\', \'' . htmlspecialchars($organism, ENT_QUOTES) . '\', \'' . htmlspecialchars($assembly, ENT_QUOTES) . '\', this)" title="Build text search index (jbrowse text-index)"><i class="fa fa-search-plus"></i></button>'
         : '';
 
+    // Everything the View Details dialog shows, carried in the row data so the dialog
+    // needs no second request and no file path ever comes back from the browser.
+    $typeDir = basename(dirname($item['file']));
+    $details = [
+        'organism'    => $organism,
+        'assembly'    => $assembly,
+        'config_file' => "$organism/$assembly/$typeDir/" . basename($item['file']),
+        // The file's own identity, which is what Delete needs. The JBrowse trackId is NOT
+        // the file name for anything but combo tracks.
+        'type_dir'    => $typeDir,
+        'file_id'     => basename($item['file'], '.json'),
+        'origin'      => TrackGenerator::isSheetOriginTrack($typeDir, $track) ? 'Google Sheet'
+                       : (isset($track['metadata']['gene_set']) ? 'Gene set registration' : 'Unknown'),
+        'track'       => $track,
+    ];
+
+    // Gene annotation tracks belong to gene-set registration: no checkbox, no Delete.
+    $isGeneTrack = isset($track['metadata']['gene_set']) || !empty($track['metadata']['is_primary_gene_track']);
+    $deleteBtn = $isGeneTrack ? '' :
+        '<button class="btn btn-outline-danger btn-sm" data-action="delete-track" title="Delete"><i class="fa fa-trash"></i></button>';
+
     $data[] = [
-        'checkbox' => '<input type="checkbox" name="trackSelect" value="' . htmlspecialchars($trackId) . '" data-organism="' . htmlspecialchars($organism) . '" data-assembly="' . htmlspecialchars($assembly) . '" onchange="updateBulkButtons()">',
+        'details' => $details,
+        'checkbox' => $isGeneTrack ? '' : '<input type="checkbox" name="trackSelect" onchange="updateBulkButtons()">',
         'name' => '<strong>' . htmlspecialchars($name) . '</strong><br><small class="text-muted">' . htmlspecialchars($trackId) . '</small>',
         'organism' => htmlspecialchars($organism),
         'assembly' => htmlspecialchars($assembly),
@@ -165,14 +188,12 @@ foreach ($paginatedTracks as $item) {
         'status' => '<span class="badge bg-' . $statusClass . '">' . $status . '</span> ' . htmlspecialchars($source),
         'actions' => '
             <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-primary btn-sm" onclick="viewTrack(\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\', \'' . htmlspecialchars($organism, ENT_QUOTES) . '\', \'' . htmlspecialchars($assembly, ENT_QUOTES) . '\')" title="View Details">
+                <button class="btn btn-outline-primary btn-sm" data-action="view-track" title="View Details">
                     <i class="fa fa-eye"></i>
                 </button>
                 ' . $rebuildBtn . '
                 ' . $indexBtn . '
-                <button class="btn btn-outline-danger btn-sm" onclick="deleteTrack(\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\', \'' . htmlspecialchars($organism, ENT_QUOTES) . '\', \'' . htmlspecialchars($assembly, ENT_QUOTES) . '\')" title="Delete">
-                    <i class="fa fa-trash"></i>
-                </button>
+                ' . $deleteBtn . '
             </div>
         '
     ];

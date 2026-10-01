@@ -145,6 +145,24 @@ foreach ($registered_assemblies as $org => $asms) {
     }
 }
 
+// One row per registered assembly for the Assemblies & Tracks table: its gene set(s) and
+// its track sheet. The table is rendered client-side from this, so a row can be redrawn
+// after a sync or a sheet change without a second copy of the markup in PHP.
+$assembly_rows = [];
+foreach ($registered_assemblies as $org => $asms) {
+    foreach ($asms as $asm) {
+        $assembly_rows[] = [
+            'organism'  => $org,
+            'assembly'  => $asm,
+            'name'      => $assembly_display_names[$org][$asm] ?? $asm,
+            'gene_sets' => array_values(array_filter($gene_sets_info,
+                fn($r) => $r['organism'] === $org && $r['assembly'] === $asm)),
+            'sheet'     => getJBrowseSheetStatus($org, $asm),
+        ];
+    }
+}
+usort($assembly_rows, fn($a, $b) => strcasecmp($a['organism'] . $a['assembly'], $b['organism'] . $b['assembly']));
+
 // Get track statistics
 $tracks_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/tracks';
 $track_stats = [
@@ -215,14 +233,12 @@ $data = [
     'unregistered_assemblies' => $unregistered_assemblies,
     'orphaned_registrations' => $orphaned_registrations,
     'orphans_systemic' => $orphans_systemic,
-    'gene_sets_info' => $gene_sets_info,
+    'assembly_rows' => $assembly_rows,
     'inline_scripts' => [
         'const jbrowseOrganisms = '        . json_encode($organisms)               . ';',
-        'const registeredOrganisms = '    . json_encode($registered_assemblies)   . ';',
         'const jbrowseAssemblyNames = '   . json_encode($assembly_display_names)  . ';',
         'const sitePath = "'              . $site                               . '";',
-        'const unregisteredAssemblies = ' . json_encode($unregistered_assemblies) . ';',
-        'const geneSetsInfo = '           . json_encode($gene_sets_info)        . ';',
+        'const jbrowseAssemblyRows = '    . json_encode($assembly_rows)           . ';',
     ],
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
