@@ -5,7 +5,7 @@ use Exporter 'import';
 
 our @EXPORT_OK = qw(read_hog_orthologs parse_oma_header best_accession accession_for
                     read_export_sources find_export_readme write_ortholog_tables read_hgnc_symbols
-                    read_id_map target_ids write_paralog_table);
+                    read_id_map target_ids write_paralog_table read_gene_names);
 
 # A gene set that IS a reference genome takes its orthologs from the template's reference run,
 # where its genes carry the reference's OMA ids (NEMVE000123). find_reference_genome.pl maps
@@ -359,8 +359,9 @@ sub write_ortholog_tables {
 # The target species' own genes that share a HOG: <TARGET>.oma_hog_paralogs.moop.tsv, one row
 # per gene and paralog (both directions).
 #   write_paralog_table(target => CODE, version => ..., date => 'YYYY-MM-DD', id_map => read_id_map(...),
-#                       result => read_hog_orthologs(...))
-# The description says which species of the OMA run share the duplication: "duplicated within
+#                       names => read_gene_names(...), result => read_hog_orthologs(...))
+# The description is the paralog's own name from geneNames.tsv (its id when it has no name), then
+# which species of the OMA run share the duplication: "duplicated within
 # CONKUS" when the copies are found in the target species and no other, else "duplication shared
 # with CAPTE, LOTGI". Both are relative to the species in the run. The Score is the number of
 # species that share the duplication (1 = within the target species), so the newest copies sort
@@ -386,7 +387,8 @@ sub write_paralog_table {
             foreach my $own_id (target_ids($arg{id_map}, $genes->{$gene}{prot_id})) {
               foreach my $paralog_id (target_ids($arg{id_map}, $genes->{$paralog}{prot_id})) {
                 next if $own_id eq $paralog_id;
-                $lines{join("\t", $own_id, $paralog_id, "paralog, $when ($duplication->{hog})", $score)} = 1;
+                my $label = $arg{names}{$paralog_id} // $paralog_id;
+                $lines{join("\t", $own_id, $paralog_id, "$label (paralog, $when, $duplication->{hog})", $score)} = 1;
               }
             }
           }
@@ -411,6 +413,26 @@ sub write_paralog_table {
   }
   close $out_fh;
   return ("$out_file (" . scalar(keys %lines) . ")");
+}
+
+# geneNames.tsv (ID, MAINID, GroupId, Desc, Note) -> { protein id => name }, the name without
+# its evidence tag ("CUEDC2: CUE domain containing 2 (1 of 2) [ISO|2to1|...]" -> up to "(1 of 2)").
+# Genes named None are left out.
+sub read_gene_names {
+  my ($file) = @_;
+  my %name_of;
+  return \%name_of unless defined $file and $file ne '' and $file ne '-';
+  open my $fh, '<', $file or die "cant open gene names $file $!\n";
+  my $header = <$fh>;
+  while (my $line = <$fh>) {
+    chomp $line;
+    my ($id, $main_id, $group_id, $name) = split /\t/, $line;
+    next unless defined $name and $name ne '' and $name ne 'None';
+    $name =~ s/\s*\[[^\]]*\]$//;
+    $name_of{$id} = $name;
+  }
+  close $fh;
+  return \%name_of;
 }
 
 # HGNC table -> { 'HGNC:n' => { symbol, name } }

@@ -544,11 +544,8 @@ if [ -n "$OMA_CODE" ]; then
   shopt -s nullglob
   existing_hogs=(*.oma_hog.moop.tsv)
   shopt -u nullglob
-  ## The same parser writes the species' own paralogs ($OMA_CODE.oma_hog_paralogs.moop.tsv), so a
-  ## gene set built before that table existed is parsed again.
-  if { [ ${#existing_hogs[@]} -eq 0 ] || ! has_data "$OMA_CODE.oma_hog_paralogs.moop.tsv"; } \
-     && [ -s "$OMA_SRC/Output/HierarchicalGroups.orthoxml" ]; then
-    echo "Building OMA HOG orthologs and paralogs for $OMA_CODE"
+  if [ ${#existing_hogs[@]} -eq 0 ] && [ -s "$OMA_SRC/Output/HierarchicalGroups.orthoxml" ]; then
+    echo "Building OMA HOG orthologs for $OMA_CODE"
     perl "$REPO/analysis_parsers/parse_OMA_HOG_to_MOOP_TSV.pl" \
       "$OMA_SRC/Output/HierarchicalGroups.orthoxml" "$OMA_CODE" "$OMA_VERSION" "$HGNC_TABLE" $OMA_ID_MAP \
       || { echo "ERROR: failed to build OMA HOG orthologs"; exit 1; }
@@ -696,6 +693,21 @@ run_naming_v2() {
     || { rm -rf naming.tmp; echo "ERROR: gene naming (assign_gene_names_v2.pl) failed"; exit 1; }
   rm -f closest_*.tsv gene_name_source.*.moop.tsv gene_statement.*.moop.tsv
   mv naming.tmp/* . && rmdir naming.tmp
+  build_oma_paralogs
+}
+
+## The species' own paralogs from the OMA HOGs ($OMA_CODE.oma_hog_paralogs.moop.tsv). Each row
+## shows the paralog's name, so the table is built after naming and again whenever names change.
+oma_paralogs_current() {
+  [ -z "$OMA_CODE" ] || [ ! -s "$OMA_SRC/Output/HierarchicalGroups.orthoxml" ] \
+    || has_data "$OMA_CODE.oma_hog_paralogs.moop.tsv"
+}
+build_oma_paralogs() {
+  [ -n "$OMA_CODE" ] && [ -s "$OMA_SRC/Output/HierarchicalGroups.orthoxml" ] || return 0
+  echo "Building OMA HOG paralogs for $OMA_CODE"
+  perl "$REPO/analysis_parsers/parse_OMA_HOG_paralogs_to_MOOP_TSV.pl" \
+    "$OMA_SRC/Output/HierarchicalGroups.orthoxml" "$OMA_CODE" "$OMA_VERSION" geneNames.tsv $OMA_ID_MAP \
+    || { echo "ERROR: failed to build OMA HOG paralogs"; exit 1; }
 }
 
 ## the closest_<tag>.tsv files, human first, for addClosestToGFF.pl
@@ -833,6 +845,7 @@ if $HAS_GFF; then
   fi
 
   naming_outputs_current || REBUILD=true
+  $REBUILD || oma_paralogs_current || build_oma_paralogs
   if $REBUILD; then
     echo "Building geneNames.tsv"
     if $RENAME; then
@@ -1071,6 +1084,7 @@ else
   fi
 
   naming_outputs_current || REBUILD=true
+  $REBUILD || oma_paralogs_current || build_oma_paralogs
   if $REBUILD; then
     echo "Building geneNames.tsv"
     run_naming_v2

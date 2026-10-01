@@ -4,8 +4,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin";
 use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_export_sources find_export_readme
-                       write_ortholog_tables read_hgnc_symbols read_id_map target_ids
-                       write_paralog_table);
+                       write_ortholog_tables read_hgnc_symbols read_id_map target_ids);
 
 # OMA HOG orthologs of the target species -> moop TSVs (Orthologs), one per partner species and
 # id database.
@@ -16,8 +15,7 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_export_sources f
 # comes from the HOG tree (OmaHogOrthologs.pm): the target gene and the partner gene meet at a
 # speciation node. Each row carries the relationship (1:1, 1:many, many:1, many:many;
 # target:partner) and the HOG id in the description, since the Score column only holds numbers.
-# Also writes <TARGET>.oma_hog_paralogs.moop.tsv (Paralogs): the target species' own genes in
-# the same HOG, which meet at a duplication node, with the species that share the duplication.
+# The species' own paralogs come from parse_OMA_HOG_paralogs_to_MOOP_TSV.pl, after naming.
 # Partner ids, links, source releases and the optional id map as in parse_OMA_pairs_to_MOOP_TSV.pl.
 
 my $usage = "usage: $0 HierarchicalGroups.orthoxml TARGET_CODE OMA_VERSION [hgnc_complete_set.txt|-] [id_map.tsv]\n";
@@ -51,8 +49,4 @@ my @written = write_ortholog_tables(
   kind => 'oma_hog', label => 'OMA HOG orthologs', version => $oma_version, date => $date,
   sources => read_export_sources(find_export_readme($orthoxml)),
   hgnc => read_hgnc_symbols($hgnc_file), rows => \@rows);
-push @written, write_paralog_table(target => $target, version => $oma_version, date => $date,
-                                   id_map => $id_map, result => $result);
-warn "$result->{same_species_at_speciation} orthologGroups hold $target genes in two children (not written as paralogs)\n"
-  if $result->{same_species_at_speciation};
 warn "wrote @written\n";
