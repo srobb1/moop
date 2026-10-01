@@ -169,3 +169,59 @@ CREATE TABLE feature_annotation (
 -- so only the reverse direction needs its own index.
 CREATE INDEX feature_annotation_annotation_id_idx
 ON feature_annotation (annotation_id);
+
+
+/**
+ * Gene naming: what the naming run says about each gene, for the gene page's overview card.
+ *
+ * Self-contained: nothing here is shared with annotation / feature_annotation /
+ * annotation_source. These are sentences about a gene, not hits: nothing that reads the
+ * annotation tables (search, the source pickers, the gene page tables, the count badges,
+ * MOOPmart) should ever meet them, and the simplest way to guarantee that is that they are not
+ * there. Only the overview card reads these tables. (Reusing annotation_source for the link,
+ * version and date was considered and declined: delete_gene_set.sh and the loader's reload
+ * both delete sources no annotation points to, four site queries list sources with no
+ * annotations, and every HGNC release would leave an old source row behind.)
+ *
+ * Written by load_annotations_sqlite.pl from the naming run's gene_statement.*.moop.tsv and
+ * gene_name_source.*.moop.tsv (annotation types "Gene Statement" and "Gene Name Source"); a
+ * load replaces every row of the gene set. Rows are for the GENE, never its transcripts.
+ * The closest genes and the HOG paralogs are ordinary annotations and are not here.
+ * See notes/NAMING_STATEMENTS_ON_SITE_PLAN.md (FINAL DESIGN).
+ */
+
+-- Where an accession links to. One row per database, filled by the loader from the files'
+-- "Annotation Source URL" / "Annotation Accession URL" headers, so the pipeline is the one
+-- place the URLs are written. Link = accession_url || accession (as for annotations).
+CREATE TABLE gene_naming_link (
+    link_kind     TEXT PRIMARY KEY,           -- hgnc | hgnc_group | interpro | panther | pfam | ensembl | ncbi
+    source_url    TEXT,
+    accession_url TEXT NOT NULL
+);
+
+CREATE TABLE gene_naming (
+    gene_naming_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    feature_id     INTEGER NOT NULL,          -- the gene
+    -- identity | no_name | support | copies | alignment | domains | tree | cautions |
+    -- features | expression  (the statements), and name_source (the long evidence sentence)
+    kind           TEXT NOT NULL,
+    -- the statement's place in the series (1-9; identity and no_name are both 1, a gene has
+    -- one or the other). name_source: the naming step that gave the name (0 = none).
+    sort_order     INTEGER NOT NULL,
+    naming_text    TEXT NOT NULL,             -- the sentence
+    accession      TEXT,                      -- HGNC:43638, 865, IPR000436, PTHR19325 ...; NULL where there is none
+    link_kind      TEXT,                      -- gene_naming_link.link_kind; NULL when the accession has no link
+    UNIQUE (feature_id, kind),
+    FOREIGN KEY (feature_id) REFERENCES feature(feature_id) ON DELETE CASCADE,
+    FOREIGN KEY (link_kind)  REFERENCES gene_naming_link(link_kind)
+);
+-- the gene page's lookup is served by the leading column of UNIQUE(feature_id, kind)
+
+-- One row per gene set: which data the names were made with, and when.
+CREATE TABLE gene_naming_run (
+    gene_set_id  INTEGER PRIMARY KEY,
+    data_version TEXT NOT NULL,               -- the date of the data: the HGNC release (2026-09-24)
+    run_date     DATE NOT NULL,               -- the day the naming ran: points to the code version
+    details      TEXT,                        -- naming_versions.txt: every reference release and search
+    FOREIGN KEY (gene_set_id) REFERENCES gene_set(gene_set_id) ON DELETE CASCADE
+);
