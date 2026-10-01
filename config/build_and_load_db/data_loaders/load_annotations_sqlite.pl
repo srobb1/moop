@@ -439,6 +439,12 @@ sub load_naming_file {
     my ($kind, $link_kind) = ($header->{kind}, $header->{link});
     my ($source_version, $source_url, $accession_url, $date) = @{$header}{'data version', 'source url', 'accession url', 'run date'};
     die "## Naming Kind: has no value in the header of $annot_file\n" if !defined $kind || $kind eq '';
+    # The gene name source (one long evidence sentence per gene) is kept in the files and not
+    # loaded: the typed statements carry the same content in parts, and the database stays smaller.
+    if ($kind eq 'name_source') {
+        print "Gene naming: $file_name is not loaded (kind name_source is kept in the files alone)\n";
+        return;
+    }
     die "## Naming Data Version: is required in the header of $annot_file\n" if !defined $source_version || $source_version eq '';
     die "## Naming Run Date: is required in the header of $annot_file\n"     if !defined $date || $date eq '';
     require_naming_tables();

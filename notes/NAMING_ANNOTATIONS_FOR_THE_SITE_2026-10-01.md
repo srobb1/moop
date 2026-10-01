@@ -18,23 +18,25 @@
 | `gene_naming_run` | gene set | `gene_set_id`, `data_version` (the date of the data: the HGNC release), `run_date` (the day naming ran), `details` (naming_versions.txt) |
 
 `kind`: `identity`, `no_name`, `support`, `copies`, `alignment`, `domains`, `tree`, `cautions`,
-`features`, `expression`, and `name_source` (the long evidence sentence).
+`features`, `expression`. `sort_order`: 1 to 9, the statement's place in the series.
 
-`sort_order`: 1 to 9 for the statements. For `name_source` it is the naming step (0 = none,
-3 to 8), NOT a place in the series: select it by `kind`, do not sort it in with the statements.
+**The long evidence sentence (`name_source`) is NOT loaded** (user's decision, 2026-10-01
+evening): `gene_name_source.*.moop.tsv` is still written and kept beside the other files, but
+the database holds the short typed statements alone. There is no `name_source` kind in
+`gene_naming`.
 
 The card's query:
 
     SELECT n.kind, n.sort_order, n.naming_text, n.accession, l.accession_url
     FROM gene_naming n
     LEFT JOIN gene_naming_link l ON l.link_kind = n.link_kind
-    WHERE n.feature_id = ? AND n.kind <> 'name_source'
+    WHERE n.feature_id = ?
     ORDER BY n.sort_order;
 
 - An accession with no link (`tree`: a PANTHER subfamily such as `PTHR12493:SF0`) is stored with
   `link_kind` NULL: show it as plain text, no `<a href>`.
 - Rows exist for the gene alone (a feature with no parent), never for a transcript.
-- Congeria: 200,673 rows for 43,768 genes; links hgnc, hgnc_group, interpro, panther, pfam.
+- Congeria: 156,905 rows for 43,768 genes; links hgnc, hgnc_group, interpro, panther, pfam.
 - A database built before these tables existed is not loaded into: the loader stops and asks
   for a rebuild from the current schema. (Every database is rebuilt from scratch.)
 - A load replaces the gene set's `gene_naming` rows and its `gene_naming_run` row.

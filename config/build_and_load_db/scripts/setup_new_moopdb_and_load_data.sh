@@ -153,7 +153,9 @@ load_files "*.oma_pairs.moop.tsv" "OMA Pairwise Orthologs"
 load_files "*.oma_hog.moop.tsv" "OMA HOG Orthologs"
 load_files "*.oma_hog_paralogs.moop.tsv" "OMA HOG Paralogs (the species' own genes in the same HOG)"
 load_files "closest_*.moop.tsv" "Closest genes (human, and each closest_species in geneset_config.yaml)"
-load_files "gene_name_source.*.moop.tsv" "Gene name source (why each gene has its name) -> gene_naming table, not an annotation"
+## gene_name_source.*.moop.tsv (the long evidence sentence per gene) is written by the naming run
+## and kept beside the other files, but NOT loaded: the short typed statements say the same in
+## parts the site can show and sort, and leaving the sentence out keeps the database smaller.
 load_files "gene_statement.*.moop.tsv" "Gene statements (the typed series for the gene page overview card) -> gene_naming table, not an annotation"
 load_files "eggnog_orthologs.moop.tsv" "EGGNOG Orthologs"
 load_files "*.homologs.moop.tsv" "Blast homologs"

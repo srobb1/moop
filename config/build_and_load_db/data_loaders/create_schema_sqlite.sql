@@ -183,9 +183,10 @@ ON feature_annotation (annotation_id);
  * both delete sources no annotation points to, four site queries list sources with no
  * annotations, and every HGNC release would leave an old source row behind.)
  *
- * Written by load_annotations_sqlite.pl from the naming run's gene_statement.*.moop.tsv and
- * gene_name_source.*.moop.tsv (annotation types "Gene Statement" and "Gene Name Source"); a
- * load replaces every row of the gene set. Rows are for the GENE, never its transcripts.
+ * Written by load_annotations_sqlite.pl from the naming run's gene_statement.*.moop.tsv (files
+ * with a "## Naming Kind:" header); a load replaces every row of the gene set. Rows are for
+ * the GENE, never its transcripts. The long evidence sentence (gene_name_source.*.moop.tsv,
+ * kind name_source) is kept in the files and NOT loaded.
  * The closest genes and the HOG paralogs are ordinary annotations and are not here.
  * See notes/NAMING_STATEMENTS_ON_SITE_PLAN.md (FINAL DESIGN).
  */
@@ -203,10 +204,10 @@ CREATE TABLE gene_naming (
     gene_naming_id INTEGER PRIMARY KEY AUTOINCREMENT,
     feature_id     INTEGER NOT NULL,          -- the gene
     -- identity | no_name | support | copies | alignment | domains | tree | cautions |
-    -- features | expression  (the statements), and name_source (the long evidence sentence)
+    -- features | expression
     kind           TEXT NOT NULL,
     -- the statement's place in the series (1-9; identity and no_name are both 1, a gene has
-    -- one or the other). name_source: the naming step that gave the name (0 = none).
+    -- one or the other)
     sort_order     INTEGER NOT NULL,
     naming_text    TEXT NOT NULL,             -- the sentence
     accession      TEXT,                      -- HGNC:43638, 865, IPR000436, PTHR19325 ...; NULL where there is none
