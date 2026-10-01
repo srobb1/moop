@@ -161,6 +161,11 @@ sub main {
         }
     }
 
+    # Before anything of these files is loaded (and before the feature_annotation cache
+    # below is filled): the annotation types a naming run writes anew are cleared for the
+    # gene sets these files belong to.
+    replace_reloaded_types();
+
     # Preload feature_annotation cache once for the whole run
     {
         my $sth = $dbh->prepare(q{
@@ -298,6 +303,81 @@ sub main {
     ## _exit() skips DESTROY/END processing entirely and just exits cleanly.
     STDOUT->flush;
     _exit(0);
+}
+
+# Annotation types that describe a whole gene set and are written anew by every naming run
+# (assign_gene_names_v2.pl): a statement, a name source or a closest gene REPLACES the one the
+# gene had. This loader only ever adds, so after a second naming run a gene whose Identity
+# statement changed showed both texts, and a gene that lost its Cautions statement kept it;
+# a new reference release in the version string added a second source beside the first.
+# For each such type among the files of this run, every feature_annotation row of that type on
+# the features of the files' gene sets is deleted first, then the annotations and sources of
+# the type left with no rows. Other gene sets of the organism, and all other types, are not
+# touched. The gene set is found from the features the file names (the first that resolve).
+my %REPLACED_ON_RELOAD = ('Gene Statement' => 1, 'Gene Name Source' => 1, 'Closest Gene' => 1);
+
+sub replace_reloaded_types {
+    my %gene_sets_of_type;   # annotation type -> { gene_set_id => 1 }
+    my $sth_gene_set = $dbh->prepare(q{SELECT gene_set_id FROM feature WHERE feature_id = ?});
+    foreach my $annot_file (@annot_files) {
+        open my $fh, '<', $annot_file or die "Cannot open file $annot_file: $!\n";
+        my ($annotation_type, $n_resolved);
+        while (my $line = <$fh>) {
+            chomp $line;
+            if ($line =~ /^## Annotation Type:\s*(.+?)\s*$/) { $annotation_type = $1; next }
+            next if $line =~ /^#/ || $line =~ /^\s*$/;
+            last unless defined $annotation_type && $REPLACED_ON_RELOAD{$annotation_type};
+            my ($unique_name) = split /\t/, $line;
+            $unique_name //= '';
+            $unique_name =~ s/^\s+|\s+$//g;
+            my $feature_id = $feature_cache{$unique_name};
+            if (!defined $feature_id && (length $strip_prefix || length $add_prefix)) {
+                (my $rewritten = $unique_name) =~ s/^\Q$strip_prefix\E/$add_prefix/;
+                $feature_id = $feature_cache{$rewritten};
+            }
+            next unless defined $feature_id;
+            $sth_gene_set->execute($feature_id);
+            my ($gene_set_id) = $sth_gene_set->fetchrow_array;
+            $gene_sets_of_type{$annotation_type}{$gene_set_id} = 1 if defined $gene_set_id;
+            last if ++$n_resolved >= 200;
+        }
+        close $fh;
+    }
+    $sth_gene_set->finish();
+    return unless %gene_sets_of_type;
+
+    my $sth_delete_rows = $dbh->prepare(q{
+        DELETE FROM feature_annotation
+        WHERE feature_id IN (SELECT feature_id FROM feature WHERE gene_set_id = ?)
+          AND annotation_id IN (SELECT a.annotation_id
+                                FROM annotation a
+                                JOIN annotation_source s ON s.annotation_source_id = a.annotation_source_id
+                                WHERE s.annotation_type = ?)
+    });
+    my $sth_delete_annotations = $dbh->prepare(q{
+        DELETE FROM annotation
+        WHERE annotation_source_id IN (SELECT annotation_source_id FROM annotation_source WHERE annotation_type = ?)
+          AND NOT EXISTS (SELECT 1 FROM feature_annotation fa WHERE fa.annotation_id = annotation.annotation_id)
+    });
+    my $sth_delete_sources = $dbh->prepare(q{
+        DELETE FROM annotation_source
+        WHERE annotation_type = ?
+          AND NOT EXISTS (SELECT 1 FROM annotation a WHERE a.annotation_source_id = annotation_source.annotation_source_id)
+    });
+    foreach my $annotation_type (sort keys %gene_sets_of_type) {
+        my $n_rows = 0;
+        foreach my $gene_set_id (sort keys %{ $gene_sets_of_type{$annotation_type} }) {
+            $n_rows += $sth_delete_rows->execute($gene_set_id, $annotation_type);
+        }
+        my $n_annotations = $sth_delete_annotations->execute($annotation_type) + 0;
+        my $n_sources     = $sth_delete_sources->execute($annotation_type) + 0;
+        print "Reload of '$annotation_type' (gene set "
+            . join(', ', sort keys %{ $gene_sets_of_type{$annotation_type} })
+            . "): removed $n_rows earlier rows, $n_annotations annotations and $n_sources sources left without rows\n";
+    }
+    $sth_delete_rows->finish();
+    $sth_delete_annotations->finish();
+    $sth_delete_sources->finish();
 }
 
 sub load_one_file {
