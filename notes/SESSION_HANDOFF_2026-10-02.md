@@ -1,7 +1,7 @@
 # Where we stopped, Friday 2026-10-02 (~16:40)
 
-## 1. Code: branch `cokus-review-2026-10-02` in moop-pipeline, NOT committed
-Waiting on the user's word to commit. Details: `notes/COKUS_REVIEW_2026-10-02.md`, `notes/GENE_NAMING_METHODS.md`.
+## 1. Code: branch `cokus-review-2026-10-02` in moop-pipeline, committed 09f6ccd (not pushed, not merged)
+Committed 2026-10-02 at the user's request. Details: `notes/COKUS_REVIEW_2026-10-02.md`, `notes/GENE_NAMING_METHODS.md`.
 - Fixes: statements follow the named gene; ortholog/co-ortholog wording; DIAMOND and EggNOG source versions; homolog
   tables keep the top hit; the loader no longer wipes gene statements (`*.domains.moop.tsv` glob); colon in a
   Swiss-Prot name; trailing space in HGNC names; `COLUMNS` variable and `peptide.dmnd` path in the DIAMOND scripts.
@@ -52,6 +52,6 @@ Plan: `notes/CLOSEST_SPECIES_NOTES_2026-10-02.md`. Proteomes: `dev/smr_dev/moop/
 Open: which Schmidtea mediterranea annotation is the flatworms' partner; koala or opossum for the wallaby.
 
 ## 6. Open questions for the user
-1. Commit the branch?
+1. Push and merge the branch into main?
 2. Which Smed annotation for the flatworms; koala or opossum.
 3. Copy Congeria to moop once the site card knows the new statement kind and step numbers.
