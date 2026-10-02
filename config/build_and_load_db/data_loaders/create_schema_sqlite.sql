@@ -203,10 +203,10 @@ CREATE TABLE gene_naming_link (
 CREATE TABLE gene_naming (
     gene_naming_id INTEGER PRIMARY KEY AUTOINCREMENT,
     feature_id     INTEGER NOT NULL,          -- the gene
-    -- identity | no_name | support | copies | alignment | domains | tree | cautions |
-    -- features | expression
+    -- identity | no_name | support | copies | identical | alignment | domains | tree |
+    -- cautions | features | expression
     kind           TEXT NOT NULL,
-    -- the statement's place in the series (1-9; identity and no_name are both 1, a gene has
+    -- the statement's place in the series (1-10; identity and no_name are both 1, a gene has
     -- one or the other)
     sort_order     INTEGER NOT NULL,
     naming_text    TEXT NOT NULL,             -- the sentence

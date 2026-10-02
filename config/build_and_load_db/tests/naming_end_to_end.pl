@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200, T55 => 200, T56 => 200, T57 => 80);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200, T55 => 200, T56 => 200, T57 => 80, T58 => 210, T59 => 310, T60 => 220);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -180,6 +180,8 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-NEMVE.txt", join('', map { my
   [4, 13, 'T4.1', 'NEMVE00013 | XP_000013.1 | LOC13 | anemone beta B', '1:many'],
   # T49: its only way to human is its sea anemone ortholog, which is 1:many with ANO1 and ANO2 (below)
   [49, 49, 'T49.1', 'NEMVE00049 | XP_000049.1 | LOC49 | anemone anoctamin', '1:1'],
+  # T59: a sea anemone ortholog that is ALPHA's ortholog, and nothing else points to ALPHA -> the chain is set aside
+  [59, 59, 'T59.1', 'NEMVE00059 | XP_000059.1 | LOC59 | anemone orphan', '1:1'],
 ));
 # T50-T54: five genes OMA pairs many:1 with OMEGA; only T50 and T51 are similar to it at all -> a pairing
 # mostly rejected: none is named OMEGA (omaR)
@@ -188,6 +190,7 @@ write_file("$dir/oma/Output/PairwiseOrthologs/TEST-HUMAN.txt", join('', map { my
 write_file("$dir/oma/Output/PairwiseOrthologs/NEMVE-HUMAN.txt", join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
   [49, 7, 'NEMVE00049 | XP_000049.1 | LOC49 | anemone anoctamin', $human->(7), '1:many'],
   [49, 8, 'NEMVE00049 | XP_000049.1 | LOC49 | anemone anoctamin', $human->(8), '1:many'],
+  [59, 1, 'NEMVE00059 | XP_000059.1 | LOC59 | anemone orphan', $human->(1), '1:1'],
 ));
 
 # ---- OMA HOGs (fixed species tree): T13 is paired 1:1 with HDA1 above, but its HOG makes it
@@ -273,6 +276,8 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   # T50, T51: partial hits to OMEGA (support for their OMA pair); T52-T54 none
   . $dhit->('T50', '38', 'OMEGA', 'omega hydrolase', '1e-20', 80, 200, 400, 40, 20)
   . $dhit->('T51', '38', 'OMEGA', 'omega hydrolase', '1e-20', 80, 200, 400, 40, 20)
+  # T49: a partial hit to ANO1 -- the support its chain through the sea anemone needs to be used (chain_rejected)
+  . $dhit->('T49', '07', 'ANO1', 'anoctamin 1', '1e-20', 80, 300, 500, 40, 20)
   # T46: the readthrough PIE-RHO scores just above PIE (it contains PIE) -> not a gene of its own: PIE-like
   . $dhit->('T46', '33', 'PIE-RHO', 'PIE-RHO readthrough', '1e-80', 305, 200, 400, 95, 48)
   . $dhit->('T46', '32', 'PIE', 'pie kinase', '1e-80', 300, 200, 200, 95, 95)
@@ -452,6 +457,17 @@ write_file("$dir/transcriptome2/transcript_hits.tsv", "T57.1\tVEL_1\t97.0\t78\t2
 write_file("$dir/transcriptome/transcript_hits.tsv", "T57.1\tTRINITY_DN1_c0_g1_i1.p1\t99.0\t80\t1\t0\t1\t80\t1\t80\t1e-40\t160\n"
   . "T37.1\tTRINITY_DN2_c0_g1_i1.p1\t99.0\t30\t0\t0\t1\t30\t1\t30\t1e-10\t60\n");
 
+# ---- DIAMOND against Swiss-Prot: T58 is full-length on a fly protein and has no human hit -> named after it, -like (step 7)
+write_file("$dir/diamond/UNIPROT_sprot/diamond_results.tsv",
+  join("\t", qw(qseqid sseqid stitle evalue pident length mismatch gapopen qstart qend sstart send bitscore qlen slen qcovhsp scovhsp)) . "\n"
+  . join("\t", 'T58.1', 'sp|Q9XXX1|CHS_DROME', 'sp|Q9XXX1|CHS_DROME Chitin synthase OS=Drosophila melanogaster OX=7227 GN=kkv PE=2 SV=1',
+         '1e-80', 50, 100, 40, 1, 1, 100, 1, 100, 300, 210, 210, 95, 95) . "\n"
+  # T60: two differently named Swiss-Prot proteins within 5% of each other -> a tie, no name from either
+  . join("\t", 'T60.1', 'sp|Q9XXX2|TPSA_DROME', 'sp|Q9XXX2|TPSA_DROME Terpene synthase A OS=Drosophila melanogaster OX=7227 GN=tpsA PE=2 SV=1',
+         '1e-80', 50, 100, 40, 1, 1, 100, 1, 100, 300, 220, 220, 95, 95) . "\n"
+  . join("\t", 'T60.1', 'sp|Q9XXX3|TPSB_CAEEL', 'sp|Q9XXX3|TPSB_CAEEL Terpene synthase B OS=Caenorhabditis elegans OX=6239 GN=tpsB PE=2 SV=1',
+         '1e-78', 50, 100, 40, 1, 1, 100, 1, 100, 295, 220, 220, 95, 95) . "\n");
+
 # ---- run it (twice, with different hash seeds: the output must not depend on hash order)
 my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/protein.aa.fa", '--hgnc-dir', "$dir/hgnc",
   '--oma-dir', "$dir/oma", '--oma-code', 'TEST', '--mmseqs-dir', "$dir/mmseqs", '--ref-db', "$dir/refdb",
@@ -545,6 +561,9 @@ my %expect = (
   G34 => ['IOTA: iota kinase [ISO|1to1|sim+|treeC]', 'OMA 1:1 IOTA; the tree places it with THETA -> treeC, the OMA name stays'],
   G35 => ['WSA1-like: widget sprocket associated 1-like [ISS|bh|tree+]', 'a -like name the tree agrees with (WSA1 among its co-orthologs) -> tree+'],
   G26 => ['THETA-like: theta ligase-like [ISS|bh|omaC]', 'OMA 1:1 to ZETA, but the best hit is THETA and the PANTHER family differs -> withheld (omaC); the full-length THETA hit names it'],
+  G58 => ['Chitin synthase-like (Drosophila melanogaster) [ISS|bh|sp]', 'no human hit; its best Swiss-Prot hit, a fly protein, is full-length -> named after it, -like, with the species (step 7)'],
+  G59 => ['None', 'its one way to human, a chain through the sea anemone to ALPHA, has no support and is set aside'],
+  G60 => ['None', 'two differently named Swiss-Prot proteins score within 5%: a tie, neither names it (step 7)'],
 );
 foreach my $gene (sort { substr($a, 1) <=> substr($b, 1) } keys %expect) {
   check(($name{$gene} // '') eq $expect{$gene}[0], "$gene: $expect{$gene}[1]", $name{$gene});
@@ -587,15 +606,15 @@ check(($source{G4}[3] // '') eq 'hgnc_group' && ($source{G4}[0] // '') eq '10'
       'G4 provenance: HGNC gene group id 10, linked as a group', $p->('G4'));
 check(($source{G5}[1] // '') eq 'Homolog, orthology not shown (may be a paralog): similar to human DELTA along its length: reciprocal best hit, 95% of this protein and 95% of DELTA aligned, E=1e-50 (MMseqs2)'
       && ($source{G5}[2] // '') eq '6', 'G5 provenance: coverage and E-value, step 6', $p->('G5'));
-check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '7'
+check(($source{G6}[3] // '') eq 'panther' && ($source{G6}[0] // '') eq 'PTHR00006' && ($source{G6}[2] // '') eq '8'
       && ($source{G6}[1] // '') eq 'Family homolog, orthology not shown: member of PANTHER family PTHR00006 ("WIDGET PROTEIN SMC", not in InterPro): 95% of the family model aligned, E=1e-30 (InterProScan)',
-      'G6 provenance: PANTHER family, model coverage, step 7', $p->('G6'));
+      'G6 provenance: PANTHER family, model coverage, step 8', $p->('G6'));
 check(($source{G30}[1] // '') eq 'Family homolog, orthology not shown: member of PANTHER family PTHR00030 ("CEREBELLIN-RELATED", InterPro\'s name "Cerebellin Synaptic Organizer" describes a function, not the family): 95% of the family model aligned, E=1e-40 (InterProScan)',
       'G30 provenance: why InterPro\'s name was not used', $p->('G30'));
 check(($source{G10}[1] // '') eq 'Family homolog, orthology not shown: member of PANTHER family PTHR00010 (InterPro IPR000010 "Gadget family"): 96% of the family model aligned, E=1e-60 (InterProScan)',
       'G10 provenance: InterPro name, merged model coverage', $p->('G10'));
-check(($source{G7}[0] // '') eq 'IPR000002' && scalar(($source{G7}[1] // '') =~ /\(SMART SM00002, E=1e-20\); no ortholog, full-length homolog or family to name it by$/) && ($source{G7}[2] // '') eq '8',
-      'G7 provenance: the chosen domain with its E-value, step 8', $p->('G7'));
+check(($source{G7}[0] // '') eq 'IPR000002' && scalar(($source{G7}[1] // '') =~ /\(SMART SM00002, E=1e-20\); no ortholog, full-length homolog or family to name it by$/) && ($source{G7}[2] // '') eq '9',
+      'G7 provenance: the chosen domain with its E-value, step 9', $p->('G7'));
 {
   # the Relationship column: what each name claims, in a fixed vocabulary
   my %decision = read_decisions("$out/naming_decisions.tsv");
@@ -689,6 +708,7 @@ check(($closest_human{G4}[2] // 'x') eq '' && ($closest_human{G4}[3] // '') eq '
 check(($closest_human{G49}[2] // 'x') eq '' && ($closest_human{G49}[3] // '') eq 'Anoctamins family'
       && scalar(($closest_human{G49}[5] // '') =~ /^via sea anemone ortholog \(OMA 1:1\) > OMA ortholog \(1:many\), family of 2$/),
       'closest human G49: through another species reaching two human genes -> the family, not one picked by score', join(' | ', @{$closest_human{G49} // []}));
+check(($closest_human{G59}[2] // 'x') eq '' && ($closest_human{G59}[5] // 'x') eq '', 'closest human G59: a chain nothing supports is not reported', join(' | ', @{$closest_human{G59} // []}));
 check(($closest_human{G6}[2] // '') eq 'HGNC:6' && scalar(($closest_human{G6}[5] // '') =~ /reciprocal best hit/),
       'closest human G6: a partial RBH still counts as evidence (normal filter)', join(' | ', @{$closest_human{G6} // []}));
 check(($closest_nvec{G1}[2] // '') eq 'XP_000011.1' && ($closest_nvec{G1}[5] // '') eq 'OMA ortholog (1:1)',
@@ -736,7 +756,11 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
         'statements G57: no name, short, predicted features, expressed in two transcriptomes', join(' | ', map { my $type = $_; "$type: " . $said->('G57', $type) } sort keys %{$statement{G57} // {}}));
   check(!$statement{G37}{expression} && !$statement{G37}{features}, 'statements G37: no expression, no default location (nothing negative said)',
         join(' | ', sort keys %{$statement{G37} // {}}));
-  check(($statement{G1}{identity}[1] // '') eq '1' && ($statement{G1}{domains}[1] // '') eq '5', 'statement order in Score', '');
+  check(($statement{G1}{identity}[1] // '') eq '1' && ($statement{G1}{domains}[1] // '') eq '6', 'statement order in Score', '');
+  check(scalar($said->('G2', 'identical') =~ /^3 other genes encode the same 250 aa protein, residue for residue: G25; G3; G36$/) && ($statement{G2}{identical}[1] // '') eq '4',
+        'statements G2: identical proteins listed, after Copies', $said->('G2', 'identical'));
+  check(scalar($said->('G58', 'identity') =~ /^Homolog of Drosophila melanogaster Chitin synthase; orthology not shown \(may be a paralog\); by Swiss-Prot hit in another species$/),
+        'statements G58: the identity names the species and its protein', $said->('G58', 'identity'));
 }
 
 # ---- moop files load cleanly: 4 columns and the headers the loader requires. The closest genes are an

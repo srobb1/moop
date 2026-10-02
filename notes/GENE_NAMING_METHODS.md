@@ -55,8 +55,8 @@ the tables in §2 refer to positions in these lists.
 | DIAMOND hits | DIAMOND 2.1.6 `blastp --ultra-sensitive`, E ≤ 1e-5, 17-column output with query and subject coverage; against Ensembl human (canonical proteins, `--max-target-seqs 25`: enough genes to see the named ortholog behind its paralogs) and the other databases (`--max-target-seqs 5`) **[TODO: confirm after the pipeline rerun]** | closest human tiers 5–7; naming step 6; support of OMA names |
 | Ensembl Compara homologies | same Ensembl release as the proteome hit | closest human tiers 4 and 6 |
 | UniProtKB/Swiss-Prot cross-references | Ensembl gene, HGNC id and PANTHER family and subfamily per entry | closest human tiers 6–7; PANTHER family of each human gene (support of OMA names) |
-| PANTHER | PANTHER 19.0 family HMMs, via InterProScan 5.78-109.0 (the gene set's own results); family model lengths from the same release's HMM file | naming step 7; support of OMA names |
-| InterPro domains, repeats | the gene set's InterProScan results + InterPro `entry.list` (entry types and names) | naming step 8; repeat-built families (step 7) |
+| PANTHER | PANTHER 19.0 family HMMs, via InterProScan 5.78-109.0 (the gene set's own results); family model lengths from the same release's HMM file | naming step 8; support of OMA names |
+| InterPro domains, repeats | the gene set's InterProScan results + InterPro `entry.list` (entry types and names) | naming step 9; repeat-built families (step 8) |
 | Pfam transposable-element domains | the gene set's InterProScan results (Pfam, as shipped with InterProScan 5.78) | transposable-element names (§5, step 4) |
 | PANTHER tree placements | TreeGrafter graft points from the gene set's InterProScan JSON, traced on PANTHER 19.0's TreeGrafter data (family trees with speciation/duplication events; `scripts/panther_placements.py`), with the species' NCBI lineage (`ncbi-taxon-id` in metadata.yaml) | naming step 5; `tree+`/`treeC` support of OMA and `-like` names |
 | HGNC | complete set + withdrawn ids | all human symbols, approved names and gene groups |
@@ -255,8 +255,9 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
 | 4 | **Transposable element** | a transposable-element Pfam domain (see below) | `<class> transposase domain-containing protein` | `ISM\|te` |
 | 5 | **PANTHER tree placement** | a trusted placement joins the gene to exactly one human gene at a speciation node, and that gene is also its closest human gene by similarity (§6, tiers 3–5) | `SYMBOL: approved name` | `ISO\|tree` |
 | 6 | **Full-length human similarity** | see below | `SYMBOL-like: approved name-like`, or `<HGNC group> family member` | `ISS` |
-| 7 | **PANTHER family** | the match covers ≥ 75% of the family model's positions (≥ 80% by protein residues when there is no InterProScan JSON); informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
-| 8 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
+| 7 | **Swiss-Prot protein of another species** | the gene's best Swiss-Prot hit is a protein of another species, full-length (≥ 80% of both proteins), informative, and no human gene scores higher | `name-like (species)`, no symbol | `ISS\|bh\|sp` |
+| 8 | **PANTHER family** | the match covers ≥ 75% of the family model's positions (≥ 80% by protein residues when there is no InterProScan JSON); informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
+| 9 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
 | – | — | nothing above | `None` (the gene keeps its own transcript id as name and description); the Gene Name Source table says which kind: **None: no hits** (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match) or **None: hits did not pass the naming tests** (with the kinds of evidence found) | — |
 
 The steps are tried in this order; the step number is the Score of the Gene Name Source table.
@@ -282,10 +283,10 @@ The steps are tried in this order; the step number is the Score of the Gene Name
   used (below); failing that, the PANTHER family all the human members belong to names it
   (`<family> family member`) — only when the gene is a whole member of that family: its own match
   covers ≥ 50% of the family's model, or it has a full-length hit (§3) to one of the human members
-  (model coverage as in step 7; the full-length alternative matters for members much shorter than
+  (model coverage as in step 8; the full-length alternative matters for members much shorter than
   the family model: ACBP covers 36-38% of its family's model by either measure, yet aligns 99%/100%
   to DBI); failing that, the gene
-  goes directly to step 7 — not to steps 5 or 6, which would pick one member after all. In
+  goes directly to step 8 — not to steps 5, 6 or 7, which would pick one member after all. In
   *C. kusceri* the whole-member condition removed 24 family names, mostly Sushi-domain proteins
   and fragments (a collagen piece hitting 18% of COL1A2), which are then named by their domain.
 - **Which HGNC groups are families.** HGNC groups are also made by a shared domain (`EF-hand
@@ -450,7 +451,27 @@ bitscore (§3).
    not an orthology call (§9). The symbol is the human gene's HGNC symbol, or none; it is
    never taken from another gene.
 
-**Step 7 — PANTHER family.** A family names the gene only when the gene's PANTHER match covers
+**Step 7 — a Swiss-Prot protein of another species.** Many genes of a mollusc, a flatworm or a cnidarian have no human
+counterpart, or none along their length (chitin synthases, hemocyanins, shell matrix proteins), and a reviewed protein of
+another species says more about them than a family or a domain. The rule is the one for a human -like name (step 6): the
+gene's best Swiss-Prot hit, at any coverage, must itself be full-length (E ≤ 1e-10, ≥ 80% of both proteins; a weaker full-length hit never names the gene),
+and no human gene may score higher (a gene more similar to a human gene over part of it is a fragment or a relative of
+that gene, which steps 3-6 declined to name it by). No other Swiss-Prot protein may score within 5% of the best (the paralog-tie rule of
+step 6): two entries count as the same protein when they share a PANTHER subfamily or have the same protein name;
+a tie gives no name here, and the PANTHER family step names the gene (Swiss-Prot has no family groups to name a tie by).
+**No identity cutoff is applied at this or any step** (user, 2026-10-02): E-value and the coverage of both proteins decide.
+These gene sets are far from every reference (298 of 506 Congeria human -like names are under 40% identical), the E-value
+already carries identity and length, and how specific a name may be is decided by rank (best hit full-length, no close
+second), which holds at any evolutionary distance. The provenance states the hit's identity. On the E-value itself: with
+80% of both proteins required, 1e-10 excludes 37 of the 4,768 Congeria genes whose top human hit is full-length (proteins of
+~220 aa at 26-33% identity); coverage is what decides. The name is the entry's protein name with "-like" and the species:
+"Chitin synthase-like (Drosophila melanogaster)". No symbol is given: another species' symbol is not this gene's
+identity. Swiss-Prot alone is used; Ensembl's names for other species are mostly projected from human and carry
+lineage-specific paralog numbers. The species in the name is part of the evidence: a bivalve gene named after a
+bacterial or algal protein is a candidate for contamination or horizontal transfer, and worth a look.
+Added 2026-10-02 (user's decision). A gene with a full-length human hit that step 6 left unnamed (a paralog tie) is not named here either. Congeria: 220 genes.
+
+**Step 8 — PANTHER family.** A family names the gene only when the gene's PANTHER match covers
 ≥ 75% of the family's HMM. **Model coverage** is measured on the model: the model positions
 (hmmStart–hmmEnd) of all the match's locations, merged, over the family model's length, from the
 InterProScan JSON (`scripts/interproscan_model_coverage.py`; the coordinates are on the family
@@ -463,7 +484,7 @@ way. The bar is 75% on the model (chosen 2026-09-30: on that sample 80% on the m
 matches); the residue fallback keeps its 80%. The decision table's header says which measure a run used. Protein coverage is not required: a multidomain
 protein that contains the whole family model is a member. Below the threshold the match is
 usually one shared domain (a SET domain matching the KMT5A family at 38% of its model), which
-step 8 names honestly. Among qualifying families the lowest E-value wins. The name is
+step 9 names honestly. Among qualifying families the lowest E-value wins. The name is
 InterPro's curated name when the family is integrated into an InterPro *Family* entry
 (`BONUS, ISOFORM C-RELATED` → `TRIM45/56/19-like`), else PANTHER's own name, cleaned (§4) —
 except when InterPro's name describes a function or a process rather than naming a family
@@ -482,9 +503,9 @@ says nothing — any protein with such repeats fills the model (a mollusc C2H2 p
 named for the repeat covering most of the match instead (`Zinc finger C2H2-type
 domain-containing protein`, tag `rpt`).
 
-**Step 8 — InterPro domain.** The name states the one thing known: a domain. This is
+**Step 9 — InterPro domain.** The name states the one thing known: a domain. This is
 UniProt's convention for such proteins (`SET domain-containing protein`). Only InterPro
-entries of type *Domain* or *Repeat* are used (families are step 7; homologous superfamilies
+entries of type *Domain* or *Repeat* are used (families are step 8; homologous superfamilies
 are too broad; sites are not domains), and not entries of unknown function (DUF, UPF,
 uncharacterised). Every match InterProScan reports has already passed its member database's
 curated threshold (Pfam's per-family gathering thresholds, SMART, CDD, PROSITE profiles); no
@@ -723,12 +744,13 @@ the statements that apply to a gene are written; nothing negative is said about 
 | 1 | No name | why no step named it: "No hits: ..." / "Hits did not pass the naming tests (found: ...)" | -- |
 | 2 | Support | the methods that agree on the named human gene(s), and a shared PANTHER family: "Supported by 4 methods: MMseqs2 reciprocal best hit, transitive ortholog through fly, best human hit (partial alignment), PANTHER tree placement; the same PANTHER family (PTHR12460) as the human gene" (a transitive ortholog names up to 3 species, else "through 8 species") (Evidence_by_method; these methods share one signal, sequence similarity -- a report, not independent votes) | closest human, homologs |
 | 3 | Copies | "One of 10 genes in this genome named after it (the others: ...)" | OMA |
-| 4 | Alignment | how much of each protein aligns to the named human gene; for a family, domain or no name, the best human hit and its shape (fragment, fusion) | homologs |
-| 5 | Domains | which of the human gene's Pfam domains this gene has (same-clan families count; a domain fragment does not): the named human gene -- of several, the one it aligns to best -- or, for a family, domain or no name, its best human hit ("Has 2 of NCAN's 5 Pfam domains; no Pfam match here to PF00008 EGF, ..."); a human gene with no Pfam domain in UniProt is said so. Congeria: 17,127 genes | InterProScan |
-| 6 | Tree | where TreeGrafter places it, and whether that agrees with the name | PANTHER |
-| 7 | Cautions | every reason for doubt in words: the evidence marks, other methods pointing to other human genes, few methods agreeing, a small part of the human protein, a one-way best hit, a transposon domain, a short protein | -- |
-| 8 | Features | signal peptide, transmembrane helices, a DeepLoc location with its signal | SignalP, DeepTMHMM, DeepLoc |
-| 9 | Expression | each own transcriptome that has it (a tissue, a stage) | transcriptome |
+| 4 | Identical proteins | the other genes whose protein is the same sequence, each with its scaffold: "2 other genes encode the same 613 aa protein, residue for residue: A on scaffold JAPFQT010000554.1; B on ... . This gene is on scaffold CM051040.1". Copies of a recent duplication, or one locus assembled more than once (a short unplaced scaffold); a primer, probe or dsRNA matches all of them. File kind `identical`. Congeria: 5,739 genes in 2,242 sets | protein FASTA, GFF |
+| 5 | Alignment | how much of each protein aligns to the named human gene; for a family, domain or no name, the best human hit and its shape (fragment, fusion) | homologs |
+| 6 | Domains | which of the human gene's Pfam domains this gene has (same-clan families count; a domain fragment does not): the named human gene -- of several, the one it aligns to best -- or, for a family, domain or no name, its best human hit ("Has 2 of NCAN's 5 Pfam domains; no Pfam match here to PF00008 EGF, ..."); a human gene with no Pfam domain in UniProt is said so. Congeria: 17,127 genes | InterProScan |
+| 7 | Tree | where TreeGrafter places it, and whether that agrees with the name | PANTHER |
+| 8 | Cautions | every reason for doubt in words: the evidence marks, other methods pointing to other human genes, few methods agreeing, a small part of the human protein, a one-way best hit, a transposon domain, a short protein | -- |
+| 9 | Features | signal peptide, transmembrane helices, a DeepLoc location with its signal | SignalP, DeepTMHMM, DeepLoc |
+| 10 | Expression | each own transcriptome that has it (a tissue, a stage) | transcriptome |
 
 Example (Congeria COKUS1KC_0014560):
 
@@ -773,6 +795,14 @@ family); since the PANTHER tree step (step 5) needs a single closest gene, two t
 3,235-protein Congeria sample now fall back: TTR (true transthyretin is vertebrate-specific; the
 invertebrate proteins are 5-hydroxyisourate hydrolases) → "Uricase and transthyretin-related family
 member", and GPR21 → its PANTHER family. A chain is ranked by the weaker of its two links.
+
+**A chain is checked like a direct OMA pair** (2026-10-02). A tier-4 chain is set aside when nothing supports the human
+gene(s) it reaches (no similarity hit to them at E ≤ 1e-5, no shared PANTHER family), or when both checks go against it
+(the best human hit is another gene and the PANTHER family differs) -- the omaX and omaC rules of §5.2. The next chain,
+or the next tier, decides, and the closest gene's evidence text names what was not used. Among chains, one made of two
+OMA ortholog calls is tried before a reciprocal best hit + Ensembl Compara (which run through fly, worm or yeast and
+mostly reach a family). Congeria: 828 genes had a chain set aside; 567 of them now have no closest human gene, 168 take
+their DIAMOND best hit; tier 4 went from 2,047 genes to 1,299.
 
 The lowest (strongest) tier with any evidence is used. When tier 1 gives one human gene and
 tier 2 (the HOG) gives several including it, the HOG's set is used (a family, §6.2). An

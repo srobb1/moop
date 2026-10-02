@@ -23,12 +23,14 @@
 #   4. transposable element       named for its TE class
 #   5. PANTHER tree placement     one human gene on the family tree, agreeing with the closest human
 #   6. full-length human hit      >= 80% of both proteins: "SYM-like: name-like"
-#   7. PANTHER family             "<family> family member" (>= 75% of the family model)
-#   8. InterPro domain or repeat  "<domain> domain-containing protein" (>= 50% of its model)
+#   7. Swiss-Prot, another species  best Swiss-Prot hit full-length, no close second, no human hit
+#                                 scoring higher: "name-like (species)", no symbol
+#   8. PANTHER family             "<family> family member" (>= 75% of the family model)
+#   9. InterPro domain or repeat  "<domain> domain-containing protein" (>= 50% of its model)
 #   None                          with why; a gene with no name also gets its protein features
 #                                 (SignalP 6, DeepTMHMM, DeepLoc 2 from the annotation run) and,
 #                                 with transcript_hits, whether its own transcriptome shows it expressed
-# Steps 2-8 use a name only if it is informative. Hits to other species never name a gene; a
+# Steps 2-9 use a name only if it is informative. A hit to another species names a gene at step 7 alone; a
 # similarity hit without coverage information is not used at all. Why each gene has its name is
 # loaded as annotation type "Gene Name Source" (accession = what the name came from).
 #

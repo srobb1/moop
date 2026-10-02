@@ -204,6 +204,7 @@ sub load_hgnc {
       # "readthrough" marks a transcript joining two neighbouring genes (BIVM-ERCC5), not a gene of its own
       locus_type      => defined $index{locus_type} ? ($fields[$index{locus_type}] // '') : '',
     };
+    $record->{name} =~ s/^\s+|\s+$//g;   # a few HGNC names end in a space, which doubled the space before a name's tag
     $record->{gene_group} =~ s/^"|"$//g;
     $record->{gene_group_id} =~ s/^"|"$//g;
     $table{by_id}{$record->{hgnc_id}} = $record;

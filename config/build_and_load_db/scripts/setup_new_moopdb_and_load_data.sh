@@ -126,6 +126,18 @@ load_files() {
     ## only organism.sqlite and the lock.
     local files=("$GENESET_DATA_DIR"/$pattern)
 
+    ## The gene statement files belong to their own call alone. "*.domains.moop.tsv" (SignalP,
+    ## DeepTMHMM) also matched gene_statement.domains.moop.tsv, and loading a naming file clears
+    ## the gene set's gene_naming rows first: that one file was loaded again and every other
+    ## statement was gone (Congeria 2026-10-02: 152,201 rows removed, 17,552 left).
+    if [[ "$pattern" != gene_statement.* ]]; then
+        local kept=() file
+        for file in "${files[@]}"; do
+            [[ "$(basename "$file")" == gene_statement.* ]] || kept+=("$file")
+        done
+        files=("${kept[@]}")
+    fi
+
     ## An unmatched glob leaves the pattern itself as the single element, so a
     ## count of 1 does not mean a file was found. Checking existence is what makes
     ## "no annotation files here" visible instead of passing a literal '*' to perl.

@@ -32,7 +32,9 @@ DB_NAME=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$DB_LIST")
 DB_DIR=$DB_BASE/$DB_NAME/current
 OUT_DIR=$OUT_BASE/$DB_NAME
 OUT_FILE=$OUT_DIR/diamond_results.tsv
-COLUMNS=(qseqid sseqid stitle evalue pident length mismatch gapopen qstart qend sstart send bitscore qlen slen qcovhsp scovhsp)
+## not "COLUMNS": in a terminal bash resets that to the window width after every command
+## ("Error: Invalid output field: 149" when this was run by hand)
+OUT_COLUMNS=(qseqid sseqid stitle evalue pident length mismatch gapopen qstart qend sstart send bitscore qlen slen qcovhsp scovhsp)
 mkdir -p "$OUT_DIR"
 echo "DIAMOND: $QUERY_FASTA vs $DB_NAME"
 
@@ -53,13 +55,13 @@ diamond blastp --ultra-sensitive \
   --evalue 1e-5 \
   --tmpdir "$TMP" \
   --query "$QUERY_FASTA" \
-  --db "$DB_DIR/peptide" \
+  --db "$DB_DIR/peptide.dmnd" \
   --out "$OUT_FILE.body" \
   --max-target-seqs "$MAX_TARGETS" \
-  --outfmt 6 "${COLUMNS[@]}"
+  --outfmt 6 "${OUT_COLUMNS[@]}"
 
 ## header line, as the annotation pipeline writes (naming v2 reads it for scovhsp)
-{ (IFS=$'\t'; echo "${COLUMNS[*]}"); cat "$OUT_FILE.body"; } > "$OUT_FILE" && rm "$OUT_FILE.body"
+{ (IFS=$'\t'; echo "${OUT_COLUMNS[*]}"); cat "$OUT_FILE.body"; } > "$OUT_FILE" && rm "$OUT_FILE.body"
 gzip -f "$OUT_FILE"
 
 ## "<db>\t<version>", the annotation pipeline's format: the db's own db_version.txt

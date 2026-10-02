@@ -35,7 +35,7 @@ mkdir -p "$OUT_DIR"
 module load diamond/2.1.6 2>/dev/null || true
 command -v diamond >/dev/null || { echo "ERROR: diamond not in PATH (module load diamond/2.1.6)" >&2; exit 1; }
 
-COLUMNS=(qseqid sseqid stitle evalue pident length mismatch gapopen qstart qend sstart send bitscore qlen slen qcovhsp scovhsp)
+OUT_COLUMNS=(qseqid sseqid stitle evalue pident length mismatch gapopen qstart qend sstart send bitscore qlen slen qcovhsp scovhsp)
 OUT_FILE=$OUT_DIR/diamond_results.tsv
 TMP=$OUT_DIR/tmp.$$
 mkdir -p "$TMP"
@@ -50,9 +50,9 @@ diamond blastp --ultra-sensitive \
   --db "$OUT_DIR/partner" \
   --out "$OUT_FILE.body" \
   --max-target-seqs 5 \
-  --outfmt 6 "${COLUMNS[@]}"
+  --outfmt 6 "${OUT_COLUMNS[@]}"
 
-{ (IFS=$'\t'; echo "${COLUMNS[*]}"); cat "$OUT_FILE.body"; } > "$OUT_FILE"
+{ (IFS=$'\t'; echo "${OUT_COLUMNS[*]}"); cat "$OUT_FILE.body"; } > "$OUT_FILE"
 gzip -f "$OUT_FILE"
 printf '%s\t%s\n' "$LABEL" "md5:$(md5sum "$PARTNER" | cut -d' ' -f1)" > "$OUT_DIR/db_version.txt"
 diamond --version > "$OUT_DIR/diamond_version.txt"
@@ -61,6 +61,6 @@ diamond --version > "$OUT_DIR/diamond_version.txt"
   echo "command: $0 $*"
   echo "query: $QUERY (md5 $(md5sum "$QUERY" | cut -d' ' -f1))"
   echo "partner: $PARTNER (md5 $(md5sum "$PARTNER" | cut -d' ' -f1))"
-  echo "diamond blastp --ultra-sensitive --evalue 1e-5 --max-target-seqs 5 --outfmt 6 ${COLUMNS[*]}"
+  echo "diamond blastp --ultra-sensitive --evalue 1e-5 --max-target-seqs 5 --outfmt 6 ${OUT_COLUMNS[*]}"
 } > "$OUT_DIR/command.txt"
 echo "Done: $OUT_FILE.gz ($(zcat "$OUT_FILE.gz" | tail -n +2 | cut -f1 | sort -u | wc -l) query proteins with a hit)"

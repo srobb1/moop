@@ -35,6 +35,11 @@ while (my $line = <TH>){
   #ACI1_HiC_scaffold_1_000001.1	sp|Q16342|PDCD2_HUMAN	sp|Q16342|PDCD2_HUMAN Programmed cell death protein 2 OS=Homo sapiens OX=9606 GN=PDCD2 PE=1 SV=2	2.04e-210
   # ENSAMXP00000035529.1  ENSAMXP00000035529.1 pep primary_assembly:Astyanax_mexicanus-2.0:20:11140888:11159592:1 gene:ENSAMXG00000032087.1 transcript:ENSAMXT00000039164.1 gene_biotype:protein_coding transcript_biotype:protein_coding gene_symbol:HRH2 description:histamine receptor H2 [Source:HGNC Symbol;Acc:HGNC:5183]
   my ($t_id, $hit_id, $hit_desc, $score) = split "\t" , $line;
+  # the homolog table shows each protein's top hit. The search now keeps several targets per protein
+  # for gene naming (25-50 against human: 401,689 rows for Congeria's 17,355 proteins with a hit, most
+  # of them isoforms of one human gene); DIAMOND lists a query's hits in its own order, best first (the
+  # hit a one-target search reports), so the first is kept
+  next if $annot{$t_id}++;
   $hit_id =~ s/sp\|(\S+)\|\S+/$1/;
   if ($hit_desc =~ /gene_symbol:(\S+)\s*description/){
     $hit_desc =~ s/.+gene_symbol:(\S+)\s*description:\s*(.+)/$1: $2/;

@@ -232,7 +232,9 @@ make_diamond_moop() {
   local DBLAST_DIR="$ANALYSIS_DIR/diamond"
   local SPROT_DIR="$DBLAST_DIR/UNIPROT_sprot"
   local VERSION
-  VERSION=$(head -1 "$SPROT_DIR/db_version.txt" 2>/dev/null)
+  ## db_version.txt is "<version>" or, as the annotation pipeline now writes it, "<db><TAB><version>":
+  ## the last field either way (the whole line put the database name and a tab into the source version)
+  VERSION=$(awk '{print $NF; exit}' "$SPROT_DIR/db_version.txt" 2>/dev/null)
 
   [ -e tophit.tsv ] && rm tophit.tsv
   if [ -e "$SPROT_DIR/diamond_results.tsv.gz" ]; then
@@ -250,7 +252,7 @@ make_diamond_moop() {
     TARGET_ORG=$(basename "$RESULTS")
     ORGSTRING="${TARGET_ORG#ENS_}"
     ORG=$(echo "$ORGSTRING" | perl -pe 's/^(\w)/\u$1/; s/_(\w)/ \L$1/g')
-    VERSION=$(head -1 "$RESULTS/db_version.txt" 2>/dev/null)
+    VERSION=$(awk '{print $NF; exit}' "$RESULTS/db_version.txt" 2>/dev/null)
     [ -e tophit.tsv ] && rm tophit.tsv
     if [ -e "$RESULTS/diamond_results.tsv.gz" ]; then
       zcat "$RESULTS/diamond_results.tsv.gz" > tophit.tsv
@@ -271,10 +273,13 @@ has_data UniProtKB_Swiss-Prot.homologs.moop.tsv \
 # ── EggNOG ────────────────────────────────────────────────────────────────────
 make_eggnog_moop() {
   local EDIR="$ANALYSIS_DIR/eggnog_mapper"
-  local MAPPERVERSION DBVERSION VERSION
-  MAPPERVERSION=$(grep emapper "$EDIR/db_version.txt" 2>/dev/null \
-                  | perl -pe 's/.*(emapper-\S+).*/$1/')
-  DBVERSION=$(grep 'eggNOG DB version:' "$EDIR/db_version.txt" 2>/dev/null \
+  local MAPPERVERSION DBVERSION VERSION VERSION_FILE
+  ## the annotation pipeline writes eggnog_mapper_version.txt; older runs have db_version.txt
+  VERSION_FILE="$EDIR/eggnog_mapper_version.txt"
+  [ -s "$VERSION_FILE" ] || VERSION_FILE="$EDIR/db_version.txt"
+  MAPPERVERSION=$(grep -m1 emapper "$VERSION_FILE" 2>/dev/null \
+                  | perl -pe 's/.*?(emapper-\S+).*/$1/')
+  DBVERSION=$(grep -m1 'eggNOG DB version:' "$VERSION_FILE" 2>/dev/null \
               | perl -pe 's/.*?eggNOG DB version: (\S+).*/$1/')
   VERSION="$MAPPERVERSION DB_$DBVERSION"
   echo "perl $REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl $EDIR/eggnog_mapper_results.tsv $VERSION"
@@ -624,6 +629,9 @@ build_naming_args() {
 
   ## the gene set's species, taxon and accessions, for the header of naming_decisions.tsv
   [ -s "$GENESET_DIR/metadata.yaml" ] && NAMING_ARGS+=(--metadata "$GENESET_DIR/metadata.yaml")
+
+  ## each gene's scaffold, for the Identical proteins statement (where the other genes with the same protein are)
+  [ -s "$GENESET_DIR/genes.gff" ] && NAMING_ARGS+=(--gff "$GENESET_DIR/genes.gff")
 
   ## Model coverage from the InterProScan JSON (model coordinates; the TSV has only protein
   ## coordinates): the PANTHER family rules and the InterPro domain step measure on the model.
