@@ -545,7 +545,8 @@ my $out = "$dir/out1";
 # ---- a read-through transcript (--gff): GX's second transcript lies over gene GY and its protein matches
 # GY's human gene (GAMMA), which GX's other protein (ALPHA) does not hit at all -> a caution on GX, none on
 # GY, and GX keeps its name (Danio rerio 2026-10-05: KLF5-202 over pibf1, matching human PIBF1). The FASTA
-# ids carry a version the GFF's protein_id lacks, as Ensembl's do.
+# ids carry a version the GFF's protein_id lacks, as Ensembl's do. GY's GFF id is RefSeq-style (gene-GY): the caution
+# names it by its id on the site, GY.
 {
   my $rt = "$dir/readthrough";
   system('mkdir', '-p', $rt) == 0 or die;
@@ -568,8 +569,8 @@ my $out = "$dir/out1";
     . $feature->('CDS', 1000, 4000, 'ID=CDS:X1;Parent=transcript:RX1;protein_id=X1')
     . $feature->('mRNA', 3900, 9000, 'ID=transcript:RX2;Parent=gene:GX;Name=alpa-202')
     . $feature->('CDS', 3900, 9000, 'ID=CDS:X2;Parent=transcript:RX2;protein_id=X2')
-    . $feature->('gene', 4500, 9200, 'ID=gene:GY;Name=gamb')
-    . $feature->('mRNA', 4500, 9200, 'ID=transcript:RY;Parent=gene:GY;Name=gamb-201')
+    . $feature->('gene', 4500, 9200, 'ID=gene-GY;Name=gamb')
+    . $feature->('mRNA', 4500, 9200, 'ID=transcript:RY;Parent=gene-GY;Name=gamb-201')
     . $feature->('CDS', 4500, 9200, 'ID=CDS:X3;Parent=transcript:RY;protein_id=X3')
     . $feature->('gene', 20000, 30000, 'ID=gene:GC;Name=alpc')
     . $feature->('mRNA', 20000, 30000, 'ID=transcript:RC1;Parent=gene:GC;Name=alpc-201')

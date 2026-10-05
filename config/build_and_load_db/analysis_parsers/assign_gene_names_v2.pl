@@ -337,7 +337,7 @@ my %gene_label;           # GFF gene -> its Name
 my %protein_transcript;   # CDS protein_id -> its transcript
 my %protein_best_human;   # protein -> its best human hit (DIAMOND, NORMAL filter)
 my %protein_any_human;    # protein -> human key -> 1: every human gene it hits (E <= $HIT_MAX_EVALUE, any coverage)
-my %read_through;         # group -> [ { transcript, gene, human } ]
+my %read_through;         # group -> [ { human, transcripts => [ labels ], genes => [ [ group, GFF gene ] ] } ]
 my @pending_compara;  # links through another species' Ensembl gene, resolved in one Compara pass
 my %reference_fasta_cache;
 my %reference_fasta_file;   # species dir -> the protein FASTA read (for the decision table's header)
@@ -784,11 +784,12 @@ sub transcript_of_protein {
   return undef;
 }
 
-# "pibf1 (ENSDARG00000013006)": a gene of this gene set as a caution names it
+# "pibf1 (ENSDARG00000013006)": a gene as a caution names it -- its id on the site (the gene set's gene, not
+# the GFF's: RefSeq's GFF has gene-LOC114963508 for LOC114963508) and the name its GFF gene gives it
 sub gff_gene_text {
-  my ($gene) = @_;
-  my $name = $gene_label{$gene} // '';
-  return $name ne '' && $name ne $gene ? "$name ($gene)" : $gene;
+  my ($group, $gff_gene) = @_;
+  my $name = defined $gff_gene ? $gene_label{$gff_gene} // '' : '';
+  return $name ne '' && $name ne $group ? "$name ($group)" : $group;
 }
 
 # Read-through transcripts (--gff): one transcript of a gene overlaps another gene, and its protein's best human
@@ -828,9 +829,8 @@ sub find_read_through_transcripts {
         next if grep { my $own = $_; places_overlap($own, $other_place) } @other_places;
         my $entry = $entry_of{$human->{key}} //= { human => $human, transcripts => [], genes => [], seen => {} };
         my $label = $transcript_label{$transcript} // $transcript;
-        my $gene = $transcript_gene{$other_transcript} // $other_group;
         push @{$entry->{transcripts}}, $label unless $entry->{seen}{"t\t$label"}++;
-        push @{$entry->{genes}}, $gene unless $entry->{seen}{"g\t$gene"}++;
+        push @{$entry->{genes}}, [$other_group, $transcript_gene{$other_transcript}] unless $entry->{seen}{"g\t$other_group"}++;
       }
     }
     next unless %entry_of;
@@ -849,7 +849,7 @@ sub places_overlap {
 sub read_through_text {
   my ($entry) = @_;
   my @transcripts = @{$entry->{transcripts}};
-  my @genes = map { my $gene = $_; gff_gene_text($gene) } @{$entry->{genes}};
+  my @genes = map { my $gene = $_; gff_gene_text(@$gene) } @{$entry->{genes}};
   return (@transcripts == 1 ? "transcript $transcripts[0] overlaps" : 'transcripts ' . join(', ', @transcripts) . ' overlap')
        . (@genes == 1 ? " the gene $genes[0]" : ' the genes ' . join(', ', @genes))
        . (@transcripts == 1 ? ', and its protein matches' : ', and their proteins match') . ' human ' . human_label($entry->{human})
@@ -4719,8 +4719,10 @@ sub agreement {
   }
   my %reaching = %through ? %through : %through_any;
   my @through = sort keys %reaching;
+  # the species joined by "/": with commas they ran into the list of methods ("through elephant shark,
+  # mouse, spotted gar, best human hit")
   my %method_words = (1 => 'OMA pairwise ortholog', 2 => 'OMA HOG', 3 => 'MMseqs2 reciprocal best hit',
-                      4 => 'transitive ortholog through ' . (!@through ? 'another species' : @through <= 3 ? join(', ', @through)
+                      4 => 'transitive ortholog through ' . (!@through ? 'another species' : @through <= 3 ? join('/', @through)
                                                                 : scalar(@through) . ' species'));
   foreach my $method (['OMA', 1], ['HOG', 2], ['RBH', 3], ['VIA', 4]) {
     my ($label, $tier) = @$method;
