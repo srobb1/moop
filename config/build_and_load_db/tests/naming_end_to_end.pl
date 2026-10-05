@@ -551,15 +551,16 @@ my $out = "$dir/out1";
   system('mkdir', '-p', $rt) == 0 or die;
   system('cp', '-r', "$dir/diamond", "$rt/diamond") == 0 or die;
   system('cp', "$dir/isoforms.tsv", "$dir/protein.aa.fa", $rt) == 0 or die;
-  write_file("$rt/isoforms.tsv", "X1.1;X2.1\tNone\tGX\nX3.1\tNone\tGY\nX5.1;X6.1\tNone\tGC\nX7.1\tNone\tGD\n", 1);
-  write_file("$rt/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x 300) . "\n" } qw(X1 X2 X3 X5 X6 X7)), 1);
+  write_file("$rt/isoforms.tsv", "X1.1;X2.1\tNone\tGX\nX3.1\tNone\tGY\nX5.1;X6.1\tNone\tGC\nX7.1\tNone\tGD\nX8.1\tNone\tGE\n", 1);
+  write_file("$rt/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x 300) . "\n" } qw(X1 X2 X3 X5 X6 X7 X8)), 1);
   write_file("$rt/diamond/ENS_homo_sapiens/diamond_results.tsv",
     $dhit->('X1', '01', 'ALPHA', 'alpha synthase', '1e-150', 600, 300, 300, 95, 95)
     . $dhit->('X2', '04', 'GAMMA', 'gamma transferase', '1e-100', 400, 300, 250, 95, 95)
     . $dhit->('X3', '04', 'GAMMA', 'gamma transferase', '1e-100', 400, 300, 250, 95, 95)
     . $dhit->('X5', '01', 'ALPHA', 'alpha synthase', '1e-150', 600, 300, 300, 95, 95)
     . $dhit->('X6', '04', 'GAMMA', 'gamma transferase', '1e-100', 400, 300, 250, 95, 95)
-    . $dhit->('X7', '04', 'GAMMA', 'gamma transferase', '1e-100', 400, 300, 250, 95, 95), 1);
+    . $dhit->('X7', '04', 'GAMMA', 'gamma transferase', '1e-100', 400, 300, 250, 95, 95)
+    . $dhit->('X8', '01', 'ALPHA', 'alpha synthase', '1e-8', 60, 300, 300, 90, 85), 1);
   my $feature = sub { my ($type, $start, $end, $attributes) = @_; return join("\t", 's1', 'test', $type, $start, $end, '.', '-', '.', $attributes) . "\n" };
   write_file("$rt/genes.gff", "##gff-version 3\n"
     . $feature->('gene', 1000, 9000, 'ID=gene:GX;Name=alpa')
@@ -591,6 +592,11 @@ my $out = "$dir/out1";
   check(scalar(($caution{GY} // '') !~ /overlaps the gene/), 'read-through: no caution on the gene it lies over (GY)', $caution{GY});
   # GD lies over both of GC's transcripts, the ALPHA one too: overlapping genes of one family, not a read-through
   check(scalar(($caution{GC} // '') !~ /overlaps the gene/), 'read-through: none when the other gene also lies over the other transcripts of the gene (GC)', $caution{GC});
+  # GE: its one human hit covers both proteins at E = 1e-8, above the full-length cutoff (1e-10): the
+  # alignment says full-length and gives the E-value, not "partial" beside 90% and 85%
+  my %alignment = map { my $row = $_; ($row->[0] => $row->[2]) } read_tsv("$rt_out/gene_statement.alignment.moop.tsv");
+  check(($alignment{GE} // '') =~ /^Best human hit ALPHA: aligned over 90% of this protein and 85% of ALPHA \(full-length; E=1e-0?8\)$/,
+        'alignment: full-length with an E-value above the cutoff says so, with the E-value (GE)', $alignment{GE});
   my %name;
   foreach my $row (read_tsv("$rt_out/geneNames.tsv")) { $name{$row->[2]} //= $row->[3]; }
   check(scalar(($name{GX} // '') =~ /ALPHA/), 'read-through: the gene keeps its name (GX)', $name{GX});
@@ -703,7 +709,7 @@ my $p = sub { my ($gene) = @_; return $source{$gene} ? join(' | ', @{$source{$ge
 check(($source{G1}[0] // '') eq 'HGNC:1' && ($source{G1}[2] // '') eq '3'
       && ($source{G1}[1] // '') eq 'Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001); aligned over 95% of this protein and 95% of ALPHA (full-length); has 2 of ALPHA\'s 3 Pfam domains; no Pfam match here to PF00099 SH2x',
       'G1 provenance: HGNC:1, OMA 1:1, its support, step 3', $p->('G1'));
-check(($source{G2}[1] // '') eq 'Co-ortholog of human GAMMA (OMA, many:1), one of 2 genes in this genome named after it (the others: G3); '
+check(($source{G2}[1] // '') eq 'Co-ortholog of human GAMMA (OMA, many:1), one of 2 genes in this genome named after it (the other: G3); '
       . 'OMA pairs 3 genes here with it, 1 of them named by other evidence; GAMMA is its best human similarity hit; '
       . 'a different PANTHER family (PTHR00099; human: PTHR00004); aligned over 90% of this protein and 90% of GAMMA (full-length)',
       'G2 provenance: the genes carrying the name (2), and how many OMA paired (3)', $p->('G2'));
@@ -879,7 +885,7 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
   check(scalar($said->('G26', 'cautions') =~ /OMA pairs it with human ZETA \([^)]+\), but its best human similarity hit is THETA and its PANTHER family differs, so ZETA does not name it/),
         'statement G26 cautions (omaC): the withheld OMA pairing, with both human genes', $said->('G26', 'cautions'));
   check(scalar($said->('G1', 'domains') =~ /^Has 2 of ALPHA's 3 Pfam domains; no Pfam match here to PF00099/), 'statement G1 domains', $said->('G1', 'domains'));
-  check(scalar($said->('G2', 'identity') =~ /^Co-ortholog of human GAMMA; by /) && scalar($said->('G2', 'copies') =~ /^One of 2 genes in this genome named after it \(the others: G3\)$/),
+  check(scalar($said->('G2', 'identity') =~ /^Co-ortholog of human GAMMA; by /) && scalar($said->('G2', 'copies') =~ /^One of 2 genes in this genome named after it \(the other: G3\)$/),
         'statement G2: co-ortholog, and its copy', $said->('G2', 'identity') . ' | ' . $said->('G2', 'copies'));
   check(scalar($said->('G5', 'identity') =~ /^Homolog of human DELTA; orthology not shown \(may be a paralog\); by /), 'statement G5 identity (-like)', $said->('G5', 'identity'));
   check(scalar($said->('G6', 'identity') =~ /^Member of the .* family; which member is not known; by PANTHER family$/), 'statement G6 identity (family)', $said->('G6', 'identity'));

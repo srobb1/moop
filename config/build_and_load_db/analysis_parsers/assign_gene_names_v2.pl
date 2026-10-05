@@ -3432,10 +3432,21 @@ sub best_alignment {
 
 sub alignment_coverage_text {
   my ($group, $humans) = @_;
-  my ($hit, $full, $best_human) = best_alignment($group, $humans);
+  my ($hit, undef, $best_human) = best_alignment($group, $humans);
   return '' unless $hit;
-  return sprintf('aligned over %.0f%% of this protein and %.0f%% of %s (%s)', $hit->{qcov}, $hit->{tcov}, human_label($best_human),
-                 $full ? 'full-length' : 'partial');
+  return (human_alignment_text($hit, human_label($best_human)))[0];
+}
+
+# "aligned over 88% of this protein and 81% of INSL3 (full-length; E=7e-06)": the label follows the
+# coverages shown (rounded down, so 79.6% is not shown as 80% beside "partial"); a full-length alignment
+# whose E-value is above the full-length hits' cutoff says its E-value (Danio 2026-10-05: 56 genes read
+# "88% ... 81% (partial)", an MMseqs2 hit at E=7e-06). Returns the text and whether it is full-length.
+sub human_alignment_text {
+  my ($hit, $human_text) = @_;
+  my $full = ($hit->{qcov} >= $FULL{qcov} and $hit->{tcov} >= $FULL{tcov}) ? 1 : 0;
+  my $label = $full ? 'full-length' : 'partial';
+  $label .= '; E=' . e_value($hit->{evalue}) if $full and $hit->{evalue} > $FULL{evalue};
+  return (sprintf('aligned over %d%% of this protein and %d%% of %s (%s)', int($hit->{qcov}), int($hit->{tcov}), $human_text, $label), $full);
 }
 
 # an InterPro domain or repeat name as a protein name, UniProt's convention: "Zinc finger, RING-type"
@@ -3535,7 +3546,8 @@ sub count_named_copies {
       my @others = grep { my $other = $_; $other ne $group } @groups;
       my $listed = join(', ', @others[0 .. ($#others < $COPIES_LISTED - 1 ? $#others : $COPIES_LISTED - 1)])
                  . (@others > $COPIES_LISTED ? ' and ' . (@others - $COPIES_LISTED) . ' more' : '');
-      my $text = $copies > 1 ? ($by_oma ? ', ' : '; ') . "one of $copies genes in this genome named after it (the others: $listed)" : '';
+      my $copies_line = "one of $copies genes in this genome named after it (" . (@others == 1 ? 'the other' : 'the others') . ": $listed)";
+      my $text = $copies > 1 ? ($by_oma ? ', ' : '; ') . $copies_line : '';
       if ($by_oma and $paired > $copies) {
         $text .= "; OMA pairs $paired genes here with it, " . ($paired - $copies) . ' of them named by other evidence';
         $stats{'many:1 names: fewer genes carry the name than OMA paired'}++;
@@ -3545,7 +3557,7 @@ sub count_named_copies {
       # by OMA, the opening word is the relationship the tag gives (relationship()): 1to1 an ortholog,
       # else a co-ortholog -- an OMA HOG 1:1 pair read "Co-ortholog of" beside Relationship "ortholog"
       $start =~ s/^(?:Co-ortholog|Ortholog) of/($named->{tag}[1] eq '1to1' ? 'Ortholog' : 'Co-ortholog') . ' of'/e if $by_oma;
-      $named->{copies_text} = "one of $copies genes in this genome named after it (the others: $listed)" if $copies > 1;
+      $named->{copies_text} = $copies_line if $copies > 1;
       $named->{origin}{rule} = $start . $text . $copies_of->{end};
       # the count in the name too, as Ensembl writes one-to-many orthologs: every copy is "1 of N"
       $named->{desc} .= " (1 of $copies)" if $copies > 1;
@@ -4144,10 +4156,8 @@ sub gene_statements {
     if ($best) {
       my $entry = $best->[1];
       my $hit = $entry->{best_full} // $entry->{best};
-      $said{alignment} = sprintf('Best human hit %s: aligned over %.0f%% of this protein and %.0f%% of %s (%s)',
-                                 human_label($entry->{human}), $hit->{qcov}, $hit->{tcov}, human_label($entry->{human}),
-                                 $entry->{best_full} ? 'full-length' : 'partial')
-                       . ($entry->{best_full} ? '' : shape_note($entry));
+      my ($coverage, $full) = human_alignment_text($hit, human_label($entry->{human}));
+      $said{alignment} = 'Best human hit ' . human_label($entry->{human}) . ": $coverage" . ($full ? '' : shape_note($entry));
       # the best hit's domains, found here or not (a domain or family name, or none: which of the
       # human gene's domains this gene has)
       my $domains = domain_text($group, $entry->{human});
