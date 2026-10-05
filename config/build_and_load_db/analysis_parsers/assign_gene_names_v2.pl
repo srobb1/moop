@@ -1644,7 +1644,7 @@ sub read_panther_families {
     next unless $analysis eq 'PANTHER';
     my $key = "$id\t$family";
     my $evalue = defined $score && $score =~ /^[0-9.eE+-]+$/ ? $score : 1;
-    my $match = $match{$key} //= { id => $id, family => $family, description => $description // '',
+    my $match = $match{$key} //= { id => $id, family => $family, description => tidy_source_text($description // ''),
                                    interpro => $interpro, evalue => $evalue, regions => [] };
     $match->{evalue} = $evalue if $evalue < $match->{evalue};
     push @{$match->{regions}}, [$start, $end];
@@ -1742,6 +1742,16 @@ sub aligned_residues {
 }
 
 # InterPro's entry.list: accession -> { type (Domain, Repeat, Family, ...), name }
+# a name as a source gives it, without its stray spaces: PANTHER drops parentheses and keeps the spaces
+# around them ("ACTIVATING TRANSCRIPTION FACTOR  ATF  4/5"), InterPro has "protein-like , bZIP domain"
+sub tidy_source_text {
+  my ($text) = @_;
+  $text =~ s/\s+/ /g;
+  $text =~ s/ ,/,/g;
+  $text =~ s/^ | $//g;
+  return $text;
+}
+
 sub read_interpro_entries {
   my ($file) = @_;
   my %entry;
@@ -1750,7 +1760,7 @@ sub read_interpro_entries {
     chomp $line;
     my ($accession, $type, $name) = split /\t/, $line;
     next unless defined $name and $accession =~ /^IPR\d+$/;
-    $entry{$accession} = { type => $type, name => $name };
+    $entry{$accession} = { type => $type, name => tidy_source_text($name) };
   }
   close $fh;
   return \%entry;

@@ -312,7 +312,8 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
 
 # ---- InterProScan TSV (PANTHER families and InterPro domains), InterPro entry list, PANTHER model lengths
 # PANTHER names a gene only when its match covers >= 80% of the family model:
-#   T6: 95 of a 100-residue model, not in InterPro -> PANTHER's own name
+#   T6: 95 of a 100-residue model, not in InterPro -> PANTHER's own name (its stray double space, as
+#       PANTHER leaves where it drops parentheses, is not shown)
 #   T7: PANTHER's "-" (no description) -> skipped; T7's domains: the LOWER E-value one (SMART,
 #       IPR000002) must name it, not the lower accession
 #   T9: a locus-id family ("PROTEIN CBG12345") -> None
@@ -326,7 +327,7 @@ write_file("$dir/iprscan.tsv", join('',
   # T1 carries one of ALPHA's two Pfam domains
   $row->('T1',  300, 'Pfam',    'PF00001.9', 'kinase',          10, 250, '1.0E-40', 'IPR000001', 'Kinase domain'),
   $row->('T1',  300, 'Pfam',    'PF00097.3', 'sh2z',           260, 290, '1.0E-8',  '-', '-'),
-  $row->('T6',  100, 'PANTHER', 'PTHR00006', 'WIDGET PROTEIN SMC', 3, 97, '1.0E-30', '-', '-'),
+  $row->('T6',  100, 'PANTHER', 'PTHR00006', 'WIDGET  PROTEIN SMC', 3, 97, '1.0E-30', '-', '-'),
   $row->('T7',  200, 'PANTHER', 'PTHR00007', '-',                1,  190, '1.0E-25', '-', '-'),
   $row->('T7',  200, 'Pfam',    'PF00001',   'kinase',           1,  100, '1.0E-5',  'IPR000001', 'Kinase domain'),
   $row->('T7',  200, 'SMART',   'SM00002',   'RING',             120, 180, '1.0E-20', 'IPR000002', 'Zinc finger, RING-type'),
@@ -866,6 +867,8 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
     close $fh;
   }
   my $said = sub { my ($gene, $type) = @_; return ($statement{$gene}{$type} // [''])->[0]; };
+  my @untidy = grep { my $text = $_; $text =~ /  | ,/ } map { my $gene = $_; map { my $type = $_; $statement{$gene}{$type}[0] } sort keys %{$statement{$gene}} } sort keys %statement;
+  check(!@untidy, 'statements: no double space, no space before a comma (PANTHER / InterPro names tidied as read)', $untidy[0]);
   check($said->('G1', 'identity') eq 'Ortholog of human ALPHA; by OMA human ortholog', 'statement G1 identity', $said->('G1', 'identity'));
   check(scalar($said->('G1', 'support') =~ /^Supported by \d+ methods?: .*OMA pairwise ortholog.*best human hit \(full-length\).*; the same PANTHER family \(PTHR00001\) as the human gene$/),
         'statement G1 support: the methods that agree, and the shared PANTHER family', $said->('G1', 'support'));
