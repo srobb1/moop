@@ -329,6 +329,15 @@ my %native_shown;         # group -> source: the gene shows its own (--native) n
 my %chains_set_aside;     # group -> [ { humans, evidence, why } ]: orthology through another species, not used (chain_rejected)
 my %identical;            # group -> [ other groups whose longest protein is the same sequence ]
 my %gene_scaffold;        # group -> its scaffold (--gff), for the Identical proteins statement
+# read-through transcripts (--gff, find_read_through_transcripts)
+my %transcript_place;     # transcript -> [ scaffold, start, end ]
+my %transcript_label;     # transcript -> its GFF Name (KLF5-202)
+my %transcript_gene;      # transcript -> its GFF gene
+my %gene_label;           # GFF gene -> its Name
+my %protein_transcript;   # CDS protein_id -> its transcript
+my %protein_best_human;   # protein -> its best human hit (DIAMOND, NORMAL filter)
+my %protein_any_human;    # protein -> human key -> 1: every human gene it hits (E <= $HIT_MAX_EVALUE, any coverage)
+my %read_through;         # group -> [ { transcript, gene, human } ]
 my @pending_compara;  # links through another species' Ensembl gene, resolved in one Compara pass
 my %reference_fasta_cache;
 my %reference_fasta_file;   # species dir -> the protein FASTA read (for the decision table's header)
@@ -440,6 +449,7 @@ sub main {
   if (defined $opt{'diamond-dir'}) {
     collect_diamond();
     link_swissprot_hits() if defined $opt{'uniprot-dir'};
+    find_read_through_transcripts() if defined $opt{gff};
   }
   foreach my $species (@closest_species) {
     collect_closest_species($species);
@@ -722,20 +732,128 @@ sub read_identical_proteins {
   }
 }
 
-# each gene's scaffold (GFF gene, mRNA and transcript lines)
+# each gene's scaffold (GFF gene, mRNA and transcript lines); the transcripts' places, names and genes, and
+# the transcript of each CDS protein_id (for read-through transcripts)
 sub read_gene_scaffolds {
   my ($gff) = @_;
   my $open = $gff =~ /\.gz$/ ? "gzip -dc '$gff' |" : "< $gff";
   open my $fh, $open or die "cant open gff $gff $!\n";
   while (my $line = <$fh>) {
     next if $line =~ /^#/;
-    my ($scaffold, undef, $type, undef, undef, undef, undef, undef, $attributes) = split /\t/, $line;
-    next unless defined $attributes and ($type eq 'gene' or $type eq 'mRNA' or $type eq 'transcript');
+    chomp $line;
+    my ($scaffold, undef, $type, $start, $end, undef, undef, undef, $attributes) = split /\t/, $line;
+    next unless defined $attributes;
+    if ($type eq 'CDS') {
+      my ($parent) = $attributes =~ /(?:^|;)Parent=([^;\s]+)/;
+      my ($protein) = $attributes =~ /(?:^|;)protein_id=([^;\s]+)/;
+      $protein_transcript{$protein} //= plain_feature_id($parent) if defined $parent and defined $protein;
+      next;
+    }
+    next unless $type eq 'gene' or $type eq 'mRNA' or $type eq 'transcript';
     my ($feature) = $attributes =~ /(?:^|;)ID=([^;\s]+)/ or next;
+    my ($name) = $attributes =~ /(?:^|;)Name=([^;]+)/;
+    if ($type eq 'gene') {
+      $gene_label{plain_feature_id($feature)} = $name if defined $name;
+    } else {
+      my $transcript = plain_feature_id($feature);
+      $transcript_place{$transcript} = [$scaffold, $start, $end];
+      $transcript_label{$transcript} = $name if defined $name;
+      my ($parent) = $attributes =~ /(?:^|;)Parent=([^;\s]+)/;
+      $transcript_gene{$transcript} = plain_feature_id($parent) if defined $parent;
+    }
     my $group = group_for($feature) // (exists $members{$feature} ? $feature : next);
     $gene_scaffold{$group} //= $scaffold;
   }
   close $fh;
+}
+
+# an Ensembl GFF id without its type prefix (transcript:ENSDART00000004361)
+sub plain_feature_id {
+  my ($id) = @_;
+  return $id =~ s/^(?:gene|transcript):(?=\S)//r;
+}
+
+# a protein's transcript: through its CDS protein_id, or the protein id is the transcript's (own gene sets);
+# a FASTA id with a version the GFF lacks (ENSDARP00000012722.9) is tried without it
+sub transcript_of_protein {
+  my ($protein) = @_;
+  foreach my $id ($protein, strip_suffixes($protein), $protein =~ s/\.\d+$//r) {
+    return $protein_transcript{$id} if exists $protein_transcript{$id};
+    return $id if exists $transcript_place{$id};
+  }
+  return undef;
+}
+
+# "pibf1 (ENSDARG00000013006)": a gene of this gene set as a caution names it
+sub gff_gene_text {
+  my ($gene) = @_;
+  my $name = $gene_label{$gene} // '';
+  return $name ne '' && $name ne $gene ? "$name ($gene)" : $gene;
+}
+
+# Read-through transcripts (--gff): one transcript of a gene overlaps another gene, and its protein's best human
+# hit is that gene's protein's best human hit too -- a human gene the gene's other proteins do not hit at all, nor
+# does this protein hit theirs (so not a paralog). Danio rerio 2026-10-05: 26 genes, e.g. ENSDARG00000015506 KLF5,
+# whose KLF5-202 lies over pibf1 and matches human PIBF1. Said as a caution; the name is left as it is (the user
+# chose that over a vote of the isoforms, which renamed 71 Danio genes, mostly between paralogs).
+sub find_read_through_transcripts {
+  my %by_human;   # human key -> [ [ group, transcript ] ]: the proteins whose best human hit it is
+  foreach my $group (sort keys %proteins_of) {
+    foreach my $protein (@{$proteins_of{$group}}) {
+      my $best = $protein_best_human{$protein} or next;
+      my $transcript = transcript_of_protein($protein) // next;
+      push @{$by_human{$best->{human}{key}}}, [$group, $transcript];
+    }
+  }
+  foreach my $group (sort keys %proteins_of) {
+    my @proteins = grep { my $protein = $_; $protein_best_human{$protein} } sort @{$proteins_of{$group}};
+    my %entry_of;   # human key -> { human, transcripts, genes }
+    foreach my $protein (@proteins) {
+      my $human = $protein_best_human{$protein}{human};
+      my @others = grep { my $other = $_; $protein_best_human{$other}{human}{key} ne $human->{key} } @proteins;
+      next unless @others;
+      next if grep { my $other = $_; $protein_any_human{$protein}{$protein_best_human{$other}{human}{key}}
+                                     or $protein_any_human{$other}{$human->{key}} } @others;
+      my $transcript = transcript_of_protein($protein) // next;
+      my $place = $transcript_place{$transcript} // next;
+      # where the gene's other proteins lie: the other gene must not lie over them too (a cluster of
+      # overlapping genes of one family -- Danio NLRC3 -- is not a read-through)
+      my @other_places = grep { my $other_place = $_; defined $other_place } map { my $other = $_; my $other_transcript = transcript_of_protein($other);
+                                                defined $other_transcript ? $transcript_place{$other_transcript} : undef } @others;
+      foreach my $match (@{$by_human{$human->{key}} // []}) {
+        my ($other_group, $other_transcript) = @$match;
+        next if $other_group eq $group;
+        my $other_place = $transcript_place{$other_transcript} // next;
+        next unless places_overlap($place, $other_place);
+        next if grep { my $own = $_; places_overlap($own, $other_place) } @other_places;
+        my $entry = $entry_of{$human->{key}} //= { human => $human, transcripts => [], genes => [], seen => {} };
+        my $label = $transcript_label{$transcript} // $transcript;
+        my $gene = $transcript_gene{$other_transcript} // $other_group;
+        push @{$entry->{transcripts}}, $label unless $entry->{seen}{"t\t$label"}++;
+        push @{$entry->{genes}}, $gene unless $entry->{seen}{"g\t$gene"}++;
+      }
+    }
+    next unless %entry_of;
+    $read_through{$group} = [ map { my $key = $_; $entry_of{$key} } sort keys %entry_of ];
+    $stats{'read-through transcript caution: genes'}++;
+  }
+}
+
+sub places_overlap {
+  my ($one, $two) = @_;
+  return $one->[0] eq $two->[0] && $one->[1] <= $two->[2] && $two->[1] <= $one->[2];
+}
+
+# "transcript KLF5-202 overlaps the gene pibf1 (ENSDARG00000013006), and its protein matches human PIBF1, as
+# that gene's does"; several transcripts or genes for one human gene in one clause
+sub read_through_text {
+  my ($entry) = @_;
+  my @transcripts = @{$entry->{transcripts}};
+  my @genes = map { my $gene = $_; gff_gene_text($gene) } @{$entry->{genes}};
+  return (@transcripts == 1 ? "transcript $transcripts[0] overlaps" : 'transcripts ' . join(', ', @transcripts) . ' overlap')
+       . (@genes == 1 ? " the gene $genes[0]" : ' the genes ' . join(', ', @genes))
+       . (@transcripts == 1 ? ', and its protein matches' : ', and their proteins match') . ' human ' . human_label($entry->{human})
+       . (@genes == 1 ? q{, as that gene's does} : q{, as those genes' do});
 }
 
 # "scaffold JAPFQT010000554.1": where a gene is. The scaffold's name alone: its length beside a protein's
@@ -1394,9 +1512,12 @@ sub collect_diamond {
       record_human_hit($group, $candidate->{human}, { %hit, id => $query, hit => $subject, reciprocal => 0,
                                                      tool => 'DIAMOND', label => $candidate->{label},
                                                      source => $candidate->{source}, type => $candidate->{type} }) if $candidate->{human};
+      $protein_any_human{$query}{$candidate->{human}{key}} = 1 if $candidate->{human} and $evalue <= $HIT_MAX_EVALUE;
       next unless passes(\%hit, \%NORMAL);
       push @{$hits{$group}}, { %hit, %$candidate, id => $query, hit => $subject, reciprocal => 0 };
       if ($candidate->{human}) {
+        my $protein_hit = { %hit, id => $query, hit => $subject, human => $candidate->{human} };
+        $protein_best_human{$query} = $protein_hit if better_hit($protein_hit, $protein_best_human{$query});
         add_link($group, tier => 5, human => [$candidate->{human}], type => 'best hit', id => $query,
                  bits => $hit{bits}, evalue => $hit{evalue}, evidence => "best BLAST hit ($candidate->{label})", hit => $subject);
       }
@@ -4063,6 +4184,7 @@ sub gene_statements {
   @unsaid = grep { my $words = $_; $words !~ /^OMA / } @unsaid if $tag{omaX} or $tag{omaC} or $tag{omaR};
   push @cautions, (@unsaid == 1 ? 'one method points' : scalar(@unsaid) . ' methods point') . ' to other human genes: ' . join(', ', @unsaid)
     if @humans and @unsaid;
+  push @cautions, map { my $entry = $_; read_through_text($entry) } @{$read_through{$group} // []};
   my $length = max_member_length($group);
   push @cautions, "a short protein, $length aa" if $length and $length < $SHORT_PROTEIN;
   $said{cautions} = ucfirst join('; ', @cautions) if @cautions;

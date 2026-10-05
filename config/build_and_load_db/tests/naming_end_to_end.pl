@@ -541,6 +541,60 @@ my $out = "$dir/out1";
   check(scalar(($identical // '') =~ /^3 other genes encode the same 250 aa protein/), 'transcript isoforms: identical proteins still found (G2)', $identical);
 }
 
+# ---- a read-through transcript (--gff): GX's second transcript lies over gene GY and its protein matches
+# GY's human gene (GAMMA), which GX's other protein (ALPHA) does not hit at all -> a caution on GX, none on
+# GY, and GX keeps its name (Danio rerio 2026-10-05: KLF5-202 over pibf1, matching human PIBF1). The FASTA
+# ids carry a version the GFF's protein_id lacks, as Ensembl's do.
+{
+  my $rt = "$dir/readthrough";
+  system('mkdir', '-p', $rt) == 0 or die;
+  system('cp', '-r', "$dir/diamond", "$rt/diamond") == 0 or die;
+  system('cp', "$dir/isoforms.tsv", "$dir/protein.aa.fa", $rt) == 0 or die;
+  write_file("$rt/isoforms.tsv", "X1.1;X2.1\tNone\tGX\nX3.1\tNone\tGY\nX5.1;X6.1\tNone\tGC\nX7.1\tNone\tGD\n", 1);
+  write_file("$rt/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x 300) . "\n" } qw(X1 X2 X3 X5 X6 X7)), 1);
+  write_file("$rt/diamond/ENS_homo_sapiens/diamond_results.tsv",
+    $dhit->('X1', '01', 'ALPHA', 'alpha synthase', '1e-150', 600, 300, 300, 95, 95)
+    . $dhit->('X2', '04', 'GAMMA', 'gamma transferase', '1e-100', 400, 300, 250, 95, 95)
+    . $dhit->('X3', '04', 'GAMMA', 'gamma transferase', '1e-100', 400, 300, 250, 95, 95)
+    . $dhit->('X5', '01', 'ALPHA', 'alpha synthase', '1e-150', 600, 300, 300, 95, 95)
+    . $dhit->('X6', '04', 'GAMMA', 'gamma transferase', '1e-100', 400, 300, 250, 95, 95)
+    . $dhit->('X7', '04', 'GAMMA', 'gamma transferase', '1e-100', 400, 300, 250, 95, 95), 1);
+  my $feature = sub { my ($type, $start, $end, $attributes) = @_; return join("\t", 's1', 'test', $type, $start, $end, '.', '-', '.', $attributes) . "\n" };
+  write_file("$rt/genes.gff", "##gff-version 3\n"
+    . $feature->('gene', 1000, 9000, 'ID=gene:GX;Name=alpa')
+    . $feature->('mRNA', 1000, 4000, 'ID=transcript:RX1;Parent=gene:GX;Name=alpa-201')
+    . $feature->('CDS', 1000, 4000, 'ID=CDS:X1;Parent=transcript:RX1;protein_id=X1')
+    . $feature->('mRNA', 3900, 9000, 'ID=transcript:RX2;Parent=gene:GX;Name=alpa-202')
+    . $feature->('CDS', 3900, 9000, 'ID=CDS:X2;Parent=transcript:RX2;protein_id=X2')
+    . $feature->('gene', 4500, 9200, 'ID=gene:GY;Name=gamb')
+    . $feature->('mRNA', 4500, 9200, 'ID=transcript:RY;Parent=gene:GY;Name=gamb-201')
+    . $feature->('CDS', 4500, 9200, 'ID=CDS:X3;Parent=transcript:RY;protein_id=X3')
+    . $feature->('gene', 20000, 30000, 'ID=gene:GC;Name=alpc')
+    . $feature->('mRNA', 20000, 30000, 'ID=transcript:RC1;Parent=gene:GC;Name=alpc-201')
+    . $feature->('CDS', 20000, 30000, 'ID=CDS:X5;Parent=transcript:RC1;protein_id=X5')
+    . $feature->('mRNA', 20000, 25000, 'ID=transcript:RC2;Parent=gene:GC;Name=alpc-202')
+    . $feature->('CDS', 20000, 25000, 'ID=CDS:X6;Parent=transcript:RC2;protein_id=X6')
+    . $feature->('gene', 15000, 35000, 'ID=gene:GD;Name=gamd')
+    . $feature->('mRNA', 15000, 35000, 'ID=transcript:RD;Parent=gene:GD;Name=gamd-201')
+    . $feature->('CDS', 15000, 35000, 'ID=CDS:X7;Parent=transcript:RD;protein_id=X7'));
+  my %replace = ("$dir/isoforms.tsv" => "$rt/isoforms.tsv", "$dir/protein.aa.fa" => "$rt/protein.aa.fa", "$dir/diamond" => "$rt/diamond");
+  my @readthrough = map { my $argument = $_; $replace{$argument} // $argument } @arguments;
+  my $rt_out = "$rt/out";
+  system('mkdir', '-p', $rt_out) == 0 or die;
+  my $status = system("\Q$^X\E \Q$script\E " . join(' ', map { my $argument = $_; "\Q$argument\E" } @readthrough, '--gff', "$rt/genes.gff")
+                      . " --out-names \Q$rt_out/geneNames.tsv\E --out-dir \Q$rt_out\E > \Q$rt_out.log\E 2>&1");
+  check($status == 0, 'assign_gene_names_v2.pl runs with --gff (read-through transcripts)', `tail -3 \Q$rt_out.log\E`);
+  my %caution = map { my $row = $_; ($row->[0] => $row->[2]) } read_tsv("$rt_out/gene_statement.cautions.moop.tsv");
+  check(scalar(($caution{GX} // '') =~ /(?i:t)ranscript alpa-202 overlaps the gene gamb \(GY\), and its protein matches human GAMMA, as that gene's does/),
+        'read-through: the caution names the transcript, the gene it lies over and the human gene (GX)', $caution{GX});
+  check(scalar(($caution{GY} // '') !~ /overlaps the gene/), 'read-through: no caution on the gene it lies over (GY)', $caution{GY});
+  # GD lies over both of GC's transcripts, the ALPHA one too: overlapping genes of one family, not a read-through
+  check(scalar(($caution{GC} // '') !~ /overlaps the gene/), 'read-through: none when the other gene also lies over the other transcripts of the gene (GC)', $caution{GC});
+  my %name;
+  foreach my $row (read_tsv("$rt_out/geneNames.tsv")) { $name{$row->[2]} //= $row->[3]; }
+  check(scalar(($name{GX} // '') =~ /ALPHA/), 'read-through: the gene keeps its name (GX)', $name{GX});
+}
+
 # ---- --native: a gene whose own name is only its Ensembl id ("ENS...: ", no description) takes the
 # pipeline's name; a real symbol with no description is kept (Danio rerio: 7,453 genes kept their id)
 {
