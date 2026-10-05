@@ -38,6 +38,7 @@ sub clean_name {
   $name =~ s/\s+precursor\s*$//i;
   $name =~ s/;.*$//;
   $name =~ s/\s+/ /g;
+  $name =~ s/ ,/,/g;   # a source's stray space before a comma ("laminin , and", HGNC group 1218)
   $name =~ s/^\s+|\s+$//g;
   return $name;
 }
@@ -151,7 +152,7 @@ sub add_like_to_description {
   # already a similarity name: "...-like", "...-like protein", "...-like protein 2" -- or a human name
   # ending in the word "like" ("calcyphosine like", HGNC CAPSL): no second "like" (user's choice,
   # 2026-10-05; the symbol, "CAPSL-like", still marks the similarity). 22 names were "... like-like".
-  return $name if $name =~ /(?:^|[\s-])like(?:\s+protein)?(?:\s+\d+[A-Za-z]?)?$/i;
+  return $name if $name =~ /-like(?:\s+protein)?(?:\s+\d+[A-Za-z]?)?$/i or $name =~ /\slike$/i;
   # qualifiers read better after "-like" is removed than with it glued on
   $name =~ s/,\s*(?:mitochondrial|chloroplastic|cytoplasmic|nuclear|peroxisomal)\s*$//i;
   # a trailing bracketed part stays last: "BCL2-like 12-like (proline rich)"

@@ -525,6 +525,22 @@ my $out = "$dir/out1";
         'FASTA ids that match no gene: stops at the start with a clear message', $message);
 }
 
+# ---- an Ensembl-style gene set: isoforms.tsv lists TRANSCRIPTS, proteins reach their genes through
+# protein2gene. The gene's own proteins are still found (Danio rerio 2026-10-05: no Identical proteins
+# statement, no protein features, no "a short protein" note -- every lookup by a transcript id failed)
+{
+  write_file("$dir/isoforms_ensembl.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "R$n.1\tNone\tG$n\n" } sort keys %length));
+  write_file("$dir/protein2gene_ensembl.txt", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tG$n\n" } sort keys %length));
+  my @ensembl = map { my $argument = $_; $argument eq "$dir/isoforms.tsv" ? "$dir/isoforms_ensembl.tsv" : $argument } @arguments;
+  my $ensembl_out = "$dir/out_ensembl";
+  system('mkdir', '-p', $ensembl_out) == 0 or die;
+  my $status = system("\Q$^X\E \Q$script\E " . join(' ', map { my $argument = $_; "\Q$argument\E" } @ensembl, '--protein2gene', "$dir/protein2gene_ensembl.txt")
+                      . " --out-names \Q$ensembl_out/geneNames.tsv\E --out-dir \Q$ensembl_out\E > \Q$ensembl_out.log\E 2>&1");
+  check($status == 0, 'assign_gene_names_v2.pl runs with transcript isoforms + protein2gene', `tail -3 \Q$ensembl_out.log\E`);
+  my ($identical) = map { my $row = $_; $row->[0] eq 'G2' ? $row->[2] : () } read_tsv("$ensembl_out/gene_statement.identical.moop.tsv");
+  check(scalar(($identical // '') =~ /^3 other genes encode the same 250 aa protein/), 'transcript isoforms: identical proteins still found (G2)', $identical);
+}
+
 # ---- --native: a gene whose own name is only its Ensembl id ("ENS...: ", no description) takes the
 # pipeline's name; a real symbol with no description is kept (Danio rerio: 7,453 genes kept their id)
 {

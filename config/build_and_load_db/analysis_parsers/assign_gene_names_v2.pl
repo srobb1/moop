@@ -303,6 +303,7 @@ my (@closest_species, $naming_species);
 my %stats;
 my (%group_of, %members, %curated_selected);   # isoform groups
 my (%gene_of_protein, %query_length);
+my %proteins_of;   # group -> the FASTA proteins that are its own (group_for): the isoforms of an Ensembl gene set are transcripts
 my $hgnc;
 my %human_links;      # group -> [ link ]   link = {tier, human => [records], type, evidence, bits, id, hit}
 my %all_human_links;  # the same, before choose_closest_human sets unsupported OMA links aside (Evidence_by_method column)
@@ -402,6 +403,10 @@ sub main {
   %gene_of_protein = read_protein2gene($opt{protein2gene});
   %query_length = fasta_lengths($opt{'protein-fasta'});
   check_proteins_have_genes();
+  foreach my $protein (sort keys %query_length) {
+    my $group = group_for($protein) // next;
+    push @{$proteins_of{$group}}, $protein;
+  }
   read_identical_proteins($opt{'protein-fasta'});
   read_gene_scaffolds($opt{gff}) if defined $opt{gff};
   %gene_set_meta = read_metadata($opt{metadata}) if defined $opt{metadata};
@@ -637,9 +642,13 @@ sub read_transcript_hits {
 }
 
 # the protein a gene's features are read from: its longest (ties by id)
+# a gene's longest protein, by its FASTA id. Its members (isoforms.tsv) are protein ids for RefSeq and
+# most gene sets but transcript ids for Ensembl, so the gene's proteins come from the FASTA through
+# group_for (2026-10-05: Danio rerio had no Identical proteins statement, no protein features and no
+# "a short protein" note -- every lookup by a transcript id found nothing).
 sub longest_member {
   my ($group) = @_;
-  my ($longest) = sort { ($query_length{$b} // 0) <=> ($query_length{$a} // 0) or $a cmp $b } @{$members{$group} // []};
+  my ($longest) = sort { ($query_length{$b} // 0) <=> ($query_length{$a} // 0) or $a cmp $b } @{$proteins_of{$group} // $members{$group} // []};
   return $longest;
 }
 
@@ -3266,7 +3275,7 @@ sub write_gene_model_flags {
 sub max_member_length {
   my ($group) = @_;
   my $longest = 0;
-  foreach my $id (@{$members{$group} // []}) {
+  foreach my $id (@{$proteins_of{$group} // $members{$group} // []}) {
     my $length = $query_length{$id} // 0;
     $longest = $length if $length > $longest;
   }
@@ -3525,6 +3534,7 @@ sub family_member {
   # the first colon as the symbol): "DUMPY: SHORTER THAN WILD-TYPE" -> "DUMPY - SHORTER ..."
   (my $name = $family) =~ s/\s*:\s*/ - /g;
   $name =~ s/\s+/ /g;   # stray double spaces in PANTHER / HGNC names
+  $name =~ s/ ,/,/g;    # and a stray space before a comma ("Discoidin, CUB, EGF, laminin , and ...")
   $name =~ s/^ | $//g;
   # already "... family member" ("SOLUTE CARRIER FAMILY 22 MEMBER"); ending in a family
   # ("Solute carrier family 5", "Glycosyl transferase family 10", "... superfamily") -> "member";
