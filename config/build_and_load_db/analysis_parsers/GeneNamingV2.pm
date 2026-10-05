@@ -148,13 +148,17 @@ sub is_informative_hit {
 sub add_like_to_description {
   my ($description) = @_;
   my $name = clean_name($description);
-  # already a similarity name: "...-like", "...-like protein", "...-like protein 2"
-  return $name if $name =~ /-like(?:\s+protein)?(?:\s+\d+[A-Za-z]?)?$/i;
+  # already a similarity name: "...-like", "...-like protein", "...-like protein 2" -- or a human name
+  # ending in the word "like" ("calcyphosine like", HGNC CAPSL): no second "like" (user's choice,
+  # 2026-10-05; the symbol, "CAPSL-like", still marks the similarity). 22 names were "... like-like".
+  return $name if $name =~ /(?:^|[\s-])like(?:\s+protein)?(?:\s+\d+[A-Za-z]?)?$/i;
   # qualifiers read better after "-like" is removed than with it glued on
   $name =~ s/,\s*(?:mitochondrial|chloroplastic|cytoplasmic|nuclear|peroxisomal)\s*$//i;
   # a trailing bracketed part stays last: "BCL2-like 12-like (proline rich)"
   if ($name =~ /^(.*\S)\s+(\([^()]*\))$/) {
-    return "$1-like $2";
+    my ($main, $bracket) = ($1, $2);
+    return $name if $main =~ /(?:^|[\s-])like$/i;   # "rabphilin 3A like (without C2 domains)"
+    return "$main-like $bracket";
   }
   return "$name-like";
 }

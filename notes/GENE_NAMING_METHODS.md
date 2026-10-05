@@ -101,6 +101,7 @@ needs them in this form, or the rule that depends on them is silently weaker:
 | Human search database | **canonical** Ensembl proteins, one per gene, with Ensembl's own FASTA headers (`gene:`, `gene_symbol:`, `description:` with `[Source:HGNC Symbol;Acc:HGNC:…]`); `$REF_DB/ENS_homo_sapiens/current/peptide.fa.gz` is the FASTA the database was built from | `--ref-db` | headers without `gene:`/`Acc:HGNC`: hits cannot be resolved to HGNC genes |
 | MMseqs2 RBH | `mmseqs easy-rbh` against each Ensembl proteome; the protein FASTA it searched must be `peptide.fa.gz` (or the release's `*.pep.all.fa.gz`, same ids) under `--ref-db` | `<analysis>/rbh_mmseq/ENS_<species>/rbh_mmseq_results.tsv` | a hit whose protein is not in that FASTA is skipped (counted in stats: coverage cannot be computed) |
 | Reference proteomes | `--ref-db`: required whenever OMA, MMseqs2 or DIAMOND results are given (coverage of hits, human gene loci and sequences); the script stops at the start without it | `$REF_DB/ENS_<species>/current/` | — |
+| Protein ids | every id in `protein.aa.fa` (and so in every search result) must reach a gene: through `isoforms.tsv` (built from `genes.gff`, or from `protein2gene.txt` without a GFF) or `protein2gene.txt`. An Ensembl GFF keeps the version in a tag (`ID=gene:ENSDARG00000009657;…;version=8`) while its FASTAs use `id.version`: the build writes its own copy of the GFF with versioned ids (`scripts/add_id_versions.pl`, only when every FASTA protein id is a GFF `protein_id.version`) | `--protein-fasta`, `--isoforms`, `--protein2gene` | naming stops ("N of M proteins … have no gene") when more than half have none; below that, the count is in the stats (`proteins with no gene in the gene set`) |
 | Gene set metadata | `metadata.yaml` with `ncbi-taxon-id` | `$GENESET_DIR/metadata.yaml` | no taxon id: no PANTHER tree placement |
 | Reference data | `scripts/update_reference_data.sh`: HGNC, UniProt cross-references, Ensembl Compara, NCBI taxonomy, InterPro `entry.list`, PANTHER model lengths, PANTHER TreeGrafter trees (`panther_trees`) | `$REFERENCE_DATA` | missing required files stop the build |
 
@@ -211,7 +212,12 @@ word: a word HGNC's approved names use takes HGNC's most frequent spelling (`deh
 (`METALLOPROTEASE`) and kept as an acronym when shorter (`NACHT`, `DOMON`); words with digits stay
 (`9C`, `E2`). `SHORT-CHAIN DEHYDROGENASE/REDUCTASE FAMILY 9C` becomes `Short-chain
 dehydrogenase/reductase family 9C`. The provenance keeps PANTHER's own spelling. Native names (§5, step 2) are kept exactly as the source
-gives them.
+gives them -- unless uninformative. A native name that is only a symbol with no description is judged
+by the symbol: a gene with no name of its own, which Ensembl gives as its id
+(`ENSDARG00000000370.10: `), is uninformative and takes the pipeline's name (Danio rerio: 7,453
+genes kept their id as their name until 2026-10-05); a real symbol (`rnf169: `) is kept. Likewise a description that only repeats the symbol (RefSeq's
+fly product names, `B9d2: B9d2`, `pre-mod(mdg4)-X: pre-mod(mdg4)-X, isoform A`) is judged by the
+symbol: a real symbol is kept (744 fly genes had been replaced), a placeholder (`CG4321: CG4321`) is not.
 
 ## 5. Naming — the first step that yields a name wins
 
@@ -245,6 +251,9 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
   - `te` (on an `ISO` name) — the ortholog carries a **t**ransposable-**e**lement domain
   - `omaX` — an **OMA** ortholog was e**x**cluded (set aside: nothing supported it)
   - `omaC` — an **OMA** name was withheld: the evidence **c**onflicts with it (best human hit another gene, and a different PANTHER family)
+  - `omaR` — an **OMA** many:1 pairing was **r**ejected as a whole: ≥ 5 genes here paired with one human gene and fewer than half pass the checks, so none of them is named after it
+  - `tree+` / `treeC` — the PANTHER **tree** places the gene with the named human gene / **c**onflicts (other human genes); `treeC` withholds a step-6 `-like` name, and only marks an OMA name
+  - With `omaX`, `omaC`, `omaR` (and `treeC` on step 6) the call is not used and the next step names the gene; the mark stays in the tag, so a reader sees OMA (or the best hit) was passed over and the Cautions statement says why
 
 | Step | Source | Condition | Name form | Tag |
 |---|---|---|---|---|
@@ -418,8 +427,9 @@ PANTHER family tree, the other through pairwise hits. When the closest gene is a
 through another species reaching several copies), the tree's choice of one copy is shown as a vote
 (`tree+`) but does not name the gene: one method alone would be picking the copy. Like step 6, it is skipped after an OMA co-ortholog family that step 3
 could not name. Elsewhere the tree is one vote: on OMA and `-like` names it adds `tree+` (it
-places the gene with the named human gene) or `treeC` (with other human genes), and never changes
-the name. On a 3,235-protein *C. kusceri* sample: trusted placements put the gene with OMA's named
+places the gene with the named human gene) or `treeC` (with other human genes). On an OMA name
+`treeC` never changes the name; on a step-6 `-like` name it withholds it (step 6, item 4; since
+2026-10-05). On a 3,235-protein *C. kusceri* sample: trusted placements put the gene with OMA's named
 gene 215 times out of 221; the step named 78 genes (63 previously a PANTHER family name, 9 a
 `-like` name, 5 a domain, 1 none), and `tree+`/`treeC` marked 749/20 OMA and 57/8 `-like` names.
 The disagreements with OMA (AQP8 → AQP1/2/4/5/6/MIP, PSMB4 → PSMB1) look like tree misplacements
@@ -449,7 +459,20 @@ bitscore (§3).
    step 6 gives no name.
 3. The name is **always** `-like`, reciprocal or not: sequence similarity, even reciprocal, is
    not an orthology call (§9). The symbol is the human gene's HGNC symbol, or none; it is
-   never taken from another gene.
+   never taken from another gene. A human name that already ends in the word "like" gets no
+   second one: `CAPSL-like: calcyphosine like`, not "calcyphosine like-like" (the symbol marks the
+   similarity; 22 names, user's choice 2026-10-05).
+4. **The PANTHER tree can withhold it (`treeC`).** When a trusted PANTHER tree placement (step 5's
+   bar) joins the gene to OTHER human genes than the one (or the tied group) step 6 would name it
+   after, step 6 gives no name; step 7 is skipped too (the gene has a full-length human hit left
+   unnamed), and the PANTHER family or InterPro domain names it. Its provenance ends "the
+   full-length best hit does not name it "X-like: …": TreeGrafter places it with human Y (…)".
+   Measured on Danio rerio against ZFIN's own names (2026-10-05): step-6 names the tree
+   contradicted agreed 29% of the time (20 of 68), those it supported 78%, those without a
+   placement 72%; in the conflicts the best-hit gene and the tree's gene were each right about as
+   often (20 vs 19), so neither names the gene. Cost: Congeria 38 names change (0 lost),
+   Phagocata 36 (1 lost), Danio 143 (4 lost); the rest take a family or domain name.
+   (On an OMA name, step 3, `treeC` is only a mark: OMA is the stronger call and the name stays.)
 
 **Step 7 — a Swiss-Prot protein of another species.** Many genes of a mollusc, a flatworm or a cnidarian have no human
 counterpart, or none along their length (chitin synthases, hemocyanins, shell matrix proteins), and a reviewed protein of
@@ -606,6 +629,7 @@ the same thing wherever it appears:
 | `C` | contradicts: the evidence points elsewhere | `pthrC` (a different PANTHER family), `treeC` (the PANTHER tree places it with other human genes), `omaC` (an OMA name withheld: `sim~` and `pthrC` together) |
 | `-` | no evidence | `sim-` (no similarity hit to the named gene) |
 | `X` | excluded: set aside | `omaX` (an OMA pair nothing supports) |
+| `R` | rejected: a whole pairing | `omaR` (OMA pairs ≥ 5 genes here with one human gene, fewer than half pass: none is named after it) |
 
 `~` is deliberately not `C`: a close paralog outscoring the true ortholog is common and does not by
 itself contradict an orthology call; only together with a conflicting PANTHER family (`pthrC`) is
@@ -741,16 +765,17 @@ the statements that apply to a gene are written; nothing negative is said about 
 | Order | Type | Says | Backed by (table on the page) |
 |---|---|---|---|
 | 1 | Identity | the relationship and the step: "Co-ortholog of human EPDR1; by PANTHER tree placement" | orthologs, closest human |
-| 1 | No name | why no step named it: "No hits: ..." / "Hits did not pass the naming tests (found: ...)" | -- |
+| 1 | No name | why no step named it: "No hits: ..." / "Hits did not pass the naming tests (found: ...)". A gene that shows its own (RefSeq/Ensembl) name gets an Identity statement instead -- "Named by its own annotation (Ensembl); the pipeline's evidence does not name it: hits did not pass the naming tests (found: ...)" (file kind `identity.native`) -- so its page never opens with "No name" under a name | -- |
 | 2 | Support | the methods that agree on the named human gene(s), and a shared PANTHER family: "Supported by 4 methods: MMseqs2 reciprocal best hit, transitive ortholog through fly, best human hit (partial alignment), PANTHER tree placement; the same PANTHER family (PTHR12460) as the human gene" (a transitive ortholog names up to 3 species, else "through 8 species") (Evidence_by_method; these methods share one signal, sequence similarity -- a report, not independent votes) | closest human, homologs |
 | 3 | Copies | "One of 10 genes in this genome named after it (the others: ...)" | OMA |
 | 4 | Identical proteins | the other genes whose protein is the same sequence, each with its scaffold: "2 other genes encode the same 613 aa protein, residue for residue: A on scaffold JAPFQT010000554.1; B on ... . This gene is on scaffold CM051040.1". Copies of a recent duplication, or one locus assembled more than once (a short unplaced scaffold); a primer, probe or dsRNA matches all of them. File kind `identical`. Congeria: 5,739 genes in 2,242 sets | protein FASTA, GFF |
 | 5 | Alignment | how much of each protein aligns to the named human gene; for a family, domain or no name, the best human hit and its shape (fragment, fusion) | homologs |
 | 6 | Domains | which of the human gene's Pfam domains this gene has (same-clan families count; a domain fragment does not): the named human gene -- of several, the one it aligns to best -- or, for a family, domain or no name, its best human hit ("Has 2 of NCAN's 5 Pfam domains; no Pfam match here to PF00008 EGF, ..."); a human gene with no Pfam domain in UniProt is said so. Congeria: 17,127 genes | InterProScan |
 | 7 | Tree | where TreeGrafter places it, and whether that agrees with the name | PANTHER |
-| 8 | Cautions | every reason for doubt in words: the evidence marks, other methods pointing to other human genes, few methods agreeing, a small part of the human protein, a one-way best hit, a transposon domain, a short protein | -- |
+| 8 | Cautions | every reason for doubt in words: the evidence marks, other methods pointing to other human genes, few methods agreeing, a small part of the human protein, a one-way best hit, a transposon domain, a short protein; and when the named human gene is a pseudogene (HGNC: "Human GUCY1B2 is a pseudogene (HGNC)") or one in some people ("… a pseudogene in some people (HGNC: gene/pseudogene)") -- HGNC's own note stays in the name, the caution says it is about the human gene | -- |
 | 9 | Features | signal peptide, transmembrane helices, a DeepLoc location with its signal | SignalP, DeepTMHMM, DeepLoc |
 | 10 | Expression | each own transcriptome that has it (a tissue, a stage) | transcriptome |
+| 11 | MOOP name | for a gene that shows its own (RefSeq/Ensembl) name: the name MOOP's own steps give it and by which step, "MOOP name: SLC35A5: solute carrier family 35 member A5 [ISO\|1to1\|…] (by OMA human ortholog)" -- so both the source's name and MOOP's are on the page (the label is the site's to word). File kind `pipeline_name`; the full reasons are in `naming_decisions.tsv` (Pipeline_name, S1–S9) | -- |
 
 Example (Congeria COKUS1KC_0014560):
 

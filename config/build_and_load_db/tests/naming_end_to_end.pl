@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200, T55 => 200, T56 => 200, T57 => 80, T58 => 210, T59 => 310, T60 => 220);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200, T55 => 200, T56 => 200, T57 => 80, T58 => 210, T59 => 310, T60 => 220, T61 => 300, T62 => 300);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -306,7 +306,9 @@ write_file("$dir/diamond/ENS_homo_sapiens/diamond_results.tsv",
   . $dhit->('T29', '19', 'MIX1', 'mix protein 1', '1e-80', 300, 300, 300, 90, 90)
   . $dhit->('T34', '24', 'IOTA', 'iota kinase', '1e-50', 200, 300, 300, 90, 90)
   # T35: full length to WSA1 -> WSA1-like; the tree places it with WSA1 among co-orthologs -> tree+
-  . $dhit->('T35', '23', 'WSA1', 'widget sprocket associated 1', '1e-100', 400, 300, 300, 95, 95));
+  . $dhit->('T35', '23', 'WSA1', 'widget sprocket associated 1', '1e-100', 400, 300, 300, 95, 95)
+  # T61: full length to THETA -> would be THETA-like, but the tree places it with IOTA -> withheld (treeC)
+  . $dhit->('T61', '18', 'THETA', 'theta ligase', '1e-120', 400, 300, 300, 95, 95));
 
 # ---- InterProScan TSV (PANTHER families and InterPro domains), InterPro entry list, PANTHER model lengths
 # PANTHER names a gene only when its match covers >= 80% of the family model:
@@ -375,6 +377,10 @@ write_file("$dir/iprscan.tsv", join('',
   $row->('T44', 200, 'PANTHER', 'PTHR00044', 'OSPREY PROTEIN',   1, 190, '1.0E-50', '-', '-'),
   # T45: 78% by protein residues, no JSON coverage -> no family name (80% by residues)
   $row->('T45', 200, 'PANTHER', 'PTHR00045', 'FALCON PROTEIN',   1, 156, '1.0E-50', '-', '-'),
+  # T61: its THETA-like name withheld (treeC) -> this family names it
+  $row->('T61', 300, 'PANTHER', 'PTHR00061', 'GIZMO PROTEIN',    1, 290, '1.0E-50', '-', '-'),
+  # T62: a family whose name already ends in "member" -> one "member", not "... MEMBER family member"
+  $row->('T62', 300, 'PANTHER', 'PTHR00062', 'SPROCKET RECEPTOR 1 SUPERFAMILY MEMBER', 1, 290, '1.0E-50', '-', '-'),
 ));
 # ---- InterProScan model coverage from the JSON (scripts/interproscan_model_coverage.py)
 write_file("$dir/model_coverage.tsv", "# test\nprotein\tanalysis\tsignature\tmodel_length\tmodel_coverage_pct\n"
@@ -391,7 +397,7 @@ write_file("$dir/entry.list", "ENTRY_AC\tENTRY_TYPE\tENTRY_NAME\nIPR000001\tDoma
   . "IPR000038\tDomain\tSpindle domain\nIPR000039\tDomain\tBolt domain\nIPR000040\tDomain\tNut domain\n");
 write_file("$dir/hmm_lengths.tsv", join('', map { my $model = $_; "$model->[0]\t$model->[1]\n" }
   ['PTHR00006', 100], ['PTHR00007', 200], ['PTHR00009', 120], ['PTHR00010', 250], ['PTHR00011', 200], ['PTHR00012', 150],
-  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300], ['PTHR00030', 200], ['PTHR00038', 200], ['PTHR00044', 200], ['PTHR00045', 200]));
+  ['PTHR00001', 300], ['PTHR00099', 250], ['PTHR00024', 200], ['PTHR00018', 300], ['PTHR00027', 300], ['PTHR00028', 300], ['PTHR00030', 200], ['PTHR00038', 200], ['PTHR00044', 200], ['PTHR00045', 200], ['PTHR00061', 300], ['PTHR00062', 300]));
 
 # ---- PANTHER tree placements (scripts/panther_placements.py output)
 #   T31: one human ortholog, EPS, and EPS is its closest human gene (RBH) -> named EPS by the tree (step 5)
@@ -399,6 +405,7 @@ write_file("$dir/hmm_lengths.tsv", join('', map { my $model = $_; "$model->[0]\t
 #   T33: EPS again, but the PANTHER match is weak (E=1e-5) -> not trusted, not used
 #   T34: THETA, against OMA's IOTA -> treeC on the OMA name
 #   T35: co-orthologs WSA1 and MIX4 -> tree+ on the WSA1-like name
+#   T61: IOTA, against its full-length best hit THETA -> the THETA-like name is withheld (treeC)
 my $placement = sub { my ($id, $match, $evalue, $pcov, $mcov, $placement, $humans) = @_;
   return join("\t", "$id.1", $match, 'NAME', $evalue, $pcov, $mcov, 'PTN0001', 'PTHR00031:AN5', 'speciation', 'Deuterostomia',
               'PTHR00031:AN3', 'speciation', 'Bilateria', 'yes', $placement, $humans) . "\n" };
@@ -409,7 +416,8 @@ write_file("$dir/panther_placements.tsv", "# test placements\n"
   . $placement->('T32', 'PTHR00031:SF2', '1e-50', 90, 85, 'ortholog_1', 'HGNC:5')
   . $placement->('T33', 'PTHR00031:SF1', '1e-5', 90, 85, 'ortholog_1', 'HGNC:6')
   . $placement->('T34', 'PTHR00031:SF3', '1e-60', 90, 85, 'ortholog_1', 'HGNC:18')
-  . $placement->('T35', 'PTHR00031:SF4', '1e-80', 95, 90, 'co-orthologs', 'HGNC:22;HGNC:23'));
+  . $placement->('T35', 'PTHR00031:SF4', '1e-80', 95, 90, 'co-orthologs', 'HGNC:22;HGNC:23')
+  . $placement->('T61', 'PTHR00031:SF3', '1e-60', 90, 85, 'ortholog_1', 'HGNC:24'));
 
 # ---- a closest species searched by scripts/closest_species_rbh.sh and closest_species_diamond.sh
 # (a planarian stand-in; real Schmidtea FASTA titles carry ids only, like SMED9 here)
@@ -505,6 +513,54 @@ my $out = "$dir/out1";
   }
   my $message = `\Q$^X\E \Q$script\E @{[ join(' ', map { my $argument = $_; "\Q$argument\E" } @without_ref_db) ]} --out-names \Q$dir/x.tsv\E --out-dir \Q$dir\E 2>&1`;
   check($? != 0 && scalar($message =~ /^--ref-db is required with --oma-dir, --mmseqs-dir or --diamond-dir/), 'no --ref-db: stops at the start with a clear message', $message);
+}
+
+# ---- protein ids that are not the gene set's (Danio rerio 2026-10-05: FASTA ENSDARP...6, GFF without the
+# version) stop at once instead of naming every gene "no hits"
+{
+  write_file("$dir/protein_other_ids.fa", join('', map { my $protein = $_; ">$protein.9\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
+  my @other_ids = map { my $argument = $_; $argument eq "$dir/protein.aa.fa" ? "$dir/protein_other_ids.fa" : $argument } @arguments;
+  my $message = `\Q$^X\E \Q$script\E @{[ join(' ', map { my $argument = $_; "\Q$argument\E" } @other_ids) ]} --out-names \Q$dir/x.tsv\E --out-dir \Q$dir\E 2>&1`;
+  check($? != 0 && scalar($message =~ /^\d+ of \d+ proteins in \S+ have no gene .*the FASTA ids do not match the gene set's ids/),
+        'FASTA ids that match no gene: stops at the start with a clear message', $message);
+}
+
+# ---- --native: a gene whose own name is only its Ensembl id ("ENS...: ", no description) takes the
+# pipeline's name; a real symbol with no description is kept (Danio rerio: 7,453 genes kept their id)
+{
+  write_file("$dir/native.tsv", "ID\tMAINID\tGroupId\tDesc\tNote\n"
+    . "G1\tG1\tG1\tENSTESG00000000001.1: \tTest\nT1.1\tSELF\tG1\tENSTESG00000000001.1: \tTest\n"
+    . "G5\tG5\tG5\trnf169: \tTest\nT5.1\tSELF\tG5\trnf169: \tTest\n"
+    . "G60\tG60\tG60\ttps1: terpene synthase 1\tTest\nT60.1\tSELF\tG60\ttps1: terpene synthase 1\tTest\n"
+    . "G6\tG6\tG6\tB9d2: B9d2, isoform A\tTest\nT6.1\tSELF\tG6\tB9d2: B9d2, isoform A\tTest\n"
+    . "G7\tG7\tG7\tCG4321: CG4321\tTest\nT7.1\tSELF\tG7\tCG4321: CG4321\tTest\n");
+  my $native_out = "$dir/out_native";
+  system('mkdir', '-p', $native_out) == 0 or die;
+  my $status = system("\Q$^X\E \Q$script\E " . join(' ', map { my $argument = $_; "\Q$argument\E" } @arguments, '--native', "$dir/native.tsv")
+                      . " --out-names \Q$native_out/geneNames.tsv\E --out-dir \Q$native_out\E > \Q$native_out.log\E 2>&1");
+  check($status == 0, 'assign_gene_names_v2.pl runs with --native', `tail -3 \Q$native_out.log\E`);
+  my %native_name;
+  foreach my $row (read_tsv("$native_out/geneNames.tsv")) { $native_name{$row->[0]} = $row->[3]; }
+  check(scalar(($native_name{'T1.1'} // '') =~ /^ALPHA: alpha synthase/), 'an Ensembl id as the native name is replaced by the pipeline name', $native_name{'T1.1'});
+  check(scalar(($native_name{'T5.1'} // '') =~ /^rnf169:/), 'a real native symbol with no description is kept', $native_name{'T5.1'});
+  # a description that only repeats the symbol (RefSeq's fly product names): judged by the symbol
+  check(scalar(($native_name{'T6.1'} // '') =~ /^B9d2: B9d2/), 'a native name repeating a real symbol is kept (B9d2: B9d2)', $native_name{'T6.1'});
+  check(($native_name{'T7.1'} // '') !~ /^CG4321/, 'a native name repeating a placeholder symbol is replaced (CG4321: CG4321)', $native_name{'T7.1'});
+  # a gene that shows its own name but that the pipeline does not name: Identity says so, never "No name"
+  my %native_said;
+  foreach my $file (glob "$native_out/gene_statement.*.moop.tsv") {
+    my ($kind) = $file =~ /gene_statement\.([a-z_]+)/;
+    foreach my $row (read_tsv($file)) { $native_said{$row->[0]}{$kind} = $row->[2] if $row->[0] eq 'G60'; }
+  }
+  check(scalar(($native_said{G60}{identity} // '') =~ /^Named by its own annotation \(Test\); the pipeline's evidence does not name it: /)
+        && !exists $native_said{G60}{no_name},
+        'a native name the pipeline cannot back: an Identity statement, not "No name"', join(' | ', map { "$_=$native_said{G60}{$_}" } sort keys %{$native_said{G60} // {}}));
+  # a gene showing its own name gets the name MOOP would give it, and by which step; a replaced one does not
+  my %moop_name;
+  foreach my $row (read_tsv("$native_out/gene_statement.pipeline_name.moop.tsv")) { $moop_name{$row->[0]} = $row->[2]; }
+  check(($moop_name{G5} // '') eq 'MOOP name: DELTA-like: delta kinase-like [ISS|rbh] (by full-length human hit)',
+        'a kept native name: the MOOP name statement gives the pipeline name and its step', $moop_name{G5});
+  check(!exists $moop_name{G1}, 'a replaced native name: no MOOP name statement (the name shown is MOOP\'s)', $moop_name{G1});
 }
 
 # ---- read the outputs
@@ -635,6 +691,13 @@ check(($source{G13}[3] // '') eq 'hgnc_group' && ($source{G13}[0] // '') eq '30'
 check(($source{G14}[0] // '') eq 'HGNC:8' && scalar(($source{G14}[1] // '') =~ /ANO1, ANO2 score within 5% of each other, and only ANO2 is a reciprocal best hit$/),
       'G14 provenance: the tie and what decided it', $p->('G14'));
 check(($source{G15}[0] // '') eq '21' && ($source{G15}[2] // '') eq '6', 'G15 provenance: HGNC group 21, step 6', $p->('G15'));
+# a full-length best hit the PANTHER tree contradicts does not name the gene (Danio rerio: such names agreed with
+# ZFIN 29% of the time); the next step does, and its provenance says why
+check(scalar(($name{G61} // '') =~ /^GIZMO protein family member \[ISM\|pthr/), 'G61: THETA-like withheld (treeC); its PANTHER family names it', $name{G61});
+check(scalar(($name{G62} // '') =~ /^Sprocket receptor 1 superfamily member \[ISM\|pthr\]$/i), 'G62: a family name ending in "member" gets no second "family member"', $name{G62});
+check(($source{G61}[2] // '') eq '8'
+      && scalar(($source{G61}[1] // '') =~ /; the full-length best hit does not name it "THETA-like: theta ligase-like": TreeGrafter places it with human IOTA \(ortholog_1/),
+      'G61 provenance: the withheld THETA-like name and the tree placement are stated', $p->('G61'));
 check(($source{G31}[0] // '') eq 'HGNC:6' && ($source{G31}[2] // '') eq '5'
       && scalar(($source{G31}[1] // '') =~ /^Ortholog of human EPS by its place on the PANTHER family tree: TreeGrafter places it with human EPS \(ortholog_1: joins at a speciation node, Bilateria \(grafted inside another lineage, moved up to this one\); PANTHER PTHR00031:SF1 E=1e-50, 90% of the protein, 85% of the family model\); and EPS is also its closest human gene by similarity/),
       'G31 provenance: the tree placement and the agreeing closest human, step 5', $p->('G31'));
@@ -885,6 +948,11 @@ check($differs == 0, 'identical output under two hash seeds', "$differs file(s) 
   check($informative->('MCG131172, isoform CRA_a') == 0, 'a Celera MCG id is uninformative');
   check($informative->('Binding oxidoreductase, putative (AFU_orthologue AFUA_1G17690)-related') == 0, 'an Aspergillus locus label is uninformative');
   check($informative->('complementary DNA binding protein') == 1, 'a name that only mentions DNA stays informative');
+  # "-like": a human name already ending in the word "like" gets no second one (CAPSL "calcyphosine like")
+  check(GeneNamingV2::add_like_to_description('calcyphosine like') eq 'calcyphosine like', 'no "like-like": calcyphosine like');
+  check(GeneNamingV2::add_like_to_description('rabphilin 3A like (without C2 domains)') eq 'rabphilin 3A like (without C2 domains)',
+        'no "like-like" before a trailing bracket');
+  check(GeneNamingV2::add_like_to_description('anoctamin 1') eq 'anoctamin 1-like', 'an ordinary name still gets "-like"');
 }
 
 print $failed ? "\n$failed FAILED, $passed passed\n" : "all $passed checks passed\n";

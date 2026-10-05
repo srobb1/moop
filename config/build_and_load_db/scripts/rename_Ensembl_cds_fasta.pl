@@ -7,7 +7,10 @@ die "Usage: $0 <protein.aa.fa> <cds.nt.fa>\n" unless $prot_file && $cds_file;
 
 # Build transcript_id -> CDS:protein_id map from protein FASTA.
 # Ensembl-format headers: >XP_019850188.1 pep ... transcript:XM_019994629.1 ...
-my %tx2cds;
+# A CDS FASTA may name transcripts without the version the protein FASTA gives them
+# (Danio rerio GRCz11/20260404: >ENSDART00000164359 vs transcript:ENSDART00000164359.1),
+# so each transcript is also found by its id without the version.
+my (%tx2cds, %bare_tx2cds);
 open my $prot, '<', $prot_file or die "Cannot open $prot_file: $!\n";
 while (<$prot>) {
     next unless /^>/;
@@ -16,6 +19,8 @@ while (<$prot>) {
     my ($tx_id)   = /\btranscript:(\S+)/;
     next unless defined $prot_id && defined $tx_id;
     $tx2cds{$tx_id} = "CDS:$prot_id";
+    (my $bare_tx_id = $tx_id) =~ s/\.\d+$//;
+    $bare_tx2cds{$bare_tx_id} = "CDS:$prot_id" if $bare_tx_id ne $tx_id;
 }
 close $prot;
 
@@ -24,7 +29,7 @@ open my $out, '>', "$cds_file.tmp" or die "Cannot write $cds_file.tmp: $!\n";
 while (<$in>) {
     if (/^>(\S+)(.*)/) {
         my ($tx_id, $rest) = ($1, $2);
-        my $cds_id = $tx2cds{$tx_id};
+        my $cds_id = $tx2cds{$tx_id} // $bare_tx2cds{$tx_id};
         if (defined $cds_id) {
             print $out ">$cds_id $tx_id$rest\n";
         } else {

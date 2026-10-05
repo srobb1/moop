@@ -41,6 +41,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
 GENESET_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY/$GENE_SET
 GENOME_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY
 ANALYSIS_DIR=$ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET
+## the GFF everything below is built from: the source, or MOOP's versioned copy of an
+## Ensembl GFF (genes.versioned.gff, add_id_versions.pl; set after the GFF format is known)
+SRC_GFF=$GENESET_DIR/genes.gff
 
 ASSEMBLY_DATA=$DATA/$THIS_ORG/$ASSEMBLY
 GENESET_DATA=$ASSEMBLY_DATA/$GENE_SET
@@ -631,7 +634,7 @@ build_naming_args() {
   [ -s "$GENESET_DIR/metadata.yaml" ] && NAMING_ARGS+=(--metadata "$GENESET_DIR/metadata.yaml")
 
   ## each gene's scaffold, for the Identical proteins statement (where the other genes with the same protein are)
-  [ -s "$GENESET_DIR/genes.gff" ] && NAMING_ARGS+=(--gff "$GENESET_DIR/genes.gff")
+  [ -s "$SRC_GFF" ] && NAMING_ARGS+=(--gff "$SRC_GFF")
 
   ## Model coverage from the InterProScan JSON (model coordinates; the TSV has only protein
   ## coordinates): the PANTHER family rules and the InterPro domain step measure on the model.
@@ -831,6 +834,29 @@ if $HAS_GFF; then
     fi
   fi
 
+  ## Ensembl GFFs keep the version in a tag (ID=gene:ENSDARG00000009657;...;version=8) while
+  ## the FASTAs, and every analysis run on them, use id.version. add_id_versions.pl writes
+  ## a copy whose IDs carry the version, only when every FASTA protein id is a GFF
+  ## protein_id.version (exit 3: not needed); everything below reads that copy.
+  if [[ "$GFF_SOURCE" == "ensembl" ]]; then
+    if [ ! -s genes.versioned.gff ] || [ "$GENESET_DIR/genes.gff" -nt genes.versioned.gff ] \
+       || [ "$GENESET_DIR/protein.aa.fa" -nt genes.versioned.gff ]; then
+      rm -f genes.versioned.gff
+      perl "$SCRIPTS/add_id_versions.pl" "$GENESET_DIR/genes.gff" "$GENESET_DIR/protein.aa.fa" genes.versioned.gff.tmp
+      case $? in
+        0) mv genes.versioned.gff.tmp genes.versioned.gff ;;
+        3) rm -f genes.versioned.gff.tmp ;;
+        *) rm -f genes.versioned.gff.tmp
+           echo "ERROR: the protein FASTA ids match genes.gff neither as they are nor with the version tags (add_id_versions.pl, above)"; exit 1 ;;
+      esac
+    fi
+    if [ -s genes.versioned.gff ]; then
+      SRC_GFF=$PWD/genes.versioned.gff
+      ln -sf "$SRC_GFF" genes.gff
+      echo "GFF IDs: versioned (genes.versioned.gff)"
+    fi
+  fi
+
   ## genome.fa lives at the assembly level
   mkdir -p "$ASSEMBLY_DATA"
   [ -e "$ASSEMBLY_DATA/genome.fa" ] || ln -sf "$GENOME_DIR/genome.fa" "$ASSEMBLY_DATA/genome.fa"
@@ -845,9 +871,13 @@ if $HAS_GFF; then
   [ "${MOOP_RELOAD:-0}" = "1" ] && REBUILD=true
 
   has_data isoforms.tsv || REBUILD=true
+  ## a gene set whose GFF changed since its isoforms were built is rebuilt from it, reload or not
+  ## (2026-10-05: ten flatworm gene sets updated on 2026-08-17 still had isoforms.tsv from 2026-07-28,
+  ## so 0.2-1% of their proteins had no gene and could not be named)
+  [ "$SRC_GFF" -nt isoforms.tsv ] && { echo "genes.gff is newer than isoforms.tsv: rebuilding"; REBUILD=true; }
   if $REBUILD; then
     echo "Building isoforms.tsv"
-    perl "$REPO/analysis_parsers/make_isoforms_from_gff.pl" "$GENESET_DIR/genes.gff" > isoforms.tsv.tmp \
+    perl "$REPO/analysis_parsers/make_isoforms_from_gff.pl" "$SRC_GFF" > isoforms.tsv.tmp \
       && mv isoforms.tsv.tmp isoforms.tsv \
       || { rm -f isoforms.tsv.tmp; echo "ERROR: failed to build isoforms.tsv"; exit 1; }
   fi
@@ -860,7 +890,7 @@ if $HAS_GFF; then
       run_naming_v2
 
       echo "Updating GFF and FASTAs"
-      perl "$REPO/analysis_parsers/updateGFF.pl"   "$GENESET_DIR/genes.gff"         geneNames.tsv > genes.gff.tmp \
+      perl "$REPO/analysis_parsers/updateGFF.pl"   "$SRC_GFF"         geneNames.tsv > genes.gff.tmp \
         && perl "$REPO/analysis_parsers/addClosestToGFF.pl" genes.gff.tmp $(closest_files) > genes.gff.closest.tmp \
         && mv genes.gff.closest.tmp genes.gff && rm -f genes.gff.tmp \
         || { rm -f genes.gff.tmp genes.gff.closest.tmp; echo "ERROR: failed to build genes.gff"; exit 1; }
@@ -884,7 +914,7 @@ if $HAS_GFF; then
       # on disk so a replaced name can be compared with what the source called it.
       # geneNames.tsv covers every id in it: updateFASTA.pl/updateGFF.pl treat an id
       # ABSENT from a names file as "no name any more".
-      perl "$REPO/analysis_parsers/get_names_from_gff.pl" "$GENESET_DIR/genes.gff" > geneNames.native.tsv.tmp \
+      perl "$REPO/analysis_parsers/get_names_from_gff.pl" "$SRC_GFF" > geneNames.native.tsv.tmp \
         && mv geneNames.native.tsv.tmp geneNames.native.tsv \
         || { rm -f geneNames.native.tsv.tmp; echo "ERROR: failed to build geneNames.native.tsv"; exit 1; }
       run_naming_v2 --native geneNames.native.tsv
@@ -896,9 +926,9 @@ if $HAS_GFF; then
   ## run above), so write a real copy -- never edit through the link into the datastore.
   if ! $RENAME && [ -s closest_human.tsv ]; then
     rm -f genes.gff
-    perl "$REPO/analysis_parsers/addClosestToGFF.pl" "$GENESET_DIR/genes.gff" $(closest_files) > genes.gff.tmp \
+    perl "$REPO/analysis_parsers/addClosestToGFF.pl" "$SRC_GFF" $(closest_files) > genes.gff.tmp \
       && mv genes.gff.tmp genes.gff \
-      || { rm -f genes.gff.tmp; ln -sf "$GENESET_DIR/genes.gff" genes.gff; echo "ERROR: failed to add closest genes to genes.gff"; exit 1; }
+      || { rm -f genes.gff.tmp; ln -sf "$SRC_GFF" genes.gff; echo "ERROR: failed to add closest genes to genes.gff"; exit 1; }
   fi
 
   ## MOOP's own ID normalization, opt-in per gene set via metadata.yaml:
@@ -1083,6 +1113,7 @@ else
   [ "${MOOP_RELOAD:-0}" = "1" ] && REBUILD=true
 
   has_data isoforms.tsv || REBUILD=true
+  [ "$GENESET_DIR/protein2gene.txt" -nt isoforms.tsv ] && { echo "protein2gene.txt is newer than isoforms.tsv: rebuilding"; REBUILD=true; }
   if $REBUILD; then
     echo "Building isoforms.tsv from protein2gene.txt"
     perl "$REPO/analysis_parsers/make_isoforms_from_transcript2gene.pl" \

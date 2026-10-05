@@ -61,7 +61,8 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #   5 PANTHER tree placement: a trusted TreeGrafter placement with exactly one human ortholog, which
 #     is also the closest human gene by similarity (tier 3-5): "SYM: name"
 #   6 best full-length human hit (FULL: both coverages >= 80%), reciprocal or not: "SYM-like:
-#     name-like"; symbol only from HGNC. Other species never name a gene.
+#     name-like"; symbol only from HGNC. Other species never name a gene. Withheld when a trusted
+#     PANTHER tree placement joins the gene to other human genes (treeC); the next step names it.
 #   7 best Swiss-Prot hit, in another species, full-length and scoring at least as high as any human
 #     hit: "name-like (species)", no symbol
 #   8 PANTHER family whose match covers >= 80% of the family model: "<family> family member",
@@ -321,6 +322,9 @@ my $human_searched = 0;   # a similarity search against human proteins was read 
 my %unsupported_oma;      # group -> { humans, type }: an OMA human ortholog set aside (oma_supported)
 my %conflicting_oma;      # group -> { humans, type, best }: an OMA name withheld, both checks against it (oma_conflicts)
 my %rejected_pairing;     # group -> { human, paired, passed }: a many:1 pairing mostly rejected (omaR)
+my %tree_withheld;        # group -> why: a step-6 name the PANTHER tree contradicts, not used (like_name_tree_checked)
+my %gene_set_meta;        # the gene set's metadata.yaml (--metadata): species, taxon id, accessions
+my %native_shown;         # group -> source: the gene shows its own (--native) name (collect_native_rows)
 my %chains_set_aside;     # group -> [ { humans, evidence, why } ]: orthology through another species, not used (chain_rejected)
 my %identical;            # group -> [ other groups whose longest protein is the same sequence ]
 my %gene_scaffold;        # group -> its scaffold (--gff), for the Identical proteins statement
@@ -397,8 +401,10 @@ sub main {
   read_isoforms($opt{isoforms});
   %gene_of_protein = read_protein2gene($opt{protein2gene});
   %query_length = fasta_lengths($opt{'protein-fasta'});
+  check_proteins_have_genes();
   read_identical_proteins($opt{'protein-fasta'});
   read_gene_scaffolds($opt{gff}) if defined $opt{gff};
+  %gene_set_meta = read_metadata($opt{metadata}) if defined $opt{metadata};
   # protein features, reported for genes with no name (and in the decision table): nothing is named by them
   %signal_peptide   = read_signalp($opt{signalp})             if defined $opt{signalp};
   %tm_helices       = read_deeptmhmm($opt{deeptmhmm})         if defined $opt{deeptmhmm};
@@ -518,6 +524,23 @@ sub read_isoforms {
     $curated_selected{$group} = $selected if defined $selected and $selected ne 'None' and $selected ne '';
   }
   close $fh;
+}
+
+# Every analysis reports proteins by their FASTA id; a gene is named only through the
+# protein's gene. When the FASTA ids and the gene set's ids do not join (Danio rerio
+# GRCz11, 2026-10-05: FASTA ENSDARP...6, GFF ENSDARP... with the version in a tag), every
+# gene came out "no hits" and nothing said why. Stop instead when most proteins have no gene.
+sub check_proteins_have_genes {
+  my @proteins = keys %query_length;
+  return unless @proteins;
+  my @no_gene = grep { my $protein = $_; !defined group_for($protein) } @proteins;
+  $stats{'proteins with no gene in the gene set'} = scalar @no_gene if @no_gene;
+  if (@no_gene > @proteins / 2) {
+    my @examples = (sort @no_gene)[0 .. ($#no_gene < 2 ? $#no_gene : 2)];
+    die sprintf("%d of %d proteins in %s have no gene in --isoforms/--protein2gene (e.g. %s): "
+              . "the FASTA ids do not match the gene set's ids\n",
+                scalar @no_gene, scalar @proteins, $opt{'protein-fasta'}, join(', ', @examples));
+  }
 }
 
 sub read_protein2gene {
@@ -2509,7 +2532,7 @@ my @NAMING_STEPS = (
   [3, 'OMA human ortholog',    \&oma_name],
   [4, 'transposable element',  \&te_name],
   [5, 'PANTHER tree placement', \&tree_name],
-  [6, 'full-length human hit', \&like_name],
+  [6, 'full-length human hit', \&like_name_tree_checked],
   [7, 'Swiss-Prot hit in another species', \&swissprot_name],
   [8, 'PANTHER family',        \&panther_family_name],
   [9, 'InterPro domain',       \&domain_name],
@@ -2808,7 +2831,9 @@ sub swissprot_name {
   my ($group) = @_;
   my $hit = $swissprot_best{$group}
     or return not_named(defined $opt{'diamond-dir'} ? 'no Swiss-Prot hit' : 'no search against Swiss-Prot');
-  my $species = ($hit->{species_scientific} // '') =~ s/\s*\(strain [^)]*\)//r;
+  # "(strain ...)" may hold brackets of its own: "Streptomyces coelicolor (strain ATCC BAA-471 / A3(2) / M145)"
+  # (2026-10-05: one level of nesting left "Streptomyces coelicolor / M145)" in a fly gene's name)
+  my $species = ($hit->{species_scientific} // '') =~ s/\s*\(strain (?:[^()]|\([^()]*\))*\)//r;
   my $what = "Swiss-Prot $hit->{accession} \"$hit->{description}\"" . ($species ne '' ? " ($species)" : '');
   return not_named("best Swiss-Prot hit is a human protein ($hit->{accession}): the human steps decide")
     if $hit->{human} or $species eq 'Homo sapiens';
@@ -2978,6 +3003,10 @@ sub unsupported_oma_text {
 
 sub set_aside_note {
   my ($group, $named) = @_;
+  # a step-6 name withheld because the tree contradicts it: the name the gene got says so
+  if ($tree_withheld{$group} and $named->{origin} and grep { my $step = $_; $step == 6 } @{$decision{$group}{reached} // []}) {
+    $named = { %$named, origin => { %{$named->{origin}}, rule => $named->{origin}{rule} . '; ' . $tree_withheld{$group} } };
+  }
   if ($rejected_pairing{$group}) {
     return $named unless $named->{tag} and $named->{origin} and ($decision{$group}{step} // 0) != 3;
     return { %$named, tag => [@{$named->{tag}}, 'omaR'],
@@ -3041,12 +3070,14 @@ sub oma_conflicts {
 #   ISM  sequence model            pthr (PANTHER family), ipr (InterPro domain)
 #   TAS  human-curated name;  SRC  the gene set's own name, or another annotation of the same species
 # Support marks, one meaning each: + agrees, ~ partly (similar, not the best), C contradicts (the
-# evidence points elsewhere), - no evidence, X excluded (set aside).
+# evidence points elsewhere), - no evidence, X excluded (set aside), R rejected (a whole pairing).
 # support of an orthology name: sim+ its human gene is the best human similarity hit, sim~ a hit but
 # not the best, sim- no hit; pthr+ / pthrC same / conflicting PANTHER family; hog OMA's HOG agrees.
 # sim~ on an ISM name: the gene has a human homolog, but only a partial one.
 # omaX: an OMA pair nothing supports was set aside; omaC: an OMA name was withheld because the best
-# human hit is another gene AND the PANTHER family differs (oma_conflicts).
+# human hit is another gene AND the PANTHER family differs (oma_conflicts); omaR: OMA's many:1 pairing
+# was rejected as a whole (>= $PAIRING_MIN_COPIES genes here paired with one human gene, fewer than half
+# pass), so none of them is named after it. The next step names the gene; the mark stays in its tag.
 sub tagged {
   my ($named) = @_;
   return $named unless $named->{tag} and $named->{desc} ne 'None';
@@ -3499,7 +3530,12 @@ sub family_member {
   # ("Solute carrier family 5", "Glycosyl transferase family 10", "... superfamily") -> "member";
   # else "X family member" -- "family" earlier in the name does not count ("GPCR family 3,
   # GABA-B receptor family member", not "... receptor member")
-  return $name if $name =~ /\bfamily\s+member$/i;
+  # already a member ("... superfamily member", "... superfamily members", "Solute carrier family 22
+  # member", "G-protein Coupled Receptor 1 Superfamily Member"): one "member", lower case, not a
+  # second "family member" (2026-10-05: 107 Danio/Congeria genes were "... Member family member")
+  if ($name =~ /^(.*\b(?:super)?family(?:\s+[A-Za-z]?\d+[A-Za-z]?)?)\s+members?$/i) {
+    return "$1 member";
+  }
   return $name =~ /family(?:\s+[A-Za-z]?\d+[A-Za-z]?)?$/i ? "$name member" : "$name family member";
 }
 
@@ -3579,6 +3615,22 @@ sub hgnc_group_size {
 #   - if another human gene scores within $LIKE_TIE of it, the paralogs are a tie: a reciprocal best
 #     hit to exactly one of them (with a full-length hit) decides; else their shared HGNC group
 #     names the gene; else no -like name.
+# Step 6 as used: a -like or family name from the best full-length human hit is withheld when a
+# trusted PANTHER tree placement joins the gene to OTHER human genes (treeC), and the next step
+# names it. Checked against Danio rerio's own (ZFIN) names on 2026-10-05: step-6 names the tree
+# contradicted agreed 29% of the time (20 of 68), those it supported 78%, those without a
+# placement 72%. Withholding them cost 0 names in Congeria, 1 in Phagocata and 4 in Danio; the
+# rest (213 genes) take a PANTHER family or InterPro domain name instead.
+sub like_name_tree_checked {
+  my ($group) = @_;
+  my $named = like_name($group);
+  return $named unless is_named($named) and grep { my $flag = $_; $flag eq 'treeC' } @{$named->{tag} // []};
+  %stats = ('no -like name: the PANTHER tree places it with other human genes (treeC)' => 1);
+  my $why = "the full-length best hit does not name it \"$named->{desc}\": " . tree_text($tree{$group});
+  $tree_withheld{$group} = $why;
+  return not_named("withheld (treeC): $why");
+}
+
 sub like_name {
   my ($group) = @_;
   my @ranked = grep { my $ranked_hit = $_; $ranked_hit->[1]{best}{evalue} <= $FULL{evalue} } ranked_human_hits($group);
@@ -3778,7 +3830,7 @@ sub write_naming_versions {
 
 # A gene naming file (gene statements, the gene name source): loaded into the gene_naming tables,
 # not the annotation tables, so its header says "Naming", not "Annotation":
-#   Naming Kind          identity | no_name | support | ... | expression | name_source
+#   Naming Kind          identity | no_name | support | ... | expression | pipeline_name | name_source
 #   Naming Link          the database the accessions link to (hgnc, interpro, ...); blank = no link
 #   Naming Data Version  the date of the data (the HGNC release)
 #   Naming Source URL / Naming Accession URL   the link database's home page and accession prefix
@@ -3832,6 +3884,9 @@ my @STATEMENT_TYPES = (
   ['cautions',   8],
   ['features',   9],
   ['expression', 10],
+  # a gene that shows its own (--native) name: the name MOOP's own steps give it, and by which step
+  # (the user wants both on the gene page: the source's name, and what MOOP would call it and why)
+  ['pipeline_name', 11],
 );
 my $STATEMENT_TYPE = 'Gene Statement';
 
@@ -3903,11 +3958,23 @@ sub gene_statements {
   my %said;
   if (!$named or $named->{desc} eq 'None') {
     my @found = sort keys %{$any_evidence{$group} // {}};
-    $said{no_name} = @found ? 'Hits did not pass the naming tests (found: ' . join(', ', @found) . ')'
-                            : 'No hits: no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match';
+    my $why = @found ? 'Hits did not pass the naming tests (found: ' . join(', ', @found) . ')'
+                     : 'No hits: no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match';
+    if (my $source = $native_shown{$group}) {
+      # the gene shows its own annotation's name: its page must not open with "No name"
+      # (Danio rerio 2026-10-05: 171 Ensembl-named genes had a No name statement)
+      $said{identity} = "Named by its own annotation ($source); the pipeline's evidence does not name it: " . lcfirst $why;
+    } else {
+      $said{no_name} = $why;
+    }
   } else {
     $said{identity} = identity_statement($group, $named);
     $said{copies} = ucfirst $named->{copies_text} if $named->{copies_text};
+    if ($native_shown{$group}) {
+      my %method = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
+      my $step = $decision{$group}{step} // 0;
+      $said{pipeline_name} = "MOOP name: $named->{desc}" . ($method{$step} ? " (by $method{$step})" : '');
+    }
   }
   my $identical = identical_text($group);
   $said{identical} = $identical if $identical ne '';
@@ -3969,6 +4036,16 @@ sub gene_statements {
   push @cautions, conflicting_oma_text($group) // 'an OMA pairing was withheld: its best hit and PANTHER family point to another gene' if $tag{omaC};
   push @cautions, rejected_pairing_text($group) // "OMA's many:1 pairing was mostly rejected" if $tag{omaR};
   push @cautions, 'it carries a transposable-element domain' if $tag{te};
+  # the human gene the name comes from is a pseudogene, or one in some people (HGNC's own note in the
+  # approved name, "(pseudogene)" / "(gene/pseudogene)", kept in the name as HGNC gives it): said, so
+  # the note is read as being about the human gene (2026-10-05: 22 genes in Congeria, Phagocata, Danio)
+  foreach my $human (@humans) {
+    if (($human->{name} // '') =~ /\(gene\/pseudogene\)/i) {
+      push @cautions, 'human ' . human_label($human) . ' is a pseudogene in some people (HGNC: gene/pseudogene)';
+    } elsif (($human->{name} // '') =~ /\(pseudogene\)/i or ($human->{locus_type} // '') =~ /pseudogene/i) {
+      push @cautions, 'human ' . human_label($human) . ' is a pseudogene (HGNC)';
+    }
+  }
   push @cautions, @{$named->{cautions} // []} if $named;
   # methods pointing to other human genes that no mark above states (the best hit and the tree have theirs)
   my @unsaid = grep { my $words = $_; $words !~ /best human hit|PANTHER tree/ } @{$elsewhere_words // []};
@@ -3992,6 +4069,9 @@ sub write_statements {
   foreach my $group (sort keys %members) {
     my %said = gene_statements($group);
     my $named = $name{$group};
+    # a gene that shows its own (--native) name where the pipeline gives none: its Identity is that name
+    $named = { %{$named // {}}, origin => { kind => 'native', accession => $group } }
+      if $native_shown{$group} and (!$named or $named->{desc} eq 'None');
     my %accession = (identity => ($named && $named->{origin} ? $named->{origin}{accession} : '') // '',
                      tree => ($tree{$group} ? $tree{$group}{panther_match} : ''));
     foreach my $type (@STATEMENT_TYPES) {
@@ -4099,7 +4179,22 @@ sub collect_native_rows {
     push @{$native_rows{$native_group}}, [$id, $main, $native_group, $desc // '', $note // ''];
     if ($main eq 'SELF') {
       my ($symbol, $description) = split_symbol($desc // '');
-      $native_group_informative{$native_group} = is_informative_hit($symbol, $description, $id);
+      (my $bare_description = $description) =~ s/,\s*isoform\s+\S+$//i;
+      if (($desc // '') =~ /^(\S+):\s*$/) {
+        # a symbol and no description ("rnf169: "): kept when the symbol is a real one. A gene
+        # with no Name= gets its own id here ("ENSDARG00000000370.10: "), which split_symbol
+        # left whole, colon and all, so the Ensembl-id placeholder never matched it and 7,453
+        # Danio rerio genes kept their id as their name (2026-10-05).
+        $native_group_informative{$native_group} = is_placeholder_symbol($1) ? 0 : 1;
+      } elsif ($symbol ne '' and lc $bare_description eq lc $symbol) {
+        # a description that only repeats the symbol ("B9d2: B9d2", "pre-mod(mdg4)-X: pre-mod(mdg4)-X,
+        # isoform A" -- RefSeq's fly product names): judged by the symbol, like a symbol with no
+        # description. The repeat-an-id rule of is_informative_hit is for hits, where the symbol is
+        # another gene's; here it threw away 744 real FlyBase symbols (2026-10-05).
+        $native_group_informative{$native_group} = is_placeholder_symbol($symbol) ? 0 : 1;
+      } else {
+        $native_group_informative{$native_group} = is_informative_hit($symbol, $description, $id);
+      }
     }
   }
   close $fh;
@@ -4119,6 +4214,7 @@ sub collect_native_rows {
         ($desc, $note, $origin) = ($name{$group}{desc}, $name{$group}{note}, $name{$group}{origin});
       } elsif ($origin) {
         $desc = tagged({ desc => $desc, tag => ['SRC'] })->{desc};   # the source's own text, as it is, plus the tag
+        $native_shown{$group} = $note ne '' ? $note : 'the gene set' if defined $group;
       }
       push @name_rows, [$id, $main, $native_group_id, $desc, $note, $group, $origin];
     }
@@ -4175,11 +4271,11 @@ sub first_line {
   return $line;
 }
 
-# the gene set, from its metadata.yaml (--metadata): species, taxon, gene set and assembly
-sub gene_set_lines {
-  return ('(no --metadata given)') unless defined $opt{metadata};
+# metadata.yaml: "key: value" lines (the first of a repeated key wins)
+sub read_metadata {
+  my ($file) = @_;
   my %meta;
-  open my $fh, '<', $opt{metadata} or die "cant open metadata $opt{metadata} $!\n";
+  open my $fh, '<', $file or die "cant open metadata $file $!\n";
   while (my $line = <$fh>) {
     next unless $line =~ /^([A-Za-z][A-Za-z0-9_-]*):\s*(.*?)\s*$/;
     my ($key, $value) = ($1, $2);
@@ -4187,6 +4283,13 @@ sub gene_set_lines {
     $meta{$key} //= $value;
   }
   close $fh;
+  return %meta;
+}
+
+# the gene set, from its metadata.yaml (--metadata): species, taxon, gene set and assembly
+sub gene_set_lines {
+  return ('(no --metadata given)') unless defined $opt{metadata};
+  my %meta = %gene_set_meta;
   my $species = join(' ', grep { my $part = $_; defined $part and $part ne '' } @meta{qw(genus species)});
   my @lines;
   push @lines, "species: $species" . (($meta{'common-name'} // '') ne '' ? " ($meta{'common-name'})" : '') if $species ne '';
@@ -4304,7 +4407,7 @@ sub decision_header {
     "  4 transposable element (a TE Pfam domain); before step 3 when >= $TE_MIN_COPIES copies share one OMA human gene",
     '  5 PANTHER tree placement: a trusted placement with exactly one human gene at a speciation node, and that gene is',
     '    also the closest human gene by similarity (tier 3-5) -> the gene\'s name, plain',
-    '  6 full-length human hit -> "SYM-like"',
+    '  6 full-length human hit -> "SYM-like"; withheld when the PANTHER tree places it with other human genes (treeC)',
     '  7 best Swiss-Prot hit, a protein of another species, full-length and scoring at least as high as any human hit',
     '    -> "<name>-like (<species>)", no symbol',
     '    (5, 6 and 7 are skipped after an OMA co-ortholog family step 3 could not name: each would pick one member)',
@@ -4337,11 +4440,14 @@ sub decision_header {
     '  similarity: rbh reciprocal best hit; bh best hit; tie-rbh / tie-grp a paralog tie resolved by a reciprocal hit / a family;',
     '    sp the hit is a Swiss-Prot protein of another species (step 7)',
     '  model: pthr PANTHER family; ipr InterPro domain; rpt repeat; te transposable element',
-    '  support marks: + agrees, ~ partly (similar, not the best), C contradicts, - no evidence, X excluded',
+    '  support marks: + agrees, ~ partly (similar, not the best), C contradicts, - no evidence, X excluded (set aside), R rejected',
     '    sim+ / sim~ / sim- the named human gene is the best human hit / a hit but not the best / not a hit',
     '    pthr+ / pthrC same / different PANTHER family as the named human gene; hog OMA\'s HOG agrees',
-    '    omaX an OMA pair nothing supports was set aside; omaC an OMA name withheld (best hit another gene AND PANTHER family differs)',
-    '    tree+ / treeC a trusted PANTHER tree placement joins it to the named human gene / to other human genes',
+    '    omaX an OMA pair nothing supports was set aside (excluded); omaC an OMA name withheld (best hit another gene AND PANTHER family differs)',
+    "    omaR OMA's many:1 pairing rejected: >= $PAIRING_MIN_COPIES genes here paired with one human gene and fewer than half pass,",
+    '      so none is named after it; with any of these marks the next step names the gene and the mark stays in its tag',
+    '    tree+ / treeC a trusted PANTHER tree placement joins it to the named human gene / to other human genes;',
+    '      treeC withholds a step-6 -like name (the next step names the gene), and only marks an OMA name',
     '  closest human tiers: 1 OMA pairwise; 2 OMA HOG; 3 MMseqs2 RBH; 4 via another species\' ortholog; 5 DIAMOND best hit;',
     '    6 Swiss-Prot hit -> Ensembl Compara; 7 Swiss-Prot hit -> PANTHER subfamily',
     '',

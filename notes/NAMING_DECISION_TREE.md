@@ -1,10 +1,10 @@
 # Gene naming: the decision tree
 
-How `assign_gene_names_v2.pl` (branch `naming-v2`) names one gene, in the order the code tries
+How `assign_gene_names_v2.pl` names one gene, in the order the code tries
 the steps (`decide_name`, with the checks `choose_closest_human` makes on OMA's set before it). The
 first box that gives a name names the gene. Every step uses a name only if it is informative
 (GENE_NAMING_METHODS.md §4). The full rules, thresholds and examples are in GENE_NAMING_METHODS.md;
-this page is the map. Keep it in step with the code. A rendered copy for viewers without Mermaid:
+this page is the map; [NAMING_PATHWAYS.md](NAMING_PATHWAYS.md) lists every pathway with a real example and counts. Keep it in step with the code. A rendered copy for viewers without Mermaid:
 [naming_decision_tree.svg](naming_decision_tree.svg) (regenerate with
 `npx @mermaid-js/mermaid-cli -i <the mermaid block> -o naming_decision_tree.svg -b white`).
 
@@ -41,19 +41,25 @@ flowchart TD
     tree -- yes --> nTree["'SYMBOL: approved name'<br/><b>ISO · tree</b>"]
     tree -- no --> fullLength{"6 · Best human hit full-length?<br/>(E ≤ 1e-10, ≥ 80% of both proteins; the top hit only)"}
     fullLength -- yes --> tie{"Another human gene within 5% of its bitscore?"}
-    tie -- no --> nLike["'SYMBOL-like: name-like'<br/><b>ISS · rbh / bh</b>"]
+    tie -- no --> likeTree{"PANTHER tree: a trusted placement<br/>with OTHER human genes? (treeC)"}
+    likeTree -- "no" --> nLike["'SYMBOL-like: name-like'<br/><b>ISS · rbh / bh</b>"]
+    likeTree -- "yes: withheld, step 7 skipped" --> panther
     tie -- yes --> tieResolve{"Exactly one tied gene a full-length<br/>reciprocal best hit?"}
-    tieResolve -- yes --> nLike
+    tieResolve -- yes --> likeTree
     tieResolve -- no --> tieGroup{"Shared HGNC group (family by descent)<br/>or PANTHER family?"}
-    tieGroup -- yes --> nTieGroup["'&lt;group or family&gt; family member'<br/><b>ISS · tie-grp</b>"]
+    tieGroup -- yes --> groupTree{"PANTHER tree: a trusted placement<br/>with OTHER human genes? (treeC)"}
+    groupTree -- yes --> panther
+    groupTree -- no --> nTieGroup["'&lt;group or family&gt; family member'<br/><b>ISS · tie-grp</b>"]
     tieGroup -- no --> panther
-    fullLength -- no --> panther
+    fullLength -- no --> swiss{"7 · Best Swiss-Prot hit a protein of another species,<br/>full-length, scoring at least as high as any human hit,<br/>no other Swiss-Prot protein within 5%?"}
+    swiss -- yes --> nSwiss["'name-like (species)' · no symbol<br/><b>ISS · bh · sp</b>"]
+    swiss -- no --> panther
 
-    panther{"7 · PANTHER family covering ≥ 75% of its model?<br/>(≥ 80% by protein residues when there is no InterProScan JSON)"}
+    panther{"8 · PANTHER family covering ≥ 75% of its model?<br/>(≥ 80% by protein residues when there is no InterProScan JSON)"}
     panther -- yes --> repeats{"≥ 25% of the match repeat units?"}
     repeats -- yes --> nRepeat["'&lt;repeat&gt;-containing protein'<br/><b>ISM · rpt</b>"]
     repeats -- no --> nPanther["'&lt;family&gt; family member'<br/>InterPro's name, or PANTHER's when InterPro's describes a function<br/><b>ISM · pthr</b>"]
-    panther -- no --> domain{"8 · InterPro Domain or Repeat (not DUF / UPF / uncharacterised),<br/>covering ≥ 50% of its model where known?"}
+    panther -- no --> domain{"9 · InterPro Domain or Repeat (not DUF / UPF / uncharacterised),<br/>covering ≥ 50% of its model where known?"}
     domain -- yes --> nDomain["'&lt;domain&gt; domain-containing protein'<br/><b>ISM · ipr</b>"]
     domain -- no --> hits{"Any homology evidence at all?"}
     hits -- no --> nNoHits["None: no hits"]
@@ -61,7 +67,7 @@ flowchart TD
 
     classDef named fill:#e8f4ea,stroke:#3a7d44,color:#1b3a20;
     classDef none fill:#f4e8e8,stroke:#8a3b3b,color:#3a1b1b;
-    class nCurated,nSource,nTE,nOrtholog,nGroup,nOmaFamily,nTree,nLike,nTieGroup,nRepeat,nPanther,nDomain named;
+    class nCurated,nSource,nTE,nOrtholog,nGroup,nOmaFamily,nTree,nLike,nTieGroup,nSwiss,nRepeat,nPanther,nDomain named;
     class nNoHits,nNotPassed none;
 ```
 

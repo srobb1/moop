@@ -204,9 +204,10 @@ CREATE TABLE gene_naming (
     gene_naming_id INTEGER PRIMARY KEY AUTOINCREMENT,
     feature_id     INTEGER NOT NULL,          -- the gene
     -- identity | no_name | support | copies | identical | alignment | domains | tree |
-    -- cautions | features | expression
+    -- cautions | features | expression | pipeline_name (a gene showing its own RefSeq/Ensembl
+    -- name: the name MOOP's own steps give it)
     kind           TEXT NOT NULL,
-    -- the statement's place in the series (1-10; identity and no_name are both 1, a gene has
+    -- the statement's place in the series (1-11; identity and no_name are both 1, a gene has
     -- one or the other)
     sort_order     INTEGER NOT NULL,
     naming_text    TEXT NOT NULL,             -- the sentence
