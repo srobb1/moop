@@ -3,6 +3,11 @@
 All of this is committed and pushed to main (last: `3184187b`). Pipeline-side work is in the
 other agent's handoff (`notes/SESSION_HANDOFF_2026-10-06.md`).
 
+## Next session (user, 2026-10-06): RELEASE PREP — getting human testers
+
+Start there, not with the open items below. See memory `project_launch_readiness` (0 of 98
+assemblies are PUBLIC; testers auto-login IP_IN_RANGE and never see the public path).
+
 ## Shipped today
 
 | Commit | What |
