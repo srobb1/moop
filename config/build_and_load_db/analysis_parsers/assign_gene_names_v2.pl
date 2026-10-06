@@ -4226,7 +4226,9 @@ sub gene_statements {
     if ($native_shown{$group}) {
       my %method = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
       my $step = $decision{$group}{step} // 0;
-      $said{pipeline_name} = "MOOP name: $named->{desc}" . ($method{$step} ? " (by $method{$step})" : '');
+      # the name without its evidence code: the card shows no codes (user, 2026-10-06), and the step is said in words
+      (my $plain = $named->{desc}) =~ s/\s*\[(?:ISO|ISS|ISM|TAS|SRC)(?:\|[^\[\]]*)?\]$//;
+      $said{pipeline_name} = "MOOP name: $plain" . ($method{$step} ? " (by $method{$step})" : '');
     }
   }
   my (undef, $protein_text) = naming_protein($group, $named);

@@ -636,8 +636,8 @@ my $out = "$dir/out1";
   # a gene showing its own name gets the name MOOP would give it, and by which step; a replaced one does not
   my %moop_name;
   foreach my $row (read_tsv("$native_out/gene_statement.pipeline_name.moop.tsv")) { $moop_name{$row->[0]} = $row->[2]; }
-  check(($moop_name{G5} // '') eq 'MOOP name: DELTA-like: delta kinase-like [ISS|rbh] (by full-length human hit)',
-        'a kept native name: the MOOP name statement gives the pipeline name and its step', $moop_name{G5});
+  check(($moop_name{G5} // '') eq 'MOOP name: DELTA-like: delta kinase-like (by full-length human hit)',
+        'a kept native name: the MOOP name statement gives the pipeline name (no evidence code) and its step', $moop_name{G5});
   check(!exists $moop_name{G1}, 'a replaced native name: no MOOP name statement (the name shown is MOOP\'s)', $moop_name{G1});
 }
 
