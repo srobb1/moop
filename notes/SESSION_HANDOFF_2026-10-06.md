@@ -25,7 +25,10 @@
 - No rebuilds until the annotation pipeline is re-run (fixes in progress, then the queue).
 - S. mediterranea: the live database (431 MB, 2026-07-31, 5 gene sets) is fine; there is no local database (an
   empty file made by a Claude sqlite3 query on 10-05 was deleted). dd_v6 (active since 09-02) was never built.
-- File-vs-database audit script (read-only): scratch copy only, not in the repo yet.
+- `scripts/audit_files_vs_db.py organism.sqlite GENE_SET_DIR...`: every annotation source against its files. The build
+  runs it after loading and before the copy, and stops on a mismatch (report: `<organism>/audit_files_vs_db.tsv`;
+  `MOOP_SKIP_AUDIT=1` skips it). Tested in a Congeria build (91/91, 9 s). It will stop rebuilds of organisms whose
+  database does not match until they are rebuilt with --reload.
 
 ## 3. For the site agent
 - Card: label for statement kind `identical` ("Identical proteins"); naming steps 1-9.

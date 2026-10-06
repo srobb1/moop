@@ -294,6 +294,25 @@ if [ "${MOOP_SKIP_VACUUM:-0}" != "1" ]; then
   fi
 fi
 
+## ── Audit: the database holds exactly what its annotation files say ────────────
+## Before the copy, so a database that does not match its files never reaches the site.
+## (2026-10-06: the eross RBBH and DIAMOND homologs files shared a source and were merged
+## in 60 organisms; nothing in the build noticed.) Report: $ORG_DATA/audit_files_vs_db.tsv.
+## MOOP_SKIP_AUDIT=1 skips it (not for publishing).
+if [ "${MOOP_SKIP_AUDIT:-0}" != "1" ]; then
+  step "Auditing $THIS_ORG: annotation files against the database"
+  AUDIT_DIRS=()
+  for entry in "${GENESETS[@]}"; do
+    IFS=$'\t' read -r asm gs <<< "$entry"
+    AUDIT_DIRS+=("$ORG_DATA/$asm/$gs")
+  done
+  if ! python3 -I "$SCRIPTS/audit_files_vs_db.py" "$DB" "${AUDIT_DIRS[@]}" --report "$ORG_DATA/audit_files_vs_db.tsv"; then
+    echo "ERROR: $THIS_ORG's database does not match its annotation files (above; $ORG_DATA/audit_files_vs_db.tsv)." >&2
+    echo "       Not copying to moop." >&2
+    exit 1
+  fi
+fi
+
 ## ── Copy to moop ──────────────────────────────────────────────────────────────
 ## After every gene set has loaded, so the database that reaches the live site is
 ## never missing one.
