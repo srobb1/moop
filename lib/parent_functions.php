@@ -562,6 +562,147 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $gene_set_ids = [])
 }
 
 /**
+ * How a gene was named: its naming statements, for the overview card.
+ *
+ * The statements live in their own tables (gene_naming, gene_naming_link, gene_naming_run),
+ * not in the annotation tables — so search, the badges, the pickers and MOOPmart cannot see
+ * them by construction. See notes/NAMING_STATEMENTS_ON_SITE_PLAN.md, "FINAL DESIGN".
+ *
+ * Tolerant of a database that has no naming tables: most do not yet, and a gene page must
+ * never fail because an optional section is absent. Returns no statements in that case.
+ *
+ * `name_source` rows are skipped: the user decided the typed statements carry the same
+ * evidence, and intends not to load that kind. A database that happens to have it is ignored.
+ *
+ * @param int    $feature_id  The gene (statements are keyed by GENE, never a transcript)
+ * @param string $dbFile
+ * @return array ['statements' => [[kind, sort_order, naming_text, accession, url], ...]
+ *                (in sort_order), 'data_version' => HGNC release date or null]
+ */
+function getGeneNaming($feature_id, $dbFile): array {
+    $empty = ['statements' => [], 'data_version' => null];
+    try {
+        $dbh = getDbConnection($dbFile);
+        $has = $dbh->query("SELECT COUNT(*) FROM sqlite_master
+                            WHERE type = 'table' AND name IN ('gene_naming', 'gene_naming_link')")
+                   ->fetchColumn();
+        if ((int)$has < 2) {
+            return $empty;
+        }
+        $stmt = $dbh->prepare(
+            "SELECT n.kind, n.sort_order, n.naming_text, n.accession, l.accession_url
+             FROM gene_naming n
+             LEFT JOIN gene_naming_link l ON l.link_kind = n.link_kind
+             WHERE n.feature_id = ? AND n.kind <> 'name_source'
+             ORDER BY n.sort_order, n.kind");
+        $stmt->execute([$feature_id]);
+        $statements = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $r['url'] = ($r['accession'] !== null && $r['accession'] !== '' && !empty($r['accession_url']))
+                // ':' kept literal: HGNC's own links read ".../hgnc_id/HGNC:21625", and a
+                // colon is legal there. Everything else is still encoded.
+                ? $r['accession_url'] . str_replace('%3A', ':', rawurlencode($r['accession']))
+                : null;
+            $statements[] = $r;
+        }
+        if (empty($statements)) {
+            return $empty;
+        }
+
+        $version = null;
+        $run = $dbh->query("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'gene_naming_run'")
+                   ->fetchColumn();
+        if ((int)$run > 0) {
+            $v = $dbh->prepare("SELECT r.data_version FROM gene_naming_run r
+                                JOIN feature f ON f.gene_set_id = r.gene_set_id
+                                WHERE f.feature_id = ?");
+            $v->execute([$feature_id]);
+            $version = $v->fetchColumn() ?: null;
+        }
+        return ['statements' => $statements, 'data_version' => $version];
+    } catch (PDOException $e) {
+        error_log('getGeneNaming: ' . $e->getMessage());
+        return $empty;
+    }
+}
+
+/**
+ * Which of this gene's features the naming `protein` statement points at.
+ *
+ * The statement's accession is the protein id as the NAMING PIPELINE saw it — the depositor's
+ * id from its --protein-fasta — which may or may not carry MOOP's internal ':pep' suffix
+ * (feedback: original data stays original; ':pep'/':cds' exist only in MOOP's copies). So
+ * both spellings are tried, and an mRNA id is accepted too. Returns the protein's uniquename
+ * (for the tree) and the transcript directly under the gene (whose annotation card the
+ * statement links to), or null when nothing on this page matches.
+ *
+ * @param string $accession
+ * @param array  $children  flat descendants of the gene (getChildren rows)
+ * @param int    $gene_id
+ * @return array{protein:?string, mrna:string}|null
+ */
+function moop_resolve_naming_protein(string $accession, array $children, $gene_id): ?array {
+    if ($accession === '' || empty($children)) return null;
+    $by_id = [];
+    $by_name = [];
+    foreach ($children as $c) {
+        $by_id[$c['feature_id']] = $c;
+        $by_name[$c['feature_uniquename']] = $c;
+    }
+    $bare = preg_replace('/:pep$/', '', $accession);
+    $hit = null;
+    foreach ([$accession, $bare . ':pep', $bare] as $candidate) {
+        if (isset($by_name[$candidate])) { $hit = $by_name[$candidate]; break; }
+    }
+    if ($hit === null) return null;
+
+    // Up to the transcript that hangs directly off the gene (protein -> cds -> mRNA).
+    $protein = _fasta_key_for_type((string)$hit['feature_type']) === 'protein' ? $hit['feature_uniquename'] : null;
+    $node = $hit;
+    for ($guard = 0; $guard < 10 && (string)$node['parent_feature_id'] !== (string)$gene_id; $guard++) {
+        if (!isset($by_id[$node['parent_feature_id']])) return null;
+        $node = $by_id[$node['parent_feature_id']];
+    }
+    if ((string)$node['parent_feature_id'] !== (string)$gene_id) return null;
+
+    // Given an mRNA id, the protein is the one beneath it.
+    if ($protein === null) {
+        foreach ($children as $c) {
+            if (_fasta_key_for_type((string)$c['feature_type']) !== 'protein') continue;
+            for ($n = $c, $g = 0; $g < 10 && isset($by_id[$n['parent_feature_id']]); $g++) {
+                $n = $by_id[$n['parent_feature_id']];
+                if ($n['feature_id'] === $node['feature_id']) { $protein = $c['feature_uniquename']; break 2; }
+            }
+        }
+    }
+    return ['protein' => $protein, 'mrna' => $node['feature_uniquename']];
+}
+
+/**
+ * The label shown beside each naming statement, by kind. A kind not listed here is still
+ * shown, labelled from its own name — a new kind from the pipeline must not vanish silently.
+ */
+function moop_gene_naming_label(string $kind): string {
+    static $labels = [
+        'support'       => 'Support',
+        // "Isoform", not "Protein": the overview already has a Protein line (the length of
+        // the longest), and two lines both called Protein would read as a contradiction
+        // whenever the naming protein is not the longest.
+        'protein'       => 'Isoform',
+        'copies'        => 'Copies',
+        'identical'     => 'Identical proteins',
+        'alignment'     => 'Alignment',
+        'domains'       => 'Domains',
+        'tree'          => 'Tree',
+        'cautions'      => 'Cautions',
+        'features'      => 'Features',
+        'expression'    => 'Expression',
+        'pipeline_name' => 'MOOP name',
+    ];
+    return $labels[$kind] ?? ucfirst(str_replace('_', ' ', $kind));
+}
+
+/**
  * Generate tree-style HTML for feature hierarchy
  * Creates a hierarchical list with box-drawing characters (like Unix 'tree' command)
  *
@@ -586,7 +727,9 @@ function getAllAnnotationsForFeatures($feature_ids, $dbFile, $gene_set_ids = [])
  * @param int   $depth           Internal use for recursion
  * @return string - HTML string with nested ul/li tree structure
  */
-function generateTreeHTML(array $children, $all_annotations = [], $analysis_order = [], $depth = 0) {
+function generateTreeHTML(array $children, $all_annotations = [], $analysis_order = [], $depth = 0,
+                          array $protein_lengths = [], string $longest_protein = '',
+                          string $naming_protein = '') {
     if ($depth >= MOOP_HIERARCHY_MAX_DEPTH || empty($children)) {
         return '';
     }
@@ -665,7 +808,21 @@ function generateTreeHTML(array $children, $all_annotations = [], $analysis_orde
         }
         
         // Nested children were fetched with the parent, in the same CTE.
-        $html .= generateTreeHTML($row['grandchildren'] ?? [], $all_annotations, $analysis_order, $depth + 1);
+        // Protein length; "longest" only when there is more than one to choose between —
+        // that is the protein the overview's length and the naming Features describe.
+        if (isset($protein_lengths[$row['feature_uniquename']])) {
+            $html .= ' <span class="tree-length">' . number_format($protein_lengths[$row['feature_uniquename']]) . ' aa';
+            if (count($protein_lengths) > 1 && $row['feature_uniquename'] === $longest_protein) {
+                $html .= ' · longest';
+            }
+            if ($row['feature_uniquename'] === $naming_protein) {
+                $html .= ' · used for naming';
+            }
+            $html .= '</span>';
+        }
+
+        $html .= generateTreeHTML($row['grandchildren'] ?? [], $all_annotations, $analysis_order, $depth + 1,
+                                  $protein_lengths, $longest_protein, $naming_protein);
         $html .= "</li>";
     }
     $html .= "</ul>";

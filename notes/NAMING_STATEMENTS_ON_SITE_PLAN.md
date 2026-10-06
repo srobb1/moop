@@ -251,3 +251,18 @@ title says for a gene with no name; open or collapsed by default.
     Sushi-domain example, COKUS1KC_0000001), confirm every fact in the Name Source sentence
     also appears in one of that gene's statements.
 - Still open: what the title says for a gene with no name; list open or collapsed by default.
+
+## Display decided 2026-10-06 (user) — the remaining open questions
+
+- **Unnamed gene** (`kind = 'no_name'`): the title reads **"Unnamed gene"**, and the no_name
+  statement sits under it where the Identity line would be.
+- **Named gene:** the provenance code is **dropped** from the title
+  (`Sushi/SCR/CCP domain-containing protein [ISM|ipr|sim~|omaR]` → the name alone). "Codes are
+  hard to remember on a quick look" — the human-readable reason is the Identity sentence,
+  directly under the title.
+- **Copy** (the overview's plain-text summary): **includes the statements** — the Identity /
+  no-name sentence, then each statement as a labelled line (`Support: …`), in `sort_order`.
+- **On load:** the statement list is **open**; the lower **Annotations section starts
+  collapsed** (with a count in its header) — "I really don't want to overwhelm users". This
+  applies on every organism, not only those with statements. A "Jump to" click on a section
+  inside it must open it.

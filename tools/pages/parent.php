@@ -68,11 +68,47 @@
                 ? decodeAnnotationText($description)
                 : (!empty($name) ? $name : '');
 
+            // How this gene was named (gene_naming). The first statement says what the gene
+            // is — the Identity sentence, or why it has no name — and sits under the title;
+            // the rest are the labelled point-by-point list. Absent on databases without
+            // naming tables, which leaves the card exactly as it was.
+            $naming_statements = $gene_naming['statements'] ?? [];
+            $naming_lead = null;
+            $naming_list = [];
+            foreach ($naming_statements as $__s) {
+                if ($naming_lead === null && in_array($__s['kind'], ['identity', 'no_name'], true)) {
+                    $naming_lead = $__s;
+                } else {
+                    $naming_list[] = $__s;
+                }
+            }
+            if ($naming_lead !== null && $naming_lead['kind'] === 'no_name') {
+                // The description of an unnamed gene is only its own transcript ID, which
+                // the heading would repeat to no purpose. Say plainly that it has no name;
+                // the reason is the line directly beneath.
+                $overview_title = 'Unnamed gene';
+            } elseif ($naming_lead !== null) {
+                // The naming pipeline ends each name with its evidence code, e.g.
+                // "Sushi/SCR/CCP domain-containing protein [ISM|ipr|sim~|omaR]". The code is
+                // unreadable at a glance (user, 2026-10-06), and the Identity sentence below
+                // says the same thing in words. Stripped only on genes that HAVE naming
+                // statements, so no other description ending in brackets is touched.
+                $overview_title = preg_replace('/\s*\[IS[A-Z]*(\|[^\[\]]*)?\]\s*$/', '', $overview_title);
+            }
+
             // Plain-text summary for pasting into notes. Built here rather than scraped
             // from the DOM: the overview is a <dl> of labels and links, so a hand
             // selection drags in blank lines and layout whitespace. Same fields, same
             // order as the box, one per line, no headings — the user asked for exactly
             // what they would have highlighted, minus the mess.
+            // One line however many isoforms: the longest protein, and "longest of N" only
+            // when there is a choice. Plain text here; the card adds the same words.
+            $protein_length_text = '';
+            if ($longest_protein !== '') {
+                $n_prot = count($protein_lengths);
+                $protein_length_text = 'Protein: ' . number_format($protein_lengths[$longest_protein]) . ' aa'
+                    . ($n_prot > 1 ? ' (longest of ' . $n_prot . ')' : '');
+            }
             $copy_lines = [$feature_uniquename];
             if ($overview_title !== '') $copy_lines[] = $overview_title;
             $badges = htmlspecialchars_decode(strip_tags($type));
@@ -98,6 +134,18 @@
                               . '-' . number_format($feature_loc['end'])
                               . (in_array($feature_loc['strand'], ['+','-'], true) ? ' (' . $feature_loc['strand'] . ')' : '');
             }
+            if ($longest_protein !== '') {
+                $copy_lines[] = $protein_length_text;
+            }
+            // The naming statements, after the rest: the lead sentence, then one labelled
+            // line per statement, in the card's order (user, 2026-10-06).
+            if ($naming_lead !== null) {
+                $copy_lines[] = $naming_lead['naming_text']
+                    . (!empty($naming_lead['accession']) ? ' (' . $naming_lead['accession'] . ')' : '');
+            }
+            foreach ($naming_list as $__s) {
+                $copy_lines[] = moop_gene_naming_label($__s['kind']) . ': ' . $__s['naming_text'];
+            }
             $copy_text = implode("\n", array_filter($copy_lines, fn($l) => trim((string)$l) !== ''));
             ?>
             <div class="feature-header-id">
@@ -122,6 +170,39 @@
                         <span class="feature-title-empty">No description available</span>
                     <?php endif; ?>
                 </h1>
+                <?php if ($naming_lead !== null): ?>
+                <p class="gene-naming-lead<?= $naming_lead['kind'] === 'no_name' ? ' is-unnamed' : '' ?>">
+                    <?= htmlspecialchars($naming_lead['naming_text']) ?>
+                    <?php if (!empty($naming_lead['accession'])): ?>
+                        <?php if (!empty($naming_lead['url'])): ?>
+                            <a href="<?= htmlspecialchars($naming_lead['url']) ?>" target="_blank" rel="noopener"
+                               class="gene-naming-acc"><?= htmlspecialchars($naming_lead['accession']) ?><i class="fa fa-external-link-alt link-icon"></i></a>
+                        <?php else: ?>
+                            <span class="gene-naming-acc"><?= htmlspecialchars($naming_lead['accession']) ?></span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </p>
+                <?php endif; ?>
+                <?php if (!empty($naming_list)): ?>
+                <?php /* Open by default; the annotation tables below start collapsed instead
+                         (user, 2026-10-06: "I really don't want to overwhelm users"). Long
+                         statements clamp to two lines with a "more" — Cautions run to 571
+                         characters. */ ?>
+                <dl class="gene-naming-list">
+                    <?php foreach ($naming_list as $__s): ?>
+                        <dt class="gn-kind-<?= htmlspecialchars($__s['kind']) ?>"><?= htmlspecialchars(moop_gene_naming_label($__s['kind'])) ?></dt>
+                        <dd class="gn-kind-<?= htmlspecialchars($__s['kind']) ?>">
+                            <span class="gn-text"><?= htmlspecialchars($__s['naming_text']) ?><?php
+                                if ($__s['kind'] === 'protein' && !empty($naming_isoform['mrna'])): ?>
+                                <a href="#<?= htmlspecialchars(moop_annotation_card_anchor($naming_isoform['mrna'])) ?>" class="gene-naming-acc">its annotations</a><?php endif; ?></span>
+                            <button type="button" class="gn-more" hidden>more</button>
+                        </dd>
+                    <?php endforeach; ?>
+                </dl>
+                <?php if (!empty($gene_naming['data_version'])): ?>
+                    <p class="gene-naming-version">Named by MOOP from HGNC release <?= htmlspecialchars($gene_naming['data_version']) ?></p>
+                <?php endif; ?>
+                <?php endif; ?>
                 <div class="mb-2">
                     <span class="badge bg-feature-gene text-white badge-sm"><?= htmlspecialchars($type) ?></span>
                     <?php if (!empty($children_hierarchical)):
@@ -167,6 +248,11 @@
                             echo $loc_text;
                         }
                     ?></dd>
+                    <?php endif; ?>
+                    <?php if ($longest_protein !== ''): ?>
+                    <dt>Protein</dt>
+                    <dd><?= number_format($protein_lengths[$longest_protein]) ?> aa<?php if (count($protein_lengths) > 1): ?>
+                        <span class="text-muted" title="<?= htmlspecialchars($longest_protein) ?>">(longest of <?= count($protein_lengths) ?>)</span><?php endif; ?></dd>
                     <?php endif; ?>
                 </dl>
             </div>
@@ -304,7 +390,7 @@
                                 <?php if ($parent_annot_count > 0): ?>
                                     <span class="badge bg-success text-white badge-sm"><?= $parent_annot_count ?> annotation<?= $parent_annot_count > 1 ? 's' : '' ?></span>
                                 <?php endif; ?>
-                                <?= generateTreeHTML($children_hierarchical, $all_annotations, $analysis_order) ?>
+                                <?= generateTreeHTML($children_hierarchical, $all_annotations, $analysis_order, 0, $protein_lengths, $longest_protein, (string)($naming_isoform['protein'] ?? '')) ?>
                             </li>
                         </ul>
                     </div>
@@ -317,10 +403,24 @@
     <div class="card shadow-sm mb-4" id="pnav-annotations" data-nav-label="Annotations">
         <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div class="d-flex align-items-center">
-                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="true" role="button">
-                    <i class="fas fa-minus toggle-icon text-primary"></i>
+                <?php /* Starts COLLAPSED (user, 2026-10-06: "I really don't want to overwhelm
+                         users"). The overview card above is the summary; the tables are the
+                         detail. The count says what is inside before it is opened, and every
+                         link into it — sidebar, gene-structure rows, the hierarchy, a #hash —
+                         opens it first (parent-nav.js, parent-tools.js). */ ?>
+                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="false" aria-controls="annotationsSection" role="button">
+                    <i class="fas fa-plus toggle-icon text-primary"></i>
                 </span>
                 <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Annotations</span>
+                <span class="ms-2 small text-muted annotations-count"><?php
+                    $__n_tx = count($children_hierarchical);
+                    if (empty($annotation_total)) {
+                        echo 'none';
+                    } else {
+                        echo number_format($annotation_total) . ' annotation' . ($annotation_total == 1 ? '' : 's');
+                        if ($__n_tx > 1) echo ' across ' . $__n_tx . ' transcripts';
+                    }
+                ?></span>
                 <?php if (!empty($isoforms_share_annotations)): ?>
                     <?php /* Stated, not acted on. The tables stay per transcript — an annotation
                              belongs to the transcript, and grouping only the genes where the sets
@@ -361,7 +461,7 @@
                          you there from anywhere, and it duplicated that in one spot only. */ ?>
             </div>
         </div>
-        <div id="annotationsSection" class="collapse show">
+        <div id="annotationsSection" class="collapse">
             <div class="card-body">
                 <?php
                 // Parent annotations - using cached results
@@ -580,6 +680,10 @@ echo help_modal(
 // not on the page — Gene Structure is absent when there is no gene model, and Annotations
 // when nothing is annotated.
 $page_sections = [];
+if (!empty($naming_statements)) {
+    $page_sections[] = ['label' => 'How this gene was named',
+        'text' => 'Under the title: what the gene is, then the evidence point by point. Cautions flags what to check before relying on the name.'];
+}
 if (!empty($gene_model)) {
     $page_sections[] = ['label' => 'Gene Structure',
         'text' => 'Every transcript drawn to scale against the genome. Click a feature for its sequence, or a row to jump to its annotations.'];
@@ -588,7 +692,7 @@ $page_sections[] = ['label' => 'Feature Hierarchy',
     'text' => 'What belongs to what: the ' . htmlspecialchars(moop_type_word($type)) . ', its transcripts, and their coding sequences and proteins.'];
 if (!empty($children_hierarchical) || !empty($all_annotations[$feature_id])) {
     $page_sections[] = ['label' => 'Annotations',
-        'text' => 'What analyses found for this sequence, grouped by transcript and then by type. One table per type.'];
+        'text' => 'What analyses found for this sequence, grouped by transcript and then by type. Starts folded — click its heading to open.'];
 }
 $page_sections[] = ['label' => 'Sequences',
     'text' => 'Download the genomic, transcript, coding or protein sequence for anything on this page.'];

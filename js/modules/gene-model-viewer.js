@@ -319,6 +319,9 @@
                 g.addEventListener('click', () => {
                     const target = document.getElementById(iso.anchor);
                     if (target) {
+                        // The Annotations section starts collapsed; open it first or the
+                        // scroll lands on nothing.
+                        if (window.moopOpenCollapsedAncestors) window.moopOpenCollapsedAncestors(target);
                         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 });

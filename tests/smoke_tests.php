@@ -873,6 +873,31 @@ array_map('unlink', glob("$_db_dir/*.sqlite"));
 @rmdir($_db_dir);
 
 // ----------------------------------------------------------------------------
+group('Gene naming: the isoform a name was taken from');
+require_once dirname(__DIR__) . '/lib/extract_search_helpers.php';
+require_once dirname(__DIR__) . '/lib/parent_functions.php';
+// gene 1 -> mRNA 2 (G-RA) -> cds 3 -> protein 4 (P1:pep); mRNA 5 (G-RB) -> cds 6 -> protein 7 (P2:pep).
+// Protein ids deliberately unlike their mRNA ids -- they often are, and a bare protein id that
+// happened to equal its mRNA id would pass through the mRNA path and hide a broken match.
+$_kids = [
+    ['feature_id' => 2, 'feature_uniquename' => 'G-RA',     'feature_type' => 'mRNA',    'parent_feature_id' => 1],
+    ['feature_id' => 3, 'feature_uniquename' => 'G-RA:cds', 'feature_type' => 'cds',     'parent_feature_id' => 2],
+    ['feature_id' => 4, 'feature_uniquename' => 'P1:pep',   'feature_type' => 'protein', 'parent_feature_id' => 3],
+    ['feature_id' => 5, 'feature_uniquename' => 'G-RB',     'feature_type' => 'mRNA',    'parent_feature_id' => 1],
+    ['feature_id' => 6, 'feature_uniquename' => 'G-RB:cds', 'feature_type' => 'cds',     'parent_feature_id' => 5],
+    ['feature_id' => 7, 'feature_uniquename' => 'P2:pep',   'feature_type' => 'protein', 'parent_feature_id' => 6],
+];
+$_want = ['protein' => 'P2:pep', 'mrna' => 'G-RB'];
+ok(moop_resolve_naming_protein('P2:pep', $_kids, 1) === $_want, 'MOOP protein id resolves to its protein and transcript');
+// The pipeline reads the DEPOSITOR's FASTA, whose ids carry no ':pep'.
+ok(moop_resolve_naming_protein('P2', $_kids, 1) === $_want, 'a bare id resolves to the same isoform, not to nothing');
+ok(moop_resolve_naming_protein('P1', $_kids, 1)['mrna'] === 'G-RA', 'the other isoform is not confused with it');
+ok(moop_resolve_naming_protein('G-RB', $_kids, 1) === $_want, 'an mRNA id resolves to the protein beneath it');
+ok(moop_resolve_naming_protein('G-RC', $_kids, 1) === null, 'an id not on the page resolves to null');
+ok(moop_resolve_naming_protein('P2:pep', $_kids, 99) === null, 'a protein of another gene resolves to null');
+ok(moop_gene_naming_label('protein') !== 'Protein', 'the naming-protein label does not repeat the overview\'s Protein line');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

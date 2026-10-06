@@ -50,6 +50,7 @@ include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../includes/layout.php';
 include_once __DIR__ . '/../lib/parent_functions.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/fasta_index.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 
 // Load page-specific config
@@ -418,6 +419,57 @@ foreach ($children as $child) {
 }
 $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
 
+// Protein lengths, from the protein FASTA's .fai — a point lookup, no sequence read. Shown on
+// each protein in the Feature Hierarchy, and the longest in the overview: a short protein is a
+// clue worth seeing at the top (user, 2026-10-06), and the longest is the one the naming
+// pipeline reads length and predicted features from (assign_gene_names_v2.pl,
+// longest_member: ties broken by id — same rule here). An id missing from the index (a gene
+// set whose FASTA names differ) simply shows no length.
+$protein_lengths = [];
+$longest_protein = '';
+$protein_ids = [];
+foreach ($children as $__c) {
+    if (_fasta_key_for_type((string)$__c['feature_type']) === 'protein') {
+        $protein_ids[] = $__c['feature_uniquename'];
+    }
+}
+$protein_pattern = $sequence_types['protein']['pattern'] ?? null;
+$protein_fasta = $protein_pattern ? (glob("$gene_set_dir/$protein_pattern")[0] ?? null) : null;
+if ($protein_ids && $protein_fasta && moop_fasta_index_available($protein_fasta)) {
+    foreach (moop_fai_lookup($protein_fasta . '.fai', $protein_ids) as $__id => $__e) {
+        $protein_lengths[$__id] = $__e['len'];
+    }
+    uksort($protein_lengths, 'strcmp');
+    foreach ($protein_lengths as $__id => $__len) {
+        if ($longest_protein === '' || $__len > $protein_lengths[$longest_protein]) {
+            $longest_protein = $__id;
+        }
+    }
+}
+
+// How this gene was named — the overview card's statement list. Empty on a database with no
+// naming tables (most, for now), which simply leaves the card as it was.
+$gene_naming = getGeneNaming($feature_id, $db);
+
+// The isoform the name was taken from, when the pipeline says (a `protein` statement, only on
+// genes with more than one protein and evidence pointing at one). Marked in the tree, and the
+// statement links to that transcript's annotations.
+$naming_isoform = null;
+foreach ($gene_naming['statements'] as $__s) {
+    if ($__s['kind'] === 'protein' && !empty($__s['accession'])) {
+        $naming_isoform = moop_resolve_naming_protein($__s['accession'], $children, $feature_id);
+        break;
+    }
+}
+
+// For the Annotations header, which starts collapsed: say what is inside before it is opened.
+$annotation_total = 0;
+foreach ($all_annotations as $__by_type) {
+    foreach ($__by_type as $__rows) {
+        $annotation_total += count($__rows);
+    }
+}
+
 // Repoint the gene-model diagram's row links at the annotation CARDS.
 //
 // The isoform ids in $gene_model come from the GFF, and the cards are keyed by the DATABASE
@@ -557,6 +609,11 @@ echo render_display_page(
         'annotated_isoform_count'    => $annotated_isoform_count,
         'db' => $db,
         'all_annotations' => $all_annotations,
+        'gene_naming' => $gene_naming,
+        'naming_isoform' => $naming_isoform,
+        'protein_lengths' => $protein_lengths,
+        'longest_protein' => $longest_protein,
+        'annotation_total' => $annotation_total,
         'analysis_order' => $analysis_order,
         'annotation_colors' => $annotation_colors,
         'annotation_labels' => $annotation_labels,

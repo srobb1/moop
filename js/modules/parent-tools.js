@@ -74,3 +74,95 @@ $(document).ready(function () {
             : 'Collapse every transcript so the list fits on one screen');
     });
 });
+
+
+/* ── Reaching into a collapsed section ────────────────────────────────────────
+ *
+ * The Annotations section starts collapsed (user, 2026-10-06), so every way into it has to
+ * open it first, or the jump lands on a hidden element and nothing visibly happens. The
+ * ways in: the gene-structure rows (gene-model-viewer.js), the Feature Hierarchy's
+ * href="#..." links, a #hash in the URL, and the "Jump to" sidebar (parent-nav.js, which
+ * opens its own targets).
+ *
+ * collapse-handler.js toggles `.show` directly and fires no Bootstrap events, so the icon
+ * is set here, and DataTables are re-measured by watching the class instead: a table drawn
+ * while its section was hidden has no width to measure, and its header comes out squashed.
+ */
+(function () {
+    function setIcon(collapseEl) {
+        if (!collapseEl.id) return;
+        document.querySelectorAll('[data-bs-target="#' + collapseEl.id + '"] .toggle-icon').forEach(function (i) {
+            i.classList.toggle('fa-minus', collapseEl.classList.contains('show'));
+            i.classList.toggle('fa-plus', !collapseEl.classList.contains('show'));
+        });
+    }
+
+    window.moopOpenCollapsedAncestors = function (el) {
+        for (var p = el; p; p = p.parentElement) {
+            if (p.classList && p.classList.contains('collapse') && !p.classList.contains('show')) {
+                p.classList.add('show');
+                setIcon(p);
+            }
+        }
+    };
+
+    function adjustTables() {
+        if (window.jQuery && jQuery.fn.dataTable) {
+            jQuery.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var section = document.getElementById('annotationsSection');
+        if (section && window.MutationObserver) {
+            var wasOpen = section.classList.contains('show');
+            new MutationObserver(function () {
+                var open = section.classList.contains('show');
+                if (open && !wasOpen) adjustTables();
+                wasOpen = open;
+            }).observe(section, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // In-page links: open the way, then let the browser follow the link as usual.
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest && e.target.closest('a[href^="#"]');
+            if (!a || a.getAttribute('href').length < 2) return;
+            var target = document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)));
+            if (target) window.moopOpenCollapsedAncestors(target);
+        }, true);
+
+        // Arriving with a #hash that points inside a collapsed section.
+        if (location.hash.length > 1) {
+            var target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+            if (target && target.closest('.collapse:not(.show)')) {
+                window.moopOpenCollapsedAncestors(target);
+                target.scrollIntoView({ block: 'start' });
+            }
+        }
+    });
+})();
+
+
+/* ── Naming statements: "more" on the ones clamped to two lines ───────────────
+ * Shown only where the text actually overflows — measured, since line length depends on
+ * the card's width, not on the character count. */
+document.addEventListener('DOMContentLoaded', function () {
+    var items = document.querySelectorAll('.gene-naming-list dd');
+    function measure() {
+        items.forEach(function (dd) {
+            if (dd.classList.contains('gn-open')) return;
+            var t = dd.querySelector('.gn-text'), b = dd.querySelector('.gn-more');
+            if (t && b) b.hidden = t.scrollHeight <= t.clientHeight + 1;
+        });
+    }
+    items.forEach(function (dd) {
+        var b = dd.querySelector('.gn-more');
+        if (!b) return;
+        b.addEventListener('click', function () {
+            var open = dd.classList.toggle('gn-open');
+            b.textContent = open ? 'less' : 'more';
+        });
+    });
+    measure();
+    window.addEventListener('resize', measure);
+});

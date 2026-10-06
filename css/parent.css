@@ -502,3 +502,84 @@ a.badge:hover {
 .isoform-note-same             { border-left-color: #0891b2; }
 .isoform-note-same strong      { color: #0f5132; }
 .isoform-note-same .fas        { color: #0891b2; }
+
+/* ── How this gene was named (overview card) ─────────────────────────────────
+   The lead sentence (Identity, or why the gene has no name) sits directly under the
+   title; the labelled statements follow. Cautions is the one place colour means state. */
+.feature-header .gene-naming-lead {
+    font-size: 0.92rem;
+    color: #3b3350;
+    margin: -0.3rem 0 0.5rem;
+}
+.feature-header .gene-naming-lead.is-unnamed {
+    color: #5c5470;
+}
+.feature-header .gene-naming-acc {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    color: #764ba2;
+    white-space: nowrap;
+    margin-left: 0.25rem;
+    text-decoration: none;
+}
+.feature-header .gene-naming-list {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.75rem;
+    row-gap: 0.2rem;
+    font-size: 0.84rem;
+    margin: 0 0 0.35rem;
+    padding-left: 0.6rem;
+    border-left: 2px solid #e4dcef;
+}
+.feature-header .gene-naming-list dt {
+    color: #6c757d;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.feature-header .gene-naming-list dd {
+    margin: 0;
+    color: #333;
+    min-width: 0;
+}
+.feature-header .gene-naming-list .gn-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+.feature-header .gene-naming-list dd.gn-open .gn-text {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: none;
+}
+.feature-header .gene-naming-list .gn-more {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: 0.78rem;
+    color: #764ba2;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.feature-header .gene-naming-list dt.gn-kind-cautions {
+    color: #8a5a00;
+}
+.feature-header .gene-naming-list dd.gn-kind-cautions {
+    background: #fff8e6;
+    border-radius: 0.2rem;
+    padding: 0 0.3rem;
+}
+.feature-header .gene-naming-version {
+    font-size: 0.75rem;
+    color: #8a8f98;
+    margin: 0 0 0.5rem;
+}
+
+/* Protein length beside a protein in the Feature Hierarchy */
+.tree-length {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-left: 0.35rem;
+}
