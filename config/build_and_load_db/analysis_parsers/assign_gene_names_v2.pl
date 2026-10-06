@@ -338,6 +338,8 @@ my %transcript_label;     # transcript -> its GFF Name (KLF5-202)
 my %transcript_gene;      # transcript -> its GFF gene
 my %gene_label;           # GFF gene -> its Name
 my %protein_transcript;   # CDS protein_id -> its transcript
+my %protein_mrna;         # protein -> its mRNA's id as the site names it: CDS protein_id, or a cds-/CDS: id
+                          # (RefSeq: ID=cds-NP_1;Parent=rna-NM_1), for the Protein statement only
 my %protein_best_human;   # protein -> its best human hit (DIAMOND, NORMAL filter)
 my %protein_any_human;    # protein -> human key -> 1: every human gene it hits (E <= $HIT_MAX_EVALUE, any coverage)
 my %read_through;         # group -> [ { human, transcripts => [ labels ], genes => [ [ group, GFF gene ] ] } ]
@@ -753,6 +755,9 @@ sub read_gene_scaffolds {
       my ($parent) = $attributes =~ /(?:^|;)Parent=([^;\s]+)/;
       my ($protein) = $attributes =~ /(?:^|;)protein_id=([^;\s]+)/;
       $protein_transcript{$protein} //= plain_feature_id($parent) if defined $parent and defined $protein;
+      my ($cds_id) = $attributes =~ /(?:^|;)ID=(?:cds-|CDS:)([^;\s]+)/;
+      my $mrna_protein = $protein // $cds_id;
+      $protein_mrna{$mrna_protein} //= $parent =~ s/^(?:rna-|transcript:)//r if defined $parent and defined $mrna_protein;
       next;
     }
     next unless $type eq 'gene' or $type eq 'mRNA' or $type eq 'transcript';
@@ -4068,15 +4073,18 @@ my @STATEMENT_TYPES = (
   ['support',    2],
   ['copies',     3],
   ['identical',  4],
-  ['alignment',  5],
-  ['domains',    6],
-  ['tree',       7],
-  ['cautions',   8],
-  ['features',   9],
-  ['expression', 10],
+  # which of a gene's proteins the name rests on, and its length (user, 2026-10-06): the Alignment
+  # statement below says "this protein"; a gene with several proteins needs to say which
+  ['protein',    5],
+  ['alignment',  6],
+  ['domains',    7],
+  ['tree',       8],
+  ['cautions',   9],
+  ['features',   10],
+  ['expression', 11],
   # a gene that shows its own (--native) name: the name MOOP's own steps give it, and by which step
   # (the user wants both on the gene page: the source's name, and what MOOP would call it and why)
-  ['pipeline_name', 11],
+  ['pipeline_name', 12],
 );
 my $STATEMENT_TYPE = 'Gene Statement';
 
@@ -4167,6 +4175,36 @@ sub no_domains_text {
   return 'No Pfam domain is annotated for ' . human_label($human) . ' in UniProt, so there are no domains to compare';
 }
 
+# The protein a name rests on (and its mRNA), when that is clear: the gene has more than one protein and the name's evidence
+# (its note: source|type|protein|hit|score -- the hit, ortholog pair, domain or family match it came from)
+# names one of them. Not for a gene with one protein (nothing to choose), a name with no evidence protein (a
+# curated or native name without one, None), or a protein selected_id fell back to. ('', '') otherwise.
+sub naming_protein {
+  my ($group, $named) = @_;
+  return ('', '') unless $named and $named->{desc} ne 'None' and defined $named->{note};
+  my @proteins = @{$proteins_of{$group} // []};
+  return ('', '') unless @proteins > 1;
+  my $evidence = (split /\|/, $named->{note})[2] // '';
+  return ('', '') if $evidence eq '' or $evidence eq '-';
+  my ($protein) = grep { my $id = $_; $id eq $evidence or strip_suffixes($id) eq strip_suffixes($evidence) } @proteins;
+  return ('', '') unless defined $protein and $query_length{$protein};
+  my @lengths = sort { $a <=> $b } grep { my $length = $_; $length } map { my $id = $_; $query_length{$id} // 0 } @proteins;
+  my $range = $lengths[0] == $lengths[-1] ? "all $lengths[0] aa" : commify($lengths[0]) . ' to ' . commify($lengths[-1]) . ' aa';
+  my $id = $protein =~ s/:pep$//r;   # the protein FASTA's id (a TransDecoder ".p1" is part of it)
+  # its mRNA, when the GFF gives one with another id (RefSeq NP_ / NM_, Ensembl ENSP / ENST); own gene sets use one id
+  my ($mrna) = grep { my $candidate = $_; defined $candidate } map { my $key = $_; $protein_mrna{$key} } ($protein, $id, strip_suffixes($id), $id =~ s/\.\d+$//r);
+  my $mrna_text = defined $mrna && $mrna ne $id ? " (mRNA $mrna)" : '';
+  # "used for naming": with --native the gene shows its own annotation's name, and this is the protein MOOP's steps used
+  return ($id, sprintf('Protein used for naming: %s%s, %s aa; the gene has %d proteins, %s',
+                       $id, $mrna_text, commify($query_length{$protein}), scalar(@proteins), $range));
+}
+
+sub commify {
+  my ($number) = @_;
+  1 while $number =~ s/^(\d+)(\d{3})/$1,$2/;
+  return $number;
+}
+
 sub gene_statements {
   my ($group) = @_;
   my $named = $name{$group};
@@ -4191,6 +4229,8 @@ sub gene_statements {
       $said{pipeline_name} = "MOOP name: $named->{desc}" . ($method{$step} ? " (by $method{$step})" : '');
     }
   }
+  my (undef, $protein_text) = naming_protein($group, $named);
+  $said{protein} = $protein_text if $protein_text ne '';
   my $identical = identical_text($group);
   $said{identical} = $identical if $identical ne '';
   my @humans = $named && $named->{desc} ne 'None' ? named_humans($group, $named) : ();
@@ -4287,7 +4327,8 @@ sub write_statements {
     $named = { %{$named // {}}, origin => { kind => 'native', accession => $group } }
       if $native_shown{$group} and (!$named or $named->{desc} eq 'None');
     my %accession = (identity => ($named && $named->{origin} ? $named->{origin}{accession} : '') // '',
-                     tree => ($tree{$group} ? $tree{$group}{panther_match} : ''));
+                     tree => ($tree{$group} ? $tree{$group}{panther_match} : ''),
+                     protein => (naming_protein($group, $name{$group}))[0]);
     foreach my $type (@STATEMENT_TYPES) {
       my ($key, $order) = @$type;
       my $text = $said{$key} // next;

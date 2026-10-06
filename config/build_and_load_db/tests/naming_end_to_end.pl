@@ -906,7 +906,7 @@ check(($closest_human{G13}[3] // '') eq 'Class I HDACs family' && ($closest_huma
         'statements G57: no name, short, predicted features, expressed in two transcriptomes', join(' | ', map { my $type = $_; "$type: " . $said->('G57', $type) } sort keys %{$statement{G57} // {}}));
   check(!$statement{G37}{expression} && !$statement{G37}{features}, 'statements G37: no expression, no default location (nothing negative said)',
         join(' | ', sort keys %{$statement{G37} // {}}));
-  check(($statement{G1}{identity}[1] // '') eq '1' && ($statement{G1}{domains}[1] // '') eq '6', 'statement order in Score', '');
+  check(($statement{G1}{identity}[1] // '') eq '1' && ($statement{G1}{domains}[1] // '') eq '7', 'statement order in Score', '');
   check(scalar($said->('G2', 'identical') =~ /^3 other genes encode the same 250 aa protein, residue for residue: G25; G3; G36$/) && ($statement{G2}{identical}[1] // '') eq '4',
         'statements G2: identical proteins listed, after Copies', $said->('G2', 'identical'));
   check(scalar($said->('G58', 'identity') =~ /^Homolog of Drosophila melanogaster Chitin synthase; orthology not shown \(may be a paralog\); by Swiss-Prot hit in another species$/),
