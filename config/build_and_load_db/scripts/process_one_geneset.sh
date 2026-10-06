@@ -410,8 +410,10 @@ make_rbbh_moop() {
     fi
 
     echo "Building RBBH moop files for $TARGET_ORG"
+    ## rbh_eross is reciprocal_alignment.py over DIAMOND: "(DIAMOND RBH)" keeps its source apart from the
+    ## DIAMOND homologs file's "Ensembl $ORG" (same name and version would merge the two in the database)
     perl "$REPO/analysis_parsers/parse_RBBH_to_MOOP_TSV.pl" "$RESULTS" "Ensembl $ORG" "$VERSION" \
-      https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q=" "$DESC"
+      https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q=" "$DESC" "DIAMOND RBH"
   done
   shopt -u nullglob
 }

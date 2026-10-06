@@ -14,6 +14,13 @@ my $desc_file = shift; # OPTIONAL: hit_id<TAB>description<TAB>symbol table.
                        # regenerates one from the reference peptide FASTA and passes
                        # its path here -- see make_rbbh_ensembl_moop_files.sh.
 $desc_file = "$dir/desc.txt" unless defined $desc_file && length $desc_file;
+my $method = shift; # OPTIONAL: the search method, added to the source name ("DIAMOND RBH" ->
+                    # "Ensembl Homo sapiens (DIAMOND RBH)"), as parse_MMSEQS_RBH_to_MOOP_TSV.pl adds
+                    # "(MMseqs2 RBH)". The output file name keeps $src alone.
+                    # Without it, the source is "Ensembl Homo sapiens" -- the same name and version as
+                    # the DIAMOND homologs file, and the loader (one source per name and version) put
+                    # both files' rows under one source: on Congeria (2026-10-02 to 10-06) every
+                    # DIAMOND human hit showed as an RBBH homolog.
 
 =pod
 query	best_hit	evalue	reciprocal_score	query_gene	hit_gene
@@ -79,7 +86,7 @@ $src    =~ s/\s*$//;
 $id_url =~ s/\s*$//;
 $date   =~ s/\s*$//;
 open OUT, ">$src_nospace.RBBH.moop.tsv" or die "Can't open >$src_nospace.RBBH.moop.tsv for writing $! \n";
-print OUT "## Annotation Source: $src
+print OUT "## Annotation Source: $src" . (defined $method && length $method ? " ($method)" : '') . "
 ## Annotation Source Version: $src_version
 ## Annotation Source URL: $src_url
 ## Annotation Accession URL: $id_url

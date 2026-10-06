@@ -25,6 +25,8 @@ my ($sth_get_annotation_source, $sth_insert_annotation_source, $sth_update_annot
 # Caches - shared across every file processed in this invocation
 my (%annotation_cache, %feature_cache, %feature_annotation_cache,
     %feature_type_cache, %parent_cache, %source_cache_loaded, %ambiguous_uniquename);
+# annotation_source id -> [ annotation type, file ] of the first file this run loaded into it
+my %source_type_this_run;
 my $count_not_found = 0;
 # Annotations whose id only matched after undoing MOOP's own :pep/:cds rename.
 # Reported at the end: a large number is normal and means the rename is doing its
@@ -591,6 +593,20 @@ These are required for a load
             $sth_update_annotation_source->execute($accession_url, $source_url, $annotation_type, $date, $source_id);
             print "Updated annotation_source id $source_id\n";
         }
+    }
+
+    # Two files of one run under one source must be one kind of analysis. A source is one
+    # name and version (UNIQUE), so a second file with the same name and version but another
+    # type would land in the first file's source, and every row of both would show under one
+    # label: Congeria 2026-10-02 to 10-06, the DIAMOND human homologs ("Ensembl Homo sapiens",
+    # Homologs) inside the reciprocal-best-hit source of the same name (RBBH Homolog).
+    if (my $first = $source_type_this_run{$source_id}) {
+        die "ERROR: $annot_file has annotation source \"$source\" ($source_version), type \"$annotation_type\", "
+          . "but $first->[1] loaded the same source as type \"$first->[0]\" in this run. One source cannot hold "
+          . "two kinds of analysis: give one of them its own source name.\n"
+          if $first->[0] ne $annotation_type;
+    } else {
+        $source_type_this_run{$source_id} = [$annotation_type, $annot_file];
     }
 
     # Preload annotation cache for this source, once per distinct source per run
