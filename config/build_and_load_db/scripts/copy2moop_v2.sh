@@ -186,10 +186,13 @@ send() {
     return 1
   fi
 
-  ## '>' is "being received by the remote", 'c' is "created there". '.' lines are
+  ## '<' is "being sent to the remote" (every push of a file: rsync's man page, --itemize-changes),
+  ## '>' is "being received locally", 'c' is "created there" (directories, links). '.' lines are
   ## files rsync looked at and left alone -- those are the ones we want to be silent.
+  ## (Until 2026-10-06 this counted '>' and 'c' only: a push that UPDATED a file on the site
+  ## counted 0 and was logged "SAME ... nothing to do" although rsync had copied it.)
   local n
-  n=$(grep -cE '^(>|c[dfL])' "$out" || true)
+  n=$(grep -cE '^(<|>|c[dfL])' "$out" || true)
   XFER=$(( XFER + n ))
   [ "$n" -gt 0 ] && sed 's/^/        /' "$out"
   rm -f "$out"
