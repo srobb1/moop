@@ -188,7 +188,7 @@ above are kept for the reasoning and for the list of places an annotation type s
 | `gene_naming_run` | gene set | `gene_set_id`, `data_version` (HGNC release date), `run_date`, `details` (from naming_versions.txt) |
 
 `kind` is one of: identity, no_name, support, copies, identical, protein, alignment, domains, tree, cautions,
-features, expression, pipeline_name, name_source (2026-10-06: `protein`, order 5, the protein the name rests on; later kinds moved down one). `sort_order` is 1–9 for statements and the naming step for
+features, expression, pipeline_name, name_source (2026-10-06: `protein`, order 5, the protein the name rests on; later kinds moved down one). `sort_order` is 1–12 for statements and the naming step for
 name_source (0 = none). Identity is ONE kind; which database it links to is in `link_kind`.
 
 The card's query:
