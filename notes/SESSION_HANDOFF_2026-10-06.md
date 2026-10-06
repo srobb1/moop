@@ -37,3 +37,14 @@
 ## 4. Waiting
 - Schmidtea naming plan: published Smed names -> named Smed FASTA -> naming species for the other worms; after the
   Smed annotation run. Compara stays a naming input (decided 10-06).
+
+## 5. Later the same day (copied to the site 16:29)
+- InterProScan parser kept only the LAST match per protein and analysis (every organism: Congeria lost 71% of
+  InterPro entries, 70%/56% of GO, 32% of Pfam). Fixed (8bb4e84, Hamap direction 182b30a). Found by the site agent.
+- Protein Features: SignalP, DeepTMHMM and a new DeepLoc table (all proteins) as their own annotation type (3573ca0).
+- New statement kind `protein` (order 5; later kinds +1): the protein a name rests on, its mRNA and lengths (0b8e385).
+- "MOOP name" statement without evidence codes (4f38368).
+- notes/ANNOTATION_SCORES.md: what every table's Score holds, for the site's score lookup.
+- Congeria on the site now has all of this (audit 92/92, naming replays 43,768). The previous site version is
+  `organism.sqlite.before_2026-10-06c`. Every other organism needs a --reload rebuild for the InterProScan fix too.
+- Stopping a build: kill its process group, not only the parent (a loader survived once; harmless under --reload).
