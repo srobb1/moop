@@ -317,6 +317,8 @@ my %human_hit;        # group -> human key -> { best => hit, best_full => hit, r
 my %swissprot_best;   # group -> its best Swiss-Prot hit (E <= $HIT_MAX_EVALUE, any coverage, any species): the hit and its entry (swissprot_name)
 my %swissprot_hits;   # group -> accession -> the best hit to that entry: every Swiss-Prot hit, for the tie rule
 my %swissprot_subfamily;   # Swiss-Prot accession -> { PANTHER subfamily => 1 } (sprot_xrefs), for the entries hit
+my %search_best;      # group -> search ("DIAMOND mouse", "RBH mouse") -> its best hit (E <= $HIT_MAX_EVALUE, any coverage):
+                      # reported in the decision table only (Best_hit_each_search, RBH_each_species)
 my %gene_panther;     # group -> { PANTHER family => 1 }: every PANTHER match, any coverage
 my %human_panther;    # HGNC id -> { PANTHER family => 1 } (Swiss-Prot human entries)
 my $human_searched = 0;   # a similarity search against human proteins was read (else "no hit" means nothing)
@@ -1149,6 +1151,9 @@ sub collect_mmseqs {
         ? hit_human(human_record(hgnc_id => $info->{hgnc_id}, ensembl_gene => $info->{gene}, description => $info->{description})) : undef;
       record_human_hit($group, $human, { %hit, id => $query, hit => $target, reciprocal => 1, tool => 'MMseqs2',
                                                 source => 'MMseqs2_RBH_Homo_sapiens', type => 'RBBH_Homolog' }) if $human;
+      record_search_best($group, "RBH $common", { %hit, id => $query, hit => $target,
+                                                  symbol => ($human ? $human->{symbol} : $info->{symbol}) // '',
+                                                  description => ($human ? $human->{name} : $info->{description}) // '' });
       next unless passes(\%hit, \%NORMAL);
 
       if ($species eq 'homo_sapiens') {
@@ -1506,6 +1511,8 @@ sub collect_diamond {
       next unless @fields >= 17;   # no coverage, no bitscore: not used at all (see the note below)
       my $candidate = diamond_candidate($db, $subject, $title);
       next unless $candidate;
+      record_search_best($group, "DIAMOND $candidate->{species}", { %hit, %$candidate, id => $query, hit => $subject })
+        unless $candidate->{accession};
       if ($candidate->{accession} and $evalue <= $HIT_MAX_EVALUE) {
         my $swissprot_hit = { %hit, %$candidate, id => $query, hit => $subject, tool => 'DIAMOND' };
         $swissprot_best{$group} = $swissprot_hit if better_hit($swissprot_hit, $swissprot_best{$group});
@@ -1591,6 +1598,32 @@ sub record_human_hit {
   $entry->{rbh} = 1 if $hit->{reciprocal};
   $entry->{best} = $hit if better_hit($hit, $entry->{best});
   $entry->{best_full} = $hit if passes($hit, \%FULL) and better_hit($hit, $entry->{best_full});
+}
+
+# a search's best hit for the group (E <= $HIT_MAX_EVALUE, any coverage), for the decision table only
+sub record_search_best {
+  my ($group, $search, $hit) = @_;
+  return unless defined $hit->{evalue} and $hit->{evalue} <= $HIT_MAX_EVALUE and defined $hit->{bits};
+  $search_best{$group}{$search} = $hit if better_hit($hit, $search_best{$group}{$search});
+}
+
+# one hit for the decision table: symbol "description", identity, coverage of this protein / of the hit, E, bits
+sub hit_numbers_text {
+  my ($hit) = @_;
+  my $symbol = ($hit->{symbol} // '') ne '' ? $hit->{symbol} : $hit->{hit};
+  return sprintf('%s%s %s%.0f/%.0f%% cov, E=%s, %.0f bits', $symbol,
+                 (($hit->{description} // '') ne '' ? " \"$hit->{description}\"" : ''),
+                 (defined $hit->{pident} ? sprintf('%.0f%% id, ', $hit->{pident}) : ''),
+                 $hit->{qcov} // 0, $hit->{tcov} // 0, e_value($hit->{evalue}), $hit->{bits});
+}
+
+# every search of one kind (DIAMOND or RBH), strongest first: "mouse: Pax6 "paired box 6" 92% id, 98/97% cov, ...; ..."
+sub search_best_text {
+  my ($group, $kind) = @_;
+  my $searches = $search_best{$group} // {};
+  my @keys = grep { my $search = $_; $search =~ /^\Q$kind\E / } keys %$searches;
+  @keys = sort { better_hit($searches->{$a}, $searches->{$b}) ? -1 : better_hit($searches->{$b}, $searches->{$a}) ? 1 : $a cmp $b } @keys;
+  return join('; ', map { my $search = $_; ($search =~ s/^\Q$kind\E //r =~ s/^homo_sapiens$/human/r) . ': ' . hit_numbers_text($searches->{$search}) } @keys);
 }
 
 # higher bitscore, then lower E-value, then ids -- so the choice never depends on read order
@@ -4648,6 +4681,9 @@ sub decision_header {
     '  Best_human_hit ...: the gene\'s best hit to a human gene (E <= ' . e_value($HIT_MAX_EVALUE) . ', any coverage), whatever the cutoffs:',
     '    coverage of this protein / of the human protein (%), E-value, bitscore, rbh or bh, full-length yes/no;',
     '    Second_human_hit: the next human gene and its bitscore as % of the best (a paralog close behind)',
+    '  SwissProt_best_hit ...: the gene\'s best Swiss-Prot hit, any species including human (E <= ' . e_value($HIT_MAX_EVALUE) . ', any coverage),',
+    '    whatever the cutoffs: accession, symbol and name; species; % identity; coverage of this protein / of the',
+    '    Swiss-Prot protein (%); E-value; bitscore. Step 7 uses it when it is another species\' protein',
     '  PANTHER_best / PANTHER_model_cov: the gene\'s best-covered PANTHER family and how much of the model it covers (%)',
     '  Tree_placement: where TreeGrafter puts it on the PANTHER tree -- placement (ortholog_1, co-orthologs, paralog_family,',
     '    no_human, lineage_not_in_tree, no_graft), trusted or weak, the human genes, the joining node, the match\'s scores',
@@ -4666,6 +4702,9 @@ sub decision_header {
            "  Closest_$species->{tag}: the closest $species->{species} gene (rank: gene, evidence), as in closest_" . lc($species->{tag}) . '.tsv' }
          @closest_species),
     '    closest-species ranks: 1 OMA ortholog; 2 MMseqs2 reciprocal best hit; 3 DIAMOND best hit; 4 hits file',
+    '  Best_hit_each_search: the best hit in each DIAMOND search but Swiss-Prot (E <= ' . e_value($HIT_MAX_EVALUE) . ', any coverage),',
+    '    strongest first -- "species: symbol "name" % identity, coverage of this protein/of the hit, E, bits"',
+    '  RBH_each_species: the same for each MMseqs2 reciprocal-best-hit search (tier 3 human, tier 4 through Compara)',
   );
   return join('', map { my $line = $_; "# $line\n" } @header);
 }
@@ -4826,9 +4865,12 @@ sub write_decisions {
   print $fh decision_header();
   my %step_label = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
   print $fh join("\t", qw(ID GroupId Name Step Relationship Reason Native_name Pipeline_name Best_human_hit Best_hit_qcov Best_hit_tcov Best_hit_evalue
-                          Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit PANTHER_best PANTHER_model_cov Tree_placement),
+                          Best_hit_bits Best_hit_kind Best_hit_full_length Second_human_hit
+                          SwissProt_best_hit SwissProt_species SwissProt_identity SwissProt_qcov SwissProt_tcov SwissProt_evalue SwissProt_bits
+                          PANTHER_best PANTHER_model_cov Tree_placement),
                  (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
-                 'Closest_human', 'Evidence_by_method', 'Protein_features', 'Transcript_support', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species)), "\n";
+                 'Closest_human', 'Evidence_by_method', 'Protein_features', 'Transcript_support', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species),
+                 'Best_hit_each_search', 'RBH_each_species'), "\n";
   # --native: the gene set's own informative names replace the decision (collect_native_rows)
   my %native_kept;
   foreach my $row (@name_rows) {
@@ -4848,6 +4890,12 @@ sub write_decisions {
                ($top->{best_full} ? 'yes' : 'no'),
                (@ranked > 1 ? sprintf('%s (%.0f%%)', human_label($ranked[1][1]{human}), 100 * $ranked[1][1]{best}{bits} / $top->{best}{bits}) : ''));
     }
+    my @swissprot = ('') x 7;
+    if (my $hit = $swissprot_best{$group}) {
+      @swissprot = ("$hit->{accession} " . (($hit->{symbol} // '') ne '' ? "$hit->{symbol} " : '') . "\"$hit->{description}\"",
+                    $hit->{species_scientific} // $hit->{species} // '', sprintf('%.0f', $hit->{pident} // 0),
+                    sprintf('%.0f', $hit->{qcov} // 0), sprintf('%.0f', $hit->{tcov} // 0), e_value($hit->{evalue}), sprintf('%.0f', $hit->{bits}));
+    }
     my $coverage = $gene_family_coverage{$group} // {};
     my ($family) = sort { $coverage->{$b} <=> $coverage->{$a} or $a cmp $b } keys %$coverage;
     my $family_text = defined $family ? $family . (defined $panther_label{$family} ? " \"$panther_label{$family}\"" : '') : '';
@@ -4863,11 +4911,12 @@ sub write_decisions {
                  ($named->{origin} ? $named->{origin}{rule} : 'no step gave a name'),
                  ($native ? $native->{desc} : ''),
                  pipeline_name($group),
-                 @best, $family_text, (defined $family ? $coverage->{$family} : ''),
+                 @best, @swissprot, $family_text, (defined $family ? $coverage->{$family} : ''),
                  ($tree{$group} ? ($tree{$group}{trusted} ? 'trusted: ' : 'weak: ') . tree_text($tree{$group}) : ''),
                  (map { my $naming_step = $_; step_cell($group, $naming_step->[0], $native ? 1 : 0) } @NAMING_STEPS),
                  $closest_text, agreement_text($group), protein_features_text($group), transcript_text($group),
-                 (map { my $species = $_; closest_species_text($species, $group) } @closest_species));
+                 (map { my $species = $_; closest_species_text($species, $group) } @closest_species),
+                 search_best_text($group, 'DIAMOND'), search_best_text($group, 'RBH'));
     print $fh join("\t", map { my $cell = $_; $cell //= ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";
   }
   close $fh;
