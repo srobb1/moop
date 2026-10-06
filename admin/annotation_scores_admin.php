@@ -85,28 +85,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $score_action !== '') {
     } elseif ($score_action === 'rule_add' || $score_action === 'rule_save') {
         $rule = $rule_from_post();
         if (!isset($rule['kind'], $kinds[$rule['kind']]) || (!isset($rule['source']) && !isset($rule['type']))) {
-            $flash = ['type' => 'danger', 'msg' => 'A rule needs a kind, and a source or a type (or both).'];
+            $flash = ['type' => 'danger', 'msg' => 'A source rule needs a source; a fallback needs a table. Both need a kind.'];
         } elseif ($score_action === 'rule_save' && isset($rules[$idx])) {
             $rules[$idx] = $rule;
             $flash = ['type' => 'success', 'msg' => 'Saved rule ' . ($idx + 1) . '.'];
         } else {
-            // A new SOURCE rule goes above the first type-wide rule: rules are first-match, so
-            // added at the end it would sit under "Domains -> E-value" and never apply. A
-            // type-only rule goes at the end.
-            $at = count($rules);
-            if (isset($rule['source'])) {
-                foreach ($rules as $i => $r) {
-                    if (empty($r['source'])) { $at = $i; break; }
-                }
+            // Source rules and fallbacks are matched as two separate tiers (fallbacks always
+            // last), so a new rule's position only matters among its own tier: put it at the
+            // end of that tier. Kept grouped in the file too, so the file reads like the card.
+            $is_source = isset($rule['source']);
+            $last_of_tier = null;
+            foreach ($rules as $i => $r) {
+                if (!empty($r['source']) === $is_source) $last_of_tier = $i;
             }
+            // After the last rule of its tier; with none yet, sources go first, fallbacks last.
+            $at = $last_of_tier !== null ? $last_of_tier + 1 : ($is_source ? 0 : count($rules));
             array_splice($rules, $at, 0, [$rule]);
-            $flash = ['type' => 'success', 'msg' => 'Added a rule at position ' . ($at + 1) . '.'];
+            $flash = ['type' => 'success', 'msg' => $is_source ? 'Added a source rule.' : 'Added a fallback.'];
         }
 
     } elseif ($score_action === 'rule_move' && isset($rules[$idx])) {
-        $to = $idx + (($_POST['dir'] ?? '') === 'up' ? -1 : 1);
-        if (isset($rules[$to])) {
-            [$rules[$idx], $rules[$to]] = [$rules[$to], $rules[$idx]];
+        // Order matters only among source rules: swap with the nearest SOURCE rule above or
+        // below, skipping any fallback that happens to sit between them in the file.
+        $step = ($_POST['dir'] ?? '') === 'up' ? -1 : 1;
+        for ($to = $idx + $step; isset($rules[$to]); $to += $step) {
+            if (!empty($rules[$to]['source'])) {
+                [$rules[$idx], $rules[$to]] = [$rules[$to], $rules[$idx]];
+                break;
+            }
         }
         $flash = ['type' => 'success', 'msg' => 'Moved the rule.'];
 

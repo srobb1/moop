@@ -1,5 +1,5 @@
 {
-  "_about": "What the Score column means for each annotation source. Edited on Admin > Manage Annotation Scores. Rules are checked top to bottom; the first rule whose source (the start of the source name) and type both match decides the kind. A source no rule matches shows its raw number.",
+  "_about": "What the Score column means for each annotation source. Edited on Admin > Manage Annotations (Score meanings). Rules with a source are checked first, top to bottom, first match wins; a source matches the START of the source name, and a rule that also names a type needs both. Rules with only a type are fallbacks for that table, checked only after every source rule. A source no rule matches shows its raw number.",
   "kinds": {
     "evalue": {
       "label": "E-value",
@@ -152,7 +152,15 @@
       "kind": "none"
     },
     {
-      "source": "InterProScan (SignalP_",
+      "source": "InterProScan (SignalP_EUK)",
+      "kind": "none"
+    },
+    {
+      "source": "InterProScan (SignalP_GRAM_NEGATIVE)",
+      "kind": "none"
+    },
+    {
+      "source": "InterProScan (SignalP_GRAM_POSITIVE)",
       "kind": "none"
     },
     {

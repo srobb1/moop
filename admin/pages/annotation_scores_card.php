@@ -12,10 +12,12 @@ $__kind_options = function (string $selected) use ($score_cfg): string {
     }
     return $html;
 };
-// Type: a dropdown of the site's annotation types, "(any type)" first, so an empty value
+// Table: a dropdown of the site's annotation types, "(any table)" first, so an empty value
 // reads as a choice rather than a blank, and a typo cannot make a rule silently match nothing.
-$__type_options = function (string $selected) use ($score_types): string {
-    $html = '<option value="">(any type)</option>';
+// $any_label '' = no "any" choice (a fallback must name its table).
+$__type_options = function (string $selected, string $any_label = '(any table)') use ($score_types): string {
+    $html = $any_label !== '' ? '<option value="">' . htmlspecialchars($any_label) . '</option>'
+                              : ($selected === '' ? '<option value="" selected disabled>choose a table</option>' : '');
     foreach ($score_types as $t) {
         $html .= '<option value="' . htmlspecialchars($t) . '"' . ($t === $selected ? ' selected' : '') . '>'
                . htmlspecialchars($t) . '</option>';
@@ -86,55 +88,99 @@ $__example = function (string $id, array $k) use ($score_cfg): string {
       <p class="small text-success mb-3"><i class="fa fa-check"></i> Every source on this site (<?= (int)$score_source_total ?> across all organisms) has a score meaning.</p>
     <?php endif; ?>
 
-    <h6 class="mt-3">Rules <small class="text-muted fw-normal">— checked top to bottom; the first match decides</small></h6>
-    <p class="small text-muted mb-2">
-      <strong>Source starts with</strong> matches the beginning of a source name, so <code>OMA HOG orthologs</code>
-      covers every species. <strong>Type</strong> is the annotation type — the table the source appears in on the
-      gene page. Most rules need only a source and leave Type as <em>(any type)</em>; the rules at the bottom give
-      only a type, as the fallback for any source in that table that no rule above caught. Give both to narrow a
-      rule to one source in one table.
-    </p>
-    <div class="table-responsive">
-    <table class="table table-sm align-middle">
-      <thead><tr><th>#</th><th>Source starts with</th><th>Type</th><th>Kind</th><th></th></tr></thead>
-      <tbody>
-      <?php foreach ($score_raw['rules'] as $i => $r): $form = "scoreRule$i"; ?>
-        <tr>
-          <td class="text-muted"><?= $i + 1 ?></td>
-          <td><input form="<?= $form ?>" name="source" class="form-control form-control-sm" value="<?= htmlspecialchars($r['source'] ?? '') ?>" placeholder="(any source)"></td>
-          <td><select form="<?= $form ?>" name="type" class="form-select form-select-sm"><?= $__type_options((string)($r['type'] ?? '')) ?></select></td>
-          <td><select form="<?= $form ?>" name="kind" class="form-select form-select-sm"><?= $__kind_options((string)($r['kind'] ?? '')) ?></select></td>
-          <td class="text-nowrap">
+    <?php
+    // Two lists, because they behave differently (lib/annotation_scores.php): source rules
+    // are checked first, in order; fallbacks only after all of them, so their order does not
+    // matter and they cannot shadow a source rule. Indexes are positions in the one file list.
+    $__source_rules = $__fallbacks = [];
+    foreach ($score_raw['rules'] as $i => $r) {
+        if (!empty($r['source'])) $__source_rules[$i] = $r; else $__fallbacks[$i] = $r;
+    }
+    $__src_idx = array_keys($__source_rules);
+    $__buttons = function (int $i, bool $movable, bool $first, bool $last, string $form) use ($score_file_write_error): string {
+        ob_start(); ?>
             <form id="<?= $form ?>" method="post" class="d-inline">
               <?= csrf_input_field() ?>
               <input type="hidden" name="rule_index" value="<?= $i ?>">
               <button name="_score_action" value="rule_save" class="btn btn-sm btn-outline-primary" title="Save this rule">Save</button>
             </form>
+            <?php if ($movable): ?>
             <form method="post" class="d-inline">
               <?= csrf_input_field() ?>
               <input type="hidden" name="_score_action" value="rule_move">
               <input type="hidden" name="rule_index" value="<?= $i ?>">
-              <button name="dir" value="up" class="btn btn-sm btn-outline-secondary" title="Move up" <?= $i === 0 ? 'disabled' : '' ?>>↑</button>
-              <button name="dir" value="down" class="btn btn-sm btn-outline-secondary" title="Move down" <?= $i === count($score_raw['rules']) - 1 ? 'disabled' : '' ?>>↓</button>
+              <button name="dir" value="up" class="btn btn-sm btn-outline-secondary" title="Move up" <?= $first ? 'disabled' : '' ?>>↑</button>
+              <button name="dir" value="down" class="btn btn-sm btn-outline-secondary" title="Move down" <?= $last ? 'disabled' : '' ?>>↓</button>
             </form>
-            <form method="post" class="d-inline" data-confirm="Delete rule <?= $i + 1 ?>?">
+            <?php endif; ?>
+            <form method="post" class="d-inline" data-confirm="Delete this rule?">
               <?= csrf_input_field() ?>
               <input type="hidden" name="_score_action" value="rule_delete">
               <input type="hidden" name="rule_index" value="<?= $i ?>">
               <button class="btn btn-sm btn-outline-danger" title="Delete this rule"><i class="fa fa-trash"></i></button>
             </form>
-          </td>
+        <?php return ob_get_clean();
+    };
+    ?>
+    <h6 class="mt-3">Rules by source <small class="text-muted fw-normal">— checked top to bottom; the first match decides</small></h6>
+    <p class="small text-muted mb-2">
+      <strong>Source starts with</strong> matches the beginning of a source name, so <code>OMA HOG orthologs</code>
+      covers every species. <strong>Table</strong> is optional: leave it at <em>(any table)</em>, or pick one to
+      limit the rule to that source in that table.
+    </p>
+    <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead><tr><th>#</th><th>Source starts with</th><th>Table</th><th>Kind</th><th></th></tr></thead>
+      <tbody>
+      <?php foreach ($__src_idx as $n => $i): $r = $__source_rules[$i]; $form = "scoreRule$i"; ?>
+        <tr>
+          <td class="text-muted"><?= $n + 1 ?></td>
+          <td><input form="<?= $form ?>" name="source" class="form-control form-control-sm" value="<?= htmlspecialchars($r['source']) ?>" required></td>
+          <td><select form="<?= $form ?>" name="type" class="form-select form-select-sm"><?= $__type_options((string)($r['type'] ?? ''), '(any table)') ?></select></td>
+          <td><select form="<?= $form ?>" name="kind" class="form-select form-select-sm"><?= $__kind_options((string)($r['kind'] ?? '')) ?></select></td>
+          <td class="text-nowrap"><?= $__buttons($i, true, $n === 0, $n === count($__src_idx) - 1, $form) ?></td>
         </tr>
       <?php endforeach; ?>
         <tr class="table-light">
           <td class="text-muted">+</td>
-          <td><input form="scoreRuleNew" name="source" class="form-control form-control-sm" placeholder="e.g. InterProScan (Pfam)"></td>
-          <td><select form="scoreRuleNew" name="type" class="form-select form-select-sm"><?= $__type_options('') ?></select></td>
+          <td><input form="scoreRuleNew" name="source" class="form-control form-control-sm" placeholder="e.g. InterProScan (Pfam)" required></td>
+          <td><select form="scoreRuleNew" name="type" class="form-select form-select-sm"><?= $__type_options('', '(any table)') ?></select></td>
           <td><select form="scoreRuleNew" name="kind" class="form-select form-select-sm"><?= $__kind_options('') ?></select></td>
           <td>
             <form id="scoreRuleNew" method="post" class="d-inline">
               <?= csrf_input_field() ?>
               <button name="_score_action" value="rule_add" class="btn btn-sm btn-primary">Add rule</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h6 class="mt-4">Fallbacks by table <small class="text-muted fw-normal">— used only when no rule above matches</small></h6>
+    <p class="small text-muted mb-2">
+      Any source in this table that no rule above covers gets this kind. This is why most E-value sources
+      (Pfam, PANTHER, EggNOG, every Ensembl species…) need no rule of their own, and why a new E-value analysis
+      works as soon as it is loaded. Order does not matter here.
+    </p>
+    <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead><tr><th>Table</th><th>Kind</th><th></th></tr></thead>
+      <tbody>
+      <?php foreach ($__fallbacks as $i => $r): $form = "scoreRule$i"; ?>
+        <tr>
+          <td><select form="<?= $form ?>" name="type" class="form-select form-select-sm" required><?= $__type_options((string)$r['type'], '') ?></select></td>
+          <td><select form="<?= $form ?>" name="kind" class="form-select form-select-sm"><?= $__kind_options((string)($r['kind'] ?? '')) ?></select></td>
+          <td class="text-nowrap"><?= $__buttons($i, false, false, false, $form) ?></td>
+        </tr>
+      <?php endforeach; ?>
+        <tr class="table-light">
+          <td><select form="scoreFallbackNew" name="type" class="form-select form-select-sm" required><?= $__type_options('', '') ?></select></td>
+          <td><select form="scoreFallbackNew" name="kind" class="form-select form-select-sm"><?= $__kind_options('') ?></select></td>
+          <td>
+            <form id="scoreFallbackNew" method="post" class="d-inline">
+              <?= csrf_input_field() ?>
+              <button name="_score_action" value="rule_add" class="btn btn-sm btn-primary">Add fallback</button>
             </form>
           </td>
         </tr>

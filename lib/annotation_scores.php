@@ -21,9 +21,14 @@
  * first saves. What stays in code is only HOW each display style formats a number.
  *
  *   kinds: { id: { label, display, explanation, [unit, unit_plural], [words: {"1": "1:1"}] } }
- *   rules: [ { [source], [type], kind } ]   first match wins; `source` matches the START of
- *          the source name, `type` the whole annotation type, both case-insensitive; a rule
- *          naming both needs both.
+ *   rules: [ { [source], [type], kind } ]   `source` matches the START of the source name,
+ *          `type` the whole annotation type, both case-insensitive; a rule naming both needs both.
+ *          Two tiers: rules WITH a source are checked first, in file order, first match wins;
+ *          rules with only a type are FALLBACKS ("anything else in Domains is an E-value"),
+ *          checked only after every source rule. A fallback therefore can never shadow a
+ *          specific rule, wherever it sits in the file — when it was one ordered list, moving
+ *          "Domains -> E-value" above "ProSiteProfiles -> profile score" would have silently
+ *          made every ProSite score read as an E-value.
  *
  * Where each default kind comes from in the pipeline (config/build_and_load_db/analysis_parsers/):
  *   E-values: DIAMOND, MMseqs2, EggNOG, InterProScan member databases; profile scores:
@@ -98,10 +103,13 @@ function moop_score_config_normalize(array $c): array {
 /** The kind id for a source, or '' when no rule matches. */
 function moop_score_kind(string $annotation_type, string $source, ?array $cfg = null): string {
     $cfg = $cfg ?? moop_score_config();
-    foreach ($cfg['rules'] as $r) {
-        if ($r['source'] !== '' && stripos($source, $r['source']) !== 0) continue;
-        if ($r['type'] !== '' && strcasecmp($annotation_type, $r['type']) !== 0) continue;
-        return $r['kind'];
+    foreach ([true, false] as $with_source) {           // source rules, then fallbacks
+        foreach ($cfg['rules'] as $r) {
+            if (($r['source'] !== '') !== $with_source) continue;
+            if ($r['source'] !== '' && stripos($source, $r['source']) !== 0) continue;
+            if ($r['type'] !== '' && strcasecmp($annotation_type, $r['type']) !== 0) continue;
+            return $r['kind'];
+        }
     }
     return '';
 }

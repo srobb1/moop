@@ -921,6 +921,15 @@ ok($_f(1.0, 'Domains', 'DeepTMHMM')['display'] === '1 segment' && $_f(7.0, 'Doma
 ok(strpos($_f(null, 'Domains', 'InterProScan (Pfam)')['display'], '—') !== false, 'no score shows a dash');
 $_bad = moop_score_config_normalize(['kinds' => ['k' => ['display' => 'evalue']], 'rules' => [['kind' => 'k'], ['source' => 'X', 'kind' => 'missing'], ['source' => 'Y', 'kind' => 'k']]]);
 ok(count($_bad['rules']) === 1, 'a rule matching everything, or naming a missing kind, is dropped rather than applied');
+// Fallbacks (type only) are a separate, later tier: wherever one sits in the file, it cannot
+// shadow a source rule. As one ordered list, "Domains -> E-value" moved above ProSite would
+// have silently turned every ProSite profile score into an "E-value".
+$_tier = moop_score_config_normalize(['kinds' => ['e' => ['display' => 'evalue'], 'p' => ['display' => 'number']],
+    'rules' => [['type' => 'Domains', 'kind' => 'e'], ['source' => 'InterProScan (ProSiteProfiles)', 'kind' => 'p']]]);
+ok(moop_score_kind('Domains', 'InterProScan (ProSiteProfiles)', $_tier) === 'p', 'a fallback listed first does not shadow a source rule');
+ok(moop_score_kind('Domains', 'InterProScan (Pfam)', $_tier) === 'e', 'the fallback still catches sources no rule names');
+ok(moop_score_kind('Protein Features', 'InterProScan (SignalP_EUK)', $_sc) === 'none' && moop_score_kind('Protein Features', 'SignalP', $_sc) === 'signalp',
+   'InterProScan\'s SignalP runs (no score) are not confused with standalone SignalP (a probability)');
 
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
