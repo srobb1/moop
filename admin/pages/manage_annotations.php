@@ -311,6 +311,8 @@
   </div>
   <?php endif; ?>
 
+  <?php include __DIR__ . '/annotation_scores_card.php'; ?>
+
   <!-- Back to Admin Dashboard Link (Bottom) -->
   <div class="mt-5 mb-4">
     <a href="admin.php" class="btn btn-outline-secondary btn-sm">

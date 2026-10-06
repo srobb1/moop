@@ -228,3 +228,12 @@ document.addEventListener('click', function(e) {
     toggleTypeDetails(typeName);
   }
 });
+
+/* Score meanings card: confirm before a delete. A data attribute rather than an inline
+ * onclick/onsubmit — the site is removing inline handlers so the CSP can be enforced. */
+document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('#score-meanings button');
+    if (!b) return;
+    var holder = b.closest('[data-confirm]') || (b.hasAttribute('data-confirm') ? b : null);
+    if (holder && !window.confirm(holder.getAttribute('data-confirm'))) e.preventDefault();
+});

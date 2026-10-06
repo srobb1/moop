@@ -488,6 +488,7 @@ function housekeeping_snapshot_site_data() {
         $site_path . '/metadata/taxonomy_tree_config.json'      => 'metadata/taxonomy_tree_config.json',
         $site_path . '/metadata/glossary.json'                  => 'metadata/glossary.json',
         $site_path . '/metadata/group_taxon_exceptions.json'    => 'metadata/group_taxon_exceptions.json',
+        $site_path . '/metadata/annotation_scores.json'         => 'metadata/annotation_scores.json',
         $users_file                                             => 'users.json',
     ];
 

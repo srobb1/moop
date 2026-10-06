@@ -282,7 +282,13 @@ const DataTableExportConfig = {
                 // "Bipalium kewenseHammerhead Worm". Found by reading a downloaded file.
                 //
                 // Replaced before the tag strip, so the separator survives it.
-                body: function (data) {
+                body: function (data, row, column, node) {
+                    // A cell may say what a download should hold instead of what it shows:
+                    // the annotation Score shows "2.7e-5" or "many:many" and exports the
+                    // full number, or the words where the number is only a code.
+                    if (node && node.hasAttribute && node.hasAttribute('data-export')) {
+                        return node.getAttribute('data-export');
+                    }
                     if (typeof data !== 'string') return data;
                     return data
                         .replace(/<br\s*\/?>/gi, ' — ')

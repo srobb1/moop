@@ -1,0 +1,187 @@
+{
+  "_about": "What the Score column means for each annotation source. Edited on Admin > Manage Annotation Scores. Rules are checked top to bottom; the first rule whose source (the start of the source name) and type both match decides the kind. A source no rule matches shows its raw number.",
+  "kinds": {
+    "evalue": {
+      "label": "E-value",
+      "display": "evalue",
+      "explanation": "E-value: how many matches this good would be expected by chance. Lower is stronger; 0 means too small to measure. Below 1e-10 is a strong match; above 1e-3 is weak — except Pfam and SMART, whose own cutoffs decide a hit, so a short repeat can show an E-value above 1."
+    },
+    "profile_score": {
+      "label": "Profile score",
+      "display": "number",
+      "explanation": "Profile score: how well the protein fits the family's profile. Higher is better. Not an E-value."
+    },
+    "signalp": {
+      "label": "SignalP probability",
+      "display": "percent",
+      "explanation": "SignalP's probability that the protein has a signal peptide."
+    },
+    "deeploc": {
+      "label": "DeepLoc probability",
+      "display": "percent",
+      "explanation": "DeepLoc's probability for its top predicted location. Higher is more confident."
+    },
+    "protnlm": {
+      "label": "ProtNLM confidence",
+      "display": "percent",
+      "explanation": "ProtNLM's confidence in its predicted name (below 20% is not shown)."
+    },
+    "tm_segments": {
+      "label": "Membrane segments",
+      "display": "count",
+      "unit": "segment",
+      "unit_plural": "segments",
+      "explanation": "The number of membrane-spanning segments DeepTMHMM predicts."
+    },
+    "paralog_species": {
+      "label": "Species sharing the duplication",
+      "display": "count",
+      "unit": "species",
+      "unit_plural": "species",
+      "explanation": "How many species share this gene duplication: 1 means it happened in this species only; more species means an older duplication (they are named in the description)."
+    },
+    "oma_relation": {
+      "label": "OMA relationship",
+      "display": "words",
+      "words": {
+        "1": "1:1",
+        "2": "many:1",
+        "3": "1:many",
+        "4": "many:many"
+      },
+      "explanation": "How the genes pair up between the two species (this species : the other). 1:1 is the cleanest ortholog; \"many\" means duplicated copies on that side."
+    },
+    "closest_human": {
+      "label": "Closest human gene evidence",
+      "display": "words",
+      "words": {
+        "1": "OMA ortholog",
+        "2": "OMA co-ortholog",
+        "3": "reciprocal best hit",
+        "4": "via another species",
+        "5": "best similarity hit",
+        "6": "via Swiss-Prot and Ensembl",
+        "7": "PANTHER subfamily"
+      },
+      "explanation": "The evidence the closest human gene rests on, strongest first: OMA ortholog, OMA co-ortholog, reciprocal best hit, via another species, best similarity hit, via Swiss-Prot and Ensembl, PANTHER subfamily."
+    },
+    "closest_species": {
+      "label": "Closest gene evidence",
+      "display": "words",
+      "words": {
+        "1": "OMA ortholog",
+        "2": "reciprocal best hit",
+        "3": "best similarity hit",
+        "4": "best hit (E-value only)"
+      },
+      "explanation": "The evidence the closest gene rests on, strongest first: OMA ortholog, reciprocal best hit, best similarity hit, best hit by E-value alone."
+    },
+    "none": {
+      "label": "No score",
+      "display": "none",
+      "explanation": "This source gives no score."
+    }
+  },
+  "rules": [
+    {
+      "source": "OMA pairwise orthologs",
+      "kind": "oma_relation"
+    },
+    {
+      "source": "OMA HOG orthologs",
+      "kind": "oma_relation"
+    },
+    {
+      "source": "OMA group orthologs",
+      "kind": "none"
+    },
+    {
+      "source": "OMA HOG paralogs",
+      "kind": "paralog_species"
+    },
+    {
+      "source": "Closest human gene",
+      "kind": "closest_human"
+    },
+    {
+      "source": "SignalP",
+      "kind": "signalp"
+    },
+    {
+      "source": "DeepLoc",
+      "kind": "deeploc"
+    },
+    {
+      "source": "DeepTMHMM",
+      "kind": "tm_segments"
+    },
+    {
+      "source": "ProtNLM",
+      "kind": "protnlm"
+    },
+    {
+      "source": "InterProScan (ProSiteProfiles)",
+      "kind": "profile_score"
+    },
+    {
+      "source": "InterProScan (Hamap)",
+      "kind": "profile_score"
+    },
+    {
+      "source": "InterProScan (InterPro)",
+      "kind": "none"
+    },
+    {
+      "source": "InterProScan (Coils)",
+      "kind": "none"
+    },
+    {
+      "source": "InterProScan (MobiDBLite)",
+      "kind": "none"
+    },
+    {
+      "source": "InterProScan (ProSitePatterns)",
+      "kind": "none"
+    },
+    {
+      "source": "InterProScan (Phobius)",
+      "kind": "none"
+    },
+    {
+      "source": "InterProScan (TMHMM)",
+      "kind": "none"
+    },
+    {
+      "source": "InterProScan (SignalP_",
+      "kind": "none"
+    },
+    {
+      "type": "Closest Gene",
+      "kind": "closest_species"
+    },
+    {
+      "type": "Gene Ontology",
+      "kind": "none"
+    },
+    {
+      "type": "Homologs",
+      "kind": "evalue"
+    },
+    {
+      "type": "RBBH Homolog",
+      "kind": "evalue"
+    },
+    {
+      "type": "Orthologs",
+      "kind": "evalue"
+    },
+    {
+      "type": "Domains",
+      "kind": "evalue"
+    },
+    {
+      "type": "Gene Families",
+      "kind": "evalue"
+    }
+  ]
+}

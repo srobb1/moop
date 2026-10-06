@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/annotation_scores.php';
 /**
  * Parent Feature Display Functions
  * Functions for displaying parent feature data, hierarchies, and annotations
@@ -358,6 +359,13 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     
     $table_id = "annotTable_$count";
     $result_count = count($results);
+
+    // What this table's Score column means, per source present (lib/annotation_scores.php).
+    // Joined to the type's description in the (i) block; it alone is reason enough to show it.
+    $score_help = moop_score_help_html($results);
+    if ($score_help !== '') {
+        $desc = ($desc ? $desc : '') . $score_help;
+    }
     $desc_id = "annotDesc_$count";
     
     // Determine text color based on background color
@@ -432,7 +440,7 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
     $html .= "<th class=\"export-only\">Annotation Type</th>";
     $html .= "<th>Annotation ID</th>";
     $html .= "<th>Description</th>";
-    $html .= "<th>Score</th>";
+    $html .= "<th title=\"What the score means depends on the source. Hover a value, or open the (i) above.\">Score</th>";
     $html .= "<th>Source</th>";
     $html .= "</tr></thead>";
     $html .= "<tbody>";
@@ -446,9 +454,14 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
         // as NULL now, so without this the column renders as a blank cell where it used to
         // read "-", and the reader cannot tell "no score" from "we failed to show it".
         // Also keeps NULL out of htmlspecialchars(), which is deprecated in PHP 8.1+.
-        $hit_score = ($row['score'] === null || $row['score'] === '')
-            ? '<span class="text-muted">—</span>'
-            : htmlspecialchars((string) $row['score']);
+        //
+        // Formatted by what the number IS for this source (lib/annotation_scores.php): an OMA
+        // "4" reads "many:many", a closest-gene "1" reads "OMA ortholog", an E-value is
+        // shortened. data-order keeps sorting on the stored number; data-export gives a
+        // download the full number, or the words where the number is only a code.
+        $score_cell = moop_format_score($row['score'],
+            moop_score_kind((string)$row['annotation_type'], (string)$row['annotation_source_name']));
+        $hit_score = $score_cell['display'];
         // gloss() rather than htmlspecialchars(): a source name like PANTHER, RBBH, EggNOG,
         // InterPro or ProtNLM is an opaque acronym that nothing else on the site explains.
         // The annotation TYPE has a description (annotation_config.json, opened by the (i)
@@ -487,7 +500,10 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
         $html .= "<td class=\"export-only\">" . htmlspecialchars($annotation_type) . "</td>";
         $html .= "<td>" . $hit_id_cell . "</td>";
         $html .= "<td>" . $hit_description . "</td>";
-        $html .= "<td>" . $hit_score . "</td>";
+        $html .= '<td data-order="' . htmlspecialchars($score_cell['order']) . '"'
+               . ' data-export="' . htmlspecialchars($score_cell['export']) . '"'
+               . ($score_cell['title'] !== '' ? ' title="' . htmlspecialchars($score_cell['title']) . '"' : '')
+               . '>' . $hit_score . '</td>';
         $html .= "<td>" . $annotation_source . "</td>";
         $html .= "</tr>";
     }

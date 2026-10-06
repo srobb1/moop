@@ -1,6 +1,10 @@
 <?php
 include_once __DIR__ . '/admin_init.php';
 
+// Score meanings card (metadata/annotation_scores.json). Handles its own POSTs and redirects
+// before anything below runs.
+include_once __DIR__ . '/annotation_scores_admin.php';
+
 // Load page-specific config
 $metadata_path = $config->getPath('metadata_path');
 $config_file = "$metadata_path/annotation_config.json";
@@ -351,6 +355,14 @@ $data = [
     'messageType' => $messageType,
     'config' => $config,
     'config_file' => $config_file,
+    'score_raw' => $score_raw,
+    'score_cfg' => $score_cfg,
+    'score_unmatched' => $score_unmatched,
+    'score_source_total' => $score_source_total,
+    'score_flash' => $score_flash,
+    'score_file' => $score_file,
+    'score_file_write_error' => $score_file_write_error,
+    'score_types' => $score_types,
     // jQuery UI is vendored locally, like every other third-party library (js/vendor/).
     // It used to load from code.jquery.com, which was the only CDN dependency left in the
     // served app: a request the browser may not be able to make on an internal network, with

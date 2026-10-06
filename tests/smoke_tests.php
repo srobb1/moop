@@ -898,6 +898,31 @@ ok(moop_resolve_naming_protein('P2:pep', $_kids, 99) === null, 'a protein of ano
 ok(moop_gene_naming_label('protein') !== 'Protein', 'the naming-protein label does not repeat the overview\'s Protein line');
 
 // ----------------------------------------------------------------------------
+group('Annotation scores: what each source\'s Score means, from the shipped table');
+require_once dirname(__DIR__) . '/lib/annotation_scores.php';
+$_sc = moop_score_config_normalize(json_decode(file_get_contents(dirname(__DIR__) . '/metadata/annotation_scores.json.example'), true));
+$_k = fn($type, $source) => moop_score_kind($type, $source, $_sc);
+ok($_k('Orthologs', 'OMA HOG orthologs (HUMAN)') === 'oma_relation', 'an OMA ortholog score is a relationship code, for any partner species');
+ok($_k('Orthologs', 'EggNOG') === 'evalue', 'EggNOG in the same table is an E-value — the meaning changes row by row');
+ok($_k('Domains', 'InterProScan (ProSiteProfiles)') === 'profile_score', 'a profile score is not read as an E-value');
+ok($_k('Domains', 'InterProScan (InterPro)') === 'none', 'InterPro entries carry no score');
+ok($_k('Gene Ontology', 'InterProScan (InterPro2GO)') === 'none', 'GO terms carry no score');
+ok($_k('Closest Gene', 'Closest human gene (HGNC)') === 'closest_human', 'closest HUMAN gene uses the 7-tier scale');
+ok($_k('Closest Gene', 'Closest mouse gene') === 'closest_species', 'closest gene in another species uses its own 4-rank scale');
+ok($_k('Mystery Type', 'Some New Tool') === '', 'a source no rule covers has no kind (shown raw, listed for the admin)');
+$_f = fn($score, $type, $source) => moop_format_score($score, $_k($type, $source), $_sc);
+$_r = $_f(4.0, 'Orthologs', 'OMA pairwise orthologs (MOUSE)');
+ok($_r['display'] === 'many:many' && $_r['export'] === 'many:many' && $_r['order'] === '4', 'OMA 4 shows and exports "many:many", sorts as 4');
+ok($_f(9.0, 'Orthologs', 'OMA HOG orthologs (MOUSE)')['display'] === '9', 'a code with no words is shown as stored, not hidden');
+ok($_f(2.66983e-05, 'Domains', 'InterProScan (CDD)')['display'] === '2.7e-5', 'an E-value is shortened');
+ok($_f(2.66983e-05, 'Domains', 'InterProScan (CDD)')['export'] === '2.66983E-5' || $_f(2.66983e-05, 'Domains', 'InterProScan (CDD)')['export'] === (string)2.66983e-05, 'a download keeps the full E-value');
+ok($_f(0.999424, 'Domains', 'SignalP')['display'] === '99.9%', 'a probability of 0.9994 reads 99.9%, not a rounded-up 100%');
+ok($_f(1.0, 'Domains', 'DeepTMHMM')['display'] === '1 segment' && $_f(7.0, 'Domains', 'DeepTMHMM')['display'] === '7 segments', 'counts carry their unit, singular and plural');
+ok(strpos($_f(null, 'Domains', 'InterProScan (Pfam)')['display'], '—') !== false, 'no score shows a dash');
+$_bad = moop_score_config_normalize(['kinds' => ['k' => ['display' => 'evalue']], 'rules' => [['kind' => 'k'], ['source' => 'X', 'kind' => 'missing'], ['source' => 'Y', 'kind' => 'k']]]);
+ok(count($_bad['rules']) === 1, 'a rule matching everything, or naming a missing kind, is dropped rather than applied');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {
