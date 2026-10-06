@@ -238,6 +238,10 @@ make_diamond_moop() {
   ## db_version.txt is "<version>" or, as the annotation pipeline now writes it, "<db><TAB><version>":
   ## the last field either way (the whole line put the database name and a tab into the source version)
   VERSION=$(awk '{print $NF; exit}' "$SPROT_DIR/db_version.txt" 2>/dev/null)
+  if [ -z "$VERSION" ] && [ -d "$SPROT_DIR" ]; then
+    VERSION=unknown
+    echo "WARNING: no version in $SPROT_DIR/db_version.txt -- using '$VERSION'" >&2
+  fi
 
   [ -e tophit.tsv ] && rm tophit.tsv
   if [ -e "$SPROT_DIR/diamond_results.tsv.gz" ]; then
@@ -256,6 +260,13 @@ make_diamond_moop() {
     ORGSTRING="${TARGET_ORG#ENS_}"
     ORG=$(echo "$ORGSTRING" | perl -pe 's/^(\w)/\u$1/; s/_(\w)/ \L$1/g')
     VERSION=$(awk '{print $NF; exit}' "$RESULTS/db_version.txt" 2>/dev/null)
+    ## no db_version.txt: the reference DB's release (its 'current' link), as make_rbbh_moop does -- never a
+    ## blank version (2026-10-06 audit: Notamacropus, S. polychroa and Phagocata show blank DIAMOND versions)
+    if [ -z "$VERSION" ]; then
+      VERSION=$(basename "$(readlink -f "$REF_DB/$TARGET_ORG/current" 2>/dev/null)" 2>/dev/null)
+      [[ "$VERSION" == release-* ]] || VERSION=unknown
+      echo "WARNING: no version in $RESULTS/db_version.txt -- using '$VERSION'" >&2
+    fi
     [ -e tophit.tsv ] && rm tophit.tsv
     if [ -e "$RESULTS/diamond_results.tsv.gz" ]; then
       zcat "$RESULTS/diamond_results.tsv.gz" > tophit.tsv
