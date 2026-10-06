@@ -122,7 +122,8 @@ foreach my $row (@rows) {
   # after the choice, a name carries a note of an OMA pairing that did not name the gene (set_aside_note):
   # omaR (a many:1 pairing mostly rejected; not on a step-3 name), else omaC (withheld), else omaX (set aside)
   if (defined $want_name and $want_name ne 'None' and $row->{Step} !~ /native/ and $want_name =~ /\]$/) {
-    my $note = ($cell[3] =~ /withheld \(omaR\)/ and $expected != 3) ? 'omaR'
+    # (omaR is decided over every gene OMA pairs with that human gene, so OMA_checks records it, not only the S3 cell)
+    my $note = (($cell[3] =~ /withheld \(omaR\)/ or ($row->{OMA_checks} // '') =~ /pairing mostly rejected \(omaR\)/) and $expected != 3) ? 'omaR'
              : $cell[3] =~ /withheld \(omaC\)/ ? 'omaC'
              : $cell[3] =~ /set aside \(omaX\)/ ? 'omaX' : '';
     $want_name =~ s/\]$/|$note]/ if $note ne '';
