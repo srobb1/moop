@@ -1,7 +1,7 @@
 # Gene naming and closest-gene assignment — Methods
 
-Draft for publication. Describes `assign_gene_names_v2.pl` as of 2026-09-28 (branch
-`naming-v2`). Every threshold below is quoted from the code; if the code changes, change
+Draft for publication. Describes `assign_gene_names_v2.pl` as of 2026-10-06 (branch
+`ensembl-id-versions`). The rules on two pages: [NAMING_QUICK_REFERENCE.md](NAMING_QUICK_REFERENCE.md). Every threshold below is quoted from the code; if the code changes, change
 this file with it. Items marked **[TODO]** are facts this document cannot state from the
 code alone.
 
@@ -33,9 +33,10 @@ the tables in §2 refer to positions in these lists.
 - **Naming steps** (§5): the kinds of evidence a name can come from, tried in this order;
   the first that gives an informative name wins. 1 a curator's name; 2 the gene set's own
   (RefSeq/Ensembl) name, or a chosen naming species; **3 an OMA ortholog of a human gene**;
-  4 a transposable-element domain; 5 full-length similarity to one human gene (`-like`);
-  6 a PANTHER family; 7 an InterPro domain; otherwise no name. The step is the Score of the
-  Gene Name Source table.
+  4 a transposable-element domain; 5 a PANTHER tree placement with one human gene; 6 full-length
+  similarity to one human gene (`-like`); 7 full-length similarity to a Swiss-Prot protein of another
+  species (`-like (species)`); 8 a PANTHER family; 9 an InterPro domain; otherwise no name. The step is
+  the Score of the Gene Name Source table.
 - **Closest-human tiers** (§6): the kinds of evidence for a gene's closest human gene,
   strongest first; the lowest tier with any evidence is used. **Tier 1: an OMA pairwise
   ortholog** (OMA calls the gene and a human gene orthologs directly). **Tier 2: an OMA HOG
@@ -473,6 +474,25 @@ bitscore (§3).
    often (20 vs 19), so neither names the gene. Cost: Congeria 38 names change (0 lost),
    Phagocata 36 (1 lost), Danio 143 (4 lost); the rest take a family or domain name.
    (On an OMA name, step 3, `treeC` is only a mark: OMA is the stronger call and the name stays.)
+
+**When a gene gets a `-like` name -- the cases at a glance.** These apply to a gene that no orthology method
+named (no OMA human ortholog, step 3; the PANTHER tree did not name it, step 5). "Full-length" = E ≤ 1e-10 and
+≥ 80% of both proteins; "top" = highest bitscore. Counts are from the 2026-10-05 runs.
+
+| When this happens | The gene gets | *Phagocata* | *Congeria* |
+|---|---|---|---|
+| the top human hit is full-length, no other human gene scores within 5% of it, and the PANTHER tree does not place the gene with other human genes | a human `-like` name: `ANKRD42-like: ankyrin repeat domain 42-like` (step 6) | 607 | 471 |
+| as above, but other human genes score within 5% (paralogs), and one of them is a full-length reciprocal best hit | a `-like` name after that one gene (step 6, tag `tie-rbh`) | 7 of the 607 | 2 of the 471 |
+| other human genes score within 5% and no reciprocal best hit picks one | their family name: the shared HGNC group (`Heat shock 70kDa proteins family member`), else their shared PANTHER family (step 6, tag `tie-grp`) | 454 | 215 |
+| the top human hit is full-length, but the PANTHER tree places the gene with OTHER human genes | no `-like` or tie name; a PANTHER family or domain name (steps 8–9) | 133 | 115 |
+| the top human hit is partial, or there is no human hit; the top Swiss-Prot hit is another species' protein, full-length, with no human gene scoring higher and no other protein within 5% | that protein's name: `Chitin synthase-like (Drosophila melanogaster)`, no symbol (step 7) | 219 | 191 |
+| none of the above | a PANTHER family name (step 8), a domain name (step 9), or no name | | |
+
+A weaker hit is never used in place of a partial top hit, in either step. Each step takes its own top hit: step 6
+the best human gene, step 7 the best Swiss-Prot protein; the human step comes first, so a full-length human hit names
+the gene even when a protein of another species scores higher. (Tested 2026-10-06: naming by the best Swiss-Prot hit
+of any species instead would replace 43-51% of human `-like` names -- mostly with the same gene's name in mouse, rat
+or frog, or with no name -- and in fly would give up 118 right human names for 27 wrong ones.)
 
 **Step 7 — a Swiss-Prot protein of another species.** Many genes of a mollusc, a flatworm or a cnidarian have no human
 counterpart, or none along their length (chitin synthases, hemocyanins, shell matrix proteins), and a reviewed protein of
@@ -920,17 +940,44 @@ provenance and closest genes, plus checks of the informative-name rules; 151 che
 checked by breaking it on purpose (the threshold or the rule disabled) and confirming the
 test fails.
 
-## 9. Validation
+## 9. Validation -- tests that CHECK the naming (not part of the naming)
 
-**[TODO: rerun after the 2026-09-28 changes — fly benchmark with OMA (reference run) and
-17-column DIAMOND; name-source table for *D. melanogaster*, *C. kusceri*, *M. capitata*,
-*Miniopterus natalensis*.]** The figures below predate those changes.
+> **Read this first.** Everything in this section is a test run separately to see how often the names are
+> right. Nothing here feeds into naming. Two species whose orthologs are already known (fly, zebrafish) are
+> named as if they were new organisms, and their names are compared with an answer key. Ensembl Compara is that
+> answer key here. Compara is ALSO used inside naming, in a different way -- through a hit to another species'
+> gene, closest-human tiers 4 and 6 (§6.1) -- and that use does not need the gene itself to be in Compara.
+> Scripts and runs: `naming_review/eval_e2e1005/` and `naming_review/runs/` (outside this repository).
 
-**Benchmark: *Drosophila melanogaster*** (RefSeq annotation release FB_Rel_6.54, 13,986
-genes), named as if it were a new organism, without its own names and without OMA. Each name
-that carries a human gene symbol was compared with the fly gene's human orthologs in Ensembl
-Compara release 113 (20,391 fly–human ortholog pairs; 6,983 fly genes with a human ortholog;
-FlyBase ids mapped through the GFF cross-references).
+**Benchmark: *Drosophila melanogaster* and *Danio rerio* (2026-10-05/06).** Fly (FB_Rel_6.54, 13,986 genes) was
+named blind: without its own names, its own DIAMOND/MMseqs2 searches or *Drosophila* Swiss-Prot entries. Zebrafish
+(GRCz11, 25,447 genes) was named with its full evidence.
+
+**How a name is scored.** Ensembl Compara release 116 lists, for each fly or zebrafish gene, the human genes it
+calls orthologs (one2one, one2many and many2many, from Compara's gene trees). Each human gene id (ENSG) becomes its
+current HGNC symbol; each fly gene (FlyBase FBgn) is matched to our gene through the FlyBase cross-reference in the
+RefSeq GFF, and a zebrafish gene by its Ensembl id. That gives every gene a list of human symbols -- one fly gene ->
+B9D2 alone, another (a sugar transporter) -> 11 human SLC2A genes. A name agrees when its symbol (`SYMBOL` in
+`SYMBOL: ...` or `SYMBOL-like: ...`) is on the gene's list. Genes Compara gives no human ortholog are left out of the
+percentages (nothing to compare with). Of the genes with a Compara human ortholog, 38% (fly) and 6% (zebrafish) have
+several (a duplication in the human lineage), and a name after any of them agrees, so the figures are also given for
+genes with exactly one. (Naming itself uses Compara 113 and 116, matching each reference proteome's release.)
+
+| | fly, all genes | fly, one human ortholog | zebrafish, all genes | zebrafish, one human ortholog |
+|---|---|---|---|---|
+| names with a human symbol (steps 3, 5, 6) agreeing with Compara | 3,790 of 4,004 (94.7%) | 3,260 of 3,374 (96.6%) | 13,758 of 14,281 (96.3%) | 13,519 of 13,900 (97.3%) |
+| `-like` names (step 6) agreeing | 257 of 328 (78.4%) | 81 of 111 (73.0%) | 658 of 801 (82.1%) | 620 of 711 (87.2%) |
+
+A `-like` name rests on similarity to one human gene, not on an orthology call; in about one in five, the human gene
+it names is not a Compara ortholog of the gene (§10). Compara is a method too, not the truth: some of its calls are
+doubtful (zebrafish genes whose best full-length human hit is a neuroligin, NLGN2 or NLGN3, but whose listed
+human orthologs are carboxylesterases, CES1/CES2), and several
+cheap signals tried to catch the wrong `-like` names (score gap to the second human gene, PANTHER family, OMA HOGs,
+paralogs in the same genome) separated them no better than by a few percent (`naming_review/NOTES_2026-10-0*.md`).
+
+**Earlier benchmark (2026-09, before OMA and the current steps; kept for the rule it motivated).** Fly named
+without its own names and without OMA, scored against Compara release 113 (20,391 fly–human ortholog pairs; 6,983
+fly genes with a human ortholog; FlyBase ids mapped through the GFF cross-references).
 
 | Rule | Names | Human gene is an ortholog | Human gene is a paralog of the ortholog | Fly gene has no human ortholog |
 |---|---|---|---|---|
@@ -972,9 +1019,11 @@ proteins).
   with its copy count).
 - **OMA support is one-sided.** A supported OMA call can still be wrong (hidden paralogy with
   similarity to the named gene); support only removes calls nothing else backs.
-- **`-like` names point at one human paralog** when a gene predates a human-lineage
-  duplication and one paralog scores more than 5% above the others. `-like` marks the name as
-  similarity, not orthology; in the fly benchmark 8% of `-like` names pointed at a paralog of
-  the true ortholog.
+- **`-like` names can point at a human paralog.** A `-like` name (the cases are in §5, step 6) rests on
+  similarity to one human gene, not on an orthology call. When the gene predates a duplication in the human
+  lineage and one paralog scores more than 5% above the others, the name points at that paralog, which may not
+  be the ortholog. In the benchmarks (§9), 78% (fly) and 82% (zebrafish) of human `-like` names name a Compara
+  ortholog of the gene. Names after another species' Swiss-Prot protein (step 7) carry the same caveat. Every
+  `-like` name's provenance reads "Homolog, orthology not shown (may be a paralog)".
 - **Names without OMA** are limited to full-length similarity (`-like`), PANTHER families,
   transposable-element classes and domains; plain names from BLAST alone are not given (§9).
