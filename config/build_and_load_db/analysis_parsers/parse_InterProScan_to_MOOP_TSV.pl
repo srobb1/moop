@@ -15,9 +15,9 @@ my $version = shift;
 # a protein kept only its last match per analysis: Congeria lost 71% of its InterPro entries, 70% of its
 # PANTHER GO terms, 56% of its InterPro GO terms, 32% of its Pfam domains.)
 my %annot;
-# repeat hits of one accession in a protein keep the best score: the lowest E-value, except ProSite
+# repeat hits of one accession in a protein keep the best score: the lowest E-value, except ProSite and HAMAP
 # profiles, whose score is a normalised score where higher is better; a score that is no number ('-') yields
-my %HIGHER_IS_BETTER = (ProSiteProfiles => 1);
+my %HIGHER_IS_BETTER = (ProSiteProfiles => 1, Hamap => 1);   # profile scores; the others are E-values
 sub keep_match {
   my ($analysis, $protein, $accession, $desc, $score) = @_;
   my $current = $annot{$analysis}{$protein}{$accession};
