@@ -330,6 +330,7 @@ my %gene_set_meta;        # the gene set's metadata.yaml (--metadata): species, 
 my %native_shown;         # group -> source: the gene shows its own (--native) name (collect_native_rows)
 my %chains_set_aside;     # group -> [ { humans, evidence, why } ]: orthology through another species, not used (chain_rejected)
 my %identical;            # group -> [ other groups whose longest protein is the same sequence ]
+my %closest_before_name;  # group -> the closest human the naming steps used, when closest_from_name replaced it (decision table)
 my %gene_scaffold;        # group -> its scaffold (--gff), for the Identical proteins statement
 # read-through transcripts (--gff, find_read_through_transcripts)
 my %transcript_place;     # transcript -> [ scaffold, start, end ]
@@ -4140,6 +4141,7 @@ sub closest_from_name {
   my %method = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
   my $evidence = 'the human gene its name is taken from (' . ($method{$step} // 'its name') . ')';
   $evidence .= '; other evidence gives ' . join('/', map { my $human = $_; human_label($human) } @{$closest->{human}}) . " ($closest->{evidence})" if $closest;
+  $closest_before_name{$group} = $closest;
   $closest{$group} = { tier => ($entry && $entry->{rbh} ? 3 : 5), human => [@humans], evidence => $evidence, from_name => 1 };
   $stats{'closest human: the gene the name is taken from, replacing ' . ($closest ? "tier $closest->{tier}" : 'none')}++;
 }
@@ -4693,6 +4695,8 @@ sub decision_header {
     '    passed over / skipped: a rule set the step aside (why)',
     '    not reached: an earlier step named the gene; what this step would have said follows',
     '  Closest_human: the closest human gene (tier: gene, evidence), as in closest_human.tsv',
+    '  Closest_human_used_for_naming: "same", or -- when a gene named after a human gene got that gene as its closest',
+    '    human AFTER naming -- the closest human gene the naming steps used (steps 3 and 5, the step 5-7 skip), or "none"',
     '  Evidence_by_method: what each method points to, marked against the closest human gene: OMA pairwise, OMA HOG,',
     '    MMseqs2 reciprocal best hit (RBH), via another species (VIA), best human hit (BH, full or partial length),',
     '    trusted PANTHER tree placement (TREE), best PANTHER family (PTHR: + the closest human gene\'s family,',
@@ -4859,6 +4863,14 @@ sub pipeline_name {
   return tagged(set_aside_note($group, $candidate{$step}))->{desc} . " (step $step)";
 }
 
+# the decision table's closest-human cell: "tier N: SYM (evidence)", a family as SYM/SYM
+sub closest_cell {
+  my ($closest) = @_;
+  return '' unless $closest;
+  return "tier $closest->{tier}: " . ($closest->{family} ? join('/', map { my $human = $_; human_label($human) } @{$closest->{human}})
+                                                         : human_label($closest->{human}[0])) . " ($closest->{evidence})";
+}
+
 sub write_decisions {
   my ($file) = @_;
   open my $fh, '>', $file or die "cant write $file $!\n";
@@ -4869,7 +4881,7 @@ sub write_decisions {
                           SwissProt_best_hit SwissProt_species SwissProt_identity SwissProt_qcov SwissProt_tcov SwissProt_evalue SwissProt_bits
                           PANTHER_best PANTHER_model_cov Tree_placement),
                  (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
-                 'Closest_human', 'Evidence_by_method', 'Protein_features', 'Transcript_support', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species),
+                 'Closest_human', 'Closest_human_used_for_naming', 'Evidence_by_method', 'Protein_features', 'Transcript_support', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species),
                  'Best_hit_each_search', 'RBH_each_species'), "\n";
   # --native: the gene set's own informative names replace the decision (collect_native_rows)
   my %native_kept;
@@ -4899,11 +4911,8 @@ sub write_decisions {
     my $coverage = $gene_family_coverage{$group} // {};
     my ($family) = sort { $coverage->{$b} <=> $coverage->{$a} or $a cmp $b } keys %$coverage;
     my $family_text = defined $family ? $family . (defined $panther_label{$family} ? " \"$panther_label{$family}\"" : '') : '';
-    my $closest = $closest{$group};
-    my $closest_text = $closest
-      ? "tier $closest->{tier}: " . ($closest->{family} ? join('/', map { my $human = $_; human_label($human) } @{$closest->{human}})
-                                                       : human_label($closest->{human}[0])) . " ($closest->{evidence})"
-      : '';
+    my $closest_text = closest_cell($closest{$group});
+    my $closest_used = exists $closest_before_name{$group} ? (closest_cell($closest_before_name{$group}) || 'none') : 'same';
     my @cells = ($named->{selected}, $group, $named->{desc},
                  ($native ? '2 native name' : $step ? "$step $step_label{$step}"
                   : %{$any_evidence{$group} // {}} ? 'none: hits did not pass the naming tests' : 'none: no hits'),
@@ -4914,7 +4923,7 @@ sub write_decisions {
                  @best, @swissprot, $family_text, (defined $family ? $coverage->{$family} : ''),
                  ($tree{$group} ? ($tree{$group}{trusted} ? 'trusted: ' : 'weak: ') . tree_text($tree{$group}) : ''),
                  (map { my $naming_step = $_; step_cell($group, $naming_step->[0], $native ? 1 : 0) } @NAMING_STEPS),
-                 $closest_text, agreement_text($group), protein_features_text($group), transcript_text($group),
+                 $closest_text, $closest_used, agreement_text($group), protein_features_text($group), transcript_text($group),
                  (map { my $species = $_; closest_species_text($species, $group) } @closest_species),
                  search_best_text($group, 'DIAMOND'), search_best_text($group, 'RBH'));
     print $fh join("\t", map { my $cell = $_; $cell //= ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";
