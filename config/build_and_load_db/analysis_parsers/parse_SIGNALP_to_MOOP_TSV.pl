@@ -5,7 +5,7 @@ use warnings;
 my $top_hits = shift; #= '../analysis/BLASTP_UNIPROT_sprot/tophit.tsv';
 my $source = 'SignalP'; #shift; #'SwissProt';
 my $source_url = "https://services.healthtech.dtu.dk/services/SignalP-6.0/"; # shift; #'https://www.ensembl.org/'; #'https://www.uniprot.org';
-my $annotation_type = 'Domains'; 
+my $annotation_type = 'Protein Features';   # with DeepTMHMM and DeepLoc, their own group on the site (2026-10-06; was 'Domains')
 my $annotation_url = '';
 
 my $date = `date '+%Y-%m-%d' -r '$top_hits'`;

@@ -6,7 +6,7 @@ my $top_hits = shift; #= '../analysis/BLASTP_UNIPROT_sprot/tophit.tsv';
 my $source = 'DeepTMHMM'; #shift; #'SwissProt';
 my $source_version = shift; #'release-113' ;#'2024_06'; #`cat ../analysis/BLASTP_UNIPROT_sprot/db_version.txt`;
 my $source_url = "https://dtu.biolib.com/DeepTMHMM"; # shift; #'https://www.ensembl.org/'; #'https://www.uniprot.org';
-my $annotation_type = 'Domains'; 
+my $annotation_type = 'Protein Features';   # with DeepTMHMM and DeepLoc, their own group on the site (2026-10-06; was 'Domains')
 my $annotation_url = '';
 
 my $date = `date '+%Y-%m-%d' -r '$top_hits'`;

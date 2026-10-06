@@ -372,6 +372,24 @@ make_deeptmhmm_moop() {
 has_data DeepTMHMM.domains.moop.tsv \
   || { echo "Building DeepTMHMM moop files"; make_deeptmhmm_moop; }
 
+# ── DeepLoc 2 ─────────────────────────────────────────────────────────────────
+## Subcellular location, every protein (a protein without a sorting signal says so). Its
+## deeploc2_version.txt holds DeepLoc's usage message (it has no --version), so the version is
+## 2.0 and the model the job ran with (-m Accurate|Fast in deeploc2_job_cmd.txt).
+make_deeploc_moop() {
+  local LDIR="$ANALYSIS_DIR/deeploc2"
+  local VERSION MODEL
+  if [ ! -s "$LDIR/deeploc2_results.tsv" ]; then
+    echo "No DeepLoc results at $LDIR — skipping"
+    return 0
+  fi
+  MODEL=$(grep -o -m1 -- '-m [A-Za-z]*' "$LDIR/deeploc2_job_cmd.txt" 2>/dev/null | awk '{print $2}')
+  VERSION="2.0${MODEL:+ ($MODEL model)}"
+  perl "$REPO/analysis_parsers/parse_DEEPLOC_to_MOOP_TSV.pl" "$LDIR/deeploc2_results.tsv" "$VERSION"
+}
+has_data DeepLoc.domains.moop.tsv \
+  || { echo "Building DeepLoc moop files"; make_deeploc_moop; }
+
 # ── RBBH — reciprocal best BLAST hits ────────────────────────────────────────
 make_rbbh_moop() {
   local RBBH_BASE="$ANALYSIS_DIR/rbh_eross"
