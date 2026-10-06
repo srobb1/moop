@@ -467,5 +467,8 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
 ?>
 
 
-<script src="/<?= $site ?>/js/modules/copy-to-clipboard.js"></script>
-<script src="/<?= $site ?>/js/modules/collapse-handler.js"></script>
+<?php /* Versioned like every other script (?v=mtime), so browsers may cache them long-term
+         and still pick up an edit. These two were the only unversioned scripts on a gene page. */
+require_once __DIR__ . '/../includes/asset_url.php'; ?>
+<script src="<?= moop_asset_url('js/modules/copy-to-clipboard.js') ?>"></script>
+<script src="<?= moop_asset_url('js/modules/collapse-handler.js') ?>"></script>
