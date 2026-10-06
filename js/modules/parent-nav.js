@@ -288,6 +288,11 @@
       var trigger = (jb && jb.offsetParent !== null ? jb.getBoundingClientRect().bottom : 0) + 90;
       var bestKey = spy.length ? spy[0].key : null, bestTop = -Infinity;
       for (var i = 0; i < spy.length; i++) {
+        // Skip a section that is not laid out (inside a collapsed block). Its rect is all
+        // zeros, so its "top" of 0 sat above the trigger line and it won: with Annotations
+        // folded on load (2026-10-06), every gene page opened with its FIRST TRANSCRIPT
+        // highlighted instead of the gene, while the reader was at the top of the page.
+        if (!spy[i].el.getClientRects().length) continue;
         var top = spy[i].el.getBoundingClientRect().top;
         if (top <= trigger && top > bestTop) { bestTop = top; bestKey = spy[i].key; }
       }

@@ -170,6 +170,20 @@
                         <span class="feature-title-empty">No description available</span>
                     <?php endif; ?>
                 </h1>
+                <?php /* The chips belong to the title: they say what kind of feature this is.
+                         They sat below the naming statements for a while, cut off from it. */ ?>
+                <div class="mb-2">
+                    <span class="badge bg-feature-gene text-white badge-sm"><?= htmlspecialchars($type) ?></span>
+                    <?php if (!empty($children_hierarchical)):
+                        $first_child_type = $children_hierarchical[0]['feature_type'] ?? 'mRNA';
+                        $child_class = strtoupper($first_child_type) === 'MRNA' ? 'bg-feature-mrna' : 'bg-feature-gene';
+                        $direct_child_count = count($children_hierarchical);
+                    ?>
+                        <span class="badge text-white ms-1 badge-sm <?= $child_class ?>">
+                            <?= $direct_child_count ?> <?= htmlspecialchars($first_child_type) ?> child<?= $direct_child_count > 1 ? 'ren' : '' ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
                 <?php if ($naming_lead !== null): ?>
                 <p class="gene-naming-lead<?= $naming_lead['kind'] === 'no_name' ? ' is-unnamed' : '' ?>">
                     <?= htmlspecialchars($naming_lead['naming_text']) ?>
@@ -203,18 +217,6 @@
                     <p class="gene-naming-version">Named by MOOP from HGNC release <?= htmlspecialchars($gene_naming['data_version']) ?></p>
                 <?php endif; ?>
                 <?php endif; ?>
-                <div class="mb-2">
-                    <span class="badge bg-feature-gene text-white badge-sm"><?= htmlspecialchars($type) ?></span>
-                    <?php if (!empty($children_hierarchical)):
-                        $first_child_type = $children_hierarchical[0]['feature_type'] ?? 'mRNA';
-                        $child_class = strtoupper($first_child_type) === 'MRNA' ? 'bg-feature-mrna' : 'bg-feature-gene';
-                        $direct_child_count = count($children_hierarchical);
-                    ?>
-                        <span class="badge text-white ms-1 badge-sm <?= $child_class ?>">
-                            <?= $direct_child_count ?> <?= htmlspecialchars($first_child_type) ?> child<?= $direct_child_count > 1 ? 'ren' : '' ?>
-                        </span>
-                    <?php endif; ?>
-                </div>
                 <?php
                 $jbrowse_assembly_file = $config->getPath('metadata_path')
                     . '/jbrowse2-configs/assemblies/'
