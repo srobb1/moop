@@ -14,6 +14,13 @@
 use strict;
 use warnings;
 
+# ---- constants the subs read (set before any work: tests/check_perl_file_scope.pl)
+# --native: the step that would have named the gene says "the pipeline's pick without the native name: <name>"
+my $NAME_MARK = qr/(?:^NAMED: |would name: |the pipeline's pick without the native name: )/;
+# A step's own rule on the words of a name (is it informative, "uncharacterized") is applied to text that is in
+# the row; it is not re-implemented here, so a cell saying a name is not informative is accepted as such.
+my $UNINFORMATIVE = qr/is not informative|has no informative name|is not an informative name/;
+
 my ($file, $examples) = @ARGV;
 die "Usage: $0 naming_decisions.tsv [examples per line]\n" unless defined $file;
 $examples //= 3;
@@ -51,8 +58,6 @@ foreach my $column (qw(SwissProt_best_hit Closest_human_used_for_naming Naming_s
 my @step_columns = map { my $step = $_; (grep { my $column = $_; $column =~ /^S${step}_/ } @columns)[0] } 1 .. 9;
 
 # ---- reading a row
-# --native: the step that would have named the gene says "the pipeline's pick without the native name: <name>"
-my $NAME_MARK = qr/(?:^NAMED: |would name: |the pipeline's pick without the native name: )/;
 sub cell_named { my ($cell) = @_; return ($cell =~ $NAME_MARK and $cell !~ /^NAMED: the gene set's own name/) ? 1 : 0 }
 sub cell_name {
   my ($cell) = @_;
@@ -136,9 +141,6 @@ foreach my $row (@rows) {
 }
 
 # ---- part 2: each step's verdict from the columns
-# A step's own rule on the words of a name (is it informative, "uncharacterized") is applied to text that is in
-# the row; it is not re-implemented here, so a cell saying a name is not informative is accepted as such.
-my $UNINFORMATIVE = qr/is not informative|has no informative name|is not an informative name/;
 my (%verdict, %verdict_example);
 sub record {
   my ($step, $outcome, $row, $cell) = @_;
