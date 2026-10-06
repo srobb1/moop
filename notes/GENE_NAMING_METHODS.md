@@ -690,7 +690,8 @@ domain, and the OMA name is then withheld: 136 of 43,768 *C. kusceri* names (97 
 39 families), mostly repeat- and domain-rich proteins — 18 copies paired many:1 with APOH, and
 selectins, matrilins and cadherins paired through Sushi, vWA and cadherin domains — which the
 next steps name by their domain or family. The closest human gene stays the OMA partner (OMA did
-make the call); the name's provenance states the conflict.
+make the call) unless a later step names the gene after another human gene, which is then its closest
+human gene too (§6.1); the name's provenance states the conflict.
 
 ### 5.2a Definitions -- the relationship words, and when this pipeline uses each
 
@@ -839,6 +840,15 @@ tiers 1–2 by relationship type (1:1, many:1, 1:many, many:many; Ensembl Compar
 one2one, one2many, many2many likewise), then agreement (the gene's best MMseqs2/DIAMOND
 bitscore to that human gene); tiers 3–7 by bitscore, then E-value, then agreement, then
 relationship type. Remaining ties go to a gene with an HGNC record, then to ids.
+
+**A gene named after a human gene has that gene as its closest human gene** (2026-10-05). The tiers above
+decide the closest human gene only for genes whose name is not a human gene's (a family or domain name, a
+Swiss-Prot name from another species, or none). A page whose name said one human gene and whose closest
+human said another was confusing; the two disagreed for 107 *D. rerio* -like names (step 6, the best
+full-length hit), 92 of them by orthology through a distant species (amphioxus, fly, sea anemone) that cannot
+tell vertebrate paralogs apart, and ZFIN's symbol sided with the name 44 times, with the tier pick 11 times.
+The closest gene's evidence then reads "the human gene its name is taken from (full-length human hit); other
+evidence gives NPAS2 (...)", and its tier is 3 when the name's hit is reciprocal, else 5.
 
 ### 6.2 One entry per gene: families
 

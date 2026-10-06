@@ -734,7 +734,14 @@ check(scalar(($source{G28}[1] // '') =~ /; similar to human MIX1 over part of it
 check(scalar(($source{G29}[1] // '') =~ /; similar to human MIX1 along its length \(90% of this protein, 90% of MIX1, E=1e-80\), but that gene's name could not be used/),
       'G29 provenance: a full-length homolog is not described as partial', $p->('G29'));
 check(($closest_human{G27}[3] // '') eq 'MIX1/MIX2-family', 'closest human G27: no scattered HGNC group in the family label', join(' | ', @{$closest_human{G27} // []}));
-check(($closest_human{G26}[2] // '') eq 'HGNC:17', 'closest human G26: still the OMA partner ZETA (OMA made that call)', join(' | ', @{$closest_human{G26} // []}));
+# G16 (no name): its closest human is CFAP52 (119 bits), the best hit over half of both proteins, not the stronger
+# WDR90 (562 bits over 30% of WDR90) -- a closest human gene always covers half of both (user, 2026-10-06)
+check(($closest_human{G16}[3] // '') eq 'CFAP52',
+      'closest human G16: the best hit over half of both proteins (CFAP52), not the stronger partial WDR90', join(' | ', @{$closest_human{G16} // []}));
+# G26 is named THETA-like (its OMA pair ZETA withheld): its closest human is THETA too, the gene its name
+# is taken from, with OMA's ZETA in the evidence (user, 2026-10-05: one page, one human gene)
+check(($closest_human{G26}[2] // '') eq 'HGNC:18' && ($closest_human{G26}[5] // '') =~ /^the human gene its name is taken from \(full-length human hit\); other evidence gives ZETA \(OMA ortholog/,
+      'closest human G26: THETA, the gene its name is taken from, with ZETA from OMA in the evidence', join(' | ', @{$closest_human{G26} // []}));
 check(($source{G4}[3] // '') eq 'hgnc_group' && ($source{G4}[0] // '') eq '10'
       && scalar(($source{G4}[1] // '') =~ /^Co-ortholog of 2 human genes in the HGNC group "Beta proteins" \(OMA, 1:many\); no single ortholog; one of these genes is its best human similarity hit; aligned over 90% of this protein and 90% of BETA1 \(full-length\)$/),
       'G4 provenance: HGNC gene group id 10, linked as a group', $p->('G4'));
@@ -828,8 +835,8 @@ check(($name{G37} // '') eq 'None' && ($source{G37}[1] // '') eq 'None: no hits 
         'decision table: the two kinds of no name', "G37 $decision{G37}{Step}; G8 $decision{G8}{Step}");
   check(($decision{G1}{Evidence_by_method} // '') eq 'OMA=ALPHA(+) HOG=- RBH=- VIA=- BH=ALPHA(full,+) TREE=- PTHR=PTHR00001(+) | vs ALPHA: 2 agree, 0 point elsewhere',
         'Evidence_by_method G1: OMA and the best hit agree; same PANTHER family', $decision{G1}{Evidence_by_method});
-  check(($decision{G26}{Evidence_by_method} // '') eq 'OMA=ZETA(+) HOG=- RBH=- VIA=- BH=THETA(full,C) TREE=- PTHR=PTHR00018(C) | vs ZETA: 1 agree, 1 point elsewhere',
-        'Evidence_by_method G26 (omaC): the best hit and the PANTHER family point elsewhere', $decision{G26}{Evidence_by_method});
+  check(($decision{G26}{Evidence_by_method} // '') eq 'OMA=ZETA(C) HOG=- RBH=- VIA=- BH=THETA(full,+) TREE=- PTHR=PTHR00018(?) | vs THETA: 1 agree, 1 point elsewhere',
+        'Evidence_by_method G26 (omaC): measured against THETA, its name and closest human; OMA points elsewhere', $decision{G26}{Evidence_by_method});
   check(($decision{G25}{Evidence_by_method} // '') eq 'OMA=EPS(X) HOG=- RBH=- VIA=- BH=- TREE=- PTHR=-',
         'Evidence_by_method G25 (omaX): the set-aside OMA pair is shown, marked X', $decision{G25}{Evidence_by_method});
   check(($decision{G34}{Evidence_by_method} // '') eq 'OMA=IOTA(+) HOG=- RBH=- VIA=- BH=IOTA(full,+) TREE=THETA(C) PTHR=- | vs IOTA: 2 agree, 1 point elsewhere',

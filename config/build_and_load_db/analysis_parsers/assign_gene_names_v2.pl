@@ -511,6 +511,9 @@ sub main {
   foreach my $group (keys %members) {
     $name{$group} = with_relationship($group, tagged(set_aside_note($group, $chosen{$group})));
   }
+  foreach my $group (sort keys %members) {
+    closest_from_name($group, $name{$group});
+  }
 
   # ============================================================== write
   write_outputs();
@@ -4082,6 +4085,30 @@ sub identity_statement {
   my $step = $decision{$group}{step} // 0;
   my %method = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
   return "$text; by " . ($method{$step} // 'its own annotation');
+}
+
+# A gene named after a human gene has that gene as its closest human gene (user, 2026-10-05): a page
+# whose name says one human gene and whose closest human says another was confusing. Danio: 107 -like
+# names (step 6, best full-length hit) had another closest human, 92 of them by orthology through a
+# distant species (amphioxus, fly) that cannot tell vertebrate paralogs apart; ZFIN sided with the name
+# 44 times, with the closest human 11. Genes without a human gene in their name keep the closest human
+# chosen before. The tier is the name's own evidence: 3 when its hit is reciprocal, else 5.
+sub closest_from_name {
+  my ($group, $named) = @_;
+  return unless $named and $named->{desc} ne 'None';
+  my $relationship = $named->{relationship} // 'none';
+  return unless $relationship eq 'ortholog' or $relationship eq 'co-ortholog' or $relationship eq 'homolog';
+  my @humans = @{$named->{humans} // []} or return;   # named after a human gene (from its closest): nothing to change
+  my $closest = $closest{$group};
+  my $named_keys = join(' ', sort map { my $human = $_; $human->{key} } @humans);
+  return if $closest and $named_keys eq join(' ', sort map { my $human = $_; $human->{key} } @{$closest->{human}});
+  my $entry = @humans == 1 ? $human_hit{$group}{$humans[0]{key}} : undef;
+  my $step = $decision{$group}{step} // 0;
+  my %method = map { my $naming_step = $_; ($naming_step->[0] => $naming_step->[1]) } @NAMING_STEPS;
+  my $evidence = 'the human gene its name is taken from (' . ($method{$step} // 'its name') . ')';
+  $evidence .= '; other evidence gives ' . join('/', map { my $human = $_; human_label($human) } @{$closest->{human}}) . " ($closest->{evidence})" if $closest;
+  $closest{$group} = { tier => ($entry && $entry->{rbh} ? 3 : 5), human => [@humans], evidence => $evidence, from_name => 1 };
+  $stats{'closest human: the gene the name is taken from, replacing ' . ($closest ? "tier $closest->{tier}" : 'none')}++;
 }
 
 # the human gene(s) a name is about: the gene the name was taken from (a -like name is named after its
