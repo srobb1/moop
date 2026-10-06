@@ -3894,7 +3894,7 @@ sub like_text {
   my $domains = domain_text($group, $human);
   $rule .= "; $domains" if $domains ne '';
   if ($tie_flag) {
-    $rule .= "; " . join(', ', map { my $human = $_; human_label($human) } @$tie_genes) . " score within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE))
+    $rule .= "; " . join(', ', map { my $tie_human = $_; human_label($tie_human) } @$tie_genes) . " score within " . sprintf('%.0f%%', 100 * (1 - $LIKE_TIE))
            . " of each other, and only $label is a reciprocal best hit";
   }
   return with_tree_vote($group, [$human], {

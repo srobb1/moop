@@ -58,23 +58,19 @@ foreach my $file (@files){
   print $file,"\n";
   $date = `date '+%Y-%m-%d' -r $file`;
   
-  my $id = '';
+  # rbh_eross_results.tsv: a header line, then one row per query (query best_hit evalue
+  # reciprocal_score query_gene hit_gene); reciprocal_score is the rank of the reverse hit, so 1 is a
+  # reciprocal best hit. (Until 2026-10-06 a "$id" flag here meant to keep only the first hit per query
+  # of a '#'-commented BLAST table; the row's own "my $id" hid it, so it never acted, and the current
+  # files have one row per query.)
   open TSV, $file or die "cant open blast out in tsv format: $file $! \n";
   <TSV>;
   while (my $line = <TSV>){
     chomp $line;
-    if ($line =~ /^#/){
-     $id = '';
-      next; 
-    }elsif($id ne ''){
-      next;
-    }else{
-      # top hit
-      my @line = split "\t", $line;
-      my ($id,$hit,$evalue,$reciprical_score,$query_gene,$hit_gene) = @line;
-      next unless $reciprical_score == 1;
-      $hits{$id}{$hit}=$evalue;
-    }
+    next if $line =~ /^#/;
+    my ($id,$hit,$evalue,$reciprical_score,$query_gene,$hit_gene) = split "\t", $line;
+    next unless $reciprical_score == 1;
+    $hits{$id}{$hit}=$evalue;
   }
 }
 my $src_nospace = $src;
