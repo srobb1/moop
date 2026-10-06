@@ -582,6 +582,9 @@
             .catch(err => showError('Could not fetch sequence: ' + err.message));
     }
 
+    // For the isoform diagrams drawn in a big gene's cards (gene-model-viewer.js).
+    window.moopOpenFormatter = openFormatter;
+
     // ── Button init ───────────────────────────────────────────────────────────
     function init() {
         if (typeof geneModelData === 'undefined' || !geneModelData) return;
@@ -589,7 +592,12 @@
 
         const btn      = document.getElementById('gene-model-fmt-btn');
         if (!btn) return;
-        const isoforms = geneModelData.isoforms || [];
+        // A big gene's diagram shows one isoform (data-show-only); list just that one, not a
+        // dropdown of every isoform -- 360 entries on the chameleon UBXN8 gene. The others
+        // have their own Format button on the diagram drawn in their card.
+        const svg      = document.getElementById('gene-model-svg');
+        const only     = svg && svg.getAttribute('data-show-only');
+        const isoforms = (geneModelData.isoforms || []).filter(i => !only || i.anchor === only);
         if (!isoforms.length) { btn.style.display = 'none'; return; }
 
         if (isoforms.length === 1) {

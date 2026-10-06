@@ -1,5 +1,13 @@
 <?php
 require_once __DIR__ . '/annotation_scores.php';
+
+/**
+ * From this many direct transcripts up, the gene page lists them and loads each one's
+ * annotations on demand instead of rendering every card and sequence (tools/parent.php).
+ * 50 chosen with the user on 2026-10-06; 189 genes site-wide reach it, mostly planarian
+ * transcriptome clusters. Change it here only.
+ */
+const MOOP_BIG_GENE_TRANSCRIPTS = 50;
 /**
  * Parent Feature Display Functions
  * Functions for displaying parent feature data, hierarchies, and annotations

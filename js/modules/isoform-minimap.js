@@ -65,13 +65,9 @@
                    '" height="' + h + '" fill="' + fill + '" rx="0.5"/>';
         }
 
-        isoforms.forEach(function (iso) {
-            if (!iso.anchor) return;
-            var card = document.getElementById(iso.anchor);
-            if (!card) return;
-            var header = card.querySelector(".card-header");
-            if (!header || header.querySelector(".iso-minimap")) return;
-
+        // One thumbnail, on the gene-wide scale above. Shared by the card headers below and
+        // by a big gene's transcript list (parent-tools.js), so both draw identically.
+        function build(iso) {
             var hasCds   = iso.cds && iso.cds.length > 0;
             var exonFill = hasCds ? COLOR_EXON : COLOR_NOCDS;
 
@@ -95,6 +91,24 @@
             svg.setAttribute("focusable", "false");
             svg.style.pointerEvents = "none";            // never intercept the collapse toggle
             svg.innerHTML = parts.join("");
+            return svg;
+        }
+
+        // For the big-gene transcript list: the thumbnail for a transcript's card anchor, or
+        // null when the gene model has no row for it.
+        var byAnchor = {};
+        isoforms.forEach(function (iso) { if (iso.anchor) byAnchor[iso.anchor] = iso; });
+        window.moopIsoformMinimap = function (anchor) {
+            return byAnchor[anchor] ? build(byAnchor[anchor]) : null;
+        };
+
+        isoforms.forEach(function (iso) {
+            if (!iso.anchor) return;
+            var card = document.getElementById(iso.anchor);
+            if (!card) return;
+            var header = card.querySelector(".card-header");
+            if (!header || header.querySelector(".iso-minimap")) return;
+            var svg = build(iso);
 
             // Order is ID, count, then picture. The count is what a reader scans when
             // deciding whether to open a collapsed card, so it should not sit behind the

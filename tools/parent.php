@@ -412,12 +412,84 @@ $children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_g
 // Get all children flat for sequence retrieval (keeping getChildren for backwards compatibility)
 $children = getChildren($feature_id, $db, $accessible_gene_set_ids);
 
-// Optimize: Get ALL annotations for parent and all children in ONE query
+// ── Big genes: a lighter page ────────────────────────────────────────────────
+// A few "genes" have hundreds of transcripts -- transcriptome clusters, mostly in planarians
+// (1,083 in Obama nungara onun.kc3.gc000000). Rendering a full annotation card and every
+// sequence for each ran PHP out of memory (128 MB) and served nginx's bare 500 page; at 618
+// transcripts the page that did load was 22.5 MB. 189 genes site-wide have >= 50.
+//
+// Above the threshold the page lists the transcripts with their counts, and loads one
+// transcript's annotation card on demand -- through THIS page (…&transcript=ID), so it
+// passes exactly the same access checks and gene lookup as the full page, rather than
+// through a second endpoint that would have to duplicate them. Sequences are offered as
+// downloads instead of being printed inline. (User, 2026-10-06: threshold 50 for now.)
+$big_gene = count($children_hierarchical) >= MOOP_BIG_GENE_TRANSCRIPTS;
+
+// The requested transcript, for an on-demand card: it must be one of THIS gene's direct
+// children, found in the access-filtered list above -- never looked up on its own.
+$fragment_child = null;
+if ($big_gene && isset($_GET['transcript'])) {
+    foreach ($children_hierarchical as $__i => $__c) {
+        if ($__c['feature_uniquename'] === (string)$_GET['transcript']) {
+            $fragment_child = $__c;
+            $fragment_position = $__i;
+            break;
+        }
+    }
+    if ($fragment_child === null) {
+        http_response_code(404);
+        exit('That transcript is not part of this gene.');
+    }
+}
+
+// Annotations for what the page will SHOW: everything on a normal gene; on a big gene only
+// the gene itself (and the one requested transcript, for a card). One query either way.
 $all_feature_ids = [$feature_id];
-foreach ($children as $child) {
-    $all_feature_ids[] = $child['feature_id'];
+$__descend = function (array $node) use (&$__descend, &$all_feature_ids) {
+    $all_feature_ids[] = $node['feature_id'];
+    foreach ($node['grandchildren'] ?? [] as $__g) $__descend($__g);
+};
+if (!$big_gene) {
+    foreach ($children as $child) {
+        $all_feature_ids[] = $child['feature_id'];
+    }
+} elseif ($fragment_child !== null) {
+    $__descend($fragment_child);
 }
 $all_annotations = getAllAnnotationsForFeatures($all_feature_ids, $db);
+
+// On a big gene, each transcript's annotation COUNT for the list, from one GROUP BY rather
+// than the rows themselves; a transcript's count includes its CDS and protein.
+$child_annotation_counts = [];
+if ($big_gene) {
+    $__top = [];        // feature_id -> the direct child it belongs to
+    foreach ($children_hierarchical as $__c) {
+        $__stack = [$__c];
+        while ($__stack) {
+            $__n = array_pop($__stack);
+            $__top[$__n['feature_id']] = $__c['feature_id'];
+            foreach ($__n['grandchildren'] ?? [] as $__g) $__stack[] = $__g;
+        }
+    }
+    foreach (array_chunk(array_keys($__top), 900) as $__ids) {
+        $__rows = fetchData('SELECT feature_id, COUNT(*) AS n FROM feature_annotation WHERE feature_id IN ('
+                            . implode(',', array_fill(0, count($__ids), '?')) . ') GROUP BY feature_id', $db, $__ids);
+        foreach ($__rows as $__r) {
+            $__t = $__top[$__r['feature_id']];
+            $child_annotation_counts[$__t] = ($child_annotation_counts[$__t] ?? 0) + (int)$__r['n'];
+        }
+    }
+}
+
+// The on-demand card: that transcript's card alone, no page around it.
+if ($fragment_child !== null) {
+    // Table ids must not collide with cards already on the page: give each transcript its
+    // own numbered block.
+    $count = 100000 + $fragment_position * 100;
+    echo generateChildAnnotationCards($fragment_child, $all_annotations, $analysis_order, $annotation_colors,
+        $annotation_labels, $analysis_desc, $organism_name, $count, false, $annotated_child_types ?? []);
+    exit;
+}
 
 // Protein lengths, from the protein FASTA's .fai — a point lookup, no sequence read. Shown on
 // each protein in the Feature Hierarchy, and the longest in the overview: a short protein is a
@@ -469,6 +541,7 @@ foreach ($all_annotations as $__by_type) {
         $annotation_total += count($__rows);
     }
 }
+$annotation_total += array_sum($child_annotation_counts);   // a big gene's transcripts, not loaded as rows
 
 // Repoint the gene-model diagram's row links at the annotation CARDS.
 //
@@ -507,6 +580,18 @@ if (!empty($gene_model['isoforms']) && !empty($children)) {
     unset($__iso);
 }
 
+// After the anchors are set (just above). A big gene's diagram draws ONE isoform (the one with the longest protein, else the first)
+// instead of every row -- 360 rows was 18,000 px. Others are drawn in their card on demand.
+$big_gene_diagram_anchor = '';
+if ($big_gene && !empty($gene_model['isoforms'])) {
+    $__longest_tx = $longest_protein !== '' ? (moop_resolve_naming_protein($longest_protein, $children, $feature_id)['mrna'] ?? null) : null;
+    $__want = $__longest_tx !== null ? moop_annotation_card_anchor($__longest_tx) : null;
+    foreach ($gene_model['isoforms'] as $__iso) {
+        if ($__want !== null && ($__iso['anchor'] ?? null) === $__want) { $big_gene_diagram_anchor = $__want; break; }
+    }
+    if ($big_gene_diagram_anchor === '') $big_gene_diagram_anchor = (string)($gene_model['isoforms'][0]['anchor'] ?? '');
+}
+
 // Do all the isoforms carry the SAME annotations?
 //
 // Worth saying out loud, because it is a real biological observation and the page cannot
@@ -534,7 +619,7 @@ $isoform_annotation_signature = static function (array $by_type): string {
 
 $isoforms_share_annotations = false;
 $annotated_isoform_count    = 0;
-if (count($children_hierarchical) > 1) {
+if (count($children_hierarchical) > 1 && !$big_gene) {   // a big gene's isoform annotations are not loaded
     $sigs = [];
     foreach ($children_hierarchical as $__child) {
         $sigs[] = $isoform_annotation_signature($all_annotations[$__child['feature_id']] ?? []);
@@ -614,6 +699,9 @@ echo render_display_page(
         'protein_lengths' => $protein_lengths,
         'longest_protein' => $longest_protein,
         'annotation_total' => $annotation_total,
+        'big_gene' => $big_gene,
+        'big_gene_diagram_anchor' => $big_gene_diagram_anchor,
+        'child_annotation_counts' => $child_annotation_counts,
         'analysis_order' => $analysis_order,
         'annotation_colors' => $annotation_colors,
         'annotation_labels' => $annotation_labels,

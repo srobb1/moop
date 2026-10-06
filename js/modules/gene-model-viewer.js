@@ -73,7 +73,11 @@
         if (typeof geneModelData === 'undefined' || !geneModelData) return;
         const svg = document.getElementById('gene-model-svg');
         if (!svg) return;
-        render(geneModelData, svg);
+        // A big gene (tools/parent.php, MOOP_BIG_GENE_TRANSCRIPTS) draws one isoform here;
+        // the others are drawn in their own card when it is opened (moopDrawIsoform). The
+        // full data stays loaded -- the sequence tools and the genomic modal still use it.
+        const only = svg.getAttribute('data-show-only');
+        render(only ? isoformSubset(only) : geneModelData, svg);
 
         const seqBtn = document.getElementById('gene-model-seq-btn');
         if (seqBtn) seqBtn.addEventListener('click', () => showGenomicModal(geneModelData.gene, geneModelData.isoforms));
@@ -81,6 +85,62 @@
         const gffBtn = document.getElementById('gene-model-gff-btn');
         if (gffBtn) gffBtn.addEventListener('click', () => showGffModal(geneModelData.gene));
     }
+
+    function isoformSubset(anchor) {
+        const iso = (geneModelData.isoforms || []).filter(i => i.anchor === anchor);
+        return { gene: geneModelData.gene, isoforms: iso };
+    }
+
+    /* Draw one isoform's structure (with the gene above it) at the top of `container`.
+     * Used by the big-gene layout when a transcript's card is loaded (parent-tools.js).
+     * Returns false when the gene has no diagram or this transcript has no row in it. */
+    window.moopDrawIsoform = function (anchor, container) {
+        if (typeof geneModelData === 'undefined' || !geneModelData) return false;
+        const data = isoformSubset(anchor);
+        if (!data.isoforms.length) return false;
+        const box = document.createElement('div');
+        box.className = 'big-gene-isoform-diagram mb-3 pb-2 border-bottom';
+
+        // The Gene Structure card's buttons, for THIS isoform: Format sequence opens the
+        // formatter on it, FASTA gives the gene locus plus its span, GFF the gene's GFF3.
+        const iso = data.isoforms[0];
+        const bar = document.createElement('div');
+        bar.className = 'd-flex justify-content-end gap-2 mb-1';
+        const mkBtn = (icon, text, title, fn) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'btn btn-sm moop-data-btn';
+            b.title = title;
+            b.innerHTML = '<i class="fas ' + icon + ' me-1"></i>';
+            b.appendChild(document.createTextNode(text));
+            b.addEventListener('click', fn);
+            return b;
+        };
+        const canSeq = (typeof genomeSequenceAvailable !== 'undefined') && genomeSequenceAvailable;
+        if (canSeq && window.moopOpenFormatter) {
+            bar.appendChild(mkBtn('fa-palette', 'Format sequence', 'Open this isoform\'s sequence with each feature type highlighted',
+                () => window.moopOpenFormatter(iso)));
+        }
+        const group = document.createElement('div');
+        group.className = 'btn-group btn-group-sm';
+        if (canSeq) {
+            group.appendChild(mkBtn('fa-download', 'FASTA', 'Download the genomic sequence — gene locus plus this isoform\'s span',
+                () => showGenomicModal(data.gene, data.isoforms)));
+        }
+        group.appendChild(mkBtn('fa-download', 'GFF', 'Download GFF3 for the gene — all its isoforms and sub-features',
+            () => showGffModal(data.gene)));
+        bar.appendChild(group);
+        box.appendChild(bar);
+
+        const svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('width', '100%');
+        svg.style.display = 'block';
+        svg.style.overflow = 'visible';
+        box.appendChild(svg);
+        container.insertBefore(box, container.firstChild);
+        render(data, svg);
+        return true;
+    };
 
     function render(data, svg) {
         const { gene, isoforms } = data;

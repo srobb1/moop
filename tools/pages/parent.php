@@ -291,7 +291,10 @@
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Gene Structure</span>
             <span class="ms-2 text-muted small">
-                <?= count($gene_model['isoforms']) ?> isoform<?= count($gene_model['isoforms']) !== 1 ? 's' : '' ?>
+                <?= number_format(count($gene_model['isoforms'])) ?> isoform<?= count($gene_model['isoforms']) !== 1 ? 's' : '' ?>
+                <?php if (!empty($big_gene)): ?>
+                    · <span title="Too many to draw at once. Open a transcript under Annotations to draw its own structure.">showing the longest</span>
+                <?php endif; ?>
             </span>
             <?= help_modal_trigger('gene-model-help', '', 'Help: reading the gene structure diagram') ?>
             <?php /* One treatment for all of these: they are all "get this gene's data out".
@@ -317,7 +320,8 @@
         </div>
         <div id="geneModelSection" class="collapse show">
             <div class="card-body p-3">
-                <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"></svg>
+                <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"<?php
+                    if (!empty($big_gene_diagram_anchor)): ?> data-show-only="<?= htmlspecialchars($big_gene_diagram_anchor) ?>"<?php endif; ?>></svg>
 
                 <?php
                 // ONE definition of the diagram's colour key, shared by this legend and the
@@ -392,7 +396,18 @@
                                 <?php if ($parent_annot_count > 0): ?>
                                     <span class="badge bg-success text-white badge-sm"><?= $parent_annot_count ?> annotation<?= $parent_annot_count > 1 ? 's' : '' ?></span>
                                 <?php endif; ?>
+                                <?php if (!empty($big_gene)):
+                                    // Thousands of tree lines (each transcript with its CDS and
+                                    // protein: 632 KB at 1,083 transcripts) say nothing a reader can
+                                    // take in. One line, and the list under Annotations has them all.
+                                    $__first = $children_hierarchical[0]['feature_type'] ?? 'mRNA'; ?>
+                                    <ul><li><span class="tree-char">└── </span>
+                                        <span class="text-dark"><?= number_format(count($children_hierarchical)) ?> <?= htmlspecialchars($__first) ?></span>
+                                        <span class="text-muted small">— each with its CDS and protein; listed under Annotations</span>
+                                    </li></ul>
+                                <?php else: ?>
                                 <?= generateTreeHTML($children_hierarchical, $all_annotations, $analysis_order, 0, $protein_lengths, $longest_protein, (string)($naming_isoform['protein'] ?? '')) ?>
+                                <?php endif; ?>
                             </li>
                         </ul>
                     </div>
@@ -448,7 +463,8 @@
                          to the last means scrolling past every annotation table in between.
                          There was no way to fold them and no keyboard shortcut either. Only
                          shown when there is more than one transcript to fold. */ ?>
-                <?php if (count($children_hierarchical) > 1): ?>
+                <?php /* Not on a big gene: its cards are opened one at a time, and each has its own close. */ ?>
+                <?php if (count($children_hierarchical) > 1 && empty($big_gene)): ?>
                 <button type="button" class="btn btn-sm moop-data-btn" id="toggle-all-transcripts"
                         data-state="expanded"
                         title="Collapse every transcript so the list fits on one screen">
@@ -482,8 +498,56 @@
                     }
                 }
                 
+                // Big gene (tools/parent.php, MOOP_BIG_GENE_TRANSCRIPTS): a list of the
+                // transcripts, each one's card loaded on demand, instead of every card at once.
+                if (!empty($big_gene)) {
+                    $has_annotations = true;
+                    $__n_tx = count($children_hierarchical);
+                    // Each transcript's protein, for its length (protein -> cds -> mRNA).
+                    $__protein_of = [];
+                    foreach ($children_hierarchical as $__c) {
+                        $__stack = [$__c];
+                        while ($__stack) {
+                            $__node = array_pop($__stack);
+                            if (isset($protein_lengths[$__node['feature_uniquename']])) {
+                                $__protein_of[$__c['feature_uniquename']] = $__node['feature_uniquename'];
+                            }
+                            foreach ($__node['grandchildren'] ?? [] as $__g) $__stack[] = $__g;
+                        }
+                    }
+                    ?>
+                    <div class="isoform-note">
+                        <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        <strong><?= number_format($__n_tx) ?> transcripts</strong> — too many to show at once, so each
+                        transcript's annotations load when you ask for them. Sort the list by annotations or
+                        protein length to find the ones worth opening.
+                    </div>
+                    <?php
+                    // The rows as compact data (~60 bytes a transcript); the browser builds the
+                    // table from it (parent-tools.js). As server-rendered rows with their buttons
+                    // this was ~600 bytes a transcript, 656 KB at 1,083 transcripts.
+                    // [id, annotation count, protein length or null, is the longest protein]
+                    $__rows = [];
+                    foreach ($children_hierarchical as $__c) {
+                        $__u = $__c['feature_uniquename'];
+                        $__p = $__protein_of[$__u] ?? null;
+                        $__rows[] = [$__u, (int)($child_annotation_counts[$__c['feature_id']] ?? 0),
+                                     $__p !== null ? (int)$protein_lengths[$__p] : null, $__p !== null && $__p === $longest_protein];
+                    }
+                    ?>
+                    <script type="application/json" id="bigGeneRows"><?= json_encode($__rows, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+                    <div class="table-responsive">
+                    <table id="bigGeneTranscripts" class="table table-sm table-striped table-hover" style="width:100%">
+                        <thead><tr><th>Transcript</th><?php if (!empty($gene_model['isoforms'])): ?><th class="col-structure">Structure</th><?php endif; ?><th>Annotations</th><th>Protein</th><th></th></tr></thead>
+                    </table>
+                    </div>
+                    <div id="bigGeneCards" class="mt-3"
+                         data-organism="<?= htmlspecialchars($organism_name) ?>"
+                         data-gene="<?= htmlspecialchars($feature_uniquename) ?>"></div>
+                    <?php
+                }
                 // Children annotations (with hierarchical support for grandchildren)
-                if (!empty($children_hierarchical)) {
+                elseif (!empty($children_hierarchical)) {
                     // Summary when there is more than one child.
                     //
                     // This used to say "Each may have different annotations" unconditionally.
@@ -564,7 +628,37 @@
     $organism_data    = $config->getPath('organism_data');
 
     $sequences_file = __DIR__ . '/../sequences_display.php';
-    if (file_exists($sequences_file)) {
+    if (!empty($big_gene)) {
+        // Hundreds of transcripts' sequences printed inline is what made these pages tens of
+        // megabytes. Offer the same FASTA downloads the full page has; the controller streams
+        // them (tools/parent.php, download_file).
+        ?>
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex align-items-center">
+                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#bigGeneSequences" aria-expanded="true" role="button">
+                    <i class="fas fa-minus toggle-icon text-primary"></i>
+                </span>
+                <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Sequences</span>
+            </div>
+            <div id="bigGeneSequences" class="collapse show">
+            <div class="card-body">
+                <p class="text-muted mb-2">This gene has <?= number_format(count($children_hierarchical)) ?> transcripts — too many
+                    to print here. Download them as FASTA:</p>
+                <?php foreach (($sequence_types ?? $config->getSequenceTypes()) as $__st => $__conf):
+                    if ($__st === 'genome') continue; ?>
+                    <form method="POST" action="" class="d-inline">
+                        <input type="hidden" name="sequence_type" value="<?= htmlspecialchars($__st) ?>">
+                        <input type="hidden" name="download_file" value="1">
+                        <button type="submit" class="btn btn-sm btn-success me-1">
+                            <i class="fa fa-download"></i> <?= htmlspecialchars($__conf['label'] ?? $__st) ?>
+                        </button>
+                    </form>
+                <?php endforeach; ?>
+            </div>
+            </div>
+        </div>
+        <?php
+    } elseif (file_exists($sequences_file)) {
         include_once $sequences_file;
     }
     ?>

@@ -166,3 +166,148 @@ document.addEventListener('DOMContentLoaded', function () {
     measure();
     window.addEventListener('resize', measure);
 });
+
+
+/* ── Big genes: one transcript's annotations, on demand ───────────────────────
+ *
+ * A gene with hundreds of transcripts lists them (tools/parent.php, MOOP_BIG_GENE_TRANSCRIPTS)
+ * instead of rendering every annotation card, which ran PHP out of memory. "Show annotations"
+ * asks the gene page itself for that one transcript's card (…&transcript=ID) -- the same
+ * access checks as the full page -- and adds it below the list.
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    var list = document.getElementById('bigGeneTranscripts');
+    var holder = document.getElementById('bigGeneCards');
+    if (!list || !holder) return;
+
+    // Rows arrive as data (pages/parent.php #bigGeneRows): [id, annotations, protein aa|null, longest]
+    var rows = [];
+    try { rows = JSON.parse(document.getElementById('bigGeneRows').textContent); } catch (e) {}
+    var esc = function (t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+    // Explicit data indexes, because the optional Structure column shifts the positions.
+    // Columns: Transcript | [Structure] | Annotations | Protein | button.
+    var hasStructure = !!list.querySelector('th.col-structure');
+    var anchorOf = function (id) { return 'annot_card_' + String(id).replace(/[^a-zA-Z0-9_]/g, '_'); };
+    var cols = [{ data: 0, render: function (v, type) { return type === 'display' ? esc(v) : v; } }];
+    if (hasStructure) {
+        // The isoform's thumbnail (isoform-minimap.js), only for genes with a gene model --
+        // transcriptome clusters have none. The cell is an empty placeholder; fillThumbs()
+        // draws the rows on screen only, so 360 transcripts cost 25 thumbnails per page.
+        cols.push({ data: null, orderable: false, render: function (v, type, row) {
+            return type === 'display' ? '<span class="iso-thumb" data-anchor="' + esc(anchorOf(row[0])) + '"></span>' : '';
+        } });
+    }
+    var proteinCol = cols.length + 1;
+    cols.push(
+        { data: 1, render: function (v, type) { return type === 'display' ? v.toLocaleString() : v; } },
+        { data: 2, render: function (v, type, row) {
+            if (type !== 'display') return v === null ? -1 : v;
+            if (v === null) return '<span class="text-muted">—</span>';
+            return v.toLocaleString() + ' aa' + (row[3] ? ' <span class="text-muted small">longest</span>' : '');
+        } },
+        { data: null, orderable: false, className: 'text-end', render: function (v, type, row) {
+            if (type !== 'display' || row[1] === 0) return '';
+            return '<button type="button" class="btn btn-sm moop-data-btn big-gene-load" data-transcript="'
+                 + esc(row[0]) + '">Show annotations</button>';
+        } }
+    );
+
+    function fillThumbs() {
+        if (!window.moopIsoformMinimap) return;
+        list.querySelectorAll('.iso-thumb:empty').forEach(function (cell) {
+            var svg = window.moopIsoformMinimap(cell.getAttribute('data-anchor'));
+            if (svg) cell.appendChild(svg);
+        });
+    }
+
+    if (window.jQuery && jQuery.fn.DataTable) {
+        jQuery(list).on('draw.dt', fillThumbs);
+        jQuery(list).DataTable({
+            data: rows,
+            pageLength: 25,
+            // Longest protein first: the same isoform the Gene Structure diagram shows, so the
+            // top of the list matches the picture above it. (Sorting by annotation count read
+            // as arbitrary when nearly every transcript had the same count.)
+            order: [[proteinCol, 'desc']],
+            deferRender: true,
+            columns: cols
+        });
+        // Once more after every DOMContentLoaded handler has run: isoform-minimap.js defines
+        // moopIsoformMinimap in its own handler, which runs AFTER this one.
+        setTimeout(fillThumbs, 0);
+    }
+
+    function initCard(card) {
+        // DataTables for the new tables, as parent-tools does for the page's own on load.
+        card.querySelectorAll('table[id^="annotTable_"]').forEach(function (t) {
+            // typeof, not window.X: DataTableExportConfig is a top-level `const`, which is a
+            // global NAME but never a window property -- window.DataTableExportConfig is
+            // always undefined, and the tables were silently left uninitialised.
+            if (typeof DataTableExportConfig !== 'undefined') DataTableExportConfig.reinitialize('#' + t.id);
+        });
+    }
+
+    // Delegated: DataTables redraws the rows on every page and sort, so buttons come and go.
+    list.addEventListener('click', function (e) {
+        var btn = e.target.closest('.big-gene-load');
+        if (!btn) return;
+        var id = btn.getAttribute('data-transcript');
+        var existing = holder.querySelector('[data-loaded-transcript="' + CSS.escape(id) + '"]');
+        if (existing) { existing.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+
+        btn.disabled = true;
+        var label = btn.textContent;
+        btn.textContent = 'Loading…';
+        var url = location.pathname + '?organism=' + encodeURIComponent(holder.dataset.organism)
+                + '&uniquename=' + encodeURIComponent(holder.dataset.gene)
+                + '&transcript=' + encodeURIComponent(id);
+        fetch(url, { credentials: 'same-origin' })
+            .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+            .then(function (html) {
+                var wrap = document.createElement('div');
+                wrap.className = 'mb-3';
+                wrap.setAttribute('data-loaded-transcript', id);
+                wrap.innerHTML = html;
+                holder.insertBefore(wrap, holder.firstChild);
+                initCard(wrap);
+                // A close, so opened cards do not just pile up. Removing it resets the list's
+                // button (if that row is on the current page) so the transcript can be reopened.
+                var header = wrap.querySelector('.annotation-card > .card-header');
+                if (header) {
+                    var close = document.createElement('button');
+                    close.type = 'button';
+                    close.className = 'btn btn-sm moop-data-btn ms-auto';
+                    close.title = 'Close this transcript';
+                    close.innerHTML = '<i class="fas fa-times me-1"></i>Close';
+                    close.addEventListener('click', function (ev) {
+                        ev.stopPropagation();
+                        wrap.remove();
+                        // Through the table's own rows, not the document: rows on other pages are
+                        // detached from the DOM, so a page-wide lookup would miss them.
+                        var sel = '.big-gene-load[data-transcript="' + CSS.escape(id) + '"]';
+                        var rowsNodes = (window.jQuery && jQuery.fn.DataTable && jQuery.fn.DataTable.isDataTable(list))
+                            ? jQuery(list).DataTable().rows().nodes().toArray() : [list];
+                        rowsNodes.forEach(function (n) { var b = n.querySelector(sel); if (b) b.textContent = label; });
+                    });
+                    header.appendChild(close);
+                }
+                // Its structure, drawn here because the big-gene diagram shows only one isoform.
+                // Same anchor rule as moop_annotation_card_anchor() in lib/parent_functions.php.
+                // Inside the card's body, under its header and above the first table, so it
+                // reads as part of that transcript and folds with it -- drawn on the wrapper,
+                // it sat outside the card's border, jammed against whatever was above.
+                if (window.moopDrawIsoform) {
+                    var body = wrap.querySelector('.annotation-card .card-body') || wrap;
+                    window.moopDrawIsoform('annot_card_' + id.replace(/[^a-zA-Z0-9_]/g, '_'), body);
+                }
+                btn.textContent = 'Shown below ↓';
+                btn.disabled = false;
+                wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            })
+            .catch(function () {
+                btn.textContent = label;
+                btn.disabled = false;
+                window.alert('Could not load the annotations for ' + id + '.');
+            });
+    });
+});
