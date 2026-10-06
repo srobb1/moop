@@ -383,7 +383,18 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
     if (moop_fasta_ensure_index($fasta_file)) {
         // One index scan for both, not two — see moop_fasta_fetch_with_headers().
         $found = moop_fasta_fetch_with_headers($fasta_file, $search_ids);
-        if (!empty($found)) {
+        // An index that exists is AUTHORITATIVE: ids it does not hold are not in the file.
+        // This used to fall through to blastdbcmd whenever nothing was found -- the comment
+        // above says "whenever there is no index", the code did it whenever the index was
+        // EMPTY FOR THESE IDS. So every gene without a protein (non-coding: rRNA loci,
+        // lncRNAs) paid ~225 ms of blastdbcmd startup per sequence type to confirm the empty
+        // answer: Nematostella NV2g025908000.1 (a 28S rRNA locus) took 0.49 s, against 0.06 s
+        // for a coding gene. Checked before changing it: over 161 sequence files in every
+        // organism, blastdbcmd found none of 483 ids that the index lacked.
+        if (empty($found)) {
+            return $sequences;
+        }
+        {
             $seqs = []; $hdrs = [];
             foreach ($found as $sid => $rec) { $seqs[$sid] = $rec['seq']; $hdrs[$sid] = $rec['header']; }
             foreach ($seqs as $sid => $residues) {
@@ -396,6 +407,11 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
             return $sequences;
         }
     }
+
+    // No usable index (samtools missing, or the web server cannot write one here). Still
+    // works, but ~225 ms per call -- logged so an unindexable gene set shows up in Manage
+    // Error Log rather than only as a slow page.
+    error_log("sequences: no usable .fai index for $fasta_file; using blastdbcmd (slow)");
 
     // Use blastdbcmd to extract sequences - it accepts comma-separated IDs
     $config = ConfigManager::getInstance();
