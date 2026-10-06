@@ -10,7 +10,27 @@ use Data::Dumper;
 
 my $iprscan_tsv = shift;
 my $version = shift;
+# analysis -> protein -> accession -> { desc, score }: EVERY match of a protein, one row per accession.
+# (Until 2026-10-06 this was analysis -> protein -> { id, desc, score }, so each line overwrote the last and
+# a protein kept only its last match per analysis: Congeria lost 71% of its InterPro entries, 70% of its
+# PANTHER GO terms, 56% of its InterPro GO terms, 32% of its Pfam domains.)
 my %annot;
+# repeat hits of one accession in a protein keep the best score: the lowest E-value, except ProSite
+# profiles, whose score is a normalised score where higher is better; a score that is no number ('-') yields
+my %HIGHER_IS_BETTER = (ProSiteProfiles => 1);
+sub keep_match {
+  my ($analysis, $protein, $accession, $desc, $score) = @_;
+  my $current = $annot{$analysis}{$protein}{$accession};
+  my $numeric = defined $score && $score =~ /^[0-9.eE+-]+$/;
+  if (!$current) {
+    $annot{$analysis}{$protein}{$accession} = { desc => $desc, score => $score };
+  } elsif ($numeric and ($current->{score} // '') =~ /^[0-9.eE+-]+$/) {
+    my $better = $HIGHER_IS_BETTER{$analysis} ? $score > $current->{score} : $score < $current->{score};
+    $current->{score} = $score if $better;
+  } elsif ($numeric) {
+    $current->{score} = $score;
+  }
+}
 my $GOTSV = 'go.tsv';
 if(!-e $GOTSV){
   `curl -OL http://purl.obolibrary.org/obo/go.obo`;
@@ -41,36 +61,25 @@ while (my $line = <TSV>){
   #ACI1_HiC_scaffold_10_000001.1	1a7cc15bf91900869cb7f6b4b219f948	177	PANTHER	PTHR42693	ARYLSULFATASE FAMILY MEMBER	4	142	2.1E-12	T	22-03-2025	IPR050738	Sulfatase enzyme	GO:0004065(PANTHER)	MetaCyc:PWY-6546|MetaCyc:PWY-6558|MetaCyc:PWY-6567|MetaCyc:PWY-6568|MetaCyc:PWY-6821|MetaCyc:PWY-7831|MetaCyc:PWY-8045|MetaCyc:PWY-8358|MetaCyc:PWY-8381|Reactome:R-BTA-1663150|Reactome:R-BTA-6798695|Reactome:R-BTA-9840310|Reactome:R-CFA-2022857|Reactome:R-CFA-6798695|Reactome:R-HSA-1663150|Reactome:R-HSA-196071|Reactome:R-HSA-2022857|Reactome:R-HSA-2206290|Reactome:R-HSA-6798695|Reactome:R-HSA-9840310|Reactome:R-MMU-1663150|Reactome:R-MMU-196071|Reactome:R-MMU-2022857|Reactome:R-MMU-6798695|Reactome:R-MMU-9840310|Reactome:R-RNO-1663150|Reactome:R-RNO-196071|Reactome:R-RNO-2022857|Reactome:R-RNO-6798695|Reactome:R-RNO-9840310|Reactome:R-SPO-196071|Reactome:R-SPO-2022857|Reactome:R-SPO-6798695|Reactome:R-SPO-9840310
   #ACI1_HiC_scaffold_10_000002.1	06aa6d1bcba3aa8478ca0e4c2896ea97	772	PANTHER	PTHR22846	WD40 REPEAT PROTEIN	84	771	1.8E-231	T	22-03-2025	IPR045183	F-box-like/WD repeat-containing protein Ebi-like	GO:0000118(PANTHER)|GO:0003714(InterPro)|GO:0003714(PANTHER)|GO:0006357(PANTHER)	Reactome:R-DME-3214815|Reactome:R-DME-350054|Reactome:R-DME-400206|Reactome:R-DME-9029569|Reactome:R-DME-9707564|Reactome:R-HSA-1368082|Reactome:R-HSA-1368108|Reactome:R-HSA-1989781|Reactome:R-HSA-2122947|Reactome:R-HSA-2151201|Reactome:R-HSA-2426168|Reactome:R-HSA-2644606|Reactome:R-HSA-2894862|Reactome:R-HSA-3214815|Reactome:R-HSA-350054|Reactome:R-HSA-381340|Reactome:R-HSA-400206|Reactome:R-HSA-400253|Reactome:R-HSA-9022537|Reactome:R-HSA-9022692|Reactome:R-HSA-9029569|Reactome:R-HSA-9609690|Reactome:R-HSA-9707564|Reactome:R-HSA-9707616|Reactome:R-MMU-3214815|Reactome:R-MMU-350054|Reactome:R-MMU-400206|Reactome:R-MMU-9029569|Reactome:R-MMU-9707564|Reactome:R-SCE-3214815|Reactome:R-SPO-3214841|Reactome:R-SPO-3214858|Reactome:R-SPO-8951664|Reactome:R-SPO-9772755
   my ($t_id, $protein_md5, $protein_length, $analysis, $signature_id, $signature_desc, $start, $end, $score, $status, $date, $interpro_id, $interpro_desc, $go_terms, $pathway_terms) = split "\t" , $line;
-  my ($g_id) = $t_id =~ /(.+)\.\d+$/;
-  $annot{$analysis}{$t_id}{id}=$signature_id;
-  $annot{$analysis}{$t_id}{desc}=$signature_desc;
-  $annot{$analysis}{$t_id}{score}=$score;
+  next unless defined $signature_id and $signature_id ne '';
+  keep_match($analysis, $t_id, $signature_id, $signature_desc, $score);
 
-  if($interpro_id ne '-'){
-    $analysis = 'InterPro';
-    $annot{$analysis}{$t_id}{id}=$interpro_id;
-    $annot{$analysis}{$t_id}{desc}=$interpro_desc;
-    $annot{$analysis}{$t_id}{score}='-';
+  if (defined $interpro_id and $interpro_id ne '-' and $interpro_id ne '') {
+    keep_match('InterPro', $t_id, $interpro_id, $interpro_desc, '-');
   }
- 
-  if ($go_terms ne '-'){
-    my @go_terms = split /\|/ , $go_terms;
-    foreach my $go_term (@go_terms){
-      if ($go_term =~ /PANTHER/){
-        $go_term =~ s/\(\S+\)//;
-        $analysis='PANTHER2GO';
-      }else {
-        $go_term =~ s/\(InterPro\)//;
-        $analysis='InterPro2GO';
-      }
-      $annot{$analysis}{$t_id}{desc}="$go{$go_term}{name}: $go{$go_term}{desc}";
-      $annot{$analysis}{$t_id}{id}=$go_term;
-      $annot{$analysis}{$t_id}{score}=$go{$go_term}{namespace};
-    } 
+
+  if (defined $go_terms and $go_terms ne '-' and $go_terms ne '') {
+    foreach my $go_term (split /\|/, $go_terms) {
+      my $go_analysis = $go_term =~ /\(PANTHER\)/ ? 'PANTHER2GO' : 'InterPro2GO';
+      $go_term =~ s/\(\S+\)$//;
+      # a term go.tsv does not have (newer than it): kept, said so
+      my $go_desc = $go{$go_term} ? "$go{$go_term}{name}: $go{$go_term}{desc}" : "$go_term (not in go.tsv)";
+      keep_match($go_analysis, $t_id, $go_term, $go_desc, $go{$go_term} ? $go{$go_term}{namespace} : '-');
+    }
   }
 }
 
-foreach my $analysis (sort keys %annot){
+foreach my $analysis (sort grep { my $name = $_; $name ne 'InterPro2GO' and $name ne 'PANTHER2GO' } keys %annot){
   my $annotation_type = 'Domains';
   my $annotation_url = lc("https://www.ebi.ac.uk/interpro/entry/$analysis/");
   if ($analysis eq 'PANTHER'){
@@ -104,13 +113,12 @@ foreach my $analysis (sort keys %annot){
 ## Annotation Creation Date: $date\n";
   print OUT join("\t","## Gene","${analysis}_iprscan","Description","Score"),"\n";
   foreach my $t (sort keys %{$annot{$analysis}}){
-    if (exists  $annot{$analysis}{$t}{id}){
-      my $id = $annot{$analysis}{$t}{id};
-      if ($analysis eq 'FunFam'){
-        $id =~ s/G3DSA:(.+):FF:(\d+)/$1\/funfam\/$2/;
-      }
-      my $desc = defined $annot{$analysis}{$t}{desc} ? $annot{$analysis}{$t}{desc} : '-'; ;
-      my $score = defined $annot{$analysis}{$t}{score} ? $annot{$analysis}{$t}{score} : '-';
+    foreach my $accession (sort keys %{$annot{$analysis}{$t}}){
+      my $match = $annot{$analysis}{$t}{$accession};
+      my $id = $accession;
+      $id =~ s/G3DSA:(.+):FF:(\d+)/$1\/funfam\/$2/ if $analysis eq 'FunFam';
+      my $desc = defined $match->{desc} && $match->{desc} ne '' ? $match->{desc} : '-';
+      my $score = defined $match->{score} && $match->{score} ne '' ? $match->{score} : '-';
       print OUT join("\t",$t,$id,$desc,$score),"\n";
     }
   }
@@ -121,18 +129,16 @@ foreach my $analysis ('InterPro2GO','PANTHER2GO'){
   print "Starting: $analysis.iprscan.moop.tsv\n";
   open OUT, ">$analysis.iprscan.moop.tsv" or die "Can't open $analysis.iprscan.moop.txt for writing $! \n";
   print OUT "## Annotation Source: InterProScan ($analysis)
-## Annotation Source Version: 5.72-103.0
+## Annotation Source Version: $version
 ## Annotation Accession URL: https://amigo.geneontology.org/amigo/term/
 ## Annotation Source URL: https://www.ebi.ac.uk/interpro/
 ## Annotation Type: Gene Ontology
 ## Annotation Creation Date: $date\n";
   print OUT join("\t","## Gene","${analysis}","Description","Score"),"\n";
-  foreach my $t (sort keys %{$annot{$analysis}}){
-    if (exists  $annot{$analysis}{$t}{id}){
-      my $id = $annot{$analysis}{$t}{id};
-      my $desc = $annot{$analysis}{$t}{desc};
-      my $score = $annot{$analysis}{$t}{score};
-      print OUT join("\t",$t,$id,$desc,$score),"\n";
+  foreach my $t (sort keys %{$annot{$analysis} // {}}){
+    foreach my $go_term (sort keys %{$annot{$analysis}{$t}}){
+      my $match = $annot{$analysis}{$t}{$go_term};
+      print OUT join("\t",$t,$go_term,$match->{desc},$match->{score} // '-'),"\n";
     }
   }
   close OUT;
