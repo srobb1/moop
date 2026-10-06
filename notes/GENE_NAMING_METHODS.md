@@ -930,8 +930,10 @@ is trusted.
 `scripts/check_naming_decisions.pl naming_decisions.tsv` reads only the decision table and checks that each
 gene's name can be worked out from its row: it replays the choice of step from the nine step cells (all
 13,986 fly genes replay, 2026-10-06), then recomputes each step's verdict from the row's own columns and
-lists what it cannot recompute and why (inputs that are only in a cell's text, such as InterPro domains,
-transposable-element domains and the genes in a paralog tie).
+lists any it cannot recompute. Every step's inputs are columns of the row (step 2 `Naming_species_hits`, step 3
+`OMA_checks`, 4 `TE_Pfam_domain`, 6-7 `Human_hits_ranked`, `Human_tie_family`, `SwissProt_*`, 8 `PANTHER_family_used`,
+9 `InterPro_domain`); only the word rule on whether a name is informative is applied to the name as written. Fly
+benchmark and every end-to-end test table: no step it cannot recompute, none that disagrees.
 
 Identical inputs give byte-identical outputs: every choice between equal candidates is
 made by the ordering rules above, never by the order in which data were read (verified by

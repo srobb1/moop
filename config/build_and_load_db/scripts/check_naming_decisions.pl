@@ -5,9 +5,9 @@
 #   1. THE CHOICE -- from the nine step cells (S1..S9) and Closest_human, re-run the rules that pick
 #      the step (assign_gene_names_v2.pl decide_name: first step that gives a name; steps 5-7 skipped
 #      after an OMA co-ortholog family; the transposon override of step 3) and compare with Step and Name.
-#   2. EACH STEP'S VERDICT -- where the row's columns hold a step's inputs, recompute whether that step
-#      gives a name and compare with what its cell says. A step whose inputs are not in the columns is
-#      counted as "cannot tell", with the missing input named: that is what the table still lacks.
+#   2. EACH STEP'S VERDICT -- from the row's columns that hold each step's inputs, recompute whether that
+#      step gives a name and compare with what its cell says. "cannot tell" names an input the table lacks;
+#      "DISAGREES" is a rule this script and assign_gene_names_v2.pl apply differently.
 #
 # Usage: check_naming_decisions.pl naming_decisions.tsv [examples per line, default 3]
 # Exit 0 when every choice replays (part 1); part 2 is a report.
@@ -44,7 +44,8 @@ close $fh;
 foreach my $name (sort keys %cut) {
   die "$file: cutoff '$name' not found in the # header (a table from an older script?)\n" unless defined $cut{$name};
 }
-foreach my $column (qw(SwissProt_best_hit Best_hit_each_search Closest_human_used_for_naming)) {
+foreach my $column (qw(SwissProt_best_hit Closest_human_used_for_naming Naming_species_hits OMA_checks TE_Pfam_domain Human_hits_ranked Human_tie_family
+                        SwissProt_within_tie PANTHER_family_used InterPro_domain)) {
   die "$file: no $column column (written by assign_gene_names_v2.pl from 2026-10-06)\n" unless grep { my $have = $_; $have eq $column } @columns;
 }
 my @step_columns = map { my $step = $_; (grep { my $column = $_; $column =~ /^S${step}_/ } @columns)[0] } 1 .. 9;
@@ -134,6 +135,9 @@ foreach my $row (@rows) {
 }
 
 # ---- part 2: each step's verdict from the columns
+# A step's own rule on the words of a name (is it informative, "uncharacterized") is applied to text that is in
+# the row; it is not re-implemented here, so a cell saying a name is not informative is accepted as such.
+my $UNINFORMATIVE = qr/is not informative|has no informative name|is not an informative name/;
 my (%verdict, %verdict_example);
 sub record {
   my ($step, $outcome, $row, $cell) = @_;
@@ -142,116 +146,143 @@ sub record {
   push @{$verdict_example{$key}}, "$row->{ID}: " . substr($cell, 0, 160) if @{$verdict_example{$key} // []} < $examples;
 }
 sub compare {   # predicted 1/0 against the cell
-  my ($step, $predicted, $row, $cell, $mismatch_hint) = @_;
+  my ($step, $predicted, $row, $cell, $why) = @_;
   my $said = cell_named($cell);
-  if ($predicted == $said) {
+  if ($predicted and !$said and $cell =~ $UNINFORMATIVE) {
+    record($step, 'agrees (the name is judged uninformative: a rule on the name in the row)', $row, $cell);
+  } elsif ($predicted == $said) {
     record($step, 'agrees', $row, $cell);
   } else {
-    record($step, 'DISAGREES (' . ($said ? 'cell names it' : 'cell gives no name: ' . why_pattern($cell)) . ')'
-                . ($mismatch_hint ? " -- $mismatch_hint" : ''), $row, $cell);
+    record($step, 'DISAGREES: row says ' . ($predicted ? 'a name' : 'no name') . ($why ? " ($why)" : '')
+                . ', cell ' . ($said ? 'names it' : 'gives none: ' . why_pattern($cell)), $row, $cell);
   }
+}
+# "GNAQ 492 bits bh full, E=3.1e-175, 99.7/98.1%; GNA11 479 bits (97.4%) bh full, ..." -> [ { gene, bits, pct, rbh, full } ]
+sub ranked_humans {
+  my ($row) = @_;
+  my @genes;
+  foreach my $part (split /; /, $row->{Human_hits_ranked} // '') {
+    my ($gene, $bits, $rbh, $full, $evalue) = $part =~ /^(\S+) ([\d.]+) bits (rbh|bh) (full|partial), E=(\S+),/ or next;
+    push @genes, { gene => $gene, bits => $bits, rbh => $rbh eq 'rbh', full => $full eq 'full', evalue => $evalue };
+  }
+  return @genes;
+}
+sub family_named {   # the shared HGNC group is a family by descent, or (when it is not) a PANTHER family the gene matches
+  my ($text) = @_;
+  return ($text =~ /\(coherence [\d.]+, a family by descent\)|a smaller HGNC group used|\("[^"]*"\), which the gene matches as a whole member/) ? 1 : 0;
 }
 
 foreach my $row (@rows) {
   my %cell = map { my $step = $_; ($step => $row->{$step_columns[$step - 1]} // '') } 1 .. 9;
-  record(1, $cell{1} =~ /no human-curated name/ ? 'agrees (no such input in this run)' : 'cannot tell: curated names are not a column', $row, $cell{1});
-  record(2, $cell{2} =~ /no naming species/ ? 'agrees (no such input in this run)'
-          : $cell{2} =~ /^NAMED: the gene set's own name/ ? ($row->{Native_name} ne '' ? 'agrees (Native_name column)' : 'DISAGREES: native, no Native_name')
-          : 'cannot tell: naming-species genes are not a column', $row, $cell{2});
+  record(1, $cell{1} =~ /no human-curated name/ ? 'agrees (no such input in this run)'
+          : cell_named($cell{1}) ? 'agrees (the curated name is the input, in the cell)' : 'DISAGREES: curated cell without a name', $row, $cell{1});
+  # step 2: the gene set's own name (--native), or the naming species' first candidate with a name, in the order
+  # of Naming_species_hits: OMA 1:1 / many:1, full-length RBH, full-length DIAMOND top (not same species), hits file
+  if ($cell{2} =~ /no naming species/) {
+    record(2, 'agrees (no such input in this run)', $row, $cell{2});
+  } elsif ($cell{2} =~ /^NAMED: the gene set's own name/) {
+    record(2, $row->{Native_name} ne '' ? 'agrees (Native_name column)' : 'DISAGREES: native, no Native_name', $row, $cell{2});
+  } else {
+    my ($candidates) = ($row->{Naming_species_hits} // '') =~ /^[^:]+: (.*)$/;
+    my $named = 0;
+    foreach my $part (split /; /, $candidates // '') {
+      $named = 1 if $part =~ /^OMA (?:1:1|many:1) \S+ "[^"]+"/ or $part =~ /^RBH full \S+ "[^"]+"/
+                 or $part =~ /^DIAMOND top \S+ "[^"]+" full [^(]*$/ or $part =~ /^hits file \S+ "[^"]+"/;
+    }
+    compare(2, $named, $row, $cell{2});
+  }
   my $closest = closest_human($row);
   my $tree = tree($row);
   my $is_skipped = sub { my ($step) = @_; $cell{$step} =~ /(?:^|; )(?:skipped|passed over)[:;]/ };
-  # the columns round (whole %, one-digit E-values): a value shown AT a cutoff may be either side of it
-  my $at_margin = sub { my (@pairs) = @_; while (my ($value, $cutoff) = splice @pairs, 0, 2) { return 1 if abs($value - $cutoff) < 1 } return 0 };
+  my @humans = ranked_humans($row);
 
-  # step 3: the closest human gene is an OMA ortholog (tier 1-2)
-  if (!$closest or $closest->{tier} > 2) {
-    compare(3, 0, $row, $cell{3});
-  } elsif (cell_named($cell{3})) {
-    record(3, 'agrees', $row, $cell{3});
+  # step 3: OMA human ortholog(s) the steps used (tier 1-2), and the checks in OMA_checks
+  my $oma = $row->{OMA_checks} // '';
+  if ($is_skipped->(3)) {
+    record(3, 'skipped by the choice rules', $row, $cell{3});
+  } elsif (!$closest or $closest->{tier} > 2) {
+    compare(3, 0, $row, $cell{3}, 'no OMA human ortholog');
+  } elsif ($oma =~ /^fused:|; fused:/) {
+    compare(3, 0, $row, $cell{3}, 'fused');
+  } elsif ($closest->{family} and !family_named($oma)) {
+    compare(3, 0, $row, $cell{3}, 'co-orthologs share no family');
+  } elsif ($oma =~ /conflict:/) {
+    compare(3, 0, $row, $cell{3}, 'omaC');
+  } elsif ($oma =~ /pairing mostly rejected/) {
+    compare(3, 0, $row, $cell{3}, 'omaR');
   } else {
-    record(3, 'cannot tell: OMA tier 1-2 but no name -- ' . why_pattern($cell{3}), $row, $cell{3});
+    compare(3, 1, $row, $cell{3});
   }
 
-  # step 4: transposable-element Pfam domains are not a column
-  record(4, $cell{4} =~ /no transposable-element Pfam domain/ ? 'cannot tell: TE Pfam domains not a column (cell: none)'
-                                                             : 'cannot tell: TE Pfam domains not a column', $row, $cell{4});
+  # step 4: a transposable-element Pfam domain always names
+  compare(4, ($row->{TE_Pfam_domain} // '') ne '' ? 1 : 0, $row, $cell{4});
 
   # step 5: a trusted placement with one human gene, which is also the single closest human gene (tier 3-5)
   if ($is_skipped->(5)) {
     record(5, 'skipped by the choice rules', $row, $cell{5});
-  } elsif (!$tree) {
-    compare(5, 0, $row, $cell{5});
   } else {
-    my $agrees = ($tree->{trusted} and $tree->{placement} eq 'ortholog_1' and @{$tree->{humans}} == 1 and $closest
+    my $agrees = ($tree and $tree->{trusted} and $tree->{placement} eq 'ortholog_1' and @{$tree->{humans}} == 1 and $closest
                   and $closest->{tier} >= 3 and $closest->{tier} <= 5 and !$closest->{family} and $closest->{genes}[0] eq $tree->{humans}[0]) ? 1 : 0;
-    compare(5, $agrees, $row, $cell{5}, $agrees ? 'informative-name check is not in the columns' : '');
+    compare(5, $agrees, $row, $cell{5});
   }
 
-  # step 6: the best human gene full-length, no paralog within the tie margin, no contradicting tree
+  # step 6: the best human gene (E <= cutoff) full-length; a tie within the margin is decided by one reciprocal
+  # hit, else the tied genes' shared family; withheld when a trusted tree places it with other human genes
+  my @at_cutoff = grep { my $human = $_; $human->{evalue} <= $cut{full_evalue} } @humans;
   if ($is_skipped->(6)) {
     record(6, 'skipped by the choice rules', $row, $cell{6});
-  } elsif (($row->{Best_human_hit} // '') eq '') {
-    compare(6, 0, $row, $cell{6});
-  } elsif ($row->{Best_hit_evalue} > $cut{full_evalue}) {
-    compare(6, 0, $row, $cell{6}, 'best human hit E above the cutoff: assumed no weaker human hit passes');
-  } elsif ($row->{Best_hit_full_length} ne 'yes') {
-    compare(6, 0, $row, $cell{6});
+  } elsif (!@at_cutoff) {
+    compare(6, 0, $row, $cell{6}, 'no human hit at the cutoff');
+  } elsif (!$at_cutoff[0]{full}) {
+    compare(6, 0, $row, $cell{6}, 'best human gene partial');
   } else {
-    my ($second_pct) = ($row->{Second_human_hit} // '') =~ /\((\d+)%\)$/;
-    my $tied = (defined $second_pct and $second_pct >= 100 * $cut{tie}) ? 1 : 0;
-    # (the column rounds to whole %: a second gene at 94.6% shows as 95%)
-    my $near_cut = (defined $second_pct and abs($second_pct - 100 * $cut{tie}) < 1) ? 1 : 0;
-    my $tree_other = ($tree and $tree->{trusted} and ($tree->{placement} eq 'ortholog_1' or $tree->{placement} eq 'co-orthologs')
-                      and !grep { my $human = $_; $human eq $row->{Best_human_hit} } @{$tree->{humans}}) ? 1 : 0;
-    if ($near_cut) {
-      record(6, 'cannot tell: second human gene at the tie margin, the column rounds to whole %', $row, $cell{6});
-    } elsif ($tied) {
-      record(6, 'cannot tell: paralog tie -- which tied genes are reciprocal hits, their HGNC group and PANTHER family are not columns'
-                . (cell_named($cell{6}) ? ' (cell names it)' : ' (cell: no name)'), $row, $cell{6});
-    } elsif ($tree_other) {
-      compare(6, 0, $row, $cell{6}, 'treeC');
-    } else {
-      compare(6, 1, $row, $cell{6}, 'informative-name check is not in the columns');
+    my @tied = grep { my $human = $_; $human->{bits} >= $cut{tie} * $at_cutoff[0]{bits} } @at_cutoff;
+    my @reciprocal = grep { my $human = $_; $human->{rbh} and $human->{full} } @tied;
+    my ($named, @named_genes) = (1, $at_cutoff[0]{gene});
+    if (@tied > 1) {
+      if (@reciprocal == 1) {
+        @named_genes = ($reciprocal[0]{gene});
+      } else {
+        $named = family_named($row->{Human_tie_family} // '');
+        @named_genes = map { my $human = $_; $human->{gene} } @tied;
+      }
     }
+    my %named_gene = map { my $gene = $_; ($gene => 1) } @named_genes;
+    my $tree_other = ($tree and $tree->{trusted} and ($tree->{placement} eq 'ortholog_1' or $tree->{placement} eq 'co-orthologs')
+                      and !grep { my $human = $_; $named_gene{$human} } @{$tree->{humans}}) ? 1 : 0;
+    compare(6, ($named and !$tree_other) ? 1 : 0, $row, $cell{6},
+            !$named ? 'tie without a shared family' : $tree_other ? 'treeC' : '');
   }
 
-  # step 7: best Swiss-Prot hit, another species, full-length, no full-length human hit, not below the best human hit
+  # step 7: best Swiss-Prot hit, another species, full-length, no other protein within the margin,
+  # no full-length human gene, not below the best human hit
+  my $sp_full = (($row->{SwissProt_best_hit} // '') ne '' and $row->{SwissProt_evalue} <= $cut{full_evalue}
+                 and $row->{SwissProt_qcov} >= $cut{full_cov} and $row->{SwissProt_tcov} >= $cut{full_cov}) ? 1 : 0;
   if ($is_skipped->(7)) {
     record(7, 'skipped by the choice rules', $row, $cell{7});
   } elsif (($row->{SwissProt_best_hit} // '') eq '') {
-    compare(7, 0, $row, $cell{7});
+    compare(7, 0, $row, $cell{7}, 'no Swiss-Prot hit');
   } elsif ($row->{SwissProt_species} =~ /^Homo sapiens/) {
-    compare(7, 0, $row, $cell{7});
-  } elsif ($at_margin->($row->{SwissProt_qcov}, $cut{full_cov}, $row->{SwissProt_tcov}, $cut{full_cov}) or $row->{SwissProt_evalue} == $cut{full_evalue}) {
-    record(7, 'cannot tell: Swiss-Prot coverage or E-value at the cutoff, the column rounds', $row, $cell{7});
-  } elsif (!($row->{SwissProt_evalue} <= $cut{full_evalue} and $row->{SwissProt_qcov} >= $cut{full_cov} and $row->{SwissProt_tcov} >= $cut{full_cov})) {
-    compare(7, 0, $row, $cell{7});
-  } elsif (($row->{Best_hit_full_length} // '') eq 'yes') {
-    compare(7, 0, $row, $cell{7});
+    compare(7, 0, $row, $cell{7}, 'human protein');
+  } elsif (!$sp_full) {
+    compare(7, 0, $row, $cell{7}, 'not full-length');
+  } elsif (($row->{SwissProt_within_tie} // '') =~ /: another protein/) {
+    compare(7, 0, $row, $cell{7}, 'Swiss-Prot tie');
+  } elsif (grep { my $human = $_; $human->{full} } @humans) {
+    compare(7, 0, $row, $cell{7}, 'a full-length human gene');
   } elsif (($row->{Best_hit_bits} // '') ne '' and $row->{Best_hit_bits} > $row->{SwissProt_bits}) {
-    compare(7, 0, $row, $cell{7});
-  } elsif (cell_named($cell{7})) {
-    record(7, 'agrees (as far as the columns go: Swiss-Prot ties and other human genes\' full-length hits are not columns)', $row, $cell{7});
+    compare(7, 0, $row, $cell{7}, 'below the best human hit');
   } else {
-    record(7, 'cannot tell: ' . why_pattern($cell{7}), $row, $cell{7});
+    compare(7, 1, $row, $cell{7});
   }
 
-  # step 8: the best-covered PANTHER family covers enough of its model
-  if (($row->{PANTHER_best} // '') eq '') {
-    compare(8, 0, $row, $cell{8});
-  } elsif ($at_margin->($row->{PANTHER_model_cov}, $cut{family_cov})) {
-    record(8, 'cannot tell: PANTHER model coverage at the cutoff, the column rounds', $row, $cell{8});
-  } elsif ($row->{PANTHER_model_cov} >= $cut{family_cov}) {
-    compare(8, 1, $row, $cell{8}, 'repeat-built family / informative-name check are not columns');
-  } elsif (cell_named($cell{8})) {
-    record(8, 'cannot tell: names it below the model cutoff (residue coverage or another family; not columns)', $row, $cell{8});
-  } else {
-    record(8, 'agrees', $row, $cell{8});
-  }
+  # step 8: the family passing the model bar (PANTHER_family_used); a repeat-built one names the repeat
+  my $family = $row->{PANTHER_family_used} // '';
+  compare(8, ($family ne '' and $family !~ /^none passes/) ? 1 : 0, $row, $cell{8});
 
-  # step 9: InterPro domains are not a column
-  record(9, 'cannot tell: InterPro domains not a column', $row, $cell{9});
+  # step 9: the best InterPro domain or repeat covering enough of its model
+  my $domain = $row->{InterPro_domain} // '';
+  compare(9, ($domain ne '' and $domain !~ /^only part of a domain/) ? 1 : 0, $row, $cell{9});
 }
 
 # ---- report

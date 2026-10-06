@@ -4706,6 +4706,24 @@ sub decision_header {
            "  Closest_$species->{tag}: the closest $species->{species} gene (rank: gene, evidence), as in closest_" . lc($species->{tag}) . '.tsv' }
          @closest_species),
     '    closest-species ranks: 1 OMA ortholog; 2 MMseqs2 reciprocal best hit; 3 DIAMOND best hit; 4 hits file',
+    '  The inputs of each step, so a row holds what every step decides on (scripts/check_naming_decisions.pl):',
+    '  Naming_species_hits (step 2): "<naming species>: " and its candidates in the order step 2 tries them -- OMA orthologs',
+    '    (1:1 and many:1 name), the full-length reciprocal best hit, the best DIAMOND hit (full or partial; not for the same',
+    '    species), the hits file; each names only with an informative name. Empty without a naming species',
+    '  OMA_checks (step 3): for the OMA human gene(s) the steps used -- support flags (sim+ best human hit, sim~ a hit but',
+    '    not the best, sim- none; pthr+ same PANTHER family, pthrC another; tree+/treeC; hog), a conflict (sim~ and pthrC),',
+    '    for one gene how many genes here OMA pairs with it (and an omaR rejection), for several their shared HGNC group',
+    '    (coherence) and PANTHER family; or an OMA ortholog set aside (omaX)',
+    '  TE_Pfam_domain (step 4): the transposable-element Pfam domain, E-value, class',
+    '  Human_hits_ranked (steps 6, 7): human genes by their best hit, strongest first -- the top with E <= ' . e_value($FULL{evalue}) . ' (step 6), those',
+    '    within the paralog-tie margin of it, and every gene with a full-length hit: bits as the search gave them, rbh or bh, full',
+    '    or partial, E and coverages of the best hit (step 6 uses the genes with E <= ' . e_value($FULL{evalue}) . ')',
+    '  Human_tie_family (step 6): for a tie no single reciprocal hit decides, the HGNC group and PANTHER family the tied genes share',
+    '  SwissProt_within_tie (step 7): other Swiss-Prot entries within the tie margin of the best, each the same protein or another',
+    '  PANTHER_family_used (step 8): the family the step names by -- E, model coverage and the bar, repeat units, which name;',
+    '    or the best family and why none passes',
+    '  InterPro_domain (step 9): the best InterPro domain or repeat, or the part of one that is too little of its model',
+    '  Coverages to one decimal and E-values to two digits in these and the hit columns, so a value at a cutoff is clear',
     '  Best_hit_each_search: the best hit in each DIAMOND search but Swiss-Prot (E <= ' . e_value($HIT_MAX_EVALUE) . ', any coverage),',
     '    strongest first -- "species: symbol "name" % identity, coverage of this protein/of the hit, E, bits"',
     '  RBH_each_species: the same for each MMseqs2 reciprocal-best-hit search (tier 3 human, tier 4 through Compara)',
@@ -4863,6 +4881,174 @@ sub pipeline_name {
   return tagged(set_aside_note($group, $candidate{$step}))->{desc} . " (step $step)";
 }
 
+# E-value with two significant digits, for the decision table's columns (a one-digit 1e-10 may be 1.4e-10)
+sub table_e_value {
+  my ($evalue) = @_;
+  return '?' unless defined $evalue and $evalue =~ /^[0-9.eE+-]+$/;
+  return $evalue == 0 ? '0' : sprintf('%.1e', $evalue);
+}
+
+# "HGNC group "X" (coherence 0.85, a family by descent); PANTHER family PTHR1 ("label")": what a set of human
+# genes share, as step 3 (OMA co-orthologs) and step 6 (a paralog tie) use it
+sub shared_family_text {
+  my ($group, $humans) = @_;
+  my $scattered = shared_hgnc_group($humans, 'all');
+  my $shared = shared_hgnc_group($humans);
+  my @parts;
+  push @parts, defined $scattered
+    ? sprintf('HGNC group "%s" (coherence %.2f, %s)', $scattered, hgnc_group_coherence($scattered),
+              defined $shared ? 'a family by descent' : "below $HGNC_GROUP_MIN_COHERENCE: not a family by descent")
+    : 'no shared HGNC group';
+  push @parts, "a smaller HGNC group used: \"$shared\"" if defined $shared and defined $scattered and $shared ne $scattered;
+  if (!defined $shared) {
+    my $family = (grep { my $human = $_; !$human->{hgnc_id} } @$humans) ? undef : shared_panther_family($group, $humans);
+    push @parts, defined $family ? "PANTHER family $family (\"$panther_label{$family}\"), which the gene matches as a whole member"
+                                 : 'no PANTHER family they share that the gene matches as a whole member';
+  }
+  return join('; ', @parts);
+}
+
+# The inputs of the naming steps that are not in the columns before them, so a row holds everything a
+# step decides on (scripts/check_naming_decisions.pl): OMA_checks (step 3), TE_Pfam_domain (4),
+# Human_hits_ranked and Human_tie_family (6, 7), SwissProt_within_tie (7), PANTHER_family_used (8),
+# InterPro_domain (9). Computed with the steps' own functions; their counters are not kept.
+sub rule_input_cells {
+  my ($group) = @_;
+  my %saved = %stats;
+
+  # step 2: the naming species' candidates, in the order the step tries them (naming_species_name)
+  my $naming_text = '';
+  if ($naming_species) {
+    my $tag = $naming_species->{tag};
+    my @parts;
+    foreach my $candidate (@{$species_oma{$tag}{$group} // []}) {
+      my $parsed = $candidate->{parsed};
+      push @parts, sprintf('OMA %s %s "%s"', $candidate->{type}, $candidate->{hit},
+                           join(' ', grep { my $part = $_; $part ne '' } (is_placeholder_symbol($parsed->{gene_id}) ? '' : $parsed->{gene_id}),
+                                                                         clean_name($parsed->{description})));
+    }
+    my $rbh = $species_rbh{$tag}{$group};
+    push @parts, sprintf('RBH full %s "%s" %.1f/%.1f%%, E=%s', $rbh->{full}{hit}, $rbh->{full}{description}, $rbh->{full}{qcov},
+                         $rbh->{full}{tcov}, table_e_value($rbh->{full}{evalue})) if $rbh and $rbh->{full};
+    my $diamond = $species_diamond{$tag}{$group};
+    push @parts, sprintf('DIAMOND top %s "%s" %s %.1f/%.1f%%, E=%s%s', $diamond->{top}{hit}, $diamond->{top}{description},
+                         (passes($diamond->{top}, \%FULL) ? 'full' : 'partial'), $diamond->{top}{qcov}, $diamond->{top}{tcov},
+                         table_e_value($diamond->{top}{evalue}), ($naming_species->{same_species} ? ' (not used: same species)' : ''))
+      if $diamond and $diamond->{top};
+    if (my $hit = $species_hit{$tag}{$group}) {
+      push @parts, sprintf('hits file %s "%s" (%s), E=%s', $hit->{hit}, $hit->{description}, $hit->{source}, table_e_value($hit->{evalue}));
+    }
+    $naming_text = "$naming_species->{species}" . ($naming_species->{same_species} ? ' (same species)' : '') . ': '
+                 . (@parts ? join('; ', @parts) : 'none');
+  }
+
+  # step 3: the closest human gene the steps used, when OMA (tier 1-2)
+  my $oma = '';
+  my $closest = exists $closest_before_name{$group} ? $closest_before_name{$group} : $closest{$group};
+  if ($closest and $closest->{tier} <= 2) {
+    my @humans = @{$closest->{human}};
+    my ($flags) = oma_support($group, \@humans, $closest);
+    my %flag = map { my $flag = $_; ($flag => 1) } @$flags;
+    my @parts = ('support: ' . (@$flags ? join(' ', @$flags) : 'none'));
+    push @parts, 'conflict: best human hit is another gene (sim~) and the PANTHER family differs (pthrC)' if $flag{'sim~'} and $flag{'pthrC'};
+    push @parts, "fused: $closest->{fused}" if $closest->{fused};
+    if ($closest->{family}) {
+      push @parts, shared_family_text($group, \@humans);
+    } else {
+      push @parts, sprintf('OMA pairs %d gene(s) here with %s', scalar(keys %{$claimed_human{$humans[0]{key}} // {}}), human_label($humans[0]));
+      if (my $rejected = $rejected_pairing{$group}) {
+        push @parts, sprintf('pairing mostly rejected (omaR): %d paired, %d pass the support and conflict checks (needs half, when >= %d paired)',
+                             $rejected->{paired}, $rejected->{passed}, $PAIRING_MIN_COPIES);
+      }
+    }
+    $oma = join('; ', @parts);
+  } elsif ($unsupported_oma{$group}) {
+    $oma = 'OMA human ortholog set aside (omaX): ' . join('/', map { my $human = $_; human_label($human) } @{$unsupported_oma{$group}{humans}})
+         . ' -- no similarity hit or PANTHER family supports it';
+  }
+
+  # step 4
+  my $te = $transposon{$group};
+  my $te_text = $te ? sprintf('%s "%s" E=%s (%s %s)', $te->{signature}, $te->{pfam_name}, table_e_value($te->{evalue}),
+                              @{$TE_PFAM{$te->{signature}}}[0, 1]) : '';
+
+  # steps 6 and 7: human genes with E <= the full-length cutoff (like_name), strongest first: the top,
+  # those within the tie margin, and every full-length one
+  # (step 6 uses those with E <= the cutoff; step 7 asks whether ANY human gene has a full-length hit, whatever
+  # its best hit's E -- an MMseqs2 and a DIAMOND hit to one gene can differ)
+  my @all = ranked_human_hits($group);
+  my @ranked = grep { my $ranked_hit = $_; $ranked_hit->[1]{best}{evalue} <= $FULL{evalue} } @all;
+  my ($ranked_text, $tie_text) = ('', '');
+  if (@all) {
+    my $top = @ranked ? $ranked[0][1] : undef;
+    my @shown = grep { my $entry = $_->[1];
+                       ($top and $entry == $top) or $entry->{best_full}
+                       or ($top and $entry->{best}{evalue} <= $FULL{evalue} and $entry->{best}{bits} >= $LIKE_TIE * $top->{best}{bits}) } @all;
+    my $more = @shown > 12 ? @shown - 12 : 0;
+    @shown = @shown[0 .. 11] if $more;
+    $ranked_text = join('; ', map { my $entry = $_->[1];
+                                    sprintf('%s %s bits %s %s, E=%s, %.1f/%.1f%%', human_label($entry->{human}), 0 + $entry->{best}{bits},
+                                            ($entry->{rbh} ? 'rbh' : 'bh'), ($entry->{best_full} ? 'full' : 'partial'),
+                                            table_e_value($entry->{best}{evalue}), $entry->{best}{qcov}, $entry->{best}{tcov}) } @shown)
+                 . ($more ? "; and $more more full-length" : '');
+    my @tied = $top ? grep { my $ranked_hit = $_; $ranked_hit->[1]{best}{bits} >= $LIKE_TIE * $top->{best}{bits} } @ranked : ();
+    my @reciprocal = grep { my $ranked_hit = $_; $ranked_hit->[1]{rbh} and $ranked_hit->[1]{best_full} } @tied;
+    if (@tied > 1 and @reciprocal != 1) {
+      $tie_text = shared_family_text($group, [map { my $ranked_hit = $_; $ranked_hit->[1]{human} } @tied]);
+    }
+  }
+
+  # step 7: other Swiss-Prot entries within the tie margin of the best, and whether each is the same protein
+  my $swissprot_text = '';
+  if (my $hit = $swissprot_best{$group}) {
+    my $own_subfamilies = $swissprot_subfamily{$hit->{accession}} // {};
+    my @others;
+    foreach my $accession (sort { $swissprot_hits{$group}{$b}{bits} <=> $swissprot_hits{$group}{$a}{bits} or $a cmp $b }
+                           keys %{$swissprot_hits{$group} // {}}) {
+      next if $accession eq $hit->{accession};
+      my $other = $swissprot_hits{$group}{$accession};
+      next unless $other->{bits} >= $LIKE_TIE * $hit->{bits};
+      my ($shared) = sort grep { my $family = $_; ($swissprot_subfamily{$accession} // {})->{$family} } keys %$own_subfamilies;
+      my $same = lc($other->{description}) eq lc($hit->{description}) ? 'same protein (same name)'
+               : defined $shared ? "same protein (PANTHER subfamily $shared)" : 'another protein';
+      push @others, sprintf('%s "%s" %.0f bits (%.1f%%): %s', $accession, $other->{description}, $other->{bits}, 100 * $other->{bits} / $hit->{bits}, $same);
+    }
+    $swissprot_text = @others ? join('; ', @others) : 'none';
+  }
+
+  # step 8: the family the step uses (read_panther_families: passing the model coverage bar, lowest E)
+  my $family_text = '';
+  if (my $family = $panther{$group}) {
+    my $label = (defined $family->{interpro_name} and is_informative_hit('', $family->{interpro_name}, $family->{interpro}))
+              ? "InterPro name \"$family->{interpro_name}\"" : "PANTHER name \"" . panther_name($family->{description}) . '"'
+                . (defined $family->{interpro_set_aside} ? " (InterPro's \"$family->{interpro_set_aside}\" describes a function)" : '');
+    (my $family_only = $family->{family}) =~ s/:SF\d+$//;
+    $family_text = sprintf('%s E=%s, %d%% of the model (needs %d%%), repeat units %.0f%% of the match%s; %s', $family->{family},
+                           table_e_value($family->{evalue}), $family->{model_coverage},
+                           $family_coverage_needed{$group}{$family_only} // $FAMILY_MODEL_COVERAGE,
+                           100 * ($family->{repeat_fraction} // 0), (defined $family->{repeat_name} ? " ($family->{repeat_name})" : ''), $label);
+  } elsif (my $coverage = $gene_family_coverage{$group}) {
+    my ($best) = sort { $coverage->{$b} <=> $coverage->{$a} or $a cmp $b } keys %$coverage;
+    $family_text = sprintf('none passes: best %s covers %d%% of the model (needs %d%%)', $best, $coverage->{$best},
+                           $family_coverage_needed{$group}{$best} // $FAMILY_MODEL_COVERAGE);
+  }
+
+  # step 9
+  my $domain_text = '';
+  if (my $domain = $domain{$group}) {
+    $domain_text = sprintf('%s "%s" (%s; %s%s%s%s)', $domain->{entry}, $domain->{name}, $domain->{type}, $domain->{analysis},
+                           ($domain->{signature} ne '' ? " $domain->{signature}" : ''),
+                           (defined $domain->{evalue} ? ', E=' . table_e_value($domain->{evalue}) : ''),
+                           (defined $domain->{model_coverage} ? ", $domain->{model_coverage}% of the domain model" : ''));
+  } elsif (my $partial = $partial_domain{$group}) {
+    $domain_text = sprintf('only part of a domain: %s "%s" (%s %s) covers %d%% of its model (needs %d%%)', $partial->{entry}, $partial->{name},
+                           $partial->{analysis}, $partial->{signature}, $partial->{model_coverage}, $DOMAIN_MIN_MODEL_COVERAGE);
+  }
+
+  %stats = %saved;
+  return ($naming_text, $oma, $te_text, $ranked_text, $tie_text, $swissprot_text, $family_text, $domain_text);
+}
+
 # the decision table's closest-human cell: "tier N: SYM (evidence)", a family as SYM/SYM
 sub closest_cell {
   my ($closest) = @_;
@@ -4882,7 +5068,8 @@ sub write_decisions {
                           PANTHER_best PANTHER_model_cov Tree_placement),
                  (map { my $naming_step = $_; "S$naming_step->[0]_" . ($naming_step->[1] =~ s/[^A-Za-z0-9]+/_/gr) } @NAMING_STEPS),
                  'Closest_human', 'Closest_human_used_for_naming', 'Evidence_by_method', 'Protein_features', 'Transcript_support', (map { my $species = $_; "Closest_$species->{tag}" } @closest_species),
-                 'Best_hit_each_search', 'RBH_each_species'), "\n";
+                 'Naming_species_hits', 'OMA_checks', 'TE_Pfam_domain', 'Human_hits_ranked', 'Human_tie_family', 'SwissProt_within_tie', 'PANTHER_family_used',
+                 'InterPro_domain', 'Best_hit_each_search', 'RBH_each_species'), "\n";
   # --native: the gene set's own informative names replace the decision (collect_native_rows)
   my %native_kept;
   foreach my $row (@name_rows) {
@@ -4897,16 +5084,16 @@ sub write_decisions {
     my @best = ('') x 8;
     if (@ranked) {
       my $top = $ranked[0][1];
-      @best = (human_label($top->{human}), sprintf('%.0f', $top->{best}{qcov} // 0), sprintf('%.0f', $top->{best}{tcov} // 0),
-               e_value($top->{best}{evalue}), sprintf('%.0f', $top->{best}{bits}), ($top->{rbh} ? 'rbh' : 'bh'),
+      @best = (human_label($top->{human}), sprintf('%.1f', $top->{best}{qcov} // 0), sprintf('%.1f', $top->{best}{tcov} // 0),
+               table_e_value($top->{best}{evalue}), sprintf('%.0f', $top->{best}{bits}), ($top->{rbh} ? 'rbh' : 'bh'),
                ($top->{best_full} ? 'yes' : 'no'),
-               (@ranked > 1 ? sprintf('%s (%.0f%%)', human_label($ranked[1][1]{human}), 100 * $ranked[1][1]{best}{bits} / $top->{best}{bits}) : ''));
+               (@ranked > 1 ? sprintf('%s (%.1f%%)', human_label($ranked[1][1]{human}), 100 * $ranked[1][1]{best}{bits} / $top->{best}{bits}) : ''));
     }
     my @swissprot = ('') x 7;
     if (my $hit = $swissprot_best{$group}) {
       @swissprot = ("$hit->{accession} " . (($hit->{symbol} // '') ne '' ? "$hit->{symbol} " : '') . "\"$hit->{description}\"",
-                    $hit->{species_scientific} // $hit->{species} // '', sprintf('%.0f', $hit->{pident} // 0),
-                    sprintf('%.0f', $hit->{qcov} // 0), sprintf('%.0f', $hit->{tcov} // 0), e_value($hit->{evalue}), sprintf('%.0f', $hit->{bits}));
+                    $hit->{species_scientific} // $hit->{species} // '', sprintf('%.1f', $hit->{pident} // 0),
+                    sprintf('%.1f', $hit->{qcov} // 0), sprintf('%.1f', $hit->{tcov} // 0), table_e_value($hit->{evalue}), sprintf('%.0f', $hit->{bits}));
     }
     my $coverage = $gene_family_coverage{$group} // {};
     my ($family) = sort { $coverage->{$b} <=> $coverage->{$a} or $a cmp $b } keys %$coverage;
@@ -4925,7 +5112,7 @@ sub write_decisions {
                  (map { my $naming_step = $_; step_cell($group, $naming_step->[0], $native ? 1 : 0) } @NAMING_STEPS),
                  $closest_text, $closest_used, agreement_text($group), protein_features_text($group), transcript_text($group),
                  (map { my $species = $_; closest_species_text($species, $group) } @closest_species),
-                 search_best_text($group, 'DIAMOND'), search_best_text($group, 'RBH'));
+                 rule_input_cells($group), search_best_text($group, 'DIAMOND'), search_best_text($group, 'RBH'));
     print $fh join("\t", map { my $cell = $_; $cell //= ''; $cell =~ s/[\t\n]/ /g; $cell } @cells), "\n";
   }
   close $fh;
