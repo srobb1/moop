@@ -120,6 +120,7 @@ shopt -s nullglob
 load_files() {
     local pattern="$1"
     local description="$2"
+    local exclude="${3:-}"   # optional: a glob of file names to leave out of $pattern
 
     echo "Loading $description"
     ## Per GENE SET, like features.tsv -- not the organism directory, which holds
@@ -134,6 +135,14 @@ load_files() {
         local kept=() file
         for file in "${files[@]}"; do
             [[ "$(basename "$file")" == gene_statement.* ]] || kept+=("$file")
+        done
+        files=("${kept[@]}")
+    fi
+
+    if [ -n "$exclude" ]; then
+        local kept=() file
+        for file in "${files[@]}"; do
+            [[ "$(basename "$file")" == $exclude ]] || kept+=("$file")
         done
         files=("${kept[@]}")
     fi
@@ -171,7 +180,14 @@ load_files "closest_*.moop.tsv" "Closest genes (human, and each closest_species 
 load_files "gene_statement.*.moop.tsv" "Gene statements (the typed series for the gene page overview card) -> gene_naming table, not an annotation"
 load_files "eggnog_orthologs.moop.tsv" "EGGNOG Orthologs"
 load_files "*.homologs.moop.tsv" "Blast homologs"
-load_files "*.RBBH.moop.tsv" "Reciprocal Blast Best Hit homologs"
+## MMseqs2 reciprocal best hits only. The eross files (<Source>.RBBH.moop.tsv, DIAMOND reciprocal_alignment.py)
+## are no longer loaded (user, 2026-10-06): MMseqs2 is what naming uses, and the old eross files share their
+## source name with the DIAMOND homologs file, so loading them merged the two (see load_annotations_sqlite.pl).
+## They stay in the data folders; LOAD_EROSS_RBBH=1 loads them again (made with the "(DIAMOND RBH)" name).
+load_files "*.MMseqs.RBBH.moop.tsv" "Reciprocal best hits (MMseqs2)"
+if [ "${LOAD_EROSS_RBBH:-0}" = 1 ]; then
+  load_files "*.RBBH.moop.tsv" "Reciprocal best hits (eross, DIAMOND)" "*.MMseqs.RBBH.moop.tsv"
+fi
 load_files "*.iprscan.moop.tsv" "Domains and IPRSCAN2GO and PANTHER2GO"
 load_files "*.domains.moop.tsv" "SignalP / DeepTMHMM domains"
 load_files "protnlm.moop.tsv" "Protnlm"

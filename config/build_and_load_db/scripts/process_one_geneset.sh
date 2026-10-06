@@ -419,7 +419,9 @@ make_rbbh_moop() {
 }
 ## One .RBBH.moop.tsv per target organism, so the has_data gate is per-target
 ## inside the loop rather than the single driver line the blocks above use.
-make_rbbh_moop
+## eross RBBH: phased out (user, 2026-10-06) -- MMseqs2 RBH below is used for naming and loaded instead.
+## LOAD_EROSS_RBBH=1 makes (and setup_new_moopdb_and_load_data.sh loads) them again.
+[ "${LOAD_EROSS_RBBH:-0}" = 1 ] && make_rbbh_moop
 
 # ── MMseqs2 RBH (rbh_mmseq) ───────────────────────────────────────────────────
 ## Same reference species as rbh_eross, from a second tool; separate files and a
