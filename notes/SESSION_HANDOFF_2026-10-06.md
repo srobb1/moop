@@ -48,3 +48,13 @@
 - Congeria on the site now has all of this (audit 92/92, naming replays 43,768). The previous site version is
   `organism.sqlite.before_2026-10-06c`. Every other organism needs a --reload rebuild for the InterProScan fix too.
 - Stopping a build: kill its process group, not only the parent (a loader survived once; harmless under --reload).
+
+## 6. Open questions (offered, not decided)
+- Build one organism with isoforms (proposed: Amphimedon, RefSeq) so the site can show the new `protein`
+  statement on real data; Congeria has one protein per gene. Also clears Amphimedon's RBBH merge.
+- A caution when a partial-hit gene's best human gene is already the full-length name of a nearby gene
+  (COKUS1KC_0030556: 142 aa zinc-finger UBP fragment beside the real HDAC6, COKUS1KC_0030557, opposite strand).
+  Count how many genes it would touch before deciding. Names would not change.
+- Optional cleanup: 26 harmless reused variable names and 8 unused variables (Perl::Critic, ~/perl5/bin/perlcritic).
+- Site side (other agent): protein lengths for every protein on the gene page (protein.aa.fa.fai column 2);
+  score lookup from notes/ANNOTATION_SCORES.md; "Isoform" label for kind `protein`.
