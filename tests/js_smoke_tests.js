@@ -37,7 +37,7 @@ for (const rel of MODULES) {
 }
 const {
     moopSearchTerms, moopSearchInputIsUsable, moopHighlightableTerms,
-    moopTermHighlight, highlightSearchTerms, moopRowHighlightText,
+    moopTermHighlight, highlightSearchTerms, moopRowHighlightText, moopStripNamingTag,
 } = sandbox;
 
 // ---------------------------------------------------------------------------- harness
@@ -148,6 +148,12 @@ eq(highlightSearchTerms('', 'HDAC', ''), '', 'empty text returns empty, not unde
 eq(highlightSearchTerms('some text', '', ''), 'some text', 'empty keywords leave the text alone');
 ok(!/undefined/.test(String(highlightSearchTerms(null, 'HDAC', ''))),
    'null text never renders the string "undefined"');
+
+group('moopStripNamingTag — the naming pipeline\'s evidence tag (shared fixture with PHP)');
+const TAGS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/naming_tags.json'), 'utf8')).cases;
+TAGS.forEach(([input, want]) => eq(moopStripNamingTag(input), want, JSON.stringify(input)));
+const tagRow = { feature_description: 'HIVEP zinc finger 3 [ISS|rbh|tree+]' };
+ok(!moopRowHighlightText(tagRow).includes('tree'), 'the tag is not part of the row\'s highlightable text either');
 
 // ---------------------------------------------------------------------------- report
 console.log('\n' + '-'.repeat(60));

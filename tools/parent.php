@@ -412,6 +412,10 @@ $children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_g
 // Get all children flat for sequence retrieval (keeping getChildren for backwards compatibility)
 $children = getChildren($feature_id, $db, $accessible_gene_set_ids);
 
+// The gene's symbol (HIVEP3), shown before its description — '' when feature_name holds an id or
+// a LOC placeholder rather than a name. See moop_gene_symbol().
+$gene_symbol = moop_gene_symbol($name, $feature_uniquename, array_column($children, 'feature_uniquename'));
+
 // ── Big genes: a lighter page ────────────────────────────────────────────────
 // A few "genes" have hundreds of transcripts -- transcriptome clusters, mostly in planarians
 // (1,083 in Obama nungara onun.kc3.gc000000). Rendering a full annotation card and every
@@ -689,6 +693,7 @@ echo render_display_page(
         'feature_id' => $feature_id,
         'feature_uniquename' => $feature_uniquename,
         'description' => $description,
+        'gene_symbol' => $gene_symbol,
         'type' => $type,
         'genus' => $genus,
         'species' => $species,
@@ -749,6 +754,7 @@ echo render_display_page(
             "const genomeSequenceAvailable = " . ($genome_seq_available ? 'true' : 'false') . ";"
         ]
     ],
-    htmlspecialchars($feature_uniquename)
+    // The tab says what the gene IS first when it has a name: "HIVEP3 · h1SMcG0000013".
+    htmlspecialchars(($gene_symbol !== '' ? $gene_symbol . ' · ' : '') . $feature_uniquename)
 );
 ?>

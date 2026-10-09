@@ -932,6 +932,19 @@ ok(moop_score_kind('Protein Features', 'InterProScan (SignalP_EUK)', $_sc) === '
    'InterProScan\'s SignalP runs (no score) are not confused with standalone SignalP (a probability)');
 
 // ----------------------------------------------------------------------------
+group('naming tag: stripped from descriptions (shared fixture with the JS suite)');
+require_once "$BASE/lib/functions_display.php";
+foreach (json_decode(file_get_contents("$BASE/tests/fixtures/naming_tags.json"), true)['cases'] as [$_in, $_want]) {
+    ok(moop_strip_naming_tag($_in) === $_want, json_encode($_in));
+}
+
+ok(moop_gene_symbol('HIVEP3', 'h1SMcG0000013') === 'HIVEP3' && moop_gene_symbol(' trp-1 ', 'g') === 'trp-1', 'symbol: a real symbol is shown, trimmed');
+ok(moop_gene_symbol('', 'g') === '' && moop_gene_symbol(null, 'g') === '', 'symbol: blank → none');
+ok(moop_gene_symbol('COKUS1KC_0003911-RA', 'COKUS1KC_0003911') === '', 'symbol: the gene\'s own id with a transcript suffix is not a symbol (Congeria unnamed genes)');
+ok(moop_gene_symbol('t1.1', 'g1', ['t1.1', 't2.1']) === '', 'symbol: a child\'s id is not a symbol');
+ok(moop_gene_symbol('LOC5512485', 'g') === '' && moop_gene_symbol('LOCK1', 'g') === 'LOCK1', 'symbol: an NCBI LOC placeholder is not shown; a real name starting LOC is');
+
+// ----------------------------------------------------------------------------
 group('expression: bundles (TPM tables) → yes/no');
 // ----------------------------------------------------------------------------
 // notes/EXPRESSION_COUNT_TABLES_PLAN.md. A made-up gene set: g1 has two transcripts, g2 one,

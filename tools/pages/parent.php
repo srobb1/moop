@@ -64,9 +64,10 @@
             <?php
             // Computed here, above both the copy payload and the heading below, so the two
             // cannot disagree about what this gene is called.
-            $overview_title = !empty($description)
-                ? decodeAnnotationText($description)
-                : (!empty($name) ? $name : '');
+            // The symbol is shown separately, before the title; it never doubles as the title.
+            // ($name here used to be the fallback, but it was never passed to this file.)
+            $gene_symbol = $gene_symbol ?? '';
+            $overview_title = !empty($description) ? decodeAnnotationText($description) : '';
 
             // How this gene was named (gene_naming). The first statement says what the gene
             // is — the Identity sentence, or why it has no name — and sits under the title;
@@ -87,13 +88,14 @@
                 // the heading would repeat to no purpose. Say plainly that it has no name;
                 // the reason is the line directly beneath.
                 $overview_title = 'Unnamed gene';
-            } elseif ($naming_lead !== null) {
+                $gene_symbol = '';
+            } else {
                 // The naming pipeline ends each name with its evidence code, e.g.
-                // "Sushi/SCR/CCP domain-containing protein [ISM|ipr|sim~|omaR]". The code is
-                // unreadable at a glance (user, 2026-10-06), and the Identity sentence below
-                // says the same thing in words. Stripped only on genes that HAVE naming
-                // statements, so no other description ending in brackets is touched.
-                $overview_title = preg_replace('/\s*\[IS[A-Z]*(\|[^\[\]]*)?\]\s*$/', '', $overview_title);
+                // "Sushi/SCR/CCP domain-containing protein [ISM|ipr|sim~|omaR]". Unreadable at a
+                // glance (user, 2026-10-06); the Identity sentence below says it in words. Matched
+                // by the pipeline's own codes only, so it applies whether or not this database
+                // has naming tables (organisms not yet reloaded still carry the tag).
+                $overview_title = moop_strip_naming_tag($overview_title);
             }
 
             // Plain-text summary for pasting into notes. Built here rather than scraped
@@ -110,7 +112,7 @@
                     . ($n_prot > 1 ? ' (longest of ' . $n_prot . ')' : '');
             }
             $copy_lines = [$feature_uniquename];
-            if ($overview_title !== '') $copy_lines[] = $overview_title;
+            $copy_lines[] = trim($gene_symbol . ($gene_symbol !== '' && $overview_title !== '' ? ' — ' : '') . $overview_title);
             $badges = htmlspecialchars_decode(strip_tags($type));
             if (!empty($children_hierarchical)) {
                 $n = count($children_hierarchical);
@@ -164,9 +166,12 @@
             </div>
             <div class="feature-overview-body">
                 <h1 class="feature-title">
+                    <?php if ($gene_symbol !== ''): ?>
+                        <span class="feature-symbol" title="Gene symbol"><?= htmlspecialchars($gene_symbol) ?></span>
+                    <?php endif; ?>
                     <?php if ($overview_title !== ''): ?>
                         <?= htmlspecialchars($overview_title) ?>
-                    <?php else: ?>
+                    <?php elseif ($gene_symbol === ''): ?>
                         <span class="feature-title-empty">No description available</span>
                     <?php endif; ?>
                 </h1>

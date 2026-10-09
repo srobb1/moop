@@ -1,0 +1,15 @@
+{
+  "_comment": "Read by BOTH tests/smoke_tests.php (moop_strip_naming_tag) and tests/js_smoke_tests.js (moopStripNamingTag), so the two copies of the rule cannot drift. [input, expected]",
+  "cases": [
+    ["HIVEP zinc finger 3 [ISS|rbh|tree+]", "HIVEP zinc finger 3"],
+    ["NADH:ubiquinone oxidoreductase core subunit S8 [ISO|1to1|sim+|pthr+|tree+|hog]", "NADH:ubiquinone oxidoreductase core subunit S8"],
+    ["Sushi/SCR/CCP domain-containing protein [ISM|ipr|sim~|omaR]", "Sushi/SCR/CCP domain-containing protein"],
+    ["histone H3 [TAS]", "histone H3"],
+    ["own name [SRC|x]", "own name"],
+    ["HIVEP zinc finger 3 [Source:HGNC Symbol;Acc:HGNC:13561]", "HIVEP zinc finger 3 [Source:HGNC Symbol;Acc:HGNC:13561]"],
+    ["protein [ISA|foo]", "protein [ISA|foo]"],
+    ["[ISS|bh] mid-string tag stays", "[ISS|bh] mid-string tag stays"],
+    ["kinase [ISOform 2]", "kinase [ISOform 2]"],
+    ["", ""]
+  ]
+}

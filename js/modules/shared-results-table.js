@@ -105,7 +105,7 @@ const RESULT_COLUMNS = [
     },
     {
         key: 'description', label: 'Description', width: 300, variants: ['*'], wrap: true,
-        render: (r, ctx) => highlightSearchTerms(r.feature_description, ctx.keywords, moopRowHighlightText(r)) || '—'
+        render: (r, ctx) => highlightSearchTerms(moopStripNamingTag(r.feature_description), ctx.keywords, moopRowHighlightText(r)) || '—'
     },
     {
         key: 'ann_source', label: 'Annotation Source', width: 300, variants: ['full'],
@@ -167,11 +167,23 @@ function resultFeatureUrl(ctx, uniquename) {
  * contentless, so there is no stored text to mark. See moopTermHighlight().
  */
 /**
+ * A pipeline-named gene's description ends with its evidence tag, e.g.
+ * "HIVEP zinc finger 3 [ISS|rbh|tree+]" (assign_gene_names_v2.pl, sub tagged). The tag is
+ * unreadable at a glance (user, 2026-10-09); the gene page says the same thing in words.
+ * Only the pipeline's own leading codes are removed, so no other bracketed text is touched.
+ * Mirror of moop_strip_naming_tag() in lib/functions_display.php — keep the code lists equal.
+ */
+const MOOP_NAMING_TAG_RE = /\s*\[(?:ISO|ISS|ISM|TAS|SRC)(?:\|[^\[\]]*)?\]\s*$/;
+function moopStripNamingTag(text) {
+    return text ? String(text).replace(MOOP_NAMING_TAG_RE, '') : text;
+}
+
+/**
  * The row's highlightable text, joined. Used to decide whether a term was found LITERALLY
  * anywhere in this row -- if it was, no cell falls back to a shortened guess.
  */
 function moopRowHighlightText(r) {
-    return [r.feature_name, r.feature_description, r.annotation_description]
+    return [r.feature_name, moopStripNamingTag(r.feature_description), r.annotation_description]
         .filter(Boolean).join(' \0 ');
 }
 

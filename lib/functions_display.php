@@ -753,3 +753,44 @@ function getGroupImagePath($group_info, $absolute_images_path = '') {
     
     return '';
 }
+
+/**
+ * A pipeline-named gene's description ends with its evidence tag, e.g.
+ * "HIVEP zinc finger 3 [ISS|rbh|tree+]" (assign_gene_names_v2.pl, sub tagged). The tag is
+ * unreadable at a glance (user, 2026-10-06 and 2026-10-09); the gene page's Identity sentence
+ * says the same thing in words. Only the pipeline's own leading codes are removed, so no other
+ * bracketed text is touched.
+ *
+ *   ISO orthology · ISS sequence similarity (-like) · ISM sequence model (family/domain)
+ *   TAS human-curated · SRC the gene set's own name
+ *
+ * Mirror of moopStripNamingTag() in js/modules/shared-results-table.js — keep the code lists equal.
+ */
+const MOOP_NAMING_TAG_RE = '/\s*\[(?:ISO|ISS|ISM|TAS|SRC)(?:\|[^\[\]]*)?\]\s*$/';
+
+function moop_strip_naming_tag(string $text): string
+{
+    return preg_replace(MOOP_NAMING_TAG_RE, '', $text);
+}
+
+/**
+ * The gene's short name (symbol) for display — HIVEP3, trp-1 — or '' when it has none.
+ *
+ * The loader stores it in feature_name, already split from the description upstream. But that
+ * column also holds things that are not symbols, which must not be shown as one:
+ *   - blank (9,146 Nematostella genes)
+ *   - the gene's own id, or a transcript id built on it (Congeria's unnamed genes: "…_0003911-RA")
+ *   - any of its children's ids
+ *   - an NCBI placeholder, LOC5512485 — names nothing; the pipeline no longer assigns them
+ *     (user, 2026-10-09), but organisms not yet reloaded still carry them
+ *
+ * @param string[] $child_ids uniquenames of the gene's transcripts etc.
+ */
+function moop_gene_symbol(?string $name, string $uniquename, array $child_ids = []): string
+{
+    $name = trim((string)$name);
+    if ($name === '' || str_starts_with($name, $uniquename)) return '';
+    if (in_array($name, $child_ids, true)) return '';
+    if (preg_match('/^LOC\d+$/', $name)) return '';
+    return $name;
+}

@@ -35,6 +35,14 @@
     margin: 0.2rem 0 0.55rem;
     padding: 0;
 }
+/* Gene symbol before the description: italic, the convention for gene symbols, in the site's
+   darker teal so it reads as the gene's name and the description as what it is. */
+.feature-header .feature-symbol {
+    font-style: italic;
+    color: #0e7490;
+    margin-right: 0.35rem;
+}
+
 .feature-header .feature-title-empty {
     font-weight: 500;
     font-style: italic;
