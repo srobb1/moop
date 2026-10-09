@@ -932,6 +932,160 @@ ok(moop_score_kind('Protein Features', 'InterProScan (SignalP_EUK)', $_sc) === '
    'InterProScan\'s SignalP runs (no score) are not confused with standalone SignalP (a probability)');
 
 // ----------------------------------------------------------------------------
+group('expression: bundles (TPM tables) → yes/no');
+// ----------------------------------------------------------------------------
+// notes/EXPRESSION_COUNT_TABLES_PLAN.md. A made-up gene set: g1 has two transcripts, g2 one,
+// g3 none in the table. All on temp files; no site data.
+require_once "$BASE/lib/expression_functions.php";
+$_xd = sys_get_temp_dir() . '/moop_expr_test_' . getmypid();
+@mkdir($_xd);
+$_xw = function (string $name, string $body) use ($_xd) { file_put_contents("$_xd/$name", $body); return "$_xd/$name"; };
+$_xthrows = function (callable $fn) { try { $fn(); return false; } catch (RuntimeException $e) { return true; } };
+
+$_m = moop_expression_read_matrix($_xw('a.tsv', "transcript_id\tS1\tS2\tS3\n\"t1.1\"\t2\t0\tNA\nt2.1\t3\t0\t\nt3.1\t0.5\t0.2\t9\n"));
+ok($_m['samples'] === ['S1', 'S2', 'S3'], 'matrix: the id column header is not a sample; quotes stripped');
+ok($_m['rows']['t1.1'] === [2.0, 0.0, null] && $_m['rows']['t2.1'][2] === null, 'matrix: NA and empty are null, 0 stays 0 — "not measured" is not "not expressed"');
+$_r = moop_expression_read_matrix($_xw('r.tsv', "S1\tS2\ng1\t1\t2\n"));
+ok($_r['samples'] === ['S1', 'S2'] && $_r['rows']['g1'] === [1.0, 2.0], 'matrix: R write.table header (no id cell) — every header cell is a sample');
+ok($_xthrows(fn() => moop_expression_read_matrix($_xw('d.tsv', "id\tS1\ng1\t1\ng1\t2\n"))), 'matrix: a duplicated id is refused, not overwritten');
+ok($_xthrows(fn() => moop_expression_read_matrix($_xw('n.tsv', "id\tS1\ng1\t-1\n"))), 'matrix: a negative TPM is refused');
+ok($_xthrows(fn() => moop_expression_read_matrix($_xw('g.tsv', "id\tS1\tS2\ng1\t1\n"))), 'matrix: a short row is refused');
+
+$_s = moop_expression_read_samples($_xw('s.tsv', "sample_id\tgroup\treplicate\tstage\nS3\tlate\t1\t48h\nS1\tearly\t1\t2h\nS2\tearly\t2\t2h\n"), $_m['samples']);
+ok(array_column($_s['samples'], 'name') === ['S3', 'S1', 'S2'], 'samples.tsv: its row order is the display order');
+ok($_s['samples'][0]['attrs'] === ['stage' => '48h'], 'samples.tsv: every other column is kept as an attribute');
+ok($_xthrows(fn() => moop_expression_read_samples($_xw('s2.tsv', "sample_id\tgroup\nS1\ta\nS2\ta\n"), $_m['samples'])), 'samples.tsv: a sample in the table but not listed is refused');
+ok($_xthrows(fn() => moop_expression_read_samples($_xw('s3.tsv', "sample_id\tgroup\nS1\ta\nS2\ta\nS3\ta\nS9\ta\n"), $_m['samples'])), 'samples.tsv: a listed sample not in the table is refused');
+$_s0 = moop_expression_read_samples(null, ['A', 'B']);
+ok($_s0['samples'][1]['group'] === 'B' && $_s0['warnings'], 'no samples.tsv: each sample is its own group, with a warning');
+
+$_genes = ['g1' => true, 'g2' => true, 'g3' => true];
+$_tx    = ['t1.1' => 'g1', 't2.1' => 'g1', 't3.1' => 'g2'];
+$_mt = moop_expression_match_ids(['t1.1', 't2.1', 't3', 'ERCC-1'], $_genes, $_tx);
+ok($_mt['level'] === 'transcript' && $_mt['exact'] === 2 && $_mt['by_version'] === 1 && $_mt['unmatched'] === ['ERCC-1'],
+   'match: transcript level detected; a missing ".1" still matches; spike-ins are reported unmatched');
+ok(moop_expression_match_ids(['g1', 'g2'], $_genes, $_tx)['level'] === 'gene', 'match: gene-level table detected');
+$_amb = moop_expression_match_ids(['x'], [], ['x.1' => 'g1', 'x.2' => 'g1']);
+ok($_amb['map'] === [], 'match: a versionless id that could be either of two transcripts is NOT guessed');
+
+// Experiments as moop_expression_bundle_experiments() returns them: samples in display order.
+$_smp = [['name' => 'S3', 'group_name' => 'late'], ['name' => 'S1', 'group_name' => 'early'], ['name' => 'S2', 'group_name' => 'early']];
+$_e3  = ['detect_threshold' => 3.0, 'samples' => $_smp];
+$_e1  = ['detect_threshold' => 1.0, 'samples' => $_smp];
+$_gm = moop_expression_group_means($_smp, [null, 5.0, 0.0]);
+ok($_gm === [['group' => 'late', 'mean' => null, 'n' => 0], ['group' => 'early', 'mean' => 2.5, 'n' => 2]], 'group means: replicates averaged; a group with nothing measured is null, not 0');
+ok(moop_expression_call($_e3, [null, 5.0, 0.0])['call'] === 'no', 'call: early mean 2.5 is below this experiment\'s threshold of 3 → no');
+ok(moop_expression_call($_e1, [null, 5.0, 0.0])['call'] === 'yes', 'call: the same values pass the default 1 TPM threshold → yes');
+$_c = moop_expression_call($_e3, [9.0, 0.5, 0.2]);
+ok($_c['call'] === 'yes' && $_c['top_group'] === 'late' && $_c['top_mean'] === 9.0, 'call: reports the highest group');
+ok(moop_expression_call($_e3, null)['call'] === 'unknown', 'call: no row is "unknown", never "no"');
+
+// --- counts path: exon-union lengths, counts → TPM, a whole bundle, the htseq converter's reader
+$_ec = $_xw('exon_coords.tsv', "t1.1\tc\t+\t1,300\t1,100;201,300\nt2.1\tc\t+\t51,250\t51,150;241,250\nt3.1\tc\t-\t1,50\t1,50\n");
+$_len = moop_expression_feature_lengths($_ec, $_tx);
+ok($_len['t1.1'] === 200 && $_len['t2.1'] === 110, 'lengths: a transcript is the sum of its exons');
+ok($_len['g1'] === 250, 'lengths: a gene is the UNION of its transcripts\' exons (1-150 ∪ 201-300 = 250), overlap not counted twice');
+$_t = moop_expression_counts_to_tpm(['a' => [10.0, null], 'b' => [30.0, 4.0], 'c' => [5.0, 5.0]], ['a' => 100, 'b' => 300]);
+ok(abs($_t['rows']['a'][0] - 500000) < 1e-6 && abs($_t['rows']['b'][0] - 500000) < 1e-6, 'TPM: equal reads per base → equal TPM, whatever the gene length');
+ok($_t['rows']['a'][1] === null && abs($_t['rows']['b'][1] - 1e6) < 1e-6, 'TPM: a null count stays null and is left out of the sample total');
+ok($_t['no_length'] === ['c'] && !isset($_t['rows']['c']), 'TPM: a feature with no exon length gets no TPM and is reported');
+ok($_xthrows(fn() => moop_expression_read_matrix($_xw('c.tsv', "gene_id\tS1\ng1\t2.5\n"), true)), 'counts.tsv: a fractional "count" is refused');
+
+$_hd = "$_xd/htseq"; @mkdir($_hd);
+file_put_contents("$_hd/s.10.counts", "g1\t5\ng2\t1\n__no_feature\t100\n");
+file_put_contents("$_hd/s.2.counts",  "g1\t3\n__no_feature\t7\n__ambiguous\t2\n");
+$_h = moop_expression_read_count_dir($_hd);
+ok($_h['samples'] === ['s.2', 's.10'], 'htseq dir: samples in natural order (s.2 before s.10), extension dropped');
+ok($_h['rows']['g2'] === [null, 1.0] && !isset($_h['rows']['__no_feature']), 'htseq dir: a gene missing from one file is null there; __ counters are not genes');
+ok($_h['special']['s.2'] === ['__no_feature' => 7, '__ambiguous' => 2], 'htseq dir: __ counters kept for the QC report');
+
+// --- the gene page's words: detected yes/no + off/low/medium/high
+$_lv = fn($m, $t = 1.0) => moop_expression_level(['call' => $m === null ? 'unknown' : ($m >= $t ? 'yes' : 'no'), 'top_mean' => $m, 'threshold' => $t]);
+ok($_lv(0.5) === 'off' && $_lv(1.0) === 'low' && $_lv(9.99) === 'low', 'level: below 1 TPM is off; 1 to <10 is low');
+ok($_lv(10.0) === 'medium' && $_lv(99.9) === 'medium' && $_lv(100.0) === 'high', 'level: 10 to <100 is medium; 100 and up is high');
+ok($_lv(2.0, 3.0) === 'off', 'level: "off" follows the experiment\'s own threshold, so it can never disagree with "not detected"');
+ok($_lv(null) === 'no data', 'level: a gene missing from an experiment is "no data", never "off"');
+
+$_sx = fn($label) => ['label' => $label, 'meta' => ['citation' => 'PMID:1'], 'detect_threshold' => 1.0,
+    'samples' => [['name' => 'A', 'group_name' => 'a'], ['name' => 'B', 'group_name' => 'b']]];
+$_gs = moop_expression_summarize([$_sx('hi'), $_sx('off'), $_sx('none')], [0 => [2.0, 250.0], 1 => [0.1, 0.2]]);
+ok(array_column($_gs['experiments'], 'level') === ['high', 'off', 'no data'], 'summary: one word per experiment, in order');
+ok($_gs['detected'] === 1 && $_gs['with_data'] === 2, 'summary: "detected in 1 of 2" — an experiment without this gene is not counted as a "no"');
+ok($_gs['experiments'][0]['top_group'] === 'b' && $_gs['experiments'][0]['top_mean'] === 250.0, 'summary: names the highest condition');
+
+// --- bars on the gene page
+$_grp = fn(array $m) => array_map(fn($k, $v) => ['group' => $k, 'mean' => $v, 'n' => 1], array_keys($m), $m);
+$_sv = moop_expression_sparkline_svg($_grp(['zygote' => 1.2, 'gastrula' => 265.0, 'polyp' => 0.0]), 'high');
+ok(substr_count($_sv, 'class="expr-bar"') === 3 && strpos($_sv, '<polyline') === false && strpos($_sv, '<path') === false,
+   'bars: one bar per condition, never a line');
+ok(strpos($_sv, '<title>gastrula: 265 TPM</title>') !== false && strpos($_sv, '<title>zygote: 1.2 TPM</title>') !== false, 'bars: each bar\'s hover names its condition and value');
+ok(preg_match('/<title>polyp: 0\.0 TPM<\/title>.*?height="1"\/>/', $_sv) === 1, 'bars: a measured zero is a hairline, not missing');
+ok(moop_expression_sparkline_svg($_grp(['a' => 0.1, 'b' => 0.5]), 'off') === '' && moop_expression_sparkline_svg([], 'no data') === '',
+   'bars: an "off" gene draws nothing — 0.1 vs 0.5 TPM is not a pattern');
+$_lo = moop_expression_sparkline_svg($_grp(['a' => 2.0, 'b' => 5.0]), 'low');
+ok(preg_match('/<title>b: 5\.0 TPM<\/title>.*?height="11"\/>/', $_lo) === 1, 'bars: scale never below 10 TPM, so a low gene\'s tallest bar is half height, not full');
+$_nd = moop_expression_sparkline_svg([['group' => 'x', 'mean' => null, 'n' => 0], ['group' => 'y', 'mean' => 50.0, 'n' => 1]], 'medium');
+ok(strpos($_nd, 'expr-bar-none') !== false && strpos($_nd, '<title>x: no data</title>') !== false, 'bars: an unmeasured condition is marked "no data", distinct from zero');
+ok(strpos(moop_expression_sparkline_svg($_grp(['<b>&' => 50.0]), 'medium'), '&lt;b&gt;&amp;: 50 TPM') !== false, 'bars: condition names are escaped once');
+
+// --- reading bundles straight from disk (notes/EXPRESSION_BUNDLE_SPEC.md) + overrides
+$_old_log = ini_set('error_log', '/dev/null');   // skipped experiments are logged; keep test output clean
+$_root = "$_xd/bundles"; @mkdir($_root);
+$_mk = function (string $slug, array $files) use ($_root) {
+    @mkdir("$_root/$slug");
+    foreach ($files as $n => $body) file_put_contents("$_root/$slug/$n", $body);
+};
+// tpm.tsv columns deliberately in a different order from samples.tsv
+$_mk('a_dev', ['experiment.json' => '{"label":"Dev","access_level":"PUBLIC","citation":"PMID:1"}',
+    'samples.tsv' => "sample_id\tgroup\treplicate\nS2\tearly\t1\nS1\tlate\t1\n",
+    'tpm.tsv'     => "gene_id\tS1\tS2\ng1\t250\t2\ng2\tNA\t0\n"]);
+$_mk('b_secret', ['experiment.json' => '{"label":"Secret","access_level":"COLLABORATOR","assay":"bulk_rna"}',
+    'samples.tsv' => "sample_id\tgroup\nS1\tx\n", 'tpm.tsv' => "gene_id\tS1\ng1\t5\n"]);
+$_mk('c_broken', ['experiment.json' => '{"label":"Broken","access_level":"PUBLIC"}',
+    'samples.tsv' => "sample_id\tgroup\nS1\tx\nS9\ty\n", 'tpm.tsv' => "gene_id\tS1\ng1\t5\n"]);
+$_mk('d_nolabel', ['experiment.json' => '{"access_level":"PUBLIC"}',
+    'samples.tsv' => "sample_id\tgroup\nS1\tx\n", 'tpm.tsv' => "gene_id\tS1\ng1\t5\n"]);
+$_mk('e_half', ['experiment.json' => '{"label":"Half-copied","access_level":"PUBLIC"}']);
+$_mk('f_mixedcase', ['experiment.json' => '{"label":"Mixed","access_level":"Public"}',
+    'samples.tsv' => "sample_id\tgroup\nS1\tx\n", 'tpm.tsv' => "gene_id\tS1\ng1\t5\n"]);
+$_mk('g_typo', ['experiment.json' => '{"label":"Typo","access_level":"COLABORATOR"}',
+    'samples.tsv' => "sample_id\tgroup\nS1\tx\n", 'tpm.tsv' => "gene_id\tS1\ng1\t5\n"]);
+$_p = 'Org/Asm/GS/';
+
+$_be = moop_expression_bundle_experiments($_root, $_p, 'PUBLIC', []);
+ok(array_column($_be, 'slug') === ['a_dev', 'f_mixedcase'], 'bundles: PUBLIC sees the public, well-formed experiments ("Public" matches case-insensitively) — broken, unlabelled and half-copied ones are skipped');
+ok(array_column(moop_expression_bundle_experiments($_root, $_p, 'COLLABORATOR', []), 'slug') === ['a_dev', 'b_secret', 'f_mixedcase'], 'bundles: COLLABORATOR also sees the COLLABORATOR one');
+ok(!in_array('g_typo', array_column(moop_expression_bundle_experiments($_root, $_p, 'IP_IN_RANGE', []), 'slug'), true)
+   && in_array('g_typo', array_column(moop_expression_bundle_experiments($_root, $_p, 'ADMIN', []), 'slug'), true), 'bundles: a misspelled access level fails closed (ADMIN only)');
+$_bv = moop_expression_bundle_values($_be[0], ['g1', 'g2', 'g9']);
+ok($_bv['g1'] === [2.0, 250.0], 'bundles: values come back in samples.tsv order (S2, S1), not tpm.tsv column order');
+ok($_bv['g2'] === [0.0, null] && !isset($_bv['g9']), 'bundles: NA is null, 0 is 0, an absent gene is absent');
+
+$_ov = [$_p . 'a_dev' => ['access_level' => 'COLLABORATOR']];
+ok(array_column(moop_expression_bundle_experiments($_root, $_p, 'PUBLIC', $_ov), 'slug') === ['f_mixedcase'], 'override: setting a PUBLIC experiment to COLLABORATOR hides it from PUBLIC');
+$_ov2 = [$_p . 'b_secret' => ['access_level' => 'PUBLIC', 'label' => 'Renamed', 'assay' => 'overridden']];
+$_be2 = moop_expression_bundle_experiments($_root, $_p, 'PUBLIC', $_ov2);
+ok(array_column($_be2, 'label') === ['Dev', 'Renamed', 'Mixed'], 'override: label and access_level replace the bundle\'s values');
+ok($_be2[1]['meta']['assay'] === 'bulk_rna', 'override: a field outside the allowlist (assay) changes nothing');
+ok(moop_expression_bundle_experiments($_root, $_p, 'PUBLIC', [$_p . 'a_dev' => ['access_level' => '', 'label' => null]])[0]['label'] === 'Dev',
+   'override: an empty value keeps the default (the config_editable.json convention)');
+ok(moop_expression_bundle_experiments($_root, $_p, 'ADMIN', null) === [], 'override: an unreadable overrides file shows NOTHING — fail closed, never back to the bundle default');
+file_put_contents("$_xd/ov_bad.json", '{"not json');
+ok(moop_expression_load_overrides("$_xd/ov_bad.json") === null && moop_expression_load_overrides("$_xd/none.json") === [],
+   'override: a corrupt file loads as null (fail closed); a missing file is simply no overrides');
+$_pr = moop_expression_override_problems([$_p . 'gone' => [], $_p . 'a_dev' => ['colour' => 'red'], 'Other/X/Y/z' => []], $_p, ['a_dev']);
+ok(count($_pr) === 2 && strpos($_pr[0], 'no such experiment') !== false && strpos($_pr[1], "'colour'") !== false,
+   'override: the checker reports a leftover entry and a field that cannot be overridden; other gene sets are not its business');
+
+$_sum = moop_expression_summarize([0 => $_be[0]], [0 => $_bv['g1']]);
+ok($_sum['experiments'][0]['level'] === 'high' && $_sum['experiments'][0]['top_group'] === 'late', 'bundles: the gene page summary works the same on bundle data');
+ini_set('error_log', $_old_log === false ? '' : $_old_log);
+exec('rm -rf ' . escapeshellarg($_root));
+
+array_map('unlink', glob("$_hd/*")); @rmdir($_hd);
+array_map('unlink', glob("$_xd/*")); @rmdir($_xd);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

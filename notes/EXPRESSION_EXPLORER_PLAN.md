@@ -1,5 +1,9 @@
 # Expression Explorer — many genes × chosen experiments
 
+> **2026-10-09: superseded as the first route.** Expression now comes from TPM tables — see
+> `EXPRESSION_COUNT_TABLES_PLAN.md`. This bigWig design is kept for experiments that exist only as
+> bigWigs; it would produce the same files, so the display layer is unchanged.
+
 **Status:** architecture decided 2026-07-14; **revised 2026-09-14** (user): built on the same modules
 as the gene-page expression section, which ships first. Not built.
 

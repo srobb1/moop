@@ -30,7 +30,15 @@
                         var element = document.querySelector(target);
                         if (element) {
                             element.classList.toggle('show');
-                            
+
+                            // Bootstrap would keep these in step; since this handler replaces it,
+                            // it must too. Without them every trigger reported the state it had at
+                            // page load — wrong for screen readers, and wrong for any label that
+                            // switches on [aria-expanded] (the gene page's "Show all / Show fewer").
+                            var shown = element.classList.contains('show');
+                            this.setAttribute('aria-expanded', shown ? 'true' : 'false');
+                            this.classList.toggle('collapsed', !shown);
+
                             // Toggle the icon if present
                             var icon = this.querySelector('.toggle-icon, .fa-chevron-down, .fa-minus, .fa-plus');
                             if (icon) {

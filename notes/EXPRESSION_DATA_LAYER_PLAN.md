@@ -1,5 +1,9 @@
 # Expression data layer — the shared substrate
 
+> **2026-10-09: superseded as the first route.** Expression now comes from TPM tables — see
+> `EXPRESSION_COUNT_TABLES_PLAN.md`. This bigWig design is kept for experiments that exist only as
+> bigWigs; it would produce the same files, so the display layer is unchanged.
+
 **Status:** feasibility **VERIFIED on this box 2026-07-14** (real reads against the live tracks
 server). Not built yet.
 

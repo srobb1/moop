@@ -583,3 +583,33 @@ a.badge:hover {
     color: #6c757d;
     margin-left: 0.35rem;
 }
+
+/* ---- Expression section (gene page) --------------------------------------------------------
+   One word per experiment. A teal ramp, darkest = highest, so the column reads at a glance;
+   "off" is neutral grey and "no data" is not a pill at all — absence must not look like a level. */
+.expr-table td { border-color: #eef2f4; }
+.expr-table tr:last-child td { border-bottom: 0; }
+.expr-exp { width: 55%; }
+.expr-cite { margin-left: .4rem; font-size: .75rem; color: #6c757d; text-decoration: none; white-space: nowrap; }
+.expr-cite:hover { color: #0891b2; text-decoration: underline; }
+.expr-lvl-cell { width: 7rem; }
+.expr-level {
+    display: inline-block; min-width: 4.5rem; padding: .1rem .5rem; border-radius: 999px;
+    font-size: .75rem; font-weight: 600; text-align: center; text-transform: uppercase; letter-spacing: .03em;
+    cursor: help;
+}
+.expr-level-high    { background: #0e7490; color: #fff; }
+.expr-level-medium  { background: #22a6c4; color: #fff; }
+.expr-level-low     { background: #cdeff6; color: #0e5a6e; }
+.expr-level-off     { background: #eceff1; color: #6c757d; }
+.expr-level-no-data { background: transparent; color: #8a949b; font-weight: 400; font-style: italic; text-transform: none; }
+.expr-key { font-size: .75rem; }
+.expr-spark-cell { width: 140px; }
+.expr-spark { display: block; overflow: visible; }
+.expr-bar       { fill: #0891b2; }
+.expr-bar-hit   { fill: transparent; }
+.expr-spark g:hover .expr-bar { fill: #0e5a6e; }
+.expr-bar-none  { fill: none; stroke: #c3cbd0; stroke-width: 1; stroke-dasharray: 2 2; }
+.expr-more-btn { font-size: .8rem; color: #0891b2; text-decoration: none; }
+.expr-more-btn[aria-expanded="true"]  .when-collapsed,
+.expr-more-btn[aria-expanded="false"] .when-expanded { display: none; }

@@ -489,6 +489,9 @@ function housekeeping_snapshot_site_data() {
         $site_path . '/metadata/glossary.json'                  => 'metadata/glossary.json',
         $site_path . '/metadata/group_taxon_exceptions.json'    => 'metadata/group_taxon_exceptions.json',
         $site_path . '/metadata/annotation_scores.json'         => 'metadata/annotation_scores.json',
+        // Web-side overrides of expression bundles (access level etc.). The bundles themselves are
+        // copied in from the compute box; THIS file is the only web-side state, so it must be backed up.
+        $site_path . '/metadata/expression_overrides.json'      => 'metadata/expression_overrides.json',
         $users_file                                             => 'users.json',
     ];
 

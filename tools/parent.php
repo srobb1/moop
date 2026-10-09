@@ -672,6 +672,15 @@ if ($download_file_flag && !empty($sequence_type)) {
 }
 
 
+// Expression: "is this gene expressed?" — one word per experiment, read straight from the gene
+// set's expression bundles (plain files copied over from the compute box; this page only reads).
+// Spec: notes/EXPRESSION_BUNDLE_SPEC.md. No bundles → no section. Gene-set access is already
+// settled — this feature was loaded through $accessible_gene_set_ids — and each experiment's own
+// access level (with metadata/expression_overrides.json applied) is checked inside.
+require_once __DIR__ . '/../lib/expression_functions.php';
+$expression_summary = moop_expression_gene_page($organism_name, $genome_accession, $gene_set_name,
+                                                $feature_uniquename, get_access_level());
+
 // Render page using layout system
 echo render_display_page(
     __DIR__ . '/pages/parent.php',
@@ -716,6 +725,7 @@ echo render_display_page(
         'gene_model' => $gene_model,
         'feature_loc' => $feature_loc,
         'genome_seq_available' => $genome_seq_available,
+        'expression_summary' => $expression_summary,
         'page_styles' => ["/$site/css/parent.css", "/$site/css/parent-nav.css"],
         'page_script' => [
             "/$site/js/modules/collapse-handler.js",

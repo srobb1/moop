@@ -1,5 +1,9 @@
 # Gene-page expression section — one gene × chosen experiments
 
+> **2026-10-09: superseded as the first route.** Expression now comes from TPM tables — see
+> `EXPRESSION_COUNT_TABLES_PLAN.md`. This bigWig design is kept for experiments that exist only as
+> bigWigs; it would produce the same files, so the display layer is unchanged.
+
 **Status:** idea captured 2026-07-14 (user). **Design revised 2026-09-14** (user): the reader chooses
 which experiments to show, and the section is built from the same modules as the Expression
 Explorer. Not started. **Blocked on the precompute** in `EXPRESSION_DATA_LAYER_PLAN.md` — choosing

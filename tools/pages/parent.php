@@ -416,6 +416,95 @@
         </div>
     </div>
 
+    <?php if (!empty($expression_summary)):
+        // Expression — "is this gene expressed?", in words. Deliberately no chart and no numbers
+        // on the face of it (user, 2026-10-09: "most users don't care about TPM, they like
+        // genes"); the TPM behind each word is in the hover text for those who do.
+        // Spec: notes/EXPRESSION_COUNT_TABLES_PLAN.md.
+        $__ex      = $expression_summary;
+        $__n_exp   = count($__ex['experiments']);
+        $__tpm     = fn(?float $v) => $v === null ? '' : ($v < 10 ? number_format($v, 1) : number_format($v, 0));
+    ?>
+    <!-- Expression Section -->
+    <div class="card shadow-sm mb-4" id="pnav-expression" data-nav-label="Expression">
+        <div class="card-header d-flex align-items-center flex-wrap">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#expressionSection" aria-expanded="true" role="button">
+                <i class="fas fa-chart-bar toggle-icon text-primary"></i>
+            </span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Expression</span>
+            <span class="ms-2 text-muted small">
+                <?php if ($__ex['with_data'] === 0): ?>
+                    not measured in any of <?= $__n_exp ?> experiment<?= $__n_exp !== 1 ? 's' : '' ?>
+                <?php else: ?>
+                    detected in <?= $__ex['detected'] ?> of <?= $__ex['with_data'] ?> experiment<?= $__ex['with_data'] !== 1 ? 's' : '' ?>
+                    <?php if ($__ex['with_data'] < $__n_exp): ?>
+                        · <?= $__n_exp - $__ex['with_data'] ?> without data for this gene
+                    <?php endif; ?>
+                <?php endif; ?>
+            </span>
+        </div>
+        <div id="expressionSection" class="collapse show">
+            <div class="card-body py-2">
+                <?php
+                // The first few experiments are shown; the rest sit in a collapsed block behind
+                // "Show all" (user, 2026-10-09). All values come from the one read the controller
+                // already made, so revealing them costs nothing — Bootstrap's collapse does the
+                // toggle, no script of ours.
+                $__first = 5;
+                $__render_row = function (array $__e) use ($__tpm) {
+                    $__lvl  = $__e['level'];
+                    $__hint = $__e['call'] === 'unknown'
+                        ? 'This gene is not in this experiment\'s data.'
+                        : 'Highest condition average: ' . $__tpm($__e['top_mean']) . ' TPM'
+                          . ' (' . $__e['top_group'] . '). Detected means at least '
+                          . $__tpm($__e['threshold']) . ' TPM in some condition.';
+                    $__pmid = preg_match('/^PMID:\s*(\d+)$/i', $__e['citation'], $__m) ? $__m[1] : '';
+                    ?>
+                        <tr>
+                            <td class="expr-exp">
+                                <?= htmlspecialchars($__e['label']) ?>
+                                <?php if ($__pmid !== ''): ?>
+                                    <a class="expr-cite" href="https://pubmed.ncbi.nlm.nih.gov/<?= $__pmid ?>/" target="_blank" rel="noopener"
+                                       title="Publication for this experiment">PMID <?= $__pmid ?></a>
+                                <?php endif; ?>
+                            </td>
+                            <td class="expr-lvl-cell">
+                                <span class="expr-level expr-level-<?= str_replace(' ', '-', $__lvl) ?>" title="<?= htmlspecialchars($__hint) ?>"><?= htmlspecialchars($__lvl) ?></span>
+                            </td>
+                            <td class="expr-spark-cell"><?= moop_expression_sparkline_svg($__e['groups'], $__lvl) ?></td>
+                        </tr>
+                    <?php
+                };
+                $__shown = array_slice($__ex['experiments'], 0, $__first);
+                $__more  = array_slice($__ex['experiments'], $__first);
+                ?>
+                <table class="table table-sm align-middle mb-1 expr-table">
+                    <tbody>
+                    <?php foreach ($__shown as $__e) $__render_row($__e); ?>
+                    </tbody>
+                    <?php if ($__more): ?>
+                    <tbody id="expressionMore" class="collapse">
+                    <?php foreach ($__more as $__e) $__render_row($__e); ?>
+                    </tbody>
+                    <?php endif; ?>
+                </table>
+                <?php if ($__more): ?>
+                <button type="button" class="btn btn-sm btn-link px-0 expr-more-btn collapsed"
+                        data-bs-toggle="collapse" data-bs-target="#expressionMore" aria-expanded="false" aria-controls="expressionMore">
+                    <span class="when-collapsed">Show all <?= $__n_exp ?> experiments</span>
+                    <span class="when-expanded">Show fewer</span>
+                </button>
+                <?php endif; ?>
+                <div class="text-muted expr-key">
+                    Level = the condition with the highest average (replicates averaged): off below 1 TPM ·
+                    low 1–10 · medium 10–100 · high 100 and above. Bars: each condition's average, in order;
+                    hover a bar for its value.
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Annotations Section -->
     <div class="card shadow-sm mb-4" id="pnav-annotations" data-nav-label="Annotations">
         <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
