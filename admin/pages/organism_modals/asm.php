@@ -34,7 +34,7 @@
       </div>
 
       <?php if ($assembly_validation): ?>
-        <h6 class="fw-bold mb-2"><i class="fa fa-database"></i> Database Directory Matching <?= req_info('The assembly directory name must match either the genome_name or genome_accession from the database.') ?></h6>
+        <h6 class="fw-bold mb-2"><i class="fa fa-database"></i> Database Directory Matching <?= field_help('The assembly directory name must match either the genome_name or genome_accession from the database.', 'What this section needs') ?></h6>
         <div class="card mb-3 <?= $has_db_mismatch ? 'border-danger border-2' : 'border-success' ?>">
           <div class="card-body small">
             <?php
@@ -151,7 +151,7 @@
                 <?php if ($fai_info['fai_exists']): ?>
                   <span class="badge bg-success"><i class="fa fa-check"></i></span>
                   <strong>FAI index:</strong> <code>genome.fa.fai</code>
-                  <?= req_info('A genome.fa.fai samtools index lets the SVG gene-model sequence viewer fetch region sequences.') ?>
+                  <?= field_help('A genome.fa.fai samtools index lets the SVG gene-model sequence viewer fetch region sequences.', 'What this section needs') ?>
                 <?php else: ?>
                   <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i></span>
                   <strong>FAI index:</strong> <small class="text-danger"><code>genome.fa.fai</code> missing — the SVG sequence viewer will be unavailable.</small>
@@ -268,7 +268,7 @@
           <i class="fa fa-exclamation-circle"></i> <strong>Issues Found:</strong>
           <ul class="mb-0 mt-2">
             <?php if ($has_db_mismatch): ?><li>Directory name does not match any genome record in the database</li><?php endif; ?>
-            <?php if ($is_missing_live): ?><li>Missing required FASTA files in one or more gene sets</li><?php endif; ?>
+            <?php if ($is_missing_live): ?><li><?= empty($gene_set_dirs_live) ? 'No gene set data in this assembly' : 'Missing required FASTA files in one or more gene sets' ?></li><?php endif; ?>
             <?php if ($modal_has_missing_blast): ?><li>Missing BLAST index files in one or more gene sets</li><?php endif; ?>
             <?php if ($modal_has_missing_fai): ?><li>Missing <code>genome.fa.fai</code> index (required for SVG sequence viewer)</li><?php endif; ?>
           </ul>

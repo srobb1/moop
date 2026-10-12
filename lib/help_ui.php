@@ -21,7 +21,8 @@
  * Seven different help idioms had accumulated across the site — hand-written popover
  * markup, an `info-icon`-to-custom-modal pattern, collapsibles, a JS string route, and
  * a req_info() helper stranded inside admin/api/get_organism_modal.php (a file that
- * runs a switch and exit()s when included, so the function could never be reused).
+ * runs a switch and exit()s when included, so the function could never be reused --
+ * retired 2026-10-12; the organism modals now use field_help()).
  * Colour and shape therefore signalled nothing, and each new page added an eighth
  * variant. Same failure as the admin card headers before css/admin-cards.css — see
  * CLAUDE.md section 6. If one of these helpers lacks something a page needs, ADD IT

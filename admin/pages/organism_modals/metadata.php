@@ -71,7 +71,7 @@
           $organism
       ); ?>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Required Fields <?= req_info('All fields must be present and non-empty: genus, species, common_name, taxon_id.') ?></h6>
+      <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Required Fields <?= field_help('All fields must be present and non-empty: genus, species, common_name, taxon_id.', 'What this section needs') ?></h6>
       <div class="card mb-3">
         <div class="card-body small">
           <?php if (!empty($json_val['errors'])): ?>

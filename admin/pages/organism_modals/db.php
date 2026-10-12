@@ -24,7 +24,7 @@
         </div>
       </div>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-file"></i> Database File <?= req_info('A valid SQLite database file named organism.sqlite must exist in the organism directory, readable by the web server.') ?></h6>
+      <h6 class="fw-bold mb-2"><i class="fa fa-file"></i> Database File <?= field_help('A valid SQLite database file named organism.sqlite must exist in the organism directory, readable by the web server.', 'What this section needs') ?></h6>
       <div class="card mb-3">
         <div class="card-body small">
           <p class="mb-1"><strong>Path:</strong> <?= htmlspecialchars($data['db_file'] ?? 'N/A') ?></p>
@@ -35,7 +35,7 @@
         </div>
       </div>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Database Validity <?= req_info('Must be a valid SQLite3 file with the proper structure — all required tables from the schema present.') ?></h6>
+      <h6 class="fw-bold mb-2"><i class="fa fa-check-square"></i> Database Validity <?= field_help('Must be a valid SQLite3 file with the proper structure — all required tables from the schema present.', 'What this section needs') ?></h6>
       <div class="card mb-3">
         <div class="card-body small">
           <p class="mb-1">
@@ -53,7 +53,7 @@
         </div>
       </div>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-table"></i> Database Tables <?= req_info('Required tables: organism, genome, gene_set, feature, annotation_source, annotation, feature_annotation.') ?></h6>
+      <h6 class="fw-bold mb-2"><i class="fa fa-table"></i> Database Tables <?= field_help('Required tables: organism, genome, gene_set, feature, annotation_source, annotation, feature_annotation.', 'What this section needs') ?></h6>
       <div class="card mb-3">
         <div class="card-body small">
           <?php if (!empty($validation['tables_present'])): ?>
@@ -98,7 +98,7 @@
         </div>
       </div>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-layer-group"></i> Gene Sets <small class="text-muted fw-normal">— database records vs. on-disk directories</small> <?= req_info('Each gene_set row in the database should have a matching subdirectory inside its assembly on disk. This flags database gene sets whose directory is missing — e.g. data was loaded but the files were never deployed (or were removed). Per-assembly FASTA / BLAST file detail lives in the assembly modal.', 'Gene sets: database vs. disk') ?></h6>
+      <h6 class="fw-bold mb-2"><i class="fa fa-layer-group"></i> Gene Sets <small class="text-muted fw-normal">— database records vs. on-disk directories</small> <?= field_help('Each gene_set row in the database should have a matching subdirectory inside its assembly on disk. This flags database gene sets whose directory is missing — e.g. data was loaded but the files were never deployed (or were removed). Per-assembly FASTA / BLAST file detail lives in the assembly modal.', 'Gene sets: database vs. disk') ?></h6>
       <?php /* $gene_sets_by_genome, $gene_set_query_error: organism_modal_db_data() */ ?>
       <?php if ($gene_set_query_error): ?>
         <div class="alert alert-warning small mb-3">Could not query gene_set table: <?= htmlspecialchars($gene_set_query_error) ?></div>
@@ -153,7 +153,7 @@
         <?php endforeach; ?>
       <?php endif; ?>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-exclamation-triangle"></i> Data Quality <?= req_info('Database records should have valid relationships and complete data — this checks for orphaned annotations, missing accessions, and features without proper organism links.', 'Data quality check') ?></h6>
+      <h6 class="fw-bold mb-2"><i class="fa fa-exclamation-triangle"></i> Data Quality <?= field_help('Database records should have valid relationships and complete data — this checks for orphaned annotations, missing accessions, and features without proper organism links.', 'Data quality check') ?></h6>
       <div class="card mb-3 <?= empty($validation['data_issues']) ? 'border-success' : 'border-danger border-2' ?>">
         <div class="card-body small">
           <?php if (empty($validation['data_issues'])): ?>
@@ -161,17 +161,21 @@
           <?php else: ?>
             <p class="mb-2"><strong class="text-danger"><i class="fa fa-exclamation-circle"></i> Issues Found:</strong></p>
             <ul class="mb-0">
-              <?php foreach ($validation['data_issues'] as $issue): ?>
+              <?php foreach ($validation['data_issues'] as $issue_i => $issue):
+                  // data_issues (prose) and data_issue_codes are built in lockstep; explain by
+                  // CODE, never by matching the prose (CLAUDE.md 9b) -- reword a message in the
+                  // validator and a strpos() here silently stops matching.
+                  $issue_code = $validation['data_issue_codes'][$issue_i] ?? ''; ?>
                 <li class="mb-2">
                   <span class="text-danger"><?= htmlspecialchars($issue) ?></span>
                   <br>
                   <small class="text-muted">
                     <?php
-                      if (strpos($issue, 'Orphaned annotations') !== false) {
+                      if ($issue_code === 'orphaned-annotations') {
                         echo 'Annotations exist in the database but are not linked to any annotation source. These records cannot be properly accessed.';
-                      } elseif (strpos($issue, 'missing accession') !== false) {
+                      } elseif ($issue_code === 'annotations-missing-accession') {
                         echo 'An accession is a unique identifier (like a UniProt ID or NCBI accession number). Annotations should have accession values for proper identification and linking to external databases. Missing accessions prevent proper data cross-referencing.';
-                      } elseif (strpos($issue, 'Features without organism') !== false) {
+                      } elseif ($issue_code === 'features-without-organism') {
                         echo 'Features (genes, proteins, etc.) exist in the database but are not properly linked to an organism record. They cannot be associated with the correct biological entity.';
                       }
                     ?>
@@ -184,7 +188,7 @@
       </div>
 
       <?php if ($assembly_validation): ?>
-        <h6 class="fw-bold mb-2"><i class="fa fa-folder"></i> Assembly Validation <?= req_info('For each genome record in the database, a directory must exist in the organism folder whose name matches the genome_name or genome_accession.') ?></h6>
+        <h6 class="fw-bold mb-2"><i class="fa fa-folder"></i> Assembly Validation <?= field_help('For each genome record in the database, a directory must exist in the organism folder whose name matches the genome_name or genome_accession.', 'What this section needs') ?></h6>
         <div class="card mb-3 <?= $assembly_validation['valid'] ? 'border-success' : 'border-danger border-2' ?>">
           <div class="card-body small">
             <?php if ($assembly_validation['valid'] && empty($assembly_validation['mismatches'])): ?>

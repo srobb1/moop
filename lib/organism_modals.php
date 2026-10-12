@@ -13,18 +13,6 @@
  */
 
 
-/**
- * Small (i) info icon whose native tooltip carries a section's "what's required" note,
- * replacing the bulky blue alert boxes so each modal's actual data reads first.
- */
-function req_info(string $text, string $title = 'What this section needs'): string {
-    return '<a role="button" tabindex="0" class="text-info ms-1" style="cursor:pointer; font-weight:normal;"'
-         . ' data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top"'
-         . ' data-bs-title="' . htmlspecialchars($title, ENT_QUOTES) . '"'
-         . ' data-bs-content="' . htmlspecialchars($text, ENT_QUOTES) . '">'
-         . '<i class="fa fa-info-circle"></i></a>';
-}
-
 /** Render one modal view with its data. */
 function organism_modal_render(string $view, array $vars): void {
     extract($vars);
@@ -178,7 +166,10 @@ function organism_modal_asm_data($organism, $assembly, $data, $sequence_types, $
     $gene_set_dirs_live = [];
     if (is_dir($assembly_path)) {
         foreach (array_diff(scandir($assembly_path), ['.', '..']) as $f) {
-            if (is_dir("$assembly_path/$f")) $gene_set_dirs_live[] = $f;
+            // is_gene_set_dir(): a gene set is identified by its FASTA payload, as on the
+            // setup checklist. Every subdirectory used to count, so an empty leftover
+            // (Schmidtea's *_orig dirs) was listed as a gene set missing all its FASTAs.
+            if (is_gene_set_dir("$assembly_path/$f")) $gene_set_dirs_live[] = $f;
         }
     }
     sort($gene_set_dirs_live);

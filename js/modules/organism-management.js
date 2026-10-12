@@ -791,7 +791,13 @@ async function openOrganismModal(type, organism, assembly) {
         // Enable click-to-open info popovers on section headers (the (i) icons that
         // replaced the old "Required:" boxes). Bootstrap's data-api does not auto-init
         // popovers, so wire them up explicitly after injecting the modal HTML.
-        modalEl.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
+        // Section (i) icons are the shared field_help() buttons: let field-help.js set them
+        // up (it also drops the no-JS title fallback, so no tooltip doubles the popover),
+        // then any other popover in the modal; never two instances on one element.
+        if (window.MoopFieldHelp) window.MoopFieldHelp.init(modalEl);
+        modalEl.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+          if (!bootstrap.Popover.getInstance(el)) new bootstrap.Popover(el);
+        });
 
         // Re-apply Bootstrap modal behaviour after innerHTML replacement
         bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
