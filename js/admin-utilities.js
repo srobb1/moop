@@ -170,30 +170,3 @@ function refreshOrganismCache(btn, statusEl, force = false, label = '<i class="f
       if (statusEl) statusEl.textContent = 'Failed: ' + err;
     });
 }
-
-/**
- * Generate taxonomy tree button used in organism_checklist.php
- */
-function initGenerateTreeButton() {
-  const btn = document.getElementById('generateTreeBtn');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    refreshOrganismCache(
-      btn,
-      document.getElementById('generateTreeStatus'),
-      false,
-      btn.innerHTML
-    );
-  });
-}
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', initGenerateTreeButton);
-
-// Also try immediate initialization in case DOMContentLoaded already fired
-if (document.readyState === 'loading') {
-  // DOM is still loading, wait for DOMContentLoaded
-} else {
-  // DOM is already loaded
-  initGenerateTreeButton();
-}

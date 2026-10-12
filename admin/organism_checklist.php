@@ -35,6 +35,7 @@ $data = [
     'sequence_types' => $sequence_types,
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
+        '/' . $config->getString('site') . '/js/organism-checklist.js',
     ],
 ];
 $data = array_merge($data, $checks);
