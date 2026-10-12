@@ -759,13 +759,21 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
     }
     sort($gene_set_dirs_live);
 
-    // Classify sequence types: assembly-level (file found directly) vs gene_set-level
+    // Classify sequence types BY KEY: 'genome' is the assembly-level FASTA, the rest
+    // live in each gene set -- the rule getAssemblyFastaFiles() and the checklist use.
+    //
+    // This used to classify by where a file was FOUND: a type with a file directly in
+    // the assembly dir was assembly-level, anything else was expected per gene set. So an
+    // assembly with no genome (transcriptome/proteome-only -- 24 of 96 here, by design)
+    // had genome.fa "Missing" inside every gene set and a red "Missing required FASTA
+    // files" summary, in the same modal that says a genome is not applicable to it.
     $asm_level_files = [];   // [type => ['config'=>..., 'file'=>string]]
     $gs_level_types  = [];   // [type => config]  — checked per gene_set
     foreach ($sequence_types as $type => $config) {
-        $direct = glob("$assembly_path/{$config['pattern']}") ?: [];
-        if (!empty($direct)) {
-            $asm_level_files[$type] = ['config' => $config, 'file' => basename($direct[0])];
+        if ($type === 'genome') {
+            if (file_exists("$assembly_path/{$config['pattern']}")) {
+                $asm_level_files[$type] = ['config' => $config, 'file' => $config['pattern']];
+            }
         } else {
             $gs_level_types[$type] = $config;
         }
@@ -776,9 +784,10 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
     foreach ($gene_set_dirs_live as $gs) {
         $gs_fasta_status[$gs] = [];
         foreach ($gs_level_types as $type => $config) {
-            $files = glob("$assembly_path/$gs/{$config['pattern']}") ?: [];
-            $gs_fasta_status[$gs][$type] = !empty($files)
-                ? ['found' => true,  'file' => basename($files[0])]
+            // file_exists, not glob: a pattern is a literal filename, and glob would read
+            // [ ] * ? in it as wildcards.
+            $gs_fasta_status[$gs][$type] = file_exists("$assembly_path/$gs/{$config['pattern']}")
+                ? ['found' => true,  'file' => $config['pattern']]
                 : ['found' => false, 'file' => null];
         }
     }
