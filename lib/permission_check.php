@@ -106,7 +106,7 @@ function moop_permission_check_mode(string $name): string {
  * checker: it told admins to make restricted data world-readable, and painted rows
  * red for modes that pass perfectly well by impact (660, 640, ...).
  */
-function moop_permission_expectation(string $mode, string $type, bool $sensitive = false): string {
+function moop_permission_expectation(string $mode, string $type, bool $sensitive = false, bool $build_dir = false): string {
     $is_dir = ($type === 'directory');
     // Sensitivity is a separate axis from the check_mode — a path can be web-writable AND
     // hold credentials — so it is appended rather than switched on.
@@ -119,6 +119,11 @@ function moop_permission_expectation(string $mode, string $type, bool $sensitive
                 ? 'Writable by the web server; SGID so new files inherit the group; not world-writable'
                 : 'Writable by the web server; not world-writable; not executable') . $suffix;
         default:
+            if ($is_dir && $build_dir) {
+                // moop_permission_needs_build_write(): data the web server also builds into.
+                return 'Writable by the web server (in-app builds create files here); SGID and the web '
+                     . 'server group so new files inherit it; not world-writable' . $suffix;
+            }
             return ($is_dir
                 ? 'Readable and traversable by the web server; not world-writable'
                 : 'Readable by the web server; not world-writable; not executable') . $suffix;
@@ -211,6 +216,19 @@ function moop_permission_fix_commands(array $check, string $moop_owner): array {
         }
     } else {
         if (empty($check['is_readable'])) $cmds[] = "sudo chmod {$R}g+rX $q";
+
+        // Data directories the web server builds into (performPermissionCheck's
+        // needs_build_write branch). DIRECTORIES only: `chmod -R 2775` would also mark
+        // every genome, database and index file executable -- which is how 234 such
+        // files got that way here.
+        if ($is_dir && moop_permission_needs_build_write((string)($check['name'] ?? ''))) {
+            if ($group !== '' && (string)($check['current_group'] ?? '') !== $group) {
+                $cmds[] = 'sudo chgrp -R ' . escapeshellarg($group) . " $q";
+            }
+            if (empty($check['is_writable']) || ($bits & 02000) === 0) {
+                $cmds[] = "sudo find $q -type d -exec chmod g+rwxs {} +";
+            }
+        }
     }
 
     // A path holding credentials that is open to `other`. Independent of check_mode: the
@@ -344,6 +362,25 @@ function moop_permission_needs_build_write(string $name): bool {
  * @param  list<string> $prune_paths absolute paths to skip (the writable rules' own paths)
  * @return list<string> up to $limit offending paths; empty means no evidence
  */
+/**
+ * The rule for one organism directory (organisms/{Organism}/).
+ *
+ * One definition, used by the full scan above AND by the Organism Setup Checklist, which
+ * checks each organism directory live. The checklist used to carry its own copy of this
+ * judgement -- writable / SGID / group -- while this scan checked readable / world-writable
+ * / writable, so each reported problems the other could not see.
+ */
+function moop_permission_organism_dir_rule(string $web_group): array {
+    return [
+        'name' => 'Organism Directory',
+        'type' => 'directory',
+        'required_perms' => '2775',
+        'required_group' => $web_group,
+        'reason' => 'SGID required for assembly rename operations',
+        'why_write' => 'Web server needs to rename/move assembly subdirectories',
+    ];
+}
+
 function moop_web_owned_evidence(string $dir, string $web_user, array $prune_paths = [], int $limit = 3): array {
     if ($web_user === '' || !is_dir($dir)) return [];
 
@@ -472,6 +509,25 @@ function performPermissionCheck($path, $item, $web_group = 'www-data') {
             $result['issues'][] = "Not writable by the web server ($web_group) — in-app builds"
                 . ' here (Build BLAST Index, samtools faidx, assembly rename) will fail';
             $bump('medium');
+        }
+        // ...and what it builds must stay readable to the next tool along. The web server
+        // and CLI scripts both create files in these directories; SGID makes every new
+        // file inherit the directory's group instead of its creator's. The rules always
+        // SAID this ('SGID required for assembly rename operations') but only the
+        // 'writable' branch ever checked it, and these directories are 'data' -- so it was
+        // enforced only by the Organism Setup Checklist's private copy of the rule.
+        // (SGID on a DIRECTORY is not what the SCAP baseline's unauthorized-SGID rule is
+        // about -- that one audits SGID executables.)
+        if ($result['type'] === 'directory' && moop_permission_needs_build_write($item['name'])) {
+            $want_group = $item['required_group'] ?? $web_group;
+            if (($mode_bits & 02000) === 0) {
+                $result['issues'][] = "Missing the SGID bit ($perms) — files built here will not inherit the $want_group group";
+                $bump('medium');
+            }
+            if ($group !== $want_group) {
+                $result['issues'][] = "Group is $group, should be $want_group — files built here inherit the wrong group";
+                $bump('medium');
+            }
         }
         // Does the web server write here despite being classified read-only? Skip the data
         // trees (organisms/, data/tracks): those ARE web-written by design and are only
@@ -1242,14 +1298,7 @@ function moop_collect_permission_checks($config): array {
                 $org_path = $organism_data . '/' . $organism;
 
                 // Check organism subdirectory itself
-                $check = performPermissionCheck($org_path, [
-                    'name' => 'Organism Directory',
-                    'type' => 'directory',
-                    'required_perms' => '2775',
-                    'required_group' => $web_group,
-                    'reason' => 'SGID required for assembly rename operations',
-                    'why_write' => 'Web server needs to rename/move assembly subdirectories',
-                ], $web_group);
+                $check = performPermissionCheck($org_path, moop_permission_organism_dir_rule($web_group), $web_group);
 
                 if (!empty($check['issues'])) {
                     $assembly_subdir_issues[] = $check;

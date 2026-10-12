@@ -1127,6 +1127,34 @@ exec('rm -rf ' . escapeshellarg($_bd));
 $_prop->setValue($_cm, $_saved);
 
 // ----------------------------------------------------------------------------
+group('Data directories the web builds into need SGID + the web group');
+// performPermissionCheck() only checked SGID/group in its 'writable' branch, and the
+// organism tree is 'data' -- so only the Organism Setup Checklist's private copy of the
+// rule ever enforced it. Hermetic: a temp dir, its own group standing in for the web group.
+require_once "$BASE/lib/permission_check.php";
+$_pd = sys_get_temp_dir() . '/moop_perm_smoke_' . getmypid();
+@mkdir($_pd, 0700, true);
+chmod($_pd, 0775);
+// Same lookup the checker uses: posix when present, else `stat` (CLI PHP here has no posix).
+$_grp = function_exists('posix_getgrgid') ? (posix_getgrgid(filegroup($_pd))['name'] ?? '')
+                                          : trim((string)shell_exec('stat -c %G ' . escapeshellarg($_pd)));
+foreach (['Organism Directory', 'Assembly Subdirectory: O/A', 'Gene Set Subdirectory: O/A/G'] as $_name) {
+    clearstatcache();
+    $_c = performPermissionCheck($_pd, ['name' => $_name, 'type' => 'directory', 'required_group' => $_grp], $_grp);
+    ok((bool)preg_grep('/Missing the SGID bit/', $_c['issues']), "$_name: missing SGID is reported");
+    ok(in_array("sudo find '$_pd' -type d -exec chmod g+rwxs {} +", moop_permission_fix_commands($_c, ''), true),
+       "$_name: fix touches directories only (find -type d), never chmod -R");
+}
+$_c = performPermissionCheck($_pd, ['name' => 'Organism Directory', 'type' => 'directory', 'required_group' => 'no-such-group-xyz'], 'no-such-group-xyz');
+ok((bool)preg_grep('/should be no-such-group-xyz/', $_c['issues']), 'wrong group is reported');
+chmod($_pd, 02775); clearstatcache();
+$_c = performPermissionCheck($_pd, ['name' => 'Organism Directory', 'type' => 'directory', 'required_group' => $_grp], $_grp);
+ok(empty($_c['issues']), 'SGID + correct group: clean');
+$_c = performPermissionCheck($_pd, ['name' => 'Some Other Data Directory', 'type' => 'directory'], $_grp);
+ok(!preg_grep('/SGID/', $_c['issues'] ?? []), 'non-build data directories are not held to SGID');
+@rmdir($_pd);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

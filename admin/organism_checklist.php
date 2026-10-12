@@ -38,6 +38,9 @@ $data = [
     ],
 ];
 $data = array_merge($data, $checks);
+// The dashboard's last background permission scan (housekeeping, at most an hour old),
+// summarised under the live per-organism check so the deeper levels are not out of sight.
+$data['perm_summary'] = $_SESSION['perm_summary'] ?? null;
 
 // Render page using layout system
 echo render_display_page(

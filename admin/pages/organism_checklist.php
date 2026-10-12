@@ -478,40 +478,49 @@
         <?php if (!empty($permission_issues)): ?>
           <div class="alert alert-warning mt-3">
             <i class="fa fa-exclamation-triangle"></i> <strong>Permission Issues Found in Organism Directories:</strong>
+            <div class="small mt-1">Required: <?= htmlspecialchars($permission_expectation) ?>.</div>
             <ul class="mb-0 mt-2">
               <?php foreach ($permission_issues as $item): ?>
                 <li>
-                  <strong><?= htmlspecialchars($item['organism']) ?></strong><br>
-                  Current: <?= $item['perms'] ?? 'unknown' ?> (group: <?= htmlspecialchars($item['group'] ?? 'unknown') ?>) | Required: 2775 (group: <?= htmlspecialchars($expected_group) ?>)
-                  <?php if (!empty($item['issues'])): ?>
-                    <ul class="mt-1 mb-0">
-                      <?php foreach ($item['issues'] as $issue): ?>
-                        <li><?= htmlspecialchars($issue) ?></li>
-                      <?php endforeach; ?>
-                    </ul>
+                  <strong><?= htmlspecialchars($item['organism']) ?></strong>
+                  <span class="text-muted">— currently <?= htmlspecialchars($item['current_perms'] ?? 'unknown') ?>, group <?= htmlspecialchars($item['current_group'] ?? 'unknown') ?></span>
+                  <ul class="mt-1 mb-0">
+                    <?php foreach ($item['issues'] as $issue): ?>
+                      <li><?= htmlspecialchars($issue) ?></li>
+                    <?php endforeach; ?>
+                  </ul>
+                  <?php if (!empty($item['fix_commands'])): ?>
+                    <div class="mt-1 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.85em;">
+                      <?php foreach ($item['fix_commands'] as $cmd): ?><?= htmlspecialchars($cmd) ?><br><?php endforeach; ?>
+                    </div>
                   <?php endif; ?>
                 </li>
               <?php endforeach; ?>
             </ul>
-            <?php // NOT `chmod -R 2775`: the -R applies 2775 to FILES too, making every
-                  // genome, database and BLAST index executable. That command — handed out
-                  // right here — is where 234 executable index files on this box came from.
-                  // Directories need the traverse bit; data files never do. Split them. ?>
-            <div class="mt-3 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.85em;">
-              <strong>To fix all organism directories, run:</strong><br>
-              sudo chgrp -R <?= htmlspecialchars($expected_group) ?> <?= escapeshellarg($organism_data) ?><br>
-              sudo find <?= escapeshellarg($organism_data) ?> -type d -exec chmod 2775 {} +<br>
-              sudo find <?= escapeshellarg($organism_data) ?> -type f -exec chmod a-x {} +
+            <?php // Files never get the execute bit: the fixes above touch DIRECTORIES only.
+                  // `chmod -R 2775` once handed out here is where 234 executable index files
+                  // on this box came from. ?>
+            <div class="small mt-2">If data files were made executable by an earlier recursive chmod:</div>
+            <div class="p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.85em;">
+              <?= htmlspecialchars($exec_files_fix_command) ?>
             </div>
           </div>
         <?php else: ?>
           <div class="alert alert-success mt-3">
-            <i class="fa fa-check-circle"></i> Organism directories have proper permissions (2775, <?= htmlspecialchars($expected_group) ?> group)!
+            <i class="fa fa-check-circle"></i> All <?= count($organisms_in_system) ?> organism directories pass:
+            <?= htmlspecialchars($permission_expectation) ?>.
           </div>
         <?php endif; ?>
 
         <p class="mt-3"><strong>Full Detailed Check:</strong> <a href="manage_filesystem_permissions.php" class="btn btn-primary"><i class="fa fa-lock"></i> Manage Filesystem Permissions</a></p>
-        <small class="text-muted d-block mt-2"><i class="fa fa-info-circle"></i> The full page checks organism directories, assembly subdirectories, FASTA files, and other critical paths</small>
+        <small class="text-muted d-block mt-2"><i class="fa fa-info-circle"></i>
+          This card checks the organism directories live. The full page checks every assembly and
+          gene set directory, the FASTA files, and the rest of the site with the same rules<?php
+          if (!empty($perm_summary['checked_at'])): ?> — its last background scan
+          (<?= htmlspecialchars($perm_summary['checked_at']) ?>) found
+          <?= (int)($perm_summary['finding_count'] ?? 0) ?> issue area<?= ((int)($perm_summary['finding_count'] ?? 0)) === 1 ? '' : 's' ?><?php
+          endif; ?>.
+        </small>
       </div>
     </div>
 

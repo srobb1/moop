@@ -13,6 +13,7 @@
  */
 
 require_once __DIR__ . '/blast_functions.php';
+require_once __DIR__ . '/permission_check.php';
 
 /**
  * Run every checklist check.
@@ -43,6 +44,8 @@ function organism_checklist_checks(string $organism_data, array $sequence_types,
         'fai_issues'            => organism_checklist_fai_issues($organism_data, $organisms_in_system),
         'expected_group'        => $web_server_info['group'],
         'permission_issues'     => organism_checklist_permission_issues($organism_data, $organisms_in_system, $web_server_info['group']),
+        'permission_expectation'=> moop_permission_expectation('data', 'directory', false, true),
+        'exec_files_fix_command'=> moop_permission_fix_exec_files_command($organism_data),
         'gene_sets_missing_gff' => organism_checklist_gene_sets_missing_gff($organism_data, $organisms_in_system, $sequence_types),
         'organisms_not_in_tree' => organism_checklist_not_in_tree($organisms_in_system, "$metadata_path/taxonomy_tree_config.json"),
         'unassigned_organisms'  => organism_checklist_unassigned("$metadata_path/organism_assembly_groups.json", $organisms_in_system),
@@ -144,73 +147,29 @@ function organism_checklist_fai_issues(string $organism_data, array $organisms):
     return $fai_issues;
 }
 
-/** Quick permission check on each organism directory. */
+/**
+ * Organism directories that fail the SHARED organism-directory rule
+ * (moop_permission_organism_dir_rule() + performPermissionCheck() in
+ * lib/permission_check.php) -- the same judgement the dashboard and the Filesystem
+ * Permissions page apply, run live here on just these directories.
+ *
+ * This used to be a private copy of the rule (writable / SGID / group) while the shared
+ * checker tested readable / world-writable / writable, so each reported problems the
+ * other could not see. Each row is the shared checker's result plus 'organism' and the
+ * fix commands it suggests.
+ */
 function organism_checklist_permission_issues(string $organism_data, array $organisms, string $expected_group): array
 {
+    $rule  = moop_permission_organism_dir_rule($expected_group);
+    $owner = getMoopOwner();
+
     $permission_issues = [];
     foreach ($organisms as $org) {
-        $org_dir = "$organism_data/$org";
-
-        if (!file_exists($org_dir)) {
-            $permission_issues[] = [
-                'organism' => $org,
-                'path' => $org_dir,
-                'issues' => ['Directory does not exist']
-            ];
-            continue;
-        }
-
-        // Get full permission with leading digits (e.g., 2775, 0755)
-        $perms_full = substr(sprintf('%o', fileperms($org_dir)), -4);
-        $perms = ltrim($perms_full, '0') ?: '0';
-
-        $group = 'unknown';
-        if (function_exists('posix_getgrgid')) {
-            $gr = posix_getgrgid(filegroup($org_dir));
-            if ($gr) { $group = $gr['name']; }
-        } elseif ($org_dir) {
-            $stat_out = [];
-            @exec("stat -c '%G' " . escapeshellarg($org_dir) . " 2>/dev/null", $stat_out);
-            if (!empty($stat_out[0]) && $stat_out[0] !== 'UNKNOWN') { $group = $stat_out[0]; }
-        }
-
-        $issues = [];
-
-        // Judge by IMPACT, not by an exact mode string — same rule the dashboard and
-        // the Filesystem Permissions page use (lib/permission_check.php). The old test
-        // here was `$perms !== '2775'`, which is wrong in both directions: it flags an
-        // apache-owned 2755 directory the web CAN write, and it would pass a 2775
-        // directory whose SELinux label blocks writes anyway.
-        //
-        // What actually matters: can the web server CREATE files here? makeblastdb and
-        // samtools faidx write new files, and creating a file needs write on the parent
-        // directory, not on the file.
-        if (!is_writable($org_dir)) {
-            $issues[] = "The web server ($expected_group) cannot write here — "
-                      . "Build BLAST Index and index generation will fail ($perms)";
-        }
-
-        // SGID keeps new files in the web group. Without it, files created here inherit
-        // the creator's group and the next tool along cannot read them.
-        if (!($perms_full[0] === '2')) {
-            $issues[] = "Missing the SGID bit ($perms) — new files here will not inherit "
-                      . "the $expected_group group";
-        }
-
-        // Check group matches the web server group
-        if ($group !== $expected_group) {
-            $issues[] = "Group is $group, should be $expected_group";
-        }
-
-        if (!empty($issues)) {
-            $permission_issues[] = [
-                'organism' => $org,
-                'path' => $org_dir,
-                'perms' => $perms,
-                'group' => $group,
-                'issues' => $issues
-            ];
-        }
+        $check = performPermissionCheck("$organism_data/$org", $rule, $expected_group);
+        if (empty($check['issues'])) continue;
+        $check['organism']     = $org;
+        $check['fix_commands'] = moop_permission_fix_commands($check, $owner);
+        $permission_issues[] = $check;
     }
     return $permission_issues;
 }
