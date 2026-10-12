@@ -41,7 +41,9 @@ $excluded_exts = array_flip([
 // Filenames excluded from listing (internal data files not intended for download)
 $excluded_filenames = array_flip([
     'feature_coords.tsv',
+    'exon_coords.tsv',
     'annotated_feature_types.json',
+    'jbrowse_tracks_sheet.txt',
 ]);
 
 function _downloads_format_size(int $bytes): string {
@@ -49,6 +51,64 @@ function _downloads_format_size(int $bytes): string {
     if ($bytes >= 1048576)    return round($bytes / 1048576,    1) . ' MB';
     if ($bytes >= 1024)       return round($bytes / 1024,       1) . ' KB';
     return $bytes . ' B';
+}
+
+/**
+ * List the downloadable files directly inside $dir (not recursive), sorted with the
+ * priority extensions first. Used for both a gene-set directory and its assembly
+ * directory, so the two can never disagree about what is offered.
+ */
+function _downloads_list_files(string $dir, array $excluded_exts, array $excluded_filenames, array $ext_priority): array {
+    $files = [];
+    foreach (scandir($dir) as $fname) {
+        if ($fname === '.' || $fname === '..') continue;
+        $fpath = "$dir/$fname";
+        if (!is_file($fpath)) continue;
+        $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+        if (isset($excluded_exts[$ext]))       continue;
+        if (isset($excluded_filenames[$fname])) continue;
+
+        $size = (int) filesize($fpath);
+
+        // Determine display color class from the CONFIGURED sequence-type patterns.
+        // These four filenames used to be hardcoded here, which made this comment untrue:
+        // renaming a pattern in Site Configuration left the matching files uncoloured.
+        // The colour per type stays local — it is a download-list text colour, deliberately
+        // not the badge background in sequence_types[*]['color'].
+        static $seq_type_colors = [
+            'protein'    => 'feature-color-protein',
+            'transcript' => 'feature-color-mrna',
+            'cds'        => 'feature-color-gene',
+            'genome'     => 'text-assembly',
+        ];
+        $color_class = '';
+        $fname_lower = strtolower($fname);
+        foreach (ConfigManager::getInstance()->getSequenceTypes() as $seq_type => $seq_config) {
+            $pattern = strtolower($seq_config['pattern'] ?? '');
+            if ($pattern !== '' && isset($seq_type_colors[$seq_type]) && str_contains($fname_lower, $pattern)) {
+                $color_class = $seq_type_colors[$seq_type];
+                break;
+            }
+        }
+        if ($color_class === '' && in_array($ext, ['gff', 'gff3', 'gtf'])) $color_class = 'text-success';
+
+        $files[] = [
+            'name'        => $fname,
+            'size'        => $size,
+            'size_label'  => _downloads_format_size($size),
+            'color_class' => $color_class,
+        ];
+    }
+
+    usort($files, function ($a, $b) use ($ext_priority) {
+        $ea = strtolower(pathinfo($a['name'], PATHINFO_EXTENSION));
+        $eb = strtolower(pathinfo($b['name'], PATHINFO_EXTENSION));
+        $pa = $ext_priority[$ea] ?? 999;
+        $pb = $ext_priority[$eb] ?? 999;
+        return $pa !== $pb ? $pa - $pb : strcmp($a['name'], $b['name']);
+    });
+
+    return $files;
 }
 
 // Get accessible assemblies
@@ -103,6 +163,8 @@ $ext_priority = array_flip(['fa', 'fasta', 'faa', 'gff', 'gff3', 'gtf', 'bed', '
 // Build download tree: $download_tree[organism][assembly] = ['files' => [...], 'file_count' => N, 'total_label' => '...']
 $download_tree = [];
 $assembly_labels = [];   // [organism][accession] => "Name (Accession)"
+$assembly_files  = [];   // [organism][accession] => same shape as a gene-set entry
+$assembly_files_seen = [];
 
 foreach ($unique_sources as $source) {
     $organism      = $source['organism'];
@@ -112,56 +174,29 @@ foreach ($unique_sources as $source) {
 
     if (!is_dir($gene_set_path)) continue;
 
-    $files = [];
-    foreach (scandir($gene_set_path) as $fname) {
-        if ($fname === '.' || $fname === '..') continue;
-        $fpath = "$gene_set_path/$fname";
-        if (!is_file($fpath)) continue;
-        $ext = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
-        if (isset($excluded_exts[$ext]))       continue;
-        if (isset($excluded_filenames[$fname])) continue;
+    $files = _downloads_list_files($gene_set_path, $excluded_exts, $excluded_filenames, $ext_priority);
 
-        $size = (int) filesize($fpath);
-
-        // Determine display color class from the CONFIGURED sequence-type patterns.
-        // These four filenames used to be hardcoded here, which made this comment untrue:
-        // renaming a pattern in Site Configuration left the matching files uncoloured.
-        // The colour per type stays local — it is a download-list text colour, deliberately
-        // not the badge background in sequence_types[*]['color'].
-        static $seq_type_colors = [
-            'protein'    => 'feature-color-protein',
-            'transcript' => 'feature-color-mrna',
-            'cds'        => 'feature-color-gene',
-            'genome'     => 'text-assembly',
-        ];
-        $color_class = '';
-        $fname_lower = strtolower($fname);
-        foreach (ConfigManager::getInstance()->getSequenceTypes() as $seq_type => $seq_config) {
-            $pattern = strtolower($seq_config['pattern'] ?? '');
-            if ($pattern !== '' && isset($seq_type_colors[$seq_type]) && str_contains($fname_lower, $pattern)) {
-                $color_class = $seq_type_colors[$seq_type];
-                break;
-            }
+    // The genome FASTA lives one level up, at the ASSEMBLY, shared by every gene set
+    // under it -- so a gene-set-only scan never offered it (the page listed no genome
+    // for any organism). Scanned once per assembly, served with no gene_set param,
+    // which download_file.php gates on has_assembly_access(). That passes for anyone
+    // who can see a gene set of this assembly, which is what put it in this loop.
+    $asm_key = $organism . "\0" . $assembly;
+    if (!isset($assembly_files_seen[$asm_key])) {
+        $assembly_files_seen[$asm_key] = true;
+        $asm_files = _downloads_list_files(dirname($gene_set_path), $excluded_exts, $excluded_filenames, $ext_priority);
+        if (!empty($asm_files)) {
+            $assembly_files[$organism][$assembly] = [
+                'files'       => $asm_files,
+                'file_count'  => count($asm_files),
+                'total_label' => _downloads_format_size(array_sum(array_column($asm_files, 'size'))),
+            ];
+            $assembly_labels[$organism][$assembly] = assembly_label($source['genome_name'] ?? '', $assembly);
+            $download_tree[$organism][$assembly] ??= [];
         }
-        if ($color_class === '' && in_array($ext, ['gff', 'gff3', 'gtf'])) $color_class = 'text-success';
-
-        $files[] = [
-            'name'        => $fname,
-            'size'        => $size,
-            'size_label'  => _downloads_format_size($size),
-            'color_class' => $color_class,
-        ];
     }
 
     if (empty($files)) continue;
-
-    usort($files, function ($a, $b) use ($ext_priority) {
-        $ea = strtolower(pathinfo($a['name'], PATHINFO_EXTENSION));
-        $eb = strtolower(pathinfo($b['name'], PATHINFO_EXTENSION));
-        $pa = $ext_priority[$ea] ?? 999;
-        $pb = $ext_priority[$eb] ?? 999;
-        return $pa !== $pb ? $pa - $pb : strcmp($a['name'], $b['name']);
-    });
 
     $total_size = array_sum(array_column($files, 'size'));
 
@@ -220,6 +255,7 @@ $data = [
     'siteTitle'        => $siteTitle,
     'download_tree'    => $download_tree,
     'assembly_labels'  => $assembly_labels,
+    'assembly_files'   => $assembly_files,
     'context_organism' => $context_organism,
     'context_assembly' => $context_assembly,
     'context_gene_set' => $context_gene_set,
