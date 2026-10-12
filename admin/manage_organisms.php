@@ -45,25 +45,17 @@ if (file_exists($cache_file)) {
 $stale_organisms = [];
 $cache_stale_reason = null;
 if ($raw_cache) {
-    $cached_config_fp = $raw_cache['config_fingerprint'] ?? null;
-    $current_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
-    if ($cached_config_fp !== $current_config_fp) {
-        // Config (groups/taxonomy) changed — show the banner so the user knows a refresh
-        // is needed, but don't mark individual rows as stale. The per-row badge means
-        // that organism's own files changed; a groups edit doesn't change any organism's
-        // files, and the cache refresh for this case is fast (no DB/FASTA/BLAST recheck).
+    // Config (groups/taxonomy) changed: banner only, no row marked stale -- see
+    // moop_organism_cache_staleness(). Otherwise the organisms whose own files changed.
+    $staleness = moop_organism_cache_staleness($raw_cache, $organism_data, $taxonomy_tree_file, $groups_file);
+    if ($staleness['config_changed']) {
         $cache_stale_reason = 'groups or taxonomy config changed';
     } else {
-        $cached_org_fps = $raw_cache['org_fingerprints'] ?? [];
-        $current_org_fps = buildPerOrganismFingerprints($organism_data);
-        foreach ($current_org_fps as $org_name => $fp) {
-            if (($cached_org_fps[$org_name] ?? null) !== $fp) {
-                $stale_organisms[] = $org_name;
-            }
-        }
+        $stale_organisms = $staleness['changed'];
+        $current_org_fps = $staleness['current_fps'];
         // Remove organisms that no longer exist on disk — update cache immediately
         // so they disappear on page reload without needing a full background refresh.
-        $deleted = array_diff(array_keys($cached_org_fps), array_keys($current_org_fps));
+        $deleted = $staleness['deleted'];
         if (!empty($deleted)) {
             foreach ($deleted as $org_name) {
                 unset($organisms[$org_name]);

@@ -1155,6 +1155,28 @@ ok(!preg_grep('/SGID/', $_c['issues'] ?? []), 'non-build data directories are no
 @rmdir($_pd);
 
 // ----------------------------------------------------------------------------
+group('Organism health lists shared by the dashboard and the setup checklist');
+// The checklist kept private copies of these and disagreed with the dashboard: its
+// "ungrouped" passed an organism if ANY entry had a group. One ungrouped assembly is
+// invisible to users, so the rule is per ASSEMBLY.
+require_once "$BASE/lib/functions_data.php";
+$_cache = [
+    'Allgrouped' => ['assemblies' => ['A1', 'A2'], 'overall_status' => ['checks' => ['in_taxonomy_tree' => true]]],
+    'Halfgrouped'=> ['assemblies' => ['B1', 'B2'], 'overall_status' => ['checks' => ['in_taxonomy_tree' => false]]],
+    'Nogroups'   => ['assemblies' => ['C1'],       'overall_status' => ['checks' => []]],
+];
+$_groups = [
+    ['organism' => 'Allgrouped',  'assembly' => 'A1', 'groups' => ['G']],
+    ['organism' => 'Allgrouped',  'assembly' => 'A2', 'groups' => ['G']],
+    ['organism' => 'Halfgrouped', 'assembly' => 'B1', 'groups' => ['G']],
+    ['organism' => 'Halfgrouped', 'assembly' => 'B2', 'groups' => []],
+];
+ok(getUngroupedOrganisms($_cache, $_groups) === ['Halfgrouped', 'Nogroups'],
+   'ungrouped is per assembly: one ungrouped assembly makes the organism ungrouped');
+ok(getOrganismsNotInTree($_cache) === ['Halfgrouped'],
+   'not-in-tree reads the cache flag; a missing flag is not reported as absent');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

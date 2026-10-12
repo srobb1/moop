@@ -61,6 +61,29 @@
   <div class="mt-5">
     <h3 class="mb-3"><i class="fa fa-tasks"></i> Setup Steps</h3>
 
+    <?php // Most checks below read the organism cache -- the same results Manage Organisms
+          // and the dashboard show. Say how fresh that is, and what has changed since. ?>
+    <div class="alert <?= ($cache_stale_organisms || $cache_config_changed || !$cache_generated) ? 'alert-warning' : 'alert-light border' ?> small">
+      <i class="fa fa-clock"></i>
+      <?php if (!$cache_generated): ?>
+        No organism cache yet, so database, BLAST, index, tree and group checks have nothing to report.
+      <?php else: ?>
+        Database, BLAST, index, tree and group checks come from the organism cache, last refreshed
+        <strong><?= htmlspecialchars($cache_generated) ?></strong> &mdash; the same results Manage Organisms shows.
+        <?php if ($cache_stale_organisms): ?>
+          Changed on disk since then: <strong><?= htmlspecialchars(implode(', ', $cache_stale_organisms)) ?></strong>.
+        <?php elseif ($cache_config_changed): ?>
+          The groups or taxonomy config has changed since then.
+        <?php endif; ?>
+      <?php endif; ?>
+      <?php if ($cache_stale_organisms || $cache_config_changed || !$cache_generated): ?>
+        <button type="button" class="btn btn-sm btn-warning ms-2" id="checklistRefreshCacheBtn">
+          <i class="fa fa-sync-alt"></i> Refresh cache
+        </button>
+        <span id="checklistRefreshCacheStatus" class="ms-2"></span>
+      <?php endif; ?>
+    </div>
+
 
     <!-- Step 1: Copy Files -->
     <div class="card mb-3">
@@ -252,11 +275,12 @@
         </div>
 
         <!-- organism.sqlite Status Check -->
+        <?php $db_problem_count = count($no_database_organisms) + count($empty_database_organisms); ?>
         <div class="mt-4">
           <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#sqliteStatusStep1" role="button" tabindex="0">
-            <i class="fa fa-database"></i> Database File Status 
-            <?php if (!empty($missing_sqlite)): ?>
-              <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> <?= count($missing_sqlite) ?> Missing</span>
+            <i class="fa fa-database"></i> Database Status
+            <?php if ($db_problem_count): ?>
+              <span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> <?= $db_problem_count ?> Need attention</span>
             <?php else: ?>
               <span class="badge bg-success"><i class="fa fa-check"></i> OK</span>
             <?php endif; ?>
@@ -264,24 +288,34 @@
           </h6>
           <div class="collapse show" id="sqliteStatusStep1">
 
-            <?php if (!empty($missing_sqlite)): ?>
+            <?php if (!empty($no_database_organisms)): ?>
               <div class="alert alert-warning">
-                <i class="fa fa-exclamation-triangle"></i> <strong>Missing organism.sqlite files:</strong>
-                <p class="mb-3 mt-2">The following organisms don't have an <code>organism.sqlite</code> database file:</p>
+                <i class="fa fa-exclamation-triangle"></i> <strong>No <code>organism.sqlite</code>:</strong>
+                <p class="mb-2 mt-2">These organisms have assembly data on disk but no database, so nothing about their genes can be searched or shown:</p>
                 <div class="bg-light p-2 rounded mb-3" style="max-height: 150px; overflow-y: auto;">
                   <ul class="mb-0">
-                    <?php foreach ($missing_sqlite as $org): ?>
+                    <?php foreach ($no_database_organisms as $org): ?>
                       <li><code><?= htmlspecialchars($org) ?>/organism.sqlite</code></li>
                     <?php endforeach; ?>
                   </ul>
                 </div>
-                
-                <p class="mb-2"><strong>What to do:</strong></p>
-                <ul class="mb-2">
-                  <li>Create your own <code>organism.sqlite</code> file with gene/feature data</li>
-                  <li>Or use an empty placeholder database to get started</li>
-                  <li>See the <a href="/<?= htmlspecialchars($config->getString('site')) ?>/help.php?topic=organism-data-organization#database-schema" target="_blank"><strong>Database Schema section</strong></a> in the organism data organization help for detailed information on file format and structure</li>
-                </ul>
+                <p class="mb-0">Build the database with the loading pipeline. See the <a href="/<?= htmlspecialchars($site) ?>/help.php?topic=organism-data-organization#database-schema" target="_blank"><strong>Database Schema section</strong></a> for the file format and structure.</p>
+              </div>
+            <?php endif; ?>
+
+            <?php if (!empty($empty_database_organisms)): ?>
+              <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i> <strong>Database present but holds no usable data:</strong>
+                <p class="mb-2 mt-2">These open fine, so a file check passes them &mdash; but users searching them get no results:</p>
+                <div class="bg-light p-2 rounded mb-3" style="max-height: 150px; overflow-y: auto;">
+                  <ul class="mb-0">
+                    <?php foreach ($empty_database_organisms as $e): ?>
+                      <li><code><?= htmlspecialchars($e['organism']) ?></code>
+                        <span class="text-muted small">&mdash; <?= htmlspecialchars(implode('; ', $e['issues'])) ?></span></li>
+                    <?php endforeach; ?>
+                  </ul>
+                </div>
+                <p class="mb-0">Reload the database. Details per organism are in <a href="manage_organisms.php?filter=db-content"><strong>Manage Organisms</strong></a>.</p>
               </div>
             <?php endif; ?>
           </div>

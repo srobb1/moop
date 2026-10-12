@@ -1288,6 +1288,77 @@ function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
  *   taxonomy_suggestions: array
  * }
  */
+/**
+ * How far the organism cache has fallen behind the disk -- cheap (filemtime + scandir,
+ * a few ms), so a page can say so instead of silently showing old results.
+ *
+ * Moved out of admin/manage_organisms.php so the setup checklist, which now reads the
+ * cache too, applies the same test rather than a third copy of it.
+ *
+ * If the groups/taxonomy config changed, that alone is reported: the refresh for it is
+ * quick and does not recheck any organism's files, so no row is marked stale.
+ *
+ * @return array{config_changed: bool, changed: string[], deleted: string[], current_fps: array}
+ */
+function moop_organism_cache_staleness(array $raw_cache, string $organism_data,
+                                       string $taxonomy_tree_file, string $groups_file): array {
+    $out = ['config_changed' => false, 'changed' => [], 'deleted' => [], 'current_fps' => []];
+    if (!$raw_cache) return $out;
+
+    if (($raw_cache['config_fingerprint'] ?? null) !== buildConfigFingerprint($taxonomy_tree_file, $groups_file)) {
+        $out['config_changed'] = true;
+        return $out;
+    }
+
+    $cached_fps  = $raw_cache['org_fingerprints'] ?? [];
+    $current_fps = buildPerOrganismFingerprints($organism_data);
+    foreach ($current_fps as $org_name => $fp) {
+        if (($cached_fps[$org_name] ?? null) !== $fp) $out['changed'][] = $org_name;
+    }
+    $out['deleted']     = array_values(array_diff(array_keys($cached_fps), array_keys($current_fps)));
+    $out['current_fps'] = $current_fps;
+    return $out;
+}
+
+/**
+ * Organisms the organism cache marks as missing from the homepage taxonomy tree.
+ * Shared by the dashboard/Manage Organisms health alerts and the setup checklist, so
+ * the count on one and the list on the other are the same set.
+ */
+function getOrganismsNotInTree(array $cache_data): array {
+    $out = [];
+    foreach ($cache_data as $org_name => $org_data) {
+        $checks = $org_data['overall_status']['checks'] ?? [];
+        if (isset($checks['in_taxonomy_tree']) && !$checks['in_taxonomy_tree']) $out[] = $org_name;
+    }
+    sort($out);
+    return $out;
+}
+
+/**
+ * Organisms with at least one assembly that has no group entry -- that assembly is
+ * invisible to users. Per ASSEMBLY on purpose: an organism with one grouped and one
+ * ungrouped assembly is NOT fine. Shared by the health alerts and the setup checklist
+ * (whose private copy, until 2026-10-12, passed an organism if ANY entry had a group).
+ *
+ * @param array $cache_data     Organism cache 'data'
+ * @param array $groups_entries organism_assembly_groups.json, decoded
+ */
+function getUngroupedOrganisms(array $cache_data, array $groups_entries): array {
+    $grouped_pairs = [];
+    foreach ($groups_entries as $ge) {
+        if (!empty($ge['groups'])) $grouped_pairs[($ge['organism'] ?? '') . '/' . ($ge['assembly'] ?? '')] = true;
+    }
+    $out = [];
+    foreach ($cache_data as $org_name => $org_data) {
+        foreach ($org_data['assemblies'] ?? [] as $asm) {
+            if (!isset($grouped_pairs["$org_name/$asm"])) { $out[] = $org_name; break; }
+        }
+    }
+    sort($out);
+    return $out;
+}
+
 function computeDataHealthAlerts(string $organism_data_path): array {
     $config        = ConfigManager::getInstance();
     $metadata_path = $config->getPath('metadata_path');
@@ -1315,12 +1386,8 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     // the organism cache. This reads the codes it now emits -- no database is opened here.
     $empty_db_codes = moop_db_content_issue_codes();
     $empty_database_organisms = [];
+    $health_alerts['not_in_tree'] = count(getOrganismsNotInTree($cache_data));
     foreach ($cache_data as $org_name => $org_data) {
-        $checks = $org_data['overall_status']['checks'] ?? [];
-        if (isset($checks['in_taxonomy_tree']) && !$checks['in_taxonomy_tree']) {
-            $health_alerts['not_in_tree']++;
-        }
-
         // data_issues (prose) and data_issue_codes (machine) are built in lockstep, so the
         // index that matched a code selects that code's own message.
         $codes  = $org_data['db_validation']['data_issue_codes'] ?? [];
@@ -1361,16 +1428,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
 
     // LIVE groups file — keeps grouping checks accurate right after a group edit.
     $gd = loadJsonFile($groups_file, []);
-    $grouped_pairs = [];
-    foreach ($gd as $ge) {
-        if (!empty($ge['groups'])) $grouped_pairs[$ge['organism'] . '/' . $ge['assembly']] = true;
-    }
-    // Organisms where any cached assembly has no group entry (invisible to users).
-    foreach ($cache_data as $org_name => $org_data) {
-        foreach ($org_data['assemblies'] ?? [] as $asm) {
-            if (!isset($grouped_pairs["$org_name/$asm"])) { $health_alerts['ungrouped']++; break; }
-        }
-    }
+    $health_alerts['ungrouped'] = count(getUngroupedOrganisms($cache_data, $gd));
     // Group entries whose gene-set directory no longer exists on disk.
     foreach ($gd as $ge) {
         $gs = $ge['gene_set'] ?? 'v1';

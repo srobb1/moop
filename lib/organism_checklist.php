@@ -2,14 +2,20 @@
 /**
  * Organism Setup Checklist — the checks behind admin/organism_checklist.php.
  *
- * These ran inside the page template (admin/pages/organism_checklist.php) until
- * 2026-10-12: nine separate filesystem sweeps interleaved with the HTML, two of them
- * duplicates (the organism list was built twice, and "missing organism.json" was
- * computed twice under two names). They are collected here so the page only renders,
- * every check reads the same organism list, and each can be tested on its own.
+ * Until 2026-10-12 these ran inside the page template, and then (briefly) here, as the
+ * checklist's OWN scans of the disk. Manage Organisms and the dashboard meanwhile read
+ * the organism cache and computeDataHealthAlerts() -- so the three pages could disagree
+ * about the same organism, and did: the checklist called two empty databases "OK" while
+ * the other two flagged them, and its "ungrouped" test was looser than theirs.
  *
- * Behaviour was moved, not changed: the rendered page is byte-identical before and
- * after the move. Corrections to the checks themselves are separate commits.
+ * Now every check that the shared code already makes is READ from it:
+ *   database present / empty      computeDataHealthAlerts()
+ *   BLAST indexes, genome .fai    organism cache (blast_validation, fai_validation)
+ *   taxonomy tree, groups         getOrganismsNotInTree(), getUngroupedOrganisms()
+ *   directory permissions         moop_permission_organism_dir_rule() (live)
+ * Only checks nothing else makes stay live here: organism.json present, gene sets with
+ * no genes.gff. The cache is as fresh as its last refresh, so the page reports which
+ * organisms changed on disk since then (the same fingerprint test Manage Organisms uses).
  */
 
 require_once __DIR__ . '/blast_functions.php';
@@ -27,28 +33,37 @@ function organism_checklist_checks(string $organism_data, array $sequence_types,
 {
     $organisms_in_system = organism_checklist_organisms($organism_data);
 
-    $missing_sqlite = [];
-    $missing_json   = [];
+    $raw_cache  = loadJsonFile(moop_organism_cache_file(), []);
+    $cache_data = is_array($raw_cache) ? ($raw_cache['data'] ?? []) : [];
+    $staleness  = moop_organism_cache_staleness(is_array($raw_cache) ? $raw_cache : [], $organism_data,
+                      "$metadata_path/taxonomy_tree_config.json", "$metadata_path/organism_assembly_groups.json");
+    $health     = computeDataHealthAlerts($organism_data);
+
+    $missing_json = [];
     foreach ($organisms_in_system as $org) {
-        if (!file_exists("$organism_data/$org/organism.sqlite")) $missing_sqlite[] = $org;
-        if (!file_exists("$organism_data/$org/organism.json"))   $missing_json[]   = $org;
+        if (!file_exists("$organism_data/$org/organism.json")) $missing_json[] = $org;
     }
 
+    $groups_entries  = loadJsonFile("$metadata_path/organism_assembly_groups.json", []);
     $web_server_info = getWebServerUser();
 
     return [
-        'organisms_in_system'   => $organisms_in_system,
-        'missing_sqlite'        => $missing_sqlite,
-        'missing_json'          => $missing_json,
-        'blast_issues'          => organism_checklist_blast_issues($organism_data, $organisms_in_system, $sequence_types),
-        'fai_issues'            => organism_checklist_fai_issues($organism_data, $organisms_in_system),
-        'expected_group'        => $web_server_info['group'],
-        'permission_issues'     => organism_checklist_permission_issues($organism_data, $organisms_in_system, $web_server_info['group']),
-        'permission_expectation'=> moop_permission_expectation('data', 'directory', false, true),
-        'exec_files_fix_command'=> moop_permission_fix_exec_files_command($organism_data),
-        'gene_sets_missing_gff' => organism_checklist_gene_sets_missing_gff($organism_data, $organisms_in_system, $sequence_types),
-        'organisms_not_in_tree' => organism_checklist_not_in_tree($organisms_in_system, "$metadata_path/taxonomy_tree_config.json"),
-        'unassigned_organisms'  => organism_checklist_unassigned("$metadata_path/organism_assembly_groups.json", $organisms_in_system),
+        'organisms_in_system'      => $organisms_in_system,
+        'cache_generated'          => is_array($raw_cache) ? ($raw_cache['generated'] ?? null) : null,
+        'cache_stale_organisms'    => $staleness['changed'],
+        'cache_config_changed'     => $staleness['config_changed'],
+        'no_database_organisms'    => $health['no_database_organisms'],
+        'empty_database_organisms' => $health['empty_database_organisms'],
+        'missing_json'             => $missing_json,
+        'blast_issues'             => organism_checklist_blast_issues($cache_data),
+        'fai_issues'               => organism_checklist_fai_issues($cache_data),
+        'expected_group'           => $web_server_info['group'],
+        'permission_issues'        => organism_checklist_permission_issues($organism_data, $organisms_in_system, $web_server_info['group']),
+        'permission_expectation'   => moop_permission_expectation('data', 'directory', false, true),
+        'exec_files_fix_command'   => moop_permission_fix_exec_files_command($organism_data),
+        'gene_sets_missing_gff'    => organism_checklist_gene_sets_missing_gff($organism_data, $organisms_in_system, $sequence_types),
+        'organisms_not_in_tree'    => getOrganismsNotInTree($cache_data),
+        'unassigned_organisms'     => getUngroupedOrganisms($cache_data, is_array($groups_entries) ? $groups_entries : []),
     ];
 }
 
@@ -68,80 +83,55 @@ function organism_checklist_organisms(string $organism_data): array
 }
 
 /**
- * FASTA files whose BLAST indexes are missing. BLAST indexes live in gene_set subdirs
- * under each assembly dir. Each row also carries whether the web server can build the
- * index there, so the page can offer "Generate now" or explain why not.
+ * FASTA files whose BLAST indexes are missing, read from the organism cache's
+ * blast_validation (validateBlastIndexFiles(), aggregated across each assembly's gene
+ * sets). Each row also carries whether the web server can build the index there --
+ * checked live, and only for the rows that need it -- so the page can offer
+ * "Generate now" or explain why not.
  */
-function organism_checklist_blast_issues(string $organism_data, array $organisms, array $sequence_types): array
+function organism_checklist_blast_issues(array $cache_data): array
 {
     $blast_issues = [];
-    foreach ($organisms as $org) {
-        $org_dir = "$organism_data/$org";
-        if (!is_dir($org_dir)) continue;
-        foreach (scandir($org_dir) as $asm) {
-            if ($asm === '.' || $asm === '..' || !is_dir("$org_dir/$asm")) continue;
-            $asm_path = "$org_dir/$asm";
-            foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
-                $blast_validation = validateBlastIndexFiles($gs_dir, $sequence_types);
-                foreach ($blast_validation['databases'] ?? [] as $db) {
-                    if (!$db['has_indexes']) {
-                        $blast_issues[] = [
-                            'organism' => $org,
-                            'assembly' => $asm,
-                            'gene_set' => basename($gs_dir),
-                            'fasta'    => $db['fasta'],
-                            'db_type'  => sequence_type_blast_dbtype($db['type']),
-                            'missing'  => $db['missing_indexes'],
-                        ];
-                    }
-                }
+    foreach ($cache_data as $org => $org_data) {
+        foreach ($org_data['blast_validation'] ?? [] as $asm => $bv) {
+            foreach ($bv['databases'] ?? [] as $db) {
+                if (!empty($db['has_indexes'])) continue;
+                $gs_fullpath = dirname($db['fasta_path']);
+                $blast_issues[] = [
+                    'organism'    => $org,
+                    'assembly'    => $asm,
+                    'gene_set'    => basename($gs_fullpath),
+                    'fasta'       => $db['fasta'],
+                    'missing'     => $db['missing_indexes'] ?? [],
+                    'db_type'     => sequence_type_blast_dbtype($db['type'] ?? ''),
+                    'gs_fullpath' => $gs_fullpath,
+                    'perm_check'  => checkAssemblyCanGenerateBlast($gs_fullpath, [$db['fasta']]),
+                ];
             }
         }
     }
-
-    foreach ($blast_issues as &$issue) {
-        $issue['gs_fullpath'] = $organism_data . '/' . $issue['organism'] . '/' . $issue['assembly'] . '/' . $issue['gene_set'];
-        $issue['perm_check']  = checkAssemblyCanGenerateBlast($issue['gs_fullpath'], [$issue['fasta']]);
-    }
-    unset($issue);
-
     return $blast_issues;
 }
 
 /**
- * Assemblies whose genome FASTA has no .fai index.
- *
- * The genome filename comes from config (Manage Site Configuration), not a literal.
- *
- * Correctly guarded on the FASTA existing, and that guard matters: 25 of 96 assemblies
- * here have no genome at all. They are sequence-only sets — no reference genome,
- * therefore no genes.gff and no JBrowse registration. Verified consistent 2026-07-16:
- * ZERO assemblies have annotations without a genome, so "missing genome.fa" is a
- * category, not a fault. Flagging a missing index for a genome that is not supposed to
- * exist would be 25 phantom warnings.
+ * Assemblies whose genome FASTA has no .fai index, from the organism cache's
+ * fai_validation. Assemblies with no genome at all (transcriptome/proteome-only, 24 of
+ * 96 here) are not reported: no genome, nothing to index.
  */
-function organism_checklist_fai_issues(string $organism_data, array $organisms): array
+function organism_checklist_fai_issues(array $cache_data): array
 {
-    $genome_pattern = genome_fasta_filename();
+    $genome_file = genome_fasta_filename();
     $fai_issues = [];
-    foreach ($organisms as $org) {
-        $org_dir = "$organism_data/$org";
-        if (is_dir($org_dir)) {
-            foreach (scandir($org_dir) as $item) {
-                if ($item === '.' || $item === '..') continue;
-                $asm_dir = "$org_dir/$item";
-                if (!is_dir($asm_dir)) continue;
-                $fasta   = "$asm_dir/$genome_pattern";
-                $fai     = "$fasta.fai";
-                if (file_exists($fasta) && !file_exists($fai)) {
-                    $fai_issues[] = [
-                        'organism' => $org,
-                        'assembly' => $item,
-                        'fasta'    => $fasta,
-                        'writable' => is_writable($asm_dir),
-                    ];
-                }
-            }
+    foreach ($cache_data as $org => $org_data) {
+        foreach ($org_data['fai_validation'] ?? [] as $asm => $fai) {
+            if (empty($fai['genome_fa_exists']) || !empty($fai['fai_exists'])) continue;
+            $asm_dir = rtrim($org_data['path'] ?? '', '/') . '/' . $asm;
+            $fai_issues[] = [
+                'organism' => $org,
+                'assembly' => $asm,
+                'fasta'    => "$asm_dir/$genome_file",
+                'writable' => is_writable($asm_dir),
+            ];
         }
     }
     return $fai_issues;
@@ -215,54 +205,4 @@ function organism_checklist_gene_sets_missing_gff(string $organism_data, array $
         }
     }
     return $gene_sets_missing_gff;
-}
-
-/**
- * Organisms missing from the homepage taxonomy selector.
- *
- * The tree file comes from metadata_path. It used to be derived as
- * dirname($organism_data) . '/metadata/taxonomy_tree_config.json', which resolves
- * correctly only because metadata_path happens to sit beside organisms/ on this
- * deployment. Both paths are configurable independently — point metadata_path anywhere
- * else and isAssemblyInTaxonomyTree() reads a file that does not exist, so every
- * organism reports "not yet in selector". (CLAUDE.md: never derive, use ConfigManager.)
- */
-function organism_checklist_not_in_tree(array $organisms, string $tree_file): array
-{
-    $organisms_not_in_tree = [];
-    foreach ($organisms as $org) {
-        if (!isAssemblyInTaxonomyTree($org, '', $tree_file)) {
-            $organisms_not_in_tree[] = $org;
-        }
-    }
-    return $organisms_not_in_tree;
-}
-
-/**
- * Organisms with no group assignment in organism_assembly_groups.json.
- *
- * The file comes from metadata_path. It used to be derived as
- * dirname($organism_data) . '/metadata/...', the same mistake corrected for the tree
- * file above -- right here only because metadata/ happens to sit beside organisms/.
- *
- * The file has one entry per organism/assembly/gene set, so an organism can appear
- * several times (7 do today). It counts as assigned if ANY of its entries has a group.
- * This used to keep only the LAST entry per organism, so an organism whose last entry
- * was ungrouped would be reported unassigned despite groups on its other entries.
- * (Latent: no organism is in that state today.)
- */
-function organism_checklist_unassigned(string $groups_file, array $organisms): array
-{
-    $entries = loadJsonFile($groups_file, []);
-    if (!is_array($entries)) $entries = [];
-
-    $assigned = [];
-    foreach ($entries as $item) {
-        $org = is_array($item) ? ($item['organism'] ?? '') : '';
-        if ($org !== '' && !empty($item['groups'])) {
-            $assigned[$org] = true;
-        }
-    }
-
-    return array_values(array_filter($organisms, fn($org) => !isset($assigned[$org])));
 }
