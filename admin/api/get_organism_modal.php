@@ -1045,7 +1045,7 @@ function render_asm_modal($organism, $assembly, $data, $sequence_types, $groups_
                           <strong class="d-block mb-1">To generate BLAST indexes, run on the server:</strong>
                           <?php
                             $gs_fullpath = $assembly_path . '/' . $gs;
-                            $db_type     = strpos($db['fasta'], 'protein') !== false ? 'prot' : 'nucl';
+                            $db_type     = sequence_type_blast_dbtype($db['type']);
                           ?>
                           <code class="d-block" style="word-break:break-all;white-space:normal;">cd <?= htmlspecialchars($gs_fullpath) ?> && \<br>makeblastdb -in <?= htmlspecialchars($db['fasta']) ?> -dbtype <?= htmlspecialchars($db_type) ?> -parse_seqids</code>
                         </div>

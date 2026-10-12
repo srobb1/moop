@@ -683,9 +683,9 @@ function validateBlastIndexFiles($assembly_path, $sequence_types = []) {
             $result['total_count']++;
             $type_info = $type_mapping[$seq_type] ?? null;
             
-            // If not in mapping, detect from pattern
+            // Not in the mapping: decide by the type key, not by the filename
             if (!$type_info) {
-                $is_protein = strpos($pattern, 'protein') !== false;
+                $is_protein = sequence_type_blast_dbtype($seq_type) === 'prot';
                 $extensions = $is_protein ? ['phr', 'pin', 'psq'] : ['nhr', 'nin', 'nsq'];
                 $type_info = ['name' => ucfirst($seq_type), 'extensions' => $extensions];
             }
@@ -865,17 +865,25 @@ function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_d
         return $result;
     }
     
-    // Determine database type
-    $is_protein = strpos($fasta_filename, 'protein') !== false;
-    $db_type = $is_protein ? 'prot' : 'nucl';
+    // Only a configured sequence FASTA is indexed, and its -dbtype comes from the
+    // configured type (see sequence_type_blast_dbtype()), never from the filename.
+    $seq_type = sequence_type_for_filename($fasta_filename);
+    if ($seq_type === null) {
+        $result['message'] = 'Not a configured sequence FASTA: ' . $fasta_filename;
+        return $result;
+    }
+    $db_type = sequence_type_blast_dbtype($seq_type);
     
     // Build command with configurable path to makeblastdb
     $config = ConfigManager::getInstance();
     $blast_tools = $config->getArray('blast_tools', []);
     $makeblastdb_path = $blast_tools['makeblastdb'] ?? 'makeblastdb';
     $cd_cmd = 'cd ' . escapeshellarg($assembly_path);
-    // Don't use escapeshellarg for the filename since we're already in the directory
-    $makeblastdb_cmd = $makeblastdb_path . ' -in ' . $fasta_filename . ' -dbtype ' . $db_type . ' -parse_seqids 2>&1';
+    // Every argument escaped (CLAUDE.md §8). The filename was interpolated raw here,
+    // on the reasoning that we had cd'd into its directory -- which has nothing to do
+    // with shell metacharacters. Only '/' was rejected upstream.
+    $makeblastdb_cmd = escapeshellarg($makeblastdb_path) . ' -in ' . escapeshellarg($fasta_filename)
+                     . ' -dbtype ' . escapeshellarg($db_type) . ' -parse_seqids 2>&1';
     $full_cmd = $cd_cmd . ' && ' . $makeblastdb_cmd;
     
     // Execute command
@@ -891,7 +899,7 @@ function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_d
             $debug_info = [];
             
             // Check if indexes were created
-            $index_ext = $is_protein ? ['phr', 'pin', 'psq'] : ['nhr', 'nin', 'nsq'];
+            $index_ext = $db_type === 'prot' ? ['phr', 'pin', 'psq'] : ['nhr', 'nin', 'nsq'];
             $all_created = true;
             $missing = [];
             foreach ($index_ext as $ext) {

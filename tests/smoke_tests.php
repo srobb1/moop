@@ -1099,6 +1099,34 @@ array_map('unlink', glob("$_hd/*")); @rmdir($_hd);
 array_map('unlink', glob("$_xd/*")); @rmdir($_xd);
 
 // ----------------------------------------------------------------------------
+group('Sequence type -> BLAST dbtype is decided by config KEY, not filename');
+// The protein FASTA used to be recognised by strpos($filename, 'protein'). A renamed
+// pattern then indexed protein as nucleotide -- silently. Prove the key decides.
+require_once "$BASE/lib/blast_functions.php";
+ok(sequence_type_for_filename('protein.aa.fa') === 'protein', 'protein pattern maps to the protein type');
+ok(sequence_type_for_filename('geneset.json') === null,       'a non-sequence file maps to no type');
+ok(sequence_type_blast_dbtype('protein') === 'prot',          'protein type -> prot');
+ok(sequence_type_blast_dbtype('transcript') === 'nucl',       'transcript type -> nucl');
+
+$_cm   = ConfigManager::getInstance();
+$_prop = new ReflectionProperty(ConfigManager::class, 'config');
+$_prop->setAccessible(true);
+$_saved = $_prop->getValue($_cm);
+$_renamed = $_saved;
+$_renamed['sequence_types']['protein']['pattern'] = 'peptides.fa';
+$_prop->setValue($_cm, $_renamed);
+ok(sequence_type_blast_dbtype((string)sequence_type_for_filename('peptides.fa')) === 'prot',
+   'renamed protein pattern (no "protein" in the name) is still indexed as prot');
+$_bd = sys_get_temp_dir() . '/moop_blast_smoke_' . getmypid();
+@mkdir("$_bd/Org/Asm/GS", 0700, true);
+file_put_contents("$_bd/Org/Asm/GS/notes.txt", "not a fasta\n");
+$_r = generateBlastIndexes('Org', 'Asm', 'notes.txt', $_bd, 'GS');
+ok(str_starts_with($_r['message'], 'Not a configured sequence FASTA'),
+   'generateBlastIndexes refuses a file that is not a configured sequence FASTA');
+exec('rm -rf ' . escapeshellarg($_bd));
+$_prop->setValue($_cm, $_saved);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

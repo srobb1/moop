@@ -45,7 +45,7 @@ function organism_checklist_checks(string $organism_data, array $sequence_types,
         'permission_issues'     => organism_checklist_permission_issues($organism_data, $organisms_in_system, $web_server_info['group']),
         'gene_sets_missing_gff' => organism_checklist_gene_sets_missing_gff($organism_data, $organisms_in_system, $sequence_types),
         'organisms_not_in_tree' => organism_checklist_not_in_tree($organisms_in_system, "$metadata_path/taxonomy_tree_config.json"),
-        'unassigned_organisms'  => organism_checklist_unassigned($organism_data, $organisms_in_system),
+        'unassigned_organisms'  => organism_checklist_unassigned("$metadata_path/organism_assembly_groups.json", $organisms_in_system),
     ];
 }
 
@@ -87,6 +87,7 @@ function organism_checklist_blast_issues(string $organism_data, array $organisms
                             'assembly' => $asm,
                             'gene_set' => basename($gs_dir),
                             'fasta'    => $db['fasta'],
+                            'db_type'  => sequence_type_blast_dbtype($db['type']),
                             'missing'  => $db['missing_indexes'],
                         ];
                     }
@@ -96,7 +97,7 @@ function organism_checklist_blast_issues(string $organism_data, array $organisms
     }
 
     foreach ($blast_issues as &$issue) {
-        $issue['gs_fullpath'] = $organism_data . '/' . $issue['organism'] . '/' . $issue['assembly'] . '/' . ($issue['gene_set'] ?? 'v1');
+        $issue['gs_fullpath'] = $organism_data . '/' . $issue['organism'] . '/' . $issue['assembly'] . '/' . $issue['gene_set'];
         $issue['perm_check']  = checkAssemblyCanGenerateBlast($issue['gs_fullpath'], [$issue['fasta']]);
     }
     unset($issue);
@@ -278,28 +279,31 @@ function organism_checklist_not_in_tree(array $organisms, string $tree_file): ar
     return $organisms_not_in_tree;
 }
 
-/** Organisms with no group assignment in organism_assembly_groups.json. */
-function organism_checklist_unassigned(string $organism_data, array $organisms): array
+/**
+ * Organisms with no group assignment in organism_assembly_groups.json.
+ *
+ * The file comes from metadata_path. It used to be derived as
+ * dirname($organism_data) . '/metadata/...', the same mistake corrected for the tree
+ * file above -- right here only because metadata/ happens to sit beside organisms/.
+ *
+ * The file has one entry per organism/assembly/gene set, so an organism can appear
+ * several times (7 do today). It counts as assigned if ANY of its entries has a group.
+ * This used to keep only the LAST entry per organism, so an organism whose last entry
+ * was ungrouped would be reported unassigned despite groups on its other entries.
+ * (Latent: no organism is in that state today.)
+ */
+function organism_checklist_unassigned(string $groups_file, array $organisms): array
 {
-    $groups_file = dirname($organism_data) . '/metadata/organism_assembly_groups.json';
-    $group_assignments = [];
-    if (file_exists($groups_file)) {
-        $group_data = loadJsonFile($groups_file, []);
-        if (is_array($group_data)) {
-            foreach ($group_data as $item) {
-                $org = $item['organism'] ?? '';
-                if (!empty($org)) {
-                    $group_assignments[$org] = $item['groups'] ?? [];
-                }
-            }
+    $entries = loadJsonFile($groups_file, []);
+    if (!is_array($entries)) $entries = [];
+
+    $assigned = [];
+    foreach ($entries as $item) {
+        $org = is_array($item) ? ($item['organism'] ?? '') : '';
+        if ($org !== '' && !empty($item['groups'])) {
+            $assigned[$org] = true;
         }
     }
 
-    $unassigned_organisms = [];
-    foreach ($organisms as $org) {
-        if (empty($group_assignments[$org])) {
-            $unassigned_organisms[] = $org;
-        }
-    }
-    return $unassigned_organisms;
+    return array_values(array_filter($organisms, fn($org) => !isset($assigned[$org])));
 }

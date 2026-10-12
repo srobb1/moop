@@ -141,6 +141,31 @@ function sequence_filename(string $type): ?string {
 }
 
 /**
+ * The configured sequence type a FASTA filename belongs to, e.g. 'protein.aa.fa' => 'protein'.
+ * Null when the file is not one of the configured sequence FASTAs.
+ */
+function sequence_type_for_filename(string $filename): ?string {
+    foreach (ConfigManager::getInstance()->getSequenceTypes() as $type => $seq_config) {
+        if (($seq_config['pattern'] ?? '') !== '' && $seq_config['pattern'] === $filename) {
+            return $type;
+        }
+    }
+    return null;
+}
+
+/**
+ * makeblastdb -dbtype for a sequence type: 'prot' for the protein type, 'nucl' otherwise.
+ *
+ * Decided by the type KEY. Every caller used to guess from the filename --
+ * strpos($fasta, 'protein') -- which is right only while the protein pattern happens to
+ * contain that word. Rename it in Site Configuration (say, to 'peptides.fa') and the
+ * protein FASTA would be indexed as nucleotide, with no error until BLAST returned nothing.
+ */
+function sequence_type_blast_dbtype(string $type): string {
+    return $type === 'protein' ? 'prot' : 'nucl';
+}
+
+/**
  * Filename of the reference genome FASTA, which lives at the ASSEMBLY level and is shared
  * across that assembly's gene sets. Convenience wrapper — the genome is asked for far more
  * often than the other types, and it is the one whose location differs.

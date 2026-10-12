@@ -349,13 +349,12 @@
                         $can_generate = $perm_check['writable'];
 
                         // Calculate commands upfront so they're available everywhere
-                        $is_protein = strpos($issue['fasta'], 'protein') !== false;
-                        $db_type = $is_protein ? 'prot' : 'nucl';
+                        $db_type = $issue['db_type'];
                         $cd_cmd = "cd " . htmlspecialchars($gs_fullpath);
                         $makeblastdb_cmd = "makeblastdb -in " . htmlspecialchars($issue['fasta']) . " -dbtype " . htmlspecialchars($db_type) . " -parse_seqids";
                       ?>
                       <li class="mb-3 pb-3 border-bottom">
-                        <strong><?= htmlspecialchars($issue['organism']) ?>/<?= htmlspecialchars($issue['assembly']) ?>/<?= htmlspecialchars($issue['gene_set'] ?? 'v1') ?>/<?= htmlspecialchars($issue['fasta']) ?></strong><br>
+                        <strong><?= htmlspecialchars($issue['organism']) ?>/<?= htmlspecialchars($issue['assembly']) ?>/<?= htmlspecialchars($issue['gene_set']) ?>/<?= htmlspecialchars($issue['fasta']) ?></strong><br>
                         <small class="text-danger">Missing: <?= htmlspecialchars(implode(', ', $issue['missing'])) ?></small>
                         <?php if (!$can_generate): ?>
                           <div class="alert alert-danger mt-2 mb-0 py-1 px-2 small">
@@ -370,7 +369,7 @@
                                 <i class="fa fa-copy"></i> Copy
                               </button>
                               <?php if ($can_generate): ?>
-                                <button type="button" class="btn btn-outline-success generate-blast-btn" data-organism="<?= htmlspecialchars($issue['organism']) ?>" data-assembly="<?= htmlspecialchars($issue['assembly']) ?>" data-gene-set="<?= htmlspecialchars($issue['gene_set'] ?? 'v1') ?>" data-fasta="<?= htmlspecialchars($issue['fasta']) ?>" title="Generate now">
+                                <button type="button" class="btn btn-outline-success generate-blast-btn" data-organism="<?= htmlspecialchars($issue['organism']) ?>" data-assembly="<?= htmlspecialchars($issue['assembly']) ?>" data-gene-set="<?= htmlspecialchars($issue['gene_set']) ?>" data-fasta="<?= htmlspecialchars($issue['fasta']) ?>" title="Generate now">
                                   <i class="fa fa-play"></i> Generate
                                 </button>
                               <?php endif; ?>
