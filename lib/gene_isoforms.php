@@ -113,7 +113,7 @@ function moop_primer_sequence_types(): array
  */
 function moop_transcript_sequence(string $gene_set_path, string $id, string $seq_type = 'transcript'): string
 {
-    $types   = ConfigManager::getInstance()->getArray('sequence_types');
+    $types   = ConfigManager::getInstance()->getSequenceTypes();
     $pattern = $types[$seq_type]['pattern'] ?? null;
     if ($pattern === null || !in_array($seq_type, moop_primer_sequence_types(), true)) {
         return '';

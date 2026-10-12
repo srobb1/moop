@@ -104,7 +104,7 @@
             // admin-editable in Manage Site Configuration, so a literal list here would
             // start lying the moment someone changed one. 'genome' sits at the assembly
             // level (shared across gene sets); the rest live in the gene set.
-            $seq_types    = $config->getSequenceTypes();
+            $seq_types    = $sequence_types;   // passed in by admin/organism_checklist.php
             $genome_cfg   = $seq_types['genome'] ?? null;
             $geneset_seqs = array_diff_key($seq_types, ['genome' => 1]);
             ?>
@@ -780,7 +780,7 @@
                     // so having no GFF is correct for it. One with cds/transcript almost
                     // certainly should have one, and is worth chasing on the data server.
                     $has = [];
-                    foreach (ConfigManager::getInstance()->getSequenceTypes() as $k => $seq) {
+                    foreach ($sequence_types as $k => $seq) {
                         if ($k === 'genome') continue;
                         if (!empty($seq['pattern']) && file_exists($gs_dir . '/' . $seq['pattern'])) {
                             $has[] = $seq['label'] ?? $k;

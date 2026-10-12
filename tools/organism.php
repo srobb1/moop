@@ -52,6 +52,21 @@ $organism_info = $organism_context['info'];
 $group_data = getGroupData();
 $taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
 $taxonomy_tree_data = loadJsonFile("$metadata_path/taxonomy_tree_config.json", []);
+$lineage_cache = !empty($organism_info['taxon_id']) ? load_lineage_cache($metadata_path) : [];
+
+// Taxonomy breadcrumb: the organism's ranks above species, each with how many organisms
+// in that rank this user can see. Read from the local lineage cache -- this used to call
+// fetch_taxonomy_lineage() from the page, a live NCBI eutils request (3 tries x 15 s) on
+// every organism page view, so a slow NCBI meant a page that hung for over a minute.
+$lineage_display = [];
+if (!empty($organism_info['taxon_id'])
+    && isAssemblyInTaxonomyTree($organism_name, '', "$metadata_path/taxonomy_tree_config.json")) {
+    $lineage = $lineage_cache[(string)$organism_info['taxon_id']]['lineage'] ?? [];
+    if (!empty($lineage)) {
+        $lineage_with_counts = getTaxonomyLineageWithCounts($lineage, $taxonomy_tree_data['tree'], $taxonomy_user_access);
+        $lineage_display = array_slice($lineage_with_counts, 0, -1);   // drop the species itself
+    }
+}
 
 // Build scientific name from genus and species
 $scientific_name = '';
@@ -73,7 +88,6 @@ if ($needs_description) {
 
     // Auto-description from lineage cache (always available when taxon_id is set)
     if (!empty($organism_info['taxon_id']) && !empty($scientific_name)) {
-        $lineage_cache = load_lineage_cache($metadata_path);
         $tid = (string)$organism_info['taxon_id'];
         if (!empty($lineage_cache[$tid]['lineage'])) {
             $auto_desc = buildAutoDescription($scientific_name, $lineage_cache[$tid]['lineage']);
@@ -135,8 +149,8 @@ $data = [
     'organism_data' => $organism_data,
     'images_path' => $images_path,
     'absolute_images_path' => $absolute_images_path,
-    'taxonomy_user_access' => $taxonomy_user_access,
-    'taxonomy_tree_data' => $taxonomy_tree_data,
+    'lineage_display' => $lineage_display,
+    'siteTitle' => $config->getString('siteTitle'),
 ];
 
 // Use generic template to render

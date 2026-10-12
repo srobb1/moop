@@ -72,7 +72,6 @@
         // Set up variables for sequences_display.php
         $gene_name = $uniquenames_string;
         $enable_downloads = true;
-        $organism_data = $config->getPath('organism_data');
         
         // Include the reusable sequences display component
         include_once __DIR__ . '/../sequences_display.php';

@@ -307,6 +307,7 @@ $data = [
     'uniquenames_string' => $uniquenames_string,
     'displayed_content' => $displayed_content,
     'sequence_types' => $sequence_types,
+    'organism_data' => $organism_data,
     'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],
     'context' => $context,
     'context_organism' => $context['organism'] ?? '',

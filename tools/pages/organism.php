@@ -153,26 +153,18 @@
            </dl>
 
           <!-- Taxonomic Breadcrumb -->
-          <?php
-          $taxonomy_tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
-          if (!empty($organism_info['taxon_id']) && isAssemblyInTaxonomyTree($organism_name, '', $taxonomy_tree_file)): 
-              $lineage = fetch_taxonomy_lineage($organism_info['taxon_id']);
-               if (!empty($lineage)): 
-                   $lineage_with_counts = getTaxonomyLineageWithCounts($lineage, $taxonomy_tree_data['tree'], $taxonomy_user_access);
-                   ?>
+          <?php if (!empty($lineage_display)): ?>
                                  <div class="mt-4 pt-3 border-top">
                    <h6 class="text-muted mb-3" style="font-weight: 600;">
                      Taxonomy Lineage
                      <?= field_help(
                          'The number beside each rank is how many organisms in that group are in '
-                         . $config->getString('siteTitle') . '. Click a rank to see them.',
+                         . $siteTitle . '. Click a rank to see them.',
                          'Taxonomy lineage counts'
                      ) ?>
                    </h6>
                    <div class="breadcrumb clear-initial-trail">
-                     <?php 
-                     // Exclude the last item (organism's own genus/species)
-                     $lineage_display = array_slice($lineage_with_counts, 0, -1);
+                     <?php
                      foreach ($lineage_display as $item) {
                          $name = htmlspecialchars($item['name']);
                          $count = isset($item['count']) ? $item['count'] : 0;
@@ -185,8 +177,7 @@
                      ?>
                    </div>
                  </div>
-              <?php endif;
-          endif; ?>
+          <?php endif; ?>
 
           <!-- Groups This Organism Belongs To -->
           <?php

@@ -164,7 +164,6 @@
             $organism_name = $selected_organism;
             $assembly_name = $selected_assembly_accession;
             $enable_downloads = true;
-            $organism_data = $config->getPath('organism_data');
             
             include_once __DIR__ . '/../sequences_display.php';
             ?>

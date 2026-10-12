@@ -27,7 +27,7 @@ function getBlastDatabases($assembly_path) {
         return $databases;
     }
 
-    $sequence_types = ConfigManager::getInstance()->getArray('sequence_types');
+    $sequence_types = ConfigManager::getInstance()->getSequenceTypes();
 
     // Map sequence types to database info
     $type_mapping = [

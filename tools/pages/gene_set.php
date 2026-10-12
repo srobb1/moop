@@ -149,26 +149,6 @@
               </div>
 
               <?php
-              $gs_dir = $config->getPath('organism_data') . "/$organism_name/$genome_accession/$gene_set_name";
-              $gff_name = genes_gff_filename();
-              $has_gff = file_exists("$gs_dir/$gff_name") && filesize("$gs_dir/$gff_name") > 0;
-
-              // The ASSEMBLY's genome FASTA, offered here as well as on the assembly page.
-              // Someone working with a gene set usually wants the sequence it was called
-              // against, and making them navigate up a level to get it is a step for
-              // nothing. Same file, same handler -- gene_set='' is what marks it
-              // assembly-level, which is also how the assembly page finds it.
-              $genome_file = null;
-              $genome_files = getAssemblyFastaFiles($organism_name, $genome_name ?? $genome_accession);
-              if (empty($genome_files)) {
-                  $genome_files = getAssemblyFastaFiles($organism_name, $genome_accession);
-              }
-              foreach ($genome_files as $gtype => $ginfo) {
-                  if (($ginfo['gene_set'] ?? '') === '') {
-                      $genome_file = ['type' => $gtype, 'info' => $ginfo];
-                      break;
-                  }
-              }
               $has_downloads = !empty($fasta_files) || $has_gff || $genome_file;
               ?>
               <?php if ($has_downloads): ?>
@@ -206,7 +186,6 @@
                 <?php endif; ?>
                 <?php if ($genome_file):
                     $gColor = getColorClassOrStyle($genome_file['info']['color'] ?? '');
-                    $genome_directory = !empty($genome_files) && isset($genome_name) ? $genome_name : $genome_accession;
                 ?>
                 <?php /* Last, and labelled with the assembly, because it belongs to the
                          assembly rather than to this gene set -- the ordering says so
