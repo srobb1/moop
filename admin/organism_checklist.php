@@ -17,6 +17,10 @@ $site = $config->getString('site');
 $organism_data = $config->getPath('organism_data');
 $sequence_types = $config->getSequenceTypes();
 
+// Every check the page reports, run once here. The page itself only renders.
+include_once __DIR__ . '/../lib/organism_checklist.php';
+$checks = organism_checklist_checks($organism_data, $sequence_types, $config->getPath('metadata_path'));
+
 // Configure display
 $display_config = [
     'title' => 'New Organism Setup Checklist - ' . $config->getString('siteTitle'),
@@ -33,6 +37,7 @@ $data = [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
     ],
 ];
+$data = array_merge($data, $checks);
 
 // Render page using layout system
 echo render_display_page(

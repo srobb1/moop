@@ -61,18 +61,6 @@
   <div class="mt-5">
     <h3 class="mb-3"><i class="fa fa-tasks"></i> Setup Steps</h3>
 
-    <?php
-    // Load all organisms in system once (used by all steps)
-    $organisms_in_system = [];
-    if (is_dir($organism_data)) {
-        foreach (scandir($organism_data) as $item) {
-            if ($item !== '.' && $item !== '..' && is_dir("$organism_data/$item")) {
-                $organisms_in_system[] = $item;
-            }
-        }
-    }
-    sort($organisms_in_system);
-    ?>
 
     <!-- Step 1: Copy Files -->
     <div class="card mb-3">
@@ -265,16 +253,6 @@
 
         <!-- organism.sqlite Status Check -->
         <div class="mt-4">
-          <?php
-          // Check for missing SQLite databases
-          $missing_sqlite = [];
-          foreach ($organisms_in_system as $org) {
-              $sqlite_path = "$organism_data/$org/organism.sqlite";
-              if (!file_exists($sqlite_path)) {
-                  $missing_sqlite[] = $org;
-              }
-          }
-          ?>
           <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#sqliteStatusStep1" role="button" tabindex="0">
             <i class="fa fa-database"></i> Database File Status 
             <?php if (!empty($missing_sqlite)): ?>
@@ -311,16 +289,6 @@
 
         <!-- organism.json Status Check -->
         <div class="mt-4">
-          <?php
-          // Check for missing organism.json files
-          $missing_json = [];
-          foreach ($organisms_in_system as $org) {
-              $json_path = "$organism_data/$org/organism.json";
-              if (!file_exists($json_path)) {
-                  $missing_json[] = $org;
-              }
-          }
-          ?>
           <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#jsonStatusStep1" role="button" tabindex="0">
             <i class="fa fa-file-code"></i> organism.json File Status 
             <?php if (!empty($missing_json)): ?>
@@ -357,35 +325,6 @@
 
         <!-- BLAST Index Status Check -->
         <div class="mt-4">
-          <?php
-          include_once __DIR__ . '/../../lib/blast_functions.php';
-          
-          // Check for missing BLAST indexes.
-          // BLAST indexes now live in gene_set subdirs under each assembly dir.
-          $blast_issues = [];
-          foreach ($organisms_in_system as $org) {
-              $org_dir = "$organism_data/$org";
-              if (!is_dir($org_dir)) continue;
-              foreach (scandir($org_dir) as $asm) {
-                  if ($asm === '.' || $asm === '..' || !is_dir("$org_dir/$asm")) continue;
-                  $asm_path = "$org_dir/$asm";
-                  foreach (glob($asm_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
-                      $blast_validation = validateBlastIndexFiles($gs_dir, $sequence_types);
-                      foreach ($blast_validation['databases'] ?? [] as $db) {
-                          if (!$db['has_indexes']) {
-                              $blast_issues[] = [
-                                  'organism' => $org,
-                                  'assembly' => $asm,
-                                  'gene_set' => basename($gs_dir),
-                                  'fasta'    => $db['fasta'],
-                                  'missing'  => $db['missing_indexes'],
-                              ];
-                          }
-                      }
-                  }
-              }
-          }
-          ?>
           <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#blastIndexStatusStep1" role="button" tabindex="0">
             <i class="fa fa-rocket"></i> BLAST Index Files Status 
             <?php if (!empty($blast_issues)): ?>
@@ -405,9 +344,8 @@
                   <ul class="mb-0 small">
                     <?php foreach ($blast_issues as $issue): ?>
                       <?php 
-                        $organism_data_base = $config->getPath('organism_data');
-                        $gs_fullpath = $organism_data_base . '/' . $issue['organism'] . '/' . $issue['assembly'] . '/' . ($issue['gene_set'] ?? 'v1');
-                        $perm_check = checkAssemblyCanGenerateBlast($gs_fullpath, [$issue['fasta']]);
+                        $gs_fullpath  = $issue['gs_fullpath'];
+                        $perm_check   = $issue['perm_check'];
                         $can_generate = $perm_check['writable'];
 
                         // Calculate commands upfront so they're available everywhere
@@ -453,41 +391,6 @@
 
         <!-- FAI Index Status Check -->
         <div class="mt-4">
-          <?php
-          // Check for missing FAI indexes.
-          //
-          // The genome filename comes from config (Manage Site Configuration), not a
-          // literal — same reason the structure box above is generated rather than typed.
-          //
-          // Correctly guarded on the FASTA existing, and that guard matters: 25 of 96
-          // assemblies here have no genome at all. They are sequence-only sets — no
-          // reference genome, therefore no genes.gff and no JBrowse registration. Verified
-          // consistent 2026-07-16: ZERO assemblies have annotations without a genome, so
-          // "missing genome.fa" is a category, not a fault. Flagging a missing index for a
-          // genome that is not supposed to exist would be 25 phantom warnings.
-          $genome_pattern = genome_fasta_filename();
-          $fai_issues = [];
-          foreach ($organisms_in_system as $org) {
-              $org_dir = "$organism_data/$org";
-              if (is_dir($org_dir)) {
-                  foreach (scandir($org_dir) as $item) {
-                      if ($item === '.' || $item === '..') continue;
-                      $asm_dir = "$org_dir/$item";
-                      if (!is_dir($asm_dir)) continue;
-                      $fasta   = "$asm_dir/$genome_pattern";
-                      $fai     = "$fasta.fai";
-                      if (file_exists($fasta) && !file_exists($fai)) {
-                          $fai_issues[] = [
-                              'organism' => $org,
-                              'assembly' => $item,
-                              'fasta'    => $fasta,
-                              'writable' => is_writable($asm_dir),
-                          ];
-                      }
-                  }
-              }
-          }
-          ?>
           <h6 class="fw-bold mb-3" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#faiIndexStatusStep1" role="button" tabindex="0">
             <i class="fa fa-dna"></i> Genome FAI Index Status
             <?php if (!empty($fai_issues)): ?>
@@ -572,77 +475,6 @@
 
         <p class="mb-3"><em><i class="fa fa-info-circle"></i> This step performs a quick check of organism directories. For a comprehensive check including assembly subdirectories and all FASTA files, use the <strong>Manage Filesystem Permissions</strong> page below.</em></p>
 
-        <?php
-        // Quick permission check on organism directories
-        $permission_issues = [];
-        $web_server_info = getWebServerUser();
-        $expected_group = $web_server_info['group'];
-
-        foreach ($organisms_in_system as $org) {
-            $org_dir = "$organism_data/$org";
-
-            if (!file_exists($org_dir)) {
-                $permission_issues[] = [
-                    'organism' => $org,
-                    'path' => $org_dir,
-                    'issues' => ['Directory does not exist']
-                ];
-                continue;
-            }
-
-            // Get full permission with leading digits (e.g., 2775, 0755)
-            $perms_full = substr(sprintf('%o', fileperms($org_dir)), -4);
-            $perms = ltrim($perms_full, '0') ?: '0';
-
-            $group = 'unknown';
-            if (function_exists('posix_getgrgid')) {
-                $gr = posix_getgrgid(filegroup($org_dir));
-                if ($gr) { $group = $gr['name']; }
-            } elseif ($org_dir) {
-                $stat_out = [];
-                @exec("stat -c '%G' " . escapeshellarg($org_dir) . " 2>/dev/null", $stat_out);
-                if (!empty($stat_out[0]) && $stat_out[0] !== 'UNKNOWN') { $group = $stat_out[0]; }
-            }
-
-            $issues = [];
-
-            // Judge by IMPACT, not by an exact mode string — same rule the dashboard and
-            // the Filesystem Permissions page use (lib/permission_check.php). The old test
-            // here was `$perms !== '2775'`, which is wrong in both directions: it flags an
-            // apache-owned 2755 directory the web CAN write, and it would pass a 2775
-            // directory whose SELinux label blocks writes anyway.
-            //
-            // What actually matters: can the web server CREATE files here? makeblastdb and
-            // samtools faidx write new files, and creating a file needs write on the parent
-            // directory, not on the file.
-            if (!is_writable($org_dir)) {
-                $issues[] = "The web server ($expected_group) cannot write here — "
-                          . "Build BLAST Index and index generation will fail ($perms)";
-            }
-
-            // SGID keeps new files in the web group. Without it, files created here inherit
-            // the creator's group and the next tool along cannot read them.
-            if (!($perms_full[0] === '2')) {
-                $issues[] = "Missing the SGID bit ($perms) — new files here will not inherit "
-                          . "the $expected_group group";
-            }
-
-            // Check group matches the web server group
-            if ($group !== $expected_group) {
-                $issues[] = "Group is $group, should be $expected_group";
-            }
-
-            if (!empty($issues)) {
-                $permission_issues[] = [
-                    'organism' => $org,
-                    'path' => $org_dir,
-                    'perms' => $perms,
-                    'group' => $group,
-                    'issues' => $issues
-                ];
-            }
-        }
-        ?>
         
         <?php if (!empty($permission_issues)): ?>
           <div class="alert alert-warning mt-3">
@@ -708,35 +540,13 @@
           <li>Check that FASTA files are properly formatted for BLAST (if indexes are missing, you may need to rebuild BLAST indexes)</li>
         </ul>
 
-        <?php
-        // Load all organisms in system (used by Steps 3, 4, and 5)
-        $organisms_in_system = [];
-        if (is_dir($organism_data)) {
-            foreach (scandir($organism_data) as $item) {
-                if ($item !== '.' && $item !== '..' && is_dir("$organism_data/$item")) {
-                    $organisms_in_system[] = $item;
-                }
-            }
-        }
-        sort($organisms_in_system);
-        ?>
 
-        <?php
-        // Check for organisms missing organism.json
-        $organisms_missing_json = [];
-        foreach ($organisms_in_system as $org) {
-            $json_file = "$organism_data/$org/organism.json";
-            if (!file_exists($json_file)) {
-                $organisms_missing_json[] = $org;
-            }
-        }
-        ?>
         
-        <?php if (!empty($organisms_missing_json)): ?>
+        <?php if (!empty($missing_json)): ?>
           <div class="alert alert-warning mt-3">
             <i class="fa fa-exclamation-triangle"></i> <strong>Missing organism.json:</strong>
             <ul class="mb-0 mt-2">
-              <?php foreach ($organisms_missing_json as $org): ?>
+              <?php foreach ($missing_json as $org): ?>
                 <li><?= htmlspecialchars($org) ?></li>
               <?php endforeach; ?>
             </ul>
@@ -756,44 +566,6 @@
           </div>
         <?php endif; ?>
 
-        <?php
-        // Gene sets with no annotations file.
-        //
-        // Nothing checked this before 2026-07-16 — unsurprisingly, since Step 1 never told
-        // anyone to copy genes.gff in the first place. A gene set without it still BLASTs
-        // (blast_functions.php resolves FASTA directly and never looks at the GFF), but
-        // JBrowse gets no annotation track and feature_coords.tsv is never built, so BLAST
-        // linkouts are dead. gene_set_functions.php logs "no genes.gff found — skipped" and
-        // carries on, which is why this can sit unnoticed.
-        //
-        // Gene sets are identified by their FASTA payload (is_gene_set_dir), never by the
-        // GFF — testing for the GFF to decide what IS a gene set makes the ones missing it
-        // invisible, which was the pre-existing bug in validateAssemblyDirectories().
-        $gene_sets_missing_gff = [];
-        foreach ($organisms_in_system as $org) {
-            foreach (glob("$organism_data/$org/*", GLOB_ONLYDIR) ?: [] as $asm_dir) {
-                foreach (glob("$asm_dir/*", GLOB_ONLYDIR) ?: [] as $gs_dir) {
-                    if (!is_gene_set_dir($gs_dir)) continue;
-                    if (file_exists($gs_dir . '/' . genes_gff_filename())) continue;
-
-                    // Report what IS there: a protein-only set has no genomic coordinates,
-                    // so having no GFF is correct for it. One with cds/transcript almost
-                    // certainly should have one, and is worth chasing on the data server.
-                    $has = [];
-                    foreach ($sequence_types as $k => $seq) {
-                        if ($k === 'genome') continue;
-                        if (!empty($seq['pattern']) && file_exists($gs_dir . '/' . $seq['pattern'])) {
-                            $has[] = $seq['label'] ?? $k;
-                        }
-                    }
-                    $gene_sets_missing_gff[] = [
-                        'path' => str_replace($organism_data . '/', '', $gs_dir),
-                        'has'  => $has,
-                    ];
-                }
-            }
-        }
-        ?>
 
         <?php if (!empty($gene_sets_missing_gff)): ?>
           <div class="alert alert-warning mt-3">
@@ -850,22 +622,6 @@
           <li>If two organisms share the same taxon ID, only one will appear in the selector</li>
         </ul>
 
-        <?php
-        // Ask ConfigManager; do not derive. This used to be
-        // dirname($organism_data) . '/metadata/taxonomy_tree_config.json', which resolves
-        // correctly only because metadata_path happens to sit beside organisms/ on this
-        // deployment. Both paths are configurable independently — point metadata_path
-        // anywhere else and isAssemblyInTaxonomyTree() reads a file that does not exist,
-        // so every organism reports "not yet in selector". A wall of false warnings, from
-        // a path that was never wrong here. (CLAUDE.md: never derive, use ConfigManager.)
-        $tree_file = $config->getPath('metadata_path') . '/taxonomy_tree_config.json';
-        $organisms_not_in_tree = [];
-        foreach ($organisms_in_system as $org) {
-            if (!isAssemblyInTaxonomyTree($org, '', $tree_file)) {
-                $organisms_not_in_tree[] = $org;
-            }
-        }
-        ?>
 
         <?php if (!empty($organisms_not_in_tree)): ?>
           <div class="alert alert-warning mt-3">
@@ -912,31 +668,6 @@
           </li>
         </ul>
 
-        <?php
-        // Load organism_assembly_groups.json
-        $groups_file = dirname($organism_data) . '/metadata/organism_assembly_groups.json';
-        $group_assignments = [];
-        
-        if (file_exists($groups_file)) {
-            $group_data = loadJsonFile($groups_file, []);
-            if (is_array($group_data)) {
-                foreach ($group_data as $item) {
-                    $org = $item['organism'] ?? '';
-                    if (!empty($org)) {
-                        $group_assignments[$org] = $item['groups'] ?? [];
-                    }
-                }
-            }
-        }
-        
-        // Check which organisms in the system don't have group assignments
-        $unassigned_organisms = [];
-        foreach ($organisms_in_system as $org) {
-            if (empty($group_assignments[$org])) {
-                $unassigned_organisms[] = $org;
-            }
-        }
-        ?>
         
         <?php if (!empty($unassigned_organisms)): ?>
           <div class="alert alert-warning mt-3">
