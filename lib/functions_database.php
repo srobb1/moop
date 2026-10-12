@@ -50,6 +50,29 @@ function validateDatabaseFile($dbFile) {
 }
 
 /**
+ * data_issue_codes (from validateDatabaseIntegrity) that mean the database opened fine
+ * but holds nothing usable, mapped to the short tag Manage Organisms shows for each.
+ *
+ * The ONE list. It was written out by hand four times -- the dashboard's health alerts,
+ * Manage Organisms' filter-chip count, its row badges and its DB tint -- each with a
+ * comment promising it matched the others.
+ */
+function moop_db_content_issue_tags(): array {
+    return [
+        'empty-feature'        => 'no-features',
+        'empty-annotation'     => 'no-annotations',
+        'empty-genome'         => 'no-genomes-in-db',
+        'empty-gene_set'       => 'no-gene-sets-in-db',
+        'annotations-unlinked' => 'annotations-unlinked',
+    ];
+}
+
+/** The codes alone -- see moop_db_content_issue_tags(). */
+function moop_db_content_issue_codes(): array {
+    return array_keys(moop_db_content_issue_tags());
+}
+
+/**
  * Validate database integrity and data quality
  * 
  * Checks:

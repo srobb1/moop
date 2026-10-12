@@ -1313,8 +1313,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     //
     // The counts were already there: validateDatabaseIntegrity() writes row_counts into
     // the organism cache. This reads the codes it now emits -- no database is opened here.
-    $empty_db_codes = ['empty-feature', 'empty-annotation', 'empty-genome',
-                       'empty-gene_set', 'annotations-unlinked'];
+    $empty_db_codes = moop_db_content_issue_codes();
     $empty_database_organisms = [];
     foreach ($cache_data as $org_name => $org_data) {
         $checks = $org_data['overall_status']['checks'] ?? [];

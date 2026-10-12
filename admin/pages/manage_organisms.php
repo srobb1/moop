@@ -216,10 +216,9 @@
                     'missing-genome-fa' => 0, 'missing-other-fasta' => 0,
                     'groups' => 0, 'tree' => 0, 'metadata' => 0, 'stale' => 0,
                     'db-content' => 0];
-  // Codes that mean the database loaded but holds nothing usable. Same list the row
-  // loop and the DB tint use; kept here so the chip count cannot drift from the badges.
-  $db_content_codes = ['empty-feature', 'empty-annotation', 'empty-genome',
-                       'empty-gene_set', 'annotations-unlinked'];
+  // Codes that mean the database loaded but holds nothing usable -- the one shared list,
+  // so the chip count, the row badges and the DB tint cannot drift apart.
+  $db_content_codes = moop_db_content_issue_codes();
   foreach ($organisms as $_org => $_d) {
       $_c = $_d['overall_status']['checks'];
       $_g = $fasta_gaps($_d);
@@ -445,13 +444,7 @@
                // instead: an organism whose database is structurally perfect and merely
                // EMPTY is not invalid, and that badge sends the admin hunting the wrong
                // problem. Keyed on data_issue_codes, never on the prose (CLAUDE.md 9b).
-               $db_issue_tags = [
-                   'empty-feature'        => 'no-features',
-                   'empty-annotation'     => 'no-annotations',
-                   'empty-genome'         => 'no-genomes-in-db',
-                   'empty-gene_set'       => 'no-gene-sets-in-db',
-                   'annotations-unlinked' => 'annotations-unlinked',
-               ];
+               $db_issue_tags = moop_db_content_issue_tags();
                $row_db_codes = $data['db_validation']['data_issue_codes'] ?? [];
                $row_db_named = [];
                foreach ($row_db_codes as $__code) {
@@ -624,10 +617,7 @@
                        // ignored data_issues entirely: an organism with zero features, or
                        // with orphaned annotations, still lit up green. Content problems
                        // that make the organism unusable are red; everything else warns.
-                       $db_unusable = (bool)array_intersect($v['data_issue_codes'] ?? [], [
-                           'empty-feature', 'empty-annotation', 'empty-genome',
-                           'empty-gene_set', 'annotations-unlinked',
-                       ]);
+                       $db_unusable = (bool)array_intersect($v['data_issue_codes'] ?? [], $db_content_codes);
                        if (!$v['readable'] || !$v['database_valid'] || $db_unusable)              $db_class = 'danger';
                        elseif (empty($v['tables_present']) || !empty($v['data_issues']) || $db_bad_dirs) $db_class = 'warning';
                        else                                                                       $db_class = 'success';
