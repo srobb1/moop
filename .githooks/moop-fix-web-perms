@@ -27,4 +27,17 @@ git ls-files -z -- '*.php' '*.js' '*.css' \
     ':(exclude)tests/*' ':(exclude)testing/*' 2>/dev/null \
   | xargs -0 -r chmod o+r 2>/dev/null
 
+# ...and the DIRECTORIES holding them. A checkout that adds a new directory creates it
+# under the same umask -- 750 smr:smr here -- and php-fpm cannot traverse it, so every
+# file inside 404s/500s however readable the file is (2026-10-12: a new
+# admin/pages/organism_modals/ came out 750 and would have 500'd every Manage Organisms
+# modal; caught before commit).
+# `o+x` only -- enter, not list -- and only for directories on the path to a tracked web
+# file, every one of which is already served.
+git ls-files -- '*.php' '*.js' '*.css' \
+    ':(exclude)tests/*' ':(exclude)testing/*' 2>/dev/null \
+  | awk -F/ '{ p = ""; for (i = 1; i < NF; i++) { p = (p == "" ? $i : p "/" $i); print p } }' \
+  | sort -u \
+  | while IFS= read -r dir; do chmod o+x "$dir" 2>/dev/null; done
+
 exit 0
