@@ -21,13 +21,6 @@
  * layout.php renders complete HTML page
  *   ↓
  * Content file (pages/blast.php) displays form and results
- * 
- * TODO: Implement cleanup mechanism for old BLAST result files
- * - Results are stored in temporary files on the filesystem
- * - Need to implement periodic cleanup (cron job or on-demand) to remove old results
- * - Should delete files older than X days (suggest 7-30 days)
- * - Consider storing results in database instead of filesystem for better management
- * - See: blast_functions.php executeBlastSearch() function for result file handling
  */
 
 include_once __DIR__ . '/tool_init.php';
@@ -56,25 +49,28 @@ $filter_organisms_string = $organism_result['string'] ?? '';
 
 // Get form data
 $search_query = trim($_POST['query'] ?? '');
-$blast_program = trim($_POST['blast_program'] ?? 'blastx');
 $blast_db = trim($_POST['blast_db'] ?? '');
 
-// blastn-short is a task preset, not a separate binary — translate here.
+// The program the user picked, checked against blast_programs() -- the same list the
+// dropdown is rendered from. An unknown value falls back to the default, never through
+// to the command line (see the 2026-10-13 fix in executeBlastSearch()).
+$programs = blast_programs();
+$blast_program_selected = trim($_POST['blast_program'] ?? 'blastx');
+if (!isset($programs[$blast_program_selected])) $blast_program_selected = 'blastx';
+// What we EXECUTE: the binary, and the -task the registry names for it. Kept apart from
+// $blast_program_selected, which re-renders the form: without the split, running a short
+// search returned a page whose dropdown said plain "BLASTn" while the short parameters were
+// still in the advanced fields -- the form disagreed with the search that had just run.
+$blast_program = $programs[$blast_program_selected]['binary'] ?? $blast_program_selected;
+$_POST['task'] = $programs[$blast_program_selected]['task'] ?? '';
+
+// blastn-short's parameters.
 //
 // Only fill in what the user did not choose. Anything set here is passed as an EXPLICIT
 // flag, and an explicit flag beats the task's own default -- which is exactly how the
 // old '10' here defeated blastn-short's built-in E-value of 1000 and cut a real 20nt
 // primer from 566 hits to 26.
-// $blast_program_selected keeps what the USER picked, for re-rendering the form.
-// $blast_program becomes what we EXECUTE. Without the split, running a short search
-// returned a page whose dropdown said plain "BLASTn" while the short parameters were
-// still sitting in the advanced fields and the "adjusted" badge had vanished -- so the
-// form disagreed with the search that had just run.
-$blast_program_selected = $blast_program;
-
-if ($blast_program === 'blastn-short') {
-    $blast_program = 'blastn';
-    $_POST['task']      = 'blastn-short';
+if ($blast_program_selected === 'blastn-short') {
     // 1000 is blastn-short's own default (`blastn -help`). A 20nt perfect match scores
     // ~40 bits, which is not significant at E=10 against a whole gene set, so the real
     // hit is discarded. Short queries need the threshold RAISED, not lowered.
@@ -147,7 +143,7 @@ $culling_limit = (int)($_POST['culling_limit'] ?? 0);
 $threshold = trim($_POST['threshold'] ?? '');
 $soft_masking = isset($_POST['soft_masking']);
 $ungapped = isset($_POST['ungapped']);
-$strand = trim($_POST['strand'] ?? 'plus');
+$strand = trim($_POST['strand'] ?? 'both');   // BLAST's own default; 'plus' missed every opposite-strand match
 
 // Initialize result variables
 $search_error  = null;
@@ -258,19 +254,8 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
                     // Extract hit IDs for targeted feature_coords lookup — avoids loading
                     // entire (potentially 80MB+) coords file into the 128MB memory limit.
                     preg_match_all('/<Hit_id>(.*?)<\/Hit_id>/', $blast_result['output'], $hit_id_matches);
-                    foreach ($hit_id_matches[1] ?? [] as $raw_id) {
-                        $hid = preg_replace('/^[a-z]{2,3}\|/', '', trim($raw_id));
-                        if (strpos($hid, '|') !== false) {
-                            $parts = explode('|', $hid);
-                            $hid = $parts[0] !== '' ? $parts[0] : ($parts[1] ?? $hid);
-                        }
-                        $hid = preg_replace('/:[a-z]+$/', '', $hid);
-                        // NCBI extracted CDS format: {chr}_cds_{ProteinAccession}_{index}
-                        if (preg_match('/_cds_([A-Z]{2}_?\d+\.\d+)_\d+$/', $hid, $m)) {
-                            $hid = $m[1];
-                        }
-                        $blast_hit_ids[] = $hid;
-                    }
+                    // The same cleaning the linkout renderer applies when it looks them up.
+                    $blast_hit_ids = array_map('blastHitFeatureId', $hit_id_matches[1] ?? []);
                 }
             }
         }
@@ -288,18 +273,7 @@ if (!empty($selected_source_obj) && !empty($selected_db_obj)) {
 
     $has_sqlite = file_exists($config->getPath('organism_data') . '/' . $selected_organism . '/organism.sqlite');
 
-    $has_jbrowse = false;
-    $assemblies_meta = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
-    if (is_dir($assemblies_meta)) {
-        foreach (glob($assemblies_meta . '/*.json') ?: [] as $jf) {
-            $jd = loadJsonFile($jf, []);
-            if (($jd['organism'] ?? '') === $selected_organism
-                && ($jd['assemblyId'] ?? '') === $selected_assembly) {
-                $has_jbrowse = true;
-                break;
-            }
-        }
-    }
+    $has_jbrowse = isJBrowseAssemblyRegistered($selected_organism, $selected_assembly);
 
     $coords = (!$is_genome_db && ($linkout_config['jbrowse'] ?? false))
         ? loadFeatureCoords($assembly_path, $blast_hit_ids)

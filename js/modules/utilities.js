@@ -126,7 +126,7 @@ function filterBlastPrograms(sequenceType, programSelectId) {
     // when detection returns 'unknown' -- which is how blastn-short became permanently
     // greyed out for the nucleotide queries it exists to serve.
     const proteinPrograms = ['blastp', 'tblastn'];        // Protein input programs
-    const nucleotidePrograms = ['blastn', 'blastn-short', 'blastx', 'tblastx'];  // Nucleotide input programs
+    const nucleotidePrograms = ['blastn', 'megablast', 'blastn-short', 'blastx', 'tblastx'];  // Nucleotide input programs
     
     // Disable/enable options based on sequence type
     document.querySelectorAll('#' + programSelectId + ' option').forEach(opt => {
@@ -139,11 +139,15 @@ function filterBlastPrograms(sequenceType, programSelectId) {
         }
     });
     
-    // If current selection is disabled, select first available
+    // If current selection is disabled, select first available -- and say so with a
+    // 'change' event, so the page's own handler runs. Setting selectedIndex fires nothing:
+    // pasting a protein while in BLASTn-short switched to BLASTp but kept E-value 1000,
+    // word size 7 and the "Adjusted for short sequences" badge.
     if (programSelect.options[programSelect.selectedIndex].disabled) {
         for (let i = 0; i < programSelect.options.length; i++) {
             if (!programSelect.options[i].disabled) {
                 programSelect.selectedIndex = i;
+                programSelect.dispatchEvent(new Event('change'));
                 break;
             }
         }
@@ -209,7 +213,7 @@ function updateDatabaseList() {
     // blastn, tblastn, tblastx need Nucleotide DB
     const compatibleDbs = allDbs.filter(db => {
         if (['blastp', 'blastx'].includes(program)) return db.type === 'protein';
-        if (['blastn', 'blastn-short', 'tblastn', 'tblastx'].includes(program)) return db.type === 'nucleotide';
+        if (['blastn', 'megablast', 'blastn-short', 'tblastn', 'tblastx'].includes(program)) return db.type === 'nucleotide';
         return true;
     });
     

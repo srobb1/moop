@@ -112,11 +112,13 @@ function initializeBlastManager() {
             form.querySelector('input[name="assembly"]').value = selectedSource.dataset.assembly;
             form.querySelector('input[name="gene_set"]').value = selectedSource.dataset.geneSet || '';
             
-            // Show progress indicator
-            const progressIndicator = document.getElementById('progressIndicator');
-            if (progressIndicator) {
-                progressIndicator.style.display = 'block';
-                document.getElementById('searchBtn').disabled = true;
+            // Say it is running, on the button the user just pressed, and stop a second
+            // submit. This used to look for #progressIndicator, which the page has never
+            // had -- so a long search showed nothing at all and could be submitted twice.
+            const searchBtn = document.getElementById('searchBtn');
+            if (searchBtn) {
+                searchBtn.disabled = true;
+                searchBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Running BLAST… (large databases can take a minute)';
             }
         });
     }
@@ -147,19 +149,6 @@ function initializeBlastManager() {
         }
     }
     
-    // Hide progress indicator after page has loaded
-    const resultsCard = document.querySelector('.mt-4.card');
-    const progressIndicator = document.getElementById('progressIndicator');
-    if (resultsCard && progressIndicator) {
-        progressIndicator.style.display = 'none';
-    }
-    
-    // Re-enable search button
-    const searchBtn = document.getElementById('searchBtn');
-    if (searchBtn) {
-        searchBtn.disabled = false;
-    }
-    
     // Toggle custom evalue input visibility
     window.toggleEvalueCustom = function() {
         const select = document.getElementById('evalue');
@@ -174,14 +163,14 @@ function initializeBlastManager() {
     };
 }
 
-// Auto-scroll to results section when page loads with results
+// Scroll to the results when the page comes back with them. Never worked before: it looked
+// for #blast-results-section (the card is #blastResultsCard), and it added a
+// DOMContentLoaded listener from INSIDE a DOMContentLoaded handler, after the event had fired.
 function autoScrollToResults() {
-    document.addEventListener('DOMContentLoaded', function() {
-        const resultsSection = document.getElementById('blast-results-section');
-        if (resultsSection) {
-            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    });
+    const resultsCard = document.getElementById('blastResultsCard');
+    if (resultsCard) {
+        resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 // Initialize on DOM ready
@@ -205,15 +194,20 @@ function loadSampleSequence(type) {
         return;
     }
     
+    // blastp for the protein sample (this said blastx, a DNA-query program; detection below
+    // corrected it, which hid the mistake). The 'change' event runs the page's handler, so
+    // a preset left over from BLASTn-short is put back -- setting .value alone fires nothing.
     if (type === 'protein' && sampleSequences['protein']) {
         queryField.value = sampleSequences['protein'];
         if (programField) {
-            programField.value = 'blastx';
+            programField.value = 'blastp';
+            programField.dispatchEvent(new Event('change'));
         }
     } else if (type === 'nucleotide' && sampleSequences['nucleotide']) {
         queryField.value = sampleSequences['nucleotide'];
         if (programField) {
             programField.value = 'blastn';
+            programField.dispatchEvent(new Event('change'));
         }
     } else {
         console.error('Sample not found for type:', type);

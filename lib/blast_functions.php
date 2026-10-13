@@ -157,7 +157,8 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     $full_db_path = $db_path . '/' . $db_base;
     $cmd[] = '-db ' . escapeshellarg($full_db_path);
     $cmd[] = '-evalue ' . escapeshellarg($evalue);
-    $cmd[] = '-num_descriptions ' . escapeshellarg($max_hits);
+    // -num_alignments is what limits an archive (-outfmt 11); -num_descriptions only
+    // produced "ignored for output formats > 4" on every run.
     $cmd[] = '-num_alignments ' . escapeshellarg($max_hits);
     $cmd[] = '-num_threads ' . $num_threads;
     $cmd[] = '-outfmt 11';
@@ -240,7 +241,11 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
         $cmd[] = '-task ' . escapeshellarg($task);
     }
 
-    $command = 'printf ' . escapeshellarg($query_seq) . ' | ' . implode(' ', $cmd);
+    // The query goes to BLAST's stdin (its default -query). It used to be piped in with
+    // `printf <query>`, and printf reads its first argument as a FORMAT: a header like
+    // ">clone 100% identical" became "clone 100 0dentical", and "\n" in a header became a
+    // real newline that pushed the rest of the header into the sequence.
+    $command = implode(' ', $cmd);
     
     // Execute BLAST with proc_open for better control
     $descriptors = [
@@ -256,6 +261,7 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
         return $result;
     }
     
+    fwrite($pipes[0], $query_seq);
     fclose($pipes[0]);
     $blast_stdout = stream_get_contents($pipes[1]);
     fclose($pipes[1]);
@@ -898,6 +904,19 @@ function reverseComplement(string $seq): string
  * 'summary' completes the option label after the em dash. 'when' is the card
  * text in the help modal and is deliberately about 25 words: the format is the
  * constraint that keeps the help readable (see help_modal() in lib/help_ui.php).
+ *
+ * What RUNS is here too, so the page cannot offer a program the server would run
+ * differently:
+ *   'binary'  the BLAST+ executable (defaults to the key)
+ *   'task'    -task, or '' for none. blastn MUST name one: with no -task, blastn runs
+ *             megablast (`blastn -help`: Default = `megablast'), which is how "BLASTn"
+ *             quietly meant megablast until 2026-10-13 -- 8 hits became 2 on a related
+ *             bat's transcripts.
+ *   'filter'  whether DUST/SEG is on by default -- BLAST's own default for that task,
+ *             so the checkbox starts where BLAST itself would.
+ *   'soft_masking'  BLAST's own -soft_masking default (`<program> -help`): true for
+ *             blastn, false for the rest. The form sends this flag on EVERY search, so a
+ *             checkbox starting unticked forced blastn to hard masking.
  */
 if (!function_exists('blast_programs')) {
 function blast_programs(): array
@@ -909,7 +928,22 @@ function blast_programs(): array
             'label'   => 'BLASTn',
             'summary' => 'DNA query vs DNA database',
             'when'    => 'The everyday choice for DNA. Finds a gene, transcript or genomic '
-                       . 'region in an assembly when both sides are nucleotide.',
+                       . 'region in an assembly, including from a related species.',
+            'task'    => 'blastn',
+            'filter'  => true,
+            'soft_masking' => true,
+        ],
+        'megablast' => [
+            'query'   => 'DNA',
+            'db'      => 'DNA',
+            'label'   => 'Megablast',
+            'summary' => 'Fast, for near-identical DNA',
+            'when'    => 'Faster than BLASTn but finds only close matches: the same gene in '
+                       . 'the same species. Misses diverged and cross-species hits.',
+            'binary'  => 'blastn',
+            'task'    => 'megablast',
+            'filter'  => true,
+            'soft_masking' => true,
         ],
         'blastp' => [
             'query'   => 'Protein',
@@ -918,6 +952,9 @@ function blast_programs(): array
             'summary' => 'Protein query vs protein database',
             'when'    => 'Protein on both sides. Use it to find homologues of a protein you '
                        . 'already have in amino-acid form.',
+            'task'    => '',
+            'filter'  => false,
+            'soft_masking' => false,
         ],
         'blastx' => [
             'query'   => 'DNA',
@@ -926,6 +963,9 @@ function blast_programs(): array
             'summary' => 'DNA query vs protein database (translated)',
             'when'    => 'You have DNA and want to know what it CODES FOR. Translates your '
                        . 'query in all six frames and searches proteins.',
+            'task'    => '',
+            'filter'  => true,
+            'soft_masking' => false,
         ],
         'tblastn' => [
             'query'   => 'Protein',
@@ -934,6 +974,9 @@ function blast_programs(): array
             'summary' => 'Protein query vs DNA database (translated)',
             'when'    => 'You have a protein and want to find its gene in a genome that is '
                        . 'not annotated yet. Translates the database, not your query.',
+            'task'    => '',
+            'filter'  => true,
+            'soft_masking' => false,
         ],
         'tblastx' => [
             'query'   => 'DNA',
@@ -942,6 +985,9 @@ function blast_programs(): array
             'summary' => 'DNA query vs DNA database (both translated)',
             'when'    => 'Translates BOTH sides. For distant relationships where the protein '
                        . 'is conserved but the DNA is not. Thorough, and by far the slowest.',
+            'task'    => '',
+            'filter'  => true,
+            'soft_masking' => false,
         ],
         'blastn-short' => [
             'query'   => 'Short DNA',
@@ -952,6 +998,10 @@ function blast_programs(): array
                        . 'barcodes. The ordinary settings discard perfect short matches, so '
                        . 'this preset is not optional for them.',
             'color'   => 'success',
+            'binary'  => 'blastn',
+            'task'    => 'blastn-short',
+            'filter'  => false,
+            'soft_masking' => true,
         ],
     ];
 }

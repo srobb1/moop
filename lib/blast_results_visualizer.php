@@ -517,6 +517,25 @@ function cleanBlastHitId(string $id): string {
 }
 
 /**
+ * The feature ID a BLAST hit refers to: source prefix and FASTA type suffix (:cds, :pep)
+ * removed, and an NCBI extracted-CDS name reduced to its protein accession.
+ *
+ * ONE definition. tools/blast.php uses it to choose which feature_coords.tsv rows to load,
+ * and buildBlastHitLinkouts() to look a hit up in them; they were two copies, and had
+ * already drifted (a 2-3 vs a 2-4 letter prefix) -- a hit cleaned differently on each side
+ * loses its Genome Browser button with no error.
+ */
+function blastHitFeatureId(string $raw_id): string {
+    $id = cleanBlastHitId(trim($raw_id));
+    $id = preg_replace('/:[a-z]+$/', '', $id);
+    // NCBI extracted CDS format: {chr}_cds_{ProteinAccession}_{index}
+    if (preg_match('/_cds_([A-Z]{2}_?\d+\.\d+)_\d+$/', $id, $m)) {
+        $id = $m[1];
+    }
+    return $id;
+}
+
+/**
  * Build linkout buttons for a single BLAST hit based on admin-configured rules.
  *
  * @param array $hit      Parsed hit array (subject, id, hsps, ...)
@@ -536,13 +555,7 @@ function buildBlastHitLinkouts($hit, $context) {
     $linkout_config = $context['linkout_config'] ?? [];
     $db_seq_type    = $context['db_seq_type']    ?? '';
 
-    $hit_id = cleanBlastHitId($hit['id'] ?? '');
-    // Strip FASTA export type suffixes (:cds, :pep, etc.) — feature_coords.tsv uses bare IDs
-    $hit_id = preg_replace('/:[a-z]+$/', '', $hit_id);
-    // NCBI extracted CDS format: {chr}_cds_{ProteinAccession}_{index} → extract accession
-    if (preg_match('/_cds_([A-Z]{2}_?\d+\.\d+)_\d+$/', $hit_id, $m)) {
-        $hit_id = $m[1];
-    }
+    $hit_id = blastHitFeatureId($hit['id'] ?? '');
 
     $html = '';
 

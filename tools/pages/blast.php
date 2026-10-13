@@ -213,13 +213,17 @@
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <label for="matrix" class="form-label"><strong>Scoring Matrix</strong></label>
+                                <?php
+                                // $blast_options is [] until a search runs, so "isset" was always
+                                // true and nothing matched: no option was selected and the browser
+                                // fell back to the FIRST, BLOSUM45 -- every protein search ran
+                                // BLOSUM45 under a label saying BLOSUM62 was the default.
+                                $cur_matrix = $blast_options['matrix'] ?? 'BLOSUM62';
+                                ?>
                                 <select id="matrix" name="matrix" class="form-select">
-                                    <option value="BLOSUM45" <?= isset($blast_options) && $blast_options['matrix'] === 'BLOSUM45' ? 'selected' : '' ?>>BLOSUM45</option>
-                                    <option value="BLOSUM62" <?= !isset($blast_options) || (isset($blast_options) && $blast_options['matrix'] === 'BLOSUM62') ? 'selected' : '' ?>>BLOSUM62 (default)</option>
-                                    <option value="BLOSUM80" <?= isset($blast_options) && $blast_options['matrix'] === 'BLOSUM80' ? 'selected' : '' ?>>BLOSUM80</option>
-                                    <option value="PAM30" <?= isset($blast_options) && $blast_options['matrix'] === 'PAM30' ? 'selected' : '' ?>>PAM30</option>
-                                    <option value="PAM70" <?= isset($blast_options) && $blast_options['matrix'] === 'PAM70' ? 'selected' : '' ?>>PAM70</option>
-                                    <option value="PAM250" <?= isset($blast_options) && $blast_options['matrix'] === 'PAM250' ? 'selected' : '' ?>>PAM250</option>
+                                    <?php foreach (['BLOSUM45', 'BLOSUM62', 'BLOSUM80', 'PAM30', 'PAM70', 'PAM250'] as $m): ?>
+                                    <option value="<?= $m ?>" <?= $cur_matrix === $m ? 'selected' : '' ?>><?= $m ?><?= $m === 'BLOSUM62' ? ' (default)' : '' ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                                 <small class="form-text text-muted">Only used for protein searches</small>
                             </div>
@@ -227,7 +231,9 @@
                             <div class="col-md-6">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="form-check mt-2">
-                                    <input class="form-check-input" type="checkbox" name="filter_seq" id="filter_seq" <?= (isset($blast_options) && $blast_options['filter']) ? 'checked' : '' ?>>
+                                    <?php // Before a search: BLAST's own default for the program (blast_programs() 'filter');
+                                          // applyBlastProgramDefaults() keeps it in step when the program changes. ?>
+                                    <input class="form-check-input" type="checkbox" name="filter_seq" id="filter_seq" <?= ($blast_options['filter'] ?? (blast_programs()[$blast_program]['filter'] ?? false)) ? 'checked' : '' ?>>
                                     <label class="form-check-label adv-short-param" for="filter_seq">
                                         Filter low complexity regions
                                     </label>
@@ -242,13 +248,13 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <label for="word_size" class="form-label adv-short-param"><strong>Word Size</strong></label>
-                                <input type="number" id="word_size" name="word_size" class="form-control" value="<?= isset($blast_options) && $blast_options['word_size'] ? htmlspecialchars($blast_options['word_size']) : '' ?>" placeholder="Default (program-specific)" min="1">
+                                <input type="number" id="word_size" name="word_size" class="form-control" value="<?= !empty($blast_options['word_size']) ? htmlspecialchars($blast_options['word_size']) : '' ?>" placeholder="Default (program-specific)" min="1">
                                 <small class="form-text text-muted">Length of initial exact match (typically 11 for blastn, 3 for blastp)</small>
                             </div>
                             
                             <div class="col-md-6">
                                 <label for="max_hsps" class="form-label"><strong>Max HSPs</strong></label>
-                                <input type="number" id="max_hsps" name="max_hsps" class="form-control" value="<?= isset($blast_options) && $blast_options['max_hsps'] ? htmlspecialchars($blast_options['max_hsps']) : '' ?>" placeholder="Unlimited" min="1">
+                                <input type="number" id="max_hsps" name="max_hsps" class="form-control" value="<?= !empty($blast_options['max_hsps']) ? htmlspecialchars($blast_options['max_hsps']) : '' ?>" placeholder="Unlimited" min="1">
                                 <small class="form-text text-muted">Maximum number of HSPs to return per subject</small>
                             </div>
                         </div>
@@ -256,13 +262,13 @@
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <label for="perc_identity" class="form-label"><strong>Percent Identity</strong></label>
-                                <input type="number" id="perc_identity" name="perc_identity" class="form-control" value="<?= isset($blast_options) && $blast_options['perc_identity'] ? htmlspecialchars($blast_options['perc_identity']) : '' ?>" placeholder="No threshold" min="0" max="100" step="0.1">
+                                <input type="number" id="perc_identity" name="perc_identity" class="form-control" value="<?= !empty($blast_options['perc_identity']) ? htmlspecialchars($blast_options['perc_identity']) : '' ?>" placeholder="No threshold" min="0" max="100" step="0.1">
                                 <small class="form-text text-muted">Minimum percent identity (0-100)</small>
                             </div>
                             
                             <div class="col-md-6">
                                 <label for="culling_limit" class="form-label"><strong>Culling Limit</strong></label>
-                                <input type="number" id="culling_limit" name="culling_limit" class="form-control" value="<?= isset($blast_options) && $blast_options['culling_limit'] ? htmlspecialchars($blast_options['culling_limit']) : '' ?>" placeholder="No limit" min="0">
+                                <input type="number" id="culling_limit" name="culling_limit" class="form-control" value="<?= !empty($blast_options['culling_limit']) ? htmlspecialchars($blast_options['culling_limit']) : '' ?>" placeholder="No limit" min="0">
                                 <small class="form-text text-muted">Max alignments per subject (0 = unlimited)</small>
                             </div>
                         </div>
@@ -270,13 +276,13 @@
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <label for="gapopen" class="form-label adv-short-param"><strong>Gap Open Penalty</strong></label>
-                                <input type="number" id="gapopen" name="gapopen" class="form-control" value="<?= isset($blast_options) && $blast_options['gapopen'] ? htmlspecialchars($blast_options['gapopen']) : '' ?>" placeholder="Default" min="1">
+                                <input type="number" id="gapopen" name="gapopen" class="form-control" value="<?= !empty($blast_options['gapopen']) ? htmlspecialchars($blast_options['gapopen']) : '' ?>" placeholder="Default" min="1">
                                 <small class="form-text text-muted">Cost to open a gap</small>
                             </div>
                             
                             <div class="col-md-6">
                                 <label for="gapextend" class="form-label adv-short-param"><strong>Gap Extend Penalty</strong></label>
-                                <input type="number" id="gapextend" name="gapextend" class="form-control" value="<?= isset($blast_options) && $blast_options['gapextend'] ? htmlspecialchars($blast_options['gapextend']) : '' ?>" placeholder="Default" min="1">
+                                <input type="number" id="gapextend" name="gapextend" class="form-control" value="<?= !empty($blast_options['gapextend']) ? htmlspecialchars($blast_options['gapextend']) : '' ?>" placeholder="Default" min="1">
                                 <small class="form-text text-muted">Cost to extend a gap</small>
                             </div>
                         </div>
@@ -284,16 +290,22 @@
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <label for="threshold" class="form-label"><strong>Threshold</strong></label>
-                                <input type="number" id="threshold" name="threshold" class="form-control" value="<?= isset($blast_options) && $blast_options['threshold'] ? htmlspecialchars($blast_options['threshold']) : '' ?>" placeholder="Default" step="0.1">
+                                <input type="number" id="threshold" name="threshold" class="form-control" value="<?= !empty($blast_options['threshold']) ? htmlspecialchars($blast_options['threshold']) : '' ?>" placeholder="Default" step="0.1">
                                 <small class="form-text text-muted">Minimum score for extending HSP (protein searches)</small>
                             </div>
                             
                             <div class="col-md-6">
                                 <label for="strand" class="form-label"><strong>Strand (DNA only)</strong></label>
+                                <?php
+                                // Both by default, as BLAST itself does. "Plus" carried `selected` in
+                                // BOTH branches of its condition, so every DNA search was plus-only and
+                                // a query from the other strand returned nothing at all.
+                                $cur_strand = $blast_options['strand'] ?? 'both';
+                                ?>
                                 <select id="strand" name="strand" class="form-select">
-                                    <option value="plus" <?= isset($blast_options) && $blast_options['strand'] === 'plus' ? 'selected' : 'selected' ?>>Plus strand</option>
-                                    <option value="minus" <?= isset($blast_options) && $blast_options['strand'] === 'minus' ? 'selected' : '' ?>>Minus strand</option>
-                                    <option value="both" <?= isset($blast_options) && $blast_options['strand'] === 'both' ? 'selected' : '' ?>>Both strands</option>
+                                    <?php foreach (['both' => 'Both strands', 'plus' => 'Plus strand', 'minus' => 'Minus strand'] as $v => $l): ?>
+                                    <option value="<?= $v ?>" <?= $cur_strand === $v ? 'selected' : '' ?>><?= $l ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                         </div>
@@ -301,7 +313,7 @@
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="soft_masking" id="soft_masking" <?= isset($blast_options) && $blast_options['soft_masking'] ? 'checked' : '' ?>>
+                                    <input class="form-check-input" type="checkbox" name="soft_masking" id="soft_masking" <?= ($blast_options['soft_masking'] ?? (blast_programs()[$blast_program]['soft_masking'] ?? false)) ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="soft_masking">
                                         <strong>Soft Masking</strong>
                                     </label>
@@ -311,7 +323,7 @@
 
                             <div class="col-md-6">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="ungapped" id="ungapped" <?= isset($blast_options) && $blast_options['ungapped'] ? 'checked' : '' ?>>
+                                    <input class="form-check-input" type="checkbox" name="ungapped" id="ungapped" <?= !empty($blast_options['ungapped']) ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="ungapped">
                                         <strong>Ungapped</strong>
                                     </label>
@@ -459,7 +471,20 @@ document.getElementById('advOptions')?.addEventListener('hide.bs.collapse', func
 // from a short search knows the preset is in effect.
 let blastShortPresetApplied = <?= $blast_program === 'blastn-short' ? 'true' : 'false' ?>;
 
+// Each program's own BLAST defaults for the two checkboxes, from blast_programs() -- the
+// list the dropdown is rendered from -- so a program change sets them where BLAST itself
+// would. They were left wherever the last click put them: off on a fresh page, on after
+// leaving BLASTn-short.
+const blastProgramDefaults = <?= json_encode(array_map(fn($p) => ['filter' => $p['filter'], 'soft_masking' => $p['soft_masking']], blast_programs())) ?>;
+
 function applyBlastProgramDefaults(program) {
+    const defaults = blastProgramDefaults[program];
+    if (defaults) {
+        const f = document.getElementById('filter_seq');
+        const m = document.getElementById('soft_masking');
+        if (f) f.checked = defaults.filter;
+        if (m) m.checked = defaults.soft_masking;
+    }
     const notice    = document.getElementById('blastn-short-notice');
     const advNotice = document.getElementById('adv-short-notice');
     const badge     = document.getElementById('adv-modified-badge');
@@ -483,7 +508,6 @@ function applyBlastProgramDefaults(program) {
         // Pre-fill advanced fields
         const wordSize  = document.getElementById('word_size');
         const evalue    = document.getElementById('evalue');
-        const filterCb  = document.getElementById('filter_seq');
         const gapopen   = document.getElementById('gapopen');
         const gapextend = document.getElementById('gapextend');
         if (wordSize)  wordSize.value   = '7';
@@ -491,9 +515,8 @@ function applyBlastProgramDefaults(program) {
         // overrode it and cut a real 20nt primer from 566 hits to 26. The notice below
         // has always SAID 1000 -- only the code disagreed.
         if (evalue)    evalue.value     = '1000';
-        // DUST off. It is `no` for blastn-short upstream, and left on it silently
-        // returns ZERO hits for any primer with a simple repeat (ATATAT..., poly-A).
-        if (filterCb)  filterCb.checked = false;
+        // DUST off -- set above from blastProgramDefaults (`no` for blastn-short upstream).
+        // Left on, it silently returns ZERO hits for any primer with a simple repeat.
         if (gapopen)   gapopen.value    = '5';
         if (gapextend) gapextend.value  = '2';
         // Auto-select genome database if available
@@ -517,12 +540,10 @@ function applyBlastProgramDefaults(program) {
         // result. Blank means "use the program default" on the server side.
         const wordSize  = document.getElementById('word_size');
         const evalue    = document.getElementById('evalue');
-        const filterCb  = document.getElementById('filter_seq');
         const gapopen   = document.getElementById('gapopen');
         const gapextend = document.getElementById('gapextend');
         if (wordSize)  wordSize.value   = '';
         if (evalue)    evalue.value     = '1e-3';
-        if (filterCb)  filterCb.checked = true;
         if (gapopen)   gapopen.value    = '';
         if (gapextend) gapextend.value  = '';
     }
