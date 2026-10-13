@@ -21,7 +21,8 @@
  * - 50-500 tracks:  ~500ms, 500KB → 50KB (gzipped)
  * - 500-1000:       ~1s, 2MB → 200KB (gzipped)
  * 
- * For assemblies > 1000 tracks, consider using config-optimized.php
+ * Measured 2026-10-13, the largest assembly here (Nematostella Nvec200, 1,171 tracks):
+ * ~1.5 s, 3.2 MB -> 426 KB gzipped. See "Large track sets" below before changing this.
  * 
  * Endpoints:
  * ----------
@@ -63,10 +64,24 @@
  *     initJBrowse2(config);
  *   });
  * 
- * Alternative Endpoint:
- * ---------------------
- * For assemblies with > 1000 tracks, use api/jbrowse2/config-optimized.php
- * which implements lazy-loading via track URIs for better performance.
+ * Large track sets -- what is already on demand, and what is not:
+ * -------------------------------------------------------------------
+ * This endpoint sends the TRACK LIST for one assembly: only the tracks this user may
+ * see, each with a token bound to its one data file. The track DATA is already loaded
+ * on demand: JBrowse fetches only the region on screen, through tracks.php, which
+ * checks that token on every request. Only this list is sent all at once.
+ *
+ * If the list ever gets slow, two approaches JBrowse 2 actually supports:
+ *   - a track-hub connection (JB2TrackHubConnection): a second config.json of tracks,
+ *     loaded when the user connects to it -- e.g. one per category, served by this
+ *     endpoint with the same filtering and tokens;
+ *   - splitting the list by category and adding categories as the user asks for them
+ *     (sessionTracks).
+ * Do NOT use a track entry of {trackId, uri, assemblyNames} pointing back at PHP: in
+ * JBrowse 2 that is shorthand for a DATA FILE, whose adapter is chosen by the file
+ * extension. api/jbrowse2/config-optimized.php did exactly that for "lazy loading";
+ * it was never switched on, would have broken every track over its 50-track threshold,
+ * and duplicated this file's token code (already drifting). Deleted 2026-10-13.
  * 
  * Current Status: PRIMARY ENDPOINT (actively used by all assemblies)
  * Last Updated: 2026-02-14
@@ -238,8 +253,8 @@ function generateAssemblyConfig($organism, $assembly, $user_access_level) {
     ];
     
     // 4. LOAD AND FILTER TRACKS
-    // All tracks are embedded in the response (no lazy-loading)
-    // For assemblies > 1000 tracks, consider using config-optimized.php
+    // All permitted tracks are listed in the response; their DATA loads on demand
+    // through tracks.php. For very large lists see "Large track sets" in the header.
     $tracks = loadFilteredTracks($organism, $assembly, $user_access_level);
     $config['tracks'] = $tracks;
     
