@@ -406,6 +406,28 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         return $result;
     }
 
+    // Fast path: whole sequences from a current .fai index, read in-process -- no blastdbcmd
+    // process (~225 ms each). Output is what blastdbcmd prints: the full header line, the
+    // residues uppercased, 80 per line. This is what lets the gene page DISPLAY through this
+    // same function as its downloads, instead of a second reader of its own.
+    $ranged = array_filter($batch, fn($line) => strpos($line, ' ') !== false);
+    if (!$ranged) {
+        require_once __DIR__ . '/fasta_index.php';
+        if (moop_fasta_index_available($blast_db)) {
+            $records = [];
+            foreach (moop_fasta_fetch_with_headers($blast_db, $batch) as $rec) {
+                $records[] = '>' . $rec['header'] . "\n" . rtrim(chunk_split($rec['seq'], 80, "\n"));
+            }
+            if (!$records) {
+                $result['error'] = 'No sequences found for the requested IDs';
+                return $result;
+            }
+            $result['success'] = true;
+            $result['content'] = implode("\n", $records);
+            return $result;
+        }
+    }
+
     $temp_file = tempnam(sys_get_temp_dir(), 'blastdb_');
     if ($temp_file === false || file_put_contents($temp_file, implode("\n", $batch) . "\n") === false) {
         if ($temp_file !== false) @unlink($temp_file);

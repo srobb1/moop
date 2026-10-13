@@ -479,12 +479,22 @@ $retrieve_these_seqs = array_unique($retrieve_these_seqs);
 sort($retrieve_these_seqs);
 $gene_name = implode(",", $retrieve_these_seqs);
 
+// The sequences, ONCE, through the same extractor every sequence page uses -- shown in the
+// Sequences card and served by its Download buttons, so the two cannot differ. The card used to
+// run its own FASTA reader while Download went through this one; that is how the page once
+// showed lowercase (soft-masked) bases that the download did not. Same order as before: IDs
+// sorted as sort() does. A big gene shows no sequences, so it extracts only for a download.
+$__ids = array_keys($typed_ids);
+sort($__ids);
+$typed_ids = array_combine($__ids, array_map(fn($i) => $typed_ids[$i], $__ids));
+$displayed_content = [];
+if (is_dir($gene_set_dir) && (!$big_gene || ($download_file_flag && !empty($sequence_type)))) {
+    $displayed_content = extractSequencesForAllTypes($gene_set_dir, $typed_ids, $sequence_types, $organism_name, $genome_accession)['content'];
+}
+
 // Handle download request if present (BEFORE rendering page)
 if ($download_file_flag && !empty($sequence_type)) {
     if (is_dir($gene_set_dir)) {
-        $extract_result = extractSequencesForAllTypes($gene_set_dir, $typed_ids, $sequence_types, $organism_name, $genome_accession);
-        $displayed_content = $extract_result['content'];
-
         if (!empty($displayed_content) && isset($displayed_content[$sequence_type])) {
             if (ob_get_level()) {
                 ob_end_clean();
@@ -541,6 +551,7 @@ echo render_display_page(
         'analysis_desc' => $analysis_desc,
         'retrieve_these_seqs' => $retrieve_these_seqs,
         'gene_name' => $gene_name,
+        'available_sequences' => $displayed_content ? formatSequenceResults($displayed_content, $sequence_types) : [],
         'enable_downloads' => true,
         'assembly_name' => $genome_accession,
         'site' => $site,

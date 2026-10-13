@@ -143,7 +143,7 @@ function housekeeping_task_registry(): array {
             'name'  => 'jbrowse_indexes',
             'fn'    => 'housekeeping_check_jbrowse_indexes',
             'label' => 'JBrowse track indexes',
-            'desc'  => 'Counts gene tracks whose bgzip/tabix index is older than its source GFF. annotations.gff3 is a symlink into organisms/ so it follows every gene-set reload, while the .gz JBrowse actually reads is a snapshot that only changes on an explicit re-prep — so a reload stales the browser track silently. Stat calls only; reports rather than rebuilds, because re-compressing a 100 MB+ GFF belongs behind a button.',
+            'desc'  => 'Rebuilds and counts gene tracks whose bgzip/tabix index is older than its source GFF. annotations.gff3 is a symlink into organisms/ so it follows every gene-set reload, while the .gz JBrowse actually reads is a snapshot that only changes on an explicit re-prep — so a reload stales the browser track silently. Rebuilds stale ones first — only in the background run, smallest first, about five minutes per run, the rest on the next; a run from the Re-run button only counts.',
         ],
         [
             'name'  => 'jbrowse_version',
@@ -903,17 +903,21 @@ function housekeeping_permission_check() {
  * behind; the two Bradypodion gene sets were serving feature IDs that no longer existed
  * in the database at all, so every gene-page link into JBrowse missed.
  *
- * Stat calls only -- one per gene set, no file contents read -- so this is cheap enough
- * to run on the housekeeping interval. It reports; it does not rebuild. Rebuilding
- * re-compresses a GFF that can be over 100 MB and belongs behind a button the admin
- * presses, not inside a page load.
+ * Counting is stat calls only. REBUILDING (since 2026-10-13, user's decision) happens first,
+ * and ONLY in the background run (PHP_SAPI 'cli', scripts/run_housekeeping.php): it
+ * re-compresses GFFs that can exceed 100 MB, which must never happen inside a page request
+ * -- and housekeeping still runs inline from the admin "re-run" button and when a spawn
+ * fails. It used to report only, on the grounds that rebuilding "belongs behind a button";
+ * the button existed, and 42 of 68 tracks were stale anyway.
  */
 function housekeeping_check_jbrowse_indexes() {
     $config    = ConfigManager::getInstance();
     $site_path = $config->getPath('site_path');
     $base      = "$site_path/data/genomes";
+    $rebuilt   = PHP_SAPI === 'cli' ? housekeeping_rebuild_stale_gene_indexes($base) : null;
 
-    $summary = ['total' => 0, 'stale' => 0, 'missing' => 0, 'examples' => [], 'checked_at' => time()];
+    $summary = ['total' => 0, 'stale' => 0, 'missing' => 0, 'examples' => [], 'checked_at' => time(),
+                'last_rebuild' => $rebuilt];
 
     if (!is_dir($base)) {
         $_SESSION['jbrowse_index_summary'] = $summary;
@@ -965,6 +969,49 @@ function housekeeping_check_jbrowse_indexes() {
 
     $_SESSION['jbrowse_index_summary'] = $summary;
     housekeeping_persist_status('jbrowse_index_summary', $summary);
+}
+
+/**
+ * Rebuild stale gene-track indexes, smallest GFF first, until $budget_seconds is spent; the
+ * rest wait for the next run (hourly), so a large backlog is worked through without any one
+ * run holding the housekeeping lock for long.
+ *
+ * Only tracks that were prepped before and have since gone stale -- never one that was never
+ * registered (no .gz): registering is an admin decision. The rebuild is the manager's own
+ * re-prep (prepareGeneSetForJBrowse, not forced), which rebuilds the .gz/.tbi when stale and
+ * leaves the track config alone when it exists. The search index (trix) is not touched: it
+ * lives under jbrowse2/, which the web server must not write, and none exist today.
+ *
+ * @return array{done: list<string>, failed: list<string>, left: int, seconds: int}
+ */
+function housekeeping_rebuild_stale_gene_indexes(string $base, int $budget_seconds = 300): array {
+    $t0 = time();
+    $out = ['done' => [], 'failed' => [], 'left' => 0, 'seconds' => 0];
+    if (!is_dir($base)) return $out;
+
+    $stale = [];
+    foreach (glob("$base/*/*/*/annotations.gff3") ?: [] as $gff) {
+        $gz = "$gff.gz";
+        if (!file_exists($gff) || !file_exists($gz)) continue;   // gone, or never prepped
+        $idx = file_exists("$gz.tbi") ? "$gz.tbi" : (file_exists("$gz.csi") ? "$gz.csi" : null);
+        if (filemtime($gz) < filemtime($gff) || ($idx !== null && filemtime($idx) < filemtime($gz))) {
+            $stale[$gff] = filesize($gff);
+        }
+    }
+    asort($stale);
+
+    $config = ConfigManager::getInstance();
+    require_once $config->getPath('site_path') . '/lib/jbrowse/gene_set_functions.php';
+    foreach (array_keys($stale) as $i => $gff) {
+        if (time() - $t0 >= $budget_seconds) { $out['left'] = count($stale) - $i; break; }
+        [$org, $asm, $gs] = array_slice(explode('/', substr($gff, strlen($base) + 1)), 0, 3);
+        $log = [];
+        $ok  = prepareGeneSetForJBrowse($org, $asm, $gs, $config, $log, false);
+        $out[$ok ? 'done' : 'failed'][] = "$org/$asm/$gs";
+        if (!$ok) error_log("MOOP housekeeping: re-prep failed for $org/$asm/$gs: " . implode(' | ', array_slice($log, -3)));
+    }
+    $out['seconds'] = time() - $t0;
+    return $out;
 }
 
 /**

@@ -62,6 +62,72 @@
                 <span class="fw-semibold" style="font-size:0.9rem;">Your sequence</span>
             </div>
             <div class="card-body py-3">
+                <?php
+                $with_seq = array_values(array_filter($isoforms, fn($i) => $i['fasta_id'] !== ''));
+                ?>
+                <?php if (count($with_seq) === 1 && $selected_isoform !== ''): ?>
+                    <?php // One transcript: nothing to ask, so do not ask. ?>
+                    <div class="form-text mt-0 mb-2">
+                        <i class="fa fa-check-circle text-success me-1"></i>
+                        Filled in with <strong><?= htmlspecialchars($with_seq[0]['fasta_id']) ?></strong>,
+                        the only transcript of <?= htmlspecialchars($context_feature) ?>
+                        (<?= number_format((int)$with_seq[0]['length']) ?> bp).
+                    </div>
+                <?php elseif (count($with_seq) > 1): ?>
+                    <?php // Several: picking one for them would be guessing, and the
+                          // transcripts differ in exactly the way that matters here. ?>
+                    <?php // FIRST in the card, and in an attention box: it only appears when there
+                          // is a real choice to make, and the sequence box below is empty until it is
+                          // made -- below the box and the marking notes, it was easy to miss (user,
+                          // 2026-10-13). ?>
+                    <div class="moop-callout-attention rounded px-3 py-2 mb-3">
+                        <label for="isoform" class="form-label mb-1">
+                            <strong><?= htmlspecialchars($context_feature) ?></strong> has
+                            <?= count($with_seq) ?> transcripts — which one?
+                            <?= field_help(
+                                'Isoforms of the same gene differ in which exons they contain, so a primer '
+                                . 'pair that works on one may not amplify another — and for RT-PCR the exon '
+                                . 'junctions themselves differ. Pick the transcript you actually care about. '
+                                . 'Choosing one replaces the sequence box with its sequence.',
+                                'Which transcript?'
+                            ) ?>
+                        </label>
+                        <div class="d-flex gap-2 align-items-start flex-wrap">
+                            <select name="isoform" id="isoform" class="form-select" style="max-width:32rem;">
+                                <?php foreach ($isoforms as $iso): ?>
+                                    <option value="<?= htmlspecialchars($iso['id']) ?>"
+                                            <?= $iso['fasta_id'] === '' ? 'disabled' : '' ?>
+                                            <?= $selected_isoform === $iso['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($iso['fasta_id'] ?: $iso['id']) ?>
+                                        — <?= htmlspecialchars($iso['type']) ?><?php
+                                        echo $iso['length'] !== null
+                                            ? ', ' . number_format((int)$iso['length']) . ' bp'
+                                            : ' (no sequence available)'; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php // A plain submit, not JS: it re-renders the page with the
+                                  // chosen transcript prefilled, and works with no scripting. ?>
+                            <button type="submit" name="load_isoform" value="1" class="btn btn-outline-moop">
+                                <i class="fa fa-arrow-down me-1"></i>Load this sequence
+                            </button>
+                        </div>
+                        <?php $missing = count($isoforms) - count($with_seq); ?>
+                        <?php if ($missing > 0): ?>
+                            <div class="form-text">
+                                <?= $missing ?> further transcript<?= $missing === 1 ? ' has' : 's have' ?>
+                                no sequence in this gene set, so <?= $missing === 1 ? 'it is' : 'they are' ?>
+                                listed but cannot be chosen.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php elseif ($context_feature): ?>
+                    <div class="form-text mt-0 mb-2">
+                        <i class="fa fa-link me-1"></i>Arrived from
+                        <strong><?= htmlspecialchars($context_feature) ?></strong>, but no transcript
+                        sequence was found for it in this gene set. Paste a sequence above.
+                    </div>
+                <?php endif; ?>
                 <p class="small text-muted mb-2">
                     Paste DNA, with or without a FASTA header. Primers are designed from this
                     sequence, so include the region you want to amplify plus some room either side.
@@ -113,68 +179,6 @@
                         <?php endif; ?>
                     </div>
                 </div>
-                <?php
-                $with_seq = array_values(array_filter($isoforms, fn($i) => $i['fasta_id'] !== ''));
-                ?>
-                <?php if (count($with_seq) === 1 && $selected_isoform !== ''): ?>
-                    <?php // One transcript: nothing to ask, so do not ask. ?>
-                    <div class="form-text">
-                        <i class="fa fa-check-circle text-success me-1"></i>
-                        Filled in with <strong><?= htmlspecialchars($with_seq[0]['fasta_id']) ?></strong>,
-                        the only transcript of <?= htmlspecialchars($context_feature) ?>
-                        (<?= number_format((int)$with_seq[0]['length']) ?> bp).
-                    </div>
-                <?php elseif (count($with_seq) > 1): ?>
-                    <?php // Several: picking one for them would be guessing, and the
-                          // transcripts differ in exactly the way that matters here. ?>
-                    <div class="mt-3">
-                        <label for="isoform" class="form-label mb-1">
-                            <strong><?= htmlspecialchars($context_feature) ?></strong> has
-                            <?= count($with_seq) ?> transcripts — which one?
-                            <?= field_help(
-                                'Isoforms of the same gene differ in which exons they contain, so a primer '
-                                . 'pair that works on one may not amplify another — and for RT-PCR the exon '
-                                . 'junctions themselves differ. Pick the transcript you actually care about. '
-                                . 'Choosing one replaces the sequence box with its sequence.',
-                                'Which transcript?'
-                            ) ?>
-                        </label>
-                        <div class="d-flex gap-2 align-items-start flex-wrap">
-                            <select name="isoform" id="isoform" class="form-select" style="max-width:32rem;">
-                                <?php foreach ($isoforms as $iso): ?>
-                                    <option value="<?= htmlspecialchars($iso['id']) ?>"
-                                            <?= $iso['fasta_id'] === '' ? 'disabled' : '' ?>
-                                            <?= $selected_isoform === $iso['id'] ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($iso['fasta_id'] ?: $iso['id']) ?>
-                                        — <?= htmlspecialchars($iso['type']) ?><?php
-                                        echo $iso['length'] !== null
-                                            ? ', ' . number_format((int)$iso['length']) . ' bp'
-                                            : ' (no sequence available)'; ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <?php // A plain submit, not JS: it re-renders the page with the
-                                  // chosen transcript prefilled, and works with no scripting. ?>
-                            <button type="submit" name="load_isoform" value="1" class="btn btn-outline-secondary">
-                                <i class="fa fa-arrow-down me-1"></i>Load this sequence
-                            </button>
-                        </div>
-                        <?php $missing = count($isoforms) - count($with_seq); ?>
-                        <?php if ($missing > 0): ?>
-                            <div class="form-text">
-                                <?= $missing ?> further transcript<?= $missing === 1 ? ' has' : 's have' ?>
-                                no sequence in this gene set, so <?= $missing === 1 ? 'it is' : 'they are' ?>
-                                listed but cannot be chosen.
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                <?php elseif ($context_feature): ?>
-                    <div class="form-text">
-                        <i class="fa fa-link me-1"></i>Arrived from
-                        <strong><?= htmlspecialchars($context_feature) ?></strong>, but no transcript
-                        sequence was found for it in this gene set. Paste a sequence above.
-                    </div>
-                <?php endif; ?>
             </div>
         </div>
 

@@ -690,7 +690,7 @@ function getAvailableSequenceTypesForDisplay($accessible_sources, $sequence_type
  * Handle sequence download request
  * 
  * Checks for download flag and sends file if conditions are met.
- * Works with both array-based sequences (from extractSequencesFromFasta)
+ * Works with both array-based sequences (id => FASTA record)
  * and string-based sequences (from extractSequencesForAllTypes).
  * 
  * @param bool $download_flag - Whether download was requested
@@ -703,7 +703,7 @@ function handleSequenceDownload($download_flag, $sequence_type, $sequence_data, 
         return false;
     }
     
-    // Handle both formats: array (from extractSequencesFromFasta) and string (from extractSequencesForAllTypes)
+    // Handle both formats: array (id => FASTA record) and string (from extractSequencesForAllTypes)
     $fasta_content = '';
     if (is_array($sequence_data)) {
         // Array format: feature_id => content

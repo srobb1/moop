@@ -994,3 +994,12 @@ footer .footer-meta {
   font-style: italic;
   text-transform: none;
 }
+
+/* "Decide this first" -- a choice the page cannot make for the user and that everything below
+   depends on (Primer Maker: which of a gene's transcripts). Amber, the site's attention accent,
+   as a wash with a left rule: it stands out from the teal tool cards without reading as an error. */
+.moop-callout-attention {
+  background-color: #fff8eb;
+  border: 1px solid #f6d28b;
+  border-left: 4px solid var(--moop-accent-amber);
+}
