@@ -712,11 +712,23 @@
     // the send-to-maker button is opted INTO here rather than appearing wherever
     // this component happens to be included.
     $enable_primer_design = true;
+    // Each sequence's TRANSCRIPT, so Primer Maker's own isoform list shows the one picked: a
+    // transcript is its own; a CDS (or protein) is under its transcript in the feature tree.
+    $__by_id = array_column($children, null, 'feature_id');
+    $__transcript_of = [];
+    foreach ($children as $__c) {
+        $__t = $__c;
+        while (isset($__by_id[$__t['parent_feature_id']]) && !in_array(strtolower($__t['feature_type']), ['mrna', 'transcript'], true)) {
+            $__t = $__by_id[$__t['parent_feature_id']];
+        }
+        $__transcript_of[$__c['feature_uniquename']] = $__t['feature_uniquename'];
+    }
     $primer_design_context = [
         'organism' => $organism_name,
         'assembly' => $genome_accession,
         'gene_set' => $gene_set_name,
         'feature'  => $feature_uniquename,
+        'transcript_of' => $__transcript_of,
     ];
     $assembly_name    = $genome_accession;
     $organism_data    = $config->getPath('organism_data');

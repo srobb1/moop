@@ -280,19 +280,47 @@ if (!empty($sequence_errors)) {
                         if (!empty($enable_primer_design)
                             && in_array($seq_type, moop_primer_sequence_types(), true)) {
                             $pd_ctx = $primer_design_context ?? [];
-                            $pd_url = '/' . $config->getString('site') . '/tools/primer_maker.php?'
-                                    . http_build_query([
+                            // One link per sequence in this box. With several (a gene with several
+                            // isoforms), the button is a picker, like Format sequence's: the link
+                            // used to name only the gene, so Primer Maker opened empty and asked
+                            // again -- and from a CDS box it could never load anything, because a
+                            // CDS id (X-RA:cds, cds-XP_..., ...) cannot be derived from the
+                            // transcript id it was given. seq_id is the exact id in this box.
+                            $pd_links = [];
+                            foreach ($sequences as $pd_header => $pd_fasta) {
+                                $pd_id  = strtok((string)$pd_header, " \t");
+                                $pd_len = strlen(preg_replace('/\s+/', '', implode('', array_slice(explode("\n", $pd_fasta), 1))));
+                                $pd_links[] = [
+                                    'id'  => $pd_id,
+                                    'len' => $pd_len,
+                                    'url' => '/' . $config->getString('site') . '/tools/primer_maker.php?' . http_build_query([
                                         'organism' => $pd_ctx['organism'] ?? '',
                                         'assembly' => $pd_ctx['assembly'] ?? '',
                                         'gene_set' => $pd_ctx['gene_set'] ?? '',
                                         'feature'  => $pd_ctx['feature'] ?? '',
+                                        'isoform'  => $pd_ctx['transcript_of'][$pd_id] ?? $pd_id,
+                                        'seq_id'   => $pd_id,
                                         'seq_type' => $seq_type,
-                                        // A transcript is what RT-PCR needs; anything else is
-                                        // ordinary PCR.
+                                        // A transcript is what RT-PCR needs; anything else is ordinary PCR.
                                         'primer_type' => $seq_type === 'transcript' ? 'rtpcr' : 'standard',
-                                    ]);
-                            echo '      <a href="' . htmlspecialchars($pd_url) . '" class="btn btn-sm btn-tool-indigo mb-2">'
-                               . '<i class="fa fa-magic me-1"></i>Design primers from this sequence</a>';
+                                    ]),
+                                ];
+                            }
+                            if (count($pd_links) === 1) {
+                                echo '      <a href="' . htmlspecialchars($pd_links[0]['url']) . '" class="btn btn-sm btn-tool-indigo mb-2">'
+                                   . '<i class="fa fa-magic me-1"></i>Design primers from this sequence</a>';
+                            } elseif ($pd_links) {
+                                echo '      <div class="dropdown d-inline-block mb-2">';
+                                echo '        <button class="btn btn-sm btn-tool-indigo dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">'
+                                   . '<i class="fa fa-magic me-1"></i>Design primers from…</button>';
+                                echo '        <ul class="dropdown-menu">';
+                                foreach ($pd_links as $pd) {
+                                    echo '          <li><a class="dropdown-item small" href="' . htmlspecialchars($pd['url']) . '">'
+                                       . htmlspecialchars($pd['id']) . ' <span class="text-muted">· ' . number_format($pd['len']) . ' bp</span></a></li>';
+                                }
+                                echo '        </ul>';
+                                echo '      </div>';
+                            }
                         }
 
                         echo '      <div class="card bg-light">';
