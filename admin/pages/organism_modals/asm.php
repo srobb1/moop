@@ -192,7 +192,7 @@
               <?php if ($gs_all_ok): ?>
                 <span class="badge bg-success ms-2"><i class="fa fa-check"></i> Complete</span>
               <?php else: ?>
-                <span class="badge bg-warning text-dark ms-2"><i class="fa fa-exclamation-triangle"></i> <?= $gs_fasta_miss ? 'Missing files' : 'Missing BLAST indexes' ?></span>
+                <span class="badge bg-warning text-dark ms-2"><i class="fa fa-exclamation-triangle"></i> <?= $gs_fasta_miss ? 'No ' . htmlspecialchars(implode(', ', $gs_missing_labels[$gs] ?? [])) . ' FASTA' : 'Missing BLAST indexes' ?></span>
               <?php endif; ?>
             </div>
             <div class="card-body small py-2">
@@ -268,7 +268,10 @@
           <i class="fa fa-exclamation-circle"></i> <strong>Issues Found:</strong>
           <ul class="mb-0 mt-2">
             <?php if ($has_db_mismatch): ?><li>Directory name does not match any genome record in the database</li><?php endif; ?>
-            <?php if ($is_missing_live): ?><li><?= empty($gene_set_dirs_live) ? 'No gene set data in this assembly' : 'Missing required FASTA files in one or more gene sets' ?></li><?php endif; ?>
+            <?php if ($is_missing_live && empty($gene_set_dirs_live)): ?><li>No gene set data in this assembly</li><?php endif; ?>
+            <?php foreach ($gs_missing_labels as $gs => $labels): ?>
+              <li>Gene set <code><?= htmlspecialchars($gs) ?></code> has no <?= htmlspecialchars(implode(', ', $labels)) ?> FASTA</li>
+            <?php endforeach; ?>
             <?php if ($modal_has_missing_blast): ?><li>Missing BLAST index files in one or more gene sets</li><?php endif; ?>
             <?php if ($modal_has_missing_fai): ?><li>Missing <code>genome.fa.fai</code> index (required for SVG sequence viewer)</li><?php endif; ?>
           </ul>

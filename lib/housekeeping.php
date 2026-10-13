@@ -1066,7 +1066,11 @@ function housekeeping_refresh_organism_cache_if_stale() {
     // the only slow case is a big rebuild, and it runs in the background below.
     if (file_exists($cache_file)) {
         $raw = loadJsonFile($cache_file, []);
+        // An older schema is stale whatever its fingerprints say: the scan discards it, and
+        // without this check a schema bump never reached the cache on its own.
         if ($raw && isset($raw['org_fingerprints'], $raw['config_fingerprint'])
+            && defined('ORGANISM_CACHE_SCHEMA_VERSION')
+            && ($raw['schema_version'] ?? 0) === ORGANISM_CACHE_SCHEMA_VERSION
             && function_exists('buildPerOrganismFingerprints') && function_exists('buildConfigFingerprint')) {
             $metadata_path      = $config->getPath('metadata_path');
             $taxonomy_tree_file = "$metadata_path/taxonomy_tree_config.json";

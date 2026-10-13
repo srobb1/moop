@@ -1403,6 +1403,14 @@ function moop_collect_permission_checks($config): array {
         }
     }
 
+    // The organism-wide exec sweep and the per-FASTA check both flag an executable
+    // genome.fa, so it was counted twice: the dashboard read "2 findings, 5 affected
+    // files" for 3 files. Keep the FASTA row (it carries the file's own rule) and drop
+    // the duplicate sweep row.
+    $fasta_paths = array_column($fasta_file_issues, 'path');
+    $exec_file_issues = array_values(array_filter($exec_file_issues,
+        fn($e) => !in_array($e['path'], $fasta_paths, true)));
+
     return [
         'checks'                 => $checks,
         'assembly_subdir_issues' => $assembly_subdir_issues,

@@ -58,7 +58,12 @@ if (!$force && !$single_organism) {
     $cache_file = moop_organism_cache_file();
     if (file_exists($cache_file)) {
         $cached = loadJsonFile($cache_file, []);
-        if ($cached && isset($cached['org_fingerprints'], $cached['config_fingerprint'], $cached['generated'])) {
+        // schema_version too: getCachedOrganismsInfo() discards a cache of an older schema,
+        // but this early exit did not look, so after a schema bump the Refresh button
+        // answered "already up to date" and the new fields never appeared until some
+        // organism's files happened to change (2026-10-12, schema 5 -> 6).
+        if ($cached && isset($cached['org_fingerprints'], $cached['config_fingerprint'], $cached['generated'])
+            && ($cached['schema_version'] ?? 0) === ORGANISM_CACHE_SCHEMA_VERSION) {
             $current_org_fps   = buildPerOrganismFingerprints($organism_data);
             $current_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
             if ($cached['config_fingerprint'] === $current_config_fp && $cached['org_fingerprints'] === $current_org_fps) {

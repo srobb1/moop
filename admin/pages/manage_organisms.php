@@ -194,21 +194,41 @@
   <?php endif; ?>
 
   <?php
-  // Per-organism FASTA gaps, read from the cached fasta_validation. Returns whether
-  // any assembly is missing genome.fa, and whether any is missing a non-genome
-  // sequence type (transcript/cds/protein — "other FASTA"). Reused by the filter
-  // counts below and the per-row data-issues tokens.
+  // Per-organism FASTA gaps, read from the cached fasta_validation (per-gene-set detail
+  // from assembly_fasta_gaps()). Returns:
+  //   genome_fa      an assembly that HAS gene-set data lacks genome.fa (transcriptome /
+  //                  proteome only -- a valid shape, shown as a neutral tag)
+  //   missing_types  sequence-type keys some gene set lacks, e.g. ['cds']
+  //   empty_asms     assemblies holding no gene set at all
+  //   other_fasta    either of the last two -- what the "Missing other FASTA" filter matches
+  // An empty assembly does not count as "no genome": that is a placeholder waiting for
+  // data, and calling it transcriptome-only would describe data that is not there.
   $fasta_gaps = function (array $data): array {
       $missing_genome = false;
-      $missing_other  = false;
+      $missing_types  = [];
+      $empty_asms     = 0;
       foreach ($data['fasta_validation']['assemblies'] ?? [] as $asm) {
-          foreach ($asm['fasta_files'] ?? [] as $type => $info) {
-              if (!empty($info['found'])) continue;
-              if ($type === 'genome') $missing_genome = true;
-              else                    $missing_other  = true;
+          $gaps = $asm['gaps'] ?? null;
+          if ($gaps === null) {
+              // Cache written before per-gene-set gaps existed: fall back to the
+              // assembly-wide flags (the next refresh replaces it).
+              foreach ($asm['fasta_files'] ?? [] as $type => $info) {
+                  if (!empty($info['found'])) continue;
+                  if ($type === 'genome') $missing_genome = true;
+                  else                    $missing_types[$type] = true;
+              }
+              continue;
+          }
+          if (empty($gaps['gene_sets'])) { $empty_asms++; continue; }
+          if (empty($gaps['has_genome'])) $missing_genome = true;
+          foreach ($gaps['gene_sets'] as $missing) {
+              foreach ($missing as $type) $missing_types[$type] = true;
           }
       }
-      return ['genome_fa' => $missing_genome, 'other_fasta' => $missing_other];
+      return ['genome_fa'     => $missing_genome,
+              'missing_types' => array_keys($missing_types),
+              'empty_asms'    => $empty_asms,
+              'other_fasta'   => $missing_types || $empty_asms];
   };
 
   // Pre-compute filter counts for the status filter bar
@@ -390,7 +410,7 @@
             ['needs-attention',     'Needs Attention',      'warning',   'Any organism that is not fully complete'],
             ['db-content',          'Empty / Unlinked DB',  'danger',    'The database loaded but holds no usable data — no features, no annotations, or annotations linked to nothing. Users see an organism that returns no search results.'],
             ['missing-genome-fa',   'Missing genome FASTA', 'info',      'No reference genome (genome.fa). Often expected — transcriptome/proteome-only organisms have none.'],
-            ['missing-other-fasta', 'Missing other FASTA',  'info',      'A gene-set FASTA (protein / transcript / CDS) is missing'],
+            ['missing-other-fasta', 'Missing other FASTA',  'info',      'A gene set lacks a protein / mRNA / CDS FASTA, or an assembly holds no gene set'],
             ['blast',               'Missing BLAST',        'secondary', 'One or more BLAST indexes are missing'],
             ['fai',                 'Missing FAI',          'secondary', 'genome.fa is present but its .fai index is missing'],
             ['groups',              'Not in Groups',        'danger',    'Assembly is not in any group — invisible to users'],
@@ -461,6 +481,10 @@
                $row_gaps = $fasta_gaps($data);
                if ($row_gaps['genome_fa'])   $row_issues[] = 'missing-genome-fa';
                if ($row_gaps['other_fasta']) $row_issues[] = 'missing-other-fasta';
+               // Name WHICH type is missing -- "Missing gene-set FASTA" sent the admin into
+               // every assembly modal to find out. Tokens are per type key.
+               foreach ($row_gaps['missing_types'] as $__t) $row_issues[] = 'missing-fasta-' . $__t;
+               if ($row_gaps['empty_asms']) $row_issues[] = 'empty-assembly';
                if ($is_stale) $row_issues[] = 'stale';
                $row_status = moop_organism_severity($row_status_info);
              ?>
@@ -527,7 +551,14 @@
                        <?php 
                          $safe_asm_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism . '_' . $assembly);
                          $asm_fasta = $data['fasta_validation']['assemblies'][$assembly] ?? null;
-                         $is_missing = isset($data['fasta_validation']['missing_files'][$assembly]);
+                         // Missing gene-set data, from the per-gene-set gaps. missing_files
+                         // lists genome.fa too, which tinted all 24 transcriptome-only
+                         // assemblies as "missing FASTA" -- the same misreading fixed in the
+                         // assembly modal (f0995795).
+                         $asm_gaps   = $asm_fasta['gaps'] ?? null;
+                         $is_missing = $asm_gaps !== null
+                             ? (empty($asm_gaps['gene_sets']) || (bool)array_filter($asm_gaps['gene_sets']))
+                             : isset($data['fasta_validation']['missing_files'][$assembly]);
                          
                          // Check if the assembly directory name matches the database; capture the
                          // matched genome record so the chip can show the canonical "Name (Accession)".
@@ -644,9 +675,13 @@
                      'groups'              => ['Not in any group',       'warning'],
                      'tree'                => ['Not in taxonomy tree',   'warning'],
                      'metadata'            => ['Metadata incomplete',    'warning'],
-                     'missing-other-fasta' => ['Missing gene-set FASTA', 'warning'],
+                     'empty-assembly'      => [$row_gaps['empty_asms'] === 1 ? 'Assembly with no gene set'
+                                                   : $row_gaps['empty_asms'] . ' assemblies with no gene set', 'warning'],
                      'stale'               => ['Stale — rescan',         'warning'],
                    ];
+                   foreach ($sequence_types as $__t => $__cfg) {
+                       if ($__t !== 'genome') $issue_labels['missing-fasta-' . $__t] = ['No ' . ($__cfg['label'] ?? $__t) . ' FASTA', 'warning'];
+                   }
                    $visible_issues = array_values(array_filter($row_issues, fn($i) => isset($issue_labels[$i])));
                  ?>
                  <button class="btn btn-sm btn-outline-<?= $hstate[0] ?>" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Open the setup checklist">

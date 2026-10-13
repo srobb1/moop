@@ -207,6 +207,15 @@ function organism_modal_asm_data($organism, $assembly, $data, $sequence_types, $
         }
     }
 
+    // Per gene_set: the labels of the types it lacks ("CDS", "mRNA"), so the header badge
+    // and the summary say WHAT is missing, not just "Missing files".
+    $gs_missing_labels = [];  // [gs => list<label>], only gene sets with gaps
+    foreach ($gs_fasta_status as $gs => $files) {
+        foreach ($files as $type => $fi) {
+            if (!$fi['found']) $gs_missing_labels[$gs][] = $gs_level_types[$type]['label'] ?? $type;
+        }
+    }
+
     // Per gene_set: BLAST indexes
     $gs_blast_status = [];  // [gs => blast_validation_result]
     foreach ($gene_set_dirs_live as $gs) {
@@ -244,7 +253,7 @@ function organism_modal_asm_data($organism, $assembly, $data, $sequence_types, $
         }
     }
 
-    return compact('organism', 'assembly', 'data', 'sequence_types', 'groups_data', 'organism_data', 'safe_asm_id', 'assembly_validation', 'assembly_path', 'genome_fa_path', 'fai_info', 'modal_has_missing_fai', 'assembly_groups', 'has_db_mismatch', 'db_mismatch_messages', 'matching_genome', 'assembly_display', 'gene_set_dirs_live', 'asm_level_files', 'gs_level_types', 'gs_fasta_status', 'gs_blast_status', 'is_missing_live', 'modal_has_missing_blast', 'assembly_dir_options');
+    return compact('organism', 'assembly', 'data', 'sequence_types', 'groups_data', 'organism_data', 'safe_asm_id', 'assembly_validation', 'assembly_path', 'genome_fa_path', 'fai_info', 'modal_has_missing_fai', 'assembly_groups', 'has_db_mismatch', 'db_mismatch_messages', 'matching_genome', 'assembly_display', 'gene_set_dirs_live', 'asm_level_files', 'gs_level_types', 'gs_fasta_status', 'gs_missing_labels', 'gs_blast_status', 'is_missing_live', 'modal_has_missing_blast', 'assembly_dir_options');
 }
 
 /** Overall-status modal. */

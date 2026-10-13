@@ -42,7 +42,9 @@
 // invisible until something unrelated changed an organism's fingerprint -- the checks
 // would look shipped and report nothing, which is the exact silent-staleness failure
 // they exist to catch.
-define('ORGANISM_CACHE_SCHEMA_VERSION', 5);
+// v6: validateAssemblyFastaFiles() records per-gene-set gaps (assembly_fasta_gaps()), so
+// Manage Organisms can say WHICH FASTA type a gene set lacks instead of "missing files".
+define('ORGANISM_CACHE_SCHEMA_VERSION', 6);
 
 /**
  * Write organism cache atomically: write to a temp file then rename().

@@ -11,6 +11,7 @@
  * Now every check that the shared code already makes is READ from it:
  *   database present / empty      computeDataHealthAlerts()
  *   BLAST indexes, genome .fai    organism cache (blast_validation, fai_validation)
+ *   missing FASTA per gene set    organism cache (fasta_validation gaps)
  *   taxonomy tree, groups         getOrganismsNotInTree(), getUngroupedOrganisms()
  *   directory permissions         moop_permission_organism_dir_rule() (live)
  * Only checks nothing else makes stay live here: organism.json present, gene sets with
@@ -62,6 +63,7 @@ function organism_checklist_checks(string $organism_data, array $sequence_types,
         'permission_expectation'   => moop_permission_expectation('data', 'directory', false, true),
         'exec_files_fix_command'   => moop_permission_fix_exec_files_command($organism_data),
         'gene_sets_missing_gff'    => organism_checklist_gene_sets_missing_gff($organism_data, $organisms_in_system, $sequence_types),
+        'fasta_gaps'               => organism_checklist_fasta_gaps($cache_data, $sequence_types),
         'organisms_not_in_tree'    => getOrganismsNotInTree($cache_data),
         'unassigned_organisms'     => getUngroupedOrganisms($cache_data, is_array($groups_entries) ? $groups_entries : []),
     ];
@@ -135,6 +137,38 @@ function organism_checklist_fai_issues(array $cache_data): array
         }
     }
     return $fai_issues;
+}
+
+/**
+ * Gene sets lacking a FASTA type, and assemblies holding no gene set, from the organism
+ * cache's per-gene-set gaps (assembly_fasta_gaps()) -- the same data behind Manage
+ * Organisms' "No CDS FASTA" badges. A missing genome is not listed: an assembly without
+ * one is transcriptome/proteome-only, a valid shape.
+ *
+ * @return array{gene_sets: list<array{path:string, missing:list<string>}>, empty_assemblies: list<string>, expected: list<string>, unknown: bool}
+ */
+function organism_checklist_fasta_gaps(array $cache_data, array $sequence_types): array
+{
+    $expected = [];
+    foreach ($sequence_types as $t => $cfg) if ($t !== 'genome') $expected[] = $cfg['label'] ?? $t;
+    $out = ['gene_sets' => [], 'empty_assemblies' => [], 'expected' => $expected, 'unknown' => false];
+    foreach ($cache_data as $org => $org_data) {
+        foreach ($org_data['fasta_validation']['assemblies'] ?? [] as $asm => $asm_info) {
+            $gaps = $asm_info['gaps'] ?? null;
+            // A cache written before per-gene-set gaps existed (schema < 6) carries none;
+            // say so rather than report "every gene set complete" from no data.
+            if ($gaps === null) { $out['unknown'] = true; continue; }
+            if (empty($gaps['gene_sets'])) { $out['empty_assemblies'][] = "$org/$asm"; continue; }
+            foreach ($gaps['gene_sets'] as $gs => $missing) {
+                if (!$missing) continue;
+                $out['gene_sets'][] = [
+                    'path'    => "$org/$asm/$gs",
+                    'missing' => array_map(fn($t) => $sequence_types[$t]['label'] ?? $t, $missing),
+                ];
+            }
+        }
+    }
+    return $out;
 }
 
 /**

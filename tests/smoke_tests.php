@@ -1177,6 +1177,39 @@ ok(getOrganismsNotInTree($_cache) === ['Halfgrouped'],
    'not-in-tree reads the cache flag; a missing flag is not reported as absent');
 
 // ----------------------------------------------------------------------------
+group('Missing FASTA is reported per gene set, by type');
+// Manage Organisms said only "Missing gene-set FASTA" and tinted all 24 transcriptome-only
+// assemblies as missing data (genome.fa was in the same list). assembly_fasta_gaps() names
+// the missing type per gene set; genome is the assembly's, and a non-gene-set dir (Schmidtea's
+// empty *_orig) is not a gene set missing everything.
+require_once "$BASE/lib/functions_filesystem.php";
+$_cm   = ConfigManager::getInstance();
+$_prop = new ReflectionProperty(ConfigManager::class, 'config');
+$_prop->setAccessible(true);
+$_saved = $_prop->getValue($_cm);
+$_st = ['protein'    => ['pattern' => 'protein.aa.fa',    'label' => 'Protein'],
+        'transcript' => ['pattern' => 'transcript.nt.fa', 'label' => 'mRNA'],
+        'cds'        => ['pattern' => 'cds.nt.fa',        'label' => 'CDS'],
+        'genome'     => ['pattern' => 'genome.fa',        'label' => 'Genome']];
+$_prop->setValue($_cm, array_merge($_saved, ['sequence_types' => $_st]));
+$_fd = sys_get_temp_dir() . '/moop_fastagaps_' . getmypid();
+@mkdir("$_fd/Full/GS", 0700, true);
+@mkdir("$_fd/Full/Partial", 0700, true);
+@mkdir("$_fd/Empty/old_orig", 0700, true);
+foreach (['protein.aa.fa', 'transcript.nt.fa', 'cds.nt.fa'] as $_f) touch("$_fd/Full/GS/$_f");
+touch("$_fd/Full/Partial/protein.aa.fa");
+touch("$_fd/Full/genome.fa");
+$_g = assembly_fasta_gaps("$_fd/Full", $_st);
+ok($_g['has_genome'] === true, 'genome.fa at the assembly level is found');
+ok($_g['gene_sets'] === ['GS' => [], 'Partial' => ['transcript', 'cds']],
+   'each gene set lists exactly the types it lacks; a complete sibling does not hide them');
+$_g = assembly_fasta_gaps("$_fd/Empty", $_st);
+ok($_g['has_genome'] === false && $_g['gene_sets'] === [],
+   'an assembly with only a non-FASTA dir has NO gene sets (not one missing everything)');
+exec('rm -rf ' . escapeshellarg($_fd));
+$_prop->setValue($_cm, $_saved);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

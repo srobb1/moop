@@ -248,8 +248,44 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
 }
 
 /**
+ * Which FASTA types each gene set in an assembly is missing -- the one place that
+ * answers "what data is missing here", read by Manage Organisms (via the organism
+ * cache), the assembly modal and the setup checklist.
+ *
+ * Classified by sequence-type KEY: 'genome' belongs to the assembly, every other type
+ * to each gene set. Per gene set, not per assembly: an assembly-wide "is there a CDS
+ * file anywhere" answer hides a gene set that lacks one whenever a sibling has it.
+ *
+ * @param string $assembly_path  Assembly directory
+ * @param array  $sequence_types ConfigManager::getSequenceTypes()
+ * @return array{has_genome: bool, gene_sets: array<string, list<string>>}
+ *         gene_sets maps each gene-set dir name to the type KEYS it lacks (empty list =
+ *         complete). No entries = the assembly holds no gene set at all.
+ */
+function assembly_fasta_gaps(string $assembly_path, array $sequence_types): array {
+    $genome_pattern = $sequence_types['genome']['pattern'] ?? '';
+    $result = [
+        'has_genome' => $genome_pattern !== '' && file_exists("$assembly_path/$genome_pattern"),
+        'gene_sets'  => [],
+    ];
+    $entries = is_dir($assembly_path) ? array_diff(scandir($assembly_path), ['.', '..']) : [];
+    sort($entries);
+    foreach ($entries as $gs) {
+        if (!is_gene_set_dir("$assembly_path/$gs")) continue;
+        $missing = [];
+        foreach ($sequence_types as $type => $config) {
+            if ($type === 'genome') continue;
+            // file_exists, not glob: a pattern is a literal filename.
+            if (!file_exists("$assembly_path/$gs/{$config['pattern']}")) $missing[] = $type;
+        }
+        $result['gene_sets'][$gs] = $missing;
+    }
+    return $result;
+}
+
+/**
  * Validate assembly FASTA files exist
- * 
+ *
  * Checks if each assembly directory contains the required FASTA files
  * based on sequence_types patterns from site config
  * 
@@ -325,8 +361,12 @@ function validateAssemblyFastaFiles($organism_dir, $sequence_types) {
             }
         }
         
+        // Per-gene-set detail. fasta_files above answers "is this type present ANYWHERE
+        // in the assembly"; gaps answers "which gene set lacks which type".
+        $assembly_info['gaps'] = assembly_fasta_gaps($full_path, $sequence_types);
+
         $result['assemblies'][$dir] = $assembly_info;
-        
+
         if (!empty($assembly_info['missing_patterns'])) {
             $result['missing_files'][$dir] = $assembly_info['missing_patterns'];
         }

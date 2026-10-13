@@ -609,6 +609,34 @@
         <?php endif; ?>
 
 
+        <?php if ($fasta_gaps['unknown']): ?>
+          <div class="alert alert-secondary mt-3">
+            <i class="fa fa-info-circle"></i> Missing-FASTA detail is not in the organism cache yet —
+            refresh the cache to see which gene sets lack a FASTA type.
+          </div>
+        <?php elseif (!empty($fasta_gaps['gene_sets']) || !empty($fasta_gaps['empty_assemblies'])): ?>
+          <div class="alert alert-warning mt-3">
+            <i class="fa fa-exclamation-triangle"></i>
+            <strong>Sequence data missing:</strong>
+            <div class="small mt-1">
+              Each gene set is expected to hold <?= htmlspecialchars(implode(', ', $fasta_gaps['expected'])) ?> FASTA. A missing type cannot be
+              BLASTed or downloaded for that gene set. An assembly with no gene set shows no genes at all.
+            </div>
+            <div class="mt-2 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.8em; max-height: 16em; overflow-y: auto;">
+              <?php foreach ($fasta_gaps['gene_sets'] as $gs): ?>
+                <?= htmlspecialchars($gs['path']) ?><span class="text-warning">   [no <?= htmlspecialchars(implode(', ', $gs['missing'])) ?>]</span><br>
+              <?php endforeach; ?>
+              <?php foreach ($fasta_gaps['empty_assemblies'] as $asm): ?>
+                <?= htmlspecialchars($asm) ?><span class="text-warning">   [no gene set]</span><br>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php else: ?>
+          <div class="alert alert-success mt-3">
+            <i class="fa fa-check-circle"></i> Every gene set has its <?= htmlspecialchars(implode(', ', $fasta_gaps['expected'])) ?> FASTA.
+          </div>
+        <?php endif; ?>
+
         <?php if (!empty($gene_sets_missing_gff)): ?>
           <div class="alert alert-warning mt-3">
             <i class="fa fa-exclamation-triangle"></i>
