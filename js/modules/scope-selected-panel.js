@@ -69,22 +69,16 @@ function initScopeSelectedPanel(opts) {
             // hard-coding <em> here would opt this component out of that rule.
             return `<div class="px-2 py-1 border-bottom">
                 <div class="d-flex justify-content-between align-items-start">
-                  <span><strong class="sci-name">${esc(d.label)}</strong>${
-                      d.cn ? ' <span class="text-muted small">· ' + esc(d.cn) + '</span>' : ''
+                  <span><strong class="sci-name">${escapeHtml(d.label)}</strong>${
+                      d.cn ? ' <span class="text-muted small">· ' + escapeHtml(d.cn) + '</span>' : ''
                   }</span>
                   <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger flex-shrink-0 scope-panel-remove"
-                          data-org="${esc(org)}" title="Remove"
-                          aria-label="Remove ${esc(d.label)} from selection"><i class="fas fa-times"></i></button>
+                          data-org="${escapeHtml(org)}" title="Remove"
+                          aria-label="Remove ${escapeHtml(d.label)} from selection"><i class="fas fa-times"></i></button>
                 </div>
-                ${d.rows.map((r) => `<div class="text-muted ps-2" style="font-size:0.75rem;">› ${esc(r)}</div>`).join('')}
+                ${d.rows.map((r) => `<div class="text-muted ps-2" style="font-size:0.75rem;">› ${escapeHtml(r)}</div>`).join('')}
               </div>`;
         }).join('');
-    }
-
-    function esc(v) {
-        return String(v == null ? '' : v)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
     }
 
     // Keep the row highlight in step with the checkbox, then re-render.
@@ -142,9 +136,9 @@ function highlightScopeDetail(row, query, detailSel) {
 
     if (!query) { detail.innerHTML = orig; return; }
 
-    const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = escapeRegExp(query);
     detail.innerHTML = orig.replace(/([^<>]+)/g, (text) =>
-        text.replace(new RegExp(esc, 'gi'), (m) => `<mark class="scope-hl">${m}</mark>`)
+        text.replace(new RegExp(pattern, 'gi'), (m) => `<mark class="scope-hl">${m}</mark>`)
     );
 }
 

@@ -43,7 +43,7 @@
  * 
  * How to Activate:
  * ----------------
- * 1. Update js/jbrowse2-loader.js to call config-optimized.php instead of config.php
+ * 1. Update js/modules/jbrowse2-browser.js to call config-optimized.php instead of config.php
  * 2. Or implement smart routing based on track count:
  *    if (trackCount > 1000) {
  *        apiUrl = '/moop/api/jbrowse2/config-optimized.php';

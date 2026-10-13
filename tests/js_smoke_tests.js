@@ -28,7 +28,9 @@ const vm = require('vm');
 // how you prove the tests can actually fail. Point it at an older revision and the
 // highlighting cases must go red; if they stay green the tests are not testing anything.
 const ROOT = process.env.MOOP_JS_ROOT || path.resolve(__dirname, '..');
-const MODULES = ['js/modules/search-terms.js', 'js/modules/shared-results-table.js'];
+// utilities.js first: it is loaded on every page before the others (includes/layout.php),
+// and they use its escapeHtml() / escapeRegExp().
+const MODULES = ['js/modules/utilities.js', 'js/modules/search-terms.js', 'js/modules/shared-results-table.js'];
 
 const sandbox = { console };
 vm.createContext(sandbox);

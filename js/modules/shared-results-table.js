@@ -192,11 +192,10 @@ function highlightSearchTerms(text, keywords, rowText) {
     if (!keywords) return text;
     const EXACT = `<strong style="background-color: #fff3cd; font-weight: bold;">$&</strong>`;
     const STEM  = `<strong style="background-color: #cff4fc; font-weight: bold;">$&</strong>`;
-    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     const trimmed = keywords.trim();
     if (/^".+"$/.test(trimmed)) {
-        return text.replace(new RegExp(esc(trimmed.slice(1, -1)), 'gi'), EXACT);
+        return text.replace(new RegExp(escapeRegExp(trimmed.slice(1, -1)), 'gi'), EXACT);
     }
     // Same threshold as the search gate, and that matters: this used to require 3 while the
     // gate allowed anything 3+ overall, so a two-character term inside a longer query ran
@@ -213,7 +212,7 @@ function highlightSearchTerms(text, keywords, rowText) {
         const hit = moopTermHighlight(highlighted, term, exactInRow);
         if (!hit) return;
         highlighted = highlighted.replace(
-            new RegExp(esc(hit.text), 'gi'),
+            new RegExp(escapeRegExp(hit.text), 'gi'),
             hit.exact ? EXACT : STEM
         );
     });

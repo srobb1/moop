@@ -4,9 +4,15 @@
  */
 
 /**
- * Escape HTML special characters to prevent XSS
- * 
- * @param {string} text - Text to escape
+ * Escape text for use in HTML -- the ONE implementation on the site.
+ *
+ * Loaded on every page by includes/layout.php, so no module needs its own. There were
+ * seven (three named escapeHtml, two esc, one escHtml, one escH in an admin page),
+ * escaping different character sets -- some left ' or " alone -- largely because this
+ * one threw on null or a number (it called text.replace directly). It now accepts
+ * anything: null/undefined become '', everything else goes through String().
+ *
+ * @param {*} text - Value to escape
  * @returns {string} Escaped HTML-safe text
  */
 function escapeHtml(text) {
@@ -17,7 +23,18 @@ function escapeHtml(text) {
         '"': '&quot;',
         "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, m => map[m]);
+    return String(text == null ? '' : text).replace(/[&<>"']/g, m => map[m]);
+}
+
+/**
+ * Escape text for use inside a RegExp, so it matches literally ("1.5" matches a dot).
+ * The one implementation; two modules each had their own copy.
+ *
+ * @param {*} text
+ * @returns {string}
+ */
+function escapeRegExp(text) {
+    return String(text == null ? '' : text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**

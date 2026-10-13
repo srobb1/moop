@@ -388,13 +388,9 @@ document.getElementById('externalLinksBody').addEventListener('click', e => {
 // --- Per-database linkouts ---
 const perDbOptions = <?= json_encode(array_values($db_options ?? [])) ?>;
 
-function escH(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 function makeDbSelect() {
   const opts = perDbOptions.map(o =>
-    `<option value="${escH(o.key)}">${escH(o.display)}</option>`
+    `<option value="${escapeHtml(o.key)}">${escapeHtml(o.display)}</option>`
   ).join('');
   return `<select class="form-select form-select-sm" name="pdb_key[]" required>
     <option value="">— select database —</option>

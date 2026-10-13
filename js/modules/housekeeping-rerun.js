@@ -41,12 +41,6 @@
         out.innerHTML = html;
     }
 
-    function escapeHtml(s) {
-        const d = document.createElement('div');
-        d.textContent = String(s == null ? '' : s);
-        return d.innerHTML;
-    }
-
     btn.addEventListener('click', function () {
         btn.disabled = true;
         const original = btn.innerHTML;
@@ -131,12 +125,6 @@
         out.style.display = '';
         out.className = 'small mb-4 ' + (cls || 'text-muted');
         out.innerHTML = html;
-    }
-
-    function escapeHtml(s) {
-        const d = document.createElement('div');
-        d.textContent = String(s == null ? '' : s);
-        return d.innerHTML;
     }
 
     btn.addEventListener('click', function () {

@@ -25,11 +25,6 @@
       'stroke="currentColor" stroke-width="1.6" fill="none"/></svg>';
 
     // ---- helpers -----------------------------------------------------------
-    function esc(s) {
-      return String(s).replace(/[&<>"']/g, function (c) {
-        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-      });
-    }
     // The count pill is rendered INSIDE the type badge so it can hang off its corner, so a
     // plain textContent read returns "RBBH Homolog18". Clone and drop the pill rather than
     // string-stripping the number — a label can legitimately contain digits.
@@ -134,14 +129,14 @@
           ? '<button class="pnav-caret" aria-expanded="true" aria-label="Toggle section" data-key="' + n.key + '">' + chevron + "</button>"
           : '<span class="pnav-spacer"></span>';
         var tagSlug = n.tag ? n.tag.toLowerCase().replace(/[^a-z0-9]+/g, "") : "";
-        var tag = n.tag ? '<span class="pnav-tag pnav-tag--' + tagSlug + '">' + esc(n.tag) + "</span>" : "";
+        var tag = n.tag ? '<span class="pnav-tag pnav-tag--' + tagSlug + '">' + escapeHtml(n.tag) + "</span>" : "";
         var cnt = n.count
-          ? '<span class="pnav-count" aria-label="' + esc(n.count) + ' annotations">' + esc(n.count) + "</span>"
+          ? '<span class="pnav-count" aria-label="' + escapeHtml(n.count) + ' annotations">' + escapeHtml(n.count) + "</span>"
           : "";
         var link =
           '<a class="pnav-link lvl-' + n.lvl + '" href="#" data-key="' + n.key + '" title="' +
-          esc(n.label) + (n.count ? " — " + n.count + " annotations" : "") + '">' +
-          tag + '<span class="pnav-label">' + esc(n.label) + "</span>" + cnt + "</a>";
+          escapeHtml(n.label) + (n.count ? " — " + n.count + " annotations" : "") + '">' +
+          tag + '<span class="pnav-label">' + escapeHtml(n.label) + "</span>" + cnt + "</a>";
         var sub = hasKids ? '<div class="pnav-sub">' + renderList(n.children) + "</div>" : "";
         return '<li class="pnav-item"><div class="pnav-row">' + caret + link + "</div>" + sub + "</li>";
       }).join("") + "</ul>";
