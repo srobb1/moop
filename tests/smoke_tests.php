@@ -1320,6 +1320,27 @@ ok($_miss === ['Org/WithGenome/GS1'], 'flags the gene set on a genome assembly, 
 exec('rm -rf ' . escapeshellarg($_gd));
 
 // ----------------------------------------------------------------------------
+group('home page examples: ranked by the agreed rules, never hard-coded');
+require_once "$BASE/lib/home_examples.php";
+$_c = fn(array $o) => $o + ['organism' => 'Z', 'assembly' => 'a', 'gene_set' => 'g', 'complete' => true,
+    'gs_full' => true, 'browse' => true, 'gene_tier' => 3, 'common' => 'x', 'group_ok' => true];
+ok(moop_home_examples_cmp($_c(['organism' => 'B']), $_c(['organism' => 'A', 'complete' => false])) < 0,
+   'a Complete organism beats an incomplete one, whatever the name');
+ok(moop_home_examples_cmp($_c(['gene_tier' => 3, 'common' => '']), $_c(['gene_tier' => 1])) < 0,
+   'a rich gene (rule 4) outranks a common name (rule 5): least important rules relax first');
+ok(moop_home_examples_cmp($_c(['organism' => 'A']), $_c(['organism' => 'B'])) < 0,
+   'ties go alphabetically, so the examples are stable');
+// The admin override: anything the audience cannot open is dropped; an empty result
+// falls back to the automatic set rather than showing nothing.
+$_auto = ['organisms' => [['text' => 'Auto org', 'kind' => 'organism']], 'genes' => []];
+$_ent  = [['organism' => 'Pub_Org', 'assembly' => 'GCA_1', 'gene_set' => 'gs1', 'groups' => ['Fish']]];
+$_r = moop_home_examples_apply_override($_auto, ['organisms' => ['Fish', 'Secret Bat', 'pub org']], $_ent);
+ok(array_column($_r['organisms'], 'text') === ['Fish', 'pub org'],
+   'override keeps what the audience can open, drops the rest');
+$_r = moop_home_examples_apply_override($_auto, ['organisms' => ['Secret Bat']], $_ent);
+ok(array_column($_r['organisms'], 'text') === ['Auto org'], 'an override with nothing openable falls back to automatic');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

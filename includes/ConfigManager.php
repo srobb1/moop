@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'blast_sample_sequences', 'blast_num_threads', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -618,7 +618,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);
@@ -806,12 +806,21 @@ class ConfigManager
                 ]),
                 'note' => 'Protein and nucleotide sequences for users to test BLAST. Cannot be empty.',
             ],
+            // Example chips -- lib/home_examples.php. Both are OVERRIDES: empty means
+            // "choose automatically from data the viewer can open", which is the default.
             'sample_feature_ids' => [
-                'label' => 'Sample Feature IDs',
-                'description' => 'Sample feature IDs for sequence retrieval testing',
+                'label' => 'Example gene / feature IDs',
+                'description' => 'Shown on the home page Genes tab and as "Load examples" in Sequence Retrieval.',
                 'type' => 'sample_ids',
                 'current_value' => $this->getArray('sample_feature_ids', []),
-                'note' => 'Example IDs that users can paste into retrieve sequences tool. Enter one per line. Cannot be empty.',
+                'note' => 'Leave empty to choose automatically. Any ID a viewer cannot open is skipped for that viewer.',
+            ],
+            'home_search_examples' => [
+                'label' => 'Example organism search terms',
+                'description' => 'Shown under the home page Organisms search: names, common names, groups, assemblies or gene sets.',
+                'type' => 'sample_ids',
+                'current_value' => $this->getArray('home_search_examples', []),
+                'note' => 'Leave empty to choose automatically. Any term a viewer cannot open is skipped for that viewer.',
             ],
             'site_data_path' => [
                 'label' => 'Site Data Backup Path',

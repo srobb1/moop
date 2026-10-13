@@ -629,19 +629,20 @@
                         </p>
                         
                         <label for="sample_feature_ids" class="form-label">
-                            <strong>Feature IDs (one per line)</strong>
+                            <strong>Gene / feature IDs (one per line)</strong>
                         </label>
-                        <textarea 
-                            id="sample_feature_ids" 
-                            name="sample_feature_ids" 
-                            class="form-control" 
-                            rows="5"
-                            placeholder="Example:&#10;ACA1_PVKU01000001.1_000001.1&#10;ACA1_PVKU01005411.1_000003.1"
-                            required><?php 
+                        <textarea id="sample_feature_ids" name="sample_feature_ids" class="form-control" rows="3"
+                                  placeholder="Empty = automatic"><?php
                             $ids = $editable_config['sample_feature_ids']['current_value'];
                             echo is_array($ids) ? htmlspecialchars(implode("\n", $ids)) : htmlspecialchars($ids);
                         ?></textarea>
-                        <small class="form-text text-muted">Enter one feature ID per line</small>
+                        <label for="home_search_examples" class="form-label mt-3">
+                            <strong><?= htmlspecialchars($editable_config['home_search_examples']['label']) ?> (one per line)</strong>
+                        </label>
+                        <p class="text-muted small mb-1"><?= htmlspecialchars($editable_config['home_search_examples']['description']) ?></p>
+                        <textarea id="home_search_examples" name="home_search_examples" class="form-control" rows="3"
+                                  placeholder="Empty = automatic"><?= htmlspecialchars(implode("\n", (array)$editable_config['home_search_examples']['current_value'])) ?></textarea>
+                        <small class="form-text text-muted">Leave both empty to let the site choose examples every viewer can open.</small>
                     </div>
                 </div>
 

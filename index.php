@@ -15,6 +15,7 @@ if (!file_exists(__DIR__ . '/config/config_editable.json')) {
 include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/includes/layout.php';
 include_once __DIR__ . '/lib/moop_functions.php';
+include_once __DIR__ . '/lib/home_examples.php';
 
 // Get configuration
 $config = ConfigManager::getInstance();
@@ -127,6 +128,9 @@ echo render_display_page(
         'organism_count'     => count($organism_list),
         'assembly_count'     => $quick_search['assembly_count'],
         'featured_groups'    => $featured_groups,
+        // Example chips under both search boxes, chosen from data this viewer can open
+        // (lib/home_examples.php) -- they were hard-coded IDs a public visitor could not.
+        'examples'           => moop_home_examples($group_data),
         'cards_to_display'   => $cards_to_display,
         'page_script'        => [
             "/$site/js/modules/feature-search.js",

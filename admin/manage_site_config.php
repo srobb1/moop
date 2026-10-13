@@ -245,18 +245,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // Parse sample feature IDs from form
-        if (isset($_POST['sample_feature_ids']) && !empty(trim($_POST['sample_feature_ids']))) {
-            $ids_text = trim($_POST['sample_feature_ids']);
-            $ids = array_filter(array_map('trim', explode("\n", $ids_text)));
-            
-            if (!empty($ids)) {
-                $data['sample_feature_ids'] = $ids;
-            } else {
-                $error = 'Sample feature IDs cannot be empty. Please provide at least one ID.';
+        // Example overrides (lib/home_examples.php): one per line. EMPTY IS VALID -- it
+        // means "choose automatically", the default. This used to refuse an empty box,
+        // which forced an admin to type IDs that a public visitor might not be able to open.
+        foreach (['sample_feature_ids', 'home_search_examples'] as $__k) {
+            if (isset($_POST[$__k])) {
+                $data[$__k] = array_values(array_filter(array_map('trim', explode("\n", (string)$_POST[$__k])), 'strlen'));
             }
-        } elseif (empty($error)) {
-            $error = 'Sample feature IDs cannot be empty. Please provide at least one ID.';
         }
         
         // Handle file upload for header image

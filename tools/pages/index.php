@@ -61,14 +61,14 @@
               </div>
               <?= help_modal_trigger('qs-help', '', 'Help: searching for an organism, group, assembly or gene set') ?>
             </div>
+            <?php if (!empty($examples['organisms'])): ?>
             <div class="qs-examples mt-2">
               <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
-              <button class="qs-example-chip sci-name" type="button" style="font-size:0.62rem;">Anoura caudifer</button>
-              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">Pallid Bat</button>
-              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">Bats</button>
-              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">GCA_004027475.1</button>
-              <button class="qs-example-chip" type="button" style="font-size:0.62rem;">SIMR_2025-01-24</button>
+              <?php foreach ($examples['organisms'] as $ex): ?>
+                <button class="qs-example-chip<?= $ex['kind'] === 'organism' ? ' sci-name' : '' ?>" type="button" style="font-size:0.62rem;"><?= htmlspecialchars($ex['text']) ?></button>
+              <?php endforeach; ?>
             </div>
+            <?php endif; ?>
           </div>
         </div>
       </div>
@@ -92,12 +92,14 @@
               </div>
               <?= help_modal_trigger('fs-help', '', 'Help: finding a gene by its ID') ?>
             </div>
+            <?php if (!empty($examples['genes'])): ?>
             <div class="qs-examples mt-2">
               <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
-              <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">XM_020002978.1</button>
-              <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">ACA1_PVKU01000001.1_000001</button>
-              <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;">ACA1_PVKU01000001.1_000001.1</button>
+              <?php foreach ($examples['genes'] as $ex): ?>
+                <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;"><?= htmlspecialchars($ex['text']) ?></button>
+              <?php endforeach; ?>
             </div>
+            <?php endif; ?>
             <div id="fs-status" class="small mt-2 text-muted" style="display:none;"></div>
             <div id="fs-results"></div>
           </div>

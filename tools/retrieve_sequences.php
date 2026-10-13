@@ -35,6 +35,7 @@ $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] 
 $sequence_type = trim($_POST['sequence_type'] ?? '');
 
 include_once __DIR__ . '/tool_init.php';
+include_once __DIR__ . '/../lib/home_examples.php';  // moop_home_examples(): example IDs
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../includes/source-selector-helpers.php';
@@ -323,7 +324,10 @@ $data = [
     'should_scroll_to_results' => $should_scroll_to_results,
     'selected_source'   => $selected_source,
     'selected_gene_set' => $selected_gene_set,
-    'sample_feature_ids' => $config->getArray('sample_feature_ids', []),
+    // The same examples as the home page Genes tab (lib/home_examples.php): chosen from
+    // data this viewer can open, or the admin's sample_feature_ids minus any they cannot.
+    // This read the setting raw, so "Load examples" gave a public visitor a Chamaeleo ID.
+    'sample_feature_ids' => array_column(moop_home_examples(getGroupData())['genes'], 'text'),
     'parent_to_children' => $parent_to_children ?? [],
     'page_styles' => [
         '/' . $site . '/css/display.css',

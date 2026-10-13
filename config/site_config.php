@@ -272,12 +272,12 @@ CTCCTACGGGTAGTAAACATACTGTCACAACTATAGTGTTCGCATGGTGGATAGTACCCA
 AATGCGTCCACAACAGTTATCAATCAA',
     ],
     
-    // ======== SAMPLE FEATURE IDS FOR SEQUENCE RETRIEVAL ========
-    // Default sample feature IDs for users to test sequence retrieval
-    'sample_feature_ids' => [
-        'ACA1_PVKU01000001.1_000001.1',
-        'ACA1_PVKU01005411.1_000003.1',
-    ],
+    // ======== EXAMPLE CHIPS (home page + Sequence Retrieval) ========
+    // Empty = chosen automatically from data the viewer can open (lib/home_examples.php).
+    // These used to ship as SIMRbase bat IDs, which every other site -- and every public
+    // visitor here -- could not open. Set them in Manage Site Configuration to override.
+    'sample_feature_ids'   => [],   // gene / feature IDs: home Genes tab, Sequence Retrieval
+    'home_search_examples' => [],   // organism / group / assembly / gene-set terms: home Organisms tab
     
     // ======== BLAST+ TOOL PATHS ========
     // Paths to BLAST+ binaries
