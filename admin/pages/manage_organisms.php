@@ -391,28 +391,28 @@
       <!-- Status filter bar -->
       <div class="mb-3 d-flex flex-wrap gap-2 align-items-center" id="statusFilterBar">
         <span class="text-muted small fw-bold me-1">Filter:</span>
-        <button class="btn btn-sm btn-outline-secondary active" data-filter="all">All (<?= count($organisms) ?>)</button>
+        <button class="btn btn-sm org-filter sev-all active" data-filter="all">All <span class="org-filter-n"><?= count($organisms) ?></span></button>
         <?php
           // Severity first: Critical / Incomplete match the Health button on each row.
-          // Then one button per specific issue, coloured by ITS severity from
+          // Then one button per specific issue, colored by ITS severity from
           // moop_organism_issue_defs() -- red always means critical, amber incomplete,
           // grey informational. Issues no organism has are left out rather than shown
           // disabled: with ~15 kinds of issue, a bar of greyed-out zeros was noise.
           foreach (['critical' => 'Critical', 'incomplete' => 'Incomplete'] as $sev => $label):
             $n = $filter_counts[$sev] ?? 0;
         ?>
-          <button class="btn btn-sm btn-outline-<?= $n === 0 ? 'secondary' : moop_severity_color($sev) ?>" data-filter="<?= $sev ?>"
+          <button class="btn btn-sm org-filter sev-<?= $sev ?>" data-filter="<?= $sev ?>"
                   title="Organisms whose Health is <?= $label ?>"<?= $n === 0 ? ' disabled' : '' ?>>
-            <?= $label ?> (<?= $n ?>)
+            <?= $label ?> <span class="org-filter-n"><?= $n ?></span>
           </button>
         <?php endforeach; ?>
         <span class="vr mx-1"></span>
         <?php foreach (['critical', 'incomplete', 'info'] as $sev):
                 foreach ($issue_defs as $key => $def):
                   if (!$def['filter'] || $def['severity'] !== $sev || empty($filter_counts[$key])) continue; ?>
-          <button class="btn btn-sm btn-outline-<?= moop_severity_color($sev) ?>" data-filter="<?= $key ?>"
+          <button class="btn btn-sm org-filter sev-<?= $sev ?>" data-filter="<?= $key ?>"
                   title="<?= htmlspecialchars($def['title']) ?>">
-            <?= htmlspecialchars($def['label']) ?> (<?= $filter_counts[$key] ?>)
+            <?= htmlspecialchars($def['label']) ?> <span class="org-filter-n"><?= $filter_counts[$key] ?></span>
           </button>
         <?php endforeach; endforeach; ?>
       </div>
@@ -427,9 +427,9 @@
         <span><i class="fa fa-check text-success"></i> nothing missing</span>
         <span><span class="badge rounded-pill border text-dark bg-warning-subtle">No CDS</span> chips name what is missing</span>
         <span class="vr"></span>
-        <span>Colour: <span class="text-danger fw-semibold">red</span> can't serve data ·
+        <span>Color: <span class="text-danger fw-semibold">red</span> can't serve data ·
           <span class="text-warning-emphasis fw-semibold">amber</span> incomplete ·
-          <span class="fw-semibold">grey</span> just so you know</span>
+          <span class="fw-semibold">gray</span> just so you know</span>
         <span class="vr"></span>
         <span>Click a line for details</span>
       </div>
@@ -507,7 +507,7 @@
                  <?php
                    // Assembly → gene set tree. Each line carries only its own level's state:
                    // a ✓ when nothing is missing, chips naming what is. Every chip is amber
-                   // because every one is an Incomplete-level problem -- colour means SEVERITY
+                   // because every one is an Incomplete-level problem -- color means SEVERITY
                    // on this whole page (moop_severity_color()), and the chip's text says what
                    // kind. A healthy organism reads as plain text and ticks.
                  ?>

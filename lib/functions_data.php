@@ -1022,12 +1022,12 @@ function moop_organism_severity(array $overall_status): string {
 
 /**
  * Every issue Manage Organisms can name about an organism, with its SEVERITY -- the one
- * table behind the filter buttons, their colours, and the Health cell's badges.
+ * table behind the filter buttons, their colors, and the Health cell's badges.
  *
- * Before this, each of those had its own list with its own colours, and they disagreed:
+ * Before this, each of those had its own list with its own colors, and they disagreed:
  * "Not in Groups" was a red filter button and an amber Health badge for the same row, and
  * the info-cyan "Missing genome FASTA" button looked like a problem while describing a
- * valid transcriptome-only shape. Colour now means one thing, everywhere on the page:
+ * valid transcriptome-only shape. Color now means one thing, everywhere on the page:
  *
  *   critical    red    the organism is listed but cannot serve data -- the same rule as
  *                      moop_organism_severity(), which grades the row
@@ -1068,7 +1068,7 @@ function moop_organism_issue_defs(): array {
     ];
 }
 
-/** Bootstrap colour for a severity: one mapping, so red always means critical. */
+/** Bootstrap color for a severity: one mapping, so red always means critical. */
 function moop_severity_color(string $severity): string {
     return ['critical' => 'danger', 'incomplete' => 'warning', 'info' => 'secondary'][$severity] ?? 'secondary';
 }

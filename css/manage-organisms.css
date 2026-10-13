@@ -36,3 +36,35 @@
 
 /* Gene-set card the modal was opened at (clicked from a gene-set line). */
 .gs-focus { box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.55); transition: box-shadow 0.4s; }
+
+/* Filter bar: pills in the same idiom as the tree's chips -- soft fill, thin border in
+   the severity color -- rather than empty outline buttons. The selected filter takes
+   the solid color so it is obvious which one is on. sev-* follows
+   moop_organism_issue_defs(): critical red, incomplete amber, info / all grey. */
+.org-filter {
+  --f-bg: var(--bs-secondary-bg-subtle); --f-bd: var(--bs-secondary-border-subtle);
+  --f-on: var(--bs-secondary);           --f-on-fg: #fff;
+  border: 1px solid var(--f-bd);
+  border-radius: 50rem;
+  background: var(--f-bg);
+  color: var(--bs-body-color);
+  font-weight: 500;
+  padding: 0.2rem 0.4rem 0.2rem 0.75rem;
+}
+.org-filter.sev-critical   { --f-bg: var(--bs-danger-bg-subtle);  --f-bd: var(--bs-danger-border-subtle);  --f-on: var(--bs-danger); }
+.org-filter.sev-incomplete { --f-bg: var(--bs-warning-bg-subtle); --f-bd: var(--bs-warning-border-subtle); --f-on: var(--bs-warning); --f-on-fg: #212529; }
+.org-filter:hover          { background: var(--f-bg); border-color: var(--f-on); color: var(--bs-body-color); }
+.org-filter.active,
+.org-filter.active:hover   { background: var(--f-on); border-color: var(--f-on); color: var(--f-on-fg); }
+.org-filter:disabled       { opacity: 0.45; }
+.org-filter-n {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-left: 0.3rem;
+  padding: 0 0.4rem;
+  border-radius: 50rem;
+  background: rgba(255, 255, 255, 0.85);
+  color: #212529;
+  font-size: 0.8em;
+  text-align: center;
+}
