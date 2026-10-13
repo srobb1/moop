@@ -1644,6 +1644,9 @@ a:hover .link-icon {
 }
 .qs-card .card-body {
   background: transparent;
+  /* width:100% -- a .card is a flex column, and a flex item with margin:auto shrinks to
+     its content, so this sat at ~440px and cut the placeholder off ("…assembl"). */
+  width: 100%;
   max-width: 680px;
   margin: 0 auto;
 }

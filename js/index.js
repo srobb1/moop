@@ -1,39 +1,18 @@
 // Index page — organism selection
-// Global state shared by all four tabs and the taxonomy tree
+// Global state shared by the three selection tabs and the taxonomy tree.
+// Data (organismData, treeData, userAccess, quickSearchData, groupColors) is defined by
+// index.php's inline_scripts; escapeHtml() is the shared one from js/modules/utilities.js.
 
 let selectedOrganisms = new Set();
 let orgDataMap        = {};   // organism key → data object
 let phyloTree         = null;
 
-const GROUP_COLORS = [
-    '#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6',
-    '#1abc9c','#e67e22','#e91e63','#00bcd4','#795548','#607d8b'
-];
-
-// Built lazily on first call so quickSearchData is guaranteed to be defined by then.
-let _groupColorMap = null;
-
+// Group colours are computed server-side (moop_group_color(), lib/group_colors.php) and
+// handed over as `groupColors`, so a group is the same colour here as on every other page.
+// This used to assign them by each group's alphabetical position among the groups the
+// viewer could see, so colours shifted with access level and with every new group.
 function groupColor(name) {
-    if (!_groupColorMap) {
-        const names = quickSearchData
-            .filter(d => d.type === 'group')
-            .map(d => d.label)
-            .sort((a, b) => a.localeCompare(b));
-        _groupColorMap = {};
-        names.forEach((name, i) => {
-            let idx = i % GROUP_COLORS.length;
-            if (i > 0) {
-                const prev = _groupColorMap[names[i - 1]];
-                while (GROUP_COLORS[idx] === prev) idx = (idx + 1) % GROUP_COLORS.length;
-            }
-            _groupColorMap[name] = GROUP_COLORS[idx];
-        });
-    }
-    return _groupColorMap[name] ?? GROUP_COLORS[0];
-}
-
-function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return (typeof groupColors !== 'undefined' && groupColors[name]) || '#607d8b';
 }
 
 // ─── Organism / Taxon lists ────────────────────────────────────────────────
@@ -43,15 +22,15 @@ function renderOrganismList() {
     if (!list) return;
     list.innerHTML = organismData.map(o => {
         const chips = o.groups.map(g =>
-            `<span class="org-group-chip" style="background:${groupColor(g)}">${escHtml(g)}</span>`
+            `<span class="org-group-chip" style="background:${groupColor(g)}">${escapeHtml(g)}</span>`
         ).join('');
         const common = o.common_name
-            ? `<span class="org-common text-muted">· ${escHtml(o.common_name)}</span>`
+            ? `<span class="org-common text-muted">· ${escapeHtml(o.common_name)}</span>`
             : '';
         const searchText = [o.display_name, o.common_name, ...o.groups].join(' ').toLowerCase();
-        return `<div class="org-select-row" data-org="${escHtml(o.organism)}" data-search="${escHtml(searchText)}">
+        return `<div class="org-select-row" data-org="${escapeHtml(o.organism)}" data-search="${escapeHtml(searchText)}">
             <span class="org-groups">${chips}</span>
-            <span class="org-name"><em>${escHtml(o.display_name)}</em></span>
+            <span class="org-name"><em>${escapeHtml(o.display_name)}</em></span>
             ${common}
             <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
         </div>`;
@@ -68,15 +47,15 @@ function renderTaxonList() {
     if (!list) return;
     list.innerHTML = organismData.map(o => {
         const chain      = (o.taxon_chain || []).filter(t => t !== 'Life');
-        const chainStr   = chain.map(t => escHtml(t)).join('<span class="taxon-sep"> › </span>');
+        const chainStr   = chain.map(t => escapeHtml(t)).join('<span class="taxon-sep"> › </span>');
         const common     = o.common_name
-            ? ` <span class="text-muted">· ${escHtml(o.common_name)}</span>` : '';
+            ? ` <span class="text-muted">· ${escapeHtml(o.common_name)}</span>` : '';
         const searchText = [o.display_name, o.common_name, ...chain].join(' ').toLowerCase();
-        return `<div class="org-select-row taxon-row" data-org="${escHtml(o.organism)}" data-search="${escHtml(searchText)}">
+        return `<div class="org-select-row taxon-row" data-org="${escapeHtml(o.organism)}" data-search="${escapeHtml(searchText)}">
             <div class="taxon-row-inner">
                 <div class="taxon-path">${chainStr}</div>
                 <div class="taxon-row-name">
-                    <em>${escHtml(o.display_name)}</em>${common}
+                    <em>${escapeHtml(o.display_name)}</em>${common}
                     <span class="org-check"><i class="fas fa-check text-success"></i></span>
                 </div>
             </div>
@@ -105,13 +84,16 @@ function toggleOrganism(org) {
     } else {
         selectedOrganisms.add(org);
     }
-    updateSelectedList();
-    refreshAllHighlights();
-    if (phyloTree) phyloTree.updateUI();
+    refreshSelectionUI();
 }
 
 function removeOrganism(org) {
     selectedOrganisms.delete(org);
+    refreshSelectionUI();
+}
+
+/** Redraw everything that shows the selection: the panel, the list highlights, the tree. */
+function refreshSelectionUI() {
     updateSelectedList();
     refreshAllHighlights();
     if (phyloTree) phyloTree.updateUI();
@@ -148,13 +130,12 @@ function updateSelectedList() {
         return;
     }
 
-    const site = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\//, '').split('/')[0];
     listEl.innerHTML = Array.from(selectedOrganisms).map(org => {
         const info    = orgDataMap[org];
-        const name    = info ? `<em>${escHtml(info.display_name)}</em>` : escHtml(org.replace(/_/g, ' '));
+        const name    = info ? `<em>${escapeHtml(info.display_name)}</em>` : escapeHtml(org.replace(/_/g, ' '));
         const common  = info?.common_name
-            ? ` <span class="text-muted">· ${escHtml(info.common_name)}</span>` : '';
-        const pageUrl = `/${site}/tools/organism.php?organism=${encodeURIComponent(org)}`;
+            ? ` <span class="text-muted">· ${escapeHtml(info.common_name)}</span>` : '';
+        const pageUrl = `${sitePath}/tools/organism.php?organism=${encodeURIComponent(org)}`;
         return `<div class="selected-org-item d-flex align-items-center justify-content-between">
             <span class="selected-org-name">${name}${common}</span>
             <span class="selected-org-actions ms-2 flex-shrink-0 text-nowrap">
@@ -162,7 +143,7 @@ function updateSelectedList() {
                     <i class="fas fa-external-link-alt text-info"></i>
                 </a>
                 <button class="btn btn-link btn-sm p-0 text-danger remove-org-btn"
-                        data-org="${escHtml(org)}" title="Remove">
+                        data-org="${escapeHtml(org)}" title="Remove">
                     <i class="fas fa-times"></i>
                 </button>
             </span>
@@ -182,10 +163,9 @@ function handleToolClick(toolId) {
     const toolPath = btn.getAttribute('data-tool-path');
     if (!toolPath) return;
 
-    const site = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\//,'').split('/')[0];
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = `/${site}${toolPath}`;
+    form.action = `${sitePath}${toolPath}`;
     form.target = '_blank';
 
     Array.from(selectedOrganisms).forEach(org => {
@@ -297,10 +277,10 @@ function initQuickSearch() {
             return;
         }
         dropdown.innerHTML = results.map((d, i) => {
-            const sec = d.secondary ? `<span class="qs-secondary">${escHtml(d.secondary)}</span>` : '';
-            return `<a class="qs-item" href="${escHtml(d.url)}" data-idx="${i}">
-                <span class="qs-type qs-type-${escHtml(d.type)}">${TYPE_LABEL[d.type] || d.type}</span>
-                <span class="qs-label">${escHtml(d.label)}</span>
+            const sec = d.secondary ? `<span class="qs-secondary">${escapeHtml(d.secondary)}</span>` : '';
+            return `<a class="qs-item" href="${escapeHtml(d.url)}" data-idx="${i}">
+                <span class="qs-type qs-type-${escapeHtml(d.type)}">${TYPE_LABEL[d.type] || d.type}</span>
+                <span class="qs-label">${escapeHtml(d.label)}</span>
                 ${sec}
             </a>`;
         }).join('');
@@ -376,9 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tree-expand-all')?.addEventListener('click', () => phyloTree?.expandAll());
     document.getElementById('tree-collapse-all')?.addEventListener('click', () => phyloTree?.collapseAll());
 
-    const treeInfoBtn = document.getElementById('tree-info-btn');
-    if (treeInfoBtn) new bootstrap.Popover(treeInfoBtn, { sanitize: false });
-
     // Remove-organism delegation on the selected panel
     document.getElementById('selected-organisms-list')
         ?.addEventListener('click', e => {
@@ -390,9 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('clear-all-organisms')
         ?.addEventListener('click', () => {
             selectedOrganisms.clear();
-            updateSelectedList();
-            refreshAllHighlights();
-            if (phyloTree) phyloTree.updateUI();
+            refreshSelectionUI();
         });
 
     // Colorize Browse by Group chips — same map as org-select badges for visual consistency

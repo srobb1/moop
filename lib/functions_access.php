@@ -459,49 +459,50 @@ function getUnrepresentedGeneSetTuples(array $all_organisms, string $organism_da
 }
 
 /**
- * Get taxonomy tree user access for display
- * Returns organisms accessible to current user for taxonomy tree display
- * 
- * @param array $group_data Array of organism/assembly/groups data
- * @return array Array of accessible organisms with true value
+ * Organisms this viewer can see at least one gene set of, for the taxonomy tree and the
+ * home page lists: organism => true.
+ *
+ * Built from moop_visible_group_entries(), the one per-gene-set filter. It used to be a
+ * separate per-role copy that granted a whole organism from get_user_access() keys or
+ * from any one public entry.
+ *
+ * @param array $group_data getGroupData() entries
+ * @return array organism => true
  */
 function getTaxonomyTreeUserAccess($group_data) {
     $taxonomy_user_access = [];
-    
-    if (get_access_level() === 'ADMIN' || get_access_level() === 'IP_IN_RANGE') {
-        // Admin gets access to all organisms
-        foreach ($group_data as $data) {
-            $organism = $data['organism'];
-            if (!isset($taxonomy_user_access[$organism])) {
-                $taxonomy_user_access[$organism] = true;
-            }
-        }
-    } elseif (is_logged_in()) {
-        // Logged-in users get their specific access PLUS public organisms
-        $taxonomy_user_access = get_user_access();
-        
-        // Add public organisms
-        foreach ($group_data as $data) {
-            if (entry_is_public($data)) {
-                $organism = $data['organism'];
-                if (!isset($taxonomy_user_access[$organism])) {
-                    $taxonomy_user_access[$organism] = true;
-                }
-            }
-        }
-    } else {
-        // Public users: get organisms in PUBLIC group
-        foreach ($group_data as $data) {
-            if (entry_is_public($data)) {
-                $organism = $data['organism'];
-                if (!isset($taxonomy_user_access[$organism])) {
-                    $taxonomy_user_access[$organism] = true;
-                }
-            }
-        }
+    foreach (moop_visible_group_entries($group_data) as $entry) {
+        $taxonomy_user_access[$entry['organism']] = true;
     }
-    
     return $taxonomy_user_access;
+}
+
+/**
+ * The taxonomy tree cut down to the organisms this viewer may see, with branches left
+ * empty removed. Null when nothing under $node is visible.
+ *
+ * For anything SENT TO THE BROWSER. The home page used to send the whole tree and let
+ * the tree's JavaScript hide what the viewer could not open -- so an anonymous visitor's
+ * page source named all 85 organisms, with their lineages and common names, while the
+ * page showed one (found 2026-10-13). Hiding in the browser is not access control.
+ *
+ * @param array $node   a tree node: {name, children?, organism?, ...}
+ * @param array $access organism => true (getTaxonomyTreeUserAccess())
+ * @return array|null
+ */
+function pruneTaxonomyTreeForAccess(array $node, array $access): ?array {
+    if (isset($node['organism'])) {
+        return isset($access[$node['organism']]) ? $node : null;
+    }
+    $kept = [];
+    foreach ($node['children'] ?? [] as $child) {
+        if (!is_array($child)) continue;
+        $pruned = pruneTaxonomyTreeForAccess($child, $access);
+        if ($pruned !== null) $kept[] = $pruned;
+    }
+    if (!$kept) return null;
+    $node['children'] = $kept;
+    return $node;
 }
 
 /**

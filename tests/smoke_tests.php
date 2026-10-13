@@ -24,6 +24,7 @@ require_once "$BASE/includes/access_control.php";   // also bootstraps ConfigMan
 require_once "$BASE/lib/database_queries.php";
 require_once "$BASE/lib/functions_database.php";  // validateDatabaseIntegrity() + getDbConnection()
 require_once "$BASE/lib/functions_data.php";
+require_once "$BASE/lib/functions_access.php";  // getTaxonomyTreeUserAccess()
 
 // ----------------------------------------------------------------------------
 // Tiny test harness
@@ -101,6 +102,55 @@ $_SESSION = ['access_level' => 'COLLABORATOR',
              'access' => ['Made_Up_Org' => ['GCA_1', 'GCA_2']]];
 ok(has_gene_set_access('Made_Up_Org', 'GCA_1', 'gs_alpha') === false,
    'legacy {org: [asm,...]} list shape denies rather than throwing');
+
+// ----------------------------------------------------------------------------
+group('home page: built from the gene sets the viewer may see, not by organism');
+// One organism, one PUBLIC gene set and one PRIVATE one -- the case the home page got
+// wrong: it filtered by organism, so a visitor would have seen the private assembly's
+// accession, gene-set name and private-only group in quick search and the counts.
+$_mixed = [
+    ['organism' => 'Mix_Org', 'assembly' => 'GCA_pub',  'gene_set' => 'gs_pub',  'groups' => ['Shared'],     'public' => true],
+    ['organism' => 'Mix_Org', 'assembly' => 'GCA_priv', 'gene_set' => 'gs_priv', 'groups' => ['SecretGroup']],
+    ['organism' => 'Hidden_Org', 'assembly' => 'GCA_h', 'gene_set' => 'gs_h',    'groups' => ['Shared']],
+];
+$_qs_for = function () use ($_mixed) {
+    $vis  = moop_visible_group_entries($_mixed);
+    $orgs = [];
+    foreach (array_keys(getTaxonomyTreeUserAccess($_mixed)) as $o) {
+        $orgs[] = ['organism' => $o, 'display_name' => $o, 'common_name' => '', 'groups' => [], 'taxon_chain' => []];
+    }
+    $qs = buildHomeQuickSearch($vis, $orgs, 'moop');
+    return ['labels' => array_column($qs['items'], 'label'), 'asm' => $qs['assembly_count'],
+            'cards' => array_keys(getIndexDisplayCards($_mixed)), 'orgs' => array_column($orgs, 'organism')];
+};
+$_SESSION = ['access_level' => 'PUBLIC', 'access' => [], 'logged_in' => false];
+$_r = $_qs_for();
+ok(!array_intersect(['GCA_priv', 'gs_priv', 'SecretGroup'], $_r['labels']),
+   'a visitor\'s quick search lists no private assembly, gene set or private-only group');
+ok($_r['asm'] === 1 && $_r['orgs'] === ['Mix_Org'], 'a visitor counts 1 assembly and sees only the organism with a public gene set');
+ok($_r['cards'] === ['Shared'], 'a visitor gets only the group holding the public gene set');
+$_SESSION = ['access_level' => 'COLLABORATOR', 'logged_in' => true, 'access' => ['Mix_Org' => ['GCA_priv' => ['gs_priv']]]];
+$_r = $_qs_for();
+ok(in_array('gs_priv', $_r['labels'], true) && !in_array('Hidden_Org', $_r['orgs'], true),
+   'a collaborator sees the gene set granted to them, and not an ungranted organism');
+$_SESSION = ['access_level' => 'COLLABORATOR', 'logged_in' => true, 'access' => ['Hidden_Org' => ['GCA_other' => ['*']]]];
+ok(!in_array('Hidden_Org', getTaxonomyTreeUserAccess($_mixed) ? array_keys(getTaxonomyTreeUserAccess($_mixed)) : [], true),
+   'access to a DIFFERENT assembly of an organism does not reveal this one');
+$_SESSION = ['access_level' => 'IP_IN_RANGE', 'access' => []];
+ok(count(moop_visible_group_entries($_mixed)) === 3, 'the lab network sees every entry');
+
+// The tree sent to the browser: the home page sent the WHOLE tree and hid the rest in JS,
+// so an anonymous visitor's page source named all 85 organisms.
+$_tree = ['name' => 'Life', 'children' => [
+    ['name' => 'Cnidaria', 'children' => [['name' => 'Nv', 'organism' => 'Mix_Org']]],
+    ['name' => 'Chiroptera', 'children' => [['name' => 'Bat', 'organism' => 'Hidden_Org']]],
+]];
+$_p = pruneTaxonomyTreeForAccess($_tree, ['Mix_Org' => true]);
+ok(json_encode($_p) === json_encode(['name' => 'Life', 'children' => [['name' => 'Cnidaria', 'children' => [['name' => 'Nv', 'organism' => 'Mix_Org']]]]]),
+   'the pruned tree keeps only visible organisms and drops the branch left empty');
+ok(strpos(json_encode($_p), 'Hidden_Org') === false && strpos(json_encode($_p), 'Chiroptera') === false,
+   'neither a hidden organism nor its lineage reaches the browser');
+ok(pruneTaxonomyTreeForAccess($_tree, []) === null, 'nothing visible: no tree at all');
 
 // ----------------------------------------------------------------------------
 group('search-query building — FTS expression + scope filters');

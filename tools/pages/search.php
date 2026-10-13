@@ -72,7 +72,10 @@
         <?= help_modal_trigger('search-help', '', 'How to search') ?>
       </div>
       <div class="card-body py-3">
+        <?php // ?q= pre-fills the term: the home page's Genes box links here when an ID
+              // lookup finds nothing ("Search annotations for 'BRCA1'"). ?>
         <input type="text" class="form-control moop-input" id="searchKeywords"
+               value="<?= htmlspecialchars(trim((string)($_GET['q'] ?? ''))) ?>"
                placeholder='e.g. BRCA1, "Histone Deacetylase 1", GO:0006351 (minimum 3 characters)…'>
       </div>
     </div>
@@ -109,8 +112,6 @@
               <p class="text-muted small p-3">No accessible organisms found.</p>
             <?php else: ?>
             <?php
-            $gp = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63','#00bcd4','#795548','#607d8b'];
-            $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31) % count($gp)];
             // How many gene-set rows each organism has, so a multi-gene-set organism renders
             // as ONE row in simple view (carrying a "N gene sets" note) instead of N rows the
             // eye cannot tell apart. The extra rows only distinguish themselves once Details
@@ -161,7 +162,7 @@
                      data-asm-display="<?= htmlspecialchars($asmDisplay) ?>">
               <span class="org-groups flex-shrink-0">
                 <?php foreach ($groups as $g): ?>
-                <span class="org-group-chip" style="background:<?= $groupColor($g) ?>"><?= htmlspecialchars($g) ?></span>
+                <span class="org-group-chip" style="background:<?= moop_group_color($g) ?>"><?= htmlspecialchars($g) ?></span>
                 <?php endforeach; ?>
               </span>
               <span class="flex-grow-1 text-truncate" style="min-width:0; white-space:nowrap;">

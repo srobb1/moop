@@ -43,6 +43,7 @@ require_once __DIR__ . '/../lib/glossary.php';
 // a view file must be able to call them without knowing what its controller included,
 // or pages go back to hand-writing their own popover markup.
 require_once __DIR__ . '/../lib/help_ui.php';
+require_once __DIR__ . '/../lib/group_colors.php';   // moop_group_color(): one colour per group, site-wide
 
 // Load the ConfigManager class
 require_once __DIR__ . '/ConfigManager.php';

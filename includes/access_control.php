@@ -480,23 +480,62 @@ function has_gene_set_access($organism_name, $assembly_name, $gene_set) {
         return true;
     }
 
-    if (has_access('COLLABORATOR')) {
-        $user_access = get_user_access();
-        $allowed = $user_access[$organism_name][$assembly_name] ?? [];
+    return moop_collaborator_allows($organism_name, $assembly_name, $gene_set);
+}
+}
 
-        // users.json carries TWO access shapes (admin/manage_users.php:277 handles both):
-        //   new  {org: {asm: [gene_set, ...]}}
-        //   old  {org: [asm, ...]}            -- a list, so [$assembly] misses and we deny
-        // A third, `{asm: true}`, means "the whole assembly" and predates gene sets.
-        // Without this coercion in_array() receives a bool and PHP 8 throws a TypeError,
-        // which is a 500 on every page that resolves access -- not a denial.
-        if ($allowed === true)  return true;
-        if (!is_array($allowed)) return false;
-
-        return in_array('*', $allowed, true) || in_array($gene_set, $allowed, true);
+/**
+ * The collaborator half of has_gene_set_access(): does this logged-in user's own
+ * access list grant the gene set? One definition, shared with
+ * moop_visible_group_entries() so the two cannot drift.
+ */
+if (!function_exists('moop_collaborator_allows')) {
+function moop_collaborator_allows($organism_name, $assembly_name, $gene_set) {
+    if (!has_access('COLLABORATOR')) {
+        return false;
     }
+    $user_access = get_user_access();
+    $allowed = $user_access[$organism_name][$assembly_name] ?? [];
 
-    return false;
+    // users.json carries TWO access shapes (admin/manage_users.php:277 handles both):
+    //   new  {org: {asm: [gene_set, ...]}}
+    //   old  {org: [asm, ...]}            -- a list, so [$assembly] misses and we deny
+    // A third, `{asm: true}`, means "the whole assembly" and predates gene sets.
+    // Without this coercion in_array() receives a bool and PHP 8 throws a TypeError,
+    // which is a 500 on every page that resolves access -- not a denial.
+    if ($allowed === true)  return true;
+    if (!is_array($allowed)) return false;
+
+    return in_array('*', $allowed, true) || in_array($gene_set, $allowed, true);
+}
+}
+
+/**
+ * The organism_assembly_groups.json entries this viewer may see -- the ONE filter that
+ * every "what is visible to you" list is built from (home page, taxonomy tree, group
+ * cards, group pages).
+ *
+ * Decided per GENE SET, with exactly has_gene_set_access()'s rule. It replaces three
+ * separate per-ORGANISM shortcuts on the home page: an organism with one public gene set
+ * and one private one would have listed the private assembly's accession and gene-set
+ * name in quick search, counted it in "N assemblies", and shown groups holding only the
+ * private part, to an anonymous visitor (found 2026-10-13; not live -- no organism mixes
+ * the two today).
+ *
+ * The public test uses the entry already in hand (entry_is_public()); going through
+ * has_gene_set_access() would re-read the groups file once per entry to find it again.
+ *
+ * @param array $group_data getGroupData() entries
+ * @return array the visible entries, in their original order
+ */
+if (!function_exists('moop_visible_group_entries')) {
+function moop_visible_group_entries(array $group_data) {
+    $sees_all = has_access('ADMIN') || has_access('IP_IN_RANGE');
+    return array_values(array_filter($group_data, function ($entry) use ($sees_all) {
+        return $sees_all
+            || entry_is_public($entry)
+            || moop_collaborator_allows($entry['organism'] ?? '', $entry['assembly'] ?? '', $entry['gene_set'] ?? 'v1');
+    }));
 }
 }
 

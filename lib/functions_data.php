@@ -84,44 +84,6 @@ function getAllGroupCards($group_data) {
 }
 
 /**
- * Get group cards that have at least one public assembly
- * Returns card objects only for groups containing assemblies in the "Public" group
- * 
- * @param array $group_data Array of organism/assembly/groups data
- * @return array Associative array of group_name => card_info for public groups only
- */
-function getPublicGroupCards($group_data) {
-    $public_groups = [];
-    $group_organisms = [];
-
-    // Find all groups that contain at least one public assembly
-    foreach ($group_data as $data) {
-        if (entry_is_public($data)) {
-            foreach ($data['groups'] as $group) {
-                // Never surface the legacy "PUBLIC" access group as a browsable card —
-                // public is a per-gene-set flag now, and public gene sets appear under
-                // their real (taxonomic) groups.
-                if (strtoupper(trim((string)$group)) === 'PUBLIC') continue;
-                if (!isset($public_groups[$group])) {
-                    $public_groups[$group] = [
-                        'title' => $group,
-                        'text' => "Explore $group Data",
-                        'link' => 'tools/groups.php?group=' . urlencode($group)
-                    ];
-                    $group_organisms[$group] = [];
-                }
-                $group_organisms[$group][$data['organism']] = true;
-            }
-        }
-    }
-    foreach ($public_groups as $group => &$card) {
-        $card['organism_count'] = count($group_organisms[$group]);
-    }
-    ksort($public_groups);
-    return $public_groups;
-}
-
-/**
  * Organisms in a group that this user can actually see, with only the assemblies
  * they can see under each.
  *
@@ -151,18 +113,15 @@ function getPublicGroupCards($group_data) {
 function getAccessibleOrganismsInGroup($group_name, $group_data) {
     $accessible_organisms = [];
 
-    foreach ($group_data as $data) {
+    // moop_visible_group_entries() applies has_gene_set_access()'s rule without
+    // re-reading the groups file once per entry.
+    foreach (moop_visible_group_entries($group_data) as $data) {
         if (!in_array($group_name, $data['groups'] ?? [], true)) {
             continue;
         }
 
         $organism = $data['organism'];
         $assembly = $data['assembly'];
-        $gene_set = $data['gene_set'] ?? 'v1';
-
-        if (!has_gene_set_access($organism, $assembly, $gene_set)) {
-            continue;
-        }
 
         // One entry per assembly: several gene sets on one assembly must not
         // produce the same assembly several times.
@@ -435,60 +394,97 @@ function getAssemblyFastaFiles($organism_name, $assembly_name) {
 }
 
 /**
- * Get cards to display on index page based on user access level
- * 
- * @param array $group_data Array of group data from getGroupData()
- * @return array Cards to display with title, text, and link
+ * The home page's quick-search list: organisms, groups, assemblies and gene sets.
+ *
+ * Takes ONLY the entries the viewer may see (moop_visible_group_entries()) and the
+ * already-filtered organism list, so it cannot list anything they could not open.
+ * It was built inline in index.php from the raw group data, filtered by organism.
+ *
+ * @param array  $visible_entries moop_visible_group_entries() output
+ * @param array  $organism_list   [{organism, display_name, common_name, groups, taxon_chain}]
+ * @param string $site            site path segment, e.g. "moop"
+ * @return array{items: list<array>, assembly_count: int}
  */
-function getIndexDisplayCards($group_data) {
-    $cards_to_display = [];
-    $all_cards = getAllGroupCards($group_data);
-    
-    if (get_access_level() === 'ADMIN' || get_access_level() === 'IP_IN_RANGE') {
-        $cards_to_display = $all_cards;
-    } elseif (is_logged_in()) {
-        // Logged-in users see: public groups + any groups containing their permitted organisms
-        $cards_to_display = getPublicGroupCards($group_data);
+function buildHomeQuickSearch(array $visible_entries, array $organism_list, string $site): array {
+    $items = [];
+    $org_display_map = [];
+    foreach ($organism_list as $org_entry) {
+        $org_display_map[$org_entry['organism']] = $org_entry['display_name'];
+        $search_parts = array_filter(array_merge(
+            [$org_entry['display_name'], $org_entry['common_name']],
+            $org_entry['groups'],
+            $org_entry['taxon_chain']
+        ));
+        $items[] = [
+            'type'      => 'organism',
+            'label'     => $org_entry['display_name'],
+            'secondary' => $org_entry['common_name'],
+            'url'       => "/$site/tools/organism.php?organism=" . urlencode($org_entry['organism']),
+            'search'    => strtolower(implode(' ', $search_parts)),
+        ];
+    }
 
-        $user_organisms = array_keys(get_user_access());
-        $group_organisms = [];
-        foreach ($group_data as $entry) {
-            if (!in_array($entry['organism'], $user_organisms, true)) continue;
-            foreach ($entry['groups'] as $group) {
-                if (isset($cards_to_display[$group])) continue;
-                if (!isset($group_organisms[$group])) $group_organisms[$group] = [];
-                $group_organisms[$group][$entry['organism']] = true;
-            }
-        }
-        foreach ($group_organisms as $group => $orgs) {
-            $cards_to_display[$group] = [
-                'title'          => $group,
-                'text'           => "Explore $group Data",
-                'link'           => 'tools/groups.php?group=' . urlencode($group),
-                'organism_count' => count($orgs),
+    $seen_groups = $seen_assemblies = $seen_genesets = [];
+    foreach ($visible_entries as $entry) {
+        $org      = $entry['organism'];
+        $assembly = $entry['assembly'];   // the genome accession, e.g. GCA_004027475.1
+        $gene_set = $entry['gene_set'] ?? '';
+        $org_display = $org_display_map[$org] ?? str_replace('_', ' ', $org);
+
+        foreach ($entry['groups'] ?? [] as $group) {
+            if (strtoupper(trim((string)$group)) === 'PUBLIC') continue;   // legacy access keyword
+            if (isset($seen_groups[$group])) continue;
+            $seen_groups[$group] = true;
+            $items[] = [
+                'type'      => 'group',
+                'label'     => $group,
+                'secondary' => '',
+                'url'       => "/$site/tools/groups.php?group=" . urlencode($group),
+                'search'    => strtolower($group),
             ];
         }
-    } else {
-        // Visitors see only groups with public assemblies
-        $cards_to_display = getPublicGroupCards($group_data);
+
+        $asm_key = $org . '|' . $assembly;
+        if (!isset($seen_assemblies[$asm_key])) {
+            $seen_assemblies[$asm_key] = true;
+            $items[] = [
+                'type'      => 'assembly',
+                'label'     => $assembly,
+                'secondary' => $org_display,
+                'url'       => "/$site/tools/assembly.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly),
+                'search'    => strtolower(implode(' ', array_filter([$assembly, $org_display, $org]))),
+            ];
+        }
+
+        if ($gene_set !== '' && !isset($seen_genesets[$asm_key . '|' . $gene_set])) {
+            $seen_genesets[$asm_key . '|' . $gene_set] = true;
+            $items[] = [
+                'type'      => 'geneset',
+                'label'     => $gene_set,
+                'secondary' => $org_display . ' › ' . $assembly,
+                'url'       => "/$site/tools/gene_set.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly) . "&gene_set=" . urlencode($gene_set),
+                'search'    => strtolower(implode(' ', array_filter([$gene_set, $org_display, $org, $assembly]))),
+            ];
+        }
     }
-    
-    return $cards_to_display;
+
+    return ['items' => $items, 'assembly_count' => count($seen_assemblies)];
 }
 
 /**
- * Format organism name for index page display with italics
- * 
- * @param string $organism Organism name with underscores
- * @return string Formatted name with proper capitalization and italics
+ * Group cards for the home page: every group holding a gene set this viewer can see,
+ * with the number of such organisms in it.
+ *
+ * Built from moop_visible_group_entries(). It used to branch per role -- admins all,
+ * visitors getPublicGroupCards(), collaborators a hand-merged mix keyed on ORGANISM --
+ * so a collaborator granted one assembly saw the groups of the organism's others too,
+ * and a public group's count left out the organisms they could see privately.
+ *
+ * @param array $group_data getGroupData() entries
+ * @return array group_name => card
  */
-function formatIndexOrganismName($organism) {
-    $parts = explode('_', $organism);
-    $formatted_name = ucfirst(strtolower($parts[0]));
-    for ($i = 1; $i < count($parts); $i++) {
-        $formatted_name .= ' ' . strtolower($parts[$i]);
-    }
-    return '<i>' . $formatted_name . '</i>';
+function getIndexDisplayCards($group_data) {
+    return getAllGroupCards(moop_visible_group_entries($group_data));
 }
 
 /**

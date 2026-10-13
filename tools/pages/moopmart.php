@@ -5,9 +5,6 @@
  *            $annotation_source_names, $annotation_source_types
  */
 
-// Group color hash (matches index.js GROUP_COLORS palette)
-$gp = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63','#00bcd4','#795548','#607d8b'];
-$groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31) % count($gp)];
 ?>
 <div class="container py-3">
 
@@ -247,7 +244,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                data-asm-display="<?= htmlspecialchars($asmDisplay) ?>">
         <span class="org-groups flex-shrink-0">
           <?php foreach ($groups as $g): ?>
-          <span class="org-group-chip" style="background:<?= $groupColor($g) ?>"><?= htmlspecialchars($g) ?></span>
+          <span class="org-group-chip" style="background:<?= moop_group_color($g) ?>"><?= htmlspecialchars($g) ?></span>
           <?php endforeach; ?>
         </span>
         <span class="flex-grow-1 text-truncate" style="min-width:0;">

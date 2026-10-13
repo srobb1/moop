@@ -1,7 +1,9 @@
 <?php
 /**
  * Index page content
- * Variables available: $siteTitle, $organism_count, $assembly_count, $cards_to_display, $taxonomy_tree_data, $user_access_json, $ip
+ * Variables available: $siteTitle, $site, $organism_count, $assembly_count, $featured_groups, $cards_to_display
+ * Scripts and their data (index.js, taxonomy-tree.js, userAccess, treeData, organismData)
+ * come from index.php's page_script / inline_scripts, not from tags here.
  */
 ?>
 
@@ -114,7 +116,7 @@
     <hr class="mx-auto page-header-divider mb-3">
     <div class="d-flex justify-content-center flex-wrap gap-2">
       <?php foreach ($featured_groups as $fg): ?>
-        <a href="<?= htmlspecialchars($fg['url']) ?>" class="index-group-chip text-decoration-none"
+        <a href="<?= htmlspecialchars($fg['url']) ?>" target="_blank" class="index-group-chip text-decoration-none"
            data-group="<?= htmlspecialchars($fg['name']) ?>">
           <?= htmlspecialchars($fg['name']) ?>
         </a>
@@ -376,11 +378,3 @@
   </div><!-- /collapse browse-select-body -->
 </div><!-- /container -->
 
-<script src="js/modules/taxonomy-tree.js?v=<?= filemtime(__DIR__ . '/../../js/modules/taxonomy-tree.js') ?>"></script>
-<script src="js/index.js?v=<?= filemtime(__DIR__ . '/../../js/index.js') ?>"></script>
-<script>
-const userAccess    = <?= $user_access_json ?>;
-const treeData      = <?= json_encode($taxonomy_tree_data) ?>;
-const organismData  = <?= $organism_list_json ?>;
-
-</script>

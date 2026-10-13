@@ -21,15 +21,8 @@
  * - $on_change_function (string) - JavaScript function to call on selection change
  */
 
-$group_colors = ['primary', 'success', 'info', 'warning', 'danger', 'secondary', 'dark'];
-$group_color_map = [];
-
-// Assign colors to groups consistently
-foreach ($sources_by_group as $group_name => $organisms) {
-    if (!isset($group_color_map[$group_name])) {
-        $group_color_map[$group_name] = $group_colors[count($group_color_map) % count($group_colors)];
-    }
-}
+// Group colours: moop_group_color() (lib/group_colors.php), the same on every page. This
+// list assigned Bootstrap colours by POSITION, so a group's colour here matched nowhere else.
 ?>
 
 <div class="fasta-source-selector">
@@ -61,7 +54,7 @@ foreach ($sources_by_group as $group_name => $organisms) {
     <div class="fasta-source-list">
         <?php 
         foreach ($sources_by_group as $group_name => $organisms): 
-            $group_color = $group_color_map[$group_name];
+            $group_color = moop_group_color((string)$group_name);
             
             foreach ($organisms as $organism => $assemblies): 
                 foreach ($assemblies as $source): 
@@ -112,7 +105,7 @@ foreach ($sources_by_group as $group_name => $organisms) {
                             <?= $is_selected ? 'checked' : '' ?>
                             >
                         
-                        <span class="badge badge-sm bg-<?= $group_color ?> text-white">
+                        <span class="badge badge-sm text-white" style="background:<?= $group_color ?>">
                             <?= htmlspecialchars($group_name) ?>
                         </span>
                         <?php /* The organism is a SCIENTIFIC NAME: sentence case, italic,

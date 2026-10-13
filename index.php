@@ -19,12 +19,12 @@ include_once __DIR__ . '/lib/moop_functions.php';
 // Get configuration
 $config = ConfigManager::getInstance();
 
-// Get visitor IP (set in access_control.php)
-global $visitor_ip;
-$ip = $visitor_ip;
-
-// Get user group data and display permissions
-$group_data = getGroupData();
+// Everything on this page is built from the entries THIS viewer may see, decided per
+// gene set (moop_visible_group_entries()). Building it from the raw group data and
+// filtering by organism -- three separate ways -- would show a private assembly of an
+// organism that also has a public one.
+$group_data       = getGroupData();
+$visible_entries  = moop_visible_group_entries($group_data);
 $cards_to_display = getIndexDisplayCards($group_data);
 
 // Load taxonomy tree data
@@ -33,7 +33,6 @@ $taxonomy_tree_data = loadJsonFile("$metadata_path/taxonomy_tree_config.json", [
 
 // Get user access for taxonomy tree
 $taxonomy_user_access = getTaxonomyTreeUserAccess($group_data);
-$user_access_json = json_encode($taxonomy_user_access);
 
 // Build flat organism list for Organism Select / Taxon Select tabs
 function indexTraverseTree(array $node, array $chain = []): array {
@@ -54,7 +53,7 @@ function indexTraverseTree(array $node, array $chain = []): array {
 }
 
 $organism_groups_map = [];
-foreach ($group_data as $entry) {
+foreach ($visible_entries as $entry) {
     $org = $entry['organism'];
     if (!isset($organism_groups_map[$org])) $organism_groups_map[$org] = [];
     foreach ($entry['groups'] as $g) {
@@ -72,87 +71,10 @@ foreach (indexTraverseTree($taxonomy_tree_data['tree']) as $leaf) {
 }
 usort($organism_list, fn($a, $b) => strcmp($a['display_name'], $b['display_name']));
 
-// Build quick-search dataset (organisms + groups + assemblies + gene sets)
 $site = $config->getString('site');
 
-$qs_items = [];
-
-// Organisms
-$org_display_map = [];
-foreach ($organism_list as $org_entry) {
-    $org_display_map[$org_entry['organism']] = $org_entry['display_name'];
-    $search_parts = array_filter(array_merge(
-        [$org_entry['display_name'], $org_entry['common_name']],
-        $org_entry['groups'],
-        $org_entry['taxon_chain']
-    ));
-    $qs_items[] = [
-        'type'      => 'organism',
-        'label'     => $org_entry['display_name'],
-        'secondary' => $org_entry['common_name'],
-        'url'       => "/$site/tools/organism.php?organism=" . urlencode($org_entry['organism']),
-        'search'    => strtolower(implode(' ', $search_parts)),
-    ];
-}
-
-// Groups, assemblies, and gene sets — read directly from $group_data (already loaded),
-// filtered by $taxonomy_user_access so only what this user can see is included.
-$seen_groups    = [];
-$seen_assemblies = [];
-$seen_genesets  = [];
-
-foreach ($group_data as $entry) {
-    $org      = $entry['organism'];
-    $assembly = $entry['assembly'];   // this is the genome accession (e.g. GCA_004027475.1)
-    $gene_set = $entry['gene_set'] ?? '';
-    $groups   = $entry['groups'] ?? [];
-
-    if (!isset($taxonomy_user_access[$org])) continue;
-
-    $org_display = $org_display_map[$org] ?? str_replace('_', ' ', $org);
-
-    // Groups
-    foreach ($groups as $group) {
-        if (!isset($seen_groups[$group])) {
-            $seen_groups[$group] = true;
-            $qs_items[] = [
-                'type'      => 'group',
-                'label'     => $group,
-                'secondary' => '',
-                'url'       => "/$site/tools/groups.php?group=" . urlencode($group),
-                'search'    => strtolower($group),
-            ];
-        }
-    }
-
-    // Assembly
-    $asm_key = $org . '|' . $assembly;
-    if (!isset($seen_assemblies[$asm_key])) {
-        $seen_assemblies[$asm_key] = true;
-        $qs_items[] = [
-            'type'      => 'assembly',
-            'label'     => $assembly,
-            'secondary' => $org_display,
-            'url'       => "/$site/tools/assembly.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly),
-            'search'    => strtolower(implode(' ', array_filter([$assembly, $org_display, $org]))),
-        ];
-    }
-
-    // Gene set
-    if ($gene_set) {
-        $gs_key = $asm_key . '|' . $gene_set;
-        if (!isset($seen_genesets[$gs_key])) {
-            $seen_genesets[$gs_key] = true;
-            $qs_items[] = [
-                'type'      => 'geneset',
-                'label'     => $gene_set,
-                'secondary' => $org_display . ' › ' . $assembly,
-                'url'       => "/$site/tools/gene_set.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly) . "&gene_set=" . urlencode($gene_set),
-                'search'    => strtolower(implode(' ', array_filter([$gene_set, $org_display, $org, $assembly]))),
-            ];
-        }
-    }
-}
+// Quick-search dataset (organisms + groups + assemblies + gene sets).
+$quick_search = buildHomeQuickSearch($visible_entries, $organism_list, $site);
 
 // Featured groups for above-the-fold chips — only show groups the current user can access
 $featured_groups = [];
@@ -176,7 +98,7 @@ if (file_exists($desc_file)) {
 // Manual `featured` always wins; this only fills an otherwise-blank section.
 if (empty($featured_groups)) {
     $groups_with_public = [];
-    foreach ($group_data as $entry) {
+    foreach ($visible_entries as $entry) {
         if (entry_is_public($entry)) {
             foreach (($entry['groups'] ?? []) as $g) {
                 if (strtoupper(trim((string)$g)) === 'PUBLIC') continue; // legacy keyword, not a real group
@@ -203,20 +125,28 @@ echo render_display_page(
         // at the annotation search). Every other page already has it.
         'site'               => $site,
         'organism_count'     => count($organism_list),
-        'assembly_count'     => count($seen_assemblies),
+        'assembly_count'     => $quick_search['assembly_count'],
         'featured_groups'    => $featured_groups,
         'cards_to_display'   => $cards_to_display,
-        'taxonomy_tree_data' => $taxonomy_tree_data,
-        'user_access_json'   => $user_access_json,
-        'organism_list_json' => json_encode($organism_list),
-        'ip'                 => $ip,
         'page_script'        => [
             "/$site/js/modules/feature-search.js",
+            "/$site/js/modules/taxonomy-tree.js",
+            "/$site/js/index.js",
         ],
         'inline_scripts'     => [
             "const sitePath = '/$site';",
-            "const moopSite = '/$site';",
-            "const quickSearchData = " . json_encode($qs_items) . ";",
+            "const quickSearchData = " . json_encode($quick_search['items']) . ";",
+            "const userAccess = " . json_encode($taxonomy_user_access) . ";",
+            // Only the organisms this viewer may see -- see pruneTaxonomyTreeForAccess().
+            "const treeData = " . json_encode(['tree' => pruneTaxonomyTreeForAccess($taxonomy_tree_data['tree'] ?? [], $taxonomy_user_access)
+                                                         ?? ['name' => 'Life', 'children' => []]]) . ";",
+            "const organismData = " . json_encode($organism_list) . ";",
+            // Colours come from moop_group_color(), shared with every other page; index.js
+            // does not compute its own.
+            "const groupColors = " . json_encode(moop_group_colors(array_merge(
+                array_keys($cards_to_display),
+                ...array_map(fn($o) => $o['groups'], $organism_list ?: [['groups' => []]])
+            ))) . ";",
         ],
     ],
     $config->getString('siteTitle')

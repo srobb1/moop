@@ -3,8 +3,6 @@
  * Genome Browser — Display Page
  * Variables: $scope_tree, $organism_info, $organism_groups, $all_groups, $site, $dl_organism, $dl_assembly
  */
-$gp = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63','#00bcd4','#795548','#607d8b'];
-$groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31) % count($gp)];
 ?>
 <div class="container-fluid py-3 px-3">
 
@@ -36,7 +34,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
           <?php if (!empty($all_groups)): ?>
           <div id="jb-group-chips" class="d-flex flex-wrap gap-1 pt-1">
             <?php foreach ($all_groups as $g): ?>
-            <span class="org-group-chip jb-group-chip" style="background:<?= $groupColor($g) ?>; cursor:pointer; opacity:0.55;"
+            <span class="org-group-chip jb-group-chip" style="background:<?= moop_group_color($g) ?>; cursor:pointer; opacity:0.55;"
                   data-group="<?= htmlspecialchars($g) ?>"><?= htmlspecialchars($g) ?></span>
             <?php endforeach; ?>
           </div>
@@ -60,7 +58,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
                data-search="<?= htmlspecialchars($search) ?>">
             <div class="flex-grow-1 d-flex align-items-center flex-wrap gap-1" style="min-width:0;">
               <?php foreach ($groups as $g): ?>
-              <span class="org-group-chip" style="background:<?= $groupColor($g) ?>"><?= htmlspecialchars($g) ?></span>
+              <span class="org-group-chip" style="background:<?= moop_group_color($g) ?>"><?= htmlspecialchars($g) ?></span>
               <?php endforeach; ?>
               <span class="small fw-semibold"><em><?= htmlspecialchars($display) ?></em></span>
               <?php if ($common): ?>

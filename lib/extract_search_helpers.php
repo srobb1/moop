@@ -658,28 +658,6 @@ function flattenSourcesList($sources_by_group) {
 }
 
 /**
- * Assign Bootstrap colors to groups for consistent UI display
- * 
- * Uses Bootstrap color palette cyclically across groups
- * Same group always gets same color (idempotent)
- * 
- * @param array $sources_by_group - Groups to assign colors to
- * @return array - [group_name => bootstrap_color]
- */
-function assignGroupColors($sources_by_group) {
-    $group_colors = ['primary', 'success', 'info', 'warning', 'danger', 'secondary', 'dark'];
-    $group_color_map = [];
-    
-    foreach ($sources_by_group as $group_name => $organisms) {
-        if (!isset($group_color_map[$group_name])) {
-            $group_color_map[$group_name] = $group_colors[count($group_color_map) % count($group_colors)];
-        }
-    }
-    
-    return $group_color_map;
-}
-
-/**
  * Get available sequence types from all accessible sources
  * 
  * Scans assembly directories to determine which sequence types are available

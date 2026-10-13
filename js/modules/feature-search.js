@@ -36,8 +36,14 @@
         if (!wrap) return;
 
         if (!results.length) {
-            wrap.innerHTML = '';
-            setStatus('No matches found.');
+            // An exact-ID lookup finding nothing usually means the visitor typed a name or a
+            // word ("BRCA1", "kinase"). Offer the search that handles those, term filled in.
+            const q    = (document.getElementById('fs-input')?.value || '').trim();
+            const site = sitePath;
+            setStatus('');
+            wrap.innerHTML = '<div class="small mt-2 text-muted">No gene, transcript or protein has that exact ID. '
+                + (q ? `<a href="${site}/tools/search.php?q=${encodeURIComponent(q)}">Search annotations for “${escapeHtml(q)}” →</a>` : '')
+                + '</div>';
             return;
         }
 
@@ -95,11 +101,14 @@
         const btn  = document.getElementById('fs-go');
         const wrap = document.getElementById('fs-results');
 
+        // Restore the button's own label afterwards -- it was reset to "Go" while the
+        // button reads "Search".
+        const label = btn ? btn.innerHTML : '';
         if (btn)  { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; }
         if (wrap) wrap.innerHTML = '';
         setStatus('Searching…');
 
-        const site = (typeof moopSite !== 'undefined') ? moopSite : window.sitePath;
+        const site = sitePath;
         fetch(`${site}/api/feature_search.php?q=${encodeURIComponent(q)}`)
             .then(r => r.json())
             .then(data => {
@@ -108,7 +117,7 @@
             })
             .catch(() => setStatus('Search failed. Please try again.', true))
             .finally(() => {
-                if (btn) { btn.disabled = false; btn.innerHTML = 'Go'; }
+                if (btn) { btn.disabled = false; btn.innerHTML = label; }
             });
     }
 
