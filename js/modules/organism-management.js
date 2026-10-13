@@ -710,7 +710,7 @@ $.fn.dataTable.ext.search.push(function(settings, _data, _idx) {
     if (activeStatusFilter === 'all') return true;
     const tr = settings.aoData[_idx].nTr;
     if (!tr) return true;
-    if (activeStatusFilter === 'needs-attention') return tr.dataset.status !== 'complete';
+    if (activeStatusFilter === 'critical' || activeStatusFilter === 'incomplete') return tr.dataset.status === activeStatusFilter;
     return (tr.dataset.issues || '').split(' ').includes(activeStatusFilter);
 });
 
@@ -753,8 +753,9 @@ $(document).ready(function() {
  * Open an organism modal on demand via AJAX.
  * Fetches the modal HTML from the API, injects it into #dynamicModal, and shows it.
  * type: 'db' | 'metadata' | 'asm' | 'status'
+ * geneSet (asm only): scroll to that gene set's card and highlight it.
  */
-async function openOrganismModal(type, organism, assembly) {
+async function openOrganismModal(type, organism, assembly, geneSet) {
     const modalEl = document.getElementById('dynamicModal');
     if (!modalEl) return;
 
@@ -801,6 +802,23 @@ async function openOrganismModal(type, organism, assembly) {
 
         // Re-apply Bootstrap modal behaviour after innerHTML replacement
         bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+
+        // Opened from a gene-set line: bring that gene set's card into view and mark it,
+        // so the click lands on what was clicked rather than the top of the assembly.
+        if (geneSet) {
+            const card = Array.from(modalEl.querySelectorAll('[data-gene-set]'))
+                .find(el => el.dataset.geneSet === geneSet);
+            if (card) {
+                // After the fade-in: while the modal is still transitioning it is not yet
+                // scrollable, and scrollIntoView silently does nothing.
+                const focus = () => {
+                    card.scrollIntoView({ block: 'center' });
+                    card.classList.add('gs-focus');
+                    setTimeout(() => card.classList.remove('gs-focus'), 2500);
+                };
+                setTimeout(focus, 350);  // Bootstrap's fade is 300 ms
+            }
+        }
 
         // Wire up image upload handlers for the metadata modal
         if (type === 'metadata') {

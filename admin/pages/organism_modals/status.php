@@ -22,6 +22,7 @@
               $checklist = [
                   'has_assemblies'      => 'Has assemblies',
                   'has_fasta'           => 'Has FASTA files',
+                  'gene_sets_complete'  => 'Every assembly has a gene set with Protein, mRNA and CDS FASTA',
                   'has_blast_indexes'   => 'Has BLAST indexes',
                   'has_fai_index'       => 'Has FAI index',
                   'has_database'        => 'Has database file',

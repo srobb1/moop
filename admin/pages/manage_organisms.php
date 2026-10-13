@@ -68,7 +68,7 @@
           <li>Verify BLAST indexes are present</li>
           <li>Verify genome FAI index is present</li>
           <li>See which groups each organism belongs to</li>
-          <li>Track overall setup completion with the 10-point checklist</li>
+          <li>Track overall setup completion with the setup checklist</li>
         </ul>
       </div>
     </div>
@@ -194,132 +194,122 @@
   <?php endif; ?>
 
   <?php
-  // Per-organism FASTA gaps, read from the cached fasta_validation (per-gene-set detail
-  // from assembly_fasta_gaps()). Returns:
-  //   genome_fa      an assembly that HAS gene-set data lacks genome.fa (transcriptome /
-  //                  proteome only -- a valid shape, shown as a neutral tag)
-  //   missing_types  sequence-type keys some gene set lacks, e.g. ['cds']
-  //   empty_asms     assemblies holding no gene set at all
-  //   other_fasta    either of the last two -- what the "Missing other FASTA" filter matches
-  // An empty assembly does not count as "no genome": that is a placeholder waiting for
-  // data, and calling it transcriptome-only would describe data that is not there.
-  $fasta_gaps = function (array $data): array {
-      $missing_genome = false;
-      $missing_types  = [];
-      $empty_asms     = 0;
-      foreach ($data['fasta_validation']['assemblies'] ?? [] as $asm) {
-          $gaps = $asm['gaps'] ?? null;
-          if ($gaps === null) {
-              // Cache written before per-gene-set gaps existed: fall back to the
-              // assembly-wide flags (the next refresh replaces it).
-              foreach ($asm['fasta_files'] ?? [] as $type => $info) {
-                  if (!empty($info['found'])) continue;
-                  if ($type === 'genome') $missing_genome = true;
-                  else                    $missing_types[$type] = true;
-              }
-              continue;
-          }
-          if (empty($gaps['gene_sets'])) { $empty_asms++; continue; }
-          if (empty($gaps['has_genome'])) $missing_genome = true;
-          foreach ($gaps['gene_sets'] as $missing) {
-              foreach ($missing as $type) $missing_types[$type] = true;
-          }
+  // The issue tokens one organism carries -- keys of moop_organism_issue_defs(), which
+  // gives each its label and severity. Worked out ONCE per row, above the table: the
+  // filter counts and the row's data-issues used to be two separate hand-written
+  // computations of the same thing.
+  $db_issue_tags = moop_db_content_issue_tags();
+  $db_content_codes = moop_db_content_issue_codes();  // also tints the Health cell's DB icon
+  $org_issues = function (string $organism, array $data) use ($db_issue_tags, $stale_organisms): array {
+      $checks = $data['overall_status']['checks'];
+      $issues = [];
+      foreach ([
+          'has_assemblies'       => 'no-assemblies',
+          'has_fasta'            => 'no-fasta',
+          'has_database'         => 'no-database',
+          'database_valid'       => 'db-invalid',
+          'gene_sets_complete'   => 'gene-set-files',
+          'has_blast_indexes'    => 'blast',
+          'has_fai_index'        => 'fai',
+          'directories_match_db' => 'dir-mismatch',
+          'assemblies_in_groups' => 'groups',
+          'in_taxonomy_tree'     => 'tree',
+          'metadata_complete'    => 'metadata',
+      ] as $chk => $tok) {
+          if (isset($checks[$chk]) && !$checks[$chk]) $issues[] = $tok;
       }
-      return ['genome_fa'     => $missing_genome,
-              'missing_types' => array_keys($missing_types),
-              'empty_asms'    => $empty_asms,
-              'other_fasta'   => $missing_types || $empty_asms];
+      // The generic 'database_valid' check collapses every data problem into one
+      // "DB invalid" badge. When the validator named a specific cause, say that
+      // instead: an organism whose database is structurally perfect and merely
+      // EMPTY is not invalid, and that badge sends the admin hunting the wrong
+      // problem. Keyed on data_issue_codes, never on the prose (CLAUDE.md 9b).
+      $codes = $data['db_validation']['data_issue_codes'] ?? [];
+      $named = [];
+      foreach ($codes as $code) {
+          if (isset($db_issue_tags[$code])) $named[] = $db_issue_tags[$code];
+      }
+      // Only drop the generic badge when EVERY issue has a specific name -- an
+      // unmapped referential issue must keep its 'DB invalid' or it vanishes.
+      if ($named && !array_diff($codes, array_keys($db_issue_tags))) {
+          $issues = array_values(array_diff($issues, ['db-invalid']));
+      }
+      $issues = array_merge($issues, $named);
+      if ($named) $issues[] = 'db-content';
+      // No genome: an assembly that HAS gene-set data but no genome.fa. An empty
+      // assembly is not "no genome" -- it is a placeholder, and gene-set-files covers it.
+      foreach ($data['fasta_validation']['assemblies'] ?? [] as $asm) {
+          if (!empty($asm['gaps']['gene_sets']) && empty($asm['gaps']['has_genome'])) { $issues[] = 'no-genome'; break; }
+      }
+      if (in_array($organism, $stale_organisms ?? [], true)) $issues[] = 'stale';
+      return $issues;
   };
 
-  // Pre-compute filter counts for the status filter bar
-  $filter_counts = ['needs-attention' => 0, 'blast' => 0, 'fai' => 0,
-                    'missing-genome-fa' => 0, 'missing-other-fasta' => 0,
-                    'groups' => 0, 'tree' => 0, 'metadata' => 0, 'stale' => 0,
-                    'db-content' => 0];
-  // Codes that mean the database loaded but holds nothing usable -- the one shared list,
-  // so the chip count, the row badges and the DB tint cannot drift apart.
-  $db_content_codes = moop_db_content_issue_codes();
-  foreach ($organisms as $_org => $_d) {
-      $_c = $_d['overall_status']['checks'];
-      $_g = $fasta_gaps($_d);
-      if (!$_d['overall_status']['all_pass'])   $filter_counts['needs-attention']++;
-      if (!$_c['has_blast_indexes'])            $filter_counts['blast']++;
-      if (!$_c['has_fai_index'])                $filter_counts['fai']++;
-      if ($_g['genome_fa'])                     $filter_counts['missing-genome-fa']++;
-      if ($_g['other_fasta'])                   $filter_counts['missing-other-fasta']++;
-      if (!$_c['assemblies_in_groups'])         $filter_counts['groups']++;
-      if (!$_c['in_taxonomy_tree'])             $filter_counts['tree']++;
-      if (!$_c['metadata_complete'])            $filter_counts['metadata']++;
-      if (in_array($_org, $stale_organisms ?? [])) $filter_counts['stale']++;
-      if (array_intersect($_d['db_validation']['data_issue_codes'] ?? [], $db_content_codes)) {
-          $filter_counts['db-content']++;
-      }
-  }
-  unset($_org, $_d, $_c, $_g);
-  ?>
+  // One assembly's state for the Assemblies tree, split by LEVEL so each problem shows on
+  // the line that owns it: name / genome / .fai on the assembly line, FASTA and BLAST
+  // on each gene-set line. Read from the organism cache. Missing types are LABELS
+  // ("CDS", "mRNA") -- the site's own names, never the file pattern.
+  $asm_state = function (array $data, string $assembly) use ($sequence_types): array {
+      $path  = $data['path'] . '/' . $assembly;
+      $gaps  = $data['fasta_validation']['assemblies'][$assembly]['gaps']
+             ?? assembly_fasta_gaps($path, $sequence_types);
+      $label = fn($t) => $sequence_types[$t]['label'] ?? $t;
 
-  <!-- Legend & Status Guide — compact, collapsed by default, sits directly above the table -->
-  <div class="card mb-2">
-    <div class="card-header adm-head d-flex align-items-center py-2" role="button"
-         data-bs-toggle="collapse" data-bs-target="#legendContent"
-         aria-expanded="false" aria-controls="legendContent" style="cursor:pointer;">
-      <i class="fa fa-book text-muted me-2"></i>
-      <span class="fw-semibold">Legend &amp; Status Guide</span>
-      <span class="ms-2 d-inline-flex gap-1">
-        <span class="badge bg-success rounded-circle p-1">&nbsp;</span>
-        <span class="badge bg-warning rounded-circle p-1">&nbsp;</span>
-        <span class="badge bg-danger rounded-circle p-1">&nbsp;</span>
-      </span>
-      <i class="fa fa-chevron-down ms-auto text-muted"></i>
-    </div>
-    <div class="collapse" id="legendContent">
-      <div class="card-body py-3">
-        <div class="row g-3 small">
-          <div class="col-md-6 col-xl-3">
-            <h6 class="fw-bold mb-2"><i class="fa fa-folder text-muted"></i> Assemblies</h6>
-            <div class="d-flex flex-column gap-1">
-              <div><span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> <span class="text-muted">dir + valid FASTA</span></div>
-              <div><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Name Mismatch</span> <span class="text-muted">dir ≠ DB genome name</span></div>
-              <div><span class="badge bg-secondary"><i class="fa fa-rocket"></i> Missing BLAST</span> <span class="text-muted">FASTA present, no indexes</span></div>
-              <div><span class="badge bg-secondary"><i class="fa fa-dna"></i> Missing FAI</span> <span class="text-muted"><code>genome.fa.fai</code> absent</span></div>
-              <div><span class="badge bg-info"><i class="fa fa-times-circle"></i> Missing Files</span> <span class="text-muted">required FASTA absent</span></div>
-            </div>
-          </div>
-          <div class="col-md-6 col-xl-3">
-            <h6 class="fw-bold mb-2"><i class="fa fa-database text-muted"></i> Database</h6>
-            <div class="d-flex flex-column gap-1">
-              <div><span class="badge bg-success"><i class="fa fa-check-circle"></i> Ready</span> <span class="text-muted">exists, readable, valid</span></div>
-              <div><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</span> <span class="text-muted">valid, assembly issues</span></div>
-              <div><span class="badge bg-danger"><i class="fa fa-lock"></i> Unreadable</span> <span class="text-muted">server can't read file</span></div>
-              <div><span class="badge bg-danger"><i class="fa fa-times-circle"></i> Invalid</span> <span class="text-muted">corrupted / bad schema</span></div>
-              <div><span class="badge bg-danger"><i class="fa fa-inbox"></i> Empty / Unlinked</span> <span class="text-muted">loads, but holds no usable rows</span></div>
-            </div>
-          </div>
-          <div class="col-md-6 col-xl-3">
-            <h6 class="fw-bold mb-2"><i class="fa fa-file-code text-muted"></i> Metadata</h6>
-            <div class="d-flex flex-column gap-1">
-              <div><span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete</span> <span class="text-muted">all fields, writable</span></div>
-              <div><span class="badge bg-warning"><i class="fa fa-lock"></i> Not Writable</span> <span class="text-muted">complete but read-only</span></div>
-              <div><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete</span> <span class="text-muted">valid, missing fields</span></div>
-              <div><span class="badge bg-danger"><i class="fa fa-times-circle"></i> Missing / Invalid</span> <span class="text-muted">absent or bad JSON</span></div>
-            </div>
-          </div>
-          <div class="col-md-6 col-xl-3">
-            <h6 class="fw-bold mb-2"><i class="fa fa-star text-muted"></i> Overall</h6>
-            <div class="d-flex flex-column gap-1">
-              <div><span class="badge bg-success"><i class="fa fa-check-circle"></i> Complete <span class="badge bg-light text-success">10</span></span> <span class="text-muted">all 10 checks pass</span></div>
-              <div><span class="badge bg-warning"><i class="fa fa-exclamation-triangle"></i> Incomplete <span class="badge bg-light text-dark">X</span></span> <span class="text-muted">some pass</span></div>
-              <div><span class="badge bg-danger"><i class="fa fa-times-circle"></i> Critical <span class="badge bg-light text-danger">0</span></span> <span class="text-muted">none pass</span></div>
-            </div>
-          </div>
-        </div>
-        <p class="small text-muted mb-0 mt-3">
-          <i class="fa fa-info-circle"></i> Click any status badge in a row for details and fixes.
-          <strong>10-point checklist:</strong> Assemblies • FASTA files • BLAST indexes • FAI index • Database file • Database readable • Assemblies in groups • Organism in tree • Metadata complete
-        </p>
-      </div>
-    </div>
-  </div>
+      // Directory name vs the database's genome records.
+      $matched = null;
+      $av = $data['assembly_validation'];
+      foreach ($av['genomes'] ?? [] as $g) {
+          if ($assembly === $g['genome_name'] || $assembly === $g['genome_accession']) { $matched = $g; break; }
+      }
+
+      $fai = $data['fai_validation'][$assembly] ?? [
+          'genome_fa_exists' => file_exists("$path/" . genome_fasta_filename()),
+          'fai_exists'       => file_exists("$path/" . genome_fasta_filename() . '.fai'),
+      ];
+
+      // BLAST: each index entry names its FASTA's path, and so its gene set.
+      $dbs = $data['blast_validation'][$assembly]['databases'] ?? null;
+      if ($dbs === null) {
+          $dbs = [];
+          foreach (array_keys($gaps['gene_sets']) as $gs) {
+              $dbs = array_merge($dbs, validateBlastIndexFiles("$path/$gs", $sequence_types)['databases'] ?? []);
+          }
+      }
+      $unindexed = [];
+      foreach ($dbs as $db) {
+          if (!$db['has_indexes']) $unindexed[basename(dirname($db['fasta_path']))][] = $label($db['type']);
+      }
+
+      $gene_sets = [];
+      foreach ($gaps['gene_sets'] as $gs => $missing) {
+          $gene_sets[$gs] = ['missing' => array_map($label, $missing), 'unindexed' => $unindexed[$gs] ?? []];
+      }
+      return [
+          'display'    => $matched ? assembly_label($matched['genome_name'] ?? '', $matched['genome_accession'] ?? '') : $assembly,
+          'mismatch'   => $av && $matched === null,
+          'has_genome' => $gaps['has_genome'],
+          'no_fai'     => $fai['genome_fa_exists'] && !$fai['fai_exists'],
+          'gene_sets'  => $gene_sets,
+      ];
+  };
+
+  // Gene-set types a complete gene set holds, for the ✓ tooltip.
+  $gs_type_labels = [];
+  foreach ($sequence_types as $__t => $__cfg) if ($__t !== 'genome') $gs_type_labels[] = $__cfg['label'] ?? $__t;
+
+  // Per row, once: issue tokens and severity. The filter bar counts and the table rows
+  // below both read these, so a count cannot disagree with what its filter shows.
+  $issue_defs    = moop_organism_issue_defs();
+  $row_tokens    = [];
+  $row_severity  = [];
+  $filter_counts = ['critical' => 0, 'incomplete' => 0];
+  foreach ($organisms as $_org => $_d) {
+      $row_tokens[$_org]   = $org_issues($_org, $_d);
+      $row_severity[$_org] = moop_organism_severity($_d['overall_status']);
+      if (isset($filter_counts[$row_severity[$_org]])) $filter_counts[$row_severity[$_org]]++;
+      foreach ($row_tokens[$_org] as $_t) $filter_counts[$_t] = ($filter_counts[$_t] ?? 0) + 1;
+  }
+  unset($_org, $_d, $_t);
+  ?>
 
   <!-- Current Organisms Table -->
   <div class="card">
@@ -403,29 +393,45 @@
         <span class="text-muted small fw-bold me-1">Filter:</span>
         <button class="btn btn-sm btn-outline-secondary active" data-filter="all">All (<?= count($organisms) ?>)</button>
         <?php
-          // Every filter is shown, always, with its count — even 0. A 0-count filter is
-          // disabled + muted so the full set of data-completeness lenses stays visible at
-          // a glance without cluttering the bar with clickable dead ends.
-          $filter_defs = [
-            ['needs-attention',     'Needs Attention',      'warning',   'Any organism that is not fully complete'],
-            ['db-content',          'Empty / Unlinked DB',  'danger',    'The database loaded but holds no usable data — no features, no annotations, or annotations linked to nothing. Users see an organism that returns no search results.'],
-            ['missing-genome-fa',   'Missing genome FASTA', 'info',      'No reference genome (genome.fa). Often expected — transcriptome/proteome-only organisms have none.'],
-            ['missing-other-fasta', 'Missing other FASTA',  'info',      'A gene set lacks a protein / mRNA / CDS FASTA, or an assembly holds no gene set'],
-            ['blast',               'Missing BLAST',        'secondary', 'One or more BLAST indexes are missing'],
-            ['fai',                 'Missing FAI',          'secondary', 'genome.fa is present but its .fai index is missing'],
-            ['groups',              'Not in Groups',        'danger',    'Assembly is not in any group — invisible to users'],
-            ['tree',                'Not in Tree',          'danger',    'Not in the taxonomy tree — hidden from the homepage organism selector'],
-            ['metadata',            'Metadata Incomplete',  'danger',    'organism.json is missing required fields or is not writable'],
-            ['stale',               'Stale',                'warning',   'Files changed since the last cache refresh'],
-          ];
-          foreach ($filter_defs as [$key, $label, $style, $title]):
-            $n = $filter_counts[$key] ?? 0;
+          // Severity first: Critical / Incomplete match the Health button on each row.
+          // Then one button per specific issue, coloured by ITS severity from
+          // moop_organism_issue_defs() -- red always means critical, amber incomplete,
+          // grey informational. Issues no organism has are left out rather than shown
+          // disabled: with ~15 kinds of issue, a bar of greyed-out zeros was noise.
+          foreach (['critical' => 'Critical', 'incomplete' => 'Incomplete'] as $sev => $label):
+            $n = $filter_counts[$sev] ?? 0;
         ?>
-          <button class="btn btn-sm btn-outline-<?= $n === 0 ? 'secondary' : $style ?>" data-filter="<?= $key ?>"
-                  title="<?= htmlspecialchars($title) ?>"<?= $n === 0 ? ' disabled' : '' ?>>
-            <?= htmlspecialchars($label) ?> (<?= $n ?>)
+          <button class="btn btn-sm btn-outline-<?= $n === 0 ? 'secondary' : moop_severity_color($sev) ?>" data-filter="<?= $sev ?>"
+                  title="Organisms whose Health is <?= $label ?>"<?= $n === 0 ? ' disabled' : '' ?>>
+            <?= $label ?> (<?= $n ?>)
           </button>
         <?php endforeach; ?>
+        <span class="vr mx-1"></span>
+        <?php foreach (['critical', 'incomplete', 'info'] as $sev):
+                foreach ($issue_defs as $key => $def):
+                  if (!$def['filter'] || $def['severity'] !== $sev || empty($filter_counts[$key])) continue; ?>
+          <button class="btn btn-sm btn-outline-<?= moop_severity_color($sev) ?>" data-filter="<?= $key ?>"
+                  title="<?= htmlspecialchars($def['title']) ?>">
+            <?= htmlspecialchars($def['label']) ?> (<?= $filter_counts[$key] ?>)
+          </button>
+        <?php endforeach; endforeach; ?>
+      </div>
+
+      <!-- Key. The table is meant to read without it -- each line says what is missing in
+           words -- so this is a one-line reminder, not a guide. It replaced a four-column
+           legend that described solid badges the table no longer drew. -->
+      <div class="org-key small d-flex flex-wrap align-items-center gap-2 mb-3">
+        <span><i class="fa fa-folder"></i> assembly</span>
+        <span><span class="text-muted">└</span> <i class="fa fa-stream"></i> gene set</span>
+        <span class="vr"></span>
+        <span><i class="fa fa-check text-success"></i> nothing missing</span>
+        <span><span class="badge rounded-pill border text-dark bg-warning-subtle">No CDS</span> chips name what is missing</span>
+        <span class="vr"></span>
+        <span>Colour: <span class="text-danger fw-semibold">red</span> can't serve data ·
+          <span class="text-warning-emphasis fw-semibold">amber</span> incomplete ·
+          <span class="fw-semibold">grey</span> just so you know</span>
+        <span class="vr"></span>
+        <span>Click a line for details</span>
       </div>
 
       <table id="organismsTable" class="table table-striped table-hover">
@@ -441,52 +447,9 @@
            <?php foreach ($organisms as $organism => $data): ?>
              <?php
                $is_stale   = in_array($organism, $stale_organisms ?? []);
-               $row_status_info = $data['overall_status'];
-               $row_checks = $row_status_info['checks'];
-               $row_issue_map = [
-                   'has_blast_indexes'    => 'blast',
-                   'has_fai_index'        => 'fai',
-                   'assemblies_in_groups' => 'groups',
-                   'in_taxonomy_tree'     => 'tree',
-                   'metadata_complete'    => 'metadata',
-                   'has_assemblies'       => 'no-assemblies',
-                   'has_fasta'            => 'no-fasta',
-                   'has_database'         => 'no-database',
-                   'database_valid'       => 'db-invalid',
-                   'directories_match_db' => 'dir-mismatch',
-               ];
-               $row_issues = [];
-               foreach ($row_issue_map as $chk => $lbl) {
-                   if (isset($row_checks[$chk]) && !$row_checks[$chk]) $row_issues[] = $lbl;
-               }
-               // The generic 'database_valid' check collapses every data problem into one
-               // "DB invalid" badge. When the validator named a specific cause, say that
-               // instead: an organism whose database is structurally perfect and merely
-               // EMPTY is not invalid, and that badge sends the admin hunting the wrong
-               // problem. Keyed on data_issue_codes, never on the prose (CLAUDE.md 9b).
-               $db_issue_tags = moop_db_content_issue_tags();
-               $row_db_codes = $data['db_validation']['data_issue_codes'] ?? [];
-               $row_db_named = [];
-               foreach ($row_db_codes as $__code) {
-                   if (isset($db_issue_tags[$__code])) $row_db_named[] = $db_issue_tags[$__code];
-               }
-               // Only drop the generic badge when EVERY issue has a specific name -- an
-               // unmapped referential issue must keep its 'DB invalid' or it vanishes.
-               if ($row_db_named && !array_diff($row_db_codes, array_keys($db_issue_tags))) {
-                   $row_issues = array_values(array_diff($row_issues, ['db-invalid']));
-               }
-               $row_issues = array_merge($row_issues, $row_db_named);
-               if ($row_db_named) $row_issues[] = 'db-content';
-
-               $row_gaps = $fasta_gaps($data);
-               if ($row_gaps['genome_fa'])   $row_issues[] = 'missing-genome-fa';
-               if ($row_gaps['other_fasta']) $row_issues[] = 'missing-other-fasta';
-               // Name WHICH type is missing -- "Missing gene-set FASTA" sent the admin into
-               // every assembly modal to find out. Tokens are per type key.
-               foreach ($row_gaps['missing_types'] as $__t) $row_issues[] = 'missing-fasta-' . $__t;
-               if ($row_gaps['empty_asms']) $row_issues[] = 'empty-assembly';
-               if ($is_stale) $row_issues[] = 'stale';
-               $row_status = moop_organism_severity($row_status_info);
+               $row_checks = $data['overall_status']['checks'];
+               $row_issues = $row_tokens[$organism];
+               $row_status = $row_severity[$organism];
              ?>
              <tr data-status="<?= $row_status ?>"
                  data-issues="<?= implode(' ', $row_issues) ?>"
@@ -541,88 +504,49 @@
                  <?php endif; ?>
                </td>
                <td>
-                 <span class="badge bg-secondary"><?= count($data['assemblies']) ?> <?= count($data['assemblies']) === 1 ? 'assembly' : 'assemblies' ?></span>
-                 <?php if (!empty($row_gaps['genome_fa'])): ?>
-                   <span class="badge rounded-pill bg-light text-secondary border" title="No reference genome (genome.fa) — transcriptome / proteome data only. A valid data shape, not an error.">Transcriptome only</span>
-                 <?php endif; ?>
+                 <?php
+                   // Assembly → gene set tree. Each line carries only its own level's state:
+                   // a ✓ when nothing is missing, chips naming what is. Every chip is amber
+                   // because every one is an Incomplete-level problem -- colour means SEVERITY
+                   // on this whole page (moop_severity_color()), and the chip's text says what
+                   // kind. A healthy organism reads as plain text and ticks.
+                 ?>
                  <?php if (!empty($data['assemblies'])): ?>
-                   <div class="mt-1">
-                     <?php foreach ($data['assemblies'] as $assembly): ?>
-                       <?php 
-                         $safe_asm_id = preg_replace('/[^a-zA-Z0-9_-]/', '_', $organism . '_' . $assembly);
-                         $asm_fasta = $data['fasta_validation']['assemblies'][$assembly] ?? null;
-                         // Missing gene-set data, from the per-gene-set gaps. missing_files
-                         // lists genome.fa too, which tinted all 24 transcriptome-only
-                         // assemblies as "missing FASTA" -- the same misreading fixed in the
-                         // assembly modal (f0995795).
-                         $asm_gaps   = $asm_fasta['gaps'] ?? null;
-                         $is_missing = $asm_gaps !== null
-                             ? (empty($asm_gaps['gene_sets']) || (bool)array_filter($asm_gaps['gene_sets']))
-                             : isset($data['fasta_validation']['missing_files'][$assembly]);
-                         
-                         // Check if the assembly directory name matches the database; capture the
-                         // matched genome record so the chip can show the canonical "Name (Accession)".
-                         $has_name_mismatch = false;
-                         $matched_genome = null;
-                         $assembly_validation = $data['assembly_validation'];
-                         if ($assembly_validation) {
-                           foreach ($assembly_validation['genomes'] as $genome) {
-                             if ($assembly === $genome['genome_name'] || $assembly === $genome['genome_accession']) {
-                               $matched_genome = $genome;
-                               break;
-                             }
-                           }
-                           $has_name_mismatch = ($matched_genome === null);
-                         }
-                         $asm_display = $matched_genome
-                                      ? assembly_label($matched_genome['genome_name'] ?? '', $matched_genome['genome_accession'] ?? '')
-                                      : $assembly;
-                         
-                         // Check if BLAST indexes are missing for FASTA files.
-                         // BLAST indexes now live in gene_set subdirs; aggregate across all gene_sets.
-                         $assembly_path = $data['path'] . '/' . $assembly;
-                         $has_missing_blast_indexes = false;
-                         if (isset($data['blast_validation'][$assembly])) {
-                           $blast_validation = $data['blast_validation'][$assembly];
-                           foreach ($blast_validation['databases'] ?? [] as $db) {
-                             if (!$db['has_indexes']) { $has_missing_blast_indexes = true; break; }
-                           }
-                         } else {
-                           foreach (glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
-                             $bv = validateBlastIndexFiles($gs_dir, $sequence_types);
-                             foreach ($bv['databases'] ?? [] as $db) {
-                               if (!$db['has_indexes']) { $has_missing_blast_indexes = true; break 2; }
-                             }
-                           }
-                         }
-
-                         // Check if FAI index is missing
-                         $has_missing_fai = false;
-                         $fai_info_badge  = $data['fai_validation'][$assembly] ?? [
-                           'genome_fa_exists' => file_exists($assembly_path . '/' . genome_fasta_filename()),
-                           'fai_exists'       => file_exists($assembly_path . '/' . genome_fasta_filename() . '.fai'),
-                         ];
-                         if ($fai_info_badge['genome_fa_exists'] && !$fai_info_badge['fai_exists']) {
-                           $has_missing_fai = true;
-                         }
-                         
-                         // Determine badge style
-                         // Priority: name mismatch > missing blast indexes > missing fai > missing fasta files
-                         // Light, low-saturation fills — assembly state is now owned by the Health
-                         // column, so the chip is mostly a name / nav element. Keep the legend's
-                         // colour convention, just pale: cyan = missing FASTA, amber = name mismatch.
-                         $badge_class = 'bg-light';
-                         if ($has_name_mismatch) {
-                             $badge_class = 'bg-warning-subtle';
-                         } elseif ($has_missing_blast_indexes || $has_missing_fai) {
-                             $badge_class = 'bg-secondary-subtle';
-                         } elseif ($is_missing) {
-                             $badge_class = 'bg-info-subtle';
-                         }
-                       ?>
-                       <button class="btn btn-sm d-block w-100 text-start mb-1 border text-dark <?= $badge_class ?>" onclick="openOrganismModal('asm', <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($assembly)) ?>)">
-                         <i class="fa fa-folder text-muted"></i> <?= htmlspecialchars($asm_display) ?>
+                   <div class="asm-tree">
+                     <?php foreach ($data['assemblies'] as $assembly):
+                       $s = $asm_state($data, $assembly);
+                       $asm_chips = [];
+                       if ($s['mismatch'])   $asm_chips[] = ['Name not in DB', 'The directory name matches no genome record in the database'];
+                       if (!$s['gene_sets']) $asm_chips[] = ['No gene set',    'No gene-set directory with FASTA files -- no genes will show for this assembly'];
+                       if ($s['no_fai'])     $asm_chips[] = ['Genome not indexed (.fai)', 'genome.fa is present but genome.fa.fai is not -- the sequence viewer needs it'];
+                       $asm_js = htmlspecialchars(json_encode($organism)) . ', ' . htmlspecialchars(json_encode($assembly));
+                     ?>
+                       <button type="button" class="asm-line" onclick="openOrganismModal('asm', <?= $asm_js ?>)" title="Open assembly details">
+                         <i class="fa fa-folder text-muted"></i> <span class="fw-semibold"><?= htmlspecialchars($s['display']) ?></span>
+                         <?php foreach ($asm_chips as [$txt, $tip]): ?>
+                           <span class="badge rounded-pill border text-dark bg-warning-subtle" title="<?= htmlspecialchars($tip) ?>"><?= htmlspecialchars($txt) ?></span>
+                         <?php endforeach; ?>
+                         <?php if (!$asm_chips): ?>
+                           <i class="fa fa-check text-success" title="<?= $s['has_genome'] ? 'Genome FASTA and its .fai index present; name matches the database' : 'Name matches the database' ?>"></i>
+                         <?php endif; ?>
+                         <?php if (!$s['has_genome'] && $s['gene_sets']): ?>
+                           <small class="text-muted" title="No genome.fa -- transcriptome / proteome data only. A valid data shape, not an error.">no genome</small>
+                         <?php endif; ?>
                        </button>
+                       <?php foreach ($s['gene_sets'] as $gs => $g): ?>
+                         <button type="button" class="gs-line" onclick="openOrganismModal('asm', <?= $asm_js ?>, <?= htmlspecialchars(json_encode($gs)) ?>)" title="Open this gene set's details">
+                           <span class="text-muted">└</span> <i class="fa fa-stream text-muted"></i> <?= htmlspecialchars($gs) ?>
+                           <?php foreach ($g['missing'] as $t): ?>
+                             <span class="badge rounded-pill border text-dark bg-warning-subtle" title="<?= htmlspecialchars($t) ?> FASTA file is missing">No <?= htmlspecialchars($t) ?></span>
+                           <?php endforeach; ?>
+                           <?php foreach ($g['unindexed'] as $t): ?>
+                             <span class="badge rounded-pill border text-dark bg-warning-subtle" title="<?= htmlspecialchars($t) ?> FASTA is present but has no BLAST index"><?= htmlspecialchars($t) ?> not BLAST-indexed</span>
+                           <?php endforeach; ?>
+                           <?php if (!$g['missing'] && !$g['unindexed']): ?>
+                             <i class="fa fa-check text-success" title="<?= htmlspecialchars(implode(', ', $gs_type_labels)) ?> FASTA present and BLAST-indexed"></i>
+                           <?php endif; ?>
+                         </button>
+                       <?php endforeach; ?>
                      <?php endforeach; ?>
                    </div>
                  <?php endif; ?>
@@ -630,15 +554,15 @@
                <td>
                  <?php
                    // ── Consolidated Health cell (replaces the old Tree/DB/Metadata/Status columns) ──
-                   $status = $data['overall_status'] ?? getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types);
                    // Graded by IMPACT, not by how many checks passed -- see
-                   // moop_organism_severity(). Both this cell and the row's data-status
-                   // above call it, so the badge and the filter cannot disagree.
+                   // moop_organism_severity(). $row_status is the one value computed above
+                   // the table, so this badge, the row's data-status and the filter counts
+                   // cannot disagree.
                    $hstate = [
                        'complete'   => ['success', 'check-circle',         'Complete'],
                        'critical'   => ['danger',  'times-circle',         'Critical'],
                        'incomplete' => ['warning', 'exclamation-triangle', 'Incomplete'],
-                   ][moop_organism_severity($status)];
+                   ][$row_status];
                    // DB inspector tint (mirrors the old DB Status column's states)
                    $db_class = 'secondary';
                    if ($data['db_validation']) {
@@ -657,40 +581,19 @@
                    $jv = $data['json_validation'];
                    $meta_ok = $jv['exists'] && $jv['readable'] && $jv['valid_json'] && $jv['has_required_fields'] && $jv['writable'];
                    $meta_class = $meta_ok ? 'success' : ((!$jv['exists'] || !$jv['readable'] || !$jv['valid_json']) ? 'danger' : 'warning');
-                   // Specific problems to spell out. The neutral "Transcriptome only" tag lives in
-                   // the Assemblies cell, so 'missing-genome-fa' is intentionally NOT listed here.
-                   $issue_labels = [
-                     'no-assemblies'       => ['No assemblies',          'danger'],
-                     'no-fasta'            => ['No FASTA',               'danger'],
-                     'no-database'         => ['No database',            'danger'],
-                     'db-invalid'          => ['DB invalid',             'danger'],
-                     'no-features'         => ['No features in DB',     'danger'],
-                     'no-annotations'      => ['No annotations in DB',  'danger'],
-                     'no-genomes-in-db'    => ['No assemblies in DB',   'danger'],
-                     'no-gene-sets-in-db'  => ['No gene sets in DB',    'danger'],
-                     'annotations-unlinked'=> ['Annotations unlinked',  'danger'],
-                     'dir-mismatch'        => ['Dir / DB mismatch',      'warning'],
-                     'blast'               => ['No BLAST index',         'warning'],
-                     'fai'                 => ['No FAI index',           'warning'],
-                     'groups'              => ['Not in any group',       'warning'],
-                     'tree'                => ['Not in taxonomy tree',   'warning'],
-                     'metadata'            => ['Metadata incomplete',    'warning'],
-                     'empty-assembly'      => [$row_gaps['empty_asms'] === 1 ? 'Assembly with no gene set'
-                                                   : $row_gaps['empty_asms'] . ' assemblies with no gene set', 'warning'],
-                     'stale'               => ['Stale — rescan',         'warning'],
-                   ];
-                   foreach ($sequence_types as $__t => $__cfg) {
-                       if ($__t !== 'genome') $issue_labels['missing-fasta-' . $__t] = ['No ' . ($__cfg['label'] ?? $__t) . ' FASTA', 'warning'];
-                   }
-                   $visible_issues = array_values(array_filter($row_issues, fn($i) => isset($issue_labels[$i])));
+                   // Organism-level problems only ('health' in moop_organism_issue_defs()).
+                   // Everything per assembly or per gene set -- FASTA, BLAST, .fai, directory
+                   // names, no genome -- is on its own line in the Assemblies tree beside this
+                   // cell; repeating it here showed the same fact twice in two wordings.
+                   $visible_issues = array_values(array_filter($row_issues, fn($i) => !empty($issue_defs[$i]['health'])));
                  ?>
                  <button class="btn btn-sm btn-outline-<?= $hstate[0] ?>" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Open the setup checklist">
                    <i class="fa fa-<?= $hstate[1] ?>"></i> <?= $hstate[2] ?>
                  </button>
                  <?php if ($visible_issues): ?>
                    <div class="mt-1 d-flex flex-wrap gap-1">
-                     <?php foreach ($visible_issues as $iss): [$lbl, $sev] = $issue_labels[$iss]; ?>
-                       <span class="badge bg-<?= $sev === 'danger' ? 'danger' : 'warning text-dark' ?>"><?= htmlspecialchars($lbl) ?></span>
+                     <?php foreach ($visible_issues as $iss): $def = $issue_defs[$iss]; $c = moop_severity_color($def['severity']); ?>
+                       <span class="badge bg-<?= $c ?><?= $c === 'warning' ? ' text-dark' : '' ?>" title="<?= htmlspecialchars($def['title']) ?>"><?= htmlspecialchars($def['label']) ?></span>
                      <?php endforeach; ?>
                    </div>
                  <?php endif; ?>

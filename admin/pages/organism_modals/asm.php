@@ -167,7 +167,7 @@
         </div>
       </div>
 
-      <h6 class="fw-bold mb-2"><i class="fa fa-layer-group"></i> Gene sets <small class="text-muted fw-normal">— sequences &amp; BLAST indexes</small></h6>
+      <h6 class="fw-bold mb-2"><i class="fa fa-stream"></i> Gene sets <small class="text-muted fw-normal">— sequences &amp; BLAST indexes</small></h6>
       <?php if (empty($gene_set_dirs_live)): ?>
         <div class="card mb-3 border-danger border-2">
           <div class="card-body small">
@@ -186,9 +186,9 @@
             $gs_border     = $gs_all_ok ? 'border-success' : 'border-warning border-2';
             $gs_hdr        = $gs_all_ok ? 'bg-success bg-opacity-10' : 'bg-warning bg-opacity-10';
           ?>
-          <div class="card mb-2 <?= $gs_border ?>">
+          <div class="card mb-2 <?= $gs_border ?>" data-gene-set="<?= htmlspecialchars($gs) ?>">
             <div class="card-header py-1 px-3 <?= $gs_hdr ?>">
-              <strong><i class="fa fa-folder"></i> <?= htmlspecialchars($gs) ?></strong>
+              <strong><i class="fa fa-stream"></i> <?= htmlspecialchars($gs) ?></strong>
               <?php if ($gs_all_ok): ?>
                 <span class="badge bg-success ms-2"><i class="fa fa-check"></i> Complete</span>
               <?php else: ?>

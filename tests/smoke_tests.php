@@ -1210,6 +1210,39 @@ exec('rm -rf ' . escapeshellarg($_fd));
 $_prop->setValue($_cm, $_saved);
 
 // ----------------------------------------------------------------------------
+group('A partial gene set grades Incomplete; issue colours have one source');
+// Health said "Complete" beside a gene set with no CDS: no check asked per gene set.
+// gene_sets_complete does, and it is NOT critical -- the data that is there still works.
+$_asm = fn(array $gene_sets, bool $genome) => ['gaps' => ['has_genome' => $genome, 'gene_sets' => $gene_sets], 'fasta_files' => ['protein' => ['found' => true]]];
+$_org = fn(array $asms) => [
+    'path' => '/nonexistent', 'assemblies' => array_keys($asms), 'has_db' => false,
+    'fasta_validation' => ['assemblies' => $asms],
+    'blast_validation' => array_map(fn() => ['databases' => []], $asms),
+    'fai_validation'   => array_map(fn() => ['genome_fa_exists' => false, 'fai_exists' => false], $asms),
+    'in_taxonomy_tree' => true, 'json_validation' => [],
+];
+$_st = fn(array $asms) => getOrganismOverallStatus('X', $_org($asms), [], '', [])['checks']['gene_sets_complete'];
+ok($_st(['A' => $_asm(['GS' => []], false)]) === true,
+   'a complete gene set passes -- with no genome.fa (transcriptome-only is valid)');
+ok($_st(['A' => $_asm(['GS' => []], true), 'B' => $_asm(['GS2' => ['cds']], false)]) === false,
+   'one gene set lacking CDS fails the check, even beside a complete assembly');
+ok($_st(['A' => $_asm(['GS' => []], true), 'B' => $_asm([], false)]) === false,
+   'an assembly with no gene set fails the check');
+ok(moop_organism_severity($_sev(['gene_sets_complete' => false])) === 'incomplete',
+   'a gene-set gap grades Incomplete (amber), never Critical');
+
+$_defs = moop_organism_issue_defs();
+ok(!array_filter($_defs, fn($d) => !in_array($d['severity'], ['critical', 'incomplete', 'info'], true)),
+   'every issue has a known severity');
+ok(!array_diff(array_values(moop_db_content_issue_tags()), array_keys($_defs)),
+   'every database-content tag has an issue definition (else its badge vanishes)');
+ok($_defs['groups']['severity'] === 'incomplete' && $_defs['no-genome']['severity'] === 'info'
+   && $_defs['db-content']['severity'] === 'critical',
+   'groups is amber, no-genome grey, an empty / unlinked DB red');
+ok(moop_severity_color('critical') === 'danger' && moop_severity_color('incomplete') === 'warning',
+   'severity -> colour: red is critical, amber incomplete');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

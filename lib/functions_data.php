@@ -819,6 +819,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
     $checks = [
         'has_assemblies' => false,
         'has_fasta' => false,
+        'gene_sets_complete' => false,
         'has_blast_indexes' => false,
         'has_fai_index' => false,
         'has_database' => false,
@@ -846,6 +847,21 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         }
     }
     
+    // 2b. Does every assembly hold a gene set, and every gene set each gene-set FASTA type
+    // (protein / mRNA / CDS)? Asked per gene set (assembly_fasta_gaps()), so one complete
+    // sibling cannot hide a gene set that lacks its CDS. Not in moop_organism_severity()'s
+    // critical list: the organism still serves the data it has, so a gap grades Incomplete.
+    // genome.fa is not asked for -- a transcriptome-only assembly is a valid shape.
+    if ($checks['has_assemblies']) {
+        $complete = true;
+        foreach ($data['assemblies'] as $assembly) {
+            $gaps = $data['fasta_validation']['assemblies'][$assembly]['gaps']
+                 ?? assembly_fasta_gaps($data['path'] . '/' . $assembly, $sequence_types);
+            if (!$gaps['gene_sets'] || array_filter($gaps['gene_sets'])) { $complete = false; break; }
+        }
+        $checks['gene_sets_complete'] = $complete;
+    }
+
     // 3. Are BLAST indexes present for ALL FASTA files?
     // This check fails if there are FASTA files but any are missing BLAST indexes
     if ($checks['has_fasta']) {
@@ -1002,6 +1018,59 @@ function moop_organism_severity(array $overall_status): string {
         if (array_key_exists($critical, $checks) && !$checks[$critical]) return 'critical';
     }
     return 'incomplete';
+}
+
+/**
+ * Every issue Manage Organisms can name about an organism, with its SEVERITY -- the one
+ * table behind the filter buttons, their colours, and the Health cell's badges.
+ *
+ * Before this, each of those had its own list with its own colours, and they disagreed:
+ * "Not in Groups" was a red filter button and an amber Health badge for the same row, and
+ * the info-cyan "Missing genome FASTA" button looked like a problem while describing a
+ * valid transcriptome-only shape. Colour now means one thing, everywhere on the page:
+ *
+ *   critical    red    the organism is listed but cannot serve data -- the same rule as
+ *                      moop_organism_severity(), which grades the row
+ *   incomplete  amber  something is missing or unconfigured; the data that is there works
+ *   info        grey   worth knowing, not a problem
+ *
+ * filter = has a filter button. health = has a badge in the Health cell; issues that the
+ * Assemblies tree already shows line by line (FASTA, BLAST, .fai, directory names) have no
+ * badge, so a fact is never shown twice in two wordings.
+ *
+ * @return array<string, array{label:string, severity:string, title:string, filter:bool, health:bool}>
+ */
+function moop_organism_issue_defs(): array {
+    $d = fn($label, $severity, $title, $filter, $health) => compact('label', 'severity', 'title', 'filter', 'health');
+    return [
+        // critical
+        'no-assemblies'        => $d('No assemblies',         'critical', 'No assembly directories', true, true),
+        'no-fasta'             => $d('No FASTA',              'critical', 'No FASTA file in any assembly', true, true),
+        'no-database'          => $d('No database',           'critical', 'No organism.sqlite', true, true),
+        'db-invalid'           => $d('DB invalid',            'critical', 'The database cannot be read or has the wrong schema', true, true),
+        'db-content'           => $d('Empty / unlinked DB',   'critical', 'The database loaded but holds no usable data -- no features, no annotations, or annotations linked to nothing. Users see an organism that returns no search results.', true, false),
+        'no-features'          => $d('No features in DB',     'critical', 'The database holds no features', false, true),
+        'no-annotations'       => $d('No annotations in DB',  'critical', 'The database holds no annotations', false, true),
+        'no-genomes-in-db'     => $d('No assemblies in DB',   'critical', 'The database holds no assembly records', false, true),
+        'no-gene-sets-in-db'   => $d('No gene sets in DB',    'critical', 'The database holds no gene-set records', false, true),
+        'annotations-unlinked' => $d('Annotations unlinked',  'critical', 'Annotations are linked to no feature', false, true),
+        // incomplete
+        'gene-set-files'       => $d('Missing gene-set files', 'incomplete', 'A gene set lacks its Protein, mRNA or CDS FASTA, or an assembly holds no gene set', true, false),
+        'blast'                => $d('Missing BLAST index',   'incomplete', 'A FASTA file has no BLAST index', true, false),
+        'fai'                  => $d('Missing .fai',          'incomplete', 'genome.fa is present but its .fai index is not', true, false),
+        'dir-mismatch'         => $d('Dir / DB mismatch',     'incomplete', 'An assembly or gene-set directory matches no record in the database', true, false),
+        'groups'               => $d('Not in groups',         'incomplete', 'An assembly is in no group -- invisible to users until it is', true, true),
+        'tree'                 => $d('Not in tree',           'incomplete', 'Not in the taxonomy tree -- hidden from the homepage organism selector', true, true),
+        'metadata'             => $d('Metadata incomplete',   'incomplete', 'organism.json is missing required fields or is not writable', true, true),
+        'stale'                => $d('Stale',                 'incomplete', 'Files changed since the last cache refresh -- rescan', true, true),
+        // info
+        'no-genome'            => $d('No genome',             'info',       'An assembly has no genome.fa -- transcriptome / proteome data only. A valid shape, not an error.', true, false),
+    ];
+}
+
+/** Bootstrap colour for a severity: one mapping, so red always means critical. */
+function moop_severity_color(string $severity): string {
+    return ['critical' => 'danger', 'incomplete' => 'warning', 'info' => 'secondary'][$severity] ?? 'secondary';
 }
 
 

@@ -1,0 +1,38 @@
+/* Manage Organisms -- the Assemblies cell's assembly → gene set tree.
+   Each line is a button (it opens that level's details) but should read as text:
+   no fill, no border, underline on hover. Status lives in the ✓ / chips on the line. */
+.asm-tree .asm-line,
+.asm-tree .gs-line {
+  display: block;
+  width: 100%;
+  padding: 0.1rem 0.25rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: none;
+  color: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  line-height: 1.6;
+}
+.asm-tree .gs-line { padding-left: 1rem; }
+.asm-tree .asm-line + .asm-line,
+.asm-tree .gs-line + .asm-line { margin-top: 0.35rem; }
+.asm-tree .asm-line:hover,
+.asm-tree .gs-line:hover { background: rgba(8, 145, 178, 0.08); }
+.asm-tree .asm-line:hover .fw-semibold,
+.asm-tree .gs-line:hover { text-decoration: underline; }
+.asm-tree .badge { font-weight: 500; text-decoration: none; }
+
+/* The key above the table: a soft teal wash with the admin accent rule, so it reads as
+   a reference panel rather than more table chrome. */
+.org-key {
+  padding: 0.45rem 0.75rem;
+  background: rgba(8, 145, 178, 0.07);
+  border-left: 3px solid #0891b2;
+  border-radius: 0.25rem;
+  color: #334155;
+}
+.org-key .badge { font-weight: 500; }
+
+/* Gene-set card the modal was opened at (clicked from a gene-set line). */
+.gs-focus { box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.55); transition: box-shadow 0.4s; }

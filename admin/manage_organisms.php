@@ -316,6 +316,9 @@ $data = [
     'cache_stale' => ($cache_stale_reason !== null),
     'cache_changed_orgs' => $stale_organisms,
     'lineage_cache_generated' => $lineage_cache_generated,
+    'page_styles' => [
+        '/' . $config->getString('site') . '/css/manage-organisms.css'
+    ],
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/modules/organism-management.js'
