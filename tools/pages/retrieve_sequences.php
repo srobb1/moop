@@ -36,9 +36,7 @@
                  page_title() emits the same markup from one place; measured identical. */ ?>
         <?= page_title('Sequence Retrieval', 'fa fa-dna') ?>
         <?= help_modal_trigger('retrieve-help', '', 'How to use Sequence Retrieval') ?>
-      </div>
-      <div class="card-body py-2">
-        <?= page_purpose('Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs and retrieve genomic, CDS, protein, and flanking sequences.') ?>
+          <?= page_purpose('Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs and retrieve genomic, CDS, protein, and flanking sequences.', '', false, false) ?>
       </div>
     </div>
 
@@ -185,10 +183,12 @@ echo help_modal(
         [
             'heading' => 'Steps',
             'cards'   => [
-                ['label' => '1. Pick an assembly', 'text' => 'Select an organism and one of its assemblies.'],
-                ['label' => '2. Enter IDs',        'text' => 'Gene or feature IDs, one per line or comma-separated. See "Entering IDs" below for how IDs expand.'],
-                ['label' => '3. Retrieve',         'text' => 'Results show every available sequence type — genomic, CDS, protein, flanking — for each ID.'],
-                ['label' => '4. Take what you need', 'text' => 'Copy or download individual sequences from the results.'],
+                // 'num' and labels match the page's numbered step headers; the last card is
+                // about the results, which have no step number on the page, so none here.
+                ['num' => '1', 'label' => 'Select organism and assembly', 'text' => 'Select an organism and one of its assemblies.'],
+                ['num' => '2', 'label' => 'Enter feature or gene IDs',    'text' => 'Gene or feature IDs, one per line or comma-separated. See "Entering IDs" below for how IDs expand.'],
+                ['num' => '3', 'label' => 'Retrieve sequences',           'text' => 'Results show every available sequence type — genomic, CDS, protein, flanking — for each ID.'],
+                [              'label' => 'Take what you need',           'text' => 'Copy or download individual sequences from the results.'],
             ],
         ],
         [

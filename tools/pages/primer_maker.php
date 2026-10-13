@@ -26,9 +26,7 @@
                   // 32px, purely from line-height. ?>
             <?= page_title('Primer Maker', 'fa fa-magic') ?>
             <?= help_modal_trigger('pm-help', '', 'What Primer Maker does') ?>
-        </div>
-        <div class="card-body">
-            <?= page_purpose('Design PCR, qPCR, RT-PCR or sequencing primers from a sequence, and get a table you can paste straight into a spreadsheet.') ?>
+            <?= page_purpose('Design PCR, qPCR, RT-PCR or sequencing primers from a sequence, and get a table you can paste straight into a spreadsheet.', '', false, false) ?>
         </div>
     </div>
 
@@ -722,6 +720,10 @@
         <a href="<?= htmlspecialchars('/' . $site . '/tools/primer_maker.php') ?>" class="btn btn-outline-secondary ms-2">Clear</a>
     </form>
 
+    <?php // Where the page jumps to after a run (js/primer-maker.js): the output is below
+          // the long form, so without it a finished run looked like nothing happened. ?>
+    <div id="primerMakerResults" data-ran="<?= ($run_error || $notes || !empty($results)) ? '1' : '' ?>"></div>
+
     <?php if ($run_error): ?>
         <div class="alert alert-danger mt-4"><i class="fa fa-exclamation-circle me-2"></i><?= htmlspecialchars($run_error) ?></div>
     <?php endif; ?>
@@ -984,6 +986,12 @@
                                         <?= csrf_input_field() ?>
                                         <input type="hidden" name="primers" value="<?= htmlspecialchars($chain_fasta) ?>">
                                         <?php if ($context_organism && $context_assembly && $context_gene_set): ?>
+                                            <?php // The context too, not only the ticked source: without it
+                                                  // Primer BLAST arrived with this gene set CHECKED but the
+                                                  // list unfiltered, all 96 sources showing. ?>
+                                            <input type="hidden" name="organism" value="<?= htmlspecialchars($context_organism) ?>">
+                                            <input type="hidden" name="assembly" value="<?= htmlspecialchars($context_assembly) ?>">
+                                            <input type="hidden" name="gene_set" value="<?= htmlspecialchars($context_gene_set) ?>">
                                             <input type="hidden" name="selected_source"
                                                    value="<?= htmlspecialchars($context_organism . '|' . $context_assembly . '|' . $context_gene_set) ?>">
                                             <?php // cDNA: these were designed on a transcript, so the

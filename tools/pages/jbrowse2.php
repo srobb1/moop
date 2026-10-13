@@ -12,9 +12,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center tool-header">
       <?= page_title('Genome Browser') ?>
-    </div>
-    <div class="card-body py-2">
-      <p class="text-muted small mb-0">Select an organism and assembly to explore in JBrowse2. Navigate genes, tracks, and sequence annotations interactively.</p>
+      <?= page_purpose_info('Explore an assembly in the JBrowse genome browser: genes, data tracks and sequence, interactively.') ?>
     </div>
   </div>
 

@@ -25,9 +25,7 @@
       <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
         <?= page_title('BLAST Search', 'fa fa-dna') ?>
         <?= help_modal_trigger('blast-help', '', 'How to use BLAST') ?>
-      </div>
-      <div class="card-body py-2">
-        <?= page_purpose('Search genome assemblies by sequence similarity. Paste a DNA or protein sequence, select a program and database, and run.') ?>
+          <?= page_purpose('Search genome assemblies by sequence similarity. Paste a DNA or protein sequence, select a program and database, and run.', '', false, false) ?>
       </div>
     </div>
 
@@ -92,7 +90,7 @@
                     // rather than "wrong tool" -- so the chooser belongs at the control,
                     // not only in the general help.
                     ?>
-                    <?= help_modal_trigger('blast-programs-help', 'Which program?', 'Help: choosing a BLAST program') ?>
+                    <?= help_modal_trigger('blast-programs-help', '', 'Help: choosing a BLAST program') ?>
                 </div>
                 <div class="card-body py-3">
                     <div id="sequenceTypeInfo" class="sequence-type-info mb-2" style="display:none;">
@@ -427,15 +425,18 @@ echo help_modal(
     'How to use BLAST',
     [[
         'heading' => '',
+        // 'num' and the labels match the page's own numbered step headers, so the help reads
+        // as a map of the boxes below it -- the pattern Search and MOOPmart use. Advanced
+        // options is unnumbered on the page, so it is unnumbered here, in the same place.
         'cards'   => [
-            ['label' => '1. Paste a sequence', 'text' => 'DNA or protein, in FASTA or as plain text.'],
-            ['label' => '2. Pick a program',   'text' => 'The program decides which databases you can search — blastn for nucleotide, blastp for protein, and so on.'],
-            ['label' => '3. Choose a database', 'text' => 'Select an organism and one of its databases to search against.'],
-            ['label' => '4. Adjust if needed',  'text' => 'Advanced options set e-value, maximum hits, scoring matrix and more. The defaults are fine for most searches.'],
-            ['label' => '5. Run BLAST',         'text' => 'Results list each hit with its alignment, and can link back to the gene page and genome browser.'],
+            ['num' => '1', 'label' => 'Paste a sequence',               'text' => 'DNA or protein, in FASTA or as plain text.'],
+            ['num' => '2', 'label' => 'Select a BLAST program',         'text' => 'The program decides which databases you can search — blastn for nucleotide, blastp for protein, and so on.'],
+            ['num' => '3', 'label' => 'Select organism and database',   'text' => 'Select an organism and one of its databases to search against.'],
+            [              'label' => 'Advanced options (optional)',    'text' => 'E-value, maximum hits, scoring matrix and more. The defaults are fine for most searches.'],
+            ['num' => '4', 'label' => 'Run BLAST',                      'text' => 'Results list each hit with its alignment, and can link back to the gene page and genome browser.'],
         ],
     ]],
-    ['intro' => 'Search genome assemblies by sequence similarity, in five steps.']
+    ['intro' => 'Search genome assemblies by sequence similarity, in four steps.']
 );
 ?>
 

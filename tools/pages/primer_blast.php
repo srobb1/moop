@@ -156,9 +156,7 @@ $db_section_label = function ($key) {
     <div class="card shadow-sm mb-4">
       <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
         <?= page_title('Primer BLAST', 'fa fa-vials') ?>
-      </div>
-      <div class="card-body py-2">
-        <?= page_purpose('Check primer pairs against a genome and transcriptome: how many products they would amplify, where those land, and how big each one is.') ?>
+          <?= page_purpose_info('Check primer pairs against a genome and transcriptome: how many products they would amplify, where those land, and how big each one is.') ?>
       </div>
     </div>
 
@@ -356,7 +354,7 @@ $db_section_label = function ($key) {
         <?php // Everything below describes the SEARCH THAT RAN. Clearing the form must
               // take it away too, or the page shows an answer to a question the form no
               // longer asks. ?>
-        <div id="primerResults">
+        <div id="primerResults" data-ran="<?= !empty($parse_result) ? '1' : '' ?>">
         <?php if (!empty($parse_result)): ?>
 
             <?php foreach (($parse_result['errors'] ?? []) as $err): ?>

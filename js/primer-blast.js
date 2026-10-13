@@ -187,9 +187,20 @@ function clearPrimerFile() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    // After a run, jump to the output: it sits below a long form, so a finished run
+    // otherwise looked like nothing had happened.
+    var ran = document.getElementById('primerResults');
+    if (ran && ran.dataset.ran === '1') ran.scrollIntoView({ block: 'start' });
+
     var box = document.getElementById('sourceFilter');
     if (box) {
         box.addEventListener('input', filterPrimerSources);
+        // Apply the pre-filled context on load too, as BLAST does. Run only on typing,
+        // the list arrived narrowed to the ORGANISM (server-side) while the box already
+        // named the assembly -- both Nematostella assemblies showed for "Nvec200".
+        // Only when there IS text: an empty box would un-hide what the server hid for
+        // a multi-organism context (?organisms[]=...), turning 7 rows into 96.
+        if (box.value.trim() !== '') filterPrimerSources();
     }
     updatePrimerSelection();
 

@@ -111,6 +111,11 @@
         syncOptionPlaceholders();
         syncTailFields();
 
+        // After a run, jump to the output: it sits below a long form, so a finished run
+        // otherwise looked like nothing had happened.
+        var ran = document.getElementById('primerMakerResults');
+        if (ran && ran.dataset.ran === '1') ran.scrollIntoView({ block: 'start' });
+
         document.querySelectorAll('input[name="primer_type"]').forEach(function (radio) {
             radio.addEventListener('change', syncOptionPlaceholders);
         });

@@ -29,9 +29,7 @@
     <div class="card shadow-sm mb-4">
       <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
         <?= page_title('Download Selected Sequences', 'fa fa-dna') ?>
-      </div>
-      <div class="card-body py-2">
-        <?= page_purpose('Download protein, mRNA, CDS or genomic sequences for a set of features chosen from a results table.') ?>
+          <?= page_purpose_info('Download protein, mRNA, CDS or genomic sequences for a set of features chosen from a results table.') ?>
       </div>
     </div>
 

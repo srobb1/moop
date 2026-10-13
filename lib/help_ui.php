@@ -290,6 +290,10 @@ function page_purpose(string $text, string $extra = '', bool $html = false, bool
     // an inconsistency, not an improvement. `hidden` keeps it out of the accessibility tree
     // while leaving it in the DOM for scripts/extract_page_purposes.php.
     if (!$visible) {
+        // Tags stripped: a gloss() term renders its own <span>, and the router's extractor
+        // reads to the first </span> -- MOOPmart's purpose came out as "Export annotation".
+        // Nothing hidden needs a tooltip.
+        if ($html) $body = htmlspecialchars(strip_tags($text));
         return '<span hidden data-page-purpose>' . $body . '</span>';
     }
 
@@ -299,4 +303,18 @@ function page_purpose(string $text, string $extra = '', bool $html = false, bool
     // ordinary sentence cannot inject markup by accident.
     return '<p class="' . htmlspecialchars($cls, ENT_QUOTES) . '" data-page-purpose>'
          . $body . '</p>';
+}
+
+/**
+ * page_purpose() for a page with no help modal of its own: the sentence is declared
+ * (hidden, for the router) and shown behind an (i) in the header instead of as a line of
+ * text on the page.
+ *
+ * Page descriptions used to render as visible text under every tool header. They are
+ * written for the "which page do I want?" router, so on the page itself they mostly
+ * restated the title and the help (i) beside it. A page with a help modal declares its
+ * purpose hidden (page_purpose(..., false)); a page without one uses this.
+ */
+function page_purpose_info(string $text): string {
+    return page_purpose($text, '', false, false) . field_help($text, 'About this page');
 }

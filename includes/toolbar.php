@@ -22,6 +22,15 @@ $access_class = [
     'ADMIN'        => 'badge bg-danger',
 ];
 $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
+
+// An admin previewing the public view: the access level reads PUBLIC by design (the
+// accessors lie, so every page renders exactly what a visitor gets), but the badge must
+// still say who you are -- a plain "Public" badge hid that you were an admin at all.
+$va_previewing = function_exists('moop_viewing_as_public') && moop_viewing_as_public();
+if ($va_previewing) {
+    $access_text = 'Admin · Public view';
+    $badge_class = 'badge bg-warning text-dark';
+}
 ?>
 <nav class="navbar navbar-expand-md bg-dark navbar-dark sticky-top">
   <div class="container-fluid px-3">
@@ -74,27 +83,25 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
       <!-- Right nav items (collapse into menu on mobile) -->
       <ul class="navbar-nav align-items-md-center gap-2">
         <li class="nav-item">
-          <span class="<?= $badge_class ?>"><?= htmlspecialchars($access_text) ?></span>
+          <span class="<?= $badge_class ?>"><?php if ($va_previewing): ?><i class="fa fa-eye me-1" aria-hidden="true"></i><?php endif; ?><?= htmlspecialchars($access_text) ?></span>
         </li>
 
         <?php if (moop_viewing_as_public() || moop_session_is_admin()):
           // One toggle for both directions. While previewing, moop_session_is_admin()
           // is (correctly) false — the accessors lie — so moop_viewing_as_public() is
           // what keeps this control on screen so the admin can always switch back.
-          $va_previewing = moop_viewing_as_public(); ?>
+          // A bare switch: the badge beside it says which view is on, so the long
+          // "View as public" label only repeated it. The name is kept for screen readers. ?>
         <li class="nav-item">
           <form method="post" action="/<?= $site ?>/view_as.php" class="m-0">
             <?= csrf_input_field() ?>
             <input type="hidden" name="action" value="<?= $va_previewing ? 'leave' : 'enter' ?>">
             <input type="hidden" name="return" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '') ?>">
-            <div class="form-check form-switch m-0 d-flex align-items-center gap-2"
-                 title="See this page as an unauthenticated visitor sees it">
+            <div class="form-check form-switch m-0 d-flex align-items-center"
+                 title="<?= $va_previewing ? 'Back to admin view' : 'View as public -- see this page as a visitor who is not logged in' ?>">
               <input class="form-check-input" type="checkbox" role="switch" id="viewAsToggle"
                      <?= $va_previewing ? 'checked' : '' ?> onchange="this.form.submit()">
-              <label class="form-check-label small text-nowrap <?= $va_previewing ? 'text-warning fw-semibold' : 'text-white' ?>"
-                     for="viewAsToggle">
-                <i class="fa fa-eye me-1"></i>View as public
-              </label>
+              <label class="visually-hidden" for="viewAsToggle"><?= $va_previewing ? 'Back to admin view' : 'View as public' ?></label>
             </div>
           </form>
         </li>

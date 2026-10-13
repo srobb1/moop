@@ -16,9 +16,7 @@ $groupColor = fn($n) => $gp[abs(array_sum(array_map('ord', str_split($n))) * 31)
     <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
       <?= page_title('MOOPmart — Data Exporter') ?>
       <?= help_modal_trigger('mm-help', '', 'What MOOPmart does') ?>
-    </div>
-    <div class="card-body py-2">
-        <?= page_purpose('Export ' . gloss('annotation') . ' data or sequences.', '', true) ?>
+        <?= page_purpose('Export annotation data or sequences.', '', false, false) ?>
     </div>
   </div>
 

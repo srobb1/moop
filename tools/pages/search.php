@@ -28,11 +28,8 @@
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
       <?= page_title('Search Features by Annotation') ?>
-      <?= page_purpose('Find genes across one or more organisms by what is known about them — a keyword, an annotation term, or an ID.') ?>
+      <?= page_purpose('Find genes across one or more organisms by what is known about them — a keyword, an annotation term, or an ID.', '', false, false) ?>
       <?= help_modal_trigger('search-page-help', '', 'What this page does') ?>
-    </div>
-    <div class="card-body py-2">
-      <p class="text-muted small mb-0">Find specific <?= gloss('feature', 'features') ?> — genes, mRNAs, or proteins — by ID or keyword, matched against their <?= gloss('annotation', 'annotations') ?> across one or more organisms. Use <a href="moopmart.php" class="text-decoration-none">MOOPmart</a> to bulk-download many features at once.</p>
     </div>
   </div>
 
