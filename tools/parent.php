@@ -59,9 +59,21 @@ $metadata_path = $config->getPath('metadata_path');
 $sequence_types = $config->getSequenceTypes();
 $siteTitle = $config->getString('siteTitle');
 
+// A real page, sent as 404, for a gene that is not there -- in place of a bare die() line with
+// no way back (and, until 2026-10-13, the raw ID echoed unescaped: reflected XSS).
+function moop_gene_not_found(string $uniquename, string $organism_name = '', string $organism_label = ''): void {
+    global $site;
+    http_response_code(404);
+    echo render_display_page(__DIR__ . '/pages/gene_not_found.php', [
+        'uniquename' => $uniquename, 'organism_name' => $organism_name,
+        'organism_label' => $organism_label, 'site' => $site,
+    ], 'Gene not found');
+    exit;
+}
+
 // Validate required parameters
 if (empty($_GET['organism']) || empty($_GET['uniquename'])) {
-    die("Error: Missing required parameters. Please provide both 'organism' and 'uniquename' parameters.");
+    moop_gene_not_found((string)($_GET['uniquename'] ?? ''));
 }
 
 $uniquename = $_GET['uniquename']; // uniquename is a feature identifier, not an assembly
@@ -150,10 +162,9 @@ if (count($ancestors) == 1) {
 $row = getFeatureById($ancestor_feature_id, $db, $accessible_gene_set_ids);
 
 // Get all info about Highest Parent
-if (empty($row)) { 
-    // Escaped: $uniquename is the raw URL value. Printed as-is it was reflected XSS on a public
-    // page -- any link could run its own script as whoever clicked (found 2026-10-13).
-    die("The gene " . htmlspecialchars($uniquename) . " was not found in the database. Please, check the spelling carefully or try to find it in the search tool.");
+if (empty($row)) {
+    moop_gene_not_found((string)$uniquename, $organism_name,
+        trim(($organism_info['genus'] ?? '') . ' ' . ($organism_info['species'] ?? '')) ?: str_replace('_', ' ', $organism_name));
 }
 
 $feature_id = $row['feature_id'];
@@ -408,11 +419,10 @@ $genome_seq_available = file_exists("$assembly_dir_base/$genome_fasta_file")
 $family_feature_ids = [$feature_id];
 $retrieve_these_seqs = [$feature_uniquename];
 
-// Get children with hierarchical structure (for proper nesting)
-$children_hierarchical = getChildrenHierarchical($feature_id, $db, $accessible_gene_set_ids);
-
-// Get all children flat for sequence retrieval (keeping getChildren for backwards compatibility)
+// Every descendant, flat (sequence retrieval, annotations) -- and the same rows as a tree for the
+// nested display. One query: getChildrenHierarchical() ran this very query again internally.
 $children = getChildren($feature_id, $db, $accessible_gene_set_ids);
+$children_hierarchical = childTreeFromRows($feature_id, $children);
 
 // The gene's symbol (HIVEP3), shown before its description — '' when feature_name holds an id or
 // a LOC placeholder rather than a name. See moop_gene_symbol().
@@ -708,7 +718,6 @@ echo render_display_page(
         'children_hierarchical' => $children_hierarchical,
         'isoforms_share_annotations' => $isoforms_share_annotations,
         'annotated_isoform_count'    => $annotated_isoform_count,
-        'db' => $db,
         'all_annotations' => $all_annotations,
         'gene_naming' => $gene_naming,
         'naming_isoform' => $naming_isoform,
@@ -747,12 +756,14 @@ echo render_display_page(
             "/$site/js/modules/copy-to-clipboard.js"
         ],
         'inline_scripts' => [
-            "const geneModelData = " . json_encode($gene_model) . ";",
-            "const moopOrganism = '" . addslashes($organism_name) . "';",
-            "const moopAssembly = '" . addslashes($genome_accession) . "';",
-            "const moopGeneSet = '" . addslashes($gene_set_name) . "';",
-            "const moopSite = '/" . addslashes($site) . "';",
-            "const siteTitle = '" . addslashes($siteTitle) . "';",
+            "const geneModelData = " . json_encode($gene_model, JSON_HEX_TAG) . ";",
+            // json_encode, not addslashes(): addslashes() leaves `</script>` and line breaks
+            // alone, so it is only safe for values that happen never to contain them.
+            "const moopOrganism = " . json_encode($organism_name, JSON_HEX_TAG) . ";",
+            "const moopAssembly = " . json_encode($genome_accession, JSON_HEX_TAG) . ";",
+            "const moopGeneSet = " . json_encode($gene_set_name, JSON_HEX_TAG) . ";",
+            "const moopSite = " . json_encode('/' . $site, JSON_HEX_TAG) . ";",
+            "const siteTitle = " . json_encode($siteTitle, JSON_HEX_TAG) . ";",
             "const genomeSequenceAvailable = " . ($genome_seq_available ? 'true' : 'false') . ";"
         ]
     ],

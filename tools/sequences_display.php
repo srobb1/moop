@@ -215,7 +215,8 @@ if (!empty($sequence_errors)) {
         <div class="card-header d-flex align-items-center justify-content-between">
             <div class="collapse-section d-flex align-items-center" data-bs-toggle="collapse" data-bs-target="#sequencesSection" aria-expanded="true">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
-                <strong class="ms-2">Sequences</strong>
+                <?php // The same eyebrow as every other section header on the gene page. ?>
+                <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Sequences</span>
             </div>
             <?php /* "Back to Top" removed: the gene page's section nav returns you there from
                      anywhere, so this duplicated it in one spot. It was also an href="#",

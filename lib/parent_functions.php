@@ -271,7 +271,14 @@ function getChildren($feature_id, $dbFile, $gene_set_ids = []) {
  * @return array Direct children, each with 'grandchildren' recursively populated
  */
 function getChildrenHierarchical($feature_id, $dbFile, $gene_set_ids = []) {
-    $flat = getChildren($feature_id, $dbFile, $gene_set_ids);
+    return childTreeFromRows($feature_id, getChildren($feature_id, $dbFile, $gene_set_ids));
+}
+
+/**
+ * Nest getChildren()'s flat rows under $feature_id -- for a caller that already has the rows
+ * and should not query for them twice.
+ */
+function childTreeFromRows($feature_id, array $flat) {
     if (empty($flat)) return [];
 
     // Group all nodes by their parent_feature_id for O(1) child lookup
