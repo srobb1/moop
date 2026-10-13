@@ -149,7 +149,7 @@ $page_scripts = [
 ];
 
 $display_config = [
-    'title' => htmlspecialchars($group_name) . ' - ' . $config->getString('siteTitle'),
+    'title' => htmlspecialchars($group_name),
     'content_file' => __DIR__ . '/pages/groups.php',
     'page_script' => $page_scripts,
     'inline_scripts' => [

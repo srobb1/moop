@@ -286,7 +286,7 @@ $available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $seq
 
 // Configure display template
 $display_config = [
-    'title' => 'Sequence Retrieval & Download - ' . htmlspecialchars($siteTitle),
+    'title' => 'Sequence Retrieval & Download',
     'content_file' => __DIR__ . '/pages/retrieve_sequences.php',
     'page_script' => [
 	'/' . $site . '/js/modules/utilities.js',

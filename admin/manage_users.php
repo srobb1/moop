@@ -296,7 +296,7 @@ foreach ($users as $username => $userData) {
 
 // Configure display
 $display_config = [
-    'title' => 'Manage Users - ' . $siteTitle,
+    'title' => 'Manage Users',
     'content_file' => __DIR__ . '/pages/manage_users.php',
 ];
 

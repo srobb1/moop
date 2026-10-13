@@ -17,7 +17,7 @@ $site = $config->getString('site');
 
 // Configure display
 $display_config = [
-    'title' => 'Admin Tools - ' . $config->getString('siteTitle'),
+    'title' => 'Admin Tools',
     'content_file' => __DIR__ . '/pages/admin.php',
 ];
 

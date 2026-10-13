@@ -67,7 +67,7 @@ $gene_sets = array_values(array_filter($all_gene_sets, fn($gs) => isset($accessi
 
 // Configure display template
 $display_config = [
-    'title' => htmlspecialchars($assembly_info['genome_name']) . ' - ' . $config->getString('siteTitle'),
+    'title' => htmlspecialchars($assembly_info['genome_name']),
     'content_file' => __DIR__ . '/pages/assembly.php',
     'page_script' => [
         "/$site/js/assembly-display.js"

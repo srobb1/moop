@@ -23,7 +23,7 @@ $checks = organism_checklist_checks($organism_data, $sequence_types, $config->ge
 
 // Configure display
 $display_config = [
-    'title' => 'New Organism Setup Checklist - ' . $config->getString('siteTitle'),
+    'title' => 'New Organism Setup Checklist',
     'content_file' => __DIR__ . '/pages/organism_checklist.php',
 ];
 

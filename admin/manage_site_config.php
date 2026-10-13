@@ -477,7 +477,7 @@ if (!$file_writable && file_exists($config_file)) {
 
 // Configure display
 $display_config = [
-    'title' => 'Manage Site Configuration - ' . $siteTitle,
+    'title' => 'Manage Site Configuration',
     'content_file' => __DIR__ . '/pages/manage_site_config.php',
 ];
 

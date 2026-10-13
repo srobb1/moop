@@ -129,7 +129,7 @@ $current_tree = loadJsonFile($tree_config_file, null);
 
 // Configure display
 $display_config = [
-    'title' => 'Manage Taxonomy Tree - ' . $siteTitle,
+    'title' => 'Manage Taxonomy Tree',
     'content_file' => __DIR__ . '/pages/manage_taxonomy_tree.php',
 ];
 

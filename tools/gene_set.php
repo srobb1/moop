@@ -83,7 +83,7 @@ $gff_name = genes_gff_filename();
 $has_gff = file_exists("$gs_dir/$gff_name") && filesize("$gs_dir/$gff_name") > 0;
 
 $display_config = [
-    'title'        => htmlspecialchars($gene_set_name) . ' — ' . htmlspecialchars($genome_accession) . ' - ' . $siteTitle,
+    'title'        => htmlspecialchars($gene_set_name) . ' — ' . htmlspecialchars($genome_accession),
     'content_file' => __DIR__ . '/pages/gene_set.php',
     'page_script'  => [
         "/$site/js/gene_set-display.js",

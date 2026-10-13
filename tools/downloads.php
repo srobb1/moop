@@ -242,7 +242,7 @@ if (!empty($display_name)) {
 }
 
 $display_config = [
-    'title'          => $page_title . ' - ' . htmlspecialchars($siteTitle),
+    'title'          => $page_title,
     'content_file'   => __DIR__ . '/pages/downloads.php',
     'page_script'    => ['/' . $site . '/js/modules/downloads.js'],
     'inline_scripts' => [

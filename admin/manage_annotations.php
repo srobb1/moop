@@ -342,7 +342,7 @@ $site = $config->getString('site');
 
 // Configure display
 $display_config = [
-    'title' => 'Manage Annotations - ' . $siteTitle,
+    'title' => 'Manage Annotations',
     'content_file' => __DIR__ . '/pages/manage_annotations.php',
 ];
 

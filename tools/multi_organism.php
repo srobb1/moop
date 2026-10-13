@@ -65,7 +65,7 @@ foreach ($organisms as $organism) {
 // Configure display template
 $organism_list = implode(', ', array_map('htmlspecialchars', $organisms));
 $display_config = [
-    'title' => 'Multi-Organism Search - ' . $config->getString('siteTitle'),
+    'title' => 'Multi-Organism Search',
     'content_file' => __DIR__ . '/pages/multi_organism.php',
     'page_script' => [
         "/$site/js/modules/organism-utils.js",

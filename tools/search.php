@@ -103,8 +103,11 @@ if ($ctx_organism) {
     }
 }
 
+// Was read below but never set: the tab said "Search —" and siteTitle reached the JS empty.
+$siteTitle = ConfigManager::getInstance()->getString('siteTitle');
+
 $display_config = [
-    'title'        => 'Search — ' . htmlspecialchars($siteTitle),
+    'title'        => 'Search',
     'content_file' => __DIR__ . '/pages/search.php',
     'page_script'  => [
         // Before search-display.js, which calls initScopeSelectedPanel().

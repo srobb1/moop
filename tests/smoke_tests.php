@@ -1243,6 +1243,17 @@ ok(moop_severity_color('critical') === 'danger' && moop_severity_color('incomple
    'severity -> colour: red is critical, amber incomplete');
 
 // ----------------------------------------------------------------------------
+group('Browser tab titles: "Page — Site" on every page');
+// Three separators and a missing site name across ~30 hand-written titles; the layout
+// now adds the suffix once, and tolerates a caller that still adds it.
+require_once "$BASE/includes/layout.php";
+ok(moop_tab_title('Primer BLAST', 'S M') === 'Primer BLAST — S M', 'a bare page name gets the site suffix');
+ok(moop_tab_title('BLAST Search - S M', 'S M') === 'BLAST Search — S M', 'an old "-" suffix is normalised, not doubled');
+ok(moop_tab_title('Search — S M', 'S M') === 'Search — S M', 'an em-dash suffix is not doubled');
+ok(moop_tab_title('A &amp; B', 'S M') === 'A & B — S M', 'pre-escaped text is decoded (the layout escapes once)');
+ok(moop_tab_title('', 'S M') === 'S M', 'no page name: the site name alone');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

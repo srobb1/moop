@@ -356,7 +356,7 @@ foreach ($databasesByAssembly as $key => $dbs) {
 
 // Configure display template
 $display_config = [
-    'title' => 'BLAST Search - ' . htmlspecialchars($siteTitle),
+    'title' => 'BLAST Search',
     'content_file' => __DIR__ . '/pages/blast.php',
     'page_script' => [
         '/' . $site . '/js/modules/collapse-handler.js',

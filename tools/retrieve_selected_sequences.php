@@ -164,7 +164,7 @@ if (empty($uniquenames)) {
 
 // Configure display template
 $display_config = [
-    'title' => 'Download Selected Sequences - ' . htmlspecialchars($siteTitle),
+    'title' => 'Download Selected Sequences',
     'content_file' => __DIR__ . '/pages/retrieve_selected_sequences.php',
     'page_script' => null,
     'inline_scripts' => []

@@ -117,6 +117,23 @@ require_once __DIR__ . '/asset_url.php';
  *       ]
  *   ], 'Organism Display');
  */
+/**
+ * The browser-tab title: "Page — Site", one format on every page.
+ *
+ * Callers used to append the site name themselves, ~30 times, with three separators
+ * ("-", "—", none) -- so the tabs read "BLAST Search - SIMRbase MOOP", "Search — SIMRbase
+ * MOOP" and bare "Primer BLAST". The site name stays (page first, so it survives a narrow
+ * tab): bookmarks and history need it, and a second MOOP site would otherwise look
+ * identical. A suffix a caller still adds is stripped rather than doubled, and entities a
+ * caller pre-escaped are decoded -- the layout escapes once, on output.
+ */
+function moop_tab_title(string $title, string $site): string {
+    $title = trim(html_entity_decode($title, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    if ($site === '') return $title;
+    $title = trim(preg_replace('/\s*[-—–|]\s*' . preg_quote($site, '/') . '$/u', '', $title));
+    return ($title === '' || $title === $site) ? $site : "$title — $site";
+}
+
 function render_display_page($content_file, $data = [], $title = '', $options = []) {
     // Get config instance for use in layout
     $config = ConfigManager::getInstance();
@@ -131,6 +148,9 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
     // Start output buffering to capture complete page
     ob_start();
     
+    // Browser tab: "Page — Site" on every page. Callers pass the page name only.
+    $title = moop_tab_title((string)$title, $config->getString('siteTitle'));
+
     // Output complete HTML structure
     ?>
     <!DOCTYPE html>

@@ -48,7 +48,7 @@ $jbrowse_installed = isJBrowse2Installed($site_path);
 // If JBrowse is not installed, show setup view
 if (!$jbrowse_installed) {
     $display_config = [
-        'title' => 'JBrowse2 Setup Required - ' . $config->getString('siteTitle'),
+        'title' => 'JBrowse2 Setup Required',
         'content_file' => __DIR__ . '/pages/jbrowse_setup.php',
     ];
     
@@ -69,7 +69,7 @@ if (!$jbrowse_installed) {
 // JBrowse is installed - continue with dashboard view
 // Configure display
 $display_config = [
-    'title' => 'JBrowse Management - ' . $config->getString('siteTitle'),
+    'title' => 'JBrowse Management',
     'content_file' => __DIR__ . '/pages/manage_jbrowse.php',
 ];
 

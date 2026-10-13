@@ -77,7 +77,7 @@ sort($organisms);
 
 // Configure display
 $display_config = [
-    'title' => 'Error Log Viewer - ' . $siteTitle,
+    'title' => 'Error Log Viewer',
     'content_file' => __DIR__ . '/pages/error_log.php',
 ];
 

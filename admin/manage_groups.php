@@ -423,7 +423,7 @@ foreach ($gt_suggestions as $_s) {
 
 // Configure display
 $display_config = [
-    'title' => 'Manage Groups - ' . $siteTitle,
+    'title' => 'Manage Groups',
     'content_file' => __DIR__ . '/pages/manage_groups.php',
 ];
 

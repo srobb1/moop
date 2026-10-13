@@ -275,7 +275,7 @@ include_once __DIR__ . '/../includes/layout.php';
 
 // Configure display
 $display_config = [
-    'title' => 'Manage Organisms - ' . $config->getString('siteTitle'),
+    'title' => 'Manage Organisms',
     'content_file' => __DIR__ . '/pages/manage_organisms.php',
 ];
 
