@@ -215,13 +215,18 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
             }
         }
 
-        // Reverse direction at the ASSEMBLY level: directories on disk that are shaped
-        // like an assembly (they carry a genome.json) but match no genome row by name or
-        // accession. The DB-driven loop above only walks rows outward to disk, so a whole
-        // assembly dir dropped from the DB (rebuilt/removed upstream, or superseded by a
-        // rename) but left on disk stays invisible to every other check. genome.json is
-        // the marker for "this dir was meant to be an assembly" — same idea as requiring
-        // a genes gff to treat a subdir as a real gene_set above.
+        // Reverse direction at the ASSEMBLY level: directories on disk that match no
+        // genome row by name or accession. The DB-driven loop above only walks rows
+        // outward to disk, so a whole assembly dir dropped from the DB (rebuilt/removed
+        // upstream, or superseded by a rename) but left on disk stays invisible to every
+        // other check.
+        //
+        // EVERY subdirectory, not only ones holding a genome.json. Manage Organisms lists
+        // every subdirectory as an assembly, so requiring genome.json here made the two
+        // disagree: Schmidtea's four leftover dirs (an empty *_orig inside, no genome.json)
+        // showed in the assembly tree as "Name not in DB" while this check passed the
+        // organism. Every real assembly here has a genome.json; the dirs without one were
+        // exactly the leftovers.
         $known_assembly_dirs = [];
         foreach ($genomes as $genome) {
             if ($genome['genome_name'] !== '')      $known_assembly_dirs[$genome['genome_name']] = true;
@@ -229,12 +234,11 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
         }
         foreach ($dir_names as $dir) {
             if (isset($known_assembly_dirs[$dir])) continue;
-            if (!file_exists("$organism_data_dir/$dir/genome.json")) continue; // not an assembly dir
             $result['valid'] = false;
             $result['mismatches'][] = [
                 'type'         => 'orphaned_assembly_directory',
                 'assembly_dir' => $dir,
-                'message'      => "Directory '$dir' exists on disk with a genome.json but has no matching genome row in the database — likely a stale leftover from a rename or reload",
+                'message'      => "Directory '$dir' exists on disk but has no matching genome row in the database — a leftover from a rename or reload, or data not yet loaded",
             ];
         }
 

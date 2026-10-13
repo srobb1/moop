@@ -1428,13 +1428,46 @@ function getUngroupedOrganisms(array $cache_data, array $groups_entries): array 
     return $out;
 }
 
+/**
+ * Gene sets lacking a FASTA type, and assemblies holding no gene set, from the organism
+ * cache's per-gene-set gaps (assembly_fasta_gaps()) -- the same data behind Manage
+ * Organisms' "No CDS" chips. Shared by the setup checklist and the dashboard's Data
+ * Health card, so the two list the same gene sets. A missing genome is not listed: an assembly without
+ * one is transcriptome/proteome-only, a valid shape.
+ *
+ * @return array{gene_sets: list<array{path:string, missing:list<string>}>, empty_assemblies: list<string>, expected: list<string>, unknown: bool}
+ */
+function getGeneSetFastaGaps(array $cache_data, array $sequence_types): array
+{
+    $expected = [];
+    foreach ($sequence_types as $t => $cfg) if ($t !== 'genome') $expected[] = $cfg['label'] ?? $t;
+    $out = ['gene_sets' => [], 'empty_assemblies' => [], 'expected' => $expected, 'unknown' => false];
+    foreach ($cache_data as $org => $org_data) {
+        foreach ($org_data['fasta_validation']['assemblies'] ?? [] as $asm => $asm_info) {
+            $gaps = $asm_info['gaps'] ?? null;
+            // A cache written before per-gene-set gaps existed (schema < 6) carries none;
+            // say so rather than report "every gene set complete" from no data.
+            if ($gaps === null) { $out['unknown'] = true; continue; }
+            if (empty($gaps['gene_sets'])) { $out['empty_assemblies'][] = "$org/$asm"; continue; }
+            foreach ($gaps['gene_sets'] as $gs => $missing) {
+                if (!$missing) continue;
+                $out['gene_sets'][] = [
+                    'path'    => "$org/$asm/$gs",
+                    'missing' => array_map(fn($t) => $sequence_types[$t]['label'] ?? $t, $missing),
+                ];
+            }
+        }
+    }
+    return $out;
+}
+
 function computeDataHealthAlerts(string $organism_data_path): array {
     $config        = ConfigManager::getInstance();
     $metadata_path = $config->getPath('metadata_path');
     $cache_file    = moop_organism_cache_file();
     $groups_file   = "$metadata_path/organism_assembly_groups.json";
 
-    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0];
+    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0, 'gene_set_files' => 0];
 
     // Cache-driven: taxonomy-tree membership + the list of assemblies per organism.
     $cache_data = [];
@@ -1470,6 +1503,12 @@ function computeDataHealthAlerts(string $organism_data_path): array {
         }
     }
     $health_alerts['empty_database'] = count($empty_database_organisms);
+
+    // Gene sets missing a Protein / mRNA / CDS FASTA -- the same list as the setup
+    // checklist and Manage Organisms' "Missing gene-set files" filter. Empty assemblies are
+    // not repeated here: they already appear as orphaned assembly directories below.
+    $gene_set_file_gaps = getGeneSetFastaGaps($cache_data, $config->getSequenceTypes())['gene_sets'];
+    $health_alerts['gene_set_files'] = count($gene_set_file_gaps);
 
     // Gene-set dirs on disk with no matching DB row (dropped in a rebuild, not cleaned up).
     $orphaned_gene_set_tuples = getOrphanedGeneSetTuples($organism_data_path);
@@ -1522,6 +1561,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
         'orphaned_jbrowse_systemic'      => $orphaned_jbrowse_systemic,
         'no_database_organisms'    => $no_database_organisms,
         'empty_database_organisms' => $empty_database_organisms,
+        'gene_set_file_gaps'       => $gene_set_file_gaps,
         'new_gene_set_tuples'      => $new_gene_set_tuples,
         'taxonomy_suggestions'     => $taxonomy_suggestions,
     ];

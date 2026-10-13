@@ -1254,6 +1254,22 @@ ok(moop_tab_title('A &amp; B', 'S M') === 'A & B — S M', 'pre-escaped text is 
 ok(moop_tab_title('', 'S M') === 'S M', 'no page name: the site name alone');
 
 // ----------------------------------------------------------------------------
+group('Missing genes.gff is flagged only where a genome exists');
+// All 20 gene sets the checklist listed sat on transcriptome-only assemblies, where a GFF
+// cannot exist. A gene set on an assembly WITH a genome must still be caught.
+require_once "$BASE/lib/organism_checklist.php";
+$_gd = sys_get_temp_dir() . '/moop_gff_' . getmypid();
+$_st = ['protein' => ['pattern' => 'protein.aa.fa', 'label' => 'Protein'], 'genome' => ['pattern' => 'genome.fa', 'label' => 'Genome']];
+@mkdir("$_gd/Org/WithGenome/GS1", 0700, true);
+@mkdir("$_gd/Org/Transcriptome/GS2", 0700, true);
+touch("$_gd/Org/WithGenome/genome.fa");
+touch("$_gd/Org/WithGenome/GS1/protein.aa.fa");
+touch("$_gd/Org/Transcriptome/GS2/protein.aa.fa");
+$_miss = array_column(organism_checklist_gene_sets_missing_gff($_gd, ['Org'], $_st), 'path');
+ok($_miss === ['Org/WithGenome/GS1'], 'flags the gene set on a genome assembly, not the transcriptome-only one');
+exec('rm -rf ' . escapeshellarg($_gd));
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

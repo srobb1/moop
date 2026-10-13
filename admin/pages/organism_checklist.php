@@ -645,8 +645,8 @@
             <div class="small mt-1">
               These still work for BLAST, but JBrowse has <strong>no annotation track</strong> for them and
               BLAST linkouts are unavailable (<code>feature_coords.tsv</code> is built from the GFF).
-              A <strong>protein-only</strong> set has no genomic coordinates, so having no GFF is expected —
-              anything holding mRNA or CDS is worth tracking down on your data server.
+              Only gene sets on an assembly <strong>with a genome</strong> are listed — without one there is
+              nothing to place genes on, so no GFF is expected. Track these down on your data server.
             </div>
             <div class="mt-2 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.8em; max-height: 16em; overflow-y: auto;">
               <?php foreach ($gene_sets_missing_gff as $gs): ?>
@@ -662,8 +662,9 @@
           </div>
         <?php else: ?>
           <div class="alert alert-success mt-3">
-            <i class="fa fa-check-circle"></i> Every gene set has its
-            <code><?= htmlspecialchars(genes_gff_filename()) ?></code> annotations file.
+            <i class="fa fa-check-circle"></i> Every gene set on an assembly with a genome has its
+            <code><?= htmlspecialchars(genes_gff_filename()) ?></code> annotations file. (Transcriptome-only
+            assemblies have no genome to place genes on, so they need none.)
           </div>
         <?php endif; ?>
 

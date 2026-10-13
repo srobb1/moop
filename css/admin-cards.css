@@ -100,3 +100,7 @@
 .adm-head[data-bs-toggle="collapse"]:hover {
     background: rgba(8, 145, 178, 0.12);
 }
+
+/* Data Health card (admin/pages/_data_health_card.php): a rule between stacked alerts,
+   none under the last. Replaces nine hand-kept "is anything below me?" flags. */
+.dh-stack > .alert:last-child { border-bottom: 0 !important; }
