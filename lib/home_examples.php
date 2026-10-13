@@ -40,6 +40,9 @@
  * file or an override changes.
  */
 
+/** Bump when the selection rules change: invalidates every cached example. */
+const MOOP_EXAMPLES_RULES_VERSION = 2;
+
 /**
  * Example chips for the current viewer.
  *
@@ -82,7 +85,7 @@ function moop_home_examples_fingerprint(array $override): string {
         is_file($org_cache) ? filemtime($org_cache) : 0,
         is_file($groups) ? filemtime($groups) : 0,
         json_encode($override),
-        2,   // bump when the selection rules change
+        MOOP_EXAMPLES_RULES_VERSION,
     ]));
 }
 
@@ -200,12 +203,9 @@ function moop_home_examples_gene(array $c): ?array {
     $db_file = $c['path'] . '/organism.sqlite';
     if (!is_file($db_file)) return null;
     try {
+        [$gs_id] = getGeneSetInfo($c['assembly'], $c['gene_set'], $db_file);
+        if ($gs_id === null) return null;
         $dbh = getDbConnection($db_file);
-        $st = $dbh->prepare('SELECT gs.gene_set_id FROM gene_set gs JOIN genome g ON g.genome_id = gs.genome_id
-                             WHERE gs.gene_set_name = ? AND (g.genome_accession = ? OR g.genome_name = ?)');
-        $st->execute([$c['gene_set'], $c['assembly'], $c['assembly']]);
-        $gs_id = $st->fetchColumn();
-        if ($gs_id === false) return null;
 
         // A "real" name: present, not the gene's own ID, and not another feature's ID
         // (many loaders fill an unnamed gene's name with its transcript's ID).
@@ -238,6 +238,72 @@ function moop_home_examples_gene(array $c): ?array {
         error_log('home examples: ' . $c['organism'] . ': ' . $e->getMessage());
     }
     return null;
+}
+
+/**
+ * Example IDs from ONE gene set -- for a page already filtered to it (Sequence Retrieval
+ * arriving from an organism page, or after the user picks a source). Examples from the
+ * site-wide story organism would be valid IDs the viewer can open, yet not found in the
+ * gene set they are about to extract from.
+ *
+ * Same gene rules as the home page (moop_home_examples_gene()); the admin's
+ * sample_feature_ids are a site-wide choice and apply only when there is no gene set.
+ * Cached per gene set, keyed on the database's mtime, so a reload refreshes it.
+ *
+ * @return list<string> gene ID, then one of its transcript IDs; [] if the viewer cannot
+ *                      open the gene set or it has no genes
+ */
+function moop_gene_set_examples(string $organism, string $assembly, string $gene_set): array {
+    if ($organism === '' || $assembly === '' || $gene_set === '') return [];
+    if (!has_gene_set_access($organism, $assembly, $gene_set)) return [];
+
+    // The organism cache is the list of real organisms -- never build a path from the request.
+    $path = loadJsonFile(moop_organism_cache_file(), [])['data'][$organism]['path'] ?? '';
+    $db_file = $path === '' ? '' : "$path/organism.sqlite";
+    if ($db_file === '' || !is_file($db_file)) return [];
+
+    $cache_file = moop_cache_root() . '/gene_set_examples.json';
+    $key        = "$organism|$assembly|$gene_set";
+    $stamp      = filemtime($db_file) . '|' . MOOP_EXAMPLES_RULES_VERSION;
+    $cached     = is_file($cache_file) ? loadJsonFile($cache_file, []) : [];
+    if (($cached[$key]['stamp'] ?? null) === $stamp) return $cached[$key]['ids'];
+
+    $gene = moop_home_examples_gene(['organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gene_set, 'path' => $path]);
+    $ids  = $gene ? array_values(array_filter([$gene['gene'], $gene['transcript']], 'strlen')) : [];
+
+    // A cache we cannot write is a performance problem, never a correctness one.
+    $cached[$key] = ['stamp' => $stamp, 'ids' => $ids];
+    if (moop_ensure_cache_dir(dirname($cache_file))) {
+        @file_put_contents($cache_file, json_encode($cached, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    }
+    return $ids;
+}
+
+/**
+ * Sequence Retrieval's examples: the gene set's gene and transcript, plus that transcript
+ * with a range -- so loading the examples SHOWS a range working, next to the whole
+ * sequences, rather than leaving the feature to a placeholder nobody reads.
+ *
+ * @param bool $fallback with no gene set examples, use the home page Genes tab's (the
+ *                       page's first load); the browser's per-selection fetch passes false
+ *                       and keeps what it was showing instead
+ * @return array{ids: list<string>, gene: string, transcript: string} gene/transcript are ''
+ *               when unknown (e.g. admin-chosen IDs, whose kind is not recorded)
+ */
+function moop_retrieval_examples(string $organism, string $assembly, string $gene_set, bool $fallback = true): array {
+    $ids  = moop_gene_set_examples($organism, $assembly, $gene_set);
+    $gene = $ids[0] ?? '';
+    $tx   = $ids[1] ?? '';
+    if (!$ids && $fallback) {
+        $chips = moop_home_examples(getGroupData())['genes'];
+        $ids   = array_column($chips, 'text');
+        $kinds = array_column($chips, 'text', 'kind');
+        $gene  = $kinds['gene'] ?? '';
+        $tx    = $kinds['transcript'] ?? '';
+    }
+    $base = $tx !== '' ? $tx : (string)end($ids);
+    if ($base !== '') $ids[] = "$base:1-60";
+    return ['ids' => $ids, 'gene' => $gene, 'transcript' => $tx];
 }
 
 /**

@@ -25,6 +25,7 @@ require_once __DIR__ . '/parent_functions.php';
 // database_queries.php. (That file require_once's parent_functions.php itself; the order
 // here is harmless because neither has include-time side effects.)
 require_once __DIR__ . '/database_queries.php';
+require_once __DIR__ . '/genomic_regions.php';      // moopmartStreamGenomicFasta()
 
 /** Max rows a preview endpoint materialises and returns. Counts stay exact regardless. */
 const MOOPMART_PREVIEW_ROW_CAP = 100;
@@ -876,9 +877,7 @@ function moopmartGetExonCoords(string $gff_path, array $gene_uniquenames): array
  *   'downstream' — $flank_bp downstream of the gene end, strand-aware
  *   'exons'      — each exon/CDS/UTR sub-feature as a separate FASTA record
  *
- * Strand logic for upstream/downstream on minus-strand genes:
- *   upstream:   extract [end+1, end+flank_bp], then reverse-complement
- *   downstream: extract [max(1, start-flank_bp), start-1], then reverse-complement
+ * Region, strand and header rules: lib/genomic_regions.php (shared with Sequence Retrieval).
  *
  * @param array    $genes         Rows from moopmartAttachCoords():
  *                                [{uniquename, chr, start, end, strand, genome_accession,
@@ -931,46 +930,14 @@ function moopmartStreamGenomicFasta(
             continue;
         }
 
-        // Compute the genomic region to extract based on mode + strand
-        $ext_start = $gstart;
-        $ext_end   = $gend;
-        $rc        = ($strand === '-');
-
-        if ($mode === 'upstream') {
-            if ($strand === '+') {
-                $ext_start = max(1, $gstart - $flank_bp);
-                $ext_end   = $gstart - 1;
-                $rc        = false;
-            } else {
-                $ext_start = $gend + 1;
-                $ext_end   = $gend + $flank_bp;
-                $rc        = true;
-            }
-        } elseif ($mode === 'downstream') {
-            if ($strand === '+') {
-                $ext_start = $gend + 1;
-                $ext_end   = $gend + $flank_bp;
-                $rc        = false;
-            } else {
-                $ext_start = max(1, $gstart - $flank_bp);
-                $ext_end   = $gstart - 1;
-                $rc        = true;
-            }
-        }
-
-        if ($ext_start < 1 || $ext_start > $ext_end) continue;
-
-        $seq = extractFastaRegion($fasta, $fai, $chr, $ext_start, $ext_end);
-        if ($seq === null) continue;
-        if ($rc) $seq = reverseComplement($seq);
-
-        $label = match($mode) {
-            'upstream'   => "upstream_{$flank_bp}bp",
-            'downstream' => "downstream_{$flank_bp}bp",
-            default      => 'gene',
-        };
-        $header = ">$uname $label {$chr}:{$ext_start}-{$ext_end}($strand)";
-        fwrite($handle, "$header\n" . chunk_split($seq, 60, "\n"));
+        // The region, its orientation and the header come from lib/genomic_regions.php --
+        // the same rules Sequence Retrieval uses, so both pages give the same bases.
+        $part   = $mode === 'gene' ? 'body' : $mode;
+        $region = moop_genomic_region(['chr' => $chr, 'start' => $gstart, 'end' => $gend, 'strand' => $strand], $part, $flank_bp);
+        if (!$region) continue;
+        $got = moop_genomic_sequence($assembly_dir, $region);
+        if (!$got) continue;
+        fwrite($handle, moop_genomic_fasta_record($uname, $part, $flank_bp, $got['region'], $got['seq']));
     }
 }
 

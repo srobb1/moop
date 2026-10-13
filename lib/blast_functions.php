@@ -7,6 +7,7 @@
 
 // Include parent_functions for parent->child lookups
 require_once __DIR__ . '/parent_functions.php';
+require_once __DIR__ . '/extract_search_helpers.php';   // buildSequenceBatch()
 
 /**
  * Get list of available BLAST databases for an assembly
@@ -350,242 +351,73 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
 }
 
 /**
- * Extract sequences from BLAST database using blastdbcmd
- * Used by fasta extract and download tools
- * Supports parent->child lookup from database
- * 
- * @param string $blast_db Path to BLAST database (without extension)
- * @param array $sequence_ids Array of sequence IDs to extract
- * @param string $organism Optional organism name for parent/child lookup
- * @param string $assembly Optional assembly name for parent/child lookup
- * @return array Result array with 'success', 'content', and 'error' keys
+ * Extract sequences from a BLAST database using blastdbcmd.
+ * Used by Sequence Retrieval, the gene page, search-results FASTA and the Data Exporter.
+ *
+ * One path for whole sequences and ranges alike: the requests become a blastdbcmd
+ * -entry_batch file (buildSequenceBatch()), one line per "ID" or "ID start-end". This
+ * replaced two code paths -- a plain -entry list, and a four-step range builder that kept
+ * only the first range per ID and only matched children named "ID.<digits>".
+ *
+ * @param string $blast_db           Path to the FASTA / BLAST database (without extension)
+ * @param array  $sequence_ids       IDs routed to this FASTA
+ * @param string $organism           Unused; kept for the caller's argument order
+ * @param string $assembly           Unused; kept for the caller's argument order
+ * @param array  $requests           parseFeatureIds()['requests']; empty = each of
+ *                                   $sequence_ids, whole
+ * @param array  $parent_to_children ID => its descendants, so a request reaches them
+ * @return array ['success' => bool, 'content' => string, 'error' => string]
  */
-function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $assembly = '', $ranges = [], $original_input_ids = [], $parent_to_children = []) {
-    $result = [
-        'success' => false,
-        'content' => '',
-        'error' => ''
-    ];
-    
+function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $assembly = '', array $requests = [], array $parent_to_children = []) {
+    $result = ['success' => false, 'content' => '', 'error' => ''];
+
     if (empty($sequence_ids) || !is_array($sequence_ids)) {
         $result['error'] = 'No sequence IDs provided';
         return $result;
     }
-    
     if (!file_exists($blast_db . '.nhr') && !file_exists($blast_db . '.phr')) {
         $result['error'] = 'BLAST database not found';
         return $result;
     }
-    
-    // Check if $ranges is provided and not empty
-    if (!empty($ranges)) {
-        // Use batch mode with range file
-        // Convert ranges from "ID:start-end" format to "ID start-end" format for blastdbcmd
-        $batch_ranges = array_map(function($range) {
-            // Convert "ID:start-end" or "ID:start-end" to "ID start-end"
-            return preg_replace('/^([^:]+):(\d+-\d+)$/', '$1 $2', $range);
-        }, $ranges);
-        
-        // Build batch entries: converted ranges + regular IDs as full sequences
-        // Ranges apply to parent AND all children
-        $ids_with_ranges = array_map(function($range) {
-            return explode(':', $range)[0];
-        }, $ranges);
-        
-        // For each ranged ID, find and add all its children with the same range
-        $expanded_ranges = [];
-        foreach ($batch_ranges as $range_entry) {
-            $expanded_ranges[] = $range_entry; // Add the original range
-            
-            // Extract the ID and range portion from "ID start-end"
-            if (preg_match('/^(.+?)\s+(\d+-\d+)$/', $range_entry, $matches)) {
-                $parent_id = $matches[1];
-                $range_portion = $matches[2];
-                
-                // Find all children of this parent in sequence_ids and add with same range
-                foreach ($sequence_ids as $id) {
-                    // Check if this ID is a child of parent_id (e.g., "ID.1", "ID.2")
-                    if (preg_match('/^' . preg_quote($parent_id) . '\.\d+$/', $id)) {
-                        $expanded_ranges[] = "$id $range_portion";
-                    }
-                }
-            }
-        }
-        
-        // Build batch file following the 4-step plan:
-        // 1. Add all no-range input IDs (as full sequences)
-        // 2. Add all children of input IDs with no ranges (as full sequences)
-        // 3. Add all input IDs with ranges (with range formatting)
-        // 4. Add all children of input IDs with ranges (with same ranges as parent)
-        
-        $batch_entries = [];
-        
-        // Separate original input IDs into those with and without ranges
-        $input_ids_with_ranges = [];
-        $input_ids_no_ranges = [];
-        
-        foreach ($original_input_ids as $id) {
-            $has_range = false;
-            foreach ($ranges as $range_entry) {
-                $range_id = explode(':', $range_entry)[0];
-                $range_id = explode(' ', $range_id)[0];
-                if ($range_id === $id) {
-                    $has_range = true;
-                    break;
-                }
-            }
-            if ($has_range) {
-                $input_ids_with_ranges[] = $id;
-            } else {
-                $input_ids_no_ranges[] = $id;
-            }
-        }
-        
-        // Step 1: Add all no-range input IDs (full sequences)
-        foreach ($input_ids_no_ranges as $id) {
-            if (in_array($id, $sequence_ids)) {
-                $batch_entries[] = $id;
-            }
-        }
-        
-        // Step 2: Add all children of input IDs with no ranges (full sequences)
-        foreach ($input_ids_no_ranges as $parent_id) {
-            if (isset($parent_to_children[$parent_id])) {
-                foreach ($parent_to_children[$parent_id] as $child_id) {
-                    if (in_array($child_id, $sequence_ids)) {
-                        $batch_entries[] = $child_id;
-                    }
-                }
-            }
-        }
-        
-        // Step 3: Add all input IDs with ranges (formatted as "ID range")
-        foreach ($input_ids_with_ranges as $id) {
-            // Find the corresponding converted range in $batch_ranges
-            foreach (array_keys($ranges) as $idx) {
-                $range_id = explode(':', $ranges[$idx])[0];
-                $range_id = explode(' ', $range_id)[0];
-                if ($range_id === $id) {
-                    // Use the converted batch_ranges entry (with space, not colon)
-                    $batch_entries[] = $batch_ranges[$idx];
-                    break;
-                }
-            }
-        }
-        
-        // Step 4: Add all children of input IDs with ranges (with same ranges as parent)
-        foreach ($input_ids_with_ranges as $parent_id) {
-            if (isset($parent_to_children[$parent_id])) {
-                // Find the range for this parent
-                $parent_range = '';
-                foreach ($ranges as $range_entry) {
-                    $range_id = explode(':', $range_entry)[0];
-                    $range_id = explode(' ', $range_id)[0];
-                    if ($range_id === $parent_id) {
-                        // Extract range portion
-                        $parent_range = strpos($range_entry, ':') !== false ? 
-                            explode(':', $range_entry)[1] : 
-                            explode(' ', $range_entry)[1];
-                        break;
-                    }
-                }
-                
-                // Add each child with same range
-                if (!empty($parent_range)) {
-                    foreach ($parent_to_children[$parent_id] as $child_id) {
-                        if (in_array($child_id, $sequence_ids)) {
-                            $batch_entries[] = "$child_id $parent_range";
-                        }
-                    }
-                }
-            }
-        }
-        
-        $temp_file = tempnam(sys_get_temp_dir(), 'blastdb_');
-        if ($temp_file === false) {
-            $result['error'] = 'Failed to create temporary file for batch processing';
-            return $result;
-        }
-        
-        // Write batch entries to temporary file
-        if (file_put_contents($temp_file, implode("\n", $batch_entries)) === false) {
-            @unlink($temp_file);
-            $result['error'] = 'Failed to write batch file for range extraction';
-            return $result;
-        }
-        
-        // Execute: blastdbcmd -db ... -entry_batch temp_file
-        $config = ConfigManager::getInstance();
-        $blast_tools = $config->getArray('blast_tools', []);
-        $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';
-        $cmd = $blastdbcmd_path . " -db " . escapeshellarg($blast_db) . " -entry_batch " . escapeshellarg($temp_file) . " 2>&1";
-        
-        $output = [];
-        $return_var = 0;
-        @exec($cmd, $output, $return_var);
-        
-        // Delete temp file after execution
-        @unlink($temp_file);
-        
-        // Filter out blastdbcmd error messages (lines starting with "Error:")
-        // BUT keep track of them for better error reporting
-        $error_lines = array_filter($output, function($line) {
-            return strpos(trim($line), 'Error:') === 0;
-        });
-        
-        $output = array_filter($output, function($line) {
-            return strpos(trim($line), 'Error:') !== 0;
-        });
-        
-        // Check if blastdbcmd executed
-        if ($return_var > 1) {
-            $result['error'] = "Error extracting sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.";
-            return $result;
-        }
-        
-        // Check if we got any output
-        if (empty($output)) {
-            // If there were error messages about entries not found, it's likely an out-of-range coordinate
-            if (!empty($error_lines)) {
-                $result['error'] = 'One or more requested sequences or ranges were not found. This may be due to: (1) invalid sequence ID, (2) out-of-range coordinates, or (3) incorrectly formatted FASTA database. Please verify your input.';
-            } else {
-                $result['error'] = 'No sequences found for the requested IDs and ranges';
-            }
-            return $result;
-        }
-    } else {
-        // No ranges - use current logic: Execute: blastdbcmd -db ... -entry IDs
-        $config = ConfigManager::getInstance();
-        $blast_tools = $config->getArray('blast_tools', []);
-        $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';
-        $ids_string = implode(',', $sequence_ids);
-        $cmd = $blastdbcmd_path . " -db " . escapeshellarg($blast_db) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
-        $output = [];
-        $return_var = 0;
-        @exec($cmd, $output, $return_var);
-        
-        // Filter out blastdbcmd error messages (lines starting with "Error:")
-        $output = array_filter($output, function($line) {
-            return strpos(trim($line), 'Error:') !== 0;
-        });
-        
-        // Check if blastdbcmd executed
-        if ($return_var > 1) {
-            // Return code 1 is expected when some IDs don't exist, but >1 is an error
-            $result['error'] = "Error extracting sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.";
-            return $result;
-        }
-        
-        // Check if we got any output
-        if (empty($output)) {
-            $result['error'] = 'No sequences found for the requested IDs';
-            return $result;
-        }
+
+    if (!$requests) {
+        $requests = array_map(fn($id) => ['id' => $id, 'start' => null, 'end' => null], array_values($sequence_ids));
     }
-    
+    $batch = buildSequenceBatch($requests, array_values($sequence_ids), $parent_to_children);
+    if (!$batch) {
+        $result['error'] = 'No sequences found for the requested IDs';
+        return $result;
+    }
+
+    $temp_file = tempnam(sys_get_temp_dir(), 'blastdb_');
+    if ($temp_file === false || file_put_contents($temp_file, implode("\n", $batch) . "\n") === false) {
+        if ($temp_file !== false) @unlink($temp_file);
+        $result['error'] = 'Failed to write the batch file for sequence extraction';
+        return $result;
+    }
+
+    $blast_tools     = ConfigManager::getInstance()->getArray('blast_tools', []);
+    $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';
+    $cmd = $blastdbcmd_path . ' -db ' . escapeshellarg($blast_db) . ' -entry_batch ' . escapeshellarg($temp_file) . ' 2>&1';
+    $output     = [];
+    $return_var = 0;
+    @exec($cmd, $output, $return_var);
+    @unlink($temp_file);
+
+    // blastdbcmd reports an ID it does not hold as an "Error:" line and exits 1 -- expected
+    // when IDs are tried against several FASTAs. Anything above 1 is a real failure.
+    $output = array_filter($output, fn($line) => strpos(trim($line), 'Error:') !== 0);
+    if ($return_var > 1) {
+        $result['error'] = "Error extracting sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.";
+        return $result;
+    }
+    if (empty($output)) {
+        $result['error'] = 'No sequences found for the requested IDs';
+        return $result;
+    }
+
     $result['success'] = true;
     $result['content'] = implode("\n", $output);
-    
     return $result;
 }
 

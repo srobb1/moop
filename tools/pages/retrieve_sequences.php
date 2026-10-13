@@ -20,7 +20,8 @@
  * - $sequence_types
  * - $available_sequences
  * - $selected_source
- * - $sample_feature_ids
+ * - $examples  ['ids', 'gene', 'transcript'] -- moop_retrieval_examples()
+ * - $sequence_notes, $upstream_bp, $downstream_bp
  * - $parent_to_children
  * - $site
  */
@@ -36,7 +37,7 @@
                  page_title() emits the same markup from one place; measured identical. */ ?>
         <?= page_title('Sequence Retrieval', 'fa fa-dna') ?>
         <?= help_modal_trigger('retrieve-help', '', 'How to use Sequence Retrieval') ?>
-          <?= page_purpose('Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs and retrieve genomic, CDS, protein, and flanking sequences.', '', false, false) ?>
+          <?= page_purpose('Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs — whole, or a range of positions — and retrieve their protein, mRNA, CDS and genomic sequences, with flanking sequence if you want it.', '', false, false) ?>
       </div>
     </div>
 
@@ -53,6 +54,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
+
+        <?php foreach ($sequence_notes as $note): ?>
+            <div class="alert alert-info py-2 small"><i class="fa fa-info-circle me-1"></i><?= htmlspecialchars($note) ?></div>
+        <?php endforeach; ?>
 
         <form method="POST" id="downloadForm">
             <input type="hidden" name="organism" value="<?= htmlspecialchars($selected_organism) ?>">
@@ -97,12 +102,18 @@
                         id="featureIds"
                         name="uniquenames"
                         rows="6"
-                        placeholder="Enter feature IDs — one per line or comma-separated.&#10;Coordinate ranges also accepted: ID 1-10, ID:1..10, ID:1-10."
+                        placeholder="Enter feature IDs — one per line or comma-separated.&#10;Add a range for part of a sequence: ID:1-60"
                     ><?= htmlspecialchars($uniquenames_string) ?></textarea>
 
-                    <?php if (!empty($sample_feature_ids)): ?>
-                    <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
-                        <small class="text-muted">Examples: <?= htmlspecialchars(implode(', ', array_slice($sample_feature_ids, 0, 2))) ?><?= count($sample_feature_ids) > 2 ? '…' : '' ?></small>
+<?php
+                    // Shown in the help with the selected gene set's own IDs, so every example in it
+                    // works if pasted. sequence-retrieval.js refills .ex-gene / .ex-tx on a new selection.
+                    $ex_gene = $examples['gene'] !== '' ? $examples['gene'] : 'GENE_ID';
+                    $ex_tx   = $examples['transcript'] !== '' ? $examples['transcript'] : 'TRANSCRIPT_ID';
+                    ?>
+                    <?php // Always rendered: sequence-retrieval.js refills it when the selected source changes. ?>
+                    <div id="sampleIdsRow" class="mt-2 d-flex gap-2 align-items-center flex-wrap"<?= empty($examples['ids']) ? ' style="display:none;"' : '' ?>>
+                        <small class="text-muted">Examples: <span id="sampleIdsText"><?= htmlspecialchars(implode(' · ', $examples['ids'])) ?></span></small>
                         <button type="button" class="btn btn-sm fw-semibold text-white ms-auto btn-moop-teal" onclick="loadSampleIds()">
                             <i class="fa fa-bookmark me-1"></i>Load examples
                         </button>
@@ -110,21 +121,50 @@
                             <i class="fa fa-times me-1"></i>Clear
                         </button>
                     </div>
-                    <?php endif; ?>
+
+                    <?php /* Ranges were documented only in the placeholder (gone once you type) and the
+                             (i) modal, so few users found them. This line stays visible. */ ?>
+                    <div class="small text-muted mt-2">
+                        <i class="fa fa-cut me-1"></i>Want part of a sequence? Add a range:
+                        <code><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span>:1-60</code>.
+                        <a href="#idInfoCollapse" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="idInfoCollapse">How IDs and ranges work</a>
+                    </div>
 
                     <div id="searchIdsDisplay" class="mt-3 p-3 bg-light border rounded" style="display:none;">
                         <small class="text-muted d-block mb-2"><strong>IDs to search:</strong></small>
                         <div id="searchIdsContent"></div>
                     </div>
 
-                    <div class="mt-3">
-                        <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#idInfoCollapse" aria-expanded="false" aria-controls="idInfoCollapse">
-                            <i class="fa fa-info-circle me-1"></i>About parent and child IDs
-                        </button>
-                        <div class="collapse mt-2" id="idInfoCollapse">
-                            <div class="p-3 bg-light border rounded small text-muted">
-                                When you enter a parent gene ID (e.g., <code>g24397</code>), the system automatically retrieves all associated child transcript IDs (e.g., <code>g24397.t1</code>, <code>g24397.t2</code>). The "IDs to search" box shows which were found (<span style="background:#d4edda; padding:2px 4px; border-radius:2px;">green</span>) and which were not (<span style="background:#f8d7da; padding:2px 4px; border-radius:2px;">red</span>).
-                            </div>
+                    <div class="collapse mt-2" id="idInfoCollapse">
+                        <div class="p-3 bg-light border rounded small">
+                            <p class="fw-semibold mb-1">IDs</p>
+                            <ul class="mb-2 ps-3">
+                                <li>One per line, or separated by commas.</li>
+                                <li>A gene ID such as <code class="ex-gene"><?= htmlspecialchars($ex_gene) ?></code> gives every transcript, CDS and protein of that gene, and the gene's genomic region.
+                                    A transcript ID such as <code class="ex-tx"><?= htmlspecialchars($ex_tx) ?></code> gives just that isoform's, and the transcript's own genomic span (introns included).</li>
+                            </ul>
+                            <p class="fw-semibold mb-1">Ranges — part of a sequence</p>
+                            <ul class="mb-2 ps-3">
+                                <li>Add positions after the ID. These are all the same:
+                                    <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span>:1-60</code> ·
+                                    <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span>:1..60</code> ·
+                                    <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span> 1-60</code> ·
+                                    <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span> 1..60</code></li>
+                                <li>The range applies to <em>every</em> sequence of that ID — protein, mRNA, CDS and genomic. On a gene ID, to all of its transcripts.</li>
+                                <li><strong>Positions count in each sequence's own units:</strong> amino acids in a protein, nucleotides in mRNA and CDS.
+                                    So <code>1-60</code> is amino acids 1–60 of the protein but only the first 60 nucleotides of the CDS, which encode amino acids 1–20.
+                                    For the CDS that matches amino acids 1–60, ask for <code>1-180</code>. On the genomic region, <code>1</code> is the first base of the gene or transcript, introns count.</li>
+                                <li>Want several pieces of one sequence? Put each range on its own line.</li>
+                                <li>Positions start at 1, and the start cannot be after the end. A range running past the end of a sequence stops at its end.</li>
+                            </ul>
+                            <p class="fw-semibold mb-1">Genomic region and flanks</p>
+                            <ul class="mb-2 ps-3">
+                                <li>Every genomic sequence reads 5′ to 3′ along the gene: a gene on the minus strand is reverse-complemented. The header gives the location and strand, e.g. <code>chr2:16003283-16019242(-)</code>.</li>
+                                <li>Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.</li>
+                                <li>Genomic sequence needs the gene set to be placed on a genome; transcriptome-only gene sets have none.</li>
+                            </ul>
+                            <p class="fw-semibold mb-1">After you retrieve</p>
+                            <p class="mb-0">The "IDs to search" box shows which IDs were found (<span style="background:#d4edda; padding:2px 4px; border-radius:2px;">green</span>) and which were not (<span style="background:#f8d7da; padding:2px 4px; border-radius:2px;">red</span>).</p>
                         </div>
                     </div>
                 </div>
@@ -137,6 +177,21 @@
                     <span class="fw-semibold" style="font-size:0.9rem;">Retrieve sequences</span>
                 </div>
                 <div class="card-body py-3">
+                    <?php /* Flanks go with the genomic region only. Same rules (and limit) as the gene
+                             page and the Data Exporter: lib/genomic_regions.php. */ ?>
+                    <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+                        <div>
+                            <label for="upstreamBp" class="form-label small mb-1">Upstream flank (bp)</label>
+                            <input type="number" class="form-control form-control-sm moop-input" id="upstreamBp" name="upstream_bp"
+                                   min="0" max="<?= MOOP_MAX_FLANK_BP ?>" step="1" value="<?= (int)$upstream_bp ?>" style="width:9rem;">
+                        </div>
+                        <div>
+                            <label for="downstreamBp" class="form-label small mb-1">Downstream flank (bp)</label>
+                            <input type="number" class="form-control form-control-sm moop-input" id="downstreamBp" name="downstream_bp"
+                                   min="0" max="<?= MOOP_MAX_FLANK_BP ?>" step="1" value="<?= (int)$downstream_bp ?>" style="width:9rem;">
+                        </div>
+                        <small class="text-muted pb-1">Optional. Added as separate sequences next to each gene's or transcript's genomic region; 0 = none.</small>
+                    </div>
                     <button type="submit" class="btn btn-lg fw-semibold text-white w-100 btn-moop-action">
                         <i class="fa fa-eye me-1"></i>Retrieve Sequences
                     </button>
@@ -170,12 +225,9 @@
 </div>
 
 <?php
-// How-to help, opened by the (i) on the page header. Replaces a hand-rolled data-bs-html
-// popover that needed a per-page init (sequence-retrieval.js, now removed). Two sections:
-// the four steps, then the ID-entry rules that were the dense part of the old popover —
-// parent-ID auto-expansion and subsequence ranges. Those set 'html' => true for the <code>
-// examples. (A later refinement could move that second section to field_help() on the ID
-// box itself; kept here for now so this change only unifies the mechanism, not the design.)
+// How-to help, opened by the (i) on the page header: the four steps. The ID and range
+// rules used to be a second section here; they now live once, under the ID box ("How IDs
+// and ranges work"), next to where they are used and with the selected gene set's own IDs.
 echo help_modal(
     'retrieve-help',
     'How to use Sequence Retrieval',
@@ -186,33 +238,9 @@ echo help_modal(
                 // 'num' and labels match the page's numbered step headers; the last card is
                 // about the results, which have no step number on the page, so none here.
                 ['num' => '1', 'label' => 'Select organism and assembly', 'text' => 'Select an organism and one of its assemblies.'],
-                ['num' => '2', 'label' => 'Enter feature or gene IDs',    'text' => 'Gene or feature IDs, one per line or comma-separated. See "Entering IDs" below for how IDs expand.'],
-                ['num' => '3', 'label' => 'Retrieve sequences',           'text' => 'Results show every available sequence type — genomic, CDS, protein, flanking — for each ID.'],
+                ['num' => '2', 'label' => 'Enter feature or gene IDs',    'text' => 'Gene or feature IDs, one per line or comma-separated, optionally with a range for part of a sequence. "How IDs and ranges work", under the box, has the details.'],
+                ['num' => '3', 'label' => 'Retrieve sequences',           'text' => 'Results show the protein, mRNA, CDS and genomic sequence of each ID, plus upstream and downstream sequence if you set a flank.'],
                 [              'label' => 'Take what you need',           'text' => 'Copy or download individual sequences from the results.'],
-            ],
-        ],
-        [
-            'heading' => 'Entering IDs',
-            'cards'   => [
-                [
-                    'label' => 'Gene IDs expand automatically',
-                    'text'  => 'Enter a gene ID like <code>g24397</code> and you get all its transcripts '
-                             . '(<code>g24397.t1</code>, <code>g24397.t2</code>, …). Enter a single transcript '
-                             . 'ID to get just that one.',
-                    'html'  => true,
-                ],
-                [
-                    'label' => 'Extract part of a sequence',
-                    'text'  => 'Append a range — these four are equivalent:<br>'
-                             . '<code>g24397.t1:1-500</code> · <code>g24397.t1:1..500</code> · '
-                             . '<code>g24397.t1 1-500</code> · <code>g24397.t1 1..500</code>',
-                    'html'  => true,
-                ],
-                [
-                    'label' => 'A range turns off expansion',
-                    'text'  => 'Enter a ranged child ID and its parent is not auto-expanded — you get exactly the '
-                             . 'subsequence you asked for.',
-                ],
             ],
         ],
     ],
@@ -222,9 +250,7 @@ echo help_modal(
 
 <script>
 // Make sample feature IDs available to JavaScript
-<?php if (!empty($sample_feature_ids)): ?>
-    window.sampleFeatureIds = <?= json_encode($sample_feature_ids) ?>;
-<?php endif; ?>
+window.sampleFeatureIds = <?= json_encode(array_values($examples['ids'])) ?>;
 
 // Pass found IDs to JavaScript for coloring
 window.foundIds = <?= json_encode($found_ids ?? []) ?>;

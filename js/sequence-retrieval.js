@@ -44,6 +44,7 @@ function initializeSequenceRetrieval(options = {}) {
                 form.querySelector('input[name="assembly"]').value = radio.dataset.assembly;
                 form.querySelector('input[name="gene_set"]').value = radio.dataset.geneSet || '';
             }
+            refreshSampleIds(radio);
             // Update display text
             updateCurrentSelectionDisplay();
         },
@@ -305,6 +306,41 @@ function clearFeatureIds() {
 }
 
 // Initialize on DOM ready
+
+// Examples follow the selected source: fetch them from that gene set (api/gene_set_examples.php)
+// so "Load examples" always finds something in what the user is about to extract from, and
+// the "How IDs and ranges work" text shows IDs that work if pasted. The page arrives seeded
+// with the server-selected source's examples; a source with none keeps what was showing.
+const examplesBySource = {};
+let examplesWanted = '';
+
+function refreshSampleIds(radio) {
+    const p = { organism: radio.dataset.organism || '', assembly: radio.dataset.assembly || '', gene_set: radio.dataset.geneSet || '' };
+    if (!p.organism || !p.assembly || !p.gene_set) return;
+    const key = p.organism + '|' + p.assembly + '|' + p.gene_set;
+    examplesWanted = key;
+    if (examplesBySource[key]) { showExamples(examplesBySource[key]); return; }
+
+    fetch(window.sitePath + '/api/gene_set_examples.php?' + new URLSearchParams(p), { credentials: 'same-origin' })
+        .then(r => r.ok ? r.json() : { ids: [] })
+        .then(ex => {
+            examplesBySource[key] = ex;
+            if (key === examplesWanted) showExamples(ex);   // ignore a slower, superseded answer
+        })
+        .catch(() => {});
+}
+
+function showExamples(ex) {
+    const ids = Array.isArray(ex.ids) ? ex.ids : [];
+    if (!ids.length) return;
+    window.sampleFeatureIds = ids;
+    const text = document.getElementById('sampleIdsText');
+    if (text) text.textContent = ids.join(' · ');
+    const row = document.getElementById('sampleIdsRow');
+    if (row) row.style.display = '';
+    if (ex.gene) document.querySelectorAll('.ex-gene').forEach(el => { el.textContent = ex.gene; });
+    if (ex.transcript) document.querySelectorAll('.ex-tx').forEach(el => { el.textContent = ex.transcript; });
+}
 
 // Load sample feature IDs into textarea
 function loadSampleIds() {

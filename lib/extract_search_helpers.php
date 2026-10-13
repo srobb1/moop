@@ -74,68 +74,76 @@ function parseContextParameters() {
 }
 
 /**
- * Parse and validate feature IDs from user input
- * 
- * Handles both comma and newline separated formats
- * Detects range patterns (ID:1..10, ID:1-10, ID 1..10, ID 1-10) and returns them separately
- * 
- * @param string $uniquenames_string - Comma or newline separated IDs with optional ranges
- * @return array - ['valid' => bool, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => bool, 'error' => '']
+ * Parse the feature IDs a user typed, each optionally followed by a range.
+ *
+ * Entries are separated by newlines or commas. A range is the trailing part of an entry:
+ * `ID:1-30`, `ID:1..30`, `ID 1-30` or `ID 1..30` -- all the same. Everything before the
+ * range is the ID, so an ID that itself contains a colon (`P1:pep:1-30`) keeps it.
+ *
+ * Every entry is its own REQUEST, in the order typed: `X:1-30` and `X:31-40` are two
+ * requests, and `X` alongside them is a third (the whole sequence). This used to keep only
+ * the first range per ID and drop a reversed one without a word.
+ *
+ * A range that cannot be satisfied -- start after end, or a 0 start (positions count from
+ * 1) -- makes the whole input invalid, with an error naming the entries, rather than being
+ * silently skipped. A range past the end of a sequence is fine: blastdbcmd stops at the end.
+ *
+ * @param string $uniquenames_string comma- or newline-separated entries
+ * @return array{valid: bool, requests: list<array{id: string, start: ?int, end: ?int}>,
+ *               uniquenames: list<string>, has_ranges: bool, error: string}
  */
 function parseFeatureIds($uniquenames_string) {
-    $uniquenames = [];
-    $ranges = [];
-    
-    if (empty($uniquenames_string)) {
-        return ['valid' => false, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => false, 'error' => 'No feature IDs provided'];
-    }
-    
-    // Handle both comma and newline separated formats
-    $entries = array_filter(array_map('trim', 
-        preg_split('/[\n,]+/', $uniquenames_string)
-    ));
-    
-    if (empty($entries)) {
-        return ['valid' => false, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => false, 'error' => 'No valid feature IDs found'];
-    }
-    
-    // Process each entry to detect range patterns
-    // Patterns: "ID:1..10", "ID:1-10", "ID 1..10", "ID 1-10"
+    $fail = fn(string $error) => ['valid' => false, 'requests' => [], 'uniquenames' => [], 'has_ranges' => false, 'error' => $error];
+
+    $entries = array_values(array_filter(array_map('trim', preg_split('/[\n,]+/', (string)$uniquenames_string)), 'strlen'));
+    if (!$entries) return $fail('No feature IDs provided');
+
+    $requests = [];
+    $bad      = [];
     foreach ($entries as $entry) {
-        // Check for range patterns
-        if (preg_match('/^(.+?)[\s:]+(\d+)[.\-]\.?(\d+)$/', $entry, $matches)) {
-            $id = trim($matches[1]);
-            $start = $matches[2];
-            $end = $matches[3];
-            
-            // Validate range (start should be <= end)
-            if ((int)$start <= (int)$end) {
-                // Store in format expected by blastdbcmd: "ID:start-end"
-                $ranges[] = "$id:$start-$end";
-                $uniquenames[] = $id;
-            } else {
-                // Invalid range, skip or treat as error
-                continue;
-            }
+        if (preg_match('/^(.+?)[\s:]+(\d+)(?:-|\.\.)(\d+)$/', $entry, $m)) {
+            [$start, $end] = [(int)$m[2], (int)$m[3]];
+            if ($start < 1 || $start > $end) { $bad[] = $entry; continue; }
+            $requests[] = ['id' => trim($m[1]), 'start' => $start, 'end' => $end];
         } else {
-            // Regular ID without range
-            $uniquenames[] = $entry;
+            $requests[] = ['id' => $entry, 'start' => null, 'end' => null];
         }
     }
-    
-    $uniquenames = array_unique($uniquenames);
-    
-    if (empty($uniquenames)) {
-        return ['valid' => false, 'uniquenames' => [], 'ranges' => [], 'has_ranges' => false, 'error' => 'No valid feature IDs found'];
+    if ($bad) {
+        return $fail('These ranges cannot be extracted -- a range is start-end, counting from 1, with start no greater than end: '
+                     . implode(', ', $bad));
     }
-    
+
     return [
-        'valid' => true, 
-        'uniquenames' => array_values($uniquenames), 
-        'ranges' => $ranges,
-        'has_ranges' => !empty($ranges),
-        'error' => ''
+        'valid'       => true,
+        'requests'    => $requests,
+        'uniquenames' => array_values(array_unique(array_column($requests, 'id'))),
+        'has_ranges'  => (bool)array_filter($requests, fn($r) => $r['start'] !== null),
+        'error'       => '',
     ];
+}
+
+/**
+ * The blastdbcmd batch lines for ONE FASTA file: each request applied to its ID and to every
+ * descendant of that ID, keeping only the IDs this FASTA holds ($sequence_ids). A gene has no
+ * sequence of its own, so `G:1-30` becomes `G-RA 1-30` in the transcript FASTA, `G-RA:cds 1-30`
+ * in the CDS FASTA, and so on. Identical lines are emitted once.
+ *
+ * @param list<array{id: string, start: ?int, end: ?int}> $requests from parseFeatureIds()
+ * @param list<string>                $sequence_ids       IDs routed to this FASTA
+ * @param array<string, list<string>> $parent_to_children ID => all its descendants' IDs
+ * @return list<string> "ID" or "ID start-end"
+ */
+function buildSequenceBatch(array $requests, array $sequence_ids, array $parent_to_children = []): array {
+    $here  = array_flip($sequence_ids);
+    $lines = [];
+    foreach ($requests as $r) {
+        foreach (array_merge([$r['id']], $parent_to_children[$r['id']] ?? []) as $id) {
+            if (!isset($here[$id])) continue;
+            $lines[] = $r['start'] === null ? $id : "$id {$r['start']}-{$r['end']}";
+        }
+    }
+    return array_values(array_unique($lines));
 }
 
 /**
@@ -446,9 +454,9 @@ function buildTypedIdsForGenes(array $gene_uniquenames, int $gene_set_id, string
  * @param array  $sequence_types     Sequence type config from ConfigManager::getSequenceTypes()
  * @param string $organism           Passed through to blastdbcmd helper
  * @param string $assembly           Passed through to blastdbcmd helper
- * @param array  $ranges             Subsequence ranges ["ID:start-end", ...]
- * @param array  $original_input_ids Original IDs before expansion (for not-found reporting)
- * @param array  $parent_to_children Parent→children map for output grouping
+ * @param array  $requests           parseFeatureIds()['requests'] -- what the user typed,
+ *                                   ranges included; empty = every typed ID, whole
+ * @param array  $parent_to_children ID => all its descendants, so a request reaches them
  * @return array ['success' => bool, 'content' => [type => fasta_string], 'errors' => []]
  */
 function extractSequencesForAllTypes(
@@ -457,8 +465,7 @@ function extractSequencesForAllTypes(
     array  $sequence_types,
     string $organism = '',
     string $assembly = '',
-    array  $ranges = [],
-    array  $original_input_ids = [],
+    array  $requests = [],
     array  $parent_to_children = []
 ): array {
     $displayed_content = [];
@@ -478,12 +485,9 @@ function extractSequencesForAllTypes(
     }
 
     $run_extract = function (string $seq_type, string $fasta_file, array $ids)
-        use (&$displayed_content, &$tool_errors, $organism, $assembly, $ranges, $original_input_ids, $parent_to_children)
+        use (&$displayed_content, &$tool_errors, $organism, $assembly, $requests, $parent_to_children)
     {
-        $result = extractSequencesFromBlastDb(
-            $fasta_file, $ids, $organism, $assembly,
-            $ranges, $original_input_ids, $parent_to_children
-        );
+        $result = extractSequencesFromBlastDb($fasta_file, $ids, $organism, $assembly, $requests, $parent_to_children);
         if ($result['success']) {
             $lines   = array_filter(explode("\n", $result['content']), fn($l) => trim($l) !== '');
             $content = implode("\n", $lines);
@@ -518,7 +522,7 @@ function extractSequencesForAllTypes(
         }
     }
 
-    $errors = empty($displayed_content) ? $tool_errors : [];
+    $errors = empty($displayed_content) ? array_values(array_unique($tool_errors)) : [];   // one per FASTA tried
     return [
         'success' => !empty($displayed_content),
         'content' => $displayed_content,

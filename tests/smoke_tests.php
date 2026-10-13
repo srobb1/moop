@@ -948,6 +948,85 @@ ok(moop_resolve_naming_protein('P2:pep', $_kids, 99) === null, 'a protein of ano
 ok(moop_gene_naming_label('protein') !== 'Protein', 'the naming-protein label does not repeat the overview\'s Protein line');
 
 // ----------------------------------------------------------------------------
+group('Sequence Retrieval: ID ranges -- every request kept, bad ones reported');
+// Each entry the user typed is one request. Two ranges on one ID used to collapse to the
+// first, and a reversed range vanished with only "No valid feature IDs found".
+$_p = parseFeatureIds("T-RA:1-30\nT-RA:31-40");
+ok($_p['valid'] && $_p['requests'] === [
+        ['id' => 'T-RA', 'start' => 1,  'end' => 30],
+        ['id' => 'T-RA', 'start' => 31, 'end' => 40]],
+   'two ranges on one ID are two requests');
+$_same = array_map(fn($s) => parseFeatureIds($s)['requests'], ['T-RA:1-30', 'T-RA:1..30', 'T-RA 1-30', 'T-RA 1..30']);
+ok(array_unique(array_map('json_encode', $_same)) === [json_encode([['id' => 'T-RA', 'start' => 1, 'end' => 30]])],
+   'the four documented range forms are equivalent');
+ok(parseFeatureIds('P1:pep:5-9')['requests'] === [['id' => 'P1:pep', 'start' => 5, 'end' => 9]],
+   'an ID containing a colon keeps it; only the trailing range is split off');
+ok(parseFeatureIds('G, T-RA')['requests'] === [['id' => 'G', 'start' => null, 'end' => null], ['id' => 'T-RA', 'start' => null, 'end' => null]],
+   'plain IDs are requests with no range');
+$_p = parseFeatureIds("G\nT-RA:30-1");
+ok(!$_p['valid'] && strpos($_p['error'], 'T-RA:30-1') !== false, 'a reversed range is an error that names the entry');
+$_p = parseFeatureIds('T-RA:0-10');
+ok(!$_p['valid'] && strpos($_p['error'], 'T-RA:0-10') !== false, 'positions start at 1: a 0 start is an error');
+
+// The batch handed to blastdbcmd for ONE FASTA: each request applied to the ID and to its
+// descendants, keeping only IDs that live in this FASTA.
+$_kids = ['G' => ['G-RA', 'G-RA:cds', 'P1:pep']];
+ok(buildSequenceBatch([['id' => 'G', 'start' => 1, 'end' => 30]], ['P1:pep'], $_kids) === ['P1:pep 1-30'],
+   'a gene\'s range reaches its protein; the gene itself has no sequence here');
+ok(buildSequenceBatch(parseFeatureIds("G-RA:1-30\nG-RA:31-40\nG-RA")['requests'], ['G-RA'], $_kids)
+       === ['G-RA 1-30', 'G-RA 31-40', 'G-RA'],
+   'two ranges and a whole sequence of one ID are all extracted');
+ok(buildSequenceBatch(parseFeatureIds("G\nG-RA")['requests'], ['G-RA', 'G-RB'], ['G' => ['G-RA', 'G-RB']])
+       === ['G-RA', 'G-RB'],
+   'an ID asked for twice (directly and via its gene) is extracted once');
+
+// ----------------------------------------------------------------------------
+group('Genomic regions: one definition for gene page, Data Exporter and Sequence Retrieval');
+require_once dirname(__DIR__) . '/lib/genomic_regions.php';
+$_plus  = ['chr' => 'c1', 'start' => 1001, 'end' => 2000, 'strand' => '+'];
+$_minus = ['chr' => 'c1', 'start' => 1001, 'end' => 2000, 'strand' => '-'];
+$_rg = fn($r) => $r === null ? null : [$r['start'], $r['end'], $r['strand']];
+ok($_rg(moop_genomic_region($_plus, 'body')) === [1001, 2000, '+'], 'body is the locus');
+ok($_rg(moop_genomic_region($_plus, 'upstream', 100)) === [901, 1000, '+'], '+ strand: upstream is before the start');
+ok($_rg(moop_genomic_region($_plus, 'downstream', 100)) === [2001, 2100, '+'], '+ strand: downstream is after the end');
+ok($_rg(moop_genomic_region($_minus, 'upstream', 100)) === [2001, 2100, '-'], '- strand: upstream lies at HIGHER coordinates');
+ok($_rg(moop_genomic_region($_minus, 'downstream', 100)) === [901, 1000, '-'], '- strand: downstream lies at lower coordinates');
+ok($_rg(moop_genomic_region($_plus, 'body', 0, 1, 60)) === [1001, 1060, '+'], '+ strand: range 1-60 is the first 60 bases');
+ok($_rg(moop_genomic_region($_minus, 'body', 0, 1, 60)) === [1941, 2000, '-'], '- strand: range 1-60 counts from the 5\' end (the high coordinate)');
+ok($_rg(moop_genomic_region($_plus, 'body', 0, 990, 5000)) === [1990, 2000, '+'], 'a range past the end stops at the end');
+ok(moop_genomic_region($_plus, 'body', 0, 1001, 1100) === null, 'a range starting past the end is empty');
+$_edge = ['chr' => 'c1', 'start' => 50, 'end' => 80, 'strand' => '+'];
+ok($_rg(moop_genomic_region($_edge, 'upstream', 100)) === [1, 49, '+'], 'upstream stops at position 1');
+ok(moop_genomic_region(['start' => 1] + $_edge, 'upstream', 100) === null, 'nothing upstream of position 1');
+ok(moop_genomic_region($_plus, 'upstream', 0) === null, 'a 0 bp flank is no record');
+
+// Where a feature sits: a transcript's OWN span, never its gene's (feature_coords.tsv rows
+// all carry the gene's span, which is exactly the trap).
+$_gsd = sys_get_temp_dir() . '/moop_loci_' . getmypid();
+@mkdir($_gsd);
+file_put_contents("$_gsd/feature_coords.tsv", "G-RA\tG\tc1\t100\t900\t-\nG-RB\tG\tc1\t100\t900\t-\n");
+file_put_contents("$_gsd/exon_coords.tsv", "G-RA\tc1\t-\t100,500\t100,200;400,500\nG-RB\tc1\t-\t300,900\t300,900\n");
+$_l = moop_feature_loci($_gsd, ['G', 'G-RA', 'G-RB', 'nope']);
+ok([$_l['G']['start'], $_l['G']['end'], $_l['G']['kind']] === [100, 900, 'gene'], 'a gene\'s locus comes from feature_coords.tsv');
+ok([$_l['G-RA']['start'], $_l['G-RA']['end'], $_l['G-RA']['kind']] === [100, 500, 'transcript'], 'a transcript\'s span is its own, from exon_coords.tsv');
+ok(!isset($_l['nope']), 'an ID in neither file has no locus');
+array_map('unlink', glob("$_gsd/*")); @rmdir($_gsd);
+
+// One letter case everywhere: a soft-masked (lowercase) source comes out uppercase from the
+// direct .fai reader too, as it already did from blastdbcmd and extractFastaRegion().
+require_once dirname(__DIR__) . '/lib/fasta_index.php';
+$_fa = sys_get_temp_dir() . '/moop_case_' . getmypid() . '.fa';
+file_put_contents($_fa, ">T1 desc\nACGTacgtAC\nGT\n");
+file_put_contents("$_fa.fai", "T1\t12\t9\t10\t11\n");
+$_got = moop_fasta_fetch_with_headers($_fa, ['T1']);
+ok(($_got['T1']['seq'] ?? null) === 'ACGTACGTACGT', 'soft-masked lowercase is uppercased by the .fai reader');
+ok(extractFastaRegion($_fa, "$_fa.fai", 'T1', 5, 8) === 'ACGT', '...and by the region reader');
+@unlink($_fa); @unlink("$_fa.fai");
+
+ok(moop_genomic_fasta_record('G', 'upstream', 500, ['chr' => 'c1', 'start' => 1, 'end' => 3, 'strand' => '-'], 'ACG')
+       === ">G upstream_500bp c1:1-3(-)\nACG\n", 'header: ID, part, location and strand');
+
+// ----------------------------------------------------------------------------
 group('Annotation scores: what each source\'s Score means, from the shipped table');
 require_once dirname(__DIR__) . '/lib/annotation_scores.php';
 $_sc = moop_score_config_normalize(json_decode(file_get_contents(dirname(__DIR__) . '/metadata/annotation_scores.json.example'), true));

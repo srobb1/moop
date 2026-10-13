@@ -38,6 +38,7 @@ include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/home_examples.php';  // moop_home_examples(): example IDs
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
+include_once __DIR__ . '/../lib/genomic_regions.php';  // genomic region + flanks, shared with the gene page and Data Exporter
 include_once __DIR__ . '/../includes/source-selector-helpers.php';
 
 // Load page-specific config
@@ -63,6 +64,11 @@ $context = parseContextParameters();
 
 $organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
 $organism_result = parseOrganismParameter($organisms_param, '');
+
+// Flanks for the genomic region, in bases (0 = none). Same limit as the Data Exporter.
+$upstream_bp   = max(0, min(MOOP_MAX_FLANK_BP, (int)($_POST['upstream_bp'] ?? 0)));
+$downstream_bp = max(0, min(MOOP_MAX_FLANK_BP, (int)($_POST['downstream_bp'] ?? 0)));
+$sequence_notes = [];
 
 // Get uniquenames (may be empty on initial page load)
 $uniquenames_string = trim($_POST['uniquenames'] ?? $_GET['uniquenames'] ?? '');
@@ -113,7 +119,6 @@ $selected_gene_set   = $source_parts[2] ?? '';
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
     $extraction_errors = [];
-    $original_uniquenames = []; // Initialize early in case of errors
     
     // Find matching source for selected assembly
     // Works with either accession or genome_name
@@ -131,117 +136,54 @@ if (!empty($sequence_ids_provided)) {
         $extraction_errors[] = "Assembly not found or not accessible.";
     }
     
-    // Parse and validate feature IDs
+    // Parse the IDs, each with an optional range -- one request per entry (parseFeatureIds()).
+    $requests = [];
     if (empty($extraction_errors)) {
         $id_parse = parseFeatureIds($uniquenames_string);
         if (!$id_parse['valid']) {
             $extraction_errors[] = $id_parse['error'];
         } else {
+            $requests    = $id_parse['requests'];
             $uniquenames = $id_parse['uniquenames'];
-            $ranges = $id_parse['ranges'] ?? [];  // Extract ranges from parsing result
-            
-            // Save original uniquenames to check which children were explicitly listed
-            $original_uniquenames = $uniquenames;
-            
-            // Get children for each parent ID (like parent_display.php does)
-            try {
-                $db = verifyOrganismDatabase($selected_organism, $organism_data);
-                
-                $expanded_uniquenames = [];
-                $parent_to_children = []; // Track parent->children mapping
-                foreach ($uniquenames as $uniquename) {
-                    $expanded_uniquenames[] = $uniquename;
-                    
-                    // Check if any children of this ID are already in the input with ranges
-                    // If so, skip auto-expansion (children are explicitly requested)
-                    $has_ranged_children = false;
-                    foreach ($ranges as $range_entry) {
-                        // Get the ID part from the range
-                        $range_id = explode(':', $range_entry)[0];
-                        $range_id = explode(' ', $range_id)[0];
-                        
-                        // Check if this is a child of current uniquename
-                        if (preg_match('/^' . preg_quote($uniquename) . '\.\d+$/', $range_id)) {
-                            $has_ranged_children = true;
-                            break;
-                        }
-                    }
-                    
-                    // Lookup feature to get feature_id
-                    $feature_result = getFeatureByUniquename($uniquename, $db);
-                    if (!empty($feature_result)) {
-                        $feature_id = $feature_result['feature_id'];
-                        // Get all children
-                        $children = getChildren($feature_id, $db);
-                        if (!empty($children)) {
-                            $child_names = [];
-                            foreach ($children as $child) {
-                                $child_name = $child['feature_uniquename'];
-                                
-                                // If children are already explicitly provided (with ranges), don't auto-add others
-                                if ($has_ranged_children) {
-                                    // Only add child if it's already in the expanded list
-                                    $already_present = in_array($child_name, $expanded_uniquenames);
-                                    if ($already_present) {
-                                        $child_names[] = $child_name;
-                                    }
-                                } else {
-                                    // No ranged children found - add all children
-                                    if (!in_array($child_name, $expanded_uniquenames)) {
-                                        $expanded_uniquenames[] = $child_name;
-                                    }
-                                    $child_names[] = $child_name;
-                                }
-                            }
-                            if (!empty($child_names)) {
-                                $parent_to_children[$uniquename] = $child_names;
-                            }
-                        }
-                    }
-                }
-                $uniquenames = array_unique($expanded_uniquenames);
-                
-                // Track which children were explicitly listed in the input without ranges
-                $explicitly_listed_children = [];
-                foreach ($original_uniquenames as $id) {
-                    foreach ($parent_to_children as $parent => $children) {
-                        if (in_array($id, $children)) {
-                            // Check if this child has a range
-                            $has_range = false;
-                            foreach ($ranges as $range_entry) {
-                                $range_id = explode(':', $range_entry)[0];
-                                $range_id = explode(' ', $range_id)[0];
-                                if ($range_id === $id) {
-                                    $has_range = true;
-                                    break;
-                                }
-                            }
-                            if (!$has_range) {
-                                $explicitly_listed_children[] = $id;
-                            }
-                        }
-                    }
-                }
-                
-                // Don't expand ranges here - blast_functions will handle building the batch file
-                // with all 4 categories (no-range inputs, their children, ranged inputs, their children)
-                
-            } catch (Exception $e) {
-                // If database lookup fails, just use original IDs
-                $parent_to_children = [];
-            }
         }
     }
-    
+
+    // Every descendant of each typed ID, so a gene reaches its transcripts, CDS and proteins
+    // and a range typed on the gene applies to all of them. Scoped to the selected gene set:
+    // a uniquename is unique only within one, and this organism may carry several.
+    $parent_to_children = [];
+    if (empty($extraction_errors) && $uniquenames) {
+        $db_path = $organism_data . '/' . $selected_organism . '/organism.sqlite';
+        [$gene_set_id] = getGeneSetInfo($fasta_source['assembly'], $fasta_source['gene_set'] ?? '', $db_path);
+        $gs_ids = $gene_set_id ? [$gene_set_id] : [];
+        try {
+            $db = verifyOrganismDatabase($selected_organism, $organism_data);
+            foreach ($uniquenames as $uniquename) {
+                $feature = getFeatureByUniquename($uniquename, $db, $gs_ids);
+                if (empty($feature)) continue;
+                $children = array_column(getChildren($feature['feature_id'], $db, $gs_ids), 'feature_uniquename');
+                if ($children) $parent_to_children[$uniquename] = $children;
+            }
+        } catch (Exception $e) {
+            // Without the database, extract the typed IDs as they are.
+            $parent_to_children = [];
+        }
+        $uniquenames = array_values(array_unique(array_merge($uniquenames, ...array_values($parent_to_children))));
+    }
+
     // Extract sequences for ALL available types
     if (empty($extraction_errors) && !empty($uniquenames)) {
-        $db_path = $organism_data . '/' . $selected_organism . '/organism.sqlite';
-        $typed_ids = buildTypedIds(array_values($uniquenames), $db_path);
-        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $typed_ids, $sequence_types, $selected_organism, $selected_assembly_accession, $ranges, $original_uniquenames ?? [], $parent_to_children ?? []);
+        $typed_ids = buildTypedIds($uniquenames, $db_path, $fasta_source['assembly'], $fasta_source['gene_set'] ?? '');
+        $extract_result = extractSequencesForAllTypes($fasta_source['path'], $typed_ids, $sequence_types, $selected_organism, $selected_assembly_accession, $requests, $parent_to_children);
         $displayed_content = $extract_result['content'];
         if (!empty($extract_result['errors'])) {
             $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
         }
+
+        // Genomic region (and flanks) of each typed gene or transcript -- lib/genomic_regions.php.
+        $genomic = moop_retrieve_genomic($requests, $fasta_source['path'], dirname($fasta_source['path']), $upstream_bp, $downstream_bp);
+        if ($genomic['fasta'] !== '') $displayed_content['genome'] = rtrim($genomic['fasta']);
+        $sequence_notes = $genomic['notes'];
         
         // Parse returned sequences to find which IDs were actually found
         foreach ($displayed_content as $seq_type => $fasta_content) {
@@ -251,15 +193,18 @@ if (!empty($sequence_ids_provided)) {
                 foreach ($matches[1] as $header_id) {
                     $found_ids[] = $header_id;
                     
-                    // Also add the plain ID without range (e.g., XP_023382306.1 from XP_023382306.1:1-10)
-                    if (strpos($header_id, ':') !== false) {
-                        $plain_id = explode(':', $header_id)[0];
-                        $found_ids[] = $plain_id;
-                    }
+                    // Also the ID without its range: X:pep:1-30 -> X:pep. (Cutting at the first
+                    // colon gave X, which is a different feature.)
+                    $found_ids[] = preg_replace('/:\d+-\d+$/', '', $header_id);
                 }
             }
         }
-        $found_ids = array_unique($found_ids);
+        // A gene has no sequence of its own, so its ID never appears in a header -- it was
+        // found if anything beneath it was, and showing it red ("not found") said otherwise.
+        foreach ($parent_to_children as $parent => $children) {
+            if (array_intersect($children, $found_ids)) $found_ids[] = $parent;
+        }
+        $found_ids = array_values(array_unique($found_ids));
     }
     
     // Log any errors
@@ -279,7 +224,7 @@ if (!empty($sequence_ids_provided)) {
     
     // Handle download request if present
     handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null,
-        [$organism_name ?? '', $assembly_param ?? '']);
+        [$selected_organism, $selected_assembly_accession, $selected_gene_set]);
 }
 
 // Get available sequence types from all accessible sources
@@ -296,6 +241,9 @@ $display_config = [
     ]
 ];
 
+// 'genome' is what the results show for a genomic REGION here, not a whole genome file.
+$display_types = array_replace_recursive($sequence_types, ['genome' => ['label' => 'Genomic region']]);
+
 // Prepare data for content file
 $data = [
     'site' => $site,
@@ -307,9 +255,12 @@ $data = [
     'selected_assembly_name' => $selected_assembly_name,
     'uniquenames_string' => $uniquenames_string,
     'displayed_content' => $displayed_content,
-    'sequence_types' => $sequence_types,
+    'sequence_types' => $display_types,
+    'sequence_notes' => $sequence_notes,
+    'upstream_bp'    => $upstream_bp,
+    'downstream_bp'  => $downstream_bp,
     'organism_data' => $organism_data,
-    'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],
+    'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $display_types) : [],
     'context' => $context,
     'context_organism' => $context['organism'] ?? '',
     'context_assembly' => $context['assembly'] ?? '',
@@ -324,10 +275,10 @@ $data = [
     'should_scroll_to_results' => $should_scroll_to_results,
     'selected_source'   => $selected_source,
     'selected_gene_set' => $selected_gene_set,
-    // The same examples as the home page Genes tab (lib/home_examples.php): chosen from
-    // data this viewer can open, or the admin's sample_feature_ids minus any they cannot.
-    // This read the setting raw, so "Load examples" gave a public visitor a Chamaeleo ID.
-    'sample_feature_ids' => array_column(moop_home_examples(getGroupData())['genes'], 'text'),
+    // Examples follow the selected gene set (and api/gene_set_examples.php follows a new
+    // selection in the browser), so "Load examples" finds something in the source the user
+    // is about to extract from -- including one with a range. lib/home_examples.php.
+    'examples' => moop_retrieval_examples($selected_organism, $selected_assembly_accession, $selected_gene_set),
     'parent_to_children' => $parent_to_children ?? [],
     'page_styles' => [
         '/' . $site . '/css/display.css',

@@ -84,96 +84,18 @@ function moop_fai_lookup(string $fai, array $wanted): array
 }
 
 /**
- * Fetch sequences by exact id.
- *
- * Returns the residues with all line breaks removed; the caller decides how to wrap them.
- * Ids not present in the index are simply absent from the result — the same contract
- * blastdbcmd has when an entry does not exist, which callers already treat as "this id is
- * not in this file type" rather than as an error.
- *
- * @param  list<string> $ids
- * @return array<string,string>  id => sequence, in the order the ids were requested
- */
-function moop_fasta_fetch(string $fasta, array $ids): array
-{
-    if ($ids === [] || !moop_fasta_index_available($fasta)) return [];
-
-    $idx = moop_fai_lookup($fasta . '.fai', $ids);
-    if ($idx === []) return [];
-
-    $fh = @fopen($fasta, 'rb');
-    if ($fh === false) return [];
-
-    $out = [];
-    foreach ($ids as $id) {                          // preserve caller order
-        if (!isset($idx[$id])) continue;
-        $e = $idx[$id];
-        if ($e['len'] <= 0 || $e['lb'] <= 0) continue;
-
-        // Bytes to read = residues + one line terminator per full line. lw - lb is the
-        // terminator width, so this is correct for LF and CRLF alike.
-        $lines = (int)ceil($e['len'] / $e['lb']);
-        $bytes = $e['len'] + ($lines * max(0, $e['lw'] - $e['lb']));
-
-        if (fseek($fh, $e['off']) !== 0) continue;
-        $raw = fread($fh, $bytes);
-        if ($raw === false) continue;
-
-        $seq = preg_replace('/\s+/', '', $raw);
-        // Guard against a stale index pointing somewhere plausible but wrong.
-        if ($seq === null || strlen($seq) !== $e['len']) continue;
-        $out[$id] = $seq;
-    }
-    fclose($fh);
-    return $out;
-}
-
-/**
- * The full header line for an id, as it appears in the FASTA.
- *
- * The .fai stores only the id, but callers key their results on the WHOLE header —
- * description included — because that is what blastdbcmd emits. Reading it back means one
- * short seek per id to the byte before the sequence starts.
- *
- * @param  list<string> $ids
- * @return array<string,string>  id => header text WITHOUT the leading '>'
- */
-function moop_fasta_headers(string $fasta, array $ids): array
-{
-    if ($ids === [] || !moop_fasta_index_available($fasta)) return [];
-    $idx = moop_fai_lookup($fasta . '.fai', $ids);
-    if ($idx === []) return [];
-
-    $fh = @fopen($fasta, 'rb');
-    if ($fh === false) return [];
-
-    $out = [];
-    foreach ($ids as $id) {
-        if (!isset($idx[$id])) continue;
-        // The header ends with the newline immediately before the sequence offset. Read a
-        // generous window back from there; descriptions here run to a few hundred bytes
-        // (source, accession, e-value), so 4096 is comfortable headroom.
-        $back  = 4096;
-        $start = max(0, $idx[$id]['off'] - $back);
-        if (fseek($fh, $start) !== 0) continue;
-        $chunk = fread($fh, $idx[$id]['off'] - $start);
-        if ($chunk === false) continue;
-        $chunk = rtrim($chunk, "\r\n");
-        $nl    = strrpos($chunk, "\n");
-        $hdr   = $nl === false ? $chunk : substr($chunk, $nl + 1);
-        if ($hdr !== '' && $hdr[0] === '>') $out[$id] = substr($hdr, 1);
-    }
-    fclose($fh);
-    return $out;
-}
-
-/**
  * Sequences AND headers in ONE pass over the index.
  *
- * moop_fasta_fetch() and moop_fasta_headers() each scan the .fai independently, so calling
- * both costs two scans of a 1.3MB index — ~3.3ms apiece, doubled, per FASTA. Every caller
- * that keys results by header needs both, so it is always the pair. This does the lookup
- * once and reuses it.
+ * Callers key results by the WHOLE header (description included — what blastdbcmd emits),
+ * so they need both the header and the sequence. Separate fetch/header functions meant two
+ * scans of a 1.3MB index (~3.3ms apiece) per FASTA; this does the lookup once. (The pair
+ * was deleted 2026-10-13 once nothing called them.)
+ *
+ * The sequence is UPPERCASED. Source FASTAs are often soft-masked (repeats in lowercase,
+ * 382,143 such lines in one CDS file); blastdbcmd and extractFastaRegion() uppercase, so
+ * this reader alone made the gene page show lowercase where the Data Exporter and Sequence
+ * Retrieval did not. One case everywhere also keeps lowercase free to MEAN something if
+ * MOOP ever marks masked regions deliberately.
  *
  * @param  list<string> $ids
  * @return array<string, array{seq:string, header:string}>  keyed by id, caller order
@@ -216,7 +138,7 @@ function moop_fasta_fetch_with_headers(string $fasta, array $ids): array
         $seq = preg_replace('/\s+/', '', $raw);
         if ($seq === null || strlen($seq) !== $e['len']) continue;   // stale index guard
 
-        $out[$id] = ['seq' => $seq, 'header' => ($hdr !== '' ? $hdr : $id)];
+        $out[$id] = ['seq' => strtoupper($seq), 'header' => ($hdr !== '' ? $hdr : $id)];
     }
     fclose($fh);
     return $out;

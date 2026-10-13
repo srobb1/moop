@@ -41,6 +41,7 @@
    admin pages get out of the way. This is about where the values live, not making them match. */
 :root {
   --moop-tool-header:     #0891b2;  /* tool page header (MOOP teal) */
+  --moop-tool-hover:      #0e7490;  /* that teal, one step darker: hover on teal buttons */
   --moop-organism-header: #0f766e;  /* organism-level header (dark teal) */
   --moop-assembly-header: #e11d48;  /* assembly / gene-set header (rose) */
   --moop-action:          #6366f1;  /* the committed action on a tool page (indigo) */
@@ -83,6 +84,14 @@
 .btn-moop-teal {
   background-color: var(--moop-tool-header);
   border-color: var(--moop-tool-header);
+  color: #fff;
+}
+/* Without this, Bootstrap's .btn:hover (whose hover colour is transparent for a bare .btn)
+   took the fill away and left white text on a white card: the button vanished under the
+   pointer. Found on Sequence Retrieval's "Load examples"; BLAST's sample buttons had it too. */
+.btn-moop-teal:hover, .btn-moop-teal:focus-visible, .btn-moop-teal:active {
+  background-color: var(--moop-tool-hover);
+  border-color: var(--moop-tool-hover);
   color: #fff;
 }
 
