@@ -127,7 +127,18 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     // Get configured BLAST tool path
     $config = ConfigManager::getInstance();
     $blast_tools = $config->getArray('blast_tools', []);
-    $program_path = $blast_tools[$program] ?? $program;
+
+    // ONLY these binaries, and the path shell-quoted. $program arrives from a form field
+    // (tools/blast.php posts blast_program), and this used to fall back to `?? $program`
+    // and put it into the command UNQUOTED: any posted value that was not a configured
+    // tool name became shell text -- remote command execution as the web server user,
+    // reachable anonymously on any public assembly. Found and closed 2026-10-13.
+    if (!in_array($program, ['blastn', 'blastp', 'blastx', 'tblastn', 'tblastx'], true)) {
+        unlink($archive_file);
+        $result['error'] = 'Unknown BLAST program.';
+        return $result;
+    }
+    $program_path = escapeshellarg($blast_tools[$program] ?? $program);
     $num_threads = (int)$config->getString('blast_num_threads', '2');
     if ($num_threads < 1) $num_threads = 1;
 
