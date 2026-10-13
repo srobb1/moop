@@ -151,7 +151,9 @@ $row = getFeatureById($ancestor_feature_id, $db, $accessible_gene_set_ids);
 
 // Get all info about Highest Parent
 if (empty($row)) { 
-    die("The gene $uniquename was not found in the database. Please, check the spelling carefully or try to find it in the search tool.");
+    // Escaped: $uniquename is the raw URL value. Printed as-is it was reflected XSS on a public
+    // page -- any link could run its own script as whoever clicked (found 2026-10-13).
+    die("The gene " . htmlspecialchars($uniquename) . " was not found in the database. Please, check the spelling carefully or try to find it in the search tool.");
 }
 
 $feature_id = $row['feature_id'];
@@ -247,7 +249,7 @@ if ($tabix_available || $gff_available) {
                 // mRNA -- which would populate $isoforms just enough to skip the targeted
                 // greps below and render isoforms with no structure. Without an index a
                 // gene falls through to Step 2, exactly as it did before.
-                exec('grep -F ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $region_lines);
+                exec('grep -F -e ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $region_lines);
             }
         }
     }
@@ -257,7 +259,7 @@ if ($tabix_available || $gff_available) {
         exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $region_lines);
         if (empty($region_lines)) {
             $tmp = [];
-            exec('grep -m1 -F ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
+            exec('grep -m1 -F -e ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
             if (!empty($tmp[0])) {
                 $p = explode("\t", $tmp[0]);
                 if (isset($p[2]) && strtolower($p[2]) === strtolower($type)) $region_lines = $tmp;

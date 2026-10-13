@@ -33,7 +33,9 @@ $organism_name    = $organism_context['name'];
 
 $assembly   = preg_replace('/[^a-zA-Z0-9._\-]/', '', $_GET['assembly']);
 $gene_set   = preg_replace('/[^a-zA-Z0-9._\-]/', '', $_GET['gene_set'] ?? 'v1') ?: 'v1';
-$uniquename = trim($_GET['uniquename']);   // escapeshellarg handles shell safety below
+// escapeshellarg() stops shell injection; `-e` in front of it stops OPTION injection -- a
+// value like "-f/some/file" was otherwise read by grep as an option, not a pattern.
+$uniquename = trim($_GET['uniquename']);
 
 if (empty($assembly) || empty($uniquename)) {
     http_response_code(400);
@@ -63,7 +65,7 @@ $gene_lines = [];
 exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $gene_lines);
 if (empty($gene_lines)) {
     $tmp = [];
-    exec('grep -m1 -F ' . escapeshellarg($uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
+    exec('grep -m1 -F -e ' . escapeshellarg($uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
     if (!empty($tmp[0]) && str_contains($tmp[0], 'ID=') && !str_contains($tmp[0], 'Parent=')) {
         $gene_lines = $tmp;
     }

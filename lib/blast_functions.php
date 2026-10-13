@@ -279,7 +279,7 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     // Convert ASN.1 archive to outfmt 5 (XML) using blast_formatter
     $xml_file = tempnam($temp_dir, 'blast_xml_');
     $blast_formatter_path = $blast_tools['blast_formatter'] ?? 'blast_formatter';
-    $formatter_cmd = $blast_formatter_path . ' -archive ' . escapeshellarg($archive_file) . 
+    $formatter_cmd = escapeshellarg($blast_formatter_path) . ' -archive ' . escapeshellarg($archive_file) . 
                      ' -outfmt 5 -out ' . escapeshellarg($xml_file);
     
     $process = proc_open($formatter_cmd, $descriptors, $pipes);
@@ -306,7 +306,7 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     
     // Now convert ASN.1 archive to outfmt 0 (Pairwise text) for download
     $pairwise_file = tempnam($temp_dir, 'blast_pairwise_');
-    $formatter_cmd = $blast_formatter_path . ' -archive ' . escapeshellarg($archive_file) . 
+    $formatter_cmd = escapeshellarg($blast_formatter_path) . ' -archive ' . escapeshellarg($archive_file) . 
                      ' -outfmt 0 -out ' . escapeshellarg($pairwise_file);
     
     $process = proc_open($formatter_cmd, $descriptors, $pipes);
@@ -339,7 +339,7 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     $tabular_output = '';
     $tabular_file = tempnam($temp_dir, 'blast_tabular_');
     $tabular_fmt = '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle';
-    $formatter_cmd = $blast_formatter_path . ' -archive ' . escapeshellarg($archive_file) .
+    $formatter_cmd = escapeshellarg($blast_formatter_path) . ' -archive ' . escapeshellarg($archive_file) .
                      ' -outfmt ' . escapeshellarg($tabular_fmt) . ' -out ' . escapeshellarg($tabular_file);
     $process = proc_open($formatter_cmd, $descriptors, $pipes);
     if (is_resource($process)) {
@@ -415,7 +415,7 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
 
     $blast_tools     = ConfigManager::getInstance()->getArray('blast_tools', []);
     $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';
-    $cmd = $blastdbcmd_path . ' -db ' . escapeshellarg($blast_db) . ' -entry_batch ' . escapeshellarg($temp_file) . ' 2>&1';
+    $cmd = escapeshellarg($blastdbcmd_path) . ' -db ' . escapeshellarg($blast_db) . ' -entry_batch ' . escapeshellarg($temp_file) . ' 2>&1';
     $output     = [];
     $return_var = 0;
     @exec($cmd, $output, $return_var);

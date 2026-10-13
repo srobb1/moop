@@ -418,7 +418,7 @@ function extractSequencesFromFasta($fasta_file, $feature_ids, $seq_type, &$error
     $blast_tools = $config->getArray('blast_tools', []);
     $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';
     $ids_string = implode(',', $search_ids);
-    $cmd = $blastdbcmd_path . " -db " . escapeshellarg($fasta_file) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
+    $cmd = escapeshellarg($blastdbcmd_path) . " -db " . escapeshellarg($fasta_file) . " -entry " . escapeshellarg($ids_string) . " 2>/dev/null";
     $output = [];
     $return_var = 0;
     @exec($cmd, $output, $return_var);

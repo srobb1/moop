@@ -438,7 +438,7 @@ function fetchData($sql, $dbFile, $params = []) {
         $dbh = null;
         return $result;
     } catch (PDOException $e) {
-        die("Query failed: " . $e->getMessage());
+        die("Query failed: " . htmlspecialchars($e->getMessage()));
     }
 }
 
@@ -578,7 +578,7 @@ function verifyOrganismDatabase($organism_name, $organism_data_dir) {
     
     if (!file_exists($db_path)) {
         header("HTTP/1.1 500 Internal Server Error");
-        die("Error: Database not found for organism '$organism_name'. Please ensure the organism is properly configured.");
+        die("Error: Database not found for organism '" . htmlspecialchars($organism_name) . "'. Please ensure the organism is properly configured.");
     }
     
     return $db_path;

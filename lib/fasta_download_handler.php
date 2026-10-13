@@ -94,7 +94,7 @@ $files    = $filename !== null ? glob("$assembly_dir/$filename") : [];
 
 if (empty($files)) {
     http_response_code(404);
-    die("Error: FASTA file not found for sequence type '$type'.");
+    die("Error: FASTA file not found for sequence type '" . htmlspecialchars($type) . "'.");
 }
 
 $fasta_file = $files[0];
