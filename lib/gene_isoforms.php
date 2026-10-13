@@ -14,10 +14,10 @@
  * other silently finds nothing — which is the same trap ExonMap documents, and
  * the reason sequence lookup tries both forms rather than assuming either.
  *
- * NOTE tools/parent.php:360 does the same GFF grep inline to build its gene
- * model. It should move to this function next time someone is in both files;
- * it was left alone here to keep a new tool's first draft from editing the gene
- * page.
+ * The GFF itself is read by lib/gff_gene_model.php -- the one gene-model reader the gene page
+ * and the GFF download share (2026-10-13). This file used to grep for `Parent=<id>` itself,
+ * which found NOTHING on 40% of sampled gene pages: a RefSeq gene's database id is its GeneID
+ * (102421115) while its transcripts hang under "gene-FHDC1", and Schmidtea links by geneID=.
  */
 
 if (!function_exists('moop_gene_isoforms')) {
@@ -25,67 +25,37 @@ if (!function_exists('moop_gene_isoforms')) {
 /**
  * Every transcript of a gene, in GFF order.
  *
- * @param string $gene_set_path Directory holding genes.gff and transcript.nt.fa
- * @param string $gene_id       The gene's GFF ID, e.g. "gene-LOC116613690"
+ * @param string $gene_uniquename The gene's DATABASE id, as the gene page has it -- matched to
+ *                                the GFF by lib/gff_gene_model.php (rna-/gene: prefixes, GeneID)
  * @return array Each: ['id','fasta_id','type','start','end','strand','length']
  *               'fasta_id' is '' when the transcript has no sequence in the
  *               FASTA, and 'length' is null then — an isoform we cannot offer a
  *               sequence for is still worth listing, but must not look pickable.
  */
-function moop_gene_isoforms(string $gene_set_path, string $gene_id): array
+function moop_gene_isoforms(string $organism, string $assembly, string $gene_set, string $gene_uniquename): array
 {
-    $gff = $gene_set_path . '/' . genes_gff_filename();
-    if ($gene_id === '' || !is_readable($gff)) {
-        return [];
-    }
+    require_once __DIR__ . '/gff_gene_model.php';
+    if ($gene_uniquename === '') return [];
+    $model = moop_gene_model($organism, $assembly, $gene_set, $gene_uniquename, '');
+    if ($model === null) return [];
 
-    // Anchored on the Parent= value ending at ';' or end of line, so
-    // "Parent=gene-LOC1" does not also match "Parent=gene-LOC10".
-    $lines = [];
-    exec('grep -E ' . escapeshellarg('Parent=' . preg_quote($gene_id, '/') . '(;|$)')
-         . ' ' . escapeshellarg($gff), $lines);
-
-    // The FASTA's own index tells us which transcripts actually have sequence,
-    // and how long they are — one small read instead of one samtools call per
-    // isoform just to find out whether it exists.
-    $lengths = [];
+    $transcripts = array_values(array_filter($model['children'], fn($c) => $c['id'] !== '' && moop_gff_is_transcript_type($c['type'])));
+    $gene_set_path = ConfigManager::getInstance()->getPath('organism_data') . "/$organism/$assembly/$gene_set";
     $fai = $gene_set_path . '/transcript.nt.fa.fai';
-    if (is_readable($fai)) {
-        $fh = fopen($fai, 'r');
-        while (($row = fgets($fh)) !== false) {
-            $tab = strpos($row, "\t");
-            if ($tab === false) continue;
-            $name = substr($row, 0, $tab);
-            $rest = explode("\t", rtrim($row));
-            $lengths[$name] = (int)($rest[1] ?? 0);
-        }
-        fclose($fh);
+    $wanted = [];
+    foreach ($transcripts as $t) {
+        $wanted[] = $t['id'];
+        $wanted[] = preg_replace('/^(?:rna|cds|gene|id)-/', '', $t['id']);
     }
+    require_once __DIR__ . '/fasta_index.php';
+    $idx = is_readable($fai) ? moop_fai_lookup($fai, array_values(array_unique($wanted))) : [];
 
     $out = [];
-    foreach ($lines as $line) {
-        $p = explode("\t", $line);
-        if (count($p) < 9 || !preg_match('/\bID=([^;]+)/', $p[8], $m)) {
-            continue;
-        }
-        $id   = $m[1];
-        $bare = preg_replace('/^(?:rna|cds|gene|id)-/', '', $id);
-
-        $fasta_id = '';
-        if (isset($lengths[$id]))        $fasta_id = $id;
-        elseif (isset($lengths[$bare]))  $fasta_id = $bare;
-
-        $out[] = [
-            'id'       => $id,
-            'fasta_id' => $fasta_id,
-            'type'     => $p[2],
-            'start'    => (int)$p[3],
-            'end'      => (int)$p[4],
-            'strand'   => $p[6],
-            'length'   => $fasta_id !== '' ? $lengths[$fasta_id] : null,
-        ];
+    foreach ($transcripts as $t) {
+        $bare = preg_replace('/^(?:rna|cds|gene|id)-/', '', $t['id']);
+        $fasta_id = isset($idx[$t['id']]) ? $t['id'] : (isset($idx[$bare]) ? $bare : '');
+        $out[] = $t + ['fasta_id' => $fasta_id, 'length' => $fasta_id !== '' ? $idx[$fasta_id]['len'] : null];
     }
-
     return $out;
 }
 
@@ -108,7 +78,8 @@ function moop_primer_sequence_types(): array
  * The filename comes from the sequence_types config, the same mapping the
  * Sequences section renders from, rather than a second hardcoded list.
  *
- * @param string $id       Either id convention; both are tried.
+ * @param string $id       The exact FASTA id (e.g. "X-RA:cds" from the Sequences card), or a
+ *                         transcript id in either convention (rna- prefixed or bare); both are tried.
  * @param string $seq_type One of moop_primer_sequence_types().
  */
 function moop_transcript_sequence(string $gene_set_path, string $id, string $seq_type = 'transcript'): string
@@ -124,14 +95,12 @@ function moop_transcript_sequence(string $gene_set_path, string $id, string $seq
         return '';
     }
 
-    foreach ([$id, preg_replace('/^(?:rna|cds|gene|id)-/', '', $id)] as $try) {
-        $out = [];
-        exec('samtools faidx ' . escapeshellarg($fa) . ' ' . escapeshellarg($try) . ' 2>/dev/null', $out);
-        array_shift($out);                       // the header line
-        $seq = strtoupper(implode('', $out));
-        if ($seq !== '') {
-            return $seq;
-        }
+    // The .fai reader the rest of the site uses (exact ids, uppercased like every other
+    // sequence on the site), rather than a `samtools faidx` process per lookup.
+    require_once __DIR__ . '/fasta_index.php';
+    $got = moop_fasta_fetch_with_headers($fa, array_values(array_unique([$id, preg_replace('/^(?:rna|cds|gene|id)-/', '', $id)])));
+    foreach ($got as $rec) {
+        if ($rec['seq'] !== '') return $rec['seq'];
     }
     return '';
 }

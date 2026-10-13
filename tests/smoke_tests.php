@@ -1027,6 +1027,51 @@ ok(moop_genomic_fasta_record('G', 'upstream', 500, ['chr' => 'c1', 'start' => 1,
        === ">G upstream_500bp c1:1-3(-)\nACG\n", 'header: ID, part, location and strand');
 
 // ----------------------------------------------------------------------------
+group('GFF gene model: whole-value id matching, one reader');
+require_once dirname(__DIR__) . '/lib/gff_gene_model.php';
+$_a = moop_gff_attrs('ID=rna-XM_1.2;Parent=gene-FHDC1;Dbxref=GeneID:102421115,Genbank:XM_1.2');
+ok(moop_gff_id_matches(['ID' => 'NV2g1.1'], 'NV2g1.1'), 'an identical id matches, version included');
+ok(moop_gff_id_matches($_a, 'XM_1.2'), 'an id after one source prefix (rna-) matches');
+ok(moop_gff_id_matches(['ID' => 'gene:ENSG1'], 'ENSG1'), '...and after gene:');
+ok(moop_gff_id_matches($_a, '102421115'), 'a RefSeq gene matches by its exact GeneID');
+ok(!moop_gff_id_matches(['ID' => 'X10'], 'X1'), 'X1 does NOT match X10 (the old strpos did)');
+ok(!moop_gff_id_matches(['ID' => 'g.10'], 'g.1'), 'a .1 version never matches .10');
+ok(!moop_gff_id_matches(['ID' => 'gene-A', 'Dbxref' => 'GeneID:1024211150'], '102421115'), 'a GeneID must match whole');
+ok(moop_gff_parents(moop_gff_attrs('ID=t1;Parent=a,b')) === ['a', 'b'], 'Parent= may list several parents');
+ok(moop_gff_parents(moop_gff_attrs('ID=SlugcT1.1;geneID=SlugcG1')) === ['SlugcG1'], 'geneID= links a transcript with no Parent=');
+ok(moop_gff_parents(moop_gff_attrs('ID=SlugcG1;geneID=SlugcG1')) === [], '...but not a gene to itself');
+
+// End to end on a made-up gene set: gene X1 overlaps its neighbour X10, whose line comes FIRST.
+$_od = sys_get_temp_dir() . '/moop_gm_' . getmypid();
+@mkdir("$_od/OrgA/asm1/gs1", 0777, true);
+file_put_contents("$_od/OrgA/asm1/gs1/genes.gff", implode("\n", [
+    "c1\tx\tgene\t100\t900\t.\t+\t.\tID=X10",
+    "c1\tx\tmRNA\t100\t900\t.\t+\t.\tID=X10-RA;Parent=X10",
+    "c1\tx\texon\t100\t900\t.\t+\t.\tParent=X10-RA",
+    "c1\tx\tgene\t200\t500\t.\t-\t.\tID=X1",
+    "c1\tx\tmRNA\t200\t500\t.\t-\t.\tID=X1-RA;Parent=X1",
+    "c1\tx\texon\t200\t300\t.\t-\t.\tParent=X1-RA",
+    "c1\tx\tCDS\t220\t300\t.\t-\t0\tParent=X1-RA",
+    "c1\tx\tgene\t1000\t2000\t.\t+\t.\tID=G2",
+    "c1\tx\ttranscript\t1000\t2000\t.\t+\t.\tID=G2.1;geneID=G2",
+    "c1\tx\texon\t1000\t2000\t.\t+\t.\tParent=G2.1",
+]) . "\n");
+$_cfg = ConfigManager::getInstance();
+$_rp = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['organism_data'] = $_od; $_c['genomes_directory'] = "$_od/none"; $_rp->setValue($_cfg, $_c);
+$_m = moop_gene_model('OrgA', 'asm1', 'gs1', 'X1');
+ok($_m && $_m['gff_id'] === 'X1' && array_column($_m['isoforms'], 'id') === ['X1-RA'],
+   'X1\'s model is X1, not its overlapping neighbour X10 that comes first');
+ok($_m && $_m['isoforms'][0]['cds'] === [['start' => 220, 'end' => 300]] && $_m['loc']['strand'] === '-',
+   'its exons, CDS and strand come with it');
+$_m = moop_gene_model('OrgA', 'asm1', 'gs1', 'G2');
+ok($_m && array_column($_m['isoforms'], 'id') === ['G2.1'], 'a geneID= transcript is drawn under its gene');
+ok(moop_gene_model('OrgA', 'asm1', 'gs1', 'X') === null, 'an id that is only a PREFIX of real ids finds nothing');
+$_rp->setValue($_cfg, $_saved);
+array_map('unlink', glob("$_od/OrgA/asm1/gs1/*")); @rmdir("$_od/OrgA/asm1/gs1"); @rmdir("$_od/OrgA/asm1"); @rmdir("$_od/OrgA"); @rmdir($_od);
+
+// ----------------------------------------------------------------------------
 group('Annotation scores: what each source\'s Score means, from the shipped table');
 require_once dirname(__DIR__) . '/lib/annotation_scores.php';
 $_sc = moop_score_config_normalize(json_decode(file_get_contents(dirname(__DIR__) . '/metadata/annotation_scores.json.example'), true));

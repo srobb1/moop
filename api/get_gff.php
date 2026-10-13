@@ -56,56 +56,15 @@ if (!file_exists($gff_file) || filesize($gff_file) === 0) {
     exit;
 }
 
-// --- Collect GFF lines for gene and all descendants ---
+// --- The gene and everything under it: the ONE gene-model reader (lib/gff_gene_model.php) ---
+// Ids are matched by whole value (ID, ID after one source prefix, or a RefSeq GeneID), parents by
+// Parent= or geneID=. This file used to run its own three greps of the whole GFF, matching with
+// substring patterns; the shared reader uses the tabix index when there is one.
+require_once __DIR__ . '/../lib/gff_gene_model.php';
+$model = moop_gene_model($organism_name, $assembly, $gene_set, $uniquename, '');
 
-// Level 1: the gene line itself.
-// Try 1: ID attribute (bare or Ensembl-prefixed). Try 2: uniquename anywhere in attributes
-// (NCBI GFFs store the numeric GeneID in Dbxref, not ID). Accept only top-level lines (no Parent=).
-$gene_lines = [];
-exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $gene_lines);
-if (empty($gene_lines)) {
-    $tmp = [];
-    exec('grep -m1 -F -e ' . escapeshellarg($uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
-    if (!empty($tmp[0]) && str_contains($tmp[0], 'ID=') && !str_contains($tmp[0], 'Parent=')) {
-        $gene_lines = $tmp;
-    }
-}
-
-// Extract the actual GFF ID — may differ from $uniquename (e.g. ID=gene-SYMBOL vs Dbxref GeneID).
-$gff_gene_id = $uniquename;
-if (!empty($gene_lines[0])) {
-    $gp = explode("\t", $gene_lines[0]);
-    if (!empty($gp[8]) && preg_match('/\bID=([^;]+)/', $gp[8], $id_m)) {
-        $gff_gene_id = $id_m[1];
-    }
-}
-
-// Level 2: direct children (mRNA, ncRNA, pseudogenic_transcript, etc.)
-$child_lines = [];
-exec('grep -E ' . escapeshellarg('Parent=' . preg_quote($gff_gene_id) . '(;|$)') . ' ' . escapeshellarg($gff_file), $child_lines);
-
-// Extract child IDs for the grandchild lookup
-$child_ids = [];
-foreach ($child_lines as $line) {
-    $parts = explode("\t", $line);
-    if (count($parts) >= 9 && preg_match('/ID=([^;]+)/', $parts[8], $m)) {
-        $child_ids[] = $m[1];
-    }
-}
-
-// Level 3: grandchildren (exon, CDS, UTR, etc.) — all fetched in one grep pass
-$grandchild_lines = [];
-if (!empty($child_ids)) {
-    $patterns = array_map(fn($id) => '-e ' . escapeshellarg('Parent=' . $id . ';'), $child_ids);
-    exec('grep -F ' . implode(' ', $patterns) . ' ' . escapeshellarg($gff_file), $grandchild_lines);
-    if (empty($grandchild_lines)) {
-        $patterns = array_map(fn($id) => '-e ' . escapeshellarg('Parent=' . $id), $child_ids);
-        exec('grep -F ' . implode(' ', $patterns) . ' ' . escapeshellarg($gff_file), $grandchild_lines);
-    }
-}
-
-// Output GFF3: gene first, then children, then grandchildren (parent-before-child order)
+// Output GFF3: the record first, then its children, then theirs (parent-before-child order)
 echo "##gff-version 3\n";
-foreach (array_merge($gene_lines, $child_lines, $grandchild_lines) as $line) {
+foreach ($model['lines'] ?? [] as $line) {
     echo $line . "\n";
 }

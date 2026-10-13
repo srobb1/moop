@@ -156,6 +156,22 @@ $context_organism = trim($_GET['organism']  ?? $_POST['organism']  ?? '');
 $context_assembly = trim($_GET['assembly']  ?? $_POST['assembly']  ?? '');
 $context_gene_set = trim($_GET['gene_set']  ?? $_POST['gene_set']  ?? '');
 $context_feature  = trim($_GET['feature']   ?? $_POST['feature']   ?? '');
+// The exact FASTA id of the sequence picked on a gene page's Sequences card ("X-RA:cds", a
+// RefSeq "cds-XP_...", ...) -- CDS ids cannot be derived from the transcript id.
+$context_seq_id   = trim($_GET['seq_id']    ?? $_POST['seq_id']    ?? '');
+
+// The gene set's files are read straight from these names, so they must name a gene set this
+// viewer may open -- the same check every other sequence path makes. Without it, any visitor
+// could prefill Primer Maker from a private gene set's FASTA (found 2026-10-13).
+if ($context_organism !== '' || $context_assembly !== '' || $context_gene_set !== '') {
+    $ctx_ok = $context_organism !== '' && $context_assembly !== '' && $context_gene_set !== ''
+           && !array_filter([$context_organism, $context_assembly, $context_gene_set],
+                            fn($n) => strpbrk($n, "/\\\0") !== false || $n[0] === '.')
+           && has_gene_set_access($context_organism, $context_assembly, $context_gene_set);
+    if (!$ctx_ok) {
+        $context_organism = $context_assembly = $context_gene_set = $context_feature = $context_seq_id = '';
+    }
+}
 
 $results       = [];
 $run_error     = null;
@@ -190,12 +206,20 @@ if (!in_array($seq_type, moop_primer_sequence_types(), true)) {
 if ($context_organism !== '' && $context_assembly !== '' && $context_gene_set !== '' && $context_feature !== '') {
     $gene_set_path = $config->getPath('organism_data') . '/' . $context_organism
                    . '/' . $context_assembly . '/' . $context_gene_set;
-    $isoforms = moop_gene_isoforms($gene_set_path, $context_feature);
+    $isoforms = moop_gene_isoforms($context_organism, $context_assembly, $context_gene_set, $context_feature);
 
     // Only isoforms that actually have sequence can be offered. One that does
     // not is still listed, disabled, rather than silently dropped — a gene that
     // shows 6 of 7 transcripts with no explanation looks like missing data.
     $with_seq = array_values(array_filter($isoforms, fn($i) => $i['fasta_id'] !== ''));
+
+    // The gene page names the transcript by its DATABASE id (XM_...); this list uses the GFF's
+    // (rna-XM_...). Select the same isoform either way.
+    if ($selected_isoform !== '' && !in_array($selected_isoform, array_column($isoforms, 'id'), true)) {
+        foreach ($isoforms as $__iso) {
+            if (preg_replace('/^[A-Za-z]+[-:]/', '', $__iso['id']) === $selected_isoform) { $selected_isoform = $__iso['id']; break; }
+        }
+    }
 
     if ($selected_isoform === '' && count($with_seq) === 1) {
         $selected_isoform = $with_seq[0]['id'];
@@ -207,9 +231,12 @@ if ($context_organism !== '' && $context_assembly !== '' && $context_gene_set !=
     $load_isoform = isset($_POST['load_isoform']);
     if ($selected_isoform !== ''
         && ($load_isoform || $_SERVER['REQUEST_METHOD'] !== 'POST' || trim($_POST['sequence'] ?? '') === '')) {
-        $seq = moop_transcript_sequence($gene_set_path, $selected_isoform, $seq_type);
+        // The exact sequence the Sequences card showed, when it said which; otherwise the
+        // transcript's (by either id convention).
+        $fetch_id = ($context_seq_id !== '' && !isset($_POST['load_isoform'])) ? $context_seq_id : $selected_isoform;
+        $seq = moop_transcript_sequence($gene_set_path, $fetch_id, $seq_type);
         if ($seq !== '') {
-            $sequence_text = '>' . preg_replace('/^(?:rna|cds|gene|id)-/', '', $selected_isoform)
+            $sequence_text = '>' . preg_replace('/^(?:rna|cds|gene|id)-/', '', $fetch_id)
                            . "\n" . chunk_split($seq, 60, "\n");
         }
     }

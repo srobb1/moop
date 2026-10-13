@@ -192,223 +192,31 @@ $gene_set_dir     = $assembly_dir_base . '/' . $gene_set_name;
 // gene has 0 annotations for that type.
 $annotated_child_types = getAnnotatedFeatureTypesInGeneSet((int)$feature_gene_set_id, $db, moop_cache_dir_for($gene_set_dir));
 
-// Look up feature coordinates and build gene model from GFF.
-// Fast path: feature_coords.tsv (tiny file) → tabix indexed GFF (milliseconds).
-// Fallback:  plain grep on genes.gff for gene sets not yet indexed.
-// With tabix the whole region is fetched in one call and parsed in PHP —
-// no separate grep passes for mRNAs or exons.
-$feature_loc   = null;
-$gene_model    = null;
-$gff_file      = "$gene_set_dir/" . genes_gff_filename();
-$gff_available = file_exists($gff_file) && filesize($gff_file) > 0;
-
-$genomes_dir        = $config->getPath('genomes_directory');
-$tabix_gff          = "$genomes_dir/$organism_name/$genome_accession/$gene_set_name/annotations.gff3.gz";
-$tabix_available    = file_exists($tabix_gff) && (file_exists("$tabix_gff.tbi") || file_exists("$tabix_gff.csi"));
-$feature_coords_tsv = "$gene_set_dir/feature_coords.tsv";
-
-if ($tabix_available || $gff_available) {
-    $region_lines = [];   // all GFF lines for this gene's region
-
-    // ── Step 1: get coordinates from feature_coords.tsv ─────────────────────
-    //
-    // The file is keyed on the TRANSCRIPT in column 1, with that transcript's GENE in
-    // column 2:
-    //
-    //     NV2t011319001.1      NV2g011319000.1   chr2   6033193   6048126   +
-    //     NV2t011319001.1:cds  NV2g011319000.1   chr2   6033193   6048126   +
-    //
-    // So a column-1 lookup can never match on a GENE page, which is what this page shows
-    // in almost every case -- the controller resolves whatever was requested up to its
-    // gene. The lookup missed every time, Step 2 found only the bare gene record, and the
-    // model was then rebuilt by two more scans of the whole genes.gff further down.
-    // Three full passes over 49 MB for Nematostella NV2, on every load, while the tabix
-    // index that answers the same question in one seek sat unused on 69 of 72 gene sets.
-    // Measured: 0.59s -> 0.08s cold, 0.44s -> 0.08s warm.
-    $coord_out    = [];
-    $matched_self = false;   // did we match THIS feature, or its gene?
-    if (file_exists($feature_coords_tsv)) {
-        exec('grep -m1 ' . escapeshellarg('^' . $feature_uniquename . "\t") . ' ' . escapeshellarg($feature_coords_tsv), $coord_out);
-        $matched_self = !empty($coord_out[0]);
-
-        if (!$matched_self) {
-            // Not a transcript — try column 2, i.e. treat it as a gene id. awk rather than
-            // grep so the field is matched exactly and cannot hit a coordinate or a
-            // neighbouring column; it exits at the first hit, so it is one partial pass.
-            exec('awk -F "\t" -v u=' . escapeshellarg($feature_uniquename)
-                 . ' ' . escapeshellarg('$2==u {print; exit}')
-                 . ' ' . escapeshellarg($feature_coords_tsv), $coord_out);
-        }
+// The gene's location and its drawable model, from the ONE gene-model reader
+// (lib/gff_gene_model.php): tabix region when indexed, grep of genes.gff otherwise, ids
+// matched by whole value. This page used to carry its own two copies of that parse, matched
+// ids with strpos(), and read only Parent= links.
+require_once __DIR__ . '/../lib/gff_gene_model.php';
+$feature_loc = null;
+$gene_model  = null;
+$__gm = moop_gene_model($organism_name, $genome_accession, $gene_set_name, $feature_uniquename, $type);
+if ($__gm !== null) {
+    $feature_loc = $__gm['loc'];
+    if ($__gm['isoforms']) {
+        $gene_model = [
+            'gene'     => array_merge($feature_loc, ['id' => $feature_uniquename, 'type' => $type]),
+            // 'anchor' is repointed at the annotation cards once the children are known (below).
+            'isoforms' => array_map(fn($i) => [
+                'id' => $i['id'], 'type' => $i['type'],
+                'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $i['id'] . '_' . ($analysis_order[0] ?? 'annotation')),
+                'start' => $i['start'], 'end' => $i['end'], 'strand' => $i['strand'],
+                'exons' => $i['exons'], 'cds' => $i['cds'],
+            ], $__gm['isoforms']),
+        ];
     }
-
-    if (!empty($coord_out[0])) {
-        $cp = explode("\t", trim($coord_out[0]));   // uniquename, gene_id, seqname, start, end, strand
-        if (count($cp) >= 5) {
-            $feature_loc = [
-                'seqname'    => $cp[2],
-                'start'      => (int)$cp[3],
-                'end'        => (int)$cp[4],
-                'strand'     => $cp[5] ?? '.',
-                'loc_string' => $cp[2] . ':' . $cp[3] . '-' . $cp[4],
-            ];
-            $region = escapeshellarg($cp[2] . ':' . $cp[3] . '-' . $cp[4]);
-            if ($tabix_available) {
-                exec('tabix ' . escapeshellarg($tabix_gff) . ' ' . $region, $region_lines);
-            } elseif ($gff_available && $matched_self) {
-                // Only safe when the row IS this feature. On a gene, `grep -F <gene id>`
-                // returns the gene and its mRNAs but NOT the exons, whose Parent is the
-                // mRNA -- which would populate $isoforms just enough to skip the targeted
-                // greps below and render isoforms with no structure. Without an index a
-                // gene falls through to Step 2, exactly as it did before.
-                exec('grep -F -e ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $region_lines);
-            }
-        }
-    }
-
-    // ── Step 2: fallback grep if feature_coords.tsv missed ──────────────────
-    if (empty($region_lines) && $gff_available) {
-        exec('grep -m1 -E ' . escapeshellarg('ID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)') . ' ' . escapeshellarg($gff_file), $region_lines);
-        if (empty($region_lines)) {
-            $tmp = [];
-            exec('grep -m1 -F -e ' . escapeshellarg($feature_uniquename) . ' ' . escapeshellarg($gff_file), $tmp);
-            if (!empty($tmp[0])) {
-                $p = explode("\t", $tmp[0]);
-                if (isset($p[2]) && strtolower($p[2]) === strtolower($type)) $region_lines = $tmp;
-            }
-        }
-        if (!$feature_loc && !empty($region_lines[0])) {
-            $p = explode("\t", $region_lines[0]);
-            if (count($p) >= 7) {
-                $feature_loc = [
-                    'seqname'    => $p[0], 'start' => (int)$p[3], 'end' => (int)$p[4],
-                    'strand'     => $p[6], 'loc_string' => $p[0] . ':' . $p[3] . '-' . $p[4],
-                ];
-            }
-        }
-    }
-
-    // ── Step 3: parse region lines for gene model ────────────────────────────
-    if ($feature_loc && !empty($region_lines)) {
-        $gff_gene_id = $feature_uniquename;
-        $isoforms    = [];
-        $exon_like   = ['exon', 'five_prime_utr', 'three_prime_utr', 'utr'];
-
-        // Resolve THIS gene's GFF id before looking at any child.
-        //
-        // A tabix region returns every line OVERLAPPING the span, so a neighbouring gene
-        // that overlaps this one arrives in the same batch — and its mRNAs are perfectly
-        // valid mRNA records. Without knowing our own id first we cannot tell them apart,
-        // and the ids are not sorted in our favour: an overlapping neighbour starting
-        // earlier is emitted first. NV2g007734000.1 (5 mRNAs) drew 6, the extra being
-        // NV2t007735001.1 — a different gene's transcript, in the diagram and in the
-        // sequence list built from it.
-        foreach ($region_lines as $line) {
-            $p = explode("\t", $line);
-            if (count($p) < 9) continue;
-            if (strtolower($p[2]) !== strtolower($type)) continue;
-            if (!preg_match('/\bID=([^;]+)/', $p[8], $gid_m)) continue;
-            if (strpos($p[8], $feature_uniquename) !== false ||
-                preg_match('/\bID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)/', $p[8])) {
-                $gff_gene_id = $gid_m[1];
-                break;
-            }
-        }
-
-        // First pass: collect the mRNA children OF THIS GENE
-        foreach ($region_lines as $line) {
-            $p = explode("\t", $line);
-            if (count($p) < 9) continue;
-            if (!preg_match('/\bID=([^;]+)/', $p[8], $id_m)) continue;
-
-            $ft = strtolower($p[2]);
-
-            // Gene record — capture the actual GFF ID (may differ from DB uniquename)
-            if ($ft === strtolower($type) && (
-                strpos($p[8], $feature_uniquename) !== false ||
-                preg_match('/\bID=[^;:]*:?' . preg_quote($feature_uniquename) . '(;|$)/', $p[8])
-            )) {
-                $gff_gene_id = $id_m[1];
-                continue;
-            }
-
-            // mRNA / transcript child — only if its Parent IS this gene. $parent was read
-            // here before and never compared, which is what let a neighbour's transcript
-            // into the diagram once the region fetch started returning more than one gene.
-            if (preg_match('/\bParent=([^;,]+)/', $p[8], $par_m)) {
-                $parent = $par_m[1];
-                if ($parent !== $gff_gene_id) continue;
-                if (in_array($ft, ['mrna', 'transcript', 'mrna_with_minus_1_frameshift']) || strpos($ft, 'rna') !== false) {
-                    $mid = $id_m[1];
-                    $isoforms[$mid] = [
-                        'id'     => $mid,
-                        'type'   => $p[2],
-                        'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $mid . '_' . ($analysis_order[0] ?? 'annotation')),
-                        'start'  => (int)$p[3],
-                        'end'    => (int)$p[4],
-                        'strand' => $p[6],
-                        'exons'  => [],
-                        'cds'    => [],
-                    ];
-                }
-            }
-        }
-
-        // Second pass: collect exon/CDS into their parent isoforms
-        foreach ($region_lines as $line) {
-            $p = explode("\t", $line);
-            if (count($p) < 9) continue;
-            $ft = strtolower($p[2]);
-            if ($ft !== 'cds' && !in_array($ft, $exon_like)) continue;
-            if (!preg_match('/\bParent=([^;,]+)/', $p[8], $pm)) continue;
-            if (!isset($isoforms[$pm[1]])) continue;
-            $coord = ['start' => (int)$p[3], 'end' => (int)$p[4]];
-            if ($ft === 'cds') {
-                $isoforms[$pm[1]]['cds'][]   = $coord;
-            } else {
-                $isoforms[$pm[1]]['exons'][] = array_merge($coord, ['type' => $p[2]]);
-            }
-        }
-
-        // If tabix region lacked mRNAs (fallback grep case), do one targeted grep
-        if (empty($isoforms) && $gff_available) {
-            $mrna_raw = [];
-            exec('grep -E ' . escapeshellarg('Parent=' . preg_quote($gff_gene_id) . '(;|$)') . ' ' . escapeshellarg($gff_file), $mrna_raw);
-            foreach ($mrna_raw as $line) {
-                $p = explode("\t", $line);
-                if (count($p) < 9 || !preg_match('/\bID=([^;]+)/', $p[8], $m)) continue;
-                $mid = $m[1];
-                $isoforms[$mid] = [
-                    'id' => $mid, 'type' => $p[2],
-                    'anchor' => 'annot_section_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $mid . '_' . ($analysis_order[0] ?? 'annotation')),
-                    'start' => (int)$p[3], 'end' => (int)$p[4], 'strand' => $p[6],
-                    'exons' => [], 'cds' => [],
-                ];
-            }
-            if (!empty($isoforms)) {
-                $patterns  = array_map(fn($mid) => '-e ' . escapeshellarg('Parent=' . $mid), array_keys($isoforms));
-                $child_raw = [];
-                exec('grep -F ' . implode(' ', $patterns) . ' ' . escapeshellarg($gff_file), $child_raw);
-                foreach ($child_raw as $line) {
-                    $p = explode("\t", $line);
-                    if (count($p) < 9) continue;
-                    $ft = strtolower($p[2]);
-                    if ($ft !== 'cds' && !in_array($ft, $exon_like)) continue;
-                    if (!preg_match('/\bParent=([^;,]+)/', $p[8], $pm) || !isset($isoforms[$pm[1]])) continue;
-                    $coord = ['start' => (int)$p[3], 'end' => (int)$p[4]];
-                    if ($ft === 'cds') $isoforms[$pm[1]]['cds'][] = $coord;
-                    else               $isoforms[$pm[1]]['exons'][] = array_merge($coord, ['type' => $p[2]]);
-                }
-            }
-        }
-
-        $isoform_list = array_values(array_filter($isoforms, fn($i) => !empty($i['exons']) || !empty($i['cds'])));
-        if (!empty($isoform_list)) {
-            $gene_model = [
-                'gene'     => array_merge($feature_loc, ['id' => $feature_uniquename, 'type' => $type]),
-                'isoforms' => $isoform_list,
-            ];
-        }
-    }
+} else {
+    // No GFF record: the gene's span from feature_coords.tsv still gives the overview its Location.
+    $feature_loc = moop_feature_coords_loc($gene_set_dir, $feature_uniquename);
 }
 
 // Check whether genomic sequence fetch is available (the genome FASTA stays at assembly level)
