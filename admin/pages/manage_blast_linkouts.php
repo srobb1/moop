@@ -241,9 +241,18 @@
       <div class="card mt-4 mb-4">
         <div class="card-header adm-head">
           <strong>Coordinate Indexes</strong>
-          <span class="text-muted ms-2 small">— Two flat files per gene set, both written automatically when an assembly is registered in JBrowse, and both regenerable here for gene sets registered before they existed.
-          <code>feature_coords.tsv</code> powers Genome Browser linkouts on feature BLAST databases (protein / mRNA / CDS);
-          <code>exon_coords.tsv</code> lets Primer BLAST place a cDNA product on the genome, which is what gives a junction-spanning primer a browser link.</span>
+          <span class="text-muted ms-2 small">— two files per gene set</span>
+        </div>
+        <?php // The explanation lived in the header line, a paragraph long. It belongs under it. ?>
+        <div class="card-body small text-muted border-bottom">
+          <p class="mb-2">Both are written automatically when an assembly is registered in JBrowse.
+            Regenerate here for a gene set registered before a file existed, or after its <code class="text-nowrap"><?= genes_gff_filename() ?></code> changed.</p>
+          <ul class="mb-0 ps-3">
+            <li><code>feature_coords.tsv</code> — where each gene sits. Genome Browser links on protein / mRNA / CDS BLAST hits,
+              and gene regions and flanks in Sequence Retrieval and the Data Exporter.</li>
+            <li><code>exon_coords.tsv</code> — each transcript's exons. Transcript genomic spans in Sequence Retrieval,
+              Primer BLAST placing a cDNA product on the genome, and gene lengths for expression TPM.</li>
+          </ul>
         </div>
         <div class="card-body p-0">
 
@@ -331,10 +340,10 @@
                 <th>Assembly</th>
                 <th>Gene Set</th>
                 <th>Feature index
-                  <div class="fw-normal small text-muted"><code>feature_coords.tsv</code> — BLAST linkouts</div>
+                  <div class="fw-normal small text-muted"><code>feature_coords.tsv</code></div>
                 </th>
                 <th>Exon index
-                  <div class="fw-normal small text-muted"><code>exon_coords.tsv</code> — Primer BLAST cDNA linkouts</div>
+                  <div class="fw-normal small text-muted"><code>exon_coords.tsv</code></div>
                 </th>
               </tr>
             </thead>
