@@ -45,11 +45,25 @@ class PrimerBlast
     const MIN_LENGTH_FRACTION = 0.75;
 
     /**
+     * The search keeps every hit with up to this many mismatches, whatever the page's
+     * "Mismatches listed" box says. One under PrimerPairs::IGNORE_AT_TOTAL_MISMATCH
+     * (NCBI Primer-BLAST checks targets with up to 5): a single mismatch, or a few toward
+     * the 5' end, still amplify, so the VERDICT must see them. The box only decides what
+     * is LISTED -- until 2026-10-13 it filtered here, and at its default of 1 a pair could
+     * read "specific" over a 2-mismatch off-target that would amplify.
+     */
+    const SEARCH_MAX_MISMATCH = 5;
+
+    /** Default of the page's "Mismatches listed" box -- a DISPLAY filter, see above. */
+    const DISPLAY_MISMATCH_DEFAULT = 2;
+
+    /**
      * Run both primers of every pair against one BLAST database.
      *
      * @param array  $pairs        From PrimerInput::parse()['pairs'].
      * @param string $db           Path to the BLAST database (no extension).
-     * @param array  $options      ['max_mismatch' => int, 'blastn' => string]
+     * @param array  $options      ['max_mismatch' => int (search bound, default
+     *                             SEARCH_MAX_MISMATCH), 'blastn' => string]
      * @return array {
      *     @type bool   $success
      *     @type string $error
@@ -83,7 +97,7 @@ class PrimerBlast
             return $result;
         }
 
-        $max_mismatch = isset($options['max_mismatch']) ? (int)$options['max_mismatch'] : 1;
+        $max_mismatch = isset($options['max_mismatch']) ? (int)$options['max_mismatch'] : self::SEARCH_MAX_MISMATCH;
         $blastn       = $options['blastn'] ?? 'blastn';
 
         // Query ids are positional (q0f, q0r, q1f, ...) rather than the user's
@@ -151,16 +165,25 @@ class PrimerBlast
                 continue;
             }
 
-            $mismatch = (int)$mismatch;
             $length   = (int)$length;
+            $qstart   = (int)$qstart;
+            $qend     = (int)$qend;
+            $qlength  = $lengths[$qid];
 
             $pair_index = $id_map[$qid]['index'];
 
-            if ($length < $lengths[$qid] * self::MIN_LENGTH_FRACTION) {
+            if ($length < $qlength * self::MIN_LENGTH_FRACTION) {
                 $result['below_floor']++;
                 $result['discards'][$pair_index]['below_floor']++;
                 continue;
             }
+
+            // Over the WHOLE primer, not just the aligned part. BLAST's mismatch column
+            // counts substitutions inside the alignment only: a 20-mer aligned over 16
+            // bases read "0 mismatches", and gaps were not counted at all. (BLAT, used
+            // for this before, reports the full primer -- this restores that.)
+            $aligned_mismatch = (int)$mismatch;
+            $mismatch = self::fullLengthMismatches($btop, $qstart, $qend, $qlength);
 
             if ($mismatch > $max_mismatch) {
                 $result['over_mismatch']++;
@@ -168,8 +191,11 @@ class PrimerBlast
                 continue;
             }
 
-            $sstart = (int)$sstart;
-            $send   = (int)$send;
+            // The primer's FULL footprint on the subject: extend the alignment by the
+            // primer bases it left uncovered, so product sizes and browser boxes cover
+            // the whole primer. Query start maps to the low end on the + strand and to
+            // the high end on the - strand.
+            list($sstart, $send) = self::fullFootprint((int)$sstart, (int)$send, $qstart, $qend, $qlength);
 
             $meta = $id_map[$qid];
             $result['hits'][$meta['index']][$meta['side']][] = [
@@ -181,22 +207,55 @@ class PrimerBlast
                 'start'    => min($sstart, $send),
                 'end'      => max($sstart, $send),
                 'length'   => $length,
-                'mismatch' => $mismatch,
+                'mismatch' => $mismatch,           // whole primer: substitutions + gaps + uncovered ends
+                'aligned_mismatch' => $aligned_mismatch,  // BLAST's own column, aligned part only
                 'gapopen'  => (int)$gapopen,
-                'qstart'   => (int)$qstart,
-                'qend'     => (int)$qend,
-                'qlength'  => $lengths[$qid],
+                'qstart'   => $qstart,
+                'qend'     => $qend,
+                'qlength'  => $qlength,
                 // Mismatches inside the 3'-end window, INCLUDING any part of that
                 // window the alignment never reached: an unaligned 3' tail is not a
                 // match, and treating it as one would call a truncated hit clean.
                 'three_prime_mismatch' => self::threePrimeMismatches(
-                    $btop, (int)$qstart, (int)$qend, $lengths[$qid]
+                    $btop, $qstart, $qend, $qlength
                 ),
             ];
         }
 
         $result['success'] = true;
         return $result;
+    }
+
+    /**
+     * Mismatches over the whole primer: every BTOP operation (a substitution, or a gap
+     * on either side -- each costs one base of agreement) plus the primer bases the
+     * alignment never reached at either end.
+     *
+     * @param string $btop    BLAST traceback operations for the alignment.
+     * @param int    $qstart  1-based query start of the alignment.
+     * @param int    $qend    1-based query end.
+     * @param int    $qlength Full primer length.
+     */
+    public static function fullLengthMismatches($btop, $qstart, $qend, $qlength)
+    {
+        // Strip the match run-lengths; what is left is two characters per operation.
+        $ops = (int)(strlen(preg_replace('/\d+/', '', $btop)) / 2);
+        return $ops + max(0, $qstart - 1) + max(0, $qlength - $qend);
+    }
+
+    /**
+     * The subject span the whole primer would occupy: the alignment extended by the
+     * uncovered query ends. Returns [sstart, send] in BLAST's orientation (sstart > send
+     * on the minus strand), never below base 1.
+     */
+    public static function fullFootprint($sstart, $send, $qstart, $qend, $qlength)
+    {
+        $lead  = max(0, $qstart - 1);         // uncovered 5' bases
+        $trail = max(0, $qlength - $qend);    // uncovered 3' bases
+        if ($sstart <= $send) {               // + strand: 5' end is the low coordinate
+            return [max(1, $sstart - $lead), $send + $trail];
+        }
+        return [$sstart + $lead, max(1, $send - $trail)];
     }
 
     /**

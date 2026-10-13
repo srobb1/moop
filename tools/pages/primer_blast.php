@@ -175,7 +175,7 @@ $db_section_label = function ($key) {
         <?php endif; ?>
 
         <form method="POST" id="primerBlastForm" enctype="multipart/form-data"
-              data-default-mismatch="1"
+              data-default-mismatch="<?= (int)PrimerBlast::DISPLAY_MISMATCH_DEFAULT ?>"
               data-default-product="<?= (int)PrimerPairs::MAX_PRODUCT_DEFAULT ?>"
               data-default-mode="genome">
             <?= csrf_input_field() ?>
@@ -300,17 +300,18 @@ $db_section_label = function ($key) {
                           <div class="card h-100 border">
                             <div class="card-body py-3">
                               <label for="max_mismatch" class="form-label mb-2">
-                                <strong>Mismatches allowed</strong>
+                                <strong>Mismatches listed</strong>
                                 <?= field_help(
-                                    'The most mismatches a match may have and still be kept. The default of 1 '
-                                    . 'keeps single-mismatch sites, because those can still prime and amplify — '
-                                    . 'a perfect-match-only search would hide real off-targets. Raise it to see '
-                                    . 'weaker sites too; set it to 0 for exact matches only.',
-                                    'Mismatches allowed'
+                                    'The search keeps every site with up to ' . PrimerBlast::SEARCH_MAX_MISMATCH . ' mismatches per '
+                                    . 'primer, because a single mismatch, or a few toward the 5′ end, can still '
+                                    . 'amplify — and the verdict is judged on all of them. This box only changes '
+                                    . 'which products are displayed in the results: those with this many '
+                                    . 'mismatches or fewer, counted over the whole primer.',
+                                    'Mismatches listed'
                                 ) ?>
                               </label>
                               <input type="number" class="form-control" id="max_mismatch" name="max_mismatch"
-                                     min="0" max="5" value="<?= (int)$max_mismatch ?>">
+                                     min="0" max="<?= (int)PrimerBlast::SEARCH_MAX_MISMATCH ?>" value="<?= (int)$max_mismatch ?>">
                             </div>
                           </div>
                         </div>
@@ -322,10 +323,11 @@ $db_section_label = function ($key) {
                                 <strong>Largest product to report</strong>
                                 <?= field_help(
                                     'Products bigger than this are counted but not listed. Standard PCR '
-                                    . 'makes about 2 kb, but the genomic product of a pair that spans an '
-                                    . 'intron includes the intron and is much larger — so the default is '
-                                    . 'set high enough to keep those visible. Lower it to see only what '
-                                    . 'would realistically amplify.',
+                                    . 'is dependable for products under ' . PrimerPairs::amplifiableKb() . ' kb; longer ones often amplify poorly '
+                                    . 'or not at all without a long-range polymerase. The genomic product of '
+                                    . 'a pair that spans an intron includes the intron and is much larger, so '
+                                    . 'the default is set high enough to keep those visible. Lower it to see '
+                                    . 'only what would realistically amplify.',
                                     'Largest product to report'
                                 ) ?>
                               </label>
@@ -385,8 +387,8 @@ $db_section_label = function ($key) {
                     <?= help_modal_trigger('results-help', '', 'How to read these results') ?>
                     <span class="ms-auto small">
                         <?= htmlspecialchars(implode(' + ', array_map($db_label, array_keys($searched_dbs)))) ?>
-                        · up to <?= (int)$max_mismatch ?> mismatch<?= $max_mismatch === 1 ? '' : 'es' ?>
-                        · products to <?= number_format($max_product) ?> bp
+                        · listing up to <?= (int)$max_mismatch ?> mismatch<?= $max_mismatch === 1 ? '' : 'es' ?>
+                        and <?= number_format($max_product) ?> bp
                     </span>
                 </div>
                 <div class="card-body">
@@ -408,10 +410,13 @@ $db_section_label = function ($key) {
                     // ONE quality call, with the reasons it is not clean. Counts alone made
                     // the reader do this arithmetic themselves, and "specific — 1 product"
                     // beside "gDNA: 2 products" read as a contradiction.
-                    // THE RULE (user, 2026-08-06): with traditional PCR a product under
-                    // 2 kb carrying fewer than 3 mismatches is expected to amplify. Count
-                    // those; one is clean, more than one is ambiguous. Everything else is
-                    // still LISTED -- it is real -- it just does not count.
+                    // THE RULE: a product counts when PrimerPairs::isAmplifiable() says it
+                    // would amplify -- under AMPLIFIABLE_MAX (3 kb since 2026-10-13), fewer than
+                    // 6 mismatches per primer, and fewer than 2 in the last 5 bases at the 3'
+                    // end (NCBI Primer-BLAST's thresholds). The search keeps every site up to
+                    // PrimerBlast::SEARCH_MAX_MISMATCH, so this sees all of them whatever the
+                    // "Mismatches listed" box says. One is clean, more than one is ambiguous.
+                    // Everything else is still LISTED -- it is real -- it just does not count.
                     $amp = function (array $found) {
                         return array_values(array_filter($found['products'] ?? [],
                             ['PrimerPairs', 'isAmplifiable']));
@@ -438,7 +443,20 @@ $db_section_label = function ($key) {
 
                     $total = $amp_intended;
 
-                    if ($total === 0) {
+                    // Products on the template that would amplify but for their LENGTH: they
+                    // are listed in the table (anything up to "Largest product to report"),
+                    // yet the verdict counts only those under AMPLIFIABLE_MAX. Without naming that, the
+                    // badge said "no product" above a perfect 3,733 bp genomic product
+                    // (Congeria COKUS1KC_0031865-RA, pair 5 across two introns).
+                    $too_long = array_values(array_filter($r['by_db'][$intended_db]['products'] ?? [],
+                        fn($pr) => $pr['size'] > PrimerPairs::AMPLIFIABLE_MAX
+                                && $pr['size'] <= $max_product
+                                && PrimerPairs::isAmplifiable(array_merge($pr, ['size' => 0]))));
+                    $kb = PrimerPairs::amplifiableKb();
+
+                    if ($total === 0 && $too_long) {
+                        $verdict = ['none', 'bg-secondary', 'no product under ' . $kb . ' kb'];
+                    } elseif ($total === 0) {
                         $verdict = ['none', 'bg-secondary', 'no product'];
                     } elseif (!$reasons) {
                         $verdict = ['specific', 'bg-success', 'specific'];
@@ -460,7 +478,16 @@ $db_section_label = function ($key) {
                                   // sits above a note about a self-pairing gDNA product and reads
                                   // as a contradiction. ?>
                             <div class="small text-muted mb-2">
-                                Nothing amplifies on your template at these settings.
+                                <?php if ($too_long):
+                                    $sizes = array_map(fn($pr) => number_format($pr['size']) . ' bp', $too_long);
+                                    $n     = count($too_long); ?>
+                                    <?= $n === 1 ? 'The product below is ' . $sizes[0]
+                                                 : 'The ' . $n . ' products below are ' . implode(', ', array_slice($sizes, 0, -1)) . ' and ' . end($sizes) ?>.
+                                    Standard PCR is dependable for products under <?= $kb ?> kb; longer ones often
+                                    amplify poorly or not at all, so <?= $n === 1 ? 'it is' : 'they are' ?> not counted.
+                                <?php else: ?>
+                                    Nothing amplifies on your template at these settings.
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
                         <?php if ($reasons): ?>
@@ -554,17 +581,26 @@ $db_section_label = function ($key) {
                                 // Split what the engine found into what this display limit shows
                                 // and what it does not. The verdict above used AMPLIFIABLE_MAX and
                                 // is unaffected by either.
-                                $shown = array_values(array_filter($found['products'], function ($pr) use ($max_product) {
-                                    return $pr['size'] <= $max_product;
+                                // Size and mismatches are both DISPLAY limits; a product hidden by
+                                // either still counted toward the verdict.
+                                $shown = array_values(array_filter($found['products'], function ($pr) use ($max_product, $max_mismatch) {
+                                    return $pr['size'] <= $max_product && $pr['max_mismatch'] <= $max_mismatch;
                                 }));
-                                $hidden_by_display = count($found['products']) - count($shown);
+                                // Each hidden product is counted ONCE: by size if it is too large,
+                                // otherwise by mismatches.
+                                $over_mm = count(array_filter($found['products'],
+                                    fn($pr) => $pr['size'] <= $max_product && $pr['max_mismatch'] > $max_mismatch));
+                                $hidden_by_display = count($found['products']) - count($shown) - $over_mm;
                                 $over_display = $hidden_by_display + (int)$found['over_max'];
                                 ?>
                                 <?php if (empty($shown)): ?>
                                     <div class="text-muted small mb-1">
-                                        <?php if ($over_display > 0): ?>
-                                            None under <?= number_format($max_product) ?> bp —
-                                            <?= number_format($over_display) ?> larger.
+                                        <?php if ($over_display > 0 || $over_mm > 0): ?>
+                                            None shown —
+                                            <?= implode(', ', array_filter([
+                                                $over_display ? number_format($over_display) . ' larger than ' . number_format($max_product) . ' bp' : '',
+                                                $over_mm ? $over_mm . ' with more than ' . $max_mismatch . ' mismatch' . ($max_mismatch === 1 ? '' : 'es') : '',
+                                            ])) ?>.
                                         <?php else: ?>
                                             No products.
                                         <?php endif; ?>
@@ -728,6 +764,13 @@ $db_section_label = function ($key) {
                                         larger than <?= number_format($max_product) ?> bp — raise the size limit to see <?= $over_display === 1 ? 'it' : 'them' ?>.
                                     </div>
                                 <?php endif; ?>
+                                <?php if ($over_mm > 0 && !empty($shown)): ?>
+                                    <div class="text-muted" style="font-size:0.8rem;">
+                                        <?= $over_mm ?> further product<?= $over_mm === 1 ? '' : 's' ?>
+                                        with more than <?= $max_mismatch ?> mismatch<?= $max_mismatch === 1 ? '' : 'es' ?> — raise
+                                        <strong>Mismatches listed</strong> to see <?= $over_mm === 1 ? 'it' : 'them' ?>.
+                                    </div>
+                                <?php endif; ?>
 
                             </div>
                         <?php endforeach; ?>
@@ -885,20 +928,29 @@ echo help_modal(
                 'label' => 'no product',
                 'color' => 'secondary',
                 'html'  => true,
-                'text'  => 'Nothing amplifies on your template <em>at these settings</em>. That is not '
-                         . 'the same as "these primers do not work" — a primer with more mismatches than '
-                         . 'the limit is invisible, so raising <strong>Mismatches allowed</strong> or '
-                         . '<strong>Largest product to report</strong> may reveal it.',
+                'text'  => 'Nothing would amplify on your template: no place where both primers bind, '
+                         . 'facing each other, with ' . PrimerBlast::SEARCH_MAX_MISMATCH . ' or fewer mismatches each. The '
+                         . '<strong>Mismatches listed</strong> and <strong>Largest product to report</strong> boxes '
+                         . 'do not change this — they only decide what is listed.',
+            ],
+            [
+                'label' => 'no product under ' . PrimerPairs::amplifiableKb() . ' kb',
+                'color' => 'secondary',
+                'html'  => true,
+                'text'  => 'A product is listed, but it is longer than ' . PrimerPairs::amplifiableKb() . ' kb. Standard PCR is '
+                         . 'dependable for products under ' . PrimerPairs::amplifiableKb() . ' kb; longer ones often amplify poorly or not at all, so it '
+                         . 'is not counted. A long-range polymerase may still amplify it.',
             ],
             [
                 'label' => 'Only what would really amplify counts',
                 'accent' => true,
                 'html'  => true,
-                'text'  => 'A product is expected to amplify when it is <strong>under 2 kb</strong> and '
+                'text'  => 'A product counts when it is <strong>under ' . PrimerPairs::amplifiableKb() . ' kb</strong> (where standard PCR '
+                         . 'is dependable) and '
                          . 'neither primer is blocked: fewer than 6 mismatches overall, and fewer than 2 '
                          . 'within the <strong>last 5 bases of the 3′ end</strong>. Only those count toward '
                          . 'the grade — one is specific, more than one is non-specific. Anything outside is still '
-                         . 'listed because it is real, it simply will not amplify.',
+                         . 'listed because it is real; it is just not expected to amplify.',
             ],
             [
                 'label' => 'The size limit does not change the grade',
@@ -932,21 +984,22 @@ echo help_modal(
                          . 'makes nothing, so only products are listed.',
             ],
             [
-                'label' => 'Mismatches allowed',
+                'label' => 'Mismatches listed',
                 'html'  => true,
-                'text'  => 'A match is kept if it has this many mismatches <em>or fewer</em>. The default of '
-                         . '1 keeps single-mismatch sites because those can still prime. <strong>A primer '
-                         . 'with more mismatches than the limit is simply not there</strong> — so a pair can '
-                         . 'show no product until you raise it.',
+                'text'  => 'Up to ' . PrimerBlast::SEARCH_MAX_MISMATCH . ' mismatches per primer are kept, as NCBI '
+                         . 'Primer-BLAST does, because a single mismatch — or a few toward the 5′ end — can '
+                         . 'still amplify, and the verdict is judged on all of them. This box only changes '
+                         . 'which products are <strong>displayed</strong> in the results. Mismatches are '
+                         . 'counted over the <strong>whole primer</strong>: bases the alignment did not reach count too.',
                 'accent' => true,
             ],
             [
                 'label' => 'Worked example',
                 'html'  => true,
-                'text'  => 'A pair whose reverse primer carries 2 mismatches against the target: at a limit '
-                         . 'of <strong>1</strong> it reports <em>no product</em>; at <strong>2</strong> the '
-                         . 'same pair reports its real 494 bp product, marked "2 mismatches". Nothing changed '
-                         . 'but the setting — the product was always there, below the threshold.',
+                'text'  => 'A pair with an off-target where the reverse primer has 2 mismatches near its 5′ '
+                         . 'end: it is graded <em>non-specific</em> at any setting, because that site would '
+                         . 'amplify. With <strong>Mismatches listed</strong> at 1 the off-target row is not '
+                         . 'listed — a note says so — and at 2 it is listed, marked "2 mismatches".',
                 'accent' => true,
             ],
             [

@@ -263,6 +263,23 @@ ok(PrimerBlast::threePrimeMismatches('17AG1AG', 1, 20, 20) === 2,
 ok(PrimerBlast::threePrimeMismatches('15', 1, 15, 20) === 5,
    'an unaligned 3\' tail counts against the window — it is not a match');
 
+group('PrimerBlast — mismatches over the WHOLE primer, not just the aligned part');
+// BLAST's mismatch column covers the aligned stretch only: a 20-mer aligned over 16 bases
+// read "0 mismatches", and gaps were never counted. BLAT reported the full primer.
+ok(PrimerBlast::fullLengthMismatches('20', 1, 20, 20) === 0, 'a full perfect alignment has 0');
+ok(PrimerBlast::fullLengthMismatches('7AG12', 1, 20, 20) === 1, 'one substitution is 1');
+ok(PrimerBlast::fullLengthMismatches('16', 1, 16, 20) === 4, 'an uncovered 4-base 3\' tail counts as 4');
+ok(PrimerBlast::fullLengthMismatches('17', 4, 20, 20) === 3, 'an uncovered 3-base 5\' end counts as 3');
+ok(PrimerBlast::fullLengthMismatches('8A-11', 1, 20, 20) === 1, 'a gap counts as 1');
+ok(PrimerBlast::fullFootprint(101, 116, 1, 16, 20) === [101, 120], '+ strand: an uncovered 3\' tail extends the high end');
+ok(PrimerBlast::fullFootprint(116, 101, 1, 16, 20) === [116, 97], '- strand: it extends the low end');
+ok(PrimerBlast::fullFootprint(104, 120, 4, 20, 20) === [101, 120], '+ strand: an uncovered 5\' end extends the low end');
+ok(PrimerBlast::fullFootprint(2, 18, 4, 20, 20) === [1, 18], 'never below base 1');
+ok(PrimerBlast::SEARCH_MAX_MISMATCH === PrimerPairs::IGNORE_AT_TOTAL_MISMATCH - 1,
+   'the search keeps exactly the sites the amplification test can still count');
+ok(PrimerBlast::DISPLAY_MISMATCH_DEFAULT === 2, '"Mismatches allowed" defaults to 2 (display only)');
+
+// ----------------------------------------------------------------------------
 group('PrimerPairs — amplification test uses POSITION, not just count');
 
 // Same total mismatch count, opposite verdicts: position is what decides.
@@ -293,7 +310,21 @@ $big = PrimerPairs::findProducts([
     'reverse' => [hit('chr1', 9000, 9019, '-', 0, 0)],
 ], $BIG);
 ok(!PrimerPairs::isAmplifiable($big['products'][0]),
-   'a perfect-match product over 2 kb still does not amplify');
+   'a perfect-match 8 kb product still does not amplify');
+
+// The 3 kb limit (2 kb until 2026-10-13): a 2.5 kb product now counts, 3.5 kb does not.
+$mid = PrimerPairs::findProducts([
+    'forward' => [hit('chr1', 1000, 1019, '+', 0, 0)],
+    'reverse' => [hit('chr1', 3481, 3500, '-', 0, 0)],
+], $BIG);
+ok($mid['products'][0]['size'] === 2501 && PrimerPairs::isAmplifiable($mid['products'][0]),
+   'a perfect 2.5 kb product amplifies under the 3 kb limit');
+$over = PrimerPairs::findProducts([
+    'forward' => [hit('chr1', 1000, 1019, '+', 0, 0)],
+    'reverse' => [hit('chr1', 4481, 4500, '-', 0, 0)],
+], $BIG);
+ok(!PrimerPairs::isAmplifiable($over['products'][0]), 'a perfect 3.5 kb product does not');
+ok(PrimerPairs::amplifiableKb() === '3', 'the limit is shown as "3" kb');
 
 // ----------------------------------------------------------------------------
 group('ExonMap — transcript coordinates to genomic blocks');

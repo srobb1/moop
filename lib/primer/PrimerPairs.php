@@ -24,7 +24,7 @@ class PrimerPairs
      *
      * 10,000 bp, chosen to satisfy two conflicting needs with one control.
      *
-     * Standard PCR realistically amplifies ~2 kb, so 2 kb is the instinctive
+     * Standard PCR is dependable to a few kb, so a few kb is the instinctive
      * default -- but it is WRONG here, because the same bound also applies to the
      * GENOMIC search, where an intron-spanning pair legitimately measures much
      * larger. Measured: the wallaby pair spans 7,742 bp of genomic sequence purely
@@ -48,8 +48,20 @@ class PrimerPairs
      * governs what COUNTS: a real 8 kb off-target is still listed because it
      * exists, but it will not amplify under normal conditions and so must not turn
      * an otherwise clear pair ambiguous.
+     *
+     * 3 kb (was 2 kb until 2026-10-13, user's call after checking). Taq works best
+     * under 2 kb but is dependable to about 3 kb; past 3-4 kb products need
+     * optimisation or a long-range polymerase (Qiagen Taq product page and bench
+     * guide). Every user-facing mention of the limit is computed from this constant
+     * via amplifiableKb(), so the wording cannot drift from the rule.
      */
-    const AMPLIFIABLE_MAX = 2000;
+    const AMPLIFIABLE_MAX = 3000;
+
+    /** AMPLIFIABLE_MAX for display: "3" (or "2.5"). */
+    public static function amplifiableKb(): string
+    {
+        return rtrim(rtrim(number_format(self::AMPLIFIABLE_MAX / 1000, 1), '0'), '.');
+    }
 
     /**
      * Ignore a site outright at this many total mismatches or more.

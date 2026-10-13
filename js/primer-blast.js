@@ -267,7 +267,7 @@ function resetPrimerForm() {
 
     var mismatch = document.getElementById('max_mismatch');
     if (mismatch) {
-        mismatch.value = form.getAttribute('data-default-mismatch') || '1';
+        mismatch.value = form.getAttribute('data-default-mismatch') || '2';
     }
 
     var product = document.getElementById('max_product');

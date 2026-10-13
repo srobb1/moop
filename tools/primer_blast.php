@@ -67,10 +67,12 @@ if (!empty($_FILES['primer_file']['tmp_name']) && is_uploaded_file($_FILES['prim
     }
 }
 
-// The ONLY tuning knob, per the agreed spec. Clamped rather than rejected so a
-// stray value never silently becomes something else.
-$max_mismatch = (int)($_POST['max_mismatch'] ?? 1);
-$max_mismatch = max(0, min(5, $max_mismatch));
+// "Mismatches listed" -- what is LISTED, not what is searched (2026-10-13). The search
+// always keeps hits up to PrimerBlast::SEARCH_MAX_MISMATCH so the verdict sees every site
+// that could amplify; this only trims the table. Clamped rather than rejected so a stray
+// value never silently becomes something else.
+$max_mismatch = (int)($_POST['max_mismatch'] ?? PrimerBlast::DISPLAY_MISMATCH_DEFAULT);
+$max_mismatch = max(0, min(PrimerBlast::SEARCH_MAX_MISMATCH, $max_mismatch));
 
 $max_product = (int)($_POST['max_product'] ?? PrimerPairs::MAX_PRODUCT_DEFAULT);
 $max_product = max(100, min(1000000, $max_product));
@@ -257,9 +259,8 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
                 }
 
                 foreach ($dbs as $label => $db) {
-                    $blast = PrimerBlast::run($parse_result['pairs'], $db, [
-                        'max_mismatch' => $max_mismatch,
-                    ]);
+                    // No max_mismatch: the search bound is fixed (SEARCH_MAX_MISMATCH).
+                    $blast = PrimerBlast::run($parse_result['pairs'], $db);
 
                     if (!$blast['success']) {
                         $db_notes[] = ucfirst($label) . ' search failed: ' . $blast['error'];
