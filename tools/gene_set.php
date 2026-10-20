@@ -12,6 +12,7 @@
 
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/functions_data.php';
+include_once __DIR__ . '/../lib/busco.php';
 
 $organism_data = $config->getPath('organism_data');
 $siteTitle     = $config->getString('siteTitle');
@@ -97,9 +98,12 @@ $display_config = [
     ],
 ];
 
-// Load optional gene set metadata (source, date_added, note, etc.)
-$gene_set_meta_file = "$organism_data/$organism_name/$genome_accession/$gene_set_name/geneset.json";
-$gene_set_meta = loadJsonFile($gene_set_meta_file, []);
+// Optional gene set metadata (source, date_added, note, etc.) and BUSCO completeness, both
+// from $gs_dir -- the directory the files were actually found in. geneset.json used to be read
+// from the accession directory regardless, the same mistake that broke the Genome button.
+$gene_set_meta = loadJsonFile("$gs_dir/geneset.json", []);
+// Derived by the pipeline (notes/BUSCO_GENE_SET_SPEC.md). No file -> null -> no card.
+$busco = moop_load_busco($gs_dir);
 
 // Load annotation type summary from organism-level cache (grouped by type)
 $annot_type_totals = [];
@@ -131,6 +135,7 @@ $data = [
     'images_path'          => $config->getString('images_path'),
     'absolute_images_path' => $config->getPath('absolute_images_path'),
     'annot_type_totals'    => $annot_type_totals,
+    'busco'                => $busco,
 ];
 
 include_once __DIR__ . '/display-template.php';

@@ -204,6 +204,12 @@
     </div>
   </div>
 
+  <!-- Genome-mode BUSCO: only when the pipeline shipped a busco.json for this assembly. -->
+  <?php if (!empty($busco)):
+      $busco_subject = 'assembly';
+      $busco_color   = '#d97706';
+      include __DIR__ . '/../../includes/busco_card.php';
+  endif; ?>
 
 </div>
 

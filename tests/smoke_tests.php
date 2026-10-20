@@ -1465,6 +1465,47 @@ $_r = moop_home_examples_apply_override($_auto, ['organisms' => ['Secret Bat']],
 ok(array_column($_r['organisms'], 'text') === ['Auto org'], 'an override with nothing openable falls back to automatic');
 
 // ----------------------------------------------------------------------------
+group('BUSCO: busco.json read defensively; no file or nothing usable means no card');
+require_once "$BASE/lib/busco.php";
+require_once "$BASE/lib/help_ui.php";
+$_bd = sys_get_temp_dir() . '/moop_busco_' . getmypid();
+@mkdir($_bd);
+@unlink("$_bd/busco.json");
+ok(moop_load_busco($_bd) === null, 'no busco.json -> null (the page shows no card)');
+$_run = fn(array $o = []) => $o + ['lineage' => 'metazoa_odb10', 'role' => 'auto-selected', 'version' => '5.4.4',
+    'mode' => 'proteins', 'n' => 954, 'complete' => 84.1, 'single' => 77.3, 'duplicated' => 6.8,
+    'fragmented' => 5.3, 'missing' => 10.6, 'complete_n' => 802, 'single_n' => 737, 'duplicated_n' => 65,
+    'fragmented_n' => 51, 'missing_n' => 101, 'dataset_date' => '2024-01-08', 'date' => '2026-08-04'];
+$_bad = $_run(['lineage' => 'eukaryota_odb10', 'role' => 'generic']);
+unset($_bad['fragmented_n']);
+file_put_contents("$_bd/busco.json", json_encode(['protein_fasta_md5' => 'x',
+    'runs' => [$_run(), $_bad, $_run(['lineage' => 'mollusca_odb10', 'role' => 'fixed', 'n' => 5295])],
+    'warnings' => ['protein.aa.fa is newer than the BUSCO results', 42, '']]));
+$_b = moop_load_busco($_bd);
+ok(is_array($_b) && array_column($_b['runs'], 'lineage') === ['metazoa_odb10', 'mollusca_odb10'],
+   'a run missing a number is dropped; the others are kept in file order');
+ok(($_b['runs'][0]['single_n'] ?? null) === 737 && ($_b['runs'][1]['n'] ?? null) === 5295, 'counts come through as integers');
+ok(($_b['warnings'] ?? null) === ['protein.aa.fa is newer than the BUSCO results'], 'only non-empty string warnings are kept');
+ok(moop_busco_notation($_b['runs'][0]) === 'C:84.1%[S:77.3%,D:6.8%],F:5.3%,M:10.6%,n:954',
+   "BUSCO's own notation, character for character");
+file_put_contents("$_bd/busco.json", json_encode(['runs' => [$_bad]]));
+ok(moop_load_busco($_bd) === null, 'a file with no usable run is treated as no file');
+file_put_contents("$_bd/busco.json", '{not json');
+ok(moop_load_busco($_bd) === null, 'malformed JSON -> null, not an error');
+// The card: every segment's value is printed (nothing depends on colour or hover), and the
+// lineage string -- produced on another machine -- is escaped.
+$busco = ['runs' => [$_run(['lineage' => '<b>x</b>'])], 'warnings' => ['<i>w</i>']];
+$busco_subject = 'gene set'; $busco_color = '#e11d48';
+ob_start(); include "$BASE/includes/busco_card.php"; $_html = ob_get_clean();
+ok(strpos($_html, '<b>x</b>') === false && strpos($_html, '&lt;b&gt;x&lt;/b&gt;') !== false
+   && strpos($_html, '<i>w</i>') === false, 'lineage and warnings are escaped');
+preg_match_all('/class="busco-seg [^"]+" style="flex-grow:([0-9.]+);/', $_html, $_m);
+ok(count($_m[1]) === 4 && abs(array_sum(array_map('floatval', $_m[1])) - 100.0) < 0.3, 'four segments summing to 100%');
+ok(substr_count($_html, '(737)') === 1 && substr_count($_html, '(101)') === 1, 'counts printed in the legend');
+@unlink("$_bd/busco.json"); @rmdir($_bd);
+unset($busco, $busco_subject, $busco_color);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

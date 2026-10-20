@@ -209,6 +209,13 @@
     </div>
   </div>
 
+  <!-- BUSCO completeness: only when the pipeline shipped a busco.json for this gene set. -->
+  <?php if (!empty($busco)):
+      $busco_subject = 'gene set';
+      $busco_color   = '#e11d48';
+      include __DIR__ . '/../../includes/busco_card.php';
+  endif; ?>
+
   <!-- Annotation Summary -->
   <?php if (!empty($annot_type_totals)): ?>
   <div class="row mb-5" id="annotationSummary">

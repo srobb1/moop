@@ -35,6 +35,7 @@
 
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
+include_once __DIR__ . '/../lib/busco.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -89,6 +90,10 @@ $display_config = [
 $assembly_meta_file = "$organism_data/$organism_name/{$assembly_info['genome_accession']}/genome.json";
 $assembly_meta = loadJsonFile($assembly_meta_file, []);
 
+// Genome-mode BUSCO, if the pipeline ever ships one (notes/BUSCO_GENE_SET_SPEC.md): busco.json in
+// the assembly directory, the same shape as a gene set's. None today -> no card.
+$busco = moop_load_busco("$organism_data/$organism_name/{$assembly_info['genome_accession']}");
+
 // Data to pass to content file
 $data = [
     'assembly_info'        => $assembly_info,
@@ -104,6 +109,7 @@ $data = [
     'db_path'              => $db_path,
     'config'               => $config,
     'inline_scripts'       => $display_config['inline_scripts'],
+    'busco'                => $busco,
 ];
 
 // Use generic display template

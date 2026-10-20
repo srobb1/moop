@@ -1762,3 +1762,22 @@ a:hover .link-icon {
    this a matched row appears with no visible reason. Was inline in tools/pages/search.php
    until 2026-08-05; moved here rather than copied into MOOPmart. */
 mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; padding: 0 1px; color: inherit; }
+
+/* ── BUSCO completeness card (includes/busco_card.php) ─────────────────────────────────
+   Segment colours: two steps of one blue for the two kinds of COMPLETE (so they read as one
+   group), amber for fragmented, a neutral for missing (absence, not a category). Validated with
+   the dataviz palette checker: adjacent pairs pass the colour-blind and normal-vision floors;
+   two segments sit under 3:1 contrast, which is why every value is also printed in the legend. */
+.busco-run + .busco-run { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid #eef0f2; }
+.busco-bar { display: flex; gap: 2px; height: 18px; border-radius: 4px; overflow: hidden; background: #fff; }
+.busco-seg { height: 100%; min-width: 2px; flex-basis: 0; flex-shrink: 1; }
+.busco-seg-single     { background: #256abf; }
+.busco-seg-duplicated { background: #6da7ec; }
+.busco-seg-fragmented { background: #eda100; }
+.busco-seg-missing    { background: #a8a29e; }
+.busco-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1.1rem; margin-top: 0.45rem; }
+.busco-legend-item { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+.busco-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.busco-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 0.6rem; align-items: baseline; margin-top: 0.35rem; }
+.busco-notation { color: #475569; background: #f8fafc; padding: 0.05rem 0.35rem; border-radius: 3px; font-size: 0.78rem; }
+.busco-role { background: #eef2ff; color: #3730a3; font-weight: 600; font-size: 0.7rem; }
