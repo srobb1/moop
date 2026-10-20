@@ -1,14 +1,14 @@
 /**
  * Dashboard "Run housekeeping now" button.
  *
- * Housekeeping results are precomputed on a 4-hour interval (HOUSEKEEPING_MIN_INTERVAL),
+ * Housekeeping results are precomputed on an hourly interval (HOUSEKEEPING_MIN_INTERVAL),
  * so a health card can keep reporting something already fixed until the next sweep. That
  * caching is correct — the permission scan and organism-tree walk are far too expensive
  * to run on every dashboard load — but there was no way to say "recheck now" short of
  * waiting or deleting marker files by hand. This is that way.
  *
  * Reports per-task results rather than a bare spinner: the sweep is several seconds and
- * runs eight distinct tasks, so showing which one is finishing (and what it cost) beats
+ * runs several distinct tasks, so showing which one is finishing (and what it cost) beats
  * an opaque wait. Requires `sitePath` (set via inline_scripts in admin.php).
  *
  * CSRF: js/modules/csrf.js attaches the token to jQuery AJAX automatically.
@@ -21,19 +21,11 @@
 
     const out = document.getElementById('rerunHousekeepingResult');
 
-    // Rough per-task expectations so the wait is not silent. The permission scan walks
-    // the whole organism tree and dominates the total; naming it is the difference
-    // between "it hung" and "it is doing the slow one".
-    const STEPS = [
-        'clean_temp_files',
-        'ensure_cache_dir',
-        'snapshot_site_data',
-        'environment_check',
-        'permission_check',
-        'refresh_annotation_caches',
-        'refresh_organism_cache',
-        'ncbi_taxonomy_update'
-    ];
+    // The task names come from the server (data-tasks, rendered from
+    // housekeeping_task_registry()) so this list cannot drift. It was a hardcoded copy of
+    // eight names and had silently lost the two JBrowse tasks.
+    let STEPS = [];
+    try { STEPS = JSON.parse(btn.dataset.tasks || '[]'); } catch (e) { STEPS = []; }
 
     function render(html, cls) {
         if (!out) return;
@@ -86,9 +78,25 @@
                        t.ms + ' ms</span>' + err + '</div>';
             }).join('');
 
+            // jbrowse_indexes only COUNTS in this request -- rebuilding runs in the
+            // background child. Say so, or "✓ 3 ms" reads as "rebuilt".
+            let indexNote = '';
+            const ir = res.index_rebuild;
+            if (ir) {
+                indexNote = ir.needed === 0
+                    ? '<div class="mt-1">Gene-track indexes: all current.</div>'
+                    : '<div class="mt-1"><strong>' + ir.needed + ' gene-track ' +
+                      (ir.needed === 1 ? 'index needs' : 'indexes need') + ' rebuilding</strong>' +
+                      (ir.broken ? ' (' + ir.broken + ' broken)' : '') + ' — ' +
+                      (ir.started
+                          ? 'rebuild started in the background (up to about five minutes per run). Reload later to see the result.'
+                          : 'could not start the background rebuild; it will run with the next hourly housekeeping.') +
+                      '</div>';
+            }
+
             const secs = (res.elapsed_ms / 1000).toFixed(1);
             finish('<strong>' + escapeHtml(res.message) + '</strong> in ' + secs + 's' +
-                   '<div class="mt-1">' + rows + '</div>' +
+                   '<div class="mt-1">' + rows + '</div>' + indexNote +
                    '<div class="mt-2"><a href="">Reload the page</a> to see the updated cards.</div>',
                    res.failed ? 'text-warning' : 'text-muted');
         }).fail(function (xhr) {
@@ -176,6 +184,44 @@
             restore();
             render('⚠ Request failed (HTTP ' + xhr.status + '). Check logs/error.log.',
                    'text-danger');
+        });
+    });
+})();
+
+/**
+ * Gene-track index card "Rebuild now" — starts the jbrowse_indexes task in the BACKGROUND
+ * CLI child and returns at once. Re-compressing GFFs takes minutes and is never done inside
+ * a page request, so this button cannot wait for the answer; it says so instead.
+ */
+(function () {
+    'use strict';
+
+    const btn = document.getElementById('rebuildGeneIndexesBtn');
+    if (!btn) return;
+
+    const out = document.getElementById('rebuildGeneIndexesResult');
+
+    function render(html, cls) {
+        if (!out) return;
+        out.style.display = '';
+        out.className = 'small mb-4 ' + (cls || 'text-muted');
+        out.innerHTML = html;
+    }
+
+    btn.addEventListener('click', function () {
+        btn.disabled = true;
+        $.ajax({
+            url: sitePath + '/admin/api/rerun_housekeeping.php',
+            method: 'POST',
+            data: { task: btn.dataset.task || 'jbrowse_indexes', background: 1 },
+            dataType: 'json'
+        }).done(function (res) {
+            render(escapeHtml((res && res.message) || 'No answer from the server.'),
+                   res && res.success ? 'text-muted' : 'text-warning');
+            if (!(res && res.success)) btn.disabled = false;
+        }).fail(function (xhr) {
+            btn.disabled = false;
+            render('⚠ Request failed (HTTP ' + xhr.status + '). Check logs/error.log.', 'text-danger');
         });
     });
 })();

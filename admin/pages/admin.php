@@ -236,6 +236,84 @@
   <?php endif; ?>
 
 
+  <!-- Gene track indexes (JBrowse) — the compressed GFF + tabix index each gene track reads.
+       Hidden when every track is sound and current. Before 2026-10-20 housekeeping counted
+       these but NOTHING displayed the count, so an admin had no way to learn a track was out
+       of date, and an empty (broken) .gz counted as fine. Rebuilding is automatic, in the
+       background run only; the button below just starts that run now. -->
+  <?php
+    $gi        = $_SESSION['jbrowse_index_summary'] ?? [];
+    $gi_need   = (int)($gi['stale'] ?? 0) + (int)($gi['missing'] ?? 0) + (int)($gi['broken'] ?? 0);
+    $gi_failed = $gi['last_rebuild']['failed'] ?? [];
+    $gi_show   = $gi_need > 0 || !empty($gi_failed);
+    if ($gi_show):
+      $gi_cls   = ((int)($gi['broken'] ?? 0) > 0 || $gi_failed) ? 'danger' : 'warning';
+      $gi_parts = [];
+      if (!empty($gi['broken']))  $gi_parts[] = $gi['broken'] . ' broken — JBrowse shows no genes for ' . ($gi['broken'] == 1 ? 'it' : 'them');
+      if (!empty($gi['stale']))   $gi_parts[] = $gi['stale'] . ' out of date with the gene set';
+      if (!empty($gi['missing'])) $gi_parts[] = $gi['missing'] . ' missing an index';
+      $gi_last  = $gi['last_rebuild'] ?? null;
+      // This card's OWN timestamp (unix seconds), not the permission scan's $scanned: the
+      // two are written by different tasks and can be days apart.
+      $gi_age_s = isset($gi['checked_at']) ? max(0, time() - (int)$gi['checked_at']) : null;
+      $gi_age   = $gi_age_s === null ? null
+          : ($gi_age_s < 3600 ? max(1, (int)round($gi_age_s / 60)) . ' min ago'
+          : ($gi_age_s < 172800 ? (int)floor($gi_age_s / 3600) . ' hr ago'
+          : (int)floor($gi_age_s / 86400) . ' days ago'));
+  ?>
+  <div class="alert alert-<?= $gi_cls ?> d-flex align-items-start justify-content-between gap-3 mb-4" role="alert">
+    <div class="flex-grow-1">
+      <i class="fa fa-dna me-2"></i>
+      <?php if ($gi_need > 0): ?>
+      <strong><?= $gi_need ?> JBrowse gene <?= $gi_need === 1 ? 'track needs its' : 'tracks need their' ?> index rebuilt</strong>
+      <span class="d-block small"><?= htmlspecialchars(implode(' · ', $gi_parts)) ?></span>
+      <?php else: ?>
+      <strong>The last gene-track index rebuild had failures</strong>
+      <?php endif; ?>
+      <span class="d-block small text-muted mt-1">
+        Rebuilt automatically by the background housekeeping run — broken ones first, then smallest
+        first, about five minutes per hourly run.
+        <?php if ($gi_last): ?>
+          Last run: <?= count($gi_last['done'] ?? []) ?> rebuilt,
+          <?= count($gi_last['failed'] ?? []) ?> failed<?php if (!empty($gi_last['left'])): ?>,
+          <?= (int)$gi_last['left'] ?> left for the next run<?php endif; ?>.
+        <?php endif; ?>
+        <?php if ($gi_age): ?>Counted <?= htmlspecialchars($gi_age) ?>.<?php endif; ?>
+      </span>
+      <?php if ($gi_failed): ?>
+      <ul class="small mb-0 mt-1">
+        <?php foreach (array_slice($gi_failed, 0, 10) as $f): ?>
+        <li><?= htmlspecialchars($f) ?></li>
+        <?php endforeach; ?>
+      </ul>
+      <?php endif; ?>
+      <?php if (!empty($gi['examples'])): ?>
+      <a class="small" data-bs-toggle="collapse" href="#geneIndexList" role="button" aria-expanded="false">
+        Which tracks? <i class="fa fa-chevron-down small"></i>
+      </a>
+      <ul class="collapse small mb-0 mt-1" id="geneIndexList">
+        <?php foreach ($gi['examples'] as $e): ?>
+        <li><?= htmlspecialchars(str_replace('_', ' ', $e['organism']) . ' / ' . $e['assembly'] . ' / ' . $e['gene_set']) ?>
+          <span class="text-muted">— <?= htmlspecialchars($e['why']) ?></span></li>
+        <?php endforeach; ?>
+      </ul>
+      <?php endif; ?>
+      <span class="d-block small text-muted fst-italic mt-1">
+        By hand: <code>sudo -u apache php scripts/run_housekeeping.php --task=jbrowse_indexes</code>
+        — see <code>docs/JBrowse2/GENE_TRACK_INDEXES.md</code>.
+      </span>
+    </div>
+    <div class="d-flex flex-column align-items-stretch gap-1 flex-shrink-0">
+      <button type="button" id="rebuildGeneIndexesBtn" class="btn btn-sm btn-<?= $gi_cls ?>"
+              data-task="jbrowse_indexes">
+        <i class="fa fa-wrench"></i> Rebuild now
+      </button>
+    </div>
+  </div>
+  <div id="rebuildGeneIndexesResult" class="small text-muted mb-4" style="display:none;"></div>
+  <?php endif; ?>
+
+
   <!-- Housekeeping freshness + manual re-run.
        Sits with the health cards above because it is what refreshes them, and stays
        visible when they are all clean — "did my fix work?" is exactly when you want it.
@@ -379,7 +457,8 @@
         // $has_health_issues is set by _data_health_card.php and stays in scope after it.
         $_cards_shown = !empty($has_health_issues)
                      || !empty($_SESSION['perm_summary']['findings'])
-                     || !empty($_SESSION['env_warnings']);
+                     || !empty($_SESSION['env_warnings'])
+                     || !empty($gi_show);
       ?>
       <div class="d-flex align-items-center justify-content-between gap-3">
         <div class="small text-muted">
@@ -400,7 +479,8 @@
           </a>
         </div>
         <div class="flex-shrink-0">
-          <button type="button" id="rerunHousekeepingBtn" class="btn btn-sm btn-outline-secondary">
+          <button type="button" id="rerunHousekeepingBtn" class="btn btn-sm btn-outline-secondary"
+                  data-tasks="<?= htmlspecialchars(json_encode(array_column(housekeeping_task_registry(), 'name'))) ?>">
             <i class="fa fa-sync"></i> Run housekeeping now
           </button>
         </div>

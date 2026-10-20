@@ -23,6 +23,8 @@
  * reload writes Parent=; geneID stays accepted so the current data works until then.)
  */
 
+require_once __DIR__ . '/jbrowse/gene_track_index.php';
+
 /** Column 9 as key => value. Values are left URL-encoded except for comparison purposes. */
 function moop_gff_attrs(string $col9): array {
     $out = [];
@@ -67,16 +69,19 @@ function moop_gff_candidate_lines(string $organism, string $assembly, string $ge
     $gff     = "$gs_dir/" . genes_gff_filename();
     $tabix   = $config->getPath('genomes_directory') . "/$organism/$assembly/$gene_set/annotations.gff3.gz";
 
-    // The tabix copy only while it is at least as new as genes.gff. It is a derived copy
-    // (made for JBrowse), and on 2026-10-13 43 of them were older than their genes.gff -- three
-    // with a different id scheme entirely (Bradypodion_pumilum_... vs BraPum_...). The gene
-    // page had been drawing those genes from the stale copy.
-    $has_tabix = is_file($tabix) && (is_file("$tabix.tbi") || is_file("$tabix.csi"))
-              && (!is_file($gff) || filemtime($tabix) >= filemtime($gff));
+    // The tabix copy only while it is sound and at least as new as genes.gff -- the same rule
+    // housekeeping and JBrowse registration use (gene_track_index_problem()). It is a derived
+    // copy (made for JBrowse), and on 2026-10-13 43 of them were older than their genes.gff --
+    // three with a different id scheme entirely (Bradypodion_pumilum_... vs BraPum_...). The
+    // gene page had been drawing those genes from the stale copy. A copy that is empty or
+    // truncated is skipped too; it used to pass on age alone.
+    $tabix_bin = moop_tool('tabix');
+    $has_tabix = $tabix_bin !== '' && is_file($tabix)
+              && gene_track_index_problem(substr($tabix, 0, -3)) === null;
     $loc = $has_tabix ? moop_feature_coords_loc($gs_dir, $uniquename) : null;
     if ($loc) {
         $lines = [];
-        exec('tabix ' . escapeshellarg($tabix) . ' ' . escapeshellarg($loc['loc_string']), $lines);
+        exec(escapeshellarg($tabix_bin) . ' ' . escapeshellarg($tabix) . ' ' . escapeshellarg($loc['loc_string']), $lines);
         // Only if the region really holds the feature; otherwise read genes.gff below.
         foreach ($lines as $line) {
             $p = explode("\t", $line, 9);

@@ -331,3 +331,87 @@ function handleAdminAjax($customHandler = null) {
         }
     }
 }
+
+/**
+ * Absolute path to a command-line tool, or '' if it cannot be found.
+ *
+ * PATH first, then /usr/local/bin and /usr/bin. Both php-fpm's PATH and sudo's secure_path
+ * routinely leave out /usr/local/bin, which is where htslib, samtools and BLAST land when
+ * built from source -- so a bare `bgzip` that works in your shell can be "command not
+ * found" for the web server. That is how six gene tracks were emptied on 2026-10-13
+ * (`sudo -u apache php scripts/run_housekeeping.php`). Resolve first, and refuse to start
+ * work that needs a tool you could not find.
+ *
+ * An absolute path is used as given when it is executable.
+ */
+function moop_find_executable(string $name): string {
+    static $cache = [];
+    if (isset($cache[$name])) {
+        return $cache[$name];
+    }
+    if ($name === '') {
+        return '';
+    }
+    if ($name[0] === '/') {
+        return $cache[$name] = is_executable($name) ? $name : '';
+    }
+    if (strpos($name, '/') !== false) {
+        return $cache[$name] = '';
+    }
+    $found = trim((string)@shell_exec('command -v ' . escapeshellarg($name) . ' 2>/dev/null'));
+    if ($found !== '' && $found[0] === '/' && is_executable($found)) {
+        return $cache[$name] = $found;
+    }
+    foreach (['/usr/local/bin/', '/usr/bin/'] as $dir) {
+        if (is_executable($dir . $name)) {
+            return $cache[$name] = $dir . $name;
+        }
+    }
+    return $cache[$name] = '';
+}
+
+/**
+ * A configured tool, resolved: the value under $config_group[$name] in site config (a bare
+ * name or an absolute path; defaults to $name), passed through moop_find_executable().
+ * Returns '' when it cannot be found, so the caller can say which tool is missing instead of
+ * handing the shell a name it will answer with "command not found".
+ *
+ *     moop_tool('blastn', 'blast_tools')   moop_tool('primer3_core', 'primer3_tools')
+ *     moop_tool('samtools', 'blast_tools') moop_tool('tabix')
+ */
+function moop_tool(string $name, string $config_group = ''): string {
+    $configured = $name;
+    if ($config_group !== '' && class_exists('ConfigManager')) {
+        $configured = (string)(ConfigManager::getInstance()->getArray($config_group, [])[$name] ?? $name);
+    }
+    return moop_find_executable($configured !== '' ? $configured : $name);
+}
+
+/**
+ * The jbrowse CLI, or null. The project-local install comes first: it is a wrapper that pins
+ * the Node version the CLI needs. Then the usual global install locations, then PATH.
+ * (This was written out twice -- findJBrowseCliGS() and find_jbrowse_cli() -- with the same
+ * list; both now call this.)
+ */
+function moop_find_jbrowse_cli(): ?string {
+    static $cached = false;
+    if ($cached !== false) {
+        return $cached;
+    }
+    $root = dirname(__DIR__);
+    $candidates = [
+        "$root/tools/jbrowse-cli/jbrowse-run.sh",
+        "$root/tools/jbrowse-cli/bin/jbrowse",
+        (getenv('HOME') ?: '') . '/.npm-global/bin/jbrowse',
+        '/root/.npm-global/bin/jbrowse',
+        '/usr/local/lib/node_modules/.bin/jbrowse',
+        '/usr/lib/node_modules/@jbrowse/cli/bin/run',
+    ];
+    foreach ($candidates as $path) {
+        if ($path !== '' && $path[0] === '/' && is_executable($path)) {
+            return $cached = $path;
+        }
+    }
+    $found = moop_find_executable('jbrowse');
+    return $cached = ($found !== '' ? $found : null);
+}

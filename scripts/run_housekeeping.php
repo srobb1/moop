@@ -23,6 +23,9 @@
  * Usage (both do the same thing; --spawned only affects logging):
  *     php scripts/run_housekeeping.php
  *     sudo -u apache php scripts/run_housekeeping.php     # if running it by hand
+ *
+ * --task=NAME runs one task from housekeeping_task_registry() instead of the full sweep,
+ * e.g. --task=jbrowse_indexes, which the dashboard's "Rebuild now" button spawns.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -35,6 +38,18 @@ require_once $base . '/includes/config_init.php';
 require_once $base . '/lib/housekeeping.php';
 
 $spawned = in_array('--spawned', $argv ?? [], true);
+
+$only = [];
+foreach ($argv ?? [] as $arg) {
+    if (strpos($arg, '--task=') === 0) {
+        $only[] = substr($arg, 7);
+    }
+}
+$known = array_column(housekeeping_task_registry(), 'name');
+if ($unknown = array_diff($only, $known)) {
+    fwrite(STDERR, 'Unknown task: ' . implode(', ', $unknown) . "\nKnown: " . implode(', ', $known) . "\n");
+    exit(1);
+}
 
 // ── Guard: must run as the web server user ──────────────────────────────────────
 // Anything this writes must stay writable by php-fpm. Getting this wrong does not fail
@@ -62,7 +77,7 @@ if ($me !== '' && $me !== $expected && !$spawned) {
 }
 
 $started = microtime(true);
-$result  = housekeeping_run_tasks();
+$result  = housekeeping_run_tasks($only);
 $elapsed = round(microtime(true) - $started, 1);
 
 if (!$result['ran']) {

@@ -1,10 +1,10 @@
 <?php
 /**
- * API endpoint: force a housekeeping run now, bypassing the 4h interval throttle.
+ * API endpoint: force a housekeeping run now, bypassing the interval throttle.
  *
  * Why this exists: housekeeping results are precomputed and cached
  * (HOUSEKEEPING_MIN_INTERVAL, see lib/housekeeping.php), so a dashboard health card can
- * keep reporting something you have already fixed for up to 4 hours. That is correct for
+ * keep reporting something you have already fixed for up to an hour. That is correct for
  * the default path — the permission sweep and organism-tree walk are far too expensive to
  * run on every dashboard load — but it is maddening right after a fix. This gives the
  * admin a way to say "recheck now" without waiting or deleting files by hand.
@@ -51,6 +51,30 @@ if ($requested !== '') {
         exit;
     }
     $only = [$requested];
+}
+
+// background=1: start the task(s) in the detached CLI child and return at once. This is how
+// the gene-index rebuild is run on demand -- re-compressing GFFs is minutes of work and
+// is only ever done by the CLI child (housekeeping_check_jbrowse_indexes()), never inside
+// a page request.
+if (!empty($_POST['background'])) {
+    if (housekeeping_is_running()) {
+        echo json_encode([
+            'success' => false,
+            'reason'  => 'already_running',
+            'message' => 'Housekeeping is already running — it will pick this up; check back in a few minutes.',
+        ]);
+        exit;
+    }
+    $ok = housekeeping_spawn_background($only[0] ?? null);
+    echo json_encode([
+        'success'    => $ok,
+        'background' => true,
+        'message'    => $ok
+            ? 'Started in the background. Rebuilds take up to about five minutes per run; reload this page afterwards.'
+            : 'Could not start a background run — see logs/error.log.',
+    ]);
+    exit;
 }
 
 // housekeeping_run_tasks() does the work inline and ignores the interval — the throttle
@@ -103,6 +127,21 @@ if (in_array('permission_check', array_column($result['tasks'], 'name'), true)) 
         'low'           => $ps['low'] ?? 0,
         'worst'         => $ps['worst'] ?? null,
         'checked_at'    => $ps['checked_at'] ?? null,
+    ];
+}
+
+// Gene-track indexes. From here (php-fpm) the task only COUNTS -- rebuilding is minutes of
+// bgzip and happens only in the background CLI child. That difference used to be invisible:
+// the row read "jbrowse_indexes ✓ 3 ms" and an admin reasonably concluded the rebuild had
+// run. So say what the count is, and if there is work, start the background rebuild now
+// rather than leave it for the next hourly run. The lock is already released here.
+if (in_array('jbrowse_indexes', array_column($result['tasks'], 'name'), true)) {
+    $js   = $_SESSION['jbrowse_index_summary'] ?? [];
+    $need = (int)($js['stale'] ?? 0) + (int)($js['missing'] ?? 0) + (int)($js['broken'] ?? 0);
+    $response['index_rebuild'] = [
+        'needed'  => $need,
+        'broken'  => (int)($js['broken'] ?? 0),
+        'started' => $need > 0 ? housekeeping_spawn_background('jbrowse_indexes') : false,
     ];
 }
 

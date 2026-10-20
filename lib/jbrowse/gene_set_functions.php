@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../functions_system.php';
+require_once __DIR__ . '/gene_track_index.php';
+
 /**
  * JBrowse gene set prep — shared by jbrowse_register_assembly and jbrowse_register_gene_set.
  */
@@ -13,7 +16,8 @@
  *   4. Generate feature_coords.tsv (for BLAST linkouts)
  *
  * @param bool $force  Re-build even if bgzip/tbi/track JSON already exist.
- * @return bool  False only if source GFF is absent or empty (genuinely nothing to do).
+ * @return bool  False if the source GFF is absent or empty, or if the bgzip/tabix index could
+ *               not be built (the later steps still run; the log says what failed).
  */
 function prepareGeneSetForJBrowse(
     string $organism,
@@ -35,7 +39,6 @@ function prepareGeneSetForJBrowse(
     $tbi_file      = "$gz_file.tbi";
     $csi_file      = "$gz_file.csi";
     $index_type    = 'TBI';   // may be updated to 'CSI' below
-    $index_file    = $tbi_file;
     $assembly_name = "{$organism}_{$assembly}";
     $track_id      = "{$assembly_name}_{$gene_set}_genes";
     $track_name    = "Genes ($gene_set)";
@@ -81,91 +84,32 @@ function prepareGeneSetForJBrowse(
     }
 
     // ── bgzip + tabix ────────────────────────────────────────────────────────
-    // FRESHNESS, not existence.
+    // FRESHNESS and SOUNDNESS, not existence -- gene_track_index_problem() is the one rule.
     //
     // These tests used to be `!file_exists($gz_file)`, so once a .gz had ever been built
     // it was never rebuilt unless someone passed $force by hand. But a gene-set reload
     // rewrites the source GFF underneath it, and annotations.gff3 is a SYMLINK into
     // organisms/ -- so the uncompressed file silently follows every reload while the
-    // compressed copy JBrowse actually reads stays frozen. Nothing reported it, because
-    // "already exists" reads like success.
+    // compressed copy JBrowse actually reads stays frozen. Measured 2026-07-29: 41 of 69
+    // gene tracks were serving indexes older than their own GFF.
     //
-    // Measured 2026-07-29: 41 of 69 gene tracks were serving indexes older than their own
-    // GFF, some by two months. The Bradypodion pair was worse than stale -- their feature
-    // IDs had just been shortened, so JBrowse was serving IDs that no longer existed in
-    // the database and every gene-page link into the browser missed.
-    //
-    // filemtime() follows symlinks, so this compares against the real GFF.
-    $gz_stale = !file_exists($gz_file)
-             || (file_exists($target_gff) && filemtime($gz_file) < filemtime($target_gff));
-    if ($force || $gz_stale) {
-        foreach ([$tbi_file, $csi_file, $gz_file] as $f) {
-            if (file_exists($f)) unlink($f);
+    // The mtime-only version then had the opposite blind spot: on 2026-10-13 a rebuild with
+    // bgzip missing from PATH left six 0-byte .gz files, NEWER than their GFF, which every
+    // check read as fine. Soundness (non-empty, complete BGZF) is now part of the rule, and
+    // the build never touches the live files until a verified replacement exists.
+    $index_ok = true;
+    $problem  = gene_track_index_problem($target_gff);
+    if ($force || $problem !== null) {
+        if ($problem !== null) {
+            $log[] = "$gene_set: index needs rebuilding — {$problem['why']}";
         }
-        $rc = 1; $out = [];
-        $sort_cmd = '(grep "^#" ' . escapeshellarg($target_gff)
-                  . '; grep -v "^#" ' . escapeshellarg($target_gff)
-                  . ' | sort -t"$(printf \'\\t\')" -k1,1 -k4,4n) | bgzip > ' . escapeshellarg($gz_file);
-        exec('/bin/bash -c ' . escapeshellarg($sort_cmd), $out, $rc);
-
-        if ($rc !== 0 || !file_exists($gz_file)) {
-            $jb = findJBrowseCliGS();
-            if ($jb) {
-                $sort_cmd = escapeshellarg($jb) . ' sort-gff ' . escapeshellarg($target_gff)
-                          . ' | bgzip > ' . escapeshellarg($gz_file);
-                exec('/bin/bash -c ' . escapeshellarg($sort_cmd), $out, $rc);
-                $log[] = $rc === 0 ? "$gene_set: bgzip via jbrowse sort-gff OK" : "$gene_set: jbrowse sort-gff also failed";
-            }
-        }
-
-        if ($rc === 0 && file_exists($gz_file)) {
-            $log[] = "$gene_set: bgzip OK (" . number_format(filesize($gz_file)) . " bytes)";
-        } else {
-            $log[] = "$gene_set: WARNING — bgzip failed: " . implode(' ', $out);
-        }
+        $index_ok = gene_track_build_index($target_gff, $gene_set, $log);
     } else {
-        $log[] = "$gene_set: compressed GFF already exists";
+        $log[] = "$gene_set: compressed GFF and tabix index are current";
     }
-
-    if (file_exists($gz_file)) {
-        // Same freshness rule one level down: an index older than the .gz it describes
-        // points at the wrong offsets, which is worse than no index at all.
-        $have_index = file_exists($tbi_file) || file_exists($csi_file);
-        $index_stale = !$have_index;
-        if ($have_index) {
-            $existing_index = file_exists($tbi_file) ? $tbi_file : $csi_file;
-            $index_stale = filemtime($existing_index) < filemtime($gz_file);
-        }
-        $need_index = $force || $index_stale;
-        if ($need_index) {
-            if (file_exists($tbi_file)) unlink($tbi_file);
-            if (file_exists($csi_file)) unlink($csi_file);
-            $out = []; $rc = 1;
-            exec('tabix -p gff ' . escapeshellarg($gz_file) . ' 2>&1', $out, $rc);
-            if ($rc !== 0) {
-                $err = implode(' ', $out);
-                // tabix fails with a "coordinate limit" message when chromosomes exceed 512 Mb; CSI handles those
-                if (stripos($err, 'coordinate') !== false || stripos($err, 'CSI') !== false) {
-                    $out = []; $rc = 1;
-                    exec('tabix -C -p gff ' . escapeshellarg($gz_file) . ' 2>&1', $out, $rc);
-                    $index_type = 'CSI';
-                    $index_file = $csi_file;
-                    $log[] = ($rc === 0)
-                        ? "$gene_set: tabix CSI OK (" . number_format(filesize($csi_file)) . " bytes) — chromosomes exceed TBI limit"
-                        : "$gene_set: WARNING — tabix CSI also failed: " . implode(' ', $out);
-                } else {
-                    $log[] = "$gene_set: WARNING — tabix failed: $err";
-                }
-            } else {
-                $log[] = "$gene_set: tabix TBI OK (" . number_format(filesize($tbi_file)) . " bytes)";
-            }
-        } else {
-            if (file_exists($csi_file)) {
-                $index_type = 'CSI';
-                $index_file = $csi_file;
-            }
-            $log[] = "$gene_set: tabix index already exists ($index_type)";
-        }
+    // gene_track_build_index() leaves exactly one index type; TBI wins if both somehow exist.
+    if (!file_exists($tbi_file) && file_exists($csi_file)) {
+        $index_type = 'CSI';
     }
 
     // ── Gene track JSON ──────────────────────────────────────────────────────
@@ -270,7 +214,7 @@ function prepareGeneSetForJBrowse(
         );
     }
 
-    return true;
+    return $index_ok;
 }
 
 /**
@@ -510,7 +454,7 @@ function buildGeneSetTextIndex(
     $site          = $config->getString('site', 'moop');
     $metadata_path = $config->getPath('metadata_path');
 
-    $jbrowse = findJBrowseCliGS();
+    $jbrowse = moop_find_jbrowse_cli();
     if (!$jbrowse) {
         return [
             'success' => false,
@@ -775,30 +719,4 @@ function generateFeatureCoordsIndex(string $assembly_path): bool {
     fclose($fh);
     fclose($out);
     return true;
-}
-
-function findJBrowseCliGS(): ?string {
-    static $cached = null;
-    if ($cached !== null) return $cached;
-
-    $candidates = [
-        __DIR__ . '/../../tools/jbrowse-cli/jbrowse-run.sh',
-        __DIR__ . '/../../tools/jbrowse-cli/bin/jbrowse',
-        '/usr/local/bin/jbrowse',
-        '/usr/bin/jbrowse',
-        (getenv('HOME') ?: '') . '/.npm-global/bin/jbrowse',
-        '/root/.npm-global/bin/jbrowse',
-        '/usr/local/lib/node_modules/.bin/jbrowse',
-        '/usr/lib/node_modules/@jbrowse/cli/bin/run',
-    ];
-    foreach ($candidates as $path) {
-        if ($path && is_executable($path)) {
-            $cached = $path;
-            return $path;
-        }
-    }
-    $out = [];
-    exec('command -v jbrowse 2>/dev/null', $out, $ret);
-    $cached = ($ret === 0 && !empty($out[0])) ? trim($out[0]) : false;
-    return $cached ?: null;
 }

@@ -66,11 +66,13 @@ function housekeeping_persist_status(string $key, $value): void {
 function housekeeping_hydrate_session_from_status(): void {
     $file = housekeeping_status_file();
     if (!file_exists($file)) return;
-    $all = loadJsonFile($file, []);
-    if (isset($all['site_data_backup'])) $_SESSION['site_data_backup'] = $all['site_data_backup'];
-    if (isset($all['env_warnings']))     $_SESSION['env_warnings']     = $all['env_warnings'];
-    if (isset($all['perm_summary']))     $_SESSION['perm_summary']     = $all['perm_summary'];
-    if (array_key_exists('jbrowse_version', $all)) $_SESSION['jbrowse_version'] = $all['jbrowse_version'];
+    // EVERY persisted key, under its own name. This used to be a hand-kept list of four keys,
+    // and jbrowse_index_summary was never added to it -- so the gene-index count was written
+    // every hour and reached no page. housekeeping_persist_status() and the session use the
+    // same key by convention (each task sets both), so there is nothing to map.
+    foreach (loadJsonFile($file, []) as $key => $value) {
+        $_SESSION[$key] = $value;
+    }
 }
 
 /**
@@ -143,7 +145,7 @@ function housekeeping_task_registry(): array {
             'name'  => 'jbrowse_indexes',
             'fn'    => 'housekeeping_check_jbrowse_indexes',
             'label' => 'JBrowse track indexes',
-            'desc'  => 'Rebuilds and counts gene tracks whose bgzip/tabix index is older than its source GFF. annotations.gff3 is a symlink into organisms/ so it follows every gene-set reload, while the .gz JBrowse actually reads is a snapshot that only changes on an explicit re-prep — so a reload stales the browser track silently. Rebuilds stale ones first — only in the background run, smallest first, about five minutes per run, the rest on the next; a run from the Re-run button only counts.',
+            'desc'  => 'Rebuilds and counts gene tracks whose bgzip/tabix index is older than its source GFF, or is empty, truncated or missing. annotations.gff3 is a symlink into organisms/ so it follows every gene-set reload, while the .gz JBrowse actually reads is a snapshot that only changes on an explicit re-prep — so a reload stales the browser track silently. Rebuilds stale ones first — only in the background run, smallest first, about five minutes per run, the rest on the next; the Run housekeeping now button counts, then starts that background rebuild when there is work.',
         ],
         [
             'name'  => 'jbrowse_version',
@@ -234,7 +236,7 @@ function run_housekeeping(): void {
  * Invokes a real script file rather than an inline `php -r` string — nested quoting there
  * is fragile enough that it silently produced a child which never ran during testing.
  */
-function housekeeping_spawn_background(): bool {
+function housekeeping_spawn_background(?string $task = null): bool {
     $script = ConfigManager::getInstance()->getPath('site_path') . '/scripts/run_housekeeping.php';
     if (!file_exists($script)) {
         error_log('MOOP housekeeping: cannot spawn — missing ' . $script);
@@ -245,10 +247,11 @@ function housekeeping_spawn_background(): bool {
     // PHP_BINARY under php-fpm is the fpm binary, which cannot run scripts. Fall back to
     // a plain CLI php on PATH.
     if (str_contains($php, 'php-fpm') || !is_executable($php)) {
-        $php = trim((string) @shell_exec('command -v php 2>/dev/null')) ?: 'php';
+        $php = moop_find_executable('php') ?: 'php';
     }
 
-    $cmd = escapeshellarg($php) . ' ' . escapeshellarg($script) . ' --spawned';
+    $cmd = escapeshellarg($php) . ' ' . escapeshellarg($script) . ' --spawned'
+         . ($task !== null ? ' ' . escapeshellarg('--task=' . $task) : '');
     $descriptors = [
         0 => ['file', '/dev/null', 'r'],
         1 => ['file', '/dev/null', 'w'],
@@ -257,7 +260,7 @@ function housekeeping_spawn_background(): bool {
     $proc = @proc_open(['/bin/sh', '-c', $cmd], $descriptors, $pipes);
     if (!is_resource($proc)) {
         error_log('MOOP housekeeping: proc_open failed — falling back to inline run');
-        housekeeping_run_tasks();   // better slow than never
+        housekeeping_run_tasks($task !== null ? [$task] : []);   // better slow than never
         return false;
     }
     // Deliberately NO proc_close(): it blocks until the child exits.
@@ -780,21 +783,19 @@ function housekeeping_environment_check() {
         }
     }
 
-    // 4. CLI tools available
-    // PHP-FPM may have a restricted PATH, so also check /usr/local/bin explicitly
+    // 4. CLI tools available -- resolved the same way the code that runs them does
+    // (moop_find_executable: PATH, then /usr/local/bin and /usr/bin).
     $cli_tools = [
         'blastn'          => 'BLAST searches will not work',
         'blast_formatter' => 'BLAST result display and downloads will not work',
         'blastdbcmd'      => 'BLAST sequence retrieval will not work',
         'samtools'        => 'BAM/CRAM tracks and FAI indexing will not work',
         'makeblastdb'     => 'BLAST index building will not work',
+        'bgzip'           => 'JBrowse gene tracks cannot be built or rebuilt',
+        'tabix'           => 'JBrowse gene tracks cannot be built or rebuilt',
     ];
     foreach ($cli_tools as $tool => $impact) {
-        $path = trim(shell_exec("which " . escapeshellarg($tool) . " 2>/dev/null") ?? '');
-        if (empty($path) && file_exists("/usr/local/bin/$tool")) {
-            $path = "/usr/local/bin/$tool";
-        }
-        if (empty($path)) {
+        if (moop_find_executable($tool) === '') {
             $warnings[] = [
                 'level' => 'warning',
                 'message' => "CLI tool <code>$tool</code> not found in PATH — $impact.",
@@ -893,7 +894,8 @@ function housekeeping_permission_check() {
 }
 
 /**
- * Count JBrowse gene tracks whose bgzip/tabix index is older than its source GFF.
+ * Count JBrowse gene tracks whose bgzip/tabix index is stale, broken or missing
+ * (gene_track_index_problem() -- the one rule).
  *
  * WHY THIS EXISTS. data/genomes/{org}/{asm}/{gs}/annotations.gff3 is a SYMLINK into
  * organisms/, so it silently follows every gene-set reload -- while annotations.gff3.gz,
@@ -913,19 +915,22 @@ function housekeeping_permission_check() {
 function housekeeping_check_jbrowse_indexes() {
     $config    = ConfigManager::getInstance();
     $site_path = $config->getPath('site_path');
+    require_once $site_path . '/lib/jbrowse/gene_set_functions.php';
     $base      = "$site_path/data/genomes";
     $rebuilt   = PHP_SAPI === 'cli' ? housekeeping_rebuild_stale_gene_indexes($base) : null;
 
-    $summary = ['total' => 0, 'stale' => 0, 'missing' => 0, 'examples' => [], 'checked_at' => time(),
-                'last_rebuild' => $rebuilt];
-
-    if (!is_dir($base)) {
-        $_SESSION['jbrowse_index_summary'] = $summary;
-        housekeeping_persist_status('jbrowse_index_summary', $summary);
-        return;
+    // 'broken' is its own count, not folded into 'missing': an empty or truncated file
+    // was produced by a build that failed, and JBrowse shows NO genes for that track.
+    $summary = ['total' => 0, 'stale' => 0, 'missing' => 0, 'broken' => 0, 'examples' => [],
+                'checked_at' => time(), 'last_rebuild' => $rebuilt];
+    // A count-only run (the Re-run button, php-fpm) must not wipe the record of the last
+    // real rebuild -- it is what tells the admin whether the background run is working.
+    if ($rebuilt === null) {
+        $prev = json_decode((string)@file_get_contents(housekeeping_status_file()), true);
+        $summary['last_rebuild'] = $prev['jbrowse_index_summary']['last_rebuild'] ?? null;
     }
 
-    foreach (glob("$base/*/*/*/annotations.gff3") as $gff) {
+    foreach (is_dir($base) ? (glob("$base/*/*/*/annotations.gff3") ?: []) : [] as $gff) {
         // glob() does not follow into the symlink; file_exists() does, and a dangling
         // link means the gene set is gone rather than stale.
         if (!file_exists($gff)) {
@@ -933,36 +938,21 @@ function housekeeping_check_jbrowse_indexes() {
         }
         $summary['total']++;
 
-        $gz  = "$gff.gz";
-        $tbi = "$gz.tbi";
-        $csi = "$gz.csi";
-
-        $why = null;
-        if (!file_exists($gz)) {
-            $summary['missing']++;
-            $why = 'no compressed GFF';
-        } elseif (filemtime($gz) < filemtime($gff)) {
-            $summary['stale']++;
-            $why = 'index older than GFF';
-        } elseif (!file_exists($tbi) && !file_exists($csi)) {
-            $summary['missing']++;
-            $why = 'no tabix index';
-        } else {
-            $index = file_exists($tbi) ? $tbi : $csi;
-            if (filemtime($index) < filemtime($gz)) {
-                $summary['stale']++;
-                $why = 'tabix index older than compressed GFF';
-            }
+        $problem = gene_track_index_problem($gff);
+        if ($problem === null) {
+            continue;
         }
+        $summary[$problem['kind']]++;
 
-        // Enough to identify the gene set on the manager page; the page re-checks live.
-        if ($why !== null && count($summary['examples']) < 60) {
+        // Enough to identify the gene set on the dashboard; the manager page re-checks live.
+        if (count($summary['examples']) < 60) {
             $parts = explode('/', substr($gff, strlen($base) + 1));
             $summary['examples'][] = [
                 'organism' => $parts[0] ?? '?',
                 'assembly' => $parts[1] ?? '?',
                 'gene_set' => $parts[2] ?? '?',
-                'why'      => $why,
+                'kind'     => $problem['kind'],
+                'why'      => $problem['why'],
             ];
         }
     }
@@ -972,43 +962,58 @@ function housekeeping_check_jbrowse_indexes() {
 }
 
 /**
- * Rebuild stale gene-track indexes, smallest GFF first, until $budget_seconds is spent; the
- * rest wait for the next run (hourly), so a large backlog is worked through without any one
- * run holding the housekeeping lock for long.
+ * Rebuild gene-track indexes that are stale, broken or missing, smallest GFF first, until
+ * $budget_seconds is spent; the rest wait for the next run (hourly), so a large backlog is
+ * worked through without any one run holding the housekeeping lock for long. Broken ones go
+ * first regardless of size: a broken track shows no genes at all, a stale one shows old ones.
  *
- * Only tracks that were prepped before and have since gone stale -- never one that was never
- * registered (no .gz): registering is an admin decision. The rebuild is the manager's own
- * re-prep (prepareGeneSetForJBrowse, not forced), which rebuilds the .gz/.tbi when stale and
- * leaves the track config alone when it exists. The search index (trix) is not touched: it
- * lives under jbrowse2/, which the web server must not write, and none exist today.
+ * "Missing" includes a gene set with no .gz at all. That used to be skipped as "never
+ * registered -- an admin decision", but annotations.gff3 is only ever created by
+ * prepareGeneSetForJBrowse() itself, so the symlink existing means registration was
+ * attempted and the compression step is what failed.
+ *
+ * The rebuild is the manager's own re-prep (prepareGeneSetForJBrowse, not forced), which
+ * rebuilds only what gene_track_index_problem() reports and leaves the track config alone
+ * when it exists. The search index (trix) is not touched: it lives under jbrowse2/, which
+ * the web server must not write, and none exist today.
  *
  * @return array{done: list<string>, failed: list<string>, left: int, seconds: int}
+ *         failed entries are "org/asm/gs — reason".
  */
 function housekeeping_rebuild_stale_gene_indexes(string $base, int $budget_seconds = 300): array {
     $t0 = time();
     $out = ['done' => [], 'failed' => [], 'left' => 0, 'seconds' => 0];
     if (!is_dir($base)) return $out;
 
-    $stale = [];
-    foreach (glob("$base/*/*/*/annotations.gff3") ?: [] as $gff) {
-        $gz = "$gff.gz";
-        if (!file_exists($gff) || !file_exists($gz)) continue;   // gone, or never prepped
-        $idx = file_exists("$gz.tbi") ? "$gz.tbi" : (file_exists("$gz.csi") ? "$gz.csi" : null);
-        if (filemtime($gz) < filemtime($gff) || ($idx !== null && filemtime($idx) < filemtime($gz))) {
-            $stale[$gff] = filesize($gff);
-        }
-    }
-    asort($stale);
-
     $config = ConfigManager::getInstance();
     require_once $config->getPath('site_path') . '/lib/jbrowse/gene_set_functions.php';
-    foreach (array_keys($stale) as $i => $gff) {
-        if (time() - $t0 >= $budget_seconds) { $out['left'] = count($stale) - $i; break; }
+
+    $todo = [];
+    foreach (glob("$base/*/*/*/annotations.gff3") ?: [] as $gff) {
+        if (!file_exists($gff)) continue;   // dangling: the gene set is gone
+        $problem = gene_track_index_problem($gff);
+        if ($problem !== null) {
+            $todo[$gff] = [$problem['kind'] === 'broken' ? 0 : 1, filesize($gff)];
+        }
+    }
+    uasort($todo, fn($a, $b) => $a <=> $b);
+
+    foreach (array_keys($todo) as $i => $gff) {
+        if (time() - $t0 >= $budget_seconds) { $out['left'] = count($todo) - $i; break; }
         [$org, $asm, $gs] = array_slice(explode('/', substr($gff, strlen($base) + 1)), 0, 3);
         $log = [];
         $ok  = prepareGeneSetForJBrowse($org, $asm, $gs, $config, $log, false);
-        $out[$ok ? 'done' : 'failed'][] = "$org/$asm/$gs";
-        if (!$ok) error_log("MOOP housekeeping: re-prep failed for $org/$asm/$gs: " . implode(' | ', array_slice($log, -3)));
+        if ($ok) {
+            $out['done'][] = "$org/$asm/$gs";
+            continue;
+        }
+        // The reason travels WITH the result, into the status file the dashboard reads. The
+        // background child's error_log() goes to its stderr, which is /dev/null -- so a
+        // reason that only went to the log was a reason nobody would ever see.
+        $errors = array_values(array_filter($log, fn($l) => strpos($l, 'ERROR') !== false || strpos($l, 'WARNING') !== false));
+        $why    = implode(' | ', $errors ?: array_slice($log, -2));
+        $out['failed'][] = "$org/$asm/$gs — $why";
+        error_log("MOOP housekeeping: re-prep failed for $org/$asm/$gs: $why");
     }
     $out['seconds'] = time() - $t0;
     return $out;
