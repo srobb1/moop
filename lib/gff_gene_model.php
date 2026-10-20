@@ -108,7 +108,8 @@ function moop_gff_candidate_lines(string $organism, string $assembly, string $ge
  *   loc      [seqname, start, end, strand, loc_string]
  *   lines    raw GFF lines, parent before child: the record, its children, theirs
  *   children [id, type, start, end, strand, lines] for each direct child
- *   isoforms the diagram's model: transcript-type children with exons/CDS --
+ *   isoforms the diagram's model: transcript-type children with exons/CDS (or, for a gene with
+ *            CDS directly under it, each CDS id) --
  *            [id, type, start, end, strand, exons [start,end,type], cds [start,end]]
  */
 function moop_gene_model(string $organism, string $assembly, string $gene_set, string $uniquename, string $type = 'gene'): ?array {
@@ -168,6 +169,24 @@ function moop_gene_model(string $organism, string $assembly, string $gene_set, s
         if ($id === '' || !moop_gff_is_transcript_type($c['p'][2])) continue;
         $isoforms[$id] = ['id' => $id, 'type' => $c['p'][2], 'start' => (int)$c['p'][3], 'end' => (int)$c['p'][4],
                           'strand' => $c['p'][6], 'exons' => [], 'cds' => []];
+    }
+    // A gene whose CDS hangs directly off it, with no transcript between: NCBI's prokaryotic
+    // annotation (PGAP), and bacterial GFFs generally. The CDS IS the transcript level -- the
+    // loader stores it as one (gene -> cds -> protein) -- so draw each CDS id as an isoform whose
+    // exons are its own segments: no UTRs or introns are known. Several lines with one id (a
+    // programmed frameshift) are one isoform with several segments.
+    if (!$isoforms) {
+        foreach ($children as $c) {
+            $id = $c['a']['ID'] ?? '';
+            if ($id === '' || strtolower($c['p'][2]) !== 'cds') continue;
+            $seg = ['start' => (int)$c['p'][3], 'end' => (int)$c['p'][4]];
+            $isoforms[$id] ??= ['id' => $id, 'type' => $c['p'][2], 'start' => $seg['start'], 'end' => $seg['end'],
+                                'strand' => $c['p'][6], 'exons' => [], 'cds' => []];
+            $isoforms[$id]['start'] = min($isoforms[$id]['start'], $seg['start']);
+            $isoforms[$id]['end']   = max($isoforms[$id]['end'], $seg['end']);
+            $isoforms[$id]['cds'][]   = $seg;
+            $isoforms[$id]['exons'][] = $seg + ['type' => 'exon'];
+        }
     }
     foreach ($grand as $g) {
         $ft = strtolower($g['p'][2]);
