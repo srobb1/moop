@@ -259,6 +259,22 @@ my ($bad_parent_type) = $dbh->selectrow_array(
 
 my ($self_parents) = $dbh->selectrow_array(
     "SELECT COUNT(*) FROM feature WHERE parent_feature_id = feature_id");
+# Loops longer than one step: the self-parent test above cannot see A -> B -> A, and
+# such a chain hangs the website's walk up the tree just the same. Walk up from every
+# child; a walk that arrives back at its start is a loop. Depth-capped so this query
+# itself always terminates -- real hierarchies are 3-4 levels deep.
+my ($cycle_members) = $dbh->selectrow_array(q{
+    WITH RECURSIVE walk(start_id, cur_id, depth) AS (
+        SELECT feature_id, parent_feature_id, 1
+          FROM feature
+         WHERE parent_feature_id IS NOT NULL AND parent_feature_id != feature_id
+        UNION ALL
+        SELECT w.start_id, f.parent_feature_id, w.depth + 1
+          FROM walk w JOIN feature f ON f.feature_id = w.cur_id
+         WHERE f.parent_feature_id IS NOT NULL AND w.cur_id != w.start_id AND w.depth < 50
+    )
+    SELECT COUNT(DISTINCT start_id) FROM walk WHERE cur_id = start_id
+});
 
 my ($dangling) = $dbh->selectrow_array(
     "SELECT COUNT(*) FROM feature c
@@ -288,6 +304,9 @@ push @fatal, "$bad_parent_type feature(s) store a non-integer, non-NULL parent_f
     if $bad_parent_type;
 push @fatal, "$self_parents feature(s) are their own parent (a recursive walk will not terminate)"
     if $self_parents;
+push @fatal, "$cycle_members feature(s) sit in a longer parent loop (A -> B -> A); a recursive"
+    . " walk will not terminate"
+    if $cycle_members;
 push @fatal, "$dangling feature(s) point at a parent_feature_id that does not exist"
     if $dangling;
 push @fatal, "0 roots -- nothing can bubble up to a top-level feature"

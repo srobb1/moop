@@ -135,11 +135,22 @@ for my $gene_id (sort keys %gene_txs) {
     my $gdesc = $gene_desc{$gene_id} // '';
     print join("\t", $gene_id, 'gene', '', '', $gname, $gdesc), "\n";
 
+    # A transcript whose id IS its gene's id (a protein-only set described as "each
+    # protein is its own gene and transcript") must not be emitted: the loader keys on
+    # uniquename, so the mRNA row would overwrite the gene row and leave a gene set
+    # with 0 genes and N self-parented "mRNAs" -- Sinorhizobium_meliloti's H01 set as
+    # loaded. Skipping it makes the gene the transcript level (gene -> CDS -> protein,
+    # as bacterial GFFs are), and resolve_parent() then falls back to the gene.
+    my %tx_known;
     for my $tx_id (sort @{ $gene_txs{$gene_id} }) {
+        if ($tx_id eq $gene_id) {
+            warn "WARNING: transcript $tx_id has the same id as its gene; "
+               . "loading it as the gene only (no separate mRNA row)\n";
+            next;
+        }
+        $tx_known{$tx_id} = 1;
         print join("\t", $tx_id, 'mRNA', $gene_id, 'gene', $gname, $gdesc), "\n";
     }
-
-    my %tx_known = map { $_ => 1 } @{ $gene_txs{$gene_id} };
 
     # A CDS entry sharing its raw ID with a protein entry (the common case —
     # both are the same ORF call) is stored under a ":cds" uniquename and the
