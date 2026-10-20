@@ -3,8 +3,9 @@
  * AJAX endpoint to get annotation sources grouped by type
  * Used by advanced search filter modal
  * 
- * Parameters: organisms (comma-separated list) OR organism (single, for backwards compatibility)
- * Returns: JSON with grouped sources (aggregated from all specified organisms)
+ * Parameters: organisms (comma-separated list) OR organism (single, for backwards compatibility);
+ *             optionally, for one organism, assembly (an accession) and gene_set
+ * Returns: JSON with grouped sources, from only the gene sets this viewer may open
  */
 
 ob_start();
@@ -34,18 +35,41 @@ if (empty($organisms)) {
     exit;
 }
 
-// Optional: one gene set of a single organism (the gene set page).
+// Only what this viewer may open. Source names and counts are data: before 2026-10-20 this
+// endpoint answered for any organism named, so an anonymous request listed every source and
+// count of an organism with no public assembly. ADMIN and IP_IN_RANGE see everything and get
+// the organism-wide counts; anyone else gets the sum of the gene sets they may open, never
+// the organism's figure, which would include the gene sets they may not.
+// Matching against the accessible list also rejects a name that is not an organism at all
+// (it is used to build database and cache paths below).
+$full_access = has_access('ADMIN') || has_access('IP_IN_RANGE');
+$viewer_gene_sets = [];   // organism => ["accession/gene_set" => true]
+foreach (getAccessibleGeneSets() as $group_orgs) {
+    foreach ($group_orgs as $org => $sources) {
+        foreach ($sources as $source) {
+            $accession = $source['genome_accession'] ?? $source['assembly'];
+            $viewer_gene_sets[$org][$accession . '/' . $source['gene_set']] = true;
+        }
+    }
+}
+$organisms = array_values(array_filter(array_unique($organisms),
+    fn($org) => isset($viewer_gene_sets[$org])));
+
+// Optional scope within a single organism: an assembly (the assembly page), or an assembly
+// + gene set (the gene set page). The counts are then that scope's own, so the filter neither
+// shows organism-wide numbers nor offers a source with nothing in it. Ignored for several
+// organisms -- an accession belongs to one.
 $assembly_param = trim((string)($_GET['assembly'] ?? ''));
 $gene_set_param = trim((string)($_GET['gene_set'] ?? ''));
-if ($gene_set_param !== '' && (count($organisms) !== 1 || $assembly_param === ''
-        || !has_gene_set_access($organisms[0], $assembly_param, $gene_set_param))) {
-    $gene_set_param = '';   // not a gene set this viewer may see: organism-level, as before
+if (count($organisms) !== 1 || $assembly_param === '') {
+    $assembly_param = $gene_set_param = '';
 }
 
 $organism_data = $config->getPath('organism_data');
 
 // Aggregate sources from all organisms
 $aggregated_sources = [];
+$answered = [];   // the organisms that contributed, for the response
 $metadata_path = $config->getPath('metadata_path');
 $config_file = "$metadata_path/annotation_config.json";
 $annotation_config = loadJsonFile($config_file, []);
@@ -57,16 +81,41 @@ foreach ($organisms as $organism) {
         continue; // Skip organisms without database
     }
 
-    // Scoped to ONE gene set (the gene set page passes assembly + gene_set): that gene set's own
-    // sources and counts, so the filter neither shows organism-wide numbers nor offers a source
-    // that has nothing in this gene set. Built in the background by housekeeping; until then,
-    // fall through to the organism's sources -- a superset, so nothing the user could pick is
-    // missing, only the counts are wider.
-    $gs_counts = ($gene_set_param !== '' && count($organisms) === 1)
-        ? moop_load_gene_set_annotation_counts($organism, $assembly_param, $gene_set_param)
-        : null;
-    if ($gs_counts !== null) {
-        $source_types = $gs_counts;
+    // The gene sets this request covers: the viewer's, narrowed to the scope asked for.
+    $keys = array_values(array_filter(array_keys($viewer_gene_sets[$organism]),
+        function ($key) use ($assembly_param, $gene_set_param) {
+            [$accession, $gene_set] = explode('/', $key, 2);
+            return ($assembly_param === '' || $accession === $assembly_param)
+                && ($gene_set_param === '' || $gene_set === $gene_set_param);
+        }));
+    if (!$keys) {
+        continue;   // nothing in that scope this viewer may open
+    }
+    $answered[] = $organism;
+
+    // Per-gene-set counts are built by housekeeping's background run. A gene set not built yet
+    // is left out for a restricted viewer rather than replaced by the organism's figure; a viewer
+    // who may see everything gets the organism's sources instead -- a superset, so nothing they
+    // could pick is missing, only the counts are wider.
+    $source_types = null;
+    if (!$full_access || $assembly_param !== '') {
+        $parts = [];
+        foreach ($keys as $key) {
+            [$accession, $gene_set] = explode('/', $key, 2);
+            $part = moop_load_gene_set_annotation_counts($organism, $accession, $gene_set);
+            if ($part !== null) {
+                $parts[] = $part;
+            } elseif ($full_access) {
+                $parts = null;
+                break;
+            }
+        }
+        if ($parts !== null) {
+            $source_types = moop_sum_annotation_source_counts($parts);
+        }
+    }
+    if ($source_types !== null) {
+        // scoped counts, above
     // Use per-organism cache to avoid re-running the expensive COUNT aggregate query.
     // Cache is invalidated automatically when organism.sqlite is newer than the cache file.
     } elseif (($cache_file = moop_annotation_sources_cache_file($organism)) !== ''
@@ -130,7 +179,7 @@ foreach ($source_types_with_color as $type_data) {
 }
 
 echo json_encode([
-    'organisms' => $organisms,
+    'organisms' => $answered,
     'source_types' => $source_types_with_color,
     'total_sources' => $total_sources,
     'total_annotations' => $total_count

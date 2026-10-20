@@ -15,8 +15,8 @@ class AdvancedSearchFilter {
     constructor(config) {
         // Accept either organisms array or single organism for backwards compatibility
         this.organisms = config.organisms || (config.organism ? [config.organism] : []);
-        // One gene set (the gene set page): the server then lists that gene set's own sources
-        // and counts instead of the whole organism's.
+        // An assembly (the assembly page), or one gene set (the gene set page): the server then
+        // lists that scope's own sources and counts instead of the whole organism's.
         this.assembly = config.assembly || '';
         this.geneSet  = config.geneSet || '';
         this.sitePath = config.sitePath || window.sitePath;
@@ -42,9 +42,10 @@ class AdvancedSearchFilter {
         
         $.ajax({
             url: this.sitePath + '/tools/get_annotation_sources_grouped.php',
-            data: this.geneSet
-                ? { organisms: organismsParam, assembly: this.assembly, gene_set: this.geneSet }
-                : { organisms: organismsParam },
+            // assembly alone = the assembly page; + gene_set = the gene set page
+            data: Object.assign({ organisms: organismsParam },
+                this.assembly ? { assembly: this.assembly } : {},
+                this.assembly && this.geneSet ? { gene_set: this.geneSet } : {}),
             method: 'GET',
             dataType: 'json',
             success: (data) => {

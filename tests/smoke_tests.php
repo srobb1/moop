@@ -1492,6 +1492,15 @@ array_map('unlink', glob("$_gd/OrgB/*")); @rmdir("$_gd/OrgB"); @rmdir($_gd);
 // The grouping both builders share: config order first, counts as integers.
 $_g = moop_group_annotation_sources([['name' => 'b', 'type' => 'Zeta', 'count' => '3'], ['name' => 'a', 'type' => 'Zeta', 'count' => '1']]);
 ok($_g === ['Zeta' => [['name' => 'b', 'count' => 3], ['name' => 'a', 'count' => 1]]], 'rows grouped by type, counts as integers, row order kept');
+// A viewer who may open only some gene sets gets THEIR sum, never the organism's figure.
+$_s = moop_sum_annotation_source_counts([
+    ['Homologs' => [['name' => 'UniProt', 'count' => 5], ['name' => '123', 'count' => 1]]],
+    ['Homologs' => [['name' => 'UniProt', 'count' => 2], ['name' => 'Pfam', 'count' => 9]], 'GO' => [['name' => 'GO', 'count' => 4]]],
+]);
+ok($_s === ['Homologs' => [['name' => 'Pfam', 'count' => 9], ['name' => 'UniProt', 'count' => 7], ['name' => '123', 'count' => 1]],
+            'GO' => [['name' => 'GO', 'count' => 4]]],
+   'gene set counts summed per source, highest first, a numeric name stays a string');
+ok(moop_sum_annotation_source_counts([]) === [], 'no gene sets -> nothing');
 
 // ----------------------------------------------------------------------------
 group('search: annotation source filter carries names exactly (JSON, no trim, commas survive)');

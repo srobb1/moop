@@ -266,7 +266,7 @@ class AnnotationSearch {
         const filter = new AdvancedSearchFilter({
             organisms: organisms,
             sitePath: this.config.sitePath,
-            // Set only on the gene set page (extraAjaxParams carries its assembly + gene_set).
+            // Assembly page: extraAjaxParams carries its assembly; gene set page: assembly + gene_set.
             assembly: this.config.extraAjaxParams.assembly || '',
             geneSet: this.config.extraAjaxParams.gene_set || '',
             selectedSources: selectedSourcesObj,

@@ -187,6 +187,34 @@ function moop_drop_empty_annotation_sources(array $by_type): array
 }
 
 /**
+ * Add several [type => [['name' => ..., 'count' => ...], ...]] lists into one: counts summed
+ * per (type, name), types in first-seen order, sources by count descending (ties keep
+ * first-seen order). Used to build the counts of just the gene sets a viewer may open.
+ *
+ * @param array $parts list of [type => sources] arrays
+ */
+function moop_sum_annotation_source_counts(array $parts): array
+{
+    $sum = [];
+    foreach ($parts as $by_type) {
+        foreach ($by_type as $type => $sources) {
+            foreach ((array)$sources as $s) {
+                $name = (string)($s['name'] ?? '');
+                $sum[$type][$name] = ($sum[$type][$name] ?? 0) + (int)($s['count'] ?? 0);
+            }
+        }
+    }
+    $out = [];
+    foreach ($sum as $type => $counts) {
+        $rows = [];
+        foreach ($counts as $name => $count) $rows[] = ['name' => (string)$name, 'count' => $count];
+        usort($rows, fn($a, $b) => $b['count'] <=> $a['count']);   // usort is stable in PHP 8
+        $out[$type] = $rows;
+    }
+    return $out;
+}
+
+/**
  * Read an organism's annotation-sources cache, empty sources removed.
  *
  * @return array|null [type => sources], or null when there is no cache file to read
