@@ -4,7 +4,8 @@
  * Used by advanced search filter modal
  * 
  * Parameters: organisms (comma-separated list) OR organism (single, for backwards compatibility);
- *             optionally, for one organism, assembly (an accession) and gene_set
+ *             optionally, for one organism, assembly (an accession) and gene_set;
+ *             optionally group (a group name): only that group's gene sets
  * Returns: JSON with grouped sources, from only the gene sets this viewer may open
  */
 
@@ -43,8 +44,12 @@ if (empty($organisms)) {
 // Matching against the accessible list also rejects a name that is not an organism at all
 // (it is used to build database and cache paths below).
 $full_access = has_access('ADMIN') || has_access('IP_IN_RANGE');
+// Optional: a group (the group page). A group can hold only some of an organism's gene sets,
+// so its counts are those gene sets' own, never the whole organism's.
+$group_param = (string)($_GET['group'] ?? '');
 $viewer_gene_sets = [];   // organism => ["accession/gene_set" => true]
-foreach (getAccessibleGeneSets() as $group_orgs) {
+foreach (getAccessibleGeneSets() as $group_name => $group_orgs) {
+    if ($group_param !== '' && (string)$group_name !== $group_param) continue;
     foreach ($group_orgs as $org => $sources) {
         foreach ($sources as $source) {
             $accession = $source['genome_accession'] ?? $source['assembly'];
@@ -98,7 +103,7 @@ foreach ($organisms as $organism) {
     // who may see everything gets the organism's sources instead -- a superset, so nothing they
     // could pick is missing, only the counts are wider.
     $source_types = null;
-    if (!$full_access || $assembly_param !== '') {
+    if (!$full_access || $assembly_param !== '' || $group_param !== '') {
         $parts = [];
         foreach ($keys as $key) {
             [$accession, $gene_set] = explode('/', $key, 2);

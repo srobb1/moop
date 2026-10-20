@@ -19,6 +19,7 @@ class AdvancedSearchFilter {
         // lists that scope's own sources and counts instead of the whole organism's.
         this.assembly = config.assembly || '';
         this.geneSet  = config.geneSet || '';
+        this.group    = config.group || '';   // the group page: only the group's gene sets
         this.sitePath = config.sitePath || window.sitePath;
         this.onApply = config.onApply || (() => {});
         this.sourceTypes = {};
@@ -45,7 +46,8 @@ class AdvancedSearchFilter {
             // assembly alone = the assembly page; + gene_set = the gene set page
             data: Object.assign({ organisms: organismsParam },
                 this.assembly ? { assembly: this.assembly } : {},
-                this.assembly && this.geneSet ? { gene_set: this.geneSet } : {}),
+                this.assembly && this.geneSet ? { gene_set: this.geneSet } : {},
+                this.group ? { group: this.group } : {}),
             method: 'GET',
             dataType: 'json',
             success: (data) => {

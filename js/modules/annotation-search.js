@@ -269,6 +269,7 @@ class AnnotationSearch {
             // Assembly page: extraAjaxParams carries its assembly; gene set page: assembly + gene_set.
             assembly: this.config.extraAjaxParams.assembly || '',
             geneSet: this.config.extraAjaxParams.gene_set || '',
+            group: this.config.extraAjaxParams.group || '',   // group page
             selectedSources: selectedSourcesObj,
             onApply: (selectedSources) => {
                 this.selectedSources = selectedSources;
