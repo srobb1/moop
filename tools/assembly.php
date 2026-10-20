@@ -36,6 +36,7 @@
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../lib/busco.php';
+include_once __DIR__ . '/../lib/gene_set_summary.php';
 
 // Load page-specific config
 $organism_data = $config->getPath('organism_data');
@@ -94,6 +95,15 @@ $assembly_meta = loadJsonFile($assembly_meta_file, []);
 // the assembly directory, the same shape as a gene set's. None today -> no card.
 $busco = moop_load_busco("$organism_data/$organism_name/{$assembly_info['genome_accession']}");
 
+// Assembly statistics: the pipeline's assembly_stats.json, else the background-computed .fai
+// figures (moop_assembly_stats_or_fallback() -- never computed here). The directory is the one on
+// disk: the accession, else the genome name, as for the downloads.
+$asm_dir = "$organism_data/$organism_name/{$assembly_info['genome_accession']}";
+if (!is_dir($asm_dir) && !empty($assembly_info['genome_name'])) {
+    $asm_dir = "$organism_data/$organism_name/{$assembly_info['genome_name']}";
+}
+$assembly_stats = moop_assembly_stats_or_fallback($asm_dir);
+
 // Data to pass to content file
 $data = [
     'assembly_info'        => $assembly_info,
@@ -110,6 +120,7 @@ $data = [
     'config'               => $config,
     'inline_scripts'       => $display_config['inline_scripts'],
     'busco'                => $busco,
+    'assembly_stats'       => $assembly_stats,
 ];
 
 // Use generic display template

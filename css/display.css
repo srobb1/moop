@@ -1787,3 +1787,17 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 .gsc-table td { font-size: 0.9rem; }
 .gsc-busco-bar { width: 96px; height: 10px; flex: 0 0 96px; }
 .gsc-top-icon { color: #0891b2; font-size: 0.7rem; margin-left: 0.25rem; }
+
+/* ── Assembly statistics card, assembly page (includes/assembly_stats_card.php) ──────────
+   Headline numbers in the same voice as the gene set page's Feature Counts: a large figure, a
+   small-caps label, one quiet line of context. Everything else is grouped and collapsed. */
+.as-tiles { display: flex; flex-wrap: wrap; gap: 0.75rem 2.25rem; margin-bottom: 0.9rem; }
+.as-tile { min-width: 7.5rem; }
+.as-tile-value { font-size: 1.5rem; font-weight: 700; line-height: 1.1; color: #1e293b; }
+.as-tile-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; margin-top: 0.15rem; }
+.as-tile-context { font-size: 0.8rem; color: #64748b; }
+.as-sentence { color: #334155; }
+.as-group-title { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #64748b; margin-bottom: 0.25rem; }
+.as-group { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 0.9rem; font-size: 0.9rem; }
+.as-group dt { font-weight: 400; color: #64748b; }
+.as-group dd { margin: 0; color: #1e293b; }

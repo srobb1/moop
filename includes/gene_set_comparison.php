@@ -48,7 +48,9 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
             . 'set page also shows the more specific lineages. With homolog: the share of genes with '
             . 'a homolog or ortholog in another species -- genes that resemble something known. '
             . 'Spurious gene predictions rarely do, so a low share can mean many of them. N50: half the assembly is in sequences at least this '
-            . 'long -- higher means a more contiguous genome. The arrow marks the highest value in a '
+            . 'long, and L50 is how many such sequences it takes -- a higher N50 and lower L50 '
+            . 'mean a more contiguous genome. Contig N50 is the same measured after splitting '
+            . 'at gaps (runs of Ns), so scaffolding cannot inflate it. The arrow marks the highest value in a '
             . 'column; click a column heading to sort.',
             'Comparing gene sets'
         ) ?>
@@ -118,8 +120,27 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
                 </td>
                 <td class="text-end" data-order="<?= $st ? $st['n50'] : -1 ?>">
                   <?php if ($st): ?>
-                    <?= moop_format_bp($st['n50']) ?><?= ($gsc_top['n50'] !== null && $st['n50'] >= $gsc_top['n50']) ? $gsc_mark : '' ?>
-                    <div class="small text-muted"><?= number_format($st['sequences']) ?> seqs &middot; <?= moop_format_bp($st['total_length']) ?></div>
+                    <?php $gsc_n50_tip = !empty($st['l50'])
+                        ? 'Half the genome is in ' . number_format($st['l50']) . ' sequence' . ($st['l50'] == 1 ? '' : 's')
+                          . ' of at least ' . moop_format_bp($st['n50'])
+                        : ''; ?>
+                    <span<?= $gsc_n50_tip !== '' ? ' title="' . htmlspecialchars($gsc_n50_tip) . '"' : '' ?>><?= moop_format_bp($st['n50']) ?></span><?= ($gsc_top['n50'] !== null && $st['n50'] >= $gsc_top['n50']) ? $gsc_mark : '' ?>
+                    <div class="small text-muted">
+                      <?php if (!empty($st['l50'])): ?>L50 <?= number_format($st['l50']) ?> &middot; <?php endif; ?>
+                      <?= number_format($st['sequences']) ?> seqs &middot; <?= moop_format_bp($st['total_length']) ?>
+                    </div>
+                    <?php /* Contig, gap and GC figures exist only in the pipeline's assembly_stats.json
+                             (a .fai has lengths alone); without it these lines are simply absent. */ ?>
+                    <?php if (isset($st['contig_n50'])): ?>
+                    <div class="small text-muted">contig N50 <?= moop_format_bp($st['contig_n50']) ?></div>
+                    <?php endif; ?>
+                    <?php if (isset($st['gap_pct']) || isset($st['gc_pct'])): ?>
+                    <div class="small text-muted">
+                      <?php if (isset($st['gap_pct'])): ?>gaps <?= moop_format_small_pct($st['gap_pct']) ?><?php endif; ?>
+                      <?php if (isset($st['gap_pct'], $st['gc_pct'])): ?> &middot; <?php endif; ?>
+                      <?php if (isset($st['gc_pct'])): ?>GC <?= number_format($st['gc_pct'], 1) ?>%<?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                   <?php else: ?><span class="text-muted">—</span><?php endif; ?>
                 </td>
                 <td class="text-nowrap" data-order="<?= htmlspecialchars($r['date_added']) ?>">

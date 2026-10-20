@@ -223,7 +223,7 @@
       <div class="card shadow-sm">
         <div class="card-header d-flex align-items-center" style="background-color:#e11d48;">
           <i class="fas fa-tag me-2 text-white"></i>
-          <span class="text-uppercase fw-semibold text-white section-eyebrow">Annotation Summary</span>
+          <span class="text-uppercase fw-semibold text-white section-eyebrow">Gene Set Annotation Summary</span>
           <?php /* Nothing on the page connected these numbers to the search box above them.
                    A reader sees 129,866 homologs and has no reason to know the text of those
                    annotations is what the search box searches, nor that the filter icon can

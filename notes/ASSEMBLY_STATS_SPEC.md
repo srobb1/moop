@@ -111,6 +111,15 @@ independent count of ≥ 10 N runs (Nvec: 763 runs + 30 records = 793 contigs). 
 - **`process_one_geneset.sh`** runs the script right after `genome.fa.fai` is built, whenever the
   genome is present. **Recomputed only when `genome.fa` is newer than `assembly_stats.json`, or
   the file's `version` is not the script's** (user, 2026-10-20) — the genome can be 3.4 Gb.
+- **⚠️ TO DO (decided 2026-10-20, review of 45b1ea5): "current" must not rest on "newer than".**
+  `is_current()` skips when `assembly_stats.json` is newer than `genome.fa`. A genome replaced with
+  `rsync -a` / `cp -p` keeps its ORIGINAL, older mtime, so the old stats would read as current and
+  never be redone -- silently wrong. Fix: record the genome's byte size and mtime in the file
+  (`fasta_bytes`, `fasta_mtime`) and treat it as current only when BOTH equal the genome's current
+  `stat` exactly (and `version` matches). Bump `$FORMAT_VERSION` to 2 so every file is redone once
+  and gains the two fields. MOOP's reader ignores fields it does not know, so this needs no web change.
+  (The `.fai` / BLAST `needs_rebuild` checks in the same block share the `-nt` rule -- the same
+  exposure, for the pipeline to decide separately.)
 - **Per assembly, though the pipeline is per gene set** (user, 2026-10-20): the SCRIPT decides —
   when the file is current it exits at once without reading the genome. So an assembly's first
   gene set computes it and the others skip; no new loop, no per-assembly step. `--reload` does

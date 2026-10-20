@@ -204,6 +204,9 @@
     </div>
   </div>
 
+  <!-- Assembly statistics: contiguity, size, gaps, GC. -->
+  <?php if (!empty($assembly_stats)) include __DIR__ . '/../../includes/assembly_stats_card.php'; ?>
+
   <!-- Genome-mode BUSCO: only when the pipeline shipped a busco.json for this assembly. -->
   <?php if (!empty($busco)):
       $busco_subject = 'assembly';

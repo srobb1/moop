@@ -28,7 +28,7 @@ $busco_segments = [
     <div class="card shadow-sm">
       <div class="card-header d-flex align-items-center" style="background-color:<?= htmlspecialchars($busco_color) ?>;">
         <i class="fas fa-check-double me-2 text-white"></i>
-        <span class="text-uppercase fw-semibold text-white section-eyebrow">Completeness (BUSCO)</span>
+        <span class="text-uppercase fw-semibold text-white section-eyebrow"><?= htmlspecialchars(ucwords($busco_subject)) ?> Completeness (BUSCO)</span>
         <span class="ms-2"><?= field_help(
             'BUSCO looks for a set of genes that almost every species in a lineage carries, '
             . 'once each. Complete means the gene was found full-length -- as a single copy, '

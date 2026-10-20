@@ -1499,9 +1499,22 @@ require_once "$BASE/lib/gene_set_summary.php";
 $_fai = tempnam(sys_get_temp_dir(), 'fai');
 // lengths 50,30,10,5,5 (total 100): the running sum first reaches 50 at the first sequence.
 file_put_contents($_fai, "s1\t50\t0\t60\t61\ns2\t30\t0\t60\t61\ns3\t10\t0\t60\t61\ns4\t5\t0\t60\t61\ns5\t5\t0\t60\t61\n");
-ok(moop_fai_stats($_fai) === ['sequences' => 5, 'total_length' => 100, 'n50' => 50], 'N50 is the length where half the total is reached');
+ok(moop_fai_stats($_fai) === ['sequences' => 5, 'total_length' => 100, 'n50' => 50, 'l50' => 1], 'N50 is the length where half the total is reached; L50 how many it took');
 file_put_contents($_fai, "a\t40\t0\t60\t61\nb\t30\t0\t60\t61\nc\t30\t0\t60\t61\n");
-ok((moop_fai_stats($_fai)['n50'] ?? null) === 30, 'N50 when the half-way point falls in the second sequence');
+ok((moop_fai_stats($_fai)['n50'] ?? null) === 30 && (moop_fai_stats($_fai)['l50'] ?? null) === 2, 'N50/L50 when the half-way point falls in the second sequence');
+// The pipeline's assembly_stats.json: the scaffold four required, the rest optional.
+$_ad = sys_get_temp_dir() . '/moop_as_' . getmypid(); @mkdir($_ad);
+file_put_contents("$_ad/assembly_stats.json", json_encode(['version' => 1, 'sequences' => 30, 'total_length' => 252273000,
+    'n50' => 16735929, 'l50' => 7, 'contig_n50' => 803730, 'gap_bases' => 114400, 'gap_pct' => 0, 'gc_pct' => 41]));
+$_as = moop_load_assembly_stats($_ad);
+ok(($_as['l50'] ?? null) === 7 && ($_as['contig_n50'] ?? null) === 803730 && ($_as['gc_pct'] ?? null) === 41.0,
+   'assembly_stats.json read: scaffold + contig figures, GC accepted as a whole number');
+ok(moop_format_small_pct($_as['gap_pct']) === '0.05%', 'gap share from gap_bases (0.045%), not the rounded 0 in the file');
+ok(moop_format_small_pct(0.0042) === '<0.01%' && moop_format_small_pct(0.0) === '0.0%' && moop_format_small_pct(2.34) === '2.3%',
+   'a gap share too small to show reads <0.01%, never 0.00%');
+file_put_contents("$_ad/assembly_stats.json", json_encode(['sequences' => 30, 'total_length' => 1, 'n50' => '16735929', 'l50' => 7]));
+ok(moop_load_assembly_stats($_ad) === null, 'a required figure missing or not an integer -> null (the .fai fallback is used)');
+@unlink("$_ad/assembly_stats.json"); @rmdir($_ad);
 file_put_contents($_fai, '');
 ok(moop_fai_stats($_fai) === null, 'an empty .fai gives no stats, not zeros');
 @unlink($_fai);

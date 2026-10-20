@@ -7,7 +7,7 @@
  * feature table or a genome index:
  *
  *   gene_set_summary.json  (cache, per organism; BUILT ONLY in housekeeping's background run)
- *     assemblies.{dir}     sequences, total_length, n50 -- from {dir}/genome.fa.fai. A .fai can
+ *     assemblies.{dir}     sequences, total_length, n50, l50 -- from {dir}/genome.fa.fai. A .fai can
  *                          be 70 MB (Carollia: millions of contigs), so it is sorted by `sort`,
  *                          streamed, never loaded into PHP.
  *     gene_sets.{acc/gs}   genes, transcripts, homology_genes, homology_transcripts: how many
@@ -62,8 +62,9 @@ function moop_homology_flags(): array {
  * background run rebuilds it -- mtimes alone cannot see a change in the code that built it.
  * 2: homology_* (genes with a homolog/ortholog) replaced annotated_* (any annotation).
  * 3: homology types chosen by name or config flag, recorded in the file.
+ * 4: l50 in the .fai-derived assembly figures.
  */
-const MOOP_GENE_SET_SUMMARY_VERSION = 3;
+const MOOP_GENE_SET_SUMMARY_VERSION = 4;
 
 function moop_gene_set_summary_file(string $organism): string {
     $dir = moop_cache_root() . '/' . $organism;
@@ -88,7 +89,8 @@ function moop_gene_set_summary_is_stale(string $organism_dir, string $file): boo
 }
 
 /**
- * Length statistics from a .fai, streamed through sort(1): {sequences, total_length, n50}.
+ * Length statistics from a .fai, streamed through sort(1): {sequences, total_length, n50, l50}.
+ * The FALLBACK: assembly_stats.json from the pipeline wins when present (moop_load_assembly_stats()).
  * null if the file cannot be read.
  */
 function moop_fai_stats(string $fai): ?array {
@@ -112,13 +114,50 @@ function moop_fai_stats(string $fai): ?array {
     $cmd = 'cut -f2 ' . escapeshellarg($fai) . ' | LC_ALL=C sort -rn 2>/dev/null';
     $pipe = popen($cmd, 'r');
     if (!$pipe) return null;
-    $n50 = 0; $running = 0;
+    $n50 = 0; $l50 = 0; $running = 0;
     while (($len = fgets($pipe)) !== false) {
         $running += (int)$len;
+        $l50++;
         if ($running * 2 >= $total) { $n50 = (int)$len; break; }
     }
     pclose($pipe);
-    return ['sequences' => $count, 'total_length' => $total, 'n50' => $n50];
+    return ['sequences' => $count, 'total_length' => $total, 'n50' => $n50, 'l50' => $l50];
+}
+
+/**
+ * {assembly dir}/assembly_stats.json, written by the pipeline (notes/ASSEMBLY_STATS_SPEC.md):
+ * scaffold and contig N50/L50, gaps, GC. Read defensively, like busco.json: missing or malformed
+ * -> null, and the caller falls back to the .fai figures. The four scaffold fields must be
+ * present and sane; the rest are optional (the pipeline omits what it cannot compute).
+ */
+function moop_load_assembly_stats(string $assembly_dir): ?array {
+    $file = rtrim($assembly_dir, '/') . '/assembly_stats.json';
+    if (!is_file($file)) return null;
+    $doc = json_decode((string)@file_get_contents($file), true);
+    if (!is_array($doc)) {
+        error_log("MOOP: unreadable assembly_stats.json at $file");
+        return null;
+    }
+    $out = [];
+    foreach (['sequences', 'total_length', 'n50', 'l50'] as $k) {
+        if (!is_int($doc[$k] ?? null) || $doc[$k] <= 0) {
+            error_log("MOOP: assembly_stats.json at $file lacks a valid $k");
+            return null;
+        }
+        $out[$k] = $doc[$k];
+    }
+    foreach (['n90', 'l90', 'longest', 'contigs', 'contig_n50', 'contig_l50', 'gap_bases'] as $k) {
+        if (is_int($doc[$k] ?? null) && $doc[$k] >= 0) $out[$k] = $doc[$k];
+    }
+    // Percentages arrive as JSON numbers, so 41.0 is written 41: accept int or float.
+    foreach (['gap_pct', 'gc_pct'] as $k) {
+        if (is_numeric($doc[$k] ?? null) && $doc[$k] >= 0 && $doc[$k] <= 100) $out[$k] = (float)$doc[$k];
+    }
+    // gap_pct is rounded to one decimal by the pipeline, so a typical 0.045% arrives as 0 and
+    // would read as "no gaps". gap_bases is exact: derive the share from it when present.
+    if (isset($out['gap_bases'])) $out['gap_pct'] = 100 * $out['gap_bases'] / $out['total_length'];
+    $out['from_pipeline'] = true;
+    return $out;
 }
 
 /**
@@ -215,7 +254,7 @@ function moop_gene_set_comparison_rows(string $organism, array $assemblies, stri
             }
 
             $counts   = $summary['gene_sets']["$accession/{$gs['gene_set_name']}"] ?? null;
-            $asm_stat = $summary['assemblies'][$asm_dir] ?? null;
+            $asm_stat = moop_assembly_stats_or_fallback("$org_dir/$asm_dir", $summary);
             $warnings = $busco['warnings'] ?? [];
             if ($counts && $counts['transcripts'] > 0 && $counts['homology_transcripts'] === 0) {   // 0, not null
                 $warnings[] = 'No gene in this gene set has a homolog or ortholog attached.';
@@ -245,6 +284,32 @@ function getAssemblyGeneSetNames(string $assembly, string $db): array {
     return fetchData("SELECT gs.gene_set_name, g.genome_name
                       FROM gene_set gs JOIN genome g ON g.genome_id = gs.genome_id
                       WHERE g.genome_accession = ? ORDER BY gs.gene_set_name", $db, [$assembly]) ?: [];
+}
+
+/**
+ * An assembly's statistics, from the ONE place both pages ask: the pipeline's assembly_stats.json
+ * when there is one (contig N50, gaps, GC too); otherwise the scaffold figures the background run
+ * derived from the .fai into gene_set_summary.json. Never computed here -- a .fai can be 70 MB.
+ *
+ * @param array|null $summary  the organism's summary if the caller already has it; loaded if null
+ */
+function moop_assembly_stats_or_fallback(string $assembly_dir, ?array $summary = null): ?array {
+    $from_file = moop_load_assembly_stats($assembly_dir);
+    if ($from_file) return $from_file;
+    if ($summary === null) {
+        $organism_dir = dirname($assembly_dir);
+        $file = moop_gene_set_summary_file(basename($organism_dir));
+        if ($file !== '' && is_file($file) && !moop_gene_set_summary_is_stale($organism_dir, $file)) {
+            $summary = json_decode((string)@file_get_contents($file), true);
+        }
+    }
+    return $summary['assemblies'][basename($assembly_dir)] ?? null;
+}
+
+/** A share that may be tiny: "<0.01%" below that, two decimals below 0.1% ("0.05%"), else one. */
+function moop_format_small_pct(float $pct): string {
+    if ($pct > 0 && $pct < 0.01) return '<0.01%';
+    return number_format($pct, ($pct > 0 && $pct < 0.1) ? 2 : 1) . '%';
 }
 
 /** 1234567 -> "1.2 Mb"; for N50 and assembly size. */
