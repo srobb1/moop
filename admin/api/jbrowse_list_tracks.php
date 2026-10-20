@@ -51,7 +51,7 @@ if (is_dir($tracks_dir)) {
         if ($filterType && ($track['type'] ?? '') !== $filterType) continue;
         // Access levels compare case-insensitively — track JSONs store both 'Public' and
         // 'PUBLIC' for the same level, and the filter dropdown offers the normalised name.
-        if ($filterAccess && normalize_access_level($track['metadata']['access_level'] ?? 'PUBLIC') !== normalize_access_level($filterAccess)) continue;
+        if ($filterAccess && moop_jbrowse_track_access($track) !== $filterAccess) continue;
         
         // Apply search
         if ($searchValue) {
@@ -93,7 +93,8 @@ foreach ($paginatedTracks as $item) {
     $type = $track['type'] ?? 'Unknown';
     // Normalised once, so the badge text, the badge colour lookup and the
     // public-source warning below all agree regardless of how the level was written.
-    $access = normalize_access_level($track['metadata']['access_level'] ?? 'PUBLIC');
+    // GENE_SET / NOT_SET / a level -- moop_jbrowse_track_access(), never a default PUBLIC.
+    $access = moop_jbrowse_track_access($track);
 
     // Determine source and validate
     $source = 'Local';
@@ -140,7 +141,9 @@ foreach ($paginatedTracks as $item) {
         'PUBLIC' => 'success',
         'COLLABORATOR' => 'primary',
         'IP_IN_RANGE' => 'warning',
-        'ADMIN' => 'danger'
+        'ADMIN' => 'danger',
+        'GENE_SET' => 'info',      // follows the gene set's access (Manage Groups)
+        'NOT_SET' => 'dark'        // admins only until a level is set
     ];
     $accessColor = $accessColors[$access] ?? 'secondary';
     

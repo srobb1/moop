@@ -51,6 +51,23 @@ function access_level_hierarchy() {
 }
 
 /**
+ * What decides who sees a JBrowse track, for display: 'GENE_SET' for a gene set's own track
+ * (it follows the gene set's access -- Manage Groups -- like every page), 'NOT_SET' when the
+ * track carries no access level, else the normalised level.
+ *
+ * Nothing is PUBLIC unless it says so. A missing level used to read as PUBLIC at ~15 sites;
+ * a gene track's stored 'PUBLIC' was written automatically at registration and is ignored for
+ * access since 2026-10-20 (api/jbrowse2/config.php), so showing it told an admin a restricted
+ * gene track was public. A NOT_SET track is visible to admins only
+ * (required_access_level_value(null) => 4).
+ */
+function moop_jbrowse_track_access(array $track): string {
+    if ((string)($track['metadata']['gene_set'] ?? '') !== '') return 'GENE_SET';
+    $level = trim((string)($track['metadata']['access_level'] ?? ''));
+    return $level === '' ? 'NOT_SET' : normalize_access_level($level);
+}
+
+/**
  * Rank REQUIRED to see a resource (a track, an assembly).
  *
  * Unknown/empty FAILS CLOSED to 4 (ADMIN-only): a typo'd level should become visible to

@@ -178,7 +178,9 @@ function viewTrack(details) {
     };
     add('Organism / assembly', `${details.organism.replace(/_/g, ' ')} / ${details.assembly}`);
     add('Came from', details.origin);
-    add('Access', meta.access_level || 'PUBLIC (not set)');
+    // Gene tracks follow their gene set (Manage Groups); a blank level is NOT public.
+    add('Access', meta.gene_set ? 'Follows gene set access (Manage Groups)'
+                : (meta.access_level || 'Not set — visible to admins only'));
     add('Category', (track.category || []).join(' › '));
     add('Track type', [track.type, (track.adapter || {}).type].filter(Boolean).join(' · '));
     add('Description', meta.description);

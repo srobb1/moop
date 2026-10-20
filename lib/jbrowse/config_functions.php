@@ -132,7 +132,7 @@ function loadSyntenyTracks($assembly1, $assembly2, $user_access_level)
         if (!$track_def) continue;
 
         // Get track access level
-        $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
+        $track_access_level = $track_def['metadata']['access_level'] ?? null;   // none set = admins only
         $track_level_value = required_access_level_value($track_access_level);
 
         // Check if user has access

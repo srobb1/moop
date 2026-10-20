@@ -175,7 +175,6 @@ function prepareGeneSetForJBrowse(
                 'management_track_id'   => $track_id,
                 'gene_set'              => $gene_set,
                 'description'           => "Gene models ($gene_set)",
-                'access_level'          => 'PUBLIC',
                 'is_primary_gene_track' => true,
                 'is_remote'             => false,
                 'file_path'             => "$genomes_dir/annotations.gff3.gz",

@@ -200,7 +200,7 @@ if (is_dir($tracks_dir)) {
 
             // Normalised: track JSONs mix 'Public' and 'PUBLIC' for the same level, which
             // otherwise renders as two separate filter buttons with two separate counts.
-            $access = normalize_access_level($track['metadata']['access_level'] ?? 'PUBLIC');
+            $access = moop_jbrowse_track_access($track);   // GENE_SET / NOT_SET / a level
             $track_stats['by_access'][$access] = ($track_stats['by_access'][$access] ?? 0) + 1;
 
             if (isset($track['adapter']['gffGzLocation']['uri']) ||

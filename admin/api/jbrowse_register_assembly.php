@@ -134,7 +134,6 @@ $assembly_data = [
     'organism'           => $organism,
     'assemblyId'         => $assembly,
     'aliases'            => [$assembly],
-    'defaultAccessLevel' => 'PUBLIC',
     'primaryGeneTracks'  => [],
     'sequence'           => [
         'type'    => 'ReferenceSequenceTrack',

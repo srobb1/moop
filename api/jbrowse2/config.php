@@ -311,7 +311,8 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
 
         // Other tracks (RNA-seq, etc. -- curated per track in the track sheets): the assembly is
         // already known to be open to this viewer; the track's own access_level narrows further.
-        $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
+        // No level set = admins only (fails closed); nothing is PUBLIC unless it says so.
+        $track_access_level = $track_def['metadata']['access_level'] ?? null;
         $track_level_value = required_access_level_value($track_access_level);
 
         // PERMISSION CHECK: User must have sufficient access level
@@ -378,7 +379,7 @@ function moop_jbrowse_tokenize_sequence($sequence, $organism, $assembly) {
 function addTokensToTrack($track_def, $organism, $assembly) {
     // Tokens are minted per-file inside addTokenToAdapterUrls (each bound to the exact
     // file it authorizes — audit #17), so nothing is pre-minted here.
-    $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
+    $track_access_level = (string)($track_def['metadata']['access_level'] ?? '');
 
     if (isset($track_def['adapter'])) {
         try {
@@ -490,7 +491,7 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
                         // - Not protected by our .htaccess
 
                         // Validation: Warn if marked as private (can't enforce auth)
-                        if ($warn_on_external_private && $track_access_level !== 'PUBLIC') {
+                        if ($warn_on_external_private && normalize_access_level($track_access_level) !== 'PUBLIC') {
                             error_log(
                                 "WARNING: Track has external URL with access_level='{$track_access_level}' " .
                                 "but server is not in trusted_tracks_servers list. " .
