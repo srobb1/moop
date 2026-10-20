@@ -968,7 +968,9 @@ function moopmartParsePreviewRequest(array $post): array {
     $crit_kws  = $post['ann_criteria_kw']  ?? [];
     $criteria  = [];
     foreach (array_keys((array)$crit_srcs) as $i) {
-        $src = trim($crit_srcs[$i] ?? '');
+        // The source name exactly as listed: never trimmed. Names are matched as stored, and eight
+        // databases told an RBBH source from a Homologs one only by a trailing space.
+        $src = (string)($crit_srcs[$i] ?? '');
         $acc = trim($crit_accs[$i] ?? '');
         $kw  = trim($crit_kws[$i]  ?? '');
         if ($src !== '' || $acc !== '' || $kw !== '') {

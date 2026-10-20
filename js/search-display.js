@@ -229,7 +229,8 @@ $(document).ready(function () {
 
     // ── Annotation sources panel ─────────────────────────────────────────────
 
-    // Track per-source override: null = use default (all checked), else {name: bool}
+    // Which sources are ticked, by name: {name: bool}. Nothing is ticked until the user picks --
+    // Step 3 asks for a choice rather than assuming every type, and the submit guard enforces it.
     let sourceOverrides = {};
 
     function loadAnnotationSources(organisms) {
@@ -278,16 +279,19 @@ $(document).ready(function () {
             return;
         }
 
+        // Type and source names come from the databases, so they are escaped like any other
+        // data -- into text and into attributes alike.
         let html = '';
         for (const [type, typeData] of Object.entries(sourceTypes)) {
-            const color   = typeData.color || 'secondary';
+            const color   = escapeHtml(typeData.color || 'secondary');
             const sources = typeData.sources || [];
+            const t       = escapeHtml(type);
 
             // Type header row — clickable, no visible checkbox
-            html += `<div class="org-select-row source-type-row" data-type="${type}" style="background:#f8f9fa;">
-                       <input type="checkbox" class="source-type-cb visually-hidden" data-type="${type}">
+            html += `<div class="org-select-row source-type-row" data-type="${t}" style="background:#f8f9fa;">
+                       <input type="checkbox" class="source-type-cb visually-hidden" data-type="${t}">
                        <span class="fw-semibold" style="font-size:0.88rem;">
-                         <span class="badge bg-${color} me-1">${type}</span>
+                         <span class="badge bg-${color} me-1">${t}</span>
                        </span>
                        <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
                      </div>`;
@@ -295,12 +299,13 @@ $(document).ready(function () {
             // Individual source rows — indented, clickable
             for (const src of sources) {
                 const on    = sourceOverrides[src.name] === true;
-                const count = src.count ? ` <span class="text-muted small">(${src.count.toLocaleString()})</span>` : '';
+                const name  = escapeHtml(src.name);
+                const count = src.count ? ` <span class="text-muted small">(${Number(src.count).toLocaleString()})</span>` : '';
                 html += `<div class="org-select-row source-ind-row ps-4${on ? ' selected' : ''}"
-                              data-source="${src.name}" data-type="${type}" style="font-size:0.82rem;">
+                              data-source="${name}" data-type="${t}" style="font-size:0.82rem;">
                            <input type="checkbox" class="source-cb visually-hidden"
-                                  data-source="${src.name}" data-type="${type}"${on ? ' checked' : ''}>
-                           <span>${src.name}${count}</span>
+                                  data-source="${name}" data-type="${t}"${on ? ' checked' : ''}>
+                           <span>${name}${count}</span>
                            <span class="org-check ms-auto"><i class="fas fa-check text-success"></i></span>
                          </div>`;
             }
@@ -321,7 +326,7 @@ $(document).ready(function () {
     function syncAllTypeRows() {
         $('.source-type-row').each(function () {
             const type  = $(this).data('type');
-            const all   = $('[data-type="' + type + '"].source-cb');
+            const all   = $('[data-type="' + CSS.escape(String(type)) + '"].source-cb');
             const on    = all.filter(':checked').length;
             const total = all.length;
             const cb    = $(this).find('.source-type-cb')[0];
@@ -333,7 +338,7 @@ $(document).ready(function () {
     // Type header row click — toggle all sources of that type
     $(document).on('click', '.source-type-row', function () {
         const type     = $(this).data('type');
-        const srcRows  = $('[data-type="' + type + '"].source-ind-row');
+        const srcRows  = $('[data-type="' + CSS.escape(String(type)) + '"].source-ind-row');
         const anyOn    = srcRows.filter('.selected').length > 0;
         const next     = !anyOn;
         srcRows.each(function () {
@@ -371,8 +376,8 @@ $(document).ready(function () {
         $('.source-type-row').each(function () {
             const type = $(this).data('type');
             let anyVisible = String(type).toLowerCase().includes(q);
-            $('[data-type="' + type + '"].source-ind-row').each(function () {
-                const matches = String($(this).data('source')).toLowerCase().includes(q);
+            $('[data-type="' + CSS.escape(String(type)) + '"].source-ind-row').each(function () {
+                const matches = String(this.dataset.source).toLowerCase().includes(q);
                 $(this).toggle(matches);
                 if (matches) anyVisible = true;
             });
@@ -391,7 +396,7 @@ $(document).ready(function () {
         const next = !boxes.toArray().every(cb => cb.checked);
         boxes.each(function () {
             this.checked = next;
-            sourceOverrides[$(this).data('source')] = next;
+            sourceOverrides[this.dataset.source] = next;
         });
         $('.source-ind-row').toggleClass('selected', next);
         syncAllTypeRows();
@@ -402,11 +407,11 @@ $(document).ready(function () {
     // Remove annotation type from selected panel (× button)
     $(document).on('click', '.deselect-ann-type', function () {
         const type = $(this).data('type');
-        $('[data-type="' + type + '"].source-cb').each(function () {
+        $('[data-type="' + CSS.escape(String(type)) + '"].source-cb').each(function () {
             this.checked = false;
-            sourceOverrides[$(this).data('source')] = false;
+            sourceOverrides[this.dataset.source] = false;
         });
-        $('[data-type="' + type + '"].source-ind-row').removeClass('selected');
+        $('[data-type="' + CSS.escape(String(type)) + '"].source-ind-row').removeClass('selected');
         syncAllTypeRows();
         updateSourcesSummary();
         updateAnnotTypesPanel();
@@ -415,7 +420,7 @@ $(document).ready(function () {
     function getCheckedSources() {
         const sources = [];
         $('.source-cb:checked').each(function () {
-            sources.push($(this).data('source'));
+            sources.push(this.dataset.source);
         });
         return sources.length ? sources : null;
     }
@@ -451,9 +456,9 @@ $(document).ready(function () {
 
         panel.innerHTML = selected.map(({ type, partial }) =>
             `<div class="d-flex align-items-center justify-content-between px-2 py-1 border-bottom">
-               <span class="small">${type}${partial ? ' <span class="text-muted fst-italic">(partial)</span>' : ''}</span>
+               <span class="small">${escapeHtml(type)}${partial ? ' <span class="text-muted fst-italic">(partial)</span>' : ''}</span>
                <button type="button" class="btn btn-link btn-sm p-0 text-danger deselect-ann-type"
-                       data-type="${type}" title="Remove"><i class="fas fa-times"></i></button>
+                       data-type="${escapeHtml(type)}" title="Remove"><i class="fas fa-times"></i></button>
              </div>`
         ).join('');
     }
@@ -529,22 +534,6 @@ $(document).ready(function () {
             if (keep && ctx.assembly) keep = (this.dataset.asm === ctx.assembly);
             if (keep && ctx.gene_set) keep = (this.dataset.gs  === ctx.gene_set);
             this.checked = keep;
-        });
-
-        // Sync assembly checkboxes
-        $('.scope-asm-cb').each(function () {
-            const boxes = $(`.scope-gs-cb[data-org="${this.dataset.org}"][data-asm="${this.dataset.asm}"]`);
-            const cnt   = boxes.filter(':checked').length;
-            this.checked       = cnt === boxes.length;
-            this.indeterminate = cnt > 0 && cnt < boxes.length;
-        });
-
-        // Sync organism checkboxes
-        $('.scope-org-cb').each(function () {
-            const boxes = $(`.scope-gs-cb[data-org="${this.dataset.org}"]`);
-            const cnt   = boxes.filter(':checked').length;
-            this.checked       = cnt === boxes.length;
-            this.indeterminate = cnt > 0 && cnt < boxes.length;
         });
 
         // Sync flat row highlights after context is applied

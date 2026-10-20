@@ -1494,6 +1494,20 @@ $_g = moop_group_annotation_sources([['name' => 'b', 'type' => 'Zeta', 'count' =
 ok($_g === ['Zeta' => [['name' => 'b', 'count' => 3], ['name' => 'a', 'count' => 1]]], 'rows grouped by type, counts as integers, row order kept');
 
 // ----------------------------------------------------------------------------
+group('search: annotation source filter carries names exactly (JSON, no trim, commas survive)');
+require_once "$BASE/lib/functions_validation.php";
+$_names = ['Closest human gene (Ensembl, no HGNC record)', 'Ensembl Danio rerio ', 'Say "hi" <b>', 'UniProt'];
+ok(moop_parse_source_names(json_encode($_names)) === $_names,
+   'a JSON list round-trips: the comma, the trailing space, quotes and angle brackets are all kept');
+ok(moop_parse_source_names('') === [] && moop_parse_source_names(null) === [] && moop_parse_source_names('[not json') === [],
+   'empty, missing or malformed -> no filter, not an error');
+ok(moop_parse_source_names(json_encode(['A', '', 3, ['x'], 'B'])) === ['A', 'B'], 'only non-empty strings are names');
+$_old = ini_set('error_log', '/dev/null');
+ok(moop_parse_source_names('UniProt,Ensembl Danio rerio ') === ['UniProt', 'Ensembl Danio rerio '],
+   'the old comma string is still accepted (a page open from before), and not trimmed');
+ini_set('error_log', $_old === false ? '' : $_old);
+
+// ----------------------------------------------------------------------------
 group('organism page gene set comparison: assembly stats from a .fai, formatted sizes');
 require_once "$BASE/lib/gene_set_summary.php";
 $_fai = tempnam(sys_get_temp_dir(), 'fai');

@@ -649,7 +649,9 @@
 
         // Section: Annotation — repeatable criteria rows (AND between them)
         document.querySelectorAll('.mm-ann-criterion').forEach(row => {
-            const src = row.querySelector('.mm-ann-src-select')?.value?.trim() || '';
+            // The source name exactly as listed -- not trimmed: a name is matched as stored, and
+            // eight databases told two sources apart only by a trailing space.
+            const src = row.querySelector('.mm-ann-src-select')?.value || '';
             const acc = row.querySelector('.mm-ann-accession')?.value?.trim() || '';
             const kw  = row.querySelector('.mm-ann-keyword')?.value?.trim() || '';
             if (src || acc || kw) {

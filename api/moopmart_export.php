@@ -54,36 +54,15 @@ if (empty($selected)) {
     die('No accessible sources selected.');
 }
 
-// Raw input IDs (resolved per-organism below)
-$raw_input_ids = array_values(array_filter(array_map('trim', (array)($_POST['feature_ids'] ?? []))));
-
-// --- Build base filters (no feature_ids — those are resolved per-organism) ---
-$filters = [];
-$types = array_filter($_POST['feature_types'] ?? []);
-if (!empty($types))                             $filters['feature_types']        = array_values($types);
-if (!empty($_POST['gene_name']))                $filters['gene_name']            = trim($_POST['gene_name']);
-if (!empty($_POST['gene_description']))         $filters['gene_description']     = trim($_POST['gene_description']);
-$_crit_srcs = $_POST['ann_criteria_src'] ?? [];
-$_crit_accs = $_POST['ann_criteria_acc'] ?? [];
-$_crit_kws  = $_POST['ann_criteria_kw']  ?? [];
-$_criteria  = [];
-foreach (array_keys((array)$_crit_srcs) as $_i) {
-    $src = trim($_crit_srcs[$_i] ?? '');
-    $acc = trim($_crit_accs[$_i] ?? '');
-    $kw  = trim($_crit_kws[$_i]  ?? '');
-    if ($src !== '' || $acc !== '' || $kw !== '') {
-        $_criteria[] = ['src' => $src, 'acc' => $acc, 'kw' => $kw];
-    }
-}
-if (!empty($_criteria)) $filters['annotation_criteria'] = $_criteria;
-
-$coord_filter = [];
-if (!empty($_POST['coord_chr']))   $coord_filter['chr']   = trim($_POST['coord_chr']);
-if (!empty($_POST['coord_start'])) $coord_filter['start'] = (int)$_POST['coord_start'];
-if (!empty($_POST['coord_end']))   $coord_filter['end']   = (int)$_POST['coord_end'];
-
-$global_filter_reason        = buildMoopmartFilterReason($filters, $coord_filter);
-$annotation_columns_selected = array_filter($_POST['annotation_columns'] ?? []);
+// Filters, IDs, coordinates and annotation columns: parsed by the SAME function the previews use
+// (moopmartParsePreviewRequest). This file used to repeat that parsing inline, so a fix to one --
+// the criterion source name is matched exactly, never trimmed -- silently missed the other.
+$req                         = moopmartParsePreviewRequest($_POST);
+$raw_input_ids               = $req['raw_input_ids'];
+$filters                     = $req['filters'];
+$coord_filter                = $req['coord_filter'];
+$global_filter_reason        = $req['global_filter_reason'];
+$annotation_columns_selected = $req['annotation_columns'];
 
 $organism_data  = $config->getPath('organism_data');
 $sequence_types = $config->getSequenceTypes();

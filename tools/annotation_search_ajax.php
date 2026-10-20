@@ -49,7 +49,7 @@ if (!empty($scope_json)) {
 $source_filter    = [];
 $gene_only_search = !empty($_GET['no_annotations']);  // user explicitly deselected all sources
 if (!$gene_only_search && !empty($source_names)) {
-    $source_filter = array_map('trim', explode(',', $source_names));
+    $source_filter = moop_parse_source_names($source_names);   // JSON list; exact names
 }
 
 // Validate inputs

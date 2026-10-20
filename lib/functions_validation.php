@@ -136,3 +136,36 @@ function decodeAnnotationText($text) {
         return chr(hexdec($matches[1]));
     }, $text);
 }
+
+/**
+ * The annotation-source filter a search request carries, as a list of exact source names.
+ *
+ * Sent as a JSON array: `["Ensembl Homo sapiens", "Closest human gene (Ensembl, no HGNC record)"]`.
+ * It used to be one comma-joined string split on ',' and each piece trim()med, which broke on two
+ * real names (2026-10-20):
+ *   - "Closest human gene (Ensembl, no HGNC record)" -- the gene-naming pipeline's own output --
+ *     split in two, so filtering by it matched nothing;
+ *   - eight databases named their RBBH sources "Ensembl Danio rerio " (trailing space), the only
+ *     difference from the Homologs source; trim() turned every one into the Homologs name, so
+ *     a filtered search returned no RBBH rows for those organisms.
+ * Names are matched EXACTLY as stored; normalising them is the loader's job, not the request's.
+ *
+ * A plain comma string is still accepted (a page open in a browser from before the change sends
+ * one) and logged, so we can tell when it is safe to drop.
+ *
+ * @return list<string>
+ */
+function moop_parse_source_names($raw): array {
+    if (!is_string($raw) || $raw === '') {
+        return [];
+    }
+    if ($raw[0] === '[') {
+        $list = json_decode($raw, true);
+        if (!is_array($list)) {
+            return [];
+        }
+        return array_values(array_filter($list, fn($name) => is_string($name) && $name !== ''));
+    }
+    error_log('MOOP: source_names sent as a comma string (old page?) -- names containing commas will not match');
+    return array_values(array_filter(explode(',', $raw), fn($name) => $name !== ''));
+}

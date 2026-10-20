@@ -505,7 +505,10 @@ class AnnotationSearch {
                     // Explicit "no annotation sources" — search gene fields only
                     ajaxData.no_annotations = '1';
                 } else {
-                    ajaxData.source_names = this.selectedSources.join(',');
+                    // A JSON list, not a comma-joined string: real source names contain commas
+                    // ("Closest human gene (Ensembl, no HGNC record)"). See
+                    // moop_parse_source_names() in lib/functions_validation.php.
+                    ajaxData.source_names = JSON.stringify(this.selectedSources);
                 }
             }
             if (scopePairs !== null) {

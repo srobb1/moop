@@ -109,24 +109,28 @@ class AdvancedSearchFilter {
      */
     buildModalHtml() {
         let sourceTypesHtml = '';
+        // Checkbox ids are numbered, not derived from the source name: the same name can sit
+        // under two annotation types (65 of 85 databases on 2026-10-20), and two checkboxes
+        // sharing an id made clicking the second one's label tick the FIRST.
+        let checkboxSeq = 0;
         
         for (const type in this.sourceTypes) {
             const typeData = this.sourceTypes[type];
             const sources = typeData.sources || typeData; // Handle both new format with color and old format
             const color = typeData.color || 'secondary'; // Get color from new format
             const description = typeData.description || ''; // Get description
-            const typeId = this.sanitizeId(type);
             const sourcesHtml = sources.map(source => {
                 const isChecked = this.selectedSources[source.name] ? 'checked' : '';
+                const id        = 'source-cb-' + (++checkboxSeq);
                 return `
                 <div class="form-check ms-3">
                     <input class="form-check-input source-checkbox" type="checkbox" 
-                           id="source-${this.sanitizeId(source.name)}"
-                           data-source="${source.name}"
-                           data-type="${type}"
+                           id="${id}"
+                           data-source="${escapeHtml(source.name)}"
+                           data-type="${escapeHtml(type)}"
                            ${isChecked}>
-                    <label class="form-check-label small" for="source-${this.sanitizeId(source.name)}">
-                        ${source.name} <span class="badge bg-secondary">${source.count.toLocaleString()}</span>
+                    <label class="form-check-label small" for="${id}">
+                        ${escapeHtml(source.name)} <span class="badge bg-secondary">${Number(source.count).toLocaleString()}</span>
                     </label>
                 </div>
             `;
@@ -138,16 +142,16 @@ class AdvancedSearchFilter {
                 <div class="mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="d-flex align-items-center">
-                            <span class="badge bg-${color} fs-6">${type}</span>
+                            <span class="badge bg-${escapeHtml(color)} fs-6">${escapeHtml(type)}</span>
                             ${infoIcon}
                         </div>
                         <div>
                             <button type="button" class="btn btn-sm btn-outline-secondary select-type" 
-                                    data-type="${type}">
+                                    data-type="${escapeHtml(type)}">
                                 Select All
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary deselect-type" 
-                                    data-type="${type}">
+                                    data-type="${escapeHtml(type)}">
                                 Deselect All
                             </button>
                         </div>
@@ -219,7 +223,7 @@ class AdvancedSearchFilter {
         
         // Individual source checkbox
         $(document).off('change', '.source-checkbox').on('change', '.source-checkbox', (e) => {
-            const source = $(e.target).data('source');
+            const source = e.target.dataset.source;
             this.selectedSources[source] = e.target.checked;
         });
         
@@ -259,8 +263,8 @@ class AdvancedSearchFilter {
      * Select all sources of a specific type
      */
     selectType(type) {
-        $(`.source-checkbox[data-type="${type}"]`).prop('checked', true).each((idx, el) => {
-            this.selectedSources[$(el).data('source')] = true;
+        $(`.source-checkbox[data-type="${CSS.escape(String(type))}"]`).prop('checked', true).each((idx, el) => {
+            this.selectedSources[el.dataset.source] = true;
         });
     }
     
@@ -268,8 +272,8 @@ class AdvancedSearchFilter {
      * Deselect all sources of a specific type
      */
     deselectType(type) {
-        $(`.source-checkbox[data-type="${type}"]`).prop('checked', false).each((idx, el) => {
-            this.selectedSources[$(el).data('source')] = false;
+        $(`.source-checkbox[data-type="${CSS.escape(String(type))}"]`).prop('checked', false).each((idx, el) => {
+            this.selectedSources[el.dataset.source] = false;
         });
     }
     
