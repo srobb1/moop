@@ -151,7 +151,11 @@ class GoogleSheetsParser
                 $comboName = trim($matches[1]);
                 $inCombo = true;
                 $currentCombo = [
-                    'track_id' => strtolower(str_replace([' ', ',', ':'], ['_', '', '_'], $comboName)),
+                    // The id is also the JSON file name: '/' or '\\' would make it a path. 23
+                    // Nematostella combos ("Circadian dark/light overlay ...") were never written
+                    // because of it (found 2026-10-20). Other characters are left as they were so
+                    // existing ids (e.g. gonads_male+female) do not change.
+                    'track_id' => strtolower(str_replace([' ', ',', ':', '/', '\\'], ['_', '', '_', '_', '_'], $comboName)),
                     'name' => $comboName,
                     'organism' => $organism,
                     'assembly' => $assembly,
