@@ -204,11 +204,8 @@
             </div>
           <?php endif; ?>
     
-          <!-- Get accessible assemblies for this organism -->
-          <?php
-          $accessible_assemblies = getOrganismAssemblies($organism_name, $organism_data);
-          ?>
-    
+          <?php /* $accessible_assemblies comes from the controller (tools/organism.php), which
+                   also builds the gene set comparison from it. */ ?>
           <!-- Assemblies Section -->
           <?php
           if (!empty($accessible_assemblies)): ?>
@@ -292,6 +289,10 @@
       </div>
     </div>
   <?php endif; ?>
+
+  <?php /* Under About: every assembly + gene set side by side, so choosing one does not mean
+           opening each. Rendered whether or not there is an About text. */ ?>
+  <?php if (!empty($gene_set_rows)) include __DIR__ . '/../../includes/gene_set_comparison.php'; ?>
   </div><!-- /#organismContent -->
 </div><!-- /.container -->
 

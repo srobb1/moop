@@ -1086,6 +1086,45 @@ function housekeeping_refresh_annotation_caches() {
     // page shows no Annotation Summary rather than the organism's figures under its name.
     if (PHP_SAPI === 'cli') {
         housekeeping_refresh_gene_set_annotation_counts($organism_data, $entries);
+        housekeeping_refresh_gene_set_summaries($organism_data, $entries);
+    }
+}
+
+/**
+ * Build gene_set_summary.json (the organism page's gene set comparison: assembly N50 / size /
+ * sequence count from the .fai, gene + transcript + annotated counts from the database) for each
+ * organism whose database or any genome .fai is newer than it. Background run only, smallest
+ * first, within a budget -- see lib/gene_set_summary.php.
+ */
+function housekeeping_refresh_gene_set_summaries(string $organism_data, array $entries, int $budget_seconds = 120): void {
+    require_once dirname(__DIR__) . '/lib/gene_set_summary.php';
+    $t0   = time();
+    $todo = [];
+    foreach ($entries as $entry) {
+        if ($entry === '.' || $entry === '..' || !is_dir("$organism_data/$entry")) continue;
+        if (!is_file("$organism_data/$entry/organism.sqlite")) continue;
+        $file = moop_gene_set_summary_file($entry);
+        if ($file === '' || !moop_gene_set_summary_is_stale("$organism_data/$entry", $file)) continue;
+        $todo[$entry] = filesize("$organism_data/$entry/organism.sqlite");
+    }
+    asort($todo);
+
+    $done = 0;
+    foreach (array_keys($todo) as $organism) {
+        if (time() - $t0 >= $budget_seconds) break;
+        $file = moop_gene_set_summary_file($organism);
+        $tmp  = "$file.tmp-" . getmypid();
+        if (file_put_contents($tmp, json_encode(moop_build_gene_set_summary("$organism_data/$organism"))) !== false
+            && rename($tmp, $file)) {
+            $done++;
+        } else {
+            @unlink($tmp);
+            error_log("MOOP housekeeping: could not write $file");
+        }
+    }
+    $left = count($todo) - $done;
+    if ($done > 0 || $left > 0) {
+        error_log("MOOP housekeeping: gene set summaries built for $done organism(s), $left left for the next run");
     }
 }
 

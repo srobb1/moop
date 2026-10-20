@@ -1494,6 +1494,38 @@ $_g = moop_group_annotation_sources([['name' => 'b', 'type' => 'Zeta', 'count' =
 ok($_g === ['Zeta' => [['name' => 'b', 'count' => 3], ['name' => 'a', 'count' => 1]]], 'rows grouped by type, counts as integers, row order kept');
 
 // ----------------------------------------------------------------------------
+group('organism page gene set comparison: assembly stats from a .fai, formatted sizes');
+require_once "$BASE/lib/gene_set_summary.php";
+$_fai = tempnam(sys_get_temp_dir(), 'fai');
+// lengths 50,30,10,5,5 (total 100): the running sum first reaches 50 at the first sequence.
+file_put_contents($_fai, "s1\t50\t0\t60\t61\ns2\t30\t0\t60\t61\ns3\t10\t0\t60\t61\ns4\t5\t0\t60\t61\ns5\t5\t0\t60\t61\n");
+ok(moop_fai_stats($_fai) === ['sequences' => 5, 'total_length' => 100, 'n50' => 50], 'N50 is the length where half the total is reached');
+file_put_contents($_fai, "a\t40\t0\t60\t61\nb\t30\t0\t60\t61\nc\t30\t0\t60\t61\n");
+ok((moop_fai_stats($_fai)['n50'] ?? null) === 30, 'N50 when the half-way point falls in the second sequence');
+file_put_contents($_fai, '');
+ok(moop_fai_stats($_fai) === null, 'an empty .fai gives no stats, not zeros');
+@unlink($_fai);
+// Which types count as homology: by name unless annotation_config.json flags a type either way.
+$_md = sys_get_temp_dir() . '/moop_hom_' . getmypid(); @mkdir($_md);
+$_cfg = ConfigManager::getInstance();
+$_rp = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['metadata_path'] = $_md; $_rp->setValue($_cfg, $_c);
+$_types = ['Homologs', 'Orthologs', 'RBBH Homolog', 'Paralogs', 'Gene Ontology', 'Protein Features', 'Ortholog groups'];
+file_put_contents("$_md/annotation_config.json", '{}');
+ok(moop_homology_types($_types) === ['Homologs', 'Orthologs', 'RBBH Homolog', 'Ortholog groups'],
+   'by name: homolog/ortholog types count, paralogs, GO and DeepLoc do not');
+file_put_contents("$_md/annotation_config.json", json_encode(['annotation_types' => [
+    'RBBH Homolog' => ['homology' => false], 'Paralogs' => ['homology' => true]]]));
+ok(moop_homology_types($_types) === ['Homologs', 'Orthologs', 'Paralogs', 'Ortholog groups'],
+   'a homology flag in annotation_config.json overrides the name, either way');
+ok(moop_homology_flags() === ['Paralogs' => true, 'RBBH Homolog' => false], 'flags are recorded, so a changed flag forces a rebuild');
+$_rp->setValue($_cfg, $_saved);
+@unlink("$_md/annotation_config.json"); @rmdir($_md);
+ok(moop_format_bp(2689411905) === '2.69 Gb' && moop_format_bp(16735929) === '16.7 Mb'
+   && moop_format_bp(10739) === '10.7 kb' && moop_format_bp(512) === '512 bp', 'sizes read as Gb / Mb / kb / bp');
+
+// ----------------------------------------------------------------------------
 group('BUSCO: busco.json read defensively; no file or nothing usable means no card');
 require_once "$BASE/lib/busco.php";
 require_once "$BASE/lib/help_ui.php";

@@ -1781,3 +1781,9 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 .busco-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 0.6rem; align-items: baseline; margin-top: 0.35rem; }
 .busco-notation { color: #475569; background: #f8fafc; padding: 0.05rem 0.35rem; border-radius: 3px; font-size: 0.78rem; }
 .busco-role { background: #eef2ff; color: #3730a3; font-weight: 600; font-size: 0.7rem; }
+
+/* ── Gene set comparison, organism page (includes/gene_set_comparison.php) ──────────── */
+.gsc-table th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; white-space: nowrap; }
+.gsc-table td { font-size: 0.9rem; }
+.gsc-busco-bar { width: 96px; height: 10px; flex: 0 0 96px; }
+.gsc-top-icon { color: #0891b2; font-size: 0.7rem; margin-left: 0.25rem; }

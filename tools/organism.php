@@ -35,6 +35,7 @@
 
 // Load initialization
 include_once __DIR__ . '/tool_init.php';
+include_once __DIR__ . '/../lib/gene_set_summary.php';
 
 // Get config values
 $organism_data = $config->getPath('organism_data');
@@ -140,6 +141,15 @@ $display_config = [
     ]
 ];
 
+// Assemblies the viewer can open (the chips), and one comparison row per gene set on them --
+// the table under About that lets someone choose without opening each one. Rows are small
+// JSON reads only; the expensive figures are precomputed by housekeeping (lib/gene_set_summary.php).
+$accessible_assemblies = getOrganismAssemblies($organism_name, $organism_data);
+$gene_set_rows = moop_gene_set_comparison_rows($organism_name, $accessible_assemblies, $organism_data);
+if ($gene_set_rows) {
+    $display_config['page_script'][] = '/' . $site . '/js/gene-set-comparison.js';
+}
+
 // Prepare data for content file
 $data = [
     'organism_name' => $organism_name,
@@ -151,6 +161,8 @@ $data = [
     'absolute_images_path' => $absolute_images_path,
     'lineage_display' => $lineage_display,
     'siteTitle' => $config->getString('siteTitle'),
+    'accessible_assemblies' => $accessible_assemblies,
+    'gene_set_rows' => $gene_set_rows,
 ];
 
 // Use generic template to render
