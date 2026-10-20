@@ -7,6 +7,24 @@ require_once __DIR__ . '/gene_track_index.php';
  */
 
 /**
+ * Where a JBrowse trix (text-search) index is written, and the URL it is served from:
+ * data/genomes/{organism}/{assembly}[/{gene_set}] -- `jbrowse text-index --out` adds trix/.
+ *
+ * Beside the gene track it indexes, and NOT in jbrowse2/: that tree is the browser app's own
+ * code, read-only to the web server by design (CLAUDE.md §11), so an index written there
+ * either fails (SELinux) or makes the app tree web-writable. Until 2026-10-20 both builders
+ * wrote to jbrowse2/{organism}/..., and not one index existed on this host. Removing the
+ * gene set or assembly removes its data/genomes directory, and the index with it.
+ *
+ * @return array{0:string,1:string} [filesystem directory, URL path]
+ */
+function moop_jbrowse_trix_location(string $organism, string $assembly, string $gene_set = ''): array {
+    $config = ConfigManager::getInstance();
+    $rel = "data/genomes/$organism/$assembly" . ($gene_set !== '' ? "/$gene_set" : '');
+    return [$config->getPath('site_path') . "/$rel", '/' . $config->getString('site', 'moop') . "/$rel"];
+}
+
+/**
  * Prepare one gene set's GFF for JBrowse.
  *
  * What it does:
@@ -312,11 +330,7 @@ function archiveGeneSet(string $organism, string $assembly, string $gene_set, Co
         rrmdir($genomes_dir);
         $removed[] = "data/genomes/$organism/$assembly/$gene_set";
     }
-    $trix_dir = "$site_path/jbrowse2/$organism/$assembly/$gene_set";
-    if (is_dir($trix_dir)) {
-        rrmdir($trix_dir);
-        $removed[] = "jbrowse2/$organism/$assembly/$gene_set (trix search index)";
-    }
+    // (Its trix search index lives inside $genomes_dir/trix, so it went with it.)
 
     // 3. Remove the gene track JSON and its trackId from the assembly's primaryGeneTracks.
     $track_id   = "{$organism}_{$assembly}_{$gene_set}_genes";
@@ -420,12 +434,7 @@ function unregisterAssembly(string $organism, string $assembly, ConfigManager $c
         }
     }
 
-    // 4. Trix search index, if this assembly ever had one built.
-    $trix_dir = "$site_path/jbrowse2/$organism/$assembly";
-    if (is_dir($trix_dir) && rrmdir($trix_dir)) {
-        $removed[] = "jbrowse2/$organism/$assembly/ (trix search index)";
-        @rmdir(dirname($trix_dir));
-    }
+    // 4. (Trix search indexes live under data/genomes/$organism/$assembly/, removed in step 2.)
 
     // 5. A registered Google Sheet track source for this assembly is no longer reachable.
     $sheet_dir = "$metadata_path/jbrowse2-configs/sheets/$organism/$assembly";
@@ -439,7 +448,7 @@ function unregisterAssembly(string $organism, string $assembly, ConfigManager $c
 
 /**
  * Run jbrowse text-index for a specific gene set and update its track JSON.
- * Trix files go in jbrowse2/{organism}/{assembly}/{gene_set}/trix/.
+ * Trix files go in data/genomes/{organism}/{assembly}/{gene_set}/trix/ (moop_jbrowse_trix_location()).
  *
  * @return array ['success'=>bool, 'error'=>string?, ...]
  */
@@ -464,7 +473,9 @@ function buildGeneSetTextIndex(
     }
 
     $gz_file     = "$site_path/data/genomes/$organism/$assembly/$gene_set/annotations.gff3.gz";
-    $trix_parent = "$site_path/jbrowse2/$organism/$assembly/$gene_set";
+    // Beside the gene track it indexes, never in jbrowse2/ (read-only app code; see
+    // moop_jbrowse_trix_location()).
+    [$trix_parent, $trix_url] = moop_jbrowse_trix_location($organism, $assembly, $gene_set);
     $trix_dir    = "$trix_parent/trix";
 
     if (!file_exists($gz_file)) {
@@ -510,7 +521,7 @@ function buildGeneSetTextIndex(
     }
 
     $asm_name = $track_def['assemblyNames'][0] ?? "{$organism}_{$assembly}";
-    $base     = "/$site/jbrowse2/$organism/$assembly/$gene_set/trix/$gz_basename";
+    $base     = "$trix_url/trix/$gz_basename";
     $track_def['textSearching'] = [
         'textSearchAdapter' => [
             'type'                => 'TrixTextSearchAdapter',

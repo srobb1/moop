@@ -400,19 +400,44 @@ function moop_web_owned_evidence(string $dir, string $web_user, array $prune_pat
 }
 
 /**
- * Check one path by IMPACT and assign a severity.
- *
- * Result keys mirror the old shape (name/path/exists/current_perms/current_owner/
- * current_group/is_readable/is_writable/issues) plus 'check_mode', 'category', and
- * 'severity' (high|medium|low). 'issues' empty = OK.
- *
- * Severity (per the user's definition — impact for users & logging):
- *   high   — the site is broken now: web can't read a file it serves, can't write
- *            logs/caches/config, or a secret is exposed.
- *   medium — works today, will bite a future admin action (data dir not web-writable),
- *            or wrong group so new files inherit it.
- *   low    — cosmetic only (accessible, not exposed).
+ * The web user's numeric [uid, gid], either null when it cannot be resolved. posix_* when
+ * the extension is loaded (it is not in this host's CLI PHP), else `id -u` / `getent group`.
  */
+function moop_permission_web_ids(string $web_user, string $web_group): array {
+    static $memo = [];
+    $key = "$web_user:$web_group";
+    if (isset($memo[$key])) return $memo[$key];
+    $uid = null;
+    $gid = null;
+    if (function_exists('posix_getpwnam')) {
+        $pw = $web_user !== '' ? @posix_getpwnam($web_user) : false;
+        if ($pw !== false) $uid = $pw['uid'];
+        $gr = $web_group !== '' ? @posix_getgrnam($web_group) : false;
+        if ($gr !== false) $gid = $gr['gid'];
+    } else {
+        $o = []; if ($web_user !== '') @exec('id -u ' . escapeshellarg($web_user) . ' 2>/dev/null', $o);
+        if (!empty($o[0]) && is_numeric(trim($o[0]))) $uid = (int)trim($o[0]);
+        $o = []; if ($web_group !== '') @exec('getent group ' . escapeshellarg($web_group) . ' 2>/dev/null', $o);
+        if (!empty($o[0])) { $p = explode(':', $o[0]); if (isset($p[2])) $gid = (int)$p[2]; }
+    }
+    return $memo[$key] = [$uid, $gid];
+}
+
+/**
+ * Could the web user write $path, judged from its mode bits and the web user's numeric ids --
+ * the same predicate as setup-check.php::webCanWrite(). Not is_writable(): from the CLI that
+ * answers for the shell user, not the web server. Unresolvable ids => false (do not guess).
+ */
+function moop_permission_web_can_write(string $path, string $web_user, string $web_group): bool {
+    $st = @stat($path);
+    if ($st === false) return false;
+    [$uid, $gid] = moop_permission_web_ids($web_user, $web_group);
+    $m = $st['mode'];
+    return ($uid !== null && $st['uid'] === $uid && ($m & 0200))
+        || ($gid !== null && $st['gid'] === $gid && ($m & 0020))
+        || ($m & 0002);
+}
+
 function performPermissionCheck($path, $item, $web_group = 'www-data') {
     $mode = moop_permission_item_mode($item);
     $sensitive = !empty($item['sensitive']);
@@ -528,6 +553,17 @@ function performPermissionCheck($path, $item, $web_group = 'www-data') {
                 $result['issues'][] = "Group is $group, should be $want_group — files built here inherit the wrong group";
                 $bump('medium');
             }
+        }
+        // A tree the web server must NOT be able to write (jbrowse2/: JavaScript every visitor's
+        // browser runs). 'data' mode only ever asked "can the web READ it", so jbrowse2/ sat at
+        // 2775 group apache -- web-writable by its mode bits -- and passed (found 2026-10-20).
+        // The SELinux label happened to block the write on this host; on Debian nothing would.
+        // Predicted from mode bits + the web user's numeric ids, never is_writable() (CLI = smr).
+        if (!empty($item['must_not_be_web_writable'])
+            && moop_permission_web_can_write($path, (string)($item['_web_user'] ?? ''), $web_group)) {
+            $result['issues'][] = "Writable by the web server ($perms) — this tree must be read-only to it;"
+                . ' remove group write (chmod g-w) so a write bug cannot plant code here';
+            $bump('medium');
         }
         // Does the web server write here despite being classified read-only? Skip the data
         // trees (organisms/, data/tracks): those ARE web-written by design and are only
@@ -937,6 +973,7 @@ function moop_build_permission_items($config, array $ctx): array {
             'required_perms' => '755',
             'required_owner' => $moop_owner,
             'required_group' => $web_group,
+            'must_not_be_web_writable' => true,
             'reason' => 'Served static assets — the web server needs read+traverse only. This tree must NOT be web-writable: it is fetched and executed by every user\'s browser, so a write bug here would mean injected JavaScript on every page, which the nginx no-exec rules cannot prevent (they stop .php, not .js).',
         ],
 
@@ -1208,19 +1245,7 @@ function moop_collect_permission_checks($config): array {
         // about elsewhere: two dirs here are apache-owned at 2755, so apache writes them
         // through the OWNER bit and a group-write test cries wolf. is_writable() is worse
         // — from CLI it answers for smr, not apache.
-        $web_uid = null;
-        $web_gid = null;
-        if (function_exists('posix_getpwnam')) {
-            $pw = @posix_getpwnam($web_user);
-            if ($pw !== false) $web_uid = $pw['uid'];
-            $gr = @posix_getgrnam($web_group);
-            if ($gr !== false) $web_gid = $gr['gid'];
-        } else {
-            $o = []; @exec('id -u ' . escapeshellarg($web_user)  . ' 2>/dev/null', $o);
-            if (!empty($o[0]) && is_numeric(trim($o[0]))) $web_uid = (int)trim($o[0]);
-            $o = []; @exec('getent group ' . escapeshellarg($web_group) . ' 2>/dev/null', $o);
-            if (!empty($o[0])) { $p = explode(':', $o[0]); if (isset($p[2])) $web_gid = (int)$p[2]; }
-        }
+        [$web_uid, $web_gid] = moop_permission_web_ids($web_user, $web_group);
 
         $found = [];
         // -mindepth 1: the root itself is already covered by the rule above.

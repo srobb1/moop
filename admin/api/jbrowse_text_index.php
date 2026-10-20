@@ -3,7 +3,7 @@
  * JBrowse Admin API: Text-Index a Track
  *
  * Runs `jbrowse text-index` on a local GFF or BED track to enable feature
- * name/ID search in JBrowse2.  Creates trix files in jbrowse2/{organism}/{assembly}/trix/
+ * name/ID search in JBrowse2.  Creates trix files in data/genomes/{organism}/{assembly}/trix/
  * and updates the track JSON with a textSearching block.
  *
  * POST params:
@@ -14,6 +14,7 @@
  */
 
 require_once __DIR__ . '/../../admin/admin_init.php';
+require_once __DIR__ . '/../../lib/jbrowse/gene_set_functions.php';   // moop_jbrowse_trix_location()
 
 header('Content-Type: application/json');
 
@@ -91,9 +92,9 @@ if (!$jbrowse) {
 // jbrowse text-index names files after the input file basename (not --fileId), so two
 // assemblies sharing the same source filename (e.g. annotations.gff3.gz) would overwrite
 // each other if stored in a shared directory.
-// Output layout: jbrowse2/{organism}/{assembly}/trix/{basename}.ix
-$jbrowse2_dir = "$site_path/jbrowse2";
-$trix_out_dir = "$jbrowse2_dir/$organism/$assembly";
+// Output layout: data/genomes/{organism}/{assembly}/trix/{basename}.ix -- never jbrowse2/,
+// which is read-only app code (moop_jbrowse_trix_location()).
+[$trix_out_dir, $trix_url] = moop_jbrowse_trix_location($organism, $assembly);
 if (!is_dir($trix_out_dir) && !mkdir($trix_out_dir, 0755, true)) {
     echo json_encode(['success' => false, 'error' => "Could not create trix directory: $trix_out_dir"]);
     exit;
@@ -190,10 +191,11 @@ function find_track_json(string $track_dir, string $track_id): ?string {
 
 /**
  * Build the textSearching block to embed in a track JSON.
- * Trix files live at jbrowse2/{organism}/{assembly}/trix/ to avoid cross-assembly collisions.
+ * Trix files live at data/genomes/{organism}/{assembly}/trix/ to avoid cross-assembly collisions.
  */
 function build_text_searching_block(string $track_id, string $gz_basename, string $organism, string $assembly, string $assembly_name, string $site): array {
-    $base = "/$site/jbrowse2/$organism/$assembly/trix/$gz_basename";
+    [, $trix_url] = moop_jbrowse_trix_location($organism, $assembly);
+    $base = "$trix_url/trix/$gz_basename";
     return [
         'textSearchAdapter' => [
             'type'                => 'TrixTextSearchAdapter',
