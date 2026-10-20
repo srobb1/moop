@@ -208,7 +208,9 @@ class GoogleSheetsParser
             $track = $this->cleanTrackData($row);
             
             // Add to combo group if we're in a combo track
-            if ($inCombo && $currentCombo && $comboGroup) {
+            // !== null, not truthiness: a group named "0" (Woods Hole "## oranges: 0", the 0 hpf
+            // strand) is falsy in PHP, so its rows were dropped and the 4 time-series combos failed.
+            if ($inCombo && $currentCombo && $comboGroup !== null) {
                 $currentCombo['groups'][$comboGroup]['tracks'][] = $track;
             }
             
