@@ -334,6 +334,14 @@ copy_one_geneset() {
     send "$REMOTE_ASSEMBLY_PATH" \
       "$ASSEMBLY_DATA/genome.fa" "$ASSEMBLY_DATA/genome.fa.fai" "$ASSEMBLY_DATA/genome.fa.n*"
   fi
+  ## Assembly statistics (process_one_geneset.sh): sent when there are some; otherwise any copy
+  ## left on the server by an earlier run is removed, as for busco.json below.
+  if [ -s "$ASSEMBLY_DATA/assembly_stats.json" ]; then
+    send "$REMOTE_ASSEMBLY_PATH" "$ASSEMBLY_DATA/assembly_stats.json"
+  else
+    "${SSH[@]}" "$REMOTE" "rm -f '$REMOTE_ASSEMBLY_PATH/assembly_stats.json'" \
+      || log "WARN  $THIS_ORG  [$ASSEMBLY] — could not remove a stale assembly_stats.json on $REMOTE"
+  fi
 
   ## Gene-set level: geneset.json + GFF + coords (genome-backed), FASTAs + indexes (always)
   ##

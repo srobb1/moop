@@ -1118,6 +1118,17 @@ if $HAS_GFF; then
       && samtools faidx "$ASSEMBLY_DATA/genome.fa"
     needs_rebuild "$ASSEMBLY_DATA/genome.fa" "$ASSEMBLY_DATA/genome.fa.ndb" \
       && makeblastdb -in "$ASSEMBLY_DATA/genome.fa" -dbtype nucl -parse_seqids
+    ## Assembly statistics for the organism page (notes/ASSEMBLY_STATS_SPEC.md). Per ASSEMBLY,
+    ## though this runs per gene set: the script exits at once when assembly_stats.json is newer
+    ## than genome.fa (and its format is current), so an assembly's first gene set computes it and
+    ## the rest skip. After the .fai, which it is checked against. A failure removes the file and
+    ## warns -- no file means the page falls back to the .fai, never shows wrong figures.
+    perl "$REPO/analysis_parsers/assembly_stats_to_MOOP_JSON.pl" "$ASSEMBLY_DATA/genome.fa" \
+      "$ASSEMBLY_DATA/assembly_stats.json" "$ASSEMBLY_DATA/genome.fa.fai" \
+      || { echo "WARNING: assembly statistics failed for $ASSEMBLY_DATA/genome.fa; no assembly_stats.json" >&2
+           rm -f "$ASSEMBLY_DATA/assembly_stats.json" "$ASSEMBLY_DATA/assembly_stats.json.tmp"; }
+  else
+    rm -f "$ASSEMBLY_DATA/assembly_stats.json"
   fi
   if [ -e protein.aa.fa ]; then
     needs_rebuild protein.aa.fa protein.aa.fa.pdb \

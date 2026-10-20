@@ -1,6 +1,7 @@
 # Assembly statistics — the contract between the compute box and MOOP
 
-**Status:** agreed 2026-10-20 (user). Pipeline side to be built on the compute box; the MOOP page
+**Status:** agreed 2026-10-20 (user). Pipeline side built 2026-10-20
+(`analysis_parsers/assembly_stats_to_MOOP_JSON.pl`); the MOOP page
 reads what is described here. Same model as BUSCO (`BUSCO_GENE_SET_SPEC.md`) and expression
 (`EXPRESSION_BUNDLE_SPEC.md`): **built on the compute box, copied to the web server, only ever
 read there.**
@@ -73,7 +74,7 @@ All lengths in bases. Case-insensitive (soft-masked lower-case bases count like 
 | `n50` / `n90` | sort records longest first; the length of the record at which the running sum first reaches ≥ 50% / ≥ 90% of `total_length` |
 | `l50` / `l90` | how many records that took (1-based) — "half the genome is in `l50` sequences" |
 | `longest` | the longest record |
-| `contigs` | records split at every run of **≥ 10 consecutive N** (QUAST's default); runs shorter than 10 stay inside the contig. Leading/trailing N runs are trimmed, not counted as contigs |
+| `contigs` | records split at every run of **≥ 10 consecutive N** (QUAST's default); runs shorter than 10 stay inside the contig. Leading/trailing N runs are trimmed **whatever their length** (user, 2026-10-20), not counted as contigs |
 | `contig_n50` / `contig_l50` | as `n50` / `l50`, over those contigs, against the **total contig length** — the sum of the contig lengths, which includes any short (< 10) N runs left inside them but none of the ≥ 10 runs they were split at |
 | `gap_bases` | count of N (and n) bases anywhere |
 | `gap_pct` | `gap_bases / total_length × 100`, one decimal |
@@ -90,15 +91,33 @@ written as 0 or null.
 - `sequences` ≥ 1, `total_length` > 0;
 - `l50` ≤ `l90` ≤ `sequences` and `n50` ≥ `n90`; the same for the contig fields;
 - `gap_bases` ≤ `total_length`;
-- total contig length + bases in the split runs (≥ 10 N, including leading/trailing ones) == `total_length`;
+- total contig length + bases in the split runs (≥ 10 N) + bases in the trimmed end runs (any length) == `total_length`;
 - `sequences`, `total_length`, `n50`, `l50` agree with `genome.fa.fai` when one exists (cheap,
   and it catches reading the wrong file).
 
+## Tested 2026-10-20
+
+| Genome | Result | Time / memory |
+|---|---|---|
+| Nematostella GCA_033964005.1 (252 Mb) | 30 seqs, N50 16,735,929, L50 7, N90 13,131,831, L90 14 — exactly the `.fai` figures above; 793 contigs, contig N50 803,730 (L50 84); gaps 114,400 bp; GC 41.0% | 2 s |
+| Tammar wallaby Haploid_plus_Y (3.35 Gb) | 9 seqs, N50 483,301,654, L50 3; 111 contigs, contig N50 113,185,175; gaps 1,225 bp; GC 38.7% | 106 s, 8 MB |
+| Made-up edge cases | leading 3 N, internal 5 N (kept), 12 N split across lines (split), trailing 2 N, an all-N record, lower case: every figure as worked by hand | — |
+
+Cross-checked with `seqkit stats` / `fx2tab` (count, total, longest, N50, N count, GC) and an
+independent count of ≥ 10 N runs (Nvec: 763 runs + 30 records = 793 contigs). `fasta_md5` = `md5sum`.
+
 ## Getting it to MOOP
 
-- **`process_one_geneset.sh`** writes `$ASSEMBLY_DATA/assembly_stats.json` whenever the genome is
-  present — remade on every run, like `busco.json` (derived; a re-run must never leave the stats
-  of a previous genome). No genome → no file, and the gene set carries on.
+- **`process_one_geneset.sh`** runs the script right after `genome.fa.fai` is built, whenever the
+  genome is present. **Recomputed only when `genome.fa` is newer than `assembly_stats.json`, or
+  the file's `version` is not the script's** (user, 2026-10-20) — the genome can be 3.4 Gb.
+- **Per assembly, though the pipeline is per gene set** (user, 2026-10-20): the SCRIPT decides —
+  when the file is current it exits at once without reading the genome. So an assembly's first
+  gene set computes it and the others skip; no new loop, no per-assembly step. `--reload` does
+  not force it (the figures depend only on `genome.fa`); a definition change bumps `version`,
+  which does. Written to `.tmp` and renamed, so it is never half-written.
+- No genome → the file is removed, and the gene set carries on. A failed run (bad FASTA, figures
+  that do not add up, disagreement with the `.fai`) → the file is removed and a warning printed.
 - **`copy2moop_v2.sh`** sends it with the other assembly-level files, in the `HAS_GENOME` block
   next to `genome.fa` / `genome.fa.fai`. When there is none, remove any copy left on the server
   by an earlier run (the same pattern as `busco.json`).
@@ -111,9 +130,12 @@ written as 0 or null.
 ## What MOOP does with it (web side, built after the files exist)
 
 - `lib/gene_set_summary.php` reads `assembly_stats.json` when present and valid; the organism
-  page's "Assembly N50" column then also shows L50 and contig N50, and gaps / GC where useful.
+  page shows N50 **and L50** (user, 2026-10-20), contig N50, and gaps / GC where useful.
+- Percentages are JSON numbers, so one decimal is lost when it is zero: `gap_pct` 0.04 is written
+  `0`, GC 41.0 is written `41`. Format them on the page (`number_format($v, 1)`).
 - **Fallback:** when there is no file — another installation that does not run this pipeline,
-  or an assembly not yet re-run — the web server keeps computing scaffold `sequences`,
-  `total_length`, `n50` and `l50` from `genome.fa.fai` as it does today. The contig, gap and GC
+  or an assembly not yet re-run — the web server computes scaffold `sequences`,
+  `total_length`, `n50` and `l50` from `genome.fa.fai`. (`moop_fai_stats()` returns sequences,
+  total and N50 today; L50 is to be added there.) The contig, gap and GC
   fields simply do not appear. One reader, two sources; the file wins.
 - A missing or malformed file is the fallback, never an error.
