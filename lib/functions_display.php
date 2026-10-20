@@ -356,14 +356,17 @@ function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_
     
     if (!$organism_info) {
         // Was a silent redirect to the home page: a mistyped or stale link just "lost" you.
-        moop_not_found_page('There is no organism "' . $organism_name . '" on this site.');
+        moop_not_found_page('There is no organism "' . $organism_name . '" that you can open.');
     }
     
     // Check access (unless it's public)
     if ($check_access) {
-        $is_public = is_public_organism($organism_name);
-        if (!$is_public) {
-            require_access('COLLABORATOR', $organism_name);
+        // Not yours: the SAME answer as an unknown organism (it was a redirect to
+        // access_denied.php, which told a visitor the organism exists). The not-found page
+        // says how to see more -- log in, or the institute network -- without saying whether
+        // there is more.
+        if (!is_public_organism($organism_name) && !has_access('COLLABORATOR', $organism_name)) {
+            moop_not_found_page('There is no organism "' . $organism_name . '" that you can open.');
         }
     }
     

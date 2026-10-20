@@ -49,7 +49,10 @@ $organism_context = setupOrganismDisplayContext($organism_name, $organism_data, 
 $organism_info = $organism_context['info'];
 
 // Now validate assembly parameter (after access check)
-$assembly_param = validateAssemblyParam($_GET['assembly'] ?? '', "/$site/access_denied.php");
+$assembly_param = (string)($_GET['assembly'] ?? '');
+if ($assembly_param === '') {
+    moop_not_found_page('This link does not name an assembly.');
+}
 
 // Verify database exists
 $db_path = verifyOrganismDatabase($organism_name, $organism_data);
@@ -58,7 +61,7 @@ $db_path = verifyOrganismDatabase($organism_name, $organism_data);
 $assembly_info = getAssemblyStats($assembly_param, $db_path);
 
 if (empty($assembly_info)) {
-    moop_not_found_page('There is no assembly "' . $assembly_param . '" for this organism.');
+    moop_not_found_page('There is no assembly "' . $assembly_param . '" for this organism that you can open.');
 }
 
 // Get gene sets for this assembly, filtered to what the current user can access
@@ -66,6 +69,12 @@ $all_gene_sets = getAssemblyGeneSets($assembly_info['genome_accession'], $db_pat
 $accessible_sources = flattenSourcesList(getAccessibleGeneSets($organism_name, $assembly_info['genome_accession']));
 $accessible_gene_set_names = array_flip(array_column($accessible_sources, 'gene_set'));
 $gene_sets = array_values(array_filter($all_gene_sets, fn($gs) => isset($accessible_gene_set_names[$gs['gene_set_name']])));
+// An assembly is open to a viewer exactly when one of its gene sets is -- the rule the genome
+// browser uses (moop_jbrowse_viewer_gene_sets()). Only organism-level access was checked here,
+// so a collaborator granted one assembly could open another's page and statistics.
+if (!$accessible_sources) {
+    moop_not_found_page('There is no assembly "' . $assembly_param . '" for this organism that you can open.');
+}
 
 // Configure display template
 $display_config = [

@@ -26,10 +26,11 @@ $search_url = '/' . $site . '/tools/search.php' . ($organism_name !== '' ? '?org
                     This link does not name a gene.
                 <?php endif; ?>
             </p>
-            <p class="text-muted small mb-4">
+            <p class="text-muted small mb-3">
                 Check the spelling — IDs include their version, e.g. <code>.1</code> — or search by name,
-                description or annotation. A gene can also be in a gene set you do not have access to.
+                description or annotation.
             </p>
+            <?php include __DIR__ . '/not_found_access_hint.php'; ?>
             <a class="btn btn-moop-teal text-white me-2" href="<?= htmlspecialchars($search_url) ?>">
                 <i class="fa fa-search me-1"></i>Search<?= $organism_label !== '' ? ' ' . htmlspecialchars($organism_label) : '' ?>
             </a>

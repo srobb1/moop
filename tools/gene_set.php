@@ -19,7 +19,10 @@ $siteTitle     = $config->getString('siteTitle');
 
 // Validate params
 $organism_name  = validateOrganismParam($_GET['organism'] ?? '');
-$assembly_param = validateAssemblyParam($_GET['assembly'] ?? '', "/$site/access_denied.php");
+$assembly_param = (string)($_GET['assembly'] ?? '');
+if ($assembly_param === '') {
+    moop_not_found_page('This link does not name an assembly.');
+}
 $gene_set_param = trim($_GET['gene_set'] ?? '');
 
 if (empty($gene_set_param)) {
@@ -34,15 +37,15 @@ $organism_info    = $organism_context['info'];
 $db_path = verifyOrganismDatabase($organism_name, $organism_data);
 
 // Check gene-set-level access
+// Not yours: the same answer as a gene set that does not exist (see the not-found page's hint).
 if (!has_gene_set_access($organism_name, $assembly_param, $gene_set_param)) {
-    header("Location: /$site/access_denied.php");
-    exit;
+    moop_not_found_page('There is no gene set "' . $gene_set_param . '" in assembly "' . $assembly_param . '" that you can open.');
 }
 
 // Load gene set stats (gene/mRNA counts from DB)
 $gene_set_info = getGeneSetStats($assembly_param, $gene_set_param, $db_path);
 if (empty($gene_set_info)) {
-    moop_not_found_page('There is no gene set "' . $gene_set_param . '" in assembly "' . $assembly_param . '".');
+    moop_not_found_page('There is no gene set "' . $gene_set_param . '" in assembly "' . $assembly_param . '" that you can open.');
 }
 
 $genome_accession = $gene_set_info['genome_accession'];
