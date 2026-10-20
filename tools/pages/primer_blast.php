@@ -711,7 +711,9 @@ $db_section_label = function ($key) {
                                                     // junction-spanning primer a browser link at all.
                                                     $mapped_g = $prod['genomic'] ?? null;
                                                     $can_link = !empty($result_organism) && !empty($result_assembly)
-                                                              && ($db_key === 'genome' || $mapped_g !== null);
+                                                              && ($db_key === 'genome' || $mapped_g !== null)
+                                                              // the browser can only open registered assemblies
+                                                              && isJBrowseAssemblyRegistered($result_organism, $result_assembly);
                                                     ?>
                                                     <?php if ($can_link): ?>
                                                         <?php

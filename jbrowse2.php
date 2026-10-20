@@ -25,10 +25,17 @@ $organism_groups = [];   // [organism] = [group, ...]
 $all_groups      = [];   // distinct non-PUBLIC groups, sorted
 $assembly_names  = [];   // [organism][assembly] = human-readable name (if set)
 
+// Only assemblies registered with the genome browser: the picker used to offer every assembly
+// the viewer may open, and 28 of 96 have no JBrowse definition, so choosing one ended in
+// "HTTP 404 fetching .../config.php" (found 2026-10-20, sea lamprey GCF_010993605.1). Same file
+// api/jbrowse2/config.php loads; register an assembly (Admin -> JBrowse) to make it appear.
+$jb_assemblies_dir = $config->getPath('metadata_path') . '/jbrowse2-configs/assemblies';
+
 foreach ($raw_sources as $src) {
     $org = $src['organism'];
     $asm = $src['genome_accession'] ?: $src['assembly'];
     if (empty($asm)) continue;
+    if (!is_file("$jb_assemblies_dir/{$org}_{$asm}.json")) continue;
 
     if (!isset($scope_tree[$org]))         $scope_tree[$org] = [];
     if (!in_array($asm, $scope_tree[$org])) $scope_tree[$org][] = $asm;
@@ -64,6 +71,14 @@ if (!empty($_GET['organism']) && preg_match('/^[A-Za-z0-9_\-\.]+$/', $_GET['orga
     $dl_organism = $_GET['organism'];
 if (!empty($_GET['assembly']) && preg_match('/^[A-Za-z0-9_\-\.]+$/', $_GET['assembly']))
     $dl_assembly = $_GET['assembly'];
+
+// A deep link to an assembly the browser cannot show -- not registered with JBrowse, or not
+// one this viewer may open (both already left out of $scope_tree) -- gets the site's not-found
+// page, worded the same either way, instead of JBrowse's raw "HTTP 404 fetching config.php".
+if ($dl_organism !== '' && $dl_assembly !== ''
+        && !in_array($dl_assembly, $scope_tree[$dl_organism] ?? [], true)) {
+    moop_not_found_page('There is no assembly "' . $dl_assembly . '" in the genome browser that you can open.');
+}
 
 $dl_loc = '';
 if (!empty($_GET['loc']) && preg_match('/^[\w.\-:]+$/', $_GET['loc']))
