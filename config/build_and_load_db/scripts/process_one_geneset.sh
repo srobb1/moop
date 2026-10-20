@@ -91,6 +91,39 @@ echo "Mode     : $($HAS_GFF && echo genome || echo transcriptome)"
 ## returns true if file exists, is non-empty, and has more than a header line
 has_data() { [ -s "$1" ] && [ "$(wc -l < "$1")" -gt 1 ]; }
 
+## build_index SOURCE INDEX COMMAND...  -- run COMMAND to (re)build INDEX from SOURCE unless INDEX
+## was already built from exactly this SOURCE.
+##
+## "Exactly this source" = the byte size and mtime SOURCE had when INDEX was built, kept in a stamp
+## beside it (.INDEX.built_from; a dot-file, so copy2moop's genome.fa.n* / protein.aa.fa.p* globs
+## never ship it). This replaced "rebuild when SOURCE is newer than INDEX" (2026-10-20): a genome
+## replaced with rsync -a / cp -p keeps its ORIGINAL, older mtime, so its .fai and BLAST database
+## were never rebuilt -- and shipped to the site, silently describing the old genome. genome.fa is
+## a symlink into $GENOMES, so that is exactly how it gets replaced. Any replacement changes the size
+## or the mtime, older or newer.
+##
+## An index from before stamps existed (no stamp) is ADOPTED when it is newer than its source --
+## the old rule, no worse than before -- and stamped, so the first run does not rebuild every BLAST
+## database there is. The source is stat'ed BEFORE the build, so a source replaced mid-build is
+## caught on the next run. The stamp is written only when COMMAND succeeds.
+build_index() {
+  local src="$1" index="$2"; shift 2
+  local stamp now
+  stamp="$(dirname "$index")/.$(basename "$index").built_from"
+  now=$(stat -L -c '%s %Y' "$src") || return 1
+  if [ -f "$index" ]; then
+    if [ -f "$stamp" ]; then
+      [ "$(cat "$stamp")" = "$now" ] && return 0
+      echo "$(basename "$src") changed since $(basename "$index") was built: rebuilding"
+    elif [ ! "$src" -nt "$index" ]; then
+      echo "$now" > "$stamp"
+      return 0
+    fi
+  fi
+  "$@" || return 1
+  echo "$now" > "$stamp"
+}
+
 ## Has THIS gene set actually been LOADED into the organism database?
 ##
 ## "Built" and "loaded" are different questions and only the second one matters.
@@ -1110,18 +1143,17 @@ if $HAS_GFF; then
 
   module load samtools
   module load blast-plus
-  needs_rebuild() { [ ! -f "$2" ] || [ "$1" -nt "$2" ]; }
   echo "Building indices"
 
   if [ -e "$ASSEMBLY_DATA/genome.fa" ]; then
-    needs_rebuild "$ASSEMBLY_DATA/genome.fa" "$ASSEMBLY_DATA/genome.fa.fai" \
-      && samtools faidx "$ASSEMBLY_DATA/genome.fa"
-    needs_rebuild "$ASSEMBLY_DATA/genome.fa" "$ASSEMBLY_DATA/genome.fa.ndb" \
-      && makeblastdb -in "$ASSEMBLY_DATA/genome.fa" -dbtype nucl -parse_seqids
+    build_index "$ASSEMBLY_DATA/genome.fa" "$ASSEMBLY_DATA/genome.fa.fai" \
+      samtools faidx "$ASSEMBLY_DATA/genome.fa"
+    build_index "$ASSEMBLY_DATA/genome.fa" "$ASSEMBLY_DATA/genome.fa.ndb" \
+      makeblastdb -in "$ASSEMBLY_DATA/genome.fa" -dbtype nucl -parse_seqids
     ## Assembly statistics for the organism page (notes/ASSEMBLY_STATS_SPEC.md). Per ASSEMBLY,
-    ## though this runs per gene set: the script exits at once when assembly_stats.json is newer
-    ## than genome.fa (and its format is current), so an assembly's first gene set computes it and
-    ## the rest skip. After the .fai, which it is checked against. A failure removes the file and
+    ## though this runs per gene set: the script exits at once when assembly_stats.json records
+    ## genome.fa's current size and mtime (and its format is current), so an assembly's first gene
+    ## set computes it and the rest skip. After the .fai, which it is checked against. A failure removes the file and
     ## warns -- no file means the page falls back to the .fai, never shows wrong figures.
     perl "$REPO/analysis_parsers/assembly_stats_to_MOOP_JSON.pl" "$ASSEMBLY_DATA/genome.fa" \
       "$ASSEMBLY_DATA/assembly_stats.json" "$ASSEMBLY_DATA/genome.fa.fai" \
@@ -1131,12 +1163,12 @@ if $HAS_GFF; then
     rm -f "$ASSEMBLY_DATA/assembly_stats.json"
   fi
   if [ -e protein.aa.fa ]; then
-    needs_rebuild protein.aa.fa protein.aa.fa.pdb \
-      && makeblastdb -in protein.aa.fa -dbtype prot -parse_seqids
+    build_index protein.aa.fa protein.aa.fa.pdb \
+      makeblastdb -in protein.aa.fa -dbtype prot -parse_seqids
   fi
   for FA in transcript.nt.fa cds.nt.fa; do
     [ -e "$FA" ] || continue
-    needs_rebuild "$FA" "${FA}.ndb" && makeblastdb -in "$FA" -dbtype nucl -parse_seqids
+    build_index "$FA" "${FA}.ndb" makeblastdb -in "$FA" -dbtype nucl -parse_seqids
   done
 
   # samtools .fai alongside the BLAST databases.
@@ -1155,7 +1187,7 @@ if $HAS_GFF; then
   # index for point lookups, ~1.3MB per FASTA and ~0.1s to build.
   for FA in protein.aa.fa transcript.nt.fa cds.nt.fa; do
     [ -e "$FA" ] || continue
-    needs_rebuild "$FA" "${FA}.fai" && samtools faidx "$FA"
+    build_index "$FA" "${FA}.fai" samtools faidx "$FA"
   done
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -1263,16 +1295,15 @@ else
   fi
 
   module load blast-plus
-  needs_rebuild() { [ ! -f "$2" ] || [ "$1" -nt "$2" ]; }
   echo "Building FASTA indices"
 
   if [ -e protein.aa.fa ]; then
-    needs_rebuild protein.aa.fa protein.aa.fa.pdb \
-      && makeblastdb -in protein.aa.fa -dbtype prot -parse_seqids
+    build_index protein.aa.fa protein.aa.fa.pdb \
+      makeblastdb -in protein.aa.fa -dbtype prot -parse_seqids
   fi
   for FA in transcript.nt.fa cds.nt.fa; do
     [ -e "$FA" ] || continue
-    needs_rebuild "$FA" "${FA}.ndb" && makeblastdb -in "$FA" -dbtype nucl -parse_seqids
+    build_index "$FA" "${FA}.ndb" makeblastdb -in "$FA" -dbtype nucl -parse_seqids
   done
 
   # samtools .fai alongside the BLAST databases.
@@ -1291,7 +1322,7 @@ else
   # index for point lookups, ~1.3MB per FASTA and ~0.1s to build.
   for FA in protein.aa.fa transcript.nt.fa cds.nt.fa; do
     [ -e "$FA" ] || continue
-    needs_rebuild "$FA" "${FA}.fai" && samtools faidx "$FA"
+    build_index "$FA" "${FA}.fai" samtools faidx "$FA"
   done
 
 fi

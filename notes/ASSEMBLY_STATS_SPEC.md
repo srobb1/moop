@@ -124,8 +124,12 @@ independent count of ≥ 10 N runs (Nvec: 763 runs + 30 records = 793 contigs). 
   and gains the two fields. MOOP's reader ignores fields it does not know, so this needs no web change.
   Built as described; tested with a genome replaced by an OLDER file via `cp -p` (json newer than
   it): recomputed. Unchanged genome: skipped. A version-1 file: recomputed.
-  (The `.fai` / BLAST `needs_rebuild` checks in the same block share the `-nt` rule -- the same
-  exposure, for the pipeline to decide separately.)
+  (The `.fai` / BLAST `needs_rebuild` checks in the same block shared the `-nt` rule -- the same
+  exposure. **Fixed 2026-10-20:** `needs_rebuild` is replaced by `build_index` in
+  `process_one_geneset.sh`, which records the source's size + mtime in a dot-file stamp beside each
+  index (`.genome.fa.fai.built_from`, never shipped) and rebuilds when they differ. Indexes from
+  before the change are adopted on first run when newer than their source, so nothing is
+  mass-rebuilt.)
 - **Per assembly, though the pipeline is per gene set** (user, 2026-10-20): the SCRIPT decides —
   when the file is current it exits at once without reading the genome. So an assembly's first
   gene set computes it and the others skip; no new loop, no per-assembly step. `--reload` does
