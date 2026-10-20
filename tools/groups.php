@@ -118,6 +118,7 @@ if ($is_taxonomy_group) {
         // plainly. No access check below — there is nothing here to protect, and
         // demanding a login for a grouping we do not have would be a lie.
         $group_unknown = true;
+        http_response_code(404);   // the page still renders, saying so; the status says it too
     }
 
     // Manual group: Use existing logic

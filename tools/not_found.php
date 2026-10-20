@@ -5,14 +5,12 @@
  * docs/nginx/moop-security.conf sends data/genomes/, organisms/, config/, logs/, metadata/ and
  * .php in served data trees here (`error_page 404 /moop/tools/not_found.php`), so a refused
  * link gets the site's own header and menus and one way home, instead of nginx's stock Red Hat
- * page. nginx keeps the 404 status; this sets it too, for a direct visit.
+ * page. nginx keeps the 404 status; moop_not_found_page() sets it too, for a direct visit.
  *
  * Says nothing about what was asked for: the same page whether the path exists or not.
  */
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../includes/layout.php';
+include_once __DIR__ . '/../lib/functions_display.php';
 
-http_response_code(404);
-echo render_display_page(__DIR__ . '/pages/not_found.php', [
-    'site' => ConfigManager::getInstance()->getString('site', 'moop'),
-], 'Page not found');
+moop_not_found_page();

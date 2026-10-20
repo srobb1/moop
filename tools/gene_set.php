@@ -23,7 +23,7 @@ $assembly_param = validateAssemblyParam($_GET['assembly'] ?? '', "/$site/access_
 $gene_set_param = trim($_GET['gene_set'] ?? '');
 
 if (empty($gene_set_param)) {
-    die("Error: Missing gene_set parameter.");
+    moop_not_found_page('This link does not name a gene set.');
 }
 
 // Setup organism context (validates, loads info, checks top-level access)
@@ -42,7 +42,7 @@ if (!has_gene_set_access($organism_name, $assembly_param, $gene_set_param)) {
 // Load gene set stats (gene/mRNA counts from DB)
 $gene_set_info = getGeneSetStats($assembly_param, $gene_set_param, $db_path);
 if (empty($gene_set_info)) {
-    die("Error: Gene set '" . htmlspecialchars($gene_set_param) . "' not found for assembly '" . htmlspecialchars($assembly_param) . "'.");
+    moop_not_found_page('There is no gene set "' . $gene_set_param . '" in assembly "' . $assembly_param . '".');
 }
 
 $genome_accession = $gene_set_info['genome_accession'];

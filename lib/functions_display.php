@@ -300,6 +300,38 @@ function validateOrganismJson($json_path) {
 }
 
 /**
+ * Send a "not found" answer and stop: HTTP 404, and on a page the site's own page -- header, menus, the message, one link home (tools/pages/not_found.php).
+ * An API endpoint (a script under /api/) gets a plain-text 404 instead of HTML.
+ *
+ * One page for every "that does not exist" answer. Before 2026-10-20 an unknown organism
+ * silently redirected to the home page, an unknown assembly or gene set printed a bare
+ * "Error: ..." line with no way back, all sent as 200; and refused paths showed nginx's stock
+ * page. (A gene keeps its own page, tools/pages/gene_not_found.php, which also offers search.)
+ *
+ * @param string $message plain text, escaped on output; '' for the generic wording
+ */
+function moop_not_found_page(string $message = ''): void {
+    http_response_code(404);
+    // Pages get the full site page; API endpoints (under /api/) a plain-text answer. Decided by
+    // the request path, not by whether the layout happens to be loaded yet: most controllers
+    // include it only at the end, through display-template.php.
+    $is_api = strpos((string)($_SERVER['SCRIPT_NAME'] ?? ''), '/api/') !== false;
+    if (!$is_api) {
+        require_once __DIR__ . '/../includes/layout.php';
+    }
+    if (!$is_api && function_exists('render_display_page')) {
+        echo render_display_page(__DIR__ . '/../tools/pages/not_found.php', [
+            'site'    => ConfigManager::getInstance()->getString('site', 'moop'),
+            'message' => $message,
+        ], 'Not found');
+    } else {
+        header('Content-Type: text/plain; charset=utf-8');
+        echo ($message !== '' ? $message : 'Not found') . "\n";
+    }
+    exit;
+}
+
+/**
  * Complete setup for organism display pages
  * Validates parameter, loads organism info, checks access, returns context
  * Use this to replace boilerplate in organism_display, assembly_display, parent_display
@@ -323,8 +355,8 @@ function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_
     $organism_info = loadOrganismInfo($organism_name, $organism_data_dir);
     
     if (!$organism_info) {
-        header("Location: $redirect_home");
-        exit;
+        // Was a silent redirect to the home page: a mistyped or stale link just "lost" you.
+        moop_not_found_page('There is no organism "' . $organism_name . '" on this site.');
     }
     
     // Check access (unless it's public)

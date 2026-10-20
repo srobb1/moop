@@ -58,7 +58,7 @@ $db_path = verifyOrganismDatabase($organism_name, $organism_data);
 $assembly_info = getAssemblyStats($assembly_param, $db_path);
 
 if (empty($assembly_info)) {
-    die("Error: Assembly not found.");
+    moop_not_found_page('There is no assembly "' . $assembly_param . '" for this organism.');
 }
 
 // Get gene sets for this assembly, filtered to what the current user can access
