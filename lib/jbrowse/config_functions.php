@@ -241,13 +241,13 @@ function generateDualAssemblyConfig($assembly1, $assembly2, $user_access_level)
                 'name' => $assembly1_def['name'],
                 'displayName' => $assembly1_def['displayName'] ?? "{$organism1} ({$asm1})",
                 'aliases' => $assembly1_def['aliases'] ?? [$asm1],
-                'sequence' => $assembly1_def['sequence']
+                'sequence' => moop_jbrowse_tokenize_sequence($assembly1_def['sequence'] ?? null, $organism1, $asm1)
             ],
             [
                 'name' => $assembly2_def['name'],
                 'displayName' => $assembly2_def['displayName'] ?? "{$organism2} ({$asm2})",
                 'aliases' => $assembly2_def['aliases'] ?? [$asm2],
-                'sequence' => $assembly2_def['sequence']
+                'sequence' => moop_jbrowse_tokenize_sequence($assembly2_def['sequence'] ?? null, $organism2, $asm2)
             ]
         ],
         'plugins' => getJBrowse2PluginConfiguration(),

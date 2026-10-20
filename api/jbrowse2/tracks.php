@@ -25,8 +25,12 @@
 
 require_once __DIR__ . '/../../lib/jbrowse/track_token.php';
 
-// Configuration
-$TRACKS_BASE_DIR = __DIR__ . '/../../data/tracks';
+// Configuration. api/jbrowse2/genome_file.php sets these three before including this file, to
+// serve data/genomes/ with the same checks; standalone (here, and the copy deployed on the
+// remote tracks server) they take the data/tracks defaults. Never read from the request.
+$TRACKS_BASE_DIR    = $TRACKS_BASE_DIR    ?? __DIR__ . '/../../data/tracks';
+$TOKEN_FILE_PREFIX  = $TOKEN_FILE_PREFIX  ?? '';   // the token's `file` claim is PREFIX . ?file=
+$ALLOWED_REAL_ROOTS = $ALLOWED_REAL_ROOTS ?? [];   // where symlinks under the base may resolve
 
 // Get parameters
 $file = $_GET['file'] ?? '';
@@ -80,7 +84,7 @@ if (!$token_data) {
 // on the tracks server — the authorization is carried in the signed token itself.
 $token_file = $token_data->file ?? '';
 
-if ($token_file === '' || $token_file !== $file) {
+if ($token_file === '' || $token_file !== $TOKEN_FILE_PREFIX . $file) {
     http_response_code(403);
     header('Content-Type: application/json');
     echo json_encode([
@@ -95,7 +99,13 @@ if ($token_file === '' || $token_file !== $file) {
 $resolved_base = realpath($TRACKS_BASE_DIR);
 $file_path = realpath($TRACKS_BASE_DIR . '/' . $file);
 
-if ($file_path === false || strpos($file_path, $resolved_base . '/') !== 0) {
+$inside_allowed = $file_path !== false && strpos($file_path, $resolved_base . '/') === 0;
+foreach ($ALLOWED_REAL_ROOTS as $allowed_root) {
+    if ($file_path !== false && $allowed_root && strpos($file_path, rtrim($allowed_root, '/') . '/') === 0) {
+        $inside_allowed = true;
+    }
+}
+if (!$inside_allowed) {
     http_response_code(400);
     header('Content-Type: application/json');
     echo json_encode(['error' => 'Invalid file path']);
@@ -229,7 +239,13 @@ function getContentTypeFromFile($filename) {
         'bed' => 'text/plain',
         'gff' => 'text/plain',
         'gff3' => 'text/plain',
-        'gtf' => 'text/plain'
+        'gtf' => 'text/plain',
+        'fasta' => 'text/plain',   // data/genomes (genome_file.php)
+        'fa' => 'text/plain',
+        'fai' => 'text/plain',
+        'ix' => 'text/plain',      // trix text-search index
+        'ixx' => 'text/plain',
+        'json' => 'application/json'
     ];
     
     return $mime_types[$ext] ?? 'application/octet-stream';

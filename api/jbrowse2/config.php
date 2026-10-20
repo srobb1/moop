@@ -170,7 +170,8 @@ function generateAssemblyList($user_access_level) {
             'name' => $assembly_def['name'],
             'displayName' => $assembly_def['displayName'] ?? $assembly_def['name'],
             'aliases' => $assembly_def['aliases'] ?? [],
-            'sequence' => $assembly_def['sequence'] ?? null
+            'sequence' => moop_jbrowse_tokenize_sequence($assembly_def['sequence'] ?? null,
+                                                         $assembly_def['organism'], $assembly_def['assemblyId'])
         ];
     }
     
@@ -233,7 +234,7 @@ function generateAssemblyConfig($organism, $assembly, $user_access_level) {
                 'name' => $assembly_definition['name'],
                 'displayName' => $assembly_definition['displayName'] ?? "{$organism} ({$assembly})",
                 'aliases' => $assembly_definition['aliases'] ?? [$assembly],
-                'sequence' => $assembly_definition['sequence']
+                'sequence' => moop_jbrowse_tokenize_sequence($assembly_definition['sequence'] ?? null, $organism, $assembly)
             ]
         ],
         'plugins' => getJBrowse2PluginConfiguration(),
@@ -363,6 +364,17 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
  * @param string $assembly - Assembly ID
  * @return array|null - Track config with tokens, or null if token generation fails
  */
+/**
+ * An assembly's sequence block with its file URLs tokenised, like a track's. The genome FASTA
+ * is fetched by URL from data/genomes/ exactly as a gene track is, but this block is built
+ * apart from the tracks and until 2026-10-20 went out with no token at all.
+ */
+function moop_jbrowse_tokenize_sequence($sequence, $organism, $assembly) {
+    if (!is_array($sequence) || !isset($sequence['adapter'])) return $sequence;
+    $sequence['adapter'] = addTokenToAdapterUrls($sequence['adapter'], $organism, $assembly, 'PUBLIC');
+    return $sequence;
+}
+
 function addTokensToTrack($track_def, $organism, $assembly) {
     // Tokens are minted per-file inside addTokenToAdapterUrls (each bound to the exact
     // file it authorizes — audit #17), so nothing is pre-minted here.
@@ -371,6 +383,11 @@ function addTokensToTrack($track_def, $organism, $assembly) {
     if (isset($track_def['adapter'])) {
         try {
             $track_def['adapter'] = addTokenToAdapterUrls($track_def['adapter'], $organism, $assembly, $track_access_level);
+            // A text-search (trix) index is fetched by URL like the track's own files.
+            if (isset($track_def['textSearching']['textSearchAdapter'])) {
+                $track_def['textSearching']['textSearchAdapter'] = addTokenToAdapterUrls(
+                    $track_def['textSearching']['textSearchAdapter'], $organism, $assembly, $track_access_level);
+            }
         } catch (Exception $e) {
             error_log("Failed to generate token(s) for track {$track_def['trackId']}: " . $e->getMessage());
             return null;
@@ -498,8 +515,19 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
                         $token = generateTrackToken($organism, $assembly, $file_path);
                         $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=" . urlencode($file_path) . '&token=' . urlencode($token);
 
+                    } elseif (preg_match("#^/{$site}/data/genomes/(.+)$#", $uri, $matches)) {
+                        // CASE 3b: genome data (sequence, gene track, trix index) -> genome_file.php,
+                        // which checks this token. nginx no longer serves data/genomes/ directly;
+                        // until 2026-10-20 it did, and the token appended here was decorative.
+                        $file_path = $matches[1];
+                        if (($q = strpos($file_path, '?')) !== false) {
+                            $file_path = substr($file_path, 0, $q);
+                        }
+                        $token = generateTrackToken($organism, $assembly, 'genomes/' . $file_path);
+                        $value['uri'] = "/{$site}/api/jbrowse2/genome_file.php?file=" . urlencode($file_path) . '&token=' . urlencode($token);
+
                     } elseif (preg_match("#^/{$site}/#", $uri)) {
-                        // CASE 4: Other MOOP paths (e.g. /moop/data/genomes/… served directly by MOOP).
+                        // CASE 4: Other MOOP paths served directly by MOOP.
                         // Token is decorative here (not routed through tracks.php); bind to the path.
                         $token = generateTrackToken($organism, $assembly, $uri);
                         $separator = strpos($uri, '?') !== false ? '&' : '?';
