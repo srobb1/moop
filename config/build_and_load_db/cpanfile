@@ -1,0 +1,42 @@
+# Perl modules the build pipeline (config/build_and_load_db) loads.
+#
+# Install with any of:
+#   cpanm --installdeps config/build_and_load_db                # into whatever perl is first in PATH
+#   sudo dnf install perl-JSON-PP perl-FindBin perl-DBI perl-DBD-SQLite perl-URI perl-CPAN-Meta-YAML \
+#        perl-IO-Compress perl-Digest-MD5 perl-Data-Dumper perl-Getopt-Long perl-File-Temp \
+#        perl-File-Find perl-File-Basename perl-PathTools perl-POSIX perl-Exporter      # RHEL/Rocky 9
+#   sudo apt-get install libdbi-perl libdbd-sqlite3-perl liburi-perl          # Debian/Ubuntu (CI)
+#
+# Why the dnf list includes modules that "come with Perl": Red Hat splits Perl into one package
+# per module, and a minimal install (perl-interpreter) has almost none of them. A web server with
+# only perl-interpreter fails with "Can't locate JSON/PP.pm" / "Can't locate FindBin.pm". Debian's
+# perl package carries the core modules, so CI only needs the three non-core ones.
+#
+# Where it runs: the compute box only (the pipeline uses ~/.local/bin/perl, 5.42, first in PATH).
+# The web server needs NONE of these -- it runs no Perl; MOOP reads the pipeline's output with PHP.
+#
+# Built 2026-10-20 by scanning every tracked .pl/.pm under config/build_and_load_db (not old/) for
+# use/require. When a script starts using a new module, add it here. Comments name one example
+# user of each module.
+
+requires 'perl', '5.026';
+
+## Not part of Perl -- needed on every machine
+requires 'DBI';                 # data_loaders/load_annotations_sqlite.pl, load_genes_sqlite.pl
+requires 'DBD::SQLite';         # the driver behind DBI->connect("dbi:SQLite:...") -- a use-scan misses it
+requires 'URI::Escape';         # analysis_parsers/get_names_from_ensembl_gff.pl (5 files)
+
+## Part of Perl, but separate packages on RHEL (see above)
+requires 'JSON::PP';            # analysis_parsers/parse_BUSCO_to_MOOP_JSON.pl
+requires 'FindBin';             # analysis_parsers/assign_gene_names_v2.pl, tests/ (10 files)
+requires 'CPAN::Meta::YAML';    # scripts/geneset_config.pl
+requires 'Cwd';
+requires 'Data::Dumper';
+requires 'Digest::MD5';         # parse_BUSCO_to_MOOP_JSON.pl, find_reference_genome.pl
+requires 'Exporter';
+requires 'File::Basename';
+requires 'File::Find';          # tests/check_perl_file_scope.pl
+requires 'File::Temp';          # tests/naming_end_to_end.pl
+requires 'Getopt::Long';
+requires 'IO::Compress::Gzip';  # tests/naming_end_to_end.pl
+requires 'POSIX';
