@@ -143,6 +143,35 @@ stamp_built() {
   echo "$2" > "$(dirname "$1")/.$(basename "$1").built_from"
 }
 
+## snapshot_outputs FILE... / restore_unchanged FILE... -- keep a rewritten output's OLD file
+## (and so its mtime) when the new one is byte-identical (2026-10-20). protein.aa.fa, cds.nt.fa and
+## genes.gff are re-derived on every run (cleaned, renamed, closest genes added) even when nothing
+## changed; with a new mtime each time, their BLAST databases and .fai were rebuilt and everything
+## re-copied to the site. The snapshot is a HARD LINK (free): every writer in between replaces the
+## file by rename (.tmp + mv), so the old inode survives. A writer that edited in place would only
+## lose the saving -- both names would show the new content -- never the data.
+snapshot_outputs() {
+  local f
+  for f in "$@"; do
+    rm -f ".$f.prev"
+    [ -f "$f" ] && [ ! -L "$f" ] && ln "$f" ".$f.prev"
+  done
+  return 0
+}
+restore_unchanged() {
+  local f
+  for f in "$@"; do
+    [ -f ".$f.prev" ] || continue
+    if [ "$f" -ef ".$f.prev" ]; then
+      rm -f ".$f.prev"                      # not rewritten at all: still the same file
+    elif [ -f "$f" ] && [ ! -L "$f" ] && cmp -s "$f" ".$f.prev"; then
+      mv ".$f.prev" "$f"
+    else
+      rm -f ".$f.prev"
+    fi
+  done
+}
+
 ## build_index SOURCE INDEX COMMAND... -- run COMMAND to (re)build INDEX unless it is up to date
 build_index() {
   local src="$1" index="$2"; shift 2
@@ -933,6 +962,7 @@ if $HAS_GFF; then
     *)       ensure_organism_json "gene" "mRNA,transcript" ;;
   esac
 
+  snapshot_outputs genes.gff protein.aa.fa cds.nt.fa transcript.nt.fa
   for f in genes.gff protein.aa.fa cds.nt.fa transcript.nt.fa; do
     [ -L "$f" ] && rm -f "$f"
   done
@@ -944,7 +974,7 @@ if $HAS_GFF; then
     ln -sf "$GENESET_DIR/protein.aa.fa"     protein.aa.fa
     ln -sf "$GENESET_DIR/transcript.nt.fa"  transcript.nt.fa
     if [[ "$GFF_SOURCE" == "refseq" || "$GFF_SOURCE" == "ensembl" ]]; then
-      cp "$GENESET_DIR/cds.nt.fa" cds.nt.fa
+      cp "$GENESET_DIR/cds.nt.fa" cds.nt.fa.tmp && mv cds.nt.fa.tmp cds.nt.fa   # by rename: snapshot_outputs
     else
       ln -sf "$GENESET_DIR/cds.nt.fa" cds.nt.fa
     fi
@@ -1117,6 +1147,8 @@ if $HAS_GFF; then
     [ -s protein.aa.fa ] && perl "$SCRIPTS/rename_generic_fasta.pl" protein.aa.fa :pep genes.gff cds.nt.fa
   fi
 
+  restore_unchanged genes.gff protein.aa.fa cds.nt.fa transcript.nt.fa
+
   if [ -s "genes.gff" ]; then
     echo "GFF available. Proceeding to feature table."
   else
@@ -1257,6 +1289,7 @@ else
     stamp_built isoforms.tsv "$ISOFORMS_SIGNATURE"
   fi
 
+  snapshot_outputs protein.aa.fa cds.nt.fa transcript.nt.fa
   naming_outputs_current || REBUILD=true
   $REBUILD || oma_paralogs_current || build_oma_paralogs
   if $REBUILD; then
@@ -1333,6 +1366,8 @@ else
       "$GENESET_DIR/metadata.yaml" gene "mRNA,transcript"
     mv organism.json "$DATA/$THIS_ORG/organism.json"
   fi
+
+  restore_unchanged protein.aa.fa cds.nt.fa transcript.nt.fa
 
   module load blast-plus
   echo "Building FASTA indices"
