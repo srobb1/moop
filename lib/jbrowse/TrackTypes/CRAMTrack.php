@@ -72,10 +72,10 @@ class CramTrack extends BaseTrack implements TrackTypeInterface
         }
 
         // Validate CRAM file with samtools (local only)
-        if (!$isRemote && empty($errors) && $this->isSamtoolsAvailable()) {
+        if (!$isRemote && empty($errors) && $this->tool('samtools') !== '') {
             $output = [];
             $returnCode = 0;
-            exec("samtools quickcheck " . escapeshellarg($filePath) . " 2>&1", $output, $returnCode);
+            exec(escapeshellarg($this->tool('samtools')) . " quickcheck " . escapeshellarg($filePath) . " 2>&1", $output, $returnCode);
             if ($returnCode !== 0) {
                 $errors[] = "Invalid CRAM file format";
             }
@@ -163,23 +163,13 @@ class CramTrack extends BaseTrack implements TrackTypeInterface
         return null;
     }
     
-    /**
-     * Check if samtools is available
-     */
-    private function isSamtoolsAvailable(): bool
-    {
-        $output = [];
-        $returnCode = 0;
-        exec("which samtools 2>/dev/null", $output, $returnCode);
-        return $returnCode === 0;
-    }
     
     /**
      * Get CRAM statistics
      */
     private function getCramStats(string $filePath, bool $skipStats = false): array
     {
-        if ($skipStats || !$this->isSamtoolsAvailable()) {
+        if ($skipStats || !$this->tool('samtools') !== '') {
             return [
                 'total_reads' => 'not_calculated',
                 'mapped_reads' => 'not_calculated'
@@ -188,12 +178,12 @@ class CramTrack extends BaseTrack implements TrackTypeInterface
         
         // Get total reads
         $output = [];
-        exec("samtools view -c " . escapeshellarg($filePath) . " 2>/dev/null", $output);
+        exec(escapeshellarg($this->tool('samtools')) . " view -c " . escapeshellarg($filePath) . " 2>/dev/null", $output);
         $totalReads = isset($output[0]) ? (int)$output[0] : 'unknown';
         
         // Get mapped reads (exclude unmapped flag 0x4)
         $output = [];
-        exec("samtools view -c -F 4 " . escapeshellarg($filePath) . " 2>/dev/null", $output);
+        exec(escapeshellarg($this->tool('samtools')) . " view -c -F 4 " . escapeshellarg($filePath) . " 2>/dev/null", $output);
         $mappedReads = isset($output[0]) ? (int)$output[0] : 'unknown';
         
         return [

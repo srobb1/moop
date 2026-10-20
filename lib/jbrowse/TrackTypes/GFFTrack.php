@@ -154,16 +154,6 @@ class GFFTrack extends BaseTrack implements TrackTypeInterface
         return null;
     }
     
-    /**
-     * Check if tabix is available
-     */
-    private function isTabixAvailable(): bool
-    {
-        $output = [];
-        $returnCode = 0;
-        exec("which tabix 2>/dev/null", $output, $returnCode);
-        return $returnCode === 0;
-    }
     
     /**
      * Build track metadata structure

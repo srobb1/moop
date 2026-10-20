@@ -88,4 +88,15 @@ abstract class BaseTrack
      * @return string Track type (e.g., 'bam', 'bigwig', 'vcf')
      */
     abstract public function getType(): string;
+
+    /**
+     * Absolute path to a command-line tool ('tabix', 'samtools'), or '' if it is not installed.
+     * One lookup for every track type (they each had a private `which` copy). samtools'
+     * configured path lives under blast_tools in site config, for historical reasons.
+     */
+    protected function tool(string $name): string
+    {
+        require_once __DIR__ . '/../../functions_system.php';
+        return moop_tool($name, $name === 'samtools' ? 'blast_tools' : '');
+    }
 }

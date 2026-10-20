@@ -77,10 +77,10 @@ class BEDTrack extends BaseTrack implements TrackTypeInterface
         }
         
         // Validate BED file with tabix if available
-        if (empty($errors) && $this->isTabixAvailable()) {
+        if (empty($errors) && $this->tool('tabix') !== '') {
             $output = [];
             $returnCode = 0;
-            exec("tabix -H " . escapeshellarg($filePath) . " 2>&1 | head -1", $output, $returnCode);
+            exec(escapeshellarg($this->tool('tabix')) . " -H " . escapeshellarg($filePath) . " 2>&1 | head -1", $output, $returnCode);
             if ($returnCode !== 0) {
                 $errors[] = "Invalid BED file format or not bgzip compressed";
             }
@@ -168,23 +168,13 @@ class BEDTrack extends BaseTrack implements TrackTypeInterface
         return null;
     }
     
-    /**
-     * Check if tabix is available
-     */
-    private function isTabixAvailable(): bool
-    {
-        $output = [];
-        $returnCode = 0;
-        exec("which tabix 2>/dev/null", $output, $returnCode);
-        return $returnCode === 0;
-    }
     
     /**
      * Get BED statistics
      */
     private function getBedStats(string $filePath, bool $skipStats = false): array
     {
-        if ($skipStats || !$this->isTabixAvailable()) {
+        if ($skipStats || !$this->tool('tabix') !== '') {
             return [
                 'feature_count' => 'not_calculated'
             ];

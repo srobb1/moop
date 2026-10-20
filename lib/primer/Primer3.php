@@ -59,23 +59,8 @@ class Primer3
      */
     public static function binary()
     {
-        $config = ConfigManager::getInstance();
-        $name   = $config->getArray('primer3_tools')['primer3_core'] ?? 'primer3_core';
-
-        if (strpos($name, '/') === 0) {
-            return is_executable($name) ? $name : '';
-        }
-
-        $found = trim((string)@shell_exec('which ' . escapeshellarg($name) . ' 2>/dev/null'));
-        if ($found !== '') {
-            return $found;
-        }
-        foreach (['/usr/local/bin/', '/usr/bin/'] as $dir) {
-            if (is_executable($dir . $name)) {
-                return $dir . $name;
-            }
-        }
-        return '';
+        require_once __DIR__ . '/../functions_system.php';
+        return moop_tool('primer3_core', 'primer3_tools');
     }
 
     /**

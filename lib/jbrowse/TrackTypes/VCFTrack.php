@@ -72,10 +72,10 @@ class VCFTrack extends BaseTrack implements TrackTypeInterface
         }
         
         // Validate VCF file with tabix if available
-        if (empty($errors) && $this->isTabixAvailable()) {
+        if (empty($errors) && $this->tool('tabix') !== '') {
             $output = [];
             $returnCode = 0;
-            exec("tabix -H " . escapeshellarg($filePath) . " 2>&1 | head -1", $output, $returnCode);
+            exec(escapeshellarg($this->tool('tabix')) . " -H " . escapeshellarg($filePath) . " 2>&1 | head -1", $output, $returnCode);
             if ($returnCode !== 0) {
                 $errors[] = "Invalid VCF file format or not bgzip compressed";
             }
@@ -163,23 +163,13 @@ class VCFTrack extends BaseTrack implements TrackTypeInterface
         return null;
     }
     
-    /**
-     * Check if tabix is available
-     */
-    private function isTabixAvailable(): bool
-    {
-        $output = [];
-        $returnCode = 0;
-        exec("which tabix 2>/dev/null", $output, $returnCode);
-        return $returnCode === 0;
-    }
     
     /**
      * Get VCF statistics
      */
     private function getVcfStats(string $filePath, bool $skipStats = false): array
     {
-        if ($skipStats || !$this->isTabixAvailable()) {
+        if ($skipStats || !$this->tool('tabix') !== '') {
             return [
                 'variant_count' => 'not_calculated',
                 'sample_count' => 'not_calculated'

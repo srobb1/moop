@@ -51,11 +51,8 @@ if (!is_writable($assembly_dir)) {
 }
 
 // Locate samtools
-$samtools = trim(shell_exec('which samtools 2>/dev/null'));
-if (empty($samtools)) {
-    $samtools = '/usr/local/bin/samtools';
-}
-if (!is_executable($samtools)) {
+$samtools = moop_tool('samtools', 'blast_tools');
+if ($samtools === '') {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'samtools not found or not executable']);
     exit;

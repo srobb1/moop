@@ -98,7 +98,14 @@ class PrimerBlast
         }
 
         $max_mismatch = isset($options['max_mismatch']) ? (int)$options['max_mismatch'] : self::SEARCH_MAX_MISMATCH;
-        $blastn       = $options['blastn'] ?? 'blastn';
+        // The configured blastn, like BLAST itself -- this used to run a bare 'blastn' and
+        // ignore blast_tools, so a site that set a full path got it everywhere but here.
+        require_once __DIR__ . '/../functions_system.php';
+        $blastn       = $options['blastn'] ?? moop_tool('blastn', 'blast_tools');
+        if ($blastn === '') {
+            $result['error'] = "blastn is not installed or not on the web server's PATH.";
+            return $result;
+        }
 
         // Query ids are positional (q0f, q0r, q1f, ...) rather than the user's
         // names: a primer name may contain spaces or characters BLAST would
@@ -122,7 +129,7 @@ class PrimerBlast
         }
         file_put_contents($query_file, $fasta);
 
-        $cmd = escapeshellcmd($blastn)
+        $cmd = escapeshellarg($blastn)
              . ' -task blastn-short'
              . ' -evalue ' . escapeshellarg(self::EVALUE)
              . ' -word_size ' . escapeshellarg(self::WORD_SIZE)

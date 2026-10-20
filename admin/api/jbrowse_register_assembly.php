@@ -97,7 +97,12 @@ if (!file_exists($target_fasta) && !is_link($target_fasta)) {
 // ── Step 3: samtools faidx ───────────────────────────────────────────────────
 
 if (!file_exists("$target_fasta.fai")) {
-    $cmd = 'samtools faidx ' . escapeshellarg($target_fasta) . ' 2>&1';
+    $samtools = moop_tool('samtools', 'blast_tools');
+    if ($samtools === '') {
+        echo json_encode(['success' => false, 'error' => "samtools is not installed or not on the web server's PATH"]);
+        exit;
+    }
+    $cmd = escapeshellarg($samtools) . ' faidx ' . escapeshellarg($target_fasta) . ' 2>&1';
     exec($cmd, $out, $rc);
     if ($rc !== 0) {
         echo json_encode(['success' => false, 'error' => 'samtools faidx failed: ' . implode("\n", $out)]);

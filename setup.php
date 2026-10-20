@@ -147,11 +147,11 @@ function getWebUser() {
     return ['user' => $user, 'group' => $group];
 }
 
+// Same lookup the running app uses (PATH, then /usr/local/bin, /usr/bin), so the check cannot
+// pass a tool the web server then fails to find, or fail one it would find.
+require_once __DIR__ . '/lib/functions_system.php';
 function toolExists($tool) {
-    $output = [];
-    $ret = 1;
-    @exec("which " . escapeshellarg($tool) . " 2>/dev/null", $output, $ret);
-    return $ret === 0;
+    return moop_find_executable($tool) !== '';
 }
 
 /**

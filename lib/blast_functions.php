@@ -7,6 +7,7 @@
 
 // Include parent_functions for parent->child lookups
 require_once __DIR__ . '/parent_functions.php';
+require_once __DIR__ . '/functions_system.php';
 require_once __DIR__ . '/extract_search_helpers.php';   // buildSequenceBatch()
 
 /**
@@ -123,10 +124,9 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
         return $result;
     }
     
-    // Build BLAST command with outfmt 11 (ASN.1)
-    // Get configured BLAST tool path
+    // Build BLAST command with outfmt 11 (ASN.1). Tool paths come from moop_tool():
+    // the configured blast_tools value, resolved to an absolute path.
     $config = ConfigManager::getInstance();
-    $blast_tools = $config->getArray('blast_tools', []);
 
     // ONLY these binaries, and the path shell-quoted. $program arrives from a form field
     // (tools/blast.php posts blast_program), and this used to fall back to `?? $program`
@@ -138,7 +138,13 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
         $result['error'] = 'Unknown BLAST program.';
         return $result;
     }
-    $program_path = escapeshellarg($blast_tools[$program] ?? $program);
+    $program_bin = moop_tool($program, 'blast_tools');
+    if ($program_bin === '') {
+        unlink($archive_file);
+        $result['error'] = "$program is not installed or not on the web server's PATH.";
+        return $result;
+    }
+    $program_path = escapeshellarg($program_bin);
     $num_threads = (int)$config->getString('blast_num_threads', '2');
     if ($num_threads < 1) $num_threads = 1;
 
@@ -278,7 +284,7 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     
     // Convert ASN.1 archive to outfmt 5 (XML) using blast_formatter
     $xml_file = tempnam($temp_dir, 'blast_xml_');
-    $blast_formatter_path = $blast_tools['blast_formatter'] ?? 'blast_formatter';
+    $blast_formatter_path = moop_tool('blast_formatter', 'blast_tools') ?: 'blast_formatter';
     $formatter_cmd = escapeshellarg($blast_formatter_path) . ' -archive ' . escapeshellarg($archive_file) . 
                      ' -outfmt 5 -out ' . escapeshellarg($xml_file);
     
@@ -435,8 +441,7 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         return $result;
     }
 
-    $blast_tools     = ConfigManager::getInstance()->getArray('blast_tools', []);
-    $blastdbcmd_path = $blast_tools['blastdbcmd'] ?? 'blastdbcmd';
+    $blastdbcmd_path = moop_tool('blastdbcmd', 'blast_tools') ?: 'blastdbcmd';
     $cmd = escapeshellarg($blastdbcmd_path) . ' -db ' . escapeshellarg($blast_db) . ' -entry_batch ' . escapeshellarg($temp_file) . ' 2>&1';
     $output     = [];
     $return_var = 0;
@@ -746,9 +751,11 @@ function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_d
     $db_type = sequence_type_blast_dbtype($seq_type);
     
     // Build command with configurable path to makeblastdb
-    $config = ConfigManager::getInstance();
-    $blast_tools = $config->getArray('blast_tools', []);
-    $makeblastdb_path = $blast_tools['makeblastdb'] ?? 'makeblastdb';
+    $makeblastdb_path = moop_tool('makeblastdb', 'blast_tools');
+    if ($makeblastdb_path === '') {
+        $result['message'] = "makeblastdb is not installed or not on the web server's PATH.";
+        return $result;
+    }
     $cd_cmd = 'cd ' . escapeshellarg($assembly_path);
     // Every argument escaped (CLAUDE.md §8). The filename was interpolated raw here,
     // on the reasoning that we had cd'd into its directory -- which has nothing to do

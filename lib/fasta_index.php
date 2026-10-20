@@ -186,16 +186,14 @@ function moop_fasta_ensure_index(string $fasta): bool
     if (isset($tried[$fasta])) return false;
     $tried[$fasta] = true;
 
-    $samtools = 'samtools';
-    if (class_exists('ConfigManager')) {
-        $tools    = ConfigManager::getInstance()->getArray('blast_tools', []);
-        $samtools = $tools['samtools'] ?? 'samtools';
-    }
+    require_once __DIR__ . '/functions_system.php';
+    $samtools = moop_tool('samtools', 'blast_tools');
+    if ($samtools === '') return false;
 
     $tmp = @tempnam($dir, '.fai.');
     if ($tmp === false) return false;
 
-    $cmd = escapeshellcmd($samtools) . ' faidx -o ' . escapeshellarg($tmp)
+    $cmd = escapeshellarg($samtools) . ' faidx -o ' . escapeshellarg($tmp)
          . ' ' . escapeshellarg($fasta) . ' 2>/dev/null';
     $out = []; $rc = 1;
     @exec($cmd, $out, $rc);

@@ -77,7 +77,7 @@ if (empty($file_path) || !file_exists($file_path)) {
 }
 
 // Check for jbrowse CLI
-$jbrowse = find_jbrowse_cli();
+$jbrowse = moop_find_jbrowse_cli();
 if (!$jbrowse) {
     echo json_encode([
         'success'  => false,
@@ -187,30 +187,6 @@ function find_track_json(string $track_dir, string $track_id): ?string {
     return null;
 }
 
-/**
- * Locate the jbrowse CLI binary.
- */
-function find_jbrowse_cli(): ?string {
-    $candidates = [
-        // Project-local install (preferred — uses Node 20 wrapper)
-        __DIR__ . '/../../tools/jbrowse-cli/jbrowse-run.sh',
-        __DIR__ . '/../../tools/jbrowse-cli/bin/jbrowse',
-        '/usr/local/bin/jbrowse',
-        '/usr/bin/jbrowse',
-        (getenv('HOME') ?: '') . '/.npm-global/bin/jbrowse',
-        '/root/.npm-global/bin/jbrowse',
-        '/usr/local/lib/node_modules/.bin/jbrowse',
-        '/usr/lib/node_modules/@jbrowse/cli/bin/run',
-    ];
-    foreach ($candidates as $path) {
-        if ($path && is_executable($path)) return $path;
-    }
-    // Try PATH lookup
-    $out = [];
-    exec('command -v jbrowse 2>/dev/null', $out, $ret);
-    if ($ret === 0 && !empty($out[0])) return trim($out[0]);
-    return null;
-}
 
 /**
  * Build the textSearching block to embed in a track JSON.
