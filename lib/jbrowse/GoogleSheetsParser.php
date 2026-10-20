@@ -118,7 +118,17 @@ class GoogleSheetsParser
         }
         
         // Parse all rows
-        $regularTracks = [];
+        //
+        // A track is DEFINED once: by the first row with its TRACK_ID that has a NAME and a
+        // TRACK_PATH. Combo groups hold references to tracks, not copies -- a member row may be
+        // just the TRACK_ID (every other cell blank), and the definition fills it in. A later
+        // full copy still works, but the definition wins and a copy that disagrees is reported.
+        // Until 2026-10-20 every member row had to repeat the whole track (425 of Nematostella's
+        // 1,166 tracks appear more than once), an edit to one copy did not reach the others, and
+        // which copy won depended on processing order.
+        $definitions = [];     // track_id => track (first full row)
+        $definedOnLine = [];   // track_id => sheet line of that row
+        $warnings = [];
         $comboTracks = [];
         
         $inCombo = false;
@@ -148,7 +158,14 @@ class GoogleSheetsParser
                 
             } elseif (preg_match('/^# ([^#].*)/', $line, $matches)) {
                 // Start of combo track: # SIMR:Four_Adult_Tissues_MOLNG-2707
+                // Only a block that had colour groups -- "# BAM FILES" and the like are section
+                // labels, not combos, and are left unclosed on purpose.
+                if ($currentCombo && !empty($currentCombo['groups'])) {
+                    $warnings[] = 'line ' . ($i + 1) . ': combo "' . $currentCombo['name'] . '" was not closed with "### end" before "'
+                                . trim($matches[1]) . '" -- it is ignored';
+                }
                 $comboName = trim($matches[1]);
+                $comboGroup = null;   // rows before this combo's first "##" line belong to no group
                 $inCombo = true;
                 $currentCombo = [
                     // The id is also the JSON file name: '/' or '\\' would make it a path. 23
@@ -159,7 +176,8 @@ class GoogleSheetsParser
                     'name' => $comboName,
                     'organism' => $organism,
                     'assembly' => $assembly,
-                    'groups' => []
+                    'groups' => [],
+                    'line' => $i + 1
                 ];
                 continue;
                 
@@ -192,6 +210,16 @@ class GoogleSheetsParser
                 $row[$columnName] = $filteredValues[$index] ?? '';
             }
             
+            $rowTrackId = trim((string)($row['track_id'] ?? ''));
+            $inGroup = $inCombo && $currentCombo && $comboGroup !== null;
+
+            // A reference: a member row inside a combo group with only its TRACK_ID filled in.
+            if ($inGroup && $rowTrackId !== ''
+                    && trim((string)($row['name'] ?? '')) === '' && trim((string)($row['track_path'] ?? '')) === '') {
+                $currentCombo['groups'][$comboGroup]['tracks'][] = ['ref' => $rowTrackId, 'line' => $i + 1];
+                continue;
+            }
+
             // Skip if missing required fields
             if (empty($row['track_id']) || empty($row['name']) || empty($row['track_path'])) {
                 continue;
@@ -207,15 +235,30 @@ class GoogleSheetsParser
             // Clean track data
             $track = $this->cleanTrackData($row);
             
-            // Add to combo group if we're in a combo track
+            // The first full row defines the track; a later full copy is checked against it.
+            $id = $track['track_id'];
+            if (!isset($definitions[$id])) {
+                $definitions[$id] = $track;
+                $definedOnLine[$id] = $i + 1;
+            } else {
+                $differ = [];
+                foreach ($track as $key => $value) {
+                    if (in_array($key, ['browser_track_id', 'organism', 'assembly'], true)) continue;
+                    if ((string)$value !== (string)($definitions[$id][$key] ?? '')) $differ[] = $key;
+                }
+                if ($differ) {
+                    $warnings[] = 'line ' . ($i + 1) . ': ' . $id . ' repeats line ' . $definedOnLine[$id]
+                                . ' with a different ' . implode(', ', $differ) . ' -- line ' . $definedOnLine[$id]
+                                . "'s values are used (leave only the TRACK_ID on this row to avoid copies)";
+                }
+            }
+
+            // In a combo group, the member is a reference to the definition, resolved below.
             // !== null, not truthiness: a group named "0" (Woods Hole "## oranges: 0", the 0 hpf
             // strand) is falsy in PHP, so its rows were dropped and the 4 time-series combos failed.
-            if ($inCombo && $currentCombo && $comboGroup !== null) {
-                $currentCombo['groups'][$comboGroup]['tracks'][] = $track;
+            if ($inGroup) {
+                $currentCombo['groups'][$comboGroup]['tracks'][] = ['ref' => $id, 'line' => $i + 1];
             }
-            
-            // Always add to regular tracks (combo tracks are made from regular tracks)
-            $regularTracks[] = $track;
         }
         
         // Add final combo track if we're still in one
@@ -223,16 +266,43 @@ class GoogleSheetsParser
             $comboTracks[] = $currentCombo;
         }
 
-        // A combo track shows its members' data, so it takes the STRICTEST member level; a member
-        // with no level makes the combo not set. The `#` lines that define it have no Access cell.
-        foreach ($comboTracks as &$combo) {
+        // Resolve members to their definitions; report what cannot be built.
+        $seenComboIds = [];
+        $resolvedCombos = [];
+        foreach ($comboTracks as $combo) {
+            if (isset($seenComboIds[$combo['track_id']])) {
+                $warnings[] = 'line ' . $combo['line'] . ': combo "' . $combo['name'] . '" has the same name as line '
+                            . $seenComboIds[$combo['track_id']] . ' -- ignored; give it its own name';
+                continue;
+            }
+            $seenComboIds[$combo['track_id']] = $combo['line'];
+            foreach ($combo['groups'] as $groupName => $group) {
+                $members = [];
+                foreach ($group['tracks'] as $member) {
+                    if (isset($definitions[$member['ref']])) {
+                        $members[] = $definitions[$member['ref']];
+                    } else {
+                        $warnings[] = 'line ' . $member['line'] . ': combo "' . $combo['name'] . '" refers to TRACK_ID '
+                                    . $member['ref'] . ', which no row defines (a row with its NAME and TRACK_PATH)';
+                    }
+                }
+                if (!$members) {
+                    $warnings[] = 'line ' . $combo['line'] . ': combo "' . $combo['name'] . '", group "' . $groupName
+                                . '" has no tracks -- the combo will not be built';
+                }
+                $combo['groups'][$groupName]['tracks'] = $members;
+            }
+            // A combo track shows its members' data, so it takes the STRICTEST member level; a member
+            // with no level makes the combo not set. The `#` lines that define it have no Access cell.
             $combo['access_level'] = self::strictestAccessLevel($combo);
+            $resolvedCombos[] = $combo;
         }
-        unset($combo);
+        $comboTracks = $resolvedCombos;
         
         return [
-            'regular' => $regularTracks,
-            'combo' => $comboTracks
+            'regular'  => array_values($definitions),   // each track once
+            'combo'    => $comboTracks,
+            'warnings' => $warnings,
         ];
     }
     

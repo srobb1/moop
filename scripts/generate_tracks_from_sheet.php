@@ -185,6 +185,17 @@ try {
     $comboCount = count($tracks['combo']);
     
     echo "✓ Found $regularCount regular tracks and $comboCount combo tracks\n\n";
+
+    // Problems in the sheet itself (GoogleSheetsParser::parseTracks): copies that disagree,
+    // references to undefined tracks, duplicate combo names, empty groups. Shown on every run,
+    // dry runs included, so they are seen before anything is written.
+    if (!empty($tracks['warnings'])) {
+        echo "⚠ Sheet problems (" . count($tracks['warnings']) . "):\n";
+        foreach ($tracks['warnings'] as $warning) {
+            echo "  - $warning\n";
+        }
+        echo "\n";
+    }
     
     // Show track summary
     if ($regularCount > 0) {

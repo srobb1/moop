@@ -1618,6 +1618,53 @@ ok(moop_feature_gene_set_ids('G1', $_fdb, []) === [], 'no accessible gene sets -
 @unlink($_fdb);
 
 // ----------------------------------------------------------------------------
+group('track sheets: a track is defined once; combo members are references; problems reported');
+require_once "$BASE/lib/jbrowse/GoogleSheetsParser.php";
+$_rows = [
+    "TRACK_ID\tNAME\tTRACK_PATH\tACCESS",
+    "t1\tTrack one\t/a/t1.bw\tPUBLIC",                        // 2: defines t1
+    "t2\tTrack two\t/a/t2.bw\tCOLLABORATOR",                  // 3
+    "t3\tTrack three\t/a/t3.bw\t",                            // 4: no access set
+    "# Pair one/two",                                         // 5: '/' in a name
+    "## blues: 0",                                            // 6: a group named "0"
+    "t1",                                                     // 7: reference only
+    "## greens: other",
+    "t2\tTrack two\t/a/t2.bw\tCOLLABORATOR",                  // 9: identical full copy -- fine
+    "### end",
+    "# Pair one/two",                                         // 11: same name again
+    "## reds: x",
+    "t1",
+    "### end",
+    "# Has a ghost",                                          // 15
+    "## blues: g",
+    "nope",                                                   // 17: undefined reference
+    "### end",
+    "# Unset member",
+    "## blues: u",
+    "t1",
+    "t3",
+    "### end",
+    "t1\tTrack ONE renamed\t/a/t1.bw\tPUBLIC",                // 24: disagreeing copy
+];
+$_r = (new GoogleSheetsParser())->parseTracks(implode("\n", $_rows), 'Org', 'Asm');
+ok(array_column($_r['regular'], 'track_id') === ['t1', 't2', 't3'], 'each track once, in sheet order');
+ok($_r['regular'][0]['name'] === 'Track one', 'the FIRST full row defines a track; a later copy does not replace it');
+$_c = array_column($_r['combo'], null, 'track_id');
+ok(isset($_c['pair_one_two']) && !isset($_c['pair_one/two']), "'/' in a combo name becomes '_' (the id is a file name)");
+ok(($_c['pair_one_two']['groups'][0]['tracks'][0]['TRACK_PATH'] ?? '') === '/a/t1.bw',
+   'a TRACK_ID-only member row is filled in from the definition, and a group named "0" keeps it');
+ok(($_c['pair_one_two']['groups']['other']['tracks'][0]['name'] ?? '') === 'Track two', 'a full copy as a member resolves to the definition');
+ok(($_c['pair_one_two']['access_level'] ?? '') === 'COLLABORATOR', 'combo takes its strictest member level (PUBLIC + COLLABORATOR)');
+ok(($_c['unset_member']['access_level'] ?? 'x') === '', 'a member with no level makes the combo not set');
+ok(count(array_filter($_r['combo'], fn($c) => $c['track_id'] === 'pair_one_two')) === 1, 'a duplicate combo name is not built twice');
+$_w = implode("\n", $_r['warnings']);
+ok(strpos($_w, 'line 11: combo "Pair one/two" has the same name as line 5') !== false, 'duplicate combo name reported with both lines');
+ok(strpos($_w, 'line 17: combo "Has a ghost" refers to TRACK_ID nope') !== false, 'reference to an undefined track reported');
+ok(strpos($_w, 'group "g" has no tracks') !== false, 'a group left empty is reported');
+ok(strpos($_w, 'line 24: t1 repeats line 2 with a different name') !== false, 'a disagreeing copy is reported, naming the column');
+ok(strpos($_w, 'line 9') === false, 'an identical copy is not reported');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {
