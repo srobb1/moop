@@ -91,37 +91,67 @@ echo "Mode     : $($HAS_GFF && echo genome || echo transcriptome)"
 ## returns true if file exists, is non-empty, and has more than a header line
 has_data() { [ -s "$1" ] && [ "$(wc -l < "$1")" -gt 1 ]; }
 
-## build_index SOURCE INDEX COMMAND...  -- run COMMAND to (re)build INDEX from SOURCE unless INDEX
-## was already built from exactly this SOURCE.
+## Is a derived file still built from the SAME sources? (2026-10-20)
 ##
-## "Exactly this source" = the byte size and mtime SOURCE had when INDEX was built, kept in a stamp
-## beside it (.INDEX.built_from; a dot-file, so copy2moop's genome.fa.n* / protein.aa.fa.p* globs
-## never ship it). This replaced "rebuild when SOURCE is newer than INDEX" (2026-10-20): a genome
-## replaced with rsync -a / cp -p keeps its ORIGINAL, older mtime, so its .fai and BLAST database
-## were never rebuilt -- and shipped to the site, silently describing the old genome. genome.fa is
-## a symlink into $GENOMES, so that is exactly how it gets replaced. Any replacement changes the size
-## or the mtime, older or newer.
+## Every "is X still current?" check here used to be "rebuild when a source is newer than X". A
+## source replaced with rsync -a / cp -p keeps its ORIGINAL, older mtime, so X was never rebuilt --
+## silently, and shipped to the site. genome.fa is a symlink into $GENOMES and genes.gff /
+## protein.aa.fa are read from $GENOMES, so that is exactly how they get replaced.
 ##
-## An index from before stamps existed (no stamp) is ADOPTED when it is newer than its source --
-## the old rule, no worse than before -- and stamped, so the first run does not rebuild every BLAST
-## database there is. The source is stat'ed BEFORE the build, so a source replaced mid-build is
-## caught on the next run. The stamp is written only when COMMAND succeeds.
+## Instead, a successful build records its sources' signature in a stamp beside the output
+## (.OUTPUT.built_from -- a dot-file, so copy2moop's genome.fa.n* / protein.aa.fa.p* globs never
+## ship it), and the output is current only while the signature is unchanged. Any replacement
+## changes a source's size or mtime, older or newer.
+##
+## An output from before stamps existed (no stamp) is ADOPTED when it is newer than every source --
+## the old rule, no worse than before -- and stamped, so the first run does not rebuild everything.
+## Take the signature BEFORE building and stamp with that, so a source replaced mid-build is caught
+## on the next run. Stamp only after the build succeeded.
+
+## source_signature SOURCE... -- one token for the sources' paths, sizes and mtimes. A directory
+## (the OMA reference DB/) counts as the files directly inside it.
+source_signature() {
+  local src
+  for src in "$@"; do
+    if [ -d "$src" ]; then
+      find -L "$src" -maxdepth 1 -type f -printf '%p %s %T@\n' | sort
+    else
+      stat -L -c '%n %s %Y' "$src" 2>/dev/null || echo "$src missing"
+    fi
+  done | md5sum | cut -d' ' -f1
+}
+
+## up_to_date OUTPUT SIGNATURE SOURCE... -- true when OUTPUT exists and was built from exactly these
+## sources (or is a pre-stamp output newer than all of them, which is then stamped).
+up_to_date() {
+  local output="$1" signature="$2"; shift 2
+  local stamp src
+  stamp="$(dirname "$output")/.$(basename "$output").built_from"
+  [ -s "$output" ] || return 1
+  if [ -f "$stamp" ]; then
+    [ "$(cat "$stamp")" = "$signature" ]
+    return
+  fi
+  for src in "$@"; do
+    [ "$src" -nt "$output" ] && return 1
+  done
+  echo "$signature" > "$stamp"
+}
+
+## stamp_built OUTPUT SIGNATURE -- record that OUTPUT was just built from sources with SIGNATURE
+stamp_built() {
+  echo "$2" > "$(dirname "$1")/.$(basename "$1").built_from"
+}
+
+## build_index SOURCE INDEX COMMAND... -- run COMMAND to (re)build INDEX unless it is up to date
 build_index() {
   local src="$1" index="$2"; shift 2
-  local stamp now
-  stamp="$(dirname "$index")/.$(basename "$index").built_from"
-  now=$(stat -L -c '%s %Y' "$src") || return 1
-  if [ -f "$index" ]; then
-    if [ -f "$stamp" ]; then
-      [ "$(cat "$stamp")" = "$now" ] && return 0
-      echo "$(basename "$src") changed since $(basename "$index") was built: rebuilding"
-    elif [ ! "$src" -nt "$index" ]; then
-      echo "$now" > "$stamp"
-      return 0
-    fi
-  fi
+  local signature
+  signature=$(source_signature "$src")
+  up_to_date "$index" "$signature" "$src" && return 0
+  [ -s "$index" ] && echo "$(basename "$src") changed since $(basename "$index") was built: rebuilding"
   "$@" || return 1
-  echo "$now" > "$stamp"
+  stamp_built "$index" "$signature"
 }
 
 ## Has THIS gene set actually been LOADED into the organism database?
@@ -561,13 +591,14 @@ HGNC_TABLE="$REFERENCE_DATA/hgnc/hgnc_complete_set.txt"
 IS_REFERENCE_GENOME=false
 if [ -d "$OMA_REFERENCE_RUN/DB" ] && [ -s "$GENESET_DIR/protein.aa.fa" ]; then
   ## cached: redone only when protein.aa.fa or the reference run's genomes change
-  if [ ! -s oma_reference_check.tsv ] || [ "$GENESET_DIR/protein.aa.fa" -nt oma_reference_check.tsv ] \
-     || [ "$OMA_REFERENCE_RUN/DB" -nt oma_reference_check.tsv ]; then
+  OMA_REF_SIGNATURE=$(source_signature "$GENESET_DIR/protein.aa.fa" "$OMA_REFERENCE_RUN/DB")
+  if ! up_to_date oma_reference_check.tsv "$OMA_REF_SIGNATURE" "$GENESET_DIR/protein.aa.fa" "$OMA_REFERENCE_RUN/DB"; then
     echo "Checking whether this gene set is one of the OMA reference genomes"
     perl "$REPO/analysis_parsers/find_reference_genome.pl" "$OMA_REFERENCE_RUN/DB" \
       "$GENESET_DIR/protein.aa.fa" oma_reference_id_map.tsv > oma_reference_check.tsv.tmp
     REF_STATUS=$?
     mv oma_reference_check.tsv.tmp oma_reference_check.tsv
+    stamp_built oma_reference_check.tsv "$OMA_REF_SIGNATURE"
     [ $REF_STATUS -eq 0 ] || rm -f oma_reference_id_map.tsv
   fi
   if [ -s oma_reference_id_map.tsv ]; then
@@ -924,12 +955,13 @@ if $HAS_GFF; then
   ## a copy whose IDs carry the version, only when every FASTA protein id is a GFF
   ## protein_id.version (exit 3: not needed); everything below reads that copy.
   if [[ "$GFF_SOURCE" == "ensembl" ]]; then
-    if [ ! -s genes.versioned.gff ] || [ "$GENESET_DIR/genes.gff" -nt genes.versioned.gff ] \
-       || [ "$GENESET_DIR/protein.aa.fa" -nt genes.versioned.gff ]; then
+    VERSIONED_SIGNATURE=$(source_signature "$GENESET_DIR/genes.gff" "$GENESET_DIR/protein.aa.fa")
+    if ! up_to_date genes.versioned.gff "$VERSIONED_SIGNATURE" "$GENESET_DIR/genes.gff" "$GENESET_DIR/protein.aa.fa"; then
       rm -f genes.versioned.gff
       perl "$SCRIPTS/add_id_versions.pl" "$GENESET_DIR/genes.gff" "$GENESET_DIR/protein.aa.fa" genes.versioned.gff.tmp
       case $? in
-        0) mv genes.versioned.gff.tmp genes.versioned.gff ;;
+        0) mv genes.versioned.gff.tmp genes.versioned.gff
+           stamp_built genes.versioned.gff "$VERSIONED_SIGNATURE" ;;
         3) rm -f genes.versioned.gff.tmp ;;
         *) rm -f genes.versioned.gff.tmp
            echo "ERROR: the protein FASTA ids match genes.gff neither as they are nor with the version tags (add_id_versions.pl, above)"; exit 1 ;;
@@ -959,12 +991,15 @@ if $HAS_GFF; then
   ## a gene set whose GFF changed since its isoforms were built is rebuilt from it, reload or not
   ## (2026-10-05: ten flatworm gene sets updated on 2026-08-17 still had isoforms.tsv from 2026-07-28,
   ## so 0.2-1% of their proteins had no gene and could not be named)
-  [ "$SRC_GFF" -nt isoforms.tsv ] && { echo "genes.gff is newer than isoforms.tsv: rebuilding"; REBUILD=true; }
+  ISOFORMS_SIGNATURE=$(source_signature "$SRC_GFF")
+  has_data isoforms.tsv && ! up_to_date isoforms.tsv "$ISOFORMS_SIGNATURE" "$SRC_GFF" \
+    && { echo "genes.gff changed since isoforms.tsv was built: rebuilding"; REBUILD=true; }
   if $REBUILD; then
     echo "Building isoforms.tsv"
     perl "$REPO/analysis_parsers/make_isoforms_from_gff.pl" "$SRC_GFF" > isoforms.tsv.tmp \
       && mv isoforms.tsv.tmp isoforms.tsv \
       || { rm -f isoforms.tsv.tmp; echo "ERROR: failed to build isoforms.tsv"; exit 1; }
+    stamp_built isoforms.tsv "$ISOFORMS_SIGNATURE"
   fi
 
   naming_outputs_current || REBUILD=true
@@ -1091,11 +1126,13 @@ if $HAS_GFF; then
 
   # ── GTF (built from the finalized, renamed genes.gff) ────────────────────
   module load gffread
-  if [ ! -s genes.gtf ] || [ genes.gff -nt genes.gtf ]; then
+  GTF_SIGNATURE=$(source_signature genes.gff)
+  if ! up_to_date genes.gtf "$GTF_SIGNATURE" genes.gff; then
     echo "Building genes.gtf"
     gffread -T -F genes.gff -o genes.gtf.tmp \
       && mv genes.gtf.tmp genes.gtf \
       || { rm -f genes.gtf.tmp; echo "ERROR: failed to build genes.gtf"; exit 1; }
+    stamp_built genes.gtf "$GTF_SIGNATURE"
   fi
 
   has_data features.tsv || REBUILD=true
@@ -1208,13 +1245,16 @@ else
   [ "${MOOP_RELOAD:-0}" = "1" ] && REBUILD=true
 
   has_data isoforms.tsv || REBUILD=true
-  [ "$GENESET_DIR/protein2gene.txt" -nt isoforms.tsv ] && { echo "protein2gene.txt is newer than isoforms.tsv: rebuilding"; REBUILD=true; }
+  ISOFORMS_SIGNATURE=$(source_signature "$GENESET_DIR/protein2gene.txt")
+  has_data isoforms.tsv && ! up_to_date isoforms.tsv "$ISOFORMS_SIGNATURE" "$GENESET_DIR/protein2gene.txt" \
+    && { echo "protein2gene.txt changed since isoforms.tsv was built: rebuilding"; REBUILD=true; }
   if $REBUILD; then
     echo "Building isoforms.tsv from protein2gene.txt"
     perl "$REPO/analysis_parsers/make_isoforms_from_transcript2gene.pl" \
       "$GENESET_DIR/protein2gene.txt" > isoforms.tsv.tmp \
       && mv isoforms.tsv.tmp isoforms.tsv \
       || { rm -f isoforms.tsv.tmp; echo "ERROR: failed to build isoforms.tsv"; exit 1; }
+    stamp_built isoforms.tsv "$ISOFORMS_SIGNATURE"
   fi
 
   naming_outputs_current || REBUILD=true
