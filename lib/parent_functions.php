@@ -158,6 +158,22 @@ function moop_hierarchy_nearest_of_type(array $seeds, $dbFile, array $types, arr
  * @return array - Array of features: [self, parent, grandparent, ...]
  */
 /**
+ * The gene sets (of $gene_set_ids) that hold a feature with this uniquename -- usually one.
+ * A gene page link names an organism and an ID; two gene sets of one organism can share IDs
+ * (a reannotation that keeps them), and the page must then ask which one, never guess.
+ *
+ * @return int[] distinct gene_set_id, ascending
+ */
+function moop_feature_gene_set_ids(string $feature_uniquename, string $dbFile, array $gene_set_ids): array {
+    if (!$gene_set_ids) return [];
+    $in   = implode(',', array_fill(0, count($gene_set_ids), '?'));
+    $rows = fetchData("SELECT DISTINCT gene_set_id FROM feature
+                        WHERE feature_uniquename = ? AND gene_set_id IN ($in) ORDER BY gene_set_id",
+                      $dbFile, array_merge([$feature_uniquename], array_map('intval', $gene_set_ids)));
+    return array_map('intval', array_column($rows, 'gene_set_id'));
+}
+
+/**
  * Get the ancestor chain for a feature as a flat array [self, parent, grandparent, ...].
  * Uses a single upward recursive CTE instead of one query per level.
  *

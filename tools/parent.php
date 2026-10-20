@@ -131,6 +131,47 @@ if (!empty($organism_info['feature_types']['parents'])) {
     $parents = $organism_info['feature_types']['parents'];
 }
 
+// Which gene set. A link may name one (assembly + gene_set: search results, BLAST, the home
+// page ID search); without it, an ID found in more than one gene set the viewer can open is
+// ASKED about, never guessed -- before 2026-10-20 the page silently took whichever row came
+// first and ignored the parameters the links already sent.
+$req_assembly = (string)($_GET['assembly'] ?? '');
+$req_gene_set = (string)($_GET['gene_set'] ?? '');
+if ($req_assembly !== '' || $req_gene_set !== '') {
+    $scoped = array_filter($accessible_sources, fn($src) =>
+        // the accession, or the assembly's directory name (they differ for a few assemblies)
+        ($req_assembly === '' || in_array($req_assembly, [$src['genome_accession'] ?? null, $src['assembly'] ?? null], true))
+        && ($req_gene_set === '' || ($src['gene_set'] ?? '') === $req_gene_set));
+    $accessible_gene_set_ids = array_values(array_unique(array_filter(array_column($scoped, 'gene_set_id'))));
+}
+$__label = trim(($organism_info['genus'] ?? '') . ' ' . ($organism_info['species'] ?? '')) ?: str_replace('_', ' ', $organism_name);
+$__holding = moop_feature_gene_set_ids((string)$uniquename, $db, $accessible_gene_set_ids);
+if (!$__holding) {
+    // Not in any gene set the viewer may open (or not in the one named): the same 404 either
+    // way, so a link cannot be used to learn what a restricted gene set holds.
+    moop_gene_not_found((string)$uniquename, $organism_name, $__label);
+}
+if (count($__holding) > 1) {
+    $__choices = [];
+    foreach ($accessible_sources as $src) {
+        if (!in_array((int)($src['gene_set_id'] ?? 0), $__holding, true)) continue;
+        $accession = $src['genome_accession'] ?? $src['assembly'];
+        $__choices["$accession/{$src['gene_set']}"] = [
+            'assembly_label' => assembly_label($src['genome_name'] ?? '', $accession),
+            'gene_set'       => $src['gene_set'],
+            'url'            => "/$site/tools/parent.php?organism=" . urlencode($organism_name)
+                              . '&uniquename=' . urlencode((string)$uniquename)
+                              . '&assembly=' . urlencode($accession) . '&gene_set=' . urlencode($src['gene_set']),
+        ];
+    }
+    echo render_display_page(__DIR__ . '/pages/gene_choose_gene_set.php', [
+        'uniquename' => (string)$uniquename, 'organism_label' => $__label,
+        'choices' => array_values($__choices), 'site' => $site,
+    ], 'Choose a gene set');
+    exit;
+}
+$accessible_gene_set_ids = $__holding;   // the one gene set; everything below reads only it
+
 // Get ancestors for the feature
 $ancestors = getAncestors($uniquename, $db, $accessible_gene_set_ids);
 

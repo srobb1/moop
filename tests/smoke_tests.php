@@ -1603,6 +1603,21 @@ ok(substr_count($_html, '(737)') === 1 && substr_count($_html, '(101)') === 1, '
 unset($busco, $busco_subject, $busco_color);
 
 // ----------------------------------------------------------------------------
+group('gene page: an ID in two gene sets is asked about, never guessed');
+$_fdb = sys_get_temp_dir() . '/moop_fgs_' . getmypid() . '.sqlite';
+$_p = new PDO("sqlite:$_fdb");
+$_p->exec("CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_uniquename TEXT, gene_set_id INTEGER)");
+$_p->exec("INSERT INTO feature VALUES (1,'G1',1),(2,'G1',2),(3,'G2',1),(4,'G1',3)");
+$_p = null;
+ok(moop_feature_gene_set_ids('G1', $_fdb, [1, 2]) === [1, 2], 'shared ID -> both gene sets (the page shows a chooser)');
+ok(moop_feature_gene_set_ids('G1', $_fdb, [2]) === [2], 'scoped by the link to one gene set -> just that one');
+ok(moop_feature_gene_set_ids('G1', $_fdb, [1, 2]) === [1, 2],
+   'gene set 3 holds G1 too, but the viewer cannot open it -> not counted');
+ok(moop_feature_gene_set_ids('G2', $_fdb, [2]) === [], 'not in the named gene set -> none (404, same as unknown)');
+ok(moop_feature_gene_set_ids('G1', $_fdb, []) === [], 'no accessible gene sets -> none');
+@unlink($_fdb);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

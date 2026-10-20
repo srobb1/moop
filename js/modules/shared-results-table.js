@@ -97,7 +97,7 @@ const RESULT_COLUMNS = [
         key: 'feature_id', label: 'Feature ID', width: 280, variants: ['*'],
         cssClass: 'dt-feature-id',   // located by class, not header text — see datatable-config.js
         render: (r, ctx) =>
-            `<a href="${resultFeatureUrl(ctx, r.feature_uniquename)}" target="_blank">${r.feature_uniquename}</a>`
+            `<a href="${resultFeatureUrl(ctx, r.feature_uniquename, r)}" target="_blank">${r.feature_uniquename}</a>`
     },
     {
         key: 'name', label: 'Name', width: 180, variants: ['*'],
@@ -145,10 +145,15 @@ function resultAssemblyLabel(r) {
     return acc || '—';
 }
 
-/** Feature page URL. */
-function resultFeatureUrl(ctx, uniquename) {
+/**
+ * Feature page URL. Carries the row's assembly + gene set: one organism's gene sets can share
+ * IDs, and without them the gene page has to ask which one was meant.
+ */
+function resultFeatureUrl(ctx, uniquename, r = {}) {
     return `${ctx.sitePath}/${ctx.linkBasePath}?organism=${encodeURIComponent(ctx.organism)}`
-         + `&uniquename=${encodeURIComponent(uniquename)}`;
+         + `&uniquename=${encodeURIComponent(uniquename)}`
+         + (r.genome_accession ? `&assembly=${encodeURIComponent(r.genome_accession)}` : '')
+         + (r.gene_set ? `&gene_set=${encodeURIComponent(r.gene_set)}` : '');
 }
 
 /**

@@ -872,7 +872,10 @@
         gene_set:         { title: 'Gene Set',          data: 'gene_set_name',    defaultContent: '' },
         gene_id:          { title: 'Gene ID',           data: 'uniquename',       defaultContent: '',
                             render: (val, type, row) => type !== 'display' ? val
-                                : `<a href="${moopSite}/tools/parent.php?uniquename=${encodeURIComponent(val)}&organism=${encodeURIComponent(row.organism_dir)}" target="_blank">${val}</a>` },
+                                : `<a href="${moopSite}/tools/parent.php?uniquename=${encodeURIComponent(val)}&organism=${encodeURIComponent(row.organism_dir)}`
+                                  + (row.genome_accession ? `&assembly=${encodeURIComponent(row.genome_accession)}` : '')
+                                  + (row.gene_set_name ? `&gene_set=${encodeURIComponent(row.gene_set_name)}` : '')
+                                  + `" target="_blank">${val}</a>` },
         gene_name:        { title: 'Gene Name',         data: 'name',             defaultContent: '' },
         gene_description: { title: 'Gene Description',  data: 'description',      defaultContent: '',
                             render: (v, t) => t === 'display' && v?.length > 60 ? `<span title="${v.replace(/"/g, '&quot;')}">${v.slice(0, 60)}…</span>` : (v || '') },

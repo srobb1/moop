@@ -666,7 +666,8 @@ function buildBlastHitLinkouts($hit, $context) {
         if (($linkout_config['gene_page'] ?? false) && $has_sqlite) {
             $url  = "/$site/tools/parent.php?uniquename=" . urlencode($gene_id)
                   . '&organism=' . urlencode($organism)
-                  . '&assembly=' . urlencode($assembly);
+                  . '&assembly=' . urlencode($assembly)
+                  . (($context['gene_set'] ?? '') !== '' ? '&gene_set=' . urlencode($context['gene_set']) : '');
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                    . 'class="btn btn-sm btn-outline-primary me-1">'
                    . $gene_page_label . '</a>';
