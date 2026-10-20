@@ -390,6 +390,25 @@ make_deeploc_moop() {
 has_data DeepLoc.domains.moop.tsv \
   || { echo "Building DeepLoc moop files"; make_deeploc_moop; }
 
+# ── BUSCO ─────────────────────────────────────────────────────────────────────
+## Completeness of the gene set, for the gene set page: busco.json (notes/BUSCO_GENE_SET_SPEC.md).
+## Not loaded into the database -- copy2moop_v2.sh ships the file. DERIVED, so it is remade on
+## every run (a parse of a few small files), unlike geneset.json: a reload must never leave the
+## BUSCO of old gene models on the page. A failed parse removes busco.json and warns rather than
+## stopping the gene set -- no file means no BUSCO card, never a wrong one.
+make_busco_json() {
+  local BDIR="$ANALYSIS_DIR/busco"
+  if [ ! -d "$BDIR" ]; then
+    echo "No BUSCO results at $BDIR — skipping"
+    rm -f busco.json
+    return 0
+  fi
+  perl "$REPO/analysis_parsers/parse_BUSCO_to_MOOP_JSON.pl" "$BDIR" "$GENESET_DIR/protein.aa.fa" busco.json \
+    || { echo "WARNING: BUSCO results in $BDIR could not be parsed; no busco.json for this gene set" >&2
+         rm -f busco.json busco.json.tmp; }
+}
+make_busco_json
+
 # ── RBBH — reciprocal best BLAST hits ────────────────────────────────────────
 make_rbbh_moop() {
   local RBBH_BASE="$ANALYSIS_DIR/rbh_eross"

@@ -361,6 +361,16 @@ copy_one_geneset() {
       cds.nt.fa "cds.nt.fa.n*" cds.nt.fa.fai
   fi
 
+  ## BUSCO (process_one_geneset.sh): sent when there is one; when there is not -- no results,
+  ## or they failed to parse -- any copy left on the server from an earlier run is removed, so
+  ## the page never shows the BUSCO of gene models that are no longer there.
+  if [ -s busco.json ]; then
+    send "$REMOTE_GENESET_PATH" busco.json
+  else
+    "${SSH[@]}" "$REMOTE" "rm -f '$REMOTE_GENESET_PATH/busco.json'" \
+      || log "WARN  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — could not remove a stale busco.json on $REMOTE"
+  fi
+
   verify_remote "$ORG_DATA/organism.sqlite" "$REMOTE_ORG_PATH/organism.sqlite"
 
   if [ "$FAILED" -ne 0 ]; then
