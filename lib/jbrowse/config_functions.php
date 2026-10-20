@@ -9,6 +9,42 @@
 // Access-level ladder + case-insensitive normalisation used by loadFilteredTracks().
 // Required explicitly rather than relying on the caller having loaded it first.
 require_once __DIR__ . '/../functions_access.php';
+require_once __DIR__ . '/../extract_search_helpers.php';   // flattenSourcesList()
+
+/**
+ * The gene sets this viewer may open, for the genome browser: [organism][assembly] => [gene_set => true].
+ * An assembly appears under its accession AND its directory name (they differ for a few).
+ *
+ * The ONE access decision for JBrowse, from the same rules every other page uses
+ * (getAccessibleGeneSets() -> has_gene_set_access(): organism_assembly_groups.json + users.json).
+ * Until 2026-10-20 api/jbrowse2/config.php decided from its own fields instead -- an assembly
+ * JSON's defaultAccessLevel and a gene track's metadata.access_level, both written as 'PUBLIC'
+ * at registration, a missing value also PUBLIC -- so an anonymous request for any organism's
+ * config got its genome and gene track, while the jbrowse2.php picker (which used these rules)
+ * hid it. Those fields are no longer read for access.
+ */
+function moop_jbrowse_viewer_gene_sets(): array {
+    static $memo = null;
+    if ($memo !== null) return $memo;
+    $memo = [];
+    foreach (flattenSourcesList(getAccessibleGeneSets()) as $src) {
+        foreach (array_unique(array_filter([$src['genome_accession'] ?? '', $src['assembly'] ?? ''])) as $asm) {
+            $memo[$src['organism']][$asm][$src['gene_set']] = true;
+        }
+    }
+    return $memo;
+}
+
+/** May this viewer open this assembly in the genome browser: at least one of its gene sets. */
+function moop_jbrowse_can_open_assembly(?string $organism, ?string $assembly): bool {
+    if ((string)$organism === '' || (string)$assembly === '') return false;
+    return !empty(moop_jbrowse_viewer_gene_sets()[$organism][$assembly]);
+}
+
+/** May this viewer see this gene set's gene track. */
+function moop_jbrowse_can_open_gene_set(string $organism, string $assembly, string $gene_set): bool {
+    return !empty(moop_jbrowse_viewer_gene_sets()[$organism][$assembly][$gene_set]);
+}
 
 /**
  * Parse assembly name into organism and assembly components
@@ -163,6 +199,15 @@ function generateDualAssemblyConfig($assembly1, $assembly2, $user_access_level)
         exit;
     }
     
+    // Access first, answered as "not found", so a restricted assembly's existence is not revealed.
+    foreach ([[$organism1, $asm1, $assembly1], [$organism2, $asm2, $assembly2]] as [$check_org, $check_asm, $check_name]) {
+        if (!moop_jbrowse_can_open_assembly($check_org, $check_asm)) {
+            http_response_code(404);
+            echo json_encode(['error' => "Assembly not found: $check_name"]);
+            exit;
+        }
+    }
+
     // Load assembly definitions
     $metadata_path = __DIR__ . '/../../metadata/jbrowse2-configs/assemblies';
     $assembly1_file = "$metadata_path/{$organism1}_{$asm1}.json";
@@ -186,22 +231,6 @@ function generateDualAssemblyConfig($assembly1, $assembly2, $user_access_level)
     if (!$assembly1_def || !$assembly2_def) {
         http_response_code(500);
         echo json_encode(['error' => 'Failed to load assembly definitions']);
-        exit;
-    }
-    
-    // Check user has access to both assemblies
-    $assembly1_access = $assembly1_def['defaultAccessLevel'] ?? 'PUBLIC';
-    $assembly2_access = $assembly2_def['defaultAccessLevel'] ?? 'PUBLIC';
-    
-    if (!canUserAccessAssembly($user_access_level, $assembly1_access, $organism1, $asm1)) {
-        http_response_code(403);
-        echo json_encode(['error' => "Access denied to assembly: $assembly1"]);
-        exit;
-    }
-    
-    if (!canUserAccessAssembly($user_access_level, $assembly2_access, $organism2, $asm2)) {
-        http_response_code(403);
-        echo json_encode(['error' => "Access denied to assembly: $assembly2"]);
         exit;
     }
     

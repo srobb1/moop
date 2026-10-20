@@ -160,12 +160,9 @@ function generateAssemblyList($user_access_level) {
 
         if (!$assembly_def) continue;
         
-        $assembly_access_level = $assembly_def['defaultAccessLevel'] ?? 'PUBLIC';
-        
-        // Check if user can access this assembly
-        if (!canUserAccessAssembly($user_access_level, $assembly_access_level, 
-                                   $assembly_def['organism'] ?? null, 
-                                   $assembly_def['assemblyId'] ?? null)) {
+        // Only assemblies with a gene set this viewer may open (the site's rules, not the
+        // JSON's own defaultAccessLevel -- see moop_jbrowse_viewer_gene_sets()).
+        if (!moop_jbrowse_can_open_assembly($assembly_def['organism'] ?? null, $assembly_def['assemblyId'] ?? null)) {
             continue;
         }
         
@@ -173,7 +170,6 @@ function generateAssemblyList($user_access_level) {
             'name' => $assembly_def['name'],
             'displayName' => $assembly_def['displayName'] ?? $assembly_def['name'],
             'aliases' => $assembly_def['aliases'] ?? [],
-            'accessLevel' => $assembly_access_level,
             'sequence' => $assembly_def['sequence'] ?? null
         ];
     }
@@ -201,7 +197,17 @@ function generateAssemblyList($user_access_level) {
  * @return void - Outputs JSON with gzip compression and exits
  */
 function generateAssemblyConfig($organism, $assembly, $user_access_level) {
-    // 1. LOAD ASSEMBLY DEFINITION
+    // 1. PERMISSION FIRST: the viewer must be able to open a gene set of this assembly -- the same
+    // rule as every other page (moop_jbrowse_viewer_gene_sets()). Before the file lookup, and the
+    // same 404 as an unknown assembly, so the answer never says that a restricted one exists
+    // (and $organism/$assembly reach the paths below only once they are known names).
+    if (!moop_jbrowse_can_open_assembly($organism, $assembly)) {
+        http_response_code(404);
+        echo json_encode(['error' => "Assembly definition not found: {$organism}_{$assembly}"]);
+        exit;
+    }
+
+    // 2. LOAD ASSEMBLY DEFINITION
     $metadata_path = __DIR__ . '/../../metadata';
     $assemblies_dir = "$metadata_path/jbrowse2-configs/assemblies";
     $assembly_def_file = "$assemblies_dir/{$organism}_{$assembly}.json";
@@ -220,15 +226,6 @@ function generateAssemblyConfig($organism, $assembly, $user_access_level) {
         exit;
     }
 
-    // 2. VALIDATE PERMISSIONS using defaultAccessLevel from assembly JSON
-    // (getAccessibleGeneSets checks gene-set groups, not genome browser access)
-    $assembly_access_level = $assembly_definition['defaultAccessLevel'] ?? 'PUBLIC';
-    if (!canUserAccessAssembly($user_access_level, $assembly_access_level, $organism, $assembly)) {
-        http_response_code(403);
-        echo json_encode(['error' => 'Access denied to this assembly']);
-        exit;
-    }
-    
     // 3. BUILD BASE CONFIG WITH PLUGINS AT TOP LEVEL
     $config = [
         'assemblies' => [
@@ -281,12 +278,10 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
     $tracks_dir = __DIR__ . "/../../metadata/jbrowse2-configs/tracks";
     
     // Load tracks from hierarchical structure: tracks/organism/assembly/type/*.json
-    $track_files = glob("$tracks_dir/$organism/$assembly/*/*.json");
-    
-    if (empty($track_files)) {
-        // Fallback to flat structure (legacy compatibility)
-        $track_files = glob("$tracks_dir/*.json");
-    }
+    // (A "flat structure" fallback used to load tracks/*.json -- every assembly's -- when this
+    // assembly had none. No flat files exist, and it would have handed one assembly another's
+    // tracks. Removed 2026-10-20.)
+    $track_files = glob("$tracks_dir/$organism/$assembly/*/*.json") ?: [];
     
     $filtered_tracks = [];
 
@@ -302,7 +297,19 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
 
         if (!$track_def) continue;
 
-        // Get track access level from metadata
+        // A gene set's own track (gene models): visible exactly when the gene set is -- the
+        // site's rule. Its stored access_level is written 'PUBLIC' at registration and is not
+        // a decision anyone made, so it is not consulted for these.
+        $track_gene_set = (string)($track_def['metadata']['gene_set'] ?? '');
+        if ($track_gene_set !== '') {
+            if (!moop_jbrowse_can_open_gene_set($organism, $assembly, $track_gene_set)) continue;
+            $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
+            if ($track_with_tokens) $filtered_tracks[] = $track_with_tokens;
+            continue;
+        }
+
+        // Other tracks (RNA-seq, etc. -- curated per track in the track sheets): the assembly is
+        // already known to be open to this viewer; the track's own access_level narrows further.
         $track_access_level = $track_def['metadata']['access_level'] ?? 'PUBLIC';
         $track_level_value = required_access_level_value($track_access_level);
 
@@ -510,33 +517,4 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
     return $adapter;
 }
 
-/**
- * Check if user can access assembly
- */
-function canUserAccessAssembly($user_level, $assembly_level, $organism, $assembly_id) {
-    // Levels compared case-insensitively (lib/functions_access.php).
-    $user_level     = normalize_access_level($user_level);
-    $assembly_level = normalize_access_level($assembly_level);
-
-    // Admin and IP_IN_RANGE see everything
-    if ($user_level === 'ADMIN' || $user_level === 'IP_IN_RANGE') {
-        return true;
-    }
-
-    // Public assemblies visible to all
-    if ($assembly_level === 'PUBLIC') {
-        return true;
-    }
-
-    // Collaborator needs specific assembly access
-    if ($user_level === 'COLLABORATOR') {
-        if ($organism && $assembly_id) {
-            $user_access = $_SESSION['access'] ?? [];
-            return isset($user_access[$organism][$assembly_id]);
-        }
-        return false;
-    }
-    
-    return false;
-}
 ?>
