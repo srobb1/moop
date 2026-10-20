@@ -216,6 +216,13 @@ class GoogleSheetsParser
         if ($currentCombo && !empty($currentCombo['groups'])) {
             $comboTracks[] = $currentCombo;
         }
+
+        // A combo track shows its members' data, so it takes the STRICTEST member level; a member
+        // with no level makes the combo not set. The `#` lines that define it have no Access cell.
+        foreach ($comboTracks as &$combo) {
+            $combo['access_level'] = self::strictestAccessLevel($combo);
+        }
+        unset($combo);
         
         return [
             'regular' => $regularTracks,
@@ -338,7 +345,7 @@ class GoogleSheetsParser
             $firstRow = $rows[0];
             
             // Map ACCESS column to access_level
-            $accessLevel = trim($firstRow['access'] ?? $firstRow['access_level'] ?? 'PUBLIC');
+            $accessLevel = trim($firstRow['access'] ?? $firstRow['access_level'] ?? '');   // blank = not set (admins only), never PUBLIC
             
             $comboTrack = [
                 'track_id' => $comboId,
@@ -376,6 +383,26 @@ class GoogleSheetsParser
      * @param array $row Raw row data
      * @return array Cleaned track data
      */
+    /**
+     * The strictest access level among a combo track's member tracks; '' (not set) if any member
+     * has none. An unrecognised level ranks as ADMIN, as required_access_level_value() treats it.
+     */
+    public static function strictestAccessLevel(array $combo): string
+    {
+        $rank = ['PUBLIC' => 1, 'COLLABORATOR' => 2, 'IP_IN_RANGE' => 3, 'ADMIN' => 4];
+        $best = null;
+        $bestRank = 0;
+        foreach ($combo['groups'] ?? [] as $group) {
+            foreach ($group['tracks'] ?? [] as $member) {
+                $level = strtoupper(trim((string)($member['access_level'] ?? '')));
+                if ($level === '') return '';
+                $memberRank = $rank[$level] ?? 4;
+                if ($memberRank > $bestRank) { $bestRank = $memberRank; $best = $level; }
+            }
+        }
+        return $best ?? '';
+    }
+
     private function normalizeTrackPath(string $path): string
     {
         // Collapse accidental double (or more) slashes in the path portion of a URL
@@ -392,7 +419,9 @@ class GoogleSheetsParser
     private function cleanTrackData($row)
     {
         // Map ACCESS column to access_level
-        $accessLevel = trim($row['access'] ?? $row['access_level'] ?? 'PUBLIC');
+        // A blank Access cell is NOT public: it stays '' = not set, which JBrowse shows to admins
+        // only. Until 2026-10-20 a blank became PUBLIC -- 2,541 of 2,636 sheet rows were blank.
+        $accessLevel = trim($row['access'] ?? $row['access_level'] ?? '');
         
         $track = [
             'track_id' => trim($row['track_id']),

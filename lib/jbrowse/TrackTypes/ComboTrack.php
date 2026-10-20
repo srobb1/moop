@@ -207,7 +207,9 @@ class ComboTrack implements TrackTypeInterface
                 ]
             ],
             'metadata' => [
-                'management_track_id' => $trackData['track_id']
+                'management_track_id' => $trackData['track_id'],
+                // strictest member level (GoogleSheetsParser::strictestAccessLevel); '' = not set
+                'access_level' => (string)($trackData['access_level'] ?? '')
             ]
         ];
         

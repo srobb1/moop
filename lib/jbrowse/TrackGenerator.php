@@ -243,6 +243,14 @@ class TrackGenerator
             $trackExists = $this->trackExists($track['track_id'], $track['organism'], $track['assembly']);
             
             if ($trackExists && !$shouldForce) {
+                // Existing tracks are not regenerated -- but their ACCESS still follows the sheet.
+                // Before 2026-10-20 a changed Access cell never reached a track that already had a
+                // JSON file, so the sheet could say COLLABORATOR while the site served it PUBLIC.
+                if ($this->syncExistingAccessLevel($this->findTrackFile($track['track_id'], $track['organism'], $track['assembly']),
+                                                   (string)($track['access_level'] ?? ''), $dryRun)) {
+                    $results['access_updated'][] = $track['track_id'];
+                    echo "  ⚿ Access updated: " . $track['track_id'] . " -> " . ($track['access_level'] ?: 'not set') . "\n";
+                }
                 $results['skipped'][] = $track['track_id'];
                 $results['stats']['skipped']++;
                 continue;
@@ -318,6 +326,11 @@ class TrackGenerator
                             strtolower($combo['track_id']) . '.json';
                 
                 if (!$shouldForce && file_exists($trackFile)) {
+                    // Access still follows the sheet (strictest member), as for regular tracks.
+                    if ($this->syncExistingAccessLevel($trackFile, (string)($combo['access_level'] ?? ''), $dryRun)) {
+                        $results['access_updated'][] = $combo['track_id'];
+                        echo "  ⚿ Access updated: " . $combo['track_id'] . " -> " . ($combo['access_level'] ?: 'not set') . "\n";
+                    }
                     echo "  ⊘ Skipping " . $combo['track_id'] . " (already exists, use --force to regenerate)\n";
                     $results['skipped'][] = $combo['track_id'];
                     $results['stats']['skipped']++;
@@ -410,6 +423,43 @@ class TrackGenerator
      * @param string $assembly Assembly ID
      * @return bool True if track exists
      */
+    /**
+     * The JSON file of an existing track (same search as trackExists()), or null.
+     */
+    public function findTrackFile($trackId, $organism, $assembly): ?string
+    {
+        $baseDir = $this->config->getPath('metadata_path') . "/jbrowse2-configs/tracks/$organism/$assembly";
+        foreach (['bigwig', 'bam', 'vcf', 'gff', 'gtf', 'bed', 'cram', 'paf', 'maf', 'combo', 'auto'] as $typeDir) {
+            $trackFile = "$baseDir/$typeDir/$trackId.json";
+            if (file_exists($trackFile)) return $trackFile;
+        }
+        return null;
+    }
+
+    /**
+     * Set an existing track's metadata.access_level to the sheet's value when they differ
+     * (compared case-insensitively; '' = not set). Only that field changes. Gene tracks
+     * (metadata.gene_set) are never touched -- they follow their gene set.
+     *
+     * @return bool true when the file was (or, on a dry run, would be) updated
+     */
+    public function syncExistingAccessLevel(?string $trackFile, string $level, bool $dryRun = false): bool
+    {
+        if ($trackFile === null || !is_file($trackFile)) return false;
+        $def = json_decode((string)file_get_contents($trackFile), true);
+        if (!is_array($def) || (string)($def['metadata']['gene_set'] ?? '') !== '') return false;
+        $current = trim((string)($def['metadata']['access_level'] ?? ''));
+        $level   = trim($level);
+        if (array_key_exists('access_level', $def['metadata'] ?? []) && strcasecmp($current, $level) === 0) return false;
+        if ($dryRun) return true;
+        $def['metadata']['access_level'] = $level;
+        if (file_put_contents($trackFile, json_encode($def, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) === false) {
+            error_log("TrackGenerator: could not update access_level in $trackFile");
+            return false;
+        }
+        return true;
+    }
+
     public function trackExists($trackId, $organism, $assembly)
     {
         // Check all track type directories

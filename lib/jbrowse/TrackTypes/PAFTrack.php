@@ -143,7 +143,7 @@ class PAFTrack extends BaseTrack implements TrackTypeInterface
         $description = $options['description'] ?? '';
         $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
             ? $options['access_level']
-            : 'Public';
+            : '';   // not set = admins only; never a default PUBLIC
         
         // Determine if remote or local
         $isRemote = preg_match('/^https?:\/\//i', $filePath);

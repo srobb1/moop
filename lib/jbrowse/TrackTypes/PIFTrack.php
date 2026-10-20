@@ -115,7 +115,7 @@ class PIFTrack extends BaseTrack implements TrackTypeInterface
         $category = $options['category'] ?? 'Synteny';
         $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
             ? $options['access_level']
-            : 'Public';
+            : '';   // not set = admins only; never a default PUBLIC
         
         $isRemote = preg_match('/^https?:\/\//i', $filePath);
         

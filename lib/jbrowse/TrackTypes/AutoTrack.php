@@ -256,7 +256,7 @@ class AutoTrack implements TrackTypeInterface
             'metadata' => [
                 'management_track_id' => $trackData['track_id'],
                 'description' => $trackData['description'] ?? '',
-                'access_level' => $trackData['access_level'] ?? 'PUBLIC',
+                'access_level' => $trackData['access_level'] ?? '',   // not set = admins only
                 'file_path' => $gffPath,
                 'is_remote' => false,
                 'added_date' => gmdate('Y-m-d\TH:i:s\Z')

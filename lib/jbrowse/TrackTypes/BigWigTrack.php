@@ -172,7 +172,7 @@ class BigWigTrack extends BaseTrack implements TrackTypeInterface
         // Build access level
         $accessLevel = isset($trackData['access_level']) && !empty($trackData['access_level'])
             ? $trackData['access_level']
-            : 'Public';
+            : '';   // not set = admins only; never a default PUBLIC
         
         // Build metadata structure matching shell script output
         $metadata = [
