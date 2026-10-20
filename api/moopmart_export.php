@@ -29,7 +29,6 @@ $selected_raw = $_POST['sources'] ?? [];
 if (!is_array($selected_raw)) $selected_raw = [$selected_raw];
 
 $output_format  = in_array($_POST['output_format'] ?? '', ['tsv', 'fasta']) ? $_POST['output_format'] : 'tsv';
-$ann_format     = ($_POST['ann_format'] ?? 'long') === 'wide' ? 'wide' : 'long';
 $fasta_mode     = $_POST['fasta_mode'] ?? 'gene';
 $flank_bp       = max(1, min(100000, (int)($_POST['flank_bp'] ?? 500)));
 $fasta_preview  = !empty($_POST['fasta_preview']);
@@ -63,6 +62,7 @@ $filters                     = $req['filters'];
 $coord_filter                = $req['coord_filter'];
 $global_filter_reason        = $req['global_filter_reason'];
 $annotation_columns_selected = $req['annotation_columns'];
+$ann_format                  = $req['ann_format'];   // long | wide -- the same parse the preview uses
 
 $organism_data  = $config->getPath('organism_data');
 $sequence_types = $config->getSequenceTypes();
@@ -197,11 +197,10 @@ if ($output_format === 'tsv') {
         ? array_keys($feat_col_map)
         : array_values(array_filter($requested_feat, fn($k) => isset($feat_col_map[$k])));
 
-    // Annotation sub-column selection (ann_id / ann_description; ann_type / ann_source = no data field)
-    $requested_ann    = array_flip(array_values(array_filter($_POST['ann_columns'] ?? [])));
-    $ann_incl_id      = empty($requested_ann) || isset($requested_ann['ann_id']);
-    $ann_incl_desc    = empty($requested_ann) || isset($requested_ann['ann_description']);
-    $ann_incl_src     = empty($requested_ann) || isset($requested_ann['ann_source']);
+    // Annotation sub-columns: the same parse the preview uses (moopmartParsePreviewRequest)
+    $ann_incl_id      = $req['ann_incl_id'];
+    $ann_incl_desc    = $req['ann_incl_desc'];
+    $ann_incl_src     = $req['ann_incl_src'];
 
     // Build header row
     $feature_headers = array_map(fn($k) => $feat_col_map[$k][0], $active_feat);

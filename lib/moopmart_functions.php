@@ -992,6 +992,11 @@ function moopmartParsePreviewRequest(array $post): array {
     $requested_ann      = array_flip(array_values(array_filter($post['ann_columns'] ?? [])));
     $ann_incl_id        = empty($requested_ann) || isset($requested_ann['ann_id']);
     $ann_incl_desc      = empty($requested_ann) || isset($requested_ann['ann_description']);
+    $ann_incl_src       = empty($requested_ann) || isset($requested_ann['ann_source']);
+    // Long (default): one row per annotation. Wide: one row per feature, a source's values
+    // joined. Parsed here once for the preview AND the download -- the preview used to be
+    // wide whatever was chosen, so "Long" looked like it did nothing.
+    $ann_format         = ($post['ann_format'] ?? 'long') === 'wide' ? 'wide' : 'long';
 
     return [
         'raw_input_ids'        => $raw_input_ids,
@@ -1001,6 +1006,8 @@ function moopmartParsePreviewRequest(array $post): array {
         'annotation_columns'   => $annotation_columns,
         'ann_incl_id'          => $ann_incl_id,
         'ann_incl_desc'        => $ann_incl_desc,
+        'ann_incl_src'         => $ann_incl_src,
+        'ann_format'           => $ann_format,
     ];
 }
 
@@ -1106,15 +1113,24 @@ function moopmartCollectOrganismRows(string $org, array $org_sources, array $fil
  * @param bool  $ann_incl_desc               Include "Description:<src>" columns
  * @return array ['rows' => array, 'ann_col_headers' => array]
  */
-function moopmartBuildPreviewRows(array $preview, array $annotation_columns_selected, bool $ann_incl_id, bool $ann_incl_desc): array {
+function moopmartBuildPreviewRows(array $preview, array $annotation_columns_selected, bool $ann_incl_id, bool $ann_incl_desc,
+                                  bool $ann_incl_src = true, string $ann_format = 'wide'): array {
     $clean_prev        = fn($s) => str_replace(["\r\n", "\r", "\n", "\t"], ' ', (string)$s);
     $ann_col_headers   = [];
     $ann_by_uniquename = [];
+    $long              = $ann_format === 'long';
 
     if (!empty($annotation_columns_selected)) {
-        foreach ($annotation_columns_selected as $src) {
-            if ($ann_incl_id)   $ann_col_headers[] = 'ID:' . $src;
-            if ($ann_incl_desc) $ann_col_headers[] = 'Description:' . $src;
+        // The download's own column names (api/moopmart_export.php), so the preview is the file.
+        if ($long) {
+            if ($ann_incl_src)  $ann_col_headers[] = 'annotation_source';
+            if ($ann_incl_id)   $ann_col_headers[] = 'annotation_id';
+            if ($ann_incl_desc) $ann_col_headers[] = 'annotation_description';
+        } else {
+            foreach ($annotation_columns_selected as $src) {
+                if ($ann_incl_id)   $ann_col_headers[] = 'ID:' . $src;
+                if ($ann_incl_desc) $ann_col_headers[] = 'Description:' . $src;
+            }
         }
 
         // Deduplicate by gene feature_id before fetching annotations
@@ -1149,6 +1165,7 @@ function moopmartBuildPreviewRows(array $preview, array $annotation_columns_sele
             'strand'           => $f['strand']         ?? '',
             'match_reason'     => $f['match_reason']   ?? '',
         ];
+        if ($long) return $row;   // expanded below, one row per annotation
         foreach ($annotation_columns_selected as $src) {
             $entries = $ann_by_uniquename[$f['uniquename']][$src] ?? [];
             if ($ann_incl_id)   $row['ID:' . $src]          = implode('; ', array_map(fn($e) => $e['accession'], $entries));
@@ -1156,6 +1173,27 @@ function moopmartBuildPreviewRows(array $preview, array $annotation_columns_sele
         }
         return $row;
     }, $preview);
+
+    // Long: the feature row repeated once per annotation, sources in the order chosen -- exactly
+    // as the download writes it; a feature with none of the chosen annotations keeps one row.
+    if ($long && $annotation_columns_selected) {
+        $expanded = [];
+        foreach ($rows as $row) {
+            $emitted = false;
+            foreach ($annotation_columns_selected as $src) {
+                foreach ($ann_by_uniquename[$row['uniquename']][$src] ?? [] as $entry) {
+                    $line = $row;
+                    if ($ann_incl_src)  $line['annotation_source']      = $src;
+                    if ($ann_incl_id)   $line['annotation_id']          = $entry['accession'];
+                    if ($ann_incl_desc) $line['annotation_description'] = $clean_prev($entry['description'] ?? '');
+                    $expanded[] = $line;
+                    $emitted = true;
+                }
+            }
+            if (!$emitted) $expanded[] = $row;
+        }
+        $rows = $expanded;
+    }
 
     return ['rows' => $rows, 'ann_col_headers' => $ann_col_headers];
 }

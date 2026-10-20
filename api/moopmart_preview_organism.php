@@ -60,7 +60,8 @@ $res = moopmartCollectOrganismRows(
     $req['raw_input_ids'], $req['global_filter_reason'], $organism_data, MOOPMART_PREVIEW_ROW_CAP
 );
 
-$built = moopmartBuildPreviewRows($res['rows'], $req['annotation_columns'], $req['ann_incl_id'], $req['ann_incl_desc']);
+$built = moopmartBuildPreviewRows($res['rows'], $req['annotation_columns'], $req['ann_incl_id'], $req['ann_incl_desc'],
+                                  $req['ann_incl_src'], $req['ann_format']);
 
 echo json_encode([
     'organism'        => $organism,

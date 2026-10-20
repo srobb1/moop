@@ -535,6 +535,11 @@
         radios.forEach(r => r.addEventListener('change', updateFormat));
         updateFormat();
 
+        // Wide <-> Long changes the table's shape: a preview in the other layout is stale.
+        document.querySelectorAll('input[name="mm-layout"]').forEach(r => r.addEventListener('change', () => {
+            document.getElementById('mm-results-section')?.classList.add('d-none');
+        }));
+
         // FASTA sequence type → show/hide flank input
         document.querySelectorAll('.mm-fasta-mode').forEach(radio => {
             radio.addEventListener('change', function () {
@@ -900,9 +905,18 @@
         return cols.length ? cols : Object.values(FEAT_COL_SPECS);
     }
 
+    // Long layout with annotation columns: the preview has one line per annotation, so its line
+    // count and the feature total are different units -- say so instead of "first N of M".
+    let previewIsLong = false;
+
     function setResultsCaption(shown, total) {
         const caption = document.getElementById('mm-results-caption');
         if (!caption) return;
+        if (previewIsLong) {
+            caption.textContent = `— ${total.toLocaleString()} feature row${total !== 1 ? 's' : ''}, `
+                + `one line per annotation (preview: ${shown.toLocaleString()} line${shown !== 1 ? 's' : ''})`;
+            return;
+        }
         caption.textContent = shown < total
             ? `— showing first ${shown.toLocaleString()} of ${total.toLocaleString()}`
             : `— ${total.toLocaleString()} result${total !== 1 ? 's' : ''}`;
@@ -920,6 +934,7 @@
     // organisms only add rows via updateResultsTable().
     function buildResultsTable(rows, total, annColHeaders = []) {
         const section = document.getElementById('mm-results-section');
+        previewIsLong = annLayout() === 'long' && annColHeaders.length > 0;
         setResultsCaption(rows.length, total);
         section?.classList.remove('d-none');
         section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
