@@ -93,8 +93,11 @@ Why `LOC<GeneID>` and not the bare number (today's database ID) or the symbol:
   NCBI's own form for unnamed genes;
 - NCBI's symbol-based IDs (`gene-ANAPC13`) change when a gene is renamed between releases and
   get `-2` suffixes when a symbol repeats. The symbol remains the displayed name.
-- To check: whether NCBI search resolves `LOC<GeneID>` for genes that have a symbol (if not,
-  the Alias with the GeneID still links out correctly).
+- Checked 2026-10-20 (NCBI E-utilities, db=gene): a plain search for `LOC<GeneID>` finds
+  the gene both when that IS its symbol (`LOC5505848`, Nematostella) and when it has a real
+  symbol (`LOC105288252` -> ANAPC13, Pteropus vampyrus). Only a symbol-field search
+  (`LOC105288252[sym]`) misses the latter. MOOP's own link-outs should still use the number
+  (`https://www.ncbi.nlm.nih.gov/gene/<GeneID>`), which is always exact.
 
 Why drop `gene-` / `rna-` / `cds-`: they are NCBI's GFF scaffolding, not identifiers; the
 accession after them is already unique, and it is what people cite and what the FASTA uses.
