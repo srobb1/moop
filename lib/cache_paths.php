@@ -134,6 +134,37 @@ function moop_annotation_sources_cache_file(string $organism): string
 }
 
 /**
+ * Per-organism, per-GENE-SET annotation counts: {"accession/gene_set": {type: [{name, count}, ...]}}.
+ * Built only by housekeeping's background run (getAnnotationSourcesByGeneSet() is seconds per
+ * database), so it sits beside the organism cache and is never written by a page request.
+ */
+function moop_gene_set_annotation_counts_file(string $organism): string
+{
+    $dir = moop_cache_root() . '/' . $organism;
+    return moop_ensure_cache_dir($dir) ? "$dir/gene_set_annotation_counts.json" : '';
+}
+
+/**
+ * One gene set's annotation counts by type and source -- the shape moop_load_annotation_sources_cache()
+ * returns for a whole organism -- or null when they are not available yet.
+ *
+ * null also when the cache is OLDER than organism.sqlite: after a reload the gene sets and their
+ * annotations may have changed, and a gene set page must show its own current numbers or none --
+ * never the old ones, and never the organism's in their place.
+ */
+function moop_load_gene_set_annotation_counts(string $organism, string $assembly, string $gene_set): ?array
+{
+    $file = moop_gene_set_annotation_counts_file($organism);
+    if ($file === '' || !is_file($file)) return null;
+    $db = ConfigManager::getInstance()->getPath('organism_data') . "/$organism/organism.sqlite";
+    if (is_file($db) && filemtime($file) < filemtime($db)) return null;
+    $data = json_decode((string)@file_get_contents($file), true);
+    $key  = "$assembly/$gene_set";   // a gene set name is unique per assembly, not per organism
+    if (!is_array($data) || !is_array($data[$key] ?? null)) return null;
+    return moop_drop_empty_annotation_sources($data[$key]);
+}
+
+/**
  * Drop sources that have no annotations, and types left with no sources.
  *
  * A database can hold an annotation_source row with nothing loaded under it (10 of 85 did

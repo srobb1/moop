@@ -15,6 +15,10 @@ class AdvancedSearchFilter {
     constructor(config) {
         // Accept either organisms array or single organism for backwards compatibility
         this.organisms = config.organisms || (config.organism ? [config.organism] : []);
+        // One gene set (the gene set page): the server then lists that gene set's own sources
+        // and counts instead of the whole organism's.
+        this.assembly = config.assembly || '';
+        this.geneSet  = config.geneSet || '';
         this.sitePath = config.sitePath || window.sitePath;
         this.onApply = config.onApply || (() => {});
         this.sourceTypes = {};
@@ -38,7 +42,9 @@ class AdvancedSearchFilter {
         
         $.ajax({
             url: this.sitePath + '/tools/get_annotation_sources_grouped.php',
-            data: { organisms: organismsParam },
+            data: this.geneSet
+                ? { organisms: organismsParam, assembly: this.assembly, gene_set: this.geneSet }
+                : { organisms: organismsParam },
             method: 'GET',
             dataType: 'json',
             success: (data) => {

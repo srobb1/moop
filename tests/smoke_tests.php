@@ -1465,6 +1465,35 @@ $_r = moop_home_examples_apply_override($_auto, ['organisms' => ['Secret Bat']],
 ok(array_column($_r['organisms'], 'text') === ['Auto org'], 'an override with nothing openable falls back to automatic');
 
 // ----------------------------------------------------------------------------
+group('gene set page: annotation counts are the GENE SET\'s, never the organism\'s');
+$_gd = sys_get_temp_dir() . '/moop_gsac_' . getmypid();
+@mkdir("$_gd/OrgB", 0777, true);
+$_cfg = ConfigManager::getInstance();
+$_rp = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['organism_data'] = $_gd; $_c['cache_path'] = $_gd; $_rp->setValue($_cfg, $_c);
+ok(moop_load_gene_set_annotation_counts('OrgB', 'A1', 'gs1') === null, 'no cache yet -> null (the page leaves the summary out)');
+touch("$_gd/OrgB/organism.sqlite", time() - 100);
+file_put_contents(moop_gene_set_annotation_counts_file('OrgB'), json_encode([
+    'A1/gs1' => ['Homologs' => [['name' => 'UniProt', 'count' => 5], ['name' => 'Empty', 'count' => 0]]],
+    'A2/gs1' => ['Homologs' => [['name' => 'UniProt', 'count' => 9]]],
+    'A1/gs2' => [],
+]));
+$_r = moop_load_gene_set_annotation_counts('OrgB', 'A1', 'gs1');
+ok($_r === ['Homologs' => [['name' => 'UniProt', 'count' => 5]]], "this gene set's counts, an empty source dropped");
+ok((moop_load_gene_set_annotation_counts('OrgB', 'A2', 'gs1')['Homologs'][0]['count'] ?? null) === 9,
+   'two gene sets with the SAME name on different assemblies stay apart');
+ok(moop_load_gene_set_annotation_counts('OrgB', 'A1', 'gs2') === [], 'a gene set with no annotations is empty, not "not built"');
+touch("$_gd/OrgB/organism.sqlite", time() + 100);
+ok(moop_load_gene_set_annotation_counts('OrgB', 'A1', 'gs1') === null,
+   'database newer than the cache (a reload) -> null, never the old numbers');
+$_rp->setValue($_cfg, $_saved);
+array_map('unlink', glob("$_gd/OrgB/*")); @rmdir("$_gd/OrgB"); @rmdir($_gd);
+// The grouping both builders share: config order first, counts as integers.
+$_g = moop_group_annotation_sources([['name' => 'b', 'type' => 'Zeta', 'count' => '3'], ['name' => 'a', 'type' => 'Zeta', 'count' => '1']]);
+ok($_g === ['Zeta' => [['name' => 'b', 'count' => 3], ['name' => 'a', 'count' => 1]]], 'rows grouped by type, counts as integers, row order kept');
+
+// ----------------------------------------------------------------------------
 group('BUSCO: busco.json read defensively; no file or nothing usable means no card');
 require_once "$BASE/lib/busco.php";
 require_once "$BASE/lib/help_ui.php";

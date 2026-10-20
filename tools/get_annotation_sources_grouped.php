@@ -34,6 +34,14 @@ if (empty($organisms)) {
     exit;
 }
 
+// Optional: one gene set of a single organism (the gene set page).
+$assembly_param = trim((string)($_GET['assembly'] ?? ''));
+$gene_set_param = trim((string)($_GET['gene_set'] ?? ''));
+if ($gene_set_param !== '' && (count($organisms) !== 1 || $assembly_param === ''
+        || !has_gene_set_access($organisms[0], $assembly_param, $gene_set_param))) {
+    $gene_set_param = '';   // not a gene set this viewer may see: organism-level, as before
+}
+
 $organism_data = $config->getPath('organism_data');
 
 // Aggregate sources from all organisms
@@ -49,15 +57,25 @@ foreach ($organisms as $organism) {
         continue; // Skip organisms without database
     }
 
+    // Scoped to ONE gene set (the gene set page passes assembly + gene_set): that gene set's own
+    // sources and counts, so the filter neither shows organism-wide numbers nor offers a source
+    // that has nothing in this gene set. Built in the background by housekeeping; until then,
+    // fall through to the organism's sources -- a superset, so nothing the user could pick is
+    // missing, only the counts are wider.
+    $gs_counts = ($gene_set_param !== '' && count($organisms) === 1)
+        ? moop_load_gene_set_annotation_counts($organism, $assembly_param, $gene_set_param)
+        : null;
+    if ($gs_counts !== null) {
+        $source_types = $gs_counts;
     // Use per-organism cache to avoid re-running the expensive COUNT aggregate query.
     // Cache is invalidated automatically when organism.sqlite is newer than the cache file.
-    $cache_file = moop_annotation_sources_cache_file($organism);
-    if (file_exists($cache_file) && filemtime($cache_file) >= filemtime($db)) {
+    } elseif (($cache_file = moop_annotation_sources_cache_file($organism)) !== ''
+              && file_exists($cache_file) && filemtime($cache_file) >= filemtime($db)) {
         $cached = loadJsonFile($cache_file, []);
         $source_types = is_array($cached) ? $cached : [];
     } else {
         $source_types = getAnnotationSourcesByType($db);
-        file_put_contents($cache_file, json_encode($source_types));
+        if ($cache_file !== '') file_put_contents($cache_file, json_encode($source_types));
     }
     // A cache written before empty sources were excluded still lists them.
     $source_types = moop_drop_empty_annotation_sources($source_types);

@@ -1413,53 +1413,81 @@ function getAnnotationSourcesByType($dbFile) {
                   JOIN annotation a ON ans.annotation_source_id = a.annotation_source_id
                   GROUP BY ans.annotation_source_id, ans.annotation_type
                   ORDER BY ans.annotation_type, COUNT(a.annotation_id) DESC";
-        
-        $sources_with_types = fetchData($query, $dbFile, []);
-        
-        // Group by annotation_type
-        $grouped = [];
-        foreach ($sources_with_types as $source) {
-            $type = $source['type'];
-            
-            if (!isset($grouped[$type])) {
-                $grouped[$type] = [];
-            }
-            
-            $grouped[$type][] = [
-                'name' => $source['name'],
-                'count' => $source['count']
-            ];
-        }
-        
-        // Load annotation config to get proper ordering
-        global $config;
-        $metadata_path = $config->getPath('metadata_path');
-        $config_file = "$metadata_path/annotation_config.json";
-        $annotation_config = loadJsonFile($config_file, []);
-        
-        // Use annotation_type_order from config if available
-        $sorted = [];
-        if (!empty($annotation_config['annotation_type_order'])) {
-            // Add types in the order defined in config
-            foreach ($annotation_config['annotation_type_order'] as $type) {
-                if (isset($grouped[$type])) {
-                    $sorted[$type] = $grouped[$type];
-                }
-            }
-        }
-        
-        // Add any remaining types not in the config order (in case of dynamic types)
-        foreach ($grouped as $type => $sources) {
-            if (!isset($sorted[$type])) {
-                $sorted[$type] = $sources;
-            }
-        }
-        
-        return $sorted;
-        
+
+        return moop_group_annotation_sources(fetchData($query, $dbFile, []));
     } catch (Exception $e) {
         return [];
     }
+}
+
+/**
+ * The same counts as getAnnotationSourcesByType(), PER GENE SET: for each gene set, each source,
+ * the number of distinct annotations attached to that gene set's features.
+ *
+ * The organism-wide figure was shown on the gene set page as if it were the gene set's, which
+ * is wrong for every organism with more than one gene set (6 on 2026-10-20). Here an
+ * annotation counts for a gene set only if one of that gene set's features carries it.
+ *
+ * EXPENSIVE: it walks feature_annotation, ~2 s per database warm and far more cold, so it is
+ * never run in a page request -- housekeeping builds it in the background run, once per
+ * database change (moop_gene_set_annotation_counts_file()).
+ *
+ * Keyed "{assembly accession}/{gene set name}": a gene set name is unique per assembly, not
+ * per organism (gene_set UNIQUE(genome_id, gene_set_name)), so the name alone could merge two.
+ *
+ * @return array  {"accession/gene_set": {type: [{name, count}, ...]}}, types ordered as
+ *                getAnnotationSourcesByType() orders them; [] on error.
+ */
+function getAnnotationSourcesByGeneSet($dbFile) {
+    try {
+        $query = "SELECT g.genome_accession || '/' || gs.gene_set_name AS gene_set,
+                         ans.annotation_source_name AS name,
+                         ans.annotation_type AS type,
+                         COUNT(DISTINCT fa.annotation_id) AS count
+                  FROM feature_annotation fa
+                  JOIN feature f            ON f.feature_id = fa.feature_id
+                  JOIN gene_set gs          ON gs.gene_set_id = f.gene_set_id
+                  JOIN genome g             ON g.genome_id = gs.genome_id
+                  JOIN annotation a         ON a.annotation_id = fa.annotation_id
+                  JOIN annotation_source ans ON ans.annotation_source_id = a.annotation_source_id
+                  GROUP BY gs.gene_set_id, ans.annotation_source_id, ans.annotation_type
+                  ORDER BY gene_set, ans.annotation_type, count DESC";
+        $by_gene_set = [];
+        foreach (fetchData($query, $dbFile, []) as $row) {
+            $by_gene_set[$row['gene_set']][] = $row;
+        }
+        return array_map('moop_group_annotation_sources', $by_gene_set);
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/**
+ * Rows of {name, type, count} -> {type: [{name, count}, ...]}, types in the order
+ * annotation_config.json's annotation_type_order gives, then any others. Shared by the
+ * organism-wide and per-gene-set counts so the two can never be ordered differently.
+ */
+function moop_group_annotation_sources(array $rows): array {
+    $grouped = [];
+    foreach ($rows as $row) {
+        $grouped[$row['type']][] = ['name' => $row['name'], 'count' => (int)$row['count']];
+    }
+
+    global $config;
+    $annotation_config = loadJsonFile($config->getPath('metadata_path') . '/annotation_config.json', []);
+    $sorted = [];
+    foreach (($annotation_config['annotation_type_order'] ?? []) as $type) {
+        if (isset($grouped[$type])) {
+            $sorted[$type] = $grouped[$type];
+        }
+    }
+    // Any types the config does not list, after the ordered ones.
+    foreach ($grouped as $type => $sources) {
+        if (!isset($sorted[$type])) {
+            $sorted[$type] = $sources;
+        }
+    }
+    return $sorted;
 }
 
 /**

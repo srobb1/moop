@@ -127,7 +127,7 @@ function housekeeping_task_registry(): array {
             'name'  => 'refresh_annotation_caches',
             'fn'    => 'housekeeping_refresh_annotation_caches',
             'label' => 'Refresh annotation caches',
-            'desc'  => "Rebuilds each organism's annotation_sources_cache.json when it is missing or older than that organism's SQLite database.",
+            'desc'  => "Rebuilds each organism's annotation_sources_cache.json when it is missing or older than that organism's SQLite database. In the background run it also rebuilds the per-gene-set counts the gene set page shows (seconds per database, so a few minutes per run; the rest on the next).",
         ],
         [
             'name'  => 'refresh_organism_cache',
@@ -1038,7 +1038,11 @@ function housekeeping_refresh_annotation_caches() {
         return;
     }
 
-    // database_queries.php is not loaded by admin_init — include lazily
+    // database_queries.php is not loaded by admin_init — include lazily. functions_database.php
+    // (fetchData) IS loaded by admin_init, but not in the background CLI run, where every
+    // rebuild here died with "Call to undefined function fetchData()" -- invisible, because in
+    // steady state nothing is stale and the loop below never reaches a query.
+    require_once dirname(__DIR__) . '/lib/functions_database.php';
     $db_queries = dirname(__DIR__) . '/lib/database_queries.php';
     if (file_exists($db_queries)) {
         include_once $db_queries;
@@ -1072,6 +1076,62 @@ function housekeeping_refresh_annotation_caches() {
 
     if ($refreshed > 0) {
         error_log("MOOP housekeeping: refreshed annotation source caches for $refreshed organism(s)");
+    }
+
+    // Per-GENE-SET counts, for the gene set page's Annotation Summary and its search filter.
+    // Seconds per database (a walk of feature_annotation), so ONLY in the background CLI run,
+    // like the gene-track index rebuild -- never inside the Re-run button's request -- and
+    // within a time budget: after a full reload all 85 are stale at once (~3 min warm, more
+    // cold), and the rest simply wait for the next run. Until a gene set's counts exist, its
+    // page shows no Annotation Summary rather than the organism's figures under its name.
+    if (PHP_SAPI === 'cli') {
+        housekeeping_refresh_gene_set_annotation_counts($organism_data, $entries);
+    }
+}
+
+/**
+ * Build gene_set_annotation_counts.json for every organism whose database is newer than it,
+ * smallest database first, until $budget_seconds is spent.
+ *
+ * @param list<string> $entries  scandir() of organism_data
+ */
+function housekeeping_refresh_gene_set_annotation_counts(string $organism_data, array $entries, int $budget_seconds = 240): void {
+    $t0   = time();
+    $todo = [];
+    foreach ($entries as $entry) {
+        if ($entry === '.' || $entry === '..') continue;
+        $db   = "$organism_data/$entry/organism.sqlite";
+        $file = moop_gene_set_annotation_counts_file($entry);
+        if (!is_file($db) || $file === '') continue;
+        if (is_file($file) && filemtime($file) >= filemtime($db)) continue;
+        $todo[$entry] = filesize($db);
+    }
+    asort($todo);
+
+    $done = 0;
+    foreach (array_keys($todo) as $organism) {
+        if (time() - $t0 >= $budget_seconds) break;
+        $db     = "$organism_data/$organism/organism.sqlite";
+        $counts = getAnnotationSourcesByGeneSet($db);
+        // Every gene set gets an entry, an empty one included, so "this gene set has no
+        // annotations" is recorded rather than looking like "not built yet".
+        $all = "SELECT g.genome_accession || '/' || gs.gene_set_name AS k FROM gene_set gs JOIN genome g ON g.genome_id = gs.genome_id";
+        foreach (fetchData($all, $db, []) as $row) {
+            $counts[$row['k']] = $counts[$row['k']] ?? [];
+        }
+        $file = moop_gene_set_annotation_counts_file($organism);
+        // Temp + rename: a reader never sees a half-written file.
+        $tmp  = "$file.tmp-" . getmypid();
+        if (file_put_contents($tmp, json_encode($counts)) !== false && rename($tmp, $file)) {
+            $done++;
+        } else {
+            @unlink($tmp);
+            error_log("MOOP housekeeping: could not write $file");
+        }
+    }
+    $left = count($todo) - $done;
+    if ($done > 0 || $left > 0) {
+        error_log("MOOP housekeeping: per-gene-set annotation counts built for $done organism(s), $left left for the next run");
     }
 }
 

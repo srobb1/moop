@@ -105,15 +105,17 @@ $gene_set_meta = loadJsonFile("$gs_dir/geneset.json", []);
 // Derived by the pipeline (notes/BUSCO_GENE_SET_SPEC.md). No file -> null -> no card.
 $busco = moop_load_busco($gs_dir);
 
-// Load annotation type summary from organism-level cache (grouped by type)
+// Annotation Summary: THIS gene set's counts, by type. It used to read the organism-wide cache,
+// so on an organism with several gene sets (6 on 2026-10-20) every gene set page showed the
+// same, organism-wide numbers under its own name. The per-gene-set counts are built by
+// housekeeping's background run; until they exist (or after a reload, until rebuilt) the
+// summary is left out rather than filled with the organism's figures.
 $annot_type_totals = [];
-$annot_cache = moop_load_annotation_sources_cache($organism_name);
-if ($annot_cache !== null) {
-    foreach ($annot_cache as $type => $sources) {
-        $annot_type_totals[$type] = array_sum(array_column($sources, 'count'));
-    }
-    arsort($annot_type_totals);
+$annot_counts = moop_load_gene_set_annotation_counts($organism_name, $genome_accession, $gene_set_name);
+foreach ($annot_counts ?? [] as $type => $sources) {
+    $annot_type_totals[$type] = array_sum(array_column($sources, 'count'));
 }
+arsort($annot_type_totals);
 
 $data = [
     'gene_set_info'        => $gene_set_info,

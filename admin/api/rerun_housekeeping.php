@@ -71,7 +71,7 @@ if (!empty($_POST['background'])) {
         'success'    => $ok,
         'background' => true,
         'message'    => $ok
-            ? 'Started in the background. Rebuilds take up to about five minutes per run; reload this page afterwards.'
+            ? 'Started in the background. It can take a few minutes; reload this page afterwards.'
             : 'Could not start a background run — see logs/error.log.',
     ]);
     exit;
