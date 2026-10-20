@@ -39,8 +39,10 @@ are remade whenever the genome is. Same reasoning as `busco.json` vs `geneset.js
 
 ```json
 {
-   "version"      : 1,
+   "version"      : 2,
    "fasta_md5"    : "…",
+   "fasta_bytes"  : …,
+   "fasta_mtime"  : …,
    "date"         : "2026-10-20",
    "sequences"    : 30,
    "total_length" : 252273000,
@@ -79,9 +81,10 @@ All lengths in bases. Case-insensitive (soft-masked lower-case bases count like 
 | `gap_bases` | count of N (and n) bases anywhere |
 | `gap_pct` | `gap_bases / total_length × 100`, one decimal |
 | `gc_pct` | `(G+C) / (A+C+G+T) × 100`, one decimal — Ns and any other IUPAC codes excluded from both sides |
+| `fasta_bytes` / `fasta_mtime` | byte size and mtime (epoch seconds) of that `genome.fa`, taken before it is read — what decides whether the file is current (version 2+) |
 | `fasta_md5` | md5 of the `genome.fa` the figures were computed from, so MOOP (or a person) can tell the stats belong to the genome on disk |
 | `date` | when the file was written (YYYY-MM-DD) |
-| `version` | `1`. Bump if a definition above changes, so MOOP can tell old files from new |
+| `version` | `2` (2: `fasta_bytes` / `fasta_mtime` added). Bump if a definition above changes, so MOOP can tell old files from new |
 
 Integers as JSON numbers, not strings. A field that cannot be computed is **omitted**, not
 written as 0 or null.
@@ -109,15 +112,18 @@ independent count of ≥ 10 N runs (Nvec: 763 runs + 30 records = 793 contigs). 
 ## Getting it to MOOP
 
 - **`process_one_geneset.sh`** runs the script right after `genome.fa.fai` is built, whenever the
-  genome is present. **Recomputed only when `genome.fa` is newer than `assembly_stats.json`, or
-  the file's `version` is not the script's** (user, 2026-10-20) — the genome can be 3.4 Gb.
-- **⚠️ TO DO (decided 2026-10-20, review of 45b1ea5): "current" must not rest on "newer than".**
+  genome is present. **Recomputed only when the genome is not the one the file records — its
+  byte size or mtime differs from `fasta_bytes` / `fasta_mtime` — or the file's `version` is not
+  the script's** (user, 2026-10-20) — the genome can be 3.4 Gb.
+- **✅ DONE 2026-10-20 (was a TO DO from the review of 45b1ea5): "current" no longer rests on "newer than".**
   `is_current()` skips when `assembly_stats.json` is newer than `genome.fa`. A genome replaced with
   `rsync -a` / `cp -p` keeps its ORIGINAL, older mtime, so the old stats would read as current and
   never be redone -- silently wrong. Fix: record the genome's byte size and mtime in the file
   (`fasta_bytes`, `fasta_mtime`) and treat it as current only when BOTH equal the genome's current
   `stat` exactly (and `version` matches). Bump `$FORMAT_VERSION` to 2 so every file is redone once
   and gains the two fields. MOOP's reader ignores fields it does not know, so this needs no web change.
+  Built as described; tested with a genome replaced by an OLDER file via `cp -p` (json newer than
+  it): recomputed. Unchanged genome: skipped. A version-1 file: recomputed.
   (The `.fai` / BLAST `needs_rebuild` checks in the same block share the `-nt` rule -- the same
   exposure, for the pipeline to decide separately.)
 - **Per assembly, though the pipeline is per gene set** (user, 2026-10-20): the SCRIPT decides —

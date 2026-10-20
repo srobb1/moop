@@ -7,10 +7,16 @@
 #
 # ONE PER ASSEMBLY, called once per GENE SET: process_one_geneset.sh runs this for every gene set,
 # and an assembly can carry several. So the script decides for itself whether there is work to
-# do: when <out.json> already exists, is newer than <genome.fa>, and was written by this
-# $FORMAT_VERSION, it says so and exits 0 without reading the genome. The first gene set of an
-# assembly computes the file; the others find it current. A new genome.fa (newer than the file)
-# or a change to a definition here (bump $FORMAT_VERSION) makes the next run recompute it.
+# do: when <out.json> already exists, records exactly the byte size and mtime genome.fa has now
+# (fasta_bytes, fasta_mtime), and was written by this $FORMAT_VERSION, it says so and exits 0
+# without reading the genome. The first gene set of an assembly computes the file; the others find
+# it current. A different genome.fa or a change to a definition here (bump $FORMAT_VERSION) makes
+# the next run recompute it.
+#
+# Why size + mtime EQUAL, not "the file is newer than the genome": a genome replaced with
+# rsync -a / cp -p keeps its ORIGINAL, older mtime, so "newer than" would keep the old genome's
+# figures for good, silently (review of 45b1ea5, 2026-10-20). Any replacement changes the size or
+# the mtime, older or newer.
 #
 # The genome is streamed once (genomes reach 3.4 Gb -- never slurped): lengths, N runs, GC and
 # the md5 all come from the same pass. Every figure is checked before anything is written, and
@@ -27,7 +33,8 @@ use Digest::MD5;
 use POSIX qw(strftime);
 
 ## bump when a definition in notes/ASSEMBLY_STATS_SPEC.md changes: every file is then recomputed
-my $FORMAT_VERSION = 1;
+## 2: fasta_bytes + fasta_mtime added, and currency is decided by them (2026-10-20)
+my $FORMAT_VERSION = 2;
 ## a run of at least this many N splits a scaffold into contigs (QUAST's default)
 my $MIN_SPLIT_GAP = 10;
 
@@ -37,14 +44,19 @@ sub main {
   die "$genome: missing or empty\n" unless -s $genome;
 
   if (is_current($genome, $out_json)) {
-    print "Assembly stats: $out_json is current (newer than $genome, format $FORMAT_VERSION) -- not recomputed\n";
+    print "Assembly stats: $out_json is current (same size and mtime as $genome, format $FORMAT_VERSION) -- not recomputed\n";
     return;
   }
 
+  ## stat BEFORE reading: if the genome is replaced mid-read, the recorded size/mtime are the old
+  ## file's, so the next run sees a mismatch and recomputes
+  my ($fasta_bytes, $fasta_mtime) = (stat $genome)[7, 9];
   my $scan = scan_genome($genome);
   my %stats = (
     version      => $FORMAT_VERSION,
     fasta_md5    => $scan->{md5},
+    fasta_bytes  => $fasta_bytes,
+    fasta_mtime  => $fasta_mtime,
     date         => strftime('%Y-%m-%d', localtime),
     sequences    => scalar @{ $scan->{record_lengths} },
     total_length => $scan->{total_length},
@@ -84,12 +96,11 @@ sub main {
     (defined $stats{contig_n50} ? ", contig N50 $stats{contig_n50}" : ''), $out_json;
 }
 
-## <out.json> exists, is newer than the genome (stat follows the genome.fa symlink to the real
-## file), and was written with this $FORMAT_VERSION.
+## <out.json> exists, was written with this $FORMAT_VERSION, and records the size and mtime the
+## genome has now (stat follows the genome.fa symlink to the real file).
 sub is_current {
   my ($genome, $out_json) = @_;
   return 0 unless -s $out_json;
-  return 0 unless (stat $out_json)[9] > (stat $genome)[9];
   my $existing = eval {
     open my $in, '<', $out_json or die;
     local $/;
@@ -99,6 +110,9 @@ sub is_current {
   };
   return 0 unless ref $existing eq 'HASH';
   return 0 unless defined $existing->{version} and $existing->{version} == $FORMAT_VERSION;
+  my ($bytes, $mtime) = (stat $genome)[7, 9];
+  return 0 unless defined $existing->{fasta_bytes} and $existing->{fasta_bytes} == $bytes;
+  return 0 unless defined $existing->{fasta_mtime} and $existing->{fasta_mtime} == $mtime;
   return 1;
 }
 
