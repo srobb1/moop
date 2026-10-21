@@ -169,9 +169,7 @@ $(document).ready(function () {
         updateScopeSummary();
         updateSearchSelectedPanel();
         clearTimeout(sourcesLoadTimer);
-        sourcesLoadTimer = setTimeout(() => {
-            loadAnnotationSources(getCheckedOrganisms());
-        }, 300);
+        sourcesLoadTimer = setTimeout(loadAnnotationSources, 300);
     }
 
     function getCheckedOrganisms() {
@@ -233,7 +231,27 @@ $(document).ready(function () {
     // Step 3 asks for a choice rather than assuming every type, and the submit guard enforces it.
     let sourceOverrides = {};
 
-    function loadAnnotationSources(organisms) {
+    // The gene sets ticked for each organism that is only PARTLY ticked, as
+    // "organism/accession/gene_set" -- so the counts in Step 3 are the selection's own, not the
+    // whole organism's. Fully ticked organisms are left out: their organism-wide counts are
+    // already right, and listing every gene set of a big selection would overflow the URL.
+    function partialGeneSets() {
+        const byOrg = {};
+        $('.scope-gs-cb').each(function () {
+            (byOrg[this.dataset.org] ??= []).push(this);
+        });
+        const out = [];
+        Object.values(byOrg).forEach(boxes => {
+            const on = boxes.filter(cb => cb.checked);
+            if (on.length && on.length < boxes.length) {
+                on.forEach(cb => out.push(`${cb.dataset.org}/${cb.dataset.asm}/${cb.dataset.gs}`));
+            }
+        });
+        return out;
+    }
+
+    function loadAnnotationSources() {
+        const organisms = getCheckedOrganisms();
         if (!organisms.length) {
             // One message at a time. The static "only the types you tick are searched"
             // line is hidden here for the same reason the filter box is: with no types
@@ -250,8 +268,10 @@ $(document).ready(function () {
 
         $('#sourcesPanel').html('<div class="text-center p-3 text-muted"><i class="fa fa-spinner fa-spin me-1"></i> Loading…</div>');
 
-        $.getJSON(sitePath + '/tools/get_annotation_sources_grouped.php',
-            { organisms: organisms.join(',') },
+        const params  = { organisms: organisms.join(',') };
+        const partial = partialGeneSets();
+        if (partial.length) params.gene_sets = JSON.stringify(partial);
+        $.getJSON(sitePath + '/tools/get_annotation_sources_grouped.php', params,
             function (data) {
                 renderSourcesPanel(data.source_types || {});
             }
@@ -549,8 +569,7 @@ $(document).ready(function () {
     applyContextScope(typeof scopeContext !== 'undefined' ? scopeContext : null);
     updateScopeSummary();
     // Only load annotation types for pre-selected organisms; otherwise wait for user to select
-    const preselectedOrgs = getCheckedOrganisms();
-    loadAnnotationSources(preselectedOrgs);
+    loadAnnotationSources();
 
     document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
 });

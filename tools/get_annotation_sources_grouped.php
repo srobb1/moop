@@ -5,7 +5,9 @@
  * 
  * Parameters: organisms (comma-separated list) OR organism (single, for backwards compatibility);
  *             optionally, for one organism, assembly (an accession) and gene_set;
- *             optionally group (a group name): only that group's gene sets
+ *             optionally group (a group name): only that group's gene sets;
+ *             optionally gene_sets (JSON list of "organism/accession/gene_set"): for the
+ *             organisms named in it, only those gene sets
  * Returns: JSON with grouped sources, from only the gene sets this viewer may open
  */
 
@@ -70,6 +72,16 @@ if (count($organisms) !== 1 || $assembly_param === '') {
     $assembly_param = $gene_set_param = '';
 }
 
+// Optional (the search page): gene_sets, a JSON list of "organism/accession/gene_set" for the
+// organisms the user picked only PART of. Those organisms count just the listed gene sets; an
+// organism not in the list counts all of its own. Partial organisms only, so a full selection
+// of every organism never puts hundreds of gene sets in the URL.
+$only_gene_sets = [];   // organism => ["accession/gene_set" => true]
+foreach ((array)(json_decode((string)($_GET['gene_sets'] ?? ''), true) ?: []) as $item) {
+    $parts = is_string($item) ? explode('/', $item, 2) : [];
+    if (count($parts) === 2) $only_gene_sets[$parts[0]][$parts[1]] = true;
+}
+
 $organism_data = $config->getPath('organism_data');
 
 // Aggregate sources from all organisms
@@ -87,11 +99,13 @@ foreach ($organisms as $organism) {
     }
 
     // The gene sets this request covers: the viewer's, narrowed to the scope asked for.
+    $only = $only_gene_sets[$organism] ?? null;
     $keys = array_values(array_filter(array_keys($viewer_gene_sets[$organism]),
-        function ($key) use ($assembly_param, $gene_set_param) {
+        function ($key) use ($assembly_param, $gene_set_param, $only) {
             [$accession, $gene_set] = explode('/', $key, 2);
             return ($assembly_param === '' || $accession === $assembly_param)
-                && ($gene_set_param === '' || $gene_set === $gene_set_param);
+                && ($gene_set_param === '' || $gene_set === $gene_set_param)
+                && ($only === null || isset($only[$key]));
         }));
     if (!$keys) {
         continue;   // nothing in that scope this viewer may open
@@ -103,7 +117,7 @@ foreach ($organisms as $organism) {
     // who may see everything gets the organism's sources instead -- a superset, so nothing they
     // could pick is missing, only the counts are wider.
     $source_types = null;
-    if (!$full_access || $assembly_param !== '' || $group_param !== '') {
+    if (!$full_access || $assembly_param !== '' || $group_param !== '' || $only !== null) {
         $parts = [];
         foreach ($keys as $key) {
             [$accession, $gene_set] = explode('/', $key, 2);
