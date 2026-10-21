@@ -1,8 +1,9 @@
 # One ID per feature: one ID map per gene set, built once
 
 **Status:** PLAN, third version 2026-10-21 (compute box, after reviewing the second version
-against the pipeline code and the built data). Not started. **For review by the web-host
-agent** before any code is written.
+against the pipeline code and the built data). **Reviewed by the web-host agent 2026-10-21:
+agreed** ("the right design"); its answers and two additions are folded in below (see "Web-host
+review"). Not started.
 
 **Priorities, in order:** (1) the IDs in the database, genes.gff and the FASTAs are
 identical; (2) the code that guarantees it is simple. Rewriting existing code is preferred
@@ -210,7 +211,10 @@ moop_id   type   parent_moop_id   original_gff_id   original_fasta_id
 5. **The loader joins annotations through the map.** Annotation files stay in delivered IDs;
    `load_annotations_sqlite.pl` reads `id_map.tsv` and looks each annotation ID up as
    `original_fasta_id` (then `original_gff_id`) exactly. The `.id_prefix_stripped` manifest
-   and the `:pep`/`:cds`/re-prefix candidate guessing are deleted.
+   and the `:pep`/`:cds`/re-prefix candidate guessing are deleted. **The load fails loudly**
+   when an annotation file's IDs match nothing in the map (beyond a listed exception) — the
+   riskiest piece: a rename once dropped 21,199 Bipalium_vagum annotations silently, and today
+   Medicago and Turritopsis have 0 linked annotations with no complaint.
 
 6. **One coordinates producer: the web's.** With MOOP IDs in genes.gff, the web's generic
    reader is right as written minus its prefix stripping. The pipeline's `_coords_*` are
@@ -228,7 +232,8 @@ moop_id   type   parent_moop_id   original_gff_id   original_fasta_id
      used by two features (a multi-line CDS sharing one ID is fine).
 
    It is also a housekeeping health card on the web, so a misaligned gene set shows on the
-   dashboard.
+   dashboard. It runs on transcriptome-only sets too from the start (cheap, and it would have
+   caught the gene-less sets), even though their map builder is phase 2.
 
 ### ID rules (inside `build_id_map.pl` only)
 
@@ -290,29 +295,48 @@ These rules reproduce today's database IDs exactly. Step 1 below proves it.
    the rewritten FASTAs must equal today's built ones byte for byte except the listed fixes.
 3. **Loader join** through the map, on the same copies: annotation counts per source equal
    today's, plus Danio's 150 proteins' annotations.
+
+   **Then steps 1–3 for every gene set, not only these six** (web-host review): the change
+   touches FASTA renaming and the annotation join for all ~92 gene sets, not just the 28
+   misaligned ones. No rollout until every gene set passes the ID comparison, the byte-for-byte
+   FASTA comparison and the per-source annotation counts.
 4. **Wire into `process_one_geneset.sh`**, replacing the strip_id_prefix / lift / rename
    block (~1083–1150) and the features.tsv call. Run Nematostella end to end; ship.
-5. **Web, Nematostella:** re-register JBrowse; check the gene page, Data Exporter coordinates
-   (must now fill), JBrowse search by ID and by an old `gene-LOC…` alias, BLAST link-outs,
-   search results.
+5. **Web, Nematostella:** first change the JBrowse text-index default from `Name,ID` to
+   `Name,ID,Alias` (`admin/api/jbrowse_register_gene_set.php:42`, `jbrowse_text_index.php:29`,
+   `jbrowse_reprep_gff.php:30`, `admin/pages/manage_jbrowse.php:535`) — without it the old IDs
+   kept as `Alias=` are not searchable. Then re-register JBrowse; check the gene page, Data
+   Exporter coordinates (must now fill), JBrowse search by ID and by an old `gene-LOC…` alias,
+   BLAST link-outs, search results.
 6. **Roll out** to every gene set (Amphimedon, Petromyzon, Danio as reloads).
 7. **Delete**, once the gate is clean everywhere: the three emitters, the three coords
    writers, `detect_format`, the four FASTA renamers, `strip_id_prefix.pl`,
    `add_id_versions.pl`, the loader's manifest and candidate guessing, copy2moop's
-   feature_coords.tsv, the web prefix stripping, the `lib/gff_gene_model.php` ID ladder.
+   feature_coords.tsv, the `lib/gff_gene_model.php` ID ladder, and every web prefix strip:
+   `generateFeatureCoordsIndex()` and `generateExonCoordsIndex()` (`gene_set_functions.php`
+   ~598, which also writes stripped duplicate rows), `lib/gene_isoforms.php` (3 places),
+   `tools/primer_maker.php` ~239, and the ID matching in `api/get_gff.php` (~60).
 
-## Questions for the web-host reviewer
+## Web-host review (2026-10-21)
 
-1. Anything on the web that reads a GFF `ID=` with a prefix on purpose (JBrowse text index,
-   Primer Maker, track configs) that would break when gene/mRNA `ID=` lose `gene-`/`rna-`?
-   The old IDs stay as `Alias=`.
-2. Is the web's `feature_coords.tsv` reader the one to keep (piece 6)? It writes all GFF
-   features, non-coding included; the pipeline's writes coding only.
-3. The transcript2gene (transcriptome-only) path: fold it into `build_id_map.pl` now, or
-   leave `parse_transcript2gene_to_MOOP_TSV.pl` as is for a phase 2? It has no GFF, so none
-   of today's misalignment.
-4. Should `id_map.tsv` ship to the web, so the gene page or search can resolve an old ID
-   (e.g. `gene-LOC5505848`) without the GFF?
+Verdict: the right design, simpler than v2 where it matters (one script holds every source
+rule). Answers to the four questions:
+
+1. **Does anything on the web need the `gene-`/`rna-` prefixes?** No code needs them: every web
+   use strips a prefix if present, so all of it becomes dead code (list added to step 7). But
+   JBrowse's text index covers `Name,ID` only, so the old IDs kept as `Alias=` are searchable
+   only once the default becomes `Name,ID,Alias` — a required web change, now in step 5.
+2. **Keep the web's coordinates writer?** Yes: one generic reader; covering non-coding features
+   does no harm (lookups are by ID). Its prefix stripping and duplicate rows go once IDs align.
+3. **Transcriptome path?** Phase 2 — no misalignment there today. But run the gate on
+   transcriptome sets now (added to piece 7).
+4. **Ship `id_map.tsv` to the web?** Not now: database IDs do not change, so every MOOP URL keeps
+   working, and the old GFF IDs never appeared in MOOP URLs. `Alias=` plus the index change
+   covers JBrowse.
+
+Two additions, folded in: the loader fails loudly on annotation IDs that match nothing (piece
+5), and steps 1–3 are required for every gene set before rollout, not only the six copies
+(step 3).
 
 ## Touch points
 
