@@ -542,7 +542,7 @@ function runFtsSearch($dbFile, $sql, $params) {
         return [
             'results' => array_slice($rows, 0, $max_display),
             'capped'  => true,
-            'warning' => number_format($max_display) . '+ results found. Use Advanced Filter or add more search terms to refine.',
+            'warning' => 'More than ' . number_format($max_display) . ' matches; showing the first ' . number_format($max_display) . '.',
         ];
     }
     return ['results' => $rows, 'capped' => false, 'warning' => null];

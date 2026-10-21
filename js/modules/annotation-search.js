@@ -533,11 +533,13 @@ class AnnotationSearch {
                             species: data.species || ''
                         });
                     }
-                    if (data.warning) {
-                        this.warnings.push({ organism: data.organism, warning: data.warning });
-                    }
+                    // A capped response's warning IS the cap; the one cap message below says
+                    // it for every organism at once. Told apart by the flag, not by the text --
+                    // matching '2,500' broke the moment search_results_limit changed.
                     if (data.capped) {
                         this.cappedOrganisms.push(data.organism);
+                    } else if (data.warning) {
+                        this.warnings.push({ organism: data.organism, warning: data.warning });
                     }
                     completed++;
                     const progress = Math.round((completed / total) * 100);
@@ -607,15 +609,19 @@ class AnnotationSearch {
             // The limit is configurable (search_results_limit), so read it rather than
             // hardcoding -- a message that names the wrong number is worse than none.
             const lim = (window.MOOP_SEARCH_RESULTS_LIMIT || 2500).toLocaleString();
+            // Names no control: the six pages that share this narrow in different places
+            // (Steps 2 and 3 on Search, a filter icon elsewhere), and "Use Advanced Filter"
+            // matched none of them.
             capMessageHtml = `<div class="alert alert-warning mb-3">
-                <strong>Search results are capped at ${lim} per organism.</strong> Use Advanced Filter or add more search terms to refine.
-                The following organism searches were capped: <em>${cappedList}</em>
+                <strong>Showing the first ${lim} matches per organism &mdash; there are more.</strong>
+                To see others, add another search word, or search fewer organisms or annotation types.
+                More matches than shown: <em>${escapeHtml(cappedList)}</em>
                 <br><small>Downloads from this search are capped too, and their filename says so.</small>
             </div>`;
         }
 
         let warningsHtml = '';
-        const otherWarnings = this.warnings.filter(w => !w.warning.includes('2,500') && !w.warning.includes('capped'));
+        const otherWarnings = this.warnings;
         if (otherWarnings.length > 0) {
             warningsHtml = '<div class="alert alert-warning mb-3">';
             otherWarnings.forEach((item, idx) => {
