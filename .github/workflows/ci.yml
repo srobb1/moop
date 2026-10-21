@@ -74,7 +74,7 @@ jobs:
       - name: Run JS smoke tests
         run: node tests/js_smoke_tests.js
 
-  # The build pipeline (config/build_and_load_db) is Perl. Three steps, each for a failure that
+  # The build pipeline (config/build_and_load_db) is Perl. Four steps, each for a failure that
   # otherwise shows up only as wrong data on the site:
   #   - perl -c: a syntax or missing-module error (every pipeline script and module).
   #   - check_perl_file_scope.pl: the "file-scope assignment" trap -- a table assigned below
@@ -83,6 +83,8 @@ jobs:
   #   - naming_end_to_end.pl: gene naming on a tiny made-up gene set, one gene per naming rule,
   #     asserting the exact names and provenance. Hermetic; it caught both silent bugs when run
   #     against the broken versions.
+  #   - draft_expression_metadata_test.pl: expression samples named from the reads STAR aligned,
+  #     not from a list's order (22 of 24 Nvec samples in two projects were mislabelled that way).
   pipeline:
     name: pipeline perl checks
     runs-on: ubuntu-latest
@@ -113,3 +115,6 @@ jobs:
 
       - name: Gene naming end to end
         run: perl config/build_and_load_db/tests/naming_end_to_end.pl
+
+      - name: Expression metadata drafter
+        run: perl config/build_and_load_db/tests/draft_expression_metadata_test.pl
