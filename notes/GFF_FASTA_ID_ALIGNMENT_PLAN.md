@@ -3,7 +3,8 @@
 **Status:** PLAN, third version 2026-10-21 (compute box, after reviewing the second version
 against the pipeline code and the built data). **Reviewed by the web-host agent 2026-10-21:
 agreed** ("the right design"); its answers and two additions are folded in below (see "Web-host
-review"). Not started.
+review"). **Step 1 done 2026-10-21** — the rules reproduce every database that matches its
+files (see "Step 1 results"); steps 2–7 not started.
 
 **Priorities, in order:** (1) the IDs in the database, genes.gff and the FASTAs are
 identical; (2) the code that guarantees it is simple. Rewriting existing code is preferred
@@ -237,9 +238,13 @@ moop_id   type   parent_moop_id   original_gff_id   original_fasta_id
 
 ### ID rules (inside `build_id_map.pl` only)
 
-A feature is in the map when it is a gene with at least one CDS carrying `protein_id`, or
-the mRNA/transcript, CDS or protein under it. V/C gene segments and pseudogene CDS without a
-`protein_id` are skipped by that rule; nothing names them.
+**RefSeq and Ensembl:** a feature is in the map when it is a gene with at least one CDS
+carrying `protein_id`, or the mRNA/transcript, CDS or protein under it. V/C gene segments and
+pseudogene CDS without a `protein_id` are skipped by that rule; nothing names them.
+
+**Other and lift:** every gene, mRNA and transcript line is in the map, coding or not — that is
+what `emit_generic` loads today (found writing step 1: a coding-only rule for these would have
+dropped thousands of non-coding features the databases hold).
 
 | source | gene | mRNA / transcript | CDS | protein |
 |---|---|---|---|---|
@@ -308,7 +313,12 @@ These rules reproduce today's database IDs exactly. Step 1 below proves it.
    kept as `Alias=` are not searchable. Then re-register JBrowse; check the gene page, Data
    Exporter coordinates (must now fill), JBrowse search by ID and by an old `gene-LOC…` alias,
    BLAST link-outs, search results.
-6. **Roll out** to every gene set (Amphimedon, Petromyzon, Danio as reloads).
+6. **Roll out** to every gene set. Reloads where a fix adds features: Danio, and the eight
+   RefSeq gene sets with 13 mitochondrial mRNAs each, Amphimedon among them (it also gains
+   *Gro* copy 2) — step 1 results. **Re-ship
+   everything the gate passes** (web-host review): some web-host databases are older copies of
+   the compute box's (Danio was added there only on 2026-10-21), so never assume a web copy
+   already matches.
 7. **Delete**, once the gate is clean everywhere: the three emitters, the three coords
    writers, `detect_format`, the four FASTA renamers, `strip_id_prefix.pl`,
    `add_id_versions.pl`, the loader's manifest and candidate guessing, copy2moop's
@@ -316,6 +326,31 @@ These rules reproduce today's database IDs exactly. Step 1 below proves it.
    `generateFeatureCoordsIndex()` and `generateExonCoordsIndex()` (`gene_set_functions.php`
    ~598, which also writes stripped duplicate rows), `lib/gene_isoforms.php` (3 places),
    `tools/primer_maker.php` ~239, and the ID matching in `api/get_gff.php` (~60).
+
+## Step 1 results (2026-10-21)
+
+`analysis_parsers/build_id_map.pl` (the map builder), `scripts/compare_id_map_to_db.pl` (map vs
+organism.sqlite, both directions: in the map but not the database, in the database but not the
+map, wrong parent, wrong type) and `scripts/id_map_step1.sh` (every gene set in
+active_genesets.tsv, the shell's own source classification and metadata keys; read-only).
+Output: `dev/smr_dev/id_map_step1/all/summary.tsv` (one line per gene set, differences grouped
+by kind) and one `.diff.tsv` per gene set listing every differing feature.
+
+| Result | Gene sets |
+|---|---|
+| **Identical** (every feature, type and parent, both directions) | **59**: 57 in the run + Rousettus RS_101 and Sturnira RS_100.20210611 (see below). Includes RefSeq (Nematostella RS_101, Bradyrhizobium, most bats), other (Congeria, Nvec NV2, Bradypodion ×2 with the prefix rewrite) and lift (Parastichopus). |
+| **Only the listed fixes** | **9**: Amphimedon (*Gro* copy 2 + 13 mitochondrial mRNAs, their 14 CDSs move under them); Artibeus, Desmodus, Hipposideros, Myotis myotis, Nothobranchius, Petromyzon, Pteropus alecto (13 mitochondrial mRNAs each, nothing else); Danio, run by hand as it is not in active_genesets.tsv (163,177/163,177 identical + its 150 immune-segment proteins, 145 genes). |
+| **Database older than its files** | **14**: the 12 land-planarian `*.kc*` sets (GFF 2026-08-17, database 2026-07-28: the database still holds TransDecoder `….p1:cds` CDSs), Notamacropus T2T_SIMR_ANNOT (GFF 2026-10-04) and Schmidtea polychroa Spol_FtD1 (GFF 2026-08-17) — the last two are the gene-less sets of `PIPELINE_CHECKS_FROM_WEB_2026-10-21.md`. Cannot confirm or refute the rules until rebuilt; for bvag every map CDS/protein matches a record in today's FASTAs (0 of 36,548 unmatched). **Rerun step 1 after their rebuild.** |
+| **Wrong annotation file** | **1**: Drosophila. The database was built from the Ensembl BDGP6.54 GFF; the folder now holds NCBI's RefSeq annotation (`FB_Rel_6.54`, GeneID-based IDs). Same counts in every category, every ID different. Which annotation the fly uses is a decision, not a rule question. |
+| Not compared | 7 with no organism.sqlite on the compute box (5 Schmidtea mediterranea, Medicago, test_ejr). |
+
+**active_genesets.tsv points nowhere for 6 entries.** Three use the annotation folder's name
+instead of the gene set's (`BDGP6.54` → `FB_Rel_6.54`, `Release-101` → `RS_101`,
+`Release-100.20210611` → `RS_100.20210611`; their databases still use the old names); three name
+folders no longer in `genomes/v2` (Phagocata velata pvel.kc3, pvel.kc4, Schmidtea polychroa
+GCA_044892525.1). Danio is missing from it.
+
+Rule correction found writing step 1: see "ID rules" — other/lift keep non-coding features.
 
 ## Web-host review (2026-10-21)
 
