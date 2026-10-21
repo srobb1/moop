@@ -60,3 +60,25 @@ Schmidtea mediterranea 16k, Schizocardium 8k, Sinorhizobium 3). Checked the curr
 through it (`assign_gene_names_v2.pl` 960, 1221, 1558, 1574, 2483), and
 `tests/naming_end_to_end.pl` covers it. These come from the old naming run and go away on
 reprocessing — except Schizocardium and Sinorhizobium, per item 2.
+
+## Answers from the compute box (2026-10-21) — item 1, BUSCO
+
+1. **Which file BUSCO ran on: all isoforms.** `busco_job_cmd.txt` for both RS_101 runs:
+   `IN_FASTA=genomes/v2/Nematostella_vectensis/GCF_932526225.1/RS_101/protein.aa.fa` — the
+   delivered RefSeq proteins, 32,370 for 19,231 genes (6,166 genes have more than one).
+   **Measured:** BUSCO 5.4.4, metazoa_odb10, rerun on one longest protein per gene
+   (`dev/smr_dev/busco_isoform_test/`): **D 24.9% → 0.6%**, C 97.6% → 96.8%, S 72.7% → 96.2%,
+   M 2.0% → 2.6%. So the card's "duplicated" is almost entirely isoforms. The same holds for every
+   gene set with several proteins per gene. Not yet decided (user): rerun BUSCO on a
+   longest-isoform file for every gene set (annotation pipeline), and what the card shows meanwhile.
+2. **`protein_fasta_md5` is the md5 of the DELIVERED protein file** (the datastore's
+   `protein.aa.fa`, the one BUSCO ran on): RS_101 `44468053…` matches it exactly. The shipped
+   `protein.aa.fa` is MOOP's rewritten copy (names added to headers, proteins with internal stops
+   dropped), so its md5 differs by design. **The web should not compare it with the shipped file.**
+   The pipeline already does the staleness check (`warnings`: "protein.aa.fa is newer than the
+   BUSCO results"); the web can show `warnings`.
+3. **"3 of 6 delivered" — nothing is missing.** The six gene sets in the spec (Chamaeleo
+   MENDER_20260701, bvag, cpin, crob, dmul, bkew) are the ones that got that staleness WARNING in
+   the 2026-10-20 dry parse of all 88 BUSCO folders, not six deliveries. `busco.json` is written
+   only when a gene set goes through `process_one_geneset.sh`; so far only the three test reloads
+   have (Congeria COKUS1KC, Nvec NV2, Nvec RS_101). The rest arrive as each gene set is reprocessed.
