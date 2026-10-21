@@ -532,7 +532,7 @@
             <small class="text-muted fw-normal">(leave blank to skip indexing)</small>
           </label>
           <input type="text" class="form-control" id="gffActionAttrs"
-                 value="Name,ID" placeholder="e.g. Name,ID,gene_id">
+                 value="<?= htmlspecialchars(MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES) ?>" placeholder="e.g. Name,ID,Alias,gene_id">
           <div class="form-text">Comma-separated GFF attribute names to index for feature name search.</div>
         </div>
 

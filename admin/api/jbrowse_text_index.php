@@ -10,7 +10,7 @@
  *   organism   - organism directory name  (e.g. Nematostella_vectensis)
  *   assembly   - assembly ID              (e.g. GCA_033964005.1)
  *   track_id   - JBrowse trackId          (e.g. track_e1f2d5134e)
- *   attributes - comma-separated GFF attributes to index  [default: Name,ID]
+ *   attributes - comma-separated GFF attributes to index  [default: MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES]
  */
 
 require_once __DIR__ . '/../../admin/admin_init.php';
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $organism   = trim($_POST['organism']   ?? '');
 $assembly   = trim($_POST['assembly']   ?? '');
 $track_id   = trim($_POST['track_id']   ?? '');
-$attributes = trim($_POST['attributes'] ?? 'Name,ID');
+$attributes = trim($_POST['attributes'] ?? MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES);
 
 if (empty($organism) || empty($assembly) || empty($track_id)) {
     echo json_encode(['success' => false, 'error' => 'organism, assembly, and track_id are required']);

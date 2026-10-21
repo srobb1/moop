@@ -82,3 +82,35 @@ reprocessing — except Schizocardium and Sinorhizobium, per item 2.
    the 2026-10-20 dry parse of all 88 BUSCO folders, not six deliveries. `busco.json` is written
    only when a gene set goes through `process_one_geneset.sh`; so far only the three test reloads
    have (Congeria COKUS1KC, Nvec NV2, Nvec RS_101). The rest arrive as each gene set is reprocessed.
+
+## 4. Unnamed genes are "named" by their transcript ID (decide — user wants this looked at)
+
+Found 2026-10-21 (web host) in a Data Exporter export. For a gene no step can name,
+`assign_gene_names_v2.pl:71` keeps "the transcript id stays the name", and when there is no
+description at all the description is the transcript id too. Shipped genes.gff, e.g. NV2:
+`ID=NV2g000002000.1;Name=NV2t000002001.1;Note=NV2t000002001.1`. Measured in the databases
+(gene's feature_name / feature_description == its first transcript's uniquename):
+
+| gene set | genes | name = transcript id | description = transcript id |
+|---|---|---|---|
+| Congeria_kusceri COKUS1KC (new pipeline) | 43,768 | 38,743 (89%) | 23,222 |
+| Nematostella_vectensis NV2 (new pipeline) | 24,526 | 18,977 (77%) | 7,977 |
+| Medicago_sativa | 164,632 | 27,229 | 0 |
+| ~40 others | | 70–9,000 each | 0 |
+| Nematostella RS_101 (RefSeq) | 19,231 | 0 | 0 |
+
+The two big cases are both new-pipeline reloads, so this spreads as gene sets are reprocessed.
+It also includes genes WITH a description (NV2g008260000.1 "von Willebrand factor type A
+domain-containing protein" has Name=NV2t008260001.1).
+
+What it costs on the web:
+- **Search ranking.** The tie-break "among equal matches, genes with a name first"
+  (`(COALESCE(f.feature_name,'') <> '') DESC`, lib/database_queries.php) counts a transcript id
+  as a name, so for these gene sets it no longer separates identifiable genes from anonymous ones.
+- **Display.** The gene page shows a transcript id as the gene's description where it would say
+  "No description available"; exports carry the id in gene_name and gene_description.
+
+**Suggested:** an unnamed gene's Name and description are EMPTY (no Name=/Note= on the gene,
+empty in geneNames.tsv → features.tsv). The web already shows the gene ID when there is no name,
+and search/exports handle empty. Check `tests/naming_end_to_end.pl` expectations for the
+no-name case before changing it.

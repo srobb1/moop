@@ -11,7 +11,7 @@
  *   gene_set   - gene set name (e.g. v1, OGS1.0)
  *   force      - 1 to re-build even if files already exist
  *   text_index - 1 to also build the Trix text-search index
- *   attributes - comma-separated GFF attributes for text-index [default: Name,ID]
+ *   attributes - comma-separated GFF attributes for text-index [default: MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES]
  *
  * Steps performed:
  *   1. Create data/genomes/{org}/{asm}/{gene_set}/
@@ -39,7 +39,7 @@ $assembly   = trim($_POST['assembly']   ?? '');
 $gene_set   = trim($_POST['gene_set']   ?? '');
 $force      = !empty($_POST['force']);
 $do_index   = !empty($_POST['text_index']);
-$attributes = trim($_POST['attributes'] ?? 'Name,ID');
+$attributes = trim($_POST['attributes'] ?? MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES);
 
 if (empty($organism) || empty($assembly) || empty($gene_set)) {
     echo json_encode(['success' => false, 'error' => 'Organism, assembly, and gene_set are required']);

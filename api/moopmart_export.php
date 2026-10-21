@@ -12,7 +12,8 @@
  *   output_format        - 'tsv' | 'fasta'  (default: tsv)
  *   fasta_mode           - 'gene'|'upstream'|'downstream'|'exons'|'protein'|'transcript'|'cds'
  *   flank_bp             - int, 1–100000 (upstream/downstream only; default: 500)
- *   annotation_columns[] - annotation source names to include as TSV columns (empty = all)
+ *   annotation_columns[] - annotation source names to include as TSV columns (empty = none;
+ *                          the page has the user pick them)
  */
 
 include_once __DIR__ . '/../tools/tool_init.php';

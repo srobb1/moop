@@ -11,6 +11,7 @@
 // Load admin initialization (handles auth, config, includes)
 include_once __DIR__ . '/admin_init.php';
 require_once __DIR__ . '/../lib/functions_data.php';
+require_once __DIR__ . '/../lib/jbrowse/gene_set_functions.php';   // MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES
 
 // Load layout system
 include_once __DIR__ . '/../includes/layout.php';

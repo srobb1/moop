@@ -7,6 +7,15 @@ require_once __DIR__ . '/gene_track_index.php';
  */
 
 /**
+ * GFF attributes `jbrowse text-index` makes searchable, unless an admin types others.
+ * The one default: the three admin endpoints fall back to it and Manage JBrowse prints it as
+ * the field's value (its JS resets to that). Alias is in it because aligned gene sets keep
+ * each feature's original ID as Alias= (notes/GFF_FASTA_ID_ALIGNMENT_PLAN.md), so a search
+ * for gene-LOC5505848 still finds 5505848. A GFF without Alias= indexes exactly as before.
+ */
+const MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES = 'Name,ID,Alias';
+
+/**
  * Where a JBrowse trix (text-search) index is written, and the URL it is served from:
  * data/genomes/{organism}/{assembly}[/{gene_set}] -- `jbrowse text-index --out` adds trix/.
  *

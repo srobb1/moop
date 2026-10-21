@@ -10,7 +10,7 @@
  *   assembly   - assembly ID             (e.g. GCA_033964005.1)
  *   gene_set   - gene set name           [default: v1]
  *   text_index - 1 to also rebuild the Trix text-search index
- *   attributes - comma-separated GFF attributes for text-index [default: Name,ID]
+ *   attributes - comma-separated GFF attributes for text-index [default: MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES]
  */
 
 require_once __DIR__ . '/../../admin/admin_init.php';
@@ -27,7 +27,7 @@ $organism   = trim($_POST['organism']   ?? '');
 $assembly   = trim($_POST['assembly']   ?? '');
 $gene_set   = trim($_POST['gene_set']   ?? 'v1');
 $do_index   = !empty($_POST['text_index']);
-$attributes = trim($_POST['attributes'] ?? 'Name,ID');
+$attributes = trim($_POST['attributes'] ?? MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES);
 
 if (empty($organism) || empty($assembly)) {
     echo json_encode(['success' => false, 'error' => 'Organism and assembly are required']);

@@ -306,7 +306,9 @@ function _openGffModal(opts) {
     document.getElementById('gffActionModalTitle').textContent = opts.title;
     document.getElementById('gffActionModalDesc').textContent  = opts.desc;
     document.getElementById('gffActionAttrsGroup').style.display = opts.showAttrs ? '' : 'none';
-    document.getElementById('gffActionAttrs').value = 'Name,ID';
+    // Back to the default the page printed (MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES), not a copy of it.
+    const attrsEl = document.getElementById('gffActionAttrs');
+    attrsEl.value = attrsEl.defaultValue;
     document.getElementById('gffActionResult').style.display = 'none';
     document.getElementById('gffActionLog').textContent = '';
 
