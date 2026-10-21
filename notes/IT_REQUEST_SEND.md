@@ -1,5 +1,11 @@
 # Request: additional memory and faster storage for the SIMRbase VM
 
+> ⚠️ **2026-10-21 — DO NOT SEND AS WRITTEN.** The data volume now answers random reads in
+> **0.55 ms** (was 32 ms when this was written; O_DIRECT, `notes/bench/disk_random_read.py`).
+> A cold search across the 49 bats now takes **3–6 s** (was 25–91 s). The storage case below
+> has been met, and any RAM case that rested on the slow disk needs re-measuring before it is
+> made. Current figures: CLAUDE.md §9.
+
 **Host:** simrbasenew · RHEL 9 · currently 16 GB RAM, 1 TB data volume
 
 ---

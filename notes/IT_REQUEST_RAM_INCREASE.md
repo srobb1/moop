@@ -1,5 +1,11 @@
 # Request to IT: faster storage and more RAM for the MOOP/SIMRbase VM
 
+> ⚠️ **2026-10-21 — DO NOT SEND AS WRITTEN.** The data volume now answers random reads in
+> **0.55 ms** (was 32 ms when this was written; O_DIRECT, `notes/bench/disk_random_read.py`).
+> A cold search across the 49 bats now takes **3–6 s** (was 25–91 s). The storage case below
+> has been met, and any RAM case that rested on the slow disk needs re-measuring before it is
+> made. Current figures: CLAUDE.md §9.
+
 **Status 2026-07-30: numbers current, ready to send.** Rewritten after the pipeline reload
 completed — every figure below was re-measured on that date. Two earlier drafts contained
 wrong numbers (§5 records both, and why), so nothing here is carried over on trust.

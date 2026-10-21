@@ -262,19 +262,28 @@ reads like one, and it works against the goal the schema is built around. Where 
 creates a staleness risk, the answer is regeneration discipline (proactive build + a rebuild
 control), not schema growth.
 
-**Measured, on this host (figures refreshed 2026-07-31):** 85 databases totalling **33 GB**
-against ~12 GB of page cache, so most data is still cold most of the time — and cold is what
-dominates. `COUNT(*) FROM annotation` on Procerodes_sp takes **401 ms cold and 2.7 ms warm**
-(~150×). Every megabyte added to a database competes for that cache and evicts something a
-user is about to need. Before optimising SQL, check you are not actually measuring the disk.
+**Measured, on this host (figures refreshed 2026-10-21):** 85 databases totalling **33 GB**
+against ~12 GB of page cache, so most data is still cold most of the time. The data volume
+now answers a random read in **0.55 ms** (`notes/bench/disk_random_read.py`, O_DIRECT; it was
+32 ms in July — `lsblk` still reports it rotational because it is a VMware virtual disk, so
+trust the latency, not the flag). `COUNT(*) FROM annotation` on Procerodes_sp takes **8–18 ms
+cold and ~2 ms warm** (eviction verified with mincore). A cold cross-organism search over the
+49 bats takes **3–6 s** through the real endpoint. Cold still costs a multiple of warm, and
+every megabyte added to a database still competes for that cache — the lean-schema argument
+above stands — but cold is no longer catastrophic. Before optimising SQL, measure cold AND
+warm, and check you are not actually measuring the disk.
 
-⚠️ **Earlier revisions of this file said 66 GB and 7,051 ms cold.** Both were true when
-written and are now stale by an order of magnitude: the 2026-07-30 reload halved the corpus
-(contentless FTS, `date` moved to `annotation_source`) and the 2026-07-31 FTS rebuild ran
-`VACUUM`, which made each annotation table contiguous rather than scattered through its
-file. **Same SQL, same rows, 17.6× faster purely from where the bytes sit.** The argument
-above is unchanged — cache residency still dominates query shape — but do not quote the old
-multiplier.
+The search's **unfiltered fast path** (the per-type quota pool) is still worth 2–3× on a cold
+cross-organism search over any filtered search (helicase 5.7 s vs 10.2 s, binding 2.9 vs
+8.9 s). Anything that sends a filter by default throws that away — the main Search page did,
+from June to 2026-10-21, because "every type ticked" was sent as a list of every type.
+
+⚠️ **Earlier revisions of this file said 66 GB / 7,051 ms cold, then 401 ms cold.** Each was
+true when written. The first drop came from the 2026-07-30 reload and the 2026-07-31
+`VACUUM` (same SQL, same rows, 17.6× faster purely from where the bytes sit); the second from
+the storage change (32 ms → 0.55 ms random reads, found 2026-10-21). Do not quote the old
+multipliers. The `notes/` files below predate the storage change — their mechanisms hold,
+their absolute timings do not.
 
 Numbers, fast/slow query shapes and the cross-organism fan-out cost:
 `notes/QUERY_PERFORMANCE.md`. The cold-search cost model, and why `bm25()` was removed from

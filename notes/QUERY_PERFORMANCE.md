@@ -1,5 +1,11 @@
 # Query performance — what is fast, what is slow, and what actually decides it
 
+> ⚡ **2026-10-21 — the storage under these numbers changed.** Random reads on the data volume
+> now take **0.55 ms** (were 32 ms; `notes/bench/disk_random_read.py`, O_DIRECT). Re-measured:
+> the `COUNT(*)` below is **8–18 ms cold, ~2 ms warm** (was 401 / 2.7), and a cold 49-bat search
+> is **3–6 s** (was 25–91 s). The mechanisms described here still hold; the absolute timings
+> do not. Current figures: CLAUDE.md §9.
+
 Measured 2026-07-22 against the live databases on this host, **and re-measured 2026-07-31
 after the reload and the FTS rebuild.** Every number below is real, not estimated.
 

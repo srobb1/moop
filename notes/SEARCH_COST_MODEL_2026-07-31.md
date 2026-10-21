@@ -1,5 +1,11 @@
 # Cold search: the measured cost model, and what to do about it
 
+> ⚡ **2026-10-21 — the storage under these numbers changed.** Random reads on the data volume
+> now take **0.55 ms** (were 32 ms; `notes/bench/disk_random_read.py`, O_DIRECT). Re-measured:
+> the `COUNT(*)` below is **8–18 ms cold, ~2 ms warm** (was 401 / 2.7), and a cold 49-bat search
+> is **3–6 s** (was 25–91 s). The mechanisms described here still hold; the absolute timings
+> do not. Current figures: CLAUDE.md §9.
+
 **Date:** 2026-07-31. Everything here is measured on this host unless marked *estimated*.
 Harness: `testing/fts_split/` (`bench.py`, `decompose.py`, `nobm25.py`, `ladder.py`) and
 `notes/bench/persistence.py`. All uncommitted at time of writing.
