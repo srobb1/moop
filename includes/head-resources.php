@@ -25,7 +25,7 @@ $site = $config->getString('site');
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="<?php echo "/$images_path/favicon.ico"; ?>">
+    <link rel="icon" href="<?= moop_asset_url_from_site_path($config->getUrl('favicon_path')) ?>">
     <?php if (function_exists('generate_csrf_token')): ?>
     <meta name="csrf-token" content="<?= htmlspecialchars(generate_csrf_token(), ENT_QUOTES) ?>">
     <?php endif; ?>

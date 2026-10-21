@@ -352,13 +352,22 @@ footer .footer-meta {
   padding-left: 10px;
 }
 
+/* Logo + site title read as one brand unit: logo sits close to the title, title is semibold. */
 .navbar-brand {
-  margin-right: 5px;
+  margin-right: 0;
+  /* No vertical padding, so the 34px logo fits within the nav links' height and the bar stays 56px */
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .navbar-brand img {
-  height: 25px;
-  vertical-align: text-bottom;
+  height: 34px;
+  vertical-align: middle;
+}
+
+.navbar .nav-link.site-title {
+  font-weight: 600;
+  padding-left: 2px;
 }
 
 .navbar .nav-link {

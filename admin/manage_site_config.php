@@ -325,8 +325,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $width = $img_info[0];
                         $height = $img_info[1];
                         
-                        if ($width < 16 || $width > 256 || $height < 16 || $height > 256) {
-                            $error = "Favicon dimensions must be 16-256px. Your image: {$width}x{$height}";
+                        $limits = $config->getEditableConfigMetadata()['favicon_filename']['upload_info'];
+                        if ($width < $limits['min_width'] || $width > $limits['max_width']
+                            || $height < $limits['min_height'] || $height > $limits['max_height']) {
+                            $error = "Favicon dimensions must be {$limits['min_width']}-{$limits['max_width']}px. Your image: {$width}x{$height}";
                         } else {
                             // Upload successful
                             $filename = 'favicon.' . $file_ext;

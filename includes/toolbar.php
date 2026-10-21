@@ -50,7 +50,7 @@ if ($va_previewing) {
       <!-- Left nav items -->
       <ul class="navbar-nav me-auto">
         <li class="nav-item">
-          <a class="nav-link" href="/<?= $site ?>/index.php"><i class="fa fa-home me-1"></i><?= htmlspecialchars($title) ?></a>
+          <a class="nav-link site-title" href="/<?= $site ?>/index.php"><?= htmlspecialchars($title) ?></a>
         </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
