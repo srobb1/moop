@@ -568,7 +568,10 @@ $(document).ready(function () {
 
     applyContextScope(typeof scopeContext !== 'undefined' ? scopeContext : null);
     updateScopeSummary();
-    // Only load annotation types for pre-selected organisms; otherwise wait for user to select
+    // Only load annotation types for pre-selected organisms; otherwise wait for user to select.
+    // applyContextScope() above already scheduled this load through onScopeChange(); cancel that
+    // and load once, now -- otherwise every page opened with a context requested it twice.
+    clearTimeout(sourcesLoadTimer);
     loadAnnotationSources();
 
     document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
