@@ -685,11 +685,13 @@ function moop_expression_bundle_values(array $experiment, array $features): arra
 }
 
 /**
- * Everything the gene page's Expression section needs, read from the bundles.
+ * One gene's values in every experiment this reader may see, read from the bundles ONCE —
+ * the gene page's summary and its TSV download both come from this, so they cannot differ.
  *
- * @return array|null null = show no section (no bundles, nothing visible, or overrides unreadable)
+ * @return array|null ['experiments' => …, 'values' => id => vals]; null = no bundles, nothing
+ *                    visible, or overrides unreadable (the page then shows no section)
  */
-function moop_expression_gene_page(string $organism, string $assembly, string $gene_set, string $gene, string $user_level): ?array
+function moop_expression_gene_data(string $organism, string $assembly, string $gene_set, string $gene, string $user_level): ?array
 {
     $dir = moop_expression_bundle_dir($organism, $assembly, $gene_set);
     if (!is_dir($dir)) return null;
@@ -707,5 +709,32 @@ function moop_expression_gene_page(string $organism, string $assembly, string $g
             unset($experiments[$i]);
         }
     }
-    return $experiments ? moop_expression_summarize($experiments, $values) : null;
+    return $experiments ? ['experiments' => $experiments, 'values' => $values] : null;
+}
+
+/**
+ * One gene's expression as a TSV, one row per sample (long format — sorts, filters and pivots
+ * in a spreadsheet without reshaping). Pure, so the tests drive it directly.
+ *
+ * Columns: gene, experiment, experiment_id, sample, condition, replicate, tpm.
+ * The sample values, not the condition averages the page draws: an average can be rebuilt from
+ * the rows, the replicates cannot be rebuilt from an average. A missing value is "NA", never 0
+ * (see the file header). An experiment without this gene has no rows — the same experiments the
+ * page counts as "without data".
+ */
+function moop_expression_gene_tsv(string $gene, array $experiments, array $values): string
+{
+    $cell = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string)$s);
+    $out  = "gene\texperiment\texperiment_id\tsample\tcondition\treplicate\ttpm\n";
+    foreach ($experiments as $eid => $e) {
+        if (!isset($values[$eid])) continue;
+        foreach ($e['samples'] as $i => $s) {
+            $v = $values[$eid][$i] ?? null;
+            $out .= implode("\t", array_map($cell, [
+                $gene, $e['label'], $e['slug'] ?? '', $s['name'], $s['group_name'], $s['replicate'] ?? '',
+                $v === null ? 'NA' : $v,
+            ])) . "\n";
+        }
+    }
+    return $out;
 }

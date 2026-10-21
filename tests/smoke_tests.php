@@ -1200,6 +1200,16 @@ ok(array_column($_gs['experiments'], 'level') === ['high', 'off', 'no data'], 's
 ok($_gs['detected'] === 1 && $_gs['with_data'] === 2, 'summary: "detected in 1 of 2" — an experiment without this gene is not counted as a "no"');
 ok($_gs['experiments'][0]['top_group'] === 'b' && $_gs['experiments'][0]['top_mean'] === 250.0, 'summary: names the highest condition');
 
+// --- the gene page's "Download TSV"
+$_tx3 = ['label' => 'Dev', 'slug' => 'a_dev', 'samples' => [
+    ['name' => 'S2', 'group_name' => 'early', 'replicate' => '1'],
+    ['name' => 'S1', 'group_name' => "la\tte", 'replicate' => '']]];
+$_tsv = explode("\n", rtrim(moop_expression_gene_tsv('g1', [3 => $_tx3, 4 => $_tx3], [3 => [2.5, null]]), "\n"));
+ok($_tsv[0] === "gene\texperiment\texperiment_id\tsample\tcondition\treplicate\ttpm", 'tsv: header names every column');
+ok(($_tsv[1] ?? '') === "g1\tDev\ta_dev\tS2\tearly\t1\t2.5", 'tsv: one row per sample, in display order, with the raw value');
+ok(($_tsv[2] ?? '') === "g1\tDev\ta_dev\tS1\tla te\t\tNA", 'tsv: a missing value is NA, never 0; a tab inside a name cannot shift columns');
+ok(count($_tsv) === 3, 'tsv: an experiment without this gene contributes no rows');
+
 // --- bars on the gene page
 $_grp = fn(array $m) => array_map(fn($k, $v) => ['group' => $k, 'mean' => $v, 'n' => 1], array_keys($m), $m);
 $_sv = moop_expression_sparkline_svg($_grp(['zygote' => 1.2, 'gastrula' => 265.0, 'polyp' => 0.0]), 'high');

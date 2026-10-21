@@ -40,9 +40,10 @@
 // Check for download request early (before other processing)
 $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
 $sequence_type = trim($_POST['sequence_type'] ?? '');
+$download_expression = ($_POST['download_expression'] ?? '') === '1';
 
 // Start output buffering if download is requested to prevent any stray output
-if ($download_file_flag) {
+if ($download_file_flag || $download_expression) {
     ob_start();
 }
 
@@ -553,8 +554,22 @@ if ($download_file_flag && !empty($sequence_type)) {
 // settled — this feature was loaded through $accessible_gene_set_ids — and each experiment's own
 // access level (with metadata/expression_overrides.json applied) is checked inside.
 require_once __DIR__ . '/../lib/expression_functions.php';
-$expression_summary = moop_expression_gene_page($organism_name, $genome_accession, $gene_set_name,
-                                                $feature_uniquename, get_access_level());
+$__expr_data = moop_expression_gene_data($organism_name, $genome_accession, $gene_set_name,
+                                         $feature_uniquename, get_access_level());
+$expression_summary = $__expr_data
+    ? moop_expression_summarize($__expr_data['experiments'], $__expr_data['values']) : null;
+
+// "Download TSV" in the Expression card: the same read the card shows, one row per sample.
+if ($download_expression && $__expr_data && $__expr_data['values']) {
+    require_once __DIR__ . '/../lib/download_filename.php';
+    while (ob_get_level()) ob_end_clean();
+    $__fn = moop_download_filename('expression',
+        [$organism_name, $genome_accession, $gene_set_name, $feature_uniquename], 'tsv');
+    header('Content-Type: text/tab-separated-values; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . addcslashes($__fn, '"\\') . '"');
+    echo moop_expression_gene_tsv($feature_uniquename, $__expr_data['experiments'], $__expr_data['values']);
+    exit;
+}
 
 // Render page using layout system
 echo render_display_page(

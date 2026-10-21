@@ -447,6 +447,16 @@
                     <?php endif; ?>
                 <?php endif; ?>
             </span>
+            <?php if ($__ex['with_data'] > 0): ?>
+            <form method="POST" action="" class="ms-auto">
+                <?= csrf_input_field() ?>
+                <input type="hidden" name="download_expression" value="1">
+                <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
+                        title="This gene's TPM in every sample, one row per sample">
+                    <i class="fa fa-download"></i> TSV
+                </button>
+            </form>
+            <?php endif; ?>
         </div>
         <div id="expressionSection" class="collapse show">
             <div class="card-body py-2">
