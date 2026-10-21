@@ -211,7 +211,7 @@ function moopmartCountChildRows(array $gene_feature_ids, string $db_path): array
  *
  * @param int[]  $gene_feature_ids
  * @param string $db_path
- * @return array [gene_feature_id => [['mrna_id'=>'...', 'protein_id'=>'...'], ...]]
+ * @return array [gene_feature_id => [['mrna_fid'=>int, 'mrna_id'=>'...', 'protein_id'=>'...'], ...]]
  */
 function moopmartGetChildIds(array $gene_feature_ids, string $db_path): array
 {
@@ -227,6 +227,7 @@ function moopmartGetChildIds(array $gene_feature_ids, string $db_path): array
         // Feature type may be stored as 'protein' or 'polypeptide' depending on the source GFF.
         $query = "SELECT
                       mrna.parent_feature_id  AS gene_fid,
+                      mrna.feature_id         AS mrna_fid,
                       mrna.feature_uniquename AS mrna_id,
                       COALESCE(
                           (SELECT prot.feature_uniquename FROM feature prot
@@ -246,6 +247,7 @@ function moopmartGetChildIds(array $gene_feature_ids, string $db_path): array
 
         foreach (fetchData($query, $db_path, array_merge($chunk, $mrna_types)) as $row) {
             $result[(int)$row['gene_fid']][] = [
+                'mrna_fid'   => (int)$row['mrna_fid'],
                 'mrna_id'    => $row['mrna_id'],
                 'protein_id' => $row['protein_id'] ?? '',
             ];
@@ -256,8 +258,9 @@ function moopmartGetChildIds(array $gene_feature_ids, string $db_path): array
 
 /**
  * Expand gene-level feature rows to one row per mRNA child.
- * Each expanded row inherits the gene row's data and adds mrna_id and protein_id.
- * Genes with no mRNA children produce one row with empty mrna_id/protein_id.
+ * Each expanded row inherits the gene row's data and adds mrna_id, protein_id and
+ * mrna_feature_id (what moopmartRowAnnotations() reads the isoform's own annotations by).
+ * Genes with no mRNA children produce one row with empty ids and a null mrna_feature_id.
  *
  * @param array  $gene_features  Rows from moopmartAttachCoords() with db_path set
  * @param string $db_path        Path to this organism's organism.sqlite
@@ -274,15 +277,17 @@ function moopmartExpandToMrnaRows(array $gene_features, string $db_path): array
         $children = $child_ids[$f['feature_id']] ?? null;
         if ($children) {
             foreach ($children as $child) {
-                $row               = $f;
-                $row['mrna_id']    = $child['mrna_id'];
-                $row['protein_id'] = $child['protein_id'];
-                $expanded[]        = $row;
+                $row                    = $f;
+                $row['mrna_feature_id'] = $child['mrna_fid'];
+                $row['mrna_id']         = $child['mrna_id'];
+                $row['protein_id']      = $child['protein_id'];
+                $expanded[]             = $row;
             }
         } else {
-            $f['mrna_id']    = '';
-            $f['protein_id'] = '';
-            $expanded[]      = $f;
+            $f['mrna_feature_id'] = null;
+            $f['mrna_id']         = '';
+            $f['protein_id']      = '';
+            $expanded[]           = $f;
         }
     }
     return $expanded;
@@ -393,33 +398,11 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
     }
 
     // Annotation criteria — each entry generates its own EXISTS clause (AND between them).
-    // Annotations live on mRNA/transcript children, not directly on gene features.
     foreach ($filters['annotation_criteria'] ?? [] as $criterion) {
-        $crit_where  = [];
-        $crit_params = [];
-        if (!empty($criterion['src'])) {
-            $crit_where[]  = 'ans.annotation_source_name = ?';
-            $crit_params[] = $criterion['src'];
-        }
-        if (!empty($criterion['acc'])) {
-            $crit_where[]  = 'a.annotation_accession = ?';
-            $crit_params[] = $criterion['acc'];
-        }
-        if (!empty($criterion['kw'])) {
-            $parsed = moopmartBuildTextConditions($criterion['kw'], 'a.annotation_description');
-            if ($parsed) { foreach ($parsed['conditions'] as $c) $crit_where[] = $c; array_push($crit_params, ...$parsed['params']); }
-        }
-        if (!empty($crit_where)) {
-            $where[] = 'EXISTS (
-                SELECT 1
-                FROM feature           child
-                JOIN feature_annotation fa2 ON fa2.feature_id         = child.feature_id
-                JOIN annotation         a   ON fa2.annotation_id      = a.annotation_id
-                JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
-                WHERE child.parent_feature_id = f.feature_id
-                  AND ' . implode(' AND ', $crit_where) . '
-            )';
-            array_push($params, ...$crit_params);
+        $clause = moopmartAnnotationCriterionClause($criterion);
+        if ($clause) {
+            $where[] = $clause['sql'];
+            array_push($params, ...$clause['params']);
         }
     }
 
@@ -447,203 +430,126 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
 }
 
 // ============================================================
-// ATTACH-BASED BATCH QUERIES (multi-organism, shared connection)
+// ANNOTATIONS — one rule for which annotations belong to a row
 // ============================================================
 
 /**
- * Build the SQL + params for one organism's feature query, with all table
- * references prefixed by $pfx (e.g. "db3.") for use with ATTACH.
- * Returns ['sql' => string, 'params' => array], or ['sql'=>'','params'=>[]] if nothing to query.
+ * SQL for one annotation criterion: the gene matches if the annotation is stored on the
+ * gene itself OR on one of its children. Most loaders attach annotations to the mRNA, but a
+ * gene with no transcript level (Bradyrhizobium: 117,552 annotations on genes) carries them
+ * itself — a children-only test reported "No features matched" for every such filter.
+ *
+ * @param array $criterion ['src' => source name (exact), 'acc' => accession, 'kw' => keywords]
+ * @return array|null ['sql' => string, 'params' => array], or null if the criterion is empty
  */
-function moopmartBuildFeatureQueryPart(array $gene_set_ids, array $filters, string $organism, string $pfx): array
+function moopmartAnnotationCriterionClause(array $criterion): ?array
 {
-    $params       = [];
-    $placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
-    array_push($params, ...$gene_set_ids);
-
-    $types = !empty($filters['feature_types']) ? array_values($filters['feature_types']) : ['gene', 'pseudogene'];
-    $tp    = implode(',', array_fill(0, count($types), '?'));
-    $where = ["f.gene_set_id IN ($placeholders)", "f.feature_type IN ($tp)"];
-    array_push($params, ...$types);
-
-    if (!empty($filters['feature_ids'])) {
-        $ids = $filters['feature_ids'][$organism] ?? [];
-        if (empty($ids)) return ['sql' => '', 'params' => []];
-        $ph = implode(',', array_fill(0, count($ids), '?'));
-        $where[] = "f.feature_uniquename IN ($ph)";
-        array_push($params, ...$ids);
+    $crit_where  = [];
+    $crit_params = [];
+    if (!empty($criterion['src'])) {
+        $crit_where[]  = 'ans.annotation_source_name = ?';
+        $crit_params[] = $criterion['src'];
     }
-    if (!empty($filters['gene_name'])) {
-        $parsed = moopmartBuildTextConditions($filters['gene_name'], 'f.feature_name');
-        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
+    if (!empty($criterion['acc'])) {
+        $crit_where[]  = 'a.annotation_accession = ?';
+        $crit_params[] = $criterion['acc'];
     }
-    if (!empty($filters['gene_description'])) {
-        $parsed = moopmartBuildTextConditions($filters['gene_description'], 'f.feature_description');
-        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
+    if (!empty($criterion['kw'])) {
+        $parsed = moopmartBuildTextConditions($criterion['kw'], 'a.annotation_description');
+        if ($parsed) { foreach ($parsed['conditions'] as $c) $crit_where[] = $c; array_push($crit_params, ...$parsed['params']); }
     }
-    foreach ($filters['annotation_criteria'] ?? [] as $criterion) {
-        $crit_where = []; $crit_params = [];
-        if (!empty($criterion['src'])) { $crit_where[] = 'ans.annotation_source_name = ?'; $crit_params[] = $criterion['src']; }
-        if (!empty($criterion['acc'])) { $crit_where[] = 'a.annotation_accession = ?';      $crit_params[] = $criterion['acc']; }
-        if (!empty($criterion['kw'])) {
-            $parsed = moopmartBuildTextConditions($criterion['kw'], 'a.annotation_description');
-            if ($parsed) { foreach ($parsed['conditions'] as $c) $crit_where[] = $c; array_push($crit_params, ...$parsed['params']); }
-        }
-        if (!empty($crit_where)) {
-            $where[] = "EXISTS (SELECT 1 FROM {$pfx}feature child
-                        JOIN {$pfx}feature_annotation fa2 ON fa2.feature_id = child.feature_id
-                        JOIN {$pfx}annotation a ON fa2.annotation_id = a.annotation_id
-                        JOIN {$pfx}annotation_source ans ON a.annotation_source_id = ans.annotation_source_id
-                        WHERE child.parent_feature_id = f.feature_id AND " . implode(' AND ', $crit_where) . ')';
-            array_push($params, ...$crit_params);
-        }
-    }
+    if (empty($crit_where)) return null;
 
-    $where_sql = implode(' AND ', $where);
-    $sql = "SELECT DISTINCT f.feature_id, f.feature_uniquename AS uniquename,
-                f.feature_name AS name, f.feature_description AS description,
-                f.feature_type AS type, f.gene_set_id,
-                gs.gene_set_name, g.genome_accession, g.genome_name,
-                o.genus || ' ' || o.species AS organism_name,
-                ? AS organism_dir
-            FROM {$pfx}feature f
-            JOIN {$pfx}gene_set gs ON f.gene_set_id = gs.gene_set_id
-            JOIN {$pfx}genome   g  ON gs.genome_id  = g.genome_id
-            JOIN {$pfx}organism o  ON g.organism_id = o.organism_id
-            WHERE $where_sql";
-    array_unshift($params, $organism);
-
-    return ['sql' => $sql, 'params' => $params];
-}
-
-/**
- * Count features matching moopmartQueryFeatures filters (lightweight preview).
- */
-function moopmartCountFeatures(array $gene_set_ids, string $db_path, array $filters = []): int
-{
-    if (empty($gene_set_ids)) return 0;
-
-    $params       = [];
-    $placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
-    array_push($params, ...$gene_set_ids);
-
-    $where = ["f.gene_set_id IN ($placeholders)"];
-
-    $types = !empty($filters['feature_types'])
-        ? array_values($filters['feature_types'])
-        : ['gene', 'pseudogene'];
-    $tp    = implode(',', array_fill(0, count($types), '?'));
-    $where[] = "f.feature_type IN ($tp)";
-    array_push($params, ...$types);
-
-    if (!empty($filters['feature_ids'])) {
-        $ids = $filters['feature_ids'];
-        $ph  = implode(',', array_fill(0, count($ids), '?'));
-        $where[] = "f.feature_uniquename IN ($ph)";
-        array_push($params, ...$ids);
-    }
-    if (!empty($filters['gene_name'])) {
-        $parsed = moopmartBuildTextConditions($filters['gene_name'], 'f.feature_name');
-        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
-    }
-    if (!empty($filters['gene_description'])) {
-        $parsed = moopmartBuildTextConditions($filters['gene_description'], 'f.feature_description');
-        if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
-    }
-
-    foreach ($filters['annotation_criteria'] ?? [] as $criterion) {
-        $crit_where  = [];
-        $crit_params = [];
-        if (!empty($criterion['src'])) {
-            $crit_where[]  = 'ans.annotation_source_name = ?';
-            $crit_params[] = $criterion['src'];
-        }
-        if (!empty($criterion['acc'])) {
-            $crit_where[]  = 'a.annotation_accession = ?';
-            $crit_params[] = $criterion['acc'];
-        }
-        if (!empty($criterion['kw'])) {
-            $parsed = moopmartBuildTextConditions($criterion['kw'], 'a.annotation_description');
-            if ($parsed) { foreach ($parsed['conditions'] as $c) $crit_where[] = $c; array_push($crit_params, ...$parsed['params']); }
-        }
-        if (!empty($crit_where)) {
-            $where[] = 'EXISTS (
+    $crit_sql = implode(' AND ', $crit_where);
+    $match    = fn(string $holder) => "EXISTS (
                 SELECT 1
-                FROM feature           child
-                JOIN feature_annotation fa2 ON fa2.feature_id         = child.feature_id
+                FROM feature_annotation fa2
                 JOIN annotation         a   ON fa2.annotation_id      = a.annotation_id
                 JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
-                WHERE child.parent_feature_id = f.feature_id
-                  AND ' . implode(' AND ', $crit_where) . '
-            )';
-            array_push($params, ...$crit_params);
-        }
-    }
-
-    $where_sql = implode(' AND ', $where);
-
-    $query = "SELECT COUNT(DISTINCT f.feature_id) AS cnt
-              FROM feature f
-              JOIN gene_set gs ON f.gene_set_id  = gs.gene_set_id
-              JOIN genome   g  ON gs.genome_id   = g.genome_id
-              JOIN organism o  ON g.organism_id  = o.organism_id
-              WHERE $where_sql";
-
-    $rows = fetchData($query, $db_path, $params);
-    return (int)($rows[0]['cnt'] ?? 0);
+                WHERE fa2.feature_id IN ($holder)
+                  AND $crit_sql
+            )";
+    // Two EXISTS rather than one OR'd join, so each side keeps its index
+    // (feature_annotation.feature_id, feature.parent_feature_id).
+    return [
+        'sql'    => '(' . $match('f.feature_id') . ' OR '
+                        . $match('SELECT child.feature_id FROM feature child WHERE child.parent_feature_id = f.feature_id') . ')',
+        'params' => array_merge($crit_params, $crit_params),
+    ];
 }
 
 /**
- * Fetch annotations for a list of feature_ids, grouped by feature then source.
+ * Fetch the annotations of a set of genes and their children, keyed by the feature that
+ * holds them, so a row can be given exactly its own (moopmartRowAnnotations()).
+ *
+ * Keys: a transcript child's annotations under the TRANSCRIPT's feature_id; the gene's own
+ * annotations, and those of any non-transcript child, under the GENE's feature_id. This used
+ * to merge every isoform's annotations under the gene, so each isoform row of the export
+ * showed its siblings' hits too (15,203 Drosophila isoform rows), and it never looked at the
+ * gene itself, so a gene-level annotation was never exported at all.
  *
  * Chunked in batches of 500 to avoid oversized IN clauses on large result sets.
  *
- * @param int[]  $feature_ids
+ * @param int[]  $gene_feature_ids
  * @param string $db_path
- * @return array [feature_id => [source_name => [{accession, description}, ...], ...], ...]
+ * @return array [feature_id => [source_name => [accession => {accession, description}]]]
  */
-function moopmartGetAnnotationsForFeatures(array $feature_ids, string $db_path): array
+function moopmartGetAnnotationsForGenes(array $gene_feature_ids, string $db_path): array
 {
-    if (empty($feature_ids)) return [];
+    if (empty($gene_feature_ids)) return [];
 
-    // Annotations live on mRNA/transcript children, not on gene features directly.
-    // Join through parent_feature_id so gene feature_ids resolve to their children's
-    // annotations. Result is keyed by the gene (parent) feature_id.
+    $transcript_types = array_flip(moopmartMrnaTypes());
     $result = [];
-    foreach (array_chunk($feature_ids, 500) as $chunk) {
-        $ph    = implode(',', array_fill(0, count($chunk), '?'));
-        $query = "SELECT child.parent_feature_id   AS gene_feature_id,
-                         ans.annotation_source_name,
-                         a.annotation_accession,
-                         a.annotation_description
-                  FROM feature            child
-                  JOIN feature_annotation fa  ON fa.feature_id          = child.feature_id
-                  JOIN annotation         a   ON fa.annotation_id       = a.annotation_id
-                  JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
-                  WHERE child.parent_feature_id IN ($ph)
-                  ORDER BY child.parent_feature_id, ans.annotation_source_name, a.annotation_accession";
+    foreach (array_chunk($gene_feature_ids, 500) as $chunk) {
+        $ph     = implode(',', array_fill(0, count($chunk), '?'));
+        $select = "SELECT f.feature_id, f.parent_feature_id, LOWER(f.feature_type) AS type, %d AS is_child,
+                          ans.annotation_source_name, a.annotation_accession, a.annotation_description
+                   FROM feature            f
+                   JOIN feature_annotation fa  ON fa.feature_id          = f.feature_id
+                   JOIN annotation         a   ON fa.annotation_id       = a.annotation_id
+                   JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
+                   WHERE %s IN ($ph)";
+        $query  = sprintf($select, 0, 'f.feature_id') . ' UNION ALL ' . sprintf($select, 1, 'f.parent_feature_id')
+                . ' ORDER BY annotation_source_name, annotation_accession';
 
-        foreach (fetchData($query, $db_path, $chunk) as $row) {
-            $gfid = $row['gene_feature_id'];
-            $src  = $row['annotation_source_name'];
-            $acc  = $row['annotation_accession'];
-            // Deduplicate: the same accession may appear on multiple mRNA isoforms
-            $result[$gfid][$src][$acc] = [
+        foreach (fetchData($query, $db_path, array_merge($chunk, $chunk)) as $row) {
+            $holder = ($row['is_child'] && isset($transcript_types[$row['type']]))
+                ? (int)$row['feature_id']          // an isoform's own
+                : (int)($row['is_child'] ? $row['parent_feature_id'] : $row['feature_id']);  // the gene's
+            $acc = $row['annotation_accession'];
+            $result[$holder][$row['annotation_source_name']][$acc] = [
                 'accession'   => $acc,
                 'description' => $row['annotation_description'],
             ];
         }
     }
+    return $result;
+}
 
-    // Convert inner associative-by-accession arrays to plain indexed arrays
-    foreach ($result as &$by_source) {
-        foreach ($by_source as &$entries) {
-            $entries = array_values($entries);
+/**
+ * The annotations one exported row carries: its gene's own, plus — for an isoform row — that
+ * isoform's, and never a sibling isoform's. The download and the preview both read this, so
+ * the preview stays the file.
+ *
+ * @param array $anns Output of moopmartGetAnnotationsForGenes() for the row's database
+ * @param array $row  A row from moopmartExpandToMrnaRows()
+ * @return array [source_name => [{accession, description}, ...]], sources and accessions sorted
+ */
+function moopmartRowAnnotations(array $anns, array $row): array
+{
+    $merged = $anns[$row['feature_id']] ?? [];
+    $mfid   = $row['mrna_feature_id'] ?? null;
+    if ($mfid !== null) {
+        foreach ($anns[$mfid] ?? [] as $src => $entries) {
+            foreach ($entries as $acc => $entry) $merged[$src][$acc] = $entry;
         }
     }
-    unset($by_source, $entries);
-
-    return $result;
+    foreach ($merged as &$entries) {
+        ksort($entries, SORT_STRING);
+        $entries = array_values($entries);
+    }
+    unset($entries);
+    return $merged;
 }
 
 /**
@@ -1117,8 +1023,9 @@ function moopmartBuildPreviewRows(array $preview, array $annotation_columns_sele
                                   bool $ann_incl_src = true, string $ann_format = 'wide'): array {
     $clean_prev        = fn($s) => str_replace(["\r\n", "\r", "\n", "\t"], ' ', (string)$s);
     $ann_col_headers   = [];
-    $ann_by_uniquename = [];
+    $row_anns          = [];   // preview index => that row's own annotations
     $long              = $ann_format === 'long';
+    $preview           = array_values($preview);   // row_anns, rows and the long expansion share these indexes
 
     if (!empty($annotation_columns_selected)) {
         // The download's own column names (api/moopmart_export.php), so the preview is the file.
@@ -1133,23 +1040,21 @@ function moopmartBuildPreviewRows(array $preview, array $annotation_columns_sele
             }
         }
 
-        // Deduplicate by gene feature_id before fetching annotations
-        $seen_fids     = [];
-        $preview_by_db = [];
+        // One fetch per database for its genes, then each row takes only its own annotations
+        $gene_fids_by_db = [];
         foreach ($preview as $f) {
-            if (empty($f['db_path']) || isset($seen_fids[$f['feature_id']])) continue;
-            $seen_fids[$f['feature_id']]    = true;
-            $preview_by_db[$f['db_path']][] = $f;
+            if (!empty($f['db_path'])) $gene_fids_by_db[$f['db_path']][$f['feature_id']] = true;
         }
-        foreach ($preview_by_db as $db_path => $db_feats) {
-            $chunk_anns = moopmartGetAnnotationsForFeatures(array_column($db_feats, 'feature_id'), $db_path);
-            foreach ($db_feats as $f) {
-                $ann_by_uniquename[$f['uniquename']] = $chunk_anns[$f['feature_id']] ?? [];
-            }
+        $anns_by_db = [];
+        foreach ($gene_fids_by_db as $db_path => $fids) {
+            $anns_by_db[$db_path] = moopmartGetAnnotationsForGenes(array_keys($fids), $db_path);
+        }
+        foreach ($preview as $i => $f) {
+            $row_anns[$i] = moopmartRowAnnotations($anns_by_db[$f['db_path'] ?? ''] ?? [], $f);
         }
     }
 
-    $rows = array_map(function ($f) use ($annotation_columns_selected, $ann_by_uniquename, $ann_incl_id, $ann_incl_desc, $clean_prev) {
+    $rows = array_map(function ($f, $i) use ($annotation_columns_selected, $row_anns, $ann_incl_id, $ann_incl_desc, $clean_prev, $long) {
         $row = [
             'uniquename'       => $f['uniquename'],
             'name'             => $f['name']          ?? '',
@@ -1167,21 +1072,21 @@ function moopmartBuildPreviewRows(array $preview, array $annotation_columns_sele
         ];
         if ($long) return $row;   // expanded below, one row per annotation
         foreach ($annotation_columns_selected as $src) {
-            $entries = $ann_by_uniquename[$f['uniquename']][$src] ?? [];
+            $entries = $row_anns[$i][$src] ?? [];
             if ($ann_incl_id)   $row['ID:' . $src]          = implode('; ', array_map(fn($e) => $e['accession'], $entries));
             if ($ann_incl_desc) $row['Description:' . $src] = implode('; ', array_map(fn($e) => $clean_prev($e['description'] ?? ''), $entries));
         }
         return $row;
-    }, $preview);
+    }, $preview, array_keys($preview));
 
     // Long: the feature row repeated once per annotation, sources in the order chosen -- exactly
     // as the download writes it; a feature with none of the chosen annotations keeps one row.
     if ($long && $annotation_columns_selected) {
         $expanded = [];
-        foreach ($rows as $row) {
+        foreach ($rows as $i => $row) {
             $emitted = false;
             foreach ($annotation_columns_selected as $src) {
-                foreach ($ann_by_uniquename[$row['uniquename']][$src] ?? [] as $entry) {
+                foreach ($row_anns[$i][$src] ?? [] as $entry) {
                     $line = $row;
                     if ($ann_incl_src)  $line['annotation_source']      = $src;
                     if ($ann_incl_id)   $line['annotation_id']          = $entry['accession'];

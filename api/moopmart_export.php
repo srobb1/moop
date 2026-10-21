@@ -168,9 +168,10 @@ while (ob_get_level()) ob_end_clean();
 // =============================================================
 if ($output_format === 'tsv') {
 
-    // Determine annotation source columns — empty selection = no annotation columns
+    // Annotation source columns, in the order chosen -- the preview's order, so the preview is
+    // the file. (This used to sort() them, so wide headers came out in a different order.)
+    // Empty selection = no annotation columns.
     $source_cols = array_values($annotation_columns_selected);
-    sort($source_cols);
 
     // Strip embedded newlines/tabs that would break TSV parsing in Excel
     $clean = fn($s) => str_replace(["\r\n", "\r", "\n", "\t"], ' ', (string)$s);
@@ -242,12 +243,11 @@ if ($output_format === 'tsv') {
 
             // Expand gene rows to one row per mRNA before streaming
             $expanded   = moopmartExpandToMrnaRows($chunk, $db_path);
-            $fids       = array_column($chunk, 'feature_id'); // gene-level fids for annotation lookup
-            $chunk_anns = moopmartGetAnnotationsForFeatures($fids, $db_path);
+            $chunk_anns = moopmartGetAnnotationsForGenes(array_column($chunk, 'feature_id'), $db_path);
 
             foreach ($expanded as $f) {
                 $base     = array_map(fn($k) => ($feat_col_map[$k][1])($f), $active_feat);
-                $fid_anns = $chunk_anns[$f['feature_id']] ?? []; // feature_id is still the gene's
+                $fid_anns = moopmartRowAnnotations($chunk_anns, $f);   // this row's own, never a sibling isoform's
 
                 if ($ann_format === 'long') {
                     $emitted = false;

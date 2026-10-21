@@ -1675,6 +1675,52 @@ ok(strpos($_w, 'line 24: t1 repeats line 2 with a different name') !== false, 'a
 ok(strpos($_w, 'line 9') === false, 'an identical copy is not reported');
 
 // ----------------------------------------------------------------------------
+group('Data Exporter: each row carries its own annotations; gene-level ones are seen');
+require_once "$BASE/lib/moopmart_functions.php";
+// G1 has two isoforms with different hits plus one hit on the gene itself; G2 has no transcript
+// and its hit sits on the gene (Bradyrhizobium's shape). Shared function, so preview == download.
+$_mdb = sys_get_temp_dir() . '/moop_mm_' . getmypid() . '.sqlite';
+@unlink($_mdb);
+$_p = new PDO("sqlite:$_mdb");
+$_p->exec("CREATE TABLE organism (organism_id INTEGER PRIMARY KEY, genus TEXT, species TEXT);
+           CREATE TABLE genome (genome_id INTEGER PRIMARY KEY, organism_id INTEGER, genome_name TEXT, genome_accession TEXT);
+           CREATE TABLE gene_set (gene_set_id INTEGER PRIMARY KEY, genome_id INTEGER, gene_set_name TEXT);
+           CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_name TEXT, feature_description TEXT,
+                                 feature_type TEXT, feature_uniquename TEXT, parent_feature_id INTEGER, gene_set_id INTEGER);
+           CREATE TABLE annotation_source (annotation_source_id INTEGER PRIMARY KEY, annotation_source_name TEXT);
+           CREATE TABLE annotation (annotation_id INTEGER PRIMARY KEY, annotation_source_id INTEGER,
+                                    annotation_accession TEXT, annotation_description TEXT);
+           CREATE TABLE feature_annotation (feature_id INTEGER, annotation_id INTEGER);
+           INSERT INTO organism VALUES (1,'Testus','fixture');
+           INSERT INTO genome VALUES (1,1,'asm','ASM1');
+           INSERT INTO gene_set VALUES (1,1,'gs1');
+           INSERT INTO feature VALUES (1,'','','gene','G1',NULL,1),(2,'','','mRNA','M1',1,1),(3,'','','mRNA','M2',1,1),
+                                      (4,'','','gene','G2',NULL,1),(5,'','','cds','C2',4,1);
+           INSERT INTO annotation_source VALUES (1,'S');
+           INSERT INTO annotation VALUES (1,1,'X1','d1'),(2,1,'X2','d2'),(3,1,'Z','dz'),(4,1,'Y','dy');
+           INSERT INTO feature_annotation VALUES (2,1),(3,2),(1,3),(4,4);");
+$_p = null;
+$_genes = moopmartQueryFeatures([1], $_mdb);
+foreach ($_genes as &$_g) { $_g['db_path'] = $_mdb; $_g['organism_dir'] = 'Testus_fixture'; }
+unset($_g);
+$_rows = moopmartExpandToMrnaRows($_genes, $_mdb);
+$_by = [];
+foreach (moopmartBuildPreviewRows($_rows, ['S'], true, false, true, 'wide')['rows'] as $_r) {
+    $_by[$_r['mrna_id'] ?: $_r['uniquename']] = $_r['ID:S'];
+}
+ok(($_by['M1'] ?? null) === 'X1; Z', "an isoform row shows its own hit plus the gene's, not its sibling's (got " . var_export($_by['M1'] ?? null, true) . ')');
+ok(($_by['M2'] ?? null) === 'X2; Z', 'the sibling isoform likewise');
+ok(($_by['G2'] ?? null) === 'Y', 'a gene with no transcript shows the hit stored on the gene itself');
+$_long = moopmartBuildPreviewRows($_rows, ['S'], true, false, true, 'long')['rows'];
+ok(array_column(array_values(array_filter($_long, fn($r) => $r['mrna_id'] === 'M1')), 'annotation_id') === ['X1', 'Z'],
+   'long format: one line per annotation the isoform actually has');
+$_hit = fn($acc) => array_column(moopmartQueryFeatures([1], $_mdb,
+    ['annotation_criteria' => [['src' => 'S', 'acc' => $acc, 'kw' => '']]]), 'uniquename');
+ok($_hit('Y') === ['G2'], 'the annotation filter finds a hit stored on the gene itself');
+ok($_hit('X2') === ['G1'], 'the filter still finds a hit stored on an isoform (whole gene kept, every isoform)');
+@unlink($_mdb);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {
