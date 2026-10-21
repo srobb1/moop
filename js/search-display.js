@@ -227,8 +227,12 @@ $(document).ready(function () {
 
     // ── Annotation sources panel ─────────────────────────────────────────────
 
-    // Which sources are ticked, by name: {name: bool}. Nothing is ticked until the user picks --
-    // Step 3 asks for a choice rather than assuming every type, and the submit guard enforces it.
+    // What the user changed, by source name: {name: bool}. A source not in here is TICKED --
+    // every type is searched by default (user, 2026-10-21). Required selection was meant to keep
+    // searches cheap, but measured, the type filter barely changes a search's cost: it narrows
+    // rows the full-text match has already read. The cost is the organisms, which stay required.
+    // A type that appears when more organisms are added arrives ticked; one the user unticked
+    // stays unticked.
     let sourceOverrides = {};
 
     // The gene sets ticked for each organism that is only PARTLY ticked, as
@@ -253,7 +257,7 @@ $(document).ready(function () {
     function loadAnnotationSources() {
         const organisms = getCheckedOrganisms();
         if (!organisms.length) {
-            // One message at a time. The static "only the types you tick are searched"
+            // One message at a time. The static "all types are searched; untick any you don't want"
             // line is hidden here for the same reason the filter box is: with no types
             // listed there is nothing to tick and nothing to filter, so both would be
             // rules about a control that is not on screen. Shown again in
@@ -318,7 +322,7 @@ $(document).ready(function () {
 
             // Individual source rows — indented, clickable
             for (const src of sources) {
-                const on    = sourceOverrides[src.name] === true;
+                const on    = sourceOverrides[src.name] !== false;
                 const name  = escapeHtml(src.name);
                 const count = src.count ? ` <span class="text-muted small">(${Number(src.count).toLocaleString()})</span>` : '';
                 html += `<div class="org-select-row source-ind-row ps-4${on ? ' selected' : ''}"
@@ -437,12 +441,17 @@ $(document).ready(function () {
         updateAnnotTypesPanel();
     });
 
+    // The source filter for the search: null = no filter, when every listed type is ticked.
+    // Not a list of every name: ANY source filter takes the search off its fast path
+    // (searchFeaturesAndAnnotations(), lib/database_queries.php -- the pool is chosen inside the
+    // full-text index only when nothing is filtered), so "all, spelled out" costs far more than
+    // "all" for the same rows. The list shows only sources with data in this selection, so
+    // nothing outside it could match anyway. (The submit guard rejects nothing-ticked first.)
     function getCheckedSources() {
-        const sources = [];
-        $('.source-cb:checked').each(function () {
-            sources.push(this.dataset.source);
-        });
-        return sources.length ? sources : null;
+        const boxes   = $('.source-cb');
+        const checked = boxes.filter(':checked');
+        if (checked.length === boxes.length) return null;
+        return checked.toArray().map(cb => cb.dataset.source);
     }
 
     function updateSourcesSummary() {

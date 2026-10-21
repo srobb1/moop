@@ -242,7 +242,7 @@
                    Starts hidden because the panel starts empty. */ ?>
           <div class="px-3 pt-3" id="sources-help-line" style="display:none;">
             <div class="form-text moop-help">
-              Only the types you tick are searched. <?= help_modal_trigger('ann-types-modal', '', 'What each annotation type covers') ?>
+              All types are searched; untick any you don't want. <?= help_modal_trigger('ann-types-modal', '', 'What each annotation type covers') ?>
             </div>
           </div>
           <div class="px-2 pt-2 pb-1 border-bottom" id="sources-filter-wrap" style="display:none;">
@@ -307,8 +307,8 @@
       [[
           'heading' => '',
           'cards'   => [
-              ['label' => 'Only what you tick is searched',
-               'text'  => 'Leave a type unselected and its annotations are skipped.'],
+              ['label' => 'Every type starts ticked',
+               'text'  => 'Untick a type and its annotations are skipped.'],
               // No "the list follows Step 2" card: the panel itself says that, in place,
               // exactly when it is true — and stops saying it once types have loaded, which
               // a modal cannot do.
