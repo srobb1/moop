@@ -12,41 +12,9 @@
 let searchManager;
 let selectedOrganisms;
 
-/**
- * Handle tool button clicks on the group page.
- * POSTs the live selectedOrganisms list to the tool URL in a new tab,
- * so unchecked organisms are excluded and URL length is never an issue.
- */
+// Toolbox buttons: the live selection, via the shared js/modules/tool-launch.js.
 function handleToolClick(toolId) {
-    if (!selectedOrganisms || selectedOrganisms.length === 0) {
-        alert('Please select at least one organism');
-        return;
-    }
-
-    const toolBtn = document.getElementById(`tool-btn-${toolId}`);
-    if (!toolBtn) return;
-
-    const toolPath = toolBtn.getAttribute('data-tool-path');
-    if (!toolPath) return;
-
-    const siteName = (typeof sitePath !== 'undefined' ? sitePath : window.sitePath).replace(/^\//,'').split('/')[0];
-
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/${siteName}${toolPath}`;
-    form.target = '_blank';
-
-    selectedOrganisms.forEach(org => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'organisms[]';
-        input.value = org;
-        form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
+    postSelectionToTool(toolId, selectedOrganisms);
 }
 
 // Update search manager with currently selected organisms

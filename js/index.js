@@ -153,32 +153,9 @@ function updateSelectedList() {
 
 // ─── Tool submission ───────────────────────────────────────────────────────
 
+// The live selection, via the shared js/modules/tool-launch.js.
 function handleToolClick(toolId) {
-    if (selectedOrganisms.size === 0) {
-        alert('Please select at least one organism');
-        return;
-    }
-    const btn = document.getElementById(`tool-btn-${toolId}`);
-    if (!btn) return;
-    const toolPath = btn.getAttribute('data-tool-path');
-    if (!toolPath) return;
-
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `${sitePath}${toolPath}`;
-    form.target = '_blank';
-
-    Array.from(selectedOrganisms).forEach(org => {
-        const inp = document.createElement('input');
-        inp.type  = 'hidden';
-        inp.name  = 'organisms[]';
-        inp.value = org;
-        form.appendChild(inp);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
+    postSelectionToTool(toolId, Array.from(selectedOrganisms));
 }
 
 // ─── Tree tab filter (reused from old code) ────────────────────────────────

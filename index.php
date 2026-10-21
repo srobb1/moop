@@ -135,6 +135,7 @@ echo render_display_page(
         'page_script'        => [
             "/$site/js/modules/feature-search.js",
             "/$site/js/modules/taxonomy-tree.js",
+            "/$site/js/modules/tool-launch.js",
             "/$site/js/index.js",
         ],
         'inline_scripts'     => [

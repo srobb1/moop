@@ -146,6 +146,7 @@ if (!$is_taxonomy_group && empty($group_unknown) && !is_public_group($group_name
 // Configure display template
 $page_scripts = [
     "/$site/js/modules/organism-utils.js",
+    "/$site/js/modules/tool-launch.js",
     "/$site/js/groups-display.js"
 ];
 
