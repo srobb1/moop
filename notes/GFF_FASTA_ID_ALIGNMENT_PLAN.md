@@ -344,6 +344,9 @@ Pipeline: `scripts/process_one_geneset.sh` (~980–1185), `analysis_parsers/pars
 `scripts/strip_id_prefix.pl`, `scripts/add_id_versions.pl`, `scripts/rename_RefSeq_cds_fasta.pl`,
 `scripts/rename_Ensembl_cds_fasta.pl`, `scripts/rename_generic_fasta.pl`,
 `data_loaders/load_annotations_sqlite.pl`, `scripts/copy2moop_v2.sh:360`.
-Web: `lib/jbrowse/gene_set_functions.php` (`generateFeatureCoordsIndex`),
-`lib/gff_gene_model.php`, `lib/moopmart_functions.php` (coords), `lib/housekeeping.php`
-(health card).
+Web: `lib/jbrowse/gene_set_functions.php` (`generateFeatureCoordsIndex`,
+`generateExonCoordsIndex`), `lib/gff_gene_model.php`, `lib/gene_isoforms.php`,
+`tools/primer_maker.php`, `api/get_gff.php`, `lib/moopmart_functions.php` (coords),
+`lib/housekeeping.php` (health card), the JBrowse text-index default
+(`admin/api/jbrowse_register_gene_set.php`, `jbrowse_text_index.php`, `jbrowse_reprep_gff.php`,
+`admin/pages/manage_jbrowse.php`).
