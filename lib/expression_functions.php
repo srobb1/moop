@@ -910,7 +910,8 @@ function moop_expression_shade_colour(float $t): string
 function moop_expression_heatmap_svg(array $genes, array $experiments, array $matrix, string $mode = 'level', array $symbols = [],
                                      ?callable $gene_url = null): string
 {
-    $cell_w = 30; $cell_h = 18; $gap = 14; $head_h = 110;
+    $cell_w = 30; $cell_h = 18; $gap = 14;
+    $cond_cap = 40;     // a condition name longer than this is cut (whole in its hover)
     // Row labels: the id, right-aligned next to the cells, and -- only when some gene in the list
     // has one -- a narrow bold symbol column before it. Widths follow the longest of each
     // (~6.6 px a character at 11 px); a symbol longer than 14 characters is cut, whole in the hover.
@@ -931,10 +932,22 @@ function moop_expression_heatmap_svg(array $genes, array $experiments, array $ma
         $spans[$c[0]][1] = $x + $cell_w;
         $x += $cell_w; $prev = $c[0];
     }
-    // Slanted condition labels lean right past the last column: leave room for the longest.
+    // The header grows with what it holds, so nothing is cut that fits on a page:
+    //  - experiment names, ONE LINE EACH, stepped down in column order: a name starts over its
+    //    own columns and may run on past them, because the next name is on the next line --
+    //    so names are shown whole and never overprint (they used to be cut to their columns'
+    //    width, which left 3-condition experiments as "Gastrula, p…");
+    //  - condition names, slanted at 55 degrees, get as much height as the longest needs (~5.1 px
+    //    a character), up to $cond_cap characters; longer ones are cut, whole in the hover.
     $longest = 0;
-    foreach ($cols as [, $group]) $longest = max($longest, mb_strlen($group));
-    $width  = $x + (int)ceil(min($longest, 24) * 6.2 * 0.57) + 8;
+    foreach ($cols as [, $group]) $longest = max($longest, min($cond_cap, mb_strlen($group)));
+    $exp_line = 16;
+    $exp_h    = $exp_line * count($spans) + 6;
+    $cond_h   = max(40, (int)ceil($longest * 5.1) + 14);
+    $head_h   = $exp_h + $cond_h;
+    // Width: the last column plus the slanted labels' lean, or the furthest a name runs.
+    $width = $x + (int)ceil($longest * 6.2 * 0.57) + 8;
+    foreach ($spans as $i => [$x0]) $width = max($width, (int)ceil($x0 + 7.2 * mb_strlen((string)$experiments[$i]['label'])) + 8);
     $height = $head_h + count($genes) * $cell_h + 4;
     $esc = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
     $fmt = fn(float $v) => $v < 10 ? number_format($v, 1) : number_format($v, 0);
@@ -943,20 +956,22 @@ function moop_expression_heatmap_svg(array $genes, array $experiments, array $ma
                    $width, $height, $width, $height)
          . '<defs><pattern id="exprNoData" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
          . '<rect width="5" height="5" fill="#f1f3f5"/><line x1="0" y1="0" x2="0" y2="5" stroke="#ced4da" stroke-width="2"/></pattern></defs>';
-    // Experiment names over their columns, condition names slanted beneath.
+    // Experiment names, each on its own line with a rule over its columns; a faint guide drops
+    // from the rule to the columns so a name further up still reads as belonging to them.
+    $line = 0;
     foreach ($spans as $i => [$x0, $x1]) {
-        // An experiment's name gets only its own columns' width (~7 px a character at 12 px):
-        // longer names are cut with an ellipsis and given whole in the hover, so neighbours
-        // never overprint each other.
-        $label = (string)$experiments[$i]['label'];
-        $fit   = max(3, (int)floor(($x1 - $x0) / 7));
-        $shown = mb_strlen($label) > $fit ? rtrim(mb_substr($label, 0, $fit - 1)) . '…' : $label;
-        $svg .= sprintf('<text class="expr-hm-exp" x="%s" y="12"><title>%s</title>%s</text>', $x0, $esc($label), $esc($shown))
-              . sprintf('<line x1="%s" y1="17" x2="%s" y2="17" stroke="#0891b2" stroke-width="2"/>', $x0, $x1);
+        $ty = 12 + $exp_line * $line;
+        $svg .= sprintf('<line x1="%s" y1="%s" x2="%s" y2="%s" stroke="#0891b2" stroke-opacity="0.25" stroke-width="1"/>',
+                        $x0, $ty + 4, $x0, $exp_h)
+              . sprintf('<text class="expr-hm-exp" x="%s" y="%s">%s</text>', $x0 + 3, $ty, $esc($experiments[$i]['label']))
+              . sprintf('<line x1="%s" y1="%s" x2="%s" y2="%s" stroke="#0891b2" stroke-width="2"/>', $x0, $exp_h, $x1, $exp_h);
+        $line++;
     }
     foreach ($cols as $k => [$i, $group]) {
-        $cx = $x_of[$k] + $cell_w / 2;
-        $svg .= sprintf('<text class="expr-hm-cond" transform="translate(%s,%d) rotate(-55)">%s</text>', $cx, $head_h - 4, $esc($group));
+        $cx   = $x_of[$k] + $cell_w / 2;
+        $cut  = mb_strlen($group) > $cond_cap ? rtrim(mb_substr($group, 0, $cond_cap - 1)) . '…' : $group;
+        $tip  = $cut !== $group ? '<title>' . $esc($group) . '</title>' : '';
+        $svg .= sprintf('<text class="expr-hm-cond" transform="translate(%s,%d) rotate(-55)">%s%s</text>', $cx, $head_h - 4, $tip, $esc($cut));
     }
     foreach (array_values($genes) as $r => $gene) {
         $y = $head_h + $r * $cell_h;

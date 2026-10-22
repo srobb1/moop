@@ -2137,9 +2137,16 @@ $_svg = moop_expression_heatmap_svg(['g1', 'g2'], $_exps, $_mx, 'level', [], fn(
 ok(substr_count($_svg, '<a class="expr-hm-link" href="/moop/tools/parent.php?uniquename=g1&amp;x=1">') === 1
    && substr_count($_svg, 'class="expr-hm-link"') === 2,
    'each gene label links to its gene page (href escaped), one link per gene');
-$_svg = moop_expression_heatmap_svg(['g1'], [0 => ['label' => 'A very long experiment name indeed', 'samples' => [['group_name' => 'x']]]], ['g1' => [0 => null]]);
-ok(strpos($_svg, '<title>A very long experiment name indeed</title>A v…') !== false,
-   'an experiment name longer than its columns is cut with an ellipsis, whole in the hover');
+$_long_cond = str_repeat('a long condition name ', 3);   // 66 characters
+$_svg = moop_expression_heatmap_svg(['g1'], [0 => ['label' => 'A very long experiment name indeed', 'samples' => [['group_name' => 'x']]],
+                                             1 => ['label' => 'Second experiment', 'samples' => [['group_name' => $_long_cond]]]],
+                                    ['g1' => [0 => null, 1 => null]]);
+ok(strpos($_svg, '>A very long experiment name indeed</text>') !== false && strpos($_svg, '>Second experiment</text>') !== false,
+   'experiment names are shown whole, however narrow their columns');
+preg_match_all('/class="expr-hm-exp" x="[^"]*" y="(\d+)"/', $_svg, $_ys);
+ok(count(array_unique($_ys[1])) === 2, 'each experiment name has its own line, so a long one never overprints the next');
+ok(strpos($_svg, '<title>' . htmlspecialchars($_long_cond, ENT_QUOTES) . '</title>') !== false && strpos($_svg, '…</text>') !== false,
+   'a condition name past 40 characters is cut, whole in its hover; shorter ones are drawn whole');
 
 // Gene lookup in a throwaway database: transcript -> gene, and a self-loop must not hang.
 $_edb = sys_get_temp_dir() . '/moop_expr_' . getmypid() . '.sqlite';
