@@ -1423,44 +1423,64 @@ function getAnnotationSourcesByType($dbFile) {
 }
 
 /**
- * The same counts as getAnnotationSourcesByType(), PER GENE SET: for each gene set, each source,
- * the number of distinct annotations attached to that gene set's features.
+ * Per GENE SET, per source: how many GENES carry it (and how many distinct terms it has).
  *
- * The organism-wide figure was shown on the gene set page as if it were the gene set's, which
- * is wrong for every organism with more than one gene set (6 on 2026-10-20). Here an
- * annotation counts for a gene set only if one of that gene set's features carries it.
+ * Genes, not terms, since 2026-10-22. The old count was distinct annotations, so a filter
+ * offered "InterProScan (Coils) (1)" while 13,090 Nematostella proteins have a coiled coil:
+ * one term, "Coil". Someone choosing a filter wants to know how much of the gene set it
+ * reaches. A gene also belongs to exactly one gene set, so gene counts add up across gene
+ * sets and organisms -- the term counts did not (a term shared by two gene sets counted twice).
  *
- * EXPENSIVE: it walks feature_annotation, ~2 s per database warm and far more cold, so it is
- * never run in a page request -- housekeeping builds it in the background run, once per
- * database change (moop_gene_set_annotation_counts_file()).
+ * "Gene" = the feature's root: annotations sit on transcripts (sometimes genes, or proteins),
+ * so a feature is traced up at most two parents. In a gene set with no gene models the root
+ * is the transcript, so there the number counts transcripts. Self-parents are skipped, as a
+ * few databases had them (see the feature table DDL).
+ *
+ * The per-TYPE total is a separate distinct count: one gene with both Pfam and InterPro is
+ * two source hits but one Domains gene, so summing the sources would overstate it.
+ *
+ * EXPENSIVE: two walks of feature_annotation, ~8 s each warm on Nematostella (5.1 M links),
+ * so it is never run in a page request -- housekeeping builds it in the background run, once
+ * per database change (moop_gene_set_annotation_counts_file()).
  *
  * Keyed "{assembly accession}/{gene set name}": a gene set name is unique per assembly, not
  * per organism (gene_set UNIQUE(genome_id, gene_set_name)), so the name alone could merge two.
  *
- * @return array  {"accession/gene_set": {type: [{name, count}, ...]}}, types ordered as
- *                getAnnotationSourcesByType() orders them; [] on error.
+ * @return array  ['sources' => {"acc/gs": {type: [{name, count, terms}, ...]}},
+ *                 'type_genes' => {"acc/gs": {type: genes}}]; empty arrays on error.
  */
 function getAnnotationSourcesByGeneSet($dbFile) {
+    $from = "FROM feature_annotation fa
+             JOIN feature f             ON f.feature_id = fa.feature_id
+             LEFT JOIN feature p        ON p.feature_id = f.parent_feature_id AND p.feature_id <> f.feature_id
+             LEFT JOIN feature gp       ON gp.feature_id = p.parent_feature_id AND gp.feature_id <> p.feature_id
+             JOIN gene_set gs           ON gs.gene_set_id = f.gene_set_id
+             JOIN genome g              ON g.genome_id = gs.genome_id
+             JOIN annotation a          ON a.annotation_id = fa.annotation_id
+             JOIN annotation_source ans ON ans.annotation_source_id = a.annotation_source_id";
+    $gene = 'COALESCE(gp.feature_id, p.feature_id, f.feature_id)';
     try {
-        $query = "SELECT g.genome_accession || '/' || gs.gene_set_name AS gene_set,
-                         ans.annotation_source_name AS name,
-                         ans.annotation_type AS type,
-                         COUNT(DISTINCT fa.annotation_id) AS count
-                  FROM feature_annotation fa
-                  JOIN feature f            ON f.feature_id = fa.feature_id
-                  JOIN gene_set gs          ON gs.gene_set_id = f.gene_set_id
-                  JOIN genome g             ON g.genome_id = gs.genome_id
-                  JOIN annotation a         ON a.annotation_id = fa.annotation_id
-                  JOIN annotation_source ans ON ans.annotation_source_id = a.annotation_source_id
-                  GROUP BY gs.gene_set_id, ans.annotation_source_id, ans.annotation_type
-                  ORDER BY gene_set, ans.annotation_type, count DESC";
         $by_gene_set = [];
-        foreach (fetchData($query, $dbFile, []) as $row) {
+        $rows = fetchData("SELECT g.genome_accession || '/' || gs.gene_set_name AS gene_set,
+                                  ans.annotation_source_name AS name, ans.annotation_type AS type,
+                                  COUNT(DISTINCT $gene) AS count, COUNT(DISTINCT fa.annotation_id) AS terms
+                           $from
+                           GROUP BY gs.gene_set_id, ans.annotation_source_id, ans.annotation_type
+                           ORDER BY gene_set, ans.annotation_type, count DESC", $dbFile, []);
+        foreach ($rows as $row) {
             $by_gene_set[$row['gene_set']][] = $row;
         }
-        return array_map('moop_group_annotation_sources', $by_gene_set);
+        $type_genes = [];
+        $rows = fetchData("SELECT g.genome_accession || '/' || gs.gene_set_name AS gene_set,
+                                  ans.annotation_type AS type, COUNT(DISTINCT $gene) AS genes
+                           $from
+                           GROUP BY gs.gene_set_id, ans.annotation_type", $dbFile, []);
+        foreach ($rows as $row) {
+            $type_genes[$row['gene_set']][$row['type']] = (int)$row['genes'];
+        }
+        return ['sources' => array_map('moop_group_annotation_sources', $by_gene_set), 'type_genes' => $type_genes];
     } catch (Exception $e) {
-        return [];
+        return ['sources' => [], 'type_genes' => []];
     }
 }
 
@@ -1472,7 +1492,9 @@ function getAnnotationSourcesByGeneSet($dbFile) {
 function moop_group_annotation_sources(array $rows): array {
     $grouped = [];
     foreach ($rows as $row) {
-        $grouped[$row['type']][] = ['name' => $row['name'], 'count' => (int)$row['count']];
+        $entry = ['name' => $row['name'], 'count' => (int)$row['count']];
+        if (isset($row['terms'])) $entry['terms'] = (int)$row['terms'];
+        $grouped[$row['type']][] = $entry;
     }
 
     global $config;

@@ -1182,12 +1182,16 @@ function housekeeping_refresh_gene_set_annotation_counts(string $organism_data, 
         // annotations" is recorded rather than looking like "not built yet".
         $all = "SELECT g.genome_accession || '/' || gs.gene_set_name AS k FROM gene_set gs JOIN genome g ON g.genome_id = gs.genome_id";
         foreach (fetchData($all, $db, []) as $row) {
-            $counts[$row['k']] = $counts[$row['k']] ?? [];
+            $counts['sources'][$row['k']]    = $counts['sources'][$row['k']] ?? [];
+            $counts['type_genes'][$row['k']] = $counts['type_genes'][$row['k']] ?? [];
         }
+        $counts['count'] = 'genes';   // what 'count' means -- readers refuse a file without it
         $file = moop_gene_set_annotation_counts_file($organism);
         // Temp + rename: a reader never sees a half-written file.
         $tmp  = "$file.tmp-" . getmypid();
         if (file_put_contents($tmp, json_encode($counts)) !== false && rename($tmp, $file)) {
+            // The term-count file this replaced (pre-2026-10-22 name); nothing reads it now.
+            @unlink(dirname($file) . '/gene_set_annotation_counts.json');
             $done++;
         } else {
             @unlink($tmp);

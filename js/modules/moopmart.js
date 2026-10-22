@@ -83,7 +83,7 @@
                 const type = og.dataset.type || og.label;
                 if (lastAnnTypeTotals) {
                     const t = lastAnnTypeTotals[type] || 0;
-                    og.label = `${type} (${t.toLocaleString()})`;
+                    og.label = `${type} (${t.toLocaleString()} gene${t !== 1 ? 's' : ''})`;
                 } else {
                     og.label = type;   // cleared — no selection
                 }
@@ -126,23 +126,32 @@
             }
             if (summary) summary.textContent = 'Counting annotations…';
             const seq = ++annCountSeq;
+            // Counts follow the GENE SETS ticked, not just the organisms: for an organism with
+            // only some of its gene sets ticked, name those (same parameter as the search page).
+            const partial = partialGeneSets();
             const url = `${moopSite}/tools/get_annotation_sources_grouped.php?organisms=`
-                      + encodeURIComponent(orgs.join(','));
+                      + encodeURIComponent(orgs.join(','))
+                      + (partial.length ? '&gene_sets=' + encodeURIComponent(JSON.stringify(partial)) : '');
             fetch(url)
                 .then(r => r.json())
                 .then(data => {
                     if (seq !== annCountSeq) return;   // superseded by a newer selection
+                    // Counts are GENES carrying each source; a type's total is its own
+                    // distinct figure (td.genes), never the sum of its sources -- one gene with
+                    // both Pfam and InterPro is one Domains gene. data.counts is null while the
+                    // background rebuild is unfinished: show names only, disable nothing.
+                    const known = data.counts === 'genes';
                     const counts = {};
                     const typeTotals = {};
-                    Object.entries(data.source_types || {}).forEach(([typeName, td]) =>
-                        (td.sources || []).forEach(s => {
-                            counts[s.name] = (counts[s.name] || 0) + s.count;
-                            typeTotals[typeName] = (typeTotals[typeName] || 0) + s.count;
-                        }));
-                    lastAnnCounts = counts;
-                    lastAnnTypeTotals = typeTotals;
+                    Object.entries(data.source_types || {}).forEach(([typeName, td]) => {
+                        typeTotals[typeName] = td.genes || 0;
+                        (td.sources || []).forEach(s => { counts[s.name] = s.count || 0; });
+                    });
+                    lastAnnCounts = known ? counts : null;
+                    lastAnnTypeTotals = known ? typeTotals : null;
                     applyAnnDropdownCounts();
                     badges.forEach(b => {
+                        if (!known) { b.textContent = ''; b.classList.add('d-none'); return; }
                         const n = counts[b.dataset.src] || 0;
                         // Mark sources with no annotations for this selection; applyAnnVisibility() hides them
                         b.closest('.mm-ann-item')?.classList.toggle('mm-ann-zerocount', n === 0);
@@ -157,10 +166,11 @@
                     });
                     applyAnnVisibility();
                     if (summary) {
-                        const total = data.total_annotations || 0;
-                        summary.textContent = total > 0
-                            ? `${total.toLocaleString()} annotations across ${data.total_sources || 0} source${(data.total_sources || 0) !== 1 ? 's' : ''} for the selected organism${orgs.length !== 1 ? 's' : ''}`
-                            : 'No annotations for the selected organisms';
+                        const n = data.total_sources || 0;
+                        summary.textContent = n === 0
+                            ? 'No annotations for the selected organisms'
+                            : `${n.toLocaleString()} annotation source${n !== 1 ? 's' : ''} for the selected organism${orgs.length !== 1 ? 's' : ''}`
+                              + (known ? ' — the number beside each is how many genes carry it' : '');
                     }
                 })
                 .catch(() => { if (summary) summary.textContent = ''; /* keep prior badges */ });
@@ -618,6 +628,21 @@
 
     // Distinct organism dirs among the selected sources — the fan-out unit for the
     // progressive preview (one request per organism).
+    // "org/accession/gene_set" for every ticked gene set of an organism ticked only in part.
+    // A fully ticked organism is left out, so a broad selection keeps the URL short.
+    function partialGeneSets() {
+        const byOrg = {};
+        document.querySelectorAll('.mm-gs-cb').forEach(cb => (byOrg[cb.dataset.org] ??= []).push(cb));
+        const out = [];
+        Object.values(byOrg).forEach(boxes => {
+            const on = boxes.filter(cb => cb.checked);
+            if (on.length && on.length < boxes.length) {
+                on.forEach(cb => out.push(`${cb.dataset.org}/${cb.dataset.asm}/${cb.dataset.gs}`));
+            }
+        });
+        return out;
+    }
+
     function getSelectedOrganisms() {
         const seen = new Set();
         document.querySelectorAll('.mm-gs-cb:checked').forEach(c => seen.add(c.dataset.org));

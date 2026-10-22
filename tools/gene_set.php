@@ -113,11 +113,9 @@ $busco = moop_load_busco($gs_dir);
 // same, organism-wide numbers under its own name. The per-gene-set counts are built by
 // housekeeping's background run; until they exist (or after a reload, until rebuilt) the
 // summary is left out rather than filled with the organism's figures.
-$annot_type_totals = [];
-$annot_counts = moop_load_gene_set_annotation_counts($organism_name, $genome_accession, $gene_set_name);
-foreach ($annot_counts ?? [] as $type => $sources) {
-    $annot_type_totals[$type] = array_sum(array_column($sources, 'count'));
-}
+// Per type, how many GENES carry it -- a distinct count, not the sum of the type's sources
+// (one gene with both Pfam and InterPro is one Domains gene).
+$annot_type_totals = moop_load_gene_set_annotation_type_genes($organism_name, $genome_accession, $gene_set_name) ?? [];
 arsort($annot_type_totals);
 
 $data = [

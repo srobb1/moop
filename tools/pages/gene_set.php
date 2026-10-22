@@ -224,14 +224,15 @@
         <div class="card-header d-flex align-items-center" style="background-color:#e11d48;">
           <i class="fas fa-tag me-2 text-white"></i>
           <span class="text-uppercase fw-semibold text-white section-eyebrow">Gene Set Annotation Summary</span>
+          <span class="ms-2 small text-white-50">genes per annotation type</span>
           <?php /* Nothing on the page connected these numbers to the search box above them.
                    A reader sees 129,866 homologs and has no reason to know the text of those
                    annotations is what the search box searches, nor that the filter icon can
                    narrow a search to one kind. The sources in that filter are grouped by
                    exactly these types (getAnnotationSourcesGrouped), so the two line up. */ ?>
           <span class="ms-2"><?= field_help(
-              'These are the annotations attached to this gene set, counted by type. The '
-              . 'search box above searches their text, so a search for "kinase" looks '
+              'How many genes in this gene set carry at least one annotation of each type. The '
+              . 'search box above searches the text of those annotations, so a search for "kinase" looks '
               . 'through all of them. To search just one kind, open the filter beside the '
               . 'search box and pick its sources.',
               'Annotation summary'
@@ -245,7 +246,7 @@
                      data rather than leftover space. */ ?>
             <?php foreach ($annot_type_totals as $type => $total): ?>
             <div class="text-center p-3 flex-fill" style="min-width:120px; border-right:1px solid #dee2e6; border-bottom:1px solid #dee2e6;">
-              <div class="fw-bold text-secondary" style="font-size:1.2rem; line-height:1;"><?= number_format($total) ?></div>
+              <div class="fw-bold text-secondary" style="font-size:1.2rem; line-height:1;" title="genes with this annotation type"><?= number_format($total) ?></div>
               <div class="text-muted fw-semibold mt-1" style="font-size:0.7rem; letter-spacing:0.06em; text-transform:uppercase;"><?= htmlspecialchars($type) ?></div>
             </div>
             <?php endforeach; ?>

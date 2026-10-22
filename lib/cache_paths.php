@@ -141,7 +141,10 @@ function moop_annotation_sources_cache_file(string $organism): string
 function moop_gene_set_annotation_counts_file(string $organism): string
 {
     $dir = moop_cache_root() . '/' . $organism;
-    return moop_ensure_cache_dir($dir) ? "$dir/gene_set_annotation_counts.json" : '';
+    // .genes: counts became GENES on 2026-10-22. A new name, not a format check, so every
+    // organism counts as "not built" until housekeeping rebuilds it -- the old file is
+    // younger than its database and would otherwise never be redone.
+    return moop_ensure_cache_dir($dir) ? "$dir/gene_set_annotation_counts.genes.json" : '';
 }
 
 /**
@@ -154,14 +157,39 @@ function moop_gene_set_annotation_counts_file(string $organism): string
  */
 function moop_load_gene_set_annotation_counts(string $organism, string $assembly, string $gene_set): ?array
 {
+    $data = moop_read_gene_set_annotation_counts($organism);
+    $key  = "$assembly/$gene_set";   // a gene set name is unique per assembly, not per organism
+    if ($data === null || !is_array($data['sources'][$key] ?? null)) return null;
+    return moop_drop_empty_annotation_sources($data['sources'][$key]);
+}
+
+/**
+ * Per annotation type, how many of this gene set's genes carry at least one annotation of it.
+ * Not the sum of the sources: one gene with both Pfam and InterPro is one Domains gene.
+ * Same null rules as moop_load_gene_set_annotation_counts().
+ *
+ * @return array<string,int>|null
+ */
+function moop_load_gene_set_annotation_type_genes(string $organism, string $assembly, string $gene_set): ?array
+{
+    $data = moop_read_gene_set_annotation_counts($organism);
+    $key  = "$assembly/$gene_set";
+    if ($data === null || !is_array($data['type_genes'][$key] ?? null)) return null;
+    return array_filter(array_map('intval', $data['type_genes'][$key]));
+}
+
+/**
+ * The organism's per-gene-set counts file, decoded -- or null when it is missing, older
+ * than organism.sqlite (a reload may have changed everything), or not a gene-count file.
+ */
+function moop_read_gene_set_annotation_counts(string $organism): ?array
+{
     $file = moop_gene_set_annotation_counts_file($organism);
     if ($file === '' || !is_file($file)) return null;
     $db = ConfigManager::getInstance()->getPath('organism_data') . "/$organism/organism.sqlite";
     if (is_file($db) && filemtime($file) < filemtime($db)) return null;
     $data = json_decode((string)@file_get_contents($file), true);
-    $key  = "$assembly/$gene_set";   // a gene set name is unique per assembly, not per organism
-    if (!is_array($data) || !is_array($data[$key] ?? null)) return null;
-    return moop_drop_empty_annotation_sources($data[$key]);
+    return (is_array($data) && ($data['count'] ?? '') === 'genes') ? $data : null;
 }
 
 /**
@@ -212,6 +240,22 @@ function moop_sum_annotation_source_counts(array $parts): array
         $out[$type] = $rows;
     }
     return $out;
+}
+
+/**
+ * Per-type gene totals summed over several gene sets. Exact, because a gene belongs to one
+ * gene set; the per-SOURCE sums above are exact for the same reason.
+ *
+ * @param list<array<string,int>> $parts
+ * @return array<string,int>
+ */
+function moop_sum_type_genes(array $parts): array
+{
+    $sum = [];
+    foreach ($parts as $by_type) {
+        foreach ((array)$by_type as $type => $n) $sum[$type] = ($sum[$type] ?? 0) + (int)$n;
+    }
+    return $sum;
 }
 
 /**

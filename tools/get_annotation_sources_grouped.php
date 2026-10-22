@@ -86,6 +86,8 @@ $organism_data = $config->getPath('organism_data');
 
 // Aggregate sources from all organisms
 $aggregated_sources = [];
+$type_genes = [];      // type => genes carrying at least one annotation of it
+$counts_known = true;  // false while any gene set in scope has no counts built yet
 $answered = [];   // the organisms that contributed, for the response
 $metadata_path = $config->getPath('metadata_path');
 $config_file = "$metadata_path/annotation_config.json";
@@ -112,58 +114,43 @@ foreach ($organisms as $organism) {
     }
     $answered[] = $organism;
 
-    // Per-gene-set counts are built by housekeeping's background run. A gene set not built yet
-    // is left out for a restricted viewer rather than replaced by the organism's figure; a viewer
-    // who may see everything gets the organism's sources instead -- a superset, so nothing they
-    // could pick is missing, only the counts are wider.
-    $source_types = null;
-    if (!$full_access || $assembly_param !== '' || $group_param !== '' || $only !== null) {
-        $parts = [];
-        foreach ($keys as $key) {
-            [$accession, $gene_set] = explode('/', $key, 2);
-            $part = moop_load_gene_set_annotation_counts($organism, $accession, $gene_set);
-            if ($part !== null) {
-                $parts[] = $part;
-            } elseif ($full_access) {
-                $parts = null;
-                break;
-            }
+    // Counts are GENES per source, built per gene set by housekeeping's background run
+    // (getAnnotationSourcesByGeneSet). They add up exactly across gene sets and organisms,
+    // since a gene belongs to one gene set -- so every scope, the whole organism included,
+    // is the sum of its gene sets. While any gene set in scope is not built yet (after a
+    // reload) the numbers are left out rather than shown partial: a viewer who may see
+    // everything still gets every source NAME from the organism cache; anyone else gets the
+    // names of the built gene sets only, never the organism's, which may include gene sets
+    // they cannot open.
+    $parts = [];
+    $type_parts = [];
+    foreach ($keys as $key) {
+        [$accession, $gene_set] = explode('/', $key, 2);
+        $part = moop_load_gene_set_annotation_counts($organism, $accession, $gene_set);
+        if ($part === null) {
+            $counts_known = false;
+            continue;
         }
-        if ($parts !== null) {
-            $source_types = moop_sum_annotation_source_counts($parts);
-        }
+        $parts[] = $part;
+        $type_parts[] = moop_load_gene_set_annotation_type_genes($organism, $accession, $gene_set) ?? [];
     }
-    if ($source_types !== null) {
-        // scoped counts, above
-    // Use per-organism cache to avoid re-running the expensive COUNT aggregate query.
-    // Cache is invalidated automatically when organism.sqlite is newer than the cache file.
-    } elseif (($cache_file = moop_annotation_sources_cache_file($organism)) !== ''
-              && file_exists($cache_file) && filemtime($cache_file) >= filemtime($db)) {
-        $cached = loadJsonFile($cache_file, []);
-        $source_types = is_array($cached) ? $cached : [];
+    if (count($parts) === count($keys)) {
+        $source_types = moop_sum_annotation_source_counts($parts);
+        foreach (moop_sum_type_genes($type_parts) as $type => $n) {
+            $type_genes[$type] = ($type_genes[$type] ?? 0) + $n;
+        }
+    } elseif ($full_access) {
+        $source_types = moop_load_annotation_sources_cache($organism) ?? [];
     } else {
-        $source_types = getAnnotationSourcesByType($db);
-        if ($cache_file !== '') file_put_contents($cache_file, json_encode($source_types));
+        $source_types = moop_sum_annotation_source_counts($parts);
     }
-    // A cache written before empty sources were excluded still lists them.
-    $source_types = moop_drop_empty_annotation_sources($source_types);
 
-    // Aggregate counts
     foreach ($source_types as $type => $sources) {
-        if (!isset($aggregated_sources[$type])) {
-            $aggregated_sources[$type] = [];
-        }
-        
         foreach ($sources as $source) {
-            $source_name = $source['name'];
-            if (!isset($aggregated_sources[$type][$source_name])) {
-                $aggregated_sources[$type][$source_name] = [
-                    'name' => $source_name,
-                    'count' => 0
-                ];
-            }
-            // Add counts from this organism
-            $aggregated_sources[$type][$source_name]['count'] += $source['count'];
+            $name = $source['name'];
+            $aggregated_sources[$type][$name]['name'] = $name;
+            $aggregated_sources[$type][$name]['count'] =
+                ($aggregated_sources[$type][$name]['count'] ?? 0) + (int)$source['count'];
         }
     }
 }
@@ -180,28 +167,32 @@ foreach ($aggregated_sources as $type => $sources_by_name) {
         $description = $annotation_config['annotation_types'][$type]['description'];
     }
     
+    $sources = array_values($sources_by_name);
+    usort($sources, fn($a, $b) => $b['count'] <=> $a['count']);
+    if (!$counts_known) {
+        foreach ($sources as &$src) { $src['count'] = null; }
+        unset($src);
+    }
     $source_types_with_color[$type] = [
-        'sources' => array_values($sources_by_name),
+        'sources' => $sources,
+        'genes' => $counts_known ? ($type_genes[$type] ?? 0) : null,
         'color' => $color,
         'description' => $description
     ];
 }
 
-// Calculate totals
 $total_sources = 0;
-$total_count = 0;
 foreach ($source_types_with_color as $type_data) {
     $total_sources += count($type_data['sources']);
-    foreach ($type_data['sources'] as $source) {
-        $total_count += $source['count'];
-    }
 }
 
+// 'count' on a source and 'genes' on a type are GENES (a transcript in a gene set with no gene
+// models), or null for all of them while counts are being rebuilt -- see the loop above.
 echo json_encode([
     'organisms' => $answered,
+    'counts' => $counts_known ? 'genes' : null,
     'source_types' => $source_types_with_color,
     'total_sources' => $total_sources,
-    'total_annotations' => $total_count
 ]);
 
 ?>

@@ -133,7 +133,7 @@ class AdvancedSearchFilter {
                            data-type="${escapeHtml(type)}"
                            ${isChecked}>
                     <label class="form-check-label small" for="${id}">
-                        ${escapeHtml(source.name)} <span class="badge bg-secondary">${Number(source.count).toLocaleString()}</span>
+                        ${escapeHtml(source.name)}${source.count == null ? '' : ` <span class="badge bg-secondary" title="Genes with this annotation">${Number(source.count).toLocaleString()}</span>`}
                     </label>
                 </div>
             `;

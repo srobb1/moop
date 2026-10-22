@@ -1605,11 +1605,24 @@ $_saved = $_rp->getValue($_cfg);
 $_c = $_saved; $_c['organism_data'] = $_gd; $_c['cache_path'] = $_gd; $_rp->setValue($_cfg, $_c);
 ok(moop_load_gene_set_annotation_counts('OrgB', 'A1', 'gs1') === null, 'no cache yet -> null (the page leaves the summary out)');
 touch("$_gd/OrgB/organism.sqlite", time() - 100);
+// A pre-2026-10-22 file: term counts, no 'count' marker. Must read as "not built", never as
+// gene counts -- that is the whole reason the file was renamed and marked.
 file_put_contents(moop_gene_set_annotation_counts_file('OrgB'), json_encode([
-    'A1/gs1' => ['Homologs' => [['name' => 'UniProt', 'count' => 5], ['name' => 'Empty', 'count' => 0]]],
-    'A2/gs1' => ['Homologs' => [['name' => 'UniProt', 'count' => 9]]],
-    'A1/gs2' => [],
+    'A1/gs1' => ['Homologs' => [['name' => 'UniProt', 'count' => 5]]],
 ]));
+ok(moop_load_gene_set_annotation_counts('OrgB', 'A1', 'gs1') === null, 'a file without count=genes is refused');
+file_put_contents(moop_gene_set_annotation_counts_file('OrgB'), json_encode([
+    'count'   => 'genes',
+    'sources' => [
+        'A1/gs1' => ['Homologs' => [['name' => 'UniProt', 'count' => 5], ['name' => 'Empty', 'count' => 0]]],
+        'A2/gs1' => ['Homologs' => [['name' => 'UniProt', 'count' => 9]]],
+        'A1/gs2' => [],
+    ],
+    'type_genes' => ['A1/gs1' => ['Homologs' => 4, 'Domains' => 0], 'A2/gs1' => ['Homologs' => 9], 'A1/gs2' => []],
+]));
+ok(moop_load_gene_set_annotation_type_genes('OrgB', 'A1', 'gs1') === ['Homologs' => 4],
+   'per-type gene totals read back, a zero type dropped');
+ok(moop_load_gene_set_annotation_type_genes('OrgB', 'A9', 'gs1') === null, 'an unknown gene set -> null');
 $_r = moop_load_gene_set_annotation_counts('OrgB', 'A1', 'gs1');
 ok($_r === ['Homologs' => [['name' => 'UniProt', 'count' => 5]]], "this gene set's counts, an empty source dropped");
 ok((moop_load_gene_set_annotation_counts('OrgB', 'A2', 'gs1')['Homologs'][0]['count'] ?? null) === 9,
@@ -1632,6 +1645,8 @@ ok($_s === ['Homologs' => [['name' => 'Pfam', 'count' => 9], ['name' => 'UniProt
             'GO' => [['name' => 'GO', 'count' => 4]]],
    'gene set counts summed per source, highest first, a numeric name stays a string');
 ok(moop_sum_annotation_source_counts([]) === [], 'no gene sets -> nothing');
+ok(moop_sum_type_genes([['Homologs' => 4, 'Domains' => 2], ['Homologs' => 9]]) === ['Homologs' => 13, 'Domains' => 2],
+   'per-type gene totals add across gene sets (a gene belongs to one gene set)');
 
 // ----------------------------------------------------------------------------
 group('search: annotation source filter carries names exactly (JSON, no trim, commas survive)');
