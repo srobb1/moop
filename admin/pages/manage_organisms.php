@@ -462,7 +462,7 @@
                    <br><small class="text-muted"><?= htmlspecialchars($data['info']['common_name']) ?></small>
                  <?php endif; ?>
                  <br>
-                 <button class="btn btn-sm btn-outline-secondary" type="button" onclick="togglePath(this, '<?= htmlspecialchars($data['path']) ?>', '<?= htmlspecialchars($organism) ?>')">
+                 <button class="btn btn-sm btn-outline-secondary" type="button" onclick="togglePath(this, <?= htmlspecialchars(json_encode($data['path'])) ?>, <?= htmlspecialchars(json_encode($organism)) ?>)">
                    <i class="fa fa-folder"></i> View Path
                  </button>
                  <button class="btn btn-sm btn-outline-secondary" type="button"

@@ -152,11 +152,11 @@ foreach ($paginatedTracks as $item) {
     $canIndex   = $isLocalGff || $isLocalBed;
 
     $rebuildBtn = $isLocalGff
-        ? '<button class="btn btn-outline-warning btn-sm" onclick="rebuildGff(\'' . htmlspecialchars($organism, ENT_QUOTES) . '\', \'' . htmlspecialchars($assembly, ENT_QUOTES) . '\', this)" title="Rebuild bgzip + tabix index"><i class="fa fa-wrench"></i></button>'
+        ? '<button class="btn btn-outline-warning btn-sm" onclick="rebuildGff(' . htmlspecialchars(json_encode($organism), ENT_QUOTES) . ', ' . htmlspecialchars(json_encode($assembly), ENT_QUOTES) . ', this)" title="Rebuild bgzip + tabix index"><i class="fa fa-wrench"></i></button>'
         : '';
 
     $indexBtn = $canIndex
-        ? '<button class="btn btn-outline-info btn-sm" onclick="indexTrackNames(\'' . htmlspecialchars($trackId, ENT_QUOTES) . '\', \'' . htmlspecialchars($organism, ENT_QUOTES) . '\', \'' . htmlspecialchars($assembly, ENT_QUOTES) . '\', this)" title="Build text search index (jbrowse text-index)"><i class="fa fa-search-plus"></i></button>'
+        ? '<button class="btn btn-outline-info btn-sm" onclick="indexTrackNames(' . htmlspecialchars(json_encode($trackId), ENT_QUOTES) . ', ' . htmlspecialchars(json_encode($organism), ENT_QUOTES) . ', ' . htmlspecialchars(json_encode($assembly), ENT_QUOTES) . ', this)" title="Build text search index (jbrowse text-index)"><i class="fa fa-search-plus"></i></button>'
         : '';
 
     // Everything the View Details dialog shows, carried in the row data so the dialog

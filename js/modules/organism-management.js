@@ -197,7 +197,7 @@ function addMetadataImage(organism) {
     
     const html = `
       <div class="image-item" data-index="${newIndex}" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataImage('${organism}', ${newIndex})" style="float: right;">Remove</button>
+        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataImage(${escapeHtml(JSON.stringify(organism))}, ${newIndex})" style="float: right;">Remove</button>
         <div class="form-group mb-3">
           <label>Image File</label>
           <div class="input-group">
@@ -237,7 +237,7 @@ function addMetadataParagraph(organism) {
     
     const html = `
       <div class="paragraph-item" data-index="${newIndex}" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataParagraph('${organism}', ${newIndex})" style="float: right;">Remove</button>
+        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataParagraph(${escapeHtml(JSON.stringify(organism))}, ${newIndex})" style="float: right;">Remove</button>
         <div class="form-group mb-3">
           <label>Text (HTML allowed)</label>
           <textarea class="form-control para-text" rows="4"></textarea>
@@ -564,7 +564,7 @@ function addFeatureTag(organism, type) {
     badge.className = 'badge me-2 mb-2 feature-tag';
     badge.className += type === 'parent' ? ' bg-primary' : ' bg-info';
     badge.setAttribute('data-feature', feature);
-    badge.innerHTML = `${feature} <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, '${organism}')"></i>`;
+    badge.innerHTML = `${escapeHtml(feature)} <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, ${escapeHtml(JSON.stringify(organism))})"></i>`;
     
     container.appendChild(badge);
     input.value = '';

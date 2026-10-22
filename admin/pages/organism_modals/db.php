@@ -245,7 +245,7 @@
                             </select>
                             <span class="text-muted small">→</span>
                             <input id="gsNewDirName<?= $gs_safe_id ?>" type="text" class="form-control form-control-sm" style="max-width:200px;" value="<?= htmlspecialchars($mismatch['gene_set_name']) ?>" readonly>
-                            <button class="btn btn-info btn-sm" onclick="renameGeneSetDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($mismatch['assembly_dir'])) ?>, '<?= $gs_safe_id ?>')">
+                            <button class="btn btn-info btn-sm" onclick="renameGeneSetDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($mismatch['assembly_dir'])) ?>, <?= htmlspecialchars(json_encode($gs_safe_id)) ?>)">
                               <i class="fa fa-exchange-alt"></i> Rename
                             </button>
                           </div>
@@ -273,7 +273,7 @@
           </div>
           <div class="card-body small">
             <p class="mb-2">The database file is not readable by the web server. Click the button below to attempt an automatic fix.</p>
-            <button class="btn btn-warning btn-sm" onclick="fixDatabasePermissions(event, '<?= $org_safe ?>')">
+            <button class="btn btn-warning btn-sm" onclick="fixDatabasePermissions(event, <?= htmlspecialchars(json_encode($organism)) ?>)">
               <i class="fa fa-wrench"></i> Fix Permissions
             </button>
             <div id="fixResult<?= $org_safe ?>" class="mt-3 d-none"></div>

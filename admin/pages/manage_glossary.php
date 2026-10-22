@@ -108,7 +108,7 @@
                 </td>
                 <td>
                   <form method="post" class="mb-0"
-                        onsubmit="return confirm('Delete the term &quot;<?= htmlspecialchars($term, ENT_QUOTES) ?>&quot;? Any dashed &quot;<?= htmlspecialchars($term, ENT_QUOTES) ?>&quot; on the site becomes a plain word.');">
+                        onsubmit="return confirm(<?= htmlspecialchars(json_encode('Delete the term "' . $term . '"? Any dashed "' . $term . '" on the site becomes a plain word.'), ENT_QUOTES) ?>);">
                     <?= csrf_input_field() ?>
                     <input type="hidden" name="_action" value="delete">
                     <input type="hidden" name="term" value="<?= htmlspecialchars($term, ENT_QUOTES) ?>">

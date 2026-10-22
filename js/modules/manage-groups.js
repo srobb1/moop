@@ -44,7 +44,7 @@ function addImage(groupName) {
   
   const html = `
     <div class="image-item" data-index="${newIndex}" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-      <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage('${groupName}', ${newIndex})" style="float: right;" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
+      <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage(${escapeHtml(JSON.stringify(groupName))}, ${newIndex})" style="float: right;" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
       <div class="form-group">
         <label>Image File</label>
         <div class="input-group">
@@ -126,7 +126,7 @@ function addParagraph(groupName) {
   
   const html = `
     <div class="paragraph-item" data-index="${newIndex}" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-      <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph('${groupName}', ${newIndex})" style="float: right;" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
+      <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph(${escapeHtml(JSON.stringify(groupName))}, ${newIndex})" style="float: right;" ${isDescFileWriteError ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : ''}>Remove</button>
       <div class="form-group">
         <label>Text (HTML allowed)</label>
         <textarea class="form-control para-text" rows="4"></textarea>

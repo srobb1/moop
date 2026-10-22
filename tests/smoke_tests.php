@@ -1974,6 +1974,77 @@ if ($_bgz === '' || $_tbx === '') {
 }
 
 // ----------------------------------------------------------------------------
+group('Inline handlers: PHP values go in as JSON, never inside a quoted JS string');
+// The browser decodes an attribute's HTML entities BEFORE it runs the JavaScript, so
+// htmlspecialchars() cannot protect a value echoed inside f('...') in an onclick: an
+// apostrophe closes the string (the button dies; an onsubmit confirm() dies and the form
+// submits unconfirmed), a backslash vanishes, and a crafted name runs its own code. The safe
+// form echoes htmlspecialchars(json_encode($x)) as the WHOLE argument, unquoted. (No PHP
+// close tag in these comments: one ends PHP mode even inside a // comment.) This walks every handler attribute and
+// fails on PHP output that lands inside a '...' or "..." JS literal. count() is allowed: a
+// number cannot break out of a string.
+$_php_in_js_string = function (string $attr): array {
+    $bad = [];
+    $attr = preg_replace('/^on[a-z]+="(.*)"$/s', '$1', $attr);   // the value only, not its own quotes
+    preg_match_all('/<\?(?:=|php echo)\s*(.*?)\s*;?\s*\?>/s', $attr, $blocks);
+    $marked = preg_replace('/<\?(?:=|php echo).*?\?>/s', "\x01", $attr);
+    $js = html_entity_decode($marked, ENT_QUOTES | ENT_HTML5);
+    $quote = null; $i_block = 0;
+    for ($i = 0, $n = strlen($js); $i < $n; $i++) {
+        $c = $js[$i];
+        if ($c === "\x01") {
+            $expr = $blocks[1][$i_block++] ?? '';
+            if ($quote !== null && !preg_match('/^count\(/', $expr)) $bad[] = $expr;
+        } elseif ($quote !== null && $c === '\\') {
+            $i++;
+        } elseif ($c === "'" || $c === '"') {
+            $quote = $quote === null ? $c : ($quote === $c ? null : $quote);
+        }
+    }
+    return $bad;
+};
+ok($_php_in_js_string("onclick=\"f('<?= htmlspecialchars(\$name) ?>')\"") === ['htmlspecialchars($name)'],
+   'the broken form is caught: htmlspecialchars output inside a quoted JS string');
+ok($_php_in_js_string("onsubmit=\"return confirm('Delete &quot;<?= htmlspecialchars(\$t, ENT_QUOTES) ?>&quot;?')\"") === ['htmlspecialchars($t, ENT_QUOTES)'],
+   'caught inside a message too, with entity-encoded quotes around it');
+ok($_php_in_js_string("onclick=\"f(<?= htmlspecialchars(json_encode(\$name)) ?>, <?= \$idx ?>)\"") === [],
+   'the safe form passes: the JSON string literal is the whole argument');
+ok($_php_in_js_string("onclick=\"if(confirm('Fetch all <?= count(\$organisms) ?> organisms?')) go()\"") === [],
+   'a count() inside a message is allowed');
+$_handler_hits = [];
+exec('git -C ' . escapeshellarg($BASE) . ' ls-files -- "*.php"', $_tracked);
+foreach ($_tracked as $_rel) {
+    if (strpos($_rel, 'vendor/') === 0) continue;
+    $_src = (string)@file_get_contents("$BASE/$_rel");
+    if (!preg_match_all('/\bon[a-z]+="[^"]*"/', $_src, $_attrs, PREG_OFFSET_CAPTURE)) continue;
+    foreach ($_attrs[0] as [$_attr, $_off]) {
+        foreach ($_php_in_js_string($_attr) as $_expr) {
+            $_handler_hits[] = $_rel . ':' . (substr_count($_src, "\n", 0, $_off) + 1) . " $_expr";
+        }
+    }
+}
+ok(count($_tracked) > 100 && $_handler_hits === [],
+   'no PHP value is written inside a quoted string in an inline handler'
+   . ($_handler_hits ? ":\n      " . implode("\n      ", $_handler_hits) : ''));
+// The same mistake in the two other ways handlers get built: concatenated in a PHP string
+// (onclick="f(\'' . $x . '\')") and in a JS template literal (onclick="f('${x}')").
+// Either way the safe form is the JSON-encoded value, escaped for the attribute.
+$_built_hits = [];
+exec('git -C ' . escapeshellarg($BASE) . ' ls-files -- "*.php" "js/*.js"', $_built_files);
+foreach ($_built_files as $_rel) {
+    if (strpos($_rel, 'vendor/') !== false || strpos($_rel, 'tests/') === 0) continue;   // tests quote the pattern
+    $_is_js = substr($_rel, -3) === '.js';
+    foreach (file("$BASE/$_rel") ?: [] as $_n => $_line) {
+        $_bad = $_is_js ? preg_match('/\bon[a-z]+="[^"]*\'\$\{/', $_line)
+                        : preg_match("/\\bon[a-z]+=\"[^\"]*\\\\''\\s*\\./", $_line);
+        if ($_bad) $_built_hits[] = "$_rel:" . ($_n + 1);
+    }
+}
+ok($_built_hits === [],
+   'no handler built in a PHP string or JS template puts a value inside quotes'
+   . ($_built_hits ? ":\n      " . implode("\n      ", $_built_hits) : ''));
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

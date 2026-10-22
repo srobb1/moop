@@ -98,7 +98,7 @@
                   </select>
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
-                  <button class="btn btn-info btn-sm w-100" onclick="renameAssemblyDirectory(event, '<?= htmlspecialchars($organism) ?>', '<?= htmlspecialchars($safe_asm_id) ?>')">
+                  <button class="btn btn-info btn-sm w-100" onclick="renameAssemblyDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_asm_id)) ?>)">
                     <i class="fa fa-exchange-alt"></i> Rename
                   </button>
                 </div>
@@ -122,7 +122,7 @@
                   </select>
                 </div>
                 <div class="col-md-6 d-flex align-items-end">
-                  <button class="btn btn-danger btn-sm w-100" onclick="deleteAssemblyDirectory(event, '<?= htmlspecialchars($organism) ?>', '<?= htmlspecialchars($safe_asm_id) ?>')">
+                  <button class="btn btn-danger btn-sm w-100" onclick="deleteAssemblyDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_asm_id)) ?>)">
                     <i class="fa fa-trash-alt"></i> Delete Directory
                   </button>
                 </div>
@@ -282,7 +282,7 @@
 
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-danger" onclick="deleteCurrentAssemblyDirectory(event, '<?= htmlspecialchars($organism) ?>', '<?= htmlspecialchars($safe_asm_id) ?>')">
+      <button type="button" class="btn btn-danger" onclick="deleteCurrentAssemblyDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_asm_id)) ?>)">
         <i class="fa fa-trash-alt"></i> Delete Assembly Directory
       </button>
       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

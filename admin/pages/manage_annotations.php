@@ -204,7 +204,7 @@
                   <div>Features: <strong><?= $type_config['feature_count'] ?? 0 ?></strong></div>
                 </small>
                 <?php if (($type_config['annotation_count'] ?? 0) === 0 && ($type_config['feature_count'] ?? 0) === 0): ?>
-                <button type="button" class="btn btn-sm btn-danger mt-2" onclick="deleteType('<?= htmlspecialchars($type_name) ?>')">
+                <button type="button" class="btn btn-sm btn-danger mt-2" onclick="deleteType(<?= htmlspecialchars(json_encode($type_name)) ?>)">
                   <i class="fa fa-trash"></i> Delete
                 </button>
                 <?php endif; ?>

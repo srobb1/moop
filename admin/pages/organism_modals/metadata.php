@@ -144,12 +144,12 @@
                 foreach ($parents as $feature):
               ?>
                 <span class="badge bg-primary me-2 mb-2 feature-tag" data-feature="<?= htmlspecialchars($feature) ?>">
-                  <?= htmlspecialchars($feature) ?> <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, '<?= $org_safe ?>')"></i>
+                  <?= htmlspecialchars($feature) ?> <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, <?= htmlspecialchars(json_encode($organism)) ?>)"></i>
                 </span>
               <?php endforeach; ?>
             </div>
             <input type="text" class="form-control mt-2" id="parent-feature-input-<?= $org_safe ?>" placeholder="e.g., gene, pseudogene">
-            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addFeatureTag('<?= $org_safe ?>', 'parent')">
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addFeatureTag(<?= htmlspecialchars(json_encode($organism)) ?>, 'parent')">
               <i class="fa fa-plus"></i> Add Parent Feature
             </button>
           </div>
@@ -161,12 +161,12 @@
                 foreach ($children as $feature):
               ?>
                 <span class="badge bg-info me-2 mb-2 feature-tag" data-feature="<?= htmlspecialchars($feature) ?>">
-                  <?= htmlspecialchars($feature) ?> <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, '<?= $org_safe ?>')"></i>
+                  <?= htmlspecialchars($feature) ?> <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, <?= htmlspecialchars(json_encode($organism)) ?>)"></i>
                 </span>
               <?php endforeach; ?>
             </div>
             <input type="text" class="form-control mt-2" id="child-feature-input-<?= $org_safe ?>" placeholder="e.g., mRNA, transcript, protein">
-            <button type="button" class="btn btn-sm btn-outline-info mt-2" onclick="addFeatureTag('<?= $org_safe ?>', 'child')">
+            <button type="button" class="btn btn-sm btn-outline-info mt-2" onclick="addFeatureTag(<?= htmlspecialchars(json_encode($organism)) ?>, 'child')">
               <i class="fa fa-plus"></i> Add Child Feature
             </button>
           </div>
@@ -190,7 +190,7 @@
             foreach ($images as $idx => $image):
           ?>
             <div class="image-item" data-index="<?= $idx ?>" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-              <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataImage('<?= $org_safe ?>', <?= $idx ?>)" style="float: right;">Remove</button>
+              <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataImage(<?= htmlspecialchars(json_encode($organism)) ?>, <?= $idx ?>)" style="float: right;">Remove</button>
               <div class="form-group mb-3">
                 <label>Image File</label>
                 <div class="input-group">
@@ -207,7 +207,7 @@
             </div>
           <?php endforeach; ?>
         </div>
-        <button type="button" class="btn btn-sm btn-primary mb-4" onclick="addMetadataImage('<?= $org_safe ?>')">
+        <button type="button" class="btn btn-sm btn-primary mb-4" onclick="addMetadataImage(<?= htmlspecialchars(json_encode($organism)) ?>)">
           <i class="fa fa-plus"></i> Add Image
         </button>
 
@@ -223,7 +223,7 @@
             foreach ($paragraphs as $idx => $para):
           ?>
             <div class="paragraph-item" data-index="<?= $idx ?>" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-              <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataParagraph('<?= $org_safe ?>', <?= $idx ?>)" style="float: right;">Remove</button>
+              <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataParagraph(<?= htmlspecialchars(json_encode($organism)) ?>, <?= $idx ?>)" style="float: right;">Remove</button>
               <div class="form-group mb-3">
                 <label>Text (HTML allowed)</label>
                 <textarea class="form-control para-text" rows="4"><?= htmlspecialchars($para['text'] ?? '') ?></textarea>
@@ -245,13 +245,13 @@
             </div>
           <?php endforeach; ?>
         </div>
-        <button type="button" class="btn btn-sm btn-primary mb-4" onclick="addMetadataParagraph('<?= $org_safe ?>')">
+        <button type="button" class="btn btn-sm btn-primary mb-4" onclick="addMetadataParagraph(<?= htmlspecialchars(json_encode($organism)) ?>)">
           <i class="fa fa-plus"></i> Add Paragraph
         </button>
 
         <div id="saveResult<?= $org_safe ?>"></div>
 
-        <button type="button" class="btn btn-success" onclick="saveMetadata(event, '<?= $org_safe ?>')">
+        <button type="button" class="btn btn-success" onclick="saveMetadata(event, <?= htmlspecialchars(json_encode($organism)) ?>)">
           <i class="fa fa-save"></i> Save Metadata
         </button>
       </form>

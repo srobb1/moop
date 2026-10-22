@@ -349,7 +349,7 @@ function organismHeaderHtml(organism, results, sitePath, imageUrl, linked) {
     const fallbackId = 'icon-' + organism.replace(/[^a-zA-Z0-9]/g, '_');
 
     const imageHtml = imageUrl
-        ? `<img src="${imageUrl}" class="organism-thumbnail" style="height: 24px; width: 24px; margin-right: 8px; border-radius: 3px;" onerror="this.style.display='none'; document.getElementById('${fallbackId}').style.display='inline';" onload="document.getElementById('${fallbackId}').style.display='none';">
+        ? `<img src="${imageUrl}" class="organism-thumbnail" style="height: 24px; width: 24px; margin-right: 8px; border-radius: 3px;" onerror="this.style.display='none'; document.getElementById(${escapeHtml(JSON.stringify(fallbackId))}).style.display='inline';" onload="document.getElementById(${escapeHtml(JSON.stringify(fallbackId))}).style.display='none';">
            <i class="fa fa-dna" id="${fallbackId}" style="margin-right: 8px; display: none;"></i>`
         : `<i class="fa fa-dna" style="margin-right: 8px;"></i>`;
 

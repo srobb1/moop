@@ -591,7 +591,7 @@
       $has_content = $has_images || $has_paragraphs;
     ?>
       <div class="group-card <?= $desc['in_use'] ? 'in-use' : 'not-in-use' ?>" style="margin-bottom: 20px; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; background-color: #fff;">
-        <div class="group-header" onclick="toggleGroup('<?= htmlspecialchars($desc['group_name']) ?>')" style="cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="group-header" onclick="toggleGroup(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)" style="cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 3px; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <?php if ($has_content): ?>
               <span style="color: #28a745; font-size: 18px; margin-right: 5px;" title="Has content">✓</span>
@@ -620,7 +620,7 @@
               </button>
             <?php endif; ?>
             <button type="button" class="btn btn-secondary btn-sm"
-                    onclick="toggleGroup('<?= htmlspecialchars($desc['group_name']) ?>')">
+                    onclick="toggleGroup(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)">
               <i class="fa fa-edit"></i> Edit
             </button>
           </div>
@@ -642,7 +642,7 @@
                 <input type="text" class="form-control" id="wiki-topic-<?= htmlspecialchars($desc['group_name']) ?>"
                        value="<?= htmlspecialchars($desc['wikipedia_topic'] ?? '') ?>"
                        placeholder="e.g. Platyhelminthes"
-                       oninput="document.getElementById('wiki-topic-hidden-<?= htmlspecialchars($desc['group_name']) ?>').value = this.value">
+                       oninput="document.getElementById(<?= htmlspecialchars(json_encode('wiki-topic-hidden-' . $desc['group_name'])) ?>).value = this.value">
                 <button type="button" class="btn btn-outline-primary"
                         onclick="fetchGroupWiki(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>, this)"
                         <?= $desc_file_write_error ? 'disabled' : '' ?>>
@@ -656,7 +656,7 @@
             <div id="images-container-<?= htmlspecialchars($desc['group_name']) ?>">
               <?php foreach ($desc['images'] as $idx => $image): ?>
                 <div class="image-item" data-index="<?= $idx ?>" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-                  <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)" style="float: right;" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
+                  <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeImage(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>, <?= $idx ?>)" style="float: right;" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
                   <div class="form-group">
                     <label>Image File</label>
                     <div class="input-group">
@@ -673,13 +673,13 @@
                 </div>
               <?php endforeach; ?>
             </div>
-            <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addImage('<?= htmlspecialchars($desc['group_name']) ?>')" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Image</button>
+            <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addImage(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Image</button>
             
             <h5>HTML Paragraphs</h5>
             <div id="paragraphs-container-<?= htmlspecialchars($desc['group_name']) ?>">
               <?php foreach ($desc['html_p'] as $idx => $para): ?>
                 <div class="paragraph-item" data-index="<?= $idx ?>" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-                  <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph('<?= htmlspecialchars($desc['group_name']) ?>', <?= $idx ?>)" style="float: right;" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
+                  <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeParagraph(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>, <?= $idx ?>)" style="float: right;" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Remove</button>
                   <div class="form-group">
                     <label>Text (HTML allowed)</label>
                     <textarea class="form-control para-text" rows="4"><?= htmlspecialchars($para['text']) ?></textarea>
@@ -697,7 +697,7 @@
                 </div>
               <?php endforeach; ?>
             </div>
-            <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addParagraph('<?= htmlspecialchars($desc['group_name']) ?>')" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Paragraph</button>
+            <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addParagraph(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Paragraph</button>
             
             <div class="mt-3">
               <button type="submit" name="save_description" class="btn btn-success" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Save Changes</button>
