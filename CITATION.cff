@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use MOOP, please cite it using the metadata below."
+type: software
+title: "MOOP: Multi-Organism Omics Platform"
+abstract: >-
+  A web application for exploring genome assemblies, gene sets and functional
+  annotations across many organisms, with annotation search, BLAST, sequence
+  retrieval, bulk export and an integrated JBrowse2 genome browser.
+authors:
+  - given-names: "Sofia M. C."
+    family-names: Robb
+    orcid: "https://orcid.org/0000-0002-3528-5267"
+repository-code: "https://github.com/srobb1/moop"
+license: MIT
+keywords:
+  - genomics
+  - genome browser
+  - functional annotation
+  - comparative genomics
+  - JBrowse2
+  - BLAST
