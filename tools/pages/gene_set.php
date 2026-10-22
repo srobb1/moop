@@ -111,13 +111,19 @@
                 <dt>Source</dt>
                 <dd><?= htmlspecialchars($gene_set_meta['source']) ?></dd>
                 <?php endif; ?>
+                <?php /* Where the data came from, written in the JSON on the compute box (copy2moop ships it;
+                         an edit made on this server is overwritten by the next copy). Free text: URLs link. */ ?>
+                <?php if (!empty($gene_set_meta['provenance'])): ?>
+                <dt>Provenance</dt>
+                <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$gene_set_meta['provenance']) ?></dd>
+                <?php endif; ?>
                 <?php if (!empty($gene_set_meta['date_added'])): ?>
                 <dt>Date added</dt>
                 <dd><?= htmlspecialchars($gene_set_meta['date_added']) ?></dd>
                 <?php endif; ?>
                 <?php if (!empty($gene_set_meta['note'])): ?>
                 <dt>Note</dt>
-                <dd><?= htmlspecialchars($gene_set_meta['note']) ?></dd>
+                <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$gene_set_meta['note']) ?></dd>
                 <?php endif; ?>
               </dl>
               <?php /* Counts live in the flow of the card, above Downloads, not in a panel

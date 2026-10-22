@@ -125,13 +125,19 @@
             <dt>Source</dt>
             <dd><?= htmlspecialchars($assembly_meta['source']) ?></dd>
             <?php endif; ?>
+            <?php /* Where the data came from, written in the JSON on the compute box (copy2moop ships it;
+                     an edit made on this server is overwritten by the next copy). Free text: URLs link. */ ?>
+            <?php if (!empty($assembly_meta['provenance'])): ?>
+            <dt>Provenance</dt>
+            <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$assembly_meta['provenance']) ?></dd>
+            <?php endif; ?>
             <?php if (!empty($assembly_meta['date_added'])): ?>
             <dt>Date added</dt>
             <dd><?= htmlspecialchars($assembly_meta['date_added']) ?></dd>
             <?php endif; ?>
             <?php if (!empty($assembly_meta['note'])): ?>
             <dt>Note</dt>
-            <dd><?= htmlspecialchars($assembly_meta['note']) ?></dd>
+            <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$assembly_meta['note']) ?></dd>
             <?php endif; ?>
             <?php /* Gene sets live HERE, in the overview, not in a full-width card of their
                      own below. Measured across all 85 organisms: no assembly has more than

@@ -2045,6 +2045,19 @@ ok($_built_hits === [],
    . ($_built_hits ? ":\n      " . implode("\n      ", $_built_hits) : ''));
 
 // ----------------------------------------------------------------------------
+group('Metadata free text: provenance / note');
+ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
+   'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',
+   'a URL becomes a link; the full stop after it stays text');
+ok(moop_text_with_links('(see https://doi.org/10.1/x)') ===
+   '(see <a href="https://doi.org/10.1/x" target="_blank" rel="noopener">https://doi.org/10.1/x</a>)',
+   'a closing bracket after a URL is not part of it');
+ok(strpos(moop_text_with_links('<b>x</b> https://a.b/"onmouseover="y'), '<b>') === false
+   && strpos(moop_text_with_links('https://a.b/"onmouseover="y'), 'href="https://a.b/"') !== false,
+   'text is escaped, and a quote ends the URL -- it cannot add an attribute to the link');
+ok(moop_text_with_links("two\nlines, no url") === "two\nlines, no url", 'plain text passes through; line breaks are kept for CSS');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

@@ -154,7 +154,7 @@
 │   │   ├── genome.fa                ← Reference genome FASTA
 │   │   ├── genome.fa.fai            ← FASTA index (samtools)
 │   │   ├── genome.fa.n*             ← BLAST nucleotide index files
-│   │   ├── genome.json              ← Assembly metadata (source, date, notes)
+│   │   ├── genome.json              ← Assembly metadata (source, provenance, date, note)
 │   │   │
 │   │   └── Gene_Set_Name/           ← One directory per gene set
 │   │       ├── transcript.nt.fa     ← Spliced mRNA sequences
@@ -164,7 +164,7 @@
 │   │       ├── protein.aa.fa        ← Protein sequences
 │   │       ├── protein.aa.fa.p*     ← BLAST protein index files
 │   │       ├── genes.gff            ← GFF3 annotation file
-│   │       └── geneset.json         ← Gene set metadata (source, date, notes)
+│   │       └── geneset.json         ← Gene set metadata (source, provenance, date, note)
 │   │
 │   └── Another_Assembly_ID/
 │       └── [same structure]
@@ -184,12 +184,12 @@
           <tr><td><code>organism.sqlite</code></td><td>Organism level</td><td>All features and annotations for this organism</td></tr>
           <tr><td><code>organism.json</code></td><td>Organism level</td><td>Display metadata: genus, species, common name, image path</td></tr>
           <tr><td><code>genome.fa</code></td><td>Assembly level</td><td>Complete reference genome (chromosomes/scaffolds)</td></tr>
-          <tr><td><code>genome.json</code></td><td>Assembly level</td><td>Assembly metadata: source, date added, notes</td></tr>
+          <tr><td><code>genome.json</code></td><td>Assembly level</td><td>Assembly metadata: source, provenance (where it came from), date added, note</td></tr>
           <tr><td><code>transcript.nt.fa</code></td><td>Gene set level</td><td>Spliced mRNA sequences (exons only)</td></tr>
           <tr><td><code>cds.nt.fa</code></td><td>Gene set level</td><td>Coding sequences (start codon to stop codon)</td></tr>
           <tr><td><code>protein.aa.fa</code></td><td>Gene set level</td><td>Translated protein sequences</td></tr>
           <tr><td><code>genes.gff</code></td><td>Gene set level</td><td>GFF3 annotation file used by JBrowse2</td></tr>
-          <tr><td><code>geneset.json</code></td><td>Gene set level</td><td>Gene set metadata: source, date added, notes</td></tr>
+          <tr><td><code>geneset.json</code></td><td>Gene set level</td><td>Gene set metadata: source, provenance (where it came from), date added, note</td></tr>
           <tr><td><code>*.n* / *.p*</code></td><td>Same dir as FASTA</td><td>BLAST database index files (auto-generated)</td></tr>
         </tbody>
       </table>

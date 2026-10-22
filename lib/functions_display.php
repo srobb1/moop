@@ -300,6 +300,30 @@ function validateOrganismJson($json_path) {
 }
 
 /**
+ * Free text from a metadata file (genome.json / geneset.json "provenance", "note") as HTML:
+ * escaped, with http(s):// and ftp:// URLs made into links that open in a new tab. Line breaks
+ * are kept by the caller's CSS (white-space: pre-line), not turned into <br>.
+ *
+ * A URL's trailing sentence punctuation stays outside the link, so "see https://x.org/a."
+ * links https://x.org/a and leaves the full stop as text.
+ */
+function moop_text_with_links(string $text): string {
+    $parts = preg_split('~((?:https?|ftp)://[^\s<>"]+)~i', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
+    $html = '';
+    foreach ($parts as $i => $part) {
+        if ($i % 2 === 0) {
+            $html .= htmlspecialchars($part, ENT_QUOTES);
+            continue;
+        }
+        $url  = rtrim($part, '.,;:!?)]\'');
+        $tail = substr($part, strlen($url));
+        $html .= '<a href="' . htmlspecialchars($url, ENT_QUOTES) . '" target="_blank" rel="noopener">'
+               . htmlspecialchars($url, ENT_QUOTES) . '</a>' . htmlspecialchars($tail, ENT_QUOTES);
+    }
+    return $html;
+}
+
+/**
  * Send a "not found" answer and stop: HTTP 404, and on a page the site's own page -- header, menus, the message, one link home (tools/pages/not_found.php).
  * An API endpoint (a script under /api/) gets a plain-text 404 instead of HTML.
  *
