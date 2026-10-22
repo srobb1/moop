@@ -12,6 +12,7 @@
  *   database present / empty      computeDataHealthAlerts()
  *   BLAST indexes, genome .fai    organism cache (blast_validation, fai_validation)
  *   missing FASTA per gene set    getGeneSetFastaGaps() (organism cache)
+ *   chromosome names vs genome    getGeneSetSeqnameGaps() (organism cache)
  *   taxonomy tree, groups         getOrganismsNotInTree(), getUngroupedOrganisms()
  *   directory permissions         moop_permission_organism_dir_rule() (live)
  * Only checks nothing else makes stay live here: organism.json present, gene sets with
@@ -64,6 +65,7 @@ function organism_checklist_checks(string $organism_data, array $sequence_types,
         'exec_files_fix_command'   => moop_permission_fix_exec_files_command($organism_data),
         'gene_sets_missing_gff'    => organism_checklist_gene_sets_missing_gff($organism_data, $organisms_in_system, $sequence_types),
         'fasta_gaps'               => getGeneSetFastaGaps($cache_data, $sequence_types),
+        'seqname_gaps'             => getGeneSetSeqnameGaps($cache_data),
         'organisms_not_in_tree'    => getOrganismsNotInTree($cache_data),
         'unassigned_organisms'     => getUngroupedOrganisms($cache_data, is_array($groups_entries) ? $groups_entries : []),
     ];

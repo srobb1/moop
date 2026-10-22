@@ -25,6 +25,7 @@
                   'gene_sets_complete'  => 'Every assembly has a gene set with Protein, mRNA and CDS FASTA',
                   'has_blast_indexes'   => 'Has BLAST indexes',
                   'has_fai_index'       => 'Has FAI index',
+                  'seqnames_match_genome' => 'Gene sets name chromosomes as the genome does',
                   'has_database'        => 'Has database file',
                   'database_valid'      => 'Database is valid',
                   'directories_match_db'=> 'Assembly & gene set dirs match DB',

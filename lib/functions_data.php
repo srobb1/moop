@@ -818,6 +818,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         'gene_sets_complete' => false,
         'has_blast_indexes' => false,
         'has_fai_index' => false,
+        'seqnames_match_genome' => false,
         'has_database' => false,
         'database_valid' => false,
         'directories_match_db' => false,
@@ -919,6 +920,10 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         }
         $checks['has_fai_index'] = !$any_genome_fa || $all_have_fai;
     }
+
+    // 4b. Do the gene sets name chromosomes the way their genome does? (organism cache,
+    // seqname_validation -- only mismatches are recorded, so empty passes)
+    $checks['seqnames_match_genome'] = empty($data['seqname_validation']);
 
     // 5. Is there a database file?
     $checks['has_database'] = $data['has_db'];
@@ -1054,6 +1059,7 @@ function moop_organism_issue_defs(): array {
         'gene-set-files'       => $d('Missing gene-set files', 'incomplete', 'A gene set lacks its Protein, mRNA or CDS FASTA, or an assembly holds no gene set', true, false),
         'blast'                => $d('Missing BLAST index',   'incomplete', 'A FASTA file has no BLAST index', true, false),
         'fai'                  => $d('Missing .fai',          'incomplete', 'genome.fa is present but its .fai index is not', true, false),
+        'seqnames'             => $d('Chromosome names differ', 'incomplete', 'A gene set names its chromosomes differently from its genome (e.g. "2L" vs "NC_004354.4") -- genomic sequence, exon export and the genome browser find nothing for its genes. Search and BLAST still work.', true, true),
         'dir-mismatch'         => $d('Dir / DB mismatch',     'incomplete', 'An assembly or gene-set directory matches no record in the database', true, false),
         'groups'               => $d('Not in groups',         'incomplete', 'An assembly is in no group -- invisible to users until it is', true, true),
         'tree'                 => $d('Not in tree',           'incomplete', 'Not in the taxonomy tree -- hidden from the homepage organism selector', true, true),
@@ -1062,6 +1068,25 @@ function moop_organism_issue_defs(): array {
         // info
         'no-genome'            => $d('No genome',             'info',       'An assembly has no genome.fa -- transcriptome / proteome data only. A valid shape, not an error.', true, false),
     ];
+}
+
+/**
+ * Gene sets whose coordinates name chromosomes their genome does not contain, read from the
+ * organism cache (seqname_validation). One list for the dashboard, the setup checklist and
+ * Manage Organisms.
+ *
+ * @return list<array{path: string, missing: int, total: int, examples: list<string>}>
+ */
+function getGeneSetSeqnameGaps(array $cache_data): array {
+    $out = [];
+    foreach ($cache_data as $org => $org_data) {
+        foreach ($org_data['seqname_validation'] ?? [] as $asm => $gene_sets) {
+            foreach ($gene_sets as $gs => $gap) {
+                $out[] = ['path' => "$org/$asm/$gs"] + $gap;
+            }
+        }
+    }
+    return $out;
 }
 
 /** Bootstrap color for a severity: one mapping, so red always means critical. */
@@ -1463,7 +1488,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     $cache_file    = moop_organism_cache_file();
     $groups_file   = "$metadata_path/organism_assembly_groups.json";
 
-    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0, 'gene_set_files' => 0];
+    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0, 'gene_set_files' => 0, 'seqname_mismatch' => 0];
 
     // Cache-driven: taxonomy-tree membership + the list of assemblies per organism.
     $cache_data = [];
@@ -1505,6 +1530,11 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     // not repeated here: they already appear as orphaned assembly directories below.
     $gene_set_file_gaps = getGeneSetFastaGaps($cache_data, $config->getSequenceTypes())['gene_sets'];
     $health_alerts['gene_set_files'] = count($gene_set_file_gaps);
+
+    // Gene sets whose chromosome names are not the genome's -- every coordinate-based tool
+    // finds nothing for their genes, and nothing else on the dashboard would say so.
+    $gene_set_seqname_gaps = getGeneSetSeqnameGaps($cache_data);
+    $health_alerts['seqname_mismatch'] = count($gene_set_seqname_gaps);
 
     // Gene-set dirs on disk with no matching DB row (dropped in a rebuild, not cleaned up).
     $orphaned_gene_set_tuples = getOrphanedGeneSetTuples($organism_data_path);
@@ -1558,6 +1588,7 @@ function computeDataHealthAlerts(string $organism_data_path): array {
         'no_database_organisms'    => $no_database_organisms,
         'empty_database_organisms' => $empty_database_organisms,
         'gene_set_file_gaps'       => $gene_set_file_gaps,
+        'gene_set_seqname_gaps'    => $gene_set_seqname_gaps,
         'new_gene_set_tuples'      => $new_gene_set_tuples,
         'taxonomy_suggestions'     => $taxonomy_suggestions,
     ];

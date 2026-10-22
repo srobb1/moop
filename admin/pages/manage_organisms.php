@@ -211,6 +211,7 @@
           'gene_sets_complete'   => 'gene-set-files',
           'has_blast_indexes'    => 'blast',
           'has_fai_index'        => 'fai',
+          'seqnames_match_genome' => 'seqnames',
           'directories_match_db' => 'dir-mismatch',
           'assemblies_in_groups' => 'groups',
           'in_taxonomy_tree'     => 'tree',

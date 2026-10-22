@@ -75,6 +75,7 @@ $_orphaned_jbrowse_systemic = $_health['orphaned_jbrowse_systemic'];
 $_no_database_organisms    = $_health['no_database_organisms'];
 $_empty_database_organisms = $_health['empty_database_organisms'];
 $_gene_set_file_gaps       = $_health['gene_set_file_gaps'];
+$_gene_set_seqname_gaps    = $_health['gene_set_seqname_gaps'];
 $_new_gene_set_tuples      = $_health['new_gene_set_tuples'];
 $_taxonomy_suggestions     = $_health['taxonomy_suggestions'];
 unset($_raw_cache_data, $_health);
@@ -102,6 +103,7 @@ $data = [
     'no_database_organisms' => $_no_database_organisms,
     'empty_database_organisms' => $_empty_database_organisms,
     'gene_set_file_gaps' => $_gene_set_file_gaps,
+    'gene_set_seqname_gaps' => $_gene_set_seqname_gaps,
     // Per CLAUDE.md §6: JS logic belongs in js/modules/, not inline. (The organism-cache
     // widget below predates that rule.)
     'page_script' => [

@@ -309,6 +309,7 @@ $data = [
     'no_database_organisms' => $_health['no_database_organisms'],
     'empty_database_organisms' => $_health['empty_database_organisms'],
     'gene_set_file_gaps' => $_health['gene_set_file_gaps'],
+    'gene_set_seqname_gaps' => $_health['gene_set_seqname_gaps'],
     'new_gene_set_tuples' => $_health['new_gene_set_tuples'],
     'taxonomy_suggestions' => $_health['taxonomy_suggestions'],
     // Reuse this page's existing staleness computation for the shared health card's

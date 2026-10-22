@@ -15,6 +15,8 @@
  * time (both files are always loaded together).
  */
 
+require_once __DIR__ . '/genomic_regions.php';   // moop_gene_set_seqname_gap()
+
 /**
  * Get organism info with caching.
  *
@@ -46,7 +48,8 @@
 // Manage Organisms can say WHICH FASTA type a gene set lacks instead of "missing files".
 // v7: overall_status gains 'gene_sets_complete', so partial gene sets grade Incomplete.
 // v8: an assembly directory with no genome.json is checked against the database too.
-define('ORGANISM_CACHE_SCHEMA_VERSION', 8);
+// v9: seqname_validation -- gene sets whose coordinates name chromosomes the genome lacks.
+define('ORGANISM_CACHE_SCHEMA_VERSION', 9);
 
 /**
  * Write organism cache atomically: write to a temp file then rename().
@@ -268,6 +271,18 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
             ];
         }
         $org_info['fai_validation'] = $fai_by_assembly;
+
+        // Gene sets whose coordinates name chromosomes the genome does not have (Ensembl "2L"
+        // vs RefSeq "NC_004354.4"): genomic sequence, exon export and the genome browser all
+        // find nothing for their genes. Only the gene sets with a mismatch are recorded.
+        $seqname_by_assembly = [];
+        foreach ($org_info['assemblies'] as $assembly) {
+            foreach (glob("$org_path/$assembly/*", GLOB_ONLYDIR) ?: [] as $gs_dir) {
+                $gap = moop_gene_set_seqname_gap($gs_dir, "$org_path/$assembly");
+                if ($gap && $gap['missing'] > 0) $seqname_by_assembly[$assembly][basename($gs_dir)] = $gap;
+            }
+        }
+        $org_info['seqname_validation'] = $seqname_by_assembly;
         
         // Pre-compute taxonomy tree membership
         $org_info['in_taxonomy_tree'] = isAssemblyInTaxonomyTree($org_name, '', $taxonomy_tree_file);

@@ -668,6 +668,29 @@
           </div>
         <?php endif; ?>
 
+        <?php if (!empty($seqname_gaps)): ?>
+          <div class="alert alert-warning mt-3">
+            <i class="fa fa-exclamation-triangle"></i>
+            <strong><?= count($seqname_gaps) ?> gene set<?= count($seqname_gaps) === 1 ? ' names' : 's name' ?> chromosomes differently from the genome:</strong>
+            <div class="small mt-1">
+              The coordinates in <code>feature_coords.tsv</code> (built from the GFF) use sequence names that are
+              not in the assembly's <code><?= htmlspecialchars(genome_fasta_filename()) ?></code> -- for example
+              Ensembl <code>2L</code> against RefSeq <code>NC_004354.4</code>. Genomic sequence, exon export and
+              the genome browser find nothing for these genes; search and BLAST still work.
+            </div>
+            <div class="mt-2 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.8em; max-height: 16em; overflow-y: auto;">
+              <?php foreach ($seqname_gaps as $gs): ?>
+                <?= htmlspecialchars($gs['path']) ?><span class="text-warning">   [<?= number_format($gs['missing']) ?> of <?= number_format($gs['total']) ?> not in genome, e.g. <?= htmlspecialchars(implode(', ', $gs['examples'])) ?>]</span><br>
+              <?php endforeach; ?>
+            </div>
+            <small class="text-muted d-block mt-2">
+              <i class="fa fa-info-circle"></i>
+              Use a genome and an annotation from the same source, or give the gene set a name-translation table.
+              Keep the original files as they are.
+            </small>
+          </div>
+        <?php endif; ?>
+
         <p class="mt-3"><strong>Full Management:</strong> <a href="manage_organisms.php" class="btn btn-success"><i class="fa fa-dna"></i> Manage Organisms</a></p>
       </div>
     </div>
