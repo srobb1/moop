@@ -60,6 +60,7 @@ if ($va_previewing) {
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/search.php">Annotation Search</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/moopmart.php">MOOPmart: Data Exporter</a></li>
+            <li><a class="dropdown-item" href="/<?= $site ?>/tools/expression.php">Expression</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/blast.php">BLAST Search</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/primer_blast.php">Primer BLAST</a></li>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/primer_maker.php">Primer Maker</a></li>

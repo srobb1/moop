@@ -121,6 +121,15 @@ arsort($annot_type_totals);
 $data = [
     'gene_set_info'        => $gene_set_info,
     'gene_set_meta'        => $gene_set_meta,
+    // The Expression tool's button appears only when this gene set has expression data the
+    // visitor may see (reads each experiment's header line only).
+    'has_expression'       => (function () use ($organism_name, $genome_accession, $gene_set_name) {
+        require_once __DIR__ . '/../lib/expression_functions.php';
+        $dir = moop_expression_bundle_dir($organism_name, $genome_accession, $gene_set_name);
+        if (!is_dir($dir)) return false;
+        $ov = moop_expression_load_overrides(rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/expression_overrides.json');
+        return (bool)moop_expression_bundle_experiments($dir, "$organism_name/$genome_accession/$gene_set_name/", get_access_level(), $ov);
+    })(),
     'organism_name'        => $organism_name,
     'organism_info'        => $organism_info,
     'genome_accession'     => $genome_accession,

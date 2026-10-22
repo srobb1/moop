@@ -35,6 +35,7 @@
           'assembly'     => $genome_accession,
           'gene_set'     => $gene_set_name,
           'display_name' => $gene_set_name,
+          'has_expression' => !empty($has_expression),
       ]);
       include_once TOOL_SECTION_PATH;
       ?>

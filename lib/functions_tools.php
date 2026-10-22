@@ -110,9 +110,11 @@ function createToolContext($page, $params = []) {
     // param in config/tools_config.php is all it takes. The base keys stay
     // because some are consumed HERE rather than by any one tool
     // (use_onclick_handler, page) or are used to derive display_name below.
+    // required_params too: a tool that needs a flag the page sets (Expression needs
+    // has_expression) would otherwise never see it -- the same silent drop as above.
     $declared = [];
     foreach (ConfigManager::getInstance()->getAllTools() as $tool) {
-        foreach (($tool['context_params'] ?? []) as $p) {
+        foreach (array_merge($tool['context_params'] ?? [], $tool['required_params'] ?? []) as $p) {
             $declared[$p] = true;
         }
     }

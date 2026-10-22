@@ -116,6 +116,21 @@ return [
         'toolbox'        => true,
     ],
 
+    'expression' => [
+        'id'              => 'expression',
+        'name'            => 'Expression',
+        'icon'            => 'fa-th',
+        'description'     => 'Compare a list of genes across expression experiments as a heatmap',
+        'btn_class'       => 'btn-tool-teal',
+        'url_path'        => '/tools/expression.php',
+        'context_params'  => ['organism', 'assembly', 'gene_set'],
+        // Only where there is something to show: the gene set page sets has_expression when
+        // the gene set has expression bundles this visitor may see. Elsewhere the button would
+        // lead to an empty page.
+        'required_params' => ['has_expression'],
+        'pages'           => ['gene_set'],
+    ],
+
     'primer_maker' => [
         'id'             => 'primer_maker',
         'name'           => 'Primer Maker',

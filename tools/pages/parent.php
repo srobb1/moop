@@ -474,7 +474,14 @@
                 <?php endif; ?>
             </span>
             <?php if ($__ex['with_data'] > 0): ?>
-            <form method="POST" action="" class="ms-auto">
+            <?php /* Into the Expression tool with this gene already in the list, to add others. */ ?>
+            <a class="btn btn-sm btn-outline-secondary py-0 ms-auto"
+               href="/<?= htmlspecialchars($site) ?>/tools/expression.php?<?= htmlspecialchars(http_build_query([
+                   'organism' => $organism_name, 'assembly' => $genome_accession, 'gene_set' => $gene_set_name,
+                   'genes' => $feature_uniquename])) ?>"
+               title="Open the Expression tool with this gene, to compare it with others">
+                <i class="fa fa-th"></i> Compare genes</a>
+            <form method="POST" action="" class="ms-1">
                 <?= csrf_input_field() ?>
                 <input type="hidden" name="download_expression" value="1">
                 <button type="submit" class="btn btn-sm btn-outline-secondary py-0"

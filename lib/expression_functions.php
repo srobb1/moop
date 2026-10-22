@@ -738,3 +738,249 @@ function moop_expression_gene_tsv(string $gene, array $experiments, array $value
     }
     return $out;
 }
+
+// ============================================================================
+// The Expression tool (tools/expression.php): a gene list x chosen experiments -> heatmap
+// ============================================================================
+
+/** At most this many genes per heatmap: past it the rows stop being readable, not slow. */
+const MOOP_EXPRESSION_TOOL_MAX_GENES = 200;
+
+/**
+ * Every gene set with expression bundles this reader may see, for the tool's picker.
+ * Only gene sets with data are offered: listing every organism would mostly lead nowhere.
+ *
+ * @return list<array{organism: string, assembly: string, gene_set: string, experiments: int}>
+ */
+function moop_expression_gene_sets(string $organism_data, string $user_level): array
+{
+    require_once __DIR__ . '/../includes/access_control.php';
+    $overrides = moop_expression_load_overrides(
+        rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/expression_overrides.json');
+    $out = [];
+    foreach (glob(rtrim($organism_data, '/') . '/*/*/*/expression', GLOB_ONLYDIR) ?: [] as $dir) {
+        [$organism, $assembly, $gene_set] = array_slice(explode('/', $dir), -4, 3);
+        if (!has_gene_set_access($organism, $assembly, $gene_set)) continue;
+        $n = count(moop_expression_bundle_experiments($dir, "$organism/$assembly/$gene_set/", $user_level, $overrides));
+        if ($n) $out[] = compact('organism', 'assembly', 'gene_set') + ['experiments' => $n];
+    }
+    return $out;
+}
+
+/**
+ * The gene each feature belongs to: a transcript or protein id pasted into the tool is answered
+ * with its gene's row, because the expression tables are per gene.
+ *
+ * Walks parent_feature_id upward, at most 6 steps and never through a feature twice -- some
+ * databases carry self-loops (bug: parent = self), on which an unguarded walk never ends.
+ *
+ * @param list<string> $uniquenames features of ONE gene set
+ * @return array<string, string> uniquename => its root (gene) uniquename
+ */
+function moop_expression_root_genes(array $uniquenames, string $db_file, int $gene_set_id): array
+{
+    $roots = [];
+    foreach (array_unique($uniquenames) as $name) {
+        $row  = fetchData('SELECT feature_id, feature_uniquename, parent_feature_id FROM feature
+                            WHERE gene_set_id = ? AND feature_uniquename = ?', $db_file, [$gene_set_id, $name])[0] ?? null;
+        $seen = [];
+        for ($step = 0; $row && $step < 6; $step++) {
+            $seen[(int)$row['feature_id']] = true;
+            $parent = $row['parent_feature_id'];
+            if ($parent === null || $parent === '' || $parent === 'NULL' || isset($seen[(int)$parent])) break;
+            $up = fetchData('SELECT feature_id, feature_uniquename, parent_feature_id FROM feature WHERE feature_id = ?',
+                            $db_file, [(int)$parent])[0] ?? null;
+            if (!$up) break;
+            $row = $up;
+        }
+        if ($row) $roots[$name] = (string)$row['feature_uniquename'];
+    }
+    return $roots;
+}
+
+/**
+ * Each gene's symbol (TBXT, SOD1) where it has a real one, by the gene page's own rule
+ * (moop_gene_symbol(): not blank, not its own or a child's id, not a LOC placeholder). Genes
+ * without one are absent. In NV2 that is most genes -- 240 of 24,526 carry a symbol; the rest
+ * hold a transcript id in feature_name -- so the heatmap simply shows their id.
+ *
+ * @param list<string> $genes gene uniquenames of ONE gene set
+ * @return array<string, string> gene => symbol
+ */
+function moop_expression_gene_symbols(array $genes, string $db_file, int $gene_set_id): array
+{
+    if (!$genes) return [];
+    require_once __DIR__ . '/functions_display.php';
+    $in   = implode(',', array_fill(0, count($genes), '?'));
+    $rows = fetchData("SELECT feature_id, feature_uniquename, feature_name FROM feature
+                        WHERE gene_set_id = ? AND feature_uniquename IN ($in)", $db_file, array_merge([$gene_set_id], $genes));
+    $kids = [];
+    if ($rows) {
+        $ids = array_column($rows, 'feature_id');
+        foreach (fetchData('SELECT parent_feature_id, feature_uniquename FROM feature WHERE parent_feature_id IN ('
+                           . implode(',', array_fill(0, count($ids), '?')) . ')', $db_file, $ids) as $k) {
+            $kids[(int)$k['parent_feature_id']][] = (string)$k['feature_uniquename'];
+        }
+    }
+    $out = [];
+    foreach ($rows as $r) {
+        $sym = moop_gene_symbol($r['feature_name'], (string)$r['feature_uniquename'], $kids[(int)$r['feature_id']] ?? []);
+        if ($sym !== '') $out[(string)$r['feature_uniquename']] = $sym;
+    }
+    return $out;
+}
+
+/**
+ * Condition averages for each gene in each experiment, read from the bundles once per experiment.
+ *
+ * @param array $experiments from moop_expression_bundle_experiments()
+ * @param list<string> $genes gene ids as the tables use them
+ * @return array{experiments: array, matrix: array<string, array<int, list<array>|null>>}
+ *         matrix[gene][experiment index] = moop_expression_group_means() rows, or null when the
+ *         experiment has no row for that gene ("no data", never zero). An experiment whose file
+ *         cannot be read is dropped (and logged), as on the gene page.
+ */
+function moop_expression_heatmap_matrix(array $experiments, array $genes): array
+{
+    $matrix = array_fill_keys($genes, []);
+    foreach ($experiments as $i => $e) {
+        try {
+            $vals = moop_expression_bundle_values($e, $genes);
+        } catch (RuntimeException $ex) {
+            error_log("expression: skipping {$e['slug']} — " . $ex->getMessage());
+            unset($experiments[$i]);
+            continue;
+        }
+        foreach ($genes as $g) {
+            $matrix[$g][$i] = isset($vals[$g]) ? moop_expression_group_means($e['samples'], $vals[$g]) : null;
+        }
+    }
+    return ['experiments' => $experiments, 'matrix' => $matrix];
+}
+
+/**
+ * How dark a cell is, 0..1.
+ *
+ * 'level'   -- absolute, log-scaled: 1, 10, 100 and 1000 TPM at exactly 1/4, 1/2, 3/4 and 1 --
+ *             the gene page's off / low / medium / high boundaries -- with 0..1 TPM rising evenly
+ *             to the first step, and >= 1000 darkest. (log10(TPM + 1) was used first; the +1
+ *             squeezes the low end, so the legend's "even" steps were not.) A linear scale would
+ *             let one highly expressed gene wash every other row out.
+ * 'pattern' -- this gene's own shape: value / its highest condition, but never divided by less
+ *             than MOOP_EXPRESSION_SPARK_FLOOR, the gene page's rule, so a silent gene's 0.1 vs
+ *             0.5 TPM is not drawn as dramatically as a real 1 vs 265.
+ */
+function moop_expression_shade(float $tpm, string $mode, float $row_max): float
+{
+    if ($mode === 'pattern') {
+        return max(0.0, min(1.0, $tpm / max($row_max, MOOP_EXPRESSION_SPARK_FLOOR)));
+    }
+    if ($tpm <= 1.0) return max(0.0, $tpm * 0.25);
+    return min(1.0, 0.25 + 0.25 * log10($tpm));
+}
+
+/** A shade (0..1) as a colour: white through the site's teal to deep teal. */
+function moop_expression_shade_colour(float $t): string
+{
+    $stops = [[0.0, [248, 250, 252]], [0.25, [165, 230, 238]], [0.5, [34, 180, 206]], [0.75, [8, 120, 150]], [1.0, [12, 54, 72]]];
+    for ($i = 1; $i < count($stops); $i++) {
+        [$t1, $c1] = $stops[$i];
+        if ($t <= $t1) {
+            [$t0, $c0] = $stops[$i - 1];
+            $f = $t1 > $t0 ? ($t - $t0) / ($t1 - $t0) : 0;
+            return sprintf('#%02x%02x%02x', ...array_map(fn($a, $b) => (int)round($a + ($b - $a) * $f), $c0, $c1));
+        }
+    }
+    return '#0c3648';
+}
+
+/**
+ * The heatmap as inline SVG: one row per gene, one column per condition, grouped under each
+ * experiment. Pure -- the tests drive it directly.
+ *
+ * A cell with no measurement is hatched grey, never drawn as zero (null != 0 everywhere in this
+ * feature). Every cell's hover gives gene, experiment, condition, the average and its replicates.
+ *
+ * @param list<string> $genes rows, in display order
+ * @param array $experiments index => experiment (label, samples)
+ * @param array $matrix from moop_expression_heatmap_matrix()
+ * @param array $symbols gene => symbol, from moop_expression_gene_symbols()
+ * @param callable|null $gene_url gene => its page's URL; the gene's label then links there
+ */
+function moop_expression_heatmap_svg(array $genes, array $experiments, array $matrix, string $mode = 'level', array $symbols = [],
+                                     ?callable $gene_url = null): string
+{
+    $cell_w = 30; $cell_h = 18; $gap = 14; $head_h = 110;
+    // Row labels: the id, right-aligned next to the cells, and -- only when some gene in the list
+    // has one -- a narrow bold symbol column before it. Widths follow the longest of each
+    // (~6.6 px a character at 11 px); a symbol longer than 14 characters is cut, whole in the hover.
+    $id_w  = 12 + 6.6 * max(array_map('mb_strlen', $genes ?: ['']));
+    $sym_n = $symbols ? min(14, max(array_map('mb_strlen', $symbols))) : 0;
+    $sym_w = $sym_n ? 10 + 6.8 * $sym_n : 0;
+    $label_w = (int)ceil(4 + $sym_w + $id_w);
+    // Columns: every condition of every experiment, in samples.tsv order.
+    $cols = [];
+    foreach ($experiments as $i => $e) {
+        foreach (moop_expression_group_means($e['samples'], []) as $g) $cols[] = [$i, $g['group']];
+    }
+    $x_of = []; $x = $label_w; $prev = null; $spans = [];
+    foreach ($cols as $c) {
+        if ($prev !== null && $prev !== $c[0]) $x += $gap;
+        $x_of[] = $x;
+        $spans[$c[0]] ??= [$x, $x];
+        $spans[$c[0]][1] = $x + $cell_w;
+        $x += $cell_w; $prev = $c[0];
+    }
+    // Slanted condition labels lean right past the last column: leave room for the longest.
+    $longest = 0;
+    foreach ($cols as [, $group]) $longest = max($longest, mb_strlen($group));
+    $width  = $x + (int)ceil(min($longest, 24) * 6.2 * 0.57) + 8;
+    $height = $head_h + count($genes) * $cell_h + 4;
+    $esc = fn($s) => htmlspecialchars((string)$s, ENT_QUOTES);
+    $fmt = fn(float $v) => $v < 10 ? number_format($v, 1) : number_format($v, 0);
+
+    $svg = sprintf('<svg xmlns="http://www.w3.org/2000/svg" class="expr-heatmap" width="%d" height="%d" viewBox="0 0 %d %d" role="img" aria-label="Expression heatmap">',
+                   $width, $height, $width, $height)
+         . '<defs><pattern id="exprNoData" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+         . '<rect width="5" height="5" fill="#f1f3f5"/><line x1="0" y1="0" x2="0" y2="5" stroke="#ced4da" stroke-width="2"/></pattern></defs>';
+    // Experiment names over their columns, condition names slanted beneath.
+    foreach ($spans as $i => [$x0, $x1]) {
+        // An experiment's name gets only its own columns' width (~7 px a character at 12 px):
+        // longer names are cut with an ellipsis and given whole in the hover, so neighbours
+        // never overprint each other.
+        $label = (string)$experiments[$i]['label'];
+        $fit   = max(3, (int)floor(($x1 - $x0) / 7));
+        $shown = mb_strlen($label) > $fit ? rtrim(mb_substr($label, 0, $fit - 1)) . '…' : $label;
+        $svg .= sprintf('<text class="expr-hm-exp" x="%s" y="12"><title>%s</title>%s</text>', $x0, $esc($label), $esc($shown))
+              . sprintf('<line x1="%s" y1="17" x2="%s" y2="17" stroke="#0891b2" stroke-width="2"/>', $x0, $x1);
+    }
+    foreach ($cols as $k => [$i, $group]) {
+        $cx = $x_of[$k] + $cell_w / 2;
+        $svg .= sprintf('<text class="expr-hm-cond" transform="translate(%s,%d) rotate(-55)">%s</text>', $cx, $head_h - 4, $esc($group));
+    }
+    foreach (array_values($genes) as $r => $gene) {
+        $y = $head_h + $r * $cell_h;
+        $label = sprintf('<text class="expr-hm-gene" x="%d" y="%s">%s</text>', $label_w - 6, $y + $cell_h - 5, $esc($gene));
+        if (isset($symbols[$gene])) {
+            $sym = $symbols[$gene];
+            $cut = mb_strlen($sym) > 14 ? mb_substr($sym, 0, 13) . '…' : $sym;
+            $label .= sprintf('<text class="expr-hm-sym" x="4" y="%s"><title>%s</title>%s</text>', $y + $cell_h - 5, $esc($sym), $esc($cut));
+        }
+        // The id (and symbol) link to the gene's page -- an SVG <a>, so it works in the inline
+        // picture; a downloaded copy keeps working links too.
+        $svg .= $gene_url ? sprintf('<a class="expr-hm-link" href="%s">%s</a>', $esc($gene_url($gene)), $label) : $label;
+        // This gene's highest condition across everything shown -- the 'pattern' denominator.
+        $row_max = 0.0;
+        foreach ($matrix[$gene] ?? [] as $groups) foreach ($groups ?? [] as $g) if ($g['mean'] !== null) $row_max = max($row_max, $g['mean']);
+        foreach ($cols as $k => [$i, $group]) {
+            $mean = null; $n = 0;
+            foreach ($matrix[$gene][$i] ?? [] as $g) if ($g['group'] === $group) { $mean = $g['mean']; $n = $g['n']; }
+            $tip = $gene . (isset($symbols[$gene]) ? " ({$symbols[$gene]})" : '') . " · {$experiments[$i]['label']} · $group: "
+                 . ($mean === null ? 'no data' : $fmt($mean) . " TPM (average of $n)");
+            $fill = $mean === null ? 'url(#exprNoData)' : moop_expression_shade_colour(moop_expression_shade($mean, $mode, $row_max));
+            $svg .= sprintf('<rect x="%s" y="%s" width="%d" height="%d" fill="%s" stroke="#fff"><title>%s</title></rect>',
+                            $x_of[$k], $y, $cell_w, $cell_h, $fill, $esc($tip));
+        }
+    }
+    return $svg . '</svg>';
+}

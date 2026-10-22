@@ -2111,6 +2111,53 @@ ok($_gm['Lonely'] === [] && !in_array('public', $_gm['Nematostella'], true),
 ok($_gm['Mixed'] === ['Ants', 'bats', 'Bats 9', 'Bats 10'], 'alphabetical ignoring case, numbers in natural order');
 
 // ----------------------------------------------------------------------------
+group('Expression tool: heatmap shading, drawing and gene lookup');
+require_once "$BASE/lib/expression_functions.php";
+$_sh = fn($t) => round(moop_expression_shade($t, 'level', 0), 3);
+ok([$_sh(0), $_sh(0.5), $_sh(1), $_sh(10), $_sh(100), $_sh(1000), $_sh(5000)] === [0.0, 0.125, 0.25, 0.5, 0.75, 1.0, 1.0],
+   'level: 1 / 10 / 100 / 1000 TPM at exactly 1/4, 1/2, 3/4, 1 (the gene page\'s bands); 0..1 TPM rises evenly');
+ok(moop_expression_shade(5, 'pattern', 5) === 0.5 && moop_expression_shade(200, 'pattern', 400) === 0.5,
+   'pattern: scaled to the gene\'s own highest -- but never to less than the 10 TPM floor (a silent gene stays pale)');
+ok(moop_expression_shade_colour(0.0) === '#f8fafc' && moop_expression_shade_colour(1.0) === '#0c3648', 'shades run white to deep teal');
+$_exps = [0 => ['label' => 'Dev', 'samples' => [['group_name' => 'egg'], ['group_name' => 'egg'], ['group_name' => 'larva']]],
+          1 => ['label' => 'Metals', 'samples' => [['group_name' => 'control']]]];
+$_mx = ['g1' => [0 => moop_expression_group_means($_exps[0]['samples'], [1.0, 3.0, 50.0]), 1 => null],
+        'g2' => [0 => moop_expression_group_means($_exps[0]['samples'], [0.0, 0.0, 0.0]), 1 => moop_expression_group_means($_exps[1]['samples'], [7.0])]];
+$_svg = moop_expression_heatmap_svg(['g1', 'g2'], $_exps, $_mx);
+ok(substr_count($_svg, '<rect x=') === 6, 'one cell per gene per condition (2 genes x 3 conditions)');
+ok(substr_count($_svg, 'fill="url(#exprNoData)"') === 1 && strpos($_svg, 'g1 · Metals · control: no data') !== false,
+   'an experiment without the gene is hatched "no data", never drawn as zero');
+ok(strpos($_svg, 'g1 · Dev · egg: 2.0 TPM (average of 2)') !== false && strpos($_svg, 'g2 · Dev · egg: 0.0 TPM') !== false,
+   'each cell says its average and how many samples, and a measured zero is a value, not "no data"');
+ok(strpos($_svg, 'expr-hm-sym') === false, 'no symbol column when no gene in the list has a symbol');
+$_svg = moop_expression_heatmap_svg(['g1', 'g2'], $_exps, $_mx, 'level', ['g2' => 'SOD1']);
+ok(substr_count($_svg, 'class="expr-hm-sym"') === 1 && strpos($_svg, 'g2 (SOD1) · Metals') !== false,
+   'a symbol is drawn only for the gene that has one, and named in its cells\' hover');
+$_svg = moop_expression_heatmap_svg(['g1', 'g2'], $_exps, $_mx, 'level', [], fn($g) => "/moop/tools/parent.php?uniquename=$g&x=1");
+ok(substr_count($_svg, '<a class="expr-hm-link" href="/moop/tools/parent.php?uniquename=g1&amp;x=1">') === 1
+   && substr_count($_svg, 'class="expr-hm-link"') === 2,
+   'each gene label links to its gene page (href escaped), one link per gene');
+$_svg = moop_expression_heatmap_svg(['g1'], [0 => ['label' => 'A very long experiment name indeed', 'samples' => [['group_name' => 'x']]]], ['g1' => [0 => null]]);
+ok(strpos($_svg, '<title>A very long experiment name indeed</title>A v…') !== false,
+   'an experiment name longer than its columns is cut with an ellipsis, whole in the hover');
+
+// Gene lookup in a throwaway database: transcript -> gene, and a self-loop must not hang.
+$_edb = sys_get_temp_dir() . '/moop_expr_' . getmypid() . '.sqlite';
+@unlink($_edb);
+$_pdo = new PDO("sqlite:$_edb");
+$_pdo->exec("CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_uniquename TEXT, feature_name TEXT, feature_type TEXT,
+             parent_feature_id INTEGER, gene_set_id INTEGER)");
+$_pdo->exec("INSERT INTO feature VALUES (1,'G1','SOD1','gene',NULL,7), (2,'G1.t1','G1.t1','mRNA',1,7), (3,'G1.t1:pep','','protein',2,7),
+             (4,'LOOP','LOOP','gene',4,7), (5,'G2','G2.t1','gene',NULL,7), (6,'G2.t1','','mRNA',5,7), (7,'G9','X','gene',NULL,8)");
+$_pdo = null;
+ok(moop_expression_root_genes(['G1.t1', 'G1.t1:pep', 'G1', 'LOOP', 'G9'], $_edb, 7)
+   === ['G1.t1' => 'G1', 'G1.t1:pep' => 'G1', 'G1' => 'G1', 'LOOP' => 'LOOP'],
+   'transcripts and proteins resolve to their gene; a self-parented feature stops; another gene set is not searched');
+ok(moop_expression_gene_symbols(['G1', 'G2'], $_edb, 7) === ['G1' => 'SOD1'],
+   'a symbol only where the gene has a real one -- a transcript id in feature_name is not a symbol');
+@unlink($_edb);
+
+// ----------------------------------------------------------------------------
 group('Wikipedia extracts: brackets the API emptied are removed');
 require_once "$BASE/lib/wikipedia_functions.php";
 ok(moop_wikipedia_clean_extract('An echinoderm () is any animal of the phylum Echinodermata (), which')
