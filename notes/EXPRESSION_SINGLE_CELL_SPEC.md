@@ -179,6 +179,36 @@ emb    <- Embeddings(obj, reduction = "umap")                 # cells x 2
 #         recording each line's byte offset -> expression.idx
 ```
 
+## Idea to explore: Part B on the tracks server, read in slices (2026-10-22, not decided)
+
+The per-cell files are the same scale as the BAMs and bigWigs the tracks server already holds, and
+they can be read the same way JBrowse reads those: an index, HTTP range requests, a per-file JWT.
+
+| File | Size at 50k cells | Where it would live |
+|---|---|---|
+| Part A (`tpm.tsv`, `pct_expressed.tsv`, `samples.tsv`, `experiment.json`) | ~1 MB | **web server**, as now — the gene page and heatmap read them server-side |
+| `cells/expression.idx` | ~1 MB | web server (MOOP hands the browser each gene's exact byte range) |
+| `cells/cells.tsv` | ~2.5 MB | **tracks server**, loaded by the browser once per dataset |
+| `cells/expression.tsv` | ~1 GB (≈2 GB at 100k cells) | **tracks server**, read one gene at a time |
+
+How a UMAP for one gene would load: MOOP looks the gene up in `expression.idx`, issues a token for
+`expression.tsv` only if the viewer may see this experiment (same rule as JBrowse tracks), and the
+browser fetches `Range: bytes=offset-(offset+length-1)` — a few KB, whatever the file size.
+
+Why: keeps gigabyte files off the web server, whose page cache already holds less than the organism
+databases need (33 GB of DBs vs ~12 GB cache, CLAUDE.md §9) — a matrix read here would evict them.
+
+To settle before choosing it:
+1. **The browser must fetch directly** (as JBrowse does): this web server cannot reach the tracks
+   server's port 8080 itself. That relies on the tracks server's CORS allowlist, which has broken
+   before (`bug_tracks_server_8080_unreachable`). The same-origin proxy (`notes/TRACKS_PROXY_PLAN.md`)
+   would remove that dependency for this and JBrowse alike.
+2. **No plain gzip** on `expression.tsv` — gzip cannot be range-read. Uncompressed (simplest), or
+   bgzip with offsets into BGZF blocks.
+3. **Token in the URL**, as for JBrowse today — same known issue, same planned fix (proxy, or an
+   `Authorization` header: `notes/TRACKS_PROXY_PLAN.md`, `plan_jbrowse_auth_headers`).
+4. The tracks server's `tracks.php` would need to accept this file type (it serves track files today).
+
 ## What MOOP will do with it (web side, when data exists)
 
 1. Part A works in today's Expression tool as a heatmap with no change (cell types are groups).
