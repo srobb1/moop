@@ -331,7 +331,7 @@ $data = [
   setAgeText(document.getElementById('taxonomySyncAge'));
 })();"
     ]
-];
+] + $_health;   // the health card's data, whole -- moop_data_health_empty() gives its shape
 
 // Render page using layout system
 echo render_display_page(

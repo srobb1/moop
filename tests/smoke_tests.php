@@ -1499,6 +1499,11 @@ ok(!array_diff(array_column($_cd, 'issue'), array_keys(moop_organism_issue_defs(
 $_card = file_get_contents("$BASE/admin/pages/_data_health_card.php");
 ok(!array_filter(array_keys(moop_data_health_empty()['health_alerts']), fn($k) => strpos($_card, "\$health_alerts['$k']") === false),
    'every health-alert count is shown by the health card');
+// Both pages that show the card must hand it the health data whole -- dropping that once left
+// Manage Organisms with no health card at all, and no suite renders a page to notice.
+foreach (['admin/admin.php', 'admin/manage_organisms.php'] as $_pg) {
+    ok(strpos(file_get_contents("$BASE/$_pg"), '] + $_health;') !== false, "$_pg passes the health data to its page");
+}
 ok(moop_organism_severity($_sev(['gene_sets_complete' => false])) === 'incomplete',
    'a gene-set gap grades Incomplete (amber), never Critical');
 
