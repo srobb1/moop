@@ -26,30 +26,37 @@
     </div>
     <div class="collapse" id="aboutAdminTools">
       <div class="card-body">
-        <p><strong>Purpose:</strong> Central navigation hub for all administrative functions.</p>
-        
-        <p><strong>Why This Matters:</strong> This is the entry point for managing your MOOP system. Use these tools to:</p>
+        <?php /* How the PAGE works and where common jobs live. No list of the tools: the Quick
+                 Links and the cards at the foot are that list (lib/admin_tools.php), and the copy
+                 that used to sit here had drifted -- it was missing Glossary, JBrowse and BLAST. */ ?>
+        <p>This page answers two questions: <strong>is the site healthy</strong>, and <strong>where do I go to change something</strong>.</p>
+
+        <h6 class="mt-3">Finding your way</h6>
         <ul>
-          <li>Control who has access to what organisms</li>
-          <li>Manage your organism data and metadata</li>
-          <li>Organize annotations for display</li>
-          <li>Keep organisms discoverable on the homepage selector (handled automatically by cache refresh)</li>
-          <li>Maintain user accounts and permissions</li>
-          <li>Monitor system health and errors</li>
+          <li><strong>Quick Links</strong> (left, on every admin page) go straight to any tool. A number beside a
+            link means something there needs attention — <span class="badge rounded-pill bg-danger">red</span> critical,
+            <span class="badge rounded-pill bg-warning">amber</span> to fix. On <em>Dashboard</em> it counts OS security
+            updates and library advisories, which have no page of their own.</li>
+          <li><strong>System Status</strong> has one card per check, grouped Data, Security &amp; software, Server and
+            Maintenance. The header states the result; click it for the detail.</li>
+          <li>The <strong>tool cards</strong> at the foot of the page describe each tool in a sentence.</li>
         </ul>
-        
-        <p><strong>Available Tools:</strong></p>
+
+        <h6 class="mt-3">How current the figures are</h6>
+        <p>Most status figures come from <strong>housekeeping</strong>, which runs in the background at most once an
+          hour, so a card can be up to an hour old. <em>Run housekeeping now</em> in the Housekeeping card refreshes
+          them, and the page a card links to always re-checks live.</p>
+
+        <h6 class="mt-3">Common jobs</h6>
         <ul class="mb-0">
-          <li><strong>New Organism Setup Checklist</strong> - Step-by-step guide for adding new organisms with links to admin tools</li>
-          <li><strong>Manage Site Configuration</strong> - Edit site title, admin email, and appearance settings</li>
-          <li><strong>Manage Users</strong> - Create collaborator accounts and control access</li>
-          <li><strong>Manage Organisms</strong> - View and manage all organism data</li>
-          <li><strong>Manage Groups</strong> - Tag organisms with flexible categories</li>
-          <li><strong>Manage Annotations</strong> - Customize annotation display</li>
-          <li><strong>Error Logs</strong> - Monitor system health</li>
-          <li><strong>PHP Function Registry</strong> - Maintain PHP code documentation</li>
-          <li><strong>JavaScript Function Registry</strong> - Maintain JavaScript code documentation</li>
-          <li><strong>Filesystem Permissions</strong> - Check and fix file permissions</li>
+          <li><strong>Add an organism</strong> — the Setup Checklist walks through every step.</li>
+          <li><strong>Make data public</strong> — Groups: the <em>Visibility</em> toggle on each gene set.
+            <strong>Give one person access</strong> — Users. Both are explained in
+            <a href="/<?= htmlspecialchars($site) ?>/help.php?topic=access">Who can see what</a>.</li>
+          <li><strong>An organism's About text or image</strong> — Organisms, the <i class="fa fa-file-alt"></i>
+            icon in its row. Paragraphs written there <em>replace</em> the automatic Wikipedia text; leave them
+            empty to keep it. The same goes for the image.</li>
+          <li><strong>A group's description</strong> — Groups, <em>Retrieve &amp; Save</em> fetches it from Wikipedia.</li>
         </ul>
       </div>
     </div>
