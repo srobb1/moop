@@ -297,7 +297,7 @@ if ($has_health_issues):
   ];
   $_dh_critical = $_dh_counts[0][1] > 0;
 ?>
-<div class="card mb-4 <?= $_dh_critical ? 'border-danger' : 'border-warning' ?>">
+<div class="card <?= $health_card_collapsible ? 'mb-3' : 'mb-4' ?> <?= $_dh_critical ? 'border-danger' : 'border-warning' ?>">
   <div class="card-header <?= $_dh_critical ? 'adm-head-danger' : 'adm-head-warn' ?> d-flex align-items-center justify-content-between gap-2<?= $health_card_collapsible ? ' position-relative' : '' ?>">
     <h5 class="mb-0">
       <?php if ($health_card_collapsible): ?>

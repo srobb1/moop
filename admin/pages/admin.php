@@ -62,119 +62,16 @@
        above the first real section rather than as a group of their own. -->
   <h3 class="mb-3"><i class="fa fa-heartbeat"></i> System Status</h3>
 
-  <!-- Site Data Backup Status -->
-  <?php if ($site_data_backup !== null): ?>
-    <?php if ($site_data_backup['status'] === 'error'): ?>
-    <div class="alert alert-warning d-flex align-items-center" role="alert">
-      <i class="fa fa-exclamation-triangle me-2"></i>
-      <div><strong>Backup issue:</strong> <?= $site_data_backup['message'] ?></div>
-    </div>
-    <?php elseif ($site_data_backup['status'] === 'ok'): ?>
-    <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
-      <i class="fa fa-check-circle me-2"></i>
-      <div class="w-100">
-        <strong>Site data backup active</strong> &mdash;
-        last run: <?= htmlspecialchars($site_data_backup['last_run']) ?>,
-        <?= $site_data_backup['files_copied'] ?> file(s) updated
-        <br><small class="text-muted">Config, metadata, and organism files are checked for changes on every admin login and copied to <code><?= htmlspecialchars($site_data_backup['path']) ?></code>.</small>
-        <?php
-          // Recomputed LIVE on every load, not read from the housekeeping snapshot.
-          // Everything else on this page is precomputed because it is expensive — the
-          // permission sweep and the organism-tree walk cost hundreds of ms. This costs
-          // ~10ms (git status --porcelain 5ms + ahead count 4ms), so it never needed to
-          // inherit a 4-hour staleness. It did, and the result was a badge that still read
-          // "3 files to commit" after an admin had committed and pushed, with no way to
-          // tell whether the number was stale or the push had failed. A figure this cheap
-          // should simply be true.
-          $g = null;
-          if (!empty($site_data_backup['is_git']) && function_exists('housekeeping_git_status')) {
-              $g = housekeeping_git_status($site_data_backup['path']);
-          }
-        ?>
-        <?php if ($site_data_backup['is_git'] && !empty($g)): ?>
-          <div class="mt-2 pt-2 border-top">
-            <?php // Git icon, not a second check-circle: this line sits inside an alert that
-                  // already leads with a ✓, so two ticks just read as "success success". The
-                  // green text carries the state; the icon should say WHAT this line is about. ?>
-            <?php if ($g['clean']): ?>
-              <span class="text-success"><i class="fa fa-code-branch"></i>
-                <strong>All committed<?= $g['has_upstream'] ? ' &amp; pushed' : '' ?></strong></span>
-              <small class="text-muted ms-1"><?= (int) $g['commits'] ?> commit<?= $g['commits'] == 1 ? '' : 's' ?>
-                &middot; last <?= htmlspecialchars($g['last_commit']) ?><?= $g['has_upstream'] ? '' : ' &middot; no remote configured' ?></small>
-            <?php else: ?>
-              <span class="text-warning"><i class="fa fa-exclamation-triangle"></i>
-                <strong>Backup not synced</strong></span>
-              <small class="text-muted ms-1"><?php
-                $bits = [];
-                if ($g['uncommitted'] > 0) $bits[] = $g['uncommitted'] . ' file' . ($g['uncommitted'] == 1 ? '' : 's') . ' to commit';
-                if ($g['ahead'] > 0)       $bits[] = $g['ahead'] . ' commit' . ($g['ahead'] == 1 ? '' : 's') . ' to push';
-                if (!$g['has_upstream'])   $bits[] = 'no remote configured';
-                echo htmlspecialchars(implode(', ', $bits));
-              ?></small>
-              <br><small class="text-muted d-block mt-1">
-                <?php
-                  // ONE command that is correct in every state, rather than one chosen from the
-                  // state at render time — housekeeping copies files in the background, so the
-                  // state can change between this page rendering and the admin running the command.
-                  //
-                  // The original was "cd … && git add -A && git commit && git push", which silently
-                  // skipped the push whenever there was nothing to commit: git commit exits non-zero
-                  // and && short-circuits. The admin sees "nothing to commit, working tree clean",
-                  // concludes they are done, and the badge still says not synced.
-                  //
-                  // `|| true` on the commit is what fixes it, NOT dropping the commit or using `;`.
-                  // A bare `;` before push would also run the push if the `cd` itself failed, i.e.
-                  // in whatever directory the shell happened to be in.
-                  $_cmd = "cd " . $site_data_backup['path']
-                        . " && git add -A"
-                        . " && (git commit -m \"Site data backup\" || true)"
-                        . ($g['has_upstream'] ? " && git push" : "");
-                ?>
-                <code style="font-size: 0.85em;"><?= htmlspecialchars($_cmd) ?></code>
-              </small>
-            <?php endif; ?>
-          </div>
-        <?php elseif ($site_data_backup['is_git']): ?>
-          <span class="badge bg-secondary ms-2">Git available</span>
-        <?php endif; ?>
-      </div>
-    </div>
-    <?php endif; ?>
-  <?php endif; ?>
-
-  <!-- Data Health Issues (shared partial — identical card on the Manage Organisms page) -->
-  <?php $health_card_collapsible = true;   // folded here; its header counts what is inside ?>
-  <?php include __DIR__ . '/_data_health_card.php'; ?>
-
-  <!-- Environment Warnings -->
-  <?php if (!empty($_SESSION['env_warnings'])): ?>
-  <div class="card mb-4 border-warning">
-    <div class="card-header adm-head-warn" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#envWarnings">
-      <h5 class="mb-0">
-        <i class="fa fa-exclamation-triangle text-warning"></i>
-        Environment Issues (<?= count($_SESSION['env_warnings']) ?>)
-        <i class="fa fa-chevron-down float-end"></i>
-      </h5>
-    </div>
-    <div class="collapse show" id="envWarnings">
-      <div class="card-body p-0">
-        <?php foreach ($_SESSION['env_warnings'] as $warning): ?>
-        <div class="alert alert-<?= $warning['level'] ?> mb-0 border-0 rounded-0 border-bottom">
-          <i class="fa fa-<?= $warning['level'] === 'danger' ? 'times-circle' : 'exclamation-circle' ?> me-2"></i>
-          <?= $warning['message'] ?>
-        </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-  </div>
-  <?php endif; ?>
-
   <?php
-  // Housekeeping freshness — computed OUTSIDE the permission-card conditional below,
-  // because the "Run housekeeping now" row uses it too and must stay visible when the
-  // cards are clean. Age is shown RELATIVE, never absolute: PHP's date.timezone is
-  // typically unset (UTC) while the host clock is local, so a printed wall-clock time
-  // reads hours off.
+  // One folding card per check (admin/pages/_status_card.php): the header states the
+  // result, the detail folds away. Every check renders even when it is clean -- a check
+  // that vanished when fine read exactly like one that never ran. Order: the data first,
+  // then what serves it, then the machinery that keeps these figures current.
+  include_once __DIR__ . '/_status_card.php';
+
+  // Housekeeping freshness -- the permission card and the housekeeping card both use it.
+  // Age is RELATIVE, never absolute: PHP's date.timezone is typically unset (UTC) while
+  // the host clock is local, so a printed wall-clock time reads hours off.
   $iv_hrs  = (int) round((defined('HOUSEKEEPING_MIN_INTERVAL') ? HOUSEKEEPING_MIN_INTERVAL : 4 * 3600) / 3600);
   $_hk_at  = $_SESSION['perm_summary']['checked_at'] ?? null;
   $age_s   = $_hk_at ? max(0, time() - strtotime($_hk_at)) : null;
@@ -185,63 +82,77 @@
           : (int) floor($age_s / 3600) . ' hr ago');
   ?>
 
-  <!-- Filesystem Permissions pointer — a router to the detail page, grouped by CATEGORY
-       (one finding per section, not per file) and phrased by the worst severity PRESENT
-       (never "0 high"). Precomputed once per housekeeping interval into
-       logs/.housekeeping_status.json — NOT scanned on dashboard load. Hidden when clean. -->
-  <?php if (!empty($_SESSION['perm_summary']['findings'])):
-    $ps       = $_SESSION['perm_summary'];
-    $worst    = $ps['worst'] ?? 'medium';
-    $cls      = $worst === 'high' ? 'danger' : ($worst === 'medium' ? 'warning' : 'secondary');
-    $icon     = $worst === 'high' ? 'lock' : ($worst === 'medium' ? 'exclamation-triangle' : 'info-circle');
-    // Findings at the worst tier lead; anything below is a muted footnote.
-    $top      = array_values(array_filter($ps['findings'], fn($f) => $f['severity'] === $worst));
-    $below    = count($ps['findings']) - count($top);
-    $labels   = array_map(fn($f) => $f['category'] . ' (' . $f['count'] . ')', $top);
-    $headline = $worst === 'high'
-        ? 'permission ' . (count($top) === 1 ? 'area needs' : 'areas need') . ' attention — may break tools, logging, or expose a secret'
-        : ($worst === 'medium'
-            ? 'permission ' . (count($top) === 1 ? 'area' : 'areas') . ' to address'
-            : 'low-priority permission ' . (count($top) === 1 ? 'item' : 'items') . ' to tidy');
-  ?>
-  <div class="alert alert-<?= $cls ?> d-flex align-items-center justify-content-between gap-3 mb-4" role="alert">
-    <div>
-      <i class="fa fa-<?= $icon ?> me-2"></i>
-      <strong><?= count($top) ?> <?= $headline ?></strong>
-      <span class="d-block small text-muted">
-        <?= htmlspecialchars(implode(', ', $labels)) ?><?php if ($below > 0): ?> &middot; <?= $below ?> lower-priority <?= $below === 1 ? 'area' : 'areas' ?><?php endif; ?>
-      </span>
-      <span class="d-block small text-muted fst-italic mt-1">
-        <i class="fa fa-clock"></i>
-        <?php if ($scanned): ?>Scanned <?= htmlspecialchars($scanned) ?><?php else: ?>Cached scan<?php endif; ?>
-        &middot; the Permission Manager re-checks live.
-      </span>
-    </div>
-    <div class="d-flex flex-column align-items-stretch gap-1 flex-shrink-0">
-      <a href="manage_filesystem_permissions.php" class="btn btn-sm btn-<?= $cls ?>">
-        <i class="fa fa-lock"></i> Permission Manager
-      </a>
-      <!-- Re-check THIS card only. The card is a cached snapshot, so after fixing
-           something it keeps reporting the problem until the next sweep — and the full
-           "Run housekeeping now" below is a lot of unrelated work to answer one question.
-           Runs the permission task alone (seconds) and reloads so the card re-renders,
-           including disappearing entirely when nothing is left to report. -->
-      <button type="button" id="recheckPermissionsBtn"
-              class="btn btn-sm btn-outline-<?= $cls ?>"
-              data-task="permission_check">
-        <i class="fa fa-sync"></i> Re-check now
-      </button>
-    </div>
-  </div>
-  <div id="recheckPermissionsResult" class="small text-muted mb-4" style="display:none;"></div>
+  <!-- Data Health (shared partial -- the same card on the Manage Organisms page). It renders
+       nothing when there is nothing to report, so the clean state is drawn here. -->
+  <?php $health_card_collapsible = true; ?>
+  <?php include __DIR__ . '/_data_health_card.php'; ?>
+  <?php if (empty($has_health_issues)): ?>
+    <?= adm_status_card('dataHealth', 'notes-medical', 'Data Health', [['No issues', 'success']], '',
+          '<p class="small text-muted mb-0">Every organism passed the data checks (databases, sequence files, '
+          . 'gene sets, cache). The <a href="manage_organisms.php">Manage Organisms</a> page shows the same checks per organism.</p>') ?>
   <?php endif; ?>
 
+  <!-- Organism cache. Element ids are unchanged: the refresh JS in admin/admin.php looks
+       them up by id. Opened while a refresh runs, so its progress bar is visible. -->
+  <?php
+    $generated   = $cache_info['generated'] ?? null;
+    $org_count   = $cache_info['organism_count'] ?? 0;
+    $refreshing  = $cache_info['refreshing'] ?? false;
+    $stale       = ($cache_stale ?? false) && !$refreshing;
+    $age_str     = 'never built';
+    if ($generated) {
+        $sec = time() - strtotime($generated);
+        if ($sec < 60)        $age_str = $sec . 's ago';
+        elseif ($sec < 3600)  $age_str = floor($sec/60) . 'm ago';
+        elseif ($sec < 86400) $age_str = floor($sec/3600) . 'h ago';
+        else                  $age_str = floor($sec/86400) . 'd ago';
+    }
+    if ($refreshing)      { $_oc_badges = [['Refreshing…', 'info']];  $_oc_tone = ''; }
+    elseif (!$generated)  { $_oc_badges = [['Not built', 'danger']];  $_oc_tone = 'danger'; }
+    elseif ($stale)       { $_oc_badges = [['Out of date', 'warning']]; $_oc_tone = 'warn'; }
+    else                  { $_oc_badges = [['Up to date', 'success']]; $_oc_tone = ''; }
+    if ($generated) $_oc_badges[] = [$org_count . ' organisms · built ' . $age_str, 'secondary'];
+    ob_start();
+  ?>
+    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+      <div id="dashCacheSummary" class="small">
+        <?php if ($refreshing): ?>
+          <span class="text-primary"><i class="fa fa-spinner fa-spin"></i> Refresh in progress…</span>
+        <?php elseif (!$generated): ?>
+          Cache not built yet — organism data may not be visible.
+        <?php elseif ($stale): ?>
+          <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong> — some
+          organisms changed since; the Data Health card lists which.
+        <?php else: ?>
+          <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong>.
+        <?php endif; ?>
+        <span class="d-block text-muted">The organism list, counts and health checks across the site are read from this cache.</span>
+      </div>
+      <div class="d-flex align-items-center gap-2 flex-shrink-0">
+        <button id="dashRefreshBtn"
+                class="btn btn-sm <?= (!$generated || $stale) ? 'btn-warning' : 'btn-outline-secondary' ?>"
+                onclick="startOrganismCacheRefresh(this)"
+                <?= $refreshing ? 'disabled' : '' ?>>
+          <i class="fa fa-sync-alt"></i> <?= $refreshing ? 'Refreshing…' : 'Update Cache' ?>
+        </button>
+        <a href="manage_organisms.php" class="btn btn-sm btn-outline-primary">
+          <i class="fa fa-list"></i> View Organisms
+        </a>
+      </div>
+    </div>
+    <div id="dashCacheProgressWrap" class="mt-2" style="display: <?= $refreshing ? 'block' : 'none' ?>;">
+      <!-- 20px: Bootstrap's .progress-bar label is 0.75rem/12px, so a thinner bar clips the
+           percentage the poll JS writes into it. -->
+      <div class="progress" style="height: 20px;">
+        <div id="dashCacheProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+      </div>
+      <small class="text-muted" id="dashCacheProgressText">Checking status…</small>
+    </div>
+  <?= adm_status_card('organismCache', 'sync-alt', 'Organism Cache', $_oc_badges, $_oc_tone, ob_get_clean(), $refreshing) ?>
 
-  <!-- Gene track indexes (JBrowse) — the compressed GFF + tabix index each gene track reads.
-       Hidden when every track is sound and current. Before 2026-10-20 housekeeping counted
-       these but NOTHING displayed the count, so an admin had no way to learn a track was out
-       of date, and an empty (broken) .gz counted as fine. Rebuilding is automatic, in the
-       background run only; the button below just starts that run now. -->
+  <!-- JBrowse: the installed version, and each gene set's registration (gene track index,
+       coordinate files, search index). Rebuilding is automatic, in the background run only;
+       the button just starts that run now. Version is report-only: upgrading is a CLI job. -->
   <?php
     $gi        = $_SESSION['jbrowse_index_summary'] ?? [];
     // 'need' counts gene sets with ANY part out of step (gene_set_jbrowse_problems()); a status
@@ -249,275 +160,307 @@
     $gi_need   = (int)($gi['need'] ?? ((int)($gi['stale'] ?? 0) + (int)($gi['missing'] ?? 0) + (int)($gi['broken'] ?? 0)));
     $gi_failed = $gi['last_rebuild']['failed'] ?? [];
     $gi_show   = $gi_need > 0 || !empty($gi_failed);
-    if ($gi_show):
-      $gi_cls   = ((int)($gi['broken'] ?? 0) > 0 || $gi_failed) ? 'danger' : 'warning';
-      $gi_parts = [];
-      if (!empty($gi['broken']))  $gi_parts[] = $gi['broken'] . ' broken — JBrowse shows no genes for ' . ($gi['broken'] == 1 ? 'it' : 'them');
-      if (!empty($gi['stale']))   $gi_parts[] = $gi['stale'] . ' out of date with the gene set';
-      if (!empty($gi['missing'])) $gi_parts[] = $gi['missing'] . ' missing an index';
-      if (!empty($gi['coords']))  $gi_parts[] = $gi['coords'] . ' with coordinate files older than genes.gff (Data Exporter, BLAST links)';
-      if (!empty($gi['search']))  $gi_parts[] = $gi['search'] . ' without a current search index (JBrowse search box)';
-      $gi_last  = $gi['last_rebuild'] ?? null;
-      // This card's OWN timestamp (unix seconds), not the permission scan's $scanned: the
-      // two are written by different tasks and can be days apart.
-      $gi_age_s = isset($gi['checked_at']) ? max(0, time() - (int)$gi['checked_at']) : null;
-      $gi_age   = $gi_age_s === null ? null
-          : ($gi_age_s < 3600 ? max(1, (int)round($gi_age_s / 60)) . ' min ago'
-          : ($gi_age_s < 172800 ? (int)floor($gi_age_s / 3600) . ' hr ago'
-          : (int)floor($gi_age_s / 86400) . ' days ago'));
+    $gi_bad    = (int)($gi['broken'] ?? 0) > 0 || $gi_failed;
+    $gi_parts  = [];
+    if (!empty($gi['broken']))  $gi_parts[] = $gi['broken'] . ' broken — JBrowse shows no genes for ' . ($gi['broken'] == 1 ? 'it' : 'them');
+    if (!empty($gi['stale']))   $gi_parts[] = $gi['stale'] . ' out of date with the gene set';
+    if (!empty($gi['missing'])) $gi_parts[] = $gi['missing'] . ' missing an index';
+    if (!empty($gi['coords']))  $gi_parts[] = $gi['coords'] . ' with coordinate files older than genes.gff (Data Exporter, BLAST links)';
+    if (!empty($gi['search']))  $gi_parts[] = $gi['search'] . ' without a current search index (JBrowse search box)';
+    $gi_last  = $gi['last_rebuild'] ?? null;
+    // This card's OWN timestamp, not the permission scan's: different tasks, can be days apart.
+    $gi_age_s = isset($gi['checked_at']) ? max(0, time() - (int)$gi['checked_at']) : null;
+    $gi_age   = $gi_age_s === null ? null
+        : ($gi_age_s < 3600 ? max(1, (int)round($gi_age_s / 60)) . ' min ago'
+        : ($gi_age_s < 172800 ? (int)floor($gi_age_s / 3600) . ' hr ago'
+        : (int)floor($gi_age_s / 86400) . ' days ago'));
+
+    $jb_cur = $jbrowse_version['current'] ?? null;
+    $jb_new = $jbrowse_version['latest'] ?? null;
+    $jb_old = !empty($jbrowse_version['outdated']);
+    $jb_age = '';
+    if (!empty($jbrowse_version['checked_at'])) {
+        $d = floor((time() - strtotime($jbrowse_version['checked_at'])) / 86400);
+        $jb_age = $d < 1 ? 'today' : ($d == 1 ? 'yesterday' : $d . 'd ago');
+    }
+
+    $_jb_badges = [];
+    if ($gi_failed)         $_jb_badges[] = ['Rebuild failures', 'danger'];
+    if ($gi_need > 0)       $_jb_badges[] = [$gi_need . ' gene ' . ($gi_need === 1 ? 'set needs' : 'sets need') . ' Re-prep', $gi_bad ? 'danger' : 'warning'];
+    elseif (!empty($gi))    $_jb_badges[] = ['Tracks current', 'success'];
+    if ($jb_old)            $_jb_badges[] = ['Update available: ' . $jb_new, 'warning'];
+    elseif ($jb_cur)        $_jb_badges[] = ['v' . $jb_cur, 'secondary'];
+    $_jb_tone = $gi_bad ? 'danger' : (($gi_need > 0 || $jb_old) ? 'warn' : '');
+    ob_start();
   ?>
-  <div class="alert alert-<?= $gi_cls ?> d-flex align-items-start justify-content-between gap-3 mb-4" role="alert">
-    <div class="flex-grow-1">
-      <i class="fa fa-dna me-2"></i>
-      <?php if ($gi_need > 0): ?>
-      <strong><?= $gi_need ?> JBrowse gene <?= $gi_need === 1 ? 'set needs' : 'sets need' ?> a Re-prep</strong>
-      <span class="d-block small"><?= htmlspecialchars(implode(' · ', $gi_parts)) ?></span>
-      <?php if (!empty($gi['search']) && isset($gi['cli']) && !$gi['cli']): ?>
-      <span class="d-block small mt-1"><strong>Search indexes cannot be built here:</strong> the web server cannot run the
-        JBrowse CLI. Install it with <code>sudo scripts/install_jbrowse_cli.sh</code>.</span>
-      <?php endif; ?>
-      <?php else: ?>
-      <strong>The last gene-track index rebuild had failures</strong>
-      <?php endif; ?>
-      <span class="d-block small text-muted mt-1">
-        Rebuilt automatically by the background housekeeping run — broken ones first, then smallest
-        first, about five minutes per hourly run.
-        <?php if ($gi_last): ?>
-          Last run: <?= count($gi_last['done'] ?? []) ?> rebuilt,
-          <?= count($gi_last['failed'] ?? []) ?> failed<?php if (!empty($gi_last['left'])): ?>,
-          <?= (int)$gi_last['left'] ?> left for the next run<?php endif; ?>.
+    <?php if ($jb_cur): ?>
+      <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+        <div class="small">
+          <strong>Version</strong> —
+          <?php if ($jb_old): ?>
+            <?= htmlspecialchars($jb_cur) ?> installed, <strong><?= htmlspecialchars($jb_new) ?></strong> available
+          <?php elseif ($jb_new): ?>
+            <i class="fa fa-check text-success"></i> <?= htmlspecialchars($jb_cur) ?>, the latest release
+          <?php else: ?>
+            <?= htmlspecialchars($jb_cur) ?> <span class="text-muted">— latest release not checked yet</span>
+          <?php endif; ?>
+          <?php if ($jb_age): ?><span class="text-muted">(checked <?= htmlspecialchars($jb_age) ?>)</span><?php endif; ?>
+        </div>
+        <a href="<?= $jb_old ? '../docs/JBrowse2/UPGRADING.md' : 'https://github.com/GMOD/jbrowse-components/releases' ?>"
+           class="btn btn-sm <?= $jb_old ? 'btn-warning' : 'btn-outline-secondary' ?> flex-shrink-0"
+           <?= $jb_old ? '' : 'target="_blank" rel="noopener"' ?>>
+          <i class="fa fa-book"></i> <?= $jb_old ? 'How to upgrade' : 'Release notes' ?>
+        </a>
+      </div>
+    <?php endif; ?>
+    <div class="d-flex align-items-start justify-content-between gap-3 border-top pt-2">
+      <div class="small flex-grow-1">
+        <strong>Gene set registration</strong> —
+        <?php if ($gi_need > 0): ?>
+          <?= $gi_need ?> gene <?= $gi_need === 1 ? 'set needs' : 'sets need' ?> a Re-prep:
+          <?= htmlspecialchars(implode(' · ', $gi_parts)) ?>
+          <?php if (!empty($gi['search']) && isset($gi['cli']) && !$gi['cli']): ?>
+          <span class="d-block mt-1"><strong>Search indexes cannot be built here:</strong> the web server cannot run the
+            JBrowse CLI. Install it with <code>sudo scripts/install_jbrowse_cli.sh</code>.</span>
+          <?php endif; ?>
+        <?php elseif ($gi_failed): ?>
+          the last rebuild had failures.
+        <?php elseif (!empty($gi)): ?>
+          <i class="fa fa-check text-success"></i> all <?= (int)($gi['total'] ?? 0) ?> gene sets' tracks,
+          coordinate files and search indexes are current.
+        <?php else: ?>
+          <span class="text-muted">not checked yet.</span>
         <?php endif; ?>
-        <?php if ($gi_age): ?>Counted <?= htmlspecialchars($gi_age) ?>.<?php endif; ?>
-      </span>
-      <?php if ($gi_failed): ?>
-      <ul class="small mb-0 mt-1">
-        <?php foreach (array_slice($gi_failed, 0, 10) as $f): ?>
-        <li><?= htmlspecialchars($f) ?></li>
-        <?php endforeach; ?>
-      </ul>
-      <?php endif; ?>
-      <?php if (!empty($gi['examples'])): ?>
-      <a class="small" data-bs-toggle="collapse" href="#geneIndexList" role="button" aria-expanded="false">
-        Which tracks? <i class="fa fa-chevron-down small"></i>
-      </a>
-      <ul class="collapse small mb-0 mt-1" id="geneIndexList">
-        <?php foreach ($gi['examples'] as $e): ?>
-        <li><?= htmlspecialchars(str_replace('_', ' ', $e['organism']) . ' / ' . $e['assembly'] . ' / ' . $e['gene_set']) ?>
-          <span class="text-muted">— <?= htmlspecialchars($e['why']) ?></span></li>
-        <?php endforeach; ?>
-      </ul>
-      <?php endif; ?>
-      <span class="d-block small text-muted fst-italic mt-1">
-        By hand: <code>sudo -u apache php scripts/run_housekeeping.php --task=jbrowse_indexes</code>
-        — see <code>docs/JBrowse2/GENE_TRACK_INDEXES.md</code>.
-      </span>
-    </div>
-    <div class="d-flex flex-column align-items-stretch gap-1 flex-shrink-0">
-      <button type="button" id="rebuildGeneIndexesBtn" class="btn btn-sm btn-<?= $gi_cls ?>"
+        <span class="d-block text-muted mt-1">
+          Rebuilt automatically by the background housekeeping run — broken ones first, then smallest first.
+          <?php if ($gi_last && (count($gi_last['done'] ?? []) || count($gi_last['failed'] ?? []) || !empty($gi_last['left']))): ?>
+            Last run: <?= count($gi_last['done'] ?? []) ?> rebuilt, <?= count($gi_last['failed'] ?? []) ?> failed<?php if (!empty($gi_last['left'])): ?>,
+            <?= (int)$gi_last['left'] ?> left for the next run<?php endif; ?>.
+          <?php endif; ?>
+          <?php if ($gi_age): ?>Counted <?= htmlspecialchars($gi_age) ?>.<?php endif; ?>
+        </span>
+        <?php if ($gi_failed): ?>
+        <ul class="mb-0 mt-1">
+          <?php foreach (array_slice($gi_failed, 0, 10) as $f): ?><li><?= htmlspecialchars($f) ?></li><?php endforeach; ?>
+        </ul>
+        <?php endif; ?>
+        <?php if (!empty($gi['examples'])): ?>
+        <a data-bs-toggle="collapse" href="#geneIndexList" role="button" aria-expanded="false">
+          Which gene sets? <i class="fa fa-chevron-down small"></i>
+        </a>
+        <ul class="collapse mb-0 mt-1" id="geneIndexList">
+          <?php foreach ($gi['examples'] as $e): ?>
+          <li><?= htmlspecialchars(str_replace('_', ' ', $e['organism']) . ' / ' . $e['assembly'] . ' / ' . $e['gene_set']) ?>
+            <span class="text-muted">— <?= htmlspecialchars($e['why']) ?></span></li>
+          <?php endforeach; ?>
+        </ul>
+        <?php endif; ?>
+        <span class="d-block text-muted fst-italic mt-1">
+          By hand: <code>sudo -u apache php scripts/run_housekeeping.php --task=jbrowse_indexes</code>
+          — see <code>docs/JBrowse2/GENE_TRACK_INDEXES.md</code>.
+        </span>
+      </div>
+      <?php if ($gi_show): ?>
+      <button type="button" id="rebuildGeneIndexesBtn" class="btn btn-sm btn-<?= $gi_bad ? 'danger' : 'warning' ?> flex-shrink-0"
               data-task="jbrowse_indexes">
         <i class="fa fa-wrench"></i> Rebuild now
       </button>
-    </div>
-  </div>
-  <div id="rebuildGeneIndexesResult" class="small text-muted mb-4" style="display:none;"></div>
-  <?php endif; ?>
-
-
-  <!-- Housekeeping freshness + manual re-run.
-       Sits with the health cards above because it is what refreshes them, and stays
-       visible when they are all clean — "did my fix work?" is exactly when you want it.
-       The staleness explanation lives HERE rather than on each card: every card above is
-       precomputed on the same interval, and saying it once beats four copies drifting.
-       The task list is rendered from housekeeping_task_registry() — the same list that
-       RUNS them — so it cannot drift out of date. -->
-  <div class="card mb-4">
-    <div class="card-body py-2">
-      <?php if (function_exists('housekeeping_is_running') && housekeeping_is_running()): ?>
-      <!-- A background run is in flight RIGHT NOW. The numbers on this page were rendered
-           before it finishes, so say so plainly rather than let the admin wonder why their
-           fix is still listed. This is the honest face of the async trade-off. -->
-      <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-2" role="status">
-        <span class="spinner-border spinner-border-sm flex-shrink-0"></span>
-        <div class="small">
-          <strong>Housekeeping is running.</strong> These figures were taken before it started —
-          <a href="">reload</a> in a few seconds.
-        </div>
-      </div>
       <?php endif; ?>
+    </div>
+    <div id="rebuildGeneIndexesResult" class="small text-muted mt-2" style="display:none;"></div>
+  <?= adm_status_card('jbrowse', 'dna', 'JBrowse', $_jb_badges, $_jb_tone, ob_get_clean()) ?>
 
-    <!-- JBrowse2 version. Same row as the organism cache and housekeeping freshness: all
-         three answer "how current is this install". Always visible, like the cache widget,
-         because "you are on the latest" is worth seeing — a card that only appears when
-         something is wrong cannot tell you the check is actually running.
-         Report-only: upgrading is a CLI job (docs/JBrowse2/UPGRADING.md), so there is no
-         button here. The figure is precomputed by housekeeping; GitHub is contacted at most
-         once a week, so `checked_at` is stated rather than implied. -->
-    <?php if (!empty($jbrowse_version['current'])): ?>
-      <?php
-        $jb_cur  = $jbrowse_version['current'];
-        $jb_new  = $jbrowse_version['latest']   ?? null;
-        $jb_when = $jbrowse_version['checked_at'] ?? null;
-        $jb_old  = !empty($jbrowse_version['outdated']);
-        $jb_age  = '';
-        if ($jb_when) {
-            $d = floor((time() - strtotime($jb_when)) / 86400);
-            $jb_age = $d < 1 ? 'today' : ($d == 1 ? 'yesterday' : $d . 'd ago');
+  <!-- Filesystem permissions: grouped by CATEGORY and phrased by the worst severity PRESENT
+       (never "0 high"). Precomputed once per housekeeping interval, NOT scanned on load. -->
+  <?php
+    $ps       = $_SESSION['perm_summary'] ?? null;
+    $findings = $ps['findings'] ?? [];
+    $worst    = $ps['worst'] ?? 'medium';
+    $top      = array_values(array_filter($findings, fn($f) => $f['severity'] === $worst));
+    $below    = count($findings) - count($top);
+    if (!$ps) {
+        $_pm_badges = [['Not scanned yet', 'secondary']]; $_pm_tone = '';
+    } elseif (!$findings) {
+        $_pm_badges = [['No issues', 'success']]; $_pm_tone = '';
+    } else {
+        $_pm_col    = $worst === 'high' ? 'danger' : ($worst === 'medium' ? 'warning' : 'secondary');
+        $_pm_badges = [[count($top) . ' ' . (count($top) === 1 ? 'area needs' : 'areas need') . ' attention', $_pm_col]];
+        if ($below > 0) $_pm_badges[] = [$below . ' lower-priority', 'secondary'];
+        $_pm_tone   = $worst === 'high' ? 'danger' : ($worst === 'medium' ? 'warn' : '');
+    }
+    ob_start();
+  ?>
+    <div class="d-flex align-items-start justify-content-between gap-3">
+      <div class="small">
+        <?php if ($findings): ?>
+          <?php
+            $labels   = array_map(fn($f) => $f['category'] . ' (' . $f['count'] . ')', $top);
+            $headline = $worst === 'high'
+                ? 'May break tools or logging, or expose a secret.'
+                : ($worst === 'medium' ? 'Worth addressing.' : 'Low priority — tidy when convenient.');
+          ?>
+          <strong><?= htmlspecialchars(implode(', ', $labels)) ?></strong> — <?= $headline ?>
+          <?php foreach ($top as $f): if (empty($f['reasons'])) continue; ?>
+            <span class="d-block text-muted"><?= htmlspecialchars($f['category']) ?>: <?= htmlspecialchars(implode('; ', $f['reasons'])) ?></span>
+          <?php endforeach; ?>
+        <?php elseif ($ps): ?>
+          <i class="fa fa-check text-success"></i> Nothing the web server needs is blocked, and nothing secret is exposed.
+        <?php else: ?>
+          The first scan runs with the next housekeeping run.
+        <?php endif; ?>
+        <span class="d-block text-muted fst-italic mt-1">
+          <i class="fa fa-clock"></i>
+          <?php if ($scanned): ?>Scanned <?= htmlspecialchars($scanned) ?><?php else: ?>Cached scan<?php endif; ?>
+          &middot; the Permission Manager re-checks live.
+        </span>
+      </div>
+      <div class="d-flex flex-column align-items-stretch gap-1 flex-shrink-0">
+        <a href="manage_filesystem_permissions.php" class="btn btn-sm btn-outline-secondary">
+          <i class="fa fa-lock"></i> Permission Manager
+        </a>
+        <!-- Re-check THIS card only: runs the permission task alone (seconds) and reloads. -->
+        <button type="button" id="recheckPermissionsBtn" class="btn btn-sm btn-outline-secondary"
+                data-task="permission_check">
+          <i class="fa fa-sync"></i> Re-check now
+        </button>
+      </div>
+    </div>
+    <div id="recheckPermissionsResult" class="small text-muted mt-2" style="display:none;"></div>
+  <?= adm_status_card('permissions', 'lock', 'Filesystem Permissions', $_pm_badges, $_pm_tone, ob_get_clean()) ?>
+
+  <!-- Environment: PHP extensions, JWT keys, command-line tools, composer dependencies. -->
+  <?php
+    $_env = $_SESSION['env_warnings'] ?? [];
+    $_env_danger = count(array_filter($_env, fn($w) => ($w['level'] ?? '') === 'danger'));
+    $_env_badges = !$_env ? [['No issues', 'success']]
+                 : [[count($_env) . ' ' . (count($_env) === 1 ? 'issue' : 'issues'), $_env_danger ? 'danger' : 'warning']];
+    ob_start();
+  ?>
+    <?php if (!$_env): ?>
+      <p class="small text-muted mb-0"><i class="fa fa-check text-success"></i> PHP extensions, JWT keys,
+        command-line tools and composer dependencies are all in place.</p>
+    <?php else: foreach ($_env as $warning): ?>
+      <div class="alert alert-<?= $warning['level'] ?> mb-2 small">
+        <i class="fa fa-<?= $warning['level'] === 'danger' ? 'times-circle' : 'exclamation-circle' ?> me-2"></i>
+        <?= $warning['message'] ?>
+      </div>
+    <?php endforeach; endif; ?>
+  <?= adm_status_card('environment', 'server', 'Environment', $_env_badges, $_env ? ($_env_danger ? 'danger' : 'warn') : '', ob_get_clean()) ?>
+
+  <!-- Site data backup. The git line is recomputed LIVE on every load (~10 ms), unlike the
+       rest of this section: a badge that still said "3 files to commit" after a push, with no
+       way to tell stale from failed, is what made it live. -->
+  <?php
+    $g = null;
+    if ($site_data_backup !== null && !empty($site_data_backup['is_git']) && function_exists('housekeeping_git_status')) {
+        $g = housekeeping_git_status($site_data_backup['path']);
+    }
+    if ($site_data_backup === null) {
+        $_bk_badges = [['Not run yet', 'secondary']]; $_bk_tone = '';
+    } elseif ($site_data_backup['status'] === 'error') {
+        $_bk_badges = [['Failing', 'danger']]; $_bk_tone = 'danger';
+    } else {
+        $_bk_badges = [['Active', 'success']]; $_bk_tone = '';
+        if ($g && !$g['clean']) {
+            $_bits = [];
+            if ($g['uncommitted'] > 0) $_bits[] = $g['uncommitted'] . ' to commit';
+            if ($g['ahead'] > 0)       $_bits[] = $g['ahead'] . ' to push';
+            $_bk_badges[] = ['Not synced: ' . ($_bits ? implode(', ', $_bits) : 'no remote'), 'warning'];
+            $_bk_tone = 'warn';
+        } elseif ($g) {
+            $_bk_badges[] = ['Committed' . ($g['has_upstream'] ? ' & pushed' : ''), 'success'];
         }
-      ?>
-      <div class="<?= $jb_old ? 'alert alert-warning' : '' ?> mb-2">
-        <div class="d-flex align-items-center justify-content-between gap-3">
-          <div>
-            <i class="fa fa-dna me-2"></i>
-            <strong>JBrowse2</strong> —
-            <?php if ($jb_old): ?>
-              version <strong><?= htmlspecialchars($jb_cur) ?></strong>, but
-              <strong><?= htmlspecialchars($jb_new) ?></strong> is available
-            <?php elseif ($jb_new): ?>
-              <i class="fa fa-check text-success"></i> Up to date — version
-              <strong><?= htmlspecialchars($jb_cur) ?></strong>
-            <?php else: ?>
-              version <strong><?= htmlspecialchars($jb_cur) ?></strong>
-              <span class="text-muted">— latest release not checked yet</span>
-            <?php endif; ?>
-            <?php if ($jb_age): ?>
-              <span class="text-muted small">(checked <?= htmlspecialchars($jb_age) ?>)</span>
-            <?php endif; ?>
-          </div>
-          <div class="flex-shrink-0">
-            <a href="<?= $jb_old
-                        ? '../docs/JBrowse2/UPGRADING.md'
-                        : 'https://github.com/GMOD/jbrowse-components/releases' ?>"
-               class="btn btn-sm <?= $jb_old ? 'btn-warning' : 'btn-outline-secondary' ?>"
-               <?= $jb_old ? '' : 'target="_blank" rel="noopener"' ?>>
-              <i class="fa fa-book"></i> <?= $jb_old ? 'How to upgrade' : 'Release notes' ?>
-            </a>
-          </div>
-        </div>
-      </div>
-    <?php endif; ?>
-
-    <!-- Organism cache freshness. Sits with the housekeeping card below rather than under
-         Data Management: both answer "how current are the figures on this page", and the
-         cache status alone above a row of navigation cards read as an orphan. Element IDs
-         are unchanged — the refresh JS in admin/admin.php looks everything up by id. -->
-    <?php
-      $generated   = $cache_info['generated'] ?? null;
-      $org_count   = $cache_info['organism_count'] ?? 0;
-      $refreshing  = $cache_info['refreshing'] ?? false;
-      $stale       = ($cache_stale ?? false) && !$refreshing;
-      $changed     = $cache_changed_orgs ?? [];
-      $age_str     = 'never built';
-      if ($generated) {
-          $sec = time() - strtotime($generated);
-          if ($sec < 60)        $age_str = $sec . 's ago';
-          elseif ($sec < 3600)  $age_str = floor($sec/60) . 'm ago';
-          elseif ($sec < 86400) $age_str = floor($sec/3600) . 'h ago';
-          else                  $age_str = floor($sec/86400) . 'd ago';
-      }
-      // The "cache out of date" warning + changed-organism list live in the Data Health
-      // card above; this widget just shows status + the refresh control + progress bar.
-      $alert_class = !$generated ? 'alert-warning' : 'alert-secondary';
-    ?>
-    <div class="<?= $alert_class === 'alert-warning' ? 'alert alert-warning' : '' ?> mb-2">
-      <div class="d-flex align-items-center justify-content-between gap-3">
-        <div>
-          <i class="fa fa-sync-alt me-2"></i>
-          <strong>Organism Cache</strong> —
-          <span id="dashCacheSummary">
-            <?php if ($refreshing): ?>
-              <span class="text-primary"><i class="fa fa-spinner fa-spin"></i> Refresh in progress…</span>
-            <?php elseif (!$generated): ?>
-              Cache not built yet — organism data may not be visible
-            <?php elseif ($stale): ?>
-              <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong>
-            <?php else: ?>
-              <i class="fa fa-check text-success"></i> Up to date — <?= $org_count ?> organisms, built <strong><?= htmlspecialchars($age_str) ?></strong>
-            <?php endif; ?>
-          </span>
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-shrink-0">
-          <button id="dashRefreshBtn"
-                  class="btn btn-sm <?= (!$generated || $stale) ? 'btn-warning' : 'btn-outline-secondary' ?>"
-                  onclick="startOrganismCacheRefresh(this)"
-                  <?= $refreshing ? 'disabled' : '' ?>>
-            <i class="fa fa-sync-alt"></i> <?= $refreshing ? 'Refreshing…' : 'Update Cache' ?>
-          </button>
-          <a href="manage_organisms.php" class="btn btn-sm btn-outline-primary">
-            <i class="fa fa-list"></i> View Organisms
-          </a>
-        </div>
-      </div>
-      <div id="dashCacheProgressWrap" class="mt-2" style="display: <?= $refreshing ? 'block' : 'none' ?>;">
-        <!-- 20px, not the 6px this started as: the bar was a bare sliver until the poll
-             JS began writing a percentage into it (bar.textContent), and Bootstrap's
-             .progress-bar label is 0.75rem/12px, so the digits were clipped top and
-             bottom. 20px leaves 4px of breathing room either side. -->
-        <div class="progress" style="height: 20px;">
-          <div id="dashCacheProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-        </div>
-        <small class="text-muted" id="dashCacheProgressText">Checking status…</small>
-      </div>
-    </div>
-
-      <?php
-        // Whether ANY health card actually rendered above. When everything is clean they are
-        // all hidden, and the old wording ("Health checks above are cached") pointed at an
-        // empty page — exactly the state an admin is in when checking whether a fix landed.
-        // $has_health_issues is set by _data_health_card.php and stays in scope after it.
-        $_cards_shown = !empty($has_health_issues)
-                     || !empty($_SESSION['perm_summary']['findings'])
-                     || !empty($_SESSION['env_warnings'])
-                     || !empty($gi_show);
-      ?>
-      <div class="d-flex align-items-center justify-content-between gap-3">
-        <div class="small text-muted">
-          <i class="fa fa-clock me-1"></i>
-          <?php if ($_cards_shown): ?>
-          Health checks above are cached<?php if ($scanned): ?> — last run
-          <strong><?= htmlspecialchars($scanned) ?></strong><?php endif; ?>,
-          so a recent fix may still be listed.
+    }
+    ob_start();
+  ?>
+    <?php if ($site_data_backup === null): ?>
+      <p class="small text-muted mb-0">The first backup runs with the next housekeeping run.</p>
+    <?php elseif ($site_data_backup['status'] === 'error'): ?>
+      <p class="small mb-0"><i class="fa fa-exclamation-triangle text-danger me-1"></i><?= $site_data_backup['message'] ?></p>
+    <?php else: ?>
+      <p class="small mb-2">
+        Last run <?= htmlspecialchars($site_data_backup['last_run']) ?>,
+        <?= (int) $site_data_backup['files_copied'] ?> file<?= $site_data_backup['files_copied'] == 1 ? '' : 's' ?> updated.
+        <span class="d-block text-muted">Config, metadata and organism files are checked for changes with each
+          housekeeping run and copied to <code><?= htmlspecialchars($site_data_backup['path']) ?></code>.</span>
+      </p>
+      <?php if ($g): ?>
+        <div class="small border-top pt-2">
+          <?php if ($g['clean']): ?>
+            <span class="text-success"><i class="fa fa-code-branch"></i>
+              <strong>All committed<?= $g['has_upstream'] ? ' &amp; pushed' : '' ?></strong></span>
+            <span class="text-muted ms-1"><?= (int) $g['commits'] ?> commit<?= $g['commits'] == 1 ? '' : 's' ?>
+              &middot; last <?= htmlspecialchars($g['last_commit']) ?><?= $g['has_upstream'] ? '' : ' &middot; no remote configured' ?></span>
           <?php else: ?>
-          <i class="fa fa-check-circle text-success"></i>
-          All health checks passed<?php if ($scanned): ?> as of
-          <strong><?= htmlspecialchars($scanned) ?></strong><?php endif; ?>.
-          Results are cached, so a problem introduced since then may not be listed yet.
+            <span class="text-warning-emphasis"><i class="fa fa-code-branch"></i> <strong>Not synced.</strong></span>
+            MOOP never commits — run this to commit and push the backup:
+            <?php
+              // ONE command correct in every state: housekeeping copies files in the background,
+              // so the state can change between render and the admin running it. `|| true` keeps
+              // the push when there was nothing to commit; `&&` keeps it from running if cd fails.
+              $_cmd = "cd " . $site_data_backup['path']
+                    . " && git add -A"
+                    . " && (git commit -m \"Site data backup\" || true)"
+                    . ($g['has_upstream'] ? " && git push" : "");
+            ?>
+            <code class="d-block mt-1" style="font-size: 0.85em;"><?= htmlspecialchars($_cmd) ?></code>
+            <span class="text-muted d-block mt-1">Last commit <?= htmlspecialchars($g['last_commit']) ?>.</span>
           <?php endif; ?>
-          <a class="ms-1" data-bs-toggle="collapse" href="#housekeepingTasks" role="button"
-             aria-expanded="false" aria-controls="housekeepingTasks" style="cursor:pointer;">
-            What runs? <i class="fa fa-chevron-down small"></i>
-          </a>
         </div>
-        <div class="flex-shrink-0">
-          <button type="button" id="rerunHousekeepingBtn" class="btn btn-sm btn-outline-secondary"
-                  data-tasks="<?= htmlspecialchars(json_encode(array_column(housekeeping_task_registry(), 'name'))) ?>">
-            <i class="fa fa-sync"></i> Run housekeeping now
-          </button>
-        </div>
-      </div>
+      <?php endif; ?>
+    <?php endif; ?>
+  <?= adm_status_card('backup', 'save', 'Site Data Backup', $_bk_badges, $_bk_tone, ob_get_clean()) ?>
 
-      <div class="collapse" id="housekeepingTasks">
-        <hr class="my-2">
-        <p class="small text-muted mb-2">
-          <strong>Nothing to set up — no cron.</strong> These run in the background when an
-          admin loads a page, at most once
-          <?= $iv_hrs === 1 ? 'an hour' : 'every ' . $iv_hrs . ' hours' ?>,
-          and never slow it down. New figures appear on your next visit.
-        </p>
-        <?php foreach (housekeeping_task_registry() as $_t): ?>
-        <div class="mb-2">
-          <div class="small"><strong><?= htmlspecialchars($_t['label']) ?></strong>
-            <code class="text-muted ms-1"><?= htmlspecialchars($_t['name']) ?></code>
-          </div>
-          <div class="small text-muted"><?= htmlspecialchars($_t['desc']) ?></div>
-        </div>
-        <?php endforeach; ?>
-        <p class="small text-muted mb-0 fst-italic">
-          Defined in <code>lib/housekeeping.php</code>.
-        </p>
+  <!-- Housekeeping: what refreshes every card above. Last, because it is the machinery, not
+       a finding. The task list is rendered from housekeeping_task_registry() -- the same list
+       that RUNS them -- so it cannot drift. -->
+  <?php
+    $_hk_running = function_exists('housekeeping_is_running') && housekeeping_is_running();
+    $_hk_badges  = $_hk_running ? [['Running', 'info']]
+                 : [[$scanned ? 'Last run ' . $scanned : 'Not run yet', 'secondary']];
+    ob_start();
+  ?>
+    <?php if ($_hk_running): ?>
+    <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-2" role="status">
+      <span class="spinner-border spinner-border-sm flex-shrink-0"></span>
+      <div class="small">
+        <strong>Housekeeping is running.</strong> These figures were taken before it started —
+        <a href="">reload</a> in a few seconds.
       </div>
     </div>
-  </div>
-  <div id="rerunHousekeepingResult" class="small mt-2 mb-4"></div>
+    <?php endif; ?>
+    <div class="d-flex align-items-center justify-content-between gap-3">
+      <div class="small text-muted">
+        Runs in the background when an admin loads a page, at most once
+        <?= $iv_hrs === 1 ? 'an hour' : 'every ' . $iv_hrs . ' hours' ?>, and never slows it down.
+        Every card above is a cached result of it, so a fix made since the last run may still be listed.
+        <a class="ms-1" data-bs-toggle="collapse" href="#housekeepingTasks" role="button"
+           aria-expanded="false" aria-controls="housekeepingTasks">
+          What runs? <i class="fa fa-chevron-down small"></i>
+        </a>
+      </div>
+      <button type="button" id="rerunHousekeepingBtn" class="btn btn-sm btn-outline-secondary flex-shrink-0"
+              data-tasks="<?= htmlspecialchars(json_encode(array_column(housekeeping_task_registry(), 'name'))) ?>">
+        <i class="fa fa-sync"></i> Run housekeeping now
+      </button>
+    </div>
+    <div class="collapse" id="housekeepingTasks">
+      <hr class="my-2">
+      <p class="small text-muted mb-2"><strong>Nothing to set up — no cron.</strong></p>
+      <?php foreach (housekeeping_task_registry() as $_t): ?>
+      <div class="mb-2">
+        <div class="small"><strong><?= htmlspecialchars($_t['label']) ?></strong>
+          <code class="text-muted ms-1"><?= htmlspecialchars($_t['name']) ?></code>
+        </div>
+        <div class="small text-muted"><?= htmlspecialchars($_t['desc']) ?></div>
+      </div>
+      <?php endforeach; ?>
+      <p class="small text-muted mb-0 fst-italic">Defined in <code>lib/housekeeping.php</code>.</p>
+    </div>
+    <div id="rerunHousekeepingResult" class="small mt-2"></div>
+  <?= adm_status_card('housekeeping', 'broom', 'Housekeeping', $_hk_badges, '', ob_get_clean(), $_hk_running) ?>
+  <div class="mb-4"></div>
+
 
   <!-- System Configuration -->
   <div class="mt-5">
