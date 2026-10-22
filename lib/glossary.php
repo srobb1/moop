@@ -16,11 +16,12 @@
  */
 
 /**
- * All term => definition pairs from metadata/glossary.json.
+ * All term => definition pairs from metadata/glossary.json, keys spelled as the admin
+ * wrote them ("mRNA", "GO term") — for listing the glossary itself.
  * Read once per request and cached; returns [] if the file is missing or invalid,
  * so a bad file degrades to plain words rather than breaking a page.
  */
-function glossary_terms(): array {
+function glossary_entries(): array {
     static $terms = null;
     if ($terms !== null) {
         return $terms;
@@ -50,14 +51,23 @@ function glossary_terms(): array {
         ? loadJsonFile($file, [])
         : (is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : []);
 
-    // Normalize keys for case-insensitive lookup while preserving the admin's
-    // chosen display spelling in the value's own key is not needed — gloss() shows
-    // whatever the caller passes. Store lower-cased keys for matching.
     $terms = [];
     foreach ((array) $loaded as $k => $v) {
         if (is_string($v) && $v !== '') {
-            $terms[strtolower((string) $k)] = $v;
+            $terms[(string) $k] = $v;
         }
+    }
+    return $terms;
+}
+
+/**
+ * The same pairs keyed lower-case, for case-insensitive lookup — gloss() shows
+ * whatever spelling the caller passes, so only matching needs the folded key.
+ */
+function glossary_terms(): array {
+    static $terms = null;
+    if ($terms === null) {
+        $terms = array_change_key_case(glossary_entries(), CASE_LOWER);
     }
     return $terms;
 }

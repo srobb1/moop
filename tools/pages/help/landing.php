@@ -57,8 +57,9 @@ $topic_card = function (array $t) use ($site) {
     </div>
     <div class="card-body p-4">
       <p class="text-muted mb-0">
-        Guides for using <?= htmlspecialchars($siteTitle) ?> — searching, BLAST, building gene lists and
-        exporting data. Setting up or maintaining a site instead? That is covered separately below.
+        Where to go, how the data fits together, and where it comes from. How to use a particular
+        page is on that page — look for its <i class="fa fa-info-circle" style="color:#0891b2;" aria-label="information"></i>
+        buttons. Setting up or maintaining a site instead? That is covered separately below.
       </p>
     </div>
   </div>

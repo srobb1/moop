@@ -16,23 +16,46 @@
  */
 
 return [
-    // ── Finding your way ─────────────────────────────────────────────────────
+    // ── For users ────────────────────────────────────────────────────────────
+    // Only what has no page of its own to live on: where to go, the concepts that span
+    // pages, and the site-wide facts. Help about a control lives beside that control.
     [
         'id'          => 'finding-the-right-page',
-        'title'       => 'Which page do I want?',
-        'description' => 'What each page is for, in one sentence — start here if you know what you '
-                       . 'want to do but not where to do it.',
+        'title'       => 'What do you want to do?',
+        'description' => 'Common tasks and the page for each, plus every page in one sentence — start '
+                       . 'here if you know what you want to do but not where to do it.',
         'icon'        => 'fa-map-signs',
         'category'    => 'general',
     ],
-
-    // ── For users ────────────────────────────────────────────────────────────
     [
-        'id' => 'search-and-filter',
-        'title' => 'Search &amp; Filter',
-        'description' => 'Use advanced search and filtering to find specific sequences and annotations.',
-        'icon' => 'fa-search',
-        'category' => 'general',
+        'id'          => 'data-organization',
+        'title'       => 'How the data is organized',
+        'description' => 'Organism, assembly, gene set, gene, transcript, protein — what each one is '
+                       . 'and how they fit together.',
+        'icon'        => 'fa-sitemap',
+        'category'    => 'general',
+    ],
+    [
+        'id'          => 'data-sources',
+        'title'       => 'Where the data comes from',
+        'description' => 'Where the gene sets and annotations come from, and what to cite when you use them.',
+        'icon'        => 'fa-database',
+        'category'    => 'general',
+    ],
+    [
+        'id'          => 'access',
+        'title'       => 'Who can see what',
+        'description' => 'Why an organism may be missing for you, and how to get access to more.',
+        'icon'        => 'fa-lock',
+        'category'    => 'general',
+    ],
+    [
+        'id'          => 'glossary',
+        'title'       => 'Glossary',
+        'description' => 'Every term the site defines, in one list — the same definitions you see when '
+                       . 'you point at a dashed-underlined word.',
+        'icon'        => 'fa-book-open',
+        'category'    => 'general',
     ],
 
     // ── For administrators: setup and maintenance ────────────────────────────

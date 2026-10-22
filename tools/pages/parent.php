@@ -162,6 +162,9 @@
                         <i class="fa fa-copy"></i> <span class="copy-label">Copy</span>
                     </button>
                     <?= help_modal_trigger('gene-page-help', '', 'Help: what this page shows') ?>
+                    <?php /* Declared, not shown — the title bar already says which gene this is;
+                             this exists so the page declares its PURPOSE for the router. */ ?>
+                    <?= page_purpose('Everything recorded for one gene — its structure, transcripts, annotations and sequences.', '', false, false) ?>
                 </span>
             </div>
             <div class="feature-overview-body">
@@ -291,7 +294,7 @@
     <!-- Gene Structure Section -->
     <div class="card shadow-sm mb-4" id="pnav-gene-structure" data-nav-label="Gene Structure">
         <div class="card-header d-flex align-items-center flex-wrap">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#geneModelSection" aria-expanded="true" role="button">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#geneModelSection" aria-expanded="true" role="button" aria-label="Show or hide Gene Structure" title="Show or hide Gene Structure">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Gene Structure</span>
@@ -359,7 +362,7 @@
     <!-- Feature Hierarchy Section -->
     <div class="card shadow-sm mb-4" id="pnav-hierarchy" data-nav-label="Feature Hierarchy">
         <div class="card-header d-flex align-items-center">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true" role="button">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true" role="button" aria-label="Show or hide Feature Hierarchy" title="Show or hide Feature Hierarchy">
                 <i class="fas fa-sitemap toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Feature Hierarchy</span>
@@ -433,7 +436,7 @@
     <!-- Expression Section -->
     <div class="card shadow-sm mb-4" id="pnav-expression" data-nav-label="Expression">
         <div class="card-header d-flex align-items-center flex-wrap">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#expressionSection" aria-expanded="true" role="button">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#expressionSection" aria-expanded="true" role="button" aria-label="Show or hide Expression" title="Show or hide Expression">
                 <i class="fas fa-chart-bar toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Expression</span>
@@ -529,7 +532,7 @@
                          detail. The count says what is inside before it is opened, and every
                          link into it — sidebar, gene-structure rows, the hierarchy, a #hash —
                          opens it first (parent-nav.js, parent-tools.js). */ ?>
-                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="false" aria-controls="annotationsSection" role="button">
+                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="false" aria-controls="annotationsSection" role="button" aria-label="Show or hide Annotations" title="Show or hide Annotations">
                     <i class="fas fa-plus toggle-icon text-primary"></i>
                 </span>
                 <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Annotations</span>
@@ -751,7 +754,7 @@
         ?>
         <div class="card shadow-sm mb-4">
             <div class="card-header d-flex align-items-center">
-                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#bigGeneSequences" aria-expanded="true" role="button">
+                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#bigGeneSequences" aria-expanded="true" role="button" aria-label="Show or hide Sequences" title="Show or hide Sequences">
                     <i class="fas fa-minus toggle-icon text-primary"></i>
                 </span>
                 <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Sequences</span>

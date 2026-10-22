@@ -162,7 +162,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
           <em><?= htmlspecialchars($org_display) ?></em><?php if ($show_common): ?><small class="text-muted fw-normal"> · <?= htmlspecialchars($org_common_name) ?></small><?php endif; ?>
         </label>
         <small class="text-muted me-3 flex-shrink-0">
-          <?= count($assemblies) ?> assembly<?= count($assemblies) !== 1 ? 'ies' : '' ?>
+          <?= count($assemblies) ?> assembl<?= count($assemblies) !== 1 ? 'ies' : 'y' ?>
         </small>
         <i class="fas fa-chevron-down toggle-icon text-muted"></i>
       </div>

@@ -48,6 +48,7 @@ $pages = [
     'assembly'           => '/tools/assembly.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1',
     'gene_set'           => '/tools/gene_set.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2',
     'multi_organism'     => '/tools/multi_organism.php?organisms=Nematostella_vectensis',
+    'parent'             => '/tools/parent.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&uniquename=NV2g025931000.1',
     'jbrowse2'           => '/jbrowse2.php',
     'about'              => '/about.php',
     'help'               => '/help.php',
@@ -85,7 +86,10 @@ $meta = [
     'gene_set' => ['title' => 'Gene set page', 'link' => null, 'linkable' => false,
                    'reached_by' => ['From an assembly page — pick one of its gene sets.',
                                     'Or search for it by name from the home page.']],
-    'jbrowse2'           => ['title' => 'Genome Browser',     'link' => '/jbrowse2.php',              'linkable' => true],
+    'parent'   => ['title' => 'Gene page', 'link' => null, 'linkable' => false,
+                   'reached_by' => ['Click a gene ID in any search result or gene list.',
+                                    'Or search for the gene ID from the home page, then click it in the results.']],
+    'jbrowse2'           => ['title' => 'Genome Browser',    'link' => '/jbrowse2.php',              'linkable' => true],
 ];
 
 $json  = in_array('--json',  $argv, true);
