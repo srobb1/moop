@@ -356,12 +356,17 @@ Current tasks (`run_housekeeping()`):
 - `refresh_annotation_caches`
 - `refresh_organism_cache` — only if stale
 - `ncbi_taxonomy_update`
-- `jbrowse_indexes` — counts gene tracks whose bgzip/tabix index is broken, stale or missing,
-  and **rebuilds them in the background CLI run only** (never in a page request). One rule
-  (`gene_track_index_problem()`), one safe builder (`gene_track_build_index()`: resolve tools,
-  build to temp, verify BGZF, rename). Dashboard card + "Rebuild now". Read
+- `jbrowse_indexes` — counts gene sets whose JBrowse registration is out of step with their
+  `genes.gff` — the bgzip/tabix gene track, `feature_coords.tsv`/`exon_coords.tsv`, and the
+  search (trix) index — and **re-preps them in the background CLI run only** (never in a page
+  request). One rule (`gene_set_jbrowse_problems()`, built on `gene_track_index_problem()`),
+  one safe track builder (`gene_track_build_index()`: resolve tools, build to temp, verify
+  BGZF, rename). Dashboard card + "Rebuild now"; Manage JBrowse badges each gene set live. Read
   `docs/JBrowse2/GENE_TRACK_INDEXES.md` before touching it — on 2026-10-13 a missing `bgzip`
-  on sudo's PATH emptied six live tracks, and the age-only check called them fine.
+  on sudo's PATH emptied six live tracks, and the age-only check called them fine. Until
+  2026-10-21 only the track was checked, and **no gene set had a search index** with nothing
+  saying so. The search index needs the JBrowse CLI where php-fpm may run it:
+  `scripts/install_jbrowse_cli.sh` (§11).
 - `jbrowse_version` — report-only; GitHub contacted at most weekly
 
 Resolve command-line tools with `moop_find_executable()` (`lib/functions_system.php`), never a

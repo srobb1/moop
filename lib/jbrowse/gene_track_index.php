@@ -76,6 +76,63 @@ function gene_track_index_problem(string $gff): ?array {
 }
 
 /**
+ * Everything a gene set's JBrowse registration derives from its genes.gff, and what is wrong
+ * with each part -- the one answer to "does this gene set need a Re-prep?".
+ *
+ *   track   annotations.gff3.gz + tabix index      gene_track_index_problem()
+ *   coords  feature_coords.tsv, exon_coords.tsv    missing, or older than genes.gff (the same
+ *                                                  test prepareGeneSetForJBrowse() rebuilds on)
+ *   search  trix/annotations.gff3.gz.ix            missing, older than the .gz it indexes, not
+ *                                                  linked from the track, or built with other
+ *                                                  attributes than MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES
+ *
+ * Only the first of these used to be checked. A new genes.gff therefore staled the coordinates
+ * and the search index with nothing saying so, and no gene set had a search index at all
+ * (2026-10-21) without any page noticing. Stat calls plus one small JSON read: cheap enough
+ * for housekeeping and for Manage JBrowse to run live.
+ *
+ * @param string $gff        data/genomes/{org}/{asm}/{gs}/annotations.gff3 (the symlink)
+ * @param string $track_json the gene track's config; '' skips the two checks that need it
+ * @return list<array{part: 'track'|'coords'|'search', kind: 'missing'|'stale'|'broken', why: string}>
+ *         empty = current
+ */
+function gene_set_jbrowse_problems(string $gff, string $track_json = ''): array {
+    $out = [];
+    if ($p = gene_track_index_problem($gff)) {
+        $out[] = ['part' => 'track'] + $p;
+    }
+
+    $src = realpath($gff);   // the gene set's own genes.gff in organisms/
+    if ($src !== false) {
+        $gff_mtime = filemtime($src);
+        foreach (['feature_coords.tsv', 'exon_coords.tsv'] as $name) {
+            $f = dirname($src) . "/$name";
+            if (!is_file($f)) {
+                $out[] = ['part' => 'coords', 'kind' => 'missing', 'why' => "no $name"];
+            } elseif (filemtime($f) < $gff_mtime) {
+                $out[] = ['part' => 'coords', 'kind' => 'stale', 'why' => "$name older than genes.gff"];
+            }
+        }
+    }
+
+    $gz = "$gff.gz";
+    $ix = dirname($gff) . '/trix/' . basename($gz) . '.ix';
+    $track = $track_json !== '' && is_file($track_json) ? (json_decode((string)file_get_contents($track_json), true) ?: []) : null;
+    $want  = defined('MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES') ? MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES : null;
+    if (!is_file($ix)) {
+        $out[] = ['part' => 'search', 'kind' => 'missing', 'why' => 'no search index'];
+    } elseif (is_file($gz) && filemtime($ix) < filemtime($gz)) {
+        $out[] = ['part' => 'search', 'kind' => 'stale', 'why' => 'search index older than the gene track'];
+    } elseif ($track !== null && empty($track['textSearching']['textSearchAdapter'])) {
+        $out[] = ['part' => 'search', 'kind' => 'missing', 'why' => 'search index not linked from the gene track'];
+    } elseif ($track !== null && $want !== null && ($track['metadata']['text_index_attributes'] ?? '') !== $want) {
+        $out[] = ['part' => 'search', 'kind' => 'stale',
+                  'why' => 'search index built from ' . ($track['metadata']['text_index_attributes'] ?? 'unknown attributes') . ", not $want"];
+    }
+    return $out;
+}
+
+/**
  * Sort + bgzip + tabix a gene track, replacing the live files only once the new ones are
  * verified. Returns false (and logs why) without touching the live files on any failure.
  *

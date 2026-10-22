@@ -1842,6 +1842,59 @@ ok($_hit('X2') === ['G1'], 'the filter still finds a hit stored on an isoform (w
 @unlink($_mdb);
 
 // ----------------------------------------------------------------------------
+group('JBrowse: a new genes.gff stales the track, the coordinates AND the search index');
+// Only the track index used to be checked, so coordinates and the search index went stale in
+// silence -- and no gene set had a search index at all without anything saying so.
+require_once "$BASE/lib/jbrowse/gene_track_index.php";
+if (!defined('MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES')) define('MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES', 'Name,ID,Alias');
+$_bgz = moop_find_executable('bgzip'); $_tbx = moop_find_executable('tabix');
+if ($_bgz === '' || $_tbx === '') {
+    ok(true, 'SKIPPED: bgzip/tabix not installed');
+} else {
+    $_jb = sys_get_temp_dir() . '/moop_jbfresh_' . getmypid();
+    @mkdir("$_jb/org/gs", 0777, true); @mkdir("$_jb/dg/trix", 0777, true);
+    file_put_contents("$_jb/org/gs/genes.gff", "##gff-version 3\nc1\ts\tgene\t1\t9\t.\t+\t.\tID=G1\n");
+    symlink("$_jb/org/gs/genes.gff", "$_jb/dg/annotations.gff3");
+    exec(escapeshellarg($_bgz) . ' -c ' . escapeshellarg("$_jb/org/gs/genes.gff") . ' > ' . escapeshellarg("$_jb/dg/annotations.gff3.gz")
+         . ' && ' . escapeshellarg($_tbx) . ' -p gff ' . escapeshellarg("$_jb/dg/annotations.gff3.gz"));
+    foreach (['org/gs/feature_coords.tsv', 'org/gs/exon_coords.tsv', 'dg/trix/annotations.gff3.gz.ix'] as $_f) file_put_contents("$_jb/$_f", "x\n");
+    $_tj = "$_jb/track.json";
+    $_track = fn(array $meta, bool $linked = true) => file_put_contents($_tj, json_encode(
+        ['metadata' => $meta] + ($linked ? ['textSearching' => ['textSearchAdapter' => ['type' => 'TrixTextSearchAdapter']]] : [])));
+    $_t = time() - 1000;   // GFF oldest, then .gz/.tbi, then what is derived from them
+    touch("$_jb/org/gs/genes.gff", $_t); touch("$_jb/dg/annotations.gff3.gz", $_t + 10); touch("$_jb/dg/annotations.gff3.gz.tbi", $_t + 20);
+    foreach (['org/gs/feature_coords.tsv', 'org/gs/exon_coords.tsv', 'dg/trix/annotations.gff3.gz.ix'] as $_f) touch("$_jb/$_f", $_t + 30);
+    $_parts = fn() => array_map(fn($p) => $p['part'] . ':' . $p['kind'], gene_set_jbrowse_problems("$_jb/dg/annotations.gff3", $_tj));
+
+    $_track(['text_index_attributes' => 'Name,ID,Alias']);
+    ok($_parts() === [], 'everything newer than genes.gff, index linked, current attributes: nothing to do');
+
+    touch("$_jb/org/gs/genes.gff", $_t + 25);   // a new genes.gff, newer than .gz and .tbi, older than coords
+    ok($_parts() === ['track:stale'], 'genes.gff newer than the .gz: the track is stale');
+    touch("$_jb/org/gs/genes.gff", $_t + 40);   // ...and newer than the coordinate files
+    ok(gene_track_index_problem("$_jb/dg/annotations.gff3") !== null
+       && $_parts() === ['track:stale', 'coords:stale', 'coords:stale'], 'and the coordinate files are stale too -- not just the track');
+
+    touch("$_jb/org/gs/genes.gff", $_t);
+    touch("$_jb/org/gs/feature_coords.tsv", $_t - 5);   // track current, coords left behind (a failed build)
+    ok(gene_track_index_problem("$_jb/dg/annotations.gff3") === null && $_parts() === ['coords:stale'],
+       'coordinates older than genes.gff while the track is current -- the case the old check could not see');
+    touch("$_jb/org/gs/feature_coords.tsv", $_t + 30);
+
+    touch("$_jb/dg/trix/annotations.gff3.gz.ix", $_t + 5);
+    ok($_parts() === ['search:stale'], 'a search index older than the gene track is stale');
+    touch("$_jb/dg/trix/annotations.gff3.gz.ix", $_t + 30);
+    $_track(['text_index_attributes' => 'Name,ID']);
+    ok($_parts() === ['search:stale'], 'a search index built without Alias is stale');
+    $_track(['text_index_attributes' => 'Name,ID,Alias'], false);
+    ok($_parts() === ['search:missing'], 'an index the track does not link to is no index');
+    unlink("$_jb/dg/trix/annotations.gff3.gz.ix");
+    ok($_parts() === ['search:missing'], 'no index file: missing');
+
+    exec('rm -rf ' . escapeshellarg($_jb));
+}
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

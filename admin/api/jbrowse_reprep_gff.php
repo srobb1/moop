@@ -85,4 +85,7 @@ echo json_encode([
     'success'           => $ok,
     'output'            => implode("\n", $log),
     'text_index_result' => $text_index_result,
+    // What is still out of step afterwards (gene_set_jbrowse_problems()), so the page's
+    // badge shows the result rather than assuming success.
+    'problems'          => moop_gene_set_jbrowse_problems($organism, $assembly, $gene_set),
 ]);

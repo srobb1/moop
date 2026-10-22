@@ -460,14 +460,37 @@ if (!toolExists('primer3_core')) {
     pass("primer3_core (parameters in $primer3_config_dir)");
 }
 
-// jbrowse CLI — needed for text-index (gene name search) and sort-gff
-$jbrowse_local = "$base/tools/jbrowse-cli/node_modules/.bin/jbrowse";
-if (toolExists('jbrowse') || file_exists($jbrowse_local)) {
-    pass("jbrowse CLI" . (file_exists($jbrowse_local) ? " (local install)" : ""));
+// jbrowse CLI — builds each gene track's search index (text-index) at registration, and sorts
+// GFFs plain sort cannot. What matters is whether the WEB SERVER can run it, and this check used
+// to ask only whether it existed: it passed on this host while every web build failed. Under
+// SELinux a copy in the docroot (httpd_sys_content_t) may be read but not executed, and node
+// needs --jitless because executable memory (httpd_execmem) is denied -- see
+// scripts/install_jbrowse_cli.sh, which installs it in /usr/local/bin (bin_t) with both handled.
+$jb_sys     = '/usr/local/bin/jbrowse';
+$jb_local   = "$base/tools/jbrowse-cli/jbrowse-run.sh";
+$jb_selinux = trim((string)@shell_exec('getenforce 2>/dev/null')) === 'Enforcing';
+$jb_how     = "mkdir -p tools/jbrowse-cli && npm install -g --prefix tools/jbrowse-cli @jbrowse/cli\n"
+            . "         cp \"\$(command -v node)\" tools/jbrowse-cli/node\n"
+            . "         sudo scripts/install_jbrowse_cli.sh";
+if (is_file($jb_sys)) {
+    if ($jb_selinux && strpos((string)@file_get_contents($jb_sys), '--jitless') === false) {
+        warn("jbrowse CLI ($jb_sys) runs node without --jitless",
+             "SELinux denies the web server executable memory, so node aborts and no search index is built.\n"
+             . "         sudo scripts/install_jbrowse_cli.sh");
+    } else {
+        pass("jbrowse CLI ($jb_sys)");
+    }
+} elseif ($jb_selinux && (is_file($jb_local) || toolExists('jbrowse'))) {
+    warn("jbrowse CLI found, but not where the web server may run it",
+         "SELinux lets the web server read a program in the document root or a home directory, not run it,\n"
+         . "         so JBrowse search indexes are never built. Install it in /usr/local/bin:\n"
+         . "         sudo scripts/install_jbrowse_cli.sh");
+} elseif (toolExists('jbrowse') || is_file($jb_local)) {
+    pass("jbrowse CLI" . (is_file($jb_local) ? " (local install)" : ""));
 } else {
     warn("jbrowse CLI not found",
-         "Optional — required for JBrowse text-index (gene name search) and sort-gff.\n"
-         . "         mkdir -p tools/jbrowse-cli && cd tools/jbrowse-cli && npm install @jbrowse/cli");
+         "Optional — without it gene tracks get no search index (JBrowse's search box finds no genes).\n"
+         . "         $jb_how");
 }
 
 // Composer — check PATH and local composer.phar

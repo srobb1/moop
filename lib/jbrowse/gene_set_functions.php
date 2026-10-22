@@ -15,6 +15,21 @@ require_once __DIR__ . '/gene_track_index.php';
  */
 const MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES = 'Name,ID,Alias';
 
+/** A gene set's gene track config: metadata/jbrowse2-configs/tracks/{org}/{asm}/gff/{gs}_genes.json */
+function moop_gene_track_json_path(string $organism, string $assembly, string $gene_set): string {
+    return ConfigManager::getInstance()->getPath('metadata_path')
+         . "/jbrowse2-configs/tracks/$organism/$assembly/gff/{$gene_set}_genes.json";
+}
+
+/**
+ * gene_set_jbrowse_problems() for one gene set by name -- what Manage JBrowse, housekeeping
+ * and the register/re-prep endpoints all ask.
+ */
+function moop_gene_set_jbrowse_problems(string $organism, string $assembly, string $gene_set): array {
+    $gff = ConfigManager::getInstance()->getPath('site_path') . "/data/genomes/$organism/$assembly/$gene_set/annotations.gff3";
+    return gene_set_jbrowse_problems($gff, moop_gene_track_json_path($organism, $assembly, $gene_set));
+}
+
 /**
  * Where a JBrowse trix (text-search) index is written, and the URL it is served from:
  * data/genomes/{organism}/{assembly}[/{gene_set}] -- `jbrowse text-index --out` adds trix/.

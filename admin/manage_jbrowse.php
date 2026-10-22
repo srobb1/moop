@@ -141,6 +141,9 @@ foreach ($registered_assemblies as $org => $asms) {
                 'gff_size'      => filesize($gff_path),
                 'gff_prepped'   => file_exists($gz_path) && (file_exists("$gz_path.tbi") || file_exists("$gz_path.csi")),
                 'is_registered' => file_exists($track_json),
+                // Live: stat calls and one small JSON read per gene set. Housekeeping's count is
+                // up to an hour old; this page is where an admin checks a fix landed.
+                'problems'      => file_exists($track_json) ? moop_gene_set_jbrowse_problems($org, $asm, $gs) : [],
             ];
         }
     }

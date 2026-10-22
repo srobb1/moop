@@ -244,7 +244,9 @@
        background run only; the button below just starts that run now. -->
   <?php
     $gi        = $_SESSION['jbrowse_index_summary'] ?? [];
-    $gi_need   = (int)($gi['stale'] ?? 0) + (int)($gi['missing'] ?? 0) + (int)($gi['broken'] ?? 0);
+    // 'need' counts gene sets with ANY part out of step (gene_set_jbrowse_problems()); a status
+    // file from before 2026-10-21 has only the track counts.
+    $gi_need   = (int)($gi['need'] ?? ((int)($gi['stale'] ?? 0) + (int)($gi['missing'] ?? 0) + (int)($gi['broken'] ?? 0)));
     $gi_failed = $gi['last_rebuild']['failed'] ?? [];
     $gi_show   = $gi_need > 0 || !empty($gi_failed);
     if ($gi_show):
@@ -253,6 +255,8 @@
       if (!empty($gi['broken']))  $gi_parts[] = $gi['broken'] . ' broken — JBrowse shows no genes for ' . ($gi['broken'] == 1 ? 'it' : 'them');
       if (!empty($gi['stale']))   $gi_parts[] = $gi['stale'] . ' out of date with the gene set';
       if (!empty($gi['missing'])) $gi_parts[] = $gi['missing'] . ' missing an index';
+      if (!empty($gi['coords']))  $gi_parts[] = $gi['coords'] . ' with coordinate files older than genes.gff (Data Exporter, BLAST links)';
+      if (!empty($gi['search']))  $gi_parts[] = $gi['search'] . ' without a current search index (JBrowse search box)';
       $gi_last  = $gi['last_rebuild'] ?? null;
       // This card's OWN timestamp (unix seconds), not the permission scan's $scanned: the
       // two are written by different tasks and can be days apart.
@@ -266,8 +270,12 @@
     <div class="flex-grow-1">
       <i class="fa fa-dna me-2"></i>
       <?php if ($gi_need > 0): ?>
-      <strong><?= $gi_need ?> JBrowse gene <?= $gi_need === 1 ? 'track needs its' : 'tracks need their' ?> index rebuilt</strong>
+      <strong><?= $gi_need ?> JBrowse gene <?= $gi_need === 1 ? 'set needs' : 'sets need' ?> a Re-prep</strong>
       <span class="d-block small"><?= htmlspecialchars(implode(' · ', $gi_parts)) ?></span>
+      <?php if (!empty($gi['search']) && isset($gi['cli']) && !$gi['cli']): ?>
+      <span class="d-block small mt-1"><strong>Search indexes cannot be built here:</strong> the web server cannot run the
+        JBrowse CLI. Install it with <code>sudo scripts/install_jbrowse_cli.sh</code>.</span>
+      <?php endif; ?>
       <?php else: ?>
       <strong>The last gene-track index rebuild had failures</strong>
       <?php endif; ?>

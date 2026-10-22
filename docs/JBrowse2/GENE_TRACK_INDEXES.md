@@ -15,7 +15,21 @@ index is rebuilt.
 
 ## The rule (one place)
 
-`gene_track_index_problem()` in `lib/jbrowse/gene_set_functions.php` decides whether a track
+`gene_set_jbrowse_problems()` (`lib/jbrowse/gene_track_index.php`) answers "does this gene set
+need a Re-prep?". A new `genes.gff` stales three things, and it checks all of them:
+
+| Part | Files | Out of step when |
+|------|-------|------------------|
+| `track` | `annotations.gff3.gz` + `.tbi`/`.csi` | `gene_track_index_problem()` — table below |
+| `coords` | `feature_coords.tsv`, `exon_coords.tsv` (in the gene set's own directory) | missing, or older than `genes.gff` |
+| `search` | `trix/annotations.gff3.gz.ix` | missing, older than the `.gz`, not linked from the track config, or built with other attributes than `MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES` (`Name,ID,Alias`) |
+
+Until 2026-10-21 only the track was checked. The Register/Re-prep button also asked for no
+search index (`text_index: '0'`) and the web server could not run the JBrowse CLI (see
+`docs/SELINUX_AND_HARDENING.md`), so **no gene set had a search index** and JBrowse's search box
+found no gene by name — with every check green.
+
+`gene_track_index_problem()` in `lib/jbrowse/gene_track_index.php` decides whether a track
 needs work. Everything uses it: the dashboard count, the background rebuild, registration
 itself, and the gene page (which reads a gene's model from the tabix copy only when it passes).
 
@@ -30,7 +44,10 @@ were *newer* than their GFFs, and the old age-only check called them fine.
 
 ## It rebuilds itself
 
-Housekeeping's `jbrowse_indexes` task rebuilds every track the rule flags — **only in the
+Housekeeping's `jbrowse_indexes` task re-preps every gene set the rule flags: the manager's own
+`prepareGeneSetForJBrowse()` (track + coordinate files, whichever are out of date), then the
+search index if that is still out of date. A gene set counts as done only when the rule finds
+nothing afterwards. It rebuilds — **only in the
 background CLI run** (`scripts/run_housekeeping.php`, spawned from an admin page load at most
 once an hour). Broken ones go first, then smallest first, for about five minutes per run; the
 rest wait for the next run. A page request never re-compresses a GFF.
@@ -45,7 +62,10 @@ The build (`gene_track_build_index()`) is safe to interrupt or fail:
 
 ## Will I know? Where do I look?
 
-- **Admin dashboard** — a "JBrowse gene tracks need their index rebuilt" card appears whenever
+- **Manage JBrowse** — each gene set in Assemblies & Tracks carries a badge for what is out of
+  step ("track out of date", "coordinates out of date", "no search index"), checked live; hover
+  for the reason. "Only rows needing attention" includes them.
+- **Admin dashboard** — a "JBrowse gene sets need a Re-prep" card appears whenever
   anything is broken, stale or missing, or the last rebuild had failures. It lists the tracks,
   what the last run did, and each failure's reason. It is hidden when everything is current.
 - **Rebuild now** on that card starts the background rebuild immediately instead of waiting for

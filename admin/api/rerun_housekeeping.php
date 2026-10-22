@@ -137,7 +137,7 @@ if (in_array('permission_check', array_column($result['tasks'], 'name'), true)) 
 // rather than leave it for the next hourly run. The lock is already released here.
 if (in_array('jbrowse_indexes', array_column($result['tasks'], 'name'), true)) {
     $js   = $_SESSION['jbrowse_index_summary'] ?? [];
-    $need = (int)($js['stale'] ?? 0) + (int)($js['missing'] ?? 0) + (int)($js['broken'] ?? 0);
+    $need = (int)($js['need'] ?? ((int)($js['stale'] ?? 0) + (int)($js['missing'] ?? 0) + (int)($js['broken'] ?? 0)));
     $response['index_rebuild'] = [
         'needed'  => $need,
         'broken'  => (int)($js['broken'] ?? 0),

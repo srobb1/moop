@@ -181,6 +181,15 @@ semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/html/moop/metadata(/.*)
 semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/html/moop/metadata"
 ```
 
+**3. Writable is not runnable.** Every rule above is about the web server *writing*. A program
+the web server must *run* needs a label that allows execution (`bin_t`), and a program in the
+document root is `httpd_sys_content_t` — readable, never executable. That is why the JBrowse
+CLI in `tools/jbrowse-cli/` failed from every web request ("jbrowse CLI not found") while working
+from a shell, and no gene set had a search index (found 2026-10-21). Node then needs
+`--jitless`, because SELinux also denies the web server executable memory (`httpd_execmem`);
+turning that boolean on would grant it to every web-server process. `scripts/install_jbrowse_cli.sh`
+installs the CLI in `/usr/local/bin` with both handled, and `setup-check.php` warns when it is not.
+
 ---
 
 ## `scripts/fix_moop_selinux.sh`

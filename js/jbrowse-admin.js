@@ -750,7 +750,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    const geneSetNeedsAttention = gs => !gs.is_registered || !gs.gff_prepped;
+    // gs.problems: gene_set_jbrowse_problems() from the server -- track index, coordinate
+    // files, search index -- so a gene set whose genes.gff changed is visible here.
+    const geneSetNeedsAttention = gs => !gs.is_registered || !gs.gff_prepped || (gs.problems || []).length > 0;
+    const PROBLEM_LABELS = { track: 'track out of date', coords: 'coordinates out of date', search: 'no search index' };
+    function problemBadges(gs) {
+        const parts = [...new Set((gs.problems || []).map(p => p.part))];
+        return parts.map(part => {
+            const why = gs.problems.filter(p => p.part === part).map(p => p.why).join('; ');
+            const label = part === 'search' && gs.problems.some(p => p.part === 'search' && p.kind === 'stale')
+                ? 'search index out of date' : PROBLEM_LABELS[part] || part;
+            const b = el('span', 'badge bg-warning text-dark fw-normal', label);
+            b.title = why + ' — Re-prep fixes it (housekeeping also does, within the hour)';
+            return b;
+        });
+    }
     const hasSheet = row => !!row.sheet.sheet_id;
     const sheetLink = sheet => `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheet.sheet_id)}/edit#gid=${encodeURIComponent(sheet.gid || '0')}`;
 
@@ -772,11 +786,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (gs.gff_size === 0) { btn.disabled = true; btn.title = 'GFF is empty'; }
                 line.append(btn);
             } else {
-                line.append(el('i', 'fa ' + (gs.gff_prepped ? 'fa-check-circle text-success' : 'fa-exclamation-circle text-warning')),
+                const current = gs.gff_prepped && !(gs.problems || []).length;
+                line.append(el('i', 'fa ' + (current ? 'fa-check-circle text-success' : 'fa-exclamation-circle text-warning')),
                             el('code', '', gs.gene_set));
                 if (!gs.gff_prepped) line.append(el('span', 'small text-warning', 'not prepped'));
+                else line.append(...problemBadges(gs));
                 line.append(iconButton('btn btn-sm btn-link p-0 small text-decoration-none', 'fa-redo', 'Re-prep', 'gs-reprep',
-                                       'Rebuild the compressed, indexed GFF from the current genes.gff'));
+                                       'Rebuild the gene track, coordinate files and search index from the current genes.gff'));
             }
             td.append(line);
         });
@@ -934,6 +950,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.success) {
                     gs.is_registered = true;
                     gs.gff_prepped = true;
+                    gs.problems = data.problems || [];
                     const ix = data.text_index_result;
                     if (ix && !ix.success) {
                         showLog('warning', `Gene track ready for ${label}, but its search index was not built: ${ix.error || 'unknown error'}`, data.output);
