@@ -1,7 +1,7 @@
 # One ID per feature: RefSeq/Ensembl genes.gff and FASTAs match the database
 
-**Status:** PLAN, fourth version 2026-10-21 (compute box). Steps 1–3 done (`39e17bb`, `06f0ac8`,
-`347b931`, `83472e2`); Nematostella RS_101 shipped aligned, web checks in progress (see "Step 3
+**Status:** PLAN, fourth version 2026-10-21 (compute box). Steps 1–3 done (`39e17bb`, `51fc630`,
+`5becc4c`, `e8cfeb4`); Nematostella RS_101 shipped aligned, web checks in progress (see "Step 3
 results"); step 4 (rollout) next. This version replaces the third ("one ID map per gene set, crossed once"): a review of that
 design against the pipeline code found it would have to re-learn every special case the working
 code already handles (naming order, Ensembl versioning, gene-level annotation IDs, prefix/lift
@@ -276,7 +276,7 @@ proteins. Listed exception; the database still loads a protein row for each.
 
 ## Step 3 results (2026-10-21)
 
-**Wiring** (`347b931`, `process_one_geneset.sh`, GFF path): RefSeq/Ensembl only, after features.tsv
+**Wiring** (`5becc4c`, `process_one_geneset.sh`, GFF path): RefSeq/Ensembl only, after features.tsv
 (it and feature_coords.tsv read the source IDs): `build_id_map.pl` (`--gff $SRC_GFF`: delivered, or
 `genes.versioned.gff` for Ensembl) → `format_gff_ids.pl` → `updateGFF.pl` → `updateFASTA.pl
 --keep-unlisted --by-gene` on the three FASTAs. `restore_unchanged` and genes.gtf moved below it, so
@@ -302,7 +302,7 @@ coordinates.
 
 **Congeria COKUS1KC** (other; regression check): no file changed, gate clean; shipped (busco.json only).
 
-**Gate fixes found on the way** (`83472e2`): an unnamed other/lift CDS/protein has its mRNA's ID as
+**Gate fixes found on the way** (`e8cfeb4`): an unnamed other/lift CDS/protein has its mRNA's ID as
 database description and a bare `>id` header — no description, not a mismatch (Congeria: 46,444 false
 `fasta_name` → 0). The 3,041 Parastichopus internal-stop models are missing *proteins*, now listed by
 protein ID (`…:pep`). Parastichopus still fails on names only (95,740: the `parpar1_` name bug in its
