@@ -28,7 +28,7 @@
     <div class="col-lg-8">
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
-        <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#0f766e;">
+        <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:#0f766e;">
           <span class="fw-semibold" style="letter-spacing:0.03em; font-size:0.9rem;"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
           <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;">search limited to this organism</span>
         </div>

@@ -5,7 +5,7 @@
     <!-- Title and Search Column -->
     <div class="col-lg-8">
       <div class="card shadow-sm h-100">
-        <div class="card-header text-white d-flex align-items-center justify-content-between" style="background-color:#e11d48;">
+        <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:#e11d48;">
           <span class="fw-semibold" style="letter-spacing:0.04em; font-size:0.85rem;"><?= htmlspecialchars($gene_set_name) ?></span>
           <span class="badge bg-white text-gene-set" style="font-size:0.65em; opacity:0.9;">search limited to this gene set</span>
         </div>

@@ -4,7 +4,7 @@
     <div class="col-lg-8">
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
-        <div class="card-header text-white d-flex align-items-center justify-content-between tool-header">
+        <div class="card-header text-white d-flex align-items-center gap-3 tool-header">
           <?= page_title('Multi-Organism Search') ?>
           <?php /* Declared, not shown — the heading already says where you are. */ ?>
           <?= page_purpose('Search genes across a set of organisms you choose yourself, rather than a curated group.', '', false, false) ?>
