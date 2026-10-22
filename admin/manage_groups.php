@@ -60,11 +60,14 @@ $all_existing_groups = getAllExistingGroups($groups_data);
 $descriptions_data = loadJsonFile($descriptions_file, []);
 $updated_descriptions = syncGroupDescriptions($all_existing_groups, $descriptions_data);
 
-// Save synced descriptions data
-if (file_exists($descriptions_file) && is_writable($descriptions_file)) {
-    file_put_contents($descriptions_file, json_encode($updated_descriptions, JSON_PRETTY_PRINT));
-    $descriptions_data = $updated_descriptions;
+// Save synced descriptions data -- only when the sync changed something (a new group, an
+// in_use flag, the order). This wrote on EVERY view of the page, so opening Manage Groups while
+// a Retrieve & Save ran could write the copy it had read back over the save. Slashes unescaped,
+// like admin/api/fetch_group_wiki.php, so the two writers stop reformatting each other's file.
+if ($updated_descriptions !== $descriptions_data && file_exists($descriptions_file) && is_writable($descriptions_file)) {
+    file_put_contents($descriptions_file, json_encode($updated_descriptions, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 }
+$descriptions_data = $updated_descriptions;
 
 // Create a mapping of which entries exist in the filesystem
 // Check to the gene_set subdir level (or assembly level for entries without gene_set)
@@ -113,7 +116,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         unset($desc);
         
         // Save to file
-        $save_result = file_put_contents($descriptions_file, json_encode($descriptions_data, JSON_PRETTY_PRINT));
+        $save_result = file_put_contents($descriptions_file, json_encode($descriptions_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         
         if ($save_result === false) {
             $_SESSION['error_message'] = "Error: Could not write to group_descriptions.json. Check file permissions.";
