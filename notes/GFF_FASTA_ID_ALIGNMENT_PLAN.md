@@ -296,9 +296,19 @@ transcript.nt.fa is now a real file. 18,765 non-coding genes (tRNA, rRNA, lncRNA
 `gene-` IDs, as planned. Shipped (copy2moop, 40 files).
 
 Web checks on Nematostella: gene page good, FASTA sequences in the new header format, exon retrieval
-from the gene structure diagram works. **Still to check:** BLAST link-outs, JBrowse search (by new ID,
-and by `gene-LOC…` once the text index includes `Alias` — web agent on it), Data Exporter
-coordinates.
+from the gene structure diagram works. JBrowse search (text index now `Name,ID,Alias`, web
+`189228e`) finds every test ID: `116613690`, `LOC116613690`, `gene-LOC116613690`, `XM_048724567.1`,
+`XM_048724567`, `rna-XM_048724567.1`, `DCAF15` / `LOC5517108` (renamed by naming v2) and the
+non-coding `LOC125561164`. **Still to check:** BLAST link-outs, Data Exporter coordinates.
+
+**Name fix found in the JBrowse test** (`7c1657e`): `updateGFF.pl` names a line by its own ID when
+geneNames.tsv has no symbol (or no row: non-coding) — right for other/lift, but on RefSeq it turned
+24,238 Nematostella gene names into IDs (`116613694`, `gene-LOC125561164`), and non-coding LOCs (no
+`Alias=`) became unsearchable. The gate missed it: the database name is empty for those genes.
+`--keep-source-names` (step-3 call only) keeps the source's `Name=` there; geneNames.tsv symbols
+still win. Nematostella: 37,867 of 37,996 genes keep their old name, 129 take naming v2's symbol.
+Re-shipped. That copy also re-sent `feature_coords.tsv` (unchanged here since 2026-10-20): the
+site's copy differed — if the web side had rewritten it, that change was overwritten.
 
 **Congeria COKUS1KC** (other; regression check): no file changed, gate clean; shipped (busco.json only).
 
