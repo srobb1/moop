@@ -143,6 +143,7 @@
   <?php endif; ?>
 
   <!-- Data Health Issues (shared partial — identical card on the Manage Organisms page) -->
+  <?php $health_card_collapsible = true;   // folded here; its header counts what is inside ?>
   <?php include __DIR__ . '/_data_health_card.php'; ?>
 
   <!-- Environment Warnings -->

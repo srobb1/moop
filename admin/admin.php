@@ -85,6 +85,7 @@ $data = [
     // widget below predates that rule.)
     'page_script' => [
         '/' . $config->getString('site') . '/js/modules/housekeeping-rerun.js',
+        '/' . $config->getString('site') . '/js/modules/remember-collapse.js',
     ],
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",

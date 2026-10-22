@@ -104,3 +104,9 @@
 /* Data Health card (admin/pages/_data_health_card.php): a rule between stacked alerts,
    none under the last. Replaces nine hand-kept "is anything below me?" flags. */
 .dh-stack > .alert:last-child { border-bottom: 0 !important; }
+
+/* A collapsible card header (Data Health on the dashboard): the chevron points down when
+   open, right when folded. */
+.adm-collapse-toggle .adm-chevron { transition: transform 0.15s ease; font-size: 0.85em; }
+.adm-collapse-toggle.collapsed .adm-chevron { transform: rotate(-90deg); }
+.adm-collapse-toggle:focus-visible { outline: 2px solid var(--adm-accent); outline-offset: 2px; }

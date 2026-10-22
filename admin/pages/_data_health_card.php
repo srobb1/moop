@@ -7,7 +7,9 @@
  * Expects computeDataHealthAlerts()'s result extracted into scope -- the page passes it whole
  * ($data = [...] + $_health). Its keys and their shapes are moop_data_health_empty(), which
  * also supplies the defaults here, so there is no list of them to keep in step.
- * Also $cache_stale / $cache_changed_orgs from the page.
+ * Also $cache_stale / $cache_changed_orgs from the page, and optionally
+ * $health_card_collapsible (the dashboard sets it): the body starts folded, the header counts
+ * what is inside by severity, and js/modules/remember-collapse.js keeps the admin's choice.
  */
 $_health_empty = moop_data_health_empty();
 $health_alerts = ($health_alerts ?? []) + $_health_empty['health_alerts'];
@@ -35,12 +37,13 @@ $_p_seq   = $health_alerts['seqname_mismatch'] > 0;
 
 $_any_data_issue = (bool)array_filter($health_alerts);   // any alert with a count -- every key above has its alert below
 $has_health_issues = $cache_stale || $_any_data_issue;
+$health_card_collapsible = $health_card_collapsible ?? false;
 if ($has_health_issues):
+  // The alerts are rendered first and counted from what was rendered, so the header's
+  // badges can never disagree with the body -- there is no second list of which alert is
+  // which severity to keep in step.
+  ob_start();
 ?>
-<div class="card mb-4 border-warning">
-  <div class="card-header adm-head-warn">
-    <h5 class="mb-0"><i class="fa fa-exclamation-triangle text-warning"></i> Data Health Issues</h5>
-  </div>
   <?php // A rule between stacked alerts, none under the last: css/admin-cards.css .dh-stack.
         // It was nine hand-kept $_after_* flags, each listing every alert below it, so
         // adding one alert meant editing all nine. ?>
@@ -285,5 +288,36 @@ if ($has_health_issues):
     </div>
     <?php endif; ?>
   </div>
+<?php
+  $_dh_body = ob_get_clean();
+  $_dh_counts = [
+      ['danger',    substr_count($_dh_body, 'class="alert alert-danger'),    'critical', 'critical'],
+      ['warning',   substr_count($_dh_body, 'class="alert alert-warning'),   'to fix',   'to fix'],
+      ['secondary', substr_count($_dh_body, 'class="alert alert-secondary'), 'suggestion', 'suggestions'],
+  ];
+  $_dh_critical = $_dh_counts[0][1] > 0;
+?>
+<div class="card mb-4 <?= $_dh_critical ? 'border-danger' : 'border-warning' ?>">
+  <div class="card-header <?= $_dh_critical ? 'adm-head-danger' : 'adm-head-warn' ?> d-flex align-items-center justify-content-between gap-2<?= $health_card_collapsible ? ' position-relative' : '' ?>">
+    <h5 class="mb-0">
+      <?php if ($health_card_collapsible): ?>
+        <button type="button" class="btn btn-link p-0 border-0 text-reset text-decoration-none fw-semibold stretched-link adm-collapse-toggle collapsed"
+                data-bs-toggle="collapse" data-bs-target="#dataHealthBody" aria-expanded="false" aria-controls="dataHealthBody">
+          <i class="fa fa-chevron-down adm-chevron me-1"></i>
+      <?php endif; ?>
+      <i class="fa fa-exclamation-triangle <?= $_dh_critical ? 'text-danger' : 'text-warning' ?>"></i> Data Health Issues
+      <?php if ($health_card_collapsible): ?></button><?php endif; ?>
+    </h5>
+    <div class="d-flex flex-wrap gap-1 justify-content-end">
+      <?php foreach ($_dh_counts as [$_c, $_n, $_one, $_many]): if (!$_n) continue; ?>
+        <span class="badge bg-<?= $_c ?><?= $_c === 'warning' ? ' text-dark' : '' ?>"><?= $_n ?> <?= $_n === 1 ? $_one : $_many ?></span>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php if ($health_card_collapsible): ?>
+  <div id="dataHealthBody" class="collapse" data-remember-collapse="moop.dashboard.dataHealth"><?= $_dh_body ?></div>
+  <?php else: ?>
+  <?= $_dh_body ?>
+  <?php endif; ?>
 </div>
-<?php endif; ?>
+<?php unset($_dh_body, $_dh_counts, $_c, $_n, $_one, $_many); endif; ?>
