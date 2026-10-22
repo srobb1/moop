@@ -40,14 +40,18 @@ function loadOrganismAndGetImagePath($organism_name, $images_path = 'moop/images
  * Returns the URL path to an organism's image with fallback logic:
  * 1. Custom image from organism.json if defined
  * 2. NCBI taxonomy image if taxon_id exists and image file found
- * 3. Empty string if no image available
- * 
+ * 3. A Wikipedia image already cached in images/wikimedia/
+ * 4. Otherwise fetch one from Wikipedia and cache it -- unless $fetch is false
+ * 5. Empty string if no image available
+ *
  * @param array $organism_info Array from organism.json with keys: images, taxon_id
  * @param string $images_path URL path to images directory (e.g., 'moop/images')
  * @param string $absolute_images_path Absolute file system path to images directory
+ * @param bool $fetch false = local files only, no network: the admin metadata modal uses it to
+ *                    say which image the site would show, without opening a modal downloading one
  * @return string URL path to image file or empty string if no image
  */
-function getOrganismImagePath($organism_info, $images_path = 'moop/images', $absolute_images_path = '') {
+function getOrganismImagePath($organism_info, $images_path = 'moop/images', $absolute_images_path = '', bool $fetch = true) {
     // Validate input
     if (empty($organism_info) || !is_array($organism_info)) {
         logError('getOrganismImagePath received invalid organism_info', 'organism_image', [
@@ -94,6 +98,7 @@ function getOrganismImagePath($organism_info, $images_path = 'moop/images', $abs
         }
 
         // Fetch from Wikipedia and cache locally; pass scientific name as second arg so it is tried first
+        if (!$fetch) return '';
         $common_name = $organism_info['common_name'] ?? '';
         $wiki_data = getWikipediaOrganismData($common_name, $scientific_name);
         if (!empty($wiki_data['image_url'])) {

@@ -184,6 +184,16 @@
           if one is already present, then Wikipedia — downloaded once and cached in
           <code>images/wikimedia/</code>.
         </p>
+        <?php if (empty($data['info']['images'])): ?>
+        <p class="small mb-3">
+          <?php if (!empty($auto_image)): ?>
+            No image set here, so the site shows <code><?= htmlspecialchars(preg_replace('#^.*?/images/#', '', rawurldecode($auto_image))) ?></code>:
+            <img src="<?= htmlspecialchars($auto_image) ?>" alt="" class="adm-meta-thumb d-block mt-1">
+          <?php else: ?>
+            No image set here, and none found yet — the site fetches one from Wikipedia the first time the organism page is shown.
+          <?php endif; ?>
+        </p>
+        <?php endif; ?>
         <div id="images-container-<?= $org_safe ?>">
           <?php
             $images = $data['info']['images'] ?? [['file' => '', 'caption' => '']];
@@ -199,6 +209,19 @@
                 </div>
                 <input type="file" class="image-upload-input" style="display:none;" accept="image/*">
                 <small class="form-text text-muted">Or upload a photo directly</small>
+                <?php if (!empty($image['file'])):
+                    // The file as the site serves it, so the admin can see which picture this is
+                    // -- or that the name points at nothing.
+                    $__img_abs = ConfigManager::getInstance()->getPath('absolute_images_path') . '/' . $image['file'];
+                    $__img_url = $images_url . '/' . implode('/', array_map('rawurlencode', explode('/', $image['file']))); ?>
+                <div class="mt-2">
+                  <?php if (is_file($__img_abs)): ?>
+                    <img src="<?= htmlspecialchars($__img_url) ?>" alt="" class="adm-meta-thumb">
+                  <?php else: ?>
+                    <span class="small text-danger"><i class="fa fa-exclamation-triangle"></i> No file <code>images/<?= htmlspecialchars($image['file']) ?></code> — the site will show no image.</span>
+                  <?php endif; ?>
+                </div>
+                <?php endif; ?>
               </div>
               <div class="form-group">
                 <label>Caption (HTML allowed)</label>

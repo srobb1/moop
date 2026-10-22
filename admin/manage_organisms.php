@@ -197,15 +197,6 @@ handleAdminAjax(function($action) use ($organisms) {
             'taxon_id' => $taxon_id
         ];
         
-        // Add images if provided
-        if (!empty($images)) {
-            $metadata['images'] = $images;
-        }
-        
-        // Add html paragraphs if provided
-        if (!empty($html_p)) {
-            $metadata['html_p'] = $html_p;
-        }
         
         // Add feature types if provided
         if (!empty($parents) || !empty($children)) {
@@ -217,6 +208,18 @@ handleAdminAjax(function($action) use ($organisms) {
         
         // Merge with existing data to preserve other fields
         $metadata = loadAndMergeJson($organism_json_path, $metadata);
+
+        // Images and paragraphs are written exactly as the modal shows them -- it now reads
+        // organism.json itself, so what it sends is the whole list. They used to be written
+        // only when non-empty, so removing the last image or paragraph never took effect.
+        // An empty list removes the key: the site then picks its own image / writes its own
+        // description again (NCBI or Wikipedia), as the modal's help text says.
+        // Only a list the request actually sent: a missing field must never read as "remove all".
+        foreach (['images' => [$images, 'images_json'], 'html_p' => [$html_p, 'html_p_json']] as $key => [$list, $field]) {
+            if (!isset($_POST[$field])) continue;
+            if (!empty($list)) $metadata[$key] = $list;
+            else unset($metadata[$key]);
+        }
         
         // Write the file
         $json_string = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

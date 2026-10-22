@@ -116,11 +116,32 @@ function organism_modal_db_data($organism, $data, $organism_data): ?array {
                    'gene_sets_by_genome', 'gene_set_query_error', 'gene_set_mismatch_details');
 }
 
-/** Metadata (organism.json) modal. */
+/**
+ * Metadata (organism.json) modal. An EDITOR, so it reads the file itself, never the organism
+ * cache: the cache can be up to an hour behind (or older, until refreshed) and its copy of
+ * organism.json has no feature_types at all. Built from the cache, the modal showed none of an
+ * admin's hand-written paragraphs or images after an edit made outside it, and always showed
+ * the default feature types -- which Save then wrote over the real ones.
+ * Falls back to the cache's copy only when the file cannot be read as JSON (the validation
+ * panel then says why).
+ *
+ * $auto_image: when organism.json names no image, the image the site shows instead (NCBI
+ * taxonomy or a cached Wikipedia image), found from local files only.
+ */
 function organism_modal_metadata_data($organism, $data, $organism_data): array {
-    $json_val = $data['json_validation'];
+    $json_path = "$organism_data/$organism/organism.json";
+    $json_val  = validateOrganismJson($json_path);
+    $file      = $json_val['valid_json'] ? loadJsonFile($json_path, null) : null;
+    if (is_array($file)) {
+        $data['info'] = $file;
+    }
+    $config     = ConfigManager::getInstance();
+    $images_url = '/' . $config->getString('site') . '/images';
+    $auto_image = empty($data['info']['images'])
+        ? getOrganismImagePath(['images' => []] + ($data['info'] ?? []), ltrim($images_url, '/'), '', false)
+        : '';
     $org_safe = htmlspecialchars($organism);
-    return compact('organism', 'data', 'organism_data', 'json_val', 'org_safe');
+    return compact('organism', 'data', 'organism_data', 'json_val', 'org_safe', 'images_url', 'auto_image');
 }
 
 /** Assembly modal. */

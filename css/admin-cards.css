@@ -148,3 +148,7 @@
   .adm-layout { display: block; }
   .adm-quicklinks { position: static; max-height: none; margin-bottom: 1rem; }
 }
+
+/* Organism metadata modal: a small preview of each image named in organism.json, and of the
+   image the site picks itself when none is named. */
+.adm-meta-thumb { max-height: 80px; max-width: 160px; border-radius: 0.25rem; border: 1px solid #dee2e6; }
