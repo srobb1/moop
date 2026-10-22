@@ -368,6 +368,11 @@ Current tasks (`run_housekeeping()`):
   saying so. The search index needs the JBrowse CLI where php-fpm may run it:
   `scripts/install_jbrowse_cli.sh` (§11).
 - `jbrowse_version` — report-only; GitHub contacted at most weekly
+- `security_updates` — pending OS security updates (dnf/apt), watched site packages first,
+  reboot-pending, report-only. **The web server cannot query the package manager under
+  SELinux** (httpd_t may not open the RPM db — tested 2026-10-22), so root writes a daily
+  report into `cache_path` via a systemd timer (`sudo scripts/install_security_report.sh`)
+  and the task only reads it. A failed query is an *error*, never "0 updates".
 
 Resolve command-line tools with `moop_find_executable()` (`lib/functions_system.php`), never a
 bare name: php-fpm's PATH and sudo's `secure_path` both omit `/usr/local/bin`.

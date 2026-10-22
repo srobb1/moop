@@ -148,6 +148,12 @@ function housekeeping_task_registry(): array {
             'desc'  => 'Rebuilds and counts gene tracks whose bgzip/tabix index is older than its source GFF, or is empty, truncated or missing. annotations.gff3 is a symlink into organisms/ so it follows every gene-set reload, while the .gz JBrowse actually reads is a snapshot that only changes on an explicit re-prep — so a reload stales the browser track silently. Rebuilds stale ones first — only in the background run, smallest first, about five minutes per run, the rest on the next; the Run housekeeping now button counts, then starts that background rebuild when there is work.',
         ],
         [
+            'name'  => 'security_updates',
+            'fn'    => 'housekeeping_check_security_updates',
+            'label' => 'OS security updates',
+            'desc'  => "Lists pending operating-system security updates (dnf on RHEL-family hosts, apt on Debian/Ubuntu), worst first, and flags the packages the site runs on — PHP, the web server, OpenSSL, SQLite, the kernel. Reads the package manager's own cached metadata, so it makes no network call; at most once a day, in the background run only. Report-only: installing updates needs root.",
+        ],
+        [
             'name'  => 'jbrowse_version',
             'fn'    => 'housekeeping_check_jbrowse_version',
             'label' => 'JBrowse2 version',
@@ -1340,6 +1346,165 @@ function housekeeping_check_ncbi_taxonomy_update() {
     } else {
         @unlink($lock_file);
     }
+}
+
+/**
+ * Pending OS security updates -- the check that would have caught PHP2Shell.
+ *
+ * PHP2Shell (2026-10-21) was patched only because someone read an article. This host runs
+ * RHEL's PHP 8.0, which upstream no longer supports: fixes arrive only as Red Hat backports,
+ * so the version number never looks new and nothing on the site watched the errata. When
+ * this was written the host had 121 security advisories pending, nginx and OpenSSL among them.
+ *
+ * The web server usually may NOT ask the package manager: under SELinux httpd_t cannot open
+ * the RPM database ("rpmdb open failed", tested 2026-10-22). So the source is a report root
+ * writes daily into the cache directory (scripts/install_security_report.sh -- a systemd
+ * timer), and this task only READS it: cheap, so it runs every housekeeping pass.
+ * Without a report it tries the package manager directly (fine on a host without that
+ * policy), only in the background CLI run, at most daily; if that fails too, the result
+ * says how to set the report up rather than claiming "no updates".
+ *
+ * Report-only, never installs: that needs root, and updating PHP restarts php-fpm.
+ */
+function housekeeping_check_security_updates(): void {
+    $report = moop_cache_root() . '/security_updates.txt';
+    if (is_readable($report)) {
+        $result = moop_parse_security_report((string)file_get_contents($report));
+        $result['source'] = 'report';
+    } else {
+        $prev   = $_SESSION['security_updates'] ?? null;
+        $forced = PHP_SAPI === 'cli' && in_array('--task=security_updates', $GLOBALS['argv'] ?? [], true);
+        $due    = $forced || !$prev || empty($prev['checked_at'])
+               || (time() - (int)strtotime($prev['checked_at'])) > 86400;
+        if (PHP_SAPI !== 'cli' || !$due) {
+            return;   // ~2 s of package manager: never in a page request, at most daily
+        }
+        $text = "# generated: " . date('c') . "\n# running_kernel: " . php_uname('r') . "\n";
+        if (($dnf = moop_find_executable('dnf')) !== '') {
+            $out = []; $rc = 0;
+            exec(escapeshellarg($dnf) . ' -q -C updateinfo list --security 2>&1', $out, $rc);
+            $text .= "# manager: dnf\n" . implode("\n", $out) . "\n# exit: $rc\n";
+        } elseif (($apt = moop_find_executable('apt-get')) !== '') {
+            $out = []; $rc = 0;
+            exec(escapeshellarg($apt) . ' -s -o Debug::NoLocking=1 upgrade 2>&1', $out, $rc);
+            $text .= "# manager: apt\n" . implode("\n", $out) . "\n# exit: $rc\n";
+        } else {
+            $text .= "# manager: none\n";
+        }
+        $result = moop_parse_security_report($text);
+        $result['source'] = 'direct';
+    }
+    $_SESSION['security_updates'] = $result;
+    housekeeping_persist_status('security_updates', $result);
+}
+
+/**
+ * Parse a security report: "# key: value" header lines, then the package manager's own
+ * output. Pure (no I/O) so it is testable; shared by the root-written report and the direct run.
+ *
+ * @return array{checked_at:?string, manager:?string, error:?string, stale:bool, reboot:?bool,
+ *               advisories:array, by_severity:array, watched:array, packages:int, command:?string}
+ */
+function moop_parse_security_report(string $text): array {
+    $head = [];
+    $body = [];
+    foreach (preg_split('/\R/', $text) as $line) {
+        if (preg_match('/^# (\w+): ?(.*)$/', $line, $m)) $head[$m[1]] = trim($m[2]);
+        else $body[] = $line;
+    }
+    $body = implode("\n", $body);
+    $r = ['checked_at' => $head['generated'] ?? null, 'manager' => $head['manager'] ?? null, 'error' => null,
+          'stale' => false, 'reboot' => null, 'advisories' => [], 'by_severity' => [], 'watched' => [],
+          'packages' => 0, 'command' => null];
+
+    // A report root stopped writing is worse than none: it shows old good news. 3 days = the
+    // daily timer has missed at least two runs.
+    if ($r['checked_at'] && time() - (int)strtotime($r['checked_at']) > 3 * 86400) $r['stale'] = true;
+
+    if (isset($head['reboot_required'])) {
+        $r['reboot'] = true;
+    } elseif (!empty($head['newest_kernel']) && !empty($head['running_kernel'])) {
+        $r['reboot'] = $head['newest_kernel'] !== $head['running_kernel'];
+    }
+
+    $exit = isset($head['exit']) ? (int)$head['exit'] : 0;
+    if ($r['manager'] === 'none' || $r['manager'] === null) {
+        $r['error'] = 'No supported package manager (dnf or apt-get) found.';
+    } elseif ($exit !== 0) {
+        $r['error'] = $r['manager'] . ' exited ' . $exit . ': ' . substr(preg_replace('/\s+/', ' ', $body), 0, 300);
+    } elseif ($r['manager'] === 'dnf') {
+        $r = array_merge($r, moop_parse_dnf_security($body));
+        $r['command'] = 'sudo dnf update --security';
+    } else {
+        $r = array_merge($r, moop_parse_apt_security($body));
+        $r['command'] = 'sudo apt-get update && sudo apt-get upgrade';
+    }
+    return $r;
+}
+
+/**
+ * The packages the site itself runs on, by product. Matched by name prefix ("php" covers
+ * php-fpm, php-cli...). Short on purpose: everything else is still counted, just not called out.
+ */
+function moop_security_watch_list(): array {
+    // package-name prefix => the product it belongs to (dnf and apt name the same thing differently)
+    return ['php' => 'PHP', 'nginx' => 'nginx', 'httpd' => 'Apache httpd', 'apache2' => 'Apache httpd',
+            'openssl' => 'OpenSSL', 'libssl' => 'OpenSSL', 'sqlite' => 'SQLite', 'libsqlite3' => 'SQLite',
+            'kernel' => 'Linux kernel', 'linux-image' => 'Linux kernel', 'glibc' => 'glibc', 'libc6' => 'glibc',
+            'curl' => 'curl', 'libcurl' => 'curl'];
+}
+
+/**
+ * Parse `dnf updateinfo list --security` ("RHSA-2026:59362 Important/Sec. nginx-2:1.20.1-28.el9_8.5.x86_64").
+ * One advisory can list many packages and one package many advisories: counts are of
+ * ADVISORIES, and a watched PRODUCT (kernel-core, kernel-tools... = Linux kernel) is reported
+ * once, at its worst severity.
+ *
+ * @return array{advisories: array<string,string>, by_severity: array<string,int>, watched: array<string,array{severity:string, advisories:list<string>}>, packages: int}
+ */
+function moop_parse_dnf_security(string $text): array {
+    $rank = ['Critical' => 4, 'Important' => 3, 'Moderate' => 2, 'Low' => 1];
+    $advisories = []; $packages = []; $watched = [];
+    foreach (preg_split('/\R/', $text) as $line) {
+        if (!preg_match('/^(\S+)\s+(\w+)\/Sec\.\s+(\S+)$/', trim($line), $m)) continue;
+        [, $id, $sev, $nevra] = $m;
+        // name-[epoch:]version-release.arch -> name
+        $name = preg_replace('/-(\d+:)?[^-]+-[^-]+$/', '', $nevra);
+        $advisories[$id] = $sev;
+        $packages[$name] = true;
+        foreach (moop_security_watch_list() as $prefix => $product) {
+            if (strpos($name, $prefix) !== 0) continue;
+            $w_old = $watched[$product]['severity'] ?? null;
+            if ($w_old === null || ($rank[$sev] ?? 0) > ($rank[$w_old] ?? 0)) $watched[$product]['severity'] = $sev;
+            $watched[$product]['advisories'][$id] = true;
+            break;
+        }
+    }
+    foreach ($watched as &$w) { $w['advisories'] = array_keys($w['advisories']); }
+    unset($w);
+    uasort($watched, fn($a, $b) => ($rank[$b['severity']] ?? 0) <=> ($rank[$a['severity']] ?? 0));
+    $by = array_count_values($advisories);
+    uksort($by, fn($a, $b) => ($rank[$b] ?? 0) <=> ($rank[$a] ?? 0));
+    return ['advisories' => $advisories, 'by_severity' => $by, 'watched' => $watched, 'packages' => count($packages)];
+}
+
+/**
+ * Parse `apt-get -s upgrade`: "Inst nginx [1.22.1-9] (1.22.1-9+deb12u1 Debian-Security:12/stable-security [amd64])".
+ * apt has no severities, so every security update counts as one "Security" entry.
+ * ⚠️ Written for Debian/Ubuntu and NOT yet run on one -- verify on the first such host.
+ */
+function moop_parse_apt_security(string $text): array {
+    $packages = []; $watched = [];
+    foreach (preg_split('/\R/', $text) as $line) {
+        if (!preg_match('/^Inst (\S+) .*\(\S+ ([^)]*)\)/', $line, $m)) continue;
+        if (stripos($m[2], 'security') === false) continue;
+        $packages[$m[1]] = true;
+        foreach (moop_security_watch_list() as $prefix => $product) {
+            if (strpos($m[1], $prefix) === 0) { $watched[$product] = ['severity' => 'Security', 'advisories' => []]; break; }
+        }
+    }
+    return ['advisories' => [], 'by_severity' => $packages ? ['Security' => count($packages)] : [],
+            'watched' => $watched, 'packages' => count($packages)];
 }
 
 /**

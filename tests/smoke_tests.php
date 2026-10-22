@@ -1649,6 +1649,29 @@ ok(moop_sum_type_genes([['Homologs' => 4, 'Domains' => 2], ['Homologs' => 9]]) =
    'per-type gene totals add across gene sets (a gene belongs to one gene set)');
 
 // ----------------------------------------------------------------------------
+group('OS security updates: the report is parsed, never mistaken for "all clear"');
+require_once "$BASE/lib/housekeeping.php";
+$_dnf = "RHSA-2026:1 Important/Sec. nginx-2:1.20.1-28.el9_8.5.x86_64\n"
+      . "RHSA-2026:1 Important/Sec. nginx-core-2:1.20.1-28.el9_8.5.x86_64\n"
+      . "RHSA-2026:2 Critical/Sec.  webkit2gtk3-jsc-2.54.1-1.el9_8.x86_64\n"
+      . "RHSA-2026:3 Low/Sec.       kernel-5.14.0-687.29.1.el9_8.x86_64\n"
+      . "RHSA-2026:4 Important/Sec. kernel-core-5.14.0-687.30.1.el9_8.x86_64\n";
+$_r = moop_parse_security_report("# generated: " . date('c') . "\n# running_kernel: k1\n# manager: dnf\n# newest_kernel: k1\n$_dnf# exit: 0\n");
+ok(count($_r['advisories']) === 4 && $_r['by_severity'] === ['Critical' => 1, 'Important' => 2, 'Low' => 1],
+   'counts ADVISORIES, not package lines, worst first');
+ok(array_keys($_r['watched']) === ['nginx', 'Linux kernel'], 'site packages grouped by product; a desktop library is not one');
+ok($_r['watched']['Linux kernel']['severity'] === 'Important', "a product is reported at its WORST advisory's severity");
+ok($_r['reboot'] === false && $_r['stale'] === false && $_r['error'] === null, 'running the newest kernel, fresh report, no error');
+$_r = moop_parse_security_report("# generated: 2020-01-01T00:00:00+00:00\n# running_kernel: k1\n# manager: dnf\n# newest_kernel: k2\n# exit: 0\n");
+ok($_r['stale'] === true && $_r['reboot'] === true, 'an old report is stale; a newer installed kernel means a reboot is pending');
+$_r = moop_parse_security_report("# generated: " . date('c') . "\n# manager: dnf\nError: rpmdb open failed\n# exit: 1\n");
+ok($_r['error'] !== null && $_r['advisories'] === [] && $_r['command'] === null,
+   'a failed package manager is an ERROR, never zero updates (the SELinux case)');
+$_r = moop_parse_apt_security("Inst nginx [1.22.1-9] (1.22.1-9+deb12u1 Debian-Security:12/stable-security [amd64])\n"
+      . "Inst vim [2] (3 Debian:12.5/stable [amd64])\nInst libssl3 [3.0.1] (3.0.2 Debian-Security:12/stable-security [amd64])");
+ok($_r['packages'] === 2 && array_keys($_r['watched']) === ['nginx', 'OpenSSL'], 'apt: only -security origins count; libssl3 is OpenSSL');
+
+// ----------------------------------------------------------------------------
 group('search: annotation source filter carries names exactly (JSON, no trim, commas survive)');
 require_once "$BASE/lib/functions_validation.php";
 $_names = ['Closest human gene (Ensembl, no HGNC record)', 'Ensembl Danio rerio ', 'Say "hi" <b>', 'UniProt'];

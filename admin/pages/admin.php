@@ -270,6 +270,96 @@
     <div id="rebuildGeneIndexesResult" class="small text-muted mt-2" style="display:none;"></div>
   <?= adm_status_card('jbrowse', 'dna', 'JBrowse', $_jb_badges, $_jb_tone, ob_get_clean()) ?>
 
+  <!-- OS security updates (housekeeping_check_security_updates). Root writes a daily report
+       (scripts/install_security_report.sh) because the web server may not query the package
+       database itself; this only reads it. Colour follows the packages the SITE runs on -- a
+       Critical fix for a desktop library is listed, but does not turn the card red. -->
+  <?php
+    $su   = $_SESSION['security_updates'] ?? null;
+    $rank = ['Critical' => 4, 'Important' => 3, 'Moderate' => 2, 'Low' => 1, 'Security' => 3];
+    $su_worst_watched = 0;
+    foreach (($su['watched'] ?? []) as $_w) $su_worst_watched = max($su_worst_watched, $rank[$_w['severity']] ?? 0);
+    $su_needs_setup = $su && $su['error'] && ($su['source'] ?? '') === 'direct';
+    $_su_badges = []; $_su_tone = '';
+    if (!$su) {
+        $_su_badges[] = ['Not checked yet', 'secondary'];
+    } elseif ($su_needs_setup) {
+        $_su_badges[] = ['Needs a one-time setup', 'warning']; $_su_tone = 'warn';
+    } elseif ($su['error']) {
+        $_su_badges[] = ['Check failed', 'danger']; $_su_tone = 'danger';
+    } else {
+        if (!$su['by_severity']) $_su_badges[] = ['Up to date', 'success'];
+        if ($su['watched'])      $_su_badges[] = [count($su['watched']) . ' site ' . (count($su['watched']) === 1 ? 'package needs' : 'packages need') . ' updates', $su_worst_watched >= 4 ? 'danger' : 'warning'];
+        foreach ($su['by_severity'] as $_sev => $_n) {
+            $_su_badges[] = [$_n . ' ' . strtolower($_sev), $_sev === 'Critical' ? 'danger' : ($_sev === 'Important' ? 'warning' : 'secondary')];
+        }
+        if (!empty($su['reboot'])) { $_su_badges[] = ['Reboot needed', 'warning']; }
+        if (!empty($su['stale']))  { $_su_badges[] = ['Report is out of date', 'warning']; }
+        $_su_tone = $su_worst_watched >= 4 ? 'danger' : (($su['watched'] || !empty($su['reboot']) || !empty($su['stale'])) ? 'warn' : '');
+    }
+    ob_start();
+  ?>
+    <?php if (!$su): ?>
+      <p class="small text-muted mb-0">The first check runs with the next housekeeping run.</p>
+    <?php elseif ($su_needs_setup): ?>
+      <p class="small mb-2">The web server is not allowed to ask the package manager for pending updates
+        (on SELinux hosts it may not read the package database), so a small daily report has to be
+        written by root instead. Run once, on the server:</p>
+      <code class="d-block small mb-2">sudo <?= htmlspecialchars($config->getPath('site_path')) ?>/scripts/install_security_report.sh</code>
+      <p class="small text-muted mb-0">It installs a daily systemd timer that writes the report into MOOP's
+        cache directory. MOOP only reads it and never installs anything.
+        <span class="d-block">Last attempt: <?= htmlspecialchars($su['error']) ?></span></p>
+    <?php elseif ($su['error']): ?>
+      <p class="small mb-0"><i class="fa fa-times-circle text-danger me-1"></i><?= htmlspecialchars($su['error']) ?></p>
+    <?php else: ?>
+      <?php if ($su['watched']): ?>
+        <p class="small mb-1"><strong>Packages the site runs on:</strong></p>
+        <ul class="list-unstyled small mb-2">
+          <?php foreach ($su['watched'] as $_prod => $_w): $_c = ($rank[$_w['severity']] ?? 0) >= 4 ? 'danger' : (($rank[$_w['severity']] ?? 0) >= 3 ? 'warning' : 'secondary'); ?>
+            <li class="mb-1">
+              <span class="badge bg-<?= $_c ?><?= $_c === 'warning' ? ' text-dark' : '' ?> me-1"><?= htmlspecialchars($_w['severity']) ?></span>
+              <strong><?= htmlspecialchars($_prod) ?></strong>
+              <?php if ($_w['advisories']): ?>
+                <span class="text-muted">— <?= count($_w['advisories']) ?> advisor<?= count($_w['advisories']) === 1 ? 'y' : 'ies' ?>:
+                  <?= htmlspecialchars(implode(', ', array_slice($_w['advisories'], 0, 4))) ?><?= count($_w['advisories']) > 4 ? ' …' : '' ?></span>
+              <?php endif; ?>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+      <?php elseif ($su['by_severity']): ?>
+        <p class="small mb-2"><i class="fa fa-check text-success me-1"></i>None of the pending updates are for
+          packages the site runs on (PHP, the web server, OpenSSL, SQLite, the kernel).</p>
+      <?php else: ?>
+        <p class="small mb-2"><i class="fa fa-check text-success me-1"></i>No security updates are pending.</p>
+      <?php endif; ?>
+      <?php if ($su['by_severity']): ?>
+        <p class="small mb-2">In all, <?= count($su['advisories']) ?: array_sum($su['by_severity']) ?>
+          <?= $su['manager'] === 'dnf' ? 'security advisories' : 'security updates' ?> are pending across
+          <?= (int)$su['packages'] ?> packages. To install them all, on the server:
+          <code class="d-block mt-1"><?= htmlspecialchars($su['command']) ?></code>
+          <span class="text-muted d-block mt-1">Updating PHP restarts php-fpm by itself; a kernel update needs a reboot.</span>
+        </p>
+      <?php endif; ?>
+      <?php if (!empty($su['reboot'])): ?>
+        <p class="small mb-2"><i class="fa fa-power-off text-warning me-1"></i>A newer kernel is installed than the one
+          running — reboot to finish installing it.</p>
+      <?php endif; ?>
+      <p class="small text-muted fst-italic mb-0">
+        <i class="fa fa-clock"></i>
+        <?php if (!empty($su['stale'])): ?><strong>This report is out of date</strong> — the daily
+          <code>moop-security-report</code> timer has stopped running. Check it with
+          <code>systemctl status moop-security-report.timer</code>.
+        <?php endif; ?>
+        <?php // Relative, never a printed clock time: PHP's timezone is unset here (UTC) while the host is local.
+              $_su_age = $su['checked_at'] ? max(0, time() - (int)strtotime($su['checked_at'])) : null; ?>
+        Report from <?= $_su_age === null ? 'an unknown time' : ($_su_age < 3600 ? max(1, (int)round($_su_age / 60)) . ' min ago'
+                         : ($_su_age < 172800 ? (int)floor($_su_age / 3600) . ' hr ago' : (int)floor($_su_age / 86400) . ' days ago')) ?>
+        <?= ($su['source'] ?? '') === 'report' ? '· written daily by the moop-security-report timer' : '' ?>
+        · report-only, MOOP never installs updates.
+      </p>
+    <?php endif; ?>
+  <?= adm_status_card('securityUpdates', 'shield-alt', 'OS Security Updates', $_su_badges, $_su_tone, ob_get_clean()) ?>
+
   <!-- Filesystem permissions: grouped by CATEGORY and phrased by the worst severity PRESENT
        (never "0 high"). Precomputed once per housekeeping interval, NOT scanned on load. -->
   <?php
