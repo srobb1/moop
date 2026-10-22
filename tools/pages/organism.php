@@ -247,6 +247,12 @@
 
   <!-- Description Section -->
   <div id="organismContent">
+  <?php /* Above About (user, 2026-10-22): every assembly + gene set side by side, so choosing
+           one does not mean opening each -- and the data comes before the prose, instead of
+           sitting below an intro that can run to four paragraphs. Rendered whether or not
+           there is an About text. */ ?>
+  <?php if (!empty($gene_set_rows)) include __DIR__ . '/../../includes/gene_set_comparison.php'; ?>
+
   <?php if (!empty($organism_info['html_p']) && is_array($organism_info['html_p'])): ?>
     <div class="row mb-4">
       <div class="col-12">
@@ -261,7 +267,24 @@
                        italics a scientific name requires by convention are stripped. Put
                        them back for THIS organism's binomial only -- the one name we can
                        identify with certainty. */ ?>
-              <?php foreach ($organism_info['html_p'] as $paragraph): ?>
+              <?php
+                // Paragraphs flagged 'more' go in one collapsed block, placed where the first
+                // of them stood, so the source line after them stays visible.
+                $__more_open = false;
+                // Label swap is CSS on aria-expanded (css/display.css) -- no script needed.
+                $__more_btn  = '<button type="button" class="btn btn-link btn-sm p-0 mb-3 about-more-toggle"'
+                             . ' data-bs-toggle="collapse" data-bs-target="#organismAboutMore"'
+                             . ' aria-expanded="false" aria-controls="organismAboutMore">'
+                             . '<span class="about-more-closed">Read more <i class="fa fa-chevron-down"></i></span>'
+                             . '<span class="about-more-open">Show less <i class="fa fa-chevron-up"></i></span>'
+                             . '</button>';
+                foreach ($organism_info['html_p'] as $paragraph):
+                  if (!empty($paragraph['more']) && !$__more_open): $__more_open = true; ?>
+                    <div class="collapse" id="organismAboutMore">
+                  <?php elseif (empty($paragraph['more']) && $__more_open): $__more_open = false; ?>
+                    </div>
+                    <?= $__more_btn ?>
+                  <?php endif; ?>
                 <p class="<?= htmlspecialchars($paragraph['class'] ?? '') ?>" 
                    style="<?= htmlspecialchars($paragraph['style'] ?? '') ?>">
                   <?= moop_italicise_binomial(
@@ -271,6 +294,7 @@
                       ) ?>
                 </p>
               <?php endforeach; ?>
+              <?php if ($__more_open): ?></div><?= $__more_btn ?><?php endif; ?>
             </div>
             
             <?php if (!empty($organism_info['text_src'])): ?>
@@ -290,9 +314,6 @@
     </div>
   <?php endif; ?>
 
-  <?php /* Under About: every assembly + gene set side by side, so choosing one does not mean
-           opening each. Rendered whether or not there is an About text. */ ?>
-  <?php if (!empty($gene_set_rows)) include __DIR__ . '/../../includes/gene_set_comparison.php'; ?>
   </div><!-- /#organismContent -->
 </div><!-- /.container -->
 

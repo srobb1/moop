@@ -98,13 +98,21 @@ if ($needs_description) {
         }
     }
 
-    // Wikipedia paragraph (shown in addition to the auto-description when available)
+    // Wikipedia text (shown in addition to the auto-description when available).
+    // The extract is plain text with one "\n" between paragraphs. Each becomes its own <p>:
+    // left in one <p>, HTML folds the newline into a space and the paragraphs run together;
+    // nl2br keeps the break but not the paragraph spacing. Attribution is a separate line,
+    // not text glued onto the last paragraph.
     if (!empty($wiki_data['description'])) {
+        // Only the first paragraph shows; the rest sit behind "Read more" (user, 2026-10-22:
+        // some intros run to four paragraphs and push the page's data far down).
+        foreach (preg_split('/\s*\n\s*/', trim($wiki_data['description']), -1, PREG_SPLIT_NO_EMPTY) as $i => $para) {
+            $html_p[] = ['text' => htmlspecialchars($para), 'class' => '', 'style' => '', 'more' => $i > 0];
+        }
         $html_p[] = [
-            'text'  => htmlspecialchars($wiki_data['description']) .
-                       '<br><br><small class="text-muted">Source: <a href="' . htmlspecialchars($wiki_data['wikipedia_url']) .
-                       '" target="_blank">Wikipedia</a></small>',
-            'class' => '',
+            'text'  => '<small>Source: <a href="' . htmlspecialchars($wiki_data['wikipedia_url']) .
+                       '" target="_blank" rel="noopener">Wikipedia</a></small>',
+            'class' => 'text-muted',
             'style' => ''
         ];
     }

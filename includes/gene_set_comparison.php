@@ -56,6 +56,14 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
         ) ?>
       </h2>
       <div class="feature-overview-body">
+        <?php if ($gsc_many): ?>
+        <?php /* Guidance, not a verdict -- still no "best" badge, for the reason in the header. */ ?>
+        <p class="small text-muted mb-2">
+          <strong>Not sure which to use?</strong> A higher BUSCO score and a higher share with a
+          homolog usually mean a more complete gene set. If you are following a paper, use the
+          gene set it used.
+        </p>
+        <?php endif; ?>
         <div class="table-responsive">
           <table class="table table-sm align-middle mb-0 gsc-table" id="geneSetComparisonTable">
             <thead>
@@ -88,7 +96,9 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
                      title="<?= htmlspecialchars(implode("\n", $r['warnings'])) ?>"></i>
                   <span class="visually-hidden"><?= htmlspecialchars(implode(' ', $r['warnings'])) ?></span>
                   <?php endif; ?>
-                  <div class="small"><a href="<?= htmlspecialchars($asm_url) ?>" class="text-muted"><?= htmlspecialchars($r['assembly_label']) ?></a></div>
+                  <?php /* Labelled, because a gene set name and an assembly name look alike
+                           ("NV2" over "Nvec200 (GCA_...)") and readers could not tell which was which. */ ?>
+                  <div class="small text-muted">Assembly: <a href="<?= htmlspecialchars($asm_url) ?>" class="text-muted"><?= htmlspecialchars($r['assembly_label']) ?></a></div>
                 </td>
                 <td><?= $r['source'] !== '' ? htmlspecialchars($r['source']) : '<span class="text-muted">—</span>' ?></td>
                 <td class="text-end" data-order="<?= $c ? $c['genes'] : -1 ?>">

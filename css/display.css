@@ -360,6 +360,12 @@ table.dataTable thead th {
   margin-bottom: 0;
 }
 
+/* "Read more" on the organism About text: one button, label chosen by its state. */
+.about-more-toggle[aria-expanded="false"] .about-more-open,
+.about-more-toggle[aria-expanded="true"] .about-more-closed {
+  display: none;
+}
+
 .resource-card {
   background-color: #f8f9fa;
   transition: all 0.3s ease;
