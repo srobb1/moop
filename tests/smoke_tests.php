@@ -1696,6 +1696,18 @@ ok(isset($_inv['Packagist:firebase/php-jwt@7.0.2']) && !isset($_inv['Packagist:p
    'Composer runtime packages are checked ("v" dropped); dev-only tools are not -- they never ship');
 array_map('unlink', glob("$_ld/js/*")); @unlink("$_ld/vendor/composer/installed.json");
 @rmdir("$_ld/js"); @rmdir("$_ld/vendor/composer"); @rmdir("$_ld/vendor"); @rmdir($_ld);
+// Unlisted third-party files: a fixture proves the scan finds one, the real tree must have none.
+$_ud = sys_get_temp_dir() . '/moop_unlisted_' . getmypid();
+@mkdir("$_ud/js/vendor", 0777, true); @mkdir("$_ud/css", 0777, true);
+file_put_contents("$_ud/js/vendor/listed.js", 'x'); file_put_contents("$_ud/js/vendor/new-lib.js", 'x');
+file_put_contents("$_ud/css/other.min.css", 'x'); file_put_contents("$_ud/css/ours.css", 'x');
+ok(moop_unlisted_vendor_files($_ud, [['js/vendor/listed.js', '', '', '', '']]) === ['css/other.min.css', 'js/vendor/new-lib.js'],
+   'a vendor-folder file or a stray .min.css that is not listed is found; our own .css is not');
+array_map('unlink', array_merge(glob("$_ud/js/vendor/*"), glob("$_ud/css/*"))); @rmdir("$_ud/js/vendor"); @rmdir("$_ud/js"); @rmdir("$_ud/css"); @rmdir($_ud);
+ok(moop_unlisted_vendor_files($BASE) === [],
+   'every third-party file in this checkout is in scripts/vendor_assets.txt (add a line when adding a library)');
+ok(moop_external_asset_refs($BASE) === [],
+   'no page loads a script or stylesheet from another site (self-host it and list it in scripts/vendor_assets.txt)');
 $_vr = moop_vendor_asset_rows();
 ok(count($_vr) > 0 && count(array_filter($_vr, fn($r) => !preg_match('/^\w+:.+@[^@]+$/', $r[4]))) === 0,
    'every line of scripts/vendor_assets.txt names its ecosystem:package@version');

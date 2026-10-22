@@ -529,28 +529,10 @@ if (file_exists("$base/vendor/autoload.php")) {
 
 section("Front-end Vendor Assets");
 
-$vendor_assets = [
-    'js/vendor/jquery.min.js',
-    'js/vendor/jquery-ui.min.js',
-    'js/vendor/bootstrap.bundle.min.js',
-    'js/vendor/jquery.dataTables.min.js',
-    'js/vendor/dataTables.bootstrap5.min.js',
-    'js/vendor/dataTables.buttons.min.js',
-    'js/vendor/buttons.bootstrap5.min.js',
-    'js/vendor/buttons.html5.min.js',
-    'js/vendor/buttons.print.min.js',
-    'js/vendor/buttons.colVis.min.js',
-    'js/vendor/dataTables.colReorder.min.js',
-    'js/vendor/jszip.min.js',
-    'css/bootstrap.min.css',
-    'css/datatables/dataTables.bootstrap5.min.css',
-    'css/datatables/buttons.bootstrap5.min.css',
-    'css/datatables/colReorder.dataTables.min.css',
-    'css/fontawesome/all.css',
-    'css/fontawesome/webfonts/fa-solid-900.woff2',
-    'css/fontawesome/webfonts/fa-regular-400.woff2',
-    'css/fontawesome/webfonts/fa-brands-400.woff2',
-];
+// The list is scripts/vendor_assets.txt -- the same one fetch_vendor_assets.sh downloads from
+// and the dashboard's library check reads. (It was a hand-kept copy here until 2026-10-22.)
+require_once "$base/lib/library_audit.php";
+$vendor_assets = array_column(moop_vendor_asset_rows("$base/scripts/vendor_assets.txt"), 0);
 
 $missing_assets = [];
 foreach ($vendor_assets as $rel) {
@@ -567,6 +549,12 @@ if (empty($missing_assets)) {
          . implode(', ', array_slice($missing_assets, 0, 4))
          . (count($missing_assets) > 4 ? ' …' : ''),
          'scripts/fetch_vendor_assets.sh');
+}
+$unlisted_assets = moop_unlisted_vendor_files($base);
+if ($unlisted_assets) {
+    warn(count($unlisted_assets) . " third-party file(s) not in scripts/vendor_assets.txt, so never checked for vulnerabilities: "
+         . implode(', ', array_slice($unlisted_assets, 0, 4)) . (count($unlisted_assets) > 4 ? ' …' : ''),
+         'Add a line for each (url | sha256 | post-process | ecosystem:package@version), or delete it if unused');
 }
 
 // ── Section 4: Configuration Files ──────────────────────────────────────────
@@ -908,6 +896,31 @@ if ($selinux_enforcing) {
 }
 
 // ── Section 6: JWT Authentication Keys ──────────────────────────────────────
+
+section("Security Update Report");
+
+// The dashboard's OS Security Updates card reads a report root writes daily: the web server is
+// not allowed to query the package manager itself under SELinux. Without the timer the card can
+// only say "needs setup" -- which nobody sees until they look.
+$sec_cache  = !empty($config['cache_path']) ? rtrim($config['cache_path'], '/') : "$base/organisms";
+$sec_report = "$sec_cache/security_updates.txt";
+$sec_timer  = '/etc/systemd/system/moop-security-report.timer';
+if (!is_file($sec_timer) && !is_file($sec_report)) {
+    warn("Daily security-update report is not set up — the dashboard cannot list pending OS security updates",
+         'sudo scripts/install_security_report.sh   (once; installs a daily systemd timer)');
+} elseif (!is_file($sec_report)) {
+    warn("The report timer is installed but $sec_report does not exist yet",
+         'sudo systemctl start moop-security-report.service');
+} else {
+    $sec_age = time() - (int) filemtime($sec_report);
+    if ($sec_age > 3 * 86400) {
+        warn('Security-update report is ' . (int) floor($sec_age / 86400) . ' days old — the daily timer is not running',
+             'systemctl status moop-security-report.timer');
+    } else {
+        pass('Security-update report written ' . ($sec_age < 3600 ? (int) round($sec_age / 60) . ' min' : (int) floor($sec_age / 3600) . ' h') . ' ago'
+             . (is_file($sec_timer) ? ' (daily timer installed)' : ' (no timer found — written by hand?)'));
+    }
+}
 
 section("JWT Authentication Keys");
 

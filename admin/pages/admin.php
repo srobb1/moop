@@ -377,16 +377,24 @@
     } else {
         if ($la_vul)  $_la_badges[] = [count($la_vul) . ' with known vulnerabilities', $la_high ? 'danger' : 'warning'];
         if ($la_bad)  $_la_badges[] = [count($la_bad) . ' unverified', 'warning'];
+        if (!empty($la['unlisted'])) $_la_badges[] = [count($la['unlisted']) . ' unlisted ' . (count($la['unlisted']) === 1 ? 'file' : 'files'), 'warning'];
         if (!$la_vul && !$la_bad && !empty($la['checked_at'])) $_la_badges[] = ['No known vulnerabilities', 'success'];
         if (!empty($la['osv_failed']) || empty($la['checked_at'])) $_la_badges[] = ['OSV not reached', 'secondary'];
         $_la_badges[] = [count($la_pk) . ' libraries', 'secondary'];
-        $_la_tone = $la_high ? 'danger' : (($la_vul || $la_bad) ? 'warn' : '');
+        $_la_tone = $la_high ? 'danger' : (($la_vul || $la_bad || !empty($la['unlisted'])) ? 'warn' : '');
     }
     ob_start();
   ?>
     <?php if (!$la): ?>
       <p class="small text-muted mb-0">The first check runs with the next housekeeping run.</p>
     <?php else: ?>
+      <?php if (!empty($la['unlisted'])): ?>
+        <div class="alert alert-warning small py-2 mb-2">
+          <strong>Not in <code>scripts/vendor_assets.txt</code>, so never checked:</strong>
+          <?= htmlspecialchars(implode(', ', $la['unlisted'])) ?>.
+          Add a line for each (URL, checksum, <code>ecosystem:package@version</code>), or delete the file if nothing uses it.
+        </div>
+      <?php endif; ?>
       <table class="table table-sm small align-middle mb-2">
         <thead><tr><th>Library</th><th>Version</th><th>Status</th></tr></thead>
         <tbody>

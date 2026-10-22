@@ -8,8 +8,7 @@ css/
 ├── README.md                              # This file
 ├── moop.css                               # Base/global styles (ALWAYS included)
 ├── bootstrap.min.css                      # Bootstrap 5.3.2 framework
-├── datatables.css & datatables.min.css    # DataTables table styling
-├── datatables/                            # DataTables plugin CSS
+├── datatables/                            # DataTables 1.13 + Bootstrap 5 CSS (third-party: scripts/vendor_assets.txt)
 │
 ├── Page-Specific Stylesheets (loaded conditionally):
 │   ├── advanced-search-filter.css         # Advanced search filter UI
@@ -73,9 +72,9 @@ $display_config = [
 ### Global Styles
 
 **Always loaded on every page:**
-- `bootstrap.min.css` - Bootstrap framework (from CDN)
+- `bootstrap.min.css` - Bootstrap framework (self-hosted; third-party files are listed in `scripts/vendor_assets.txt`)
 - `moop.css` - Base MOOP styles
-- `datatables.css` - DataTables table styling (when using tables)
+- `datatables/*.css` - DataTables table styling
 
 Located in `head-resources.php` - should **not** be changed per-page
 

@@ -128,3 +128,58 @@ function moop_osv_request(string $url, ?string $post = null): ?array {
     $data = $code === 200 && $body ? json_decode($body, true) : null;
     return is_array($data) ? $data : null;
 }
+
+/**
+ * Third-party files on disk that scripts/vendor_assets.txt does not list -- so the library
+ * check would never look at them. Where they live: everything under js/vendor/,
+ * css/datatables/ and css/fontawesome/, plus any *.min.js / *.min.css elsewhere in js/ and
+ * css/ (a minified file is almost always someone else's). Found 2026-10-22: five unused
+ * DataTables 1.10.18 stylesheets nobody had listed or loaded.
+ *
+ * @return list<string> paths relative to $root
+ */
+function moop_unlisted_vendor_files(string $root, ?array $rows = null): array {
+    $listed = array_flip(array_column($rows ?? moop_vendor_asset_rows("$root/scripts/vendor_assets.txt"), 0));
+    $found = [];
+    foreach (['js/vendor', 'css/datatables', 'css/fontawesome'] as $dir) {
+        if (!is_dir("$root/$dir")) continue;
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator("$root/$dir", FilesystemIterator::SKIP_DOTS));
+        foreach ($it as $f) if ($f->isFile()) $found[] = substr($f->getPathname(), strlen($root) + 1);
+    }
+    foreach (['js', 'css'] as $dir) {
+        foreach (glob("$root/$dir/*.min.{js,css}", GLOB_BRACE) ?: [] as $f) $found[] = substr($f, strlen($root) + 1);
+    }
+    $out = array_values(array_unique(array_filter($found, fn($p) => !isset($listed[$p]) && basename($p) !== 'README.md')));
+    sort($out);
+    return $out;
+}
+
+/**
+ * <script src="http..."> / <link href="http..."> in the app's own code: a library loaded from
+ * a CDN is outside the vendor list, outside the Content-Security-Policy (script-src 'self') and
+ * hands a third party code execution. setup.php is the one documented exception (it disables
+ * itself once the site is configured; see CLAUDE.md).
+ *
+ * @return list<string> "path:line"
+ */
+function moop_external_asset_refs(string $root): array {
+    $hits = [];
+    foreach (['admin', 'api', 'includes', 'lib', 'tools', 'js'] as $dir) {
+        if (!is_dir("$root/$dir")) continue;
+        $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator("$root/$dir", FilesystemIterator::SKIP_DOTS));
+        foreach ($it as $f) {
+            $path = substr($f->getPathname(), strlen($root) + 1);
+            if (!preg_match('/\.(php|js|html)$/', $path) || strpos($path, 'js/vendor/') === 0) continue;
+            foreach (@file($f->getPathname()) ?: [] as $n => $line) {
+                if (preg_match('/<(script|link)\b[^>]*\b(src|href)=["\']https?:\/\//i', $line)) $hits[] = "$path:" . ($n + 1);
+            }
+        }
+    }
+    foreach (glob("$root/*.php") ?: [] as $f) {
+        if (basename($f) === 'setup.php') continue;
+        foreach (@file($f) ?: [] as $n => $line) {
+            if (preg_match('/<(script|link)\b[^>]*\b(src|href)=["\']https?:\/\//i', $line)) $hits[] = basename($f) . ':' . ($n + 1);
+        }
+    }
+    return $hits;
+}

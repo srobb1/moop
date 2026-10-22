@@ -94,7 +94,20 @@ sudo scripts/fix_moop_selinux.sh      # idempotent, safe to re-run
 Skip this on Debian/Ubuntu. Skipping it *on an enforcing host* gives you a site that loads
 perfectly and then silently cannot write anything — [see below](#troubleshooting).
 
-**6. Log in** at `http://your-host/moop/` with the admin account you just created.
+**6. Turn on the daily security-update report.**
+
+```bash
+sudo scripts/install_security_report.sh   # once; safe to re-run
+```
+
+The admin dashboard lists pending OS security updates (PHP, the web server, OpenSSL, the
+kernel…), but the web server is not allowed to ask the package manager itself — under SELinux
+it cannot read the package database. This installs a small systemd timer that, as root, writes
+a plain-text report into MOOP's cache directory once a day and 10 minutes after each boot.
+MOOP only reads that report; it never runs as root and never installs anything. Re-run the
+script if you change `cache_path`. Without it the dashboard card says "Needs a one-time setup".
+
+**7. Log in** at `http://your-host/moop/` with the admin account you just created.
 
 Then run `php setup-check.php` once more; it should come back clean.
 
@@ -180,6 +193,22 @@ repo, committing stays manual by design.
 | Check the health of an install | `php setup-check.php` |
 | Warm the organism cache | `php scripts/warm_organism_cache.php` (`--force` to rescan) |
 | Upgrade JBrowse2 | [Upgrading JBrowse2](docs/JBrowse2/UPGRADING.md) |
+| Add or upgrade a front-end library (JS/CSS) | Add or edit its line in `scripts/vendor_assets.txt`, run `scripts/fetch_vendor_assets.sh --force` — see below |
+| Install pending OS security updates | Admin → System Status → OS Security Updates shows the command |
+
+**Third-party libraries** — jQuery, Bootstrap, DataTables, Font Awesome and the rest are
+self-hosted, and **every one must have a line in `scripts/vendor_assets.txt`**: its path, the URL
+it came from, its sha256, and `ecosystem:package@version` (e.g. `npm:jquery@3.6.0`). That one
+file is how `scripts/fetch_vendor_assets.sh` downloads and verifies them, and how the dashboard's
+Third-party Libraries card asks [OSV](https://osv.dev) about known vulnerabilities each week. A
+file that is not listed is never checked, so CI fails when a third-party file appears without a
+line (`tests/smoke_tests.php`), and so does a page that loads a script from a CDN. Composer
+packages need nothing — they are read from `vendor/composer/installed.json`.
+
+**Security and upkeep** — Admin → System Status checks, without you asking: pending OS
+security updates (step 6 above), known vulnerabilities in the libraries MOOP ships, deprecated
+PHP calls the site has made, and — in CI, on every push — whether the code still works on PHP
+8.3. All of it is report-only.
 
 **Organism cache** — Manage Organisms validates every database, FASTA, BLAST index and
 metadata file. Past ~50 organisms that scan can exceed the web server timeout, so results

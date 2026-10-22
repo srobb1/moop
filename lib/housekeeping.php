@@ -1392,6 +1392,8 @@ function housekeeping_check_library_advisories(): void {
         'checked_at'  => $reached ? date('c') : ($prev['checked_at'] ?? null),
         'signature'   => $reached ? $sig : ($prev['signature'] ?? null),
         'osv_failed'  => $due && !$reached,
+        // Third-party files the list above does not cover, so OSV never hears of them.
+        'unlisted'    => moop_unlisted_vendor_files($root),
     ];
     $_SESSION['library_advisories'] = $result;
     housekeeping_persist_status('library_advisories', $result);
