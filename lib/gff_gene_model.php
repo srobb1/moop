@@ -36,13 +36,30 @@ function moop_gff_attrs(string $col9): array {
     return $out;
 }
 
+/**
+ * Every database id this GFF record could stand for (rules in the file header): its ID, its ID
+ * after one source prefix, and any NCBI GeneID. The one place those rules live -- the per-gene
+ * matcher below and whole-file readers (the Data Exporter's exon mode) both use it.
+ *
+ * @return list<string>
+ */
+function moop_gff_db_id_candidates(array $attrs): array {
+    $out = [];
+    $id  = $attrs['ID'] ?? '';
+    if ($id !== '') {
+        $out[] = $id;
+        $bare  = preg_replace('/^[A-Za-z]+[-:]/', '', $id);
+        if ($bare !== $id) $out[] = $bare;
+    }
+    foreach (explode(',', $attrs['Dbxref'] ?? '') as $x) {
+        if (strncmp($x, 'GeneID:', 7) === 0 && ctype_digit(substr($x, 7))) $out[] = substr($x, 7);
+    }
+    return $out;
+}
+
 /** Does this GFF record stand for the database feature $uniquename? (rules in the file header) */
 function moop_gff_id_matches(array $attrs, string $uniquename): bool {
-    $id = $attrs['ID'] ?? '';
-    if ($id !== '' && ($id === $uniquename || preg_replace('/^[A-Za-z]+[-:]/', '', $id) === $uniquename)) {
-        return true;
-    }
-    return ctype_digit($uniquename) && in_array('GeneID:' . $uniquename, explode(',', $attrs['Dbxref'] ?? ''), true);
+    return in_array($uniquename, moop_gff_db_id_candidates($attrs), true);
 }
 
 /** The ids this record hangs under: Parent= (comma list), else geneID= when it is not the record itself. */

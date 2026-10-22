@@ -26,6 +26,7 @@ require_once __DIR__ . '/parent_functions.php';
 // here is harmless because neither has include-time side effects.)
 require_once __DIR__ . '/database_queries.php';
 require_once __DIR__ . '/genomic_regions.php';      // moopmartStreamGenomicFasta()
+require_once __DIR__ . '/gff_gene_model.php';       // GFF id rules, for exon mode
 require_once __DIR__ . '/feature_types.php';        // moop_transcript_types()
 
 /** Max rows a preview endpoint materialises and returns. Counts stay exact regardless. */
@@ -558,17 +559,7 @@ function moopmartGetChrNames(string $gene_set_path): array
         return loadJsonFile($cache, []);
     }
 
-    $chrs = [];
-    $fh   = fopen($tsv, 'r');
-    if ($fh === false) return [];
-    while (($line = fgets($fh)) !== false) {
-        $p = explode("\t", $line, 4);
-        if (isset($p[2])) $chrs[trim($p[2])] = true;
-    }
-    fclose($fh);
-
-    $result = array_keys($chrs);
-    sort($result, SORT_NATURAL);
+    $result = moop_feature_coords_seqnames($gene_set_path) ?? [];
     if ($cache !== '') @file_put_contents($cache, json_encode($result));
     return $result;
 }
@@ -685,68 +676,84 @@ function moopmartAttachCoords(array $features, array $coords_by_gs_id, array $co
 /**
  * Stream through a GFF3 file once and collect sub-feature coordinates for a set of genes.
  *
- * Only the first isoform (first mRNA-type child encountered) per gene is used.
+ * Only the first isoform (first transcript-type child encountered) per gene is used.
  * Sub-features collected: exon, CDS, five_prime_UTR, three_prime_UTR, UTR.
  * Features assumed to be in parent-before-child order (standard GFF3).
  *
+ * Ids are matched by lib/gff_gene_model.php's rules (prefix, GeneID), and links by its
+ * moop_gff_parents(). This used to require an ID= on every line -- exon lines usually carry
+ * only Parent=, so six gene sets (NV2 among them) exported no exons at all -- and to match the
+ * GFF gene ID to the database id exactly, which missed every "gene:"-prefixed GFF.
+ *
  * @param string   $gff_path         Path to genes.gff
- * @param string[] $gene_uniquenames  Gene IDs to collect sub-features for
+ * @param string[] $gene_uniquenames  Gene IDs (database uniquenames) to collect sub-features for
  * @return array   [gene_id => [{start, end, type, strand}, ...]] sorted by start ASC
  */
 function moopmartGetExonCoords(string $gff_path, array $gene_uniquenames): array
 {
     if (!file_exists($gff_path) || empty($gene_uniquenames)) return [];
 
-    $target_genes    = array_flip($gene_uniquenames);
-    $gene_first_mrna = [];  // gene_id => mrna_id (first isoform only)
-    $mrna_to_gene    = [];  // mrna_id => gene_id
-    $sub_features    = [];  // gene_id => [{start, end, type, strand}]
+    $target_genes = array_flip($gene_uniquenames);
+    $gff_gene     = [];  // GFF gene ID => database gene uniquename
+    $has_first    = [];  // database gene uniquename => true once its first isoform is chosen
+    $mrna_to_gene = [];  // GFF transcript ID => database gene uniquename
+    $sub_features = [];  // database gene uniquename => [{start, end, type, strand}]
 
-    $mrna_types = ['mrna', 'transcript', 'lnc_rna', 'ncrna', 'pre_mirna', 'rrna', 'trna',
-                   'pseudogenic_transcript', 'processed_transcript'];
     $exon_types = ['exon', 'cds', 'five_prime_utr', 'three_prime_utr', 'utr'];
 
     $fh = fopen($gff_path, 'r');
     if ($fh === false) return [];
     while (($line = fgets($fh)) !== false) {
-        if ($line[0] === '#') continue;
-        $parts = explode("\t", rtrim($line));
+        if ($line === '' || $line[0] === '#') continue;
+        $parts = explode("\t", rtrim($line, "\r\n"));
         if (count($parts) < 9) continue;
 
         $feat_type_raw = $parts[2];
         $feat_type     = strtolower($feat_type_raw);
-        $attrs         = $parts[8];
+        $attrs         = moop_gff_attrs($parts[8]);
+        $parents       = moop_gff_parents($attrs);
+        $id            = $attrs['ID'] ?? '';
 
-        if (!preg_match('/\bID=([^;]+)/', $attrs, $mid)) continue;
-        $id = $mid[1];
-
-        $parent = null;
-        if (preg_match('/\bParent=([^;,]+)/', $attrs, $pm)) {
-            $parent = $pm[1];
+        // A target gene: remember which database id its GFF ID stands for
+        if (!$parents && $id !== '') {
+            foreach (moop_gff_db_id_candidates($attrs) as $cand) {
+                if (!isset($target_genes[$cand])) continue;
+                $gff_gene[$id] = $cand;
+                // A top-level transcript (Feature type: mRNA, or a transcriptome) is its own isoform
+                if (moop_gff_is_transcript_type($feat_type)) { $has_first[$cand] = true; $mrna_to_gene[$id] = $cand; }
+                break;
+            }
+            continue;
         }
 
-        // Detect first mRNA-type child of each target gene
-        if ($parent !== null
-            && isset($target_genes[$parent])
-            && in_array($feat_type, $mrna_types)
-            && !isset($gene_first_mrna[$parent])
-        ) {
-            $gene_first_mrna[$parent] = $id;
-            $mrna_to_gene[$id]        = $parent;
+        // The first transcript-type child of each target gene
+        if ($id !== '' && moop_gff_is_transcript_type($feat_type)) {
+            foreach ($parents as $p) {
+                $gene = $gff_gene[$p] ?? null;
+                if ($gene !== null && !isset($has_first[$gene])) {
+                    $has_first[$gene] = true;
+                    $mrna_to_gene[$id] = $gene;
+                    break;
+                }
+            }
+            continue;
         }
 
-        // Collect exon/CDS/UTR children of the first isoform
-        if ($parent !== null
-            && isset($mrna_to_gene[$parent])
-            && in_array($feat_type, $exon_types)
-        ) {
-            $gene_id = $mrna_to_gene[$parent];
-            $sub_features[$gene_id][] = [
-                'start'  => (int)$parts[3],
-                'end'    => (int)$parts[4],
-                'type'   => $feat_type_raw,
-                'strand' => $parts[6],
-            ];
+        // Exon/CDS/UTR children of a chosen isoform -- no ID= needed -- or, for a gene with no
+        // transcript level (bacteria: gene -> CDS), of the gene itself
+        if (in_array($feat_type, $exon_types, true)) {
+            foreach ($parents as $p) {
+                $gene = $mrna_to_gene[$p] ?? null;
+                if ($gene === null && isset($gff_gene[$p]) && !isset($has_first[$gff_gene[$p]])) $gene = $gff_gene[$p];
+                if ($gene === null) continue;
+                $sub_features[$gene][] = [
+                    'start'  => (int)$parts[3],
+                    'end'    => (int)$parts[4],
+                    'type'   => $feat_type_raw,
+                    'strand' => $parts[6],
+                ];
+                break;
+            }
         }
     }
     fclose($fh);
@@ -754,6 +761,7 @@ function moopmartGetExonCoords(string $gff_path, array $gene_uniquenames): array
     foreach ($sub_features as &$feats) {
         usort($feats, fn($a, $b) => $a['start'] - $b['start']);
     }
+    unset($feats);
 
     return $sub_features;
 }
@@ -782,6 +790,7 @@ function moopmartGetExonCoords(string $gff_path, array $gene_uniquenames): array
  * @param string   $mode          'gene' | 'upstream' | 'downstream' | 'exons'
  * @param int      $flank_bp      Flank size in bp (upstream/downstream only; ignored otherwise)
  * @param resource $handle        Writable file handle to stream FASTA output to
+ * @return array  What was skipped and why, for moop_genomic_skip_notes() -- never silently
  */
 function moopmartStreamGenomicFasta(
     array $genes,
@@ -790,11 +799,14 @@ function moopmartStreamGenomicFasta(
     string $mode,
     int $flank_bp,
     $handle
-): void {
+): array {
     $genome_file = genome_fasta_filename();
     $fasta = "$assembly_dir/$genome_file";
     $fai   = "$assembly_dir/$genome_file.fai";
-    if (!file_exists($fasta) || !file_exists($fai)) return;
+    if (!file_exists($fasta) || !file_exists($fai)) return [];   // the caller reports the missing file
+
+    $missing = array_flip(moop_genome_missing_seqnames($assembly_dir, array_column($genes, 'chr')));
+    $skips   = [];
 
     // Pre-load all exon coords in one GFF pass for the exons mode
     $exon_coords = [];
@@ -809,9 +821,12 @@ function moopmartStreamGenomicFasta(
         $gend   = $g['end'];
         $strand = $g['strand'];
 
+        if ((string)$chr === '') { $skips['no_coords'][] = $uname; continue; }
+        if (isset($missing[$chr])) { $skips['missing_chr'][$chr][] = $uname; continue; }
+
         if ($mode === 'exons') {
             $gene_exons = $exon_coords[$uname] ?? [];
-            if (empty($gene_exons)) continue;
+            if (empty($gene_exons)) { $skips['no_exons'][] = $uname; continue; }
             $n = 0;
             foreach ($gene_exons as $exon) {
                 $n++;
@@ -833,6 +848,7 @@ function moopmartStreamGenomicFasta(
         if (!$got) continue;
         fwrite($handle, moop_genomic_fasta_record($uname, $part, $flank_bp, $got['region'], $got['seq']));
     }
+    return $skips;
 }
 
 /**

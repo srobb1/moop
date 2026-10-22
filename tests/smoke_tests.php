@@ -1026,6 +1026,50 @@ ok(extractFastaRegion($_fa, "$_fa.fai", 'T1', 5, 8) === 'ACGT', '...and by the r
 ok(moop_genomic_fasta_record('G', 'upstream', 500, ['chr' => 'c1', 'start' => 1, 'end' => 3, 'strand' => '-'], 'ACG')
        === ">G upstream_500bp c1:1-3(-)\nACG\n", 'header: ID, part, location and strand');
 
+// A gene set that names chromosomes differently from its genome (Ensembl "2L" vs RefSeq
+// "NC_004354.4") got empty genomic output with no word why. Now each skip is said.
+$_ad = sys_get_temp_dir() . '/moop_chr_' . getmypid();
+@mkdir($_ad); @mkdir("$_ad/gs");
+file_put_contents("$_ad/genome.fa", ">c1\nACGTACGTAC\n");
+file_put_contents("$_ad/genome.fa.fai", "c1\t10\t4\t10\t11\n");
+file_put_contents("$_ad/gs/feature_coords.tsv", "G1\tG1\tc1\t2\t5\t+\nG2\tG2\t2L\t2\t5\t+\nG3\tG3\t2L\t1\t3\t-\n");
+ok(moop_genome_missing_seqnames($_ad, ['c1', '2L', '2L', '']) === ['2L'], 'a sequence name not in the genome is found, once; a blank is not a name');
+$_r = moop_retrieve_genomic([['id' => 'G1', 'start' => null, 'end' => null], ['id' => 'G2', 'start' => null, 'end' => null],
+                             ['id' => 'G3', 'start' => null, 'end' => null]], "$_ad/gs", $_ad);
+ok(strpos($_r['fasta'], '>G1 genomic c1:2-5(+)') === 0 && strpos($_r['fasta'], 'G2') === false, 'Sequence Retrieval: the matching gene is cut, the others are not');
+ok(count($_r['notes']) === 1 && strpos($_r['notes'][0], "2 features skipped: sequence '2L' is not in this assembly's genome") === 0,
+   'Sequence Retrieval: the skipped genes are reported, not dropped silently');
+$_n = moop_genomic_skip_notes(['no_coords' => ['A', 'B', 'C', 'D'], 'no_exons' => ['E']]);
+ok($_n === ['4 features skipped: no genome coordinates in this gene set (e.g. A, B, C, …).',
+            "1 feature skipped: no exons found for them in the gene set's GFF (e.g. E)."], 'no coordinates and no exons are reported too');
+ok(moop_genomic_skip_notes([]) === [], 'nothing skipped -> no notes');
+
+// Data Exporter exon mode: exon lines usually carry only Parent= (NV2 exported no exons at all),
+// and the GFF gene ID may be prefixed or a GeneID. The same id rules as the gene page.
+require_once "$BASE/lib/moopmart_functions.php";
+$_gff = sys_get_temp_dir() . '/moop_exons_' . getmypid() . '.gff';
+file_put_contents($_gff, implode("\n", [
+    "##gff-version 3",
+    "c1\ts\tgene\t100\t900\t.\t+\t.\tID=gene:G1",
+    "c1\ts\tmRNA\t100\t900\t.\t+\t.\tID=transcript:T1;Parent=gene:G1",
+    "c1\ts\texon\t100\t200\t.\t+\t.\tParent=transcript:T1",
+    "c1\ts\texon\t700\t900\t.\t+\t.\tParent=transcript:T1",
+    "c1\ts\tmRNA\t100\t900\t.\t+\t.\tID=transcript:T2;Parent=gene:G1",
+    "c1\ts\texon\t300\t400\t.\t+\t.\tParent=transcript:T2",
+    "c1\ts\tgene\t1000\t1300\t.\t-\t.\tID=gene-B1;Dbxref=GeneID:4242",
+    "c1\ts\tCDS\t1000\t1300\t.\t-\t0\tID=cds-B1;Parent=gene-B1",
+    "c1\ts\tgene\t2000\t2100\t.\t+\t.\tID=Other",
+    "c1\ts\texon\t2000\t2100\t.\t+\t.\tParent=Other",
+]) . "\n");
+$_ex = moopmartGetExonCoords($_gff, ['G1', '4242']);
+ok(array_map(fn($e) => [$e['start'], $e['end']], $_ex['G1'] ?? []) === [[100, 200], [700, 900]],
+   'exons with no ID= are found, for a gene: prefixed gene, first isoform only');
+ok(array_map(fn($e) => [$e['type'], $e['start']], $_ex['4242'] ?? []) === [['CDS', 1000]],
+   'a bacterial gene -> CDS (no transcript), matched by its GeneID');
+ok(!isset($_ex['Other']), 'a gene that was not asked for is not collected');
+@unlink($_gff);
+array_map('unlink', glob("$_ad/gs/*")); @rmdir("$_ad/gs"); array_map('unlink', glob("$_ad/*")); @rmdir($_ad);
+
 // ----------------------------------------------------------------------------
 group('GFF gene model: whole-value id matching, one reader');
 require_once dirname(__DIR__) . '/lib/gff_gene_model.php';

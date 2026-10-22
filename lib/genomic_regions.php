@@ -23,6 +23,7 @@
  */
 
 require_once __DIR__ . '/blast_functions.php';   // extractFastaRegion(), reverseComplement()
+require_once __DIR__ . '/fasta_index.php';       // moop_fai_lookup()
 
 /** Largest region one record may hold -- the same limit api/get_sequence.php applies. */
 const MOOP_MAX_REGION_BP = 500000;
@@ -126,6 +127,90 @@ function moop_genomic_sequence(string $assembly_dir, array $region): ?array {
 }
 
 /**
+ * Of these sequence names, the ones this assembly's genome does not contain.
+ *
+ * A gene set and its genome can name the same chromosome differently (Ensembl "2L" vs RefSeq
+ * "NC_004354.4"). Every cut is then empty, and without this check the exports said nothing:
+ * Drosophila's genomic FASTA came back as an empty file with HTTP 200 (2026-10-21; five gene
+ * sets were affected). Checked once per batch -- one pass over the .fai.
+ *
+ * @param list<string> $chrs sequence names from the gene set's coordinates
+ * @return list<string> the names missing from genome.fa.fai, in first-seen order
+ */
+function moop_genome_missing_seqnames(string $assembly_dir, array $chrs): array {
+    $chrs = array_values(array_unique(array_filter(array_map('strval', $chrs), 'strlen')));
+    if (!$chrs) return [];
+    $found = moop_fai_lookup("$assembly_dir/" . genome_fasta_filename() . '.fai', $chrs);
+    return array_values(array_filter($chrs, fn($c) => !isset($found[$c])));
+}
+
+/**
+ * Does this gene set name its chromosomes the way its genome does? One pass over
+ * feature_coords.tsv and one over the .fai -- for the organism cache, never a page load.
+ *
+ * @return array{missing: int, total: int, examples: list<string>}|null null when there is
+ *         nothing to compare (no coordinates, or no genome index)
+ */
+function moop_gene_set_seqname_gap(string $gene_set_dir, string $assembly_dir): ?array {
+    $chrs = moop_feature_coords_seqnames($gene_set_dir);
+    if ($chrs === null || !is_file("$assembly_dir/" . genome_fasta_filename() . '.fai')) return null;
+    $missing = moop_genome_missing_seqnames($assembly_dir, $chrs);
+    return ['missing' => count($missing), 'total' => count($chrs), 'examples' => array_slice($missing, 0, 3)];
+}
+
+/**
+ * The distinct sequence names a gene set's coordinates use (feature_coords.tsv column 3),
+ * in natural order. The Data Exporter's chromosome list (moopmartGetChrNames(), which caches
+ * this) and the chromosome-name health check both read it here.
+ *
+ * @return list<string>|null null when the gene set has no feature_coords.tsv
+ */
+function moop_feature_coords_seqnames(string $gene_set_dir): ?array {
+    $fh = @fopen("$gene_set_dir/feature_coords.tsv", 'r');
+    if (!$fh) return null;
+    $chrs = [];
+    while (($line = fgets($fh)) !== false) {
+        $p = explode("\t", $line, 4);
+        if (isset($p[2])) $chrs[trim($p[2])] = true;
+    }
+    fclose($fh);
+    $out = array_map('strval', array_keys($chrs));
+    sort($out, SORT_NATURAL);
+    return $out;
+}
+
+/**
+ * Why features got no genomic sequence, as notes for the person who asked -- shared by the
+ * Data Exporter and Sequence Retrieval so both say the same thing.
+ *
+ * @param array{no_coords?: list<string>, missing_chr?: array<string, list<string>>, no_exons?: list<string>} $skips
+ * @return list<string>
+ */
+function moop_genomic_skip_notes(array $skips): array {
+    $eg    = fn(array $ids) => ' (e.g. ' . implode(', ', array_slice($ids, 0, 3)) . (count($ids) > 3 ? ', …' : '') . ')';
+    $n     = fn(int $k, string $one) => number_format($k) . ' ' . $one . ($k === 1 ? '' : 's');
+    $notes = [];
+    if (!empty($skips['missing_chr'])) {
+        $ids   = array_merge(...array_values($skips['missing_chr']));
+        $names = array_keys($skips['missing_chr']);
+        $one   = count($names) === 1;
+        $notes[] = $n(count($ids), 'feature') . ' skipped: ' . ($one ? 'sequence' : 'sequences')
+                 . " '" . implode("', '", array_slice($names, 0, 3)) . "'" . (count($names) > 3 ? ' and ' . (count($names) - 3) . ' more' : '')
+                 . ($one ? ' is' : ' are') . " not in this assembly's genome -- the gene set and the genome name the chromosomes differently"
+                 . $eg($ids) . '.';
+    }
+    if (!empty($skips['no_coords'])) {
+        $notes[] = $n(count($skips['no_coords']), 'feature') . ' skipped: no genome coordinates in this gene set'
+                 . $eg($skips['no_coords']) . '.';
+    }
+    if (!empty($skips['no_exons'])) {
+        $notes[] = $n(count($skips['no_exons']), 'feature') . ' skipped: no exons found for them in the gene set\'s GFF'
+                 . $eg($skips['no_exons']) . '.';
+    }
+    return $notes;
+}
+
+/**
  * One FASTA record, in the header format all genomic output shares:
  *   >ID[:from-to] genomic|upstream_500bp|downstream_500bp chr:start-end(strand)
  */
@@ -152,12 +237,18 @@ function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $as
         return $out;
     }
 
-    $loci   = moop_feature_loci($gene_set_dir, array_values(array_unique(array_column($requests, 'id'))));
-    $done   = [];
-    $toobig = [];
+    $loci    = moop_feature_loci($gene_set_dir, array_values(array_unique(array_column($requests, 'id'))));
+    $missing = array_flip(moop_genome_missing_seqnames($assembly_dir, array_column($loci, 'chr')));
+    $skips   = [];
+    $done    = [];
+    $toobig  = [];
     foreach ($requests as $r) {
         $locus = $loci[$r['id']] ?? null;
         if (!$locus) continue;   // a CDS or protein ID, or not in this gene set
+        if (isset($missing[$locus['chr']])) {
+            if (!in_array($r['id'], $skips['missing_chr'][$locus['chr']] ?? [], true)) $skips['missing_chr'][$locus['chr']][] = $r['id'];
+            continue;
+        }
         $parts = [['body', 0, $r['start'], $r['end']]];
         // Flanks belong to the feature, not to a range of it: added once per ID.
         if (!isset($done[$r['id']])) {
@@ -175,6 +266,7 @@ function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $as
             $out['fasta'] .= moop_genomic_fasta_record($r['id'], $part, $bp, $got['region'], $got['seq'], $from, $shown_to);
         }
     }
+    array_push($out['notes'], ...moop_genomic_skip_notes($skips));
     if ($toobig) {
         $out['notes'][] = 'Genomic sequence longer than ' . number_format(MOOP_MAX_REGION_BP) . ' bp is not shown here: '
                         . implode(', ', array_unique($toobig)) . '. The Data Exporter has no such limit.';

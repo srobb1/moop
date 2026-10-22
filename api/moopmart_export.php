@@ -303,6 +303,7 @@ if ($output_format === 'tsv') {
 
     $genomic_modes    = ['gene', 'upstream', 'downstream', 'exons'];
     $skipped_datasets = [];
+    $genomic_notes    = [];   // per gene set: why some genes got no genomic sequence
     $collect_limit    = $fasta_preview ? 10 : PHP_INT_MAX;
     $collected        = 0;
     $reached_limit    = false;
@@ -352,7 +353,8 @@ if ($output_format === 'tsv') {
                     $skipped_datasets[] = "$gs_label (missing $missing)";
                     continue;
                 }
-                moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
+                $skips = moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
+                foreach (moop_genomic_skip_notes($skips) as $note) $genomic_notes[] = "$gs_label: $note";
             } else {
                 // Pre-built FASTA files: protein, transcript, cds
                 // $gs_features is gene-level; expand to mRNA/CDS/protein children for extraction
@@ -387,6 +389,9 @@ if ($output_format === 'tsv') {
         die('No features matched the selected filters.');
     }
 
+    foreach ($genomic_notes as $note) {
+        fwrite($out, "# WARNING: $note\n");
+    }
     if (!empty($skipped_datasets)) {
         fwrite($out, "\n# WARNING: The following gene sets were skipped because required files are missing:\n");
         foreach ($skipped_datasets as $ds) {
