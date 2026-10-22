@@ -22,7 +22,7 @@ $gs_label = fn(array $gs) => str_replace('_', ' ', $gs['organism']) . ' — ' . 
           ['num' => '1', 'label' => 'Gene set', 'text' => 'Only gene sets with expression data are listed.'],
           ['num' => '2', 'label' => 'Genes', 'text' => 'Paste gene, transcript or protein IDs — a transcript or protein is shown as its gene. Up to ' . MOOP_EXPRESSION_TOOL_MAX_GENES . ' at a time.'],
           ['num' => '3', 'label' => 'Experiments', 'text' => 'Tick the experiments to show. Each column is one condition: the average of its samples.'],
-          ['label' => 'Level or pattern', 'text' => 'Level shades every cell on one scale (1, 10, 100, 1000 TPM in even steps), so genes can be compared with each other. Pattern scales each gene to its own highest condition, to compare the shape of genes expressed at very different levels.'],
+          ['label' => 'Level or pattern', 'text' => 'Level shades every cell on one scale (1, 10, 100, 1000 in even steps, in each experiment\'s unit — TPM for bulk RNA-seq, CPM for single-cell), so genes can be compared with each other. Pattern scales each gene to its own highest condition, to compare the shape of genes expressed at very different levels.'],
           ['label' => 'No data', 'text' => 'A hatched cell means there is no measurement — not zero.'],
       ],
   ]], ['intro' => 'Pick a gene set, paste genes, choose experiments, and see them side by side. Hover any cell for its value; download the samples behind it as a TSV.']);
@@ -154,11 +154,11 @@ $gs_label = fn(array $gs) => str_replace('_', ' ', $gs['organism']) . ' — ' . 
         <?php if ($mode === 'level'): ?>
           <?php foreach ([0, 1, 10, 100, 1000] as $tpm): ?>
             <span><i style="background:<?= moop_expression_shade_colour(moop_expression_shade((float)$tpm, 'level', 0)) ?>"></i><?= $tpm === 1000 ? '≥ 1000' : $tpm ?></span>
-          <?php endforeach; ?> <span class="text-muted">TPM, average of each condition's samples</span>
+          <?php endforeach; ?> <span class="text-muted"><?= htmlspecialchars($units_label) ?>, average of each condition's samples</span>
         <?php else: ?>
           <?php foreach ([0, 0.25, 0.5, 0.75, 1] as $f): ?>
             <span><i style="background:<?= moop_expression_shade_colour($f) ?>"></i><?= (int)($f * 100) ?>%</span>
-          <?php endforeach; ?> <span class="text-muted">of each gene's highest condition (genes under <?= (int)MOOP_EXPRESSION_SPARK_FLOOR ?> TPM stay pale)</span>
+          <?php endforeach; ?> <span class="text-muted">of each gene's highest condition (genes under <?= (int)MOOP_EXPRESSION_SPARK_FLOOR ?> <?= htmlspecialchars($units_label) ?> stay pale)</span>
         <?php endif; ?>
         <span><i class="expr-hm-nodata"></i>no data</span>
       </div>

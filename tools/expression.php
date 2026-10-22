@@ -106,7 +106,7 @@ if ($chosen && $typed && $selected) {
             // One row per sample, like the gene page's download (the same columns, from the same
             // function), plus input_ids: the ID(s) pasted for that gene -- a transcript or protein
             // id when that is what was pasted, several when several resolved to the one gene.
-            $out = "gene\texperiment\texperiment_id\tsample\tcondition\treplicate\ttpm\tinput_ids\n";
+            $out = "gene\texperiment\texperiment_id\tsample\tcondition\treplicate\tvalue\tunit\tinput_ids\n";
             foreach ($selected as $i => $e) {
                 try { $vals = moop_expression_bundle_values($e, $genes); } catch (RuntimeException $ex) { continue; }
                 foreach ($genes as $g) {
@@ -154,6 +154,7 @@ echo render_display_page(__DIR__ . '/pages/expression.php', [
     'no_rows'         => $no_rows,
     'heatmap'         => $heatmap,
     'mode'            => $mode,
+    'units_label'     => moop_expression_units_label($selected),
     'sort'            => $sort,
     'link'            => $link,
     'page_styles'     => ["/$site/css/expression-tool.css"],

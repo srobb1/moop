@@ -485,7 +485,7 @@
                 <?= csrf_input_field() ?>
                 <input type="hidden" name="download_expression" value="1">
                 <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
-                        title="This gene's TPM in every sample, one row per sample">
+                        title="This gene's value in every sample, one row per sample, with its unit">
                     <i class="fa fa-download"></i> TSV
                 </button>
             </form>
@@ -503,9 +503,9 @@
                     $__lvl  = $__e['level'];
                     $__hint = $__e['call'] === 'unknown'
                         ? 'This gene is not in this experiment\'s data.'
-                        : 'Highest condition average: ' . $__tpm($__e['top_mean']) . ' TPM'
+                        : 'Highest condition average: ' . $__tpm($__e['top_mean']) . ' ' . $__e['unit']
                           . ' (' . $__e['top_group'] . '). Detected means at least '
-                          . $__tpm($__e['threshold']) . ' TPM in some condition.';
+                          . $__tpm($__e['threshold']) . ' ' . $__e['unit'] . ' in some condition.';
                     $__pmid = preg_match('/^PMID:\s*(\d+)$/i', $__e['citation'], $__m) ? $__m[1] : '';
                     ?>
                         <tr>
@@ -519,7 +519,7 @@
                             <td class="expr-lvl-cell">
                                 <span class="expr-level expr-level-<?= str_replace(' ', '-', $__lvl) ?>" title="<?= htmlspecialchars($__hint) ?>"><?= htmlspecialchars($__lvl) ?></span>
                             </td>
-                            <td class="expr-spark-cell"><?= moop_expression_sparkline_svg($__e['groups'], $__lvl) ?></td>
+                            <td class="expr-spark-cell"><?= moop_expression_sparkline_svg($__e['groups'], $__lvl, $__e['unit']) ?></td>
                         </tr>
                     <?php
                 };
@@ -544,9 +544,10 @@
                 </button>
                 <?php endif; ?>
                 <div class="text-muted expr-key">
-                    Level = the condition with the highest average (replicates averaged): off below 1 TPM ·
-                    low 1–10 · medium 10–100 · high 100 and above. Bars: each condition's average, in order;
-                    hover a bar for its value.
+                    Level = the condition with the highest average (replicates averaged): off below 1 ·
+                    low 1–10 · medium 10–100 · high 100 and above
+                    (<?= htmlspecialchars(moop_expression_units_label($__ex['experiments'])) ?>). Bars: each
+                    condition's average, in order; hover a bar for its value.
                 </div>
             </div>
         </div>

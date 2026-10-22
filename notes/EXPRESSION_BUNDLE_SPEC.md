@@ -125,6 +125,7 @@ PRJNA189768.76	early blastula (7 hpf)	1	embryo, 7hpf early blastula	SRR765898	PR
   "citation": "PMID:23601508",
   "project_accession": "PRJNA189768",
   "assay": "bulk_rna",
+  "unit": "TPM",
   "access_level": "PUBLIC",
   "detect_threshold": 1,
   "contact": ""
@@ -136,7 +137,10 @@ PRJNA189768.76	early blastula (7 hpf)	1	embryo, 7hpf early blastula	SRR765898	PR
   who sees it; the reader must already have access to the gene set. A misspelling fails closed (ADMIN only).
 - `assay` — `bulk_rna`, or `scrna` (single-cell: cell types as groups; its extra files and rules
   are in `EXPRESSION_SINGLE_CELL_SPEC.md`).
-- `detect_threshold` — TPM a condition must reach for "detected". Default 1.
+- `unit` — what the values in `tpm.tsv` are: `TPM` for bulk RNA-seq, `CPM` for single-cell
+  pseudobulk. MOOP shows it beside every value and in the TSV downloads (it never changes a number).
+  Absent = `TPM`. Can be corrected by an override.
+- `detect_threshold` — the value (in `unit`) a condition must reach for "detected". Default 1.
 - `citation` — `PMID:nnnn` becomes a PubMed link.
 
 ## `qc.tsv` (recommended)

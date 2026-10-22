@@ -1310,9 +1310,22 @@ $_tx3 = ['label' => 'Dev', 'slug' => 'a_dev', 'samples' => [
     ['name' => 'S2', 'group_name' => 'early', 'replicate' => '1'],
     ['name' => 'S1', 'group_name' => "la\tte", 'replicate' => '']]];
 $_tsv = explode("\n", rtrim(moop_expression_gene_tsv('g1', [3 => $_tx3, 4 => $_tx3], [3 => [2.5, null]]), "\n"));
-ok($_tsv[0] === "gene\texperiment\texperiment_id\tsample\tcondition\treplicate\ttpm", 'tsv: header names every column');
-ok(($_tsv[1] ?? '') === "g1\tDev\ta_dev\tS2\tearly\t1\t2.5", 'tsv: one row per sample, in display order, with the raw value');
-ok(($_tsv[2] ?? '') === "g1\tDev\ta_dev\tS1\tla te\t\tNA", 'tsv: a missing value is NA, never 0; a tab inside a name cannot shift columns');
+ok($_tsv[0] === "gene\texperiment\texperiment_id\tsample\tcondition\treplicate\tvalue\tunit", 'tsv: header names every column');
+ok(($_tsv[1] ?? '') === "g1\tDev\ta_dev\tS2\tearly\t1\t2.5\tTPM", 'tsv: one row per sample, in display order, with the raw value and its unit (TPM when unstated)');
+ok(($_tsv[2] ?? '') === "g1\tDev\ta_dev\tS1\tla te\t\tNA\tTPM", 'tsv: a missing value is NA, never 0; a tab inside a name cannot shift columns');
+$_tsv = explode("\n", rtrim(moop_expression_gene_tsv('g1', [0 => ['unit' => 'CPM'] + $_tx3], [0 => [7.0, 1.0]]), "\n"));
+ok(substr($_tsv[1] ?? '', -4) === "\tCPM", 'tsv: a single-cell experiment\'s rows say CPM');
+
+// --- units: experiment.json "unit", shown beside every value
+ok(moop_expression_unit([]) === 'TPM' && moop_expression_unit(['unit' => '']) === 'TPM', 'unit: absent or empty reads as TPM, the spec default');
+ok(moop_expression_unit(['unit' => 'CPM']) === 'CPM' && moop_expression_unit(['unit' => ' FPKM ']) === 'FPKM', 'unit: the stated unit, trimmed');
+ok(moop_expression_unit(['unit' => '<b>x</b>']) === 'TPM' && moop_expression_unit(['unit' => 'counts per million reads mapped']) === 'TPM',
+   'unit: anything that is not a short unit name is not printed into the page');
+ok(moop_expression_units_label([['unit' => 'TPM'], ['unit' => 'CPM'], ['unit' => 'TPM']]) === 'TPM / CPM'
+   && moop_expression_units_label([['unit' => 'TPM']]) === 'TPM', 'unit: a mixed selection names each unit once');
+ok(in_array('unit', MOOP_EXPRESSION_OVERRIDABLE, true), 'unit: correctable by an override, like the other experiment fields');
+$_gu = moop_expression_summarize([['unit' => 'CPM'] + $_sx('sc')], [0 => [2.0, 5.0]]);
+ok(($_gu['experiments'][0]['unit'] ?? null) === 'CPM', 'unit: the gene page summary carries each experiment\'s unit');
 ok(count($_tsv) === 3, 'tsv: an experiment without this gene contributes no rows');
 
 // --- bars on the gene page
@@ -2127,6 +2140,8 @@ $_svg = moop_expression_heatmap_svg(['g1', 'g2'], $_exps, $_mx);
 ok(substr_count($_svg, '<rect x=') === 6, 'one cell per gene per condition (2 genes x 3 conditions)');
 ok(substr_count($_svg, 'fill="url(#exprNoData)"') === 1 && strpos($_svg, 'g1 · Metals · control: no data') !== false,
    'an experiment without the gene is hatched "no data", never drawn as zero');
+$_svg_cpm = moop_expression_heatmap_svg(['g2'], [1 => ['unit' => 'CPM'] + $_exps[1]], ['g2' => [1 => $_mx['g2'][1]]]);
+ok(strpos($_svg_cpm, 'g2 · Metals · control: 7.0 CPM (average of 1)') !== false, 'a cell names its experiment\'s unit (CPM for single-cell)');
 ok(strpos($_svg, 'g1 · Dev · egg: 2.0 TPM (average of 2)') !== false && strpos($_svg, 'g2 · Dev · egg: 0.0 TPM') !== false,
    'each cell says its average and how many samples, and a measured zero is a value, not "no data"');
 ok(strpos($_svg, 'expr-hm-sym') === false, 'no symbol column when no gene in the list has a symbol');

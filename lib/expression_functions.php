@@ -1,6 +1,6 @@
 <?php
 /**
- * Gene expression from TPM tables.
+ * Gene expression from TPM (bulk) or CPM (single-cell) tables -- each experiment says its unit.
  *
  * Contract: notes/EXPRESSION_BUNDLE_SPEC.md. In short:
  *
@@ -20,7 +20,32 @@
  * not expressed" are different answers to "is this gene expressed?".
  */
 
-const MOOP_EXPRESSION_DEFAULT_THRESHOLD = 1.0;   // TPM
+const MOOP_EXPRESSION_DEFAULT_THRESHOLD = 1.0;   // in the experiment's unit
+
+/**
+ * The unit an experiment's values are in, from experiment.json "unit" (spec: TPM for bulk RNA-seq,
+ * CPM for single-cell pseudobulk). Absent = TPM, the bundle spec's default, so bundles written
+ * before the field existed read as they always did. Shown as a label only -- it never changes a
+ * number -- so anything outside the expected short form is logged and read as TPM rather than
+ * printed into the page.
+ */
+function moop_expression_unit(array $meta): string
+{
+    $unit = trim((string)($meta['unit'] ?? ''));
+    if ($unit === '') return 'TPM';
+    if (!preg_match('/^[A-Za-z][A-Za-z0-9 .\/-]{0,11}$/', $unit)) {
+        error_log("expression: experiment.json unit '$unit' is not a unit name -- reading as TPM");
+        return 'TPM';
+    }
+    return $unit;
+}
+
+/** The units of some experiments, each once, in order: "TPM", or "TPM / CPM" when they differ. */
+function moop_expression_units_label(array $experiments): string
+{
+    $units = array_values(array_unique(array_map(fn($e) => $e['unit'] ?? 'TPM', $experiments)));
+    return $units ? implode(' / ', $units) : 'TPM';
+}
 
 /**
  * Read a gene × sample matrix (counts.tsv or tpm.tsv): header row of sample ids, one row per id.
@@ -446,6 +471,7 @@ function moop_expression_summarize(array $experiments, array $values): array
             'top_group' => $call['top_group'],
             'top_mean'  => $call['top_mean'],
             'threshold' => $call['threshold'],
+            'unit'      => $e['unit'] ?? 'TPM',
         ];
     }
     return $out;
@@ -542,7 +568,7 @@ function moop_expression_load_overrides(string $file): ?array
  * "keep the default". Unlike ConfigManager, a key outside the list is not silently dropped from
  * view: scripts/check_expression.php reports it (moop_expression_override_problems()).
  */
-const MOOP_EXPRESSION_OVERRIDABLE = ['label', 'access_level', 'detect_threshold', 'summary', 'citation'];
+const MOOP_EXPRESSION_OVERRIDABLE = ['label', 'access_level', 'detect_threshold', 'summary', 'citation', 'unit'];
 
 function moop_expression_apply_override(array $meta, array $override): array
 {
@@ -627,6 +653,7 @@ function moop_expression_bundle_experiments(string $dir, string $key_prefix, str
                 'label'            => (string)$meta['label'],
                 'access_level'     => $access,
                 'detect_threshold' => (float)($meta['detect_threshold'] ?? MOOP_EXPRESSION_DEFAULT_THRESHOLD),
+                'unit'             => moop_expression_unit($meta),
                 'meta'             => $meta,
                 'samples'          => array_map(fn($x) => [
                     'name' => $x['name'], 'group_name' => $x['group'], 'replicate' => $x['replicate'], 'attrs' => $x['attrs'],
@@ -716,7 +743,9 @@ function moop_expression_gene_data(string $organism, string $assembly, string $g
  * One gene's expression as a TSV, one row per sample (long format — sorts, filters and pivots
  * in a spreadsheet without reshaping). Pure, so the tests drive it directly.
  *
- * Columns: gene, experiment, experiment_id, sample, condition, replicate, tpm.
+ * Columns: gene, experiment, experiment_id, sample, condition, replicate, value, unit.
+ * The unit is on every row (from experiment.json): a download can mix bulk TPM with single-cell
+ * CPM, and a bare number would not say which. (The column was "tpm" until 2026-10-22.)
  * The sample values, not the condition averages the page draws: an average can be rebuilt from
  * the rows, the replicates cannot be rebuilt from an average. A missing value is "NA", never 0
  * (see the file header). An experiment without this gene has no rows — the same experiments the
@@ -725,14 +754,14 @@ function moop_expression_gene_data(string $organism, string $assembly, string $g
 function moop_expression_gene_tsv(string $gene, array $experiments, array $values): string
 {
     $cell = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string)$s);
-    $out  = "gene\texperiment\texperiment_id\tsample\tcondition\treplicate\ttpm\n";
+    $out  = "gene\texperiment\texperiment_id\tsample\tcondition\treplicate\tvalue\tunit\n";
     foreach ($experiments as $eid => $e) {
         if (!isset($values[$eid])) continue;
         foreach ($e['samples'] as $i => $s) {
             $v = $values[$eid][$i] ?? null;
             $out .= implode("\t", array_map($cell, [
                 $gene, $e['label'], $e['slug'] ?? '', $s['name'], $s['group_name'], $s['replicate'] ?? '',
-                $v === null ? 'NA' : $v,
+                $v === null ? 'NA' : $v, $e['unit'] ?? 'TPM',
             ])) . "\n";
         }
     }
@@ -991,7 +1020,7 @@ function moop_expression_heatmap_svg(array $genes, array $experiments, array $ma
             $mean = null; $n = 0;
             foreach ($matrix[$gene][$i] ?? [] as $g) if ($g['group'] === $group) { $mean = $g['mean']; $n = $g['n']; }
             $tip = $gene . (isset($symbols[$gene]) ? " ({$symbols[$gene]})" : '') . " · {$experiments[$i]['label']} · $group: "
-                 . ($mean === null ? 'no data' : $fmt($mean) . " TPM (average of $n)");
+                 . ($mean === null ? 'no data' : $fmt($mean) . ' ' . ($experiments[$i]['unit'] ?? 'TPM') . " (average of $n)");
             $fill = $mean === null ? 'url(#exprNoData)' : moop_expression_shade_colour(moop_expression_shade($mean, $mode, $row_max));
             $svg .= sprintf('<rect x="%s" y="%s" width="%d" height="%d" fill="%s" stroke="#fff"><title>%s</title></rect>',
                             $x_of[$k], $y, $cell_w, $cell_h, $fill, $esc($tip));
