@@ -1177,7 +1177,9 @@ if $HAS_GFF; then
   ##     original IDs and source symbols kept in Alias=. AFTER features.tsv, whose emit_refseq/
   ##     emit_ensembl and feature_coords.tsv read the source IDs; genes.gff is re-derived from
   ##     the source on every run above, so it is never formatted twice.
-  ##   - updateGFF.pl: Name= from geneNames.tsv, now that gene IDs are its GroupIds.
+  ##   - updateGFF.pl: Name= from geneNames.tsv, now that gene IDs are its GroupIds;
+  ##     --keep-source-names: no symbol there (or not in it: non-coding) keeps the source's Name=
+  ##     (LOC116613694), never the bare ID (24,238 Nematostella genes, found 2026-10-21).
   ##   - updateFASTA.pl --by-gene: every record takes its gene's name, as the database does;
   ##     --keep-unlisted: a record the database does not load (non-coding XR_/lincRNA/tRNA)
   ##     keeps the source's header. transcript.nt.fa is a symlink into the datastore here; the
@@ -1190,7 +1192,7 @@ if $HAS_GFF; then
       && mv id_map.tsv.tmp id_map.tsv \
       || { rm -f id_map.tsv.tmp; echo "ERROR: failed to build id_map.tsv"; exit 1; }
     perl "$SCRIPTS/format_gff_ids.pl" genes.gff id_map.tsv > genes.gff.ids.tmp \
-      && perl "$REPO/analysis_parsers/updateGFF.pl" genes.gff.ids.tmp geneNames.tsv > genes.gff.tmp \
+      && perl "$REPO/analysis_parsers/updateGFF.pl" --keep-source-names genes.gff.ids.tmp geneNames.tsv > genes.gff.tmp \
       && mv genes.gff.tmp genes.gff && rm -f genes.gff.ids.tmp \
       || { rm -f genes.gff.ids.tmp genes.gff.tmp; echo "ERROR: failed to align genes.gff IDs and names"; exit 1; }
     for FA in protein.aa.fa cds.nt.fa transcript.nt.fa; do

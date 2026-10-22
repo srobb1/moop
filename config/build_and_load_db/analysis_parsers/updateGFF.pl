@@ -4,6 +4,16 @@ use warnings;
 use Data::Dumper;
 use URI::Escape;
 
+# --keep-source-names (RefSeq/Ensembl, notes/GFF_FASTA_ID_ALIGNMENT_PLAN.md): a line keeps the
+# source's own Name= wherever this script would otherwise name it by its own ID or leave it
+# unnamed -- a gene naming v2 left without a symbol (LOC116613694, not 116613694), non-coding
+# genes and transcripts not in geneNames.tsv (LOC125561164, tRNA symbols), CDS lines. A symbol
+# from geneNames.tsv still replaces it. Without the switch (other/lift) nothing changes.
+my $keep_source_names = 0;
+if (@ARGV && $ARGV[0] eq '--keep-source-names'){
+  shift;
+  $keep_source_names = 1;
+}
 my $gff = shift;
 my $names = shift;
 my $notes_file = shift;
@@ -75,6 +85,7 @@ while (my $line = <GFF>){
     $line =~ s/[\(\)\[\]]/uri_escape($&)/ge;
   }
 	my ($gid, $tid, $main_tid);
+  my ($source_name) = $line =~ /(?:\t|;)Name=([^;]+)/;
   if($line =~ /merged_Name=[^;]+/){
     $line =~ s/merged_Name=[^;]+;?//;
   }
@@ -152,6 +163,15 @@ while (my $line = <GFF>){
        }
 		}
 	}
+  if ($keep_source_names and defined $source_name and $line !~ /\tApollo\t/){
+    my ($own_id) = $line =~ /(?:\t|;)ID=([^;]+)/;
+    my ($new_name) = $line =~ /(?:\t|;)Name=([^;]*)/;
+    if (!defined $new_name){
+      $line .= ";Name=$source_name";
+    }elsif (defined $own_id and $new_name eq $own_id){
+      $line =~ s/((?:\t|;)Name=)\Q$new_name\E(;|$)/$1$source_name$2/;
+    }
+  }
   if ($line =~ /\tgene\t/ and $line !~ /Name=/){
     $line =~ s/ID=([^;]+)/ID=$1;Name=$1/;
   }
