@@ -469,22 +469,28 @@ if (!toolExists('primer3_core')) {
 $jb_sys     = '/usr/local/bin/jbrowse';
 $jb_local   = "$base/tools/jbrowse-cli/jbrowse-run.sh";
 $jb_selinux = trim((string)@shell_exec('getenforce 2>/dev/null')) === 'Enforcing';
-$jb_how     = "mkdir -p tools/jbrowse-cli && npm install -g --prefix tools/jbrowse-cli @jbrowse/cli\n"
-            . "         cp \"\$(command -v node)\" tools/jbrowse-cli/node\n"
-            . "         sudo scripts/install_jbrowse_cli.sh";
+$jb_how     = "scripts/build_jbrowse_cli.sh ~/jbrowse-cli-build\n"
+            . "         sudo scripts/install_jbrowse_cli.sh ~/jbrowse-cli-build";
 if (is_file($jb_sys)) {
     if ($jb_selinux && strpos((string)@file_get_contents($jb_sys), '--jitless') === false) {
         warn("jbrowse CLI ($jb_sys) runs node without --jitless",
              "SELinux denies the web server executable memory, so node aborts and no search index is built.\n"
-             . "         sudo scripts/install_jbrowse_cli.sh");
+             . "         $jb_how");
     } else {
         pass("jbrowse CLI ($jb_sys)");
+    }
+    // The old hand-made bundle in the document root: unused once /usr/local/bin has the CLI,
+    // downloadable over HTTP, and it carried Node 20 (no security fixes since April 2026).
+    if (is_dir("$base/tools/jbrowse-cli")) {
+        warn("Old jbrowse CLI bundle in the document root (tools/jbrowse-cli/)",
+             "Unused -- the web server runs $jb_sys -- but served over HTTP, with its own Node. Delete it:\n"
+             . "         rm -rf " . escapeshellarg("$base/tools/jbrowse-cli"));
     }
 } elseif ($jb_selinux && (is_file($jb_local) || toolExists('jbrowse'))) {
     warn("jbrowse CLI found, but not where the web server may run it",
          "SELinux lets the web server read a program in the document root or a home directory, not run it,\n"
          . "         so JBrowse search indexes are never built. Install it in /usr/local/bin:\n"
-         . "         sudo scripts/install_jbrowse_cli.sh");
+         . "         $jb_how");
 } elseif (toolExists('jbrowse') || is_file($jb_local)) {
     pass("jbrowse CLI" . (is_file($jb_local) ? " (local install)" : ""));
 } else {

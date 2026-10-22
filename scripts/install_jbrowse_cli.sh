@@ -12,8 +12,10 @@
 #   /usr/local/lib/jbrowse-cli/      the CLI's JavaScript (only read)
 #   /usr/local/bin/jbrowse           wrapper -- moop_find_jbrowse_cli() looks here first
 #
-# Source: tools/jbrowse-cli/ if present (node + lib/node_modules/@jbrowse/cli), else give
-# a directory holding the same layout as $1.
+# Source: a bundle built by scripts/build_jbrowse_cli.sh (node + lib/node_modules/@jbrowse/cli),
+# given as $1. To upgrade Node or the CLI, rebuild and rerun this. The default, tools/jbrowse-cli/,
+# is the old hand-made bundle inside the document root -- served over HTTP, and Node 20 (no
+# security fixes since April 2026); delete it once this has installed from a fresh build.
 #
 # Usage: sudo scripts/install_jbrowse_cli.sh [source_dir]
 set -euo pipefail
