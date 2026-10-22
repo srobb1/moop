@@ -373,6 +373,11 @@ Current tasks (`run_housekeeping()`):
   SELinux** (httpd_t may not open the RPM db — tested 2026-10-22), so root writes a daily
   report into `cache_path` via a systemd timer (`sudo scripts/install_security_report.sh`)
   and the task only reads it. A failed query is an *error*, never "0 updates".
+- `library_advisories` — third-party libraries vs OSV (osv.dev), weekly or when a version
+  changes. Inventory = `scripts/vendor_assets.txt` (front-end files: url, sha256,
+  `ecosystem:package@version` — the SAME table `fetch_vendor_assets.sh` downloads from) +
+  Composer's `installed.json` (runtime packages only). A file off its pinned checksum is
+  reported *unverified*. Upgrading a library = edit its line there; nothing else to maintain.
 
 Resolve command-line tools with `moop_find_executable()` (`lib/functions_system.php`), never a
 bare name: php-fpm's PATH and sudo's `secure_path` both omit `/usr/local/bin`.

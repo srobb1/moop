@@ -38,6 +38,7 @@ define('HOUSEKEEPING_MIN_INTERVAL', 3600);
 // VANISH — identical to "everything is clean". That is the silent-failure shape this file
 // is supposed to detect, not exhibit.
 require_once __DIR__ . '/functions_system.php';
+require_once __DIR__ . '/library_audit.php';
 
 /**
  * Two tasks below (site data snapshot, environment check) drive dashboard widgets
@@ -152,6 +153,12 @@ function housekeeping_task_registry(): array {
             'fn'    => 'housekeeping_check_security_updates',
             'label' => 'OS security updates',
             'desc'  => "Lists pending operating-system security updates (dnf on RHEL-family hosts, apt on Debian/Ubuntu), worst first, and flags the packages the site runs on — PHP, the web server, OpenSSL, SQLite, the kernel. Reads the package manager's own cached metadata, so it makes no network call; at most once a day, in the background run only. Report-only: installing updates needs root.",
+        ],
+        [
+            'name'  => 'library_advisories',
+            'fn'    => 'housekeeping_check_library_advisories',
+            'label' => 'Third-party library vulnerabilities',
+            'desc'  => 'Lists the third-party libraries the site ships (the front-end files in scripts/vendor_assets.txt and the Composer packages), verifies each file against its pinned checksum, and asks the OSV vulnerability database (osv.dev) about each exact version — at most once a week, or straight away when a version changes. Only package names and versions are sent.',
         ],
         [
             'name'  => 'jbrowse_version',
@@ -1346,6 +1353,48 @@ function housekeeping_check_ncbi_taxonomy_update() {
     } else {
         @unlink($lock_file);
     }
+}
+
+/**
+ * Known vulnerabilities in the third-party libraries MOOP ships (lib/library_audit.php).
+ *
+ * The local half -- which libraries, which versions, do the files still match their pinned
+ * checksums -- is cheap and runs every pass. The OSV lookup is a network call, so at most
+ * weekly, like jbrowse_version; sooner when the inventory changed (a library was upgraded,
+ * so last week's answer is about a version no longer shipped) or when started on its own
+ * (--task=library_advisories). Only package names and versions leave the server.
+ * If OSV cannot be reached the last answer is kept and marked, never replaced by "none found".
+ */
+function housekeeping_check_library_advisories(): void {
+    $root = ConfigManager::getInstance()->getPath('site_path');
+    $pkgs = moop_library_inventory($root);
+    $prev = $_SESSION['library_advisories'] ?? [];
+    $sig  = md5(json_encode(array_map(fn($p) => "{$p['ecosystem']}:{$p['name']}@{$p['version']}", $pkgs)));
+    $forced = PHP_SAPI === 'cli' && in_array('--task=library_advisories', $GLOBALS['argv'] ?? [], true);
+    $due = $forced || empty($prev['checked_at']) || ($prev['signature'] ?? '') !== $sig
+        || (time() - (int)strtotime($prev['checked_at'])) > 7 * 86400;
+
+    $vulns = null;
+    if ($due) $vulns = moop_osv_check($pkgs);
+    $reached = $vulns !== null;
+    if (!$reached) {
+        // Not due, or OSV unreachable: carry last time's findings over by package@version.
+        $old = [];
+        foreach ($prev['packages'] ?? [] as $p) $old["{$p['ecosystem']}:{$p['name']}@{$p['version']}"] = $p['vulns'] ?? [];
+        $vulns = [];
+        foreach ($pkgs as $i => $p) $vulns[$i] = $old["{$p['ecosystem']}:{$p['name']}@{$p['version']}"] ?? [];
+    }
+    foreach ($pkgs as $i => &$p) { $p['vulns'] = $vulns[$i] ?? []; }
+    unset($p);
+
+    $result = [
+        'packages'    => $pkgs,
+        'checked_at'  => $reached ? date('c') : ($prev['checked_at'] ?? null),
+        'signature'   => $reached ? $sig : ($prev['signature'] ?? null),
+        'osv_failed'  => $due && !$reached,
+    ];
+    $_SESSION['library_advisories'] = $result;
+    housekeeping_persist_status('library_advisories', $result);
 }
 
 /**

@@ -1672,6 +1672,35 @@ $_r = moop_parse_apt_security("Inst nginx [1.22.1-9] (1.22.1-9+deb12u1 Debian-Se
 ok($_r['packages'] === 2 && array_keys($_r['watched']) === ['nginx', 'OpenSSL'], 'apt: only -security origins count; libssl3 is OpenSSL');
 
 // ----------------------------------------------------------------------------
+group('third-party libraries: the version is only trusted when the file matches its checksum');
+$_ld = sys_get_temp_dir() . '/moop_libaudit_' . getmypid();
+@mkdir("$_ld/js", 0777, true); @mkdir("$_ld/vendor/composer", 0777, true);
+file_put_contents("$_ld/js/a.js", 'A');
+file_put_contents("$_ld/js/b.js", 'tampered');
+$_rows = [
+    ['js/a.js', 'https://x/lib-1.2.3/a.js', hash('sha256', 'A'), 'none', 'npm:lib@1.2.3'],
+    ['js/b.js', 'https://x/other-2.0.0/b.js', hash('sha256', 'B'), 'none', 'npm:other@2.0.0'],
+    ['js/c.js', 'https://x/third-9.9.9/c.js', hash('sha256', 'C'), 'none', 'npm:third@1.0.0'],
+];
+file_put_contents("$_ld/vendor/composer/installed.json", json_encode([
+    'packages' => [['name' => 'firebase/php-jwt', 'version' => 'v7.0.2'], ['name' => 'phpcompatibility/php-compatibility', 'version' => '9.3.5']],
+    'dev-package-names' => ['phpcompatibility/php-compatibility'],
+]));
+$_inv = [];
+foreach (moop_library_inventory($_ld, $_rows) as $_p) $_inv["{$_p['ecosystem']}:{$_p['name']}@{$_p['version']}"] = $_p['problems'];
+ok(($_inv['npm:lib@1.2.3'] ?? null) === [], 'a file matching its checksum, URL naming its version: no problem');
+ok(count($_inv['npm:other@2.0.0'] ?? []) === 1 && strpos($_inv['npm:other@2.0.0'][0], 'checksum') !== false,
+   'a changed file is reported unverified, not assumed to be the listed version');
+ok(count($_inv['npm:third@1.0.0'] ?? []) === 2, 'a URL that does not name the version, and a missing file, are both reported');
+ok(isset($_inv['Packagist:firebase/php-jwt@7.0.2']) && !isset($_inv['Packagist:phpcompatibility/php-compatibility@9.3.5']),
+   'Composer runtime packages are checked ("v" dropped); dev-only tools are not -- they never ship');
+array_map('unlink', glob("$_ld/js/*")); @unlink("$_ld/vendor/composer/installed.json");
+@rmdir("$_ld/js"); @rmdir("$_ld/vendor/composer"); @rmdir("$_ld/vendor"); @rmdir($_ld);
+$_vr = moop_vendor_asset_rows();
+ok(count($_vr) > 0 && count(array_filter($_vr, fn($r) => !preg_match('/^\w+:.+@[^@]+$/', $r[4]))) === 0,
+   'every line of scripts/vendor_assets.txt names its ecosystem:package@version');
+
+// ----------------------------------------------------------------------------
 group('search: annotation source filter carries names exactly (JSON, no trim, commas survive)');
 require_once "$BASE/lib/functions_validation.php";
 $_names = ['Closest human gene (Ensembl, no HGNC record)', 'Ensembl Danio rerio ', 'Say "hi" <b>', 'UniProt'];

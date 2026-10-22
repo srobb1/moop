@@ -360,6 +360,70 @@
     <?php endif; ?>
   <?= adm_status_card('securityUpdates', 'shield-alt', 'OS Security Updates', $_su_badges, $_su_tone, ob_get_clean()) ?>
 
+  <!-- Third-party libraries (housekeeping_check_library_advisories): what the site ships,
+       proven by checksum, and what OSV knows about those exact versions. -->
+  <?php
+    $la     = $_SESSION['library_advisories'] ?? null;
+    $la_pk  = $la['packages'] ?? [];
+    $la_vul = array_values(array_filter($la_pk, fn($p) => !empty($p['vulns'])));
+    $la_bad = array_values(array_filter($la_pk, fn($p) => !empty($p['problems'])));
+    $la_high = false;
+    foreach ($la_vul as $_p) foreach ($_p['vulns'] as $_v) if (in_array($_v['severity'], ['High', 'Critical'], true)) $la_high = true;
+    $_la_badges = []; $_la_tone = '';
+    if (!$la) {
+        $_la_badges[] = ['Not checked yet', 'secondary'];
+    } else {
+        if ($la_vul)  $_la_badges[] = [count($la_vul) . ' with known vulnerabilities', $la_high ? 'danger' : 'warning'];
+        if ($la_bad)  $_la_badges[] = [count($la_bad) . ' unverified', 'warning'];
+        if (!$la_vul && !$la_bad && !empty($la['checked_at'])) $_la_badges[] = ['No known vulnerabilities', 'success'];
+        if (!empty($la['osv_failed']) || empty($la['checked_at'])) $_la_badges[] = ['OSV not reached', 'secondary'];
+        $_la_badges[] = [count($la_pk) . ' libraries', 'secondary'];
+        $_la_tone = $la_high ? 'danger' : (($la_vul || $la_bad) ? 'warn' : '');
+    }
+    ob_start();
+  ?>
+    <?php if (!$la): ?>
+      <p class="small text-muted mb-0">The first check runs with the next housekeeping run.</p>
+    <?php else: ?>
+      <table class="table table-sm small align-middle mb-2">
+        <thead><tr><th>Library</th><th>Version</th><th>Status</th></tr></thead>
+        <tbody>
+        <?php foreach ($la_pk as $_p): ?>
+          <tr>
+            <td><?= htmlspecialchars($_p['name']) ?> <span class="text-muted"><?= $_p['ecosystem'] === 'Packagist' ? '(PHP)' : '' ?></span></td>
+            <td><code><?= htmlspecialchars($_p['version']) ?></code></td>
+            <td>
+              <?php foreach ($_p['vulns'] as $_v): $_vc = in_array($_v['severity'], ['High', 'Critical'], true) ? 'danger' : 'warning'; ?>
+                <div>
+                  <span class="badge bg-<?= $_vc ?><?= $_vc === 'warning' ? ' text-dark' : '' ?>"><?= htmlspecialchars($_v['severity']) ?></span>
+                  <a href="<?= htmlspecialchars($_v['url']) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($_v['id']) ?></a>
+                  <?= htmlspecialchars($_v['summary']) ?>
+                  <?php if ($_v['fixed']): ?><span class="text-muted">— fixed in <?= htmlspecialchars(implode(', ', $_v['fixed'])) ?></span><?php endif; ?>
+                </div>
+              <?php endforeach; ?>
+              <?php foreach ($_p['problems'] as $_pr): ?>
+                <div class="text-warning-emphasis"><i class="fa fa-exclamation-triangle me-1"></i><?= htmlspecialchars($_pr) ?></div>
+              <?php endforeach; ?>
+              <?php if (!$_p['vulns'] && !$_p['problems']): ?><i class="fa fa-check text-success"></i><?php endif; ?>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      <p class="small text-muted mb-0">
+        <?php $_la_age = !empty($la['checked_at']) ? max(0, time() - (int)strtotime($la['checked_at'])) : null; ?>
+        <i class="fa fa-clock"></i>
+        <?php if ($_la_age === null): ?>OSV has not been reached yet.
+        <?php else: ?>Checked against <a href="https://osv.dev" target="_blank" rel="noopener">OSV</a>
+          <?= $_la_age < 3600 ? max(1, (int)round($_la_age / 60)) . ' min' : ($_la_age < 172800 ? (int)floor($_la_age / 3600) . ' hr' : (int)floor($_la_age / 86400) . ' days') ?> ago<?php endif; ?>
+        <?= !empty($la['osv_failed']) ? '· the last attempt could not reach it, so these are the previous results' : '' ?>
+        · weekly, and whenever a version changes.
+        <span class="d-block mt-1">To upgrade a front-end library, edit its line in <code>scripts/vendor_assets.txt</code>
+          and run <code>scripts/fetch_vendor_assets.sh --force</code>; a PHP package, <code>composer update</code>.</span>
+      </p>
+    <?php endif; ?>
+  <?= adm_status_card('libraries', 'cubes', 'Third-party Libraries', $_la_badges, $_la_tone, ob_get_clean()) ?>
+
   <!-- Filesystem permissions: grouped by CATEGORY and phrased by the worst severity PRESENT
        (never "0 high"). Precomputed once per housekeeping interval, NOT scanned on load. -->
   <?php

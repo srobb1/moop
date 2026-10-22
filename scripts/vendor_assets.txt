@@ -1,0 +1,31 @@
+# Third-party front-end files MOOP serves itself -- ONE list, read by:
+#   scripts/fetch_vendor_assets.sh   downloads / verifies them (--check)
+#   housekeeping library_advisories  verifies the checksums and asks OSV (osv.dev) about each
+#                                     package@version for known vulnerabilities, weekly
+#
+# path | url | sha256 | post-process (none|fa_paths) | ecosystem:package@version
+#
+# Upgrading a library: change the version in its URL AND in the last column, run
+# scripts/fetch_vendor_assets.sh --force, put the new checksum here, commit. The checksum is of
+# the file you verified, never copied from a vendor's website. The last column is checked
+# against the URL, so a bump that changes one but not the other is reported on the dashboard.
+js/vendor/jquery.min.js|https://code.jquery.com/jquery-3.6.0.min.js|ff1523fb7389539c84c65aba19260648793bb4f5e29329d2ee8804bc37a3fe6e|none|npm:jquery@3.6.0
+js/vendor/jquery-ui.min.js|https://code.jquery.com/ui/1.14.0/jquery-ui.min.js|15bd333f88c4dc91eabbe20107d624b4b7128c8d5973a2766fa8138c1d0ba683|none|npm:jquery-ui@1.14.0
+js/vendor/bootstrap.bundle.min.js|https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js|82f64f62bb03c1bc1824b0f9c9e05f70dba33e146818e63cdf5c306c8cf3dedd|none|npm:bootstrap@5.3.2
+css/bootstrap.min.css|https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css|3017df4a76db5f01c2b99b603d88b03106df13bcfe18e67b7c13c2341d3a67df|none|npm:bootstrap@5.3.2
+js/vendor/jquery.dataTables.min.js|https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js|552bbd0c3eaf26eaeb697823c5026ff41bb379d19f266ed71203d041e84a065c|none|npm:datatables.net@1.13.4
+js/vendor/dataTables.bootstrap5.min.js|https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js|079a1739cd9385bd77f12f4c7e42c70ece95eec295425e15f84bba1bbcc70d41|none|npm:datatables.net-bs5@1.13.4
+css/datatables/dataTables.bootstrap5.min.css|https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css|18fd969de4b138549b71ff1826a9dc2d4d52f5532a89f11042183a507c8154ff|none|npm:datatables.net-bs5@1.13.4
+js/vendor/dataTables.buttons.min.js|https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js|749896e15fee3ce201c59530d93c13c70d5e482ab0cd40d9228da30c5c8a04bc|none|npm:datatables.net-buttons@2.3.6
+js/vendor/buttons.bootstrap5.min.js|https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js|ea0b6a6cedca0ecf6a7dce0fe57aab199cea6d355f299f6b66aba0eea74ce2fb|none|npm:datatables.net-buttons-bs5@2.3.6
+js/vendor/buttons.html5.min.js|https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js|3afbfbcff9a8cea4fc9787c9494512082f27ddeee20179565c78fc14bba81b9f|none|npm:datatables.net-buttons@2.3.6
+js/vendor/buttons.print.min.js|https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js|c1f746892c5a352a895d7070c2d7c59341607e42da77ea74c946b673c520d3d9|none|npm:datatables.net-buttons@2.3.6
+js/vendor/buttons.colVis.min.js|https://cdn.datatables.net/buttons/2.3.6/js/buttons.colVis.min.js|519ef1a30e3a9a9c34af125e8fc94466e0dd2b309ee8228875927ac8cc9dfaab|none|npm:datatables.net-buttons@2.3.6
+css/datatables/buttons.bootstrap5.min.css|https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap5.min.css|5ac0e5193d42ca6713646b5185f1e0b6028221cc2ac72361e819ceabb3de3892|none|npm:datatables.net-buttons-bs5@2.3.6
+js/vendor/dataTables.colReorder.min.js|https://cdn.datatables.net/colreorder/1.6.2/js/dataTables.colReorder.min.js|ad621b1936cc8c60ce10718faf5429bb45f6ec177a719a464886e60c155ab99e|none|npm:datatables.net-colreorder@1.6.2
+css/datatables/colReorder.dataTables.min.css|https://cdn.datatables.net/colreorder/1.6.2/css/colReorder.dataTables.min.css|c00fb83a1f191a964ad70790f3aa1cc41360471a80fbd4b77e6de36635bd83a9|none|npm:datatables.net-colreorder@1.6.2
+js/vendor/jszip.min.js|https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js|acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e|none|npm:jszip@3.10.1
+css/fontawesome/all.css|https://use.fontawesome.com/releases/v5.7.0/css/all.css|edeccf624d15b02e0cdf16ada5bd8e805e04f35e07345c56f3b8b733c41ca34e|fa_paths|npm:@fortawesome/fontawesome-free@5.7.0
+css/fontawesome/webfonts/fa-solid-900.woff2|https://use.fontawesome.com/releases/v5.7.0/webfonts/fa-solid-900.woff2|658cf43db24e9d4c57890e958aa74656a13139754de24f19e706f0a355279e4d|none|npm:@fortawesome/fontawesome-free@5.7.0
+css/fontawesome/webfonts/fa-regular-400.woff2|https://use.fontawesome.com/releases/v5.7.0/webfonts/fa-regular-400.woff2|79569bbf98e046743427673c2f59a9649ee833f2a9089b2e6497d435b5fe1b09|none|npm:@fortawesome/fontawesome-free@5.7.0
+css/fontawesome/webfonts/fa-brands-400.woff2|https://use.fontawesome.com/releases/v5.7.0/webfonts/fa-brands-400.woff2|ed7514b6c3a5fdc386bff4dcccaee5e0c72e83cf31f90ff5ac4fb70e33fb6857|none|npm:@fortawesome/fontawesome-free@5.7.0
