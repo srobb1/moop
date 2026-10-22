@@ -10,7 +10,8 @@
  *
  * Depends on (caller must include before this file):
  *   lib/functions_database.php  — fetchData()
- *   lib/blast_functions.php     — loadFeatureCoords(), extractFastaRegion(), reverseComplement()
+ *   lib/blast_functions.php     — extractFastaRegion(), reverseComplement()
+ *   lib/feature_coords.php      — feature_coords.tsv lookups
  */
 
 // Required outright rather than relied on transitively: the ID-resolution CTE below
@@ -569,65 +570,6 @@ function moopmartGetChrNames(string $gene_set_path): array
 // ============================================================
 
 /**
- * Load coordinates from feature_coords.tsv for a given set of feature uniquenames.
- *
- * Each row in the TSV maps any feature (gene, mRNA, exon, …) to its gene ancestor's
- * genomic coordinates.  Passing $filter_uniquenames limits the load to exactly the
- * features that were returned by moopmartQueryFeatures(), avoiding the need to slurp
- * the entire (potentially large) TSV into memory.
- *
- * Without a filter the function falls back to loading only gene-level rows
- * (where uniquename === gene_id) for memory efficiency — useful if the full
- * coord set is needed regardless of what the DB query returned.
- *
- * @param string   $gene_set_path       Absolute path to the gene_set directory
- * @param string[] $filter_uniquenames  Only load entries for these uniquenames;
- *                                      empty array = load gene-level rows only
- * @return array [uniquename => ['chr'=>'...','start'=>N,'end'=>N,'strand'=>'+'|'-']]
- */
-function moopmartLoadGeneCoords(string $gene_set_path, array $filter_uniquenames = []): array
-{
-    $tsv = "$gene_set_path/feature_coords.tsv";
-    if (!file_exists($tsv)) return [];
-
-    // Build a fast lookup set when a filter is provided.
-    $filter = !empty($filter_uniquenames) ? array_flip($filter_uniquenames) : null;
-
-    $coords = [];
-    $fh     = fopen($tsv, 'r');
-    if ($fh === false) return [];
-    while (($line = fgets($fh)) !== false) {
-        $p = explode("\t", rtrim($line));
-        if (count($p) < 6) continue;
-        [$uniquename, $gene_id, $chr, $start, $end, $strand] = $p;
-
-        if ($filter !== null) {
-            // Targeted load: match on gene_id (col1) — feature uniquenames are gene-level,
-            // but col0 in the TSV is the mRNA/isoform uniquename with a suffix.
-            if (!isset($filter[$gene_id])) continue;
-            if (isset($coords[$gene_id])) continue; // keep first isoform only
-            $coords[$gene_id] = [
-                'chr'    => $chr,
-                'start'  => (int)$start,
-                'end'    => (int)$end,
-                'strand' => rtrim($strand),
-            ];
-        } else {
-            // No filter: gene-level rows only (col0 === col1) for memory efficiency.
-            if ($uniquename !== $gene_id) continue;
-            $coords[$uniquename] = [
-                'chr'    => $chr,
-                'start'  => (int)$start,
-                'end'    => (int)$end,
-                'strand' => $strand,
-            ];
-        }
-    }
-    fclose($fh);
-    return $coords;
-}
-
-/**
  * Attach coordinate data to feature rows and optionally filter by genomic region.
  *
  * Features with no coord entry are dropped unless feature_coords.tsv was absent
@@ -635,7 +577,7 @@ function moopmartLoadGeneCoords(string $gene_set_path, array $filter_uniquenames
  *
  * @param array $features           Output of moopmartQueryFeatures()
  * @param array $coords_by_gs_id    [gene_set_id => [uniquename => [chr,start,end,strand]]]
- *                                  Built by caller using moopmartLoadGeneCoords() per source
+ *                                  Built by caller using moop_feature_coords_by_gene() per source
  * @param array $coord_filter       Optional ['chr'=>'', 'start'=>0, 'end'=>0]
  * @return array  Feature rows with chr, start, end, strand merged in
  */
@@ -971,7 +913,7 @@ function moopmartCollectOrganismRows(string $org, array $org_sources, array $fil
     foreach ($org_sources as $src) {
         $gs_id = $src['gene_set_id'];
         if ($gs_id && !isset($coords_by_gs[$gs_id])) {
-            $coords_by_gs[$gs_id] = moopmartLoadGeneCoords($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
+            $coords_by_gs[$gs_id] = moop_feature_coords_by_gene($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
         }
     }
 

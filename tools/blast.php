@@ -27,6 +27,7 @@ include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/blast_results_visualizer.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
+include_once __DIR__ . '/../lib/feature_coords.php';
 include_once __DIR__ . '/../includes/source-selector-helpers.php';
 
 // Load page-specific config
@@ -276,7 +277,7 @@ if (!empty($selected_source_obj) && !empty($selected_db_obj)) {
     $has_jbrowse = isJBrowseAssemblyRegistered($selected_organism, $selected_assembly);
 
     $coords = (!$is_genome_db && ($linkout_config['jbrowse'] ?? false))
-        ? loadFeatureCoords($assembly_path, $blast_hit_ids)
+        ? moop_feature_coords_by_feature($assembly_path, $blast_hit_ids)
         : [];
 
     $blast_linkout_context = [

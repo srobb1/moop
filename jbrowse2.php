@@ -12,6 +12,7 @@ include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/includes/layout.php';
 include_once __DIR__ . '/lib/moop_functions.php';
 include_once __DIR__ . '/lib/extract_search_helpers.php';
+include_once __DIR__ . '/lib/feature_coords.php';
 
 $config        = ConfigManager::getInstance();
 $site          = $config->getString('site', 'moop');
@@ -111,23 +112,13 @@ foreach ($scope_tree as $org => $assemblies) {
         $def         = loadJsonFile($json_path, []);
         $gene_tracks = $def['primaryGeneTracks'] ?? [];
 
-        // First gene loc: scan feature_coords.tsv files under organisms/{org}/{asm}/*/
-        // Each line: feature_uniquename \t gene_id \t seqname \t start \t end \t strand
-        // Lines with ':' in col 0 are derived features (:cds, :pep) — skip them.
+        // First gene loc: the first feature of the first gene set that has coordinates
         $first_loc = '';
         $coords_files = glob($organism_data . '/' . $org . '/' . $asm . '/*/feature_coords.tsv');
         if ($coords_files) {
             sort($coords_files);
-            if ($fh = fopen($coords_files[0], 'r')) {
-                while (($line = fgets($fh)) !== false) {
-                    $p = explode("\t", $line);
-                    if (count($p) >= 5 && strpos($p[0], ':') === false) {
-                        $first_loc = trim($p[2]) . ':' . trim($p[3]) . '..' . trim($p[4]);
-                        break;
-                    }
-                }
-                fclose($fh);
-            }
+            $r = moop_feature_coords_first(dirname($coords_files[0]));
+            if ($r) $first_loc = "{$r['chr']}:{$r['start']}..{$r['end']}";
         }
 
         // Fallback: first sequence name from the .fai index

@@ -24,6 +24,7 @@
 
 require_once __DIR__ . '/blast_functions.php';   // extractFastaRegion(), reverseComplement()
 require_once __DIR__ . '/fasta_index.php';       // moop_fai_lookup()
+require_once __DIR__ . '/feature_coords.php';    // feature_coords.tsv lookups
 
 /** Largest region one record may hold -- the same limit api/get_sequence.php applies. */
 const MOOP_MAX_REGION_BP = 500000;
@@ -58,14 +59,9 @@ function moop_feature_loci(string $gene_set_dir, array $ids): array {
     }
 
     // Genes: column 2 of any row holds the gene, and every row carries the gene's span.
-    $fh = @fopen("$gene_set_dir/feature_coords.tsv", 'r');
-    if ($fh) {
-        while (($line = fgets($fh)) !== false) {
-            $p = explode("\t", rtrim($line, "\r\n"));
-            if (count($p) < 6 || !isset($want[$p[1]]) || isset($loci[$p[1]])) continue;
-            $loci[$p[1]] = ['chr' => $p[2], 'start' => (int)$p[3], 'end' => (int)$p[4], 'strand' => $p[5], 'kind' => 'gene'];
-        }
-        fclose($fh);
+    $genes = array_keys(array_diff_key($want, $loci));
+    foreach (moop_feature_coords_by_gene($gene_set_dir, $genes) as $gene => $locus) {
+        $loci[$gene] = $locus + ['kind' => 'gene'];
     }
     return $loci;
 }
@@ -156,27 +152,6 @@ function moop_gene_set_seqname_gap(string $gene_set_dir, string $assembly_dir): 
     if ($chrs === null || !is_file("$assembly_dir/" . genome_fasta_filename() . '.fai')) return null;
     $missing = moop_genome_missing_seqnames($assembly_dir, $chrs);
     return ['missing' => count($missing), 'total' => count($chrs), 'examples' => array_slice($missing, 0, 3)];
-}
-
-/**
- * The distinct sequence names a gene set's coordinates use (feature_coords.tsv column 3),
- * in natural order. The Data Exporter's chromosome list (moopmartGetChrNames(), which caches
- * this) and the chromosome-name health check both read it here.
- *
- * @return list<string>|null null when the gene set has no feature_coords.tsv
- */
-function moop_feature_coords_seqnames(string $gene_set_dir): ?array {
-    $fh = @fopen("$gene_set_dir/feature_coords.tsv", 'r');
-    if (!$fh) return null;
-    $chrs = [];
-    while (($line = fgets($fh)) !== false) {
-        $p = explode("\t", $line, 4);
-        if (isset($p[2])) $chrs[trim($p[2])] = true;
-    }
-    fclose($fh);
-    $out = array_map('strval', array_keys($chrs));
-    sort($out, SORT_NATURAL);
-    return $out;
 }
 
 /**

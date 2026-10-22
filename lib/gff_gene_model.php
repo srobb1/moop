@@ -24,6 +24,7 @@
  */
 
 require_once __DIR__ . '/jbrowse/gene_track_index.php';
+require_once __DIR__ . '/feature_coords.php';
 
 /** Column 9 as key => value. Values are left URL-encoded except for comparison purposes. */
 function moop_gff_attrs(string $col9): array {
@@ -234,13 +235,8 @@ function moop_gene_model(string $organism, string $assembly, string $gene_set, s
  * @return array{seqname:string,start:int,end:int,strand:string,loc_string:string}|null
  */
 function moop_feature_coords_loc(string $gene_set_dir, string $uniquename): ?array {
-    $coords = "$gene_set_dir/feature_coords.tsv";
-    if (!is_file($coords)) return null;
-    $row = [];
-    exec('awk -F "\t" -v u=' . escapeshellarg($uniquename) . ' ' . escapeshellarg('$1==u || $2==u {print; exit}')
-         . ' ' . escapeshellarg($coords), $row);
-    $p = explode("\t", trim($row[0] ?? ''));
-    if (count($p) < 5) return null;
-    return ['seqname' => $p[2], 'start' => (int)$p[3], 'end' => (int)$p[4], 'strand' => $p[5] ?? '.',
-            'loc_string' => "$p[2]:$p[3]-$p[4]"];
+    $r = moop_feature_coords_find($gene_set_dir, $uniquename);
+    if (!$r) return null;
+    return ['seqname' => $r['chr'], 'start' => $r['start'], 'end' => $r['end'], 'strand' => $r['strand'],
+            'loc_string' => "{$r['chr']}:{$r['start']}-{$r['end']}"];
 }

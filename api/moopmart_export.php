@@ -123,7 +123,7 @@ $organismChunks = function (string $org, array $org_data) use (
         $gs_id  = $src['gene_set_id'];
         $gs_key = $db . '|' . $gs_id;
         if ($gs_id && !isset($coords_by_gs[$gs_id])) {
-            $coords_by_gs[$gs_id]      = moopmartLoadGeneCoords($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
+            $coords_by_gs[$gs_id]      = moop_feature_coords_by_gene($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
             $sources_by_gs_id[$gs_key] = $src;
         }
     }

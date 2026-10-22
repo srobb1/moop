@@ -1071,6 +1071,38 @@ ok(!isset($_ex['Other']), 'a gene that was not asked for is not collected');
 array_map('unlink', glob("$_ad/gs/*")); @rmdir("$_ad/gs"); array_map('unlink', glob("$_ad/*")); @rmdir($_ad);
 
 // ----------------------------------------------------------------------------
+group('feature_coords.tsv: one reader, every lookup');
+require_once "$BASE/lib/feature_coords.php";
+$_fc = sys_get_temp_dir() . '/moop_fc_' . getmypid();
+@mkdir($_fc);
+file_put_contents("$_fc/feature_coords.tsv", implode("\n", [
+    "G10:pep\tG10\tc2\t50\t60\t+",
+    "G10-RA\tG10\tc2\t50\t60\t+",
+    "G1-RA\tG1\tc1\t100\t900\t- ",
+    "G1-RB\tG1\tc1\t100\t900\t-",
+    "B5\tB5\tc10\t5\t9",
+    "short\tG9\tc3",
+]) . "\n");
+ok(moop_feature_coords_by_feature($_fc, ['G1-RB', 'G10-RA', 'nope']) ===
+   ['G10-RA' => ['gene_id' => 'G10', 'chr' => 'c2', 'start' => 50, 'end' => 60, 'strand' => '+'],
+    'G1-RB'  => ['gene_id' => 'G1', 'chr' => 'c1', 'start' => 100, 'end' => 900, 'strand' => '-']], 'by feature id (column 1)');
+ok(moop_feature_coords_by_gene($_fc, ['G1', 'B5', 'G9']) ===
+   ['G1' => ['chr' => 'c1', 'start' => 100, 'end' => 900, 'strand' => '-'],
+    'B5' => ['chr' => 'c10', 'start' => 5, 'end' => 9, 'strand' => '.']],
+   'by gene id: first row wins, strand trimmed in every lookup, a 5-column row counts, a short row does not');
+ok(moop_feature_coords_by_gene($_fc, []) === [] && moop_feature_coords_by_feature($_fc, []) === [], 'an empty list asks for nothing');
+ok((moop_feature_coords_find($_fc, 'G1')['id'] ?? '') === 'G1-RA', 'find: a gene id finds its first row...');
+ok((moop_feature_coords_find($_fc, 'G10-RA')['gene_id'] ?? '') === 'G10', '...a feature id finds its own row');
+ok(moop_feature_coords_find($_fc, 'G') === null && moop_feature_coords_find($_fc, '1-R') === null, '...and a substring of an id is not that id');
+ok((moop_feature_coords_first($_fc)['id'] ?? '') === 'G10-RA', 'first: a derived id (X:pep) is skipped');
+ok(moop_feature_coords_seqnames($_fc) === ['c1', 'c2', 'c3', 'c10'], 'sequence names: distinct, natural order');
+ok(moop_feature_coords_seqnames("$_fc/none") === null && moop_feature_coords_find("$_fc/none", 'G1') === null, 'no file: null, not an error');
+require_once "$BASE/lib/gff_gene_model.php";
+ok(moop_feature_coords_loc($_fc, 'G1') === ['seqname' => 'c1', 'start' => 100, 'end' => 900, 'strand' => '-', 'loc_string' => 'c1:100-900'],
+   'the gene page\'s Location reads through it');
+array_map('unlink', glob("$_fc/*")); @rmdir($_fc);
+
+// ----------------------------------------------------------------------------
 group('GFF gene model: whole-value id matching, one reader');
 require_once dirname(__DIR__) . '/lib/gff_gene_model.php';
 $_a = moop_gff_attrs('ID=rna-XM_1.2;Parent=gene-FHDC1;Dbxref=GeneID:102421115,Genbank:XM_1.2');

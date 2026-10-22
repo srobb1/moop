@@ -808,44 +808,6 @@ function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_d
 }
 
 /**
- * Load feature_coords.tsv into a lookup array keyed by feature uniquename.
- *
- * @param string $assembly_path  Absolute path to the assembly directory
- * @return array  ['uniquename' => ['gene_id','chr','start','end','strand'], ...]
- */
-function loadFeatureCoords($assembly_path, $filter_ids = null) {
-    $tsv_file = $assembly_path . '/feature_coords.tsv';
-    if (!file_exists($tsv_file)) return [];
-
-    // $filter_ids = null  → load everything (legacy callers)
-    // $filter_ids = []    → return immediately (no hits, no coords needed)
-    // $filter_ids = [...]  → only load matching rows (memory-safe for large files)
-    if ($filter_ids !== null && empty($filter_ids)) return [];
-    $filter_set = $filter_ids !== null ? array_flip($filter_ids) : null;
-
-    $coords = [];
-    $fh = fopen($tsv_file, 'r');
-    if (!$fh) return [];
-
-    while (($line = fgets($fh)) !== false) {
-        $p = explode("\t", rtrim($line));
-        if (count($p) < 6) continue;
-        if ($filter_set !== null && !isset($filter_set[$p[0]])) continue;
-        $coords[$p[0]] = [
-            'gene_id' => $p[1],
-            'chr'     => $p[2],
-            'start'   => (int)$p[3],
-            'end'     => (int)$p[4],
-            'strand'  => $p[5],
-        ];
-        // Once we have all requested IDs, stop scanning the file.
-        if ($filter_set !== null && count($coords) === count($filter_set)) break;
-    }
-    fclose($fh);
-    return $coords;
-}
-
-/**
  * Extract a genomic region from a samtools-indexed FASTA using pure PHP.
  * Uses the .fai 5-column index to fseek directly — no external tools required.
  *
