@@ -28,6 +28,11 @@
 // and ConfigManager bootstrap below) — so the helpers are always in scope.
 require_once __DIR__ . '/../lib/functions_json.php';
 
+// Record deprecated calls (logs/deprecations/) -- this host's error_reporting hides them,
+// so without this the first sign of a removed function would be a fatal after a PHP upgrade.
+// Here at the same early choke point so every entry path is covered.
+require_once __DIR__ . '/deprecation_log.php';
+
 // Cache path helpers (moop_cache_dir_for, moop_organism_cache_file, ...). Loaded
 // here at the single early choke point so every entry path — tools, admin, api,
 // and standalone scripts (all of which include config_init) — can resolve where

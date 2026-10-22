@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!--
+  PHP version-compatibility scan (PHPCompatibility), run by CI's "PHP 8.3 readiness" job:
+  does MOOP's PHP still work on every version from the one in production (8.0) up to the
+  newest RHEL 9 offers (8.3)? Raise testVersion when a newer one is planned.
+
+  The exact commands (install into a scratch directory, never into the repo) are in
+  .github/workflows/ci.yml, job php-next. XML comments cannot hold a double hyphen, so they
+  are not repeated here.
+-->
+<ruleset name="MOOP PHP compatibility">
+  <config name="testVersion" value="8.0-8.3"/>
+  <rule ref="PHPCompatibility">
+    <!-- PHP 8.1 changed htmlspecialchars()/html_entity_decode() to escape single quotes by
+         default. That only makes output SAFER, so it is not a compatibility risk; flagging all
+         ~1,350 calls would bury the findings that matter. -->
+    <exclude name="PHPCompatibility.ParameterValues.NewHTMLEntitiesFlagsDefault"/>
+    <!-- array_is_list() is PHP 8.1+, but lib/functions_json.php defines it on 8.0. -->
+    <exclude name="PHPCompatibility.FunctionUse.NewFunctions.array_is_listFound"/>
+  </rule>
+  <exclude-pattern>*/vendor/*</exclude-pattern>
+</ruleset>

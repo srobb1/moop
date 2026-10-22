@@ -469,6 +469,13 @@ they pass on any checkout. Exit 0 = all pass. `.github/workflows/ci.yml` runs bo
 push, each preceded by a syntax sweep (`php -l` over all PHP, `node --check` over all
 non-vendor JS).
 
+**PHP 8.3 readiness has its own CI job (`php-next`).** Production runs RHEL's PHP 8.0 (upstream
+end-of-life; fixes only as Red Hat backports). The job lints and runs the PHP tests under 8.3,
+fails if they triggered any deprecation, and scans every file with PHPCompatibility (`phpcompat.xml`,
+testVersion 8.0-8.3, installed in a temp dir — never a repo dependency). Deprecations are also
+recorded on the LIVE site by `includes/deprecation_log.php` into `logs/deprecations/` (this host's
+error_reporting hides them) and listed on the dashboard's PHP Version card.
+
 **The build pipeline (Perl) has its own CI job** — run these before committing pipeline changes:
 
 ```bash

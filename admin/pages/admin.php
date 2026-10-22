@@ -82,6 +82,7 @@
           : (int) floor($age_s / 3600) . ' hr ago');
   ?>
 
+  <div class="adm-group-label">Data</div>
   <!-- Data Health (shared partial -- the same card on the Manage Organisms page). It renders
        nothing when there is nothing to report, so the clean state is drawn here. -->
   <?php $health_card_collapsible = true; ?>
@@ -270,6 +271,7 @@
     <div id="rebuildGeneIndexesResult" class="small text-muted mt-2" style="display:none;"></div>
   <?= adm_status_card('jbrowse', 'dna', 'JBrowse', $_jb_badges, $_jb_tone, ob_get_clean()) ?>
 
+  <div class="adm-group-label">Security &amp; software</div>
   <!-- OS security updates (housekeeping_check_security_updates). Root writes a daily report
        (scripts/install_security_report.sh) because the web server may not query the package
        database itself; this only reads it. Colour follows the packages the SITE runs on -- a
@@ -424,6 +426,48 @@
     <?php endif; ?>
   <?= adm_status_card('libraries', 'cubes', 'Third-party Libraries', $_la_badges, $_la_tone, ob_get_clean()) ?>
 
+  <!-- PHP Version: will MOOP's code keep working as PHP moves on? Deprecations are recorded
+       as they happen (includes/deprecation_log.php -- error_reporting hides them on this host);
+       a newer PHP is checked by CI's "PHP 8.3 readiness" job on every push. Read live: a glob of
+       a few small files, cheap enough not to need housekeeping. -->
+  <?php
+    $_dep = [];
+    foreach (glob(dirname(__DIR__, 2) . '/logs/deprecations/*.json') ?: [] as $_f) {
+        $_d = json_decode((string)@file_get_contents($_f), true);
+        if (is_array($_d)) { $_d['last_seen'] = @filemtime($_f); $_dep[] = $_d; }
+    }
+    usort($_dep, fn($a, $b) => ($b['last_seen'] ?? 0) <=> ($a['last_seen'] ?? 0));
+    $_php_badges = [['PHP ' . PHP_VERSION, 'secondary']];
+    $_php_badges[] = $_dep ? [count($_dep) . ' deprecated ' . (count($_dep) === 1 ? 'call' : 'calls'), 'warning'] : ['No deprecations', 'success'];
+    ob_start();
+  ?>
+    <p class="small mb-2">
+      The site runs <strong>PHP <?= htmlspecialchars(PHP_VERSION) ?></strong>.
+      Security fixes for it are reported under <em>OS Security Updates</em>; this card is about whether
+      MOOP's own code will keep working on newer versions.
+    </p>
+    <?php if ($_dep): ?>
+      <p class="small mb-1"><strong>Deprecated calls the site has made</strong> — each will stop working on a later PHP:</p>
+      <ul class="small mb-2">
+        <?php foreach (array_slice($_dep, 0, 15) as $_d): ?>
+          <li><code><?= htmlspecialchars(($_d['file'] ?? '?') . ':' . ($_d['line'] ?? '?')) ?></code> —
+            <?= htmlspecialchars($_d['message'] ?? '') ?>
+            <span class="text-muted">(first seen on <?= htmlspecialchars($_d['page'] ?? '?') ?>)</span></li>
+        <?php endforeach; ?>
+      </ul>
+      <p class="small text-muted mb-2">Once fixed, delete the matching file in <code>logs/deprecations/</code>.</p>
+    <?php else: ?>
+      <p class="small mb-2"><i class="fa fa-check text-success me-1"></i>No deprecated PHP call has been made since this
+        check started recording (PHP hides deprecation warnings on this server, so MOOP records them itself).</p>
+    <?php endif; ?>
+    <p class="small text-muted mb-0">
+      Newer versions are checked on every push by the <strong>PHP 8.3 readiness</strong> job in GitHub Actions:
+      a syntax check and the tests under PHP 8.3, plus a scan of every file with PHPCompatibility
+      (rules in <code>phpcompat.xml</code>).
+    </p>
+  <?= adm_status_card('phpVersion', 'code', 'PHP Version', $_php_badges, $_dep ? 'warn' : '', ob_get_clean()) ?>
+
+  <div class="adm-group-label">Server</div>
   <!-- Filesystem permissions: grouped by CATEGORY and phrased by the worst severity PRESENT
        (never "0 high"). Precomputed once per housekeeping interval, NOT scanned on load. -->
   <?php
@@ -482,7 +526,11 @@
     <div id="recheckPermissionsResult" class="small text-muted mt-2" style="display:none;"></div>
   <?= adm_status_card('permissions', 'lock', 'Filesystem Permissions', $_pm_badges, $_pm_tone, ob_get_clean()) ?>
 
-  <!-- Environment: PHP extensions, JWT keys, command-line tools, composer dependencies. -->
+  <!-- Server Requirements: is everything the site needs PRESENT -- PHP extensions, JWT keys,
+       command-line tools, composer dependencies. (Named "Environment" until 2026-10-22; PHP
+       now appears in three cards, each answering a different question: is it installed (here),
+       does it need a security fix (OS Security Updates), will our code run on the next
+       version (PHP Version).) -->
   <?php
     $_env = $_SESSION['env_warnings'] ?? [];
     $_env_danger = count(array_filter($_env, fn($w) => ($w['level'] ?? '') === 'danger'));
@@ -499,7 +547,7 @@
         <?= $warning['message'] ?>
       </div>
     <?php endforeach; endif; ?>
-  <?= adm_status_card('environment', 'server', 'Environment', $_env_badges, $_env ? ($_env_danger ? 'danger' : 'warn') : '', ob_get_clean()) ?>
+  <?= adm_status_card('environment', 'server', 'Server Requirements', $_env_badges, $_env ? ($_env_danger ? 'danger' : 'warn') : '', ob_get_clean()) ?>
 
   <!-- Site data backup. The git line is recomputed LIVE on every load (~10 ms), unlike the
        rest of this section: a badge that still said "3 files to commit" after a push, with no
@@ -565,6 +613,7 @@
     <?php endif; ?>
   <?= adm_status_card('backup', 'save', 'Site Data Backup', $_bk_badges, $_bk_tone, ob_get_clean()) ?>
 
+  <div class="adm-group-label">Maintenance</div>
   <!-- Housekeeping: what refreshes every card above. Last, because it is the machinery, not
        a finding. The task list is rendered from housekeeping_task_registry() -- the same list
        that RUNS them -- so it cannot drift. -->

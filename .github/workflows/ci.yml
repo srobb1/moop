@@ -74,6 +74,70 @@ jobs:
       - name: Run JS smoke tests
         run: node tests/js_smoke_tests.js
 
+  # Will MOOP still work on a newer PHP? Production runs RHEL's PHP 8.0, which upstream no
+  # longer supports (fixes come only as Red Hat backports); RHEL 9 offers 8.1-8.3. Three checks,
+  # all maintained by others -- nothing here is a hand-kept list of deprecated functions:
+  #   - php -l under 8.3: syntax the newer parser rejects.
+  #   - the PHP tests under 8.3, then any deprecation they triggered: includes/deprecation_log.php
+  #     records each one in logs/deprecations/ (it does so on the live site too), so a non-empty
+  #     directory fails the job and prints what was hit.
+  #   - PHPCompatibility, a static scan of every file for 8.0-8.3 (phpcompat.xml), including code
+  #     no test reaches. Installed in a temp directory: a CI tool, never shipped.
+  php-next:
+    name: PHP 8.3 readiness
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Lint every PHP file under 8.3
+        run: |
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! php -l "$file" >/dev/null 2>&1; then
+              echo "::error file=$file::Does not parse on PHP 8.3"
+              php -l "$file" || true
+              status=1
+            fi
+          done < <(find . -path ./vendor -prune -o -name '*.php' -print0)
+          exit $status
+
+      - name: PHP tests under 8.3
+        env:
+          VALIDATE_CONFIG: 'false'
+        run: |
+          php tests/smoke_tests.php
+          php tests/search_ranking_tests.php
+
+      - name: No deprecations triggered by the tests
+        run: |
+          shopt -s nullglob
+          found=(logs/deprecations/*.json)
+          if [ ${#found[@]} -gt 0 ]; then
+            for f in "${found[@]}"; do
+              php -r '$d = json_decode(file_get_contents($argv[1]), true); echo "::error file={$d["file"]},line={$d["line"]}::{$d["message"]}\n";' "$f"
+            done
+            exit 1
+          fi
+          echo "No deprecations"
+
+      - name: PHPCompatibility scan (PHP 8.0-8.3)
+        run: |
+          mkdir -p /tmp/phpcompat && cd /tmp/phpcompat
+          echo '{}' > composer.json
+          composer config allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+          composer require --no-interaction --quiet "phpcompatibility/php-compatibility:^10.0@alpha" dealerdirect/phpcodesniffer-composer-installer
+          cd "$GITHUB_WORKSPACE"
+          git ls-files '*.php' | grep -v '^vendor/' > /tmp/phpcompat/files.txt
+          php -d memory_limit=1G /tmp/phpcompat/vendor/bin/phpcs -n --standard=phpcompat.xml --file-list=/tmp/phpcompat/files.txt
+
   # The build pipeline (config/build_and_load_db) is Perl. Four steps, each for a failure that
   # otherwise shows up only as wrong data on the site:
   #   - perl -c: a syntax or missing-module error (every pipeline script and module).

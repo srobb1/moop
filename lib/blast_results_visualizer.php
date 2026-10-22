@@ -439,7 +439,7 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
             $html .= '<strong>Query Coverage (This HSP):</strong> ';
             $html .= $query_hsp_coverage . '% (' . ($hsp['query_to'] - $hsp['query_from'] + 1) . '/' . $results['query_length'] . ') | ';
             $html .= '<strong>Subject Coverage (This HSP):</strong> ';
-            $html .= $hsp['subject_coverage_percent'] . '% (' . abs($hsp['hit_to'] - $hsp['hit_from']) + 1 . '/' . $results['hits'][$hit_idx]['length'] . ')';
+            $html .= $hsp['subject_coverage_percent'] . '% (' . (abs($hsp['hit_to'] - $hsp['hit_from']) + 1) . '/' . $results['hits'][$hit_idx]['length'] . ')';
             $html .= '</small>';
 
             // Per-HSP JBrowse button (genome BLAST only)

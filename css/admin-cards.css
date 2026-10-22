@@ -110,3 +110,16 @@
 .adm-collapse-toggle .adm-chevron { transition: transform 0.15s ease; font-size: 0.85em; }
 .adm-collapse-toggle.collapsed .adm-chevron { transform: rotate(-90deg); }
 .adm-collapse-toggle:focus-visible { outline: 2px solid var(--adm-accent); outline-offset: 2px; }
+
+/* Group label between runs of status cards on the dashboard (Data / Security & software /
+   Server / Maintenance): the cards answer different questions, and ten in one undivided stack
+   made an admin read every header to find the one they wanted. */
+.adm-group-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6c757d;
+  margin: 1.1rem 0 0.4rem;
+}
+.adm-group-label:first-of-type { margin-top: 0; }
