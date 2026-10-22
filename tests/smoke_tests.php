@@ -2045,6 +2045,27 @@ ok($_built_hits === [],
    . ($_built_hits ? ":\n      " . implode("\n      ", $_built_hits) : ''));
 
 // ----------------------------------------------------------------------------
+group('Gene neighbours: the genes beside a gene, in genome order');
+require_once "$BASE/lib/feature_coords.php";
+$_nd = sys_get_temp_dir() . '/moop_nbr_' . getmypid();
+@mkdir($_nd, 0777, true);
+// g2 is nested inside g1, g3 overlaps g2's end, g9 is on another sequence; transcript rows
+// repeat their gene's span, as the real file does.
+file_put_contents("$_nd/feature_coords.tsv", implode("\n", [
+    "t3\tg3\tchr1\t450\t900\t+", "g1\tg1\tchr1\t100\t1000\t+", "t1\tg1\tchr1\t100\t1000\t+",
+    "g9\tg9\tchr2\t1\t50\t-", "g2\tg2\tchr1\t200\t500\t-", "g4\tg4\tchr1\t2000\t2500\t+", "g3\tg3\tchr1\t450\t900\t+",
+]) . "\n");
+$_b = moop_feature_coords_genes_beside($_nd, 'g2');
+ok(array_column($_b['left'], 'gene_id') === ['g1'] && array_column($_b['right'], 'gene_id') === ['g3', 'g4'],
+   'ordered by start: a nested gene sits between its host and the next; other sequences are left out');
+ok($_b['self']['strand'] === '-' && $_b['self']['start'] === 200, "the gene's own span and strand come back too");
+$_walk = ['g1']; while (($_n = moop_feature_coords_genes_beside($_nd, end($_walk))['right'][0]['gene_id'] ?? null)) $_walk[] = $_n;
+ok($_walk === ['g1', 'g2', 'g3', 'g4'], 'stepping right from the first gene visits every gene on the sequence once');
+ok(moop_feature_coords_genes_beside($_nd, 'g9')['left'] === [] && moop_feature_coords_genes_beside($_nd, 'nope') === null,
+   'a gene alone on its sequence has no neighbours; an unknown gene is null');
+array_map('unlink', glob("$_nd/*")); @rmdir($_nd);
+
+// ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
 ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
    'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',

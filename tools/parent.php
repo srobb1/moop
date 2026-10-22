@@ -615,6 +615,12 @@ echo render_display_page(
         'annotated_child_types' => $annotated_child_types,
         'gene_model' => $gene_model,
         'feature_loc' => $feature_loc,
+        // Neighbour buttons need the gene set's coordinates file (api/gene_neighbor.php reads it).
+        'neighbor_nav' => is_file("$gene_set_dir/feature_coords.tsv") ? [
+            'organism' => $organism_name, 'assembly' => $genome_accession,
+            'gene_set' => $gene_set_name, 'uniquename' => $feature_uniquename,
+            'strand'   => (string)($feature_loc['strand'] ?? '.'),
+        ] : null,
         'genome_seq_available' => $genome_seq_available,
         'expression_summary' => $expression_summary,
         'page_styles' => ["/$site/css/parent.css", "/$site/css/parent-nav.css"],
@@ -625,6 +631,7 @@ echo render_display_page(
             "/$site/js/modules/sequence-formatter.js",
             "/$site/js/modules/parent-nav.js",
             "/$site/js/modules/isoform-minimap.js",
+            "/$site/js/modules/gene-neighbors.js",
             // Loaded here, not left to sequences_display.php: that include only runs when
             // there are sequences to show, so the overview Copy button would be dead on a
             // gene with none.

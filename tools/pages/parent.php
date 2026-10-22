@@ -331,6 +331,29 @@
                 <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"<?php
                     if (!empty($big_gene_diagram_anchor)): ?> data-show-only="<?= htmlspecialchars($big_gene_diagram_anchor) ?>"<?php endif; ?>></svg>
 
+                <?php if (!empty($neighbor_nav)):
+                    // The diagram is always drawn 5'->3' (a reverse-strand gene is flipped), so
+                    // upstream is on the LEFT of the picture for every gene. Which way that is in
+                    // the genome depends on strand: '+' upstream = lower coordinates. A gene with
+                    // no strand is drawn as '+', so its buttons read in genome order instead.
+                    $__stranded = in_array($neighbor_nav['strand'], ['+', '-'], true);
+                    $__up_side  = $neighbor_nav['strand'] === '-' ? 'right' : 'left';
+                    $__dn_side  = $__up_side === 'left' ? 'right' : 'left'; ?>
+                <div class="gene-neighbors d-flex align-items-center gap-2 mt-2"
+                     data-organism="<?= htmlspecialchars($neighbor_nav['organism']) ?>"
+                     data-assembly="<?= htmlspecialchars($neighbor_nav['assembly']) ?>"
+                     data-gene-set="<?= htmlspecialchars($neighbor_nav['gene_set']) ?>"
+                     data-uniquename="<?= htmlspecialchars($neighbor_nav['uniquename']) ?>">
+                    <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn" data-side="<?= $__up_side ?>"
+                            title="The nearest gene <?= $__stranded ? "5′ of this one" : 'at lower coordinates' ?> on <?= htmlspecialchars((string)($feature_loc['chr'] ?? 'this sequence')) ?> that has a gene page">
+                        <i class="fas fa-arrow-left me-1"></i><?= $__stranded ? 'Upstream gene' : 'Previous gene' ?></button>
+                    <span class="gene-neighbor-status small text-muted flex-grow-1 text-center" role="status"></span>
+                    <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn" data-side="<?= $__dn_side ?>"
+                            title="The nearest gene <?= $__stranded ? "3′ of this one" : 'at higher coordinates' ?> on <?= htmlspecialchars((string)($feature_loc['chr'] ?? 'this sequence')) ?> that has a gene page">
+                        <?= $__stranded ? 'Downstream gene' : 'Next gene' ?><i class="fas fa-arrow-right ms-1"></i></button>
+                </div>
+                <?php endif; ?>
+
                 <?php
                 // ONE definition of the diagram's colour key, shared by this legend and the
                 // help modal at the foot of the page. Hexes mirror the COLOR_* constants in
@@ -813,6 +836,10 @@ if (!empty($gene_model)) {
         ['label' => 'Click a row',
          'text'  => 'Jumps to that isoform\'s annotations further down the page.'],
     ];
+    if (!empty($neighbor_nav)) {
+        $gm_read_cards[] = ['label' => 'Upstream / downstream gene',
+            'text' => 'Opens the nearest gene on the same sequence in that direction. Genes with no page of their own (non-coding RNAs, which are in the genome browser only) are skipped.'];
+    }
     if (!empty($genome_seq_available)) {
         $gm_read_cards[] = ['label' => 'Click a feature',
             'text' => 'Exons, CDS blocks, introns and both flanking regions open their sequence. Flank size is adjustable inside that popup.'];

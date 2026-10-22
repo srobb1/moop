@@ -135,3 +135,44 @@ function moop_feature_coords_seqnames(string $gene_set_dir): ?array {
     sort($out, SORT_NATURAL);
     return $out;
 }
+
+/**
+ * The genes either side of $gene_id on its own sequence, nearest first -- the gene page's
+ * neighbour buttons (api/gene_neighbor.php).
+ *
+ * Genes are ordered by start, then end, then id, and "left"/"right" are the genes before and
+ * after this one in that order. Ordering by start rather than requiring a gap means a gene
+ * nested inside or overlapping this one is still reachable: clicking right repeatedly walks
+ * every gene on the sequence exactly once.
+ *
+ * Streams the whole file (every row carries its gene's span, so the first row seen per gene
+ * is enough): 0.28 s and 12 MB on the largest gene set, Pipistrellus RS_101 (66 MB, 25,101
+ * genes), measured 2026-10-22. Run on a click, never on a page load.
+ *
+ * @return array{self: array, left: list<array>, right: list<array>}|null null when the gene is
+ *         not in the file (or there is no file). Each gene: {gene_id, chr, start, end, strand}.
+ */
+function moop_feature_coords_genes_beside(string $gene_set_dir, string $gene_id): ?array {
+    if (!($fh = @fopen(moop_feature_coords_file($gene_set_dir), 'r'))) return null;
+    $genes = [];
+    while (($line = fgets($fh)) !== false) {
+        // Most rows belong to a gene already seen: test the gene id before parsing the line.
+        $p = explode("\t", $line, 3);
+        if (!isset($p[1]) || $p[1] === '' || isset($genes[$p[1]])) continue;
+        $row = moop_feature_coords_parse($line);
+        if ($row === null) continue;
+        $genes[$row['gene_id']] = moop_feature_coords_locus($row) + ['gene_id' => $row['gene_id']];
+    }
+    fclose($fh);
+    if (!isset($genes[$gene_id])) return null;
+
+    $self = $genes[$gene_id];
+    $on_seq = array_values(array_filter($genes, fn($g) => $g['chr'] === $self['chr']));
+    usort($on_seq, fn($a, $b) => [$a['start'], $a['end'], $a['gene_id']] <=> [$b['start'], $b['end'], $b['gene_id']]);
+    $at = array_search($gene_id, array_column($on_seq, 'gene_id'), true);
+    return [
+        'self'  => $self,
+        'left'  => array_reverse(array_slice($on_seq, 0, $at)),
+        'right' => array_slice($on_seq, $at + 1),
+    ];
+}
