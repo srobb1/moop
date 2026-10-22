@@ -821,43 +821,44 @@ function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_d
 if (!function_exists('extractFastaRegion')) {
 function extractFastaRegion(string $fasta_path, string $fai_path, string $seqname, int $start, int $end): ?string
 {
-    $fh    = fopen($fai_path, 'r');
+    require_once __DIR__ . '/fasta_index.php';
+    $entry = moop_fai_lookup($fai_path, [$seqname])[$seqname] ?? null;
+    if (!$entry) return null;
+    $fh = fopen($fasta_path, 'rb');
     if ($fh === false) return null;
-    $entry = null;
-    while (($line = fgets($fh)) !== false) {
-        $parts = explode("\t", rtrim($line));
-        if (count($parts) >= 5 && $parts[0] === $seqname) {
-            $entry = [
-                'total_len'      => (int)$parts[1],
-                'offset'         => (int)$parts[2],
-                'bases_per_line' => (int)$parts[3],
-                'bytes_per_line' => (int)$parts[4],
-            ];
-            break;
-        }
-    }
+    $seq = moop_fasta_read_at($fh, $entry, $start, $end);
     fclose($fh);
+    return $seq;
+}
+}
 
-    if (!$entry || $entry['bases_per_line'] === 0) return null;
-
+/**
+ * Read bases $start..$end (1-based, inclusive) of one sequence from an open FASTA, given its
+ * .fai entry (moop_fai_lookup()'s shape). The read half of extractFastaRegion(), so a batch
+ * can look its sequences up ONCE and cut many regions: extractFastaRegion() scans the .fai
+ * from the top on every call, which on Carollia's 1.9 M-line index cost 5.7 ms a region.
+ *
+ * @param resource $fh
+ * @param array{len: int, off: int, lb: int, lw: int} $entry
+ * @return string|null uppercase bases; null when the range starts past the sequence's end
+ */
+function moop_fasta_read_at($fh, array $entry, int $start, int $end): ?string
+{
+    if ($entry['lb'] <= 0) return null;
     // Clamp to contig boundaries so we never read past the end into the next entry
-    if ($end > $entry['total_len']) $end = $entry['total_len'];
+    if ($end > $entry['len']) $end = $entry['len'];
+    if ($start < 1) $start = 1;
     if ($start > $end) return null;
 
     $s        = $start - 1;
     $len      = $end - $start + 1;
-    $byte_pos = $entry['offset']
-              + intdiv($s, $entry['bases_per_line']) * $entry['bytes_per_line']
-              + ($s % $entry['bases_per_line']);
-
-    $fh = fopen($fasta_path, 'rb');
-    if ($fh === false) return null;
-    fseek($fh, $byte_pos);
+    $byte_pos = $entry['off'] + intdiv($s, $entry['lb']) * $entry['lw'] + ($s % $entry['lb']);
+    if (fseek($fh, $byte_pos) !== 0) return null;
 
     $seq       = '';
     $remaining = $len;
     while ($remaining > 0) {
-        $read_len = $remaining + (int)ceil($remaining / $entry['bases_per_line']) + 4;
+        $read_len = $remaining + (int)ceil($remaining / $entry['lb']) + 4;
         $chunk    = fread($fh, min(65536, $read_len));
         if ($chunk === false || $chunk === '') break;
         $clean     = str_replace(["\r\n", "\r", "\n"], '', $chunk);
@@ -865,10 +866,7 @@ function extractFastaRegion(string $fasta_path, string $fai_path, string $seqnam
         $seq      .= substr($clean, 0, $take);
         $remaining -= $take;
     }
-    fclose($fh);
-
     return strtoupper($seq);
-}
 }
 
 /**

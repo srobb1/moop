@@ -106,17 +106,46 @@ function moop_genomic_region(array $locus, string $part, int $bp = 0, ?int $from
 }
 
 /**
+ * Open an assembly's genome for a batch of cuts: the .fai entries for these sequence names,
+ * looked up in ONE pass, and the FASTA held open. Cutting each region through
+ * extractFastaRegion() re-read the .fai from the top every time -- 5.7 ms a region on
+ * Carollia's 1.9 M-line index, once per gene and once per EXON in the Data Exporter.
+ * (samtools faidx loads its index once too; this is the same idea.)
+ *
+ * @param list<string> $chrs every sequence name the batch will cut from
+ * @return array{fh: resource, fai: array<string, array{len: int, off: int, lb: int, lw: int}>}|null
+ *         null when the genome or its .fai is missing
+ */
+function moop_genome_open(string $assembly_dir, array $chrs): ?array {
+    $fasta = "$assembly_dir/" . genome_fasta_filename();
+    if (!is_file($fasta) || !is_file("$fasta.fai")) return null;
+    $chrs = array_values(array_unique(array_filter(array_map('strval', $chrs), 'strlen')));
+    $fh   = fopen($fasta, 'rb');
+    if ($fh === false) return null;
+    return ['fh' => $fh, 'fai' => $chrs ? moop_fai_lookup("$fasta.fai", $chrs) : []];
+}
+
+function moop_genome_close(?array $genome): void {
+    if ($genome && is_resource($genome['fh'])) fclose($genome['fh']);
+}
+
+/** Of these names, the ones the opened genome does not contain (see moop_genome_missing_seqnames()). */
+function moop_genome_missing(array $genome, array $chrs): array {
+    return array_values(array_unique(array_filter(array_map('strval', $chrs),
+        fn($c) => $c !== '' && !isset($genome['fai'][$c]))));
+}
+
+/**
  * The bases of a region, 5'->3' along the feature. The returned region's end is clipped to
  * the contig, so a header built from it states what was actually extracted.
  *
+ * @param array $genome from moop_genome_open(), whose $chrs included this region's
  * @return array{seq: string, region: array}|null null if the contig is not in the genome
  */
-function moop_genomic_sequence(string $assembly_dir, array $region): ?array {
-    $fasta = "$assembly_dir/" . genome_fasta_filename();
-    $fai   = "$fasta.fai";
-    if (!is_file($fasta) || !is_file($fai)) return null;
-
-    $seq = extractFastaRegion($fasta, $fai, $region['chr'], $region['start'], $region['end']);
+function moop_genomic_sequence(array $genome, array $region): ?array {
+    $entry = $genome['fai'][$region['chr']] ?? null;
+    if (!$entry) return null;
+    $seq = moop_fasta_read_at($genome['fh'], $entry, $region['start'], $region['end']);
     if ($seq === null || $seq === '') return null;
     $region['end'] = $region['start'] + strlen($seq) - 1;
     return ['seq' => $region['strand'] === '-' ? reverseComplement($seq) : $seq, 'region' => $region];
@@ -213,7 +242,12 @@ function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $as
     }
 
     $loci    = moop_feature_loci($gene_set_dir, array_values(array_unique(array_column($requests, 'id'))));
-    $missing = array_flip(moop_genome_missing_seqnames($assembly_dir, array_column($loci, 'chr')));
+    $genome  = moop_genome_open($assembly_dir, array_column($loci, 'chr'));
+    if (!$genome) {
+        $out['notes'][] = 'Genomic sequence is not available: this assembly has no readable genome.';
+        return $out;
+    }
+    $missing = array_flip(moop_genome_missing($genome, array_column($loci, 'chr')));
     $skips   = [];
     $done    = [];
     $toobig  = [];
@@ -235,12 +269,13 @@ function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $as
             $region = moop_genomic_region($locus, $part, $bp, $from, $to);
             if (!$region) continue;
             if ($region['end'] - $region['start'] + 1 > MOOP_MAX_REGION_BP) { $toobig[] = $r['id']; continue; }
-            $got = moop_genomic_sequence($assembly_dir, $region);
+            $got = moop_genomic_sequence($genome, $region);
             if (!$got) continue;
             $shown_to = $from !== null ? $from + strlen($got['seq']) - 1 : null;
             $out['fasta'] .= moop_genomic_fasta_record($r['id'], $part, $bp, $got['region'], $got['seq'], $from, $shown_to);
         }
     }
+    moop_genome_close($genome);
     array_push($out['notes'], ...moop_genomic_skip_notes($skips));
     if ($toobig) {
         $out['notes'][] = 'Genomic sequence longer than ' . number_format(MOOP_MAX_REGION_BP) . ' bp is not shown here: '

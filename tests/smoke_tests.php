@@ -1067,6 +1067,35 @@ ok(array_map(fn($e) => [$e['start'], $e['end']], $_ex['G1'] ?? []) === [[100, 20
 ok(array_map(fn($e) => [$e['type'], $e['start']], $_ex['4242'] ?? []) === [['CDS', 1000]],
    'a bacterial gene -> CDS (no transcript), matched by its GeneID');
 ok(!isset($_ex['Other']), 'a gene that was not asked for is not collected');
+
+// Exon mode numbers 5'->3' along the gene, each type on its own counter -- on the minus strand
+// exon1 is the HIGHEST-coordinate exon. (It was one shared counter in coordinate order.)
+$_ed = sys_get_temp_dir() . '/moop_exnum_' . getmypid();
+@mkdir($_ed);
+file_put_contents("$_ed/genome.fa", ">c1\nAAAAACCCCCGGGGGTTTTTACGTA\nCCCCC\n");
+file_put_contents("$_ed/genome.fa.fai", "c1\t30\t4\t25\t26\n");
+file_put_contents("$_ed/genes.gff", implode("\n", [
+    "c1\ts\tgene\t1\t25\t.\t-\t.\tID=M1",
+    "c1\ts\tmRNA\t1\t25\t.\t-\t.\tID=M1.t;Parent=M1",
+    "c1\ts\texon\t1\t5\t.\t-\t.\tParent=M1.t",
+    "c1\ts\texon\t11\t15\t.\t-\t.\tParent=M1.t",
+    "c1\ts\tCDS\t12\t14\t.\t-\t0\tParent=M1.t",
+    "c1\ts\texon\t21\t25\t.\t-\t.\tParent=M1.t",
+    "c1\ts\tCDS\t22\t24\t.\t-\t0\tParent=M1.t",
+]) . "\n");
+$_h = fopen('php://memory', 'w+');
+moopmartStreamGenomicFasta([['uniquename' => 'M1', 'chr' => 'c1', 'start' => 1, 'end' => 25, 'strand' => '-']], $_ed, "$_ed/genes.gff", 'exons', 0, $_h);
+rewind($_h); $_fa_out = stream_get_contents($_h); fclose($_h);
+preg_match_all('/^>(\S+) (\S+)/m', $_fa_out, $_m);
+ok($_m[1] === ['M1.CDS1', 'M1.exon1', 'M1.CDS2', 'M1.exon2', 'M1.exon3'], "exons numbered 5'->3' on the minus strand, each type on its own counter");
+ok($_m[2][1] === 'c1:21-25(-)' && strpos($_fa_out, ">M1.exon1 c1:21-25(-)\nTACGT\n") !== false, 'exon1 is the highest-coordinate exon, reverse-complemented');
+// The batch reader cuts what extractFastaRegion() cuts, clipped at the contig end.
+$_g = moop_genome_open($_ed, ['c1', 'nope']);
+ok(moop_genome_missing($_g, ['c1', 'nope', '']) === ['nope'], 'an opened genome knows which names it lacks');
+ok((moop_genomic_sequence($_g, ['chr' => 'c1', 'start' => 24, 'end' => 40, 'strand' => '+'])['seq'] ?? '') === extractFastaRegion("$_ed/genome.fa", "$_ed/genome.fa.fai", 'c1', 24, 40)
+   && extractFastaRegion("$_ed/genome.fa", "$_ed/genome.fa.fai", 'c1', 24, 40) === 'TACCCCC', 'batch cut == single cut, across a line break and clipped at the end');
+moop_genome_close($_g);
+array_map('unlink', glob("$_ed/*")); @rmdir($_ed);
 @unlink($_gff);
 array_map('unlink', glob("$_ad/gs/*")); @rmdir("$_ad/gs"); array_map('unlink', glob("$_ad/*")); @rmdir($_ad);
 

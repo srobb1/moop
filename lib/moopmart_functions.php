@@ -742,12 +742,12 @@ function moopmartStreamGenomicFasta(
     int $flank_bp,
     $handle
 ): array {
-    $genome_file = genome_fasta_filename();
-    $fasta = "$assembly_dir/$genome_file";
-    $fai   = "$assembly_dir/$genome_file.fai";
-    if (!file_exists($fasta) || !file_exists($fai)) return [];   // the caller reports the missing file
+    // One .fai lookup for the whole batch and the FASTA held open -- not a scan of the .fai
+    // per gene (and per exon), which was most of a large genomic export's time.
+    $genome = moop_genome_open($assembly_dir, array_column($genes, 'chr'));
+    if (!$genome) return [];   // the caller reports the missing file
 
-    $missing = array_flip(moop_genome_missing_seqnames($assembly_dir, array_column($genes, 'chr')));
+    $missing = array_flip(moop_genome_missing($genome, array_column($genes, 'chr')));
     $skips   = [];
 
     // Pre-load all exon coords in one GFF pass for the exons mode
@@ -769,14 +769,19 @@ function moopmartStreamGenomicFasta(
         if ($mode === 'exons') {
             $gene_exons = $exon_coords[$uname] ?? [];
             if (empty($gene_exons)) { $skips['no_exons'][] = $uname; continue; }
-            $n = 0;
+            // Numbered 5'->3' along the gene, each type counted on its own: exon1 is the
+            // first exon transcribed and CDS1 the first coding block -- on the minus strand the
+            // highest coordinates. (They shared one counter in coordinate order, so a minus-
+            // strand gene's exon1 was its LAST exon, and the list read exon1, CDS2, exon3.)
+            if ($strand === '-') $gene_exons = array_reverse($gene_exons);
+            $n = [];
             foreach ($gene_exons as $exon) {
-                $n++;
-                $seq = extractFastaRegion($fasta, $fai, $chr, $exon['start'], $exon['end']);
-                if ($seq === null) continue;
-                if ($strand === '-') $seq = reverseComplement($seq);
-                $header = ">$uname.{$exon['type']}$n {$chr}:{$exon['start']}-{$exon['end']}($strand)";
-                fwrite($handle, "$header\n" . chunk_split($seq, 60, "\n"));
+                $k = strtolower($exon['type']);
+                $n[$k] = ($n[$k] ?? 0) + 1;
+                $got = moop_genomic_sequence($genome, ['chr' => $chr, 'start' => $exon['start'], 'end' => $exon['end'], 'strand' => $strand]);
+                if (!$got) continue;
+                $r = $got['region'];
+                fwrite($handle, ">$uname.{$exon['type']}{$n[$k]} {$chr}:{$r['start']}-{$r['end']}($strand)\n" . chunk_split($got['seq'], 60, "\n"));
             }
             continue;
         }
@@ -786,10 +791,11 @@ function moopmartStreamGenomicFasta(
         $part   = $mode === 'gene' ? 'body' : $mode;
         $region = moop_genomic_region(['chr' => $chr, 'start' => $gstart, 'end' => $gend, 'strand' => $strand], $part, $flank_bp);
         if (!$region) continue;
-        $got = moop_genomic_sequence($assembly_dir, $region);
+        $got = moop_genomic_sequence($genome, $region);
         if (!$got) continue;
         fwrite($handle, moop_genomic_fasta_record($uname, $part, $flank_bp, $got['region'], $got['seq']));
     }
+    moop_genome_close($genome);
     return $skips;
 }
 
