@@ -55,7 +55,15 @@ while (my $line = <NAMES>){
 		$name = $id;
 	}
   my $gid = $groupid;
-	$names{$gid}{isGene}=$id;
+  # The gene's own row (ID = GroupId: RefSeq/Ensembl geneNames.tsv) names the gene, as it does in
+  # the database (parse_GFF3_to_MOOP_TSV.pl). Without one, the group's last row, as always. A
+  # protein shared by two genes otherwise gave a gene the other gene's name (Bradyrhizobium, 42).
+  if ($id eq $gid){
+    $names{$gid}{isGene}=$id;
+    $names{$gid}{isGeneSelf}=1;
+  }elsif (!$names{$gid}{isGeneSelf}){
+    $names{$gid}{isGene}=$id;
+  }
 	$names{$id}{note}=$name;
 	$names{$id}{name}=$sym; 
   $source =~ s/PROTNLM\|.+\|(.+)/PROTNLM|$1/;

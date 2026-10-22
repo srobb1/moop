@@ -3,6 +3,22 @@ use strict;
 use warnings;
 use Data::Dumper;
 
+# --keep-unlisted: a record whose id is not in the names file keeps its header as delivered,
+# instead of being cleared to ">id". For RefSeq/Ensembl, whose FASTAs also hold records MOOP does not
+# load (non-coding XR_/lincRNA/tRNA transcripts) and whose geneNames.tsv has a row for every loaded
+# feature, "not in geneNames.tsv" means "not a database feature", so the source's description is
+# the only one there is (notes/GFF_FASTA_ID_ALIGNMENT_PLAN.md).
+#
+# --by-gene: every record takes its GENE's row (GroupId) instead of its own, which is what the
+# RefSeq/Ensembl database holds (parse_GFF3_to_MOOP_TSV.pl gives every row of a gene the gene's
+# name), so a retrieved FASTA record says what the gene page says.
+my ($keep_unlisted, $by_gene) = (0, 0);
+while (@ARGV && $ARGV[0] =~ /^--/){
+  my $option = shift;
+  if    ($option eq '--keep-unlisted'){ $keep_unlisted = 1 }
+  elsif ($option eq '--by-gene')      { $by_gene = 1 }
+  else  { die "updateFASTA: unknown option $option\n" }
+}
 my $fasta = shift;
 my $names = shift;
 
@@ -40,6 +56,7 @@ while (my $line = <NAMES>){
 	#$gid =~ s/CCA1t(\d{6})...\.(\d+)/CCA1g${1}000.$2/;
 	#$names{$id}{isGene}=$mainid;
 	$names{$id}{main}=$mainid;
+	$names{$id}{group}=$groupid;
 	$names{$id}{note}=$name;
 	$names{$id}{name}=$sym; 
 	$names{$id}{source}=$source;
@@ -146,13 +163,19 @@ while (my $line = <FASTA>){
 			# header carried, so a description cannot outlive the annotation that produced
 			# it -- the same retraction rule as the has-a-row-but-nothing-to-say case below.
 			# Previously such lines passed through untouched and kept a stale description
-			# indefinitely.
-			$line = ">$id";
+			# indefinitely. (--keep-unlisted: not a feature we name, so not ours to clear.)
+			$line = ">$id" unless $keep_unlisted;
 		}
 		else {
-			 my $name = $names{$key}{name};
-			 my $note = $names{$key}{note};
-			 my $source = $names{$key}{source};
+			 # --by-gene: the gene's row; its id (a GeneID, say) is an id too, never a symbol
+			 my $row = $key;
+			 if ($by_gene && exists $names{ $names{$key}{group} }){
+				 $row = $names{$key}{group};
+				 $is_id_like{$row} = 1;
+			 }
+			 my $name = $names{$row}{name};
+			 my $note = $names{$row}{note};
+			 my $source = $names{$row}{source};
        # ONE header shape, always:  >id  NAME  DESCRIPTION  SOURCE
        #
        # NAME falls back to the feature id when geneNames.tsv carries no "SYMBOL: " prefix,

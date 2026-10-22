@@ -181,6 +181,7 @@ sub rewrite_gff {
         if (@field < 9) { print $out $line; next }
         $lines++;
         my @attrs = split /;/, $field[8];
+        my ($own_id) = $field[8] =~ /(?:^|;)ID=([^;]*)/;
         my $touched = 0;
         foreach my $attr (@attrs) {
             my $eq = index($attr, '=');
@@ -188,6 +189,16 @@ sub rewrite_gff {
             my $key = substr($attr, 0, $eq);
             next unless grep { $_ eq $key } @ID_ATTRS;
             my $value = substr($attr, $eq + 1);
+            # Prepend mode: a Name= is an ID only when it is the feature's own (updateGFF.pl's
+            # fallback for an unnamed gene/mRNA); a real symbol must stay as it is. Prefixing every
+            # Name= gave Parastichopus 'parpar1_MOAP1' in the database and genes.gff while its
+            # FASTAs said 'MOAP1' (found 2026-10-21, notes/GFF_FASTA_ID_ALIGNMENT_PLAN.md). namesrc
+            # starts with the name source, not an ID ("Ensembl_Homo_sapiens|RBBH_Homolog|<id>|..."),
+            # so prepending to it only ever produced "parpar1_Ensembl_Homo_sapiens|...".
+            if (!length $strip) {
+                next if $key eq 'namesrc';
+                next if $key eq 'Name' && !(defined $own_id && $value eq $own_id);
+            }
             my $n;
             if (length $strip) {
                 # Anchored, not global: the redundant string this was built for
