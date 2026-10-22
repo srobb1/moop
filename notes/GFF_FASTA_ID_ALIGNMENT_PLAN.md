@@ -1,7 +1,8 @@
 # One ID per feature: RefSeq/Ensembl genes.gff and FASTAs match the database
 
-**Status:** PLAN, fourth version 2026-10-21 (compute box). Steps 1 and 2 done (step 1 pushed `39e17bb`); step 3
-(wiring) next. This version replaces the third ("one ID map per gene set, crossed once"): a review of that
+**Status:** PLAN, fourth version 2026-10-21 (compute box). Steps 1–3 done (`39e17bb`, `06f0ac8`,
+`347b931`, `83472e2`); Nematostella RS_101 shipped aligned, web checks in progress (see "Step 3
+results"); step 4 (rollout) next. This version replaces the third ("one ID map per gene set, crossed once"): a review of that
 design against the pipeline code found it would have to re-learn every special case the working
 code already handles (naming order, Ensembl versioning, gene-level annotation IDs, prefix/lift
 rewrites of every GFF line, non-coding FASTA records) to fix a problem that exists in RefSeq and
@@ -272,6 +273,55 @@ naming v2) and reloads, so the fix lands with its naming v2 build after OMA part
 lifted models whose reading frame the liftover broke; 8 are mitochondrial (ATP6, ATP8, COX1–3,
 ND3–5), translated with the standard instead of the invertebrate mitochondrial code — real
 proteins. Listed exception; the database still loads a protein row for each.
+
+## Step 3 results (2026-10-21)
+
+**Wiring** (`347b931`, `process_one_geneset.sh`, GFF path): RefSeq/Ensembl only, after features.tsv
+(it and feature_coords.tsv read the source IDs): `build_id_map.pl` (`--gff $SRC_GFF`: delivered, or
+`genes.versioned.gff` for Ensembl) → `format_gff_ids.pl` → `updateGFF.pl` → `updateFASTA.pl
+--keep-unlisted --by-gene` on the three FASTAs. `restore_unchanged` and genes.gtf moved below it, so
+an unchanged rerun keeps every file, mtime and index. genes.gff is re-derived from the source on every
+run, so it is never formatted twice. The gate runs after the load on every GFF gene set, warns only
+(databases loaded before `03eff13` fail on names until reloaded); details in
+`id_alignment.details.tsv`. Neither it nor `id_map.tsv` is in copy2moop's file list.
+
+The v2 build tree runs the repo's `scripts/` through a symlink, so a commit here is the next build's
+code. Added `v2/id_alignment_exceptions.tsv` → repo (the gate reads it from `$REPO`).
+
+**Nematostella RS_101** (v2 build, no reload; backup of the old files in
+`dev/smr_dev/id_map_step3/before/`): gate clean on 116,341 features (10,651 non-coding transcripts
+not in the database, headers kept); organism.sqlite, features.tsv, feature_coords.tsv unchanged; FASTA
+IDs and sequences unchanged; output byte-identical to the step-2 copy; a second run rebuilt nothing.
+transcript.nt.fa is now a real file. 18,765 non-coding genes (tRNA, rRNA, lncRNA, sn/snoRNA) keep
+`gene-` IDs, as planned. Shipped (copy2moop, 40 files).
+
+Web checks on Nematostella: gene page good, FASTA sequences in the new header format, exon retrieval
+from the gene structure diagram works. **Still to check:** BLAST link-outs, JBrowse search (by new ID,
+and by `gene-LOC…` once the text index includes `Alias` — web agent on it), Data Exporter
+coordinates.
+
+**Congeria COKUS1KC** (other; regression check): no file changed, gate clean; shipped (busco.json only).
+
+**Gate fixes found on the way** (`83472e2`): an unnamed other/lift CDS/protein has its mRNA's ID as
+database description and a bare `>id` header — no description, not a mismatch (Congeria: 46,444 false
+`fasta_name` → 0). The 3,041 Parastichopus internal-stop models are missing *proteins*, now listed by
+protein ID (`…:pep`). Parastichopus still fails on names only (95,740: the `parpar1_` name bug in its
+database), fixed with its rebuild.
+
+**Open:**
+- FASTA headers carry naming's evidence tag, as the database does: `>XP_001617561.3 LOC5495712 late
+  histone H2B.L4 [SRC] RefSeq`. Keep, or strip the `[SRC]`/`[ISO|…]` tag from FASTA headers?
+- Isoform-level descriptions (`emit_refseq` per row, drop `--by-gene`)?
+- Bradyrhizobium symbols are GeneIDs (locus_tag when there is no `gene=`?).
+- `updateGFF.pl` drops the source `Note=` (Nematostella 22,479 lines).
+- Gate not yet on the transcriptome-only (T2G) path.
+- Drift between this doc and step 2: the formatter's mRNA `Alias=` also carries `gene=`,
+  `locus_tag=`, source `Name=` and `transcript_id=` (wider than the table above); the step-2 harness
+  never compared features.tsv (step 3 did: unchanged); the gate baseline covered 6 gene sets, not
+  all; the Danio versioned-input rerun is done (gate clean).
+
+**Next — step 4:** run the other RefSeq/Ensembl gene sets (no reload: genes.gff, FASTAs, indexes),
+gate each, ship, re-register JBrowse. Amphimedon and Bradyrhizobium need a reload to pass on names.
 
 ## Why not the full redesign (third version)
 
