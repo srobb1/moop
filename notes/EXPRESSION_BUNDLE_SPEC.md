@@ -1,6 +1,7 @@
 # Expression bundle — the contract between the compute box and MOOP
 
-**Status:** agreed 2026-10-09 (user). This is the format MOOP reads. Anything that produces it —
+**Status:** agreed 2026-10-09 (user). This is the format MOOP reads. Single-cell data adds to it:
+`EXPRESSION_SINGLE_CELL_SPEC.md`. Anything that produces it —
 today's htseq-count output, a future read-count system, salmon — is the compute box's business.
 Background and history: `EXPRESSION_COUNT_TABLES_PLAN.md`.
 
@@ -133,7 +134,8 @@ PRJNA189768.76	early blastula (7 hpf)	1	embryo, 7hpf early blastula	SRR765898	PR
 - `label` (required) — the experiment's name on the page.
 - `access_level` (required) — `PUBLIC`, `COLLABORATOR`, `IP_IN_RANGE` or `ADMIN`. Only ever narrows
   who sees it; the reader must already have access to the gene set. A misspelling fails closed (ADMIN only).
-- `assay` — `bulk_rna`, or `scrna_pseudobulk` (cell types as groups).
+- `assay` — `bulk_rna`, or `scrna` (single-cell: cell types as groups; its extra files and rules
+  are in `EXPRESSION_SINGLE_CELL_SPEC.md`).
 - `detect_threshold` — TPM a condition must reach for "detected". Default 1.
 - `citation` — `PMID:nnnn` becomes a PubMed link.
 
