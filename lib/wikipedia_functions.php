@@ -10,6 +10,20 @@
  */
 
 /**
+ * A Wikipedia plain-text extract (explaintext) made fit to show. The API removes pronunciation
+ * markup -- the IPA and the "listen" link -- but leaves the brackets around it, so the lead of
+ * Echinoderm reads "An echinoderm () is any animal of the phylum Echinodermata (), ..." and
+ * Mollusca "molluscs or mollusks ()". Brackets holding nothing but spaces and separators go,
+ * with the space before them; a separator left at the start of a bracket is dropped
+ * ("(; from Greek ...)" -> "(from Greek ...)").
+ */
+function moop_wikipedia_clean_extract(string $text): string {
+    $text = preg_replace('/\s*\(\s*[;,:]?\s*\)/u', '', $text);
+    $text = preg_replace('/\(\s*[;,:]\s*/u', '(', $text);
+    return trim($text);
+}
+
+/**
  * Fetch Wikipedia data for a taxonomic rank/level
  * Gets description and image from Wikipedia using the search API
  *
@@ -79,7 +93,7 @@ function getWikipediaTaxonomyData($rank_name) {
         // It was also byte-based: strlen/substr on UTF-8 can sever a multi-byte character
         // and emit a broken byte. Dropping the cut removes that hazard rather than papering
         // over it with mb_ equivalents.
-        $result['description'] = trim($page['extract']);
+        $result['description'] = moop_wikipedia_clean_extract($page['extract']);
     }
     
     // Extract image (try thumbnail first, then original)
@@ -168,7 +182,7 @@ function getWikipediaTaxonomyDataFromSearch($rank_name) {
         if (!empty($page['extract'])) {
             // exintro=true already limits this to the lead section -- see the note on the
             // first of these four call sites. No second cut.
-            $result['description'] = trim($page['extract']);
+            $result['description'] = moop_wikipedia_clean_extract($page['extract']);
         }
         
         if (!empty($page['thumbnail']['source'])) {
@@ -328,7 +342,7 @@ function moop_wikipedia_fetch_organism_uncached($organism_name, $scientific_name
         if (!empty($page['extract'])) {
             // exintro=true already limits this to the lead section -- see the note on the
             // first of these four call sites. No second cut.
-            $result['description'] = trim($page['extract']);
+            $result['description'] = moop_wikipedia_clean_extract($page['extract']);
         }
         
         if (!empty($page['thumbnail']['source'])) {
@@ -434,7 +448,7 @@ function getWikipediaOrganismDataFromSearch($organism_name) {
         }
 
         // exintro=true already limits this to the lead section. No second cut.
-        $result['description'] = trim($page['extract']);
+        $result['description'] = moop_wikipedia_clean_extract($page['extract']);
 
         if (!empty($page['thumbnail']['source'])) {
             $result['image_url'] = $page['thumbnail']['source'];

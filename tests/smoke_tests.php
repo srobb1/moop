@@ -2096,6 +2096,17 @@ ok(moop_feature_coords_genes_beside($_nd, 'g9')['left'] === [] && moop_feature_c
 array_map('unlink', glob("$_nd/*")); @rmdir($_nd);
 
 // ----------------------------------------------------------------------------
+group('Wikipedia extracts: brackets the API emptied are removed');
+require_once "$BASE/lib/wikipedia_functions.php";
+ok(moop_wikipedia_clean_extract('An echinoderm () is any animal of the phylum Echinodermata (), which')
+   === 'An echinoderm is any animal of the phylum Echinodermata, which',
+   'an emptied pronunciation bracket goes, with the space before it');
+ok(moop_wikipedia_clean_extract('molluscs or mollusks (). 86,600') === 'molluscs or mollusks. 86,600', 'before a full stop too');
+ok(moop_wikipedia_clean_extract('Cnidaria (; from Greek knide) is') === 'Cnidaria (from Greek knide) is',
+   'a bracket that still has words keeps them, minus the separator left at its start');
+ok(moop_wikipedia_clean_extract('the sea (or ocean) is') === 'the sea (or ocean) is', 'a real bracket is untouched');
+
+// ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
 ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
    'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',
