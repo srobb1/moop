@@ -53,15 +53,7 @@ function indexTraverseTree(array $node, array $chain = []): array {
     return $out;
 }
 
-$organism_groups_map = [];
-foreach ($visible_entries as $entry) {
-    $org = $entry['organism'];
-    if (!isset($organism_groups_map[$org])) $organism_groups_map[$org] = [];
-    foreach ($entry['groups'] as $g) {
-        if (!in_array($g, $organism_groups_map[$org], true))
-            $organism_groups_map[$org][] = $g;
-    }
-}
+$organism_groups_map = moop_organism_groups_map($visible_entries);   // sorted, one order site-wide
 
 $organism_list = [];
 foreach (indexTraverseTree($taxonomy_tree_data['tree']) as $leaf) {

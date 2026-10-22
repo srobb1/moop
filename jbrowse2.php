@@ -24,6 +24,7 @@ $scope_tree      = [];   // [organism] = [assembly, ...]
 $organism_info   = [];   // [organism] = {genus, species, common_name}
 $organism_groups = [];   // [organism] = [group, ...]
 $all_groups      = [];   // distinct non-PUBLIC groups, sorted
+$jb_sources      = [];   // the sources whose assembly is registered with the browser
 $assembly_names  = [];   // [organism][assembly] = human-readable name (if set)
 
 // Only assemblies registered with the genome browser: the picker used to offer every assembly
@@ -55,15 +56,14 @@ foreach ($raw_sources as $src) {
         $assembly_names[$org][$asm] = ($gn && $gn !== $asm) ? $gn : '';
     }
 
-    if (!isset($organism_groups[$org])) $organism_groups[$org] = [];
-    foreach ($src['groups'] ?? [] as $g) {
-        if ($g === 'PUBLIC') continue;
-        if (!in_array($g, $organism_groups[$org], true)) $organism_groups[$org][] = $g;
-        if (!in_array($g, $all_groups, true))            $all_groups[] = $g;
-    }
+    $jb_sources[] = $src;
 }
+// The registered assemblies' groups: per organism through the one shared list (sorted, legacy
+// PUBLIC skipped), and the distinct set for the filter chips from the same lists.
+$organism_groups = moop_organism_groups_map($jb_sources);
+$all_groups = array_values(array_unique(array_merge([], ...array_values($organism_groups ?: [[]]))));
 ksort($scope_tree);
-sort($all_groups);
+usort($all_groups, 'moop_group_name_order');
 
 // Deep-link parameters (coming from gene page / BLAST / assembly page)
 $dl_organism = '';

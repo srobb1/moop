@@ -144,6 +144,43 @@ function getAccessibleOrganismsInGroup($group_name, $group_data) {
 }
 
 /**
+ * Each organism's groups, for the group chips beside organism names: ONE list per organism, in
+ * one order, everywhere -- alphabetical, ignoring case (moop_group_name_order()).
+ *
+ * The home page, Search, the Data Exporter and the genome browser each built this map with their
+ * own copy of the same loop, keeping groups in whatever order the entries happened to list them --
+ * so Nematostella read "Cnidaria, Sea anemone" and Scolanthus "Sea anemone, Cnidaria" side by side
+ * (2026-10-22). The copies had drifted in other ways too: only the genome browser skipped the
+ * legacy PUBLIC keyword, and only in upper case.
+ *
+ * Which entries to read stays the caller's choice (visible gene sets, registered assemblies ...).
+ *
+ * @param iterable $entries rows with 'organism' and 'groups' (organism_assembly_groups.json rows,
+ *                          or flattenSourcesList() sources)
+ * @return array<string, list<string>> organism => its groups, sorted, without duplicates
+ */
+function moop_organism_groups_map(iterable $entries): array {
+    $map = [];
+    foreach ($entries as $e) {
+        $org = (string)($e['organism'] ?? '');
+        if ($org === '') continue;
+        $map[$org] ??= [];
+        foreach ($e['groups'] ?? [] as $g) {
+            $g = (string)$g;
+            if (strtoupper(trim($g)) === 'PUBLIC') continue;   // legacy keyword, not a real group
+            if (!in_array($g, $map[$org], true)) $map[$org][] = $g;
+        }
+    }
+    foreach ($map as &$groups) usort($groups, 'moop_group_name_order');
+    return $map;
+}
+
+/** The one order for group names on screen: alphabetical, case-insensitive, numbers natural. */
+function moop_group_name_order(string $a, string $b): int {
+    return strnatcasecmp($a, $b) ?: strcmp($a, $b);
+}
+
+/**
  * Get all groups that contain a specific organism
  * Returns group info including accessible organism count for each group
  * 
@@ -178,8 +215,8 @@ function getGroupsForOrganism($organism_name, $group_data = null) {
         $info['count'] = count($accessible_organisms);
     }
     
-    // Sort by group name
-    ksort($organism_groups);
+    // Sort by group name -- the same order as every other group chip list (moop_group_name_order())
+    uksort($organism_groups, 'moop_group_name_order');
     
     return $organism_groups;
 }

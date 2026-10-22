@@ -126,15 +126,9 @@ $annotation_source_names = array_keys($annotation_source_names);
 sort($annotation_source_names);
 
 // Build organism → groups map for group chips in the flat organism list
-$organism_groups = [];
-foreach (getGroupData() as $entry) {
-    $org = $entry['organism'];
-    if (!isset($organism_groups[$org])) $organism_groups[$org] = [];
-    foreach ($entry['groups'] as $g) {
-        if (!in_array($g, $organism_groups[$org], true))
-            $organism_groups[$org][] = $g;
-    }
-}
+// Only the gene sets this visitor may see, like the home page: reading every entry put the names of
+// groups holding only private gene sets beside organisms the visitor can open.
+$organism_groups = moop_organism_groups_map(moop_visible_group_entries(getGroupData()));   // sorted, one order site-wide
 
 // Chr names are loaded dynamically via API when exactly one assembly is selected.
 // No pre-loading here — avoids reading N×M cache files on every page load.

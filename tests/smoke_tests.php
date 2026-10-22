@@ -2096,6 +2096,21 @@ ok(moop_feature_coords_genes_beside($_nd, 'g9')['left'] === [] && moop_feature_c
 array_map('unlink', glob("$_nd/*")); @rmdir($_nd);
 
 // ----------------------------------------------------------------------------
+group('Group chips: one sorted list per organism, on every page');
+$_gm = moop_organism_groups_map([
+    ['organism' => 'Scolanthus', 'groups' => ['Sea anemone', 'Cnidaria']],
+    ['organism' => 'Nematostella', 'groups' => ['Cnidaria']],
+    ['organism' => 'Nematostella', 'groups' => ['Sea anemone', 'Cnidaria', 'public', 'PUBLIC']],
+    ['organism' => 'Lonely', 'groups' => []],
+    ['organism' => 'Mixed', 'groups' => ['bats', 'Bats 10', 'Bats 9', 'Ants']],
+]);
+ok($_gm['Scolanthus'] === $_gm['Nematostella'] && $_gm['Nematostella'] === ['Cnidaria', 'Sea anemone'],
+   'two organisms in the same groups list them in the same order, whatever order the entries gave');
+ok($_gm['Lonely'] === [] && !in_array('public', $_gm['Nematostella'], true),
+   'an organism with no groups gets an empty list; the legacy PUBLIC keyword is skipped in any case');
+ok($_gm['Mixed'] === ['Ants', 'bats', 'Bats 9', 'Bats 10'], 'alphabetical ignoring case, numbers in natural order');
+
+// ----------------------------------------------------------------------------
 group('Wikipedia extracts: brackets the API emptied are removed');
 require_once "$BASE/lib/wikipedia_functions.php";
 ok(moop_wikipedia_clean_extract('An echinoderm () is any animal of the phylum Echinodermata (), which')

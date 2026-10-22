@@ -65,11 +65,8 @@ foreach ($raw_sources as $src) {
         $assembly_names[$org][$asm] = ($gn && $gn !== $asm) ? $gn : '';
     }
 
-    if (!isset($organism_groups[$org])) $organism_groups[$org] = [];
-    foreach ($src['groups'] ?? [] as $g) {
-        if (!in_array($g, $organism_groups[$org], true)) $organism_groups[$org][] = $g;
-    }
 }
+$organism_groups = moop_organism_groups_map($raw_sources);   // sorted, one order site-wide
 
 // Sort tree: organisms alphabetically, assemblies alphabetically, gene_sets alphabetically
 ksort($scope_tree);
