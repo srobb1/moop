@@ -1,11 +1,5 @@
 <div class="container mt-4">
 
-  <!-- Back to Admin Dashboard -->
-  <div class="mb-3">
-    <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-    </a>
-  </div>
 
   <!-- Messages -->
   <?php if ($message): ?>
@@ -309,11 +303,6 @@
   </div>
   <?php endif; ?>
 
-  <div class="mb-5">
-    <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-    </a>
-  </div>
 
 </div><!-- /container -->
 

@@ -673,159 +673,26 @@
   <div class="mb-4"></div>
 
 
-  <!-- System Configuration -->
+  <!-- The admin tools: moop_admin_tools() (lib/admin_tools.php), the same list as the Quick
+       Links sidebar, so a tool added there appears in both. These were hand-written cards in
+       three idioms -- some with a header bar, some without, button colours mixed within a group. -->
+  <?php require_once __DIR__ . '/../../lib/admin_tools.php'; ?>
+  <?php foreach (moop_admin_tools() as $_grp): ?>
   <div class="mt-5">
-    <h3 class="mb-3"><i class="fa fa-cog"></i> System Configuration</h3>
+    <h3 class="mb-3"><i class="fa fa-<?= htmlspecialchars($_grp['icon']) ?>"></i> <?= htmlspecialchars($_grp['heading']) ?></h3>
     <div class="row">
+      <?php foreach ($_grp['tools'] as $_tool): ?>
       <div class="col-md-6 mb-3">
         <div class="card h-100">
           <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-cog"></i> Manage Site Configuration</h5>
-            <p class="card-text">Edit site settings like title, branding, and admin contact information.</p>
-            <a href="manage_site_config.php" class="btn btn-primary">Go to Site Configuration</a>
+            <h5 class="card-title"><i class="fa fa-<?= htmlspecialchars($_tool['icon']) ?>"></i> <?= htmlspecialchars($_tool['title']) ?></h5>
+            <p class="card-text"><?= htmlspecialchars($_tool['desc']) ?></p>
+            <a href="<?= htmlspecialchars($_tool['file']) ?>" class="btn <?= $_grp['btn'] ?>"><?= htmlspecialchars($_tool['cta']) ?></a>
           </div>
         </div>
       </div>
-      
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-users"></i> Manage Users</h5>
-            <p class="card-text">Add new users to the system and manage user accounts.</p>
-            <a href="manage_users.php" class="btn btn-primary">Go to Manage Users</a>
-          </div>
-        </div>
-      </div>
+      <?php endforeach; ?>
     </div>
   </div>
-
-  <!-- Organism Cache Status -->
-  <div class="mt-5">
-    <h3 class="mb-3"><i class="fa fa-database"></i> Data Management</h3>
-
-
-    <div class="row">
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-header adm-head">
-            <h5 class="card-title mb-0"><i class="fa fa-clipboard-list"></i> New Organism Setup Checklist</h5>
-          </div>
-          <div class="card-body">
-            <p class="card-text">Step-by-step guide for adding a new organism with quick links to all required admin tools.</p>
-            <a href="organism_checklist.php" class="btn btn-success">Go to Setup Checklist</a>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-dna"></i> Manage Organisms</h5>
-            <p class="card-text">View current organisms, assemblies, and learn how to add new data.</p>
-            <a href="manage_organisms.php" class="btn btn-success">Go to Manage Organisms</a>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-layer-group"></i> Manage Groups</h5>
-            <p class="card-text">Configure organism assembly groups and group descriptions.</p>
-            <a href="manage_groups.php" class="btn btn-success">Go to Manage Groups</a>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-tags"></i> Manage Annotation Sections</h5>
-            <p class="card-text">Configure annotation section types and descriptions.</p>
-            <a href="manage_annotations.php" class="btn btn-success">Go to Annotation Sections</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-book"></i> Manage Glossary</h5>
-            <p class="card-text">Define the dashed-underline help terms shown across the site.</p>
-            <a href="manage_glossary.php" class="btn btn-success">Go to Manage Glossary</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-header adm-head">
-            <h5 class="card-title mb-0"><i class="fa fa-dna"></i> JBrowse Track Management</h5>
-          </div>
-          <div class="card-body">
-            <p class="card-text">Manage JBrowse tracks and configurations. Register Google Sheets, sync tracks, validate URLs, and monitor track access.</p>
-            <a href="manage_jbrowse.php" class="btn btn-primary">Go to JBrowse Management</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-header adm-head">
-            <h5 class="card-title mb-0"><i class="fa fa-external-link-alt"></i> BLAST Linkouts</h5>
-          </div>
-          <div class="card-body">
-            <p class="card-text">Configure which linkout buttons appear on BLAST results: gene page, JBrowse, and custom external URLs with placeholder support.</p>
-            <a href="manage_blast_linkouts.php" class="btn btn-primary">Manage Linkouts</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Developer & Maintenance -->
-  <div class="mt-5">
-    <h3 class="mb-3"><i class="fa fa-wrench"></i> Developer & Maintenance</h3>
-    <div class="row">
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-code"></i> PHP Function Registry</h5>
-            <p class="card-text">Manage and view all PHP functions. Update, search, and track usage.</p>
-            <a href="manage_registry.php" class="btn btn-info">Manage PHP Registry</a>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-file-code"></i> JavaScript Function Registry</h5>
-            <p class="card-text">Manage and view all JavaScript functions. Update, search, and track usage.</p>
-            <a href="manage_js_registry.php" class="btn btn-info">Manage JS Registry</a>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-lock"></i> Filesystem Permissions</h5>
-            <p class="card-text">Complete guide to file and directory permissions. Check and fix permission issues.</p>
-            <a href="manage_filesystem_permissions.php" class="btn btn-info">Check Permissions</a>
-          </div>
-        </div>
-      </div>
-      
-      <div class="col-md-6 mb-3">
-        <div class="card h-100">
-          <div class="card-body">
-            <h5 class="card-title"><i class="fa fa-exclamation-triangle"></i> Error Logs</h5>
-            <p class="card-text">View and manage application error logs for debugging and monitoring.</p>
-            <a href="manage_error_log.php" class="btn btn-info">View Error Logs</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <?php endforeach; ?>
 </div>

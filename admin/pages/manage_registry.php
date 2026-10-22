@@ -6,12 +6,6 @@
 ?>
 
 <div class="container mt-5">
-    <!-- Back to Admin Dashboard Link -->
-    <div class="mb-4">
-      <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-      </a>
-    </div>
 
     <h2><i class="fa fa-code"></i> PHP Function Registry</h2>
     
@@ -238,11 +232,5 @@
         <script type="application/json" id="registryData">
           <?php echo json_encode($registry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?></script>
     <?php endif; ?>
-    <!-- Back to Admin Dashboard Link (Bottom) -->
-    <div class="mt-5 mb-4">
-      <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-      </a>
-    </div>
 </div>
 

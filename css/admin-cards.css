@@ -123,3 +123,28 @@
   margin: 1.1rem 0 0.4rem;
 }
 .adm-group-label:first-of-type { margin-top: 0; }
+
+/* Quick Links: the sidebar on every admin page (admin/pages/_quick_links.php, placed by
+   includes/layout.php). It links to other PAGES, so it is a menu, not a table of contents:
+   icons per tool, the current page marked, no scrollspy. Sticky on wide screens; below lg it
+   folds behind a button above the page. */
+.adm-layout { display: flex; gap: 1.5rem; align-items: flex-start; }
+.adm-layout-main { flex: 1 1 auto; min-width: 0; }   /* min-width: wide tables scroll, not the page */
+.adm-quicklinks { flex: 0 0 13.5rem; position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto;
+  font-size: 0.875rem; }
+.adm-ql-title { font-weight: 600; letter-spacing: 0.04em; color: var(--adm-accent-strong);
+  padding: 0 0.6rem 0.4rem; border-bottom: 1px solid var(--adm-border); margin-bottom: 0.25rem; }
+.adm-ql-group { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #6c757d; padding: 0.75rem 0.6rem 0.2rem; }
+.adm-ql-link { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.6rem; border-radius: 0.35rem;
+  color: #343a40; text-decoration: none; border-left: 3px solid transparent; }
+.adm-ql-link .fa-fw { color: var(--adm-accent); }
+.adm-ql-link:hover { background: var(--adm-wash); color: #212529; }
+.adm-ql-link.active { background: var(--adm-wash); border-left-color: var(--adm-accent); font-weight: 600; color: #212529; }
+.adm-ql-label { flex: 1 1 auto; }
+.adm-ql-badge { font-size: 0.68rem; }
+.adm-ql-toggle { background: var(--adm-wash); border: 1px solid var(--adm-border); color: var(--adm-accent-strong); }
+@media (max-width: 991.98px) {
+  .adm-layout { display: block; }
+  .adm-quicklinks { position: static; max-height: none; margin-bottom: 1rem; }
+}

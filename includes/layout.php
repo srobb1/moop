@@ -172,7 +172,15 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         <?php include_once __DIR__ . '/navbar.php'; ?>
         
         <div class="container-fluid py-4">
-            <?php 
+            <?php
+            // Admin pages get the Quick Links sidebar beside their content. admin_init.php marks
+            // the request; the session check keeps it off the page an admin previews as public.
+            $__admin_nav = defined('MOOP_ADMIN_PAGE') && moop_session_is_admin() && !moop_viewing_as_public();
+            if ($__admin_nav): ?>
+            <div class="adm-layout">
+                <?php include __DIR__ . '/../admin/pages/_quick_links.php'; ?>
+                <div class="adm-layout-main">
+            <?php endif;
             // Include content file
             // Content file has access to all extracted variables
             if (file_exists($content_file)) {
@@ -183,7 +191,10 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
                 echo 'Error: Content file not found: ' . htmlspecialchars($content_file);
                 echo '</div>';
             }
-            ?>
+            if ($__admin_nav): ?>
+                </div>
+            </div>
+            <?php endif; ?>
             
             <!-- Back button at bottom (if provided in options) -->
             <?php

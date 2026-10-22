@@ -1,10 +1,4 @@
 <div class="container mt-5" id="top">
-  <!-- Back to Admin Dashboard Link -->
-  <div class="mb-4">
-    <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-    </a>
-  </div>
   
   <?php 
     echo generatePermissionAlert(
@@ -708,12 +702,6 @@
     <?php endforeach; ?>
   </div>
 
-  <!-- Back to Admin Dashboard Link (Bottom) -->
-  <div class="mt-5 mb-4">
-    <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-      <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-    </a>
-  </div>
 </div>
 
 <!-- Hidden form for delete-group action -->

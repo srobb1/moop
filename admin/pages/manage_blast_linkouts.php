@@ -17,11 +17,6 @@
   <div class="row">
     <div class="col-12">
 
-      <div class="mb-4">
-        <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-          <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-        </a>
-      </div>
 
       <h2><i class="fa fa-external-link-alt"></i> Manage BLAST Linkouts</h2>
       <p class="text-muted">Configure which buttons appear on each BLAST result hit. Changes take effect immediately for new searches.</p>

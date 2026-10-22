@@ -105,9 +105,6 @@
           <button onclick="window.location.reload()" class="btn btn-success btn-lg">
             <i class="fa fa-sync"></i> Check Again
           </button>
-          <a href="admin.php" class="btn btn-secondary btn-lg ms-2">
-            <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-          </a>
         </div>
       </div>
       

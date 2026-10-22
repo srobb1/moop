@@ -39,6 +39,9 @@ include_once __DIR__ . '/../includes/config_init.php';
 // Load access control and verify admin role
 include_once __DIR__ . '/admin_access_check.php';
 
+// Marks this request as an admin page: includes/layout.php then draws the Quick Links sidebar.
+if (!defined('MOOP_ADMIN_PAGE')) define('MOOP_ADMIN_PAGE', true);
+
 // Get config instance - available for use in admin pages
 $config = ConfigManager::getInstance();
 

@@ -21,12 +21,6 @@
 ?>
 
 <div class="container mt-4">
-    <!-- Back to Admin Dashboard Link -->
-    <div class="mb-4">
-      <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-      </a>
-    </div>
 
     <div class="row">
         <div class="col-md-12">
@@ -214,10 +208,4 @@
         </div>
     </div>
 
-    <!-- Back to Admin Dashboard Link (Bottom) -->
-    <div class="mt-5 mb-4">
-      <a href="admin.php" class="btn btn-outline-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Admin Dashboard
-      </a>
-    </div>
 </div>
