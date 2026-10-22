@@ -926,12 +926,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const label = `${row.organism} / ${row.assembly} / ${geneSetName}`;
         busy(btn, true);
         showLog('info', `Preparing the gene track for ${label}…`);
-        post(endpoint, { organism: row.organism, assembly: row.assembly, gene_set: geneSetName, text_index: '0' })
+        // The search index comes with the track (attributes: the server's default,
+        // MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES -- Name,ID,Alias). It was sent as '0' here, so no
+        // gene set had one and JBrowse's search box found no gene by name (2026-10-21).
+        post(endpoint, { organism: row.organism, assembly: row.assembly, gene_set: geneSetName, text_index: '1' })
             .then(data => {
                 if (data.success) {
                     gs.is_registered = true;
                     gs.gff_prepped = true;
-                    showLog('success', `Gene track ready for ${label}.`, data.output);
+                    const ix = data.text_index_result;
+                    if (ix && !ix.success) {
+                        showLog('warning', `Gene track ready for ${label}, but its search index was not built: ${ix.error || 'unknown error'}`, data.output);
+                    } else {
+                        showLog('success', `Gene track and search index ready for ${label}.`, data.output);
+                    }
                     redrawRow(row);
                 } else {
                     showLog('danger', `Gene track for ${label} failed: ${data.error || 'unknown error'}`, data.output);

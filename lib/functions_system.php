@@ -399,7 +399,12 @@ function moop_find_jbrowse_cli(): ?string {
         return $cached;
     }
     $root = dirname(__DIR__);
+    // /usr/local/bin first: scripts/install_jbrowse_cli.sh puts it there, labelled bin_t. A copy
+    // inside the document root is httpd_sys_content_t, which SELinux lets the web server read
+    // but not run -- from php-fpm is_executable() is false there, so it is only a fallback for
+    // shells and hosts without SELinux.
     $candidates = [
+        '/usr/local/bin/jbrowse',
         "$root/tools/jbrowse-cli/jbrowse-run.sh",
         "$root/tools/jbrowse-cli/bin/jbrowse",
         (getenv('HOME') ?: '') . '/.npm-global/bin/jbrowse',
