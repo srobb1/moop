@@ -176,9 +176,10 @@ function _fasta_key_for_type(string $type): ?string {
  * them. Without them this looks a uniquename up across the organism's entire database,
  * and a uniquename is only unique within a gene set — an organism carrying two gene sets
  * (or two assemblies) can return several rows for one name, whereupon the last row
- * silently wins and a feature can be typed from the wrong gene set. The sibling
- * buildTypedIdsForGenes() below has always scoped its lookups with `f.gene_set_id = ?`;
- * this one did not, which is the inconsistency that made the bug easy to miss.
+ * silently wins and a feature can be typed from the wrong gene set. (A sibling,
+ * buildTypedIdsForGenes(), scoped its lookups with `f.gene_set_id = ?` and this one did
+ * not -- the inconsistency that made the bug easy to miss. The sibling had no callers and
+ * was deleted 2026-10-21.)
  */
 function buildTypedIds(array $uniquenames, string $db_path, string $assembly = '', string $gene_set = ''): array {
     $result = array_fill_keys($uniquenames, null);
@@ -371,71 +372,6 @@ function expandFeaturesToAllSequenceTypes(
     }
 }
 
-
-function buildTypedIdsForGenes(array $gene_uniquenames, int $gene_set_id, string $db_path): array {
-    $result = [];
-    if (empty($gene_uniquenames) || !file_exists($db_path)) return $result;
-
-    $gp = implode(',', array_fill(0, count($gene_uniquenames), '?'));
-    try {
-        $dbh = getDbConnection($db_path);
-
-        // Level 1: direct mRNA/transcript children of the genes
-        $stmt = $dbh->prepare(
-            "SELECT f.feature_uniquename, f.feature_type
-               FROM feature f
-               JOIN feature g ON f.parent_feature_id = g.feature_id
-              WHERE g.feature_uniquename IN ($gp)
-                AND f.gene_set_id = ?
-                AND f.feature_type IN ('mRNA', 'transcript')"
-        );
-        $stmt->execute(array_merge(array_values($gene_uniquenames), [$gene_set_id]));
-        $mrna_ids = [];
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $result[$row['feature_uniquename']] = $row['feature_type'];
-            $mrna_ids[] = $row['feature_uniquename'];
-        }
-
-        // Level 2: CDS children of mRNAs
-        $cds_ids = [];
-        if (!empty($mrna_ids)) {
-            $mp   = implode(',', array_fill(0, count($mrna_ids), '?'));
-            $stmt = $dbh->prepare(
-                "SELECT f.feature_uniquename, f.feature_type
-                   FROM feature f
-                   JOIN feature m ON f.parent_feature_id = m.feature_id
-                  WHERE m.feature_uniquename IN ($mp)
-                    AND f.gene_set_id = ?
-                    AND f.feature_type IN ('cds', 'CDS')"
-            );
-            $stmt->execute(array_merge(array_values($mrna_ids), [$gene_set_id]));
-            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $result[$row['feature_uniquename']] = $row['feature_type'];
-                $cds_ids[] = $row['feature_uniquename'];
-            }
-        }
-
-        // Level 3: protein children of CDS (gene → mRNA → cds → protein)
-        if (!empty($cds_ids)) {
-            $cp   = implode(',', array_fill(0, count($cds_ids), '?'));
-            $stmt = $dbh->prepare(
-                "SELECT f.feature_uniquename, f.feature_type
-                   FROM feature f
-                   JOIN feature c ON f.parent_feature_id = c.feature_id
-                  WHERE c.feature_uniquename IN ($cp)
-                    AND f.gene_set_id = ?
-                    AND f.feature_type IN ('protein', 'polypeptide')"
-            );
-            $stmt->execute(array_merge(array_values($cds_ids), [$gene_set_id]));
-            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $result[$row['feature_uniquename']] = $row['feature_type'];
-            }
-        }
-    } catch (Exception $e) {
-        // Return whatever we found; extractSequencesForAllTypes handles empty
-    }
-    return $result;
-}
 
 /**
  * Extract sequences using type-based FASTA routing.

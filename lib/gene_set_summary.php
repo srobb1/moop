@@ -21,6 +21,7 @@
  */
 
 require_once __DIR__ . '/busco.php';
+require_once __DIR__ . '/feature_types.php';   // moop_transcript_type_sql()
 require_once __DIR__ . '/cache_paths.php';
 
 /**
@@ -63,8 +64,9 @@ function moop_homology_flags(): array {
  * 2: homology_* (genes with a homolog/ortholog) replaced annotated_* (any annotation).
  * 3: homology types chosen by name or config flag, recorded in the file.
  * 4: l50 in the .fai-derived assembly figures.
+ * 5: transcripts counted by moop_transcript_types(), not feature_type = 'mRNA' (S. lugubris read 0).
  */
-const MOOP_GENE_SET_SUMMARY_VERSION = 4;
+const MOOP_GENE_SET_SUMMARY_VERSION = 5;
 
 function moop_gene_set_summary_file(string $organism): string {
     $dir = moop_cache_root() . '/' . $organism;
@@ -176,7 +178,7 @@ function moop_build_gene_set_summary(string $organism_dir): array {
     $key = "g.genome_accession || '/' || gs.gene_set_name";
     foreach (fetchData("SELECT $key AS k,
                                COUNT(CASE WHEN f.feature_type = 'gene' THEN 1 END) AS genes,
-                               COUNT(CASE WHEN f.feature_type = 'mRNA' THEN 1 END) AS transcripts
+                               COUNT(CASE WHEN " . moop_transcript_type_sql('f.feature_type') . " THEN 1 END) AS transcripts
                         FROM gene_set gs
                         JOIN genome g ON g.genome_id = gs.genome_id
                         LEFT JOIN feature f ON f.gene_set_id = gs.gene_set_id
@@ -200,7 +202,7 @@ function moop_build_gene_set_summary(string $organism_dir): array {
     foreach (fetchData("SELECT $key AS k,
                                COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id
                                                    WHEN p.feature_type = 'gene' THEN p.feature_id END) AS homology_genes,
-                               COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) AS homology_transcripts
+                               COUNT(DISTINCT CASE WHEN " . moop_transcript_type_sql('f.feature_type') . " THEN f.feature_id END) AS homology_transcripts
                         FROM feature f
                         LEFT JOIN feature p ON p.feature_id = f.parent_feature_id
                         JOIN gene_set gs ON gs.gene_set_id = f.gene_set_id

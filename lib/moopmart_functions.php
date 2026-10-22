@@ -26,6 +26,7 @@ require_once __DIR__ . '/parent_functions.php';
 // here is harmless because neither has include-time side effects.)
 require_once __DIR__ . '/database_queries.php';
 require_once __DIR__ . '/genomic_regions.php';      // moopmartStreamGenomicFasta()
+require_once __DIR__ . '/feature_types.php';        // moop_transcript_types()
 
 /** Max rows a preview endpoint materialises and returns. Counts stay exact regardless. */
 const MOOPMART_PREVIEW_ROW_CAP = 100;
@@ -160,19 +161,6 @@ function buildMoopmartFilterReason(array $filters, array $coord_filter): string
 // ============================================================
 
 /**
- * Feature types treated as transcript children of a gene.
- * moopmartGetChildIds() and moopmartCountChildRows() must agree on this list, or a
- * preview's reported row count will not match the rows it actually renders.
- *
- * @return string[]
- */
-function moopmartMrnaTypes(): array
-{
-    return ['mrna', 'transcript', 'lnc_rna', 'ncrna', 'pre_mirna', 'rrna', 'trna',
-            'pseudogenic_transcript', 'processed_transcript'];
-}
-
-/**
  * Count transcript children per gene without materialising them.
  *
  * Lets a caller total up the expanded row count for a whole organism while only ever
@@ -186,7 +174,7 @@ function moopmartCountChildRows(array $gene_feature_ids, string $db_path): array
 {
     if (empty($gene_feature_ids)) return [];
 
-    $mrna_types = moopmartMrnaTypes();
+    $mrna_types = moop_transcript_types();
     $type_ph    = implode(',', array_fill(0, count($mrna_types), '?'));
 
     $counts = [];
@@ -217,7 +205,7 @@ function moopmartGetChildIds(array $gene_feature_ids, string $db_path): array
 {
     if (empty($gene_feature_ids)) return [];
 
-    $mrna_types = moopmartMrnaTypes();
+    $mrna_types = moop_transcript_types();
     $type_ph    = implode(',', array_fill(0, count($mrna_types), '?'));
 
     $result = [];
@@ -498,7 +486,7 @@ function moopmartGetAnnotationsForGenes(array $gene_feature_ids, string $db_path
 {
     if (empty($gene_feature_ids)) return [];
 
-    $transcript_types = array_flip(moopmartMrnaTypes());
+    $transcript_types = array_flip(moop_transcript_types());
     $result = [];
     foreach (array_chunk($gene_feature_ids, 500) as $chunk) {
         $ph     = implode(',', array_fill(0, count($chunk), '?'));

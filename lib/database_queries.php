@@ -16,6 +16,8 @@
  * - Search queries (annotation search, feature search)
  */
 
+require_once __DIR__ . '/feature_types.php';   // moop_transcript_type_sql()
+
 /**
  * Get feature data by feature_id
  * Returns complete feature information including organism and genome data
@@ -244,7 +246,7 @@ function searchFeaturesByUniquename($search_term, $dbFile, $organism_name = '') 
 function getAssemblyStats($genome_id_param, $dbFile) {
     $query = "SELECT g.genome_id, g.genome_accession, g.genome_name,
                      COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id END) as gene_count,
-                     COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count,
+                     COUNT(DISTINCT CASE WHEN " . moop_transcript_type_sql('f.feature_type') . " THEN f.feature_id END) as mrna_count,
                      COUNT(DISTINCT f.feature_id) as total_features
               FROM genome g
               LEFT JOIN gene_set gs ON gs.genome_id = g.genome_id
@@ -268,7 +270,7 @@ function getGeneSetStats($assembly, $gene_set_name, $dbFile) {
     $query = "SELECT gs.gene_set_id, gs.gene_set_name, gs.gene_set_description,
                      g.genome_id, g.genome_accession, g.genome_name,
                      COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id END) as gene_count,
-                     COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count,
+                     COUNT(DISTINCT CASE WHEN " . moop_transcript_type_sql('f.feature_type') . " THEN f.feature_id END) as mrna_count,
                      COUNT(DISTINCT f.feature_id) as total_features
               FROM gene_set gs
               JOIN genome g ON gs.genome_id = g.genome_id
@@ -291,7 +293,7 @@ function getAssemblyGeneSets($assembly, $dbFile) {
     $query = "SELECT gs.gene_set_id, gs.gene_set_name, gs.gene_set_description,
                      g.genome_accession, g.genome_name,
                      COUNT(DISTINCT CASE WHEN f.feature_type = 'gene' THEN f.feature_id END) as gene_count,
-                     COUNT(DISTINCT CASE WHEN f.feature_type = 'mRNA' THEN f.feature_id END) as mrna_count
+                     COUNT(DISTINCT CASE WHEN " . moop_transcript_type_sql('f.feature_type') . " THEN f.feature_id END) as mrna_count
               FROM gene_set gs
               JOIN genome g ON gs.genome_id = g.genome_id
               LEFT JOIN feature f ON f.gene_set_id = gs.gene_set_id
