@@ -1147,24 +1147,11 @@ if $HAS_GFF; then
     [ -s protein.aa.fa ] && perl "$SCRIPTS/rename_generic_fasta.pl" protein.aa.fa :pep genes.gff cds.nt.fa
   fi
 
-  restore_unchanged genes.gff protein.aa.fa cds.nt.fa transcript.nt.fa
-
   if [ -s "genes.gff" ]; then
     echo "GFF available. Proceeding to feature table."
   else
     echo "ERROR: genes.gff is empty or missing!"
     exit 1
-  fi
-
-  # ── GTF (built from the finalized, renamed genes.gff) ────────────────────
-  module load gffread
-  GTF_SIGNATURE=$(source_signature genes.gff)
-  if ! up_to_date genes.gtf "$GTF_SIGNATURE" genes.gff; then
-    echo "Building genes.gtf"
-    gffread -T -F genes.gff -o genes.gtf.tmp \
-      && mv genes.gtf.tmp genes.gtf \
-      || { rm -f genes.gtf.tmp; echo "ERROR: failed to build genes.gtf"; exit 1; }
-    stamp_built genes.gtf "$GTF_SIGNATURE"
   fi
 
   has_data features.tsv || REBUILD=true
@@ -1180,6 +1167,51 @@ if $HAS_GFF; then
       "$GENESET_DIR/metadata.yaml" cds.nt.fa protein.aa.fa geneNames.tsv > features.tsv.tmp \
       && mv features.tsv.tmp features.tsv \
       || { rm -f features.tsv.tmp; echo "ERROR: failed to build features.tsv"; exit 1; }
+  fi
+
+  ## RefSeq/Ensembl: genes.gff and the FASTAs carry the database's IDs and names
+  ## (notes/GFF_FASTA_ID_ALIGNMENT_PLAN.md). The delivered genes.gff says gene-LOC5505848 /
+  ## rna-XM_... (Ensembl gene:/transcript:) where the database and FASTAs say 5505848 / XM_...,
+  ## and the FASTA headers keep the source's name where naming v2 replaced it.
+  ##   - format_gff_ids.pl: gene/mRNA ID= and every Parent= naming them -> database IDs, the
+  ##     original IDs and source symbols kept in Alias=. AFTER features.tsv, whose emit_refseq/
+  ##     emit_ensembl and feature_coords.tsv read the source IDs; genes.gff is re-derived from
+  ##     the source on every run above, so it is never formatted twice.
+  ##   - updateGFF.pl: Name= from geneNames.tsv, now that gene IDs are its GroupIds.
+  ##   - updateFASTA.pl --by-gene: every record takes its gene's name, as the database does;
+  ##     --keep-unlisted: a record the database does not load (non-coding XR_/lincRNA/tRNA)
+  ##     keeps the source's header. transcript.nt.fa is a symlink into the datastore here; the
+  ##     .tmp + mv replaces the link with a real file, never writes through it.
+  ## Other/lift gene sets are already aligned (updateGFF.pl/updateFASTA.pl above).
+  if ! $RENAME; then
+    echo "Aligning genes.gff and FASTA IDs and names with the database"
+    perl "$REPO/analysis_parsers/build_id_map.pl" --gff "$SRC_GFF" --source "$GFF_SOURCE" --out id_map.tsv.tmp \
+      --protein "$GENESET_DIR/protein.aa.fa" --cds "$GENESET_DIR/cds.nt.fa" --transcript "$GENESET_DIR/transcript.nt.fa" \
+      && mv id_map.tsv.tmp id_map.tsv \
+      || { rm -f id_map.tsv.tmp; echo "ERROR: failed to build id_map.tsv"; exit 1; }
+    perl "$SCRIPTS/format_gff_ids.pl" genes.gff id_map.tsv > genes.gff.ids.tmp \
+      && perl "$REPO/analysis_parsers/updateGFF.pl" genes.gff.ids.tmp geneNames.tsv > genes.gff.tmp \
+      && mv genes.gff.tmp genes.gff && rm -f genes.gff.ids.tmp \
+      || { rm -f genes.gff.ids.tmp genes.gff.tmp; echo "ERROR: failed to align genes.gff IDs and names"; exit 1; }
+    for FA in protein.aa.fa cds.nt.fa transcript.nt.fa; do
+      [ -s "$FA" ] || continue
+      perl "$REPO/analysis_parsers/updateFASTA.pl" --keep-unlisted --by-gene "$FA" geneNames.tsv > "$FA.tmp" \
+        && mv "$FA.tmp" "$FA" \
+        || { rm -f "$FA.tmp"; echo "ERROR: failed to name $FA"; exit 1; }
+    done
+  fi
+
+  restore_unchanged genes.gff protein.aa.fa cds.nt.fa transcript.nt.fa
+
+  # ── GTF (built from the finalized, renamed genes.gff) ────────────────────
+  module load gffread
+  GTF_SIGNATURE=$(source_signature genes.gff)
+  if ! up_to_date genes.gtf "$GTF_SIGNATURE" genes.gff; then
+    echo "Building genes.gtf"
+    gffread -T -F genes.gff -o genes.gtf.tmp \
+      && mv genes.gtf.tmp genes.gtf \
+      || { rm -f genes.gtf.tmp; echo "ERROR: failed to build genes.gtf"; exit 1; }
+    stamp_built genes.gtf "$GTF_SIGNATURE"
   fi
 
   ## Load if anything was rebuilt above, OR if this gene set simply is not in the
@@ -1208,6 +1240,17 @@ if $HAS_GFF; then
     perl "$REPO/analysis_parsers/make_organisms_config.pl" \
       "$GENESET_DIR/metadata.yaml" gene "$CHILDREN"
     mv organism.json "$DATA/$THIS_ORG/organism.json"
+  fi
+
+  ## The gate (notes/GFF_FASTA_ID_ALIGNMENT_PLAN.md): genes.gff and the FASTAs as shipped
+  ## against this gene set's rows in organism.sqlite. Read-only; warns, does not stop the
+  ## build (a database loaded before today's parser fails on names until it is reloaded).
+  ## Details in id_alignment.details.tsv, which copy2moop_v2.sh does not ship.
+  if [ -s "$DATA/$THIS_ORG/organism.sqlite" ]; then
+    echo "ID alignment gate"
+    perl "$SCRIPTS/check_id_alignment.pl" "$THIS_ORG" "$DATA/$THIS_ORG/organism.sqlite" "$ASSEMBLY" "$GENE_SET" \
+      "$GFF_SOURCE" "$PWD" id_alignment.details.tsv "$REPO/id_alignment_exceptions.tsv" \
+      || echo "WARNING: genes.gff/FASTAs do not match organism.sqlite for $THIS_ORG [$ASSEMBLY/$GENE_SET] -- see $PWD/id_alignment.details.tsv" >&2
   fi
 
   module load samtools
