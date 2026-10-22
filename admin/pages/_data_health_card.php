@@ -4,32 +4,17 @@
  *
  * Included by both the admin dashboard (admin/pages/admin.php) and the manage
  * organisms page (admin/pages/manage_organisms.php) so both show the SAME warnings.
- * Expects these variables in scope (extracted from the page's $data):
- *   $health_alerts            — ['ungrouped','not_in_tree','stale_groups','new_gene_sets','orphaned_gene_sets','orphaned_assemblies','orphaned_jbrowse','no_database','taxonomy_suggestions']
- *   $taxonomy_suggestions     — list of ['organism','assembly','gene_set','group','rank','basis']
- *   $orphaned_gene_set_tuples — list of ['organism','assembly','gene_set']
- *   $orphaned_assembly_tuples — list of ['organism','assembly']
- *   $orphaned_jbrowse_registrations — list of ['organism','assembly','reason','detail']
- *   $no_database_organisms    — list of organism-name strings
- *   $empty_database_organisms — list of ['organism' => string, 'issues' => string[]]
- *   $gene_set_file_gaps       — list of ['path' => 'Org/Asm/GeneSet', 'missing' => string[] labels]
- *   $gene_set_seqname_gaps    — list of ['path', 'missing', 'total', 'examples'] (getGeneSetSeqnameGaps())
+ * Expects computeDataHealthAlerts()'s result extracted into scope -- the page passes it whole
+ * ($data = [...] + $_health). Its keys and their shapes are moop_data_health_empty(), which
+ * also supplies the defaults here, so there is no list of them to keep in step.
+ * Also $cache_stale / $cache_changed_orgs from the page.
  */
-$health_alerts = ($health_alerts ?? []) + [
-    'ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0,
-    'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0,
-    'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0, 'gene_set_files' => 0,
-    'seqname_mismatch' => 0,
-];
-$taxonomy_suggestions = $taxonomy_suggestions ?? [];
-$orphaned_gene_set_tuples = $orphaned_gene_set_tuples ?? [];
-$orphaned_assembly_tuples = $orphaned_assembly_tuples ?? [];
-$orphaned_jbrowse_registrations = $orphaned_jbrowse_registrations ?? [];
-$orphaned_jbrowse_systemic      = $orphaned_jbrowse_systemic ?? false;
-$no_database_organisms    = $no_database_organisms ?? [];
-$empty_database_organisms = $empty_database_organisms ?? [];
-$gene_set_file_gaps       = $gene_set_file_gaps ?? [];
-$gene_set_seqname_gaps    = $gene_set_seqname_gaps ?? [];
+$_health_empty = moop_data_health_empty();
+$health_alerts = ($health_alerts ?? []) + $_health_empty['health_alerts'];
+foreach ($_health_empty as $_k => $_v) {
+    if (!isset($$_k)) $$_k = $_v;
+}
+unset($_health_empty, $_k, $_v);
 $cache_stale        = $cache_stale ?? false;
 $cache_changed_orgs = $cache_changed_orgs ?? [];
 
@@ -48,7 +33,7 @@ $_p_tax   = $health_alerts['taxonomy_suggestions'] > 0;
 $_p_gsf   = $health_alerts['gene_set_files'] > 0;
 $_p_seq   = $health_alerts['seqname_mismatch'] > 0;
 
-$_any_data_issue = ($_p_ung || $_p_ngs || $_p_sg || $_p_ogs || $_p_oa || $_p_ojb || $_p_nodb || $_p_edb || $_p_nit || $_p_tax || $_p_gsf || $_p_seq);
+$_any_data_issue = (bool)array_filter($health_alerts);   // any alert with a count -- every key above has its alert below
 $has_health_issues = $cache_stale || $_any_data_issue;
 if ($has_health_issues):
 ?>

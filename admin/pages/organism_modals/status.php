@@ -19,24 +19,8 @@
           </div>
           <div class="list-group">
             <?php
-              $checklist = [
-                  'has_assemblies'      => 'Has assemblies',
-                  'has_fasta'           => 'Has FASTA files',
-                  'gene_sets_complete'  => 'Every assembly has a gene set with Protein, mRNA and CDS FASTA',
-                  'has_blast_indexes'   => 'Has BLAST indexes',
-                  'has_fai_index'       => 'Has FAI index',
-                  'seqnames_match_genome' => 'Gene sets name chromosomes as the genome does',
-                  'has_database'        => 'Has database file',
-                  'database_valid'      => 'Database is valid',
-                  'directories_match_db'=> 'Assembly & gene set dirs match DB',
-                  'assemblies_in_groups'=> 'Assembly in organism groups',
-                  'in_taxonomy_tree'    => 'In taxonomy tree',
-                  'metadata_complete'   => 'Metadata complete',
-              ];
-              foreach ($checklist as $key => $label):
+              foreach (moop_organism_check_defs() as $key => $def):
                   $pass = $checks[$key] ?? false;
-                  $labelText = is_array($label) ? $label[0] : $label;
-                  $labelExtra = is_array($label) ? $label[1] : '';
             ?>
               <div class="list-group-item <?= $pass ? '' : 'bg-light' ?>">
                 <div class="d-flex align-items-center">
@@ -45,7 +29,7 @@
                   <?php else: ?>
                     <i class="fa fa-times-circle text-danger me-2" style="font-size: 18px;"></i>
                   <?php endif; ?>
-                  <span><strong><?= htmlspecialchars($labelText) ?></strong> <?= $labelExtra ?></span>
+                  <span><strong><?= htmlspecialchars($def['label']) ?></strong></span>
                 </div>
               </div>
             <?php endforeach; ?>

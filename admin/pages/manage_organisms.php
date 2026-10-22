@@ -203,21 +203,8 @@
   $org_issues = function (string $organism, array $data) use ($db_issue_tags, $stale_organisms): array {
       $checks = $data['overall_status']['checks'];
       $issues = [];
-      foreach ([
-          'has_assemblies'       => 'no-assemblies',
-          'has_fasta'            => 'no-fasta',
-          'has_database'         => 'no-database',
-          'database_valid'       => 'db-invalid',
-          'gene_sets_complete'   => 'gene-set-files',
-          'has_blast_indexes'    => 'blast',
-          'has_fai_index'        => 'fai',
-          'seqnames_match_genome' => 'seqnames',
-          'directories_match_db' => 'dir-mismatch',
-          'assemblies_in_groups' => 'groups',
-          'in_taxonomy_tree'     => 'tree',
-          'metadata_complete'    => 'metadata',
-      ] as $chk => $tok) {
-          if (isset($checks[$chk]) && !$checks[$chk]) $issues[] = $tok;
+      foreach (moop_organism_check_defs() as $chk => $def) {
+          if (isset($checks[$chk]) && !$checks[$chk]) $issues[] = $def['issue'];
       }
       // The generic 'database_valid' check collapses every data problem into one
       // "DB invalid" badge. When the validator named a specific cause, say that
@@ -586,7 +573,9 @@
                    // Everything per assembly or per gene set -- FASTA, BLAST, .fai, directory
                    // names, no genome -- is on its own line in the Assemblies tree beside this
                    // cell; repeating it here showed the same fact twice in two wordings.
-                   $visible_issues = array_values(array_filter($row_issues, fn($i) => !empty($issue_defs[$i]['health'])));
+                   // In moop_organism_issue_defs() order, so critical badges come first.
+                   $visible_issues = array_values(array_filter(array_intersect(array_keys($issue_defs), $row_issues),
+                                                               fn($i) => !empty($issue_defs[$i]['health'])));
                  ?>
                  <button class="btn btn-sm btn-outline-<?= $hstate[0] ?>" onclick="openOrganismModal('status', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Open the setup checklist">
                    <i class="fa fa-<?= $hstate[1] ?>"></i> <?= $hstate[2] ?>

@@ -301,17 +301,6 @@ $data = [
     'cache_generated' => $cache_generated,
     'stale_organisms' => $stale_organisms,
     'cache_stale_reason' => $cache_stale_reason,
-    'health_alerts' => $_health['health_alerts'],
-    'orphaned_gene_set_tuples' => $_health['orphaned_gene_set_tuples'],
-    'orphaned_assembly_tuples' => $_health['orphaned_assembly_tuples'],
-    'orphaned_jbrowse_registrations' => $_health['orphaned_jbrowse_registrations'],
-    'orphaned_jbrowse_systemic' => $_health['orphaned_jbrowse_systemic'],
-    'no_database_organisms' => $_health['no_database_organisms'],
-    'empty_database_organisms' => $_health['empty_database_organisms'],
-    'gene_set_file_gaps' => $_health['gene_set_file_gaps'],
-    'gene_set_seqname_gaps' => $_health['gene_set_seqname_gaps'],
-    'new_gene_set_tuples' => $_health['new_gene_set_tuples'],
-    'taxonomy_suggestions' => $_health['taxonomy_suggestions'],
     // Reuse this page's existing staleness computation for the shared health card's
     // "cache out of date" notice ($stale_organisms = per-org changes; reason covers
     // the config-only case where no individual organism file changed).

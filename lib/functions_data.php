@@ -803,6 +803,36 @@ function isAssemblyInTaxonomyTree($organism, $assembly, $tree_file) {
 
 
 /**
+ * The per-organism checks, defined ONCE: what each is called on the status modal's
+ * checklist, and which issue (moop_organism_issue_defs()) a failure raises on Manage
+ * Organisms. getOrganismOverallStatus() computes exactly these keys.
+ *
+ * These were three hand-kept lists -- the status array, the page's check -> issue map and
+ * the modal's check -> label map -- and a check missing from one simply did not show there,
+ * with no error (CLAUDE.md 9b). Adding a check is now: an entry here, its computation in
+ * getOrganismOverallStatus(), and its issue in moop_organism_issue_defs().
+ *
+ * @return array<string, array{label: string, issue: string}> in checklist order
+ */
+function moop_organism_check_defs(): array {
+    $d = fn($label, $issue) => compact('label', 'issue');
+    return [
+        'has_assemblies'        => $d('Has assemblies', 'no-assemblies'),
+        'has_fasta'             => $d('Has FASTA files', 'no-fasta'),
+        'gene_sets_complete'    => $d('Every assembly has a gene set with Protein, mRNA and CDS FASTA', 'gene-set-files'),
+        'has_blast_indexes'     => $d('Has BLAST indexes', 'blast'),
+        'has_fai_index'         => $d('Has FAI index', 'fai'),
+        'seqnames_match_genome' => $d('Gene sets name chromosomes as the genome does', 'seqnames'),
+        'has_database'          => $d('Has database file', 'no-database'),
+        'database_valid'        => $d('Database is valid', 'db-invalid'),
+        'directories_match_db'  => $d('Assembly & gene set dirs match DB', 'dir-mismatch'),
+        'assemblies_in_groups'  => $d('Assembly in organism groups', 'groups'),
+        'in_taxonomy_tree'      => $d('In taxonomy tree', 'tree'),
+        'metadata_complete'     => $d('Metadata complete', 'metadata'),
+    ];
+}
+
+/**
  * Get comprehensive status of an organism across all checks
  * @param string $organism Organism name
  * @param array $data Organism data from getDetailedOrganismsInfo
@@ -812,20 +842,7 @@ function isAssemblyInTaxonomyTree($organism, $assembly, $tree_file) {
  * @return array Status with checks and overall status
  */
 function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree_file, $sequence_types) {
-    $checks = [
-        'has_assemblies' => false,
-        'has_fasta' => false,
-        'gene_sets_complete' => false,
-        'has_blast_indexes' => false,
-        'has_fai_index' => false,
-        'seqnames_match_genome' => false,
-        'has_database' => false,
-        'database_valid' => false,
-        'directories_match_db' => false,
-        'assemblies_in_groups' => false,
-        'in_taxonomy_tree' => false,
-        'metadata_complete' => false,
-    ];
+    $checks = array_fill_keys(array_keys(moop_organism_check_defs()), false);
     
     // 1. Does it have at least one assembly?
     $checks['has_assemblies'] = !empty($data['assemblies']);
@@ -1482,13 +1499,39 @@ function getGeneSetFastaGaps(array $cache_data, array $sequence_types): array
     return $out;
 }
 
+/**
+ * What computeDataHealthAlerts() returns, with nothing found -- its shape, defined once.
+ * The pages pass the result through whole ($data = [...] + $_health) and the shared health
+ * card defaults from this, so a new alert needs no key-by-key copying anywhere: it used to
+ * be copied in admin/admin.php AND admin/manage_organisms.php and defaulted again in
+ * _data_health_card.php, and a key missed in one place quietly never showed.
+ */
+function moop_data_health_empty(): array {
+    return [
+        'health_alerts' => ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0,
+                            'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0,
+                            'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0,
+                            'gene_set_files' => 0, 'seqname_mismatch' => 0],
+        'orphaned_gene_set_tuples'       => [],
+        'orphaned_assembly_tuples'       => [],
+        'orphaned_jbrowse_registrations' => [],
+        'orphaned_jbrowse_systemic'      => false,
+        'no_database_organisms'          => [],
+        'empty_database_organisms'       => [],
+        'gene_set_file_gaps'             => [],
+        'gene_set_seqname_gaps'          => [],
+        'new_gene_set_tuples'            => [],
+        'taxonomy_suggestions'           => [],
+    ];
+}
+
 function computeDataHealthAlerts(string $organism_data_path): array {
     $config        = ConfigManager::getInstance();
     $metadata_path = $config->getPath('metadata_path');
     $cache_file    = moop_organism_cache_file();
     $groups_file   = "$metadata_path/organism_assembly_groups.json";
 
-    $health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0, 'gene_set_files' => 0, 'seqname_mismatch' => 0];
+    $health_alerts = moop_data_health_empty()['health_alerts'];
 
     // Cache-driven: taxonomy-tree membership + the list of assemblies per organism.
     $cache_data = [];

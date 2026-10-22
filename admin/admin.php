@@ -26,7 +26,6 @@ $organism_data = $config->getPath('organism_data');
 $cache_file    = moop_organism_cache_file();
 $lock_file     = moop_organism_cache_lock_file();
 $cache_info    = ['generated' => null, 'organism_count' => 0, 'refreshing' => false];
-$health_alerts = ['ungrouped' => 0, 'not_in_tree' => 0, 'stale_groups' => 0, 'new_gene_sets' => 0, 'orphaned_gene_sets' => 0, 'orphaned_assemblies' => 0, 'orphaned_jbrowse' => 0, 'no_database' => 0, 'taxonomy_suggestions' => 0, 'empty_database' => 0];
 $_raw_cache_data = [];
 $cache_stale = false;      // true when live data fingerprints differ from the cache's
 $cache_changed_orgs = [];  // organisms whose data changed since the cache was built
@@ -66,19 +65,8 @@ if (file_exists($cache_file)) {
 $cache_info['refreshing'] = moop_organism_cache_refresh_active();
 // Data health alerts — computed by a shared helper so the dashboard and the manage
 // organisms page always show the SAME issues (single source of truth).
-$_health = computeDataHealthAlerts($organism_data);
-$health_alerts             = $_health['health_alerts'];
-$_orphaned_gene_set_tuples = $_health['orphaned_gene_set_tuples'];
-$_orphaned_assembly_tuples = $_health['orphaned_assembly_tuples'];
-$_orphaned_jbrowse_regs    = $_health['orphaned_jbrowse_registrations'];
-$_orphaned_jbrowse_systemic = $_health['orphaned_jbrowse_systemic'];
-$_no_database_organisms    = $_health['no_database_organisms'];
-$_empty_database_organisms = $_health['empty_database_organisms'];
-$_gene_set_file_gaps       = $_health['gene_set_file_gaps'];
-$_gene_set_seqname_gaps    = $_health['gene_set_seqname_gaps'];
-$_new_gene_set_tuples      = $_health['new_gene_set_tuples'];
-$_taxonomy_suggestions     = $_health['taxonomy_suggestions'];
-unset($_raw_cache_data, $_health);
+$_health = computeDataHealthAlerts($organism_data);   // passed to the page whole, below
+unset($_raw_cache_data);
 
 // Prepare data for content file
 // Site-data backup status comes from housekeeping (stored in session)
@@ -93,17 +81,6 @@ $data = [
     'cache_info' => $cache_info,
     'cache_stale' => $cache_stale,
     'cache_changed_orgs' => $cache_changed_orgs,
-    'health_alerts' => $health_alerts,
-    'new_gene_set_tuples' => $_new_gene_set_tuples,
-    'taxonomy_suggestions' => $_taxonomy_suggestions,
-    'orphaned_gene_set_tuples' => $_orphaned_gene_set_tuples,
-    'orphaned_assembly_tuples' => $_orphaned_assembly_tuples,
-    'orphaned_jbrowse_registrations' => $_orphaned_jbrowse_regs,
-    'orphaned_jbrowse_systemic' => $_orphaned_jbrowse_systemic,
-    'no_database_organisms' => $_no_database_organisms,
-    'empty_database_organisms' => $_empty_database_organisms,
-    'gene_set_file_gaps' => $_gene_set_file_gaps,
-    'gene_set_seqname_gaps' => $_gene_set_seqname_gaps,
     // Per CLAUDE.md §6: JS logic belongs in js/modules/, not inline. (The organism-cache
     // widget below predates that rule.)
     'page_script' => [
@@ -171,7 +148,7 @@ $data = [
         }
         " . ($cache_info['refreshing'] ? "document.addEventListener('DOMContentLoaded', pollOrganismCacheStatus);" : ""),
     ],
-];
+] + $_health;   // the health card's data, whole -- moop_data_health_empty() gives its shape
 
 // Render page using layout system
 echo render_display_page(

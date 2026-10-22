@@ -1488,6 +1488,17 @@ ok($_st(['A' => $_asm(['GS' => []], true), 'B' => $_asm(['GS2' => ['cds']], fals
    'one gene set lacking CDS fails the check, even beside a complete assembly');
 ok($_st(['A' => $_asm(['GS' => []], true), 'B' => $_asm([], false)]) === false,
    'an assembly with no gene set fails the check');
+
+// The checks, their issue tags and their checklist labels are ONE list (they were three, and
+// a check missing from one silently did not show there).
+$_cd = moop_organism_check_defs();
+ok(array_keys(getOrganismOverallStatus('X', $_org(['A' => $_asm(['GS' => []], true)]), [], '', [])['checks']) === array_keys($_cd),
+   'getOrganismOverallStatus() computes exactly the defined checks');
+ok(!array_diff(array_column($_cd, 'issue'), array_keys(moop_organism_issue_defs())), 'every check raises an issue that has a label and severity');
+// The health card decides "any issue" from the counts alone, so every count needs its alert.
+$_card = file_get_contents("$BASE/admin/pages/_data_health_card.php");
+ok(!array_filter(array_keys(moop_data_health_empty()['health_alerts']), fn($k) => strpos($_card, "\$health_alerts['$k']") === false),
+   'every health-alert count is shown by the health card');
 ok(moop_organism_severity($_sev(['gene_sets_complete' => false])) === 'incomplete',
    'a gene-set gap grades Incomplete (amber), never Critical');
 
