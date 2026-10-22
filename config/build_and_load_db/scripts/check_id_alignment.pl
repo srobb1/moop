@@ -212,10 +212,13 @@ sub main {
       next;
     }
     ## a feature with no symbol is named by an id (its own or its mRNA's); updateFASTA.pl then
-    ## labels the header with the id it looked up, which can be the delivered one
+    ## labels the header with the id it looked up, which can be the delivered one. An unnamed
+    ## other/lift CDS/protein has its mRNA's id as description too (emit_generic), and a bare
+    ## ">id" header: no description either (Congeria COKUS1KC, 23,222 CDS + 23,222 proteins).
     my $symbol = exists $db->{ $feature->{name} } ? '' : $feature->{name};
+    my $desc   = exists $db->{ $feature->{desc} } ? '' : $feature->{desc};
     $report->('fasta_name', $id, $kind, "header '$records->{$id}' db '$feature->{name}' / '$feature->{desc}'")
-      unless header_matches($records->{$id}, $symbol, $feature->{desc});
+      unless header_matches($records->{$id}, $symbol, $desc);
   }
 
   foreach my $id (sort keys %{ $gff->{coding} }) {
