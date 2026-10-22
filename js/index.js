@@ -153,8 +153,15 @@ function updateSelectedList() {
 
 // ─── Tool submission ───────────────────────────────────────────────────────
 
-// The live selection, via the shared js/modules/tool-launch.js.
+// The live selection, via the shared js/modules/tool-launch.js. "Search Organisms" with ONE
+// organism opens that organism's page instead: a multi-organism search of one organism is the
+// organism page's own search, without the rest of that page.
 function handleToolClick(toolId) {
+    if (toolId === 'taxonomy_search' && selectedOrganisms.size === 1) {
+        const [org] = selectedOrganisms;
+        window.open(`${sitePath}/tools/organism.php?organism=${encodeURIComponent(org)}`, '_blank');
+        return;
+    }
     postSelectionToTool(toolId, Array.from(selectedOrganisms));
 }
 
