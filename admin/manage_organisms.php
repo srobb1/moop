@@ -42,34 +42,32 @@ if (file_exists($cache_file)) {
 }
 
 // Quick staleness check — only filemtime + scandir calls, no full scan (~50ms for 60 organisms).
-$stale_organisms = [];
-$cache_stale_reason = null;
+// moop_organism_cache_staleness() is the one test every admin page and housekeeping use.
+$stale_organisms     = [];
+$cache_stale_reason  = null;
+$cache_stale_reasons = [];
 if ($raw_cache) {
-    // Config (groups/taxonomy) changed: banner only, no row marked stale -- see
-    // moop_organism_cache_staleness(). Otherwise the organisms whose own files changed.
-    $staleness = moop_organism_cache_staleness($raw_cache, $organism_data, $taxonomy_tree_file, $groups_file);
-    if ($staleness['config_changed']) {
-        $cache_stale_reason = 'groups or taxonomy config changed';
-    } else {
-        $stale_organisms = $staleness['changed'];
-        $current_org_fps = $staleness['current_fps'];
-        // Remove organisms that no longer exist on disk — update cache immediately
-        // so they disappear on page reload without needing a full background refresh.
-        $deleted = $staleness['deleted'];
-        if (!empty($deleted)) {
-            foreach ($deleted as $org_name) {
-                unset($organisms[$org_name]);
-            }
-            $raw_cache['data']             = $organisms;
-            $raw_cache['org_fingerprints'] = $current_org_fps;
-            $raw_cache['generated']        = date('Y-m-d H:i:s');
-            organism_cache_write_atomic($cache_file, $raw_cache);
-        }
+    $staleness           = moop_organism_cache_staleness($raw_cache, $organism_data, $taxonomy_tree_file, $groups_file);
+    $stale_organisms     = $staleness['changed'];   // marked Stale in the table, config change or not
+    $cache_stale_reasons = $staleness['reasons'];
 
-        if (!empty($stale_organisms)) {
-            $cache_stale_reason = count($stale_organisms) . ' organism(s) changed on disk';
+    // Remove organisms that no longer exist on disk — update cache immediately so they
+    // disappear on page reload without needing a full background refresh. ONLY their entries:
+    // this used to store every current fingerprint, which also recorded each changed-but-not-
+    // rescanned organism as current, so its Stale badge vanished on the next load while its
+    // cached data stayed old.
+    if ($staleness['deleted'] && isset($raw_cache['org_fingerprints'])) {
+        foreach ($staleness['deleted'] as $org_name) {
+            unset($organisms[$org_name], $raw_cache['org_fingerprints'][$org_name]);
         }
+        $raw_cache['data']      = $organisms;
+        $raw_cache['generated'] = date('Y-m-d H:i:s');
+        organism_cache_write_atomic($cache_file, $raw_cache);
     }
+
+    $parts = array_merge($stale_organisms ? [count($stale_organisms) . ' organism(s) changed on disk'] : [],
+                         $cache_stale_reasons);
+    if ($parts) $cache_stale_reason = implode('; ', $parts);
 }
 
 // Data health alerts — same shared helper the dashboard uses, so both pages show the
@@ -306,6 +304,7 @@ $data = [
     // the config-only case where no individual organism file changed).
     'cache_stale' => ($cache_stale_reason !== null),
     'cache_changed_orgs' => $stale_organisms,
+    'cache_stale_reasons' => $cache_stale_reasons,
     'lineage_cache_generated' => $lineage_cache_generated,
     'page_styles' => [
         '/' . $config->getString('site') . '/css/manage-organisms.css'

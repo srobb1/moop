@@ -2045,6 +2045,36 @@ ok($_built_hits === [],
    . ($_built_hits ? ":\n      " . implode("\n      ", $_built_hits) : ''));
 
 // ----------------------------------------------------------------------------
+group('Organism cache staleness: one test, used by the dashboard, Manage Organisms and Quick Links');
+require_once "$BASE/lib/organism_cache.php";
+require_once "$BASE/lib/functions_data.php";
+$_sd = sys_get_temp_dir() . '/moop_stale_' . getmypid();
+@mkdir("$_sd/orgs/Alpha", 0777, true); @mkdir("$_sd/orgs/Beta", 0777, true);
+file_put_contents("$_sd/orgs/Alpha/organism.sqlite", 'a'); file_put_contents("$_sd/orgs/Beta/organism.sqlite", 'b');
+file_put_contents("$_sd/tree.json", '{}'); file_put_contents("$_sd/groups.json", '[]');
+$_cache = ['config_fingerprint' => buildConfigFingerprint("$_sd/tree.json", "$_sd/groups.json"),
+           'org_fingerprints'   => buildPerOrganismFingerprints("$_sd/orgs"),
+           'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION];
+$_st = fn($c) => moop_organism_cache_staleness($c, "$_sd/orgs", "$_sd/tree.json", "$_sd/groups.json");
+$_r = $_st($_cache);
+ok(!$_r['stale'] && $_r['changed'] === [] && $_r['deleted'] === [] && $_r['reasons'] === [], 'nothing changed: not stale');
+file_put_contents("$_sd/orgs/Alpha/organism.sqlite", 'a rebuilt database');
+exec('rm -rf ' . escapeshellarg("$_sd/orgs/Beta"));
+$_r = $_st($_cache);
+ok($_r['stale'] && $_r['changed'] === ['Alpha'] && $_r['deleted'] === ['Beta'] && $_r['reasons'] === [],
+   'a rebuilt database is changed; a removed organism is deleted');
+file_put_contents("$_sd/groups.json", '[{"organism":"Alpha"}]');
+$_r = $_st($_cache);
+ok($_r['config_changed'] && $_r['changed'] === ['Alpha'] && count($_r['reasons']) === 1,
+   'a config change and a changed organism are BOTH reported (the old rule hid the organism)');
+$_r = $_st(['schema_version' => ORGANISM_CACHE_SCHEMA_VERSION - 1] + $_cache);
+ok($_r['stale'] && $_r['format_outdated'], 'a cache of an older format is stale whatever its fingerprints say');
+$_r = $_st(array_diff_key($_cache, ['config_fingerprint' => 1]));
+ok($_r['stale'] && $_r['format_outdated'] && $_r['changed'] === [], 'a cache with no fingerprints is stale, without listing every organism');
+ok($_st([])['stale'] === false, 'no cache at all is "not built", not stale -- callers say so in their own words');
+exec('rm -rf ' . escapeshellarg($_sd));
+
+// ----------------------------------------------------------------------------
 group('Gene neighbours: the genes beside a gene, in genome order');
 require_once "$BASE/lib/feature_coords.php";
 $_nd = sys_get_temp_dir() . '/moop_nbr_' . getmypid();

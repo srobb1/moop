@@ -7,7 +7,7 @@
  * Expects computeDataHealthAlerts()'s result extracted into scope -- the page passes it whole
  * ($data = [...] + $_health). Its keys and their shapes are moop_data_health_empty(), which
  * also supplies the defaults here, so there is no list of them to keep in step.
- * Also $cache_stale / $cache_changed_orgs from the page, and optionally
+ * Also $cache_stale / $cache_changed_orgs / $cache_stale_reasons from the page, and optionally
  * $health_card_collapsible (the dashboard sets it): the body starts folded, the header counts
  * what is inside by severity, and js/modules/remember-collapse.js keeps the admin's choice.
  */
@@ -17,8 +17,9 @@ foreach ($_health_empty as $_k => $_v) {
     if (!isset($$_k)) $$_k = $_v;
 }
 unset($_health_empty, $_k, $_v);
-$cache_stale        = $cache_stale ?? false;
-$cache_changed_orgs = $cache_changed_orgs ?? [];
+$cache_stale         = $cache_stale ?? false;
+$cache_changed_orgs  = $cache_changed_orgs ?? [];
+$cache_stale_reasons = $cache_stale_reasons ?? [];   // moop_organism_cache_staleness()['reasons']
 
 // Presence of each alert, in the order they render top-to-bottom. Each alert draws a
 // bottom border when any alert after it is present, so the stack reads as one panel.
@@ -134,11 +135,11 @@ if ($has_health_issues):
       <div>
         <i class="fa fa-sync-alt me-2"></i>
         <strong>Organism cache out of date</strong> —
-        <?php if ($_n > 0): ?>
-          <?= $_n ?> organism<?= $_n === 1 ? '' : 's' ?> changed since it was built (<?= $_preview ?>).
-        <?php else: ?>
-          groups or taxonomy config changed since it was built.
-        <?php endif; ?>
+        <?php // Every reason at once: changed organisms AND a config change can both be true,
+              // and one refresh handles both. ?>
+        <?= implode('; ', array_merge(
+              $_n > 0 ? [$_n . ' organism' . ($_n === 1 ? '' : 's') . " changed since it was built ($_preview)"] : [],
+              array_map('htmlspecialchars', $cache_stale_reasons))) ?>.
         Re-cache recommended — the orphan/drift checks below read the cache, so they can be out of date until you refresh.
       </div>
       <button class="btn btn-sm btn-warning flex-shrink-0"

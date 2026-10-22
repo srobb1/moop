@@ -1396,35 +1396,72 @@ function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
  * }
  */
 /**
- * How far the organism cache has fallen behind the disk -- cheap (filemtime + scandir,
- * a few ms), so a page can say so instead of silently showing old results.
+ * How far the organism cache has fallen behind the disk -- THE staleness test. Cheap
+ * (filemtime + scandir, a few ms). Every reader uses it: the dashboard and Quick Links (via
+ * moop_organism_cache_stale_summary()), Manage Organisms, the setup checklist, housekeeping's
+ * decision to refresh, and warm_organism_cache.php's "already up to date" exit.
  *
- * Moved out of admin/manage_organisms.php so the setup checklist, which now reads the
- * cache too, applies the same test rather than a third copy of it.
+ * Until 2026-10-22 there were four copies with three different rule sets:
+ *   - a config change was reported ALONE here, hiding organisms whose files had also changed,
+ *     on the claim that the config refresh "does not recheck any organism's files" -- but the
+ *     rebuild (getCachedOrganismsInfo) rescans changed organisms and recomputes config-only
+ *     ones in the same pass, so nothing was saved and a just-rebuilt database showed no Stale
+ *     badge whenever someone had also edited a group;
+ *   - only housekeeping and the warm script knew that a cache of an older schema, or one
+ *     with no fingerprints, is discarded by the next rebuild, so the pages called it current.
+ * Now all three conditions are reported together, and any of them makes the cache stale.
  *
- * If the groups/taxonomy config changed, that alone is reported: the refresh for it is
- * quick and does not recheck any organism's files, so no row is marked stale.
+ * No cache at all is not "stale": the callers report "not built" in their own words.
  *
- * @return array{config_changed: bool, changed: string[], deleted: string[], current_fps: array}
+ * @return array{stale: bool, format_outdated: bool, config_changed: bool, changed: string[],
+ *               deleted: string[], current_fps: array, reasons: string[]}
+ *         reasons: why it is stale apart from the organisms in changed/deleted, as phrases
+ *         ("the groups or taxonomy config has changed since it was built") for a sentence.
  */
 function moop_organism_cache_staleness(array $raw_cache, string $organism_data,
                                        string $taxonomy_tree_file, string $groups_file): array {
-    $out = ['config_changed' => false, 'changed' => [], 'deleted' => [], 'current_fps' => []];
+    $out = ['stale' => false, 'format_outdated' => false, 'config_changed' => false,
+            'changed' => [], 'deleted' => [], 'current_fps' => [], 'reasons' => []];
     if (!$raw_cache) return $out;
 
-    if (($raw_cache['config_fingerprint'] ?? null) !== buildConfigFingerprint($taxonomy_tree_file, $groups_file)) {
-        $out['config_changed'] = true;
-        return $out;
-    }
+    $has_fps = isset($raw_cache['org_fingerprints'], $raw_cache['config_fingerprint']);
+    $out['format_outdated'] = !$has_fps || ($raw_cache['schema_version'] ?? 0) !== ORGANISM_CACHE_SCHEMA_VERSION;
+    $out['config_changed']  = $has_fps
+        && $raw_cache['config_fingerprint'] !== buildConfigFingerprint($taxonomy_tree_file, $groups_file);
 
-    $cached_fps  = $raw_cache['org_fingerprints'] ?? [];
     $current_fps = buildPerOrganismFingerprints($organism_data);
-    foreach ($current_fps as $org_name => $fp) {
-        if (($cached_fps[$org_name] ?? null) !== $fp) $out['changed'][] = $org_name;
+    if ($has_fps) {
+        // Without stored fingerprints every organism would read as changed; format_outdated
+        // already says the whole cache needs rebuilding.
+        $cached_fps = $raw_cache['org_fingerprints'];
+        foreach ($current_fps as $org_name => $fp) {
+            if (($cached_fps[$org_name] ?? null) !== $fp) $out['changed'][] = $org_name;
+        }
+        $out['deleted'] = array_values(array_diff(array_keys($cached_fps), array_keys($current_fps)));
     }
-    $out['deleted']     = array_values(array_diff(array_keys($cached_fps), array_keys($current_fps)));
     $out['current_fps'] = $current_fps;
+
+    if ($out['format_outdated']) $out['reasons'][] = 'it was built by an older version of MOOP';
+    if ($out['config_changed'])  $out['reasons'][] = 'the groups or taxonomy config has changed since it was built';
+    $out['stale'] = $out['format_outdated'] || $out['config_changed'] || $out['changed'] || $out['deleted'];
     return $out;
+}
+
+/**
+ * The Data Health card's cache inputs, from moop_organism_cache_staleness(), for the dashboard
+ * and the admin Quick Links counts. Removed organisms are listed as "Name (removed)". (Manage
+ * Organisms prunes them from the cache before drawing the card, so there they never appear.)
+ *
+ * @return array{cache_stale: bool, cache_changed_orgs: string[], cache_stale_reasons: string[]}
+ */
+function moop_organism_cache_stale_summary(array $raw_cache): array {
+    $config        = ConfigManager::getInstance();
+    $metadata_path = $config->getPath('metadata_path');
+    $s = moop_organism_cache_staleness($raw_cache, $config->getPath('organism_data'),
+        "$metadata_path/taxonomy_tree_config.json", "$metadata_path/organism_assembly_groups.json");
+    $changed = array_merge($s['changed'], array_map(fn($o) => "$o (removed)", $s['deleted']));
+    sort($changed);
+    return ['cache_stale' => $s['stale'], 'cache_changed_orgs' => $changed, 'cache_stale_reasons' => $s['reasons']];
 }
 
 /**

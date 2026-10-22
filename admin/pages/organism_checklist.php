@@ -63,7 +63,7 @@
 
     <?php // Most checks below read the organism cache -- the same results Manage Organisms
           // and the dashboard show. Say how fresh that is, and what has changed since. ?>
-    <div class="alert <?= ($cache_stale_organisms || $cache_config_changed || !$cache_generated) ? 'alert-warning' : 'alert-light border' ?> small">
+    <div class="alert <?= ($cache_stale_organisms || $cache_stale_reasons || !$cache_generated) ? 'alert-warning' : 'alert-light border' ?> small">
       <i class="fa fa-clock"></i>
       <?php if (!$cache_generated): ?>
         No organism cache yet, so database, BLAST, index, tree and group checks have nothing to report.
@@ -72,11 +72,12 @@
         <strong><?= htmlspecialchars($cache_generated) ?></strong> &mdash; the same results Manage Organisms shows.
         <?php if ($cache_stale_organisms): ?>
           Changed on disk since then: <strong><?= htmlspecialchars(implode(', ', $cache_stale_organisms)) ?></strong>.
-        <?php elseif ($cache_config_changed): ?>
-          The groups or taxonomy config has changed since then.
         <?php endif; ?>
+        <?php foreach ($cache_stale_reasons as $_reason): ?>
+          <?= htmlspecialchars(ucfirst($_reason)) ?>.
+        <?php endforeach; ?>
       <?php endif; ?>
-      <?php if ($cache_stale_organisms || $cache_config_changed || !$cache_generated): ?>
+      <?php if ($cache_stale_organisms || $cache_stale_reasons || !$cache_generated): ?>
         <button type="button" class="btn btn-sm btn-warning ms-2" id="checklistRefreshCacheBtn">
           <i class="fa fa-sync-alt"></i> Refresh cache
         </button>

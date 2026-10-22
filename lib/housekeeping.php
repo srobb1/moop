@@ -38,6 +38,12 @@ define('HOUSEKEEPING_MIN_INTERVAL', 3600);
 // VANISH — identical to "everything is clean". That is the silent-failure shape this file
 // is supposed to detect, not exhibit.
 require_once __DIR__ . '/functions_system.php';
+// refresh_organism_cache calls moop_organism_cache_staleness() -- the same explicit rule. The
+// copy it replaced guarded itself with function_exists(), which in the background runner
+// (scripts/run_housekeeping.php loads only config_init + this file) was always false, so it
+// never once judged the cache fresh: the rebuild script was started every run and its own
+// copy of the check said "already up to date".
+require_once __DIR__ . '/functions_data.php';
 require_once __DIR__ . '/library_audit.php';
 
 /**
@@ -1255,26 +1261,16 @@ function housekeeping_refresh_organism_cache_if_stale() {
     if (moop_organism_cache_refresh_active()) return;
 
     // Only refresh when the underlying data actually changed — a DB rebuilt/copied over,
-    // groups or taxonomy edited — detected via the same fingerprints the warm script and
-    // dashboard use, rather than on a fixed timer. Keeps refreshes out of the admin's way:
-    // the only slow case is a big rebuild, and it runs in the background below.
-    if (file_exists($cache_file)) {
-        $raw = loadJsonFile($cache_file, []);
-        // An older schema is stale whatever its fingerprints say: the scan discards it, and
-        // without this check a schema bump never reached the cache on its own.
-        if ($raw && isset($raw['org_fingerprints'], $raw['config_fingerprint'])
-            && defined('ORGANISM_CACHE_SCHEMA_VERSION')
-            && ($raw['schema_version'] ?? 0) === ORGANISM_CACHE_SCHEMA_VERSION
-            && function_exists('buildPerOrganismFingerprints') && function_exists('buildConfigFingerprint')) {
-            $metadata_path      = $config->getPath('metadata_path');
-            $taxonomy_tree_file = "$metadata_path/taxonomy_tree_config.json";
-            $groups_file        = "$metadata_path/organism_assembly_groups.json";
-            if ($raw['org_fingerprints'] === buildPerOrganismFingerprints($organism_data)
-                && $raw['config_fingerprint'] === buildConfigFingerprint($taxonomy_tree_file, $groups_file)) {
-                return; // nothing changed — no refresh needed
-            }
-        }
-        // A cache with no fingerprints (older format) or unreadable → fall through and refresh.
+    // groups or taxonomy edited, or a cache of an older format — by the one staleness test
+    // every admin page uses (moop_organism_cache_staleness()), rather than on a fixed timer.
+    // Keeps refreshes out of the admin's way: the only slow case is a big rebuild, and it
+    // runs in the background below. No cache, or an unreadable one: refresh.
+    $raw = file_exists($cache_file) ? loadJsonFile($cache_file, []) : [];
+    if ($raw) {
+        $metadata_path = $config->getPath('metadata_path');
+        $staleness = moop_organism_cache_staleness($raw, $organism_data,
+            "$metadata_path/taxonomy_tree_config.json", "$metadata_path/organism_assembly_groups.json");
+        if (!$staleness['stale']) return;   // nothing changed — no refresh needed
     }
 
     file_put_contents($lock_file, '0');

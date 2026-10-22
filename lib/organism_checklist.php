@@ -53,7 +53,7 @@ function organism_checklist_checks(string $organism_data, array $sequence_types,
         'organisms_in_system'      => $organisms_in_system,
         'cache_generated'          => is_array($raw_cache) ? ($raw_cache['generated'] ?? null) : null,
         'cache_stale_organisms'    => $staleness['changed'],
-        'cache_config_changed'     => $staleness['config_changed'],
+        'cache_stale_reasons'      => $staleness['reasons'],   // config change, older format
         'no_database_organisms'    => $health['no_database_organisms'],
         'empty_database_organisms' => $health['empty_database_organisms'],
         'missing_json'             => $missing_json,

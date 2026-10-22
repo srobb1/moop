@@ -58,50 +58,46 @@ if (!$force && !$single_organism) {
     $cache_file = moop_organism_cache_file();
     if (file_exists($cache_file)) {
         $cached = loadJsonFile($cache_file, []);
-        // schema_version too: getCachedOrganismsInfo() discards a cache of an older schema,
-        // but this early exit did not look, so after a schema bump the Refresh button
-        // answered "already up to date" and the new fields never appeared until some
-        // organism's files happened to change (2026-10-12, schema 5 -> 6).
-        if ($cached && isset($cached['org_fingerprints'], $cached['config_fingerprint'], $cached['generated'])
-            && ($cached['schema_version'] ?? 0) === ORGANISM_CACHE_SCHEMA_VERSION) {
-            $current_org_fps   = buildPerOrganismFingerprints($organism_data);
-            $current_config_fp = buildConfigFingerprint($taxonomy_tree_file, $groups_file);
-            if ($cached['config_fingerprint'] === $current_config_fp && $cached['org_fingerprints'] === $current_org_fps) {
-                // Organism cache is fresh — but still run taxonomy section if lineage cache is missing
-                $lineage_cache_file = "$metadata_path/taxonomy_lineage_cache.json";
-                if (file_exists($lineage_cache_file)) {
-                    echo "Cache is already up to date (generated: {$cached['generated']})\n";
-                    echo "Use --force to rescan anyway.\n";
-                    exit(0);
-                }
-                echo "Organism cache is fresh but lineage cache is missing — running taxonomy update.\n";
-                // Jump straight to taxonomy section using cached organism data
-                $organism_infos = [];
-                foreach ($cached['data'] as $org_name => $org_data) {
-                    if (!empty($org_data['info'])) $organism_infos[$org_name] = $org_data['info'];
-                }
-                $lineage_cache = load_lineage_cache($metadata_path);
-                $need_fetch = array_filter($organism_infos, function($d) use ($lineage_cache) {
-                    return !empty($d['taxon_id']) && !isset($lineage_cache[(string)$d['taxon_id']]);
-                });
-                if (!empty($need_fetch)) {
-                    echo "Fetching lineage from NCBI for " . count($need_fetch) . " organism(s)...\n";
-                    $lineage_cache = refresh_lineage_cache($need_fetch, $lineage_cache, function($org, $cur, $tot) {
-                        echo "  [$cur/$tot] $org\n";
-                    });
-                    save_lineage_cache($lineage_cache, $metadata_path);
-                }
-                $tree_config_file = "$metadata_path/taxonomy_tree_config.json";
-                if (!file_exists($tree_config_file) || is_writable($tree_config_file)) {
-                    $tree_data = build_tree_from_lineage_cache($organism_infos, $lineage_cache);
-                    $tree_json = json_encode($tree_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-                    if ($tree_json !== false && @file_put_contents($tree_config_file, $tree_json) !== false) {
-                        @chmod($tree_config_file, 0664);
-                        echo "Taxonomy tree rebuilt (" . count($organism_infos) . " organisms).\n";
-                    }
-                }
+        // The one staleness test every admin page and housekeeping use. It includes the cache
+        // format: getCachedOrganismsInfo() discards a cache of an older schema, and this early
+        // exit once did not look, so after a schema bump the Refresh button answered "already
+        // up to date" and the new fields never appeared (2026-10-12, schema 5 -> 6).
+        if ($cached && isset($cached['generated'])
+            && !moop_organism_cache_staleness($cached, $organism_data, $taxonomy_tree_file, $groups_file)['stale']) {
+            // Organism cache is fresh — but still run taxonomy section if lineage cache is missing
+            $lineage_cache_file = "$metadata_path/taxonomy_lineage_cache.json";
+            if (file_exists($lineage_cache_file)) {
+                echo "Cache is already up to date (generated: {$cached['generated']})\n";
+                echo "Use --force to rescan anyway.\n";
                 exit(0);
             }
+            echo "Organism cache is fresh but lineage cache is missing — running taxonomy update.\n";
+            // Jump straight to taxonomy section using cached organism data
+            $organism_infos = [];
+            foreach ($cached['data'] as $org_name => $org_data) {
+                if (!empty($org_data['info'])) $organism_infos[$org_name] = $org_data['info'];
+            }
+            $lineage_cache = load_lineage_cache($metadata_path);
+            $need_fetch = array_filter($organism_infos, function($d) use ($lineage_cache) {
+                return !empty($d['taxon_id']) && !isset($lineage_cache[(string)$d['taxon_id']]);
+            });
+            if (!empty($need_fetch)) {
+                echo "Fetching lineage from NCBI for " . count($need_fetch) . " organism(s)...\n";
+                $lineage_cache = refresh_lineage_cache($need_fetch, $lineage_cache, function($org, $cur, $tot) {
+                    echo "  [$cur/$tot] $org\n";
+                });
+                save_lineage_cache($lineage_cache, $metadata_path);
+            }
+            $tree_config_file = "$metadata_path/taxonomy_tree_config.json";
+            if (!file_exists($tree_config_file) || is_writable($tree_config_file)) {
+                $tree_data = build_tree_from_lineage_cache($organism_infos, $lineage_cache);
+                $tree_json = json_encode($tree_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                if ($tree_json !== false && @file_put_contents($tree_config_file, $tree_json) !== false) {
+                    @chmod($tree_config_file, 0664);
+                    echo "Taxonomy tree rebuilt (" . count($organism_infos) . " organisms).\n";
+                }
+            }
+            exit(0);
         }
     }
 }

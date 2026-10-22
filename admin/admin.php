@@ -27,36 +27,19 @@ $cache_file    = moop_organism_cache_file();
 $lock_file     = moop_organism_cache_lock_file();
 $cache_info    = ['generated' => null, 'organism_count' => 0, 'refreshing' => false];
 $_raw_cache_data = [];
-$cache_stale = false;      // true when live data fingerprints differ from the cache's
-$cache_changed_orgs = [];  // organisms whose data changed since the cache was built
 if (file_exists($cache_file)) {
     $raw = loadJsonFile($cache_file, []);
     if ($raw) {
         $cache_info['generated']      = $raw['generated'] ?? null;
         $cache_info['organism_count'] = count($raw['data'] ?? []);
         $_raw_cache_data = $raw['data'] ?? [];
-        // Content-based staleness: compare the CURRENT data fingerprints against the ones
-        // stored when the cache was built, so we flag "your data actually changed" (a DB
-        // rebuilt/copied over, groups/taxonomy edited) instead of nagging by age. Cheap
-        // (~3ms: organism.sqlite mtimes + two config files). This is what the drift/orphan
-        // checks below depend on — a stale cache silently hides real problems.
-        if (function_exists('buildPerOrganismFingerprints') && function_exists('buildConfigFingerprint')) {
-            $_meta_path   = $config->getPath('metadata_path');
-            $_cur_org_fps = buildPerOrganismFingerprints($organism_data);
-            $_cur_cfg_fp  = buildConfigFingerprint("$_meta_path/taxonomy_tree_config.json", "$_meta_path/organism_assembly_groups.json");
-            $_cached_org_fps = $raw['org_fingerprints'] ?? [];
-            foreach ($_cur_org_fps as $_o => $_fp) {
-                if (!isset($_cached_org_fps[$_o]) || $_cached_org_fps[$_o] !== $_fp) $cache_changed_orgs[] = $_o;
-            }
-            foreach ($_cached_org_fps as $_o => $_fp) {
-                if (!isset($_cur_org_fps[$_o])) $cache_changed_orgs[] = $_o . ' (removed)';
-            }
-            sort($cache_changed_orgs);
-            $_config_changed = isset($raw['config_fingerprint']) && $raw['config_fingerprint'] !== $_cur_cfg_fp;
-            $cache_stale = !empty($cache_changed_orgs) || $_config_changed;
-        }
     }
 }
+// Content-based staleness ("your data actually changed", not "the cache is old"): the same
+// test Manage Organisms, the setup checklist and the Quick Links counts apply. This page had
+// its own inline copy until 2026-10-22, with slightly different rules.
+['cache_stale' => $cache_stale, 'cache_changed_orgs' => $cache_changed_orgs, 'cache_stale_reasons' => $cache_stale_reasons] =
+    moop_organism_cache_stale_summary($raw ?? []);
 // Same liveness test the status endpoint and housekeeping use — see
 // moop_organism_cache_refresh_active(). This was `file_exists($lock_file) && mtime < 600`,
 // which answered a different question (was a lock created recently) and so disagreed with
@@ -81,6 +64,7 @@ $data = [
     'cache_info' => $cache_info,
     'cache_stale' => $cache_stale,
     'cache_changed_orgs' => $cache_changed_orgs,
+    'cache_stale_reasons' => $cache_stale_reasons,
     // Per CLAUDE.md §6: JS logic belongs in js/modules/, not inline. (The organism-cache
     // widget below predates that rule.)
     'page_script' => [
