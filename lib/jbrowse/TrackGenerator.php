@@ -246,10 +246,17 @@ class TrackGenerator
                 // Existing tracks are not regenerated -- but their ACCESS still follows the sheet.
                 // Before 2026-10-20 a changed Access cell never reached a track that already had a
                 // JSON file, so the sheet could say COLLABORATOR while the site served it PUBLIC.
-                if ($this->syncExistingAccessLevel($this->findTrackFile($track['track_id'], $track['organism'], $track['assembly']),
-                                                   (string)($track['access_level'] ?? ''), $dryRun)) {
+                $trackFile = $this->findTrackFile($track['track_id'], $track['organism'], $track['assembly']);
+                if ($this->syncExistingAccessLevel($trackFile, (string)($track['access_level'] ?? ''), $dryRun)) {
                     $results['access_updated'][] = $track['track_id'];
                     echo "  ⚿ Access updated: " . $track['track_id'] . " -> " . ($track['access_level'] ?: 'not set') . "\n";
+                }
+                // ...and so does what the sheet SAYS about it: name, category, description and the
+                // descriptive columns. See syncExistingDescription().
+                $changed = $this->syncExistingDescription($trackFile, $track, $dryRun);
+                if ($changed) {
+                    $results['description_updated'][] = $track['track_id'];
+                    echo "  ✎ Updated: " . $track['track_id'] . " (" . implode(', ', $changed) . ")\n";
                 }
                 $results['skipped'][] = $track['track_id'];
                 $results['stats']['skipped']++;
@@ -458,6 +465,60 @@ class TrackGenerator
             return false;
         }
         return true;
+    }
+
+    /**
+     * Bring an existing track's DESCRIPTION up to date with its sheet row, without regenerating it.
+     *
+     * A sync skips tracks that already have a JSON file (regenerating means re-reading remote
+     * files, and BAM tracks recount their reads), so until 2026-10-23 an edited NAME, CATEGORY,
+     * DESCRIPTION or descriptive column never reached a track that existed -- the sheet said one
+     * thing, the browser showed another, and only "force" fixed it. Same trap as the access level
+     * above, closed the same way: these fields are copied from the row on every sync.
+     *
+     * Only what the sheet describes is touched: name, category, metadata.description and
+     * metadata.google_sheets_metadata (GoogleSheetsParser::sheetMetadata()). The file location,
+     * displays, colours and anything computed when the track was generated are left alone. Gene
+     * set tracks are not sheet tracks and are skipped, as for access.
+     *
+     * @param string|null $trackFile Existing track JSON
+     * @param array       $track     Track data from GoogleSheetsParser::parseTracks()
+     * @param bool        $dryRun    Report what would change without writing
+     * @return string[] The fields that changed (empty when nothing did)
+     */
+    public function syncExistingDescription(?string $trackFile, array $track, bool $dryRun = false): array
+    {
+        if ($trackFile === null || !is_file($trackFile)) return [];
+        $def = json_decode((string)file_get_contents($trackFile), true);
+        if (!is_array($def) || (string)($def['metadata']['gene_set'] ?? '') !== '') return [];
+
+        $changed = [];
+        $name = trim((string)($track['name'] ?? ''));
+        if ($name !== '' && ($def['name'] ?? null) !== $name) {
+            $def['name'] = $name; $changed[] = 'name';
+        }
+        $category = trim((string)($track['category'] ?? ''));
+        if ($category !== '' && ($def['category'] ?? null) !== [$category]) {
+            $def['category'] = [$category]; $changed[] = 'category';
+        }
+        $description = trim((string)($track['description'] ?? ''));
+        if (($def['metadata']['description'] ?? '') !== $description) {
+            $def['metadata']['description'] = $description; $changed[] = 'description';
+        }
+        // The key's presence is what marks a sheet track for clean (isSheetOriginTrack()), so a
+        // track that has it keeps it even when its row's descriptive cells are now all empty.
+        $sheet = GoogleSheetsParser::sheetMetadata($track);
+        $had = array_key_exists('google_sheets_metadata', $def['metadata'] ?? []);
+        if (($sheet || $had) && ($def['metadata']['google_sheets_metadata'] ?? null) !== $sheet) {
+            $def['metadata']['google_sheets_metadata'] = $sheet; $changed[] = 'metadata';
+        }
+
+        if (!$changed || $dryRun) return $changed;
+        if (file_put_contents($trackFile, json_encode($def, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) === false) {
+            error_log("TrackGenerator: could not update the description in $trackFile");
+            return [];
+        }
+        return $changed;
     }
 
     public function trackExists($trackId, $organism, $assembly)

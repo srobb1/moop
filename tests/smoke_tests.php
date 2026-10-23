@@ -613,6 +613,39 @@ ok($_ts_lists === [], 'no track type keeps its own list of sheet columns'
    . ($_ts_lists ? ' -- ' . implode(', ', $_ts_lists) : ''));
 
 // ----------------------------------------------------------------------------
+group('sheet sync refreshes what the sheet says about existing tracks');
+// A sync skips tracks that already have a JSON file, so before 2026-10-23 an edited NAME,
+// CATEGORY, DESCRIPTION or descriptive column never reached them without "force".
+require_once dirname(__DIR__) . '/lib/jbrowse/TrackGenerator.php';
+$_sd_gen  = new TrackGenerator(ConfigManager::getInstance());
+$_sd_file = sys_get_temp_dir() . '/moop_sd_' . getmypid() . '.json';
+$_sd_def  = ['trackId' => 'track_abc', 'name' => 'old name', 'category' => ['Gene Expression'],
+             'adapter' => ['type' => 'BigWigAdapter', 'bigWigLocation' => ['uri' => 'https://t/x.bw']],
+             'metadata' => ['access_level' => 'PUBLIC', 'description' => '', 'file_size' => 'remote',
+                            'google_sheets_metadata' => ['technique' => 'RNASeq', 'tissue' => 'whole']]];
+file_put_contents($_sd_file, json_encode($_sd_def));
+$_sd_row = ['track_id' => 't1', 'name' => 'new name', 'category' => 'Gene Expression',
+            'description' => 'now described', 'sheet_metadata' => ['technique' => 'RNASeq', 'tissue' => 'whole animal', 'stage' => 'adult']];
+ok($_sd_gen->syncExistingDescription($_sd_file, $_sd_row, true) === ['name', 'description', 'metadata']
+   && json_decode(file_get_contents($_sd_file), true) === $_sd_def, 'dry run reports the changes and writes nothing');
+ok($_sd_gen->syncExistingDescription($_sd_file, $_sd_row) === ['name', 'description', 'metadata'], 'a real sync applies them');
+$_sd_new = json_decode(file_get_contents($_sd_file), true);
+ok($_sd_new['name'] === 'new name' && $_sd_new['metadata']['description'] === 'now described'
+   && $_sd_new['metadata']['google_sheets_metadata'] === ['technique' => 'RNASeq', 'tissue' => 'whole animal', 'stage' => 'adult'],
+   'name, description and the descriptive columns follow the sheet');
+ok($_sd_new['adapter'] === $_sd_def['adapter'] && $_sd_new['metadata']['file_size'] === 'remote'
+   && $_sd_new['metadata']['access_level'] === 'PUBLIC' && $_sd_new['trackId'] === 'track_abc',
+   'the file location, generated facts and access are left alone');
+ok($_sd_gen->syncExistingDescription($_sd_file, $_sd_row) === [], 'a second sync changes nothing');
+$_sd_row['sheet_metadata'] = [];
+$_sd_gen->syncExistingDescription($_sd_file, $_sd_row);
+ok(array_key_exists('google_sheets_metadata', json_decode(file_get_contents($_sd_file), true)['metadata']),
+   'emptied descriptive cells keep the sheet-track marker, so clean still recognises the track');
+file_put_contents($_sd_file, json_encode(['name' => 'Genes', 'metadata' => ['gene_set' => 'NV2']]));
+ok($_sd_gen->syncExistingDescription($_sd_file, $_sd_row) === [], 'a gene set track is never touched');
+@unlink($_sd_file);
+
+// ----------------------------------------------------------------------------
 group('sheet sync clean — only removes tracks a sheet wrote');
 
 // On 2026-10-01 a sheet was registered for Congeria and synced with the page defaults. The

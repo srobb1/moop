@@ -230,7 +230,8 @@
         <div class="border rounded p-3 bg-light">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="optRewrite" checked>
-            <label class="form-check-label" for="optRewrite">Rewrite existing tracks from the sheet (picks up edited rows)</label>
+            <label class="form-check-label" for="optRewrite">Rewrite existing tracks from the sheet</label>
+            <small class="text-muted d-block">Rebuilds every track, which re-reads each file and is slow on a large sheet. Only needed when a row's file path, colour or track type changed: names, categories, descriptions and the other columns are updated on every sync.</small>
           </div>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="optRemove">
