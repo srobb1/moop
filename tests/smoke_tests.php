@@ -2204,6 +2204,28 @@ ok(strpos(moop_text_with_links('<b>x</b> https://a.b/"onmouseover="y'), '<b>') =
 ok(moop_text_with_links("two\nlines, no url") === "two\nlines, no url", 'plain text passes through; line breaks are kept for CSS');
 
 // ----------------------------------------------------------------------------
+group('ConfigManager: dotted keys and numbers reach every getter');
+// Only getBoolean() understood 'a.b' until 2026-10-23; getArray('jbrowse2.trusted_tracks_servers')
+// silently returned [] and housekeeping checked a JWT key path it never actually read. And
+// getString() returned the DEFAULT for a bare int from site_config.php.
+$_cfg = ConfigManager::getInstance();
+$_rp = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved;
+$_c['jbrowse2'] = ['trusted_tracks_servers' => ['https://t.example'], 'jwt_private_key' => '/k/priv.pem', 'n' => 3];
+$_c['smoke_int'] = 7;
+$_c['smoke.literal'] = 'literal wins';
+$_rp->setValue($_cfg, $_c);
+ok($_cfg->getArray('jbrowse2.trusted_tracks_servers') === ['https://t.example'], 'getArray reads a dotted key');
+ok($_cfg->getPath('jbrowse2.jwt_private_key') === '/k/priv.pem', 'getPath reads a dotted key');
+ok($_cfg->getInt('jbrowse2.n') === 3, 'getInt reads a dotted key');
+ok($_cfg->getString('jbrowse2.missing', 'd') === 'd' && $_cfg->getString('smoke_int.x', 'd') === 'd',
+   'a missing or non-array path gives the default');
+ok($_cfg->getString('smoke.literal') === 'literal wins', 'a literal key containing a dot still wins');
+ok($_cfg->getString('smoke_int', 'default') === '7', 'getString returns a bare int as text, not the default');
+$_rp->setValue($_cfg, $_saved);
+
+// ----------------------------------------------------------------------------
 group('BLAST queue: it cannot get stuck');
 // lib/blast_queue.php. State is flock()s, which the kernel drops when a process dies, so the
 // things to prove are: a free unit is always takeable, nothing is held half-way, a dead

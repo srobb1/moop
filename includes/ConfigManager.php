@@ -175,9 +175,14 @@ class ConfigManager
     }
 
     /**
-     * Get configuration value with type coercion
-     * 
-     * @param string $key Configuration key
+     * Get configuration value
+     *
+     * Dot notation reaches into nested settings: 'jbrowse2.trusted_tracks_servers'. Every typed
+     * getter goes through here, so they all accept it. Until 2026-10-23 only getBoolean() did;
+     * getArray('jbrowse2.trusted_tracks_servers') returned [] while the configured list held the
+     * tracks server, and nothing said so. A literal key with a dot in it still wins.
+     *
+     * @param string $key Configuration key (supports dot notation)
      * @param mixed $default Default value if key not found
      * @return mixed Configuration value or default
      */
@@ -195,7 +200,17 @@ class ConfigManager
             return "/$site/$images_dir/$favicon_filename";
         }
 
-        return $this->config[$key] ?? $default;
+        if (array_key_exists($key, $this->config) || strpos($key, '.') === false) {
+            return $this->config[$key] ?? $default;
+        }
+        $value = $this->config;
+        foreach (explode('.', $key) as $k) {
+            if (!is_array($value) || !isset($value[$k])) {
+                return $default;
+            }
+            $value = $value[$k];
+        }
+        return $value;
     }
 
     /**
@@ -234,6 +249,10 @@ class ConfigManager
     public function getString($key, $default = '')
     {
         $value = $this->get($key, $default);
+        // A number is text too. site_config.php writes numbers bare ('blast_num_threads' => 2)
+        // while a saved admin form stores "2", and rejecting the int returned the DEFAULT --
+        // so the setting only took effect once an admin happened to save it as a string.
+        if (is_int($value) || is_float($value)) return (string)$value;
         return is_string($value) ? $value : $default;
     }
 
