@@ -550,6 +550,60 @@
                     </div>
                 </div>
 
+                <!-- BLAST Queue -->
+                <?php
+                $_bq = $blast_queue_effective;
+                $_bq_auto = [
+                    'blast_memory_budget_mb' => number_format($_bq['units'] * BLAST_QUEUE_UNIT_MB / 1024, 1) . ' GB',
+                    'blast_max_concurrent'   => $_bq['max_concurrent'] . ' at once',
+                ];
+                ?>
+                <div class="card adm-card mb-3" id="pnav-blast-queue" data-nav-label="BLAST Queue">
+                    <div class="card-header adm-head">
+                        <h5 class="mb-0"><i class="fa fa-hourglass-half"></i> BLAST Queue</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">
+                            When the server is busy, BLAST and Primer BLAST searches wait their turn instead of all
+                            running at once &mdash; too many big genome searches together run the server out of memory.
+                            A waiting user sees their place in line. Nothing can get stuck: a search that dies frees
+                            its place immediately, and both the wait and the run are time-limited.
+                        </p>
+                        <p class="small mb-3">
+                            <strong>Right now:</strong>
+                            <?php if ($blast_queue_now['ok']): ?>
+                                <?= (int)$blast_queue_now['running'] ?> running, <?= (int)$blast_queue_now['waiting'] ?> waiting.
+                            <?php else: ?>
+                                <span class="text-danger">the queue directory cannot be used, so searches run unqueued (see the error log).</span>
+                            <?php endif; ?>
+                            <span class="text-muted">In use: <?= htmlspecialchars($_bq_auto['blast_memory_budget_mb']) ?> memory budget,
+                            <?= (int)$_bq['max_concurrent'] ?> searches at once, wait up to <?= (int)$_bq['max_wait'] ?> s, run up to <?= (int)$_bq['max_runtime'] ?> s.</span>
+                        </p>
+                        <div class="row g-3">
+                            <?php foreach (['blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb'] as $_qk):
+                                $_qm = $editable_config[$_qk]; ?>
+                            <div class="col-sm-6 col-lg-4">
+                                <label class="form-label small fw-semibold mb-1" for="<?= $_qk ?>"><?= htmlspecialchars($_qm['label']) ?></label>
+                                <input type="number" class="form-control form-control-sm" style="max-width: 140px;"
+                                       id="<?= $_qk ?>" name="<?= $_qk ?>"
+                                       value="<?= (int)$_qm['current_value'] ?>"
+                                       min="<?= (int)$_qm['min'] ?>" max="<?= (int)$_qm['max'] ?>">
+                                <small class="text-muted d-block mt-1"><?= htmlspecialchars($_qm['description']) ?>
+                                    <?php if ((int)$_qm['current_value'] === 0 && isset($_bq_auto[$_qk])): ?>
+                                        Now: <?= htmlspecialchars($_bq_auto[$_qk]) ?>.
+                                    <?php endif; ?>
+                                </small>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <small class="form-text text-muted d-block mt-3">
+                            Longest wait + longest run must stay under 280 s: nginx gives up on a page after 300 s
+                            (<code>scripts/install_nginx_timeouts.sh</code>). Background and measurements:
+                            <code>notes/CAPACITY_TEST_2026-10-23.md</code>.
+                        </small>
+                    </div>
+                </div>
+
                 <!-- BLAST Sample Sequences -->
                 <div class="card adm-card mb-3" id="pnav-blast-samples" data-nav-label="BLAST Sample Sequences">
                     <div class="card-header adm-head d-flex justify-content-between align-items-center">

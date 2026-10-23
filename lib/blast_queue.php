@@ -179,6 +179,14 @@ function blast_queue_status(string $ticket): array
     return ['state' => 'unknown'];
 }
 
+/** Searches running and waiting right now, for the admin page. */
+function blast_queue_snapshot(): array
+{
+    $dir = blast_queue_dir();
+    if ($dir === '') return ['ok' => false, 'running' => 0, 'waiting' => 0];
+    return ['ok' => true, 'running' => blast_queue_running($dir), 'waiting' => count(blast_queue_waiters($dir))];
+}
+
 /**
  * Try to take $need unit locks at once. All or nothing: a partial set is released, so two
  * waiters can never each hold half of what the other needs.

@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -798,9 +798,41 @@ class ConfigManager
                 'label' => 'BLAST CPU Threads',
                 'description' => 'Maximum CPU threads per BLAST search. Should match the number of cores on this server. Each concurrent BLAST job uses this many threads.',
                 'type' => 'number',
-                'current_value' => (int)$this->getString('blast_num_threads', '2'),
+                'current_value' => $this->getInt('blast_num_threads', 2),
                 'min' => 1,
                 'max' => 256,
+            ],
+            // The BLAST queue (lib/blast_queue.php). Ranges are the save handler's bounds;
+            // 0 means "size from this machine" where allowed.
+            'blast_memory_budget_mb' => [
+                'label' => 'Memory budget (MB)',
+                'description' => 'Memory BLAST searches may use at once: 0 = 60% of RAM, otherwise at least 1024.',
+                'type' => 'number', 'min' => 0, 'max' => 1048576,
+                'current_value' => $this->getInt('blast_memory_budget_mb', 0),
+            ],
+            'blast_max_concurrent' => [
+                'label' => 'Searches at once',
+                'description' => 'At most this many BLAST searches run together. 0 = CPU cores / threads + 2.',
+                'type' => 'number', 'min' => 0, 'max' => 256,
+                'current_value' => $this->getInt('blast_max_concurrent', 0),
+            ],
+            'blast_queue_max_wait' => [
+                'label' => 'Longest wait in line (s)',
+                'description' => 'After this a waiting search gives up with "server busy, try again".',
+                'type' => 'number', 'min' => 10, 'max' => 600,
+                'current_value' => $this->getInt('blast_queue_max_wait', 120),
+            ],
+            'blast_max_runtime' => [
+                'label' => 'Longest run (s)',
+                'description' => 'A search still running after this is stopped.',
+                'type' => 'number', 'min' => 30, 'max' => 1800,
+                'current_value' => $this->getInt('blast_max_runtime', 150),
+            ],
+            'blast_max_output_mb' => [
+                'label' => 'Largest result (MB)',
+                'description' => 'Bigger results are refused with a reason. Above ~40 MB they no longer fit PHP\'s 128 MB memory limit.',
+                'type' => 'number', 'min' => 5, 'max' => 100,
+                'current_value' => $this->getInt('blast_max_output_mb', 20),
             ],
             'search_results_limit' => [
                 'label' => 'Search Results Limit',

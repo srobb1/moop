@@ -204,6 +204,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // BLAST queue settings. Out of range is an ERROR, not a silently dropped field:
+        // a save that reports success while keeping the old value reads as "my change
+        // did nothing". Bounds come from the metadata, so the form and this agree.
+        $_qmeta = $config->getEditableConfigMetadata();
+        foreach (['blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait',
+                  'blast_max_runtime', 'blast_max_output_mb'] as $_qk) {
+            if (!isset($_POST[$_qk]) || trim((string)$_POST[$_qk]) === '') continue;
+            $_qv = (int)$_POST[$_qk];
+            if ($_qv < $_qmeta[$_qk]['min'] || $_qv > $_qmeta[$_qk]['max']) {
+                $error = "{$_qmeta[$_qk]['label']} must be between {$_qmeta[$_qk]['min']} and {$_qmeta[$_qk]['max']}.";
+                break;
+            }
+            if ($_qk === 'blast_memory_budget_mb' && $_qv !== 0) {
+                $_ram_mb = preg_match('/^MemTotal:\s+(\d+)/m', (string)@file_get_contents('/proc/meminfo'), $_m)
+                    ? intdiv((int)$_m[1], 1024) : 0;
+                if ($_qv < 1024 || ($_ram_mb && $_qv > $_ram_mb)) {
+                    $error = 'Memory budget must be 0 (automatic) or between 1024 MB and this server\'s RAM'
+                           . ($_ram_mb ? " ($_ram_mb MB)" : '') . '.';
+                    break;
+                }
+            }
+            $data[$_qk] = $_qv;
+        }
+        // nginx abandons a request after fastcgi_read_timeout (300 s, set by
+        // scripts/install_nginx_timeouts.sh); a search that waits and then runs must finish first.
+        if (empty($error) && isset($data['blast_queue_max_wait'], $data['blast_max_runtime'])
+            && $data['blast_queue_max_wait'] + $data['blast_max_runtime'] > 280) {
+            $error = 'Longest wait + longest run must stay under 280 seconds: nginx gives up on a page after 300 s, '
+                   . 'and a search still waiting or running then is lost to the user.';
+        }
+
         // Parse the per-organism search results cap. Bounded rather than free —
         // a value below the minimum would truncate ordinary searches, and one above
         // it stalls the browser rendering the table, which reads to a user as the
@@ -444,6 +475,11 @@ function moop_count_pattern_matches(string $organisms_dir, string $pattern): int
          + count(glob("$organisms_dir/*/*/$pattern") ?: []);
 }
 
+// What the BLAST queue is actually using (0 = automatic resolves here), and what it is doing now.
+require_once __DIR__ . '/../lib/blast_queue.php';
+$blast_queue_effective = blast_queue_settings();
+$blast_queue_now = blast_queue_snapshot();
+
 $sequence_type_matches = [];
 foreach (($editable_config['sequence_types']['current_value'] ?? []) as $_st => $_sc) {
     $sequence_type_matches[$_st] = moop_count_pattern_matches($organism_data, $_sc['pattern'] ?? '');
@@ -496,6 +532,8 @@ $data = [
     'metadata_path' => $metadata_path,
     'config_file' => $config_file,
     'sequence_type_matches' => $sequence_type_matches,
+    'blast_queue_effective' => $blast_queue_effective,
+    'blast_queue_now' => $blast_queue_now,
     'page_styles' => [
         // parent-nav.css supplies the sticky section-nav; the same pair the gene page uses.
         '/' . $site . '/css/parent-nav.css',

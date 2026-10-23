@@ -17,7 +17,10 @@ WHAT IT DOES
     primer_blast     check one pair against the NV2 genome
     search_one       annotation search, one organism
     search_bats      annotation search across every bat, fanned out 5-wide like the page does
-    gene_page        one gene page
+    name_one         gene name/ID search (PAX6, TP53, ...), one organism -- the name tier
+    name_bats        gene name/ID search across every bat
+    gene_page        one gene page (always the same small Nematostella gene: a warm baseline)
+    gene_page_any    a gene page picked from earlier search results -- many organisms, cold rows
   The bat scenarios need data a PUBLIC visitor cannot see; they are skipped (and say so) when
   the probe at start-up finds the site will not show them to this client.
 
@@ -30,6 +33,11 @@ COMMANDS
   capacity.py burst [--users 8] [--ramp 60] [--loops 2]
       The realistic case: people arrive over --ramp seconds and each does a session --
       search, open a gene, BLAST, design primers -- with think time between steps.
+  capacity.py mixed [--viewers 4] [--searchers 4] [--duration 60]
+      Do gene pages stay fast while other people search? First --viewers people open gene
+      pages (picked from real search results) on their own for --duration/2 seconds, the
+      baseline; then the same viewers carry on while --searchers people run cross-bat
+      searches back to back. Reports gene-page wait before vs during.
   capacity.py evict
       (server only) drop every organism database and BLAST index from the page cache, so
       the next run measures COLD. Verified with mincore, not assumed.
@@ -66,6 +74,7 @@ NV = ("Nematostella_vectensis", "GCA_033964005.1", "NV2")
 MM = ("Myotis_myotis", "GCF_014108235.1", "RS_100")
 BIG = ("Notamacropus_eugenii", "Tammar_Female_v7_Final_Haploid_plus_Y", "T2T_helixer")   # largest genome, ~3.4 Gb
 BAT_GROUP = "Bats"
+SEARCH_NAMES = ["PAX6", "TP53", "BRCA2", "SOX2", "NOTCH1", "WNT5A", "GAPDH", "MYC", "HOXA1", "ACTB"]
 SEARCH_TERMS = ["kinase", "transporter", "helicase", "zinc finger", "receptor", "ribosomal",
                 "ubiquitin", "collagen", "homeobox", "dehydrogenase"]
 HEAVY = {"tblastn_bat_gen", "tblastn_big_gen"}   # genome tblastn: 1.2-2.9 GB RAM each
@@ -164,9 +173,11 @@ def _search(c, organisms, term, width=5):
         if st != 200:
             return org, None, f"HTTP {st}"
         try:
-            return org, len(json.loads(body).get("results") or []), None
+            results = json.loads(body).get("results") or []
         except ValueError:
             return org, None, "not JSON"
+        _remember_genes(results)
+        return org, len(results), None
 
     with ThreadPoolExecutor(max_workers=width) as ex:
         for org, n, err in ex.map(one, organisms):
@@ -179,6 +190,31 @@ def _search(c, organisms, term, width=5):
                               + (f"; {len(errors)} failed ({errors[0]})" if errors else ""))
 
 
+GENE_POOL, _pool_lock = [], threading.Lock()
+
+
+def _remember_genes(results, keep=5):
+    """Keep a few hits from each search, so gene pages are ones people would actually open."""
+    import random
+    with _pool_lock:
+        for r in random.sample(results, min(keep, len(results))):
+            g = (r.get("organism"), r.get("genome_accession"), r.get("gene_set"), r.get("feature_uniquename"))
+            if all(g) and len(GENE_POOL) < 3000:
+                GENE_POOL.append(g)
+
+
+def _gene_page_any(c):
+    import random
+    with _pool_lock:
+        g = random.choice(GENE_POOL) if GENE_POOL else None
+    if g is None:
+        return _gene_page(c)
+    st, html, dt = c.req("/tools/parent.php", params={
+        "organism": g[0], "assembly": g[1], "gene_set": g[2], "uniquename": g[3]})
+    ok = st == 200 and g[3] in html
+    return ok, dt, f"HTTP {st}" if ok else f"HTTP {st} {g[0]} {g[3]}"
+
+
 def _gene_page(c):
     st, html, dt = c.req("/tools/parent.php", params={
         "organism": NV[0], "assembly": NV[1], "gene_set": NV[2], "uniquename": "NV2g025931000.1"})
@@ -188,6 +224,13 @@ def _gene_page(c):
 
 _term_i = 0
 _term_lock = threading.Lock()
+
+
+def next_name():
+    global _term_i
+    with _term_lock:
+        _term_i += 1
+        return SEARCH_NAMES[_term_i % len(SEARCH_NAMES)]
 
 
 def next_term():
@@ -211,7 +254,10 @@ SCENARIOS = {
     "primer_blast":    (_primer_blast, False),
     "search_one":      (lambda c: _search(c, [NV[0]], next_term()), False),
     "search_bats":     (lambda c: _search(c, BATS, next_term()), True),
+    "name_one":        (lambda c: _search(c, [NV[0]], next_name()), False),
+    "name_bats":       (lambda c: _search(c, BATS, next_name()), True),
     "gene_page":       (_gene_page, False),
+    "gene_page_any":   (_gene_page_any, False),
 }
 
 
@@ -397,6 +443,76 @@ def burst(a, sampler, in_range):
     return {"summary": summary, "requests": results}
 
 
+def mixed(a, sampler, in_range):
+    """Gene-page waits alone, then while other people run cross-organism searches."""
+    import random
+    orgs = BATS if in_range else [NV[0]]
+    print(f"priming the gene pool from searches over {len(orgs)} organism(s)...")
+    c0 = Client(a.base)
+    for term in SEARCH_NAMES[:3] + SEARCH_TERMS[:2]:
+        _search(c0, orgs, term)
+    print(f"  {len(GENE_POOL)} genes from {len({g[0] for g in GENE_POOL})} organisms")
+
+    results, lock = [], threading.Lock()
+    phase = {"name": "alone"}
+    stop = threading.Event()
+    searching = threading.Event()
+
+    def viewer(i):
+        rnd = random.Random(i)
+        c = Client(a.base)
+        while not stop.is_set():
+            ok, dt, detail = _gene_page_any(c)
+            with lock:
+                results.append({"phase": phase["name"], "kind": "gene_page", "ok": ok, "s": dt, "detail": detail})
+            time.sleep(rnd.uniform(0.5, 2.0))
+
+    def searcher(i):
+        c = Client(a.base)
+        searching.wait()
+        n = 0
+        while not stop.is_set():
+            term = (SEARCH_NAMES if n % 2 else SEARCH_TERMS)[(i + n) % 10]
+            ok, dt, detail = _search(c, orgs, term)
+            with lock:
+                results.append({"phase": "during", "kind": "search", "ok": ok, "s": dt, "detail": detail})
+            n += 1
+
+    threads = [threading.Thread(target=viewer, args=(i,), daemon=True) for i in range(a.viewers)]
+    threads += [threading.Thread(target=searcher, args=(i,), daemon=True) for i in range(a.searchers)]
+    for t in threads:
+        t.start()
+    t0 = time.time()
+    time.sleep(a.duration / 2)
+    phase["name"] = "during"
+    t1 = time.time()
+    searching.set()
+    time.sleep(a.duration)
+    stop.set()
+    for t in threads:
+        t.join(timeout=120)
+    t2 = time.time()
+
+    def line(label, rows, t_a, t_b):
+        if not rows:
+            return
+        ts = sorted(r["s"] for r in rows)
+        bad = [r for r in rows if not r["ok"]]
+        p95 = ts[min(len(ts) - 1, int(0.95 * len(ts)))]
+        srv = sampler.window(t_a, t_b) if sampler else {}
+        print(f"{label:<34} {len(ts):>4} {statistics.median(ts):>7.2f}s {p95:>7.2f}s {max(ts):>7.2f}s {len(bad):>5}"
+              + (f"   cpu peak {srv['cpu_peak']:.0f}% mean {srv['cpu_mean']:.0f}%, refaults {srv['refaults']}" if srv else "")
+              + (f"   !! {bad[0]['detail']}" if bad else ""))
+
+    print(f"\nmixed: {a.viewers} people opening gene pages; then {a.searchers} more searching "
+          f"{len(orgs)} organisms back to back")
+    print(f"{'':<34} {'n':>4} {'median':>8} {'p95':>8} {'slowest':>8} {'errs':>5}")
+    line("gene pages, alone", [r for r in results if r["phase"] == "alone" and r["kind"] == "gene_page"], t0, t1)
+    line(f"gene pages, during {a.searchers} searchers", [r for r in results if r["phase"] == "during" and r["kind"] == "gene_page"], t1, t2)
+    line(f"searches ({len(orgs)} organisms each)", [r for r in results if r["kind"] == "search"], t1, t2)
+    return {"requests": results}
+
+
 def evict_all():
     sys.path.insert(0, HERE)
     from cache import evict, resident
@@ -419,7 +535,7 @@ def evict_all():
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["list", "ladder", "burst", "evict"])
+    ap.add_argument("command", choices=["list", "ladder", "burst", "mixed", "evict"])
     ap.add_argument("scenario", nargs="?")
     ap.add_argument("--base", default="http://172.16.2.52/moop")
     ap.add_argument("--out", default="capacity_results")
@@ -431,6 +547,9 @@ def main():
     ap.add_argument("--loops", type=int, default=1)
     ap.add_argument("--think-min", type=float, default=5)
     ap.add_argument("--think-max", type=float, default=20)
+    ap.add_argument("--viewers", type=int, default=4)
+    ap.add_argument("--searchers", type=int, default=4)
+    ap.add_argument("--duration", type=float, default=60)
     ap.add_argument("--allow-oom", action="store_true", help="lift the heavy-BLAST concurrency guard (see SAFETY)")
     a = ap.parse_args()
 
@@ -468,6 +587,10 @@ def main():
             w = csv.DictWriter(fh, fieldnames=list(rows[0]))
             w.writeheader()
             w.writerows(rows)
+    elif a.command == "mixed":
+        res = mixed(a, sampler, in_range)
+        path = os.path.join(a.out, f"mixed-{stamp}.json")
+        json.dump(res, open(path, "w"), indent=1)
     else:
         if a.users > MAX_SAFE_HEAVY * 2 and not a.allow_oom:
             # each burst session includes one heavy (bat) tblastn; arrivals are spread, so

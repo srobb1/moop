@@ -52,6 +52,29 @@ BLASTs run — searches and gene pages were unaffected in every mixed test.
 **Your expected load (5–10 people, bursty) is comfortably inside what this box does — as long as
 nobody's BLAST can exhaust memory.**
 
+### Searches and gene pages together (added the same afternoon)
+
+The first pass searched only keywords and always opened the same small Nematostella gene, so
+it never tested name searches, gene pages on the big databases, or gene pages under search load.
+
+| Test | Result |
+|---|---|
+| Gene name/ID search ("NANOG", "GATA4"), all 49 bats, **cold cache** | 5.7 s |
+| Same, warm | ~2.4 s (0.05 s per organism) |
+| Broad keyword ("cytochrome") hitting the 2,500-row cap in every bat — 122,500 rows, **cold** | **21 s** |
+| Same, warm | 2.5 s (each organism 0.06 s, 1.5 MB of JSON) |
+| `mixed`: 6 people opening gene pages picked from real search results (1,225 genes, 49 bats), cold start | median **0.08 s**, p95 0.25 s |
+| …the same 6 while 4 more run 49-bat searches back to back (CPU mean 61%) | median **0.07 s**, p95 0.20 s — no change |
+| …and those searches | median 2.7 s, slowest 6.9 s, 0 errors |
+
+Gene pages are not affected by search load at all. The one slow case is a very broad cross-organism
+search from a cold cache: 21 s, all of it reading 122,500 rows off disk. More RAM (fix 5) is
+what helps there; the bigger cost of such a search is the browser drawing 122,500 rows, which
+is what the per-organism cap and its "narrow your search" prompt are for.
+
+Run it: `python3 capacity.py mixed --viewers 6 --searchers 4 --duration 60` (add `evict` first,
+on the server, for a cold start); `ladder name_bats`; `ladder gene_page_any`.
+
 ## When do we need more CPUs?
 
 CPU only matters for genome BLAST. The rule from the curve: **waits start growing once more than
