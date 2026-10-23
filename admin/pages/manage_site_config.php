@@ -557,6 +557,12 @@
                     'blast_memory_budget_mb' => number_format($_bq['units'] * BLAST_QUEUE_UNIT_MB / 1024, 1) . ' GB',
                     'blast_max_concurrent'   => $_bq['max_concurrent'] . ' at once',
                 ];
+                // The value in use, for the two settings where 0 means "work it out from this
+                // machine" -- the box shows that number, not a bare 0.
+                $_bq_in_use = [
+                    'blast_memory_budget_mb' => $_bq['units'] * BLAST_QUEUE_UNIT_MB,
+                    'blast_max_concurrent'   => $_bq['max_concurrent'],
+                ];
                 ?>
                 <div class="card adm-card mb-3" id="pnav-blast-queue" data-nav-label="BLAST Queue">
                     <div class="card-header adm-head">
@@ -581,18 +587,26 @@
                         </p>
                         <div class="row g-3">
                             <?php foreach (['blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb'] as $_qk):
-                                $_qm = $editable_config[$_qk]; ?>
+                                $_qm = $editable_config[$_qk];
+                                $_can_auto = isset($_bq_in_use[$_qk]);
+                                $_is_auto  = $_can_auto && (int)$_qm['current_value'] === 0; ?>
                             <div class="col-sm-6 col-lg-4">
                                 <label class="form-label small fw-semibold mb-1" for="<?= $_qk ?>"><?= htmlspecialchars($_qm['label']) ?></label>
-                                <input type="number" class="form-control form-control-sm" style="max-width: 140px;"
-                                       id="<?= $_qk ?>" name="<?= $_qk ?>"
-                                       value="<?= (int)$_qm['current_value'] ?>"
-                                       min="<?= (int)$_qm['min'] ?>" max="<?= (int)$_qm['max'] ?>">
-                                <small class="text-muted d-block mt-1"><?= htmlspecialchars($_qm['description']) ?>
-                                    <?php if ((int)$_qm['current_value'] === 0 && isset($_bq_auto[$_qk])): ?>
-                                        Now: <?= htmlspecialchars($_bq_auto[$_qk]) ?>.
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="number" class="form-control form-control-sm" style="max-width: 140px;"
+                                           id="<?= $_qk ?>" name="<?= $_qk ?>"
+                                           value="<?= $_is_auto ? (int)$_bq_in_use[$_qk] : (int)$_qm['current_value'] ?>"
+                                           min="<?= $_can_auto ? 1 : (int)$_qm['min'] ?>" max="<?= (int)$_qm['max'] ?>"
+                                           <?= $_is_auto ? 'disabled' : '' ?>>
+                                    <?php if ($_can_auto): ?>
+                                    <div class="form-check mb-0 small">
+                                        <input class="form-check-input bq-auto" type="checkbox" id="<?= $_qk ?>_auto" name="<?= $_qk ?>_auto"
+                                               value="1" data-target="<?= $_qk ?>" <?= $_is_auto ? 'checked' : '' ?>>
+                                        <label class="form-check-label" for="<?= $_qk ?>_auto">Automatic</label>
+                                    </div>
                                     <?php endif; ?>
-                                </small>
+                                </div>
+                                <small class="text-muted d-block mt-1"><?= htmlspecialchars($_qm['description']) ?></small>
                             </div>
                             <?php endforeach; ?>
                         </div>

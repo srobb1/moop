@@ -210,6 +210,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_qmeta = $config->getEditableConfigMetadata();
         foreach (['blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait',
                   'blast_max_runtime', 'blast_max_output_mb'] as $_qk) {
+            // "Automatic" ticked: store 0, which blast_queue_settings() sizes from this machine.
+            // (The number box is disabled then, so the browser does not send it.)
+            if (!empty($_POST[$_qk . '_auto'])) { $data[$_qk] = 0; continue; }
             if (!isset($_POST[$_qk]) || trim((string)$_POST[$_qk]) === '') continue;
             $_qv = (int)$_POST[$_qk];
             if ($_qv < $_qmeta[$_qk]['min'] || $_qv > $_qmeta[$_qk]['max']) {

@@ -806,13 +806,13 @@ class ConfigManager
             // 0 means "size from this machine" where allowed.
             'blast_memory_budget_mb' => [
                 'label' => 'Memory budget (MB)',
-                'description' => 'Memory BLAST searches may use at once: 0 = 60% of RAM, otherwise at least 1024.',
+                'description' => 'Memory BLAST searches may use at once. Automatic = 60% of RAM; a fixed value must be at least 1024.',
                 'type' => 'number', 'min' => 0, 'max' => 1048576,
                 'current_value' => $this->getInt('blast_memory_budget_mb', 0),
             ],
             'blast_max_concurrent' => [
                 'label' => 'Searches at once',
-                'description' => 'At most this many BLAST searches run together. 0 = CPU cores / threads + 2.',
+                'description' => 'At most this many BLAST searches run together. Automatic = CPU cores / threads + 2.',
                 'type' => 'number', 'min' => 0, 'max' => 256,
                 'current_value' => $this->getInt('blast_max_concurrent', 0),
             ],

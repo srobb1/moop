@@ -323,3 +323,30 @@
         });
     });
 })();
+
+/**
+ * BLAST Queue: the "Automatic" tick boxes.
+ *
+ * Ticked, the number box is disabled but still shows the value the queue is using, so the
+ * page never displays a bare 0 for "worked out from this machine". Unticked, the box opens
+ * with that same number as a starting point.
+ */
+(function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        const boxes = document.querySelectorAll('.bq-auto');
+        function sync(cb) {
+            const input = document.getElementById(cb.dataset.target);
+            if (input) input.disabled = cb.checked;
+        }
+        boxes.forEach(function (cb) {
+            cb.addEventListener('change', function () { sync(cb); });
+        });
+        // A form reset restores the tick but not the disabled state; resync after it.
+        const form = boxes.length ? boxes[0].form : null;
+        if (form) {
+            form.addEventListener('reset', function () {
+                window.setTimeout(function () { boxes.forEach(sync); }, 0);
+            });
+        }
+    });
+})();
