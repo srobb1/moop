@@ -158,7 +158,7 @@ function housekeeping_task_registry(): array {
             'name'  => 'security_updates',
             'fn'    => 'housekeeping_check_security_updates',
             'label' => 'OS security updates',
-            'desc'  => "Lists pending operating-system security updates (dnf on RHEL-family hosts, apt on Debian/Ubuntu), worst first, and flags the packages the site runs on — PHP, the web server, OpenSSL, SQLite, the kernel. Reads the package manager's own cached metadata, so it makes no network call; at most once a day, in the background run only. Report-only: installing updates needs root.",
+            'desc'  => "Lists pending operating-system security updates, worst first, and flags the packages the site runs on — PHP, the web server, OpenSSL, SQLite, the kernel. The web server may not ask the package manager itself, so this only READS a report that root writes: once a day (the moop-security-report timer) and after every dnf/apt install or update. Running housekeeping re-reads that report; it does not re-check the system. Report-only: installing updates needs root.",
         ],
         [
             'name'  => 'library_advisories',

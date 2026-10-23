@@ -349,6 +349,16 @@
           <span class="text-muted d-block mt-1">Updating PHP restarts php-fpm by itself; a kernel update needs a reboot.</span>
         </p>
       <?php endif; ?>
+      <?php if (($su['source'] ?? '') === 'report'): ?>
+        <?php /* Housekeeping only READS root's report, so "Run housekeeping now" alone shows the same
+                 answer again. Installing through dnf/apt refreshes the report by itself once the hook
+                 from install_security_report.sh is in place; this is for everything else. */ ?>
+        <p class="small mb-2">To re-check now (the report also refreshes by itself after each dnf/apt
+          install or update), on the server:
+          <code class="d-block mt-1">sudo systemctl start moop-security-report.service</code>
+          <span class="text-muted d-block mt-1">then <strong>Run housekeeping now</strong> to show the new report here.</span>
+        </p>
+      <?php endif; ?>
       <?php if (!empty($su['reboot'])): ?>
         <p class="small mb-2"><i class="fa fa-power-off text-warning me-1"></i>A newer kernel is installed than the one
           running — reboot to finish installing it.</p>
