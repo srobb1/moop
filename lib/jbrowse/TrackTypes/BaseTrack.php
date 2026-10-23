@@ -11,6 +11,8 @@
  * @package MOOP\JBrowse\TrackTypes
  */
 
+require_once __DIR__ . '/../GoogleSheetsParser.php';   // GoogleSheetsParser::sheetMetadata()
+
 abstract class BaseTrack
 {
     /**

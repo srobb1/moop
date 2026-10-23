@@ -14,6 +14,8 @@
 
 require_once __DIR__ . '/TrackTypeInterface.php';
 
+require_once __DIR__ . '/../GoogleSheetsParser.php';   // GoogleSheetsParser::sheetMetadata()
+
 class AutoTrack implements TrackTypeInterface
 {
     private $pathResolver;
@@ -263,12 +265,10 @@ class AutoTrack implements TrackTypeInterface
             ]
         ];
         
-        // Add any extra metadata from sheet
-        $extraFields = ['technique', 'institute', 'source', 'experiment', 'summary'];
-        foreach ($extraFields as $field) {
-            if (!empty($trackData[$field])) {
-                $metadata['metadata']['google_sheets_metadata'][$field] = $trackData[$field];
-            }
+        // Sheet fields: the same rule as every other track type.
+        $sheetsMetadata = GoogleSheetsParser::sheetMetadata($trackData);
+        if (!empty($sheetsMetadata)) {
+            $metadata['metadata']['google_sheets_metadata'] = $sheetsMetadata;
         }
         
         // Write JSON

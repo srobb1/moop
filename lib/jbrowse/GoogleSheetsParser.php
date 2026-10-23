@@ -24,14 +24,23 @@ class GoogleSheetsParser
     private $requiredColumns = ['track_id', 'name', 'track_path'];
 
     /**
-     * Sheet metadata columns carried through to the track types.
-     *
-     * Each track type decides what it publishes and copies only its own list into the track
-     * JSON (BigWig, BAM, BED, CRAM, VCF, GFF and GTF list 13; MAF, PAF and MCScan add four
-     * more). This list's job is to lose none of them on the way, so it is the union of theirs.
-     * tests/smoke_tests.php fails if a track type names a field that is missing here.
+     * Columns that are NOT description: the ones MOOP reads to BUILD a track, plus `notes`,
+     * which curators use for working notes ("Adding ... to dev stage for all in this project")
+     * and which must not appear in a public browser. Every other column is description,
+     * carried through as-is (see sheetMetadata()).
      *
      * Keys are normalized column names (see normalizeColumnName()).
+     */
+    const CONTROL_COLUMNS = [
+        'track_id', 'name', 'track_path', 'filename', 'category', 'access', 'access_level',
+        'color', 'description', 'notes',
+        // synteny (MCScan) and alignment (MAF) inputs
+        'assembly_1', 'assembly_2', 'assembly1', 'assembly2', 'bed1_path', 'bed2_path', 'maf',
+    ];
+
+    /**
+     * The descriptive columns this parser used to copy, by name. Kept only so track data built
+     * some other way than parseTracks() (no 'sheet_metadata' key) still yields its fields.
      */
     const METADATA_FIELDS = [
         'technique', 'institute', 'source', 'experiment',
@@ -39,6 +48,37 @@ class GoogleSheetsParser
         'summary', 'citation', 'project', 'accession',
         'date', 'analyst', 'sciprj', 'biosample', 'ngs_file', 'mlong',
     ];
+
+    /**
+     * A track's descriptive sheet fields: column => value, empty cells left out.
+     *
+     * The ONE place a track type gets them. Until 2026-10-23 eleven track types each kept their
+     * own list of column names (three different lists), so a new column in the sheet -- a
+     * ChIP target, a developmental stage split into stage / time point / sex -- was silently
+     * dropped unless all eleven were edited. Now every column that is not a CONTROL_COLUMN is
+     * kept, under its normalized header name. Columns are found by name, so their order in the
+     * sheet does not matter; a column that is empty for a track (or missing from the sheet
+     * altogether) simply adds nothing.
+     *
+     * @param array $data Track data from parseTracks() (or any array carrying the fields)
+     * @return array<string,string>
+     */
+    public static function sheetMetadata(array $data): array
+    {
+        $out = [];
+        if (isset($data['sheet_metadata']) && is_array($data['sheet_metadata'])) {
+            foreach ($data['sheet_metadata'] as $key => $value) {
+                $value = is_scalar($value) ? trim((string)$value) : '';
+                if ($value !== '') $out[$key] = $value;
+            }
+            return $out;
+        }
+        foreach (self::METADATA_FIELDS as $key) {
+            $value = isset($data[$key]) && is_scalar($data[$key]) ? trim((string)$data[$key]) : '';
+            if ($value !== '') $out[$key] = $value;
+        }
+        return $out;
+    }
 
     /**
      * Normalize a sheet column header to the key the code reads.
@@ -244,7 +284,9 @@ class GoogleSheetsParser
                 $differ = [];
                 foreach ($track as $key => $value) {
                     if (in_array($key, ['browser_track_id', 'organism', 'assembly'], true)) continue;
-                    if ((string)$value !== (string)($definitions[$id][$key] ?? '')) $differ[] = $key;
+                    $other = $definitions[$id][$key] ?? '';
+                    $same  = is_array($value) || is_array($other) ? $value == $other : (string)$value === (string)$other;
+                    if (!$same) $differ[] = $key;
                 }
                 if ($differ) {
                     $warnings[] = 'line ' . ($i + 1) . ': ' . $id . ' repeats line ' . $definedOnLine[$id]
@@ -512,9 +554,19 @@ class GoogleSheetsParser
             'assembly' => $row['assembly'],
         ];
 
-        // Optional metadata: every field some track type publishes (see METADATA_FIELDS)
+        // Every other column is description: kept by name, empty cells dropped (sheetMetadata()).
+        // The flat copies under METADATA_FIELDS stay for code that still reads them by name.
+        $sheet = [];
+        foreach ($row as $column => $value) {
+            if (in_array($column, self::CONTROL_COLUMNS, true)
+                || in_array($column, ['organism', 'assembly', 'browser_track_id'], true)
+                || $column === '') continue;
+            $value = trim((string)$value);
+            if ($value !== '') $sheet[$column] = $value;
+        }
+        $track['sheet_metadata'] = $sheet;
         foreach (self::METADATA_FIELDS as $field) {
-            $track[$field] = trim($row[$field] ?? '');
+            $track[$field] = $sheet[$field] ?? '';
         }
 
         return $track;

@@ -174,18 +174,13 @@ class PAFTrack extends BaseTrack implements TrackTypeInterface
             ]
         ];
         
-        // Add all optional metadata fields
-        $optionalFields = [
-            'technique', 'institute', 'source', 'experiment',
-            'developmental_stage', 'tissue', 'condition',
-            'summary', 'citation', 'project', 'accession',
-            'date', 'analyst', 'sciprj', 'biosample', 'ngs_file', 'mlong'
-        ];
-        
-        foreach ($optionalFields as $field) {
-            if (isset($options[$field]) && !empty($options[$field])) {
-                $metadata['metadata'][$field] = $options[$field];
-            }
+        // Sheet fields go under google_sheets_metadata, as for every other track type. These
+        // three used to put them loose in metadata, where the browser's faceted selector (which
+        // reads google_sheets_metadata, see moop_jbrowse_browser_metadata()) and the sheet-origin
+        // check (TrackGenerator) both missed them.
+        $sheetsMetadata = GoogleSheetsParser::sheetMetadata($options);
+        if (!empty($sheetsMetadata)) {
+            $metadata['metadata']['google_sheets_metadata'] = $sheetsMetadata;
         }
         
         // Build JBrowse2 track configuration

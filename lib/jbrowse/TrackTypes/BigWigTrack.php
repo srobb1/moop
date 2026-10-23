@@ -213,20 +213,8 @@ class BigWigTrack extends BaseTrack implements TrackTypeInterface
             $metadata['metadata']['file_size'] = $fileSize;
         }
         
-        // Add Google Sheets metadata if present
-        $sheetFields = [
-            'technique', 'institute', 'source', 'experiment',
-            'developmental_stage', 'tissue', 'condition',
-            'summary', 'citation', 'project', 'accession',
-            'date', 'analyst'
-        ];
-        
-        $googleMetadata = [];
-        foreach ($sheetFields as $field) {
-            if (isset($trackData[$field]) && !empty($trackData[$field])) {
-                $googleMetadata[$field] = $trackData[$field];
-            }
-        }
+        // Add Google Sheets metadata if present (one rule for every track type)
+        $googleMetadata = GoogleSheetsParser::sheetMetadata($trackData);
         
         if (!empty($googleMetadata)) {
             $metadata['metadata']['google_sheets_metadata'] = $googleMetadata;

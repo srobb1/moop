@@ -226,21 +226,8 @@ class GTFTrack extends BaseTrack implements TrackTypeInterface
      */
     private function extractSheetsMetadata(array $options): array
     {
-        $fields = [
-            'technique', 'institute', 'source', 'experiment',
-            'developmental_stage', 'tissue', 'condition',
-            'summary', 'citation', 'project', 'accession',
-            'date', 'analyst'
-        ];
-        
-        $metadata = [];
-        foreach ($fields as $field) {
-            if (isset($options[$field]) && $options[$field] !== '') {
-                $metadata[$field] = $options[$field];
-            }
-        }
-        
-        return $metadata;
+        // One rule for every track type: GoogleSheetsParser::sheetMetadata().
+        return GoogleSheetsParser::sheetMetadata($options);
     }
     
     /**

@@ -586,24 +586,31 @@ foreach (['developmental_stage', 'citation', 'project', 'accession', 'date', 'an
 }
 ok(!array_key_exists('tissue', $_ts_gsm), 'an empty sheet cell is not written as an empty field');
 
-// The drift guard. Each track type keeps its own list of the sheet fields it publishes, and the
-// parser must carry every one of them — a field a track type asks for but the parser drops is
-// exactly this bug. Asserted rather than trusted: adding a column to one track type's list
-// looks complete from inside that file.
-$_ts_fields = defined('GoogleSheetsParser::METADATA_FIELDS') ? GoogleSheetsParser::METADATA_FIELDS : [];
-ok(!empty($_ts_fields), 'GoogleSheetsParser::METADATA_FIELDS lists the fields it carries');
-$_ts_lists = 0;
+// Any column, any order, empty columns ignored. Until 2026-10-23 eleven track types each kept
+// their own list of column names (three different lists), so a NEW column was silently dropped.
+// Now every column that is not a control column is kept, by its header name.
+$_nc_tsv = "Chip-Target\tTRACK_PATH\tUnused Empty\tNAME\tTRACK_ID\tStage\tAccess\tTechnique\n"
+         . "H3K4me3\thttps://tracks.example.org/c1.bw\t\tChIP one\tc1\tembryo\tPublic\tChIPSeq\n";
+$_nc = ($_ts_parser->parseTracks($_nc_tsv, 'OrgA', 'GCA_1')['regular'][0] ?? []);
+ok(($_nc['sheet_metadata'] ?? null) === ['chip_target' => 'H3K4me3', 'stage' => 'embryo', 'technique' => 'ChIPSeq'],
+   'a new column is kept by name, columns in any order, an empty column adds nothing');
+ok(GoogleSheetsParser::sheetMetadata($_nc) === $_nc['sheet_metadata'], 'sheetMetadata() returns exactly those fields');
+ok(!array_intersect(array_keys($_nc['sheet_metadata'] ?? []), GoogleSheetsParser::CONTROL_COLUMNS),
+   'control columns (track id, name, path, access...) are not repeated as description');
+ob_start();
+(new BigWigTrack($_ts_resolver, ConfigManager::getInstance()))->generate($_nc, 'OrgA', 'GCA_1', ['dry_run' => true]);
+$_nc_out = ob_get_clean();
+$_nc_json = preg_match('/Metadata: (\{.*\})\s*$/s', $_nc_out, $_nc_m) ? json_decode($_nc_m[1], true) : null;
+ok(($_nc_json['metadata']['google_sheets_metadata']['chip_target'] ?? null) === 'H3K4me3',
+   'the new column reaches the track JSON with no code change');
+
+// And no track type may grow its own list again.
+$_ts_lists = [];
 foreach (glob(dirname(__DIR__) . '/lib/jbrowse/TrackTypes/*.php') as $_ts_file) {
-    preg_match_all("/\[\s*'technique'[^\]]*\]/", file_get_contents($_ts_file), $_ts_found);
-    foreach ($_ts_found[0] as $_ts_list) {
-        $_ts_lists++;
-        preg_match_all("/'([a-z0-9_]+)'/", $_ts_list, $_ts_names);
-        $_ts_missing = array_diff($_ts_names[1], $_ts_fields);
-        ok(empty($_ts_missing), basename($_ts_file) . ' publishes only fields the parser carries'
-           . (empty($_ts_missing) ? '' : ' (dropped: ' . implode(', ', $_ts_missing) . ')'));
-    }
+    if (preg_match("/\[\s*'technique'\s*,\s*'institute'/", file_get_contents($_ts_file))) $_ts_lists[] = basename($_ts_file);
 }
-ok($_ts_lists > 0, "found the track types' metadata field lists to check");
+ok($_ts_lists === [], 'no track type keeps its own list of sheet columns'
+   . ($_ts_lists ? ' -- ' . implode(', ', $_ts_lists) : ''));
 
 // ----------------------------------------------------------------------------
 group('sheet sync clean — only removes tracks a sheet wrote');
