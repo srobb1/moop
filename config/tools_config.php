@@ -118,7 +118,7 @@ return [
 
     'expression' => [
         'id'              => 'expression',
-        'name'            => 'Expression',
+        'name'            => 'Expression Explorer',
         'icon'            => 'fa-th',
         'description'     => 'Compare a list of genes across expression experiments as a heatmap',
         'btn_class'       => 'btn-tool-teal',

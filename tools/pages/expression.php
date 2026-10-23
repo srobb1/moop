@@ -1,6 +1,6 @@
 <?php
 /**
- * Expression tool -- content file (controller: tools/expression.php).
+ * Expression Explorer -- content file (controller: tools/expression.php).
  * Variables: $gene_sets, $chosen, $experiments, $selected_slugs, $genes_text, $typed, $too_many,
  *            $form_sent, $genes, $unresolved, $ambiguous, $via_parent, $no_rows, $heatmap,
  *            $mode, $sort, $link (callable: same request with some settings changed), $site
@@ -10,13 +10,13 @@ $gs_label = fn(array $gs) => str_replace('_', ' ', $gs['organism']) . ' — ' . 
 <div class="container py-3">
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
-      <?= page_title('Expression') ?>
-      <?= help_modal_trigger('expr-tool-help', '', 'What the Expression tool does') ?>
+      <?= page_title('Expression Explorer') ?>
+      <?= help_modal_trigger('expr-tool-help', '', 'What the Expression Explorer does') ?>
       <?= page_purpose('Compare a list of genes across expression experiments as a heatmap.', '', false, false) ?>
     </div>
   </div>
   <?php
-  echo help_modal('expr-tool-help', 'What the Expression tool does', [[
+  echo help_modal('expr-tool-help', 'What the Expression Explorer does', [[
       'heading' => '',
       'cards'   => [
           ['num' => '1', 'label' => 'Gene set', 'text' => 'Only gene sets with expression data are listed.'],

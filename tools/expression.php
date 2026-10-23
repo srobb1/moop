@@ -158,4 +158,4 @@ echo render_display_page(__DIR__ . '/pages/expression.php', [
     'sort'            => $sort,
     'link'            => $link,
     'page_styles'     => ["/$site/css/expression-tool.css"],
-], 'Expression');
+], 'Expression Explorer');

@@ -789,7 +789,7 @@
       <div id="mm-expr-row" class="d-none mt-2 pt-2 border-top">
         <button type="button" class="btn btn-sm mm-dl-secondary" id="mm-expr-btn">
           <span id="mm-expr-spinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
-          <i class="fa fa-th me-1"></i> Send to Expression
+          <i class="fa fa-th me-1"></i> Send to Expression Explorer
         </button>
         <span class="small text-muted ms-1">Heatmap of these genes, one gene set at a time.</span>
         <div id="mm-expr-result" class="small mt-2"></div>
