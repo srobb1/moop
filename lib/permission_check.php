@@ -18,6 +18,8 @@
  * by which point admin_init has loaded them for both callers.
  */
 
+require_once __DIR__ . '/jbrowse/track_token.php';   // moop_jwt_key_paths(): the keys signing really uses
+
 /**
  * How to judge a path — by IMPACT, not by an exact permission string.
  *
@@ -1054,7 +1056,7 @@ function moop_build_permission_items($config, array $ctx): array {
             'sensitive' => true,
             'description' => 'Private and public keys for JBrowse2 track authentication',
             'type' => 'directory',
-            'paths' => [$config->getPath('certs_directory')],
+            'paths' => [moop_jwt_key_paths()['dir']],
             'required_perms' => '2750',
             'required_owner' => $moop_owner,
             'required_group' => $web_group,
@@ -1070,8 +1072,8 @@ function moop_build_permission_items($config, array $ctx): array {
             'description' => 'RSA private and public keys used to sign JBrowse2 track tokens',
             'type' => 'file',
             'paths' => [
-                $config->getPath('jwt_private_key'),
-                $config->getPath('jwt_public_key'),
+                moop_jwt_key_paths()['private'],
+                moop_jwt_key_paths()['public'],
             ],
             'required_perms' => '640',
             'required_owner' => $moop_owner,

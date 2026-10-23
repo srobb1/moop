@@ -691,9 +691,10 @@ function housekeeping_environment_check() {
         }
     }
 
-    // 2. JWT keys exist and readable (use config paths, fall back to defaults)
-    $private_key = $config->getPath('jbrowse2.jwt_private_key') ?: $site_path . '/certs/jwt_private_key.pem';
-    $public_key  = $config->getPath('jbrowse2.jwt_public_key') ?: $site_path . '/certs/jwt_public_key.pem';
+    // 2. JWT keys exist and readable -- the very files the signing code uses.
+    require_once __DIR__ . '/jbrowse/track_token.php';
+    $private_key = moop_jwt_key_paths()['private'];
+    $public_key  = moop_jwt_key_paths()['public'];
     $priv_basename = basename($private_key);
     $pub_basename  = basename($public_key);
     if (!file_exists($private_key) || !file_exists($public_key)) {

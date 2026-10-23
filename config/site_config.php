@@ -91,9 +91,10 @@ return [
     // ======== JBROWSE2 DATA PATHS ========
     'genomes_directory' => "$site_path/data/genomes",
     'tracks_directory' => "$site_path/data/tracks",
-    'certs_directory' => "$site_path/certs",
-    'jwt_private_key' => "$site_path/certs/jwt_private_key.pem",
-    'jwt_public_key' => "$site_path/certs/jwt_public_key.pem",
+    // The JWT key pair is NOT configured here: it is always <moop>/certs/, from
+    // moop_jwt_key_paths() in lib/jbrowse/track_token.php (that file also runs on the tracks
+    // server, which has no config). Six settings that only looked like they moved it were
+    // removed 2026-10-23; the signing code never read them.
     
     // ======== REQUIRED: Directory Names ========
     'images_dir' => $images_dir,
@@ -436,9 +437,6 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'data_directory' => "$site_path/data/genomes/",
         'genomes_directory' => "$site_path/data/genomes/",
         'tracks_directory' => "$site_path/data/tracks/",
-        'certs_directory' => "$site_path/certs/",
-        'jwt_private_key' => "$site_path/certs/jwt_private_key.pem",
-        'jwt_public_key' => "$site_path/certs/jwt_public_key.pem",
         'token_expiration' => 3600,  // 1 hour in seconds
         'default_assembly' => 'GCA_004027475.1',
         'default_organism' => 'Anoura_caudifer',

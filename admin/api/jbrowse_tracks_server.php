@@ -29,7 +29,7 @@ switch ($action) {
     // ------------------------------------------------------------------ //
     case 'get_config':
         $tracks_server = $config->get('tracks_server', []);
-        $pub_key_path  = __DIR__ . '/../../certs/jwt_public_key.pem';
+        $pub_key_path  = moop_jwt_key_paths()['public'];
         $pub_key       = file_exists($pub_key_path) ? trim(file_get_contents($pub_key_path)) : null;
 
         echo json_encode([

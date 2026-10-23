@@ -772,8 +772,8 @@ JWT tokens authenticate individual track file requests to the tracks server. Thi
 **Algorithm:** RSA with SHA-256 (2048-bit keys)
 
 **Key Files:**
-- `/data/moop/certs/jwt_private_key.pem` - Private key (signs tokens, MOOP server only)
-- `/data/moop/certs/jwt_public_key.pem` - Public key (verifies tokens, tracks servers)
+- `/var/www/html/moop/certs/jwt_private_key.pem` - Private key (signs tokens, MOOP server only)
+- `/var/www/html/moop/certs/jwt_public_key.pem` - Public key (verifies tokens, tracks servers)
 
 **Security Model:**
 ```
@@ -841,7 +841,7 @@ JWT tokens authenticate individual track file requests to the tracks server. Thi
 
 ```php
 function generateTrackToken($organism, $assembly) {
-    $private_key_path = '/data/moop/certs/jwt_private_key.pem';
+    $private_key_path = moop_jwt_key_paths()['private'];
     $private_key = file_get_contents($private_key_path);
     
     $token_data = [
@@ -921,7 +921,7 @@ function addTokenToAdapterUrls($adapter, $token) {
 
 ```php
 function verifyTrackToken($token) {
-    $public_key_path = '/data/moop/certs/jwt_public_key.pem';
+    $public_key_path = moop_jwt_key_paths()['public'];
     $public_key = file_get_contents($public_key_path);
     
     try {
@@ -1354,13 +1354,13 @@ organism/assembly/[subdirectories...]/filename
 
 ```bash
 # 1. Generate new RSA key pair (4096-bit recommended for new keys)
-cd /data/moop/certs
+cd /var/www/html/moop/certs
 openssl genrsa -out jwt_private_key_new.pem 4096
 openssl rsa -in jwt_private_key_new.pem -pubout -out jwt_public_key_new.pem
 
 # 2. Set proper permissions
-chmod 600 jwt_private_key_new.pem
-chmod 644 jwt_public_key_new.pem
+chmod 640 jwt_private_key_new.pem
+chmod 640 jwt_public_key_new.pem
 
 # 3. Deploy new public key to ALL tracks servers
 for server in tracks1 tracks2 tracks3; do
@@ -1406,7 +1406,7 @@ sudo systemctl restart php-fpm  # MOOP server
 ```
 
 **Configuration:**
-- JWT keys in `/data/moop/certs/`
+- JWT keys in `/var/www/html/moop/certs/`
 - Track files in `/data/moop/data/tracks/`
 - `tracks.php` validates using local public key
 - Internal IPs auto-authenticated (no tokens)
@@ -1437,17 +1437,17 @@ sudo systemctl restart php-fpm  # MOOP server
 
 1. **Generate keys on MOOP server** (if not already done):
 ```bash
-cd /data/moop/certs
+cd /var/www/html/moop/certs
 openssl genrsa -out jwt_private_key.pem 2048
 openssl rsa -in jwt_private_key.pem -pubout -out jwt_public_key.pem
-chmod 600 jwt_private_key.pem
-chmod 644 jwt_public_key.pem
+chmod 640 jwt_private_key.pem
+chmod 640 jwt_public_key.pem
 ```
 
 2. **Deploy public key to tracks servers**:
 ```bash
-scp /data/moop/certs/jwt_public_key.pem tracks-admin@tracks1.example.com:/etc/tracks-server/
-scp /data/moop/certs/jwt_public_key.pem tracks-admin@tracks2.example.com:/etc/tracks-server/
+scp /var/www/html/moop/certs/jwt_public_key.pem tracks-admin@tracks1.example.com:/etc/tracks-server/
+scp /var/www/html/moop/certs/jwt_public_key.pem tracks-admin@tracks2.example.com:/etc/tracks-server/
 ```
 
 3. **Update track URLs in assembly metadata**:
@@ -1483,8 +1483,8 @@ Header always set Access-Control-Expose-Headers "Content-Range, Content-Length, 
   - [ ] OR nginx: `location` block denies `/data/tracks/`
   - [ ] Tested: Direct file URLs return 403 Forbidden
   - [ ] Verified: API endpoint still works with valid token
-- [ ] Private key permissions: `chmod 600 jwt_private_key.pem`
-- [ ] Keys stored outside web root
+- [ ] Private key permissions: `chmod 640 jwt_private_key.pem`
+- [ ] `/moop/certs/` refused by the web server: any file there returns 404 (not 403)
 - [ ] HTTPS enabled with valid certificate
 - [ ] Session cookies: HttpOnly, Secure, SameSite=Lax
 - [ ] Session timeout configured (recommended: 1-4 hours)
@@ -1565,10 +1565,10 @@ grep "403" /var/log/apache2/tracks-access.log | tail -50
 
 ```bash
 # IMMEDIATE: Generate new keys
-cd /data/moop/certs
+cd /var/www/html/moop/certs
 openssl genrsa -out jwt_private_key.pem 4096
 openssl rsa -in jwt_private_key.pem -pubout -out jwt_public_key.pem
-chmod 600 jwt_private_key.pem
+chmod 640 jwt_private_key.pem
 
 # Deploy new public key to ALL tracks servers
 for server in $(cat /etc/tracks-servers.txt); do
@@ -1757,8 +1757,8 @@ JWT tokens authenticate track file requests to prevent unauthorized access to Bi
 **Algorithm:** RSA with SHA-256 (asymmetric keys)
 
 **Files:**
-- `/data/moop/certs/jwt_private_key.pem` - RSA private key (2048-bit), signs tokens on MOOP server
-- `/data/moop/certs/jwt_public_key.pem` - RSA public key, verifies tokens on tracks server
+- `/var/www/html/moop/certs/jwt_private_key.pem` - RSA private key (2048-bit), signs tokens on MOOP server
+- `/var/www/html/moop/certs/jwt_public_key.pem` - RSA public key, verifies tokens on tracks server
 
 **Security Benefits:**
 - ✅ MOOP server keeps private key (signs tokens)
@@ -1782,7 +1782,7 @@ JWT tokens authenticate track file requests to prevent unauthorized access to Bi
 **Current Keys (already deployed):**
 
 ```bash
-cd /data/moop/certs
+cd /var/www/html/moop/certs
 ls -la
 # jwt_private_key.pem (2048-bit RSA private key)
 # jwt_public_key.pem (RSA public key)
@@ -1804,7 +1804,7 @@ openssl rsa -pubin -in jwt_public_key.pem -text -noout | head -1
 
 ```php
 function generateTrackToken($organism, $assembly, $access_level) {
-    $private_key = file_get_contents('/data/moop/certs/jwt_private_key.pem');
+    $private_key = file_get_contents(moop_jwt_key_paths()['private']);
     
     $token_data = [
         'user_id' => $_SESSION['username'] ?? 'anonymous',
@@ -1823,7 +1823,7 @@ function generateTrackToken($organism, $assembly, $access_level) {
 
 ```php
 function verifyTrackToken($token) {
-    $public_key = file_get_contents('/data/moop/certs/jwt_public_key.pem');
+    $public_key = file_get_contents(moop_jwt_key_paths()['public']);
     
     try {
         $decoded = JWT::decode($token, new Key($public_key, 'RS256'));
@@ -1844,8 +1844,8 @@ function verifyTrackToken($token) {
 
 ```bash
 # Copy to each tracks server
-scp /data/moop/certs/jwt_public_key.pem tracks-admin@tracks1.example.com:/etc/tracks-server/
-scp /data/moop/certs/jwt_public_key.pem tracks-admin@tracks2.example.com:/etc/tracks-server/
+scp /var/www/html/moop/certs/jwt_public_key.pem tracks-admin@tracks1.example.com:/etc/tracks-server/
+scp /var/www/html/moop/certs/jwt_public_key.pem tracks-admin@tracks2.example.com:/etc/tracks-server/
 
 # Verify permissions on remote servers
 ssh tracks-admin@tracks1.example.com "ls -la /etc/tracks-server/jwt_public_key.pem"
@@ -2224,9 +2224,9 @@ try {
 #### DO ✅
 
 - ✅ Use RS256 (asymmetric) for JWT tokens
-- ✅ Keep private key on MOOP server only (`chmod 600`)
+- ✅ Keep private key on MOOP server only (`chmod 640` (group apache: php-fpm reads it through the group))
 - ✅ Distribute public key to tracks servers (`chmod 644`)
-- ✅ Store keys outside web root (`/data/moop/certs/`)
+- ✅ Keys live in `<moop>/certs/` (here `/var/www/html/moop/certs/`), INSIDE the web root, so the web server must refuse `/moop/certs/` — `docs/nginx/moop-security.conf`. Check: a request for any file there returns 404, not 403 (403 means only the directory mode is protecting it)
 - ✅ Backup keys securely (encrypted backups)
 - ✅ Rotate keys annually or when compromised
 
@@ -2353,11 +2353,11 @@ tail -f /var/log/nginx/tracks.access.log | grep "bigwig"
 
 ```bash
 # 1. Generate new key pair immediately
-cd /data/moop/certs
+cd /var/www/html/moop/certs
 openssl genrsa -out jwt_private_key.pem 4096
 openssl rsa -in jwt_private_key.pem -pubout -out jwt_public_key.pem
-chmod 600 jwt_private_key.pem
-chmod 644 jwt_public_key.pem
+chmod 640 jwt_private_key.pem
+chmod 640 jwt_public_key.pem
 
 # 2. Deploy new public key to ALL tracks servers
 for server in tracks1 tracks2 tracks3; do
@@ -2369,8 +2369,8 @@ done
 grep "Token" /var/log/nginx/tracks.error.log | grep -v "Valid token"
 
 # 5. Backup compromised key for investigation
-mv /data/moop/certs/jwt_private_key.pem.backup \
-   /data/moop/certs/compromised_key_$(date +%s).pem
+mv /var/www/html/moop/certs/jwt_private_key.pem.backup \
+   /var/www/html/moop/certs/compromised_key_$(date +%s).pem
 ```
 
 ### Unauthorized Access Detection

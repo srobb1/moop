@@ -340,7 +340,7 @@ tar -czf jbrowse_metadata_$(date +%Y%m%d).tar.gz \
 
 # 2. JWT keys
 tar -czf jwt_keys_$(date +%Y%m%d).tar.gz \
-    /data/moop/certs/jwt_*.pem
+    /var/www/html/moop/certs/jwt_*.pem
 
 # 3. Track data (if not backed up elsewhere)
 tar -czf tracks_$(date +%Y%m%d).tar.gz \
@@ -454,14 +454,14 @@ jq '.sequence.adapter.fastaLocation.uri' metadata_file.json
 **Solutions:**
 ```bash
 # Check keys exist
-ls -la /data/moop/certs/jwt_*.pem
+ls -la /var/www/html/moop/certs/jwt_*.pem
 
 # Check key permissions
-chmod 600 /data/moop/certs/jwt_private_key.pem
-chmod 644 /data/moop/certs/jwt_public_key.pem
+chmod 640 /var/www/html/moop/certs/jwt_private_key.pem
+chmod 640 /var/www/html/moop/certs/jwt_public_key.pem
 
 # Verify key format
-head /data/moop/certs/jwt_private_key.pem
+head /var/www/html/moop/certs/jwt_private_key.pem
 # Should start with: -----BEGIN RSA PRIVATE KEY-----
 
 # Test token generation
@@ -543,13 +543,13 @@ To use a remote tracks server, add it to the trusted servers list:
 On MOOP server:
 ```bash
 # Keep private key (signs tokens)
-/data/moop/certs/jwt_private_key.pem (chmod 600)
+/var/www/html/moop/certs/jwt_private_key.pem (chmod 640 (group apache: php-fpm reads it through the group))
 ```
 
 On tracks server(s):
 ```bash
 # Copy public key (validates tokens)
-scp /data/moop/certs/jwt_public_key.pem tracks-admin@tracks.example.com:/etc/tracks-server/
+scp /var/www/html/moop/certs/jwt_public_key.pem tracks-admin@tracks.example.com:/etc/tracks-server/
 
 # Set permissions
 chmod 644 /etc/tracks-server/jwt_public_key.pem
@@ -568,7 +568,7 @@ See [technical/SECURITY.md](technical/SECURITY.md) for detailed tracks server co
 
 1. **Copy public key to tracks server**
    ```bash
-   scp /data/moop/certs/jwt_public_key.pem admin@tracks.yourlab.edu:/var/tracks/certs/
+   scp /var/www/html/moop/certs/jwt_public_key.pem admin@tracks.yourlab.edu:/var/tracks/certs/
    ```
 
 2. **Deploy tracks.php validation endpoint**

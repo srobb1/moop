@@ -209,6 +209,7 @@ function webCanWrite($path, $web_user, $web_group) {
 // Same lookup the running app uses (PATH, then /usr/local/bin, /usr/bin), so the check cannot
 // pass a tool the web server then fails to find, or fail one it would find.
 require_once __DIR__ . '/lib/functions_system.php';
+require_once __DIR__ . '/lib/jbrowse/track_token.php';   // moop_jwt_key_paths(); needs no composer
 function toolExists($tool) {
     return moop_find_executable($tool) !== '';
 }
@@ -623,7 +624,7 @@ if (!empty($config['site_data_path'])) {
 // on the directory holding the JWT private key.
 $readonly_dirs = [
     'data/tracks' => $config['jbrowse2']['tracks_directory'] ?? "$base/data/tracks",
-    'certs'       => $config['jbrowse2']['certs_directory'] ?? "$base/certs",
+    'certs'       => moop_jwt_key_paths()['dir'],
 ];
 
 // Normalize trailing slashes from config values
@@ -930,8 +931,8 @@ if (!is_file($sec_timer) && !is_file($sec_report)) {
 
 section("JWT Authentication Keys");
 
-$jwt_priv = $config['jbrowse2']['jwt_private_key'] ?? "$base/certs/jwt_private_key.pem";
-$jwt_pub  = $config['jbrowse2']['jwt_public_key']  ?? "$base/certs/jwt_public_key.pem";
+$jwt_priv = moop_jwt_key_paths()['private'];
+$jwt_pub  = moop_jwt_key_paths()['public'];
 
 $jwt_gen_cmd = "mkdir -p certs && openssl genrsa -out certs/jwt_private_key.pem 2048 " .
                "&& openssl rsa -in certs/jwt_private_key.pem -pubout -out certs/jwt_public_key.pem " .

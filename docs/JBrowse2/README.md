@@ -458,11 +458,11 @@ curl -s "http://localhost:8888/api/jbrowse2/test-assembly.php?organism=Anoura_ca
 ### Generate JWT Keys
 
 ```bash
-cd /data/moop/certs
+cd /var/www/html/moop/certs
 openssl genrsa -out jwt_private_key.pem 4096
 openssl rsa -in jwt_private_key.pem -pubout -out jwt_public_key.pem
-chmod 600 jwt_private_key.pem
-chmod 644 jwt_public_key.pem
+chmod 640 jwt_private_key.pem
+chmod 640 jwt_public_key.pem
 ```
 
 ---
@@ -478,7 +478,7 @@ chmod 644 jwt_public_key.pem
 
 ### Tracks Not Loading
 
-1. Check JWT keys exist: `ls /data/moop/certs/jwt_*.pem`
+1. Check JWT keys exist: `ls /var/www/html/moop/certs/jwt_*.pem`
 2. Verify token generation: Check browser console (F12)
 3. Test tracks server: `curl -I "http://localhost:8888/api/jbrowse2/fake-tracks-server.php?file=bigwig/test.bw"`
 4. Check token expiry (1 hour default)

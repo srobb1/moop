@@ -173,8 +173,8 @@ If keys don't exist, generate them:
 cd /var/www/html/moop/certs
 openssl genrsa -out jwt_private_key.pem 2048
 openssl rsa -in jwt_private_key.pem -pubout -out jwt_public_key.pem
-chmod 600 jwt_private_key.pem
-chmod 644 jwt_public_key.pem
+chmod 640 jwt_private_key.pem
+chmod 640 jwt_public_key.pem
 ```
 
 ---

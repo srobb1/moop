@@ -2,14 +2,47 @@
 /**
  * Track Token Generator
  * Generates JWT tokens for track file access
- * 
- * Requires: composer require firebase/php-jwt
+ *
+ * Requires: composer require firebase/php-jwt (loaded only when a token is signed or checked,
+ * so the key paths below can be read on an install where composer has not run yet --
+ * setup-check.php and setup.php need them before that).
+ *
+ * This same file is copied to the remote tracks server, which has no MOOP configuration.
+ * Keep it self-contained: no ConfigManager, no other MOOP includes.
  */
-
-require_once __DIR__ . '/../../vendor/autoload.php';
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+
+/**
+ * Where the JWT key pair lives: <moop>/certs/. Every reader goes through here -- signing and
+ * verifying below, the permissions check, housekeeping, setup and setup-check, the tracks
+ * server admin page -- so a check can never inspect a different file from the one in use.
+ *
+ * Fixed, not configured, on purpose: this file also runs on the tracks server, which has no
+ * MOOP config to read a path from. Until 2026-10-23 site_config.php carried six settings
+ * (certs_directory, jwt_private_key, jwt_public_key, twice over) that LOOKED like they moved
+ * the keys; the signing code never read any of them, so changing one would only have pointed
+ * the health checks at the wrong file.
+ *
+ * The directory is inside the web root. nginx refuses it outright (location ^~ /moop/certs/
+ * in docs/nginx/moop-security.conf); the 2750 directory mode is the second line, not the only one.
+ *
+ * @return array{dir: string, private: string, public: string}
+ */
+function moop_jwt_key_paths(): array {
+    $dir = dirname(__DIR__, 2) . '/certs';
+    return [
+        'dir'     => $dir,
+        'private' => $dir . '/jwt_private_key.pem',
+        'public'  => $dir . '/jwt_public_key.pem',
+    ];
+}
+
+/** Load firebase/php-jwt (Composer) on first use. */
+function moop_jwt_library(): void {
+    require_once __DIR__ . '/../../vendor/autoload.php';
+}
 
 /**
  * Generate JWT token for track access
@@ -29,8 +62,7 @@ use Firebase\JWT\Key;
  * @return string JWT token
  */
 function generateTrackToken($organism, $assembly, $file = '') {
-    $config_dir = dirname(__DIR__, 2) . '/certs';
-    $private_key_path = $config_dir . '/jwt_private_key.pem';
+    $private_key_path = moop_jwt_key_paths()['private'];
 
     if (!file_exists($private_key_path)) {
         throw new Exception("JWT private key not found at: $private_key_path");
@@ -46,6 +78,7 @@ function generateTrackToken($organism, $assembly, $file = '') {
         'exp' => time() + 3600  // 1 hour expiry
     ];
 
+    moop_jwt_library();
     try {
         $jwt = JWT::encode($token_data, $private_key, 'RS256');
         return $jwt;
@@ -61,8 +94,7 @@ function generateTrackToken($organism, $assembly, $file = '') {
  * @return object|false Token payload if valid, false otherwise
  */
 function verifyTrackToken($token) {
-    $config_dir = dirname(__DIR__, 2) . '/certs';
-    $public_key_path = $config_dir . '/jwt_public_key.pem';
+    $public_key_path = moop_jwt_key_paths()['public'];
 
     if (!file_exists($public_key_path)) {
         error_log("JWT verification failed: public key not found at $public_key_path");
@@ -79,6 +111,7 @@ function verifyTrackToken($token) {
     // php-jwt defaults to zero tolerance: a token whose `iat` is one second in
     // the verifier's future is rejected outright. Tokens live an hour, so a
     // minute of slack costs nothing.
+    moop_jwt_library();
     JWT::$leeway = 60;
 
     try {

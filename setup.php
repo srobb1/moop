@@ -109,6 +109,7 @@ if ($configured_real === false || $base_real === false || $configured_real !== $
 unset($configured_site_path, $configured_real, $base_real);
 
 require_once "$base/lib/distro_detect.php";
+require_once "$base/lib/jbrowse/track_token.php";   // moop_jwt_key_paths(); needs no composer
 require_once "$base/lib/functions_json.php";
 
 // ── Helper Functions ────────────────────────────────────────────────────────
@@ -266,7 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'metadata/change_log'       => rtrim(($config['metadata_path'] ?? "$base/metadata") . '/change_log', '/'),
         'metadata/jbrowse2-configs' => rtrim(($config['metadata_path'] ?? "$base/metadata") . '/jbrowse2-configs', '/'),
         'config'                    => "$base/config",
-        'certs'                     => rtrim($config['jbrowse2']['certs_directory'] ?? "$base/certs", '/'),
+        'certs'                     => moop_jwt_key_paths()['dir'],
         'organisms'                 => rtrim($config['organism_data'] ?? "$base/organisms", '/'),
     ];
 
@@ -339,8 +340,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ── Step 3: Generate JWT Keys ───────────────────────────────────────
 
-    $jwtPriv = $config['jbrowse2']['jwt_private_key'] ?? "$base/certs/jwt_private_key.pem";
-    $jwtPub  = $config['jbrowse2']['jwt_public_key']  ?? "$base/certs/jwt_public_key.pem";
+    // Where the token code will look for them -- never a config value (see moop_jwt_key_paths()).
+    $jwtPriv = moop_jwt_key_paths()['private'];
+    $jwtPub  = moop_jwt_key_paths()['public'];
 
     if (file_exists($jwtPriv) && file_exists($jwtPub)) {
         $steps['jwt_keys'] = [

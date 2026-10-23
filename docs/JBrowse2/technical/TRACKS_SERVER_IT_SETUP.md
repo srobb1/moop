@@ -839,7 +839,7 @@ When MOOP admin rotates JWT keys (annually recommended):
 
 ```bash
 # 1. Receive new public key from MOOP admin
-scp moop-admin@moop.example.com:/data/moop/certs/jwt_public_key.pem /tmp/
+scp moop-admin@moop.example.com:/var/www/html/moop/certs/jwt_public_key.pem /tmp/
 
 # 2. Backup old key
 sudo cp /var/www/tracks-server/certs/jwt_public_key.pem \

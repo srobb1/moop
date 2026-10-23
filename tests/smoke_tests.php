@@ -2237,6 +2237,55 @@ ok($_cfg->getString('smoke_int', 'default') === '7', 'getString returns a bare i
 $_rp->setValue($_cfg, $_saved);
 
 // ----------------------------------------------------------------------------
+group('JWT keys: every check looks at the files the signing code uses');
+// Until 2026-10-23 six config settings (certs_directory / jwt_private_key / jwt_public_key,
+// top-level and under jbrowse2) looked like they moved the keys, the health checks read them,
+// and the signing code ignored them all. Now one function names the files.
+require_once "$BASE/lib/jbrowse/track_token.php";
+require_once "$BASE/lib/permission_check.php";
+$_k = moop_jwt_key_paths();
+ok($_k['dir'] === "$BASE/certs" && $_k['private'] === "$BASE/certs/jwt_private_key.pem"
+   && $_k['public'] === "$BASE/certs/jwt_public_key.pem", 'the key pair is <moop>/certs/');
+
+$_items = moop_build_permission_items(ConfigManager::getInstance(), [
+    'web_group' => 'apache', 'moop_owner' => 'smr', 'metadata_path' => "$BASE/metadata",
+    'organism_data' => "$BASE/organisms", 'cache_path' => '', 'site_path' => $BASE,
+    'absolute_images_path' => "$BASE/images", 'docs_path' => "$BASE/docs"]);
+$_by = array_column($_items, 'paths', 'name');
+ok(($_by['JWT Certificates Directory'] ?? null) === [$_k['dir']], 'the permissions check inspects that directory');
+ok(($_by['JWT Key Files'] ?? null) === [$_k['private'], $_k['public']], 'and those two key files');
+
+ok(ConfigManager::getInstance()->getPath('certs_directory') === ''
+   && ConfigManager::getInstance()->getPath('jbrowse2.jwt_private_key') === ''
+   && ConfigManager::getInstance()->getPath('jwt_public_key') === '',
+   'no config setting pretends to move the keys');
+
+// No reader may go back to a config value or a path of its own.
+$_strays = [];
+foreach (array_merge(glob("$BASE/{lib,admin,api,tools,includes}/*.php", GLOB_BRACE), glob("$BASE/{lib,admin,api}/*/*.php", GLOB_BRACE),
+                     ["$BASE/setup.php", "$BASE/setup-check.php"]) as $_f) {
+    if ($_f === "$BASE/lib/jbrowse/track_token.php") continue;   // the one place that names them
+    $_src = file_get_contents($_f);
+    if (preg_match('/(certs_directory|[\'"]jwt_(private|public)_key[\'"]\s*\]|getPath\(\s*[\'"][^\'"]*jwt_|certs\/jwt_(private|public)_key\.pem[\'"])/', $_src, $_m)) {
+        $_strays[] = str_replace("$BASE/", '', $_f) . ': ' . $_m[1];
+    }
+}
+ok($_strays === [], 'nothing reads the key paths from config or spells them out itself'
+   . ($_strays ? ' -- ' . implode('; ', $_strays) : ''));
+
+// track_token.php is also deployed alone on the tracks server and is read by setup-check.php
+// before `composer install`: including it must not need Composer.
+exec(PHP_BINARY . ' -r ' . escapeshellarg('require "' . $BASE . '/lib/jbrowse/track_token.php"; '
+     . 'echo count(array_filter(get_included_files(), fn($f) => strpos($f, "/vendor/") !== false));'), $_o, $_rc);
+ok($_rc === 0 && trim(implode('', $_o)) === '0', 'track_token.php loads without Composer; the JWT library loads on first use');
+
+if (is_readable($_k['private']) && is_readable($_k['public'])) {
+    $_tok = generateTrackToken('Org', 'Asm', 'Org/Asm/x.bw');
+    $_dec = verifyTrackToken($_tok);
+    ok($_dec && $_dec->file === 'Org/Asm/x.bw', 'a token signed with that private key verifies with that public key');
+}
+
+// ----------------------------------------------------------------------------
 group('BLAST queue: it cannot get stuck');
 // lib/blast_queue.php. State is flock()s, which the kernel drops when a process dies, so the
 // things to prove are: a free unit is always takeable, nothing is held half-way, a dead

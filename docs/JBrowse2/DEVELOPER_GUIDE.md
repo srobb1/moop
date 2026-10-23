@@ -243,7 +243,7 @@ foreach ($assembly_files as $file) {
 // File: lib/jbrowse/track_token.php
 
 function generateTrackToken($organism, $assembly, $access_level) {
-    $private_key = file_get_contents('/data/moop/certs/jwt_private_key.pem');
+    $private_key = file_get_contents(moop_jwt_key_paths()['private']);
     
     $token_data = [
         'user_id' => $_SESSION['username'] ?? 'anonymous',
@@ -264,7 +264,7 @@ function generateTrackToken($organism, $assembly, $access_level) {
 // File: api/jbrowse2/fake-tracks-server.php (or remote server)
 
 function verifyTrackToken($token) {
-    $public_key = file_get_contents('/data/moop/certs/jwt_public_key.pem');
+    $public_key = file_get_contents(moop_jwt_key_paths()['public']);
     
     try {
         $decoded = JWT::decode($token, new Key($public_key, 'HS256'));
@@ -679,7 +679,7 @@ curl -s "http://localhost:8888/api/jbrowse2/get-config.php?debug=true" | jq .deb
 - ✅ Always validate user sessions
 - ✅ Never trust client input
 - ✅ Use parameterized queries (if using database)
-- ✅ Keep JWT private keys secure (chmod 600)
+- ✅ Keep JWT private keys secure (chmod 640 (group apache: php-fpm reads it through the group), never world-readable)
 - ✅ Rotate JWT keys annually
 
 ### Performance

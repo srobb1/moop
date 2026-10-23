@@ -231,7 +231,7 @@ External URLs (UCSC, Ensembl, NCBI) never get JWT tokens:
 
 ### ❌ Mistake 2: JWT Keys Have Wrong Permissions
 **Problem:** Private key readable by everyone  
-**Fix:** `chmod 600 jwt_private_key.pem`  
+**Fix:** `chmod 640 jwt_private_key.pem`  
 **Test:** `ls -la /certs/jwt_private_key.pem` → Should be `-rw-------`
 
 ### ❌ Mistake 3: AllowOverride None in Apache
