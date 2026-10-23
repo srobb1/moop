@@ -55,6 +55,46 @@ function moop_jbrowse_can_open_gene_set(string $organism, string $assembly, stri
  * @param string $full_name - Full assembly name
  * @return array - [organism, assembly] or [null, null] if invalid
  */
+/**
+ * A track's metadata as the BROWSER should see it: what describes the data, flattened so
+ * JBrowse can filter on it. The stored track JSON is left as it is.
+ *
+ * JBrowse's faceted track selector (Available tracks -> menu -> faceted view) makes one
+ * filter column per TOP-LEVEL metadata key and skips any value that is an object; its search
+ * box does the same. Everything that describes a track lives in ONE nested object --
+ * google_sheets_metadata (technique, source, project, experiment, developmental_stage, tissue,
+ * condition, citation, ...) -- so until 2026-10-23 none of it could be filtered or searched,
+ * and the columns JBrowse did offer were internal bookkeeping (file path, access level,
+ * management id, remote flag, date added). On Nematostella that is 966 RNA-seq tracks in one
+ * flat "Gene Expression" folder with nothing to narrow them by.
+ *
+ * Here the sheet's fields are lifted to the top level (blank ones dropped, runs of whitespace
+ * collapsed), a non-empty description and read counts are kept, and the internal keys are left
+ * out. The admin track-details view reads the stored file, so it still shows everything.
+ * The sheet stays the source of truth for the values: no synonyms are merged here.
+ */
+function moop_jbrowse_browser_metadata(array $metadata): array
+{
+    $clean = function ($v) {
+        if (is_array($v)) {
+            $v = implode(', ', array_filter(array_map('strval', array_filter($v, 'is_scalar')), 'strlen'));
+        }
+        if (!is_scalar($v) || is_bool($v)) return '';
+        return trim(preg_replace('/\s+/u', ' ', (string)$v));
+    };
+
+    $out = [];
+    if (($d = $clean($metadata['description'] ?? '')) !== '') $out['description'] = $d;
+    foreach ((array)($metadata['google_sheets_metadata'] ?? []) as $key => $value) {
+        if (($v = $clean($value)) !== '' && !isset($out[$key])) $out[$key] = $v;
+    }
+    // Read counts are facts about the data; 'not_calculated' is not.
+    foreach (['total_reads', 'mapped_reads'] as $key) {
+        if (isset($metadata[$key]) && is_numeric($metadata[$key])) $out[$key] = (int)$metadata[$key];
+    }
+    return $out;
+}
+
 function parseAssemblyName($full_name)
 {
     // Assembly IDs typically start with GCA_ or GCF_

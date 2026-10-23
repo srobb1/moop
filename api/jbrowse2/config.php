@@ -336,6 +336,15 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
         }
     }
 
+    // What the browser sees of each track's metadata: the sheet's descriptive fields, flat,
+    // so JBrowse's faceted selector can filter and search them (moop_jbrowse_browser_metadata()).
+    foreach ($filtered_tracks as &$t) {
+        if (isset($t['metadata']) && is_array($t['metadata'])) {
+            $t['metadata'] = moop_jbrowse_browser_metadata($t['metadata']);
+        }
+    }
+    unset($t);
+
     // Sort so Gene Models appear first, then other categories in a natural order
     $category_order = [
         'Gene Models'   => 0,

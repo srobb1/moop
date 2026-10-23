@@ -2237,6 +2237,27 @@ ok($_cfg->getString('smoke_int', 'default') === '7', 'getString returns a bare i
 $_rp->setValue($_cfg, $_saved);
 
 // ----------------------------------------------------------------------------
+group('JBrowse: track metadata is flat, so the faceted selector can filter on it');
+// JBrowse's faceted selector and its search skip object-valued metadata keys, and every
+// descriptive field sat inside google_sheets_metadata -- so nothing useful could be filtered.
+require_once "$BASE/lib/jbrowse/config_functions.php";
+$_m = moop_jbrowse_browser_metadata([
+    'management_track_id' => 'MOLNG-1.neg.bw', 'access_level' => 'PUBLIC', 'file_path' => '/x/y.bw',
+    'is_remote' => true, 'added_date' => '2026-10-21', 'description' => '',
+    'total_reads' => '1200', 'mapped_reads' => 'not_calculated',
+    'google_sheets_metadata' => ['technique' => 'RNASeq', 'source' => "Yanai  Lab\n", 'tissue' => '  ',
+                                 'stages' => ['polyp', '', 'adult'], 'nested' => ['a' => ['b' => 1]]],
+]);
+ok($_m['technique'] === 'RNASeq' && $_m['source'] === 'Yanai Lab', 'sheet fields are lifted to the top level, whitespace tidied');
+ok(!isset($_m['tissue']) && !isset($_m['description']), 'blank values are dropped');
+ok(($_m['stages'] ?? '') === 'polyp, adult', 'a list becomes text');
+$_obj = array_filter($_m, fn($v) => is_array($v) || is_object($v));
+ok($_obj === [], 'no value is an object -- JBrowse would skip it');
+ok(!array_intersect(array_keys($_m), ['management_track_id', 'access_level', 'file_path', 'is_remote', 'added_date', 'google_sheets_metadata']),
+   'internal bookkeeping is not sent to the browser');
+ok(($_m['total_reads'] ?? null) === 1200 && !isset($_m['mapped_reads']), 'read counts kept when they are numbers');
+
+// ----------------------------------------------------------------------------
 group('JWT keys: every check looks at the files the signing code uses');
 // Until 2026-10-23 six config settings (certs_directory / jwt_private_key / jwt_public_key,
 // top-level and under jbrowse2) looked like they moved the keys, the health checks read them,
