@@ -39,6 +39,7 @@ $pages = [
     'primer_blast'       => '/tools/primer_blast.php',
     'primer_maker'       => '/tools/primer_maker.php',
     'moopmart'           => '/tools/moopmart.php',
+    'expression'         => '/tools/expression.php',
     'downloads'          => '/tools/downloads.php',
     'retrieve_sequences' => '/tools/retrieve_sequences.php',
     'groups'             => '/tools/groups.php?group=Cnidaria',
@@ -63,6 +64,7 @@ $meta = [
     'primer_blast'       => ['title' => 'Primer BLAST',       'link' => '/tools/primer_blast.php',    'linkable' => true],
     'primer_maker'       => ['title' => 'Primer Maker',       'link' => '/tools/primer_maker.php',    'linkable' => true],
     'moopmart'           => ['title' => 'MOOPmart',           'link' => '/tools/moopmart.php',        'linkable' => true],
+    'expression'         => ['title' => 'Expression Explorer', 'link' => '/tools/expression.php',     'linkable' => true],
     'downloads'          => ['title' => 'Downloads',          'link' => '/tools/downloads.php',       'linkable' => true],
     'retrieve_sequences' => ['title' => 'Retrieve Sequences', 'link' => '/tools/retrieve_sequences.php', 'linkable' => true],
     // reached_by: written per route, not a generic line appended to whatever has no link.

@@ -139,10 +139,20 @@ $gs_label = fn(array $gs) => str_replace('_', ' ', $gs['organism']) . ' — ' . 
   <div class="card shadow-sm mb-4">
     <div class="card-header py-2 d-flex align-items-center flex-wrap gap-2 tool-header">
       <span class="fw-semibold" style="font-size:0.9rem;"><?= count($genes) ?> gene<?= count($genes) === 1 ? '' : 's' ?> × <?= count($selected_slugs) ?> experiment<?= count($selected_slugs) === 1 ? '' : 's' ?></span>
-      <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Shading">
+      <?php /* The (i) is grouped with the control it explains, and the next control is pushed away,
+               so it cannot be read as help for "As pasted / Highest first". */ ?>
+      <span class="d-inline-flex align-items-center gap-1 ms-auto me-2">
+      <div class="btn-group btn-group-sm" role="group" aria-label="Shading">
         <a class="btn btn-light<?= $mode === 'level' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['mode' => 'level'])) ?>">Level</a>
         <a class="btn btn-light<?= $mode === 'pattern' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['mode' => 'pattern'])) ?>">Pattern</a>
       </div>
+      <?= field_help(
+          'Level: one scale for every gene, so you can compare genes with each other (darker = more). '
+          . 'Pattern: each gene scaled to its own highest condition (100%), to compare where genes peak, '
+          . 'even a gene at 5 against one at 5,000.',
+          'Level or Pattern'
+      ) ?>
+      </span>
       <div class="btn-group btn-group-sm" role="group" aria-label="Order">
         <a class="btn btn-light<?= $sort === 'input' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['sort' => 'input'])) ?>">As pasted</a>
         <a class="btn btn-light<?= $sort === 'level' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['sort' => 'level'])) ?>">Highest first</a>

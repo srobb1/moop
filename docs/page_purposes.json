@@ -1,5 +1,5 @@
 {
-    "generated": "2026-10-22T14:54:06+00:00",
+    "generated": "2026-10-23T14:26:41+00:00",
     "routes": [
         {
             "page": "index",
@@ -66,6 +66,17 @@
             "url": "/tools/moopmart.php",
             "status": 200,
             "purpose": "Export annotation data or sequences."
+        },
+        {
+            "page": "expression",
+            "title": "Expression Explorer",
+            "link": "/tools/expression.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/expression.php",
+            "status": 200,
+            "purpose": "Compare a list of genes across expression experiments as a heatmap."
         },
         {
             "page": "downloads",
