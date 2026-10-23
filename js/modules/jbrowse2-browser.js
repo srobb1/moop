@@ -183,6 +183,78 @@
         });
     }
 
+    // ── "Find tracks": open JBrowse's faceted track selector ─────────────────
+    //
+    // JBrowse 4.3 has no setting or URL parameter that opens the faceted selector: it is
+    // local state behind one menu item (track list -> menu -> "Open faceted track selector").
+    // JBrowse runs in a same-origin iframe, so this does those clicks for the user.
+    //
+    // Found by what JBrowse SAYS, never by position: the "Open track selector" button's title,
+    // the "Filter tracks" box (its menu button sits in the same row -- the button has no label
+    // of its own), the menu item's text, the dialog's heading. If a JBrowse upgrade renames
+    // any of them, the button says how to do it by hand instead of silently doing nothing.
+    const FACET_HINT = 'In the track list, use the \u2630 menu \u2192 "Open faceted track selector".';
+
+    function waitFor(fn, ms) {
+        return new Promise(resolve => {
+            const t0 = Date.now();
+            (function tick() {
+                let v = null;
+                try { v = fn(); } catch (e) { v = null; }
+                if (v) return resolve(v);
+                if (Date.now() - t0 > ms) return resolve(null);
+                setTimeout(tick, 150);
+            })();
+        });
+    }
+
+    async function openFacetedSelector(iframe) {
+        const doc = iframe && iframe.contentDocument;
+        if (!doc) return false;
+        const byText = (sel, re) => [...doc.querySelectorAll(sel)].find(e => re.test((e.textContent || '').trim()));
+        const facetOpen = () => byText('[role=dialog] h2, [role=dialog] h6, [role=dialog] div', /^Faceted track selector$/);
+        if (facetOpen()) return true;
+
+        const filterLabel = () => byText('label', /^Filter tracks$/);
+        if (!filterLabel()) {
+            const open = await waitFor(() => doc.querySelector('button[title="Open track selector"]'), 15000);
+            if (!open) return false;
+            open.click();
+            if (!await waitFor(filterLabel, 5000)) return false;
+        }
+        // The menu button shares the "Filter tracks" row. Walk up from the box to the first
+        // ancestor holding a button that is NOT part of the box itself -- the box carries its
+        // own clear (x) button, which is the first one found otherwise.
+        const field = filterLabel().parentElement;
+        let menuBtn = null;
+        for (let row = field.parentElement; row && !menuBtn; row = row.parentElement) {
+            menuBtn = [...row.querySelectorAll('button')].find(b => !field.contains(b)) || null;
+        }
+        if (!menuBtn) return false;
+        menuBtn.click();
+        const item = await waitFor(() => byText('[role=menuitem], li', /^Open faceted track selector$/), 3000);
+        if (!item) return false;
+        item.click();
+        return !!await waitFor(facetOpen, 4000);
+    }
+
+    function initFacetButton(iframe) {
+        const btn  = document.getElementById('jb-facet-btn');
+        const note = document.getElementById('jb-facet-note');
+        if (!btn || !iframe) return;
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            if (note) note.classList.add('d-none');
+            let ok = false;
+            try { ok = await openFacetedSelector(iframe); } catch (e) { ok = false; }
+            btn.disabled = false;
+            if (!ok && note) {
+                note.textContent = 'Could not open it automatically. ' + FACET_HINT;
+                note.classList.remove('d-none');
+            }
+        });
+    }
+
     // ── Fullscreen / new window ───────────────────────────────────────────────
     function initViewerControls() {
         const fsBtn  = document.getElementById('jb-fullscreen-btn');
@@ -190,6 +262,8 @@
         const back   = document.getElementById('jb-back-btn');
         const wrap   = document.getElementById('jb-iframe-wrap');
         const iframe = document.getElementById('jb-iframe');
+
+        initFacetButton(iframe);
 
         if (fsBtn && wrap) {
             fsBtn.addEventListener('click', () => {

@@ -101,7 +101,12 @@
       </button>
       <?php endif; ?>
       <span class="text-muted small" id="jb-viewer-label"></span>
-      <div class="ms-auto d-flex gap-1">
+      <div class="ms-auto d-flex align-items-center gap-1">
+        <span class="text-muted small d-none" id="jb-facet-note"></span>
+        <button class="btn btn-sm btn-outline-secondary" id="jb-facet-btn"
+                title="Filter the track list by technique, experiment, tissue, stage, source&hellip; (JBrowse's faceted track selector)">
+          <i class="fas fa-filter me-1"></i> Find tracks
+        </button>
         <button class="btn btn-sm btn-outline-secondary" id="jb-fullscreen-btn" title="Toggle fullscreen">
           <i class="fas fa-expand"></i>
         </button>
