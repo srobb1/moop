@@ -350,14 +350,7 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
         'Gene Models'   => 0,
         'Gene Expression' => 1,
     ];
-    usort($filtered_tracks, function($a, $b) use ($category_order) {
-        $ca = $a['category'][0] ?? 'Z';
-        $cb = $b['category'][0] ?? 'Z';
-        $oa = $category_order[$ca] ?? 99;
-        $ob = $category_order[$cb] ?? 99;
-        if ($oa !== $ob) return $oa - $ob;
-        return strcmp($ca, $cb);
-    });
+    $filtered_tracks = moop_jbrowse_order_tracks(moop_jbrowse_split_individual_tracks($filtered_tracks), $category_order);
 
     return $filtered_tracks;
 }

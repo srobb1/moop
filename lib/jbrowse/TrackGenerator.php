@@ -338,6 +338,20 @@ class TrackGenerator
                         $results['access_updated'][] = $combo['track_id'];
                         echo "  ⚿ Access updated: " . $combo['track_id'] . " -> " . ($combo['access_level'] ?: 'not set') . "\n";
                     }
+                    // ...and so do its folder and shared description, worked out from its members
+                    // (ComboTrack::describe()), through the same refresh as a single track.
+                    if (isset($this->trackTypes['combo'])) {
+                        $d = ComboTrack::describe($combo);
+                        $changed = $this->syncExistingDescription($trackFile, [
+                            'name'           => $combo['name'],
+                            'category'       => implode(' / ', $d['category']),
+                            'sheet_metadata' => $d['sheet'],
+                        ], $dryRun);
+                        if ($changed) {
+                            $results['description_updated'][] = $combo['track_id'];
+                            echo "  ✎ Updated: " . $combo['track_id'] . " (" . implode(', ', $changed) . ")\n";
+                        }
+                    }
                     echo "  ⊘ Skipping " . $combo['track_id'] . " (already exists, use --force to regenerate)\n";
                     $results['skipped'][] = $combo['track_id'];
                     $results['stats']['skipped']++;

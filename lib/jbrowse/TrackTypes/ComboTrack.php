@@ -28,9 +28,66 @@
 
 require_once __DIR__ . '/TrackTypeInterface.php';
 require_once __DIR__ . '/../ColorSchemes.php';
+require_once __DIR__ . '/../GoogleSheetsParser.php';   // categoryPath(), sheetMetadata()
 
 class ComboTrack implements TrackTypeInterface
 {
+    /**
+     * The folder a combo gets inside the folder of the tracks it combines. In the track list a
+     * combo ("Adult Mesentery MM+FM": 12 tracks in one panel) looked exactly like the single
+     * .pos/.neg tracks beside it; this sub-folder says what it is. Shown as stacked rows, not
+     * literally overlaid -- hence "Grouped tracks" rather than "Overlays".
+     */
+    const FOLDER = 'Grouped tracks';
+
+    /**
+     * Where a combo goes in the track list, and what it says about itself, from its members.
+     *
+     * Folder: a "Grouped tracks" sub-folder (FOLDER) inside the deepest folder ALL its members
+     * share -- a combo of "Gene Expression / Reitzel Lab / Light removal" tracks goes in
+     * ".../Light removal/Grouped tracks", beside them; members from two studies of one lab put it
+     * under the lab; members with nothing in common leave it in a top-level "Grouped tracks".
+     * Until 2026-10-23 every combo went in one "Combo Tracks" folder (210 on Nematostella), away
+     * from the tracks it combines.
+     *
+     * Description: the sheet fields every member agrees on (lab, experiment, data_type, stage...),
+     * so combos can be found in the faceted selector too. A field the members disagree on (each
+     * has its own accession) is left out rather than picked from one of them.
+     *
+     * @param array $combo Combo from GoogleSheetsParser::parseTracks(), members resolved
+     * @return array ['category' => string[], 'sheet' => array<string,string>]
+     */
+    public static function describe(array $combo): array
+    {
+        $paths = [];
+        $sheets = [];
+        foreach (($combo['groups'] ?? []) as $group) {
+            foreach (($group['tracks'] ?? []) as $member) {
+                if (!is_array($member) || !isset($member['track_id'])) continue;
+                $paths[] = GoogleSheetsParser::categoryPath($member['category'] ?? '', '');
+                $sheets[] = GoogleSheetsParser::sheetMetadata($member);
+            }
+        }
+        $common = [];
+        if ($paths) {
+            $common = array_shift($paths);
+            foreach ($paths as $p) {
+                $n = 0;
+                while ($n < count($common) && $n < count($p) && $common[$n] === $p[$n]) $n++;
+                $common = array_slice($common, 0, $n);
+            }
+            $common = array_values(array_filter($common, fn($c) => $c !== ''));
+        }
+        $shared = $sheets ? array_shift($sheets) : [];
+        foreach ($sheets as $s) {
+            foreach ($shared as $k => $v) {
+                if (($s[$k] ?? null) !== $v) unset($shared[$k]);
+            }
+        }
+        $common[] = self::FOLDER;
+        return ['category' => $common, 'sheet' => $shared];
+    }
+
     private $pathResolver;
     private $config;
     
@@ -195,7 +252,7 @@ class ComboTrack implements TrackTypeInterface
             'trackId' => $browserTrackId,
             'name' => $trackData['name'],
             'assemblyNames' => [$organism . '_' . $assembly],
-            'category' => ['Combo Tracks'],
+            'category' => self::describe($trackData)['category'],
             'adapter' => [
                 'type' => 'MultiWiggleAdapter',
                 'subadapters' => $subadapters
@@ -209,7 +266,9 @@ class ComboTrack implements TrackTypeInterface
             'metadata' => [
                 'management_track_id' => $trackData['track_id'],
                 // strictest member level (GoogleSheetsParser::strictestAccessLevel); '' = not set
-                'access_level' => (string)($trackData['access_level'] ?? '')
+                'access_level' => (string)($trackData['access_level'] ?? ''),
+                // what all its members agree on (describe()); combo/ is always sheet-origin
+                'google_sheets_metadata' => self::describe($trackData)['sheet'],
             ]
         ];
         

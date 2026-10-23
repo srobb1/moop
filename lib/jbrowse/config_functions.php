@@ -95,6 +95,81 @@ function moop_jbrowse_browser_metadata(array $metadata): array
     return $out;
 }
 
+/**
+ * Put single tracks that share a folder with grouped tracks into an "Individual tracks" sub-folder.
+ *
+ * A study folder then holds two sub-folders side by side, "Grouped tracks" (combos, written by
+ * ComboTrack::describe()) and "Individual tracks", instead of 3 combos lost among 36 single tracks.
+ * Only folders that HAVE grouped tracks get the split, so Gene Models and the like keep their
+ * tracks directly. Done when the list is served: it depends on which combos exist, so it is not
+ * stored in any track file and needs no sync.
+ *
+ * @param array $tracks Track configs as sent to JBrowse
+ * @return array
+ */
+function moop_jbrowse_split_individual_tracks(array $tracks): array
+{
+    $isCombo = fn($t) => ($t['type'] ?? '') === 'MultiQuantitativeTrack';
+    $grouped = [];
+    foreach ($tracks as $t) {
+        $cat = $t['category'] ?? [];
+        if ($isCombo($t) && end($cat) === 'Grouped tracks') {
+            array_pop($cat);
+            $grouped[implode("\x1f", $cat)] = true;
+        }
+    }
+    foreach ($tracks as &$t) {
+        if (!$isCombo($t) && isset($grouped[implode("\x1f", $t['category'] ?? [])])) {
+            $t['category'][] = 'Individual tracks';
+        }
+    }
+    unset($t);
+    return $tracks;
+}
+
+/**
+ * Order tracks for JBrowse's track list, which lists folders in the order of their first track.
+ *
+ * Top-level folders by $category_order, then by name. Below that every folder keeps the position
+ * of its first single track in the sheet, so lab and study folders stay in sheet order. A grouped
+ * (combo) track is placed by the folder it groups -- its path without the trailing
+ * ComboTrack::FOLDER -- and first within it, so each study shows its "Grouped tracks" sub-folder
+ * before its single tracks. Ties keep the incoming order.
+ *
+ * @param array $tracks         Track configs as sent to JBrowse
+ * @param array $category_order Top-level folder name => rank (lower first; others 99)
+ * @return array
+ */
+function moop_jbrowse_order_tracks(array $tracks, array $category_order = []): array
+{
+    $isCombo = fn($t) => ($t['type'] ?? '') === 'MultiQuantitativeTrack';
+    $firstSeen = [];
+    foreach (array_values($tracks) as $i => $t) {
+        if ($isCombo($t)) continue;
+        $cat = $t['category'] ?? [];
+        if (end($cat) === 'Individual tracks') array_pop($cat);
+        for ($n = 1; $n <= count($cat); $n++) {
+            $key = implode("\x1f", array_slice($cat, 0, $n));
+            if (!isset($firstSeen[$key])) $firstSeen[$key] = $i;
+        }
+    }
+    $keyed = [];
+    foreach (array_values($tracks) as $i => $t) {
+        $cat = $t['category'] ?? [];
+        if (in_array(end($cat), ['Grouped tracks', 'Individual tracks'], true)) array_pop($cat);
+        $top = $t['category'][0] ?? 'Z';
+        $keyed[] = [$category_order[$top] ?? 99, $top, $firstSeen[implode("\x1f", $cat)] ?? PHP_INT_MAX,
+                    $isCombo($t) ? 0 : 1, $i, $t];
+    }
+    usort($keyed, function ($a, $b) {
+        foreach ([0, 1, 2, 3, 4] as $k) {
+            if ($a[$k] != $b[$k]) return $a[$k] < $b[$k] ? -1 : 1;
+        }
+        return 0;
+    });
+    return array_column($keyed, 5);
+}
+
 function parseAssemblyName($full_name)
 {
     // Assembly IDs typically start with GCA_ or GCF_

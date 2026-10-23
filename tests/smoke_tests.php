@@ -617,6 +617,48 @@ $_cp_out = ob_get_clean();
 $_cp_json = preg_match('/Metadata: (\{.*\})\s*$/s', $_cp_out, $_cp_m) ? json_decode($_cp_m[1], true) : null;
 ok(($_cp_json['category'] ?? null) === ['Gene Expression', 'Reitzel Lab', 'Light removal 2019'], 'a bigWig track gets the nested category');
 
+// A combo sits in the deepest folder its members share, and carries the fields they all agree on.
+require_once dirname(__DIR__) . '/lib/jbrowse/TrackTypes/ComboTrack.php';
+$_m1 = ['track_id' => 'a', 'category' => 'Gene Expression / Reitzel Lab / Light removal', 'sheet_metadata' => ['source' => 'Reitzel Lab', 'stage' => 'adult', 'accession' => 'SRR1']];
+$_m2 = ['track_id' => 'b', 'category' => 'Gene Expression / Reitzel Lab / Light removal', 'sheet_metadata' => ['source' => 'Reitzel Lab', 'stage' => 'adult', 'accession' => 'SRR2']];
+$_m3 = ['track_id' => 'c', 'category' => 'Gene Expression / Reitzel Lab / Colour', 'sheet_metadata' => ['source' => 'Reitzel Lab']];
+$_d = ComboTrack::describe(['groups' => ['g1' => ['tracks' => [$_m1]], 'g2' => ['tracks' => [$_m2]]]]);
+ok($_d['category'] === ['Gene Expression', 'Reitzel Lab', 'Light removal', 'Grouped tracks'], 'a combo of one study goes in a "Grouped tracks" folder inside that study\'s folder');
+ok($_d['sheet'] === ['source' => 'Reitzel Lab', 'stage' => 'adult'], 'it carries the fields its members agree on, not ones that differ (accession)');
+ok(ComboTrack::describe(['groups' => ['g' => ['tracks' => [$_m1, $_m3]]]])['category'] === ['Gene Expression', 'Reitzel Lab', 'Grouped tracks'],
+   'members from two studies put it in their shared folder');
+$_m4 = ['track_id' => 'd', 'category' => 'Epigenetics', 'sheet_metadata' => []];
+ok(ComboTrack::describe(['groups' => ['g' => ['tracks' => [$_m1, $_m4]]]])['category'] === ['Grouped tracks'],
+   'members with no folder in common leave it in a top-level Grouped tracks folder');
+
+// Track list order: each study's "Grouped tracks" folder comes first; lab and study folders keep sheet order.
+require_once "$BASE/lib/jbrowse/config_functions.php";
+$_ot = fn($name, $cat, $type = 'QuantitativeTrack') => ['name' => $name, 'type' => $type, 'category' => $cat];
+$_ord = moop_jbrowse_order_tracks([
+    $_ot('genes', ['Gene Models']),
+    $_ot('g1', ['Gene Expression', 'Gibson Lab', 'Sex']),
+    $_ot('r1', ['Gene Expression', 'Reitzel Lab', 'Light']),
+    $_ot('r2', ['Gene Expression', 'Reitzel Lab', 'Light']),
+    $_ot('a-combo', ['Gene Expression', 'Reitzel Lab', 'Light', 'Grouped tracks'], 'MultiQuantitativeTrack'),
+    $_ot('z-combo', ['Gene Expression', 'Gibson Lab', 'Sex', 'Grouped tracks'], 'MultiQuantitativeTrack'),
+], ['Gene Models' => 0, 'Gene Expression' => 1]);
+ok(array_column($_ord, 'name') === ['genes', 'z-combo', 'g1', 'a-combo', 'r1', 'r2'],
+   'grouped tracks lead their own study folder; Gibson stays before Reitzel, as in the sheet');
+$_sp = moop_jbrowse_split_individual_tracks([
+    $_ot('genes', ['Gene Models']),
+    $_ot('g1', ['Gene Expression', 'Gibson Lab', 'Sex']),
+    $_ot('lone', ['Gene Expression', 'Smith Lab', 'Hourly']),
+    $_ot('z-combo', ['Gene Expression', 'Gibson Lab', 'Sex', 'Grouped tracks'], 'MultiQuantitativeTrack'),
+]);
+ok(array_column($_sp, 'category', 'name') === [
+       'genes' => ['Gene Models'],
+       'g1' => ['Gene Expression', 'Gibson Lab', 'Sex', 'Individual tracks'],
+       'lone' => ['Gene Expression', 'Smith Lab', 'Hourly'],
+       'z-combo' => ['Gene Expression', 'Gibson Lab', 'Sex', 'Grouped tracks']],
+   'single tracks beside grouped ones go in "Individual tracks"; folders without grouped tracks are left alone');
+ok(array_column(moop_jbrowse_order_tracks($_sp, ['Gene Models' => 0, 'Gene Expression' => 1]), 'name') === ['genes', 'z-combo', 'g1', 'lone'],
+   'Grouped tracks is listed before Individual tracks');
+
 // And no track type may grow its own list again.
 $_ts_lists = [];
 foreach (glob(dirname(__DIR__) . '/lib/jbrowse/TrackTypes/*.php') as $_ts_file) {
