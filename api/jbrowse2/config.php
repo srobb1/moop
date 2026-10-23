@@ -146,7 +146,7 @@ function generateAssemblyList($user_access_level) {
     $config = [
         'assemblies' => [],
         'plugins' => getJBrowse2PluginConfiguration(),
-        'configuration' => [],
+        'configuration' => moop_jbrowse_ui_configuration(),
         'connections' => [],
         'defaultSession' => ['name' => 'New Session'],
         'tracks' => [],
@@ -238,7 +238,7 @@ function generateAssemblyConfig($organism, $assembly, $user_access_level) {
             ]
         ],
         'plugins' => getJBrowse2PluginConfiguration(),
-        'configuration' => [],
+        'configuration' => moop_jbrowse_ui_configuration(),
         'tracks' => [],
         'defaultSession' => [
             'name' => "{$organism} {$assembly}",

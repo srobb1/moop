@@ -96,6 +96,27 @@ function moop_jbrowse_browser_metadata(array $metadata): array
 }
 
 /**
+ * JBrowse's own "configuration" block, the same for every MOOP browser.
+ *
+ * Folders that hold TRACKS start closed (configuration.hierarchical.defaultCollapsed.subCategories):
+ * each study's "Grouped tracks" / "Individual tracks", Gene Models and other single-level folders.
+ * Folders that only hold folders (Gene Expression, the labs, the studies) stay open, so the whole
+ * structure is visible without a wall of 1,148 tracks. Defaults only: JBrowse remembers each
+ * visitor's own open/closed folders per assembly in their browser and uses that once it exists.
+ * JBrowse rejects the WHOLE config on an unknown key, so check the schema before adding one.
+ *
+ * @return array
+ */
+function moop_jbrowse_ui_configuration(): array
+{
+    return [
+        'hierarchical' => [
+            'defaultCollapsed' => ['subCategories' => true],
+        ],
+    ];
+}
+
+/**
  * Put single tracks that share a folder with grouped tracks into an "Individual tracks" sub-folder.
  *
  * A study folder then holds two sub-folders side by side, "Grouped tracks" (combos, written by
@@ -366,7 +387,7 @@ function generateDualAssemblyConfig($assembly1, $assembly2, $user_access_level)
             ]
         ],
         'plugins' => getJBrowse2PluginConfiguration(),
-        'configuration' => [],
+        'configuration' => moop_jbrowse_ui_configuration(),
         'tracks' => [],
         'defaultSession' => [
             'name' => "{$assembly1} vs {$assembly2} Comparison",
