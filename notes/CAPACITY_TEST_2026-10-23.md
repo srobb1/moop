@@ -79,12 +79,28 @@ VM setting on VMware, so it is an IT request, not a purchase. 64 GB would hold a
 
 ## Order to do things
 
-1. `sudo scripts/install_php_fpm_resilience.sh` — today. Also restarts php-fpm if it is down.
-2. BLAST queue (fix 2) + `-max_hsps` / output-size guard (fix 3) — before real users.
-3. `fastcgi_read_timeout 300s` for `tools/blast.php` in the nginx config (fix 4).
-4. Ask IT for 32 GB RAM.
-5. Re-run the ladders, including `tblastn_big_gen` up to 12 with `--allow-oom`, to prove the
-   queue holds and nothing goes down.
+1. ✅ `sudo scripts/install_php_fpm_resilience.sh` — installed 2026-10-23.
+2. ✅ BLAST queue (fix 2) — `lib/blast_queue.php`, 2026-10-23. Searches take memory "units"
+   (256 MB each; budget 60% of RAM = 36 units here; wallaby tblastn = 11, bat ≈ 7–10, protein
+   sets 1) and at most `cores/threads + 2` = 6 run at once. The rest wait in line, and the
+   BLAST button shows their place ("Server busy: your search is 2nd in line"). Primer BLAST
+   uses the same queue. **Cannot get stuck:** every piece of state is a `flock()` the kernel
+   drops when the process dies; a waiter gives up after 120 s with "busy, try again"; a
+   running BLAST is killed after 150 s (`timeout`); an unusable queue directory runs the
+   search unqueued and logs it. Verified: `kill -9` of a running search and of the head of
+   the line each freed the next search within 1 s; 17 smoke tests (red on the first draft,
+   which really did get stuck when a slot file was not writable).
+   Re-test: 6 wallaby tblastn at once → 3 ran, 3 waited, MemAvailable never below 6.3 GB,
+   all 6 returned hits, slowest 51 s (this morning: OOM, site down).
+3. ✅ Output-size guard (fix 3) — results over `blast_max_output_mb` (20 MB of XML) are refused
+   with the reason and what to change, checked on the BLAST archive before formatting. The
+   filter-off case now returns that message in 45 s instead of a crash page at 57 s; the
+   remaining time is BLAST itself (344,582 alignments), which only the run-time cap bounds.
+4. ⏳ `sudo scripts/install_nginx_timeouts.sh` (fix 4) — nginx `fastcgi_read_timeout` 300 s.
+   **Needed now:** the queue can make a request wait up to 120 s + run 150 s; at nginx's
+   default 60 s the last in a busy line gets a 504.
+5. Ask IT for 32 GB RAM. (Queue budget follows RAM automatically.)
+6. Re-run the ladders, including `tblastn_big_gen` up to 12 with `--allow-oom`, once fix 4 is in.
 
 ## Running it yourself (here or from cerebro)
 

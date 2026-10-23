@@ -239,8 +239,18 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
                     'threshold' => $threshold,
                     'soft_masking' => $soft_masking,
                     'ungapped' => $ungapped,
-                    'strand' => $strand
+                    'strand' => $strand,
+                    // Lets the waiting page ask api/blast_queue_status.php for its place in line.
+                    'queue_ticket' => $_POST['queue_ticket'] ?? null,
                 ];
+
+                // Let go of the session before a search that may wait in line and run for
+                // minutes. PHP locks the session file for the whole request, so holding it
+                // would freeze this visitor's other tabs, and the place-in-line poll, until
+                // BLAST finished. Nothing below writes to the session; the CSRF token is made
+                // first so the page rendered afterwards still carries a saved one.
+                generate_csrf_token();
+                session_write_close();
                 
                 // $selected_db_obj['path'], NOT $blast_db -- $blast_db is now the client-supplied
                 // sequence type, and the path comes from the server-side lookup above.

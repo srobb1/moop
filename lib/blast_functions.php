@@ -9,6 +9,7 @@
 require_once __DIR__ . '/parent_functions.php';
 require_once __DIR__ . '/functions_system.php';
 require_once __DIR__ . '/extract_search_helpers.php';   // buildSequenceBatch()
+require_once __DIR__ . '/blast_queue.php';             // executeBlastSearch() waits its turn
 
 /**
  * Get list of available BLAST databases for an assembly
@@ -83,6 +84,25 @@ function getBlastDatabases($assembly_path) {
  * @return array Result array with 'success', 'output', 'error', and 'stderr' keys
  */
 function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
+    // Every search waits its turn in the BLAST queue (lib/blast_queue.php), sized by the
+    // memory it is estimated to need. Without it, a handful of genome tblastns at once ran
+    // the server out of memory (capacity test, 2026-10-23).
+    $queued = blast_queue_run(
+        fn() => runBlastSearch($query_seq, $blast_db, $program, $options),
+        blast_queue_cost_units((string)$program, (string)$blast_db),
+        blast_queue_ticket($options['queue_ticket'] ?? null)
+    );
+    if (!$queued['ran']) {
+        return ['success' => false, 'output' => '', 'error' => $queued['error'], 'stderr' => ''];
+    }
+    $queued['result']['queue_waited'] = $queued['waited'];
+    return $queued['result'];
+}
+
+/**
+ * The search itself, run once executeBlastSearch() has a place for it. Call that, not this.
+ */
+function runBlastSearch($query_seq, $blast_db, $program, $options = []) {
     $result = [
         'success' => false,
         'output' => '',
@@ -145,7 +165,7 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
         return $result;
     }
     $program_path = escapeshellarg($program_bin);
-    $num_threads = (int)$config->getString('blast_num_threads', '2');
+    $num_threads = $config->getInt('blast_num_threads', 2);
     if ($num_threads < 1) $num_threads = 1;
 
     $cmd = [];
@@ -251,7 +271,7 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     // `printf <query>`, and printf reads its first argument as a FORMAT: a header like
     // ">clone 100% identical" became "clone 100 0dentical", and "\n" in a header became a
     // real newline that pushed the rest of the header into the sequence.
-    $command = implode(' ', $cmd);
+    $command = blast_queue_wrap_command(implode(' ', $cmd));
     
     // Execute BLAST with proc_open for better control
     $descriptors = [
@@ -275,6 +295,11 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     fclose($pipes[2]);
     $return_code = proc_close($process);
     
+    if (blast_queue_timed_out($return_code)) {
+        @unlink($archive_file);
+        $result['error'] = blast_queue_timeout_message();
+        return $result;
+    }
     if ($return_code !== 0) {
         unlink($archive_file);
         $result['error'] = 'BLAST execution failed with code ' . $return_code;
@@ -282,6 +307,13 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
         return $result;
     }
     
+    $too_big = blastOutputTooLarge($archive_file, true);
+    if ($too_big !== '') {
+        unlink($archive_file);
+        $result['error'] = $too_big;
+        return $result;
+    }
+
     // Convert ASN.1 archive to outfmt 5 (XML) using blast_formatter
     $xml_file = tempnam($temp_dir, 'blast_xml_');
     $blast_formatter_path = moop_tool('blast_formatter', 'blast_tools') ?: 'blast_formatter';
@@ -307,6 +339,19 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
         return $result;
     }
     
+    // Too much to show? Checked BEFORE reading: a transcript searched against a genome with
+    // the low-complexity filter off gave 344,582 alignments -- 224 MB of XML -- and reading it
+    // blew PHP's memory limit, so the user waited a minute for an error page. Here they get a
+    // reason and what to change instead. (The archive check above catches most of these
+    // sooner; this one is the backstop.)
+    $too_big = blastOutputTooLarge($xml_file);
+    if ($too_big !== '') {
+        unlink($archive_file);
+        unlink($xml_file);
+        $result['error'] = $too_big;
+        return $result;
+    }
+
     // Read the XML output
     $output = file_get_contents($xml_file);
     
@@ -371,6 +416,35 @@ function executeBlastSearch($query_seq, $blast_db, $program, $options = []) {
     $result['stderr']   = $blast_stderr;
 
     return $result;
+}
+
+/**
+ * '' if a BLAST result is small enough to display, else the message saying why not.
+ *
+ * The limit (blast_max_output_mb, default 20 MB of XML) is what fits PHP's memory_limit:
+ * the page holds the XML, its parsed form and the pairwise text (about twice the XML) at
+ * once. The pairwise and tabular downloads are made from the same archive, so the XML size
+ * stands for all three.
+ *
+ * Checked twice. First on the ASN.1 archive, the moment BLAST finishes: it runs ~1.4x the
+ * size of the XML made from it (measured: 319 MB archive -> 224 MB XML), so an archive over
+ * 1.4x the limit is refused without spending ~11 s converting it -- that conversion is what
+ * pushed the refusal to 57 s, against nginx's 60. Then on the XML itself, as the backstop.
+ *
+ * @param string $file        the archive or the XML
+ * @param bool   $is_archive  true for the ASN.1 archive
+ */
+function blastOutputTooLarge(string $file, bool $is_archive = false): string {
+    $limit_mb = max(1, ConfigManager::getInstance()->getInt('blast_max_output_mb', 20));
+    $size = (int)@filesize($file);
+    $xml_size = $is_archive ? $size / 1.4 : $size;
+    if ($xml_size <= $limit_mb * 1048576) return '';
+
+    return 'This search found too many alignments to show -- about ' . round($xml_size / 1048576)
+        . " MB of results, over the {$limit_mb} MB limit. "
+        . 'This usually means the query contains repeats or simple sequence. '
+        . 'Turn "Filter low complexity regions" back on, or set Max HSPs (for example 20) '
+        . 'or a stricter E-value under Advanced options.';
 }
 
 /**

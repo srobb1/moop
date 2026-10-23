@@ -120,7 +120,46 @@ function initializeBlastManager() {
                 searchBtn.disabled = true;
                 searchBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Running BLAST… (large databases can take a minute)';
             }
+            watchQueue(form, searchBtn);
         });
+    }
+
+    // Searches wait their turn when the server is busy (lib/blast_queue.php). A random ticket
+    // goes with the form; while the page waits for the answer it asks where that ticket stands
+    // and says so on the button, so a wait in line does not look like a hang.
+    function watchQueue(form, searchBtn) {
+        let field = form.querySelector('input[name="queue_ticket"]');
+        if (!field) {
+            field = document.createElement('input');
+            field.type = 'hidden';
+            field.name = 'queue_ticket';
+            form.appendChild(field);
+        }
+        const bytes = new Uint8Array(8);
+        crypto.getRandomValues(bytes);
+        const ticket = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+        field.value = ticket;
+        if (!searchBtn) return;
+
+        const ordinal = n => {
+            const teen = n % 100 >= 11 && n % 100 <= 13;
+            return n + (teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'));
+        };
+        const url = window.sitePath + '/api/blast_queue_status.php?ticket=' + ticket;
+        const spin = '<i class="fa fa-spinner fa-spin me-1"></i>';
+        const poll = () => fetch(url, { cache: 'no-store' })
+            .then(r => r.ok ? r.json() : null)
+            .then(st => {
+                if (st && st.state === 'waiting') {
+                    searchBtn.innerHTML = spin + 'Server busy: your search is ' + ordinal(st.position)
+                        + ' in line (' + st.running + ' running). It starts automatically.';
+                } else if (st && st.state === 'running') {
+                    searchBtn.innerHTML = spin + 'Running BLAST… (large databases can take a minute)';
+                }
+            })
+            .catch(() => {})
+            .finally(() => setTimeout(poll, 1500));
+        setTimeout(poll, 800);
     }
     
     // Add sequence type detection on textarea change

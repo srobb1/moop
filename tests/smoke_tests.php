@@ -2204,6 +2204,75 @@ ok(strpos(moop_text_with_links('<b>x</b> https://a.b/"onmouseover="y'), '<b>') =
 ok(moop_text_with_links("two\nlines, no url") === "two\nlines, no url", 'plain text passes through; line breaks are kept for CSS');
 
 // ----------------------------------------------------------------------------
+group('BLAST queue: it cannot get stuck');
+// lib/blast_queue.php. State is flock()s, which the kernel drops when a process dies, so the
+// things to prove are: a free unit is always takeable, nothing is held half-way, a dead
+// waiter is swept rather than blocking the line, and a broken queue runs the search anyway.
+require_once "$BASE/lib/blast_queue.php";
+$_qd = sys_get_temp_dir() . '/moop_bq_' . getmypid();
+@mkdir($_qd, 0777, true);
+$_cfg = ConfigManager::getInstance();
+$_rp = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['cache_path'] = $_qd;
+$_c['blast_memory_budget_mb'] = 4 * BLAST_QUEUE_UNIT_MB;   // 4 units
+$_c['blast_queue_max_wait'] = 5;
+$_rp->setValue($_cfg, $_c);
+
+$_dir = blast_queue_dir();
+ok($_dir !== '' && is_dir("$_dir/units") && is_dir("$_dir/wait") && is_dir("$_dir/run"), 'queue directories are created');
+ok(blast_queue_settings()['units'] === 4, 'the memory budget is divided into units');
+
+$_a = blast_queue_take_units($_dir, 4, 3);
+ok(is_array($_a) && count($_a) === 3, 'three of four free units can be taken');
+ok(blast_queue_take_units($_dir, 4, 2) === null, 'two more cannot -- only one is free');
+$_b = blast_queue_take_units($_dir, 4, 1);
+ok(is_array($_b) && count($_b) === 1, 'all or nothing: the failed attempt kept none of what it touched');
+foreach (array_merge($_a, $_b) as $_fh) { flock($_fh, LOCK_UN); fclose($_fh); }
+chmod("$_dir/units/u000", 0444);
+$_c4 = blast_queue_take_units($_dir, 4, 4);
+ok(is_array($_c4) && count($_c4) === 4, 'a unit file the web user cannot write is still takeable (locks need read only)');
+foreach ($_c4 as $_fh) { flock($_fh, LOCK_UN); fclose($_fh); }
+
+// A waiter whose process died: its file is there, nobody holds it, and it is old.
+touch("$_dir/wait/0000000001.000000-deaddeaddeaddead", time() - 10);
+$_live = fopen("$_dir/wait/0000000002.000000-1111111111111111", 'x'); flock($_live, LOCK_EX);
+touch("$_dir/wait/0000000002.000000-1111111111111111", time() - 10);
+ok(blast_queue_waiters($_dir) === ['0000000002.000000-1111111111111111'],
+   'a dead waiter is swept from the line; a live one stays');
+ok(!file_exists("$_dir/wait/0000000001.000000-deaddeaddeaddead"), "the dead waiter's file is deleted");
+ok((blast_queue_status('1111111111111111')['position'] ?? null) === 1, 'status reports a place in line');
+flock($_live, LOCK_UN); fclose($_live); unlink("$_dir/wait/0000000002.000000-1111111111111111");
+
+$_r = blast_queue_run(fn() => 'ran', 2, blast_queue_ticket(null));
+ok(($_r['ran'] ?? false) && $_r['result'] === 'ran', 'a job runs when there is room');
+ok(count(glob("$_dir/wait/*")) === 0 && count(glob("$_dir/run/*")) === 0, 'and leaves nothing behind');
+$_r = blast_queue_run(fn() => 'big', 99, blast_queue_ticket(null));
+ok(($_r['result'] ?? '') === 'big', 'a job bigger than the whole budget runs alone, it does not wait forever');
+
+$_all = blast_queue_take_units($_dir, 4, 4);
+$_t0 = microtime(true);
+$_r = blast_queue_run(fn() => 'never', 1, blast_queue_ticket(null));
+ok($_r['ran'] === false && strpos($_r['error'], 'busy') !== false && microtime(true) - $_t0 < 8,
+   'with every unit held, a request gives up after blast_queue_max_wait with a "busy" message');
+ok(count(glob("$_dir/wait/*")) === 0, 'a request that gave up leaves the line');
+foreach ($_all as $_fh) { flock($_fh, LOCK_UN); fclose($_fh); }
+
+chmod("$_dir/units/u001", 0000);
+$_r = blast_queue_run(fn() => 'unqueued', 2, blast_queue_ticket(null));
+ok(($_r['result'] ?? '') === 'unqueued' || posix_geteuid() === 0,
+   'an unopenable unit file means a broken queue: the search runs unqueued, it does not wait');
+chmod("$_dir/units/u001", 0644);
+
+ok(blast_queue_ticket('../../etc') !== '../../etc' && strlen(blast_queue_ticket(null)) === 16,
+   'a ticket from the browser is used only if it is plain hex');
+ok(blast_queue_timed_out(124) && blast_queue_timed_out(137) && !blast_queue_timed_out(1),
+   'timeout exit codes are recognised');
+
+$_rp->setValue($_cfg, $_saved);
+exec('rm -rf ' . escapeshellarg($_qd));
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

@@ -300,6 +300,17 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // Raise this value when moving to a larger server.
     'blast_num_threads' => 2,
 
+    // ======== BLAST QUEUE (lib/blast_queue.php) ========
+    // Searches wait their turn instead of all running at once, which ran the server out of
+    // memory in the 2026-10-23 capacity test. 0 = size from this machine.
+    'blast_memory_budget_mb' => 0,    // memory BLAST may use at once; 0 = 60% of RAM
+    'blast_max_concurrent'   => 0,    // searches at once; 0 = cores / blast_num_threads + 2
+    'blast_queue_max_wait'   => 120,  // seconds to wait for a turn before "busy, try again"
+    'blast_max_runtime'      => 150,  // seconds before a running search is stopped
+    // wait + runtime must stay under nginx's fastcgi_read_timeout
+    // (sudo scripts/install_nginx_timeouts.sh sets 300 s; nginx's own default is 60).
+    'blast_max_output_mb'    => 20,   // larger results are refused with a reason (PHP memory)
+
     // ======== PRIMER3 TOOL PATHS ========
     // Same convention as blast_tools above: bare name means "on the system PATH",
     // or give a full path (e.g. '/opt/primer3/bin/primer3_core').

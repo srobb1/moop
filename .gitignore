@@ -156,3 +156,4 @@ testing/
 
 # Reproducible diagnostic dumps (regenerate them rather than committing).
 status.*.log
+notes/bench/capacity_results/

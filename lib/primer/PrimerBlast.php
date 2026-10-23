@@ -143,9 +143,27 @@ class PrimerBlast
              . ' -outfmt ' . escapeshellarg('6 qseqid sseqid length mismatch gapopen qstart qend sstart send btop')
              . ' 2>&1';
 
-        exec($cmd, $output, $return_code);
+        // Through the BLAST queue like every other search, and under the same run-time cap.
+        require_once __DIR__ . '/../blast_queue.php';
+        $output = [];
+        $return_code = 0;
+        $queued = blast_queue_run(
+            function () use ($cmd, &$output, &$return_code) {
+                exec(blast_queue_wrap_command($cmd), $output, $return_code);
+            },
+            blast_queue_cost_units('blastn', $db),
+            blast_queue_ticket(null)
+        );
         @unlink($query_file);
 
+        if (!$queued['ran']) {
+            $result['error'] = $queued['error'];
+            return $result;
+        }
+        if (blast_queue_timed_out($return_code)) {
+            $result['error'] = blast_queue_timeout_message();
+            return $result;
+        }
         if ($return_code !== 0) {
             // A non-zero exit with an empty .blastout is exactly the failure mode
             // that made the original scripts report a header-only table as success.
