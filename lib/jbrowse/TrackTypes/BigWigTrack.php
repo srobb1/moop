@@ -162,12 +162,8 @@ class BigWigTrack extends BaseTrack implements TrackTypeInterface
             : '#1f77b4';
         
         // Build category array
-        $categories = [];
-        if (isset($trackData['category']) && !empty($trackData['category'])) {
-            $categories = [$trackData['category']];
-        } else {
-            $categories = ['Quantitative'];
-        }
+        // "A / B / C" in the sheet is three folder levels (GoogleSheetsParser::categoryPath()).
+        $categories = GoogleSheetsParser::categoryPath($trackData['category'] ?? '', 'Quantitative');
         
         // Build access level
         $accessLevel = isset($trackData['access_level']) && !empty($trackData['access_level'])

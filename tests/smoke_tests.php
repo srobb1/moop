@@ -604,6 +604,19 @@ $_nc_json = preg_match('/Metadata: (\{.*\})\s*$/s', $_nc_out, $_nc_m) ? json_dec
 ok(($_nc_json['metadata']['google_sheets_metadata']['chip_target'] ?? null) === 'H3K4me3',
    'the new column reaches the track JSON with no code change');
 
+// CATEGORY may be a folder path: "A / B / C" is three nested folders in JBrowse's track list.
+ok(GoogleSheetsParser::categoryPath('Gene Expression / Reitzel Lab /  Light removal 2019') === ['Gene Expression', 'Reitzel Lab', 'Light removal 2019'],
+   'a CATEGORY path becomes one folder per level, spaces tidied');
+ok(GoogleSheetsParser::categoryPath('Gene Expression') === ['Gene Expression'], 'a plain category stays one folder, as before');
+ok(GoogleSheetsParser::categoryPath('A //B/ ') === ['A', 'B'] && GoogleSheetsParser::categoryPath('', 'Quantitative') === ['Quantitative'],
+   'empty levels are dropped; an empty cell gets the track type\'s default');
+$_cp = $_nc; $_cp['category'] = 'Gene Expression / Reitzel Lab / Light removal 2019';
+ob_start();
+(new BigWigTrack($_ts_resolver, ConfigManager::getInstance()))->generate($_cp, 'OrgA', 'GCA_1', ['dry_run' => true]);
+$_cp_out = ob_get_clean();
+$_cp_json = preg_match('/Metadata: (\{.*\})\s*$/s', $_cp_out, $_cp_m) ? json_decode($_cp_m[1], true) : null;
+ok(($_cp_json['category'] ?? null) === ['Gene Expression', 'Reitzel Lab', 'Light removal 2019'], 'a bigWig track gets the nested category');
+
 // And no track type may grow its own list again.
 $_ts_lists = [];
 foreach (glob(dirname(__DIR__) . '/lib/jbrowse/TrackTypes/*.php') as $_ts_file) {
@@ -637,6 +650,10 @@ ok($_sd_new['adapter'] === $_sd_def['adapter'] && $_sd_new['metadata']['file_siz
    && $_sd_new['metadata']['access_level'] === 'PUBLIC' && $_sd_new['trackId'] === 'track_abc',
    'the file location, generated facts and access are left alone');
 ok($_sd_gen->syncExistingDescription($_sd_file, $_sd_row) === [], 'a second sync changes nothing');
+$_sd_row['category'] = 'Gene Expression / Reitzel Lab';
+ok($_sd_gen->syncExistingDescription($_sd_file, $_sd_row) === ['category']
+   && json_decode(file_get_contents($_sd_file), true)['category'] === ['Gene Expression', 'Reitzel Lab'],
+   'a CATEGORY changed to a folder path reaches an existing track');
 $_sd_row['sheet_metadata'] = [];
 $_sd_gen->syncExistingDescription($_sd_file, $_sd_row);
 ok(array_key_exists('google_sheets_metadata', json_decode(file_get_contents($_sd_file), true)['metadata']),

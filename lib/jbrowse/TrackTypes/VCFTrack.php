@@ -202,7 +202,7 @@ class VCFTrack extends BaseTrack implements TrackTypeInterface
         $trackId = $options['track_id'] ?? $this->generateTrackId($filePath, $organism, $assembly);
         $browserTrackId = $options['browser_track_id'] ?? $trackId;
         $trackName = $options['name'] ?? $this->generateTrackName($filePath);
-        $category = $options['category'] ?? 'Variants';
+        $category = GoogleSheetsParser::categoryPath($options['category'] ?? '', 'Variants');
         $description = $options['description'] ?? '';
         $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
             ? $options['access_level']
@@ -235,7 +235,7 @@ class VCFTrack extends BaseTrack implements TrackTypeInterface
             'trackId' => $browserTrackId,
             'name' => $trackName,
             'assemblyNames' => ["{$organism}_{$assembly}"],
-            'category' => [$category],
+            'category' => $category,
             'type' => 'VariantTrack',
             'adapter' => [
                 'type' => 'VcfTabixAdapter',

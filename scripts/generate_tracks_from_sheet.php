@@ -496,7 +496,7 @@ function listExistingTracks($generator, $organism, $assembly)
     foreach ($byType as $type => $typeTracks) {
         echo ucfirst($type) . " Tracks (" . count($typeTracks) . "):\n";
         foreach ($typeTracks as $track) {
-            $category = is_array($track['category']) ? implode(', ', $track['category']) : $track['category'];
+            $category = is_array($track['category']) ? implode(' / ', $track['category']) : $track['category'];
             // Single line format for easy grepping
             echo "  {$track['track_id']} → \"{$track['name']}\" ($category)\n";
         }

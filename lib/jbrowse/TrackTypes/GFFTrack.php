@@ -165,7 +165,7 @@ class GFFTrack extends BaseTrack implements TrackTypeInterface
         $trackId = $options['track_id'] ?? $this->generateTrackId($filePath, $organism, $assembly);
         $browserTrackId = $options['browser_track_id'] ?? $trackId;
         $trackName = $options['name'] ?? $this->generateTrackName($filePath);
-        $category = $options['category'] ?? 'Annotations';
+        $category = GoogleSheetsParser::categoryPath($options['category'] ?? '', 'Annotations');
         $description = $options['description'] ?? '';
         $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
             ? $options['access_level']
@@ -189,7 +189,7 @@ class GFFTrack extends BaseTrack implements TrackTypeInterface
             'trackId' => $browserTrackId,
             'name' => $trackName,
             'assemblyNames' => ["{$organism}_{$assembly}"],
-            'category' => [$category],
+            'category' => $category,
             'type' => 'FeatureTrack',
             'adapter' => [
                 'type' => 'Gff3TabixAdapter',

@@ -81,6 +81,26 @@ class GoogleSheetsParser
     }
 
     /**
+     * A sheet CATEGORY cell as JBrowse's folder path.
+     *
+     * JBrowse reads a track's category as a list, one item per folder level. "Gene Expression /
+     * Reitzel Lab / Light removal 2019" becomes three nested folders; a cell with no slash stays
+     * one folder, exactly as before (no category on any organism contained a slash on 2026-10-23).
+     * Each level is trimmed and inner whitespace collapsed; empty levels ("A //B") are dropped.
+     *
+     * @param string|array $category The cell (or a list already split)
+     * @param string       $default  Folder for an empty cell
+     * @return string[]
+     */
+    public static function categoryPath($category, string $default = 'Uncategorized'): array
+    {
+        $parts = is_array($category) ? $category : explode('/', (string)$category);
+        $parts = array_map(fn($p) => trim(preg_replace('/\s+/u', ' ', (string)$p)), $parts);
+        $parts = array_values(array_filter($parts, fn($p) => $p !== ''));
+        return $parts ?: [$default];
+    }
+
+    /**
      * Normalize a sheet column header to the key the code reads.
      *
      * Lowercase and trimmed, with each run of hyphens or whitespace turned into one underscore,

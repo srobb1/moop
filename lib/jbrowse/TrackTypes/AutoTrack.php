@@ -234,7 +234,7 @@ class AutoTrack implements TrackTypeInterface
             'trackId' => $browserTrackId,
             'name' => $trackData['name'],
             'assemblyNames' => ["{$organism}_{$assembly}"],
-            'category' => [$trackData['category']],
+            'category' => GoogleSheetsParser::categoryPath($trackData['category']),
             'type' => 'FeatureTrack',
             'adapter' => [
                 'type' => 'Gff3TabixAdapter',

@@ -112,7 +112,7 @@ class PIFTrack extends BaseTrack implements TrackTypeInterface
         $trackId = $options['track_id'] ?? basename($filePath, '.pif.gz');
         $browserTrackId = $options['browser_track_id'] ?? $trackId;
         $trackName = $options['name'] ?? str_replace(['_', '-'], ' ', basename($filePath, '.pif.gz'));
-        $category = $options['category'] ?? 'Synteny';
+        $category = GoogleSheetsParser::categoryPath($options['category'] ?? '', 'Synteny');
         $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
             ? $options['access_level']
             : '';   // not set = admins only; never a default PUBLIC
@@ -133,12 +133,12 @@ class PIFTrack extends BaseTrack implements TrackTypeInterface
             'organism' => $organism,
             'assembly1' => $assembly1,
             'assembly2' => $assembly2,
-            'category' => [$category],
+            'category' => $category,
             'config' => [
                 'type' => 'SyntenyTrack',
                 'trackId' => $trackId,
                 'name' => $trackName,
-                'category' => [$category],
+                'category' => $category,
                 'assemblyNames' => [$assembly2, $assembly1],
                 'adapter' => [
                     'type' => 'PairwiseIndexedPAFAdapter',

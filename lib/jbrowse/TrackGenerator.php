@@ -498,8 +498,8 @@ class TrackGenerator
             $def['name'] = $name; $changed[] = 'name';
         }
         $category = trim((string)($track['category'] ?? ''));
-        if ($category !== '' && ($def['category'] ?? null) !== [$category]) {
-            $def['category'] = [$category]; $changed[] = 'category';
+        if ($category !== '' && ($def['category'] ?? null) !== GoogleSheetsParser::categoryPath($category)) {
+            $def['category'] = GoogleSheetsParser::categoryPath($category); $changed[] = 'category';
         }
         $description = trim((string)($track['description'] ?? ''));
         if (($def['metadata']['description'] ?? '') !== $description) {

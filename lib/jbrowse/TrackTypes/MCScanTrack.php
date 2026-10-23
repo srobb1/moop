@@ -155,7 +155,7 @@ class MCScanTrack extends BaseTrack implements TrackTypeInterface
         $trackId = $options['track_id'] ?? $this->generateTrackId($filePath, $organism, $assembly1);
         $browserTrackId = $options['browser_track_id'] ?? $trackId;
         $trackName = $options['name'] ?? $this->generateTrackName($filePath);
-        $category = $options['category'] ?? 'Synteny';
+        $category = GoogleSheetsParser::categoryPath($options['category'] ?? '', 'Synteny');
         $description = $options['description'] ?? '';
         $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
             ? $options['access_level']
@@ -183,7 +183,7 @@ class MCScanTrack extends BaseTrack implements TrackTypeInterface
             'organism' => $organism,
             'assembly1' => $assembly1,
             'assembly2' => $assembly2,
-            'category' => [$category],
+            'category' => $category,
             'description' => $description,
             'metadata' => [
                 'management_track_id' => $trackId,
@@ -211,7 +211,7 @@ class MCScanTrack extends BaseTrack implements TrackTypeInterface
             'type' => 'SyntenyTrack',
             'trackId' => $trackId,
             'name' => $trackName,
-            'category' => [$category],
+            'category' => $category,
             'assemblyNames' => [$assembly1, $assembly2],
             'adapter' => [
                 'type' => 'MCScanAnchorsAdapter',

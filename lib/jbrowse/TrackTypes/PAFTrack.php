@@ -139,7 +139,7 @@ class PAFTrack extends BaseTrack implements TrackTypeInterface
         $trackId = $options['track_id'] ?? $this->generateTrackId($filePath, $organism, $assembly);
         $browserTrackId = $options['browser_track_id'] ?? $trackId;
         $trackName = $options['name'] ?? $this->generateTrackName($filePath);
-        $category = $options['category'] ?? 'Long-read Alignments';
+        $category = GoogleSheetsParser::categoryPath($options['category'] ?? '', 'Long-read Alignments');
         $description = $options['description'] ?? '';
         $accessLevel = isset($options['access_level']) && !empty($options['access_level'])
             ? $options['access_level']
@@ -162,7 +162,7 @@ class PAFTrack extends BaseTrack implements TrackTypeInterface
             'name' => $trackName,
             'organism' => $organism,
             'assembly' => $assembly,
-            'category' => [$category],
+            'category' => $category,
             'description' => $description,
             'metadata' => [
                 'management_track_id' => $trackId,
@@ -188,7 +188,7 @@ class PAFTrack extends BaseTrack implements TrackTypeInterface
             'type' => 'AlignmentsTrack',
             'trackId' => $trackId,
             'name' => $trackName,
-            'category' => [$category],
+            'category' => $category,
             'assemblyNames' => [$assembly],
             'adapter' => [
                 'type' => 'PAFAdapter',
