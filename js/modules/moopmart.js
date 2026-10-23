@@ -14,6 +14,8 @@
     const PREVIEW_ORG_URL = moopSite + '/api/moopmart_preview_organism.php';
     const EXPORT_URL      = moopSite + '/api/moopmart_export.php';
     const CHRS_URL        = moopSite + '/api/moopmart_chrs.php';
+    const EXPR_GENES_URL  = moopSite + '/api/moopmart_expression_genes.php';
+    const EXPRESSION_URL  = moopSite + '/tools/expression.php';
 
     // Max rows rendered in the progressive preview table (count stays exact).
     const PREVIEW_ROW_CAP = 100;
@@ -33,6 +35,7 @@
         // relying on the module's own change listener because row clicks tick the checkbox
         // PROGRAMMATICALLY, and assigning .checked fires no change event.
         if (scopePanel) scopePanel.render();
+        updateExprState();
         if (!el) return;
         refreshAnnotationCounts();   // keep Step 3 availability counts in sync with the selection
         // Toggle label states its next action (and thus the current all-selected state).
@@ -1016,6 +1019,106 @@
     }
 
     // -------------------------------------------------------
+    // Send to Expression
+    // -------------------------------------------------------
+    // A heatmap is ONE gene set (one quantification against one set of gene models); an
+    // exporter list may span many. So the list is split by gene set, each gene set with
+    // expression data gets its own "Open heatmap", and the rest are named as left out --
+    // never merged, never dropped silently.
+
+    // Selected gene-set checkboxes, split by whether their gene set has expression data.
+    function exprSplitSelection() {
+        const withData = new Set(typeof expressionGeneSets !== 'undefined' ? expressionGeneSets : []);
+        const on = Array.from(document.querySelectorAll('.mm-gs-cb:checked'));
+        const key = cb => `${cb.dataset.org}|${cb.dataset.asm}|${cb.dataset.gs}`;
+        return { send: on.filter(cb => withData.has(key(cb))), without: on.filter(cb => !withData.has(key(cb))) };
+    }
+
+    // Show the row only while the selection includes a gene set with data; any earlier answer
+    // described a different selection, so it is cleared.
+    function updateExprState() {
+        const row = document.getElementById('mm-expr-row');
+        if (!row) return;
+        row.classList.toggle('d-none', exprSplitSelection().send.length === 0);
+        const out = document.getElementById('mm-expr-result');
+        if (out) out.innerHTML = '';
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    const gsLabel = cb => `${(cb.dataset.label || cb.dataset.org).replace(/_/g, ' ')} · ${cb.dataset.asmDisplay || cb.dataset.asm} · ${cb.dataset.gs}`;
+
+    function sendToExpression() {
+        const btn     = document.getElementById('mm-expr-btn');
+        const spinner = document.getElementById('mm-expr-spinner');
+        const out     = document.getElementById('mm-expr-result');
+        const { send, without } = exprSplitSelection();
+        if (!send.length || !out) return;
+
+        btn.disabled = true;
+        spinner?.classList.remove('d-none');
+        out.innerHTML = '<span class="text-muted">Finding the matching genes…</span>';
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        Promise.all(send.map(cb =>
+            fetch(EXPR_GENES_URL, {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrf },
+                body: buildFormData({ organism: cb.dataset.org, assembly: cb.dataset.asm, gene_set: cb.dataset.gs }),
+            })
+                .then(r => r.json().then(j => { if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`); return j; }))
+                .then(data => ({ cb, data }))
+                .catch(err => ({ cb, error: err.message }))
+        )).then(results => {
+            const lines = results.map(({ cb, data, error }, i) => {
+                const name = `<strong>${escHtml(gsLabel(cb))}</strong>`;
+                if (error)            return `<div class="text-danger">${name} — could not be read (${escHtml(error)}).</div>`;
+                if (!data.gene_count) return `<div class="text-muted">${name} — no matching genes.</div>`;
+                const capped = data.gene_count > data.genes.length
+                    ? ` <span class="text-warning">(the first ${data.genes.length} of ${data.gene_count.toLocaleString()} are sent — a heatmap shows at most ${expressionMaxGenes})</span>`
+                    : '';
+                return `<div class="d-flex align-items-center flex-wrap gap-2 mb-1">`
+                    + `<button type="button" class="btn btn-sm btn-outline-primary py-0 mm-expr-open" data-i="${i}">`
+                    + `<i class="fa fa-external-link-alt me-1"></i>Open heatmap</button>`
+                    + `<span>${name} — ${data.gene_count.toLocaleString()} gene${data.gene_count !== 1 ? 's' : ''}${capped}</span></div>`;
+            });
+            if (without.length) {
+                lines.push(`<div class="text-muted mt-1">${without.length} other selected gene set${without.length !== 1 ? 's have' : ' has'} `
+                    + `no expression data; ${without.length !== 1 ? 'their' : 'its'} genes are not sent.</div>`);
+            }
+            out.innerHTML = lines.join('');
+            out.querySelectorAll('.mm-expr-open').forEach(b => b.addEventListener('click', () => {
+                const { cb, data } = results[+b.dataset.i];
+                openExpression(cb, data.genes);
+            }));
+        }).finally(() => {
+            btn.disabled = false;
+            spinner?.classList.add('d-none');
+        });
+    }
+
+    // POST (a long list does not fit a URL) into a new tab, so the exporter keeps its state and
+    // the other gene sets' heatmaps are still one click away.
+    function openExpression(cb, genes) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = EXPRESSION_URL;
+        form.target = '_blank';
+        form.style.display = 'none';
+        const fields = { organism: cb.dataset.org, assembly: cb.dataset.asm, gene_set: cb.dataset.gs, genes: genes.join('\n') };
+        for (const [k, v] of Object.entries(fields)) {
+            const inp = document.createElement('input');
+            inp.type = 'hidden'; inp.name = k; inp.value = v;
+            form.appendChild(inp);
+        }
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+    }
+
+    // -------------------------------------------------------
     // Scope context (pre-select when launched from toolbox)
     // -------------------------------------------------------
 
@@ -1055,6 +1158,17 @@
 
         // Preview
         document.getElementById('mm-preview-btn')?.addEventListener('click', previewResults);
+        document.getElementById('mm-expr-btn')?.addEventListener('click', sendToExpression);
+        updateExprState();
+        // The listed genes answer the query as it was when asked: any later edit to the form
+        // would leave "Open heatmap" sending a stale list, so the answer is cleared instead.
+        const clearExprResult = e => {
+            if (e.target.closest?.('#mm-expr-row')) return;
+            const out = document.getElementById('mm-expr-result');
+            if (out) out.innerHTML = '';
+        };
+        document.addEventListener('input', clearExprResult, true);
+        document.addEventListener('change', clearExprResult, true);
 
         // True if ANY Step 2 section is filled — an ID list, a name, a description, an
         // annotation criterion, or a chromosomal range. When none are, the export is every

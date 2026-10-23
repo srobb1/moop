@@ -12,6 +12,7 @@ include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/moopmart_functions.php';
 include_once __DIR__ . '/../lib/moop_functions.php';
+require_once __DIR__ . '/../lib/expression_functions.php';
 
 $organism_data = $config->getPath('organism_data');
 $siteTitle     = $config->getString('siteTitle');
@@ -130,6 +131,11 @@ sort($annotation_source_names);
 // groups holding only private gene sets beside organisms the visitor can open.
 $organism_groups = moop_organism_groups_map(moop_visible_group_entries(getGroupData()));   // sorted, one order site-wide
 
+// Gene sets this visitor can open that have expression data, as "org|asm|gene_set" keys (the
+// source-key format). Step 4 offers "Send to Expression" only for these: a heatmap is one gene set.
+$expression_gene_sets = array_map(fn($gs) => "{$gs['organism']}|{$gs['assembly']}|{$gs['gene_set']}",
+    moop_expression_gene_sets($config->getPath('organism_data'), get_access_level()));
+
 // Chr names are loaded dynamically via API when exactly one assembly is selected.
 // No pre-loading here — avoids reading N×M cache files on every page load.
 
@@ -152,6 +158,8 @@ echo render_display_page(
             "const moopSite = '/$site';",
             "const siteTitle = '"        . addslashes($siteTitle)                . "';",
             'const scopeContext = '      . json_encode($scope_context)           . ';',
+            'const expressionGeneSets = ' . json_encode($expression_gene_sets) . ';',
+            'const expressionMaxGenes = ' . MOOP_EXPRESSION_TOOL_MAX_GENES      . ';',
         ],
     ],
     'MOOPmart — Data Exporter'

@@ -883,7 +883,8 @@ function moopmartParsePreviewRequest(array $post): array {
  * @param array  $raw_input_ids        Raw user-supplied IDs (resolved per-organism here)
  * @param string $global_filter_reason Uniform "why included" string for non-ID filters
  * @param string $organism_data        Base organism-data path
- * @return array ['gene_count' => int, 'rows' => array]  rows = one entry per mRNA
+ * @return array ['gene_count' => int, 'rows' => array, 'genes' => list<string>]  rows = one entry per mRNA;
+ *               genes = every matched gene's uniquename, in match order (not capped)
  */
 function moopmartCollectOrganismRows(string $org, array $org_sources, array $filters, array $coord_filter, array $raw_input_ids, string $global_filter_reason, string $organism_data, ?int $row_cap = null): array {
     $empty = ['gene_count' => 0, 'row_count' => 0, 'rows' => []];
@@ -957,7 +958,7 @@ function moopmartCollectOrganismRows(string $org, array $org_sources, array $fil
     }
 
     return ['gene_count' => count($gene_rows), 'row_count' => $row_count, 'rows' => $mrna_rows,
-            'unresolved_ids' => $unresolved];
+            'genes' => array_column($gene_rows, 'uniquename'), 'unresolved_ids' => $unresolved];
 }
 
 /**
