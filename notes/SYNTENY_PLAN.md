@@ -92,16 +92,61 @@ The track-sheet columns ASSEMBLY_1, ASSEMBLY_2, BED1_PATH, BED2_PATH, MAF can be
 
 Galaxy can be added later behind the same queue: the request record says *where* it ran, so A and B are interchangeable.
 
-## 6. Requests — how a user asks
+## 6. Requests — how a user asks, and how the admin sees it (brainstorm 2026-10-23)
 
-1. Genome browser page → **Compare with another genome** → list of genomes the user can open, grouped
-   (bats first for a bat), with each pair marked *ready* or *not computed yet*.
-2. *Ready* → opens the linear synteny view (existing dual config). *Not computed* → **Request** with an optional
-   note ("looking at the TAS1R locus"). Logged-in and trusted-network users only *(your call)*.
-3. The request joins the queue (duplicates merge, the count goes up). The admin page shows the queue;
-   an admin approves (or auto-approve close pairs). Optional e-mail to the admin on new requests and to the
-   requester when it's ready (MOOP has `admin_email`).
-4. When done, the pair appears in both browsers' Synteny folder and the requester's link opens it.
+**Starting point (checked 2026-10-23): MOOP has no request mechanism at all.** The only contact route
+is a `mailto:` link to `admin_email` (footer, "no access" pages). **The server cannot send e-mail**:
+nothing in MOOP calls `mail()` and postfix is not running. So notifications go to the dashboard first;
+e-mail only if IT provides a relay later.
+
+**Direction: one general request queue, synteny as its first kind.** Nothing exists yet, so build it once:
+the same queue, dashboard card and admin page can later take "missing track", "add a genome",
+"BUSCO for this gene set". Each request has a `kind` and a small kind-specific payload.
+
+### 6.1 Where a user asks — where the need arises, not a separate form page
+- **Genome browser page**: **Compare with another genome** → the genomes this user can open (grouped,
+  e.g. bats first for a bat), each marked **Open** (pair exists) or **Request**.
+- **Gene page (later)**: "See this region in…", same list.
+- Users **pick from a list, never type a genome name**, so every request is an exact pair and duplicates
+  merge automatically.
+
+### 6.2 What a request holds
+- One click + an optional note ("looking at the TAS1R cluster"). MOOP adds who, when, the pair (sorted,
+  so A×B = B×A), and a suggested method from the taxonomy (minimap2 close, jcvi distant).
+- A request for a pair already queued **adds to its count** ("4 people want this") instead of a new entry.
+  The count is the demand signal for what to precompute next.
+
+### 6.3 Who may request
+- Logged-in users and the trusted network (IP_IN_RANGE). Anonymous public visitors see the
+  `admin_email` link instead (no spam surface).
+
+### 6.4 What the admin sees
+- **Dashboard card**: "Synteny requests: 3 new (most wanted: Myotis × Eptesicus, 4 people)", in the
+  shared `adm-card` style, like the other health cards.
+- **Requests page** behind it: pair, who asked, notes, count, suggested method, status. Buttons:
+  **Approve**, **Decline** (with a reason the requester sees), **Done**.
+
+### 6.5 Getting approved pairs to the cluster
+MOOP cannot reach the compute side, but the compute side already copies to MOOP. So:
+- MOOP keeps an **approved-pairs file in the `pairs.tsv` format** (`config/synteny/pairs.tsv`).
+- **Now:** a download button; the admin adds the lines to `pairs.tsv` on the cluster.
+- **Later:** `submit_all.sh` fetches the file from MOOP itself, so approving on the dashboard is all it takes.
+
+### 6.6 Closing the loop
+- When results are copied to MOOP, the request **marks itself done** (MOOP finds the files; no manual step).
+- The requester's **Request** becomes **Open**; a small **My requests** list shows Waiting / Ready / Declined.
+- E-mail to the admin (new request) and the requester (ready): only once a mail relay exists.
+
+### 6.7 Storage
+- A small JSON file in `metadata/` (backed up with site data, written under a lock).
+- Whatever path it uses **must be added to the writable allowlist** (`moop_permission_check_mode()`) and to
+  `scripts/fix_moop_selinux.sh`. A missing entry is exactly how earlier features failed silently (CLAUDE.md §11).
+
+### 6.8 Open questions (to decide before building)
+1. One general queue for all missing data, or synteny only? *(leaning general, synteny first)*
+2. Approve every request, or **auto-approve cheap ones** (close relatives, public genomes)?
+3. Who may request: logged-in only, or the trusted network too?
+4. Can requesters see each other's requests? The count ("4 people want this") helps; names may not.
 
 ## 7. Phases (each one usable on its own)
 
