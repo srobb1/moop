@@ -1,0 +1,9 @@
+# code_a	code_b	method	preset
+# method: genes  = gene-anchor synteny (jcvi / MCScan-python), for distant species
+#         genome = whole-genome alignment (minimap2), for close relatives
+# preset: minimap2 -x preset for method=genome (asm5 / asm10 / asm20); blank = asm20.
+# One direction per pair: the result is shown in BOTH genomes' browsers.
+ChaCal	BraPum	genes
+ChaCal	FurPar	genes
+BraPum	BraVen	genes
+BraPum	BraVen	genome	asm20

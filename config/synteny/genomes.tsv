@@ -1,0 +1,8 @@
+# code	gene_set (relative to MOOP_DATA: organism/assembly/gene_set)
+# One line per genome. The code is a short name used in file names (BraPum.bed, BraPum.BraVen.anchors).
+# Codes must be unique and contain only letters, digits and _.
+BraPum	Bradypodion_pumilum/GCA_035047305.1/SIMR_2025-04-21
+BraVen	Bradypodion_ventrale/GCA_035047345.1/SIMR_2025-04-21
+ChaCal	Chamaeleo_calyptratus/CCA3/MENDER_20260701
+FurPar	Furcifer_pardalis/GCA_030440675.1/SIMR_2025-04-21
+MyoMyo	Myotis_myotis/GCF_014108235.1/RS_100
