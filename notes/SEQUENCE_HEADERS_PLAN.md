@@ -366,6 +366,25 @@ Effort: half a day to a day. Risk: medium (visible behaviour change on two pages
 
 ### Piece 3: BLAST hit limits
 
+**Status 2026-10-27: part 3a done (limits, measured); 3b (temp files off /tmp) next.**
+
+- **The audit was wrong that BLAST output was unbounded:** `blastOutputTooLarge()` already
+  refused results over `blast_max_output_mb` before reading them. But its default (20 MB of XML)
+  rested on a guess ("about twice the XML"; the admin text said "above ~40 MB"), and was wrong.
+- **Measured** (NV2 genome, blastn, a 300 bp CA repeat, filter off, 50 hits, Max HSPs varied):
+  XML 0.5 MB → 2 MB page; 2.1 → 7.7; 4.6 → 16.3; 6.8 → 29.7 (200); 9.8 → 42.5 (200);
+  **12.7 MB → 502**. The page is ~4x the XML: it draws every alignment AND embeds the pairwise,
+  tabular and XML text in hidden divs for the browser's downloads.
+- So: `blast_max_output_mb` 20 → **5** (under half the break, room for other users); admin max
+  10, description corrected. New `blast_max_hits` (default 1000, admin-editable 10–5000),
+  clamped server-side in `tools/blast.php` and `max=` on the form, with "For more, run BLAST+ on
+  your own computer" (Sofia: "no one needs unlimited"). The refusal message says the same.
+- Hits alone do not bound it: 50 hits on chromosomes were 85 MB (thousands of HSPs each).
+- Live: the 502 case is now refused in 5 s; 999,999 hits posted → clamped to 1,000; a normal
+  blastp 0.9 s, unchanged. Admin page not viewed (needs an admin login) -- Sofia to look once.
+- Bigger fix, not done: stop embedding pairwise/tabular/XML in the page (serve them as
+  downloads) -- would cut the page by ~40% and allow a higher limit. Only if 5 MB proves tight.
+
 First **measure** (see audit). Then, depending on the numbers:
 
 - a server-side maximum for Maximum Hits (and maybe a default `max_hsps`), shown in the form

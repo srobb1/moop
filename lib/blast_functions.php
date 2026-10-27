@@ -428,9 +428,10 @@ function runBlastSearch($query_seq, $blast_db, $program, $options = []) {
 /**
  * '' if a BLAST result is small enough to display, else the message saying why not.
  *
- * The limit (blast_max_output_mb, default 20 MB of XML) is what fits PHP's memory_limit:
- * the page holds the XML, its parsed form and the pairwise text (about twice the XML) at
- * once. The pairwise and tabular downloads are made from the same archive, so the XML size
+ * The limit (blast_max_output_mb, default 5 MB of XML) is what fits PHP's memory_limit:
+ * the page holds the XML, the drawn alignments and hidden copies of the pairwise, tabular and
+ * XML text -- about 4x the XML, measured 2026-10-27 (12.7 MB of XML was a 502; the old default
+ * of 20 let that through). The pairwise and tabular downloads are made from the same archive, so the XML size
  * stands for all three.
  *
  * Checked twice. First on the ASN.1 archive, the moment BLAST finishes: it runs ~1.4x the
@@ -442,7 +443,7 @@ function runBlastSearch($query_seq, $blast_db, $program, $options = []) {
  * @param bool   $is_archive  true for the ASN.1 archive
  */
 function blastOutputTooLarge(string $file, bool $is_archive = false): string {
-    $limit_mb = max(1, ConfigManager::getInstance()->getInt('blast_max_output_mb', 20));
+    $limit_mb = max(1, ConfigManager::getInstance()->getInt('blast_max_output_mb', 5));
     $size = (int)@filesize($file);
     $xml_size = $is_archive ? $size / 1.4 : $size;
     if ($xml_size <= $limit_mb * 1048576) return '';
@@ -451,7 +452,8 @@ function blastOutputTooLarge(string $file, bool $is_archive = false): string {
         . " MB of results, over the {$limit_mb} MB limit. "
         . 'This usually means the query contains repeats or simple sequence. '
         . 'Turn "Filter low complexity regions" back on, or set Max HSPs (for example 20) '
-        . 'or a stricter E-value under Advanced options.';
+        . 'or a stricter E-value under Advanced options. '
+        . 'For a search this large, run BLAST+ on your own computer: the FASTA files are on the Downloads page.';
 }
 
 /**

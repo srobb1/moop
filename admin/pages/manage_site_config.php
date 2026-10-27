@@ -586,7 +586,7 @@
                             <?= (int)$_bq['max_concurrent'] ?> searches at once, wait up to <?= (int)$_bq['max_wait'] ?> s, run up to <?= (int)$_bq['max_runtime'] ?> s.</span>
                         </p>
                         <div class="row g-3">
-                            <?php foreach (['blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb'] as $_qk):
+                            <?php foreach (['blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits'] as $_qk):
                                 $_qm = $editable_config[$_qk];
                                 $_can_auto = isset($_bq_in_use[$_qk]);
                                 $_is_auto  = $_can_auto && (int)$_qm['current_value'] === 0; ?>

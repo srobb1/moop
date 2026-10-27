@@ -310,7 +310,13 @@ AATGCGTCCACAACAGTTATCAATCAA',
     'blast_max_runtime'      => 150,  // seconds before a running search is stopped
     // wait + runtime must stay under nginx's fastcgi_read_timeout
     // (sudo scripts/install_nginx_timeouts.sh sets 300 s; nginx's own default is 60).
-    'blast_max_output_mb'    => 20,   // larger results are refused with a reason (PHP memory)
+    // Measured 2026-10-27 (NV2 genome, a CA-repeat query): the results page holds the XML, the
+    // drawn alignments and hidden copies of the pairwise/tabular/XML text, ~4x the XML. 6.8 MB of
+    // XML made a 30 MB page (200); 9.8 MB a 42 MB page (200); 12.7 MB a 502 (PHP's 128M). 5 MB is
+    // under half of that, so several people can do it at once. It was 20, which passed results
+    // that then crashed the page.
+    'blast_max_output_mb'    => 5,    // larger results are refused with a reason (PHP memory)
+    'blast_max_hits'         => 1000, // Maximum Hits ceiling; bigger searches belong on BLAST+ locally
 
     // ======== PRIMER3 TOOL PATHS ========
     // Same convention as blast_tools above: bare name means "on the system PATH",

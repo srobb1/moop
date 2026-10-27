@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -830,9 +830,18 @@ class ConfigManager
             ],
             'blast_max_output_mb' => [
                 'label' => 'Largest result (MB)',
-                'description' => 'Bigger results are refused with a reason. Above ~40 MB they no longer fit PHP\'s 128 MB memory limit.',
-                'type' => 'number', 'min' => 5, 'max' => 100,
-                'current_value' => $this->getInt('blast_max_output_mb', 20),
+                'description' => 'MB of XML. Bigger results are refused with a reason. The page needs ~4x this '
+                    . 'in memory: 12.7 MB gave a 502 under PHP\'s 128 MB limit (measured 2026-10-27), so keep it '
+                    . 'well under 10 to leave room for other users.',
+                'type' => 'number', 'min' => 1, 'max' => 10,
+                'current_value' => $this->getInt('blast_max_output_mb', 5),
+            ],
+            'blast_max_hits' => [
+                'label' => 'Most hits (Maximum Hits)',
+                'description' => 'The highest Maximum Hits a search may ask for. The result size limit above '
+                    . 'still applies: one hit on a chromosome can carry thousands of alignments.',
+                'type' => 'number', 'min' => 10, 'max' => 5000,
+                'current_value' => $this->getInt('blast_max_hits', 1000),
             ],
             'search_results_limit' => [
                 'label' => 'Search Results Limit',

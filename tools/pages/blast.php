@@ -205,7 +205,8 @@
                             
                             <div class="col-md-6">
                                 <label for="max_results" class="form-label"><strong>Maximum Hits</strong></label>
-                                <input type="number" id="max_results" name="max_results" class="form-control" value="<?= htmlspecialchars($max_results) ?>" min="1">
+                                <input type="number" id="max_results" name="max_results" class="form-control" value="<?= (int)$max_results ?>" min="1" max="<?= (int)$max_hits_cap ?>">
+                                <div class="form-text">Up to <?= number_format($max_hits_cap) ?>. For more, run BLAST+ on your own computer.</div>
                                 <small class="form-text text-muted">Maximum number of hits to return</small>
                             </div>
                         </div>

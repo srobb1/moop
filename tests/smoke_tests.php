@@ -324,15 +324,20 @@ ok(count($bl['external'] ?? []) === 1,
 ok(($bl['jbrowse_hsp_max_link'] ?? null) === 10,
    'sub-keys the admin never saved keep their site_config default (deep merge)');
 
+// BLAST's limits, measured 2026-10-27: 12.7 MB of XML was a 502 (the results page needs ~4x the
+// XML), so the refusal threshold is 5 MB, not the 20 that let it through; Maximum Hits has a ceiling.
+ok($cm2->getInt('blast_max_output_mb') === 5 && $cm2->getInt('blast_max_hits') === 1000,
+   'BLAST defaults: results over 5 MB of XML refused (20 crashed the page), at most 1,000 hits');
+
 // The BLAST queue settings (Site Configuration -> BLAST Queue) must survive the whitelist.
 $_qsave = $cm2->saveEditableConfig(['blast_max_runtime' => 99, 'blast_queue_max_wait' => 33,
-    'blast_memory_budget_mb' => 2048, 'blast_max_concurrent' => 3, 'blast_max_output_mb' => 15], $cfgtmp);
+    'blast_memory_budget_mb' => 2048, 'blast_max_concurrent' => 3, 'blast_max_output_mb' => 15, 'blast_max_hits' => 250], $cfgtmp);
 $cm3 = (new ReflectionClass('ConfigManager'))->newInstanceWithoutConstructor();
 $cm3->initialize("$cfgtmp/site_config.php", "$cfgtmp/tools_config.php");
 ok(($_qsave['success'] ?? false)
    && $cm3->getInt('blast_max_runtime') === 99 && $cm3->getInt('blast_queue_max_wait') === 33
    && $cm3->getInt('blast_memory_budget_mb') === 2048 && $cm3->getInt('blast_max_concurrent') === 3
-   && $cm3->getInt('blast_max_output_mb') === 15,
+   && $cm3->getInt('blast_max_output_mb') === 15 && $cm3->getInt('blast_max_hits') === 250,
    'saved BLAST queue settings are loaded back, not dropped by the whitelist');
 
 // saveEditableConfig() rebuilds the file from the same whitelist, so an unlisted key is

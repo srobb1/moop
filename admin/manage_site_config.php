@@ -209,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // did nothing". Bounds come from the metadata, so the form and this agree.
         $_qmeta = $config->getEditableConfigMetadata();
         foreach (['blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait',
-                  'blast_max_runtime', 'blast_max_output_mb'] as $_qk) {
+                  'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits'] as $_qk) {
             // "Automatic" ticked: store 0, which blast_queue_settings() sizes from this machine.
             // (The number box is disabled then, so the browser does not send it.)
             if (!empty($_POST[$_qk . '_auto'])) { $data[$_qk] = 0; continue; }

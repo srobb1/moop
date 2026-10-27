@@ -129,8 +129,10 @@ if ($evalue === 'custom' && !empty($_POST['evalue_custom'])) {
     $evalue = $evalue_custom;
 }
 
-// Handle max_hits/results as number input
-$max_results = trim($_POST['max_results'] ?? '50');
+// Maximum Hits, within the site's ceiling (blast_max_hits): clamped here, not only by the
+// form's max=, so a crafted post cannot ask for more. Unlimited belongs on BLAST+ locally.
+$max_hits_cap = max(1, $config->getInt('blast_max_hits', 1000));
+$max_results  = max(1, min($max_hits_cap, (int)trim($_POST['max_results'] ?? '50')));
 
 $matrix = trim($_POST['matrix'] ?? 'BLOSUM62');
 $filter_seq = isset($_POST['filter_seq']);
@@ -385,6 +387,7 @@ $data = [
     'evalue' => $evalue,
     'evalue_custom' => $evalue_custom,
     'max_results' => $max_results,
+    'max_hits_cap' => $max_hits_cap,
     'blast_options' => $blast_options,
     'page_styles' => [
         '/' . $site . '/css/display.css',
