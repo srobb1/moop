@@ -781,7 +781,7 @@ function moopmartStreamGenomicFasta(
                 $got = moop_genomic_sequence($genome, ['chr' => $chr, 'start' => $exon['start'], 'end' => $exon['end'], 'strand' => $strand]);
                 if (!$got) continue;
                 $r = $got['region'];
-                fwrite($handle, ">$uname.{$exon['type']}{$n[$k]} {$chr}:{$r['start']}-{$r['end']}($strand)\n" . chunk_split($got['seq'], 60, "\n"));
+                fwrite($handle, ">$uname.{$exon['type']}{$n[$k]} {$chr}:{$r['start']}-{$r['end']}($strand)\n" . chunk_split($got['seq'], MOOP_FASTA_LINE_WIDTH, "\n"));
             }
             continue;
         }

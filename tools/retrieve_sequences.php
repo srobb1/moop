@@ -65,9 +65,6 @@ $context = parseContextParameters();
 $organisms_param = $_GET['organisms'] ?? $_POST['organisms'] ?? '';
 $organism_result = parseOrganismParameter($organisms_param, '');
 
-// Flanks for the genomic region, in bases (0 = none). Same limit as the Data Exporter.
-$upstream_bp   = max(0, min(MOOP_MAX_FLANK_BP, (int)($_POST['upstream_bp'] ?? 0)));
-$downstream_bp = max(0, min(MOOP_MAX_FLANK_BP, (int)($_POST['downstream_bp'] ?? 0)));
 $sequence_notes = [];
 
 // Get uniquenames (may be empty on initial page load)
@@ -116,6 +113,21 @@ $should_auto_select          = $source_selection['should_auto_select'];
 $source_parts        = explode('|', $selected_source);
 $selected_gene_set   = $source_parts[2] ?? '';
 
+// Which gene sets sit on a genome -- the ones genomic sequence and flanks can be cut from
+// (the same two files moop_retrieve_genomic() needs). Two stats per source, ~95 sources.
+$source_has_genome = [];
+foreach ($accessible_sources as $source) {
+    $source_has_genome[$source['organism'] . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '')] =
+        is_file($source['path'] . '/feature_coords.tsv')
+        && is_file(dirname($source['path']) . '/' . genome_fasta_filename() . '.fai');
+}
+
+// Flanks for the genomic region, in bases (0 = none). Same limit as the Data Exporter.
+// Offered only where there is a genome: js/sequence-retrieval.js hides AND disables the
+// boxes otherwise, so they are not submitted; moop_retrieve_genomic() notes the rest.
+$upstream_bp   = max(0, min(MOOP_MAX_FLANK_BP, (int)($_POST['upstream_bp'] ?? 0)));
+$downstream_bp = max(0, min(MOOP_MAX_FLANK_BP, (int)($_POST['downstream_bp'] ?? 0)));
+
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
     $extraction_errors = [];
@@ -152,6 +164,7 @@ if (!empty($sequence_ids_provided)) {
     // and a range typed on the gene applies to all of them. Scoped to the selected gene set:
     // a uniquename is unique only within one, and this organism may carry several.
     $parent_to_children = [];
+    $genomic_anchors    = [];
     if (empty($extraction_errors) && $uniquenames) {
         $db_path = $organism_data . '/' . $selected_organism . '/organism.sqlite';
         [$gene_set_id] = getGeneSetInfo($fasta_source['assembly'], $fasta_source['gene_set'] ?? '', $db_path);
@@ -164,6 +177,9 @@ if (!empty($sequence_ids_provided)) {
                 $children = array_column(getChildren($feature['feature_id'], $db, $gs_ids), 'feature_uniquename');
                 if ($children) $parent_to_children[$uniquename] = $children;
             }
+            // Where each typed ID's genomic sequence comes from: a protein or CDS ID uses its
+            // transcript's span, so its flanks are its isoform's (lib/genomic_regions.php).
+            $genomic_anchors = moop_genomic_anchors($uniquenames, $db, $gs_ids);
         } catch (Exception $e) {
             // Without the database, extract the typed IDs as they are.
             $parent_to_children = [];
@@ -181,7 +197,7 @@ if (!empty($sequence_ids_provided)) {
         }
 
         // Genomic region (and flanks) of each typed gene or transcript -- lib/genomic_regions.php.
-        $genomic = moop_retrieve_genomic($requests, $fasta_source['path'], dirname($fasta_source['path']), $upstream_bp, $downstream_bp);
+        $genomic = moop_retrieve_genomic($requests, $fasta_source['path'], dirname($fasta_source['path']), $upstream_bp, $downstream_bp, $genomic_anchors);
         if ($genomic['fasta'] !== '') $displayed_content['genome'] = rtrim($genomic['fasta']);
         $sequence_notes = $genomic['notes'];
         
@@ -257,6 +273,7 @@ $data = [
     'displayed_content' => $displayed_content,
     'sequence_types' => $display_types,
     'sequence_notes' => $sequence_notes,
+    'source_has_genome' => $source_has_genome,
     'upstream_bp'    => $upstream_bp,
     'downstream_bp'  => $downstream_bp,
     'organism_data' => $organism_data,

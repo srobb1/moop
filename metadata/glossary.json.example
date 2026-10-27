@@ -8,6 +8,7 @@
   "mRNA": "Messenger RNA — a gene's spliced transcript: exons joined, introns removed, including the untranslated regions (UTRs).",
   "CDS": "Coding sequence — the part of an mRNA that is translated into protein, without the untranslated regions.",
   "protein": "The amino-acid sequence translated from a feature's coding sequence (CDS).",
+  "Genomic region": "The stretch of genome a gene or transcript occupies, introns included, read 5′ to 3′ along it (a minus-strand region is reverse-complemented). Upstream and downstream flanks are the bases just before its start and just after its end.",
   "gene": "A stretch of DNA that encodes a functional product. A gene is transcribed into one or more mRNAs, which can be translated into proteins.",
   "PANTHER": "A database that sorts proteins into families and subfamilies by their evolutionary relationships, then assigns likely functions from that classification. Here it appears as the source of family and Gene Ontology annotations.",
   "RBBH": "Reciprocal Best BLAST Hit — two sequences in different species that each find the other as their single best match. It is a conservative way to infer that a pair are orthologs rather than merely similar.",

@@ -5,6 +5,13 @@
  * Used by BLAST interface, FASTA extract, and other tools
  */
 
+/**
+ * Residues per FASTA line in everything MOOP writes -- what blastdbcmd prints, so sequences
+ * read through the .fai reader look the same as ones it returns. Genomic regions and the Data
+ * Exporter's exons used 60, so one results page showed two line widths side by side.
+ */
+const MOOP_FASTA_LINE_WIDTH = 80;
+
 // Include parent_functions for parent->child lookups
 require_once __DIR__ . '/parent_functions.php';
 require_once __DIR__ . '/functions_system.php';
@@ -496,7 +503,7 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         if (moop_fasta_index_available($blast_db)) {
             $records = [];
             foreach (moop_fasta_fetch_with_headers($blast_db, $batch) as $rec) {
-                $records[] = '>' . $rec['header'] . "\n" . rtrim(chunk_split($rec['seq'], 80, "\n"));
+                $records[] = '>' . $rec['header'] . "\n" . rtrim(chunk_split($rec['seq'], MOOP_FASTA_LINE_WIDTH, "\n"));
             }
             if (!$records) {
                 $result['error'] = 'No sequences found for the requested IDs';

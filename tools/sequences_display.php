@@ -86,15 +86,19 @@ if (!empty($available_sequences) && array_reduce($available_sequences, function(
                         echo '    <div class="collapse-section" data-bs-toggle="collapse" data-bs-target="#seq_' . $seq_type . '" aria-expanded="true">';
                         echo '      <i class="fas fa-minus toggle-icon text-info"></i>';
                         echo '      <strong class="ms-2 text-dark">';
-                        // Get badge color from config, with fallback to default
-                        $badge_class = $seq_config['color'] ?? 'bg-secondary';
+                        // Badge colour from config: a class (bg-info) OR a hex value (#26d984) -- the
+                        // admin page accepts both and previews both through getColorClassOrStyle().
+                        // This used the value as a class only, so a hex colour gave NO background:
+                        // white text on the pale header ("Genomic region" was unreadable).
+                        $badge = getColorClassOrStyle($seq_config['color'] ?? 'bg-secondary');
                         // gloss() the LABEL, not the config key: the key is 'transcript'/'genome' while the
                         // glossary defines 'mRNA'/'CDS'/'protein' — the words actually shown. These headers
                         // are mode selectors the reader chooses between to get a sequence, which is the
                         // "gloss labels and controls, not prose" case in notes/GLOSSARY_TERM_CANDIDATES.md.
                         // One wrap covers every sequence type, including any added to config later, and
                         // gloss() returns plain text for an undefined term so 'Genome' degrades safely.
-                        echo '        <span class="text-white px-2 py-1 rounded ' . $badge_class . '">' . gloss($seq_config['label']) . '</span>';
+                        echo '        <span class="text-white px-2 py-1 rounded ' . $badge['class'] . '"'
+                           . ($badge['style'] !== '' ? ' style="' . $badge['style'] . '"' : '') . '>' . gloss($seq_config['label']) . '</span>';
                         echo '        (' . count($sequences) . ' sequence' . (count($sequences) > 1 ? 's' : '') . ')';
                         echo '      </strong>';
                         echo '    </div>';

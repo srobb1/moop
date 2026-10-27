@@ -19,6 +19,7 @@
  * Optional parameters:
  * - $clear_filter_function (string) - JavaScript function to call on "Clear" button
  * - $on_change_function (string) - JavaScript function to call on selection change
+ * - $source_has_genome (array) - "organism|assembly|gene_set" => bool; emits data-has-genome
  */
 
 // Group colours: moop_group_color() (lib/group_colors.php), the same on every page. This
@@ -100,6 +101,11 @@
                             data-available="<?= !empty($a['ok']) ? '1' : '0' ?>"
                             data-unavailable-reason="<?= htmlspecialchars($a['reason'] ?? '') ?>"
                             data-usable-mode="<?= htmlspecialchars($a['usable_mode'] ?? '') ?>"
+                            <?php endif;
+                            // Optional, opt-in: does this gene set sit on a genome? Sequence
+                            // Retrieval offers flanks only where they can be cut.
+                            if (isset($source_has_genome)): ?>
+                            data-has-genome="<?= !empty($source_has_genome[$source_value]) ? '1' : '0' ?>"
                             <?php endif; ?>
                             <?= !empty($on_change_function) ? 'onchange="' . htmlspecialchars($on_change_function) . '();"' : '' ?>
                             <?= $is_selected ? 'checked' : '' ?>

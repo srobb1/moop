@@ -1154,6 +1154,57 @@ ok($_n === ['4 features skipped: no genome coordinates in this gene set (e.g. A,
             "1 feature skipped: no exons found for them in the gene set's GFF (e.g. E)."], 'no coordinates and no exons are reported too');
 ok(moop_genomic_skip_notes([]) === [], 'nothing skipped -> no notes');
 
+// Sequence Retrieval flanks for a protein, CDS or transcript ID: the ISOFORM's own span, with
+// the gene named in the header. A protein ID used to give nothing at all, silently.
+$_adb = "$_ad/organism.sqlite";
+$_p = new PDO("sqlite:$_adb");
+$_p->exec("CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_uniquename TEXT, feature_name TEXT,
+           feature_description TEXT, feature_type TEXT, parent_feature_id INTEGER, gene_set_id INTEGER)");
+$_p->exec("INSERT INTO feature VALUES (1,'G1','Abc1','','gene',NULL,1),(2,'T1','T1','','mRNA',1,1),
+           (3,'T1:cds','','','CDS',2,1),(4,'T1:pep','','','protein',3,1),
+           (5,'B1','B1','','gene',NULL,1),(6,'B1p','','','protein',5,1),(7,'Z9','','','mRNA',NULL,1)");
+$_p = null;
+$_an = moop_genomic_anchors(['G1', 'T1', 'T1:pep', 'T1:cds', 'B1p', 'nope'], $_adb, [1]);
+ok($_an['T1:pep'] === ['locus' => 'T1', 'gene' => 'G1', 'gene_name' => 'Abc1', 'transcript' => 'T1'], 'a protein is cut at its transcript, under its gene');
+ok($_an['T1:cds']['locus'] === 'T1' && $_an['T1']['locus'] === 'T1', 'a CDS and a transcript: the transcript');
+ok($_an['G1']['locus'] === 'G1' && $_an['G1']['transcript'] === null, 'a gene: itself');
+ok($_an['B1p']['locus'] === 'B1' && $_an['B1p']['gene_name'] === null, 'a bacterial protein -> gene chain: the gene; a name that is just its ID is not repeated');
+ok(!isset($_an['nope']), 'an ID not in the database has no anchor');
+file_put_contents("$_ad/genome.fa", ">c1\nACGTACGTACGTACGTACGT\n");
+file_put_contents("$_ad/genome.fa.fai", "c1\t20\t4\t20\t21\n");
+file_put_contents("$_ad/gs/feature_coords.tsv", "T1\tG1\tc1\t5\t16\t+\n");
+file_put_contents("$_ad/gs/exon_coords.tsv", "T1\tc1\t+\t8,12\t8,9;11,12\n");
+$_req = fn(string $id, ?int $s = null, ?int $e = null) => ['id' => $id, 'start' => $s, 'end' => $e];
+$_r = moop_retrieve_genomic([$_req('T1:pep'), $_req('Z9')], "$_ad/gs", $_ad, 2, 0, $_an + ['Z9' => ['locus' => 'Z9', 'gene' => 'Z9', 'gene_name' => null, 'transcript' => null]]);
+ok(strpos($_r['fasta'], ">T1:pep gene=G1 gene_name=Abc1 transcript=T1 genomic c1:8-12(+)\n") === 0,
+   'protein ID: its transcript\'s own span (not the gene\'s 5-16), gene and transcript in the header');
+ok(strpos($_r['fasta'], ">T1:pep gene=G1 gene_name=Abc1 transcript=T1 upstream_2bp c1:6-7(+)\n") !== false, '...and upstream of the isoform\'s start');
+ok(strpos($_r['fasta'], 'Z9') === false && ($_r['notes'][0] ?? '') === '1 feature skipped: no genome coordinates in this gene set (e.g. Z9).',
+   'an ID in the database but not on the genome is reported, not dropped silently');
+$_r = moop_retrieve_genomic([$_req('T1:pep', 1, 2)], "$_ad/gs", $_ad, 2, 0, $_an);
+ok(strpos($_r['fasta'], ' genomic ') === false && strpos($_r['fasta'], 'upstream_2bp') !== false
+   && strpos($_r['notes'][0] ?? '', 'A range on a protein or CDS ID') === 0,
+   'a range on a protein is in amino acids: no genomic cut (a note says why), flanks still given');
+
+// exon_coords.tsv is keyed for the database's ID too: an Ensembl GFF's "transcript:FBtr1"
+// must be found as FBtr1. The builder had its own rna-/cds-/gene- list, which missed it, so no
+// Drosophila transcript could be placed on the genome.
+require_once "$BASE/lib/jbrowse/gene_set_functions.php";
+$_xd = sys_get_temp_dir() . '/moop_exbuild_' . getmypid();
+@mkdir($_xd);
+file_put_contents("$_xd/" . genes_gff_filename(), implode("\n", [
+    "c1\ts\tgene\t100\t900\t.\t+\t.\tID=gene:G1",
+    "c1\ts\tmRNA\t100\t900\t.\t+\t.\tID=transcript:FBtr1;Parent=gene:G1",
+    "c1\ts\texon\t100\t200\t.\t+\t.\tParent=transcript:FBtr1",
+    "c1\ts\tgene\t1000\t1300\t.\t-\t.\tID=gene-X",
+    "c1\ts\tmRNA\t1000\t1300\t.\t-\t.\tID=rna-XM_1;Parent=gene-X",
+    "c1\ts\texon\t1000\t1300\t.\t-\t.\tParent=rna-XM_1",
+]) . "\n");
+generateExonCoordsIndex($_xd);
+$_keys = array_map(fn($l) => explode("\t", $l)[0], file("$_xd/exon_coords.tsv", FILE_IGNORE_NEW_LINES));
+ok($_keys === ['transcript:FBtr1', 'FBtr1', 'rna-XM_1', 'XM_1'], 'exon_coords.tsv: the GFF ID and the database ID, Ensembl (transcript:) and NCBI (rna-) alike');
+array_map('unlink', glob("$_xd/*")); @rmdir($_xd);
+
 // Data Exporter exon mode: exon lines usually carry only Parent= (NV2 exported no exons at all),
 // and the GFF gene ID may be prefixed or a GeneID. The same id rules as the gene page.
 require_once "$BASE/lib/moopmart_functions.php";

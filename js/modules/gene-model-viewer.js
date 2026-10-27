@@ -637,7 +637,8 @@
                 results.forEach((data, idx) => {
                     const r    = regions[idx];
                     const hdr  = `>${r.label} ${r.type} genomic ${gene.seqname}:${r.start}-${r.end}(${gene.strand})`;
-                    const body = data.sequence.match(/.{1,60}/g)?.join('\n') ?? data.sequence;
+                    // 80 per line: MOOP_FASTA_LINE_WIDTH in lib/blast_functions.php, as every other sequence on the site.
+                    const body = data.sequence.match(/.{1,80}/g)?.join('\n') ?? data.sequence;
                     fasta += hdr + '\n' + body + '\n\n';
                 });
                 fasta = fasta.trimEnd();
@@ -731,7 +732,7 @@
         // Sequence as FASTA — matches the downloaded file exactly
         const seq    = data.sequence;
         const header = `>${region.isoform} ${region.type} ${region.seqname}:${region.start}-${region.end}(${region.strand})`;
-        const body   = seq.match(/.{1,60}/g)?.join('\n') ?? seq;
+        const body   = seq.match(/.{1,80}/g)?.join('\n') ?? seq;   // MOOP_FASTA_LINE_WIDTH
         currentFasta    = header + '\n' + body;
         currentFilename = moopDownloadName(`${region.isoform}_${region.type}_${region.seqname}-${region.start}-${region.end}`, 'fa');
         document.getElementById('seq-region-sequence').textContent = currentFasta;

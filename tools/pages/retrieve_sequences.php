@@ -141,7 +141,8 @@
                             <ul class="mb-2 ps-3">
                                 <li>One per line, or separated by commas.</li>
                                 <li>A gene ID such as <code class="ex-gene"><?= htmlspecialchars($ex_gene) ?></code> gives every transcript, CDS and protein of that gene, and the gene's genomic region.
-                                    A transcript ID such as <code class="ex-tx"><?= htmlspecialchars($ex_tx) ?></code> gives just that isoform's, and the transcript's own genomic span (introns included).</li>
+                                    A transcript ID such as <code class="ex-tx"><?= htmlspecialchars($ex_tx) ?></code> gives just that isoform's, and the transcript's own genomic span (introns included).
+                                    A protein or CDS ID gives its transcript's genomic span, and the header names the gene and transcript.</li>
                             </ul>
                             <p class="fw-semibold mb-1">Ranges — part of a sequence</p>
                             <ul class="mb-2 ps-3">
@@ -160,7 +161,8 @@
                             <p class="fw-semibold mb-1">Genomic region and flanks</p>
                             <ul class="mb-2 ps-3">
                                 <li>Every genomic sequence reads 5′ to 3′ along the gene: a gene on the minus strand is reverse-complemented. The header gives the location and strand, e.g. <code>chr2:16003283-16019242(-)</code>.</li>
-                                <li>Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.</li>
+                                <li>Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.
+                                    For a transcript, CDS or protein ID that is the isoform's own start and end; for a gene ID, the gene's.</li>
                                 <li>Genomic sequence needs the gene set to be placed on a genome; transcriptome-only gene sets have none.</li>
                             </ul>
                             <p class="fw-semibold mb-1">After you retrieve</p>
@@ -179,7 +181,9 @@
                 <div class="card-body py-3">
                     <?php /* Flanks go with the genomic region only. Same rules (and limit) as the gene
                              page and the Data Exporter: lib/genomic_regions.php. */ ?>
-                    <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+                    <?php /* Shown only for a gene set on a genome (data-has-genome on the selected
+                             source); js/sequence-retrieval.js toggles it and disables the inputs. */ ?>
+                    <div id="flankControls" class="d-flex flex-wrap align-items-end gap-3 mb-3">
                         <div>
                             <label for="upstreamBp" class="form-label small mb-1">Upstream flank (bp)</label>
                             <input type="number" class="form-control form-control-sm moop-input" id="upstreamBp" name="upstream_bp"
@@ -190,8 +194,11 @@
                             <input type="number" class="form-control form-control-sm moop-input" id="downstreamBp" name="downstream_bp"
                                    min="0" max="<?= MOOP_MAX_FLANK_BP ?>" step="1" value="<?= (int)$downstream_bp ?>" style="width:9rem;">
                         </div>
-                        <small class="text-muted pb-1">Optional. Added as separate sequences next to each gene's or transcript's genomic region; 0 = none.</small>
+                        <small class="text-muted pb-1">Optional. Added as separate sequences to the genomic region; 0 = none. A protein, CDS or transcript ID gets its own isoform's flanks; a gene ID, the gene's.</small>
                     </div>
+                    <p id="flankNoGenome" class="small text-muted mb-3" style="display:none;">
+                        <i class="fa fa-info-circle me-1"></i>This gene set is not placed on a genome, so there is no genomic sequence or flanks to retrieve.
+                    </p>
                     <button type="submit" class="btn btn-lg fw-semibold text-white w-100 btn-moop-action">
                         <i class="fa fa-eye me-1"></i>Retrieve Sequences
                     </button>

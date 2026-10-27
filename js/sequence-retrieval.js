@@ -8,6 +8,22 @@ function clearSourceFilter() {
     clearSourceFilters('sourceFilter', 'selected_source', 'fasta-source-line', null, 'downloadForm');
 }
 
+/**
+ * Flanks can only be cut from a genome: show the flank boxes for a gene set that sits on one
+ * (data-has-genome="1", from tools/retrieve_sequences.php) and hide them otherwise. Hidden
+ * inputs are also DISABLED, so a value typed for an earlier selection is not submitted.
+ * With no selection, or no flag on the radio, the boxes stay as rendered.
+ */
+function updateFlankControls(radio) {
+    const controls = document.getElementById('flankControls');
+    const note     = document.getElementById('flankNoGenome');
+    if (!controls || !radio || radio.dataset.hasGenome === undefined) return;
+    const hasGenome = radio.dataset.hasGenome === '1';
+    controls.classList.toggle('d-none', !hasGenome);
+    controls.querySelectorAll('input').forEach(function(input) { input.disabled = !hasGenome; });
+    if (note) note.style.display = hasGenome ? 'none' : '';
+}
+
 function initializeSequenceRetrieval(options = {}) {
     const form = document.getElementById('downloadForm');
     const errorAlert = document.querySelector('.alert-danger');
@@ -45,6 +61,7 @@ function initializeSequenceRetrieval(options = {}) {
                 form.querySelector('input[name="gene_set"]').value = radio.dataset.geneSet || '';
             }
             refreshSampleIds(radio);
+            updateFlankControls(radio);
             // Update display text
             updateCurrentSelectionDisplay();
         },
@@ -55,6 +72,7 @@ function initializeSequenceRetrieval(options = {}) {
     
     // Update display on page load
     updateCurrentSelectionDisplay();
+    updateFlankControls(document.querySelector('input[name="selected_source"]:checked'));
     
     // Dismiss error alert on form submission
     if (form) {

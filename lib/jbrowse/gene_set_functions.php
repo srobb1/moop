@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../functions_system.php';
 require_once __DIR__ . '/gene_track_index.php';
+require_once __DIR__ . '/../gff_gene_model.php';   // moop_gff_bare_id()
 
 /**
  * JBrowse gene set prep — shared by jbrowse_register_assembly and jbrowse_register_gene_set.
@@ -578,9 +579,12 @@ function buildGeneSetTextIndex(
  *
  * Output: transcript_id \t chr \t strand \t start,end \t s1,e1;s2,e2;...
  *
- * Rows are emitted for the GFF ID and for the id with any rna-/cds-/gene-
- * prefix stripped, because FASTA headers carry the bare accession while the GFF
- * carries "rna-ACC" — looking up one by the other silently finds nothing.
+ * Rows are emitted for the GFF ID and for the id with its source prefix stripped
+ * (moop_gff_bare_id(): rna-, transcript:, ...), because the database and FASTA
+ * headers carry the bare accession while the GFF carries "rna-ACC" — looking up
+ * one by the other silently finds nothing. This used its own rna-/cds-/gene-/id-
+ * list, which missed Ensembl's "transcript:", so no Drosophila transcript could
+ * be placed on the genome.
  *
  * No list of transcript types is used. Anything that ends up with exon children
  * is treated as a transcript, so lncRNA, tRNA and pseudogenic_transcript are
@@ -619,7 +623,7 @@ function generateExonCoordsIndex(string $gene_set_path): bool {
                  . "\t" . implode(';', $spans) . "\n";
 
             fwrite($out, $parent . $row);
-            $bare = preg_replace('/^(?:rna|cds|gene|id)-/', '', $parent);
+            $bare = moop_gff_bare_id($parent);   // the database's form of the ID
             if ($bare !== $parent) {
                 fwrite($out, $bare . $row);
             }

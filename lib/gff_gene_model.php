@@ -38,6 +38,14 @@ function moop_gff_attrs(string $col9): array {
 }
 
 /**
+ * A GFF ID without its source prefix: rna-XM_1 -> XM_1 (NCBI), transcript:FBtr1 -> FBtr1
+ * (Ensembl). Unchanged when there is none. The database stores the bare form.
+ */
+function moop_gff_bare_id(string $id): string {
+    return preg_replace('/^[A-Za-z]+[-:]/', '', $id);
+}
+
+/**
  * Every database id this GFF record could stand for (rules in the file header): its ID, its ID
  * after one source prefix, and any NCBI GeneID. The one place those rules live -- the per-gene
  * matcher below and whole-file readers (the Data Exporter's exon mode) both use it.
@@ -49,7 +57,7 @@ function moop_gff_db_id_candidates(array $attrs): array {
     $id  = $attrs['ID'] ?? '';
     if ($id !== '') {
         $out[] = $id;
-        $bare  = preg_replace('/^[A-Za-z]+[-:]/', '', $id);
+        $bare  = moop_gff_bare_id($id);
         if ($bare !== $id) $out[] = $bare;
     }
     foreach (explode(',', $attrs['Dbxref'] ?? '') as $x) {

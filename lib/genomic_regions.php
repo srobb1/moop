@@ -25,6 +25,7 @@
 require_once __DIR__ . '/blast_functions.php';   // extractFastaRegion(), reverseComplement()
 require_once __DIR__ . '/fasta_index.php';       // moop_fai_lookup()
 require_once __DIR__ . '/feature_coords.php';    // feature_coords.tsv lookups
+require_once __DIR__ . '/parent_functions.php';   // moop_hierarchy_walk()
 
 /** Largest region one record may hold -- the same limit api/get_sequence.php applies. */
 const MOOP_MAX_REGION_BP = 500000;
@@ -216,24 +217,77 @@ function moop_genomic_skip_notes(array $skips): array {
 
 /**
  * One FASTA record, in the header format all genomic output shares:
- *   >ID[:from-to] genomic|upstream_500bp|downstream_500bp chr:start-end(strand)
+ *   >ID[:from-to] [gene=G transcript=T] genomic|upstream_500bp|downstream_500bp chr:start-end(strand)
+ * $context names the gene (and transcript) a record belongs to when the ID alone does not
+ * say -- Sequence Retrieval, where several typed IDs can share one output.
  */
-function moop_genomic_fasta_record(string $id, string $part, int $bp, array $region, string $seq, ?int $from = null, ?int $to = null): string {
+function moop_genomic_fasta_record(string $id, string $part, int $bp, array $region, string $seq, ?int $from = null, ?int $to = null, string $context = ''): string {
     $label = $part === 'body' ? 'genomic' : "{$part}_{$bp}bp";
     $name  = $id . ($from !== null ? ":$from-$to" : '');
-    return ">$name $label {$region['chr']}:{$region['start']}-{$region['end']}({$region['strand']})\n"
-         . rtrim(chunk_split($seq, 60, "\n")) . "\n";
+    $ctx   = $context !== '' ? " $context" : '';
+    return ">$name$ctx $label {$region['chr']}:{$region['start']}-{$region['end']}({$region['strand']})\n"
+         . rtrim(chunk_split($seq, MOOP_FASTA_LINE_WIDTH, "\n")) . "\n";
 }
 
 /**
- * Sequence Retrieval's genomic records: for every typed gene or transcript, its region
- * (or the typed range of it) and, when asked, its flanks -- each its own record, as the
- * gene page and the Data Exporter give them.
+ * Which feature's span each typed ID's genomic sequence is cut from, and the gene it belongs to.
+ *
+ *   gene        its own span
+ *   transcript  its own span (introns included) -- NOT its gene's: isoforms with different
+ *               start sites have different upstream sequence
+ *   CDS/protein its transcript's span. A protein has no genomic span of its own worth
+ *               cutting; "upstream of this protein" means upstream of its isoform's start.
+ *
+ * The transcript is the nearest ancestor (or the ID itself) that is not a CDS, protein or
+ * exon; the gene is the top of the chain. No list of transcript types, so lncRNA, tRNA etc.
+ * work, and a bacterial protein -> CDS -> gene chain anchors on the gene.
+ *
+ * @param int[] $gene_set_ids scope -- a uniquename is unique only within one gene set
+ * @return array<string, array{locus: string, gene: string, gene_name: ?string, transcript: ?string}> IDs not in
+ *         the database are absent
+ */
+function moop_genomic_anchors(array $ids, string $db_path, array $gene_set_ids = []): array {
+    $walk = [];
+    // In batches: SQLite caps the parameters one query may bind (32,766 here), and a whole
+    // gene set's proteins (61k for Myotis myotis) is over it -- the query failed outright.
+    foreach (array_chunk(array_values(array_unique($ids)), 5000) as $batch) {
+        foreach (moop_hierarchy_walk($batch, $db_path, 'up', $gene_set_ids) as $row) {
+            $walk[(string)$row['seed_name']][(int)$row['depth']] = $row;
+        }
+    }
+    $sub = ['cds' => 1, 'protein' => 1, 'polypeptide' => 1, 'exon' => 1];
+    $out = [];
+    foreach ($walk as $id => $chain) {
+        ksort($chain);
+        $top   = end($chain);
+        $gene  = (string)$top['feature_uniquename'];
+        $locus = $gene;
+        foreach ($chain as $row) {
+            if (!isset($sub[strtolower((string)$row['feature_type'])])) { $locus = (string)$row['feature_uniquename']; break; }
+        }
+        // A RefSeq gene's uniquename is a bare GeneID (118665088); its name (PIGG) is what a
+        // reader recognises. Only a real name: one word, and not just another of its IDs.
+        $name = trim((string)($top['feature_name'] ?? ''));
+        if ($name === '' || preg_match('/\s/', $name) || $name === $gene || $name === $locus || $name === $id) $name = null;
+        $out[$id] = ['locus' => $locus, 'gene' => $gene, 'gene_name' => $name, 'transcript' => $locus !== $gene ? $locus : null];
+    }
+    return $out;
+}
+
+/**
+ * Sequence Retrieval's genomic records: for every typed ID, its region (or the typed range
+ * of it) and, when asked, its flanks -- each its own record, as the gene page and the Data
+ * Exporter give them. Where the region comes from is moop_genomic_anchors().
+ *
+ * A range typed on a protein or CDS is in ITS coordinates (amino acids, CDS bases), which
+ * say nothing about where on the genome that is -- so such a request gets its flanks but no
+ * cut region, and a note says why, rather than a cut that looks right and is not.
  *
  * @param list<array{id: string, start: ?int, end: ?int}> $requests parseFeatureIds()
+ * @param array $anchors moop_genomic_anchors(); empty = every ID is its own locus
  * @return array{fasta: string, notes: list<string>}
  */
-function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $assembly_dir, int $upstream = 0, int $downstream = 0): array {
+function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $assembly_dir, int $upstream = 0, int $downstream = 0, array $anchors = []): array {
     $out = ['fasta' => '', 'notes' => []];
     if (!$requests) return $out;
     if (!is_file("$gene_set_dir/feature_coords.tsv") || !is_file("$assembly_dir/" . genome_fasta_filename() . '.fai')) {
@@ -241,42 +295,66 @@ function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $as
         return $out;
     }
 
-    $loci    = moop_feature_loci($gene_set_dir, array_values(array_unique(array_column($requests, 'id'))));
+    $anchor_of = fn(string $id) => $anchors[$id]['locus'] ?? $id;
+    $loci    = moop_feature_loci($gene_set_dir, array_values(array_unique(array_map($anchor_of, array_column($requests, 'id')))));
     $genome  = moop_genome_open($assembly_dir, array_column($loci, 'chr'));
     if (!$genome) {
         $out['notes'][] = 'Genomic sequence is not available: this assembly has no readable genome.';
         return $out;
     }
-    $missing = array_flip(moop_genome_missing($genome, array_column($loci, 'chr')));
-    $skips   = [];
-    $done    = [];
-    $toobig  = [];
+    $missing  = array_flip(moop_genome_missing($genome, array_column($loci, 'chr')));
+    $skips    = [];
+    $done     = [];
+    $toobig   = [];
+    $no_range = [];
     foreach ($requests as $r) {
-        $locus = $loci[$r['id']] ?? null;
-        if (!$locus) continue;   // a CDS or protein ID, or not in this gene set
-        if (isset($missing[$locus['chr']])) {
-            if (!in_array($r['id'], $skips['missing_chr'][$locus['chr']] ?? [], true)) $skips['missing_chr'][$locus['chr']][] = $r['id'];
+        $id     = $r['id'];
+        $anchor = $anchors[$id] ?? null;
+        $locus  = $loci[$anchor_of($id)] ?? null;
+        if (!$locus) {
+            // Not in the database: already shown red in the ID box, nothing to add. In it but
+            // not on the genome: say so -- this used to give nothing, silently.
+            if (($anchor || !$anchors) && !in_array($id, $skips['no_coords'] ?? [], true)) $skips['no_coords'][] = $id;
             continue;
         }
-        $parts = [['body', 0, $r['start'], $r['end']]];
+        if (isset($missing[$locus['chr']])) {
+            if (!in_array($id, $skips['missing_chr'][$locus['chr']] ?? [], true)) $skips['missing_chr'][$locus['chr']][] = $id;
+            continue;
+        }
+        $context = '';
+        if ($anchor && $anchor['gene'] !== $id) {
+            $context = 'gene=' . $anchor['gene']
+                     . (($anchor['gene_name'] ?? null) !== null ? ' gene_name=' . $anchor['gene_name'] : '')
+                     . ($anchor['transcript'] !== null && $anchor['transcript'] !== $id ? ' transcript=' . $anchor['transcript'] : '');
+        }
+        $parts = [];
+        if ($r['start'] !== null && $anchor_of($id) !== $id) {
+            $no_range[] = $id;
+        } else {
+            $parts[] = ['body', 0, $r['start'], $r['end']];
+        }
         // Flanks belong to the feature, not to a range of it: added once per ID.
-        if (!isset($done[$r['id']])) {
+        if (!isset($done[$id])) {
             if ($upstream > 0)   $parts[] = ['upstream', $upstream, null, null];
             if ($downstream > 0) $parts[] = ['downstream', $downstream, null, null];
-            $done[$r['id']] = true;
+            $done[$id] = true;
         }
         foreach ($parts as [$part, $bp, $from, $to]) {
             $region = moop_genomic_region($locus, $part, $bp, $from, $to);
             if (!$region) continue;
-            if ($region['end'] - $region['start'] + 1 > MOOP_MAX_REGION_BP) { $toobig[] = $r['id']; continue; }
+            if ($region['end'] - $region['start'] + 1 > MOOP_MAX_REGION_BP) { $toobig[] = $id; continue; }
             $got = moop_genomic_sequence($genome, $region);
             if (!$got) continue;
             $shown_to = $from !== null ? $from + strlen($got['seq']) - 1 : null;
-            $out['fasta'] .= moop_genomic_fasta_record($r['id'], $part, $bp, $got['region'], $got['seq'], $from, $shown_to);
+            $out['fasta'] .= moop_genomic_fasta_record($id, $part, $bp, $got['region'], $got['seq'], $from, $shown_to, $context);
         }
     }
     moop_genome_close($genome);
     array_push($out['notes'], ...moop_genomic_skip_notes($skips));
+    if ($no_range) {
+        $out['notes'][] = 'A range on a protein or CDS ID counts amino acids or coding bases, not genome positions, so no genomic region was cut for: '
+                        . implode(', ', array_unique($no_range)) . '. Its flanks are given; for a genomic range, use the transcript ID.';
+    }
     if ($toobig) {
         $out['notes'][] = 'Genomic sequence longer than ' . number_format(MOOP_MAX_REGION_BP) . ' bp is not shown here: '
                         . implode(', ', array_unique($toobig)) . '. The Data Exporter has no such limit.';
