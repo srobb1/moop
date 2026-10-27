@@ -12,6 +12,9 @@
  *   output_format        - 'tsv' | 'fasta'  (default: tsv)
  *   fasta_mode           - 'gene'|'upstream'|'downstream'|'exons'|'protein'|'transcript'|'cds'
  *   flank_bp             - int, 1–100000 (upstream/downstream only; default: 500)
+ *   fasta_check          - 1 = do not export: return JSON {notes: [...]}, what a FASTA export
+ *                          of this selection would leave out and why (shown on the page; the
+ *                          file itself is pure FASTA)
  *   annotation_columns[] - annotation source names to include as TSV columns (empty = none;
  *                          the page has the user pick them)
  */
@@ -33,6 +36,7 @@ $output_format  = in_array($_POST['output_format'] ?? '', ['tsv', 'fasta']) ? $_
 $fasta_mode     = $_POST['fasta_mode'] ?? 'gene';
 $flank_bp       = max(1, min(100000, (int)($_POST['flank_bp'] ?? 500)));
 $fasta_preview  = !empty($_POST['fasta_preview']);
+$fasta_check    = $output_format === 'fasta' && !empty($_POST['fasta_check']);
 
 $valid_fasta_modes = ['gene', 'upstream', 'downstream', 'exons', 'protein', 'transcript', 'cds'];
 if (!in_array($fasta_mode, $valid_fasta_modes)) $fasta_mode = 'gene';
@@ -292,7 +296,8 @@ if ($output_format === 'tsv') {
 } else {
 
     $out = null;
-    $beginOutput = function () use (&$out, $filename, $fasta_preview) {
+    $beginOutput = function () use (&$out, $filename, $fasta_preview, $fasta_check) {
+        if ($fasta_check) return;   // the check writes JSON at the end, never sequence
         header('Content-Type: text/plain; charset=UTF-8');
         if (!$fasta_preview) {
             header("Content-Disposition: attachment; filename=\"$filename\"");
@@ -301,9 +306,7 @@ if ($output_format === 'tsv') {
         $out = fopen('php://output', 'w');
     };
 
-    $genomic_modes    = ['gene', 'upstream', 'downstream', 'exons'];
-    $skipped_datasets = [];
-    $genomic_notes    = [];   // per gene set: why some genes got no genomic sequence
+    $check_notes      = [];   // fasta_check: what the export leaves out, per gene set
     $collect_limit    = $fasta_preview ? 10 : PHP_INT_MAX;
     $collected        = 0;
     $reached_limit    = false;
@@ -344,52 +347,45 @@ if ($output_format === 'tsv') {
             $gff_path     = "$gs_path/" . genes_gff_filename();
             $gs_label     = $gs_name ? "$org / $assembly / $gs_name" : "$org / $assembly";
 
-            if (in_array($fasta_mode, $genomic_modes)) {
-                $genome_file = genome_fasta_filename();
-                $fasta = "$assembly_dir/$genome_file";
-                $fai   = "$assembly_dir/$genome_file.fai";
-                if (!file_exists($fasta) || !file_exists($fai)) {
-                    $missing = !file_exists($fasta) ? $genome_file : "$genome_file.fai";
-                    $skipped_datasets[] = "$gs_label (missing $missing)";
-                    continue;
-                }
-                $skips = moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
-                foreach (moop_genomic_skip_notes($skips) as $note) $genomic_notes[] = "$gs_label: $note";
+            // The check says what the export below would leave out, without exporting it
+            if ($fasta_check) {
+                $pre = moopmartFastaPreflight($gs_features, $assembly_dir, $gs_path, $fasta_mode, $sequence_types);
+                if ($pre['missing'] !== null) $check_notes[] = "$gs_label: skipped, its {$pre['missing']} is missing.";
+                foreach (moop_genomic_skip_notes($pre['skips']) as $note) $check_notes[] = "$gs_label: $note";
+                continue;
+            }
+            if (moopmartFastaMissingFile($assembly_dir, $gs_path, $fasta_mode, $sequence_types) !== null) continue;
+
+            if (in_array($fasta_mode, MOOPMART_GENOMIC_MODES, true)) {
+                moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
             } else {
                 // Pre-built FASTA files: protein, transcript, cds. The genes are expanded to
                 // their isoforms/CDS/proteins and written in batches, this one type only (it
                 // used to extract all three types for the whole gene set: 969 MB on Myotis).
                 // The gene_set_id is the access filter, so the expansion cannot leave this gene set.
                 $gs_id_int = (int)($gs_features[0]['gene_set_id'] ?? 0);
-                $streamed  = moop_stream_sequences($out, $gs_path, array_column($gs_features, 'uniquename'), $fasta_mode, [
+                moop_stream_sequences($out, $gs_path, array_column($gs_features, 'uniquename'), $fasta_mode, [
                     'db_path'        => organism_db_path($org),
                     'sequence_types' => $sequence_types,
                     'assembly'       => $assembly,
                     'organism'       => $org,
                     'gene_set_ids'   => $gs_id_int ? [$gs_id_int] : [],
                 ]);
-                if (!$streamed['has_file']) {
-                    $skipped_datasets[] = "$gs_label (missing $fasta_mode FASTA file)";
-                }
             }
         }
         unset($by_gs);
     }
 
+    if ($fasta_check) {
+        header('Content-Type: application/json');
+        echo json_encode(['notes' => $check_notes]);
+        exit;
+    }
     if ($out === null) {
         http_response_code(404);
         die('No features matched the selected filters.');
     }
-
-    foreach ($genomic_notes as $note) {
-        fwrite($out, "# WARNING: $note\n");
-    }
-    if (!empty($skipped_datasets)) {
-        fwrite($out, "\n# WARNING: The following gene sets were skipped because required files are missing:\n");
-        foreach ($skipped_datasets as $ds) {
-            fwrite($out, "#   - $ds\n");
-        }
-    }
-
+    // No "# WARNING" lines here: the file is pure FASTA. What was left out, and why, is on the
+    // page (fasta_check above).
     fclose($out);
 }

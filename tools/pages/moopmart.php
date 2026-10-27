@@ -720,7 +720,9 @@
       <div id="mm-fasta-options" class="d-none">
         <div class="small fw-semibold text-muted mb-2">Sequence type
           <?= field_help(
-              'Pick one form of each feature\'s sequence. Genomic includes introns; mRNA, CDS and '
+              'Pick one form of each feature\'s sequence. Genomic includes introns; Exons gives each '
+              . 'exon, CDS and UTR piece of the first isoform as its own sequence, numbered 5\' to 3\' '
+              . '(gene.exon1, gene.CDS1, ...); mRNA, CDS and '
               . 'protein are the usual forms. For Upstream or Downstream, set Flank size below to '
               . 'choose how many bases of genomic sequence to pull before or after the gene.',
               'Sequence type'
@@ -730,6 +732,7 @@
           <?php
           $fasta_modes = [
             'gene'       => 'Genomic',
+            'exons'      => 'Exons',
             'transcript' => 'mRNA',
             'cds'        => 'CDS',
             'protein'    => 'Protein',
@@ -783,6 +786,10 @@
         </button>
       </div>
       <div id="mm-count-result" class="small text-muted"></div>
+      <?php /* What a FASTA export leaves out, and why (filled by moopmart.js from fasta_check).
+               These used to be "# WARNING" lines at the end of the file itself, which some
+               tools reject; the file is now pure FASTA and the reasons live here. */ ?>
+      <div id="mm-fasta-notes" class="alert alert-warning small py-2 px-3 mt-2 mb-0 d-none" role="status"></div>
       <?php /* Shown only when the selection includes a gene set with expression data (moopmart.js).
                A heatmap is ONE gene set, so a list spanning several is split into one heatmap
                per gene set, and the gene sets without data are named as left out. */ ?>

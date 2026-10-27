@@ -165,7 +165,18 @@ Piece 2 fixes it.
 
 ### Piece 1: the batched streaming engine, used first by the Data Exporter 🔴
 
-**Status 2026-10-27: part A done (memory), part B open (warnings → page).**
+**Status 2026-10-27: piece 1 DONE.** Part A (memory) 193d62a6; part B (warnings → page) below.
+
+- **Part B:** the Data Exporter FASTA file is pure FASTA (no `# WARNING` lines). The page asks
+  `api/moopmart_export.php` with `fasta_check=1` (JSON notes) **alongside** Preview/Download,
+  never before it, so nothing waits; a failed check shows nothing and never stops a download.
+  `moopmartFastaPreflight()` uses the export's own rules (`moopmartFastaMissingFile()` is shared),
+  and a smoke test asserts the check and the export skip the same genes for the same reasons.
+  Cost: ~0.1 s; exons mode makes the export's GFF pass too (3.9 s on Myotis, in parallel).
+  Notes clear when the selection changes. TSV never wrote comment lines (checked).
+- **Exons added to the page** (Sofia, 2026-10-27). It existed only in the endpoint before. Cost is
+  in line with the other types (NV2 whole set 2.6 s / 104 MB file, Myotis 6.0 s / 104 MB; ~30 MB
+  peak) and only when chosen.
 
 - `moop_stream_sequences()` (`lib/extract_search_helpers.php`, batches of 500) now writes the
   Data Exporter's protein/mRNA/CDS; exons are held packed (`moopmartGetExonCoords()` →

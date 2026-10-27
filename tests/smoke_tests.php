@@ -1250,6 +1250,27 @@ rewind($_h); $_fa_out = stream_get_contents($_h); fclose($_h);
 preg_match_all('/^>(\S+) (\S+)/m', $_fa_out, $_m);
 ok($_m[1] === ['M1.CDS1', 'M1.exon1', 'M1.CDS2', 'M1.exon2', 'M1.exon3'], "exons numbered 5'->3' on the minus strand, each type on its own counter");
 ok($_m[2][1] === 'c1:21-25(-)' && strpos($_fa_out, ">M1.exon1 c1:21-25(-)\nTACGT\n") !== false, 'exon1 is the highest-coordinate exon, reverse-complemented');
+// The FASTA file is pure FASTA (it used to end in "# WARNING" lines); the page asks
+// moopmartFastaPreflight() what will be left out. It must name the same genes, for the same
+// reasons, as the export itself, without writing any sequence.
+$_genes = [['uniquename' => 'M1', 'chr' => 'c1', 'start' => 1, 'end' => 25, 'strand' => '-'],
+           ['uniquename' => 'NOC', 'chr' => '', 'start' => 0, 'end' => 0, 'strand' => ''],
+           ['uniquename' => 'BAD', 'chr' => 'nope', 'start' => 1, 'end' => 5, 'strand' => '+'],
+           ['uniquename' => 'NOEX', 'chr' => 'c1', 'start' => 1, 'end' => 5, 'strand' => '+']];
+$_h = fopen('php://memory', 'w+');
+$_exported = moopmartStreamGenomicFasta($_genes, $_ed, "$_ed/genes.gff", 'exons', 0, $_h);
+fclose($_h);
+$_pre = moopmartFastaPreflight($_genes, $_ed, $_ed, 'exons', []);
+ok($_pre['missing'] === null && $_pre['skips'] === ['no_coords' => ['NOC'], 'missing_chr' => ['nope' => ['BAD']], 'no_exons' => ['NOEX']],
+   'the FASTA check names each skipped gene and why: no coordinates, chromosome not in the genome, no exons');
+ok($_pre['skips'] === $_exported, 'the check and the export skip exactly the same genes, for the same reasons');
+ok(moopmartFastaPreflight($_genes, $_ed, $_ed, 'gene', [])['skips'] === ['no_coords' => ['NOC'], 'missing_chr' => ['nope' => ['BAD']]],
+   'genomic mode: no "no exons" reason (it does not use exons)');
+ok(moopmartFastaMissingFile("$_ed/none", $_ed, 'upstream', []) === 'genome.fa'
+   && moopmartFastaMissingFile($_ed, $_ed, 'protein', ['protein' => ['pattern' => 'protein.aa.fa']]) === 'protein FASTA file'
+   && moopmartFastaMissingFile($_ed, $_ed, 'gene', []) === null,
+   'a gene set with no genome (or no protein FASTA) is named as skipped');
+
 // The batch reader cuts what extractFastaRegion() cuts, clipped at the contig end.
 $_g = moop_genome_open($_ed, ['c1', 'nope']);
 ok(moop_genome_missing($_g, ['c1', 'nope', '']) === ['nope'], 'an opened genome knows which names it lacks');

@@ -754,6 +754,7 @@
             const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';
             const flank     = document.getElementById('mm-flank-bp')?.value || '1000';
             const fd = buildFormData({ output_format: 'fasta', fasta_mode: fastaMode, flank_bp: flank, fasta_preview: '1' });
+            showFastaNotes(fastaMode, flank);
             fetch(EXPORT_URL, { method: 'POST', headers: { 'X-CSRF-Token': csrf }, body: fd })
                 .then(r => r.text())
                 .then(text => {
@@ -771,6 +772,7 @@
                     if (btn) btn.disabled = false;
                 });
         } else {
+            hideFastaNotes();
             runTsvPreviewFanout(csrf, btn, spinner, result);
         }
     }
@@ -884,6 +886,44 @@
         showStatus(false);
         const concurrency = Math.min(5, total);
         for (let i = 0; i < concurrency; i++) launchNext();
+    }
+
+    // What a FASTA export of the current selection leaves out, and why (genes with no
+    // coordinates, a genome missing, ...). The file is pure FASTA, so these are shown here
+    // instead; asked for alongside the preview or download, never before it, so nothing
+    // waits on it. A failed check just shows nothing: it must never stop a download.
+    let fastaNotesSeq = 0;
+    function showFastaNotes(fastaMode, flank) {
+        const box = document.getElementById('mm-fasta-notes');
+        if (!box) return;
+        const seq = ++fastaNotesSeq;   // a slow answer to an older click must not win
+        box.classList.add('d-none');
+        box.replaceChildren();
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const fd = buildFormData({ output_format: 'fasta', fasta_mode: fastaMode, flank_bp: flank, fasta_check: '1' });
+        fetch(EXPORT_URL, { method: 'POST', headers: { 'X-CSRF-Token': csrf }, body: fd })
+            .then(r => r.ok ? r.json() : { notes: [] })
+            .then(({ notes }) => {
+                if (seq !== fastaNotesSeq || !notes?.length) return;
+                const head = document.createElement('div');
+                head.className = 'fw-semibold mb-1';
+                head.textContent = 'Not in this FASTA:';
+                const list = document.createElement('ul');
+                list.className = 'mb-0 ps-3';
+                for (const note of notes) {
+                    const li = document.createElement('li');
+                    li.textContent = note;
+                    list.appendChild(li);
+                }
+                box.replaceChildren(head, list);
+                box.classList.remove('d-none');
+            })
+            .catch(() => {});
+    }
+
+    function hideFastaNotes() {
+        fastaNotesSeq++;
+        document.getElementById('mm-fasta-notes')?.classList.add('d-none');
     }
 
     function renderFastaPreview(text) {
@@ -1169,6 +1209,9 @@
         };
         document.addEventListener('input', clearExprResult, true);
         document.addEventListener('change', clearExprResult, true);
+        // The FASTA notes describe the last export; once the selection changes they may not hold
+        document.addEventListener('input', hideFastaNotes, true);
+        document.addEventListener('change', hideFastaNotes, true);
 
         // True if ANY Step 2 section is filled — an ID list, a name, a description, an
         // annotation criterion, or a chromosomal range. When none are, the export is every
@@ -1194,7 +1237,10 @@
             const format    = outputFormat();
             const fastaMode = document.querySelector('input[name="mm-fasta-type"]:checked')?.value || 'gene';
             const flank     = document.getElementById('mm-flank-bp')?.value || '1000';
-            const go = () => submitDownload({ output_format: format, fasta_mode: fastaMode, flank_bp: flank });
+            const go = () => {
+                if (format === 'fasta') showFastaNotes(fastaMode, flank); else hideFastaNotes();
+                submitDownload({ output_format: format, fasta_mode: fastaMode, flank_bp: flank });
+            };
 
             // Guard the genuinely big case: every feature (no Step 2 filter) across many
             // organisms. A few unfiltered organisms is a normal export and passes straight

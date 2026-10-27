@@ -810,6 +810,63 @@ function moopmartStreamGenomicFasta(
     return $skips;
 }
 
+/** Data Exporter FASTA modes cut from the genome (the rest come from the gene set's FASTA files). */
+const MOOPMART_GENOMIC_MODES = ['gene', 'upstream', 'downstream', 'exons'];
+
+/**
+ * The file whose absence means a FASTA export skips this whole gene set, or null if all are there.
+ *
+ * The export and its check (moopmartFastaPreflight) both ask this, so they cannot disagree.
+ */
+function moopmartFastaMissingFile(string $assembly_dir, string $gs_path, string $mode, array $sequence_types): ?string
+{
+    if (in_array($mode, MOOPMART_GENOMIC_MODES, true)) {
+        $genome_file = genome_fasta_filename();
+        foreach ([$genome_file, "$genome_file.fai"] as $f) {
+            if (!file_exists("$assembly_dir/$f")) return $f;
+        }
+        return null;
+    }
+    $pattern = $sequence_types[$mode]['pattern'] ?? '';
+    return ($pattern !== '' && glob("$gs_path/$pattern")) ? null : "$mode FASTA file";
+}
+
+/**
+ * What a FASTA export of these genes will leave out, and why, worked out WITHOUT writing it.
+ *
+ * The export file is pure FASTA. It used to end in "# WARNING:" lines, which some tools reject,
+ * so the page now asks for these separately (api/moopmart_export.php, fasta_check=1) and shows
+ * them beside the download. The per-gene rules are moopmartStreamGenomicFasta()'s, in its order:
+ * no coordinates, then a sequence the genome lacks, then (exons) nothing found in the GFF. No
+ * sequence is read; exons mode makes the same single GFF pass the export makes.
+ *
+ * @param array $genes rows with uniquename and chr, as the export gets them
+ * @return array{missing: ?string, skips: array} missing = see moopmartFastaMissingFile();
+ *         skips = per-gene reasons, for moop_genomic_skip_notes()
+ */
+function moopmartFastaPreflight(array $genes, string $assembly_dir, string $gs_path, string $mode, array $sequence_types): array
+{
+    $missing_file = moopmartFastaMissingFile($assembly_dir, $gs_path, $mode, $sequence_types);
+    if ($missing_file !== null || !in_array($mode, MOOPMART_GENOMIC_MODES, true)) {
+        return ['missing' => $missing_file, 'skips' => []];
+    }
+
+    $chrs    = array_column($genes, 'chr');
+    $genome  = moop_genome_open($assembly_dir, $chrs);
+    $absent  = $genome ? array_flip(moop_genome_missing($genome, $chrs)) : [];
+    if ($genome) moop_genome_close($genome);
+    $exons   = $mode === 'exons' ? moopmartGetExonCoords("$gs_path/" . genes_gff_filename(), array_column($genes, 'uniquename')) : [];
+
+    $skips = [];
+    foreach ($genes as $g) {
+        $chr = (string)($g['chr'] ?? '');
+        if ($chr === '')                                                 $skips['no_coords'][] = $g['uniquename'];
+        elseif (isset($absent[$chr]))                                    $skips['missing_chr'][$chr][] = $g['uniquename'];
+        elseif ($mode === 'exons' && !isset($exons[$g['uniquename']]))   $skips['no_exons'][] = $g['uniquename'];
+    }
+    return ['missing' => null, 'skips' => $skips];
+}
+
 /**
  * Parse the shared MOOPmart preview/export request parameters from a POST array
  * into the structures the preview endpoints consume. Keeps the aggregate and
