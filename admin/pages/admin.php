@@ -342,26 +342,28 @@
         <p class="small mb-2"><i class="fa fa-check text-success me-1"></i>No security updates are pending.</p>
       <?php endif; ?>
       <?php if ($su['by_severity']): ?>
-        <p class="small mb-2">In all, <?= count($su['advisories']) ?: array_sum($su['by_severity']) ?>
+        <?php /* The steps to run, numbered, and nothing else in their way: the report refresh used to sit
+                 just below and read as step 3 (Sofia, 2026-10-27). Commands come from the manager at
+                 display time, not the saved result: moop_security_update_commands(). */
+              $_su_cmd = moop_security_update_commands($su['manager'] ?? null); ?>
+        <p class="small mb-1">In all, <?= count($su['advisories']) ?: array_sum($su['by_severity']) ?>
           <?= $su['manager'] === 'dnf' ? 'security advisories' : 'security updates' ?> are pending across
-          <?= (int)$su['packages'] ?> packages. To install them all, on the server:
-          <?php /* From the manager at display time, not the saved result: moop_security_update_commands() */ ?>
-          <code class="d-block mt-1"><?= htmlspecialchars(moop_security_update_commands($su['manager'] ?? null)['update'] ?? $su['command']) ?></code>
-          <span class="text-muted d-block mt-1">The last step frees the downloaded packages. A kernel update needs a reboot.</span>
-        </p>
-      <?php endif; ?>
-      <?php if (($su['source'] ?? '') === 'report'): ?>
-        <?php /* Housekeeping only READS root's report, so "Run housekeeping now" alone shows the same
-                 answer again. Installing through dnf/apt refreshes the report by itself once the hook
-                 from install_security_report.sh is in place; this is for everything else. */ ?>
-        <p class="small mb-2">To re-check now, on the server:
-          <code class="d-block mt-1"><?= htmlspecialchars(moop_security_update_commands($su['manager'] ?? null)['recheck']) ?></code>
-          <span class="text-muted d-block mt-1">then <strong>Run housekeeping now</strong> to show the new report here.</span>
-        </p>
+          <?= (int)$su['packages'] ?> packages. To install them all, on the server:</p>
+        <ol class="small mb-2 ps-3">
+          <li class="mb-1"><code><?= htmlspecialchars($_su_cmd['update'] ?? $su['command']) ?></code>
+            <span class="text-muted d-block">The last part frees the downloaded packages.</span></li>
+          <?php if (isset($su['watched']['Linux kernel'])): ?>
+          <li class="mb-1"><i class="fa fa-power-off text-warning me-1"></i><code><?= htmlspecialchars($_su_cmd['reboot']) ?></code>
+            <span class="text-muted d-block">This includes a kernel update, which runs only after a restart. The site is down for a minute or two and comes back by itself.</span></li>
+          <?php endif; ?>
+        </ol>
+        <p class="small text-muted mb-2">That is all: this report refreshes by itself after installing.</p>
       <?php endif; ?>
       <?php if (!empty($su['reboot'])): ?>
-        <p class="small mb-2"><i class="fa fa-power-off text-warning me-1"></i>A newer kernel is installed than the one
-          running — reboot to finish installing it.</p>
+        <p class="small mb-2"><i class="fa fa-power-off text-warning me-1"></i><strong>A newer kernel is installed than the one running.</strong>
+          Restart the server to run it:
+          <code class="d-block mt-1"><?= htmlspecialchars(moop_security_update_commands($su['manager'] ?? null)['reboot']) ?></code>
+          <span class="text-muted d-block mt-1">The site is down for a minute or two and comes back by itself.</span></p>
       <?php endif; ?>
       <p class="small text-muted fst-italic mb-0">
         <i class="fa fa-clock"></i>
@@ -375,6 +377,13 @@
                          : ($_su_age < 172800 ? (int)floor($_su_age / 3600) . ' hr ago' : (int)floor($_su_age / 86400) . ' days ago')) ?>
         <?= ($su['source'] ?? '') === 'report' ? '· written daily by the moop-security-report timer' : '' ?>
         · report-only, MOOP never installs updates.
+        <?php if (($su['source'] ?? '') === 'report'): ?>
+          <?php /* Housekeeping only READS root's report, so "Run housekeeping now" alone shows the same
+                   answer again. Installing refreshes it by itself (the dnf/apt hook); this is for the rest. */ ?>
+          <span class="d-block mt-1">To refresh it without installing anything:
+            <code><?= htmlspecialchars(moop_security_update_commands($su['manager'] ?? null)['recheck']) ?></code>,
+            then <strong>Run housekeeping now</strong>.</span>
+        <?php endif; ?>
       </p>
     <?php endif; ?>
   <?= adm_status_card('securityUpdates', 'shield-alt', 'OS Security Updates', $_su_badges, $_su_tone, ob_get_clean()) ?>

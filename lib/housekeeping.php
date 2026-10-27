@@ -1461,15 +1461,19 @@ function housekeeping_check_security_updates(): void {
  * "clean packages", not "clean all": clean all also empties the package lists the report reads
  * (dnf -C), and the report fails until `dnf makecache` (2026-10-27).
  *
- * @return array{update: ?string, recheck: string}
+ * @return array{update: ?string, recheck: string, reboot: string}
  */
 function moop_security_update_commands(?string $manager): array {
+    // A new kernel runs only after a restart; nginx and php-fpm are enabled, so the site comes back
+    $reboot = 'sudo systemctl reboot';
     if ($manager === 'apt') {
         return ['update'  => 'sudo apt-get update && sudo apt-get upgrade && sudo apt-get clean',
-                'recheck' => 'sudo apt-get update && sudo systemctl start moop-security-report.service'];
+                'recheck' => 'sudo apt-get update && sudo systemctl start moop-security-report.service',
+                'reboot'  => $reboot];
     }
     return ['update'  => $manager === 'dnf' ? 'sudo dnf update --security && sudo dnf clean packages' : null,
-            'recheck' => 'sudo dnf makecache && sudo systemctl start moop-security-report.service'];
+            'recheck' => 'sudo dnf makecache && sudo systemctl start moop-security-report.service',
+            'reboot'  => $reboot];
 }
 
 function moop_parse_security_report(string $text): array {

@@ -2073,6 +2073,12 @@ ok(strpos((string)$_r['error'], 'No package lists to read') === 0 && strpos((str
 $_r = moop_parse_security_report("# generated: " . date('c') . "\n# manager: dnf\n$_dnf# exit: 0\n");
 ok($_r['command'] === 'sudo dnf update --security && sudo dnf clean packages' && strpos($_r['recheck'], 'sudo dnf makecache') === 0,
    'the update command cleans up its downloaded packages (clean packages, which keeps the lists the report reads)');
+$_dnfk = "RHSA-2026:90365 Important/Sec.  kernel-core-5.14.0-700.el9.x86_64\n";
+$_r = moop_parse_security_report("# generated: " . date('c') . "\n# running_kernel: k1\n# manager: dnf\n# newest_kernel: k1\n$_dnfk# exit: 0\n");
+$_card = file_get_contents("$BASE/admin/pages/admin.php");
+ok(isset($_r['watched']['Linux kernel']) && moop_security_update_commands('dnf')['reboot'] === 'sudo systemctl reboot'
+   && strpos($_card, "isset(\$su['watched']['Linux kernel'])") !== false && strpos($_card, "['reboot']") !== false,
+   'a pending kernel security update is recognised, and the card then says to restart the server, with the command');
 $_r = moop_parse_apt_security("Inst nginx [1.22.1-9] (1.22.1-9+deb12u1 Debian-Security:12/stable-security [amd64])\n"
       . "Inst vim [2] (3 Debian:12.5/stable [amd64])\nInst libssl3 [3.0.1] (3.0.2 Debian-Security:12/stable-security [amd64])");
 ok($_r['packages'] === 2 && array_keys($_r['watched']) === ['nginx', 'OpenSSL'], 'apt: only -security origins count; libssl3 is OpenSSL');
