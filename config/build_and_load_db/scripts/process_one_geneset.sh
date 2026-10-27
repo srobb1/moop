@@ -233,11 +233,58 @@ infer_source() {
   esac
 }
 
+## write_genome_json [KIND] -- with no KIND, only creates a missing genome.json. With KIND
+## (genome_kind, below) it rewrites it to carry "genome_kind", keeping its date_added.
 write_genome_json() {
-  local file="$ASSEMBLY_DATA/genome.json"
-  [ -f "$file" ] && return
-  printf '{\n  "accession": "%s",\n  "name": "",\n  "source": "%s",\n  "date_added": "%s"\n}\n' \
-    "$DATA_ASSEMBLY" "$(infer_source "$DATA_ASSEMBLY")" "$(date +%Y-%m-%d)" > "$file"
+  local kind=$1 file="$ASSEMBLY_DATA/genome.json" added kind_line=""
+  [ -z "$kind" ] && [ -f "$file" ] && return
+  added=$(sed -n 's/^ *"date_added": *"\([^"]*\)".*/\1/p' "$file" 2>/dev/null)
+  [ -n "$kind" ] && kind_line=$(printf '\n  "genome_kind": "%s",' "$kind")
+  printf '{\n  "accession": "%s",\n  "name": "",\n  "source": "%s",%s\n  "date_added": "%s"\n}\n' \
+    "$DATA_ASSEMBLY" "$(infer_source "$DATA_ASSEMBLY")" "$kind_line" \
+    "${added:-$(date +%Y-%m-%d)}" > "$file"
+}
+
+## genome_kind -- "genome" for a real assembly, "transcripts" for a reference built from
+## transcripts (make_fake_genome_from_t2g.pl and its predecessors), so the site can say which.
+##
+## Read from the data, not trusted to a name (PflaM.kc1.ref is a real genome; dd_v6 and
+## Romankenkius_au23-003 are built from transcripts). A transcript-built reference holds one
+## record per sequence spanning it end to end; a real assembly almost never does. Counted over
+## the sequences that carry features, using top-level features only (no Parent=; region-type
+## lines, which RefSeq writes over every sequence, skipped). Measured 2026-10-27 over all 99
+## assemblies in $GENOMES: all 21 transcript-built at 1.000, all 77 real at <= 0.04.
+##
+## metadata.yaml "genome-kind: genome|transcripts" settles a case the data cannot (an empty GFF);
+## where both answer and disagree, the build stops. Neither answers: a warning, and no genome_kind.
+genome_kind() {
+  local gff=$1 fai=$2 meta detected
+  meta=$(sed -n 's/^genome-kind:[[:space:]]*\([^[:space:]]*\).*/\1/p' "$GENESET_DIR/metadata.yaml" | head -n1)
+  case "$meta" in
+    ""|NA|genome|transcripts) ;;
+    *) echo "ERROR: $GENESET_DIR/metadata.yaml: genome-kind '$meta' -- must be genome or transcripts" >&2
+       return 1 ;;
+  esac
+  [ "$meta" = NA ] && meta=""
+  detected=$(awk -F'\t' '
+    FNR == NR { len[$1] = $2; next }
+    NF < 9 || /^#/ || $9 ~ /(^|;)Parent=/ || $3 ~ /^(region|chromosome|scaffold|contig|supercontig|databank_entry|source)$/ { next }
+    { top[$1]++; if ($4 == 1 && $5 == len[$1]) whole[$1] = 1 }
+    END {
+      for (s in top) { n++; if (top[s] == 1 && whole[s]) one++ }
+      if (n == 0) exit
+      if (one / n >= 0.9) print "transcripts"
+      else if (one / n <= 0.1) print "genome"
+    }' "$fai" "$gff")
+  if [ -n "$meta" ] && [ -n "$detected" ] && [ "$meta" != "$detected" ]; then
+    echo "ERROR: $THIS_ORG/$ASSEMBLY: metadata.yaml says genome-kind: $meta, but $(basename "$gff") against" >&2
+    echo "       genome.fa looks like $detected. Correct one of them." >&2
+    return 1
+  fi
+  [ -n "$meta$detected" ] \
+    || echo "WARNING: $THIS_ORG/$ASSEMBLY: cannot tell whether genome.fa is a genome or built from transcripts;" \
+            "genome.json gets no genome_kind. Set genome-kind: genome|transcripts in metadata.yaml." >&2
+  echo "${meta:-$detected}"
 }
 
 write_geneset_json() {
@@ -1265,6 +1312,10 @@ if $HAS_GFF; then
   if [ -e "$ASSEMBLY_DATA/genome.fa" ]; then
     build_index "$ASSEMBLY_DATA/genome.fa" "$ASSEMBLY_DATA/genome.fa.fai" \
       samtools faidx "$ASSEMBLY_DATA/genome.fa"
+    if $HAS_GFF; then
+      KIND=$(genome_kind "$SRC_GFF" "$ASSEMBLY_DATA/genome.fa.fai") || exit 1
+      [ -n "$KIND" ] && echo "Genome kind: $KIND" && write_genome_json "$KIND"
+    fi
     build_index "$ASSEMBLY_DATA/genome.fa" "$ASSEMBLY_DATA/genome.fa.ndb" \
       makeblastdb -in "$ASSEMBLY_DATA/genome.fa" -dbtype nucl -parse_seqids
     ## Assembly statistics for the organism page (notes/ASSEMBLY_STATS_SPEC.md). Per ASSEMBLY,
