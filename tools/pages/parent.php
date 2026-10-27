@@ -311,7 +311,9 @@
                      nothing. The VERB is carried by the icon instead — palette opens a
                      viewer, download downloads — and the two downloads are grouped because
                      they are the same action in two formats. */ ?>
-            <div class="ms-auto d-flex gap-2 align-items-center">
+            <?php /* flex-wrap: on a phone the three buttons were 0.6 px wider than the header,
+                     enough to make the page scroll sideways. */ ?>
+            <div class="ms-auto d-flex flex-wrap gap-2 align-items-center">
                 <?php if (!empty($genome_seq_available)): ?>
                 <button class="btn btn-sm moop-data-btn" id="gene-model-fmt-btn"
                         title="Open the sequence with each feature type highlighted"><i class="fas fa-palette me-1"></i>Format sequence</button>
@@ -328,9 +330,11 @@
         </div>
         <div id="geneModelSection" class="collapse show">
             <div class="card-body p-3">
-                <svg id="gene-model-svg" width="100%" style="display:block; overflow:visible;"<?php
-                    if (!empty($big_gene_diagram_anchor)): ?> data-show-only="<?= htmlspecialchars($big_gene_diagram_anchor) ?>"<?php endif; ?>></svg>
-
+                <?php
+                $__svg = '<svg id="gene-model-svg" width="100%" style="display:block; overflow:visible; flex:1 1 0; min-width:0;"'
+                       . (!empty($big_gene_diagram_anchor) ? ' data-show-only="' . htmlspecialchars($big_gene_diagram_anchor) . '"' : '')
+                       . '></svg>';
+                ?>
                 <?php if (!empty($neighbor_nav)):
                     // The diagram is always drawn 5'->3' (a reverse-strand gene is flipped), so
                     // upstream is on the LEFT of the picture for every gene. Which way that is in
@@ -338,20 +342,34 @@
                     // no strand is drawn as '+', so its buttons read in genome order instead.
                     $__stranded = in_array($neighbor_nav['strand'], ['+', '-'], true);
                     $__up_side  = $neighbor_nav['strand'] === '-' ? 'right' : 'left';
-                    $__dn_side  = $__up_side === 'left' ? 'right' : 'left'; ?>
-                <div class="gene-neighbors d-flex align-items-center gap-2 mt-2"
+                    $__dn_side  = $__up_side === 'left' ? 'right' : 'left';
+                    $__chr      = htmlspecialchars((string)($feature_loc['chr'] ?? 'this sequence'));
+                    $__up_label = $__stranded ? 'upstream gene' : 'previous gene';
+                    $__dn_label = $__stranded ? 'downstream gene' : 'next gene'; ?>
+                <?php /* « and » either side of the diagram, on the side each neighbour lies (Sofia,
+                         2026-10-27). They were two labelled buttons on a row of their own, which on
+                         a phone needed ~300 px and stuck out of the card, so the page scrolled
+                         sideways. data-label carries the words the status line uses. */ ?>
+                <div class="gene-neighbors"
                      data-organism="<?= htmlspecialchars($neighbor_nav['organism']) ?>"
                      data-assembly="<?= htmlspecialchars($neighbor_nav['assembly']) ?>"
                      data-gene-set="<?= htmlspecialchars($neighbor_nav['gene_set']) ?>"
                      data-uniquename="<?= htmlspecialchars($neighbor_nav['uniquename']) ?>">
-                    <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn" data-side="<?= $__up_side ?>"
-                            title="The nearest gene <?= $__stranded ? "5′ of this one" : 'at lower coordinates' ?> on <?= htmlspecialchars((string)($feature_loc['chr'] ?? 'this sequence')) ?> that has a gene page">
-                        <i class="fas fa-arrow-left me-1"></i><?= $__stranded ? 'Upstream gene' : 'Previous gene' ?></button>
-                    <span class="gene-neighbor-status small text-muted flex-grow-1 text-center" role="status"></span>
-                    <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn" data-side="<?= $__dn_side ?>"
-                            title="The nearest gene <?= $__stranded ? "3′ of this one" : 'at higher coordinates' ?> on <?= htmlspecialchars((string)($feature_loc['chr'] ?? 'this sequence')) ?> that has a gene page">
-                        <?= $__stranded ? 'Downstream gene' : 'Next gene' ?><i class="fas fa-arrow-right ms-1"></i></button>
+                    <div class="d-flex align-items-center gap-1">
+                        <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn gene-neighbor-chevron" data-side="<?= $__up_side ?>"
+                                data-label="<?= $__up_label ?>" aria-label="Go to the <?= $__up_label ?>"
+                                title="<?= ucfirst($__up_label) ?>: the nearest gene <?= $__stranded ? "5′ of this one" : 'at lower coordinates' ?> on <?= $__chr ?> that has a gene page">
+                            <i class="fas fa-angle-double-left" aria-hidden="true"></i></button>
+                        <?= $__svg ?>
+                        <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn gene-neighbor-chevron" data-side="<?= $__dn_side ?>"
+                                data-label="<?= $__dn_label ?>" aria-label="Go to the <?= $__dn_label ?>"
+                                title="<?= ucfirst($__dn_label) ?>: the nearest gene <?= $__stranded ? "3′ of this one" : 'at higher coordinates' ?> on <?= $__chr ?> that has a gene page">
+                            <i class="fas fa-angle-double-right" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="gene-neighbor-status small text-muted text-center mt-1" role="status"></div>
                 </div>
+                <?php else: ?>
+                <?= $__svg ?>
                 <?php endif; ?>
 
                 <?php

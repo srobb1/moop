@@ -448,6 +448,10 @@ a.badge:hover {
 /* Inside a btn-group the shared edge doubles up without this. */
 .btn-group > .moop-data-btn + .moop-data-btn { border-left-color: #b9e0ea; }
 
+/* Gene page: « and » either side of the gene diagram (upstream / downstream gene). Small and
+   fixed-width, so the diagram keeps nearly all the room, on a phone too. */
+.gene-neighbor-chevron { flex: 0 0 auto; padding: 0.2rem 0.4rem; line-height: 1; }
+
 /* Annotation total in the transcript card header — a magnitude cue beside the name, not a
    control, so it takes the same quiet teal tint as the data buttons. Most useful when the
    card is collapsed and the header is all there is. */

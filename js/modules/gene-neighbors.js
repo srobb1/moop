@@ -1,12 +1,13 @@
 /**
- * Gene page: the Upstream / Downstream gene buttons under the gene structure diagram.
+ * Gene page: the « and » buttons either side of the gene structure diagram (upstream and
+ * downstream gene).
  *
  * Each button carries its genome side (data-side="left" | "right"); the page has already worked
  * out which side is upstream from the gene's strand. A click asks api/gene_neighbor.php for the
  * nearest gene on that side that has a gene page, then goes there. The lookup reads the gene
  * set's whole coordinates file (~0.25 s on the largest), so it runs on the click, never on load.
  *
- * When there is nothing further on the sequence the answer is shown beside the buttons rather
+ * When there is nothing further on the sequence the answer is shown under the diagram rather
  * than on a page of its own: the user stays where they were.
  */
 (function () {
@@ -37,7 +38,8 @@
                 window.location.href = data.url;
                 return;
             }
-            const direction = btn.textContent.trim().toLowerCase();
+            // The buttons are icons now (« »), so the words come from data-label
+            const direction = btn.dataset.label || 'neighbouring gene';
             const skipped   = data.skipped
                 ? ` (${data.skipped} gene${data.skipped === 1 ? '' : 's'} without a page — see the genome browser)` : '';
             setBusy(false, `No ${direction} with a gene page on ${data.chr}${skipped}.`);
