@@ -1422,6 +1422,20 @@ ok(moop_fasta_with_context(">P2 x\nM\n>Q no ctx\nAC\n>P2:1-2 r\nM\n", ['P2' => [
      === ">P2 gene=G2 transcript=T2 x\nM\n>Q no ctx\nAC\n>P2:1-2 gene=G2 transcript=T2 r\nM\n"
    && moop_fasta_with_context("no header line\nAC\n", ['P2' => ['locus' => 'T2', 'gene' => 'G2', 'gene_name' => null, 'transcript' => 'T2']]) === "no header line\nAC\n",
    'the header rewrite jumps record to record: first, middle and ranged headers; text with no header untouched');
+// Every place that serves extracted sequences adds the same headers, so the site is consistent
+// (Sofia, 2026-10-27). A new page or endpoint that calls extractSequencesForAllTypes() must too.
+$_plain = [];
+foreach (array_merge(glob("$BASE/tools/*.php"), glob("$BASE/api/*.php")) as $_f) {
+    // Real calls only, read from PHP's tokens: a comment naming the function is not a call
+    $_calls = [];
+    foreach (token_get_all(file_get_contents($_f)) as $_tok) {
+        if (is_array($_tok) && $_tok[0] === T_STRING) $_calls[$_tok[1]] = true;
+    }
+    if (isset($_calls['extractSequencesForAllTypes'])
+        && !isset($_calls['moop_content_with_context']) && !isset($_calls['moop_fasta_with_context'])) $_plain[] = basename($_f);
+}
+ok($_plain === [], 'every page and endpoint that serves sequences adds the gene=/transcript= headers'
+   . ($_plain ? ' -- not: ' . implode(', ', $_plain) : ''));
 ok(moop_content_with_context(['protein' => ">P2 x\nM\n", 'genome' => ">P2 genomic c1:1-2(+)\nAC\n"], "$_sd/organism.sqlite", [1])
      === ['protein' => ">P2 gene=G2 transcript=T2 x\nM\n", 'genome' => ">P2 genomic c1:1-2(+)\nAC\n"]
    && moop_content_with_context(['protein' => ">P2 x\nM\n"], "$_sd/missing.sqlite", [1]) === ['protein' => ">P2 x\nM\n"],

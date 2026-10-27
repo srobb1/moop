@@ -16,6 +16,7 @@ ob_start();
 include_once __DIR__ . '/../tools/tool_init.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
+require_once __DIR__ . '/../lib/genomic_regions.php';   // moop_anchors_from_family(), moop_fasta_with_context()
 ob_end_clean();
 
 set_time_limit(300);
@@ -97,15 +98,22 @@ foreach ($valid_organisms as $organism => $uniquenames) {
         // gene set. buildTypedIds() typed each id as itself, so a search returning mRNAs
         // downloaded transcripts only — the same gap that made the per-table FASTA button
         // return no CDS or protein.
+        $family    = [];
         $typed_ids = expandFeaturesToAllSequenceTypes(
             $uniquenames,
             organism_db_path($organism),
             $source['assembly'] ?? '',
-            $source['gene_set'] ?? ''
+            $source['gene_set'] ?? '',
+            [],
+            $family
         );
         $result = extractSequencesForAllTypes($source['path'], $typed_ids, $sequence_types, $organism, $source['assembly']);
         if ($result['success']) {
+            // gene=, gene_name=, transcript= in each header, as every other sequence download has
+            // them: worked out from the family the walk above returned (+0.03 s on 2,500 mRNAs)
+            $anchors = moop_anchors_from_family(array_keys($typed_ids), $family);
             foreach ($result['content'] as $content) {
+                $content = moop_fasta_with_context($content, $anchors);
                 $chunk = rtrim($content) . "\n";
                 echo $chunk;
                 $found_any = true;

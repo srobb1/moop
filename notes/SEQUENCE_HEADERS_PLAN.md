@@ -526,8 +526,13 @@ protein/mRNA/CDS) byte-identical to the lookup route; Retrieve Selected page == 
 every record of all 6 NV2/Myotis whole-set files has gene=; counts unchanged.
 - Seen: `gene_name=LOC118648923` (Myotis): NCBI's placeholder, not a name. The rule hides only a
   name identical to an ID. Left as is: LOC names belong to the GFF/FASTA/DB ID-alignment plan.
-- Still plain: the search-results "Download FASTA" (`api/download_search_fasta.php`). The
-  Downloads page is plain BY DESIGN (decision 3: deposited files byte-identical).
+- The search-results "Download FASTA" (`api/download_search_fasta.php`) has them too (Sofia: be
+  consistent), from its own walk: 2,500 Myotis mRNAs -> 7,500 sequences, all with gene=, 0.27 s
+  (+0.03 s). A smoke test now fails if any page or endpoint that calls
+  extractSequencesForAllTypes() serves sequences without the headers. The Downloads page is plain
+  BY DESIGN (decision 3: deposited files byte-identical). Baking the headers into the FASTA files
+  was considered and declined: names change with the naming pipeline (stale headers, FASTA/.fai/
+  BLAST rebuilds), the rules would exist twice (PHP + Perl), and it breaks decision 3.
 
 Needs piece 1.
 
