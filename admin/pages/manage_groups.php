@@ -249,6 +249,19 @@
     </div>
   <?php endif; ?>
 
+  <?php if (!empty($unloaded_tuples)): ?>
+    <?php /* Directories on disk that the database does not have. Not offered for groups: published,
+             every page of theirs fails (six planarian leftovers went out this way, 2026-10-27). */ ?>
+    <div class="alert alert-warning mt-4 mb-0">
+      <i class="fa fa-folder-minus me-1"></i>
+      <strong><?= count($unloaded_tuples) ?> director<?= count($unloaded_tuples) === 1 ? 'y' : 'ies' ?> on disk not in the database</strong>
+      — not offered for groups, because their pages would fail. Load them, or remove the directories:
+      <?php foreach ($unloaded_tuples as $t): ?>
+        <br><small class="text-muted"><?= htmlspecialchars("{$t['organism']} / {$t['assembly']} / {$t['gene_set']}") ?></small>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
   <?php if (!empty($unrepresented_organisms)): ?>
     <hr class="my-5">
     <div class="card mb-4" id="new-assemblies">

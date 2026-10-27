@@ -2724,6 +2724,19 @@ ok(strpos($_mg, '_fs_exists') === false && substr_count($_mg, 'moop_group_entry_
    && strpos(file_get_contents("$BASE/lib/functions_data.php"), "moop_group_entry_stale_reason(\$ge, \$organism_data_path, \$_orphans)") !== false,
    'Manage Groups (badge, list, Delete All Stale) and the dashboard count all use that one rule');
 ok(moop_organism_issue_defs()['dir-mismatch']['health'] === true, 'a directory with no database row shows as a Health badge, not only a filter');
+// Bulk add offers only gene sets the database has: six planarian leftovers were published by it
+touch("$_od/Org/organism.sqlite");
+$_sp = moop_split_unrepresented_by_db([
+    ['organism' => 'Org', 'assembly' => 'NEW', 'gene_set' => 'gs1'],      // loaded
+    ['organism' => 'Org', 'assembly' => 'OLD', 'gene_set' => 'gs1'],      // assembly not in the DB
+    ['organism' => 'Org', 'assembly' => 'NEW', 'gene_set' => 'gsX'],      // gene set not in the DB
+    ['organism' => 'NoDb', 'assembly' => 'A', 'gene_set' => 'g'],         // organism never loaded
+], $_od, ['Org/OLD' => true], ['Org/NEW/gsX' => true]);
+ok(array_column($_sp['loaded'], 'assembly') === ['NEW'] && count($_sp['not_loaded']) === 3,
+   'only a gene set its database has is offered for groups; an orphaned assembly, an orphaned gene set and an unloaded organism are not');
+$_mgc = file_get_contents("$BASE/admin/manage_groups.php");
+ok(substr_count($_mgc, 'moop_split_unrepresented_by_db(') >= 3, 'Manage Groups lists AND both add handlers (single, bulk) refuse a directory the database does not have');
+unlink("$_od/Org/organism.sqlite");
 array_map('rmdir', ["$_od/Org/OLD/gs1", "$_od/Org/NEW/gs1", "$_od/Org/OLD", "$_od/Org/NEW", "$_od/Org", $_od]);
 
 // ----------------------------------------------------------------------------

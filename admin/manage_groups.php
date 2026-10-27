@@ -172,6 +172,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $assembly = $_POST['assembly'];
         $gene_set = $_POST['gene_set'] ?? 'v1';
         $groups_input = trim($_POST['groups']);
+        // Never publish a directory the database does not have (moop_split_unrepresented_by_db())
+        if (moop_split_unrepresented_by_db([['organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gene_set]], $organism_data_path)['not_loaded']) {
+            $_SESSION['error_message'] = "$organism / $assembly / $gene_set is not in the organism's database, so it cannot be given groups: its pages would fail. Load it first, or remove the directory.";
+            ob_end_clean();
+            header('Location: manage_groups.php');
+            exit();
+        }
 
         if ($groups_input === '') {
             $groups = [];
@@ -340,6 +347,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Bulk add: create new entries for ungrouped assemblies
         $assemblies = json_decode($_POST['assemblies'], true);
         $groups = array_filter(array_map('trim', explode(',', trim($_POST['groups'] ?? ''))));
+        // Never publish a directory the database does not have (moop_split_unrepresented_by_db())
+        $_bulk = moop_split_unrepresented_by_db(array_map(fn($a) => ['organism' => $a['organism'], 'assembly' => $a['assembly'],
+                                                                      'gene_set' => $a['gene_set'] ?? 'v1'], $assemblies ?: []), $organism_data_path);
+        $assemblies = $_bulk['loaded'];
+        if ($_bulk['not_loaded']) {
+            $_SESSION['error_message'] = 'Not added, because they are not in their organism\'s database (their pages would fail): '
+                . implode(', ', array_map(fn($t) => "{$t['organism']} / {$t['assembly']} / {$t['gene_set']}", $_bulk['not_loaded'])) . '.';
+        }
         
         $added_count = 0;
         $log_entries = [];
@@ -389,7 +404,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 // Identify unrepresented (organism, assembly, gene_set) tuples on disk.
 // Shared with the admin dashboard health widget — see getUnrepresentedGeneSetTuples().
-$unrepresented_tuples = getUnrepresentedGeneSetTuples($all_organisms, $organism_data_path, $groups_data);
+// Only directories the database has can be given groups; the rest are listed apart, not offered.
+$_split               = moop_split_unrepresented_by_db(getUnrepresentedGeneSetTuples($all_organisms, $organism_data_path, $groups_data), $organism_data_path);
+$unrepresented_tuples = $_split['loaded'];
+$unloaded_tuples      = $_split['not_loaded'];
 // Keep $unrepresented_organisms for backward compat with bulk_add and JS
 $unrepresented_organisms = [];
 foreach ($unrepresented_tuples as $t) {
@@ -437,6 +455,7 @@ $data = [
     'descriptions_data' => $descriptions_data,
     'unrepresented_organisms' => $unrepresented_organisms,
     'unrepresented_tuples' => $unrepresented_tuples,
+    'unloaded_tuples' => $unloaded_tuples,
     'stale_entries' => $stale_entries,
     'db_orphaned_tuples' => $db_orphaned_tuples,
     'existing_groups' => $all_existing_groups,

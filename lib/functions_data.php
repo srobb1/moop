@@ -1621,6 +1621,35 @@ function moop_group_entry_stale_reason(array $entry, string $organism_data_path,
     return null;
 }
 
+/**
+ * Gene-set directories with no groups entry, split into those that CAN be given groups (their
+ * organism, assembly and gene set are in the database) and those that cannot (no database, or an
+ * assembly / gene set the database does not have: rename or reload leftovers).
+ *
+ * Manage Groups' Bulk add offered every directory on disk. On 2026-10-27 it published six planarian
+ * leftovers this way: listed to users, every page failing. The dashboard's "new gene sets" and the
+ * Manage Groups list now count and offer only the loadable ones, and the add handlers refuse the rest.
+ *
+ * @param list<array{organism:string, assembly:string, gene_set:string}> $tuples getUnrepresentedGeneSetTuples()
+ * @return array{loaded: list, not_loaded: list}
+ */
+function moop_split_unrepresented_by_db(array $tuples, string $organism_data_path, ?array $orphan_asm = null, ?array $orphan_gs = null): array {
+    // The orphan sets come from the organism cache; a caller (the smoke test) may pass its own
+    $orphan_asm ??= moop_orphaned_assembly_set($organism_data_path);
+    if ($orphan_gs === null) {
+        $orphan_gs = [];
+        foreach (getOrphanedGeneSetTuples($organism_data_path) as $t) $orphan_gs[$t['organism'] . '/' . $t['assembly'] . '/' . $t['gene_set']] = true;
+    }
+    $out = ['loaded' => [], 'not_loaded' => []];
+    foreach ($tuples as $t) {
+        $loaded = is_file("$organism_data_path/{$t['organism']}/organism.sqlite")
+               && !isset($orphan_asm[$t['organism'] . '/' . $t['assembly']])
+               && !isset($orphan_gs[$t['organism'] . '/' . $t['assembly'] . '/' . $t['gene_set']]);
+        $out[$loaded ? 'loaded' : 'not_loaded'][] = $t;
+    }
+    return $out;
+}
+
 /** getOrphanedAssemblyTuples() as an "organism/assembly" => true set, for moop_group_entry_stale_reason(). */
 function moop_orphaned_assembly_set(string $organism_data_path): array {
     $set = [];
@@ -1716,7 +1745,11 @@ function computeDataHealthAlerts(string $organism_data_path): array {
         if (moop_group_entry_stale_reason($ge, $organism_data_path, $_orphans) !== null) $health_alerts['stale_groups']++;
     }
     // Gene-set dirs on disk with no groups.json entry at all (checked per gene set).
-    $new_gene_set_tuples = getUnrepresentedGeneSetTuples(getOrganismsWithAssemblies($organism_data_path), $organism_data_path, $gd);
+    // Only those that can be given groups: a directory the database does not have is already
+    // counted as an orphan above, and offering it here is how leftovers got published.
+    $new_gene_set_tuples = moop_split_unrepresented_by_db(
+        getUnrepresentedGeneSetTuples(getOrganismsWithAssemblies($organism_data_path), $organism_data_path, $gd),
+        $organism_data_path)['loaded'];
     $health_alerts['new_gene_sets'] = count($new_gene_set_tuples);
 
     // Gene sets the taxonomy says probably belong to a curated group they are not in.
