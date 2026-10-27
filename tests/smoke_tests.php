@@ -2707,6 +2707,26 @@ ok(!preg_match('/tempnam\(\s*sys_get_temp_dir\(\)/', $_src) && substr_count($_sr
    'BLAST, Primer BLAST, Primer3 and MAFFT write their temp files through moop_temp_dir()');
 
 // ----------------------------------------------------------------------------
+group('Stale group entries: one rule, and it sees a directory with no database row');
+// Danio's groups entry named GRCz11 after its reload into GCA_000002035.4: the directory was still
+// on disk, so the dashboard and Manage Groups (each with their own copy of a disk-only rule) said
+// nothing while every Danio page failed. One rule now, with two reasons.
+require_once "$BASE/lib/functions_data.php";
+$_od = sys_get_temp_dir() . '/moop_stalegrp_' . getmypid();
+@mkdir("$_od/Org/OLD/gs1", 0777, true); @mkdir("$_od/Org/NEW/gs1", 0777, true);
+$_orph = ['Org/OLD' => true];
+ok(moop_group_entry_stale_reason(['organism' => 'Org', 'assembly' => 'OLD', 'gene_set' => 'gs1'], $_od, $_orph) === 'not_in_db'
+   && moop_group_entry_stale_reason(['organism' => 'Org', 'assembly' => 'GONE', 'gene_set' => 'gs1'], $_od, $_orph) === 'gone'
+   && moop_group_entry_stale_reason(['organism' => 'Org', 'assembly' => 'NEW', 'gene_set' => 'gs1'], $_od, $_orph) === null,
+   'a groups entry is stale if its directory is gone OR its assembly has no database row; a good one is not');
+$_mg = file_get_contents("$BASE/admin/manage_groups.php") . file_get_contents("$BASE/admin/pages/manage_groups.php");
+ok(strpos($_mg, '_fs_exists') === false && substr_count($_mg, 'moop_group_entry_stale_reason(') >= 2
+   && strpos(file_get_contents("$BASE/lib/functions_data.php"), "moop_group_entry_stale_reason(\$ge, \$organism_data_path, \$_orphans)") !== false,
+   'Manage Groups (badge, list, Delete All Stale) and the dashboard count all use that one rule');
+ok(moop_organism_issue_defs()['dir-mismatch']['health'] === true, 'a directory with no database row shows as a Health badge, not only a filter');
+array_map('rmdir', ["$_od/Org/OLD/gs1", "$_od/Org/NEW/gs1", "$_od/Org/OLD", "$_od/Org/NEW", "$_od/Org", $_od]);
+
+// ----------------------------------------------------------------------------
 group('BLAST queue: it cannot get stuck');
 // lib/blast_queue.php. State is flock()s, which the kernel drops when a process dies, so the
 // things to prove are: a free unit is always takeable, nothing is held half-way, a dead

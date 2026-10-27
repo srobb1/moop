@@ -240,7 +240,7 @@ if ($has_health_issues):
       <div>
         <i class="fa fa-trash-alt me-2"></i>
         <strong><?= $health_alerts['stale_groups'] ?> stale group entr<?= $health_alerts['stale_groups'] > 1 ? 'ies' : 'y' ?></strong>
-        reference organisms or assemblies no longer on disk.
+        point at nothing users can open: the directory is gone, or it is still there but no longer in the organism's database (a rename or reload leftover).
       </div>
       <a href="manage_groups.php" class="btn btn-sm btn-warning flex-shrink-0">Clean Up in Groups</a>
     </div>

@@ -1114,7 +1114,9 @@ function moop_organism_issue_defs(): array {
         'blast'                => $d('Missing BLAST index',   'incomplete', 'A FASTA file has no BLAST index', true, false),
         'fai'                  => $d('Missing .fai',          'incomplete', 'genome.fa is present but its .fai index is not', true, false),
         'seqnames'             => $d('Chromosome names differ', 'incomplete', 'A gene set names its chromosomes differently from its genome (e.g. "2L" vs "NC_004354.4") -- genomic sequence, exon export and the genome browser find nothing for its genes. Search and BLAST still work.', true, true),
-        'dir-mismatch'         => $d('Dir / DB mismatch',     'incomplete', 'An assembly or gene-set directory matches no record in the database', true, false),
+        // A Health badge too (it was a filter only): Danio's GRCz11 sat in this state for weeks with
+        // its groups entry pointing at it, so every Danio page failed while its row looked fine.
+        'dir-mismatch'         => $d('Dir / DB mismatch',     'incomplete', 'An assembly or gene-set directory matches no record in the database -- a rename or reload leftover. If a groups entry points at it, that assembly\'s pages fail; delete the directory or fix the entry.', true, true),
         'groups'               => $d('Not in groups',         'incomplete', 'An assembly is in no group -- invisible to users until it is', true, true),
         'tree'                 => $d('Not in tree',           'incomplete', 'Not in the taxonomy tree -- hidden from the homepage organism selector', true, true),
         'metadata'             => $d('Metadata incomplete',   'incomplete', 'organism.json is missing required fields or is not writable', true, true),
@@ -1599,6 +1601,33 @@ function moop_data_health_empty(): array {
     ];
 }
 
+/**
+ * Why a groups-file entry points at nothing users can open, or null if it is fine. ONE rule for
+ * the dashboard count and Manage Groups' badge, list and "Delete All Stale Entries" -- four places
+ * that each had their own copy, and all four checked only the disk:
+ *
+ *   'gone'      its gene-set directory is not on disk
+ *   'not_in_db' the directory is there but its assembly has no row in the organism's database --
+ *               a rename/reload leftover. Danio's GRCz11 entry (2026-10-27) was one: every Danio
+ *               gene page and export failed, and nothing on the dashboard said so, because the
+ *               directory still existed.
+ *
+ * @param array $orphaned_assemblies "organism/assembly" => true, from getOrphanedAssemblyTuples()
+ */
+function moop_group_entry_stale_reason(array $entry, string $organism_data_path, array $orphaned_assemblies): ?string {
+    $gs = $entry['gene_set'] ?? 'v1';
+    if (!is_dir("$organism_data_path/{$entry['organism']}/{$entry['assembly']}/$gs")) return 'gone';
+    if (isset($orphaned_assemblies[$entry['organism'] . '/' . $entry['assembly']])) return 'not_in_db';
+    return null;
+}
+
+/** getOrphanedAssemblyTuples() as an "organism/assembly" => true set, for moop_group_entry_stale_reason(). */
+function moop_orphaned_assembly_set(string $organism_data_path): array {
+    $set = [];
+    foreach (getOrphanedAssemblyTuples($organism_data_path) as $t) $set[$t['organism'] . '/' . $t['assembly']] = true;
+    return $set;
+}
+
 function computeDataHealthAlerts(string $organism_data_path): array {
     $config        = ConfigManager::getInstance();
     $metadata_path = $config->getPath('metadata_path');
@@ -1680,10 +1709,11 @@ function computeDataHealthAlerts(string $organism_data_path): array {
     // LIVE groups file — keeps grouping checks accurate right after a group edit.
     $gd = loadJsonFile($groups_file, []);
     $health_alerts['ungrouped'] = count(getUngroupedOrganisms($cache_data, $gd));
-    // Group entries whose gene-set directory no longer exists on disk.
+    // Group entries that point at nothing users can open: directory gone, or no database row
+    $_orphans = [];
+    foreach ($orphaned_assembly_tuples as $t) $_orphans[$t['organism'] . '/' . $t['assembly']] = true;
     foreach ($gd as $ge) {
-        $gs = $ge['gene_set'] ?? 'v1';
-        if (!is_dir("$organism_data_path/{$ge['organism']}/{$ge['assembly']}/$gs")) $health_alerts['stale_groups']++;
+        if (moop_group_entry_stale_reason($ge, $organism_data_path, $_orphans) !== null) $health_alerts['stale_groups']++;
     }
     // Gene-set dirs on disk with no groups.json entry at all (checked per gene set).
     $new_gene_set_tuples = getUnrepresentedGeneSetTuples(getOrganismsWithAssemblies($organism_data_path), $organism_data_path, $gd);

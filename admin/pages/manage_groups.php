@@ -159,8 +159,8 @@
         <?php $row_gs = htmlspecialchars($data['gene_set'] ?? 'v1'); ?>
         <?php $row_common_name = htmlspecialchars($organism_meta[$data['organism']]['common_name'] ?? ''); ?>
         <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" data-gene-set="<?= $row_gs ?>"
-            style="<?= !$data['_fs_exists'] ? 'background-color: #fff3cd;' : '' ?>">
-          <td><input type="checkbox" class="grouped-assembly-checkbox" <?= !$data['_fs_exists'] ? 'disabled' : '' ?>></td>
+            style="<?= $data['_stale'] !== null ? 'background-color: #fff3cd;' : '' ?>">
+          <td><input type="checkbox" class="grouped-assembly-checkbox" <?= $data['_stale'] !== null ? 'disabled' : '' ?>></td>
           <td><?= htmlspecialchars($data['organism']) ?></td>
           <td class="text-muted"><?= $row_common_name ?></td>
           <td><?= htmlspecialchars($data['assembly']) ?></td>
@@ -207,7 +207,7 @@
             <?php endif; ?>
           </td>
           <td>
-            <?php if ($data['_fs_exists']):
+            <?php if ($data['_stale'] === null):
               $is_pub = ($data['public'] ?? false) === true; ?>
               <div class="form-check form-switch mb-0" title="Public gene sets are visible to everyone; restricted ones only to collaborators and IP-range users.">
                 <input class="form-check-input gene-set-public-toggle" type="checkbox" role="switch"
@@ -221,14 +221,16 @@
             <?php endif; ?>
           </td>
           <td>
-            <?php if (!$data['_fs_exists']): ?>
+            <?php if ($data['_stale'] === 'gone'): ?>
               <span class="badge bg-warning text-dark" title="Directory not found in filesystem">⚠️ Stale (dir missing)</span>
+            <?php elseif ($data['_stale'] === 'not_in_db'): ?>
+              <span class="badge bg-warning text-dark" title="The directory is on disk, but the organism's database has no row for this assembly (a rename or reload leftover), so its pages fail">⚠️ Stale (not in database)</span>
             <?php else: ?>
               <span class="badge bg-success">✓ Synced</span>
             <?php endif; ?>
           </td>
           <td>
-            <?php if (!$data['_fs_exists']): ?>
+            <?php if ($data['_stale'] !== null): ?>
               <button type="button" class="btn btn-danger btn-sm delete-stale-btn" data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Delete</button>
             <?php else: ?>
               <button type="button" class="btn btn-info btn-sm edit-groups" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Edit</button>
@@ -297,25 +299,19 @@
     </div>
   <?php endif; ?>
 
-  <?php
-    // Find stale entries (in JSON but directory doesn't exist)
-    $stale_entries = array_filter($groups_data_with_status, function($data) {
-      return !$data['_fs_exists'];
-    });
-  ?>
-  
+
   <?php if (!empty($stale_entries)): ?>
     <hr class="my-5">
     <div class="card border-warning mb-4">
       <div class="card-header adm-head-warn d-flex flex-wrap align-items-center gap-2">
         <span class="badge bg-warning text-dark fs-6">⚠️ Stale Entries (<?= count($stale_entries) ?>)</span>
-        <span class="text-muted small">— listed in the groups file, but the directory is missing on disk</span>
+        <span class="text-muted small">— listed in the groups file, but the directory is missing on disk or its assembly is not in the database</span>
         <button type="button" class="btn btn-danger btn-sm ms-auto delete-all-stale-btn" data-stale-count="<?= count($stale_entries) ?>" <?= $file_write_error ? 'data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>
           <i class="fa fa-trash"></i> Delete All Stale Entries
         </button>
       </div>
       <div class="card-body">
-        <p class="text-muted mb-3">These entries are in the JSON file but the corresponding directories were moved or deleted. Each is also highlighted with a yellow background in the &ldquo;Assemblies with Groups&rdquo; table above.</p>
+        <p class="text-muted mb-3">These entries are in the JSON file but point at nothing users can open: the directory was moved or deleted, or it is still there but the organism's database no longer has that assembly (renamed or reloaded under another name). Each is also highlighted with a yellow background in the &ldquo;Assemblies with Groups&rdquo; table above.</p>
         <table class="table table-hover mb-0">
           <thead>
             <tr>

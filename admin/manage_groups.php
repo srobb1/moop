@@ -71,13 +71,12 @@ $descriptions_data = $updated_descriptions;
 
 // Create a mapping of which entries exist in the filesystem
 // Check to the gene_set subdir level (or assembly level for entries without gene_set)
+// The stale rule is moop_group_entry_stale_reason() (lib/functions_data.php), shared with the
+// dashboard: directory gone, OR directory there but no database row (a rename/reload leftover).
+$orphaned_assembly_set   = moop_orphaned_assembly_set($organism_data_path);
 $groups_data_with_status = [];
 foreach ($groups_data as $data) {
-    $gs = $data['gene_set'] ?? 'v1';
-    $asm_ok = isset($all_organisms[$data['organism']]) && in_array($data['assembly'], $all_organisms[$data['organism']]);
-    $gs_path = $organism_data_path . '/' . $data['organism'] . '/' . $data['assembly'] . '/' . $gs;
-    $exists_in_fs = $asm_ok && is_dir($gs_path);
-    $data['_fs_exists'] = $exists_in_fs;
+    $data['_stale'] = moop_group_entry_stale_reason($data, $organism_data_path, $orphaned_assembly_set);
     $groups_data_with_status[] = $data;
 }
 
@@ -234,14 +233,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $deleted_count = 0;
         $log_entries = [];
 
+        $orphaned_assembly_set = moop_orphaned_assembly_set($organism_data_path);
         foreach ($groups_data as $key => $data) {
-            $gs = $data['gene_set'] ?? 'v1';
-            $asm_ok = isset($all_organisms[$data['organism']]) &&
-                      in_array($data['assembly'], $all_organisms[$data['organism']]);
-            $gs_path = $organism_data_path . '/' . $data['organism'] . '/' . $data['assembly'] . '/' . $gs;
-            $exists_in_fs = $asm_ok && is_dir($gs_path);
-
-            if (!$exists_in_fs) {
+            // The same rule the page lists them by (moop_group_entry_stale_reason())
+            if (moop_group_entry_stale_reason($data, $organism_data_path, $orphaned_assembly_set) !== null) {
                 $log_entries[] = sprintf(
                     "[%s] DELETE_STALE by %s | Organism: %s | Assembly: %s | Groups: [%s]",
                     $timestamp,
@@ -402,9 +397,7 @@ foreach ($unrepresented_tuples as $t) {
 }
 
 // Find stale entries (entries in groups_data but not in filesystem)
-$stale_entries = array_filter($groups_data_with_status, function($data) {
-    return !$data['_fs_exists'];
-});
+$stale_entries = array_filter($groups_data_with_status, fn($data) => $data['_stale'] !== null);
 
 // Gene_set directories on disk with no matching row in their organism's database —
 // e.g. dropped upstream during a DB rebuild but never cleaned up here. Distinct from
