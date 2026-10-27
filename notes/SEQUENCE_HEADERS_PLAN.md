@@ -319,7 +319,26 @@ First **measure** (see audit). Then, depending on the numbers:
 - and/or stop holding three copies of the result: write the pairwise and tabular downloads to
   files the download endpoint streams, instead of strings in memory.
 
-Effort: 1–3 h after measuring. Risk: low.
+**Move every web temp file off `/tmp`** (added 2026-10-27). `/tmp` is a **4 GB** volume, and
+php-fpm's PrivateTmp is just a directory on it. One big BLAST left a 374 MB archive + 268 MB
+XML (and pairwise + tabular exist alongside while it runs), so a few large jobs at once could
+fill it, and then every BLAST and sequence download fails. On 2026-10-27 scratch files filled
+it for real, briefly.
+
+- One helper, e.g. `moop_temp_dir()`, returning `{cache_path}/tmp` (data volume, 900 GB;
+  already `httpd_sys_rw_content_t`), falling back to `sys_get_temp_dir()` and logging if it
+  is unusable (fail open). Every `tempnam(sys_get_temp_dir(), …)` uses it: BLAST
+  (`blast_`, `blast_xml_`, `blast_pairwise_`, `blast_tabular_`), `blastdb_` batch files,
+  MAFFT, Galaxy. Grep for `sys_get_temp_dir` and `tempnam` to find them all.
+- `housekeeping_clean_temp_files()` cleans that directory (it currently only sees php-fpm's
+  private /tmp, so files made from the command line are never cleaned). Then CLI, cron and
+  web all see the same place.
+- Not under `organisms/`, and outside the document root, so nothing temporary is ever served.
+  Add the path to the writable allowlist (`moop_permission_check_mode()`) and
+  `scripts/fix_moop_selinux.sh` (CLAUDE.md §11: a missing entry fails silently).
+- Check on a real web request (PrivateTmp means "works in my shell" proves nothing).
+
+Effort: 1–3 h after measuring, plus ~1 h for the temp directory. Risk: low.
 
 ### Piece 4: the shared header builder (no visible change)
 
