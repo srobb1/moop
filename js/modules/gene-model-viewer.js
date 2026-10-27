@@ -279,7 +279,7 @@
                     ir.addEventListener('click', e => {
                         e.stopPropagation();
                         showSequenceModal({
-                            type: 'Intron', isoform: iso.id,
+                            type: 'Intron', isoform: iso.id, feature: iso, label: 'intron',
                             start: intronStart, end: intronEnd,
                             seqname: gene.seqname, strand: gene.strand,
                         });
@@ -308,7 +308,7 @@
                     rect.addEventListener('click', e => {
                         e.stopPropagation();
                         showSequenceModal({
-                            type: exonType, isoform: iso.id,
+                            type: exonType, isoform: iso.id, feature: iso, label: ex.type || 'exon',
                             start: ex.start, end: ex.end,
                             seqname: gene.seqname, strand: gene.strand,
                         });
@@ -330,7 +330,7 @@
                     rect.addEventListener('click', e => {
                         e.stopPropagation();
                         showSequenceModal({
-                            type: 'CDS', isoform: iso.id,
+                            type: 'CDS', isoform: iso.id, feature: iso, label: 'CDS',
                             start: cds.start, end: cds.end,
                             seqname: gene.seqname, strand: gene.strand,
                         });
@@ -574,6 +574,15 @@
         });
     }
 
+    // A FASTA header in the site's standard: the database ID, then the context the page worked out
+    // with the one PHP rule (moop_header_context(): gene=, gene_name=, transcript=), then what the
+    // record is and where. Nothing is decided here, so these match every download.
+    function fastaHeader(feature, label, seqname, start, end, strand) {
+        const id  = (feature && (feature.db_id || feature.id)) || seqname;
+        const ctx = feature && feature.header_context ? ' ' + feature.header_context : '';
+        return `>${id}${ctx} ${label} ${seqname}:${start}-${end}(${strand})`;
+    }
+
     function showSequenceModal(region) {
         ensureModal();
 
@@ -627,8 +636,8 @@
 
         // One entry for the full gene locus, then one per isoform span (includes introns)
         const regions = [
-            { label: gene.id || gene.seqname, type: 'Gene',    start: gene.start, end: gene.end },
-            ...isoforms.map(iso => ({ label: iso.id,           type: 'Isoform',   start: iso.start, end: iso.end })),
+            { feature: gene, start: gene.start, end: gene.end },
+            ...isoforms.map(iso => ({ feature: iso, start: iso.start, end: iso.end })),
         ];
 
         Promise.all(regions.map(r => fetchCachedSeq(gene.seqname, r.start, r.end, gene.strand)))
@@ -636,7 +645,7 @@
                 let fasta = '';
                 results.forEach((data, idx) => {
                     const r    = regions[idx];
-                    const hdr  = `>${r.label} ${r.type} genomic ${gene.seqname}:${r.start}-${r.end}(${gene.strand})`;
+                    const hdr  = fastaHeader(r.feature, 'genomic', gene.seqname, r.start, r.end, gene.strand);
                     // 80 per line: MOOP_FASTA_LINE_WIDTH in lib/blast_functions.php, as every other sequence on the site.
                     const body = data.sequence.match(/.{1,80}/g)?.join('\n') ?? data.sequence;
                     fasta += hdr + '\n' + body + '\n\n';
@@ -731,7 +740,7 @@
 
         // Sequence as FASTA — matches the downloaded file exactly
         const seq    = data.sequence;
-        const header = `>${region.isoform} ${region.type} ${region.seqname}:${region.start}-${region.end}(${region.strand})`;
+        const header = fastaHeader(region.feature, region.label || region.type, region.seqname, region.start, region.end, region.strand);
         const body   = seq.match(/.{1,80}/g)?.join('\n') ?? seq;   // MOOP_FASTA_LINE_WIDTH
         currentFasta    = header + '\n' + body;
         currentFilename = moopDownloadName(`${region.isoform}_${region.type}_${region.seqname}-${region.start}-${region.end}`, 'fa');
@@ -771,6 +780,7 @@
         showSequenceModal({
             type: `${label} ${bpLabel}`,
             isoform: gene.id || gene.seqname,
+            feature: gene, label: `${direction}_${bp}bp`,   // upstream_500bp, as the server writes it
             start, end,
             seqname: gene.seqname,
             strand,

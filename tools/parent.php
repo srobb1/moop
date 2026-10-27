@@ -442,8 +442,24 @@ if (!empty($gene_model['isoforms']) && !empty($children)) {
         // No match leaves the row unlinked, which is honest — better than a link that
         // silently scrolls nowhere.
         $__iso['anchor'] = $match !== null ? moop_annotation_card_anchor($match) : null;
+        $__iso['db_id']  = $match;   // the ID the FASTA headers use (the database's, not the GFF's)
     }
     unset($__iso);
+}
+
+// The FASTA the diagram's panels build in the browser (gene-model-viewer.js) gets the same headers
+// as every download: the database ID, then gene=/gene_name=/transcript=. Worked out HERE by the one
+// rule (moop_header_context(), lib/genomic_regions.php); the JS only places the text.
+if (!empty($gene_model['gene'])) {
+    require_once __DIR__ . '/../lib/genomic_regions.php';
+    $__hdr_ids = array_values(array_filter(array_merge([$feature_uniquename], array_column($gene_model['isoforms'] ?? [], 'db_id'))));
+    $__anchors = moop_genomic_anchors($__hdr_ids, $db, $accessible_gene_set_ids);
+    $gene_model['gene']['db_id']          = $feature_uniquename;
+    $gene_model['gene']['header_context'] = moop_header_context($feature_uniquename, $__anchors[$feature_uniquename] ?? null);
+    foreach ($gene_model['isoforms'] ?? [] as $__i => $__iso) {
+        if (empty($__iso['db_id'])) continue;
+        $gene_model['isoforms'][$__i]['header_context'] = moop_header_context($__iso['db_id'], $__anchors[$__iso['db_id']] ?? null);
+    }
 }
 
 // After the anchors are set (just above). A big gene's diagram draws ONE isoform (the one with the longest protein, else the first)

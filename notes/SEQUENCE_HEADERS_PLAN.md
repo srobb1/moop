@@ -581,6 +581,16 @@ Effort: ~1 h. Risk: low–medium.
 
 ### Piece 8: gene page genomic/flank panels (JS)
 
+**Status 2026-10-27: DONE.** `tools/parent.php` gives the gene and each isoform in
+`geneModelData` a `db_id` (the database ID, not the GFF's `rna-XM_...`) and a `header_context`
+from `moop_header_context()`; `gene-model-viewer.js` builds every header through one
+`fastaHeader()` and decides nothing itself. Live (real clicks): the FASTA button gives
+`>118665088 gene_name=PIGG genomic NW_023416313.1:43082-74463(+)` -- character-for-character
+Sequence Retrieval's header for that gene -- and `>XM_036326083.1 gene=118665088 gene_name=PIGG
+genomic ...` per isoform; an exon `>XM_036326083.1 gene=... exon ...`; a flank
+`>118665088 gene_name=PIGG upstream_1000bp ...`. NV2's unnamed gene: no gene_name. A smoke test
+fails if the viewer builds a header any other way.
+
 `js/modules/gene-model-viewer.js` builds its own headers (`>label type genomic chr:...`). Bring
 them to the standard. The page already knows the gene and its name, so no new lookup is needed.
 

@@ -1448,6 +1448,13 @@ ok($_an9['G9']['gene_name'] === null && $_an9['P9']['gene_name'] === null && $_a
 ok(moop_header_context('G9', $_an9['G9']) === '' && moop_header_context('G8', $_an9['G8']) === 'gene_name=Rad17',
    'a gene\'s own record: gene_name= when it has a real name, nothing otherwise');
 
+// The gene page builds some FASTA in the browser (gene-model-viewer.js). Its headers come from one
+// helper, fed the server's moop_header_context() text, so they match every download (piece 8).
+$_gmv = file_get_contents("$BASE/js/modules/gene-model-viewer.js");
+ok(preg_match_all('/`>\$\{/', $_gmv) === 1 && strpos($_gmv, 'function fastaHeader(') !== false
+   && strpos(file_get_contents("$BASE/tools/parent.php"), "['header_context'] = moop_header_context(") !== false,
+   'the gene page\'s browser-built FASTA headers all go through fastaHeader(), with context from the PHP rule');
+
 // Every place that serves extracted sequences adds the same headers, so the site is consistent
 // (Sofia, 2026-10-27). A new page or endpoint that calls extractSequencesForAllTypes() must too.
 $_plain = [];
