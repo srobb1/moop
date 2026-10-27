@@ -1175,6 +1175,20 @@ ok($_an['T1:cds']['locus'] === 'T1' && $_an['T1']['locus'] === 'T1', 'a CDS and 
 ok($_an['G1']['locus'] === 'G1' && $_an['G1']['transcript'] === null, 'a gene: itself');
 ok($_an['B1p']['locus'] === 'B1' && $_an['B1p']['gene_name'] === null, 'a bacterial protein -> gene chain: the gene; a name that is just its ID is not repeated');
 ok(!isset($_an['nope']), 'an ID not in the database has no anchor');
+
+// The header standard, in one place (moop_header_context / moop_fasta_with_context): context
+// after the ID, the source's own description kept, nothing that repeats the ID, and a record
+// with no context left exactly as it was.
+$_in  = ">T1:pep translocon subunit [Org]\nMAAA\n>T1:pep:1-2 translocon\nMA\n>T1:cds\nATG\n>T1 mRNA one\nACGT\n>G1 the gene\nACGT\n>nope kept as is\nAC\n";
+$_out = moop_fasta_with_context($_in, $_an);
+ok($_out === ">T1:pep gene=G1 gene_name=Abc1 transcript=T1 translocon subunit [Org]\nMAAA\n"
+            . ">T1:pep:1-2 gene=G1 gene_name=Abc1 transcript=T1 translocon\nMA\n"
+            . ">T1:cds gene=G1 gene_name=Abc1 transcript=T1\nATG\n"
+            . ">T1 gene=G1 gene_name=Abc1 mRNA one\nACGT\n"
+            . ">G1 the gene\nACGT\n>nope kept as is\nAC\n",
+   'headers: ID first, then gene/gene_name/transcript, then the original description; a range is looked up without it; no transcript= on the transcript, nothing on the gene, unknown IDs untouched');
+ok(moop_fasta_with_context($_in, []) === $_in && moop_header_context('B1p', $_an['B1p']) === 'gene=B1',
+   'no anchors -> the FASTA unchanged; a name that is only an ID is not shown (gene=B1, no gene_name)');
 file_put_contents("$_ad/genome.fa", ">c1\nACGTACGTACGTACGTACGT\n");
 file_put_contents("$_ad/genome.fa.fai", "c1\t20\t4\t20\t21\n");
 file_put_contents("$_ad/gs/feature_coords.tsv", "T1\tG1\tc1\t5\t16\t+\n");

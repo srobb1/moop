@@ -144,7 +144,7 @@ into Sequence Retrieval.
 |---|---|---|---|---|
 | 0 | ✅ Sequence Retrieval flanks (9fccbe42) | (done) | yes | — |
 | 1 | Batched streaming engine + Data Exporter; FASTA warnings move to the page | 2 live 502s, `#` lines in FASTA | small (warnings on page) | low |
-| 1b | Export slots (BLAST-queue design, never stuck); only if measurement says so | concurrent-export load | "busy" message, place in line | low–medium |
+| 1b | ~~Export slots~~ **not needed (measured 2026-10-27)** | — | — | — |
 | 2 | Sequence Retrieval + Retrieve Selected: download-only above X | 2 live 502s + big pages | yes | medium |
 | 3 | BLAST hit limits | unmeasured risk | small | low |
 | 4 | Shared header builder | — | none | none |
@@ -255,6 +255,24 @@ Verify:
   with isoforms in a list long enough to cross a boundary, a ranged ID.
 
 Effort: half a day. Risk: low; same output, produced differently, and provable by `cmp`.
+
+### ✅ Piece 1b: export slots -- measured, NOT needed (2026-10-27)
+
+Decision 6 said: measure first, add slots only if needed. Measured after pieces 1-3, on the
+live site, exports to /dev/null over loopback, five visitor pages (home, three gene pages from
+three organisms, Sequence Retrieval) timed in a loop for the whole run:
+
+| | page loads | median | slowest | lowest available RAM |
+|---|---|---|---|---|
+| nothing else running | 30 | 0.010 s | 0.138 s | 12.7 GB |
+| 5 whole-gene-set exports at once | 20 | 0.006 s | 0.058 s | 12.5 GB |
+| 10 at once (Myotis, NV2, Acropora: genomic, exons, mRNA, CDS, protein) | 1,510 | 0.006 s | 0.104 s | 12.5 GB |
+
+Every page 200. Streaming in batches made each export's memory small, so other users do not
+notice them. What slows is the exports themselves (they share the 8 cores: Myotis mRNA 5 s
+alone, 42 s among ten) -- and nobody waits on them. Not tested: network bandwidth to remote
+users (10 downloads of 0.1-0.9 GB each would share the link), and cold-cache pages. Revisit if
+either shows up; the BLAST-queue design is still the way, per Decision 6.
 
 ### Piece 2: Sequence Retrieval and Retrieve Selected: download-only above X
 
@@ -432,6 +450,13 @@ it for real, briefly.
 Effort: 1–3 h after measuring, plus ~1 h for the temp directory. Risk: low.
 
 ### Piece 4: the shared header builder (no visible change)
+
+**Status 2026-10-27: DONE.** `moop_header_context($id, $anchor)` holds the header rules (they
+were inline in `moop_retrieve_genomic()`, which now calls it); `moop_fasta_with_context($fasta,
+$anchors)` applies them to any FASTA text: context after the ID (a range like `X:1-60` looked
+up without it), the source's description kept, unknown IDs and sequence lines untouched. The
+per-ID lookup stays `moop_genomic_anchors()` (batched). Genomic output unchanged: existing exact
+header tests green, live Myotis demo header identical. 2 new tests, proven red.
 
 - Generalise `moop_genomic_anchors()` (`lib/genomic_regions.php`) into one context lookup for any
   sequence ID: `gene`, `gene_name`, `transcript`. Already batched (5,000 per query).

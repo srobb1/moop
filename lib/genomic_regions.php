@@ -275,6 +275,44 @@ function moop_genomic_anchors(array $ids, string $db_path, array $gene_set_ids =
 }
 
 /**
+ * The key=value pairs that say what a sequence belongs to -- THE header standard, in one place:
+ *
+ *   >ID gene=G gene_name=N transcript=T <the rest of the header, unchanged>
+ *
+ * Nothing that repeats the ID: no context at all on a gene's own record (the ID is the gene),
+ * no transcript= on the transcript itself. gene_name= only when moop_genomic_anchors() kept it
+ * (one word, and not just another of the feature's IDs). The ID stays the first word, because
+ * BLAST, samtools, scripts and the found/not-found marking all key on it.
+ *
+ * @param ?array $anchor one entry of moop_genomic_anchors(); null = nothing known, no context
+ */
+function moop_header_context(string $id, ?array $anchor): string {
+    if (!$anchor || $anchor['gene'] === $id) return '';
+    return 'gene=' . $anchor['gene']
+         . (($anchor['gene_name'] ?? null) !== null ? ' gene_name=' . $anchor['gene_name'] : '')
+         . ($anchor['transcript'] !== null && $anchor['transcript'] !== $id ? ' transcript=' . $anchor['transcript'] : '');
+}
+
+/**
+ * Put moop_header_context() into every header of a FASTA text, keeping everything else.
+ *
+ * The header's first word is the ID, perhaps with a range (X:1-60, as Sequence Retrieval and
+ * blastdbcmd write it); the context is looked up without the range and inserted straight after
+ * that word, before the source file's own description. A record with no context, and every
+ * sequence line, is left byte-for-byte as it was.
+ *
+ * @param array $anchors moop_genomic_anchors() for the IDs in $fasta (one batched lookup)
+ */
+function moop_fasta_with_context(string $fasta, array $anchors): string {
+    if (!$anchors || $fasta === '') return $fasta;
+    return preg_replace_callback('/^>(\S+)/m', function (array $m) use ($anchors) {
+        $id      = preg_replace('/:\d+-\d+$/', '', $m[1]);
+        $context = moop_header_context($id, $anchors[$id] ?? null);
+        return $context === '' ? $m[0] : ">{$m[1]} $context";
+    }, $fasta);
+}
+
+/**
  * Sequence Retrieval's genomic records: for every typed ID, its region (or the typed range
  * of it) and, when asked, its flanks -- each its own record, as the gene page and the Data
  * Exporter give them. Where the region comes from is moop_genomic_anchors().
@@ -327,12 +365,7 @@ function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $as
             if (!in_array($id, $skips['missing_chr'][$locus['chr']] ?? [], true)) $skips['missing_chr'][$locus['chr']][] = $id;
             continue;
         }
-        $context = '';
-        if ($anchor && $anchor['gene'] !== $id) {
-            $context = 'gene=' . $anchor['gene']
-                     . (($anchor['gene_name'] ?? null) !== null ? ' gene_name=' . $anchor['gene_name'] : '')
-                     . ($anchor['transcript'] !== null && $anchor['transcript'] !== $id ? ' transcript=' . $anchor['transcript'] : '');
-        }
+        $context = moop_header_context($id, $anchor);
         $parts = [];
         if ($r['start'] !== null && $anchor_of($id) !== $id) {
             $no_range[] = $id;
