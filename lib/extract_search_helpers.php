@@ -487,8 +487,8 @@ const MOOP_STREAM_BATCH = 500;
  * @param string   $gene_set_dir  directory holding the gene set's FASTA files
  * @param string[] $ids           feature uniquenames (genes or anything below them)
  * @param string   $type          sequence_types key: protein | transcript | cds
- * @param array    $opts          db_path, sequence_types (required); assembly, organism,
- *                                gene_set_ids (the ACCESS filter -- pass it), batch
+ * @param array    $opts          db_path, sequence_types (required); assembly, gene_set (scope by
+ *                                name), organism, gene_set_ids (the ACCESS filter -- pass it), batch
  * @return array{written:int, has_file:bool}  has_file false = the gene set has no $type FASTA
  */
 function moop_stream_sequences($handle, string $gene_set_dir, array $ids, string $type, array $opts): array {
@@ -502,7 +502,7 @@ function moop_stream_sequences($handle, string $gene_set_dir, array $ids, string
 
     foreach (array_chunk(array_values(array_unique($ids)), $opts['batch'] ?? MOOP_STREAM_BATCH) as $chunk) {
         $typed = array_diff_key(
-            expandFeaturesToAllSequenceTypes($chunk, $opts['db_path'], $opts['assembly'] ?? '', '', $opts['gene_set_ids'] ?? []),
+            expandFeaturesToAllSequenceTypes($chunk, $opts['db_path'], $opts['assembly'] ?? '', $opts['gene_set'] ?? '', $opts['gene_set_ids'] ?? []),
             $seen
         );
         if (!$typed) continue;
@@ -515,6 +515,118 @@ function moop_stream_sequences($handle, string $gene_set_dir, array $ids, string
         unset($typed, $fasta);
     }
     return ['written' => $written, 'has_file' => true];
+}
+
+/**
+ * Every descendant of each typed ID: Sequence Retrieval's expansion.
+ *
+ * A gene reaches its transcripts, CDS and proteins, and a range typed on the gene applies to
+ * all of them; a protein reaches nothing. (Unlike expandFeaturesToAllSequenceTypes(), which
+ * the search-results paths use, this never walks UP.) The page and its downloads both call
+ * this, so a download holds what the page shows. Two small queries per ID: 0.2 s for 2,000
+ * Myotis genes, 2.2 s for 20,000.
+ *
+ * @param array $gene_set_ids the ACCESS filter, and the scope: a uniquename is unique only
+ *                            within one gene set, and an organism may carry several
+ * @return array<string, list<string>> typed ID => its descendants' uniquenames (IDs with none omitted)
+ */
+function moop_retrieval_children(array $ids, string $db_path, array $gene_set_ids): array {
+    $map = [];
+    foreach ($ids as $id) {
+        $feature = getFeatureByUniquename($id, $db_path, $gene_set_ids);
+        if (empty($feature)) continue;
+        $children = array_column(getChildren($feature['feature_id'], $db_path, $gene_set_ids), 'feature_uniquename');
+        if ($children) $map[$id] = $children;
+    }
+    return $map;
+}
+
+/**
+ * Sequence Retrieval's download: ONE type for any number of typed IDs, a batch at a time.
+ *
+ * Each batch is exactly what the page does for a list that size -- moop_retrieval_children(),
+ * buildTypedIds(), extractSequencesForAllTypes() with the typed ranges, or for 'genome'
+ * moop_retrieve_genomic() with its flanks -- so a list that fits in one batch downloads
+ * byte-for-byte what the page shows (plus a final newline). The download used to re-run the
+ * page's whole extraction, every type plus the genome, to send one of them.
+ *
+ * A record written in an earlier batch is not written again (an ID typed twice, or a
+ * transcript typed as well as its gene).
+ *
+ * @param resource $handle
+ * @param array    $requests  parseFeatureIds()['requests']: id + optional start/end
+ * @param string   $type      protein | transcript | cds | genome
+ * @param array    $ctx       db_path, gene_set_ids, gene_set_dir, assembly_dir, sequence_types;
+ *                            assembly, gene_set, organism, upstream, downstream, batch
+ * @return int records written
+ */
+function moop_retrieval_stream($handle, array $requests, string $type, array $ctx): int {
+    $written = 0;
+    $seen    = [];
+    // One record out, unless it was already written (by its header line)
+    $write = function (string $record) use ($handle, &$seen, &$written) {
+        $record = rtrim($record, "\n");
+        $header = strtok($record, "\n");
+        if (isset($seen[$header])) return;
+        $seen[$header] = true;
+        fwrite($handle, $record . "\n");
+        $written++;
+    };
+    foreach (array_chunk($requests, $ctx['batch'] ?? MOOP_STREAM_BATCH) as $batch) {
+        $ids = array_values(array_unique(array_column($batch, 'id')));
+        try {
+            $children = moop_retrieval_children($ids, $ctx['db_path'], $ctx['gene_set_ids']);
+            $anchors  = $type === 'genome' ? moop_genomic_anchors($ids, $ctx['db_path'], $ctx['gene_set_ids']) : [];
+        } catch (Exception $e) {
+            // Without the database, extract the typed IDs as they are -- as the page does.
+            $children = [];
+            $anchors  = [];
+        }
+
+        if ($type === 'genome') {
+            // Each region is written as it is cut: a region runs to 500 kb, so a batch of them
+            // collected first could reach ~300 MB.
+            moop_retrieve_genomic($batch, $ctx['gene_set_dir'], $ctx['assembly_dir'],
+                                  $ctx['upstream'] ?? 0, $ctx['downstream'] ?? 0, $anchors, $write);
+            continue;
+        }
+        $all   = array_values(array_unique(array_merge($ids, ...array_values($children))));
+        $typed = buildTypedIds($all, $ctx['db_path'], $ctx['assembly'] ?? '', $ctx['gene_set'] ?? '');
+        $fasta = extractSequencesForAllTypes($ctx['gene_set_dir'], $typed, [$type => $ctx['sequence_types'][$type]],
+                                             $ctx['organism'] ?? '', $ctx['assembly'] ?? '', $batch, $children)['content'][$type] ?? '';
+        // One record per ">" line, each written as it is found (no second copy of the batch)
+        $at  = 0;
+        $len = strlen($fasta);
+        while ($at < $len) {
+            $next = strpos($fasta, "\n>", $at);
+            $end  = $next === false ? $len : $next;
+            $write(substr($fasta, $at, $end - $at));
+            $at = $end + 1;
+        }
+        unset($fasta, $children, $anchors);
+    }
+    return $written;
+}
+
+/**
+ * Send the headers for a streamed sequence download and return a handle to write it to.
+ *
+ * sendFileDownload()'s streaming sibling: no Content-Length (the size is not known until the
+ * last batch is written) and the output buffers cleared, so each batch leaves as it is written
+ * instead of piling up in PHP. Call only once nothing can fail any more: after the first byte
+ * the HTTP status cannot change.
+ *
+ * @return resource
+ */
+function beginSequenceDownload(string $sequence_type, array $scope = []) {
+    require_once __DIR__ . '/download_filename.php';
+    $filename = moop_download_filename('sequences', array_merge($scope, [$sequence_type]), 'fasta');
+    while (ob_get_level()) ob_end_clean();
+    set_time_limit(0);
+    header('Content-Type: application/octet-stream');
+    header("Content-Disposition: attachment; filename={$filename}");
+    header('Cache-Control: no-cache, no-store');
+    return fopen('php://output', 'w');
 }
 
 /**

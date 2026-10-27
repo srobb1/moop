@@ -128,6 +128,20 @@ if (!empty($sequence_ids_provided)) {
         } elseif (!is_dir($gene_set_dir)) {
             $extraction_errors[] = "Gene set directory not found for $assembly_name/$gene_set_name."
                 . ($available_gene_sets ? ' Available: ' . implode(', ', $available_gene_sets) . '.' : '');
+        } elseif (!empty($uniquenames) && $download_file_flag && isset($sequence_types[$sequence_type])
+                  && glob("$gene_set_dir/" . $sequence_types[$sequence_type]['pattern'])) {
+            // A download: this ONE type, streamed in batches, then exit. It used to extract every
+            // type for the whole selection (below) and then send one of them.
+            $out = beginSequenceDownload($sequence_type, [$organism_name, $assembly_name, $gene_set_name]);
+            moop_stream_sequences($out, $gene_set_dir, $uniquenames, $sequence_type, [
+                'db_path'        => "$organism_data/$organism_name/organism.sqlite",
+                'sequence_types' => $sequence_types,
+                'assembly'       => $assembly_name,
+                'gene_set'       => $gene_set_name,
+                'organism'       => $organism_name,
+            ]);
+            fclose($out);
+            exit;
         } elseif (!empty($uniquenames)) {
             $db_path = "$organism_data/$organism_name/organism.sqlite";
             // Expand each selected feature to every sequence type it has — mRNA, CDS AND
@@ -146,9 +160,6 @@ if (!empty($sequence_ids_provided)) {
         }
     }
     
-    // Handle download request if present
-    handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null,
-        [$organism_name ?? '', $assembly_name ?? '', $gene_set_name ?? '']);
 }
 
 // Parse form data for display

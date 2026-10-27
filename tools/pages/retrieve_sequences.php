@@ -217,6 +217,21 @@
         <!-- Sequences Display Section -->
         <?php if (!empty($displayed_content)): ?>
             <hr class="my-5" id="sequences-section">
+            <?php /* One FASTA file per type, for the IDs in the box (ranges and flanks included).
+                     The buttons submit the main form (form="downloadForm"), so the ID list is
+                     not copied into the page once per button; the server streams the one type
+                     asked for. This page had no download at all before: the shared sequence
+                     card only draws its buttons when given a gene name, which it is not here. */ ?>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3" id="retrieveDownloads">
+                <span class="small text-muted me-1"><i class="fa fa-download me-1"></i>Download as FASTA:</span>
+                <?php foreach ($sequence_types as $dl_type => $dl_config): ?>
+                    <?php if (empty($displayed_content[$dl_type])) continue; ?>
+                    <button type="submit" form="downloadForm" name="download_type" value="<?= htmlspecialchars($dl_type) ?>"
+                            class="btn btn-sm fw-semibold text-white btn-moop-teal">
+                        <?= htmlspecialchars($dl_config['label']) ?>
+                    </button>
+                <?php endforeach; ?>
+            </div>
             <?php
             // For retrieve_sequences.php, we have pre-extracted sequences with ranges
             // Don't set $gene_name to prevent sequences_display.php from re-extracting

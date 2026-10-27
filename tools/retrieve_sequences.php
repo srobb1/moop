@@ -31,8 +31,11 @@ ob_start();
 
 // Get parameters for processing
 $sequence_ids_provided = !empty($_POST['uniquenames']);
-$download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
-$sequence_type = trim($_POST['sequence_type'] ?? '');
+// A download names one sequence type: download_type from the page's Download buttons (they
+// submit the main form, so the ID list is not copied into the page once per button), or the
+// older download_file + sequence_type pair.
+$download_type = trim($_POST['download_type'] ?? '');
+if ($download_type === '' && ($_POST['download_file'] ?? '') === '1') $download_type = trim($_POST['sequence_type'] ?? '');
 
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/home_examples.php';  // moop_home_examples(): example IDs
@@ -160,23 +163,51 @@ if (!empty($sequence_ids_provided)) {
         }
     }
 
+    if (empty($extraction_errors) && $uniquenames) {
+        $db_path = $organism_data . '/' . $selected_organism . '/organism.sqlite';
+        [$gene_set_id] = getGeneSetInfo($fasta_source['assembly'], $fasta_source['gene_set'] ?? '', $db_path);
+        $gs_ids = $gene_set_id ? [$gene_set_id] : [];
+    }
+
+    // A download: ONE type, streamed in batches (moop_retrieval_stream), then exit -- none of
+    // the page's all-types extraction below. Only types this gene set has; anything else falls
+    // through to the page, which says what is there.
+    $source_key = $selected_organism . '|' . ($fasta_source['assembly'] ?? '') . '|' . ($fasta_source['gene_set'] ?? '');
+    $can_download = $download_type === 'genome'
+        ? !empty($source_has_genome[$source_key])
+        : isset($sequence_types[$download_type]) && glob(($fasta_source['path'] ?? '') . '/' . $sequence_types[$download_type]['pattern']);
+    if (empty($extraction_errors) && $uniquenames && $download_type !== '' && $can_download) {
+        try {
+            $db = verifyOrganismDatabase($selected_organism, $organism_data);
+        } catch (Exception $e) {
+            $db = $db_path;   // as the page does: the typed IDs, unexpanded
+        }
+        $out = beginSequenceDownload($download_type, [$selected_organism, $selected_assembly_accession, $selected_gene_set]);
+        moop_retrieval_stream($out, $requests, $download_type, [
+            'db_path'        => $db,
+            'gene_set_ids'   => $gs_ids,
+            'gene_set_dir'   => $fasta_source['path'],
+            'assembly_dir'   => dirname($fasta_source['path']),
+            'sequence_types' => $sequence_types,
+            'assembly'       => $fasta_source['assembly'],
+            'gene_set'       => $fasta_source['gene_set'] ?? '',
+            'organism'       => $selected_organism,
+            'upstream'       => $upstream_bp,
+            'downstream'     => $downstream_bp,
+        ]);
+        fclose($out);
+        exit;
+    }
+
     // Every descendant of each typed ID, so a gene reaches its transcripts, CDS and proteins
     // and a range typed on the gene applies to all of them. Scoped to the selected gene set:
     // a uniquename is unique only within one, and this organism may carry several.
     $parent_to_children = [];
     $genomic_anchors    = [];
     if (empty($extraction_errors) && $uniquenames) {
-        $db_path = $organism_data . '/' . $selected_organism . '/organism.sqlite';
-        [$gene_set_id] = getGeneSetInfo($fasta_source['assembly'], $fasta_source['gene_set'] ?? '', $db_path);
-        $gs_ids = $gene_set_id ? [$gene_set_id] : [];
         try {
             $db = verifyOrganismDatabase($selected_organism, $organism_data);
-            foreach ($uniquenames as $uniquename) {
-                $feature = getFeatureByUniquename($uniquename, $db, $gs_ids);
-                if (empty($feature)) continue;
-                $children = array_column(getChildren($feature['feature_id'], $db, $gs_ids), 'feature_uniquename');
-                if ($children) $parent_to_children[$uniquename] = $children;
-            }
+            $parent_to_children = moop_retrieval_children($uniquenames, $db, $gs_ids);
             // Where each typed ID's genomic sequence comes from: a protein or CDS ID uses its
             // transcript's span, so its flanks are its isoform's (lib/genomic_regions.php).
             $genomic_anchors = moop_genomic_anchors($uniquenames, $db, $gs_ids);
@@ -237,10 +268,6 @@ if (!empty($sequence_ids_provided)) {
     
     // Flag to scroll to results section if sequences were displayed
     $should_scroll_to_results = !empty($displayed_content);
-    
-    // Handle download request if present
-    handleSequenceDownload($download_file_flag, $sequence_type, $displayed_content[$sequence_type] ?? null,
-        [$selected_organism, $selected_assembly_accession, $selected_gene_set]);
 }
 
 // Get available sequence types from all accessible sources

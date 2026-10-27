@@ -1181,6 +1181,11 @@ ok(strpos($_r['fasta'], ">T1:pep gene=G1 gene_name=Abc1 transcript=T1 genomic c1
 ok(strpos($_r['fasta'], ">T1:pep gene=G1 gene_name=Abc1 transcript=T1 upstream_2bp c1:6-7(+)\n") !== false, '...and upstream of the isoform\'s start');
 ok(strpos($_r['fasta'], 'Z9') === false && ($_r['notes'][0] ?? '') === '1 feature skipped: no genome coordinates in this gene set (e.g. Z9).',
    'an ID in the database but not on the genome is reported, not dropped silently');
+$_emitted = '';
+$_r = moop_retrieve_genomic([$_req('T1:pep'), $_req('Z9')], "$_ad/gs", $_ad, 2, 0, $_an, function ($rec) use (&$_emitted) { $_emitted .= $rec; });
+$_whole = moop_retrieve_genomic([$_req('T1:pep'), $_req('Z9')], "$_ad/gs", $_ad, 2, 0, $_an);
+ok($_r['fasta'] === '' && $_emitted !== '' && $_emitted === $_whole['fasta'] && $_r['notes'] === $_whole['notes'],
+   'genomic records handed out one at a time (for a download) are the records the page collects, notes and all');
 $_r = moop_retrieve_genomic([$_req('T1:pep', 1, 2)], "$_ad/gs", $_ad, 2, 0, $_an);
 ok(strpos($_r['fasta'], ' genomic ') === false && strpos($_r['fasta'], 'upstream_2bp') !== false
    && strpos($_r['notes'][0] ?? '', 'A range on a protein or CDS ID') === 0,
@@ -1330,6 +1335,42 @@ $_r = $_stream(['G1', 'G2', 'G3', 'G4'], 'protein', 1);
 ok(count($_r['ids']) === 5 && count(array_unique($_r['ids'])) === 5, 'batch size 1: every gene its own batch, nothing lost');
 $_r = $_stream(['G1'], 'cds', 500);
 ok($_r['has_file'] === false && $_r['fasta'] === '', 'no FASTA of that type in the gene set -> has_file false, so the caller can say so');
+
+// Sequence Retrieval's download (moop_retrieval_stream): the page's own expansion -- a gene
+// reaches its isoforms, a typed protein only itself -- one batch at a time.
+require_once "$BASE/lib/database_queries.php";
+require_once "$BASE/lib/parent_functions.php";
+$_p = new PDO("sqlite:$_sd/organism.sqlite");
+$_p->exec("ALTER TABLE feature ADD COLUMN organism_id INTEGER DEFAULT 1;
+           ALTER TABLE feature ADD COLUMN feature_name TEXT DEFAULT '';
+           ALTER TABLE feature ADD COLUMN feature_description TEXT DEFAULT '';
+           CREATE TABLE organism (organism_id INTEGER PRIMARY KEY, genus TEXT, species TEXT, subtype TEXT, common_name TEXT, taxon_id INTEGER);
+           CREATE TABLE genome (genome_id INTEGER PRIMARY KEY, genome_accession TEXT, genome_name TEXT);
+           CREATE TABLE gene_set (gene_set_id INTEGER PRIMARY KEY, genome_id INTEGER, gene_set_name TEXT);
+           INSERT INTO organism VALUES (1,'G','s','','',1); INSERT INTO genome VALUES (1,'A1','A1');
+           INSERT INTO gene_set VALUES (1,1,'gs1'),(2,1,'gs2');");
+$_p = null;
+$_rctx = ['db_path' => "$_sd/organism.sqlite", 'gene_set_ids' => [1], 'gene_set_dir' => $_sd, 'assembly_dir' => $_sd,
+          'sequence_types' => $_st, 'assembly' => 'A1', 'gene_set' => 'gs1'];
+$_rs = function (array $ids, int $batch) use ($_rctx) {
+    $h = fopen('php://memory', 'w+');
+    $n = moop_retrieval_stream($h, array_map(fn($id) => ['id' => $id, 'start' => null, 'end' => null], $ids), 'protein', $_rctx + ['batch' => $batch]);
+    rewind($h); $fa = stream_get_contents($h); fclose($h);
+    preg_match_all('/^>(\S+)/m', $fa, $m);
+    return ['n' => $n, 'ids' => $m[1], 'fasta' => $fa];
+};
+$_ch = moop_retrieval_children(['G1', 'P2', 'G5'], "$_sd/organism.sqlite", [1]);
+ok($_ch === ['G1' => ['T1a', 'T1b', 'P1a', 'P1b']],
+   'the page\'s expansion: a gene reaches its isoforms and proteins, a protein nothing, another gene set nothing');
+$_r = $_rs(['G1', 'P2', 'P1a', 'G1', 'G5'], 1);
+$_got = $_r['ids']; sort($_got);
+ok($_got === ['P1a', 'P1b', 'P2'] && $_r['n'] === 3,
+   'Sequence Retrieval download: each protein once though G1 and P1a reach it in different batches; a typed protein gives itself; another gene set nothing');
+$_one = $_rs(['G1', 'P2'], 500);
+$_page = extractSequencesForAllTypes($_sd, buildTypedIds(['G1', 'P2', 'T1a', 'T1b', 'P1a', 'P1b'], "$_sd/organism.sqlite", 'A1', 'gs1'), $_st, '', 'A1',
+                                     [['id' => 'G1', 'start' => null, 'end' => null], ['id' => 'P2', 'start' => null, 'end' => null]],
+                                     moop_retrieval_children(['G1', 'P2'], "$_sd/organism.sqlite", [1]))['content']['protein'];
+ok($_one['fasta'] === $_page . "\n", 'a short list downloads byte-for-byte what the page shows (plus the final newline)');
 array_map('unlink', glob("$_sd/*")); @rmdir($_sd);
 
 // ----------------------------------------------------------------------------

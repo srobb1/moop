@@ -258,6 +258,27 @@ Effort: half a day. Risk: low; same output, produced differently, and provable b
 
 ### Piece 2: Sequence Retrieval and Retrieve Selected: download-only above X
 
+**Status 2026-10-27: part 2a done (streaming downloads); 2b (download-only above 50) next.**
+
+- **Found:** Sequence Retrieval had **no download buttons at all**. The shared sequence card
+  draws them only when given `$gene_name`, which this page sets to `''`; the controller's
+  download code was unreachable. Now a "Download as FASTA" row (one button per type shown)
+  submits the main form with `download_type`, so the ID list is not copied into the page.
+- Sequence Retrieval downloads: `moop_retrieval_stream()`: the PAGE's expansion
+  (`moop_retrieval_children()`, shared, never walks up) per batch of 500, ranges and flanks
+  kept. Genomic records are handed out one at a time (`moop_retrieve_genomic(..., $emit)`), so
+  memory no longer depends on region size (a batch of 500 near-500 kb regions would be ~300 MB).
+- Retrieve Selected downloads: `moop_stream_sequences()` (its page's expansion), new
+  `gene_set` scope option.
+- Both used to re-run the page's whole extraction (every type, plus genome) to send one type.
+- Peak memory, all 20,154 Myotis genes (CLI): protein 27 MB / 3.4 s, mRNA 51 MB / 4.2 s,
+  genomic + 500 bp upstream 19 MB / 17 s (812 MB file). Live: 200 for 2,000 and 20,154 genes;
+  whole-set protein = 61,156 records, the FASTA file's count.
+- Proof: page vs download identical (blank lines ignored) for every type, on both pages (NV2:
+  gene + protein + ranged transcript + flanks; 30 NV2 mRNAs). Real-browser click on the new
+  buttons; the posted form replayed. 4 new smoke tests, each proven red on a broken copy.
+- `handleSequenceDownload()` / `sendFileDownload()` remain for the gene page only (one gene).
+
 Sofia's direction (2026-10-27): **any number of IDs is allowed; do not cap what people can
 collect.** Big lists go straight to download, with a clear message, so neither the server nor the
 browser has to hold them.

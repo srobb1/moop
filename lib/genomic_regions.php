@@ -284,10 +284,13 @@ function moop_genomic_anchors(array $ids, string $db_path, array $gene_set_ids =
  * cut region, and a note says why, rather than a cut that looks right and is not.
  *
  * @param list<array{id: string, start: ?int, end: ?int}> $requests parseFeatureIds()
- * @param array $anchors moop_genomic_anchors(); empty = every ID is its own locus
+ * @param array    $anchors moop_genomic_anchors(); empty = every ID is its own locus
+ * @param callable $emit    optional: given each record as it is cut, instead of collecting them
+ *                          in 'fasta' -- a download then holds one region at a time (a region
+ *                          runs to 500 kb, so a batch of them collected was up to ~300 MB)
  * @return array{fasta: string, notes: list<string>}
  */
-function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $assembly_dir, int $upstream = 0, int $downstream = 0, array $anchors = []): array {
+function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $assembly_dir, int $upstream = 0, int $downstream = 0, array $anchors = [], ?callable $emit = null): array {
     $out = ['fasta' => '', 'notes' => []];
     if (!$requests) return $out;
     if (!is_file("$gene_set_dir/feature_coords.tsv") || !is_file("$assembly_dir/" . genome_fasta_filename() . '.fai')) {
@@ -346,7 +349,8 @@ function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $as
             $got = moop_genomic_sequence($genome, $region);
             if (!$got) continue;
             $shown_to = $from !== null ? $from + strlen($got['seq']) - 1 : null;
-            $out['fasta'] .= moop_genomic_fasta_record($id, $part, $bp, $got['region'], $got['seq'], $from, $shown_to, $context);
+            $record = moop_genomic_fasta_record($id, $part, $bp, $got['region'], $got['seq'], $from, $shown_to, $context);
+            if ($emit) $emit($record); else $out['fasta'] .= $record;
         }
     }
     moop_genome_close($genome);
