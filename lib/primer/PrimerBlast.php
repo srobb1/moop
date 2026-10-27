@@ -122,7 +122,8 @@ class PrimerBlast
             }
         }
 
-        $query_file = tempnam(sys_get_temp_dir(), 'moop_primer_q');
+        require_once __DIR__ . '/../temp_dir.php';
+        $query_file = tempnam(moop_temp_dir(), 'moop_primer_q');
         if ($query_file === false) {
             $result['error'] = 'Could not create a temporary query file.';
             return $result;

@@ -678,7 +678,8 @@ class Primer3Design
         // An explicit temp file, not a pipe through /tmp by name: php-fpm runs
         // with PrivateTmp, so anything exec'd from a web request gets its own
         // /tmp that is invisible from a shell (CLAUDE.md §11).
-        $in_file = tempnam(sys_get_temp_dir(), 'moop_p3_');
+        require_once __DIR__ . '/../temp_dir.php';
+        $in_file = tempnam(moop_temp_dir(), 'moop_p3_');
         if ($in_file === false) {
             return ['success' => false, 'error' => 'Could not create a temporary file.', 'results' => []];
         }

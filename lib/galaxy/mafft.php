@@ -183,7 +183,8 @@ class MAFFTTool {
      * Save FASTA content to temporary file
      */
     private function saveFastaFile($content) {
-        $file = tempnam(sys_get_temp_dir(), 'mafft_');
+        require_once __DIR__ . '/../temp_dir.php';
+        $file = tempnam(moop_temp_dir(), 'mafft_');
         file_put_contents($file, $content);
         return $file;
     }

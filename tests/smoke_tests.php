@@ -2589,6 +2589,31 @@ if (is_readable($_k['private']) && is_readable($_k['public'])) {
 }
 
 // ----------------------------------------------------------------------------
+group('Web temp files: off the small /tmp, one name in PHP and the setup script');
+// lib/temp_dir.php names {web root}/.{site}-tmp; scripts/fix_moop_selinux.sh creates and labels
+// it. Two derivations of one path drift silently (CLAUDE.md §11), so they are checked together.
+require_once "$BASE/lib/temp_dir.php";
+ok(moop_temp_dir_path() === dirname($BASE) . '/.' . basename($BASE) . '-tmp',
+   'the temp directory is a hidden one beside the app (nginx refuses dot paths)');
+ok(strpos(file_get_contents("$BASE/scripts/fix_moop_selinux.sh"), 'TEMP="${TEMP:-$(dirname "$MOOP")/.${SITE}-tmp}"') !== false,
+   'the setup script creates the same directory');
+$_t = moop_temp_dir();
+ok($_t === moop_temp_dir_path() ? is_writable($_t) : $_t === sys_get_temp_dir(),
+   'moop_temp_dir(): that directory when usable, otherwise the system temp dir (fails open)');
+$_items = moop_build_permission_items(ConfigManager::getInstance(), [
+    'web_group' => 'apache', 'moop_owner' => 'smr', 'metadata_path' => "$BASE/metadata",
+    'organism_data' => "$BASE/organisms", 'cache_path' => '', 'site_path' => $BASE,
+    'absolute_images_path' => "$BASE/images", 'docs_path' => "$BASE/docs", 'temp_path' => $BASE]);
+$_tr = array_values(array_filter($_items, fn($i) => $i['name'] === 'Temp Directory'))[0] ?? [];
+ok(($_tr['paths'] ?? null) === [$BASE] && !empty($_tr['sensitive']) && ($_tr['required_perms'] ?? '') === '2770'
+   && moop_permission_check_mode('Temp Directory') === 'writable',
+   'the permissions check covers it: writable (so SELinux is checked), sensitive, 2770');
+$_src = '';
+foreach (['lib/blast_functions.php', 'lib/primer/PrimerBlast.php', 'lib/primer/Primer3Design.php', 'lib/galaxy/mafft.php'] as $_f) $_src .= file_get_contents("$BASE/$_f");
+ok(!preg_match('/tempnam\(\s*sys_get_temp_dir\(\)/', $_src) && substr_count($_src, 'moop_temp_dir()') >= 5,
+   'BLAST, Primer BLAST, Primer3 and MAFFT write their temp files through moop_temp_dir()');
+
+// ----------------------------------------------------------------------------
 group('BLAST queue: it cannot get stuck');
 // lib/blast_queue.php. State is flock()s, which the kernel drops when a process dies, so the
 // things to prove are: a free unit is always takeable, nothing is held half-way, a dead

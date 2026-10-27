@@ -366,7 +366,25 @@ Effort: half a day to a day. Risk: medium (visible behaviour change on two pages
 
 ### Piece 3: BLAST hit limits
 
-**Status 2026-10-27: part 3a done (limits, measured); 3b (temp files off /tmp) next.**
+**Status 2026-10-27: piece 3 DONE.** 3a 8cefb717 (limits, measured); 3b (temp dir) below, verified live.
+
+- **3b:** web temp files go to `moop_temp_dir()` (lib/temp_dir.php): `{web root}/.{site}-tmp` =
+  `/var/www/html/.moop-tmp`, on the 900 GB disk. Hidden, so nginx's existing dot rule never
+  serves it. `/var/www/moop-cache` was NOT an option: `/var` is 4 GB and 85% full (2.6 GB of it
+  is `/var/cache/dnf`; `sudo dnf clean all` frees it). Fails open to the system temp dir until
+  the directory exists and is writable. Writers: BLAST (archive, XML, pairwise, tabular,
+  blastdb_), Primer BLAST, Primer3, MAFFT. Housekeeping clears any file over a day old in it,
+  and now also the primer tools' prefixes in /tmp (they were never cleaned). Added to the
+  permission check (writable, sensitive, 2770) and scripts/fix_moop_selinux.sh (creates it).
+- **Switched on and verified 2026-10-27** after `sudo scripts/fix_moop_selinux.sh`: the dir is
+  2770 apache:apache, httpd_sys_rw_content_t, and 404 over HTTP (dir and a file in it). Real web
+  requests: a genome BLAST was watched writing blast_, blast_xml_, blast_pairwise_ and
+  blast_tabular_ files there, and removing them (1,800 HSPs, 5.9 s, same as before); Primer BLAST
+  found its products; a ranged download (blastdbcmd reads its ID list from the dir) returned
+  both pieces; Primer Maker designed primers. Nothing left behind. MAFFT (via Galaxy) not run.
+- Seen on the way: four identical root-owned PDFs named `.aaa.{html,ini,log,pdf}` in
+  /var/www/html (2026-10-22 12:16, when the web root was set up): looks like an endpoint-security
+  ransomware canary. Not served (404). Left alone; ask IT if unsure.
 
 - **The audit was wrong that BLAST output was unbounded:** `blastOutputTooLarge()` already
   refused results over `blast_max_output_mb` before reading them. But its default (20 MB of XML)

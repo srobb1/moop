@@ -142,8 +142,10 @@ function runBlastSearch($query_seq, $blast_db, $program, $options = []) {
     $filter = $options['filter'] ? 'yes' : 'no';
     $task = $options['task'] ?? '';
     
-    // Create temporary directory for ASN.1 archive output
-    $temp_dir = sys_get_temp_dir();
+    // Temp files on the big disk, not the 4 GB /tmp: the raw archive can run to hundreds of MB
+    // before the size check sees it (lib/temp_dir.php)
+    require_once __DIR__ . '/temp_dir.php';
+    $temp_dir = moop_temp_dir();
     $archive_file = tempnam($temp_dir, 'blast_');
     
     if ($archive_file === false) {
@@ -517,7 +519,8 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
         }
     }
 
-    $temp_file = tempnam(sys_get_temp_dir(), 'blastdb_');
+    require_once __DIR__ . '/temp_dir.php';
+    $temp_file = tempnam(moop_temp_dir(), 'blastdb_');
     if ($temp_file === false || file_put_contents($temp_file, implode("\n", $batch) . "\n") === false) {
         if ($temp_file !== false) @unlink($temp_file);
         $result['error'] = 'Failed to write the batch file for sequence extraction';

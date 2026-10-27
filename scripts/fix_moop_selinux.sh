@@ -49,6 +49,10 @@ _PARENT="$(dirname "$(dirname "$MOOP")")"   # /var/www/html/moop -> /var/www
 CACHE="${CACHE:-$_PARENT/${SITE}-cache}"
 SITE_DATA="${SITE_DATA:-$_PARENT/${SITE}-site-data}"
 PRIVATE="${PRIVATE:-$_PARENT/${SITE}-private}"
+# Web temp files (BLAST results, primer/MAFFT inputs): beside the app, on the web root's disk,
+# NOT the small /tmp. Hidden (leading dot), so nginx's dot rule never serves it. Must match
+# moop_temp_dir_path() in lib/temp_dir.php -- /var/www/html/moop -> /var/www/html/.moop-tmp
+TEMP="${TEMP:-$(dirname "$MOOP")/.${SITE}-tmp}"
 GUARD_NAME="${GUARD_NAME:-${SITE}-security.conf}"
 
 # Directories the web server (php-fpm as apache) must be able to WRITE.
@@ -80,6 +84,7 @@ RW_DIRS=(
                                     # Without this rule a relabel reverts it to httpd_sys_content_t
                                     # (read-only) and Manage Users 500s — happened 2026-07-17.
     "$CACHE"                        # generated caches (organism scan, annotation counts, ...)
+    "$TEMP"                         # web temp files (lib/temp_dir.php); users' queries, so 2770
     "$MOOP/organisms"               # organism data + in-tree BLAST/.fai indexes the web builds
 )
 # WHY organisms/ is writable (settled 2026-07-16 — this is the intended end state, not a TODO):
@@ -193,6 +198,14 @@ fi
 chown apache:apache "$CACHE"
 chmod 2775 "$CACHE"   # SGID: new cache files inherit group apache (php-fpm + CLI both read/write)
 
+echo "== 2b. Create the web temp directory if missing (apache-owned, SGID, no world access) =="
+if [[ ! -d "$TEMP" ]]; then
+    mkdir -p "$TEMP"
+    echo "  created $TEMP"
+fi
+chown apache:apache "$TEMP"
+chmod 2770 "$TEMP"    # users' query sequences and results: group apache only, never world-readable
+
 echo "== 3. Persistent read-write SELinux rules (recursive) =="
 for d in "${RW_DIRS[@]}"; do
     [[ -d "$d" ]] || { echo "  SKIP (missing): $d"; continue; }
@@ -229,6 +242,7 @@ cat <<EOF
 
 DONE. Verify:
   ls -ldZ $CACHE                                         # httpd_sys_rw_content_t
+  ls -ldZ $TEMP                                          # httpd_sys_rw_content_t, 2770 apache
   ls -ldZ $MOOP/organisms                                # httpd_sys_rw_content_t (writable)
   getsebool httpd_can_network_connect                    # on
 

@@ -362,42 +362,42 @@ function housekeeping_run_tasks(array $only = []): array {
 // =====================================================================
 
 /**
- * Delete stale temp files created by BLAST, MAFFT, and other tools.
+ * Delete stale temp files created by BLAST, MAFFT, the primer tools and others.
  *
- * Targets files older than 24 hours with known prefixes in the system
- * temp directory. These accumulate when PHP processes crash mid-run.
+ * Files older than 24 hours. These accumulate when a PHP process dies mid-run.
+ *  - MOOP's own temp directory (lib/temp_dir.php): everything in it is ours, so ANY old file
+ *    goes -- a new writer cannot be forgotten by a prefix list.
+ *  - The system temp dir (php-fpm's private /tmp from here, or the fallback when MOOP's
+ *    directory is unusable): only the known prefixes. The primer tools' two were missing from
+ *    this list, so their orphans were never cleaned.
  */
 function housekeeping_clean_temp_files() {
-    $tmp_dir = sys_get_temp_dir();
+    require_once __DIR__ . '/temp_dir.php';
     $max_age = 86400; // 24 hours in seconds
     $now     = time();
     $deleted = 0;
+    $stale   = function (string $file) use ($now, $max_age, &$deleted) {
+        if (is_file($file) && $now - filemtime($file) > $max_age && @unlink($file)) $deleted++;
+    };
+
+    $own = moop_temp_dir_path();
+    if (is_dir($own)) {
+        foreach (glob("$own/*") ?: [] as $file) $stale($file);
+    }
 
     // Prefixes used by tempnam() calls throughout the codebase
     $prefixes = [
-        'blast_',         // blast_functions.php — archive output
-        'blast_xml_',     // blast_functions.php — XML conversion
-        'blast_pairwise_',// blast_functions.php — pairwise conversion
+        'blast_',         // blast_functions.php — archive, blast_xml_, blast_pairwise_, blast_tabular_
         'blastdb_',       // blast_functions.php — batch sequence extraction
         'mafft_',         // galaxy/mafft.php    — MAFFT alignment input
+        'moop_primer_q',  // primer/PrimerBlast.php   — primer query
+        'moop_p3_',       // primer/Primer3Design.php — primer3 input
         'galaxy_seqs_',   // galaxy testing
     ];
-
-    foreach ($prefixes as $prefix) {
-        $pattern = $tmp_dir . '/' . $prefix . '*';
-        $files = glob($pattern);
-        if (!is_array($files)) {
-            continue;
-        }
-        foreach ($files as $file) {
-            if (!is_file($file)) {
-                continue;
-            }
-            $age = $now - filemtime($file);
-            if ($age > $max_age) {
-                @unlink($file);
-                $deleted++;
-            }
+    $tmp_dir = sys_get_temp_dir();
+    if ($tmp_dir !== $own) {
+        foreach ($prefixes as $prefix) {
+            foreach (glob($tmp_dir . '/' . $prefix . '*') ?: [] as $file) $stale($file);
         }
     }
 

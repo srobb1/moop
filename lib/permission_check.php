@@ -18,6 +18,8 @@
  * by which point admin_init has loaded them for both callers.
  */
 
+require_once __DIR__ . '/temp_dir.php';   // moop_temp_dir_path(): the Temp Directory rule
+
 require_once __DIR__ . '/jbrowse/track_token.php';   // moop_jwt_key_paths(): the keys signing really uses
 
 /**
@@ -81,6 +83,7 @@ function moop_permission_check_mode(string $name): string {
         'JBrowse2 Track Config Directory' => 1,  // metadata/jbrowse2-configs
         'Genome Data Directory'           => 1,  // data/genomes — gff.gz + tabix
         'Cache Directory'                 => 1,  // cache_path
+        'Temp Directory'                  => 1,  // lib/temp_dir.php: BLAST, primer, MAFFT temp files
         'Organism Cache File'             => 1,  // under cache_path
         'Gene Set Identity Cache'         => 1,  // under cache_path — lib/gene_set_identity.php
         'Images Directory'                => 1,  // images/ — organism images upload HERE, flat
@@ -870,6 +873,23 @@ function moop_build_permission_items($config, array $ctx): array {
             'sgid_bit' => true,
         ],
 
+        // Temp Directory - Write Required (lib/temp_dir.php). Checked once it exists; until then
+        // MOOP uses the system temp dir. Sensitive: it holds users' query sequences and results,
+        // some from restricted assemblies, so nobody outside apache's group may read it.
+        [
+            'name' => 'Temp Directory',
+            'description' => 'BLAST results, sequence lists and primer/alignment inputs while a request runs. Removed after use; housekeeping clears anything over a day old.',
+            'type' => 'directory',
+            'paths' => (is_dir($ctx['temp_path'] ?? '') ? [$ctx['temp_path']] : []),
+            'required_perms' => '2770',
+            'required_owner' => 'apache',
+            'required_group' => $web_group,
+            'reason' => 'Kept off the small /tmp volume, on the disk that holds the web root; hidden (leading dot), so nginx never serves it',
+            'why_write' => 'Every BLAST search, Primer BLAST/Maker run and MAFFT alignment writes its temp files here',
+            'sgid_bit' => true,
+            'sensitive' => true,
+        ],
+
         // Database Files - Read Only
         [
             'name' => 'SQLite Database Files',
@@ -1178,6 +1198,7 @@ function moop_collect_permission_checks($config): array {
         'metadata_path'        => $metadata_path,
         'organism_data'        => $organism_data,
         'cache_path'           => $cache_path,
+        'temp_path'            => moop_temp_dir_path(),
         'site_path'            => $site_path,
         'absolute_images_path' => $absolute_images_path,
         'docs_path'            => $docs_path,
