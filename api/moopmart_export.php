@@ -370,6 +370,9 @@ if ($output_format === 'tsv') {
                     'assembly'       => $assembly,
                     'organism'       => $org,
                     'gene_set_ids'   => $gs_id_int ? [$gs_id_int] : [],
+                    // gene=, gene_name=, transcript= in each header, worked out from the same walk
+                    // (~+10% of the export's time, measured; a separate lookup was +22-34%)
+                    'context'        => true,
                 ]);
             }
         }

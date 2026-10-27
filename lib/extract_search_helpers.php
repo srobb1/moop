@@ -283,6 +283,10 @@ function buildTypedIds(array $uniquenames, string $db_path, string $assembly = '
  * @param string $assembly     optional scope — accession or genome name
  * @param string $gene_set     optional scope — gene set name
  * @param array  $gene_set_ids optional ACCESS filter — accessible gene_set_id values
+ * @param ?array $family       optional, filled with every row both walks returned, feature_id =>
+ *                             [feature_uniquename, feature_type, feature_name, parent_feature_id]:
+ *                             the family the header context is worked out from
+ *                             (moop_anchors_from_family()) without walking up again
  * @return array uniquename => feature_type, ready for extractSequencesForAllTypes()
  */
 function expandFeaturesToAllSequenceTypes(
@@ -290,7 +294,8 @@ function expandFeaturesToAllSequenceTypes(
     string $db_path,
     string $assembly = '',
     string $gene_set = '',
-    array  $gene_set_ids = []
+    array  $gene_set_ids = [],
+    ?array &$family = null
 ): array {
     if (empty($uniquenames) || !file_exists($db_path)) {
         return [];
@@ -331,6 +336,10 @@ function expandFeaturesToAllSequenceTypes(
         }
 
         $seed_ph = implode(',', array_fill(0, count($seed_ids), '?'));
+        // The family's links and names only when asked for: every other caller keeps the query
+        // it had, so nothing else depends on those columns.
+        $cols = $family !== null ? 'f.feature_id, f.feature_uniquename, f.feature_type, f.feature_name, f.parent_feature_id'
+                                 : 'f.feature_uniquename, f.feature_type';
 
         // --- Down: every descendant, in ONE recursive query ---------------------------
         $descendants = "WITH RECURSIVE d(feature_id) AS (
@@ -338,7 +347,7 @@ function expandFeaturesToAllSequenceTypes(
                             UNION
                             SELECT f.feature_id FROM feature f JOIN d ON f.parent_feature_id = d.feature_id
                         )
-                        SELECT f.feature_uniquename, f.feature_type
+                        SELECT $cols
                           FROM feature f JOIN d ON d.feature_id = f.feature_id
                          WHERE 1=1 $gs_clause";
 
@@ -351,7 +360,7 @@ function expandFeaturesToAllSequenceTypes(
                           SELECT f.feature_id, f.parent_feature_id
                             FROM feature f JOIN a ON f.feature_id = a.parent_feature_id
                       )
-                      SELECT f.feature_uniquename, f.feature_type
+                      SELECT $cols
                         FROM feature f JOIN a ON a.feature_id = f.feature_id
                        WHERE 1=1 $gs_clause";
 
@@ -361,6 +370,7 @@ function expandFeaturesToAllSequenceTypes(
             $s->execute(array_merge(array_values($seed_ids), $gs_params));
             foreach ($s->fetchAll(PDO::FETCH_ASSOC) as $row) {
                 $typed[$row['feature_uniquename']] = $row['feature_type'];
+                if ($family !== null) $family[$row['feature_id']] = $row;
             }
         }
 
@@ -519,8 +529,8 @@ const MOOP_STREAM_BATCH = 500;
  * @param string   $type          sequence_types key: protein | transcript | cds
  * @param array    $opts          db_path, sequence_types (required); assembly, gene_set (scope by
  *                                name), organism, gene_set_ids (the ACCESS filter -- pass it), batch,
- *                                context (true = gene=/transcript= headers, as the page shows them;
- *                                context_gene_set_ids scopes that lookup when gene_set_ids is empty)
+ *                                context (true = gene=/gene_name=/transcript= headers, the standard;
+ *                                worked out from the expansion's own walk, no second lookup)
  * @return array{written:int, has_file:bool}  has_file false = the gene set has no $type FASTA
  */
 function moop_stream_sequences($handle, string $gene_set_dir, array $ids, string $type, array $opts): array {
@@ -533,8 +543,12 @@ function moop_stream_sequences($handle, string $gene_set_dir, array $ids, string
     $written  = 0;
 
     foreach (array_chunk(array_values(array_unique($ids)), $opts['batch'] ?? MOOP_STREAM_BATCH) as $chunk) {
+        // With context, the expansion also hands back the family it walked, and the headers are
+        // worked out from that in memory (moop_anchors_from_family()). A separate lookup per
+        // sequence cost +22-34% of the export's time (Myotis protein 3.4 -> 4.5 s).
+        $family = !empty($opts['context']) ? [] : null;
         $typed = array_diff_key(
-            expandFeaturesToAllSequenceTypes($chunk, $opts['db_path'], $opts['assembly'] ?? '', $opts['gene_set'] ?? '', $opts['gene_set_ids'] ?? []),
+            expandFeaturesToAllSequenceTypes($chunk, $opts['db_path'], $opts['assembly'] ?? '', $opts['gene_set'] ?? '', $opts['gene_set_ids'] ?? [], $family),
             $seen
         );
         if (!$typed) continue;
@@ -542,8 +556,11 @@ function moop_stream_sequences($handle, string $gene_set_dir, array $ids, string
 
         $fasta = extractSequencesForAllTypes($gene_set_dir, $typed, $one_type, $opts['organism'] ?? '', $opts['assembly'] ?? '')['content'][$type] ?? '';
         if ($fasta === '') continue;
-        if (!empty($opts['context'])) {
-            $fasta = moop_content_with_context([$type => $fasta], $opts['db_path'], $opts['context_gene_set_ids'] ?? $opts['gene_set_ids'] ?? [])[$type];
+        if ($family) {
+            // Only the IDs that are this file's headers (a protein file: about a quarter of the family)
+            require_once __DIR__ . '/genomic_regions.php';
+            $in_file = array_keys(array_filter($typed, fn($t) => $t === null || _fasta_key_for_type((string)$t) === $type));
+            $fasta   = moop_fasta_with_context($fasta, moop_anchors_from_family($in_file, $family));
         }
         fwrite($handle, $fasta . "\n");
         $written += substr_count($fasta, "\n>") + 1;

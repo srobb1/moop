@@ -255,21 +255,60 @@ function moop_genomic_anchors(array $ids, string $db_path, array $gene_set_ids =
             $walk[(string)$row['seed_name']][(int)$row['depth']] = $row;
         }
     }
-    $sub = ['cds' => 1, 'protein' => 1, 'polypeptide' => 1, 'exon' => 1];
     $out = [];
     foreach ($walk as $id => $chain) {
         ksort($chain);
-        $top   = end($chain);
-        $gene  = (string)$top['feature_uniquename'];
-        $locus = $gene;
-        foreach ($chain as $row) {
-            if (!isset($sub[strtolower((string)$row['feature_type'])])) { $locus = (string)$row['feature_uniquename']; break; }
+        $out[$id] = moop_anchor_from_chain((string)$id, array_values($chain));
+    }
+    return $out;
+}
+
+/**
+ * The anchor of one ID from its chain of ancestors -- the rules moop_genomic_anchors() applies,
+ * in one place, so a caller that already holds the chain (the Data Exporter's own walk down from
+ * each gene) gets the same answer without walking up again.
+ *
+ * @param array $chain rows from the ID itself up to the top (feature_uniquename, feature_type,
+ *                     feature_name), nearest first
+ * @return array{locus: string, gene: string, gene_name: ?string, transcript: ?string}
+ */
+function moop_anchor_from_chain(string $id, array $chain): array {
+    static $sub = ['cds' => 1, 'protein' => 1, 'polypeptide' => 1, 'exon' => 1];
+    $top   = end($chain);
+    $gene  = (string)$top['feature_uniquename'];
+    $locus = $gene;
+    foreach ($chain as $row) {
+        if (!isset($sub[strtolower((string)$row['feature_type'])])) { $locus = (string)$row['feature_uniquename']; break; }
+    }
+    // A RefSeq gene's uniquename is a bare GeneID (118665088); its name (PIGG) is what a
+    // reader recognises. Only a real name: one word, and not just another of its IDs.
+    $name = trim((string)($top['feature_name'] ?? ''));
+    if ($name === '' || preg_match('/\s/', $name) || $name === $gene || $name === $locus || $name === $id) $name = null;
+    return ['locus' => $locus, 'gene' => $gene, 'gene_name' => $name, 'transcript' => $locus !== $gene ? $locus : null];
+}
+
+/**
+ * Anchors for IDs whose whole family is already in hand: climb each one's parent links in
+ * $family (feature_id => row) and apply moop_anchor_from_chain(). No query. A parent outside
+ * $family ends the chain there, as a gene-set-scoped walk up would.
+ *
+ * @param array $family feature_id => [feature_uniquename, feature_type, feature_name, parent_feature_id]
+ */
+function moop_anchors_from_family(array $ids, array $family): array {
+    $by_name = [];
+    foreach ($family as $fid => $row) $by_name[(string)$row['feature_uniquename']] = $fid;
+    $out = [];
+    foreach ($ids as $id) {
+        $fid = $by_name[(string)$id] ?? null;
+        if ($fid === null) continue;
+        $chain = [];
+        $seen  = [];
+        while ($fid !== null && isset($family[$fid]) && !isset($seen[$fid]) && count($chain) <= MOOP_HIERARCHY_MAX_DEPTH) {
+            $seen[$fid] = true;   // cycle guard, as the SQL walks have
+            $chain[] = $family[$fid];
+            $fid = $family[$fid]['parent_feature_id'] ?? null;
         }
-        // A RefSeq gene's uniquename is a bare GeneID (118665088); its name (PIGG) is what a
-        // reader recognises. Only a real name: one word, and not just another of its IDs.
-        $name = trim((string)($top['feature_name'] ?? ''));
-        if ($name === '' || preg_match('/\s/', $name) || $name === $gene || $name === $locus || $name === $id) $name = null;
-        $out[$id] = ['locus' => $locus, 'gene' => $gene, 'gene_name' => $name, 'transcript' => $locus !== $gene ? $locus : null];
+        $out[(string)$id] = moop_anchor_from_chain((string)$id, $chain);
     }
     return $out;
 }
@@ -305,11 +344,28 @@ function moop_header_context(string $id, ?array $anchor): string {
  */
 function moop_fasta_with_context(string $fasta, array $anchors): string {
     if (!$anchors || $fasta === '') return $fasta;
-    return preg_replace_callback('/^>(\S+)/m', function (array $m) use ($anchors) {
-        $id      = preg_replace('/:\d+-\d+$/', '', $m[1]);
+    // Jump from header to header ("\n>"), never looking at sequence lines: a regex anchored at
+    // every line start spent ~0.5 s per 240 MB on lines it then left alone.
+    $parts = [];
+    $done  = 0;
+    $at    = $fasta[0] === '>' ? 0 : strpos($fasta, "\n>");
+    if ($at !== false && $at > 0) $at++;
+    while ($at !== false) {
+        $len     = strcspn($fasta, " \t\n\r\f\v", $at + 1);   // the ID: the header's first word
+        $word    = substr($fasta, $at + 1, $len);
+        $id      = strpos($word, '-') !== false ? preg_replace('/:\d+-\d+$/', '', $word) : $word;
         $context = moop_header_context($id, $anchors[$id] ?? null);
-        return $context === '' ? $m[0] : ">{$m[1]} $context";
-    }, $fasta);
+        if ($context !== '') {
+            $end     = $at + 1 + $len;
+            $parts[] = substr($fasta, $done, $end - $done) . ' ' . $context;
+            $done    = $end;
+        }
+        $next = strpos($fasta, "\n>", $at + 1);
+        $at   = $next === false ? false : $next + 1;
+    }
+    if (!$parts) return $fasta;
+    $parts[] = substr($fasta, $done);
+    return implode('', $parts);
 }
 
 /**

@@ -1405,7 +1405,23 @@ $_h = fopen('php://memory', 'w+');
 moop_stream_sequences($_h, $_sd, ['G2'], 'protein', $_so);
 rewind($_h); $_rawfa = stream_get_contents($_h); fclose($_h);
 ok($_ctxfa === ">P2 gene=G2 transcript=T2 desc of P2\nMDDD\n" && $_rawfa === ">P2 desc of P2\nMDDD\n",
-   'Retrieve Selected\'s download (context => true) gets the headers; without it (the Data Exporter, until piece 6) unchanged');
+   'with context => true (Retrieve Selected, the Data Exporter) the headers are added; without it the FASTA is unchanged');
+// The Data Exporter works the context out from the family its own walk returned (no second
+// lookup: that was +22-34% of the export's time). It must agree with the lookup, ID for ID.
+$_fam = [];
+$_typed = expandFeaturesToAllSequenceTypes(['G1', 'G2', 'G3'], "$_sd/organism.sqlite", '', '', [1], $_fam);
+ok(moop_anchors_from_family(array_keys($_typed), $_fam) == moop_genomic_anchors(array_keys($_typed), "$_sd/organism.sqlite", [1])
+   && count($_fam) === count($_typed),
+   'context from the export\'s own walk == the separate lookup, for every gene, mRNA and protein');
+ok(expandFeaturesToAllSequenceTypes(['G1', 'G2', 'G3'], "$_sd/organism.sqlite", '', '', [1]) === $_typed,
+   'asking for the family does not change the expansion');
+$_loop = [10 => ['feature_uniquename' => 'A', 'feature_type' => 'protein', 'feature_name' => '', 'parent_feature_id' => 11],
+          11 => ['feature_uniquename' => 'B', 'feature_type' => 'mRNA', 'feature_name' => '', 'parent_feature_id' => 10]];
+ok((moop_anchors_from_family(['A'], $_loop)['A']['gene'] ?? null) === 'B', 'a parent loop in the data (A -> B -> A) ends the climb at B instead of spinning');
+ok(moop_fasta_with_context(">P2 x\nM\n>Q no ctx\nAC\n>P2:1-2 r\nM\n", ['P2' => ['locus' => 'T2', 'gene' => 'G2', 'gene_name' => null, 'transcript' => 'T2']])
+     === ">P2 gene=G2 transcript=T2 x\nM\n>Q no ctx\nAC\n>P2:1-2 gene=G2 transcript=T2 r\nM\n"
+   && moop_fasta_with_context("no header line\nAC\n", ['P2' => ['locus' => 'T2', 'gene' => 'G2', 'gene_name' => null, 'transcript' => 'T2']]) === "no header line\nAC\n",
+   'the header rewrite jumps record to record: first, middle and ranged headers; text with no header untouched');
 ok(moop_content_with_context(['protein' => ">P2 x\nM\n", 'genome' => ">P2 genomic c1:1-2(+)\nAC\n"], "$_sd/organism.sqlite", [1])
      === ['protein' => ">P2 gene=G2 transcript=T2 x\nM\n", 'genome' => ">P2 genomic c1:1-2(+)\nAC\n"]
    && moop_content_with_context(['protein' => ">P2 x\nM\n"], "$_sd/missing.sqlite", [1]) === ['protein' => ">P2 x\nM\n"],

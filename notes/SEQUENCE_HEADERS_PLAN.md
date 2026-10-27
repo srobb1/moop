@@ -512,6 +512,23 @@ Effort: ~2 h. Risk: low–medium; screenshot each page.
 
 ### Piece 6: headers in Data Exporter protein/mRNA/CDS
 
+**Status 2026-10-27: DONE.** The Data Exporter's protein/mRNA/CDS files carry the headers
+(`'context' => true`). Measured: the simple route (a lookup per batch) cost +22-34%, as the plan
+warned, so the context now comes from the export's own walk:
+`expandFeaturesToAllSequenceTypes(..., &$family)` hands back the rows it walked (columns fetched
+only when asked), `moop_anchors_from_family()` climbs them in memory with the same rules
+(`moop_anchor_from_chain()`, split out of `moop_genomic_anchors()`, so there is one copy), only for
+the IDs that are the file's headers, and `moop_fasta_with_context()` now jumps header to header
+(242 MB: 0.53 s -> 0.29 s). Result: **+8-10%** (Myotis protein 3.33 -> 3.68 s, NV2 2.22 -> 2.39 s),
+peak memory +1-3 MB. Not the ~3% estimated: the walk is 80% of the export already; not worth
+reworking for 0.3 s. Proof: 12 whole-gene-set outputs (Myotis, NV2, Bradyrhizobium, Drosophila x
+protein/mRNA/CDS) byte-identical to the lookup route; Retrieve Selected page == download. Live:
+every record of all 6 NV2/Myotis whole-set files has gene=; counts unchanged.
+- Seen: `gene_name=LOC118648923` (Myotis): NCBI's placeholder, not a name. The rule hides only a
+  name identical to an ID. Left as is: LOC names belong to the GFF/FASTA/DB ID-alignment plan.
+- Still plain: the search-results "Download FASTA" (`api/download_search_fasta.php`). The
+  Downloads page is plain BY DESIGN (decision 3: deposited files byte-identical).
+
 Needs piece 1.
 
 - **Not** a separate lookup per output ID: measured **+22–25%** export time (NV2 +0.5 s on
