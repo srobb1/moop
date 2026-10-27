@@ -134,12 +134,17 @@ if (!empty($sequence_ids_provided)) {
             // A download: this ONE type, streamed in batches, then exit. It used to extract every
             // type for the whole selection (below) and then send one of them.
             $out = beginSequenceDownload($sequence_type, [$organism_name, $assembly_name, $gene_set_name]);
+            $db_path = "$organism_data/$organism_name/organism.sqlite";
+            [$gene_set_id] = getGeneSetInfo($assembly_name, $gene_set_name, $db_path);
             moop_stream_sequences($out, $gene_set_dir, $uniquenames, $sequence_type, [
-                'db_path'        => "$organism_data/$organism_name/organism.sqlite",
+                'db_path'        => $db_path,
                 'sequence_types' => $sequence_types,
                 'assembly'       => $assembly_name,
                 'gene_set'       => $gene_set_name,
                 'organism'       => $organism_name,
+                // the headers the page shows (gene=, transcript=)
+                'context'        => true,
+                'context_gene_set_ids' => $gene_set_id ? [$gene_set_id] : [],
             ]);
             fclose($out);
             exit;
@@ -160,7 +165,9 @@ if (!empty($sequence_ids_provided)) {
             // more than one gene set, and an unscoped lookup lets the last row win.
             $typed_ids = expandFeaturesToAllSequenceTypes($uniquenames, $db_path, $assembly_name, $gene_set_name);
             $extract_result = extractSequencesForAllTypes($gene_set_dir, $typed_ids, $sequence_types);
-            $displayed_content = $extract_result['content'];
+            // gene=, gene_name=, transcript= in the headers; the download adds the same
+            [$gene_set_id] = getGeneSetInfo($assembly_name, $gene_set_name, $db_path);
+            $displayed_content = moop_content_with_context($extract_result['content'], $db_path, $gene_set_id ? [$gene_set_id] : []);
             if (!empty($extract_result['errors'])) {
                 $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
             }

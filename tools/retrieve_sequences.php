@@ -260,7 +260,9 @@ if (!empty($sequence_ids_provided)) {
     if (empty($extraction_errors) && !empty($uniquenames) && !$retrieval_summary) {
         $typed_ids = buildTypedIds($uniquenames, $db_path, $fasta_source['assembly'], $fasta_source['gene_set'] ?? '');
         $extract_result = extractSequencesForAllTypes($fasta_source['path'], $typed_ids, $sequence_types, $selected_organism, $selected_assembly_accession, $requests, $parent_to_children);
-        $displayed_content = $extract_result['content'];
+        // gene=, gene_name=, transcript= in the headers (lib/genomic_regions.php's standard); the
+        // download (moop_retrieval_stream) adds the same, so the two still match
+        $displayed_content = moop_content_with_context($extract_result['content'], $db_path, $gs_ids);
         if (!empty($extract_result['errors'])) {
             $extraction_errors = array_merge($extraction_errors, $extract_result['errors']);
         }

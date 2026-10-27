@@ -1390,10 +1390,26 @@ $_got = $_r['ids']; sort($_got);
 ok($_got === ['P1a', 'P1b', 'P2'] && $_r['n'] === 3,
    'Sequence Retrieval download: each protein once though G1 and P1a reach it in different batches; a typed protein gives itself; another gene set nothing');
 $_one = $_rs(['G1', 'P2'], 500);
-$_page = extractSequencesForAllTypes($_sd, buildTypedIds(['G1', 'P2', 'T1a', 'T1b', 'P1a', 'P1b'], "$_sd/organism.sqlite", 'A1', 'gs1'), $_st, '', 'A1',
-                                     [['id' => 'G1', 'start' => null, 'end' => null], ['id' => 'P2', 'start' => null, 'end' => null]],
-                                     moop_retrieval_children(['G1', 'P2'], "$_sd/organism.sqlite", [1]))['content']['protein'];
+$_page = moop_content_with_context(
+    extractSequencesForAllTypes($_sd, buildTypedIds(['G1', 'P2', 'T1a', 'T1b', 'P1a', 'P1b'], "$_sd/organism.sqlite", 'A1', 'gs1'), $_st, '', 'A1',
+                                [['id' => 'G1', 'start' => null, 'end' => null], ['id' => 'P2', 'start' => null, 'end' => null]],
+                                moop_retrieval_children(['G1', 'P2'], "$_sd/organism.sqlite", [1]))['content'],
+    "$_sd/organism.sqlite", [1])['protein'];
 ok($_one['fasta'] === $_page . "\n", 'a short list downloads byte-for-byte what the page shows (plus the final newline)');
+ok(strpos($_one['fasta'], ">P1a gene=G1 transcript=T1a desc of P1a\n") !== false,
+   'page and download headers name the gene and isoform, then the original description (the header standard)');
+$_h = fopen('php://memory', 'w+');
+moop_stream_sequences($_h, $_sd, ['G2'], 'protein', $_so + ['context' => true]);
+rewind($_h); $_ctxfa = stream_get_contents($_h); fclose($_h);
+$_h = fopen('php://memory', 'w+');
+moop_stream_sequences($_h, $_sd, ['G2'], 'protein', $_so);
+rewind($_h); $_rawfa = stream_get_contents($_h); fclose($_h);
+ok($_ctxfa === ">P2 gene=G2 transcript=T2 desc of P2\nMDDD\n" && $_rawfa === ">P2 desc of P2\nMDDD\n",
+   'Retrieve Selected\'s download (context => true) gets the headers; without it (the Data Exporter, until piece 6) unchanged');
+ok(moop_content_with_context(['protein' => ">P2 x\nM\n", 'genome' => ">P2 genomic c1:1-2(+)\nAC\n"], "$_sd/organism.sqlite", [1])
+     === ['protein' => ">P2 gene=G2 transcript=T2 x\nM\n", 'genome' => ">P2 genomic c1:1-2(+)\nAC\n"]
+   && moop_content_with_context(['protein' => ">P2 x\nM\n"], "$_sd/missing.sqlite", [1]) === ['protein' => ">P2 x\nM\n"],
+   'genomic records are left alone (they carry it already); no database -> the sequences unchanged, never lost');
 
 // A long list is summarised, not drawn: which IDs are in the gene set (one query per 5,000),
 // and how much sequence a short one would draw, from the .fai alone.

@@ -466,6 +466,36 @@ function extractSequencesForAllTypes(
     ];
 }
 
+/**
+ * gene=, gene_name=, transcript= in the headers of extracted sequences -- the header standard
+ * (moop_header_context()), so a protein or CDS says which gene and isoform it is once it has
+ * left the page. One batched lookup for every ID in every type; the genomic records already
+ * carry it. Only the headers change: the ID stays first, the source's description is kept.
+ * If the lookup fails the sequences are returned as they were -- context is never worth
+ * losing the sequences over.
+ *
+ * @param array $content     type => FASTA, as extractSequencesForAllTypes() returns it
+ * @param array $gene_set_ids the scope -- a uniquename is unique only within one gene set
+ */
+function moop_content_with_context(array $content, string $db_path, array $gene_set_ids): array {
+    require_once __DIR__ . '/genomic_regions.php';
+    $ids = [];
+    foreach ($content as $type => $fasta) {
+        if ($type === 'genome' || !preg_match_all('/^>(\S+)/m', $fasta, $m)) continue;
+        foreach ($m[1] as $id) $ids[preg_replace('/:\d+-\d+$/', '', $id)] = true;
+    }
+    if (!$ids || !is_file($db_path)) return $content;
+    try {
+        $anchors = moop_genomic_anchors(array_keys($ids), $db_path, $gene_set_ids);
+    } catch (Exception $e) {
+        return $content;
+    }
+    foreach ($content as $type => $fasta) {
+        if ($type !== 'genome') $content[$type] = moop_fasta_with_context($fasta, $anchors);
+    }
+    return $content;
+}
+
 /** IDs per batch in moop_stream_sequences(). 500 genes of Myotis protein+isoforms ≈ 3 MB. */
 const MOOP_STREAM_BATCH = 500;
 
@@ -488,7 +518,9 @@ const MOOP_STREAM_BATCH = 500;
  * @param string[] $ids           feature uniquenames (genes or anything below them)
  * @param string   $type          sequence_types key: protein | transcript | cds
  * @param array    $opts          db_path, sequence_types (required); assembly, gene_set (scope by
- *                                name), organism, gene_set_ids (the ACCESS filter -- pass it), batch
+ *                                name), organism, gene_set_ids (the ACCESS filter -- pass it), batch,
+ *                                context (true = gene=/transcript= headers, as the page shows them;
+ *                                context_gene_set_ids scopes that lookup when gene_set_ids is empty)
  * @return array{written:int, has_file:bool}  has_file false = the gene set has no $type FASTA
  */
 function moop_stream_sequences($handle, string $gene_set_dir, array $ids, string $type, array $opts): array {
@@ -510,6 +542,9 @@ function moop_stream_sequences($handle, string $gene_set_dir, array $ids, string
 
         $fasta = extractSequencesForAllTypes($gene_set_dir, $typed, $one_type, $opts['organism'] ?? '', $opts['assembly'] ?? '')['content'][$type] ?? '';
         if ($fasta === '') continue;
+        if (!empty($opts['context'])) {
+            $fasta = moop_content_with_context([$type => $fasta], $opts['db_path'], $opts['context_gene_set_ids'] ?? $opts['gene_set_ids'] ?? [])[$type];
+        }
         fwrite($handle, $fasta . "\n");
         $written += substr_count($fasta, "\n>") + 1;
         unset($typed, $fasta);
@@ -594,6 +629,8 @@ function moop_retrieval_stream($handle, array $requests, string $type, array $ct
         $typed = buildTypedIds($all, $ctx['db_path'], $ctx['assembly'] ?? '', $ctx['gene_set'] ?? '');
         $fasta = extractSequencesForAllTypes($ctx['gene_set_dir'], $typed, [$type => $ctx['sequence_types'][$type]],
                                              $ctx['organism'] ?? '', $ctx['assembly'] ?? '', $batch, $children)['content'][$type] ?? '';
+        // The same headers the page shows (gene=, transcript=)
+        $fasta = moop_content_with_context([$type => $fasta], $ctx['db_path'], $ctx['gene_set_ids'])[$type];
         // One record per ">" line, each written as it is found (no second copy of the batch)
         $at  = 0;
         $len = strlen($fasta);

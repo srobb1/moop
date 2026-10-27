@@ -532,6 +532,9 @@ $typed_ids = array_combine($__ids, array_map(fn($i) => $typed_ids[$i], $__ids));
 $displayed_content = [];
 if (is_dir($gene_set_dir) && (!$big_gene || ($download_file_flag && !empty($sequence_type)))) {
     $displayed_content = extractSequencesForAllTypes($gene_set_dir, $typed_ids, $sequence_types, $organism_name, $genome_accession)['content'];
+    // gene=, gene_name=, transcript= in the headers, so a sequence copied or downloaded from
+    // here still says which gene and isoform it is
+    $displayed_content = moop_content_with_context($displayed_content, $db, $accessible_gene_set_ids);
 }
 
 // Handle download request if present (BEFORE rendering page)

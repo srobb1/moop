@@ -489,6 +489,17 @@ Effort: 1–2 h. Risk: none; nothing calls it yet.
 
 ### Piece 5: headers on the pages that show a few sequences
 
+**Status 2026-10-27: DONE.** `moop_content_with_context($content, $db, $gene_set_ids)` (one
+batched lookup) adds the headers on the gene page, Sequence Retrieval and Retrieve Selected,
+and in their downloads: Sequence Retrieval's `moop_retrieval_stream()` always, Retrieve
+Selected's `moop_stream_sequences(..., ['context' => true])` (the Data Exporter stays plain
+until piece 6). Live: Sequence Retrieval page == download for every type; gene page 0.06 s;
+`>XP_036181976.1 gene=118665088 gene_name=PIGG transcript=XM_036326083.1 GPI ethanolamine
+phosphate transferase 2 isoform X2 [Myotis myotis]`. Primer links unchanged (they take the
+header's first word); Primer Maker opens from a CDS link. Desktop wraps cleanly; on a phone
+viewport no sideways scroll. (A narrow non-mobile window overflows by 8 px from an unrelated
+`moop-data-btn` button.) 3 new tests + 1 updated, proven red.
+
 Sequence Retrieval's Protein/mRNA/CDS boxes, the gene page's sequence boxes, Retrieve Selected.
 All go through `extractSequencesForAllTypes()` and `tools/sequences_display.php`.
 
