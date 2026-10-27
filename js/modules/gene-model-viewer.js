@@ -123,7 +123,7 @@
         }
         const group = document.createElement('div');
         group.className = 'btn-group btn-group-sm';
-        if (canSeq) {
+        if (canSeq && !(typeof genomeIsTranscripts !== 'undefined' && genomeIsTranscripts)) {
             group.appendChild(mkBtn('fa-download', 'FASTA', 'Download the genomic sequence — gene locus plus this isoform\'s span',
                 () => showGenomicModal(data.gene, data.isoforms)));
         }
@@ -147,6 +147,10 @@
         if (!isoforms || isoforms.length === 0) return;
 
         const canFetchSeq = (typeof genomeSequenceAvailable !== 'undefined') && genomeSequenceAvailable;
+        // A genome.fa of assembled transcripts (genomeIsTranscripts, from moop_genome_kind()): exons and
+        // CDS still open their sequence, but there are no flanks (nothing lies around a transcript) and
+        // no separate "genomic" sequence of the locus (it is the transcript again).
+        const realGenome  = canFetchSeq && !(typeof genomeIsTranscripts !== 'undefined' && genomeIsTranscripts);
 
         const trackW   = VIRTUAL_WIDTH - PAD_LEFT - PAD_RIGHT;
         const GENE_ROW = ROW_HEIGHT + LABEL_HEIGHT;   // height of gene backbone row
@@ -195,7 +199,7 @@
 
             gG.appendChild(makeLine(PAD_LEFT, VIRTUAL_WIDTH - PAD_RIGHT, gCy, gCy, '#999', 1.5));
 
-            if (canFetchSeq) {
+            if (realGenome) {
                 const bg = makeRect(0, gRowTop, VIRTUAL_WIDTH, ROW_HEIGHT + LABEL_HEIGHT, 'transparent', 0);
                 bg.setAttribute('class', 'iso-row-bg');
                 bg.style.cursor = 'pointer';
@@ -341,7 +345,7 @@
 
             // Upstream / downstream flanking blocks — always pinned to the margins
             // so they never float into the track and collide with isoform labels.
-            if (canFetchSeq) {
+            if (realGenome) {
                 const feat   = Object.assign({ seqname: gene.seqname }, iso);
                 const by     = cy - FLANK_H / 2;
                 const upX    = PAD_LEFT - FLANK_GAP - FLANK_W;

@@ -116,13 +116,15 @@ $should_auto_select          = $source_selection['should_auto_select'];
 $source_parts        = explode('|', $selected_source);
 $selected_gene_set   = $source_parts[2] ?? '';
 
-// Which gene sets sit on a genome -- the ones genomic sequence and flanks can be cut from
-// (the same two files moop_retrieve_genomic() needs). Two stats per source, ~95 sources.
+// Which gene sets sit on a REAL genome -- the ones genomic sequence and flanks can be cut from
+// (the two files moop_retrieve_genomic() needs, and a genome.fa that is not just one assembled
+// transcript per gene: around a transcript there is nothing upstream or downstream, and its
+// "genomic region" is the transcript again -- moop_genome_kind()). ~95 sources, microseconds each.
 $source_has_genome = [];
 foreach ($accessible_sources as $source) {
     $source_has_genome[$source['organism'] . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '')] =
         is_file($source['path'] . '/feature_coords.tsv')
-        && is_file(dirname($source['path']) . '/' . genome_fasta_filename() . '.fai');
+        && moop_genome_kind(dirname($source['path'])) === 'genome';
 }
 
 // Flanks for the genomic region, in bases (0 = none). Same limit as the Data Exporter.
@@ -268,9 +270,12 @@ if (!empty($sequence_ids_provided)) {
         }
 
         // Genomic region (and flanks) of each typed gene or transcript -- lib/genomic_regions.php.
-        $genomic = moop_retrieve_genomic($requests, $fasta_source['path'], dirname($fasta_source['path']), $upstream_bp, $downstream_bp, $genomic_anchors);
-        if ($genomic['fasta'] !== '') $displayed_content['genome'] = rtrim($genomic['fasta']);
-        $sequence_notes = $genomic['notes'];
+        // Only on a real genome: on a transcript assembly it would be the transcript again.
+        if (!empty($source_has_genome[$source_key])) {
+            $genomic = moop_retrieve_genomic($requests, $fasta_source['path'], dirname($fasta_source['path']), $upstream_bp, $downstream_bp, $genomic_anchors);
+            if ($genomic['fasta'] !== '') $displayed_content['genome'] = rtrim($genomic['fasta']);
+            $sequence_notes = $genomic['notes'];
+        }
         
         // Parse returned sequences to find which IDs were actually found
         foreach ($displayed_content as $seq_type => $fasta_content) {

@@ -319,7 +319,8 @@
                         title="Open the sequence with each feature type highlighted"><i class="fas fa-palette me-1"></i>Format sequence</button>
                 <?php endif; ?>
                 <div class="btn-group btn-group-sm" role="group" aria-label="Download this gene">
-                    <?php if (!empty($genome_seq_available)): ?>
+                    <?php /* Not on a transcript assembly: the "genomic" sequence would be the transcript again */ ?>
+                    <?php if (!empty($genome_seq_available) && empty($genome_is_transcripts)): ?>
                     <button class="btn moop-data-btn" id="gene-model-seq-btn"
                             title="Download the genomic sequence — gene locus plus each isoform span"><i class="fas fa-download me-1"></i>FASTA</button>
                     <?php endif; ?>
@@ -386,7 +387,9 @@
                     ['label' => 'Exon',   'hex' => '#17becf', 'text' => 'A transcribed block on an isoform with no CDS, so nothing here is known to code.'],
                     ['label' => 'Intron', 'hex' => '#888888', 'text' => 'The thin line joining exons. Spliced out of the mature transcript.'],
                 ];
-                if (!empty($genome_seq_available)) {
+                // An assembled transcript has no introns (and no flanks, below) to point at
+                if (!empty($genome_is_transcripts)) $gene_model_legend = array_values(array_filter($gene_model_legend, fn($l) => $l['label'] !== 'Intron'));
+                if (!empty($genome_seq_available) && empty($genome_is_transcripts)) {
                     $gene_model_legend[] = ['label' => 'Upstream',   'hex' => '#31a354', 'text' => 'Flanking sequence before the transcript start.'];
                     $gene_model_legend[] = ['label' => 'Downstream', 'hex' => '#756bb1', 'text' => 'Flanking sequence after the transcript end.'];
                 }
@@ -868,7 +871,10 @@ if (!empty($gene_model)) {
         $gm_read_cards[] = ['label' => '« and » either side: the neighbouring genes',
             'text' => '« goes to the gene page of the nearest gene upstream (the 5′ side, the left of the picture), » to the nearest one downstream, on the same sequence (for a gene with no strand: lower and higher positions). Hover to see which. Genes with no page of their own (non-coding RNAs, which are in the genome browser only) are skipped.'];
     }
-    if (!empty($genome_seq_available)) {
+    if (!empty($genome_seq_available) && !empty($genome_is_transcripts)) {
+        $gm_read_cards[] = ['label' => 'Click a feature',
+            'text' => 'Exons and CDS blocks open their sequence. This gene set\'s sequences are assembled transcripts, not a genome, so there is no flanking sequence around them.'];
+    } elseif (!empty($genome_seq_available)) {
         $gm_read_cards[] = ['label' => 'Click a feature',
             'text' => 'Exons, CDS blocks, introns and both flanking regions open their sequence. Flank size is adjustable inside that popup.'];
     }

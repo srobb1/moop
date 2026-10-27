@@ -821,21 +821,27 @@ function moopmartStreamGenomicFasta(
 const MOOPMART_GENOMIC_MODES = ['gene', 'upstream', 'downstream', 'exons'];
 
 /**
- * The file whose absence means a FASTA export skips this whole gene set, or null if all are there.
+ * Why a FASTA export skips this whole gene set ("its genome.fa is missing", ...), or null if it does not.
  *
- * The export and its check (moopmartFastaPreflight) both ask this, so they cannot disagree.
+ * The export and its check (moopmartFastaPreflight) both ask this, so they cannot disagree. A
+ * genome.fa that is one assembled transcript per gene (moop_genome_kind()) is no genome: around a
+ * transcript there is nothing upstream or downstream, and its "genomic" sequence and exons are the
+ * transcript again -- so the genomic modes skip it and say why.
  */
-function moopmartFastaMissingFile(string $assembly_dir, string $gs_path, string $mode, array $sequence_types): ?string
+function moopmartFastaSkipReason(string $assembly_dir, string $gs_path, string $mode, array $sequence_types): ?string
 {
     if (in_array($mode, MOOPMART_GENOMIC_MODES, true)) {
         $genome_file = genome_fasta_filename();
         foreach ([$genome_file, "$genome_file.fai"] as $f) {
-            if (!file_exists("$assembly_dir/$f")) return $f;
+            if (!file_exists("$assembly_dir/$f")) return "its $f is missing";
+        }
+        if (moop_genome_kind($assembly_dir) === 'transcripts') {
+            return 'its sequences are assembled transcripts, not a genome, so there is no genomic, flanking or exon sequence to cut (use mRNA, CDS or Protein)';
         }
         return null;
     }
     $pattern = $sequence_types[$mode]['pattern'] ?? '';
-    return ($pattern !== '' && glob("$gs_path/$pattern")) ? null : "$mode FASTA file";
+    return ($pattern !== '' && glob("$gs_path/$pattern")) ? null : "its $mode FASTA file is missing";
 }
 
 /**
@@ -848,12 +854,12 @@ function moopmartFastaMissingFile(string $assembly_dir, string $gs_path, string 
  * sequence is read; exons mode makes the same single GFF pass the export makes.
  *
  * @param array $genes rows with uniquename and chr, as the export gets them
- * @return array{missing: ?string, skips: array} missing = see moopmartFastaMissingFile();
+ * @return array{missing: ?string, skips: array} missing = see moopmartFastaSkipReason();
  *         skips = per-gene reasons, for moop_genomic_skip_notes()
  */
 function moopmartFastaPreflight(array $genes, string $assembly_dir, string $gs_path, string $mode, array $sequence_types): array
 {
-    $missing_file = moopmartFastaMissingFile($assembly_dir, $gs_path, $mode, $sequence_types);
+    $missing_file = moopmartFastaSkipReason($assembly_dir, $gs_path, $mode, $sequence_types);
     if ($missing_file !== null || !in_array($mode, MOOPMART_GENOMIC_MODES, true)) {
         return ['missing' => $missing_file, 'skips' => []];
     }

@@ -265,6 +265,11 @@ if ($__gm !== null) {
 $genome_fasta_file    = genome_fasta_filename();
 $genome_seq_available = file_exists("$assembly_dir_base/$genome_fasta_file")
                      && file_exists("$assembly_dir_base/$genome_fasta_file.fai");
+// A genome.fa of one assembled transcript per gene (moop_genome_kind()) still lets the page show the
+// transcript with its CDS and UTRs marked, but it has no flanks (nothing lies around a transcript), no
+// separate "genomic" sequence (it IS the transcript) and no neighbouring genes on the same sequence.
+require_once __DIR__ . '/../lib/genomic_regions.php';
+$genome_is_transcripts = $genome_seq_available && moop_genome_kind($assembly_dir_base) === 'transcripts';
 
 $family_feature_ids = [$feature_id];
 $retrieve_these_seqs = [$feature_uniquename];
@@ -635,7 +640,9 @@ echo render_display_page(
         'gene_model' => $gene_model,
         'feature_loc' => $feature_loc,
         // Neighbour buttons need the gene set's coordinates file (api/gene_neighbor.php reads it).
-        'neighbor_nav' => is_file("$gene_set_dir/feature_coords.tsv") ? [
+        'genome_is_transcripts' => $genome_is_transcripts,
+        // No neighbours on a transcript assembly: each sequence holds one gene
+        'neighbor_nav' => is_file("$gene_set_dir/feature_coords.tsv") && !$genome_is_transcripts ? [
             'organism' => $organism_name, 'assembly' => $genome_accession,
             'gene_set' => $gene_set_name, 'uniquename' => $feature_uniquename,
             'strand'   => (string)($feature_loc['strand'] ?? '.'),
@@ -665,7 +672,9 @@ echo render_display_page(
             "const moopGeneSet = " . json_encode($gene_set_name, JSON_HEX_TAG) . ";",
             "const moopSite = " . json_encode('/' . $site, JSON_HEX_TAG) . ";",
             "const siteTitle = " . json_encode($siteTitle, JSON_HEX_TAG) . ";",
-            "const genomeSequenceAvailable = " . ($genome_seq_available ? 'true' : 'false') . ";"
+            "const genomeSequenceAvailable = " . ($genome_seq_available ? 'true' : 'false') . ";",
+            // No flank blocks or "genomic" FASTA when the genome is assembled transcripts
+            "const genomeIsTranscripts = " . ($genome_is_transcripts ? 'true' : 'false') . ";"
         ]
     ],
     // The tab says what the gene IS first when it has a name: "HIVEP3 · h1SMcG0000013".

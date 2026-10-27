@@ -1304,9 +1304,9 @@ ok($_pre['missing'] === null && $_pre['skips'] === ['no_coords' => ['NOC'], 'mis
 ok($_pre['skips'] === $_exported, 'the check and the export skip exactly the same genes, for the same reasons');
 ok(moopmartFastaPreflight($_genes, $_ed, $_ed, 'gene', [])['skips'] === ['no_coords' => ['NOC'], 'missing_chr' => ['nope' => ['BAD']]],
    'genomic mode: no "no exons" reason (it does not use exons)');
-ok(moopmartFastaMissingFile("$_ed/none", $_ed, 'upstream', []) === 'genome.fa'
-   && moopmartFastaMissingFile($_ed, $_ed, 'protein', ['protein' => ['pattern' => 'protein.aa.fa']]) === 'protein FASTA file'
-   && moopmartFastaMissingFile($_ed, $_ed, 'gene', []) === null,
+ok(moopmartFastaSkipReason("$_ed/none", $_ed, 'upstream', []) === 'its genome.fa is missing'
+   && moopmartFastaSkipReason($_ed, $_ed, 'protein', ['protein' => ['pattern' => 'protein.aa.fa']]) === 'its protein FASTA file is missing'
+   && moopmartFastaSkipReason($_ed, $_ed, 'gene', []) === null,
    'a gene set with no genome (or no protein FASTA) is named as skipped');
 
 // The batch reader cuts what extractFastaRegion() cuts, clipped at the contig end.
@@ -2738,6 +2738,37 @@ $_mgc = file_get_contents("$BASE/admin/manage_groups.php");
 ok(substr_count($_mgc, 'moop_split_unrepresented_by_db(') >= 3, 'Manage Groups lists AND both add handlers (single, bulk) refuse a directory the database does not have');
 unlink("$_od/Org/organism.sqlite");
 array_map('rmdir', ["$_od/Org/OLD/gs1", "$_od/Org/NEW/gs1", "$_od/Org/OLD", "$_od/Org/NEW", "$_od/Org", $_od]);
+
+// ----------------------------------------------------------------------------
+group('A genome.fa of assembled transcripts is not a genome');
+// 13 planarian gene sets ship one assembled transcript per gene as genome.fa. Flanks, "genomic region"
+// and exon cuts are meaningless there (nothing lies around a transcript), and the tools offered them.
+require_once "$BASE/lib/moopmart_functions.php";
+$_gk = sys_get_temp_dir() . '/moop_gkind_' . getmypid();
+foreach (['tx/gs', 'gn/gs', 'said/gs'] as $_d) @mkdir("$_gk/$_d", 0777, true);
+$_txc = $_gnc = '';
+for ($_i = 1; $_i <= 40; $_i++) {
+    $_txc .= "T{$_i}.1\tT{$_i}\tT{$_i}.1.ref\t1\t" . (900 + $_i) . "\t+\n";               // gene = its own sequence, from base 1
+    $_gnc .= "R{$_i}\tG{$_i}\tchr" . ($_i % 3 + 1) . "\t" . (5000 * $_i) . "\t" . (5000 * $_i + 900) . "\t-\n";  // genes along chromosomes
+}
+file_put_contents("$_gk/tx/gs/feature_coords.tsv", $_txc);
+file_put_contents("$_gk/gn/gs/feature_coords.tsv", $_gnc);
+file_put_contents("$_gk/said/gs/feature_coords.tsv", $_txc);
+foreach (['tx', 'gn', 'said'] as $_d) { touch("$_gk/$_d/genome.fa"); touch("$_gk/$_d/genome.fa.fai"); }
+file_put_contents("$_gk/said/genome.json", '{"accession": "x", "genome_kind": "genome"}');
+ok(moop_genome_kind("$_gk/tx") === 'transcripts' && moop_genome_kind("$_gk/gn") === 'genome',
+   'detected from the data: genes that ARE their sequence -> transcripts; genes along chromosomes -> genome');
+ok(moop_genome_kind("$_gk/said") === 'genome' && moop_genome_kind("$_gk/none") === 'none',
+   'genome.json genome_kind wins over detection; no genome.fa -> none');
+ok(strpos((string)moopmartFastaSkipReason("$_gk/tx", "$_gk/tx/gs", 'upstream', []), 'assembled transcripts') !== false
+   && moopmartFastaSkipReason("$_gk/gn", "$_gk/gn/gs", 'upstream', []) === null,
+   'the Data Exporter skips genomic/flank/exon modes on a transcript assembly, and says why');
+$_rsrc = file_get_contents("$BASE/tools/retrieve_sequences.php");
+ok(strpos($_rsrc, "moop_genome_kind(dirname(\$source['path'])) === 'genome'") !== false
+   && strpos(file_get_contents("$BASE/tools/parent.php"), "moop_genome_kind(\$assembly_dir_base) === 'transcripts'") !== false,
+   'Sequence Retrieval (flanks, genomic region) and the gene page (flanks, genomic FASTA, neighbours) ask the same question');
+foreach (['tx', 'gn', 'said'] as $_d) { array_map('unlink', glob("$_gk/$_d/gs/*")); rmdir("$_gk/$_d/gs"); array_map('unlink', glob("$_gk/$_d/*")); rmdir("$_gk/$_d"); }
+rmdir($_gk);
 
 // ----------------------------------------------------------------------------
 group('BLAST queue: it cannot get stuck');

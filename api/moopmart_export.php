@@ -351,11 +351,11 @@ if ($output_format === 'tsv') {
             // The check says what the export below would leave out, without exporting it
             if ($fasta_check) {
                 $pre = moopmartFastaPreflight($gs_features, $assembly_dir, $gs_path, $fasta_mode, $sequence_types);
-                if ($pre['missing'] !== null) $check_notes[] = "$gs_label: skipped, its {$pre['missing']} is missing.";
+                if ($pre['missing'] !== null) $check_notes[] = "$gs_label: skipped, {$pre['missing']}.";
                 foreach (moop_genomic_skip_notes($pre['skips']) as $note) $check_notes[] = "$gs_label: $note";
                 continue;
             }
-            if (moopmartFastaMissingFile($assembly_dir, $gs_path, $fasta_mode, $sequence_types) !== null) continue;
+            if (moopmartFastaSkipReason($assembly_dir, $gs_path, $fasta_mode, $sequence_types) !== null) continue;
 
             if (in_array($fasta_mode, MOOPMART_GENOMIC_MODES, true)) {
                 // gene_name= only for real names: NV2 "names" most genes after a transcript ID

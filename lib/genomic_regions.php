@@ -400,6 +400,47 @@ function moop_fasta_with_context(string $fasta, array $anchors): string {
 }
 
 /**
+ * What an assembly's genome.fa really is: 'genome' (chromosomes or scaffolds), 'transcripts' (one
+ * assembled transcript per gene, standing in for a genome -- the planarian .kc and _cc gene sets),
+ * or 'none' (no genome.fa / .fai).
+ *
+ * It matters because a transcript has nothing around it: upstream and downstream of a gene that is
+ * its own sequence do not exist, and its "genomic region" is just the transcript again. The tools
+ * offered both anyway. Measured 2026-10-27 over all 87 gene sets with a genome.fa: 14 are transcript
+ * assemblies -- one sequence per gene, named after it, the gene spanning all of it, 100% each -- and
+ * every real genome scores 0% (even bats with a million scaffolds, ~1.3 genes each).
+ *
+ * genome.json's "genome_kind" says it when the pipeline writes it; otherwise it is detected from the
+ * first 200 rows of feature_coords.tsv (microseconds): a transcript assembly if nearly every gene sits
+ * at the start of a sequence named after it.
+ */
+function moop_genome_kind(string $assembly_dir): string {
+    static $memo = [];
+    if (isset($memo[$assembly_dir])) return $memo[$assembly_dir];
+    if (!is_file("$assembly_dir/" . genome_fasta_filename() . '.fai')) return $memo[$assembly_dir] = 'none';
+
+    $json = @json_decode((string)@file_get_contents("$assembly_dir/genome.json"), true);
+    $said = is_array($json) ? strtolower(trim((string)($json['genome_kind'] ?? ''))) : '';
+    if (in_array($said, ['genome', 'transcripts'], true)) return $memo[$assembly_dir] = $said;
+
+    $seen = $own = 0;
+    foreach (glob("$assembly_dir/*/feature_coords.tsv") ?: [] as $file) {
+        $fh = @fopen($file, 'r');
+        if (!$fh) continue;
+        while ($seen < 200 && ($line = fgets($fh)) !== false) {
+            $p = explode("\t", rtrim($line, "\r\n"));
+            if (count($p) < 5 || !ctype_digit($p[3])) continue;
+            [$gene, $chr, $start] = [$p[1], $p[2], (int)$p[3]];
+            $seen++;
+            if ($start <= 10 && ($chr === $gene || strpos($chr, $gene) === 0 || strpos($gene, $chr) === 0)) $own++;
+        }
+        fclose($fh);
+        if ($seen >= 200) break;
+    }
+    return $memo[$assembly_dir] = ($seen >= 20 && $own >= 0.9 * $seen) ? 'transcripts' : 'genome';
+}
+
+/**
  * Sequence Retrieval's genomic records: for every typed ID, its region (or the typed range
  * of it) and, when asked, its flanks -- each its own record, as the gene page and the Data
  * Exporter give them. Where the region comes from is moop_genomic_anchors().
