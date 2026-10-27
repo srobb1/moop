@@ -202,24 +202,62 @@ if (!empty($sequence_ids_provided)) {
     // Every descendant of each typed ID, so a gene reaches its transcripts, CDS and proteins
     // and a range typed on the gene applies to all of them. Scoped to the selected gene set:
     // a uniquename is unique only within one, and this organism may carry several.
+    //
+    // A long list is not drawn: more than MOOP_RETRIEVAL_SHOW_MAX_IDS entries, or more sequence
+    // than MOOP_RETRIEVAL_SHOW_MAX_BYTES, and the page says what was found and offers each type
+    // as a download (streamed above) instead. Nothing is capped: every ID still downloads. Drawn,
+    // 300 Myotis genes was a 502 and 100 a 6 MB page.
     $parent_to_children = [];
     $genomic_anchors    = [];
+    $retrieval_summary  = null;
     if (empty($extraction_errors) && $uniquenames) {
-        try {
-            $db = verifyOrganismDatabase($selected_organism, $organism_data);
-            $parent_to_children = moop_retrieval_children($uniquenames, $db, $gs_ids);
-            // Where each typed ID's genomic sequence comes from: a protein or CDS ID uses its
-            // transcript's span, so its flanks are its isoform's (lib/genomic_regions.php).
-            $genomic_anchors = moop_genomic_anchors($uniquenames, $db, $gs_ids);
-        } catch (Exception $e) {
-            // Without the database, extract the typed IDs as they are.
-            $parent_to_children = [];
+        $too_many = count($requests) > MOOP_RETRIEVAL_SHOW_MAX_IDS;
+        if (!$too_many) {
+            try {
+                $db = verifyOrganismDatabase($selected_organism, $organism_data);
+                $parent_to_children = moop_retrieval_children($uniquenames, $db, $gs_ids);
+                // Where each typed ID's genomic sequence comes from: a protein or CDS ID uses its
+                // transcript's span, so its flanks are its isoform's (lib/genomic_regions.php).
+                $genomic_anchors = moop_genomic_anchors($uniquenames, $db, $gs_ids);
+            } catch (Exception $e) {
+                // Without the database, extract the typed IDs as they are.
+                $parent_to_children = [];
+            }
         }
-        $uniquenames = array_values(array_unique(array_merge($uniquenames, ...array_values($parent_to_children))));
+        $too_big = !$too_many && moop_retrieval_estimate_bytes($requests, $parent_to_children, $fasta_source['path'], $sequence_types, [
+            'anchors' => $genomic_anchors, 'upstream' => $upstream_bp, 'downstream' => $downstream_bp,
+            'has_genome' => !empty($source_has_genome[$source_key]),
+        ]) > MOOP_RETRIEVAL_SHOW_MAX_BYTES;
+
+        if ($too_many || $too_big) {
+            $found = moop_retrieval_found($uniquenames, $db_path, $gs_ids);
+            $download_types = [];
+            foreach ($sequence_types as $t => $t_config) {
+                if ($t === 'genome' ? !empty($source_has_genome[$source_key]) : (bool)glob($fasta_source['path'] . '/' . $t_config['pattern'])) {
+                    $download_types[] = $t;
+                }
+            }
+            // What the genomic download will leave out, and why (no coordinates, a chromosome
+            // the genome lacks, a region over the limit): the download's own rules, no sequence read.
+            if (in_array('genome', $download_types, true)) {
+                if ($too_many) $genomic_anchors = moop_genomic_anchors($uniquenames, $db_path, $gs_ids);
+                $sequence_notes = moop_retrieve_genomic($requests, $fasta_source['path'], dirname($fasta_source['path']),
+                                                        $upstream_bp, $downstream_bp, $genomic_anchors, null, true)['notes'];
+            }
+            $retrieval_summary = [
+                'reason'  => $too_many ? 'count' : 'size',
+                'ids'     => count($uniquenames),
+                'missing' => array_values(array_filter($uniquenames, fn($id) => !isset($found[$id]))),
+                'types'   => $download_types,
+            ];
+            $parent_to_children = [];
+        } else {
+            $uniquenames = array_values(array_unique(array_merge($uniquenames, ...array_values($parent_to_children))));
+        }
     }
 
     // Extract sequences for ALL available types
-    if (empty($extraction_errors) && !empty($uniquenames)) {
+    if (empty($extraction_errors) && !empty($uniquenames) && !$retrieval_summary) {
         $typed_ids = buildTypedIds($uniquenames, $db_path, $fasta_source['assembly'], $fasta_source['gene_set'] ?? '');
         $extract_result = extractSequencesForAllTypes($fasta_source['path'], $typed_ids, $sequence_types, $selected_organism, $selected_assembly_accession, $requests, $parent_to_children);
         $displayed_content = $extract_result['content'];
@@ -267,7 +305,7 @@ if (!empty($sequence_ids_provided)) {
     }
     
     // Flag to scroll to results section if sequences were displayed
-    $should_scroll_to_results = !empty($displayed_content);
+    $should_scroll_to_results = !empty($displayed_content) || !empty($retrieval_summary);
 }
 
 // Get available sequence types from all accessible sources
@@ -314,8 +352,12 @@ $data = [
     'filter_organisms' => $filter_organisms,
     'sources_by_group' => $sources_by_group,
     'download_error_msg' => $download_error_msg,
-    'uniquenames' => $uniquenames,
+    // A long list is summarised, not drawn, so the ID box gets nothing to colour (the JS shows
+    // a count instead, at the same MOOP_RETRIEVAL_SHOW_MAX_IDS).
+    'uniquenames' => empty($retrieval_summary) ? $uniquenames : [],
     'found_ids' => $found_ids,
+    'retrieval_summary' => $retrieval_summary ?? null,
+    'show_max_ids' => MOOP_RETRIEVAL_SHOW_MAX_IDS,
     'should_scroll_to_results' => $should_scroll_to_results,
     'selected_source'   => $selected_source,
     'selected_gene_set' => $selected_gene_set,

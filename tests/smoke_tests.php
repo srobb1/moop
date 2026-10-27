@@ -1186,6 +1186,10 @@ $_r = moop_retrieve_genomic([$_req('T1:pep'), $_req('Z9')], "$_ad/gs", $_ad, 2, 
 $_whole = moop_retrieve_genomic([$_req('T1:pep'), $_req('Z9')], "$_ad/gs", $_ad, 2, 0, $_an);
 ok($_r['fasta'] === '' && $_emitted !== '' && $_emitted === $_whole['fasta'] && $_r['notes'] === $_whole['notes'],
    'genomic records handed out one at a time (for a download) are the records the page collects, notes and all');
+$_dry = moop_retrieve_genomic([$_req('T1:pep'), $_req('Z9')], "$_ad/gs", $_ad, 2, 0, $_an + ['Z9' => ['locus' => 'Z9', 'gene' => 'Z9', 'gene_name' => null, 'transcript' => null]], null, true);
+$_real = moop_retrieve_genomic([$_req('T1:pep'), $_req('Z9')], "$_ad/gs", $_ad, 2, 0, $_an + ['Z9' => ['locus' => 'Z9', 'gene' => 'Z9', 'gene_name' => null, 'transcript' => null]]);
+ok($_dry['fasta'] === '' && $_dry['notes'] !== [] && $_dry['notes'] === $_real['notes'],
+   'a dry run (the notes shown beside a long list\'s downloads) gives the download\'s own notes, and reads no sequence');
 $_r = moop_retrieve_genomic([$_req('T1:pep', 1, 2)], "$_ad/gs", $_ad, 2, 0, $_an);
 ok(strpos($_r['fasta'], ' genomic ') === false && strpos($_r['fasta'], 'upstream_2bp') !== false
    && strpos($_r['notes'][0] ?? '', 'A range on a protein or CDS ID') === 0,
@@ -1371,6 +1375,16 @@ $_page = extractSequencesForAllTypes($_sd, buildTypedIds(['G1', 'P2', 'T1a', 'T1
                                      [['id' => 'G1', 'start' => null, 'end' => null], ['id' => 'P2', 'start' => null, 'end' => null]],
                                      moop_retrieval_children(['G1', 'P2'], "$_sd/organism.sqlite", [1]))['content']['protein'];
 ok($_one['fasta'] === $_page . "\n", 'a short list downloads byte-for-byte what the page shows (plus the final newline)');
+
+// A long list is summarised, not drawn: which IDs are in the gene set (one query per 5,000),
+// and how much sequence a short one would draw, from the .fai alone.
+ok(moop_retrieval_found(['G1', 'P2', 'nope', 'G5', 'G1'], "$_sd/organism.sqlite", [1]) === ['G1' => true, 'P2' => true],
+   'found: only IDs in this gene set (G5 is in another, "nope" nowhere), each once');
+$_req2 = [['id' => 'G1', 'start' => null, 'end' => null], ['id' => 'P2', 'start' => 1, 'end' => 2]];
+ok(moop_retrieval_estimate_bytes($_req2, moop_retrieval_children(['G1', 'P2'], "$_sd/organism.sqlite", [1]), $_sd, $_st, ['has_genome' => false]) === 10,
+   'size estimate from the .fai: G1 reaches P1a + P1b (4 + 4); a range counts its own length (P2:1-2 = 2); no genome, no genomic part');
+ok(MOOP_RETRIEVAL_SHOW_MAX_IDS === 50 && MOOP_RETRIEVAL_SHOW_MAX_BYTES === 5000000,
+   'the show-on-page limits are the decided ones (50 IDs; 5 MB, measured): change them on purpose, with the measurements');
 array_map('unlink', glob("$_sd/*")); @rmdir($_sd);
 
 // ----------------------------------------------------------------------------

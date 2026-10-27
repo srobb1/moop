@@ -50,7 +50,35 @@
         </div>
     </div>
 
-    <?php if (empty($displayed_content)): ?>
+    <?php if (!empty($download_only_types)): ?>
+        <?php /* A long selection: one download per type, no sequences drawn (the controller
+                 skipped extracting them). Each button posts what the per-type Download buttons
+                 below the drawn sequences post, so the server streams that one type. */ ?>
+        <div class="card shadow-sm mb-4" id="retrievalSummary">
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    Selections of more than <?= (int)$show_max_ids ?> features are available as a download only, so the page stays quick.
+                    Every feature is included.
+                </p>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="small text-muted me-1"><i class="fa fa-download me-1"></i>Download as FASTA:</span>
+                    <?php foreach ($download_only_types as $dl_type): ?>
+                        <form method="POST" class="d-inline">
+                            <input type="hidden" name="organism" value="<?= htmlspecialchars($organism_name) ?>">
+                            <input type="hidden" name="assembly" value="<?= htmlspecialchars($assembly_name) ?>">
+                            <input type="hidden" name="gene_set" value="<?= htmlspecialchars($gene_set_name) ?>">
+                            <input type="hidden" name="uniquenames" value="<?= htmlspecialchars($uniquenames_string) ?>">
+                            <input type="hidden" name="sequence_type" value="<?= htmlspecialchars($dl_type) ?>">
+                            <input type="hidden" name="download_file" value="1">
+                            <button type="submit" class="btn btn-sm fw-semibold text-white btn-moop-teal">
+                                <?= htmlspecialchars($sequence_types[$dl_type]['label'] ?? $dl_type) ?>
+                            </button>
+                        </form>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    <?php elseif (empty($displayed_content)): ?>
         <!-- If no sequences yet, just show simple submit button -->
         <form method="POST">
             <input type="hidden" name="organism" value="<?= htmlspecialchars($organism_name) ?>">

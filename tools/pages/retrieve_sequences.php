@@ -214,6 +214,55 @@
 
         </form>
 
+        <?php if (!empty($retrieval_summary)): ?>
+            <?php
+            // A long list: what was found, and each type as a download -- not drawn on the page
+            // (MOOP_RETRIEVAL_SHOW_MAX_IDS / _BYTES in lib/extract_search_helpers.php). The
+            // buttons submit the main form, like the ones above the drawn results.
+            $rs_missing = $retrieval_summary['missing'];
+            $rs_found   = $retrieval_summary['ids'] - count($rs_missing);
+            $rs_shown   = 50;
+            ?>
+            <hr class="my-5" id="sequences-section">
+            <div class="card shadow-sm mb-4" id="retrievalSummary">
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong><?= number_format($retrieval_summary['ids']) ?> ID<?= $retrieval_summary['ids'] === 1 ? '' : 's' ?>:
+                        <?= number_format($rs_found) ?> found<?= $rs_missing ? ', ' . number_format(count($rs_missing)) . ' not found' : '' ?>.</strong>
+                    </p>
+                    <p class="small text-muted mb-3">
+                        <?php if ($retrieval_summary['reason'] === 'count'): ?>
+                            Lists of more than <?= (int)$show_max_ids ?> IDs are available as a download only, so the page stays quick. Every ID is included.
+                        <?php else: ?>
+                            These sequences are too long to show on the page, so they are available as a download only. Every ID is included.
+                        <?php endif; ?>
+                        Ranges and flanks apply to the download as they would on the page.
+                    </p>
+                    <div class="d-flex flex-wrap align-items-center gap-2" id="retrieveDownloads">
+                        <span class="small text-muted me-1"><i class="fa fa-download me-1"></i>Download as FASTA:</span>
+                        <?php foreach ($retrieval_summary['types'] as $dl_type): ?>
+                            <button type="submit" form="downloadForm" name="download_type" value="<?= htmlspecialchars($dl_type) ?>"
+                                    class="btn btn-sm fw-semibold text-white btn-moop-teal">
+                                <?= htmlspecialchars($sequence_types[$dl_type]['label'] ?? $dl_type) ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($rs_missing): ?>
+                        <div class="mt-3 small">
+                            <span class="fw-semibold">Not found in this gene set:</span>
+                            <?= htmlspecialchars(implode(', ', array_slice($rs_missing, 0, $rs_shown))) ?><?= count($rs_missing) > $rs_shown ? ', …' : '' ?>
+                            <?php if (count($rs_missing) > $rs_shown): ?>
+                                <details class="mt-2">
+                                    <summary>All <?= number_format(count($rs_missing)) ?> not found, to copy</summary>
+                                    <textarea class="form-control form-control-sm font-monospace mt-2" rows="6" readonly><?= htmlspecialchars(implode("\n", $rs_missing)) ?></textarea>
+                                </details>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <!-- Sequences Display Section -->
         <?php if (!empty($displayed_content)): ?>
             <hr class="my-5" id="sequences-section">
@@ -280,6 +329,8 @@ window.foundIds = <?= json_encode($found_ids ?? []) ?>;
 // Pass parent-to-children mapping for display
 window.parentToChildren = <?= json_encode($parent_to_children ?? []) ?>;
 
+// Longer lists are a download only; the ID box shows a count instead of every ID (same limit)
+window.retrievalShowMax = <?= (int)$show_max_ids ?>;
 // Pass auto-select flag to JavaScript
 window.shouldAutoSelect = <?= json_encode($should_auto_select ?? true) ?>;
 </script>

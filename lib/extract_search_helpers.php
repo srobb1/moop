@@ -609,6 +609,86 @@ function moop_retrieval_stream($handle, array $requests, string $type, array $ct
 }
 
 /**
+ * Sequence Retrieval and Retrieve Selected SHOW at most this many typed IDs; a longer list is
+ * offered as a download only (any length: nothing is capped, it is just not drawn).
+ * Measured 2026-10-27 on Myotis: 100 gene IDs made a 6 MB page, 200 a 15.7 MB page, 300 a 502.
+ */
+const MOOP_RETRIEVAL_SHOW_MAX_IDS = 50;
+
+/**
+ * ...and at most this much sequence, estimated before any is read
+ * (moop_retrieval_estimate_bytes()). Fifty genes can still be huge: each genomic region runs to
+ * 500 kb, plus flanks of up to 100 kb a side.
+ *
+ * Measured 2026-10-27. Typical genes: 50 Myotis genes estimate 2.27 MB and render a 2.3 MB
+ * page (the estimate tracks the page closely), so 2 MB -- the first guess -- would have sent
+ * almost every 50-gene list to download. Browser (headless Chrome): ~170 ms per MB to load
+ * (2.3 MB 0.44 s, 4.3 MB 0.77 s, 8.3 MB 1.4 s, 16 MB 2.8 s), scrolling flat. Server: a page
+ * costs ~5.5x its size in PHP memory (15.7 MB worked, ~23 MB hit the 128M limit), so 5 MB is
+ * ~28 MB -- comfortably clear of the limit with other users on the server.
+ */
+const MOOP_RETRIEVAL_SHOW_MAX_BYTES = 5000000;
+
+/**
+ * Which of these IDs exist in the gene set: one IN (...) query per 5,000 (SQLite's limit on
+ * bound values is 32,766), never one query per ID.
+ *
+ * @param array $gene_set_ids the scope; empty = the whole database
+ * @return array<string, true>
+ */
+function moop_retrieval_found(array $ids, string $db_path, array $gene_set_ids): array {
+    $found = [];
+    if (!$ids || !is_file($db_path)) return $found;
+    $gs = $gene_set_ids ? ' AND gene_set_id IN (' . implode(',', array_fill(0, count($gene_set_ids), '?')) . ')' : '';
+    foreach (array_chunk(array_values(array_unique($ids)), 5000) as $chunk) {
+        $sql = 'SELECT DISTINCT feature_uniquename FROM feature WHERE feature_uniquename IN ('
+             . implode(',', array_fill(0, count($chunk), '?')) . ')' . $gs;
+        foreach (fetchData($sql, $db_path, array_merge($chunk, array_values($gene_set_ids))) as $row) {
+            $found[$row['feature_uniquename']] = true;
+        }
+    }
+    return $found;
+}
+
+/**
+ * Roughly how many bases/residues Sequence Retrieval would put on the page, without reading
+ * any sequence: lengths from each FASTA's .fai and from the coordinate files, a range counted
+ * as its own length. Close enough to decide "show it" or "download it"; it ignores headers
+ * and line breaks.
+ *
+ * @param array $requests  parseFeatureIds()['requests']
+ * @param array $children  moop_retrieval_children()
+ * @param array $genomic   anchors (moop_genomic_anchors()), upstream, downstream, has_genome
+ */
+function moop_retrieval_estimate_bytes(array $requests, array $children, string $gene_set_dir, array $sequence_types, array $genomic): int {
+    require_once __DIR__ . '/fasta_index.php';
+    $ids = array_values(array_unique(array_merge(array_column($requests, 'id'), ...array_values($children))));
+    $len = [];   // id => [length, ...], one per FASTA it is in
+    foreach ($sequence_types as $type => $config) {
+        if ($type === 'genome') continue;
+        $fasta = glob("$gene_set_dir/{$config['pattern']}")[0] ?? '';
+        if ($fasta === '' || !moop_fasta_index_available($fasta)) continue;
+        foreach (moop_fai_lookup("$fasta.fai", $ids) as $id => $e) $len[$id][] = $e['len'];
+    }
+    $anchors = $genomic['anchors'] ?? [];
+    $loci = !empty($genomic['has_genome'])
+        ? moop_feature_loci($gene_set_dir, array_map(fn($r) => $anchors[$r['id']]['locus'] ?? $r['id'], $requests))
+        : [];
+    $flanks = (int)($genomic['upstream'] ?? 0) + (int)($genomic['downstream'] ?? 0);
+
+    $total = 0;
+    foreach ($requests as $r) {
+        $span = $r['start'] === null ? PHP_INT_MAX : $r['end'] - $r['start'] + 1;
+        foreach (array_merge([$r['id']], $children[$r['id']] ?? []) as $id) {
+            foreach ($len[$id] ?? [] as $l) $total += min($l, $span);
+        }
+        $locus = $loci[$anchors[$r['id']]['locus'] ?? $r['id']] ?? null;
+        if ($locus) $total += min($locus['end'] - $locus['start'] + 1, $span, MOOP_MAX_REGION_BP) + $flanks;
+    }
+    return $total;
+}
+
+/**
  * Send the headers for a streamed sequence download and return a handle to write it to.
  *
  * sendFileDownload()'s streaming sibling: no Content-Length (the size is not known until the

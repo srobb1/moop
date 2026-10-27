@@ -288,9 +288,12 @@ function moop_genomic_anchors(array $ids, string $db_path, array $gene_set_ids =
  * @param callable $emit    optional: given each record as it is cut, instead of collecting them
  *                          in 'fasta' -- a download then holds one region at a time (a region
  *                          runs to 500 kb, so a batch of them collected was up to ~300 MB)
+ * @param bool     $dry_run true = only the notes: every skip rule applied, no sequence read. A
+ *                          list too long to draw shows these beside its download buttons, and
+ *                          they cannot disagree with the download, because they are its rules.
  * @return array{fasta: string, notes: list<string>}
  */
-function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $assembly_dir, int $upstream = 0, int $downstream = 0, array $anchors = [], ?callable $emit = null): array {
+function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $assembly_dir, int $upstream = 0, int $downstream = 0, array $anchors = [], ?callable $emit = null, bool $dry_run = false): array {
     $out = ['fasta' => '', 'notes' => []];
     if (!$requests) return $out;
     if (!is_file("$gene_set_dir/feature_coords.tsv") || !is_file("$assembly_dir/" . genome_fasta_filename() . '.fai')) {
@@ -346,6 +349,7 @@ function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $as
             $region = moop_genomic_region($locus, $part, $bp, $from, $to);
             if (!$region) continue;
             if ($region['end'] - $region['start'] + 1 > MOOP_MAX_REGION_BP) { $toobig[] = $id; continue; }
+            if ($dry_run) continue;
             $got = moop_genomic_sequence($genome, $region);
             if (!$got) continue;
             $shown_to = $from !== null ? $from + strlen($got['seq']) - 1 : null;
@@ -355,13 +359,19 @@ function moop_retrieve_genomic(array $requests, string $gene_set_dir, string $as
     }
     moop_genome_close($genome);
     array_push($out['notes'], ...moop_genomic_skip_notes($skips));
+    // At most 10 IDs named, like the skip notes' examples: a long list (all 20,154 Myotis genes)
+    // made one of these 1,800 characters naming 154 IDs.
+    $named = function (array $ids): string {
+        $ids = array_values(array_unique($ids));
+        return implode(', ', array_slice($ids, 0, 10)) . (count($ids) > 10 ? ' and ' . number_format(count($ids) - 10) . ' more' : '');
+    };
     if ($no_range) {
         $out['notes'][] = 'A range on a protein or CDS ID counts amino acids or coding bases, not genome positions, so no genomic region was cut for: '
-                        . implode(', ', array_unique($no_range)) . '. Its flanks are given; for a genomic range, use the transcript ID.';
+                        . $named($no_range) . '. Its flanks are given; for a genomic range, use the transcript ID.';
     }
     if ($toobig) {
-        $out['notes'][] = 'Genomic sequence longer than ' . number_format(MOOP_MAX_REGION_BP) . ' bp is not shown here: '
-                        . implode(', ', array_unique($toobig)) . '. The Data Exporter has no such limit.';
+        $out['notes'][] = 'Genomic sequence longer than ' . number_format(MOOP_MAX_REGION_BP) . ' bp is left out: '
+                        . $named($toobig) . '. The Data Exporter has no such limit.';
     }
     return $out;
 }

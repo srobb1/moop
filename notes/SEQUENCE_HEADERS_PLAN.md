@@ -258,7 +258,29 @@ Effort: half a day. Risk: low; same output, produced differently, and provable b
 
 ### Piece 2: Sequence Retrieval and Retrieve Selected: download-only above X
 
-**Status 2026-10-27: part 2a done (streaming downloads); 2b (download-only above 50) next.**
+**Status 2026-10-27: piece 2 DONE.** 2a (streaming downloads) 023a0fb4; 2b (download-only) below.
+
+- **2b:** more than `MOOP_RETRIEVAL_SHOW_MAX_IDS` (50) entries, or an estimated
+  `MOOP_RETRIEVAL_SHOW_MAX_BYTES` of sequence, and Sequence Retrieval draws no sequences: a card
+  says "N IDs: X found, Y not found" (one `IN (...)` query per 5,000), lists the not-found (first
+  50, then all in a copyable box) and offers each type as a download. Retrieve Selected: the
+  same over 50 features (no found/not-found: its IDs come from search results).
+- **The 2 MB net was wrong; it is 5 MB, measured.** 50 typical Myotis genes estimate 2.27 MB and
+  render a 2.3 MB page, so 2 MB sent nearly every 50-gene list to download. Headless Chrome
+  loads ~170 ms/MB (16 MB: 2.8 s), scrolling flat; PHP needs ~5.5x the page size, so 5 MB is
+  ~28 MB. The constant's comment has the numbers.
+- Live: 50 genes drawn (2.7 MB, 0.5 s); 51 genes summary (0.01 s); 50 genes + 100 kb flanks
+  summary ("too long"); 20,156 IDs summary in 0.06 s with the 2 fake IDs listed (was a 502 from
+  ~300). Retrieve Selected 2,500 mRNAs: 132 KB page (was 18.4 MB).
+- ID box (js/sequence-retrieval.js): over the same limit (`window.retrievalShowMax`) it shows a
+  count. 20,154 IDs pasted: a keystroke took 112 ms and built 40,308 elements; now 3 ms, none.
+- 3 smoke tests (found scoped to the gene set; estimate counts a range's own length; the
+  limits), each proven red on a broken copy.
+- A summarised list shows the genomic download's notes (no coordinates, chromosome names that
+  differ, regions over 500 kb): `moop_retrieve_genomic(..., $dry_run = true)` applies every skip
+  rule and reads no sequence, so the notes are the download's own. Live: Drosophila 13,986
+  genes 0.43 s, Bradyrhizobium 0.23 s, Myotis 20,154 0.44 s. The "over 500 kb" and
+  "range on a protein" notes now name at most 10 IDs ("and N more"); one was 1,800 characters.
 
 - **Found:** Sequence Retrieval had **no download buttons at all**. The shared sequence card
   draws them only when given `$gene_name`, which this page sets to `''`; the controller's

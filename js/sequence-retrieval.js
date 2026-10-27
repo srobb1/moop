@@ -126,8 +126,19 @@ function initializeSequenceRetrieval(options = {}) {
             .split(/[\n,]+/)
             .map(id => id.trim())
             .filter(id => id.length > 0);
-        
-        
+
+        // A long list is a download only (window.retrievalShowMax, the server's same limit), so
+        // there is nothing to colour: say so in one line. This box used to draw every ID, on
+        // every keystroke, checking each against every found ID -- slow in the browser for a
+        // paste of thousands, before the server was even asked.
+        const showMax = window.retrievalShowMax || 50;
+        if (userInputIds.length > showMax) {
+            searchIdsDisplay.textContent = userInputIds.length.toLocaleString() + ' IDs entered. Lists of more than '
+                + showMax + ' IDs are available as a download only: retrieve to see how many were found.';
+            searchIdsDisplay.style.display = 'block';
+            return;
+        }
+
         // Get found IDs from server (IDs that were actually returned by blastdbcmd)
         let foundIds = [];
         if (foundIdsField && foundIdsField.value) {

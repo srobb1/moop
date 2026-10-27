@@ -95,6 +95,7 @@ $siteTitle = $config->getString('siteTitle');
 
 // Initialize displayed content
 $displayed_content = [];
+$download_only_types = [];   // filled for a selection too long to show
 
 // If sequence IDs are provided, extract ALL sequence types
 if (!empty($sequence_ids_provided)) {
@@ -142,6 +143,12 @@ if (!empty($sequence_ids_provided)) {
             ]);
             fclose($out);
             exit;
+        } elseif (count($uniquenames) > MOOP_RETRIEVAL_SHOW_MAX_IDS) {
+            // A long selection is offered as downloads, not drawn (the page shows the count and
+            // one button per type): 2,500 mRNAs -- the search cap -- made an 18 MB page.
+            foreach ($sequence_types as $t => $t_config) {
+                if ($t !== 'genome' && glob("$gene_set_dir/" . $t_config['pattern'])) $download_only_types[] = $t;
+            }
         } elseif (!empty($uniquenames)) {
             $db_path = "$organism_data/$organism_name/organism.sqlite";
             // Expand each selected feature to every sequence type it has — mRNA, CDS AND
@@ -190,6 +197,8 @@ $data = [
     'gene_set_name' => $gene_set_name,
     'uniquenames' => $uniquenames,
     'uniquenames_string' => $uniquenames_string,
+    'download_only_types' => $download_only_types,
+    'show_max_ids' => MOOP_RETRIEVAL_SHOW_MAX_IDS,
     'displayed_content' => $displayed_content,
     'sequence_types' => $sequence_types,
     'organism_data' => $organism_data,
