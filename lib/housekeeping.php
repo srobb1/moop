@@ -1415,11 +1415,8 @@ function housekeeping_check_library_advisories(): void {
  * Report-only, never installs: that needs root, and updating PHP restarts php-fpm.
  */
 function housekeeping_check_security_updates(): void {
-    $report = moop_cache_root() . '/security_updates.txt';
-    if (is_readable($report)) {
-        $result = moop_parse_security_report((string)file_get_contents($report));
-        $result['source'] = 'report';
-    } else {
+    $result = moop_read_security_report();
+    if ($result === null) {
         $prev   = $_SESSION['security_updates'] ?? null;
         $forced = PHP_SAPI === 'cli' && in_array('--task=security_updates', $GLOBALS['argv'] ?? [], true);
         $due    = $forced || !$prev || empty($prev['checked_at'])
@@ -1444,6 +1441,21 @@ function housekeeping_check_security_updates(): void {
     }
     $_SESSION['security_updates'] = $result;
     housekeeping_persist_status('security_updates', $result);
+}
+
+/**
+ * The root-written report, parsed, or null when there is none. Also called by the dashboard on
+ * every load: it is one small file, and reading it only on the housekeeping interval meant the
+ * card went on listing installed updates and a restart already done for up to an hour after the
+ * report itself said otherwise (2026-10-27). The running kernel is asked of this machine, not
+ * taken from the report, so a restart shows as soon as it has happened.
+ */
+function moop_read_security_report(): ?array {
+    $report = moop_cache_root() . '/security_updates.txt';
+    if (!is_readable($report)) return null;
+    $result = moop_parse_security_report((string)file_get_contents($report), php_uname('r'));
+    $result['source'] = 'report';
+    return $result;
 }
 
 /**
@@ -1476,7 +1488,7 @@ function moop_security_update_commands(?string $manager): array {
             'reboot'  => $reboot];
 }
 
-function moop_parse_security_report(string $text): array {
+function moop_parse_security_report(string $text, ?string $running_kernel = null): array {
     $head = [];
     $body = [];
     foreach (preg_split('/\R/', $text) as $line) {
@@ -1492,6 +1504,8 @@ function moop_parse_security_report(string $text): array {
     // daily timer has missed at least two runs.
     if ($r['checked_at'] && time() - (int)strtotime($r['checked_at']) > 3 * 86400) $r['stale'] = true;
 
+    // The kernel running NOW beats the one root saw when it wrote the report
+    if ($running_kernel !== null && $running_kernel !== '') $head['running_kernel'] = $running_kernel;
     if (isset($head['reboot_required'])) {
         $r['reboot'] = true;
     } elseif (!empty($head['newest_kernel']) && !empty($head['running_kernel'])) {

@@ -105,7 +105,9 @@ function moop_admin_tool_badges(): array {
     }
 
     // No page of their own: the dashboard card is where they are read.
-    $sec  = $_SESSION['security_updates'] ?? [];
+    // The report itself, read live like the card: the saved housekeeping result can be an hour behind it
+    $sec  = (function_exists('moop_read_security_report') ? moop_read_security_report() : null)
+         ?? ($_SESSION['security_updates'] ?? []);
     $libs = $_SESSION['library_advisories']['packages'] ?? [];
     $vuln = count(array_filter($libs, fn($p) => !empty($p['vulns'])));
     $osn  = (int)($sec['packages'] ?? 0);

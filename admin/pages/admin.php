@@ -284,7 +284,8 @@
        database itself; this only reads it. Colour follows the packages the SITE runs on -- a
        Critical fix for a desktop library is listed, but does not turn the card red. -->
   <?php
-    $su   = $_SESSION['security_updates'] ?? null;
+    // Read the report live (one small file): the saved housekeeping result can be an hour behind it
+    $su   = moop_read_security_report() ?? ($_SESSION['security_updates'] ?? null);
     $rank = ['Critical' => 4, 'Important' => 3, 'Moderate' => 2, 'Low' => 1, 'Security' => 3];
     $su_worst_watched = 0;
     foreach (($su['watched'] ?? []) as $_w) $su_worst_watched = max($su_worst_watched, $rank[$_w['severity']] ?? 0);

@@ -2063,6 +2063,12 @@ ok($_r['watched']['Linux kernel']['severity'] === 'Important', "a product is rep
 ok($_r['reboot'] === false && $_r['stale'] === false && $_r['error'] === null, 'running the newest kernel, fresh report, no error');
 $_r = moop_parse_security_report("# generated: 2020-01-01T00:00:00+00:00\n# running_kernel: k1\n# manager: dnf\n# newest_kernel: k2\n# exit: 0\n");
 ok($_r['stale'] === true && $_r['reboot'] === true, 'an old report is stale; a newer installed kernel means a reboot is pending');
+// A report written before the restart still names the old kernel: the machine's own answer wins
+$_pre = "# generated: " . date('c') . "\n# running_kernel: k1\n# manager: dnf\n# newest_kernel: k2\n# exit: 0\n";
+ok(moop_parse_security_report($_pre, 'k2')['reboot'] === false && moop_parse_security_report($_pre, 'k1')['reboot'] === true,
+   'the LIVE running kernel decides the reboot, not the one in a report written before the restart');
+ok(strpos(file_get_contents("$BASE/admin/pages/admin.php"), 'moop_read_security_report() ??') !== false,
+   'the dashboard reads the report live, not only the hourly housekeeping result');
 $_r = moop_parse_security_report("# generated: " . date('c') . "\n# manager: dnf\nError: rpmdb open failed\n# exit: 1\n");
 ok($_r['error'] !== null && $_r['advisories'] === [] && $_r['command'] === null,
    'a failed package manager is an ERROR, never zero updates (the SELinux case)');
