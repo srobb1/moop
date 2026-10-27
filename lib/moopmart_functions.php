@@ -735,8 +735,8 @@ function moopmartExonList(string $packed): array
  * Region, strand and header rules: lib/genomic_regions.php (shared with Sequence Retrieval).
  *
  * @param array    $genes         Rows from moopmartAttachCoords():
- *                                [{uniquename, chr, start, end, strand, genome_accession,
- *                                  gene_set_name, organism_name, ...}]
+ *                                [{uniquename, chr, start, end, strand, name (the gene's name,
+ *                                  for gene_name=), genome_accession, gene_set_name, ...}]
  * @param string   $assembly_dir  Path to {organism_data}/{organism}/{assembly}/
  *                                genome.fa lives here (not in gene_set subdir)
  * @param string   $gff_path      Path to genes.gff (used for exons mode only)
@@ -777,6 +777,13 @@ function moopmartStreamGenomicFasta(
         if ((string)$chr === '') { $skips['no_coords'][] = $uname; continue; }
         if (isset($missing[$chr])) { $skips['missing_chr'][$chr][] = $uname; continue; }
 
+        // gene_name= in each header (the header standard, lib/genomic_regions.php): these records
+        // are per gene, so the gene's name is all there is to add. Its ID stays first, and an exon
+        // keeps its G1.exon1 ID (decision 2: people's scripts key on it).
+        $context = moop_header_context($uname, moop_anchor_from_chain($uname,
+            [['feature_uniquename' => $uname, 'feature_type' => 'gene', 'feature_name' => $g['name'] ?? '']]));
+        $ctx     = $context !== '' ? " $context" : '';
+
         if ($mode === 'exons') {
             $gene_exons = moopmartExonList($exon_coords[$uname] ?? '');
             if (empty($gene_exons)) { $skips['no_exons'][] = $uname; continue; }
@@ -792,7 +799,7 @@ function moopmartStreamGenomicFasta(
                 $got = moop_genomic_sequence($genome, ['chr' => $chr, 'start' => $exon['start'], 'end' => $exon['end'], 'strand' => $strand]);
                 if (!$got) continue;
                 $r = $got['region'];
-                fwrite($handle, ">$uname.{$exon['type']}{$n[$k]} {$chr}:{$r['start']}-{$r['end']}($strand)\n" . chunk_split($got['seq'], MOOP_FASTA_LINE_WIDTH, "\n"));
+                fwrite($handle, ">$uname.{$exon['type']}{$n[$k]}$ctx {$chr}:{$r['start']}-{$r['end']}($strand)\n" . chunk_split($got['seq'], MOOP_FASTA_LINE_WIDTH, "\n"));
             }
             continue;
         }
@@ -804,7 +811,7 @@ function moopmartStreamGenomicFasta(
         if (!$region) continue;
         $got = moop_genomic_sequence($genome, $region);
         if (!$got) continue;
-        fwrite($handle, moop_genomic_fasta_record($uname, $part, $flank_bp, $got['region'], $got['seq']));
+        fwrite($handle, moop_genomic_fasta_record($uname, $part, $flank_bp, $got['region'], $got['seq'], null, null, $context));
     }
     moop_genome_close($genome);
     return $skips;

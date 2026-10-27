@@ -548,6 +548,30 @@ Effort: ~2 h. Risk: medium (bulk file format). Measure time and peak memory befo
 
 ### Piece 7: headers in Data Exporter genomic and exons
 
+**Status 2026-10-27: DONE.** Genomic, upstream, downstream and exon records carry `gene_name=`
+after the ID (exon IDs stay `G1.exon1`, decision 2). The shared rule changed with it: a gene's own
+record now gets `gene_name=` (and only that) everywhere -- e.g. Sequence Retrieval
+`>118665088 gene_name=PIGG genomic ...`. Proof: Myotis, NV2, Acropora x genomic/upstream/exons
+byte-identical to before once `gene_name=` is stripped.
+- **Found on the way:** 24,286 of NV2's 24,526 gene "names" are transcript IDs (NV2g025877000.1
+  "named" NV2t025877001.1). Headers would have read `gene_name=NV2t025877001.1`, and second
+  isoforms' proteins already did. New rule: a name that is any feature's ID is not a name
+  (`moop_names_that_are_ids()`, batched; the family route checks the family). Live NV2: 240 real
+  names kept (RAD17...), 0 ID-shaped in gene/protein/exon files. Sofia: the NV2 rerun brings real
+  names; the guard stays (cheap, and protects any gene set named that way).
+
+**Status 2026-10-27: DONE.** Genomic, upstream, downstream and exon records carry `gene_name=`
+after the ID (exon IDs stay `G1.exon1`, decision 2). The shared rule changed with it: a gene's own
+record now gets `gene_name=` (and only that) everywhere -- e.g. Sequence Retrieval
+`>118665088 gene_name=PIGG genomic ...`. Proof: Myotis, NV2, Acropora x genomic/upstream/exons
+byte-identical to before once `gene_name=` is stripped.
+- **Found on the way:** 24,286 of NV2's 24,526 gene "names" are transcript IDs (NV2g025877000.1
+  "named" NV2t025877001.1). Headers would have read `gene_name=NV2t025877001.1`, and second
+  isoforms' proteins already did. New rule: a name that is any feature's ID is not a name
+  (`moop_names_that_are_ids()`, batched; the family route checks the family). Live NV2: 240 real
+  names kept (RAD17...), 0 ID-shaped in gene/protein/exon files. Sofia: the NV2 rerun brings real
+  names; the guard stays (cheap, and protects any gene set named that way).
+
 - gene / upstream / downstream: add `gene_name=` (records are per gene, so no `gene=` or
   `transcript=`).
 - exons: today `>G1.exon1 chr:s-e(strand)`. **Recommended: keep the `G1.exon1` ID** (people's

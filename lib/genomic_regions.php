@@ -260,7 +260,33 @@ function moop_genomic_anchors(array $ids, string $db_path, array $gene_set_ids =
         ksort($chain);
         $out[$id] = moop_anchor_from_chain((string)$id, array_values($chain));
     }
+    $ids_named = moop_names_that_are_ids(array_column($out, 'gene_name'), $db_path, $gene_set_ids);
+    foreach ($out as &$a) if ($a['gene_name'] !== null && isset($ids_named[$a['gene_name']])) $a['gene_name'] = null;
+    unset($a);
     return $out;
+}
+
+/**
+ * Which of these "names" are really another feature's ID: one IN (...) query per 5,000.
+ *
+ * Nematostella NV2 names 24,286 of its 24,526 genes after one of their transcripts (gene
+ * NV2g025877000.1, "name" NV2t025877001.1). On a protein that is caught by "not the transcript's
+ * ID", but a gene's own record has no transcript to compare with, so it read
+ * gene_name=NV2t025877001.1 -- an ID dressed as a name. A name that is any feature's ID is not one.
+ *
+ * @return array<string, true>
+ */
+function moop_names_that_are_ids(array $names, string $db_path, array $gene_set_ids = []): array {
+    $names = array_values(array_unique(array_filter($names, fn($n) => $n !== null && $n !== '')));
+    $hit   = [];
+    if (!$names || !is_file($db_path)) return $hit;
+    $gs = $gene_set_ids ? ' AND gene_set_id IN (' . implode(',', array_fill(0, count($gene_set_ids), '?')) . ')' : '';
+    foreach (array_chunk($names, 5000) as $chunk) {
+        $sql = 'SELECT DISTINCT feature_uniquename FROM feature WHERE feature_uniquename IN ('
+             . implode(',', array_fill(0, count($chunk), '?')) . ')' . $gs;
+        foreach (fetchData($sql, $db_path, array_merge($chunk, array_values($gene_set_ids))) as $row) $hit[$row['feature_uniquename']] = true;
+    }
+    return $hit;
 }
 
 /**
@@ -308,7 +334,10 @@ function moop_anchors_from_family(array $ids, array $family): array {
             $chain[] = $family[$fid];
             $fid = $family[$fid]['parent_feature_id'] ?? null;
         }
-        $out[(string)$id] = moop_anchor_from_chain((string)$id, $chain);
+        $a = moop_anchor_from_chain((string)$id, $chain);
+        // A "name" that is a family member's ID (NV2 names genes after a transcript) is not one
+        if ($a['gene_name'] !== null && isset($by_name[$a['gene_name']])) $a['gene_name'] = null;
+        $out[(string)$id] = $a;
     }
     return $out;
 }
@@ -318,15 +347,17 @@ function moop_anchors_from_family(array $ids, array $family): array {
  *
  *   >ID gene=G gene_name=N transcript=T <the rest of the header, unchanged>
  *
- * Nothing that repeats the ID: no context at all on a gene's own record (the ID is the gene),
- * no transcript= on the transcript itself. gene_name= only when moop_genomic_anchors() kept it
- * (one word, and not just another of the feature's IDs). The ID stays the first word, because
+ * Nothing that repeats the ID: a gene's own record gets only gene_name= (the ID is the gene,
+ * and a RefSeq gene ID is a bare number -- 118665088 -- that the name PIGG explains), and the
+ * transcript itself no transcript=. gene_name= only when moop_genomic_anchors() kept it (one
+ * word, and not just another of the feature's IDs). The ID stays the first word, because
  * BLAST, samtools, scripts and the found/not-found marking all key on it.
  *
  * @param ?array $anchor one entry of moop_genomic_anchors(); null = nothing known, no context
  */
 function moop_header_context(string $id, ?array $anchor): string {
-    if (!$anchor || $anchor['gene'] === $id) return '';
+    if (!$anchor) return '';
+    if ($anchor['gene'] === $id) return ($anchor['gene_name'] ?? null) !== null ? 'gene_name=' . $anchor['gene_name'] : '';
     return 'gene=' . $anchor['gene']
          . (($anchor['gene_name'] ?? null) !== null ? ' gene_name=' . $anchor['gene_name'] : '')
          . ($anchor['transcript'] !== null && $anchor['transcript'] !== $id ? ' transcript=' . $anchor['transcript'] : '');

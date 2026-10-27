@@ -1185,8 +1185,8 @@ ok($_out === ">T1:pep gene=G1 gene_name=Abc1 transcript=T1 translocon subunit [O
             . ">T1:pep:1-2 gene=G1 gene_name=Abc1 transcript=T1 translocon\nMA\n"
             . ">T1:cds gene=G1 gene_name=Abc1 transcript=T1\nATG\n"
             . ">T1 gene=G1 gene_name=Abc1 mRNA one\nACGT\n"
-            . ">G1 the gene\nACGT\n>nope kept as is\nAC\n",
-   'headers: ID first, then gene/gene_name/transcript, then the original description; a range is looked up without it; no transcript= on the transcript, nothing on the gene, unknown IDs untouched');
+            . ">G1 gene_name=Abc1 the gene\nACGT\n>nope kept as is\nAC\n",
+   'headers: ID first, then gene/gene_name/transcript, then the original description; a range is looked up without it; no transcript= on the transcript, only gene_name= on the gene, unknown IDs untouched');
 ok(moop_fasta_with_context($_in, []) === $_in && moop_header_context('B1p', $_an['B1p']) === 'gene=B1',
    'no anchors -> the FASTA unchanged; a name that is only an ID is not shown (gene=B1, no gene_name)');
 file_put_contents("$_ad/genome.fa", ">c1\nACGTACGTACGTACGTACGT\n");
@@ -1276,6 +1276,16 @@ $_h = fopen('php://memory', 'w+');
 moopmartStreamGenomicFasta([['uniquename' => 'M1', 'chr' => 'c1', 'start' => 1, 'end' => 25, 'strand' => '-']], $_ed, "$_ed/genes.gff", 'exons', 0, $_h);
 rewind($_h); $_fa_out = stream_get_contents($_h); fclose($_h);
 preg_match_all('/^>(\S+) (\S+)/m', $_fa_out, $_m);
+// With the gene's name: gene_name= after the ID on every exon and on the gene/flank records;
+// the exon ID stays G.exonN (decision 2), and a name that is the gene's own ID is not shown.
+$_h = fopen('php://memory', 'w+');
+moopmartStreamGenomicFasta([['uniquename' => 'M1', 'chr' => 'c1', 'start' => 1, 'end' => 25, 'strand' => '-', 'name' => 'Abc9']], $_ed, "$_ed/genes.gff", 'exons', 0, $_h);
+moopmartStreamGenomicFasta([['uniquename' => 'M1', 'chr' => 'c1', 'start' => 1, 'end' => 25, 'strand' => '-', 'name' => 'Abc9']], $_ed, "$_ed/genes.gff", 'upstream', 3, $_h);
+moopmartStreamGenomicFasta([['uniquename' => 'M1', 'chr' => 'c1', 'start' => 1, 'end' => 25, 'strand' => '-', 'name' => 'M1']], $_ed, "$_ed/genes.gff", 'gene', 0, $_h);
+rewind($_h); $_named = stream_get_contents($_h); fclose($_h);
+ok(strpos($_named, ">M1.exon1 gene_name=Abc9 c1:21-25(-)\n") !== false && strpos($_named, ">M1 gene_name=Abc9 upstream_3bp c1:26-28(-)\n") !== false
+   && strpos($_named, ">M1 genomic c1:1-25(-)\n") !== false,
+   'Data Exporter genomic/exon headers: gene_name= after the ID (exon IDs unchanged); a name that is the ID itself is left out');
 ok($_m[1] === ['M1.CDS1', 'M1.exon1', 'M1.CDS2', 'M1.exon2', 'M1.exon3'], "exons numbered 5'->3' on the minus strand, each type on its own counter");
 ok($_m[2][1] === 'c1:21-25(-)' && strpos($_fa_out, ">M1.exon1 c1:21-25(-)\nTACGT\n") !== false, 'exon1 is the highest-coordinate exon, reverse-complemented');
 // The FASTA file is pure FASTA (it used to end in "# WARNING" lines); the page asks
@@ -1422,6 +1432,22 @@ ok(moop_fasta_with_context(">P2 x\nM\n>Q no ctx\nAC\n>P2:1-2 r\nM\n", ['P2' => [
      === ">P2 gene=G2 transcript=T2 x\nM\n>Q no ctx\nAC\n>P2:1-2 gene=G2 transcript=T2 r\nM\n"
    && moop_fasta_with_context("no header line\nAC\n", ['P2' => ['locus' => 'T2', 'gene' => 'G2', 'gene_name' => null, 'transcript' => 'T2']]) === "no header line\nAC\n",
    'the header rewrite jumps record to record: first, middle and ranged headers; text with no header untouched');
+// A gene "named" after one of its transcripts (24,286 NV2 genes) has no name worth showing: the
+// lookup and the family route both drop it, while a real name stays.
+$_p = new PDO("sqlite:$_sd/organism.sqlite");
+$_p->exec("INSERT INTO feature (feature_id, feature_uniquename, feature_type, parent_feature_id, gene_set_id, feature_name) VALUES
+           (30,'G9','gene',NULL,1,'T9a'),(31,'T9a','mRNA',30,1,''),(32,'P9','protein',31,1,''),(33,'G8','gene',NULL,1,'Rad17')");
+$_p = null;
+ok(moop_names_that_are_ids(['T9a', 'Rad17', '', null], "$_sd/organism.sqlite", [1]) === ['T9a' => true],
+   'a "name" that is some feature\'s ID is found as one; a real name is not');
+$_an9 = moop_genomic_anchors(['G9', 'P9', 'G8'], "$_sd/organism.sqlite", [1]);
+$_fam9 = []; expandFeaturesToAllSequenceTypes(['G9', 'G8'], "$_sd/organism.sqlite", '', '', [1], $_fam9);
+$_af9 = moop_anchors_from_family(['G9', 'P9', 'G8'], $_fam9);
+ok($_an9['G9']['gene_name'] === null && $_an9['P9']['gene_name'] === null && $_an9['G8']['gene_name'] === 'Rad17' && $_af9 == $_an9,
+   'NV2-style names dropped on both routes (lookup and family agree); a real name kept');
+ok(moop_header_context('G9', $_an9['G9']) === '' && moop_header_context('G8', $_an9['G8']) === 'gene_name=Rad17',
+   'a gene\'s own record: gene_name= when it has a real name, nothing otherwise');
+
 // Every place that serves extracted sequences adds the same headers, so the site is consistent
 // (Sofia, 2026-10-27). A new page or endpoint that calls extractSequencesForAllTypes() must too.
 $_plain = [];

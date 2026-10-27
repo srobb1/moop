@@ -328,6 +328,7 @@ if ($output_format === 'tsv') {
                     'end'         => $f['end']    ?? 0,
                     'strand'      => $f['strand'] ?? '',
                     'gene_set_id' => $f['gene_set_id'],
+                    'name'        => $f['name'] ?? '',   // gene_name= in genomic/exon headers
                 ];
                 if (++$collected >= $collect_limit) { $reached_limit = true; break 2; }
             }
@@ -357,6 +358,11 @@ if ($output_format === 'tsv') {
             if (moopmartFastaMissingFile($assembly_dir, $gs_path, $fasta_mode, $sequence_types) !== null) continue;
 
             if (in_array($fasta_mode, MOOPMART_GENOMIC_MODES, true)) {
+                // gene_name= only for real names: NV2 "names" most genes after a transcript ID
+                $ids_named = moop_names_that_are_ids(array_column($gs_features, 'name'), organism_db_path($org),
+                                                     ($gs_features[0]['gene_set_id'] ?? 0) ? [(int)$gs_features[0]['gene_set_id']] : []);
+                foreach ($gs_features as &$gf) if (isset($ids_named[$gf['name']])) $gf['name'] = '';
+                unset($gf);
                 moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
             } else {
                 // Pre-built FASTA files: protein, transcript, cds. The genes are expanded to
