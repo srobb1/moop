@@ -198,6 +198,15 @@ printf '            %s\n' "${GENESETS[@]}"
 [ "$MOOP_RELOAD" = "1" ] && echo "Reload    : yes — invalidating what this run covers"
 
 ORG_DATA=$DATA/$THIS_ORG
+
+## GENESETS holds the delivered assembly names ($GENOMES); data/ names an assembly by its
+## genome-accession (data_assembly, paths.sh), so swap it in for every path under $ORG_DATA.
+source "$SCRIPTS/paths.sh"
+for i in "${!GENESETS[@]}"; do
+  IFS=$'\t' read -r asm gs <<< "${GENESETS[$i]}"
+  data_asm=$(data_assembly "$THIS_ORG" "$asm") || exit 1
+  DATA_GENESETS[$i]="$data_asm"$'\t'"$gs"
+done
 DB=$ORG_DATA/organism.sqlite
 mkdir -p "$ORG_DATA"
 
@@ -212,7 +221,7 @@ if [ "$MOOP_RELOAD" = "1" ]; then
       rm -f "$ORG_DATA/$asm/$gs/features.tsv" \
             "$ORG_DATA/$asm/$gs/isoforms.tsv" \
             "$ORG_DATA/$asm/$gs/geneNames.tsv"
-    done < <(printf '%s\n' "${GENESETS[@]}")
+    done < <(printf '%s\n' "${DATA_GENESETS[@]}")
   else
     # Whole organism: drop the file. A schema is not editable in place -- UNIQUE,
     # NOT NULL and a corrected FOREIGN KEY cannot be added to an existing SQLite
@@ -223,7 +232,7 @@ if [ "$MOOP_RELOAD" = "1" ]; then
       rm -f "$ORG_DATA/$asm/$gs/features.tsv" \
             "$ORG_DATA/$asm/$gs/isoforms.tsv" \
             "$ORG_DATA/$asm/$gs/geneNames.tsv"
-    done < <(printf '%s\n' "${GENESETS[@]}")
+    done < <(printf '%s\n' "${DATA_GENESETS[@]}")
   fi
 fi
 
@@ -302,7 +311,7 @@ fi
 if [ "${MOOP_SKIP_AUDIT:-0}" != "1" ]; then
   step "Auditing $THIS_ORG: annotation files against the database"
   AUDIT_DIRS=()
-  for entry in "${GENESETS[@]}"; do
+  for entry in "${DATA_GENESETS[@]}"; do
     IFS=$'\t' read -r asm gs <<< "$entry"
     AUDIT_DIRS+=("$ORG_DATA/$asm/$gs")
   done

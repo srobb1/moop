@@ -71,7 +71,7 @@ while IFS=$'\t' read -r org asm gs; do
   GENESET_DIR="$GENOMES/$org/$asm/$gs"
   GENOME_DIR="$GENOMES/$org/$asm"
   ANALYSIS_DIR="$ANNOTATIONS/$org/$asm/$gs"
-  GENESET_DATA="$DATA/$org/$asm/$gs"
+  GENESET_DATA="$DATA/$org/$(data_assembly "$org" "$asm")/$gs"
 
   # Determine mode
   HAS_GFF=false; HAS_T2G=false

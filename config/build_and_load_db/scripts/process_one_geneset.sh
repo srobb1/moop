@@ -45,7 +45,10 @@ ANALYSIS_DIR=$ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET
 ## Ensembl GFF (genes.versioned.gff, add_id_versions.pl; set after the GFF format is known)
 SRC_GFF=$GENESET_DIR/genes.gff
 
-ASSEMBLY_DATA=$DATA/$THIS_ORG/$ASSEMBLY
+## data/ names the assembly by its genome-accession, as the database does (data_assembly, paths.sh);
+## the inputs above keep the delivered name (GRCz11 in $GENOMES, GCA_000002035.4 in data/)
+DATA_ASSEMBLY=$(data_assembly "$THIS_ORG" "$ASSEMBLY") || exit 1
+ASSEMBLY_DATA=$DATA/$THIS_ORG/$DATA_ASSEMBLY
 GENESET_DATA=$ASSEMBLY_DATA/$GENE_SET
 
 ## Detect which kind of geneset this is
@@ -82,7 +85,7 @@ if ! $HAS_GFF && ! $HAS_T2G; then
 fi
 
 echo "Organism : $THIS_ORG"
-echo "Assembly : $ASSEMBLY"
+echo "Assembly : $ASSEMBLY$( [ "$DATA_ASSEMBLY" != "$ASSEMBLY" ] && echo "  (data/: $DATA_ASSEMBLY)")"
 echo "Gene set : $GENE_SET"
 echo "Geneset  : $GENESET_DIR"
 echo "Analysis : $ANALYSIS_DIR"
@@ -234,7 +237,7 @@ write_genome_json() {
   local file="$ASSEMBLY_DATA/genome.json"
   [ -f "$file" ] && return
   printf '{\n  "accession": "%s",\n  "name": "",\n  "source": "%s",\n  "date_added": "%s"\n}\n' \
-    "$ASSEMBLY" "$(infer_source "$ASSEMBLY")" "$(date +%Y-%m-%d)" > "$file"
+    "$DATA_ASSEMBLY" "$(infer_source "$DATA_ASSEMBLY")" "$(date +%Y-%m-%d)" > "$file"
 }
 
 write_geneset_json() {
@@ -1250,7 +1253,7 @@ if $HAS_GFF; then
   ## Details in id_alignment.details.tsv, which copy2moop_v2.sh does not ship.
   if [ -s "$DATA/$THIS_ORG/organism.sqlite" ]; then
     echo "ID alignment gate"
-    perl "$SCRIPTS/check_id_alignment.pl" "$THIS_ORG" "$DATA/$THIS_ORG/organism.sqlite" "$ASSEMBLY" "$GENE_SET" \
+    perl "$SCRIPTS/check_id_alignment.pl" "$THIS_ORG" "$DATA/$THIS_ORG/organism.sqlite" "$DATA_ASSEMBLY" "$GENE_SET" \
       "$GFF_SOURCE" "$PWD" id_alignment.details.tsv "$REPO/id_alignment_exceptions.tsv" \
       || echo "WARNING: genes.gff/FASTAs do not match organism.sqlite for $THIS_ORG [$ASSEMBLY/$GENE_SET] -- see $PWD/id_alignment.details.tsv" >&2
   fi

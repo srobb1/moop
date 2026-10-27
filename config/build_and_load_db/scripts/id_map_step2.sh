@@ -39,7 +39,7 @@ gff_rest() {
 
 one_gene_set() {
   local org=$1 asm=$2 gs=$3 source=$4
-  local built="$DATA/$org/$asm/$gs" delivered="$GENOMES/$org/$asm/$gs" work="$OUT/${org}__${gs}"
+  local built="$DATA/$org/$(data_assembly "$org" "$asm")/$gs" delivered="$GENOMES/$org/$asm/$gs" work="$OUT/${org}__${gs}"
   mkdir -p "$work/ship"
   local naming_gff="$delivered/genes.gff"
   [ "$source" = ensembl ] && naming_gff="$built/genes.versioned.gff"
@@ -60,7 +60,7 @@ one_gene_set() {
 
   {
     echo "== gate"
-    perl "$SCRIPTS/check_id_alignment.pl" "$org" "$DATA/$org/organism.sqlite" "$asm" "$gs" "$source" \
+    perl "$SCRIPTS/check_id_alignment.pl" "$org" "$DATA/$org/organism.sqlite" "$(data_assembly "$org" "$asm")" "$gs" "$source" \
       "$work/ship" "$work/gate.details.tsv" "$REPO/id_alignment_exceptions.tsv"
     echo "gate exit $?"
     echo "== FASTA ids and sequences unchanged"

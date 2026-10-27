@@ -275,11 +275,15 @@ copy_one_geneset() {
 
   local GENOME_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY
   local ORG_DATA=$DATA/$THIS_ORG
-  local ASSEMBLY_DATA=$ORG_DATA/$ASSEMBLY
+  ## data/ and moop name the assembly by its genome-accession (data_assembly, paths.sh)
+  local DATA_ASSEMBLY
+  DATA_ASSEMBLY=$(data_assembly "$THIS_ORG" "$ASSEMBLY") \
+    || { log "FAIL  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — cannot tell its genome-accession (above)"; return 1; }
+  local ASSEMBLY_DATA=$ORG_DATA/$DATA_ASSEMBLY
   local GENESET_DATA=$ASSEMBLY_DATA/$GENE_SET
 
   local REMOTE_ORG_PATH="$REMOTE_ROOT/$THIS_ORG"
-  local REMOTE_ASSEMBLY_PATH="$REMOTE_ORG_PATH/$ASSEMBLY"
+  local REMOTE_ASSEMBLY_PATH="$REMOTE_ORG_PATH/$DATA_ASSEMBLY"
   local REMOTE_GENESET_PATH="$REMOTE_ASSEMBLY_PATH/$GENE_SET"
 
   ## organism.sqlite is the file the live site actually serves, so its absence is

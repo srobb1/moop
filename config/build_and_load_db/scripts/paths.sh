@@ -43,3 +43,35 @@
 : "${INTERPROSCAN_DIR:=/n/projects/sm2699/SBG_v4/src/interproscan/interproscan-5.78-109.0}"
 
 export GENOMES ANNOTATIONS REF_DB REFERENCE_DATA OMA_BASE OMA_REFERENCE_RUN INTERPROSCAN_DIR
+
+## data_assembly ORGANISM ASSEMBLY -- the name of the assembly's directory in data/ and on moop.
+##
+## $GENOMES names assembly directories however they were delivered (GRCz11, schMedA2h1), but the
+## database records the genome-accession from metadata.yaml (GCA_000002035.4), and the site finds
+## an assembly's files by that accession. So the built tree is named by the accession, read from
+## the assembly's gene sets' metadata.yaml; an assembly with none (empty or NA) keeps its own name.
+## Gene sets of one assembly that disagree on the accession are an error: there is no right answer.
+data_assembly() {
+  local org=$1 asm=$2 metas=() meta acc
+  for meta in "$GENOMES/$org/$asm"/*/metadata.yaml; do
+    [ -f "$meta" ] && metas+=("$meta")
+  done
+  [ ${#metas[@]} -gt 0 ] || { echo "$asm"; return 0; }
+  acc=$(awk '
+    FNR == 1 { seen = 0 }
+    !seen && /^genome-accession:/ {
+      seen = 1
+      sub(/^genome-accession:[ \t]*/, "")
+      if ($1 == "" || $1 == "NA") next
+      if (name == "") { name = $1; first = FILENAME }
+      else if ($1 != name) conflict = conflict "\n  " $1 "  " FILENAME
+    }
+    END {
+      if (conflict != "") {
+        print "ERROR: gene sets of one assembly disagree on genome-accession:\n  " name "  " first conflict > "/dev/stderr"
+        exit 1
+      }
+      print name
+    }' "${metas[@]}") || return 1
+  echo "${acc:-$asm}"
+}
