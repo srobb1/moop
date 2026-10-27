@@ -165,6 +165,30 @@ Piece 2 fixes it.
 
 ### Piece 1: the batched streaming engine, used first by the Data Exporter 🔴
 
+**Status 2026-10-27: part A done (memory), part B open (warnings → page).**
+
+- `moop_stream_sequences()` (`lib/extract_search_helpers.php`, batches of 500) now writes the
+  Data Exporter's protein/mRNA/CDS; exons are held packed (`moopmartGetExonCoords()` →
+  `moopmartExonList()`). Ranges were NOT added yet: no caller needs them until piece 2.
+- Peak memory, whole gene set, CLI: Myotis protein **969 → 27 MB**, mRNA 50 MB, CDS 41 MB;
+  exons **183 → 31 MB** (NV2 164 → 30). All faster than before.
+- Proof: exons byte-identical to the old code on Myotis, NV2, Danio, Acropora (+2 empty);
+  protein/mRNA/CDS same record set (sorted hash) on Myotis, NV2, Bradyrhizobium. Live
+  endpoint: all 8 whole-set exports (NV2 + Myotis × 4 modes) 200, were 502.
+- Fixed on the way: the protein/mRNA/CDS export wrote no newline after a gene set, so with
+  two gene sets selected the next record was glued onto the last sequence line.
+- 6 new smoke tests (batch boundary, duplicate across batches, access filter per batch,
+  one-batch byte-identical, batch size 1, missing file); each proven red on a broken copy.
+- **Found, not ours to fix (data load):** Danio GRCz11 is invisible to the Data Exporter in
+  every mode ("No features matched"): the DB genome row says `GCA_000002035.4` / name `NA`,
+  the directory and genome.json say `GRCz11`, so the gene set never gets a `gene_set_id`.
+  Check on the reload (it is in the 2026-10-27 annotation batch).
+- **Found:** Myotis mRNA/CDS exports have fewer records than the FASTA files (61,143 vs
+  70,917; 61,156 vs 61,234): the extra records are not in the DB (non-coding, JBrowse-only
+  by decision). Same before and after; the exporter exports DB genes.
+- **Testing hazard:** `/tmp` is only 4 GB; whole-set comparison files filled it once. Stream
+  comparisons through `sha256sum` instead of writing them out.
+
 One function, in `lib/extract_search_helpers.php` next to `extractSequencesForAllTypes()`, that
 every bulk sequence path will use:
 

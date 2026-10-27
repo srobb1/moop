@@ -627,9 +627,13 @@ function moopmartAttachCoords(array $features, array $coords_by_gs_id, array $co
  * only Parent=, so six gene sets (NV2 among them) exported no exons at all -- and to match the
  * GFF gene ID to the database id exactly, which missed every "gene:"-prefixed GFF.
  *
+ * Each gene's sub-features are kept PACKED, one "start end type strand" line apiece in one
+ * string per gene; moopmartExonList() unpacks one gene when it is written. A whole gene set
+ * held as PHP arrays (~400 bytes per exon) peaked at 183 MB on Myotis, over the 128M limit.
+ *
  * @param string   $gff_path         Path to genes.gff
  * @param string[] $gene_uniquenames  Gene IDs (database uniquenames) to collect sub-features for
- * @return array   [gene_id => [{start, end, type, strand}, ...]] sorted by start ASC
+ * @return array<string, string>  gene_id => packed sub-features, for moopmartExonList()
  */
 function moopmartGetExonCoords(string $gff_path, array $gene_uniquenames): array
 {
@@ -688,24 +692,31 @@ function moopmartGetExonCoords(string $gff_path, array $gene_uniquenames): array
                 $gene = $mrna_to_gene[$p] ?? null;
                 if ($gene === null && isset($gff_gene[$p]) && !isset($has_first[$gff_gene[$p]])) $gene = $gff_gene[$p];
                 if ($gene === null) continue;
-                $sub_features[$gene][] = [
-                    'start'  => (int)$parts[3],
-                    'end'    => (int)$parts[4],
-                    'type'   => $feat_type_raw,
-                    'strand' => $parts[6],
-                ];
+                $sub_features[$gene] = ($sub_features[$gene] ?? '')
+                    . (int)$parts[3] . ' ' . (int)$parts[4] . ' ' . $feat_type_raw . ' ' . $parts[6] . "\n";
                 break;
             }
         }
     }
     fclose($fh);
-
-    foreach ($sub_features as &$feats) {
-        usort($feats, fn($a, $b) => $a['start'] - $b['start']);
-    }
-    unset($feats);
-
     return $sub_features;
+}
+
+/**
+ * One gene's sub-features from moopmartGetExonCoords(), sorted by start.
+ *
+ * @return list<array{start:int, end:int, type:string, strand:string}>
+ */
+function moopmartExonList(string $packed): array
+{
+    $feats = [];
+    foreach (explode("\n", rtrim($packed, "\n")) as $line) {
+        if ($line === '') continue;
+        [$start, $end, $type, $strand] = explode(' ', $line, 4);
+        $feats[] = ['start' => (int)$start, 'end' => (int)$end, 'type' => $type, 'strand' => $strand];
+    }
+    usort($feats, fn($a, $b) => $a['start'] - $b['start']);
+    return $feats;
 }
 
 // ============================================================
@@ -767,7 +778,7 @@ function moopmartStreamGenomicFasta(
         if (isset($missing[$chr])) { $skips['missing_chr'][$chr][] = $uname; continue; }
 
         if ($mode === 'exons') {
-            $gene_exons = $exon_coords[$uname] ?? [];
+            $gene_exons = moopmartExonList($exon_coords[$uname] ?? '');
             if (empty($gene_exons)) { $skips['no_exons'][] = $uname; continue; }
             // Numbered 5'->3' along the gene, each type counted on its own: exon1 is the
             // first exon transcribed and CDS1 the first coding block -- on the minus strand the

@@ -466,6 +466,57 @@ function extractSequencesForAllTypes(
     ];
 }
 
+/** IDs per batch in moop_stream_sequences(). 500 genes of Myotis protein+isoforms ≈ 3 MB. */
+const MOOP_STREAM_BATCH = 500;
+
+/**
+ * Write ONE sequence type for any number of features to $handle, a batch at a time.
+ *
+ * The bulk path. extractSequencesForAllTypes() builds every type for every id as strings in
+ * memory, which is right for a page showing a few genes and wrong for a whole gene set: the
+ * Data Exporter's protein export did exactly that and peaked at 969 MB on Myotis (limit 128M,
+ * so a 502). Here each batch is expanded (gene -> its isoforms/CDS/proteins, scoped to the
+ * gene set), extracted for $type only, written, and freed before the next.
+ *
+ * A gene and all its descendants are expanded together, so an isoform is never split across
+ * a batch boundary. An id already written (given twice, or reached from two inputs) is not
+ * written again. Within a batch the order is extractSequencesForAllTypes()'s, so a list that
+ * fits in one batch comes out exactly as before.
+ *
+ * @param resource $handle
+ * @param string   $gene_set_dir  directory holding the gene set's FASTA files
+ * @param string[] $ids           feature uniquenames (genes or anything below them)
+ * @param string   $type          sequence_types key: protein | transcript | cds
+ * @param array    $opts          db_path, sequence_types (required); assembly, organism,
+ *                                gene_set_ids (the ACCESS filter -- pass it), batch
+ * @return array{written:int, has_file:bool}  has_file false = the gene set has no $type FASTA
+ */
+function moop_stream_sequences($handle, string $gene_set_dir, array $ids, string $type, array $opts): array {
+    $config = $opts['sequence_types'][$type] ?? null;
+    if (!$config || !glob("$gene_set_dir/{$config['pattern']}")) {
+        return ['written' => 0, 'has_file' => false];
+    }
+    $one_type = [$type => $config];
+    $seen     = [];
+    $written  = 0;
+
+    foreach (array_chunk(array_values(array_unique($ids)), $opts['batch'] ?? MOOP_STREAM_BATCH) as $chunk) {
+        $typed = array_diff_key(
+            expandFeaturesToAllSequenceTypes($chunk, $opts['db_path'], $opts['assembly'] ?? '', '', $opts['gene_set_ids'] ?? []),
+            $seen
+        );
+        if (!$typed) continue;
+        $seen += array_fill_keys(array_keys($typed), true);
+
+        $fasta = extractSequencesForAllTypes($gene_set_dir, $typed, $one_type, $opts['organism'] ?? '', $opts['assembly'] ?? '')['content'][$type] ?? '';
+        if ($fasta === '') continue;
+        fwrite($handle, $fasta . "\n");
+        $written += substr_count($fasta, "\n>") + 1;
+        unset($typed, $fasta);
+    }
+    return ['written' => $written, 'has_file' => true];
+}
+
 /**
  * Format extracted sequences for display component
  * 

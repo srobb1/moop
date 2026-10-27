@@ -356,28 +356,20 @@ if ($output_format === 'tsv') {
                 $skips = moopmartStreamGenomicFasta($gs_features, $assembly_dir, $gff_path, $fasta_mode, $flank_bp, $out);
                 foreach (moop_genomic_skip_notes($skips) as $note) $genomic_notes[] = "$gs_label: $note";
             } else {
-                // Pre-built FASTA files: protein, transcript, cds
-                // $gs_features is gene-level; expand to mRNA/CDS/protein children for extraction
-                $gene_uniquenames = array_column($gs_features, 'uniquename');
-                $db_path  = organism_db_path($org);
+                // Pre-built FASTA files: protein, transcript, cds. The genes are expanded to
+                // their isoforms/CDS/proteins and written in batches, this one type only (it
+                // used to extract all three types for the whole gene set: 969 MB on Myotis).
+                // The gene_set_id is the access filter, so the expansion cannot leave this gene set.
                 $gs_id_int = (int)($gs_features[0]['gene_set_id'] ?? 0);
-                // Feature-type agnostic descendant walk, replacing buildTypedIdsForGenes()'s
-                // three hardcoded levels (mRNA -> CDS -> protein). Starting from genes, the
-                // descendants walk yields every isoform and its CDS and protein, which is
-                // what that function produced by hand. The gene_set_id is passed as the
-                // access filter so the expansion cannot leave this gene set.
-                $typed_ids = expandFeaturesToAllSequenceTypes(
-                    $gene_uniquenames, $db_path, $assembly, '',
-                    $gs_id_int ? [$gs_id_int] : []
-                );
-                $extract_result = extractSequencesForAllTypes($gs_path, $typed_ids, $sequence_types, $org, $assembly);
-                if (isset($extract_result['content'][$fasta_mode])) {
-                    fwrite($out, $extract_result['content'][$fasta_mode]);
-                } else {
-                    $pattern = $sequence_types[$fasta_mode]['pattern'] ?? '';
-                    if ($pattern && empty(glob("$gs_path/*$pattern"))) {
-                        $skipped_datasets[] = "$gs_label (missing $fasta_mode FASTA file)";
-                    }
+                $streamed  = moop_stream_sequences($out, $gs_path, array_column($gs_features, 'uniquename'), $fasta_mode, [
+                    'db_path'        => organism_db_path($org),
+                    'sequence_types' => $sequence_types,
+                    'assembly'       => $assembly,
+                    'organism'       => $org,
+                    'gene_set_ids'   => $gs_id_int ? [$gs_id_int] : [],
+                ]);
+                if (!$streamed['has_file']) {
+                    $skipped_datasets[] = "$gs_label (missing $fasta_mode FASTA file)";
                 }
             }
         }

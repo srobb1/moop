@@ -1223,9 +1223,9 @@ file_put_contents($_gff, implode("\n", [
     "c1\ts\texon\t2000\t2100\t.\t+\t.\tParent=Other",
 ]) . "\n");
 $_ex = moopmartGetExonCoords($_gff, ['G1', '4242']);
-ok(array_map(fn($e) => [$e['start'], $e['end']], $_ex['G1'] ?? []) === [[100, 200], [700, 900]],
+ok(array_map(fn($e) => [$e['start'], $e['end']], moopmartExonList($_ex['G1'] ?? '')) === [[100, 200], [700, 900]],
    'exons with no ID= are found, for a gene: prefixed gene, first isoform only');
-ok(array_map(fn($e) => [$e['type'], $e['start']], $_ex['4242'] ?? []) === [['CDS', 1000]],
+ok(array_map(fn($e) => [$e['type'], $e['start']], moopmartExonList($_ex['4242'] ?? '')) === [['CDS', 1000]],
    'a bacterial gene -> CDS (no transcript), matched by its GeneID');
 ok(!isset($_ex['Other']), 'a gene that was not asked for is not collected');
 
@@ -1259,6 +1259,57 @@ moop_genome_close($_g);
 array_map('unlink', glob("$_ed/*")); @rmdir($_ed);
 @unlink($_gff);
 array_map('unlink', glob("$_ad/gs/*")); @rmdir("$_ad/gs"); array_map('unlink', glob("$_ad/*")); @rmdir($_ad);
+
+// ----------------------------------------------------------------------------
+group('moop_stream_sequences: bulk FASTA a batch at a time, nothing lost or doubled');
+// The Data Exporter's protein/mRNA/CDS export built all three types for a whole gene set in
+// memory (969 MB on Myotis, a 502). The batched writer must give the same records: a gene's
+// isoforms never split across a batch, an ID reached twice written once, the access filter kept.
+require_once "$BASE/lib/extract_search_helpers.php";
+$_sd = sys_get_temp_dir() . '/moop_stream_' . getmypid();
+@mkdir($_sd);
+$_p = new PDO("sqlite:$_sd/organism.sqlite");
+$_p->exec("CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_uniquename TEXT, feature_type TEXT,
+           parent_feature_id INTEGER, gene_set_id INTEGER)");
+$_p->exec("INSERT INTO feature VALUES (1,'G1','gene',NULL,1),(2,'T1a','mRNA',1,1),(3,'P1a','protein',2,1),
+           (4,'T1b','mRNA',1,1),(5,'P1b','protein',4,1),(6,'G2','gene',NULL,1),(7,'T2','mRNA',6,1),(8,'P2','protein',7,1),
+           (9,'G3','gene',NULL,1),(10,'T3','mRNA',9,1),(11,'P3','protein',10,1),(12,'G4','gene',NULL,1),(13,'T4','mRNA',12,1),
+           (14,'P4','protein',13,1),(15,'G5','gene',NULL,2),(16,'T5','mRNA',15,2),(17,'P5','protein',16,2)");
+$_p = null;
+$_fa = ''; $_fai = '';
+foreach (['P1a' => 'MAAA', 'P1b' => 'MCCC', 'P2' => 'MDDD', 'P3' => 'MEEE', 'P4' => 'MFFF', 'P5' => 'MGGG'] as $_id => $_seq) {
+    $_fa .= ">$_id desc of $_id\n";
+    $_fai .= "$_id\t" . strlen($_seq) . "\t" . strlen($_fa) . "\t" . strlen($_seq) . "\t" . (strlen($_seq) + 1) . "\n";
+    $_fa .= "$_seq\n";
+}
+file_put_contents("$_sd/protein.aa.fa", $_fa);
+file_put_contents("$_sd/protein.aa.fa.fai", $_fai);
+touch("$_sd/protein.aa.fa.phr");
+$_st = ['protein' => ['pattern' => 'protein.aa.fa'], 'cds' => ['pattern' => 'cds.nt.fa']];
+$_so = ['db_path' => "$_sd/organism.sqlite", 'sequence_types' => $_st, 'gene_set_ids' => [1]];
+$_stream = function (array $ids, string $type, int $batch) use ($_sd, $_so) {
+    $h = fopen('php://memory', 'w+');
+    $r = moop_stream_sequences($h, $_sd, $ids, $type, $_so + ['batch' => $batch]);
+    rewind($h); $r['fasta'] = stream_get_contents($h); fclose($h);
+    preg_match_all('/^>(\S+)/m', $r['fasta'], $m); $r['ids'] = $m[1];
+    return $r;
+};
+// Batches of 2: [G1, G2] then [P1a, G3] -- P1a was already written from G1, across the boundary.
+$_r = $_stream(['G1', 'G2', 'P1a', 'G3', 'G2', 'G5'], 'protein', 2);
+$_got = $_r['ids']; sort($_got);
+ok($_got === ['P1a', 'P1b', 'P2', 'P3'] && $_r['written'] === 4,
+   'every isoform of each gene, each protein once (an ID reached twice, across a batch boundary, is not repeated)');
+ok(!in_array('P5', $_r['ids'], true), 'a gene outside the allowed gene set gives nothing (the access filter holds per batch)');
+ok(strpos($_r['fasta'], ">P1a desc of P1a\nMAAA\n") !== false && substr($_r['fasta'], -1) === "\n",
+   'records keep their FASTA header, and the output ends in a newline (two gene sets used to run together)');
+$_one = $_stream(['G1', 'G2', 'G3'], 'protein', 500);
+$_old = extractSequencesForAllTypes($_sd, expandFeaturesToAllSequenceTypes(['G1', 'G2', 'G3'], "$_sd/organism.sqlite", '', '', [1]), $_st)['content']['protein'];
+ok($_one['fasta'] === $_old . "\n", 'a list that fits in one batch is byte-identical to the unbatched extraction');
+$_r = $_stream(['G1', 'G2', 'G3', 'G4'], 'protein', 1);
+ok(count($_r['ids']) === 5 && count(array_unique($_r['ids'])) === 5, 'batch size 1: every gene its own batch, nothing lost');
+$_r = $_stream(['G1'], 'cds', 500);
+ok($_r['has_file'] === false && $_r['fasta'] === '', 'no FASTA of that type in the gene set -> has_file false, so the caller can say so');
+array_map('unlink', glob("$_sd/*")); @rmdir($_sd);
 
 // ----------------------------------------------------------------------------
 group('feature_coords.tsv: one reader, every lookup');
