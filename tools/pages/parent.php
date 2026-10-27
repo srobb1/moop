@@ -343,13 +343,15 @@
                     $__stranded = in_array($neighbor_nav['strand'], ['+', '-'], true);
                     $__up_side  = $neighbor_nav['strand'] === '-' ? 'right' : 'left';
                     $__dn_side  = $__up_side === 'left' ? 'right' : 'left';
-                    $__chr      = htmlspecialchars((string)($feature_loc['chr'] ?? 'this sequence'));
                     $__up_label = $__stranded ? 'upstream gene' : 'previous gene';
                     $__dn_label = $__stranded ? 'downstream gene' : 'next gene'; ?>
                 <?php /* « and » either side of the diagram, on the side each neighbour lies (Sofia,
                          2026-10-27). They were two labelled buttons on a row of their own, which on
                          a phone needed ~300 px and stuck out of the card, so the page scrolled
-                         sideways. data-label carries the words the status line uses. */ ?>
+                         sideways. data-label carries the words the status line uses; the hover says
+                         "Go to the upstream gene page" (a Bootstrap tooltip made by gene-neighbors.js, with no
+                         fade). No data-bs-toggle="tooltip": parent-tools.js would then make a second,
+                         default (fading) one on the same button, and that is the one that showed. */ ?>
                 <div class="gene-neighbors"
                      data-organism="<?= htmlspecialchars($neighbor_nav['organism']) ?>"
                      data-assembly="<?= htmlspecialchars($neighbor_nav['assembly']) ?>"
@@ -358,12 +360,12 @@
                     <div class="d-flex align-items-center gap-1">
                         <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn gene-neighbor-chevron" data-side="<?= $__up_side ?>"
                                 data-label="<?= $__up_label ?>" aria-label="Go to the <?= $__up_label ?>"
-                                title="<?= ucfirst($__up_label) ?>: the nearest gene <?= $__stranded ? "5′ of this one" : 'at lower coordinates' ?> on <?= $__chr ?> that has a gene page">
+                                title="Go to the <?= $__up_label ?> page">
                             <i class="fas fa-angle-double-left" aria-hidden="true"></i></button>
                         <?= $__svg ?>
                         <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn gene-neighbor-chevron" data-side="<?= $__dn_side ?>"
                                 data-label="<?= $__dn_label ?>" aria-label="Go to the <?= $__dn_label ?>"
-                                title="<?= ucfirst($__dn_label) ?>: the nearest gene <?= $__stranded ? "3′ of this one" : 'at higher coordinates' ?> on <?= $__chr ?> that has a gene page">
+                                title="Go to the <?= $__dn_label ?> page">
                             <i class="fas fa-angle-double-right" aria-hidden="true"></i></button>
                     </div>
                     <div class="gene-neighbor-status small text-muted text-center mt-1" role="status"></div>
@@ -863,8 +865,8 @@ if (!empty($gene_model)) {
          'text'  => 'Jumps to that isoform\'s annotations further down the page.'],
     ];
     if (!empty($neighbor_nav)) {
-        $gm_read_cards[] = ['label' => 'Upstream / downstream gene',
-            'text' => 'Opens the nearest gene on the same sequence in that direction. Genes with no page of their own (non-coding RNAs, which are in the genome browser only) are skipped.'];
+        $gm_read_cards[] = ['label' => '« and » either side: the neighbouring genes',
+            'text' => '« goes to the gene page of the nearest gene upstream (the 5′ side, the left of the picture), » to the nearest one downstream, on the same sequence (for a gene with no strand: lower and higher positions). Hover to see which. Genes with no page of their own (non-coding RNAs, which are in the genome browser only) are skipped.'];
     }
     if (!empty($genome_seq_available)) {
         $gm_read_cards[] = ['label' => 'Click a feature',
@@ -894,11 +896,11 @@ if (!empty($gene_model)) {
             ['heading' => 'How to read it', 'cards' => $gm_read_cards],
             ['heading' => 'Getting sequence out', 'cards' => [
                 ['label' => 'This gene',
-                 'text'  => 'Use Genomic or GFF in the header of this box, or the Sequences section at the foot of the page.'],
+                 'text'  => 'Use FASTA or GFF in the header of this box, or the Sequences section at the foot of the page.'],
                 ['label' => 'Many genes at once', 'html' => true,
                  'text'  => 'For mRNA, CDS, protein, genomic or flanking sequence across many features, use <a href="/'
                           . htmlspecialchars($config->getString('site', 'moop')) . '/tools/moopmart.php?organism='
-                          . urlencode($organism_name) . '">MOOPmart</a>.'],
+                          . urlencode($organism_name) . '">the Data Exporter</a>.'],
             ]],
         ],
         ['intro' => 'Every isoform of this gene, drawn to scale against the genome.']

@@ -16,6 +16,12 @@
     const status  = box.querySelector('.gene-neighbor-status');
     const buttons = box.querySelectorAll('.gene-neighbor-btn');
 
+    // "Go to the upstream gene page" on hover, at once: no delay and no fade (Sofia found the
+    // default fade slow; the plain title attribute shows only after a pause of its own)
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        buttons.forEach(b => new bootstrap.Tooltip(b, {animation: false, delay: {show: 0, hide: 0}}));
+    }
+
     function setBusy(busy, message) {
         buttons.forEach(b => { b.disabled = busy; });
         status.textContent = message || '';
