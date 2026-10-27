@@ -2066,6 +2066,13 @@ ok($_r['stale'] === true && $_r['reboot'] === true, 'an old report is stale; a n
 $_r = moop_parse_security_report("# generated: " . date('c') . "\n# manager: dnf\nError: rpmdb open failed\n# exit: 1\n");
 ok($_r['error'] !== null && $_r['advisories'] === [] && $_r['command'] === null,
    'a failed package manager is an ERROR, never zero updates (the SELinux case)');
+// After `dnf clean all` the report (dnf -C, cache only) has nothing to read: say so and how to fix it
+$_r = moop_parse_security_report("# generated: " . date('c') . "\n# manager: dnf\nError: Cache-only enabled but no cache for 'epel'\n# exit: 1\n");
+ok(strpos((string)$_r['error'], 'No package lists to read') === 0 && strpos((string)$_r['error'], 'sudo dnf makecache') !== false,
+   'an emptied dnf cache is explained, with the command that rebuilds it and refreshes the report');
+$_r = moop_parse_security_report("# generated: " . date('c') . "\n# manager: dnf\n$_dnf# exit: 0\n");
+ok($_r['command'] === 'sudo dnf update --security && sudo dnf clean packages' && strpos($_r['recheck'], 'sudo dnf makecache') === 0,
+   'the update command cleans up its downloaded packages (clean packages, which keeps the lists the report reads)');
 $_r = moop_parse_apt_security("Inst nginx [1.22.1-9] (1.22.1-9+deb12u1 Debian-Security:12/stable-security [amd64])\n"
       . "Inst vim [2] (3 Debian:12.5/stable [amd64])\nInst libssl3 [3.0.1] (3.0.2 Debian-Security:12/stable-security [amd64])");
 ok($_r['packages'] === 2 && array_keys($_r['watched']) === ['nginx', 'OpenSSL'], 'apt: only -security origins count; libssl3 is OpenSSL');

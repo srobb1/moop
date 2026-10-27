@@ -1453,6 +1453,25 @@ function housekeeping_check_security_updates(): void {
  * @return array{checked_at:?string, manager:?string, error:?string, stale:bool, reboot:?bool,
  *               advisories:array, by_severity:array, watched:array, packages:int, command:?string}
  */
+/**
+ * The commands the dashboard shows for a package manager: install the security updates (and free
+ * the downloaded packages), and refresh the report. Worked out when the page is shown, not stored
+ * with housekeeping's saved result, so a change here appears on the next page load.
+ *
+ * "clean packages", not "clean all": clean all also empties the package lists the report reads
+ * (dnf -C), and the report fails until `dnf makecache` (2026-10-27).
+ *
+ * @return array{update: ?string, recheck: string}
+ */
+function moop_security_update_commands(?string $manager): array {
+    if ($manager === 'apt') {
+        return ['update'  => 'sudo apt-get update && sudo apt-get upgrade && sudo apt-get clean',
+                'recheck' => 'sudo apt-get update && sudo systemctl start moop-security-report.service'];
+    }
+    return ['update'  => $manager === 'dnf' ? 'sudo dnf update --security && sudo dnf clean packages' : null,
+            'recheck' => 'sudo dnf makecache && sudo systemctl start moop-security-report.service'];
+}
+
 function moop_parse_security_report(string $text): array {
     $head = [];
     $body = [];
@@ -1476,16 +1495,20 @@ function moop_parse_security_report(string $text): array {
     }
 
     $exit = isset($head['exit']) ? (int)$head['exit'] : 0;
+    $r['recheck'] = moop_security_update_commands($r['manager'])['recheck'];
     if ($r['manager'] === 'none' || $r['manager'] === null) {
         $r['error'] = 'No supported package manager (dnf or apt-get) found.';
+    } elseif ($exit !== 0 && stripos($body, 'Cache-only enabled but no cache') !== false) {
+        // After `dnf clean all`: not a broken system, just no lists to read until they are rebuilt
+        $r['error'] = 'No package lists to read. To rebuild them and refresh this report, on the server: ' . $r['recheck'];
     } elseif ($exit !== 0) {
         $r['error'] = $r['manager'] . ' exited ' . $exit . ': ' . substr(preg_replace('/\s+/', ' ', $body), 0, 300);
     } elseif ($r['manager'] === 'dnf') {
         $r = array_merge($r, moop_parse_dnf_security($body));
-        $r['command'] = 'sudo dnf update --security';
+        $r['command'] = moop_security_update_commands('dnf')['update'];
     } else {
         $r = array_merge($r, moop_parse_apt_security($body));
-        $r['command'] = 'sudo apt-get update && sudo apt-get upgrade';
+        $r['command'] = moop_security_update_commands('apt')['update'];
     }
     return $r;
 }

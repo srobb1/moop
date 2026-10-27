@@ -345,17 +345,17 @@
         <p class="small mb-2">In all, <?= count($su['advisories']) ?: array_sum($su['by_severity']) ?>
           <?= $su['manager'] === 'dnf' ? 'security advisories' : 'security updates' ?> are pending across
           <?= (int)$su['packages'] ?> packages. To install them all, on the server:
-          <code class="d-block mt-1"><?= htmlspecialchars($su['command']) ?></code>
-          <span class="text-muted d-block mt-1">Updating PHP restarts php-fpm by itself; a kernel update needs a reboot.</span>
+          <?php /* From the manager at display time, not the saved result: moop_security_update_commands() */ ?>
+          <code class="d-block mt-1"><?= htmlspecialchars(moop_security_update_commands($su['manager'] ?? null)['update'] ?? $su['command']) ?></code>
+          <span class="text-muted d-block mt-1">The last step frees the downloaded packages. A kernel update needs a reboot.</span>
         </p>
       <?php endif; ?>
       <?php if (($su['source'] ?? '') === 'report'): ?>
         <?php /* Housekeeping only READS root's report, so "Run housekeeping now" alone shows the same
                  answer again. Installing through dnf/apt refreshes the report by itself once the hook
                  from install_security_report.sh is in place; this is for everything else. */ ?>
-        <p class="small mb-2">To re-check now (the report also refreshes by itself after each dnf/apt
-          install or update), on the server:
-          <code class="d-block mt-1">sudo systemctl start moop-security-report.service</code>
+        <p class="small mb-2">To re-check now, on the server:
+          <code class="d-block mt-1"><?= htmlspecialchars(moop_security_update_commands($su['manager'] ?? null)['recheck']) ?></code>
           <span class="text-muted d-block mt-1">then <strong>Run housekeeping now</strong> to show the new report here.</span>
         </p>
       <?php endif; ?>
