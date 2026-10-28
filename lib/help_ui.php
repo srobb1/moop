@@ -74,7 +74,7 @@ function field_help(string $text, string $title = ''): string {
     $aria = $title !== '' ? ('Help: ' . $title) : 'More information';
 
     $html  = '<button type="button" class="field-help"';
-    $html .= ' data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top"';
+    $html .= ' data-bs-toggle="popover" data-bs-trigger="manual" data-bs-placement="top"';
     if ($title !== '') {
         $html .= ' data-bs-title="' . htmlspecialchars($title, ENT_QUOTES) . '"';
     }
