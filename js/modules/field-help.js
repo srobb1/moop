@@ -30,15 +30,18 @@
   var openEl = null;  // the (i) whose popover is showing, if any
 
   function popoverFor(el) {
-    if (!window.bootstrap || !bootstrap.Popover) return null;
-    var pop = bootstrap.Popover.getOrCreateInstance(el, { trigger: 'manual' });
-    // The title attribute is a no-JS fallback written by field_help(). Now that a
-    // real popover exists, drop it — otherwise hovering shows the native browser
-    // tooltip and clicking shows the popover, i.e. the same text twice in two
-    // different places. Removed only after construction succeeds, so a page where
-    // Bootstrap failed to load keeps its fallback.
-    el.removeAttribute('title');
-    return pop;
+    if (!window.bootstrap || !bootstrap.Popover) return null;   // no Bootstrap: keep the fallback
+    // The title attribute is a no-JS fallback written by field_help(), holding the help text
+    // itself. Remove it BEFORE the popover is built: Bootstrap stores it as the popover's
+    // heading (data-bs-original-title) and falls back to it whenever no heading is given, so an
+    // (i) without a heading of its own showed its text twice — heading and body. Left in place,
+    // it would also show the native browser tooltip on hover. The heading, if any, is
+    // data-bs-title.
+    if (!bootstrap.Popover.getInstance(el)) el.removeAttribute('title');
+    return bootstrap.Popover.getOrCreateInstance(el, {
+      trigger: 'manual',
+      title: el.getAttribute('data-bs-title') || ''
+    });
   }
 
   function closeOpen() {

@@ -26,7 +26,7 @@ $sysmon_help = [
     'CPU'                    => 'How busy the processors were over the last minute. Below 60% is relaxed; brief jumps are normal. Long stretches above 80% mean more CPUs would help.',
     'Memory used'            => 'RAM held by programs. Linux also fills spare RAM with cached files — that is not counted here, and is good. Above 90%, the server is short of RAM.',
     'PHP workers busy'       => 'How many of the PHP workers (each builds one page at a time) are busy now. If all are busy, visitors wait in a queue.',
-    'Databases vs RAM cache' => 'Total size of all organism databases, and how much RAM is holding files. “Disk wait” is time the CPUs spent waiting on the disk — high means cold reads.',
+    'Databases that fit in RAM' => 'How much of the organism databases RAM can hold at once. Below 100% is normal — people rarely use all of it. “Waiting on disk” says whether it hurts: near 0% means the part people use is in RAM. Status follows the waiting.',
     'Data disk used'         => 'The disk holding your databases, genomes and uploads. Above 80%, plan for space before adding big new data.',
 ];
 

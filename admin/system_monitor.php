@@ -81,9 +81,12 @@ if ($now) {
     if (isset($now['db_total_mb'], $now['cache_mb'])) {
         // How much of the data can be in RAM at once. Not a fault in itself — most of a database
         // is rarely read — but the lower it goes, the more requests go cold (see the warm/cold card).
-        $fit = $now['db_total_mb'] > 0 ? 100 * $now['cache_mb'] / $now['db_total_mb'] : null;
-        $tiles[] = ['label' => 'Databases vs RAM cache', 'value' => round($now['db_total_mb'] / 1024, 1) . ' GB',
-                    'sub' => round($now['cache_mb'] / 1024, 1) . ' GB of RAM caching files' . (isset($now['iowait_pct']) ? ' · disk wait ' . $now['iowait_pct'] . '%' : ''),
+        // "At most": the RAM cache also holds other files, so this is the ceiling, not a measurement
+        // of what is cached. Whether it HURTS is the disk wait (and the warm/cold card).
+        $fit = $now['db_total_mb'] > 0 ? min(100, 100 * $now['cache_mb'] / $now['db_total_mb']) : null;
+        $tiles[] = ['label' => 'Databases that fit in RAM', 'value' => $fit === null ? '—' : 'at most ' . round($fit) . '%',
+                    'sub' => round($now['cache_mb'] / 1024, 1) . ' GB of RAM for ' . round($now['db_total_mb'] / 1024, 1) . ' GB of databases'
+                             . (isset($now['iowait_pct']) ? ' · waiting on disk ' . $now['iowait_pct'] . '%' : ''),
                     'level' => isset($now['iowait_pct']) ? moop_monitor_level($now['iowait_pct'], 10, 25) : 'unknown'];
     }
     // The data disk always; any other disk only once it is filling up (it matters then, and

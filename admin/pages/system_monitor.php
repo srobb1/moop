@@ -343,15 +343,17 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
         actually use — the <em>working set</em> — and that is what the RAM cache
         (<?= isset($now['cache_mb']) ? round($now['cache_mb'] / 1024, 1) . ' GB now' : '—' ?>) has to hold for the site to stay warm.</p>
       <?php if ($io['measured'] > 0): ?>
-        <p class="mb-2"><strong><?= round(100 * $io['cold'] / $io['measured']) ?>%</strong> of <?= number_format($io['measured']) ?> requests
-          were cold · <strong><?= moop_monitor_fmt_bytes($io['disk_kb'] * 1024) ?></strong> read from disk in total.</p>
+        <?php $cold_pct = round(100 * $io['cold'] / $io['measured']); ?>
+        <p class="mb-2">Of <?= number_format($io['measured']) ?> requests: <strong><?= 100 - $cold_pct ?>% warm</strong>,
+          <strong><?= $cold_pct ?>% cold</strong> · <?= moop_monitor_fmt_bytes($io['disk_kb'] * 1024) ?> read from disk in total.</p>
         <div class="table-responsive sysmon-usage-table">
         <table class="table table-sm sysmon-num mb-0">
-          <thead><tr><th>Organism</th><th class="text-end">Requests</th><th class="text-end">Cold</th><th class="text-end">Read from disk</th></tr></thead>
+          <thead><tr><th>Organism</th><th class="text-end">Requests</th><th class="text-end">Warm (from RAM)</th><th class="text-end">Cold (from disk)</th><th class="text-end">Read from disk</th></tr></thead>
           <tbody>
           <?php foreach (array_slice($pages['by_org_disk'] ?? [], 0, 20, true) as $org => $o): ?>
             <tr><td><?= $h(str_replace('_', ' ', $org)) ?></td><td class="text-end"><?= number_format($o['requests']) ?></td>
-              <td class="text-end"><?= round(100 * $o['cold'] / max(1, $o['requests'])) ?>%</td>
+              <?php $cp = round(100 * $o['cold'] / max(1, $o['requests'])); ?>
+              <td class="text-end"><?= 100 - $cp ?>%</td><td class="text-end"><?= $cp ?>%</td>
               <td class="text-end"><?= moop_monitor_fmt_bytes($o['disk_kb'] * 1024) ?></td></tr>
           <?php endforeach; ?>
           </tbody>
