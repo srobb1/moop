@@ -107,7 +107,27 @@ a plain-text report into MOOP's cache directory once a day and 10 minutes after 
 MOOP only reads that report; it never runs as root and never installs anything. Re-run the
 script if you change `cache_path`. Without it the dashboard card says "Needs a one-time setup".
 
-**7. Log in** at `http://your-host/moop/` with the admin account you just created.
+**7. Protect and watch the server** (nginx; safe to re-run).
+
+```bash
+sudo scripts/install_monitor.sh
+```
+
+One command for the whole layer that keeps crawlers and AI scrapers from draining the server
+and shows what it is doing:
+
+- **Security headers + an enforced Content-Security-Policy** (skipped if your nginx already
+  sets them). The tracks server, if you configured one, is allowed automatically.
+- **Rate limits per address** (pages, AJAX, genome browser, exports/downloads) and
+  **robots.txt**. Your auto-login IP ranges are never limited, and when you change them in
+  Site Configuration the limits follow within a minute — nothing to re-run.
+- **The System Monitor collector**: a root timer that records CPU, RAM, disk, php-fpm load and
+  nginx traffic once a minute for the admin dashboard. It never runs MOOP code as root.
+
+Why and how: `notes/BOT_PROTECTION_PLAN.md`, `notes/SYSTEM_MONITOR_PLAN.md`. Apache hosts: not
+covered yet — these are nginx configuration.
+
+**8. Log in** at `http://your-host/moop/` with the admin account you just created.
 
 Then run `php setup-check.php` once more; it should come back clean.
 

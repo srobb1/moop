@@ -347,11 +347,19 @@ ErrorDocument 403 "Access denied. Track files must be accessed through the API e
 
 On nginx this file does nothing — use the [shipped guard](nginx/moop-security.conf) instead.
 
-Last, the daily OS security-update report the admin dashboard reads (README, Quick Start
+Then the daily OS security-update report the admin dashboard reads (README, Quick Start
 step 6 — the same step on both paths):
 
 ```bash
 sudo scripts/install_security_report.sh
+```
+
+Last, on nginx, the protect-and-watch layer (README, Quick Start step 7): security headers and
+the enforced CSP, per-address rate limits and robots.txt, and the System Monitor's root
+collector. Safe to re-run; `setup-check.php` reports it if missing.
+
+```bash
+sudo scripts/install_monitor.sh
 ```
 
 ---

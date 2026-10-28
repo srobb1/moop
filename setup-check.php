@@ -929,6 +929,49 @@ if (!is_file($sec_timer) && !is_file($sec_report)) {
     }
 }
 
+section("Protection & System Monitor");
+
+// README Quick Start step 7: scripts/install_monitor.sh installs the security headers + CSP,
+// per-address rate limits + robots.txt, and the System Monitor's root collector (a timer that
+// writes monitor_now.json into the cache directory every minute). nginx only for now.
+$mon_now   = "$sec_cache/monitor_now.json";
+$mon_timer = '/etc/systemd/system/moop-monitor.timer';
+$mon_cmd   = 'sudo scripts/install_monitor.sh   (once; safe to re-run)';
+if (detectWebServer() === 'apache') {
+    warn('Rate limits, security headers and the System Monitor are nginx configuration — not set up on Apache',
+         'See notes/BOT_PROTECTION_PLAN.md; the Apache equivalents are not written yet.');
+} else {
+    if (!is_file($mon_timer) && !is_file($mon_now)) {
+        warn('System Monitor collector is not installed — no CPU/RAM/traffic figures, and the rate limits do not follow IP-range changes',
+             $mon_cmd);
+    } else {
+        $mon = json_decode((string) @file_get_contents($mon_now), true);
+        $mon_age = is_array($mon) ? time() - (int) ($mon['generated'] ?? 0) : PHP_INT_MAX;
+        if ($mon_age > 300) {
+            warn('System Monitor has not written a sample for ' . ($mon_age === PHP_INT_MAX ? 'ever' : (int) floor($mon_age / 60) . ' min') . ' — the timer is not running',
+                 'systemctl status moop-monitor.timer');
+        } else {
+            pass('System Monitor sampling (last ' . $mon_age . ' s ago)');
+            $sync = $mon['nginx_sync'] ?? [];
+            if (($sync['state'] ?? '') === 'error') {
+                fail('nginx rate-limit sync failed: ' . ($sync['message'] ?? 'unknown'), 'Check the monitor page; the previous nginx config is still in use.');
+            } elseif (($sync['state'] ?? '') === 'in_sync') {
+                pass('nginx rate limits follow the auto-login IP ranges');
+            }
+        }
+    }
+    // These two are root-owned nginx files, readable by everyone on a stock install.
+    is_file('/etc/nginx/conf.d/moop-ratelimit.conf')
+        ? pass('Per-address rate limits installed')
+        : warn('No per-address rate limits — one client can take every php-fpm worker', $mon_cmd);
+    $hdr = false;
+    foreach (array_merge(['/etc/nginx/nginx.conf'], glob('/etc/nginx/conf.d/*.conf') ?: [], glob('/etc/nginx/default.d/*.conf') ?: []) as $f) {
+        if (is_readable($f) && strpos((string) file_get_contents($f), 'Content-Security-Policy') !== false) { $hdr = true; break; }
+    }
+    $hdr ? pass('Security headers / Content-Security-Policy set in nginx')
+         : warn('No Content-Security-Policy found in nginx (or its file is not readable to this check)', $mon_cmd);
+}
+
 section("JWT Authentication Keys");
 
 $jwt_priv = moop_jwt_key_paths()['private'];

@@ -107,6 +107,12 @@ function housekeeping_task_registry(): array {
             'desc'  => 'Deletes BLAST and MAFFT scratch files older than 24 hours from the system temp directory.',
         ],
         [
+            'name'  => 'monitor_publish_wanted',
+            'fn'    => 'housekeeping_monitor_publish_wanted',
+            'label' => 'Publish nginx settings',
+            'desc'  => 'Writes the auto-login IP ranges for the System Monitor collector, which keeps the nginx rate-limit exemptions in step with them.',
+        ],
+        [
             'name'  => 'request_metrics_retention',
             'fn'    => 'housekeeping_request_metrics_retention',
             'label' => 'Prune request log',
@@ -409,6 +415,17 @@ function housekeeping_clean_temp_files() {
 
     if ($deleted > 0) {
         error_log("MOOP housekeeping: cleaned up $deleted stale temp file(s)");
+    }
+}
+
+/**
+ * Publish nginx_wanted.json for the System Monitor collector (lib/system_monitor.php). Also done
+ * on every Site Configuration save; this hourly run covers a config changed any other way.
+ */
+function housekeeping_monitor_publish_wanted() {
+    require_once __DIR__ . '/system_monitor.php';
+    if (!moop_monitor_publish_wanted()) {
+        error_log('MOOP housekeeping: could not write nginx_wanted.json to the cache directory');
     }
 }
 

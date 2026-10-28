@@ -378,6 +378,11 @@ Current tasks (`run_housekeeping()`):
   `ecosystem:package@version` — the SAME table `fetch_vendor_assets.sh` downloads from) +
   Composer's `installed.json` (runtime packages only). A file off its pinned checksum is
   reported *unverified*. Upgrading a library = edit its line there; nothing else to maintain.
+- `monitor_publish_wanted` — writes `{cache}/nginx_wanted.json` (the auto-login IP ranges) for
+  the System Monitor's root collector, which applies it to the nginx rate-limit exemptions. Also
+  written on every Site Configuration save. (`lib/system_monitor.php`, `scripts/moop_monitor.py`)
+- `request_metrics_retention` — deletes `{cache}/metrics/requests-*.tsv` older than 30 days
+  (the per-request log names users and addresses; `lib/request_metrics.php`).
 
 Resolve command-line tools with `moop_find_executable()` (`lib/functions_system.php`), never a
 bare name: php-fpm's PATH and sudo's `secure_path` both omit `/usr/local/bin`.
@@ -652,6 +657,14 @@ via `config_editable.json` — read it through ConfigManager, never from `site_c
    design; see §11.)
 6. **Web-server security config** — deploy `docs/nginx/moop-security.conf` or
    `docs/apache/moop-security.conf`. Not optional; see §11.
+7. **Protect and watch the server** — `sudo scripts/install_monitor.sh` (nginx; README Quick
+   Start step 7). Security headers + enforced CSP (`docs/nginx/moop-headers.conf`, skipped if
+   nginx already sets them), rate limits + robots.txt, and the System Monitor's root collector,
+   which also keeps the rate-limit exemptions in step with `auto_login_ip_ranges`.
+   `setup-check.php` reports each piece. **Anything new that a fresh install needs must land in
+   this list, the README Quick Start, `docs/INSTALL.md` and `setup-check.php` together** —
+   the CSP lived only in this host's nginx.conf until 2026-10-28, so a new install would have
+   had none.
 
 ---
 

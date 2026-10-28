@@ -436,6 +436,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Reload config to show updated values
                 $editable_config = $config->getEditableConfigMetadata();
 
+                // Tell the System Monitor's root collector the (possibly new) auto-login ranges;
+                // it applies them to the nginx rate-limit exemptions within a minute. Nobody has
+                // to re-run install_nginx_limits.sh. (lib/system_monitor.php)
+                require_once __DIR__ . '/../lib/system_monitor.php';
+                moop_monitor_publish_wanted($editable_config['auto_login_ip_ranges']['current_value'] ?? null);
+
                 // A sequence-type pattern that matches nothing is not an error the save can
                 // detect — the file just stops being found everywhere. Say so explicitly
                 // rather than reporting a clean save over a site that has gone quiet.

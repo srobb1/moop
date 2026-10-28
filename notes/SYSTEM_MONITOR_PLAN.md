@@ -61,6 +61,18 @@ read by nobody).
 4. **Admin page** — Now / charts / traffic / heaviest / who / slowest.
 5. **Recommendations** + Add-to-heavy button; dashboard card linking to the page.
 
+## Progress
+
+- **Piece 1 DONE** 2026-10-28 (ea20ae8f): request log live.
+- **Piece 2 DONE** 2026-10-28: collector installed by Sofia (`sudo scripts/install_monitor.sh`),
+  sampling every minute; php-fpm status on (127.0.0.1 only); nginx sync in_sync on first run
+  (rendered conf byte-identical to the hand-installed one, so no reload). The installer is also
+  the single new-install step for the protect-and-watch layer: it ships the security headers +
+  CSP (`docs/nginx/moop-headers.conf`) — which until now existed ONLY in this host's nginx.conf,
+  so a new install would have had none — and is wired into README step 7, docs/INSTALL.md,
+  setup-check.php ("Protection & System Monitor") and CLAUDE.md's deployment list.
+- Next: piece 4 (the page) before 3, so there is something to see; then 3 + 5.
+
 ## Privacy
 
 Usernames and addresses are personal data: admin-only page, 30-day retention, never in the
