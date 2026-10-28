@@ -88,13 +88,22 @@ function moop_metrics_parse(string $line): ?array {
  * Visitor = the username when logged in, else the address — an anonymous visitor's address is
  * the only identity there is.
  */
-function moop_metrics_summarise(iterable $rows): array {
+function moop_metrics_summarise(iterable $rows, int $slowest_n = 0): array {
     $by_script = [];
     $by_who = [];
+    $slowest = [];
     $total = 0;
     foreach ($rows as $r) {
         if (!$r) continue;
         $total++;
+        if ($slowest_n > 0) {
+            // Keep the N slowest without holding every row: trim back to N whenever it doubles.
+            $slowest[] = $r;
+            if (count($slowest) >= 2 * $slowest_n) {
+                usort($slowest, fn($a, $b) => $b['ms'] <=> $a['ms']);
+                $slowest = array_slice($slowest, 0, $slowest_n);
+            }
+        }
         $s = &$by_script[$r['script']];
         $s['count'] = ($s['count'] ?? 0) + 1;
         $s['total_ms'] = ($s['total_ms'] ?? 0) + $r['ms'];
@@ -124,7 +133,23 @@ function moop_metrics_summarise(iterable $rows): array {
     unset($s);
     uasort($by_script, fn($a, $b) => $b['total_ms'] <=> $a['total_ms']);
     uasort($by_who, fn($a, $b) => $b['total_ms'] <=> $a['total_ms']);
-    return ['requests' => $total, 'by_script' => $by_script, 'by_who' => $by_who];
+    usort($slowest, fn($a, $b) => $b['ms'] <=> $a['ms']);
+    return ['requests' => $total, 'by_script' => $by_script, 'by_who' => $by_who,
+            'slowest' => array_slice($slowest, 0, $slowest_n)];
+}
+
+/**
+ * Rows from the last $seconds, across however many daily files that spans (newest last).
+ * Streams: never holds a whole file.
+ */
+function moop_metrics_rows_since(int $seconds, ?int $now = null): \Generator {
+    $now = $now ?? time();
+    $from = $now - $seconds;
+    for ($d = strtotime(date('Y-m-d', $from)); $d <= $now; $d = strtotime('+1 day', $d)) {   // not +86400: DST days
+        foreach (moop_metrics_rows(date('Y-m-d', $d)) as $row) {
+            if ($row['ts'] >= $from) yield $row;
+        }
+    }
 }
 
 /** Stream the parsed rows of one day's file (no whole-file read: a busy day can be large). */

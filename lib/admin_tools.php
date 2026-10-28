@@ -45,6 +45,9 @@ function moop_admin_tools(): array {
              'cta'  => 'Go to Manage Users'],
         ]],
         ['label' => 'Maintenance', 'heading' => 'Developer & Maintenance', 'icon' => 'wrench', 'btn' => 'btn-info', 'tools' => [
+            ['file' => 'system_monitor.php', 'title' => 'System Monitor', 'label' => 'System Monitor', 'icon' => 'chart-line',
+             'desc' => 'CPU, memory, disk and PHP workers; traffic, crawlers and rate-limit refusals; the heaviest pages and who is using them.',
+             'cta'  => 'Open System Monitor'],
             ['file' => 'manage_filesystem_permissions.php', 'title' => 'Filesystem Permissions', 'label' => 'Filesystem Permissions', 'icon' => 'lock',
              'desc' => 'Complete guide to file and directory permissions. Check and fix permission issues.',
              'cta'  => 'Check Permissions'],

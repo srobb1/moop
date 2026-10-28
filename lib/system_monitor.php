@@ -51,3 +51,69 @@ function moop_monitor_read(string $which): ?array {
     $data = json_decode((string) @file_get_contents($file), true);
     return is_array($data) ? $data : null;
 }
+
+/**
+ * good | warning | critical for a reading, by two thresholds. Higher = worse.
+ * Status is never shown by colour alone: the page pairs it with an icon and a word.
+ */
+function moop_monitor_level(?float $value, float $warn, float $crit): string {
+    if ($value === null) return 'unknown';
+    return $value >= $crit ? 'critical' : ($value >= $warn ? 'warning' : 'good');
+}
+
+/** php-fpm's worker limit (pm.max_children), or null if www.conf cannot be read. */
+function moop_monitor_fpm_max_children(string $conf = '/etc/php-fpm.d/www.conf'): ?int {
+    $text = @file_get_contents($conf);
+    return ($text !== false && preg_match('/^\s*pm\.max_children\s*=\s*(\d+)/m', $text, $m)) ? (int) $m[1] : null;
+}
+
+/** Is $ip inside one of the auto-login ranges (internal network, VPN, institute)? */
+function moop_monitor_ip_internal(string $ip, array $ranges): bool {
+    $n = ip2long($ip);
+    if ($n === false) return false;
+    foreach ($ranges as $r) {
+        $s = ip2long((string) ($r['start'] ?? ''));
+        $e = ip2long((string) ($r['end'] ?? ''));
+        if ($s !== false && $e !== false && $n >= $s && $n <= $e) return true;
+    }
+    return false;
+}
+
+/**
+ * Add up the collector's per-minute (24 h) or per-hour (7 d) records for the traffic tables:
+ * requests by class, status, user-agent kind, 429s, bytes, and the busiest addresses.
+ */
+function moop_monitor_traffic(array $points): array {
+    $t = ['req' => 0, 'bytes' => 0, 's429' => 0, 'fpm_max_children_reached' => 0,
+          'cls' => [], 'status' => [], 'ua' => [], 'limited' => [], 'ips' => []];
+    foreach ($points as $p) {
+        foreach (['req', 'bytes', 's429', 'fpm_max_children_reached'] as $k) $t[$k] += (int) ($p[$k] ?? 0);
+        foreach (['cls', 'status', 'ua', 'limited'] as $k) {
+            foreach (($p[$k] ?? []) as $name => $n) $t[$k][$name] = ($t[$k][$name] ?? 0) + (int) $n;
+        }
+        foreach (($p['top_ips'] ?? []) as $pair) {
+            [$ip, $n] = $pair;
+            $t['ips'][$ip] = ($t['ips'][$ip] ?? 0) + (int) $n;
+        }
+    }
+    foreach (['cls', 'status', 'ua', 'limited', 'ips'] as $k) arsort($t[$k]);
+    $t['ips'] = array_slice($t['ips'], 0, 20, true);
+    return $t;
+}
+
+/** 850 ms / 4.2 s / 3.1 min — a duration as a person reads it. */
+function moop_monitor_fmt_ms(float $ms): string {
+    if ($ms < 1000) return round($ms) . ' ms';
+    if ($ms < 60000) return round($ms / 1000, 1) . ' s';
+    if ($ms < 3600000) return round($ms / 60000, 1) . ' min';
+    return round($ms / 3600000, 1) . ' h';
+}
+
+/** 512 B / 3.4 MB / 1.2 GB. */
+function moop_monitor_fmt_bytes(float $b): string {
+    foreach (['B', 'KB', 'MB', 'GB', 'TB'] as $i => $u) {
+        if ($b < 1024 || $u === 'TB') return ($i ? round($b, 1) : (int) $b) . ' ' . $u;
+        $b /= 1024;
+    }
+    return '';
+}

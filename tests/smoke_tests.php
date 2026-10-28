@@ -2672,6 +2672,26 @@ ok($_gone === 1 && !is_file("$_md/requests-2026-09-27.tsv") && is_file("$_md/req
 array_map('unlink', glob("$_md/*")); @rmdir($_md);
 
 // ----------------------------------------------------------------------------
+group('System Monitor page: status levels, internal addresses, traffic totals');
+require_once "$BASE/lib/system_monitor.php";
+ok(moop_monitor_level(50, 60, 85) === 'good' && moop_monitor_level(60, 60, 85) === 'warning'
+   && moop_monitor_level(90, 60, 85) === 'critical' && moop_monitor_level(null, 60, 85) === 'unknown',
+   'levels: below warn is good, at warn is warning, at crit is critical, no reading is unknown');
+$_rg = [['start' => '172.16.0.0', 'end' => '172.16.255.255']];
+ok(moop_monitor_ip_internal('172.16.2.52', $_rg) && !moop_monitor_ip_internal('172.17.0.1', $_rg)
+   && !moop_monitor_ip_internal('not-an-ip', $_rg), 'internal = inside an auto-login range; garbage is never internal');
+$_tr = moop_monitor_traffic([
+    ['req' => 10, 'bytes' => 100, 's429' => 1, 'cls' => ['page' => 6, 'static' => 4], 'ua' => ['browser' => 10], 'top_ips' => [['1.1.1.1', 7], ['2.2.2.2', 3]]],
+    ['req' => 5, 'bytes' => 50, 's429' => 0, 'cls' => ['page' => 5], 'ua' => ['ai' => 5], 'top_ips' => [['2.2.2.2', 5]]],
+]);
+ok($_tr['req'] === 15 && $_tr['s429'] === 1 && $_tr['cls']['page'] === 11 && $_tr['ua']['ai'] === 5,
+   'traffic sums requests, refusals, classes and user-agent kinds across samples');
+ok(array_keys($_tr['ips']) === ['2.2.2.2', '1.1.1.1'] && $_tr['ips']['2.2.2.2'] === 8,
+   'busiest addresses are merged across samples and sorted');
+ok(moop_monitor_fmt_ms(850) === '850 ms' && moop_monitor_fmt_ms(4200) === '4.2 s' && moop_monitor_fmt_bytes(3565158) === '3.4 MB',
+   'durations and sizes read as a person would say them');
+
+// ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
 ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
    'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',

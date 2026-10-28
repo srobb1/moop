@@ -71,7 +71,15 @@ read by nobody).
   CSP (`docs/nginx/moop-headers.conf`) — which until now existed ONLY in this host's nginx.conf,
   so a new install would have had none — and is wired into README step 7, docs/INSTALL.md,
   setup-check.php ("Protection & System Monitor") and CLAUDE.md's deployment list.
-- Next: piece 4 (the page) before 3, so there is something to see; then 3 + 5.
+- **Piece 4 DONE** 2026-10-28: Admin → Maintenance → System Monitor (`admin/system_monitor.php`).
+  Right-now tiles (status = icon + word, never colour alone), five single-measure charts (inline
+  SVG, crosshair + keyboard, gaps break the line, data table underneath), traffic by user-agent
+  kind / request kind / status, busiest addresses (internal marked), heaviest pages, who, slowest
+  requests, rate-limit sync. Checked logged in as the test admin: no JS errors, no CSP issues,
+  no horizontal scroll at 1440 or 390 px.
+- First finding from it: `api/jbrowse2/config.php` takes ~3.2 s and ~28 MB on every genome-browser
+  open — the slowest public request. Worth investigating (cacheable?).
+- Next: piece 3 (heavy group into MOOP config) + 5 (recommendations, Add-to-heavy button).
 
 ## Privacy
 
