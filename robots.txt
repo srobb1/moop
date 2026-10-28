@@ -1,0 +1,57 @@
+# MOOP — robots.txt
+#
+# Served at /robots.txt by nginx (docs/nginx/moop-ratelimit.conf), from this file in the repo.
+#
+# Bulk data: please do not crawl gene pages. Whole gene sets (FASTA, GFF, annotations) are on
+# the Downloads page, and the Data Exporter builds custom tables:
+#   /moop/tools/downloads.php
+#   /moop/tools/moopmart.php
+#
+# Polite crawlers only. Crawlers that ignore this file are handled by rate limits and a
+# browser check (notes/BOT_PROTECTION_PLAN.md).
+
+# AI training and AI-answer crawlers: nothing here, please.
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Bytespider
+User-agent: Amazonbot
+User-agent: meta-externalagent
+User-agent: meta-externalfetcher
+User-agent: FacebookBot
+User-agent: cohere-ai
+User-agent: cohere-training-data-crawler
+User-agent: Diffbot
+User-agent: ImagesiftBot
+User-agent: omgili
+User-agent: omgilibot
+User-agent: Timpibot
+User-agent: YouBot
+User-agent: AI2Bot
+User-agent: Ai2Bot-Dolma
+User-agent: PetalBot
+Disallow: /
+
+# Everyone else (search engines): the descriptive pages, so the site can be found —
+# not the generated ones (gene pages, search, BLAST, exports, downloads, genome browser).
+User-agent: *
+Allow: /moop/$
+Allow: /moop/index.php
+Allow: /moop/about.php
+Allow: /moop/help.php
+Allow: /moop/tools/organism.php
+Allow: /moop/tools/groups.php
+Allow: /moop/tools/downloads.php
+Allow: /moop/css/
+Allow: /moop/js/
+Allow: /moop/images/
+Disallow: /moop/
+Crawl-delay: 10

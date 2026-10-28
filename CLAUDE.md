@@ -576,6 +576,7 @@ The following were added/fixed; keep these patterns:
 | Admin API auth | `admin/api/generate_registry.php` | Must use `admin_init.php` |
 | Trusted server URL fix | `includes/ConfigManager.php::isTrustedTracksServer()` | Prevents subdomain bypass |
 | Proxy/IP warning | `includes/access_control.php` | Logs warning if X-Forwarded-For seen with IP ranges active |
+| Bot protection (2026-10-28) | `robots.txt`, `docs/nginx/moop-ratelimit*.conf`, `lib/human_check.php` | nginx per-address limits by request class (page/api/jbrowse/heavy), internal ranges exempt — install/re-run `sudo scripts/install_nginx_limits.sh` after changing IP ranges. **A new heavy endpoint (export/download) must be added to the `heavy` class** in `moop-ratelimit-http.conf`, or it gets the lighter page limit. Turnstile check built, off until launch. Plan: `notes/BOT_PROTECTION_PLAN.md` |
 
 ---
 

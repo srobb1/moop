@@ -102,7 +102,21 @@ and worker violations never reach the page console, so the report-only crawl had
 `data:` added to connect-src; re-verified with CDP Audits issues (workers included): 24 pages
 + JBrowse, zero violations, gene track draws; Turnstile pass flow passes under enforcement.
 
+**Layers 1 + 3 + 4 built 2026-10-28:** `robots.txt` (repo root, served at /robots.txt by nginx;
+AI-training crawlers disallowed entirely, search engines get the descriptive pages only) and
+per-address limits by request class — `docs/nginx/moop-ratelimit{,-http}.conf`, installed by
+`sudo scripts/install_nginx_limits.sh` (exempt ranges generated from auto_login_ip_ranges;
+nginx -t then reload, else restore; `--remove` undoes). Proven on a throwaway nginx on a spare
+port before touching the live one: classes right, 40 pages at once → 31 served/9 refused, the
+same from an internal address → all 40, static never limited, ~2 pages/s refill.
+⚠️ Testing trick: a test location that answers with `return` bypasses limit_req entirely
+(rewrite phase runs before preaccess) — serve a file (`try_files`) instead.
+
 **Found on the way:** `/var/www/html/info.php` was a live phpinfo() page — deleted 2026-10-28.
+Also: nginx.conf loads modules from `/var/www/html/modules/*.conf` — inside the web root (the
+RHEL default is /usr/share/nginx/modules). The directory does not exist and /var/www/html is
+root-only, so nothing loads and nobody else can add a file — low risk, but it should point at
+/usr/share/nginx/modules.
 
 ## Order
 1 + 2 first (all MOOP code, testable now), then 3 + 4 (nginx, root), then 5. 6 only if
