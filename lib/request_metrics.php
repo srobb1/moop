@@ -19,8 +19,8 @@
 
 const MOOP_METRICS_RETENTION_DAYS = 30;
 // org/asm/gs (added 2026-10-28): which organism / assembly / gene set the request was about, for
-// "most viewed / searched / downloaded". Search WORDS are never recorded (Sofia, 2026-10-28: what a
-// collaborator searches for can reveal unpublished work) — only which organisms a search covered.
+// "most viewed / searched / downloaded". The usage tables never record search WORDS — only which
+// organisms a search covered. (Slow or failed requests do keep them, in params: see below.)
 // Lines written before then have 10 columns; moop_metrics_parse() accepts both.
 //
 // db_ms/db_n/disk_kb/params (added 2026-10-28): SQLite time and statement count (lib/db_timer.php);
@@ -42,12 +42,15 @@ const MOOP_METRICS_MIN_FREE_PCT = 15;
 
 /**
  * Parameters worth keeping to reproduce a slow request — an ALLOWLIST, never "everything but".
- * Deliberately absent: search words (search_keywords, q, query — they can reveal a collaborator's
- * unpublished work, decided 2026-10-28), gene-ID lists (uniquenames — as revealing as search words),
- * BLAST sequences, tokens (JBrowse puts its JWT in the URL), anything password-like.
+ * Search words ARE kept here (search_keywords, quoted, and the gene-ID lookup's q): Sofia,
+ * 2026-10-28 — for a slow or failed search they are what is needed to see what went on. Only
+ * for those requests, admin-only, 30 days; the usage tables still never record them.
+ * Deliberately absent: BLAST sequences (query — can be unpublished data, and large), pasted
+ * gene-ID lists (uniquenames), tokens (JBrowse puts its JWT in the URL), anything password-like.
  */
 const MOOP_METRICS_PARAM_ALLOW = ['organism', 'organisms', 'assembly', 'gene_set', 'uniquename', 'transcript', 'loc',
-                                  'sequence_type', 'group', 'range', 'feature_type', 'source_names'];
+                                  'sequence_type', 'group', 'range', 'feature_type', 'source_names',
+                                  'search_keywords', 'quoted', 'scope', 'no_annotations', 'q'];
 
 function moop_metrics_dir(): string {
     require_once __DIR__ . '/cache_paths.php';   // functions only; access_control.php does not load it

@@ -394,9 +394,10 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
       <div class="card adm-card h-100">
         <div class="card-header adm-head"><h5 class="mb-0">Slowest requests, <?= $span ?> <?= $sysmon_i('slowest') ?></h5></div>
         <div class="card-body">
-          <p class="small text-muted">Requests over <?= MOOP_METRICS_SLOW_MS / 1000 ?> s or that failed keep their settings (never search
-            words): page loads get an <em>open</em> link to load them again exactly as they ran; form submissions (BLAST,
-            exports) show their settings instead. None yet if everything has been fast.</p>
+          <p class="small text-muted">Requests over <?= MOOP_METRICS_SLOW_MS / 1000 ?> s or that failed keep their settings, including
+            search words (not BLAST sequences or pasted gene lists), so you can see what went on: page loads get an <em>open</em>
+            link to load them again exactly as they ran; background requests and forms show their settings instead. None yet if
+            everything has been fast.</p>
           <div class="table-responsive">
           <table class="table table-sm sysmon-num">
             <thead><tr><th>When</th><th>Page</th><th class="text-end">Time</th><th>Why slow</th><th class="text-end">In database</th><th class="text-end">From disk</th>
@@ -405,11 +406,18 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
             <?php foreach ($pages['slowest'] as $r): ?>
               <tr><td><small><?= date($range === '24h' ? 'H:i:s' : 'D j M H:i', (int) $r['ts']) ?></small></td>
                 <td><code><?= $h($r['script']) ?></code>
-                  <?php if (($r['params'] ?? '') !== '' && $r['method'] === 'GET'): ?>
+                  <?php
+                    // A link only for real pages; a background request (a search's per-organism call,
+                    // AJAX) would open raw data, so its settings are shown as text instead.
+                    $is_page = in_array(moop_monitor_class($r['script'], $heavy), ['page', 'heavy'], true) && strpos($r['script'], 'api/') !== 0;
+                  ?>
+                  <?php if (($r['params'] ?? '') !== '' && $r['method'] === 'GET' && $is_page): ?>
                     <a class="small ms-1" href="/<?= $h($site) ?>/<?= $h($r['script']) ?>?<?= $h($r['params']) ?>" target="_blank" rel="noopener"
                        title="Open this request again, with the same parameters">open <i class="fa fa-external-link-alt" aria-hidden="true"></i></a>
                   <?php elseif (($r['params'] ?? '') !== ''): ?>
-                    <div class="small text-muted text-break"><?= $h($r['method']) ?>: <?= $h(urldecode($r['params'])) ?></div>
+                    <?php parse_str($r['params'], $pv); ?>
+                    <div class="small text-muted text-break"><?php foreach ($pv as $pk => $pval): ?><span class="me-2"><?= $h($pk) ?>:
+                      <strong><?= $h(is_array($pval) ? implode(', ', $pval) : $pval) ?></strong></span><?php endforeach; ?></div>
                   <?php endif; ?></td>
                 <td class="text-end"><?= moop_monitor_fmt_ms($r['ms']) ?></td>
                 <td><small><?= $h(moop_monitor_why_slow($r) ?? 'not measured') ?></small></td>

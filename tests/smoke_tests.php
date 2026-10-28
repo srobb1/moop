@@ -2772,11 +2772,11 @@ array_map('unlink', glob("$_md/*")); @rmdir($_md);
 
 // ----------------------------------------------------------------------------
 group('System Monitor: SQLite time, warm/cold, slow-request parameters, safety cap');
-$_pq = moop_metrics_params(['organism' => 'Nv', 'uniquename' => 'NV2g1', 'search_keywords' => 'secret gene', 'q' => 'x',
+$_pq = moop_metrics_params(['organism' => 'Nv', 'uniquename' => 'NV2g1', 'search_keywords' => 'kinase domain', 'q' => 'NV2g2',
     'query' => '>seq ACGT', 'uniquenames' => 'G1,G2', 'token' => 'eyJhbGciOi', 'password' => 'p']);
 parse_str($_pq, $_pp);
-ok($_pp === ['organism' => 'Nv', 'uniquename' => 'NV2g1'],
-   'slow-request parameters: allowlist only — no search words, BLAST sequence, gene-ID list, token or password');
+ok($_pp === ['organism' => 'Nv', 'uniquename' => 'NV2g1', 'search_keywords' => 'kinase domain', 'q' => 'NV2g2'],
+   'slow-request parameters: allowlist — search words kept (to reproduce a slow search); no BLAST sequence, gene-ID list, token or password');
 $_l13 = "1.0\ttools/parent.php\tGET\t200\t12\t2.0\t\tPUBLIC\t1.2.3.4\tcurl\tNv\tA\tG\n";
 $_p13 = moop_metrics_parse($_l13);
 ok($_p13 && $_p13['org'] === 'Nv' && $_p13['disk_kb'] === null && $_p13['db_n'] === 0, 'lines from before the database columns still parse (disk = not measured)');
