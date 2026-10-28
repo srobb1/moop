@@ -131,6 +131,32 @@ function moop_monitor_traffic(array $points): array {
     return $t;
 }
 
+/**
+ * The collector's disks, named for what they hold on THIS kind of host, most important first,
+ * with duplicates (two paths on one filesystem — the cache usually sits on /var) removed.
+ * Each: label, role, used_pct, free_gb, size_gb, path.
+ */
+function moop_monitor_disks(array $disks): array {
+    $roles = [
+        'organisms' => ['Data', 'databases, genomes, uploads — new data cannot be added when full'],
+        'var'       => ['/var', 'logs, MOOP caches, the request log — when full, logging fails and pages that write caches break'],
+        'cache'     => ['Cache', 'MOOP caches'],
+        'tmp'       => ['/tmp', 'temporary files — large exports and BLAST runs fail when full'],
+        'root'      => ['System (/)', 'the operating system — updates fail when full'],
+    ];
+    $out = [];
+    $seen = [];
+    foreach ($roles as $key => [$label, $role]) {
+        if (!isset($disks[$key])) continue;
+        $d = $disks[$key];
+        $sig = $d['size_gb'] . '|' . $d['used_pct'] . '|' . $d['free_gb'];   // same filesystem → same numbers
+        if (isset($seen[$sig])) continue;
+        $seen[$sig] = true;
+        $out[$key] = $d + ['label' => $label, 'role' => $role];
+    }
+    return $out;
+}
+
 /** 850 ms / 4.2 s / 3.1 min — a duration as a person reads it. */
 function moop_monitor_fmt_ms(float $ms): string {
     if ($ms < 1000) return round($ms) . ' ms';

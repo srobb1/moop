@@ -86,14 +86,14 @@ if ($now) {
                     'sub' => round($now['cache_mb'] / 1024, 1) . ' GB of RAM caching files' . (isset($now['iowait_pct']) ? ' · disk wait ' . $now['iowait_pct'] . '%' : ''),
                     'level' => isset($now['iowait_pct']) ? moop_monitor_level($now['iowait_pct'], 10, 25) : 'unknown'];
     }
-    $worst = null;
-    foreach (($now['disks'] ?? []) as $label => $d) {
-        if ($worst === null || $d['used_pct'] > $worst['used_pct']) $worst = $d + ['label' => $label];
-    }
-    if ($worst) {
-        $tiles[] = ['label' => 'Fullest disk', 'value' => $worst['used_pct'] . '%',
-                    'sub' => $worst['path'] . ' · ' . $worst['free_gb'] . ' GB free',
-                    'level' => moop_monitor_level($worst['used_pct'], 80, 90)];
+    // The data disk always; any other disk only once it is filling up (it matters then, and
+    // only then — "the OS disk is 33% full" is noise).
+    foreach (moop_monitor_disks($now['disks'] ?? []) as $key => $d) {
+        if ($key !== 'organisms' && $d['used_pct'] < 80) continue;
+        $tiles[] = ['label' => $key === 'organisms' ? 'Data disk used' : 'Disk filling: ' . $d['label'],
+                    'value' => $d['used_pct'] . '%',
+                    'sub' => $d['free_gb'] . ' GB free of ' . $d['size_gb'] . ' GB',
+                    'level' => moop_monitor_level($d['used_pct'], 80, 90)];
     }
 }
 

@@ -54,6 +54,8 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
 
   <!-- Right now -->
   <?php if ($tiles): ?>
+  <h2 class="h6 text-muted mb-2">Right now <span class="fw-normal">— the latest one-minute sample (CPU: average over that
+    minute; the rest: at that moment). Averages and peaks are in the charts and under Capacity.</span></h2>
   <div class="sysmon-tiles mb-4">
     <?php foreach ($tiles as $t): ?>
       <div class="sysmon-tile">
@@ -440,6 +442,10 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
               <tr><th>Memory per busy worker (typical-heavy request + worker)</th><td class="text-end"><?= $h($cap['per_worker_mb']) ?> MB</td></tr>
               <tr><th>PHP workers allowed now (pm.max_children)</th><td class="text-end"><?= $max_children ?? '—' ?></td></tr>
               <tr><th>…if all were busy at once, PHP would need</th><td class="text-end"><?= $cap['php_worst_mb'] !== null ? round($cap['php_worst_mb'] / 1024, 1) . ' GB' : '—' ?></td></tr>
+              <?php foreach (moop_monitor_disks($now['disks'] ?? []) as $d): ?>
+              <tr><th>Disk: <?= $h($d['label']) ?> <span class="fw-normal small text-muted d-block"><?= $h($d['role']) ?></span></th>
+                <td class="text-end"><?= $h($d['used_pct']) ?>% · <?= $h($d['free_gb']) ?> GB free of <?= $h($d['size_gb']) ?></td></tr>
+              <?php endforeach; ?>
               <tr><th>Workers that fit in 60% of RAM</th><td class="text-end"><?= $cap['suggested_max_children'] ?? '—' ?></td></tr>
               <tr><th>Largest single request seen</th><td class="text-end"><?= $h($cap['largest_mb']) ?> MB</td></tr>
               <tr><td colspan="2" class="small text-muted">The estimate uses a typical-heavy request (95th percentile), not the

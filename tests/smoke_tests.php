@@ -2808,6 +2808,11 @@ $_rec = moop_monitor_recommendations(['iowait_avg' => 8] + $_cap, ['io' => ['mea
     [], ['db_total_mb' => 33000, 'cache_mb' => 12000, 'disks' => []], ['ips' => [], 'ua' => []], null, 50, false, []);
 ok((bool) array_filter($_rec, fn($r) => strpos($r['title'], 'databases often are not in RAM') !== false),
    'many cold requests + disk wait -> "more RAM would make the site faster"');
+$_dk = moop_monitor_disks(['root' => ['size_gb' => 12, 'used_pct' => 33, 'free_gb' => 8, 'path' => '/'],
+    'var' => ['size_gb' => 4, 'used_pct' => 32, 'free_gb' => 2.7, 'path' => '/var'], 'cache' => ['size_gb' => 4, 'used_pct' => 32, 'free_gb' => 2.7, 'path' => '/var/www/moop-cache'],
+    'organisms' => ['size_gb' => 900, 'used_pct' => 29, 'free_gb' => 638, 'path' => '/var/www/html/moop/organisms']]);
+ok(array_keys($_dk) === ['organisms', 'var', 'root'] && $_dk['organisms']['label'] === 'Data',
+   'disks: the data disk first, each named for what it holds; a path on the same filesystem (cache on /var) not listed twice');
 
 // ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
