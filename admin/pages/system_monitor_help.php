@@ -18,7 +18,7 @@ $sysmon_help = [
     'pages'     => 'What each page costs the server. Sort by any column. Big “Total time” = where the server spends its effort; big “Slowest 5%” = what feels slow to people.',
     'warmcold'  => 'Whether pages found their data already in RAM (warm, fast) or had to read it from disk (cold, slower). Many cold requests = the databases do not fit in RAM.',
     'who'       => 'Who used the server most: logged-in people by name, everyone else by address. Kept 30 days, admins only.',
-    'slowest'   => 'The slowest single requests. “open” reloads the same page with the same settings, so you can see the slowness for yourself.',
+    'slowest'   => 'The slowest single requests. A page that took over 2 seconds (or failed) also gets an “open” link that reloads it with the same settings, so you can see the slowness yourself. Faster requests have no link — their settings are not kept.',
     'capacity'  => 'The figures behind “do we need more RAM, CPUs or PHP workers?”, and how to change the number of PHP workers safely.',
     'heavy'     => 'Pages that are expensive to run (exports, downloads, BLAST). Each address may run these only 20 times a minute, so one visitor cannot swamp the server.',
     'sync'      => 'Whether nginx (the web server) is using the IP ranges and heavy group set in MOOP. It should say “In step with MOOP”.',

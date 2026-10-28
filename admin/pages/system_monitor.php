@@ -394,6 +394,9 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
       <div class="card adm-card h-100">
         <div class="card-header adm-head"><h5 class="mb-0">Slowest requests, <?= $span ?> <?= $sysmon_i('slowest') ?></h5></div>
         <div class="card-body">
+          <p class="small text-muted">Requests over <?= MOOP_METRICS_SLOW_MS / 1000 ?> s or that failed keep their settings (never search
+            words): page loads get an <em>open</em> link to load them again exactly as they ran; form submissions (BLAST,
+            exports) show their settings instead. None yet if everything has been fast.</p>
           <div class="table-responsive">
           <table class="table table-sm sysmon-num">
             <thead><tr><th>When</th><th>Page</th><th class="text-end">Time</th><th class="text-end">In database</th><th class="text-end">From disk</th>
