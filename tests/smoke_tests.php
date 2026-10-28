@@ -2771,6 +2771,45 @@ ok(moop_metrics_build_daily(strtotime('2026-10-28 12:00'), $_md) === 0, 'and doe
 array_map('unlink', glob("$_md/*")); @rmdir($_md);
 
 // ----------------------------------------------------------------------------
+group('System Monitor: SQLite time, warm/cold, slow-request parameters, safety cap');
+$_pq = moop_metrics_params(['organism' => 'Nv', 'uniquename' => 'NV2g1', 'search_keywords' => 'secret gene', 'q' => 'x',
+    'query' => '>seq ACGT', 'uniquenames' => 'G1,G2', 'token' => 'eyJhbGciOi', 'password' => 'p']);
+parse_str($_pq, $_pp);
+ok($_pp === ['organism' => 'Nv', 'uniquename' => 'NV2g1'],
+   'slow-request parameters: allowlist only — no search words, BLAST sequence, gene-ID list, token or password');
+$_l13 = "1.0\ttools/parent.php\tGET\t200\t12\t2.0\t\tPUBLIC\t1.2.3.4\tcurl\tNv\tA\tG\n";
+$_p13 = moop_metrics_parse($_l13);
+ok($_p13 && $_p13['org'] === 'Nv' && $_p13['disk_kb'] === null && $_p13['db_n'] === 0, 'lines from before the database columns still parse (disk = not measured)');
+$_io = moop_metrics_summarise([
+    ['script' => 'tools/parent.php', 'ms' => 120, 'peak_mb' => 2, 'status' => 200, 'user' => '', 'ip' => 'a', 'level' => 'PUBLIC', 'org' => 'Mm', 'db_ms' => 70, 'db_n' => 14, 'disk_kb' => 16000],
+    ['script' => 'tools/parent.php', 'ms' => 90,  'peak_mb' => 2, 'status' => 200, 'user' => '', 'ip' => 'a', 'level' => 'PUBLIC', 'org' => 'Mm', 'db_ms' => 50, 'db_n' => 14, 'disk_kb' => 0],
+    ['script' => 'tools/parent.php', 'ms' => 80,  'peak_mb' => 2, 'status' => 200, 'user' => '', 'ip' => 'a', 'level' => 'PUBLIC', 'org' => 'Nv', 'db_ms' => 40, 'db_n' => 14, 'disk_kb' => 10],
+]);
+$_ps = $_io['by_script']['tools/parent.php'];
+ok($_io['io'] === ['measured' => 3, 'cold' => 1, 'disk_kb' => 16010] && $_ps['cold'] === 1 && $_ps['db_ms'] === 160 && $_ps['db_n'] === 42,
+   'cold = read more than 64 KB from disk; database time and statements add up per page');
+ok(array_key_first($_io['by_org_disk']) === 'Mm' && $_io['by_org_disk']['Mm']['disk_kb'] === 16000 && $_io['by_org_disk']['Nv']['cold'] === 0,
+   'disk reads are attributed to the organism, heaviest first (the working set)');
+$_mg2 = moop_metrics_merge([$_io + ['skipped' => 5], $_io]);
+ok($_mg2['io']['cold'] === 2 && $_mg2['by_org_disk']['Mm']['disk_kb'] === 32000 && $_mg2['skipped'] === 5 && $_mg2['by_script']['tools/parent.php']['db_n'] === 84,
+   'daily merge keeps warm/cold, per-organism disk, database time and skipped counts');
+$_sd = sys_get_temp_dir() . '/moop_skip_' . getmypid(); @mkdir($_sd);
+file_put_contents("$_sd/skipped-2026-10-28.cnt", str_repeat('.', 7));
+ok(moop_metrics_skipped('2026-10-28', $_sd) === 7 && moop_metrics_skipped('2026-10-27', $_sd) === 0, 'the safety cap counts skipped requests one byte each');
+array_map('unlink', glob("$_sd/*")); @rmdir($_sd);
+require_once "$BASE/lib/db_timer.php";
+$_pl = new PDO('sqlite::memory:'); $_tm = new MoopTimedPDO('sqlite::memory:');
+foreach ([$_pl, $_tm] as $_db) { $_db->exec('CREATE TABLE t (a INTEGER, b TEXT)'); $_db->exec("INSERT INTO t VALUES (1,'x'),(2,'y')"); }
+$_q = fn($db) => [$db->query('SELECT * FROM t')->fetchAll(PDO::FETCH_ASSOC), $db->query('SELECT b FROM t')->fetchAll(PDO::FETCH_COLUMN),
+                  $db->query('SELECT a, b FROM t')->fetchAll(PDO::FETCH_KEY_PAIR), $db->query('SELECT b FROM t WHERE a = 2')->fetchColumn()];
+$_n0 = MoopDbTimer::$n;
+ok($_q($_pl) === $_q($_tm) && MoopDbTimer::$n - $_n0 === 4 && MoopDbTimer::$ms > 0, 'timed PDO returns exactly what PDO returns, and counts statements');
+$_rec = moop_monitor_recommendations(['iowait_avg' => 8] + $_cap, ['io' => ['measured' => 400, 'cold' => 200, 'disk_kb' => 1], 'by_script' => []],
+    [], ['db_total_mb' => 33000, 'cache_mb' => 12000, 'disks' => []], ['ips' => [], 'ua' => []], null, 50, false, []);
+ok((bool) array_filter($_rec, fn($r) => strpos($r['title'], 'databases often are not in RAM') !== false),
+   'many cold requests + disk wait -> "more RAM would make the site faster"');
+
+// ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
 ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
    'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',

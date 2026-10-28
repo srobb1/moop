@@ -96,6 +96,16 @@ read by nobody).
   internal vs public, requests + distinct visitors (visitor-days over 30 days). Collector also chmods
   the nginx conf 644 (the first rewrite came out root-only under sudo's umask). Re-install to apply.
 
+- **SQLite + warm/cold + slow-request parameters + safety cap DONE** 2026-10-28:
+  `lib/db_timer.php` (MoopTimedPDO via getDbConnection — times execute AND row fetching; proven equal to
+  PDO for every fetch style). Per request: db_ms, db_n, disk_kb (getrusage ru_inblock — NOT /proc/self/io,
+  which php-fpm workers cannot read: they are non-dumpable after switching user). Measured live: a cold gene
+  page read 16.6 MB from disk in 124 ms, warm 0 KB in 89 ms. Slow (>=2 s) or 5xx requests keep allowlisted
+  parameters → "open" link (GET). Safety cap: >200 MB/day or <15% free on the log's disk → fast requests only
+  counted (skipped-*.cnt). Collector: iowait, disk reads MB/s + latency on the database device, page cache,
+  total DB size. Page: "Databases: warm or cold" (cold share, disk reads by organism = working set), DB/cold
+  columns per page, cold-database recommendation.
+
 ## Privacy
 
 Usernames and addresses are personal data: admin-only page, 30-day retention, never in the

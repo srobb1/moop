@@ -111,11 +111,14 @@ def sample_system(state, paths):
     out = {}
     with open('/proc/stat') as fh:
         f = [int(x) for x in fh.readline().split()[1:]]
-    idle, total = f[3] + f[4], sum(f[:8])
+    idle, total, iowait = f[3] + f[4], sum(f[:8]), f[4]
     prev = state.get('cpu')
     if prev and total > prev[1]:
         out['cpu_pct'] = round(100.0 * (1 - (idle - prev[0]) / (total - prev[1])), 1)
-    state['cpu'] = [idle, total]
+        # Time the CPUs sat idle WAITING FOR DISK: the signature of cold database reads.
+        if len(prev) > 2:
+            out['iowait_pct'] = round(100.0 * (iowait - prev[2]) / (total - prev[1]), 1)
+    state['cpu'] = [idle, total, iowait]
 
     mem = {}
     with open('/proc/meminfo') as fh:
@@ -126,6 +129,8 @@ def sample_system(state, paths):
     out['mem_avail_mb'] = mem.get('MemAvailable', 0)
     out['mem_used_pct'] = round(100.0 * (1 - out['mem_avail_mb'] / max(out['mem_total_mb'], 1)), 1)
     out['swap_used_mb'] = mem.get('SwapTotal', 0) - mem.get('SwapFree', 0)
+    # RAM holding file data — for this site, mostly database pages (what keeps queries warm).
+    out['cache_mb'] = mem.get('Cached', 0)
     with open('/proc/loadavg') as fh:
         la = fh.read().split()
     out['load1'], out['load5'], out['load15'] = float(la[0]), float(la[1]), float(la[2])
@@ -143,6 +148,49 @@ def sample_system(state, paths):
             pass
     out['disks'] = disks
     return out
+
+
+def sample_disk(state, path):
+    """Reads on the device holding `path` (the databases), since the last run: MB/s and the
+    average time one read took. From /proc/diskstats; matched by the path's device numbers."""
+    try:
+        dev = os.stat(path).st_dev
+        major, minor = os.major(dev), os.minor(dev)
+        with open('/proc/diskstats') as fh:
+            for line in fh:
+                p = line.split()
+                if int(p[0]) == major and int(p[1]) == minor:
+                    ios, sectors, ticks = int(p[3]), int(p[5]), int(p[6])
+                    break
+            else:
+                return {}
+    except (OSError, ValueError, IndexError):
+        return {}
+    now = time.time()
+    prev = state.get('disk')
+    state['disk'] = [now, ios, sectors, ticks]
+    if not prev or now <= prev[0] or ios < prev[1]:
+        return {}
+    d_ios = ios - prev[1]
+    return {'disk_read_mbs': round((sectors - prev[2]) * 512 / 1048576 / (now - prev[0]), 2),
+            'disk_read_ms': round((ticks - prev[3]) / d_ios, 2) if d_ios else None}
+
+
+def sample_databases(site):
+    """Total size of all organism databases — set against the RAM cache, it says how much of the
+    data CAN be warm at once."""
+    total, n = 0, 0
+    org_dir = os.path.join(site, 'organisms')
+    try:
+        for name in os.listdir(org_dir):
+            try:
+                total += os.stat(os.path.join(org_dir, name, 'organism.sqlite')).st_size
+                n += 1
+            except OSError:
+                pass
+    except OSError:
+        return {}
+    return {'db_total_mb': total // 1048576, 'db_count': n}
 
 
 def sample_fpm(state):
@@ -400,10 +448,15 @@ def sync_nginx(cache, site, prev):
 
 # ---------------------------------------------------------------- history -------------------
 
+# Measures averaged (with a peak kept) when minutes roll up into hours and hours into days.
+ROLLUP_AVG = ('cpu_pct', 'mem_used_pct', 'load1', 'fpm_active', 'fpm_queue', 'swap_used_mb',
+              'iowait_pct', 'disk_read_mbs', 'disk_read_ms', 'cache_mb', 'db_total_mb')
+
+
 def rollup_hour(minutes):
     """Combine one hour of minute records into one record."""
     h = {'t': minutes[0]['t'] - minutes[0]['t'] % 3600, 'n': len(minutes)}
-    for k in ('cpu_pct', 'mem_used_pct', 'load1', 'fpm_active', 'fpm_queue', 'swap_used_mb'):
+    for k in ROLLUP_AVG:
         vals = [m[k] for m in minutes if isinstance(m.get(k), (int, float))]
         if vals:
             h[k] = round(sum(vals) / len(vals), 1)
@@ -433,7 +486,7 @@ def day_start(t):
 def rollup_day(hours):
     """Combine one day's hourly records: averages weighted by samples, peaks of peaks, sums."""
     d = {'t': day_start(hours[0]['t']), 'n': sum(h.get('n', 0) for h in hours)}
-    for k in ('cpu_pct', 'mem_used_pct', 'load1', 'fpm_active', 'fpm_queue', 'swap_used_mb'):
+    for k in ROLLUP_AVG:
         num = sum(h[k] * h.get('n', 1) for h in hours if isinstance(h.get(k), (int, float)))
         den = sum(h.get('n', 1) for h in hours if isinstance(h.get(k), (int, float)))
         if den:
@@ -466,6 +519,8 @@ def main():
     rec.update(sample_system(state, {'root': '/', 'var': '/var', 'tmp': '/tmp', 'cache': cache,
                                      'organisms': os.path.realpath(os.path.join(site, 'organisms'))}))
     rec.update(sample_fpm(state))
+    rec.update(sample_disk(state, os.path.realpath(os.path.join(site, 'organisms'))))
+    rec.update(sample_databases(site))
     acc = summarise_access(read_new_lines(ACCESS_LOG, state, 'access_pos'), load_classes())
     rec.update(acc)
     rec['limited'] = summarise_errors(read_new_lines(ERROR_LOG, state, 'error_pos'))

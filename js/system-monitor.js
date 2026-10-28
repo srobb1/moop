@@ -167,7 +167,8 @@
   function buildTable() {
     var table = document.getElementById('sysmon-series-table');
     if (!table) return;
-    var cols = [['t', 'Time'], ['cpu', 'CPU %'], ['mem', 'Memory %'], ['req', 'Requests'], ['fpm', 'PHP workers busy'], ['s429', 'Refused (429)']];
+    var cols = [['t', 'Time'], ['cpu', 'CPU %'], ['mem', 'Memory %'], ['req', 'Requests'], ['fpm', 'PHP workers busy'],
+                ['iowait', 'Disk wait %'], ['dread', 'Disk reads MB/s'], ['s429', 'Refused (429)']];
     var thead = table.createTHead().insertRow();
     cols.forEach(function (c) { var th = document.createElement('th'); th.textContent = c[1]; thead.appendChild(th); });
     var tbody = table.createTBody();

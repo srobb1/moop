@@ -78,6 +78,14 @@ if ($now) {
     } else {
         $tiles[] = ['label' => 'PHP workers busy', 'value' => '—', 'sub' => 'status page unreachable', 'level' => 'unknown'];
     }
+    if (isset($now['db_total_mb'], $now['cache_mb'])) {
+        // How much of the data can be in RAM at once. Not a fault in itself — most of a database
+        // is rarely read — but the lower it goes, the more requests go cold (see the warm/cold card).
+        $fit = $now['db_total_mb'] > 0 ? 100 * $now['cache_mb'] / $now['db_total_mb'] : null;
+        $tiles[] = ['label' => 'Databases vs RAM cache', 'value' => round($now['db_total_mb'] / 1024, 1) . ' GB',
+                    'sub' => round($now['cache_mb'] / 1024, 1) . ' GB of RAM caching files' . (isset($now['iowait_pct']) ? ' · disk wait ' . $now['iowait_pct'] . '%' : ''),
+                    'level' => isset($now['iowait_pct']) ? moop_monitor_level($now['iowait_pct'], 10, 25) : 'unknown'];
+    }
     $worst = null;
     foreach (($now['disks'] ?? []) as $label => $d) {
         if ($worst === null || $d['used_pct'] > $worst['used_pct']) $worst = $d + ['label' => $label];
@@ -99,6 +107,8 @@ foreach ($points as $p) {
         'req'  => (int) ($p['req'] ?? 0),
         'fpm'  => $p['fpm_active'] ?? null,
         's429' => (int) ($p['s429'] ?? 0),
+        'iowait' => $p['iowait_pct'] ?? null,
+        'dread'  => $p['disk_read_mbs'] ?? null,
     ];
 }
 
@@ -108,13 +118,16 @@ if ($range === '30d') {
     // of request lines on every page load would not scale with traffic.
     $today_rows = fn() => moop_metrics_rows(date('Y-m-d'));
     $daily = moop_metrics_daily(29);
-    $pages = moop_metrics_merge(array_merge($daily, [moop_metrics_summarise($today_rows(), 20)]));
+    $pages = moop_metrics_merge(array_merge($daily, [moop_metrics_summarise($today_rows(), 20) + ['skipped' => moop_metrics_skipped(date('Y-m-d'))]]));
     $usage = moop_metrics_usage_merge(array_merge(array_column($daily, 'usage'), [moop_metrics_usage($today_rows())]));
     $days_covered = count($daily) + 1;
 } else {
     $pages = moop_metrics_summarise(moop_metrics_rows_since($seconds), 20);
     $usage = moop_metrics_usage(moop_metrics_rows_since($seconds));
     $days_covered = null;
+    // Requests the safety cap counted but did not log, over the dates this window touches.
+    $pages['skipped'] = 0;
+    for ($d = time() - $seconds; $d <= time() + 60; $d += 86400) $pages['skipped'] += moop_metrics_skipped(date('Y-m-d', $d));
 }
 // Recommendations judge pages on 7 days whatever window is shown: a day is too little evidence.
 $pages7  = $range === '7d' ? $pages : moop_metrics_summarise(moop_metrics_rows_since(7 * 86400));
@@ -143,6 +156,7 @@ echo render_display_page(
         'flash'        => $flash,
         'usage'        => $usage,
         'days_covered' => $days_covered,
+        'site'         => $site,
         'page_styles'  => ['/' . $site . '/css/system-monitor.css'],
         'page_script'  => ['/' . $site . '/js/system-monitor.js'],
         'inline_scripts' => [

@@ -189,6 +189,8 @@ function moop_monitor_capacity(array $points, array $pages, ?array $now, ?int $m
         'php_worst_mb'   => $max_children ? (int) round($max_children * $per_worker) : null,
         'total_mb'       => $total_mb,
         'suggested_max_children' => $suggested,
+        'iowait_avg'     => ($io = $vals('iowait_pct', false)) ? round($avg($io), 1) : null,
+        'iowait_peak'    => ($iop = $vals('iowait_pct', true)) ? max($iop) : null,
     ];
 }
 
@@ -229,6 +231,17 @@ function moop_monitor_recommendations(array $cap, array $pages7, array $heavy, ?
             "If all {$max_children} workers were busy at once with a typical-heavy request ({$cap['per_worker_mb']} MB each, measured), PHP alone would need "
             . round($cap['php_worst_mb'] / 1024, 1) . ' GB of the server’s ' . round($cap['total_mb'] / 1024, 1) . ' GB. '
             . "About {$cap['suggested_max_children']} workers fit while leaving room for the OS and the page cache SQLite depends on. Either lower pm.max_children or add RAM.");
+    }
+    // Cold databases: many requests read from disk AND the CPUs spend real time waiting on it.
+    $io = $pages7['io'] ?? ['measured' => 0, 'cold' => 0];
+    $cold_share = $io['measured'] ? 100 * $io['cold'] / $io['measured'] : 0;
+    if ($io['measured'] >= 200 && $cold_share >= 25 && ($cap['iowait_avg'] ?? 0) >= 5) {
+        $add('warning', 'The databases often are not in RAM — more RAM would make the site faster',
+            round($cold_share) . '% of requests over 7 days had to read from disk, and the CPUs spent on average '
+            . $cap['iowait_avg'] . '% of their time waiting for it. '
+            . (isset($now['db_total_mb'], $now['cache_mb']) ? 'The databases total ' . round($now['db_total_mb'] / 1024, 1) . ' GB; '
+                . round($now['cache_mb'] / 1024, 1) . ' GB of RAM is caching files. ' : '')
+            . 'See “Databases: warm or cold” for which organisms read the most — that working set is what the cache needs to hold.');
     }
     if (($cap['cpu_busy_share'] ?? 0) >= 25 || ($cap['cpu_avg'] ?? 0) >= 70) {
         $add('warning', 'CPU is busy much of the time — consider more CPUs',

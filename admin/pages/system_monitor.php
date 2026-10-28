@@ -3,7 +3,7 @@
  * SYSTEM MONITOR - Content File. Controller: admin/system_monitor.php.
  *
  * Variables: $range ('24h'|'7d'), $age, $collector_ok, $sync, $tiles, $now, $traffic, $pages,
- *            $max_children, $ranges, $heavy, $cap, $recs, $flash, $usage, $days_covered
+ *            $max_children, $ranges, $heavy, $cap, $recs, $flash, $usage, $days_covered, $site
  * Charts are drawn by js/system-monitor.js from window.MOOP_MONITOR.series; every chart has the
  * same numbers in the data table below it, so nothing is hover-only.
  */
@@ -68,6 +68,16 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
   </div>
   <?php endif; ?>
 
+  <?php if (($pages['skipped'] ?? 0) > 0): ?>
+    <div class="alert alert-warning small">
+      <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"></i>
+      The request log hit its safety limit in this window (a day's log over <?= MOOP_METRICS_DAILY_CAP_MB ?> MB, or the disk
+      under <?= MOOP_METRICS_MIN_FREE_PCT ?>% free): <?= number_format($pages['skipped']) ?> ordinary fast requests were counted but
+      not logged, so page and usage figures below are incomplete. Slow and failed requests were all kept. Usually a crawler —
+      see Busiest addresses.
+    </div>
+  <?php endif; ?>
+
   <?php if ($flash): ?>
     <div class="alert <?= $flash[0] === 'ok' ? 'alert-success' : 'alert-danger' ?>"><?= $h($flash[1]) ?></div>
   <?php endif; ?>
@@ -127,6 +137,12 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
         </figure>
         <figure class="sysmon-chart" data-key="fpm" data-unit=" busy"<?= $max_children ? ' data-max="' . (int) $max_children . '"' : '' ?>>
           <figcaption>PHP workers busy<?= $max_children ? ' (of ' . (int) $max_children . ')' : '' ?></figcaption><div class="sysmon-plot"></div>
+        </figure>
+        <figure class="sysmon-chart" data-key="iowait" data-unit="%">
+          <figcaption>Waiting on disk (iowait) — high means cold database reads</figcaption><div class="sysmon-plot"></div>
+        </figure>
+        <figure class="sysmon-chart" data-key="dread" data-unit=" MB/s">
+          <figcaption>Reads from the database disk</figcaption><div class="sysmon-plot"></div>
         </figure>
         <figure class="sysmon-chart" data-key="s429" data-unit=" refused">
           <figcaption>Requests refused by rate limits (429) per <?= $per ?></figcaption><div class="sysmon-plot"></div>
@@ -285,7 +301,9 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
       <table class="table table-sm table-hover sysmon-num sysmon-dt" id="sysmon-pages">
         <thead><tr><th>Page</th><th>Limit</th><th class="text-end">Requests</th><th class="text-end">Total time</th><th class="text-end">Typical</th>
           <th class="text-end">Slowest 5%</th><th class="text-end">Slowest</th><th class="text-end">Memory, typical</th>
-          <th class="text-end">Memory, peak</th><th class="text-end">Errors</th></tr></thead>
+          <th class="text-end">Memory, peak</th><th class="text-end">Errors</th>
+          <th class="text-end" title="Share of this page's time spent in SQLite (running queries and reading rows)">In database</th>
+          <th class="text-end" title="Share of requests that had to read from disk rather than RAM">Cold</th></tr></thead>
         <tbody>
         <?php foreach ($pages['by_script'] as $script => $s): ?>
           <tr><td><code><?= $h($script) ?></code></td>
@@ -297,11 +315,45 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
             <td class="text-end" data-order="<?= (int) $s['max_ms'] ?>"><?= moop_monitor_fmt_ms($s['max_ms']) ?></td>
             <td class="text-end"><?= $h($s['mean_mb']) ?> MB</td>
             <td class="text-end"><?= $h($s['max_mb']) ?> MB</td>
-            <td class="text-end"><?= $s['errors'] ? '<span class="sysmon-status sysmon-critical"><i class="fa fa-times-circle" aria-hidden="true"></i> ' . (int) $s['errors'] . '</span>' : '0' ?></td></tr>
+            <td class="text-end"><?= $s['errors'] ? '<span class="sysmon-status sysmon-critical"><i class="fa fa-times-circle" aria-hidden="true"></i> ' . (int) $s['errors'] . '</span>' : '0' ?></td>
+            <td class="text-end"><?= !empty($s['db_n']) ? round(100 * ($s['db_ms'] ?? 0) / max(1, $s['total_ms'])) . '%' : '—' ?></td>
+            <td class="text-end"><?= !empty($s['io_n']) ? round(100 * ($s['cold'] ?? 0) / $s['io_n']) . '%' : '—' ?></td></tr>
         <?php endforeach; ?>
         </tbody>
       </table>
       </div>
+    </div>
+  </div>
+
+  <!-- Databases: warm or cold -->
+  <?php $io = $pages['io'] ?? ['measured' => 0, 'cold' => 0, 'disk_kb' => 0]; ?>
+  <div class="card adm-card mb-4" id="sysmon-warmcold">
+    <div class="card-header adm-head"><h5 class="mb-0">Databases: warm or cold, <?= $span ?></h5></div>
+    <div class="card-body">
+      <p class="small text-muted">A request is <em>warm</em> when everything it needed was already in RAM, and <em>cold</em> when it
+        had to read from disk (more than <?= MOOP_METRICS_COLD_KB ?> KB). Cold requests are the slow ones on this site. The
+        organisms below are where the disk reads go: together they are the part of the
+        <?= isset($now['db_total_mb']) ? round($now['db_total_mb'] / 1024, 1) . ' GB of databases' : 'databases' ?> that people
+        actually use — the <em>working set</em> — and that is what the RAM cache
+        (<?= isset($now['cache_mb']) ? round($now['cache_mb'] / 1024, 1) . ' GB now' : '—' ?>) has to hold for the site to stay warm.</p>
+      <?php if ($io['measured'] > 0): ?>
+        <p class="mb-2"><strong><?= round(100 * $io['cold'] / $io['measured']) ?>%</strong> of <?= number_format($io['measured']) ?> requests
+          were cold · <strong><?= moop_monitor_fmt_bytes($io['disk_kb'] * 1024) ?></strong> read from disk in total.</p>
+        <div class="table-responsive sysmon-usage-table">
+        <table class="table table-sm sysmon-num mb-0">
+          <thead><tr><th>Organism</th><th class="text-end">Requests</th><th class="text-end">Cold</th><th class="text-end">Read from disk</th></tr></thead>
+          <tbody>
+          <?php foreach (array_slice($pages['by_org_disk'] ?? [], 0, 20, true) as $org => $o): ?>
+            <tr><td><?= $h(str_replace('_', ' ', $org)) ?></td><td class="text-end"><?= number_format($o['requests']) ?></td>
+              <td class="text-end"><?= round(100 * $o['cold'] / max(1, $o['requests'])) ?>%</td>
+              <td class="text-end"><?= moop_monitor_fmt_bytes($o['disk_kb'] * 1024) ?></td></tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+        </div>
+      <?php else: ?>
+        <p class="small text-muted mb-0">No measurements yet in this window (recorded from 2026-10-28).</p>
+      <?php endif; ?>
     </div>
   </div>
 
@@ -336,17 +388,26 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
         <div class="card-body">
           <div class="table-responsive">
           <table class="table table-sm sysmon-num">
-            <thead><tr><th>When</th><th>Page</th><th class="text-end">Time</th><th class="text-end">Memory</th><th>Who</th><th class="text-end">Status</th></tr></thead>
+            <thead><tr><th>When</th><th>Page</th><th class="text-end">Time</th><th class="text-end">In database</th><th class="text-end">From disk</th>
+              <th class="text-end">Memory</th><th>Who</th><th class="text-end">Status</th></tr></thead>
             <tbody>
             <?php foreach ($pages['slowest'] as $r): ?>
               <tr><td><small><?= date($range === '24h' ? 'H:i:s' : 'D j M H:i', (int) $r['ts']) ?></small></td>
-                <td><code><?= $h($r['script']) ?></code></td>
+                <td><code><?= $h($r['script']) ?></code>
+                  <?php if (($r['params'] ?? '') !== '' && $r['method'] === 'GET'): ?>
+                    <a class="small ms-1" href="/<?= $h($site) ?>/<?= $h($r['script']) ?>?<?= $h($r['params']) ?>" target="_blank" rel="noopener"
+                       title="Open this request again, with the same parameters">open <i class="fa fa-external-link-alt" aria-hidden="true"></i></a>
+                  <?php elseif (($r['params'] ?? '') !== ''): ?>
+                    <div class="small text-muted text-break"><?= $h($r['method']) ?>: <?= $h(urldecode($r['params'])) ?></div>
+                  <?php endif; ?></td>
                 <td class="text-end"><?= moop_monitor_fmt_ms($r['ms']) ?></td>
+                <td class="text-end"><?= !empty($r['db_n']) ? moop_monitor_fmt_ms($r['db_ms']) : '—' ?></td>
+                <td class="text-end"><?= ($r['disk_kb'] ?? null) === null ? '—' : moop_monitor_fmt_bytes($r['disk_kb'] * 1024) ?></td>
                 <td class="text-end"><?= $h($r['peak_mb']) ?> MB</td>
                 <td><small><?= $h($r['user'] !== '' ? $r['user'] : $r['ip']) ?></small></td>
                 <td class="text-end"><?= (int) $r['status'] ?></td></tr>
             <?php endforeach; ?>
-            <?php if (!$pages['slowest']): ?><tr><td colspan="6" class="text-muted">Nothing logged yet.</td></tr><?php endif; ?>
+            <?php if (!$pages['slowest']): ?><tr><td colspan="8" class="text-muted">Nothing logged yet.</td></tr><?php endif; ?>
             </tbody>
           </table>
           </div>
@@ -372,6 +433,9 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
               <tr><th>Share of time CPU was above 80%</th><td class="text-end"><?= $h($cap['cpu_busy_share'] ?? '—') ?>%</td></tr>
               <tr><th>Memory, peak used</th><td class="text-end"><?= $h($cap['mem_peak'] ?? '—') ?>% of <?= round($cap['total_mb'] / 1024, 1) ?> GB</td></tr>
               <tr><th>Swap, peak</th><td class="text-end"><?= (int) $cap['swap_peak_mb'] ?> MB</td></tr>
+              <tr><th>Waiting on disk (iowait), average / peak</th><td class="text-end"><?= $h($cap['iowait_avg'] ?? '—') ?>% / <?= $h($cap['iowait_peak'] ?? '—') ?>%</td></tr>
+              <tr><th>Databases / RAM caching files</th><td class="text-end"><?= isset($now['db_total_mb']) ? round($now['db_total_mb'] / 1024, 1) . ' GB / ' . round($now['cache_mb'] / 1024, 1) . ' GB' : '—' ?></td></tr>
+              <tr><th>Requests that went cold</th><td class="text-end"><?= ($pages['io']['measured'] ?? 0) ? round(100 * $pages['io']['cold'] / $pages['io']['measured']) . '%' : '—' ?></td></tr>
               <tr><th>Times every PHP worker was busy</th><td class="text-end"><?= (int) $cap['workers_reached'] ?></td></tr>
               <tr><th>Memory per busy worker (typical-heavy request + worker)</th><td class="text-end"><?= $h($cap['per_worker_mb']) ?> MB</td></tr>
               <tr><th>PHP workers allowed now (pm.max_children)</th><td class="text-end"><?= $max_children ?? '—' ?></td></tr>
@@ -387,7 +451,8 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
         <div class="col-lg-6 small">
           <h6>When is it time to add…</h6>
           <ul>
-            <li><strong>RAM</strong> — memory regularly above ~85–90% used, <em>any</em> swapping, or “every PHP worker busy”
+            <li><strong>RAM</strong> — many requests going cold with high disk wait (the databases no longer fit in the cache), memory
+              regularly above ~85–90% used, <em>any</em> swapping, or “every PHP worker busy”
               while RAM has no room for more workers. RAM runs out first on this server (capacity test, 2026-10-23), and it
               also holds the page cache that keeps the databases fast, so it is the usual first upgrade.</li>
             <li><strong>CPUs</strong> — CPU above 80% for long stretches (not short spikes), while memory is fine. Check the

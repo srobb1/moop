@@ -373,7 +373,10 @@ function getDbConnection($dbFile) {
     $open_flags = ($dbFile === ':memory:')
         ? (PDO::SQLITE_OPEN_READWRITE | PDO::SQLITE_OPEN_CREATE | $uri_flag)
         : PDO::SQLITE_OPEN_READONLY;
-    $dbh = new PDO("sqlite:" . $dbFile, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => $open_flags]);
+    // MoopTimedPDO = PDO that adds up SQLite time per request for the System Monitor
+    // (lib/db_timer.php). Same results, same errors; proven equal for every fetch style.
+    require_once __DIR__ . '/db_timer.php';
+    $dbh = new MoopTimedPDO("sqlite:" . $dbFile, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => $open_flags]);
     $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $dbh->sqliteCreateFunction('REGEXP', function($pattern, $text) {
         return preg_match('/' . $pattern . '/i', $text) ? 1 : 0;
