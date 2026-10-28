@@ -2639,6 +2639,39 @@ ok($_sr('//evil.com/x') === '/moop/' && $_sr('/\\evil.com') === '/moop/' && $_sr
    'protocol-relative, backslash, absolute, relative, header-injection and empty returns all go home');
 
 // ----------------------------------------------------------------------------
+group('System Monitor request log: lines, summary, retention');
+require_once "$BASE/lib/request_metrics.php";
+$_row = ['ts' => '1793219250.734', 'script' => 'tools/parent.php', 'method' => 'GET', 'status' => '200', 'ms' => '120',
+         'peak_mb' => '24.0', 'user' => '', 'level' => 'PUBLIC', 'ip' => '1.2.3.4', 'agent' => "Bad\tAgent\nX"];
+$_line = moop_metrics_line($_row);
+ok(substr_count($_line, "\t") === count(MOOP_METRICS_COLUMNS) - 1 && substr_count($_line, "\n") === 1,
+   'a tab or newline inside a value cannot split the line');
+$_p = moop_metrics_parse($_line);
+ok($_p && $_p['script'] === 'tools/parent.php' && $_p['ms'] === 120 && $_p['peak_mb'] === 24.0 && $_p['agent'] === 'Bad Agent X',
+   'a line parses back to the same values, typed');
+ok(moop_metrics_parse("half\ta line\n") === null, 'a truncated line is skipped, not misread');
+$_rows = [];
+foreach ([[100, 10], [300, 50], [200, 20]] as [$ms, $mb]) $_rows[] = ['script' => 'tools/parent.php', 'ms' => $ms, 'peak_mb' => $mb, 'status' => 200, 'user' => '', 'ip' => '1.2.3.4', 'level' => 'PUBLIC'];
+$_rows[] = ['script' => 'api/moopmart_export.php', 'ms' => 5000, 'peak_mb' => 300, 'status' => 500, 'user' => 'alice', 'ip' => '9.9.9.9', 'level' => 'COLLABORATOR'];
+$_sum = moop_metrics_summarise($_rows);
+$_pp = $_sum['by_script']['tools/parent.php'];
+ok($_sum['requests'] === 4 && $_pp['count'] === 3 && $_pp['mean_ms'] === 200 && $_pp['max_mb'] == 50 && $_pp['mean_mb'] == 26.7,
+   'per-script count, mean time, peak and mean memory');
+ok(array_key_first($_sum['by_script']) === 'api/moopmart_export.php' && $_sum['by_script']['api/moopmart_export.php']['errors'] === 1,
+   'heaviest script (by total time) first; 5xx counted as errors');
+ok(isset($_sum['by_who']['alice'], $_sum['by_who']['1.2.3.4']) && $_sum['by_who']['1.2.3.4']['count'] === 3,
+   'visitors are the username when logged in, else the address');
+$_md = sys_get_temp_dir() . '/moop_metrics_' . getmypid();
+@mkdir($_md);
+$_now = strtotime('2026-10-28 12:00:00');
+foreach (['2026-09-27', '2026-09-28', '2026-10-27'] as $_d) touch("$_md/requests-$_d.tsv");
+touch("$_md/other.txt");
+$_gone = moop_metrics_prune(30, $_now, $_md);
+ok($_gone === 1 && !is_file("$_md/requests-2026-09-27.tsv") && is_file("$_md/requests-2026-09-28.tsv") && is_file("$_md/other.txt"),
+   'retention deletes only request logs older than 30 days');
+array_map('unlink', glob("$_md/*")); @rmdir($_md);
+
+// ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
 ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
    'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',

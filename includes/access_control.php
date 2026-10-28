@@ -710,6 +710,12 @@ if (session_status() === PHP_SESSION_ACTIVE) {
 // see", not "does the bot challenge work" — and this deployment is reachable only from
 // internal addresses, so if the challenge could not reach Cloudflare the admin would be
 // bounced into an unpassable redirect with no page left to click "Leave preview" on.
+// Request log for the System Monitor (lib/request_metrics.php). Registered BEFORE the human
+// check, so a request it turns away is logged too — those are exactly the crawler hits the
+// monitor needs to show.
+require_once __DIR__ . '/../lib/request_metrics.php';
+moop_metrics_register();
+
 require_once __DIR__ . '/../lib/human_check.php';
 moop_human_check_enforce();
 // ─────────────────────────────────────────────────────────────────────────────

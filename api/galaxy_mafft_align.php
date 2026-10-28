@@ -28,6 +28,8 @@ header('Content-Type: application/json');
 
 // Include configuration
 require_once __DIR__ . '/../includes/config_init.php';
+require_once __DIR__ . '/../lib/request_metrics.php';   // System Monitor; this endpoint skips access_control.php
+moop_metrics_register();
 
 // Get Galaxy configuration
 $config = ConfigManager::getInstance();

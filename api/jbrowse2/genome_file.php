@@ -20,6 +20,8 @@
  * GET ?file={organism}/{assembly}[/{gene_set}]/{name}&token=JWT
  */
 require_once __DIR__ . '/../../includes/config_init.php';
+require_once __DIR__ . '/../../lib/request_metrics.php';   // System Monitor; this endpoint skips access_control.php
+moop_metrics_register();
 
 $TRACKS_BASE_DIR    = __DIR__ . '/../../data/genomes';
 $TOKEN_FILE_PREFIX  = 'genomes/';

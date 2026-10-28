@@ -34,6 +34,8 @@ include_once __DIR__ . '/../lib/moop_functions.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../lib/fasta_index.php';
+require_once __DIR__ . '/../lib/request_metrics.php';   // System Monitor; this endpoint skips access_control.php
+moop_metrics_register();
 
 // Initialize download settings
 $enable_downloads = $enable_downloads ?? false;

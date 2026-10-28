@@ -107,6 +107,12 @@ function housekeeping_task_registry(): array {
             'desc'  => 'Deletes BLAST and MAFFT scratch files older than 24 hours from the system temp directory.',
         ],
         [
+            'name'  => 'request_metrics_retention',
+            'fn'    => 'housekeeping_request_metrics_retention',
+            'label' => 'Prune request log',
+            'desc'  => 'Deletes System Monitor request logs older than 30 days (they hold usernames and addresses).',
+        ],
+        [
             'name'  => 'ensure_cache_dir',
             'fn'    => 'housekeeping_ensure_cache_dir',
             'label' => 'Ensure cache directory',
@@ -403,6 +409,18 @@ function housekeeping_clean_temp_files() {
 
     if ($deleted > 0) {
         error_log("MOOP housekeeping: cleaned up $deleted stale temp file(s)");
+    }
+}
+
+/**
+ * System Monitor request log retention (lib/request_metrics.php): 30 days, decided 2026-10-28.
+ * The files name users and addresses, so they are not kept longer than they are useful.
+ */
+function housekeeping_request_metrics_retention() {
+    require_once __DIR__ . '/request_metrics.php';
+    $deleted = moop_metrics_prune();
+    if ($deleted > 0) {
+        error_log("MOOP housekeeping: pruned $deleted request log file(s) older than " . MOOP_METRICS_RETENTION_DAYS . ' days');
     }
 }
 
