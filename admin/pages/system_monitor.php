@@ -8,6 +8,7 @@
  * same numbers in the data table below it, so nothing is hover-only.
  */
 $h = fn($s) => htmlspecialchars((string) $s);
+require __DIR__ . '/system_monitor_help.php';   // $sysmon_guide, $sysmon_i()
 $level_icon = ['good' => 'check-circle', 'warning' => 'exclamation-triangle', 'critical' => 'times-circle', 'unknown' => 'question-circle'];
 $level_word = ['good' => 'OK', 'warning' => 'Watch', 'critical' => 'High', 'unknown' => 'Unknown'];
 $span = ['24h' => 'last 24 hours', '7d' => 'last 7 days', '30d' => 'last 30 days'][$range];
@@ -21,7 +22,10 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
 
 <div class="container-fluid px-4 mt-4 sysmon">
 
-  <?= page_title('System Monitor', 'fa fa-chart-line') ?>
+  <div class="d-flex flex-wrap align-items-center gap-3">
+    <?= page_title('System Monitor', 'fa fa-chart-line') ?>
+    <?= help_modal_trigger('sysmon-guide', 'How to read this page') ?>
+  </div>
   <p class="text-muted mb-3">
     What the server is doing: resources, traffic, the heaviest pages and who is using them.
     <?php if ($collector_ok): ?>
@@ -59,7 +63,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
   <div class="sysmon-tiles mb-4">
     <?php foreach ($tiles as $t): ?>
       <div class="sysmon-tile">
-        <div class="sysmon-tile-label"><?= $h($t['label']) ?></div>
+        <div class="sysmon-tile-label"><?= $h($t['label']) ?> <?= $sysmon_i(strpos($t['label'], 'Disk filling') === 0 ? 'Data disk used' : $t['label']) ?></div>
         <div class="sysmon-tile-value"><?= $h($t['value']) ?></div>
         <div class="sysmon-tile-sub"><?= $h($t['sub']) ?></div>
         <div class="sysmon-status sysmon-<?= $h($t['level']) ?>">
@@ -90,7 +94,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     $rec_head = $worst === 'critical' ? 'adm-head-danger' : ($worst === 'warning' ? 'adm-head-warn' : 'adm-head');
   ?>
   <div class="card adm-card mb-4" id="sysmon-recs">
-    <div class="card-header <?= $rec_head ?>"><h5 class="mb-0">Recommendations</h5></div>
+    <div class="card-header <?= $rec_head ?>"><h5 class="mb-0">Recommendations <?= $sysmon_i('recs') ?></h5></div>
     <div class="card-body">
       <?php if (!$recs): ?>
         <span class="sysmon-status sysmon-good"><i class="fa fa-check-circle" aria-hidden="true"></i> Nothing to act on.</span>
@@ -125,7 +129,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
 
   <!-- Charts: one measure each (never two y-axes) -->
   <div class="card adm-card mb-4">
-    <div class="card-header adm-head"><h5 class="mb-0">Over the <?= $span ?></h5></div>
+    <div class="card-header adm-head"><h5 class="mb-0">Over the <?= $span ?> <?= $sysmon_i('charts') ?></h5></div>
     <div class="card-body">
       <div class="sysmon-charts">
         <figure class="sysmon-chart" data-key="cpu" data-unit="%" data-max="100">
@@ -161,7 +165,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <!-- Traffic -->
     <div class="col-xl-6">
       <div class="card adm-card h-100">
-        <div class="card-header adm-head"><h5 class="mb-0">Traffic, <?= $span ?></h5></div>
+        <div class="card-header adm-head"><h5 class="mb-0">Traffic, <?= $span ?> <?= $sysmon_i('traffic') ?></h5></div>
         <div class="card-body">
           <p class="small text-muted mb-2">
             <?= number_format($traffic['req']) ?> requests · <?= moop_monitor_fmt_bytes($traffic['bytes']) ?> sent ·
@@ -208,7 +212,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <!-- Busiest addresses -->
     <div class="col-xl-6">
       <div class="card adm-card h-100">
-        <div class="card-header adm-head"><h5 class="mb-0">Busiest addresses, <?= $span ?></h5></div>
+        <div class="card-header adm-head"><h5 class="mb-0">Busiest addresses, <?= $span ?> <?= $sysmon_i('addresses') ?></h5></div>
         <div class="card-body">
           <p class="small text-muted">From the web server's log — every request, including static files.
             <em>Internal</em> = inside the auto-login ranges, never rate-limited.</p>
@@ -259,7 +263,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     };
   ?>
   <div class="card adm-card my-4" id="sysmon-usage">
-    <div class="card-header adm-head"><h5 class="mb-0">What people use, <?= $span ?></h5></div>
+    <div class="card-header adm-head"><h5 class="mb-0">What people use, <?= $span ?> <?= $sysmon_i('usage') ?></h5></div>
     <div class="card-body">
       <p class="small text-muted">Which organisms, assemblies and gene sets people open, search, BLAST and download — top 15 of
         each. <em>Internal</em> = your own people (institute network, VPN, and collaborators who log in);
@@ -293,7 +297,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
 
   <!-- Heaviest pages -->
   <div class="card adm-card my-4">
-    <div class="card-header adm-head"><h5 class="mb-0">Heaviest pages, <?= $span ?></h5></div>
+    <div class="card-header adm-head"><h5 class="mb-0">Heaviest pages, <?= $span ?> <?= $sysmon_i('pages') ?></h5></div>
     <div class="card-body">
       <p class="small text-muted">From MOOP's own request log (PHP only): what each page costs. Sorted by total
         time — a cheap page called constantly can cost more than a slow one called rarely. Peak memory is
@@ -330,7 +334,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
   <!-- Databases: warm or cold -->
   <?php $io = $pages['io'] ?? ['measured' => 0, 'cold' => 0, 'disk_kb' => 0]; ?>
   <div class="card adm-card mb-4" id="sysmon-warmcold">
-    <div class="card-header adm-head"><h5 class="mb-0">Databases: warm or cold, <?= $span ?></h5></div>
+    <div class="card-header adm-head"><h5 class="mb-0">Databases: warm or cold, <?= $span ?> <?= $sysmon_i('warmcold') ?></h5></div>
     <div class="card-body">
       <p class="small text-muted">A request is <em>warm</em> when everything it needed was already in RAM, and <em>cold</em> when it
         had to read from disk (more than <?= MOOP_METRICS_COLD_KB ?> KB). Cold requests are the slow ones on this site. The
@@ -363,7 +367,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <!-- Who -->
     <div class="col-12">
       <div class="card adm-card h-100">
-        <div class="card-header adm-head"><h5 class="mb-0">Who, <?= $span ?></h5></div>
+        <div class="card-header adm-head"><h5 class="mb-0">Who, <?= $span ?> <?= $sysmon_i('who') ?></h5></div>
         <div class="card-body">
           <p class="small text-muted">Logged-in users by name; everyone else by address. PHP requests only. Kept 30 days.</p>
           <div class="table-responsive">
@@ -386,7 +390,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <!-- Slowest requests -->
     <div class="col-12">
       <div class="card adm-card h-100">
-        <div class="card-header adm-head"><h5 class="mb-0">Slowest requests, <?= $span ?></h5></div>
+        <div class="card-header adm-head"><h5 class="mb-0">Slowest requests, <?= $span ?> <?= $sysmon_i('slowest') ?></h5></div>
         <div class="card-body">
           <div class="table-responsive">
           <table class="table table-sm sysmon-num">
@@ -420,7 +424,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
 
   <!-- Capacity: when to add RAM or CPUs, and PHP workers -->
   <div class="card adm-card mb-4" id="sysmon-capacity">
-    <div class="card-header adm-head"><h5 class="mb-0">Capacity — RAM, CPUs and PHP workers</h5></div>
+    <div class="card-header adm-head"><h5 class="mb-0">Capacity — RAM, CPUs and PHP workers <?= $sysmon_i('capacity') ?></h5></div>
     <div class="card-body">
       <?php if ($cap['samples'] < 60 || ($pages['requests'] ?? 0) < 500): ?>
         <p class="small text-muted"><i class="fa fa-info-circle" aria-hidden="true"></i>
@@ -483,7 +487,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
 
   <!-- Heavy group -->
   <div class="card adm-card mb-4" id="sysmon-heavy">
-    <div class="card-header adm-head"><h5 class="mb-0">Heavy group (strictest rate limit)</h5></div>
+    <div class="card-header adm-head"><h5 class="mb-0">Heavy group (strictest rate limit) <?= $sysmon_i('heavy') ?></h5></div>
     <div class="card-body">
       <p class="small text-muted">Exports, downloads and other expensive scripts: one address may run these at most 20 times a
         minute (burst 10, 3 at once). Changes reach nginx within a minute; nothing to re-run.
@@ -507,7 +511,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
   <!-- nginx rate-limit sync -->
   <?php if ($sync): ?>
   <div class="card adm-card mb-5">
-    <div class="card-header <?= ($sync['state'] ?? '') === 'error' ? 'adm-head-danger' : 'adm-head' ?>"><h5 class="mb-0">Rate-limit settings</h5></div>
+    <div class="card-header <?= ($sync['state'] ?? '') === 'error' ? 'adm-head-danger' : 'adm-head' ?>"><h5 class="mb-0">Rate-limit settings <?= $sysmon_i('sync') ?></h5></div>
     <div class="card-body small">
       <?php $st = $sync['state'] ?? 'unknown'; $lv = $st === 'in_sync' ? 'good' : ($st === 'error' ? 'critical' : 'warning'); ?>
       <span class="sysmon-status sysmon-<?= $lv ?>"><i class="fa fa-<?= $level_icon[$lv] ?>" aria-hidden="true"></i>
@@ -520,3 +524,5 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
   </div>
   <?php endif; ?>
 </div>
+
+<?= $sysmon_guide ?>
