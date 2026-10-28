@@ -12,6 +12,12 @@
  * unchecked write that says "saved" is the recurring silent-failure shape on this site.
  */
 
+// Auth + CSRF even when this file is requested DIRECTLY. Included by manage_annotations.php this
+// is a no-op (already loaded); requested on its own it used to run with no login check, saved
+// from being an unauthenticated write endpoint only because a helper was not loaded yet and the
+// request died with a 500 first (found 2026-10-28).
+include_once __DIR__ . '/admin_init.php';
+
 require_once __DIR__ . '/../lib/annotation_scores.php';
 require_once __DIR__ . '/../lib/cache_paths.php';
 
