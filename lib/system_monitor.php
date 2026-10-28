@@ -75,7 +75,7 @@ function moop_monitor_class(string $script, array $heavy): string {
 
 /** One of the collector's published files, decoded, or null if absent/unreadable. */
 function moop_monitor_read(string $which): ?array {
-    if (!in_array($which, ['now', '24h', '7d'], true)) return null;
+    if (!in_array($which, ['now', '24h', '7d', '30d'], true)) return null;
     $file = moop_cache_root() . "/monitor_$which.json";
     if (!is_readable($file)) return null;
     $data = json_decode((string) @file_get_contents($file), true);

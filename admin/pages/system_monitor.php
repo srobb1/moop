@@ -3,14 +3,15 @@
  * SYSTEM MONITOR - Content File. Controller: admin/system_monitor.php.
  *
  * Variables: $range ('24h'|'7d'), $age, $collector_ok, $sync, $tiles, $now, $traffic, $pages,
- *            $max_children, $ranges, $heavy, $cap, $recs, $flash
+ *            $max_children, $ranges, $heavy, $cap, $recs, $flash, $usage, $days_covered
  * Charts are drawn by js/system-monitor.js from window.MOOP_MONITOR.series; every chart has the
  * same numbers in the data table below it, so nothing is hover-only.
  */
 $h = fn($s) => htmlspecialchars((string) $s);
 $level_icon = ['good' => 'check-circle', 'warning' => 'exclamation-triangle', 'critical' => 'times-circle', 'unknown' => 'question-circle'];
 $level_word = ['good' => 'OK', 'warning' => 'Watch', 'critical' => 'High', 'unknown' => 'Unknown'];
-$span = $range === '7d' ? 'last 7 days' : 'last 24 hours';
+$span = ['24h' => 'last 24 hours', '7d' => 'last 7 days', '30d' => 'last 30 days'][$range];
+$per  = ['24h' => 'minute', '7d' => 'hour', '30d' => 'day'][$range];
 $pct = fn($n, $total) => $total > 0 ? round(100 * $n / $total) . '%' : '—';
 $ua_words = ['browser' => 'Browsers', 'search' => 'Search engines', 'ai' => 'AI crawlers', 'script' => 'Scripts & automation',
              'other' => 'Other', 'none' => 'No user agent'];
@@ -45,6 +46,10 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
   <div class="sysmon-filters mb-3" role="group" aria-label="Time range">
     <a class="btn btn-sm <?= $range === '24h' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?range=24h">Last 24 hours</a>
     <a class="btn btn-sm <?= $range === '7d' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?range=7d">Last 7 days</a>
+    <a class="btn btn-sm <?= $range === '30d' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?range=30d">Last 30 days</a>
+    <?php if ($range === '30d' && $days_covered !== null && $days_covered < 30): ?>
+      <span class="small text-muted align-self-center">Page and visitor figures cover <?= (int) $days_covered ?> day(s) so far — the log started 2026-10-28.</span>
+    <?php endif; ?>
   </div>
 
   <!-- Right now -->
@@ -91,7 +96,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
               <strong><?= $h($r['title']) ?></strong>
               <div class="small text-muted"><?= $h($r['detail']) ?></div>
               <?php if (($r['action']['type'] ?? '') === 'heavy_add'): ?>
-                <form method="post" action="system_monitor.php<?= $range === '7d' ? '?range=7d' : '' ?>" class="mt-1">
+                <form method="post" action="system_monitor.php<?= $range !== '24h' ? '?range=' . $h($range) : '' ?>" class="mt-1">
                   <?= csrf_input_field() ?>
                   <input type="hidden" name="action" value="heavy_add">
                   <input type="hidden" name="script" value="<?= $h($r['action']['script']) ?>">
@@ -118,13 +123,13 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
           <figcaption>Memory used</figcaption><div class="sysmon-plot"></div>
         </figure>
         <figure class="sysmon-chart" data-key="req" data-unit=" requests">
-          <figcaption>Requests per <?= $range === '7d' ? 'hour' : 'minute' ?></figcaption><div class="sysmon-plot"></div>
+          <figcaption>Requests per <?= $per ?></figcaption><div class="sysmon-plot"></div>
         </figure>
         <figure class="sysmon-chart" data-key="fpm" data-unit=" busy"<?= $max_children ? ' data-max="' . (int) $max_children . '"' : '' ?>>
           <figcaption>PHP workers busy<?= $max_children ? ' (of ' . (int) $max_children . ')' : '' ?></figcaption><div class="sysmon-plot"></div>
         </figure>
         <figure class="sysmon-chart" data-key="s429" data-unit=" refused">
-          <figcaption>Requests refused by rate limits (429) per <?= $range === '7d' ? 'hour' : 'minute' ?></figcaption><div class="sysmon-plot"></div>
+          <figcaption>Requests refused by rate limits (429) per <?= $per ?></figcaption><div class="sysmon-plot"></div>
         </figure>
       </div>
       <details class="mt-2">
@@ -210,6 +215,64 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     </div>
   </div>
 
+  <!-- What people use: organisms, assemblies, gene sets -->
+  <?php
+    $vis = $range === '30d' ? 'visitor-days' : 'visitors';
+    $usage_table = function (array $rows, string $label) use ($h, $vis) {
+        uasort($rows, fn($a, $b) => ($b['in'] + $b['out']) <=> ($a['in'] + $a['out']));
+        $rows = array_slice($rows, 0, 15, true);
+        ob_start(); ?>
+        <table class="table table-sm sysmon-num mb-0">
+          <thead>
+            <tr><th rowspan="2"><?= $h($label) ?></th><th colspan="2" class="text-center">Internal</th><th colspan="2" class="text-center">Public</th></tr>
+            <tr><th class="text-end">Requests</th><th class="text-end"><?= ucfirst($vis) ?></th><th class="text-end">Requests</th><th class="text-end"><?= ucfirst($vis) ?></th></tr>
+          </thead>
+          <tbody>
+          <?php foreach ($rows as $name => $c): ?>
+            <?php $parts = explode('/', $name); $parts[0] = str_replace('_', ' ', $parts[0]); /* organism only: accessions keep their underscores */ ?>
+            <tr><td><?= $h(implode(' / ', $parts)) ?></td>
+              <td class="text-end"><?= number_format($c['in']) ?></td><td class="text-end"><?= number_format($c['in_v']) ?></td>
+              <td class="text-end"><?= number_format($c['out']) ?></td><td class="text-end"><?= number_format($c['out_v']) ?></td></tr>
+          <?php endforeach; ?>
+          <?php if (!$rows): ?><tr><td colspan="5" class="text-muted">Nothing recorded yet.</td></tr><?php endif; ?>
+          </tbody>
+        </table>
+        <?php return ob_get_clean();
+    };
+  ?>
+  <div class="card adm-card my-4" id="sysmon-usage">
+    <div class="card-header adm-head"><h5 class="mb-0">What people use, <?= $span ?></h5></div>
+    <div class="card-body">
+      <p class="small text-muted">Which organisms, assemblies and gene sets people open, search, BLAST and download — top 15 of
+        each. <em>Internal</em> = your own people (institute network, VPN, and collaborators who log in);
+        <em>public</em> = everyone else. <?= $range === '30d'
+          ? 'Over 30 days, visitors are counted per day (someone who came on 3 days counts 3).'
+          : 'Visitors are distinct people or addresses, so one busy visitor or crawler cannot make something look popular.' ?>
+        Search words are never recorded — only which organisms a search covered.</p>
+      <ul class="nav nav-tabs" role="tablist">
+        <?php $tabs = ['view' => 'Viewed', 'search' => 'Searched', 'blast' => 'BLAST', 'download' => 'Downloaded']; $first = true; ?>
+        <?php foreach ($tabs as $k => $label): ?>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link<?= $first ? ' active' : '' ?>" data-bs-toggle="tab" data-bs-target="#sysmon-usage-<?= $k ?>" type="button" role="tab"><?= $label ?></button>
+          </li>
+        <?php $first = false; endforeach; ?>
+      </ul>
+      <div class="tab-content pt-3">
+        <?php $first = true; foreach ($tabs as $k => $label): ?>
+          <div class="tab-pane fade<?= $first ? ' show active' : '' ?>" id="sysmon-usage-<?= $k ?>" role="tabpanel">
+            <div class="row g-4">
+              <div class="col-12 sysmon-usage-table"><div class="table-responsive"><?= $usage_table($usage[$k]['organism'] ?? [], 'Organism') ?></div></div>
+              <?php if ($k !== 'search'): ?>
+              <div class="col-12 sysmon-usage-table"><div class="table-responsive"><?= $usage_table($usage[$k]['assembly'] ?? [], 'Assembly') ?></div></div>
+              <div class="col-12 sysmon-usage-table"><div class="table-responsive"><?= $usage_table($usage[$k]['gene_set'] ?? [], 'Gene set') ?></div></div>
+              <?php endif; ?>
+            </div>
+          </div>
+        <?php $first = false; endforeach; ?>
+      </div>
+    </div>
+  </div>
+
   <!-- Heaviest pages -->
   <div class="card adm-card my-4">
     <div class="card-header adm-head"><h5 class="mb-0">Heaviest pages, <?= $span ?></h5></div>
@@ -276,7 +339,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
             <thead><tr><th>When</th><th>Page</th><th class="text-end">Time</th><th class="text-end">Memory</th><th>Who</th><th class="text-end">Status</th></tr></thead>
             <tbody>
             <?php foreach ($pages['slowest'] as $r): ?>
-              <tr><td><small><?= date($range === '7d' ? 'D H:i' : 'H:i:s', (int) $r['ts']) ?></small></td>
+              <tr><td><small><?= date($range === '24h' ? 'H:i:s' : 'D j M H:i', (int) $r['ts']) ?></small></td>
                 <td><code><?= $h($r['script']) ?></code></td>
                 <td class="text-end"><?= moop_monitor_fmt_ms($r['ms']) ?></td>
                 <td class="text-end"><?= $h($r['peak_mb']) ?> MB</td>
@@ -356,7 +419,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
         Recommendations above suggest additions from what pages measurably cost.</p>
       <div class="sysmon-heavy-list">
         <?php foreach ($heavy as $s): ?>
-          <form method="post" action="system_monitor.php<?= $range === '7d' ? '?range=7d' : '' ?>" class="sysmon-heavy-item">
+          <form method="post" action="system_monitor.php<?= $range !== '24h' ? '?range=' . $h($range) : '' ?>" class="sysmon-heavy-item">
             <?= csrf_input_field() ?>
             <input type="hidden" name="action" value="heavy_remove">
             <input type="hidden" name="script" value="<?= $h($s) ?>">

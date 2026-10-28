@@ -14,8 +14,9 @@
 (function () {
   var data = window.MOOP_MONITOR || {series: []};
   var series = data.series || [];
-  var is7d = data.range === '7d';
-  var step = is7d ? 3600 : 60;                     // seconds between samples
+  var range = data.range;                          // '24h' | '7d' | '30d'
+  var is7d = range === '7d', is30d = range === '30d';
+  var step = is30d ? 86400 : (is7d ? 3600 : 60);   // seconds between samples
   var SVG = 'http://www.w3.org/2000/svg';
   var M = {top: 8, right: 12, bottom: 22, left: 44};
 
@@ -29,6 +30,7 @@
   function fmtTime(t) {
     var d = new Date(t * 1000);
     var hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    if (is30d) return d.toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'});
     return is7d ? d.toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'}) + ' ' + hm : hm;
   }
   function fmtNum(v) {
@@ -55,9 +57,10 @@
     var svg = el('svg', {viewBox: '0 0 ' + W + ' ' + H, role: 'img'}, plot);
     var pts = series.filter(function (p) { return p[key] !== null && p[key] !== undefined; });
     if (pts.length < 2) {
-      el('text', {x: W / 2, y: H / 2, 'text-anchor': 'middle', class: 'empty'}, svg).textContent = is7d
-        ? 'Hourly figures appear once the first full hour is recorded.'
-        : 'Not enough samples yet — the collector records one a minute.';
+      el('text', {x: W / 2, y: H / 2, 'text-anchor': 'middle', class: 'empty'}, svg).textContent = is30d
+        ? 'Daily figures appear once two full days are recorded.'
+        : (is7d ? 'Hourly figures appear once the first full hour is recorded.'
+                : 'Not enough samples yet — the collector records one a minute.');
       return;
     }
     var t0 = series[0].t, t1 = series[series.length - 1].t;
@@ -74,18 +77,23 @@
       el('text', {x: M.left - 6, y: yy + 4, 'text-anchor': 'end', class: 'tick'}, svg).textContent = fmtNum(v);
     });
     // x ticks: every 4 h (24 h view) or every midnight (7 d view)
-    var tickStep = is7d ? 86400 : 4 * 3600;
+    var tickStep = is30d ? 7 * 86400 : (is7d ? 86400 : 4 * 3600);
     var first = Math.ceil(t0 / tickStep) * tickStep;
-    if (is7d) { var d0 = new Date(t0 * 1000); d0.setHours(24, 0, 0, 0); first = d0.getTime() / 1000; }
+    if (is7d || is30d) { var d0 = new Date(t0 * 1000); d0.setHours(24, 0, 0, 0); first = d0.getTime() / 1000; }
     // The start and end are always labelled (a young or short window may hold no regular tick);
     // a regular tick too close to either end is skipped so labels never collide.
-    var shortTime = function (t) { var d = new Date(t * 1000); return is7d ? d.toLocaleDateString(undefined, {weekday: 'short'}) + ' ' + pad(d.getHours()) + 'h' : pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+    var shortTime = function (t) {
+      var d = new Date(t * 1000);
+      if (is30d) return d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
+      return is7d ? d.toLocaleDateString(undefined, {weekday: 'short'}) + ' ' + pad(d.getHours()) + 'h' : pad(d.getHours()) + ':' + pad(d.getMinutes());
+    };
     el('text', {x: M.left, y: H - 6, 'text-anchor': 'start', class: 'tick'}, svg).textContent = shortTime(t0);
     el('text', {x: W - M.right, y: H - 6, 'text-anchor': 'end', class: 'tick'}, svg).textContent = shortTime(t1);
     for (var tt = first; tt <= t1; tt += tickStep) {
       if (x(tt) - M.left < 60 || W - M.right - x(tt) < 60) continue;
       el('text', {x: x(tt), y: H - 6, 'text-anchor': 'middle', class: 'tick'}, svg).textContent =
-        is7d ? new Date(tt * 1000).toLocaleDateString(undefined, {weekday: 'short'}) : pad(new Date(tt * 1000).getHours()) + ':00';
+        is30d ? new Date(tt * 1000).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})
+              : (is7d ? new Date(tt * 1000).toLocaleDateString(undefined, {weekday: 'short'}) : pad(new Date(tt * 1000).getHours()) + ':00');
     }
 
     // Line + area, broken wherever samples are missing

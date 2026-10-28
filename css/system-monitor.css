@@ -82,3 +82,7 @@
 /* Heavy group: one chip per script, each with its own remove form */
 .sysmon-heavy-list { display: flex; flex-wrap: wrap; gap: .4rem .6rem; }
 .sysmon-heavy-item { display: inline-flex; align-items: center; border: 1px solid var(--sm-grid); border-radius: 1rem; padding: .1rem .55rem; background: #fff; }
+
+/* Usage tables: one per row, kept to a readable width (names left, four number columns) */
+.sysmon-usage-table { max-width: 60rem; }
+.sysmon-usage-table td:first-child { min-width: 16rem; }

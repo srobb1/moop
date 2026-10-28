@@ -115,8 +115,8 @@ function housekeeping_task_registry(): array {
         [
             'name'  => 'request_metrics_retention',
             'fn'    => 'housekeeping_request_metrics_retention',
-            'label' => 'Prune request log',
-            'desc'  => 'Deletes System Monitor request logs older than 30 days (they hold usernames and addresses).',
+            'label' => 'Request log: daily summaries + pruning',
+            'desc'  => 'Summarises each finished day of the System Monitor request log (for the 30-day view), then deletes logs and summaries older than 30 days (they hold usernames and addresses).',
         ],
         [
             'name'  => 'ensure_cache_dir',
@@ -435,6 +435,7 @@ function housekeeping_monitor_publish_wanted() {
  */
 function housekeeping_request_metrics_retention() {
     require_once __DIR__ . '/request_metrics.php';
+    moop_metrics_build_daily();
     $deleted = moop_metrics_prune();
     if ($deleted > 0) {
         error_log("MOOP housekeeping: pruned $deleted request log file(s) older than " . MOOP_METRICS_RETENTION_DAYS . ' days');

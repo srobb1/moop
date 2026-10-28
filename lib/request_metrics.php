@@ -18,7 +18,12 @@
  */
 
 const MOOP_METRICS_RETENTION_DAYS = 30;
-const MOOP_METRICS_COLUMNS = ['ts', 'script', 'method', 'status', 'ms', 'peak_mb', 'user', 'level', 'ip', 'agent'];
+// org/asm/gs (added 2026-10-28): which organism / assembly / gene set the request was about, for
+// "most viewed / searched / downloaded". Search WORDS are never recorded (Sofia, 2026-10-28: what a
+// collaborator searches for can reveal unpublished work) — only which organisms a search covered.
+// Lines written before then have 10 columns; moop_metrics_parse() accepts both.
+const MOOP_METRICS_COLUMNS = ['ts', 'script', 'method', 'status', 'ms', 'peak_mb', 'user', 'level', 'ip', 'agent', 'org', 'asm', 'gs'];
+const MOOP_METRICS_COLUMNS_V1 = 10;
 
 function moop_metrics_dir(): string {
     require_once __DIR__ . '/cache_paths.php';   // functions only; access_control.php does not load it
@@ -50,8 +55,26 @@ function moop_metrics_record(): void {
         'level'   => (string) ($_SESSION['access_level'] ?? 'PUBLIC'),
         'ip'      => (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
         'agent'   => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 160),
-    ]);
+    ] + moop_metrics_context($_GET + $_POST));
     @file_put_contents($dir . '/requests-' . date('Y-m-d', (int) $start) . '.tsv', $line, FILE_APPEND);
+}
+
+/**
+ * The organism / assembly / gene set a request names, from its parameters (organism, assembly,
+ * gene_set; or organisms[] on multi-organism pages, up to 10, comma-joined). Only identifier-shaped
+ * values are kept — anything else (a mistyped or hostile parameter) is recorded as ''.
+ */
+function moop_metrics_context(array $params): array {
+    $clean = function ($v): string {
+        if (is_array($v)) $v = implode(',', array_slice(array_filter($v, 'is_string'), 0, 10));
+        $v = (string) $v;
+        return preg_match('/^[A-Za-z0-9_.,-]{1,300}$/', $v) ? $v : '';
+    };
+    return [
+        'org' => $clean($params['organism'] ?? ($params['organisms'] ?? '')),
+        'asm' => $clean($params['assembly'] ?? ''),
+        'gs'  => $clean($params['gene_set'] ?? ''),
+    ];
 }
 
 /** "/var/www/html/moop/tools/parent.php" -> "tools/parent.php" (path under the app root). */
@@ -72,6 +95,9 @@ function moop_metrics_line(array $row): string {
 /** Parse one line back into a row, or null if it is not a complete line. */
 function moop_metrics_parse(string $line): ?array {
     $f = explode("\t", rtrim($line, "\n"));
+    if (count($f) === MOOP_METRICS_COLUMNS_V1) {
+        $f = array_merge($f, array_fill(0, count(MOOP_METRICS_COLUMNS) - MOOP_METRICS_COLUMNS_V1, ''));
+    }
     if (count($f) !== count(MOOP_METRICS_COLUMNS)) return null;
     $row = array_combine(MOOP_METRICS_COLUMNS, $f);
     $row['ts'] = (float) $row['ts'];
@@ -177,10 +203,177 @@ function moop_metrics_prune(int $days = MOOP_METRICS_RETENTION_DAYS, ?int $now =
     $dir = $dir ?? moop_metrics_dir();
     $cutoff = date('Y-m-d', ($now ?? time()) - $days * 86400);
     $deleted = 0;
-    foreach (glob("$dir/requests-*.tsv") ?: [] as $file) {
-        if (preg_match('/requests-(\d{4}-\d{2}-\d{2})\.tsv$/', $file, $m) && $m[1] < $cutoff && @unlink($file)) {
+    foreach (array_merge(glob("$dir/requests-*.tsv") ?: [], glob("$dir/daily-*.json") ?: []) as $file) {
+        if (preg_match('/(?:requests|daily)-(\d{4}-\d{2}-\d{2})\.(?:tsv|json)$/', $file, $m) && $m[1] < $cutoff && @unlink($file)) {
             $deleted++;
         }
     }
     return $deleted;
+}
+
+/**
+ * What a request did, for usage counts: 'view' (organism / assembly / gene set / gene pages,
+ * genome browser), 'search' (one annotation-search request per organism searched), 'blast' (a
+ * BLAST run, i.e. POST), 'download' (files and sequences). Anything else: null (not counted).
+ */
+function moop_metrics_usage_kind(string $script, string $method): ?string {
+    static $map = [
+        'tools/organism.php' => 'view', 'tools/assembly.php' => 'view', 'tools/gene_set.php' => 'view',
+        'tools/parent.php' => 'view', 'jbrowse2.php' => 'view', 'tools/multi_organism.php' => 'view',
+        'tools/annotation_search_ajax.php' => 'search',
+        'api/download_file.php' => 'download', 'api/get_sequence.php' => 'download',
+        'tools/retrieve_sequences.php' => 'download', 'tools/retrieve_selected_sequences.php' => 'download',
+    ];
+    if ($script === 'tools/blast.php') return $method === 'POST' ? 'blast' : null;
+    return $map[$script] ?? null;
+}
+
+/**
+ * Most viewed / searched / BLASTed / downloaded organisms, assemblies and gene sets.
+ * Internal = logged in (which includes the automatic login for internal/VPN addresses);
+ * public = everyone else. Requests AND distinct visitors, so one busy visitor or crawler
+ * cannot make an organism look popular.
+ *
+ * Returns [kind][level][name] => [in, out, in_v, out_v]; level is organism | assembly
+ * ("Org/asm") | gene_set ("Org/asm/gs").
+ */
+function moop_metrics_usage(iterable $rows): array {
+    $u = [];
+    $seen = [];
+    foreach ($rows as $r) {
+        if (!$r || $r['org'] === '' || $r['status'] >= 400) continue;
+        $kind = moop_metrics_usage_kind($r['script'], $r['method']);
+        if ($kind === null) continue;
+        $side = $r['level'] !== 'PUBLIC' ? 'in' : 'out';
+        $who = $r['user'] !== '' ? $r['user'] : $r['ip'];
+        $keys = [];
+        $orgs = explode(',', $r['org']);
+        foreach ($orgs as $o) $keys[] = ['organism', $o];
+        if (count($orgs) === 1 && $r['asm'] !== '') {
+            $keys[] = ['assembly', $r['org'] . '/' . $r['asm']];
+            if ($r['gs'] !== '') $keys[] = ['gene_set', $r['org'] . '/' . $r['asm'] . '/' . $r['gs']];
+        }
+        foreach ($keys as [$level, $name]) {
+            $c = &$u[$kind][$level][$name];
+            $c = $c ?? ['in' => 0, 'out' => 0, 'in_v' => 0, 'out_v' => 0];
+            $c[$side]++;
+            if (!isset($seen[$kind][$level][$name][$side][$who])) {
+                $seen[$kind][$level][$name][$side][$who] = true;
+                $c[$side . '_v']++;
+            }
+            unset($c);
+        }
+    }
+    return $u;
+}
+
+/**
+ * Combine per-day usage (each from moop_metrics_usage on one day). Requests add up exactly;
+ * visitors become VISITOR-DAYS (someone who came on 3 days counts 3) — distinct visitors across
+ * days cannot be recovered from daily counts, and the page says which it shows.
+ */
+function moop_metrics_usage_merge(array $days): array {
+    $u = [];
+    foreach ($days as $d) {
+        foreach ($d as $kind => $levels) foreach ($levels as $level => $names) foreach ($names as $name => $c) {
+            $t = &$u[$kind][$level][$name];
+            $t = $t ?? ['in' => 0, 'out' => 0, 'in_v' => 0, 'out_v' => 0];
+            foreach ($t as $k => $_) $t[$k] += (int) ($c[$k] ?? 0);
+            unset($t);
+        }
+    }
+    return $u;
+}
+
+/**
+ * One finished day, summarised, for the 30-day view: {cache}/metrics/daily-YYYY-MM-DD.json.
+ * Built by housekeeping once the day is over, so the page adds up 30 small files instead of
+ * re-reading 30 days of request lines. Rebuilt if the day's log is newer than its summary.
+ * Same 30-day retention as the logs (it names users and addresses).
+ */
+function moop_metrics_build_daily(?int $now = null, ?string $dir = null): int {
+    $dir = $dir ?? moop_metrics_dir();
+    $today = date('Y-m-d', $now ?? time());
+    $built = 0;
+    foreach (glob("$dir/requests-*.tsv") ?: [] as $log) {
+        if (!preg_match('/requests-(\d{4}-\d{2}-\d{2})\.tsv$/', $log, $m) || $m[1] >= $today) continue;
+        $out = "$dir/daily-{$m[1]}.json";
+        if (is_file($out) && filemtime($out) >= filemtime($log)) continue;
+        $rows = function () use ($log) {
+            $fh = fopen($log, 'r');
+            while ($fh && ($line = fgets($fh)) !== false) {
+                if ($row = moop_metrics_parse($line)) yield $row;
+            }
+            if ($fh) fclose($fh);
+        };
+        $summary = moop_metrics_summarise($rows(), 20);
+        $summary['usage'] = moop_metrics_usage($rows());
+        $summary['date'] = $m[1];
+        $tmp = tempnam($dir, '.daily.');
+        if ($tmp && file_put_contents($tmp, json_encode($summary)) !== false && rename($tmp, $out)) {
+            @chmod($out, 0644);
+            $built++;
+        } elseif ($tmp) {
+            @unlink($tmp);
+        }
+    }
+    return $built;
+}
+
+/**
+ * Add up summaries (daily files, plus today's live one) into the same shape
+ * moop_metrics_summarise() returns. Counts, totals and maxima are exact; "slowest 5%" becomes the
+ * worst day's figure, and the overall memory percentile likewise — percentiles do not add.
+ */
+function moop_metrics_merge(array $summaries): array {
+    $m = ['requests' => 0, 'by_script' => [], 'by_who' => [], 'slowest' => [], 'peak_p95_mb' => 0, 'peak_max_mb' => 0];
+    foreach ($summaries as $s) {
+        $m['requests'] += (int) ($s['requests'] ?? 0);
+        foreach (($s['by_script'] ?? []) as $k => $v) {
+            $t = &$m['by_script'][$k];
+            $t = $t ?? ['count' => 0, 'total_ms' => 0, 'max_ms' => 0, 'p95_ms' => 0, 'mb_x_count' => 0, 'max_mb' => 0, 'errors' => 0];
+            $t['count'] += $v['count'];
+            $t['total_ms'] += $v['total_ms'];
+            $t['max_ms'] = max($t['max_ms'], $v['max_ms']);
+            $t['p95_ms'] = max($t['p95_ms'], $v['p95_ms']);
+            $t['mb_x_count'] += $v['mean_mb'] * $v['count'];
+            $t['max_mb'] = max($t['max_mb'], $v['max_mb']);
+            $t['errors'] += $v['errors'];
+            unset($t);
+        }
+        foreach (($s['by_who'] ?? []) as $k => $v) {
+            $t = &$m['by_who'][$k];
+            $t = $t ?? ['count' => 0, 'total_ms' => 0, 'max_mb' => 0, 'level' => $v['level'], 'ip' => $v['ip']];
+            $t['count'] += $v['count'];
+            $t['total_ms'] += $v['total_ms'];
+            $t['max_mb'] = max($t['max_mb'], $v['max_mb']);
+            unset($t);
+        }
+        $m['slowest'] = array_merge($m['slowest'], $s['slowest'] ?? []);
+        $m['peak_p95_mb'] = max($m['peak_p95_mb'], $s['peak_p95_mb'] ?? 0);
+        $m['peak_max_mb'] = max($m['peak_max_mb'], $s['peak_max_mb'] ?? 0);
+    }
+    foreach ($m['by_script'] as &$t) {
+        $t['mean_ms'] = (int) round($t['total_ms'] / max(1, $t['count']));
+        $t['mean_mb'] = round($t['mb_x_count'] / max(1, $t['count']), 1);
+        unset($t['mb_x_count']);
+    }
+    unset($t);
+    uasort($m['by_script'], fn($a, $b) => $b['total_ms'] <=> $a['total_ms']);
+    uasort($m['by_who'], fn($a, $b) => $b['total_ms'] <=> $a['total_ms']);
+    usort($m['slowest'], fn($a, $b) => $b['ms'] <=> $a['ms']);
+    $m['slowest'] = array_slice($m['slowest'], 0, 20);
+    return $m;
+}
+
+/** The daily summaries for the last $days finished days (oldest first), as decoded arrays. */
+function moop_metrics_daily(int $days, ?int $now = null): array {
+    $out = [];
+    $now = $now ?? time();
+    for ($i = $days; $i >= 1; $i--) {
+        $date = date('Y-m-d', strtotime("-$i day", $now));
+        $file = moop_metrics_dir() . "/daily-$date.json";
+        if (is_readable($file) && is_array($d = json_decode((string) file_get_contents($file), true))) $out[] = $d;
+    }
+    return $out;
 }

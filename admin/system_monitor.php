@@ -36,18 +36,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['
     $_SESSION['sysmon_flash'] = $published
         ? ['ok', ($_POST['action'] === 'heavy_add' ? 'Added ' : 'Removed ') . $script . ' — nginx will follow within a minute.']
         : ['error', 'Not saved: ' . ($result['success'] ? 'could not write nginx_wanted.json to the cache directory' : $result['message'])];
-    header('Location: system_monitor.php' . (($_GET['range'] ?? '') === '7d' ? '?range=7d' : '') . '#sysmon-heavy');
+    $back = in_array($_GET['range'] ?? '', ['7d', '30d'], true) ? '?range=' . $_GET['range'] : '';
+    header('Location: system_monitor.php' . $back . '#sysmon-heavy');
     exit;
 }
 $flash = $_SESSION['sysmon_flash'] ?? null;
 unset($_SESSION['sysmon_flash']);
 
-$range   = ($_GET['range'] ?? '24h') === '7d' ? '7d' : '24h';
-$seconds = $range === '7d' ? 7 * 86400 : 86400;
+$range   = in_array($_GET['range'] ?? '', ['7d', '30d'], true) ? $_GET['range'] : '24h';
+$seconds = ['24h' => 86400, '7d' => 7 * 86400, '30d' => 30 * 86400][$range];
 
 $now_file = moop_monitor_read('now');
 $hist     = moop_monitor_read($range);
-$points   = $range === '7d' ? ($hist['hours'] ?? []) : ($hist['minutes'] ?? []);
+$points   = $range === '30d' ? ($hist['days'] ?? []) : ($range === '7d' ? ($hist['hours'] ?? []) : ($hist['minutes'] ?? []));
+if ($range === '30d') {
+    // The collector keeps a year of days; this view is the last 30.
+    $points = array_values(array_filter($points, fn($p) => $p['t'] >= time() - 31 * 86400));
+}
 $now      = $now_file['now'] ?? null;
 $sync     = $now_file['nginx_sync'] ?? null;
 $age      = $now_file ? time() - (int) $now_file['generated'] : null;
@@ -98,7 +103,19 @@ foreach ($points as $p) {
 }
 
 $traffic = moop_monitor_traffic($points);
-$pages   = moop_metrics_summarise(moop_metrics_rows_since($seconds), 20);
+if ($range === '30d') {
+    // 29 finished days from housekeeping's daily summaries + today, read live. Re-reading a month
+    // of request lines on every page load would not scale with traffic.
+    $today_rows = fn() => moop_metrics_rows(date('Y-m-d'));
+    $daily = moop_metrics_daily(29);
+    $pages = moop_metrics_merge(array_merge($daily, [moop_metrics_summarise($today_rows(), 20)]));
+    $usage = moop_metrics_usage_merge(array_merge(array_column($daily, 'usage'), [moop_metrics_usage($today_rows())]));
+    $days_covered = count($daily) + 1;
+} else {
+    $pages = moop_metrics_summarise(moop_metrics_rows_since($seconds), 20);
+    $usage = moop_metrics_usage(moop_metrics_rows_since($seconds));
+    $days_covered = null;
+}
 // Recommendations judge pages on 7 days whatever window is shown: a day is too little evidence.
 $pages7  = $range === '7d' ? $pages : moop_metrics_summarise(moop_metrics_rows_since(7 * 86400));
 $heavy   = moop_monitor_heavy_list();
@@ -124,6 +141,8 @@ echo render_display_page(
         'cap'          => $cap,
         'recs'         => $recs,
         'flash'        => $flash,
+        'usage'        => $usage,
+        'days_covered' => $days_covered,
         'page_styles'  => ['/' . $site . '/css/system-monitor.css'],
         'page_script'  => ['/' . $site . '/js/system-monitor.js'],
         'inline_scripts' => [

@@ -13,8 +13,9 @@ Each run:
      what it wants to {cache}/nginx_wanted.json, this re-validates every value, regenerates the
      conf, and applies it only if `nginx -t` passes (else restores) — so nobody has to remember
      to re-run install_nginx_limits.sh after changing the ranges;
-  4. publishes {cache}/monitor_now.json, monitor_24h.json (per minute) and monitor_7d.json (per
-     hour), which the admin page reads.
+  4. publishes {cache}/monitor_now.json, monitor_24h.json (per minute), monitor_7d.json (per
+     hour) and monitor_30d.json (per day, kept a year — addresses dropped after 30 days), which
+     the admin page reads.
 
 Security — root working beside a directory the web server can write:
   * Root never executes MOOP code. It READS one file MOOP writes (nginx_wanted.json): opened
@@ -365,6 +366,9 @@ def sync_nginx(cache, site, prev):
     for p, content in ((NGINX_HTTP_CONF, want_http), (NGINX_SRV_CONF, want_srv)):
         with open(p + '.moop-new', 'w') as fh:
             fh.write(content)
+        # Explicit: the process umask (0077 under some sudo setups) made the first rewrite
+        # root-only, which hid it from setup-check.php and from anyone reading the config.
+        os.chmod(p + '.moop-new', 0o644)
     backups = {}
     for p, had in ((NGINX_HTTP_CONF, have_http), (NGINX_SRV_CONF, have_srv)):
         backups[p] = had
@@ -412,6 +416,37 @@ def rollup_hour(minutes):
     return h
 
 
+def day_start(t):
+    """Local midnight at or before t (days follow the server's clock, as people read them)."""
+    lt = time.localtime(t)
+    return int(time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1)))
+
+
+def rollup_day(hours):
+    """Combine one day's hourly records: averages weighted by samples, peaks of peaks, sums."""
+    d = {'t': day_start(hours[0]['t']), 'n': sum(h.get('n', 0) for h in hours)}
+    for k in ('cpu_pct', 'mem_used_pct', 'load1', 'fpm_active', 'fpm_queue', 'swap_used_mb'):
+        num = sum(h[k] * h.get('n', 1) for h in hours if isinstance(h.get(k), (int, float)))
+        den = sum(h.get('n', 1) for h in hours if isinstance(h.get(k), (int, float)))
+        if den:
+            d[k] = round(num / den, 1)
+            d[k + '_max'] = max(h.get(k + '_max', h[k]) for h in hours if isinstance(h.get(k), (int, float)))
+    for k in ('req', 'bytes', 's429', 'fpm_max_children_reached', 'fpm_accepted'):
+        d[k] = sum(h.get(k, 0) or 0 for h in hours)
+    for k in ('status', 'cls', 'ua', 'limited'):
+        agg = {}
+        for h in hours:
+            for kk, v in (h.get(k) or {}).items():
+                agg[kk] = agg.get(kk, 0) + v
+        d[k] = agg
+    ips = {}
+    for h in hours:
+        for ip, n in h.get('top_ips', []):
+            ips[ip] = ips.get(ip, 0) + n
+    d['top_ips'] = sorted(ips.items(), key=lambda kv: -kv[1])[:20]
+    return d
+
+
 def main():
     conf = load_conf()
     cache, site = conf['CACHE'], conf['SITE']
@@ -444,12 +479,28 @@ def main():
             hours.append(rollup_hour(ms))
     hours.sort(key=lambda h: h['t'])
     state['hours'] = hours
+    # Daily rollups: finish any day that is over and not yet rolled up. Kept a year — they are a
+    # few hundred small records — but addresses (personal data) only for 30 days.
+    days = [d for d in state.get('days', []) if d['t'] > minute - 400 * 86400]
+    done_days = {d['t'] for d in days}
+    by_day = {}
+    for h in hours:
+        by_day.setdefault(day_start(h['t']), []).append(h)
+    for dt, hs in sorted(by_day.items()):
+        if day_start(dt + 36 * 3600) <= minute and dt not in done_days:   # the next day has begun
+            days.append(rollup_day(hs))
+    for d in days:
+        if d['t'] < minute - 30 * 86400:
+            d.pop('top_ips', None)
+    days.sort(key=lambda d: d['t'])
+    state['days'] = days
 
     save_state(state)
     publish(cache, 'monitor_now.json', {'version': VERSION, 'generated': now, 'now': rec, 'nginx_sync': sync})
     publish(cache, 'monitor_24h.json', {'version': VERSION, 'generated': now, 'minutes': hist})
     publish(cache, 'monitor_7d.json', {'version': VERSION, 'generated': now, 'hours': hours})
-    for name in ('monitor_now.json', 'monitor_24h.json', 'monitor_7d.json'):
+    publish(cache, 'monitor_30d.json', {'version': VERSION, 'generated': now, 'days': days})
+    for name in ('monitor_now.json', 'monitor_24h.json', 'monitor_7d.json', 'monitor_30d.json'):
         subprocess.run(['restorecon', os.path.join(cache, name)], capture_output=True)
 
 

@@ -2724,6 +2724,53 @@ ok($_recs[0]['level'] === 'critical' && strpos($_recs[0]['title'], 'All PHP work
 ok(strpos($_titles, 'tools/organism.php failed 1 time') !== false, '5xx errors are reported per page');
 
 // ----------------------------------------------------------------------------
+group('System Monitor: what people use (organisms / assemblies / gene sets), 30-day merge');
+$_cx = moop_metrics_context(['organism' => 'Nematostella_vectensis', 'assembly' => 'GCA_033964005.1', 'gene_set' => 'NV2',
+                             'search_keywords' => 'my secret gene']);
+ok($_cx === ['org' => 'Nematostella_vectensis', 'asm' => 'GCA_033964005.1', 'gs' => 'NV2'],
+   'organism / assembly / gene set are recorded; search words are not (there is no column for them)');
+ok(moop_metrics_context(['organisms' => ['A_b', 'C_d']])['org'] === 'A_b,C_d' && moop_metrics_context(['organism' => '<script>'])['org'] === '',
+   'multi-organism pages record the list; anything not identifier-shaped is dropped');
+$_old = moop_metrics_parse("1793219250.7\ttools/parent.php\tGET\t200\t12\t2.0\t\tPUBLIC\t1.2.3.4\tcurl\n");
+ok($_old && $_old['org'] === '' && $_old['script'] === 'tools/parent.php', 'lines written before the new columns still parse');
+$_mk = fn($script, $org, $who, $level = 'PUBLIC', $asm = '', $gs = '', $status = 200, $method = 'GET') =>
+    ['script' => $script, 'method' => $method, 'status' => $status, 'user' => '', 'ip' => $who, 'level' => $level, 'org' => $org, 'asm' => $asm, 'gs' => $gs];
+$_us = moop_metrics_usage([
+    $_mk('tools/parent.php', 'Nv', '1.1.1.1', 'PUBLIC', 'A1', 'G1'),
+    $_mk('tools/parent.php', 'Nv', '1.1.1.1', 'PUBLIC', 'A1', 'G1'),
+    $_mk('tools/organism.php', 'Nv', '172.16.2.52', 'IP_IN_RANGE'),
+    $_mk('tools/annotation_search_ajax.php', 'Sm', '2.2.2.2'),
+    $_mk('tools/multi_organism.php', 'Nv,Sm', '3.3.3.3'),
+    $_mk('tools/organism.php', 'Nv', '4.4.4.4', 'PUBLIC', '', '', 404),
+    $_mk('tools/blast.php', 'Nv', '5.5.5.5'),
+    $_mk('tools/blast.php', 'Nv', '5.5.5.5', 'PUBLIC', '', '', 200, 'POST'),
+]);
+$_nv = $_us['view']['organism']['Nv'];
+ok($_nv['out'] === 3 && $_nv['out_v'] === 2 && $_nv['in'] === 1 && $_nv['in_v'] === 1,
+   'views split internal / public, with distinct visitors (one visitor twice = 2 requests, 1 visitor)');
+ok(isset($_us['view']['gene_set']['Nv/A1/G1'], $_us['view']['organism']['Sm']) && $_us['search']['organism']['Sm']['out'] === 1,
+   'gene-set level is counted; a multi-organism page counts each organism; searches count by organism');
+ok(($_us['blast']['organism']['Nv']['out'] ?? 0) === 1, 'a BLAST counts when it runs (POST), not when the form is opened; 404s are not counted');
+$_mu = moop_metrics_usage_merge([$_us, $_us]);
+ok($_mu['view']['organism']['Nv']['out'] === 6 && $_mu['view']['organism']['Nv']['out_v'] === 4, 'merged days add requests and visitor-days');
+$_d1 = moop_metrics_summarise([['script' => 'a.php', 'ms' => 100, 'peak_mb' => 10, 'status' => 200, 'user' => '', 'ip' => 'x', 'level' => 'PUBLIC']], 5);
+$_d2 = moop_metrics_summarise([['script' => 'a.php', 'ms' => 300, 'peak_mb' => 30, 'status' => 500, 'user' => '', 'ip' => 'x', 'level' => 'PUBLIC']], 5);
+$_mg = moop_metrics_merge([$_d1, $_d2]);
+ok($_mg['requests'] === 2 && $_mg['by_script']['a.php']['count'] === 2 && $_mg['by_script']['a.php']['mean_ms'] === 200
+   && $_mg['by_script']['a.php']['max_mb'] == 30 && $_mg['by_script']['a.php']['mean_mb'] == 20 && $_mg['by_script']['a.php']['errors'] === 1
+   && $_mg['by_who']['x']['count'] === 2, 'daily summaries merge: counts, means, peaks and errors exact');
+$_md = sys_get_temp_dir() . '/moop_daily_' . getmypid(); @mkdir($_md);
+file_put_contents("$_md/requests-2026-10-27.tsv", moop_metrics_line(['ts' => '1793100000', 'script' => 'tools/organism.php', 'method' => 'GET', 'status' => '200',
+    'ms' => '5', 'peak_mb' => '2', 'user' => '', 'level' => 'PUBLIC', 'ip' => '9.9.9.9', 'agent' => 'x', 'org' => 'Nv', 'asm' => '', 'gs' => '']));
+file_put_contents("$_md/requests-2026-10-28.tsv", '');
+$_built = moop_metrics_build_daily(strtotime('2026-10-28 12:00'), $_md);
+$_dj = json_decode((string) @file_get_contents("$_md/daily-2026-10-27.json"), true);
+ok($_built === 1 && !is_file("$_md/daily-2026-10-28.json") && ($_dj['usage']['view']['organism']['Nv']['out'] ?? 0) === 1,
+   'housekeeping summarises finished days only (not today), including usage');
+ok(moop_metrics_build_daily(strtotime('2026-10-28 12:00'), $_md) === 0, 'and does not redo a day whose summary is current');
+array_map('unlink', glob("$_md/*")); @rmdir($_md);
+
+// ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
 ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
    'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',

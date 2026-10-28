@@ -89,6 +89,13 @@ read by nobody).
   re-run to take the new collector + template; its first sync rewrites the map (two heavy lines → one)
   and reloads nginx once.
 
+- **30-day view + usage DONE** 2026-10-28: collector keeps daily rollups a year (addresses dropped after
+  30 days) → monitor_30d.json; housekeeping writes `metrics/daily-YYYY-MM-DD.json` per finished day so
+  the page adds up 30 small files. Request log records organism / assembly / gene set (NOT search words
+  — Sofia: they can reveal unpublished work). "What people use": viewed / searched / BLAST / downloaded,
+  internal vs public, requests + distinct visitors (visitor-days over 30 days). Collector also chmods
+  the nginx conf 644 (the first rewrite came out root-only under sudo's umask). Re-install to apply.
+
 ## Privacy
 
 Usernames and addresses are personal data: admin-only page, 30-day retention, never in the
