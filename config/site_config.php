@@ -485,6 +485,20 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // 3. Copy jwt_public_key.pem to remote server
     // 4. Copy track data to remote server
     // 5. Configure nginx/Apache on remote server
+    // ======== RATE LIMITS: the "heavy" group ========
+    // Scripts (path under the app root) that nginx limits most strictly per address: 20 per
+    // minute, burst 10, 3 at once — exports, downloads, sequence and BLAST runs. The list is
+    // MOOP's; the System Monitor's root collector writes it into nginx (via nginx_wanted.json).
+    // Admins add or remove entries on Admin -> System Monitor, which recommends candidates from
+    // what each page measurably costs. Saved overrides live in config_editable.json.
+    'rate_limit_heavy' => [
+        'api/moopmart_export.php', 'api/download_zip.php', 'api/download_file.php',
+        'api/download_annotations.php', 'api/download_search_fasta.php', 'api/blast_download.php',
+        'api/get_sequence.php', 'api/get_gff.php', 'api/galaxy_mafft_align.php',
+        'tools/blast.php', 'tools/primer_blast.php', 'tools/retrieve_sequences.php',
+        'tools/retrieve_selected_sequences.php', 'tools/sequences_display.php',
+    ],
+
     // ======== CLOUDFLARE TURNSTILE (bot protection) ========
     // Enable to require human verification once per session.
     // site_key goes in config_editable.json (admin UI).

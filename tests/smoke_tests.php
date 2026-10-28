@@ -2692,6 +2692,38 @@ ok(moop_monitor_fmt_ms(850) === '850 ms' && moop_monitor_fmt_ms(4200) === '4.2 s
    'durations and sizes read as a person would say them');
 
 // ----------------------------------------------------------------------------
+group('System Monitor: heavy group, capacity, recommendations');
+ok(moop_monitor_valid_heavy('api/moopmart_export.php', $BASE) && !moop_monitor_valid_heavy('api/../config/x.php', $BASE)
+   && !moop_monitor_valid_heavy('api/no_such_script.php', $BASE) && !moop_monitor_valid_heavy('admin/admin.php', $BASE),
+   'a heavy entry must be api/ or tools/, plain name, and an existing file');
+$_hv = ['tools/blast.php'];
+ok(moop_monitor_class('tools/blast.php', $_hv) === 'heavy' && moop_monitor_class('api/jbrowse2/config.php', $_hv) === 'jbrowse'
+   && moop_monitor_class('api/feature_search.php', $_hv) === 'api' && moop_monitor_class('tools/annotation_search_ajax.php', $_hv) === 'api'
+   && moop_monitor_class('tools/parent.php', $_hv) === 'page', 'class order mirrors the nginx map: heavy, jbrowse, api, page');
+$_cap = moop_monitor_capacity(
+    [['cpu_pct' => 20, 'cpu_pct_max' => 95, 'mem_used_pct' => 50, 'mem_used_pct_max' => 70, 'fpm_max_children_reached' => 2]],
+    ['peak_p95_mb' => 85], ['mem_total_mb' => 16000], 50);
+ok($_cap['cpu_avg'] == 20 && $_cap['cpu_peak'] == 95 && $_cap['mem_peak'] == 70,
+   'hourly records: averages from averages, peaks from peaks');
+ok($_cap['per_worker_mb'] == 100 && $_cap['php_worst_mb'] === 5000 && $_cap['suggested_max_children'] === 96 && $_cap['workers_reached'] === 2,
+   'worker memory = p95 request peak + base; 50 x 100 MB = 5 GB; 60% of 16 GB fits 96');
+$_p7 = ['by_script' => [
+    'tools/parent.php'        => ['count' => 40, 'p95_ms' => 2500, 'max_mb' => 20, 'errors' => 0],
+    'tools/blast.php'         => ['count' => 40, 'p95_ms' => 9000, 'max_mb' => 300, 'errors' => 0],
+    'api/jbrowse2/config.php' => ['count' => 40, 'p95_ms' => 3200, 'max_mb' => 28, 'errors' => 0],
+    'tools/organism.php'      => ['count' => 2,  'p95_ms' => 9000, 'max_mb' => 10, 'errors' => 1],
+]];
+$_tr0 = ['ips' => [], 'ua' => []];
+$_recs = moop_monitor_recommendations($_cap, $_p7, $_hv, ['mem_total_mb' => 16000, 'disks' => []], $_tr0, null, 50, false, []);
+$_titles = implode(' | ', array_column($_recs, 'title'));
+$_adds = array_filter(array_column($_recs, 'action'));
+ok(count($_adds) === 1 && array_values($_adds)[0]['script'] === 'tools/parent.php',
+   'heavy candidate: slow + enough requests + not already heavy; never the genome browser, never on 2 requests');
+ok($_recs[0]['level'] === 'critical' && strpos($_recs[0]['title'], 'All PHP workers were busy') === 0 && strpos($_recs[0]['detail'], 'raise pm.max_children toward 96') !== false,
+   'saturation is first, and says workers can be raised when RAM allows');
+ok(strpos($_titles, 'tools/organism.php failed 1 time') !== false, '5xx errors are reported per page');
+
+// ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
 ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
    'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',

@@ -92,10 +92,12 @@ function moop_metrics_summarise(iterable $rows, int $slowest_n = 0): array {
     $by_script = [];
     $by_who = [];
     $slowest = [];
+    $peaks = [];
     $total = 0;
     foreach ($rows as $r) {
         if (!$r) continue;
         $total++;
+        $peaks[] = $r['peak_mb'];
         if ($slowest_n > 0) {
             // Keep the N slowest without holding every row: trim back to N whenever it doubles.
             $slowest[] = $r;
@@ -134,8 +136,13 @@ function moop_metrics_summarise(iterable $rows, int $slowest_n = 0): array {
     uasort($by_script, fn($a, $b) => $b['total_ms'] <=> $a['total_ms']);
     uasort($by_who, fn($a, $b) => $b['total_ms'] <=> $a['total_ms']);
     usort($slowest, fn($a, $b) => $b['ms'] <=> $a['ms']);
+    sort($peaks);
+    // Memory per request across ALL pages: what one PHP worker typically needs at its busiest.
+    // This, times the worker count, is what has to fit in RAM.
+    $peak_p95 = $peaks ? $peaks[(int) floor(0.95 * (count($peaks) - 1))] : 0;
     return ['requests' => $total, 'by_script' => $by_script, 'by_who' => $by_who,
-            'slowest' => array_slice($slowest, 0, $slowest_n)];
+            'slowest' => array_slice($slowest, 0, $slowest_n),
+            'peak_p95_mb' => $peak_p95, 'peak_max_mb' => $peaks ? end($peaks) : 0];
 }
 
 /**

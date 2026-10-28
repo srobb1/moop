@@ -581,7 +581,7 @@ The following were added/fixed; keep these patterns:
 | Admin API auth | `admin/api/generate_registry.php` | Must use `admin_init.php` |
 | Trusted server URL fix | `includes/ConfigManager.php::isTrustedTracksServer()` | Prevents subdomain bypass |
 | Proxy/IP warning | `includes/access_control.php` | Logs warning if X-Forwarded-For seen with IP ranges active |
-| Bot protection (2026-10-28) | `robots.txt`, `docs/nginx/moop-ratelimit*.conf`, `lib/human_check.php` | nginx per-address limits by request class (page/api/jbrowse/heavy), internal ranges exempt — install/re-run `sudo scripts/install_nginx_limits.sh` after changing IP ranges. **A new heavy endpoint (export/download) must be added to the `heavy` class** in `moop-ratelimit-http.conf`, or it gets the lighter page limit. Turnstile check built, off until launch. Plan: `notes/BOT_PROTECTION_PLAN.md` |
+| Bot protection (2026-10-28) | `robots.txt`, `docs/nginx/moop-ratelimit*.conf`, `lib/human_check.php` | nginx per-address limits by request class (page/api/jbrowse/heavy), internal ranges exempt. Both the exempt ranges (`auto_login_ip_ranges`) and the heavy group (`rate_limit_heavy`, managed on Admin → System Monitor, which recommends candidates from measured cost) live in MOOP config; the System Monitor's root collector applies them to nginx within a minute — nothing to re-run. **A new export/download endpoint belongs in `rate_limit_heavy`** (site_config.php default), or it gets the lighter page limit. `moop_monitor_class()` mirrors the nginx map order — change both together. Turnstile check built, off until launch. Plan: `notes/BOT_PROTECTION_PLAN.md` |
 
 ---
 

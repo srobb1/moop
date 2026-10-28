@@ -79,7 +79,15 @@ read by nobody).
   no horizontal scroll at 1440 or 390 px.
 - First finding from it: `api/jbrowse2/config.php` takes ~3.2 s and ~28 MB on every genome-browser
   open — the slowest public request. Worth investigating (cacheable?).
-- Next: piece 3 (heavy group into MOOP config) + 5 (recommendations, Add-to-heavy button).
+- **Pieces 3 + 5 DONE** 2026-10-28: heavy group = `rate_limit_heavy` (site_config.php default, overrides
+  in config_editable.json), published in nginx_wanted.json, validated by the collector (shape +
+  existing file) and rendered as ONE map line. Page: Recommendations (saturation, RAM/swap, workers vs
+  RAM, CPU, heavy candidates with an Add button, 5xx per page, crawler exposure, disk, sync errors),
+  Capacity (when to add RAM / CPUs / workers + how to change pm.max_children), Heavy group chips with
+  Remove. Collector and install script render byte-identically (an `awk -v` escape bug turned `\.php`
+  into `.php` — fixed by passing values through ENVIRON). Needs `sudo scripts/install_monitor.sh`
+  re-run to take the new collector + template; its first sync rewrites the map (two heavy lines → one)
+  and reloads nginx once.
 
 ## Privacy
 

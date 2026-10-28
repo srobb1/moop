@@ -13,15 +13,18 @@
 require_once __DIR__ . '/cache_paths.php';
 
 /**
- * Write {cache}/nginx_wanted.json from the site's auto_login_ip_ranges.
- * Called by housekeeping (hourly) and right after Site Configuration is saved.
- * Only valid IPv4 ranges are written (the collector checks again; this keeps a bad entry from
+ * Write {cache}/nginx_wanted.json from the site's auto_login_ip_ranges and rate_limit_heavy.
+ * Called by housekeeping (hourly), right after Site Configuration is saved, and after the heavy
+ * group is changed on the System Monitor page.
+ * Only valid entries are written (the collector checks again; this keeps a bad entry from
  * blocking the good ones in the meantime). Returns false if the file could not be written.
  *
  * @param array|null $ranges ranges to publish; null = read them from the config
+ * @param array|null $heavy  heavy scripts to publish; null = read them from the config
  */
-function moop_monitor_publish_wanted(?array $ranges = null): bool {
+function moop_monitor_publish_wanted(?array $ranges = null, ?array $heavy = null): bool {
     $ranges = $ranges ?? ConfigManager::getInstance()->getArray('auto_login_ip_ranges', []);
+    $heavy  = array_values(array_filter($heavy ?? moop_monitor_heavy_list(), 'moop_monitor_valid_heavy'));
     $valid = [];
     foreach ($ranges as $r) {
         $s = (string) ($r['start'] ?? '');
@@ -33,7 +36,7 @@ function moop_monitor_publish_wanted(?array $ranges = null): bool {
     }
     $cache = moop_cache_root();
     if (!moop_ensure_cache_dir($cache)) return false;
-    $json = json_encode(['generated' => time(), 'exempt_ranges' => $valid], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    $json = json_encode(['generated' => time(), 'exempt_ranges' => $valid, 'heavy' => $heavy], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     $tmp = tempnam($cache, '.nginx_wanted.');
     if ($tmp === false || @file_put_contents($tmp, $json . "\n") === false) {
         if ($tmp) @unlink($tmp);
@@ -41,6 +44,33 @@ function moop_monitor_publish_wanted(?array $ranges = null): bool {
     }
     @chmod($tmp, 0644);
     return @rename($tmp, "$cache/nginx_wanted.json");
+}
+
+/** The heavy group as configured (Admin -> System Monitor; default in site_config.php). */
+function moop_monitor_heavy_list(): array {
+    return array_values(array_map('strval', ConfigManager::getInstance()->getArray('rate_limit_heavy', [])));
+}
+
+/**
+ * Can this be a heavy-group entry? "api/foo.php" or "tools/foo.php", lower-case, and the file must
+ * exist — the same rule the root collector applies before anything reaches nginx.
+ */
+function moop_monitor_valid_heavy($script, ?string $root = null): bool {
+    return is_string($script) && preg_match('#^(api|tools)/[a-z0-9_]+\.php$#', $script)
+        && is_file(($root ?? dirname(__DIR__)) . '/' . $script);
+}
+
+/**
+ * Which nginx rate-limit class a script falls in — the same order as the map in
+ * docs/nginx/moop-ratelimit-http.conf (heavy first). Shown on the monitor page and used by the
+ * recommendations; if that map changes, change this with it.
+ */
+function moop_monitor_class(string $script, array $heavy): string {
+    if (in_array($script, $heavy, true)) return 'heavy';
+    if (strpos($script, 'api/jbrowse2/') === 0) return 'jbrowse';
+    if (strpos($script, 'api/') === 0) return 'api';
+    if (preg_match('#^tools/(annotation_search_ajax|get_annotation_sources_grouped|get_organism_hierarchy)\.php$#', $script)) return 'api';
+    return 'page';
 }
 
 /** One of the collector's published files, decoded, or null if absent/unreadable. */
@@ -116,4 +146,129 @@ function moop_monitor_fmt_bytes(float $b): string {
         $b /= 1024;
     }
     return '';
+}
+
+const MOOP_FPM_WORKER_BASE_MB = 15;   // a php-fpm worker's own footprint beyond the request's peak (estimate)
+
+/**
+ * Capacity: does the server need more RAM, more CPUs, or more PHP workers? From the collector's
+ * samples ($points, 24 h or 7 d) and the request log summary ($pages). Each verdict says which
+ * figure it rests on, so an admin can check it rather than trust it.
+ *
+ * How workers and RAM relate: each busy PHP worker holds up to one request's peak memory. If all
+ * pm.max_children workers were busy with a typical-heavy request (95th-percentile peak) at once,
+ * PHP alone would need max_children x (p95 peak + worker base). That must fit in RAM with room
+ * left for the OS and — on this site above all — the page cache that keeps SQLite fast.
+ */
+function moop_monitor_capacity(array $points, array $pages, ?array $now, ?int $max_children): array {
+    // Hourly records (7 d) carry both an average and a peak: averages from averages, peaks from
+    // peaks. Minute records (24 h) have one value, used for both.
+    $vals = function (string $k, bool $peak) use ($points) {
+        return array_values(array_filter(array_map(fn($p) => $peak ? ($p[$k . '_max'] ?? ($p[$k] ?? null)) : ($p[$k] ?? null), $points), 'is_numeric'));
+    };
+    $cpu = $vals('cpu_pct', false);
+    $cpu_peaks = $vals('cpu_pct', true);
+    $mem = $vals('mem_used_pct', true);
+    $avg = fn($a) => $a ? array_sum($a) / count($a) : null;
+    $total_mb = (int) ($now['mem_total_mb'] ?? 0);
+    $per_worker = ($pages['peak_p95_mb'] ?? 0) + MOOP_FPM_WORKER_BASE_MB;
+    $reached = array_sum(array_map(fn($p) => (int) ($p['fpm_max_children_reached'] ?? 0), $points));
+    $queued = count(array_filter($points, fn($p) => (int) ($p['fpm_queue_max'] ?? ($p['fpm_queue'] ?? 0)) > 0));
+    $suggested = ($total_mb > 0 && $per_worker > 0) ? (int) floor(0.6 * $total_mb / $per_worker) : null;
+    return [
+        'samples'        => count($points),
+        'cpu_avg'        => $avg($cpu) !== null ? round($avg($cpu), 1) : null,
+        'cpu_peak'       => $cpu_peaks ? max($cpu_peaks) : null,
+        'cpu_busy_share' => $cpu ? round(100 * count(array_filter($cpu, fn($v) => $v >= 80)) / count($cpu)) : null,
+        'mem_peak'       => $mem ? max($mem) : null,
+        'swap_peak_mb'   => ($s = $vals('swap_used_mb', true)) ? max($s) : 0,
+        'workers_reached'=> $reached,
+        'queued_samples' => $queued,
+        'per_worker_mb'  => round($per_worker, 1),
+        'largest_mb'     => (float) ($pages['peak_max_mb'] ?? 0),
+        'php_worst_mb'   => $max_children ? (int) round($max_children * $per_worker) : null,
+        'total_mb'       => $total_mb,
+        'suggested_max_children' => $suggested,
+    ];
+}
+
+/**
+ * What the admin should act on, most serious first. Each: level (critical|warning|info), title,
+ * detail, and optionally action = ['type' => 'heavy_add', 'script' => ...].
+ *
+ * @param array $pages7  request-log summary over 7 days (stable enough to judge pages on)
+ */
+function moop_monitor_recommendations(array $cap, array $pages7, array $heavy, ?array $now, array $traffic,
+                                      ?array $sync, ?int $max_children, bool $turnstile_on, array $ranges): array {
+    $out = [];
+    $add = function ($level, $title, $detail, $action = null) use (&$out) {
+        $out[] = ['level' => $level, 'title' => $title, 'detail' => $detail, 'action' => $action];
+    };
+
+    if (($sync['state'] ?? '') === 'error') {
+        $add('critical', 'nginx rate-limit settings were not applied', (string) ($sync['message'] ?? ''));
+    }
+
+    // ── Capacity ──
+    if ($cap['workers_reached'] > 0 || $cap['queued_samples'] > 0) {
+        $fits = $cap['suggested_max_children'] !== null && $max_children !== null && $cap['suggested_max_children'] > $max_children;
+        $add('critical', 'All PHP workers were busy — visitors waited',
+            "Every one of the {$max_children} PHP workers was in use " . ($cap['workers_reached'] ?: $cap['queued_samples']) . ' time(s) in this window; requests queued until one was free. '
+            . ($fits ? "RAM allows more workers: raise pm.max_children toward {$cap['suggested_max_children']} (see “How to change the number of PHP workers” below)."
+                     : 'RAM does not allow more workers at the measured memory per request — this is the point to add RAM (or to limit the heaviest pages).'));
+    }
+    if (($cap['mem_peak'] ?? 0) >= 90 || $cap['swap_peak_mb'] > 256) {
+        $add('critical', 'Memory ran short — time to add RAM',
+            'Memory reached ' . $cap['mem_peak'] . '% used' . ($cap['swap_peak_mb'] > 0 ? ' and the server swapped ' . $cap['swap_peak_mb'] . ' MB to disk' : '')
+            . '. Swapping makes every page slow. More RAM is the fix; lowering pm.max_children trades it for queueing.');
+    } elseif (($cap['mem_peak'] ?? 0) >= 80) {
+        $add('warning', 'Memory is getting tight', 'Memory peaked at ' . $cap['mem_peak'] . '% used. Watch it; at 90% or any swapping, add RAM.');
+    }
+    if ($cap['php_worst_mb'] !== null && $cap['total_mb'] > 0 && $cap['php_worst_mb'] > 0.7 * $cap['total_mb']) {
+        $add('warning', 'Too many PHP workers for this much RAM',
+            "If all {$max_children} workers were busy at once with a typical-heavy request ({$cap['per_worker_mb']} MB each, measured), PHP alone would need "
+            . round($cap['php_worst_mb'] / 1024, 1) . ' GB of the server’s ' . round($cap['total_mb'] / 1024, 1) . ' GB. '
+            . "About {$cap['suggested_max_children']} workers fit while leaving room for the OS and the page cache SQLite depends on. Either lower pm.max_children or add RAM.");
+    }
+    if (($cap['cpu_busy_share'] ?? 0) >= 25 || ($cap['cpu_avg'] ?? 0) >= 70) {
+        $add('warning', 'CPU is busy much of the time — consider more CPUs',
+            "CPU averaged {$cap['cpu_avg']}% and was above 80% in {$cap['cpu_busy_share']}% of samples. Short spikes are normal; sustained load like this means more cores would help — but first check the busiest addresses for a crawler.");
+    }
+
+    // ── Heavy-group candidates: measurably expensive, not yet limited as heavy ──
+    foreach ($pages7['by_script'] ?? [] as $script => $s) {
+        $cls = moop_monitor_class($script, $heavy);
+        if ($cls === 'heavy' || $cls === 'jbrowse' || !moop_monitor_valid_heavy($script) || $s['count'] < 5) continue;
+        if ($s['p95_ms'] >= 2000 || $s['max_mb'] >= 64) {
+            $add('warning', "Add {$script} to the heavy group?",
+                "Over 7 days: {$s['count']} requests, slowest 5% took " . moop_monitor_fmt_ms($s['p95_ms']) . ", peak memory {$s['max_mb']} MB. "
+                . 'In the heavy group one address may run it 20 times a minute (3 at once) instead of 2 a second.',
+                ['type' => 'heavy_add', 'script' => $script]);
+        }
+    }
+
+    // ── Errors ──
+    foreach ($pages7['by_script'] ?? [] as $script => $s) {
+        if ($s['errors'] > 0) {
+            $add('warning', "{$script} failed {$s['errors']} time(s) in 7 days", 'Server errors (5xx). The details are in the PHP error log (Admin → Error Logs).');
+        }
+    }
+
+    // ── Exposure ──
+    $outside = 0;
+    foreach ($traffic['ips'] as $ip => $n) if (!moop_monitor_ip_internal((string) $ip, $ranges)) $outside += $n;
+    if (!$turnstile_on && ($traffic['ua']['ai'] ?? 0) + ($traffic['ua']['script'] ?? 0) > 1000 && $outside > 1000) {
+        $add('warning', 'Crawlers are reaching the site — consider turning on the browser check',
+            number_format($outside) . ' requests from outside addresses, ' . number_format(($traffic['ua']['ai'] ?? 0)) . ' from AI crawlers. '
+            . 'Turnstile (Site Configuration) stops mass crawlers before any page is built; logged-in and internal users never see it.');
+    }
+    foreach (($now['disks'] ?? []) as $label => $d) {
+        if ($d['used_pct'] >= 80) {
+            $add($d['used_pct'] >= 90 ? 'critical' : 'warning', "Disk {$d['path']} is {$d['used_pct']}% full", $d['free_gb'] . ' GB free.');
+        }
+    }
+
+    $rank = ['critical' => 0, 'warning' => 1, 'info' => 2];
+    usort($out, fn($a, $b) => $rank[$a['level']] <=> $rank[$b['level']]);
+    return $out;
 }

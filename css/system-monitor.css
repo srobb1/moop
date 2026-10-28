@@ -71,3 +71,14 @@
 .sysmon-num td, .sysmon-num th { font-variant-numeric: tabular-nums; }
 .sysmon-bar { display: inline-block; height: 8px; background: var(--sm-series); border-radius: 0 4px 4px 0; vertical-align: middle; min-width: 2px; }
 .sysmon-table-wrap { max-height: 320px; overflow: auto; }
+
+/* Recommendations: status (icon + word) beside each item */
+.sysmon-rec { display: flex; gap: 1rem; padding: .6rem 0; border-top: 1px solid var(--sm-grid); }
+.sysmon-rec:first-child { border-top: 0; padding-top: 0; }
+.sysmon-rec > .sysmon-status { flex: 0 0 7.5rem; padding-top: .1rem; }
+.sysmon-rec-body { flex: 1; min-width: 0; }
+@media (max-width: 520px) { .sysmon-rec { flex-direction: column; gap: .25rem; } .sysmon-rec > .sysmon-status { flex-basis: auto; } }
+
+/* Heavy group: one chip per script, each with its own remove form */
+.sysmon-heavy-list { display: flex; flex-wrap: wrap; gap: .4rem .6rem; }
+.sysmon-heavy-item { display: inline-flex; align-items: center; border: 1px solid var(--sm-grid); border-radius: 1rem; padding: .1rem .55rem; background: #fff; }

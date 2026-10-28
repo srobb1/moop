@@ -3,7 +3,7 @@
  * SYSTEM MONITOR - Content File. Controller: admin/system_monitor.php.
  *
  * Variables: $range ('24h'|'7d'), $age, $collector_ok, $sync, $tiles, $now, $traffic, $pages,
- *            $max_children, $ranges
+ *            $max_children, $ranges, $heavy, $cap, $recs, $flash
  * Charts are drawn by js/system-monitor.js from window.MOOP_MONITOR.series; every chart has the
  * same numbers in the data table below it, so nothing is hover-only.
  */
@@ -62,6 +62,49 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
+
+  <?php if ($flash): ?>
+    <div class="alert <?= $flash[0] === 'ok' ? 'alert-success' : 'alert-danger' ?>"><?= $h($flash[1]) ?></div>
+  <?php endif; ?>
+
+  <!-- Recommendations: what to act on, most serious first -->
+  <?php
+    $worst = $recs ? $recs[0]['level'] : null;
+    $rec_head = $worst === 'critical' ? 'adm-head-danger' : ($worst === 'warning' ? 'adm-head-warn' : 'adm-head');
+  ?>
+  <div class="card adm-card mb-4" id="sysmon-recs">
+    <div class="card-header <?= $rec_head ?>"><h5 class="mb-0">Recommendations</h5></div>
+    <div class="card-body">
+      <?php if (!$recs): ?>
+        <span class="sysmon-status sysmon-good"><i class="fa fa-check-circle" aria-hidden="true"></i> Nothing to act on.</span>
+        <span class="small text-muted">Resources, workers, errors and rate-limit settings all look fine for the <?= $span ?>
+          (pages judged on the last 7 days).</span>
+      <?php else: ?>
+        <ul class="list-unstyled mb-0 sysmon-recs">
+        <?php foreach ($recs as $r): ?>
+          <li class="sysmon-rec">
+            <div class="sysmon-status sysmon-<?= $h($r['level']) ?>">
+              <i class="fa fa-<?= $level_icon[$r['level']] ?? 'info-circle' ?>" aria-hidden="true"></i>
+              <?= $r['level'] === 'critical' ? 'Act now' : ($r['level'] === 'warning' ? 'Worth doing' : 'Note') ?>
+            </div>
+            <div class="sysmon-rec-body">
+              <strong><?= $h($r['title']) ?></strong>
+              <div class="small text-muted"><?= $h($r['detail']) ?></div>
+              <?php if (($r['action']['type'] ?? '') === 'heavy_add'): ?>
+                <form method="post" action="system_monitor.php<?= $range === '7d' ? '?range=7d' : '' ?>" class="mt-1">
+                  <?= csrf_input_field() ?>
+                  <input type="hidden" name="action" value="heavy_add">
+                  <input type="hidden" name="script" value="<?= $h($r['action']['script']) ?>">
+                  <button type="submit" class="btn btn-sm btn-outline-primary">Add to heavy group</button>
+                </form>
+              <?php endif; ?>
+            </div>
+          </li>
+        <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
+    </div>
+  </div>
 
   <!-- Charts: one measure each (never two y-axes) -->
   <div class="card adm-card mb-4">
@@ -177,12 +220,13 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
         <?= number_format($pages['requests']) ?> requests.</p>
       <div class="table-responsive">
       <table class="table table-sm table-hover sysmon-num sysmon-dt" id="sysmon-pages">
-        <thead><tr><th>Page</th><th class="text-end">Requests</th><th class="text-end">Total time</th><th class="text-end">Typical</th>
+        <thead><tr><th>Page</th><th>Limit</th><th class="text-end">Requests</th><th class="text-end">Total time</th><th class="text-end">Typical</th>
           <th class="text-end">Slowest 5%</th><th class="text-end">Slowest</th><th class="text-end">Memory, typical</th>
           <th class="text-end">Memory, peak</th><th class="text-end">Errors</th></tr></thead>
         <tbody>
         <?php foreach ($pages['by_script'] as $script => $s): ?>
           <tr><td><code><?= $h($script) ?></code></td>
+            <td><small><?= $h(moop_monitor_class($script, $heavy)) ?></small></td>
             <td class="text-end"><?= number_format($s['count']) ?></td>
             <td class="text-end" data-order="<?= (int) $s['total_ms'] ?>"><?= moop_monitor_fmt_ms($s['total_ms']) ?></td>
             <td class="text-end" data-order="<?= (int) $s['mean_ms'] ?>"><?= moop_monitor_fmt_ms($s['mean_ms']) ?></td>
@@ -244,6 +288,84 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
           </table>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Capacity: when to add RAM or CPUs, and PHP workers -->
+  <div class="card adm-card mb-4" id="sysmon-capacity">
+    <div class="card-header adm-head"><h5 class="mb-0">Capacity — RAM, CPUs and PHP workers</h5></div>
+    <div class="card-body">
+      <?php if ($cap['samples'] < 60 || ($pages['requests'] ?? 0) < 500): ?>
+        <p class="small text-muted"><i class="fa fa-info-circle" aria-hidden="true"></i>
+          These figures firm up after a few days of real use — so far <?= number_format($cap['samples']) ?> samples and
+          <?= number_format($pages['requests']) ?> logged requests in this window.</p>
+      <?php endif; ?>
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <table class="table table-sm sysmon-num mb-0">
+            <tbody>
+              <tr><th>CPU, average / peak</th><td class="text-end"><?= $h($cap['cpu_avg'] ?? '—') ?>% / <?= $h($cap['cpu_peak'] ?? '—') ?>%</td></tr>
+              <tr><th>Share of time CPU was above 80%</th><td class="text-end"><?= $h($cap['cpu_busy_share'] ?? '—') ?>%</td></tr>
+              <tr><th>Memory, peak used</th><td class="text-end"><?= $h($cap['mem_peak'] ?? '—') ?>% of <?= round($cap['total_mb'] / 1024, 1) ?> GB</td></tr>
+              <tr><th>Swap, peak</th><td class="text-end"><?= (int) $cap['swap_peak_mb'] ?> MB</td></tr>
+              <tr><th>Times every PHP worker was busy</th><td class="text-end"><?= (int) $cap['workers_reached'] ?></td></tr>
+              <tr><th>Memory per busy worker (typical-heavy request + worker)</th><td class="text-end"><?= $h($cap['per_worker_mb']) ?> MB</td></tr>
+              <tr><th>PHP workers allowed now (pm.max_children)</th><td class="text-end"><?= $max_children ?? '—' ?></td></tr>
+              <tr><th>…if all were busy at once, PHP would need</th><td class="text-end"><?= $cap['php_worst_mb'] !== null ? round($cap['php_worst_mb'] / 1024, 1) . ' GB' : '—' ?></td></tr>
+              <tr><th>Workers that fit in 60% of RAM</th><td class="text-end"><?= $cap['suggested_max_children'] ?? '—' ?></td></tr>
+              <tr><th>Largest single request seen</th><td class="text-end"><?= $h($cap['largest_mb']) ?> MB</td></tr>
+              <tr><td colspan="2" class="small text-muted">The estimate uses a typical-heavy request (95th percentile), not the
+                largest. Many large exports at once would need more — the heavy group's limit of 3 at once per address is what
+                keeps that in check.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="col-lg-6 small">
+          <h6>When is it time to add…</h6>
+          <ul>
+            <li><strong>RAM</strong> — memory regularly above ~85–90% used, <em>any</em> swapping, or “every PHP worker busy”
+              while RAM has no room for more workers. RAM runs out first on this server (capacity test, 2026-10-23), and it
+              also holds the page cache that keeps the databases fast, so it is the usual first upgrade.</li>
+            <li><strong>CPUs</strong> — CPU above 80% for long stretches (not short spikes), while memory is fine. Check the
+              busiest addresses first: a crawler can look exactly like “we need more CPUs”.</li>
+            <li><strong>PHP workers</strong> — “every PHP worker busy” keeps appearing <em>and</em> the row above says more
+              workers fit in RAM.</li>
+          </ul>
+          <h6>How to change the number of PHP workers</h6>
+          <ol>
+            <li>Edit <code>/etc/php-fpm.d/www.conf</code> (as root) and set <code>pm.max_children</code>. Keep it at or below
+              “workers that fit in 60% of RAM”.</li>
+            <li>Check and apply: <code>sudo php-fpm -t &amp;&amp; sudo systemctl reload php-fpm</code>
+              (a reload finishes the requests in progress; nobody is cut off).</li>
+            <li>Come back here after a few days: “every PHP worker busy” should fall to 0 without memory climbing.</li>
+          </ol>
+          <p class="mb-0 text-muted">More workers only help if the server has the memory for them; past that point they make
+            things worse, because the server starts swapping.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Heavy group -->
+  <div class="card adm-card mb-4" id="sysmon-heavy">
+    <div class="card-header adm-head"><h5 class="mb-0">Heavy group (strictest rate limit)</h5></div>
+    <div class="card-body">
+      <p class="small text-muted">Exports, downloads and other expensive scripts: one address may run these at most 20 times a
+        minute (burst 10, 3 at once). Changes reach nginx within a minute; nothing to re-run.
+        Recommendations above suggest additions from what pages measurably cost.</p>
+      <div class="sysmon-heavy-list">
+        <?php foreach ($heavy as $s): ?>
+          <form method="post" action="system_monitor.php<?= $range === '7d' ? '?range=7d' : '' ?>" class="sysmon-heavy-item">
+            <?= csrf_input_field() ?>
+            <input type="hidden" name="action" value="heavy_remove">
+            <input type="hidden" name="script" value="<?= $h($s) ?>">
+            <code><?= $h($s) ?></code>
+            <button type="submit" class="btn btn-link btn-sm p-0 ms-1 text-muted" title="Remove from the heavy group"
+                    aria-label="Remove <?= $h($s) ?> from the heavy group"><i class="fa fa-times" aria-hidden="true"></i></button>
+          </form>
+        <?php endforeach; ?>
+        <?php if (!$heavy): ?><span class="small text-muted">Empty — every script gets the ordinary page or AJAX limit.</span><?php endif; ?>
       </div>
     </div>
   </div>

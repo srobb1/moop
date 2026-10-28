@@ -8,7 +8,8 @@ Each run:
      "max children reached" — the earliest sign the site is saturated);
   2. reads what nginx logged since the last run: requests by class, status codes, 429s, bytes,
      user-agent kinds, top addresses; and the error log's "limiting requests" lines;
-  3. keeps the nginx rate-limit config in step with MOOP (exempt address ranges): MOOP publishes
+  3. keeps the nginx rate-limit config in step with MOOP (exempt address ranges and the heavy
+     group of scripts): MOOP publishes
      what it wants to {cache}/nginx_wanted.json, this re-validates every value, regenerates the
      conf, and applies it only if `nginx -t` passes (else restores) — so nobody has to remember
      to re-run install_nginx_limits.sh after changing the ranges;
@@ -18,7 +19,8 @@ Each run:
 Security — root working beside a directory the web server can write:
   * Root never executes MOOP code. It READS one file MOOP writes (nginx_wanted.json): opened
     with O_NOFOLLOW, size-capped, and every value re-validated (IPv4 ranges only). The worst a
-    compromised web process can do is change which addresses are exempt from rate limits.
+    compromised web process can do is change which addresses are exempt from rate limits, or
+    which existing scripts count as heavy.
   * Outputs go to the cache directory's TOP level (its parent, /var/www, is root-owned, so the
     directory itself cannot be swapped for a link) via mkstemp + rename — a link planted at the
     target name is replaced, never followed.
@@ -280,7 +282,10 @@ def ip_int(s):
     return (a << 24) | (b << 16) | (c << 8) | d
 
 
-def read_wanted(cache):
+HEAVY_RE = re.compile(r'(api|tools)/[a-z0-9_]+\.php')
+
+
+def read_wanted(cache, site):
     """MOOP's wanted settings. Opened without following links, size-capped, every value checked."""
     path = os.path.join(cache, 'nginx_wanted.json')
     try:
@@ -299,32 +304,45 @@ def read_wanted(cache):
             if not (valid_ipv4(s) and valid_ipv4(e) and ip_int(s) <= ip_int(e)):
                 return None, f'invalid range in nginx_wanted.json: {s}-{e} — nothing applied'
             ranges.append((s, e))
-        return {'ranges': ranges}, None
+        heavy = []
+        for h in data.get('heavy', [])[:200]:
+            h = str(h)
+            # A fixed shape AND an existing file — nothing else can reach the nginx map line.
+            if not HEAVY_RE.fullmatch(h) or not os.path.isfile(os.path.join(site, h)):
+                return None, f'invalid heavy entry in nginx_wanted.json: {h[:80]} — nothing applied'
+            heavy.append(h[:-4])
+        return {'ranges': ranges, 'heavy': heavy}, None
     except (ValueError, AttributeError, TypeError):
         return None, 'nginx_wanted.json is not valid — nothing applied'
 
 
-def render_http_conf(ranges):
+def render_http_conf(ranges, heavy):
+    """The template with its placeholders filled — byte-identical to install_nginx_limits.sh's
+    output for the same inputs, so an unchanged config never triggers a reload."""
     with open(os.path.join(SHARE_DIR, 'moop-ratelimit-http.conf')) as fh:
         template = fh.read()
-    block = '\n'.join(f'    {s}-{e} 1;' for s, e in ranges)
+    fill = {
+        '@EXEMPT_RANGES@': '\n'.join(f'    {s}-{e} 1;' for s, e in ranges),
+        '@HEAVY_RULES@': f'    ~^/moop/({"|".join(heavy)})\\.php$   heavy;' if heavy else '',
+    }
     out = []
     for line in template.split('\n'):
-        if re.fullmatch(r'[ \t]*@EXEMPT_RANGES@[ \t]*', line):
-            if block:
-                out.append(block)
+        key = line.strip()
+        if key in fill:
+            if fill[key]:
+                out.append(fill[key])
         else:
             out.append(line)
     return '\n'.join(out)
 
 
-def sync_nginx(cache, prev):
-    wanted, err = read_wanted(cache)
+def sync_nginx(cache, site, prev):
+    wanted, err = read_wanted(cache, site)
     now = int(time.time())
     if err:
         return {**(prev or {}), 'checked': now, 'state': 'waiting' if 'not published' in err else 'error', 'message': err}
     try:
-        want_http = render_http_conf(wanted['ranges'])
+        want_http = render_http_conf(wanted['ranges'], wanted['heavy'])
         with open(os.path.join(SHARE_DIR, 'moop-ratelimit.conf')) as fh:
             want_srv = fh.read()
     except OSError as e:
@@ -339,8 +357,9 @@ def sync_nginx(cache, prev):
 
     have_http, have_srv = current(NGINX_HTTP_CONF), current(NGINX_SRV_CONF)
     ranges_txt = ', '.join(f'{s}–{e}' for s, e in wanted['ranges']) or 'none'
+    heavy_n = len(wanted['heavy'])
     if have_http == want_http and have_srv == want_srv:
-        return {**(prev or {}), 'checked': now, 'state': 'in_sync', 'ranges': ranges_txt,
+        return {**(prev or {}), 'checked': now, 'state': 'in_sync', 'ranges': ranges_txt, 'heavy': heavy_n,
                 'message': 'nginx rate limits match MOOP'}
 
     for p, content in ((NGINX_HTTP_CONF, want_http), (NGINX_SRV_CONF, want_srv)):
@@ -363,8 +382,8 @@ def sync_nginx(cache, prev):
         return {'checked': now, 'state': 'error', 'ranges': ranges_txt,
                 'message': 'generated config failed nginx -t — previous config kept: ' + test.stderr.strip()[-300:]}
     subprocess.run(['systemctl', 'reload', 'nginx'], capture_output=True)
-    return {'checked': now, 'state': 'in_sync', 'ranges': ranges_txt, 'changed': now,
-            'message': f'nginx rate limits updated to match MOOP (exempt: {ranges_txt})'}
+    return {'checked': now, 'state': 'in_sync', 'ranges': ranges_txt, 'heavy': heavy_n, 'changed': now,
+            'message': f'nginx rate limits updated to match MOOP ({heavy_n} heavy scripts; exempt: {ranges_txt})'}
 
 
 # ---------------------------------------------------------------- history -------------------
@@ -408,7 +427,7 @@ def main():
     rec.update(acc)
     rec['limited'] = summarise_errors(read_new_lines(ERROR_LOG, state, 'error_pos'))
 
-    sync = sync_nginx(cache, state.get('sync'))
+    sync = sync_nginx(cache, site, state.get('sync'))
     state['sync'] = sync
 
     hist = [m for m in state.get('minutes', []) if m['t'] > minute - 86400 and m['t'] != minute]

@@ -68,11 +68,29 @@ RANGES=$(php -r '
 ' "$MOOP")
 [ -n "$RANGES" ] || echo "Note: no auto_login_ip_ranges configured — every address is limited."
 
+# The heavy group, from the site config (rate_limit_heavy): one nginx map line. Same rule as the
+# System Monitor collector, which keeps it in step afterwards (scripts/moop_monitor.py).
+HEAVY=$(php -r '
+    require $argv[1] . "/includes/config_init.php";
+    $ok = [];
+    foreach (ConfigManager::getInstance()->getArray("rate_limit_heavy", []) as $s) {
+        if (preg_match("#^(api|tools)/[a-z0-9_]+\\.php$#", (string) $s) && is_file($argv[1] . "/" . $s)) {
+            $ok[] = substr($s, 0, -4);
+        } else {
+            fwrite(STDERR, "skipping invalid heavy entry: " . json_encode($s) . "\n");
+        }
+    }
+    if ($ok) echo "    ~^/moop/(" . implode("|", $ok) . ")\\.php$   heavy;";
+' "$MOOP")
+
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
-# Replace the placeholder line with the ranges (awk, so dots and dashes need no escaping).
-awk -v ranges="$RANGES" '/^[ \t]*@EXEMPT_RANGES@[ \t]*$/ { if (ranges != "") print ranges; next } { print }' \
-    "$MOOP/docs/nginx/moop-ratelimit-http.conf" > "$TMP"
+# Replace each placeholder line with its value. Passed through ENVIRON, NOT awk -v: -v
+# interprets backslash escapes, which turned the heavy rule's \.php into .php (any character).
+MOOP_RANGES="$RANGES" MOOP_HEAVY="$HEAVY" awk '
+    /^[ \t]*@EXEMPT_RANGES@[ \t]*$/ { if (ENVIRON["MOOP_RANGES"] != "") print ENVIRON["MOOP_RANGES"]; next }
+    /^[ \t]*@HEAVY_RULES@[ \t]*$/   { if (ENVIRON["MOOP_HEAVY"] != "") print ENVIRON["MOOP_HEAVY"]; next }
+    { print }' "$MOOP/docs/nginx/moop-ratelimit-http.conf" > "$TMP"
 
 backup "$HTTP_DST"; backup "$SRV_DST"
 install -m 644 "$TMP" "$HTTP_DST"

@@ -176,9 +176,9 @@
     buildTable();
     var timer;
     window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(drawAll, 150); });
-    // Both tables open sorted by total time (pages: column 2, who: column 3).
+    // Both tables open sorted by total time (pages: column 3, who: column 3).
     if (window.jQuery && jQuery.fn.DataTable) {
-      jQuery('#sysmon-pages').DataTable({order: [[2, 'desc']], pageLength: 25, autoWidth: false});
+      jQuery('#sysmon-pages').DataTable({order: [[3, 'desc']], pageLength: 25, autoWidth: false});
       jQuery('#sysmon-who').DataTable({order: [[3, 'desc']], pageLength: 10, autoWidth: false});
     }
   });

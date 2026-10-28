@@ -8,7 +8,9 @@
  *     lib/system_monitor.php;
  *   - MOOP's own request log (lib/request_metrics.php): per page, time and peak memory, and who.
  *
- * Read-only. Nothing here runs a command or touches nginx.
+ * The one thing it changes is the heavy group (rate_limit_heavy in config_editable.json), from
+ * the Add / Remove buttons. MOOP then publishes it and the root collector applies it to nginx
+ * within a minute. Nothing here runs a command or touches nginx itself.
  */
 
 include_once __DIR__ . '/admin_init.php';
@@ -18,6 +20,27 @@ require_once __DIR__ . '/../lib/request_metrics.php';
 
 $siteTitle = $config->getString('siteTitle');
 $site      = $config->getString('site');
+
+// ── Heavy group: add / remove (POST; admin_init.php has checked the CSRF token) ──
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['heavy_add', 'heavy_remove'], true)) {
+    $script = (string) ($_POST['script'] ?? '');
+    $list   = moop_monitor_heavy_list();
+    if ($_POST['action'] === 'heavy_add' && moop_monitor_valid_heavy($script) && !in_array($script, $list, true)) {
+        $list[] = $script;
+    } elseif ($_POST['action'] === 'heavy_remove') {
+        $list = array_values(array_diff($list, [$script]));
+    }
+    $config_dir = $config->getPath('root_path') . '/' . $site . '/config';
+    $result = $config->saveEditableConfig(['rate_limit_heavy' => $list], $config_dir);
+    $published = $result['success'] && moop_monitor_publish_wanted(null, $list);
+    $_SESSION['sysmon_flash'] = $published
+        ? ['ok', ($_POST['action'] === 'heavy_add' ? 'Added ' : 'Removed ') . $script . ' — nginx will follow within a minute.']
+        : ['error', 'Not saved: ' . ($result['success'] ? 'could not write nginx_wanted.json to the cache directory' : $result['message'])];
+    header('Location: system_monitor.php' . (($_GET['range'] ?? '') === '7d' ? '?range=7d' : '') . '#sysmon-heavy');
+    exit;
+}
+$flash = $_SESSION['sysmon_flash'] ?? null;
+unset($_SESSION['sysmon_flash']);
 
 $range   = ($_GET['range'] ?? '24h') === '7d' ? '7d' : '24h';
 $seconds = $range === '7d' ? 7 * 86400 : 86400;
@@ -76,6 +99,12 @@ foreach ($points as $p) {
 
 $traffic = moop_monitor_traffic($points);
 $pages   = moop_metrics_summarise(moop_metrics_rows_since($seconds), 20);
+// Recommendations judge pages on 7 days whatever window is shown: a day is too little evidence.
+$pages7  = $range === '7d' ? $pages : moop_metrics_summarise(moop_metrics_rows_since(7 * 86400));
+$heavy   = moop_monitor_heavy_list();
+$cap     = moop_monitor_capacity($points, $pages7, $now, $max_children);
+$recs    = moop_monitor_recommendations($cap, $pages7, $heavy, $now, $traffic, $sync, $max_children,
+                                         !empty($config->getArray('turnstile', [])['enabled']), $ranges);
 
 echo render_display_page(
     __DIR__ . '/pages/system_monitor.php',
@@ -91,6 +120,10 @@ echo render_display_page(
         'pages'        => $pages,
         'max_children' => $max_children,
         'ranges'       => $ranges,
+        'heavy'        => $heavy,
+        'cap'          => $cap,
+        'recs'         => $recs,
+        'flash'        => $flash,
         'page_styles'  => ['/' . $site . '/css/system-monitor.css'],
         'page_script'  => ['/' . $site . '/js/system-monitor.js'],
         'inline_scripts' => [
