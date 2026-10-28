@@ -12,7 +12,7 @@
  * focuses on click, which is why it only ever looked fine in Chrome. So:
  *   - click the (i)            → opens it (and closes any other open one)
  *   - click the (i) again      → closes it
- *   - click anywhere else      → closes it (clicks inside the popover itself do not)
+ *   - press anywhere else      → closes it (presses inside the popover itself do not)
  *   - Escape                   → closes it and returns focus to the (i)
  * Keyboard users still get it: Enter/Space on a <button> fires click.
  *
@@ -64,10 +64,18 @@
         var pop = popoverFor(trigger);
         if (pop) { pop.show(); openEl = trigger; }
       }
-      return;
     }
-    // A click inside the open popover (selecting text, a link) must not close it.
-    if (openEl && !e.target.closest('.popover')) closeOpen();
+  });
+
+  // Closing on a press elsewhere listens to pointerdown, not click: iOS Safari does not
+  // deliver a tap on plain text or empty space to a document click handler (only taps on
+  // "clickable" elements), so a click listener left the popover stuck open on iPhone/iPad.
+  // A press on the (i) itself is left to the click handler above, which toggles; a press
+  // inside the open popover (selecting text, a link) must not close it.
+  document.addEventListener('pointerdown', function (e) {
+    if (!openEl || !e.target.closest) return;
+    if (e.target.closest(SELECTOR) || e.target.closest('.popover')) return;
+    closeOpen();
   });
 
   document.addEventListener('keydown', function (e) {
