@@ -357,6 +357,14 @@ def sync_nginx(cache, site, prev):
             return None
 
     have_http, have_srv = current(NGINX_HTTP_CONF), current(NGINX_SRV_CONF)
+    # World-readable, always (not secret; setup-check.php reads them). Corrected every run, so a
+    # file left root-only by an earlier write or by hand does not stay that way.
+    for p in (NGINX_HTTP_CONF, NGINX_SRV_CONF):
+        try:
+            if os.stat(p).st_mode & 0o777 != 0o644:
+                os.chmod(p, 0o644)
+        except OSError:
+            pass
     ranges_txt = ', '.join(f'{s}–{e}' for s, e in wanted['ranges']) or 'none'
     heavy_n = len(wanted['heavy'])
     if have_http == want_http and have_srv == want_srv:

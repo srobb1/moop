@@ -184,4 +184,4 @@ print(f"CPU {n.get('cpu_pct')}%  RAM {n['mem_used_pct']}% used ({n['mem_avail_mb
 print(f"php-fpm: {n.get('fpm_active')} busy / {n.get('fpm_total')} workers, queue {n.get('fpm_queue')}" if 'fpm_active' in n else f"php-fpm status: {n.get('fpm_error')}")
 print(f"nginx sync: {s.get('state')} — {s.get('message')}")
 PY
-echo "Installed. The admin page reads $CACHE/monitor_{now,24h,7d}.json."
+echo "Installed. Admin -> System Monitor reads $CACHE/monitor_{now,24h,7d,30d}.json."
