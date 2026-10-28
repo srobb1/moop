@@ -2813,6 +2813,11 @@ $_dk = moop_monitor_disks(['root' => ['size_gb' => 12, 'used_pct' => 33, 'free_g
     'organisms' => ['size_gb' => 900, 'used_pct' => 29, 'free_gb' => 638, 'path' => '/var/www/html/moop/organisms']]);
 ok(array_keys($_dk) === ['organisms', 'var', 'root'] && $_dk['organisms']['label'] === 'Data',
    'disks: the data disk first, each named for what it holds; a path on the same filesystem (cache on /var) not listed twice');
+ok(moop_monitor_why_slow(['ms' => 3000, 'db_ms' => 2500, 'disk_kb' => 16000]) === 'Cold database'
+   && moop_monitor_why_slow(['ms' => 3000, 'db_ms' => 2500, 'disk_kb' => 0]) === 'Database (warm)'
+   && moop_monitor_why_slow(['ms' => 3000, 'db_ms' => 100, 'disk_kb' => 0]) === 'PHP / other'
+   && moop_monitor_why_slow(['ms' => 3000, 'db_ms' => 0, 'disk_kb' => null]) === null,
+   'why slow: cold database / warm database / PHP, and "not measured" for old lines');
 
 // ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');

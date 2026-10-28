@@ -399,7 +399,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
             exports) show their settings instead. None yet if everything has been fast.</p>
           <div class="table-responsive">
           <table class="table table-sm sysmon-num">
-            <thead><tr><th>When</th><th>Page</th><th class="text-end">Time</th><th class="text-end">In database</th><th class="text-end">From disk</th>
+            <thead><tr><th>When</th><th>Page</th><th class="text-end">Time</th><th>Why slow</th><th class="text-end">In database</th><th class="text-end">From disk</th>
               <th class="text-end">Memory</th><th>Who</th><th class="text-end">Status</th></tr></thead>
             <tbody>
             <?php foreach ($pages['slowest'] as $r): ?>
@@ -412,13 +412,14 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
                     <div class="small text-muted text-break"><?= $h($r['method']) ?>: <?= $h(urldecode($r['params'])) ?></div>
                   <?php endif; ?></td>
                 <td class="text-end"><?= moop_monitor_fmt_ms($r['ms']) ?></td>
+                <td><small><?= $h(moop_monitor_why_slow($r) ?? 'not measured') ?></small></td>
                 <td class="text-end"><?= !empty($r['db_n']) ? moop_monitor_fmt_ms($r['db_ms']) : '—' ?></td>
                 <td class="text-end"><?= ($r['disk_kb'] ?? null) === null ? '—' : moop_monitor_fmt_bytes($r['disk_kb'] * 1024) ?></td>
                 <td class="text-end"><?= $h($r['peak_mb']) ?> MB</td>
                 <td><small><?= $h($r['user'] !== '' ? $r['user'] : $r['ip']) ?></small></td>
                 <td class="text-end"><?= (int) $r['status'] ?></td></tr>
             <?php endforeach; ?>
-            <?php if (!$pages['slowest']): ?><tr><td colspan="8" class="text-muted">Nothing logged yet.</td></tr><?php endif; ?>
+            <?php if (!$pages['slowest']): ?><tr><td colspan="9" class="text-muted">Nothing logged yet.</td></tr><?php endif; ?>
             </tbody>
           </table>
           </div>

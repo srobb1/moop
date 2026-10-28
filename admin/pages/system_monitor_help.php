@@ -64,6 +64,7 @@ $sysmon_guide = help_modal(
             ['label' => 'Typical / Slowest 5% / Slowest', 'text' => 'Typical is the average. Slowest 5% is what the unluckiest 1 in 20 visitors waited. Slowest is the single worst case.'],
             ['label' => 'Memory', 'text' => 'RAM one request used. Peak memory is what can run the server out of RAM when many run at once.'],
             ['label' => 'In database / Cold', 'text' => 'Share of the page’s time spent in the database, and share of its requests that read from disk. High on both: the page waits on data, not code.'],
+            ['label' => 'Why slow (Slowest requests)', 'text' => 'Cold database: waited on the disk for data. Database (warm): data was in RAM but the query is slow. PHP / other: not the database.'],
             ['label' => 'Limit', 'text' => 'Which rate limit nginx applies to the page: page, api (background requests), jbrowse (genome browser) or heavy (exports and downloads).'],
         ]],
         ['heading' => 'When to act', 'cards' => [

@@ -311,3 +311,20 @@ function moop_monitor_recommendations(array $cap, array $pages7, array $heavy, ?
     usort($out, fn($a, $b) => $rank[$a['level']] <=> $rank[$b['level']]);
     return $out;
 }
+
+/**
+ * Why was this request slow? From what the request log measured: cold database (it read from
+ * disk AND most of its time was in the database), database warm (database-bound but nothing read
+ * from disk — the query itself is slow), disk outside the database, or PHP/other.
+ * null = not measured (logged before 2026-10-28, or from an endpoint without the counters).
+ */
+function moop_monitor_why_slow(array $r): ?string {
+    if (($r['disk_kb'] ?? null) === null) return null;
+    $ms = max(1, (int) ($r['ms'] ?? 0));
+    $db_heavy = ($r['db_ms'] ?? 0) >= 0.5 * $ms;
+    $cold = $r['disk_kb'] > MOOP_METRICS_COLD_KB;
+    if ($db_heavy && $cold) return 'Cold database';
+    if ($db_heavy) return 'Database (warm)';
+    if ($cold) return 'Reading files from disk';
+    return 'PHP / other';
+}
