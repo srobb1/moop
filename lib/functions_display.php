@@ -97,10 +97,9 @@ function getOrganismImagePath($organism_info, $images_path = 'moop/images', $abs
             }
         }
 
-        // Fetch from Wikipedia and cache locally; pass scientific name as second arg so it is tried first
+        // Fetch from Wikipedia and save locally under the scientific name
         if (!$fetch) return '';
-        $common_name = $organism_info['common_name'] ?? '';
-        $wiki_data = getWikipediaOrganismData($common_name, $scientific_name);
+        $wiki_data = getWikipediaOrganismData($scientific_name, $organism_info['common_name'] ?? '');
         if (!empty($wiki_data['image_url'])) {
             $url_path = parse_url($wiki_data['image_url'], PHP_URL_PATH);
             $ext = strtolower(pathinfo($url_path, PATHINFO_EXTENSION) ?: 'jpg');
@@ -178,6 +177,15 @@ function getOrganismImageCaption($organism_info, $absolute_images_path = '') {
             if (moop_is_real_image("$wikimedia_dir/$safe_name.$ext")) {
                 $result['caption'] = 'Image from Wikipedia';
                 $result['link'] = 'https://en.wikipedia.org/wiki/' . str_replace(' ', '_', $scientific_name);
+                // What the lookup found, read from its cache (never the network). A genus-level
+                // image is a picture of SOME species in the genus, and the caption says so.
+                $wiki = function_exists('moop_wikipedia_cached') ? moop_wikipedia_cached($scientific_name) : null;
+                if (!empty($wiki['wikipedia_url'])) {
+                    $result['link'] = $wiki['wikipedia_url'];
+                }
+                if (($wiki['scope'] ?? '') === 'genus') {
+                    $result['caption'] = 'Image from Wikipedia (genus ' . preg_replace('/\s*\(.*\)$/', '', $wiki['title']) . ')';
+                }
                 return $result;
             }
         }
@@ -743,10 +751,13 @@ function downloadWikimediaImage($wiki_url, $cache_filename, $cache_directory = '
         return "/$site/images/wikimedia/" . basename($cache_filename);
     }
     
-    $image_data = moop_curl_get($wiki_url, 10, 20);
-    
-    if ($image_data === false) {
-        logError('Failed to download Wikimedia image', 'wikimedia_download', ['wiki_url' => $wiki_url]);
+    $http_code  = 0;
+    $image_data = moop_curl_get($wiki_url, 10, 20, $http_code);
+
+    // A refusal (Wikimedia answers 429 when rate-limited) still has a body. Only a 200 that
+    // really is an image may be written, or the error page is saved as the organism's picture.
+    if ($image_data === false || $http_code !== 200 || @getimagesizefromstring($image_data) === false) {
+        logError('Failed to download Wikimedia image', 'wikimedia_download', ['wiki_url' => $wiki_url, 'http_code' => $http_code]);
         return false;
     }
     

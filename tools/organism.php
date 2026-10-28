@@ -80,7 +80,10 @@ $wiki_data = null;
 $needs_description = !isset($organism_info['html_p']) || !is_array($organism_info['html_p']) || count($organism_info['html_p']) === 0;
 $needs_image       = empty($organism_info['images']) && empty(getOrganismImageWithCaption($organism_info, $images_path, $absolute_images_path)['image_path']);
 if ($needs_description || $needs_image) {
-    $wiki_data = getWikipediaOrganismData($organism_name, $scientific_name);
+    $wiki_data = getWikipediaOrganismData(
+        $scientific_name !== '' ? $scientific_name : $organism_name,
+        $organism_info['common_name'] ?? ''
+    );
 }
 
 // Build description paragraphs when not manually set in organism.json
@@ -104,6 +107,16 @@ if ($needs_description) {
     // nl2br keeps the break but not the paragraph spacing. Attribution is a separate line,
     // not text glued onto the last paragraph.
     if (!empty($wiki_data['description'])) {
+        // No article for this species: the lookup fell back to the genus article. Say so
+        // before the text, or the genus's description reads as this organism's.
+        if (($wiki_data['scope'] ?? '') === 'genus') {
+            $html_p[] = [
+                'text'  => '<small>No Wikipedia article for this species. About the genus <i>' .
+                           htmlspecialchars(preg_replace('/\s*\(.*\)$/', '', $wiki_data['title'])) . '</i>:</small>',
+                'class' => 'text-muted mb-1',
+                'style' => ''
+            ];
+        }
         // Only the first paragraph shows; the rest sit behind "Read more" (user, 2026-10-22:
         // some intros run to four paragraphs and push the page's data far down).
         foreach (preg_split('/\s*\n\s*/', trim($wiki_data['description']), -1, PREG_SPLIT_NO_EMPTY) as $i => $para) {

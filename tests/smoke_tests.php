@@ -2596,6 +2596,22 @@ ok(moop_wikipedia_clean_extract('Cnidaria (; from Greek knide) is') === 'Cnidari
 ok(moop_wikipedia_clean_extract('the sea (or ocean) is') === 'the sea (or ocean) is', 'a real bracket is untouched');
 
 // ----------------------------------------------------------------------------
+group('Wikipedia organism lookup: which article is believed');
+ok(moop_wikipedia_normalise_name(" Girardia_sp  ") === 'Girardia sp', 'directory-style names normalise to the scientific name');
+$_pl  = ['title' => 'Planarian', 'extract' => 'A planarian is a free-living flatworm of the order Tricladida.'];
+$_lbb = ['title' => 'Little brown bat', 'extract' => 'The little brown bat (Myotis lucifugus) is an endangered species.'];
+$_gen = ['title' => 'Girardia', 'extract' => 'Girardia is a genus of freshwater planarians.'];
+$_cura = ['title' => 'Cura (flatworm)', 'extract' => 'Cura is a genus of dugesiid triclads.'];
+ok(!moop_wikipedia_names_species($_pl, 'Procerodes sp'),
+   'a generic common-name article ("Marine planarian" -> Planarian) is not taken as the species');
+ok(moop_wikipedia_names_species($_lbb, 'Myotis lucifugus'), 'a common-name article that names the binomial is the species');
+ok(moop_wikipedia_is_genus_page($_gen, 'Girardia') && moop_wikipedia_is_genus_page($_cura, 'Cura'),
+   'the genus article is recognised, with or without a "(flatworm)" qualifier');
+ok(!moop_wikipedia_is_genus_page($_lbb, 'Myotis') && !moop_wikipedia_is_genus_page($_gen, 'Gira'),
+   'a species article, or a title that merely starts with the letters, is not the genus page');
+ok(moop_wikipedia_empty_result()['scope'] === '', 'an empty result has no scope, so it is cached on the short TTL');
+
+// ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
 ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
    'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',

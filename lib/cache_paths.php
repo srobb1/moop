@@ -272,11 +272,13 @@ function moop_load_annotation_sources_cache(string $organism): ?array
 }
 
 /**
- * Per-organism Wikipedia lookup cache.
+ * Wikipedia lookup cache, one file per SCIENTIFIC NAME: {cache_root}/wikipedia/Girardia_sp.json.
  *
- * Sits beside annotation_sources_cache.json, same per-organism subdirectory pattern, so
- * it needs no new entry in the writable allowlist or the SELinux script (CLAUDE.md §11) —
- * the cache root already carries httpd_sys_rw_content_t and this is a directory under it.
+ * Keyed by name, not by organism directory, because the answer depends on the name alone.
+ * (It used to sit in each organism's cache directory under whatever name the caller passed —
+ * sometimes the common name, which nine planarians share; see getWikipediaOrganismData().)
+ * A directory under the cache root, so it needs no new entry in the writable allowlist or the
+ * SELinux script (CLAUDE.md §11) — the cache root already carries httpd_sys_rw_content_t.
  *
  * Exists because the organism page called the Wikipedia API live on every single page
  * load. Measured 2026-08-04: 348 ms of a 428 ms page, all 85 organisms affected (every
@@ -284,10 +286,11 @@ function moop_load_annotation_sources_cache(string $organism): ?array
  * and the worst case is far uglier than the average — getWikipediaOrganismData() tries up
  * to three titles and then a search fallback, four sequential calls at a 10 s timeout each.
  */
-function moop_wikipedia_cache_file(string $organism): string
+function moop_wikipedia_cache_file(string $scientific_name): string
 {
-    $dir = moop_cache_root() . '/' . $organism;
-    return moop_ensure_cache_dir($dir) ? "$dir/wikipedia.json" : '';
+    $dir  = moop_cache_root() . '/wikipedia';
+    $file = preg_replace('/[^A-Za-z0-9.-]+/', '_', $scientific_name);
+    return ($file !== '' && moop_ensure_cache_dir($dir)) ? "$dir/$file.json" : '';
 }
 
 /**

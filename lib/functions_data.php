@@ -17,20 +17,45 @@ require_once __DIR__ . '/organism_cache.php';        // .organism_cache.json lay
 require_once __DIR__ . '/group_taxonomy_check.php';  // curated-group vs taxonomy-rank drift suggestions
 
 /**
+ * The User-Agent for every request MOOP makes to another service: the project URL plus the
+ * site's admin email, as Wikimedia's policy asks ("a meaningful User-Agent header that
+ * includes contact information"). Wikimedia began enforcing API rate limits in 2026 and a
+ * generic agent gets the lowest tier: with 'MOOP/1.0 (github.com)' Wikipedia answered 429
+ * after ~10 calls (measured 2026-10-28). The placeholder admin_email from site_config.php is
+ * never sent.
+ */
+function moop_user_agent(): string {
+    static $ua = null;
+    if ($ua !== null) return $ua;
+    $contact = 'https://github.com/srobb1/moop';
+    $email = class_exists('ConfigManager') ? ConfigManager::getInstance()->getString('admin_email') : '';
+    if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) && !preg_match('/@example\.(com|org)$/i', $email)) {
+        $contact .= "; $email";
+    }
+    return $ua = "MOOP/1.0 ($contact) PHP-curl/" . (curl_version()['version'] ?? '');
+}
+
+/**
  * cURL GET with connect + total timeouts — avoids D-state hangs from file_get_contents.
  * Returns the response body string, or false on error.
+ *
+ * NOTE a body is returned whatever the HTTP status — a 429 "too many requests" or a 503
+ * error page comes back as a string, not false. Callers that must tell an answer from a
+ * refusal pass $http_code and check it (the Wikipedia lookup does; see
+ * moop_wikipedia_api()).
  */
-function moop_curl_get(string $url, int $connect_timeout = 5, int $total_timeout = 10) {
+function moop_curl_get(string $url, int $connect_timeout = 5, int $total_timeout = 10, &$http_code = null) {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_CONNECTTIMEOUT => $connect_timeout,
         CURLOPT_TIMEOUT        => $total_timeout,
-        CURLOPT_USERAGENT      => 'MOOP/1.0 (github.com)',
+        CURLOPT_USERAGENT      => moop_user_agent(),
     ]);
-    $result = curl_exec($ch);
-    $err    = curl_errno($ch);
+    $result    = curl_exec($ch);
+    $err       = curl_errno($ch);
+    $http_code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     curl_close($ch);
     return ($result !== false && !$err) ? $result : false;
 }
