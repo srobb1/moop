@@ -2612,6 +2612,33 @@ ok(!moop_wikipedia_is_genus_page($_lbb, 'Myotis') && !moop_wikipedia_is_genus_pa
 ok(moop_wikipedia_empty_result()['scope'] === '', 'an empty result has no scope, so it is cached on the short TTL');
 
 // ----------------------------------------------------------------------------
+group('Human check (Turnstile): who is challenged, and where they may be sent back to');
+require_once "$BASE/lib/human_check.php";
+$_hd = fn($en, $in, $ver, $script, $m, $uri, $h = []) => moop_human_check_decision($en, $in, $ver, $script, $m, $uri, $h);
+$_html = ['Accept' => 'text/html,application/xhtml+xml'];
+ok($_hd(false, false, false, 'parent.php', 'GET', '/moop/tools/parent.php', $_html) === null, 'off: nobody is challenged');
+ok($_hd(true, true, false, 'parent.php', 'GET', '/moop/tools/parent.php', $_html) === null, 'logged in (incl. internal IP auto-login): never challenged');
+ok($_hd(true, false, true, 'parent.php', 'GET', '/moop/tools/parent.php', $_html) === null, 'already passed this session: not challenged again');
+ok($_hd(true, false, false, 'parent.php', 'GET', '/moop/tools/parent.php', $_html) === 'redirect', 'anonymous page load: sent to the challenge page');
+ok($_hd(true, false, false, 'verify-human.php', 'GET', '/moop/verify-human.php', $_html) === null
+   && $_hd(true, false, false, 'login.php', 'POST', '/moop/login.php') === null,
+   'the challenge page and login are never themselves challenged (no redirect loop; account holders get in)');
+ok($_hd(true, false, false, 'moopmart_export.php', 'GET', '/moop/api/moopmart_export.php', $_html) === 'deny',
+   'api/ gets a JSON 403, not a 302 to an HTML page a script cannot follow');
+ok($_hd(true, false, false, 'search.php', 'GET', '/moop/tools/search.php', ['X-Requested-With' => 'XMLHttpRequest']) === 'deny'
+   && $_hd(true, false, false, 'blast.php', 'POST', '/moop/tools/blast.php', $_html) === 'deny',
+   'AJAX and POSTs from an unverified session are denied, not redirected');
+ok($_hd(true, false, false, 'parent.php', 'GET', '/moop/tools/parent.php', ['Accept' => '*/*']) === 'deny',
+   'a client that does not ask for HTML (curl, a script) is denied');
+ok($_hd(true, false, false, 'parent.php', 'GET', '/moop/tools/parent.php', []) === 'redirect',
+   'no Accept header at all is treated as a page load');
+$_sr = fn($r) => moop_human_check_safe_return($r, 'moop');
+ok($_sr('/moop/tools/parent.php?name=G1&x=1') === '/moop/tools/parent.php?name=G1&x=1', 'a same-site path comes back unchanged');
+ok($_sr('//evil.com/x') === '/moop/' && $_sr('/\\evil.com') === '/moop/' && $_sr('https://evil.com/') === '/moop/'
+   && $_sr('evil.com') === '/moop/' && $_sr("/moop/\r\nSet-Cookie: x") === '/moop/' && $_sr('') === '/moop/',
+   'protocol-relative, backslash, absolute, relative, header-injection and empty returns all go home');
+
+// ----------------------------------------------------------------------------
 group('Metadata free text: provenance / note');
 ok(moop_text_with_links('From ftp://ftp.ncbi.nlm.nih.gov/genomes/x/.') ===
    'From <a href="ftp://ftp.ncbi.nlm.nih.gov/genomes/x/" target="_blank" rel="noopener">ftp://ftp.ncbi.nlm.nih.gov/genomes/x/</a>.',

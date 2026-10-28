@@ -704,25 +704,12 @@ if (session_status() === PHP_SESSION_ACTIVE) {
 }
 
 // ── Cloudflare Turnstile — human verification (once per session) ──────────────
-// Runs after all auth (IP-range, session login) so authenticated users are
-// never blocked. Only unauthenticated visitors need to pass the challenge.
-// Skipped on verify-human.php itself to avoid an infinite redirect loop.
-if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') !== 'verify-human.php') {
-    $config = ConfigManager::getInstance();
-    $ts     = $config->getArray('turnstile', []);
-    // "View as PUBLIC" is exempt on purpose. The preview answers "what data does a visitor
-    // see", not "does the bot challenge work" — and this deployment is reachable only from
-    // internal addresses, so if the challenge could not reach Cloudflare the admin would be
-    // bounced into an unpassable redirect with no page left to click "Leave preview" on.
-    if (!empty($ts['enabled'])
-        && empty($_SESSION['human_verified'])
-        && !is_logged_in()
-        && !moop_viewing_as_public()
-    ) {
-        $return = $_SERVER['REQUEST_URI'] ?? '/';
-        header('Location: /' . $config->getString('site', 'moop') . '/verify-human.php?return=' . urlencode($return));
-        exit;
-    }
-    unset($ts);
-}
+// Runs after all auth (IP-range, session login) so authenticated users are never
+// blocked. Only anonymous visitors are checked; see lib/human_check.php.
+// "View as PUBLIC" is exempt on purpose. The preview answers "what data does a visitor
+// see", not "does the bot challenge work" — and this deployment is reachable only from
+// internal addresses, so if the challenge could not reach Cloudflare the admin would be
+// bounced into an unpassable redirect with no page left to click "Leave preview" on.
+require_once __DIR__ . '/../lib/human_check.php';
+moop_human_check_enforce();
 // ─────────────────────────────────────────────────────────────────────────────

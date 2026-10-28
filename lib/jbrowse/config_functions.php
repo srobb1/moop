@@ -110,6 +110,10 @@ function moop_jbrowse_browser_metadata(array $metadata): array
 function moop_jbrowse_ui_configuration(): array
 {
     return [
+        // JBrowse otherwise reports each session to analytics.jbrowse.org AND Google Analytics
+        // (gtag) — found 2026-10-28 by the CSP crawl. Visitors' browsing is not ours to send to
+        // Google, and the CSP blocks it anyway. Key checked against JBrowse 4.3.0's schema.
+        'disableAnalytics' => true,
         'hierarchical' => [
             'defaultCollapsed' => ['subCategories' => true],
         ],

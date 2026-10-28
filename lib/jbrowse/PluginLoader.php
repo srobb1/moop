@@ -25,13 +25,22 @@ function loadJBrowse2Plugins() {
         return [];
     }
     
-    // Filter to only enabled plugins and return in JBrowse2 format
+    // Filter to only enabled plugins and return in JBrowse2 format.
+    // A url without a scheme or leading slash is a file this site serves itself
+    // (js/vendor/, pinned in scripts/vendor_assets.txt) and resolves under the site prefix.
+    // Self-hosted on purpose: the Content-Security-Policy allows scripts from 'self' only,
+    // and an unversioned third-party URL changes under us without notice.
+    $site = ConfigManager::getInstance()->getString('site', 'moop');
     $enabledPlugins = [];
     foreach ($plugins as $plugin) {
         if (isset($plugin['enabled']) && $plugin['enabled'] === true) {
+            $url = (string) $plugin['url'];
+            if (!preg_match('#^(https?:)?//|^/#', $url)) {
+                $url = '/' . trim($site, '/') . '/' . $url;
+            }
             $enabledPlugins[] = [
                 'name' => $plugin['name'],
-                'url' => $plugin['url']
+                'url' => $url
             ];
         }
     }

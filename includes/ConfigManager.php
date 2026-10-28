@@ -136,6 +136,13 @@ class ConfigManager
                                     $this->config[$key][$sub_key] = $sub_value;
                                 }
                             }
+                        } elseif ($key === 'turnstile' && is_array($editable_config[$key])) {
+                            // The SECRET only ever comes from secrets.php (via site_config.php).
+                            // Saving Site Configuration used to copy it into this file, where it
+                            // then overrode secrets.php — a rotated secret was silently ignored.
+                            $ts = $editable_config[$key];
+                            unset($ts['secret_key']);
+                            $this->config[$key] = array_merge($this->config[$key] ?? [], $ts);
                         } else {
                             $this->config[$key] = $editable_config[$key];
                         }

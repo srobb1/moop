@@ -677,9 +677,15 @@ long-standing entries here had already been fixed, and one contradicted §10 of 
 - **Medium:** JWT tokens passed as URL query parameter in JBrowse track requests
   (visible in server logs) — architectural constraint from JBrowse2. Two routes exist:
   `notes/TRACKS_PROXY_PLAN.md` (simpler) and an `Authorization`-header variant.
-- **Medium:** `Content-Security-Policy` is **Report-Only** (with `'unsafe-inline'`), pending
-  a refactor of ~154 inline event handlers (`onclick`/`onchange`/...) to `addEventListener`
-  + per-request nonces before it can be enforced.
+- **Medium:** `Content-Security-Policy` is **ENFORCED since 2026-10-28** (in `/etc/nginx/nginx.conf`,
+  both server blocks) but still allows `'unsafe-inline'`, pending a refactor of ~154 inline event
+  handlers (`onclick`/`onchange`/...) to `addEventListener` + per-request nonces. Anything that
+  loads from another host must be added there by root — and **a CSP check must listen inside web
+  workers**: JBrowse's worker fetches its WebAssembly decompressor from a `data:` URL, which the
+  page console never shows; enforcing without `data:` in `connect-src` broke every JBrowse track
+  until fixed the same day. Use Chrome's `Audits.issueAdded` (CDP), not page console messages.
+  Allowed outside hosts: `challenges.cloudflare.com` (Turnstile, script + frame),
+  `upload.wikimedia.org` (img fallback), `tracks.stowers.org:8080` (connect).
 - **Low:** The Apache no-exec guard (`docs/apache/moop-security.conf`) ships **unverified** —
   written against a working nginx deployment, never run on Apache. Its VERIFY block has the
   exec test; settle it on the first Apache host.
