@@ -31,7 +31,7 @@ $date =~ s/\s+//g;
 open ORTHO, ">eggnog_orthologs.moop.tsv" or die "Can't opne eggnog_orthologs.moop.tsv for writing $! \n";
 print ORTHO "## Annotation Source: EggNOG
 ## Annotation Source Version: 5.0.2
-## Annotation Accession URL: http://eggnog5.embl.de/
+## Annotation Accession URL: https://string-db.org/network/
 ## Annotation Source URL: http://eggnog5.embl.de/
 ## Annotation Type: Orthologs
 ## Annotation Creation Date: $date\n";
@@ -50,7 +50,6 @@ while (my $line = <TSV>){
 
   next if $Description eq '-';
 
-  my ($seed_taxon_id,$seed_ortholog_id) = $seed_ortholog =~ /([^.]+)\.(\S+)/;
 
   if ($GOs ne '-'){
     my @go_terms = split /,/ , $GOs;
@@ -62,7 +61,9 @@ while (my $line = <TSV>){
     } 
   }
 
-  my $id = $seed_ortholog_id;
+  # the seed ortholog as eggNOG names it, taxid.protein: eggNOG 5 is built on STRING's proteomes, so
+  # STRING opens it by that id (the eggNOG 5 site cannot open one protein by its address)
+  my $id = $seed_ortholog;
   my $desc = $Description;
   my $sym = $Preferred_name;
   my $summary = $desc;
