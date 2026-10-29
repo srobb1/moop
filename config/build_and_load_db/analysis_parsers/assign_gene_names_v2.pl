@@ -260,7 +260,7 @@ my %NAME_SOURCE = (
   hgnc_group => ['Gene name source: HGNC gene group', 'https://www.genenames.org',
                  'https://www.genenames.org/data/genegroup/#!/group/'],
   ensembl    => ['Gene name source: Ensembl gene', 'https://www.ensembl.org',
-                 'https://www.ensembl.org/Homo_sapiens/Gene/Summary?g='],
+                 'https://www.ensembl.org/id/'],
   panther    => ['Gene name source: PANTHER family', 'https://www.ebi.ac.uk/interpro/',
                  'https://www.ebi.ac.uk/interpro/entry/panther/'],
   ncbi       => ['Gene name source: naming species', 'https://www.ncbi.nlm.nih.gov',
@@ -328,6 +328,7 @@ my %rejected_pairing;     # group -> { human, paired, passed }: a many:1 pairing
 my %tree_withheld;        # group -> why: a step-6 name the PANTHER tree contradicts, not used (like_name_tree_checked)
 my %gene_set_meta;        # the gene set's metadata.yaml (--metadata): species, taxon id, accessions
 my %native_shown;         # group -> source: the gene shows its own (--native) name (collect_native_rows)
+my %native_name;          # group -> that name, "symbol: description" as the source wrote it
 my %chains_set_aside;     # group -> [ { humans, evidence, why } ]: orthology through another species, not used (chain_rejected)
 my %identical;            # group -> [ other groups whose longest protein is the same sequence ]
 my %closest_before_name;  # group -> the closest human the naming steps used, when closest_from_name replaced it (decision table)
@@ -3981,7 +3982,7 @@ sub write_outputs {
     { file => '', source => 'Closest human gene (HGNC)', version => $version, url => 'https://www.genenames.org',
       accession_url => 'https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/', match => sub { $_[0]{id} =~ /^HGNC:/ } },
     { file => '.ensembl', source => 'Closest human gene (Ensembl, no HGNC record)', version => $version,
-      url => 'https://www.ensembl.org', accession_url => 'https://www.ensembl.org/Homo_sapiens/Gene/Summary?g=',
+      url => 'https://www.ensembl.org', accession_url => 'https://www.ensembl.org/id/',
       match => sub { $_[0]{id} ne '' } },
     { file => '.family', source => 'Closest human gene family', version => $version, url => 'https://www.genenames.org',
       accession_url => '', match => sub { 1 } },
@@ -4032,7 +4033,7 @@ sub write_naming_versions {
 
 # A gene naming file (gene statements, the gene name source): loaded into the gene_naming tables,
 # not the annotation tables, so its header says "Naming", not "Annotation":
-#   Naming Kind          identity | no_name | support | ... | expression | pipeline_name | name_source
+#   Naming Kind          source_name | identity | no_name | support | ... | expression | pipeline_name | name_source
 #   Naming Link          the database the accessions link to (hgnc, interpro, ...); blank = no link
 #   Naming Data Version  the date of the data (the HGNC release)
 #   Naming Source URL / Naming Accession URL   the link database's home page and accession prefix
@@ -4075,6 +4076,9 @@ sub open_closest_moop {
 # accessions link out to one database.
 my @STATEMENT_TYPES = (
   # [kind (also the file key), order]
+  # a gene that shows its own (--native) name: that name, and whose it is (user, 2026-10-29: the
+  # RefSeq name comes first; the MOOP name and statements follow)
+  ['source_name', 0],
   ['identity',   1],
   ['no_name',    1],
   ['support',    2],
@@ -4216,6 +4220,9 @@ sub gene_statements {
   my ($group) = @_;
   my $named = $name{$group};
   my %said;
+  # the name the gene shows is its own annotation's: say so, and whose (the MOOP name follows)
+  $said{source_name} = "$native_name{$group} (from $native_shown{$group})"
+    if $native_shown{$group} and defined $native_name{$group};
   if (!$named or $named->{desc} eq 'None') {
     my @found = sort keys %{$any_evidence{$group} // {}};
     my $why = @found ? 'Hits did not pass the naming tests (found: ' . join(', ', @found) . ')'
@@ -4235,7 +4242,8 @@ sub gene_statements {
       my $step = $decision{$group}{step} // 0;
       # the name without its evidence code: the card shows no codes (user, 2026-10-06), and the step is said in words
       (my $plain = $named->{desc}) =~ s/\s*\[(?:ISO|ISS|ISM|TAS|SRC)(?:\|[^\[\]]*)?\]$//;
-      $said{pipeline_name} = "MOOP name: $plain" . ($method{$step} ? " (by $method{$step})" : '');
+      # no "MOOP name:" in the text: the page labels the statement by its kind ("MOOP name")
+      $said{pipeline_name} = $plain . ($method{$step} ? " (by $method{$step})" : '');
     }
   }
   my (undef, $protein_text) = naming_protein($group, $named);
@@ -4337,7 +4345,8 @@ sub write_statements {
       if $native_shown{$group} and (!$named or $named->{desc} eq 'None');
     my %accession = (identity => ($named && $named->{origin} ? $named->{origin}{accession} : '') // '',
                      tree => ($tree{$group} ? $tree{$group}{panther_match} : ''),
-                     protein => (naming_protein($group, $name{$group}))[0]);
+                     protein => (naming_protein($group, $name{$group}))[0],
+                     source_name => $group);
     foreach my $type (@STATEMENT_TYPES) {
       my ($key, $order) = @$type;
       my $text = $said{$key} // next;
@@ -4477,6 +4486,8 @@ sub collect_native_rows {
       if (!$keep_native and defined $group) {
         ($desc, $note, $origin) = ($name{$group}{desc}, $name{$group}{note}, $name{$group}{origin});
       } elsif ($origin) {
+        # the gene's own row: the name the gene shows, as the source wrote it (its mRNAs can differ)
+        $native_name{$group} = $desc if defined $group and ($id eq $native_group_id or !defined $native_name{$group});
         $desc = tagged({ desc => $desc, tag => ['SRC'] })->{desc};   # the source's own text, as it is, plus the tag
         $native_shown{$group} = $note ne '' ? $note : 'the gene set' if defined $group;
       }
