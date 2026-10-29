@@ -56,6 +56,14 @@ jobs:
           VALIDATE_CONFIG: 'false'
         run: php tests/search_ranking_tests.php
 
+      # The primer tools (input parsing, product finding, the specificity rules) and the BLAST
+      # alignment formatter's coordinate arithmetic. Pure functions, no binaries, no site data.
+      # Both suites existed for months without CI running either (found 2026-10-29).
+      - name: Run primer and BLAST alignment tests
+        run: |
+          php tests/primer_smoke_tests.php
+          php tests/blast_alignment_tests.php
+
       # js/vendor is excluded for the same reason ./vendor is above: third-party bundles
       # are not ours to fix, and a minified file's syntax is upstream's problem.
       - name: Lint every JS file (node --check)
@@ -115,6 +123,8 @@ jobs:
         run: |
           php tests/smoke_tests.php
           php tests/search_ranking_tests.php
+          php tests/primer_smoke_tests.php
+          php tests/blast_alignment_tests.php
 
       - name: No deprecations triggered by the tests
         run: |

@@ -248,6 +248,27 @@ ok($primary['max_mismatch'] === 0, 'fewest mismatches beats smallest size');
 
 ok(PrimerPairs::primaryProduct(['products' => []]) === null, 'no products yields null, not a crash');
 
+group('PrimerPairs — realLocus(): the genomic product is a site where both primers would prime');
+// 2026-10-29, Artibeus XM_037135499.2_p1: the forward primer sits across an exon junction,
+// so its best genomic match is a 3-mismatch half-site 7,906 bp from the reverse. The page
+// called that "the gDNA product" and printed "cDNA 127 bp vs gDNA 7,906 bp" above a pair
+// with no genomic product at all.
+$junction = PrimerPairs::findProducts([
+    'forward' => [hit('NW_1', 91793, 91812, '+', 3, 2)],   // blocked at the 3' end
+    'reverse' => [hit('NW_1', 99679, 99698, '-', 0)],
+], $BIG);
+ok(PrimerPairs::primaryProduct($junction)['size'] === 7906, 'the closest-looking site is still found (kept as a footnote)');
+ok(!PrimerPairs::wouldPrime($junction['products'][0]) && PrimerPairs::realLocus($junction) === null,
+   'but it would not prime, so there is no real genomic locus');
+// A real locus that is merely long is still the locus — the intron-spanning case.
+$long = PrimerPairs::findProducts([
+    'forward' => [hit('chr1', 1000, 1019, '+', 0)],
+    'reverse' => [hit('chr1', 7370, 7389, '-', 1)],
+], $BIG);
+ok(PrimerPairs::wouldPrime($long['products'][0]) && !PrimerPairs::isAmplifiable($long['products'][0])
+   && PrimerPairs::realLocus($long)['size'] === 6390,
+   'a perfect 6,390 bp product across introns is the real locus even though it is too long to count');
+
 group('PrimerBlast — locating 3\' mismatches from BTOP');
 
 require_once "$BASE/lib/primer/PrimerBlast.php";

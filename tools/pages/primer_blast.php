@@ -397,7 +397,13 @@ $db_section_label = function ($key) {
                     <?php
                     $pair   = $r['pair'];
                     $t_prod = isset($r['by_db']['transcript']) ? PrimerPairs::primaryProduct($r['by_db']['transcript']) : null;
-                    $g_prod = isset($r['by_db']['genome'])     ? PrimerPairs::primaryProduct($r['by_db']['genome'])     : null;
+                    // The genomic product is the REAL locus — a site where both primers would
+                    // prime (PrimerPairs::realLocus()). The closest-looking site is kept apart
+                    // ($g_near): for a junction primer it is a half-match that never primes,
+                    // and treating it as the product reported "gDNA 7,906 bp" above a pair
+                    // with no genomic product at all (2026-10-29).
+                    $g_prod = isset($r['by_db']['genome'])     ? PrimerPairs::realLocus($r['by_db']['genome'])      : null;
+                    $g_near = isset($r['by_db']['genome'])     ? PrimerPairs::primaryProduct($r['by_db']['genome']) : null;
                     $t_size = $t_prod['size'] ?? null;
                     $g_size = $g_prod['size'] ?? null;
                     // Specificity is judged against the INTENDED template only. Summing
@@ -425,8 +431,34 @@ $db_section_label = function ($key) {
                     $amp_contam   = ($intended_db === 'transcript' && isset($r['by_db']['genome']))
                         ? count($amp($r['by_db']['genome'])) : 0;
 
+                    // Specificity is about GENES. On cDNA each product carries its gene
+                    // (tools/primer_blast.php); isoforms of one gene are one target, not
+                    // several. When any product's gene is unknown, count products as before.
+                    $amp_products = $amp($r['by_db'][$intended_db] ?? []);
+                    $amp_genes = [];
+                    foreach ($amp_products as $pr) {
+                        if (!isset($pr['gene'])) { $amp_genes = null; break; }
+                        $amp_genes[$pr['gene']['id']] = $pr['gene'];
+                    }
+                    $gene_word = fn(array $g) => $g['name'] !== '' && $g['name'] !== $g['id'] ? $g['name'] . ' (' . $g['id'] . ')' : $g['id'];
+                    $isoforms_note = null;   // one gene, several transcripts: say so, it is not a warning
                     $reasons = [];
-                    if ($amp_intended > 1) {
+                    if ($amp_genes !== null && $amp_intended > 1) {
+                        if (count($amp_genes) > 1) {
+                            $reasons[] = count($amp_genes) . ' different genes could amplify: '
+                                       . implode(', ', array_map($gene_word, array_slice(array_values($amp_genes), 0, 4)))
+                                       . (count($amp_genes) > 4 ? ', …' : '');
+                        } else {
+                            $sizes = array_values(array_unique(array_map(fn($pr) => (int)$pr['size'], $amp_products)));
+                            sort($sizes);
+                            $isoforms_note = [
+                                'gene'  => $gene_word(reset($amp_genes)),
+                                'n'     => $amp_intended,
+                                'tx'    => array_map(fn($pr) => PrimerBlast::cleanSubjectId($pr['subject']), $amp_products),
+                                'sizes' => $sizes,
+                            ];
+                        }
+                    } elseif ($amp_intended > 1) {
                         $reasons[] = $amp_intended . ' products on your template could amplify';
                     }
                     if ($amp_contam > 1) {
@@ -487,7 +519,32 @@ $db_section_label = function ($key) {
                                     amplify poorly or not at all, so <?= $n === 1 ? 'it is' : 'they are' ?> not counted.
                                 <?php else: ?>
                                     Nothing amplifies on your template at these settings.
+                                    <?php if ($intended_db === 'genome' && $search_mode !== 'transcript'): ?>
+                                        <?php // The question this answer raises (user, 2026-10-29: "when I do
+                                              // gDNA it says I don't have any alignments") — for primers made
+                                              // on a transcript the answer is usually the good one. ?>
+                                        <br>Designed these on a transcript (an mRNA, an XM_/NM_ ID, or with
+                                        Primer Maker)? A primer that sits across an exon junction has no match in
+                                        genomic DNA — that is what makes it good for RT-PCR. Set
+                                        <strong>PCR input</strong> to <strong>cDNA</strong> to check it against
+                                        the transcripts.
+                                    <?php endif; ?>
                                 <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($isoforms_note): ?>
+                            <div class="small mb-2">
+                                <i class="fa fa-check-circle text-success"></i>
+                                <span class="text-success-emphasis">One gene: <?= htmlspecialchars($isoforms_note['gene']) ?></span>
+                                <span class="text-muted">— the <?= (int)$isoforms_note['n'] ?> products are isoforms of the same gene
+                                (<?= htmlspecialchars(implode(', ', $isoforms_note['tx'])) ?>).
+                                <?php if (count($isoforms_note['sizes']) === 1): ?>
+                                    All are <?= number_format($isoforms_note['sizes'][0]) ?> bp, so you will see one band.
+                                    The pair does not tell these isoforms apart.
+                                <?php else: ?>
+                                    Their sizes differ (<?= htmlspecialchars(implode(', ', array_map(fn($n) => number_format($n) . ' bp', $isoforms_note['sizes']))) ?>),
+                                    so expect <?= count($isoforms_note['sizes']) ?> bands if the isoforms are all expressed.
+                                <?php endif; ?></span>
                             </div>
                         <?php endif; ?>
                         <?php if ($reasons): ?>
@@ -541,9 +598,16 @@ $db_section_label = function ($key) {
                                 all.
                                 <?php if ($junction): ?>
                                     The <?= htmlspecialchars($junction_p) ?> primer sits across an exon
-                                    junction, so that sequence exists only in spliced mRNA.
+                                    junction, so that sequence exists only in spliced mRNA<?php
+                                    if (!empty($t_mapped['introns'])): ?>; on the genome the product spans
+                                    <?= (int)$t_mapped['introns'] ?> intron<?= $t_mapped['introns'] === 1 ? '' : 's' ?><?php endif; ?>.
                                 <?php else: ?>
                                     Usually means a primer spans an exon junction.
+                                <?php endif; ?>
+                                <?php if ($g_near): ?>
+                                    The closest genomic site (<?= number_format($g_near['size']) ?> bp,
+                                    <?= (int)$g_near['max_mismatch'] ?> mismatch<?= (int)$g_near['max_mismatch'] === 1 ? '' : 'es' ?>)
+                                    would not prime.
                                 <?php endif; ?></span>
                             </div>
                         <?php endif; ?>
@@ -593,14 +657,23 @@ $db_section_label = function ($key) {
                                 $hidden_by_display = count($found['products']) - count($shown) - $over_mm;
                                 $over_display = $hidden_by_display + (int)$found['over_max'];
                                 ?>
+                                <?php
+                                // Hidden sites that would still amplify. Zero is the usual answer, and
+                                // the one worth saying: "None shown — 99 larger than 10,000 bp" read as
+                                // missing results when it meant "nothing here would amplify".
+                                $hidden_amp = count(array_filter($found['products'], fn($pr) =>
+                                    ($pr['size'] > $max_product || $pr['max_mismatch'] > $max_mismatch) && PrimerPairs::isAmplifiable($pr)));
+                                ?>
                                 <?php if (empty($shown)): ?>
                                     <div class="text-muted small mb-1">
                                         <?php if ($over_display > 0 || $over_mm > 0): ?>
-                                            None shown —
+                                            <?= $hidden_amp === 0 ? 'No product would amplify here.' : 'None shown.' ?>
+                                            Not listed:
                                             <?= implode(', ', array_filter([
-                                                $over_display ? number_format($over_display) . ' larger than ' . number_format($max_product) . ' bp' : '',
-                                                $over_mm ? $over_mm . ' with more than ' . $max_mismatch . ' mismatch' . ($max_mismatch === 1 ? '' : 'es') : '',
-                                            ])) ?>.
+                                                $over_mm ? $over_mm . ' site' . ($over_mm === 1 ? '' : 's') . ' where a primer has more than ' . $max_mismatch . ' mismatch' . ($max_mismatch === 1 ? '' : 'es') : '',
+                                                $over_display ? number_format($over_display) . ' where the primers are more than ' . number_format($max_product) . ' bp apart' : '',
+                                            ])) ?><?php if ($hidden_amp === 0): ?> — none of them would amplify.<?php else: ?>.
+                                                <?= $hidden_amp ?> of them could amplify — raise <strong>Mismatches listed</strong> or the size limit to see <?= $hidden_amp === 1 ? 'it' : 'them' ?>.<?php endif; ?>
                                         <?php else: ?>
                                             No products.
                                         <?php endif; ?>
@@ -663,9 +736,19 @@ $db_section_label = function ($key) {
                                                 </td>
                                                 <td style="font-family:monospace; font-size:0.85rem;">
                                                     <?= htmlspecialchars($subject) ?>:<?= number_format($prod['start']) ?>–<?= number_format($prod['end']) ?>
+                                                    <?php if (isset($prod['gene'])): ?>
+                                                        <span class="text-muted small" style="font-family:inherit;">· <?= htmlspecialchars($gene_word($prod['gene'])) ?></span>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td style="width:8rem;">
                                                     <span class="text-muted small"><?= (int)$prod['max_mismatch'] ?> mismatch<?= $prod['max_mismatch'] === 1 ? '' : 'es' ?></span>
+                                                    <?php // Listed because it is a real match, but it does not count toward
+                                                          // the grade — say so on the row, or a table of five products under
+                                                          // "One gene … 2 products" reads as a contradiction. ?>
+                                                    <?php if (!PrimerPairs::wouldPrime($prod)): ?>
+                                                        <br><span class="small text-warning-emphasis"
+                                                                  title="A primer has 6 or more mismatches, or 2 or more in the last 5 bases of its 3′ end — it would not prime here.">would not prime</span>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td style="width:11rem;">
                                                     <?php if (!empty($prod['self_pairing'])): ?>
@@ -760,17 +843,14 @@ $db_section_label = function ($key) {
                                 // case where a real product exists but is not shown: it was larger
                                 // than the size limit.
                                 ?>
-                                <?php if (!empty($over_display) && !empty($shown)): ?>
+                                <?php if (($over_display > 0 || $over_mm > 0) && !empty($shown)): ?>
                                     <div class="text-muted" style="font-size:0.8rem;">
-                                        <?= number_format($over_display) ?> further product<?= $over_display === 1 ? '' : 's' ?>
-                                        larger than <?= number_format($max_product) ?> bp — raise the size limit to see <?= $over_display === 1 ? 'it' : 'them' ?>.
-                                    </div>
-                                <?php endif; ?>
-                                <?php if ($over_mm > 0 && !empty($shown)): ?>
-                                    <div class="text-muted" style="font-size:0.8rem;">
-                                        <?= $over_mm ?> further product<?= $over_mm === 1 ? '' : 's' ?>
-                                        with more than <?= $max_mismatch ?> mismatch<?= $max_mismatch === 1 ? '' : 'es' ?> — raise
-                                        <strong>Mismatches listed</strong> to see <?= $over_mm === 1 ? 'it' : 'them' ?>.
+                                        Not listed:
+                                        <?= implode(', ', array_filter([
+                                            $over_mm ? $over_mm . ' site' . ($over_mm === 1 ? '' : 's') . ' where a primer has more than ' . $max_mismatch . ' mismatch' . ($max_mismatch === 1 ? '' : 'es') : '',
+                                            $over_display ? number_format($over_display) . ' where the primers are more than ' . number_format($max_product) . ' bp apart' : '',
+                                        ])) ?><?php if ($hidden_amp === 0): ?> — none of them would amplify.<?php else: ?>.
+                                            <?= $hidden_amp ?> of them could amplify — raise <strong>Mismatches listed</strong> or the size limit to see <?= $hidden_amp === 1 ? 'it' : 'them' ?>.<?php endif; ?>
                                     </div>
                                 <?php endif; ?>
 
@@ -915,6 +995,9 @@ echo help_modal(
                 'color' => 'success',
                 'html'  => true,
                 'text'  => 'Exactly one product could amplify — one on your template, and nothing else. '
+                         . 'On cDNA this is counted by <strong>gene</strong>: isoforms of one gene give the same '
+                         . 'product, so a pair that amplifies several isoforms of one gene is still specific '
+                         . '(a note names them, and says whether their sizes differ). '
                          . 'If your input is cDNA, genomic DNA gives only the one matching locus, which is '
                          . 'expected: that is the same place with its introns included.',
             ],
@@ -923,8 +1006,9 @@ echo help_modal(
                 'color' => 'warning',
                 'html'  => true,
                 'text'  => 'More than one product could amplify. The reasons are listed under the name: '
-                         . 'several products on your template, extra genomic products, or a self-pairing '
-                         . 'primer. Non-specific is not unusable — read the reasons and decide.',
+                         . 'more than one gene on your cDNA (or several products on genomic DNA), extra '
+                         . 'genomic products, or a self-pairing primer. Non-specific is not unusable — read the '
+                         . 'reasons and decide. A listed product marked <strong>would not prime</strong> does not count.',
             ],
             [
                 'label' => 'no product',

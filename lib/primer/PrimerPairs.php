@@ -208,6 +208,35 @@ class PrimerPairs
     }
 
     /**
+     * Would both primers bind well enough to prime here, whatever the distance?
+     *
+     * isAmplifiable() without its length test. It separates a REAL locus that is merely
+     * long (a perfect 6,389 bp product across introns) from a site that only looks like
+     * one (a junction primer's half-match in the genome: 3 mismatches, never primes).
+     */
+    public static function wouldPrime(array $product)
+    {
+        return self::isAmplifiable(array_merge($product, ['size' => 0]));
+    }
+
+    /**
+     * The pair's real locus on this database: the primary product among sites where
+     * both primers would prime (wouldPrime()), or null if there is none.
+     *
+     * On the genome, for a pair designed on cDNA, this is what "the gDNA product" means.
+     * primaryProduct() alone picks the closest-looking site even when it could never
+     * prime, and the page then reported "gDNA 7,906 bp" for a pair whose forward primer
+     * sits across an exon junction and has no genomic product at all (2026-10-29).
+     *
+     * @return array|null
+     */
+    public static function realLocus(array $found)
+    {
+        $real = array_values(array_filter($found['products'] ?? [], [self::class, 'wouldPrime']));
+        return $real ? self::primaryProduct(['products' => $real]) : null;
+    }
+
+    /**
      * The product a user would call "the" product for this pair.
      *
      * Needed because the genomic-vs-cDNA size comparison (the intron-spanning

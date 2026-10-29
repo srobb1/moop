@@ -461,17 +461,19 @@ Full detail: `docs/SELINUX_AND_HARDENING.md`.
 
 ---
 
-### 12. Tests — run both before you commit
+### 12. Tests — run all four before you commit
 
 ```bash
 php  tests/smoke_tests.php      # access control, search-query building, cache invalidation
 node tests/js_smoke_tests.js    # search-term rules + results-table highlighting
+php  tests/primer_smoke_tests.php    # primer input, products, specificity (Primer BLAST / Maker)
+php  tests/blast_alignment_tests.php # BLAST alignment coordinates
 ```
 
-Both are plain assertions with **no framework and no dependencies** — same philosophy as the
-rest of the repo — and both are hermetic (mocked `$_SESSION`, temp files, no site data), so
-they pass on any checkout. Exit 0 = all pass. `.github/workflows/ci.yml` runs both on every
-push, each preceded by a syntax sweep (`php -l` over all PHP, `node --check` over all
+All are plain assertions with **no framework and no dependencies** — same philosophy as the
+rest of the repo — and all are hermetic (mocked `$_SESSION`, temp files, no site data), so
+they pass on any checkout. Exit 0 = all pass. `.github/workflows/ci.yml` runs all of them on every
+push (plus `tests/search_ranking_tests.php`), each preceded by a syntax sweep (`php -l` over all PHP, `node --check` over all
 non-vendor JS).
 
 **PHP 8.3 readiness has its own CI job (`php-next`).** Production runs RHEL's PHP 8.0 (upstream

@@ -321,8 +321,21 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
                             . 'Admin → JBrowse Management to enable it.';
                     }
 
+                    // ---- which GENE each cDNA product belongs to ----
+                    // Specificity is a question about genes. Two isoforms of one gene give
+                    // the same product, and counting transcripts graded such a pair
+                    // "non-specific — 2 products" (XM_037135499.2 / XM_037135500.2, both
+                    // LOC119041968, 2026-10-29). A transcript not found keeps no gene, and
+                    // the page then falls back to counting products.
+                    $genes_by_tx = moop_primer_transcript_genes(dirname($assembly_path) . '/organism.sqlite',
+                        $sel_assembly, $sel_gene_set, array_keys($subject_ids));
+
                     foreach ($results as $i => $r) {
                         foreach ($r['by_db']['transcript']['products'] ?? [] as $j => $prod) {
+                            $gene = $genes_by_tx[PrimerBlast::cleanSubjectId($prod['subject'])] ?? null;
+                            if ($gene !== null) {
+                                $results[$i]['by_db']['transcript']['products'][$j]['gene'] = $gene;
+                            }
                             $record = $exon_records[PrimerBlast::cleanSubjectId($prod['subject'])] ?? null;
                             if ($record === null) {
                                 continue;
@@ -337,6 +350,35 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
             }
         }
     }
+}
+
+/**
+ * The gene each transcript belongs to, in one gene set: [transcript id => ['id' => …, 'name' => …]].
+ * A database that cannot be read gives [] — the page then counts products, as it always did.
+ */
+function moop_primer_transcript_genes(string $db_file, string $assembly, string $gene_set, array $transcript_ids): array {
+    if (!$transcript_ids || !is_file($db_file)) return [];
+    $out = [];
+    try {
+        foreach (array_chunk($transcript_ids, 500) as $chunk) {
+            $rows = fetchData(
+                'SELECT m.feature_uniquename AS tx, g.feature_uniquename AS gene, g.feature_name AS name
+                   FROM feature m
+                   JOIN feature g ON g.feature_id = m.parent_feature_id
+                   JOIN gene_set gs ON gs.gene_set_id = m.gene_set_id
+                   JOIN genome ge ON ge.genome_id = gs.genome_id
+                  WHERE gs.gene_set_name = ? AND (ge.genome_accession = ? OR ge.genome_name = ?)
+                    AND m.feature_uniquename IN (' . implode(',', array_fill(0, count($chunk), '?')) . ')',
+                $db_file, array_merge([$gene_set, $assembly, $assembly], $chunk));
+            foreach ($rows as $row) {
+                $out[$row['tx']] = ['id' => $row['gene'], 'name' => (string)($row['name'] ?? '')];
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('primer_blast: transcript genes: ' . $e->getMessage());
+        return [];
+    }
+    return $out;
 }
 
 // -------------------------------------------------------------------- render
