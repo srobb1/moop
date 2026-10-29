@@ -45,6 +45,10 @@ $scanDirs = [
     __DIR__ . '/../tools',
     __DIR__ . '/../admin',
     __DIR__ . '/../includes',
+    // api/ was missing until 2026-10-29: every public endpoint (api/, api/jbrowse2/) went
+    // unscanned, so a function used only by an endpoint was listed as UNUSED — an invitation
+    // to delete something live. Keep in step with lib/registry_sources.php.
+    __DIR__ . '/../api',
 ];
 $rootPhpFiles = glob(__DIR__ . '/../*.php') ?: [];
 

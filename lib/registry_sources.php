@@ -45,10 +45,10 @@ function moop_registry_source_files(string $type, ?string $base = null): array
         return array_values($files);
     }
 
-    // Mirrors tools/generate_registry_json.php: these four directories RECURSIVELY, plus the
+    // Mirrors tools/generate_registry_json.php: these five directories RECURSIVELY, plus the
     // top-level scripts. Recursive matters — an earlier glob-based version silently skipped
     // lib/jbrowse/, admin/api/ and admin/pages/.
-    $scan_dirs = ["$base/lib", "$base/tools", "$base/admin", "$base/includes"];
+    $scan_dirs = ["$base/lib", "$base/tools", "$base/admin", "$base/includes", "$base/api"];
     $files     = glob("$base/*.php") ?: [];
 
     foreach ($scan_dirs as $dir) {

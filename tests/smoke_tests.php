@@ -259,7 +259,7 @@ group('function registries — each watches its own language, not the other');
 require_once "$BASE/lib/registry_sources.php";
 
 $rt = sys_get_temp_dir() . '/moop_regsrc_' . getmypid();
-foreach (['js/modules', 'js/vendor', 'lib/jbrowse', 'includes', 'admin/api', 'docs'] as $d) {
+foreach (['js/modules', 'js/vendor', 'lib/jbrowse', 'includes', 'admin/api', 'api/jbrowse2', 'docs'] as $d) {
     @mkdir("$rt/$d", 0777, true);
 }
 file_put_contents("$rt/js/app.js", '//');              // in
@@ -270,6 +270,7 @@ file_put_contents("$rt/lib/helper.php", '<?php');      // in
 file_put_contents("$rt/lib/jbrowse/deep.php", '<?php');// in — recursion matters
 file_put_contents("$rt/includes/inc.php", '<?php');    // in
 file_put_contents("$rt/admin/api/ep.php", '<?php');    // in
+file_put_contents("$rt/api/jbrowse2/pub.php", '<?php'); // in — public endpoints (missing until 2026-10-29)
 file_put_contents("$rt/root.php", '<?php');            // in — top-level script
 file_put_contents("$rt/docs/function_registry.json", '{}'); // out — generated output
 
@@ -281,6 +282,7 @@ ok($js_files === ['app.js', 'mod.js'],
    'JS registry watches js/ and js/modules/ only — not vendor/, not *.min.js');
 ok(in_array('deep.php', $php_files) && in_array('inc.php', $php_files) && in_array('ep.php', $php_files),
    'PHP registry recurses lib/, includes/ and admin/api/');
+ok(in_array('pub.php', $php_files), 'PHP registry scans api/ — a function used only by an endpoint is not "unused"');
 ok(in_array('root.php', $php_files), 'PHP registry includes top-level scripts');
 ok(!in_array('function_registry.json', $php_files), 'PHP registry excludes its own generated output');
 
@@ -296,7 +298,7 @@ foreach (["$rt/*/*/*", "$rt/*/*", "$rt/*"] as $pattern) {
         if (is_file($path)) unlink($path);
     }
 }
-foreach (['js/modules','js/vendor','lib/jbrowse','admin/api','js','lib','includes','admin','docs'] as $d) {
+foreach (['js/modules','js/vendor','lib/jbrowse','admin/api','api/jbrowse2','js','lib','includes','admin','api','docs'] as $d) {
     @rmdir("$rt/$d");
 }
 @rmdir($rt);
