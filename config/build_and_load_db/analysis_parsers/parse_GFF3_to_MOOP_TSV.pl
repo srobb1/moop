@@ -39,8 +39,10 @@ while (my $line = <$META>) {
     elsif ($line =~ /common-name: (.+)$/)     { $commonname       = $1 }
     elsif ($line =~ /ncbi-taxon-id: (\S+)/)   { $taxon_id         = $1 }
     elsif ($line =~ /^genome-accession:\s*(\S+)/) { $genome_accession = $1 }
-    elsif ($line =~ /^simrbase-prefix:\s*(\S+)/)  { $genome_name      = $1 }
-    elsif ($line =~ /^genome-name:\s*(\S+)/)       { $genome_name    ||= $1 }
+    # "NA" is the metadata's placeholder for no value, never a name: Acropora and Danio GRCz11 have
+    # "simrbase-prefix: NA" beside a real genome-name, and the database got genome_name 'NA'
+    elsif ($line =~ /^simrbase-prefix:\s*(\S+)/)  { $genome_name      = $1 unless $1 eq 'NA' }
+    elsif ($line =~ /^genome-name:\s*(\S+)/)       { $genome_name    ||= $1 unless $1 eq 'NA' }
     elsif ($line =~ /source: (\S+)/)          { $source           = $1 }
     elsif ($line =~ /details: (.+)$/)         { $details          = $1 }
 }
