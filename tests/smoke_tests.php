@@ -104,6 +104,24 @@ ok(has_gene_set_access('Made_Up_Org', 'GCA_1', 'gs_alpha') === false,
    'legacy {org: [asm,...]} list shape denies rather than throwing');
 
 // ----------------------------------------------------------------------------
+group('gene page: paralogs link to their own gene page on MOOP');
+require_once "$BASE/lib/parent_functions.php";
+$_ctx = ['site' => 'moop', 'organism' => 'Danio_rerio', 'assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04'];
+ok(moop_same_organism_hit_url($_ctx, ' NP_570983.2 ') === '/moop/tools/parent.php?organism=Danio_rerio&assembly=GCF_049306965.2&gene_set=RS_2025_04&uniquename=NP_570983.2',
+   'same organism, assembly and gene set as the page — gene sets of one organism can share IDs');
+ok(moop_same_organism_hit_url([], 'NP_1') === null && moop_same_organism_hit_url($_ctx, ' ') === null,
+   'no context or no ID → no link (plain text, as before)');
+$_par = [['annotation_accession' => 'NP_570983.2', 'annotation_description' => 'sox19a', 'score' => '5', 'annotation_source_name' => 'OMA HOG paralogs (DANRER)',
+          'annotation_accession_url' => null, 'annotation_type' => 'Paralogs'],
+         ['annotation_accession' => 'PF00505', 'annotation_description' => 'HMG box', 'score' => '', 'annotation_source_name' => 'InterProScan (Pfam)',
+          'annotation_accession_url' => null, 'annotation_type' => 'Domains']];
+$_html = generateAnnotationTableHTML($_par, 'NM_213118.1', 'mRNA', 1, 'Paralogs', '', 'warning', 'Danio_rerio', 'Paralogs', $_ctx);
+ok(strpos($_html, 'href="/moop/tools/parent.php?organism=Danio_rerio&amp;assembly=GCF_049306965.2&amp;gene_set=RS_2025_04&amp;uniquename=NP_570983.2"') !== false
+   && strpos($_html, 'target="_blank">NP_570983.2') === false,
+   'a paralog with no link pattern links to its gene page, in the same tab');
+ok(strpos($_html, '>PF00505</a>') === false, 'other sections with no link pattern stay plain text');
+
+// ----------------------------------------------------------------------------
 group('error log — one row per problem, trimmed to 30 days, rewritten in place');
 require_once "$BASE/lib/functions_errorlog.php";
 $_mem = fn($n, $line, $ts) => ['timestamp' => $ts, 'error' => "Allowed memory size of 134217728 bytes exhausted (tried to allocate $n bytes)",

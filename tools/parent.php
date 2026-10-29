@@ -358,7 +358,8 @@ if ($fragment_child !== null) {
     // own numbered block.
     $count = 100000 + $fragment_position * 100;
     echo generateChildAnnotationCards($fragment_child, $all_annotations, $analysis_order, $annotation_colors,
-        $annotation_labels, $analysis_desc, $organism_name, $count, false, $annotated_child_types ?? []);
+        $annotation_labels, $analysis_desc, $organism_name, $count, false, $annotated_child_types ?? [],
+        ['site' => $site, 'organism' => $organism_name, 'assembly' => $genome_accession, 'gene_set' => $gene_set_name]);
     exit;
 }
 
@@ -612,6 +613,8 @@ echo render_display_page(
         'genome_accession' => $genome_accession,
         'genome_name' => $genome_name,
         'gene_set_name' => $gene_set_name,
+        // Same-organism hits (paralogs) link to their gene page in this assembly and gene set.
+        'annotation_link_ctx' => ['site' => $site, 'organism' => $organism_name, 'assembly' => $genome_accession, 'gene_set' => $gene_set_name],
         'children' => $children,
         'children_hierarchical' => $children_hierarchical,
         'isoforms_share_annotations' => $isoforms_share_annotations,

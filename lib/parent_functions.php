@@ -383,7 +383,36 @@ function moop_type_word(?string $type): string {
     return strtolower($type);
 }
 
-function generateAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = 'warning', $organism = '', $annotation_type_key = '') {
+/**
+ * Annotation types whose hits are genes of the SAME organism, so they link to MOOP's own gene
+ * page rather than to an outside site. The loader leaves their link pattern empty (it only
+ * knows outside URLs); every paralog ID resolves to a feature in its own database (95,114 of
+ * 95,114 across 16 organisms, 2026-10-29), and the gene page opens from a protein ID.
+ */
+const MOOP_SAME_ORGANISM_ANNOTATION_TYPES = ['Paralogs'];
+
+/**
+ * Link to MOOP's gene page for a hit in the same organism, or null when the context is not
+ * known. Assembly and gene set travel with it: gene sets of one organism can share IDs, and
+ * without them the gene page has to ask which one was meant.
+ *
+ * @param array $ctx ['site' =>, 'organism' =>, 'assembly' =>, 'gene_set' =>]
+ */
+function moop_same_organism_hit_url(array $ctx, string $accession): ?string {
+    if (($ctx['site'] ?? '') === '' || ($ctx['organism'] ?? '') === '' || trim($accession) === '') return null;
+    return '/' . $ctx['site'] . '/tools/parent.php?' . http_build_query(array_filter([
+        'organism'   => $ctx['organism'],
+        'assembly'   => $ctx['assembly'] ?? '',
+        'gene_set'   => $ctx['gene_set'] ?? '',
+        'uniquename' => trim($accession),
+    ], 'strlen'));
+}
+
+/**
+ * @param array $link_ctx organism/assembly/gene_set of the page (moop_same_organism_hit_url()),
+ *                        so hits in the same organism — paralogs — link to their gene page
+ */
+function generateAnnotationTableHTML($results, $uniquename, $type, $count, $annotation_type, $desc, $color = 'warning', $organism = '', $annotation_type_key = '', array $link_ctx = []) {
     if (empty($results)) {
         return '';
     }
@@ -518,7 +547,12 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
         $raw_accession_url = $row['annotation_accession_url'];
         $has_link = $raw_accession_url !== null && trim($raw_accession_url) !== '';
         $hit_id_cell = $hit_id;
-        if ($has_link) {
+        $same_org_url = (!$has_link && in_array($row['annotation_type'] ?? '', MOOP_SAME_ORGANISM_ANNOTATION_TYPES, true))
+            ? moop_same_organism_hit_url($link_ctx, (string)$row['annotation_accession']) : null;
+        if ($same_org_url !== null) {
+            // Same site, so the same tab — unlike the outside links below.
+            $hit_id_cell = '<a href="' . htmlspecialchars($same_org_url) . '" title="Open this gene\'s page">' . $hit_id . '</a>';
+        } elseif ($has_link) {
             $annotation_accession_url = htmlspecialchars(trim($raw_accession_url));
             $hit_id_link = $annotation_accession_url . urlencode(trim($row['annotation_accession']));
             $hit_id_cell = "<a href=\"" . htmlspecialchars($hit_id_link) . "\" target=\"_blank\">" . $hit_id . "</a>";
@@ -893,7 +927,7 @@ function generateTreeHTML(array $children, $all_annotations = [], $analysis_orde
  * @param bool $is_grandchild - Internal flag for styling grandchild level
  * @return string - HTML for child/grandchild annotation cards
  */
-function generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, &$count, $is_grandchild = false, $annotated_child_types = []) {
+function generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, &$count, $is_grandchild = false, $annotated_child_types = [], array $link_ctx = []) {
     $child_feature_id = $child['feature_id'];
     $child_uniquename = $child['feature_uniquename'];
     $child_type = $child['feature_type'];
@@ -968,7 +1002,7 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
             $child_has_annotations = true;
             $color = $annotation_colors[$annotation_type] ?? 'warning';
             $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;
-            $html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name, $annotation_type);
+            $html .= generateAnnotationTableHTML($annot_results, $child_uniquename, $child_type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name, $annotation_type, $link_ctx);
         }
     }
     
@@ -980,7 +1014,7 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
     // Render grandchildren (recursively)
     if (!empty($child['grandchildren'])) {
         foreach ($child['grandchildren'] as $grandchild) {
-            $html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true, $annotated_child_types);
+            $html .= generateChildAnnotationCards($grandchild, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, true, $annotated_child_types, $link_ctx);
         }
     }
     

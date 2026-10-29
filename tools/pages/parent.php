@@ -655,7 +655,7 @@
 			// color is defined and configurable in the annotation_config.json. example "gene ontology" : "#ffc107" 
                         $color = $annotation_colors[$annotation_type] ?? 'warning';
                         $display_label = $annotation_labels[$annotation_type] ?? $annotation_type;
-                        echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name, $annotation_type);
+                        echo generateAnnotationTableHTML($annot_results, $feature_uniquename, $type, $count, $display_label, $analysis_desc[$annotation_type] ?? '', $color, $organism_name, $annotation_type, $annotation_link_ctx);
                     }
                 }
                 
@@ -753,7 +753,7 @@
                     
                     // Render children with hierarchical nesting support
                     foreach ($children_hierarchical as $child) {
-                        $rendered = generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, false, $annotated_child_types ?? []);
+                        $rendered = generateChildAnnotationCards($child, $all_annotations, $analysis_order, $annotation_colors, $annotation_labels, $analysis_desc, $organism_name, $count, false, $annotated_child_types ?? [], $annotation_link_ctx);
                         if ($rendered !== '') {
                             $has_annotations = true;
                             echo $rendered;
