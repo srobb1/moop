@@ -555,20 +555,42 @@
       <table class="table table-sm align-middle mb-0">
         <thead class="table-light"><tr><th>Organism</th><th>Retired</th><th>By</th><th>Status</th><th></th></tr></thead>
         <tbody>
-        <?php foreach ($retired as $rb): $rec = $rb['record']; $st = $rec['status'] ?? '?'; ?>
+        <?php foreach ($retired as $rb): $rec = $rb['record']; $st = $rec['status'] ?? '?'; $org = $rec['organism'] ?? ''; ?>
           <tr>
-            <td><em class="sci-name"><?= htmlspecialchars(str_replace('_', ' ', $rec['organism'] ?? $rb['bundle'])) ?></em></td>
+            <td><em class="sci-name"><?= htmlspecialchars(str_replace('_', ' ', $org ?: $rb['bundle'])) ?></em>
+              <?php if ($rb['siblings'] > 1): ?>
+                <?php // Several retires of one organism never overwrite each other; say which is which. ?>
+                <span class="badge <?= $rb['newest'] ? 'bg-secondary' : 'bg-light text-dark border' ?> ms-1"
+                      title="This organism has <?= (int)$rb['siblings'] ?> retired copies; only one can be in place at a time">
+                  <?= $rb['newest'] ? 'newest of ' . (int)$rb['siblings'] : 'older copy' ?></span>
+              <?php endif; ?></td>
             <td class="small text-nowrap"><?= htmlspecialchars($rec['retired_at'] ?? '') ?></td>
             <td class="small"><?= htmlspecialchars($rec['retired_by'] ?? '') ?></td>
-            <td class="small"><?php if ($st === 'retired'): ?>Retired<?php else: ?>
-              <span class="text-danger-emphasis" title="<?= htmlspecialchars($rec['error'] ?? '') ?>">Stopped part-way — Restore undoes what was done</span><?php endif; ?></td>
+            <td class="small">
+              <?php if ($st !== 'retired'): ?>
+                <span class="text-danger-emphasis" title="<?= htmlspecialchars($rec['error'] ?? '') ?>">Stopped part-way — Restore undoes what was done</span>
+              <?php elseif (!empty($rec['settings_restored_at'])): ?>
+                Old copy — its groups and settings were put back <?= htmlspecialchars(substr($rec['settings_restored_at'], 0, 10)) ?>; safe to delete
+              <?php elseif ($rb['exists_again']): ?>
+                <span title="organisms/<?= htmlspecialchars($org) ?>/ is there again — copied back the normal way, or another copy was restored">Copied back since — this is the old copy</span>
+              <?php else: ?>Retired<?php endif; ?></td>
             <td class="text-end text-nowrap">
-              <button type="button" class="btn btn-sm btn-outline-primary js-restore" data-bundle="<?= htmlspecialchars($rb['bundle']) ?>"
-                      data-organism="<?= htmlspecialchars($rec['organism'] ?? '') ?>"><i class="fa fa-undo"></i> Restore</button>
+              <?php if (!$rb['exists_again']): ?>
+                <button type="button" class="btn btn-sm btn-outline-primary js-restore" data-bundle="<?= htmlspecialchars($rb['bundle']) ?>"
+                        data-organism="<?= htmlspecialchars($org) ?>"><i class="fa fa-undo"></i> Restore</button>
+              <?php elseif (empty($rec['settings_restored_at']) && (!empty($rec['group_entries']) || count($rec['moved'] ?? []) > 1)): ?>
+                <?php // The copy brought data only; this bundle still holds the groups and JBrowse settings it had. ?>
+                <button type="button" class="btn btn-sm btn-outline-primary js-restore" data-settings-only="1"
+                        data-bundle="<?= htmlspecialchars($rb['bundle']) ?>" data-organism="<?= htmlspecialchars($org) ?>"
+                        title="The organism is back; put back the groups and JBrowse settings it had when retired. The old data stays here.">
+                  <i class="fa fa-tags"></i> Put back its groups &amp; settings</button>
+              <?php endif; ?>
             </td>
           </tr>
+          <?php if ($rb['has_data']): ?>
           <tr><td colspan="5" class="border-0 pt-0"><small class="text-muted">Delete for good:</small>
             <code class="small user-select-all"><?= htmlspecialchars($rb['delete_command']) ?></code></td></tr>
+          <?php endif; ?>
         <?php endforeach; ?>
         </tbody>
       </table>

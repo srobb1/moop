@@ -5,6 +5,8 @@
  * POST action=preview  organism=…   → what retiring it would do (nothing changes)
  * POST action=retire   organism=…   confirm=<the organism name, typed by the admin>
  * POST action=restore  bundle=…      (a directory name under organisms/.retired/)
+ *                      settings_only=1 → only its groups and JBrowse settings, when the organism
+ *                      was copied back the normal way (its data is already in place)
  *
  * Auth + CSRF come from admin_init.php. Paths are never taken from the request: the organism
  * must be one moop_organism_dirs() lists, the bundle one moop_retired_list() lists.
@@ -43,7 +45,7 @@ if ($action === 'preview') {
         echo json_encode(['ok' => false, 'error' => 'No such retired bundle.']);
         exit;
     }
-    echo json_encode(moop_restore_organism($bundle, $username, $config));
+    echo json_encode(moop_restore_organism($bundle, $username, $config, ($_POST['settings_only'] ?? '') === '1'));
 } else {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'Unknown action']);

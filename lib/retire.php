@@ -210,16 +210,34 @@ function moop_retire_organism(string $organism, string $username, ConfigManager 
     return ['ok' => true, 'error' => null, 'done' => $done, 'bundle' => $name];
 }
 
-/** The retired bundles, newest first: name, record, and the command that deletes one for good. */
+/**
+ * The retired bundles, grouped by organism and newest first within each: name, record, the
+ * command that deletes one for good, and two facts the list needs —
+ *   exists_again  an organism of that name is in organisms/ again (copied back the normal way, or
+ *                 another bundle restored): Restore would refuse; only its settings can go back
+ *   newest        the latest of several bundles for one organism (they never overwrite each other)
+ */
 function moop_retired_list(ConfigManager $config): array {
-    $root = moop_retired_root($config->getPath('organism_data'));
+    $organism_data = $config->getPath('organism_data');
+    $root = moop_retired_root($organism_data);
     $out  = [];
     foreach (glob("$root/*", GLOB_ONLYDIR) ?: [] as $dir) {
         $record = loadJsonFile("$dir/retired.json", []) ?: [];
-        $out[] = ['bundle' => basename($dir), 'record' => $record, 'path' => $dir,
+        $org    = (string)($record['organism'] ?? '');
+        $out[] = ['bundle' => basename($dir), 'record' => $record, 'path' => $dir, 'organism' => $org,
+                  'exists_again' => $org !== '' && is_dir("$organism_data/$org"),
+                  'has_data' => is_dir("$dir/data"),
                   'delete_command' => 'rm -rf ' . escapeshellarg($dir)];
     }
-    usort($out, fn($a, $b) => strcmp($b['bundle'], $a['bundle']));
+    usort($out, fn($a, $b) => strcmp($a['organism'], $b['organism']) ?: strcmp($b['bundle'], $a['bundle']));
+    $count = array_count_values(array_column($out, 'organism'));
+    $seen  = [];
+    foreach ($out as &$b) {
+        $b['siblings'] = $count[$b['organism']];
+        $b['newest']   = !isset($seen[$b['organism']]);
+        $seen[$b['organism']] = true;
+    }
+    unset($b);
     return $out;
 }
 
@@ -227,7 +245,7 @@ function moop_retired_list(ConfigManager $config): array {
  * Put a retired organism back: data, JBrowse settings, group entries. Refuses if an organism of
  * that name exists again. The bundle directory is removed once it is empty.
  */
-function moop_restore_organism(string $bundle_name, string $username, ConfigManager $config): array {
+function moop_restore_organism(string $bundle_name, string $username, ConfigManager $config, bool $settings_only = false): array {
     if (!moop_retire_valid_name($bundle_name)) return ['ok' => false, 'error' => 'No such retired bundle.', 'done' => []];
     $site_path = $config->getPath('site_path');
     $bundle    = moop_retired_root($config->getPath('organism_data')) . "/$bundle_name";
@@ -237,18 +255,26 @@ function moop_restore_organism(string $bundle_name, string $username, ConfigMana
         return ['ok' => false, 'error' => 'No such retired bundle.', 'done' => []];
     }
     $org_dir = $config->getPath('organism_data') . "/$organism";
-    if (file_exists($org_dir)) return ['ok' => false, 'error' => "organisms/$organism/ exists again — nothing was restored.", 'done' => []];
+    // Settings only: the organism was copied back the normal way, so its data is already in place
+    // — put back what the copy did not bring (groups, JBrowse settings) and leave the old data in
+    // the bundle for the admin to delete. Only then; a full restore never merges into a copy.
+    if ($settings_only !== file_exists($org_dir)) {
+        return ['ok' => false, 'done' => [], 'error' => $settings_only
+            ? "organisms/$organism/ is not there — use Restore to bring everything back."
+            : "organisms/$organism/ exists again — nothing was restored. Use \"Put back its groups and settings\" instead."];
+    }
 
     $done = [];
-    if (is_dir("$bundle/data")) {
+    if (!$settings_only && is_dir("$bundle/data")) {
         if (!@rename("$bundle/data", $org_dir)) return ['ok' => false, 'error' => "Could not move the data back to organisms/$organism/.", 'done' => []];
         $done[] = "Moved the data back to organisms/$organism/";
     }
+    $put_back = [];
     foreach (($record['moved'] ?? []) as $what => $orig) {
         if ($what === 'data' || !is_dir("$bundle/$what")) continue;
         $target = "$site_path/$orig";
-        if (file_exists($target)) { $done[] = "Left $what in the bundle: $orig exists"; continue; }
-        if (@rename("$bundle/$what", $target)) $done[] = 'Put back its JBrowse ' . basename($what) . ' settings';
+        if (file_exists($target)) { $done[] = 'Left its old JBrowse ' . basename($what) . " settings in the bundle: $orig already exists"; continue; }
+        if (@rename("$bundle/$what", $target)) { $done[] = 'Put back its JBrowse ' . basename($what) . ' settings'; $put_back[] = $what; }
     }
     if (!empty($record['group_entries'])) {
         $groups_file = $config->getPath('metadata_path') . '/organism_assembly_groups.json';
@@ -265,10 +291,22 @@ function moop_restore_organism(string $bundle_name, string $username, ConfigMana
         }
         $done[] = "Put back $added group entr" . ($added === 1 ? 'y' : 'ies');
     }
-    @unlink("$bundle/retired.json");
-    @rmdir("$bundle/jbrowse");
-    @rmdir($bundle);
-    moop_retire_log($config, "RESTORE by $username | Organism: $organism | Bundle: $bundle_name");
+    if ($settings_only) {
+        // The bundle keeps its old data (and its record, marked) until the admin deletes it.
+        $record['settings_restored_at'] = date('Y-m-d H:i:s');
+        $record['settings_restored_by'] = $username;
+        $record['moved'] = array_diff_key($record['moved'] ?? [], array_flip($put_back));
+        $record['group_entries'] = [];
+        moop_retire_record($bundle, $record);
+        @rmdir("$bundle/jbrowse");
+        moop_retire_log($config, "RESTORE SETTINGS by $username | Organism: $organism | Bundle: $bundle_name");
+        $done[] = 'The old data stays in the bundle — delete it with the command shown once you are sure';
+    } else {
+        @unlink("$bundle/retired.json");
+        @rmdir("$bundle/jbrowse");
+        @rmdir($bundle);
+        moop_retire_log($config, "RESTORE by $username | Organism: $organism | Bundle: $bundle_name");
+    }
     $done[] = 'Register its assemblies again in Manage JBrowse to bring back the genome browser';
     return ['ok' => true, 'error' => null, 'done' => $done];
 }

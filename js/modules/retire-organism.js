@@ -91,14 +91,17 @@
     }
 
     function doRestore(btn) {
-        const name = btn.getAttribute('data-organism') || '';
-        if (!window.confirm('Restore ' + name.replace(/_/g, ' ') + '? Its data, groups and JBrowse settings go back; '
-                + 'register it again in Manage JBrowse afterwards.')) return;
+        const name = (btn.getAttribute('data-organism') || '').replace(/_/g, ' ');
+        const settingsOnly = btn.getAttribute('data-settings-only') === '1';
+        const label = btn.innerHTML;
+        if (!window.confirm(settingsOnly
+                ? name + ' is back on the site. Put back the groups and JBrowse settings it had when retired? The old data stays in the bundle.'
+                : 'Restore ' + name + '? Its data, groups and JBrowse settings go back; register it again in Manage JBrowse afterwards.')) return;
         btn.disabled = true;
-        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Restoring…';
-        post({ action: 'restore', bundle: btn.getAttribute('data-bundle') }).then(r => {
-            window.alert((r.ok ? 'Restored.\n\n' : 'Restore stopped: ' + (r.error || '') + '\n\n') + (r.done || []).map(t => '• ' + t).join('\n'));
-            if (r.ok) refreshList(); else { btn.disabled = false; btn.innerHTML = '<i class="fa fa-undo"></i> Restore'; }
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Working…';
+        post({ action: 'restore', bundle: btn.getAttribute('data-bundle'), settings_only: settingsOnly ? '1' : '' }).then(r => {
+            window.alert((r.ok ? 'Done.\n\n' : 'Stopped: ' + (r.error || '') + '\n\n') + (r.done || []).map(t => '• ' + t).join('\n'));
+            if (r.ok) refreshList(); else { btn.disabled = false; btn.innerHTML = label; }
         });
     }
 
