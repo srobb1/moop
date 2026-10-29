@@ -4221,7 +4221,8 @@ sub gene_statements {
   my $named = $name{$group};
   my %said;
   # the name the gene shows is its own annotation's: say so, and whose (the MOOP name follows)
-  $said{source_name} = "$native_name{$group} (from $native_shown{$group})"
+  # ("rnf169: ", a symbol with no description, reads "rnf169")
+  $said{source_name} = ($native_name{$group} =~ s/:\s*$//r) . " (from $native_shown{$group})"
     if $native_shown{$group} and defined $native_name{$group};
   if (!$named or $named->{desc} eq 'None') {
     my @found = sort keys %{$any_evidence{$group} // {}};
