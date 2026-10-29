@@ -104,6 +104,18 @@ ok(has_gene_set_access('Made_Up_Org', 'GCA_1', 'gs_alpha') === false,
    'legacy {org: [asm,...]} list shape denies rather than throwing');
 
 // ----------------------------------------------------------------------------
+group('organism directories: one lister, hidden directories never count');
+require_once "$BASE/lib/functions_filesystem.php";
+$_od = sys_get_temp_dir() . '/moop_orgdirs_' . getmypid();
+foreach (['Zeta_one', 'Alpha_two', '.retired/20261029_Old_org', '.hidden'] as $_d) @mkdir("$_od/$_d", 0777, true);
+file_put_contents("$_od/README.md", 'x');
+ok(moop_organism_dirs($_od) === ['Alpha_two', 'Zeta_one'],
+   'directories only, sorted, and never .retired/ (the Retire button\'s holding area) or any dot-directory');
+ok(moop_organism_dirs("$_od/missing") === [], 'a missing data directory lists nothing, no warning');
+@rmdir("$_od/.retired/20261029_Old_org"); foreach (['.retired', '.hidden', 'Zeta_one', 'Alpha_two'] as $_d) @rmdir("$_od/$_d");
+@unlink("$_od/README.md"); @rmdir($_od);
+
+// ----------------------------------------------------------------------------
 group('gene page: paralogs link to their own gene page on MOOP');
 require_once "$BASE/lib/parent_functions.php";
 $_ctx = ['site' => 'moop', 'organism' => 'Danio_rerio', 'assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04'];

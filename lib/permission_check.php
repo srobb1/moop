@@ -18,6 +18,7 @@
  * by which point admin_init has loaded them for both callers.
  */
 
+require_once __DIR__ . '/functions_filesystem.php';   // moop_organism_dirs()
 require_once __DIR__ . '/temp_dir.php';   // moop_temp_dir_path(): the Temp Directory rule
 
 require_once __DIR__ . '/jbrowse/track_token.php';   // moop_jwt_key_paths(): the keys signing really uses
@@ -1341,8 +1342,8 @@ function moop_collect_permission_checks($config): array {
     $assembly_subdir_issues = [];
     $fasta_file_issues = [];
     if (is_dir($organism_data)) {
-        foreach (scandir($organism_data) as $organism) {
-            if ($organism !== '.' && $organism !== '..' && is_dir($organism_data . '/' . $organism)) {
+        foreach (moop_organism_dirs($organism_data) as $organism) {
+            {
                 $org_path = $organism_data . '/' . $organism;
 
                 // Check organism subdirectory itself

@@ -1150,11 +1150,7 @@ function housekeeping_refresh_annotation_caches() {
     }
 
     $refreshed = 0;
-    $entries = scandir($organism_data);
-    foreach ($entries as $entry) {
-        if ($entry === '.' || $entry === '..') {
-            continue;
-        }
+    foreach (moop_organism_dirs($organism_data) as $entry) {
         $db         = "$organism_data/$entry/organism.sqlite";
         $cache_file = moop_annotation_sources_cache_file($entry);
 

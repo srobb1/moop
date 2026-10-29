@@ -21,6 +21,26 @@
  * 'genome' is excluded: genome.fa lives at the ASSEMBLY level, so including it would make
  * every assembly directory look like a gene set.
  */
+/**
+ * The organism directories under organism_data, sorted: directories only, never a hidden one.
+ *
+ * THE way to list organisms from disk. Eight places did it themselves and disagreed — half
+ * skipped dot-directories, half did not — so a hidden directory (organisms/.retired/, where the
+ * Retire button moves data; notes/RETIRE_DATA_PLAN.md) would have been reported as a broken
+ * organism by the Setup Checklist, housekeeping and the permission scan.
+ *
+ * @return list<string> directory names (e.g. "Danio_rerio")
+ */
+function moop_organism_dirs(string $organism_data): array {
+    $out = [];
+    foreach (is_dir($organism_data) ? (scandir($organism_data) ?: []) : [] as $name) {
+        if ($name === '' || $name[0] === '.' || !is_dir("$organism_data/$name")) continue;
+        $out[] = $name;
+    }
+    sort($out);
+    return $out;
+}
+
 function is_gene_set_dir(string $dir): bool {
     if (!is_dir($dir)) return false;
     $types = ConfigManager::getInstance()->getSequenceTypes();
@@ -742,16 +762,8 @@ function getNewestSqliteModTime($organisms_path) {
     
     try {
         // Scan organism directories one level deep
-        $organisms = scandir($organisms_path);
-        foreach ($organisms as $organism) {
-            if ($organism === '.' || $organism === '..') {
-                continue;
-            }
-            
+        foreach (moop_organism_dirs($organisms_path) as $organism) {
             $organism_dir = $organisms_path . '/' . $organism;
-            if (!is_dir($organism_dir)) {
-                continue;
-            }
             
             $sqlite_file = $organism_dir . '/organism.sqlite';
             if (file_exists($sqlite_file)) {

@@ -10,6 +10,7 @@
 // — e.g. admin/api/archive_gene_set.php — do not, and the missing function turned
 // a successful archive into an uncaught fatal. Require it here so every caller of
 // this file's functions has the dependency, regardless of include order.
+require_once __DIR__ . '/functions_filesystem.php';   // moop_organism_dirs()
 require_once __DIR__ . '/blast_functions.php';
 require_once __DIR__ . '/wikipedia_functions.php';   // Wikipedia enrichment helpers (split out 2026-07-07)
 require_once __DIR__ . '/taxonomy_functions.php';    // NCBI taxonomy/lineage helpers (split out 2026-07-07)
@@ -563,12 +564,7 @@ function loadAllOrganismsMetadata($organism_data_dir) {
         return $organisms;
     }
     
-    $entries = scandir($organism_data_dir);
-    foreach ($entries as $organism) {
-        // Skip hidden directories and non-directories
-        if ($organism[0] === '.' || !is_dir("$organism_data_dir/$organism")) {
-            continue;
-        }
+    foreach (moop_organism_dirs($organism_data_dir) as $organism) {
         
         // Load organism.json using loadJsonFile (from functions_json.php)
         $organism_json_path = "$organism_data_dir/$organism/organism.json";
@@ -624,10 +620,7 @@ function getOrganismsWithAssemblies($organism_data_path) {
     }
 
     $orgs = [];
-    foreach (scandir($organism_data_path) as $organism) {
-        if ($organism[0] === '.' || !is_dir("$organism_data_path/$organism")) {
-            continue;
-        }
+    foreach (moop_organism_dirs($organism_data_path) as $organism) {
         $assemblies = [];
         $assemblyPath = "$organism_data_path/$organism";
         foreach (scandir($assemblyPath) as $file) {
@@ -745,22 +738,11 @@ function getDetailedOrganismsInfo($organism_data_path, $sequence_types = [], $pr
     $organisms_metadata = loadAllOrganismsMetadata($organism_data_path);
 
     // Count organism directories for progress reporting
-    $organisms = scandir($organism_data_path);
+    $organisms = moop_organism_dirs($organism_data_path);
     $org_count = 0;
-    $org_total = 0;
-    if ($progress_callback) {
-        foreach ($organisms as $o) {
-            if ($o[0] !== '.' && is_dir("$organism_data_path/$o")) {
-                $org_total++;
-            }
-        }
-    }
+    $org_total = count($organisms);
 
     foreach ($organisms as $organism) {
-        if ($organism[0] === '.' || !is_dir("$organism_data_path/$organism")) {
-            continue;
-        }
-
         $org_count++;
         if ($progress_callback) {
             $progress_callback($organism, $org_count, $org_total);

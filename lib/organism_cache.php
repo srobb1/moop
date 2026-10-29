@@ -15,6 +15,7 @@
  * time (both files are always loaded together).
  */
 
+require_once __DIR__ . '/functions_filesystem.php';   // moop_organism_dirs()
 require_once __DIR__ . '/genomic_regions.php';   // moop_gene_set_seqname_gap()
 
 /**
@@ -344,12 +345,7 @@ function buildPerOrganismFingerprints($organism_data_path) {
         return $fingerprints;
     }
     
-    $organisms = scandir($organism_data_path);
-    
-    foreach ($organisms as $organism) {
-        if ($organism[0] === '.' || !is_dir("$organism_data_path/$organism")) {
-            continue;
-        }
+    foreach (moop_organism_dirs($organism_data_path) as $organism) {
         
         $org_path = "$organism_data_path/$organism";
         $parts = [];

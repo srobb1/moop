@@ -20,6 +20,7 @@
  * organisms changed on disk since then (the same fingerprint test Manage Organisms uses).
  */
 
+require_once __DIR__ . '/functions_filesystem.php';   // moop_organism_dirs()
 require_once __DIR__ . '/blast_functions.php';
 require_once __DIR__ . '/permission_check.php';
 
@@ -74,16 +75,7 @@ function organism_checklist_checks(string $organism_data, array $sequence_types,
 /** Every directory directly under the organism data root, sorted. */
 function organism_checklist_organisms(string $organism_data): array
 {
-    $organisms = [];
-    if (is_dir($organism_data)) {
-        foreach (scandir($organism_data) as $item) {
-            if ($item !== '.' && $item !== '..' && is_dir("$organism_data/$item")) {
-                $organisms[] = $item;
-            }
-        }
-    }
-    sort($organisms);
-    return $organisms;
+    return moop_organism_dirs($organism_data);
 }
 
 /**
