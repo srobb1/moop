@@ -27,7 +27,9 @@ my $accession_url = '';
 my $date = `date '+%Y-%m-%d' -r '$results'`;
 $date =~ s/\s+//g;
 
-open my $in, '<', $results or die "cant open DeepLoc results $results $!\n";
+## the annotation trees gzip their results (wrap_run_all_v2)
+my $results_open = $results =~ /\.gz$/ ? "gzip -dc '$results' |" : "< $results";
+open my $in, $results_open or die "cant open DeepLoc results $results $!\n";
 my $header = <$in> // die "$results is empty\n";
 chomp $header;
 my @columns = split /\t/, $header;

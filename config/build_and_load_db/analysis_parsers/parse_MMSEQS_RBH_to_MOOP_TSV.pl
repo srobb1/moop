@@ -49,7 +49,9 @@ die "no protein headers read from $ref_fasta\n" unless %ref;
 # best hit per query protein and partner gene
 my %best;
 my ($lines, $missing_ref) = (0, 0);
-open my $rbh_fh, '<', $results_file or die "cant open $results_file $!\n";
+## the annotation trees gzip their results (wrap_run_all_v2)
+my $results_open = $results_file =~ /\.gz$/ ? "gzip -dc '$results_file' |" : "< $results_file";
+open my $rbh_fh, $results_open or die "cant open $results_file $!\n";
 while (my $line = <$rbh_fh>) {
   chomp $line;
   next if $line =~ /^query\t/ or $line !~ /\S/;

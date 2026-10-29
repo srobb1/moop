@@ -94,6 +94,15 @@ echo "Mode     : $($HAS_GFF && echo genome || echo transcriptome)"
 ## returns true if file exists, is non-empty, and has more than a header line
 has_data() { [ -s "$1" ] && [ "$(wc -l < "$1")" -gt 1 ]; }
 
+## result_file PATH -- prints PATH, or PATH.gz when only the gzipped copy is there (wrap_run_all_v2
+## gzips every result); fails when there is neither. The parsers open either.
+result_file() {
+  if [ -s "$1" ]; then echo "$1"
+  elif [ -s "$1.gz" ]; then echo "$1.gz"
+  else return 1
+  fi
+}
+
 ## Is a derived file still built from the SAME sources? (2026-10-20)
 ##
 ## Every "is X still current?" check here used to be "rebuild when a source is newer than X". A
@@ -304,9 +313,22 @@ ensure_organism_json() {
     && mv organism.json "$file"
 }
 
-## log missing input files before doing any work
-MISSING_LOG="$REPO/missing_files.log"
-log_missing() { echo "$THIS_ORG	$1" >> "$MISSING_LOG"; }
+## log missing input files before doing any work. One log per day, like copy2moop_<date>.log, and
+## each line carries its run time and gene set, so a stale entry is never read as current.
+MISSING_LOG="$REPO/missing_files_$(date +%Y%m%d).log"
+log_missing() {
+  printf '%s\t%s\t%s\t%s\t%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$THIS_ORG" "$ASSEMBLY" "$GENE_SET" "$1" >> "$MISSING_LOG"
+}
+
+## the annotation results (either kind of gene set); result_file takes name or name.gz
+check_missing_annotations() {
+  local name
+  for name in diamond/UNIPROT_sprot/diamond_results.tsv eggnog_mapper/eggnog_mapper_results.tsv \
+              interproscan/interproscan_results.tsv signalp6/signalp6_results.tsv \
+              deeptmhmm/deeptmhmm_results.gff3 deeploc2/deeploc2_results.tsv; do
+    result_file "$ANALYSIS_DIR/$name" > /dev/null || log_missing "$name(.gz)"
+  done
+}
 
 check_missing_files_gff() {
   [ -s "$GENESET_DIR/genes.gff" ]                                      || log_missing "genes.gff"
@@ -314,13 +336,7 @@ check_missing_files_gff() {
   [ -s "$GENESET_DIR/cds.nt.fa" ]                                      || log_missing "cds.nt.fa"
   [ -s "$GENESET_DIR/transcript.nt.fa" ]                               || log_missing "transcript.nt.fa"
   [ -s "$GENESET_DIR/metadata.yaml" ]                                  || log_missing "metadata.yaml"
-  [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv" ]     || log_missing "diamond/UNIPROT_sprot/diamond_results.tsv(.gz)"
-  [ -f "$ANALYSIS_DIR/eggnog_mapper/eggnog_mapper_results.tsv" ]             || log_missing "eggnog_mapper/eggnog_mapper_results.tsv"
-  [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv" ]                || log_missing "interproscan/interproscan_results.tsv(.gz)"
-  [ -f "$ANALYSIS_DIR/signalp6/signalp6_results.tsv" ]                || log_missing "signalp6/signalp6_results.tsv"
-  [ -f "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3" ]             || log_missing "deeptmhmm/deeptmhmm_results.gff3"
+  check_missing_annotations
 }
 
 check_missing_files_t2g() {
@@ -329,13 +345,7 @@ check_missing_files_t2g() {
   [ -s "$GENESET_DIR/protein.aa.fa" ]                                  || log_missing "protein.aa.fa"
   [ -s "$GENESET_DIR/transcript.nt.fa" ]                               || log_missing "transcript.nt.fa"
   [ -s "$GENESET_DIR/metadata.yaml" ]                                  || log_missing "metadata.yaml"
-  [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/diamond/UNIPROT_sprot/diamond_results.tsv" ]     || log_missing "diamond/UNIPROT_sprot/diamond_results.tsv(.gz)"
-  [ -f "$ANALYSIS_DIR/eggnog_mapper/eggnog_mapper_results.tsv" ]             || log_missing "eggnog_mapper/eggnog_mapper_results.tsv"
-  [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv.gz" ] || \
-    [ -f "$ANALYSIS_DIR/interproscan/interproscan_results.tsv" ]                || log_missing "interproscan/interproscan_results.tsv(.gz)"
-  [ -f "$ANALYSIS_DIR/signalp6/signalp6_results.tsv" ]                || log_missing "signalp6/signalp6_results.tsv"
-  [ -f "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3" ]             || log_missing "deeptmhmm/deeptmhmm_results.gff3"
+  check_missing_annotations
 }
 
 mkdir -p "$GENESET_DATA"
@@ -429,7 +439,7 @@ has_data UniProtKB_Swiss-Prot.homologs.moop.tsv \
 # ── EggNOG ────────────────────────────────────────────────────────────────────
 make_eggnog_moop() {
   local EDIR="$ANALYSIS_DIR/eggnog_mapper"
-  local MAPPERVERSION DBVERSION VERSION VERSION_FILE
+  local MAPPERVERSION DBVERSION VERSION VERSION_FILE RESULTS
   ## the annotation pipeline writes eggnog_mapper_version.txt; older runs have db_version.txt
   VERSION_FILE="$EDIR/eggnog_mapper_version.txt"
   [ -s "$VERSION_FILE" ] || VERSION_FILE="$EDIR/db_version.txt"
@@ -438,8 +448,10 @@ make_eggnog_moop() {
   DBVERSION=$(grep -m1 'eggNOG DB version:' "$VERSION_FILE" 2>/dev/null \
               | perl -pe 's/.*?eggNOG DB version: (\S+).*/$1/')
   VERSION="$MAPPERVERSION DB_$DBVERSION"
-  echo "perl $REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl $EDIR/eggnog_mapper_results.tsv $VERSION"
-  perl "$REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl" "$EDIR/eggnog_mapper_results.tsv" "$VERSION"
+  RESULTS=$(result_file "$EDIR/eggnog_mapper_results.tsv") \
+    || { echo "No EggNOG results at $EDIR — skipping"; return 0; }
+  echo "perl $REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl $RESULTS $VERSION"
+  perl "$REPO/analysis_parsers/parse_EggNOG_to_MOOP_TSV.pl" "$RESULTS" "$VERSION"
   source /home/smr/miniconda3/etc/profile.d/conda.sh
   conda activate goatools
   python3 "$REPO/analysis_parsers/reduce_eggnog_go.moop.py" EggNOG2GO.eggnog.moop.tsv
@@ -483,11 +495,12 @@ has_data protnlm.moop.tsv \
 # ── SignalP 6 ─────────────────────────────────────────────────────────────────
 make_signalp_moop() {
   local SDIR="$ANALYSIS_DIR/signalp6"
-  if [ ! -s "$SDIR/signalp6_results.tsv" ]; then
+  local RESULTS
+  if ! RESULTS=$(result_file "$SDIR/signalp6_results.tsv"); then
     echo "No SignalP results at $SDIR — skipping"
     return 0
   fi
-  perl "$REPO/analysis_parsers/parse_SIGNALP_to_MOOP_TSV.pl" "$SDIR/signalp6_results.tsv"
+  perl "$REPO/analysis_parsers/parse_SIGNALP_to_MOOP_TSV.pl" "$RESULTS"
 }
 has_data SignalP.domains.moop.tsv \
   || { echo "Building SignalP moop files"; make_signalp_moop; }
@@ -495,8 +508,8 @@ has_data SignalP.domains.moop.tsv \
 # ── DeepTMHMM ─────────────────────────────────────────────────────────────────
 make_deeptmhmm_moop() {
   local TDIR="$ANALYSIS_DIR/deeptmhmm"
-  local VERSION
-  if [ ! -s "$TDIR/deeptmhmm_results.gff3" ]; then
+  local VERSION RESULTS
+  if ! RESULTS=$(result_file "$TDIR/deeptmhmm_results.gff3"); then
     echo "No DeepTMHMM results at $TDIR — skipping"
     return 0
   fi
@@ -509,7 +522,7 @@ make_deeptmhmm_moop() {
               "$TDIR/deeptmhmm_version.txt" 2>/dev/null | head -1)
   VERSION=${VERSION:-1.0}
   perl "$REPO/analysis_parsers/parse_DEEPTMHMM_to_MOOP_TSV.pl" \
-    "$TDIR/deeptmhmm_results.gff3" "$VERSION"
+    "$RESULTS" "$VERSION"
 }
 has_data DeepTMHMM.domains.moop.tsv \
   || { echo "Building DeepTMHMM moop files"; make_deeptmhmm_moop; }
@@ -520,14 +533,14 @@ has_data DeepTMHMM.domains.moop.tsv \
 ## 2.0 and the model the job ran with (-m Accurate|Fast in deeploc2_job_cmd.txt).
 make_deeploc_moop() {
   local LDIR="$ANALYSIS_DIR/deeploc2"
-  local VERSION MODEL
-  if [ ! -s "$LDIR/deeploc2_results.tsv" ]; then
+  local VERSION MODEL RESULTS
+  if ! RESULTS=$(result_file "$LDIR/deeploc2_results.tsv"); then
     echo "No DeepLoc results at $LDIR — skipping"
     return 0
   fi
   MODEL=$(grep -o -m1 -- '-m [A-Za-z]*' "$LDIR/deeploc2_job_cmd.txt" 2>/dev/null | awk '{print $2}')
   VERSION="2.0${MODEL:+ ($MODEL model)}"
-  perl "$REPO/analysis_parsers/parse_DEEPLOC_to_MOOP_TSV.pl" "$LDIR/deeploc2_results.tsv" "$VERSION"
+  perl "$REPO/analysis_parsers/parse_DEEPLOC_to_MOOP_TSV.pl" "$RESULTS" "$VERSION"
 }
 has_data DeepLoc.domains.moop.tsv \
   || { echo "Building DeepLoc moop files"; make_deeploc_moop; }
@@ -562,7 +575,7 @@ make_rbbh_moop() {
     shopt -u nullglob
     RESULTS="${RESULTS%/}"
     shopt -s nullglob
-    RESULT_TSV=("$RESULTS"/*results.tsv)
+    RESULT_TSV=("$RESULTS"/*results.tsv "$RESULTS"/*results.tsv.gz)
     shopt -u nullglob
     [ "${#RESULT_TSV[@]}" -gt 0 ] || continue
 
@@ -618,12 +631,12 @@ make_rbbh_moop() {
 ## separate source ("... (MMseqs2 RBH)") so both show on the gene page. Named
 ## <Source>.MMseqs.RBBH.moop.tsv so the loader's *.RBBH.moop.tsv pattern takes them.
 make_mmseqs_rbh_moop() {
-  local RESULTS TARGET_ORG ORG OUT VERSION REF_FASTA
+  local RESULTS RESULTS_TSV TARGET_ORG ORG OUT VERSION REF_FASTA
   local -a FASTA
   shopt -s nullglob
   for RESULTS in "$ANALYSIS_DIR/rbh_mmseq"/ENS_*/; do
     RESULTS="${RESULTS%/}"
-    [ -s "$RESULTS/rbh_mmseq_results.tsv" ] || continue
+    RESULTS_TSV=$(result_file "$RESULTS/rbh_mmseq_results.tsv") || continue
     TARGET_ORG=$(basename "$RESULTS")                             # ENS_homo_sapiens
     ORG="${TARGET_ORG#ENS_}"; ORG="${ORG//_/ }"; ORG="${ORG^}"    # Homo sapiens
     OUT="Ensembl_${ORG// /_}.MMseqs.RBBH.moop.tsv"
@@ -639,7 +652,7 @@ make_mmseqs_rbh_moop() {
     fi
     VERSION=$(awk '{print $NF; exit}' "$RESULTS/db_version.txt" 2>/dev/null)
     echo "Building MMseqs2 RBH moop file for $TARGET_ORG"
-    perl "$REPO/analysis_parsers/parse_MMSEQS_RBH_to_MOOP_TSV.pl" "$RESULTS/rbh_mmseq_results.tsv" "${FASTA[0]}" \
+    perl "$REPO/analysis_parsers/parse_MMSEQS_RBH_to_MOOP_TSV.pl" "$RESULTS_TSV" "${FASTA[0]}" \
       "Ensembl $ORG" "${VERSION:-unknown}" https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q="
   done
   shopt -u nullglob
@@ -769,8 +782,8 @@ if [ -n "$OMA_CODE" ]; then
   fi
 fi
 
-## remove previous entries for this org and check for missing files
-sed -i "/^${THIS_ORG}\t/d" "$MISSING_LOG" 2>/dev/null
+## remove this gene set's earlier entries from today's missing-files log; the checks below re-add any still missing
+sed -i "/\t${THIS_ORG}\t${ASSEMBLY}\t${GENE_SET}\t/d" "$MISSING_LOG" 2>/dev/null
 
 # ── Gene naming v2 (notes/NAMING_V2_PLAN.md) ──────────────────────────────────
 ## assign_gene_names_v2.pl gives every gene a name (geneNames.tsv) and, separately, its
@@ -821,9 +834,10 @@ build_naming_args() {
   [ -s "$REFERENCE_DATA/pfam/pfam_names.tsv" ] && NAMING_ARGS+=(--pfam-names "$REFERENCE_DATA/pfam/pfam_names.tsv")
 
   ## protein features, reported (never used to name) for genes with no name and in naming_decisions.tsv
-  [ -s "$ANALYSIS_DIR/signalp6/signalp6_results.tsv" ]   && NAMING_ARGS+=(--signalp "$ANALYSIS_DIR/signalp6/signalp6_results.tsv")
-  [ -s "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3" ] && NAMING_ARGS+=(--deeptmhmm "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3")
-  [ -s "$ANALYSIS_DIR/deeploc2/deeploc2_results.tsv" ]   && NAMING_ARGS+=(--deeploc "$ANALYSIS_DIR/deeploc2/deeploc2_results.tsv")
+  local FEATURES
+  FEATURES=$(result_file "$ANALYSIS_DIR/signalp6/signalp6_results.tsv")   && NAMING_ARGS+=(--signalp "$FEATURES")
+  FEATURES=$(result_file "$ANALYSIS_DIR/deeptmhmm/deeptmhmm_results.gff3") && NAMING_ARGS+=(--deeptmhmm "$FEATURES")
+  FEATURES=$(result_file "$ANALYSIS_DIR/deeploc2/deeploc2_results.tsv")   && NAMING_ARGS+=(--deeploc "$FEATURES")
 
   ## the gene set's species, taxon and accessions, for the header of naming_decisions.tsv
   [ -s "$GENESET_DIR/metadata.yaml" ] && NAMING_ARGS+=(--metadata "$GENESET_DIR/metadata.yaml")

@@ -586,7 +586,8 @@ sub read_signalp {
   my %word = ('SP' => 'signal peptide', 'LIPO' => 'lipoprotein signal peptide', 'TAT' => 'Tat signal peptide',
               'TATLIPO' => 'Tat lipoprotein signal peptide', 'PILIN' => 'pilin-like signal peptide');
   my %prediction;
-  open my $fh, '<', $file or die "cant open SignalP results $file $!\n";
+  my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
+  open my $fh, $open or die "cant open SignalP results $file $!\n";
   while (my $line = <$fh>) {
     next if $line =~ /^#/;
     chomp $line;
@@ -604,7 +605,8 @@ sub read_signalp {
 sub read_deeptmhmm {
   my ($file) = @_;
   my %count;
-  open my $fh, '<', $file or die "cant open DeepTMHMM results $file $!\n";
+  my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
+  open my $fh, $open or die "cant open DeepTMHMM results $file $!\n";
   while (my $line = <$fh>) {
     $count{$1} = $2 if $line =~ /^#\s*(\S+)\s+Number of predicted TMRs:\s*(\d+)/;
   }
@@ -618,7 +620,8 @@ sub read_deeptmhmm {
 sub read_deeploc {
   my ($file) = @_;
   my %where;
-  open my $fh, '<', $file or die "cant open DeepLoc results $file $!\n";
+  my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
+  open my $fh, $open or die "cant open DeepLoc results $file $!\n";
   my $header = <$fh> // '';
   chomp $header;
   my @columns = split /\t/, $header;
@@ -1121,7 +1124,8 @@ sub collect_mmseqs {
   opendir my $dir_handle, $base or die "cant read $base\n";
   my @species_dirs;
   foreach my $entry (sort readdir $dir_handle) {
-    push @species_dirs, $entry if $entry =~ /^ENS_/ and -s "$base/$entry/rbh_mmseq_results.tsv";
+    push @species_dirs, $entry if $entry =~ /^ENS_/
+                                and (-s "$base/$entry/rbh_mmseq_results.tsv" or -s "$base/$entry/rbh_mmseq_results.tsv.gz");
   }
   closedir $dir_handle;
   foreach my $species_dir (@species_dirs) {
@@ -1131,7 +1135,10 @@ sub collect_mmseqs {
     next unless $reference;
     $human_searched = 1 if $species eq 'homo_sapiens';
 
-    open my $fh, '<', "$base/$species_dir/rbh_mmseq_results.tsv" or die "cant open mmseqs results $!\n";
+    my $file = -s "$base/$species_dir/rbh_mmseq_results.tsv" ? "$base/$species_dir/rbh_mmseq_results.tsv"
+                                                                 : "$base/$species_dir/rbh_mmseq_results.tsv.gz";
+    my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
+    open my $fh, $open or die "cant open mmseqs results $file $!\n";
     while (my $line = <$fh>) {
       chomp $line;
       next if $line =~ /^query\t/ or $line !~ /\S/;
@@ -2665,7 +2672,7 @@ sub read_species_search {
   $species_search_label{$tag}{$kind} = $label ne '' ? $label : $dir;
   my $store = $kind eq 'rbh' ? \%species_rbh : \%species_diamond;
   my ($file) = grep { my $candidate = $_; -e $candidate }
-               $kind eq 'rbh' ? ("$dir/rbh_mmseq_results.tsv") : ("$dir/diamond_results.tsv", "$dir/diamond_results.tsv.gz");
+               $kind eq 'rbh' ? ("$dir/rbh_mmseq_results.tsv", "$dir/rbh_mmseq_results.tsv.gz") : ("$dir/diamond_results.tsv", "$dir/diamond_results.tsv.gz");
   die "no results in $dir for --closest-species $tag $kind\n" unless $file;
   my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
   open my $fh, $open or die "cant read $file\n";

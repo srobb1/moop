@@ -15,7 +15,9 @@ $source_nospace =~ s/\s+/_/g;
 $source_nospace =~ s/\//_/g;
 open OUT, ">$source_nospace.domains.moop.tsv" or die "Can't open $source_nospace.domains.moop.tsv for writing $! \n";
 
-open TH, $top_hits or die "Can't open top hits $source file:$top_hits $! \n";
+## the annotation trees gzip their results (wrap_run_all_v2)
+my $top_hits_open = $top_hits =~ /\.gz$/ ? "gzip -dc '$top_hits' |" : "< $top_hits";
+open TH, $top_hits_open or die "Can't open top hits $source file:$top_hits $! \n";
 my $header = <TH>;
 my ($source_version) = $header =~ /^#\s*(SignalP-\S+)\s*/;
 

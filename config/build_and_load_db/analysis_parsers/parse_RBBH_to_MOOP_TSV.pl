@@ -58,7 +58,8 @@ foreach my $isoform (@isoforms){
     $isoforms{$iso_id}=$gene_id;
   }
 }
-my @files = <"$dir/*tsv">;
+## rbh_eross_results.tsv, or .tsv.gz in the annotation trees that gzip their results (wrap_run_all_v2)
+my @files = (<"$dir/*tsv">, <"$dir/*tsv.gz">);
 my %hits;
 my $date;
 foreach my $file (@files){
@@ -70,7 +71,8 @@ foreach my $file (@files){
   # reciprocal best hit. (Until 2026-10-06 a "$id" flag here meant to keep only the first hit per query
   # of a '#'-commented BLAST table; the row's own "my $id" hid it, so it never acted, and the current
   # files have one row per query.)
-  open TSV, $file or die "cant open blast out in tsv format: $file $! \n";
+  my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
+  open TSV, $open or die "cant open blast out in tsv format: $file $! \n";
   <TSV>;
   while (my $line = <TSV>){
     chomp $line;

@@ -24,7 +24,9 @@ print OUT "## Annotation Type: $annotation_type\n";
 print OUT "## Annotation Creation Date: $date\n";
 print OUT join("\t","## Gene", "Accession","Accession_Description","Score"),"\n";
 
-open TH, $top_hits or die "Can't open top hits $source file:$top_hits $! \n";
+## the annotation trees gzip their results (wrap_run_all_v2)
+my $top_hits_open = $top_hits =~ /\.gz$/ ? "gzip -dc '$top_hits' |" : "< $top_hits";
+open TH, $top_hits_open or die "Can't open top hits $source file:$top_hits $! \n";
 
 ## Records look like:
 ##   # ACA1_..._000047.1 Length: 1004

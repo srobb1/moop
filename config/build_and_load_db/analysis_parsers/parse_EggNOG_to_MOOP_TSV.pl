@@ -37,7 +37,9 @@ print ORTHO "## Annotation Source: EggNOG
 ## Annotation Creation Date: $date\n";
 print ORTHO join("\t","## Gene","EggNOG_seed_ortholog","Description","Seed_evalue"),"\n";
  
-open TSV, $eggnog_tsv or die "Can't open eggnog file:$eggnog_tsv $!\n";
+## the annotation trees gzip their results (wrap_run_all_v2)
+my $eggnog_open = $eggnog_tsv =~ /\.gz$/ ? "gzip -dc '$eggnog_tsv' |" : "< $eggnog_tsv";
+open TSV, $eggnog_open or die "Can't open eggnog file:$eggnog_tsv $!\n";
 while (my $line = <TSV>){
   chomp $line;
   next if $line =~ /^#/;
