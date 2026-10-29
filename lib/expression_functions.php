@@ -779,11 +779,12 @@ const MOOP_EXPRESSION_TOOL_MAX_GENES = 200;
  * Every gene set with expression bundles this reader may see, for the tool's picker.
  * Only gene sets with data are offered: listing every organism would mostly lead nowhere.
  *
- * @return list<array{organism: string, assembly: string, gene_set: string, experiments: int}>
+ * @return list<array{organism: string, assembly: string, gene_set: string, genome_name: string, experiments: int}>
  */
 function moop_expression_gene_sets(string $organism_data, string $user_level): array
 {
     require_once __DIR__ . '/../includes/access_control.php';
+    require_once __DIR__ . '/functions_access.php';   // getAssemblyInfo()
     $overrides = moop_expression_load_overrides(
         rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/expression_overrides.json');
     $out = [];
@@ -791,7 +792,10 @@ function moop_expression_gene_sets(string $organism_data, string $user_level): a
         [$organism, $assembly, $gene_set] = array_slice(explode('/', $dir), -4, 3);
         if (!has_gene_set_access($organism, $assembly, $gene_set)) continue;
         $n = count(moop_expression_bundle_experiments($dir, "$organism/$assembly/$gene_set/", $user_level, $overrides));
-        if ($n) $out[] = compact('organism', 'assembly', 'gene_set') + ['experiments' => $n];
+        if (!$n) continue;
+        // The genome's name, for the shared gene-set label (gene_set_label()).
+        [, $genome_name] = getAssemblyInfo($assembly, dirname($dir, 4) . "/$organism/organism.sqlite");
+        $out[] = compact('organism', 'assembly', 'gene_set') + ['genome_name' => (string)$genome_name, 'experiments' => $n];
     }
     return $out;
 }

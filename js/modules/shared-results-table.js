@@ -140,9 +140,20 @@ function resultColumnsFor(variant) {
  */
 function resultAssemblyLabel(r) {
     const acc  = r.genome_accession || '';
-    const name = r.genome_name || '';
-    if (name && name !== acc) return acc ? `${name} (${acc})` : name;
+    const name = genomeDisplayName(r.genome_name, acc);
+    if (name) return acc ? `${name} (${acc})` : name;
     return acc || '—';
+}
+
+/**
+ * The genome's real name, or '' when it has none worth showing: empty, the accession
+ * itself, or a placeholder a loader wrote ("NA" on three genomes, 2026-10). Same rule as
+ * genome_display_name() in lib/functions_access.php — change both together.
+ */
+function genomeDisplayName(name, acc) {
+    const n = String(name || '').trim();
+    if (!n || n === String(acc || '').trim()) return '';
+    return ['na', 'n/a', 'none', 'null', '-', 'unknown'].includes(n.toLowerCase()) ? '' : n;
 }
 
 /**

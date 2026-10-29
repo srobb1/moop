@@ -5,7 +5,8 @@
  *            $form_sent, $genes, $unresolved, $ambiguous, $via_parent, $no_rows, $heatmap,
  *            $mode, $sort, $link (callable: same request with some settings changed), $site
  */
-$gs_label = fn(array $gs) => str_replace('_', ' ', $gs['organism']) . ' — ' . $gs['assembly'] . ' / ' . $gs['gene_set'];
+// The site-wide form, "Genus species · Name (Accession) › gene set" (gene_set_label()).
+$gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'], $gs['genome_name'] ?? '', $gs['assembly'], $gs['gene_set'], $html);
 ?>
 <div class="container py-3">
   <div class="card shadow-sm mb-4">
@@ -38,7 +39,7 @@ $gs_label = fn(array $gs) => str_replace('_', ' ', $gs['organism']) . ' — ' . 
       </div>
       <div class="card-body">
         <?php if (count($gene_sets) === 1): $gs = $gene_sets[0]; ?>
-          <div><?= htmlspecialchars($gs_label($gs)) ?> <span class="text-muted small">· <?= (int)$gs['experiments'] ?> experiment<?= $gs['experiments'] === 1 ? '' : 's' ?> — the only gene set with expression data so far</span></div>
+          <div><?= $gs_label($gs, true) ?> <span class="text-muted small">· <?= (int)$gs['experiments'] ?> experiment<?= $gs['experiments'] === 1 ? '' : 's' ?> — the only gene set with expression data so far</span></div>
           <input type="hidden" name="organism" value="<?= htmlspecialchars($gs['organism']) ?>">
           <input type="hidden" name="assembly" value="<?= htmlspecialchars($gs['assembly']) ?>">
           <input type="hidden" name="gene_set" value="<?= htmlspecialchars($gs['gene_set']) ?>">

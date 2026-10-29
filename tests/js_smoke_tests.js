@@ -40,6 +40,7 @@ for (const rel of MODULES) {
 const {
     moopSearchTerms, moopSearchInputIsUsable, moopHighlightableTerms,
     moopTermHighlight, highlightSearchTerms, moopRowHighlightText, moopStripNamingTag,
+    resultAssemblyLabel,
 } = sandbox;
 
 // ---------------------------------------------------------------------------- harness
@@ -156,6 +157,12 @@ const TAGS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/naming_ta
 TAGS.forEach(([input, want]) => eq(moopStripNamingTag(input), want, JSON.stringify(input)));
 const tagRow = { feature_description: 'HIVEP zinc finger 3 [ISS|rbh|tree+]' };
 ok(!moopRowHighlightText(tagRow).includes('tree'), 'the tag is not part of the row\'s highlightable text either');
+
+group('resultAssemblyLabel — a placeholder name is no name (same rule as assembly_label())');
+eq(resultAssemblyLabel({ genome_name: 'NA', genome_accession: 'GCF_013753865.1' }), 'GCF_013753865.1', '"NA" → bare accession, no parentheses');
+eq(resultAssemblyLabel({ genome_name: 'n/a', genome_accession: 'X1' }), 'X1', 'case-insensitive');
+eq(resultAssemblyLabel({ genome_name: 'X1', genome_accession: 'X1' }), 'X1', 'name equal to the accession → bare accession');
+eq(resultAssemblyLabel({ genome_name: 'Nvec200', genome_accession: 'GCA_033964005.1' }), 'Nvec200 (GCA_033964005.1)', 'a real name keeps "Name (Accession)"');
 
 // ---------------------------------------------------------------------------- report
 console.log('\n' + '-'.repeat(60));

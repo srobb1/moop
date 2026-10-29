@@ -60,6 +60,12 @@ $db_path = verifyOrganismDatabase($organism_name, $organism_data);
 // Get assembly stats - searches by both accession and name
 $assembly_info = getAssemblyStats($assembly_param, $db_path);
 
+// The page names the assembly in its title, heading and tools: its real name, or the
+// accession when it has none (never a placeholder like "NA" — genome_display_name()).
+if (!empty($assembly_info)) {
+    $assembly_info['genome_name'] = genome_display_name($assembly_info['genome_name'] ?? '', $assembly_info['genome_accession'] ?? '')
+                                    ?: ($assembly_info['genome_accession'] ?? '');
+}
 if (empty($assembly_info)) {
     moop_not_found_page('There is no assembly "' . $assembly_param . '" for this organism that you can open.');
 }

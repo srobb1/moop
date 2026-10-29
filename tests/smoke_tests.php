@@ -104,6 +104,21 @@ ok(has_gene_set_access('Made_Up_Org', 'GCA_1', 'gs_alpha') === false,
    'legacy {org: [asm,...]} list shape denies rather than throwing');
 
 // ----------------------------------------------------------------------------
+group('assembly and gene-set labels — a placeholder name is no name');
+// Three genomes were loaded with the literal name "NA" and showed as "NA (GCF_013753865.1)"
+// on six pages (2026-10-29). Same rule as resultAssemblyLabel() in the JS suite.
+ok(assembly_label('NA', 'GCF_013753865.1') === 'GCF_013753865.1' && assembly_label('n/a', 'X') === 'X'
+   && assembly_label('', 'X') === 'X' && assembly_label('X', 'X') === 'X',
+   'no real name (blank, NA, N/A, the accession itself) → the bare accession, no parentheses');
+ok(assembly_label('Nvec200', 'GCA_033964005.1') === 'Nvec200 (GCA_033964005.1)', 'a real name keeps "Name (Accession)"');
+ok(gene_set_label('Nematostella_vectensis', 'Nvec200', 'GCA_033964005.1', 'NV2') === "Nematostella vectensis \u{00B7} Nvec200 (GCA_033964005.1) \u{203A} NV2"
+   && gene_set_label('Acropora_millepora', 'NA', 'GCF_013753865.1', 'RS_101') === "Acropora millepora \u{00B7} GCF_013753865.1 \u{203A} RS_101",
+   'gene-set label: "Genus species · Name (Accession) › gene set", placeholder dropped');
+ok(strpos(gene_set_label('A_b<x>', '', 'G', 'g&s', true), '<x>') === false
+   && strpos(gene_set_label('A_b', '', 'G', 'NV2', true), '<em class="sci-name">A b</em>') === 0,
+   'HTML form: species in italics, every part escaped');
+
+// ----------------------------------------------------------------------------
 group('home page: built from the gene sets the viewer may see, not by organism');
 // One organism, one PUBLIC gene set and one PRIVATE one -- the case the home page got
 // wrong: it filtered by organism, so a visitor would have seen the private assembly's

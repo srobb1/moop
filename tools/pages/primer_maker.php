@@ -879,6 +879,7 @@
                         ? 'from ' . count($entries) . ' sequences'
                         : 'for ' . htmlspecialchars($entries[0]['id']) ?>
                 </span>
+                <?= help_modal_trigger('pm-results-help', '', 'How to read these results') ?>
             </div>
             <div class="card-body">
                 <?php // Actions at the TOP (user, 2026-08-18). Below a table of a hundred
@@ -1185,6 +1186,58 @@
                   . 'constraints. If you already have a pair and want to know what they would '
                   . 'amplify and where, that is Primer BLAST.']
     );
+    ?>
+
+    <?php
+    // How to read the results table — every column on screen, the Check button, and what
+    // only the download holds. Keep in step with $column_spec above: a column added there
+    // needs a card here.
+    if ($entries) {
+        $results_cards = [
+            ['label' => 'Rows and #',
+             'text' => 'Each row is one primer pair. Primer3 ranks them best first (# 1 is its top pick), by how '
+                     . 'closely each pair matches the length, Tm and GC targets and how unlikely it is to form '
+                     . 'hairpins or primer-dimers.'],
+            ['label' => 'Forward / Reverse name',
+             'text' => 'The name each primer carries in the table, the download, the FASTA and Primer BLAST: '
+                     . 'your sequence\'s ID, the pair number, and F or R.'],
+            ['label' => 'Forward / Reverse primer',
+             'text' => 'The primer sequence, 5′ to 3′. The reverse primer is already reverse-complemented — '
+                     . 'order it exactly as shown.'],
+            ['label' => 'len, Tm, GC%',
+             'text' => 'Length in bases, melting temperature (°C, as Primer3 calculates it) and GC content of '
+                     . 'each primer. Pick an annealing temperature a few degrees below the lower Tm of the pair.'],
+            ['label' => 'Product (bp)',
+             'text' => 'The size of the PCR product on the sequence you pasted, from the start of the forward '
+                     . 'primer to the end of the reverse primer.'],
+            ['label' => 'Check',
+             'html' => true,
+             'text' => 'Opens <strong>Primer BLAST</strong> in a new tab with this pair filled in. It searches '
+                     . 'the genome or transcripts for everywhere the pair could bind, and grades it: '
+                     . '<strong>specific</strong> (one product), <strong>non-specific</strong> (more than one) or '
+                     . '<strong>no product</strong>. Use it before ordering — Primer Maker only sees the sequence '
+                     . 'you pasted, not the rest of the genome.'],
+        ];
+        if ($has_tail) {
+            $results_cards[] = ['label' => 'Forward / Reverse to order',
+                'text' => 'The primer with the ' . $tail['label'] . ' tag added to its 5′ end — the sequence to '
+                        . 'order. Tm, GC and length describe the primer without the tag, the part that anneals. '
+                        . 'Check sends the untagged primer, since the tag is not in the genome.'];
+            $results_cards[] = ['label' => 'Product + tags',
+                'text' => 'The product size including both tags: the band you will see on a gel.'];
+        }
+        if ($multi) {
+            $results_cards[] = ['label' => 'Sequence',
+                'text' => 'Which of your sequences the pair was designed on.'];
+        }
+        $results_cards[] = ['label' => 'Download table (TSV)',
+            'text' => 'Every row, plus columns the screen leaves out: where each primer starts in your '
+                    . 'sequence, Primer3\'s penalty score (lower is better), the product sequence itself, and a '
+                    . 'row for any sequence that produced no primers, saying why.'];
+        $results_cards[] = ['label' => 'See FASTA',
+            'text' => 'The primers as FASTA, ready to paste into an order form or another tool.'];
+        echo help_modal('pm-results-help', 'Reading the results', [['heading' => '', 'cards' => $results_cards]]);
+    }
     ?>
 
     <?php if ($export): ?>

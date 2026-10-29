@@ -46,7 +46,7 @@ foreach ($all_accessible as $src) {
 
     if (!isset($assembly_names[$org][$asm])) {
         $gn = $src['genome_name'] ?? '';
-        $assembly_names[$org][$asm] = ($gn && $gn !== $asm) ? $gn : '';
+        $assembly_names[$org][$asm] = genome_display_name($gn, $asm);   // '' for none / "NA"
     }
 }
 

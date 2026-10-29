@@ -99,27 +99,68 @@ function granted_access_level_value($level) {
 }
 
 /**
+ * The genome's human-readable name, or '' when it has none worth showing.
+ *
+ * "No name" covers more than an empty field: loaders have stored the literal text "NA"
+ * (Acropora, Danio, Schizocardium, 2026-10), and some write the accession into the name.
+ * Shown as-is these read "NA (GCF_013753865.1)". Every label goes through here, so
+ * a placeholder can never reach a page. js/modules/shared-results-table.js
+ * (genomeDisplayName) applies the same rule — change both together.
+ *
+ * @param string|null $name      genome_name
+ * @param string|null $accession genome_accession
+ * @return string
+ */
+function genome_display_name($name, $accession = ''): string {
+    $name = trim((string)$name);
+    if ($name === '' || $name === trim((string)$accession)) return '';
+    if (in_array(strtolower($name), ['na', 'n/a', 'none', 'null', '-', 'unknown'], true)) return '';
+    return $name;
+}
+
+/**
  * Canonical assembly display label — "Name (Accession)".
  *
  * The one place assembly labels are formatted, so the three historical forms
  * (bare accession, bare name, "Name (Accession)") can't drift again. Falls back to
- * the bare accession when there is no distinct name (name empty, or equal to the
- * accession). audit #8.
+ * the bare accession, with no parentheses, when there is no real name
+ * (genome_display_name()). audit #8.
  *
  * @param string|null $name      genome_name (e.g. "Nvec200")
  * @param string|null $accession genome_accession (e.g. "GCA_033964005.1")
  * @return string
  */
 function assembly_label($name, $accession) {
-    $name = trim((string)$name);
     $accession = trim((string)$accession);
-    if ($name === '' || $name === $accession) {
+    $name = genome_display_name($name, $accession);
+    if ($name === '') {
         return $accession;
     }
     if ($accession === '') {
         return $name;
     }
     return "$name ($accession)";
+}
+
+/**
+ * Canonical gene-set label — "Genus species · Name (Accession) › gene set".
+ *
+ * The form Search and the Data Exporter scope lists use. Plain text by default; with
+ * $html the species is italic and the rest muted, safe to echo (every part escaped).
+ *
+ * @param string $organism   organism directory name (Genus_species…)
+ * @param string $genome_name genome_name ('' or a placeholder gives the bare accession)
+ * @param string $accession  genome_accession
+ * @param string $gene_set   gene_set_name
+ * @param bool   $html
+ * @return string
+ */
+function gene_set_label(string $organism, $genome_name, string $accession, string $gene_set, bool $html = false): string {
+    $species = str_replace('_', ' ', $organism);
+    $rest = assembly_label($genome_name, $accession) . ($gene_set !== '' ? " \u{203A} $gene_set" : '');
+    if (!$html) return "$species \u{00B7} $rest";
+    return '<em class="sci-name">' . htmlspecialchars($species) . '</em>'
+         . ' <span class="text-muted">&middot; ' . htmlspecialchars($rest) . '</span>';
 }
 
 function getAssemblyInfo($assembly, $db_path) {
