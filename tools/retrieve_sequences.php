@@ -299,11 +299,10 @@ if (!empty($sequence_ids_provided)) {
         $found_ids = array_values(array_unique($found_ids));
     }
     
-    // Log any errors
-    if (!empty($extraction_errors)) {
-        foreach ($extraction_errors as $err) {
-            logError($err, "download_fasta", ['user' => $_SESSION['username'] ?? 'unknown']);
-        }
+    // Log server faults only. $extraction_errors is mostly the visitor's own input (IDs not
+    // found, a bad range) — shown to them on the page, and not something an admin can fix.
+    foreach ($extract_result['system_errors'] ?? [] as $err) {
+        logError($err, 'sequence_retrieval', ['organism' => $selected_organism, 'assembly' => $selected_assembly_accession]);
     }
     
     // Set download error message only if no content was retrieved

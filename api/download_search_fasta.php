@@ -108,6 +108,9 @@ foreach ($valid_organisms as $organism => $uniquenames) {
             $family
         );
         $result = extractSequencesForAllTypes($source['path'], $typed_ids, $sequence_types, $organism, $source['assembly']);
+        foreach ($result['system_errors'] ?? [] as $err) {
+            logError($err, 'download_fasta', ['organism' => $organism, 'assembly' => $source['assembly'] ?? '']);
+        }
         if ($result['success']) {
             // gene=, gene_name=, transcript= in each header, as every other sequence download has
             // them: worked out from the family the walk above returned (+0.03 s on 2,500 mRNAs)
@@ -124,7 +127,5 @@ foreach ($valid_organisms as $organism => $uniquenames) {
     }
 }
 
-if (!$found_any) {
-    // Headers already sent — log the failure so it's visible in the app log
-    logError('No sequences found for any organism in FASTA download', 'download_fasta', ['organisms' => array_keys($valid_organisms)]);
-}
+// Nothing found is not logged: it is the visitor's selection, and a server fault behind it was
+// logged above with its cause.

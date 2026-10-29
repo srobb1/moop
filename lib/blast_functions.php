@@ -485,6 +485,7 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
     }
     if (!file_exists($blast_db . '.nhr') && !file_exists($blast_db . '.phr')) {
         $result['error'] = 'BLAST database not found';
+        $result['system_error'] = true;   // a server fault, not the visitor's input -- logged
         return $result;
     }
 
@@ -524,6 +525,7 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
     if ($temp_file === false || file_put_contents($temp_file, implode("\n", $batch) . "\n") === false) {
         if ($temp_file !== false) @unlink($temp_file);
         $result['error'] = 'Failed to write the batch file for sequence extraction';
+        $result['system_error'] = true;   // a server fault, not the visitor's input -- logged
         return $result;
     }
 
@@ -539,6 +541,7 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
     $output = array_filter($output, fn($line) => strpos(trim($line), 'Error:') !== 0);
     if ($return_var > 1) {
         $result['error'] = "Error extracting sequences (exit code: $return_var). Ensure blastdbcmd is installed and FASTA files are formatted correctly.";
+        $result['system_error'] = true;   // a server fault, not the visitor's input -- logged
         return $result;
     }
     if (empty($output)) {

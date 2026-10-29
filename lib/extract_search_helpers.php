@@ -416,6 +416,7 @@ function extractSequencesForAllTypes(
 ): array {
     $displayed_content = [];
     $tool_errors       = [];
+    $system_errors     = [];
 
     // Sort IDs into per-FASTA buckets; unknowns collected separately
     $buckets = [];
@@ -431,7 +432,7 @@ function extractSequencesForAllTypes(
     }
 
     $run_extract = function (string $seq_type, string $fasta_file, array $ids)
-        use (&$displayed_content, &$tool_errors, $organism, $assembly, $requests, $parent_to_children)
+        use (&$displayed_content, &$tool_errors, &$system_errors, $organism, $assembly, $requests, $parent_to_children)
     {
         $result = extractSequencesFromBlastDb($fasta_file, $ids, $organism, $assembly, $requests, $parent_to_children);
         if ($result['success']) {
@@ -444,6 +445,7 @@ function extractSequencesForAllTypes(
             }
         } elseif (!empty($result['error'])) {
             $tool_errors[] = $result['error'];
+            if (!empty($result['system_error'])) $system_errors[] = $result['error'] . ' (' . basename($fasta_file) . ')';
         }
     };
 
@@ -473,6 +475,10 @@ function extractSequencesForAllTypes(
         'success' => !empty($displayed_content),
         'content' => $displayed_content,
         'errors'  => $errors,
+        // Server faults only (missing BLAST database, extraction tool failed) -- what belongs in
+        // the admin error log. 'errors' also holds "not found" for IDs the visitor typed, which
+        // is their input, not a fault; logging it filled the log with typos (2026-10-29).
+        'system_errors' => array_values(array_unique($system_errors)),
     ];
 }
 

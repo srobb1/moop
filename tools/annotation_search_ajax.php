@@ -140,23 +140,11 @@ if (!$uniquename_search) {
 
 // Format results for JSON
 $formatted_results = [];
-$incomplete_records = [];
 
 foreach ($results as $row) {
     $species = $row['species'];
     if (!empty($row['subtype']) && $row['subtype'] != 'NULL') {
         $species .= ' ' . $row['subtype'];
-    }
-    
-    // Check for incomplete annotation records (missing source or accession)
-    if (!$uniquename_search && (empty($row['annotation_source_name']) || empty($row['annotation_accession']))) {
-        $incomplete_records[] = [
-            'organism' => $organism,
-            'feature_uniquename' => $row['feature_uniquename'],
-            'feature_name' => $row['feature_name'] ?? '',
-            'annotation_accession' => $row['annotation_accession'] ?? 'MISSING',
-            'annotation_source' => $row['annotation_source_name'] ?? 'MISSING'
-        ];
     }
     
     $formatted_results[] = [
@@ -184,14 +172,10 @@ foreach ($results as $row) {
     ];
 }
 
-// Log incomplete records for admin review
-if (!empty($incomplete_records)) {
-    logError('Incomplete annotation records found', $organism, [
-        'search_term' => $search_keywords,
-        'count' => count($incomplete_records),
-        'records' => $incomplete_records
-    ]);
-}
+// No "incomplete annotation records" log here any more. Name and description matches carry
+// no annotation BY DESIGN (searchFeaturesByNameDescription selects NULL for those columns),
+// and the old check logged every one of them, with the search words, user and address: 98% of
+// the error log by 2026-10-29. A real integrity check belongs in housekeeping, not per search.
 
 // Check whether results hit the configured per-organism cap
 $result_count = count($formatted_results);

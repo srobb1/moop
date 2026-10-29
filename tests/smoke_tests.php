@@ -104,6 +104,27 @@ ok(has_gene_set_access('Made_Up_Org', 'GCA_1', 'gs_alpha') === false,
    'legacy {org: [asm,...]} list shape denies rather than throwing');
 
 // ----------------------------------------------------------------------------
+group('error log — one row per problem, trimmed to 30 days, rewritten in place');
+require_once "$BASE/lib/functions_errorlog.php";
+$_mem = fn($n, $line, $ts) => ['timestamp' => $ts, 'error' => "Allowed memory size of 134217728 bytes exhausted (tried to allocate $n bytes)",
+                               'context' => 'php_fatal', 'details' => ['file' => "$BASE/tools/pages/parent.php", 'line' => $line]];
+$_ents = [$_mem(19017728, 534, '2026-10-06 16:58:24'), $_mem(31522816, 432, '2026-10-01 22:30:09'),
+          ['timestamp' => '2026-09-01 00:00:00', 'error' => 'Database not found for organism', 'context' => 'Made_Up_Org', 'details' => []]];
+$_g = moop_error_log_groups($_ents);
+ok(count($_g) === 2 && $_g[0]['count'] === 2 && $_g[0]['kind'] === 'crash' && $_g[0]['where'] === 'tools/pages/parent.php:534'
+   && $_g[0]['first'] === '2026-10-01 22:30:09' && $_g[0]['last'] === '2026-10-06 16:58:24',
+   'the same crash at different sizes and lines is ONE problem, with its count, first and last seen');
+ok($_g[1]['kind'] === 'reported' && $_g[1]['where'] === '', 'a logError() entry is "reported by MOOP"');
+$_lf = tempnam(sys_get_temp_dir(), 'moop_errlog_');
+file_put_contents($_lf, implode("\n", array_map('json_encode', array_reverse($_ents))) . "\nnot json\n");
+ok(moop_error_log_remove_group($_g[0]['key'], $_lf) === 2 && count(file($_lf)) === 2,
+   '"Fixed — remove" drops every entry of that problem and nothing else');
+ok(moop_error_log_prune(strtotime('2026-10-15'), $_lf) === 1 && trim(file_get_contents($_lf)) === 'not json',
+   'entries older than 30 days are trimmed; an unreadable line is kept, never silently dropped');
+ok(moop_error_log_prune(null, $_lf) === 0, 'nothing to remove → the file is not rewritten');
+@unlink($_lf);
+
+// ----------------------------------------------------------------------------
 group('assembly and gene-set labels — a placeholder name is no name');
 // Three genomes were loaded with the literal name "NA" and showed as "NA (GCF_013753865.1)"
 // on six pages (2026-10-29). Same rule as resultAssemblyLabel() in the JS suite.

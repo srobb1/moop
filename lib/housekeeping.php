@@ -119,6 +119,12 @@ function housekeeping_task_registry(): array {
             'desc'  => 'Summarises each finished day of the System Monitor request log (for the 30-day view), then deletes logs and summaries older than 30 days (they hold usernames and addresses).',
         ],
         [
+            'name'  => 'error_log_retention',
+            'fn'    => 'housekeeping_error_log_retention',
+            'label' => 'Error log: remove entries older than 30 days',
+            'desc'  => 'Trims the admin error log (Admin → Error Logs) to the last 30 days. Entries name the user and address, like the request log.',
+        ],
+        [
             'name'  => 'ensure_cache_dir',
             'fn'    => 'housekeeping_ensure_cache_dir',
             'label' => 'Ensure cache directory',
@@ -439,6 +445,16 @@ function housekeeping_request_metrics_retention() {
     $deleted = moop_metrics_prune();
     if ($deleted > 0) {
         error_log("MOOP housekeeping: pruned $deleted request log file(s) older than " . MOOP_METRICS_RETENTION_DAYS . ' days');
+    }
+}
+
+function housekeeping_error_log_retention() {
+    require_once __DIR__ . '/functions_errorlog.php';
+    $removed = moop_error_log_prune();
+    if ($removed === null) {
+        throw new RuntimeException('could not rewrite the error log to trim old entries');
+    } elseif ($removed > 0) {
+        error_log("MOOP housekeeping: removed $removed error-log entr" . ($removed === 1 ? 'y' : 'ies') . ' older than ' . MOOP_ERROR_LOG_RETENTION_DAYS . ' days');
     }
 }
 
