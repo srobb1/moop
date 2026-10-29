@@ -270,7 +270,7 @@ sub best_accession {
 }
 
 my %NAMESPACE = (
-  Ensembl => { source_url => 'https://www.ensembl.org', accession_url => 'https://www.ensembl.org/Multi/Search/Results?q=' },
+  Ensembl => { source_url => 'https://www.ensembl.org', accession_url => 'https://www.ensembl.org/id/' },
   FlyBase => { source_url => 'https://flybase.org', accession_url => 'https://flybase.org/reports/' },
   RefSeq  => { source_url => 'https://www.ncbi.nlm.nih.gov/refseq/', accession_url => 'https://www.ncbi.nlm.nih.gov/protein/' },
   UniProt => { source_url => 'https://www.uniprot.org', accession_url => 'https://www.uniprot.org/uniprotkb/' },

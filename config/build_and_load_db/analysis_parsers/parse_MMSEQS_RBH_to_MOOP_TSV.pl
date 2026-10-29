@@ -5,7 +5,7 @@ use warnings;
 # MMseqs2 easy-rbh results against one Ensembl reference proteome -> moop TSV (RBBH Homolog).
 #
 #   parse_MMSEQS_RBH_to_MOOP_TSV.pl rbh_mmseq_results.tsv ref.pep.all.fa[.gz] "Ensembl Homo sapiens" \
-#       release-113 https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q="
+#       release-113 https://www.ensembl.org/ "https://www.ensembl.org/id/"
 #
 # Writes <Source_with_underscores>.MMseqs.RBBH.moop.tsv, e.g. Ensembl_Homo_sapiens.MMseqs.RBBH.moop.tsv
 # (matches the loader's *.RBBH.moop.tsv pattern; the eross file is Ensembl_Homo_sapiens.RBBH.moop.tsv)

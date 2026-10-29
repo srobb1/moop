@@ -7,7 +7,7 @@ my $dir = shift; # directory with the rbbh output $dir/*tsv
 my $src = shift; # Ensembl Human
 my $src_version = shift; # release-113
 my $src_url = shift; # https://www.ensembl.org
-my $id_url = shift; # https://www.ensembl.org/Multi/Search/Results?q=
+my $id_url = shift; # https://www.ensembl.org/id/
 my $desc_file = shift; # OPTIONAL: hit_id<TAB>description<TAB>symbol table.
                        # Defaults to $dir/desc.txt (where the old RBBH runs left it).
                        # The rbh_eross runs do NOT leave a desc.txt, so the caller

@@ -429,7 +429,7 @@ make_diamond_moop() {
     fi
     ls -l tophit.tsv
     perl "$REPO/analysis_parsers/parse_DIAMOND_to_MOOP_TSV.pl" tophit.tsv \
-      "Ensembl $ORG" "$VERSION" https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q="
+      "Ensembl $ORG" "$VERSION" https://www.ensembl.org/ "https://www.ensembl.org/id/"
   done
   shopt -u nullglob
 }
@@ -616,7 +616,7 @@ make_rbbh_moop() {
     ## rbh_eross is reciprocal_alignment.py over DIAMOND: "(DIAMOND RBH)" keeps its source apart from the
     ## DIAMOND homologs file's "Ensembl $ORG" (same name and version would merge the two in the database)
     perl "$REPO/analysis_parsers/parse_RBBH_to_MOOP_TSV.pl" "$RESULTS" "Ensembl $ORG" "$VERSION" \
-      https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q=" "$DESC" "DIAMOND RBH"
+      https://www.ensembl.org/ "https://www.ensembl.org/id/" "$DESC" "DIAMOND RBH"
   done
   shopt -u nullglob
 }
@@ -653,7 +653,7 @@ make_mmseqs_rbh_moop() {
     VERSION=$(awk '{print $NF; exit}' "$RESULTS/db_version.txt" 2>/dev/null)
     echo "Building MMseqs2 RBH moop file for $TARGET_ORG"
     perl "$REPO/analysis_parsers/parse_MMSEQS_RBH_to_MOOP_TSV.pl" "$RESULTS_TSV" "${FASTA[0]}" \
-      "Ensembl $ORG" "${VERSION:-unknown}" https://www.ensembl.org/ "https://www.ensembl.org/Multi/Search/Results?q="
+      "Ensembl $ORG" "${VERSION:-unknown}" https://www.ensembl.org/ "https://www.ensembl.org/id/"
   done
   shopt -u nullglob
 }

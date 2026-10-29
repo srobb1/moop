@@ -6,7 +6,7 @@ my $top_hits = shift; #= '../analysis/BLASTP_UNIPROT_sprot/tophit.tsv';
 my $source = shift; #'SwissProt';
 my $source_version = shift; #'release-113' ;#'2024_06'; #`cat ../analysis/BLASTP_UNIPROT_sprot/db_version.txt`;
 my $source_url = shift; #'https://www.ensembl.org/'; #'https://www.uniprot.org';
-my $annotation_url = shift; #'https://www.ensembl.org/Multi/Search/Results?q=' ;#'https://www.uniprot.org/uniprotkb/';
+my $annotation_url = shift; #'https://www.ensembl.org/id/' ;#'https://www.uniprot.org/uniprotkb/';
 my $annotation_type = 'Homologs'; 
 
 my $date = `date '+%Y-%m-%d' -r $top_hits`; 

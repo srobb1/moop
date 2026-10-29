@@ -77,7 +77,7 @@ while (my $line = <PAIRS>){
 }
 
 foreach my $db (sort keys %hits){
-  my $db_url = "https://www.ensembl.org/Multi/Search/Results?q=";
+  my $db_url = "https://www.ensembl.org/id/";
   if ($db =~ /RefSeq/){
     $db_url = "https://www.ncbi.nlm.nih.gov/search/all/?term=";
   }

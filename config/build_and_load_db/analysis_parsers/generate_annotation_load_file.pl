@@ -28,7 +28,7 @@ my $metadata_file = shift;
 ## Annotation Source: source (ENSEMBL Human,OMA Human)
 ## Annotation Source Version: source_version (release-110)
 ## Annotation Source URL: source_url (https://www.ensembl.org/)
-## Annotation Accession URL: annotation_url (https://www.ensembl.org/Multi/Search/Results?q=)
+## Annotation Accession URL: annotation_url (https://www.ensembl.org/id/)
 ## Annotation Type: annotation_type (Orthologs, Homologs, Domains, Gene Ontology, Gene Families, AI Annotations, Mapping, Publications)
 ## Annotation Creation Date: CALCULATED (based on annotation file date)
 ## ID Accession Accession_Description Score

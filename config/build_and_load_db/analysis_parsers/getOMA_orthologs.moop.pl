@@ -80,7 +80,7 @@ while ( my $line = <OG> ) {
 
 foreach my $ORG (sort keys %hits){
   foreach my $db (sort keys %{$hits{$ORG}}){
-    my $db_url = "https://www.ensembl.org/Multi/Search/Results?q=";
+    my $db_url = "https://www.ensembl.org/id/";
     if ($db =~ /RefSeq/){
       $db_url = "https://www.ncbi.nlm.nih.gov/search/all/?term="; 
     }elsif ($db =~ /UniProt/){
