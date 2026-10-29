@@ -1494,6 +1494,29 @@ sub name_species {
 # ##############################################################################
 # DIAMOND best hits (Swiss-Prot and Ensembl species)
 
+# A DIAMOND table's columns, by name: from its header line when it has one, else the pipeline's older
+# 17-column order. wrap_run_all_v2's runs write the same 17 columns in another order, stitle last, and
+# reading them by position took the alignment length for the E-value (2026-10-29).
+my @DIAMOND_DEFAULT_COLUMNS = qw(qseqid sseqid stitle evalue pident length mismatch gapopen qstart qend sstart send
+                                 bitscore qlen slen qcovhsp scovhsp);
+sub diamond_columns {
+  my ($header) = @_;
+  my @names = defined $header ? split(/\t/, $header) : @DIAMOND_DEFAULT_COLUMNS;
+  return { map { my $index = $_; ($names[$index] => $index) } 0 .. $#names };
+}
+
+# one row's fields by name; undef when the row lacks a column the naming needs
+sub diamond_row {
+  my ($column, @fields) = @_;
+  my %row;
+  foreach my $name (qw(qseqid sseqid stitle evalue pident bitscore qcovhsp scovhsp qstart qend)) {
+    my $index = $column->{$name} // return undef;
+    return undef unless defined $fields[$index];
+    $row{$name} = $fields[$index];
+  }
+  return \%row;
+}
+
 sub collect_diamond {
   my $base = $opt{'diamond-dir'};
   opendir my $dir_handle, $base or die "cant read $base\n";
@@ -1506,23 +1529,24 @@ sub collect_diamond {
     my $file = -e "$base/$db/diamond_results.tsv" ? "$base/$db/diamond_results.tsv" : "$base/$db/diamond_results.tsv.gz";
     my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
     open my $fh, $open or die "cant read $file\n";
+    my $column = diamond_columns();
     my $has_coverage = 0;
     while (my $line = <$fh>) {
       chomp $line;
       if ($line =~ /^qseqid\t/) {
-        $has_coverage = $line =~ /\tscovhsp/ ? 1 : 0;
+        $column = diamond_columns($line);
         next;
       }
       my @fields = split /\t/, $line;
-      my ($query, $subject, $title, $evalue) = @fields[0 .. 3];
+      my ($query, $subject) = @fields[ $column->{qseqid} // 0, $column->{sseqid} // 1 ];
       my $group = group_for($query) or next;
       $any_evidence{$group}{"DIAMOND $db"} = 1;
+      # no coverage, no bitscore (the old 4-column tables): not used at all (see the note below)
+      my $row = diamond_row($column, @fields) or next;
+      $has_coverage = 1;
+      my ($title, $evalue) = @$row{qw(stitle evalue)};
       my %hit = (evalue => $evalue);
-      if (@fields >= 17) {
-        @hit{qw(pident bits qcov tcov qstart qend)} = ($fields[4], $fields[12], $fields[15], $fields[16], $fields[8], $fields[9]);
-        $has_coverage = 1;
-      }
-      next unless @fields >= 17;   # no coverage, no bitscore: not used at all (see the note below)
+      @hit{qw(pident bits qcov tcov qstart qend)} = @$row{qw(pident bitscore qcovhsp scovhsp qstart qend)};
       my $candidate = diamond_candidate($db, $subject, $title);
       next unless $candidate;
       record_search_best($group, "DIAMOND $candidate->{species}", { %hit, %$candidate, id => $query, hit => $subject })
@@ -2677,8 +2701,10 @@ sub read_species_search {
   die "no results in $dir for --closest-species $tag $kind\n" unless $file;
   my $open = $file =~ /\.gz$/ ? "gzip -dc '$file' |" : "< $file";
   open my $fh, $open or die "cant read $file\n";
+  my $column = diamond_columns();
   while (my $line = <$fh>) {
     chomp $line;
+    $column = diamond_columns($line) if $line =~ /^qseqid\t/;
     next if $line =~ /^(?:query|qseqid)\t/ or $line !~ /\S/;
     my @fields = split /\t/, $line;
     my %hit;
@@ -2688,12 +2714,13 @@ sub read_species_search {
       %hit = (id => $fields[0], hit => $fields[1], evalue => $fields[10], bits => $fields[11],
               qcov => 100 * $fields[14], tcov => 100 * $fields[15], description => $title->{$fields[1]} // '');
     } else {
-      # the pipeline's 17 columns: qseqid sseqid stitle evalue ... bitscore qlen slen qcovhsp scovhsp
-      die "$file: expected 17 columns (scripts/closest_species_diamond.sh)\n" unless @fields >= 17;
-      my ($subject_id, $description) = split /\s+/, $fields[2], 2;
-      $title->{$fields[1]} //= $description // '';
-      %hit = (id => $fields[0], hit => $fields[1], evalue => $fields[3], bits => $fields[12],
-              qcov => $fields[15], tcov => $fields[16], description => $description // '');
+      # the 17 columns, by the header's names when there is one (diamond_columns)
+      my $row = diamond_row($column, @fields)
+        or die "$file: expected the 17-column output (scripts/closest_species_diamond.sh)\n";
+      my ($subject_id, $description) = split /\s+/, $row->{stitle}, 2;
+      $title->{ $row->{sseqid} } //= $description // '';
+      %hit = (id => $row->{qseqid}, hit => $row->{sseqid}, evalue => $row->{evalue}, bits => $row->{bitscore},
+              qcov => $row->{qcovhsp}, tcov => $row->{scovhsp}, description => $description // '');
     }
     my $group = group_for($hit{id}) or next;
     $any_evidence{$group}{"$kind $tag"} = 1;
