@@ -59,6 +59,8 @@ $age      = $now_file ? time() - (int) $now_file['generated'] : null;
 
 $max_children = moop_monitor_fpm_max_children();
 $ranges       = $config->getArray('auto_login_ip_ranges', []);
+// This server's own address: requests from it are tests and health checks, not visitors.
+$self_ips     = array_values(array_filter([$_SERVER['SERVER_ADDR'] ?? '']));
 
 // ── "Right now" tiles. Thresholds are deliberately plain; each tile says what it means. ──
 $tiles = [];
@@ -115,7 +117,7 @@ foreach ($points as $p) {
     ];
 }
 
-$traffic = moop_monitor_traffic($points);
+$traffic = moop_monitor_traffic($points, $ranges, $self_ips);
 if ($range === '30d') {
     // 29 finished days from housekeeping's daily summaries + today, read live. Re-reading a month
     // of request lines on every page load would not scale with traffic.
@@ -137,7 +139,9 @@ $pages7  = $range === '7d' ? $pages : moop_metrics_summarise(moop_metrics_rows_s
 $heavy   = moop_monitor_heavy_list();
 $cap     = moop_monitor_capacity($points, $pages7, $now, $max_children);
 $recs    = moop_monitor_recommendations($cap, $pages7, $heavy, $now, $traffic, $sync, $max_children,
-                                         !empty($config->getArray('turnstile', [])['enabled']), $ranges);
+                                         !empty($config->getArray('turnstile', [])['enabled']), $ranges,
+                                         ['24h' => 'in the last 24 hours', '7d' => 'in the last 7 days', '30d' => 'in the last 30 days'][$range],
+                                         $self_ips);
 
 echo render_display_page(
     __DIR__ . '/pages/system_monitor.php',
@@ -153,6 +157,7 @@ echo render_display_page(
         'pages'        => $pages,
         'max_children' => $max_children,
         'ranges'       => $ranges,
+        'self_ips'     => $self_ips,
         'heavy'        => $heavy,
         'cap'          => $cap,
         'recs'         => $recs,

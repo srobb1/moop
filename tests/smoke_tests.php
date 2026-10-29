@@ -2688,6 +2688,19 @@ ok($_tr['req'] === 15 && $_tr['s429'] === 1 && $_tr['cls']['page'] === 11 && $_t
    'traffic sums requests, refusals, classes and user-agent kinds across samples');
 ok(array_keys($_tr['ips']) === ['2.2.2.2', '1.1.1.1'] && $_tr['ips']['2.2.2.2'] === 8,
    'busiest addresses are merged across samples and sorted');
+// Origin: only a public address outside the auto-login ranges is "internet". On 2026-10-28 the
+// server's own tests on 127.0.0.1 were counted as outside and reported as crawlers.
+ok(moop_monitor_ip_origin('127.0.0.1', $_rg) === 'self' && moop_monitor_ip_origin('172.16.9.9', $_rg, ['172.16.9.9']) === 'self'
+   && moop_monitor_ip_origin('10.0.50.35', $_rg) === 'private' && moop_monitor_ip_origin('192.168.1.4', $_rg) === 'private'
+   && moop_monitor_ip_origin('172.16.2.52', $_rg) === 'internal' && moop_monitor_ip_origin('8.8.8.8', $_rg) === 'internet'
+   && moop_monitor_ip_origin('not-an-ip', $_rg) === 'private',
+   'origin: loopback = this server, 10.x/192.168.x = private network, auto-login = internal, public = internet; garbage never internet');
+$_trn = moop_monitor_traffic([
+    ['req' => 10, 'ua' => ['script' => 10], 'top_ips' => [['8.8.8.8', 10]], 'internet' => ['req' => 4, 'ua' => ['ai' => 3, 'none' => 1], 'top_ips' => [['8.8.8.8', 4]]]],
+    ['req' => 2, 'ua' => ['browser' => 2], 'top_ips' => [], 'internet' => ['req' => 0, 'ua' => [], 'top_ips' => []]],
+]);
+ok($_trn['internet']['measured'] && $_trn['internet']['req'] === 4 && $_trn['internet']['ua']['ai'] === 3 && $_trn['internet']['ips']['8.8.8.8'] === 4,
+   'internet-only counts are summed separately from all traffic');
 ok(moop_monitor_fmt_ms(850) === '850 ms' && moop_monitor_fmt_ms(4200) === '4.2 s' && moop_monitor_fmt_bytes(3565158) === '3.4 MB',
    'durations and sizes read as a person would say them');
 
@@ -2722,6 +2735,28 @@ ok(count($_adds) === 1 && array_values($_adds)[0]['script'] === 'tools/parent.ph
 ok($_recs[0]['level'] === 'critical' && strpos($_recs[0]['title'], 'All PHP workers were busy') === 0 && strpos($_recs[0]['detail'], 'raise pm.max_children toward 96') !== false,
    'saturation is first, and says workers can be raised when RAM allows');
 ok(strpos($_titles, 'tools/organism.php failed 1 time') !== false, '5xx errors are reported per page');
+// Exposure: the 2026-10-28 false alarm — thousands of script requests, all from this server and the
+// private network — must say nothing. Internet traffic must be named, with the addresses.
+$_rg2 = [['start' => '172.16.0.0', 'end' => '172.16.255.255']];
+$_exp = fn($tr, $ts = false) => implode(' | ', array_column(moop_monitor_recommendations($_cap, ['by_script' => []], [], ['disks' => []], $tr, null, 50, $ts, $_rg2, 'in the last 24 hours'), 'title'));
+$_local = moop_monitor_traffic([['req' => 5500, 'ua' => ['script' => 5500], 'top_ips' => [['172.16.2.52', 3600], ['127.0.0.1', 1850], ['10.0.50.35', 50]]]], $_rg2);
+$_mix = moop_monitor_traffic([['req' => 9, 'top_ips' => [['8.8.8.8', 9]]],
+                              ['req' => 1, 'top_ips' => [], 'internet' => ['req' => 1, 'ua' => ['browser' => 1], 'top_ips' => [['9.9.9.9', 1]]]]], $_rg2);
+ok(!$_mix['internet']['measured'] && $_mix['internet']['req'] === 10 && $_mix['internet']['ips']['8.8.8.8'] === 9,
+   'the day after a collector upgrade: older records are estimated from their addresses, never counted as zero');
+ok(strpos($_exp($_local), 'internet') === false && strpos($_exp($_local), 'Crawlers') === false,
+   'old-format data: loopback, private and internal addresses never count as reaching the site');
+$_local['internet'] = ['measured' => true, 'req' => 0, 'ua' => [], 'ips' => []];
+ok(strpos($_exp($_local), 'internet') === false, 'measured: no internet requests, no exposure warning');
+$_crawl = ['ips' => [], 'ua' => ['ai' => 1500], 'internet' => ['measured' => true, 'req' => 1600, 'ua' => ['ai' => 1500, 'browser' => 100], 'ips' => ['8.8.8.8' => 1600]]];
+ok(strpos($_exp($_crawl), 'Crawlers on the internet are reaching the site') !== false, 'internet crawlers over 1,000 → turn on the browser check');
+ok(strpos($_exp($_crawl, true), 'Crawlers on the internet') === false && strpos($_exp($_crawl, true), 'The site is reachable from the internet') !== false,
+   'with Turnstile on, still say the site is reachable — just not "turn it on"');
+$_few = ['ips' => [], 'ua' => [], 'internet' => ['measured' => true, 'req' => 3, 'ua' => ['browser' => 3], 'ips' => ['8.8.8.8' => 3]]];
+$_few_r = moop_monitor_recommendations($_cap, ['by_script' => []], [], ['disks' => []], $_few, null, 50, false, $_rg2, 'in the last 24 hours');
+$_few_d = implode(' ', array_column($_few_r, 'detail'));
+ok(strpos($_few_d, '3 requests from public internet addresses in the last 24 hours') !== false && strpos($_few_d, '8.8.8.8 (3)') !== false
+   && strpos($_few_d, 'ask IT') !== false, 'any internet traffic is reported with its window, the addresses, and what to do');
 
 // ----------------------------------------------------------------------------
 group('System Monitor: what people use (organisms / assemblies / gene sets), 30-day merge');

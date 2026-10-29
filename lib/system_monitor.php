@@ -110,12 +110,46 @@ function moop_monitor_ip_internal(string $ip, array $ranges): bool {
 }
 
 /**
+ * Where a request came from, in words an admin can act on:
+ *   'self'     — this server itself (loopback, or one of $self): tests, health checks
+ *   'private'  — a private-network address (10.x, 172.16–31.x, 192.168.x): your own network,
+ *                cannot arrive from the internet, but outside the auto-login ranges
+ *   'internal' — inside an auto-login range (institute network, VPN)
+ *   'internet' — anything else: a public address on the internet
+ * Only 'internet' means the site is reachable from outside. Until 2026-10-29 everything that was
+ * not 'internal' was called outside, so this server's own tests on 127.0.0.1 were reported as
+ * "crawlers reaching the site".
+ */
+function moop_monitor_ip_origin(string $ip, array $ranges, array $self = []): string {
+    if (filter_var($ip, FILTER_VALIDATE_IP) === false) return 'private';   // unparseable: never claim "internet"
+    if (in_array($ip, $self, true) || $ip === '::1' || strpos($ip, '127.') === 0) return 'self';
+    if (moop_monitor_ip_internal($ip, $ranges)) return 'internal';
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) return 'private';
+    return 'internet';
+}
+
+/** Badge text and explanation for each origin — the Busiest addresses table and the guide use these. */
+function moop_monitor_origin_words(): array {
+    return [
+        'self'     => ['This server', 'The server talking to itself — tests and health checks. Not visitors.'],
+        'private'  => ['Private network', 'A private address (10.x, 172.16–31.x, 192.168.x). It cannot come from the internet — it is on your own network, just outside the auto-login ranges.'],
+        'internal' => ['Internal', 'Inside the auto-login ranges (institute network, VPN). Never rate-limited.'],
+        'internet' => ['Internet', 'A public internet address. If the site is meant to be internal-only, it should not appear here.'],
+    ];
+}
+
+/**
  * Add up the collector's per-minute (24 h) or per-hour (7 d) records for the traffic tables:
  * requests by class, status, user-agent kind, 429s, bytes, and the busiest addresses.
  */
-function moop_monitor_traffic(array $points): array {
+function moop_monitor_traffic(array $points, array $ranges = [], array $self = []): array {
     $t = ['req' => 0, 'bytes' => 0, 's429' => 0, 'fpm_max_children_reached' => 0,
-          'cls' => [], 'status' => [], 'ua' => [], 'limited' => [], 'ips' => []];
+          'cls' => [], 'status' => [], 'ua' => [], 'limited' => [], 'ips' => [],
+          // Requests from public internet addresses only. Records from before collector v2 have no
+          // such count; for those it is estimated from their busiest addresses (a lower bound, and
+          // with no client breakdown), and 'measured' turns false. A window mixing old and new
+          // records — the first day after an upgrade — is therefore never undercounted to zero.
+          'internet' => ['measured' => true, 'req' => 0, 'ua' => [], 'ips' => []]];
     foreach ($points as $p) {
         foreach (['req', 'bytes', 's429', 'fpm_max_children_reached'] as $k) $t[$k] += (int) ($p[$k] ?? 0);
         foreach (['cls', 'status', 'ua', 'limited'] as $k) {
@@ -125,7 +159,23 @@ function moop_monitor_traffic(array $points): array {
             [$ip, $n] = $pair;
             $t['ips'][$ip] = ($t['ips'][$ip] ?? 0) + (int) $n;
         }
+        $net = &$t['internet'];
+        if (isset($p['internet'])) {
+            $net['req'] += (int) ($p['internet']['req'] ?? 0);
+            foreach (($p['internet']['ua'] ?? []) as $name => $n) $net['ua'][$name] = ($net['ua'][$name] ?? 0) + (int) $n;
+            foreach (($p['internet']['top_ips'] ?? []) as $pair) $net['ips'][$pair[0]] = ($net['ips'][$pair[0]] ?? 0) + (int) $pair[1];
+        } else {
+            $net['measured'] = false;
+            foreach (($p['top_ips'] ?? []) as $pair) {
+                if (moop_monitor_ip_origin((string) $pair[0], $ranges, $self) !== 'internet') continue;
+                $net['req'] += (int) $pair[1];
+                $net['ips'][$pair[0]] = ($net['ips'][$pair[0]] ?? 0) + (int) $pair[1];
+            }
+        }
+        unset($net);
     }
+    arsort($t['internet']['ua']);
+    arsort($t['internet']['ips']);
     foreach (['cls', 'status', 'ua', 'limited', 'ips'] as $k) arsort($t[$k]);
     $t['ips'] = array_slice($t['ips'], 0, 20, true);
     return $t;
@@ -227,7 +277,8 @@ function moop_monitor_capacity(array $points, array $pages, ?array $now, ?int $m
  * @param array $pages7  request-log summary over 7 days (stable enough to judge pages on)
  */
 function moop_monitor_recommendations(array $cap, array $pages7, array $heavy, ?array $now, array $traffic,
-                                      ?array $sync, ?int $max_children, bool $turnstile_on, array $ranges): array {
+                                      ?array $sync, ?int $max_children, bool $turnstile_on, array $ranges,
+                                      string $span = 'in this period', array $self = []): array {
     $out = [];
     $add = function ($level, $title, $detail, $action = null) use (&$out) {
         $out[] = ['level' => $level, 'title' => $title, 'detail' => $detail, 'action' => $action];
@@ -293,13 +344,30 @@ function moop_monitor_recommendations(array $cap, array $pages7, array $heavy, ?
         }
     }
 
-    // ── Exposure ──
-    $outside = 0;
-    foreach ($traffic['ips'] as $ip => $n) if (!moop_monitor_ip_internal((string) $ip, $ranges)) $outside += $n;
-    if (!$turnstile_on && ($traffic['ua']['ai'] ?? 0) + ($traffic['ua']['script'] ?? 0) > 1000 && $outside > 1000) {
-        $add('warning', 'Crawlers are reaching the site — consider turning on the browser check',
-            number_format($outside) . ' requests from outside addresses, ' . number_format(($traffic['ua']['ai'] ?? 0)) . ' from AI crawlers. '
-            . 'Turnstile (Site Configuration) stops mass crawlers before any page is built; logged-in and internal users never see it.');
+    // ── Exposure: is anyone on the public internet reaching the site? ──
+    // Counted only from public addresses — never this server, a private address, or an auto-login
+    // range (moop_monitor_traffic). Where older records had to be estimated there is no client
+    // breakdown, so make no claim about what kind of client it was.
+    $net = $traffic['internet'] ?? ['measured' => true, 'req' => 0, 'ua' => [], 'ips' => []];
+    if ($net['req'] > 0) {
+        $top = array_slice($net['ips'], 0, 3, true);
+        $who = implode(', ', array_map(fn($ip, $n) => "{$ip} (" . number_format($n) . ')', array_keys($top), $top));
+        $n_addr = count($net['ips']);
+        $from = ($net['measured'] ? '' : 'At least ') . number_format($net['req']) . ' request' . ($net['req'] === 1 ? '' : 's')
+              . " from public internet addresses {$span}"
+              . ($n_addr ? ' — busiest: ' . $who . ($n_addr > 3 ? ', and ' . ($n_addr - 3) . ' more' : '') : '') . '.';
+        $auto = $net['measured'] ? (int) (($net['ua']['ai'] ?? 0) + ($net['ua']['script'] ?? 0)) : null;
+        if ($auto !== null && $auto > 1000 && !$turnstile_on) {
+            $add('warning', 'Crawlers on the internet are reaching the site — turn on the browser check',
+                $from . ' ' . number_format($auto) . ' of them came from scripts or AI crawlers ('
+                . number_format($net['ua']['ai'] ?? 0) . ' AI). '
+                . 'To stop them: Admin → Site Configuration → Turnstile. Logged-in and internal users never see the check.');
+        } else {
+            $add('warning', 'The site is reachable from the internet',
+                $from . ($auto !== null ? ' ' . number_format($auto) . ' came from scripts or AI crawlers.' : '')
+                . ' If the site should be internal-only, ask IT why these addresses can reach it. '
+                . 'If it is meant to be public, nothing to do; turn on Turnstile (Site Configuration) if crawlers become a load.');
+        }
     }
     foreach (($now['disks'] ?? []) as $label => $d) {
         if ($d['used_pct'] >= 80) {

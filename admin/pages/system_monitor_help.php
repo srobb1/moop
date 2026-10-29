@@ -12,8 +12,8 @@
 $sysmon_help = [
     'recs'      => 'What to act on, most serious first. “Nothing to act on” is the normal state. Each item says what it rests on, so you can check it.',
     'charts'    => 'How things moved over the chosen window. Look for long stretches high up, not short spikes. Hover or use the arrow keys for exact values.',
-    'traffic'   => 'Every request the web server answered, including images and scripts — who sent them (browsers, search engines, AI crawlers, scripts) and what they asked for.',
-    'addresses' => 'The addresses that sent the most requests. One outside address far above the rest is usually a crawler; Internal ones are your own people.',
+    'traffic'   => 'Every request the web server answered, including images and scripts — what kind of program sent it, and what it asked for. Each row is explained under “Traffic” in How to read this page.',
+    'addresses' => 'The addresses that sent the most requests, labelled This server, Private network, Internal or Internet. Only Internet addresses are outside your network. A single Internet address far above the rest is usually a crawler.',
     'usage'     => 'Which organisms, assemblies and gene sets people open, search, BLAST and download — your own people and the public counted separately.',
     'pages'     => 'What each page costs the server. Sort by any column. Big “Total time” = where the server spends its effort; big “Slowest 5%” = what feels slow to people.',
     'warmcold'  => 'Whether pages found their data already in RAM (warm, fast) or had to read it from disk (cold, slower). Many cold requests = the databases do not fit in RAM.',
@@ -52,6 +52,28 @@ $sysmon_guide = help_modal(
             ['label' => 'Working set', 'text' => 'The part of the databases people actually use. If it fits in RAM, the site stays warm; that decides how much RAM is enough.'],
             ['label' => '429 / refused', 'text' => 'A request turned away because one address asked too fast. Normal for crawlers; a real person should never see it.'],
             ['label' => 'Internal / public', 'text' => 'Internal: the institute network, VPN, and anyone logged in. Public: everyone else.'],
+            ['label' => 'User agent', 'text' => 'The name a program gives when it asks for something — “Chrome on a Mac”, “Googlebot”, “curl”. The program chooses it, so a crawler can claim to be a browser; treat it as a label, not proof.'],
+        ]],
+        ['heading' => 'Traffic — who is visiting (one row per kind of program)', 'cards' => [
+            ['label' => 'Web browsers', 'text' => 'Chrome, Firefox, Safari, Edge — people using the site. Includes the pictures, styles and scripts each page loads, so one page view counts several times.'],
+            ['label' => 'Search engines', 'text' => 'Google, Bing, Baidu, Yandex, DuckDuckGo, Apple and similar, indexing pages for search results. Respect robots.txt.'],
+            ['label' => 'AI crawlers', 'text' => 'Bots that collect pages to train or feed AI: GPTBot/ChatGPT, ClaudeBot, Perplexity, CommonCrawl (CCBot), Bytespider, Amazonbot, Meta and others. Zero is normal on an internal-only site.'],
+            ['label' => 'Scripts & automated tools', 'text' => 'Command-line tools and code: curl, wget, Python, Java, Go, Node, headless browsers used for testing, and anything calling itself a bot, crawler or spider. On this server most of it is MOOP’s own checks and tests — look at Busiest addresses to see where it came from.'],
+            ['label' => 'Unrecognised programs', 'text' => 'Sent a name that matches none of the rows above: unusual or old browsers, phone apps, link previewers (Slack, Teams), monitoring services. Usually small.'],
+            ['label' => 'Did not say what it is', 'text' => 'Sent no user agent at all. Every browser sends one, so this is a bare script, a health check or a port scanner. A handful is normal; thousands from Internet addresses are worth a look.'],
+        ]],
+        ['heading' => 'Traffic — what they asked for', 'cards' => [
+            ['label' => 'Pages', 'text' => 'Full pages MOOP builds: gene pages, search, organism pages, admin pages. The most expensive kind for the server.'],
+            ['label' => 'AJAX / API', 'text' => 'Small background requests a page makes after it loads — search results, dropdown lists, annotation lookups.'],
+            ['label' => 'Genome browser', 'text' => 'JBrowse asking MOOP for its settings and track lists. (The track data itself comes from the tracks server.)'],
+            ['label' => 'Exports, downloads, BLAST', 'text' => 'The heavy group: costly pages that get a stricter per-address limit. Listed under Heavy pages.'],
+            ['label' => 'Static files', 'text' => 'Files sent as they are — styles, JavaScript, images, fonts, the JBrowse app. Cheap for the server.'],
+        ]],
+        ['heading' => 'Busiest addresses — the labels', 'cards' => [
+            ['label' => 'This server', 'text' => 'The server talking to itself (127.0.0.1, or its own address): tests, health checks, the monitor. Not visitors — ignore it.'],
+            ['label' => 'Private network', 'text' => 'A private address (10.x, 172.16–31.x, 192.168.x). These cannot come from the internet — it is someone on your own network, just outside the auto-login ranges (often VPN or another building).'],
+            ['label' => 'Internal', 'text' => 'Inside the auto-login ranges in Site Configuration (institute network, VPN). Never rate-limited.'],
+            ['label' => 'Internet', 'text' => 'A public address on the internet. If the site is meant to be internal-only and you see these, ask IT how they reach it. Recommendations warns about them.'],
         ]],
         ['heading' => 'Responses (status codes)', 'cards' => [
             ['label' => '2xx', 'text' => 'Success — the page or file was sent.'],
@@ -71,7 +93,7 @@ $sysmon_guide = help_modal(
             ['label' => 'Add RAM', 'text' => 'Many cold requests with high disk wait, memory above about 90%, any swapping, or all PHP workers busy with no room for more.'],
             ['label' => 'Add CPUs', 'text' => 'CPU above 80% for long stretches while memory is fine — after checking Busiest addresses for a crawler.'],
             ['label' => 'Add PHP workers', 'text' => '“All PHP workers busy” keeps appearing and Capacity shows more fit in RAM. The steps are in the Capacity section.'],
-            ['label' => 'A crawler', 'text' => 'One outside address or many AI crawlers near the top of Traffic. Rate limits already slow them; Turnstile (Site Configuration) stops them.'],
+            ['label' => 'A crawler', 'text' => 'One Internet address far above the rest in Busiest addresses, or many AI crawlers in Traffic. Rate limits already slow them; Turnstile (Site Configuration) stops them. Scripts from This server or Private network addresses are not crawlers.'],
         ]],
     ],
     ['intro' => 'What each part of this page tells you, what normal looks like here, and when to act.']

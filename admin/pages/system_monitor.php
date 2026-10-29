@@ -14,8 +14,10 @@ $level_word = ['good' => 'OK', 'warning' => 'Watch', 'critical' => 'High', 'unkn
 $span = ['24h' => 'last 24 hours', '7d' => 'last 7 days', '30d' => 'last 30 days'][$range];
 $per  = ['24h' => 'minute', '7d' => 'hour', '30d' => 'day'][$range];
 $pct = fn($n, $total) => $total > 0 ? round(100 * $n / $total) . '%' : '—';
-$ua_words = ['browser' => 'Browsers', 'search' => 'Search engines', 'ai' => 'AI crawlers', 'script' => 'Scripts & automation',
-             'other' => 'Other', 'none' => 'No user agent'];
+// Row labels. What each one includes is spelled out in the guide (system_monitor_help.php) — keep both in step.
+$ua_words = ['browser' => 'Web browsers', 'search' => 'Search engines', 'ai' => 'AI crawlers', 'script' => 'Scripts & automated tools',
+             'other' => 'Unrecognised programs', 'none' => 'Did not say what it is'];
+$origin_words = moop_monitor_origin_words();
 $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome browser', 'heavy' => 'Exports, downloads, BLAST',
               'static' => 'Static files (CSS, JS, images)'];
 ?>
@@ -215,13 +217,16 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
         <div class="card-header adm-head"><h5 class="mb-0">Busiest addresses, <?= $span ?> <?= $sysmon_i('addresses') ?></h5></div>
         <div class="card-body">
           <p class="small text-muted">From the web server's log — every request, including static files.
-            <em>Internal</em> = inside the auto-login ranges, never rate-limited.</p>
+            Only <strong>Internet</strong> addresses come from outside your network; the guide
+            (How to read this page) explains each label.</p>
           <table class="table table-sm sysmon-num">
             <thead><tr><th>Address</th><th></th><th class="text-end">Requests</th></tr></thead>
             <tbody>
             <?php foreach ($traffic['ips'] as $ip => $n): ?>
               <tr><td><code><?= $h($ip) ?></code></td>
-                  <td><?= moop_monitor_ip_internal((string) $ip, $ranges) ? '<span class="badge bg-light text-dark border">Internal</span>' : '' ?></td>
+                  <?php $o = moop_monitor_ip_origin((string) $ip, $ranges, $self_ips); [$o_word, $o_why] = $origin_words[$o]; ?>
+                  <td><span class="badge <?= $o === 'internet' ? 'bg-warning-subtle text-dark border border-warning' : 'bg-light text-dark border' ?>"
+                            title="<?= $h($o_why) ?>"><?= $h($o_word) ?></span></td>
                   <td class="text-end"><?= number_format($n) ?></td></tr>
             <?php endforeach; ?>
             <?php if (!$traffic['ips']): ?><tr><td colspan="3" class="text-muted">No traffic recorded yet.</td></tr><?php endif; ?>

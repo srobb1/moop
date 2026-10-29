@@ -30,6 +30,7 @@ Security — root working beside a directory the web server can write:
   * Working state lives in /var/lib/moop-monitor (root only).
 """
 
+import ipaddress
 import json
 import os
 import re
@@ -287,9 +288,29 @@ def ua_kind(ua):
     return 'other'
 
 
-def summarise_access(lines, classes):
-    out = {'req': 0, 'bytes': 0, 'status': {}, 'cls': {}, 'ua': {}, 's429': 0}
+def from_internet(ip, ranges):
+    """True only for a public address outside MOOP's internal (auto-login) ranges. Loopback and
+    private addresses (127.x, 10.x, 172.16-31.x, 192.168.x) cannot arrive from the internet, so
+    they never count — on 2026-10-28 this server's own tests on 127.0.0.1 were reported as
+    'crawlers reaching the site'."""
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    if not a.is_global:
+        return False
+    if a.version == 4:
+        n = int(a)
+        if any(ip_int(s) <= n <= ip_int(e) for s, e in ranges):
+            return False
+    return True
+
+
+def summarise_access(lines, classes, ranges):
+    out = {'req': 0, 'bytes': 0, 'status': {}, 'cls': {}, 'ua': {}, 's429': 0,
+           'internet': {'req': 0, 'ua': {}}}
     ips = {}
+    net_ips = {}
     for line in lines:
         m = LOG_RE.match(line)
         if not m:
@@ -306,8 +327,28 @@ def summarise_access(lines, classes):
         k = ua_kind(ua)
         out['ua'][k] = out['ua'].get(k, 0) + 1
         ips[ip] = ips.get(ip, 0) + 1
+        if from_internet(ip, ranges):
+            out['internet']['req'] += 1
+            out['internet']['ua'][k] = out['internet']['ua'].get(k, 0) + 1
+            net_ips[ip] = net_ips.get(ip, 0) + 1
     out['top_ips'] = sorted(ips.items(), key=lambda kv: -kv[1])[:TOP_IPS_PER_MINUTE]
+    out['internet']['top_ips'] = sorted(net_ips.items(), key=lambda kv: -kv[1])[:TOP_IPS_PER_MINUTE]
     return out
+
+
+def rollup_internet(records):
+    """Sum the internet-only counts of minute/hour records (absent in records from before v2)."""
+    agg = {'req': 0, 'ua': {}}
+    ips = {}
+    for r in records:
+        net = r.get('internet') or {}
+        agg['req'] += net.get('req', 0)
+        for kk, v in (net.get('ua') or {}).items():
+            agg['ua'][kk] = agg['ua'].get(kk, 0) + v
+        for ip, n in net.get('top_ips', []):
+            ips[ip] = ips.get(ip, 0) + n
+    agg['top_ips'] = sorted(ips.items(), key=lambda kv: -kv[1])[:20]
+    return agg
 
 
 def summarise_errors(lines):
@@ -474,6 +515,8 @@ def rollup_hour(minutes):
         for ip, n in m.get('top_ips', []):
             ips[ip] = ips.get(ip, 0) + n
     h['top_ips'] = sorted(ips.items(), key=lambda kv: -kv[1])[:20]
+    if any('internet' in m for m in minutes):
+        h['internet'] = rollup_internet(minutes)
     return h
 
 
@@ -505,6 +548,8 @@ def rollup_day(hours):
         for ip, n in h.get('top_ips', []):
             ips[ip] = ips.get(ip, 0) + n
     d['top_ips'] = sorted(ips.items(), key=lambda kv: -kv[1])[:20]
+    if any('internet' in h for h in hours):
+        d['internet'] = rollup_internet(hours)
     return d
 
 
@@ -521,7 +566,9 @@ def main():
     rec.update(sample_fpm(state))
     rec.update(sample_disk(state, os.path.realpath(os.path.join(site, 'organisms'))))
     rec.update(sample_databases(site))
-    acc = summarise_access(read_new_lines(ACCESS_LOG, state, 'access_pos'), load_classes())
+    wanted, _ = read_wanted(cache, site)
+    acc = summarise_access(read_new_lines(ACCESS_LOG, state, 'access_pos'), load_classes(),
+                           wanted['ranges'] if wanted else [])
     rec.update(acc)
     rec['limited'] = summarise_errors(read_new_lines(ERROR_LOG, state, 'error_pos'))
 
@@ -555,6 +602,7 @@ def main():
     for d in days:
         if d['t'] < minute - 30 * 86400:
             d.pop('top_ips', None)
+            (d.get('internet') or {}).pop('top_ips', None)
     days.sort(key=lambda d: d['t'])
     state['days'] = days
 
