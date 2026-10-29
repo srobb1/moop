@@ -310,11 +310,15 @@ fi
 ## MOOP_SKIP_AUDIT=1 skips it (not for publishing).
 if [ "${MOOP_SKIP_AUDIT:-0}" != "1" ]; then
   step "Auditing $THIS_ORG: annotation files against the database"
+  ## every gene set IN THE DATABASE, not only the ones this run loaded: a narrowed run
+  ## (Danio_rerio GRCz11 20260404) leaves its siblings' rows in place, and auditing them
+  ## against this run's files alone failed every source (2026-10-29, job 5487998).
+  ## data/ names an assembly by its genome accession, as the database does.
   AUDIT_DIRS=()
-  for entry in "${DATA_GENESETS[@]}"; do
-    IFS=$'\t' read -r asm gs <<< "$entry"
+  while IFS=$'\t' read -r asm gs; do
     AUDIT_DIRS+=("$ORG_DATA/$asm/$gs")
-  done
+  done < <(sqlite3 -separator $'\t' "$DB" \
+             "SELECT g.genome_accession, gs.gene_set_name FROM gene_set gs JOIN genome g ON g.genome_id = gs.genome_id ORDER BY 1, 2")
   if ! python3 -I "$SCRIPTS/audit_files_vs_db.py" "$DB" "${AUDIT_DIRS[@]}" --report "$ORG_DATA/audit_files_vs_db.tsv"; then
     echo "ERROR: $THIS_ORG's database does not match its annotation files (above; $ORG_DATA/audit_files_vs_db.tsv)." >&2
     echo "       Not copying to moop." >&2
