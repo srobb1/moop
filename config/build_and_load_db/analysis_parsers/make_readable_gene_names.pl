@@ -13,6 +13,8 @@
 #   name_from  the gene set's own annotation (RefSeq, Ensembl, ...), MOOP, or none
 #   method     how MOOP named it (OMA human ortholog, PANTHER family, ...); "Source name retained" for the source's own name
 #   evidence   the accession the MOOP name rests on (human OMA id, PANTHER family, InterPro entry, ...)
+# No cell is blank: an unnamed gene has description "No name" and name_from "none"; anything else
+# without a value is N/A.
 #
 # LAYOUT: constants at file level, all work in main(), main(); is the last line (the file-scope
 # trap, tests/check_perl_file_scope.pl).
@@ -98,7 +100,10 @@ sub main {
     (my $bare = $id) =~ s/:(?:cds|pep)$//;
     my $entry = $name_of{$id} // $name_of{$bare} // $gene_name{$gene} // ['', ''];
     my ($symbol, $description) = symbol_and_description($entry->[0]);
-    print join("\t", $gene, $type_of{$id}, $id, $symbol, $description, provenance(@$entry)), "\n";
+    my @row = ($gene, $type_of{$id}, $id, $symbol, $description, provenance(@$entry));
+    # no blank cells (the readers asked, 2026-10-29): an unnamed gene says so, anything else empty is N/A
+    $row[4] = 'No name' if $row[4] eq '' and $row[5] eq 'none';
+    print join("\t", map { my $cell = $_; $cell eq '' ? 'N/A' : $cell } @row), "\n";
   }
 }
 
