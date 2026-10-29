@@ -11,7 +11,7 @@
 # Columns: gene_id  type  id  symbol  description  name_from  method  evidence
 #   type       gene, mRNA, CDS or protein (from features.tsv, the database's own list)
 #   name_from  the gene set's own annotation (RefSeq, Ensembl, ...), MOOP, or none
-#   method     how MOOP named it (OMA human ortholog, PANTHER family, ...); blank for the source's own name
+#   method     how MOOP named it (OMA human ortholog, PANTHER family, ...); N/A for the source's own name
 #   evidence   the accession the MOOP name rests on (human OMA id, PANTHER family, InterPro entry, ...)
 #
 # LAYOUT: constants at file level, all work in main(), main(); is the last line (the file-scope
@@ -35,7 +35,8 @@ my %METHOD = (
 sub provenance {
   my ($description, $note) = @_;
   return ('none', '', '') if $description eq '' or $description eq 'None';
-  return ($note ne '' ? $note : 'the gene set', '', '') unless $note =~ /\|/;   # the source's own name: "RefSeq"
+  # the source's own name ("RefSeq"): no MOOP method or evidence, said as N/A rather than left blank
+  return ($note ne '' ? $note : 'the gene set', 'N/A', 'N/A') unless $note =~ /\|/;
   my ($source, $kind, undef, $accession) = split /\|/, $note;
   return ('none', '', '') if $source eq 'none';
   my $method = $METHOD{$source};
