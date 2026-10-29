@@ -31,7 +31,8 @@ GENE_SET=$3
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 SCRIPTS=$REPO/scripts
-DATA=$REPO/data
+## the organism job may build in a scratch copy of data/ (MOOP_DATA, moop_process_genome_data_v2.sbatch)
+DATA=${MOOP_DATA:-$REPO/data}
 
 ## Overridable so a moved tree needs no code edit. It moved once already:
 ## genomes_v2 -> genomes/v2, and this value was hardcoded in seven files.
@@ -41,6 +42,14 @@ source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
 GENESET_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY/$GENE_SET
 GENOME_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY
 ANALYSIS_DIR=$ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET
+## DIAMOND results: our own rerun against the canonical-only Ensembl proteins when this gene set has one
+## (DIAMOND_ANNOTATIONS, run_diamond_all.sh with make_canonical_peptide_dbs.sh), else the annotation
+## run's. The reference databases there hold every isoform (2026-10-29), which crowds a gene's hits
+## with one partner gene's isoforms. DIAMOND_ANNOTATIONS= (empty) uses the annotation run's alone.
+: "${DIAMOND_ANNOTATIONS=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/annotations/SBGENOMES_canonical_diamond_20261029}"
+DIAMOND_DIR=$ANALYSIS_DIR/diamond
+[ -n "$DIAMOND_ANNOTATIONS" ] && [ -d "$DIAMOND_ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET/diamond" ] \
+  && DIAMOND_DIR=$DIAMOND_ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET/diamond
 ## the GFF everything below is built from: the source, or MOOP's versioned copy of an
 ## Ensembl GFF (genes.versioned.gff, add_id_versions.pl; set after the GFF format is known)
 SRC_GFF=$GENESET_DIR/genes.gff
@@ -89,6 +98,7 @@ echo "Assembly : $ASSEMBLY$( [ "$DATA_ASSEMBLY" != "$ASSEMBLY" ] && echo "  (dat
 echo "Gene set : $GENE_SET"
 echo "Geneset  : $GENESET_DIR"
 echo "Analysis : $ANALYSIS_DIR"
+echo "DIAMOND  : $DIAMOND_DIR"
 echo "Mode     : $($HAS_GFF && echo genome || echo transcriptome)"
 
 ## returns true if file exists, is non-empty, and has more than a header line
@@ -322,11 +332,12 @@ log_missing() {
 
 ## the annotation results (either kind of gene set); result_file takes name or name.gz
 check_missing_annotations() {
-  local name
+  local name base
   for name in diamond/UNIPROT_sprot/diamond_results.tsv eggnog_mapper/eggnog_mapper_results.tsv \
               interproscan/interproscan_results.tsv signalp6/signalp6_results.tsv \
               deeptmhmm/deeptmhmm_results.gff3 deeploc2/deeploc2_results.tsv; do
-    result_file "$ANALYSIS_DIR/$name" > /dev/null || log_missing "$name(.gz)"
+    case $name in diamond/*) base=$(dirname "$DIAMOND_DIR") ;; *) base=$ANALYSIS_DIR ;; esac
+    result_file "$base/$name" > /dev/null || log_missing "$name(.gz)"
   done
 }
 
@@ -384,7 +395,7 @@ fi
 
 # ── Diamond / BLAST homologs ──────────────────────────────────────────────────
 make_diamond_moop() {
-  local DBLAST_DIR="$ANALYSIS_DIR/diamond"
+  local DBLAST_DIR="$DIAMOND_DIR"
   local SPROT_DIR="$DBLAST_DIR/UNIPROT_sprot"
   local VERSION
   ## db_version.txt is "<version>" or, as the annotation pipeline now writes it, "<db><TAB><version>":
@@ -456,7 +467,9 @@ make_eggnog_moop() {
   conda activate goatools
   python3 "$REPO/analysis_parsers/reduce_eggnog_go.moop.py" EggNOG2GO.eggnog.moop.tsv
 }
-has_data EggNOG2GO.eggnog.moop.tsv \
+## gated on the REDUCED file, the one that is loaded: a scratch build (moop_process_genome_data_v2.sbatch)
+## does not bring the full 3 GB EggNOG2GO.eggnog.moop.tsv back to /n/sci
+has_data EggNOG2GO.eggnog.reduced.moop.tsv \
   || { echo "Building EggNOG moop files"; make_eggnog_moop; }
 
 # ── InterProScan ──────────────────────────────────────────────────────────────
@@ -815,7 +828,7 @@ build_naming_args() {
   [ -n "$OMA_CODE" ]                     && NAMING_ARGS+=(--oma-dir "$OMA_SRC" --oma-code "$OMA_CODE")
   [ -n "$OMA_ID_MAP" ]                   && NAMING_ARGS+=(--oma-id-map "$OMA_ID_MAP")
   [ -d "$ANALYSIS_DIR/rbh_mmseq" ]       && NAMING_ARGS+=(--mmseqs-dir "$ANALYSIS_DIR/rbh_mmseq")
-  [ -d "$ANALYSIS_DIR/diamond" ]         && NAMING_ARGS+=(--diamond-dir "$ANALYSIS_DIR/diamond")
+  [ -d "$DIAMOND_DIR" ]                 && NAMING_ARGS+=(--diamond-dir "$DIAMOND_DIR")
   ## the raw InterProScan results name genes twice: by PANTHER family, when the match covers
   ## most of the family's model (the model lengths, from update_reference_data.sh), and by
   ## InterPro domain ("X domain-containing protein"; the entry list tells a domain from a family)

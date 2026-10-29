@@ -25,7 +25,9 @@ ORG=${1:-}; ASSEMBLY=${2:-}; GENESET=${3:-}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/paths.sh"
 
-DB_BASE=$REF_DB
+## DIAMOND_DB_BASE: another tree of <db>/current/peptide.dmnd, e.g. the canonical-only databases
+## (make_canonical_peptide_dbs.sh, dev/smr_dev/moop/db_canonical)
+DB_BASE=${DIAMOND_DB_BASE:-$REF_DB}
 SKIP_DBS=${SKIP_DBS-UNIPROT_trembl plasmid_db}
 ONLY_DBS=${ONLY_DBS:-}
 
@@ -44,7 +46,8 @@ done
 echo "DIAMOND databases (${#DBS[@]}):" >&2
 printf '  %s\n' "${DBS[@]}" >&2
 
-ANNOTATIONS_DIR=$(bash "$SCRIPT_DIR/pick_annotations_run.sh")
+## ANNOTATIONS_RUN: the run directory to write into, without the interactive prompt (batch launches)
+ANNOTATIONS_DIR=${ANNOTATIONS_RUN:-$(bash "$SCRIPT_DIR/pick_annotations_run.sh")}
 QUERY_FASTA=$(bash "$SCRIPT_DIR/make_clean_query_fasta.sh" "$ORG" "$ASSEMBLY" "$GENESET")
 
 OUT_BASE=$ANNOTATIONS_DIR/$ORG/$ASSEMBLY/$GENESET/diamond

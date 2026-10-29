@@ -199,6 +199,35 @@ printf '            %s\n' "${GENESETS[@]}"
 
 ORG_DATA=$DATA/$THIS_ORG
 
+## ── Build in /scratch, not in /n/sci (user, 2026-10-29) ────────────────────────
+## Every build rewrites thousands of files and a 2 GB database, and file churn on /n/sci loads its
+## migration/backup system (the storage admins). So the organism's data/ is copied to
+## /scratch/$USER/moop/<job>, built there, and copied back only after the build succeeded --
+## without the temporary files and without the full EggNOG GO table (the reduced one is the one
+## loaded). A failure brings nothing back: /n/sci keeps its last good copy, and the scratch
+## folder stays for a look. MOOP_SCRATCH=0 builds in place, as before.
+## One build per organism at a time: two would each copy back over the other. The lock is on
+## /n/sci, where both would start from.
+MOOP_SCRATCH=${MOOP_SCRATCH:-1}
+SCRATCH_EXCLUDES=(--filter='P .moop_build.lock' --filter='P .organism.lock'   # never deleted on /n/sci: a live job holds them
+                  --exclude='tophit.tsv' --exclude='iprscan.tsv' --exclude='*.tmp' --exclude='naming.tmp/'
+                  --exclude='EggNOG2GO.eggnog.moop.tsv' --exclude='go.obo' --exclude='organism.sqlite-wal'
+                  --exclude='organism.sqlite-shm' --exclude='.organism.lock' --exclude='.moop_build.lock')
+if [ "$MOOP_SCRATCH" = "1" ]; then
+  HOME_ORG_DATA=$ORG_DATA
+  mkdir -p "$HOME_ORG_DATA" || exit 1
+  exec 9>"$HOME_ORG_DATA/.moop_build.lock"
+  flock -n 9 || { echo "ERROR: another build of $THIS_ORG is running (lock $HOME_ORG_DATA/.moop_build.lock)" >&2; exit 1; }
+  SCRATCH_WORK=${MOOP_SCRATCH_DIR:-/scratch/$USER/moop}/${SLURM_JOB_ID:-$$}
+  step "Copying $THIS_ORG's data to $SCRATCH_WORK"
+  mkdir -p "$SCRATCH_WORK/data/$THIS_ORG" \
+    && rsync -a "${SCRATCH_EXCLUDES[@]}" "$HOME_ORG_DATA/" "$SCRATCH_WORK/data/$THIS_ORG/" \
+    || { echo "ERROR: could not copy $HOME_ORG_DATA to $SCRATCH_WORK" >&2; exit 1; }
+  DATA=$SCRATCH_WORK/data
+  ORG_DATA=$DATA/$THIS_ORG
+  export MOOP_DATA=$DATA      # process_one_geneset.sh builds here too
+fi
+
 ## GENESETS holds the delivered assembly names ($GENOMES); data/ names an assembly by its
 ## genome-accession (data_assembly, paths.sh), so swap it in for every path under $ORG_DATA.
 source "$SCRIPTS/paths.sh"
@@ -324,6 +353,20 @@ if [ "${MOOP_SKIP_AUDIT:-0}" != "1" ]; then
     echo "       Not copying to moop." >&2
     exit 1
   fi
+fi
+
+## ── Scratch build: copy back to /n/sci, then remove the scratch folder ─────────
+## Only now: every gene set loaded and the audit passed. --delete makes /n/sci match the build
+## (a file the build removed goes there too); --delete-excluded also clears the temporary files and
+## the full EggNOG GO table an in-place build left there. copy2moop below reads /n/sci.
+if [ "$MOOP_SCRATCH" = "1" ]; then
+  step "Copying $THIS_ORG's build back to $HOME_ORG_DATA"
+  rsync -a --delete --delete-excluded "${SCRATCH_EXCLUDES[@]}" "$ORG_DATA/" "$HOME_ORG_DATA/" \
+    || { echo "ERROR: could not copy the build back to $HOME_ORG_DATA; it is still in $SCRATCH_WORK" >&2; exit 1; }
+  rm -rf "$SCRATCH_WORK"
+  DATA=$REPO/data
+  ORG_DATA=$HOME_ORG_DATA
+  DB=$ORG_DATA/organism.sqlite
 fi
 
 ## ── Copy to moop ──────────────────────────────────────────────────────────────
