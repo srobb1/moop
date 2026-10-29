@@ -19,5 +19,6 @@ echo help_modal('organisms-guide', 'How Manage Organisms works', [
         ['label' => 'Refresh Cache', 'text' => 'The page loads from a saved scan, so it is instant. Refresh rescans only the organisms whose files changed; the page reloads when it finishes.'],
         ['label' => 'Force Full Rescan', 'text' => 'Rescans everything. Use it after rsync, cp -p, tar or a restore — they keep old file dates — if a row still looks out of date.'],
         ['label' => 'Sync NCBI Taxonomy', 'text' => 'Downloads the NCBI taxonomy once, so lineages are looked up locally instead of one request per organism.'],
+        ['label' => 'Retire', 'html' => true, 'text' => 'The <i class="fa fa-archive"></i> button in a row takes an organism off the site: its data moves to organisms/.retired/, its genome-browser registration and groups are removed, its cache cleared. Nothing is deleted, and <strong>Restore</strong> in the Retired list puts it back. The box shows exactly what it will do before you confirm.'],
     ]],
 ]);

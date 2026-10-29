@@ -3,6 +3,7 @@
 ob_start();
 
 include_once __DIR__ . '/admin_init.php';
+require_once __DIR__ . '/../lib/retire.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
 
 // Load page-specific config
@@ -309,12 +310,14 @@ $data = [
     'cache_changed_orgs' => $stale_organisms,
     'cache_stale_reasons' => $cache_stale_reasons,
     'lineage_cache_generated' => $lineage_cache_generated,
+    'retired' => moop_retired_list($config),   // lib/retire.php
     'page_styles' => [
         '/' . $config->getString('site') . '/css/manage-organisms.css'
     ],
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
-        '/' . $config->getString('site') . '/js/modules/organism-management.js'
+        '/' . $config->getString('site') . '/js/modules/organism-management.js',
+        '/' . $config->getString('site') . '/js/modules/retire-organism.js'
     ],
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",

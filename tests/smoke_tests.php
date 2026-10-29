@@ -112,6 +112,11 @@ file_put_contents("$_od/README.md", 'x');
 ok(moop_organism_dirs($_od) === ['Alpha_two', 'Zeta_one'],
    'directories only, sorted, and never .retired/ (the Retire button\'s holding area) or any dot-directory');
 ok(moop_organism_dirs("$_od/missing") === [], 'a missing data directory lists nothing, no warning');
+require_once "$BASE/lib/retire.php";
+ok(moop_retired_root($_od) === "$_od/.retired", 'retired bundles live inside organisms/ — same volume, so a retire is a rename');
+ok(moop_retire_valid_name('Danio_rerio') && moop_retire_valid_name('20261029-174805_Danio_rerio')
+   && !moop_retire_valid_name('../config') && !moop_retire_valid_name('.retired') && !moop_retire_valid_name('a/b') && !moop_retire_valid_name(''),
+   'retire/restore take directory names only: never a path, never a hidden directory');
 @rmdir("$_od/.retired/20261029_Old_org"); foreach (['.retired', '.hidden', 'Zeta_one', 'Alpha_two'] as $_d) @rmdir("$_od/$_d");
 @unlink("$_od/README.md"); @rmdir($_od);
 

@@ -531,12 +531,71 @@
                  <div class="mt-1 d-flex gap-1">
                    <button class="btn btn-sm btn-outline-<?= $db_class ?> px-2 py-0" onclick="openOrganismModal('db', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Database details &amp; row counts"><i class="fa fa-database"></i></button>
                    <button class="btn btn-sm btn-outline-<?= $meta_class ?> px-2 py-0" onclick="openOrganismModal('metadata', <?= htmlspecialchars(json_encode($organism)) ?>)" title="Metadata &amp; editor"><i class="fa fa-file-alt"></i></button>
+                   <button class="btn btn-sm btn-outline-secondary px-2 py-0 js-retire" type="button" data-organism="<?= htmlspecialchars($organism) ?>" title="Retire this organism — take it off the site (can be restored)"><i class="fa fa-archive"></i></button>
                  </div>
                </td>
              </tr>
            <?php endforeach; ?>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <?php // Retired organisms (lib/retire.php). Shown only when there are any. ?>
+  <?php if (!empty($retired)): ?>
+  <div class="card adm-card mt-4" id="retiredCard">
+    <div class="card-header adm-head d-flex align-items-center">
+      <h5 class="mb-0"><i class="fa fa-archive"></i> Retired</h5>
+      <span class="ms-auto small text-muted"><?= count($retired) ?> in organisms/.retired/</span>
+    </div>
+    <div class="card-body">
+      <p class="small text-muted">Off the site, nothing deleted. <strong>Restore</strong> puts the data, its groups and its
+        JBrowse settings back (then register it again in Manage JBrowse). To free the space for good, run the command shown,
+        on the server.</p>
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light"><tr><th>Organism</th><th>Retired</th><th>By</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ($retired as $rb): $rec = $rb['record']; $st = $rec['status'] ?? '?'; ?>
+          <tr>
+            <td><em class="sci-name"><?= htmlspecialchars(str_replace('_', ' ', $rec['organism'] ?? $rb['bundle'])) ?></em></td>
+            <td class="small text-nowrap"><?= htmlspecialchars($rec['retired_at'] ?? '') ?></td>
+            <td class="small"><?= htmlspecialchars($rec['retired_by'] ?? '') ?></td>
+            <td class="small"><?php if ($st === 'retired'): ?>Retired<?php else: ?>
+              <span class="text-danger-emphasis" title="<?= htmlspecialchars($rec['error'] ?? '') ?>">Stopped part-way — Restore undoes what was done</span><?php endif; ?></td>
+            <td class="text-end text-nowrap">
+              <button type="button" class="btn btn-sm btn-outline-primary js-restore" data-bundle="<?= htmlspecialchars($rb['bundle']) ?>"
+                      data-organism="<?= htmlspecialchars($rec['organism'] ?? '') ?>"><i class="fa fa-undo"></i> Restore</button>
+            </td>
+          </tr>
+          <tr><td colspan="5" class="border-0 pt-0"><small class="text-muted">Delete for good:</small>
+            <code class="small user-select-all"><?= htmlspecialchars($rb['delete_command']) ?></code></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <!-- Retire confirm (js/modules/retire-organism.js fills it) -->
+  <div class="modal fade" id="retireModal" tabindex="-1" aria-labelledby="retireModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="retireModalLabel">Retire <em class="sci-name" id="retireOrgName"></em></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="retireBody"></div>
+          <div id="retireConfirmWrap" class="mt-3" style="display:none;">
+            <label for="retireConfirm" class="form-label small">Type <code id="retireTypeName"></code> to confirm</label>
+            <input type="text" class="form-control form-control-sm" id="retireConfirm" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger btn-sm" id="retireGo" disabled><i class="fa fa-archive"></i> Retire</button>
+        </div>
+      </div>
     </div>
   </div>
 
