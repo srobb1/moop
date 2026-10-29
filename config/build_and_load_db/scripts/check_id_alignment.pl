@@ -7,7 +7,10 @@
 # <source> is process_one_geneset.sh's GFF_SOURCE (refseq, ensembl, other, lift). <build_dir> holds
 # genes.gff, protein.aa.fa, cds.nt.fa and transcript.nt.fa as shipped. exceptions.tsv
 # (id_alignment_exceptions.tsv: organism, gene_set, id, reason) lists features allowed to differ
-# (the plan's listed exceptions); this gene set's are counted, not failed.
+# (the plan's listed exceptions); this gene set's are counted, not failed. Differences that follow
+# from how the database is built (second placements, CDSs without a protein_id, immune gene segments,
+# mitochondrial mRNAs without transcript_id) are recognised from genes.gff (rule_exceptions) and
+# counted the same way, so the file holds only the one-offs no rule describes.
 #
 # Checks, protein-coding features only (genes.gff also holds tRNA, lncRNA, pseudogenes and V/C
 # segments the database does not load):
@@ -88,7 +91,7 @@ sub read_db {
 ## and CDSs are coding
 sub read_gff {
   my ($gff_file, $carries_cds_ids) = @_;
-  my (%type_of, %name_of, %parents_of, %protein, %coding);
+  my (%type_of, %name_of, %parents_of, %protein, %coding, %protein_of, %has_transcript_id);
   open my $in, '<', $gff_file or die "Cannot read $gff_file: $!\n";
   while (my $line = <$in>) {
     next if $line =~ /^#/;
@@ -106,6 +109,8 @@ sub read_gff {
       $type_of{$id} //= $field[2];
       $name_of{$id} //= plain($attr{Name}) if defined $attr{Name};
       push @{ $parents_of{$id} }, @parents;
+      $protein_of{$id} //= $attr{protein_id} if $field[2] eq 'CDS';
+      $has_transcript_id{$id} = 1 if defined $attr{transcript_id};
     }
     ## refseq/ensembl: coding means a protein_id (pseudogene and V/C segment CDSs have none);
     ## other/lift CDS lines rarely carry one, so any CDS counts
@@ -124,7 +129,50 @@ sub read_gff {
       $coding{$parent} = 1;
     }
   }
-  return { type_of => \%type_of, name_of => \%name_of, protein => \%protein, coding => \%coding };
+  return { type_of => \%type_of, name_of => \%name_of, protein => \%protein, coding => \%coding,
+           parents_of => \%parents_of, protein_of => \%protein_of, has_transcript_id => \%has_transcript_id };
+}
+
+## Differences that follow from how the database is built, recognised from genes.gff itself, so a new
+## RefSeq/Ensembl gene set needs no rows in id_alignment_exceptions.tsv (which keeps the one-offs no
+## rule describes). id => reason. Rules, worked out on 2026-10-21 (notes/GFF_FASTA_ID_ALIGNMENT_PLAN.md):
+##   second placement   NCBI places a coding gene, mRNA or CDS more than once and suffixes the copies -2, -3..
+##                      (refseq): the database has one feature per GeneID, transcript and protein
+##   no protein_id      a CDS without one (pseudogene, RefSeq immune gene segment): not loaded
+##   gene segment       an Ensembl C/D/J/V gene segment carries a CDS and protein: none of the segment,
+##                      its gene, CDS and protein is loaded
+##   mitochondrial      a RefSeq mRNA without transcript_id: the database hangs its CDS on the gene
+sub rule_exceptions {
+  my ($gff, $source) = @_;
+  my %rule;
+  return \%rule unless $source eq 'refseq' || $source eq 'ensembl';
+  my ($type_of, $parents_of, $protein_of) = @$gff{qw(type_of parents_of protein_of)};
+  foreach my $id (keys %$type_of) {
+    my $type = $type_of->{$id};
+    if ($source eq 'refseq' && $gff->{coding}{$id} && $id =~ /^(.+)-\d+$/ && ($type_of->{$1} // '') eq $type) {
+      $rule{$id} = "second placement of $1";
+    }
+    elsif ($type eq 'CDS' && !defined $protein_of->{$id}) {
+      $rule{$id} = 'CDS without protein_id (pseudogene or gene segment): not loaded';
+    }
+    elsif ($source eq 'refseq' && $type eq 'mRNA' && !$gff->{has_transcript_id}{$id}) {
+      $rule{$id} = 'mRNA without transcript_id (mitochondrial): the database hangs its CDS on the gene';
+    }
+    elsif ($type =~ /^[CDJV]_gene_segment$/) {
+      $rule{$id} = 'immune gene segment: not loaded';
+      foreach my $gene (@{ $parents_of->{$id} // [] }) {
+        $rule{$gene} = 'gene of an immune gene segment: not loaded';
+      }
+    }
+  }
+  ## the CDS and protein under a segment
+  foreach my $id (keys %$protein_of) {
+    my @segment = grep { my $parent = $_; ($type_of->{$parent} // '') =~ /^[CDJV]_gene_segment$/ } @{ $parents_of->{$id} // [] };
+    next unless @segment;
+    $rule{$id} = 'CDS of an immune gene segment: not loaded';
+    $rule{ $protein_of->{$id} } = 'protein of an immune gene segment: not loaded' if defined $protein_of->{$id};
+  }
+  return \%rule;
 }
 
 ## a FASTA's records: id => the header after the id ('' for a bare header)
@@ -172,18 +220,23 @@ sub main {
 
   my $db  = read_db($db_file, $assembly, $gene_set);
   my $gff = read_gff("$dir/genes.gff", $carries_cds_ids);
+  my $rule = rule_exceptions($gff, $source);
   my %fasta;
   foreach my $kind (keys %FASTA_OF) {
     $fasta{$kind} = read_fasta("$dir/$FASTA_OF{$kind}");
   }
 
-  my (%count, %excepted_count);
+  my (%count, %excepted_count, %rule_count);
   open my $out, '>', $details_file or die "Cannot write $details_file: $!\n";
   print $out join("\t", qw(check id type detail)), "\n";
   my $report = sub {
     my ($check, $id, $type, $detail) = @_;
     if (exists $exception{$id}) {
       $excepted_count{$check}++;
+      return;
+    }
+    if (exists $rule->{$id}) {
+      $rule_count{$check}++;
       return;
     }
     $count{$check}++;
@@ -250,6 +303,7 @@ sub main {
   my @summary;
   foreach my $check (@CHECKS) {
     my $text = "$check=" . ($count{$check} // 0);
+    $text .= "(+$rule_count{$check} by rule)" if $rule_count{$check};
     $text .= "(+$excepted_count{$check} listed)" if $excepted_count{$check};
     push @summary, $text;
   }
