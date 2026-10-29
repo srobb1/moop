@@ -1514,3 +1514,13 @@ else
   done
 
 fi
+
+## geneNames.readable.tsv: the names for people -- one row per database feature with its gene and
+## type, symbol and description apart, and where the name came from in words
+## (make_readable_gene_names.pl). geneNames.tsv stays as the pipeline's own file. Remade on every
+## run (seconds); a failure warns and leaves no file, never stops the gene set.
+if [ -s features.tsv ] && [ -s geneNames.tsv ]; then
+  perl "$REPO/analysis_parsers/make_readable_gene_names.pl" features.tsv geneNames.tsv > geneNames.readable.tsv.tmp \
+    && mv geneNames.readable.tsv.tmp geneNames.readable.tsv \
+    || { rm -f geneNames.readable.tsv.tmp; echo "WARNING: geneNames.readable.tsv was not made" >&2; }
+fi
