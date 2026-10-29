@@ -21,10 +21,10 @@ my %HIGHER_IS_BETTER = (ProSiteProfiles => 1, Hamap => 1);   # profile scores; t
 sub keep_match {
   my ($analysis, $protein, $accession, $desc, $score) = @_;
   my $current = $annot{$analysis}{$protein}{$accession};
-  my $numeric = defined $score && $score =~ /^[0-9.eE+-]+$/;
+  my $numeric = defined $score && $score =~ /^[0-9.eE+-]+$/ && $score =~ /\d/;   # "-" is no score
   if (!$current) {
     $annot{$analysis}{$protein}{$accession} = { desc => $desc, score => $score };
-  } elsif ($numeric and ($current->{score} // '') =~ /^[0-9.eE+-]+$/) {
+  } elsif ($numeric and ($current->{score} // '') =~ /^[0-9.eE+-]+$/ and $current->{score} =~ /\d/) {
     my $better = $HIGHER_IS_BETTER{$analysis} ? $score > $current->{score} : $score < $current->{score};
     $current->{score} = $score if $better;
   } elsif ($numeric) {
