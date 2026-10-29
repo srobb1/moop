@@ -13,45 +13,12 @@ $selinux_on = function_exists('moop_selinux_enforcing') && moop_selinux_enforcin
     <div class="row">
         <div class="col-12">
 
-<h2><i class="fa fa-lock"></i> Filesystem Permissions</h2>
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+  <h2 class="mb-0"><i class="fa fa-lock"></i> Filesystem Permissions</h2>
+  <?= help_modal_trigger('permissions-guide', 'How this page works') ?>
+</div>
 <p class="text-muted">Manage file and directory permissions for system reliability</p>
 
-<!-- About Section -->
-<div class="card mb-4">
-    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutPermissions">
-        <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Filesystem Permissions Manager <i class="fa fa-chevron-down float-end"></i></h5>
-    </div>
-    <div class="collapse" id="aboutPermissions">
-        <div class="card-body">
-            <p><strong>Purpose:</strong> Check that the web server can read and write exactly the files it needs — and nothing more. This page reports what is actually wrong and gives you the command to fix it.</p>
-
-            <p><strong>Why It Matters:</strong></p>
-            <ul>
-                <li>The web server runs as <code><?= htmlspecialchars($web_user) ?>:<?= htmlspecialchars($web_group) ?></code> and reads data through its <strong>group</strong> — so a file never has to be world-readable to be served.</li>
-                <li>When a writable directory is wrong, features fail <strong>silently</strong>: banner uploads, config saves, and index builds just stop working, with no error on the page.</li>
-                <li>Over-permissive files are a real risk — world-writable (<code>777</code>, <code>666</code>) lets any local user overwrite data, and an <strong>executable data file</strong> has no legitimate reason to exist.</li>
-                <?php if ($selinux_on): ?>
-                <li><strong>Under SELinux (Enforcing), the label — not the Unix mode — is the real gate.</strong> A directory can look perfectly writable at <code>2775</code> and still be blocked. That is the single most common surprise here; <code>chmod</code> will not fix it.</li>
-                <?php endif; ?>
-                <li>SGID (the <code>s</code> in <code>drwxrwsr-x</code>) makes new files inherit the directory's group automatically, so writable areas stay writable as content is added.</li>
-            </ul>
-
-            <p><strong>How These Checks Judge:</strong></p>
-            <ul>
-                <li>By <strong>impact</strong>, not by matching an exact mode. <code>640</code> and <code>660</code> pass; they are not "wrong" for failing to be <code>644</code>.</li>
-                <li>Findings are grouped by <strong>category</strong>, so a count means "how many things are wrong", not "how many files exist".</li>
-                <li>See <strong>Best Practices</strong> below for the rules, and <strong>Permission Modes Reference</strong> for what each mode means.</li>
-            </ul>
-
-            <p class="mb-0"><strong>What You Can Do Here:</strong></p>
-            <ul class="mb-0">
-                <li>See current permissions, ownership<?= $selinux_on ? ', and SELinux state' : '' ?> for everything MOOP touches</li>
-                <li>Fix one path with its own command, or take a whole section in a single paste</li>
-                <li>Understand why each path needs the access it does</li>
-            </ul>
-        </div>
-    </div>
-</div>
 
 <!-- Best Practices — reference material, collapsed by default so the checklist leads -->
 <div class="card mb-4">
@@ -446,3 +413,5 @@ foreach ($grouped as $group_name => $items):
     </div>
 
 </div>
+
+<?php include __DIR__ . '/guides/manage_filesystem_permissions.php';   // the "How this page works" guide ?>

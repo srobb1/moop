@@ -26,7 +26,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
 
   <div class="d-flex flex-wrap align-items-center gap-3">
     <?= page_title('System Monitor', 'fa fa-chart-line') ?>
-    <?= help_modal_trigger('sysmon-guide', 'How to read this page') ?>
+    <?= help_modal_trigger('sysmon-guide', 'How this page works') ?>
   </div>
   <p class="text-muted mb-3">
     What the server is doing: resources, traffic, the heaviest pages and who is using them.
@@ -218,7 +218,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
         <div class="card-body">
           <p class="small text-muted">From the web server's log — every request, including static files.
             Only <strong>Internet</strong> addresses come from outside your network; the guide
-            (How to read this page) explains each label.</p>
+            (How this page works) explains each label.</p>
           <table class="table table-sm sysmon-num">
             <thead><tr><th>Address</th><th></th><th class="text-end">Requests</th></tr></thead>
             <tbody>

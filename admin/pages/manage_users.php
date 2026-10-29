@@ -23,6 +23,11 @@
     );
   ?>
 
+  <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+    <h2 class="mb-0"><i class="fa fa-users"></i> Manage Users</h2>
+    <?= help_modal_trigger('users-guide', 'How this page works') ?>
+  </div>
+
   <p class="text-muted small">
     <i class="fa fa-info-circle me-1"></i>
     This page grants <strong>collaborators</strong> access to specific restricted organisms.
@@ -1335,3 +1340,5 @@
 
 })();
 </script>
+
+<?php include __DIR__ . '/guides/manage_users.php';   // the "How this page works" guide ?>

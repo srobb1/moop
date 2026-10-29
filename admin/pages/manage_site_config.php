@@ -1,32 +1,12 @@
 <div class="container py-4">
     <div class="row">
         <div class="col-12">
-            <h2><i class="fa fa-cog"></i> Manage Site Configuration</h2>
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+              <h2 class="mb-0"><i class="fa fa-cog"></i> Manage Site Configuration</h2>
+              <?= help_modal_trigger('siteconfig-guide', 'How this page works') ?>
+            </div>
             <p class="text-muted">Edit site-wide settings and appearance</p>
             
-            <!-- About Section -->
-            <div class="card mb-4">
-                <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutSiteConfig">
-                    <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Site Configuration <i class="fa fa-chevron-down float-end"></i></h5>
-                </div>
-                <div class="collapse" id="aboutSiteConfig">
-                    <div class="card-body">
-                        <p><strong>Purpose:</strong> Edit key site-wide settings and appearance without modifying configuration files directly.</p>
-                        
-                        <p><strong>What You Can Change:</strong></p>
-                        <ul>
-                            <li><strong>Site Title</strong> - Name displayed in browser tab, header, and throughout the site</li>
-                            <li><strong>Admin Email</strong> - Contact email for site administrators</li>
-                            <li><strong>Header Banner Image</strong> - Large banner image at the top of pages</li>
-                            <li><strong>Favicon</strong> - Small icon displayed in browser tab</li>
-                            <li><strong>Sequence Types</strong> - Configure display labels and colors for sequence file types</li>
-                            <li><strong>Auto-Login IP Ranges</strong> - Allow automatic login and all access to assemblies from specific IP addresses (institutional networks)</li>
-                        </ul>
-                        
-                        <p class="mb-0"><small class="text-muted"><i class="fa fa-lock"></i> <strong>Structural settings</strong> (paths, directories, database connections) are not editable to maintain system integrity. <a href="#" data-bs-toggle="modal" data-bs-target="#structuralSettingsModal">Learn how to change these →</a></small></p>
-                    </div>
-                </div>
-            </div>
 
             <!-- Messages -->
             <?php if ($message): ?>
@@ -1155,3 +1135,4 @@
     </div>
 </div>
 
+<?php include __DIR__ . '/guides/manage_site_config.php';   // the "How this page works" guide ?>

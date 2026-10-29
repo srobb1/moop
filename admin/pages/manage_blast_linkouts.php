@@ -18,31 +18,12 @@
     <div class="col-12">
 
 
-      <h2><i class="fa fa-external-link-alt"></i> Manage BLAST Linkouts</h2>
+      <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <h2 class="mb-0"><i class="fa fa-external-link-alt"></i> Manage BLAST Linkouts</h2>
+        <?= help_modal_trigger('linkouts-guide', 'How this page works') ?>
+      </div>
       <p class="text-muted">Configure which buttons appear on each BLAST result hit. Changes take effect immediately for new searches.</p>
 
-      <!-- About -->
-      <div class="card mb-4">
-        <div class="card-header adm-head" style="cursor:pointer;"
-             data-bs-toggle="collapse" data-bs-target="#aboutBlastLinkouts">
-          <h5 class="mb-0">
-            <i class="fa fa-info-circle"></i> About BLAST Linkouts
-            <i class="fa fa-chevron-down float-end"></i>
-          </h5>
-        </div>
-        <div class="collapse" id="aboutBlastLinkouts">
-          <div class="card-body">
-            <p><strong>Purpose:</strong> Add contextual buttons to every BLAST hit so users can jump directly to related tools.</p>
-            <ul>
-              <li><strong>Gene Page</strong> — links to the gene detail page for feature databases (mRNA, CDS, protein) when an organism SQLite database is present.</li>
-              <li><strong>Genome Browser</strong> — opens JBrowse2 at the hit location with HSPs drawn as colored blocks. For genome BLAST, a hit-level button shows all HSPs and each HSP row has its own zoom button. For feature BLAST, navigates to the gene locus.</li>
-              <li><strong>Global External Linkouts</strong> — custom URL buttons added to every BLAST hit across all databases, using placeholders like <code>{fasta_id}</code>.</li>
-              <li><strong>Per-Database External Linkouts</strong> — custom URL buttons that appear only for a specific organism / assembly / database combination.</li>
-            </ul>
-            <p class="mb-0"><small class="text-muted">The Feature Coordinate Index section at the bottom manages the <code>feature_coords.tsv</code> files that power Genome Browser linkouts on feature databases.</small></p>
-          </div>
-        </div>
-      </div>
 
       <?php if ($message): ?>
         <div class="alert alert-<?= htmlspecialchars($messageType) ?> alert-dismissible fade show">
@@ -468,3 +449,5 @@ document.querySelectorAll('.gen-index-btn').forEach(btn => {
   });
 });
 </script>
+
+<?php include __DIR__ . '/guides/manage_blast_linkouts.php';   // the "How this page works" guide ?>

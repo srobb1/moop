@@ -891,7 +891,7 @@ class ConfigManager
             ],
             'site_data_path' => [
                 'label' => 'Site Data Backup Path',
-                'description' => 'Absolute filesystem path where config, metadata, and organism.json files are snapshotted on each admin login. Set to empty to disable. Initialize as a git repo for automatic version history.',
+                'description' => 'Absolute filesystem path where config, metadata, and organism.json files are copied when they change, at most once an hour (housekeeping). Set to empty to disable. If it is a git repository the dashboard shows its status; committing stays manual — MOOP never commits.',
                 'type' => 'text',
                 'current_value' => $this->getPath('site_data_path', ''),
                 'note' => 'Keep this directory outside the web root and private — it contains API keys and user account data.',

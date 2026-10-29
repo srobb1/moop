@@ -19,7 +19,7 @@ $filtered = $filter_kind !== '' || $filter_search !== '';
 
   <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
     <h1 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Error Log</h1>
-    <?= help_modal_trigger('errlog-guide', 'How to read this page') ?>
+    <?= help_modal_trigger('errlog-guide', 'How this page works') ?>
   </div>
   <p class="text-muted">
     <?php if (!$groups): ?>

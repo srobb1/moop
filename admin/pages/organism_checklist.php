@@ -19,37 +19,11 @@
 
 <div class="container mt-5">
 
-  <h2><i class="fa fa-clipboard-list"></i> New Organism Setup Checklist</h2>
-
-  <!-- About Section -->
-  <div class="card mb-4">
-    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutChecklist" role="button" tabindex="0">
-      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About This Checklist <i class="fa fa-chevron-down float-end"></i></h5>
-    </div>
-    <div class="collapse" id="aboutChecklist">
-      <div class="card-body">
-        <p><strong>Purpose:</strong> Step-by-step guide for adding a new organism to your system with quick links to relevant admin tools.</p>
-        
-        <p><strong>Why This Matters:</strong> Adding a new organism requires several coordinated steps across the system. This checklist helps you:</p>
-        <ul>
-          <li>Follow the correct sequence of operations</li>
-          <li>Remember all necessary configuration steps</li>
-          <li>Avoid common setup mistakes</li>
-          <li>Quickly navigate to relevant admin pages</li>
-          <li>Verify each step is complete before moving on</li>
-        </ul>
-        
-        <p><strong>Built-in Checks & Actions:</strong> Each step includes automated checks to verify configuration and quick action buttons to fix easy-to-address issues:</p>
-        <ul>
-          <li><strong>Automated Checks:</strong> File permissions, missing configuration files, group assignments, and homepage selector status</li>
-          <li><strong>Quick Fix Actions:</strong> Generate missing organism.json files, assign organisms to default groups, and trigger a cache refresh</li>
-          <li><strong>Detailed Management:</strong> Links to full management pages for complex customizations</li>
-        </ul>
-        
-        <p class="mb-0"><strong>Note:</strong> Most organism data files are uploaded directly to the server. Use the links below to manage access, configuration, and visibility.</p>
-      </div>
-    </div>
+  <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+    <h2 class="mb-0"><i class="fa fa-clipboard-list"></i> New Organism Setup Checklist</h2>
+    <?= help_modal_trigger('checklist-guide', 'How this page works') ?>
   </div>
+
 
   <!-- Checklist Steps -->
   <div class="mt-5">
@@ -831,3 +805,5 @@
 </style>
 
 </div>
+
+<?php include __DIR__ . '/guides/organism_checklist.php';   // the "How this page works" guide ?>

@@ -15,25 +15,12 @@ $statusMessage = $statusMessage ?? '';
 
 <div class="container mt-5">
 
-    <h2><i class="fa fa-code"></i> JavaScript Function Registry</h2>
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+      <h2 class="mb-0"><i class="fa fa-code"></i> JavaScript Function Registry</h2>
+      <?= help_modal_trigger('jsregistry-guide', 'How this page works') ?>
+    </div>
     
     <!-- Info Card -->
-    <div class="card mb-4">
-        <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutRegistry">
-            <h5 class="mb-0"><i class="fa fa-info-circle"></i> About This Registry <i class="fa fa-chevron-down float-end"></i></h5>
-        </div>
-        <div class="collapse" id="aboutRegistry">
-            <div class="card-body">
-                <p>This is an auto-generated registry of all JavaScript functions in your codebase. It includes:</p>
-                <ul class="mb-0">
-                    <li>All functions from <code>js/</code> directory</li>
-                    <li>Function documentation and comments</li>
-                    <li>Usage tracking (where each function is called)</li>
-                    <li>Detection of unused functions</li>
-                </ul>
-            </div>
-        </div>
-    </div>
     
     <!-- Control Panel -->
     <div class="card mb-4">
@@ -235,3 +222,4 @@ $statusMessage = $statusMessage ?? '';
 
 </div>
 
+<?php include __DIR__ . '/guides/manage_js_registry.php';   // the "How this page works" guide ?>

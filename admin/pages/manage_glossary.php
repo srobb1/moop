@@ -6,9 +6,10 @@
 ?>
 <div class="container my-4">
 
-  <div class="d-flex align-items-baseline justify-content-between mb-3">
+  <div class="d-flex align-items-center gap-3 mb-3">
     <h3 class="mb-0"><i class="fa fa-book me-2" style="color:#0891b2;"></i>Manage Glossary</h3>
-    <a href="admin.php" class="btn btn-outline-secondary btn-sm">
+    <?= help_modal_trigger('glossary-guide', 'How this page works') ?>
+    <a href="admin.php" class="btn btn-outline-secondary btn-sm ms-auto">
       <i class="fa fa-arrow-left me-1"></i>Back to Dashboard
     </a>
   </div>
@@ -132,3 +133,5 @@
   </div>
 
 </div>
+
+<?php include __DIR__ . '/guides/manage_glossary.php';   // the "How this page works" guide ?>

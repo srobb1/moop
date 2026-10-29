@@ -1,6 +1,6 @@
 <?php
 /**
- * SYSTEM MONITOR — the "How to read this page" guide and the one-line (i) help for each section.
+ * SYSTEM MONITOR — the "How this page works" guide and the one-line (i) help for each section.
  * Included by admin/pages/system_monitor.php. Kept in its own file so the page stays readable.
  *
  * Written for the admin who runs the site, not for a sysadmin: every card says what a number
@@ -12,7 +12,7 @@
 $sysmon_help = [
     'recs'      => 'What to act on, most serious first. “Nothing to act on” is the normal state. Each item says what it rests on, so you can check it.',
     'charts'    => 'How things moved over the chosen window. Look for long stretches high up, not short spikes. Hover or use the arrow keys for exact values.',
-    'traffic'   => 'Every request the web server answered, including images and scripts — what kind of program sent it, and what it asked for. Each row is explained under “Traffic” in How to read this page.',
+    'traffic'   => 'Every request the web server answered, including images and scripts — what kind of program sent it, and what it asked for. Each row is explained under “Traffic” in How this page works.',
     'addresses' => 'The addresses that sent the most requests, labelled This server, Private network, Internal or Internet. Only Internet addresses are outside your network. A single Internet address far above the rest is usually a crawler.',
     'usage'     => 'Which organisms, assemblies and gene sets people open, search, BLAST and download — your own people and the public counted separately.',
     'pages'     => 'What each page costs the server. Sort by any column. Big “Total time” = where the server spends its effort; big “Slowest 5%” = what feels slow to people.',

@@ -9,64 +9,11 @@
   <?php
   ?>
   
-  <h2><i class="fa fa-dna"></i> Manage Organisms</h2>
-
-  <!-- About Section -->
-  <div class="card mb-4">
-    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutOrganismManagement">
-      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Organism Management <i class="fa fa-chevron-down float-end"></i></h5>
-    </div>
-    <div class="collapse" id="aboutOrganismManagement">
-      <div class="card-body">
-        <p><strong>Purpose:</strong> View and manage all organism data on your system. Each organism has assemblies (genome versions), FASTA sequence files, databases, and metadata.</p>
-        
-        <p><strong>Why This Matters:</strong> Organisms are the core of the system. Every organism needs:</p>
-        <ul>
-          <li>A database file (organism.sqlite) with gene/protein data</li>
-          <li>FASTA files organized in assembly directories</li>
-          <li>Metadata describing the organism (genus, species, common name, taxonomy ID)</li>
-          <li>Assignment to groups for user access control</li>
-          <li>Inclusion in the taxonomy tree for homepage discovery</li>
-        </ul>
-        
-        <p><strong>Status Checklist (10 Requirements):</strong> The system tracks 10 dimensions of organism readiness:</p>
-        <ul>
-          <li>Has assemblies</li>
-          <li>Has FASTA files</li>
-          <li>Has BLAST indexes</li>
-          <li>Has FAI index</li>
-          <li>Has database file</li>
-          <li>Database is valid</li>
-          <li>Assembly &amp; gene set dirs match DB</li>
-          <li>In organism groups</li>
-          <li>In taxonomy tree</li>
-          <li>Metadata complete</li>
-        </ul>
-        
-        <p><strong>Performance Note:</strong> This page always loads instantly from a pre-built cache.
-        Click <strong>Refresh Cache</strong> to rebuild it in the background — the page reloads automatically
-        when the scan finishes. You never need to wait for a scan during page load.</p>
-
-        <p><strong>After an <code>rsync</code>, <code>cp -p</code>, <code>tar</code> extract, or restore-from-backup:</strong>
-        those tools preserve the original file timestamps. The change detection now also compares file
-        <em>size</em>, so a re-synced organism is normally caught automatically — but if the checklist ever
-        looks out of date after such a copy, click <strong>Force Rescan</strong> to rebuild the cache from
-        scratch regardless of timestamps.</p>
-
-        <p class="mb-0"><strong>What You Can Do:</strong></p>
-        <ul class="mb-0">
-          <li>View all organisms and their status at a glance</li>
-          <li>Check database validity and readability</li>
-          <li>Manage metadata (images, descriptions)</li>
-          <li>Handle assembly directories and FASTA files</li>
-          <li>Verify BLAST indexes are present</li>
-          <li>Verify genome FAI index is present</li>
-          <li>See which groups each organism belongs to</li>
-          <li>Track overall setup completion with the setup checklist</li>
-        </ul>
-      </div>
-    </div>
+  <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+    <h2 class="mb-0"><i class="fa fa-dna"></i> Manage Organisms</h2>
+    <?= help_modal_trigger('organisms-guide', 'How this page works') ?>
   </div>
+
 
   <!-- Information Panel -->
   <div class="card mb-4">
@@ -712,3 +659,5 @@ samtools faidx genome.fa</pre>
 
 <?php
 ?>
+
+<?php include __DIR__ . '/guides/manage_organisms.php';   // the "How this page works" guide ?>

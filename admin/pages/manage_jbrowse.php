@@ -17,25 +17,11 @@
 ?>
 
 <div class="container mt-5">
-  <h2><i class="fa fa-dna"></i> JBrowse Track Management</h2>
-
-  <!-- About Section -->
-  <div class="card mb-4">
-    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutJBrowse">
-      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About JBrowse Management <i class="fa fa-chevron-down float-end"></i></h5>
-    </div>
-    <div class="collapse" id="aboutJBrowse">
-      <div class="card-body">
-        <p><strong>Purpose:</strong> Centralized management for JBrowse assemblies, tracks, and configurations.</p>
-        <p><strong>Workflow:</strong></p>
-        <ol>
-          <li>Register an assembly in JBrowse (prepares genome files and the gene annotation track)</li>
-          <li>If it has other tracks, press <strong>Add sheet</strong> on its row and paste the Google Sheet link — saving also creates the tracks</li>
-          <li>After editing a sheet later, press <strong>Sync</strong> on its row</li>
-        </ol>
-      </div>
-    </div>
+  <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+    <h2 class="mb-0"><i class="fa fa-dna"></i> JBrowse Track Management</h2>
+    <?= help_modal_trigger('jbrowse-guide', 'How this page works') ?>
   </div>
+
 
   <!-- Quick Stats -->
   <div class="row mb-4">
@@ -551,3 +537,5 @@
     </div>
   </div>
 </div>
+
+<?php include __DIR__ . '/guides/manage_jbrowse.php';   // the "How this page works" guide ?>

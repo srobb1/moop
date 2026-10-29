@@ -64,72 +64,12 @@
     <?php unset($_SESSION['permission_error']); ?>
   <?php endif; ?>
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2><i class="fa fa-layer-group"></i> Manage Organism Assembly Groups & Descriptions</h2>
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+      <h2 class="mb-0"><i class="fa fa-layer-group"></i> Manage Organism Assembly Groups & Descriptions</h2>
+      <?= help_modal_trigger('groups-guide', 'How this page works') ?>
+    </div>
   </div>
   
-  <!-- About Section -->
-  <div class="card mb-4">
-    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#aboutOrganismGroups">
-      <h5 class="mb-0"><i class="fa fa-info-circle"></i> About Organism Groups <i class="fa fa-chevron-down float-end"></i></h5>
-    </div>
-    <div class="collapse" id="aboutOrganismGroups">
-      <div class="card-body">
-        <p><strong>Purpose:</strong> Groups organize how organisms are categorized and browsed —
-           by taxonomy, research group, project, or any dimension you choose. An assembly can
-           belong to several groups at once.</p>
-
-        <div class="alert alert-info">
-          <h6 class="fw-semibold"><i class="fa fa-lock me-1"></i>How visibility &amp; permissions work</h6>
-          <p class="mb-2">Two different questions decide who can see a gene set — keep them apart:</p>
-          <ul class="mb-2">
-            <li><strong>Is the data open to everyone?</strong> Flip the <strong>Visibility</strong>
-                toggle in the table below. <span class="text-success fw-semibold">Public</span> means
-                <em>anyone</em>, including logged-out visitors; <span class="text-muted fw-semibold">Restricted</span>
-                means only the people below. This is a property of the gene set, and it is set
-                <strong>here</strong>.</li>
-            <li><strong>Who else gets a key while it's restricted?</strong> That is about people and
-                networks, and is set elsewhere:
-              <ul class="mb-0">
-                <li><strong>Collaborators</strong> — specific logged-in users you grant access to
-                    specific organisms, in <a href="manage_users.php">Manage Users</a>.</li>
-                <li><strong>IP-range users</strong> — anyone on a trusted network is auto-logged-in
-                    with full data access, configured in
-                    <a href="manage_site_config.php">Site Configuration</a>.</li>
-                <li><strong>Admins</strong> — see everything.</li>
-              </ul>
-            </li>
-          </ul>
-          <p class="mb-0 small text-muted">Why the split? “Is this data public?” belongs with the
-            <em>data</em> (here). “What may this person see?” belongs with the <em>person</em>
-            (Manage Users) — otherwise you would edit every gene set to give one collaborator access.
-            The gene set decides if the door is open to all; Manage Users and Site Configuration hand
-            specific people a key when it is not.</p>
-        </div>
-
-        <p><strong>Groups do not control visibility.</strong> A group is just a label for browsing.
-           Making a gene set public no longer means adding it to a “Public” group — it keeps its real
-           groups (e.g. Bats) and simply flips to Public.</p>
-
-        <p class="mb-0"><strong>What You Can Do:</strong></p>
-        <ul class="mb-0">
-          <li>Assign organisms to multiple groups at once</li>
-          <li>Create new group names dynamically</li>
-          <li>Add images and HTML descriptions for each group</li>
-          <li>Track stale entries (deleted from filesystem)</li>
-          <li>Visually edit group assignments with a tag interface</li>
-        </ul>
-        
-        <hr class="my-3">
-        
-        <p><strong>Configuration Files:</strong></p>
-        <ul class="mb-0">
-          <li><strong>Group Assignments:</strong> <code><?= htmlspecialchars($groups_file) ?></code></li>
-          <li><strong>Group Descriptions:</strong> <code><?= htmlspecialchars($descriptions_file) ?></code></li>
-          <li><strong>Change Log:</strong> <code><?= htmlspecialchars($metadata_path . '/change_log/manage_groups.log') ?></code></li>
-        </ul>
-      </div>
-    </div>
-  </div>
   
   <?php
   ?>
@@ -826,3 +766,4 @@ function deleteGroup(groupName) {
   </div>
 </div>
 
+<?php include __DIR__ . '/guides/manage_groups.php';   // the "How this page works" guide ?>
