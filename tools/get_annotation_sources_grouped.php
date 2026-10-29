@@ -21,8 +21,12 @@ ob_end_clean();
 header('Content-Type: application/json');
 
 // Accept either single organism or comma-separated list of organisms
-$organism_param = $_GET['organism'] ?? '';
+// organisms[]=… (an array) is accepted too. Every caller sends a comma-separated string, but an
+// array reached explode() and the page died with a 500 (error log, 2026-10-01); a malformed
+// request gets an answer, never a crash.
+$organism_param  = is_string($_GET['organism'] ?? null) ? $_GET['organism'] : '';
 $organisms_param = $_GET['organisms'] ?? '';
+if (is_array($organisms_param)) $organisms_param = implode(',', array_filter($organisms_param, 'is_string'));
 
 $organisms = [];
 if (!empty($organisms_param)) {
