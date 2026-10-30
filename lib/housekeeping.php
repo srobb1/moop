@@ -198,23 +198,49 @@ function housekeeping_marker_file(): string {
     return ConfigManager::getInstance()->getPath('site_path') . '/logs/.housekeeping_last_run';
 }
 
-/** Absolute path to the PID lock held for the duration of a run. */
+/** Absolute path to the lock file held (flock) for the duration of a run. */
 function housekeeping_lock_file(): string {
     return ConfigManager::getInstance()->getPath('site_path') . '/logs/.housekeeping_lock';
 }
 
 /**
- * Is a run in flight right now? Reads the PID lock and checks the process is alive, so a
- * lock left behind by a crashed request does not wedge housekeeping forever.
+ * Is a run in flight right now? True while some process holds the flock on the lock file.
+ *
+ * flock, not "is the PID in the file alive": the kernel drops a flock the moment its process
+ * exits, HOWEVER it exits. The PID test failed both ways at once on 2026-10-30. A background run
+ * died part-way (fetchData() die()s on a query error), so it never reached the unlink; and
+ * php-fpm never reaped the child, so the zombie kept /proc/<pid> alive. Every Rebuild click then
+ * answered "already running" and the hourly sweep never ran, until the fpm worker was recycled.
+ * Same design as the BLAST queue (lib/blast_queue.php): nothing to clean up, nothing to go stale.
  *
  * The dashboard uses this to tell the admin "running in the background — your numbers
  * will be current next visit", which is the honest way to present the async trade.
  */
 function housekeeping_is_running(): bool {
-    $lock = housekeeping_lock_file();
-    if (!file_exists($lock)) return false;
-    $pid = (int) trim((string) @file_get_contents($lock));
-    return $pid > 0 && file_exists("/proc/$pid");
+    $fh = @fopen(housekeeping_lock_file(), 'r');
+    if (!$fh) return false;
+    $free = flock($fh, LOCK_EX | LOCK_NB);
+    if ($free) flock($fh, LOCK_UN);
+    fclose($fh);
+    return !$free;
+}
+
+/**
+ * Take the run lock for this process. Returns the handle (keep it open for the whole run), or
+ * null if another run holds it. If the lock file cannot be opened at all the run goes ahead
+ * unlocked — a housekeeping that never runs is worse than one that might overlap.
+ */
+function housekeeping_lock_acquire() {
+    $fh = @fopen(housekeeping_lock_file(), 'c+');
+    if (!$fh) {
+        error_log('MOOP housekeeping: cannot open ' . housekeeping_lock_file() . ' — running unlocked');
+        return true;
+    }
+    if (!flock($fh, LOCK_EX | LOCK_NB)) { fclose($fh); return null; }
+    ftruncate($fh, 0);
+    fwrite($fh, (string) getmypid());   // for a human looking at the file; the lock is the flock
+    fflush($fh);
+    return $fh;
 }
 
 /** Has HOUSEKEEPING_MIN_INTERVAL elapsed since the last run? */
@@ -321,7 +347,6 @@ function housekeeping_run_tasks(array $only = []): array {
     $result = ['ran' => false, 'reason' => null, 'tasks' => []];
 
     $logs_dir  = ConfigManager::getInstance()->getPath('site_path') . '/logs';
-    $lock_file = housekeeping_lock_file();
 
     $tasks = housekeeping_task_registry();
     if ($only) {
@@ -332,13 +357,12 @@ function housekeeping_run_tasks(array $only = []): array {
         }
     }
 
-    if (housekeeping_is_running()) {
+    if (!is_dir($logs_dir)) @mkdir($logs_dir, 0755, true);
+    $lock = housekeeping_lock_acquire();
+    if ($lock === null) {
         $result['reason'] = 'already_running';
         return $result;
     }
-
-    if (!is_dir($logs_dir)) @mkdir($logs_dir, 0755, true);
-    @file_put_contents($lock_file, (string) getmypid());
     // Touch the marker before running: a slow task must not let other requests pile up.
     //
     // ONLY for a full sweep. A targeted re-run (the permission card's "Re-check now")
@@ -370,7 +394,7 @@ function housekeeping_run_tasks(array $only = []): array {
         }
     }
 
-    @unlink($lock_file);
+    if (is_resource($lock)) { flock($lock, LOCK_UN); fclose($lock); }
     $result['ran'] = true;
     return $result;
 }
@@ -1074,6 +1098,7 @@ function housekeeping_rebuild_stale_gene_indexes(string $base, int $budget_secon
     $t0 = time();
     $out = ['done' => [], 'failed' => [], 'left' => 0, 'seconds' => 0];
     if (!is_dir($base)) return $out;
+    $progress = ['started_at' => $t0, 'total' => 0, 'index' => 0, 'current' => null, 'done' => [], 'failed' => [], 'finished' => false];
 
     $config = ConfigManager::getInstance();
     require_once $config->getPath('site_path') . '/lib/jbrowse/gene_set_functions.php';
@@ -1085,9 +1110,16 @@ function housekeeping_rebuild_stale_gene_indexes(string $base, int $budget_secon
         $todo[$key] = [$broken ? 0 : 1, (int)@filesize("$base/$key/annotations.gff3")];
     }
     uasort($todo, fn($a, $b) => $a <=> $b);
+    $progress['total'] = count($todo);
+    housekeeping_jbrowse_progress_write($progress);
 
     foreach (array_keys($todo) as $i => $key) {
         if (time() - $t0 >= $budget_seconds) { $out['left'] = count($todo) - $i; break; }
+        $progress['index'] = $i + 1;
+        $progress['current'] = $key;
+        $progress['done'] = $out['done'];
+        $progress['failed'] = $out['failed'];
+        housekeeping_jbrowse_progress_write($progress);
         [$org, $asm, $gs] = explode('/', $key);
         $log = [];
         prepareGeneSetForJBrowse($org, $asm, $gs, $config, $log, false);
@@ -1114,7 +1146,21 @@ function housekeeping_rebuild_stale_gene_indexes(string $base, int $budget_secon
         error_log("MOOP housekeeping: re-prep failed for $key: $why");
     }
     $out['seconds'] = time() - $t0;
+    housekeeping_jbrowse_progress_write(['current' => null, 'finished' => true, 'finished_at' => time()] + $out + $progress);
     return $out;
+}
+
+/**
+ * Where the gene-index rebuild reports progress as it goes, for the dashboard's Rebuild button
+ * (admin/api/rerun_housekeeping.php status=1, js/modules/housekeeping-rerun.js). The rebuild runs
+ * for minutes in the background child; without this the button could only say "started".
+ */
+function housekeeping_jbrowse_progress_file(): string {
+    return dirname(housekeeping_status_file()) . '/.jbrowse_rebuild_progress.json';
+}
+
+function housekeeping_jbrowse_progress_write(array $progress): void {
+    @file_put_contents(housekeeping_jbrowse_progress_file(), json_encode($progress), LOCK_EX);
 }
 
 /**

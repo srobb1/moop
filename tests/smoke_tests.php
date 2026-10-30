@@ -3308,6 +3308,37 @@ $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_T));
 
 // ----------------------------------------------------------------------------
+group('Housekeeping lock: a run that dies never blocks the next');
+// 2026-10-30: a background run die()d part-way, left its PID in the lock file, and php-fpm never
+// reaped it -- the zombie kept /proc/<pid> alive, so every later run (and the dashboard's
+// Rebuild button) was refused as "already running". The lock is now a flock, which the kernel
+// drops however the process ends. Here the holder is a separate process that exits WITHOUT
+// releasing anything, as die() would.
+require_once "$BASE/lib/housekeeping.php";
+$_H = sys_get_temp_dir() . '/moop_hklock_' . getmypid();
+mkdir("$_H/logs", 0777, true);
+$_cfg = ConfigManager::getInstance();
+$_rp  = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['site_path'] = $_H; $_rp->setValue($_cfg, $_c);
+ok(!housekeeping_is_running(), 'no lock file: not running');
+$_lf = escapeshellarg("$_H/logs/.housekeeping_lock");
+$_holder = proc_open(['php', '-r', '$f = fopen(' . var_export("$_H/logs/.housekeeping_lock", true) . ', "c+"); flock($f, LOCK_EX); fwrite(STDOUT, "held\n"); fflush(STDOUT); fgets(STDIN); die(1);'],
+                     [0 => ['pipe', 'r'], 1 => ['pipe', 'w']], $_pp);
+fgets($_pp[1]);   // wait until the other process holds it
+ok(housekeeping_is_running(), 'while another process holds the lock: running');
+ok(housekeeping_lock_acquire() === null, 'a second run is refused while it is held');
+fwrite($_pp[0], "go\n"); fclose($_pp[0]); fclose($_pp[1]); proc_close($_holder);   // it die()s holding the lock
+ok(!housekeeping_is_running(), 'the holder died without releasing anything: no longer running');
+$_lk = housekeeping_lock_acquire();
+ok(is_resource($_lk) && trim(file_get_contents("$_H/logs/.housekeeping_lock")) === (string)getmypid(), 'the next run takes the lock');
+flock($_lk, LOCK_UN); fclose($_lk);
+file_put_contents("$_H/logs/.housekeeping_lock", '1');   // an old-style PID file naming a live process (init)
+ok(!housekeeping_is_running(), 'a PID in the file means nothing without the flock (the zombie case)');
+$_rp->setValue($_cfg, $_saved);
+exec('rm -rf ' . escapeshellarg($_H));
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {
