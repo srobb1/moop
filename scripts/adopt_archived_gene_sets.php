@@ -80,7 +80,11 @@ foreach (["$site/.archived_gene_sets", "$site/archived_gene_sets"] as $src) {
     }
     if ($apply && is_dir($src)) {
         moop_retire_rmdir_empty($src);   // only the now-empty Org/Asm skeleton
-        if (is_dir($src)) echo "Left $src: something is still in it\n";
+        // The top directory sits in the app directory, which the web user cannot write: an
+        // empty one left behind is a permission matter, not leftover data — say which.
+        if (is_dir($src)) echo array_diff(scandir($src) ?: [], ['.', '..'])
+            ? "Left $src: something is still in it\n"
+            : "$src is empty; remove it with: rmdir " . escapeshellarg($src) . "\n";
     }
 }
 echo $found ? '' : "Nothing to adopt.\n";

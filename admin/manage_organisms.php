@@ -298,7 +298,8 @@ $data = [
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/modules/organism-management.js',
-        '/' . $config->getString('site') . '/js/modules/retire.js'
+        '/' . $config->getString('site') . '/js/modules/retire.js',
+        '/' . $config->getString('site') . '/js/modules/copy-to-clipboard.js'
     ],
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",

@@ -404,7 +404,7 @@ function moop_retired_list(ConfigManager $config): array {
                   'in_database'  => $level !== 'organism' && is_dir("$dir/data") && ($record['organism'] ?? '') !== ''
                                     && moop_retire_in_database($record, $config),
                   'has_data' => is_dir("$dir/data"),
-                  'delete_command' => 'rm -rf ' . escapeshellarg($dir)];
+                  'delete_command' => 'sudo rm -rf ' . escapeshellarg($dir)];
     }
     usort($out, fn($a, $b) => strcmp($a['rel'], $b['rel']) ?: strcmp($b['bundle'], $a['bundle']));
     $count = array_count_values(array_column($out, 'rel'));

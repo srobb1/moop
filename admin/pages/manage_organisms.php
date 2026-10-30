@@ -600,8 +600,14 @@
             </td>
           </tr>
           <?php if ($rb['has_data']): ?>
-          <tr><td colspan="5" class="border-0 pt-0"><small class="text-muted">Delete for good:</small>
-            <code class="small user-select-all"><?= htmlspecialchars($rb['delete_command']) ?></code></td></tr>
+          <tr><td colspan="5" class="border-0 pt-0">
+            <?php // Copy button: js/modules/copy-to-clipboard.js (data-copy-text; works on plain http). ?>
+            <div class="d-flex align-items-center gap-2">
+              <small class="text-muted text-nowrap">Delete for good:</small>
+              <code class="small user-select-all flex-grow-1 bg-light border rounded px-2 py-1 text-break"><?= htmlspecialchars($rb['delete_command']) ?></code>
+              <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-copy-text="<?= htmlspecialchars($rb['delete_command']) ?>"
+                      title="Copy the command, then run it on the server"><i class="fa fa-copy"></i> <span class="copy-label">Copy</span></button>
+            </div></td></tr>
           <?php endif; ?>
         <?php endforeach; ?>
         </tbody>
