@@ -2,7 +2,7 @@
 # geneNames.tsv for people (2026-10-29): one row per database feature, with its gene and type, the
 # name split into symbol and description, and where the name came from in words.
 #
-#   make_readable_gene_names.pl features.tsv geneNames.tsv > geneNames.readable.tsv
+#   make_readable_gene_names.pl features.tsv geneNames.tsv [OMA_run/DB] > geneNames.readable.tsv
 #
 # geneNames.tsv itself is for the pipeline (updateFASTA.pl, updateGFF.pl and the loaders read it by
 # column; MAINID SELF marks the protein a gene was named from) and stays as it is. This file is the one
@@ -12,7 +12,9 @@
 #   type       gene, mRNA, CDS or protein (from features.tsv, the database's own list)
 #   name_from  the gene set's own annotation (RefSeq, Ensembl, ...), MOOP, or none
 #   method     how MOOP named it (OMA human ortholog, PANTHER family, ...); "Source name retained" for the source's own name
-#   evidence   the accession the MOOP name rests on (human OMA id, PANTHER family, InterPro entry, ...)
+#   evidence   the accession the MOOP name rests on (human ortholog, PANTHER family, InterPro entry, ...);
+#              an OMA id (HUMAN027043) is given as the protein's external id, the one the database's
+#              OMA ortholog tables carry (ENSP..., else XP_/NP_), read from the OMA run's DB/<CODE>.fa
 # No cell is blank: an unnamed gene has description "No name" and name_from "none"; anything else
 # without a value is N/A.
 #
@@ -48,6 +50,28 @@ sub provenance {
   return ('MOOP', $method, ($accession // '') eq '-' ? '' : $accession // '');
 }
 
+# OMA ids of one species code -> the protein's external id, from the OMA run's DB/<CODE>.fa headers
+# ("HUMAN027043 | ENST00000302451.9; ENSP00000305465.4 | ENSG... | ..."): the Ensembl protein, else the
+# RefSeq one, as getOMA_orthologs.moop.pl picks them for the database
+sub read_oma_external_ids {
+  my ($db_dir, $code) = @_;
+  my %external;
+  my $fasta = "$db_dir/$code.fa";
+  return \%external unless -s $fasta;
+  open my $fh, '<', $fasta or die "cant open $fasta $!\n";
+  while (my $line = <$fh>) {
+    next unless $line =~ /^>(\S+)\s*\|(.*)/;
+    my ($oma_id, $rest) = ($1, $2);
+    my @ids = map { my $field = $_; $field =~ s/^\s+|\s+$//gr } split /[|;]/, $rest;
+    my ($ensembl) = grep { my $field = $_; $field =~ /^ENS\w*P\d/ } @ids;
+    my ($refseq)  = grep { my $field = $_; $field =~ /^[XN]P_\d/ } @ids;
+    my $chosen = $ensembl // $refseq;
+    $external{$oma_id} = $chosen if defined $chosen;
+  }
+  close $fh;
+  return \%external;
+}
+
 # "pdxp: pyridoxal phosphate phosphatase [SRC]" -> ("pdxp", "pyridoxal phosphate phosphatase")
 sub symbol_and_description {
   my ($text) = @_;
@@ -58,8 +82,8 @@ sub symbol_and_description {
 }
 
 sub main {
-  my ($features_file, $names_file) = @ARGV;
-  die "usage: $0 features.tsv geneNames.tsv > geneNames.readable.tsv\n" unless defined $names_file;
+  my ($features_file, $names_file, $oma_db_dir) = @ARGV;
+  die "usage: $0 features.tsv geneNames.tsv [OMA_run/DB] > geneNames.readable.tsv\n" unless defined $names_file;
 
   # geneNames.tsv: each id's name and note; a gene's name from its own row, else from the row its
   # proteins were named by (own gene sets have no gene rows: GroupId is the gene, MAINID SELF the row)
@@ -90,6 +114,7 @@ sub main {
   }
   close $features_fh;
 
+  my %oma_external;   # species code -> {OMA id -> external id}, read when first needed
   print join("\t", qw(gene_id type id symbol description name_from method evidence)), "\n";
   foreach my $id (@order) {
     my $gene = $id;
@@ -101,6 +126,11 @@ sub main {
     my $entry = $name_of{$id} // $name_of{$bare} // $gene_name{$gene} // ['', ''];
     my ($symbol, $description) = symbol_and_description($entry->[0]);
     my @row = ($gene, $type_of{$id}, $id, $symbol, $description, provenance(@$entry));
+    if (defined $oma_db_dir and $row[7] =~ /^([A-Z0-9]{5})\d+$/) {
+      my $code = $1;
+      $oma_external{$code} //= read_oma_external_ids($oma_db_dir, $code);
+      $row[7] = $oma_external{$code}{$row[7]} // $row[7];
+    }
     # no blank cells (the readers asked, 2026-10-29): an unnamed gene says so, anything else empty is N/A
     $row[4] = 'No name' if $row[4] eq '' and $row[5] eq 'none';
     print join("\t", map { my $cell = $_; $cell eq '' ? 'N/A' : $cell } @row), "\n";
