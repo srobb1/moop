@@ -3406,6 +3406,32 @@ $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_H));
 
 // ----------------------------------------------------------------------------
+group('Taxonomy tree: an unnamed species on a genus id keeps its own leaf');
+require_once "$BASE/lib/taxonomy_functions.php";
+$_lin = fn(...$l) => ['lineage' => array_map(fn($x) => ['rank' => $x[0], 'name' => $x[1]], $l)];
+$_cache = ['10' => $_lin(['family', 'Dugesiidae'], ['genus', 'Girardia'], ['species', 'Girardia dorotocephala']),
+           '52316' => $_lin(['family', 'Dugesiidae'], ['species', 'Girardia'])];   // genus id, as the dump labels it
+$_leaves = function ($n, $path = []) use (&$_leaves) {
+    $out = [];
+    foreach ($n['children'] ?? [] as $c) {
+        if (isset($c['organism'])) $out[$c['organism']] = implode('/', array_merge($path, [$c['name']]));
+        else $out += $_leaves($c, array_merge($path, [$c['name']]));
+    }
+    return $out;
+};
+foreach ([['Girardia_dorotocephala', 'Girardia_sp'], ['Girardia_sp', 'Girardia_dorotocephala']] as $_order) {
+    $_orgs = [];
+    foreach ($_order as $_o) $_orgs[$_o] = $_o === 'Girardia_sp' ? ['taxon_id' => '52316', 'genus' => 'Girardia', 'species' => 'sp']
+                                                                 : ['taxon_id' => '10', 'genus' => 'Girardia', 'species' => 'dorotocephala'];
+    $_l = $_leaves(build_tree_from_lineage_cache($_orgs, $_cache)['tree']);
+    ok(($_l['Girardia_sp'] ?? '') === 'Dugesiidae/Girardia/Girardia sp.' && ($_l['Girardia_dorotocephala'] ?? '') === 'Dugesiidae/Girardia/Girardia dorotocephala',
+       'Girardia sp. (genus id) and G. dorotocephala share one genus node, each with its own leaf (' . $_order[0] . ' first)');
+}
+$_l = $_leaves(build_tree_from_lineage_cache(['Spathula_sp' => ['taxon_id' => '7', 'genus' => 'Spathula', 'species' => 'sp']],
+                                              ['7' => $_lin(['family', 'Dugesiidae'], ['species', 'Spathula'])])['tree']);
+ok(($_l['Spathula_sp'] ?? '') === 'Dugesiidae/Spathula/Spathula sp.', 'a lone genus-id organism reads "Spathula sp.", under its genus');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {
