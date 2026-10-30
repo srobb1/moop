@@ -306,6 +306,50 @@ genome_kind() {
   echo "${meta:-$detected}"
 }
 
+## check_gff_seqids GFF GENOME_FA -- every sequence name the GFF uses must be in the genome. A gene on a
+## name the genome does not have still loads, and search and BLAST work, but its genomic sequence, exon
+## export and genome-browser track find nothing (2026-10-30, the site's Data Quality check: Amphimedon's
+## genome had GenBank names and its GFF RefSeq ones, 13,132 of 13,133; Petromyzon chr1.. against
+## another naming). Returns 1 and says what is missing; MOOP_ALLOW_SEQID_MISMATCH=1 makes it a warning,
+## for a known and accepted case (schMedA2h1: one gene on a scaffold NCBI left out of the genome).
+check_gff_seqids() {
+  local gff=$1 genome=$2 report missing total examples
+  [ -s "$genome" ] || { echo "WARNING: no $genome: GFF sequence names not checked" >&2; return 0; }
+  ## the index when it is current, else the FASTA's own headers (first word)
+  if [ -s "$genome.fai" ] && [ "$genome.fai" -nt "$genome" ]; then
+    report=$(cut -f1 "$genome.fai" | check_gff_seqids_awk "$gff")
+  else
+    report=$(awk '/^>/ { sub(/^>/, ""); print $1 }' "$genome" | check_gff_seqids_awk "$gff")
+  fi
+  IFS=$'\t' read -r missing total examples <<< "$report"
+  [ "${missing:-0}" -eq 0 ] && return 0
+  echo "ERROR: $THIS_ORG/$ASSEMBLY/$GENE_SET -- $missing of $total sequence names in genes.gff are not in" >&2
+  echo "       $genome, e.g. $examples" >&2
+  echo "       Genes on them would load without genomic sequence, exon export or a genome-browser track." >&2
+  echo "       Fix the data: a genome and annotation that use the same names (the same source's genome," >&2
+  echo "       e.g. RefSeq GCF_ for a RefSeq GFF, Ensembl/GenBank GCA_ for an Ensembl GFF), or rename one" >&2
+  echo "       of them with a name-translation table (NCBI's *_assembly_report.txt maps GenBank <-> RefSeq)." >&2
+  if [ "${MOOP_ALLOW_SEQID_MISMATCH:-0}" = 1 ]; then
+    echo "WARNING: MOOP_ALLOW_SEQID_MISMATCH=1: continuing anyway" >&2
+    return 0
+  fi
+  echo "       To continue anyway (a known, accepted case): MOOP_ALLOW_SEQID_MISMATCH=1" >&2
+  return 1
+}
+## genome names on STDIN, the GFF as $1 -> "missing<TAB>total<TAB>first five missing (with line counts)"
+check_gff_seqids_awk() {
+  awk -F'\t' '
+    FNR == NR { in_genome[$1] = 1; next }
+    /^#/ || NF < 9 { next }
+    { used[$1] = 1 }
+    !($1 in in_genome) { if (!($1 in lines)) order[++n] = $1; lines[$1]++ }
+    END {
+      printf "%d\t%d\t", n, length(used)
+      for (i = 1; i <= n && i <= 5; i++) printf "%s%s (%d GFF lines)", (i > 1 ? ", " : ""), order[i], lines[order[i]]
+      print ""
+    }' - "$1"
+}
+
 write_geneset_json() {
   local source="$1"
   local file="$GENESET_DATA/geneset.json"
@@ -1026,6 +1070,9 @@ if $HAS_GFF; then
     echo "       then re-run this gene set." >&2
     exit 1
   fi
+
+  ## the GFF's sequence names must all be in the genome (check_gff_seqids above), before any work
+  check_gff_seqids "$GENESET_DIR/genes.gff" "$GENOME_DIR/genome.fa" || exit 1
 
   case "$GFF_SOURCE" in
     refseq)  write_geneset_json "RefSeq"   ;;
