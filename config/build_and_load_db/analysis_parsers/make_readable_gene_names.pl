@@ -11,7 +11,7 @@
 # Columns: gene_id  type  id  symbol  description  name_from  method  evidence
 #   type       gene, mRNA, CDS or protein (from features.tsv, the database's own list)
 #   name_from  the gene set's own annotation (RefSeq, Ensembl, ...), MOOP, or none
-#   method     how MOOP named it (OMA human ortholog, PANTHER family, ...); "Source name retained" for the source's own name
+#   method     how MOOP named it (OMA human ortholog, PANTHER family, DIAMOND BLASTP vs Ensembl Homo sapiens, ...); "Source name retained" for the source's own name
 #   evidence   the accession the MOOP name rests on (human ortholog, PANTHER family, InterPro entry, ...);
 #              an OMA id (HUMAN027043) is given as the protein's external id, the one the database's
 #              OMA ortholog tables carry (ENSP..., else XP_/NP_), read from the OMA run's DB/<CODE>.fa
@@ -45,8 +45,12 @@ sub provenance {
   return ($note ne '' ? $note : 'the gene set', 'Source name retained', 'N/A') unless $note =~ /\|/;
   my ($source, $kind, undef, $accession) = split /\|/, $note;
   return ('none', '', '') if $source eq 'none';
+  # a search says the program and what it searched: "DIAMOND BLASTP vs Ensembl Homo sapiens"
   my $method = $METHOD{$source};
-  $method //= $source =~ /^MMseqs2_RBH_(\w+)/ ? 'reciprocal best hit (MMseqs2), ' . ($1 =~ tr/_/ /r) : ($source =~ tr/_/ /r);
+  $method //= $source =~ /^Ensembl_(\w+)/       ? 'DIAMOND BLASTP vs Ensembl ' . species_words($1)
+            : $source eq 'UniProtKB/Swiss-Prot'  ? 'DIAMOND BLASTP vs UniProtKB/Swiss-Prot'
+            : $source =~ /^MMseqs2_RBH_(\w+)/     ? 'MMseqs2 reciprocal best hit vs Ensembl ' . species_words($1)
+            :                                      ($source =~ tr/_/ /r);
   $method .= ' (transposable element)' if ($kind // '') eq 'Transposable_element';
   return ('MOOP', $method, ($accession // '') eq '-' ? '' : $accession // '');
 }
@@ -71,6 +75,13 @@ sub read_oma_external_ids {
   }
   close $fh;
   return \%external;
+}
+
+# "homo_sapiens" -> "Homo sapiens"; Ensembl's division prefix ("PL_arabidopsis_thaliana") is dropped
+sub species_words {
+  my ($name) = @_;
+  $name =~ s/^[A-Z]{2}_//;
+  return ucfirst(lc($name =~ tr/_/ /r));
 }
 
 # "pdxp: pyridoxal phosphate phosphatase [SRC]" -> ("pdxp", "pyridoxal phosphate phosphatase")
