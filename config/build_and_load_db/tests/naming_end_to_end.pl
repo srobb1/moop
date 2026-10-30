@@ -42,7 +42,7 @@ my %length = (T1 => 300, T2 => 250, T3 => 250, T4 => 400, T5 => 100, T6 => 100, 
               T10 => 300, T11 => 200, T12 => 150, T13 => 300, T14 => 500, T15 => 300, T16 => 200,
               T17 => 400, T18 => 400, T19 => 400, T20 => 400, T21 => 400, T22 => 400, T23 => 300, T24 => 200,
               T25 => 250, T26 => 300, T27 => 300, T28 => 300, T29 => 300, T30 => 200,
-              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200, T55 => 200, T56 => 200, T57 => 80, T58 => 210, T59 => 310, T60 => 220, T61 => 300, T62 => 300);
+              T31 => 200, T32 => 200, T33 => 200, T34 => 300, T35 => 300, T36 => 250, T37 => 150, T38 => 200, T39 => 300, T40 => 200, T41 => 320, T42 => 200, T43 => 200, T44 => 200, T45 => 200, T46 => 200, T47 => 200, T48 => 200, T49 => 300, T50 => 200, T51 => 200, T52 => 200, T53 => 200, T54 => 200, T55 => 200, T56 => 200, T57 => 80, T58 => 210, T59 => 310, T60 => 220, T61 => 300, T62 => 300, T63 => 300);
 write_file("$dir/isoforms.tsv", join('', map { my $protein = $_; my $n = substr($protein, 1); "$protein.1\tNone\tG$n\n" } sort keys %length));
 write_file("$dir/protein.aa.fa", join('', map { my $protein = $_; ">$protein.1\n" . ('M' x $length{$protein}) . "\n" } sort keys %length));
 
@@ -475,7 +475,10 @@ write_file("$dir/diamond/UNIPROT_sprot/diamond_results.tsv",
   . join("\t", 'T60.1', 'sp|Q9XXX2|TPSA_DROME', 'sp|Q9XXX2|TPSA_DROME Terpene synthase A OS=Drosophila melanogaster OX=7227 GN=tpsA PE=2 SV=1',
          '1e-80', 50, 100, 40, 1, 1, 100, 1, 100, 300, 220, 220, 95, 95) . "\n"
   . join("\t", 'T60.1', 'sp|Q9XXX3|TPSB_CAEEL', 'sp|Q9XXX3|TPSB_CAEEL Terpene synthase B OS=Caenorhabditis elegans OX=6239 GN=tpsB PE=2 SV=1',
-         '1e-78', 50, 100, 40, 1, 1, 100, 1, 100, 295, 220, 220, 95, 95) . "\n");
+         '1e-78', 50, 100, 40, 1, 1, 100, 1, 100, 295, 220, 220, 95, 95) . "\n"
+  # T63: its human hit is a Swiss-Prot protein with no HGNC record and no Ensembl gene (an ERV Gag)
+  . join("\t", 'T63.1', 'sp|Q9XXX9|ERVX1_HUMAN', 'sp|Q9XXX9|ERVX1_HUMAN Endogenous retrovirus group X member 1 Gag polyprotein OS=Homo sapiens OX=9606 PE=1 SV=1',
+         '1e-90', 60, 280, 40, 1, 1, 285, 1, 290, 330, 300, 300, 95, 97) . "\n");
 
 # ---- run it (twice, with different hash seeds: the output must not depend on hash order)
 my @arguments = ('--isoforms', "$dir/isoforms.tsv", '--protein-fasta', "$dir/protein.aa.fa", '--hgnc-dir', "$dir/hgnc",
@@ -857,6 +860,28 @@ check(($source{G24}[0] // '') eq 'PTHR00024' && scalar(($source{G24}[1] // '') =
 
 # ---- closest genes: one entry per gene; families as families
 check(($closest_human{G1}[2] // '') eq 'HGNC:1', 'closest human G1: HGNC:1');
+# a human Swiss-Prot protein with no HGNC record or Ensembl gene: its own UniProt-linked source, not a
+# family row with an empty accession (Chamaeleo's ERVK-24 Gag, 2026-10-30)
+{
+  my (%in_file, %source_of);
+  foreach my $file (glob "$out/closest_human*.moop.tsv") {
+    my ($kind) = $file =~ /closest_human(\.\w+)?\.moop/;
+    open my $fh, '<', $file or die "cant read $file\n";
+    while (my $line = <$fh>) {
+      $source_of{$kind // ''} = $1 if $line =~ /^## Annotation Source: (.+)$/;
+      next if $line =~ /^#/;
+      my @fields = split /\t/, $line;
+      push @{$in_file{$kind // ''}}, \@fields;
+    }
+    close $fh;
+  }
+  my ($row) = grep { my $fields = $_; $fields->[0] eq 'T63.1' } @{$in_file{'.uniprot'} // []};
+  check(defined $row && $row->[1] eq 'Q9XXX9' && ($source_of{'.uniprot'} // '') eq 'Closest human protein (UniProt, no HGNC or Ensembl record)',
+        'closest human G63: a UniProt-only human protein gets its UniProt accession, in its own source', join(' | ', @{$row // []}));
+  check(!grep({ my $fields = $_; $fields->[1] eq '' } map { my $kind = $_; @{$in_file{$kind}} } keys %in_file),
+        'closest human: no row with an empty accession in any closest_human file');
+  check(!grep({ my $fields = $_; $fields->[0] eq 'T63.1' } @{$in_file{'.family'} // []}), 'closest human G63: not in the family file');
+}
 check(($closest_human{G25}[2] // 'x') eq '' && ($closest_human{G25}[5] // 'x') eq '', 'closest human G25: the set-aside OMA pair is not reported', join(' | ', @{$closest_human{G25} // []}));
 check(($closest_human{G4}[2] // 'x') eq '' && ($closest_human{G4}[3] // '') eq 'Beta proteins family' && scalar(($closest_human{G4}[5] // '') =~ /family of 2$/),
       'closest human G4: the family, no gene id', join(' | ', @{$closest_human{G4} // []}));

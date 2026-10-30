@@ -963,8 +963,11 @@ sub human_record {
   $ensembl_gene =~ s/\.\d+$//;
   my $description = clean_name($keys{description} // '');
   return undef if $ensembl_gene eq '' and $description eq '';
+  # a Swiss-Prot human protein with neither (ERVK-24 Gag, LINE-1 ORF2, ...) keeps its UniProt accession:
+  # the closest-human row links to it (it had no accession at all, 2026-10-30)
   return { key => ($ensembl_gene ne '' ? $ensembl_gene : "desc:$description"), hgnc_id => '',
-           symbol => $ensembl_gene, name => $description, gene_group => '' };
+           symbol => $ensembl_gene, name => $description, gene_group => '',
+           uniprot => ($ensembl_gene eq '' ? ($keys{uniprot} // [])->[0] // '' : '') };
 }
 
 sub human_from_oma_header {
@@ -1567,7 +1570,7 @@ sub collect_diamond {
         my $protein_hit = { %hit, id => $query, hit => $subject, human => $candidate->{human} };
         $protein_best_human{$query} = $protein_hit if better_hit($protein_hit, $protein_best_human{$query});
         add_link($group, tier => 5, human => [$candidate->{human}], type => 'best hit', id => $query,
-                 bits => $hit{bits}, evalue => $hit{evalue}, evidence => "best BLAST hit ($candidate->{label})", hit => $subject);
+                 bits => $hit{bits}, evalue => $hit{evalue}, evidence => "best DIAMOND hit ($candidate->{label})", hit => $subject);
       }
     }
     close $fh;
@@ -2477,7 +2480,7 @@ sub family_entry {
   my @descriptions = grep { my $description = $_; $description ne '' and !$seen{$description}++ } @$descriptions;
   my $description = join(' / ', @descriptions[0 .. ($#descriptions < 2 ? $#descriptions : 2)]);
   $description .= " ... ($size genes)" if $size > 3;
-  return { id => '', symbol => $label, description => $description };
+  return { id => '', symbol => $label, description => $description, family => 1 };
 }
 
 my (%species_oma, %species_hit);   # tag -> group -> [ OMA pairs ] / best hit in the hits file
@@ -3989,7 +3992,7 @@ sub write_outputs {
       ? (family_entry($closest->{family_size}, [map { my $human = $_; $human->{hgnc_id} ? $human->{symbol} : '' } @{$closest->{human}}],
                       [map { my $human = $_; $human->{name} } @{$closest->{human}}], shared_hgnc_group($closest->{human})))
       : map { my $human = $_;
-              +{ id => ($human->{hgnc_id} ne '' ? $human->{hgnc_id} : $human->{key} =~ /^ENSG/ ? $human->{key} : ''),
+              +{ id => ($human->{hgnc_id} ne '' ? $human->{hgnc_id} : $human->{key} =~ /^ENSG/ ? $human->{key} : $human->{uniprot} // ''),
                 symbol => ($human->{hgnc_id} ne '' ? $human->{symbol} : ''), description => $human->{name} } } @{$closest->{human}};
     $human_closest{$group} = { rank => $closest->{tier}, genes => \@genes, evidence => $closest->{evidence} };
     $stats{"closest human: tier $closest->{tier}"}++;
@@ -4010,9 +4013,12 @@ sub write_outputs {
       accession_url => 'https://www.genenames.org/data/gene-symbol-report/#!/hgnc_id/', match => sub { $_[0]{id} =~ /^HGNC:/ } },
     { file => '.ensembl', source => 'Closest human gene (Ensembl, no HGNC record)', version => $version,
       url => 'https://www.ensembl.org', accession_url => 'https://www.ensembl.org/id/',
-      match => sub { $_[0]{id} ne '' } },
+      match => sub { $_[0]{id} =~ /^ENSG/ } },
+    { file => '.uniprot', source => 'Closest human protein (UniProt, no HGNC or Ensembl record)', version => $version,
+      url => 'https://www.uniprot.org', accession_url => 'https://www.uniprot.org/uniprotkb/',
+      match => sub { $_[0]{id} ne '' and !$_[0]{family} } },
     { file => '.family', source => 'Closest human gene family', version => $version, url => 'https://www.genenames.org',
-      accession_url => '', match => sub { 1 } },
+      accession_url => '', match => sub { $_[0]{family} } },
   ]);
 
   my @species_versions;   # "closest <species>: <its searches>", for naming_versions.txt
@@ -4036,7 +4042,7 @@ sub write_outputs {
         url => 'https://www.ncbi.nlm.nih.gov', accession_url => 'https://www.ncbi.nlm.nih.gov/search/all/?term=',
         match => sub { $_[0]{id} ne '' } },
       { file => '.family', source => "Closest $species->{species} gene family", version => $species_version,
-        url => 'https://www.ncbi.nlm.nih.gov', accession_url => '', match => sub { 1 } },
+        url => 'https://www.ncbi.nlm.nih.gov', accession_url => '', match => sub { $_[0]{family} } },
     ]);
   }
   write_naming_versions($version, $full_version, @species_versions);
@@ -4455,6 +4461,10 @@ sub write_closest {
     %features = ($group => 1) unless %features;
     foreach my $gene (@{$closest->{genes}}) {
       my ($source) = grep { my $candidate = $_; $candidate->{match}->($gene) } @$sources;
+      if (!$source) {
+        $stats{"closest $file_tag: no accession and not a family, no database row"}++;
+        next;
+      }
       my $fh = $moop_fh{$source->{file}} //= open_closest_moop("$base$source->{file}.moop.tsv", $source);
       my $label = $gene->{symbol} ne '' && $gene->{description} ne '' ? "$gene->{symbol}: $gene->{description}"
                 : ($gene->{description} || $gene->{symbol});
