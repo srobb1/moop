@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 # Rewrite a RefSeq cds.nt.fa so its sequence IDs match the CDS ID= values in the
-# GFF -- which is what parse_RefSeq_GFF_to_MOOP_TSV.pl writes into
+# GFF -- which is what parse_RefSeq_GFF_to_MOOP_TSV.pl (retired to analysis_parsers/old/; parse_GFF3_to_MOOP_TSV.pl now) writes into
 # feature_uniquename, and therefore what MOOP uses as the FASTA lookup key.
 #
 # Usage: rename_RefSeq_cds_fasta.pl <gff> <cds.nt.fa> [--dry-run]

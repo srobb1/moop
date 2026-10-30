@@ -16,6 +16,12 @@ A source fails when:
   DB SOURCE WITH NO FILE  the database has a source no file of these gene sets supplies (an old load)
 Gene ids that resolve to no feature are counted (the loader skips them too), not failed.
 
+Two checks per gene set besides the sources (2026-10-30, Parastichopus):
+  PREFIX MISSED           a gene set whose ids MOOP rewrote (.id_prefix_stripped) has a feature name or
+                          description that is a feature id from BEFORE the rewrite -- an id the database
+                          does not hold (15,575 Parastichopus genes were named 'rna-XM_...')
+  READABLE NAMES          geneNames.readable.tsv says "No name" for a feature geneNames.tsv names
+
 Only the files the build loads count: the load_files patterns of setup_new_moopdb_and_load_data.sh,
 read from that script (the eross RBBH pattern only with LOAD_EROSS_RBBH=1). Gene statement files load
 into gene_naming, not annotation, and are left out. Read-only: the database is opened with mode=ro.
@@ -81,6 +87,53 @@ def rows_of(path):
                 yield fields[0], fields[1]
 
 
+def gene_set_checks(gene_set_dir, feature, labels):
+    """(status, count, example) for each check this gene set fails: PREFIX MISSED, READABLE NAMES."""
+    problems = []
+    strip = add = ''
+    manifest = os.path.join(gene_set_dir, '.id_prefix_stripped')
+    if os.path.isfile(manifest):
+        strip, add = (open(manifest).readline().rstrip('\n').split('\t') + ['', ''])[:2]
+
+    def rewrite(uid):
+        if (strip or add) and uid.startswith(strip):
+            return add + uid[len(strip):]
+        return uid
+
+    if add:
+        # this gene set's features carry the add-prefix; a label that is not a feature id itself but becomes
+        # one with the rewrite is an id the prefix step missed
+        missed = {}
+        for uniquename, name, description in labels:
+            if not uniquename.startswith(add):
+                continue
+            for label in (name, description):
+                if label and label not in feature and rewrite(label) != label and rewrite(label) in feature:
+                    missed.setdefault(uniquename, label)
+        if missed:
+            example = next(iter(missed.items()))
+            problems.append(('PREFIX MISSED', len(missed), f'{example[0]} labelled "{example[1]}"'))
+
+    names_path = os.path.join(gene_set_dir, 'geneNames.tsv')
+    readable_path = os.path.join(gene_set_dir, 'geneNames.readable.tsv')
+    if os.path.isfile(names_path) and os.path.isfile(readable_path):
+        named = set()
+        with open(names_path, errors='replace') as fh:
+            for line in fh:
+                fields = line.rstrip('\n').split('\t')
+                if len(fields) >= 4 and fields[0] != 'ID' and fields[3] not in ('', 'None'):
+                    named.add(rewrite(fields[0]))
+        lost = []
+        with open(readable_path, errors='replace') as fh:
+            for line in fh:
+                fields = line.rstrip('\n').split('\t')
+                if len(fields) >= 5 and fields[4] == 'No name' and re.sub(r':(?:cds|pep)$', '', fields[2]) in named:
+                    lost.append(fields[2])
+        if lost:
+            problems.append(('READABLE NAMES', len(lost), lost[0]))
+    return problems
+
+
 def main(argv):
     report_path = None
     if '--report' in argv:
@@ -100,14 +153,16 @@ def main(argv):
         db = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
         # as load_annotations_sqlite.pl: the first feature of a uniquename; an annotation floats up to its
         # transcript (mRNA/transcript), else to the root of its parent chain (find_annotation_target)
-        feature, feature_type, parent = {}, {}, {}
-        for fid, uniquename, ftype, parent_fid in db.execute(
-                'select feature_id, feature_uniquename, feature_type, parent_feature_id from feature'):
+        feature, feature_type, parent, labels = {}, {}, {}, []
+        for fid, uniquename, ftype, parent_fid, name, description in db.execute(
+                'select feature_id, feature_uniquename, feature_type, parent_feature_id, feature_name, '
+                'feature_description from feature'):
             if uniquename is not None and uniquename not in feature:
                 feature[uniquename] = fid
             feature_type[fid] = ftype or ''
             if parent_fid is not None:
                 parent[fid] = parent_fid
+            labels.append((uniquename or '', name or '', description or ''))
         sources = {(name.strip(), (version or '').strip()): (sid, atype) for sid, name, version, atype in db.execute(
             'select annotation_source_id, annotation_source_name, annotation_source_version, annotation_type from annotation_source')}
         db_pairs = collections.defaultdict(set)
@@ -166,6 +221,11 @@ def main(argv):
                     file_pairs[key].add((target(fid), accession))
 
     rows, failed = [], collections.Counter()
+    checks_failed = collections.Counter()
+    for gene_set_dir in gene_set_dirs:
+        for status, count, example in gene_set_checks(gene_set_dir, feature, labels):
+            checks_failed[status] += 1
+            print(f'{status}: {gene_set_dir}: {count} feature(s), e.g. {example}')
     for key in sorted(set(file_types) | set(sources)):
         sid, db_type = sources.get(key, (None, ''))
         have = db_pairs.get(sid, set()) if sid else set()
@@ -198,7 +258,8 @@ def main(argv):
             print(f'{row[-1]}: "{row[0]}" ({row[1]}) -- files {row[4]} ({row[2] or "none"}): {row[5]} pairs, '
                   f'database ({row[3] or "none"}): {row[7]}; missing {row[8]}, extra {row[9]}')
     total_unresolved = sum(unresolved.values())
-    print(f'audit_files_vs_db: {len(rows)} sources, {len(rows) - sum(failed.values())} match their files'
+    failed.update(checks_failed)
+    print(f'audit_files_vs_db: {len(rows)} sources, {len(rows) - sum(failed.values()) + sum(checks_failed.values())} match their files'
           + (f'; FAILED: {dict(failed)}' if failed else '')
           + (f'; {total_unresolved} file rows name no feature (skipped by the loader too)' if total_unresolved else ''))
     return 1 if failed else 0

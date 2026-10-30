@@ -270,7 +270,16 @@ by rebuilding `geneNames.tsv` standalone, not through the full pipeline + copy-t
 | `make_isoforms_refseq_gff.pl` | none | no: superseded by `make_isoforms_from_gff.pl` |
 | `rbbh/make_isoforms_rbbh_REFSEQGFF.pl` | `rbbh/Nematostella_vectensis.run_notes.sh` only (a by-hand record) | no |
 
-`scripts/id_map_step1.sh` has its own copy, with the lift override already in it.
+`scripts/id_map_step1.sh` has its own copy, with the lift override already in it. The callerless
+ones -- `parse_RefSeq_GFF_to_MOOP_TSV.pl`, `make_isoforms_refseq_gff.pl`, and
+`get_names_from_refseq_gff.pl` (no callers either) -- moved to `analysis_parsers/old/`. The rbbh
+one stays with its by-hand kit.
+
+**Audit guard.** `audit_files_vs_db.py` (run before every copy to moop) now fails a build on
+PREFIX MISSED (a feature name/description in a prefixed gene set that is an id from before the
+prefix) and READABLE NAMES (`geneNames.readable.tsv` says "No name" for a feature
+`geneNames.tsv` names). Tested: the pre-fix Parastichopus database fails PREFIX MISSED (48,031
+features); a readable file with every name blanked fails READABLE NAMES; Bipalium vagum passes.
 
 **Ids from before the prefix (fixed, 48490df).** Naming runs before `moop-lift-prefix` is
 applied: OMA, DIAMOND and InterProScan were computed on the unprefixed sequences, so
