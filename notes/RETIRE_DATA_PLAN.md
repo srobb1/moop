@@ -1,8 +1,37 @@
 # Retire an organism, assembly or gene set — plan
 
-Status: **PLANNED, not started** (2026-10-29). Prompted by retiring *Schmidtea nova*: removing an
-organism by hand took six steps across four admin pages plus two shell commands, and nothing
-said what was left behind.
+Status: **BUILT, all three levels.** Organism 2026-10-29 (1855c8a1, a7601e23); assembly and gene
+set 2026-10-30. Prompted by retiring *Schmidtea nova*: removing an organism by hand took six
+steps across four admin pages plus two shell commands, and nothing said what was left behind.
+
+## As built (2026-10-30) — what differs from the plan below
+
+- One code path for all levels: `moop_retire($level, …)` / `moop_restore()` in `lib/retire.php`,
+  `admin/api/retire.php`, `js/modules/retire.js` (renamed from `*_organism`). Bundles are named
+  `<ts>_<Org>[__<Asm>[__<GS>]]`.
+- Buttons: organism on the Manage Organisms row; **assembly** in the assembly dialog's footer
+  (and for leftover directories under "Retire a directory"); **gene set** on each gene-set card in
+  that dialog. The last assembly / last gene set is refused — retire the level above instead.
+- Gene set: its built JBrowse track (`data/genomes/{Org}/{Asm}/{GS}/`, incl. trix) and track JSON
+  MOVE into the bundle, and its `primaryGeneTracks` entry is recorded and removed — so a restore
+  needs no rebuild. Assembly: tracks/sheets move, the registration is removed (re-register).
+- **Hidden while the DB still has it** because every scope is built from group entries plus
+  directories — and the search endpoint now is too: `moop_search_permitted_scope()` /
+  `moop_search_narrow_scope()` (`lib/functions_access.php`). Before, `annotation_search_ajax.php`
+  authorised the ORGANISM and searched whatever pairs the browser sent, or the whole DB when it
+  sent none (the default) — so a collaborator with one assembly could search all of them.
+  Still unfiltered (fast path) whenever everything in the DB is open: all 90 organisms for admin.
+- Health: `validateAssemblyDirectories()` returns retired ones in a separate `retired` list, not
+  `mismatches` (`moop_retired_paths()` in `lib/functions_filesystem.php`). The Retired card says
+  "waiting for a database rebuild without it" while `organism.sqlite` still holds it.
+- **Replaced** `archiveGeneSet()` (Manage Groups → orphaned gene set → Archive now retires) and
+  the assembly dialog's **Delete Directory / Delete Assembly Directory** buttons (`rrmdir` of a
+  whole assembly from the web, no undo). `archiveGeneSet()` wrote to `archived_gene_sets/` in the
+  docroot with no nginx deny: its 7 restricted gene sets were downloadable over HTTP until
+  2026-10-30 (renamed `.archived_gene_sets`; `scripts/adopt_archived_gene_sets.php` turns them
+  into bundles — run as apache).
+- Not done: Data Health dashboard card for retired items (the Retired card covers it); a
+  hermetic temp-tree test of retire/restore (verified end to end through php-fpm instead).
 
 ## Goal
 

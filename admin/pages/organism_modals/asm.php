@@ -107,27 +107,16 @@
 
               <hr class="my-3">
 
-              <h6 class="fw-bold mb-3"><i class="fa fa-trash-alt"></i> Delete Directory</h6>
-              <p class="mb-3 small">If you no longer need this assembly directory, you can delete it permanently. This action cannot be undone.</p>
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label for="dirToDelete<?= htmlspecialchars($safe_asm_id) ?>" class="form-label">Directory to Delete</label>
-                  <select class="form-select form-select-sm" id="dirToDelete<?= htmlspecialchars($safe_asm_id) ?>">
-                    <option value="">-- Select directory to delete --</option>
-                    <?php
-                      foreach ($assembly_dir_options as $dir) {
-                        echo '<option value="' . htmlspecialchars($dir) . '">' . htmlspecialchars($dir) . '</option>';
-                      }
-                    ?>
-                  </select>
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                  <button class="btn btn-danger btn-sm w-100" onclick="deleteAssemblyDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_asm_id)) ?>)">
-                    <i class="fa fa-trash-alt"></i> Delete Directory
-                  </button>
-                </div>
+              <h6 class="fw-bold mb-3"><i class="fa fa-archive"></i> Retire a directory</h6>
+              <p class="mb-3 small">A directory you no longer need can be retired: it moves to <code>organisms/.retired/</code>
+                and can be restored from the Retired list on this page. Nothing is deleted.</p>
+              <div class="d-flex flex-wrap gap-2">
+                <?php foreach ($assembly_dir_options as $dir): ?>
+                  <button type="button" class="btn btn-outline-secondary btn-sm js-retire" data-level="assembly"
+                          data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($dir) ?>">
+                    <i class="fa fa-archive"></i> Retire <?= htmlspecialchars($dir) ?></button>
+                <?php endforeach; ?>
               </div>
-              <div id="deleteResult<?= htmlspecialchars($safe_asm_id) ?>" class="d-none"></div>
             </div>
           </div>
         <?php endif; ?>
@@ -193,6 +182,13 @@
                 <span class="badge bg-success ms-2"><i class="fa fa-check"></i> Complete</span>
               <?php else: ?>
                 <span class="badge bg-warning text-dark ms-2"><i class="fa fa-exclamation-triangle"></i> <?= $gs_fasta_miss ? 'No ' . htmlspecialchars(implode(', ', $gs_missing_labels[$gs] ?? [])) . ' FASTA' : 'Missing BLAST indexes' ?></span>
+              <?php endif; ?>
+              <?php if (count($gene_set_dirs_live) > 1): ?>
+                <?php // The last gene set is retired with its assembly (lib/retire.php refuses it on its own). ?>
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 float-end js-retire" data-level="gene_set"
+                        data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($assembly) ?>"
+                        data-gene-set="<?= htmlspecialchars($gs) ?>" title="Retire this gene set — take it off the site (can be restored)">
+                  <i class="fa fa-archive"></i> Retire</button>
               <?php endif; ?>
             </div>
             <div class="card-body small py-2">
@@ -282,9 +278,13 @@
 
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-danger" onclick="deleteCurrentAssemblyDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_asm_id)) ?>)">
-        <i class="fa fa-trash-alt"></i> Delete Assembly Directory
-      </button>
+      <?php // The last assembly is retired with its organism (lib/retire.php refuses it on its own). ?>
+      <?php if (count(moop_organism_dirs($data['path'])) > 1): ?>
+        <button type="button" class="btn btn-outline-danger me-auto js-retire" data-level="assembly"
+                data-organism="<?= htmlspecialchars($organism) ?>" data-assembly="<?= htmlspecialchars($assembly) ?>"
+                title="Take this assembly off the site — it moves to organisms/.retired/ and can be restored">
+          <i class="fa fa-archive"></i> Retire this assembly</button>
+      <?php endif; ?>
       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
     </div>
   </div>

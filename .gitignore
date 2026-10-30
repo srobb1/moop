@@ -123,6 +123,9 @@ samtools-*
 # Moved here (outside organisms/) so discovery routines don't scan them; it's
 # site data (large FASTA/BLAST binaries), not app code.
 /archived_gene_sets/
+# Renamed 2026-10-30 so nginx's dot-path deny blocks it; scripts/adopt_archived_gene_sets.php
+# moves its contents into organisms/.retired/.
+/.archived_gene_sets/
 organisms_missing_data/
 /moop/
 smallscreen.png

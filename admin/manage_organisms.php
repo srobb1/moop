@@ -137,25 +137,6 @@ handleAdminAjax(function($action) use ($organisms) {
         return true;
     }
 
-    // Handle delete assembly
-    if ($action === 'delete_assembly' && isset($_POST['organism']) && isset($_POST['dir_name'])) {
-        $organism = $_POST['organism'];
-        $dir_name = $_POST['dir_name'];
-        
-        
-        
-        if (!isset($organisms[$organism])) {
-            echo json_encode(['success' => false, 'message' => 'Organism not found']);
-            return true;
-        }
-        
-        $organism_dir = $organisms[$organism]['path'];
-        $result = deleteAssemblyDirectory($organism_dir, $dir_name);
-        
-        echo json_encode($result);
-        return true;
-    }
-    
     // Handle save metadata
     if ($action === 'save_metadata' && isset($_POST['organism'])) {
         $organism = $_POST['organism'];
@@ -317,7 +298,7 @@ $data = [
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/modules/organism-management.js',
-        '/' . $config->getString('site') . '/js/modules/retire-organism.js'
+        '/' . $config->getString('site') . '/js/modules/retire.js'
     ],
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",

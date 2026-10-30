@@ -69,7 +69,6 @@ RW_DIRS=(
     # (php downloads remote images into these caches).
     # Safe despite being served: nginx denies .php under /moop/images/ (moop-security.conf).
     "$MOOP/images"
-    "$MOOP/archived_gene_sets"      # gene-set archives
     # docs/ holds function_registry.json + function_registry_js.json, which the admin
     # "Generate/update registry" button REWRITES (tools/generate_registry_json.php). The
     # rest of docs/ is git-tracked source, so this is a generated artefact living in a

@@ -541,7 +541,7 @@
     </div>
   </div>
 
-  <?php // Retired organisms (lib/retire.php). Shown only when there are any. ?>
+  <?php // Retired organisms, assemblies and gene sets (lib/retire.php). Shown only when there are any. ?>
   <?php if (!empty($retired)): ?>
   <div class="card adm-card mt-4" id="retiredCard">
     <div class="card-header adm-head d-flex align-items-center">
@@ -550,18 +550,26 @@
     </div>
     <div class="card-body">
       <p class="small text-muted">Off the site, nothing deleted. <strong>Restore</strong> puts the data, its groups and its
-        JBrowse settings back (then register it again in Manage JBrowse). To free the space for good, run the command shown,
-        on the server.</p>
+        JBrowse settings back, and says what is left to do. To free the space for good, run the command shown, on the server.
+        An assembly or gene set stays in its organism's database until the pipeline rebuilds it — the pipeline must leave it
+        out, and copy2moop must not bring its directory back.</p>
       <table class="table table-sm align-middle mb-0">
-        <thead class="table-light"><tr><th>Organism</th><th>Retired</th><th>By</th><th>Status</th><th></th></tr></thead>
+        <thead class="table-light"><tr><th>Retired</th><th>When</th><th>By</th><th>Status</th><th></th></tr></thead>
         <tbody>
-        <?php foreach ($retired as $rb): $rec = $rb['record']; $st = $rec['status'] ?? '?'; $org = $rec['organism'] ?? ''; ?>
+        <?php foreach ($retired as $rb):
+            $rec = $rb['record']; $st = $rec['status'] ?? '?'; $org = $rec['organism'] ?? ''; $lvl = $rb['level'];
+            $name = $lvl === 'organism' ? $org : ($lvl === 'assembly' ? $rec['assembly'] : $rec['gene_set']); ?>
           <tr>
             <td><em class="sci-name"><?= htmlspecialchars(str_replace('_', ' ', $org ?: $rb['bundle'])) ?></em>
+              <?php if ($lvl === 'assembly'): ?>
+                <br><small>assembly <code><?= htmlspecialchars($rec['assembly']) ?></code></small>
+              <?php elseif ($lvl === 'gene_set'): ?>
+                <br><small>gene set <code><?= htmlspecialchars($rec['gene_set']) ?></code> of <?= htmlspecialchars($rec['assembly']) ?></small>
+              <?php endif; ?>
               <?php if ($rb['siblings'] > 1): ?>
-                <?php // Several retires of one organism never overwrite each other; say which is which. ?>
+                <?php // Several retires of one thing never overwrite each other; say which is which. ?>
                 <span class="badge <?= $rb['newest'] ? 'bg-secondary' : 'bg-light text-dark border' ?> ms-1"
-                      title="This organism has <?= (int)$rb['siblings'] ?> retired copies; only one can be in place at a time">
+                      title="Retired <?= (int)$rb['siblings'] ?> times; only one copy can be in place at a time">
                   <?= $rb['newest'] ? 'newest of ' . (int)$rb['siblings'] : 'older copy' ?></span>
               <?php endif; ?></td>
             <td class="small text-nowrap"><?= htmlspecialchars($rec['retired_at'] ?? '') ?></td>
@@ -572,17 +580,21 @@
               <?php elseif (!empty($rec['settings_restored_at'])): ?>
                 Old copy — its groups and settings were put back <?= htmlspecialchars(substr($rec['settings_restored_at'], 0, 10)) ?>; safe to delete
               <?php elseif ($rb['exists_again']): ?>
-                <span title="organisms/<?= htmlspecialchars($org) ?>/ is there again — copied back the normal way, or another copy was restored">Copied back since — this is the old copy</span>
+                <span title="organisms/<?= htmlspecialchars($rb['rel']) ?>/ is there again — copied back the normal way, or another copy was restored">Copied back since — this is the old copy</span>
+              <?php elseif ($rb['parent_gone']): ?>
+                Retired — its <?= $lvl === 'gene_set' ? 'assembly' : 'organism' ?> is not on the site; restore that first
+              <?php elseif ($rb['in_database']): ?>
+                <span title="organism.sqlite still holds its rows. It is hidden from every page and search meanwhile.">Retired — waiting for a database rebuild without it</span>
               <?php else: ?>Retired<?php endif; ?></td>
             <td class="text-end text-nowrap">
-              <?php if (!$rb['exists_again']): ?>
+              <?php if (!$rb['exists_again'] && !$rb['parent_gone']): ?>
                 <button type="button" class="btn btn-sm btn-outline-primary js-restore" data-bundle="<?= htmlspecialchars($rb['bundle']) ?>"
-                        data-organism="<?= htmlspecialchars($org) ?>"><i class="fa fa-undo"></i> Restore</button>
-              <?php elseif (empty($rec['settings_restored_at']) && (!empty($rec['group_entries']) || count($rec['moved'] ?? []) > 1)): ?>
+                        data-name="<?= htmlspecialchars($name) ?>"><i class="fa fa-undo"></i> Restore</button>
+              <?php elseif ($rb['exists_again'] && empty($rec['settings_restored_at']) && (!empty($rec['group_entries']) || count($rec['moved'] ?? []) > 1)): ?>
                 <?php // The copy brought data only; this bundle still holds the groups and JBrowse settings it had. ?>
                 <button type="button" class="btn btn-sm btn-outline-primary js-restore" data-settings-only="1"
-                        data-bundle="<?= htmlspecialchars($rb['bundle']) ?>" data-organism="<?= htmlspecialchars($org) ?>"
-                        title="The organism is back; put back the groups and JBrowse settings it had when retired. The old data stays here.">
+                        data-bundle="<?= htmlspecialchars($rb['bundle']) ?>" data-name="<?= htmlspecialchars($name) ?>"
+                        title="It is back; put back the groups and JBrowse settings it had when retired. The old data stays here.">
                   <i class="fa fa-tags"></i> Put back its groups &amp; settings</button>
               <?php endif; ?>
             </td>
@@ -598,12 +610,12 @@
   </div>
   <?php endif; ?>
 
-  <!-- Retire confirm (js/modules/retire-organism.js fills it) -->
+  <!-- Retire confirm (js/modules/retire.js fills it) -->
   <div class="modal fade" id="retireModal" tabindex="-1" aria-labelledby="retireModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="retireModalLabel">Retire <em class="sci-name" id="retireOrgName"></em></h5>
+          <h5 class="modal-title" id="retireModalLabel">Retire <span id="retireWhat"></span></h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">

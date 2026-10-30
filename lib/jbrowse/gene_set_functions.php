@@ -307,97 +307,10 @@ function moop_log_index_build(string $gene_set, string $name, string $path, bool
 }
 
 /**
- * Archive a gene set: move its source data directory out of the way and strip every
- * derived reference to it (JBrowse track JSON, assembly primaryGeneTracks entry,
- * bgzip/tabix/trix build artifacts, groups.json access entries).
- *
- * Intended for gene sets already confirmed absent from the organism's database — see
- * validateAssemblyDirectories()'s 'orphaned_gene_set_directory' mismatch, surfaced on
- * the admin dashboard. This function does NOT touch organism.sqlite: by definition
- * there's nothing there for this tuple to remove. It is the inverse of
- * prepareGeneSetForJBrowse() for everything that function creates.
- *
- * @return array ['success'=>bool, 'archived_to'=>string?, 'error'=>string?, 'removed'=>string[]]
- */
-function archiveGeneSet(string $organism, string $assembly, string $gene_set, ConfigManager $config): array {
-    $organisms_dir = $config->getPath('organism_data');
-    $site_path     = $config->getPath('site_path');
-    $metadata_path = $config->getPath('metadata_path');
-
-    $source_dir = "$organisms_dir/$organism/$assembly/$gene_set";
-    if (!is_dir($source_dir)) {
-        return ['success' => false, 'error' => "Gene set directory not found: $source_dir"];
-    }
-
-    $removed = [];
-
-    // 1. Move the source data directory to a timestamped archive location — never
-    //    overwrite a previous archive of the same tuple.
-    // IMPORTANT: this must live OUTSIDE $organisms_dir. Every organism-discovery
-    // routine in this codebase (getOrganismsWithAssemblies(), fingerprinting, the
-    // dashboard's organism count, etc.) treats every top-level directory under
-    // organisms/ as an organism — an archive dir placed inside it gets scanned as a
-    // phantom "organism" with its own fake assemblies/gene_sets.
-    $archive_root = "$site_path/archived_gene_sets/$organism/$assembly";
-    if (!is_dir($archive_root) && !@mkdir($archive_root, 0755, true)) {
-        return ['success' => false, 'error' => "Could not create archive directory: $archive_root"];
-    }
-    $archive_dest = "$archive_root/{$gene_set}_" . date('Ymd_His');
-    if (!@rename($source_dir, $archive_dest)) {
-        return ['success' => false, 'error' => "Could not move $source_dir to $archive_dest"];
-    }
-
-    // 2. Remove derived JBrowse build artifacts — regenerated from source data, which
-    //    is now archived, so there's nothing left for them to correctly serve.
-    $genomes_dir = "$site_path/data/genomes/$organism/$assembly/$gene_set";
-    if (is_dir($genomes_dir)) {
-        rrmdir($genomes_dir);
-        $removed[] = "data/genomes/$organism/$assembly/$gene_set";
-    }
-    // (Its trix search index lives inside $genomes_dir/trix, so it went with it.)
-
-    // 3. Remove the gene track JSON and its trackId from the assembly's primaryGeneTracks.
-    $track_id   = "{$organism}_{$assembly}_{$gene_set}_genes";
-    $track_file = "$metadata_path/jbrowse2-configs/tracks/$organism/$assembly/gff/{$gene_set}_genes.json";
-    if (file_exists($track_file)) {
-        @unlink($track_file);
-        $removed[] = "track JSON ({$gene_set}_genes.json)";
-    }
-    $assembly_json = "$metadata_path/jbrowse2-configs/assemblies/{$organism}_{$assembly}.json";
-    if (file_exists($assembly_json)) {
-        $asm_data = loadJsonFile($assembly_json, []);
-        $primary  = $asm_data['primaryGeneTracks'] ?? [];
-        $filtered = array_values(array_filter($primary, fn($id) => $id !== $track_id));
-        if (count($filtered) !== count($primary)) {
-            $asm_data['primaryGeneTracks'] = $filtered;
-            file_put_contents($assembly_json, json_encode($asm_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-            $removed[] = "primaryGeneTracks entry";
-        }
-    }
-
-    // 4. Remove groups.json access entries for this tuple — nothing left to grant
-    //    access to.
-    $groups_file = "$metadata_path/organism_assembly_groups.json";
-    if (file_exists($groups_file)) {
-        $groups_data = loadJsonFile($groups_file, []);
-        $filtered = array_values(array_filter($groups_data, function ($e) use ($organism, $assembly, $gene_set) {
-            return !($e['organism'] === $organism && $e['assembly'] === $assembly && ($e['gene_set'] ?? 'v1') === $gene_set);
-        }));
-        if (count($filtered) !== count($groups_data)) {
-            file_put_contents($groups_file, json_encode($filtered, JSON_PRETTY_PRINT));
-            $removed[] = "groups.json entry";
-        }
-    }
-
-    return ['success' => true, 'archived_to' => $archive_dest, 'removed' => $removed];
-}
-
-/**
  * Unregister an assembly from JBrowse: remove every artifact that registration created,
- * and nothing else. The inverse of admin/api/jbrowse_register_assembly.php, in the same
- * spirit as archiveGeneSet() one level up the hierarchy.
+ * and nothing else. The inverse of admin/api/jbrowse_register_assembly.php.
  *
- * CRITICAL DIFFERENCE FROM archiveGeneSet(): this NEVER touches organisms/. Registration
+ * This NEVER touches organisms/ (taking data off the site is lib/retire.php's job). Registration
  * only ever creates derived artifacts (a data/genomes/ directory holding a symlink into
  * organisms/, plus a registry JSON), so unregistering only ever removes derived artifacts.
  * The source data is left exactly as it is — that is what makes this safe to offer as a

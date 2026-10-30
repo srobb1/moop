@@ -9,15 +9,17 @@
  * this server. Does NOT touch organism.sqlite — by definition there's nothing there
  * for this tuple.
  *
- * Moves the source data directory to organisms/_archived_gene_sets/{org}/{asm}/ and
- * strips every derived reference: JBrowse track JSON, assembly primaryGeneTracks
- * entry, bgzip/tabix/trix build artifacts, groups.json access entries.
+ * Retires it (lib/retire.php, gene-set level): the directory moves to organisms/.retired/
+ * with its JBrowse track files, its group entries are saved and removed, and it can be
+ * restored from Manage Organisms → Retired. Until 2026-10-30 this called archiveGeneSet(),
+ * which moved it to archived_gene_sets/ — inside the docroot and served over HTTP — and
+ * deleted the group entries and track JSON with no record. That function is gone.
  *
  * POST params: organism, assembly, gene_set
  */
 
 require_once __DIR__ . '/../admin_init.php';
-require_once __DIR__ . '/../../lib/jbrowse/gene_set_functions.php';
+require_once __DIR__ . '/../../lib/retire.php';
 
 header('Content-Type: application/json');
 
@@ -65,19 +67,13 @@ if (!$is_confirmed_orphan) {
     exit;
 }
 
-$result = archiveGeneSet($organism, $assembly, $gene_set, $config);
+$username = (string)($_SESSION['username'] ?? 'admin');
+$r = moop_retire('gene_set', $organism, $assembly, $gene_set, $username, $config);
+$result = ['success' => $r['ok'], 'error' => $r['error'], 'removed' => $r['done'],
+           'archived_to' => $r['bundle'] ? 'organisms/' . MOOP_RETIRED_DIR . '/' . $r['bundle'] : null];
 
 if ($result['success']) {
-    $metadata_path = $config->getPath('metadata_path');
-    $log_dir       = "$metadata_path/change_log";
-    if (!is_dir($log_dir)) @mkdir($log_dir, 0775, true);
-    $username = $_SESSION['username'] ?? 'unknown';
-    $entry = sprintf(
-        "[%s] ARCHIVE_GENE_SET by %s | Organism: %s | Assembly: %s | Gene set: %s | Archived to: %s | Removed: %s\n",
-        date('Y-m-d H:i:s'), $username, $organism, $assembly, $gene_set,
-        $result['archived_to'], implode(', ', $result['removed'])
-    );
-    @file_put_contents("$log_dir/manage_groups.log", $entry, FILE_APPEND);
+    $metadata_path = $config->getPath('metadata_path');   // the retire wrote the change-log line
 
     // Refresh this one organism's entry in organisms/.organism_cache.json synchronously.
     // Without this, the dashboard/Manage Groups "orphaned in database" warning would

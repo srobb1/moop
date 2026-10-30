@@ -595,6 +595,14 @@ Use the Admin Dashboard → Manage Organisms, or place data in
 `organisms/ORGANISM_DISPLAY_README.md` (it lives in the data tree, not the repo root).
 For the JBrowse2 side, see `docs/JBrowse2/SETUP_NEW_ORGANISM.md`.
 
+### Take an organism, assembly or gene set off the site
+**Retire** — Manage Organisms (organism: the row's archive button; assembly / gene set: in the
+assembly dialog). Moves the data to `organisms/.retired/` (rename, nothing deleted), saves and
+removes its group entries and JBrowse settings; **Restore** in the Retired card undoes it. An
+assembly or gene set stays in `organism.sqlite` until the pipeline rebuilds without it — it is
+hidden meanwhile because every scope, search included, is built from groups + directories.
+There is no web "delete" for data, by design. `lib/retire.php`, `notes/RETIRE_DATA_PLAN.md`.
+
 ### Add a new tool to the tool menu
 Edit `config/tools_config.php` — each entry defines which pages the tool
 appears on, its URL path, and what context parameters it accepts.

@@ -963,7 +963,7 @@ document.addEventListener('click', async function (e) {
     const assembly = row.dataset.assembly;
     const geneSet  = row.dataset.geneSet;
 
-    if (!confirm(`Archive ${organism} / ${assembly} / ${geneSet}?\n\nThis moves its files to an archive directory (nothing is deleted) and removes JBrowse/track/group references. It does not touch any database.`)) {
+    if (!confirm(`Archive ${organism} / ${assembly} / ${geneSet}?\n\nIt is retired: its files move to organisms/.retired/ (nothing is deleted), its JBrowse track and group entries are saved with them, and Manage Organisms → Retired can restore it. It does not touch any database.`)) {
         return;
     }
 
@@ -995,8 +995,8 @@ document.addEventListener('click', async function (e) {
         const alertBox = document.getElementById('db-orphaned-alert');
         if (alertBox) {
             alertBox.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fa fa-check-circle"></i> Archived <strong>${organism} / ${assembly} / ${geneSet}</strong> to
-                <code>${data.archived_to}</code>.
+                <i class="fa fa-check-circle"></i> Retired <strong>${organism} / ${assembly} / ${geneSet}</strong> to
+                <code>${data.archived_to}</code> — Manage Organisms → Retired can restore it.
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>`;
         }

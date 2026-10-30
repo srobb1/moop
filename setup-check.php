@@ -608,7 +608,6 @@ $writable_dirs = [
     'metadata/jbrowse2-configs' => ($config['metadata_path'] ?? "$base/metadata") . '/jbrowse2-configs',
     'config'                    => "$base/config",
     'organisms'                 => $config['organism_data'] ?? "$base/organisms",
-    'archived_gene_sets'        => "$base/archived_gene_sets",
 ];
 if (!empty($config['cache_path'])) {
     $writable_dirs['cache_path'] = $config['cache_path'];

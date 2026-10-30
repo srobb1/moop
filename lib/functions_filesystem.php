@@ -5,23 +5,6 @@
  */
 
 /**
- * Does this directory hold a gene set?
- *
- * Answered by "does it contain any configured sequence FASTA", because the FASTA is the
- * payload — a gene-set directory without one has nothing to serve. Verified against the
- * live tree 2026-07-16: 94 dirs have both a FASTA and geneset.json, 0 have only one, so
- * either marker works and this one needs no extra metadata file.
- *
- * Do NOT go back to testing for the GFF. That is what this replaced, and it was circular:
- * a gene set with no genes.gff was declared "not a real gene_set dir" and vanished from
- * the checks — 23 of the 94 on this deployment have no GFF (protein-only sets legitimately
- * have none; JBrowse annotations simply are not available for them). Using the GFF to
- * decide what IS a gene set means the ones missing it can never be reported.
- *
- * 'genome' is excluded: genome.fa lives at the ASSEMBLY level, so including it would make
- * every assembly directory look like a gene set.
- */
-/**
  * The organism directories under organism_data, sorted: directories only, never a hidden one.
  *
  * THE way to list organisms from disk. Eight places did it themselves and disagreed — half
@@ -41,6 +24,47 @@ function moop_organism_dirs(string $organism_data): array {
     return $out;
 }
 
+/**
+ * What the Retire button has taken off the site and not yet put back (lib/retire.php):
+ * "Org", "Org/Asm" or "Org/Asm/GeneSet" => the bundle's record. Read from the small
+ * retired.json in each organisms/.retired/ bundle; a bundle whose data has been restored, or
+ * copied back the normal way, does not count.
+ *
+ * Lives here, not in lib/retire.php, because validateAssemblyDirectories() needs it: an
+ * assembly or gene set retired while the organism's database still holds its rows is
+ * "retired, waiting for a database rebuild", not a missing directory.
+ */
+function moop_retired_paths(string $organism_data): array {
+    static $memo = [];
+    if (isset($memo[$organism_data])) return $memo[$organism_data];
+    $out = [];
+    foreach (glob(rtrim($organism_data, '/') . '/.retired/*/retired.json') ?: [] as $file) {
+        $r = json_decode((string)@file_get_contents($file), true);
+        if (!is_array($r) || ($r['status'] ?? '') !== 'retired' || !is_dir(dirname($file) . '/data')) continue;
+        $rel = implode('/', array_filter([$r['organism'] ?? '', $r['assembly'] ?? '', $r['gene_set'] ?? ''], 'strlen'));
+        if ($rel === '' || is_dir(rtrim($organism_data, '/') . "/$rel")) continue;
+        $out[$rel] = $r + ['bundle' => basename(dirname($file))];
+    }
+    return $memo[$organism_data] = $out;
+}
+
+/**
+ * Does this directory hold a gene set?
+ *
+ * Answered by "does it contain any configured sequence FASTA", because the FASTA is the
+ * payload — a gene-set directory without one has nothing to serve. Verified against the
+ * live tree 2026-07-16: 94 dirs have both a FASTA and geneset.json, 0 have only one, so
+ * either marker works and this one needs no extra metadata file.
+ *
+ * Do NOT go back to testing for the GFF. That is what this replaced, and it was circular:
+ * a gene set with no genes.gff was declared "not a real gene_set dir" and vanished from
+ * the checks — 23 of the 94 on this deployment have no GFF (protein-only sets legitimately
+ * have none; JBrowse annotations simply are not available for them). Using the GFF to
+ * decide what IS a gene set means the ones missing it can never be reported.
+ *
+ * 'genome' is excluded: genome.fa lives at the ASSEMBLY level, so including it would make
+ * every assembly directory look like a gene set.
+ */
 function is_gene_set_dir(string $dir): bool {
     if (!is_dir($dir)) return false;
     $types = ConfigManager::getInstance()->getSequenceTypes();
@@ -101,8 +125,13 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
         'valid' => true,
         'genomes' => [],
         'mismatches' => [],
+        // Retired with the Retire button while the database still holds its rows: not a
+        // problem, so not a mismatch — "waiting for a database rebuild" (lib/retire.php).
+        'retired' => [],
         'errors' => []
     ];
+    $organism = basename($organism_data_dir);
+    $retired  = moop_retired_paths(dirname($organism_data_dir));
     
     if (!file_exists($dbFile) || !is_readable($dbFile)) {
         $result['valid'] = false;
@@ -169,7 +198,11 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
                         'gene_set_name' => $gs['gene_set_name'],
                         'dir_exists'    => $gs_exists,
                     ];
-                    if (!$gs_exists) {
+                    if (!$gs_exists && isset($retired["$organism/$found_dir/{$gs['gene_set_name']}"])) {
+                        $r = $retired["$organism/$found_dir/{$gs['gene_set_name']}"];
+                        $result['retired'][] = ['level' => 'gene_set', 'assembly_dir' => $found_dir,
+                            'gene_set_name' => $gs['gene_set_name'], 'retired_at' => $r['retired_at'] ?? '', 'bundle' => $r['bundle']];
+                    } elseif (!$gs_exists) {
                         $result['valid'] = false;
                         $result['mismatches'][] = [
                             'type'           => 'missing_gene_set_directory',
@@ -216,7 +249,12 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
                 'gene_set_checks'  => $gene_set_checks,
             ];
 
-            if ($found_dir === null) {
+            $retired_asm = $retired["$organism/$name"] ?? $retired["$organism/$accession"] ?? null;
+            if ($found_dir === null && $retired_asm !== null && empty($retired_asm['gene_set'])) {
+                $result['genomes'][count($result['genomes']) - 1]['retired'] = true;
+                $result['retired'][] = ['level' => 'assembly', 'assembly_dir' => $retired_asm['assembly'],
+                    'retired_at' => $retired_asm['retired_at'] ?? '', 'bundle' => $retired_asm['bundle']];
+            } elseif ($found_dir === null) {
                 $result['valid'] = false;
                 $result['mismatches'][] = [
                     'type'             => 'missing_directory',
@@ -482,45 +520,6 @@ function renameGeneSetDirectory($organism_dir, $assembly, $old_name, $new_name) 
         return buildDirectoryResult(true, "Successfully renamed '$old_name' to '$new_name'", $command);
     } else {
         return buildDirectoryResult(false, 'Web server lacks permission to rename directory.', $command);
-    }
-}
-
-/**
- * Delete an assembly directory
- * 
- * Recursively deletes a directory within an organism folder
- * Used to remove incorrectly named or unused assembly directories
- * Returns manual command if automatic delete fails
- * 
- * @param string $organism_dir - Path to organism directory
- * @param string $dir_name - Directory name to delete
- * @return array - ['success' => bool, 'message' => string, 'command' => string (if manual fix needed)]
- */
-function deleteAssemblyDirectory($organism_dir, $dir_name) {
-    if (!is_dir($organism_dir)) {
-        return buildDirectoryResult(false, 'Organism directory not found');
-    }
-    
-    // Validate directory name for security
-    if (!validateDirectoryName($dir_name)) {
-        return buildDirectoryResult(false, 'Invalid directory name (security check failed)');
-    }
-    
-    $dir_path = "$organism_dir/$dir_name";
-    
-    // Validate directory exists
-    if (!is_dir($dir_path)) {
-        return buildDirectoryResult(false, "Directory '$dir_name' not found");
-    }
-    
-    // Build command for admin to run if automatic delete fails
-    $command = "rm -rf " . escapeshellarg($dir_path);
-    
-    // Try to delete recursively
-    if (rrmdir($dir_path)) {
-        return buildDirectoryResult(true, "Successfully deleted directory '$dir_name'", $command);
-    } else {
-        return buildDirectoryResult(false, 'Web server lacks permission to delete directory.', $command);
     }
 }
 
