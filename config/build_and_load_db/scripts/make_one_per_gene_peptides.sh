@@ -49,6 +49,19 @@
 ##   --threads N            for DIAMOND/BLAST (default 8)
 ##   --dry-run              counts only: reads, downloads the GTF to a temp folder, writes nothing in db/
 ##
+## Example -- every Ensembl database, both sets indexed with DIAMOND and BLAST, the one-protein-per-gene
+## set under the database's own names (peptide.fa.gz, peptide.dmnd, peptide.p*) and the all-isoform set
+## as peptide.all.fa.gz, peptide.all.dmnd, peptide.all.p*:
+##
+##   module load diamond/2.1.13 blast/2.17.0
+##   bash make_one_per_gene_peptides.sh --dry-run                                  # counts only, first
+##   bash make_one_per_gene_peptides.sh --db-root /n/sci/SCI-004223-SBGENOMES/db --release current \
+##        --threads 8 --overwrite-indices
+##
+## (--overwrite-indices makes both sets' indices fresh even where some exist; leave it out to keep
+## indices a previous run made. Name databases after the options to do only those, e.g.
+## ... --overwrite-indices ENS_homo_sapiens ENS_mus_musculus)
+##
 ## Needs: curl, perl, gzip, DIAMOND and makeblastdb (module load diamond/2.1.13 blast/2.17.0, the
 ## versions the current indices were built with). Written 2026-10-30 (moop-pipeline); the same rule as
 ## make_canonical_peptide_dbs.sh there.
