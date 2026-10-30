@@ -1,0 +1,12 @@
+2026-07-28 14:58:30  OK    Bipalium_kewense  [bkew.kc1.ref/bkew.kc1]
+2026-07-28 15:18:56  OK    Bipalium_kewense  [bkew.kc1.ref/bkew.kc1]
+2026-07-28 16:52:48  OK    Bipalium_kewense  [bkew.kc1.ref/bkew.kc1]
+2026-07-28 18:29:30  OK    Bipalium_kewense  [bkew.kc1.ref/bkew.kc1]
+2026-07-28 18:44:22  OK    Bipalium_kewense  [bkew.kc1.ref/bkew.kc1]
+2026-07-28 19:05:44  OK    Bipalium_kewense  [bkew.kc1.ref/bkew.kc1]
+2026-07-28 19:17:48  FAIL  Bipalium_kewense  [bkew.kc1.ref/bkew.kc1] — /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/moop-pipeline/config/build_and_load_db/data/Bipalium_kewense/organism.sqlite is missing or empty
+2026-07-28 19:17:48        Nothing was published. The build did not leave a database where the copy
+2026-07-28 19:17:48        step looks for it (REPO=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/moop-pipeline/config/build_and_load_db, so ORG_DATA=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/moop-pipeline/config/build_and_load_db/data/Bipalium_kewense).
+2026-07-28 19:21:34  FAIL  Bipalium_kewense  [bkew.kc1.ref/bkew.kc1] — /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/moop-pipeline/config/build_and_load_db/data/Bipalium_kewense/organism.sqlite is missing or empty
+2026-07-28 19:21:34        Nothing was published. The build did not leave a database where the copy
+2026-07-28 19:21:34        step looks for it (REPO=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/moop-pipeline/config/build_and_load_db, so ORG_DATA=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/moop-pipeline/config/build_and_load_db/data/Bipalium_kewense).

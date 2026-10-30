@@ -35,7 +35,7 @@
 # PANTHER release the gene sets' InterProScan results came from.
 
 : "${GENOMES:=/n/sci/SCI-004223-SBGENOMES/genomes/v2}"
-: "${ANNOTATIONS:=/n/sci/SCI-004223-SBGENOMES/annotations/sbgenomes_2}"
+: "${ANNOTATIONS:=/n/sci/SCI-004223-SBGENOMES/annotations/v2}"
 : "${REF_DB:=/n/sci/SCI-004223-SBGENOMES/db}"
 : "${REFERENCE_DATA:=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop}"
 : "${OMA_BASE:=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/OMA_v2}"
