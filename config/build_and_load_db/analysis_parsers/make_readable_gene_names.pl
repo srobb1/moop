@@ -22,6 +22,7 @@
 # trap, tests/check_perl_file_scope.pl).
 use strict;
 use warnings;
+use File::Basename qw(dirname);
 
 my %TYPE_WORD = (gene => 'gene', mRNA => 'mRNA', transcript => 'mRNA', cds => 'CDS', CDS => 'CDS', protein => 'protein');
 
@@ -99,6 +100,25 @@ sub main {
     $gene_name{$group} = $entry if $id eq $group or (($main // '') eq 'SELF' and !exists $gene_name{$group});
   }
   close $names_fh;
+
+  # a gene set whose ids MOOP rewrote (moop-lift-prefix, moop-strip-id-prefix) after naming: geneNames.tsv
+  # has the ids from before, features.tsv those after. The same rewrite as load_annotations_sqlite.pl,
+  # from the record strip_id_prefix.pl left beside features.tsv
+  my $manifest = dirname($features_file) . '/.id_prefix_stripped';
+  if (open my $manifest_fh, '<', $manifest) {
+    my $line = <$manifest_fh> // '';
+    close $manifest_fh;
+    chomp $line;
+    my ($strip, $add) = map { my $part = $_; $part // '' } (split /\t/, $line, 2)[0, 1];
+    if (length $strip or length $add) {
+      foreach my $names (\%name_of, \%gene_name) {
+        foreach my $id (keys %$names) {
+          (my $rewritten = $id) =~ s/^\Q$strip\E/$add/;
+          $names->{$rewritten} //= $names->{$id};
+        }
+      }
+    }
+  }
 
   # features.tsv: id, type, parent (database ids); a feature's gene by walking up its parents
   my (@order, %type_of, %parent_of);

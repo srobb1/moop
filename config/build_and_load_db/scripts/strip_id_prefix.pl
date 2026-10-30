@@ -86,9 +86,10 @@ use File::Basename qw(dirname);
 # The GFF attributes that carry a feature ID. `namesrc` matters and is easy to
 # miss: the ID sits mid-string inside a pipe-delimited provenance value,
 # "Ensembl_Homo_sapiens|RBBH_Homolog|<id>|ENSP00000476446.1|6". `Name` matters
-# because an unnamed gene falls back to its own ID. Column 1 is the seqid and is
-# NOT prefixed -- it must never be rewritten.
-my @ID_ATTRS = qw(ID Parent Name namesrc);
+# because an unnamed gene falls back to its own ID. `Note` (the description) likewise
+# holds a transcript ID for an unnamed gene, and is rewritten only when it is one.
+# Column 1 is the seqid and is NOT prefixed -- it must never be rewritten.
+my @ID_ATTRS = qw(ID Parent Name Note namesrc);
 
 my $MAX_LOCAL_ID = 50;   # NCBI makeblastdb -parse_seqids
 
@@ -172,6 +173,15 @@ sub materialize {
 sub rewrite_gff {
     my ($path) = @_;
     my ($lines, $changed) = (0, 0);
+    # every feature ID in the file: in prepend mode a Name= that is one of them is an ID, not a symbol
+    my %feature_id;
+    open my $scan, '<', $path or die "Cannot open $path: $!\n";
+    while (my $line = <$scan>) {
+        next if $line =~ /^#/;
+        my ($id) = $line =~ /\t(?:[^\t]*;)?ID=([^;\t\n]*)/;
+        $feature_id{$id} = 1 if defined $id and $id ne '';
+    }
+    close $scan;
     open my $in,  '<', $path       or die "Cannot open $path: $!\n";
     open my $out, '>', "$path.tmp" or die "Cannot write $path.tmp: $!\n";
     while (my $line = <$in>) {
@@ -189,15 +199,20 @@ sub rewrite_gff {
             my $key = substr($attr, 0, $eq);
             next unless grep { $_ eq $key } @ID_ATTRS;
             my $value = substr($attr, $eq + 1);
-            # Prepend mode: a Name= is an ID only when it is the feature's own (updateGFF.pl's
-            # fallback for an unnamed gene/mRNA); a real symbol must stay as it is. Prefixing every
+            # a description is rewritten only when it is a feature ID (updateGFF.pl's fallback for
+            # an unnamed gene), in either mode; real text stays as delivered
+            next if $key eq 'Note' && !$feature_id{$value};
+            # Prepend mode: a Name= is an ID only when it is a feature ID of this file (updateGFF.pl's
+            # fallback: an unnamed mRNA's own ID, a gene named without a symbol its representative
+            # transcript's -- left unprefixed, 15,575 Parastichopus genes showed 'rna-XM_...' in the
+            # database, found 2026-10-30); a real symbol must stay as it is. Prefixing every
             # Name= gave Parastichopus 'parpar1_MOAP1' in the database and genes.gff while its
             # FASTAs said 'MOAP1' (found 2026-10-21, notes/GFF_FASTA_ID_ALIGNMENT_PLAN.md). namesrc
             # starts with the name source, not an ID ("Ensembl_Homo_sapiens|RBBH_Homolog|<id>|..."),
             # so prepending to it only ever produced "parpar1_Ensembl_Homo_sapiens|...".
             if (!length $strip) {
                 next if $key eq 'namesrc';
-                next if $key eq 'Name' && !(defined $own_id && $value eq $own_id);
+                next if $key eq 'Name' && !$feature_id{$value};
             }
             my $n;
             if (length $strip) {
