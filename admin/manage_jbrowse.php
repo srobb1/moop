@@ -247,6 +247,7 @@ $data = [
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/jbrowse-admin.js',
+        '/' . $config->getString('site') . '/js/modules/copy-to-clipboard.js',
     ],
 ];
 

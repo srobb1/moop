@@ -36,6 +36,7 @@ $data = [
     'page_script' => [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/organism-checklist.js',
+        '/' . $config->getString('site') . '/js/modules/copy-to-clipboard.js',
     ],
 ];
 $data = array_merge($data, $checks);

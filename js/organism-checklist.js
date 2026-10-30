@@ -116,31 +116,8 @@ async function assignOrganismsToNewGroup() {
   }
 }
 
-// Copy BLAST command to clipboard
+// Copy buttons: data-copy-text, handled by js/modules/copy-to-clipboard.js (works on http).
 document.addEventListener('DOMContentLoaded', function() {
-  const copyBtns = document.querySelectorAll('.copy-cmd-btn');
-  copyBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-      const cmdText = this.getAttribute('data-cmd-text');
-      
-      navigator.clipboard.writeText(cmdText).then(() => {
-        const originalText = this.innerHTML;
-        this.innerHTML = '<i class="fa fa-check"></i> Copied!';
-        this.classList.remove('btn-outline-primary');
-        this.classList.add('btn-success');
-        
-        setTimeout(() => {
-          this.innerHTML = originalText;
-          this.classList.remove('btn-success');
-          this.classList.add('btn-outline-primary');
-        }, 2000);
-      }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('Failed to copy command. Please copy manually.');
-      });
-    });
-  });
-
   // Generate BLAST indexes
   const generateBtns = document.querySelectorAll('.generate-blast-btn');
   generateBtns.forEach(btn => {

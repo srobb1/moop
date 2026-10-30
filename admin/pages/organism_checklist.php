@@ -368,8 +368,8 @@
                           <div class="d-flex justify-content-between align-items-start mb-2">
                             <strong>To generate BLAST indexes, run on the server:</strong>
                             <div class="btn-group btn-group-sm" role="group">
-                              <button type="button" class="btn btn-outline-primary copy-cmd-btn" data-cmd-text="<?= htmlspecialchars($cd_cmd . ' && ' . $makeblastdb_cmd) ?>" title="Copy command">
-                                <i class="fa fa-copy"></i> Copy
+                              <button type="button" class="btn btn-outline-primary" data-copy-text="<?= htmlspecialchars($cd_cmd . ' && ' . $makeblastdb_cmd) ?>" title="Copy command">
+                                <i class="fa fa-copy"></i> <span class="copy-label">Copy</span>
                               </button>
                               <?php if ($can_generate): ?>
                                 <button type="button" class="btn btn-outline-success generate-blast-btn" data-organism="<?= htmlspecialchars($issue['organism']) ?>" data-assembly="<?= htmlspecialchars($issue['assembly']) ?>" data-gene-set="<?= htmlspecialchars($issue['gene_set']) ?>" data-fasta="<?= htmlspecialchars($issue['fasta']) ?>" title="Generate now">
@@ -425,10 +425,10 @@
                           <div class="d-flex justify-content-between align-items-start mb-2">
                             <strong>To generate the FAI index, run on the server:</strong>
                             <div class="btn-group btn-group-sm" role="group">
-                              <button type="button" class="btn btn-outline-primary copy-cmd-btn"
-                                data-cmd-text="<?= htmlspecialchars($cd_cmd . ' && ' . $faidx_cmd) ?>"
+                              <button type="button" class="btn btn-outline-primary"
+                                data-copy-text="<?= htmlspecialchars($cd_cmd . ' && ' . $faidx_cmd) ?>"
                                 title="Copy command">
-                                <i class="fa fa-copy"></i> Copy
+                                <i class="fa fa-copy"></i> <span class="copy-label">Copy</span>
                               </button>
                               <?php if ($issue['writable']): ?>
                                 <button type="button" class="btn btn-outline-success generate-fai-btn"

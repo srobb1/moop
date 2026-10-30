@@ -578,18 +578,10 @@ function copyJWTPublicKey() {
         alert('Public key not loaded. Click Reset to reload.');
         return;
     }
-    navigator.clipboard.writeText(_jwtPublicKey).then(() => {
-        alert('Public key copied to clipboard.');
-    }).catch(() => {
-        // Fallback
-        const ta = document.createElement('textarea');
-        ta.value = _jwtPublicKey;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        alert('Public key copied to clipboard.');
-    });
+    // moopCopyText(): js/modules/copy-to-clipboard.js — works on plain http, where
+    // navigator.clipboard does not exist (the old .catch() fallback never ran: the call threw).
+    moopCopyText(_jwtPublicKey).then(ok => alert(ok ? 'Public key copied to clipboard.'
+                                                  : 'Could not copy — select the key and copy it by hand.'));
 }
 
 /**
