@@ -3339,6 +3339,73 @@ $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_H));
 
 // ----------------------------------------------------------------------------
+group('Housekeeping run record: a run that dies is named, never silent');
+// 2026-10-30: a background run die()d in a task, left no trace (its output goes to /dev/null),
+// and the card still said "Last run 12 min ago". Now every run keeps a record, a shutdown
+// function writes where and why it died, and housekeeping_health() turns the card red. The runs
+// here are real child processes: die() and SIGKILL end the process, which a test cannot do
+// to itself.
+$_H = sys_get_temp_dir() . '/moop_hkrun_' . getmypid();
+mkdir("$_H/logs", 0777, true);
+$_child = "$_H/child.php";
+file_put_contents($_child, '<?php
+require ' . var_export("$BASE/includes/config_init.php", true) . ';
+require_once ' . var_export("$BASE/lib/housekeeping.php", true) . ';
+$cfg = ConfigManager::getInstance(); $rp = new ReflectionProperty($cfg, "config"); $rp->setAccessible(true);
+$c = $rp->getValue($cfg); $c["site_path"] = $argv[1]; $rp->setValue($cfg, $c);
+$second = ["ok" => function () {}, "throw" => function () { throw new RuntimeException("no network"); },
+           "die" => function () { die("Query failed: no such table: feature"); },
+           "kill" => function () { exec("kill -9 " . getmypid()); }][$argv[2]];
+housekeeping_run_tasks([], [["name" => "first_task", "fn" => function () { echo "stray output"; }], ["name" => "second_task", "fn" => $second]]);
+');
+$_cfg = ConfigManager::getInstance();
+$_rp  = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['site_path'] = $_H; $_rp->setValue($_cfg, $_c);
+$_runs = function () { return loadJsonFile(housekeeping_status_file(), [])['housekeeping_runs'] ?? []; };
+$_go   = fn($mode) => exec('php ' . escapeshellarg($_child) . ' ' . escapeshellarg($_H) . ' ' . $mode . ' 2>&1');
+
+$_go('die');
+$_r = $_runs()[0] ?? [];
+ok(($_r['outcome'] ?? '') === 'died' && ($_r['died_in'] ?? '') === 'second_task', 'a run that die()s is recorded as died, in the task it died in');
+ok(strpos((string)($_r['message'] ?? ''), 'Query failed: no such table: feature') !== false, 'and with the message die() printed (the child\'s stdout is /dev/null)');
+$_h = housekeeping_health($_runs(), housekeeping_is_running(), time());
+ok($_h['tone'] === 'danger' && strpos(implode(' ', $_h['problems']), 'died during second_task: Query failed') !== false, 'health: red, naming the task and the error');
+ok(!housekeeping_is_running(), 'and it is not "still running"');
+
+$_go('ok');
+$_r = $_runs()[0] ?? [];
+ok(($_r['outcome'] ?? '') === 'ok' && $_r['finished_at'] >= $_r['started_at'] && count($_runs()) === 2, 'the next run goes ahead, finishes, and is recorded as well');
+$_h = housekeeping_health($_runs(), false, time());
+ok($_h['tone'] === '' && $_h['badge'][1] === 'success' && strpos($_h['headline'], '2 of 2 tasks OK') !== false, 'health: a full run finished since the death -> quiet again');
+
+$_go('throw');
+$_h = housekeeping_health($_runs(), false, time());
+ok($_runs()[0]['outcome'] === 'tasks_failed' && $_h['tone'] === 'warn' && strpos(implode(' ', $_h['problems']), 'second_task failed: no network') !== false,
+   'a task that throws: the run finishes, the card is amber and names it');
+
+$_go('kill');
+$_r = $_runs()[0] ?? [];
+ok(($_r['outcome'] ?? '') === 'running' && ($_r['current'] ?? '') === 'second_task', 'SIGKILL: nothing can be written, the record still says running');
+$_h = housekeeping_health($_runs(), housekeeping_is_running(), time());
+ok($_h['tone'] === 'danger' && strpos(implode(' ', $_h['problems']), 'stopped without finishing during second_task') !== false,
+   'health: "running" with no lock held is read as dead (killed, or out of memory)');
+
+// Pure cases
+$_now = 1800000000;
+$_ok  = fn($start, $scope = 'all') => ['id' => "x$start", 'scope' => $scope, 'started_at' => $start, 'finished_at' => $start + 30, 'outcome' => 'ok', 'tasks' => [['name' => 'a', 'ok' => true, 'ms' => 1, 'error' => null]]];
+ok(housekeeping_health([$_ok($_now - 3 * 3600)], false, $_now)['tone'] === 'danger', 'no full run finished for 3 h (hourly) -> red');
+ok(housekeeping_health([$_ok($_now - 600, 'jbrowse_indexes'), $_ok($_now - 3 * 3600)], false, $_now)['tone'] === 'danger', 'a targeted run does not count as a full one');
+ok(housekeeping_health([$_ok($_now - 1800)], false, $_now)['tone'] === '', 'a full run 30 min ago -> quiet');
+ok(housekeeping_health([['id' => 'r', 'scope' => 'all', 'started_at' => $_now - 1200, 'outcome' => 'running', 'current' => 'permission_check'], $_ok($_now - 3000)], true, $_now)['tone'] === 'warn',
+   'running for 20 minutes -> amber');
+ok(housekeeping_health([['id' => 'r', 'scope' => 'all', 'started_at' => $_now - 60, 'outcome' => 'running'], $_ok($_now - 3000)], true, $_now)['tone'] === '', 'running for a minute -> quiet');
+ok(housekeeping_health([], false, $_now)['tone'] === '', 'no record at all (a fresh install, before its first run) -> no false alarm');
+
+$_rp->setValue($_cfg, $_saved);
+exec('rm -rf ' . escapeshellarg($_H));
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

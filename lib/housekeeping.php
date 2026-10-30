@@ -67,7 +67,10 @@ function housekeeping_persist_status(string $key, $value): void {
     $all[$key] = $value;
     $dir = dirname($file);
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
-    @file_put_contents($file, json_encode($all, JSON_PRETTY_PRINT));
+    // Write aside and rename: a dashboard load reading the file mid-write used to get a
+    // truncated file, i.e. no status at all. The run record (below) writes before every task.
+    $tmp = $file . '.' . getmypid() . '.tmp';
+    if (@file_put_contents($tmp, json_encode($all, JSON_PRETTY_PRINT)) !== false && !@rename($tmp, $file)) @unlink($tmp);
 }
 
 function housekeeping_hydrate_session_from_status(): void {
@@ -338,17 +341,26 @@ function housekeeping_spawn_background(?string $task = null): bool {
  * admin/api/rerun_housekeeping.php (the dashboard's "Run now" button, where blocking is
  * correct — the admin asked and is waiting for the answer).
  *
+ * Every run keeps a record (housekeeping_run_save()): when it started, which task it is on,
+ * when it finished and how each task went. If the process ends part-way -- die(), a fatal
+ * error -- a shutdown function writes WHICH task it died in and the message. A process killed
+ * outright (SIGKILL, out of memory) cannot write anything; housekeeping_health() reads its
+ * "running" record with no lock held as dead. Until 2026-10-30 a run that died left no trace
+ * at all (the background child's output goes to /dev/null) and the card still said "Last run
+ * 12 min ago", because that time was stamped when a run STARTED.
+ *
  * @param list<string> $only Task names to run. Empty = the full sweep. Unknown names are
  *                           ignored; if nothing survives filtering the run is refused with
  *                           reason 'no_such_task' rather than silently doing nothing.
+ * @param ?array $registry   Tasks to choose from; null = housekeeping_task_registry(). For tests.
  * @return array{ran:bool, reason:?string, tasks:list<array{name:string,ok:bool,ms:int,error:?string}>}
  */
-function housekeeping_run_tasks(array $only = []): array {
+function housekeeping_run_tasks(array $only = [], ?array $registry = null): array {
     $result = ['ran' => false, 'reason' => null, 'tasks' => []];
 
     $logs_dir  = ConfigManager::getInstance()->getPath('site_path') . '/logs';
 
-    $tasks = housekeeping_task_registry();
+    $tasks = $registry ?? housekeeping_task_registry();
     if ($only) {
         $tasks = array_values(array_filter($tasks, fn($t) => in_array($t['name'], $only, true)));
         if (!$tasks) {
@@ -373,7 +385,32 @@ function housekeeping_run_tasks(array $only = []): array {
         @touch(housekeeping_marker_file());
     }
 
+    $run = ['id' => getmypid() . '-' . time(), 'scope' => $only ? implode(',', $only) : 'all', 'started_at' => time(),
+            'finished_at' => null, 'outcome' => 'running', 'current' => null, 'tasks' => [], 'died_in' => null, 'message' => null];
+    housekeeping_run_save($run);
+    // A task's stray output -- including die()'s message -- lands here, so the shutdown
+    // function can record it (the background child's own stdout is /dev/null).
+    ob_start();
+    $ob_level = ob_get_level();   // only ours: in a web request the page's buffers sit below it
+    $finished = false;
+    register_shutdown_function(function () use (&$run, &$finished, $ob_level) {
+        if ($finished) return;
+        $out = '';
+        while (ob_get_level() >= $ob_level && ob_get_level() > 0) $out = ob_get_clean() . $out;
+        $err = error_get_last();
+        $msg = trim(html_entity_decode(strip_tags($out), ENT_QUOTES));
+        if ($msg === '' && $err) $msg = $err['message'] . ' (' . basename($err['file']) . ':' . $err['line'] . ')';
+        $run['outcome']     = 'died';
+        $run['died_in']     = $run['current'];
+        $run['message']     = mb_substr($msg !== '' ? $msg : 'The process ended without finishing.', 0, 500);
+        $run['finished_at'] = time();
+        housekeeping_run_save($run);
+    });
+
     foreach ($tasks as $task) {
+        $run['current'] = $task['name'];
+        housekeeping_run_save($run);
+        if (ob_get_level() >= $ob_level) ob_clean();   // so a death message is this task's own output
         $t0 = microtime(true);
         try {
             call_user_func($task['fn']);
@@ -394,9 +431,99 @@ function housekeeping_run_tasks(array $only = []): array {
         }
     }
 
+    $finished = true;
+    ob_end_clean();
+    $run['tasks']       = array_map(fn($t) => ['name' => $t['name'], 'ok' => $t['ok'], 'ms' => $t['ms'], 'error' => $t['error']], $result['tasks']);
+    $run['outcome']     = in_array(false, array_column($result['tasks'], 'ok'), true) ? 'tasks_failed' : 'ok';
+    $run['current']     = null;
+    $run['finished_at'] = time();
+    housekeeping_run_save($run);
+
     if (is_resource($lock)) { flock($lock, LOCK_UN); fclose($lock); }
     $result['ran'] = true;
     return $result;
+}
+
+/** How many run records the status file keeps (newest first). */
+const HOUSEKEEPING_RUN_HISTORY = 8;
+
+/** Write (insert or update) one run record in the status file's 'housekeeping_runs'. */
+function housekeeping_run_save(array $run): void {
+    $all  = loadJsonFile(housekeeping_status_file(), []);
+    $runs = array_values(array_filter($all['housekeeping_runs'] ?? [], fn($r) => ($r['id'] ?? '') !== $run['id']));
+    array_unshift($runs, $run);
+    usort($runs, fn($a, $b) => ($b['started_at'] ?? 0) <=> ($a['started_at'] ?? 0));
+    housekeeping_persist_status('housekeeping_runs', array_slice($runs, 0, HOUSEKEEPING_RUN_HISTORY));
+}
+
+/** "4 min ago", "3 hr ago", "2 days ago". */
+function housekeeping_ago(int $seconds): string {
+    if ($seconds < 3600)  return max(1, (int) round($seconds / 60)) . ' min ago';
+    if ($seconds < 86400) return (int) floor($seconds / 3600) . ' hr ago';
+    return (int) floor($seconds / 86400) . ' day' . ($seconds >= 172800 ? 's' : '') . ' ago';
+}
+
+/**
+ * Is housekeeping healthy? Read from the run records alone, so it is cheap and testable.
+ *
+ *   danger  a run died (or stopped with no lock held -- killed) and no full sweep has finished
+ *           since; or no full sweep has finished for over twice the interval
+ *   warn    a run has been going for over 15 minutes; or the last full sweep had failed tasks
+ *   ''      otherwise
+ *
+ * @param list<array> $runs     the 'housekeeping_runs' records, newest first
+ * @param bool        $running  housekeeping_is_running()
+ * @return array{tone:string, badge:array{0:string,1:string}, headline:string, problems:list<string>}
+ */
+function housekeeping_health(array $runs, bool $running, int $now, int $interval = HOUSEKEEPING_MIN_INTERVAL): array {
+    if (!$runs) {
+        return ['tone' => '', 'badge' => [$running ? 'Running' : 'No run recorded yet', $running ? 'info' : 'secondary'],
+                'headline' => 'No run has been recorded yet.', 'problems' => []];
+    }
+    $last_full = null;
+    $full_i    = count($runs);   // position in the list (newest first): order, not timestamps,
+    foreach ($runs as $i => $r) { // says which came after which -- two runs can share a second
+        if (($r['scope'] ?? '') === 'all' && in_array($r['outcome'] ?? '', ['ok', 'tasks_failed'], true)) { $last_full = $r; $full_i = $i; break; }
+    }
+    $full_at = (int)($last_full['finished_at'] ?? 0);
+
+    // A "running" record is live only if it is the newest and the lock is held now.
+    $dead = null;
+    foreach ($runs as $i => $r) {
+        $outcome = $r['outcome'] ?? '';
+        $killed  = $outcome === 'running' && !($i === 0 && $running);
+        if ($i < $full_i && ($outcome === 'died' || $killed)) { $dead = $r + ['killed' => $killed]; break; }
+    }
+
+    $problems = [];
+    if ($dead) {
+        $what = $dead['killed']
+            ? 'stopped without finishing' . (!empty($dead['current']) ? ' during ' . $dead['current'] : '') . ' — killed, or out of memory'
+            : 'died' . (!empty($dead['died_in']) ? ' during ' . $dead['died_in'] : '') . ': ' . ($dead['message'] ?? '');
+        $problems[] = 'The run that started ' . housekeeping_ago($now - (int)$dead['started_at']) . ' ' . $what;
+    }
+    if (!$running && $now - $full_at > 2 * $interval) {
+        $problems[] = $full_at ? 'No full run has finished since ' . housekeeping_ago($now - $full_at) . ' (it should run hourly)'
+                               : 'No full run has finished yet';
+    }
+    if ($problems) {
+        return ['tone' => 'danger', 'badge' => [$dead ? 'Last run died' : 'Not running', 'danger'],
+                'headline' => 'Housekeeping is not finishing — every card on this page may be out of date.', 'problems' => $problems];
+    }
+
+    $warn = [];
+    if ($running && $now - (int)($runs[0]['started_at'] ?? $now) > 900) {
+        $warn[] = 'The current run has been going for ' . (int) floor(($now - (int)$runs[0]['started_at']) / 60) . ' min'
+                . (!empty($runs[0]['current']) ? ', now on ' . $runs[0]['current'] : '');
+    }
+    foreach ($last_full['tasks'] ?? [] as $t) {
+        if (empty($t['ok'])) $warn[] = $t['name'] . ' failed: ' . ($t['error'] ?? 'no message');
+    }
+    $n = count($last_full['tasks'] ?? []);
+    $headline = !$last_full ? 'No full run has finished yet.' : 'Last full run finished ' . housekeeping_ago($now - $full_at) . ' — ' . ($n - count(array_filter($last_full['tasks'] ?? [], fn($t) => empty($t['ok'])))) . " of $n tasks OK.";
+    if ($warn) return ['tone' => 'warn', 'badge' => [$running ? 'Running long' : 'Tasks failed', 'warning'], 'headline' => $headline, 'problems' => $warn];
+    return ['tone' => '', 'badge' => [$running ? 'Running' : 'Finished ' . housekeeping_ago($now - $full_at), $running ? 'info' : 'success'],
+            'headline' => $headline, 'problems' => []];
 }
 
 // =====================================================================

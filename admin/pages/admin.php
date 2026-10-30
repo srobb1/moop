@@ -48,7 +48,20 @@
       : ($age_s < 3600
           ? max(1, (int) round($age_s / 60)) . ' min ago'
           : (int) floor($age_s / 3600) . ' hr ago');
+
+  // Is housekeeping itself healthy? Every card here is its cached output, so when it stops
+  // finishing they all just stop changing -- which on 2026-10-30 went unnoticed for 1.5 hours.
+  $_hk_running = function_exists('housekeeping_is_running') && housekeeping_is_running();
+  $_hk_health  = housekeeping_health($_SESSION['housekeeping_runs'] ?? [], $_hk_running, time());
   ?>
+
+  <?php if ($_hk_health['tone'] === 'danger'): ?>
+  <div class="alert alert-danger small" role="alert">
+    <strong><i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($_hk_health['headline']) ?></strong>
+    <ul class="mb-1 mt-1"><?php foreach ($_hk_health['problems'] as $_p): ?><li><?= htmlspecialchars($_p) ?></li><?php endforeach; ?></ul>
+    Details and "Run housekeeping now" are in the <a href="#housekeepingCard" class="alert-link">Housekeeping</a> card at the bottom.
+  </div>
+  <?php endif; ?>
 
   <div class="adm-group-label">Data</div>
   <!-- Data Health (shared partial -- the same card on the Manage Organisms page). It renders
@@ -614,11 +627,18 @@
        a finding. The task list is rendered from housekeeping_task_registry() -- the same list
        that RUNS them -- so it cannot drift. -->
   <?php
-    $_hk_running = function_exists('housekeeping_is_running') && housekeeping_is_running();
-    $_hk_badges  = $_hk_running ? [['Running', 'info']]
-                 : [[$scanned ? 'Last run ' . $scanned : 'Not run yet', 'secondary']];
+    // $_hk_running / $_hk_health: computed at the top of the page (the banner uses them too).
+    $_hk_badges = [$_hk_health['badge']];
     ob_start();
   ?>
+    <?php if ($_hk_health['problems']): ?>
+    <div class="alert alert-<?= $_hk_health['tone'] === 'danger' ? 'danger' : 'warning' ?> small py-2 mb-2" role="status">
+      <strong><?= htmlspecialchars($_hk_health['headline']) ?></strong>
+      <ul class="mb-0 mt-1"><?php foreach ($_hk_health['problems'] as $_p): ?><li><?= htmlspecialchars($_p) ?></li><?php endforeach; ?></ul>
+    </div>
+    <?php else: ?>
+    <p class="small mb-2"><?= htmlspecialchars($_hk_health['headline']) ?></p>
+    <?php endif; ?>
     <?php if ($_hk_running): ?>
     <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-2" role="status">
       <span class="spinner-border spinner-border-sm flex-shrink-0"></span>
@@ -657,7 +677,8 @@
       <p class="small text-muted mb-0 fst-italic">Defined in <code>lib/housekeeping.php</code>.</p>
     </div>
     <div id="rerunHousekeepingResult" class="small mt-2"></div>
-  <?= adm_status_card('housekeeping', 'broom', 'Housekeeping', $_hk_badges, '', ob_get_clean(), $_hk_running) ?>
+  <?= adm_status_card('housekeeping', 'broom', 'Housekeeping', $_hk_badges, $_hk_health['tone'], ob_get_clean(),
+                       $_hk_running || $_hk_health['tone'] !== '') ?>
   <div class="mb-4"></div>
 
 
