@@ -258,3 +258,33 @@ of them block Parastichopus specifically (its path only ever touches
 not this one. Still need: rerun Parastichopus's reload with this fix in place and
 confirm the live gene pages actually show names/descriptions (verified so far only
 by rebuilding `geneNames.tsv` standalone, not through the full pipeline + copy-to-moop).
+
+### 7b. 2026-10-30: the detector audit, and ids the prefix missed
+
+**Audit of the four other detector copies (the open item above): none is on the lift path.**
+
+| script | caller | reached by a lift gene set? |
+|---|---|---|
+| `get_names_from_gff.pl` | `process_one_geneset.sh` (~1144) | no: only when RENAME=false, i.e. GFF_SOURCE refseq/ensembl; lift is RENAME=true |
+| `parse_RefSeq_GFF_to_MOOP_TSV.pl` | none (a comment in `rename_RefSeq_cds_fasta.pl`) | no: superseded by `parse_GFF3_to_MOOP_TSV.pl` |
+| `make_isoforms_refseq_gff.pl` | none | no: superseded by `make_isoforms_from_gff.pl` |
+| `rbbh/make_isoforms_rbbh_REFSEQGFF.pl` | `rbbh/Nematostella_vectensis.run_notes.sh` only (a by-hand record) | no |
+
+`scripts/id_map_step1.sh` has its own copy, with the lift override already in it.
+
+**Ids from before the prefix (fixed, 48490df).** Naming runs before `moop-lift-prefix` is
+applied: OMA, DIAMOND and InterProScan were computed on the unprefixed sequences, so
+`geneNames.tsv` has the unprefixed ids on purpose. Two things did not follow the prefix:
+
+- `strip_id_prefix.pl` prefixed a `Name=` only when it was the feature's OWN id. A gene named
+  without a symbol gets its representative transcript's id as Name= (updateGFF.pl), and an
+  unnamed gene's `Note=` (description) is a transcript id too, so 15,575 Parastichopus genes
+  showed `rna-XM_...` (an id not in the database) as their name. Now `Name=` and `Note=` are
+  rewritten whenever the value is a feature id of the GFF; symbols and descriptions untouched.
+- `geneNames.readable.tsv` looked names up by the prefixed ids and found none ("No name" for
+  every Parastichopus gene). It now applies the `.id_prefix_stripped` rewrite, as
+  `load_annotations_sqlite.pl` does.
+
+Verified on Parastichopus's GFF with the prefix removed and re-added: exactly 15,575 gene and
+9,841 mRNA lines change, idempotent. The strip+add mode (moop-strip-id-prefix) is untested on
+a real gene set (none built at the time). Rebuild: job 5502979.
