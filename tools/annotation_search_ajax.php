@@ -122,6 +122,17 @@ if (!$db_validation['valid']) {
 $organism_data_result = loadOrganismAndGetImagePath($organism, $images_path, $absolute_images_path);
 $organism_image_path = $organism_data_result['image_path'];
 
+// What may be searched is decided here, not by the browser: its scope can only narrow the
+// gene sets this viewer may see (lib/functions_access.php). Unfiltered stays unfiltered when
+// everything in the database is open, so the fast path is kept.
+$narrowed = moop_search_narrow_scope(moop_search_permitted_scope($organism), $scope_pairs, $assembly, $gene_set);
+$scope_pairs = $narrowed['pairs'];
+if ($narrowed['blocked']) {
+    echo json_encode(['organism' => $organism, 'results' => [], 'count' => 0, 'capped' => false,
+                      'results_limit' => moop_search_results_limit()]);
+    exit;
+}
+
 // Check if searching by feature uniquename first
 $results = searchFeaturesByUniquenameForSearch($search_input, $db, '', $assembly, $gene_set, $scope_pairs);
 $uniquename_search = !empty($results);

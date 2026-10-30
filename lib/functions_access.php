@@ -476,6 +476,64 @@ function getAccessibleGeneSets($specific_organism = null, $specific_assembly = n
 }
 
 /**
+ * The {assembly, gene_set} pairs a search of $organism's database may return to this viewer,
+ * decided on the SERVER from getAccessibleGeneSets() — the same answer every scope selector and
+ * download is built from.
+ *
+ * Returns null when every gene set in the database is open to the viewer: the search then runs
+ * unfiltered, which is the fast path (CLAUDE.md §9, "unfiltered fast path"). Otherwise returns the
+ * permitted pairs (assembly = genome_accession, which is what the search queries match), possibly
+ * none. A gene set is closed when the viewer lacks access, OR when it has no group entry or no
+ * directory — a retired assembly or gene set whose rows the database still holds until the
+ * pipeline rebuilds it (lib/retire.php).
+ *
+ * Before this the search endpoint authorised the ORGANISM and searched whichever pairs the
+ * browser sent, or the whole database when it sent none (the default).
+ */
+function moop_search_permitted_scope(string $organism): ?array {
+    $permitted = [];
+    foreach (getAccessibleGeneSets($organism) as $by_org) {
+        foreach ($by_org[$organism] ?? [] as $s) {
+            $acc = (string)($s['genome_accession'] ?? '');
+            if ($acc === '') continue;
+            $permitted[$acc . "\t" . $s['gene_set']] = ['assembly' => $acc, 'gene_set' => (string)$s['gene_set']];
+        }
+    }
+    $identity = moop_gene_set_identity([$organism], ConfigManager::getInstance()->getPath('organism_data'))[$organism] ?? [];
+    $acc_by_genome = array_column($identity['genomes'] ?? [], 'genome_accession', 'genome_id');
+    foreach ($identity['gene_sets'] ?? [] as $gs) {
+        if (!isset($permitted[($acc_by_genome[$gs['genome_id']] ?? '') . "\t" . $gs['gene_set_name']])) {
+            return array_values($permitted);
+        }
+    }
+    return null;
+}
+
+/**
+ * Combine what the browser asked to search with what the server permits (above). Pure, so the
+ * smoke tests can pin it. The browser can only NARROW the permitted scope, never widen it.
+ *
+ * @param  ?array $permitted     moop_search_permitted_scope(): null = everything is open
+ * @param  array  $client_pairs  the request's scope pairs (empty = none sent)
+ * @param  string $assembly      the request's single assembly (genome_accession) filter, if any
+ * @param  string $gene_set      the request's single gene-set filter, if any
+ * @return array  ['pairs' => list of {assembly, gene_set} to pass to the search, 'blocked' => bool]
+ *                blocked = nothing the viewer may see is left: return no results.
+ */
+function moop_search_narrow_scope(?array $permitted, array $client_pairs, string $assembly = '', string $gene_set = ''): array {
+    if ($permitted === null) return ['pairs' => $client_pairs, 'blocked' => false];
+    if ($client_pairs) {
+        $allowed = [];
+        foreach ($permitted as $p) $allowed[$p['assembly'] . "\t" . $p['gene_set']] = true;
+        $pairs = array_values(array_filter($client_pairs, fn($p) => isset($allowed[$p['assembly'] . "\t" . $p['gene_set']])));
+    } else {
+        $pairs = array_values(array_filter($permitted, fn($p) =>
+            ($assembly === '' || $p['assembly'] === $assembly) && ($gene_set === '' || $p['gene_set'] === $gene_set)));
+    }
+    return ['pairs' => $pairs, 'blocked' => !$pairs];
+}
+
+/**
  * Find (organism, assembly, gene_set) tuples that exist as directories on disk but
  * have no entry at all in organism_assembly_groups.json — i.e. nobody has access to
  * them yet. This is the gap that hides newly-added gene sets: adding a gene_set to

@@ -3191,6 +3191,23 @@ $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_qd));
 
 // ----------------------------------------------------------------------------
+group('Search scope: the server decides, the browser can only narrow');
+$_perm = [['assembly' => 'GCF_1', 'gene_set' => 'A'], ['assembly' => 'GCF_1', 'gene_set' => 'B']];
+$_n = moop_search_narrow_scope(null, [], '', '');
+ok($_n['pairs'] === [] && !$_n['blocked'], 'everything open + nothing asked = unfiltered (the fast path)');
+$_n = moop_search_narrow_scope(null, [['assembly' => 'X', 'gene_set' => 'Y']]);
+ok($_n['pairs'] === [['assembly' => 'X', 'gene_set' => 'Y']], 'everything open: the browser\'s scope is used as sent');
+$_n = moop_search_narrow_scope($_perm, [], '', '');
+ok($_n['pairs'] === $_perm && !$_n['blocked'], 'something closed + nothing asked = exactly the permitted pairs, never the whole database');
+$_n = moop_search_narrow_scope($_perm, [['assembly' => 'GCF_1', 'gene_set' => 'B'], ['assembly' => 'GCA_9', 'gene_set' => 'Z']]);
+ok($_n['pairs'] === [['assembly' => 'GCF_1', 'gene_set' => 'B']], 'a pair the viewer may not see is dropped from the browser\'s scope');
+$_n = moop_search_narrow_scope($_perm, [['assembly' => 'GCA_9', 'gene_set' => 'Z']]);
+ok($_n['blocked'], 'asking only for a closed gene set returns nothing');
+$_n = moop_search_narrow_scope($_perm, [], 'GCF_1', 'A');
+ok($_n['pairs'] === [['assembly' => 'GCF_1', 'gene_set' => 'A']], 'the single assembly / gene-set filter still narrows when the server must scope');
+ok(moop_search_narrow_scope([], [])['blocked'], 'nothing permitted = nothing searched');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {
