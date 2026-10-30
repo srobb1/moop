@@ -3208,6 +3208,106 @@ ok($_n['pairs'] === [['assembly' => 'GCF_1', 'gene_set' => 'A']], 'the single as
 ok(moop_search_narrow_scope([], [])['blocked'], 'nothing permitted = nothing searched');
 
 // ----------------------------------------------------------------------------
+group('Retire / Restore: organism, assembly, gene set (a throwaway site tree)');
+// lib/retire.php end to end against a temp tree: organisms/, metadata/, data/genomes/ and the
+// cache all point inside it, so nothing real is touched. Byte-compares the groups file, which
+// is what a retire edits and a restore must give back exactly.
+require_once "$BASE/lib/retire.php";
+$_T  = sys_get_temp_dir() . '/moop_retire_' . getmypid();
+$_O  = "$_T/organisms";   $_M = "$_T/metadata";   $_J = "$_M/jbrowse2-configs";
+foreach (["$_O/Zz_org/ASM_A/GS1", "$_O/Zz_org/ASM_A/GS2", "$_O/Zz_org/ASM_B/GS3", "$_J/assemblies", "$_J/tracks/Zz_org/ASM_A/gff",
+          "$_J/tracks/Zz_org/ASM_B/bigwig", "$_M/change_log", "$_T/data/genomes/Zz_org/ASM_A/GS2/trix", "$_T/cache"] as $_d) mkdir($_d, 0777, true);
+foreach (['ASM_A/GS1', 'ASM_A/GS2', 'ASM_B/GS3'] as $_g) file_put_contents("$_O/Zz_org/$_g/protein.aa.fa", ">p\nMKV\n");
+$_db = new PDO("sqlite:$_O/Zz_org/organism.sqlite");
+$_db->exec("CREATE TABLE genome(genome_id INTEGER PRIMARY KEY, organism_id INT, genome_description TEXT, genome_name TEXT, genome_accession TEXT);
+            INSERT INTO genome VALUES(1,1,'','ASM_A','ASM_A'),(2,1,'','ASM_B','ASM_B');
+            CREATE TABLE gene_set(gene_set_id INTEGER PRIMARY KEY, genome_id INT, gene_set_name TEXT, gene_set_description TEXT);
+            INSERT INTO gene_set VALUES(1,1,'GS1',''),(2,1,'GS2',''),(3,2,'GS3','');");
+$_db = null;
+$_track = fn($g) => "Zz_org_ASM_A_{$g}_genes";
+file_put_contents("$_J/assemblies/Zz_org_ASM_A.json", json_encode(['name' => 'Zz_org_ASM_A', 'primaryGeneTracks' => [$_track('GS1'), $_track('GS2')]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+file_put_contents("$_J/assemblies/Zz_org_ASM_B.json", '{"name":"Zz_org_ASM_B"}');
+foreach (['GS1', 'GS2'] as $_g) file_put_contents("$_J/tracks/Zz_org/ASM_A/gff/{$_g}_genes.json", '{}');
+file_put_contents("$_J/tracks/Zz_org/ASM_B/bigwig/bw.json", '{}');
+file_put_contents("$_T/data/genomes/Zz_org/ASM_A/GS2/trix/x.ix", 'ix');
+$_groups = "$_M/organism_assembly_groups.json";
+file_put_contents($_groups, json_encode([
+    ['organism' => 'Other_org', 'assembly' => 'X', 'gene_set' => 'Y', 'groups' => ['PUBLIC']],
+    ['organism' => 'Zz_org', 'assembly' => 'ASM_A', 'gene_set' => 'GS1', 'groups' => ['T']],
+    ['organism' => 'Zz_org', 'assembly' => 'ASM_B', 'gene_set' => 'GS3', 'groups' => ['T']],
+    ['organism' => 'Zz_org', 'assembly' => 'ASM_A', 'gene_set' => 'GS2', 'groups' => ['T']],   // last: restore appends
+], JSON_PRETTY_PRINT));
+$_groups_before = file_get_contents($_groups);
+
+$_cfg = ConfigManager::getInstance();
+$_rp  = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved;
+$_c['organism_data'] = $_O; $_c['metadata_path'] = $_M; $_c['site_path'] = $_T; $_c['cache_path'] = "$_T/cache";
+$_rp->setValue($_cfg, $_c);
+
+// Refusals
+ok(!moop_retire_preview('gene_set', 'Zz_org', 'ASM_B', 'GS3', $_cfg)['ok'], 'the last gene set of an assembly is refused (retire the assembly)');
+$_one = "$_O/One_org/ONLY"; mkdir($_one, 0777, true);
+ok(!moop_retire_preview('assembly', 'One_org', 'ONLY', '', $_cfg)['ok'], 'the last assembly of an organism is refused (retire the organism)');
+rmdir($_one); rmdir(dirname($_one));
+ok(!moop_retire_preview('assembly', 'Zz_org', '../metadata', '', $_cfg)['ok'] && !moop_retire_preview('gene_set', 'Zz_org', 'ASM_A', 'NOPE', $_cfg)['ok'],
+   'names must be directories that are there: no paths, no made-up gene sets');
+
+// Gene set
+$_r = moop_retire('gene_set', 'Zz_org', 'ASM_A', 'GS2', 'tester', $_cfg);
+$_b = moop_retired_root($_O) . '/' . ($_r['bundle'] ?? '');
+ok($_r['ok'] && !is_dir("$_O/Zz_org/ASM_A/GS2") && is_file("$_b/data/protein.aa.fa"), 'gene set: its directory moves into the bundle');
+ok(!file_exists("$_J/tracks/Zz_org/ASM_A/gff/GS2_genes.json") && is_file("$_b/jbrowse/genomes/ASM_A/trix/x.ix"),
+   'gene set: its track JSON and built track (trix included) move with it');
+$_asm = json_decode(file_get_contents("$_J/assemblies/Zz_org_ASM_A.json"), true);
+ok($_asm['primaryGeneTracks'] === [$_track('GS1')], 'gene set: it comes off the assembly\'s default tracks');
+ok(strpos(file_get_contents($_groups), '"GS2"') === false && strpos(file_get_contents($_groups), '"GS1"') !== false, 'gene set: only its own group entry is removed');
+$_v = validateAssemblyDirectories("$_O/Zz_org/organism.sqlite", "$_O/Zz_org");
+ok($_v['valid'] && !$_v['mismatches'] && ($_v['retired'][0]['gene_set_name'] ?? '') === 'GS2',
+   'health: a retired gene set the database still holds is "retired", not a missing directory');
+$_l = moop_retired_list($_cfg);
+ok(count($_l) === 1 && $_l[0]['level'] === 'gene_set' && $_l[0]['in_database'] && !$_l[0]['parent_gone'], 'Retired list: gene set, waiting for a database rebuild');
+$_r = moop_restore($_r['bundle'], 'tester', $_cfg);
+ok($_r['ok'] && is_file("$_O/Zz_org/ASM_A/GS2/protein.aa.fa") && is_file("$_J/tracks/Zz_org/ASM_A/gff/GS2_genes.json")
+   && is_file("$_T/data/genomes/Zz_org/ASM_A/GS2/trix/x.ix") && !glob(moop_retired_root($_O) . '/*'),
+   'gene set restore: data, track JSON and built track back; the bundle is gone');
+ok(json_decode(file_get_contents("$_J/assemblies/Zz_org_ASM_A.json"), true)['primaryGeneTracks'] === [$_track('GS1'), $_track('GS2')],
+   'gene set restore: back on the default tracks');
+ok(file_get_contents($_groups) === $_groups_before, 'gene set restore: the groups file is byte-identical to before');
+$_v = validateAssemblyDirectories("$_O/Zz_org/organism.sqlite", "$_O/Zz_org");
+ok(!$_v['retired'] && !$_v['mismatches'], 'health after restore: nothing retired, nothing missing');
+
+// Assembly
+$_r = moop_retire('assembly', 'Zz_org', 'ASM_B', '', 'tester', $_cfg);
+ok($_r['ok'] && !is_dir("$_O/Zz_org/ASM_B") && !is_file("$_J/assemblies/Zz_org_ASM_B.json") && !is_dir("$_J/tracks/Zz_org/ASM_B"),
+   'assembly: data moves, registration removed, its track settings kept in the bundle');
+$_v = validateAssemblyDirectories("$_O/Zz_org/organism.sqlite", "$_O/Zz_org");
+ok($_v['valid'] && !$_v['mismatches'] && ($_v['retired'][0]['level'] ?? '') === 'assembly', 'health: a retired assembly is "retired", not a missing directory');
+mkdir("$_O/Zz_org/ASM_B");   // copied back the normal way
+$_bn = $_r['bundle'];
+ok(!moop_restore($_bn, 'tester', $_cfg)['ok'], 'a full restore refuses when the directory is back (never merges into a copy)');
+rmdir("$_O/Zz_org/ASM_B");
+$_r = moop_restore($_bn, 'tester', $_cfg);
+ok($_r['ok'] && is_file("$_O/Zz_org/ASM_B/GS3/protein.aa.fa") && is_file("$_J/tracks/Zz_org/ASM_B/bigwig/bw.json")
+   && in_array('Register its assemblies again in Manage JBrowse to bring back the genome browser', $_r['done'], true),
+   'assembly restore: data and track settings back, and it says to register again');
+
+// Parent first: a gene set whose organism is retired too
+$_g = moop_retire('gene_set', 'Zz_org', 'ASM_A', 'GS2', 'tester', $_cfg)['bundle'];
+sleep(1);   // bundle names are per second
+$_o = moop_retire('organism', 'Zz_org', '', '', 'tester', $_cfg)['bundle'];
+$_pg = array_values(array_filter(moop_retired_list($_cfg), fn($x) => $x['bundle'] === $_g))[0] ?? [];
+$_pr = moop_restore($_g, 'tester', $_cfg);
+ok(!empty($_pg['parent_gone']) && !$_pr['ok'] && strpos((string)$_pr['error'], 'restore it first') !== false,
+   'a gene set cannot be restored while its organism is retired, and the admin is told to restore that first');
+ok(moop_restore($_o, 'tester', $_cfg)['ok'] && moop_restore($_g, 'tester', $_cfg)['ok'] && file_get_contents($_groups) === $_groups_before,
+   'organism then gene set: both back, groups file byte-identical');
+
+$_rp->setValue($_cfg, $_saved);
+exec('rm -rf ' . escapeshellarg($_T));
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

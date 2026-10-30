@@ -28,15 +28,14 @@ function moop_organism_dirs(string $organism_data): array {
  * What the Retire button has taken off the site and not yet put back (lib/retire.php):
  * "Org", "Org/Asm" or "Org/Asm/GeneSet" => the bundle's record. Read from the small
  * retired.json in each organisms/.retired/ bundle; a bundle whose data has been restored, or
- * copied back the normal way, does not count.
+ * copied back the normal way, does not count. Not cached: a few small files, and a cached copy
+ * would go stale in a process that retires or restores.
  *
  * Lives here, not in lib/retire.php, because validateAssemblyDirectories() needs it: an
  * assembly or gene set retired while the organism's database still holds its rows is
  * "retired, waiting for a database rebuild", not a missing directory.
  */
 function moop_retired_paths(string $organism_data): array {
-    static $memo = [];
-    if (isset($memo[$organism_data])) return $memo[$organism_data];
     $out = [];
     foreach (glob(rtrim($organism_data, '/') . '/.retired/*/retired.json') ?: [] as $file) {
         $r = json_decode((string)@file_get_contents($file), true);
@@ -45,7 +44,7 @@ function moop_retired_paths(string $organism_data): array {
         if ($rel === '' || is_dir(rtrim($organism_data, '/') . "/$rel")) continue;
         $out[$rel] = $r + ['bundle' => basename(dirname($file))];
     }
-    return $memo[$organism_data] = $out;
+    return $out;
 }
 
 /**
