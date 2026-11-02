@@ -972,7 +972,20 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         $html .= '</div>';
         
         if ($query['total_hits'] === 0) {
-            $html .= '<div class="alert alert-info"><small>No significant matches found for this query</small></div>';
+            // A short DNA query lost to the defaults gets the reason and a one-click re-run
+            // (js/modules/blast-short-nudge.js) -- a bare "no matches" reads as "not in this
+            // genome", which for a primer is usually false.
+            $short_reason = blast_short_query_reason((string)$blast_program, (int)$query['query_length'], $blast_options);
+            if ($short_reason !== '') {
+                $html .= '<div class="alert alert-warning blast-short-zero"><small>'
+                       . '<strong>No matches kept.</strong> ' . htmlspecialchars($short_reason)
+                       . ' <button type="button" class="btn btn-sm btn-moop-teal text-white ms-1 blast-rerun-short">'
+                       . '<i class="fa fa-redo me-1"></i>Re-run with BLASTn-short</button> '
+                       . help_modal_trigger('blast-short-help', '', 'Help: searching with primers and other short sequences')
+                       . '</small></div>';
+            } else {
+                $html .= '<div class="alert alert-info"><small>No significant matches found for this query</small></div>';
+            }
         } else {
             // HSP visualization for this query
             $html .= generateHspVisualizationWithLines($query, $blast_program, $query_num);

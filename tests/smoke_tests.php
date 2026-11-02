@@ -2444,6 +2444,23 @@ ok($_hit('X2') === ['G1'], 'the filter still finds a hit stored on an isoform (w
 @unlink($_mdb);
 
 // ----------------------------------------------------------------------------
+group('BLAST: a short DNA query that came back empty is told why, per program');
+// Text review N8 (2026-11-02, measured on Schmidtea mediterranea CDS): the reasons DIFFER --
+// Megablast cannot seed a 20 nt query at any E-value, BLASTn finds it and the 1e-3 default
+// discards it. A bare "no matches" read as "not in this genome".
+require_once "$BASE/lib/blast_functions.php";
+$_r = fn($prog, $len, $opts = []) => blast_short_query_reason($prog, $len, $opts + ['evalue' => '1e-3', 'word_size' => 0]);
+ok(strpos($_r('blastn', 20), 'E-value 1e-3') !== false, 'BLASTn at 1e-3: the E-value is the reason');
+ok(strpos($_r('blastn', 20), '28 identical') === false, 'BLASTn: the word-size reason is NOT given (it seeds from 11)');
+ok(strpos($_r('megablast', 20), 'at any E-value') !== false, 'Megablast: cannot seed, whatever the E-value');
+ok(strpos($_r('megablast', 20, ['evalue' => '1000']), 'at any E-value') !== false, 'Megablast at 1000: still the word-size reason');
+ok(strpos($_r('blastn', 20, ['evalue' => '1000']), 'E-value') === false, 'BLASTn already at 1000: the E-value is not blamed');
+ok(strpos($_r('blastx', 20), '6 amino acids') !== false, 'BLASTx: the translated length is the reason');
+ok($_r('blastn', BLAST_SHORT_QUERY_NT) === '', 'a query at the threshold is not short');
+ok($_r('blastn-short', 20) === '' && $_r('blastp', 20) === '', 'BLASTn-short itself, and protein queries, get no short-query note');
+ok(strpos($_r('blastn', 20, ['word_size' => 4]), 'short for this program') !== false, 'a custom word size: no default-based reason is claimed');
+
+// ----------------------------------------------------------------------------
 group('Data Exporter: text filters match the way Search does');
 // They were LIKE '%word%': "inase" found kinase and "kinases" did not, the opposite of Search
 // and of the (i) beside the boxes. Now the same FTS index and expression as Search.

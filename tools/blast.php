@@ -348,13 +348,15 @@ $display_config = [
     'page_script' => [
         '/' . $site . '/js/modules/collapse-handler.js',
         '/' . $site . '/js/modules/source-list-manager.js',
-        '/' . $site . '/js/blast-manager.js'
+        '/' . $site . '/js/blast-manager.js',
+        '/' . $site . '/js/modules/blast-short-nudge.js'
     ],
     'inline_scripts' => [
         "const previouslySelectedDb = '" . addslashes($blast_db) . "';",
         "const previouslySelectedSource = '" . addslashes($selected_source) . "';",
         "const sampleSequences = " . json_encode($config->getArray('blast_sample_sequences', [])) . ";",
-        "const databasesByAssembly = " . json_encode($client_databasesByAssembly) . ";"
+        "const databasesByAssembly = " . json_encode($client_databasesByAssembly) . ";",
+        "const blastShortQueryNt = " . (int) BLAST_SHORT_QUERY_NT . ";"
     ]
 ];
 

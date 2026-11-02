@@ -105,6 +105,15 @@
                         <option value="<?= htmlspecialchars($prog_id) ?>" <?= $blast_program === $prog_id ? 'selected' : '' ?>><?= htmlspecialchars($prog['label'] . ' — ' . $prog['summary']) ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <?php /* Shown by js/modules/blast-short-nudge.js while the query is short DNA and
+                             any other DNA-query program is selected. A suggestion: only the click switches. */ ?>
+                    <div id="blast-short-suggest" class="alert alert-warning py-2 mt-2 small mb-0 d-none">
+                        <i class="fa fa-lightbulb me-1"></i>
+                        <span class="blast-short-what"></span>
+                        At this program's default settings a sequence this short is usually lost; BLASTn-short is built for it.
+                        <button type="button" class="btn btn-sm btn-moop-teal text-white ms-1 blast-short-switch">Switch to BLASTn-short</button>
+                        <?= help_modal_trigger('blast-short-help', '', 'Help: searching with primers and other short sequences') ?>
+                    </div>
                     <div id="blastn-short-notice" class="alert alert-info py-2 mt-2 small mb-0 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>">
                         <i class="fa fa-info-circle me-1"></i>
                         Optimized for short sequences: word size 7, E-value 1000, adjusted gap costs, no low-complexity filter.
