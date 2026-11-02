@@ -26,6 +26,7 @@ require_once __DIR__ . '/parent_functions.php';
 // database_queries.php. (That file require_once's parent_functions.php itself; the order
 // here is harmless because neither has include-time side effects.)
 require_once __DIR__ . '/database_queries.php';
+require_once __DIR__ . '/functions_validation.php';     // sanitize_search_input(), for moopmartBuildTextConditions()
 require_once __DIR__ . '/genomic_regions.php';      // moopmartStreamGenomicFasta()
 require_once __DIR__ . '/gff_gene_model.php';       // GFF id rules, for exon mode
 require_once __DIR__ . '/feature_types.php';        // moop_transcript_types()
@@ -288,43 +289,41 @@ function moopmartExpandToMrnaRows(array $gene_features, string $db_path): array
 // ============================================================
 
 /**
- * Parse a free-text search term using the same rules as annotation search:
- *   - Quoted ("exact phrase") → single LIKE '%phrase%' condition
- *   - Multi-word              → one LIKE condition per token, ANDed by caller
- *   - Tokens < 3 chars        → ignored (same as annotation search minimum)
- *   - Returns null            → no usable tokens; caller should skip the filter
+ * A free-text filter, matched exactly the way the main Search matches it: the same FTS5
+ * indexes (built by build_fts_index.sql), the same expression (buildFtsMatchExpr()) and the
+ * same "is there anything to search for" gate (moop_search_input_is_usable()).
  *
- * @param string $raw    Raw input from the user
- * @param string $column SQL column expression to match against (e.g. 'f.feature_name')
- * @return array|null ['conditions'=>[...], 'params'=>[...]] or null if nothing to filter on
+ *   - One word        → matches from the START of a word ("wnt" finds wnt8b), never the middle
+ *   - Several words   → all must appear, any order
+ *   - "quoted words"  → side by side, in that order
+ *   - Word endings    → the porter tokenizer: "kinases" finds kinase
+ *
+ * This used to be its own LIKE '%word%' parser, so the same word found different genes
+ * here and on Search ("inase" found kinase, "kinases" did not) while the (i) beside these
+ * boxes described Search's rules. One matcher, so the two cannot drift again.
+ *
+ * @param string $raw     Raw input from the user
+ * @param string $table   FTS table: 'feature_search' (rowid = feature_id) or
+ *                        'feature_annotation_search' (rowid = feature_annotation_id)
+ * @param string $column  FTS column to restrict to, e.g. 'feature_description'
+ * @param string $id_expr SQL expression the rowid must equal, e.g. 'f.feature_id'
+ * @return array|null ['conditions'=>[...], 'params'=>[...]], or null when there is nothing
+ *                    searchable in the input (caller skips the filter)
  */
-function moopmartBuildTextConditions(string $raw, string $column): ?array
+function moopmartBuildTextConditions(string $raw, string $table, string $column, string $id_expr): ?array
 {
-    $raw = trim($raw);
-    if ($raw === '') return null;
+    $raw    = trim($raw);
+    $quoted = strlen($raw) >= 2 && $raw[0] === '"' && $raw[-1] === '"';
+    $term   = sanitize_search_input($raw, $quoted);
+    if (!moop_search_input_is_usable($term, $quoted)) return null;
 
-    // Quoted search — strip quotes, treat whole string as one exact phrase
-    if (strlen($raw) >= 2 &&
-        (($raw[0] === '"' && $raw[-1] === '"') || ($raw[0] === "'" && $raw[-1] === "'"))) {
-        $term = trim(substr($raw, 1, -1));
-        if ($term === '') return null;
-        return ['conditions' => ["$column LIKE ?"], 'params' => ["%$term%"]];
-    }
+    $match = buildFtsMatchExpr($term, $quoted);
+    if ($match === '') return null;
 
-    // Multi-word: split on whitespace, drop tokens shorter than 3 chars
-    $tokens = array_values(array_filter(
-        preg_split('/\s+/', $raw),
-        fn($t) => strlen($t) >= 3
-    ));
-    if (empty($tokens)) return null;
-
-    $conditions = [];
-    $params     = [];
-    foreach ($tokens as $token) {
-        $conditions[] = "$column LIKE ?";
-        $params[]     = '%' . $token . '%';
-    }
-    return ['conditions' => $conditions, 'params' => $params];
+    return [
+        'conditions' => ["$id_expr IN (SELECT rowid FROM $table WHERE $table MATCH ?)"],
+        'params'     => ['{' . $column . '} : (' . $match . ')'],
+    ];
 }
 
 // ============================================================
@@ -342,8 +341,8 @@ function moopmartBuildTextConditions(string $raw, string $column): ?array
  * @param array  $filters {
  *   feature_types?:         string[]  e.g. ['gene','pseudogene']; empty = all types
  *   feature_id?:            string    Exact match on feature_uniquename
- *   gene_name?:             string    LIKE match on feature_name
- *   gene_description?:      string    LIKE match on feature_description
+ *   gene_name?:             string    Search-style match on feature_name (moopmartBuildTextConditions)
+ *   gene_description?:      string    Search-style match on feature_description
  *   annotation_criteria?:   array     Each element: ['src'=>'', 'acc'=>'', 'kw'=>'']
  *                                     Each criterion generates its own EXISTS clause (AND between them).
  *                                     Empty src/acc/kw fields within a criterion are skipped.
@@ -379,11 +378,11 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
         array_push($params, ...$ids);
     }
     if (!empty($filters['gene_name'])) {
-        $parsed = moopmartBuildTextConditions($filters['gene_name'], 'f.feature_name');
+        $parsed = moopmartBuildTextConditions($filters['gene_name'], 'feature_search', 'feature_name', 'f.feature_id');
         if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
     }
     if (!empty($filters['gene_description'])) {
-        $parsed = moopmartBuildTextConditions($filters['gene_description'], 'f.feature_description');
+        $parsed = moopmartBuildTextConditions($filters['gene_description'], 'feature_search', 'feature_description', 'f.feature_id');
         if ($parsed) { foreach ($parsed['conditions'] as $c) $where[] = $c; array_push($params, ...$parsed['params']); }
     }
 
@@ -445,7 +444,7 @@ function moopmartAnnotationCriterionClause(array $criterion): ?array
         $crit_params[] = $criterion['acc'];
     }
     if (!empty($criterion['kw'])) {
-        $parsed = moopmartBuildTextConditions($criterion['kw'], 'a.annotation_description');
+        $parsed = moopmartBuildTextConditions($criterion['kw'], 'feature_annotation_search', 'annotation_description', '+fa2.feature_annotation_id');
         if ($parsed) { foreach ($parsed['conditions'] as $c) $crit_where[] = $c; array_push($crit_params, ...$parsed['params']); }
     }
     if (empty($crit_where)) return null;

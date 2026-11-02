@@ -269,6 +269,80 @@ function moop_permission_fix_exec_files_command(string $organism_data): string {
 }
 
 /**
+ * Collapse many failing checks into one entry per distinct problem.
+ *
+ * The permissions page used to render every failing path as its own block — 1,104
+ * executable BLAST index files became 1,104 alerts, and each of 18 bad organism.json files
+ * repeated the same grid, issue, fix and "Why". What an admin needs is "this problem, N
+ * files, these organisms, one command".
+ *
+ * The key is the issue text with the octal mode stripped ("Marked executable (770)" and
+ * "(775)" are one problem; the modes seen are kept in 'perms'). Organism is the first path
+ * segment under $organism_data; paths outside it are bucketed under ''.
+ *
+ * @return array<int, array{issues: string[], count: int, perms: array<string,int>,
+ *               by_organism: array<string, string[]>, first: array}>  biggest group first
+ */
+function moop_permission_consolidate(array $checks, string $organism_data = ''): array {
+    $root   = rtrim($organism_data, '/') . '/';
+    $groups = [];
+    foreach ($checks as $c) {
+        if (empty($c['issues'])) continue;
+        $issues = array_map(fn($i) => preg_replace('/ \(\d{3,4}\)/', '', (string)$i), $c['issues']);
+        $key    = implode("\n", $issues);
+        $path   = (string)($c['path'] ?? '');
+        $org    = '';
+        if ($organism_data !== '' && strpos($path, $root) === 0) {
+            $org = explode('/', substr($path, strlen($root)), 2)[0];
+        }
+        if (!isset($groups[$key])) {
+            $groups[$key] = ['issues' => $issues, 'count' => 0, 'perms' => [], 'by_organism' => [], 'first' => $c, 'checks' => []];
+        }
+        $g = &$groups[$key];
+        $g['count']++;
+        $perm = (string)($c['current_perms'] ?? '');
+        if ($perm !== '') $g['perms'][$perm] = ($g['perms'][$perm] ?? 0) + 1;
+        $g['by_organism'][$org][] = $path;
+        $g['checks'][] = $c;
+        unset($g);
+    }
+    $groups = array_values($groups);
+    usort($groups, fn($a, $b) => $b['count'] <=> $a['count']);
+    return $groups;
+}
+
+/**
+ * Per-path fix commands for many checks, merged so the same command over N paths is ONE
+ * command naming N paths (`sudo chmod a-x 'a' 'b' 'c'`), not N lines. A command is merged
+ * only when the path is its last argument and appears exactly once; anything else (the
+ * `&&` pairs, the SELinux script) is kept verbatim and de-duplicated.
+ *
+ * @return string[]
+ */
+function moop_permission_merged_fix_commands(array $checks, string $moop_owner): array {
+    $merged = [];   // prefix => [quoted paths]
+    $order  = [];   // first-seen order across merged and verbatim commands
+    foreach ($checks as $c) {
+        $q = escapeshellarg((string)($c['path'] ?? ''));
+        foreach (moop_permission_fix_commands($c, $moop_owner) as $cmd) {
+            $tail = ' ' . $q;
+            if (substr($cmd, -strlen($tail)) === $tail && substr_count($cmd, $q) === 1) {
+                $prefix = substr($cmd, 0, -strlen($tail));
+                if (!isset($merged[$prefix])) { $merged[$prefix] = []; $order[] = ['m', $prefix]; }
+                $merged[$prefix][$q] = true;
+            } elseif (!in_array(['v', $cmd], $order, true)) {
+                $order[] = ['v', $cmd];
+            }
+        }
+    }
+    $out = [];
+    foreach ($order as [$kind, $val]) {
+        $out[] = $kind === 'v' ? $val : $val . ' ' . implode(' ', array_keys($merged[$val]));
+    }
+    return $out;
+}
+
+/**
  * Is SELinux in enforcing mode? (Cached; one getenforce per process.)
  * When enforcing, the SELinux label — not the Unix mode — is what actually decides
  * whether httpd_t can write. is_writable() sees only DAC, so a dir can be

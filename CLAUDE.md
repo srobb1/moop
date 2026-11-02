@@ -337,6 +337,15 @@ persist to `logs/.housekeeping_status.json` and are hydrated cheaply into `$_SES
 every admin page load. A long-lived session would otherwise outlive the interval and never
 re-run.
 
+**A run that stops finishing is loud, not silent (2026-10-30).** The lock is a `flock`, which
+the kernel drops however the process ends (it was a PID file; a run that `die()`d left a zombie
+and blocked every run for 1.5 h). Every run keeps a record in the status file
+(`housekeeping_runs`: start, current task, finish, per-task result); a shutdown function writes
+which task a run died in and the message. `housekeeping_health()` turns the Housekeeping card —
+and a banner atop the dashboard — red when a run died or no full run finished for 2 h.
+Background-child output still goes to `/dev/null`, so the record is the only place a death
+shows: keep it that way, don't add a log nobody reads.
+
 **This means dashboard health cards can be up to an hour stale.** That is by design —
 expensive sweeps (the permission scan, the organism-tree walk) must never run on every
 dashboard load. (It was 4 hours while tasks ran inline in the admin request; the run is now

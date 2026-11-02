@@ -299,38 +299,46 @@ function build_tree_from_lineage_cache($organisms, $lineage_cache) {
     foreach ($organisms as $org_name => $data) {
         if (empty($data['taxon_id'])) continue;
         $tid = (string)$data['taxon_id'];
-        if (!isset($lineage_cache[$tid])) continue;
+        if (empty($lineage_cache[$tid]['lineage'])) continue;
 
-        $cached  = $lineage_cache[$tid];
+        // The LAST entry is the taxon itself (rankedlineage's tax_name column), whatever its
+        // rank -- ncbi_scan_local_dump() labels it 'species' even for a genus. An unnamed
+        // species ("Girardia sp.") carries its GENUS id; until 2026-10-30 its last step matched
+        // the genus node a named species had made, so no leaf was ever added and the organism
+        // vanished from the tree (and the homepage selector) with only "Not in tree" to say so.
+        $levels = $lineage_cache[$tid]['lineage'];
+        $own    = array_pop($levels);
+        $genus_level = strpos(trim($own['name']), ' ') === false;   // not a binomial: a genus id
+        if ($genus_level) {
+            $levels[] = ['rank' => 'genus', 'name' => $own['name']];
+            $sp = trim((string)($data['species'] ?? ''));
+            $leaf_name = trim(($data['genus'] ?? $own['name']) . ' ' . ($sp === '' || $sp === 'sp' ? 'sp.' : $sp));
+        } else {
+            $leaf_name = $own['name'];
+        }
+
         $current = &$tree;
-
-        foreach ($cached['lineage'] as $level) {
-            $name = $level['name'];
-            $rank = $level['rank'];
-
+        foreach ($levels as $level) {
             $found = false;
             foreach ($current['children'] as &$child) {
-                if ($child['name'] === $name) {
+                // Only an inner node can be walked into; a leaf of the same name is an organism.
+                if ($child['name'] === $level['name'] && isset($child['children'])) {
                     $current = &$child;
                     $found = true;
                     break;
                 }
             }
             unset($child);
-
             if (!$found) {
-                $node = ['name' => $name];
-                if ($rank === 'species') {
-                    $node['organism']    = $org_name;
-                    $node['common_name'] = $data['common_name'] ?? '';
-                    if (!empty($cached['image'])) $node['image'] = $cached['image'];
-                } else {
-                    $node['children'] = [];
-                }
-                $current['children'][] = $node;
+                $current['children'][] = ['name' => $level['name'], 'children' => []];
                 $current = &$current['children'][count($current['children']) - 1];
             }
         }
+        // Every organism gets its own leaf -- never merged into a node that happens to share
+        // its name.
+        $node = ['name' => $leaf_name, 'organism' => $org_name, 'common_name' => $data['common_name'] ?? ''];
+        if (!empty($lineage_cache[$tid]['image'])) $node['image'] = $lineage_cache[$tid]['image'];
+        $current['children'][] = $node;
         unset($current);
     }
 

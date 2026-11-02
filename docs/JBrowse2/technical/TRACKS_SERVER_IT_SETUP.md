@@ -71,7 +71,7 @@ Use this checklist when setting up a new tracks server:
 
 ### Installation Steps
 - [ ] Install web server (Apache recommended)
-- [ ] Install PHP 7.4+ with required extensions
+- [ ] Install PHP 8.0+ with required extensions
 - [ ] Install Composer
 - [ ] Install NTP (time synchronization - critical!)
 - [ ] Create directory structure
@@ -921,7 +921,7 @@ A: Check `/var/log/apache2/tracks-error.log` for specific PHP errors. Common iss
 **Last Updated:** February 18, 2026  
 **Tested Platforms:** Ubuntu 20.04, Ubuntu 22.04, Debian 11  
 **Apache Version:** 2.4+  
-**PHP Version:** 7.4+, 8.0+, 8.1+
+**PHP Version:** 8.0+
 
 ### AWS Instance Prerequisites Checklist:
 
@@ -1042,7 +1042,7 @@ This document provides instructions for setting up a dedicated tracks server usi
 
 - **OS:** Ubuntu 20.04+ or similar
 - **Web Server:** Apache or Nginx  
-- **PHP:** 7.4+ with extensions: json, mbstring
+- **PHP:** 8.0+ with extensions: json, mbstring
 - **Composer:** For dependency management
 - **SSL Certificate:** For HTTPS
 - **NTP:** Time synchronization

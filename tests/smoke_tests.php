@@ -117,6 +117,17 @@ ok(moop_retired_root($_od) === "$_od/.retired", 'retired bundles live inside org
 ok(moop_retire_valid_name('Danio_rerio') && moop_retire_valid_name('20261029-174805_Danio_rerio')
    && !moop_retire_valid_name('../config') && !moop_retire_valid_name('.retired') && !moop_retire_valid_name('a/b') && !moop_retire_valid_name(''),
    'retire/restore take directory names only: never a path, never a hidden directory');
+// The switch to this lister (00ab12df) left housekeeping_refresh_annotation_caches() passing
+// a removed $entries to its two per-gene-set refreshes: a TypeError on every background run.
+// Organisms without a database here, so nothing is built and no cache directory is created.
+require_once "$BASE/lib/housekeeping.php";
+try {
+    housekeeping_refresh_annotation_caches($_od);
+    $_hk_err = '';
+} catch (Throwable $e) {
+    $_hk_err = $e->getMessage();
+}
+ok($_hk_err === '', 'housekeeping: the annotation-cache task runs to the end over a tree of organisms' . ($_hk_err ? " — $_hk_err" : ''));
 @rmdir("$_od/.retired/20261029_Old_org"); foreach (['.retired', '.hidden', 'Zeta_one', 'Alpha_two'] as $_d) @rmdir("$_od/$_d");
 @unlink("$_od/README.md"); @rmdir($_od);
 
@@ -971,6 +982,27 @@ $_pc_fix_file = moop_permission_fix_commands([
 ], 'smr');
 ok(in_array('sudo chmod 640 ' . escapeshellarg($_pc_file), $_pc_fix_file, true),
    'a world-readable sensitive file is told 640');
+
+// Consolidation: the permissions page shows one block per distinct problem, not per path.
+// Executable (770) and (775) are the same problem; organisms are bucketed by first segment.
+$_pc_exec = fn($p, $m) => ['path' => $p, 'type' => 'file', 'check_mode' => 'data', 'exists' => true,
+    'is_readable' => true, 'current_perms' => $m, 'issues' => ["Marked executable ($m) — data files should not be executable"]];
+$_pc_items = [
+    $_pc_exec('/o/Bat/a/protein.aa.fa', '770'),
+    $_pc_exec('/o/Bat/a/cds.nt.fa', '775'),
+    $_pc_exec('/o/Fly/b/protein.aa.fa', '770'),
+    ['path' => '/o/Fly', 'issues' => ['Not writable']],
+    ['path' => '/o/Fly/ok.fa', 'issues' => []],
+];
+$_pc_groups = moop_permission_consolidate($_pc_items, '/o');
+ok(count($_pc_groups) === 2, 'consolidate: two distinct problems, passing paths dropped');
+ok($_pc_groups[0]['count'] === 3 && $_pc_groups[0]['perms'] === ['770' => 2, '775' => 1],
+   'consolidate: modes differing only in the octal merge, biggest group first, modes counted');
+ok(array_map('count', $_pc_groups[0]['by_organism']) === ['Bat' => 2, 'Fly' => 1],
+   'consolidate: paths bucketed by organism');
+$_pc_merged = moop_permission_merged_fix_commands(array_slice($_pc_items, 0, 3), 'smr');
+ok($_pc_merged === ["sudo chmod a-x '/o/Bat/a/protein.aa.fa' '/o/Bat/a/cds.nt.fa' '/o/Fly/b/protein.aa.fa'"],
+   'merged fix: the same chmod over three paths is ONE command, not three');
 
 // moop_permission_dir_mode: the dashboard's number, derived not hardcoded.
 $_pc_sens = ['/var/www/moop-site-data' => true, '/var/www/html/moop/config/secrets.php' => true];
@@ -2412,6 +2444,52 @@ ok($_hit('X2') === ['G1'], 'the filter still finds a hit stored on an isoform (w
 @unlink($_mdb);
 
 // ----------------------------------------------------------------------------
+group('Data Exporter: text filters match the way Search does');
+// They were LIKE '%word%': "inase" found kinase and "kinases" did not, the opposite of Search
+// and of the (i) beside the boxes. Now the same FTS index and expression as Search.
+$_mdb = sys_get_temp_dir() . '/moop_mmfts_' . getmypid() . '.sqlite';
+@unlink($_mdb);
+$_p = new PDO("sqlite:$_mdb");
+$_p->exec("CREATE TABLE organism (organism_id INTEGER PRIMARY KEY, genus TEXT, species TEXT);
+           CREATE TABLE genome (genome_id INTEGER PRIMARY KEY, organism_id INTEGER, genome_name TEXT, genome_accession TEXT);
+           CREATE TABLE gene_set (gene_set_id INTEGER PRIMARY KEY, genome_id INTEGER, gene_set_name TEXT);
+           CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_name TEXT, feature_description TEXT,
+                                 feature_type TEXT, feature_uniquename TEXT, parent_feature_id INTEGER, gene_set_id INTEGER);
+           CREATE TABLE annotation_source (annotation_source_id INTEGER PRIMARY KEY, annotation_source_name TEXT);
+           CREATE TABLE annotation (annotation_id INTEGER PRIMARY KEY, annotation_source_id INTEGER,
+                                    annotation_accession TEXT, annotation_description TEXT);
+           CREATE TABLE feature_annotation (feature_annotation_id INTEGER PRIMARY KEY, feature_id INTEGER, annotation_id INTEGER);
+           CREATE VIRTUAL TABLE feature_search USING fts5(feature_name, feature_description, content='', tokenize='porter unicode61');
+           CREATE VIRTUAL TABLE feature_annotation_search USING fts5(feature_name, feature_description, annotation_description,
+               annotation_accession, annotation_type_code, content='', tokenize='porter unicode61');
+           INSERT INTO organism VALUES (1,'Testus','fixture');
+           INSERT INTO genome VALUES (1,1,'asm','ASM1');
+           INSERT INTO gene_set VALUES (1,1,'gs1');
+           INSERT INTO feature VALUES (1,'wnt8b','protein kinase','gene','G1',NULL,1),(2,'','','mRNA','M1',1,1),
+                                      (3,'','retrotransposase','gene','G2',NULL,1),(4,'','','mRNA','M2',3,1);
+           INSERT INTO annotation_source VALUES (1,'S');
+           INSERT INTO annotation VALUES (1,1,'A1','ABC transporter family'),(2,1,'A2','transporter of ABC');
+           INSERT INTO feature_annotation VALUES (1,2,1),(2,4,2);
+           INSERT INTO feature_search(rowid, feature_name, feature_description)
+               SELECT feature_id, feature_name, feature_description FROM feature;
+           INSERT INTO feature_annotation_search(rowid, feature_name, feature_description, annotation_description,
+               annotation_accession, annotation_type_code)
+               SELECT fa.feature_annotation_id, '', '', a.annotation_description, a.annotation_accession, 'atypesz'
+               FROM feature_annotation fa JOIN annotation a USING (annotation_id);");
+$_p = null;
+$_q = fn(array $f) => array_column(moopmartQueryFeatures([1], $_mdb, $f), 'uniquename');
+$_kw = fn(string $kw) => $_q(['annotation_criteria' => [['src' => '', 'acc' => '', 'kw' => $kw]]]);
+ok($_q(['gene_description' => 'kinases']) === ['G1'], 'description: "kinases" finds kinase (word endings, as on Search)');
+ok($_q(['gene_description' => 'inase']) === [], 'description: "inase" does not find kinase (never from the middle)');
+ok($_q(['gene_description' => 'transposase']) === [], 'description: "transposase" does not find retrotransposase');
+ok($_q(['gene_name' => 'wnt']) === ['G1'], 'name: "wnt" finds wnt8b (from the start of a word)');
+ok($_kw('transporter ABC') === ['G1', 'G2'], 'keyword: several words, any order');
+ok($_kw('"ABC transporter"') === ['G1'], 'keyword: quoted words must sit side by side, in order');
+ok($_kw('transporters') === ['G1', 'G2'], "keyword: matched on the transcript's annotation, gene returned");
+ok(count($_q(['gene_description' => '!!'])) === 2, 'nothing searchable in the box: the filter is skipped, as before');
+@unlink($_mdb);
+
+// ----------------------------------------------------------------------------
 group('JBrowse: a new genes.gff stales the track, the coordinates AND the search index');
 // Only the track index used to be checked, so coordinates and the search index went stale in
 // silence -- and no gene set had a search index at all without anything saying so.
@@ -3306,6 +3384,130 @@ ok(moop_restore($_o, 'tester', $_cfg)['ok'] && moop_restore($_g, 'tester', $_cfg
 
 $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_T));
+
+// ----------------------------------------------------------------------------
+group('Housekeeping lock: a run that dies never blocks the next');
+// 2026-10-30: a background run die()d part-way, left its PID in the lock file, and php-fpm never
+// reaped it -- the zombie kept /proc/<pid> alive, so every later run (and the dashboard's
+// Rebuild button) was refused as "already running". The lock is now a flock, which the kernel
+// drops however the process ends. Here the holder is a separate process that exits WITHOUT
+// releasing anything, as die() would.
+require_once "$BASE/lib/housekeeping.php";
+$_H = sys_get_temp_dir() . '/moop_hklock_' . getmypid();
+mkdir("$_H/logs", 0777, true);
+$_cfg = ConfigManager::getInstance();
+$_rp  = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['site_path'] = $_H; $_rp->setValue($_cfg, $_c);
+ok(!housekeeping_is_running(), 'no lock file: not running');
+$_lf = escapeshellarg("$_H/logs/.housekeeping_lock");
+$_holder = proc_open(['php', '-r', '$f = fopen(' . var_export("$_H/logs/.housekeeping_lock", true) . ', "c+"); flock($f, LOCK_EX); fwrite(STDOUT, "held\n"); fflush(STDOUT); fgets(STDIN); die(1);'],
+                     [0 => ['pipe', 'r'], 1 => ['pipe', 'w']], $_pp);
+fgets($_pp[1]);   // wait until the other process holds it
+ok(housekeeping_is_running(), 'while another process holds the lock: running');
+ok(housekeeping_lock_acquire() === null, 'a second run is refused while it is held');
+fwrite($_pp[0], "go\n"); fclose($_pp[0]); fclose($_pp[1]); proc_close($_holder);   // it die()s holding the lock
+ok(!housekeeping_is_running(), 'the holder died without releasing anything: no longer running');
+$_lk = housekeeping_lock_acquire();
+ok(is_resource($_lk) && trim(file_get_contents("$_H/logs/.housekeeping_lock")) === (string)getmypid(), 'the next run takes the lock');
+flock($_lk, LOCK_UN); fclose($_lk);
+file_put_contents("$_H/logs/.housekeeping_lock", '1');   // an old-style PID file naming a live process (init)
+ok(!housekeeping_is_running(), 'a PID in the file means nothing without the flock (the zombie case)');
+$_rp->setValue($_cfg, $_saved);
+exec('rm -rf ' . escapeshellarg($_H));
+
+// ----------------------------------------------------------------------------
+group('Housekeeping run record: a run that dies is named, never silent');
+// 2026-10-30: a background run die()d in a task, left no trace (its output goes to /dev/null),
+// and the card still said "Last run 12 min ago". Now every run keeps a record, a shutdown
+// function writes where and why it died, and housekeeping_health() turns the card red. The runs
+// here are real child processes: die() and SIGKILL end the process, which a test cannot do
+// to itself.
+$_H = sys_get_temp_dir() . '/moop_hkrun_' . getmypid();
+mkdir("$_H/logs", 0777, true);
+$_child = "$_H/child.php";
+file_put_contents($_child, '<?php
+require ' . var_export("$BASE/includes/config_init.php", true) . ';
+require_once ' . var_export("$BASE/lib/housekeeping.php", true) . ';
+$cfg = ConfigManager::getInstance(); $rp = new ReflectionProperty($cfg, "config"); $rp->setAccessible(true);
+$c = $rp->getValue($cfg); $c["site_path"] = $argv[1]; $rp->setValue($cfg, $c);
+$second = ["ok" => function () {}, "throw" => function () { throw new RuntimeException("no network"); },
+           "die" => function () { die("Query failed: no such table: feature"); },
+           "kill" => function () { exec("kill -9 " . getmypid()); }][$argv[2]];
+housekeeping_run_tasks([], [["name" => "first_task", "fn" => function () { echo "stray output"; }], ["name" => "second_task", "fn" => $second]]);
+');
+$_cfg = ConfigManager::getInstance();
+$_rp  = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['site_path'] = $_H; $_rp->setValue($_cfg, $_c);
+$_runs = function () { return loadJsonFile(housekeeping_status_file(), [])['housekeeping_runs'] ?? []; };
+$_go   = fn($mode) => exec('php ' . escapeshellarg($_child) . ' ' . escapeshellarg($_H) . ' ' . $mode . ' 2>&1');
+
+$_go('die');
+$_r = $_runs()[0] ?? [];
+ok(($_r['outcome'] ?? '') === 'died' && ($_r['died_in'] ?? '') === 'second_task', 'a run that die()s is recorded as died, in the task it died in');
+ok(strpos((string)($_r['message'] ?? ''), 'Query failed: no such table: feature') !== false, 'and with the message die() printed (the child\'s stdout is /dev/null)');
+$_h = housekeeping_health($_runs(), housekeeping_is_running(), time());
+ok($_h['tone'] === 'danger' && strpos(implode(' ', $_h['problems']), 'died during second_task: Query failed') !== false, 'health: red, naming the task and the error');
+ok(!housekeeping_is_running(), 'and it is not "still running"');
+
+$_go('ok');
+$_r = $_runs()[0] ?? [];
+ok(($_r['outcome'] ?? '') === 'ok' && $_r['finished_at'] >= $_r['started_at'] && count($_runs()) === 2, 'the next run goes ahead, finishes, and is recorded as well');
+$_h = housekeeping_health($_runs(), false, time());
+ok($_h['tone'] === '' && $_h['badge'][1] === 'success' && strpos($_h['headline'], '2 of 2 tasks OK') !== false, 'health: a full run finished since the death -> quiet again');
+
+$_go('throw');
+$_h = housekeeping_health($_runs(), false, time());
+ok($_runs()[0]['outcome'] === 'tasks_failed' && $_h['tone'] === 'warn' && strpos(implode(' ', $_h['problems']), 'second_task failed: no network') !== false,
+   'a task that throws: the run finishes, the card is amber and names it');
+
+$_go('kill');
+$_r = $_runs()[0] ?? [];
+ok(($_r['outcome'] ?? '') === 'running' && ($_r['current'] ?? '') === 'second_task', 'SIGKILL: nothing can be written, the record still says running');
+$_h = housekeeping_health($_runs(), housekeeping_is_running(), time());
+ok($_h['tone'] === 'danger' && strpos(implode(' ', $_h['problems']), 'stopped without finishing during second_task') !== false,
+   'health: "running" with no lock held is read as dead (killed, or out of memory)');
+
+// Pure cases
+$_now = 1800000000;
+$_ok  = fn($start, $scope = 'all') => ['id' => "x$start", 'scope' => $scope, 'started_at' => $start, 'finished_at' => $start + 30, 'outcome' => 'ok', 'tasks' => [['name' => 'a', 'ok' => true, 'ms' => 1, 'error' => null]]];
+ok(housekeeping_health([$_ok($_now - 3 * 3600)], false, $_now)['tone'] === 'danger', 'no full run finished for 3 h (hourly) -> red');
+ok(housekeeping_health([$_ok($_now - 600, 'jbrowse_indexes'), $_ok($_now - 3 * 3600)], false, $_now)['tone'] === 'danger', 'a targeted run does not count as a full one');
+ok(housekeeping_health([$_ok($_now - 1800)], false, $_now)['tone'] === '', 'a full run 30 min ago -> quiet');
+ok(housekeeping_health([['id' => 'r', 'scope' => 'all', 'started_at' => $_now - 1200, 'outcome' => 'running', 'current' => 'permission_check'], $_ok($_now - 3000)], true, $_now)['tone'] === 'warn',
+   'running for 20 minutes -> amber');
+ok(housekeeping_health([['id' => 'r', 'scope' => 'all', 'started_at' => $_now - 60, 'outcome' => 'running'], $_ok($_now - 3000)], true, $_now)['tone'] === '', 'running for a minute -> quiet');
+ok(housekeeping_health([], false, $_now)['tone'] === '', 'no record at all (a fresh install, before its first run) -> no false alarm');
+
+$_rp->setValue($_cfg, $_saved);
+exec('rm -rf ' . escapeshellarg($_H));
+
+// ----------------------------------------------------------------------------
+group('Taxonomy tree: an unnamed species on a genus id keeps its own leaf');
+require_once "$BASE/lib/taxonomy_functions.php";
+$_lin = fn(...$l) => ['lineage' => array_map(fn($x) => ['rank' => $x[0], 'name' => $x[1]], $l)];
+$_cache = ['10' => $_lin(['family', 'Dugesiidae'], ['genus', 'Girardia'], ['species', 'Girardia dorotocephala']),
+           '52316' => $_lin(['family', 'Dugesiidae'], ['species', 'Girardia'])];   // genus id, as the dump labels it
+$_leaves = function ($n, $path = []) use (&$_leaves) {
+    $out = [];
+    foreach ($n['children'] ?? [] as $c) {
+        if (isset($c['organism'])) $out[$c['organism']] = implode('/', array_merge($path, [$c['name']]));
+        else $out += $_leaves($c, array_merge($path, [$c['name']]));
+    }
+    return $out;
+};
+foreach ([['Girardia_dorotocephala', 'Girardia_sp'], ['Girardia_sp', 'Girardia_dorotocephala']] as $_order) {
+    $_orgs = [];
+    foreach ($_order as $_o) $_orgs[$_o] = $_o === 'Girardia_sp' ? ['taxon_id' => '52316', 'genus' => 'Girardia', 'species' => 'sp']
+                                                                 : ['taxon_id' => '10', 'genus' => 'Girardia', 'species' => 'dorotocephala'];
+    $_l = $_leaves(build_tree_from_lineage_cache($_orgs, $_cache)['tree']);
+    ok(($_l['Girardia_sp'] ?? '') === 'Dugesiidae/Girardia/Girardia sp.' && ($_l['Girardia_dorotocephala'] ?? '') === 'Dugesiidae/Girardia/Girardia dorotocephala',
+       'Girardia sp. (genus id) and G. dorotocephala share one genus node, each with its own leaf (' . $_order[0] . ' first)');
+}
+$_l = $_leaves(build_tree_from_lineage_cache(['Spathula_sp' => ['taxon_id' => '7', 'genus' => 'Spathula', 'species' => 'sp']],
+                                              ['7' => $_lin(['family', 'Dugesiidae'], ['species', 'Spathula'])])['tree']);
+ok(($_l['Spathula_sp'] ?? '') === 'Dugesiidae/Spathula/Spathula sp.', 'a lone genus-id organism reads "Spathula sp.", under its genus');
 
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";

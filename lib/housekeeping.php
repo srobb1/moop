@@ -67,7 +67,10 @@ function housekeeping_persist_status(string $key, $value): void {
     $all[$key] = $value;
     $dir = dirname($file);
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
-    @file_put_contents($file, json_encode($all, JSON_PRETTY_PRINT));
+    // Write aside and rename: a dashboard load reading the file mid-write used to get a
+    // truncated file, i.e. no status at all. The run record (below) writes before every task.
+    $tmp = $file . '.' . getmypid() . '.tmp';
+    if (@file_put_contents($tmp, json_encode($all, JSON_PRETTY_PRINT)) !== false && !@rename($tmp, $file)) @unlink($tmp);
 }
 
 function housekeeping_hydrate_session_from_status(): void {
@@ -198,23 +201,49 @@ function housekeeping_marker_file(): string {
     return ConfigManager::getInstance()->getPath('site_path') . '/logs/.housekeeping_last_run';
 }
 
-/** Absolute path to the PID lock held for the duration of a run. */
+/** Absolute path to the lock file held (flock) for the duration of a run. */
 function housekeeping_lock_file(): string {
     return ConfigManager::getInstance()->getPath('site_path') . '/logs/.housekeeping_lock';
 }
 
 /**
- * Is a run in flight right now? Reads the PID lock and checks the process is alive, so a
- * lock left behind by a crashed request does not wedge housekeeping forever.
+ * Is a run in flight right now? True while some process holds the flock on the lock file.
+ *
+ * flock, not "is the PID in the file alive": the kernel drops a flock the moment its process
+ * exits, HOWEVER it exits. The PID test failed both ways at once on 2026-10-30. A background run
+ * died part-way (fetchData() die()s on a query error), so it never reached the unlink; and
+ * php-fpm never reaped the child, so the zombie kept /proc/<pid> alive. Every Rebuild click then
+ * answered "already running" and the hourly sweep never ran, until the fpm worker was recycled.
+ * Same design as the BLAST queue (lib/blast_queue.php): nothing to clean up, nothing to go stale.
  *
  * The dashboard uses this to tell the admin "running in the background — your numbers
  * will be current next visit", which is the honest way to present the async trade.
  */
 function housekeeping_is_running(): bool {
-    $lock = housekeeping_lock_file();
-    if (!file_exists($lock)) return false;
-    $pid = (int) trim((string) @file_get_contents($lock));
-    return $pid > 0 && file_exists("/proc/$pid");
+    $fh = @fopen(housekeeping_lock_file(), 'r');
+    if (!$fh) return false;
+    $free = flock($fh, LOCK_EX | LOCK_NB);
+    if ($free) flock($fh, LOCK_UN);
+    fclose($fh);
+    return !$free;
+}
+
+/**
+ * Take the run lock for this process. Returns the handle (keep it open for the whole run), or
+ * null if another run holds it. If the lock file cannot be opened at all the run goes ahead
+ * unlocked — a housekeeping that never runs is worse than one that might overlap.
+ */
+function housekeeping_lock_acquire() {
+    $fh = @fopen(housekeeping_lock_file(), 'c+');
+    if (!$fh) {
+        error_log('MOOP housekeeping: cannot open ' . housekeeping_lock_file() . ' — running unlocked');
+        return true;
+    }
+    if (!flock($fh, LOCK_EX | LOCK_NB)) { fclose($fh); return null; }
+    ftruncate($fh, 0);
+    fwrite($fh, (string) getmypid());   // for a human looking at the file; the lock is the flock
+    fflush($fh);
+    return $fh;
 }
 
 /** Has HOUSEKEEPING_MIN_INTERVAL elapsed since the last run? */
@@ -312,18 +341,26 @@ function housekeeping_spawn_background(?string $task = null): bool {
  * admin/api/rerun_housekeeping.php (the dashboard's "Run now" button, where blocking is
  * correct — the admin asked and is waiting for the answer).
  *
+ * Every run keeps a record (housekeeping_run_save()): when it started, which task it is on,
+ * when it finished and how each task went. If the process ends part-way -- die(), a fatal
+ * error -- a shutdown function writes WHICH task it died in and the message. A process killed
+ * outright (SIGKILL, out of memory) cannot write anything; housekeeping_health() reads its
+ * "running" record with no lock held as dead. Until 2026-10-30 a run that died left no trace
+ * at all (the background child's output goes to /dev/null) and the card still said "Last run
+ * 12 min ago", because that time was stamped when a run STARTED.
+ *
  * @param list<string> $only Task names to run. Empty = the full sweep. Unknown names are
  *                           ignored; if nothing survives filtering the run is refused with
  *                           reason 'no_such_task' rather than silently doing nothing.
+ * @param ?array $registry   Tasks to choose from; null = housekeeping_task_registry(). For tests.
  * @return array{ran:bool, reason:?string, tasks:list<array{name:string,ok:bool,ms:int,error:?string}>}
  */
-function housekeeping_run_tasks(array $only = []): array {
+function housekeeping_run_tasks(array $only = [], ?array $registry = null): array {
     $result = ['ran' => false, 'reason' => null, 'tasks' => []];
 
     $logs_dir  = ConfigManager::getInstance()->getPath('site_path') . '/logs';
-    $lock_file = housekeeping_lock_file();
 
-    $tasks = housekeeping_task_registry();
+    $tasks = $registry ?? housekeeping_task_registry();
     if ($only) {
         $tasks = array_values(array_filter($tasks, fn($t) => in_array($t['name'], $only, true)));
         if (!$tasks) {
@@ -332,13 +369,12 @@ function housekeeping_run_tasks(array $only = []): array {
         }
     }
 
-    if (housekeeping_is_running()) {
+    if (!is_dir($logs_dir)) @mkdir($logs_dir, 0755, true);
+    $lock = housekeeping_lock_acquire();
+    if ($lock === null) {
         $result['reason'] = 'already_running';
         return $result;
     }
-
-    if (!is_dir($logs_dir)) @mkdir($logs_dir, 0755, true);
-    @file_put_contents($lock_file, (string) getmypid());
     // Touch the marker before running: a slow task must not let other requests pile up.
     //
     // ONLY for a full sweep. A targeted re-run (the permission card's "Re-check now")
@@ -349,7 +385,32 @@ function housekeeping_run_tasks(array $only = []): array {
         @touch(housekeeping_marker_file());
     }
 
+    $run = ['id' => getmypid() . '-' . time(), 'scope' => $only ? implode(',', $only) : 'all', 'started_at' => time(),
+            'finished_at' => null, 'outcome' => 'running', 'current' => null, 'tasks' => [], 'died_in' => null, 'message' => null];
+    housekeeping_run_save($run);
+    // A task's stray output -- including die()'s message -- lands here, so the shutdown
+    // function can record it (the background child's own stdout is /dev/null).
+    ob_start();
+    $ob_level = ob_get_level();   // only ours: in a web request the page's buffers sit below it
+    $finished = false;
+    register_shutdown_function(function () use (&$run, &$finished, $ob_level) {
+        if ($finished) return;
+        $out = '';
+        while (ob_get_level() >= $ob_level && ob_get_level() > 0) $out = ob_get_clean() . $out;
+        $err = error_get_last();
+        $msg = trim(html_entity_decode(strip_tags($out), ENT_QUOTES));
+        if ($msg === '' && $err) $msg = $err['message'] . ' (' . basename($err['file']) . ':' . $err['line'] . ')';
+        $run['outcome']     = 'died';
+        $run['died_in']     = $run['current'];
+        $run['message']     = mb_substr($msg !== '' ? $msg : 'The process ended without finishing.', 0, 500);
+        $run['finished_at'] = time();
+        housekeeping_run_save($run);
+    });
+
     foreach ($tasks as $task) {
+        $run['current'] = $task['name'];
+        housekeeping_run_save($run);
+        if (ob_get_level() >= $ob_level) ob_clean();   // so a death message is this task's own output
         $t0 = microtime(true);
         try {
             call_user_func($task['fn']);
@@ -370,9 +431,99 @@ function housekeeping_run_tasks(array $only = []): array {
         }
     }
 
-    @unlink($lock_file);
+    $finished = true;
+    ob_end_clean();
+    $run['tasks']       = array_map(fn($t) => ['name' => $t['name'], 'ok' => $t['ok'], 'ms' => $t['ms'], 'error' => $t['error']], $result['tasks']);
+    $run['outcome']     = in_array(false, array_column($result['tasks'], 'ok'), true) ? 'tasks_failed' : 'ok';
+    $run['current']     = null;
+    $run['finished_at'] = time();
+    housekeeping_run_save($run);
+
+    if (is_resource($lock)) { flock($lock, LOCK_UN); fclose($lock); }
     $result['ran'] = true;
     return $result;
+}
+
+/** How many run records the status file keeps (newest first). */
+const HOUSEKEEPING_RUN_HISTORY = 8;
+
+/** Write (insert or update) one run record in the status file's 'housekeeping_runs'. */
+function housekeeping_run_save(array $run): void {
+    $all  = loadJsonFile(housekeeping_status_file(), []);
+    $runs = array_values(array_filter($all['housekeeping_runs'] ?? [], fn($r) => ($r['id'] ?? '') !== $run['id']));
+    array_unshift($runs, $run);
+    usort($runs, fn($a, $b) => ($b['started_at'] ?? 0) <=> ($a['started_at'] ?? 0));
+    housekeeping_persist_status('housekeeping_runs', array_slice($runs, 0, HOUSEKEEPING_RUN_HISTORY));
+}
+
+/** "4 min ago", "3 hr ago", "2 days ago". */
+function housekeeping_ago(int $seconds): string {
+    if ($seconds < 3600)  return max(1, (int) round($seconds / 60)) . ' min ago';
+    if ($seconds < 86400) return (int) floor($seconds / 3600) . ' hr ago';
+    return (int) floor($seconds / 86400) . ' day' . ($seconds >= 172800 ? 's' : '') . ' ago';
+}
+
+/**
+ * Is housekeeping healthy? Read from the run records alone, so it is cheap and testable.
+ *
+ *   danger  a run died (or stopped with no lock held -- killed) and no full sweep has finished
+ *           since; or no full sweep has finished for over twice the interval
+ *   warn    a run has been going for over 15 minutes; or the last full sweep had failed tasks
+ *   ''      otherwise
+ *
+ * @param list<array> $runs     the 'housekeeping_runs' records, newest first
+ * @param bool        $running  housekeeping_is_running()
+ * @return array{tone:string, badge:array{0:string,1:string}, headline:string, problems:list<string>}
+ */
+function housekeeping_health(array $runs, bool $running, int $now, int $interval = HOUSEKEEPING_MIN_INTERVAL): array {
+    if (!$runs) {
+        return ['tone' => '', 'badge' => [$running ? 'Running' : 'No run recorded yet', $running ? 'info' : 'secondary'],
+                'headline' => 'No run has been recorded yet.', 'problems' => []];
+    }
+    $last_full = null;
+    $full_i    = count($runs);   // position in the list (newest first): order, not timestamps,
+    foreach ($runs as $i => $r) { // says which came after which -- two runs can share a second
+        if (($r['scope'] ?? '') === 'all' && in_array($r['outcome'] ?? '', ['ok', 'tasks_failed'], true)) { $last_full = $r; $full_i = $i; break; }
+    }
+    $full_at = (int)($last_full['finished_at'] ?? 0);
+
+    // A "running" record is live only if it is the newest and the lock is held now.
+    $dead = null;
+    foreach ($runs as $i => $r) {
+        $outcome = $r['outcome'] ?? '';
+        $killed  = $outcome === 'running' && !($i === 0 && $running);
+        if ($i < $full_i && ($outcome === 'died' || $killed)) { $dead = $r + ['killed' => $killed]; break; }
+    }
+
+    $problems = [];
+    if ($dead) {
+        $what = $dead['killed']
+            ? 'stopped without finishing' . (!empty($dead['current']) ? ' during ' . $dead['current'] : '') . ' — killed, or out of memory'
+            : 'died' . (!empty($dead['died_in']) ? ' during ' . $dead['died_in'] : '') . ': ' . ($dead['message'] ?? '');
+        $problems[] = 'The run that started ' . housekeeping_ago($now - (int)$dead['started_at']) . ' ' . $what;
+    }
+    if (!$running && $now - $full_at > 2 * $interval) {
+        $problems[] = $full_at ? 'No full run has finished since ' . housekeeping_ago($now - $full_at) . ' (it should run hourly)'
+                               : 'No full run has finished yet';
+    }
+    if ($problems) {
+        return ['tone' => 'danger', 'badge' => [$dead ? 'Last run died' : 'Not running', 'danger'],
+                'headline' => 'Housekeeping is not finishing — every card on this page may be out of date.', 'problems' => $problems];
+    }
+
+    $warn = [];
+    if ($running && $now - (int)($runs[0]['started_at'] ?? $now) > 900) {
+        $warn[] = 'The current run has been going for ' . (int) floor(($now - (int)$runs[0]['started_at']) / 60) . ' min'
+                . (!empty($runs[0]['current']) ? ', now on ' . $runs[0]['current'] : '');
+    }
+    foreach ($last_full['tasks'] ?? [] as $t) {
+        if (empty($t['ok'])) $warn[] = $t['name'] . ' failed: ' . ($t['error'] ?? 'no message');
+    }
+    $n = count($last_full['tasks'] ?? []);
+    $headline = !$last_full ? 'No full run has finished yet.' : 'Last full run finished ' . housekeeping_ago($now - $full_at) . ' — ' . ($n - count(array_filter($last_full['tasks'] ?? [], fn($t) => empty($t['ok'])))) . " of $n tasks OK.";
+    if ($warn) return ['tone' => 'warn', 'badge' => [$running ? 'Running long' : 'Tasks failed', 'warning'], 'headline' => $headline, 'problems' => $warn];
+    return ['tone' => '', 'badge' => [$running ? 'Running' : 'Finished ' . housekeeping_ago($now - $full_at), $running ? 'info' : 'success'],
+            'headline' => $headline, 'problems' => []];
 }
 
 // =====================================================================
@@ -1074,6 +1225,7 @@ function housekeeping_rebuild_stale_gene_indexes(string $base, int $budget_secon
     $t0 = time();
     $out = ['done' => [], 'failed' => [], 'left' => 0, 'seconds' => 0];
     if (!is_dir($base)) return $out;
+    $progress = ['started_at' => $t0, 'total' => 0, 'index' => 0, 'current' => null, 'done' => [], 'failed' => [], 'finished' => false];
 
     $config = ConfigManager::getInstance();
     require_once $config->getPath('site_path') . '/lib/jbrowse/gene_set_functions.php';
@@ -1085,9 +1237,16 @@ function housekeeping_rebuild_stale_gene_indexes(string $base, int $budget_secon
         $todo[$key] = [$broken ? 0 : 1, (int)@filesize("$base/$key/annotations.gff3")];
     }
     uasort($todo, fn($a, $b) => $a <=> $b);
+    $progress['total'] = count($todo);
+    housekeeping_jbrowse_progress_write($progress);
 
     foreach (array_keys($todo) as $i => $key) {
         if (time() - $t0 >= $budget_seconds) { $out['left'] = count($todo) - $i; break; }
+        $progress['index'] = $i + 1;
+        $progress['current'] = $key;
+        $progress['done'] = $out['done'];
+        $progress['failed'] = $out['failed'];
+        housekeeping_jbrowse_progress_write($progress);
         [$org, $asm, $gs] = explode('/', $key);
         $log = [];
         prepareGeneSetForJBrowse($org, $asm, $gs, $config, $log, false);
@@ -1114,7 +1273,21 @@ function housekeeping_rebuild_stale_gene_indexes(string $base, int $budget_secon
         error_log("MOOP housekeeping: re-prep failed for $key: $why");
     }
     $out['seconds'] = time() - $t0;
+    housekeeping_jbrowse_progress_write(['current' => null, 'finished' => true, 'finished_at' => time()] + $out + $progress);
     return $out;
+}
+
+/**
+ * Where the gene-index rebuild reports progress as it goes, for the dashboard's Rebuild button
+ * (admin/api/rerun_housekeeping.php status=1, js/modules/housekeeping-rerun.js). The rebuild runs
+ * for minutes in the background child; without this the button could only say "started".
+ */
+function housekeeping_jbrowse_progress_file(): string {
+    return dirname(housekeeping_status_file()) . '/.jbrowse_rebuild_progress.json';
+}
+
+function housekeeping_jbrowse_progress_write(array $progress): void {
+    @file_put_contents(housekeeping_jbrowse_progress_file(), json_encode($progress), LOCK_EX);
 }
 
 /**
@@ -1128,9 +1301,9 @@ function housekeeping_rebuild_stale_gene_indexes(string $base, int $budget_secon
  *
  * In steady state (no databases rebuilt) this is a no-op — just stat() calls.
  */
-function housekeeping_refresh_annotation_caches() {
-    $config = ConfigManager::getInstance();
-    $organism_data = $config->getPath('organism_data');
+function housekeeping_refresh_annotation_caches(?string $organism_data = null) {
+    // A directory may be passed so the smoke test can run this over a throwaway tree.
+    $organism_data ??= ConfigManager::getInstance()->getPath('organism_data');
 
     if (empty($organism_data) || !is_dir($organism_data)) {
         return;
@@ -1149,14 +1322,18 @@ function housekeeping_refresh_annotation_caches() {
         return;
     }
 
+    // Also handed to the two per-gene-set refreshes below. 00ab12df (2026-10-29) replaced
+    // `$entries = scandir()` with an inline moop_organism_dirs() loop but left those two calls
+    // passing $entries -- null, a TypeError, and every background run since failed this task.
+    $entries   = moop_organism_dirs($organism_data);
     $refreshed = 0;
-    foreach (moop_organism_dirs($organism_data) as $entry) {
-        $db         = "$organism_data/$entry/organism.sqlite";
-        $cache_file = moop_annotation_sources_cache_file($entry);
-
+    foreach ($entries as $entry) {
+        $db = "$organism_data/$entry/organism.sqlite";
         if (!file_exists($db)) {
             continue;
         }
+        // After the DB check: resolving the cache file creates its directory.
+        $cache_file = moop_annotation_sources_cache_file($entry);
 
         // Skip if cache is current
         if (file_exists($cache_file) && filemtime($cache_file) >= filemtime($db)) {
@@ -1233,9 +1410,10 @@ function housekeeping_refresh_gene_set_annotation_counts(string $organism_data, 
     $todo = [];
     foreach ($entries as $entry) {
         if ($entry === '.' || $entry === '..') continue;
-        $db   = "$organism_data/$entry/organism.sqlite";
-        $file = moop_gene_set_annotation_counts_file($entry);
-        if (!is_file($db) || $file === '') continue;
+        $db = "$organism_data/$entry/organism.sqlite";
+        if (!is_file($db)) continue;
+        $file = moop_gene_set_annotation_counts_file($entry);   // creates its directory
+        if ($file === '') continue;
         if (is_file($file) && filemtime($file) >= filemtime($db)) continue;
         $todo[$entry] = filesize($db);
     }

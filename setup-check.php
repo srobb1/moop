@@ -313,16 +313,18 @@ echo "Distro family: {$distro['family']} (package manager: {$distro['pkg_cmd']})
 section("PHP Environment");
 
 // PHP version
-if (version_compare(PHP_VERSION, '7.4.0', '>=')) {
-    pass("PHP " . PHP_VERSION . " (7.4+ required)");
+if (version_compare(PHP_VERSION, '8.0.0', '>=')) {
+    pass("PHP " . PHP_VERSION . " (8.0+ required)");
 } else {
-    fail("PHP " . PHP_VERSION . " — version 7.4+ required",
+    fail("PHP " . PHP_VERSION . " — version 8.0+ required",
          "sudo $pkg php");
 }
 
 // Required extensions
 $required_extensions = [
-    'sqlite3'  => "sudo $pkg " . distroPackage('php-sqlite3', 'php-pdo', $family),
+    'sqlite3'    => "sudo $pkg " . distroPackage('php-sqlite3', 'php-pdo', $family),
+    'pdo_sqlite' => "sudo $pkg " . distroPackage('php-sqlite3', 'php-pdo', $family),
+    'mbstring'   => "sudo $pkg php-mbstring",
     'json'     => $family === 'rhel'
                     ? '(bundled with php on RHEL 8+)'
                     : "sudo $pkg php-json",

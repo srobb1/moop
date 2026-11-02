@@ -191,7 +191,10 @@
 /**
  * Gene-track index card "Rebuild now" — starts the jbrowse_indexes task in the BACKGROUND
  * CLI child and returns at once. Re-compressing GFFs takes minutes and is never done inside
- * a page request, so this button cannot wait for the answer; it says so instead.
+ * a page request, so the button cannot wait for the answer. Instead it polls
+ * rerun_housekeeping.php status=1, which reads the progress file the rebuild writes as it goes
+ * (housekeeping_jbrowse_progress_write()), and shows which gene set it is on, step by step.
+ * Opening the dashboard while a run is in flight picks the progress up too.
  */
 (function () {
     'use strict';
@@ -199,7 +202,11 @@
     const btn = document.getElementById('rebuildGeneIndexesBtn');
     if (!btn) return;
 
-    const out = document.getElementById('rebuildGeneIndexesResult');
+    const out      = document.getElementById('rebuildGeneIndexesResult');
+    const api      = sitePath + '/admin/api/rerun_housekeeping.php';
+    const original = btn.innerHTML;
+    const POLL_MS  = 3000;
+    let since = null;   // server time the run was asked for; older progress is a previous run's
 
     function render(html, cls) {
         if (!out) return;
@@ -208,20 +215,91 @@
         out.innerHTML = html;
     }
 
-    btn.addEventListener('click', function () {
+    const label = key => escapeHtml(String(key).split('/').map((p, i) => i === 0 ? p.replace(/_/g, ' ') : p).join(' / '));
+    const clock = t => new Date(t * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    function busy(text) {
         btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + text;
+    }
+
+    function listOf(p) {
+        let html = '';
+        (p.done || []).forEach(k => { html += '<div><span class="text-success">✓</span> ' + label(k) + '</div>'; });
+        (p.failed || []).forEach(f => { html += '<div><span class="text-danger">✗</span> ' + escapeHtml(f) + '</div>'; });
+        return html;
+    }
+
+    function poll() {
+        $.ajax({ url: api, method: 'POST', data: { status: 1 }, dataType: 'json' }).done(function (res) {
+            const p     = res && res.progress;
+            const fresh = p && since !== null && p.started_at >= since - 5;
+            if (res && res.running) {
+                if (fresh && !p.finished) {
+                    busy('Rebuilding ' + p.index + ' of ' + p.total + '…');
+                    render('<div><span class="spinner-border spinner-border-sm text-secondary me-1"></span> '
+                         + 'Rebuilding <strong>' + p.index + ' of ' + p.total + '</strong>: ' + label(p.current)
+                         + ' <span class="text-muted">(started ' + clock(p.started_at) + ')</span></div>' + listOf(p));
+                } else {
+                    busy('Starting…');
+                    render('<span class="spinner-border spinner-border-sm text-secondary me-1"></span> '
+                         + 'Housekeeping is running in the background; the gene-track rebuild starts when it reaches it. '
+                         + 'This page updates by itself.');
+                }
+                setTimeout(poll, POLL_MS);
+                return;
+            }
+            // Not running any more: report what this run did, then reload so the card is current.
+            if (fresh && p.finished) {
+                const bad = (p.failed || []).length;
+                render('<div class="' + (bad ? 'text-warning' : 'text-success') + ' fw-semibold">'
+                     + (p.total === 0 ? 'Nothing needed rebuilding.'
+                        : 'Rebuilt ' + (p.done || []).length + ' of ' + p.total + (bad ? ', ' + bad + ' failed' : '')
+                          + (p.left ? ', ' + p.left + ' left for the next run' : '') + ' in ' + p.seconds + ' s.')
+                     + '</div>' + listOf(p) + '<div class="text-muted mt-1">Refreshing the card…</div>');
+            } else {
+                render('Housekeeping finished. Refreshing the card…');
+            }
+            btn.innerHTML = original;
+            setTimeout(() => window.location.reload(), 2500);
+        }).fail(function (xhr) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+            render('⚠ Lost touch with the server (HTTP ' + xhr.status + '). The rebuild may still be running — reload in a minute.', 'text-danger');
+        });
+    }
+
+    btn.addEventListener('click', function () {
+        busy('Starting…');
+        render('<span class="spinner-border spinner-border-sm text-secondary me-1"></span> Starting the rebuild in the background…');
         $.ajax({
-            url: sitePath + '/admin/api/rerun_housekeeping.php',
+            url: api,
             method: 'POST',
             data: { task: btn.dataset.task || 'jbrowse_indexes', background: 1 },
             dataType: 'json'
         }).done(function (res) {
-            render(escapeHtml((res && res.message) || 'No answer from the server.'),
-                   res && res.success ? 'text-muted' : 'text-warning');
-            if (!(res && res.success)) btn.disabled = false;
+            if (res && (res.success || res.reason === 'already_running')) {
+                since = res.now || Math.floor(Date.now() / 1000);
+                setTimeout(poll, 1000);
+                return;
+            }
+            btn.disabled = false;
+            btn.innerHTML = original;
+            render(escapeHtml((res && res.message) || 'No answer from the server.'), 'text-warning');
         }).fail(function (xhr) {
             btn.disabled = false;
+            btn.innerHTML = original;
             render('⚠ Request failed (HTTP ' + xhr.status + '). Check logs/error.log.', 'text-danger');
         });
+    });
+
+    // A run already in flight (started by the hourly sweep, another admin, or before a reload):
+    // show it rather than a button that looks idle.
+    $.ajax({ url: api, method: 'POST', data: { status: 1 }, dataType: 'json' }).done(function (res) {
+        if (!(res && res.running)) return;
+        // A rebuild under way now is this run's; a finished one in the file is a previous run's.
+        const p = res.progress;
+        since = (p && !p.finished) ? p.started_at : res.now;
+        poll();
     });
 })();

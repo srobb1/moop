@@ -268,6 +268,8 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         <script src="<?= moop_asset_url('js/modules/annotation-search.js') ?>"></script>
         <script src="<?= moop_asset_url('js/modules/advanced-search-filter.js') ?>"></script>
         <script src="<?= moop_asset_url('js/modules/scope-filter.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/feature-search.js') ?>"></script>
+        <script src="<?= moop_asset_url('js/modules/navbar-id-search.js') ?>"></script>
         
         <!-- Loading Indicator - Available to all pages for database scanning operations -->
         <script src="<?= moop_asset_url('js/loading-indicator.js') ?>"></script>

@@ -27,6 +27,20 @@ header('Content-Type: application/json');
 // answer beats returning immediately with nothing to show.
 @set_time_limit(120);
 
+// status=1: is a run in flight, and how far has the gene-index rebuild got? Read-only; the
+// Rebuild button polls it (js/modules/housekeeping-rerun.js).
+if (!empty($_POST['status'])) {
+    $status = json_decode((string)@file_get_contents(housekeeping_status_file()), true) ?: [];
+    echo json_encode([
+        'success'  => true,
+        'running'  => housekeeping_is_running(),
+        'now'      => time(),
+        'progress' => json_decode((string)@file_get_contents(housekeeping_jbrowse_progress_file()), true),
+        'summary'  => $status['jbrowse_index_summary'] ?? null,
+    ]);
+    exit;
+}
+
 // Optional targeted re-run: `task=permission_check` runs THAT task alone.
 //
 // Why targeted matters: the dashboard's permission card is a cached snapshot, so right
@@ -62,6 +76,7 @@ if (!empty($_POST['background'])) {
         echo json_encode([
             'success' => false,
             'reason'  => 'already_running',
+            'now'     => time(),
             'message' => 'Housekeeping is already running — it will pick this up; check back in a few minutes.',
         ]);
         exit;
@@ -70,6 +85,7 @@ if (!empty($_POST['background'])) {
     echo json_encode([
         'success'    => $ok,
         'background' => true,
+        'now'        => time(),
         'message'    => $ok
             ? 'Started in the background. It can take a few minutes; reload this page afterwards.'
             : 'Could not start a background run — see logs/error.log.',

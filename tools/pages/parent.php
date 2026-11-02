@@ -221,8 +221,25 @@
                         </dd>
                     <?php endforeach; ?>
                 </dl>
-                <?php if (!empty($gene_naming['data_version'])): ?>
-                    <p class="gene-naming-version">Named by MOOP from HGNC release <?= htmlspecialchars($gene_naming['data_version']) ?></p>
+                <?php if (!empty($gene_naming['data_version'])):
+                    // A gene that keeps its own name (RefSeq, Ensembl…) carries a source_name
+                    // statement ending "(from RefSeq)". MOOP did not name it then — saying so
+                    // contradicted the lead line, which reads "Named by its own annotation".
+                    $__kept_from = null;
+                    $__moop_name = false;
+                    foreach ($naming_statements as $__s) {
+                        if ($__s['kind'] === 'source_name' && preg_match('/\(from ([^)]+)\)\s*$/', $__s['naming_text'], $__m)) {
+                            $__kept_from = $__m[1];
+                        }
+                        $__moop_name = $__moop_name || $__s['kind'] === 'pipeline_name';
+                    }
+                    $__release = htmlspecialchars($gene_naming['data_version']);
+                ?>
+                    <?php if ($__kept_from !== null): ?>
+                    <p class="gene-naming-version">Name from <?= htmlspecialchars($__kept_from) ?> · MOOP's evidence<?= $__moop_name ? ' and suggested name' : '' ?> use<?= $__moop_name ? '' : 's' ?> HGNC release <?= $__release ?></p>
+                    <?php else: ?>
+                    <p class="gene-naming-version">Named by MOOP from HGNC release <?= $__release ?></p>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <?php endif; ?>
                 <?php

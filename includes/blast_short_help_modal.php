@@ -6,8 +6,9 @@
  * "no hits" means loosen nothing and trust the E-value, and here the E-value is the
  * thing actively hiding a perfect match.
  *
- * Every number below was measured on this deployment against Nematostella RS_101 with
- * a real 20 nt primer, not taken from documentation. See tests/blast_alignment_tests.php
+ * Every number below was measured on this deployment with a real 20 nt sequence, not taken
+ * from documentation (Nematostella RS_101 originally; the "Measured here" card was re-run on
+ * Schmidtea mediterranea CDS 2026-11-02 with the E-value stated). See tests/blast_alignment_tests.php
  * for the alignment side and the commit message for the search-parameter figures.
  *
  * Requires lib/help_ui.php (loaded globally via config_init).
@@ -40,27 +41,31 @@ echo help_modal(
                     'text'  => 'Anything under about 30 nt: PCR and qPCR primers, sequencing '
                              . 'primers, in-situ and qPCR probes, CRISPR guide RNAs, siRNA and '
                              . 'shRNA targets, sequencing adapters and linkers, sample barcodes, '
-                             . 'and cloning-site or tag sequences. All of them fail the same way '
-                             . 'for the same two reasons.',
+                             . 'and cloning-site or tag sequences. They are missed for one of the '
+                             . 'two reasons below, depending on the program.',
                 ],
                 [
-                    'label' => 'Too short to seed',
-                    'text'  => 'BLAST first finds exact "words" and extends them. The default '
-                             . 'word is 28 for megablast, so a 20 nt query has nowhere to start.',
+                    'label' => 'Megablast: too short to seed',
+                    'text'  => 'BLAST first finds exact "words" and extends them. Megablast\'s word '
+                             . 'is 28 letters, so a 20 nt query has nowhere to start — no E-value '
+                             . 'brings it back. BLASTn\'s word is 11, so BLASTn does find it.',
                 ],
                 [
-                    'label' => 'Too short to score',
+                    'label' => 'BLASTn: too short to score',
                     'text'  => 'A perfect 20 nt match scores only about 40 bits. Against a whole '
-                             . 'gene set that is not statistically surprising, so the default '
-                             . 'E-value of 10 discards it.',
+                             . 'gene set that is not statistically surprising, so this page\'s '
+                             . 'default E-value of 1e-3 discards it.',
                 ],
                 [
                     'label' => 'Measured here',
                     'html'  => true,
-                    'text'  => 'A primer that exists exactly in the database: '
-                             . '<code>megablast &rarr; 0 hits</code>, '
-                             . '<code>plain blastn &rarr; 20</code>, '
-                             . '<code>BLASTn-short &rarr; 566</code>.',
+                    // Re-measured 2026-11-02 (text review N8): the earlier figures did not
+                    // say which E-value they were taken at, which is the whole point here.
+                    'text'  => 'A 20 nt sequence against the <em>Schmidtea mediterranea</em> CDS: '
+                             . '<code>BLASTn, E-value 1e-3 &rarr; 0 hits</code>, '
+                             . '<code>BLASTn, E-value 10 &rarr; found</code> (E = 0.03), '
+                             . '<code>Megablast, even at 1000 &rarr; 0 hits</code>, '
+                             . '<code>BLASTn-short &rarr; found</code>.',
                 ],
             ],
         ],

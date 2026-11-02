@@ -125,7 +125,6 @@ echo render_display_page(
         'examples'           => moop_home_examples($group_data),
         'cards_to_display'   => $cards_to_display,
         'page_script'        => [
-            "/$site/js/modules/feature-search.js",
             "/$site/js/modules/taxonomy-tree.js",
             "/$site/js/modules/tool-launch.js",
             "/$site/js/index.js",

@@ -44,53 +44,28 @@
 
     <div class="card mb-3">
       <div class="card-body">
-        <h5 class="fw-bold">Required Software</h5>
+        <h5 class="fw-bold">Software</h5>
+        <p class="text-muted mb-2">Only PHP and a web server are needed to start. The rest can be added later &mdash; MOOP loses individual features rather than failing to start. Install commands for each Linux distribution are in <a href="https://github.com/srobb1/moop/blob/main/docs/INSTALL.md" target="_blank" rel="noopener">docs/INSTALL.md</a>; <code>php setup-check.php</code> lists anything missing on your server.</p>
         <table class="table table-sm">
           <thead class="table-light">
             <tr>
               <th>Software</th>
-              <th>Minimum Version</th>
-              <th>Purpose</th>
+              <th>Needed for</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td><strong>PHP</strong></td>
-              <td>8.1+</td>
-              <td>Application runtime</td>
-            </tr>
-            <tr>
-              <td><strong>Apache</strong> or <strong>Nginx</strong></td>
-              <td>Apache 2.4+ / Nginx 1.18+</td>
-              <td>Web server</td>
-            </tr>
-            <tr>
-              <td><strong>Composer</strong></td>
-              <td>2.x</td>
-              <td>PHP dependency manager (installs JWT library)</td>
-            </tr>
-            <tr>
-              <td><strong>Node.js</strong></td>
-              <td>18+ <em>(build-time only)</em></td>
-              <td>Needed once to build the JBrowse2 static bundle — not required to run MOOP</td>
-            </tr>
-            <tr>
-              <td><strong>NCBI BLAST+</strong></td>
-              <td>2.12+</td>
-              <td>Sequence search (blastn, blastp, blastx, tblastn, tblastx, makeblastdb, blastdbcmd)</td>
-            </tr>
-            <tr>
-              <td><strong>samtools</strong></td>
-              <td>1.15+</td>
-              <td>Genome indexing (faidx) for sequence retrieval</td>
-            </tr>
-            <tr>
-              <td><strong>MAFFT</strong></td>
-              <td>7.x</td>
-              <td>Multiple sequence alignment tool</td>
-            </tr>
+            <tr><td><strong>PHP 8.0+</strong> (extensions below)</td><td>everything</td></tr>
+            <tr><td><strong>Apache</strong> (<code>mod_rewrite</code>, <code>mod_headers</code>) or <strong>nginx</strong> + php-fpm</td><td>everything</td></tr>
+            <tr><td><strong>Composer</strong></td><td>JBrowse2 track authentication</td></tr>
+            <tr><td><strong>samtools</strong>, <strong>bgzip</strong>, <strong>tabix</strong></td><td>genome and GFF indexing</td></tr>
+            <tr><td><strong>Node.js 18+</strong> and <code>@jbrowse/cli</code></td><td>gene-name search in the genome browser (<code>jbrowse text-index</code>)</td></tr>
+            <tr><td><strong>NCBI BLAST+</strong></td><td>the BLAST tool and sequence retrieval</td></tr>
+            <tr><td><strong>bigWigSummary</strong> (UCSC kent)</td><td>Expression Explorer</td></tr>
+            <tr><td><strong>primer3</strong></td><td>the primer designer</td></tr>
+            <tr><td><strong>Linux/Unix</strong>, 50&nbsp;GB+ disk</td><td>POSIX functions; storage grows with the number of organisms</td></tr>
           </tbody>
         </table>
+        <p class="small text-muted mb-0">Multiple sequence alignment (MAFFT) runs on a connected Galaxy server, not on the MOOP server, so it is not installed here.</p>
       </div>
     </div>
 
@@ -100,17 +75,16 @@
         <div class="row">
           <div class="col-md-6">
             <ul class="mb-0">
-              <li><code>pdo_sqlite</code> — SQLite database access</li>
-              <li><code>openssl</code> — JWT key generation and verification</li>
-              <li><code>json</code> — JSON parsing (built-in since PHP 8.0)</li>
-              <li><code>mbstring</code> — Multi-byte string handling</li>
+              <li><code>pdo_sqlite</code>, <code>sqlite3</code> &mdash; the organism databases</li>
+              <li><code>mbstring</code> &mdash; search-term handling</li>
+              <li><code>json</code> &mdash; JSON parsing (built in since PHP 8.0)</li>
             </ul>
           </div>
           <div class="col-md-6">
             <ul class="mb-0">
-              <li><code>curl</code> — External API calls (Wikipedia images, Galaxy)</li>
-              <li><code>posix</code> — File ownership detection</li>
-              <li><code>fileinfo</code> — MIME type detection for downloads</li>
+              <li><code>openssl</code> &mdash; JBrowse2 track authentication</li>
+              <li><code>curl</code> &mdash; outside services (Wikipedia images, Galaxy)</li>
+              <li><code>posix</code> &mdash; file-ownership reporting (optional)</li>
             </ul>
           </div>
         </div>

@@ -19,6 +19,7 @@ to be public.
 - [Requirements](#requirements)
 - [After Installing](#after-installing)
 - [Common Tasks](#common-tasks)
+- [How Search Matches Words](#how-search-matches-words)
 - [Genome Browser (JBrowse2)](#genome-browser-jbrowse2)
 - [Running a Second MOOP on One Host](#running-a-second-moop-on-one-host)
 - [Troubleshooting](#troubleshooting)
@@ -140,7 +141,7 @@ individual features rather than failing to start.
 
 | | Needed for |
 |---|---|
-| **PHP 7.4+** with `posix` `json` `sqlite3` `openssl` `curl` | everything |
+| **PHP 8.0+** with `pdo_sqlite` `sqlite3` `mbstring` `json` `openssl` `curl` `posix` | everything |
 | **Apache** (`mod_rewrite`, `mod_headers`) or **nginx** + php-fpm | everything |
 | **Composer** | JBrowse2 track authentication |
 | **samtools**, **bgzip**, **tabix** | genome and GFF indexing |
@@ -235,6 +236,30 @@ metadata file. Past ~50 organisms that scan can exceed the web server timeout, s
 are cached in `organisms/.organism_cache.json` and invalidated automatically when data
 changes. Warm it from the CLI after a bulk import; the page's **Rescan** button is fine for
 smaller sites.
+
+---
+
+## How Search Matches Words
+
+Search and the Data Exporter's text boxes use the same rules: each organism's full-text
+index (built by the pipeline into `organism.sqlite`) with a word-ending stemmer.
+
+| Expected behaviour | Example |
+|---|---|
+| Plurals find singulars | `kinases` finds *protein kinase domain* |
+| Singulars find plurals | `kinase` finds *family of kinases* |
+| Matches from the start of a word | `wnt` finds *WNT8B* |
+| Hyphenated names split into words | `wnt1` finds *Smed-wnt1* |
+| Never from the middle | `inase` finds nothing; `transposase` does not find *retrotransposase* |
+| Case does not matter | `KINASE` finds *kinase* |
+| Several words: all required, any order | `kinase protein` skips a record with only one of them |
+| Quotes: side by side, in order | `"ABC transporter"` does not find *transporter of the ABC class* |
+
+The stemmer also makes `transporter` find *transport*; Search lists exact matches first,
+while the Exporter, which does not rank, exports every match. Both the stemmer and the
+no-mid-word rule are deliberate. Every row above is asserted by
+`tests/search_ranking_tests.php`, so a change that breaks one fails CI — change the tests,
+this table and the help text together.
 
 ---
 
