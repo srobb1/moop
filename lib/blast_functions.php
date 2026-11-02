@@ -1005,8 +1005,9 @@ function blast_programs(): array
             'db'      => 'DNA',
             'label'   => 'BLASTn',
             'summary' => 'DNA query vs DNA database',
-            'when'    => 'The everyday choice for DNA. Finds a gene, transcript or genomic '
-                       . 'region in an assembly, including from a related species.',
+            'when'    => 'DNA against DNA, for the SAME species: finds a gene, transcript or '
+                       . 'genomic region in its own assembly. Between species the DNA drifts '
+                       . 'long before the protein does, so BLASTx usually finds more there.',
             'task'    => 'blastn',
             'filter'  => true,
             'soft_masking' => true,
@@ -1039,8 +1040,9 @@ function blast_programs(): array
             'db'      => 'Protein',
             'label'   => 'BLASTx',
             'summary' => 'DNA query vs protein database (translated)',
-            'when'    => 'You have DNA and want to know what it CODES FOR. Translates your '
-                       . 'query in all six frames and searches proteins.',
+            'when'    => 'The default, and the best first search for DNA across species. '
+                       . 'Translates your query in all six frames and searches proteins, where '
+                       . 'the similarity survives. Also tells you what your DNA codes for.',
             'task'    => '',
             'filter'  => true,
             'soft_masking' => false,

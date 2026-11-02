@@ -1168,8 +1168,10 @@
                          . '<code>|</code> in step 1.',
                  'html' => true],
                 ['num' => '3', 'label' => 'Options',
-                 'text' => 'Every field here is blank by default and falls back to the type you '
-                         . 'picked above. Fill in only what you actually want to override.'],
+                 'text' => 'The grey numbers in the boxes are the values for the type you picked '
+                         . 'above, shown as hints, not filled in: leave a box empty and that value '
+                         . 'is used. Type in a box only to override it. How many pairs to return '
+                         . 'starts at 5, and after a run the form keeps whatever you entered.'],
                 ['num' => '4', 'label' => '5′ primer tag',
                  'text' => 'Optional. Adds a tag such as T4P to the sequence you would order. It '
                          . 'is applied <strong>after</strong> design, so it never changes a Tm, GC '
