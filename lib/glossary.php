@@ -106,6 +106,9 @@ function glossary_spellings(): array {
  * slash and the species name pass through untouched.
  *
  * Everything not glossed is escaped, so this is safe wherever htmlspecialchars() was.
+ *
+ * First use per page (gloss_first): source names repeat on every annotation row, and a
+ * gene page underlined InterProScan 403 times.
  */
 function gloss_terms_in(string $text): string {
     $known = glossary_terms();
@@ -115,13 +118,13 @@ function gloss_terms_in(string $text): string {
     // Whole label first: a source that IS a term should gloss as one unit rather than be
     // taken apart (so "GO term" stays one popover, not "GO" plus "term").
     if (isset($known[strtolower($text)])) {
-        return gloss($text);
+        return gloss_first($text);
     }
     // Keep the delimiters so the label rebuilds exactly, punctuation and spacing intact.
     $parts = preg_split('/([()\/,]|\s+)/u', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
     $out = '';
     foreach ($parts as $p) {
-        $out .= ($p !== '' && isset($known[strtolower($p)])) ? gloss($p) : htmlspecialchars($p);
+        $out .= ($p !== '' && isset($known[strtolower($p)])) ? gloss_first($p) : htmlspecialchars($p);
     }
     return $out;
 }
