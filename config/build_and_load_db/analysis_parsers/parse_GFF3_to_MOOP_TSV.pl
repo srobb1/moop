@@ -5,7 +5,7 @@ use URI::Escape;
 
 # Unified feature-table builder. Auto-detects GFF format from gene-line attributes:
 #   ensembl : ID=gene:   -> two-pass, emits gene/mRNA/CDS/protein per CDS line
-#   refseq  : ID=gene-   or Dbxref=GeneID: -> single-pass state machine
+#   refseq  : Dbxref=GeneID: on the first gene line (not ID=gene-: our fix_genes_gff.sh genes use it, 2026-11-02) -> single-pass state machine
 #   generic : ID=/Parent= on mRNA+gene lines
 #
 # Output: metadata header then tab-sep feature rows (stdout)
@@ -313,7 +313,10 @@ sub emit_generic {
             }
         }
         $parent_id //= '';
-        my $parent_type = $parent_id ? ($feature_types{$parent_id} // '') : '';
+        # A transcript's parent the GFF never defines (gffread output: geneID= and no gene lines)
+        # is still a gene; left blank, the loader created it with no type (schMedS3h1: 17,000
+        # genes of type '', 2026-11-02)
+        my $parent_type = $parent_id ? ($feature_types{$parent_id} // ($type eq 'gene' ? '' : 'gene')) : '';
 
         next unless $type eq 'gene' || $type eq 'mRNA' || $type eq 'transcript';
         my ($name) = $attrs =~ /\bName=([^;]+)/;
@@ -558,7 +561,7 @@ sub detect_format {
         $source ||= $f[1] if @f >= 9;
         next unless @f >= 9 && $f[2] eq 'gene';
         if    ($f[8] =~ /\bID=gene:/)                                 { $fmt = 'ensembl'; last }
-        elsif ($f[8] =~ /\bID=gene-/ || $f[8] =~ /\bDbxref=GeneID:/) { $fmt = 'refseq';  last }
+        elsif ($f[8] =~ /\bDbxref=GeneID:/) { $fmt = 'refseq';  last }
         last;
     }
     close $fh;

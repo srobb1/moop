@@ -4,7 +4,7 @@ use warnings;
 
 # Unified isoforms builder. Auto-detects GFF format from gene-line attributes:
 #   ensembl : ID=gene:   (colon prefix)
-#   refseq  : ID=gene-   or Dbxref=GeneID:
+#   refseq  : Dbxref=GeneID: on the first gene line (not ID=gene-: our fix_genes_gff.sh genes use it, 2026-11-02)
 #   generic : anything else (parse mRNA/transcript ID= and Parent=)
 #
 # Output columns: [semicolon-sep children]  None  gene_id
@@ -69,7 +69,7 @@ sub detect_format {
         $source ||= $f[1] if @f >= 9;
         next unless @f >= 9 && $f[2] eq 'gene';
         if    ($f[8] =~ /\bID=gene:/)                                 { $fmt = 'ensembl'; last }
-        elsif ($f[8] =~ /\bID=gene-/ || $f[8] =~ /\bDbxref=GeneID:/) { $fmt = 'refseq';  last }
+        elsif ($f[8] =~ /\bDbxref=GeneID:/) { $fmt = 'refseq';  last }
         last;  # first gene line matched neither — generic
     }
     close $fh;

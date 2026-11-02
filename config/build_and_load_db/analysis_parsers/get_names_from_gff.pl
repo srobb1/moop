@@ -8,7 +8,7 @@ use GeneNameInformativeness qw(is_informative_name);
 
 # Unified gene-names extractor. Auto-detects GFF format from gene-line attributes:
 #   ensembl : ID=gene:   -> uses Name= and description= from gene lines
-#   refseq  : ID=gene-   or Dbxref=GeneID: -> uses gene= and product= from CDS lines
+#   refseq  : Dbxref=GeneID: on the first gene line (not ID=gene-: our fix_genes_gff.sh genes use it, 2026-11-02) -> uses gene= and product= from CDS lines
 #   generic : not supported for name extraction (use assign_gene_names.pl instead)
 #
 # Output columns: ID  MAINID  GroupId  Desc  Note
@@ -259,7 +259,7 @@ sub detect_format {
         my @f = split /\t/, $line;
         next unless @f >= 9 && $f[2] eq 'gene';
         if    ($f[8] =~ /\bID=gene:/)                                 { $fmt = 'ensembl'; last }
-        elsif ($f[8] =~ /\bID=gene-/ || $f[8] =~ /\bDbxref=GeneID:/) { $fmt = 'refseq';  last }
+        elsif ($f[8] =~ /\bDbxref=GeneID:/) { $fmt = 'refseq';  last }
         last;
     }
     close $fh;

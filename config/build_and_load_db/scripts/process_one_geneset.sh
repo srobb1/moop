@@ -1018,7 +1018,7 @@ if $HAS_GFF; then
     my @f = split /\t/;
     next unless @f >= 9 && $f[2] eq "gene";
     if    ($f[8] =~ /\bID=gene:/)                                 { print "ensembl"; exit }
-    elsif ($f[8] =~ /\bID=gene-/ || $f[8] =~ /\bDbxref=GeneID:/) { print "refseq";  exit }
+    elsif ($f[8] =~ /\bDbxref=GeneID:/) { print "refseq";  exit }
     print "other"; exit
   ' "$GENESET_DIR/genes.gff")
   GFF_SOURCE=${GFF_SOURCE:-other}
