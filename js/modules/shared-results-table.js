@@ -40,7 +40,7 @@
  * ---------------------------------------------------------------------------
  * HIDDEN-BUT-EXPORTED COLUMNS (`hidden: true`)
  *
- * Species, Assembly and Gene Set are hidden by default to keep the table readable,
+ * Species, Gene Set and Type are hidden by default to keep the table readable,
  * but they are ALWAYS present in Copy/CSV/Excel exports and can be switched on with
  * the colvis button. Hiding is expressed ONCE, as DataTables `visible: false`.
  *
@@ -82,7 +82,7 @@ const RESULT_COLUMNS = [
                      (r.common_name ? `<br><small class="text-muted">${r.common_name}</small>` : '')
     },
     {
-        key: 'assembly', label: 'Assembly', width: 200, variants: ['*'], hidden: true,
+        key: 'assembly', label: 'Assembly', width: 200, variants: ['*'],
         render: r => resultAssemblyLabel(r)
     },
     {
@@ -90,7 +90,7 @@ const RESULT_COLUMNS = [
         render: r => r.gene_set || '—'
     },
     {
-        key: 'type', label: 'Type', width: 120, variants: ['*'],
+        key: 'type', label: 'Type', width: 120, variants: ['*'], hidden: true,
         render: r => r.feature_type || ''
     },
     {
