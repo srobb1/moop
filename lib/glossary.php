@@ -73,13 +73,21 @@ function glossary_terms(): array {
 }
 
 /**
- * Render a glossary term inline: the word, dashed-underlined, its definition on
- * hover or keyboard focus. Falls back to the plain word if the term is unknown,
- * so a typo never leaves a dead affordance on the page.
- *
- * @param string      $term    Glossary key (case-insensitive), e.g. 'annotation'.
- * @param string|null $display Text to show, if different from the key (e.g. a plural).
+ * Lower-case key => the term as the glossary spells it ('fasta' => 'FASTA'), for the
+ * popover title. Callers look terms up in lower case, and a title built from that
+ * lookup key read "fasta", "busco", "e-value".
  */
+function glossary_spellings(): array {
+    static $names = null;
+    if ($names === null) {
+        $names = [];
+        foreach (array_keys(glossary_entries()) as $name) {
+            $names[strtolower($name)] = $name;
+        }
+    }
+    return $names;
+}
+
 /**
  * Gloss every known term inside a compound label, leaving the rest alone.
  *
@@ -118,6 +126,32 @@ function gloss_terms_in(string $text): string {
     return $out;
 }
 
+/**
+ * gloss() for the first use of a term on the page, plain text after that.
+ *
+ * For components rendered many times per page — BLAST's hits table once per query, its
+ * HSP line once per alignment — where gloss() would put the same dotted underline on
+ * every copy. Convention is first occurrence per page; this keeps it without each caller
+ * counting.
+ */
+function gloss_first(string $term, ?string $display = null): string {
+    static $seen = [];
+    $key = strtolower($term);
+    if (isset($seen[$key])) {
+        return htmlspecialchars($display ?? $term);
+    }
+    $seen[$key] = true;
+    return gloss($term, $display);
+}
+
+/**
+ * Render a glossary term inline: the word, dashed-underlined, its definition on
+ * hover or keyboard focus. Falls back to the plain word if the term is unknown,
+ * so a typo never leaves a dead affordance on the page.
+ *
+ * @param string      $term    Glossary key (case-insensitive), e.g. 'annotation'.
+ * @param string|null $display Text to show, if different from the key (e.g. a plural).
+ */
 function gloss(string $term, ?string $display = null): string {
     $label = $display ?? $term;
     $def   = glossary_terms()[strtolower($term)] ?? '';
@@ -127,7 +161,7 @@ function gloss(string $term, ?string $display = null): string {
     return '<span class="gloss" tabindex="0" role="button"'
          . ' data-bs-toggle="popover" data-bs-trigger="hover focus"'
          . ' data-bs-placement="top"'
-         . ' data-bs-title="' . htmlspecialchars($term, ENT_QUOTES) . '"'
+         . ' data-bs-title="' . htmlspecialchars(glossary_spellings()[strtolower($term)] ?? $term, ENT_QUOTES) . '"'
          . ' data-bs-content="' . htmlspecialchars($def, ENT_QUOTES) . '">'
          . htmlspecialchars($label) . '</span>';
 }

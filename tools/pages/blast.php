@@ -67,7 +67,7 @@
                         required
                         placeholder="Enter sequence in FASTA format or plain text"
                     ><?= htmlspecialchars($search_query) ?></textarea>
-                    <small class="form-text text-muted">FASTA format (with &gt;) or plain sequence.</small>
+                    <small class="form-text text-muted"><?= gloss('fasta', 'FASTA') ?> format (with &gt;) or plain sequence.</small>
                     <div class="mt-2 d-flex gap-2">
                         <button type="button" class="btn btn-sm fw-semibold text-white btn-moop-teal" onclick="loadSampleSequence('protein')">
                             <i class="fa fa-flask me-1"></i>Sample Protein
@@ -116,7 +116,7 @@
                     </div>
                     <div id="blastn-short-notice" class="alert alert-info py-2 mt-2 small mb-0 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>">
                         <i class="fa fa-info-circle me-1"></i>
-                        Optimized for short sequences: word size 7, E-value 1000, adjusted gap costs, no low-complexity filter.
+                        Optimized for short sequences: word size 7, <?= gloss_first('e-value', 'E-value') ?> 1000, adjusted gap costs, no low-complexity filter.
                         Advanced options have been pre-filled — you can override them.
                         <?php // Plain '&' -- help_modal_trigger() escapes the label itself. ?>
                         <?= help_modal_trigger('blast-short-help', 'Primers & short sequences', 'Help: searching with primers and other short sequences') ?>
@@ -271,7 +271,7 @@
 
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="perc_identity" class="form-label"><strong>Percent Identity</strong></label>
+                                <label for="perc_identity" class="form-label"><strong><?= gloss_first('percent identity', 'Percent Identity') ?></strong></label>
                                 <input type="number" id="perc_identity" name="perc_identity" class="form-control" value="<?= !empty($blast_options['perc_identity']) ? htmlspecialchars($blast_options['perc_identity']) : '' ?>" placeholder="No threshold" min="0" max="100" step="0.1">
                                 <small class="form-text text-muted">Minimum percent identity (0-100)</small>
                             </div>
@@ -305,7 +305,7 @@
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="strand" class="form-label"><strong>Strand (DNA only)</strong></label>
+                                <label for="strand" class="form-label"><strong><?= gloss('strand', 'Strand') ?> (DNA only)</strong></label>
                                 <?php
                                 // Both by default, as BLAST itself does. "Plus" carried `selected` in
                                 // BOTH branches of its condition, so every DNA search was plus-only and

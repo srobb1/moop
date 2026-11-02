@@ -524,10 +524,10 @@ $db_section_label = function ($key) {
                                               // gDNA it says I don't have any alignments") — for primers made
                                               // on a transcript the answer is usually the good one. ?>
                                         <br>Designed these on a transcript (an mRNA, an XM_/NM_ ID, or with
-                                        Primer Maker)? A primer that sits across an exon junction has no match in
+                                        Primer Maker)? A primer that sits across an <?= gloss('exon') ?> junction has no match in
                                         genomic DNA — that is what makes it good for RT-PCR. Set
                                         <strong>PCR input</strong> to <strong>cDNA</strong> to check it against
-                                        the transcripts.
+                                        the <?= gloss('transcript', 'transcripts') ?>.
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
@@ -536,7 +536,7 @@ $db_section_label = function ($key) {
                             <div class="small mb-2">
                                 <i class="fa fa-check-circle text-success"></i>
                                 <span class="text-success-emphasis">One gene: <?= htmlspecialchars($isoforms_note['gene']) ?></span>
-                                <span class="text-muted">— the <?= (int)$isoforms_note['n'] ?> products are isoforms of the same gene
+                                <span class="text-muted">— the <?= (int)$isoforms_note['n'] ?> products are <?= gloss('isoform', 'isoforms') ?> of the same gene
                                 (<?= htmlspecialchars(implode(', ', $isoforms_note['tx'])) ?>).
                                 <?php if (count($isoforms_note['sizes']) === 1): ?>
                                     All are <?= number_format($isoforms_note['sizes'][0]) ?> bp, so you will see one band.
@@ -600,7 +600,7 @@ $db_section_label = function ($key) {
                                     The <?= htmlspecialchars($junction_p) ?> primer sits across an exon
                                     junction, so that sequence exists only in spliced mRNA<?php
                                     if (!empty($t_mapped['introns'])): ?>; on the genome the product spans
-                                    <?= (int)$t_mapped['introns'] ?> intron<?= $t_mapped['introns'] === 1 ? '' : 's' ?><?php endif; ?>.
+                                    <?= (int)$t_mapped['introns'] ?> <?= gloss('intron', $t_mapped['introns'] === 1 ? 'intron' : 'introns') ?><?php endif; ?>.
                                 <?php else: ?>
                                     Usually means a primer spans an exon junction.
                                 <?php endif; ?>

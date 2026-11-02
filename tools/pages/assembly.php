@@ -112,7 +112,7 @@
         <?= page_purpose('Search genes within a single assembly, choosing which of its gene sets to search.', '', false, false) ?>
         <div class="feature-overview-body">
           <dl class="feature-info-grid mb-0">
-            <dt>Accession</dt>
+            <dt><?= gloss('accession', 'Accession') ?></dt>
             <dd><?= htmlspecialchars($assembly_info['genome_accession']) ?></dd>
             <dt>Organism</dt>
             <?php /* Identical shape to the gene set page's Organism row: binomial in

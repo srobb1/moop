@@ -316,7 +316,7 @@
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Gene Structure</span>
             <span class="ms-2 text-muted small">
-                <?= number_format(count($gene_model['isoforms'])) ?> isoform<?= count($gene_model['isoforms']) !== 1 ? 's' : '' ?>
+                <?= number_format(count($gene_model['isoforms'])) ?> <?= gloss('isoform', count($gene_model['isoforms']) !== 1 ? 'isoforms' : 'isoform') ?>
                 <?php if (!empty($big_gene)): ?>
                     · <span title="Too many to draw at once. Open a transcript under Annotations to draw its own structure.">showing the longest</span>
                 <?php endif; ?>

@@ -70,7 +70,7 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
       <p class="text-muted mb-0">
         Genomes and gene sets are imported from public databases or from the groups that
         produced them. Most annotations are added afterwards, by analysis tools run over the
-        proteins and transcripts.
+        proteins and <?= gloss('transcript', 'transcripts') ?>.
         This page is built from the data you can see, so it is always current.
       </p>
     </div>
@@ -94,7 +94,7 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
     <?php endforeach; ?>
   </div>
   <p class="text-muted small mb-4">
-    Each gene set page names its own source; each assembly page gives the assembly's accession.
+    Each gene set page names its own source; each assembly page gives the assembly's <?= gloss('accession') ?>.
   </p>
 
   <h2 class="h5 fw-semibold mb-3">Annotations</h2>

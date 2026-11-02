@@ -95,7 +95,7 @@ $busco_segments = [
         <?php if (!empty($busco['warnings'])): ?>
         <div class="alert alert-warning small mb-0 mt-3" role="note">
           <i class="fa fa-exclamation-triangle me-1"></i>
-          <strong>These results may not match the current gene models.</strong>
+          <strong>These results may not match the current <?= gloss('gene model', 'gene models') ?>.</strong>
           <ul class="mb-0 mt-1">
             <?php foreach ($busco['warnings'] as $w): ?>
             <li><?= htmlspecialchars($w) ?></li>

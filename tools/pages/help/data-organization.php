@@ -101,7 +101,7 @@ $levels = [
           <h3 class="h6 fw-semibold mb-2"><i class="fa fa-tags me-2" style="color:#0891b2;"></i>Annotations</h3>
           <p class="text-muted small mb-2"><?= htmlspecialchars($def('annotation')) ?></p>
           <p class="text-muted small mb-0">
-            An annotation belongs to one transcript, so a gene with several transcripts can carry
+            An annotation belongs to one <?= gloss('transcript') ?>, so a gene with several transcripts can carry
             different annotations on each. The gene page lists them transcript by transcript.
           </p>
         </div>

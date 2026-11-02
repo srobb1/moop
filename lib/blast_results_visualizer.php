@@ -304,8 +304,8 @@ function generateHitsSummaryTable($results, $query_num = 1) {
     $html .= '<tr>';
     $html .= '<th style="width: 5%">#</th>';
     $html .= '<th style="width: 45%">Hit ID / Description</th>';
-    $html .= '<th style="width: 20%">Query Coverage %</th>';
-    $html .= '<th style="width: 12%">E-value</th>';
+    $html .= '<th style="width: 20%">' . gloss_first('coverage', 'Query Coverage') . ' %</th>';
+    $html .= '<th style="width: 12%">' . gloss_first('e-value', 'E-value') . '</th>';
     $html .= '<th style="width: 18%">HSPs</th>';
     $html .= '</tr>';
     $html .= '</thead>';
@@ -423,9 +423,9 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
             $html .= '<div style="padding: 15px; border-bottom: 1px solid #dee2e6; margin-left: 15px; background: #ffffff; margin-bottom: 10px; border-left: 4px solid #28a745;">';
             $html .= '<h6 style="margin-bottom: 10px;"><strong>HSP ' . $hsp_num . '</strong></h6>';
             $html .= '<small class="text-muted d-block" style="margin-bottom: 10px;">';
-            $html .= 'E-value: ' . sprintf('%.2e', $hsp['evalue']) . ' | ';
+            $html .= gloss_first('e-value', 'E-value') . ': ' . sprintf('%.2e', $hsp['evalue']) . ' | ';
             $html .= 'Alignment length: ' . $hsp['alignment_length'] . ' | ';
-            $html .= 'Identity: ' . $hsp['identities'] . '/' . $hsp['alignment_length'] . ' (' . $hsp['percent_identity'] . '%) | ';
+            $html .= gloss_first('percent identity', 'Identity') . ': ' . $hsp['identities'] . '/' . $hsp['alignment_length'] . ' (' . $hsp['percent_identity'] . '%) | ';
             $html .= 'Similarities: ' . $hsp['similarities'] . ' | ';
             $html .= 'Gaps: ' . $hsp['gaps'];
             if ($hsp['gaps'] > 0) {
@@ -1216,7 +1216,7 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
     $html .= '</div>';
     
     // Add description below the HSP visualization (outside the relative container so ticks don't overlap)
-    $html .= '<small class="text-muted" style="display: block; margin-top: 15px; margin-bottom: 30px; text-align: center;">Each color represents a different bit score range. Lines connect adjacent HSPs on the query sequence.</small>';
+    $html .= '<small class="text-muted" style="display: block; margin-top: 15px; margin-bottom: 30px; text-align: center;">Each color represents a different ' . gloss_first('bit score') . ' range. Lines connect adjacent HSPs on the query sequence.</small>';
     
     return $html;
 }

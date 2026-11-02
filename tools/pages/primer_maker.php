@@ -129,7 +129,7 @@
                     </div>
                 <?php endif; ?>
                 <p class="small text-muted mb-2">
-                    Paste DNA, with or without a FASTA header. Primers are designed from this
+                    Paste DNA, with or without a <?= gloss('fasta', 'FASTA') ?> header. Primers are designed from this
                     sequence, so include the region you want to amplify plus some room either side.
                     <strong>Several sequences at once</strong> works too — give each one a
                     <code>&gt;name</code> line, up to <?= (int)Primer3Design::MAX_RECORDS ?>. Without
@@ -165,13 +165,13 @@
                             <code class="fw-bold">[ ]</code>
                             — every product <strong>must contain</strong> what is inside.
                             <code>ACGT<span class="fw-bold">[</span>ACGT<span class="fw-bold">]</span>ACGT</code>
-                            keeps bases 5–8 in the amplicon. Same as the
+                            keeps bases 5–8 in the <?= gloss_first('amplicon') ?>. Same as the
                             <em>Region to include</em> box below — use one or the other.
                         </div>
                         <?php if ($context_feature): ?>
                             <div class="mt-1">
                                 <i class="fa fa-check-circle text-success me-1"></i>
-                                You arrived from a gene page, so for <strong>RT-PCR</strong> the exon
+                                You arrived from a gene page, so for <strong>RT-PCR</strong> the <?= gloss('exon') ?>
                                 junctions are looked up for you — you do not need to mark them.
                                 Do not edit the sequence, or the junction positions no longer
                                 match it and cannot be used.
@@ -920,7 +920,23 @@
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle">
                         <thead class="table-light">
-                            <tr><?php foreach ($columns as $label): ?><th><?= htmlspecialchars($label) ?></th><?php endforeach; ?><th></th></tr>
+                            <?php
+                            // The first Tm, GC and product columns explain themselves on hover;
+                            // the reverse-primer copies of the same words are left plain.
+                            $header_gloss = [
+                                'left_tm'      => ['tm', 'Tm'],
+                                'left_gc'      => ['gc content', 'GC%'],
+                                'product_size' => ['amplicon', 'Product'],
+                            ];
+                            ?>
+                            <tr><?php foreach ($columns as $key => $label): ?><th><?php
+                                if (isset($header_gloss[$key])) {
+                                    [$term, $word] = $header_gloss[$key];
+                                    echo str_replace(htmlspecialchars($word), gloss_first($term, $word), htmlspecialchars($label));
+                                } else {
+                                    echo htmlspecialchars($label);
+                                }
+                            ?></th><?php endforeach; ?><th></th></tr>
                         </thead>
                         <tbody>
                         <?php foreach ($entries as $entry): ?>

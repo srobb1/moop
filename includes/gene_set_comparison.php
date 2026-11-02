@@ -59,8 +59,8 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
         <?php if ($gsc_many): ?>
         <?php /* Guidance, not a verdict -- still no "best" badge, for the reason in the header. */ ?>
         <p class="small text-muted mb-2">
-          <strong>Not sure which to use?</strong> A higher BUSCO score and a higher share with a
-          homolog usually mean a more complete gene set. If you are following a paper, use the
+          <strong>Not sure which to use?</strong> A higher <?= gloss('busco', 'BUSCO') ?> score and a higher share with a
+          <?= gloss('homolog') ?> usually mean a more complete gene set. If you are following a paper, use the
           gene set it used.
         </p>
         <?php endif; ?>

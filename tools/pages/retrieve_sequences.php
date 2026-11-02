@@ -140,8 +140,8 @@
                             <p class="fw-semibold mb-1">IDs</p>
                             <ul class="mb-2 ps-3">
                                 <li>One per line, or separated by commas.</li>
-                                <li>A gene ID such as <code class="ex-gene"><?= htmlspecialchars($ex_gene) ?></code> gives every transcript, CDS and protein of that gene, and the gene's genomic region.
-                                    A transcript ID such as <code class="ex-tx"><?= htmlspecialchars($ex_tx) ?></code> gives just that isoform's, and the transcript's own genomic span (introns included).
+                                <li>A gene ID such as <code class="ex-gene"><?= htmlspecialchars($ex_gene) ?></code> gives every <?= gloss('transcript') ?>, CDS and protein of that gene, and the gene's genomic region.
+                                    A transcript ID such as <code class="ex-tx"><?= htmlspecialchars($ex_tx) ?></code> gives just that <?= gloss('isoform') ?>'s, and the transcript's own genomic span (<?= gloss('intron', 'introns') ?> included).
                                     A protein or CDS ID gives its transcript's genomic span, and the header names the gene and transcript.</li>
                             </ul>
                             <p class="fw-semibold mb-1">Ranges — part of a sequence</p>
@@ -160,10 +160,10 @@
                             </ul>
                             <p class="fw-semibold mb-1">Genomic region and flanks</p>
                             <ul class="mb-2 ps-3">
-                                <li>Every genomic sequence reads 5′ to 3′ along the gene: a gene on the minus strand is reverse-complemented. The header gives the location and strand, e.g. <code>chr2:16003283-16019242(-)</code>.</li>
+                                <li>Every genomic sequence reads 5′ to 3′ along the gene: a gene on the minus <?= gloss('strand') ?> is reverse-complemented. The header gives the location and strand, e.g. <code>chr2:16003283-16019242(-)</code>.</li>
                                 <li>Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.
                                     For a transcript, CDS or protein ID that is the isoform's own start and end; for a gene ID, the gene's.</li>
-                                <li>Genomic sequence needs the gene set to be placed on a genome; transcriptome-only gene sets have none.</li>
+                                <li>Genomic sequence needs the gene set to be placed on a genome; <?= gloss('transcriptome') ?>-only gene sets have none.</li>
                             </ul>
                             <p class="fw-semibold mb-1">After you retrieve</p>
                             <p class="mb-0">The "IDs to search" box shows which IDs were found (<span style="background:#d4edda; padding:2px 4px; border-radius:2px;">green</span>) and which were not (<span style="background:#f8d7da; padding:2px 4px; border-radius:2px;">red</span>).</p>

@@ -105,7 +105,7 @@ foreach ($as_groups as $name => $rows) {
 
         <?php if (empty($as['from_pipeline'])): ?>
         <p class="small text-muted mb-0 mt-2">
-          Computed from the genome index. Contig, gap and GC figures appear once the annotation
+          Computed from the genome index. <?= gloss('contig', 'Contig') ?>, gap and GC figures appear once the annotation
           pipeline has produced this assembly's statistics.
         </p>
         <?php endif; ?>

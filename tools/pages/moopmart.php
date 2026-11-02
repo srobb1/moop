@@ -395,7 +395,7 @@
             <div class="browse-select-panel">
               <p class="text-muted small mb-3">
                 Every <?= gloss('feature') ?> must satisfy <strong>all</strong> criteria (AND).
-                Each row filters by <?= gloss('annotation type') ?>, exact accession, or keyword — fill any combination.
+                Each row filters by <?= gloss('annotation type') ?>, exact <?= gloss('accession') ?>, or keyword — fill any combination.
                 <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
                         style="font-size:0.85rem; line-height:1; vertical-align:middle;"
                         data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
@@ -457,7 +457,7 @@
               </div>
               <div class="row g-2">
                 <div class="col-sm-4">
-                  <label class="form-label small mb-1">Chr / scaffold</label>
+                  <label class="form-label small mb-1">Chr / <?= gloss('scaffold') ?></label>
                   <input type="text" id="mm-coord-chr" class="form-control form-control-sm moop-input"
                          placeholder="e.g. CHR01" list="mm-chr-datalist" autocomplete="off" disabled>
                   <datalist id="mm-chr-datalist"></datalist>
