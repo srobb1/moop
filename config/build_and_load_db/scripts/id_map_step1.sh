@@ -7,14 +7,22 @@
 #
 # Writes <out_dir>/<Org>__<Asm>__<GeneSet>.id_map.tsv and .diff.tsv, and <out_dir>/summary.tsv
 # (one line per gene set). The GFF source is classified exactly as process_one_geneset.sh does.
+# Without a list, the active gene sets are listed now (list_active_genesets.sh, the one definition
+# the builds use) into <out_dir>/active_genesets.tsv: build_and_load_db/v2/active_genesets.tsv is
+# refreshed only by run_all_v2.sh, so it goes stale between whole-tree runs.
 set -u
 SCRIPTS=$(cd "$(dirname "$0")" && pwd)
 REPO=$(dirname "$SCRIPTS")
 source "$SCRIPTS/paths.sh"
 OUT=${1:?Usage: id_map_step1.sh <out_dir> [active_genesets.tsv]}
-LIST=${2:-$REPO/../../../build_and_load_db/v2/active_genesets.tsv}
 DATA=${DATA:-/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/build_and_load_db/v2/data}
 mkdir -p "$OUT"
+if [ -n "${2:-}" ]; then
+  LIST=$2
+else
+  LIST=$OUT/active_genesets.tsv
+  bash "$SCRIPTS/list_active_genesets.sh" > "$LIST" || exit 1
+fi
 
 ## a top-level "key: value" from metadata.yaml, as process_one_geneset.sh reads it
 meta_key() {
@@ -34,7 +42,7 @@ gff_source() {
     my @f = split /\t/;
     next unless @f >= 9 && $f[2] eq "gene";
     if    ($f[8] =~ /\bID=gene:/)                                 { print "ensembl"; exit }
-    elsif ($f[8] =~ /\bID=gene-/ || $f[8] =~ /\bDbxref=GeneID:/) { print "refseq";  exit }
+    elsif ($f[8] =~ /\bDbxref=GeneID:/) { print "refseq";  exit }
     print "other"; exit
   ' "$gff")
   source=${source:-other}
