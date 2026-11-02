@@ -83,6 +83,23 @@ if ($va_previewing) {
 
       <!-- Right nav items (collapse into menu on mobile) -->
       <ul class="navbar-nav align-items-md-center gap-2">
+        <li class="nav-item navbar-id-search">
+          <?php /* Quick gene ID lookup — the index page's ID search (api/feature_search.php),
+                   results in a panel under the box. js/modules/navbar-id-search.js */ ?>
+          <form class="m-0" role="search" id="navIdSearch" autocomplete="off">
+            <div class="d-flex align-items-center">
+              <div class="input-group input-group-sm">
+                <input type="search" class="form-control" id="navIdInput" placeholder="Gene ID lookup"
+                       aria-label="Look up a gene, transcript or protein ID"
+                       data-1p-ignore data-lpignore="true" data-form-type="other">
+                <button class="btn btn-outline-light" type="submit" title="Look up this ID"><i class="fa fa-search"></i></button>
+              </div>
+              <?php /* The same (i) and the same help as the index page's ID box. */ ?>
+              <?= help_modal_trigger('fs-help', '', 'Help: finding a gene by its ID') ?>
+            </div>
+            <div class="navbar-id-panel shadow" id="navIdPanel" hidden></div>
+          </form>
+        </li>
         <li class="nav-item">
           <span class="<?= $badge_class ?>"><?php if ($va_previewing): ?><i class="fa fa-eye me-1" aria-hidden="true"></i><?php endif; ?><?= htmlspecialchars($access_text) ?></span>
         </li>
@@ -120,6 +137,8 @@ if ($va_previewing) {
     </div>
   </div>
 </nav>
+
+<?php include __DIR__ . '/feature_id_help_modal.php';   // opened by the (i) beside both ID boxes ?>
 
 <?php if (is_logged_in() && moop_session_is_admin()): ?>
 <!-- Admin dashboard loading overlay. The dashboard's first load per session can be slow

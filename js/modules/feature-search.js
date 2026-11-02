@@ -1,9 +1,14 @@
 /**
- * Feature ID Search — Tab 2 on the index page
+ * Feature ID Search — the index page box, and the shared lookup behind the navbar box
  *
  * Exact-match lookup of feature_uniquename across all accessible SQLite
  * databases.  Submits on Enter or button click; displays a results table
  * with links to each feature's parent page.
+ *
+ * Loaded on EVERY page (includes/layout.php): window.MoopFeatureSearch
+ * ({lookup, renderInto}) is what js/modules/navbar-id-search.js uses, so the two boxes
+ * share one endpoint, one row layout and one no-match fallback. The index wiring below
+ * does nothing on a page without #fs-input.
  */
 (function () {
     'use strict';
@@ -31,23 +36,26 @@
         el.style.display = msg ? '' : 'none';
     }
 
-    function renderResults(results) {
-        const wrap = document.getElementById('fs-results');
-        if (!wrap) return;
+    /**
+     * Render a lookup's results into `wrap`. Shared by the index page box and the navbar
+     * box, which can both be on one page — so every element read here is found INSIDE
+     * `wrap`, never by a page-wide id (the filter used to be #fs-filter/#fs-table).
+     *
+     *   opts.target  link target for the feature links ('_blank' on the index page)
+     */
+    function renderInto(wrap, results, q, opts) {
+        opts = opts || {};
+        const target = opts.target ? ` target="${opts.target}"` : '';
 
         if (!results.length) {
             // An exact-ID lookup finding nothing usually means the visitor typed a name or a
             // word ("BRCA1", "kinase"). Offer the search that handles those, term filled in.
-            const q    = (document.getElementById('fs-input')?.value || '').trim();
             const site = sitePath;
-            setStatus('');
             wrap.innerHTML = '<div class="small mt-2 text-muted">No gene, transcript or protein has that exact ID. '
                 + (q ? `<a href="${site}/tools/search.php?q=${encodeURIComponent(q)}">Search annotations for “${escapeHtml(q)}” →</a>` : '')
                 + '</div>';
             return;
         }
-
-        setStatus('');
 
         const orgDisplay = org => `<em>${org.replace(/_/g, ' ')}</em>`;
 
@@ -56,7 +64,7 @@
                 .filter(Boolean).join(' <span style="color:#cbd5e1">·</span> ');
             return `<tr data-search="${(r.organism + ' ' + r.type + ' ' + r.assembly + ' ' + r.gene_set).toLowerCase()}">
                <td style="line-height:1.2;">
-                 <a href="${r.url}" target="_blank"
+                 <a href="${r.url}"${target}
                     class="fw-semibold font-monospace" style="font-size:0.85rem;color:#0891b2;">${r.uniquename}</a>
                  <div class="text-muted" style="font-size:0.75rem; margin-top:1px;">${secondary}</div>
                </td>
@@ -66,7 +74,7 @@
 
         const filterBar = results.length > 5
             ? `<div class="mt-2 mb-1">
-                 <input type="text" id="fs-filter" class="form-control form-control-sm moop-input"
+                 <input type="text" class="form-control form-control-sm moop-input fs-filter"
                         placeholder="Filter results…" autocomplete="off">
                </div>`
             : '';
@@ -74,23 +82,38 @@
         wrap.innerHTML =
             `${filterBar}
              <div class="table-responsive mt-2">
-               <table class="table table-sm table-hover mb-0" id="fs-table"
+               <table class="table table-sm table-hover mb-0 fs-table"
                       style="border-top:2px solid #0891b2;">
                  <tbody>${results.map(rowHtml).join('')}</tbody>
                </table>
              </div>`;
 
-        const filterInput = document.getElementById('fs-filter');
+        const filterInput = wrap.querySelector('.fs-filter');
         if (filterInput) {
             filterInput.addEventListener('input', function () {
                 const term = this.value.toLowerCase();
-                document.querySelectorAll('#fs-table tbody tr').forEach(tr => {
+                wrap.querySelectorAll('.fs-table tbody tr').forEach(tr => {
                     tr.style.display = tr.dataset.search.includes(term) ? '' : 'none';
                 });
             });
             filterInput.focus();
         }
     }
+
+    /** The lookup itself: resolves to the results array, rejects with a message. */
+    function lookup(q) {
+        return fetch(`${sitePath}/api/feature_search.php?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            // Network failure or a non-JSON reply (a rate-limit page): one plain message,
+            // not a JSON parser error.
+            .catch(() => { throw new Error('Search failed. Please try again.'); })
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                return data.results || [];
+            });
+    }
+
+    window.MoopFeatureSearch = { lookup, renderInto };
 
     function search() {
         const input = document.getElementById('fs-input');
@@ -108,14 +131,9 @@
         if (wrap) wrap.innerHTML = '';
         setStatus('Searching…');
 
-        const site = sitePath;
-        fetch(`${site}/api/feature_search.php?q=${encodeURIComponent(q)}`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) { setStatus(data.error, true); return; }
-                renderResults(data.results || []);
-            })
-            .catch(() => setStatus('Search failed. Please try again.', true))
+        lookup(q)
+            .then(results => { setStatus(''); if (wrap) renderInto(wrap, results, q, { target: '_blank' }); })
+            .catch(e => setStatus(e.message, true))
             .finally(() => {
                 if (btn) { btn.disabled = false; btn.innerHTML = label; }
             });
