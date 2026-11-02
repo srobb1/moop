@@ -67,3 +67,22 @@
     font-family: monospace;
     font-size: 0.9em;
 }
+
+/* Consolidated findings: one block per distinct problem, paths folded away */
+.perm-problem {
+    padding: 10px 12px;
+    border-left: 4px solid #dc3545;
+    background: #fdf3f4;
+    border-radius: 4px;
+}
+
+.perm-paths {
+    font-family: monospace;
+    font-size: 0.85em;
+    word-break: break-all;
+}
+
+.perm-paths-scroll {
+    max-height: 12rem;
+    overflow-y: auto;
+}

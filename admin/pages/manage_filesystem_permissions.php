@@ -6,6 +6,59 @@
 // label can't be the reason anything is broken. The checks themselves already skip
 // the label test when this is false (see performPermissionCheck).
 $selinux_on = function_exists('moop_selinux_enforcing') && moop_selinux_enforcing();
+
+// One block per distinct problem (moop_permission_consolidate), not one per path: the
+// organism tree routinely produces hundreds of identical findings. Paths are listed per
+// organism behind <details>, so the page stays short and nothing is hidden.
+$render_problems = function (array $items, ?array $fix_cmds = null) use ($organism_data, $moop_owner) {
+    $root = rtrim($organism_data, '/') . '/';
+    foreach (moop_permission_consolidate($items, $organism_data) as $g):
+        $first = $g['first'];
+        $noun  = (($first['type'] ?? 'file') === 'directory') ? 'director' . ($g['count'] === 1 ? 'y' : 'ies') : 'file' . ($g['count'] === 1 ? '' : 's');
+        arsort($g['perms']);
+        $perm_txt = implode(', ', array_map(fn($p, $n) => $p . ($n > 1 ? " ×$n" : ''), array_keys($g['perms']), $g['perms']));
+        $cmds = $fix_cmds ?? moop_permission_merged_fix_commands($g['checks'], $moop_owner);
+        ?>
+        <div class="perm-problem mb-3">
+            <div class="d-flex flex-wrap align-items-baseline gap-2">
+                <span class="badge bg-danger"><?= $g['count'] ?> <?= $noun ?></span>
+                <span><?= htmlspecialchars(implode('; ', $g['issues'])) ?></span>
+                <?php if ($perm_txt !== ''): ?><small class="text-muted">mode <?= htmlspecialchars($perm_txt) ?></small><?php endif; ?>
+            </div>
+            <?php if (!empty($first['reason'])): ?>
+            <p class="small text-muted mb-1 mt-1"><i class="fa fa-lightbulb"></i> <?= htmlspecialchars($first['reason']) ?></p>
+            <?php endif; ?>
+            <?php if ($g['count'] === 1): ?>
+            <div class="perm-paths"><?= htmlspecialchars($first['path']) ?></div>
+            <?php else: ?>
+            <details class="mt-1">
+                <summary class="small">Show paths (<?= count($g['by_organism']) ?> <?= count($g['by_organism']) === 1 ? 'location' : 'locations' ?>)</summary>
+                <table class="table table-sm small mb-0 mt-1">
+                    <?php foreach ($g['by_organism'] as $org => $paths): ?>
+                    <tr>
+                        <td class="text-nowrap"><?= $org === '' ? '<em>outside organisms/</em>' : htmlspecialchars($org) ?></td>
+                        <td class="text-end"><?= count($paths) ?></td>
+                        <td class="w-100">
+                            <?php if (count($paths) === 1): ?>
+                            <div class="perm-paths"><?= htmlspecialchars($org === '' ? $paths[0] : substr($paths[0], strlen($root))) ?></div>
+                            <?php else: ?>
+                            <details>
+                                <summary>list</summary>
+                                <div class="perm-paths perm-paths-scroll"><?php foreach ($paths as $p): ?><?= htmlspecialchars($org === '' ? $p : substr($p, strlen($root))) ?><br><?php endforeach; ?></div>
+                            </details>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </table>
+            </details>
+            <?php endif; ?>
+            <?php if ($cmds): ?>
+            <div class="fix-command mb-0"><?php foreach ($cmds as $c): ?><?= htmlspecialchars($c) ?><br><?php endforeach; ?></div>
+            <?php endif; ?>
+        </div>
+    <?php endforeach;
+};
 ?>
 
 <div class="container py-4">
@@ -158,14 +211,24 @@ foreach ($checks as $check) {
     $grouped[$name][] = $check;
 }
 
+// A clean area does not need a card: ~25 passing single-path checks were ~370px each,
+// burying the few that need attention. They go into one compact table at the end.
+// 'Organism Data Directories' always keeps its card — its footer reports the organism tree.
+$passing = [];
 foreach ($grouped as $group_name => $items):
     $failing = array_values(array_filter($items, fn($i) => !empty($i['issues'])));
     $total   = count($items);
+    if (!$failing && $group_name !== 'Organism Data Directories') {
+        $passing[$group_name] = $items;
+        continue;
+    }
     // High-cardinality rules (one rule, many paths — organism.json x85, organism.sqlite x85)
-    // list ONLY what is wrong. A wall of 80 passing rows is the "how many files exist"
-    // noise the impact rewrite removed; the count should mean "how many things are wrong".
-    // Small groups still list every path so a clean single check stays visible.
-    $to_show = ($total > 5) ? $failing : $items;
+    // show ONLY what is wrong, consolidated: one block per distinct problem with its paths
+    // folded away, not a full grid/issue/fix/why block per file (18 bad organism.json files
+    // were 18 identical blocks). Small groups still list every path in full so a clean
+    // single check stays visible.
+    $consolidate = ($total > 5);
+    $to_show     = $consolidate ? [] : $items;
 ?>
 <div class="card mb-3">
     <div class="card-header adm-head">
@@ -189,6 +252,8 @@ foreach ($grouped as $group_name => $items):
     <div class="card-body">
         <?php if ($total > 5 && !$has_issues): ?>
         <p class="mb-0 text-success"><i class="fa fa-check-circle"></i> All <?= $total ?> pass.</p>
+        <?php elseif ($consolidate): ?>
+        <?php $render_problems($failing); ?>
         <?php endif; ?>
         <?php foreach ($to_show as $check): ?>
         <div class="mb-3">
@@ -288,16 +353,10 @@ foreach ($grouped as $group_name => $items):
         <?php
         // Every fix in this section as one paste, so a 5-file problem is one command
         // block instead of five copy-pastes. Mirrors the Assembly/FASTA sections below.
-        // Deduped: a shared remedy (e.g. fix_moop_selinux.sh) should appear once.
-        $group_cmds = [];
-        foreach ($failing as $f) {
-            foreach (moop_permission_fix_commands($f, $moop_owner) as $c) {
-                $group_cmds[] = $c;
-            }
-        }
-        $group_cmds = array_values(array_unique($group_cmds));
+        // Merged: the same chmod over several paths is one command naming them all.
+        $group_cmds = moop_permission_merged_fix_commands($failing, $moop_owner);
         ?>
-        <?php if (count($failing) > 1 && $group_cmds): ?>
+        <?php if (!$consolidate && count($failing) > 1 && $group_cmds): ?>
         <div class="mt-3 pt-3 border-top">
             <p class="mb-2"><strong>Fix all <?= count($failing) ?> in this section at once:</strong></p>
             <div class="fix-command">
@@ -315,19 +374,7 @@ foreach ($grouped as $group_name => $items):
         <?php if (!empty($assembly_subdir_issues)): ?>
         <h6 class="mb-3"><i class="fa fa-folder"></i> Assembly Subdirectories</h6>
         <p class="text-danger mb-3"><strong>⚠️ Some assembly subdirectories have permission issues:</strong></p>
-        <div class="mb-3">
-            <?php foreach ($assembly_subdir_issues as $issue): ?>
-            <div class="alert alert-warning mb-2">
-                <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
-                <small>
-                    Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>)
-                    <?php if (!empty($issue['issues'])): ?>
-                        — <?= htmlspecialchars(implode('; ', $issue['issues'])) ?>
-                    <?php endif; ?>
-                </small>
-            </div>
-            <?php endforeach; ?>
-        </div>
+        <?php $render_problems($assembly_subdir_issues, []); ?>
         <p class="mb-2"><strong>To fix all assembly directories, run:</strong></p>
         <div class="fix-command">
             <?php // NOT `chmod -R 2775`: that sets FILES to 775 (executable) too, which is how
@@ -341,19 +388,7 @@ foreach ($grouped as $group_name => $items):
         <?php if (!empty($fasta_file_issues)): ?>
         <h6 class="mb-3"><i class="fa fa-dna"></i> FASTA Files</h6>
         <p class="text-danger mb-3"><strong>⚠️ Some FASTA files have permission issues:</strong></p>
-        <div class="mb-3">
-            <?php foreach ($fasta_file_issues as $issue): ?>
-            <div class="alert alert-warning mb-2">
-                <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
-                <small>
-                    Current: <?= htmlspecialchars($issue['current_perms']) ?> (group: <?= htmlspecialchars($issue['current_group']) ?>)
-                    <?php if (!empty($issue['issues'])): ?>
-                        — <?= htmlspecialchars(implode('; ', $issue['issues'])) ?>
-                    <?php endif; ?>
-                </small>
-            </div>
-            <?php endforeach; ?>
-        </div>
+        <?php $render_problems($fasta_file_issues, []); ?>
         <p class="mb-2"><strong>To fix all FASTA files, run:</strong></p>
         <div class="fix-command">
             <?php
@@ -379,19 +414,7 @@ foreach ($grouped as $group_name => $items):
         <?php if (!empty($exec_file_issues)): ?>
         <h6 class="mb-3"><i class="fa fa-file-code"></i> Executable Data Files</h6>
         <p class="text-danger mb-3"><strong>⚠️ Data files carrying the execute bit:</strong></p>
-        <div class="mb-3">
-            <?php foreach ($exec_file_issues as $issue): ?>
-            <div class="alert alert-warning mb-2">
-                <strong><?= htmlspecialchars($issue['path']) ?></strong><br>
-                <small>
-                    Current: <?= htmlspecialchars($issue['current_perms']) ?>
-                    <?php if (!empty($issue['issues'])): ?>
-                        — <?= htmlspecialchars(implode('; ', $issue['issues'])) ?>
-                    <?php endif; ?>
-                </small>
-            </div>
-            <?php endforeach; ?>
-        </div>
+        <?php $render_problems($exec_file_issues, []); ?>
         <p class="mb-2"><strong>To clear the execute bit from data files, run:</strong></p>
         <div class="fix-command">
             <?php // Files only: directories legitimately need the traverse bit, so -type f is
@@ -408,6 +431,43 @@ foreach ($grouped as $group_name => $items):
     <?php endif; ?>
 </div>
 <?php endforeach; ?>
+
+<?php if ($passing): ?>
+<div class="card mb-3">
+    <div class="card-header adm-head" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#passingChecks">
+        <h6 class="mb-0">
+            <i class="fa fa-check-circle text-success"></i>
+            <?= count($passing) ?> <?= count($passing) === 1 ? 'area passes' : 'areas pass' ?>
+            <small class="text-muted fw-normal">— <?= array_sum(array_map('count', $passing)) ?> paths checked, no issues</small>
+            <i class="fa fa-chevron-down float-end"></i>
+        </h6>
+    </div>
+    <div class="collapse" id="passingChecks">
+        <div class="card-body p-0">
+            <table class="table table-sm small mb-0">
+                <thead><tr><th>Area</th><th>Path</th><th>Mode</th><th>Owner:Group</th></tr></thead>
+                <tbody>
+                <?php foreach ($passing as $group_name => $items): ?>
+                    <?php if (count($items) > 5): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($group_name) ?></td>
+                        <td colspan="3" class="text-muted">All <?= count($items) ?> pass</td>
+                    </tr>
+                    <?php else: foreach ($items as $i => $check): ?>
+                    <tr title="<?= htmlspecialchars($check['reason'] ?? '') ?>">
+                        <td><?= $i === 0 ? htmlspecialchars($group_name) : '' ?></td>
+                        <td class="perm-paths"><?= htmlspecialchars($check['path']) ?></td>
+                        <td><code><?= htmlspecialchars($check['current_perms'] ?? '') ?></code></td>
+                        <td><?= htmlspecialchars(($check['current_owner'] ?? '') . ':' . ($check['current_group'] ?? '')) ?></td>
+                    </tr>
+                    <?php endforeach; endif; ?>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
         </div>
     </div>

@@ -972,6 +972,27 @@ $_pc_fix_file = moop_permission_fix_commands([
 ok(in_array('sudo chmod 640 ' . escapeshellarg($_pc_file), $_pc_fix_file, true),
    'a world-readable sensitive file is told 640');
 
+// Consolidation: the permissions page shows one block per distinct problem, not per path.
+// Executable (770) and (775) are the same problem; organisms are bucketed by first segment.
+$_pc_exec = fn($p, $m) => ['path' => $p, 'type' => 'file', 'check_mode' => 'data', 'exists' => true,
+    'is_readable' => true, 'current_perms' => $m, 'issues' => ["Marked executable ($m) — data files should not be executable"]];
+$_pc_items = [
+    $_pc_exec('/o/Bat/a/protein.aa.fa', '770'),
+    $_pc_exec('/o/Bat/a/cds.nt.fa', '775'),
+    $_pc_exec('/o/Fly/b/protein.aa.fa', '770'),
+    ['path' => '/o/Fly', 'issues' => ['Not writable']],
+    ['path' => '/o/Fly/ok.fa', 'issues' => []],
+];
+$_pc_groups = moop_permission_consolidate($_pc_items, '/o');
+ok(count($_pc_groups) === 2, 'consolidate: two distinct problems, passing paths dropped');
+ok($_pc_groups[0]['count'] === 3 && $_pc_groups[0]['perms'] === ['770' => 2, '775' => 1],
+   'consolidate: modes differing only in the octal merge, biggest group first, modes counted');
+ok(array_map('count', $_pc_groups[0]['by_organism']) === ['Bat' => 2, 'Fly' => 1],
+   'consolidate: paths bucketed by organism');
+$_pc_merged = moop_permission_merged_fix_commands(array_slice($_pc_items, 0, 3), 'smr');
+ok($_pc_merged === ["sudo chmod a-x '/o/Bat/a/protein.aa.fa' '/o/Bat/a/cds.nt.fa' '/o/Fly/b/protein.aa.fa'"],
+   'merged fix: the same chmod over three paths is ONE command, not three');
+
 // moop_permission_dir_mode: the dashboard's number, derived not hardcoded.
 $_pc_sens = ['/var/www/moop-site-data' => true, '/var/www/html/moop/config/secrets.php' => true];
 ok(moop_permission_dir_mode('/var/www/moop-site-data', $_pc_sens) === '2770',
