@@ -184,9 +184,16 @@ echo help_modal(
                 [
                     'label' => 'Why the default throws them away',
                     'color' => 'success',
-                    'text'  => 'A perfect 20 nt match returns ZERO hits on an ordinary search. '
-                             . 'The word size is too big for it to seed, and the E-value discards '
-                             . 'the score as unremarkable. The preset fixes both.',
+                    // Per program, not "both reasons": BLASTn seeds from 11 letters and DOES
+                    // find a 20 nt match, then the 1e-3 default discards it; only Megablast
+                    // (word 28) cannot seed it at all. Text review N8, 2026-11-02, measured.
+                    'text'  => 'A perfect 20 nt match can return ZERO hits on an ordinary search, '
+                             . 'for a different reason in each program. <strong>BLASTn</strong> finds '
+                             . 'it (it starts from 11 matching letters), then the default E-value of '
+                             . '1e-3 throws it away as not significant. <strong>Megablast</strong> '
+                             . 'never finds it: it needs 28 identical letters in a row, more than the '
+                             . 'query has. BLASTn-short fixes both.',
+                    'html'  => true,
                 ],
                 [
                     'label' => 'Expect a lot of hits',
