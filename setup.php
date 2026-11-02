@@ -164,13 +164,13 @@ function checkEnvironment($base, $config) {
     // PHP version
     $checks[] = [
         'label' => 'PHP ' . PHP_VERSION,
-        'status' => version_compare(PHP_VERSION, '7.4.0', '>=') ? 'pass' : 'fail',
-        'detail' => 'Requires 7.4+',
+        'status' => version_compare(PHP_VERSION, '8.0.0', '>=') ? 'pass' : 'fail',
+        'detail' => 'Requires 8.0+',
         'category' => 'PHP',
     ];
 
     // Required extensions
-    $extensions = ['sqlite3', 'json', 'openssl', 'curl'];
+    $extensions = ['sqlite3', 'pdo_sqlite', 'mbstring', 'json', 'openssl', 'curl'];
     foreach ($extensions as $ext) {
         $checks[] = [
             'label' => "Extension: $ext",

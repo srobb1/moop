@@ -18,7 +18,7 @@ added afterwards; MOOP degrades feature-by-feature rather than failing to start.
 
 | Tool | Needed for | Skippable? |
 |---|---|---|
-| PHP 7.4+ (`posix` `json` `sqlite3` `openssl` `curl`) | everything | no |
+| PHP 8.0+ (`pdo_sqlite` `sqlite3` `mbstring` `json` `openssl` `curl` `posix`) | everything | no |
 | Apache or nginx | everything | no |
 | Composer | JWT library for JBrowse2 track auth | no |
 | SQLite 3 CLI | database maintenance and debugging | yes, until you need it |
@@ -53,15 +53,17 @@ added afterwards; MOOP degrades feature-by-feature rather than failing to start.
 ```bash
 # Ubuntu/Debian
 sudo apt-get update
-sudo apt-get install -y php php-cli php-sqlite3 php-json php-curl php-xml
+sudo apt-get install -y php php-cli php-sqlite3 php-mbstring php-json php-curl php-xml
 
 # RHEL/CentOS/Rocky
-sudo dnf install -y php php-cli php-pdo php-json php-curl php-xml
+sudo dnf install -y php php-cli php-pdo php-mbstring php-json php-curl php-xml
 
-php --version                                          # 7.4 or higher
-php -m | grep -E "sqlite3|json|posix|openssl|curl"     # all five should appear
+php --version                                                       # 8.0 or higher
+php -m | grep -E "pdo_sqlite|sqlite3|mbstring|json|posix|openssl|curl"  # all seven should appear
 ```
 
+- `pdo_sqlite`, `sqlite3` — the organism databases.
+- `mbstring` — search-term handling.
 - `openssl` — JWT track authentication for JBrowse2. Usually bundled with PHP.
 - `curl` — Galaxy integration; on by default, disable in config if unused.
 - `posix` — file-permission reporting; scripts degrade gracefully without it.

@@ -140,7 +140,7 @@ individual features rather than failing to start.
 
 | | Needed for |
 |---|---|
-| **PHP 7.4+** with `posix` `json` `sqlite3` `openssl` `curl` | everything |
+| **PHP 8.0+** with `pdo_sqlite` `sqlite3` `mbstring` `json` `openssl` `curl` `posix` | everything |
 | **Apache** (`mod_rewrite`, `mod_headers`) or **nginx** + php-fpm | everything |
 | **Composer** | JBrowse2 track authentication |
 | **samtools**, **bgzip**, **tabix** | genome and GFF indexing |

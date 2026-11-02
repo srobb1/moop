@@ -855,9 +855,9 @@ $children = getChildren($feature_id, $db, $genome_ids);</code></pre>
           <li>One section per annotation type (Homologs, Domains, GO Terms, etc.)</li>
           <li>Badge showing annotation count</li>
           <li>Sortable, searchable table</li>
-          <li>Export buttons (CSV, Excel, PDF) per annotation table</li>
-          <li><strong>Download All</strong> button in the Annotations header — downloads a single CSV
-              with every annotation for the gene and all its children (see the Data Export help page)</li>
+          <li><strong>Copy</strong>, <strong>CSV</strong> and <strong>Excel</strong> buttons above each annotation table, for that one table</li>
+          <li><strong>Download all</strong> button at the right of the Annotations section's title bar — downloads a single CSV
+              with every annotation for the gene and all its transcripts</li>
           <li>Linked annotation IDs (click to external resource)</li>
         </ul>
 
@@ -1061,8 +1061,9 @@ ORDER BY feature_name;</code></pre>
 
         <div class="alert alert-info mt-3">
           <strong><i class="fa fa-info-circle"></i> Administrator note:</strong> The auth gateway
-          requires a web server rewrite rule. See the <code>README.md</code> installation
-          instructions (Step 10) for the nginx and Apache config snippets.
+          requires a web server rewrite rule. The nginx and Apache config files and how to deploy them are in
+          the README on GitHub: <a href="https://github.com/srobb1/moop#quick-start" target="_blank" rel="noopener">Quick Start, step 4</a>
+          and <a href="https://github.com/srobb1/moop#web-server-configuration" target="_blank" rel="noopener">Web server configuration</a>.
         </div>
 
         <h6 class="mt-3">Track Authentication (JWT Tokens):</h6>

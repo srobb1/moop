@@ -308,7 +308,7 @@
 |-------|-----------|---------|
 | **Frontend** | HTML5, CSS3, Bootstrap | 5.x |
 | **UI Framework** | jQuery, DataTables | 1.13.4 |
-| **Backend** | PHP | 7.4+ |
+| **Backend** | PHP | 8.0+ |
 | **Database** | SQLite 3 | Per-organism |
 | **Search** | BLAST | ncbi-blast+ |
 | **Web Server** | Apache/Nginx | Latest |
@@ -2425,7 +2425,7 @@ Rate limited: 3 requests/second (NCBI requirement)
 ```
 Server:
   - Apache 2.4+ OR Nginx
-  - PHP 7.4 or higher
+  - PHP 8.0 or higher
   - SQLite 3
   - Linux/Unix (not tested on Windows)
 

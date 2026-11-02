@@ -1490,7 +1490,7 @@ Header always set Access-Control-Expose-Headers "Content-Range, Content-Length, 
 - [ ] Session timeout configured (recommended: 1-4 hours)
 - [ ] IP whitelist configured for internal network
 - [ ] Error logging enabled (not exposed to users)
-- [ ] PHP version up to date (7.4+ required)
+- [ ] PHP version up to date (8.0+ required)
 - [ ] `firebase/php-jwt` library installed via Composer
 
 **Tracks Servers:**

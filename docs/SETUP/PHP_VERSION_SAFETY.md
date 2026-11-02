@@ -10,7 +10,7 @@
 ## MOOP Requirements
 
 From `/data/moop/README.md`:
-- **Required:** PHP 7.4 **or higher** ✅
+- **Required:** PHP 8.0 **or higher** ✅
 - **Extensions Required:**
   - `posix` ✅ **INSTALLED**
   - `json` ✅ **INSTALLED**
@@ -32,7 +32,7 @@ Beneficial for MOOP:
 
 **Reasons:**
 1. **Version Compatibility:** PHP 8.3 is a stable release from 2023, released Jan 26, 2023
-2. **Exceeds Minimum:** MOOP requires PHP 7.4+, you have 8.3 (forward compatible)
+2. **Exceeds Minimum:** MOOP requires PHP 8.0+, you have 8.3 (forward compatible)
 3. **All Required Extensions:** Every required extension is installed
 4. **LTS Support:** PHP 8.3 receives security updates until Nov 25, 2026
 5. **Production Ready:** Major distros (Ubuntu 24.04) include it as standard
