@@ -335,8 +335,8 @@
           </div>
           <div class="collapse" id="mm-name-body">
             <div class="browse-select-panel">
-              <p class="text-muted small mb-2">Partial match, case-insensitive. Searches the <?= gloss('feature') ?> name field.
-                <?= help_modal_trigger('search-help', '', 'How to search') ?>
+              <p class="text-muted small mb-2">Searches the <?= gloss('feature') ?> name field. Matches words from their start, like Search.
+                <?= help_modal_trigger('exporter-text-help', '', 'How these text filters match') ?>
               </p>
               <input type="text" id="mm-gene-name" class="form-control moop-input"
                      placeholder="e.g. BRCA1">
@@ -356,8 +356,8 @@
           </div>
           <div class="collapse" id="mm-desc-body">
             <div class="browse-select-panel">
-              <p class="text-muted small mb-2">Searches the <?= gloss('feature') ?> description field. Partial match, case-insensitive.
-                <?= help_modal_trigger('search-help', '', 'How to search') ?>
+              <p class="text-muted small mb-2">Searches the <?= gloss('feature') ?> description field. Matches words from their start, like Search.
+                <?= help_modal_trigger('exporter-text-help', '', 'How these text filters match') ?>
               </p>
               <input type="text" id="mm-gene-description" class="form-control moop-input"
                      placeholder="e.g. kinase">
@@ -408,7 +408,7 @@
                 <div class="col-sm-4"><?= gloss('annotation type', 'Annotation type') ?></div>
                 <div class="col-sm-4">Accession <span class="text-muted">(exact)</span></div>
                 <div class="col-sm-4">Keyword
-                  <?= help_modal_trigger('search-help', '', 'How to search') ?>
+                  <?= help_modal_trigger('exporter-text-help', '', 'How these text filters match') ?>
                 </div>
               </div>
 
@@ -920,8 +920,29 @@
    needed it too, so it moved to the shared sheet rather than being copied. */
 </style>
 
-<?php /* Shared search-box help — ONE home, included by every page with a search
-        box. 'multi' pages search several organisms at once and get the organism
-        selection card plus the per-organism phrasing of the result cap. */ ?>
-<?php $search_help_scope = 'single';
-      include __DIR__ . '/../../includes/search_help_modal.php'; ?>
+<?php /* Its own modal, not the shared search help (includes/search_help_modal.php): the
+        MATCHING is now the same as Search (moopmartBuildTextConditions() uses Search's FTS
+        index and expression), but that modal's ID-first, filter-button and result-cap cards
+        do not apply here — and the Exporter does not rank, which changes what "word endings
+        are handled" means in practice. */
+echo help_modal('exporter-text-help', 'How these text filters match', [
+    ['heading' => 'How your words are matched', 'cards' => [
+        ['label' => 'One word', 'html' => true,
+         'text'  => 'Matches from the <strong>start</strong> of a word. <code>wnt</code> finds '
+                  . '<em>wnt8b</em>, but <code>transposase</code> will not find '
+                  . '<em>retrotransposase</em> — never from the middle. Upper and lower case are treated the same.'],
+        ['label' => 'Several words', 'html' => true,
+         'text'  => 'All of them must appear, in any order. <code>kinase domain</code> finds records with both.'],
+        ['label' => 'Words together', 'html' => true,
+         'text'  => 'Put them in quotes. <code>"ABC transporter"</code> needs those words side by side, in that order.'],
+        ['label' => 'Word endings are handled', 'html' => true,
+         'text'  => '<code>kinases</code> also finds <em>kinase</em>, and <code>transporter</code> also finds '
+                  . '<em>transport</em>. The export includes every match, so a broad word can bring in more '
+                  . 'genes than you expect — add a second word to narrow it.'],
+    ]],
+    ['heading' => 'Same rules as Search', 'cards' => [
+        ['label' => 'One matcher for the whole site',
+         'text'  => 'These boxes match words exactly the way the main Search does, so a word that finds a '
+                  . 'gene there finds it here.'],
+    ]],
+], ['intro' => 'Applies to the name, description and annotation keyword boxes on this page.']); ?>

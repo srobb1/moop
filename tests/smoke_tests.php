@@ -2444,6 +2444,52 @@ ok($_hit('X2') === ['G1'], 'the filter still finds a hit stored on an isoform (w
 @unlink($_mdb);
 
 // ----------------------------------------------------------------------------
+group('Data Exporter: text filters match the way Search does');
+// They were LIKE '%word%': "inase" found kinase and "kinases" did not, the opposite of Search
+// and of the (i) beside the boxes. Now the same FTS index and expression as Search.
+$_mdb = sys_get_temp_dir() . '/moop_mmfts_' . getmypid() . '.sqlite';
+@unlink($_mdb);
+$_p = new PDO("sqlite:$_mdb");
+$_p->exec("CREATE TABLE organism (organism_id INTEGER PRIMARY KEY, genus TEXT, species TEXT);
+           CREATE TABLE genome (genome_id INTEGER PRIMARY KEY, organism_id INTEGER, genome_name TEXT, genome_accession TEXT);
+           CREATE TABLE gene_set (gene_set_id INTEGER PRIMARY KEY, genome_id INTEGER, gene_set_name TEXT);
+           CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_name TEXT, feature_description TEXT,
+                                 feature_type TEXT, feature_uniquename TEXT, parent_feature_id INTEGER, gene_set_id INTEGER);
+           CREATE TABLE annotation_source (annotation_source_id INTEGER PRIMARY KEY, annotation_source_name TEXT);
+           CREATE TABLE annotation (annotation_id INTEGER PRIMARY KEY, annotation_source_id INTEGER,
+                                    annotation_accession TEXT, annotation_description TEXT);
+           CREATE TABLE feature_annotation (feature_annotation_id INTEGER PRIMARY KEY, feature_id INTEGER, annotation_id INTEGER);
+           CREATE VIRTUAL TABLE feature_search USING fts5(feature_name, feature_description, content='', tokenize='porter unicode61');
+           CREATE VIRTUAL TABLE feature_annotation_search USING fts5(feature_name, feature_description, annotation_description,
+               annotation_accession, annotation_type_code, content='', tokenize='porter unicode61');
+           INSERT INTO organism VALUES (1,'Testus','fixture');
+           INSERT INTO genome VALUES (1,1,'asm','ASM1');
+           INSERT INTO gene_set VALUES (1,1,'gs1');
+           INSERT INTO feature VALUES (1,'wnt8b','protein kinase','gene','G1',NULL,1),(2,'','','mRNA','M1',1,1),
+                                      (3,'','retrotransposase','gene','G2',NULL,1),(4,'','','mRNA','M2',3,1);
+           INSERT INTO annotation_source VALUES (1,'S');
+           INSERT INTO annotation VALUES (1,1,'A1','ABC transporter family'),(2,1,'A2','transporter of ABC');
+           INSERT INTO feature_annotation VALUES (1,2,1),(2,4,2);
+           INSERT INTO feature_search(rowid, feature_name, feature_description)
+               SELECT feature_id, feature_name, feature_description FROM feature;
+           INSERT INTO feature_annotation_search(rowid, feature_name, feature_description, annotation_description,
+               annotation_accession, annotation_type_code)
+               SELECT fa.feature_annotation_id, '', '', a.annotation_description, a.annotation_accession, 'atypesz'
+               FROM feature_annotation fa JOIN annotation a USING (annotation_id);");
+$_p = null;
+$_q = fn(array $f) => array_column(moopmartQueryFeatures([1], $_mdb, $f), 'uniquename');
+$_kw = fn(string $kw) => $_q(['annotation_criteria' => [['src' => '', 'acc' => '', 'kw' => $kw]]]);
+ok($_q(['gene_description' => 'kinases']) === ['G1'], 'description: "kinases" finds kinase (word endings, as on Search)');
+ok($_q(['gene_description' => 'inase']) === [], 'description: "inase" does not find kinase (never from the middle)');
+ok($_q(['gene_description' => 'transposase']) === [], 'description: "transposase" does not find retrotransposase');
+ok($_q(['gene_name' => 'wnt']) === ['G1'], 'name: "wnt" finds wnt8b (from the start of a word)');
+ok($_kw('transporter ABC') === ['G1', 'G2'], 'keyword: several words, any order');
+ok($_kw('"ABC transporter"') === ['G1'], 'keyword: quoted words must sit side by side, in order');
+ok($_kw('transporters') === ['G1', 'G2'], "keyword: matched on the transcript's annotation, gene returned");
+ok(count($_q(['gene_description' => '!!'])) === 2, 'nothing searchable in the box: the filter is skipped, as before');
+@unlink($_mdb);
+
+// ----------------------------------------------------------------------------
 group('JBrowse: a new genes.gff stales the track, the coordinates AND the search index');
 // Only the track index used to be checked, so coordinates and the search index went stale in
 // silence -- and no gene set had a search index at all without anything saying so.

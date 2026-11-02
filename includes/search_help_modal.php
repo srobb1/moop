@@ -3,7 +3,8 @@
  * Reusable "How to search" modal — the help behind the (i) on the search box.
  *
  * ONE home for it, included by every page with a search box: search, organism, assembly,
- * gene_set, groups, multi_organism and moopmart. Before this it came from a chain of
+ * gene_set, groups and multi_organism. (Not moopmart: it matches by the same rules, but
+ * the ID-first, filter and result-cap cards do not apply there — see tools/pages/moopmart.php.) Before this it came from a chain of
  * concatenated strings in js/modules/help-text.js (BASIC_SEARCH_HELP + ORGANISM_SELECTION_INFO
  * + RESULTS_LIMIT + ASSEMBLY_SEARCH_INFO + FILTERING_INFO), assembled per page and patched
  * mid-sentence with .replace().
