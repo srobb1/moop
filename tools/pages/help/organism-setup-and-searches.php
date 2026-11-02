@@ -624,51 +624,41 @@
   <section id="search-mechanics" class="mt-5">
     <h3><i class="fa fa-search"></i> How Searches Work</h3>
 
-    <h4 class="mt-4">Multi-Organism Search</h4>
+    <h4 class="mt-4">Search and the Data Exporter</h4>
     <div class="card mb-4">
       <div class="card-body">
-        <p><strong>Purpose:</strong> Search for features across multiple organisms/assemblies simultaneously</p>
+        <p><strong>Purpose:</strong> Find genes by ID, name, description or annotation, in one organism or across many.
+        The Search pages and the Data Exporter's text boxes use the <strong>same matching rules</strong>.</p>
 
-        <h6>Search Flow:</h6>
-        <div class="alert alert-light border">
-          <pre><code>User selects organisms/assemblies
-    ↓
-User enters search term (feature name, ID, or description)
-    ↓
-System validates search term
-    ↓
-For each selected organism:
-    ├─ Connect to organism.sqlite
-    ├─ Query feature table:
-    │  WHERE feature_name LIKE '%term%'
-    │     OR feature_uniquename LIKE '%term%'
-    │     OR feature_description LIKE '%term%'
-    ├─ Filter by accessible genome_ids (permissions check)
-    └─ Add results to aggregated list
-        ↓
-Display results organized by organism
-    ↓
-User can export (CSV, Excel, FASTA)</code></pre>
-        </div>
+        <h6>How a search runs:</h6>
+        <ol>
+          <li>A single term is first checked as a gene, transcript or protein <strong>ID</strong>. If it matches one, those are the results.</li>
+          <li>Otherwise it is looked up in each organism's full-text search index (built by the pipeline into
+              <code>organism.sqlite</code>), which covers feature names, descriptions and annotation text.</li>
+          <li>Only assemblies the visitor may open are searched.</li>
+          <li>Search ranks the results: genes named with the term first, then genes described with it, then annotation matches.
+              Exact wording comes before matches that share only the word's root. The Data Exporter does not rank; it exports every match.</li>
+        </ol>
 
-        <h6 class="mt-3">Database Query (Simplified):</h6>
-        <pre class="bg-light p-3 rounded"><code>SELECT f.*, gs.gene_set_name, g.genome_accession
-FROM feature f
-JOIN gene_set gs ON f.gene_set_id = gs.gene_set_id
-JOIN genome   g  ON gs.genome_id  = g.genome_id
-WHERE (f.feature_name        LIKE ?
-   OR  f.feature_uniquename  LIKE ?
-   OR  f.feature_description LIKE ?)
-  AND f.gene_set_id IN (?, ?, ...)  -- Accessible gene sets only
-ORDER BY f.feature_name</code></pre>
-
-        <h6 class="mt-3">Key Points:</h6>
-        <ul>
-          <li><strong>Substring matching:</strong> Searches use LIKE with wildcards (e.g., %insulin%)</li>
-          <li><strong>Permission filtering:</strong> Only returns results from accessible assemblies</li>
-          <li><strong>Case-insensitive:</strong> SQLite LIKE is case-insensitive by default</li>
-          <li><strong>Multiple fields:</strong> Searches feature_name, feature_uniquename, and feature_description</li>
-        </ul>
+        <h6 class="mt-3">What matches what:</h6>
+        <table class="table table-sm">
+          <thead class="table-light">
+            <tr><th>Expected behaviour</th><th>Example</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Plurals find singulars</td><td><code>kinases</code> finds <em>protein kinase domain</em></td></tr>
+            <tr><td>Singulars find plurals</td><td><code>kinase</code> finds <em>family of kinases</em></td></tr>
+            <tr><td>Matches from the start of a word</td><td><code>wnt</code> finds <em>WNT8B</em></td></tr>
+            <tr><td>Hyphenated names split into words</td><td><code>wnt1</code> finds <em>Smed-wnt1</em></td></tr>
+            <tr><td>Never from the middle</td><td><code>inase</code> finds nothing; <code>transposase</code> does not find <em>retrotransposase</em></td></tr>
+            <tr><td>Case does not matter</td><td><code>KINASE</code> finds <em>kinase</em></td></tr>
+            <tr><td>Several words: all required, any order</td><td><code>kinase protein</code> skips a record with only one of them</td></tr>
+            <tr><td>Quotes: side by side, in order</td><td><code>"ABC transporter"</code> does not find <em>transporter of the ABC class</em></td></tr>
+          </tbody>
+        </table>
+        <p class="small text-muted mb-0">Word endings are handled by a stemmer, which also means <code>transporter</code> finds
+        <em>transport</em>; on Search, exact matches are listed first. Matching from the middle of a word is deliberately not supported.
+        Every row of this table is checked automatically by <code>tests/search_ranking_tests.php</code>, so a change that breaks one fails the tests.</p>
       </div>
     </div>
 
