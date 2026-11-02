@@ -117,6 +117,17 @@ ok(moop_retired_root($_od) === "$_od/.retired", 'retired bundles live inside org
 ok(moop_retire_valid_name('Danio_rerio') && moop_retire_valid_name('20261029-174805_Danio_rerio')
    && !moop_retire_valid_name('../config') && !moop_retire_valid_name('.retired') && !moop_retire_valid_name('a/b') && !moop_retire_valid_name(''),
    'retire/restore take directory names only: never a path, never a hidden directory');
+// The switch to this lister (00ab12df) left housekeeping_refresh_annotation_caches() passing
+// a removed $entries to its two per-gene-set refreshes: a TypeError on every background run.
+// Organisms without a database here, so nothing is built and no cache directory is created.
+require_once "$BASE/lib/housekeeping.php";
+try {
+    housekeeping_refresh_annotation_caches($_od);
+    $_hk_err = '';
+} catch (Throwable $e) {
+    $_hk_err = $e->getMessage();
+}
+ok($_hk_err === '', 'housekeeping: the annotation-cache task runs to the end over a tree of organisms' . ($_hk_err ? " — $_hk_err" : ''));
 @rmdir("$_od/.retired/20261029_Old_org"); foreach (['.retired', '.hidden', 'Zeta_one', 'Alpha_two'] as $_d) @rmdir("$_od/$_d");
 @unlink("$_od/README.md"); @rmdir($_od);
 

@@ -1301,9 +1301,9 @@ function housekeeping_jbrowse_progress_write(array $progress): void {
  *
  * In steady state (no databases rebuilt) this is a no-op — just stat() calls.
  */
-function housekeeping_refresh_annotation_caches() {
-    $config = ConfigManager::getInstance();
-    $organism_data = $config->getPath('organism_data');
+function housekeeping_refresh_annotation_caches(?string $organism_data = null) {
+    // A directory may be passed so the smoke test can run this over a throwaway tree.
+    $organism_data ??= ConfigManager::getInstance()->getPath('organism_data');
 
     if (empty($organism_data) || !is_dir($organism_data)) {
         return;
@@ -1322,14 +1322,18 @@ function housekeeping_refresh_annotation_caches() {
         return;
     }
 
+    // Also handed to the two per-gene-set refreshes below. 00ab12df (2026-10-29) replaced
+    // `$entries = scandir()` with an inline moop_organism_dirs() loop but left those two calls
+    // passing $entries -- null, a TypeError, and every background run since failed this task.
+    $entries   = moop_organism_dirs($organism_data);
     $refreshed = 0;
-    foreach (moop_organism_dirs($organism_data) as $entry) {
-        $db         = "$organism_data/$entry/organism.sqlite";
-        $cache_file = moop_annotation_sources_cache_file($entry);
-
+    foreach ($entries as $entry) {
+        $db = "$organism_data/$entry/organism.sqlite";
         if (!file_exists($db)) {
             continue;
         }
+        // After the DB check: resolving the cache file creates its directory.
+        $cache_file = moop_annotation_sources_cache_file($entry);
 
         // Skip if cache is current
         if (file_exists($cache_file) && filemtime($cache_file) >= filemtime($db)) {
@@ -1406,9 +1410,10 @@ function housekeeping_refresh_gene_set_annotation_counts(string $organism_data, 
     $todo = [];
     foreach ($entries as $entry) {
         if ($entry === '.' || $entry === '..') continue;
-        $db   = "$organism_data/$entry/organism.sqlite";
-        $file = moop_gene_set_annotation_counts_file($entry);
-        if (!is_file($db) || $file === '') continue;
+        $db = "$organism_data/$entry/organism.sqlite";
+        if (!is_file($db)) continue;
+        $file = moop_gene_set_annotation_counts_file($entry);   // creates its directory
+        if ($file === '') continue;
         if (is_file($file) && filemtime($file) >= filemtime($db)) continue;
         $todo[$entry] = filesize($db);
     }
