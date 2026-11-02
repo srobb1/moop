@@ -1,6 +1,7 @@
 <?php
 /**
- * MOOP search RANKING tests — does the right gene come first?
+ * MOOP search RANKING tests — does the right gene come first? And WHAT MATCHES: is it found
+ * at all (word endings, word starts, quotes) — see the section near the end.
  *
  * Every relevance metric used during development counts string matches, and none of them
  * can see a TIE. That is exactly where the bugs live. Three separate metrics passed a
@@ -198,6 +199,83 @@ $stem = [
      'annotations' => ['transposase domain']],
 ];
 ranks_above('transpos', $stem, 'S_LITERAL', 'S_STEM', 'a literal "transpos" match outranks a stem-only TRANSPORT match');
+
+// =======================================================================================
+// WHAT MATCHES — the behaviour the help text promises (includes/search_help_modal.php, and
+// the Data Exporter's own copy in tools/pages/moopmart.php, which uses the same matcher).
+// Ranking above decides ORDER; these decide whether a gene is found AT ALL. If one of these
+// has to change, the help text changes with it -- in both places.
+//
+// Two of them guard decisions that were made on purpose and will look like bugs to someone:
+//   - plurals: the porter stemmer stays. Dropping it was tested 2026-07-28 and rejected --
+//     "kinases" lost 98% of its hits, "transposons" found 1 row of 3,082.
+//   - never from the middle of a word: "inase" finds nothing. Accepted trade-off.
+// =======================================================================================
+
+$match_genes = [
+    ['uniquename' => 'M_KINASE',  'name' => 'KIN1',      'description' => 'serine kinase',
+     'annotations' => ['protein kinase domain']],
+    ['uniquename' => 'M_KINASES', 'name' => 'KIN2',      'description' => '',
+     'annotations' => ['family of kinases']],
+    ['uniquename' => 'M_WNT',     'name' => 'WNT8B',     'description' => 'wingless type 8b',
+     'annotations' => ['Smed-wnt1 homolog']],
+    ['uniquename' => 'M_RETRO',   'name' => 'RTP1',      'description' => 'retrotransposase',
+     'annotations' => ['retrotransposase domain']],
+    ['uniquename' => 'M_ABC',     'name' => 'ABCB1',     'description' => '',
+     'annotations' => ['ABC transporter family']],
+    ['uniquename' => 'M_ABC_REV', 'name' => 'TRP9',      'description' => '',
+     'annotations' => ['transporter of the ABC class']],
+];
+
+/** Genes found for $term, on BOTH search paths; asserts the two paths agree. */
+function found($term, $quoted = false) {
+    global $match_genes;
+    $sets = [];
+    foreach ([true, false] as $with) {
+        $path = build_fixture($match_genes, $with);
+        $res  = searchFeaturesAndAnnotations($term, $quoted, $path);
+        $ids  = array_values(array_unique(array_column($res['results'], 'feature_uniquename')));
+        sort($ids);
+        $sets[] = $ids;
+        unlink($path);
+    }
+    ok($sets[0] === $sets[1], "\"$term\": quota pool and bm25 fallback find the same genes"
+        . ($sets[0] === $sets[1] ? '' : ' (' . implode(',', $sets[0]) . ' vs ' . implode(',', $sets[1]) . ')'));
+    return $sets[0];
+}
+function finds($term, $want, $label, $quoted = false) {
+    $got = found($term, $quoted);
+    $miss = array_diff((array)$want, $got);
+    ok(!$miss, $label . ($miss ? '  (got: ' . implode(',', $got) . ')' : ''));
+}
+function misses($term, $unwanted, $label, $quoted = false) {
+    $got = found($term, $quoted);
+    $hit = array_intersect((array)$unwanted, $got);
+    ok(!$hit, $label . ($hit ? '  (got: ' . implode(',', $got) . ')' : ''));
+}
+
+group('what matches — word endings (the porter stemmer stays)');
+finds('kinases', ['M_KINASE', 'M_KINASES'], 'a plural finds the singular: "kinases" finds "protein kinase domain"');
+finds('kinase',  ['M_KINASE', 'M_KINASES'], 'a singular finds the plural: "kinase" finds "family of kinases"');
+
+group('what matches — from the start of a word, never the middle');
+finds('wnt',  'M_WNT', 'a word start finds the gene: "wnt" finds WNT8B');
+finds('wnt1', 'M_WNT', 'a hyphenated name splits into words: "wnt1" finds "Smed-wnt1"');
+misses('inase', ['M_KINASE', 'M_KINASES'], 'never from the middle: "inase" does not find kinase');
+misses('transposase', 'M_RETRO', 'never from the middle: "transposase" does not find retrotransposase');
+
+group('what matches — case, several words, quotes');
+finds('KINASE', ['M_KINASE', 'M_KINASES'], 'case does not matter: "KINASE" finds kinase');
+finds('kinase protein', 'M_KINASE', 'several words: all of them, any order ("kinase protein")');
+misses('kinase protein', 'M_KINASES', 'several words: a record with only one of them is not found');
+finds('transporter ABC', ['M_ABC', 'M_ABC_REV'], 'several words in any order: "transporter ABC" finds both orders');
+finds('ABC transporter', 'M_ABC', 'quotes: "ABC transporter" finds those words side by side', true);
+misses('ABC transporter', 'M_ABC_REV', 'quotes: the same words apart, or reversed, are not found', true);
+
+group('what matches — which inputs are searched at all');
+ok(moop_search_input_is_usable('AR', false), 'a two-letter gene symbol is searchable (AR, C3, F8)');
+ok(!moop_search_input_is_usable('a', false), 'a single letter is refused, not run against every record');
+ok(!moop_search_input_is_usable('!!', false), 'punctuation alone is refused');
 
 // ---------------------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
