@@ -111,9 +111,25 @@
                  are; this exists so the page declares its PURPOSE for the router. */ ?>
         <?= page_purpose('Search genes within a single assembly, choosing which of its gene sets to search.', '', false, false) ?>
         <div class="feature-overview-body">
+          <?php if (($genome_kind ?? '') === 'transcripts'): ?>
+          <div class="alert alert-warning d-flex gap-2 mb-3" role="note">
+            <i class="fa fa-exclamation-triangle mt-1" aria-hidden="true"></i>
+            <div>
+              <strong>Not a genome: transcripts only.</strong>
+              This assembly is one assembled <?= gloss('transcript') ?> per gene, standing in for a genome.
+              There is no sequence between or around genes, so upstream and downstream flanks and
+              genomic regions are not available, and its statistics describe transcripts, not
+              chromosomes or scaffolds.
+            </div>
+          </div>
+          <?php endif; ?>
           <dl class="feature-info-grid mb-0">
             <dt><?= gloss('accession', 'Accession') ?></dt>
             <dd><?= htmlspecialchars($assembly_info['genome_accession']) ?></dd>
+            <?php if (($genome_kind ?? '') === 'transcripts'): ?>
+            <dt>Assembly type</dt>
+            <dd>Transcripts, one per gene &mdash; not a genome</dd>
+            <?php endif; ?>
             <dt>Organism</dt>
             <?php /* Identical shape to the gene set page's Organism row: binomial in
                      .sci-name, common name after it in parentheses and NOT italic (a common
@@ -184,12 +200,22 @@
           ?>
           <div class="mt-4 pt-3 border-top">
             <h6 class="text-muted mb-3" style="font-weight: 600;">
+              <?php if (($genome_kind ?? '') === 'transcripts'): ?>
+              Assembly FASTA (transcripts)
+              <?= field_help(
+                  'The sequences this build uses in place of a genome: one assembled transcript '
+                  . 'per gene, as a FASTA file. It is not a genome -- there is no sequence between '
+                  . 'genes.',
+                  'Assembly FASTA'
+              ) ?>
+              <?php else: ?>
               Genome FASTA
               <?= field_help(
                   'The assembled genome sequence for this build, as a FASTA file. It is the '
                   . 'sequence itself, without gene annotations -- those come from a gene set.',
                   'Genome FASTA'
               ) ?>
+              <?php endif; ?>
             </h6>
             <?php /* Labelled with the ASSEMBLY, not the file type. "Genome" told the user
                      what kind of thing it was, which the heading above now says; the name

@@ -391,6 +391,19 @@
                 <?php else: ?>
                 <?= $__svg ?>
                 <?php endif; ?>
+                <?php /* The legend drops Intron for these, but a one-block drawing with no note
+                         reads as a broken or missing gene model. Say why there is nothing to draw. */ ?>
+                <?php if (!empty($genome_is_transcripts)): ?>
+                <p class="small text-muted mb-0 mt-2">
+                    No introns: transcript assembly
+                    <?= field_help(
+                        'This assembly is one assembled transcript per gene, not a genome. Each gene is '
+                        . 'its own spliced transcript, so its exons are already joined and there is no '
+                        . 'genome sequence to place introns or flanks in.',
+                        'No introns'
+                    ) ?>
+                </p>
+                <?php endif; ?>
 
                 <?php
                 // ONE definition of the diagram's colour key, shared by this legend and the
@@ -890,7 +903,7 @@ if (!empty($gene_model)) {
     }
     if (!empty($genome_seq_available) && !empty($genome_is_transcripts)) {
         $gm_read_cards[] = ['label' => 'Click a feature',
-            'text' => 'Exons and CDS blocks open their sequence. This gene set\'s sequences are assembled transcripts, not a genome, so there is no flanking sequence around them.'];
+            'text' => 'Exons and CDS blocks open their sequence. This gene set\'s sequences are assembled transcripts, not a genome, so there are no introns and no flanking sequence around them.'];
     } elseif (!empty($genome_seq_available)) {
         $gm_read_cards[] = ['label' => 'Click a feature',
             'text' => 'Exons, CDS blocks, introns and both flanking regions open their sequence. Flank size is adjustable inside that popup.'];

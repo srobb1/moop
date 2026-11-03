@@ -118,11 +118,15 @@ if (!is_dir($asm_dir) && !empty($assembly_info['genome_name'])) {
     $asm_dir = "$organism_data/$organism_name/{$assembly_info['genome_name']}";
 }
 $assembly_stats = moop_assembly_stats_or_fallback($asm_dir);
+// 'transcripts': the genome.fa is one assembled transcript per gene, not a genome (genome.json's
+// genome_kind, else detected). The page and its statistics say so.
+$genome_kind = moop_genome_kind($asm_dir);
 
 // Data to pass to content file
 $data = [
     'assembly_info'        => $assembly_info,
     'assembly_meta'        => $assembly_meta,
+    'genome_kind'          => $genome_kind,
     'organism_name'        => $organism_name,
     'organism_info'        => $organism_info,
     'assembly_accession'   => $assembly_info['genome_accession'] ?? '',

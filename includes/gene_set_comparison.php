@@ -31,7 +31,7 @@ if ($gsc_many) {
     foreach ($gene_set_rows as $r) {
         if ($r['busco_euk']) $gsc_top['busco'] = max($gsc_top['busco'] ?? 0, $r['busco_euk']['complete']);
         if ($a = $gsc_annot($r['counts'])) $gsc_top['annot'] = max($gsc_top['annot'] ?? 0, round($a['pct'], 1));
-        if ($r['assembly_stats']) $gsc_top['n50'] = max($gsc_top['n50'] ?? 0, $r['assembly_stats']['n50']);
+        if ($r['assembly_stats'] && $r['genome_kind'] !== 'transcripts') $gsc_top['n50'] = max($gsc_top['n50'] ?? 0, $r['assembly_stats']['n50']);
     }
 }
 $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" aria-label="highest of these"></i>';
@@ -128,8 +128,13 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
                     </div>
                   <?php else: ?><span class="text-muted">—</span><?php endif; ?>
                 </td>
-                <td class="text-end" data-order="<?= $st ? $st['n50'] : -1 ?>">
-                  <?php if ($st): ?>
+                <td class="text-end" data-order="<?= ($st && $r['genome_kind'] !== 'transcripts') ? $st['n50'] : -1 ?>">
+                  <?php if ($r['genome_kind'] === 'transcripts'): ?>
+                    <?php /* No N50: the "genome" is one transcript per gene, so the figure is a
+                             transcript length and would read as a very fragmented genome. */ ?>
+                    <span class="badge text-bg-warning">Not a genome</span>
+                    <div class="small text-muted">one transcript per gene<?= $st ? ' &middot; ' . number_format($st['sequences']) . ' seqs' : '' ?></div>
+                  <?php elseif ($st): ?>
                     <?php $gsc_n50_tip = !empty($st['l50'])
                         ? 'Half the genome is in ' . number_format($st['l50']) . ' sequence' . ($st['l50'] == 1 ? '' : 's')
                           . ' of at least ' . moop_format_bp($st['n50'])

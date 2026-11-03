@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/genomic_regions.php';   // moop_genome_kind()
 /**
  * The organism page's gene set comparison: one row per (assembly, gene set) the viewer can open,
  * so choosing between them does not mean opening each one.
@@ -264,6 +265,9 @@ function moop_gene_set_comparison_rows(string $organism, array $assemblies, stri
 
             $rows[] = [
                 'assembly'       => $accession,
+                // 'transcripts' = one assembled transcript per gene standing in for a genome:
+                // its N50 is a transcript length and must not compete with real genomes.
+                'genome_kind'    => moop_genome_kind("$org_dir/$asm_dir"),
                 'assembly_label' => $label,
                 'gene_set'       => $gs['gene_set_name'],
                 'source'         => is_string($meta['source'] ?? null) ? $meta['source'] : '',

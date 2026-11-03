@@ -215,18 +215,23 @@
                 <?= field_help(
                     'Each chip is one genome build for this organism. A green tick means its '
                     . 'genome sequence is available to download and search; a grey cross means '
-                    . 'only its gene models are. Click one to open it.',
+                    . 'only its gene models are. "Transcripts only" means the build is one '
+                    . 'assembled transcript per gene, not a genome: there is no sequence between '
+                    . 'or around genes. Click one to open it.',
                     'Assemblies'
                 ) ?>
               </h6>
               <div class="chip-container">
                 <?php foreach ($accessible_assemblies as $assembly => $assembly_display):
                     $has_genome_fa = file_exists("$organism_data/$organism_name/$assembly/" . genome_fasta_filename());
+                    $is_transcripts = $has_genome_fa && moop_genome_kind("$organism_data/$organism_name/$assembly") === 'transcripts';
                 ?>
                   <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>"
                      class="assembly-chip">
                     <?= htmlspecialchars($assembly_display) ?>
-                    <?php if ($has_genome_fa): ?>
+                    <?php if ($is_transcripts): ?>
+                      <span class="badge text-bg-warning ms-1" title="One assembled transcript per gene, standing in for a genome">Transcripts only, not a genome</span>
+                    <?php elseif ($has_genome_fa): ?>
                       <i class="fa fa-check-circle ms-1 text-success" title="Genome FASTA available"></i>
                     <?php else: ?>
                       <i class="fa fa-times-circle ms-1 text-muted" title="No genome FASTA"></i>
