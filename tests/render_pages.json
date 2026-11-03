@@ -1,0 +1,271 @@
+[
+  {
+    "name": "home",
+    "viewer": "public",
+    "path": "/index.php"
+  },
+  {
+    "name": "about",
+    "viewer": "public",
+    "path": "/about.php"
+  },
+  {
+    "name": "help",
+    "viewer": "public",
+    "path": "/help.php"
+  },
+  {
+    "name": "help_access",
+    "viewer": "public",
+    "path": "/help.php?topic=access"
+  },
+  {
+    "name": "login",
+    "viewer": "public",
+    "path": "/login.php"
+  },
+  {
+    "name": "group",
+    "viewer": "public",
+    "path": "/tools/groups.php?group=Sea+anemone"
+  },
+  {
+    "name": "organism",
+    "viewer": "public",
+    "path": "/tools/organism.php?organism=Nematostella_vectensis"
+  },
+  {
+    "name": "assembly",
+    "viewer": "public",
+    "path": "/tools/assembly.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1"
+  },
+  {
+    "name": "gene_set",
+    "viewer": "public",
+    "path": "/tools/gene_set.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2"
+  },
+  {
+    "name": "gene_page",
+    "viewer": "public",
+    "path": "/tools/parent.php?organism=Nematostella_vectensis&uniquename=NV2g025931000.1"
+  },
+  {
+    "name": "search_form",
+    "viewer": "public",
+    "path": "/tools/search.php"
+  },
+  {
+    "name": "search_results",
+    "viewer": "public",
+    "path": "/tools/annotation_search_ajax.php?search_keywords=kinase&organism=Nematostella_vectensis&quoted=0"
+  },
+  {
+    "name": "blast_form",
+    "viewer": "public",
+    "path": "/tools/blast.php"
+  },
+  {
+    "name": "primer_maker_form",
+    "viewer": "public",
+    "path": "/tools/primer_maker.php"
+  },
+  {
+    "name": "primer_blast_form",
+    "viewer": "public",
+    "path": "/tools/primer_blast.php"
+  },
+  {
+    "name": "retrieve_sequences",
+    "viewer": "public",
+    "path": "/tools/retrieve_sequences.php"
+  },
+  {
+    "name": "exporter",
+    "viewer": "public",
+    "path": "/tools/moopmart.php"
+  },
+  {
+    "name": "downloads",
+    "viewer": "public",
+    "path": "/tools/downloads.php"
+  },
+  {
+    "name": "expression",
+    "viewer": "public",
+    "path": "/tools/expression.php"
+  },
+  {
+    "name": "jbrowse",
+    "viewer": "public",
+    "path": "/jbrowse2.php"
+  },
+  {
+    "name": "not_found",
+    "viewer": "public",
+    "path": "/tools/parent.php?organism=No_such&uniquename=nothing"
+  },
+  {
+    "name": "home",
+    "viewer": "network",
+    "path": "/index.php"
+  },
+  {
+    "name": "about",
+    "viewer": "network",
+    "path": "/about.php"
+  },
+  {
+    "name": "help",
+    "viewer": "network",
+    "path": "/help.php"
+  },
+  {
+    "name": "help_access",
+    "viewer": "network",
+    "path": "/help.php?topic=access"
+  },
+  {
+    "name": "login",
+    "viewer": "network",
+    "path": "/login.php"
+  },
+  {
+    "name": "group",
+    "viewer": "network",
+    "path": "/tools/groups.php?group=Sea+anemone"
+  },
+  {
+    "name": "organism",
+    "viewer": "network",
+    "path": "/tools/organism.php?organism=Nematostella_vectensis"
+  },
+  {
+    "name": "assembly",
+    "viewer": "network",
+    "path": "/tools/assembly.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1"
+  },
+  {
+    "name": "gene_set",
+    "viewer": "network",
+    "path": "/tools/gene_set.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2"
+  },
+  {
+    "name": "gene_page",
+    "viewer": "network",
+    "path": "/tools/parent.php?organism=Nematostella_vectensis&uniquename=NV2g025931000.1"
+  },
+  {
+    "name": "search_form",
+    "viewer": "network",
+    "path": "/tools/search.php"
+  },
+  {
+    "name": "search_results",
+    "viewer": "network",
+    "path": "/tools/annotation_search_ajax.php?search_keywords=kinase&organism=Nematostella_vectensis&quoted=0"
+  },
+  {
+    "name": "blast_form",
+    "viewer": "network",
+    "path": "/tools/blast.php"
+  },
+  {
+    "name": "primer_maker_form",
+    "viewer": "network",
+    "path": "/tools/primer_maker.php"
+  },
+  {
+    "name": "primer_blast_form",
+    "viewer": "network",
+    "path": "/tools/primer_blast.php"
+  },
+  {
+    "name": "retrieve_sequences",
+    "viewer": "network",
+    "path": "/tools/retrieve_sequences.php"
+  },
+  {
+    "name": "exporter",
+    "viewer": "network",
+    "path": "/tools/moopmart.php"
+  },
+  {
+    "name": "downloads",
+    "viewer": "network",
+    "path": "/tools/downloads.php"
+  },
+  {
+    "name": "expression",
+    "viewer": "network",
+    "path": "/tools/expression.php"
+  },
+  {
+    "name": "jbrowse",
+    "viewer": "network",
+    "path": "/jbrowse2.php"
+  },
+  {
+    "name": "not_found",
+    "viewer": "network",
+    "path": "/tools/parent.php?organism=No_such&uniquename=nothing"
+  },
+  {
+    "name": "primer_maker_design",
+    "viewer": "network",
+    "path": "/tools/primer_maker.php",
+    "post": {
+      "primer_type": "standard",
+      "sequence": ">t1\nATGGCTAGCTAGGATCGATCGTAGCTAGCTAGGCTAGCTAGCATCGATCGATCGGCTAGCTAGCATCGATCGACTGACTAGCTAGCTAGCATCGATGCATGCTAGCTAGCTAGCTAGCATGCATGCATCGATCGATGCTAGCTAGGGCTAGCTAGCATCGATCGATCGATCGTAGCTAGCTAGCTGATCGATCGATGCTAGCTAGCATCGATCGTAGCTAGCATGCATGCTAGCTAGCATCGATCGATCGTAGCTAGCTGATCGATCGTAGCTAGCATGCATCGATCGTAGCTAGCATCGATCGATCGTAGCTAGCATGCTAGCTAGCTAGCATCGATCG"
+    }
+  },
+  {
+    "name": "primer_blast_run",
+    "viewer": "network",
+    "path": "/tools/primer_blast.php",
+    "post": {
+      "selected_source": "Nematostella_vectensis|GCA_033964005.1|NV2",
+      "search_mode": "genome",
+      "primers": ">p1_F\nGTAACGAAACGGGCGGTTTGG\n>p1_R\nTGTCTTGGAATGCTTTGCCTG"
+    }
+  },
+  {
+    "name": "gene_page",
+    "viewer": "admin",
+    "path": "/tools/parent.php?organism=Nematostella_vectensis&uniquename=NV2g025931000.1"
+  },
+  {
+    "name": "home",
+    "viewer": "admin",
+    "path": "/index.php"
+  },
+  {
+    "name": "site_config",
+    "viewer": "admin",
+    "path": "/admin/manage_site_config.php"
+  },
+  {
+    "name": "glossary",
+    "viewer": "admin",
+    "path": "/admin/manage_glossary.php"
+  },
+  {
+    "name": "groups",
+    "viewer": "admin",
+    "path": "/admin/manage_groups.php"
+  },
+  {
+    "name": "annotations",
+    "viewer": "admin",
+    "path": "/admin/manage_annotations.php"
+  },
+  {
+    "name": "organisms",
+    "viewer": "admin",
+    "path": "/admin/manage_organisms.php"
+  },
+  {
+    "name": "users",
+    "viewer": "admin",
+    "path": "/admin/manage_users.php"
+  }
+]

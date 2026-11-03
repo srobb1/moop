@@ -85,6 +85,46 @@ full list from the Drupal site before it is switched off.
 ### 6. Simple mode (maybe)
 One setting that folds advanced options away (e.g. BLAST parameters) and uses plainer labels.
 
+### 7. Home-page organism selector: taxonomy tabs optional
+The home page's "1 · Select one or more organisms" card has three tabs: Organisms Select,
+Taxon Select (lineage filter) and Tree Select (taxonomy tree). Right for simrbase (~85
+organisms); too much for cuttingclass's four planarians (Sofia, 2026-11-03). A per-site
+setting hides the Taxon and Tree tabs; absent → all three, as today.
+
+---
+
+## Where site content is saved
+
+Custom pages AND the English/Spanish text catalog are **site data**, not app code (Sofia,
+2026-11-03: "we need to save custom pages and the bilingual text"). They live beside the
+glossary under the metadata tree, and housekeeping's `snapshot_site_data` copies them into
+`site_data_path` — the private site-data git repo. When each is built:
+- add its files to the snapshot list in `lib/housekeeping.php`;
+- add the directory to the writable allowlist (`moop_permission_check_mode()`) and to
+  `scripts/fix_moop_selinux.sh` (CLAUDE.md §11 — a missing entry fails silently).
+
+## simrbase will use some of this too — by choice
+
+Sofia wants simrbase's About menu to have **About MOOP** and, if she chooses, **About
+SIMRbase**. That is content pages (step 2) + the menu builder (step 3), switched on
+deliberately for simrbase — the opt-in rule working as intended, not a changed default.
+The render comparison shows exactly what that changes on simrbase, and nothing else.
+
+## The render comparison (step 0) — BUILT 2026-11-03
+
+`scripts/render_compare.php` + `tests/render_pages.json` (52 pages: 21 each as PUBLIC from
+127.0.0.1 and as IP_IN_RANGE from the host IP, 2 primer-tool POSTs, 8 as admin).
+
+    php scripts/render_compare.php capture ~/render-baseline     # BEFORE a change
+    php scripts/render_compare.php check   ~/render-baseline     # after; exit 0 = identical
+
+Blanked by named rule only: CSRF tokens, asset `?v=` stamps, JWT track tokens, the random
+header banner, the favicon `?t=` stamp, Site Configuration's clock. Two back-to-back captures
+are identical on all 52; a one-character change to the About heading showed on exactly the 2
+About pages and exited 1. Keep the baseline OUT of the repo (admin pages list users).
+Not covered yet: a BLAST run (queue ticket), CSS (only the stylesheet's stamp is seen) and
+JS-built content — use computed styles in a browser for those (CLAUDE.md §12b).
+
 ---
 
 ## Decided
