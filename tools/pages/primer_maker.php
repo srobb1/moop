@@ -216,6 +216,30 @@
                     ];
                 };
                 ?>
+                <?php
+                // Glossary popovers on the preset cards (2026-11-03). Only the phrases listed are
+                // glossed, as whole words (so "PCR" never matches inside "qPCR" or "RT-PCR"), first
+                // use per page. gloss_terms_in() was not used: it goes word by word, so it misses the
+                // two-word terms and glossed "exon" alone inside "exon junction". Everything else is
+                // escaped, and a term the glossary lacks stays plain text, so a site without these
+                // entries renders exactly as before.
+                // ONE pass over the plain text, all phrases in one pattern (longest first): replacing
+                // phrase by phrase re-scanned the popover HTML the previous phrase had inserted, and
+                // put an "exon junction" span inside RT-PCR's own definition attribute.
+                $gloss_phrases = function (string $text, array $phrases): string {
+                    usort($phrases, fn($a, $b) => strlen($b) - strlen($a));
+                    $re = '/(?<![\w-])(' . implode('|', array_map(fn($p) => preg_quote($p, '/'), $phrases)) . ')(?![\w-])/i';
+                    $out = ''; $pos = 0;
+                    preg_match_all($re, $text, $m, PREG_OFFSET_CAPTURE);
+                    foreach ($m[1] as [$hit, $at]) {
+                        $out .= htmlspecialchars(substr($text, $pos, $at - $pos)) . gloss_first($hit, $hit);
+                        $pos = $at + strlen($hit);
+                    }
+                    return $out . htmlspecialchars(substr($text, $pos));
+                };
+                $label_terms = ['RT-PCR', 'qPCR', 'PCR', 'exon junction'];
+                $blurb_terms = ['RNAi', 'T7 promoter', 'exon junction'];
+                ?>
                 <div class="row g-3">
                     <?php foreach ($presets as $key => $preset): ?>
                         <div class="col-md-6">
@@ -224,8 +248,8 @@
                                        id="type_<?= htmlspecialchars($key) ?>" value="<?= htmlspecialchars($key) ?>"
                                        <?= $primer_type === $key ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="type_<?= htmlspecialchars($key) ?>">
-                                    <strong><?= htmlspecialchars($preset['label']) ?></strong>
-                                    <div class="small text-muted mt-1"><?= htmlspecialchars($preset['blurb']) ?></div>
+                                    <strong><?= $gloss_phrases($preset['label'], $label_terms) ?></strong>
+                                    <div class="small text-muted mt-1"><?= $gloss_phrases($preset['blurb'], $blurb_terms) ?></div>
                                     <?php if (!empty($context_is_transcripts) && in_array($key, $junction_types ?? [], true)): ?>
                                     <div class="small text-danger mt-1">
                                         <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"></i>Not available here: this
