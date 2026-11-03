@@ -144,6 +144,19 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
       </div>
     </div>
 
+    <div class="d-flex align-items-center gap-3 mb-2">
+      <span class="small fw-semibold">Written in</span>
+      <div class="btn-group btn-group-sm" role="group" aria-label="Page format">
+        <input type="radio" class="btn-check" name="format" id="format_markdown" value="markdown" <?= $page['format'] !== 'html' ? 'checked' : '' ?>>
+        <label class="btn btn-outline-secondary" for="format_markdown">Markdown</label>
+        <input type="radio" class="btn-check" name="format" id="format_html" value="html" <?= $page['format'] === 'html' ? 'checked' : '' ?>>
+        <label class="btn btn-outline-secondary" for="format_html">HTML</label>
+      </div>
+      <span class="small text-muted" id="format-note"><?= $page['format'] === 'html'
+          ? 'Your own HTML — cards, grids, Bootstrap classes. Scripts and anything that can run are removed.'
+          : 'Simple formatting with a few marks (see "Markdown in brief" below).' ?></span>
+    </div>
+
     <ul class="nav nav-tabs" role="tablist">
       <?php foreach ($lang_names as $lang => $name): ?>
         <li class="nav-item" role="presentation">
@@ -160,7 +173,7 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
             <label class="form-label mb-1 small fw-semibold" for="title_<?= $lang ?>">Title (<?= $name ?>)</label>
             <input type="text" class="form-control mb-2" id="title_<?= $lang ?>" name="title_<?= $lang ?>"
                    value="<?= htmlspecialchars($page['title'][$lang]) ?>" <?= $lang === 'en' ? 'required' : '' ?>>
-            <label class="form-label mb-1 small fw-semibold" for="body_<?= $lang ?>">Text (Markdown)</label>
+            <label class="form-label mb-1 small fw-semibold" for="body_<?= $lang ?>">Text</label>
             <textarea class="form-control font-monospace mp-body" id="body_<?= $lang ?>" name="body_<?= $lang ?>" rows="22"
                       data-preview="preview_<?= $lang ?>" spellcheck="true"><?= htmlspecialchars($page['body'][$lang]) ?></textarea>
             <?php if ($lang !== 'en'): ?>
@@ -171,6 +184,7 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
             <div class="small fw-semibold mb-1">Preview <span class="text-muted fw-normal">— exactly as the page will show it</span></div>
             <div class="border rounded p-3 bg-white content-page-body" id="preview_<?= $lang ?>" style="min-height: 30rem; overflow:auto;"
                  aria-live="polite"><span class="text-muted small">Start typing to see the page.</span></div>
+            <div class="alert alert-warning small mt-2 mb-0 d-none mp-removed" id="removed_<?= $lang ?>" role="status"></div>
           </div>
         </div>
       </div>
@@ -185,6 +199,32 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
   </div>
   <?php endif; ?>
 
+  <?php
+  // Every address an editor can link to, ready to copy, in the page's format. Built from the live
+  // site -- its pages, MOOP's own pages, its switched-on tools -- so it is never out of date.
+  $lk = [['Home page', "/$site/"], ["MOOP's search & browse page (always MOOP's home)", "/$site/browse.php"],
+         ['About', "/$site/about.php"], ['Help', "/$site/help.php"]];
+  foreach ($pages as $lslug => $lp) $lk[] = ['Page: ' . $lp['title']['en'], moop_page_url($lslug)];
+  foreach ($tool_links ?? [] as $tl) if ($tl['type'] === 'tool') $lk[] = ['Tool: ' . $tl['label'], "/$site" . $tl['url_path']];
+  ?>
+  <details class="small mb-3" open>
+    <summary class="fw-semibold">Links you can use — copy one into your text</summary>
+    <p class="text-muted mt-2 mb-1">To link to another page: in <strong>Markdown</strong>, <code>[words to click](address)</code>; in
+      <strong>HTML</strong>, <code>&lt;a href="address"&gt;words to click&lt;/a&gt;</code>. A page that is <em>Not in a menu</em> is
+      reached only through links like these — for example, a Protocols overview page listing each protocol.
+      Addresses never change once a page is created.</p>
+    <table class="table table-sm mb-0" style="max-width: 900px;">
+      <?php foreach ($lk as [$what, $addr]): ?>
+        <tr><td class="text-nowrap"><?= htmlspecialchars($what) ?></td><td><code><?= htmlspecialchars($addr) ?></code></td>
+          <td><?= adm_command($page['format'] === 'html'
+                     ? '<a href="' . $addr . '">' . preg_replace('/^(Page|Tool): /', '', $what) . '</a>'
+                     : '[' . str_replace(['[', ']'], '', preg_replace('/^(Page|Tool): /', '', $what)) . '](' . $addr . ')',
+                   'Copy this link, then paste it into your text') ?></td></tr>
+      <?php endforeach; ?>
+    </table>
+    <p class="text-muted mt-1 mb-0">Outside sites work too: <code>[Planosphere](https://planosphere.stowers.org/)</code>.</p>
+  </details>
+
   <details class="small text-muted mb-4">
     <summary>Markdown in brief</summary>
     <table class="table table-sm mt-2" style="max-width: 640px;">
@@ -196,7 +236,22 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
       <tr><td><code>| A | B |</code> then <code>|---|---|</code></td><td>a table</td></tr>
       <tr><td>A blank line</td><td>starts a new paragraph</td></tr>
     </table>
-    HTML typed into a page is shown as text, not run — pages cannot carry scripts.
+    HTML typed into a Markdown page is shown as text, not run — pages cannot carry scripts.
+  </details>
+  <details class="small text-muted mb-4">
+    <summary>HTML pages in brief</summary>
+    <p class="mt-2 mb-1">Write or paste any HTML, for example cards in a row:</p>
+    <pre class="bg-light p-2 rounded">&lt;div class="row g-3"&gt;
+  &lt;div class="col-md-4"&gt;&lt;div class="card h-100"&gt;&lt;div class="card-body"&gt;
+    &lt;h5 class="card-title"&gt;Planarian Maintenance&lt;/h5&gt;
+    &lt;p&gt;Keeping your worms healthy.&lt;/p&gt;
+    &lt;a class="btn btn-primary" href="/<?= htmlspecialchars($site) ?>/page.php?p=planarian-maintenance"&gt;Read&lt;/a&gt;
+  &lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/div&gt;</pre>
+    Kept: headings, paragraphs, lists, tables, links, images, <code>div</code>/<code>span</code>, and
+    <code>class</code>, <code>style</code> and <code>title</code> on any of them — so Bootstrap classes work. Removed:
+    <code>&lt;script&gt;</code>, <code>onclick=</code>-style handlers, <code>javascript:</code> links,
+    <code>&lt;iframe&gt;</code>, <code>&lt;form&gt;</code> and <code>&lt;style&gt;</code>. The preview lists anything removed.
   </details>
 <?php endif; ?>
 </div>

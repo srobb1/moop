@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save') {
         $slug     = trim((string) ($_POST['slug'] ?? ''));
         $original = (string) ($_POST['original_slug'] ?? '');
-        $page = ['slug' => $slug, 'title' => [], 'body' => []];
+        $page = ['slug' => $slug, 'format' => ($_POST['format'] ?? '') === 'html' ? 'html' : 'markdown', 'title' => [], 'body' => []];
         foreach (moop_page_langs() as $lang) {   // active languages only; retired text is kept by moop_page_save()
             $page['title'][$lang] = trim((string) ($_POST["title_$lang"] ?? ''));
             $page['body'][$lang]  = str_replace("\r\n", "\n", (string) ($_POST["body_$lang"] ?? ''));
@@ -122,7 +122,8 @@ $data = [
     'home'        => $config->homeSetting(),
     'mode'        => $mode,
     'page'        => $page,
-    'pages'       => $mode === 'list' ? moop_page_list() : [],
+    'pages'       => moop_page_list(),   // the list, and the editor's "Links you can use"
+    'tool_links'  => $config->getToolsMenu(),
     'pages_dir'   => moop_pages_dir(),
     'flash'       => $flash,
     'page_script' => ['/' . $config->getString('site') . '/js/modules/manage-pages.js'],

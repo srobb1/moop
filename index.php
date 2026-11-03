@@ -34,12 +34,12 @@ if ($home['mode'] !== 'builtin') {
     if ($home_page !== null && $home['mode'] === 'page') {
         echo render_display_page(__DIR__ . '/tools/pages/content_page.php', [
             'page_title' => $pick('title'),
-            'page_html'  => moop_markdown($pick('body')),
+            'page_html'  => moop_page_render($pick('body'), $home_page['format']),
         ], $config->getString('siteTitle'));
         exit;
     }
     if ($home_page !== null && $home['mode'] === 'intro') {
-        $home_intro_html = moop_markdown($pick('body'));
+        $home_intro_html = moop_page_render($pick('body'), $home_page['format']);
     }
 }
 

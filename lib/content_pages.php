@@ -18,10 +18,14 @@
  * editor -- which only shows the active languages -- leaves the others untouched. Until the
  * language work (step 5) chooses per visitor, a page is shown in English.
  *
- * ONE Markdown converter -- moop_markdown() -- for the published page AND the editor's preview
- * (admin/api/preview_page.php), so the preview can never disagree with what visitors see.
- * Parsedown in SAFE MODE: HTML typed into a page is shown as text and javascript: links are
- * neutralised, so a page cannot carry a script.
+ * A page is written in Markdown (the default) or HTML ('format'), the same for every language.
+ * ONE renderer -- moop_page_render() -- for the published page, the home AND the editor's preview
+ * (admin/api/preview_page.php), so the preview can never disagree with what visitors see:
+ *   markdown  Parsedown in SAFE MODE: typed HTML is shown as text, javascript: links neutralised.
+ *   html      written as-is (cards, grids, Bootstrap classes), then cleaned by HTML Purifier --
+ *             a maintained sanitiser, not ours: scripts, on*= handlers, javascript: links, iframes
+ *             and forms are removed; class and style are kept. The site's CSP still allows inline
+ *             script, so this cleaning is what stops a page from carrying one.
  */
 
 /** The languages a page is edited in: the site's active languages, English first. */
@@ -71,7 +75,8 @@ function moop_page_list(): array {
 
 /** Fill in a page's shape so callers never have to check for missing keys. */
 function moop_page_normalise(array $page): array {
-    $out = ['slug' => (string) ($page['slug'] ?? ''), 'title' => [], 'body' => [],
+    $out = ['slug' => (string) ($page['slug'] ?? ''), 'format' => ($page['format'] ?? '') === 'html' ? 'html' : 'markdown',
+            'title' => [], 'body' => [],
             'updated_at' => (string) ($page['updated_at'] ?? ''), 'updated_by' => (string) ($page['updated_by'] ?? '')];
     // Every language the page has text in (active or retired), plus every active one, so callers
     // can index any active language without checking.
@@ -151,6 +156,55 @@ function moop_markdown(string $markdown): string {
     }
     $html = $parser->text($markdown);
     return str_replace('<table>', '<table class="table table-sm table-bordered">', $html);
+}
+
+/**
+ * HTML -> cleaned HTML (HTML Purifier). Keeps structure and styling -- block and inline text
+ * elements, lists, tables, links, images, and class/style/title on any of them -- and removes
+ * everything that can run: <script>, on*= handlers, javascript: links, <iframe>, <form>, <style>.
+ * With $removed passed, it is filled with what was taken out (for the editor's preview).
+ */
+function moop_html_clean(string $html, ?array &$removed = null): string {
+    // Loaded here, not at the top: including this file must not need Composer.
+    require_once __DIR__ . '/../vendor/autoload.php';
+    $collect = func_num_args() > 1;
+    static $purifiers = [];
+    if (!isset($purifiers[$collect])) {
+        $c = HTMLPurifier_Config::createDefault();
+        $c->set('Cache.DefinitionImpl', null);   // no cache directory to keep writable; pages are small
+        $c->set('HTML.AllowedElements', ['div', 'span', 'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'strong', 'b', 'em', 'i', 'u', 's', 'small', 'sub', 'sup', 'blockquote', 'pre', 'code',
+            'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'a', 'img']);
+        $c->set('HTML.AllowedAttributes', ['*.class', '*.style', '*.title', 'a.href', 'a.target',
+            'img.src', 'img.alt', 'img.width', 'img.height', 'th.colspan', 'th.rowspan', 'td.colspan', 'td.rowspan']);
+        $c->set('Attr.AllowedFrameTargets', ['_blank']);
+        $c->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
+        $c->set('Core.CollectErrors', $collect);
+        $purifiers[$collect] = new HTMLPurifier($c);
+    }
+    $p = $purifiers[$collect];
+    $clean = $p->purify($html);
+    if ($collect) {
+        $removed = [];
+        $errors = $p->context->get('ErrorCollector', true);
+        foreach ($errors ? $errors->getRaw() : [] as $e) {
+            // Plain text naming the tag ("Unrecognized <script> tag removed") -- escaped by whoever
+            // shows it. "transformed" lines report additions (an alt= filled in), not removals.
+            $msg = trim(preg_replace('/\s+/', ' ', html_entity_decode((string) ($e[2] ?? ''))));
+            if ($msg !== '' && stripos($msg, 'transformed') === false && strpos($msg, 'Unrecognized </') !== 0
+                && !in_array($msg, $removed, true)) $removed[] = $msg;
+        }
+    }
+    return $clean;
+}
+
+/**
+ * A page body as visitors see it, in its format. THE renderer: page.php, the home (index.php)
+ * and the editor's preview all call this. $removed (HTML only) lists what the cleaner took out.
+ */
+function moop_page_render(string $body, string $format, ?array &$removed = null): string {
+    if ($format !== 'html') { $removed = []; return moop_markdown($body); }
+    return func_num_args() > 2 ? moop_html_clean($body, $removed) : moop_html_clean($body);
 }
 
 /** A page's public address. */

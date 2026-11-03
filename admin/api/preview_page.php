@@ -1,7 +1,8 @@
 <?php
 /**
- * Markdown preview for Manage Pages: POST markdown -> JSON {html}. Uses moop_markdown(), the
- * SAME converter page.php publishes with, so the preview is exactly what visitors will see.
+ * Preview for Manage Pages: POST markdown (the text) + format -> JSON {html, removed}. Uses
+ * moop_page_render(), the SAME renderer page.php publishes with, so the preview is exactly what
+ * visitors will see; for HTML, 'removed' lists what the cleaner took out.
  * Admin only; admin_init.php checks the role and the CSRF token (sent by js/modules/csrf.js).
  */
 include_once __DIR__ . '/../admin_init.php';
@@ -19,4 +20,7 @@ if (strlen($markdown) > 500000) {
     echo json_encode(['error' => 'Too long to preview']);
     exit;
 }
-echo json_encode(['html' => moop_markdown($markdown)]);
+$format  = ($_POST['format'] ?? '') === 'html' ? 'html' : 'markdown';
+$removed = [];
+$html    = moop_page_render($markdown, $format, $removed);
+echo json_encode(['html' => $html, 'removed' => $removed]);

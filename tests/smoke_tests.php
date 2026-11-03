@@ -3611,6 +3611,24 @@ ok(strpos($_cph, '<script') === false && strpos($_cph, 'javascript:') === false 
    'Markdown safe mode: typed HTML is shown as text and javascript: links are neutralised -- no page can carry a script');
 ok(strpos(moop_markdown("# T\n**b**"), '<h1>T</h1>') !== false && strpos($_cph, '<table class="table table-sm table-bordered">') !== false,
    'ordinary Markdown renders; tables get the site table style');
+// HTML pages (Sofia, 2026-11-03: "a box to paste or write some html in"): cleaned by HTML Purifier.
+ok(moop_page_get('protocols')['format'] === 'markdown', 'a page is Markdown unless it says otherwise');
+$_card = '<div class="row g-3"><div class="col-md-4"><div class="card h-100" style="color:red"><div class="card-body">'
+       . '<h5 class="card-title">Maintenance</h5><a class="btn btn-primary" href="/moop/page.php?p=x">Read</a></div></div></div></div>';
+$_kept = moop_page_render($_card, 'html');
+ok(strpos($_kept, 'class="card h-100"') !== false && strpos($_kept, 'class="col-md-4"') !== false
+   && strpos($_kept, 'href="/moop/page.php?p=x"') !== false && strpos($_kept, 'style="color:') !== false,
+   'HTML: cards, grid classes, links and style survive the cleaning');
+$_rm = null;
+$_bad = moop_page_render('<div onclick="x()"><script>alert(1)</script><iframe src="https://e.x"></iframe><form><input></form>'
+       . '<a href="javascript:alert(2)">a</a><img src="/i.png" onerror="y()"><style>body{display:none}</style></div>', 'html', $_rm);
+ok(!preg_match('/<script|onclick|onerror|javascript:|<iframe|<form|<input|<style/i', $_bad),
+   'HTML: script, on*= handlers, javascript: links, iframe, form and style are removed');
+ok(count($_rm) >= 5 && (bool) array_filter($_rm, fn($m) => strpos($m, '<script>') !== false),
+   'HTML: the preview is told what was removed, naming the tag');
+ok(strpos(moop_page_render('<b>x</b>', 'markdown'), '&lt;b&gt;') !== false, 'Markdown pages still show typed HTML as text');
+moop_page_save(['slug' => 'protocols', 'format' => 'html', 'title' => ['en' => 'Protocols'], 'body' => ['en' => $_card]]);
+ok(moop_page_get('protocols')['format'] === 'html', 'the format is saved with the page');
 ok(moop_page_delete('protocols')['ok'] && moop_page_get('protocols') === null && !moop_page_delete('protocols')['ok'],
    'a page can be deleted, and deleting it again says there is no such page');
 
@@ -3634,6 +3652,9 @@ ok($_mm([$_dd, ['type' => 'dropdown', 'key' => 'empty', 'label' => ['en' => 'Emp
 ok($_mm([['type' => 'link', 'label' => ['en' => 'Search & browse'], 'to' => ['builtin' => 'browse']]]) === ["Search & browse>$_site/browse.php"]
    && ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['builtin' => 'browse']]]) === null,
    "MOOP's own home has a permanent menu target, browse.php (reachable when a page is the home)");
+ok(ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['url' => '/moop/tools/blast.php']],
+                                   ['type' => 'link', 'label' => ['en' => 'y'], 'to' => ['url' => 'https://planosphere.stowers.org/']]]) === null,
+   'a site address (/moop/...) and an https:// address are accepted (the pattern for the first did not compile until 2026-11-03)');
 ok(ConfigManager::mainMenuProblem([$_dd]) === null && ConfigManager::mainMenuProblem(ConfigManager::defaultMainMenu()) === null,
    'a valid menu and the default pass the check');
 foreach ([[['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['url' => 'javascript:alert(1)']]],

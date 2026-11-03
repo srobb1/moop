@@ -531,7 +531,7 @@ class ConfigManager
             if (isset($to['builtin'])) return in_array($to['builtin'], ['about', 'help', 'home', 'browse'], true);
             if (isset($to['page']))    return is_string($to['page']) && (bool) preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $to['page']);
             if (isset($to['url']))     return is_string($to['url']) && mb_strlen($to['url']) <= 500
-                                              && (preg_match('#^/[^/\\]#', $to['url']) || preg_match('#^https?://[^\s"\'<>]+$#i', $to['url']));
+                                              && (preg_match('#^/[^/\\\\]#', $to['url']) || preg_match('#^https?://[^\s"\'<>]+$#i', $to['url']));
             return false;
         };
         $keys = [];
