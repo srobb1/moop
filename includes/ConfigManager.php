@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -362,6 +362,134 @@ class ConfigManager
         }
         while ($items && end($items)['type'] === 'divider') array_pop($items);
         return $items;
+    }
+
+    /** The main bar as it was hand-written in includes/toolbar.php until 2026-11-03. */
+    public static function defaultMainMenu(): array
+    {
+        return [
+            ['type' => 'tools'],
+            ['type' => 'link', 'label' => ['en' => 'About'], 'to' => ['builtin' => 'about']],
+            ['type' => 'link', 'label' => ['en' => 'Help'],  'to' => ['builtin' => 'help']],
+        ];
+    }
+
+    /** The site's main bar (saved), or the default. */
+    public function mainMenu(): array
+    {
+        $saved = $this->config['main_menu'] ?? [];
+        return is_array($saved) && $saved ? array_values($saved) : self::defaultMainMenu();
+    }
+
+    /**
+     * The main bar, ready to draw: ['type' => 'tools'] | ['type' => 'link', 'label', 'href',
+     * 'external'] | ['type' => 'dropdown', 'label', 'id', 'items' => [link | ['type' => 'divider']]].
+     * A link to a page that no longer exists is left out; so is a drop-down left empty, and the
+     * Tools drop-down when every tool is switched off. Dividers never lead, trail or double.
+     */
+    public function getMainMenu(string $lang = 'en'): array
+    {
+        $out = [];
+        $n   = 0;
+        foreach ($this->mainMenu() as $item) {
+            $type = $item['type'] ?? '';
+            if ($type === 'tools') {
+                if ($this->getToolsMenu()) $out[] = ['type' => 'tools'];
+            } elseif ($type === 'link') {
+                if ($link = $this->menuLink($item, $lang)) $out[] = $link;
+            } elseif ($type === 'dropdown') {
+                $items = [];
+                foreach ((array) ($item['items'] ?? []) as $child) {
+                    if (($child['type'] ?? '') === 'divider') {
+                        if ($items && end($items)['type'] !== 'divider') $items[] = ['type' => 'divider'];
+                    } elseif ($link = $this->menuLink($child, $lang)) {
+                        $items[] = $link;
+                    }
+                }
+                while ($items && end($items)['type'] === 'divider') array_pop($items);
+                if ($items) {
+                    $out[] = ['type' => 'dropdown', 'label' => $this->menuLabel($item, $lang),
+                              'id' => 'menuDropdown' . (++$n), 'items' => $items];
+                }
+            }
+        }
+        return $out;
+    }
+
+    /** A menu item's label in $lang, falling back to English. */
+    private function menuLabel(array $item, string $lang): string
+    {
+        $label = $item['label'] ?? '';
+        if (is_string($label)) return $label;
+        $text = trim((string) ($label[$lang] ?? ''));
+        return $text !== '' ? $text : (string) ($label['en'] ?? '');
+    }
+
+    /** A link item resolved to ['type' => 'link', 'label', 'href', 'external'], or null. */
+    private function menuLink(array $item, string $lang): ?array
+    {
+        $to    = (array) ($item['to'] ?? []);
+        $site  = '/' . $this->getString('site');
+        $href  = null;
+        $external = false;
+        if (isset($to['builtin'])) {
+            $href = ['about' => "$site/about.php", 'help' => "$site/help.php", 'home' => "$site/index.php"][$to['builtin']] ?? null;
+        } elseif (isset($to['page'])) {
+            $slug = (string) $to['page'];
+            $file = rtrim($this->getPath('metadata_path'), '/') . "/pages/$slug.json";
+            if (preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $slug) && is_file($file)) {
+                $href = "$site/page.php?p=" . rawurlencode($slug);
+            }
+        } elseif (isset($to['url'])) {
+            $url = (string) $to['url'];
+            if (preg_match('#^/[^/\\]#', $url)) {
+                $href = $url;
+            } elseif (preg_match('#^https?://#i', $url)) {
+                $href = $url;
+                $external = true;
+            }
+        }
+        $label = $this->menuLabel($item, $lang);
+        return ($href === null || $label === '') ? null : ['type' => 'link', 'label' => $label, 'href' => $href, 'external' => $external];
+    }
+
+    /** Why this main_menu cannot be saved, or null if it can. Used by saveEditableConfig(). */
+    public static function mainMenuProblem($menu): ?string
+    {
+        if (!is_array($menu)) return 'not a list';
+        $label_ok = function ($label): bool {
+            if (!is_array($label) || trim((string) ($label['en'] ?? '')) === '') return false;
+            foreach ($label as $lang => $text) {
+                if (!preg_match('/^[a-z]{2}$/', (string) $lang) || !is_string($text) || mb_strlen($text) > 60) return false;
+            }
+            return true;
+        };
+        $link_ok = function ($item) use ($label_ok): bool {
+            $to = $item['to'] ?? null;
+            if (!$label_ok($item['label'] ?? null) || !is_array($to) || count($to) !== 1) return false;
+            if (isset($to['builtin'])) return in_array($to['builtin'], ['about', 'help', 'home'], true);
+            if (isset($to['page']))    return is_string($to['page']) && (bool) preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $to['page']);
+            if (isset($to['url']))     return is_string($to['url']) && mb_strlen($to['url']) <= 500
+                                              && (preg_match('#^/[^/\\]#', $to['url']) || preg_match('#^https?://[^\s"\'<>]+$#i', $to['url']));
+            return false;
+        };
+        $keys = [];
+        $tools = 0;
+        foreach ($menu as $i => $item) {
+            $type = is_array($item) ? ($item['type'] ?? '') : '';
+            if ($type === 'tools') { if (++$tools > 1) return 'the Tools menu twice'; continue; }
+            if ($type === 'link') { if (!$link_ok($item)) return 'item ' . ($i + 1) . ' is not a valid link'; continue; }
+            if ($type !== 'dropdown') return 'item ' . ($i + 1) . ' has no known type';
+            $key = (string) ($item['key'] ?? '');
+            if (!preg_match('/^[a-z0-9][a-z0-9-]{0,39}$/', $key) || isset($keys[$key])) return 'drop-down ' . ($i + 1) . ' needs its own key';
+            $keys[$key] = true;
+            if (!$label_ok($item['label'] ?? null) || !is_array($item['items'] ?? null)) return 'drop-down ' . ($i + 1) . ' needs a name';
+            foreach ($item['items'] as $child) {
+                if (($child['type'] ?? '') === 'divider') continue;
+                if (($child['type'] ?? '') !== 'link' || !$link_ok($child)) return 'an entry in drop-down ' . ($i + 1) . ' is not a valid link';
+            }
+        }
+        return null;
     }
 
     /** The menu as ids and '|' dividers: the site's saved order, else the registry default. */
@@ -712,6 +840,13 @@ class ConfigManager
                     }
                 }
 
+                if ($key === 'main_menu') {
+                    $problem = self::mainMenuProblem($data[$key]);
+                    if ($problem !== null) {
+                        return ['success' => false, 'message' => 'The menu is not valid (' . $problem . '); nothing was saved'];
+                    }
+                }
+
                 // Validate IP ranges
                 if ($key === 'auto_login_ip_ranges') {
                     if (!is_array($data[$key])) {
@@ -770,7 +905,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout' || $key === 'main_menu') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);

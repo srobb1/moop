@@ -3609,6 +3609,47 @@ ok(strpos(moop_markdown("# T\n**b**"), '<h1>T</h1>') !== false && strpos($_cph, 
    'ordinary Markdown renders; tables get the site table style');
 ok(moop_page_delete('protocols')['ok'] && moop_page_get('protocols') === null && !moop_page_delete('protocols')['ok'],
    'a page can be deleted, and deleting it again says there is no such page');
+
+// The main menu (cuttingclass step 3): one definition, edited from Manage Menu and from a
+// page's "Show in menu". Runs inside the temp metadata_path above, so page links resolve.
+require_once "$BASE/lib/main_menu.php";
+moop_page_save(['slug' => 'rnai', 'title' => ['en' => 'RNAi', 'es' => 'ARNi'], 'body' => ['en' => 'x']]);
+$_mm = function (array $menu) use ($_cpcfg, $_cprp) {
+    $c = $_cprp->getValue($_cpcfg); $c['main_menu'] = $menu; $_cprp->setValue($_cpcfg, $c);
+    return array_map(fn($i) => $i['type'] === 'tools' ? 'TOOLS' : ($i['type'] === 'link' ? $i['label'] . '>' . $i['href']
+        : $i['label'] . '[' . implode(',', array_map(fn($c) => $c['type'] === 'divider' ? '|' : $c['label'], $i['items'])) . ']'),
+        $_cpcfg->getMainMenu());
+};
+$_site = '/' . $_cpcfg->getString('site');
+ok($_mm([]) === ['TOOLS', "About>$_site/about.php", "Help>$_site/help.php"], 'no saved menu: Tools, About, Help -- the bar it replaced');
+$_dd = ['type' => 'dropdown', 'key' => 'protocols', 'label' => ['en' => 'Protocols', 'es' => 'Protocolos'], 'items' => [
+         ['type' => 'divider'], ['type' => 'link', 'label' => ['en' => 'RNAi'], 'to' => ['page' => 'rnai']], ['type' => 'divider'], ['type' => 'divider'],
+         ['type' => 'link', 'label' => ['en' => 'Gone'], 'to' => ['page' => 'no-such-page']], ['type' => 'divider']]];
+ok($_mm([$_dd, ['type' => 'dropdown', 'key' => 'empty', 'label' => ['en' => 'Empty'], 'items' => []]]) === ['Protocols[RNAi]'],
+   'a drop-down: a deleted page and stray dividers drop out; an empty drop-down is not shown');
+ok(ConfigManager::mainMenuProblem([$_dd]) === null && ConfigManager::mainMenuProblem(ConfigManager::defaultMainMenu()) === null,
+   'a valid menu and the default pass the check');
+foreach ([[['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['url' => 'javascript:alert(1)']]],
+          [['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['url' => '//evil.example']]],
+          [['type' => 'link', 'label' => ['en' => ''], 'to' => ['builtin' => 'about']]],
+          [['type' => 'tools'], ['type' => 'tools']],
+          [$_dd, $_dd],
+          [['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['page' => '../users']]],
+          'not a list'] as $_bad) {
+    ok(ConfigManager::mainMenuProblem($_bad) !== null, 'menu refused: ' . json_encode($_bad));
+}
+$_m0 = [['type' => 'tools'], $_dd];
+$_m1 = moop_menu_set_page($_m0, 'faq', 'top', ['en' => 'FAQ', 'es' => '']);
+ok(moop_menu_page_place($_m1, 'faq') === 'top' && end($_m1)['label'] === ['en' => 'FAQ'], 'a page placed on the bar goes to its end, with its title as label');
+$_m2 = moop_menu_set_page($_m1, 'faq', 'dd:protocols', ['en' => 'FAQ']);
+ok(moop_menu_page_place($_m2, 'faq') === 'dd:protocols' && count($_m2) === 2, 'moved under a drop-down: it leaves the bar (one place, never two)');
+$_m3 = moop_menu_set_page($_m2, 'rnai', 'dd:protocols', ['en' => 'RNA interference']);
+$_items = array_values(array_filter($_m3[1]['items'], fn($c) => ($c['type'] ?? '') === 'link'));
+ok($_items[0]['to']['page'] === 'rnai' && $_items[0]['label'] === ['en' => 'RNA interference'],
+   'saved again in the same place: it keeps its position, its label follows the title');
+ok(moop_menu_page_place(moop_menu_set_page($_m3, 'faq', 'none', []), 'faq') === 'none'
+   && moop_menu_page_place(moop_menu_without_page($_m3, 'rnai'), 'rnai') === 'none', '"Not in a menu", and deleting a page, take it out');
+$_c = $_cprp->getValue($_cpcfg); unset($_c['main_menu']); $_cprp->setValue($_cpcfg, $_c);
 $_cprp->setValue($_cpcfg, $_cpsaved);
 exec('rm -rf ' . escapeshellarg($_cp));
 

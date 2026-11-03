@@ -508,6 +508,14 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // menu_divider_after, name, registry order). Also managed on Admin -> Manage Tools.
     'tools_layout' => [],
 
+    // The main navigation bar (left side, after the site title): a list of
+    //   {type: tools}                                  the Tools drop-down (tools_layout above)
+    //   {type: link, label: {en, es}, to: {builtin: about|help|home} | {page: slug} | {url: ...}}
+    //   {type: dropdown, key, label: {en, es}, items: [link | {type: divider}, ...]}
+    // Empty = Tools, About, Help -- the bar as it was hand-written until 2026-11-03. Managed on
+    // Admin -> Manage Menu; a content page can also be placed from its editor (Manage Pages).
+    'main_menu' => [],
+
     // ======== RATE LIMITS: the "heavy" group ========
     // Scripts (path under the app root) that nginx limits most strictly per address: 20 per
     // minute, burst 10, 3 at once — exports, downloads, sequence and BLAST runs. The list is

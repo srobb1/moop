@@ -52,6 +52,11 @@ if ($va_previewing) {
         <li class="nav-item">
           <a class="nav-link site-title" href="/<?= $site ?>/index.php"><?= htmlspecialchars($title) ?></a>
         </li>
+<?php /* The main bar after the site title: ConfigManager::getMainMenu() -- the site's own
+         (Admin -> Manage Menu, or a page's "Show in menu") or the default Tools, About, Help,
+         which reproduces the bar as it was hand-written here until 2026-11-03. */
+foreach (ConfigManager::getInstance()->getMainMenu() as $mb_item): ?>
+<?php if ($mb_item['type'] === 'tools'): ?>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
              data-bs-toggle="dropdown" aria-expanded="false">Tools</a>
@@ -69,12 +74,26 @@ if ($va_previewing) {
 <?php endforeach; ?>
           </ul>
         </li>
+<?php elseif ($mb_item['type'] === 'link'): ?>
         <li class="nav-item">
-          <a class="nav-link" href="/<?= $site ?>/about.php">About</a>
+          <a class="nav-link" href="<?= htmlspecialchars($mb_item['href']) ?>"<?= $mb_item['external'] ? ' target="_blank" rel="noopener"' : '' ?>><?= htmlspecialchars($mb_item['label']) ?></a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/<?= $site ?>/help.php">Help</a>
+<?php else: ?>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="<?= $mb_item['id'] ?>" role="button"
+             data-bs-toggle="dropdown" aria-expanded="false"><?= htmlspecialchars($mb_item['label']) ?></a>
+          <ul class="dropdown-menu" aria-labelledby="<?= $mb_item['id'] ?>">
+<?php foreach ($mb_item['items'] as $mb_child): ?>
+<?php if ($mb_child['type'] === 'divider'): ?>
+            <li><hr class="dropdown-divider"></li>
+<?php else: ?>
+            <li><a class="dropdown-item" href="<?= htmlspecialchars($mb_child['href']) ?>"<?= $mb_child['external'] ? ' target="_blank" rel="noopener"' : '' ?>><?= htmlspecialchars($mb_child['label']) ?></a></li>
+<?php endif; ?>
+<?php endforeach; ?>
+          </ul>
         </li>
+<?php endif; ?>
+<?php endforeach; ?>
         <?php if (is_logged_in() && moop_session_is_admin()): ?>
         <li class="nav-item">
           <a id="admin_tools_link" class="nav-link" href="/<?= $site ?>/admin/admin.php"><i class="fa fa-tools me-1"></i> Admin Tools</a>

@@ -1,7 +1,8 @@
 <?php
 /**
  * MANAGE PAGES — content (no <html>/<body>; rendered via layout.php).
- * Variables from $data: $site, $mode ('list'|'new'|'edit'), $page, $pages, $pages_dir, $flash.
+ * Variables from $data: $site, $mode ('list'|'new'|'edit'), $page, $pages, $pages_dir, $flash,
+ * $menu_place ('none'|'top'|'dd:<key>'), $menu_dropdowns [key => label].
  * Live preview: js/modules/manage-pages.js -> admin/api/preview_page.php (the publishing converter).
  */
 $lang_names = ['en' => 'English', 'es' => 'Español'];
@@ -83,7 +84,18 @@ $lang_names = ['en' => 'English', 'es' => 'Español'];
         <div class="form-text"><?= $mode === 'edit' ? 'The address stays fixed, so links to the page keep working.'
                                                     : 'Filled in from the English title; change it if you like. It cannot change later.' ?></div>
       </div>
-      <div class="col-md-6 text-md-end">
+      <div class="col-md-3">
+        <label class="form-label mb-1 small fw-semibold" for="menu_place">Show in menu</label>
+        <select class="form-select form-select-sm" id="menu_place" name="menu_place">
+          <option value="none" <?= $menu_place === 'none' ? 'selected' : '' ?>>Not in a menu (link to it from another page)</option>
+          <option value="top" <?= $menu_place === 'top' ? 'selected' : '' ?>>On the menu bar itself</option>
+          <?php foreach ($menu_dropdowns as $key => $label): ?>
+            <option value="dd:<?= htmlspecialchars($key) ?>" <?= $menu_place === 'dd:' . $key ? 'selected' : '' ?>>Under ▸ <?= htmlspecialchars($label) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div class="form-text">New drop-downs and the order within them: <a href="manage_menu.php">Manage Menu</a>.</div>
+      </div>
+      <div class="col-md-3 text-md-end">
         <?php if ($mode === 'edit'): ?>
           <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars(moop_page_url($page['slug'])) ?>" target="_blank">
             <i class="fa fa-external-link-alt me-1"></i>Open the page</a>
@@ -125,6 +137,13 @@ $lang_names = ['en' => 'English', 'es' => 'Español'];
       <?php endforeach; ?>
     </div>
   </form>
+
+  <?php if ($mode === 'edit'): ?>
+  <div class="small mb-3">
+    <span class="fw-semibold">Link to this page from another page:</span>
+    <?= adm_command('[' . str_replace(['[', ']'], '', $page['title']['en']) . '](' . moop_page_url($page['slug']) . ')', 'Copy this Markdown link, then paste it into another page') ?>
+  </div>
+  <?php endif; ?>
 
   <details class="small text-muted mb-4">
     <summary>Markdown in brief</summary>

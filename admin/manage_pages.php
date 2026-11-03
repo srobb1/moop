@@ -16,6 +16,7 @@
 include_once __DIR__ . '/admin_init.php';
 include_once __DIR__ . '/../includes/layout.php';
 require_once __DIR__ . '/../lib/content_pages.php';
+require_once __DIR__ . '/../lib/main_menu.php';
 
 $flash = $_SESSION['pages_flash'] ?? null;
 unset($_SESSION['pages_flash']);
@@ -50,11 +51,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $go(['type' => 'danger', 'msg' => 'Not saved: ' . htmlspecialchars((string) $r['error'])],
                 $original === '' ? 'manage_pages.php?new=1' : 'manage_pages.php?edit=' . rawurlencode($original));
         }
+        // "Show in menu": the menu itself is changed (lib/main_menu.php) -- the page stores no copy
+        // of where it sits, so this and Manage Menu cannot disagree.
+        $place = (string) ($_POST['menu_place'] ?? 'none');
+        $menu  = $config->mainMenu();
+        $new   = moop_menu_set_page($menu, $slug, $place, $page['title']);
+        if ($new != $menu) {
+            $m = moop_menu_save($new);
+            if (empty($m['success'])) {
+                $go(['type' => 'warning', 'msg' => 'Saved the page, but not its place in the menu: ' . htmlspecialchars((string) ($m['message'] ?? ''))],
+                    'manage_pages.php?edit=' . rawurlencode($slug));
+            }
+        }
         $go(['type' => 'success', 'msg' => 'Saved "' . htmlspecialchars($page['title']['en']) . '".'], 'manage_pages.php?edit=' . rawurlencode($slug));
     }
     if ($action === 'delete') {
         $slug = (string) ($_POST['slug'] ?? '');
         $r = moop_page_delete($slug);
+        if ($r['ok']) {
+            // A deleted page leaves the menu too (the menu would skip it anyway; this keeps it tidy).
+            $menu = $config->mainMenu();
+            $new  = moop_menu_without_page($menu, $slug);
+            if ($new != $menu) moop_menu_save($new);
+        }
         $go($r['ok'] ? ['type' => 'success', 'msg' => 'Deleted the page "' . htmlspecialchars($slug) . '".']
                      : ['type' => 'danger', 'msg' => htmlspecialchars((string) $r['error'])], 'manage_pages.php');
     }
@@ -75,8 +94,11 @@ if ($mode === 'edit' && isset($_SESSION['pages_draft'])) {
 }
 unset($_SESSION['pages_draft']);
 
+$menu_now = $config->mainMenu();
 $data = [
     'site'        => $config->getString('site'),
+    'menu_place'  => $page !== null ? moop_menu_page_place($menu_now, $page['slug']) : 'none',
+    'menu_dropdowns' => moop_menu_dropdowns($menu_now),
     'mode'        => $mode,
     'page'        => $page,
     'pages'       => $mode === 'list' ? moop_page_list() : [],
