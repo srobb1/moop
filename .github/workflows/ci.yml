@@ -29,6 +29,12 @@ jobs:
           php-version: '8.0'   # match the production runtime
           coverage: none
 
+      # The runtime Composer packages (composer.lock), as setup.php installs them on a server:
+      # lib/content_pages.php renders Markdown with erusev/parsedown, and its tests check the
+      # real converter, not a stand-in.
+      - name: Install runtime Composer packages
+        run: composer install --no-dev --no-interaction --no-progress
+
       - name: Lint every PHP file (php -l)
         run: |
           status=0
@@ -104,6 +110,12 @@ jobs:
         with:
           php-version: '8.3'
           coverage: none
+
+      # The runtime Composer packages (composer.lock), as setup.php installs them on a server:
+      # lib/content_pages.php renders Markdown with erusev/parsedown, and its tests check the
+      # real converter, not a stand-in.
+      - name: Install runtime Composer packages
+        run: composer install --no-dev --no-interaction --no-progress
 
       - name: Lint every PHP file under 8.3
         run: |

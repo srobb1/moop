@@ -79,6 +79,7 @@ function moop_permission_check_mode(string $name): string {
         'Site Data Backup Files'          => 1,  // the snapshot rewrites these in place
         'Taxonomy Lineage Cache'          => 1,  // metadata/taxonomy_lineage_cache.json
         'Metadata Directory'              => 1,
+        'Content Pages Directory'         => 1,  // metadata/pages — Admin -> Manage Pages writes here
         'Metadata Backups Directory'      => 1,
         'Change Log Directory'            => 1,
         'JBrowse2 Track Config Directory' => 1,  // metadata/jbrowse2-configs
@@ -860,6 +861,22 @@ function moop_build_permission_items($config, array $ctx): array {
             'required_group' => $web_group,
             'reason' => 'SGID (Set-Group-ID) bit (shown as \'s\' in permissions) ensures new files automatically get ' . $web_group . ' as group',
             'why_write' => 'Web server needs to create/write files here. SGID ensures group is always ' . $web_group . ' without manual fixes',
+            'sgid_bit' => true,
+        ],
+
+        // Content pages (Admin -> Manage Pages, lib/content_pages.php). Created on the first save,
+        // so it is checked only once it exists: a missing directory is not a fault, it is a site
+        // with no pages yet (the save reports, rather than hides, a failure to create it).
+        [
+            'name' => 'Content Pages Directory',
+            'description' => 'Pages written on Admin -> Manage Pages, one file each',
+            'type' => 'directory',
+            'paths' => array_values(array_filter([$metadata_path . '/pages'], 'is_dir')),
+            'required_perms' => '2775',
+            'required_owner' => $moop_owner,
+            'required_group' => $web_group,
+            'reason' => 'Admins write pages here from the web',
+            'why_write' => 'Manage Pages saves, replaces and deletes page files here',
             'sgid_bit' => true,
         ],
 

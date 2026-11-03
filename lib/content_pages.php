@@ -1,0 +1,138 @@
+<?php
+/**
+ * Content pages: pages an admin writes in Markdown (About, Protocols, FAQ, ...) -- cuttingclass
+ * step 2 (notes/CUTTINGCLASS_PLAN.md). Opt-in: a site with no pages shows nothing new, and a page
+ * appears in a menu only when a menu links it.
+ *
+ * Each page is one file, {metadata_path}/pages/{slug}.json -- SITE DATA, not code, so the
+ * housekeeping snapshot copies it into the private site-data repo:
+ *
+ *   { "slug": "about-simrbase",
+ *     "title": {"en": "About SIMRbase", "es": "Acerca de SIMRbase"},
+ *     "body":  {"en": "# ...markdown...", "es": "..."},
+ *     "updated_at": "2026-11-03T16:40:00-06:00", "updated_by": "admin" }
+ *
+ * Spanish is stored now and shown when the language work (step 5) lands; until then a page is
+ * shown in English.
+ *
+ * ONE Markdown converter -- moop_markdown() -- for the published page AND the editor's preview
+ * (admin/api/preview_page.php), so the preview can never disagree with what visitors see.
+ * Parsedown in SAFE MODE: HTML typed into a page is shown as text and javascript: links are
+ * neutralised, so a page cannot carry a script.
+ */
+
+const MOOP_PAGE_LANGS = ['en', 'es'];
+
+/** Where pages live. Under metadata_path: written by the web (Manage Pages), snapshot to the backup. */
+function moop_pages_dir(): string {
+    return rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/pages';
+}
+
+/**
+ * Is this a usable page address? Lower-case letters, digits and hyphens, 1-60 characters,
+ * starting with a letter or digit. It is also the file name, so nothing else may pass.
+ */
+function moop_page_slug_ok(string $slug): bool {
+    return (bool) preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $slug);
+}
+
+/** Suggest an address from a title: "About SIMRbase!" -> "about-simrbase". */
+function moop_page_slugify(string $title): string {
+    $s = strtolower(trim($title));
+    $s = preg_replace('/[^a-z0-9]+/', '-', $s);
+    return substr(trim((string) $s, '-'), 0, 60);
+}
+
+/** One page, or null if there is none (or the address is not a valid one). */
+function moop_page_get(string $slug): ?array {
+    if (!moop_page_slug_ok($slug)) return null;
+    $file = moop_pages_dir() . "/$slug.json";
+    if (!is_file($file)) return null;
+    $page = json_decode((string) @file_get_contents($file), true);
+    return is_array($page) ? moop_page_normalise($page + ['slug' => $slug]) : null;
+}
+
+/** Every page, sorted by English title: [slug => page]. */
+function moop_page_list(): array {
+    $pages = [];
+    foreach (glob(moop_pages_dir() . '/*.json') ?: [] as $file) {
+        $slug = basename($file, '.json');
+        if ($page = moop_page_get($slug)) $pages[$slug] = $page;
+    }
+    uasort($pages, fn($a, $b) => strcasecmp($a['title']['en'], $b['title']['en']));
+    return $pages;
+}
+
+/** Fill in a page's shape so callers never have to check for missing keys. */
+function moop_page_normalise(array $page): array {
+    $out = ['slug' => (string) ($page['slug'] ?? ''), 'title' => [], 'body' => [],
+            'updated_at' => (string) ($page['updated_at'] ?? ''), 'updated_by' => (string) ($page['updated_by'] ?? '')];
+    foreach (MOOP_PAGE_LANGS as $lang) {
+        $out['title'][$lang] = (string) ($page['title'][$lang] ?? '');
+        $out['body'][$lang]  = (string) ($page['body'][$lang] ?? '');
+    }
+    return $out;
+}
+
+/**
+ * Save a page. Returns ['ok' => bool, 'error' => ?string]. Refuses a bad address or a page
+ * with no English title, and reports a write that did not happen -- the recurring failure here
+ * is a write the web server could not do, reported as success (CLAUDE.md §11).
+ *
+ * Written to a temp file and renamed, so a reader never sees half a page.
+ */
+function moop_page_save(array $page): array {
+    $page = moop_page_normalise($page);
+    if (!moop_page_slug_ok($page['slug'])) {
+        return ['ok' => false, 'error' => 'The address may use only lower-case letters, digits and hyphens (up to 60).'];
+    }
+    if (trim($page['title']['en']) === '') {
+        return ['ok' => false, 'error' => 'A page needs an English title.'];
+    }
+    $dir = moop_pages_dir();
+    if (!is_dir($dir) && !@mkdir($dir, 02775, true)) {
+        return ['ok' => false, 'error' => "Could not create $dir — the web server cannot write there."];
+    }
+    $page['updated_at'] = date('c');
+    $page['updated_by'] = (string) ($_SESSION['username'] ?? '');
+    $json = json_encode($page, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $tmp  = "$dir/.{$page['slug']}." . getmypid() . '.tmp';
+    if ($json === false || @file_put_contents($tmp, $json . "\n") === false || !@rename($tmp, "$dir/{$page['slug']}.json")) {
+        @unlink($tmp);
+        return ['ok' => false, 'error' => "Could not write the page into $dir — the web server cannot write there."];
+    }
+    @chmod("$dir/{$page['slug']}.json", 0664);
+    return ['ok' => true, 'error' => null];
+}
+
+/** Delete a page. Returns ['ok' => bool, 'error' => ?string]. */
+function moop_page_delete(string $slug): array {
+    if (!moop_page_slug_ok($slug)) return ['ok' => false, 'error' => 'No such page.'];
+    $file = moop_pages_dir() . "/$slug.json";
+    if (!is_file($file)) return ['ok' => false, 'error' => 'No such page.'];
+    return @unlink($file) ? ['ok' => true, 'error' => null]
+                          : ['ok' => false, 'error' => 'Could not delete the page — the web server cannot write there.'];
+}
+
+/**
+ * Markdown -> HTML, the ONE converter for pages and their preview. Safe mode: raw HTML is
+ * escaped, javascript: URLs are neutralised. Tables get Bootstrap's table class.
+ */
+function moop_markdown(string $markdown): string {
+    static $parser = null;
+    if ($parser === null) {
+        // Loaded here, not at the top: including this file (housekeeping, the page list) must not
+        // need Composer -- only turning Markdown into HTML does.
+        require_once __DIR__ . '/../vendor/autoload.php';
+        $parser = new Parsedown();
+        $parser->setSafeMode(true);
+        $parser->setBreaksEnabled(false);
+    }
+    $html = $parser->text($markdown);
+    return str_replace('<table>', '<table class="table table-sm table-bordered">', $html);
+}
+
+/** A page's public address. */
+function moop_page_url(string $slug): string {
+    return '/' . ConfigManager::getInstance()->getString('site') . '/page.php?p=' . rawurlencode($slug);
+}

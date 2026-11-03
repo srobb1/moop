@@ -62,6 +62,18 @@ RED on a deliberate one-character change before it is trusted.
 - Sofia leans to **keeping a MOOP-like home**: search (genes, organisms, protocols) + tools.
 - Menu builder: navbar drop-downs made of pages / tools / links (e.g. "Protocols ▾",
   "About ▾"), replacing Drupal's sidebar. No menu config → today's navbar.
+- Sofia, 2026-11-03: add items to the MAIN menu — either a single link ("Protocols" → the
+  Protocols page) or a drop-down ("Protocols ▾" → one entry per protocol page). Today's About
+  and Help are hand-written in includes/toolbar.php, like the Tools menu was: build the main bar
+  the same way (registry/config defaults that reproduce today's bar byte-for-byte, the site's own
+  layout on top), reusing the Tools-menu machinery (ConfigManager, ordering UI, dividers).
+
+### Done so far
+- Step 0 render comparison — bd5a2954. Step 1 tools on/off + cross-links — 3b0b10f3.
+  Menu + toolbox from the registry, ordered/labelled per site — 22998a58.
+- Step 2 content pages — Manage Pages (Markdown, EN/ES tabs, live server-side preview),
+  page.php?p=<slug>, metadata/pages/<slug>.json (snapshot + permission rule). Parsedown 1.8
+  (Composer) in safe mode.
 
 ### 4. Old-link redirects
 The published manuscript PDF and teachers' bookmarks point at `/en/node/121412`,

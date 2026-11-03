@@ -738,6 +738,12 @@ function housekeeping_snapshot_site_data() {
         $users_file                                             => 'users.json',
     ];
 
+    // Content pages (Admin -> Manage Pages, lib/content_pages.php): one file each, written by the
+    // web, so they are site data and must reach the private backup like the glossary does.
+    foreach (glob($config->getPath('metadata_path') . '/pages/*.json') ?: [] as $page_json) {
+        $files[$page_json] = 'metadata/pages/' . basename($page_json);
+    }
+
     // Dynamically add all organism.json files from the organisms directory
     $organisms_dir = $config->getPath('organism_data');
     if (!empty($organisms_dir) && is_dir($organisms_dir)) {

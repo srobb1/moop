@@ -3579,6 +3579,40 @@ $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_H));
 
 // ----------------------------------------------------------------------------
+group('Content pages: Markdown pages stored as site data (cuttingclass step 2)');
+require_once "$BASE/lib/content_pages.php";
+$_cp = sys_get_temp_dir() . '/moop_pages_' . getmypid();
+mkdir($_cp, 0777, true);
+$_cpcfg = ConfigManager::getInstance();
+$_cprp  = new ReflectionProperty($_cpcfg, 'config'); $_cprp->setAccessible(true);
+$_cpsaved = $_cprp->getValue($_cpcfg);
+$_cpc = $_cpsaved; $_cpc['metadata_path'] = $_cp; $_cprp->setValue($_cpcfg, $_cpc);
+
+ok(moop_page_list() === [] && moop_page_get('about') === null, 'no pages directory: no pages, no error (a site that never made one)');
+ok(moop_page_slug_ok('about-simrbase') && !moop_page_slug_ok('../users') && !moop_page_slug_ok('About') && !moop_page_slug_ok('')
+   && !moop_page_slug_ok('-x') && !moop_page_slug_ok(str_repeat('a', 61)) && moop_page_get('../../etc/passwd') === null,
+   'an address is lower-case letters, digits and hyphens only; a path is never one');
+ok(moop_page_slugify('About SIMRbase!  Protocols') === 'about-simrbase-protocols', 'an address is suggested from the title');
+ok(!moop_page_save(['slug' => 'x', 'title' => ['en' => ' ']])['ok'], 'a page needs an English title');
+$_cpr = moop_page_save(['slug' => 'protocols', 'title' => ['en' => 'Protocols', 'es' => 'Protocolos'],
+                         'body' => ['en' => "# Cutting\n**Step 1**", 'es' => 'Paso 1 — corte']]);
+$_cpp = moop_page_get('protocols');
+ok($_cpr['ok'] && $_cpp['title']['es'] === 'Protocolos' && $_cpp['body']['es'] === 'Paso 1 — corte' && $_cpp['updated_at'] !== '',
+   'a saved page loads back, both languages, with when it was saved');
+ok(substr(sprintf('%o', fileperms("$_cp/pages/protocols.json")), -3) === '664' && !glob("$_cp/pages/.*.tmp"),
+   'written as 664 (the web group can rewrite it), no temp file left behind');
+ok(array_keys(moop_page_list()) === ['protocols'], 'the list shows it');
+$_cph = moop_markdown("<script>alert(1)</script>\n[x](javascript:alert(2))\n\n<img src=x onerror=alert(3)>\n\n| a | b |\n|---|---|\n| 1 | 2 |");
+ok(strpos($_cph, '<script') === false && strpos($_cph, 'javascript:') === false && strpos($_cph, '<img src=x') === false,
+   'Markdown safe mode: typed HTML is shown as text and javascript: links are neutralised -- no page can carry a script');
+ok(strpos(moop_markdown("# T\n**b**"), '<h1>T</h1>') !== false && strpos($_cph, '<table class="table table-sm table-bordered">') !== false,
+   'ordinary Markdown renders; tables get the site table style');
+ok(moop_page_delete('protocols')['ok'] && moop_page_get('protocols') === null && !moop_page_delete('protocols')['ok'],
+   'a page can be deleted, and deleting it again says there is no such page');
+$_cprp->setValue($_cpcfg, $_cpsaved);
+exec('rm -rf ' . escapeshellarg($_cp));
+
+// ----------------------------------------------------------------------------
 group('Taxonomy tree: an unnamed species on a genus id keeps its own leaf');
 require_once "$BASE/lib/taxonomy_functions.php";
 $_lin = fn(...$l) => ['lineage' => array_map(fn($x) => ['rank' => $x[0], 'name' => $x[1]], $l)];
