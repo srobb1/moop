@@ -178,7 +178,9 @@ No new port is needed:
 - Primer BLAST on cuttingclass too, or Primer Maker only?
 - Theme: colours/logo for cuttingclass — how far beyond Site Configuration's title/logo?
 - MOOP's glossary popovers vs the "Glossary of Terms" page — merge?
-- Who reviews the Spanish for MOOP's interface strings?
+- ~~Who reviews the Spanish for MOOP's interface strings?~~ Sofia's Spanish-speaking friends
+  (2026-11-03). So: machine-draft each batch, reviewers correct it on the catalog admin page
+  (English and Spanish side by side, no code), one batch at a time — navbar + home first.
 
 ## Related
 
