@@ -873,6 +873,9 @@ README;
  * missing PHP extensions, missing JWT keys, unwritable directories,
  * missing CLI tools, missing composer dependencies.
  *
+ * A warning that has a fix to run carries it as 'command' (plain text, absolute paths), which
+ * the dashboard renders with a Copy button (adm_command()) -- not inside 'message'.
+ *
  * Results are stored in $_SESSION['env_warnings'] as an array of
  * ['level' => 'danger'|'warning', 'message' => string] entries, and persisted to
  * logs/.housekeeping_status.json so every session can be hydrated with it — see
@@ -907,7 +910,8 @@ function housekeeping_environment_check() {
         if (!extension_loaded($ext)) {
             $warnings[] = [
                 'level' => 'danger',
-                'message' => "PHP extension <code>$ext</code> is not loaded ($purpose). Install it: <code>sudo $pkg php-$ext && $restart_cmd</code>",
+                'message' => "PHP extension <code>$ext</code> is not loaded ($purpose). Install it:",
+                'command' => "sudo $pkg php-$ext && $restart_cmd",
             ];
         }
     }
@@ -921,12 +925,14 @@ function housekeeping_environment_check() {
     if (!file_exists($private_key) || !file_exists($public_key)) {
         $warnings[] = [
             'level' => 'danger',
-            'message' => "JWT keys missing in <code>certs/</code> — JBrowse2 track authentication will not work. Generate with: <code>openssl genrsa -out certs/$priv_basename 2048 && openssl rsa -in certs/$priv_basename -pubout -out certs/$pub_basename</code>",
+            'message' => "JWT keys missing in <code>certs/</code> — JBrowse2 track authentication will not work. Generate with:",
+            'command' => "cd $site_path && openssl genrsa -out certs/$priv_basename 2048 && openssl rsa -in certs/$priv_basename -pubout -out certs/$pub_basename",
         ];
     } elseif (!is_readable($private_key) || !is_readable($public_key)) {
         $warnings[] = [
             'level' => 'warning',
-            'message' => 'JWT keys in <code>certs/</code> are not readable by the web server — JBrowse2 track authentication will fail. Fix with: <code>sudo chgrp ' . htmlspecialchars(getWebServerUser()['group']) . ' certs/*.pem && sudo chmod 640 certs/*.pem</code>',
+            'message' => 'JWT keys in <code>certs/</code> are not readable by the web server — JBrowse2 track authentication will fail. Fix with:',
+            'command' => "cd $site_path && sudo chgrp " . getWebServerUser()['group'] . ' certs/*.pem && sudo chmod 640 certs/*.pem',
         ];
     }
 
@@ -965,12 +971,14 @@ function housekeeping_environment_check() {
         if ($hooks_path !== '.githooks') {
             $warnings[] = [
                 'level' => 'danger',
-                'message' => 'Git is not running MOOP\'s permission hooks — this clone is unprotected. Any checkout, merge or rebase that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with: <code>git config core.hooksPath .githooks</code>',
+                'message' => 'Git is not running MOOP\'s permission hooks — this clone is unprotected. Any checkout, merge or rebase that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with:',
+                'command' => "git -C $site_path config core.hooksPath .githooks",
             ];
         } elseif (!file_exists($hook_script)) {
             $warnings[] = [
                 'level' => 'danger',
-                'message' => 'Git is set to use <code>.githooks/</code> but the web server cannot see <code>moop-fix-web-perms</code> there — it is missing, or the directory is not traversable by the web user. Until it runs, a checkout that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with: <code>chmod 755 .githooks .githooks/*</code> (or restore the file from the repo).',
+                'message' => 'Git is set to use <code>.githooks/</code> but the web server cannot see <code>moop-fix-web-perms</code> there — it is missing, or the directory is not traversable by the web user. Until it runs, a checkout that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with this (or restore the file from the repo):',
+                'command' => "cd $site_path && chmod 755 .githooks .githooks/*",
             ];
         }
     }
@@ -1016,10 +1024,10 @@ function housekeeping_environment_check() {
             $dir_mode = function_exists('moop_permission_dir_mode')
                 ? moop_permission_dir_mode($dir, $sensitive_paths)
                 : '2770';   // fail CLOSED: never advise widening when we cannot tell
-            $fix_cmd = "sudo chgrp " . $web_info['group'] . " " . htmlspecialchars($dir) . " && sudo chmod " . $dir_mode . " " . htmlspecialchars($dir);
             $warnings[] = [
                 'level' => 'warning',
-                'message' => "Directory <code>$label/</code> is not writable — admin changes may not save. Fix with: <code>$fix_cmd</code>",
+                'message' => "Directory <code>$label/</code> is not writable — admin changes may not save. Fix with:",
+                'command' => "sudo chgrp " . $web_info['group'] . " " . escapeshellarg($dir) . " && sudo chmod " . $dir_mode . " " . escapeshellarg($dir),
             ];
         }
     }
@@ -1068,10 +1076,10 @@ function housekeeping_environment_check() {
         $warnings[] = [
             'level'   => 'info',
             'message' => 'Primer design tool <code>primer3_core</code> is not installed — the '
-                       . 'primer designer will be unavailable. Install it with '
-                       . '<code>sudo bash scripts/install_primer3.sh</code>, which uses your '
-                       . 'distribution\'s package where there is one (Debian and Ubuntu have it) '
-                       . 'and builds from source otherwise.',
+                       . 'primer designer will be unavailable. Install it with the command below, '
+                       . 'which uses your distribution\'s package where there is one (Debian and '
+                       . 'Ubuntu have it) and builds from source otherwise.',
+            'command' => "sudo bash $site_path/scripts/install_primer3.sh",
         ];
     } elseif ($p3['problem'] === 'no_parameters') {
         $warnings[] = [
@@ -1080,9 +1088,9 @@ function housekeeping_environment_check() {
                        . htmlspecialchars($p3['binary']) . '</code> but its thermodynamic '
                        . 'parameters were not found in any known location. primer3 will fail on '
                        . 'every query with <code>PRIMER_ERROR=Unable to open file …</code>. Its '
-                       . 'own <code>make install</code> does not copy that directory — re-run '
-                       . '<code>scripts/install_primer3.sh</code>, or set '
-                       . '<code>primer3_config_path</code> if it is somewhere unusual.',
+                       . 'own <code>make install</code> does not copy that directory — re-run the '
+                       . 'installer below, or set <code>primer3_config_path</code> if it is somewhere unusual.',
+            'command' => "sudo bash $site_path/scripts/install_primer3.sh",
         ];
     }
 
@@ -1090,7 +1098,8 @@ function housekeeping_environment_check() {
     if (!is_dir($site_path . '/vendor')) {
         $warnings[] = [
             'level' => 'danger',
-            'message' => 'Composer dependencies not installed (<code>vendor/</code> missing). Run: <code>cd ' . htmlspecialchars($site_path) . ' && composer install --no-dev</code>',
+            'message' => 'Composer dependencies not installed (<code>vendor/</code> missing). Run:',
+            'command' => "cd $site_path && composer install --no-dev",
         ];
     }
 

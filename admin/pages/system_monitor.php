@@ -39,11 +39,12 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <div class="alert alert-warning">
       <i class="fa fa-exclamation-triangle me-1"></i>
       <?php if ($age === null): ?>
-        The collector has not written any data yet. It is installed with
-        <code>sudo scripts/install_monitor.sh</code> (README Quick Start step 7).
+        The collector has not written any data yet. It is installed with this (README Quick Start step 7):
+        <?= adm_command('sudo ' . ConfigManager::getInstance()->getPath('site_path') . '/scripts/install_monitor.sh') ?>
       <?php else: ?>
-        The collector's last sample is <?= (int) floor($age / 60) ?> minutes old — its timer is not running
-        (<code>systemctl status moop-monitor.timer</code>). Figures below are from then.
+        The collector's last sample is <?= (int) floor($age / 60) ?> minutes old — its timer is not running.
+        Figures below are from then. Check the timer with:
+        <?= adm_command('systemctl status moop-monitor.timer') ?>
       <?php endif; ?>
     </div>
   <?php endif; ?>
@@ -493,8 +494,8 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
           <ol>
             <li>Edit <code>/etc/php-fpm.d/www.conf</code> (as root) and set <code>pm.max_children</code>. Keep it at or below
               “workers that fit in 60% of RAM”.</li>
-            <li>Check and apply: <code>sudo php-fpm -t &amp;&amp; sudo systemctl reload php-fpm</code>
-              (a reload finishes the requests in progress; nobody is cut off).</li>
+            <li>Check and apply (a reload finishes the requests in progress; nobody is cut off):
+              <?= adm_command('sudo php-fpm -t && sudo systemctl reload php-fpm') ?></li>
             <li>Come back here after a few days: “every PHP worker busy” should fall to 0 without memory climbing.</li>
           </ol>
           <p class="mb-0 text-muted">More workers only help if the server has the memory for them; past that point they make

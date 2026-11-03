@@ -555,6 +555,7 @@
       <div class="alert alert-<?= $warning['level'] ?> mb-2 small">
         <i class="fa fa-<?= $warning['level'] === 'danger' ? 'times-circle' : 'exclamation-circle' ?> me-2"></i>
         <?= $warning['message'] ?>
+        <?php if (!empty($warning['command'])): ?><?= adm_command($warning['command']) ?><?php endif; ?>
       </div>
     <?php endforeach; endif; ?>
   <?= adm_status_card('environment', 'server', 'Server Requirements', $_env_badges, $_env ? ($_env_danger ? 'danger' : 'warn') : '', ob_get_clean()) ?>

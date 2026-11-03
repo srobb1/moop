@@ -33,7 +33,7 @@
       <strong>Read-only:</strong> the web server cannot write the glossary file
       (<code><?= htmlspecialchars($glossary_file) ?></code>). Editing is disabled until this is
       fixed. Run:
-      <pre class="mb-0 mt-2"><?= htmlspecialchars($file_write_error['command'] ?? '') ?></pre>
+      <?= adm_command($file_write_error['command'] ?? '') ?>
     </div>
   <?php endif; ?>
 

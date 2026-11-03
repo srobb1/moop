@@ -493,9 +493,7 @@
                     <?php endforeach; ?>
                   </ul>
                   <?php if (!empty($item['fix_commands'])): ?>
-                    <div class="mt-1 p-2 bg-dark text-light rounded" style="font-family: monospace; font-size: 0.85em;">
-                      <?php foreach ($item['fix_commands'] as $cmd): ?><?= htmlspecialchars($cmd) ?><br><?php endforeach; ?>
-                    </div>
+                    <?= adm_command($item['fix_commands']) ?>
                   <?php endif; ?>
                 </li>
               <?php endforeach; ?>

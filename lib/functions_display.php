@@ -869,3 +869,28 @@ function moop_gene_symbol(?string $name, string $uniquename, array $child_ids = 
     if (preg_match('/^LOC\d+$/', $name)) return '';
     return $name;
 }
+
+/**
+ * A command for the admin to run on the server, with a Copy button. Selecting a command by
+ * hand drops or adds characters -- "dnf clean package" for "packages" (2026-11-03) -- so a
+ * command an admin page tells you to run is copied from the server-built string instead.
+ *
+ * Several commands are shown one per line and copied joined with " && ": pasting them as
+ * separate lines would feed the second line to the first one's sudo password prompt.
+ *
+ * Copy is js/modules/copy-to-clipboard.js (data-copy-text; works on plain http), which
+ * includes/layout.php loads on every admin page -- a page cannot forget it.
+ *
+ * @param string|list<string> $cmd  plain text; escaped here
+ */
+function adm_command($cmd): string {
+    $cmds = array_values(array_filter(array_map('strval', (array) $cmd), fn($c) => trim($c) !== ''));
+    if (!$cmds) return '';
+    $shown = implode(" &amp;&amp; \\<br>", array_map(fn($c) => htmlspecialchars($c, ENT_QUOTES), $cmds));
+    return '<div class="d-flex align-items-start gap-2 my-1">'
+         . '<code class="small user-select-all flex-grow-1 bg-light border rounded px-2 py-1 text-break">' . $shown . '</code>'
+         . '<button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-copy-text="'
+         . htmlspecialchars(implode(' && ', $cmds), ENT_QUOTES) . '"'
+         . ' title="Copy the command, then run it on the server"><i class="fa fa-copy"></i> <span class="copy-label">Copy</span></button>'
+         . '</div>';
+}

@@ -27,13 +27,7 @@
       <?php endif; ?>
       
       <p><strong>To Fix:</strong> Run <?php echo count($change_log_error['commands']) > 1 ? 'these commands' : 'this command'; ?> on the server:</p>
-      <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-        <?php foreach ($change_log_error['commands'] as $cmd): ?>
-          <code style="word-break: break-all; display: block; font-size: 0.9em; margin-bottom: 5px;">
-            <?= htmlspecialchars($cmd) ?>
-          </code>
-        <?php endforeach; ?>
-      </div>
+      <?= adm_command($change_log_error['commands']) ?>
       
       <p><small class="text-muted">After running the commands, refresh this page.</small></p>
     </div>
@@ -53,11 +47,7 @@
       </ul>
       
       <p><strong>To Fix:</strong> Run this command on the server:</p>
-      <div style="margin-top: 10px; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-        <code style="word-break: break-all; display: block;">
-          <?= htmlspecialchars($_SESSION['permission_error']['command']) ?>
-        </code>
-      </div>
+      <?= adm_command($_SESSION['permission_error']['command']) ?>
       
       <p class="mt-3"><small class="text-muted">After running the command, refresh this page to try again.</small></p>
     </div>

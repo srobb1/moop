@@ -70,7 +70,6 @@ $data = [
     'page_script' => [
         '/' . $config->getString('site') . '/js/modules/housekeeping-rerun.js',
         '/' . $config->getString('site') . '/js/modules/remember-collapse.js',
-        '/' . $config->getString('site') . '/js/modules/copy-to-clipboard.js',   // adm_command() Copy buttons
     ],
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",
