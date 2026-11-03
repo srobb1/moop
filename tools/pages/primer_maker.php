@@ -226,6 +226,12 @@
                                 <label class="form-check-label" for="type_<?= htmlspecialchars($key) ?>">
                                     <strong><?= htmlspecialchars($preset['label']) ?></strong>
                                     <div class="small text-muted mt-1"><?= htmlspecialchars($preset['blurb']) ?></div>
+                                    <?php if (!empty($context_is_transcripts) && in_array($key, $junction_types ?? [], true)): ?>
+                                    <div class="small text-danger mt-1">
+                                        <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"></i>Not available here: this
+                                        assembly is transcripts only, so its exon junctions are not known.
+                                    </div>
+                                    <?php endif; ?>
                                     <div class="mt-2 d-flex flex-wrap gap-1">
                                         <?php foreach ($preset_summary($key) as $bit): ?>
                                             <span class="badge rounded-pill fw-normal"

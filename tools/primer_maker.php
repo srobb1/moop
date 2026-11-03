@@ -58,6 +58,7 @@ include_once __DIR__ . '/../lib/primer/PrimerNames.php';
 include_once __DIR__ . '/../lib/primer/SequenceMarkup.php';
 include_once __DIR__ . '/../lib/primer/ExonMap.php';
 include_once __DIR__ . '/../lib/gene_isoforms.php';
+include_once __DIR__ . '/../lib/genomic_regions.php';   // moop_genome_kind()
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../includes/source-selector-helpers.php';
 
@@ -173,6 +174,16 @@ if ($context_organism !== '' || $context_assembly !== '' || $context_gene_set !=
     }
 }
 
+// A 'transcripts' assembly is one assembled transcript per gene standing in for a genome: no
+// exon-intron boundaries are known, so no primer can be placed across a junction. RT-PCR is the
+// preset whose whole point is spanning one, so it is refused here rather than silently designed
+// as ordinary primers -- unless the user marked the junctions themselves with "|", which
+// supplies the boundaries. qPCR is NOT in this list: quantitative PCR needs no junction
+// (Sofia, 2026-11-03); it is a short-product, tight-Tm preset that works on any template.
+$JUNCTION_TYPES = ['rtpcr'];
+$context_is_transcripts = $context_organism !== '' && $context_assembly !== ''
+    && moop_genome_kind($config->getPath('organism_data') . '/' . $context_organism . '/' . $context_assembly) === 'transcripts';
+
 $results       = [];
 $run_error     = null;
 $notes         = [];
@@ -258,6 +269,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
               . 'run. An administrator can fix this by re-running scripts/install_primer3.sh.';
     } elseif ($sequence_text === '') {
         $run_error = 'Paste a sequence to design primers from.';
+    } elseif ($context_is_transcripts && in_array($primer_type, $JUNCTION_TYPES, true)
+              && strpos($sequence_text, '|') === false) {
+        $run_error = $PRESETS[$primer_type]['label'] . ' primers cannot be designed for this sequence. '
+            . 'This assembly is transcripts only (one per gene), not a genome, so its exon–intron '
+            . 'boundaries are not known, and ' . $PRESETS[$primer_type]['label'] . ' primers must '
+            . 'span an exon junction so they cannot amplify genomic DNA. Choose Standard PCR, or '
+            . 'mark the junctions yourself with "|" in the sequence if you know them.';
     } else {
         // ⭐ SEVERAL SEQUENCES, BUT ONLY IN FASTA (user, 2026-08-18). Every '>'
         // starts a record; a paste with no header is one sequence however many
@@ -718,6 +736,8 @@ $data = [
     'primer3_problem'  => $p3['problem'],
     'context_organism' => $context_organism,
     'context_assembly' => $context_assembly,
+    'context_is_transcripts' => $context_is_transcripts,
+    'junction_types'   => $JUNCTION_TYPES,
     'context_gene_set' => $context_gene_set,
     'context_feature'  => $context_feature,
     'isoforms'         => $isoforms,
