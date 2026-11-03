@@ -48,3 +48,18 @@ function adm_status_card(string $id, string $icon, string $title, array $badges,
     $h .= '<div class="card-body">' . $body . '</div></div></div>';
     return $h;
 }
+
+/**
+ * A command for the admin to run on the server, with a Copy button. Selecting a command by
+ * hand drops or adds characters -- "dnf clean package" for "packages" (2026-11-03) -- so a
+ * command the dashboard tells you to run is always copied from the server-built string.
+ * Copy is js/modules/copy-to-clipboard.js (data-copy-text; works on plain http).
+ */
+function adm_command(string $cmd): string {
+    $c = htmlspecialchars($cmd, ENT_QUOTES);
+    return '<div class="d-flex align-items-start gap-2 my-1">'
+         . '<code class="small user-select-all flex-grow-1 bg-light border rounded px-2 py-1 text-break">' . $c . '</code>'
+         . '<button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-copy-text="' . $c . '"'
+         . ' title="Copy the command, then run it on the server"><i class="fa fa-copy"></i> <span class="copy-label">Copy</span></button>'
+         . '</div>';
+}

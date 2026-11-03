@@ -204,7 +204,8 @@
           <?= htmlspecialchars(implode(' · ', $gi_parts)) ?>
           <?php if (!empty($gi['search']) && isset($gi['cli']) && !$gi['cli']): ?>
           <span class="d-block mt-1"><strong>Search indexes cannot be built here:</strong> the web server cannot run the
-            JBrowse CLI. Install it with <code>sudo scripts/install_jbrowse_cli.sh</code>.</span>
+            JBrowse CLI. Install it with:</span>
+          <?= adm_command('sudo ' . $config->getPath('site_path') . '/scripts/install_jbrowse_cli.sh') ?>
           <?php endif; ?>
         <?php elseif ($gi_failed): ?>
           the last rebuild had failures.
@@ -239,9 +240,9 @@
         </ul>
         <?php endif; ?>
         <span class="d-block text-muted fst-italic mt-1">
-          By hand: <code>sudo -u apache php scripts/run_housekeeping.php --task=jbrowse_indexes</code>
-          — see <code>docs/JBrowse2/GENE_TRACK_INDEXES.md</code>.
+          By hand (see <code>docs/JBrowse2/GENE_TRACK_INDEXES.md</code>):
         </span>
+        <?= adm_command('sudo -u apache php ' . $config->getPath('site_path') . '/scripts/run_housekeeping.php --task=jbrowse_indexes') ?>
       </div>
       <?php if ($gi_show): ?>
       <button type="button" id="rebuildGeneIndexesBtn" class="btn btn-sm btn-<?= $gi_bad ? 'danger' : 'warning' ?> flex-shrink-0"
@@ -290,7 +291,7 @@
       <p class="small mb-2">The web server is not allowed to ask the package manager for pending updates
         (on SELinux hosts it may not read the package database), so a small daily report has to be
         written by root instead. Run once, on the server:</p>
-      <code class="d-block small mb-2">sudo <?= htmlspecialchars($config->getPath('site_path')) ?>/scripts/install_security_report.sh</code>
+      <?= adm_command('sudo ' . $config->getPath('site_path') . '/scripts/install_security_report.sh') ?>
       <p class="small text-muted mb-0">It installs a daily systemd timer that writes the report into MOOP's
         cache directory. MOOP only reads it and never installs anything.
         <span class="d-block">Last attempt: <?= htmlspecialchars($su['error']) ?></span></p>
@@ -326,10 +327,10 @@
           <?= $su['manager'] === 'dnf' ? 'security advisories' : 'security updates' ?> are pending across
           <?= (int)$su['packages'] ?> packages. To install them all, on the server:</p>
         <ol class="small mb-2 ps-3">
-          <li class="mb-1"><code><?= htmlspecialchars($_su_cmd['update'] ?? $su['command']) ?></code>
+          <li class="mb-1"><?= adm_command((string)($_su_cmd['update'] ?? $su['command'])) ?>
             <span class="text-muted d-block">The last part frees the downloaded packages.</span></li>
           <?php if (isset($su['watched']['Linux kernel'])): ?>
-          <li class="mb-1"><i class="fa fa-power-off text-warning me-1"></i><code><?= htmlspecialchars($_su_cmd['reboot']) ?></code>
+          <li class="mb-1"><i class="fa fa-power-off text-warning me-1"></i>Restart:<?= adm_command($_su_cmd['reboot']) ?>
             <span class="text-muted d-block">This includes a kernel update, which runs only after a restart. The site is down for a minute or two and comes back by itself.</span></li>
           <?php endif; ?>
         </ol>
@@ -338,14 +339,14 @@
       <?php if (!empty($su['reboot'])): ?>
         <p class="small mb-2"><i class="fa fa-power-off text-warning me-1"></i><strong>A newer kernel is installed than the one running.</strong>
           Restart the server to run it:
-          <code class="d-block mt-1"><?= htmlspecialchars(moop_security_update_commands($su['manager'] ?? null)['reboot']) ?></code>
+          <?= adm_command(moop_security_update_commands($su['manager'] ?? null)['reboot']) ?>
           <span class="text-muted d-block mt-1">The site is down for a minute or two and comes back by itself.</span></p>
       <?php endif; ?>
       <p class="small text-muted fst-italic mb-0">
         <i class="fa fa-clock"></i>
         <?php if (!empty($su['stale'])): ?><strong>This report is out of date</strong> — the daily
-          <code>moop-security-report</code> timer has stopped running. Check it with
-          <code>systemctl status moop-security-report.timer</code>.
+          <code>moop-security-report</code> timer has stopped running. Check it with:
+          <?= adm_command('systemctl status moop-security-report.timer') ?>
         <?php endif; ?>
         <?php // Relative, never a printed clock time: PHP's timezone is unset here (UTC) while the host is local.
               $_su_age = $su['checked_at'] ? max(0, time() - (int)strtotime($su['checked_at'])) : null; ?>
@@ -356,9 +357,8 @@
         <?php if (($su['source'] ?? '') === 'report'): ?>
           <?php /* Housekeeping only READS root's report, so "Run housekeeping now" alone shows the same
                    answer again. Installing refreshes it by itself (the dnf/apt hook); this is for the rest. */ ?>
-          <span class="d-block mt-1">To refresh it without installing anything:
-            <code><?= htmlspecialchars(moop_security_update_commands($su['manager'] ?? null)['recheck']) ?></code>,
-            then <strong>Run housekeeping now</strong>.</span>
+          <span class="d-block mt-1">To refresh it without installing anything, run this, then <strong>Run housekeeping now</strong>:</span>
+          <?= adm_command(moop_security_update_commands($su['manager'] ?? null)['recheck']) ?>
         <?php endif; ?>
       </p>
     <?php endif; ?>
@@ -615,7 +615,7 @@
                     . " && (git commit -m \"Site data backup\" || true)"
                     . ($g['has_upstream'] ? " && git push" : "");
             ?>
-            <code class="d-block mt-1" style="font-size: 0.85em;"><?= htmlspecialchars($_cmd) ?></code>
+            <?= adm_command($_cmd) ?>
             <span class="text-muted d-block mt-1">Last commit <?= htmlspecialchars($g['last_commit']) ?>.</span>
           <?php endif; ?>
         </div>
