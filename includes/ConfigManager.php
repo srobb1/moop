@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu', 'languages', 'languages_retired'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -364,6 +364,57 @@ class ConfigManager
         return $items;
     }
 
+    /** A language code: ISO 639-1, optionally with a region ('pt-br'). */
+    public const LANGUAGE_CODE = '/^[a-z]{2}(-[a-z]{2,4})?$/';
+
+    /**
+     * The site's languages, in order, English first: [['code' => 'en', 'name' => 'English'], ...].
+     * English is always there even if a saved list forgot it -- it is what untranslated text falls
+     * back to.
+     */
+    public function languages(): array
+    {
+        $out = [];
+        foreach ((array) ($this->config['languages'] ?? []) as $l) {
+            $code = (string) ($l['code'] ?? '');
+            if (preg_match(self::LANGUAGE_CODE, $code) && !isset($out[$code])) $out[$code] = ['code' => $code, 'name' => (string) ($l['name'] ?? $code)];
+        }
+        if (!isset($out['en'])) $out = ['en' => ['code' => 'en', 'name' => 'English']] + $out;
+        else $out = ['en' => $out['en']] + $out;
+        return array_values($out);
+    }
+
+    /** Just the codes of languages(). */
+    public function languageCodes(): array
+    {
+        return array_column($this->languages(), 'code');
+    }
+
+    /** Retired languages: [['code', 'name', 'retired_at', 'retired_by'], ...]. Their text is kept. */
+    public function retiredLanguages(): array
+    {
+        return array_values(array_filter((array) ($this->config['languages_retired'] ?? []), fn($l) => is_array($l) && isset($l['code'])));
+    }
+
+    /** Why these language lists cannot be saved, or null. */
+    public static function languagesProblem($active, $retired): ?string
+    {
+        if (!is_array($active) || !is_array($retired)) return 'not a list';
+        $seen = [];
+        foreach ([$active, $retired] as $n => $list) {
+            foreach ($list as $l) {
+                $code = is_array($l) ? (string) ($l['code'] ?? '') : '';
+                $name = is_array($l) ? trim((string) ($l['name'] ?? '')) : '';
+                if (!preg_match(self::LANGUAGE_CODE, $code)) return 'a language code must look like "fr" or "pt-br"';
+                if ($name === '' || mb_strlen($name) > 40) return "\"$code\" needs a name";
+                if (isset($seen[$code])) return "\"$code\" is listed twice";
+                $seen[$code] = true;
+                if ($n === 1 && $code === 'en') return 'English cannot be retired';
+            }
+        }
+        return in_array('en', array_column($active, 'code'), true) ? null : 'English must stay';
+    }
+
     /** The main bar as it was hand-written in includes/toolbar.php until 2026-11-03. */
     public static function defaultMainMenu(): array
     {
@@ -460,7 +511,7 @@ class ConfigManager
         $label_ok = function ($label): bool {
             if (!is_array($label) || trim((string) ($label['en'] ?? '')) === '') return false;
             foreach ($label as $lang => $text) {
-                if (!preg_match('/^[a-z]{2}$/', (string) $lang) || !is_string($text) || mb_strlen($text) > 60) return false;
+                if (!preg_match(self::LANGUAGE_CODE, (string) $lang) || !is_string($text) || mb_strlen($text) > 60) return false;
             }
             return true;
         };
@@ -840,6 +891,15 @@ class ConfigManager
                     }
                 }
 
+                if ($key === 'languages' || $key === 'languages_retired') {
+                    $active  = $key === 'languages' ? $data[$key] : ($data['languages'] ?? $this->config['languages'] ?? []);
+                    $retired = $key === 'languages_retired' ? $data[$key] : ($data['languages_retired'] ?? $this->config['languages_retired'] ?? []);
+                    $problem = self::languagesProblem($active, $retired);
+                    if ($problem !== null) {
+                        return ['success' => false, 'message' => 'The languages are not valid (' . $problem . '); nothing was saved'];
+                    }
+                }
+
                 if ($key === 'main_menu') {
                     $problem = self::mainMenuProblem($data[$key]);
                     if ($problem !== null) {
@@ -905,7 +965,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout' || $key === 'main_menu') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout' || $key === 'main_menu' || $key === 'languages' || $key === 'languages_retired') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);

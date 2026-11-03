@@ -3650,6 +3650,45 @@ ok($_items[0]['to']['page'] === 'rnai' && $_items[0]['label'] === ['en' => 'RNA 
 ok(moop_menu_page_place(moop_menu_set_page($_m3, 'faq', 'none', []), 'faq') === 'none'
    && moop_menu_page_place(moop_menu_without_page($_m3, 'rnai'), 'rnai') === 'none', '"Not in a menu", and deleting a page, take it out');
 $_c = $_cprp->getValue($_cpcfg); unset($_c['main_menu']); $_cprp->setValue($_cpcfg, $_c);
+
+// Languages (cuttingclass): English first and always; a language is RETIRED, never deleted, and
+// what was written in it survives saves made while it is retired (the retired-organism rule).
+$_lang = function (array $active, array $retired = []) use ($_cpcfg, $_cprp) {
+    $c = $_cprp->getValue($_cpcfg); $c['languages'] = $active; $c['languages_retired'] = $retired; $_cprp->setValue($_cpcfg, $c);
+};
+$_lang([]);
+ok($_cpcfg->languageCodes() === ['en'], 'no languages saved: English only (simrbase, unchanged)');
+$_lang([['code' => 'es', 'name' => 'Español'], ['code' => 'en', 'name' => 'English']]);
+ok($_cpcfg->languageCodes() === ['en', 'es'], 'English is always first, whatever the saved order');
+ok(ConfigManager::languagesProblem([['code' => 'en', 'name' => 'English'], ['code' => 'pt-br', 'name' => 'Português']], []) === null,
+   'a language with a region code is fine');
+foreach ([[[['code' => 'es', 'name' => 'Español']], []],
+          [[['code' => 'en', 'name' => 'English']], [['code' => 'en', 'name' => 'English']]],
+          [[['code' => 'en', 'name' => 'English'], ['code' => 'es', 'name' => 'Español']], [['code' => 'es', 'name' => 'Español']]],
+          [[['code' => 'en', 'name' => 'English'], ['code' => 'Spanish', 'name' => 'x']], []],
+          [[['code' => 'en', 'name' => 'English'], ['code' => 'fr', 'name' => '']], []]] as $_bad) {
+    ok(ConfigManager::languagesProblem($_bad[0], $_bad[1]) !== null, 'languages refused: ' . json_encode($_bad));
+}
+moop_page_save(['slug' => 'about', 'title' => ['en' => 'About', 'es' => 'Acerca de'], 'body' => ['en' => 'Hi', 'es' => 'Hola']]);
+$_lang([['code' => 'en', 'name' => 'English']], [['code' => 'es', 'name' => 'Español', 'retired_at' => 'x']]);
+ok(moop_page_langs() === ['en'] && moop_page_get('about')['body']['es'] === 'Hola',
+   'Spanish retired: the editor offers English only, and the Spanish text is still stored');
+moop_page_save(['slug' => 'about', 'title' => ['en' => 'About us'], 'body' => ['en' => 'Hello']]);   // an English-only save
+$_about = moop_page_get('about');
+ok($_about['body']['en'] === 'Hello' && $_about['body']['es'] === 'Hola' && $_about['title']['es'] === 'Acerca de',
+   'a page saved while Spanish is retired keeps its Spanish text (not thrown away)');
+$_lang([['code' => 'en', 'name' => 'English'], ['code' => 'es', 'name' => 'Español']]);
+ok(moop_page_langs() === ['en', 'es'] && moop_page_get('about')['body']['es'] === 'Hola', 'restored: the Spanish is back, as it was');
+$_lang([['code' => 'en', 'name' => 'English'], ['code' => 'es', 'name' => 'Español']]);
+moop_page_save(['slug' => 'about', 'title' => ['en' => 'About us', 'es' => 'Acerca de'], 'body' => ['en' => 'Hello', 'es' => '']]);
+ok(moop_page_get('about')['body']['es'] === '', 'an ACTIVE language emptied in the editor is emptied (only retired text is carried over)');
+// The page's MENU label must survive the same way: Manage Pages builds it from the stored page.
+$_lang([['code' => 'en', 'name' => 'English']], [['code' => 'es', 'name' => 'Español']]);
+moop_page_save(['slug' => 'about', 'title' => ['en' => 'About'], 'body' => ['en' => 'x']]);   // English-only save while retired
+$_mlab = moop_menu_set_page([['type' => 'link', 'label' => ['en' => 'About us', 'es' => 'Acerca de'], 'to' => ['page' => 'about']]],
+                            'about', 'top', moop_page_get('about')['title']);
+ok(($_mlab[0]['label'] ?? []) === ['en' => 'About', 'es' => 'Acerca de'], 'and its menu label keeps the retired Spanish title too');
+$_c = $_cprp->getValue($_cpcfg); unset($_c['languages'], $_c['languages_retired']); $_cprp->setValue($_cpcfg, $_c);
 $_cprp->setValue($_cpcfg, $_cpsaved);
 exec('rm -rf ' . escapeshellarg($_cp));
 

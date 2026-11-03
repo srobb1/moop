@@ -15,6 +15,9 @@
 
     const menu  = JSON.parse(JSON.stringify(data.menu || []));
     const pages = data.pages || [];
+    // The site's active languages, English first (Admin -> Manage Languages). A label in a retired
+    // language is not shown here but stays in the item, so it is saved back untouched.
+    const languages = data.languages && data.languages.length ? data.languages : [{ code: 'en', name: 'English' }];
 
     // ---- small DOM helpers (no innerHTML with admin text) ----------------------------------
     function el(tag, attrs, children) {
@@ -51,7 +54,7 @@
             return input;
         };
         return el('div', { class: 'd-flex gap-1 flex-grow-1', style: 'min-width: 16rem;' },
-                  [mk('en', placeholder + ' (English)'), mk('es', placeholder + ' (Español, optional)')]);
+                  languages.map((l, i) => mk(l.code, placeholder + ' (' + l.name + (i ? ', optional' : '') + ')')));
     }
     function targetInputs(item) {
         item.to = item.to || { builtin: 'about' };

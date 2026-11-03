@@ -56,7 +56,7 @@
   <?php endif; ?>
 
   <p class="small text-muted mt-3 mb-0">
-    Saved in <code>config/config_editable.json</code> (<code>main_menu</code>). Spanish labels are shown to
-    Spanish-language visitors once the site offers Spanish; left empty, the English label is used.
+    Saved in <code>config/config_editable.json</code> (<code>main_menu</code>). Each item has a label for every
+    <a href="manage_languages.php">language</a> the site uses; one left empty shows the English label.
   </p>
 </div>

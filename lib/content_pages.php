@@ -12,8 +12,11 @@
  *     "body":  {"en": "# ...markdown...", "es": "..."},
  *     "updated_at": "2026-11-03T16:40:00-06:00", "updated_by": "admin" }
  *
- * Spanish is stored now and shown when the language work (step 5) lands; until then a page is
- * shown in English.
+ * Languages are the site's (Admin -> Manage Languages, ConfigManager::languages()). A page keeps
+ * the text of EVERY language it was written in, retired ones included: retiring a language hides
+ * it, it never deletes what was written (the retired-organism rule), and saving a page in the
+ * editor -- which only shows the active languages -- leaves the others untouched. Until the
+ * language work (step 5) chooses per visitor, a page is shown in English.
  *
  * ONE Markdown converter -- moop_markdown() -- for the published page AND the editor's preview
  * (admin/api/preview_page.php), so the preview can never disagree with what visitors see.
@@ -21,7 +24,10 @@
  * neutralised, so a page cannot carry a script.
  */
 
-const MOOP_PAGE_LANGS = ['en', 'es'];
+/** The languages a page is edited in: the site's active languages, English first. */
+function moop_page_langs(): array {
+    return ConfigManager::getInstance()->languageCodes();
+}
 
 /** Where pages live. Under metadata_path: written by the web (Manage Pages), snapshot to the backup. */
 function moop_pages_dir(): string {
@@ -67,7 +73,12 @@ function moop_page_list(): array {
 function moop_page_normalise(array $page): array {
     $out = ['slug' => (string) ($page['slug'] ?? ''), 'title' => [], 'body' => [],
             'updated_at' => (string) ($page['updated_at'] ?? ''), 'updated_by' => (string) ($page['updated_by'] ?? '')];
-    foreach (MOOP_PAGE_LANGS as $lang) {
+    // Every language the page has text in (active or retired), plus every active one, so callers
+    // can index any active language without checking.
+    $langs = array_unique(array_merge(moop_page_langs(),
+        array_keys((array) ($page['title'] ?? [])), array_keys((array) ($page['body'] ?? []))));
+    foreach ($langs as $lang) {
+        if (!preg_match(ConfigManager::LANGUAGE_CODE, (string) $lang)) continue;
         $out['title'][$lang] = (string) ($page['title'][$lang] ?? '');
         $out['body'][$lang]  = (string) ($page['body'][$lang] ?? '');
     }
@@ -82,6 +93,16 @@ function moop_page_normalise(array $page): array {
  * Written to a temp file and renamed, so a reader never sees half a page.
  */
 function moop_page_save(array $page): array {
+    // Text in a language not being saved now (a retired one, which the editor does not show) is
+    // carried over from the stored page, never dropped.
+    $stored = moop_page_slug_ok((string) ($page['slug'] ?? '')) ? moop_page_get((string) $page['slug']) : null;
+    if ($stored !== null) {
+        foreach (['title', 'body'] as $part) {
+            foreach ($stored[$part] as $lang => $text) {
+                if (!array_key_exists($lang, (array) ($page[$part] ?? []))) $page[$part][$lang] = $text;
+            }
+        }
+    }
     $page = moop_page_normalise($page);
     if (!moop_page_slug_ok($page['slug'])) {
         return ['ok' => false, 'error' => 'The address may use only lower-case letters, digits and hyphens (up to 60).'];

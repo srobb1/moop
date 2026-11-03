@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $slug     = trim((string) ($_POST['slug'] ?? ''));
         $original = (string) ($_POST['original_slug'] ?? '');
         $page = ['slug' => $slug, 'title' => [], 'body' => []];
-        foreach (MOOP_PAGE_LANGS as $lang) {
+        foreach (moop_page_langs() as $lang) {   // active languages only; retired text is kept by moop_page_save()
             $page['title'][$lang] = trim((string) ($_POST["title_$lang"] ?? ''));
             $page['body'][$lang]  = str_replace("\r\n", "\n", (string) ($_POST["body_$lang"] ?? ''));
         }
@@ -55,7 +55,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // of where it sits, so this and Manage Menu cannot disagree.
         $place = (string) ($_POST['menu_place'] ?? 'none');
         $menu  = $config->mainMenu();
-        $new   = moop_menu_set_page($menu, $slug, $place, $page['title']);
+        // Titles from the page AS STORED, not as posted: the editor posts only the active languages,
+        // and a label built from those dropped a retired language's menu label (found 2026-11-03 --
+        // the page kept its Spanish, its menu entry lost it).
+        $stored = moop_page_get($slug);
+        $new   = moop_menu_set_page($menu, $slug, $place, $stored['title'] ?? $page['title']);
         if ($new != $menu) {
             $m = moop_menu_save($new);
             if (empty($m['success'])) {

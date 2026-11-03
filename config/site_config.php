@@ -516,6 +516,17 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // Admin -> Manage Menu; a content page can also be placed from its editor (Manage Pages).
     'main_menu' => [],
 
+    // ======== LANGUAGES ========
+    // The languages this site writes its pages and menu labels in, English first (always: it is
+    // the fallback for anything not translated). Each {code, name}: code is ISO 639-1, optionally
+    // with a region ('pt-br'). Managed on Admin -> Manage Languages.
+    //
+    // A language is never deleted, only RETIRED -- like a retired organism: it moves to
+    // languages_retired with when and by whom, disappears from the editors and the site, and every
+    // page text and menu label written in it is KEPT, so Restore brings it all back.
+    'languages'         => [['code' => 'en', 'name' => 'English']],
+    'languages_retired' => [],
+
     // ======== RATE LIMITS: the "heavy" group ========
     // Scripts (path under the app root) that nginx limits most strictly per address: 20 per
     // minute, burst 10, 3 at once — exports, downloads, sequence and BLAST runs. The list is

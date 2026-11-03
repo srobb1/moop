@@ -52,7 +52,7 @@ $data = [
     'customised'     => (bool) $config->getArray('main_menu'),
     'page_script'    => ['/' . $config->getString('site') . '/js/modules/manage-menu.js'],
     'inline_scripts' => [
-        'window.mmData = ' . json_encode(['menu' => $config->mainMenu(), 'pages' => $pages], $flags) . ';',
+        'window.mmData = ' . json_encode(['menu' => $config->mainMenu(), 'pages' => $pages, 'languages' => $config->languages()], $flags) . ';',
     ],
 ];
 echo render_display_page(__DIR__ . '/pages/manage_menu.php', $data, 'Manage Menu');

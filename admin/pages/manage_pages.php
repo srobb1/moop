@@ -5,7 +5,10 @@
  * $menu_place ('none'|'top'|'dd:<key>'), $menu_dropdowns [key => label].
  * Live preview: js/modules/manage-pages.js -> admin/api/preview_page.php (the publishing converter).
  */
-$lang_names = ['en' => 'English', 'es' => 'Español'];
+// The site's active languages (Admin -> Manage Languages), English first. Retired languages are
+// not shown, and their text is kept (lib/content_pages.php).
+$lang_names = array_column(ConfigManager::getInstance()->languages(), 'name', 'code');
+$other_langs = array_diff_key($lang_names, ['en' => true]);
 ?>
 <div class="container-fluid my-4" style="max-width: 1400px;">
 
@@ -40,13 +43,15 @@ $lang_names = ['en' => 'English', 'es' => 'Español'];
         <p class="text-muted small p-3 mb-0">No pages yet. <a href="manage_pages.php?new=1">Write the first one.</a></p>
       <?php else: ?>
       <table class="table table-sm align-middle mb-0">
-        <thead class="table-light"><tr><th class="ps-3">Title</th><th>Address</th><th>Spanish</th><th>Last saved</th><th></th></tr></thead>
+        <thead class="table-light"><tr><th class="ps-3">Title</th><th>Address</th><?php if ($other_langs): ?><th>Translations</th><?php endif; ?><th>Last saved</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($pages as $slug => $p): ?>
           <tr>
             <td class="ps-3"><a href="manage_pages.php?edit=<?= rawurlencode($slug) ?>"><strong><?= htmlspecialchars($p['title']['en']) ?></strong></a></td>
             <td class="small"><a href="<?= htmlspecialchars(moop_page_url($slug)) ?>" target="_blank"><code><?= htmlspecialchars(moop_page_url($slug)) ?></code></a></td>
-            <td class="small"><?= trim($p['body']['es']) !== '' ? '<span class="badge bg-success">written</span>' : '<span class="badge bg-light text-dark">not yet</span>' ?></td>
+            <?php if ($other_langs): ?><td class="small"><?php foreach ($other_langs as $code => $name): ?>
+              <span class="badge <?= trim($p['body'][$code] ?? '') !== '' ? 'bg-success' : 'bg-light text-dark' ?>" title="<?= htmlspecialchars($name) ?>: <?= trim($p['body'][$code] ?? '') !== '' ? 'written' : 'not yet' ?>"><?= htmlspecialchars($code) ?></span>
+            <?php endforeach; ?></td><?php endif; ?>
             <td class="small text-muted"><?= htmlspecialchars($p['updated_at'] !== '' ? substr($p['updated_at'], 0, 16) : '—') ?><?= $p['updated_by'] !== '' ? ' · ' . htmlspecialchars($p['updated_by']) : '' ?></td>
             <td class="text-end pe-3">
               <form method="post" class="d-inline" onsubmit="return confirm('Delete this page? Links to it will stop working.');">
@@ -123,8 +128,8 @@ $lang_names = ['en' => 'English', 'es' => 'Español'];
             <label class="form-label mb-1 small fw-semibold" for="body_<?= $lang ?>">Text (Markdown)</label>
             <textarea class="form-control font-monospace mp-body" id="body_<?= $lang ?>" name="body_<?= $lang ?>" rows="22"
                       data-preview="preview_<?= $lang ?>" spellcheck="true"><?= htmlspecialchars($page['body'][$lang]) ?></textarea>
-            <?php if ($lang === 'es'): ?>
-              <div class="form-text">Shown to Spanish-language visitors once the site offers Spanish. Leave empty until then.</div>
+            <?php if ($lang !== 'en'): ?>
+              <div class="form-text">Shown to visitors reading in <?= htmlspecialchars($name) ?>. Left empty, they see the English.</div>
             <?php endif; ?>
           </div>
           <div class="col-lg-6">
