@@ -116,6 +116,14 @@ full list from the Drupal site before it is switched off.
   "show gaps" view highlights untranslated strings on the real pages.
 - Catalog is site data (snapshot to the private repo), like pages and the glossary.
 - Next session: t() + catalog + export/import with checks + show-gaps view + wrap navbar & home.
+- The (i) popovers, help panels and glossary go through field_help() / help_modal() / gloss():
+  t() goes INSIDE those once, not at each (i). Glossary definitions get their own Spanish column
+  (Manage Glossary). Text with numbers built in becomes a template ("Showing %d of %d hits");
+  the export flags those.
+- Shrink the spreadsheet: record which strings THIS site actually displays and export only those,
+  so text for switched-off tools never reaches the translators.
+- Bigger picture: MOOP replaces old simrbase, then cuttingclass, then planosphere.stowers.org —
+  keep everything generic and opt-in so planosphere reuses it.
 
 ### 6. Simple mode (maybe)
 One setting that folds advanced options away (e.g. BLAST parameters) and uses plainer labels.
