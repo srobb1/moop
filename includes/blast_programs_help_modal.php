@@ -61,7 +61,7 @@ foreach (blast_programs() as $prog) {
 // repeats the cards above it is the duplication this modal keeps growing.
 $trouble_cards = [
     [
-        'label' => 'A program is greyed out',
+        'label' => 'A program is grayed out',
         'html'  => true,
         'text'  => 'Not a missing database and not a permission — it wants the OTHER kind of '
                  . 'sequence than the one you pasted. <code>tBLASTn</code> and '

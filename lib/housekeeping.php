@@ -119,7 +119,7 @@ function housekeeping_task_registry(): array {
             'name'  => 'request_metrics_retention',
             'fn'    => 'housekeeping_request_metrics_retention',
             'label' => 'Request log: daily summaries + pruning',
-            'desc'  => 'Summarises each finished day of the System Monitor request log (for the 30-day view), then deletes logs and summaries older than 30 days (they hold usernames and addresses).',
+            'desc'  => 'Summarizes each finished day of the System Monitor request log (for the 30-day view), then deletes logs and summaries older than 30 days (they hold usernames and addresses).',
         ],
         [
             'name'  => 'error_log_retention',

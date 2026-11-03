@@ -958,8 +958,8 @@ echo help_modal(
         ['heading' => 'What it shows', 'cards' => [
             ['label' => 'What belongs to what',
              'text'  => 'The ' . htmlspecialchars(moop_type_word($type)) . ', the transcripts it produces, and the coding sequence and protein each transcript gives.'],
-            ['label' => 'Colour = feature type',
-             'text'  => 'The badge after each ID uses the same colour for a type everywhere on the site.'],
+            ['label' => 'Color = feature type',
+             'text'  => 'The badge after each ID uses the same color for a type everywhere on the site.'],
         ]],
         ['heading' => 'The green count', 'cards' => [
             ['label' => 'How many annotations',

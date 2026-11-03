@@ -16,7 +16,7 @@ $per  = ['24h' => 'minute', '7d' => 'hour', '30d' => 'day'][$range];
 $pct = fn($n, $total) => $total > 0 ? round(100 * $n / $total) . '%' : '—';
 // Row labels. What each one includes is spelled out in the guide (system_monitor_help.php) — keep both in step.
 $ua_words = ['browser' => 'Web browsers', 'search' => 'Search engines', 'ai' => 'AI crawlers', 'script' => 'Scripts & automated tools',
-             'other' => 'Unrecognised programs', 'none' => 'Did not say what it is'];
+             'other' => 'Unrecognized programs', 'none' => 'Did not say what it is'];
 $origin_words = moop_monitor_origin_words();
 $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome browser', 'heavy' => 'Exports, downloads, BLAST',
               'static' => 'Static files (CSS, JS, images)'];

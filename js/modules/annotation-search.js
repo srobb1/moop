@@ -596,7 +596,7 @@ class AnnotationSearch {
         this.cancelled = true;
         $('#search-cancel-btn').hide();
         $('#searchBtn').prop('disabled', false).removeClass('btn-searching').html('<i class="fa fa-search"></i>');
-        $('#progressText').html('<span class="text-warning"><i class="fa fa-ban me-1"></i>Search cancelled.</span>');
+        $('#progressText').html('<span class="text-warning"><i class="fa fa-ban me-1"></i>Search canceled.</span>');
     }
 
     finishSearch() {

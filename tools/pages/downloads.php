@@ -272,7 +272,7 @@ echo help_modal(
     [[
         'heading' => '',
         'cards'   => [
-            ['label' => 'Browse the tree',    'text' => 'Files are organised organism → assembly → gene set. Expand a level to see what is inside.'],
+            ['label' => 'Browse the tree',    'text' => 'Files are organized organism → assembly → gene set. Expand a level to see what is inside.'],
             ['label' => 'Select at any level', 'text' => 'Tick individual files, or the box at an organism, assembly or gene-set level to take everything within it.'],
             ['label' => 'Download as a zip',   'text' => 'With files selected, Download Selected fetches them all at once in a single zip.'],
             ['label' => 'Find things fast',    'text' => 'Expand / Collapse All moves through large trees quickly, and the filter box narrows by organism name.'],

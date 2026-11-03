@@ -732,7 +732,7 @@
                                value="<?= htmlspecialchars($editable_config['cache_path']['current_value']) ?>"
                                placeholder="/var/www/moop-cache">
                         <small class="form-text text-muted mt-1">
-                            Must be an absolute path. Leave empty to store caches inside the organisms/ tree (legacy behaviour).
+                            Must be an absolute path. Leave empty to store caches inside the organisms/ tree (legacy behavior).
                         </small>
                     </div>
                 </div>

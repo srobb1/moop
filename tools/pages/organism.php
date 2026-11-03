@@ -214,7 +214,7 @@
                 <?= gloss('assembly', 'Assemblies') ?>
                 <?= field_help(
                     'Each chip is one genome build for this organism. A green tick means its '
-                    . 'genome sequence is available to download and search; a grey cross means '
+                    . 'genome sequence is available to download and search; a gray cross means '
                     . 'only its gene models are. "Transcripts only" means the build is one '
                     . 'assembled transcript per gene, not a genome: there is no sequence between '
                     . 'or around genes. Click one to open it.',

@@ -22,7 +22,7 @@ $you = [
 
 $levels = [
     ['Not logged in', 'Browse and search the data that has been made public. No account needed.'],
-    ['On the institute network', 'Recognised by network address — all the data, without logging in.'],
+    ['On the institute network', 'Recognized by network address — all the data, without logging in.'],
     ['Collaborator', 'A login granted access to particular organisms or assemblies by the administrator.'],
     ['Administrator', 'Everything, plus the admin pages.'],
 ];

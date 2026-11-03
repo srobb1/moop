@@ -11,7 +11,7 @@ echo help_modal('jbrowse-guide', 'How JBrowse Track Management works', [
     ]],
     ['heading' => 'Badges and repairs', 'cards' => [
         ['label' => 'Gene track / search index', 'text' => 'Each gene set is checked live against its genes.gff. A warning means the track or search index is missing or older than the GFF; Rebuild fixes it (housekeeping also does this in the background).'],
-        ['label' => 'Full rebuild', 'text' => 'Re-reads every track file — slow on a big sheet. Only needed when a row\'s file, colour or track type changed.'],
+        ['label' => 'Full rebuild', 'text' => 'Re-reads every track file — slow on a big sheet. Only needed when a row\'s file, color or track type changed.'],
         ['label' => 'Dry run', 'text' => 'Shows what a sync or clean-up would change, without changing anything.'],
         ['label' => 'Unregister', 'text' => 'Removes only what registration created, so the assembly leaves the genome browser. Its data, BLAST and MOOP pages are untouched.'],
     ]],

@@ -420,7 +420,7 @@
                 <div class="collapse <?= $advanced_open ? 'show' : '' ?>" id="advancedOptions">
                     <div class="border rounded p-3 mt-1">
                         <p class="small text-muted mb-3">
-                            Every box below is optional. Left blank, it uses the value shown in grey,
+                            Every box below is optional. Left blank, it uses the value shown in gray,
                             which comes from the primer type you chose in step 2 — so changing the
                             primer type changes these too.
                         </p>
@@ -1184,7 +1184,7 @@
                          . '<code>|</code> in step 1.',
                  'html' => true],
                 ['num' => '3', 'label' => 'Options',
-                 'text' => 'The grey numbers in the boxes are the values for the type you picked '
+                 'text' => 'The gray numbers in the boxes are the values for the type you picked '
                          . 'above, shown as hints, not filled in: leave a box empty and that value '
                          . 'is used. Type in a box only to override it. How many pairs to return '
                          . 'starts at 5, and after a run the form keeps whatever you entered.'],

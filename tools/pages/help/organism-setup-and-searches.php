@@ -643,7 +643,7 @@
         <h6 class="mt-3">What matches what:</h6>
         <table class="table table-sm">
           <thead class="table-light">
-            <tr><th>Expected behaviour</th><th>Example</th></tr>
+            <tr><th>Expected behavior</th><th>Example</th></tr>
           </thead>
           <tbody>
             <tr><td>Plurals find singulars</td><td><code>kinases</code> finds <em>protein kinase domain</em></td></tr>
