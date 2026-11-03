@@ -164,8 +164,8 @@
               No organisms in <strong><?= htmlspecialchars($group_name) ?></strong> yet.
               <div class="small text-muted mt-2">
                 Nothing in <?= htmlspecialchars($config->getString('siteTitle')) ?> is filed under
-                that name. Browse <a href="/<?= $site ?>/index.php">all organisms and groups</a>,
-                or <a href="/<?= $site ?>/tools/search.php">search across everything</a>.
+                that name. Browse <a href="/<?= $site ?>/index.php">all organisms and groups</a><?php if (moop_tool_on('annotation_search')): ?>,
+                or <a href="/<?= $site ?>/tools/search.php">search across everything</a><?php endif; ?>.
               </div>
             </div>
           <?php else: ?>

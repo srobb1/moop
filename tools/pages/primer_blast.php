@@ -793,7 +793,8 @@ $db_section_label = function ($key) {
                                                     // once ExonMap has placed it -- which is what gives a
                                                     // junction-spanning primer a browser link at all.
                                                     $mapped_g = $prod['genomic'] ?? null;
-                                                    $can_link = !empty($result_organism) && !empty($result_assembly)
+                                                    $can_link = moop_tool_on('genome_browser')   // switched off: no Browser button
+                                                              && !empty($result_organism) && !empty($result_assembly)
                                                               && ($db_key === 'genome' || $mapped_g !== null)
                                                               // the browser can only open registered assemblies
                                                               && isJBrowseAssemblyRegistered($result_organism, $result_assembly);

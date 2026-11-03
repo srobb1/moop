@@ -138,13 +138,16 @@ echo help_modal(
                              . 'pairs the hits, keeps only those facing each other on the same '
                              . 'sequence, reports every product size, and searches the genome and '
                              . 'the transcriptome together so you can see whether the pair spans '
-                             . 'an intron.<br>'
+                             . 'an intron.'
                              // btn-tool-orange, not btn-primary: this is the colour the tool
                              // already wears in the toolbox (config/tools_config.php), so the
                              // button here and the one they will look for match. blast.php uses
                              // btn-primary nowhere, so Bootstrap blue would be off-palette too.
-                             . '<a href="' . $primer_blast_url . '" class="btn btn-sm btn-tool-orange mt-2">'
-                             . '<i class="fa fa-vials me-1"></i>Open Primer BLAST</a>',
+                             // No button when Primer BLAST is switched off (moop_tool_on()).
+                             . (moop_tool_on('primer_blast')
+                                 ? '<br><a href="' . $primer_blast_url . '" class="btn btn-sm btn-tool-orange mt-2">'
+                                   . '<i class="fa fa-vials me-1"></i>Open Primer BLAST</a>'
+                                 : ''),
                 ],
                 [
                     'label' => 'What it catches that reading by hand does not',

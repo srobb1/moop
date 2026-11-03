@@ -51,8 +51,11 @@
             // An exact-ID lookup finding nothing usually means the visitor typed a name or a
             // word ("BRCA1", "kinase"). Offer the search that handles those, term filled in.
             const site = sitePath;
+            // Annotation Search switched off on this site (includes/toolbar.php marks the page):
+            // no link into it.
+            const searchOn = !document.querySelector('[data-no-search="1"]');
             wrap.innerHTML = '<div class="small mt-2 text-muted">No gene, transcript or protein has that exact ID. '
-                + (q ? `<a href="${site}/tools/search.php?q=${encodeURIComponent(q)}">Search annotations for “${escapeHtml(q)}” →</a>` : '')
+                + (q && searchOn ? `<a href="${site}/tools/search.php?q=${encodeURIComponent(q)}">Search annotations for “${escapeHtml(q)}” →</a>` : '')
                 + '</div>';
             return;
         }

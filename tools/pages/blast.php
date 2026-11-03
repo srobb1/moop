@@ -126,12 +126,14 @@
                         // reason to open help -- they would run the search, read the HSPs by
                         // hand, and never learn the pair could be judged in one step.
                         ?>
+<?php if (moop_tool_on('primer_blast')): ?>
                         <div class="mt-2 pt-2 border-top">
                             <i class="fa fa-vials me-1"></i>
                             Checking a primer <strong>pair</strong>? <a href="<?= htmlspecialchars('/' . $site . '/tools/primer_blast.php') ?>">Primer BLAST</a>
                             pairs the hits for you, reports every product size, and shows the products in the genome browser.
                             This page is the right tool for locating a <em>single</em> short sequence.
                         </div>
+<?php endif; ?>
                     </div>
                 </div>
             </div>

@@ -286,7 +286,8 @@ if (!empty($selected_source_obj) && !empty($selected_db_obj)) {
 
     $has_sqlite = file_exists($config->getPath('organism_data') . '/' . $selected_organism . '/organism.sqlite');
 
-    $has_jbrowse = isJBrowseAssemblyRegistered($selected_organism, $selected_assembly);
+    // Off with the genome browser too: every per-hit and per-HSP browser link reads this one flag.
+    $has_jbrowse = moop_tool_on('genome_browser') && isJBrowseAssemblyRegistered($selected_organism, $selected_assembly);
 
     $coords = (!$is_genome_db && ($linkout_config['jbrowse'] ?? false))
         ? moop_feature_coords_by_feature($assembly_path, $blast_hit_ids)

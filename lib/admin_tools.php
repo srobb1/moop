@@ -43,6 +43,9 @@ function moop_admin_tools(): array {
             ['file' => 'manage_users.php', 'title' => 'Manage Users', 'label' => 'Users', 'icon' => 'users',
              'desc' => 'Add new users to the system and manage user accounts.',
              'cta'  => 'Go to Manage Users'],
+            ['file' => 'manage_tools.php', 'title' => 'Manage Tools', 'label' => 'Tools', 'icon' => 'toolbox',
+             'desc' => 'Choose which tools this site offers in the toolbox and the Tools menu.',
+             'cta'  => 'Go to Manage Tools'],
         ]],
         ['label' => 'Maintenance', 'heading' => 'Developer & Maintenance', 'icon' => 'wrench', 'btn' => 'btn-info', 'tools' => [
             ['file' => 'system_monitor.php', 'title' => 'System Monitor', 'label' => 'System Monitor', 'icon' => 'chart-line',

@@ -31,9 +31,11 @@ $search_url = '/' . $site . '/tools/search.php' . ($organism_name !== '' ? '?org
                 description or annotation.
             </p>
             <?php include __DIR__ . '/not_found_access_hint.php'; ?>
+<?php if (moop_tool_on('annotation_search')): ?>
             <a class="btn btn-moop-teal text-white me-2" href="<?= htmlspecialchars($search_url) ?>">
                 <i class="fa fa-search me-1"></i>Search<?= $organism_label !== '' ? ' ' . htmlspecialchars($organism_label) : '' ?>
             </a>
+<?php endif; ?>
             <a class="btn btn-outline-secondary" href="/<?= htmlspecialchars($site) ?>/">Home</a>
         </div>
     </div>

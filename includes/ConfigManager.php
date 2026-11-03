@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -324,13 +324,27 @@ class ConfigManager
      * 
      * @return array Array of all tool configurations
      */
-    public function getAllTools()
+    public function getAllTools(bool $include_disabled = false)
     {
         if (!$this->ensureLoaded()) {
             return [];
         }
+        if ($include_disabled) {
+            return $this->tools;
+        }
+        // Tools the site switched off ('tools_disabled', Admin -> Manage Tools) are left out, so
+        // every toolbox that lists tools drops them without knowing the setting exists.
+        return array_filter($this->tools, fn($tool, $id) => $this->isToolEnabled((string) $id), ARRAY_FILTER_USE_BOTH);
+    }
 
-        return $this->tools;
+    /**
+     * Is this tool offered on this site? True unless its id is in 'tools_disabled' -- so an
+     * unknown id, or a site that never set the key, answers true and nothing changes.
+     */
+    public function isToolEnabled(string $tool_id): bool
+    {
+        $off = $this->config['tools_disabled'] ?? [];
+        return !(is_array($off) && in_array($tool_id, $off, true));
     }
 
     /**
@@ -586,6 +600,17 @@ class ConfigManager
                     }
                 }
                 
+                // tools_disabled: a list of known tool ids, nothing else
+                if ($key === 'tools_disabled') {
+                    if (!is_array($data[$key]) || array_diff($data[$key], array_keys($this->tools ?? []))) {
+                        return [
+                            'success' => false,
+                            'message' => 'Unknown tool in the list of tools to switch off'
+                        ];
+                    }
+                    $data[$key] = array_values(array_unique($data[$key]));
+                }
+
                 // Validate IP ranges
                 if ($key === 'auto_login_ip_ranges') {
                     if (!is_array($data[$key])) {
@@ -644,7 +669,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);

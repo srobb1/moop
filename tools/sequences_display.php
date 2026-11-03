@@ -131,7 +131,7 @@ if (!empty($available_sequences) && array_reduce($available_sequences, function(
                         // dependency should be loaded, or fail loudly — not quietly turn a
                         // feature off.
                         require_once __DIR__ . '/../lib/gene_isoforms.php';
-                        if (!empty($enable_primer_design)
+                        if (!empty($enable_primer_design) && moop_tool_on('primer_maker')   // switched off: no Design primers
                             && in_array($seq_type, moop_primer_sequence_types(), true)) {
                             $pd_ctx = $primer_design_context ?? [];
                             // One link per sequence in this box. With several (a gene with several

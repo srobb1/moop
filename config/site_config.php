@@ -493,6 +493,15 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // 3. Copy jwt_public_key.pem to remote server
     // 4. Copy track data to remote server
     // 5. Configure nginx/Apache on remote server
+    // ======== TOOLS SWITCHED OFF ========
+    // Tool ids (config/tools_config.php keys) this site does not offer. Empty = every tool, as
+    // shipped. Managed on Admin -> Manage Tools and saved in config_editable.json -- the web never
+    // writes tools_config.php, because a web-written .php file turns any write bug into code
+    // execution. A tool listed here disappears from the toolbox and the navbar's Tools menu, and
+    // its own page answers 404 (ConfigManager::isToolEnabled(), moop_tool_page_guard()).
+    // Added for cuttingclass (notes/CUTTINGCLASS_PLAN.md step 1); opt-in, so absent = unchanged.
+    'tools_disabled' => [],
+
     // ======== RATE LIMITS: the "heavy" group ========
     // Scripts (path under the app root) that nginx limits most strictly per address: 20 per
     // minute, burst 10, 3 at once — exports, downloads, sequence and BLAST runs. The list is

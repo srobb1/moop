@@ -113,7 +113,7 @@ function createToolContext($page, $params = []) {
     // required_params too: a tool that needs a flag the page sets (Expression needs
     // has_expression) would otherwise never see it -- the same silent drop as above.
     $declared = [];
-    foreach (ConfigManager::getInstance()->getAllTools() as $tool) {
+    foreach (ConfigManager::getInstance()->getAllTools(true) as $tool) {   // incl. switched-off: context only
         foreach (array_merge($tool['context_params'] ?? [], $tool['required_params'] ?? []) as $p) {
             $declared[$p] = true;
         }
@@ -141,3 +141,41 @@ function createToolContext($page, $params = []) {
 
     return $context;
 }
+
+/**
+ * The id of the switched-off tool whose page $script is, or null. Pure -- the decision
+ * moop_tool_page_guard() acts on, kept apart so it can be tested without sending a 404.
+ * Matches the script against each tool's url_path; scripts that are no tool's page (AJAX
+ * endpoints, help) are never matched.
+ */
+function moop_disabled_tool_for_script(ConfigManager $config, string $script): ?string {
+    $script = '/' . ltrim($script, '/');
+    $prefix = '/' . $config->getString('site');
+    foreach ($config->getAllTools(true) as $id => $tool) {
+        $path = (string) ($tool['url_path'] ?? '');
+        if ($path !== '' && $script === $prefix . $path && !$config->isToolEnabled((string) $id)) {
+            return (string) $id;
+        }
+    }
+    return null;
+}
+
+/**
+ * Stop here with the site's 404 page if THIS script is the page of a tool the site switched off
+ * ('tools_disabled'). Called by tools/tool_init.php and jbrowse2.php, so a tool hidden from the
+ * menus is not still usable by anyone who knows its address.
+ */
+function moop_tool_page_guard(): void {
+    $config = ConfigManager::getInstance();
+    $id = moop_disabled_tool_for_script($config, (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    if ($id === null) return;
+    // Links to it stay on other pages (Sofia, 2026-11-03), so whoever follows one is told WHY,
+    // not just "not found" -- and an admin, who can do something about it, is told where.
+    $name = (string) ($config->getAllTools(true)[$id]['name'] ?? $id);
+    $message = function_exists('moop_session_is_admin') && moop_session_is_admin()
+        ? "$name is switched off on this site. To switch it back on: Admin → Manage Tools."
+        : "$name is not offered on this site.";
+    require_once __DIR__ . '/functions_display.php';
+    moop_not_found_page($message);
+}
+

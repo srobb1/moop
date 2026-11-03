@@ -424,6 +424,47 @@ ok(($_qsave['success'] ?? false)
    && $cm3->getInt('blast_max_output_mb') === 15 && $cm3->getInt('blast_max_hits') === 250,
    'saved BLAST queue settings are loaded back, not dropped by the whitelist');
 
+require_once "$BASE/lib/functions_tools.php";
+// Tools switched off per site (cuttingclass step 1). OPT-IN: a site that never sets
+// tools_disabled must get every tool, exactly as before.
+$_td = sys_get_temp_dir() . '/moop_tooltest_' . getmypid();
+@mkdir($_td);
+copy("$BASE/config/site_config.php",  "$_td/site_config.php");
+copy("$BASE/config/tools_config.php", "$_td/tools_config.php");
+file_put_contents("$_td/config_editable.json", '{}');
+$_tnew = function () use ($_td) {
+    $c = (new ReflectionClass('ConfigManager'))->newInstanceWithoutConstructor();
+    $c->initialize("$_td/site_config.php", "$_td/tools_config.php");
+    return $c;
+};
+$_t0 = $_tnew();
+ok(count($_t0->getAllTools()) === count($_t0->getAllTools(true)) && count($_t0->getAllTools()) > 5
+   && $_t0->isToolEnabled('moopmart') && $_t0->isToolEnabled('genome_browser'),
+   'tools_disabled unset: every tool is offered, as shipped');
+ok(moop_disabled_tool_for_script($_t0, '/' . $_t0->getString('site') . '/tools/moopmart.php') === null,
+   'tools_disabled unset: no tool page is turned away');
+$_tsave = $_t0->saveEditableConfig(['tools_disabled' => ['moopmart', 'genome_browser', 'moopmart']], $_td);
+$_t1 = $_tnew();
+$_tids = array_keys($_t1->getAllTools());
+ok(($_tsave['success'] ?? false) && !in_array('moopmart', $_tids, true) && !in_array('genome_browser', $_tids, true)
+   && in_array('blast_search', $_tids, true) && count($_t1->getAllTools(true)) === count($_t0->getAllTools(true)),
+   'switched-off tools leave the toolbox list; the rest stay; the full registry is still there for admin');
+ok($_t1->getArray('tools_disabled') === ['moopmart', 'genome_browser'], 'a repeated id is saved once');
+ok(!$_t1->isToolEnabled('moopmart') && $_t1->isToolEnabled('blast_search') && $_t1->isToolEnabled('no_such_tool'),
+   'isToolEnabled: false only for a listed id (an unknown id is not "off")');
+$_tsite = '/' . $_t1->getString('site');
+ok(moop_disabled_tool_for_script($_t1, "$_tsite/tools/moopmart.php") === 'moopmart'
+   && moop_disabled_tool_for_script($_t1, "$_tsite/jbrowse2.php") === 'genome_browser',
+   "a switched-off tool's own page is turned away (404)");
+ok(moop_disabled_tool_for_script($_t1, "$_tsite/tools/blast.php") === null
+   && moop_disabled_tool_for_script($_t1, "$_tsite/api/moopmart_export.php") === null
+   && moop_disabled_tool_for_script($_t1, "/elsewhere/tools/moopmart.php") === null,
+   'other tools, endpoints that are no tool\'s page, and another site\'s path are untouched');
+ok(($_t1->saveEditableConfig(['tools_disabled' => ['moopmart', 'rm -rf']], $_td)['success'] ?? true) === false
+   && $_tnew()->getArray('tools_disabled') === ['moopmart', 'genome_browser'],
+   'an unknown tool id is refused and nothing is saved');
+exec('rm -rf ' . escapeshellarg($_td));
+
 // saveEditableConfig() rebuilds the file from the same whitelist, so an unlisted key is
 // deleted the next time any other admin settings page is saved.
 $saved = $cm2->saveEditableConfig(['siteTitle' => 'Smoke Title'], $cfgtmp);

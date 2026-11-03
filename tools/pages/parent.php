@@ -266,7 +266,7 @@
                         if ($feature_loc['strand'] === '+' || $feature_loc['strand'] === '-') {
                             $loc_text .= ' (' . ($feature_loc['strand'] === '+' ? '+' : '&minus;') . ')';
                         }
-                        if ($jbrowse_loc) {
+                        if ($jbrowse_loc && moop_tool_on('genome_browser')) {  // switched-off tool: no link to it (moop_tool_on(), lib/functions_tools.php)
                             $browser_url = '/' . $site . '/jbrowse2.php?organism=' . urlencode($organism_name)
                                 . '&assembly=' . urlencode($genome_accession)
                                 . '&loc=' . urlencode($feature_loc['loc_string']);
@@ -528,12 +528,14 @@
             </span>
             <?php if ($__ex['with_data'] > 0): ?>
             <?php /* Into the Expression Explorer with this gene already in the list, to add others. */ ?>
+<?php if (moop_tool_on('expression')): ?>
             <a class="btn btn-sm btn-outline-secondary py-0 ms-auto"
                href="/<?= htmlspecialchars($site) ?>/tools/expression.php?<?= htmlspecialchars(http_build_query([
                    'organism' => $organism_name, 'assembly' => $genome_accession, 'gene_set' => $gene_set_name,
                    'genes' => $feature_uniquename])) ?>"
                title="Open the Expression Explorer with this gene, to compare it with others">
                 <i class="fa fa-th"></i> Compare genes</a>
+<?php endif; ?>
             <form method="POST" action="" class="ms-1">
                 <?= csrf_input_field() ?>
                 <input type="hidden" name="download_expression" value="1">
@@ -930,14 +932,15 @@ if (!empty($gene_model)) {
                 $gene_model_legend
             )],
             ['heading' => 'How to read it', 'cards' => $gm_read_cards],
-            ['heading' => 'Getting sequence out', 'cards' => [
+            ['heading' => 'Getting sequence out', 'cards' => array_merge([
                 ['label' => 'This gene',
                  'text'  => 'Use FASTA or GFF in the header of this box, or the Sequences section at the foot of the page.'],
+            ], !moop_tool_on('moopmart') ? [] : [   // no Data Exporter on this site: no card pointing at it
                 ['label' => 'Many genes at once', 'html' => true,
                  'text'  => 'For mRNA, CDS, protein, genomic or flanking sequence across many features, use <a href="/'
                           . htmlspecialchars($config->getString('site', 'moop')) . '/tools/moopmart.php?organism='
                           . urlencode($organism_name) . '">the Data Exporter</a>.'],
-            ]],
+            ])],
         ],
         ['intro' => 'Every isoform of this gene, drawn to scale against the genome.']
     );

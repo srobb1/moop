@@ -55,17 +55,41 @@ if ($va_previewing) {
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
              data-bs-toggle="dropdown" aria-expanded="false">Tools</a>
+<?php /* ⚠️ A SECOND LIST of tools, apart from config/tools_config.php (which drives the
+                   toolbox): its own labels and order. Each item is kept exactly as it was and only
+                   left out when its tool is switched off (Admin -> Manage Tools), so a site that
+                   switches nothing off gets this menu byte-for-byte as before. Building it from the
+                   registry would change the labels and order -- a separate decision. */
+                $tb_on = fn(string $id) => ConfigManager::getInstance()->isToolEnabled($id); ?>
           <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
+<?php if ($tb_on('genome_browser')): ?>
             <li><a class="dropdown-item" href="/<?= $site ?>/jbrowse2.php">Genome Browser</a></li>
             <li><hr class="dropdown-divider"></li>
+<?php endif; ?>
+<?php if ($tb_on('annotation_search')): ?>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/search.php">Annotation Search</a></li>
+<?php endif; ?>
+<?php if ($tb_on('moopmart')): ?>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/moopmart.php">MOOPmart: Data Exporter</a></li>
+<?php endif; ?>
+<?php if ($tb_on('expression')): ?>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/expression.php">Expression Explorer</a></li>
+<?php endif; ?>
+<?php if ($tb_on('blast_search')): ?>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/blast.php">BLAST Search</a></li>
+<?php endif; ?>
+<?php if ($tb_on('primer_blast')): ?>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/primer_blast.php">Primer BLAST</a></li>
+<?php endif; ?>
+<?php if ($tb_on('primer_maker')): ?>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/primer_maker.php">Primer Maker</a></li>
+<?php endif; ?>
+<?php if ($tb_on('download_fasta')): ?>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/retrieve_sequences.php">Retrieve Sequences</a></li>
+<?php endif; ?>
+<?php if ($tb_on('downloads')): ?>
             <li><a class="dropdown-item" href="/<?= $site ?>/tools/downloads.php">Downloads</a></li>
+<?php endif; ?>
           </ul>
         </li>
         <li class="nav-item">
@@ -86,7 +110,7 @@ if ($va_previewing) {
         <li class="nav-item navbar-id-search">
           <?php /* Quick gene ID lookup — the index page's ID search (api/feature_search.php),
                    results in a panel under the box. js/modules/navbar-id-search.js */ ?>
-          <form class="m-0" role="search" id="navIdSearch" autocomplete="off">
+          <form class="m-0" role="search" id="navIdSearch" autocomplete="off"<?= ConfigManager::getInstance()->isToolEnabled('annotation_search') ? '' : ' data-no-search="1"' ?>>
             <div class="d-flex align-items-center">
               <div class="input-group input-group-sm">
                 <input type="search" class="form-control" id="navIdInput" placeholder="Gene ID lookup"

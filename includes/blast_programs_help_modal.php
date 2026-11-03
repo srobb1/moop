@@ -207,10 +207,12 @@ echo help_modal(
                     'text'  => 'It pairs the hits, keeps only those facing each other, reports '
                              . 'every product size, searches genome and transcriptome together, '
                              . 'and draws the products in the browser. It needs a PAIR — to '
-                             . 'locate a single oligo, stay on this page.<br>'
-                             . '<a href="' . htmlspecialchars($bp_site . '/tools/primer_blast.php')
-                             . '" class="btn btn-sm btn-tool-orange mt-2">'
-                             . '<i class="fa fa-vials me-1"></i>Open Primer BLAST</a>',
+                             . 'locate a single oligo, stay on this page.'
+                             . (moop_tool_on('primer_blast')   // switched off: no button to it
+                                 ? '<br><a href="' . htmlspecialchars($bp_site . '/tools/primer_blast.php')
+                                   . '" class="btn btn-sm btn-tool-orange mt-2">'
+                                   . '<i class="fa fa-vials me-1"></i>Open Primer BLAST</a>'
+                                 : ''),
                 ],
             ],
         ],

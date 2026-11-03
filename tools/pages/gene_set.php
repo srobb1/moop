@@ -265,6 +265,7 @@
   <?php endif; ?>
 
   <!-- Moopmart tip -->
+<?php if (moop_tool_on('moopmart')): ?>
   <div class="row mb-5">
     <div class="col-12">
       <p class="text-muted small mb-0">
@@ -275,6 +276,7 @@
       </p>
     </div>
   </div>
+<?php endif; ?>
 
 
 </div>

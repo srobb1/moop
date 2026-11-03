@@ -1032,6 +1032,7 @@
                                     $chain_fasta = '>' . $row['left_name'] . "\n" . ($pair['left_sequence'] ?? '')
                                                  . "\n>" . $row['right_name'] . "\n" . ($pair['right_sequence'] ?? '');
                                     ?>
+<?php if (moop_tool_on('primer_blast')): /* switched off: no Check button */ ?>
                                     <form method="post" action="<?= htmlspecialchars('/' . $site . '/tools/primer_blast.php') ?>"
                                           target="_blank" class="d-inline">
                                         <?= csrf_input_field() ?>
@@ -1054,6 +1055,7 @@
                                             <i class="fa fa-vials me-1"></i>Check
                                         </button>
                                     </form>
+<?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; /* pairs */ ?>

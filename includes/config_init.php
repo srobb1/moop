@@ -180,4 +180,15 @@ function genome_fasta_filename(): string {
     return sequence_filename('genome') ?? 'genome.fa';
 }
 
-?>
+/**
+ * Is this tool switched on for this site? For the links one tool's page offers into ANOTHER
+ * tool (the gene page's genome-browser link, BLAST's "Open Primer BLAST", ...): a button that
+ * leads to a switched-off tool is left out, so what a page offers matches what the site offers
+ * (Sofia, 2026-11-03). Shorthand for ConfigManager::isToolEnabled(); true unless switched off.
+ */
+// Defined HERE, not in lib/functions_tools.php: the navbar and the help modals that call it are
+// drawn on pages that never load that file (About, login). Defined there, it took both pages down
+// with a 500 for ~3 minutes on 2026-11-03. Every page loads this file before rendering anything.
+function moop_tool_on(string $tool_id): bool {
+    return ConfigManager::getInstance()->isToolEnabled($tool_id);
+}
