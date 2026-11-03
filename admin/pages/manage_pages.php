@@ -95,6 +95,10 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
           <button type="submit" class="btn btn-sm btn-primary">Save</button>
         </div>
         <?php if (!$pages): ?><p class="small text-muted mt-2 mb-0">Write a page first to use it here.</p><?php endif; ?>
+        <p class="small text-muted mt-2 mb-0">MOOP's own home is always at
+          <a href="/<?= htmlspecialchars($site) ?>/browse.php" target="_blank"><code>/<?= htmlspecialchars($site) ?>/browse.php</code></a>.
+          <?php if ($home['mode'] === 'page'): ?><strong>Your page replaces it at <code>/<?= htmlspecialchars($site) ?>/</code></strong> — add it to the
+          <a href="manage_menu.php">menu</a> (“MOOP's search &amp; browse page”) so visitors can still reach the search and tools.<?php endif; ?></p>
       </form>
     </div>
   </div>

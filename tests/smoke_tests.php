@@ -3631,6 +3631,9 @@ $_dd = ['type' => 'dropdown', 'key' => 'protocols', 'label' => ['en' => 'Protoco
          ['type' => 'link', 'label' => ['en' => 'Gone'], 'to' => ['page' => 'no-such-page']], ['type' => 'divider']]];
 ok($_mm([$_dd, ['type' => 'dropdown', 'key' => 'empty', 'label' => ['en' => 'Empty'], 'items' => []]]) === ['Protocols[RNAi]'],
    'a drop-down: a deleted page and stray dividers drop out; an empty drop-down is not shown');
+ok($_mm([['type' => 'link', 'label' => ['en' => 'Search & browse'], 'to' => ['builtin' => 'browse']]]) === ["Search & browse>$_site/browse.php"]
+   && ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['builtin' => 'browse']]]) === null,
+   "MOOP's own home has a permanent menu target, browse.php (reachable when a page is the home)");
 ok(ConfigManager::mainMenuProblem([$_dd]) === null && ConfigManager::mainMenuProblem(ConfigManager::defaultMainMenu()) === null,
    'a valid menu and the default pass the check');
 foreach ([[['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['url' => 'javascript:alert(1)']]],

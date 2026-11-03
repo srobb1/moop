@@ -22,7 +22,9 @@ $config = ConfigManager::getInstance();
 
 // Which home (Admin -> Manage Pages): MOOP's own (default), a content page instead, or MOOP's own
 // with a content page above it. A page that no longer exists falls back to MOOP's home.
-$home = $config->homeSetting();
+// browse.php sets MOOP_BUILTIN_HOME: MOOP's own home at a permanent address of its own, so it stays
+// reachable (and linkable from the menu) when a site makes one of its pages the home.
+$home = defined('MOOP_BUILTIN_HOME') ? ['mode' => 'builtin', 'page' => ''] : $config->homeSetting();
 $home_intro_html = '';
 if ($home['mode'] !== 'builtin') {
     require_once __DIR__ . '/lib/content_pages.php';

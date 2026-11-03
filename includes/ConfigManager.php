@@ -493,7 +493,8 @@ class ConfigManager
         $href  = null;
         $external = false;
         if (isset($to['builtin'])) {
-            $href = ['about' => "$site/about.php", 'help' => "$site/help.php", 'home' => "$site/index.php"][$to['builtin']] ?? null;
+            $href = ['about' => "$site/about.php", 'help' => "$site/help.php", 'home' => "$site/index.php",
+                     'browse' => "$site/browse.php"][$to['builtin']] ?? null;
         } elseif (isset($to['page'])) {
             $slug = (string) $to['page'];
             $file = rtrim($this->getPath('metadata_path'), '/') . "/pages/$slug.json";
@@ -527,7 +528,7 @@ class ConfigManager
         $link_ok = function ($item) use ($label_ok): bool {
             $to = $item['to'] ?? null;
             if (!$label_ok($item['label'] ?? null) || !is_array($to) || count($to) !== 1) return false;
-            if (isset($to['builtin'])) return in_array($to['builtin'], ['about', 'help', 'home'], true);
+            if (isset($to['builtin'])) return in_array($to['builtin'], ['about', 'help', 'home', 'browse'], true);
             if (isset($to['page']))    return is_string($to['page']) && (bool) preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $to['page']);
             if (isset($to['url']))     return is_string($to['url']) && mb_strlen($to['url']) <= 500
                                               && (preg_match('#^/[^/\\]#', $to['url']) || preg_match('#^https?://[^\s"\'<>]+$#i', $to['url']));

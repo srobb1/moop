@@ -510,7 +510,8 @@ AATGCGTCCACAACAGTTATCAATCAA',
 
     // The main navigation bar (left side, after the site title): a list of
     //   {type: tools}                                  the Tools drop-down (tools_layout above)
-    //   {type: link, label: {en, es}, to: {builtin: about|help|home} | {page: slug} | {url: ...}}
+    //   {type: link, label: {en, es}, to: {builtin: about|help|home|browse} | {page: slug} | {url: ...}}
+    //   (browse = browse.php, MOOP's own home at an address that never changes)
     //   {type: dropdown, key, label: {en, es}, items: [link | {type: divider}, ...]}
     // Empty = Tools, About, Help -- the bar as it was hand-written until 2026-11-03. Managed on
     // Admin -> Manage Menu; a content page can also be placed from its editor (Manage Pages).

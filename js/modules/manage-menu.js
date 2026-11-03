@@ -59,7 +59,8 @@
     function targetInputs(item) {
         item.to = item.to || { builtin: 'about' };
         const sel = el('select', { class: 'form-select form-select-sm', style: 'max-width: 16rem;', 'aria-label': 'Goes to' });
-        const opts = [['builtin:about', 'About'], ['builtin:help', 'Help'], ['builtin:home', 'Home page']]
+        const opts = [['builtin:about', 'About'], ['builtin:help', 'Help'], ['builtin:home', 'Home page'],
+                      ['builtin:browse', "MOOP's search & browse page"]]
             .concat(pages.map(p => ['page:' + p.slug, 'Page: ' + p.title]))
             .concat([['url', 'An address…']]);
         const now = item.to.builtin ? 'builtin:' + item.to.builtin : item.to.page ? 'page:' + item.to.page : 'url';
