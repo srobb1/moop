@@ -701,7 +701,7 @@
                                name="site_data_path"
                                class="form-control font-monospace"
                                value="<?= htmlspecialchars($editable_config['site_data_path']['current_value']) ?>"
-                               placeholder="/var/www/html/moop-site-data">
+                               placeholder="<?= htmlspecialchars(dirname($root_path) . '/' . $site . '-site-data') ?>">
                         <small class="form-text text-muted mt-1">
                             Must be an absolute path. Leave empty to disable backups.
                             To enable git version history: <code>cd /path/to/dir && git init -b main && git add -A && git commit -m "Initial snapshot"</code>

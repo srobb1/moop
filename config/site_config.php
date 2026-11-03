@@ -154,7 +154,15 @@ return [
     // snapshotted for version history. This should be a git repo separate
     // from the app repo. Set to empty string to disable auto-snapshots.
     // The housekeeping system copies changed files here on admin login.
-    'site_data_path' => "$root_path/moop-site-data",
+    //
+    // It holds users.json and secrets.php, so it must be OUTSIDE the document root. Derived like
+    // users_file: <parent of root_path>/<site>-site-data -- /var/www/moop-site-data for the
+    // first deployment (its existing override, so a no-op there). Until 2026-11-03 the default
+    // was "$root_path/moop-site-data": INSIDE the document root, not covered by the no-exec
+    // guard, and shared by every site on the host -- on a new machine the first admin login
+    // would have made the bcrypt hashes downloadable (found by the 2026-11-03 test install).
+    // scripts/fix_moop_selinux.sh already assumed this layout.
+    'site_data_path' => dirname($root_path) . '/' . $site . '-site-data',
 
     // ======== CACHE DIRECTORY ========
     // Where the app writes its own generated caches (organism scan cache,

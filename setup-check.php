@@ -594,6 +594,23 @@ foreach ($example_files as $target) {
 
 // ── Section 5: Directory Structure & Permissions ────────────────────────────
 
+section("Credentials Outside the Document Root");
+
+// users_file and the site-data backup (which copies users.json and secrets.php) must never
+// be under root_path: the web server would serve them as static files, and the no-exec
+// guard blocks .php, not .json. site_data_path defaulted to INSIDE it until 2026-11-03.
+$sc_docroot = rtrim((string) ($config['root_path'] ?? ''), '/');
+foreach (['users_file' => 'Users file', 'site_data_path' => 'Site-data backup'] as $key => $label) {
+    $p = (string) ($config[$key] ?? '');
+    if ($p === '') continue;
+    if ($sc_docroot !== '' && strpos(rtrim($p, '/') . '/', $sc_docroot . '/') === 0) {
+        fail("$label is inside the document root ($p) — anyone can download it over HTTP",
+             "Move it outside $sc_docroot (e.g. " . dirname($sc_docroot) . '/' . basename($p) . ") and set '$key' in Site Configuration");
+    } else {
+        pass("$label is outside the document root ($p)");
+    }
+}
+
 section("Directory Structure & Permissions");
 
 // Directories php-fpm must be able to WRITE. Mirrors the table in
@@ -778,6 +795,31 @@ if (!is_dir("$base/.git")) {
              "         to them, a checkout can still leave served files unreadable.");
     } else {
         pass("Git permission hooks active (core.hooksPath = .githooks)");
+    }
+
+    // The hooks fix files on the NEXT checkout -- not the ones the first clone already wrote.
+    // A clone made under a 027 umask is 640/750 throughout, so the web server cannot read
+    // setup.php itself and the very first step of the install fails (found by the test install
+    // of 2026-11-03). Same rule as the hook: served tracked files world-readable, their
+    // directories traversable.
+    $unreadable_files = 0; $untraversable_dirs = [];
+    $tracked = [];
+    @exec('git -C ' . escapeshellarg($base) . " ls-files -- '*.php' '*.js' '*.css' ':(exclude)tests/*' ':(exclude)testing/*' 2>/dev/null", $tracked);
+    foreach ($tracked as $rel) {
+        $path = "$base/$rel";
+        if (is_file($path) && !(fileperms($path) & 0004)) $unreadable_files++;
+        for ($d = dirname($rel); $d !== '.' && $d !== ''; $d = dirname($d)) {
+            if (isset($untraversable_dirs[$d])) break;
+            if (!(fileperms("$base/$d") & 0001)) $untraversable_dirs[$d] = true;
+        }
+    }
+    if (!(fileperms($base) & 0001)) $untraversable_dirs['.'] = true;
+    if ($tracked && !$unreadable_files && !$untraversable_dirs) {
+        pass('Served files are readable by the web server (' . count($tracked) . ' tracked .php/.js/.css)');
+    } elseif ($tracked) {
+        fail("$unreadable_files served file(s) not world-readable, " . count($untraversable_dirs) . ' director' . (count($untraversable_dirs) === 1 ? 'y' : 'ies')
+             . ' not traversable — the web server cannot load them (500/403). Typical after a clone under a 027 umask',
+             'cd ' . escapeshellarg($base) . ' && .githooks/moop-fix-web-perms' . (isset($untraversable_dirs['.']) ? ' && chmod o+x .' : ''));
     }
 }
 
@@ -971,6 +1013,44 @@ if (detectWebServer() === 'apache') {
     }
     $hdr ? pass('Security headers / Content-Security-Policy set in nginx')
          : warn('No Content-Security-Policy found in nginx (or its file is not readable to this check)', $mon_cmd);
+}
+
+section("Load Resilience");
+
+// Both found by the 2026-10-23 capacity test (notes/CAPACITY_TEST_2026-10-23.md), both root
+// steps that lived only on the first host until 2026-11-03 -- a new machine built from the
+// README had neither. Root-owned files under /etc, readable by everyone on a stock install.
+$fpm_dropins = glob('/etc/systemd/system/php*-fpm.service.d/moop-resilience.conf') ?: [];
+$fpm_dropins
+    ? pass('php-fpm survives an out-of-memory BLAST (' . basename(dirname($fpm_dropins[0]), '.d') . ': OOMPolicy=continue, Restart=always)')
+    : warn('php-fpm uses systemd\'s defaults: ONE search that runs out of memory stops the whole site until someone restarts it',
+           'sudo scripts/install_php_fpm_resilience.sh   (once; safe to re-run)');
+
+if (detectWebServer() === 'nginx') {
+    // The wait in the BLAST queue plus the longest run must fit inside nginx's patience, or the
+    // user gets a 504 while the search carries on for nobody. Overrides come from the admin's
+    // Site Configuration (config_editable.json), defaults from site_config.php.
+    $edit = json_decode((string) @file_get_contents("$base/config/config_editable.json"), true) ?: [];
+    $need = (int) ($edit['blast_queue_max_wait'] ?? $config['blast_queue_max_wait'] ?? 120)
+          + (int) ($edit['blast_max_runtime'] ?? $config['blast_max_runtime'] ?? 150);
+    $read_timeout = null;
+    $unreadable   = [];
+    foreach (array_merge(['/etc/nginx/nginx.conf'], glob('/etc/nginx/conf.d/*.conf') ?: [], glob('/etc/nginx/default.d/*.conf') ?: []) as $f) {
+        if (!is_readable($f)) { $unreadable[] = $f; continue; }
+        if (preg_match('/^\s*fastcgi_read_timeout\s+(\d+)s?\s*;/m', (string) file_get_contents($f), $m)) {
+            $read_timeout = max($read_timeout ?? 0, (int) $m[1]);
+        }
+    }
+    if ($read_timeout !== null && $read_timeout > $need) {
+        pass("nginx waits {$read_timeout} s for PHP — longer than a queued BLAST's wait + run ({$need} s)");
+    } elseif ($read_timeout === null && in_array('/etc/nginx/default.d/moop-timeouts.conf', $unreadable, true)) {
+        // Not "missing": a check that cannot read a file must not report it absent.
+        warn('moop-timeouts.conf is installed but only root can read it, so its timeout cannot be confirmed',
+             'sudo chmod 644 /etc/nginx/default.d/moop-timeouts.conf   (or re-run scripts/install_nginx_timeouts.sh)');
+    } else {
+        warn('nginx gives up on PHP after ' . ($read_timeout ?? 60) . " s, but a queued BLAST may take {$need} s — users get a 504 while it still runs",
+             'sudo scripts/install_nginx_timeouts.sh   (once; safe to re-run)');
+    }
 }
 
 section("JWT Authentication Keys");

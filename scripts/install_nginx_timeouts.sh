@@ -27,6 +27,7 @@ cat > "$CONF" <<'EOF'
 # Must exceed blast_queue_max_wait + blast_max_runtime (default 120 + 150 s).
 fastcgi_read_timeout 300s;
 EOF
+chmod 644 "$CONF"   # root's umask may leave it 640; setup-check reads it to confirm the value
 
 if nginx -t; then
     systemctl reload nginx

@@ -643,7 +643,7 @@ a new MOOP site from scratch. Site-specific data is versioned separately.
 - `composer.json` (but not `vendor/` or `composer.phar` — run `composer install`)
 
 **Site-data backup directory** (`site_data_path`; `site_config.php` ships
-`/var/www/html/moop-site-data`, and this deployment overrides it to `/var/www/moop-site-data`
+`<parent of root_path>/<site>-site-data` — `/var/www/moop-site-data` here, which this deployment also sets explicitly
 via `config_editable.json` — read it through ConfigManager, never from `site_config.php`):
 - `config/config_editable.json` — admin-edited settings
 - `config/secrets.php` — API keys
@@ -682,7 +682,13 @@ via `config_editable.json` — read it through ConfigManager, never from `site_c
    Start step 7). Security headers + enforced CSP (`docs/nginx/moop-headers.conf`, skipped if
    nginx already sets them), rate limits + robots.txt, and the System Monitor's root collector,
    which also keeps the rate-limit exemptions in step with `auto_login_ip_ranges`.
-   `setup-check.php` reports each piece. **Anything new that a fresh install needs must land in
+   `setup-check.php` reports each piece.
+8. **Load resilience** — `sudo scripts/install_php_fpm_resilience.sh` (one out-of-memory BLAST
+   no longer stops php-fpm) and `sudo scripts/install_nginx_timeouts.sh` (nginx waits for a
+   queued BLAST). Both lived only on this host until 2026-11-03; setup-check's "Load
+   Resilience" section now checks them. A new *machine* (not a second site on this one) has
+   more: README "A New Site on Another Machine".
+   **Anything new that a fresh install needs must land in
    this list, the README Quick Start, `docs/INSTALL.md` and `setup-check.php` together** —
    the CSP lived only in this host's nginx.conf until 2026-10-28, so a new install would have
    had none.

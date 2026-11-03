@@ -173,23 +173,23 @@ source ~/.nvm/nvm.sh && nvm install 20 && nvm use 20
 node --version    # v18+
 ```
 
-Install the CLI project-locally so the web server can find it:
+Then build a self-contained bundle (Node plus the CLI) and install it where the web server
+is allowed to run it:
 
 ```bash
-# from the MOOP root
-mkdir -p tools/jbrowse-cli
-npm install -g @jbrowse/cli --prefix tools/jbrowse-cli
-
-cat > tools/jbrowse-cli/jbrowse-run.sh << 'EOF'
-#!/bin/bash
-exec "$(which node)" tools/jbrowse-cli/lib/node_modules/@jbrowse/cli/dist/bin.js "$@"
-EOF
-chmod 755 tools/jbrowse-cli/jbrowse-run.sh
-tools/jbrowse-cli/jbrowse-run.sh --version
+# from the MOOP root, as yourself (needs network; Node is checked against nodejs.org's SHASUMS)
+scripts/build_jbrowse_cli.sh                 # builds ~/jbrowse-cli-build
+sudo scripts/install_jbrowse_cli.sh ~/jbrowse-cli-build
+jbrowse --version
 ```
 
-The wrapper exists so the right Node version is used regardless of how the web server's
-environment is set up. Admin → JBrowse → Track Listing picks this up automatically.
+It lands in `/usr/local/bin` and `/usr/local/lib/jbrowse-cli/`, which is deliberate: anything
+inside the document root carries a label the web server may read but never *execute* under
+SELinux, so a CLI installed there works from your shell and fails from every admin page.
+(Until 2026-10-21 this page said to install it in `tools/jbrowse-cli/` — exactly that
+failure: no gene set got a search index. `setup-check.php` flags an old bundle there.) The
+bundle carries its own Node, so `node --version` above only matters for building it. To
+upgrade either, rebuild and rerun the install.
 
 ## bigWigSummary
 
@@ -356,12 +356,20 @@ step 6 — the same step on both paths):
 sudo scripts/install_security_report.sh
 ```
 
-Last, on nginx, the protect-and-watch layer (README, Quick Start step 7): security headers and
+Then, on nginx, the protect-and-watch layer (README, Quick Start step 7): security headers and
 the enforced CSP, per-address rate limits and robots.txt, and the System Monitor's root
 collector. Safe to re-run; `setup-check.php` reports it if missing.
 
 ```bash
 sudo scripts/install_monitor.sh
+```
+
+Last, load resilience (README, Quick Start step 8): php-fpm keeps running when one request runs
+out of memory, and nginx waits long enough for a queued BLAST. `setup-check.php` checks both.
+
+```bash
+sudo scripts/install_php_fpm_resilience.sh
+sudo scripts/install_nginx_timeouts.sh       # nginx only
 ```
 
 ---
