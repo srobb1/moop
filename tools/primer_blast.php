@@ -25,6 +25,7 @@ include_once __DIR__ . '/../lib/primer/PrimerInput.php';
 include_once __DIR__ . '/../lib/primer/PrimerBlast.php';
 include_once __DIR__ . '/../lib/primer/PrimerPairs.php';
 include_once __DIR__ . '/../lib/primer/ExonMap.php';
+include_once __DIR__ . '/../lib/genomic_regions.php';   // moop_genome_kind()
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../includes/source-selector-helpers.php';
 
@@ -132,8 +133,19 @@ foreach ($accessible_sources as $source) {
     $key = $source['organism'] . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
     $asm = dirname($source['path']);
 
-    if (PrimerBlast::databaseExists($asm . '/genome.fa')) {
+    // A 'transcripts' assembly HAS a genome.fa -- one assembled transcript per gene standing in
+    // for a genome -- so a file check alone called it a genome, and "Genomic DNA" mode reported
+    // spliced cDNA hits as genomic products: a pair across an exon junction read as amplifying
+    // genomic DNA, where an intron really sits between the primers (2026-11-03, 21 assemblies).
+    $is_transcripts = moop_genome_kind($asm) === 'transcripts';
+    if (PrimerBlast::databaseExists($asm . '/genome.fa') && !$is_transcripts) {
         $source_availability[$key] = ['ok' => true, 'reason' => '', 'usable_mode' => ''];
+    } elseif ($is_transcripts && PrimerBlast::databaseExists($source['path'] . '/transcript.nt.fa')) {
+        $source_availability[$key] = [
+            'ok'          => false,
+            'reason'      => 'Transcripts only, not a genome. Usable with PCR input set to cDNA.',
+            'usable_mode' => 'transcript',
+        ];
     } elseif (PrimerBlast::databaseExists($source['path'] . '/transcript.nt.fa')) {
         $source_availability[$key] = [
             'ok'          => false,
@@ -206,7 +218,10 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
             // is a default that some sources genuinely cannot satisfy.
             $genome_db     = $assembly_path . '/genome.fa';
             $transcript_db = $gene_set_path . '/transcript.nt.fa';
-            $has_genome    = PrimerBlast::databaseExists($genome_db);
+            // A transcripts "genome" is not genomic DNA: searching it in place of one would
+            // report cDNA products as genomic (see $source_availability above).
+            $is_transcripts = moop_genome_kind($assembly_path) === 'transcripts';
+            $has_genome    = PrimerBlast::databaseExists($genome_db) && !$is_transcripts;
             $has_transcript = PrimerBlast::databaseExists($transcript_db);
 
             if ($has_genome) {
@@ -227,13 +242,15 @@ if ($search_error === null && $primer_text !== '' && !empty($selected_source)) {
             // transcriptome-only assembly it fired every time, because Genomic DNA
             // is the default PCR input.
             if (!$has_genome) {
+                $no_genome_why = $is_transcripts
+                    ? 'This assembly is transcripts only (one per gene), not a genome'
+                    : 'This assembly has no genome sequence — it is a transcriptome assembly';
                 if ($search_mode === 'genome' && $has_transcript) {
-                    $search_error = 'This assembly has no genome sequence — it is a transcriptome '
-                        . 'assembly. Set PCR input to "cDNA" to check these primers against its '
-                        . 'transcripts.';
+                    $search_error = $no_genome_why . '. Set PCR input to "cDNA" to check these '
+                        . 'primers against its transcripts.';
                 } elseif ($search_mode === 'transcript' && $has_transcript) {
-                    $db_notes[] = 'This assembly has no genome sequence, so genomic DNA in the sample '
-                        . 'could not be checked — only the cDNA products below are reported.';
+                    $db_notes[] = $no_genome_why . ', so genomic DNA in the sample could not be '
+                        . 'checked — only the cDNA products below are reported.';
                 } else {
                     $search_error = 'This source has neither a genome nor a transcriptome BLAST index, '
                         . 'so there is nothing to search. Build them from Admin → Organism Checklist.';
