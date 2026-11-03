@@ -81,8 +81,12 @@ $siteTitle = $config->getString('siteTitle');
 $PRESETS = [
     'standard' => [
         'label'  => 'Standard PCR',
-        'blurb'  => 'General-purpose primers — cloning, screening, checking a band on a gel.',
-        'params' => ['PRIMER_PRODUCT_SIZE_RANGE' => '100-400'],
+        // 200-900 (was 100-400, 2026-11-03): a gel band is easiest to see between a few hundred bp
+        // and 1 kb; 100 bp runs near the primer-dimer smear. Also covers RNAi templates (with the
+        // T7 tag), so there is no separate RNAi preset.
+        'blurb'  => 'General-purpose primers — cloning, screening, checking a band on a gel. '
+                  . 'For an RNAi template, add the T7 promoter tag below.',
+        'params' => ['PRIMER_PRODUCT_SIZE_RANGE' => '200-900'],
     ],
     'qpcr' => [
         'label'  => 'qPCR',
@@ -103,7 +107,9 @@ $PRESETS = [
         'blurb'  => 'Forces a primer across an exon junction, so the pair cannot amplify '
                   . 'contaminating genomic DNA. Needs to know where the junctions are — arrive '
                   . 'from a gene page and they are looked up for you.',
-        'params' => ['PRIMER_PRODUCT_SIZE_RANGE' => '70-300'],
+        // 150-600 (2026-11-03): a clear gel band, kept below Standard because reverse
+        // transcription covers long stretches less reliably, especially from partly degraded RNA.
+        'params' => ['PRIMER_PRODUCT_SIZE_RANGE' => '150-600'],
     ],
     'sequencing' => [
         'label'  => 'Sequencing',

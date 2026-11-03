@@ -331,7 +331,7 @@
                                 </label>
                                 <input type="text" class="form-control" id="size_range" name="size_range"
                                        data-option="size_range"
-                                       placeholder="<?= htmlspecialchars((string)($option_defaults['size_range'] ?? '100-400')) ?>"
+                                       placeholder="<?= htmlspecialchars((string)($option_defaults['size_range'] ?? '200-900')) ?>"
                                        value="<?= htmlspecialchars($size_range) ?>">
                                 <div class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" value="1"
