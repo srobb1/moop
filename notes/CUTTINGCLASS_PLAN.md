@@ -1,0 +1,128 @@
+# cuttingclass on MOOP — plan
+
+Started 2026-11-03. A second MOOP site, **cuttingclass**, to replace
+https://cuttingclass.stowers.org (Drupal 7 + Tripal on CentOS 7 / Apache 2.4.6 / PHP 5.4 — all
+long unsupported). It runs on **another machine**, from the **same codebase** as simrbase.
+
+Audience: high-school students and teachers. The point is that a student does not feel lost.
+
+---
+
+## The rule that governs everything here
+
+> "i want any changes we make to create cutting class to not be defaults. i want to make sure
+> all of our changes allows us to keep simrbase the way it is." — Sofia, 2026-11-03
+
+- Every cuttingclass feature is a **per-site setting whose absence means today's behaviour**.
+  simrbase never sets any of them; it must not have to add anything to stay the same.
+- A feature's code runs only when its setting is on. With it off, output is identical (e.g.
+  the translation lookup returns its input unchanged when there is no catalog).
+- One codebase, two configurations. No fork, no branch.
+- **Proof, not assumption:** step 0 below is built first and run before every commit in
+  this work.
+
+Bug fixes are different: a fix that corrects simrbase's output (like the primer checker on
+transcript assemblies, below) is decided on its own merits, with Sofia's go-ahead.
+
+---
+
+## Build order
+
+### 0. simrbase render-comparison script — FIRST
+Save ~30 real simrbase pages (home, search results, organism, assembly, gene set, gene page,
+BLAST form + a result, Primer Maker, Primer BLAST, Exporter, help, glossary) as PUBLIC and as
+admin, then compare byte-for-byte after each change. Things that legitimately vary per request
+(CSRF token, asset `?v=` stamps, timestamps) are normalised by name, never by "ignore the diff".
+Puppeteer for rendered DOM where JS builds the page; curl for server HTML. Must be shown to go
+RED on a deliberate one-character change before it is trusted.
+
+### 1. Tools on/off (admin page)
+- `config/tools_config.php` stays the **shipped defaults** and is never written by the web.
+  Letting the web server rewrite a `.php` file turns any write bug into code execution; MOOP's
+  hardening rests on the web never writing PHP it runs (CLAUDE.md §11).
+- Overrides (enabled, order, label) live in `config_editable.json` under one key; the admin
+  page edits only that. No key → every tool exactly as today.
+- Off means off: hidden from navbar + toolbox, AND the tool's own pages answer 404. A hidden
+  tool still runnable at its URL is not off.
+- cuttingclass keeps: **BLAST, gene search, Primer Maker** (and probably Primer BLAST).
+
+### 2. Content pages
+- Admin creates a page: title, address (slug), English body, Spanish body, images.
+- Stored as site data (files under metadata/ or the site-data tree), not in organism.sqlite.
+- Pages needed: **About** (today's cuttingclass front-page text), **Protocols** (Planarian
+  Maintenance, Observing Regeneration, RNAi, …), **FAQ**, **Primers** table, Useful Links,
+  Contact, Anatomy, About Our Planarians, Glossary of Terms.
+- Text already exists in both languages on the Drupal site — reuse it.
+- OPEN: editor — plain formatted text (simple, safe) vs a WYSIWYG editor (friendlier, more
+  to secure). Body HTML must be sanitised even though only admins author it.
+- Content pages become searchable from the site search (opt-in).
+
+### 3. Home page choice + menu builder
+- Home page: the built-in MOOP home (default) or any content page.
+- Sofia leans to **keeping a MOOP-like home**: search (genes, organisms, protocols) + tools.
+- Menu builder: navbar drop-downs made of pages / tools / links (e.g. "Protocols ▾",
+  "About ▾"), replacing Drupal's sidebar. No menu config → today's navbar.
+
+### 4. Old-link redirects
+The published manuscript PDF and teachers' bookmarks point at `/en/node/121412`,
+`/es/node/121411`, `/en/faq`, `/en/planarians` … Map each to its new page and 301. Collect the
+full list from the Drupal site before it is switched off.
+
+### 5. Spanish interface (the largest piece)
+- **Visitor pages only.** Admin pages stay English.
+- Language: browser `Accept-Language` on first visit, an EN | ES switch that overrides and is
+  remembered (cookie), `<html lang>` set, `Vary`/cache handled so a cached English page is
+  never served to a Spanish browser.
+- Catalog: English → Spanish pairs, managed on an admin page built like Manage Glossary. A
+  string with no Spanish shows English — nothing ever renders blank.
+- JS needs its own catalog (text built in ~50 JS files).
+- Data stays as it is: gene names, annotations, descriptions are not translated.
+- Size (2026-11-03 estimate, public pages only): ~3,500 text runs in 69 templates (~1,700 of
+  them in sysadmin help pages a teaching site may not show), ~680 strings in PHP arrays, plus
+  the JS. The Drupal translations cover the CONTENT; MOOP's own buttons/messages need Spanish
+  written (machine draft + human review is the usual route).
+
+### 6. Simple mode (maybe)
+One setting that folds advanced options away (e.g. BLAST parameters) and uses plainer labels.
+
+---
+
+## Decided
+
+- **Logins:** none except admin. Everything on cuttingclass is public.
+- **Tools kept:** BLAST, gene search, Primer Maker.
+- **Data:** the planarians on the current site ("four species"); some may have only
+  transcript assemblies, some genomes — the tools must handle both (see primer checker below).
+
+## Tracks server: two sites, one server
+
+The tracks server verifies every track token against ONE public key
+(`lib/jbrowse/track_token.php::verifyTrackToken()`), so a second site's tokens fail there.
+No new port is needed:
+
+- Each site signs with its own key and puts a `kid` (key id = site name) in the JWT header.
+- The tracks server holds one public key per site and picks by `kid` — firebase/php-jwt
+  supports a key array keyed by kid natively.
+- Each key may be limited to a path prefix (e.g. the cuttingclass key only under
+  `cuttingclass/`), so neither site can mint tokens for the other's restricted tracks — the
+  weakness of simply sharing one key pair.
+- **Opt-in:** a token with no `kid` is checked against the single existing key, exactly as
+  today. Deploy = copy the two files to the tracks server once, as originally.
+- Also: add the new origin to the tracks server's CORS allow-list. CSP follows
+  `tracks_server.url` via install_monitor.sh.
+
+## Open questions
+
+- Content-page editor: plain text vs WYSIWYG.
+- Which "start here" path does a student follow first?
+- Primer BLAST on cuttingclass too, or Primer Maker only?
+- Theme: colours/logo for cuttingclass — how far beyond Site Configuration's title/logo?
+- MOOP's glossary popovers vs the "Glossary of Terms" page — merge?
+- Who reviews the Spanish for MOOP's interface strings?
+
+## Related
+
+- Install path for the new machine: README "A New Site on Another Machine"; the 2026-11-03
+  test install (commit 177e5ac2) fixed site_data_path defaulting into the docroot and the
+  umask-027 clone being unreadable.
+- Memory: plan_i18n_cuttingclass, feedback_cuttingclass_opt_in_only.
