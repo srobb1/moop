@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu', 'languages', 'languages_retired'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu', 'languages', 'languages_retired', 'home'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -362,6 +362,15 @@ class ConfigManager
         }
         while ($items && end($items)['type'] === 'divider') array_pop($items);
         return $items;
+    }
+
+    /** The home page setting: ['mode' => 'builtin'|'page'|'intro', 'page' => slug|'']. */
+    public function homeSetting(): array
+    {
+        $h = $this->config['home'] ?? [];
+        $mode = is_array($h) ? (string) ($h['mode'] ?? 'builtin') : 'builtin';
+        if (!in_array($mode, ['page', 'intro'], true)) return ['mode' => 'builtin', 'page' => ''];
+        return ['mode' => $mode, 'page' => (string) ($h['page'] ?? '')];
     }
 
     /** A language code: ISO 639-1, optionally with a region ('pt-br'). */
@@ -900,6 +909,13 @@ class ConfigManager
                     }
                 }
 
+                if ($key === 'home') {
+                    $h = $data[$key];
+                    $ok = is_array($h) && (!$h || (in_array($h['mode'] ?? '', ['builtin', 'page', 'intro'], true)
+                          && (($h['mode'] ?? '') === 'builtin' || preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', (string) ($h['page'] ?? '')))));
+                    if (!$ok) return ['success' => false, 'message' => 'The home page setting is not valid; nothing was saved'];
+                }
+
                 if ($key === 'main_menu') {
                     $problem = self::mainMenuProblem($data[$key]);
                     if ($problem !== null) {
@@ -965,7 +981,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout' || $key === 'main_menu' || $key === 'languages' || $key === 'languages_retired') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout' || $key === 'main_menu' || $key === 'languages' || $key === 'languages_retired' || $key === 'home') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);

@@ -2,7 +2,7 @@
 /**
  * MANAGE PAGES — content (no <html>/<body>; rendered via layout.php).
  * Variables from $data: $site, $mode ('list'|'new'|'edit'), $page, $pages, $pages_dir, $flash,
- * $menu_place ('none'|'top'|'dd:<key>'), $menu_dropdowns [key => label].
+ * $menu_place ('none'|'top'|'dd:<key>'), $menu_dropdowns [key => label], $home (homeSetting()).
  * Live preview: js/modules/manage-pages.js -> admin/api/preview_page.php (the publishing converter).
  */
 // The site's active languages (Admin -> Manage Languages), English first. Retired languages are
@@ -47,7 +47,8 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
         <tbody>
         <?php foreach ($pages as $slug => $p): ?>
           <tr>
-            <td class="ps-3"><a href="manage_pages.php?edit=<?= rawurlencode($slug) ?>"><strong><?= htmlspecialchars($p['title']['en']) ?></strong></a></td>
+            <td class="ps-3"><a href="manage_pages.php?edit=<?= rawurlencode($slug) ?>"><strong><?= htmlspecialchars($p['title']['en']) ?></strong></a>
+              <?php if ($home['page'] === $slug): ?><span class="badge bg-info text-dark ms-1"><?= $home['mode'] === 'page' ? 'home page' : 'on the home page' ?></span><?php endif; ?></td>
             <td class="small"><a href="<?= htmlspecialchars(moop_page_url($slug)) ?>" target="_blank"><code><?= htmlspecialchars(moop_page_url($slug)) ?></code></a></td>
             <?php if ($other_langs): ?><td class="small"><?php foreach ($other_langs as $code => $name): ?>
               <span class="badge <?= trim($p['body'][$code] ?? '') !== '' ? 'bg-success' : 'bg-light text-dark' ?>" title="<?= htmlspecialchars($name) ?>: <?= trim($p['body'][$code] ?? '') !== '' ? 'written' : 'not yet' ?>"><?= htmlspecialchars($code) ?></span>
@@ -68,6 +69,36 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
       <?php endif; ?>
     </div>
   </div>
+  <div class="card adm-card mb-3">
+    <div class="card-header adm-head"><h5 class="mb-0">Home page</h5></div>
+    <div class="card-body">
+      <form method="post">
+        <?= csrf_input_field() ?>
+        <input type="hidden" name="_action" value="save_home">
+        <p class="small text-muted mb-2">What visitors see at <code>/<?= htmlspecialchars($site) ?>/</code>. The address stays the same
+          whichever you choose; if the page you pick is ever deleted, MOOP's home comes back.</p>
+        <?php foreach (['builtin' => 'MOOP\'s home — search, organisms and tools', 'intro' => 'MOOP\'s home, with a page above it (a welcome)',
+                        'page' => 'One of your pages, instead of MOOP\'s home'] as $value => $label): ?>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="home_mode" id="home_<?= $value ?>" value="<?= $value ?>"
+                   <?= $home['mode'] === $value ? 'checked' : '' ?> <?= $value !== 'builtin' && !$pages ? 'disabled' : '' ?>>
+            <label class="form-check-label" for="home_<?= $value ?>"><?= $label ?></label>
+          </div>
+        <?php endforeach; ?>
+        <div class="d-flex gap-2 align-items-center mt-2">
+          <select class="form-select form-select-sm" name="home_page" style="max-width: 22rem;" <?= !$pages ? 'disabled' : '' ?>>
+            <option value="">— choose a page —</option>
+            <?php foreach ($pages as $slug => $p): ?>
+              <option value="<?= htmlspecialchars($slug) ?>" <?= $home['page'] === $slug ? 'selected' : '' ?>><?= htmlspecialchars($p['title']['en']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <button type="submit" class="btn btn-sm btn-primary">Save</button>
+        </div>
+        <?php if (!$pages): ?><p class="small text-muted mt-2 mb-0">Write a page first to use it here.</p><?php endif; ?>
+      </form>
+    </div>
+  </div>
+
   <p class="small text-muted">Stored in <code><?= htmlspecialchars($pages_dir) ?></code>, one file per page — site data,
     copied into the site-data backup with the rest of the metadata.</p>
 

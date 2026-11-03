@@ -43,7 +43,7 @@ $pages_in = fn(string $code) => ($written[$code] ?? 0) . ' page' . (($written[$c
                 <span class="small text-muted">always used — the fallback</span>
               <?php else: ?>
                 <form method="post" class="d-inline"
-                      onsubmit="return confirm('Retire <?= htmlspecialchars(addslashes($l['name'])) ?>? It leaves the editors and the site. Nothing written in it is deleted, and Restore brings it back.');">
+                      onsubmit="return confirm(<?= htmlspecialchars(json_encode('Retire ' . $l['name'] . '? It leaves the editors and the site. Nothing written in it is deleted, and Restore brings it back.')) ?>);">
                   <?= csrf_input_field() ?>
                   <input type="hidden" name="_action" value="retire">
                   <input type="hidden" name="code" value="<?= htmlspecialchars($l['code']) ?>">

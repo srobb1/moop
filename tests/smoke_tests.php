@@ -479,6 +479,10 @@ $_lsave = $_t2->saveEditableConfig(['tools_layout' => [
 $_t3 = $_tnew();
 ok(($_lsave['success'] ?? false) && $_menu($_t3) === ['blast_search=BLAST', '|', 'primer_maker=Primer Maker'],
    'a saved menu: its order, its labels, and dividers never doubled or trailing');
+foreach ([['mode' => 'page'], ['mode' => 'page', 'page' => '../users'], ['mode' => 'carousel', 'page' => 'x'], 'home'] as $_badh) {
+    ok(($_t3->saveEditableConfig(['home' => $_badh], $_td)['success'] ?? true) === false, 'home refused: ' . json_encode($_badh));
+}
+ok(($_t3->saveEditableConfig(['home' => ['mode' => 'page', 'page' => 'about-us']], $_td)['success'] ?? false), 'home: a page instead, saved');
 ok($_t3->toolboxOrder() === ['primer_maker', 'blast_search'] && $_t3->toolLabel('blast_search', 'toolbox') === 'Run BLAST'
    && $_t3->toolLabel('primer_maker', 'toolbox') === $_t3->getAllTools(true)['primer_maker']['name'],
    'a saved toolbox order and label; a tool without one keeps its registry name');
@@ -3689,6 +3693,13 @@ $_mlab = moop_menu_set_page([['type' => 'link', 'label' => ['en' => 'About us', 
                             'about', 'top', moop_page_get('about')['title']);
 ok(($_mlab[0]['label'] ?? []) === ['en' => 'About', 'es' => 'Acerca de'], 'and its menu label keeps the retired Spanish title too');
 $_c = $_cprp->getValue($_cpcfg); unset($_c['languages'], $_c['languages_retired']); $_cprp->setValue($_cpcfg, $_c);
+
+// Home page choice (cuttingclass step 3): MOOP's home unless a site chooses otherwise.
+$_home = function ($h) use ($_cpcfg, $_cprp) { $c = $_cprp->getValue($_cpcfg); $c['home'] = $h; $_cprp->setValue($_cpcfg, $c); return $_cpcfg->homeSetting(); };
+ok($_home([]) === ['mode' => 'builtin', 'page' => ''] && $_home(['mode' => 'nonsense', 'page' => 'x'])['mode'] === 'builtin',
+   "home: no setting (or a broken one) = MOOP's own home");
+ok($_home(['mode' => 'intro', 'page' => 'about']) === ['mode' => 'intro', 'page' => 'about'], 'home: a page above MOOP\'s home');
+$_c = $_cprp->getValue($_cpcfg); unset($_c['home']); $_cprp->setValue($_cpcfg, $_c);
 $_cprp->setValue($_cpcfg, $_cpsaved);
 exec('rm -rf ' . escapeshellarg($_cp));
 

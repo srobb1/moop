@@ -16,6 +16,11 @@
       Browse genes, genomes, and annotations<?php if (!empty($organism_count)): ?> across <strong style="font-weight:500;"><?= $organism_count ?></strong> organism<?= $organism_count !== 1 ? 's' : '' ?><?php if (!empty($assembly_count)): ?> and <strong style="font-weight:500;"><?= $assembly_count ?></strong> assembl<?= $assembly_count !== 1 ? 'ies' : 'y' ?><?php endif; ?><?php endif; ?>
     </p>
   </div>
+<?php if (!empty($home_intro_html)): /* Admin -> Manage Pages: a page shown above the home */ ?>
+  <div class="card shadow-sm mb-3 home-intro">
+    <div class="card-body content-page-body"><?= $home_intro_html ?></div>
+  </div>
+<?php endif; ?>
   <?php /* Declared, not shown: the tagline above already tells a visitor what is here,
            and live counts do it better than a second sentence would. This exists so the
            page still declares its PURPOSE for the router. */ ?>

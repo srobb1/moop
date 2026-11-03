@@ -69,6 +69,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $go(['type' => 'success', 'msg' => 'Saved "' . htmlspecialchars($page['title']['en']) . '".'], 'manage_pages.php?edit=' . rawurlencode($slug));
     }
+    if ($action === 'save_home') {
+        $mode = (string) ($_POST['home_mode'] ?? 'builtin');
+        $slug = (string) ($_POST['home_page'] ?? '');
+        if ($mode !== 'builtin' && moop_page_get($slug) === null) {
+            $go(['type' => 'danger', 'msg' => 'Choose which page to use for the home page.'], 'manage_pages.php');
+        }
+        $value = $mode === 'builtin' ? [] : ['mode' => $mode, 'page' => $slug];
+        $dir = $config->getPath('root_path') . '/' . $config->getString('site') . '/config';
+        $r = $config->saveEditableConfig(['home' => $value], $dir);
+        $go(!empty($r['success']) ? ['type' => 'success', 'msg' => 'Saved the home page.']
+                                  : ['type' => 'danger', 'msg' => 'Not saved: ' . htmlspecialchars((string) ($r['message'] ?? ''))], 'manage_pages.php');
+    }
     if ($action === 'delete') {
         $slug = (string) ($_POST['slug'] ?? '');
         $r = moop_page_delete($slug);
@@ -77,6 +89,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $menu = $config->mainMenu();
             $new  = moop_menu_without_page($menu, $slug);
             if ($new != $menu) moop_menu_save($new);
+            // ...and if it was the home page (or the home's intro), the home goes back to MOOP's own.
+            if ($config->homeSetting()['page'] === $slug) {
+                $config->saveEditableConfig(['home' => []], $config->getPath('root_path') . '/' . $config->getString('site') . '/config');
+            }
         }
         $go($r['ok'] ? ['type' => 'success', 'msg' => 'Deleted the page "' . htmlspecialchars($slug) . '".']
                      : ['type' => 'danger', 'msg' => htmlspecialchars((string) $r['error'])], 'manage_pages.php');
@@ -103,6 +119,7 @@ $data = [
     'site'        => $config->getString('site'),
     'menu_place'  => $page !== null ? moop_menu_page_place($menu_now, $page['slug']) : 'none',
     'menu_dropdowns' => moop_menu_dropdowns($menu_now),
+    'home'        => $config->homeSetting(),
     'mode'        => $mode,
     'page'        => $page,
     'pages'       => $mode === 'list' ? moop_page_list() : [],

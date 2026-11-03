@@ -516,6 +516,14 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // Admin -> Manage Menu; a content page can also be placed from its editor (Manage Pages).
     'main_menu' => [],
 
+    // ======== HOME PAGE ========
+    // What /<site>/ shows: {mode: builtin} (MOOP's home -- search, organisms, tools; the default),
+    // {mode: page, page: slug} (one of the site's content pages instead), or {mode: intro, page:
+    // slug} (MOOP's home with that page above it, e.g. a welcome for students). The address stays
+    // /<site>/ either way. A page that no longer exists falls back to MOOP's home, never a blank
+    // or broken one. Set on Admin -> Manage Pages.
+    'home' => [],
+
     // ======== LANGUAGES ========
     // The languages this site writes its pages and menu labels in, English first (always: it is
     // the fallback for anything not translated). Each {code, name}: code is ISO 639-1, optionally
