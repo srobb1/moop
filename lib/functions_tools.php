@@ -17,6 +17,18 @@ function getAvailableTools($context = []) {
     $site     = $config->getString('site');
     $current_page = $context['page'] ?? null;
 
+    // A site that saved its own toolbox (Admin -> Manage Tools, 'tools_layout.toolbox') gets
+    // exactly those tools in that order, and its own labels; one that never did gets the
+    // registry's order and 'toolbox' flags, as shipped.
+    $saved_order = $config->toolboxOrder();
+    if ($saved_order !== null) {
+        $ordered = [];
+        foreach ($saved_order as $id) {
+            if (isset($all_tools[$id])) $ordered[$id] = ['toolbox' => true] + $all_tools[$id];
+        }
+        $all_tools = $ordered;
+    }
+
     $tools = [];
     foreach ($all_tools as $tool_id => $tool) {
         if ($current_page && !_tool_visible_on_page($tool, $current_page)) {
@@ -24,7 +36,7 @@ function getAvailableTools($context = []) {
         }
         $url = _build_tool_url($tool, $context, $site);
         if ($url !== null) {
-            $tools[$tool_id] = array_merge($tool, ['url' => $url]);
+            $tools[$tool_id] = array_merge($tool, ['url' => $url, 'name' => $config->toolLabel((string) $tool_id, 'toolbox')]);
         }
     }
     return $tools;
@@ -171,7 +183,7 @@ function moop_tool_page_guard(): void {
     if ($id === null) return;
     // Links to it stay on other pages (Sofia, 2026-11-03), so whoever follows one is told WHY,
     // not just "not found" -- and an admin, who can do something about it, is told where.
-    $name = (string) ($config->getAllTools(true)[$id]['name'] ?? $id);
+    $name = $config->toolLabel($id, 'menu');   // "Genome Browser", not the button text "View in Genome Browser"
     $message = function_exists('moop_session_is_admin') && moop_session_is_admin()
         ? "$name is switched off on this site. To switch it back on: Admin → Manage Tools."
         : "$name is not offered on this site.";

@@ -1,7 +1,9 @@
 <?php
 /**
  * MANAGE TOOLS — content (no <html>/<body>; rendered via layout.php).
- * Variables from $data: $site, $tools, $enabled, $flash, $file_write_error, $config_file.
+ * Variables from $data: $site, $tools, $enabled, $flash, $file_write_error, $config_file,
+ * $menu_rows, $box_rows, $label_of(id, where), $default_label_of(id, where), $customised.
+ * Reordering: js/modules/manage-tools.js (up/down, add/remove divider).
  */
 $where = function ($pages): string {
     if ($pages === 'all' || $pages === null) return 'every page';
@@ -79,13 +81,81 @@ $n_off = count(array_filter($enabled, fn($on) => !$on));
         </table>
       </div>
     </div>
+    <?php
+    // One row of an ordering list. Hidden *_order[] inputs carry the order the rows are in when
+    // the form is sent, so moving a row is all the up/down buttons have to do.
+    $order_row = function (string $list, array $row) use ($tools, $enabled, $label_of, $default_label_of, $file_write_error): string {
+        $dis = $file_write_error ? ' disabled' : '';
+        $moves = '<div class="btn-group btn-group-sm">'
+               . '<button type="button" class="btn btn-outline-secondary mt-up" title="Move up" aria-label="Move up"' . $dis . '><i class="fa fa-arrow-up"></i></button>'
+               . '<button type="button" class="btn btn-outline-secondary mt-down" title="Move down" aria-label="Move down"' . $dis . '><i class="fa fa-arrow-down"></i></button></div>';
+        if ($row['id'] === '|') {
+            return '<tr class="mt-divider table-light"><td class="ps-3">' . $moves
+                 . '<input type="hidden" name="menu_order[]" value="|"></td>'
+                 . '<td colspan="2"><span class="text-muted small"><i class="fa fa-minus me-1"></i>divider line</span></td>'
+                 . '<td class="text-end pe-3"><button type="button" class="btn btn-sm btn-outline-danger mt-remove"' . $dis . '>Remove</button></td></tr>';
+        }
+        $id   = $row['id'];
+        $h    = htmlspecialchars($id);
+        $off  = !($enabled[$id] ?? true);
+        $tool = $tools[$id] ?? [];
+        return '<tr' . ($off ? ' class="text-muted"' : '') . '><td class="ps-3">' . $moves
+             . '<input type="hidden" name="' . $list . '_order[]" value="' . $h . '"></td>'
+             . '<td><div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="' . $list . '_show[]" value="' . $h . '"'
+             . ' id="' . $list . '_' . $h . '"' . ($row['show'] ? ' checked' : '') . $dis . '>'
+             . '<label class="form-check-label" for="' . $list . '_' . $h . '"><i class="fa ' . htmlspecialchars($tool['icon'] ?? 'fa-wrench') . ' me-1"></i>'
+             . htmlspecialchars($tool['name'] ?? $id) . ($off ? ' <span class="badge bg-secondary">switched off</span>' : '') . '</label></div></td>'
+             . '<td><input type="text" class="form-control form-control-sm" maxlength="60" name="label_' . ($list === 'menu' ? 'menu' : 'toolbox') . '[' . $h . ']"'
+             . ' value="' . htmlspecialchars($label_of($id, $list === 'menu' ? 'menu' : 'toolbox')) . '"'
+             . ' placeholder="' . htmlspecialchars($default_label_of($id, $list === 'menu' ? 'menu' : 'toolbox')) . '"' . $dis . '></td>'
+             . '<td></td></tr>';
+    };
+    ?>
+
+    <div class="card adm-card mb-3">
+      <div class="card-header adm-head"><h5 class="mb-0">Tools menu in the navigation bar</h5></div>
+      <div class="card-body p-0">
+        <p class="small text-muted px-3 pt-3 mb-2">Ticked tools appear in the <strong>Tools</strong> menu, top to
+          bottom in this order, with the label you give them. A divider draws a line between groups.</p>
+        <table class="table table-sm align-middle mb-0 mt-list" data-list="menu">
+          <thead class="table-light"><tr><th class="ps-3" style="width:7rem;">Order</th><th>Show</th><th>Label in the menu</th><th></th></tr></thead>
+          <tbody>
+          <?php foreach ($menu_rows as $row) echo $order_row('menu', $row); ?>
+          </tbody>
+        </table>
+        <div class="px-3 py-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="mt-add-divider" <?= $file_write_error ? 'disabled' : '' ?>>
+            <i class="fa fa-plus me-1"></i>Add a divider</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card adm-card mb-3">
+      <div class="card-header adm-head"><h5 class="mb-0">Toolbox</h5></div>
+      <div class="card-body p-0">
+        <p class="small text-muted px-3 pt-3 mb-2">The toolbox on organism, assembly, gene set and gene pages. Ticked
+          tools appear in this order, each where it can run: a tool that needs a gene shows only on gene pages.</p>
+        <table class="table table-sm align-middle mb-0 mt-list" data-list="toolbox">
+          <thead class="table-light"><tr><th class="ps-3" style="width:7rem;">Order</th><th>Show</th><th>Label on the button</th><th></th></tr></thead>
+          <tbody>
+          <?php foreach ($box_rows as $row) echo $order_row('toolbox', $row); ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <button type="submit" class="btn btn-primary" <?= $file_write_error ? 'disabled' : '' ?>>
       <i class="fa fa-save me-1"></i>Save
     </button>
+    <?php if ($customised): ?>
+      <span class="small text-muted ms-2">This site has its own order or labels. Put everything back as shipped,
+        then Save, to follow the defaults again.</span>
+    <?php endif; ?>
   </form>
 
   <p class="small text-muted mt-3 mb-0">
-    Saved in <code>config/config_editable.json</code> (<code>tools_disabled</code>). The list of
+    Saved in <code>config/config_editable.json</code> (<code>tools_disabled</code>, <code>tools_layout</code>);
+    a choice that matches the shipped default is not saved, so the site keeps following it. The list of
     tools itself is <code>config/tools_config.php</code>, which this page never changes.
   </p>
 </div>

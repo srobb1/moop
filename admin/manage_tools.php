@@ -34,7 +34,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$file_write_error) {
     }
     $on  = array_map('strval', (array) ($_POST['enabled'] ?? []));
     $off = array_values(array_diff(array_keys($all_tools), $on));
-    $result = $config->saveEditableConfig(['tools_disabled' => $off], $config_dir);
+
+    // Menu and toolbox: the rows arrive in the order the admin arranged them; only the ticked
+    // ones are kept (dividers in the menu always). Labels are saved only where they differ from
+    // the registry's, and a part that matches the defaults is not saved at all -- so a site that
+    // changes nothing keeps following config/tools_config.php as it evolves.
+    $menu_show = array_map('strval', (array) ($_POST['menu_show'] ?? []));
+    $box_show  = array_map('strval', (array) ($_POST['toolbox_show'] ?? []));
+    $menu    = array_values(array_filter(array_map('strval', (array) ($_POST['menu_order'] ?? [])),
+                                         fn($x) => $x === '|' || in_array($x, $menu_show, true)));
+    $toolbox = array_values(array_filter(array_map('strval', (array) ($_POST['toolbox_order'] ?? [])),
+                                         fn($x) => in_array($x, $box_show, true)));
+    $labels = [];
+    foreach ($all_tools as $id => $tool) {
+        $defaults = ['menu' => (string) ($tool['menu_label'] ?? $tool['name'] ?? $id), 'toolbox' => (string) ($tool['name'] ?? $id)];
+        foreach ($defaults as $where => $default) {
+            $label = trim((string) ($_POST['label_' . $where][$id] ?? ''));
+            if ($label !== '' && $label !== $default) $labels[$id][$where] = $label;
+        }
+    }
+    $layout = [];
+    if ($menu !== $config->defaultToolsMenuOrder()) $layout['menu']    = $menu;
+    if ($toolbox !== $config->defaultToolboxOrder()) $layout['toolbox'] = $toolbox;
+    if ($labels)                                     $layout['labels']  = $labels;
+
+    $result = $config->saveEditableConfig(['tools_disabled' => $off, 'tools_layout' => $layout], $config_dir);
     $_SESSION['tools_flash'] = !empty($result['success'])
         ? ['type' => 'success', 'msg' => $off
             ? 'Saved. ' . count($off) . ' tool' . (count($off) === 1 ? ' is' : 's are') . ' now switched off.'
@@ -47,8 +71,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$file_write_error) {
 $flash = $_SESSION['tools_flash'] ?? null;
 unset($_SESSION['tools_flash']);
 
+// Rows for the two ordering lists: what the site shows now, in order, then every other tool
+// (unticked) so it can be added. The menu keeps its dividers.
+$menu_rows = [];
+foreach ($config->toolsMenuOrder() as $id) {
+    if ($id === '|' || isset($all_tools[$id])) $menu_rows[] = ['id' => $id, 'show' => true];
+}
+foreach (array_keys($all_tools) as $id) {
+    if (!in_array((string) $id, $config->toolsMenuOrder(), true)) $menu_rows[] = ['id' => (string) $id, 'show' => false];
+}
+$box_now   = $config->toolboxOrder() ?? $config->defaultToolboxOrder();
+$box_rows  = [];
+foreach ($box_now as $id) if (isset($all_tools[$id])) $box_rows[] = ['id' => $id, 'show' => true];
+foreach (array_keys($all_tools) as $id) {
+    if (!in_array((string) $id, $box_now, true)) $box_rows[] = ['id' => (string) $id, 'show' => false];
+}
+
 $data = [
     'site'             => $config->getString('site'),
+    'menu_rows'        => $menu_rows,
+    'box_rows'         => $box_rows,
+    'label_of'         => fn(string $id, string $where) => $config->toolLabel($id, $where),
+    'default_label_of' => fn(string $id, string $where) => (string) ($where === 'menu'
+                              ? ($all_tools[$id]['menu_label'] ?? $all_tools[$id]['name'] ?? $id)
+                              : ($all_tools[$id]['name'] ?? $id)),
+    'customised'       => (bool) ($config->getArray('tools_layout') ?? []),
+    'page_script'      => ['/' . $config->getString('site') . '/js/modules/manage-tools.js'],
     'tools'            => $all_tools,
     'enabled'          => array_map(fn($id) => $config->isToolEnabled((string) $id), array_combine(array_keys($all_tools), array_keys($all_tools))),
     'flash'            => $flash,

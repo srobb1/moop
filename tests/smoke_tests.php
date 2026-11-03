@@ -463,6 +463,35 @@ ok(moop_disabled_tool_for_script($_t1, "$_tsite/tools/blast.php") === null
 ok(($_t1->saveEditableConfig(['tools_disabled' => ['moopmart', 'rm -rf']], $_td)['success'] ?? true) === false
    && $_tnew()->getArray('tools_disabled') === ['moopmart', 'genome_browser'],
    'an unknown tool id is refused and nothing is saved');
+
+// Menu and toolbox from the registry, ordered and labelled per site (cuttingclass step 1c).
+// OPT-IN: no tools_layout = today's menu exactly (the render comparison checks the HTML).
+$_t2 = $_tnew();   // tools_disabled = moopmart, genome_browser (saved above)
+$_menu = fn($c) => array_map(fn($i) => $i['type'] === 'divider' ? '|' : $i['id'] . '=' . $i['label'], $c->getToolsMenu());
+ok($_t2->defaultToolsMenuOrder() === ['genome_browser', '|', 'annotation_search', 'moopmart', 'expression', 'blast_search',
+                                      'primer_blast', 'primer_maker', 'download_fasta', 'downloads'],
+   'default menu = the hand-written one it replaced: Genome Browser, a divider, then the rest in order');
+ok(($_menu($_t2)[0] ?? '') === 'annotation_search=Annotation Search' && !in_array('|', $_menu($_t2), true),
+   'a switched-off tool leaves the menu, and its divider does not lead it');
+$_lsave = $_t2->saveEditableConfig(['tools_layout' => [
+    'menu' => ['blast_search', '|', '|', 'primer_maker', '|'], 'toolbox' => ['primer_maker', 'blast_search'],
+    'labels' => ['blast_search' => ['menu' => 'BLAST', 'toolbox' => 'Run BLAST']]]], $_td);
+$_t3 = $_tnew();
+ok(($_lsave['success'] ?? false) && $_menu($_t3) === ['blast_search=BLAST', '|', 'primer_maker=Primer Maker'],
+   'a saved menu: its order, its labels, and dividers never doubled or trailing');
+ok($_t3->toolboxOrder() === ['primer_maker', 'blast_search'] && $_t3->toolLabel('blast_search', 'toolbox') === 'Run BLAST'
+   && $_t3->toolLabel('primer_maker', 'toolbox') === $_t3->getAllTools(true)['primer_maker']['name'],
+   'a saved toolbox order and label; a tool without one keeps its registry name');
+foreach ([['menu' => ['no_such_tool']], ['menu' => ['blast_search', 'blast_search']], ['toolbox' => ['|']],
+          ['labels' => ['blast_search' => ['menu' => str_repeat('x', 61)]]], ['colour' => 'red']] as $_bad) {
+    ok(($_t3->saveEditableConfig(['tools_layout' => $_bad], $_td)['success'] ?? true) === false,
+       'tools_layout refused: ' . json_encode($_bad));
+}
+ok($_menu($_tnew()) === ['blast_search=BLAST', '|', 'primer_maker=Primer Maker'], 'and a refused layout changed nothing');
+$_t3->saveEditableConfig(['tools_layout' => []], $_td);
+$_t4 = $_tnew();
+ok($_t4->toolsMenuOrder() === $_t4->defaultToolsMenuOrder() && $_t4->toolboxOrder() === null,
+   'saving an empty layout = back to the shipped defaults');
 exec('rm -rf ' . escapeshellarg($_td));
 
 // saveEditableConfig() rebuilds the file from the same whitelist, so an unlisted key is

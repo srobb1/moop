@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -335,6 +335,81 @@ class ConfigManager
         // Tools the site switched off ('tools_disabled', Admin -> Manage Tools) are left out, so
         // every toolbox that lists tools drops them without knowing the setting exists.
         return array_filter($this->tools, fn($tool, $id) => $this->isToolEnabled((string) $id), ARRAY_FILTER_USE_BOTH);
+    }
+
+    /**
+     * The navbar's Tools menu, in order: ['type' => 'tool', 'id', 'label', 'url_path'] or
+     * ['type' => 'divider']. From the site's saved 'tools_layout.menu' when it has one, else
+     * from the registry's menu_order / menu_divider_after -- which reproduce the menu as it was
+     * hand-written in includes/toolbar.php until 2026-11-03. Switched-off tools are left out,
+     * and a divider never leads, trails or doubles (one beside a switched-off tool would).
+     * Here, not in lib/functions_tools.php: the navbar is drawn on pages that never load that.
+     */
+    public function getToolsMenu(): array
+    {
+        if (!$this->ensureLoaded()) return [];
+        $order = $this->toolsMenuOrder();
+        $items = [];
+        foreach ($order as $id) {
+            $id = (string) $id;
+            if ($id === '|') {
+                if ($items && end($items)['type'] !== 'divider') $items[] = ['type' => 'divider'];
+                continue;
+            }
+            if (!isset($this->tools[$id]) || !$this->isToolEnabled($id)) continue;
+            $items[] = ['type' => 'tool', 'id' => $id, 'label' => $this->toolLabel($id, 'menu'),
+                        'url_path' => (string) ($this->tools[$id]['url_path'] ?? '')];
+        }
+        while ($items && end($items)['type'] === 'divider') array_pop($items);
+        return $items;
+    }
+
+    /** The menu as ids and '|' dividers: the site's saved order, else the registry default. */
+    public function toolsMenuOrder(): array
+    {
+        $saved = $this->config['tools_layout']['menu'] ?? null;
+        return is_array($saved) ? array_values(array_map('strval', $saved)) : $this->defaultToolsMenuOrder();
+    }
+
+    /** The registry's menu: tools with a menu_order, in that order, '|' after menu_divider_after. */
+    public function defaultToolsMenuOrder(): array
+    {
+        $in_menu = array_filter($this->tools, fn($t) => isset($t['menu_order']));
+        uasort($in_menu, fn($a, $b) => $a['menu_order'] <=> $b['menu_order']);
+        $order = [];
+        foreach ($in_menu as $id => $t) {
+            $order[] = (string) $id;
+            if (!empty($t['menu_divider_after'])) $order[] = '|';
+        }
+        return $order;
+    }
+
+    /** The registry's toolbox: every tool not marked 'toolbox' => false, in registry order. */
+    public function defaultToolboxOrder(): array
+    {
+        return array_values(array_map('strval', array_keys(array_filter($this->tools, fn($t) => ($t['toolbox'] ?? true) !== false))));
+    }
+
+    /**
+     * A tool's label in the menu ('menu') or the toolbox ('toolbox'): the site's own label from
+     * 'tools_layout.labels' if it set one, else the registry's menu_label / name.
+     */
+    public function toolLabel(string $tool_id, string $where = 'toolbox'): string
+    {
+        $tool  = $this->tools[$tool_id] ?? [];
+        $saved = trim((string) ($this->config['tools_layout']['labels'][$tool_id][$where] ?? ''));
+        if ($saved !== '') return $saved;
+        return (string) ($where === 'menu' ? ($tool['menu_label'] ?? $tool['name'] ?? $tool_id) : ($tool['name'] ?? $tool_id));
+    }
+
+    /**
+     * The site's saved toolbox order (tool ids, in order: the tools it shows), or null when it
+     * never saved one -- then the registry's order and 'toolbox' flags apply, as shipped.
+     */
+    public function toolboxOrder(): ?array
+    {
+        $saved = $this->config['tools_layout']['toolbox'] ?? null;
+        return is_array($saved) ? array_values(array_map('strval', $saved)) : null;
     }
 
     /**
@@ -611,6 +686,32 @@ class ConfigManager
                     $data[$key] = array_values(array_unique($data[$key]));
                 }
 
+                // tools_layout: menu = tool ids and '|' dividers; toolbox = tool ids; labels =
+                // {id: {menu, toolbox}} short plain strings. Anything else is refused whole.
+                if ($key === 'tools_layout') {
+                    $known = array_keys($this->tools ?? []);
+                    $v = $data[$key];
+                    $ok = is_array($v) && !array_diff(array_keys($v), ['menu', 'toolbox', 'labels']);
+                    foreach (['menu', 'toolbox'] as $list) {
+                        if (!$ok || !isset($v[$list])) continue;
+                        $allowed = $list === 'menu' ? array_merge($known, ['|']) : $known;
+                        $ok = is_array($v[$list]) && !array_diff($v[$list], $allowed)
+                            && count(array_filter($v[$list], fn($x) => $x !== '|')) === count(array_unique(array_filter($v[$list], fn($x) => $x !== '|')));
+                    }
+                    if ($ok && isset($v['labels'])) {
+                        $ok = is_array($v['labels']) && !array_diff(array_keys($v['labels']), $known);
+                        foreach ($ok ? $v['labels'] : [] as $pair) {
+                            if (!is_array($pair) || array_diff(array_keys($pair), ['menu', 'toolbox'])) { $ok = false; break; }
+                            foreach ($pair as $label) {
+                                if (!is_string($label) || mb_strlen($label) > 60) { $ok = false; break 2; }
+                            }
+                        }
+                    }
+                    if (!$ok) {
+                        return ['success' => false, 'message' => 'The tool layout is not valid; nothing was saved'];
+                    }
+                }
+
                 // Validate IP ranges
                 if ($key === 'auto_login_ip_ranges') {
                     if (!is_array($data[$key])) {
@@ -669,7 +770,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);

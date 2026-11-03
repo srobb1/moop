@@ -502,6 +502,12 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // Added for cuttingclass (notes/CUTTINGCLASS_PLAN.md step 1); opt-in, so absent = unchanged.
     'tools_disabled' => [],
 
+    // The navbar Tools menu and the toolbox: order, which tools each shows, and labels --
+    // {menu: [ids and '|' dividers], toolbox: [ids], labels: {id: {menu, toolbox}}}. Empty, or a
+    // part left out, = config/tools_config.php's defaults (menu_label, menu_order,
+    // menu_divider_after, name, registry order). Also managed on Admin -> Manage Tools.
+    'tools_layout' => [],
+
     // ======== RATE LIMITS: the "heavy" group ========
     // Scripts (path under the app root) that nginx limits most strictly per address: 20 per
     // minute, burst 10, 3 at once — exports, downloads, sequence and BLAST runs. The list is

@@ -55,41 +55,18 @@ if ($va_previewing) {
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
              data-bs-toggle="dropdown" aria-expanded="false">Tools</a>
-<?php /* ⚠️ A SECOND LIST of tools, apart from config/tools_config.php (which drives the
-                   toolbox): its own labels and order. Each item is kept exactly as it was and only
-                   left out when its tool is switched off (Admin -> Manage Tools), so a site that
-                   switches nothing off gets this menu byte-for-byte as before. Building it from the
-                   registry would change the labels and order -- a separate decision. */
-                $tb_on = fn(string $id) => ConfigManager::getInstance()->isToolEnabled($id); ?>
+<?php /* Built from the tool registry (ConfigManager::getToolsMenu()): order, labels and dividers
+         are config/tools_config.php's defaults or the site's own (Admin -> Manage Tools), and a
+         switched-off tool is left out. Until 2026-11-03 this was a second, hand-written list of
+         tools; the defaults reproduce it byte-for-byte. */ ?>
           <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
-<?php if ($tb_on('genome_browser')): ?>
-            <li><a class="dropdown-item" href="/<?= $site ?>/jbrowse2.php">Genome Browser</a></li>
+<?php foreach (ConfigManager::getInstance()->getToolsMenu() as $tb_item): ?>
+<?php if ($tb_item['type'] === 'divider'): ?>
             <li><hr class="dropdown-divider"></li>
+<?php else: ?>
+            <li><a class="dropdown-item" href="/<?= $site ?><?= htmlspecialchars($tb_item['url_path']) ?>"><?= htmlspecialchars($tb_item['label']) ?></a></li>
 <?php endif; ?>
-<?php if ($tb_on('annotation_search')): ?>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/search.php">Annotation Search</a></li>
-<?php endif; ?>
-<?php if ($tb_on('moopmart')): ?>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/moopmart.php">MOOPmart: Data Exporter</a></li>
-<?php endif; ?>
-<?php if ($tb_on('expression')): ?>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/expression.php">Expression Explorer</a></li>
-<?php endif; ?>
-<?php if ($tb_on('blast_search')): ?>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/blast.php">BLAST Search</a></li>
-<?php endif; ?>
-<?php if ($tb_on('primer_blast')): ?>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/primer_blast.php">Primer BLAST</a></li>
-<?php endif; ?>
-<?php if ($tb_on('primer_maker')): ?>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/primer_maker.php">Primer Maker</a></li>
-<?php endif; ?>
-<?php if ($tb_on('download_fasta')): ?>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/retrieve_sequences.php">Retrieve Sequences</a></li>
-<?php endif; ?>
-<?php if ($tb_on('downloads')): ?>
-            <li><a class="dropdown-item" href="/<?= $site ?>/tools/downloads.php">Downloads</a></li>
-<?php endif; ?>
+<?php endforeach; ?>
           </ul>
         </li>
         <li class="nav-item">
