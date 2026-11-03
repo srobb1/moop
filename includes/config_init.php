@@ -192,3 +192,66 @@ function genome_fasta_filename(): string {
 function moop_tool_on(string $tool_id): bool {
     return ConfigManager::getInstance()->isToolEnabled($tool_id);
 }
+
+/**
+ * Pick a language from an Accept-Language header: the highest-weighted entry that is one of
+ * $codes, matching a region code exactly ('pt-br') or by its language ('es-MX' -> 'es'). Pure.
+ * Returns '' when nothing matches.
+ */
+function moop_lang_negotiate(string $header, array $codes): string {
+    $best = ''; $best_q = 0.0; $pos = 0;
+    foreach (explode(',', strtolower($header)) as $part) {
+        $pos++;
+        $bits = array_map('trim', explode(';', $part));
+        $tag  = $bits[0] ?? '';
+        $q    = 1.0;
+        foreach (array_slice($bits, 1) as $b) {
+            if (strpos($b, 'q=') === 0) $q = (float) substr($b, 2);
+        }
+        $match = in_array($tag, $codes, true) ? $tag : (in_array(strtok($tag, '-'), $codes, true) ? strtok($tag, '-') : '');
+        // Higher weight wins; on a tie the earlier entry wins (browsers list in preference order).
+        if ($match !== '' && $q > $best_q) { $best = $match; $best_q = $q; }
+    }
+    return $best;
+}
+
+/**
+ * The language this request is shown in -- cuttingclass step 5. On a site with ONE language
+ * (simrbase) it is always 'en' and nothing else happens: no cookie, no header, no switch.
+ * Otherwise, in order: ?lang= (the visitor's choice from the switch, remembered for a year in
+ * the moop_lang cookie), the cookie, the browser's Accept-Language, English. Admin pages are
+ * always English. Only codes the site actually uses are ever accepted.
+ */
+function moop_current_lang(): string {
+    static $lang = null;
+    if ($lang !== null) return $lang;
+    $codes = ConfigManager::getInstance()->languageCodes();
+    if (count($codes) < 2 || PHP_SAPI === 'cli' || defined('MOOP_ADMIN_PAGE')) return $lang = 'en';
+
+    $chosen = strtolower((string) ($_GET['lang'] ?? ''));
+    if ($chosen !== '' && in_array($chosen, $codes, true)) {
+        $lang = $chosen;
+        if (!headers_sent()) {
+            setcookie('moop_lang', $lang, ['expires' => time() + 365 * 86400, 'path' => '/',
+                'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly' => true, 'samesite' => 'Lax']);
+        }
+    } elseif (in_array((string) ($_COOKIE['moop_lang'] ?? ''), $codes, true)) {
+        $lang = (string) $_COOKIE['moop_lang'];
+    } else {
+        $lang = moop_lang_negotiate((string) ($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? ''), $codes) ?: 'en';
+    }
+    if (!headers_sent()) {
+        // The same address answers in different languages: caches must key on what decided it.
+        header('Vary: Accept-Language, Cookie', false);
+        header('Content-Language: ' . $lang);
+    }
+    return $lang;
+}
+
+/** The current URL with ?lang=<code> set (for the language switch), other parameters kept. */
+function moop_lang_url(string $code): string {
+    $path  = strtok((string) ($_SERVER['REQUEST_URI'] ?? '/'), '?');
+    $query = $_GET;
+    $query['lang'] = $code;
+    return $path . '?' . http_build_query($query);
+}

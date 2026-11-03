@@ -3694,6 +3694,16 @@ $_mlab = moop_menu_set_page([['type' => 'link', 'label' => ['en' => 'About us', 
 ok(($_mlab[0]['label'] ?? []) === ['en' => 'About', 'es' => 'Acerca de'], 'and its menu label keeps the retired Spanish title too');
 $_c = $_cprp->getValue($_cpcfg); unset($_c['languages'], $_c['languages_retired']); $_cprp->setValue($_cpcfg, $_c);
 
+// The visitor's language from their browser (cuttingclass step 5). Pure: header + the site's codes.
+ok(moop_lang_negotiate('es-MX,es;q=0.9,en;q=0.8', ['en', 'es']) === 'es', 'browser language: es-MX picks Spanish');
+ok(moop_lang_negotiate('fr-FR,fr;q=0.9,en;q=0.5', ['en', 'es']) === 'en', 'a language the site lacks is skipped for the next one it has');
+ok(moop_lang_negotiate('de,fr', ['en', 'es']) === '', 'nothing the site has: no match (English is the caller\'s fallback)');
+ok(moop_lang_negotiate('en;q=0.4,es;q=0.9', ['en', 'es']) === 'es' && moop_lang_negotiate('es,en', ['en', 'es']) === 'es',
+   'highest weight wins; on a tie, the browser\'s first choice');
+ok(moop_lang_negotiate('pt-BR,pt;q=0.8', ['en', 'pt-br']) === 'pt-br', 'a region code matches exactly');
+ok(moop_lang_negotiate('', ['en', 'es']) === '' && moop_lang_negotiate('es', ['en']) === '', 'no header, or a one-language site: no match');
+ok(moop_current_lang() === 'en', 'from the command line (and on a one-language site) the language is English');
+
 // Home page choice (cuttingclass step 3): MOOP's home unless a site chooses otherwise.
 $_home = function ($h) use ($_cpcfg, $_cprp) { $c = $_cprp->getValue($_cpcfg); $c['home'] = $h; $_cprp->setValue($_cpcfg, $c); return $_cpcfg->homeSetting(); };
 ok($_home([]) === ['mode' => 'builtin', 'page' => ''] && $_home(['mode' => 'nonsense', 'page' => 'x'])['mode'] === 'builtin',

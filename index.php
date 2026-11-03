@@ -27,15 +27,17 @@ $home_intro_html = '';
 if ($home['mode'] !== 'builtin') {
     require_once __DIR__ . '/lib/content_pages.php';
     $home_page = moop_page_get($home['page']);
+    $hl = moop_current_lang();   // the visitor's language; English where the page has none
+    $pick = fn(string $part) => trim($home_page[$part][$hl] ?? '') !== '' ? $home_page[$part][$hl] : $home_page[$part]['en'];
     if ($home_page !== null && $home['mode'] === 'page') {
         echo render_display_page(__DIR__ . '/tools/pages/content_page.php', [
-            'page_title' => $home_page['title']['en'],
-            'page_html'  => moop_markdown($home_page['body']['en']),
+            'page_title' => $pick('title'),
+            'page_html'  => moop_markdown($pick('body')),
         ], $config->getString('siteTitle'));
         exit;
     }
     if ($home_page !== null && $home['mode'] === 'intro') {
-        $home_intro_html = moop_markdown($home_page['body']['en']);
+        $home_intro_html = moop_markdown($pick('body'));
     }
 }
 

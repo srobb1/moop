@@ -138,6 +138,10 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
     // Get config instance for use in layout
     $config = ConfigManager::getInstance();
 
+    // Settle the language BEFORE any output: it may set the moop_lang cookie and the Vary /
+    // Content-Language headers. A one-language site (simrbase) gets 'en' and nothing else.
+    $page_lang = moop_current_lang();
+
     // Shared page-title component (page_title()) — available to every content file.
     require_once __DIR__ . '/page_header.php';
 
@@ -154,7 +158,7 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
     // Output complete HTML structure
     ?>
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="<?= htmlspecialchars($page_lang) ?>">
     <head>
         <title><?= htmlspecialchars($title) ?></title>
         <?php include_once __DIR__ . '/head-resources.php'; ?>

@@ -73,7 +73,15 @@ RED on a deliberate one-character change before it is trusted.
   Menu + toolbox from the registry, ordered/labelled per site — 22998a58.
 - Step 2 content pages — Manage Pages (Markdown, EN/ES tabs, live server-side preview),
   page.php?p=<slug>, metadata/pages/<slug>.json (snapshot + permission rule). Parsedown 1.8
-  (Composer) in safe mode.
+  (Composer) in safe mode — 1304e636.
+- Step 3 main menu (links, drop-downs, pages placed from their editor) — 8627a299; home page
+  (MOOP's / a page above it / a page instead) — 3f532293.
+- Languages as a site setting, RETIRED like organisms (text never deleted) — a6963190.
+- Step 5 part 1, the visitor language switch: ?lang= > moop_lang cookie > Accept-Language >
+  English; only on sites with 2+ languages, never on admin pages; Vary + Content-Language.
+  Switches content pages, menu labels and the home now. NEXT: interface strings (t()).
+- Still open from this list: tool labels per language (tools_layout labels are one string today),
+  image upload for pages, simple mode, old-link redirects, optional taxonomy tabs.
 
 ### 4. Old-link redirects
 The published manuscript PDF and teachers' bookmarks point at `/en/node/121412`,

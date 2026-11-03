@@ -14,14 +14,20 @@ if ($page === null) {
     moop_not_found_page('There is no page at this address.');
 }
 
-// English until the language work (cuttingclass step 5) chooses per visitor.
-$lang = 'en';
+// The visitor's language (moop_current_lang()); a page not yet written in it is shown in English,
+// title and text separately, so nothing is ever blank.
+$lang  = moop_current_lang();
+$title = trim($page['title'][$lang] ?? '') !== '' ? $page['title'][$lang] : $page['title']['en'];
+$body  = trim($page['body'][$lang] ?? '') !== '' ? $page['body'][$lang] : $page['body']['en'];
 
 echo render_display_page(
     __DIR__ . '/tools/pages/content_page.php',
     [
-        'page_title' => $page['title'][$lang],
-        'page_html'  => moop_markdown($page['body'][$lang]),
+        'page_title' => $title,
+        'page_html'  => moop_markdown($body),
+        // English shown on a Spanish page says so, for screen readers and translators.
+        'title_lang' => $title === $page['title']['en'] && $lang !== 'en' && trim($page['title'][$lang] ?? '') === '' ? 'en' : '',
+        'body_lang'  => $body === $page['body']['en'] && $lang !== 'en' && trim($page['body'][$lang] ?? '') === '' ? 'en' : '',
     ],
-    $page['title'][$lang] . ' - ' . $config->getString('siteTitle')
+    $title . ' - ' . $config->getString('siteTitle')
 );

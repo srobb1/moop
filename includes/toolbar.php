@@ -55,7 +55,7 @@ if ($va_previewing) {
 <?php /* The main bar after the site title: ConfigManager::getMainMenu() -- the site's own
          (Admin -> Manage Menu, or a page's "Show in menu") or the default Tools, About, Help,
          which reproduces the bar as it was hand-written here until 2026-11-03. */
-foreach (ConfigManager::getInstance()->getMainMenu() as $mb_item): ?>
+foreach (ConfigManager::getInstance()->getMainMenu(moop_current_lang()) as $mb_item): ?>
 <?php if ($mb_item['type'] === 'tools'): ?>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
@@ -103,6 +103,20 @@ foreach (ConfigManager::getInstance()->getMainMenu() as $mb_item): ?>
 
       <!-- Right nav items (collapse into menu on mobile) -->
       <ul class="navbar-nav align-items-md-center gap-2">
+<?php
+// The language switch: only on a site with more than one language, never on admin pages (they
+// stay English). Each choice is the same page with ?lang=, remembered in the moop_lang cookie.
+$lb_langs = ConfigManager::getInstance()->languages();
+if (count($lb_langs) > 1 && !defined('MOOP_ADMIN_PAGE')): $lb_now = moop_current_lang(); ?>
+        <li class="nav-item">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Language">
+<?php foreach ($lb_langs as $lb_l): ?>
+            <a class="btn <?= $lb_l['code'] === $lb_now ? 'btn-light' : 'btn-outline-light' ?>" href="<?= htmlspecialchars(moop_lang_url($lb_l['code'])) ?>"
+               hreflang="<?= htmlspecialchars($lb_l['code']) ?>" lang="<?= htmlspecialchars($lb_l['code']) ?>" title="<?= htmlspecialchars($lb_l['name']) ?>"<?= $lb_l['code'] === $lb_now ? ' aria-current="true"' : '' ?>><?= htmlspecialchars(strtoupper($lb_l['code'])) ?></a>
+<?php endforeach; ?>
+          </div>
+        </li>
+<?php endif; ?>
         <li class="nav-item navbar-id-search">
           <?php /* Quick gene ID lookup — the index page's ID search (api/feature_search.php),
                    results in a panel under the box. js/modules/navbar-id-search.js */ ?>
