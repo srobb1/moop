@@ -102,6 +102,21 @@ full list from the Drupal site before it is switched off.
   the JS. The Drupal translations cover the CONTENT; MOOP's own buttons/messages need Spanish
   written (machine draft + human review is the usual route).
 
+### 5b. Translation workflow: a spreadsheet, agents, then human review (Sofia, 2026-11-03)
+1. Wrap interface text in t() page by page (navbar + home first, BLAST help last). A script WRITES
+   the spreadsheet from what is actually wrapped (never a hand-kept list): an .xlsx (CSV also
+   accepted) with columns English | Spanish | Status | Where it appears | Notes. Status is
+   `needs translation` / `machine draft` / `reviewed`. Spanish is PRE-FILLED from the current
+   cuttingclass site where the English matches.
+2. Another agent fills the gaps -> `machine draft`.
+3. A human reviewer (Sofia's Spanish-speaking friends) corrects -> `reviewed`.
+4. Upload on the catalog admin page. MOOP checks before saving: nothing lost, %d/%s placeholders
+   match between English and Spanish; shows counts per status. Re-upload updates only changes.
+- Visitors NEVER see "needs translation": untranslated text shows in English. An admin-only
+  "show gaps" view highlights untranslated strings on the real pages.
+- Catalog is site data (snapshot to the private repo), like pages and the glossary.
+- Next session: t() + catalog + export/import with checks + show-gaps view + wrap navbar & home.
+
 ### 6. Simple mode (maybe)
 One setting that folds advanced options away (e.g. BLAST parameters) and uses plainer labels.
 
