@@ -3496,6 +3496,14 @@ ok(housekeeping_health([['id' => 'r', 'scope' => 'all', 'started_at' => $_now - 
    'running for 20 minutes -> amber');
 ok(housekeeping_health([['id' => 'r', 'scope' => 'all', 'started_at' => $_now - 60, 'outcome' => 'running'], $_ok($_now - 3000)], true, $_now)['tone'] === '', 'running for a minute -> quiet');
 ok(housekeeping_health([], false, $_now)['tone'] === '', 'no record at all (a fresh install, before its first run) -> no false alarm');
+// 2026-11-03: the banner went red every morning -- housekeeping only runs while admins visit,
+// so an idle night read as "not finishing". Staleness now counts from the last REQUEST.
+ok(housekeeping_health([$_ok($_now - 18 * 3600)], false, $_now, $_now - 18 * 3600)['tone'] === '', 'idle 18 h, nothing requested since the last run -> quiet');
+ok(housekeeping_health([$_ok($_now - 18 * 3600)], false, $_now, $_now - 5)['tone'] === '', 'a run requested 5 s ago (this page load) -> quiet, not "18 hr" red');
+$_h = housekeeping_health([$_ok($_now - 18 * 3600)], false, $_now, $_now - 1800);
+ok($_h['tone'] === 'danger' && strpos(implode(' ', $_h['problems']), 'started 30 min ago and none has finished') !== false, 'requested 30 min ago, nothing finished -> red');
+ok(housekeeping_health([], false, $_now, $_now - 1800)['tone'] === '', 'requested but no record at all -> fresh-install rule still applies');
+ok(housekeeping_health([$_ok($_now - 1800)], false, $_now, $_now - 1800 - 1)['tone'] === '', 'requested, then finished -> quiet');
 
 $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_H));

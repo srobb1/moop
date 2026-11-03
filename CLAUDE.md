@@ -342,7 +342,9 @@ the kernel drops however the process ends (it was a PID file; a run that `die()`
 and blocked every run for 1.5 h). Every run keeps a record in the status file
 (`housekeeping_runs`: start, current task, finish, per-task result); a shutdown function writes
 which task a run died in and the message. `housekeeping_health()` turns the Housekeeping card —
-and a banner atop the dashboard — red when a run died or no full run finished for 2 h.
+and a banner atop the dashboard — red when a run died, or a full run was *requested* (the
+marker's mtime) over 15 min ago and none has finished since. Not "no run for 2 h": runs only
+happen while admins visit, so that rule went red after every quiet night (fixed 2026-11-03).
 Background-child output still goes to `/dev/null`, so the record is the only place a death
 shows: keep it that way, don't add a log nobody reads.
 

@@ -52,7 +52,8 @@
   // Is housekeeping itself healthy? Every card here is its cached output, so when it stops
   // finishing they all just stop changing -- which on 2026-10-30 went unnoticed for 1.5 hours.
   $_hk_running = function_exists('housekeeping_is_running') && housekeeping_is_running();
-  $_hk_health  = housekeeping_health($_SESSION['housekeeping_runs'] ?? [], $_hk_running, time());
+  $_hk_health  = housekeeping_health($_SESSION['housekeeping_runs'] ?? [], $_hk_running, time(),
+                                     function_exists('housekeeping_requested_at') ? housekeeping_requested_at() : null);
   ?>
 
   <?php if ($_hk_health['tone'] === 'danger'): ?>

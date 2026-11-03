@@ -252,6 +252,11 @@ function housekeeping_is_due(): bool {
     return (time() - $last) >= HOUSEKEEPING_MIN_INTERVAL;
 }
 
+/** When a full sweep was last requested (the marker's mtime), or null if never. */
+function housekeeping_requested_at(): ?int {
+    return @filemtime(housekeeping_marker_file()) ?: null;
+}
+
 /**
  * Seconds since the last run started, or null if it has never run.
  */
@@ -467,15 +472,23 @@ function housekeeping_ago(int $seconds): string {
  * Is housekeeping healthy? Read from the run records alone, so it is cheap and testable.
  *
  *   danger  a run died (or stopped with no lock held -- killed) and no full sweep has finished
- *           since; or no full sweep has finished for over twice the interval
+ *           since; or a full sweep was requested over 15 minutes ago and none has finished since
  *   warn    a run has been going for over 15 minutes; or the last full sweep had failed tasks
  *   ''      otherwise
  *
- * @param list<array> $runs     the 'housekeeping_runs' records, newest first
- * @param bool        $running  housekeeping_is_running()
+ * Staleness is measured from the last REQUEST (the marker's mtime), not from the clock.
+ * Housekeeping only runs while someone uses the admin pages, so "no run for 18 hours" after a
+ * quiet night is normal, not a failure -- until 2026-11-03 that alone turned the banner red
+ * every morning, and an alarm that cries wolf daily is ignored the day a run really dies. A
+ * request that produced no finished sweep within 15 minutes is the real failure (the child
+ * never started, or never wrote a record). With no request time known, fall back to age.
+ *
+ * @param list<array> $runs          the 'housekeeping_runs' records, newest first
+ * @param bool        $running       housekeeping_is_running()
+ * @param ?int        $requested_at  housekeeping_requested_at(): when a full sweep was last asked for
  * @return array{tone:string, badge:array{0:string,1:string}, headline:string, problems:list<string>}
  */
-function housekeeping_health(array $runs, bool $running, int $now, int $interval = HOUSEKEEPING_MIN_INTERVAL): array {
+function housekeeping_health(array $runs, bool $running, int $now, ?int $requested_at = null, int $interval = HOUSEKEEPING_MIN_INTERVAL): array {
     if (!$runs) {
         return ['tone' => '', 'badge' => [$running ? 'Running' : 'No run recorded yet', $running ? 'info' : 'secondary'],
                 'headline' => 'No run has been recorded yet.', 'problems' => []];
@@ -502,8 +515,13 @@ function housekeeping_health(array $runs, bool $running, int $now, int $interval
             : 'died' . (!empty($dead['died_in']) ? ' during ' . $dead['died_in'] : '') . ': ' . ($dead['message'] ?? '');
         $problems[] = 'The run that started ' . housekeeping_ago($now - (int)$dead['started_at']) . ' ' . $what;
     }
-    if (!$running && $now - $full_at > 2 * $interval) {
-        $problems[] = $full_at ? 'No full run has finished since ' . housekeeping_ago($now - $full_at) . ' (it should run hourly)'
+    if ($requested_at !== null) {
+        if (!$running && $requested_at > $full_at && $now - $requested_at > 900) {
+            $problems[] = 'A run was started ' . housekeeping_ago($now - $requested_at) . ' and none has finished since'
+                        . ($full_at ? ' (the last full run finished ' . housekeeping_ago($now - $full_at) . ')' : '');
+        }
+    } elseif (!$running && $now - $full_at > 2 * $interval) {
+        $problems[] = $full_at ? 'No full run has finished since ' . housekeeping_ago($now - $full_at)
                                : 'No full run has finished yet';
     }
     if ($problems) {
