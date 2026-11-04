@@ -420,7 +420,7 @@ class AnnotationSearch {
             // dropping the "1" ranks HDAC8 first. The 3-character minimum applies to the
             // whole query (see the length guard above), not to individual words.
             const terms = keywords.trim().split(/\s+/).filter(t => t.length > 0);
-            const boldTerms = terms.map(t => `<strong>${t}</strong>`).join(', ');
+            const boldTerms = terms.map(t => `<strong>${escapeHtml(t)}</strong>`).join(', ');
 
             if (terms.length > 1) {
                 searchExplanation = `<br><small class="text-muted">Searching with: ${boldTerms} — a record must contain all of them.</small>`;
@@ -446,7 +446,8 @@ class AnnotationSearch {
         // Wire progress-area cancel (injected into #searchProgress below)
         $(document).off('click.cancel').on('click.cancel', '#search-cancel-progress-btn', () => this.cancel());
 
-        let searchInfo = `Searched for any record containing <strong>${keywords}</strong>`;
+        // Escaped: the words come from the box, which ?q= in a link can fill (tools/pages/search.php).
+        let searchInfo = `Searched for any record containing <strong>${escapeHtml(keywords)}</strong>`;
         if (this.selectedSources && this.selectedSources.length > 0) {
             searchInfo += ` (limited to ${this.selectedSources.join(', ')})`;
         }
