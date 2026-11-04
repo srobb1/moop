@@ -20,7 +20,7 @@
   "scaffold": "Contigs ordered and joined into a longer sequence, with gaps (runs of N) where the sequence between them is unknown. Many assemblies are scaffolds rather than whole chromosomes.",
   "transcriptome": "An assembly of an organism's RNA instead of its genome: transcripts with no introns and no genomic position. Searches and downloads work, but flanks and genomic regions do not exist.",
   "BUSCO": "A completeness check. It counts how many genes expected in nearly every species of a lineage are found in an assembly or gene set: complete, duplicated, fragmented or missing. A high complete score means little is missing.",
-  "gene": "A stretch of DNA that encodes a functional product. A gene is transcribed into one or more mRNAs, which can be translated into proteins.",
+  "gene": "A stretch of DNA that encodes a functional product. A gene is transcribed into one or more RNAs: mRNAs for protein-coding genes, which can be translated into proteins, and RNAs that are never translated, such as tRNAs, rRNAs and lncRNAs, for the rest.",
   "accession": "The stable identifier a database gives a record — a gene, protein, assembly or domain — such as GCF_000001405.40 or PF00069. Quoting the accession finds exactly that record.",
   "FASTA": "A plain-text sequence format: a line starting with > holding the name, then the sequence. What BLAST takes and what sequence downloads give you.",
   "GFF": "A tab-separated file of where features lie on an assembly — genes, mRNAs, exons, CDS — with their coordinates, strand and parent. The gene models on this site come from one.",

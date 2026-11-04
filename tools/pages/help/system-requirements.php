@@ -752,8 +752,8 @@ Recommended allocation:    400 GB (with growth room)</code></pre>
       <div class="card-body">
         <h6>Fallback Chain (in order):</h6>
         <ol>
-          <li><strong>Check custom image:</strong> <code>/images/groups/{GroupName}.jpg</code> (manually uploaded)</li>
-          <li><strong>Check cached image:</strong> <code>/images/wikimedia/{GroupName}.jpg</code> (previously downloaded)</li>
+          <li><strong>Check custom image:</strong> <code>/images/groups/{GroupName}.{jpg,jpeg,png,gif,webp}</code> (manually uploaded; the first that exists, in that order)</li>
+          <li><strong>Check cached image:</strong> <code>/images/wikimedia/{GroupName}.{jpg,jpeg,png,gif,webp}</code> (previously downloaded, in the format Wikipedia had it)</li>
           <li><strong>Download from Wikipedia:</strong> Automatic on-demand download and cache</li>
           <li><strong>No image:</strong> Display group without image (graceful failure)</li>
         </ol>

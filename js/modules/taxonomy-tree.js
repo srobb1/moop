@@ -69,8 +69,16 @@ class PhyloTree {
             } else if (someSelected) {
                 nodeElement.classList.add('partial');
             }
-            const btnIcon = nodeElement.querySelector('.phylo-select-btn i');
+            const btn = nodeElement.querySelector('.phylo-select-btn');
+            const btnIcon = btn && btn.querySelector('i');
             if (btnIcon) btnIcon.className = allSelected ? 'fas fa-check' : 'fas fa-plus';
+            // The tooltip says what a click will DO: a click on the tick removes (review N74 --
+            // it used to say "Add to selection" in every state). Partly selected still adds.
+            if (btn) {
+                const label = allSelected ? moopT('Remove from selection') : moopT('Add to selection');
+                btn.title = label;
+                btn.setAttribute('aria-label', label);
+            }
         });
     }
 
@@ -105,7 +113,7 @@ class PhyloTree {
             ? `<span class="phylo-toggle" data-node-id="${nodeId}"><i class="fas fa-chevron-down"></i></span>`
             : `<span class="phylo-toggle-spacer"></span>`;
 
-        const selectBtn = `<button class="phylo-select-btn" data-node-id="${nodeId}" title="${moopTh('Add to selection')}">
+        const selectBtn = `<button class="phylo-select-btn" data-node-id="${nodeId}" title="${moopTh('Add to selection')}" aria-label="${moopTh('Add to selection')}">
                 <i class="fas fa-plus"></i>
             </button>`;
 

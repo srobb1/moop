@@ -71,7 +71,6 @@ if ($is_taxonomy_group) {
     $group_info = [
         'name' => $taxonomy_rank,
         'group_name' => $taxonomy_rank,
-        'description' => $wiki_data['description'] ?: "All organisms in the taxonomic rank: <em>$taxonomy_rank</em>",
         'type' => 'taxonomy',
         'wikipedia_url' => $wiki_data['wikipedia_url'],
         'wikipedia_image' => $wiki_data['image_url']
