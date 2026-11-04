@@ -116,8 +116,8 @@
             $badges = htmlspecialchars_decode(strip_tags($type));
             if (!empty($children_hierarchical)) {
                 $n = count($children_hierarchical);
-                $badges .= ' ' . $n . ' ' . ($children_hierarchical[0]['feature_type'] ?? 'mRNA')
-                         . ' child' . ($n > 1 ? 'ren' : '');
+                $__ct = $children_hierarchical[0]['feature_type'] ?? 'mRNA';
+                $badges .= ' ' . ($n > 1 ? t_plain('%1$d %2$s children', $n, $__ct) : t_plain('%1$d %2$s child', $n, $__ct));
             }
             $copy_lines[] = $badges;
             $copy_lines[] = trim($genus . ' ' . $species . ($common_name ? " ($common_name)" : ''));
@@ -188,7 +188,7 @@
                         $direct_child_count = count($children_hierarchical);
                     ?>
                         <span class="badge text-white ms-1 badge-sm <?= $child_class ?>">
-                            <?= $direct_child_count ?> <?= htmlspecialchars($first_child_type) ?> child<?= $direct_child_count > 1 ? 'ren' : '' ?>
+                            <?= $direct_child_count > 1 ? t('%1$d %2$s children', $direct_child_count, $first_child_type) : t('%1$d %2$s child', $direct_child_count, $first_child_type) . "\n" ?>
                         </span>
                     <?php endif; ?>
                 </div>
@@ -236,9 +236,11 @@
                     $__release = htmlspecialchars($gene_naming['data_version']);
                 ?>
                     <?php if ($__kept_from !== null): ?>
-                    <p class="gene-naming-version">Name from <?= htmlspecialchars($__kept_from) ?> · MOOP's evidence<?= $__moop_name ? ' and suggested name' : '' ?> use<?= $__moop_name ? '' : 's' ?> HGNC release <?= $__release ?></p>
+                    <p class="gene-naming-version"><?= $__moop_name
+                        ? t_markup("Name from %1\$s · MOOP's evidence and suggested name use HGNC release %2\$s", htmlspecialchars($__kept_from), $__release)
+                        : t_markup("Name from %1\$s · MOOP's evidence uses HGNC release %2\$s", htmlspecialchars($__kept_from), $__release) ?></p>
                     <?php else: ?>
-                    <p class="gene-naming-version">Named by MOOP from HGNC release <?= $__release ?></p>
+                    <p class="gene-naming-version"><?= t_markup('Named by MOOP from HGNC release %s', $__release) ?></p>
                     <?php endif; ?>
                 <?php endif; ?>
                 <?php endif; ?>
@@ -278,8 +280,8 @@
                     <?php endif; ?>
                     <?php if ($longest_protein !== ''): ?>
                     <dt><?= t('Protein') ?></dt>
-                    <dd><?= number_format($protein_lengths[$longest_protein]) ?> aa<?php if (count($protein_lengths) > 1): ?>
-                        <span class="text-muted" title="<?= htmlspecialchars($longest_protein) ?>">(longest of <?= count($protein_lengths) ?>)</span><?php endif; ?></dd>
+                    <dd><?= t('%s aa', number_format($protein_lengths[$longest_protein])) ?><?php if (count($protein_lengths) > 1): ?>
+                        <span class="text-muted" title="<?= htmlspecialchars($longest_protein) ?>"><?= t('(longest of %d)', count($protein_lengths)) ?></span><?php endif; ?></dd>
                     <?php endif; ?>
                 </dl>
             </div>
@@ -361,8 +363,9 @@
                     $__stranded = in_array($neighbor_nav['strand'], ['+', '-'], true);
                     $__up_side  = $neighbor_nav['strand'] === '-' ? 'right' : 'left';
                     $__dn_side  = $__up_side === 'left' ? 'right' : 'left';
-                    $__up_label = $__stranded ? 'upstream gene' : 'previous gene';
-                    $__dn_label = $__stranded ? 'downstream gene' : 'next gene'; ?>
+                    // In the visitor's language: the words also reach js/modules/gene-neighbors.js via data-label.
+                    $__up_label = htmlspecialchars($__stranded ? t_plain('upstream gene') : t_plain('previous gene'));
+                    $__dn_label = htmlspecialchars($__stranded ? t_plain('downstream gene') : t_plain('next gene')); ?>
                 <?php /* « and » either side of the diagram, on the side each neighbour lies (Sofia,
                          2026-10-27). They were two labelled buttons on a row of their own, which on
                          a phone needed ~300 px and stuck out of the card, so the page scrolled
@@ -377,13 +380,13 @@
                      data-uniquename="<?= htmlspecialchars($neighbor_nav['uniquename']) ?>">
                     <div class="d-flex align-items-center gap-1">
                         <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn gene-neighbor-chevron" data-side="<?= $__up_side ?>"
-                                data-label="<?= $__up_label ?>" aria-label="Go to the <?= $__up_label ?>"
-                                title="Go to the <?= $__up_label ?> page">
+                                data-label="<?= $__up_label ?>" aria-label="<?= t_markup('Go to the %s', $__up_label) ?>"
+                                title="<?= t_markup('Go to the %s page', $__up_label) ?>">
                             <i class="fas fa-angle-double-left" aria-hidden="true"></i></button>
                         <?= $__svg ?>
                         <button type="button" class="btn btn-sm moop-data-btn gene-neighbor-btn gene-neighbor-chevron" data-side="<?= $__dn_side ?>"
-                                data-label="<?= $__dn_label ?>" aria-label="Go to the <?= $__dn_label ?>"
-                                title="Go to the <?= $__dn_label ?> page">
+                                data-label="<?= $__dn_label ?>" aria-label="<?= t_markup('Go to the %s', $__dn_label) ?>"
+                                title="<?= t_markup('Go to the %s page', $__dn_label) ?>">
                             <i class="fas fa-angle-double-right" aria-hidden="true"></i></button>
                     </div>
                     <div class="gene-neighbor-status small text-muted text-center mt-1" role="status"></div>
@@ -395,7 +398,7 @@
                          reads as a broken or missing gene model. Say why there is nothing to draw. */ ?>
                 <?php if (!empty($genome_is_transcripts)): ?>
                 <p class="small text-muted mb-0 mt-2">
-                    No introns: transcript assembly
+                    <?= t('No introns: transcript assembly') . "\n" ?>
                     <?= field_help(
                         'This assembly is one assembled transcript per gene, not a genome. Each gene is '
                         . 'its own spliced transcript, so its exons are already joined and there is no '
@@ -478,7 +481,7 @@
                                 <span class="feature-color-gene"><strong><?php if ($parent_annot_anchor !== ''): ?><a href="#<?= htmlspecialchars($parent_annot_anchor) ?>" class="link-light-bordered text-decoration-none"><?= htmlspecialchars($feature_uniquename) ?></a><?php else: ?><?= htmlspecialchars($feature_uniquename) ?><?php endif; ?></strong></span> 
                                 <span class="badge bg-feature-gene text-white badge-sm"><?= htmlspecialchars($type) ?></span>
                                 <?php if ($parent_annot_count > 0): ?>
-                                    <span class="badge bg-success text-white badge-sm"><?= $parent_annot_count ?> annotation<?= $parent_annot_count > 1 ? 's' : '' ?></span>
+                                    <span class="badge bg-success text-white badge-sm"><?= $parent_annot_count > 1 ? t('%d annotations', $parent_annot_count) : t('%d annotation', $parent_annot_count) ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($big_gene)):
                                     // Thousands of tree lines (each transcript with its CDS and
@@ -518,11 +521,12 @@
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Expression') ?></span>
             <span class="ms-2 text-muted small">
                 <?php if ($__ex['with_data'] === 0): ?>
-                    not measured in any of <?= $__n_exp ?> experiment<?= $__n_exp !== 1 ? 's' : '' ?>
+                    <?= ($__n_exp !== 1 ? t('not measured in any of %d experiments', $__n_exp) : t('not measured in any of %d experiment', $__n_exp)) . "\n" ?>
                 <?php else: ?>
-                    detected in <?= $__ex['detected'] ?> of <?= $__ex['with_data'] ?> experiment<?= $__ex['with_data'] !== 1 ? 's' : '' ?>
+                    <?= ($__ex['with_data'] !== 1 ? t('detected in %1$d of %2$d experiments', $__ex['detected'], $__ex['with_data'])
+                                                   : t('detected in %1$d of %2$d experiment', $__ex['detected'], $__ex['with_data'])) . "\n" ?>
                     <?php if ($__ex['with_data'] < $__n_exp): ?>
-                        · <?= $__n_exp - $__ex['with_data'] ?> without data for this gene
+                        · <?= t('%d without data for this gene', $__n_exp - $__ex['with_data']) . "\n" ?>
                     <?php endif; ?>
                 <?php endif; ?>
             </span>
@@ -594,15 +598,14 @@
                 <?php if ($__more): ?>
                 <button type="button" class="btn btn-sm btn-link px-0 expr-more-btn collapsed"
                         data-bs-toggle="collapse" data-bs-target="#expressionMore" aria-expanded="false" aria-controls="expressionMore">
-                    <span class="when-collapsed">Show all <?= $__n_exp ?> experiments</span>
+                    <span class="when-collapsed"><?= t('Show all %d experiments', $__n_exp) ?></span>
                     <span class="when-expanded"><?= t('Show fewer') ?></span>
                 </button>
                 <?php endif; ?>
                 <div class="text-muted expr-key">
-                    Level = the condition with the highest average (replicates averaged): off below 1 ·
-                    low 1–10 · medium 10–100 · high 100 and above
-                    (<?= htmlspecialchars(moop_expression_units_label($__ex['experiments'])) ?>). Bars: each
-                    condition's average, in order; hover a bar for its value.
+                    <?= t('Level = the condition with the highest average (replicates averaged): off below 1 · low 1–10 · medium 10–100 · high 100 and above (%s).',
+                          moop_expression_units_label($__ex['experiments'])) ?>
+                    <?= t("Bars: each condition's average, in order; hover a bar for its value.") . "\n" ?>
                 </div>
             </div>
         </div>
@@ -646,7 +649,7 @@
                                  expectation on arriving is that they differ and must be
                                  compared. "Annotated the same" read as a neutral description
                                  of how the data was produced rather than as a finding. */ ?>
-                        <i class="fa fa-equals me-1" aria-hidden="true"></i>identical on all <?= (int)$annotated_isoform_count ?> transcripts
+                        <i class="fa fa-equals me-1" aria-hidden="true"></i><?= t('identical on all %d transcripts', (int)$annotated_isoform_count) . "\n" ?>
                     </span>
                 <?php endif; ?>
                 <?= help_modal_trigger('annotations-help', '', 'Help: what is an annotation?') ?>
@@ -711,9 +714,9 @@
                     ?>
                     <div class="isoform-note">
                         <i class="fas fa-info-circle" aria-hidden="true"></i>
-                        <strong><?= number_format($__n_tx) ?> transcripts</strong> — too many to show at once, so each
-                        transcript's annotations load when you ask for them. Sort the list by annotations or
-                        protein length to find the ones worth opening.
+                        <?= t_markup("%s — too many to show at once, so each transcript's annotations load when you ask for them.",
+                                     '<strong>' . t('%s transcripts', number_format($__n_tx)) . '</strong>') . "\n" ?>
+                        <?= t('Sort the list by annotations or protein length to find the ones worth opening.') . "\n" ?>
                     </div>
                     <?php
                     // The rows as compact data (~60 bytes a transcript); the browser builds the
@@ -847,8 +850,7 @@
             </div>
             <div id="bigGeneSequences" class="collapse show">
             <div class="card-body">
-                <p class="text-muted mb-2">This gene has <?= number_format(count($children_hierarchical)) ?> transcripts — too many
-                    to print here. Download them as FASTA:</p>
+                <p class="text-muted mb-2"><?= t('This gene has %s transcripts — too many to print here.', number_format(count($children_hierarchical))) ?> <?= t('Download them as FASTA:') ?></p>
                 <?php foreach (($sequence_types ?? $config->getSequenceTypes()) as $__st => $__conf):
                     if ($__st === 'genome') continue; ?>
                     <form method="POST" action="" class="d-inline">

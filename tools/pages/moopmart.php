@@ -846,8 +846,8 @@
         <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i><?= t('Select all organisms?') ?></h5>
       </div>
       <div class="modal-body">
-        <?= t('This will select all') ?> <strong id="mm-select-all-count"></strong> across all organisms.
-        Searches across all organisms can take a while — consider selecting only the ones you need.
+        <?= t_markup('This will select all %s across all organisms.', '<strong id="mm-select-all-count"></strong>') . "\n" ?>
+        <?= t('Searches across all organisms can take a while — consider selecting only the ones you need.') . "\n" ?>
       </div>
       <div class="modal-footer py-2">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= t('Cancel') ?></button>
@@ -865,9 +865,9 @@
         <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i><?= t('Export every feature?') ?></h5>
       </div>
       <div class="modal-body">
-        No filters are set in Step 2, so this exports <strong>every feature</strong> across
-        <strong class="mm-be-orgs"></strong> <?= t('organisms (') ?><strong class="mm-be-gs"></strong> gene sets).
-        That can be a very large file. Preview first to see the total, or go ahead.
+        <?= t_markup('No filters are set in Step 2, so this exports %1$s across %2$s organisms (%3$s gene sets).',
+                     '<strong>' . t('every feature') . '</strong>', '<strong class="mm-be-orgs"></strong>', '<strong class="mm-be-gs"></strong>') . "\n" ?>
+        <?= t('That can be a very large file. Preview first to see the total, or go ahead.') . "\n" ?>
       </div>
       <div class="modal-footer py-2">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= t('Cancel') ?></button>

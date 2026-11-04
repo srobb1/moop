@@ -135,7 +135,7 @@
                        which is what they are. */ ?>
               <div class="mt-4 pt-3 border-top">
                 <h6 class="text-muted mb-3" style="font-weight: 600;">
-                  Feature Counts
+                  <?= t('Feature Counts') . "\n" ?>
                   <?= field_help(
                       'How many genes this gene set contains, and how many transcripts they '
                       . 'produce. One gene can have several transcripts, so transcripts are '
@@ -165,7 +165,7 @@
                        formats without saying they are downloads for THIS gene set. */ ?>
               <div class="mt-4 pt-3 border-top">
                 <h6 class="text-muted mb-3" style="font-weight: 600;">
-                  Downloads
+                  <?= t('Downloads') . "\n" ?>
                   <?= field_help(
                       'Sequence and annotation files for this gene set. Protein, mRNA and CDS '
                       . 'are FASTA; GFF3 carries the gene models and their coordinates.',

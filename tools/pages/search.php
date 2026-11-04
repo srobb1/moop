@@ -68,7 +68,7 @@
     <div class="card mb-3 shadow-sm">
       <div class="card-header py-2 d-flex align-items-center tool-header">
         <span class="step-badge me-2">1</span>
-        <span class="fw-semibold" style="font-size:0.9rem;">Enter a <?= gloss('gene') ?> ID or <?= gloss('annotation') ?> keyword</span>
+        <span class="fw-semibold" style="font-size:0.9rem;"><?= t_markup('Enter a %1$s ID or %2$s keyword', gloss('gene'), gloss('annotation')) ?></span>
         <?= help_modal_trigger('search-help', '', 'How to search') ?>
       </div>
       <div class="card-body py-3">
@@ -76,7 +76,7 @@
               // lookup finds nothing ("Search annotations for 'BRCA1'"). ?>
         <input type="text" class="form-control moop-input" id="searchKeywords"
                value="<?= htmlspecialchars(trim((string)($_GET['q'] ?? ''))) ?>"
-               placeholder='e.g. BRCA1, "Histone Deacetylase 1", GO:0006351 (minimum 3 characters)…'>
+               placeholder='<?= /* single-quoted attribute: & < > and ' escaped, " left as is */ str_replace("'", '&#039;', htmlspecialchars(t_plain('e.g. BRCA1, "Histone Deacetylase 1", GO:0006351 (minimum 3 characters)…'), ENT_NOQUOTES)) ?>'>
       </div>
     </div>
 
@@ -167,7 +167,7 @@
               </span>
               <span class="flex-grow-1 text-truncate" style="min-width:0; white-space:nowrap;">
                 <em><?= htmlspecialchars($label) ?></em><?php if ($cn): ?><span class="text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($cn) ?></span><?php endif;
-                ?><?php if ($isRep && $gsCount > 1): ?><span class="scope-gs-count text-muted" style="font-size:0.78em;"> · <?= (int)$gsCount ?> gene sets</span><?php endif;
+                ?><?php if ($isRep && $gsCount > 1): ?><span class="scope-gs-count text-muted" style="font-size:0.78em;"> · <?= t('%d gene sets', (int)$gsCount) ?></span><?php endif;
                 ?><span class="scope-row-detail text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($asmDisplay) ?><?php if ($asmAccession): ?> <span style="font-size:0.9em;">(<?= htmlspecialchars($asmAccession) ?>)</span><?php endif; ?> › <?= htmlspecialchars($gs) ?></span>
               </span>
               <span class="org-check flex-shrink-0"><i class="fas fa-check text-success"></i></span>
@@ -216,7 +216,7 @@
     <div class="card mb-3 shadow-sm">
       <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
         <span class="step-badge me-2">3</span>
-        <span class="fw-semibold" style="font-size:0.9rem;">Choose which <?= gloss('annotation type', 'annotation types') ?> to search</span>
+        <span class="fw-semibold" style="font-size:0.9rem;"><?= t_markup('Choose which %s to search', gloss('annotation type', 'annotation types')) ?></span>
         <?php /* The header (i) explains THIS STEP, matching Steps 1 and 2 — theirs are
                  "How to search" and "How to select organisms". This slot used to hold
                  ann-types-modal, a reference list of what each type covers, so the one
@@ -242,7 +242,7 @@
                    Starts hidden because the panel starts empty. */ ?>
           <div class="px-3 pt-3" id="sources-help-line" style="display:none;">
             <div class="form-text moop-help">
-              All types are searched; untick any you don't want. <?= help_modal_trigger('ann-types-modal', '', 'What each annotation type covers') ?>
+              <?= t("All types are searched; untick any you don't want.") ?> <?= help_modal_trigger('ann-types-modal', '', 'What each annotation type covers') ?>
             </div>
           </div>
           <div class="px-2 pt-2 pb-1 border-bottom" id="sources-filter-wrap" style="display:none;">
@@ -371,8 +371,8 @@
           <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i><?= t('Select all organisms?') ?></h5>
         </div>
         <div class="modal-body">
-          <?= t('This will select all') ?> <strong id="select-all-orgs-count"></strong> organisms.
-          Searches across all organisms can take a while — consider selecting only the ones you need.
+          <?= t_markup('This will select all %s organisms.', '<strong id="select-all-orgs-count"></strong>') . "\n" ?>
+          <?= t('Searches across all organisms can take a while — consider selecting only the ones you need.') . "\n" ?>
         </div>
         <div class="modal-footer py-2">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= t('Cancel') ?></button>
@@ -386,7 +386,7 @@
   <div id="searchResults" class="hidden">
     <div class="card shadow-sm mb-5">
       <div class="card-header bg-search-results">
-        <span class="fw-semibold text-uppercase section-eyebrow"><i class="fa fa-list me-1"></i> Search Results <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
+        <span class="fw-semibold text-uppercase section-eyebrow"><i class="fa fa-list me-1"></i> <?= t('Search Results') ?> <?= help_modal_trigger('search-results-help', '', 'Understanding your search results') ?></span>
       </div>
       <div class="card-body">
         <div id="searchInfo" class="alert alert-info mb-3"></div>

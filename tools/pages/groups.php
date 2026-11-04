@@ -161,7 +161,7 @@
                     something invalid, when they did not, is worse than saying we have nothing. */ ?>
             <div class="alert alert-info mb-0">
               <i class="fa fa-info-circle"></i>
-              <?= t('No organisms in') ?> <strong><?= htmlspecialchars($group_name) ?></strong> <?= t('yet.') . "\n" ?>
+              <?= t_markup('No organisms in %s yet.', '<strong>' . htmlspecialchars($group_name) . '</strong>') . "\n" ?>
               <div class="small text-muted mt-2">
                 Nothing in <?= htmlspecialchars($config->getString('siteTitle')) ?> is filed under
                 that name. Browse <a href="/<?= $site ?>/index.php">all organisms and groups</a><?php if (moop_tool_on('annotation_search')): ?>,

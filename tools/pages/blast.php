@@ -65,9 +65,9 @@
                         class="form-control fasta-textarea-ids"
                         rows="8"
                         required
-                        placeholder="Enter sequence in FASTA format or plain text"
+                        placeholder="<?= t('Enter sequence in FASTA format or plain text') ?>"
                     ><?= htmlspecialchars($search_query) ?></textarea>
-                    <small class="form-text text-muted"><?= gloss('fasta', 'FASTA') ?> format (with &gt;) or plain sequence.</small>
+                    <small class="form-text text-muted"><?= t_markup('%s format (with >) or plain sequence.', gloss('fasta', 'FASTA')) ?></small>
                     <div class="mt-2 d-flex gap-2">
                         <button type="button" class="btn btn-sm fw-semibold text-white btn-moop-teal" onclick="loadSampleSequence('protein')">
                             <i class="fa fa-flask me-1"></i><?= t('Sample Protein') . "\n" ?>
@@ -116,8 +116,8 @@
                     </div>
                     <div id="blastn-short-notice" class="alert alert-info py-2 mt-2 small mb-0 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>">
                         <i class="fa fa-info-circle me-1"></i>
-                        Optimized for short sequences: word size 7, <?= gloss_first('e-value', 'E-value') ?> 1000, adjusted gap costs, no low-complexity filter.
-                        Advanced options have been pre-filled — you can override them.
+                        <?= t_markup('Optimized for short sequences: word size 7, %s 1000, adjusted gap costs, no low-complexity filter.', gloss_first('e-value', 'E-value')) . "\n" ?>
+                        <?= t('Advanced options have been pre-filled — you can override them.') . "\n" ?>
                         <?php // Plain '&' -- help_modal_trigger() escapes the label itself. ?>
                         <?= help_modal_trigger('blast-short-help', 'Primers & short sequences', 'Help: searching with primers and other short sequences') ?>
                         <?php
@@ -129,9 +129,8 @@
 <?php if (moop_tool_on('primer_blast')): ?>
                         <div class="mt-2 pt-2 border-top">
                             <i class="fa fa-vials me-1"></i>
-                            Checking a primer <strong>pair</strong>? <a href="<?= htmlspecialchars('/' . $site . '/tools/primer_blast.php') ?>">Primer BLAST</a>
-                            pairs the hits for you, reports every product size, and shows the products in the genome browser.
-                            This page is the right tool for locating a <em>single</em> short sequence.
+                            <?= t_markup('Checking a primer %s?', '<strong>' . t('pair') . '</strong>') ?> <?= t_markup('%s pairs the hits for you, reports every product size, and shows the products in the genome browser.', '<a href="' . htmlspecialchars('/' . $site . '/tools/primer_blast.php') . '">Primer BLAST</a>') . "\n" ?>
+                            <?= t_markup('This page is the right tool for locating a %s short sequence.', '<em>' . t('single') . '</em>') . "\n" ?>
                         </div>
 <?php endif; ?>
                     </div>
@@ -217,7 +216,7 @@
                             <div class="col-md-6">
                                 <label for="max_results" class="form-label"><strong><?= t('Maximum Hits') ?></strong></label>
                                 <input type="number" id="max_results" name="max_results" class="form-control" value="<?= (int)$max_results ?>" min="1" max="<?= (int)$max_hits_cap ?>">
-                                <div class="form-text">Up to <?= number_format($max_hits_cap) ?>. For more, run BLAST+ on your own computer.</div>
+                                <div class="form-text"><?= t('Up to %s. For more, run BLAST+ on your own computer.', number_format($max_hits_cap)) ?></div>
                                 <small class="form-text text-muted"><?= t('Maximum number of hits to return') ?></small>
                             </div>
                         </div>
@@ -307,7 +306,7 @@
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="strand" class="form-label"><strong><?= gloss('strand', 'Strand') ?> (DNA only)</strong></label>
+                                <label for="strand" class="form-label"><strong><?= t_markup('%s (DNA only)', gloss('strand', 'Strand')) ?></strong></label>
                                 <?php
                                 // Both by default, as BLAST itself does. "Plus" carried `selected` in
                                 // BOTH branches of its condition, so every DNA search was plus-only and

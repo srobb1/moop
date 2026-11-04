@@ -156,7 +156,7 @@
           <?php if (!empty($lineage_display)): ?>
                                  <div class="mt-4 pt-3 border-top">
                    <h6 class="text-muted mb-3" style="font-weight: 600;">
-                     Taxonomy Lineage
+                     <?= t('Taxonomy Lineage') . "\n" ?>
                      <?= field_help(
                          'The number beside each rank is how many organisms in that group are in '
                          . $siteTitle . '. Click a rank to see them.',
@@ -185,7 +185,7 @@
           if (!empty($organism_groups)): ?>
             <div class="mt-4 pt-3 border-top">
               <h6 class="text-muted mb-3" style="font-weight: 600;">
-                Member of Groups
+                <?= t('Member of Groups') . "\n" ?>
                 <?= field_help(
                     'Groups collect organisms by taxonomy or research focus. The number beside '
                     . 'each one is how many organisms belong to it. Click a group to see them.',

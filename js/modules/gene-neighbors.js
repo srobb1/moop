@@ -35,7 +35,7 @@
             uniquename: box.dataset.uniquename,
             side:       btn.dataset.side,
         });
-        setBusy(true, 'Finding the nearest gene…');
+        setBusy(true, moopT('Finding the nearest gene…'));
         try {
             const resp = await fetch(`${window.sitePath}/api/gene_neighbor.php?${params}`);
             const data = await resp.json();
@@ -45,13 +45,15 @@
                 return;
             }
             // The buttons are icons now (« »), so the words come from data-label
-            const direction = btn.dataset.label || 'neighbouring gene';
-            const skipped   = data.skipped
-                ? ` (${data.skipped} gene${data.skipped === 1 ? '' : 's'} without a page — see the genome browser)` : '';
-            setBusy(false, `No ${direction} with a gene page on ${data.chr}${skipped}.`);
+            const direction = btn.dataset.label || moopT('neighbouring gene');   // already in the visitor's language
+            const where = data.skipped
+                ? (data.skipped === 1 ? moopT('No %1$s with a gene page on %2$s (%3$d gene without a page — see the genome browser).', direction, data.chr, 1)
+                                      : moopT('No %1$s with a gene page on %2$s (%3$d genes without a page — see the genome browser).', direction, data.chr, data.skipped))
+                : moopT('No %1$s with a gene page on %2$s.', direction, data.chr);
+            setBusy(false, where);
             btn.disabled = true;
         } catch (err) {
-            setBusy(false, `Could not look up the neighbouring gene (${err.message}).`);
+            setBusy(false, moopT('Could not look up the neighbouring gene (%s).', err.message));
         }
     }));
 })();

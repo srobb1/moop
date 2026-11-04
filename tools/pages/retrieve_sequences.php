@@ -140,9 +140,11 @@
                             <p class="fw-semibold mb-1"><?= t('IDs') ?></p>
                             <ul class="mb-2 ps-3">
                                 <li><?= t('One per line, or separated by commas.') ?></li>
-                                <li><?= t('A gene ID such as') ?> <code class="ex-gene"><?= htmlspecialchars($ex_gene) ?></code> gives every <?= gloss('transcript') ?>, CDS and protein of that gene, and the gene's genomic region.
-                                    A transcript ID such as <code class="ex-tx"><?= htmlspecialchars($ex_tx) ?></code> gives just that <?= gloss('isoform') ?>'s, and the transcript's own genomic span (<?= gloss('intron', 'introns') ?> included).
-                                    A protein or CDS ID gives its transcript's genomic span, and the header names the gene and transcript.</li>
+                                <li><?= t_markup("A gene ID such as %1\$s gives every %2\$s, CDS and protein of that gene, and the gene's genomic region.",
+                                             '<code class="ex-gene">' . htmlspecialchars($ex_gene) . '</code>', gloss('transcript')) . "\n" ?>
+                                    <?= t_markup("A transcript ID such as %1\$s gives just that %2\$s's, and the transcript's own genomic span (%3\$s included).",
+                                             '<code class="ex-tx">' . htmlspecialchars($ex_tx) . '</code>', gloss('isoform'), gloss('intron', 'introns')) . "\n" ?>
+                                    <?= t("A protein or CDS ID gives its transcript's genomic span, and the header names the gene and transcript.") ?></li>
                             </ul>
                             <p class="fw-semibold mb-1"><?= t('Ranges — part of a sequence') ?></p>
                             <ul class="mb-2 ps-3">

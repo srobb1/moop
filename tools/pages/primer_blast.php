@@ -211,8 +211,7 @@ $db_section_label = function ($key) {
                     <input type="file" class="form-control" id="primer_file" name="primer_file"
                            accept=".fa,.fasta,.fas,.txt,.tsv,.csv">
                     <div class="form-text">
-                        The file's contents are loaded into the box above, where you can edit them
-                        before searching. Max 1 MB.
+                        <?= t("The file's contents are loaded into the box above, where you can edit them before searching.") ?> <?= t('Max 1 MB.') . "\n" ?>
                     </div>
 
                     <div class="alert alert-info py-2 px-3 mt-2 d-none" id="fileOverrideNotice">
@@ -387,8 +386,8 @@ $db_section_label = function ($key) {
                     <?= help_modal_trigger('results-help', '', 'How to read these results') ?>
                     <span class="ms-auto small">
                         <?= htmlspecialchars(implode(' + ', array_map($db_label, array_keys($searched_dbs)))) ?>
-                        · listing up to <?= (int)$max_mismatch ?> mismatch<?= $max_mismatch === 1 ? '' : 'es' ?>
-                        and <?= number_format($max_product) ?> bp
+                        · <?= ($max_mismatch === 1 ? t('listing up to %1$d mismatch and %2$s bp', $max_mismatch, number_format($max_product))
+                                                   : t('listing up to %1$d mismatches and %2$s bp', $max_mismatch, number_format($max_product))) . "\n" ?>
                     </span>
                 </div>
                 <div class="card-body">
@@ -445,9 +444,9 @@ $db_section_label = function ($key) {
                     $reasons = [];
                     if ($amp_genes !== null && $amp_intended > 1) {
                         if (count($amp_genes) > 1) {
-                            $reasons[] = count($amp_genes) . ' different genes could amplify: '
-                                       . implode(', ', array_map($gene_word, array_slice(array_values($amp_genes), 0, 4)))
-                                       . (count($amp_genes) > 4 ? ', …' : '');
+                            $reasons[] = t_plain('%1$d different genes could amplify: %2$s', count($amp_genes),
+                                         implode(', ', array_map($gene_word, array_slice(array_values($amp_genes), 0, 4)))
+                                       . (count($amp_genes) > 4 ? ', …' : ''));
                         } else {
                             $sizes = array_values(array_unique(array_map(fn($pr) => (int)$pr['size'], $amp_products)));
                             sort($sizes);
@@ -459,15 +458,15 @@ $db_section_label = function ($key) {
                             ];
                         }
                     } elseif ($amp_intended > 1) {
-                        $reasons[] = $amp_intended . ' products on your template could amplify';
+                        $reasons[] = t_plain('%d products on your template could amplify', $amp_intended);
                     }
                     if ($amp_contam > 1) {
-                        $reasons[] = 'genomic DNA could give ' . $amp_contam . ' products, not just the one matching locus';
+                        $reasons[] = t_plain('genomic DNA could give %d products, not just the one matching locus', $amp_contam);
                     }
                     foreach ($r['by_db'] as $f) {
                         foreach ($amp($f) as $pr) {
                             if (!empty($pr['self_pairing'])) {
-                                $reasons[] = 'one primer amplifies on its own (self-pairing)';
+                                $reasons[] = t_plain('one primer amplifies on its own (self-pairing)');
                                 break 2;
                             }
                         }
@@ -487,13 +486,13 @@ $db_section_label = function ($key) {
                     $kb = PrimerPairs::amplifiableKb();
 
                     if ($total === 0 && $too_long) {
-                        $verdict = ['none', 'bg-secondary', 'no product under ' . $kb . ' kb'];
+                        $verdict = ['none', 'bg-secondary', t_plain('no product under %s kb', $kb)];
                     } elseif ($total === 0) {
-                        $verdict = ['none', 'bg-secondary', 'no product'];
+                        $verdict = ['none', 'bg-secondary', t_plain('no product')];
                     } elseif (!$reasons) {
-                        $verdict = ['specific', 'bg-success', 'specific'];
+                        $verdict = ['specific', 'bg-success', t_plain('specific')];
                     } else {
-                        $verdict = ['nonspecific', 'bg-warning text-dark', 'non-specific'];
+                        $verdict = ['nonspecific', 'bg-warning text-dark', t_plain('non-specific')];
                     }
                     ?>
                     <div class="pb-pair mb-4 pb-3 border-bottom">
@@ -513,21 +512,20 @@ $db_section_label = function ($key) {
                                 <?php if ($too_long):
                                     $sizes = array_map(fn($pr) => number_format($pr['size']) . ' bp', $too_long);
                                     $n     = count($too_long); ?>
-                                    <?= $n === 1 ? 'The product below is ' . $sizes[0]
-                                                 : 'The ' . $n . ' products below are ' . implode(', ', array_slice($sizes, 0, -1)) . ' and ' . end($sizes) ?>.
-                                    Standard PCR is dependable for products under <?= $kb ?> kb; longer ones often
-                                    amplify poorly or not at all, so <?= $n === 1 ? 'it is' : 'they are' ?> not counted.
+                                    <?= $n === 1 ? t('The product below is %s.', $sizes[0])
+                                                 : t('The %1$d products below are %2$s and %3$s.', $n, implode(', ', array_slice($sizes, 0, -1)), end($sizes)) ?>
+                                    <?= ($n === 1 ? t('Standard PCR is dependable for products under %s kb; longer ones often amplify poorly or not at all, so it is not counted.', $kb)
+                                                  : t('Standard PCR is dependable for products under %s kb; longer ones often amplify poorly or not at all, so they are not counted.', $kb)) . "\n" ?>
                                 <?php else: ?>
-                                    Nothing amplifies on your template at these settings.
+                                    <?= t('Nothing amplifies on your template at these settings.') . "\n" ?>
                                     <?php if ($intended_db === 'genome' && $search_mode !== 'transcript'): ?>
                                         <?php // The question this answer raises (user, 2026-10-29: "when I do
                                               // gDNA it says I don't have any alignments") — for primers made
                                               // on a transcript the answer is usually the good one. ?>
-                                        <br>Designed these on a transcript (an mRNA, an XM_/NM_ ID, or with
-                                        Primer Maker)? A primer that sits across an <?= gloss('exon') ?> junction has no match in
-                                        genomic DNA — that is what makes it good for RT-PCR. Set
-                                        <strong>PCR input</strong> to <strong>cDNA</strong> to check it against
-                                        the <?= gloss('transcript', 'transcripts') ?>.
+                                        <br><?= t('Designed these on a transcript (an mRNA, an XM_/NM_ ID, or with Primer Maker)?') . "\n" ?>
+                                        <?= t_markup('A primer that sits across an %s junction has no match in genomic DNA — that is what makes it good for RT-PCR.', gloss('exon')) . "\n" ?>
+                                        <?= t_markup('Set %1$s to %2$s to check it against the %3$s.', '<strong>' . t('PCR input') . '</strong>', '<strong>cDNA</strong>',
+                                                     gloss('transcript', 'transcripts')) . "\n" ?>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
@@ -535,15 +533,15 @@ $db_section_label = function ($key) {
                         <?php if ($isoforms_note): ?>
                             <div class="small mb-2">
                                 <i class="fa fa-check-circle text-success"></i>
-                                <span class="text-success-emphasis">One gene: <?= htmlspecialchars($isoforms_note['gene']) ?></span>
-                                <span class="text-muted">— the <?= (int)$isoforms_note['n'] ?> products are <?= gloss('isoform', 'isoforms') ?> of the same gene
-                                (<?= htmlspecialchars(implode(', ', $isoforms_note['tx'])) ?>).
+                                <span class="text-success-emphasis"><?= t('One gene: %s', $isoforms_note['gene']) ?></span>
+                                <span class="text-muted"><?= t_markup('— the %1$d products are %2$s of the same gene (%3$s).', (string) (int)$isoforms_note['n'],
+                                                                      gloss('isoform', 'isoforms'), htmlspecialchars(implode(', ', $isoforms_note['tx']))) . "\n" ?>
                                 <?php if (count($isoforms_note['sizes']) === 1): ?>
-                                    All are <?= number_format($isoforms_note['sizes'][0]) ?> bp, so you will see one band.
-                                    The pair does not tell these isoforms apart.
+                                    <?= t('All are %s bp, so you will see one band.', number_format($isoforms_note['sizes'][0])) . "\n" ?>
+                                    <?= t('The pair does not tell these isoforms apart.') . "\n" ?>
                                 <?php else: ?>
-                                    Their sizes differ (<?= htmlspecialchars(implode(', ', array_map(fn($n) => number_format($n) . ' bp', $isoforms_note['sizes']))) ?>),
-                                    so expect <?= count($isoforms_note['sizes']) ?> bands if the isoforms are all expressed.
+                                    <?= t('Their sizes differ (%1$s), so expect %2$d bands if the isoforms are all expressed.',
+                                          implode(', ', array_map(fn($n) => number_format($n) . ' bp', $isoforms_note['sizes'])), count($isoforms_note['sizes'])) . "\n" ?>
                                 <?php endif; ?></span>
                             </div>
                         <?php endif; ?>
@@ -594,20 +592,20 @@ $db_section_label = function ($key) {
                             <div class="small mb-3">
                                 <i class="fa fa-check-circle text-success"></i>
                                 <span class="text-success-emphasis"><?= t('No genomic product') ?></span>
-                                <span class="text-muted">— genomic DNA in the sample would not amplify at
-                                all.
+                                <span class="text-muted"><?= t('— genomic DNA in the sample would not amplify at all.') . "\n" ?>
                                 <?php if ($junction): ?>
-                                    The <?= htmlspecialchars($junction_p) ?> primer sits across an exon
-                                    junction, so that sequence exists only in spliced mRNA<?php
-                                    if (!empty($t_mapped['introns'])): ?>; on the genome the product spans
-                                    <?= (int)$t_mapped['introns'] ?> <?= gloss('intron', $t_mapped['introns'] === 1 ? 'intron' : 'introns') ?><?php endif; ?>.
+                                    <?= empty($t_mapped['introns'])
+                                        ? t('The %s primer sits across an exon junction, so that sequence exists only in spliced mRNA.', $junction_p)
+                                        : t_markup('The %1$s primer sits across an exon junction, so that sequence exists only in spliced mRNA; on the genome the product spans %2$s %3$s.',
+                                                   htmlspecialchars($junction_p), (string) (int)$t_mapped['introns'],
+                                                   gloss('intron', $t_mapped['introns'] === 1 ? 'intron' : 'introns')) ?>
                                 <?php else: ?>
-                                    Usually means a primer spans an exon junction.
+                                    <?= t('Usually means a primer spans an exon junction.') . "\n" ?>
                                 <?php endif; ?>
                                 <?php if ($g_near): ?>
-                                    The closest genomic site (<?= number_format($g_near['size']) ?> bp,
-                                    <?= (int)$g_near['max_mismatch'] ?> mismatch<?= (int)$g_near['max_mismatch'] === 1 ? '' : 'es' ?>)
-                                    would not prime.
+                                    <?= ((int)$g_near['max_mismatch'] === 1
+                                        ? t('The closest genomic site (%1$s bp, %2$d mismatch) would not prime.', number_format($g_near['size']), (int)$g_near['max_mismatch'])
+                                        : t('The closest genomic site (%1$s bp, %2$d mismatches) would not prime.', number_format($g_near['size']), (int)$g_near['max_mismatch'])) . "\n" ?>
                                 <?php endif; ?></span>
                             </div>
                         <?php endif; ?>
@@ -620,17 +618,16 @@ $db_section_label = function ($key) {
                             <div class="small mb-3">
                                 <?php if (!empty($t_mapped) && $t_mapped['introns'] > 0): ?>
                                     <i class="fa fa-info-circle text-success"></i>
-                                    <span class="text-success-emphasis">Spans <?= (int)$t_mapped['introns'] ?>
-                                        intron<?= $t_mapped['introns'] === 1 ? '' : 's' ?></span>
-                                    <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
+                                    <span class="text-success-emphasis"><?= $t_mapped['introns'] === 1 ? t('Spans %d intron', 1) : t('Spans %d introns', (int)$t_mapped['introns']) ?></span>
+                                    <span class="text-muted"><?= t('— cDNA %1$s bp vs gDNA %2$s bp', number_format($t_size), number_format($g_size)) ?></span>
                                 <?php elseif ($g_size > $t_size): ?>
                                     <i class="fa fa-info-circle text-success"></i>
                                     <span class="text-success-emphasis"><?= t('Likely spans an intron') ?></span>
-                                    <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
+                                    <span class="text-muted"><?= t('— cDNA %1$s bp vs gDNA %2$s bp', number_format($t_size), number_format($g_size)) ?></span>
                                 <?php else: ?>
                                     <i class="fa fa-info-circle text-warning"></i>
                                     <span class="text-warning-emphasis"><?= t('No intron between the primers') ?></span>
-                                    <span class="text-muted">— cDNA and gDNA products are both <?= number_format($t_size) ?> bp</span>
+                                    <span class="text-muted"><?= t('— cDNA and gDNA products are both %s bp', number_format($t_size)) ?></span>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
@@ -663,19 +660,30 @@ $db_section_label = function ($key) {
                                 // missing results when it meant "nothing here would amplify".
                                 $hidden_amp = count(array_filter($found['products'], fn($pr) =>
                                     ($pr['size'] > $max_product || $pr['max_mismatch'] > $max_mismatch) && PrimerPairs::isAmplifiable($pr)));
+
+                                // "Not listed: ..." -- said in two places below (nothing shown / under the
+                                // table), built ONCE here so the two cannot drift. Whole phrases per
+                                // plural form, through t() (CLAUDE.md 7b).
+                                $__mm_forms = [['%1$d site where a primer has more than %2$d mismatch',  '%1$d site where a primer has more than %2$d mismatches'],
+                                               ['%1$d sites where a primer has more than %2$d mismatch', '%1$d sites where a primer has more than %2$d mismatches']];
+                                $not_listed_html = t('Not listed:') . "\n"
+                                    . htmlspecialchars(implode(', ', array_filter([
+                                        $over_mm ? t_plain($__mm_forms[$over_mm === 1 ? 0 : 1][$max_mismatch === 1 ? 0 : 1], $over_mm, $max_mismatch) : '',
+                                        $over_display ? t_plain('%1$s where the primers are more than %2$s bp apart', number_format($over_display), number_format($max_product)) : '',
+                                    ])))
+                                    . ($hidden_amp === 0
+                                        ? ' ' . t('— none of them would amplify.')
+                                        : '. ' . ($hidden_amp === 1
+                                            ? t_markup('%1$d of them could amplify — raise %2$s or the size limit to see it.', '1', '<strong>' . t('Mismatches listed') . '</strong>')
+                                            : t_markup('%1$d of them could amplify — raise %2$s or the size limit to see them.', (string) $hidden_amp, '<strong>' . t('Mismatches listed') . '</strong>')));
                                 ?>
                                 <?php if (empty($shown)): ?>
                                     <div class="text-muted small mb-1">
                                         <?php if ($over_display > 0 || $over_mm > 0): ?>
-                                            <?= $hidden_amp === 0 ? 'No product would amplify here.' : 'None shown.' ?>
-                                            Not listed:
-                                            <?= implode(', ', array_filter([
-                                                $over_mm ? $over_mm . ' site' . ($over_mm === 1 ? '' : 's') . ' where a primer has more than ' . $max_mismatch . ' mismatch' . ($max_mismatch === 1 ? '' : 'es') : '',
-                                                $over_display ? number_format($over_display) . ' where the primers are more than ' . number_format($max_product) . ' bp apart' : '',
-                                            ])) ?><?php if ($hidden_amp === 0): ?> — none of them would amplify.<?php else: ?>.
-                                                <?= $hidden_amp ?> of them could amplify — raise <strong>Mismatches listed</strong> or the size limit to see <?= $hidden_amp === 1 ? 'it' : 'them' ?>.<?php endif; ?>
+                                            <?= ($hidden_amp === 0 ? t('No product would amplify here.') : t('None shown.')) . "\n" ?>
+                                            <?= $not_listed_html . "\n" ?>
                                         <?php else: ?>
-                                            No products.
+                                            <?= t('No products.') . "\n" ?>
                                         <?php endif; ?>
                                     </div>
                                 <?php else: ?>
@@ -741,7 +749,7 @@ $db_section_label = function ($key) {
                                                     <?php endif; ?>
                                                 </td>
                                                 <td style="width:8rem;">
-                                                    <span class="text-muted small"><?= (int)$prod['max_mismatch'] ?> mismatch<?= $prod['max_mismatch'] === 1 ? '' : 'es' ?></span>
+                                                    <span class="text-muted small"><?= $prod['max_mismatch'] === 1 ? t('%d mismatch', 1) : t('%d mismatches', (int)$prod['max_mismatch']) ?></span>
                                                     <?php // Listed because it is a real match, but it does not count toward
                                                           // the grade — say so on the row, or a table of five products under
                                                           // "One gene … 2 products" reads as a contradiction. ?>
@@ -756,8 +764,8 @@ $db_section_label = function ($key) {
                                                               // implicit for normal products, so only this case is labelled,
                                                               // and compactly -- the loop icon carries the idea, the popover
                                                               // and the Results help carry the explanation. ?>
-                                                        <span class="badge bg-danger" title="<?= htmlspecialchars($prod['primers'][0]) ?> primer at both ends">
-                                                            <i class="fa fa-redo"></i> <?= htmlspecialchars($prod['primers'][0]) ?> self-pairing
+                                                        <span class="badge bg-danger" title="<?= t('%s primer at both ends', $prod['primers'][0]) ?>">
+                                                            <i class="fa fa-redo"></i> <?= t('%s self-pairing', $prod['primers'][0]) . "\n" ?>
                                                         </span>
                                                         <?= field_help(
                                                             'Both ends of this product use the SAME primer, not one of each. '
@@ -846,12 +854,7 @@ $db_section_label = function ($key) {
                                 ?>
                                 <?php if (($over_display > 0 || $over_mm > 0) && !empty($shown)): ?>
                                     <div class="text-muted" style="font-size:0.8rem;">
-                                        Not listed:
-                                        <?= implode(', ', array_filter([
-                                            $over_mm ? $over_mm . ' site' . ($over_mm === 1 ? '' : 's') . ' where a primer has more than ' . $max_mismatch . ' mismatch' . ($max_mismatch === 1 ? '' : 'es') : '',
-                                            $over_display ? number_format($over_display) . ' where the primers are more than ' . number_format($max_product) . ' bp apart' : '',
-                                        ])) ?><?php if ($hidden_amp === 0): ?> — none of them would amplify.<?php else: ?>.
-                                            <?= $hidden_amp ?> of them could amplify — raise <strong>Mismatches listed</strong> or the size limit to see <?= $hidden_amp === 1 ? 'it' : 'them' ?>.<?php endif; ?>
+                                        <?= $not_listed_html . "\n" ?>
                                     </div>
                                 <?php endif; ?>
 

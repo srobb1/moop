@@ -201,7 +201,7 @@
           <div class="mt-4 pt-3 border-top">
             <h6 class="text-muted mb-3" style="font-weight: 600;">
               <?php if (($genome_kind ?? '') === 'transcripts'): ?>
-              Assembly FASTA (transcripts)
+              <?= t('Assembly FASTA (transcripts)') . "\n" ?>
               <?= field_help(
                   'The sequences this build uses in place of a genome: one assembled transcript '
                   . 'per gene, as a FASTA file. It is not a genome -- there is no sequence between '
@@ -209,7 +209,7 @@
                   'Assembly FASTA'
               ) ?>
               <?php else: ?>
-              Genome FASTA
+              <?= t('Genome FASTA') . "\n" ?>
               <?= field_help(
                   'The assembled genome sequence for this build, as a FASTA file. It is the '
                   . 'sequence itself, without gene annotations -- those come from a gene set.',

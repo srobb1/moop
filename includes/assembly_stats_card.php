@@ -92,15 +92,18 @@ foreach ($as_groups as $name => $rows) {
 
         <?php if ($as_tx): ?>
         <p class="as-sentence mb-0">
-          <?= t('Half the bases are in') ?> <strong><?= number_format($as['l50']) ?> transcript<?= $as['l50'] == 1 ? '' : 's' ?></strong>
-          <?= t('of at least') ?> <strong><?= htmlspecialchars(moop_format_bp($as['n50'])) ?></strong>.
+          <?= t_markup('Half the bases are in %1$s of at least %2$s.',
+                       '<strong>' . ($as['l50'] == 1 ? t('%s transcript', number_format($as['l50'])) : t('%s transcripts', number_format($as['l50']))) . '</strong>',
+                       '<strong>' . htmlspecialchars(moop_format_bp($as['n50'])) . '</strong>') . "\n" ?>
         </p>
         <?php else: ?>
         <p class="as-sentence mb-0">
-          <?= t('Half the genome is in') ?> <strong><?= number_format($as['l50']) ?> sequence<?= $as['l50'] == 1 ? '' : 's' ?></strong>
-          <?= t('of at least') ?> <strong><?= htmlspecialchars(moop_format_bp($as['n50'])) ?></strong><?php
-          if (isset($as['contig_n50'])): ?>; without scaffolding (split at gaps) the pieces reach
-          <strong><?= htmlspecialchars(moop_format_bp($as['contig_n50'])) ?></strong><?php endif; ?>.
+<?php $as_l50 = '<strong>' . ($as['l50'] == 1 ? t('%s sequence', number_format($as['l50'])) : t('%s sequences', number_format($as['l50']))) . '</strong>';
+      $as_n50 = '<strong>' . htmlspecialchars(moop_format_bp($as['n50'])) . '</strong>'; ?>
+          <?= (isset($as['contig_n50'])
+              ? t_markup('Half the genome is in %1$s of at least %2$s; without scaffolding (split at gaps) the pieces reach %3$s.',
+                         $as_l50, $as_n50, '<strong>' . htmlspecialchars(moop_format_bp($as['contig_n50'])) . '</strong>')
+              : t_markup('Half the genome is in %1$s of at least %2$s.', $as_l50, $as_n50)) . "\n" ?>
         </p>
         <?php endif; ?>
 
