@@ -84,14 +84,14 @@
     <div class="card mb-3 shadow-sm">
       <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
         <span class="step-badge me-2">2</span>
-        <span class="fw-semibold" style="font-size:0.9rem;">Choose organisms to search</span>
+        <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Choose organisms to search') ?></span>
         <?= help_modal_trigger('scope-info-modal', '', 'How to select organisms') ?>
         <?php /* One toggle, not an All/None pair: its label states what the click will do,
                  so it doubles as a readout of whether everything is selected. Same control
                  as MOOPmart Step 1. Deselect is immediate; select-all still routes through
                  the "this can take a while" warning. */ ?>
         <button type="button" class="btn btn-sm btn-light py-0 ms-auto scope-toggle-all">
-          <span class="scope-toggle-all-label">Select all</span>
+          <span class="scope-toggle-all-label"><?= t('Select all') ?></span>
         </button>
       </div>
 
@@ -101,15 +101,15 @@
         <div class="col-lg-8 border-end d-flex flex-column">
           <div class="px-2 pt-2 pb-1 border-bottom d-flex align-items-center gap-2">
             <input type="text" class="form-control form-control-sm moop-input" id="scope-filter"
-                   placeholder="Filter by group, organism, assembly, gene set…" autocomplete="off">
+                   placeholder="<?= t('Filter by group, organism, assembly, gene set…') ?>" autocomplete="off">
             <div class="form-check form-switch mb-0 flex-shrink-0">
               <input class="form-check-input" type="checkbox" role="switch" id="scope-show-detail">
-              <label class="form-check-label small text-muted text-nowrap" for="scope-show-detail">Details</label>
+              <label class="form-check-label small text-muted text-nowrap" for="scope-show-detail"><?= t('Details') ?></label>
             </div>
           </div>
           <div style="overflow-y:auto; max-height:180px;" id="scope-org-list" class="scope-detail-hidden">
             <?php if (empty($scope_tree)): ?>
-              <p class="text-muted small p-3">No accessible organisms found.</p>
+              <p class="text-muted small p-3"><?= t('No accessible organisms found.') ?></p>
             <?php else: ?>
             <?php
             // How many gene-set rows each organism has, so a multi-gene-set organism renders
@@ -181,7 +181,7 @@
         <div class="col-lg-4 d-flex flex-column">
           <div class="px-2 py-1 border-bottom d-flex justify-content-between align-items-center"
                style="background:#f8f9fa;">
-            <span class="small fw-semibold text-muted">Selected</span>
+            <span class="small fw-semibold text-muted"><?= t('Selected') ?></span>
             <span class="badge bg-secondary" id="scope-selected-count">0</span>
           </div>
           <?php /* Empty text used to read "None — will search all organisms", which was never
@@ -196,7 +196,7 @@
                    whole selection stays reviewable. The list height itself is deliberate; see
                    the note on .org-select-list in css/display.css. */ ?>
           <div style="overflow-y:auto; max-height:180px; font-size:0.82rem;" id="scope-selected-panel">
-            <div class="text-muted small p-2 fst-italic">None yet — pick at least one organism</div>
+            <div class="text-muted small p-2 fst-italic"><?= t('None yet — pick at least one organism') ?></div>
           </div>
         </div>
 
@@ -208,7 +208,7 @@
                that is precisely the thing the collapsed list does not show. Same readout as
                MOOPmart's #mm-scope-counts. */ ?>
       <div class="px-3 py-1 border-top" style="background:#f8f9fa; font-size:0.8rem;">
-        <span class="text-muted" id="scope-counts">Select at least one organism above</span>
+        <span class="text-muted" id="scope-counts"><?= t('Select at least one organism above') ?></span>
       </div>
     </div>
 
@@ -225,7 +225,7 @@
                  in the panel below, which is where a definition belongs. */ ?>
         <?= help_modal_trigger('ann-types-step-help', '', 'About this step') ?>
         <button type="button" class="btn btn-sm btn-light py-0 ms-auto sources-toggle-all">
-          <span class="sources-toggle-all-label">Select all</span>
+          <span class="sources-toggle-all-label"><?= t('Select all') ?></span>
         </button>
       </div>
 
@@ -247,11 +247,11 @@
           </div>
           <div class="px-2 pt-2 pb-1 border-bottom" id="sources-filter-wrap" style="display:none;">
             <input type="text" class="form-control form-control-sm moop-input" id="sources-filter"
-                   placeholder="Filter annotation types…" autocomplete="off">
+                   placeholder="<?= t('Filter annotation types…') ?>" autocomplete="off">
           </div>
           <div id="sourcesPanel" style="overflow-y:auto; max-height:280px;">
             <div class="text-center p-3 text-muted">
-              <i class="fa fa-spinner fa-spin me-1"></i> Loading…
+              <i class="fa fa-spinner fa-spin me-1"></i> <?= t('Loading…') . "\n" ?>
             </div>
           </div>
         </div>
@@ -260,11 +260,11 @@
         <div class="col-lg-4 d-flex flex-column">
           <div class="px-2 py-1 border-bottom d-flex justify-content-between align-items-center"
                style="background:#f8f9fa;">
-            <span class="small fw-semibold text-muted">Selected</span>
+            <span class="small fw-semibold text-muted"><?= t('Selected') ?></span>
             <span class="badge bg-secondary" id="ann-types-selected-count">0</span>
           </div>
           <div style="overflow-y:auto; max-height:280px; font-size:0.82rem;" id="ann-types-selected-panel">
-            <div class="text-muted small p-2 fst-italic">No types selected</div>
+            <div class="text-muted small p-2 fst-italic"><?= t('No types selected') ?></div>
           </div>
         </div>
 
@@ -275,16 +275,16 @@
     <div class="card mb-3 shadow-sm">
       <div class="card-header py-2 d-flex align-items-center tool-header">
         <span class="step-badge me-2">4</span>
-        <span class="fw-semibold" style="font-size:0.9rem;">Search</span>
+        <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Search') ?></span>
       </div>
       <div class="card-body py-3">
         <div class="d-flex gap-2">
           <button type="submit" class="btn btn-lg fw-semibold text-white flex-grow-1" id="searchBtn"
                   style="background:var(--moop-action); border-color:var(--moop-action);">
-            <i class="fa fa-search me-2"></i>Search
+            <i class="fa fa-search me-2"></i><?= t('Search') . "\n" ?>
           </button>
           <button type="button" class="btn btn-lg btn-outline-danger" id="search-cancel-btn" style="display:none;">
-            <i class="fa fa-ban me-1"></i>Cancel
+            <i class="fa fa-ban me-1"></i><?= t('Cancel') . "\n" ?>
           </button>
         </div>
         <?php /* The "you skipped a step" reminder, in the same amber inline treatment BLAST and
@@ -368,15 +368,15 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content border-warning">
         <div class="modal-header bg-warning bg-opacity-10 py-2">
-          <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i>Select all organisms?</h5>
+          <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i><?= t('Select all organisms?') ?></h5>
         </div>
         <div class="modal-body">
-          This will select all <strong id="select-all-orgs-count"></strong> organisms.
+          <?= t('This will select all') ?> <strong id="select-all-orgs-count"></strong> organisms.
           Searches across all organisms can take a while — consider selecting only the ones you need.
         </div>
         <div class="modal-footer py-2">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-warning" id="select-all-orgs-confirm">Select all</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= t('Cancel') ?></button>
+          <button type="button" class="btn btn-warning" id="select-all-orgs-confirm"><?= t('Select all') ?></button>
         </div>
       </div>
     </div>

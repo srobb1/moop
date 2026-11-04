@@ -18,7 +18,7 @@ uksort($entries, 'strcasecmp');
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center tool-header">
       <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow">
-        <i class="fa fa-book-open me-2"></i>Glossary
+        <i class="fa fa-book-open me-2"></i><?= t('Glossary') . "\n" ?>
       </h1>
     </div>
     <div class="card-body p-4">
@@ -31,7 +31,7 @@ uksort($entries, 'strcasecmp');
   </div>
 
   <?php if (empty($entries)): ?>
-    <div class="alert alert-warning">No glossary terms are defined on this site yet.</div>
+    <div class="alert alert-warning"><?= t('No glossary terms are defined on this site yet.') ?></div>
   <?php else: ?>
 
   <div class="row mb-4">
@@ -42,7 +42,7 @@ uksort($entries, 'strcasecmp');
                data-help-filter=".glossary-entry" data-filter-msg="glossary-filter-msg"
                data-filter-noun="term" data-filter-nouns="terms"
                placeholder="Find a term — try &quot;gene set&quot;, &quot;GO&quot;, &quot;protein&quot;…"
-               autocomplete="off" spellcheck="false" aria-label="Filter glossary terms">
+               autocomplete="off" spellcheck="false" aria-label="<?= t('Filter glossary terms') ?>">
       </div>
       <div id="glossary-filter-msg" class="small text-muted mt-1" style="display:none;"></div>
     </div>

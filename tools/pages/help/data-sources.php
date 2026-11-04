@@ -63,7 +63,7 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center tool-header">
       <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow">
-        <i class="fa fa-database me-2"></i>Where the data comes from
+        <i class="fa fa-database me-2"></i><?= t('Where the data comes from') . "\n" ?>
       </h1>
     </div>
     <div class="card-body p-4">
@@ -77,10 +77,10 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
   </div>
 
   <?php if (!$mine): ?>
-    <div class="alert alert-warning">There is no data you can see yet.</div>
+    <div class="alert alert-warning"><?= t('There is no data you can see yet.') ?></div>
   <?php else: ?>
 
-  <h2 class="h5 fw-semibold mb-3">Gene sets</h2>
+  <h2 class="h5 fw-semibold mb-3"><?= t('Gene sets') ?></h2>
   <div class="row g-3 mb-4">
     <?php foreach ($by_origin as $src => $n): ?>
       <div class="col-6 col-md-3">
@@ -97,7 +97,7 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
     Each gene set page names its own source; each assembly page gives the assembly's <?= gloss('accession') ?>.
   </p>
 
-  <h2 class="h5 fw-semibold mb-3">Annotations</h2>
+  <h2 class="h5 fw-semibold mb-3"><?= t('Annotations') ?></h2>
   <p class="text-muted small mb-3">
     Grouped by <?= gloss('annotation type') ?>. The number beside a source is how many of your
     <?= $n_org ?> organism<?= $n_org === 1 ? '' : 's' ?> carry it.
@@ -134,12 +134,12 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
     <?php endforeach; ?>
   </div>
 
-  <h2 class="h5 fw-semibold mb-3">Citing what you use</h2>
+  <h2 class="h5 fw-semibold mb-3"><?= t('Citing what you use') ?></h2>
   <div class="row g-3 mb-4">
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-1">Genomes and gene sets</h3>
+          <h3 class="h6 fw-semibold mb-1"><?= t('Genomes and gene sets') ?></h3>
           <p class="text-muted small mb-0">
             Cite the original assembly by its accession and the gene set by its source, both shown
             on the assembly and gene set pages.
@@ -150,7 +150,7 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-1">Annotations</h3>
+          <h3 class="h6 fw-semibold mb-1"><?= t('Annotations') ?></h3>
           <p class="text-muted small mb-0">
             Cite the tool or database named beside the annotation on the gene page — for example
             InterProScan for a Pfam domain.
@@ -161,7 +161,7 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-1">This site</h3>
+          <h3 class="h6 fw-semibold mb-1"><?= t('This site') ?></h3>
           <p class="text-muted small mb-0">
             <?= htmlspecialchars($siteTitle) ?> runs on MOOP. To cite it, cite the
             <a href="https://github.com/srobb1/moop" target="_blank" rel="noopener">MOOP GitHub repository</a>.

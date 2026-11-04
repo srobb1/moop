@@ -16,7 +16,7 @@ $search_url = '/' . $site . '/tools/search.php' . ($organism_name !== '' ? '?org
 <div class="container mt-5" style="max-width: 760px;">
     <div class="card shadow-sm">
         <div class="card-body p-4">
-            <h1 class="h4 mb-3"><i class="fa fa-search me-2 text-muted"></i>Gene not found</h1>
+            <h1 class="h4 mb-3"><i class="fa fa-search me-2 text-muted"></i><?= t('Gene not found') ?></h1>
             <p class="mb-2">
                 <?php if ($uniquename !== ''): ?>
                     There is no gene <code><?= htmlspecialchars($uniquename) ?></code>

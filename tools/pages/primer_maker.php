@@ -35,7 +35,7 @@
           // hit an error on submit. ?>
     <?php if (!$primer3_ok): ?>
         <div class="alert alert-warning">
-            <h5 class="alert-heading"><i class="fa fa-exclamation-triangle me-2"></i>Primer design is unavailable</h5>
+            <h5 class="alert-heading"><i class="fa fa-exclamation-triangle me-2"></i><?= t('Primer design is unavailable') ?></h5>
             <?php if ($primer3_problem === 'missing'): ?>
                 <p class="mb-0">The primer3 program is not installed on this server. An administrator
                 can install it — the Admin dashboard's environment check says how.</p>
@@ -59,7 +59,7 @@
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="step-badge me-2">1</span>
-                <span class="fw-semibold" style="font-size:0.9rem;">Your sequence</span>
+                <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Your sequence') ?></span>
             </div>
             <div class="card-body py-3">
                 <?php
@@ -69,7 +69,7 @@
                     <?php // One transcript: nothing to ask, so do not ask. ?>
                     <div class="form-text mt-0 mb-2">
                         <i class="fa fa-check-circle text-success me-1"></i>
-                        Filled in with <strong><?= htmlspecialchars($with_seq[0]['fasta_id']) ?></strong>,
+                        <?= t('Filled in with') ?> <strong><?= htmlspecialchars($with_seq[0]['fasta_id']) ?></strong>,
                         the only transcript of <?= htmlspecialchars($context_feature) ?>
                         (<?= number_format((int)$with_seq[0]['length']) ?> bp).
                     </div>
@@ -109,7 +109,7 @@
                             <?php // A plain submit, not JS: it re-renders the page with the
                                   // chosen transcript prefilled, and works with no scripting. ?>
                             <button type="submit" name="load_isoform" value="1" class="btn btn-outline-moop">
-                                <i class="fa fa-arrow-down me-1"></i>Load this sequence
+                                <i class="fa fa-arrow-down me-1"></i><?= t('Load this sequence') . "\n" ?>
                             </button>
                         </div>
                         <?php $missing = count($isoforms) - count($with_seq); ?>
@@ -123,7 +123,7 @@
                     </div>
                 <?php elseif ($context_feature): ?>
                     <div class="form-text mt-0 mb-2">
-                        <i class="fa fa-link me-1"></i>Arrived from
+                        <i class="fa fa-link me-1"></i><?= t('Arrived from') . "\n" ?>
                         <strong><?= htmlspecialchars($context_feature) ?></strong>, but no transcript
                         sequence was found for it in this gene set. Paste a sequence above.
                     </div>
@@ -186,7 +186,7 @@
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="step-badge me-2">2</span>
-                <span class="fw-semibold" style="font-size:0.9rem;">What are you making?</span>
+                <span class="fw-semibold" style="font-size:0.9rem;"><?= t('What are you making?') ?></span>
             </div>
             <div class="card-body py-3">
                 <?php
@@ -269,7 +269,7 @@
                                                   // numbers, and it is the whole point of the type. ?>
                                             <span class="badge rounded-pill fw-normal"
                                                   style="background-color:#fdeee0; color:#8a4b12; font-size:0.72rem;">
-                                                + must span an exon junction
+                                                <?= t('+ must span an exon junction') . "\n" ?>
                                             </span>
                                         <?php endif; ?>
                                     </div>
@@ -334,7 +334,7 @@
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="step-badge me-2">3</span>
-                <span class="fw-semibold" style="font-size:0.9rem;">Options</span>
+                <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Options') ?></span>
             </div>
             <div class="card-body py-3">
                 <div class="row g-3">
@@ -342,7 +342,7 @@
                         <div class="card h-100 border">
                             <div class="card-body py-3">
                                 <label for="size_range" class="form-label mb-2">
-                                    <strong>Product size</strong>
+                                    <strong><?= t('Product size') ?></strong>
                                     <?= field_help(
                                         'How big the amplicon should be. Give a range as low-high in base '
                                         . 'pairs (150-400), or a single number for the biggest product you '
@@ -382,7 +382,7 @@
                         <div class="card h-100 border">
                             <div class="card-body py-3">
                                 <label for="target" class="form-label mb-2">
-                                    <strong>Region to include <span class="fw-normal text-muted">(optional)</span></strong>
+                                    <strong><?= t('Region to include') ?> <span class="fw-normal text-muted"><?= t('(optional)') ?></span></strong>
                                     <?= field_help(
                                         'Forces every product to span a particular stretch of your sequence — '
                                         . 'a variant you want to sequence across, an exon, a domain. Give it as '
@@ -402,7 +402,7 @@
                         <div class="card h-100 border">
                             <div class="card-body py-3">
                                 <label for="num_return" class="form-label mb-2">
-                                    <strong>How many pairs to return</strong>
+                                    <strong><?= t('How many pairs to return') ?></strong>
                                     <?= field_help(
                                         'Primer3 ranks pairs by its own penalty score, best first. Asking for '
                                         . 'more gives you alternatives to choose between; it does not make the '
@@ -433,8 +433,8 @@
                         data-bs-toggle="collapse" data-bs-target="#advancedOptions"
                         aria-expanded="<?= $advanced_open ? 'true' : 'false' ?>" aria-controls="advancedOptions">
                     <span>
-                        <i class="fa fa-sliders-h me-2"></i><strong>More options</strong>
-                        <span class="fw-normal">(Primer Length, Tm, and more)</span>
+                        <i class="fa fa-sliders-h me-2"></i><strong><?= t('More options') ?></strong>
+                        <span class="fw-normal"><?= t('(Primer Length, Tm, and more)') ?></span>
                         <?php // A collapsed panel with values in it must not look like an
                               // empty one, or the next design silently uses settings the
                               // user cannot see. ?>
@@ -460,9 +460,9 @@
                                 <thead>
                                     <tr class="small text-muted">
                                         <th style="width:14rem;"></th>
-                                        <th class="fw-normal">Minimum</th>
-                                        <th class="fw-normal">Optimum</th>
-                                        <th class="fw-normal">Maximum</th>
+                                        <th class="fw-normal"><?= t('Minimum') ?></th>
+                                        <th class="fw-normal"><?= t('Optimum') ?></th>
+                                        <th class="fw-normal"><?= t('Maximum') ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -558,7 +558,7 @@
                             </div>
                             <div class="col-sm-6 col-lg-3">
                                 <label for="junction_5p" class="form-label small fw-semibold mb-1">
-                                    Bases past a <code>|</code>, 5′ side
+                                    <?= t('Bases past a') ?> <code>|</code>, 5′ side
                                     <?= field_help(
                                         'How far a primer must reach beyond a junction mark on its 5′ side. '
                                         . 'This is what makes a junction primer actually FAIL on genomic DNA: '
@@ -571,7 +571,7 @@
                             </div>
                             <div class="col-sm-6 col-lg-3">
                                 <label for="junction_3p" class="form-label small fw-semibold mb-1">
-                                    Bases past a <code>|</code>, 3′ side
+                                    <?= t('Bases past a') ?> <code>|</code>, 3′ side
                                     <?= field_help(
                                         'The same, on the 3′ side — the end the polymerase extends from, so it '
                                         . 'matters most. Primer3\'s default is only 4, which is a thin margin: '
@@ -654,7 +654,7 @@
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="step-badge me-2">4</span>
-                <span class="fw-semibold" style="font-size:0.9rem;">5′ primer tag <span class="fw-normal">(optional)</span></span>
+                <span class="fw-semibold" style="font-size:0.9rem;"><?= t('5′ primer tag') ?> <span class="fw-normal"><?= t('(optional)') ?></span></span>
             </div>
             <div class="card-body py-3">
                 <?php // What a tag IS lives behind the (i), not in a paragraph above the
@@ -673,7 +673,7 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="tail" class="form-label mb-1">
-                            <strong>Add a tag</strong>
+                            <strong><?= t('Add a tag') ?></strong>
                             <?= field_help(
                                 'Extra sequence added to the 5′ end of each primer when you order it — a '
                                 . 'cloning adapter, a promoter, a barcode. It is not part of the primer and '
@@ -718,7 +718,7 @@
 
                     <div class="col-md-6" id="customTailFields" <?= $tail_choice === 'custom' ? '' : 'hidden' ?>>
                         <label for="tail_custom_forward" class="form-label mb-1">
-                            <strong>Your own tag</strong>
+                            <strong><?= t('Your own tag') ?></strong>
                             <?= field_help(
                                 'The two tags are independent sequences — they are NOT reverse complements '
                                 . 'of one another, so enter each as you want it synthesised, written 5′ to 3′. '
@@ -728,7 +728,7 @@
                             ) ?>
                         </label>
                         <div class="input-group input-group-sm mb-2">
-                            <span class="input-group-text" style="width:6.5rem;">Forward</span>
+                            <span class="input-group-text" style="width:6.5rem;"><?= t('Forward') ?></span>
                             <input type="text" class="form-control" id="tail_custom_forward"
                                    name="tail_custom_forward" style="font-family:monospace;"
                                    maxlength="<?= (int)PrimerTails::MAX_LENGTH ?>"
@@ -736,7 +736,7 @@
                                    value="<?= htmlspecialchars($tail_custom_f) ?>">
                         </div>
                         <div class="input-group input-group-sm">
-                            <span class="input-group-text" style="width:6.5rem;">Reverse</span>
+                            <span class="input-group-text" style="width:6.5rem;"><?= t('Reverse') ?></span>
                             <input type="text" class="form-control" id="tail_custom_reverse"
                                    name="tail_custom_reverse" style="font-family:monospace;"
                                    maxlength="<?= (int)PrimerTails::MAX_LENGTH ?>"
@@ -749,7 +749,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary" <?= $primer3_ok ? '' : 'disabled' ?>>
-            <i class="fa fa-magic me-1"></i>Design primers
+            <i class="fa fa-magic me-1"></i><?= t('Design primers') . "\n" ?>
         </button>
         <a href="<?= htmlspecialchars('/' . $site . '/tools/primer_maker.php') ?>" class="btn btn-outline-secondary ms-2">Clear</a>
     </form>
@@ -918,7 +918,7 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary js-download-tsv"
                             data-rows="primerMakerExport"
                             data-filename="<?= htmlspecialchars($download_name) ?>">
-                        <i class="fa fa-download me-1"></i>Download table (TSV)
+                        <i class="fa fa-download me-1"></i><?= t('Download table (TSV)') . "\n" ?>
                     </button>
                     <?php // "See FASTA" (user, 2026-08-18), not "Oligos to order": what the
                           // block holds is a FASTA, and SEE is the honest verb — this expands
@@ -927,7 +927,7 @@
                           // looking like the download button beside it. ?>
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
                             data-bs-target="#oligoFasta" aria-expanded="false" aria-controls="oligoFasta">
-                        <i class="fa fa-align-left me-1"></i>See FASTA
+                        <i class="fa fa-align-left me-1"></i><?= t('See FASTA') . "\n" ?>
                         <span class="badge bg-secondary ms-1"><?= count($oligos) ?></span>
                         <i class="fa fa-chevron-down collapse-chevron ms-1"></i>
                     </button>
@@ -1051,8 +1051,8 @@
                                                   // is what makes the intron comparison meaningful. ?>
                                             <input type="hidden" name="search_mode" value="transcript">
                                         <?php endif; ?>
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Check this pair for specificity and product size">
-                                            <i class="fa fa-vials me-1"></i>Check
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="<?= t('Check this pair for specificity and product size') ?>">
+                                            <i class="fa fa-vials me-1"></i><?= t('Check') . "\n" ?>
                                         </button>
                                     </form>
 <?php endif; ?>
@@ -1163,7 +1163,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                         <thead class="table-light">
-                            <tr><th style="width:16rem;">Sequence</th><th>Why not</th></tr>
+                            <tr><th style="width:16rem;"><?= t('Sequence') ?></th><th><?= t('Why not') ?></th></tr>
                         </thead>
                         <tbody>
                         <?php foreach ($failures as $failure): ?>
@@ -1180,7 +1180,7 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary mt-3 js-download-tsv"
                             data-rows="primerMakerExport"
                             data-filename="primers_<?= date('Ymd') ?>.tsv">
-                        <i class="fa fa-download me-1"></i>Download this list (TSV)
+                        <i class="fa fa-download me-1"></i><?= t('Download this list (TSV)') . "\n" ?>
                     </button>
                 <?php endif; ?>
             </div>

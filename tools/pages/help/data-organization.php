@@ -53,7 +53,7 @@ $levels = [
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center tool-header">
       <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow">
-        <i class="fa fa-sitemap me-2"></i>How the data is organized
+        <i class="fa fa-sitemap me-2"></i><?= t('How the data is organized') . "\n" ?>
       </h1>
     </div>
     <div class="card-body p-4">
@@ -82,7 +82,7 @@ $levels = [
             <p class="text-muted small mb-0"><?= htmlspecialchars($lv['text']) ?></p>
             <?php if (!empty($lv['eg'])): ?>
               <p class="small mb-0 mt-2">
-                <span class="text-muted">e.g.</span>
+                <span class="text-muted"><?= t('e.g.') ?></span>
                 <?= !empty($lv['italic']) ? '<em>' . htmlspecialchars($lv['eg']) . '</em>'
                                            : '<code>' . htmlspecialchars($lv['eg']) . '</code>' ?>
               </p>
@@ -93,12 +93,12 @@ $levels = [
     <?php endforeach; ?>
   </div>
 
-  <h2 class="h5 fw-semibold mb-3">What hangs off the chain</h2>
+  <h2 class="h5 fw-semibold mb-3"><?= t('What hangs off the chain') ?></h2>
   <div class="row g-3 mb-4">
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-tags me-2" style="color:#0891b2;"></i>Annotations</h3>
+          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-tags me-2" style="color:#0891b2;"></i><?= t('Annotations') ?></h3>
           <p class="text-muted small mb-2"><?= htmlspecialchars($def('annotation')) ?></p>
           <p class="text-muted small mb-0">
             An annotation belongs to one <?= gloss('transcript') ?>, so a gene with several transcripts can carry
@@ -110,7 +110,7 @@ $levels = [
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-filter me-2" style="color:#0891b2;"></i>Annotation types</h3>
+          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-filter me-2" style="color:#0891b2;"></i><?= t('Annotation types') ?></h3>
           <p class="text-muted small mb-2"><?= htmlspecialchars($def('annotation type')) ?></p>
           <p class="text-muted small mb-0">
             Where each type comes from is listed under
@@ -123,7 +123,7 @@ $levels = [
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-map-marker-alt me-2" style="color:#0891b2;"></i>Gene sets without genome positions</h3>
+          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-map-marker-alt me-2" style="color:#0891b2;"></i><?= t('Gene sets without genome positions') ?></h3>
           <p class="text-muted small mb-0">
             <?= $no_genome ?> of the gene sets you can see <?= $no_genome === 1 ? 'is' : 'are' ?>
             sequences only, with no positions on a genome. Their genes are searchable and have
@@ -136,7 +136,7 @@ $levels = [
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-book-open me-2" style="color:#0891b2;"></i>More terms</h3>
+          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-book-open me-2" style="color:#0891b2;"></i><?= t('More terms') ?></h3>
           <p class="text-muted small mb-0">
             CDS, GO term, Pfam and the rest are in the <a href="?topic=glossary">Glossary</a>.
           </p>

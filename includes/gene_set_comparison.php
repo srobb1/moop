@@ -68,13 +68,13 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
           <table class="table table-sm align-middle mb-0 gsc-table" id="geneSetComparisonTable">
             <thead>
               <tr>
-                <th>Gene set</th>
-                <th>Source</th>
-                <th class="text-end">Genes</th>
-                <th class="text-end">With homolog</th>
-                <th>BUSCO <span class="fw-normal text-muted">(eukaryota)</span></th>
-                <th class="text-end">Assembly N50</th>
-                <th>Added</th>
+                <th><?= t('Gene set') ?></th>
+                <th><?= t('Source') ?></th>
+                <th class="text-end"><?= t('Genes') ?></th>
+                <th class="text-end"><?= t('With homolog') ?></th>
+                <th><?= t('BUSCO') ?> <span class="fw-normal text-muted"><?= t('(eukaryota)') ?></span></th>
+                <th class="text-end"><?= t('Assembly N50') ?></th>
+                <th><?= t('Added') ?></th>
               </tr>
             </thead>
             <tbody>
@@ -132,7 +132,7 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
                   <?php if ($r['genome_kind'] === 'transcripts'): ?>
                     <?php /* No N50: the "genome" is one transcript per gene, so the figure is a
                              transcript length and would read as a very fragmented genome. */ ?>
-                    <span class="badge text-bg-warning">Not a genome</span>
+                    <span class="badge text-bg-warning"><?= t('Not a genome') ?></span>
                     <div class="small text-muted">one transcript per gene<?= $st ? ' &middot; ' . number_format($st['sequences']) . ' seqs' : '' ?></div>
                   <?php elseif ($st): ?>
                     <?php $gsc_n50_tip = !empty($st['l50'])

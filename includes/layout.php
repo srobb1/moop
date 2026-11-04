@@ -243,6 +243,12 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
              a help string carrying its own copy of the number goes stale silently the moment
              an admin changes the setting, and a wrong number in help is worse than none. -->
         <script>window.MOOP_SEARCH_RESULTS_LIMIT = <?= (int)moop_search_results_limit() ?>;</script>
+<?php /* The browser's translations for moopT() (js/modules/utilities.js), only on a page shown in
+         another language -- so a one-language site (simrbase) gets not one byte more. Before any
+         module, so text a module builds at load is already in the visitor's language. */
+if ($page_lang !== 'en'): require_once __DIR__ . '/../lib/i18n.php'; ?>
+        <script>window.MOOP_I18N = <?= json_encode((object) moop_i18n_js_catalog($page_lang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;<?= moop_i18n_show_gaps() ? ' window.MOOP_I18N_GAPS = true;' : '' ?></script>
+<?php endif; ?>
 
         <!-- Vendor JS — self-hosted, no external CDN dependency -->
         <script src="<?= moop_asset_url('js/vendor/jquery.min.js') ?>"></script>

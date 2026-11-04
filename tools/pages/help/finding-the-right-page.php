@@ -56,7 +56,7 @@ $tasks = [
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center tool-header">
       <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow">
-        <i class="fa fa-map-signs me-2"></i>What do you want to do?
+        <i class="fa fa-map-signs me-2"></i><?= t('What do you want to do?') . "\n" ?>
       </h1>
     </div>
     <div class="card-body p-4">
@@ -82,14 +82,14 @@ $tasks = [
                data-help-filter=".task-card, .route-card" data-filter-msg="route-filter-msg"
                data-filter-noun="match" data-filter-nouns="matches"
                placeholder="What do you want to do? — try &quot;download&quot;, &quot;sequence&quot;, &quot;annotation&quot;…"
-               autocomplete="off" spellcheck="false" aria-label="Filter tasks and pages">
+               autocomplete="off" spellcheck="false" aria-label="<?= t('Filter tasks and pages') ?>">
       </div>
       <div id="route-filter-msg" class="small text-muted mt-1" style="display:none;"></div>
     </div>
   </div>
 
   <section data-filter-group>
-    <h2 class="h5 fw-semibold mb-3">Common tasks</h2>
+    <h2 class="h5 fw-semibold mb-3"><?= t('Common tasks') ?></h2>
     <div class="row">
       <?php foreach ($tasks as [$task, $hint, $links]): ?>
         <?php $search = strtolower($task . ' ' . $hint . ' ' . implode(' ', array_column($links, 0))); ?>
@@ -113,7 +113,7 @@ $tasks = [
   </section>
 
   <section data-filter-group>
-  <h2 class="h5 fw-semibold mb-3 mt-2" id="every-page">Every page</h2>
+  <h2 class="h5 fw-semibold mb-3 mt-2" id="every-page"><?= t('Every page') ?></h2>
   <div class="row" id="route-list">
     <?php foreach ($routes as $r): ?>
       <?php $search = strtolower($r['title'] . ' ' . $r['purpose']); ?>

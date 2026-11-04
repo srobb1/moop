@@ -3787,6 +3787,11 @@ ok($_chk['unknown'] === ['Logn In'], 'import: English the site does not have (ed
 ok(count(array_filter($_chk['refused'], fn($r) => strpos($r[1], 'perfect') !== false)) === 1, 'import: an unknown status is refused');
 ok(isset(moop_i18n_check_upload('es', [['Spanish', 'x']], $_known)['error']), 'import: a sheet without the English column is refused whole');
 ok(moop_i18n_placeholders('%1$s and %2$d, 50%% off') === ['%1$s', '%2$d'], 'placeholders: positional ones count, %% does not');
+ok(moop_i18n_placeholders_match('Showing %d of %d', 'Mostrando %2$d: %1$d') && moop_i18n_placeholders_match('%s has %d', '%2$d en %1$s'),
+   'placeholders: a translation may reorder them with %1$ / %2$');
+ok(!moop_i18n_placeholders_match('Showing %d of %d', 'Mostrando %d') && !moop_i18n_placeholders_match('%s has %d', '%d en %s')
+   && !moop_i18n_placeholders_match('%d of %d', '%1$d de %1$d'),
+   'placeholders: one dropped, types swapped without positions, or one used twice -- refused');
 // The source scan: t() and the help helpers' literal text, by PHP tokens.
 $_scan = array_column(moop_i18n_scan_source('<?php echo t(\'Log In\'); /* t(\'not me\') */ $x->t(\'nor me\');'
     . ' echo field_help(\'One field\', \'Its title\'); echo help_modal_trigger(\'id\', \'\', \'Help: x\');'
@@ -3805,6 +3810,16 @@ ok(is_string(moop_i18n_read_upload(__FILE__, 'smoke_tests.php')), 'an upload tha
 // What the lookups above recorded is written at shutdown -- by then into the REAL cache_path, which
 // put a stray i18n_seen.json on the live site (2026-11-04). Forget it here: tests leave no trace.
 $GLOBALS['moop_i18n_seen_now'] = [];
+// The automatic organism sentence is now whole sentences through t_plain(); its English must be
+// exactly what the pieces used to make.
+require_once "$BASE/lib/functions_data.php";
+$_lin2 = fn(...$r) => array_map(fn($x) => ['rank' => $x[0], 'name' => $x[1]], $r);
+ok(buildAutoDescription('Schmidtea mediterranea', $_lin2(['phylum', 'Platyhelminthes'], ['family', 'Dugesiidae']))
+   === 'Schmidtea mediterranea is a species of flatworm in the family Dugesiidae.'
+   && buildAutoDescription('X y', $_lin2(['phylum', 'Nope'], ['order', 'Tricladida'])) === 'X y is a species in the order Tricladida.'
+   && buildAutoDescription('X y', $_lin2(['class', 'Aves'])) === 'X y is a species of bird.'
+   && buildAutoDescription('X y', $_lin2(['phylum', 'Nope'])) === 'X y is a species.',
+   'automatic organism sentence: the same English as before it was made translatable');
 $_trrp->setValue($_trcfg, $_trsaved);
 exec('rm -rf ' . escapeshellarg($_tr));
 

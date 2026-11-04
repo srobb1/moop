@@ -246,7 +246,13 @@ catalog and spreadsheet in `lib/i18n.php`; plan in `notes/CUTTINGCLASS_PLAN.md` 
 - **`?>` eats the newline after it.** A line ending in `<?= t('x') ?>` loses its line break —
   write `<?= t('x') . "\n" ?>` there, and run `scripts/render_compare.php` to prove simrbase
   is byte-identical.
-- JavaScript-built text is not covered yet (it needs its own catalog).
+- **JavaScript:** `moopT('No matches found')` (plain), `moopTh()` (escaped, for HTML strings),
+  `moopTm('Looking up %s…', html)` (markup as an argument) — `js/modules/utilities.js`. Same
+  rules: a literal, whole sentences. The translations reach the browser only on a page in another
+  language (`window.MOOP_I18N`, `includes/layout.php`).
+- **Organism summaries** are not catalog text: an admin writes them per language in the organism
+  dialog (`summary_lang` in `organism.json`); with none, a visitor gets that language's Wikipedia
+  article via the English article's language link, then English.
 
 ### 8. Shell Command Safety
 

@@ -69,8 +69,8 @@ foreach ($as_groups as $name => $rows) {
     <div class="card shadow-sm">
       <div class="card-header d-flex align-items-center" style="background-color:#d97706;">
         <i class="fas fa-ruler-horizontal me-2 text-white"></i>
-        <span class="text-uppercase fw-semibold text-white section-eyebrow">Assembly Statistics</span>
-        <?php if ($as_tx): ?><span class="badge bg-white text-dark ms-2">Transcripts, not a genome</span><?php endif; ?>
+        <span class="text-uppercase fw-semibold text-white section-eyebrow"><?= t('Assembly Statistics') ?></span>
+        <?php if ($as_tx): ?><span class="badge bg-white text-dark ms-2"><?= t('Transcripts, not a genome') ?></span><?php endif; ?>
       </div>
       <div class="card-body">
         <?php if ($as_tx): ?>
@@ -92,13 +92,13 @@ foreach ($as_groups as $name => $rows) {
 
         <?php if ($as_tx): ?>
         <p class="as-sentence mb-0">
-          Half the bases are in <strong><?= number_format($as['l50']) ?> transcript<?= $as['l50'] == 1 ? '' : 's' ?></strong>
-          of at least <strong><?= htmlspecialchars(moop_format_bp($as['n50'])) ?></strong>.
+          <?= t('Half the bases are in') ?> <strong><?= number_format($as['l50']) ?> transcript<?= $as['l50'] == 1 ? '' : 's' ?></strong>
+          <?= t('of at least') ?> <strong><?= htmlspecialchars(moop_format_bp($as['n50'])) ?></strong>.
         </p>
         <?php else: ?>
         <p class="as-sentence mb-0">
-          Half the genome is in <strong><?= number_format($as['l50']) ?> sequence<?= $as['l50'] == 1 ? '' : 's' ?></strong>
-          of at least <strong><?= htmlspecialchars(moop_format_bp($as['n50'])) ?></strong><?php
+          <?= t('Half the genome is in') ?> <strong><?= number_format($as['l50']) ?> sequence<?= $as['l50'] == 1 ? '' : 's' ?></strong>
+          <?= t('of at least') ?> <strong><?= htmlspecialchars(moop_format_bp($as['n50'])) ?></strong><?php
           if (isset($as['contig_n50'])): ?>; without scaffolding (split at gaps) the pieces reach
           <strong><?= htmlspecialchars(moop_format_bp($as['contig_n50'])) ?></strong><?php endif; ?>.
         </p>
@@ -106,7 +106,7 @@ foreach ($as_groups as $name => $rows) {
 
         <a class="small d-inline-block mt-2" data-bs-toggle="collapse" href="#assemblyStatsMore" role="button"
            aria-expanded="false" aria-controls="assemblyStatsMore">
-          More statistics <i class="fa fa-chevron-down small"></i>
+          <?= t('More statistics') ?> <i class="fa fa-chevron-down small"></i>
         </a>
         <div class="collapse" id="assemblyStatsMore">
           <div class="row mt-2">

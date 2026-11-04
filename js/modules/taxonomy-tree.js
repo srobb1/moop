@@ -105,7 +105,7 @@ class PhyloTree {
             ? `<span class="phylo-toggle" data-node-id="${nodeId}"><i class="fas fa-chevron-down"></i></span>`
             : `<span class="phylo-toggle-spacer"></span>`;
 
-        const selectBtn = `<button class="phylo-select-btn" data-node-id="${nodeId}" title="Add to selection">
+        const selectBtn = `<button class="phylo-select-btn" data-node-id="${nodeId}" title="${moopTh('Add to selection')}">
                 <i class="fas fa-plus"></i>
             </button>`;
 

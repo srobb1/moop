@@ -21,8 +21,8 @@
       <div class="spinner-ring"></div>
       <div class="spinner-ring"></div>
     </div>
-    <h4 class="mt-3 mb-2"><i class="fa fa-database"></i> Scanning Databases</h4>
-    <p class="text-muted mb-2">Counting annotations across all organisms... This may take a few seconds.</p>
+    <h4 class="mt-3 mb-2"><i class="fa fa-database"></i> <?= t('Scanning Databases') ?></h4>
+    <p class="text-muted mb-2"><?= t('Counting annotations across all organisms... This may take a few seconds.') ?></p>
     <p class="text-muted small mb-0">
       <strong>Note:</strong> If this takes too long or times out, use the <strong>Update Cache</strong> button on the
       <a href="admin/manage_organisms.php">Manage Organisms</a> or <a href="admin/admin.php">Admin Dashboard</a> page,

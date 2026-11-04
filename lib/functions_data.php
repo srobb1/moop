@@ -1839,17 +1839,20 @@ function buildAutoDescription(string $scientific_name, array $lineage): string {
 
     $type = $class_map[$ranks['class'] ?? ''] ?? $phylum_map[$ranks['phylum'] ?? ''] ?? null;
 
-    $sentence = $type
-        ? "$scientific_name is a species of $type"
-        : "$scientific_name is a species";
-
-    if (!empty($ranks['family'])) {
-        $sentence .= " in the family {$ranks['family']}";
-    } elseif (!empty($ranks['order'])) {
-        $sentence .= " in the order {$ranks['order']}";
+    // Whole sentences through t_plain() (CLAUDE.md 7b), so a site in another language can
+    // translate them -- the same English as when this was assembled from pieces.
+    $tr = function_exists('t_plain') ? 't_plain' : fn($s, ...$a) => vsprintf($s, $a);
+    $family = (string) ($ranks['family'] ?? '');
+    $order  = (string) ($ranks['order'] ?? '');
+    if ($type) {
+        $type = $tr($type);
+        if ($family !== '') return $tr('%1$s is a species of %2$s in the family %3$s.', $scientific_name, $type, $family);
+        if ($order !== '')  return $tr('%1$s is a species of %2$s in the order %3$s.', $scientific_name, $type, $order);
+        return $tr('%1$s is a species of %2$s.', $scientific_name, $type);
     }
-
-    return $sentence . '.';
+    if ($family !== '') return $tr('%1$s is a species in the family %2$s.', $scientific_name, $family);
+    if ($order !== '')  return $tr('%1$s is a species in the order %2$s.', $scientific_name, $order);
+    return $tr('%1$s is a species.', $scientific_name);
 }
 
 /**

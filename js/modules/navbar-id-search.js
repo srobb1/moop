@@ -28,7 +28,7 @@
             panel.innerHTML =
                 `<div class="navbar-id-panel-head">
                    <span>${headHtml}</span>
-                   <button type="button" class="btn-close btn-sm" aria-label="Close"></button>
+                   <button type="button" class="btn-close btn-sm" aria-label="${moopTh('Close')}"></button>
                  </div>
                  <div class="navbar-id-panel-body"></div>`;
             panel.querySelector('.btn-close').addEventListener('click', () => { seq++; close(); input.focus(); });
@@ -43,14 +43,14 @@
 
             const mine = ++seq;
             hasResults = false;
-            show(`<i class="fa fa-spinner fa-spin me-1"></i> Looking up <strong>${escapeHtml(q)}</strong>…`);
+            show('<i class="fa fa-spinner fa-spin me-1"></i> ' + moopTm('Looking up %s…', `<strong>${escapeHtml(q)}</strong>`));
 
             MoopFeatureSearch.lookup(q)
                 .then(results => {
                     if (mine !== seq) return;
                     const n = results.length;
                     const body = show(n
-                        ? `${n} match${n === 1 ? '' : 'es'} for <strong>${escapeHtml(q)}</strong>`
+                        ? (n === 1 ? moopTm('%d match for %s', n, `<strong>${escapeHtml(q)}</strong>`) : moopTm('%d matches for %s', n, `<strong>${escapeHtml(q)}</strong>`))
                         : `<strong>${escapeHtml(q)}</strong>`);
                     MoopFeatureSearch.renderInto(body, results, q, {});
                     hasResults = true;

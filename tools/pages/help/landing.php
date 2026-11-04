@@ -52,14 +52,14 @@ $topic_card = function (array $t) use ($site) {
     <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
       <?php /* h1, not a styled span — see the note on retrieve_sequences.php. */ ?>
       <h1 class="text-uppercase fw-semibold mb-0 d-inline" style="letter-spacing:0.1em; font-size:0.8rem;">
-        <i class="fa fa-book me-2"></i>Help &amp; Documentation
+        <i class="fa fa-book me-2"></i><?= t('Help & Documentation') . "\n" ?>
       </h1>
     </div>
     <div class="card-body p-4">
       <p class="text-muted mb-0">
         Where to go, how the data fits together, and where it comes from. How to use a particular
-        page is on that page — look for its <i class="fa fa-info-circle" style="color:#0891b2;" aria-label="information"></i>
-        buttons. Setting up or maintaining a site instead? That is covered separately below.
+        page is on that page — look for its <i class="fa fa-info-circle" style="color:#0891b2;" aria-label="<?= t('information') ?>"></i>
+        <?= t('buttons. Setting up or maintaining a site instead? That is covered separately below.') . "\n" ?>
       </p>
     </div>
   </div>
@@ -75,7 +75,7 @@ $topic_card = function (array $t) use ($site) {
         <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa fa-search"></i></span>
         <input type="search" id="help-filter" class="form-control border-start-0 moop-input"
                placeholder="Filter topics — try &quot;BLAST&quot;, &quot;download&quot;, &quot;permissions&quot;…"
-               autocomplete="off" spellcheck="false" aria-label="Filter help topics">
+               autocomplete="off" spellcheck="false" aria-label="<?= t('Filter help topics') ?>">
       </div>
       <div id="help-filter-msg" class="small text-muted mt-1" style="display:none;"></div>
     </div>
@@ -90,7 +90,7 @@ $topic_card = function (array $t) use ($site) {
             style="background-color:#e0f2f7; color:#0e7490;"><?= count($forUsers) ?></span>
     </h5>
   </div>
-  <p class="text-muted small mb-3">Finding data, running searches, and getting it back out.</p>
+  <p class="text-muted small mb-3"><?= t('Finding data, running searches, and getting it back out.') ?></p>
 
   <div class="row">
     <?php foreach ($forUsers as $t) { $topic_card($t); } ?>
@@ -105,10 +105,10 @@ $topic_card = function (array $t) use ($site) {
               aria-expanded="false" aria-controls="adminHelpSection">
         <span>
           <i class="fa fa-server me-2 text-secondary"></i>
-          <span class="fw-semibold text-body">Setting up &amp; maintaining a MOOP site</span>
+          <span class="fw-semibold text-body"><?= t('Setting up & maintaining a MOOP site') ?></span>
           <span class="badge rounded-pill ms-2 bg-secondary"><?= count($forAdmins) ?></span>
           <span class="text-muted small d-block mt-1 ms-4 ps-1">
-            For administrators — what is involved in installing, loading data, and keeping a site running.
+            <?= t('For administrators — what is involved in installing, loading data, and keeping a site running.') . "\n" ?>
           </span>
         </span>
         <i class="fa fa-chevron-down text-muted ms-3"></i>

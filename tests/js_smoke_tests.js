@@ -40,7 +40,7 @@ for (const rel of MODULES) {
 const {
     moopSearchTerms, moopSearchInputIsUsable, moopHighlightableTerms,
     moopTermHighlight, highlightSearchTerms, moopRowHighlightText, moopStripNamingTag,
-    resultAssemblyLabel,
+    resultAssemblyLabel, moopT, moopTh, moopTm,
 } = sandbox;
 
 // ---------------------------------------------------------------------------- harness
@@ -163,6 +163,25 @@ eq(resultAssemblyLabel({ genome_name: 'NA', genome_accession: 'GCF_013753865.1' 
 eq(resultAssemblyLabel({ genome_name: 'n/a', genome_accession: 'X1' }), 'X1', 'case-insensitive');
 eq(resultAssemblyLabel({ genome_name: 'X1', genome_accession: 'X1' }), 'X1', 'name equal to the accession → bare accession');
 eq(resultAssemblyLabel({ genome_name: 'Nvec200', genome_accession: 'GCA_033964005.1' }), 'Nvec200 (GCA_033964005.1)', 'a real name keeps "Name (Accession)"');
+
+group('moopT — interface text in the browser (the JS side of t(), CLAUDE.md 7b)');
+eq(moopT('No matches found'), 'No matches found', 'no catalog (a one-language site): the English, unchanged');
+eq(moopT('Showing %d of %d hits', 3, 10), 'Showing 3 of 10 hits', 'placeholders are filled in order');
+eq(moopT('100%% done', 1), '100% done', '%% is a percent sign when there are arguments');
+eq(moopT('100%'), '100%', 'and left alone when there are none');
+eq(moopTh('Say "%s"', '<b>'), 'Say &quot;&lt;b&gt;&quot;', 'moopTh escapes the sentence and its arguments');
+eq(moopTm('Looking up %s…', '<strong>x</strong>'), 'Looking up <strong>x</strong>…', 'moopTm inserts the caller\'s markup as given');
+sandbox.MOOP_I18N = { 'No matches found': 'Sin resultados', 'Showing %d of %d hits': 'Mostrando %2$d: %1$d', 'Empty': '' };
+eq(moopT('No matches found'), 'Sin resultados', 'with a catalog: the translation');
+eq(moopT('Showing %d of %d hits', 3, 10), 'Mostrando 10: 3', 'a translation may reorder with %1$d / %2$d');
+eq(moopT('Empty'), 'Empty', 'an empty translation shows the English, never a blank');
+sandbox.MOOP_I18N = { 'Bold': '<b>bad</b>' };
+eq(moopTh('Bold'), '&lt;b&gt;bad&lt;/b&gt;', 'a translation never carries markup into moopTh');
+eq(moopTm('Bold'), '&lt;b&gt;bad&lt;/b&gt;', '... nor into moopTm');
+sandbox.MOOP_I18N_GAPS = true;
+eq(moopT('Untranslated'), '\u27E6Untranslated\u27E7', 'show gaps (admin only): untranslated text is bracketed');
+delete sandbox.MOOP_I18N; delete sandbox.MOOP_I18N_GAPS;
+eq(moopT('No matches found'), 'No matches found', 'catalog removed: English again');
 
 // ---------------------------------------------------------------------------- report
 console.log('\n' + '-'.repeat(60));

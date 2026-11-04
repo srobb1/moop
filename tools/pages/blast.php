@@ -31,15 +31,15 @@
 
     <?php if (empty($accessible_sources)): ?>
         <div class="alert alert-warning">
-            <strong>No accessible assemblies found.</strong>
-            <p class="mb-0">You do not have access to any organism assemblies, or the data directory is misconfigured.</p>
+            <strong><?= t('No accessible assemblies found.') ?></strong>
+            <p class="mb-0"><?= t('You do not have access to any organism assemblies, or the data directory is misconfigured.') ?></p>
         </div>
     <?php else: ?>
 
         <?php if (isset($search_error)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <strong><i class="fa fa-exclamation-circle"></i> Error:</strong> <?= htmlspecialchars($search_error) ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <strong><i class="fa fa-exclamation-circle"></i> <?= t('Error:') ?></strong> <?= htmlspecialchars($search_error) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= t('Close') ?>"></button>
             </div>
         <?php endif; ?>
 
@@ -56,7 +56,7 @@
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">1</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Paste a sequence</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Paste a sequence') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <textarea
@@ -70,10 +70,10 @@
                     <small class="form-text text-muted"><?= gloss('fasta', 'FASTA') ?> format (with &gt;) or plain sequence.</small>
                     <div class="mt-2 d-flex gap-2">
                         <button type="button" class="btn btn-sm fw-semibold text-white btn-moop-teal" onclick="loadSampleSequence('protein')">
-                            <i class="fa fa-flask me-1"></i>Sample Protein
+                            <i class="fa fa-flask me-1"></i><?= t('Sample Protein') . "\n" ?>
                         </button>
                         <button type="button" class="btn btn-sm fw-semibold text-white btn-moop-teal" onclick="loadSampleSequence('nucleotide')">
-                            <i class="fa fa-flask me-1"></i>Sample Nucleotide
+                            <i class="fa fa-flask me-1"></i><?= t('Sample Nucleotide') . "\n" ?>
                         </button>
                     </div>
                 </div>
@@ -83,7 +83,7 @@
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">2</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Select a BLAST program</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select a BLAST program') ?></span>
                     <?php
                     // The program decides what CAN be compared, and picking the wrong one
                     // returns an empty result that looks like "no match in this genome"
@@ -110,8 +110,8 @@
                     <div id="blast-short-suggest" class="alert alert-warning py-2 mt-2 small mb-0 d-none">
                         <i class="fa fa-lightbulb me-1"></i>
                         <span class="blast-short-what"></span>
-                        At this program's default settings a sequence this short is usually lost; BLASTn-short is built for it.
-                        <button type="button" class="btn btn-sm btn-moop-teal text-white ms-1 blast-short-switch">Switch to BLASTn-short</button>
+                        <?= t('At this program\'s default settings a sequence this short is usually lost; BLASTn-short is built for it.') . "\n" ?>
+                        <button type="button" class="btn btn-sm btn-moop-teal text-white ms-1 blast-short-switch"><?= t('Switch to BLASTn-short') ?></button>
                         <?= help_modal_trigger('blast-short-help', '', 'Help: searching with primers and other short sequences') ?>
                     </div>
                     <div id="blastn-short-notice" class="alert alert-info py-2 mt-2 small mb-0 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>">
@@ -142,7 +142,7 @@
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">3</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Select organism and database</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select organism and database') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <?php
@@ -151,16 +151,16 @@
                     include __DIR__ . '/../../includes/source-list.php';
                     ?>
                     <div class="mt-3 p-3 bg-light border rounded">
-                        <strong>Currently selected:</strong>
+                        <strong><?= t('Currently selected:') ?></strong>
                         <div id="currentSelection" style="margin-top:8px; font-size:14px;">
-                            <span style="color:#999;">None selected</span>
+                            <span style="color:#999;"><?= t('None selected') ?></span>
                         </div>
                     </div>
                     <div class="mt-3" id="databaseSelector">
-                        <label class="form-label fw-semibold">Database</label>
+                        <label class="form-label fw-semibold"><?= t('Database') ?></label>
                         <div id="databaseBadges" style="display:flex; gap:10px; flex-wrap:wrap;">
                             <div style="padding:15px; text-align:center; color:#666; width:100%;">
-                                <small>Select an assembly first</small>
+                                <small><?= t('Select an assembly first') ?></small>
                             </div>
                         </div>
                     </div>
@@ -171,7 +171,7 @@
             <div class="mb-3">
                 <button class="btn btn-outline-moop w-100 d-flex align-items-center justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#advOptions" aria-expanded="false" aria-controls="advOptions">
                     <span>
-                        <i class="fas fa-sliders-h me-2"></i><strong>Advanced Options</strong>
+                        <i class="fas fa-sliders-h me-2"></i><strong><?= t('Advanced Options') ?></strong>
                         <?php // Shown only when a preset has changed these values. The panel stays
                               // CLOSED -- opening it confronts a first-time user with a dozen
                               // controls they did not ask for. This says something changed and
@@ -182,7 +182,7 @@
                               // most obviously are adjusted. ?>
                         <span id="adv-modified-badge" class="badge rounded-pill ms-2 <?= $blast_program === 'blastn-short' ? '' : 'd-none' ?>"
                               style="background-color:#cff4e4; color:#0f5132; font-weight:600;">
-                            <i class="fa fa-check-circle me-1"></i>Adjusted for short sequences
+                            <i class="fa fa-check-circle me-1"></i><?= t('Adjusted for short sequences') . "\n" ?>
                         </span>
                     </span>
                     <i class="fa fa-chevron-down adv-chevron" style="font-size:0.8rem; transition:transform 0.2s;"></i>
@@ -192,12 +192,12 @@
                     <div class="card card-body">
                         <!-- blastn-short preset notice -->
                         <div id="adv-short-notice" class="d-none mb-3 small fw-semibold" style="color:#0891b2;">
-                            <i class="fa fa-check-circle me-1"></i>Optimized for short searches — highlighted parameters have been adjusted.
+                            <i class="fa fa-check-circle me-1"></i><?= t('Optimized for short searches — highlighted parameters have been adjusted.') . "\n" ?>
                         </div>
                         <!-- Basic Parameters -->
                         <div class="row">
                             <div class="col-md-6">
-                                <label for="evalue" class="form-label adv-short-param"><strong>E-value Threshold</strong></label>
+                                <label for="evalue" class="form-label adv-short-param"><strong><?= t('E-value Threshold') ?></strong></label>
                                 <select id="evalue" name="evalue" class="form-select" onchange="toggleEvalueCustom()">
                                     <option value="1000" <?= $evalue === '1000' ? 'selected' : '' ?>>1000 (short queries / primers)</option>
                                     <option value="10" <?= $evalue === '10' ? 'selected' : '' ?>>10</option>
@@ -215,16 +215,16 @@
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="max_results" class="form-label"><strong>Maximum Hits</strong></label>
+                                <label for="max_results" class="form-label"><strong><?= t('Maximum Hits') ?></strong></label>
                                 <input type="number" id="max_results" name="max_results" class="form-control" value="<?= (int)$max_results ?>" min="1" max="<?= (int)$max_hits_cap ?>">
                                 <div class="form-text">Up to <?= number_format($max_hits_cap) ?>. For more, run BLAST+ on your own computer.</div>
-                                <small class="form-text text-muted">Maximum number of hits to return</small>
+                                <small class="form-text text-muted"><?= t('Maximum number of hits to return') ?></small>
                             </div>
                         </div>
 
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="matrix" class="form-label"><strong>Scoring Matrix</strong></label>
+                                <label for="matrix" class="form-label"><strong><?= t('Scoring Matrix') ?></strong></label>
                                 <?php
                                 // $blast_options is [] until a search runs, so "isset" was always
                                 // true and nothing matched: no option was selected and the browser
@@ -237,7 +237,7 @@
                                     <option value="<?= $m ?>" <?= $cur_matrix === $m ? 'selected' : '' ?>><?= $m ?><?= $m === 'BLOSUM62' ? ' (default)' : '' ?></option>
                                     <?php endforeach; ?>
                                 </select>
-                                <small class="form-text text-muted">Only used for protein searches</small>
+                                <small class="form-text text-muted"><?= t('Only used for protein searches') ?></small>
                             </div>
 
                             <div class="col-md-6">
@@ -247,7 +247,7 @@
                                           // applyBlastProgramDefaults() keeps it in step when the program changes. ?>
                                     <input class="form-check-input" type="checkbox" name="filter_seq" id="filter_seq" <?= ($blast_options['filter'] ?? (blast_programs()[$blast_program]['filter'] ?? false)) ? 'checked' : '' ?>>
                                     <label class="form-check-label adv-short-param" for="filter_seq">
-                                        Filter low complexity regions
+                                        <?= t('Filter low complexity regions') . "\n" ?>
                                     </label>
                                 </div>
                             </div>
@@ -255,19 +255,19 @@
 
                         <!-- Additional Advanced Options -->
                         <hr class="my-4">
-                        <h6 class="text-muted mb-3">Additional Parameters</h6>
+                        <h6 class="text-muted mb-3"><?= t('Additional Parameters') ?></h6>
                         
                         <div class="row">
                             <div class="col-md-6">
-                                <label for="word_size" class="form-label adv-short-param"><strong>Word Size</strong></label>
+                                <label for="word_size" class="form-label adv-short-param"><strong><?= t('Word Size') ?></strong></label>
                                 <input type="number" id="word_size" name="word_size" class="form-control" value="<?= !empty($blast_options['word_size']) ? htmlspecialchars($blast_options['word_size']) : '' ?>" placeholder="Default (program-specific)" min="1">
-                                <small class="form-text text-muted">Length of initial exact match (typically 11 for blastn, 3 for blastp)</small>
+                                <small class="form-text text-muted"><?= t('Length of initial exact match (typically 11 for blastn, 3 for blastp)') ?></small>
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="max_hsps" class="form-label"><strong>Max HSPs</strong></label>
+                                <label for="max_hsps" class="form-label"><strong><?= t('Max HSPs') ?></strong></label>
                                 <input type="number" id="max_hsps" name="max_hsps" class="form-control" value="<?= !empty($blast_options['max_hsps']) ? htmlspecialchars($blast_options['max_hsps']) : '' ?>" placeholder="Unlimited" min="1">
-                                <small class="form-text text-muted">Maximum number of HSPs to return per subject</small>
+                                <small class="form-text text-muted"><?= t('Maximum number of HSPs to return per subject') ?></small>
                             </div>
                         </div>
 
@@ -275,35 +275,35 @@
                             <div class="col-md-6">
                                 <label for="perc_identity" class="form-label"><strong><?= gloss_first('percent identity', 'Percent Identity') ?></strong></label>
                                 <input type="number" id="perc_identity" name="perc_identity" class="form-control" value="<?= !empty($blast_options['perc_identity']) ? htmlspecialchars($blast_options['perc_identity']) : '' ?>" placeholder="No threshold" min="0" max="100" step="0.1">
-                                <small class="form-text text-muted">Minimum percent identity (0-100)</small>
+                                <small class="form-text text-muted"><?= t('Minimum percent identity (0-100)') ?></small>
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="culling_limit" class="form-label"><strong>Culling Limit</strong></label>
+                                <label for="culling_limit" class="form-label"><strong><?= t('Culling Limit') ?></strong></label>
                                 <input type="number" id="culling_limit" name="culling_limit" class="form-control" value="<?= !empty($blast_options['culling_limit']) ? htmlspecialchars($blast_options['culling_limit']) : '' ?>" placeholder="No limit" min="0">
-                                <small class="form-text text-muted">Max alignments per subject (0 = unlimited)</small>
+                                <small class="form-text text-muted"><?= t('Max alignments per subject (0 = unlimited)') ?></small>
                             </div>
                         </div>
 
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="gapopen" class="form-label adv-short-param"><strong>Gap Open Penalty</strong></label>
+                                <label for="gapopen" class="form-label adv-short-param"><strong><?= t('Gap Open Penalty') ?></strong></label>
                                 <input type="number" id="gapopen" name="gapopen" class="form-control" value="<?= !empty($blast_options['gapopen']) ? htmlspecialchars($blast_options['gapopen']) : '' ?>" placeholder="Default" min="1">
-                                <small class="form-text text-muted">Cost to open a gap</small>
+                                <small class="form-text text-muted"><?= t('Cost to open a gap') ?></small>
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="gapextend" class="form-label adv-short-param"><strong>Gap Extend Penalty</strong></label>
+                                <label for="gapextend" class="form-label adv-short-param"><strong><?= t('Gap Extend Penalty') ?></strong></label>
                                 <input type="number" id="gapextend" name="gapextend" class="form-control" value="<?= !empty($blast_options['gapextend']) ? htmlspecialchars($blast_options['gapextend']) : '' ?>" placeholder="Default" min="1">
-                                <small class="form-text text-muted">Cost to extend a gap</small>
+                                <small class="form-text text-muted"><?= t('Cost to extend a gap') ?></small>
                             </div>
                         </div>
 
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="threshold" class="form-label"><strong>Threshold</strong></label>
+                                <label for="threshold" class="form-label"><strong><?= t('Threshold') ?></strong></label>
                                 <input type="number" id="threshold" name="threshold" class="form-control" value="<?= !empty($blast_options['threshold']) ? htmlspecialchars($blast_options['threshold']) : '' ?>" placeholder="Default" step="0.1">
-                                <small class="form-text text-muted">Minimum score for extending HSP (protein searches)</small>
+                                <small class="form-text text-muted"><?= t('Minimum score for extending HSP (protein searches)') ?></small>
                             </div>
                             
                             <div class="col-md-6">
@@ -327,20 +327,20 @@
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="soft_masking" id="soft_masking" <?= ($blast_options['soft_masking'] ?? (blast_programs()[$blast_program]['soft_masking'] ?? false)) ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="soft_masking">
-                                        <strong>Soft Masking</strong>
+                                        <strong><?= t('Soft Masking') ?></strong>
                                     </label>
                                 </div>
-                                <small class="form-text text-muted d-block">Apply soft masking to query and database</small>
+                                <small class="form-text text-muted d-block"><?= t('Apply soft masking to query and database') ?></small>
                             </div>
 
                             <div class="col-md-6">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="ungapped" id="ungapped" <?= !empty($blast_options['ungapped']) ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="ungapped">
-                                        <strong>Ungapped</strong>
+                                        <strong><?= t('Ungapped') ?></strong>
                                     </label>
                                 </div>
-                                <small class="form-text text-muted d-block">Perform ungapped alignment only</small>
+                                <small class="form-text text-muted d-block"><?= t('Perform ungapped alignment only') ?></small>
                             </div>
                         </div>
                     </div>
@@ -351,11 +351,11 @@
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">4</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Run BLAST</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Run BLAST') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <button type="submit" class="btn btn-lg fw-semibold text-white w-100 btn-moop-action" id="searchBtn">
-                        <i class="fa fa-search me-1"></i>Run BLAST
+                        <i class="fa fa-search me-1"></i><?= t('Run BLAST') . "\n" ?>
                     </button>
                     <?php /* Start over. Navigates to the bare page rather than resetting fields
                              in JS: a reset built from a list of fields silently stops covering
@@ -365,7 +365,7 @@
                     <div class="text-center mt-2">
                         <a href="<?= htmlspecialchars('/' . $site . '/tools/blast.php') ?>"
                            class="btn btn-sm btn-link text-secondary" id="resetBlastBtn">
-                            <i class="fa fa-undo me-1"></i>Clear form and start over
+                            <i class="fa fa-undo me-1"></i><?= t('Clear form and start over') . "\n" ?>
                         </a>
                     </div>
                     <?php /* Inline "uh-oh" for a missed assembly/database, in place of a browser
@@ -375,7 +375,7 @@
                                  up-arrow bakes in one layout: the steps stack on a narrow
                                  window but sit differently on a wide one, and the arrow is
                                  then pointing at nothing. A step number does not move. */ ?>
-                        <i class="fa fa-exclamation-circle me-1"></i> Choose an organism and database in step 3 before running BLAST.
+                        <i class="fa fa-exclamation-circle me-1"></i> <?= t('Choose an organism and database in step 3 before running BLAST.') . "\n" ?>
                     </div>
                 </div>
             </div>
@@ -385,7 +385,7 @@
         <?php if (isset($blast_result) && !empty($blast_result)): ?>
             <div class="card mt-5 shadow-sm" id="blastResultsCard">
                 <div class="card-header text-white d-flex align-items-center tool-header">
-                    <span class="text-uppercase fw-semibold section-eyebrow"><i class="fa fa-chart-bar me-2"></i>BLAST Results</span>
+                    <span class="text-uppercase fw-semibold section-eyebrow"><i class="fa fa-chart-bar me-2"></i><?= t('BLAST Results') ?></span>
                     <?php // Asked at the results, answered by controls back at step 2 — so the
                           // help has to be reachable from HERE, where the question occurs. ?>
                     <?= help_modal_trigger('blast-results-help', '', 'Help: reading and tuning your results') ?>
@@ -393,16 +393,16 @@
                 <div class="card-body">
                     <div class="mb-4 d-flex gap-2 flex-wrap">
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsText();">
-                            <i class="fa fa-download"></i> Download as TXT
+                            <i class="fa fa-download"></i> <?= t('Download as TXT') . "\n" ?>
                         </button>
                         <?php if (!empty($blast_result['tabular'])): ?>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsTabular();">
-                            <i class="fa fa-table"></i> Download as TSV
+                            <i class="fa fa-table"></i> <?= t('Download as TSV') . "\n" ?>
                         </button>
                         <?php endif; ?>
                         <?php if (!empty($blast_result['output'])): ?>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsXML();">
-                            <i class="fa fa-code"></i> Download as XML
+                            <i class="fa fa-code"></i> <?= t('Download as XML') . "\n" ?>
                         </button>
                         <?php endif; ?>
                     </div>

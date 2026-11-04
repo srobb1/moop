@@ -14,8 +14,8 @@
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header py-2">
-        <h5 class="modal-title fw-bold" id="ann-types-modal-label">Annotation Types</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title fw-bold" id="ann-types-modal-label"><?= t('Annotation Types') ?></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= t('Close') ?>"></button>
       </div>
       <div class="modal-body">
 

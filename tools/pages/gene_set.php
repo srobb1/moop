@@ -7,7 +7,7 @@
       <div class="card shadow-sm h-100">
         <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:#e11d48;">
           <span class="fw-semibold" style="letter-spacing:0.04em; font-size:0.85rem;"><?= htmlspecialchars($gene_set_name) ?></span>
-          <span class="badge bg-white text-gene-set" style="font-size:0.65em; opacity:0.9;">search limited to this gene set</span>
+          <span class="badge bg-white text-gene-set" style="font-size:0.65em; opacity:0.9;"><?= t('search limited to this gene set') ?></span>
         </div>
         <div class="card-body bg-search-light">
           <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
@@ -15,8 +15,8 @@
             <div class="row align-items-center">
               <div class="col">
                 <div class="d-flex gap-2 align-items-center">
-                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="<?= t('Enter gene ID or annotation keywords (minimum 3 characters)...') ?>" required>
+                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="<?= t('Search') ?>" data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fa fa-search"></i>
                   </button>
                 </div>
@@ -91,7 +91,7 @@
 
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="feature-header gene-set-header-custom shadow">
-        <h1><?= htmlspecialchars($gene_set_name) ?> <span class="badge bg-white text-gene-set ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Gene Set</span></h1>
+        <h1><?= htmlspecialchars($gene_set_name) ?> <span class="badge bg-white text-gene-set ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;"><?= t('Gene Set') ?></span></h1>
         <?php /* Declared, not shown — the heading and badges above already say where you
                  are; this exists so the page declares its PURPOSE for the router. */ ?>
         <?= page_purpose('Search genes within a single gene set, filtering the results by annotation source.', '', false, false) ?>
@@ -104,26 +104,26 @@
               <p class="text-muted small mb-2"><?= htmlspecialchars($gene_set_info['gene_set_description']) ?></p>
               <?php endif; ?>
               <dl class="feature-info-grid mb-0">
-                <dt>Assembly</dt>
+                <dt><?= t('Assembly') ?></dt>
                 <dd><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>"><?= htmlspecialchars(assembly_label($genome_name, $genome_accession)) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
-                <dt>Organism</dt>
+                <dt><?= t('Organism') ?></dt>
                 <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em><?php if (!empty($organism_info['common_name'])): ?> (<?= htmlspecialchars($organism_info['common_name']) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                 <?php if (!empty($gene_set_meta['source'])): ?>
-                <dt>Source</dt>
+                <dt><?= t('Source') ?></dt>
                 <dd><?= htmlspecialchars($gene_set_meta['source']) ?></dd>
                 <?php endif; ?>
                 <?php /* Where the data came from, written in the JSON on the compute box (copy2moop ships it;
                          an edit made on this server is overwritten by the next copy). Free text: URLs link. */ ?>
                 <?php if (!empty($gene_set_meta['provenance'])): ?>
-                <dt>Provenance</dt>
+                <dt><?= t('Provenance') ?></dt>
                 <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$gene_set_meta['provenance']) ?></dd>
                 <?php endif; ?>
                 <?php if (!empty($gene_set_meta['date_added'])): ?>
-                <dt>Date added</dt>
+                <dt><?= t('Date added') ?></dt>
                 <dd><?= htmlspecialchars($gene_set_meta['date_added']) ?></dd>
                 <?php endif; ?>
                 <?php if (!empty($gene_set_meta['note'])): ?>
-                <dt>Note</dt>
+                <dt><?= t('Note') ?></dt>
                 <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$gene_set_meta['note']) ?></dd>
                 <?php endif; ?>
               </dl>
@@ -146,11 +146,11 @@
                 <div class="d-flex flex-wrap gap-4">
                   <div>
                     <span class="fw-bold feature-color-gene" style="font-size:1.5rem; line-height:1;"><?= number_format($gene_set_info['gene_count'] ?? 0) ?></span>
-                    <span class="text-muted fw-semibold ms-1" style="font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Genes</span>
+                    <span class="text-muted fw-semibold ms-1" style="font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;"><?= t('Genes') ?></span>
                   </div>
                   <div>
                     <span class="fw-bold feature-color-mrna" style="font-size:1.5rem; line-height:1;"><?= number_format($gene_set_info['mrna_count'] ?? 0) ?></span>
-                    <span class="text-muted fw-semibold ms-1" style="font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;">Transcripts</span>
+                    <span class="text-muted fw-semibold ms-1" style="font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase;"><?= t('Transcripts') ?></span>
                   </div>
                 </div>
               </div>
@@ -188,7 +188,7 @@
                    class="btn btn-sm fw-semibold text-white"
                    style="border-radius: 16px; background-color: #475569; border-color: #475569;"
                    download>
-                  <i class="fa fa-download me-1"></i>GFF3
+                  <i class="fa fa-download me-1"></i><?= t('GFF3') . "\n" ?>
                 </a>
                 <?php endif; ?>
                 <?php if ($genome_file):
@@ -202,7 +202,7 @@
                    style="border-radius: 16px; <?= $gColor['style'] ?>"
                    title="The assembled genome sequence this gene set was called against"
                    download>
-                  <i class="fa fa-download me-1"></i>Genome
+                  <i class="fa fa-download me-1"></i><?= t('Genome') . "\n" ?>
                 </a>
                 <?php endif; ?>
                 </div>
@@ -230,8 +230,8 @@
       <div class="card shadow-sm">
         <div class="card-header d-flex align-items-center" style="background-color:#e11d48;">
           <i class="fas fa-tag me-2 text-white"></i>
-          <span class="text-uppercase fw-semibold text-white section-eyebrow">Gene Set Annotation Summary</span>
-          <span class="ms-2 small text-white-50">genes per annotation type</span>
+          <span class="text-uppercase fw-semibold text-white section-eyebrow"><?= t('Gene Set Annotation Summary') ?></span>
+          <span class="ms-2 small text-white-50"><?= t('genes per annotation type') ?></span>
           <?php /* Nothing on the page connected these numbers to the search box above them.
                    A reader sees 129,866 homologs and has no reason to know the text of those
                    annotations is what the search box searches, nor that the filter icon can
@@ -253,7 +253,7 @@
                      data rather than leftover space. */ ?>
             <?php foreach ($annot_type_totals as $type => $total): ?>
             <div class="text-center p-3 flex-fill" style="min-width:120px; border-right:1px solid #dee2e6; border-bottom:1px solid #dee2e6;">
-              <div class="fw-bold text-secondary" style="font-size:1.2rem; line-height:1;" title="genes with this annotation type"><?= number_format($total) ?></div>
+              <div class="fw-bold text-secondary" style="font-size:1.2rem; line-height:1;" title="<?= t('genes with this annotation type') ?>"><?= number_format($total) ?></div>
               <div class="text-muted fw-semibold mt-1" style="font-size:0.7rem; letter-spacing:0.06em; text-transform:uppercase;"><?= htmlspecialchars($type) ?></div>
             </div>
             <?php endforeach; ?>

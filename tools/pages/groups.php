@@ -9,7 +9,7 @@
         <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:#0f766e;">
           <?= page_title($group_name) ?>
           <?php if (!empty($group_organisms)): ?>
-            <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;">search limited to this group</span>
+            <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;"><?= t('search limited to this group') ?></span>
           <?php endif; ?>
         </div>
         <?php /* Declared, not shown — the group name and the "search limited to this group"
@@ -22,7 +22,7 @@
                 which is exactly what the message below is there to say plainly. */ ?>
         <?php if (empty($group_organisms)): ?>
         <div class="card-body bg-search-light text-muted small">
-          There is nothing in this grouping to search yet.
+          <?= t('There is nothing in this grouping to search yet.') . "\n" ?>
         </div>
         <?php else: ?>
         <!-- Search Section -->
@@ -32,8 +32,8 @@
             <div class="row align-items-center">
               <div class="col">
                 <div class="d-flex gap-2 align-items-center">
-                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="<?= t('Enter gene ID or annotation keywords (minimum 3 characters)...') ?>" required>
+                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="<?= t('Search') ?>" data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fa fa-search"></i>
                   </button>
                 </div>
@@ -128,7 +128,7 @@
           <div class="d-flex align-items-center gap-2">
             <span class="text-uppercase fw-semibold section-eyebrow">Organisms in <?= htmlspecialchars($group_name) ?></span>
             <?php if (!empty($group_organisms)): ?>
-              <span class="organism-count-badge"><span class="oc-n">0</span> of <span class="oc-t">0</span></span>
+              <span class="organism-count-badge"><span class="oc-n">0</span> <?= t('of') ?> <span class="oc-t">0</span></span>
             <?= field_help(
                 'Each card says whether that organism is In search or Not in search — click the bar to switch it. '
                 . 'Clicking the card itself opens that organism\'s own page instead.',
@@ -142,11 +142,11 @@
                        Corals has 1, and a filter box above a single card is noise. */ ?>
               <?php if (count($group_organisms) > 8): ?>
                 <input type="text" id="organismFilter" class="form-control form-control-sm"
-                       placeholder="Filter organisms..." style="width:180px; font-size:0.8rem;"
-                       aria-label="Filter organisms by name">
+                       placeholder="<?= t('Filter organisms...') ?>" style="width:180px; font-size:0.8rem;"
+                       aria-label="<?= t('Filter organisms by name') ?>">
               <?php endif; ?>
               <button type="button" class="btn btn-sm btn-light toggleAllOrganisms" style="font-size:0.75rem;">
-                <span class="toggle-all-label">Deselect all</span>
+                <span class="toggle-all-label"><?= t('Deselect all') ?></span>
               </button>
             </div>
           <?php endif; ?>
@@ -161,7 +161,7 @@
                     something invalid, when they did not, is worse than saying we have nothing. */ ?>
             <div class="alert alert-info mb-0">
               <i class="fa fa-info-circle"></i>
-              No organisms in <strong><?= htmlspecialchars($group_name) ?></strong> yet.
+              <?= t('No organisms in') ?> <strong><?= htmlspecialchars($group_name) ?></strong> <?= t('yet.') . "\n" ?>
               <div class="small text-muted mt-2">
                 Nothing in <?= htmlspecialchars($config->getString('siteTitle')) ?> is filed under
                 that name. Browse <a href="/<?= $site ?>/index.php">all organisms and groups</a><?php if (moop_tool_on('annotation_search')): ?>,
@@ -198,7 +198,7 @@
                      <label class="organism-selection-bar">
                        <input type="checkbox" class="organism-checkbox" data-organism="<?= htmlspecialchars($organism) ?>" checked>
                        <span class="organism-selection-icon"></span>
-                    <span class="organism-selection-text"><span class="sel-on">In search</span><span class="sel-off">Not in search</span></span>
+                    <span class="organism-selection-text"><span class="sel-on"><?= t('In search') ?></span><span class="sel-off"><?= t('Not in search') ?></span></span>
                      </label>
                      <!-- Clickable card that links to organism page -->
 <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
@@ -219,7 +219,7 @@
                         <h5 class="card-title mb-2">
                           <em><?= htmlspecialchars($genus . ' ' . $species) ?></em>
                         </h5>
-                        <span class="organism-card-go">View organism <i class="fa fa-arrow-right"></i></span>
+                        <span class="organism-card-go"><?= t('View organism') ?> <i class="fa fa-arrow-right"></i></span>
                         <?php if ($common_name): ?>
                           <p class="text-muted mb-0"><?= htmlspecialchars($common_name) ?></p>
                         <?php endif; ?>

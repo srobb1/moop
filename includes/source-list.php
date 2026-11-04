@@ -28,7 +28,7 @@
 
 <div class="fasta-source-selector">
     <label class="form-label">
-        <strong>Select Source</strong>
+        <strong><?= t('Select Source') ?></strong>
         <?php // Optional, opt-in: the calling page sets $source_list_help_id and renders
               // the matching help_modal(). Kept caller-supplied because what the list
               // MEANS -- and what an unusable source means -- differs per tool.
@@ -47,7 +47,7 @@
                 value="<?= htmlspecialchars($selected_assembly_name ?: ($selected_organism ?: $context_group)) ?>"
                 >
             <button type="button" class="btn btn-success" onclick="<?= $clear_filter_function ?? 'clearSourceFilter' ?>();">
-                <i class="fa fa-times"></i> Clear Filters
+                <i class="fa fa-times"></i> <?= t('Clear Filters') . "\n" ?>
             </button>
         </div>
     </div>

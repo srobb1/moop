@@ -327,8 +327,9 @@ function moop_wikipedia_api(string $base_url, array $params, bool &$ok): ?array 
  * title, plain-text lead, page image, Wikidata id. Missing pages, disambiguation pages and
  * pages with no lead text are dropped. Search results keep the search's ranking.
  */
-function moop_wikipedia_pages(array $query, bool &$ok): array {
-    $data = moop_wikipedia_api('https://en.wikipedia.org/w/api.php', $query + [
+function moop_wikipedia_pages(array $query, bool &$ok, string $lang = 'en'): array {
+    if (!preg_match('/^[a-z]{2,3}$/', $lang)) $lang = 'en';
+    $data = moop_wikipedia_api("https://$lang.wikipedia.org/w/api.php", $query + [
         'action'      => 'query',
         'prop'        => 'extracts|pageimages|pageprops',
         'exintro'     => 1,
@@ -482,6 +483,50 @@ function moop_wikipedia_fetch_organism_uncached($scientific_name, $common_name =
 
     $reached = true;
     return $result;
+}
+
+/**
+ * The same article in another language -- for a visitor reading the site in Spanish
+ * (cuttingclass). Found through the English article's own language link (what Wikipedia's
+ * "Español" sidebar link follows), not by a second search in that language: the English lookup
+ * above already decided WHICH article is this organism's, with all its checks.
+ *
+ * Same shape as getWikipediaOrganismData(); an empty description when that language has no
+ * article (the caller then shows the English). Cached beside the English answer as
+ * "<name>.<lang>.json", same lifetimes, same per-request budget.
+ */
+function moop_wikipedia_in_language(string $scientific_name, array $english, string $lang): array {
+    $empty = moop_wikipedia_empty_result();
+    $scientific_name = moop_wikipedia_normalise_name($scientific_name);
+    if ($lang === 'en' || !preg_match('/^[a-z]{2,3}$/', $lang) || $scientific_name === '' || ($english['title'] ?? '') === '') {
+        return $empty;
+    }
+    $file = function_exists('moop_wikipedia_cache_file') ? moop_wikipedia_cache_file("$scientific_name.$lang") : '';
+    $cached = $file && is_readable($file) ? json_decode((string) @file_get_contents($file), true) : null;
+    if (is_array($cached) && ($cached['v'] ?? 0) === 1 && ($cached['from'] ?? '') === $english['title']) {
+        $base = empty($cached['data']['description']) ? 7 * 86400 : 30 * 86400;
+        if (time() - (int) $cached['fetched_at'] < $base) return $cached['data'] + $empty;
+    }
+    $ok = true;
+    $links = moop_wikipedia_api('https://en.wikipedia.org/w/api.php', [
+        'action' => 'query', 'titles' => $english['title'], 'prop' => 'langlinks', 'lllang' => $lang, 'redirects' => 1,
+    ], $ok);
+    if (!$ok) return is_array($cached) ? $cached['data'] + $empty : $empty;
+    $title = (string) ($links['query']['pages'][0]['langlinks'][0]['title'] ?? '');
+    $data  = $empty;
+    if ($title !== '') {
+        $pages = moop_wikipedia_pages(['titles' => $title], $ok, $lang);
+        if (!$ok) return is_array($cached) ? $cached['data'] + $empty : $empty;
+        if ($pages) {
+            $data = ['description' => $pages[0]['extract'], 'image_url' => '',
+                     'wikipedia_url' => "https://$lang.wikipedia.org/wiki/" . rawurlencode(str_replace(' ', '_', $pages[0]['title'])),
+                     'source' => 'Wikipedia', 'title' => $pages[0]['title'], 'scope' => $english['scope'] ?? ''];
+        }
+    }
+    if ($file) {
+        @file_put_contents($file, json_encode(['v' => 1, 'fetched_at' => time(), 'from' => $english['title'], 'data' => $data]), LOCK_EX);
+    }
+    return $data;
 }
 
 /**

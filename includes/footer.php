@@ -34,10 +34,10 @@ if (!isset($admin_email) || empty($admin_email)) {
         <!-- Center: Contact -->
         <div class="footer-section footer-center">
             <div class="footer-text">
-                <p>Questions, issues, requests, or missing/incorrect data?</p>
+                <p><?= t('Questions, issues, requests, or missing/incorrect data?') ?></p>
                 <p>
                     <a href="mailto:<?= htmlspecialchars($admin_email) ?>">
-                        <i class="fas fa-envelope"></i> Contact Administrator
+                        <i class="fas fa-envelope"></i> <?= t('Contact Administrator') . "\n" ?>
                     </a>
                 </p>
             </div>

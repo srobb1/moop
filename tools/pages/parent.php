@@ -26,7 +26,7 @@
     <div class="pnav-jumpbar">
       <button class="pnav-jb-btn" id="pnavJbBtn" type="button" aria-expanded="false" aria-controls="pnavJbDd">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M2 4h12v1.6H2zM2 7.2h12v1.6H2zM2 10.4h8V12H2z"/></svg>
-        Jump to
+        <?= t('Jump to') . "\n" ?>
         <svg class="pnav-jb-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
       </button>
       <?php /* Matches the first sidebar entry, which is the feature's own ID — see the
@@ -37,10 +37,10 @@
     </div>
 
     <div class="pnav-layout">
-      <aside class="pnav-side" aria-label="Jump to">
+      <aside class="pnav-side" aria-label="<?= t('Jump to') ?>">
         <div class="pnav-side-head">
-          <span class="pnav-side-title">Jump to</span>
-          <button class="pnav-toggle" id="pnavToggle" type="button" aria-label="Collapse navigation" aria-expanded="true" title="Collapse (content goes full width)">
+          <span class="pnav-side-title"><?= t('Jump to') ?></span>
+          <button class="pnav-toggle" id="pnavToggle" type="button" aria-label="<?= t('Collapse navigation') ?>" aria-expanded="true" title="<?= t('Collapse (content goes full width)') ?>">
             <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
           </button>
         </div>
@@ -159,7 +159,7 @@
                     <button type="button" class="feature-header-copy"
                             data-copy-text="<?= htmlspecialchars($copy_text, ENT_QUOTES) ?>"
                             title="Copy this summary as plain text, ready to paste into notes">
-                        <i class="fa fa-copy"></i> <span class="copy-label">Copy</span>
+                        <i class="fa fa-copy"></i> <span class="copy-label"><?= t('Copy') ?></span>
                     </button>
                     <?= help_modal_trigger('gene-page-help', '', 'Help: what this page shows') ?>
                     <?php /* Declared, not shown — the title bar already says which gene this is;
@@ -170,12 +170,12 @@
             <div class="feature-overview-body">
                 <h1 class="feature-title">
                     <?php if ($gene_symbol !== ''): ?>
-                        <span class="feature-symbol" title="Gene symbol"><?= htmlspecialchars($gene_symbol) ?></span>
+                        <span class="feature-symbol" title="<?= t('Gene symbol') ?>"><?= htmlspecialchars($gene_symbol) ?></span>
                     <?php endif; ?>
                     <?php if ($overview_title !== ''): ?>
                         <?= htmlspecialchars($overview_title) ?>
                     <?php elseif ($gene_symbol === ''): ?>
-                        <span class="feature-title-empty">No description available</span>
+                        <span class="feature-title-empty"><?= t('No description available') ?></span>
                     <?php endif; ?>
                 </h1>
                 <?php /* The chips belong to the title: they say what kind of feature this is.
@@ -217,7 +217,7 @@
                             <span class="gn-text"><?= htmlspecialchars($__s['naming_text']) ?><?php
                                 if ($__s['kind'] === 'protein' && !empty($naming_isoform['mrna'])): ?>
                                 <a href="#<?= htmlspecialchars(moop_annotation_card_anchor($naming_isoform['mrna'])) ?>" class="gene-naming-acc">its annotations</a><?php endif; ?></span>
-                            <button type="button" class="gn-more" hidden>more</button>
+                            <button type="button" class="gn-more" hidden><?= t('more') ?></button>
                         </dd>
                     <?php endforeach; ?>
                 </dl>
@@ -251,14 +251,14 @@
                     : null;
                 ?>
                 <dl class="feature-info-grid mb-0">
-                    <dt>Organism</dt>
+                    <dt><?= t('Organism') ?></dt>
                     <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em class="sci-name"><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em><?php if ($common_name): ?> (<?= htmlspecialchars($common_name) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
-                    <dt>Assembly</dt>
+                    <dt><?= t('Assembly') ?></dt>
                     <dd><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars(assembly_label($genome_name, $genome_accession)) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
-                    <dt>Gene Set</dt>
+                    <dt><?= t('Gene Set') ?></dt>
                     <dd><a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>" class="link-light-bordered"><?= htmlspecialchars($gene_set_name) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                     <?php if (!empty($feature_loc)): ?>
-                    <dt>Location</dt>
+                    <dt><?= t('Location') ?></dt>
                     <dd><?php
                         $loc_text = htmlspecialchars($feature_loc['seqname'])
                             . ':' . number_format($feature_loc['start'])
@@ -277,7 +277,7 @@
                     ?></dd>
                     <?php endif; ?>
                     <?php if ($longest_protein !== ''): ?>
-                    <dt>Protein</dt>
+                    <dt><?= t('Protein') ?></dt>
                     <dd><?= number_format($protein_lengths[$longest_protein]) ?> aa<?php if (count($protein_lengths) > 1): ?>
                         <span class="text-muted" title="<?= htmlspecialchars($longest_protein) ?>">(longest of <?= count($protein_lengths) ?>)</span><?php endif; ?></dd>
                     <?php endif; ?>
@@ -311,14 +311,14 @@
     <!-- Gene Structure Section -->
     <div class="card shadow-sm mb-4" id="pnav-gene-structure" data-nav-label="Gene Structure">
         <div class="card-header d-flex align-items-center flex-wrap">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#geneModelSection" aria-expanded="true" role="button" aria-label="Show or hide Gene Structure" title="Show or hide Gene Structure">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#geneModelSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Gene Structure') ?>" title="<?= t('Show or hide Gene Structure') ?>">
                 <i class="fas fa-minus toggle-icon text-primary"></i>
             </span>
-            <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Gene Structure</span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Gene Structure') ?></span>
             <span class="ms-2 text-muted small">
                 <?= number_format(count($gene_model['isoforms'])) ?> <?= gloss('isoform', count($gene_model['isoforms']) !== 1 ? 'isoforms' : 'isoform') ?>
                 <?php if (!empty($big_gene)): ?>
-                    · <span title="Too many to draw at once. Open a transcript under Annotations to draw its own structure.">showing the longest</span>
+                    · <span title="<?= t('Too many to draw at once. Open a transcript under Annotations to draw its own structure.') ?>"><?= t('showing the longest') ?></span>
                 <?php endif; ?>
             </span>
             <?= help_modal_trigger('gene-model-help', '', 'Help: reading the gene structure diagram') ?>
@@ -333,16 +333,16 @@
             <div class="ms-auto d-flex flex-wrap gap-2 align-items-center">
                 <?php if (!empty($genome_seq_available)): ?>
                 <button class="btn btn-sm moop-data-btn" id="gene-model-fmt-btn"
-                        title="Open the sequence with each feature type highlighted"><i class="fas fa-palette me-1"></i>Format sequence</button>
+                        title="<?= t('Open the sequence with each feature type highlighted') ?>"><i class="fas fa-palette me-1"></i><?= t('Format sequence') ?></button>
                 <?php endif; ?>
-                <div class="btn-group btn-group-sm" role="group" aria-label="Download this gene">
+                <div class="btn-group btn-group-sm" role="group" aria-label="<?= t('Download this gene') ?>">
                     <?php /* Not on a transcript assembly: the "genomic" sequence would be the transcript again */ ?>
                     <?php if (!empty($genome_seq_available) && empty($genome_is_transcripts)): ?>
                     <button class="btn moop-data-btn" id="gene-model-seq-btn"
-                            title="Download the genomic sequence — gene locus plus each isoform span"><i class="fas fa-download me-1"></i>FASTA</button>
+                            title="<?= t('Download the genomic sequence — gene locus plus each isoform span') ?>"><i class="fas fa-download me-1"></i><?= t('FASTA') ?></button>
                     <?php endif; ?>
                     <button class="btn moop-data-btn" id="gene-model-gff-btn"
-                            title="Download GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features"><i class="fas fa-download me-1"></i>GFF</button>
+                            title="<?= t('Download GFF3 — gene, mRNA, exon, CDS, UTR and all sub-features') ?>"><i class="fas fa-download me-1"></i><?= t('GFF') ?></button>
                 </div>
             </div>
         </div>
@@ -438,10 +438,10 @@
     <!-- Feature Hierarchy Section -->
     <div class="card shadow-sm mb-4" id="pnav-hierarchy" data-nav-label="Feature Hierarchy">
         <div class="card-header d-flex align-items-center">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true" role="button" aria-label="Show or hide Feature Hierarchy" title="Show or hide Feature Hierarchy">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Feature Hierarchy') ?>" title="<?= t('Show or hide Feature Hierarchy') ?>">
                 <i class="fas fa-sitemap toggle-icon text-primary"></i>
             </span>
-            <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Feature Hierarchy</span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Feature Hierarchy') ?></span>
             <?= help_modal_trigger('hierarchy-help', '', 'Help: reading the feature hierarchy') ?>
         </div>
         <div id="hierarchySection" class="collapse show">
@@ -487,7 +487,7 @@
                                     $__first = $children_hierarchical[0]['feature_type'] ?? 'mRNA'; ?>
                                     <ul><li><span class="tree-char">└── </span>
                                         <span class="text-dark"><?= number_format(count($children_hierarchical)) ?> <?= htmlspecialchars($__first) ?></span>
-                                        <span class="text-muted small">— each with its CDS and protein; listed under Annotations</span>
+                                        <span class="text-muted small"><?= t('— each with its CDS and protein; listed under Annotations') ?></span>
                                     </li></ul>
                                 <?php else: ?>
                                 <?= generateTreeHTML($children_hierarchical, $all_annotations, $analysis_order, 0, $protein_lengths, $longest_protein, (string)($naming_isoform['protein'] ?? '')) ?>
@@ -512,10 +512,10 @@
     <!-- Expression Section -->
     <div class="card shadow-sm mb-4" id="pnav-expression" data-nav-label="Expression">
         <div class="card-header d-flex align-items-center flex-wrap">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#expressionSection" aria-expanded="true" role="button" aria-label="Show or hide Expression" title="Show or hide Expression">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#expressionSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Expression') ?>" title="<?= t('Show or hide Expression') ?>">
                 <i class="fas fa-chart-bar toggle-icon text-primary"></i>
             </span>
-            <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Expression</span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Expression') ?></span>
             <span class="ms-2 text-muted small">
                 <?php if ($__ex['with_data'] === 0): ?>
                     not measured in any of <?= $__n_exp ?> experiment<?= $__n_exp !== 1 ? 's' : '' ?>
@@ -534,14 +534,14 @@
                    'organism' => $organism_name, 'assembly' => $genome_accession, 'gene_set' => $gene_set_name,
                    'genes' => $feature_uniquename])) ?>"
                title="Open the Expression Explorer with this gene, to compare it with others">
-                <i class="fa fa-th"></i> Compare genes</a>
+                <i class="fa fa-th"></i> <?= t('Compare genes') ?></a>
 <?php endif; ?>
             <form method="POST" action="" class="ms-1">
                 <?= csrf_input_field() ?>
                 <input type="hidden" name="download_expression" value="1">
                 <button type="submit" class="btn btn-sm btn-outline-secondary py-0"
-                        title="This gene's value in every sample, one row per sample, with its unit">
-                    <i class="fa fa-download"></i> TSV
+                        title="<?= t('This gene\'s value in every sample, one row per sample, with its unit') ?>">
+                    <i class="fa fa-download"></i> <?= t('TSV') . "\n" ?>
                 </button>
             </form>
             <?php endif; ?>
@@ -595,7 +595,7 @@
                 <button type="button" class="btn btn-sm btn-link px-0 expr-more-btn collapsed"
                         data-bs-toggle="collapse" data-bs-target="#expressionMore" aria-expanded="false" aria-controls="expressionMore">
                     <span class="when-collapsed">Show all <?= $__n_exp ?> experiments</span>
-                    <span class="when-expanded">Show fewer</span>
+                    <span class="when-expanded"><?= t('Show fewer') ?></span>
                 </button>
                 <?php endif; ?>
                 <div class="text-muted expr-key">
@@ -618,10 +618,10 @@
                          detail. The count says what is inside before it is opened, and every
                          link into it — sidebar, gene-structure rows, the hierarchy, a #hash —
                          opens it first (parent-nav.js, parent-tools.js). */ ?>
-                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="false" aria-controls="annotationsSection" role="button" aria-label="Show or hide Annotations" title="Show or hide Annotations">
+                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#annotationsSection" aria-expanded="false" aria-controls="annotationsSection" role="button" aria-label="<?= t('Show or hide Annotations') ?>" title="<?= t('Show or hide Annotations') ?>">
                     <i class="fas fa-plus toggle-icon text-primary"></i>
                 </span>
-                <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Annotations</span>
+                <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Annotations') ?></span>
                 <span class="ms-2 small text-muted annotations-count"><?php
                     $__n_tx = count($children_hierarchical);
                     if (empty($annotation_total)) {
@@ -639,7 +639,7 @@
                              reader comparing N isoforms would find them identical. */ ?>
                     <span class="badge rounded-pill ms-2 fw-normal"
                           style="background-color:#e0f2f1; color:#0f5132; font-size:0.72rem;"
-                          title="Every transcript of this gene carries the same set of annotation types and accessions. Scores and descriptions may still differ.">
+                          title="<?= t('Every transcript of this gene carries the same set of annotation types and accessions. Scores and descriptions may still differ.') ?>">
                         <?php /* "identical", not "annotated the same": the point is that the
                                  N sets below are the same set, which is the exception. About
                                  a third of multi-isoform genes are like this, so the normal
@@ -660,13 +660,13 @@
                 <?php if (count($children_hierarchical) > 1 && empty($big_gene)): ?>
                 <button type="button" class="btn btn-sm moop-data-btn" id="toggle-all-transcripts"
                         data-state="expanded"
-                        title="Collapse every transcript so the list fits on one screen">
-                    <i class="fas fa-compress me-1"></i><span class="label">Collapse all</span>
+                        title="<?= t('Collapse every transcript so the list fits on one screen') ?>">
+                    <i class="fas fa-compress me-1"></i><span class="label"><?= t('Collapse all') ?></span>
                 </button>
                 <?php endif; ?>
                 <a href="/<?= htmlspecialchars($config->getString('site', 'moop')) ?>/api/download_annotations.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($feature_uniquename) ?>"
                    class="btn btn-sm moop-data-btn" title="Download every annotation on this page as one CSV">
-                    <i class="fas fa-download me-1"></i>Download all
+                    <i class="fas fa-download me-1"></i><?= t('Download all') . "\n" ?>
                 </a>
                 <?php /* "Back to Top" removed: the section nav on the left already returns
                          you there from anywhere, and it duplicated that in one spot only. */ ?>
@@ -731,7 +731,7 @@
                     <script type="application/json" id="bigGeneRows"><?= json_encode($__rows, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
                     <div class="table-responsive">
                     <table id="bigGeneTranscripts" class="table table-sm table-striped table-hover" style="width:100%">
-                        <thead><tr><th>Transcript</th><?php if (!empty($gene_model['isoforms'])): ?><th class="col-structure">Structure</th><?php endif; ?><th>Annotations</th><th>Protein</th><th></th></tr></thead>
+                        <thead><tr><th><?= t('Transcript') ?></th><?php if (!empty($gene_model['isoforms'])): ?><th class="col-structure"><?= t('Structure') ?></th><?php endif; ?><th><?= t('Annotations') ?></th><th><?= t('Protein') ?></th><th></th></tr></thead>
                     </table>
                     </div>
                     <div id="bigGeneCards" class="mt-3"
@@ -840,10 +840,10 @@
         ?>
         <div class="card shadow-sm mb-4">
             <div class="card-header d-flex align-items-center">
-                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#bigGeneSequences" aria-expanded="true" role="button" aria-label="Show or hide Sequences" title="Show or hide Sequences">
+                <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#bigGeneSequences" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Sequences') ?>" title="<?= t('Show or hide Sequences') ?>">
                     <i class="fas fa-minus toggle-icon text-primary"></i>
                 </span>
-                <span class="ms-2 text-uppercase fw-semibold section-eyebrow">Sequences</span>
+                <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Sequences') ?></span>
             </div>
             <div id="bigGeneSequences" class="collapse show">
             <div class="card-body">

@@ -126,7 +126,7 @@ function updateSelectedList() {
     if (card) card.classList.toggle('selection-empty', !hasSelection);
 
     if (selectedOrganisms.size === 0) {
-        listEl.innerHTML = '<div class="text-muted small px-1" style="opacity:0.6;">Your selected organisms will appear here.</div>';
+        listEl.innerHTML = '<div class="text-muted small px-1" style="opacity:0.6;">' + moopTh('Your selected organisms will appear here.') + '</div>';
         return;
     }
 
@@ -139,7 +139,7 @@ function updateSelectedList() {
         return `<div class="selected-org-item d-flex align-items-center justify-content-between">
             <span class="selected-org-name">${name}${common}</span>
             <span class="selected-org-actions ms-2 flex-shrink-0 text-nowrap">
-                <a href="${pageUrl}" target="_blank" class="btn btn-link btn-sm p-0 me-1" title="Open organism page">
+                <a href="${pageUrl}" target="_blank" class="btn btn-link btn-sm p-0 me-1" title="${moopTh('Open organism page')}">
                     <i class="fas fa-external-link-alt text-info"></i>
                 </a>
                 <button class="btn btn-link btn-sm p-0 text-danger remove-org-btn"
@@ -219,7 +219,7 @@ function initQuickSearch() {
     const goBtn    = document.getElementById('qs-go');
     if (!input || !dropdown || typeof quickSearchData === 'undefined') return;
 
-    const TYPE_LABEL = { organism: 'Organism', group: 'Group', assembly: 'Assembly', geneset: 'Gene Set' };
+    const TYPE_LABEL = { organism: moopTh('Organism'), group: moopTh('Group'), assembly: moopTh('Assembly'), geneset: moopTh('Gene Set') };
     let activeIdx = -1;
 
     function items() { return dropdown.querySelectorAll('.qs-item'); }
@@ -256,7 +256,7 @@ function initQuickSearch() {
             return;
         }
         if (results.length === 0) {
-            dropdown.innerHTML = '<div class="qs-no-results">No matches found</div>';
+            dropdown.innerHTML = '<div class="qs-no-results">' + moopTh('No matches found') + '</div>';
             dropdown.classList.add('open');
             return;
         }

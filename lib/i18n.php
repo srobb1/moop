@@ -230,7 +230,92 @@ function moop_i18n_unquote(string $lit): string {
     return $q === "'" ? strtr($body, ["\\\\" => "\\", "\\'" => "'"]) : stripcslashes($body);
 }
 
+// ---- JavaScript: moopT() / moopTh() in js/ (js/modules/utilities.js) --------------------
+
+/**
+ * Every moopT('...') / moopTh('...') literal in the site's JavaScript: [english => ['js/x.js:line']].
+ * Cached in {cache}/i18n_js_strings.json against the newest .js file's time, so a page in another
+ * language costs a directory listing, not a re-scan.
+ */
+function moop_i18n_scan_js(?string $root = null): array {
+    $cfg  = ConfigManager::getInstance();
+    $root = rtrim($root ?? $cfg->getPath('root_path') . '/' . $cfg->getString('site'), '/');
+    $files = [];
+    $it = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(
+        new RecursiveDirectoryIterator("$root/js", FilesystemIterator::SKIP_DOTS),
+        fn($f) => !($f->isDir() && $f->getFilename() === 'vendor')));
+    foreach ($it as $f) if ($f->getExtension() === 'js') $files[$f->getPathname()] = $f->getMTime();
+    $stamp = $files ? max($files) . ':' . count($files) : '0';
+
+    if (!function_exists('moop_cache_root')) require_once __DIR__ . '/cache_paths.php';
+    $cache = moop_cache_root() . '/i18n_js_strings.json';
+    $doc = json_decode((string) @file_get_contents($cache), true);
+    if (($doc['stamp'] ?? null) === $stamp && is_array($doc['strings'] ?? null)) return $doc['strings'];
+
+    $out = [];
+    foreach (array_keys($files) as $path) {
+        $rel = substr($path, strlen($root) + 1);
+        foreach (moop_i18n_scan_js_source((string) @file_get_contents($path)) as [$text, $line]) $out[$text][] = "$rel:$line";
+    }
+    ksort($out, SORT_STRING | SORT_FLAG_CASE);
+    @file_put_contents($cache, json_encode(['stamp' => $stamp, 'strings' => $out], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    @chmod($cache, 0664);
+    return $out;
+}
+
+/** The moopT()/moopTh() literals in one JS source: [[text, line], ...]. Pure. */
+function moop_i18n_scan_js_source(string $src): array {
+    $found = [];
+    preg_match_all('/\bmoopT[hm]?\(\s*(?:\'((?:[^\'\\\\\n]|\\\\.)*)\'|"((?:[^"\\\\\n]|\\\\.)*)")\s*[,)]/', $src, $m, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+    foreach ($m as $hit) {
+        $raw  = ($hit[1][1] ?? -1) >= 0 ? $hit[1][0] : $hit[2][0];
+        $text = preg_replace_callback('/\\\\(u[0-9a-fA-F]{4}|.)/', function ($e) {
+            $c = $e[1];
+            if ($c[0] === 'u' && strlen($c) === 5) return mb_chr(hexdec(substr($c, 1)), 'UTF-8');
+            return ['n' => "\n", 't' => "\t"][$c] ?? $c;
+        }, $raw);
+        if (trim($text) !== '') $found[] = [$text, substr_count($src, "\n", 0, $hit[0][1]) + 1];
+    }
+    return $found;
+}
+
+/** The translations the browser needs on a page in $lang: [english => translation], translated only. */
+function moop_i18n_js_catalog(string $lang): array {
+    $cat = moop_i18n_catalog($lang);
+    $out = [];
+    foreach (moop_i18n_scan_js() as $en => $where) {
+        $tr = (string) ($cat[$en]['text'] ?? '');
+        if (trim($tr) !== '') $out[$en] = $tr;
+    }
+    return $out;
+}
+
 // ---- placeholders --------------------------------------------------------------------
+
+/**
+ * Do two strings take the same arguments? Every %s/%d must still be there, as many times; a
+ * translation may reorder them with %1$s / %2$d ("Mostrando %2$d: %1$d"), so '%d %d' and
+ * '%2$d %1$d' match, '%d %d' and '%d' do not, and '%1$d %1$d' is not '%1$d %2$d'.
+ */
+function moop_i18n_placeholders_match(string $english, string $translation): bool {
+    $sig = function (string $s): array {
+        $out = []; $next = 1;
+        foreach (moop_i18n_placeholders_in_order($s) as $p) {
+            preg_match('/^%(?:(\d+)\$)?.*([a-zA-Z])$/', $p, $m);
+            $pos = $m[1] !== '' ? (int) $m[1] : $next++;
+            $out[$pos] = ($out[$pos] ?? '') . $m[2];
+        }
+        ksort($out);
+        return $out;
+    };
+    return $sig($english) === $sig($translation);
+}
+
+/** The placeholders in the order they appear. */
+function moop_i18n_placeholders_in_order(string $s): array {
+    preg_match_all('/%(?:\d+\$)?[-+ 0#]*\d*(?:\.\d+)?[bcdeEfFgGosuxX]/', str_replace('%%', '', $s), $m);
+    return $m[0];
+}
 
 /** The sprintf placeholders in a string, sorted: '%d', '%1$s', ... ('%%' is not one). */
 function moop_i18n_placeholders(string $s): array {
@@ -248,6 +333,8 @@ function moop_i18n_placeholders(string $s): array {
  */
 function moop_i18n_rows(string $lang, ?array $scan = null): array {
     $scan    = $scan ?? moop_i18n_scan();
+    $js      = moop_i18n_scan_js();
+    foreach ($js as $en => $where) $scan[$en] = array_merge($scan[$en] ?? [], $where);
     $seen    = moop_i18n_seen_all();
     $catalog = moop_i18n_catalog($lang);
     $rows = [];
@@ -260,7 +347,9 @@ function moop_i18n_rows(string $lang, ?array $scan = null): array {
             'text'    => $text,
             'status'  => trim($text) === '' ? 'needs translation' : (in_array($c['status'] ?? '', MOOP_I18N_STATUSES, true) && $c['status'] !== 'needs translation' ? $c['status'] : 'machine draft'),
             'notes'   => (string) ($c['notes'] ?? ''),
-            'seen'    => $seen[$en]['pages'] ?? [],
+            // Text built by JavaScript is never seen by the server; it counts as shown -- it
+            // belongs to modules the pages load -- with its files as where it appears.
+            'seen'    => $seen[$en]['pages'] ?? (isset($js[$en]) ? array_map(fn($w) => strtok($w, ':'), array_slice($js[$en], 0, 3)) : []),
             'code'    => $scan[$en] ?? [],
         ];
     }
@@ -379,7 +468,7 @@ function moop_i18n_check_upload(string $lang, array $rows, array $known): array 
             $res['changes'][$en] = ['text' => '', 'status' => 'needs translation', 'notes' => $notes];
             continue;
         }
-        if (moop_i18n_placeholders($tr) !== moop_i18n_placeholders($en)) {
+        if (!moop_i18n_placeholders_match($en, $tr)) {
             $want = implode(' ', moop_i18n_placeholders($en)) ?: 'none';
             $res['refused'][] = [$en, 'The codes do not match. The English has: ' . $want . '; the translation has: '
                                       . (implode(' ', moop_i18n_placeholders($tr)) ?: 'none') . '.'];

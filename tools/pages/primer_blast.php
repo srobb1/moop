@@ -162,15 +162,15 @@ $db_section_label = function ($key) {
 
     <?php if (empty($accessible_sources)): ?>
         <div class="alert alert-warning">
-            <strong>No accessible assemblies found.</strong>
-            <p class="mb-0">You do not have access to any organism assemblies, or the data directory is misconfigured.</p>
+            <strong><?= t('No accessible assemblies found.') ?></strong>
+            <p class="mb-0"><?= t('You do not have access to any organism assemblies, or the data directory is misconfigured.') ?></p>
         </div>
     <?php else: ?>
 
         <?php if (!empty($search_error)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert" id="primerSearchError">
-                <strong><i class="fa fa-exclamation-circle"></i> Error:</strong> <?= htmlspecialchars($search_error) ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <strong><i class="fa fa-exclamation-circle"></i> <?= t('Error:') ?></strong> <?= htmlspecialchars($search_error) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= t('Close') ?>"></button>
             </div>
         <?php endif; ?>
 
@@ -188,14 +188,14 @@ $db_section_label = function ($key) {
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">1</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Enter your primers</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Enter your primers') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <?php // One line for the whole step: it governs BOTH the textarea and the
                           // upload below it, so it sits above both rather than between them. ?>
                     <p class="mb-2">
-                        Paste your primers below, or upload a file.
-                        <span class="text-muted">Four formats are accepted and detected automatically.</span>
+                        <?= t('Paste your primers below, or upload a file.') . "\n" ?>
+                        <span class="text-muted"><?= t('Four formats are accepted and detected automatically.') ?></span>
                         <?= help_modal_trigger('primer-formats-help', 'Accepted formats', 'Accepted primer input formats') ?>
                     </p>
 
@@ -207,7 +207,7 @@ $db_section_label = function ($key) {
                         placeholder="&gt;TP53_F&#10;GCTTGAGCTGTTATCTGTGC&#10;&gt;TP53_R&#10;GCGGTGCTTCTGGGCTGAGT"
                     ><?= htmlspecialchars($primer_text) ?></textarea>
 
-                    <label for="primer_file" class="form-label mt-3">…or upload a file</label>
+                    <label for="primer_file" class="form-label mt-3"><?= t('…or upload a file') ?></label>
                     <input type="file" class="form-control" id="primer_file" name="primer_file"
                            accept=".fa,.fasta,.fas,.txt,.tsv,.csv">
                     <div class="form-text">
@@ -227,7 +227,7 @@ $db_section_label = function ($key) {
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">2</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Select the assembly to check against</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select the assembly to check against') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <?php
@@ -237,9 +237,9 @@ $db_section_label = function ($key) {
                     include __DIR__ . '/../../includes/source-list.php';
                     ?>
                     <div class="mt-3 p-3 bg-light border rounded">
-                        <strong>Currently selected:</strong>
+                        <strong><?= t('Currently selected:') ?></strong>
                         <div id="primerCurrentSelection" style="margin-top:8px; font-size:14px;">
-                            <span class="text-muted">None selected</span>
+                            <span class="text-muted"><?= t('None selected') ?></span>
                         </div>
                     </div>
                 </div>
@@ -249,7 +249,7 @@ $db_section_label = function ($key) {
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">3</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Search options</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Search options') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <div class="row g-3">
@@ -261,7 +261,7 @@ $db_section_label = function ($key) {
                                     // the .form-check-inline radios that follow -- without this they
                                     // flow up onto the label's line. ?>
                               <label class="form-label d-block mb-2">
-                                <strong>PCR input</strong>
+                                <strong><?= t('PCR input') ?></strong>
                                 <?= help_modal_trigger('pcr-input-help', '', 'What each PCR input searches') ?>
                               </label>
                               <?php // Inline: only two mutually exclusive choices with short
@@ -283,12 +283,12 @@ $db_section_label = function ($key) {
                                 <div class="form-check form-check-inline">
                                   <input class="form-check-input" type="radio" name="search_mode" id="mode_genome"
                                          value="genome" <?= $search_mode === 'genome' ? 'checked' : '' ?>>
-                                  <label class="form-check-label" for="mode_genome">Genomic DNA</label>
+                                  <label class="form-check-label" for="mode_genome"><?= t('Genomic DNA') ?></label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                   <input class="form-check-input" type="radio" name="search_mode" id="mode_transcript"
                                          value="transcript" <?= $search_mode === 'transcript' ? 'checked' : '' ?>>
-                                  <label class="form-check-label" for="mode_transcript">cDNA</label>
+                                  <label class="form-check-label" for="mode_transcript"><?= t('cDNA') ?></label>
                                 </div>
                               </div>
                               <div class="form-text text-warning-emphasis mt-1 d-none" id="pcrInputNote"></div>
@@ -300,7 +300,7 @@ $db_section_label = function ($key) {
                           <div class="card h-100 border">
                             <div class="card-body py-3">
                               <label for="max_mismatch" class="form-label mb-2">
-                                <strong>Mismatches listed</strong>
+                                <strong><?= t('Mismatches listed') ?></strong>
                                 <?= field_help(
                                     'The search keeps every site with up to ' . PrimerBlast::SEARCH_MAX_MISMATCH . ' mismatches per '
                                     . 'primer, because a single mismatch, or a few toward the 5′ end, can still '
@@ -320,7 +320,7 @@ $db_section_label = function ($key) {
                           <div class="card h-100 border">
                             <div class="card-body py-3">
                               <label for="max_product" class="form-label mb-2">
-                                <strong>Largest product to report</strong>
+                                <strong><?= t('Largest product to report') ?></strong>
                                 <?= field_help(
                                     'Products bigger than this are counted but not listed. Standard PCR '
                                     . 'is dependable for products under ' . PrimerPairs::amplifiableKb() . ' kb; longer ones often amplify poorly '
@@ -343,12 +343,12 @@ $db_section_label = function ($key) {
 
             <div class="mb-4 d-flex align-items-center gap-2">
                 <button type="submit" class="btn btn-primary">
-                    <i class="fa fa-search"></i> Check primers
+                    <i class="fa fa-search"></i> <?= t('Check primers') . "\n" ?>
                 </button>
                 <button type="button" class="btn btn-outline-secondary" id="resetPrimerForm">
-                    <i class="fa fa-undo"></i> Clear form
+                    <i class="fa fa-undo"></i> <?= t('Clear form') . "\n" ?>
                 </button>
-                <span class="text-muted small">Clears the primers, the assembly, and the options.</span>
+                <span class="text-muted small"><?= t('Clears the primers, the assembly, and the options.') ?></span>
             </div>
         </form>
 
@@ -383,7 +383,7 @@ $db_section_label = function ($key) {
             ?>
             <div class="card shadow-sm mb-4">
                 <div class="card-header text-white d-flex align-items-center tool-header">
-                    <span class="fw-semibold">Results</span>
+                    <span class="fw-semibold"><?= t('Results') ?></span>
                     <?= help_modal_trigger('results-help', '', 'How to read these results') ?>
                     <span class="ms-auto small">
                         <?= htmlspecialchars(implode(' + ', array_map($db_label, array_keys($searched_dbs)))) ?>
@@ -593,7 +593,7 @@ $db_section_label = function ($key) {
                         <?php if ($no_gdna): ?>
                             <div class="small mb-3">
                                 <i class="fa fa-check-circle text-success"></i>
-                                <span class="text-success-emphasis">No genomic product</span>
+                                <span class="text-success-emphasis"><?= t('No genomic product') ?></span>
                                 <span class="text-muted">— genomic DNA in the sample would not amplify at
                                 all.
                                 <?php if ($junction): ?>
@@ -625,11 +625,11 @@ $db_section_label = function ($key) {
                                     <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
                                 <?php elseif ($g_size > $t_size): ?>
                                     <i class="fa fa-info-circle text-success"></i>
-                                    <span class="text-success-emphasis">Likely spans an intron</span>
+                                    <span class="text-success-emphasis"><?= t('Likely spans an intron') ?></span>
                                     <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
                                 <?php else: ?>
                                     <i class="fa fa-info-circle text-warning"></i>
-                                    <span class="text-warning-emphasis">No intron between the primers</span>
+                                    <span class="text-warning-emphasis"><?= t('No intron between the primers') ?></span>
                                     <span class="text-muted">— cDNA and gDNA products are both <?= number_format($t_size) ?> bp</span>
                                 <?php endif; ?>
                             </div>
@@ -747,7 +747,7 @@ $db_section_label = function ($key) {
                                                           // "One gene … 2 products" reads as a contradiction. ?>
                                                     <?php if (!PrimerPairs::wouldPrime($prod)): ?>
                                                         <br><span class="small text-warning-emphasis"
-                                                                  title="A primer has 6 or more mismatches, or 2 or more in the last 5 bases of its 3′ end — it would not prime here.">would not prime</span>
+                                                                  title="<?= t('A primer has 6 or more mismatches, or 2 or more in the last 5 bases of its 3′ end — it would not prime here.') ?>"><?= t('would not prime') ?></span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td style="width:11rem;">
@@ -774,8 +774,8 @@ $db_section_label = function ($key) {
                                                               // it is invisible in the size and coordinates alone.
                                                               // Stated here so it does not depend on the reader
                                                               // opening the browser to notice. ?>
-                                                        <span class="badge bg-success" title="A primer sits across an exon-exon junction">
-                                                            <i class="fa fa-cut"></i> junction primer
+                                                        <span class="badge bg-success" title="<?= t('A primer sits across an exon-exon junction') ?>">
+                                                            <i class="fa fa-cut"></i> <?= t('junction primer') . "\n" ?>
                                                         </span>
                                                         <?= field_help(
                                                             'One of these primers sits across an exon-exon junction — half of it '
@@ -825,7 +825,7 @@ $db_section_label = function ($key) {
                                                         ?>
                                                         <a href="<?= htmlspecialchars($jb) ?>" target="_blank" rel="noopener"
                                                            class="btn btn-sm btn-outline-secondary">
-                                                            <i class="fa fa-dna"></i> Browser
+                                                            <i class="fa fa-dna"></i> <?= t('Browser') . "\n" ?>
                                                         </a>
                                                     <?php endif; ?>
                                                 </td>
@@ -863,7 +863,7 @@ $db_section_label = function ($key) {
                 <?php // Download built from the canonical rows collected above. ?>
                 <script type="application/json" id="primerExportData"><?= json_encode($export) ?></script>
                 <button type="button" class="btn btn-outline-primary btn-sm" id="downloadPrimerResults">
-                    <i class="fa fa-download"></i> Download results (TSV)
+                    <i class="fa fa-download"></i> <?= t('Download results (TSV)') . "\n" ?>
                 </button>
 
                 </div>

@@ -34,12 +34,12 @@
     </div>
 
     <div class="alert alert-info">
-        <strong>Organism:</strong> <em><?= htmlspecialchars($organism_name) ?></em><br>
-        <strong>Selected Features:</strong> <span class="badge bg-secondary"><?= count($uniquenames) ?></span>
+        <strong><?= t('Organism:') ?></strong> <em><?= htmlspecialchars($organism_name) ?></em><br>
+        <strong><?= t('Selected Features:') ?></strong> <span class="badge bg-secondary"><?= count($uniquenames) ?></span>
     </div>
 
     <div class="mb-4">
-        <h5>Selected Feature IDs</h5>
+        <h5><?= t('Selected Feature IDs') ?></h5>
         <div class="selected-ids">
             <?php foreach (array_slice($uniquenames, 0, 10) as $id): ?>
                 <span class="badge-custom"><?= htmlspecialchars($id) ?></span>
@@ -61,7 +61,7 @@
                     Every feature is included.
                 </p>
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <span class="small text-muted me-1"><i class="fa fa-download me-1"></i>Download as FASTA:</span>
+                    <span class="small text-muted me-1"><i class="fa fa-download me-1"></i><?= t('Download as FASTA:') ?></span>
                     <?php foreach ($download_only_types as $dl_type): ?>
                         <form method="POST" class="d-inline">
                             <input type="hidden" name="organism" value="<?= htmlspecialchars($organism_name) ?>">
@@ -87,7 +87,7 @@
             
             <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="fa fa-eye"></i> Display All Sequences
+                    <i class="fa fa-eye"></i> <?= t('Display All Sequences') . "\n" ?>
                 </button>
             </div>
         </form>

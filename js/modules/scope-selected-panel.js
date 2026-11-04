@@ -59,7 +59,7 @@ function initScopeSelectedPanel(opts) {
             // neither page can proceed, and an unscoped fan-out across every organism is the
             // query we least want run by accident.
             panelEl.innerHTML =
-                '<div class="text-muted small p-2 fst-italic">None yet — pick at least one organism</div>';
+                '<div class="text-muted small p-2 fst-italic">' + moopTh('None yet — pick at least one organism') + '</div>';
             return;
         }
 
@@ -74,7 +74,7 @@ function initScopeSelectedPanel(opts) {
                   }</span>
                   <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger flex-shrink-0 scope-panel-remove"
                           data-org="${escapeHtml(org)}" title="Remove"
-                          aria-label="Remove ${escapeHtml(d.label)} from selection"><i class="fas fa-times"></i></button>
+                          aria-label="${moopTh('Remove %s from selection', d.label)}"><i class="fas fa-times"></i></button>
                 </div>
                 ${d.rows.map((r) => `<div class="text-muted ps-2" style="font-size:0.75rem;">› ${escapeHtml(r)}</div>`).join('')}
               </div>`;

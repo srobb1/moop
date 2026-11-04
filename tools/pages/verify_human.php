@@ -27,14 +27,14 @@
             <div id="human-check" class="d-flex justify-content-center mb-3"
                  data-sitekey="<?= htmlspecialchars($site_key) ?>"></div>
             <?php if ($error): ?>
-              <button type="submit" class="btn btn-primary" id="human-check-retry" disabled>Try again</button>
+              <button type="submit" class="btn btn-primary" id="human-check-retry" disabled><?= t('Try again') ?></button>
             <?php endif; ?>
           </form>
 
           <div id="human-check-status" class="alert alert-warning py-2 small d-none" role="status"></div>
 
           <noscript>
-            <div class="alert alert-warning py-2 small">This check needs JavaScript. Please enable it, or log in.</div>
+            <div class="alert alert-warning py-2 small"><?= t('This check needs JavaScript. Please enable it, or log in.') ?></div>
           </noscript>
 
           <p class="small text-muted mb-0 mt-3">

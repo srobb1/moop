@@ -15,10 +15,10 @@
 <div class="container mt-5" style="max-width: 760px;">
     <div class="card shadow-sm">
         <div class="card-body p-4">
-            <h1 class="h4 mb-3"><i class="fa fa-code-branch me-2 text-muted"></i>Which gene set?</h1>
+            <h1 class="h4 mb-3"><i class="fa fa-code-branch me-2 text-muted"></i><?= t('Which gene set?') ?></h1>
             <p class="mb-3">
                 <code><?= htmlspecialchars($uniquename) ?></code> is in <?= count($choices) ?> gene sets of
-                <em><?= htmlspecialchars($organism_label) ?></em>. Pick the one you want:
+                <em><?= htmlspecialchars($organism_label) ?></em><?= t('. Pick the one you want:') . "\n" ?>
             </p>
             <div class="list-group mb-3">
                 <?php foreach ($choices as $choice): ?>

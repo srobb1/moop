@@ -18,8 +18,8 @@
             <div class="row align-items-center">
               <div class="col">
                 <div class="d-flex gap-2 align-items-center">
-                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="<?= t('Enter gene ID or annotation keywords (minimum 3 characters)...') ?>" required>
+                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="<?= t('Search') ?>" data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fa fa-search"></i>
                   </button>
                 </div>
@@ -106,7 +106,7 @@
 
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="feature-header assembly-header-custom shadow">
-        <h1><?= htmlspecialchars($assembly_info['genome_name']) ?> <span class="badge bg-white text-assembly ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Assembly</span></h1>
+        <h1><?= htmlspecialchars($assembly_info['genome_name']) ?> <span class="badge bg-white text-assembly ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;"><?= t('Assembly') ?></span></h1>
         <?php /* Declared, not shown — the heading and badges above already say where you
                  are; this exists so the page declares its PURPOSE for the router. */ ?>
         <?= page_purpose('Search genes within a single assembly, choosing which of its gene sets to search.', '', false, false) ?>
@@ -127,10 +127,10 @@
             <dt><?= gloss('accession', 'Accession') ?></dt>
             <dd><?= htmlspecialchars($assembly_info['genome_accession']) ?></dd>
             <?php if (($genome_kind ?? '') === 'transcripts'): ?>
-            <dt>Assembly type</dt>
+            <dt><?= t('Assembly type') ?></dt>
             <dd>Transcripts, one per gene &mdash; not a genome</dd>
             <?php endif; ?>
-            <dt>Organism</dt>
+            <dt><?= t('Organism') ?></dt>
             <?php /* Identical shape to the gene set page's Organism row: binomial in
                      .sci-name, common name after it in parentheses and NOT italic (a common
                      name is not a scientific name), then the external-link icon. The icon
@@ -138,21 +138,21 @@
                      the last page that named an organism without its common name. */ ?>
             <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em><?php if (!empty($organism_info['common_name'])): ?> (<?= htmlspecialchars($organism_info['common_name']) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
             <?php if (!empty($assembly_meta['source'])): ?>
-            <dt>Source</dt>
+            <dt><?= t('Source') ?></dt>
             <dd><?= htmlspecialchars($assembly_meta['source']) ?></dd>
             <?php endif; ?>
             <?php /* Where the data came from, written in the JSON on the compute box (copy2moop ships it;
                      an edit made on this server is overwritten by the next copy). Free text: URLs link. */ ?>
             <?php if (!empty($assembly_meta['provenance'])): ?>
-            <dt>Provenance</dt>
+            <dt><?= t('Provenance') ?></dt>
             <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$assembly_meta['provenance']) ?></dd>
             <?php endif; ?>
             <?php if (!empty($assembly_meta['date_added'])): ?>
-            <dt>Date added</dt>
+            <dt><?= t('Date added') ?></dt>
             <dd><?= htmlspecialchars($assembly_meta['date_added']) ?></dd>
             <?php endif; ?>
             <?php if (!empty($assembly_meta['note'])): ?>
-            <dt>Note</dt>
+            <dt><?= t('Note') ?></dt>
             <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$assembly_meta['note']) ?></dd>
             <?php endif; ?>
             <?php /* Gene sets live HERE, in the overview, not in a full-width card of their
@@ -185,7 +185,7 @@
                   <span class="gene-set-chip-counts">
                     <strong class="feature-color-gene"><?= number_format($gs['gene_count']) ?></strong> genes
                     &middot;
-                    <strong class="feature-color-mrna"><?= number_format($gs['mrna_count']) ?></strong> transcripts
+                    <strong class="feature-color-mrna"><?= number_format($gs['mrna_count']) ?></strong> <?= t('transcripts') . "\n" ?>
                   </span>
                 </a>
               <?php endforeach; ?>

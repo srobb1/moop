@@ -30,12 +30,12 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
   ?>
 
   <?php if (!$gene_sets): ?>
-    <div class="alert alert-light border">No gene set you can see has expression data yet.</div>
+    <div class="alert alert-light border"><?= t('No gene set you can see has expression data yet.') ?></div>
   <?php else: ?>
   <form method="get" action="/<?= htmlspecialchars($site) ?>/tools/expression.php">
     <div class="card mb-3 shadow-sm">
       <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
-        <span class="step-badge me-2">1</span><span class="fw-semibold" style="font-size:0.9rem;">Gene set</span>
+        <span class="step-badge me-2">1</span><span class="fw-semibold" style="font-size:0.9rem;"><?= t('Gene set') ?></span>
       </div>
       <div class="card-body">
         <?php if (count($gene_sets) === 1): $gs = $gene_sets[0]; ?>
@@ -64,7 +64,7 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
       <div class="col-lg-5">
         <div class="card shadow-sm h-100">
           <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
-            <span class="step-badge me-2">2</span><span class="fw-semibold" style="font-size:0.9rem;">Genes</span>
+            <span class="step-badge me-2">2</span><span class="fw-semibold" style="font-size:0.9rem;"><?= t('Genes') ?></span>
           </div>
           <div class="card-body">
             <textarea name="genes" class="form-control font-monospace" rows="9"
@@ -76,7 +76,7 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
       <div class="col-lg-7">
         <div class="card shadow-sm h-100">
           <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
-            <span class="step-badge me-2">3</span><span class="fw-semibold" style="font-size:0.9rem;">Experiments</span>
+            <span class="step-badge me-2">3</span><span class="fw-semibold" style="font-size:0.9rem;"><?= t('Experiments') ?></span>
           </div>
           <div class="card-body">
             <?php foreach ($experiments as $e):
@@ -99,16 +99,16 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
     <input type="hidden" name="show" value="1">
     <input type="hidden" name="mode" value="<?= htmlspecialchars($mode) ?>">
     <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
-    <button type="submit" class="btn btn-primary mb-4"><i class="fa fa-th me-1"></i> Show heatmap</button>
+    <button type="submit" class="btn btn-primary mb-4"><i class="fa fa-th me-1"></i> <?= t('Show heatmap') ?></button>
     <?php endif; ?>
   </form>
   <?php endif; ?>
 
   <?php if (($form_sent || $typed) && $chosen): ?>
     <?php if (!$typed): ?>
-      <div class="alert alert-warning">Paste at least one gene ID.</div>
+      <div class="alert alert-warning"><?= t('Paste at least one gene ID.') ?></div>
     <?php elseif (!$selected_slugs): ?>
-      <div class="alert alert-warning">Tick at least one experiment.</div>
+      <div class="alert alert-warning"><?= t('Tick at least one experiment.') ?></div>
     <?php endif; ?>
     <?php if ($too_many): ?>
       <div class="alert alert-warning">Only the first <?= MOOP_EXPRESSION_TOOL_MAX_GENES ?> IDs are shown.</div>
@@ -118,11 +118,11 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
         <?= htmlspecialchars(implode(', ', $unresolved)) ?></div>
     <?php endif; ?>
     <?php if ($ambiguous): ?>
-      <div class="alert alert-warning small mb-2"><strong>Matched more than one version, so all are shown:</strong>
+      <div class="alert alert-warning small mb-2"><strong><?= t('Matched more than one version, so all are shown:') ?></strong>
         <?php foreach ($ambiguous as $in => $hits): ?><?= htmlspecialchars("$in → " . implode(', ', $hits)) ?>; <?php endforeach; ?></div>
     <?php endif; ?>
     <?php if ($no_rows): ?>
-      <div class="alert alert-light border small mb-2"><strong>No expression rows for:</strong> <?= htmlspecialchars(implode(', ', $no_rows)) ?> — shown hatched.</div>
+      <div class="alert alert-light border small mb-2"><strong><?= t('No expression rows for:') ?></strong> <?= htmlspecialchars(implode(', ', $no_rows)) ?> — shown hatched.</div>
     <?php endif; ?>
     <?php if ($via_parent): ?>
       <?php /* One line, the list folded: with 200 transcripts pasted it would fill the page. */ ?>
@@ -143,7 +143,7 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
       <?php /* The (i) is grouped with the control it explains, and the next control is pushed away,
                so it cannot be read as help for "As pasted / Highest first". */ ?>
       <span class="d-inline-flex align-items-center gap-1 ms-auto me-2">
-      <div class="btn-group btn-group-sm" role="group" aria-label="Shading">
+      <div class="btn-group btn-group-sm" role="group" aria-label="<?= t('Shading') ?>">
         <a class="btn btn-light<?= $mode === 'level' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['mode' => 'level'])) ?>">Level</a>
         <a class="btn btn-light<?= $mode === 'pattern' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['mode' => 'pattern'])) ?>">Pattern</a>
       </div>
@@ -154,11 +154,11 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
           'Level or Pattern'
       ) ?>
       </span>
-      <div class="btn-group btn-group-sm" role="group" aria-label="Order">
+      <div class="btn-group btn-group-sm" role="group" aria-label="<?= t('Order') ?>">
         <a class="btn btn-light<?= $sort === 'input' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['sort' => 'input'])) ?>">As pasted</a>
         <a class="btn btn-light<?= $sort === 'level' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['sort' => 'level'])) ?>">Highest first</a>
       </div>
-      <a class="btn btn-sm btn-light" href="<?= htmlspecialchars($link(['download' => 'tsv'])) ?>"><i class="fa fa-download me-1"></i>TSV</a>
+      <a class="btn btn-sm btn-light" href="<?= htmlspecialchars($link(['download' => 'tsv'])) ?>"><i class="fa fa-download me-1"></i><?= t('TSV') ?></a>
     </div>
     <div class="card-body">
       <div class="expr-hm-legend small mb-2">
@@ -171,7 +171,7 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
             <span><i style="background:<?= moop_expression_shade_colour($f) ?>"></i><?= (int)($f * 100) ?>%</span>
           <?php endforeach; ?> <span class="text-muted">of each gene's highest condition (genes under <?= (int)MOOP_EXPRESSION_SPARK_FLOOR ?> <?= htmlspecialchars($units_label) ?> stay pale)</span>
         <?php endif; ?>
-        <span><i class="expr-hm-nodata"></i>no data</span>
+        <span><i class="expr-hm-nodata"></i><?= t('no data') ?></span>
       </div>
       <div class="expr-hm-scroll"><?= $heatmap ?></div>
     </div>

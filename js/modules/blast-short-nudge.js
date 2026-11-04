@@ -76,8 +76,9 @@
             suggest.classList.toggle('d-none', !show);
             if (!show) return;
             suggest.querySelector('.blast-short-what').textContent = lengths.length === 1
-                ? `Short sequence (${short[0]} letters):`
-                : `${short.length} of your ${lengths.length} sequences ${short.length === 1 ? 'is' : 'are'} under ${blastShortQueryNt} letters:`;
+                ? moopT('Short sequence (%d letters):', short[0])
+                : (short.length === 1 ? moopT('%d of your %d sequences is under %d letters:', short.length, lengths.length, blastShortQueryNt)
+                                      : moopT('%d of your %d sequences are under %d letters:', short.length, lengths.length, blastShortQueryNt));
         }
 
         query.addEventListener('input', update);
@@ -95,7 +96,7 @@
             if (!btn) return;
             if (!switchToShort(form)) return;
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Re-running…';
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>' + moopTh('Re-running…');
             // requestSubmit, not submit(): the form's own submit handler fills the organism
             // fields and shows the queue position, and submit() skips it.
             if (form.requestSubmit) form.requestSubmit(); else form.submit();
