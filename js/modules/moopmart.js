@@ -10,6 +10,11 @@
 (function () {
     'use strict';
 
+    // A whole sentence per count form, in the visitor's language (moopT, js/modules/utilities.js):
+    // n === 1 picks the singular. Plain text; nT() for text going into HTML.
+    const nT  = (n, one, many, ...args) => moopT(n === 1 ? one : many, ...args);
+    const nTh = (n, one, many, ...args) => moopTh(n === 1 ? one : many, ...args);
+
     // Preview fans out one request per organism so results fill in progressively.
     const PREVIEW_ORG_URL = moopSite + '/api/moopmart_preview_organism.php';
     const EXPORT_URL      = moopSite + '/api/moopmart_export.php';
@@ -42,10 +47,10 @@
         const allBoxes = document.querySelectorAll('.mm-gs-cb');
         const allOn = allBoxes.length > 0 && Array.from(allBoxes).every(cb => cb.checked);
         const toggleLabel = document.querySelector('.mm-toggle-all-label');
-        if (toggleLabel) toggleLabel.textContent = allOn ? 'Deselect all' : 'Select all';
+        if (toggleLabel) toggleLabel.textContent = allOn ? moopT('Deselect all') : moopT('Select all');
         const checked = Array.from(document.querySelectorAll('.mm-gs-cb:checked'));
         if (!checked.length) {
-            el.textContent = 'Select at least one organism above';
+            el.textContent = moopT('Select at least one organism above');
             if (namesEl) namesEl.textContent = '';
             return;
         }
@@ -127,7 +132,7 @@
                 if (summary) summary.textContent = '';
                 return;
             }
-            if (summary) summary.textContent = 'Counting annotations…';
+            if (summary) summary.textContent = moopT('Counting annotations…');
             const seq = ++annCountSeq;
             // Counts follow the GENE SETS ticked, not just the organisms: for an organism with
             // only some of its gene sets ticked, name those (same parameter as the search page).
@@ -171,9 +176,11 @@
                     if (summary) {
                         const n = data.total_sources || 0;
                         summary.textContent = n === 0
-                            ? 'No annotations for the selected organisms'
-                            : `${n.toLocaleString()} annotation source${n !== 1 ? 's' : ''} for the selected organism${orgs.length !== 1 ? 's' : ''}`
-                              + (known ? ' — the number beside each is how many genes carry it' : '');
+                            ? moopT('No annotations for the selected organisms')
+                            : (orgs.length === 1
+                                ? nT(n, '%s annotation source for the selected organism', '%s annotation sources for the selected organism', n.toLocaleString())
+                                : nT(n, '%s annotation source for the selected organisms', '%s annotation sources for the selected organisms', n.toLocaleString()))
+                              + (known ? ' ' + moopT('— the number beside each is how many genes carry it') : '');
                     }
                 })
                 .catch(() => { if (summary) summary.textContent = ''; /* keep prior badges */ });
@@ -381,7 +388,7 @@
             // innerHTML so "Step 1" renders with the small step badge; content is static.
             note.innerHTML = single
                 ? ''
-                : 'Select exactly one assembly in Step <span class="step-ref">1</span> to enable location search.';
+                : moopTm('Select exactly one assembly in Step %s to enable location search.', '<span class="step-ref">1</span>');
         }
         if (!single) { lastChrSource = null; return; }
 
@@ -539,7 +546,7 @@
             const isFasta = outputFormat() === 'fasta';
             tsvOpts?.classList.toggle('d-none', isFasta);
             fastaOpts?.classList.toggle('d-none', !isFasta);
-            if (dlLabel) dlLabel.textContent = isFasta ? 'Download FASTA' : 'Download TSV';
+            if (dlLabel) dlLabel.textContent = isFasta ? moopT('Download FASTA') : moopT('Download TSV');
             // Clear stale preview when switching formats
             document.getElementById('mm-results-section')?.classList.add('d-none');
             document.getElementById('mm-fasta-preview-section')?.classList.add('d-none');
@@ -575,8 +582,8 @@
         const checked = document.querySelectorAll('.mm-ann-col:checked').length;
         if (!total) { el.textContent = ''; return; }
         el.textContent = checked === total
-            ? `— all ${total} selected`
-            : `— ${checked} of ${total} selected`;
+            ? moopT('— all %d selected', total)
+            : moopT('— %1$d of %2$d selected', checked, total);
     }
 
     function syncAnnTypeCb(type) {
@@ -739,7 +746,7 @@
         const result  = document.getElementById('mm-count-result');
 
         if (!getSelectedSources().length) {
-            if (result) { result.textContent = 'Select at least one organism in Step 1 first.'; result.className = 'small text-warning'; }
+            if (result) { result.textContent = moopT('Select at least one organism in Step 1 first.'); result.className = 'small text-warning'; }
             return;
         }
 
@@ -759,13 +766,13 @@
                 .then(r => r.text())
                 .then(text => {
                     if (result) {
-                        result.textContent = text.trim() ? 'Showing first 10 sequences' : 'No sequences matched';
+                        result.textContent = text.trim() ? moopT('Showing first 10 sequences') : moopT('No sequences matched');
                         result.className = 'small ' + (text.trim() ? 'text-success' : 'text-muted');
                     }
                     renderFastaPreview(text);
                 })
                 .catch(() => {
-                    if (result) { result.textContent = 'Error fetching FASTA preview.'; result.className = 'small text-danger'; }
+                    if (result) { result.textContent = moopT('Error fetching FASTA preview.'); result.className = 'small text-danger'; }
                 })
                 .finally(() => {
                     spinner?.classList.add('d-none');
@@ -800,7 +807,7 @@
             // A partial run must never look complete: the totals below only cover the
             // organisms that answered, so say so rather than reporting an exact-looking
             // number that silently omits the ones that failed.
-            const failNote = failed ? ` · ${failed} organism${failed !== 1 ? 's' : ''} failed` : '';
+            const failNote = failed ? ' · ' + nT(failed, '%d organism failed', '%d organisms failed', failed) : '';
 
             // Ids that matched nothing in ANY organism that answered. Shown only when the run
             // is complete, because a miss in organism 1 of 40 means nothing on its own.
@@ -809,23 +816,23 @@
                 ? [...unresolvedTally.entries()].filter(([, n]) => n >= answered).map(([id]) => id)
                 : [];
             const missNote = missing.length
-                ? ` · ${missing.length} ID${missing.length !== 1 ? 's' : ''} not found: `
-                  + missing.slice(0, 5).join(', ') + (missing.length > 5 ? ` +${missing.length - 5} more` : '')
+                ? ' · ' + nT(missing.length, '%1$d ID not found: %2$s', '%1$d IDs not found: %2$s', missing.length,
+                             missing.slice(0, 5).join(', ') + (missing.length > 5 ? ' ' + moopT('+%d more', missing.length - 5) : ''))
                 : '';
             if (totalRows > 0) {
                 result.textContent =
-                    `${totalGenes.toLocaleString()} gene${totalGenes !== 1 ? 's' : ''} → `
-                    + `${totalRows.toLocaleString()} transcript row${totalRows !== 1 ? 's' : ''}`
-                    + (done ? '' : ` · ${completed}/${total} organism${total !== 1 ? 's' : ''}…`)
+                    nT(totalGenes, '%s gene', '%s genes', totalGenes.toLocaleString()) + ' → '
+                    + nT(totalRows, '%s transcript row', '%s transcript rows', totalRows.toLocaleString())
+                    + (done ? '' : ' · ' + nT(total, '%1$d/%2$d organism…', '%1$d/%2$d organisms…', completed, total))
                     + failNote + missNote;
                 result.className = 'small ' + ((failed || missNote) ? 'text-warning' : 'text-success');
             } else if (done && failed) {
-                result.textContent = `Preview failed for all ${failed} organism${failed !== 1 ? 's' : ''}.`;
+                result.textContent = nT(failed, 'Preview failed for all %d organism.', 'Preview failed for all %d organisms.', failed);
                 result.className = 'small text-danger';
             } else {
                 result.textContent = (done
-                    ? 'No features matched'
-                    : `Searching… ${completed}/${total} organism${total !== 1 ? 's' : ''}`) + missNote;
+                    ? moopT('No features matched')
+                    : nT(total, 'Searching… %1$d/%2$d organism', 'Searching… %1$d/%2$d organisms', completed, total)) + missNote;
                 result.className = 'small ' + (missNote ? 'text-warning' : 'text-muted');
             }
         };
@@ -907,7 +914,7 @@
                 if (seq !== fastaNotesSeq || !notes?.length) return;
                 const head = document.createElement('div');
                 head.className = 'fw-semibold mb-1';
-                head.textContent = 'Not in this FASTA:';
+                head.textContent = moopT('Not in this FASTA:');
                 const list = document.createElement('ul');
                 list.className = 'mb-0 ps-3';
                 for (const note of notes) {
@@ -981,13 +988,13 @@
         const caption = document.getElementById('mm-results-caption');
         if (!caption) return;
         if (previewIsLong) {
-            caption.textContent = `— ${total.toLocaleString()} feature row${total !== 1 ? 's' : ''}, `
-                + `one line per annotation (preview: ${shown.toLocaleString()} line${shown !== 1 ? 's' : ''})`;
+            caption.textContent = '— ' + nT(total, '%s feature row', '%s feature rows', total.toLocaleString()) + ', '
+                + nT(shown, 'one line per annotation (preview: %s line)', 'one line per annotation (preview: %s lines)', shown.toLocaleString());
             return;
         }
         caption.textContent = shown < total
-            ? `— showing first ${shown.toLocaleString()} of ${total.toLocaleString()}`
-            : `— ${total.toLocaleString()} result${total !== 1 ? 's' : ''}`;
+            ? moopT('— showing first %1$s of %2$s', shown.toLocaleString(), total.toLocaleString())
+            : '— ' + nT(total, '%s result', '%s results', total.toLocaleString());
     }
 
     // Tear down any existing preview table and hide the section — call at the start of
@@ -1022,7 +1029,7 @@
             order: [[0, 'asc']],
             autoWidth: false,
             dom: 'ltipr',
-            language: { info: 'Showing _START_ to _END_ of _TOTAL_ preview rows', infoEmpty: 'No results', lengthMenu: 'Show _MENU_ rows' },
+            language: { info: moopT('Showing _START_ to _END_ of _TOTAL_ preview rows'), infoEmpty: moopT('No results'), lengthMenu: moopT('Show _MENU_ rows') },
         });
     }
 
@@ -1099,7 +1106,7 @@
 
         btn.disabled = true;
         spinner?.classList.remove('d-none');
-        out.innerHTML = '<span class="text-muted">Finding the matching genes…</span>';
+        out.innerHTML = '<span class="text-muted">' + moopTh('Finding the matching genes…') + '</span>';
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
         Promise.all(send.map(cb =>
@@ -1114,19 +1121,20 @@
         )).then(results => {
             const lines = results.map(({ cb, data, error }, i) => {
                 const name = `<strong>${escHtml(gsLabel(cb))}</strong>`;
-                if (error)            return `<div class="text-danger">${name} — could not be read (${escHtml(error)}).</div>`;
-                if (!data.gene_count) return `<div class="text-muted">${name} — no matching genes.</div>`;
+                if (error)            return `<div class="text-danger">${moopTm('%1$s — could not be read (%2$s).', name, escHtml(error))}</div>`;
+                if (!data.gene_count) return `<div class="text-muted">${moopTm('%s — no matching genes.', name)}</div>`;
                 const capped = data.gene_count > data.genes.length
-                    ? ` <span class="text-warning">(the first ${data.genes.length} of ${data.gene_count.toLocaleString()} are sent — a heatmap shows at most ${expressionMaxGenes})</span>`
+                    ? ` <span class="text-warning">${moopTh('(the first %1$s of %2$s are sent — a heatmap shows at most %3$s)', data.genes.length, data.gene_count.toLocaleString(), expressionMaxGenes)}</span>`
                     : '';
                 return `<div class="d-flex align-items-center flex-wrap gap-2 mb-1">`
                     + `<button type="button" class="btn btn-sm btn-outline-primary py-0 mm-expr-open" data-i="${i}">`
-                    + `<i class="fa fa-external-link-alt me-1"></i>Open heatmap</button>`
-                    + `<span>${name} — ${data.gene_count.toLocaleString()} gene${data.gene_count !== 1 ? 's' : ''}${capped}</span></div>`;
+                    + `<i class="fa fa-external-link-alt me-1"></i>${moopTh('Open heatmap')}</button>`
+                    + `<span>${data.gene_count === 1 ? moopTm('%1$s — %2$s gene', name, '1') : moopTm('%1$s — %2$s genes', name, data.gene_count.toLocaleString())}${capped}</span></div>`;
             });
             if (without.length) {
-                lines.push(`<div class="text-muted mt-1">${without.length} other selected gene set${without.length !== 1 ? 's have' : ' has'} `
-                    + `no expression data; ${without.length !== 1 ? 'their' : 'its'} genes are not sent.</div>`);
+                lines.push(`<div class="text-muted mt-1">${nTh(without.length,
+                    '%d other selected gene set has no expression data; its genes are not sent.',
+                    '%d other selected gene sets have no expression data; their genes are not sent.', without.length)}</div>`);
             }
             out.innerHTML = lines.join('');
             out.querySelectorAll('.mm-expr-open').forEach(b => b.addEventListener('click', () => {
@@ -1231,7 +1239,7 @@
         document.getElementById('mm-dl-btn')?.addEventListener('click', function () {
             const result = document.getElementById('mm-count-result');
             if (!getSelectedSources().length) {
-                if (result) { result.textContent = 'Select at least one organism in Step 1 first.'; result.className = 'small text-warning'; }
+                if (result) { result.textContent = moopT('Select at least one organism in Step 1 first.'); result.className = 'small text-warning'; }
                 return;
             }
             const format    = outputFormat();
