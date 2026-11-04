@@ -3824,6 +3824,22 @@ $_trrp->setValue($_trcfg, $_trsaved);
 exec('rm -rf ' . escapeshellarg($_tr));
 
 // ----------------------------------------------------------------------------
+group('Cookies are per site: two MOOP sites on one host never share a session');
+require_once "$BASE/includes/session_init.php";
+ok(moop_cookie_name('MOOPSESS', 'moop') === 'MOOPSESS' && moop_cookie_name('MOOPSESS_S', 'moop') === 'MOOPSESS_S'
+   && moop_cookie_name('moop_lang', 'moop') === 'moop_lang',
+   'the site in folder "moop" (simrbase) keeps its cookie names exactly -- nobody is logged out');
+ok(moop_cookie_name('MOOPSESS', 'cuttingclass') === 'MOOPSESS_cuttingclass' && moop_cookie_name('moop_lang', 'cuttingclass') === 'moop_lang_cuttingclass',
+   'another site gets its own session and language cookies');
+ok(moop_cookie_name('MOOPSESS', 'cuttingclass') !== moop_cookie_name('MOOPSESS', 'moop')
+   && moop_cookie_name('MOOPSESS', 'planosphere') !== moop_cookie_name('MOOPSESS', 'cuttingclass'),
+   'no two sites share a session cookie');
+ok(moop_cookie_name('MOOPSESS', 'my-site.v2') === 'MOOPSESS_mysitev2' && moop_cookie_name('MOOPSESS', '---') === 'MOOPSESS',
+   'the folder name is reduced to letters and digits (a cookie name allows no dots or dashes there)');
+ok(moop_cookie_name('MOOPSESS') === moop_cookie_name('MOOPSESS', basename($BASE)),
+   'without an argument the name comes from this checkout\'s own folder, never from settings');
+
+// ----------------------------------------------------------------------------
 group('Taxonomy tree: an unnamed species on a genus id keeps its own leaf');
 require_once "$BASE/lib/taxonomy_functions.php";
 $_lin = fn(...$l) => ['lineage' => array_map(fn($x) => ['rank' => $x[0], 'name' => $x[1]], $l)];

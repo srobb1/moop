@@ -228,15 +228,18 @@ function moop_current_lang(): string {
     $codes = ConfigManager::getInstance()->languageCodes();
     if (count($codes) < 2 || PHP_SAPI === 'cli' || defined('MOOP_ADMIN_PAGE')) return $lang = 'en';
 
+    // Per site, like the session cookie: one site's language choice is not another's.
+    if (!function_exists('moop_cookie_name')) require_once __DIR__ . '/session_init.php';
+    $cookie = moop_cookie_name('moop_lang');
     $chosen = strtolower((string) ($_GET['lang'] ?? ''));
     if ($chosen !== '' && in_array($chosen, $codes, true)) {
         $lang = $chosen;
         if (!headers_sent()) {
-            setcookie('moop_lang', $lang, ['expires' => time() + 365 * 86400, 'path' => '/',
+            setcookie($cookie, $lang, ['expires' => time() + 365 * 86400, 'path' => '/',
                 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly' => true, 'samesite' => 'Lax']);
         }
-    } elseif (in_array((string) ($_COOKIE['moop_lang'] ?? ''), $codes, true)) {
-        $lang = (string) $_COOKIE['moop_lang'];
+    } elseif (in_array((string) ($_COOKIE[$cookie] ?? ''), $codes, true)) {
+        $lang = (string) $_COOKIE[$cookie];
     } else {
         $lang = moop_lang_negotiate((string) ($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? ''), $codes) ?: 'en';
     }

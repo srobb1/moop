@@ -789,6 +789,11 @@ long-standing entries here had already been fixed, and one contradicted §10 of 
   entry point that starts a session must call `moop_session_start()`, never `session_start()`
   directly: `session_set_cookie_params()` has no effect after the session begins, so a direct
   call silently issues a cookie with none of these protections.
+  **Cookie names are per site** (`moop_cookie_name()`, 2026-11-04): two MOOP sites on one host
+  share cookies (a cookie goes to every path on its host), so one name meant ONE session for both
+  -- a simrbase admin would have been an admin on cuttingclass. The name carries the site's
+  FOLDER (`MOOPSESS_cuttingclass`, `moop_lang_cuttingclass`); the folder `moop` keeps the bare
+  `MOOPSESS` / `moop_lang`. Any new cookie: name it through `moop_cookie_name()`.
 - Admin API CSRF (2026-07-21): all `admin/api/*.php` endpoints bootstrap via `admin_init.php`
   (auth **+** CSRF). `admin_access_check.php` alone checks the role but not the token, which
   left seven JBrowse endpoints authenticated but forgeable. Note `js/modules/csrf.js` wraps
