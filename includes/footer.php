@@ -58,7 +58,7 @@ if (!isset($admin_email) || empty($admin_email)) {
                 <?php if ($_footer_license_name !== '' || $_footer_copyright_holder !== ''): ?>
                 <p>
                     <?php if ($_footer_license_name !== ''): ?>
-                        <span class="footer-meta">License:
+                        <span class="footer-meta"><?= t('License:') . "\n" ?>
                             <?php if ($_footer_license_url !== ''): ?>
                                 <a href="<?= htmlspecialchars($_footer_license_url) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($_footer_license_name) ?></a>
                             <?php else: ?>

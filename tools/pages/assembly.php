@@ -8,12 +8,12 @@
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:#d97706;">
           <span class="fw-semibold" style="letter-spacing:0.04em; font-size:0.85rem;"><?= htmlspecialchars(assembly_label($assembly_info['genome_name'] ?? '', $assembly_info['genome_accession'] ?? '')) ?></span>
-          <span class="badge bg-white text-assembly" style="font-size:0.65em; opacity:0.9;">search limited to this <?= gloss('assembly') ?></span>
+          <span class="badge bg-white text-assembly" style="font-size:0.65em; opacity:0.9;"><?= t_markup('search limited to this %s', gloss('assembly')) ?></span>
         </div>
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> <?= t('Search Gene IDs and Annotations') ?> <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="assemblySearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -115,11 +115,9 @@
           <div class="alert alert-warning d-flex gap-2 mb-3" role="note">
             <i class="fa fa-exclamation-triangle mt-1" aria-hidden="true"></i>
             <div>
-              <strong>Not a genome: transcripts only.</strong>
-              This assembly is one assembled <?= gloss('transcript') ?> per gene, standing in for a genome.
-              There is no sequence between or around genes, so upstream and downstream flanks and
-              genomic regions are not available, and its statistics describe transcripts, not
-              chromosomes or scaffolds.
+              <strong><?= t('Not a genome: transcripts only.') ?></strong>
+              <?= t_markup('This assembly is one assembled %s per gene, standing in for a genome.', gloss('transcript')) . "\n" ?>
+              <?= t('There is no sequence between or around genes, so upstream and downstream flanks and genomic regions are not available, and its statistics describe transcripts, not chromosomes or scaffolds.') . "\n" ?>
             </div>
           </div>
           <?php endif; ?>
@@ -128,7 +126,7 @@
             <dd><?= htmlspecialchars($assembly_info['genome_accession']) ?></dd>
             <?php if (($genome_kind ?? '') === 'transcripts'): ?>
             <dt><?= t('Assembly type') ?></dt>
-            <dd>Transcripts, one per gene &mdash; not a genome</dd>
+            <dd><?= t('Transcripts, one per gene — not a genome') ?></dd>
             <?php endif; ?>
             <dt><?= t('Organism') ?></dt>
             <?php /* Identical shape to the gene set page's Organism row: binomial in

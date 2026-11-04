@@ -19,6 +19,13 @@
     a reader hovers a term to see what it means. Each term is defined here <strong>once</strong>;
     editing a definition updates every place that word appears, with no code change.
   </p>
+<?php if (count(ConfigManager::getInstance()->languageCodes()) > 1): /* only on a site with other languages */ ?>
+  <p class="small text-muted">
+    <i class="fa fa-language me-1"></i>Write terms and definitions here in English. They are translated with the rest
+    of the site's text on <a href="manage_translations.php">Manage Translations</a>. Changing a definition here means
+    it needs translating again: until then, visitors in other languages see the new English.
+  </p>
+<?php endif; ?>
 
   <?php if ($flash): ?>
     <div class="alert alert-<?= htmlspecialchars($flash['type']) ?> alert-dismissible fade show" role="alert">

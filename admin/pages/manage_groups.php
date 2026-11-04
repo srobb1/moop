@@ -631,6 +631,20 @@
               <?php endforeach; ?>
             </div>
             <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addParagraph(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Paragraph</button>
+<?php
+// The description in the site's other languages (Admin -> Manage Languages) -- only on a site
+// that has more than one, so a one-language site's editor is exactly as before. Plain text.
+$gl_langs = array_values(array_filter(ConfigManager::getInstance()->languages(), fn($l) => $l['code'] !== 'en'));
+if ($gl_langs): ?>
+            <h5 class="mt-2">Description in other languages</h5>
+            <p class="small text-muted mb-2">Plain text; a blank line starts a new paragraph. Shown instead of the paragraphs
+              above to visitors reading the site in that language. Left empty, they see the English.</p>
+<?php foreach ($gl_langs as $gl): $gl_id = 'gsum-' . md5($desc['group_name']) . '-' . htmlspecialchars($gl['code']); ?>
+            <label class="form-label" for="<?= $gl_id ?>">Description in <?= htmlspecialchars($gl['name']) ?> <span class="text-muted">(optional)</span></label>
+            <textarea class="form-control mb-3" id="<?= $gl_id ?>" name="summary_lang[<?= htmlspecialchars($gl['code']) ?>]" rows="5"
+                      lang="<?= htmlspecialchars($gl['code']) ?>"><?= htmlspecialchars((string) ($desc['summary_lang'][$gl['code']] ?? '')) ?></textarea>
+<?php endforeach; ?>
+<?php endif; ?>
             
             <div class="mt-3">
               <button type="submit" name="save_description" class="btn btn-success" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Save Changes</button>

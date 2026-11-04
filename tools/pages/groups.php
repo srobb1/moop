@@ -27,7 +27,7 @@
         <?php else: ?>
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> <?= t('Search Gene IDs and Annotations') ?> <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="groupSearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -94,7 +94,7 @@
             <div class="card">
               <img src="<?= htmlspecialchars($cached_image) ?>" class="card-img-top" alt="<?= htmlspecialchars($group_name) ?>">
               <div class="card-body">
-                <p class="card-text small text-muted">Image from <a href="<?= htmlspecialchars($group_info['wikipedia_url']) ?>" target="_blank">Wikipedia</a></p>
+                <p class="card-text small text-muted"><?= t_markup('Image from %s', '<a href="' . htmlspecialchars($group_info['wikipedia_url']) . '" target="_blank">Wikipedia</a>') ?></p>
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@
       <div class="<?= (!empty($group_info['images'][0]['file']) || !empty($group_info['wikipedia_image'])) ? 'col-md-8' : 'col-12' ?>">
         <div class="card shadow-sm">
           <div class="card-header text-white" style="background-color:#0f766e;">
-            <span class="text-uppercase fw-semibold section-eyebrow">About <?= htmlspecialchars($group_name) ?></span>
+            <span class="text-uppercase fw-semibold section-eyebrow"><?= t('About %s', $group_name) ?></span>
           </div>
           <div class="card-body">
             <?php if (!empty($group_info['html_p'])): ?>
@@ -126,7 +126,7 @@
       <div class="card shadow-sm">
         <div class="card-header text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color:#0f766e;">
           <div class="d-flex align-items-center gap-2">
-            <span class="text-uppercase fw-semibold section-eyebrow">Organisms in <?= htmlspecialchars($group_name) ?></span>
+            <span class="text-uppercase fw-semibold section-eyebrow"><?= t('Organisms in %s', $group_name) ?></span>
             <?php if (!empty($group_organisms)): ?>
               <span class="organism-count-badge"><span class="oc-n">0</span> <?= t('of') ?> <span class="oc-t">0</span></span>
             <?= field_help(
@@ -163,9 +163,11 @@
               <i class="fa fa-info-circle"></i>
               <?= t_markup('No organisms in %s yet.', '<strong>' . htmlspecialchars($group_name) . '</strong>') . "\n" ?>
               <div class="small text-muted mt-2">
-                Nothing in <?= htmlspecialchars($config->getString('siteTitle')) ?> is filed under
-                that name. Browse <a href="/<?= $site ?>/index.php">all organisms and groups</a><?php if (moop_tool_on('annotation_search')): ?>,
-                or <a href="/<?= $site ?>/tools/search.php">search across everything</a><?php endif; ?>.
+                <?= t('Nothing in %s is filed under that name.', $config->getString('siteTitle')) . "\n" ?>
+                <?php $__all = '<a href="/' . $site . '/index.php">' . t('all organisms and groups') . '</a>'; ?>
+                <?= moop_tool_on('annotation_search')
+                    ? t_markup('Browse %1$s, or %2$s.', $__all, '<a href="/' . $site . '/tools/search.php">' . t('search across everything') . '</a>')
+                    : t_markup('Browse %s.', $__all) ?>
               </div>
             </div>
           <?php else: ?>

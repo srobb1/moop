@@ -27,7 +27,7 @@
           <div class="mb-4">
             <h5 class="fw-semibold text-dark mb-2"><?= t('What is MOOP?') ?></h5>
             <p class="text-muted">
-              <strong>MOOP</strong> — to keep company, associate closely. MOOP is a comprehensive platform for exploring and discovering how diverse organisms associate closely together.
+              <?= t_markup('%s — to keep company, associate closely.', '<strong>MOOP</strong>') ?> <?= t('MOOP is a comprehensive platform for exploring and discovering how diverse organisms associate closely together.') . "\n" ?>
             </p>
           </div>
 
@@ -55,9 +55,8 @@
           <div>
             <h5 class="fw-semibold text-dark mb-2"><?= t('Who can see what') ?></h5>
             <p class="text-muted">
-              Not every organism is public, so the lists you see may be shorter than the full
-              contents of the site.
-              <a href="help.php?topic=access" class="text-decoration-none">Who can see what, and how to get access</a>.
+              <?= t('Not every organism is public, so the lists you see may be shorter than the full contents of the site.') . "\n" ?>
+              <a href="help.php?topic=access" class="text-decoration-none"><?= t('Who can see what, and how to get access') ?></a>.
             </p>
           </div>
 
@@ -71,7 +70,8 @@
           <div class="mt-5 pt-4 border-top">
             <h5 class="fw-semibold text-dark mb-2"><i class="fa fa-github"></i> <?= t('GitHub Repository') ?></h5>
             <p class="text-muted">
-              MOOP is open source. Visit the <a href="https://github.com/srobb1/moop" target="_blank" class="text-decoration-none">GitHub repository</a> to view the source code, contribute, or report issues.
+              <?= t('MOOP is open source.') ?> <?= t_markup('Visit the %s to view the source code, contribute, or report issues.',
+                  '<a href="https://github.com/srobb1/moop" target="_blank" class="text-decoration-none">' . t('GitHub repository') . '</a>') . "\n" ?>
             </p>
           </div>
         </div>

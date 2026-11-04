@@ -11,7 +11,7 @@
  */
 
 $g = glossary_terms();
-$def = fn(string $term): string => $g[strtolower($term)] ?? '';
+$def = fn(string $term): string => moop_gloss_t($g[strtolower($term)] ?? '');   // visitor's language
 
 // The viewer's gene sets, de-duplicated (a gene set appears once per group it is in).
 $mine = [];

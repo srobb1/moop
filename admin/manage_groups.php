@@ -109,6 +109,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $desc['images'] = $images;
                 $desc['html_p'] = $html_p;
                 $desc['wikipedia_topic'] = $wikipedia_topic;
+                // The description in other languages, sent only by an editor that shows the boxes
+                // (a site with more than one language). Only ACTIVE languages change: a retired
+                // language's text is kept, the retired-organism rule (Admin -> Manage Languages).
+                if (isset($_POST['summary_lang']) && is_array($_POST['summary_lang'])) {
+                    $active = ConfigManager::getInstance()->languageCodes();
+                    $keep   = (array) ($desc['summary_lang'] ?? []);
+                    foreach ($_POST['summary_lang'] as $code => $text) {
+                        if ($code === 'en' || !in_array($code, $active, true)) continue;
+                        $text = trim(str_replace("\r\n", "\n", (string) $text));
+                        if ($text === '') unset($keep[$code]);
+                        else $keep[$code] = $text;
+                    }
+                    if ($keep) $desc['summary_lang'] = $keep;
+                    else unset($desc['summary_lang']);
+                }
                 break;
             }
         }

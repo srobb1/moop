@@ -141,7 +141,7 @@ function gloss_first(string $term, ?string $display = null): string {
     static $seen = [];
     $key = strtolower($term);
     if (isset($seen[$key])) {
-        return htmlspecialchars($display ?? $term);
+        return htmlspecialchars(moop_gloss_t($display ?? $term));
     }
     $seen[$key] = true;
     return gloss($term, $display);
@@ -156,7 +156,7 @@ function gloss_first(string $term, ?string $display = null): string {
  * @param string|null $display Text to show, if different from the key (e.g. a plural).
  */
 function gloss(string $term, ?string $display = null): string {
-    $label = $display ?? $term;
+    $label = moop_gloss_t($display ?? $term);
     $def   = glossary_terms()[strtolower($term)] ?? '';
     if ($def === '') {
         return htmlspecialchars($label);
@@ -164,7 +164,19 @@ function gloss(string $term, ?string $display = null): string {
     return '<span class="gloss" tabindex="0" role="button"'
          . ' data-bs-toggle="popover" data-bs-trigger="hover focus"'
          . ' data-bs-placement="top"'
-         . ' data-bs-title="' . htmlspecialchars(glossary_spellings()[strtolower($term)] ?? $term, ENT_QUOTES) . '"'
-         . ' data-bs-content="' . htmlspecialchars($def, ENT_QUOTES) . '">'
+         . ' data-bs-title="' . htmlspecialchars(moop_gloss_t(glossary_spellings()[strtolower($term)] ?? $term), ENT_QUOTES) . '"'
+         . ' data-bs-content="' . htmlspecialchars(moop_gloss_t($def), ENT_QUOTES) . '">'
          . htmlspecialchars($label) . '</span>';
+}
+
+/**
+ * A glossary word, title or definition in the visitor's language (cuttingclass step 5b). They
+ * go through the interface catalog like any other text, so the translators' spreadsheet holds
+ * them (Admin -> Manage Translations) and there is no second place to translate. Keyed by the
+ * English: change a definition on Manage Glossary and the old translation stops showing (it no
+ * longer matches) until the new wording is translated -- an out-of-date definition is never
+ * shown as if it were current. The English, unchanged, on a one-language site.
+ */
+function moop_gloss_t(string $text): string {
+    return function_exists('t_plain') ? t_plain($text) : $text;
 }

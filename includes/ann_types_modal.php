@@ -20,10 +20,9 @@
       <div class="modal-body">
 
         <p class="text-muted mb-4">
-          Each annotation carries a <strong>type</strong> — the kind of description it is, and
-          usually where it came from. Select only the types relevant to your query — for example,
-          choose <em>Gene Ontology</em> to find genes by GO term, or <em>Domains</em> to search
-          protein domain annotations.
+          <?= t_markup('Each annotation carries a %s — the kind of description it is, and usually where it came from.', '<strong>' . t('type') . '</strong>') . "\n" ?>
+          <?= t_markup('Select only the types relevant to your query — for example, choose %1$s to find genes by GO term, or %2$s to search protein domain annotations.',
+                       '<em>Gene Ontology</em>', '<em>Domains</em>') . "\n" ?>
         </p>
 
         <div class="row g-3">

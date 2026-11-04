@@ -76,8 +76,8 @@ foreach ($as_groups as $name => $rows) {
         <?php if ($as_tx): ?>
         <p class="small mb-3">
           <i class="fa fa-info-circle me-1" aria-hidden="true"></i>
-          These figures describe <strong>transcripts</strong>, one per gene &mdash; this assembly is not a
-          genome. N50 here is a transcript length, so it cannot be compared with a genome's scaffold N50.
+          <?= t_markup('These figures describe %s, one per gene — this assembly is not a genome.', '<strong>' . t('transcripts') . '</strong>') . "\n" ?>
+          <?= t("N50 here is a transcript length, so it cannot be compared with a genome's scaffold N50.") . "\n" ?>
         </p>
         <?php endif; ?>
         <div class="as-tiles">
@@ -128,8 +128,7 @@ foreach ($as_groups as $name => $rows) {
 
         <?php if (empty($as['from_pipeline'])): ?>
         <p class="small text-muted mb-0 mt-2">
-          Computed from the genome index. <?= gloss('contig', 'Contig') ?>, gap and GC figures appear once the annotation
-          pipeline has produced this assembly's statistics.
+          <?= t('Computed from the genome index.') ?> <?= t_markup("%s, gap and GC figures appear once the annotation pipeline has produced this assembly's statistics.", gloss('contig', 'Contig')) . "\n" ?>
         </p>
         <?php endif; ?>
       </div>

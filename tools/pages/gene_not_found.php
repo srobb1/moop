@@ -19,24 +19,24 @@ $search_url = '/' . $site . '/tools/search.php' . ($organism_name !== '' ? '?org
             <h1 class="h4 mb-3"><i class="fa fa-search me-2 text-muted"></i><?= t('Gene not found') ?></h1>
             <p class="mb-2">
                 <?php if ($uniquename !== ''): ?>
-                    There is no gene <code><?= htmlspecialchars($uniquename) ?></code>
-                    <?= $organism_label !== '' ? 'in <em>' . htmlspecialchars($organism_label) . '</em>' : '' ?>
-                    that you can open.
+                    <?= ($organism_label !== ''
+                        ? t_markup('There is no gene %1$s in %2$s that you can open.', '<code>' . htmlspecialchars($uniquename) . '</code>',
+                                   '<em>' . htmlspecialchars($organism_label) . '</em>')
+                        : t_markup('There is no gene %s that you can open.', '<code>' . htmlspecialchars($uniquename) . '</code>')) . "\n" ?>
                 <?php else: ?>
-                    This link does not name a gene.
+                    <?= t('This link does not name a gene.') . "\n" ?>
                 <?php endif; ?>
             </p>
             <p class="text-muted small mb-3">
-                Check the spelling — IDs include their version, e.g. <code>.1</code> — or search by name,
-                description or annotation.
+                <?= t_markup('Check the spelling — IDs include their version, e.g. %s — or search by name, description or annotation.', '<code>.1</code>') . "\n" ?>
             </p>
             <?php include __DIR__ . '/not_found_access_hint.php'; ?>
 <?php if (moop_tool_on('annotation_search')): ?>
             <a class="btn btn-moop-teal text-white me-2" href="<?= htmlspecialchars($search_url) ?>">
-                <i class="fa fa-search me-1"></i>Search<?= $organism_label !== '' ? ' ' . htmlspecialchars($organism_label) : '' ?>
+                <i class="fa fa-search me-1"></i><?= $organism_label !== '' ? t('Search %s', $organism_label) : t('Search') ?>
             </a>
 <?php endif; ?>
-            <a class="btn btn-outline-secondary" href="/<?= htmlspecialchars($site) ?>/">Home</a>
+            <a class="btn btn-outline-secondary" href="/<?= htmlspecialchars($site) ?>/"><?= t('Home') ?></a>
         </div>
     </div>
 </div>

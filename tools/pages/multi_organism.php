@@ -13,7 +13,7 @@
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> <?= t('Search Gene IDs and Annotations') ?> <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="multiOrgSearchForm">
             <div class="row align-items-center">
               <div class="col">

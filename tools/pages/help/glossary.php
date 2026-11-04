@@ -49,7 +49,9 @@ uksort($entries, 'strcasecmp');
   </div>
 
   <div class="row">
-    <?php foreach ($entries as $term => $def): ?>
+    <?php foreach ($entries as $term => $def):
+        // In the visitor's language, like every popover (moop_gloss_t(), lib/glossary.php).
+        $term = moop_gloss_t($term); $def = moop_gloss_t($def); ?>
       <div class="col-md-6 mb-3 glossary-entry"
            data-search="<?= htmlspecialchars(strtolower($term . ' ' . $def), ENT_QUOTES) ?>">
         <div class="card h-100 shadow-sm help-topic-card">

@@ -10,7 +10,7 @@
           <span class="badge bg-white text-gene-set" style="font-size:0.65em; opacity:0.9;"><?= t('search limited to this gene set') ?></span>
         </div>
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> <?= t('Search Gene IDs and Annotations') ?> <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="geneSetSearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -270,9 +270,9 @@
     <div class="col-12">
       <p class="text-muted small mb-0">
         <i class="fas fa-lightbulb me-1" style="color:#0891b2;"></i>
-        <strong>Tip:</strong> To download some or all of the annotations for this gene set, visit
-        <a href="/<?= $site ?>/tools/moopmart.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>">MOOPmart</a>.
-        Build a gene list from this gene set and then select the annotations you want to bulk download.
+        <strong><?= t('Tip:') ?></strong> <?= t_markup('To download some or all of the annotations for this gene set, visit %s.',
+            '<a href="/' . $site . '/tools/moopmart.php?organism=' . urlencode($organism_name) . '&assembly=' . urlencode($genome_accession) . '&gene_set=' . urlencode($gene_set_name) . '">MOOPmart</a>') . "\n" ?>
+        <?= t('Build a gene list from this gene set and then select the annotations you want to bulk download.') . "\n" ?>
       </p>
     </div>
   </div>

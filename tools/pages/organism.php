@@ -35,7 +35,7 @@
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> <?= t('Search Gene IDs and Annotations') ?> <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="organismSearchForm">
             <div class="row align-items-center">
               <div class="col">
@@ -306,9 +306,9 @@
               <div class="mt-3 text-muted">
                 <small>
                   <?php if (filter_var($organism_info['text_src'], FILTER_VALIDATE_URL)): ?>
-                    Source: <a href="<?= htmlspecialchars($organism_info['text_src']) ?>" target="_blank">Link</a>
+                    <?= t_markup('Source: %s', '<a href="' . htmlspecialchars($organism_info['text_src']) . '" target="_blank">' . t('Link') . '</a>') . "\n" ?>
                   <?php else: ?>
-                    Source: <?= htmlspecialchars($organism_info['text_src']) ?>
+                    <?= t('Source: %s', $organism_info['text_src']) . "\n" ?>
                   <?php endif; ?>
                 </small>
               </div>

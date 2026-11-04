@@ -28,7 +28,7 @@ $busco_segments = [
     <div class="card shadow-sm">
       <div class="card-header d-flex align-items-center" style="background-color:<?= htmlspecialchars($busco_color) ?>;">
         <i class="fas fa-check-double me-2 text-white"></i>
-        <span class="text-uppercase fw-semibold text-white section-eyebrow"><?= htmlspecialchars(ucwords($busco_subject)) ?> Completeness (BUSCO)</span>
+        <span class="text-uppercase fw-semibold text-white section-eyebrow"><?= t('%s Completeness (BUSCO)', ucwords($busco_subject)) ?></span>
         <span class="ms-2"><?= field_help(
             'BUSCO looks for a set of genes that almost every species in a lineage carries, '
             . 'once each. Complete means the gene was found full-length -- as a single copy, '
@@ -83,10 +83,10 @@ $busco_segments = [
           <div class="busco-meta small text-muted">
             <code class="busco-notation" title="BUSCO's standard notation"><?= htmlspecialchars(moop_busco_notation($run)) ?></code>
             <?php if ($run['date'] !== ''): ?>
-            <span>Results dated <?= htmlspecialchars($run['date']) ?></span>
+            <span><?= t('Results dated %s', $run['date']) ?></span>
             <?php endif; ?>
             <?php if ($run['dataset_date'] !== ''): ?>
-            <span>&middot; lineage dataset <?= htmlspecialchars($run['dataset_date']) ?></span>
+            <span>&middot; <?= t('lineage dataset %s', $run['dataset_date']) ?></span>
             <?php endif; ?>
           </div>
         </div>
@@ -95,7 +95,7 @@ $busco_segments = [
         <?php if (!empty($busco['warnings'])): ?>
         <div class="alert alert-warning small mb-0 mt-3" role="note">
           <i class="fa fa-exclamation-triangle me-1"></i>
-          <strong>These results may not match the current <?= gloss('gene model', 'gene models') ?>.</strong>
+          <strong><?= t_markup('These results may not match the current %s.', gloss('gene model', 'gene models')) ?></strong>
           <ul class="mb-0 mt-1">
             <?php foreach ($busco['warnings'] as $w): ?>
             <li><?= htmlspecialchars($w) ?></li>
