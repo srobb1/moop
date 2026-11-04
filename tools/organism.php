@@ -175,6 +175,9 @@ if ($gene_set_rows) {
 $data = [
     'organism_name' => $organism_name,
     'organism_info' => $organism_info,
+    // The template's "Groups this organism belongs to" reads it. It was never passed, so the
+    // template saw an undefined variable (a warning per view) and the groups file was read twice.
+    'group_data' => $group_data,
     'config' => $config,
     'site' => $site,
     'organism_data' => $organism_data,
