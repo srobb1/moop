@@ -50,7 +50,7 @@ if (!isset($admin_email) || empty($admin_email)) {
                     <?php if (!empty($link['label']) && !empty($link['url'])): ?>
                     <p>
                         <a href="<?= htmlspecialchars($link['url']) ?>" target="_blank" rel="noopener">
-                            <?= htmlspecialchars($link['label']) ?>
+                            <?= htmlspecialchars(t_plain($link['label'])) ?>
                         </a>
                     </p>
                     <?php endif; ?>
