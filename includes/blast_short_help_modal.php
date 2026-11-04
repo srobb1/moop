@@ -61,11 +61,13 @@ echo help_modal(
                     'html'  => true,
                     // Re-measured 2026-11-02 (text review N8): the earlier figures did not
                     // say which E-value they were taken at, which is the whole point here.
-                    'text'  => 'A 20 nt sequence against the <em>Schmidtea mediterranea</em> CDS: '
-                             . '<code>BLASTn, E-value 1e-3 &rarr; 0 hits</code>, '
-                             . '<code>BLASTn, E-value 10 &rarr; found</code> (E = 0.03), '
-                             . '<code>Megablast, even at 1000 &rarr; 0 hits</code>, '
-                             . '<code>BLASTn-short &rarr; found</code>.',
+                    // One sentence, the four measured results as code arguments, each translatable.
+                    'text'  => t_markup('A 20 nt sequence against the %1$s CDS: %2$s, %3$s (E = 0.03), %4$s, %5$s.',
+                                   '<em>Schmidtea mediterranea</em>',
+                                   '<code>' . t('BLASTn, E-value 1e-3 → 0 hits') . '</code>',
+                                   '<code>' . t('BLASTn, E-value 10 → found') . '</code>',
+                                   '<code>' . t('Megablast, even at 1000 → 0 hits') . '</code>',
+                                   '<code>' . t('BLASTn-short → found') . '</code>'),
                 ],
             ],
         ],
@@ -134,17 +136,16 @@ echo help_modal(
                     'label' => 'Use Primer BLAST instead',
                     'color' => 'success',
                     'html'  => true,
-                    'text'  => 'Everything in the next section is done FOR you, and correctly: it '
-                             . 'pairs the hits, keeps only those facing each other on the same '
-                             . 'sequence, reports every product size, and searches the genome and '
-                             . 'the transcriptome together so you can see whether the pair spans '
-                             . 'an intron.<br>'
+                    'text'  => t('Everything in the next section is done FOR you, and correctly: it pairs the hits, keeps only those facing each other on the same sequence, reports every product size, and searches the genome and the transcriptome together so you can see whether the pair spans an intron.')
                              // btn-tool-orange, not btn-primary: this is the colour the tool
                              // already wears in the toolbox (config/tools_config.php), so the
                              // button here and the one they will look for match. blast.php uses
                              // btn-primary nowhere, so Bootstrap blue would be off-palette too.
-                             . '<a href="' . $primer_blast_url . '" class="btn btn-sm btn-tool-orange mt-2">'
-                             . '<i class="fa fa-vials me-1"></i>Open Primer BLAST</a>',
+                             // No button when Primer BLAST is switched off (moop_tool_on()).
+                             . (moop_tool_on('primer_blast')
+                                 ? '<br><a href="' . $primer_blast_url . '" class="btn btn-sm btn-tool-orange mt-2">'
+                                   . '<i class="fa fa-vials me-1"></i>' . t('Open Primer BLAST') . '</a>'
+                                 : ''),
                 ],
                 [
                     'label' => 'What it catches that reading by hand does not',
@@ -175,8 +176,7 @@ echo help_modal(
                     'label' => 'Join them with a run of Ns',
                     'color' => 'success',
                     'html'  => true,
-                    'text'  => 'One record, both primers, N in between. Keeps the pair together '
-                             . 'in a single result section:<br>'
+                    'text'  => t('One record, both primers, N in between.') . ' ' . t('Keeps the pair together in a single result section:') . '<br>'
                              . '<code>&gt;my-primer-pair<br>GCTTGAGCTGTTATCTGTGC<br>'
                              . 'NNNNNNNNNNNNNNNNNNN<br>GCGGTGCTTCTGGGCTGAGT</code>',
                 ],
@@ -197,16 +197,15 @@ echo help_modal(
                 [
                     'label' => 'A real pair looks like this',
                     'html'  => true,
-                    'text'  => 'Same subject, opposite strands, facing each other. The forward '
-                             . 'ASCENDS and the reverse DESCENDS:<br>'
+                    'text'  => t('Same subject, opposite strands, facing each other.') . ' ' . t('The forward ASCENDS and the reverse DESCENDS:') . '<br>'
                              . '<code>Sbjct &nbsp;201 &rarr; 220 &nbsp;(plus)<br>'
                              . 'Sbjct &nbsp;520 &rarr; 501 &nbsp;(minus)</code>',
                 ],
                 [
                     'label' => 'Product size',
                     'html'  => true,
-                    'text'  => 'Largest coordinate minus smallest, plus one, across both primers '
-                             . 'on that subject:<br><code>520 &minus; 201 + 1 = 320 bp</code>',
+                    'text'  => t('Largest coordinate minus smallest, plus one, across both primers on that subject:')
+                             . '<br><code>520 &minus; 201 + 1 = 320 bp</code>',
                 ],
                 [
                     'label' => 'What means no product',
@@ -222,9 +221,8 @@ echo help_modal(
                 [
                     'label' => 'Or use two separate records',
                     'html'  => true,
-                    'text'  => '<code>&gt;Fwd</code> and <code>&gt;Rev</code> as two entries also '
-                             . 'works &mdash; each gets its own collapsible Query section. Handier '
-                             . 'for checking one primer, harder for reading off a product size.',
+                    'text'  => t_markup('%1$s and %2$s as two entries also works — each gets its own collapsible Query section.', '<code>&gt;Fwd</code>', '<code>&gt;Rev</code>')
+                             . ' ' . t('Handier for checking one primer, harder for reading off a product size.'),
                 ],
             ],
         ],

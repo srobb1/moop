@@ -180,4 +180,140 @@ function genome_fasta_filename(): string {
     return sequence_filename('genome') ?? 'genome.fa';
 }
 
-?>
+/**
+ * Is this tool switched on for this site? For the links one tool's page offers into ANOTHER
+ * tool (the gene page's genome-browser link, BLAST's "Open Primer BLAST", ...): a button that
+ * leads to a switched-off tool is left out, so what a page offers matches what the site offers
+ * (Sofia, 2026-11-03). Shorthand for ConfigManager::isToolEnabled(); true unless switched off.
+ */
+// Defined HERE, not in lib/functions_tools.php: the navbar and the help modals that call it are
+// drawn on pages that never load that file (About, login). Defined there, it took both pages down
+// with a 500 for ~3 minutes on 2026-11-03. Every page loads this file before rendering anything.
+function moop_tool_on(string $tool_id): bool {
+    return ConfigManager::getInstance()->isToolEnabled($tool_id);
+}
+
+/**
+ * Pick a language from an Accept-Language header: the highest-weighted entry that is one of
+ * $codes, matching a region code exactly ('pt-br') or by its language ('es-MX' -> 'es'). Pure.
+ * Returns '' when nothing matches.
+ */
+function moop_lang_negotiate(string $header, array $codes): string {
+    $best = ''; $best_q = 0.0; $pos = 0;
+    foreach (explode(',', strtolower($header)) as $part) {
+        $pos++;
+        $bits = array_map('trim', explode(';', $part));
+        $tag  = $bits[0] ?? '';
+        $q    = 1.0;
+        foreach (array_slice($bits, 1) as $b) {
+            if (strpos($b, 'q=') === 0) $q = (float) substr($b, 2);
+        }
+        $match = in_array($tag, $codes, true) ? $tag : (in_array(strtok($tag, '-'), $codes, true) ? strtok($tag, '-') : '');
+        // Higher weight wins; on a tie the earlier entry wins (browsers list in preference order).
+        if ($match !== '' && $q > $best_q) { $best = $match; $best_q = $q; }
+    }
+    return $best;
+}
+
+/**
+ * The language this request is shown in -- cuttingclass step 5. On a site with ONE language
+ * (simrbase) it is always 'en' and nothing else happens: no cookie, no header, no switch.
+ * Otherwise, in order: ?lang= (the visitor's choice from the switch, remembered for a year in
+ * the moop_lang cookie), the cookie, the browser's Accept-Language, English. Admin pages are
+ * always English. Only codes the site actually uses are ever accepted.
+ */
+function moop_current_lang(): string {
+    static $lang = null;
+    if ($lang !== null) return $lang;
+    $codes = ConfigManager::getInstance()->languageCodes();
+    if (count($codes) < 2 || PHP_SAPI === 'cli' || defined('MOOP_ADMIN_PAGE')) return $lang = 'en';
+
+    // Per site, like the session cookie: one site's language choice is not another's.
+    if (!function_exists('moop_cookie_name')) require_once __DIR__ . '/session_init.php';
+    $cookie = moop_cookie_name('moop_lang');
+    $chosen = strtolower((string) ($_GET['lang'] ?? ''));
+    if ($chosen !== '' && in_array($chosen, $codes, true)) {
+        $lang = $chosen;
+        if (!headers_sent()) {
+            setcookie($cookie, $lang, ['expires' => time() + 365 * 86400, 'path' => '/',
+                'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'httponly' => true, 'samesite' => 'Lax']);
+        }
+    } elseif (in_array((string) ($_COOKIE[$cookie] ?? ''), $codes, true)) {
+        $lang = (string) $_COOKIE[$cookie];
+    } else {
+        $lang = moop_lang_negotiate((string) ($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? ''), $codes) ?: 'en';
+    }
+    if (!headers_sent()) {
+        // The same address answers in different languages: caches must key on what decided it.
+        header('Vary: Accept-Language, Cookie', false);
+        header('Content-Language: ' . $lang);
+    }
+    return $lang;
+}
+
+/** The current URL with ?lang=<code> set (for the language switch), other parameters kept. */
+function moop_lang_url(string $code): string {
+    $path  = strtok((string) ($_SERVER['REQUEST_URI'] ?? '/'), '?');
+    $query = $_GET;
+    $query['lang'] = $code;
+    return $path . '?' . http_build_query($query);
+}
+
+/**
+ * Interface text in the visitor's language -- cuttingclass step 5b (notes/CUTTINGCLASS_PLAN.md).
+ * Wrap the English as written: <?= t('Log In') ?>. The Spanish comes from the site's catalog
+ * (Admin -> Manage Translations, lib/i18n.php); text with no translation shows in English, so
+ * nothing ever renders blank. Placeholders are sprintf's: t('Showing %d of %d hits', $n, $total).
+ *
+ * On a one-language site (simrbase) and on admin pages this is the English, unchanged: no catalog
+ * is read, nothing is recorded.
+ *
+ *   t()        HTML-escaped (template and arguments) -- for page text and attributes.
+ *   t_plain()  not escaped -- for code that escapes for itself (the help helpers, JS via
+ *              json_encode, headers).
+ *   t_markup() the template escaped, the arguments inserted AS GIVEN -- for a sentence with
+ *              markup inside it ('across %s organisms' with a <strong>). The caller escapes them.
+ *
+ * Escaping uses ENT_COMPAT, not ENT_QUOTES: attributes here are double-quoted, and an
+ * apostrophe ("MOOP's") must come out as the same bytes it was before it was wrapped.
+ */
+function t(string $text, ...$args): string {
+    $e = fn($s) => htmlspecialchars((string) $s, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8');
+    return moop_i18n_format($e(moop_i18n_text($text)), array_map($e, $args), $text, $e);
+}
+
+function t_plain(string $text, ...$args): string {
+    return moop_i18n_format(moop_i18n_text($text), $args, $text, fn($s) => $s);
+}
+
+function t_markup(string $text, string ...$html_args): string {
+    $e = fn($s) => htmlspecialchars((string) $s, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8');
+    return moop_i18n_format($e(moop_i18n_text($text)), $html_args, $text, $e);
+}
+
+/** The text to show for $english: the catalog's, when this request is in another language. */
+function moop_i18n_text(string $english): string {
+    if (moop_current_lang() === 'en') {
+        // Still recorded on a multi-language site, so the spreadsheet can list what is shown.
+        if (count(ConfigManager::getInstance()->languageCodes()) > 1 && PHP_SAPI !== 'cli' && !defined('MOOP_ADMIN_PAGE')) {
+            require_once __DIR__ . '/../lib/i18n.php';
+            moop_i18n_seen($english);
+        }
+        return $english;
+    }
+    require_once __DIR__ . '/../lib/i18n.php';
+    return moop_i18n_lookup(moop_current_lang(), $english);
+}
+
+/**
+ * sprintf the arguments in. A translation whose placeholders do not fit (the import refuses those,
+ * but a hand-edited file could still have one) falls back to the English rather than a 500.
+ */
+function moop_i18n_format(string $template, array $args, string $english, callable $escape): string {
+    if (!$args) return $template;
+    try {
+        return vsprintf($template, $args);
+    } catch (\ValueError | \ArgumentCountError $e) {
+        return vsprintf($escape($english), $args);
+    }
+}

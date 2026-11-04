@@ -35,14 +35,11 @@
           // hit an error on submit. ?>
     <?php if (!$primer3_ok): ?>
         <div class="alert alert-warning">
-            <h5 class="alert-heading"><i class="fa fa-exclamation-triangle me-2"></i>Primer design is unavailable</h5>
+            <h5 class="alert-heading"><i class="fa fa-exclamation-triangle me-2"></i><?= t('Primer design is unavailable') ?></h5>
             <?php if ($primer3_problem === 'missing'): ?>
-                <p class="mb-0">The primer3 program is not installed on this server. An administrator
-                can install it — the Admin dashboard's environment check says how.</p>
+                <p class="mb-0"><?= t('The primer3 program is not installed on this server.') ?> <?= t("An administrator can install it — the Admin dashboard's environment check says how.") ?></p>
             <?php else: ?>
-                <p class="mb-0">primer3 is installed but its thermodynamic parameter tables are
-                missing, so every design would fail. An administrator can fix this by re-running
-                the installer.</p>
+                <p class="mb-0"><?= t('primer3 is installed but its thermodynamic parameter tables are missing, so every design would fail.') ?> <?= t('An administrator can fix this by re-running the installer.') ?></p>
             <?php endif; ?>
         </div>
     <?php endif; ?>
@@ -59,7 +56,7 @@
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="step-badge me-2">1</span>
-                <span class="fw-semibold" style="font-size:0.9rem;">Your sequence</span>
+                <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Your sequence') ?></span>
             </div>
             <div class="card-body py-3">
                 <?php
@@ -69,9 +66,9 @@
                     <?php // One transcript: nothing to ask, so do not ask. ?>
                     <div class="form-text mt-0 mb-2">
                         <i class="fa fa-check-circle text-success me-1"></i>
-                        Filled in with <strong><?= htmlspecialchars($with_seq[0]['fasta_id']) ?></strong>,
-                        the only transcript of <?= htmlspecialchars($context_feature) ?>
-                        (<?= number_format((int)$with_seq[0]['length']) ?> bp).
+                        <?= t_markup('Filled in with %1$s, the only transcript of %2$s (%3$s bp).',
+                                     '<strong>' . htmlspecialchars($with_seq[0]['fasta_id']) . '</strong>',
+                                     htmlspecialchars($context_feature), number_format((int)$with_seq[0]['length'])) . "\n" ?>
                     </div>
                 <?php elseif (count($with_seq) > 1): ?>
                     <?php // Several: picking one for them would be guessing, and the
@@ -82,8 +79,8 @@
                           // 2026-10-13). ?>
                     <div class="moop-callout-attention rounded px-3 py-2 mb-3">
                         <label for="isoform" class="form-label mb-1">
-                            <strong><?= htmlspecialchars($context_feature) ?></strong> has
-                            <?= count($with_seq) ?> transcripts — which one?
+                            <?= t_markup('%1$s has %2$s transcripts — which one?',
+                                         '<strong>' . htmlspecialchars($context_feature) . '</strong>', (string) count($with_seq)) . "\n" ?>
                             <?= field_help(
                                 'Isoforms of the same gene differ in which exons they contain, so a primer '
                                 . 'pair that works on one may not amplify another — and for RT-PCR the exon '
@@ -109,31 +106,30 @@
                             <?php // A plain submit, not JS: it re-renders the page with the
                                   // chosen transcript prefilled, and works with no scripting. ?>
                             <button type="submit" name="load_isoform" value="1" class="btn btn-outline-moop">
-                                <i class="fa fa-arrow-down me-1"></i>Load this sequence
+                                <i class="fa fa-arrow-down me-1"></i><?= t('Load this sequence') . "\n" ?>
                             </button>
                         </div>
                         <?php $missing = count($isoforms) - count($with_seq); ?>
                         <?php if ($missing > 0): ?>
                             <div class="form-text">
-                                <?= $missing ?> further transcript<?= $missing === 1 ? ' has' : 's have' ?>
-                                no sequence in this gene set, so <?= $missing === 1 ? 'it is' : 'they are' ?>
-                                listed but cannot be chosen.
+                                <?= $missing === 1
+                                    ? t('%d further transcript has no sequence in this gene set, so it is listed but cannot be chosen.', 1)
+                                    : t('%d further transcripts have no sequence in this gene set, so they are listed but cannot be chosen.', $missing) ?>
                             </div>
                         <?php endif; ?>
                     </div>
                 <?php elseif ($context_feature): ?>
                     <div class="form-text mt-0 mb-2">
-                        <i class="fa fa-link me-1"></i>Arrived from
-                        <strong><?= htmlspecialchars($context_feature) ?></strong>, but no transcript
-                        sequence was found for it in this gene set. Paste a sequence above.
+                        <i class="fa fa-link me-1"></i><?= t_markup('Arrived from %s, but no transcript sequence was found for it in this gene set.',
+                                                                   '<strong>' . htmlspecialchars($context_feature) . '</strong>') ?> <?= t('Paste a sequence above.') . "\n" ?>
                     </div>
                 <?php endif; ?>
                 <p class="small text-muted mb-2">
-                    Paste DNA, with or without a FASTA header. Primers are designed from this
-                    sequence, so include the region you want to amplify plus some room either side.
-                    <strong>Several sequences at once</strong> works too — give each one a
-                    <code>&gt;name</code> line, up to <?= (int)Primer3Design::MAX_RECORDS ?>. Without
-                    headers the whole box counts as one sequence, however many lines it spans.
+                    <?= t_markup('Paste DNA, with or without a %s header.', gloss('fasta', 'FASTA')) ?>
+                    <?= t('Primers are designed from this sequence, so include the region you want to amplify plus some room either side.') . "\n" ?>
+                    <?= t_markup('%1$s works too — give each one a %2$s line, up to %3$s.', '<strong>' . t('Several sequences at once') . '</strong>',
+                                 '<code>&gt;name</code>', (string) (int) Primer3Design::MAX_RECORDS) ?>
+                    <?= t('Without headers the whole box counts as one sequence, however many lines it spans.') . "\n" ?>
                 </p>
                 <textarea name="sequence" class="form-control" rows="8" style="font-family:monospace; font-size:0.85rem;"
                           placeholder="&gt;my_gene&#10;ATGGCTAGCTAGCTAGCATCGATCGATCG..."><?= htmlspecialchars($sequence_text) ?></textarea>
@@ -143,7 +139,7 @@
                       // notation nobody knows exists gets used by nobody. ?>
                 <div class="border rounded mt-2 px-3 py-2" style="background-color:#f6fbfd;">
                     <div class="small fw-semibold mb-1">
-                        You can mark the sequence itself
+                        <?= t('You can mark the sequence itself') . "\n" ?>
                         <?= field_help(
                             'These marks are instructions, not bases — they are removed before the '
                             . 'sequence reaches Primer3, and they never count towards a position. '
@@ -156,25 +152,22 @@
                     <div class="small text-muted">
                         <div>
                             <code class="fw-bold">|</code>
-                            — a primer <strong>must cross</strong> this point.
-                            <code>ACGT<span class="fw-bold">|</span>ACGT</code> puts it after base 4.
-                            Add as many as you like; Primer3 uses whichever one it can place a primer
-                            across and ignores the rest.
+                            <?= t_markup('— a primer %s this point.', '<strong>' . t('must cross') . '</strong>') . "\n" ?>
+                            <?= t_markup('%s puts it after base 4.', '<code>ACGT<span class="fw-bold">|</span>ACGT</code>') . "\n" ?>
+                            <?= t('Add as many as you like; Primer3 uses whichever one it can place a primer across and ignores the rest.') . "\n" ?>
                         </div>
                         <div>
                             <code class="fw-bold">[ ]</code>
-                            — every product <strong>must contain</strong> what is inside.
-                            <code>ACGT<span class="fw-bold">[</span>ACGT<span class="fw-bold">]</span>ACGT</code>
-                            keeps bases 5–8 in the amplicon. Same as the
-                            <em>Region to include</em> box below — use one or the other.
+                            <?= t_markup('— every product %s what is inside.', '<strong>' . t('must contain') . '</strong>') . "\n" ?>
+                            <?= t_markup('%1$s keeps bases 5–8 in the %2$s.', '<code>ACGT<span class="fw-bold">[</span>ACGT<span class="fw-bold">]</span>ACGT</code>', gloss_first('amplicon')) . "\n" ?>
+                            <?= t_markup('Same as the %s box below — use one or the other.', '<em>' . t('Region to include') . '</em>') . "\n" ?>
                         </div>
                         <?php if ($context_feature): ?>
                             <div class="mt-1">
                                 <i class="fa fa-check-circle text-success me-1"></i>
-                                You arrived from a gene page, so for <strong>RT-PCR</strong> the exon
-                                junctions are looked up for you — you do not need to mark them.
-                                Do not edit the sequence, or the junction positions no longer
-                                match it and cannot be used.
+                                <?= t_markup('You arrived from a gene page, so for %1$s the %2$s junctions are looked up for you — you do not need to mark them.',
+                                             '<strong>RT-PCR</strong>', gloss('exon')) . "\n" ?>
+                                <?= t('Do not edit the sequence, or the junction positions no longer match it and cannot be used.') . "\n" ?>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -186,7 +179,7 @@
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="step-badge me-2">2</span>
-                <span class="fw-semibold" style="font-size:0.9rem;">What are you making?</span>
+                <span class="fw-semibold" style="font-size:0.9rem;"><?= t('What are you making?') ?></span>
             </div>
             <div class="card-body py-3">
                 <?php
@@ -216,6 +209,33 @@
                     ];
                 };
                 ?>
+                <?php
+                // Glossary popovers on the preset cards (2026-11-03). Only the phrases listed are
+                // glossed, as whole words (so "PCR" never matches inside "qPCR" or "RT-PCR"), first
+                // use per page. gloss_terms_in() was not used: it goes word by word, so it misses the
+                // two-word terms and glossed "exon" alone inside "exon junction". Everything else is
+                // escaped, and a term the glossary lacks stays plain text, so a site without these
+                // entries renders exactly as before.
+                // ONE pass over the plain text, all phrases in one pattern (longest first): replacing
+                // phrase by phrase re-scanned the popover HTML the previous phrase had inserted, and
+                // put an "exon junction" span inside RT-PCR's own definition attribute.
+                $gloss_phrases = function (string $text, array $phrases): string {
+                    // In the visitor's language first (the presets are defined in tools/primer_maker.php);
+                    // a term is glossed where the translated text still contains it.
+                    $text = t_plain($text);
+                    usort($phrases, fn($a, $b) => strlen($b) - strlen($a));
+                    $re = '/(?<![\w-])(' . implode('|', array_map(fn($p) => preg_quote($p, '/'), $phrases)) . ')(?![\w-])/i';
+                    $out = ''; $pos = 0;
+                    preg_match_all($re, $text, $m, PREG_OFFSET_CAPTURE);
+                    foreach ($m[1] as [$hit, $at]) {
+                        $out .= htmlspecialchars(substr($text, $pos, $at - $pos)) . gloss_first($hit, $hit);
+                        $pos = $at + strlen($hit);
+                    }
+                    return $out . htmlspecialchars(substr($text, $pos));
+                };
+                $label_terms = ['RT-PCR', 'qPCR', 'PCR', 'exon junction'];
+                $blurb_terms = ['RNAi', 'T7 promoter', 'exon junction'];
+                ?>
                 <div class="row g-3">
                     <?php foreach ($presets as $key => $preset): ?>
                         <div class="col-md-6">
@@ -224,8 +244,13 @@
                                        id="type_<?= htmlspecialchars($key) ?>" value="<?= htmlspecialchars($key) ?>"
                                        <?= $primer_type === $key ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="type_<?= htmlspecialchars($key) ?>">
-                                    <strong><?= htmlspecialchars($preset['label']) ?></strong>
-                                    <div class="small text-muted mt-1"><?= htmlspecialchars($preset['blurb']) ?></div>
+                                    <strong><?= $gloss_phrases($preset['label'], $label_terms) ?></strong>
+                                    <div class="small text-muted mt-1"><?= $gloss_phrases($preset['blurb'], $blurb_terms) ?></div>
+                                    <?php if (!empty($context_is_transcripts) && in_array($key, $junction_types ?? [], true)): ?>
+                                    <div class="small text-danger mt-1">
+                                        <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"></i><?= t('Not available here: this assembly is transcripts only, so its exon junctions are not known.') . "\n" ?>
+                                    </div>
+                                    <?php endif; ?>
                                     <div class="mt-2 d-flex flex-wrap gap-1">
                                         <?php foreach ($preset_summary($key) as $bit): ?>
                                             <span class="badge rounded-pill fw-normal"
@@ -239,7 +264,7 @@
                                                   // numbers, and it is the whole point of the type. ?>
                                             <span class="badge rounded-pill fw-normal"
                                                   style="background-color:#fdeee0; color:#8a4b12; font-size:0.72rem;">
-                                                + must span an exon junction
+                                                <?= t('+ must span an exon junction') . "\n" ?>
                                             </span>
                                         <?php endif; ?>
                                     </div>
@@ -250,8 +275,7 @@
                 </div>
                 <p class="small text-muted mb-0 mt-3">
                     <i class="fa fa-info-circle me-1"></i>
-                    These are starting values. Anything you set yourself in
-                    <strong>More options</strong> below overrides them.
+                    <?= t('These are starting values.') ?> <?= t_markup('Anything you set yourself in %s below overrides them.', '<strong>' . t('More options') . '</strong>') . "\n" ?>
                 </p>
             </div>
         </div>
@@ -304,7 +328,7 @@
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="step-badge me-2">3</span>
-                <span class="fw-semibold" style="font-size:0.9rem;">Options</span>
+                <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Options') ?></span>
             </div>
             <div class="card-body py-3">
                 <div class="row g-3">
@@ -312,7 +336,7 @@
                         <div class="card h-100 border">
                             <div class="card-body py-3">
                                 <label for="size_range" class="form-label mb-2">
-                                    <strong>Product size</strong>
+                                    <strong><?= t('Product size') ?></strong>
                                     <?= field_help(
                                         'How big the amplicon should be. Give a range as low-high in base '
                                         . 'pairs (150-400), or a single number for the biggest product you '
@@ -325,14 +349,14 @@
                                 </label>
                                 <input type="text" class="form-control" id="size_range" name="size_range"
                                        data-option="size_range"
-                                       placeholder="<?= htmlspecialchars((string)($option_defaults['size_range'] ?? '100-400')) ?>"
+                                       placeholder="<?= htmlspecialchars((string)($option_defaults['size_range'] ?? '200-900')) ?>"
                                        value="<?= htmlspecialchars($size_range) ?>">
                                 <div class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" value="1"
                                            id="longest_product" name="longest_product"
                                            <?= $longest ? 'checked' : '' ?>>
                                     <label class="form-check-label small" for="longest_product">
-                                        As long as possible
+                                        <?= t('As long as possible') . "\n" ?>
                                         <?= field_help(
                                             'Asks for the longest product your sequence allows, rather than a '
                                             . 'fixed range. Primer3 is given several ranges — three quarters '
@@ -352,7 +376,7 @@
                         <div class="card h-100 border">
                             <div class="card-body py-3">
                                 <label for="target" class="form-label mb-2">
-                                    <strong>Region to include <span class="fw-normal text-muted">(optional)</span></strong>
+                                    <strong><?= t('Region to include') ?> <span class="fw-normal text-muted"><?= t('(optional)') ?></span></strong>
                                     <?= field_help(
                                         'Forces every product to span a particular stretch of your sequence — '
                                         . 'a variant you want to sequence across, an exon, a domain. Give it as '
@@ -372,7 +396,7 @@
                         <div class="card h-100 border">
                             <div class="card-body py-3">
                                 <label for="num_return" class="form-label mb-2">
-                                    <strong>How many pairs to return</strong>
+                                    <strong><?= t('How many pairs to return') ?></strong>
                                     <?= field_help(
                                         'Primer3 ranks pairs by its own penalty score, best first. Asking for '
                                         . 'more gives you alternatives to choose between; it does not make the '
@@ -403,8 +427,8 @@
                         data-bs-toggle="collapse" data-bs-target="#advancedOptions"
                         aria-expanded="<?= $advanced_open ? 'true' : 'false' ?>" aria-controls="advancedOptions">
                     <span>
-                        <i class="fa fa-sliders-h me-2"></i><strong>More options</strong>
-                        <span class="fw-normal">(Primer Length, Tm, and more)</span>
+                        <i class="fa fa-sliders-h me-2"></i><strong><?= t('More options') ?></strong>
+                        <span class="fw-normal"><?= t('(Primer Length, Tm, and more)') ?></span>
                         <?php // A collapsed panel with values in it must not look like an
                               // empty one, or the next design silently uses settings the
                               // user cannot see. ?>
@@ -420,9 +444,7 @@
                 <div class="collapse <?= $advanced_open ? 'show' : '' ?>" id="advancedOptions">
                     <div class="border rounded p-3 mt-1">
                         <p class="small text-muted mb-3">
-                            Every box below is optional. Left blank, it uses the value shown in grey,
-                            which comes from the primer type you chose in step 2 — so changing the
-                            primer type changes these too.
+                            <?= t('Every box below is optional.') ?> <?= t('Left blank, it uses the value shown in gray, which comes from the primer type you chose in step 2 — so changing the primer type changes these too.') . "\n" ?>
                         </p>
 
                         <div class="table-responsive">
@@ -430,15 +452,15 @@
                                 <thead>
                                     <tr class="small text-muted">
                                         <th style="width:14rem;"></th>
-                                        <th class="fw-normal">Minimum</th>
-                                        <th class="fw-normal">Optimum</th>
-                                        <th class="fw-normal">Maximum</th>
+                                        <th class="fw-normal"><?= t('Minimum') ?></th>
+                                        <th class="fw-normal"><?= t('Optimum') ?></th>
+                                        <th class="fw-normal"><?= t('Maximum') ?></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
                                         <th scope="row" class="fw-semibold small">
-                                            Primer length
+                                            <?= t('Primer length') . "\n" ?>
                                             <?= field_help(
                                                 'How long each primer is, in bases. 18–25 is the usual window: '
                                                 . 'shorter primers are cheaper but bind less specifically, longer '
@@ -453,7 +475,7 @@
                                     </tr>
                                     <tr>
                                         <th scope="row" class="fw-semibold small">
-                                            Melting temperature (°C)
+                                            <?= t('Melting temperature (°C)') . "\n" ?>
                                             <?= field_help(
                                                 'The temperature at which half the primer is bound to its target. '
                                                 . 'It sets the annealing temperature of your reaction, so the two '
@@ -469,7 +491,7 @@
                                     </tr>
                                     <tr>
                                         <th scope="row" class="fw-semibold small">
-                                            GC content (%)
+                                            <?= t('GC content (%)') . "\n" ?>
                                             <?= field_help(
                                                 'The percentage of the primer that is G or C. Too low and it binds '
                                                 . 'weakly; too high and it can fold on itself or stick where it '
@@ -489,7 +511,7 @@
                         <div class="row g-3 mt-2">
                             <div class="col-sm-6 col-lg-3">
                                 <label for="gc_clamp" class="form-label small fw-semibold mb-1">
-                                    GC clamp
+                                    <?= t('GC clamp') . "\n" ?>
                                     <?= field_help(
                                         'How many of the last bases at the 3′ end must be G or C. A G or C there '
                                         . 'binds tightly and helps the polymerase get started. 1 is common. Be '
@@ -502,7 +524,7 @@
                             </div>
                             <div class="col-sm-6 col-lg-3">
                                 <label for="tm_diff" class="form-label small fw-semibold mb-1">
-                                    Max Tm difference
+                                    <?= t('Max Tm difference') . "\n" ?>
                                     <?= field_help(
                                         'How far apart the two primers of a pair may be in melting temperature. '
                                         . 'If they differ a lot, no single annealing temperature suits both. '
@@ -515,7 +537,7 @@
                             </div>
                             <div class="col-sm-6 col-lg-3">
                                 <label for="max_poly_x" class="form-label small fw-semibold mb-1">
-                                    Longest single-base run
+                                    <?= t('Longest single-base run') . "\n" ?>
                                     <?= field_help(
                                         'Rejects primers containing a run of the same base, like AAAAAA. Long '
                                         . 'runs slip during replication and bind in more places than they should. '
@@ -528,7 +550,7 @@
                             </div>
                             <div class="col-sm-6 col-lg-3">
                                 <label for="junction_5p" class="form-label small fw-semibold mb-1">
-                                    Bases past a <code>|</code>, 5′ side
+                                    <?= t_markup('Bases past a %s, 5′ side', '<code>|</code>') ?>
                                     <?= field_help(
                                         'How far a primer must reach beyond a junction mark on its 5′ side. '
                                         . 'This is what makes a junction primer actually FAIL on genomic DNA: '
@@ -541,7 +563,7 @@
                             </div>
                             <div class="col-sm-6 col-lg-3">
                                 <label for="junction_3p" class="form-label small fw-semibold mb-1">
-                                    Bases past a <code>|</code>, 3′ side
+                                    <?= t_markup('Bases past a %s, 3′ side', '<code>|</code>') ?>
                                     <?= field_help(
                                         'The same, on the 3′ side — the end the polymerase extends from, so it '
                                         . 'matters most. Primer3\'s default is only 4, which is a thin margin: '
@@ -554,7 +576,7 @@
                             </div>
                             <div class="col-sm-6 col-lg-3">
                                 <label for="salt_corr" class="form-label small fw-semibold mb-1">
-                                    Salt correction
+                                    <?= t('Salt correction') . "\n" ?>
                                     <?= field_help(
                                         'Which published formula is used to account for salt when calculating Tm. '
                                         . 'It changes the Tm NUMBERS, not the chemistry — so it matters mainly if '
@@ -624,7 +646,7 @@
         <div class="card mb-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="step-badge me-2">4</span>
-                <span class="fw-semibold" style="font-size:0.9rem;">5′ primer tag <span class="fw-normal">(optional)</span></span>
+                <span class="fw-semibold" style="font-size:0.9rem;"><?= t('5′ primer tag') ?> <span class="fw-normal"><?= t('(optional)') ?></span></span>
             </div>
             <div class="card-body py-3">
                 <?php // What a tag IS lives behind the (i), not in a paragraph above the
@@ -637,13 +659,12 @@
                     <?php // One line under the heading, because "tag" alone could be read as a
                           // barcode or a protein tag. Saying what it IS costs a sentence and
                           // removes the ambiguity before the user reaches the control. ?>
-                    Extra sequence added to the 5′ end of each primer: a cloning adapter, a
-                    promoter, or your own.
+                    <?= t('Extra sequence added to the 5′ end of each primer: a cloning adapter, a promoter, or your own.') . "\n" ?>
                 </p>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="tail" class="form-label mb-1">
-                            <strong>Add a tag</strong>
+                            <strong><?= t('Add a tag') ?></strong>
                             <?= field_help(
                                 'Extra sequence added to the 5′ end of each primer when you order it — a '
                                 . 'cloning adapter, a promoter, a barcode. It is not part of the primer and '
@@ -653,14 +674,14 @@
                             ) ?>
                         </label>
                         <select name="tail" id="tail" class="form-select">
-                            <option value="none" <?= $tail_selected ? '' : 'selected' ?>>No tag — plain primers</option>
+                            <option value="none" <?= $tail_selected ? '' : 'selected' ?>><?= t('No tag — plain primers') ?></option>
                             <?php foreach ($tail_catalogue as $entry): ?>
                                 <option value="<?= htmlspecialchars($entry['id']) ?>"
                                         <?= $tail_choice === $entry['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($entry['label']) ?>
                                 </option>
                             <?php endforeach; ?>
-                            <option value="custom" <?= $tail_choice === 'custom' ? 'selected' : '' ?>>Custom tag…</option>
+                            <option value="custom" <?= $tail_choice === 'custom' ? 'selected' : '' ?>><?= t('Custom tag…') ?></option>
                         </select>
 
                         <?php // Each adapter's own sequences and purpose, so choosing one
@@ -670,16 +691,16 @@
                             <div class="form-text tail-detail" data-tail="<?= htmlspecialchars($entry['id']) ?>"
                                  <?= $tail_choice === $entry['id'] ? '' : 'hidden' ?>>
                                 <?php if ($entry['note'] !== ''): ?>
-                                    <div class="mb-1"><?= htmlspecialchars($entry['note']) ?></div>
+                                    <div class="mb-1"><?= htmlspecialchars(t_plain($entry['note'])) ?></div>
                                 <?php endif; ?>
                                 <div style="font-family:monospace;">
                                     <?php if ($entry['forward'] !== ''): ?>
                                         F <?= htmlspecialchars($entry['forward']) ?>
-                                        <span class="text-muted">(<?= strlen($entry['forward']) ?> nt)</span><br>
+                                        <span class="text-muted"><?= t('(%d nt)', strlen($entry['forward'])) ?></span><br>
                                     <?php endif; ?>
                                     <?php if ($entry['reverse'] !== ''): ?>
                                         R <?= htmlspecialchars($entry['reverse']) ?>
-                                        <span class="text-muted">(<?= strlen($entry['reverse']) ?> nt)</span>
+                                        <span class="text-muted"><?= t('(%d nt)', strlen($entry['reverse'])) ?></span>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -688,7 +709,7 @@
 
                     <div class="col-md-6" id="customTailFields" <?= $tail_choice === 'custom' ? '' : 'hidden' ?>>
                         <label for="tail_custom_forward" class="form-label mb-1">
-                            <strong>Your own tag</strong>
+                            <strong><?= t('Your own tag') ?></strong>
                             <?= field_help(
                                 'The two tags are independent sequences — they are NOT reverse complements '
                                 . 'of one another, so enter each as you want it synthesised, written 5′ to 3′. '
@@ -698,7 +719,7 @@
                             ) ?>
                         </label>
                         <div class="input-group input-group-sm mb-2">
-                            <span class="input-group-text" style="width:6.5rem;">Forward</span>
+                            <span class="input-group-text" style="width:6.5rem;"><?= t('Forward') ?></span>
                             <input type="text" class="form-control" id="tail_custom_forward"
                                    name="tail_custom_forward" style="font-family:monospace;"
                                    maxlength="<?= (int)PrimerTails::MAX_LENGTH ?>"
@@ -706,7 +727,7 @@
                                    value="<?= htmlspecialchars($tail_custom_f) ?>">
                         </div>
                         <div class="input-group input-group-sm">
-                            <span class="input-group-text" style="width:6.5rem;">Reverse</span>
+                            <span class="input-group-text" style="width:6.5rem;"><?= t('Reverse') ?></span>
                             <input type="text" class="form-control" id="tail_custom_reverse"
                                    name="tail_custom_reverse" style="font-family:monospace;"
                                    maxlength="<?= (int)PrimerTails::MAX_LENGTH ?>"
@@ -719,7 +740,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary" <?= $primer3_ok ? '' : 'disabled' ?>>
-            <i class="fa fa-magic me-1"></i>Design primers
+            <i class="fa fa-magic me-1"></i><?= t('Design primers') . "\n" ?>
         </button>
         <a href="<?= htmlspecialchars('/' . $site . '/tools/primer_maker.php') ?>" class="btn btn-outline-secondary ms-2">Clear</a>
     </form>
@@ -874,10 +895,12 @@
         <div class="card mt-4 shadow-sm">
             <div class="card-header text-white tool-header">
                 <span class="text-uppercase fw-semibold section-eyebrow">
-                    <i class="fa fa-table me-2"></i><?= $total_pairs ?> primer pair<?= $total_pairs === 1 ? '' : 's' ?>
-                    <?= $multi
-                        ? 'from ' . count($entries) . ' sequences'
-                        : 'for ' . htmlspecialchars($entries[0]['id']) ?>
+                    <i class="fa fa-table me-2"></i><?php
+                    // Whole phrases: pair / pairs x from N sequences / for one sequence.
+                    if ($multi) echo $total_pairs === 1 ? t('%1$d primer pair from %2$d sequences', 1, count($entries))
+                                                        : t('%1$d primer pairs from %2$d sequences', $total_pairs, count($entries));
+                    else        echo $total_pairs === 1 ? t('%1$d primer pair for %2$s', 1, $entries[0]['id'])
+                                                        : t('%1$d primer pairs for %2$s', $total_pairs, $entries[0]['id']); ?>
                 </span>
                 <?= help_modal_trigger('pm-results-help', '', 'How to read these results') ?>
             </div>
@@ -888,7 +911,7 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary js-download-tsv"
                             data-rows="primerMakerExport"
                             data-filename="<?= htmlspecialchars($download_name) ?>">
-                        <i class="fa fa-download me-1"></i>Download table (TSV)
+                        <i class="fa fa-download me-1"></i><?= t('Download table (TSV)') . "\n" ?>
                     </button>
                     <?php // "See FASTA" (user, 2026-08-18), not "Oligos to order": what the
                           // block holds is a FASTA, and SEE is the honest verb — this expands
@@ -897,7 +920,7 @@
                           // looking like the download button beside it. ?>
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
                             data-bs-target="#oligoFasta" aria-expanded="false" aria-controls="oligoFasta">
-                        <i class="fa fa-align-left me-1"></i>See FASTA
+                        <i class="fa fa-align-left me-1"></i><?= t('See FASTA') . "\n" ?>
                         <span class="badge bg-secondary ms-1"><?= count($oligos) ?></span>
                         <i class="fa fa-chevron-down collapse-chevron ms-1"></i>
                     </button>
@@ -910,17 +933,30 @@
                           // a tail was actually applied. ?>
                     <div class="alert alert-info py-2 small">
                         <i class="fa fa-info-circle me-1"></i>
-                        <strong>Tm, GC and length below are for the primer without its
-                        <?= htmlspecialchars($tail['label']) ?> tag</strong> — that is the part that
-                        anneals, so it is what sets your annealing temperature. Both sequences are in
-                        the table, and <strong>Check</strong> sends the untagged primer to Primer
-                        BLAST, since the tag is not in the genome.
+                        <strong><?= t('Tm, GC and length below are for the primer without its %s tag', $tail['label']) ?></strong> <?= t('— that is the part that anneals, so it is what sets your annealing temperature.') . "\n" ?>
+                        <?= t_markup('Both sequences are in the table, and %s sends the untagged primer to Primer BLAST, since the tag is not in the genome.', '<strong>' . t('Check') . '</strong>') . "\n" ?>
                     </div>
                 <?php endif; ?>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle">
                         <thead class="table-light">
-                            <tr><?php foreach ($columns as $label): ?><th><?= htmlspecialchars($label) ?></th><?php endforeach; ?><th></th></tr>
+                            <?php
+                            // The first Tm, GC and product columns explain themselves on hover;
+                            // the reverse-primer copies of the same words are left plain.
+                            $header_gloss = [
+                                'left_tm'      => ['tm', 'Tm'],
+                                'left_gc'      => ['gc content', 'GC%'],
+                                'product_size' => ['amplicon', 'Product'],
+                            ];
+                            ?>
+                            <tr><?php foreach ($columns as $key => $label): ?><th><?php
+                                if (isset($header_gloss[$key])) {
+                                    [$term, $word] = $header_gloss[$key];
+                                    echo str_replace(htmlspecialchars($word), gloss_first($term, $word), htmlspecialchars($label));
+                                } else {
+                                    echo htmlspecialchars($label);
+                                }
+                            ?></th><?php endforeach; ?><th></th></tr>
                         </thead>
                         <tbody>
                         <?php foreach ($entries as $entry): ?>
@@ -986,6 +1022,7 @@
                                     $chain_fasta = '>' . $row['left_name'] . "\n" . ($pair['left_sequence'] ?? '')
                                                  . "\n>" . $row['right_name'] . "\n" . ($pair['right_sequence'] ?? '');
                                     ?>
+<?php if (moop_tool_on('primer_blast')): /* switched off: no Check button */ ?>
                                     <form method="post" action="<?= htmlspecialchars('/' . $site . '/tools/primer_blast.php') ?>"
                                           target="_blank" class="d-inline">
                                         <?= csrf_input_field() ?>
@@ -1004,10 +1041,11 @@
                                                   // is what makes the intron comparison meaningful. ?>
                                             <input type="hidden" name="search_mode" value="transcript">
                                         <?php endif; ?>
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Check this pair for specificity and product size">
-                                            <i class="fa fa-vials me-1"></i>Check
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="<?= t('Check this pair for specificity and product size') ?>">
+                                            <i class="fa fa-vials me-1"></i><?= t('Check') . "\n" ?>
                                         </button>
                                     </form>
+<?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; /* pairs */ ?>
@@ -1022,12 +1060,10 @@
                 <div class="collapse mt-3" id="oligoFasta">
                     <p class="small text-muted mb-2">
                         <?php if ($has_tail): ?>
-                            Both forms of every primer: the bare primer, and the full oligo with its
-                            <?= htmlspecialchars($tail['label']) ?> tag. <strong>Order the tagged
-                            ones</strong> — the bare sequences are here so you can check specificity
-                            and paste them into Primer BLAST.
+                            <?= t('Both forms of every primer: the bare primer, and the full oligo with its %s tag.', $tail['label']) ?>
+                            <?= t_markup('%s — the bare sequences are here so you can check specificity and paste them into Primer BLAST.', '<strong>' . t('Order the tagged ones') . '</strong>') . "\n" ?>
                         <?php else: ?>
-                            Every primer in the table, ready to paste into an order form or a FASTA file.
+                            <?= t('Every primer in the table, ready to paste into an order form or a FASTA file.') . "\n" ?>
                         <?php endif; ?>
                     </p>
                     <?php // Click to copy, the same way every other sequence block on the
@@ -1103,19 +1139,18 @@
                     <?php // FA5 name. fa-triangle-exclamation is the FA6 spelling and this
                           // build does not know it — an unknown icon renders as NOTHING. ?>
                     <i class="fa fa-exclamation-triangle me-2"></i>
-                    <?= count($failures) ?> sequence<?= count($failures) === 1 ? '' : 's' ?> with no primers
+                    <?= count($failures) === 1 ? t('%d sequence with no primers', 1) : t('%d sequences with no primers', count($failures)) ?>
                 </span>
             </div>
             <div class="card-body">
                 <p class="small text-muted mb-2">
-                    <?= count($failures) === 1 ? 'This sequence' : 'These sequences' ?>
-                    produced no primer pairs. <?= count($entries) ? 'They are in the download above too, '
-                        . 'one row each, so the file says what happened to every sequence you pasted.' : '' ?>
+                    <?= count($failures) === 1 ? t('This sequence produced no primer pairs.') : t('These sequences produced no primer pairs.') ?>
+                    <?= count($entries) ? t('They are in the download above too, one row each, so the file says what happened to every sequence you pasted.') : '' ?>
                 </p>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                         <thead class="table-light">
-                            <tr><th style="width:16rem;">Sequence</th><th>Why not</th></tr>
+                            <tr><th style="width:16rem;"><?= t('Sequence') ?></th><th><?= t('Why not') ?></th></tr>
                         </thead>
                         <tbody>
                         <?php foreach ($failures as $failure): ?>
@@ -1132,7 +1167,7 @@
                     <button type="button" class="btn btn-sm btn-outline-secondary mt-3 js-download-tsv"
                             data-rows="primerMakerExport"
                             data-filename="primers_<?= date('Ymd') ?>.tsv">
-                        <i class="fa fa-download me-1"></i>Download this list (TSV)
+                        <i class="fa fa-download me-1"></i><?= t('Download this list (TSV)') . "\n" ?>
                     </button>
                 <?php endif; ?>
             </div>
@@ -1160,25 +1195,24 @@
                          . 'several sequences at once if you name each one. Or arrive from a gene '
                          . 'page with the transcript already chosen.'],
                 ['num' => '2', 'label' => 'What are you making?',
-                 'text' => 'Standard PCR, qPCR, RT-PCR or sequencing. Each option shows the '
-                         . 'product size, Tm, GC and length it will hand Primer3, so you can see '
-                         . 'what you are choosing before you choose it. RT-PCR also needs to know '
-                         . 'where the exon junctions are: arriving from a gene page looks them up, '
-                         . 'and for a sequence you pasted you mark them yourself with '
-                         . '<code>|</code> in step 1.',
+                 // Markup cards are translated HERE, one sentence each, the markup as an argument
+                 // (the helper does not translate an 'html' card -- see blast_programs_help_modal.php).
+                 'text' => t('Standard PCR, qPCR, RT-PCR or sequencing.')
+                         . ' ' . t('Each option shows the product size, Tm, GC and length it will hand Primer3, so you can see what you are choosing before you choose it.')
+                         . ' ' . t_markup('RT-PCR also needs to know where the exon junctions are: arriving from a gene page looks them up, and for a sequence you pasted you mark them yourself with %s in step 1.', '<code>|</code>'),
                  'html' => true],
                 ['num' => '3', 'label' => 'Options',
-                 'text' => 'Every field here is blank by default and falls back to the type you '
-                         . 'picked above. Fill in only what you actually want to override.'],
+                 'text' => 'The gray numbers in the boxes are the values for the type you picked '
+                         . 'above, shown as hints, not filled in: leave a box empty and that value '
+                         . 'is used. Type in a box only to override it. How many pairs to return '
+                         . 'starts at 5, and after a run the form keeps whatever you entered.'],
                 ['num' => '4', 'label' => '5′ primer tag',
-                 'text' => 'Optional. Adds a tag such as T4P to the sequence you would order. It '
-                         . 'is applied <strong>after</strong> design, so it never changes a Tm, GC '
-                         . 'or length figure &mdash; those describe the part that anneals.',
+                 'text' => t('Optional.') . ' ' . t('Adds a tag such as T4P to the sequence you would order.')
+                         . ' ' . t_markup('It is applied %s design, so it never changes a Tm, GC or length figure — those describe the part that anneals.', '<strong>' . t('after') . '</strong>'),
                  'html' => true],
                 ['label' => 'What you get',
-                 'text' => 'A table of pairs you can paste into a spreadsheet or download as TSV. '
-                         . '<strong>Check</strong> on any row sends that pair to Primer BLAST &mdash; '
-                         . 'without its tag, since the tag is not in the genome.',
+                 'text' => t('A table of pairs you can paste into a spreadsheet or download as TSV.')
+                         . ' ' . t_markup('%s on any row sends that pair to Primer BLAST — without its tag, since the tag is not in the genome.', '<strong>' . t('Check') . '</strong>'),
                  'html' => true],
             ],
         ]],
@@ -1212,11 +1246,10 @@
                      . 'primer to the end of the reverse primer.'],
             ['label' => 'Check',
              'html' => true,
-             'text' => 'Opens <strong>Primer BLAST</strong> in a new tab with this pair filled in. It searches '
-                     . 'the genome or transcripts for everywhere the pair could bind, and grades it: '
-                     . '<strong>specific</strong> (one product), <strong>non-specific</strong> (more than one) or '
-                     . '<strong>no product</strong>. Use it before ordering — Primer Maker only sees the sequence '
-                     . 'you pasted, not the rest of the genome.'],
+             'text' => t_markup('Opens %s in a new tab with this pair filled in.', '<strong>Primer BLAST</strong>')
+                     . ' ' . t_markup('It searches the genome or transcripts for everywhere the pair could bind, and grades it: %1$s (one product), %2$s (more than one) or %3$s.',
+                                      '<strong>' . t('specific') . '</strong>', '<strong>' . t('non-specific') . '</strong>', '<strong>' . t('no product') . '</strong>')
+                     . ' ' . t('Use it before ordering — Primer Maker only sees the sequence you pasted, not the rest of the genome.')],
         ];
         if ($has_tail) {
             $results_cards[] = ['label' => 'Forward / Reverse to order',

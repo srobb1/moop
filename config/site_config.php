@@ -154,7 +154,15 @@ return [
     // snapshotted for version history. This should be a git repo separate
     // from the app repo. Set to empty string to disable auto-snapshots.
     // The housekeeping system copies changed files here on admin login.
-    'site_data_path' => "$root_path/moop-site-data",
+    //
+    // It holds users.json and secrets.php, so it must be OUTSIDE the document root. Derived like
+    // users_file: <parent of root_path>/<site>-site-data -- /var/www/moop-site-data for the
+    // first deployment (its existing override, so a no-op there). Until 2026-11-03 the default
+    // was "$root_path/moop-site-data": INSIDE the document root, not covered by the no-exec
+    // guard, and shared by every site on the host -- on a new machine the first admin login
+    // would have made the bcrypt hashes downloadable (found by the 2026-11-03 test install).
+    // scripts/fix_moop_selinux.sh already assumed this layout.
+    'site_data_path' => dirname($root_path) . '/' . $site . '-site-data',
 
     // ======== CACHE DIRECTORY ========
     // Where the app writes its own generated caches (organism scan cache,
@@ -485,6 +493,49 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // 3. Copy jwt_public_key.pem to remote server
     // 4. Copy track data to remote server
     // 5. Configure nginx/Apache on remote server
+    // ======== TOOLS SWITCHED OFF ========
+    // Tool ids (config/tools_config.php keys) this site does not offer. Empty = every tool, as
+    // shipped. Managed on Admin -> Manage Tools and saved in config_editable.json -- the web never
+    // writes tools_config.php, because a web-written .php file turns any write bug into code
+    // execution. A tool listed here disappears from the toolbox and the navbar's Tools menu, and
+    // its own page answers 404 (ConfigManager::isToolEnabled(), moop_tool_page_guard()).
+    // Added for cuttingclass (notes/CUTTINGCLASS_PLAN.md step 1); opt-in, so absent = unchanged.
+    'tools_disabled' => [],
+
+    // The navbar Tools menu and the toolbox: order, which tools each shows, and labels --
+    // {menu: [ids and '|' dividers], toolbox: [ids], labels: {id: {menu, toolbox}}}. Empty, or a
+    // part left out, = config/tools_config.php's defaults (menu_label, menu_order,
+    // menu_divider_after, name, registry order). Also managed on Admin -> Manage Tools.
+    'tools_layout' => [],
+
+    // The main navigation bar (left side, after the site title): a list of
+    //   {type: tools}                                  the Tools drop-down (tools_layout above)
+    //   {type: link, label: {en, es}, to: {builtin: about|help|home|browse} | {page: slug} | {url: ...}}
+    //   (browse = browse.php, MOOP's own home at an address that never changes)
+    //   {type: dropdown, key, label: {en, es}, items: [link | {type: divider}, ...]}
+    // Empty = Tools, About, Help -- the bar as it was hand-written until 2026-11-03. Managed on
+    // Admin -> Manage Menu; a content page can also be placed from its editor (Manage Pages).
+    'main_menu' => [],
+
+    // ======== HOME PAGE ========
+    // What /<site>/ shows: {mode: builtin} (MOOP's home -- search, organisms, tools; the default),
+    // {mode: page, page: slug} (one of the site's content pages instead), or {mode: intro, page:
+    // slug} (MOOP's home with that page above it, e.g. a welcome for students). The address stays
+    // /<site>/ either way. A page that no longer exists falls back to MOOP's home, never a blank
+    // or broken one. Set on Admin -> Manage Pages.
+    'home' => [],
+
+    // ======== LANGUAGES ========
+    // The languages this site writes its pages and menu labels in, English first (always: it is
+    // the fallback for anything not translated). Each {code, name}: code is ISO 639-1, optionally
+    // with a region ('pt-br'). Managed on Admin -> Manage Languages.
+    //
+    // A language is never deleted, only RETIRED -- like a retired organism: it moves to
+    // languages_retired with when and by whom, disappears from the editors and the site, and every
+    // page text and menu label written in it is KEPT, so Restore brings it all back.
+    'languages'         => [['code' => 'en', 'name' => 'English']],
+    'languages_retired' => [],
+
     // ======== RATE LIMITS: the "heavy" group ========
     // Scripts (path under the app root) that nginx limits most strictly per address: 20 per
     // minute, burst 10, 3 at once — exports, downloads, sequence and BLAST runs. The list is

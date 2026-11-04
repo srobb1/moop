@@ -60,7 +60,7 @@ if (file_exists($users_file)) {
         fclose($handle);
         
         if ($confirm !== 'yes, delete all') {
-            echo "Setup cancelled.\n";
+            echo "Setup canceled.\n";
             exit(0);
         }
         echo "\n";
@@ -68,7 +68,7 @@ if (file_exists($users_file)) {
     } elseif ($option === '1') {
         $mode = 'add_admin';
     } else {
-        echo "Setup cancelled.\n";
+        echo "Setup canceled.\n";
         exit(0);
     }
 } else {
@@ -129,7 +129,7 @@ if ($mode === 'add_admin' && file_exists($users_file)) {
         fclose($handle);
         
         if ($overwrite_confirm !== 'yes') {
-            echo "Setup cancelled.\n";
+            echo "Setup canceled.\n";
             exit(0);
         }
         echo "\n";

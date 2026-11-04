@@ -26,8 +26,12 @@
 set -euo pipefail
 
 [ "$(id -u)" -eq 0 ] || { echo "Run with sudo." >&2; exit 1; }
+# RHEL names the unit php-fpm.service; Debian/Ubuntu name it per version (php8.2-fpm.service).
 UNIT=php-fpm.service
-systemctl cat "$UNIT" >/dev/null 2>&1 || { echo "$UNIT not found" >&2; exit 1; }
+if ! systemctl cat "$UNIT" >/dev/null 2>&1; then
+    UNIT=$(systemctl list-unit-files 'php*-fpm.service' --no-legend 2>/dev/null | awk '{print $1}' | sort -V | tail -1)
+fi
+[ -n "$UNIT" ] && systemctl cat "$UNIT" >/dev/null 2>&1 || { echo "No php-fpm systemd unit found" >&2; exit 1; }
 
 mkdir -p "/etc/systemd/system/$UNIT.d"
 cat > "/etc/systemd/system/$UNIT.d/moop-resilience.conf" <<'EOF'

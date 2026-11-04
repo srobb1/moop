@@ -22,6 +22,7 @@ to be public.
 - [How Search Matches Words](#how-search-matches-words)
 - [Genome Browser (JBrowse2)](#genome-browser-jbrowse2)
 - [Running a Second MOOP on One Host](#running-a-second-moop-on-one-host)
+- [A New Site on Another Machine](#a-new-site-on-another-machine)
 - [Troubleshooting](#troubleshooting)
 - [Going Deeper](#going-deeper)
 
@@ -38,7 +39,16 @@ handles.
 ```bash
 git clone https://github.com/srobb1/moop.git /var/www/html/moop
 cd /var/www/html/moop
+git config core.hooksPath .githooks
+.githooks/moop-fix-web-perms
 ```
+
+The last two lines are not optional. git writes the files it checks out with your umask
+(often `640` files in `750` directories), which the web server cannot read, so the site
+returns 500s — including `setup.php` in step 3. The hooks in `.githooks/` fix the modes
+after every later checkout or pull, but git will not run a repository's hooks until the
+clone opts in, and they do not touch the files the clone already wrote: the second line
+fixes those once.
 
 The directory name is yours to choose — MOOP derives both its filesystem paths and its URL
 prefix from where the code lives, so cloning to `/var/www/html/cuttingclass` gives you a
@@ -128,7 +138,23 @@ and shows what it is doing:
 Why and how: `notes/BOT_PROTECTION_PLAN.md`, `notes/SYSTEM_MONITOR_PLAN.md`. Apache hosts: not
 covered yet — these are nginx configuration.
 
-**8. Log in** at `http://your-host/moop/` with the admin account you just created.
+**8. Keep one heavy search from taking the site down** (safe to re-run).
+
+```bash
+sudo scripts/install_php_fpm_resilience.sh   # php-fpm keeps running when one request runs out of memory
+sudo scripts/install_nginx_timeouts.sh       # nginx (only) waits long enough for a queued BLAST
+```
+
+Both were found by a capacity test: without the first, ONE BLAST that runs out of memory
+stops php-fpm and the whole site stays down until someone restarts it by hand; without the
+second, nginx gives up after 60 s and shows a 504 while a queued search is still running.
+Background: `notes/CAPACITY_TEST_2026-10-23.md`.
+
+**9. Install the JBrowse CLI** if you will use the genome browser — it builds the gene-name
+search index. See [Node.js and the JBrowse CLI](docs/INSTALL.md#nodejs-and-the-jbrowse-cli);
+without it the genome browser works but its search box finds nothing.
+
+**10. Log in** at `http://your-host/moop/` with the admin account you just created.
 
 Then run `php setup-check.php` once more; it should come back clean.
 
@@ -286,6 +312,52 @@ one it is running in, which stops a second install writing into the first one's 
 > ⚠️ For a site whose auth-gateway rewrite is already inline in `nginx.conf`, do **not**
 > also deploy `moop-site.conf` — duplicate `location` blocks fail `nginx -t` and a reload
 > takes down the site that was working. Each template opens with the check for this.
+
+---
+
+## A New Site on Another Machine
+
+The [Quick Start](#quick-start) installs the application. A new machine also needs what the
+first host got by hand over time. Go through this list as well, in roughly this order:
+
+1. **A hostname and a certificate first.** Ask IT for the DNS name before you start, and get
+   a certificate for it. Configure HTTPS from day one: retrofitting it means changing URLs
+   people have already bookmarked, and the session cookie is only marked `Secure` on HTTPS
+   requests (`includes/session_init.php`).
+2. **Both nginx server blocks (80 and 443) need `root /var/www/html;` and
+   `include /etc/nginx/default.d/*.conf;`.** Stock RHEL nginx puts both only in the port-80
+   block. A 443 block without the include misses the security guard, the auth gateway, the
+   timeouts and the rate limits; one without `root` serves nothing (on the first host that
+   broke the genome browser with "Failed to fetch").
+3. **The Quick Start, steps 1–10.** `php setup-check.php` checks each one, and its
+   `Inspecting install:` line must name the directory you are setting up.
+4. **The genome-browser tracks server, if this site will use one.** It verifies every track
+   token with a *single* public key (`certs/jwt_public_key.pem` on that server), so a second
+   site's tokens fail there until you choose one of:
+   - **its own tracks server, or its own directory on the shared server with its own copy of
+     the server files** (the clean separation), or
+   - **sharing the first site's key pair** (copy `certs/*.pem`). This is simpler, but either site
+     can then mint tokens for the other's tracks, so a compromise of one exposes both.
+
+   Either way, add the new site's origin (`https://newhost`) to the tracks server's CORS
+   allow-list. The CSP side follows automatically from `tracks_server.url` when you run
+   `install_monitor.sh`.
+5. **Organism data.** `organisms/` is filled by the build pipeline, not by MOOP. Arrange
+   with whoever runs the pipeline which organisms go to the new site and where they are
+   copied. MOOP only needs them under `organisms/` (or `organism_data`).
+6. **Cache directory outside the document root**: set `cache_path` (Admin → Site
+   Configuration) to e.g. `/var/www/<site>-cache`. `scripts/fix_moop_selinux.sh` creates
+   and labels it. Re-run `install_security_report.sh` and `install_monitor.sh` afterwards;
+   both write into the cache directory.
+7. **Site-data backup.** Housekeeping copies config, metadata and the users file into
+   `site_data_path` on its own. Make that directory a git repository with a private remote
+   if you want history off the machine. MOOP never commits; the dashboard shows the command.
+8. **Who sees what.** A new install has no auto-login IP ranges and no public assemblies.
+   An address range in `auto_login_ip_ranges` gets *full data access with no login*, so add
+   only ranges you would trust with every restricted assembly.
+9. **Memory.** RAM, not CPU, runs out first under load: one tblastn against a 3 GB genome
+   uses ~2.9 GB. Size the machine for your biggest genomes × the number of searches you
+   expect at once (`notes/CAPACITY_TEST_2026-10-23.md`).
 
 ---
 

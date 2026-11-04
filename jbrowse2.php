@@ -16,6 +16,10 @@ include_once __DIR__ . '/lib/feature_coords.php';
 
 $config        = ConfigManager::getInstance();
 $site          = $config->getString('site', 'moop');
+
+// Switched off on this site (Admin -> Manage Tools)? Then this page does not exist here.
+require_once __DIR__ . '/lib/functions_tools.php';
+moop_tool_page_guard();
 $organism_data = $config->getPath('organism_data');
 
 // Build organism → assemblies map from accessible sources

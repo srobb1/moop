@@ -71,7 +71,6 @@ if ($is_taxonomy_group) {
     $group_info = [
         'name' => $taxonomy_rank,
         'group_name' => $taxonomy_rank,
-        'description' => $wiki_data['description'] ?: "All organisms in the taxonomic rank: <em>$taxonomy_rank</em>",
         'type' => 'taxonomy',
         'wikipedia_url' => $wiki_data['wikipedia_url'],
         'wikipedia_image' => $wiki_data['image_url']
@@ -82,8 +81,8 @@ if ($is_taxonomy_group) {
         $group_info['html_p'] = [
             [
                 'text' => htmlspecialchars($wiki_data['description']) . 
-                         '<br><br><small class="text-muted">Source: <a href="' . htmlspecialchars($wiki_data['wikipedia_url']) . 
-                         '" target="_blank">Wikipedia</a></small>',
+                         '<br><br><small class="text-muted">' . t_markup('Source: %s', '<a href="' . htmlspecialchars($wiki_data['wikipedia_url']) .
+                         '" target="_blank">Wikipedia</a>') . '</small>',
                 'class' => '',
                 'style' => ''
             ]
@@ -129,6 +128,15 @@ if ($is_taxonomy_group) {
             $group_info = $desc;
             break;
         }
+    }
+
+    // A description written in the visitor's language (Manage Groups, 'summary_lang'; cuttingclass)
+    // replaces the English paragraphs. Plain text, a blank line between paragraphs.
+    $view_lang = moop_current_lang();
+    $own_summary = ($group_info && $view_lang !== 'en') ? trim((string) ($group_info['summary_lang'][$view_lang] ?? '')) : '';
+    if ($own_summary !== '') {
+        $group_info['html_p'] = array_map(fn($para) => ['text' => htmlspecialchars($para), 'class' => '', 'style' => ''],
+                                          preg_split('/\n\s*\n/', $own_summary, -1, PREG_SPLIT_NO_EMPTY));
     }
 
     // Get organisms in this group that user has access to

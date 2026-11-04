@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu', 'languages', 'languages_retired', 'home'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -324,13 +324,294 @@ class ConfigManager
      * 
      * @return array Array of all tool configurations
      */
-    public function getAllTools()
+    public function getAllTools(bool $include_disabled = false)
     {
         if (!$this->ensureLoaded()) {
             return [];
         }
+        if ($include_disabled) {
+            return $this->tools;
+        }
+        // Tools the site switched off ('tools_disabled', Admin -> Manage Tools) are left out, so
+        // every toolbox that lists tools drops them without knowing the setting exists.
+        return array_filter($this->tools, fn($tool, $id) => $this->isToolEnabled((string) $id), ARRAY_FILTER_USE_BOTH);
+    }
 
-        return $this->tools;
+    /**
+     * The navbar's Tools menu, in order: ['type' => 'tool', 'id', 'label', 'url_path'] or
+     * ['type' => 'divider']. From the site's saved 'tools_layout.menu' when it has one, else
+     * from the registry's menu_order / menu_divider_after -- which reproduce the menu as it was
+     * hand-written in includes/toolbar.php until 2026-11-03. Switched-off tools are left out,
+     * and a divider never leads, trails or doubles (one beside a switched-off tool would).
+     * Here, not in lib/functions_tools.php: the navbar is drawn on pages that never load that.
+     */
+    public function getToolsMenu(): array
+    {
+        if (!$this->ensureLoaded()) return [];
+        $order = $this->toolsMenuOrder();
+        $items = [];
+        foreach ($order as $id) {
+            $id = (string) $id;
+            if ($id === '|') {
+                if ($items && end($items)['type'] !== 'divider') $items[] = ['type' => 'divider'];
+                continue;
+            }
+            if (!isset($this->tools[$id]) || !$this->isToolEnabled($id)) continue;
+            $items[] = ['type' => 'tool', 'id' => $id, 'label' => $this->toolLabel($id, 'menu'),
+                        'url_path' => (string) ($this->tools[$id]['url_path'] ?? '')];
+        }
+        while ($items && end($items)['type'] === 'divider') array_pop($items);
+        return $items;
+    }
+
+    /** The home page setting: ['mode' => 'builtin'|'page'|'intro', 'page' => slug|'']. */
+    public function homeSetting(): array
+    {
+        $h = $this->config['home'] ?? [];
+        $mode = is_array($h) ? (string) ($h['mode'] ?? 'builtin') : 'builtin';
+        if (!in_array($mode, ['page', 'intro'], true)) return ['mode' => 'builtin', 'page' => ''];
+        return ['mode' => $mode, 'page' => (string) ($h['page'] ?? '')];
+    }
+
+    /** A language code: ISO 639-1, optionally with a region ('pt-br'). */
+    public const LANGUAGE_CODE = '/^[a-z]{2}(-[a-z]{2,4})?$/';
+
+    /**
+     * The site's languages, in order, English first: [['code' => 'en', 'name' => 'English'], ...].
+     * English is always there even if a saved list forgot it -- it is what untranslated text falls
+     * back to.
+     */
+    public function languages(): array
+    {
+        $out = [];
+        foreach ((array) ($this->config['languages'] ?? []) as $l) {
+            $code = (string) ($l['code'] ?? '');
+            if (preg_match(self::LANGUAGE_CODE, $code) && !isset($out[$code])) $out[$code] = ['code' => $code, 'name' => (string) ($l['name'] ?? $code)];
+        }
+        if (!isset($out['en'])) $out = ['en' => ['code' => 'en', 'name' => 'English']] + $out;
+        else $out = ['en' => $out['en']] + $out;
+        return array_values($out);
+    }
+
+    /** Just the codes of languages(). */
+    public function languageCodes(): array
+    {
+        return array_column($this->languages(), 'code');
+    }
+
+    /** Retired languages: [['code', 'name', 'retired_at', 'retired_by'], ...]. Their text is kept. */
+    public function retiredLanguages(): array
+    {
+        return array_values(array_filter((array) ($this->config['languages_retired'] ?? []), fn($l) => is_array($l) && isset($l['code'])));
+    }
+
+    /** Why these language lists cannot be saved, or null. */
+    public static function languagesProblem($active, $retired): ?string
+    {
+        if (!is_array($active) || !is_array($retired)) return 'not a list';
+        $seen = [];
+        foreach ([$active, $retired] as $n => $list) {
+            foreach ($list as $l) {
+                $code = is_array($l) ? (string) ($l['code'] ?? '') : '';
+                $name = is_array($l) ? trim((string) ($l['name'] ?? '')) : '';
+                if (!preg_match(self::LANGUAGE_CODE, $code)) return 'a language code must look like "fr" or "pt-br"';
+                if ($name === '' || mb_strlen($name) > 40) return "\"$code\" needs a name";
+                if (isset($seen[$code])) return "\"$code\" is listed twice";
+                $seen[$code] = true;
+                if ($n === 1 && $code === 'en') return 'English cannot be retired';
+            }
+        }
+        return in_array('en', array_column($active, 'code'), true) ? null : 'English must stay';
+    }
+
+    /** The main bar as it was hand-written in includes/toolbar.php until 2026-11-03. */
+    public static function defaultMainMenu(): array
+    {
+        return [
+            ['type' => 'tools'],
+            ['type' => 'link', 'label' => ['en' => 'About'], 'to' => ['builtin' => 'about']],
+            ['type' => 'link', 'label' => ['en' => 'Help'],  'to' => ['builtin' => 'help']],
+        ];
+    }
+
+    /** The site's main bar (saved), or the default. */
+    public function mainMenu(): array
+    {
+        $saved = $this->config['main_menu'] ?? [];
+        return is_array($saved) && $saved ? array_values($saved) : self::defaultMainMenu();
+    }
+
+    /**
+     * The main bar, ready to draw: ['type' => 'tools'] | ['type' => 'link', 'label', 'href',
+     * 'external'] | ['type' => 'dropdown', 'label', 'id', 'items' => [link | ['type' => 'divider']]].
+     * A link to a page that no longer exists is left out; so is a drop-down left empty, and the
+     * Tools drop-down when every tool is switched off. Dividers never lead, trail or double.
+     */
+    public function getMainMenu(string $lang = 'en'): array
+    {
+        $out = [];
+        $n   = 0;
+        foreach ($this->mainMenu() as $item) {
+            $type = $item['type'] ?? '';
+            if ($type === 'tools') {
+                if ($this->getToolsMenu()) $out[] = ['type' => 'tools'];
+            } elseif ($type === 'link') {
+                if ($link = $this->menuLink($item, $lang)) $out[] = $link;
+            } elseif ($type === 'dropdown') {
+                $items = [];
+                foreach ((array) ($item['items'] ?? []) as $child) {
+                    if (($child['type'] ?? '') === 'divider') {
+                        if ($items && end($items)['type'] !== 'divider') $items[] = ['type' => 'divider'];
+                    } elseif ($link = $this->menuLink($child, $lang)) {
+                        $items[] = $link;
+                    }
+                }
+                while ($items && end($items)['type'] === 'divider') array_pop($items);
+                if ($items) {
+                    $out[] = ['type' => 'dropdown', 'label' => $this->menuLabel($item, $lang),
+                              'id' => 'menuDropdown' . (++$n), 'items' => $items];
+                }
+            }
+        }
+        return $out;
+    }
+
+    /** A menu item's label in $lang, falling back to English. */
+    private function menuLabel(array $item, string $lang): string
+    {
+        $label = $item['label'] ?? '';
+        // The site's own label in this language when it has one; otherwise the English, through
+        // the interface catalog (t_plain()) -- so the default About / Help are translated there.
+        $en = is_string($label) ? $label : trim((string) ($label['en'] ?? ''));
+        $text = is_string($label) ? '' : trim((string) ($label[$lang] ?? ''));
+        if ($lang !== 'en' && $text !== '') return $text;
+        return $en !== '' && function_exists('t_plain') ? t_plain($en) : $en;
+    }
+
+    /** A link item resolved to ['type' => 'link', 'label', 'href', 'external'], or null. */
+    private function menuLink(array $item, string $lang): ?array
+    {
+        $to    = (array) ($item['to'] ?? []);
+        $site  = '/' . $this->getString('site');
+        $href  = null;
+        $external = false;
+        if (isset($to['builtin'])) {
+            $href = ['about' => "$site/about.php", 'help' => "$site/help.php", 'home' => "$site/index.php",
+                     'browse' => "$site/browse.php"][$to['builtin']] ?? null;
+        } elseif (isset($to['page'])) {
+            $slug = (string) $to['page'];
+            $file = rtrim($this->getPath('metadata_path'), '/') . "/pages/$slug.json";
+            if (preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $slug) && is_file($file)) {
+                $href = "$site/page.php?p=" . rawurlencode($slug);
+            }
+        } elseif (isset($to['url'])) {
+            $url = (string) $to['url'];
+            if (preg_match('#^/[^/\\]#', $url)) {
+                $href = $url;
+            } elseif (preg_match('#^https?://#i', $url)) {
+                $href = $url;
+                $external = true;
+            }
+        }
+        $label = $this->menuLabel($item, $lang);
+        return ($href === null || $label === '') ? null : ['type' => 'link', 'label' => $label, 'href' => $href, 'external' => $external];
+    }
+
+    /** Why this main_menu cannot be saved, or null if it can. Used by saveEditableConfig(). */
+    public static function mainMenuProblem($menu): ?string
+    {
+        if (!is_array($menu)) return 'not a list';
+        $label_ok = function ($label): bool {
+            if (!is_array($label) || trim((string) ($label['en'] ?? '')) === '') return false;
+            foreach ($label as $lang => $text) {
+                if (!preg_match(self::LANGUAGE_CODE, (string) $lang) || !is_string($text) || mb_strlen($text) > 60) return false;
+            }
+            return true;
+        };
+        $link_ok = function ($item) use ($label_ok): bool {
+            $to = $item['to'] ?? null;
+            if (!$label_ok($item['label'] ?? null) || !is_array($to) || count($to) !== 1) return false;
+            if (isset($to['builtin'])) return in_array($to['builtin'], ['about', 'help', 'home', 'browse'], true);
+            if (isset($to['page']))    return is_string($to['page']) && (bool) preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $to['page']);
+            if (isset($to['url']))     return is_string($to['url']) && mb_strlen($to['url']) <= 500
+                                              && (preg_match('#^/[^/\\\\]#', $to['url']) || preg_match('#^https?://[^\s"\'<>]+$#i', $to['url']));
+            return false;
+        };
+        $keys = [];
+        $tools = 0;
+        foreach ($menu as $i => $item) {
+            $type = is_array($item) ? ($item['type'] ?? '') : '';
+            if ($type === 'tools') { if (++$tools > 1) return 'the Tools menu twice'; continue; }
+            if ($type === 'link') { if (!$link_ok($item)) return 'item ' . ($i + 1) . ' is not a valid link'; continue; }
+            if ($type !== 'dropdown') return 'item ' . ($i + 1) . ' has no known type';
+            $key = (string) ($item['key'] ?? '');
+            if (!preg_match('/^[a-z0-9][a-z0-9-]{0,39}$/', $key) || isset($keys[$key])) return 'drop-down ' . ($i + 1) . ' needs its own key';
+            $keys[$key] = true;
+            if (!$label_ok($item['label'] ?? null) || !is_array($item['items'] ?? null)) return 'drop-down ' . ($i + 1) . ' needs a name';
+            foreach ($item['items'] as $child) {
+                if (($child['type'] ?? '') === 'divider') continue;
+                if (($child['type'] ?? '') !== 'link' || !$link_ok($child)) return 'an entry in drop-down ' . ($i + 1) . ' is not a valid link';
+            }
+        }
+        return null;
+    }
+
+    /** The menu as ids and '|' dividers: the site's saved order, else the registry default. */
+    public function toolsMenuOrder(): array
+    {
+        $saved = $this->config['tools_layout']['menu'] ?? null;
+        return is_array($saved) ? array_values(array_map('strval', $saved)) : $this->defaultToolsMenuOrder();
+    }
+
+    /** The registry's menu: tools with a menu_order, in that order, '|' after menu_divider_after. */
+    public function defaultToolsMenuOrder(): array
+    {
+        $in_menu = array_filter($this->tools, fn($t) => isset($t['menu_order']));
+        uasort($in_menu, fn($a, $b) => $a['menu_order'] <=> $b['menu_order']);
+        $order = [];
+        foreach ($in_menu as $id => $t) {
+            $order[] = (string) $id;
+            if (!empty($t['menu_divider_after'])) $order[] = '|';
+        }
+        return $order;
+    }
+
+    /** The registry's toolbox: every tool not marked 'toolbox' => false, in registry order. */
+    public function defaultToolboxOrder(): array
+    {
+        return array_values(array_map('strval', array_keys(array_filter($this->tools, fn($t) => ($t['toolbox'] ?? true) !== false))));
+    }
+
+    /**
+     * A tool's label in the menu ('menu') or the toolbox ('toolbox'): the site's own label from
+     * 'tools_layout.labels' if it set one, else the registry's menu_label / name.
+     */
+    public function toolLabel(string $tool_id, string $where = 'toolbox'): string
+    {
+        $tool  = $this->tools[$tool_id] ?? [];
+        $saved = trim((string) ($this->config['tools_layout']['labels'][$tool_id][$where] ?? ''));
+        if ($saved !== '') return $saved;
+        return (string) ($where === 'menu' ? ($tool['menu_label'] ?? $tool['name'] ?? $tool_id) : ($tool['name'] ?? $tool_id));
+    }
+
+    /**
+     * The site's saved toolbox order (tool ids, in order: the tools it shows), or null when it
+     * never saved one -- then the registry's order and 'toolbox' flags apply, as shipped.
+     */
+    public function toolboxOrder(): ?array
+    {
+        $saved = $this->config['tools_layout']['toolbox'] ?? null;
+        return is_array($saved) ? array_values(array_map('strval', $saved)) : null;
+    }
+
+    /**
+     * Is this tool offered on this site? True unless its id is in 'tools_disabled' -- so an
+     * unknown id, or a site that never set the key, answers true and nothing changes.
+     */
+    public function isToolEnabled(string $tool_id): bool
+    {
+        $off = $this->config['tools_disabled'] ?? [];
+        return !(is_array($off) && in_array($tool_id, $off, true));
     }
 
     /**
@@ -586,6 +867,66 @@ class ConfigManager
                     }
                 }
                 
+                // tools_disabled: a list of known tool ids, nothing else
+                if ($key === 'tools_disabled') {
+                    if (!is_array($data[$key]) || array_diff($data[$key], array_keys($this->tools ?? []))) {
+                        return [
+                            'success' => false,
+                            'message' => 'Unknown tool in the list of tools to switch off'
+                        ];
+                    }
+                    $data[$key] = array_values(array_unique($data[$key]));
+                }
+
+                // tools_layout: menu = tool ids and '|' dividers; toolbox = tool ids; labels =
+                // {id: {menu, toolbox}} short plain strings. Anything else is refused whole.
+                if ($key === 'tools_layout') {
+                    $known = array_keys($this->tools ?? []);
+                    $v = $data[$key];
+                    $ok = is_array($v) && !array_diff(array_keys($v), ['menu', 'toolbox', 'labels']);
+                    foreach (['menu', 'toolbox'] as $list) {
+                        if (!$ok || !isset($v[$list])) continue;
+                        $allowed = $list === 'menu' ? array_merge($known, ['|']) : $known;
+                        $ok = is_array($v[$list]) && !array_diff($v[$list], $allowed)
+                            && count(array_filter($v[$list], fn($x) => $x !== '|')) === count(array_unique(array_filter($v[$list], fn($x) => $x !== '|')));
+                    }
+                    if ($ok && isset($v['labels'])) {
+                        $ok = is_array($v['labels']) && !array_diff(array_keys($v['labels']), $known);
+                        foreach ($ok ? $v['labels'] : [] as $pair) {
+                            if (!is_array($pair) || array_diff(array_keys($pair), ['menu', 'toolbox'])) { $ok = false; break; }
+                            foreach ($pair as $label) {
+                                if (!is_string($label) || mb_strlen($label) > 60) { $ok = false; break 2; }
+                            }
+                        }
+                    }
+                    if (!$ok) {
+                        return ['success' => false, 'message' => 'The tool layout is not valid; nothing was saved'];
+                    }
+                }
+
+                if ($key === 'languages' || $key === 'languages_retired') {
+                    $active  = $key === 'languages' ? $data[$key] : ($data['languages'] ?? $this->config['languages'] ?? []);
+                    $retired = $key === 'languages_retired' ? $data[$key] : ($data['languages_retired'] ?? $this->config['languages_retired'] ?? []);
+                    $problem = self::languagesProblem($active, $retired);
+                    if ($problem !== null) {
+                        return ['success' => false, 'message' => 'The languages are not valid (' . $problem . '); nothing was saved'];
+                    }
+                }
+
+                if ($key === 'home') {
+                    $h = $data[$key];
+                    $ok = is_array($h) && (!$h || (in_array($h['mode'] ?? '', ['builtin', 'page', 'intro'], true)
+                          && (($h['mode'] ?? '') === 'builtin' || preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', (string) ($h['page'] ?? '')))));
+                    if (!$ok) return ['success' => false, 'message' => 'The home page setting is not valid; nothing was saved'];
+                }
+
+                if ($key === 'main_menu') {
+                    $problem = self::mainMenuProblem($data[$key]);
+                    if ($problem !== null) {
+                        return ['success' => false, 'message' => 'The menu is not valid (' . $problem . '); nothing was saved'];
+                    }
+                }
+
                 // Validate IP ranges
                 if ($key === 'auto_login_ip_ranges') {
                     if (!is_array($data[$key])) {
@@ -644,7 +985,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout' || $key === 'main_menu' || $key === 'languages' || $key === 'languages_retired' || $key === 'home') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);
@@ -898,7 +1239,7 @@ class ConfigManager
             ],
             'cache_path' => [
                 'label' => 'Cache Directory',
-                'description' => 'Absolute filesystem path for generated caches (organism scan, annotation counts, chromosome names). All contents are regenerable. Leave empty to store caches inside the organisms/ data tree (legacy behaviour).',
+                'description' => 'Absolute filesystem path for generated caches (organism scan, annotation counts, chromosome names). All contents are regenerable. Leave empty to store caches inside the organisms/ data tree (legacy behavior).',
                 'type' => 'text',
                 'current_value' => $this->getPath('cache_path', ''),
                 'note' => 'Pointing this outside the document root lets the organisms/ tree be read-only to the web server. The directory must exist and be writable by the web server (correct owner/permission and, on SELinux hosts, the httpd_sys_rw_content_t label) — it is auto-created on the next admin login if missing.',

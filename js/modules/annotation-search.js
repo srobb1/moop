@@ -132,20 +132,20 @@ class AnnotationSearch {
         // search box on every results page, so length here is a tax on every search.
         // "gene set" is a live link -- it opens the same modal the icon does, which is the
         // only affordance telling a first-time user that icon exists.
-        const narrow = 'Narrow by <a href="#organismsSection">organism</a> or '
-                     + '<a href="#" class="scope-note-link">gene set</a>.';
+        const narrow = moopTm('Narrow by %s or %s.', '<a href="#organismsSection">' + moopTh('organism') + '</a>',
+                              '<a href="#" class="scope-note-link">' + moopTh('gene set') + '</a>');
         // On a single-organism page there is no organism list to jump to, so offer only
         // the control that exists.
         const narrowGeneSetOnly = this.config.scopeNoteTarget
-            ? `See the <a href="${this.config.scopeNoteTarget}">gene sets</a> below.`
-            : 'Narrow by <a href="#" class="scope-note-link">gene set</a>.';
+            ? moopTm('See the %s below.', `<a href="${this.config.scopeNoteTarget}">${moopTh('gene sets')}</a>`)
+            : moopTm('Narrow by %s.', '<a href="#" class="scope-note-link">' + moopTh('gene set') + '</a>');
 
         if (n > 1) {
-            note.html(`Searching <strong>${n}</strong> organisms. ${narrow}`);
+            note.html(moopTm('Searching %s organisms.', `<strong>${n}</strong>`) + ' ' + narrow);
         } else if (n === 1 && selected > 1) {
             // Narrowed by the scope filter rather than by the organism list; saying nothing
             // here would read as "the filter did nothing".
-            note.html(`Searching <strong>1</strong> organism, narrowed by gene set. ${narrow}`);
+            note.html(moopTm('Searching %s organism, narrowed by gene set.', '<strong>1</strong>') + ' ' + narrow);
         } else {
             // ONE organism and one to choose from -- the organism page. This used to print
             // nothing, which left the scope icon as an unlabelled control a first-time user
@@ -164,16 +164,21 @@ class AnnotationSearch {
             // them as chips, so repeating "1 assembly" spends a line to say nothing; more
             // than one is the case where the gene set count needs explaining.
             const asm = (this.config.scopeCounts || {}).assemblies || 0;
-            const across = asm > 1 ? ` in ${asm} assemblies` : '';
+            // Whole sentences, with and without the assemblies (a translator cannot reorder a
+            // phrase glued onto the end of another).
+            const strong = v => `<strong>${v}</strong>`;
             if (total > 1) {
-                note.html(included < total
-                    ? `Searching <strong>${included}</strong> of ${total} gene sets${across}. ${narrowGeneSetOnly}`
-                    : `Searching all <strong>${total}</strong> gene sets${across}. ${narrowGeneSetOnly}`);
+                note.html((included < total
+                    ? (asm > 1 ? moopTm('Searching %s of %d gene sets in %d assemblies.', strong(included), total, asm)
+                               : moopTm('Searching %s of %d gene sets.', strong(included), total))
+                    : (asm > 1 ? moopTm('Searching all %s gene sets in %d assemblies.', strong(total), asm)
+                               : moopTm('Searching all %s gene sets.', strong(total)))) + ' ' + narrowGeneSetOnly);
             } else {
                 // A single gene set cannot be narrowed, so a "narrow by" link would offer a
                 // modal that can do nothing. Name what is searched and stop there.
                 note.html(total === 1
-                    ? `Searching this ${this.config.scopeNoun}'s only gene set.` : '');
+                    ? (this.config.scopeNoun === 'assembly' ? moopTh("Searching this assembly's only gene set.")
+                                                            : moopTh("Searching this organism's only gene set.")) : '');
             }
         }
 
@@ -207,16 +212,15 @@ class AnnotationSearch {
             modalEl.innerHTML =
                 '<div class="modal-dialog modal-dialog-centered"><div class="modal-content">' +
                 '<div class="modal-header py-2">' +
-                  '<h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i>Search every organism?</h5>' +
-                  '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                  '<h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i>' + moopTh('Search every organism?') + '</h5>' +
+                  '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + moopTh('Close') + '"></button>' +
                 '</div>' +
                 '<div class="modal-body">' +
-                  'You are about to search across <strong class="ls-count"></strong> organisms. ' +
-                  'The search runs on every one, so this can take a while. You can narrow the selection ' +
-                  'first, or go ahead.' +
+                  moopTm('You are about to search across %s organisms.', '<strong class="ls-count"></strong>') + ' ' +
+                  moopTh('The search runs on every one, so this can take a while. You can narrow the selection first, or go ahead.') +
                 '</div>' +
                 '<div class="modal-footer py-2">' +
-                  '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Narrow it down</button>' +
+                  '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">' + moopTh('Narrow it down') + '</button>' +
                   '<button type="button" class="btn btn-warning ls-confirm"></button>' +
                 '</div>' +
                 '</div></div>';
@@ -224,7 +228,7 @@ class AnnotationSearch {
         }
         modalEl.querySelector('.ls-count').textContent = n.toLocaleString();
         const confirmBtn = modalEl.querySelector('.ls-confirm');
-        confirmBtn.textContent = `Search all ${n.toLocaleString()}`;
+        confirmBtn.textContent = moopT('Search all %s', n.toLocaleString());
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         // Rebind cleanly so a stale continuation from a previous call cannot fire.
         confirmBtn.onclick = () => { modal.hide(); onConfirm(); };
@@ -420,11 +424,11 @@ class AnnotationSearch {
             // dropping the "1" ranks HDAC8 first. The 3-character minimum applies to the
             // whole query (see the length guard above), not to individual words.
             const terms = keywords.trim().split(/\s+/).filter(t => t.length > 0);
-            const boldTerms = terms.map(t => `<strong>${t}</strong>`).join(', ');
+            const boldTerms = terms.map(t => `<strong>${escapeHtml(t)}</strong>`).join(', ');
 
             if (terms.length > 1) {
-                searchExplanation = `<br><small class="text-muted">Searching with: ${boldTerms} — a record must contain all of them.</small>`;
-                searchExplanation += `<br><small class="text-muted">Tip: Use quotes like <code>"exact phrase"</code> to search for exact phrase instead of individual terms.</small>`;
+                searchExplanation = '<br><small class="text-muted">' + moopTm('Searching with: %s — a record must contain all of them.', boldTerms) + '</small>';
+                searchExplanation += '<br><small class="text-muted">' + moopTm('Tip: Use quotes like %s to search for exact phrase instead of individual terms.', '<code>"exact phrase"</code>') + '</small>';
             }
         }
 
@@ -446,9 +450,10 @@ class AnnotationSearch {
         // Wire progress-area cancel (injected into #searchProgress below)
         $(document).off('click.cancel').on('click.cancel', '#search-cancel-progress-btn', () => this.cancel());
 
-        let searchInfo = `Searched for any record containing <strong>${keywords}</strong>`;
+        // Escaped: the words come from the box, which ?q= in a link can fill (tools/pages/search.php).
+        let searchInfo = moopTm('Searched for any record containing %s', `<strong>${escapeHtml(keywords)}</strong>`);
         if (this.selectedSources && this.selectedSources.length > 0) {
-            searchInfo += ` (limited to ${this.selectedSources.join(', ')})`;
+            searchInfo += ' ' + moopTh('(limited to %s)', this.selectedSources.join(', '));
         }
         if (searchExplanation) {
             searchInfo += searchExplanation;
@@ -596,7 +601,7 @@ class AnnotationSearch {
         this.cancelled = true;
         $('#search-cancel-btn').hide();
         $('#searchBtn').prop('disabled', false).removeClass('btn-searching').html('<i class="fa fa-search"></i>');
-        $('#progressText').html('<span class="text-warning"><i class="fa fa-ban me-1"></i>Search cancelled.</span>');
+        $('#progressText').html('<span class="text-warning"><i class="fa fa-ban me-1"></i>Search canceled.</span>');
     }
 
     finishSearch() {
@@ -646,7 +651,10 @@ class AnnotationSearch {
 
             let jumpToHtml = '<div class="alert alert-info mb-3 d-flex justify-content-between align-items-start gap-3">';
             jumpToHtml += '<div>';
-            jumpToHtml += `<strong>Found ${this.allResults.length} matching annotation${this.allResults.length !== 1 ? 's' : ''} across ${uniqueFeatures.size} feature${uniqueFeatures.size !== 1 ? 's' : ''}:</strong> `;
+            const nA = this.allResults.length, nF = uniqueFeatures.size;
+            jumpToHtml += '<strong>' + (nA === 1 ? moopTh('Found %d matching annotation across %d feature:', nA, nF)
+                                     : nF === 1 ? moopTh('Found %d matching annotations across %d feature:', nA, nF)
+                                                : moopTh('Found %d matching annotations across %d features:', nA, nF)) + '</strong> ';
 
             Object.keys(organismCounts).forEach((org, idx) => {
                 const anchorId = 'results-' + org.replace(/[^a-zA-Z0-9]/g, '_');
@@ -662,8 +670,8 @@ class AnnotationSearch {
 
             jumpToHtml += '</div>';
             jumpToHtml += `<div class="btn-group flex-shrink-0">
-                <button class="btn btn-sm btn-outline-success download-all-results" title="Download all annotation results as CSV"><i class="fa fa-table"></i> Table CSV</button>
-                <button class="btn btn-sm btn-outline-primary download-fasta-results" title="Download FASTA sequences for all features found"><i class="fa fa-dna"></i> FASTA</button>
+                <button class="btn btn-sm btn-outline-success download-all-results" title="${moopTh('Download all annotation results as CSV')}"><i class="fa fa-table"></i> ${moopTh('Table CSV')}</button>
+                <button class="btn btn-sm btn-outline-primary download-fasta-results" title="${moopTh('Download FASTA sequences for all features found')}"><i class="fa fa-dna"></i> FASTA</button>
             </div>`;
             jumpToHtml += '</div>';
 

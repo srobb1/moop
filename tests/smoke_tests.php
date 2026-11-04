@@ -424,6 +424,80 @@ ok(($_qsave['success'] ?? false)
    && $cm3->getInt('blast_max_output_mb') === 15 && $cm3->getInt('blast_max_hits') === 250,
    'saved BLAST queue settings are loaded back, not dropped by the whitelist');
 
+require_once "$BASE/lib/functions_tools.php";
+// Tools switched off per site (cuttingclass step 1). OPT-IN: a site that never sets
+// tools_disabled must get every tool, exactly as before.
+$_td = sys_get_temp_dir() . '/moop_tooltest_' . getmypid();
+@mkdir($_td);
+copy("$BASE/config/site_config.php",  "$_td/site_config.php");
+copy("$BASE/config/tools_config.php", "$_td/tools_config.php");
+file_put_contents("$_td/config_editable.json", '{}');
+$_tnew = function () use ($_td) {
+    $c = (new ReflectionClass('ConfigManager'))->newInstanceWithoutConstructor();
+    $c->initialize("$_td/site_config.php", "$_td/tools_config.php");
+    return $c;
+};
+$_t0 = $_tnew();
+ok(count($_t0->getAllTools()) === count($_t0->getAllTools(true)) && count($_t0->getAllTools()) > 5
+   && $_t0->isToolEnabled('moopmart') && $_t0->isToolEnabled('genome_browser'),
+   'tools_disabled unset: every tool is offered, as shipped');
+ok(moop_disabled_tool_for_script($_t0, '/' . $_t0->getString('site') . '/tools/moopmart.php') === null,
+   'tools_disabled unset: no tool page is turned away');
+$_tsave = $_t0->saveEditableConfig(['tools_disabled' => ['moopmart', 'genome_browser', 'moopmart']], $_td);
+$_t1 = $_tnew();
+$_tids = array_keys($_t1->getAllTools());
+ok(($_tsave['success'] ?? false) && !in_array('moopmart', $_tids, true) && !in_array('genome_browser', $_tids, true)
+   && in_array('blast_search', $_tids, true) && count($_t1->getAllTools(true)) === count($_t0->getAllTools(true)),
+   'switched-off tools leave the toolbox list; the rest stay; the full registry is still there for admin');
+ok($_t1->getArray('tools_disabled') === ['moopmart', 'genome_browser'], 'a repeated id is saved once');
+ok(!$_t1->isToolEnabled('moopmart') && $_t1->isToolEnabled('blast_search') && $_t1->isToolEnabled('no_such_tool'),
+   'isToolEnabled: false only for a listed id (an unknown id is not "off")');
+$_tsite = '/' . $_t1->getString('site');
+ok(moop_disabled_tool_for_script($_t1, "$_tsite/tools/moopmart.php") === 'moopmart'
+   && moop_disabled_tool_for_script($_t1, "$_tsite/jbrowse2.php") === 'genome_browser',
+   "a switched-off tool's own page is turned away (404)");
+ok(moop_disabled_tool_for_script($_t1, "$_tsite/tools/blast.php") === null
+   && moop_disabled_tool_for_script($_t1, "$_tsite/api/moopmart_export.php") === null
+   && moop_disabled_tool_for_script($_t1, "/elsewhere/tools/moopmart.php") === null,
+   'other tools, endpoints that are no tool\'s page, and another site\'s path are untouched');
+ok(($_t1->saveEditableConfig(['tools_disabled' => ['moopmart', 'rm -rf']], $_td)['success'] ?? true) === false
+   && $_tnew()->getArray('tools_disabled') === ['moopmart', 'genome_browser'],
+   'an unknown tool id is refused and nothing is saved');
+
+// Menu and toolbox from the registry, ordered and labelled per site (cuttingclass step 1c).
+// OPT-IN: no tools_layout = today's menu exactly (the render comparison checks the HTML).
+$_t2 = $_tnew();   // tools_disabled = moopmart, genome_browser (saved above)
+$_menu = fn($c) => array_map(fn($i) => $i['type'] === 'divider' ? '|' : $i['id'] . '=' . $i['label'], $c->getToolsMenu());
+ok($_t2->defaultToolsMenuOrder() === ['genome_browser', '|', 'annotation_search', 'moopmart', 'expression', 'blast_search',
+                                      'primer_blast', 'primer_maker', 'download_fasta', 'downloads'],
+   'default menu = the hand-written one it replaced: Genome Browser, a divider, then the rest in order');
+ok(($_menu($_t2)[0] ?? '') === 'annotation_search=Annotation Search' && !in_array('|', $_menu($_t2), true),
+   'a switched-off tool leaves the menu, and its divider does not lead it');
+$_lsave = $_t2->saveEditableConfig(['tools_layout' => [
+    'menu' => ['blast_search', '|', '|', 'primer_maker', '|'], 'toolbox' => ['primer_maker', 'blast_search'],
+    'labels' => ['blast_search' => ['menu' => 'BLAST', 'toolbox' => 'Run BLAST']]]], $_td);
+$_t3 = $_tnew();
+ok(($_lsave['success'] ?? false) && $_menu($_t3) === ['blast_search=BLAST', '|', 'primer_maker=Primer Maker'],
+   'a saved menu: its order, its labels, and dividers never doubled or trailing');
+foreach ([['mode' => 'page'], ['mode' => 'page', 'page' => '../users'], ['mode' => 'carousel', 'page' => 'x'], 'home'] as $_badh) {
+    ok(($_t3->saveEditableConfig(['home' => $_badh], $_td)['success'] ?? true) === false, 'home refused: ' . json_encode($_badh));
+}
+ok(($_t3->saveEditableConfig(['home' => ['mode' => 'page', 'page' => 'about-us']], $_td)['success'] ?? false), 'home: a page instead, saved');
+ok($_t3->toolboxOrder() === ['primer_maker', 'blast_search'] && $_t3->toolLabel('blast_search', 'toolbox') === 'Run BLAST'
+   && $_t3->toolLabel('primer_maker', 'toolbox') === $_t3->getAllTools(true)['primer_maker']['name'],
+   'a saved toolbox order and label; a tool without one keeps its registry name');
+foreach ([['menu' => ['no_such_tool']], ['menu' => ['blast_search', 'blast_search']], ['toolbox' => ['|']],
+          ['labels' => ['blast_search' => ['menu' => str_repeat('x', 61)]]], ['colour' => 'red']] as $_bad) {
+    ok(($_t3->saveEditableConfig(['tools_layout' => $_bad], $_td)['success'] ?? true) === false,
+       'tools_layout refused: ' . json_encode($_bad));
+}
+ok($_menu($_tnew()) === ['blast_search=BLAST', '|', 'primer_maker=Primer Maker'], 'and a refused layout changed nothing');
+$_t3->saveEditableConfig(['tools_layout' => []], $_td);
+$_t4 = $_tnew();
+ok($_t4->toolsMenuOrder() === $_t4->defaultToolsMenuOrder() && $_t4->toolboxOrder() === null,
+   'saving an empty layout = back to the shipped defaults');
+exec('rm -rf ' . escapeshellarg($_td));
+
 // saveEditableConfig() rebuilds the file from the same whitelist, so an unlisted key is
 // deleted the next time any other admin settings page is saved.
 $saved = $cm2->saveEditableConfig(['siteTitle' => 'Smoke Title'], $cfgtmp);
@@ -2444,6 +2518,23 @@ ok($_hit('X2') === ['G1'], 'the filter still finds a hit stored on an isoform (w
 @unlink($_mdb);
 
 // ----------------------------------------------------------------------------
+group('BLAST: a short DNA query that came back empty is told why, per program');
+// Text review N8 (2026-11-02, measured on Schmidtea mediterranea CDS): the reasons DIFFER --
+// Megablast cannot seed a 20 nt query at any E-value, BLASTn finds it and the 1e-3 default
+// discards it. A bare "no matches" read as "not in this genome".
+require_once "$BASE/lib/blast_functions.php";
+$_r = fn($prog, $len, $opts = []) => blast_short_query_reason($prog, $len, $opts + ['evalue' => '1e-3', 'word_size' => 0]);
+ok(strpos($_r('blastn', 20), 'E-value 1e-3') !== false, 'BLASTn at 1e-3: the E-value is the reason');
+ok(strpos($_r('blastn', 20), '28 identical') === false, 'BLASTn: the word-size reason is NOT given (it seeds from 11)');
+ok(strpos($_r('megablast', 20), 'at any E-value') !== false, 'Megablast: cannot seed, whatever the E-value');
+ok(strpos($_r('megablast', 20, ['evalue' => '1000']), 'at any E-value') !== false, 'Megablast at 1000: still the word-size reason');
+ok(strpos($_r('blastn', 20, ['evalue' => '1000']), 'E-value') === false, 'BLASTn already at 1000: the E-value is not blamed');
+ok(strpos($_r('blastx', 20), '6 amino acids') !== false, 'BLASTx: the translated length is the reason');
+ok($_r('blastn', BLAST_SHORT_QUERY_NT) === '', 'a query at the threshold is not short');
+ok($_r('blastn-short', 20) === '' && $_r('blastp', 20) === '', 'BLASTn-short itself, and protein queries, get no short-query note');
+ok(strpos($_r('blastn', 20, ['word_size' => 4]), 'short for this program') !== false, 'a custom word size: no default-based reason is claimed');
+
+// ----------------------------------------------------------------------------
 group('Data Exporter: text filters match the way Search does');
 // They were LIKE '%word%': "inase" found kinase and "kinases" did not, the opposite of Search
 // and of the (i) beside the boxes. Now the same FTS index and expression as Search.
@@ -3479,9 +3570,274 @@ ok(housekeeping_health([['id' => 'r', 'scope' => 'all', 'started_at' => $_now - 
    'running for 20 minutes -> amber');
 ok(housekeeping_health([['id' => 'r', 'scope' => 'all', 'started_at' => $_now - 60, 'outcome' => 'running'], $_ok($_now - 3000)], true, $_now)['tone'] === '', 'running for a minute -> quiet');
 ok(housekeeping_health([], false, $_now)['tone'] === '', 'no record at all (a fresh install, before its first run) -> no false alarm');
+// 2026-11-03: the banner went red every morning -- housekeeping only runs while admins visit,
+// so an idle night read as "not finishing". Staleness now counts from the last REQUEST.
+ok(housekeeping_health([$_ok($_now - 18 * 3600)], false, $_now, $_now - 18 * 3600)['tone'] === '', 'idle 18 h, nothing requested since the last run -> quiet');
+ok(housekeeping_health([$_ok($_now - 18 * 3600)], false, $_now, $_now - 5)['tone'] === '', 'a run requested 5 s ago (this page load) -> quiet, not "18 hr" red');
+$_h = housekeeping_health([$_ok($_now - 18 * 3600)], false, $_now, $_now - 1800);
+ok($_h['tone'] === 'danger' && strpos(implode(' ', $_h['problems']), 'started 30 min ago and none has finished') !== false, 'requested 30 min ago, nothing finished -> red');
+ok(housekeeping_health([], false, $_now, $_now - 1800)['tone'] === '', 'requested but no record at all -> fresh-install rule still applies');
+ok(housekeeping_health([$_ok($_now - 1800)], false, $_now, $_now - 1800 - 1)['tone'] === '', 'requested, then finished -> quiet');
 
 $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_H));
+
+// ----------------------------------------------------------------------------
+group('Content pages: Markdown pages stored as site data (cuttingclass step 2)');
+require_once "$BASE/lib/content_pages.php";
+$_cp = sys_get_temp_dir() . '/moop_pages_' . getmypid();
+mkdir($_cp, 0777, true);
+$_cpcfg = ConfigManager::getInstance();
+$_cprp  = new ReflectionProperty($_cpcfg, 'config'); $_cprp->setAccessible(true);
+$_cpsaved = $_cprp->getValue($_cpcfg);
+$_cpc = $_cpsaved; $_cpc['metadata_path'] = $_cp; $_cprp->setValue($_cpcfg, $_cpc);
+
+ok(moop_page_list() === [] && moop_page_get('about') === null, 'no pages directory: no pages, no error (a site that never made one)');
+ok(moop_page_slug_ok('about-simrbase') && !moop_page_slug_ok('../users') && !moop_page_slug_ok('About') && !moop_page_slug_ok('')
+   && !moop_page_slug_ok('-x') && !moop_page_slug_ok(str_repeat('a', 61)) && moop_page_get('../../etc/passwd') === null,
+   'an address is lower-case letters, digits and hyphens only; a path is never one');
+ok(moop_page_slugify('About SIMRbase!  Protocols') === 'about-simrbase-protocols', 'an address is suggested from the title');
+ok(!moop_page_save(['slug' => 'x', 'title' => ['en' => ' ']])['ok'], 'a page needs an English title');
+$_cpr = moop_page_save(['slug' => 'protocols', 'title' => ['en' => 'Protocols', 'es' => 'Protocolos'],
+                         'body' => ['en' => "# Cutting\n**Step 1**", 'es' => 'Paso 1 — corte']]);
+$_cpp = moop_page_get('protocols');
+ok($_cpr['ok'] && $_cpp['title']['es'] === 'Protocolos' && $_cpp['body']['es'] === 'Paso 1 — corte' && $_cpp['updated_at'] !== '',
+   'a saved page loads back, both languages, with when it was saved');
+ok(substr(sprintf('%o', fileperms("$_cp/pages/protocols.json")), -3) === '664' && !glob("$_cp/pages/.*.tmp"),
+   'written as 664 (the web group can rewrite it), no temp file left behind');
+ok(array_keys(moop_page_list()) === ['protocols'], 'the list shows it');
+$_cph = moop_markdown("<script>alert(1)</script>\n[x](javascript:alert(2))\n\n<img src=x onerror=alert(3)>\n\n| a | b |\n|---|---|\n| 1 | 2 |");
+ok(strpos($_cph, '<script') === false && strpos($_cph, 'javascript:') === false && strpos($_cph, '<img src=x') === false,
+   'Markdown safe mode: typed HTML is shown as text and javascript: links are neutralised -- no page can carry a script');
+ok(strpos(moop_markdown("# T\n**b**"), '<h1>T</h1>') !== false && strpos($_cph, '<table class="table table-sm table-bordered">') !== false,
+   'ordinary Markdown renders; tables get the site table style');
+// HTML pages (Sofia, 2026-11-03: "a box to paste or write some html in"): cleaned by HTML Purifier.
+ok(moop_page_get('protocols')['format'] === 'markdown', 'a page is Markdown unless it says otherwise');
+$_card = '<div class="row g-3"><div class="col-md-4"><div class="card h-100" style="color:red"><div class="card-body">'
+       . '<h5 class="card-title">Maintenance</h5><a class="btn btn-primary" href="/moop/page.php?p=x">Read</a></div></div></div></div>';
+$_kept = moop_page_render($_card, 'html');
+ok(strpos($_kept, 'class="card h-100"') !== false && strpos($_kept, 'class="col-md-4"') !== false
+   && strpos($_kept, 'href="/moop/page.php?p=x"') !== false && strpos($_kept, 'style="color:') !== false,
+   'HTML: cards, grid classes, links and style survive the cleaning');
+$_rm = null;
+$_bad = moop_page_render('<div onclick="x()"><script>alert(1)</script><iframe src="https://e.x"></iframe><form><input></form>'
+       . '<a href="javascript:alert(2)">a</a><img src="/i.png" onerror="y()"><style>body{display:none}</style></div>', 'html', $_rm);
+ok(!preg_match('/<script|onclick|onerror|javascript:|<iframe|<form|<input|<style/i', $_bad),
+   'HTML: script, on*= handlers, javascript: links, iframe, form and style are removed');
+ok(count($_rm) >= 5 && (bool) array_filter($_rm, fn($m) => strpos($m, '<script>') !== false),
+   'HTML: the preview is told what was removed, naming the tag');
+ok(strpos(moop_page_render('<b>x</b>', 'markdown'), '&lt;b&gt;') !== false, 'Markdown pages still show typed HTML as text');
+moop_page_save(['slug' => 'protocols', 'format' => 'html', 'title' => ['en' => 'Protocols'], 'body' => ['en' => $_card]]);
+ok(moop_page_get('protocols')['format'] === 'html', 'the format is saved with the page');
+ok(moop_page_delete('protocols')['ok'] && moop_page_get('protocols') === null && !moop_page_delete('protocols')['ok'],
+   'a page can be deleted, and deleting it again says there is no such page');
+
+// The main menu (cuttingclass step 3): one definition, edited from Manage Menu and from a
+// page's "Show in menu". Runs inside the temp metadata_path above, so page links resolve.
+require_once "$BASE/lib/main_menu.php";
+moop_page_save(['slug' => 'rnai', 'title' => ['en' => 'RNAi', 'es' => 'ARNi'], 'body' => ['en' => 'x']]);
+$_mm = function (array $menu) use ($_cpcfg, $_cprp) {
+    $c = $_cprp->getValue($_cpcfg); $c['main_menu'] = $menu; $_cprp->setValue($_cpcfg, $c);
+    return array_map(fn($i) => $i['type'] === 'tools' ? 'TOOLS' : ($i['type'] === 'link' ? $i['label'] . '>' . $i['href']
+        : $i['label'] . '[' . implode(',', array_map(fn($c) => $c['type'] === 'divider' ? '|' : $c['label'], $i['items'])) . ']'),
+        $_cpcfg->getMainMenu());
+};
+$_site = '/' . $_cpcfg->getString('site');
+ok($_mm([]) === ['TOOLS', "About>$_site/about.php", "Help>$_site/help.php"], 'no saved menu: Tools, About, Help -- the bar it replaced');
+$_dd = ['type' => 'dropdown', 'key' => 'protocols', 'label' => ['en' => 'Protocols', 'es' => 'Protocolos'], 'items' => [
+         ['type' => 'divider'], ['type' => 'link', 'label' => ['en' => 'RNAi'], 'to' => ['page' => 'rnai']], ['type' => 'divider'], ['type' => 'divider'],
+         ['type' => 'link', 'label' => ['en' => 'Gone'], 'to' => ['page' => 'no-such-page']], ['type' => 'divider']]];
+ok($_mm([$_dd, ['type' => 'dropdown', 'key' => 'empty', 'label' => ['en' => 'Empty'], 'items' => []]]) === ['Protocols[RNAi]'],
+   'a drop-down: a deleted page and stray dividers drop out; an empty drop-down is not shown');
+ok($_mm([['type' => 'link', 'label' => ['en' => 'Search & browse'], 'to' => ['builtin' => 'browse']]]) === ["Search & browse>$_site/browse.php"]
+   && ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['builtin' => 'browse']]]) === null,
+   "MOOP's own home has a permanent menu target, browse.php (reachable when a page is the home)");
+ok(ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['url' => '/moop/tools/blast.php']],
+                                   ['type' => 'link', 'label' => ['en' => 'y'], 'to' => ['url' => 'https://planosphere.stowers.org/']]]) === null,
+   'a site address (/moop/...) and an https:// address are accepted (the pattern for the first did not compile until 2026-11-03)');
+ok(ConfigManager::mainMenuProblem([$_dd]) === null && ConfigManager::mainMenuProblem(ConfigManager::defaultMainMenu()) === null,
+   'a valid menu and the default pass the check');
+foreach ([[['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['url' => 'javascript:alert(1)']]],
+          [['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['url' => '//evil.example']]],
+          [['type' => 'link', 'label' => ['en' => ''], 'to' => ['builtin' => 'about']]],
+          [['type' => 'tools'], ['type' => 'tools']],
+          [$_dd, $_dd],
+          [['type' => 'link', 'label' => ['en' => 'x'], 'to' => ['page' => '../users']]],
+          'not a list'] as $_bad) {
+    ok(ConfigManager::mainMenuProblem($_bad) !== null, 'menu refused: ' . json_encode($_bad));
+}
+$_m0 = [['type' => 'tools'], $_dd];
+$_m1 = moop_menu_set_page($_m0, 'faq', 'top', ['en' => 'FAQ', 'es' => '']);
+ok(moop_menu_page_place($_m1, 'faq') === 'top' && end($_m1)['label'] === ['en' => 'FAQ'], 'a page placed on the bar goes to its end, with its title as label');
+$_m2 = moop_menu_set_page($_m1, 'faq', 'dd:protocols', ['en' => 'FAQ']);
+ok(moop_menu_page_place($_m2, 'faq') === 'dd:protocols' && count($_m2) === 2, 'moved under a drop-down: it leaves the bar (one place, never two)');
+$_m3 = moop_menu_set_page($_m2, 'rnai', 'dd:protocols', ['en' => 'RNA interference']);
+$_items = array_values(array_filter($_m3[1]['items'], fn($c) => ($c['type'] ?? '') === 'link'));
+ok($_items[0]['to']['page'] === 'rnai' && $_items[0]['label'] === ['en' => 'RNA interference'],
+   'saved again in the same place: it keeps its position, its label follows the title');
+ok(moop_menu_page_place(moop_menu_set_page($_m3, 'faq', 'none', []), 'faq') === 'none'
+   && moop_menu_page_place(moop_menu_without_page($_m3, 'rnai'), 'rnai') === 'none', '"Not in a menu", and deleting a page, take it out');
+$_c = $_cprp->getValue($_cpcfg); unset($_c['main_menu']); $_cprp->setValue($_cpcfg, $_c);
+
+// Languages (cuttingclass): English first and always; a language is RETIRED, never deleted, and
+// what was written in it survives saves made while it is retired (the retired-organism rule).
+$_lang = function (array $active, array $retired = []) use ($_cpcfg, $_cprp) {
+    $c = $_cprp->getValue($_cpcfg); $c['languages'] = $active; $c['languages_retired'] = $retired; $_cprp->setValue($_cpcfg, $c);
+};
+$_lang([]);
+ok($_cpcfg->languageCodes() === ['en'], 'no languages saved: English only (simrbase, unchanged)');
+$_lang([['code' => 'es', 'name' => 'Español'], ['code' => 'en', 'name' => 'English']]);
+ok($_cpcfg->languageCodes() === ['en', 'es'], 'English is always first, whatever the saved order');
+ok(ConfigManager::languagesProblem([['code' => 'en', 'name' => 'English'], ['code' => 'pt-br', 'name' => 'Português']], []) === null,
+   'a language with a region code is fine');
+foreach ([[[['code' => 'es', 'name' => 'Español']], []],
+          [[['code' => 'en', 'name' => 'English']], [['code' => 'en', 'name' => 'English']]],
+          [[['code' => 'en', 'name' => 'English'], ['code' => 'es', 'name' => 'Español']], [['code' => 'es', 'name' => 'Español']]],
+          [[['code' => 'en', 'name' => 'English'], ['code' => 'Spanish', 'name' => 'x']], []],
+          [[['code' => 'en', 'name' => 'English'], ['code' => 'fr', 'name' => '']], []]] as $_bad) {
+    ok(ConfigManager::languagesProblem($_bad[0], $_bad[1]) !== null, 'languages refused: ' . json_encode($_bad));
+}
+moop_page_save(['slug' => 'about', 'title' => ['en' => 'About', 'es' => 'Acerca de'], 'body' => ['en' => 'Hi', 'es' => 'Hola']]);
+$_lang([['code' => 'en', 'name' => 'English']], [['code' => 'es', 'name' => 'Español', 'retired_at' => 'x']]);
+ok(moop_page_langs() === ['en'] && moop_page_get('about')['body']['es'] === 'Hola',
+   'Spanish retired: the editor offers English only, and the Spanish text is still stored');
+moop_page_save(['slug' => 'about', 'title' => ['en' => 'About us'], 'body' => ['en' => 'Hello']]);   // an English-only save
+$_about = moop_page_get('about');
+ok($_about['body']['en'] === 'Hello' && $_about['body']['es'] === 'Hola' && $_about['title']['es'] === 'Acerca de',
+   'a page saved while Spanish is retired keeps its Spanish text (not thrown away)');
+$_lang([['code' => 'en', 'name' => 'English'], ['code' => 'es', 'name' => 'Español']]);
+ok(moop_page_langs() === ['en', 'es'] && moop_page_get('about')['body']['es'] === 'Hola', 'restored: the Spanish is back, as it was');
+$_lang([['code' => 'en', 'name' => 'English'], ['code' => 'es', 'name' => 'Español']]);
+moop_page_save(['slug' => 'about', 'title' => ['en' => 'About us', 'es' => 'Acerca de'], 'body' => ['en' => 'Hello', 'es' => '']]);
+ok(moop_page_get('about')['body']['es'] === '', 'an ACTIVE language emptied in the editor is emptied (only retired text is carried over)');
+// The page's MENU label must survive the same way: Manage Pages builds it from the stored page.
+$_lang([['code' => 'en', 'name' => 'English']], [['code' => 'es', 'name' => 'Español']]);
+moop_page_save(['slug' => 'about', 'title' => ['en' => 'About'], 'body' => ['en' => 'x']]);   // English-only save while retired
+$_mlab = moop_menu_set_page([['type' => 'link', 'label' => ['en' => 'About us', 'es' => 'Acerca de'], 'to' => ['page' => 'about']]],
+                            'about', 'top', moop_page_get('about')['title']);
+ok(($_mlab[0]['label'] ?? []) === ['en' => 'About', 'es' => 'Acerca de'], 'and its menu label keeps the retired Spanish title too');
+$_c = $_cprp->getValue($_cpcfg); unset($_c['languages'], $_c['languages_retired']); $_cprp->setValue($_cpcfg, $_c);
+
+// The visitor's language from their browser (cuttingclass step 5). Pure: header + the site's codes.
+ok(moop_lang_negotiate('es-MX,es;q=0.9,en;q=0.8', ['en', 'es']) === 'es', 'browser language: es-MX picks Spanish');
+ok(moop_lang_negotiate('fr-FR,fr;q=0.9,en;q=0.5', ['en', 'es']) === 'en', 'a language the site lacks is skipped for the next one it has');
+ok(moop_lang_negotiate('de,fr', ['en', 'es']) === '', 'nothing the site has: no match (English is the caller\'s fallback)');
+ok(moop_lang_negotiate('en;q=0.4,es;q=0.9', ['en', 'es']) === 'es' && moop_lang_negotiate('es,en', ['en', 'es']) === 'es',
+   'highest weight wins; on a tie, the browser\'s first choice');
+ok(moop_lang_negotiate('pt-BR,pt;q=0.8', ['en', 'pt-br']) === 'pt-br', 'a region code matches exactly');
+ok(moop_lang_negotiate('', ['en', 'es']) === '' && moop_lang_negotiate('es', ['en']) === '', 'no header, or a one-language site: no match');
+ok(moop_current_lang() === 'en', 'from the command line (and on a one-language site) the language is English');
+
+// Home page choice (cuttingclass step 3): MOOP's home unless a site chooses otherwise.
+$_home = function ($h) use ($_cpcfg, $_cprp) { $c = $_cprp->getValue($_cpcfg); $c['home'] = $h; $_cprp->setValue($_cpcfg, $c); return $_cpcfg->homeSetting(); };
+ok($_home([]) === ['mode' => 'builtin', 'page' => ''] && $_home(['mode' => 'nonsense', 'page' => 'x'])['mode'] === 'builtin',
+   "home: no setting (or a broken one) = MOOP's own home");
+ok($_home(['mode' => 'intro', 'page' => 'about']) === ['mode' => 'intro', 'page' => 'about'], 'home: a page above MOOP\'s home');
+$_c = $_cprp->getValue($_cpcfg); unset($_c['home']); $_cprp->setValue($_cpcfg, $_c);
+$_cprp->setValue($_cpcfg, $_cpsaved);
+exec('rm -rf ' . escapeshellarg($_cp));
+
+// ----------------------------------------------------------------------------
+group('Interface translations: t(), the catalog, the spreadsheet checks (cuttingclass step 5b)');
+// t() on a one-language site / the command line is the English, byte for byte -- simrbase's case.
+ok(t('Log In') === 'Log In' && t("MOOP's home") === "MOOP's home" && t_plain('a & b') === 'a & b',
+   't(): English passes through unchanged (an apostrophe stays an apostrophe)');
+ok(t('Search & browse "x"') === 'Search &amp; browse &quot;x&quot;' && t('<b>') === '&lt;b&gt;',
+   't(): HTML-escaped, so a translation can never break the page it is in');
+ok(t('Showing %d of %s', 3, '<i>') === 'Showing 3 of &lt;i&gt;' && t_plain('100%') === '100%',
+   't(): arguments are escaped too; a % with no arguments is left alone');
+ok(t_markup('across %s organisms', '<strong>85</strong>') === 'across <strong>85</strong> organisms',
+   't_markup(): the sentence escaped, the markup argument inserted as given');
+ok(moop_i18n_format('Hay %d de %d', [3], 'Showing %d', fn($s) => $s) === 'Showing 3',
+   'a translation whose placeholders do not fit falls back to the English instead of a 500');
+require_once "$BASE/lib/i18n.php";
+$_tr = sys_get_temp_dir() . '/moop_i18n_' . getmypid();
+mkdir($_tr, 0777, true);
+$_trcfg = ConfigManager::getInstance();
+$_trrp  = new ReflectionProperty($_trcfg, 'config'); $_trrp->setAccessible(true);
+$_trsaved = $_trrp->getValue($_trcfg);
+$_trc = $_trsaved; $_trc['metadata_path'] = $_tr; $_trc['cache_path'] = $_tr; $_trrp->setValue($_trcfg, $_trc);
+ok(moop_i18n_catalog('es') === [] && moop_i18n_lookup('es', 'Log In') === 'Log In', 'no catalog: the English');
+$_trs = moop_i18n_save('es', ['Log In' => ['text' => 'Iniciar sesión', 'status' => 'reviewed', 'notes' => '']], 'tester');
+ok($_trs['success'] && substr(sprintf('%o', fileperms("$_tr/translations/es.json")), -3) === '664' && !glob("$_tr/translations/.*.tmp"),
+   'the catalog saves as site data, 664, no temp file left behind');
+ok(!moop_i18n_save('en', [], 'x')['success'] && !moop_i18n_save('../x', [], 'x')['success'], 'only real, non-English codes are written');
+$_trdoc = json_decode(file_get_contents("$_tr/translations/es.json"), true);
+ok($_trdoc['strings']['Log In']['text'] === 'Iniciar sesión' && $_trdoc['strings']['Log In']['updated_by'] === 'tester',
+   'each line records who changed it and when');
+ok(moop_i18n_lookup('es', 'Log In') === 'Iniciar sesión', 'a save refreshes the catalog this request already read (it was read empty above)');
+moop_i18n_save('es', ['Tools' => ['text' => 'Herramientas', 'status' => 'reviewed', 'notes' => '']], 'tester');
+ok(count(moop_i18n_catalog('es', true)) === 2, 'a second save in the same request keeps the first one\'s lines');
+$_known = ['Log In' => 1, 'Showing %d of %d hits' => 1, 'Tools' => 1, 'Help' => 1];
+$_chk = moop_i18n_check_upload('es', [
+    ['English', 'Translation', 'Status', 'Keep these exactly', 'Where it appears', 'Notes'],
+    ['Showing %d of %d hits', 'Mostrando %d de %d resultados', 'reviewed', '%d %d', '', ''],
+    ['Tools', 'Herramientas', '', '', '', ''],
+    ['Help', 'Ayuda %s', 'machine draft', '', '', ''],
+    ['Log In', '', 'needs translation', '', '', ''],
+    ['Logn In', 'Entrar', '', '', '', ''],
+    ['Tools', 'Herramientas', 'perfect', '', '', ''],
+], $_known);
+ok(($_chk['changes']['Showing %d of %d hits']['status'] ?? '') === 'reviewed', 'import: a reviewed line with matching codes is accepted');
+ok(($_chk['changes']['Tools']['status'] ?? '') === 'machine draft', 'import: a translation with no status counts as a machine draft');
+ok(count(array_filter($_chk['refused'], fn($r) => $r[0] === 'Help')) === 1 && !isset($_chk['changes']['Help']),
+   'import: a translation that adds or drops a %s code is refused, not saved');
+ok($_chk['kept'] === 1 && !isset($_chk['changes']['Log In']), 'import: a blank cell never erases a translation already there');
+ok($_chk['unknown'] === ['Logn In'], 'import: English the site does not have (edited by mistake) is reported, not saved');
+ok(count(array_filter($_chk['refused'], fn($r) => strpos($r[1], 'perfect') !== false)) === 1, 'import: an unknown status is refused');
+ok(isset(moop_i18n_check_upload('es', [['Spanish', 'x']], $_known)['error']), 'import: a sheet without the English column is refused whole');
+ok(moop_i18n_placeholders('%1$s and %2$d, 50%% off') === ['%1$s', '%2$d'], 'placeholders: positional ones count, %% does not');
+ok(moop_i18n_placeholders_match('Showing %d of %d', 'Mostrando %2$d: %1$d') && moop_i18n_placeholders_match('%s has %d', '%2$d en %1$s'),
+   'placeholders: a translation may reorder them with %1$ / %2$');
+ok(!moop_i18n_placeholders_match('Showing %d of %d', 'Mostrando %d') && !moop_i18n_placeholders_match('%s has %d', '%d en %s')
+   && !moop_i18n_placeholders_match('%d of %d', '%1$d de %1$d'),
+   'placeholders: one dropped, types swapped without positions, or one used twice -- refused');
+// The source scan: t() and the help helpers' literal text, by PHP tokens.
+$_scan = array_column(moop_i18n_scan_source('<?php echo t(\'Log In\'); /* t(\'not me\') */ $x->t(\'nor me\');'
+    . ' echo field_help(\'One field\', \'Its title\'); echo help_modal_trigger(\'id\', \'\', \'Help: x\');'
+    . ' echo help_modal(\'m\', \'Modal title\', [[\'heading\' => \'Sec\', \'cards\' => [[\'label\' => \'L\', \'text\' => \'T\', \'color\' => \'info\']]]], [\'intro\' => \'In\']);'
+    . ' echo t($var); echo t("It\'s");'), 0);
+sort($_scan);
+ok($_scan === ['Help: x', 'In', "It's", 'L', 'Log In', 'Modal title', 'One field', 'Its title', 'Sec', 'T'] || $_scan == ['Help: x', 'In', "It's", 'Its title', 'L', 'Log In', 'Modal title', 'One field', 'Sec', 'T'],
+   'scan: t() and the help helpers\' text are found; comments, methods, variables and colours are not (' . implode('|', $_scan) . ')');
+// The spreadsheet itself, through the real libraries, with no zip extension.
+$_xl = "$_tr/t.xlsx";
+file_put_contents($_xl, moop_i18n_xlsx([MOOP_I18N_COLUMNS, ['=1+1', 'a & <b>x</b> "q" %d', 'reviewed', '%d', 'index.php', '']], 'Español'));
+$_back = moop_i18n_read_upload($_xl, 't.xlsx');
+ok(is_array($_back) && $_back[0] === MOOP_I18N_COLUMNS && $_back[1][0] === '=1+1' && $_back[1][1] === 'a & <b>x</b> "q" %d',
+   'xlsx round trip: text that looks like a formula or a tag comes back exactly as written');
+ok(is_string(moop_i18n_read_upload(__FILE__, 'smoke_tests.php')), 'an upload that is neither .xlsx nor .csv is refused with a message');
+// What the lookups above recorded is written at shutdown -- by then into the REAL cache_path, which
+// put a stray i18n_seen.json on the live site (2026-11-04). Forget it here: tests leave no trace.
+$GLOBALS['moop_i18n_seen_now'] = [];
+// The automatic organism sentence is now whole sentences through t_plain(); its English must be
+// exactly what the pieces used to make.
+require_once "$BASE/lib/functions_data.php";
+$_lin2 = fn(...$r) => array_map(fn($x) => ['rank' => $x[0], 'name' => $x[1]], $r);
+ok(buildAutoDescription('Schmidtea mediterranea', $_lin2(['phylum', 'Platyhelminthes'], ['family', 'Dugesiidae']))
+   === 'Schmidtea mediterranea is a species of flatworm in the family Dugesiidae.'
+   && buildAutoDescription('X y', $_lin2(['phylum', 'Nope'], ['order', 'Tricladida'])) === 'X y is a species in the order Tricladida.'
+   && buildAutoDescription('X y', $_lin2(['class', 'Aves'])) === 'X y is a species of bird.'
+   && buildAutoDescription('X y', $_lin2(['phylum', 'Nope'])) === 'X y is a species.',
+   'automatic organism sentence: the same English as before it was made translatable');
+$_trrp->setValue($_trcfg, $_trsaved);
+exec('rm -rf ' . escapeshellarg($_tr));
+
+// ----------------------------------------------------------------------------
+group('Cookies are per site: two MOOP sites on one host never share a session');
+require_once "$BASE/includes/session_init.php";
+ok(moop_cookie_name('MOOPSESS', 'moop') === 'MOOPSESS' && moop_cookie_name('MOOPSESS_S', 'moop') === 'MOOPSESS_S'
+   && moop_cookie_name('moop_lang', 'moop') === 'moop_lang',
+   'the site in folder "moop" (simrbase) keeps its cookie names exactly -- nobody is logged out');
+ok(moop_cookie_name('MOOPSESS', 'cuttingclass') === 'MOOPSESS_cuttingclass' && moop_cookie_name('moop_lang', 'cuttingclass') === 'moop_lang_cuttingclass',
+   'another site gets its own session and language cookies');
+ok(moop_cookie_name('MOOPSESS', 'cuttingclass') !== moop_cookie_name('MOOPSESS', 'moop')
+   && moop_cookie_name('MOOPSESS', 'planosphere') !== moop_cookie_name('MOOPSESS', 'cuttingclass'),
+   'no two sites share a session cookie');
+ok(moop_cookie_name('MOOPSESS', 'my-site.v2') === 'MOOPSESS_mysitev2' && moop_cookie_name('MOOPSESS', '---') === 'MOOPSESS',
+   'the folder name is reduced to letters and digits (a cookie name allows no dots or dashes there)');
+ok(moop_cookie_name('MOOPSESS') === moop_cookie_name('MOOPSESS', basename($BASE)),
+   'without an argument the name comes from this checkout\'s own folder, never from settings');
 
 // ----------------------------------------------------------------------------
 group('Taxonomy tree: an unnamed species on a genus id keeps its own leaf');

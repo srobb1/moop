@@ -13,13 +13,18 @@
  * collapsed beneath.
  */
 $as = $assembly_stats;
+// One assembled transcript per gene, not a genome (tools/assembly.php, moop_genome_kind()): the
+// same figures, named for what they measure.
+$as_tx = ($genome_kind ?? '') === 'transcripts';
 
 // Headline tiles: [value, label, context line]. Contig and GC only when the pipeline file has them.
 $as_tiles = [
-    [moop_format_bp($as['total_length']), 'Genome size', number_format($as['sequences']) . ' sequence' . ($as['sequences'] == 1 ? '' : 's')],
-    [moop_format_bp($as['n50']), 'Scaffold N50', 'L50 ' . number_format($as['l50'])],
+    [moop_format_bp($as['total_length']), $as_tx ? 'Total transcript length' : 'Genome size',
+     number_format($as['sequences']) . ($as_tx ? ' transcript' : ' sequence') . ($as['sequences'] == 1 ? '' : 's')],
+    [moop_format_bp($as['n50']), $as_tx ? 'Transcript N50' : 'Scaffold N50', 'L50 ' . number_format($as['l50'])],
 ];
-if (isset($as['contig_n50'])) {
+// Not for transcripts: with no gaps to split at, "contigs" are the transcripts again.
+if (isset($as['contig_n50']) && !$as_tx) {
     $as_tiles[] = [moop_format_bp($as['contig_n50']), 'Contig N50',
                    isset($as['contigs']) ? number_format($as['contigs']) . ' contigs' : ''];
 }
@@ -64,9 +69,17 @@ foreach ($as_groups as $name => $rows) {
     <div class="card shadow-sm">
       <div class="card-header d-flex align-items-center" style="background-color:#d97706;">
         <i class="fas fa-ruler-horizontal me-2 text-white"></i>
-        <span class="text-uppercase fw-semibold text-white section-eyebrow">Assembly Statistics</span>
+        <span class="text-uppercase fw-semibold text-white section-eyebrow"><?= t('Assembly Statistics') ?></span>
+        <?php if ($as_tx): ?><span class="badge bg-white text-dark ms-2"><?= t('Transcripts, not a genome') ?></span><?php endif; ?>
       </div>
       <div class="card-body">
+        <?php if ($as_tx): ?>
+        <p class="small mb-3">
+          <i class="fa fa-info-circle me-1" aria-hidden="true"></i>
+          <?= t_markup('These figures describe %s, one per gene — this assembly is not a genome.', '<strong>' . t('transcripts') . '</strong>') . "\n" ?>
+          <?= t("N50 here is a transcript length, so it cannot be compared with a genome's scaffold N50.") . "\n" ?>
+        </p>
+        <?php endif; ?>
         <div class="as-tiles">
           <?php foreach ($as_tiles as [$value, $label, $context]): ?>
           <div class="as-tile">
@@ -77,16 +90,26 @@ foreach ($as_groups as $name => $rows) {
           <?php endforeach; ?>
         </div>
 
+        <?php if ($as_tx): ?>
         <p class="as-sentence mb-0">
-          Half the genome is in <strong><?= number_format($as['l50']) ?> sequence<?= $as['l50'] == 1 ? '' : 's' ?></strong>
-          of at least <strong><?= htmlspecialchars(moop_format_bp($as['n50'])) ?></strong><?php
-          if (isset($as['contig_n50'])): ?>; without scaffolding (split at gaps) the pieces reach
-          <strong><?= htmlspecialchars(moop_format_bp($as['contig_n50'])) ?></strong><?php endif; ?>.
+          <?= t_markup('Half the bases are in %1$s of at least %2$s.',
+                       '<strong>' . ($as['l50'] == 1 ? t('%s transcript', number_format($as['l50'])) : t('%s transcripts', number_format($as['l50']))) . '</strong>',
+                       '<strong>' . htmlspecialchars(moop_format_bp($as['n50'])) . '</strong>') . "\n" ?>
         </p>
+        <?php else: ?>
+        <p class="as-sentence mb-0">
+<?php $as_l50 = '<strong>' . ($as['l50'] == 1 ? t('%s sequence', number_format($as['l50'])) : t('%s sequences', number_format($as['l50']))) . '</strong>';
+      $as_n50 = '<strong>' . htmlspecialchars(moop_format_bp($as['n50'])) . '</strong>'; ?>
+          <?= (isset($as['contig_n50'])
+              ? t_markup('Half the genome is in %1$s of at least %2$s; without scaffolding (split at gaps) the pieces reach %3$s.',
+                         $as_l50, $as_n50, '<strong>' . htmlspecialchars(moop_format_bp($as['contig_n50'])) . '</strong>')
+              : t_markup('Half the genome is in %1$s of at least %2$s.', $as_l50, $as_n50)) . "\n" ?>
+        </p>
+        <?php endif; ?>
 
         <a class="small d-inline-block mt-2" data-bs-toggle="collapse" href="#assemblyStatsMore" role="button"
            aria-expanded="false" aria-controls="assemblyStatsMore">
-          More statistics <i class="fa fa-chevron-down small"></i>
+          <?= t('More statistics') ?> <i class="fa fa-chevron-down small"></i>
         </a>
         <div class="collapse" id="assemblyStatsMore">
           <div class="row mt-2">
@@ -105,8 +128,7 @@ foreach ($as_groups as $name => $rows) {
 
         <?php if (empty($as['from_pipeline'])): ?>
         <p class="small text-muted mb-0 mt-2">
-          Computed from the genome index. Contig, gap and GC figures appear once the annotation
-          pipeline has produced this assembly's statistics.
+          <?= t('Computed from the genome index.') ?> <?= t_markup("%s, gap and GC figures appear once the annotation pipeline has produced this assembly's statistics.", gloss('contig', 'Contig')) . "\n" ?>
         </p>
         <?php endif; ?>
       </div>

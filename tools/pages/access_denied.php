@@ -25,23 +25,23 @@
       <div class="card h-100 shadow-sm border-0 rounded-3">
         <div class="card-body p-5 text-center">
           <div class="mb-4" style="font-size: 60px;">🔒</div>
-          <h2 class="card-title fw-bold text-dark mb-4">Access Denied</h2>
+          <h2 class="card-title fw-bold text-dark mb-4"><?= t('Access Denied') ?></h2>
           
           <p class="card-text text-muted mb-4">
-            You don't have permission to view this page. If you believe you're seeing this page erroneously, please contact the administrator.
+            <?= t('You don\'t have permission to view this page. If you believe you\'re seeing this page erroneously, please contact the administrator.') . "\n" ?>
           </p>
           
           <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
-            <i class="fa fa-info-circle"></i> <strong>Administrator Contact:</strong>
+            <i class="fa fa-info-circle"></i> <strong><?= t('Administrator Contact:') ?></strong>
             <br>
             <a href="mailto:<?= htmlspecialchars($adminEmail) ?>" class="text-decoration-none">
               <?= htmlspecialchars($adminEmail) ?>
             </a>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= t('Close') ?>"></button>
           </div>
           
           <a href="/<?= htmlspecialchars($site) ?>/index.php" class="btn btn-primary btn-lg w-100">
-            <i class="fa fa-home"></i> Return to Home
+            <i class="fa fa-home"></i> <?= t('Return to Home') . "\n" ?>
           </a>
         </div>
       </div>

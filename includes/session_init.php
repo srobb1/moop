@@ -52,6 +52,28 @@
  *             along with the conditional above.
  */
 
+if (!function_exists('moop_cookie_name')) {
+    /**
+     * A cookie's name for THIS site. Several MOOP sites can share one host (cuttingclass beside
+     * simrbase, 2026-11-04), and a cookie is sent to every path on its host: with one name, two
+     * sites shared ONE session -- an admin logged into one was an admin on the other, and a
+     * collaborator's access list crossed over too.
+     *
+     * The suffix is the site's FOLDER name, not the 'site' setting: some entry points start the
+     * session before ConfigManager loads, and a name that depended on settings could differ
+     * between two requests of the same visitor and silently log them out. The folder is fixed.
+     *
+     * The site in folder "moop" (simrbase) keeps the bare names it has always had -- MOOPSESS,
+     * MOOPSESS_S, moop_lang -- so nobody is logged out by this. Pure apart from __DIR__.
+     */
+    function moop_cookie_name(string $base, ?string $site_folder = null): string
+    {
+        $folder = $site_folder ?? basename(dirname(__DIR__));
+        $suffix = preg_replace('/[^A-Za-z0-9]/', '', $folder);
+        return ($folder === 'moop' || $suffix === '') ? $base : $base . '_' . $suffix;
+    }
+}
+
 if (!function_exists('moop_session_start')) {
     /**
      * Start the session with MOOP's cookie attributes. Safe to call more than once.
@@ -65,7 +87,8 @@ if (!function_exists('moop_session_start')) {
         $is_https = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off');
 
         // Must be set BEFORE session_start(), same as the cookie params below.
-        session_name($is_https ? 'MOOPSESS_S' : 'MOOPSESS');
+        // Per site (moop_cookie_name()): two MOOP sites on one host must never share a session.
+        session_name(moop_cookie_name($is_https ? 'MOOPSESS_S' : 'MOOPSESS'));
 
         session_set_cookie_params([
             'lifetime' => 0,          // session cookie: cleared when the browser closes

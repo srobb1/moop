@@ -203,6 +203,23 @@ handleAdminAjax(function($action) use ($organisms) {
             else unset($metadata[$key]);
         }
         
+        // The summary in other languages ('summary_lang': {code: plain text}), sent only by a dialog
+        // that shows the boxes. Only the site's ACTIVE languages are changed: a retired language's
+        // summary is kept as it is, the retired-organism rule (Admin -> Manage Languages).
+        if (isset($_POST['summary_lang_json'])) {
+            $sent   = json_decode((string) $_POST['summary_lang_json'], true);
+            $active = ConfigManager::getInstance()->languageCodes();
+            $keep   = (array) ($metadata['summary_lang'] ?? []);
+            foreach ((array) $sent as $code => $text) {
+                if ($code === 'en' || !in_array($code, $active, true)) continue;
+                $text = trim(str_replace("\r\n", "\n", (string) $text));
+                if ($text === '') unset($keep[$code]);
+                else $keep[$code] = $text;
+            }
+            if ($keep) $metadata['summary_lang'] = $keep;
+            else unset($metadata['summary_lang']);
+        }
+
         // Write the file
         $json_string = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         
@@ -299,7 +316,6 @@ $data = [
         '/' . $config->getString('site') . '/js/admin-utilities.js',
         '/' . $config->getString('site') . '/js/modules/organism-management.js',
         '/' . $config->getString('site') . '/js/modules/retire.js',
-        '/' . $config->getString('site') . '/js/modules/copy-to-clipboard.js'
     ],
     'inline_scripts' => [
         "const sitePath = '/" . $config->getString('site') . "';",

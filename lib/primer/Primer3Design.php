@@ -61,7 +61,7 @@ class Primer3Design
         'PRIMER_MAX_TM'                        => 63.0,
         'PRIMER_MIN_GC'                        => 40.0,
         'PRIMER_MAX_GC'                        => 60.0,
-        'PRIMER_PRODUCT_SIZE_RANGE'            => '100-400',
+        'PRIMER_PRODUCT_SIZE_RANGE'            => '200-900',   // = the Standard PCR preset
     ];
 
     /**

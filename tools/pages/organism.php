@@ -30,18 +30,18 @@
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:#0f766e;">
           <span class="fw-semibold" style="letter-spacing:0.03em; font-size:0.9rem;"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
-          <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;">search limited to this organism</span>
+          <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;"><?= t('search limited to this organism') ?></span>
         </div>
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> <?= t('Search Gene IDs and Annotations') ?> <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="organismSearchForm">
             <div class="row align-items-center">
               <div class="col">
                 <div class="d-flex gap-2 align-items-center">
-                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="<?= t('Enter gene ID or annotation keywords (minimum 3 characters)...') ?>" required>
+                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="<?= t('Search') ?>" data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fa fa-search"></i>
                   </button>
                 </div>
@@ -134,7 +134,7 @@
         <?php /* Declared, not shown — the heading and badges above already say where you
                  are; this exists so the page declares its PURPOSE for the router. */ ?>
         <?= page_purpose('Search genes across all the assemblies and gene sets held for one organism, filtering both the sources searched and the results.', '', false, false) ?>
-            <span class="badge bg-white text-organism ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Organism</span></h1>
+            <span class="badge bg-white text-organism ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;"><?= t('Organism') ?></span></h1>
         <div class="feature-overview-body">
            <div class="fw-bold h4 mb-3" style="color: #0f766e;">
              <?= htmlspecialchars($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) ?>
@@ -142,7 +142,7 @@
 
            <dl class="feature-info-grid mb-0">
              <?php if (!empty($organism_info['taxon_id'])): ?>
-             <dt>NCBI Taxon ID</dt>
+             <dt><?= t('NCBI Taxon ID') ?></dt>
              <dd><a href="https://www.ncbi.nlm.nih.gov/datasets/taxonomy/<?= htmlspecialchars($organism_info['taxon_id']) ?>"
                     target="_blank"><?= htmlspecialchars($organism_info['taxon_id']) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
              <?php endif; ?>
@@ -156,7 +156,7 @@
           <?php if (!empty($lineage_display)): ?>
                                  <div class="mt-4 pt-3 border-top">
                    <h6 class="text-muted mb-3" style="font-weight: 600;">
-                     Taxonomy Lineage
+                     <?= t('Taxonomy Lineage') . "\n" ?>
                      <?= field_help(
                          'The number beside each rank is how many organisms in that group are in '
                          . $siteTitle . '. Click a rank to see them.',
@@ -185,7 +185,7 @@
           if (!empty($organism_groups)): ?>
             <div class="mt-4 pt-3 border-top">
               <h6 class="text-muted mb-3" style="font-weight: 600;">
-                Member of Groups
+                <?= t('Member of Groups') . "\n" ?>
                 <?= field_help(
                     'Groups collect organisms by taxonomy or research focus. The number beside '
                     . 'each one is how many organisms belong to it. Click a group to see them.',
@@ -214,22 +214,27 @@
                 <?= gloss('assembly', 'Assemblies') ?>
                 <?= field_help(
                     'Each chip is one genome build for this organism. A green tick means its '
-                    . 'genome sequence is available to download and search; a grey cross means '
-                    . 'only its gene models are. Click one to open it.',
+                    . 'genome sequence is available to download and search; a gray cross means '
+                    . 'only its gene models are. "Transcripts only" means the build is one '
+                    . 'assembled transcript per gene, not a genome: there is no sequence between '
+                    . 'or around genes. Click one to open it.',
                     'Assemblies'
                 ) ?>
               </h6>
               <div class="chip-container">
                 <?php foreach ($accessible_assemblies as $assembly => $assembly_display):
                     $has_genome_fa = file_exists("$organism_data/$organism_name/$assembly/" . genome_fasta_filename());
+                    $is_transcripts = $has_genome_fa && moop_genome_kind("$organism_data/$organism_name/$assembly") === 'transcripts';
                 ?>
                   <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>"
                      class="assembly-chip">
                     <?= htmlspecialchars($assembly_display) ?>
-                    <?php if ($has_genome_fa): ?>
-                      <i class="fa fa-check-circle ms-1 text-success" title="Genome FASTA available"></i>
+                    <?php if ($is_transcripts): ?>
+                      <span class="badge text-bg-warning ms-1" title="<?= t('One assembled transcript per gene, standing in for a genome') ?>"><?= t('Transcripts only, not a genome') ?></span>
+                    <?php elseif ($has_genome_fa): ?>
+                      <i class="fa fa-check-circle ms-1 text-success" title="<?= t('Genome FASTA available') ?>"></i>
                     <?php else: ?>
-                      <i class="fa fa-times-circle ms-1 text-muted" title="No genome FASTA"></i>
+                      <i class="fa fa-times-circle ms-1 text-muted" title="<?= t('No genome FASTA') ?>"></i>
                     <?php endif; ?>
                   </a>
                 <?php endforeach; ?>
@@ -301,9 +306,9 @@
               <div class="mt-3 text-muted">
                 <small>
                   <?php if (filter_var($organism_info['text_src'], FILTER_VALIDATE_URL)): ?>
-                    Source: <a href="<?= htmlspecialchars($organism_info['text_src']) ?>" target="_blank">Link</a>
+                    <?= t_markup('Source: %s', '<a href="' . htmlspecialchars($organism_info['text_src']) . '" target="_blank">' . t('Link') . '</a>') . "\n" ?>
                   <?php else: ?>
-                    Source: <?= htmlspecialchars($organism_info['text_src']) ?>
+                    <?= t('Source: %s', $organism_info['text_src']) . "\n" ?>
                   <?php endif; ?>
                 </small>
               </div>

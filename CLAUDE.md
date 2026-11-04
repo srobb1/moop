@@ -223,6 +223,42 @@ promote them is in `notes/ADMIN_UI_FOLLOWUPS.md` §6.
 - Load page-specific JS via `page_script` in the `$data` array
 - All pages get: jQuery, Bootstrap, DataTables, and `js/modules/csrf.js` automatically
 
+### 7b. Visitor-facing text goes through t() — the rule for new code (2026-11-04)
+
+Any text a VISITOR can see — page text, buttons, placeholders, `title`/`aria-label`, messages —
+is written as `<?= t('Log In') ?>`, not typed bare into the template. That is what lets a site
+with more than one language (cuttingclass) show it in Spanish; on simrbase (English only) `t()`
+returns the same bytes, so nothing changes. Functions are in `includes/config_init.php`, the
+catalog and spreadsheet in `lib/i18n.php`; plan in `notes/CUTTINGCLASS_PLAN.md` §5b.
+
+- `t()` escapes (ENT_COMPAT) — use it in HTML text and double-quoted attributes. `t_plain()` does
+  not — for code that escapes for itself. `t_markup('across %s organisms', '<strong>85</strong>')`
+  for a sentence with markup inside: the markup is an argument, never part of the English.
+- **One whole sentence per call**, with sprintf placeholders for what varies
+  (`t('Showing %d of %d hits', $n, $total)`) — never glue fragments ("Showing " . $n . " of"),
+  which no translator can reorder. Plurals: two calls chosen by the count.
+- **The English must be a literal** (`t('…')`, not `t($var)`), or the source scan cannot list it.
+  Text from config (tool names, menu labels) goes through `t_plain()` where it is printed.
+- **Not wrapped:** admin pages (always English), and DATA (gene names, annotations, organism
+  descriptions) — that is never translated.
+- **Already done for you:** `field_help()`, `help_modal()`, `help_modal_trigger()` and
+  `page_purpose()` translate their own text. Pass plain English; don't wrap it again.
+- **`?>` eats the newline after it.** A line ending in `<?= t('x') ?>` loses its line break —
+  write `<?= t('x') . "\n" ?>` there, and run `scripts/render_compare.php` to prove simrbase
+  is byte-identical.
+- **CI checks it:** `php tests/i18n_unwrapped_check.php` lists visitor-template text not inside
+  `t()` and fails on anything not in `tests/i18n_unwrapped_baseline.json` (the known leftovers
+  of 2026-11-04, mostly the English-only sysadmin help). Wrap new text; if a piece truly must
+  stay as is, `--update` accepts it. The baseline should only shrink. It reads template HTML, not
+  strings inside PHP code or JavaScript.
+- **JavaScript:** `moopT('No matches found')` (plain), `moopTh()` (escaped, for HTML strings),
+  `moopTm('Looking up %s…', html)` (markup as an argument) — `js/modules/utilities.js`. Same
+  rules: a literal, whole sentences. The translations reach the browser only on a page in another
+  language (`window.MOOP_I18N`, `includes/layout.php`).
+- **Organism summaries** are not catalog text: an admin writes them per language in the organism
+  dialog (`summary_lang` in `organism.json`); with none, a visitor gets that language's Wikipedia
+  article via the English article's language link, then English.
+
 ### 8. Shell Command Safety
 
 All shell commands use `escapeshellarg()` on every argument. Examples:
@@ -342,7 +378,9 @@ the kernel drops however the process ends (it was a PID file; a run that `die()`
 and blocked every run for 1.5 h). Every run keeps a record in the status file
 (`housekeeping_runs`: start, current task, finish, per-task result); a shutdown function writes
 which task a run died in and the message. `housekeeping_health()` turns the Housekeeping card —
-and a banner atop the dashboard — red when a run died or no full run finished for 2 h.
+and a banner atop the dashboard — red when a run died, or a full run was *requested* (the
+marker's mtime) over 15 min ago and none has finished since. Not "no run for 2 h": runs only
+happen while admins visit, so that rule went red after every quiet night (fixed 2026-11-03).
 Background-child output still goes to `/dev/null`, so the record is the only place a death
 shows: keep it that way, don't add a log nobody reads.
 
@@ -477,10 +515,12 @@ php  tests/smoke_tests.php      # access control, search-query building, cache i
 node tests/js_smoke_tests.js    # search-term rules + results-table highlighting
 php  tests/primer_smoke_tests.php    # primer input, products, specificity (Primer BLAST / Maker)
 php  tests/blast_alignment_tests.php # BLAST alignment coordinates
+php  tests/i18n_unwrapped_check.php  # no new visitor text outside t() (CLAUDE.md 7b)
 ```
 
-All are plain assertions with **no framework and no dependencies** — same philosophy as the
-rest of the repo — and all are hermetic (mocked `$_SESSION`, temp files, no site data), so
+All are plain assertions with **no test framework** — same philosophy as the rest of the repo.
+The one runtime dependency is `composer install` (the locked packages: the content-pages tests
+check the real Markdown converter, erusev/parsedown; CI installs it first). All are hermetic (mocked `$_SESSION`, temp files, no site data), so
 they pass on any checkout. Exit 0 = all pass. `.github/workflows/ci.yml` runs all of them on every
 push (plus `tests/search_ranking_tests.php`), each preceded by a syntax sweep (`php -l` over all PHP, `node --check` over all
 non-vendor JS).
@@ -641,7 +681,7 @@ a new MOOP site from scratch. Site-specific data is versioned separately.
 - `composer.json` (but not `vendor/` or `composer.phar` — run `composer install`)
 
 **Site-data backup directory** (`site_data_path`; `site_config.php` ships
-`/var/www/html/moop-site-data`, and this deployment overrides it to `/var/www/moop-site-data`
+`<parent of root_path>/<site>-site-data` — `/var/www/moop-site-data` here, which this deployment also sets explicitly
 via `config_editable.json` — read it through ConfigManager, never from `site_config.php`):
 - `config/config_editable.json` — admin-edited settings
 - `config/secrets.php` — API keys
@@ -680,7 +720,13 @@ via `config_editable.json` — read it through ConfigManager, never from `site_c
    Start step 7). Security headers + enforced CSP (`docs/nginx/moop-headers.conf`, skipped if
    nginx already sets them), rate limits + robots.txt, and the System Monitor's root collector,
    which also keeps the rate-limit exemptions in step with `auto_login_ip_ranges`.
-   `setup-check.php` reports each piece. **Anything new that a fresh install needs must land in
+   `setup-check.php` reports each piece.
+8. **Load resilience** — `sudo scripts/install_php_fpm_resilience.sh` (one out-of-memory BLAST
+   no longer stops php-fpm) and `sudo scripts/install_nginx_timeouts.sh` (nginx waits for a
+   queued BLAST). Both lived only on this host until 2026-11-03; setup-check's "Load
+   Resilience" section now checks them. A new *machine* (not a second site on this one) has
+   more: README "A New Site on Another Machine".
+   **Anything new that a fresh install needs must land in
    this list, the README Quick Start, `docs/INSTALL.md` and `setup-check.php` together** —
    the CSP lived only in this host's nginx.conf until 2026-10-28, so a new install would have
    had none.
@@ -743,6 +789,11 @@ long-standing entries here had already been fixed, and one contradicted §10 of 
   entry point that starts a session must call `moop_session_start()`, never `session_start()`
   directly: `session_set_cookie_params()` has no effect after the session begins, so a direct
   call silently issues a cookie with none of these protections.
+  **Cookie names are per site** (`moop_cookie_name()`, 2026-11-04): two MOOP sites on one host
+  share cookies (a cookie goes to every path on its host), so one name meant ONE session for both
+  -- a simrbase admin would have been an admin on cuttingclass. The name carries the site's
+  FOLDER (`MOOPSESS_cuttingclass`, `moop_lang_cuttingclass`); the folder `moop` keeps the bare
+  `MOOPSESS` / `moop_lang`. Any new cookie: name it through `moop_cookie_name()`.
 - Admin API CSRF (2026-07-21): all `admin/api/*.php` endpoints bootstrap via `admin_init.php`
   (auth **+** CSRF). `admin_access_check.php` alone checks the role but not the token, which
   left seven JBrowse endpoints authenticated but forgeable. Note `js/modules/csrf.js` wraps

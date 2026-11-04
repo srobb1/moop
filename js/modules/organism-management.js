@@ -126,6 +126,13 @@ function saveMetadata(event, organism) {
     data.append('taxon_id', formData.get('taxon_id'));
     data.append('images_json', JSON.stringify(images));
     data.append('html_p_json', JSON.stringify(paragraphs));
+    // The summary in other languages -- the box exists only on a site with more than one.
+    const summaryBox = document.getElementById('summary-lang-' + organism);
+    if (summaryBox) {
+        const summaries = {};
+        summaryBox.querySelectorAll('.summary-lang').forEach(t => { summaries[t.dataset.lang] = t.value; });
+        data.append('summary_lang_json', JSON.stringify(summaries));
+    }
     data.append('parents_json', JSON.stringify(parentFeatures));
     data.append('children_json', JSON.stringify(childFeatures));
     

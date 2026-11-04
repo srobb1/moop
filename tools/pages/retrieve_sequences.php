@@ -43,15 +43,15 @@
 
     <?php if (empty($accessible_sources)): ?>
         <div class="alert alert-warning">
-            <strong>No accessible assemblies found.</strong>
-            <p class="mb-0">You do not have access to any organism assemblies, or the data directory is misconfigured.</p>
+            <strong><?= t('No accessible assemblies found.') ?></strong>
+            <p class="mb-0"><?= t('You do not have access to any organism assemblies, or the data directory is misconfigured.') ?></p>
         </div>
     <?php else: ?>
 
         <?php if (!empty($download_error_msg)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <strong><i class="fa fa-exclamation-circle"></i> Error:</strong> <?= htmlspecialchars($download_error_msg) ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <strong><i class="fa fa-exclamation-circle"></i> <?= t('Error:') ?></strong> <?= htmlspecialchars($download_error_msg) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= t('Close') ?>"></button>
             </div>
         <?php endif; ?>
 
@@ -74,7 +74,7 @@
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">1</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Select organism and assembly</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select organism and assembly') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <?php
@@ -82,9 +82,9 @@
                     include __DIR__ . '/../../includes/source-list.php';
                     ?>
                     <div class="mt-3 p-3 bg-light border rounded">
-                        <strong>Currently selected:</strong>
+                        <strong><?= t('Currently selected:') ?></strong>
                         <div id="currentSelection" style="margin-top:8px; font-size:14px;">
-                            <span style="color:#999;">None selected</span>
+                            <span style="color:#999;"><?= t('None selected') ?></span>
                         </div>
                     </div>
                 </div>
@@ -94,7 +94,7 @@
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">2</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Enter feature or gene IDs</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Enter feature or gene IDs') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <textarea
@@ -113,60 +113,64 @@
                     ?>
                     <?php // Always rendered: sequence-retrieval.js refills it when the selected source changes. ?>
                     <div id="sampleIdsRow" class="mt-2 d-flex gap-2 align-items-center flex-wrap"<?= empty($examples['ids']) ? ' style="display:none;"' : '' ?>>
-                        <small class="text-muted">Examples: <span id="sampleIdsText"><?= htmlspecialchars(implode(' · ', $examples['ids'])) ?></span></small>
+                        <small class="text-muted"><?= t('Examples:') ?> <span id="sampleIdsText"><?= htmlspecialchars(implode(' · ', $examples['ids'])) ?></span></small>
                         <button type="button" class="btn btn-sm fw-semibold text-white ms-auto btn-moop-teal" onclick="loadSampleIds()">
-                            <i class="fa fa-bookmark me-1"></i>Load examples
+                            <i class="fa fa-bookmark me-1"></i><?= t('Load examples') . "\n" ?>
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearFeatureIds()">
-                            <i class="fa fa-times me-1"></i>Clear
+                            <i class="fa fa-times me-1"></i><?= t('Clear') . "\n" ?>
                         </button>
                     </div>
 
                     <?php /* Ranges were documented only in the placeholder (gone once you type) and the
                              (i) modal, so few users found them. This line stays visible. */ ?>
                     <div class="small text-muted mt-2">
-                        <i class="fa fa-cut me-1"></i>Want part of a sequence? Add a range:
+                        <i class="fa fa-cut me-1"></i><?= t('Want part of a sequence? Add a range:') . "\n" ?>
                         <code><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span>:1-60</code>.
-                        <a href="#idInfoCollapse" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="idInfoCollapse">How IDs and ranges work</a>
+                        <a href="#idInfoCollapse" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="idInfoCollapse"><?= t('How IDs and ranges work') ?></a>
                     </div>
 
                     <div id="searchIdsDisplay" class="mt-3 p-3 bg-light border rounded" style="display:none;">
-                        <small class="text-muted d-block mb-2"><strong>IDs to search:</strong></small>
+                        <small class="text-muted d-block mb-2"><strong><?= t('IDs to search:') ?></strong></small>
                         <div id="searchIdsContent"></div>
                     </div>
 
                     <div class="collapse mt-2" id="idInfoCollapse">
                         <div class="p-3 bg-light border rounded small">
-                            <p class="fw-semibold mb-1">IDs</p>
+                            <p class="fw-semibold mb-1"><?= t('IDs') ?></p>
                             <ul class="mb-2 ps-3">
-                                <li>One per line, or separated by commas.</li>
-                                <li>A gene ID such as <code class="ex-gene"><?= htmlspecialchars($ex_gene) ?></code> gives every transcript, CDS and protein of that gene, and the gene's genomic region.
-                                    A transcript ID such as <code class="ex-tx"><?= htmlspecialchars($ex_tx) ?></code> gives just that isoform's, and the transcript's own genomic span (introns included).
-                                    A protein or CDS ID gives its transcript's genomic span, and the header names the gene and transcript.</li>
+                                <li><?= t('One per line, or separated by commas.') ?></li>
+                                <li><?= t_markup("A gene ID such as %1\$s gives every %2\$s, CDS and protein of that gene, and the gene's genomic region.",
+                                             '<code class="ex-gene">' . htmlspecialchars($ex_gene) . '</code>', gloss('transcript')) . "\n" ?>
+                                    <?= t_markup("A transcript ID such as %1\$s gives just that %2\$s's, and the transcript's own genomic span (%3\$s included).",
+                                             '<code class="ex-tx">' . htmlspecialchars($ex_tx) . '</code>', gloss('isoform'), gloss('intron', 'introns')) . "\n" ?>
+                                    <?= t("A protein or CDS ID gives its transcript's genomic span, and the header names the gene and transcript.") ?></li>
                             </ul>
-                            <p class="fw-semibold mb-1">Ranges — part of a sequence</p>
+                            <p class="fw-semibold mb-1"><?= t('Ranges — part of a sequence') ?></p>
                             <ul class="mb-2 ps-3">
-                                <li>Add positions after the ID. These are all the same:
+                                <li><?= t('Add positions after the ID. These are all the same:') . "\n" ?>
                                     <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span>:1-60</code> ·
                                     <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span>:1..60</code> ·
                                     <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span> 1-60</code> ·
                                     <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span> 1..60</code></li>
-                                <li>The range applies to <em>every</em> sequence of that ID — protein, mRNA, CDS and genomic. On a gene ID, to all of its transcripts.</li>
-                                <li><strong>Positions count in each sequence's own units:</strong> amino acids in a protein, nucleotides in mRNA and CDS.
-                                    So <code>1-60</code> is amino acids 1–60 of the protein but only the first 60 nucleotides of the CDS, which encode amino acids 1–20.
-                                    For the CDS that matches amino acids 1–60, ask for <code>1-180</code>. On the genomic region, <code>1</code> is the first base of the gene or transcript, introns count.</li>
-                                <li>Want several pieces of one sequence? Put each range on its own line.</li>
-                                <li>Positions start at 1, and the start cannot be after the end. A range running past the end of a sequence stops at its end.</li>
+                                <li><?= t_markup('The range applies to %s sequence of that ID — protein, mRNA, CDS and genomic.', '<em>' . t('every') . '</em>') ?> <?= t('On a gene ID, to all of its transcripts.') ?></li>
+                                <li><strong><?= t("Positions count in each sequence's own units:") ?></strong> <?= t('amino acids in a protein, nucleotides in mRNA and CDS.') . "\n" ?>
+                                    <?= t_markup('So %s is amino acids 1–60 of the protein but only the first 60 nucleotides of the CDS, which encode amino acids 1–20.', '<code>1-60</code>') . "\n" ?>
+                                    <?= t_markup('For the CDS that matches amino acids 1–60, ask for %s.', '<code>1-180</code>') ?> <?= t_markup('On the genomic region, %s is the first base of the gene or transcript, introns count.', '<code>1</code>') ?></li>
+                                <li><?= t('Want several pieces of one sequence? Put each range on its own line.') ?></li>
+                                <li><?= t('Positions start at 1, and the start cannot be after the end. A range running past the end of a sequence stops at its end.') ?></li>
                             </ul>
-                            <p class="fw-semibold mb-1">Genomic region and flanks</p>
+                            <p class="fw-semibold mb-1"><?= t('Genomic region and flanks') ?></p>
                             <ul class="mb-2 ps-3">
-                                <li>Every genomic sequence reads 5′ to 3′ along the gene: a gene on the minus strand is reverse-complemented. The header gives the location and strand, e.g. <code>chr2:16003283-16019242(-)</code>.</li>
-                                <li>Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.
-                                    For a transcript, CDS or protein ID that is the isoform's own start and end; for a gene ID, the gene's.</li>
-                                <li>Genomic sequence needs the gene set to be placed on a genome; transcriptome-only gene sets have none.</li>
+                                <li><?= t_markup('Every genomic sequence reads 5′ to 3′ along the gene: a gene on the minus %s is reverse-complemented.', gloss('strand')) ?> <?= t_markup('The header gives the location and strand, e.g. %s.', '<code>chr2:16003283-16019242(-)</code>') ?></li>
+                                <li><?= t('Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.') . "\n" ?>
+                                    <?= t("For a transcript, CDS or protein ID that is the isoform's own start and end; for a gene ID, the gene's.") ?></li>
+                                <li><?= t_markup('Genomic sequence needs the gene set to be placed on a genome; %s-only gene sets have none.', gloss('transcriptome')) ?></li>
                             </ul>
-                            <p class="fw-semibold mb-1">After you retrieve</p>
-                            <p class="mb-0">The "IDs to search" box shows which IDs were found (<span style="background:#d4edda; padding:2px 4px; border-radius:2px;">green</span>) and which were not (<span style="background:#f8d7da; padding:2px 4px; border-radius:2px;">red</span>).</p>
+                            <p class="fw-semibold mb-1"><?= t('After you retrieve') ?></p>
+                            <p class="mb-0"><?= t_markup('The "IDs to search" box shows which IDs were found (%1$s) and which were not (%2$s).',
+                                '<span style="background:#d4edda; padding:2px 4px; border-radius:2px;">' . t('green') . '</span>',
+                                '<span style="background:#f8d7da; padding:2px 4px; border-radius:2px;">' . t('red') . '</span>') ?></p>
                         </div>
                     </div>
                 </div>
@@ -176,7 +180,7 @@
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">3</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Retrieve sequences</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Retrieve sequences') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <?php /* Flanks go with the genomic region only. Same rules (and limit) as the gene
@@ -185,29 +189,29 @@
                              source); js/sequence-retrieval.js toggles it and disables the inputs. */ ?>
                     <div id="flankControls" class="d-flex flex-wrap align-items-end gap-3 mb-3">
                         <div>
-                            <label for="upstreamBp" class="form-label small mb-1">Upstream flank (bp)</label>
+                            <label for="upstreamBp" class="form-label small mb-1"><?= t('Upstream flank (bp)') ?></label>
                             <input type="number" class="form-control form-control-sm moop-input" id="upstreamBp" name="upstream_bp"
                                    min="0" max="<?= MOOP_MAX_FLANK_BP ?>" step="1" value="<?= (int)$upstream_bp ?>" style="width:9rem;">
                         </div>
                         <div>
-                            <label for="downstreamBp" class="form-label small mb-1">Downstream flank (bp)</label>
+                            <label for="downstreamBp" class="form-label small mb-1"><?= t('Downstream flank (bp)') ?></label>
                             <input type="number" class="form-control form-control-sm moop-input" id="downstreamBp" name="downstream_bp"
                                    min="0" max="<?= MOOP_MAX_FLANK_BP ?>" step="1" value="<?= (int)$downstream_bp ?>" style="width:9rem;">
                         </div>
-                        <small class="text-muted pb-1">Optional. Added as separate sequences to the genomic region; 0 = none. A protein, CDS or transcript ID gets its own isoform's flanks; a gene ID, the gene's.</small>
+                        <small class="text-muted pb-1"><?= t('Optional. Added as separate sequences to the genomic region; 0 = none. A protein, CDS or transcript ID gets its own isoform\'s flanks; a gene ID, the gene\'s.') ?></small>
                     </div>
                     <p id="flankNoGenome" class="small text-muted mb-3" style="display:none;">
-                        <i class="fa fa-info-circle me-1"></i>This gene set is not placed on a genome, so there is no genomic sequence or flanks to retrieve.
+                        <i class="fa fa-info-circle me-1"></i><?= t('This gene set is not placed on a genome, so there is no genomic sequence or flanks to retrieve.') . "\n" ?>
                     </p>
                     <button type="submit" class="btn btn-lg fw-semibold text-white w-100 btn-moop-action">
-                        <i class="fa fa-eye me-1"></i>Retrieve Sequences
+                        <i class="fa fa-eye me-1"></i><?= t('Retrieve Sequences') . "\n" ?>
                     </button>
                     <?php /* "uh-oh, do this first" for a missed assembly. Inline and soft, in place
                              of a jarring browser alert(); js/sequence-retrieval.js toggles it. */ ?>
                     <div id="retrieve-select-hint" class="tools-select-hint small mt-2" style="display:none;">
                         <?php /* Step number, not a direction — see the note on the same hint
                                  in blast.php. */ ?>
-                        <i class="fa fa-exclamation-circle me-1"></i> Choose an organism and assembly in step 1 before retrieving.
+                        <i class="fa fa-exclamation-circle me-1"></i> <?= t('Choose an organism and assembly in step 1 before retrieving.') . "\n" ?>
                     </div>
                 </div>
             </div>
@@ -227,19 +231,25 @@
             <div class="card shadow-sm mb-4" id="retrievalSummary">
                 <div class="card-body">
                     <p class="mb-2">
-                        <strong><?= number_format($retrieval_summary['ids']) ?> ID<?= $retrieval_summary['ids'] === 1 ? '' : 's' ?>:
-                        <?= number_format($rs_found) ?> found<?= $rs_missing ? ', ' . number_format(count($rs_missing)) . ' not found' : '' ?>.</strong>
+                        <strong><?php
+                        $__ids = number_format($retrieval_summary['ids']);
+                        if ($rs_missing) echo $retrieval_summary['ids'] === 1
+                            ? t('%1$s ID: %2$s found, %3$s not found.', $__ids, number_format($rs_found), number_format(count($rs_missing)))
+                            : t('%1$s IDs: %2$s found, %3$s not found.', $__ids, number_format($rs_found), number_format(count($rs_missing)));
+                        else echo $retrieval_summary['ids'] === 1
+                            ? t('%1$s ID: %2$s found.', $__ids, number_format($rs_found))
+                            : t('%1$s IDs: %2$s found.', $__ids, number_format($rs_found)); ?></strong>
                     </p>
                     <p class="small text-muted mb-3">
                         <?php if ($retrieval_summary['reason'] === 'count'): ?>
-                            Lists of more than <?= (int)$show_max_ids ?> IDs are available as a download only, so the page stays quick. Every ID is included.
+                            <?= t('Lists of more than %d IDs are available as a download only, so the page stays quick.', (int)$show_max_ids) ?> <?= t('Every ID is included.') . "\n" ?>
                         <?php else: ?>
-                            These sequences are too long to show on the page, so they are available as a download only. Every ID is included.
+                            <?= t('These sequences are too long to show on the page, so they are available as a download only.') ?> <?= t('Every ID is included.') . "\n" ?>
                         <?php endif; ?>
-                        Ranges and flanks apply to the download as they would on the page.
+                        <?= t('Ranges and flanks apply to the download as they would on the page.') . "\n" ?>
                     </p>
                     <div class="d-flex flex-wrap align-items-center gap-2" id="retrieveDownloads">
-                        <span class="small text-muted me-1"><i class="fa fa-download me-1"></i>Download as FASTA:</span>
+                        <span class="small text-muted me-1"><i class="fa fa-download me-1"></i><?= t('Download as FASTA:') ?></span>
                         <?php foreach ($retrieval_summary['types'] as $dl_type): ?>
                             <button type="submit" form="downloadForm" name="download_type" value="<?= htmlspecialchars($dl_type) ?>"
                                     class="btn btn-sm fw-semibold text-white btn-moop-teal">
@@ -249,11 +259,11 @@
                     </div>
                     <?php if ($rs_missing): ?>
                         <div class="mt-3 small">
-                            <span class="fw-semibold">Not found in this gene set:</span>
+                            <span class="fw-semibold"><?= t('Not found in this gene set:') ?></span>
                             <?= htmlspecialchars(implode(', ', array_slice($rs_missing, 0, $rs_shown))) ?><?= count($rs_missing) > $rs_shown ? ', …' : '' ?>
                             <?php if (count($rs_missing) > $rs_shown): ?>
                                 <details class="mt-2">
-                                    <summary>All <?= number_format(count($rs_missing)) ?> not found, to copy</summary>
+                                    <summary><?= t('All %s not found, to copy', number_format(count($rs_missing))) ?></summary>
                                     <textarea class="form-control form-control-sm font-monospace mt-2" rows="6" readonly><?= htmlspecialchars(implode("\n", $rs_missing)) ?></textarea>
                                 </details>
                             <?php endif; ?>
@@ -272,7 +282,7 @@
                      asked for. This page had no download at all before: the shared sequence
                      card only draws its buttons when given a gene name, which it is not here. */ ?>
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3" id="retrieveDownloads">
-                <span class="small text-muted me-1"><i class="fa fa-download me-1"></i>Download as FASTA:</span>
+                <span class="small text-muted me-1"><i class="fa fa-download me-1"></i><?= t('Download as FASTA:') ?></span>
                 <?php foreach ($sequence_types as $dl_type => $dl_config): ?>
                     <?php if (empty($displayed_content[$dl_type])) continue; ?>
                     <button type="submit" form="downloadForm" name="download_type" value="<?= htmlspecialchars($dl_type) ?>"

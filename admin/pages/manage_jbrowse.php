@@ -217,7 +217,7 @@
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="optRewrite" checked>
             <label class="form-check-label" for="optRewrite">Rewrite existing tracks from the sheet</label>
-            <small class="text-muted d-block">Rebuilds every track, which re-reads each file and is slow on a large sheet. Only needed when a row's file path, colour or track type changed: names, categories, descriptions and the other columns are updated on every sync.</small>
+            <small class="text-muted d-block">Rebuilds every track, which re-reads each file and is slow on a large sheet. Only needed when a row's file path, color or track type changed: names, categories, descriptions and the other columns are updated on every sync.</small>
           </div>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" id="optRemove">
@@ -345,7 +345,7 @@
               <ol class="mb-0 mt-2 small">
                 <li>Copy <code>api/jbrowse2/tracks.php</code> and <code>lib/jbrowse/track_token.php</code> to remote server</li>
                 <li>Copy <strong>only</strong> <code>certs/jwt_public_key.pem</code> (NOT the private key)</li>
-                <li>Install Firebase JWT: <code>composer require firebase/php-jwt</code></li>
+                <li>Install Firebase JWT (on the remote server): <?= adm_command('composer require firebase/php-jwt') ?></li>
                 <li>Place track data files in <code>data/tracks/{organism}/{assembly}/{type}/</code></li>
                 <li>Add <code>data/tracks/.htaccess</code> to block direct file access</li>
                 <li>Re-sync tracks from Google Sheet so URIs point to the remote server</li>

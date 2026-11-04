@@ -27,6 +27,50 @@ function escapeHtml(text) {
 }
 
 /**
+ * Interface text in the visitor's language -- the browser's side of t() (includes/config_init.php;
+ * CLAUDE.md section 7b). Write the English as a LITERAL, so the source scan can list it:
+ *     el.textContent = moopT('No organisms selected');
+ *     moopT('Showing %d of %d hits', shown, total)     // %s / %d / %1$s, filled in order
+ * moopT() returns plain text (for textContent, .value, alert). moopTh() returns it HTML-escaped,
+ * arguments included -- for text going into an HTML string. moopTm('Looking up %s…', html) escapes
+ * the sentence and inserts the caller's markup as given. A translation from the spreadsheet is
+ * never trusted to carry markup.
+ *
+ * The translations are window.MOOP_I18N, written by includes/layout.php ONLY on a page shown in
+ * another language. On a one-language site (simrbase) it is never set and these return the
+ * English, unchanged. A missing translation shows the English (an admin with "Show gaps" on sees
+ * it marked, as on the server).
+ */
+function moopT(text, ...args) {
+    return moopFill(moopLookup(text), args);
+}
+
+function moopTh(text, ...args) {
+    return escapeHtml(moopT(text, ...args));   // the whole sentence, arguments included
+}
+
+/** The sentence escaped, the arguments inserted AS GIVEN -- markup the caller built and escaped. */
+function moopTm(text, ...htmlArgs) {
+    return moopFill(escapeHtml(moopLookup(text)), htmlArgs);
+}
+
+function moopLookup(text) {
+    const cat = globalThis.MOOP_I18N;   // window in a browser; also runs in the test sandbox
+    if (cat && typeof cat[text] === 'string' && cat[text] !== '') return cat[text];
+    return globalThis.MOOP_I18N_GAPS ? '\u27E6' + text + '\u27E7' : text;
+}
+
+function moopFill(s, args) {
+    if (!args.length) return s;
+    let next = 0;
+    return s.replace(/%%|%(?:(\d+)\$)?[sd]/g, (m, pos) => {
+        if (m === '%%') return '%';
+        const v = pos ? args[pos - 1] : args[next++];
+        return v === undefined ? m : String(v);
+    });
+}
+
+/**
  * Escape text for use inside a RegExp, so it matches literally ("1.5" matches a dot).
  * The one implementation; two modules each had their own copy.
  *

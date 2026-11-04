@@ -8,18 +8,18 @@
         <!-- Title Card -->
         <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:#d97706;">
           <span class="fw-semibold" style="letter-spacing:0.04em; font-size:0.85rem;"><?= htmlspecialchars(assembly_label($assembly_info['genome_name'] ?? '', $assembly_info['genome_accession'] ?? '')) ?></span>
-          <span class="badge bg-white text-assembly" style="font-size:0.65em; opacity:0.9;">search limited to this <?= gloss('assembly') ?></span>
+          <span class="badge bg-white text-assembly" style="font-size:0.65em; opacity:0.9;"><?= t_markup('search limited to this %s', gloss('assembly')) ?></span>
         </div>
 
         <!-- Search Section -->
         <div class="card-body bg-search-light">
-          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> Search Gene IDs and Annotations <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
+          <div class="mb-2 fw-semibold text-uppercase section-eyebrow"><i class="fa fa-search me-1"></i> <?= t('Search Gene IDs and Annotations') ?> <?= help_modal_trigger('search-help', '', 'How to search') ?></div>
           <form id="assemblySearchForm">
             <div class="row align-items-center">
               <div class="col">
                 <div class="d-flex gap-2 align-items-center">
-                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="Enter gene ID or annotation keywords (minimum 3 characters)..." required>
-                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="Search" data-bs-toggle="tooltip" data-bs-placement="bottom">
+                  <input type="text" class="form-control moop-input" id="searchKeywords" placeholder="<?= t('Enter gene ID or annotation keywords (minimum 3 characters)...') ?>" required>
+                  <button type="submit" class="btn btn-icon btn-search" id="searchBtn" title="<?= t('Search') ?>" data-bs-toggle="tooltip" data-bs-placement="bottom">
                     <i class="fa fa-search"></i>
                   </button>
                 </div>
@@ -106,15 +106,29 @@
 
     <div class="<?= $show_image ? 'col-md-8' : 'col-12' ?>">
       <div class="feature-header assembly-header-custom shadow">
-        <h1><?= htmlspecialchars($assembly_info['genome_name']) ?> <span class="badge bg-white text-assembly ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;">Assembly</span></h1>
+        <h1><?= htmlspecialchars($assembly_info['genome_name']) ?> <span class="badge bg-white text-assembly ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;"><?= t('Assembly') ?></span></h1>
         <?php /* Declared, not shown — the heading and badges above already say where you
                  are; this exists so the page declares its PURPOSE for the router. */ ?>
         <?= page_purpose('Search genes within a single assembly, choosing which of its gene sets to search.', '', false, false) ?>
         <div class="feature-overview-body">
+          <?php if (($genome_kind ?? '') === 'transcripts'): ?>
+          <div class="alert alert-warning d-flex gap-2 mb-3" role="note">
+            <i class="fa fa-exclamation-triangle mt-1" aria-hidden="true"></i>
+            <div>
+              <strong><?= t('Not a genome: transcripts only.') ?></strong>
+              <?= t_markup('This assembly is one assembled %s per gene, standing in for a genome.', gloss('transcript')) . "\n" ?>
+              <?= t('There is no sequence between or around genes, so upstream and downstream flanks and genomic regions are not available, and its statistics describe transcripts, not chromosomes or scaffolds.') . "\n" ?>
+            </div>
+          </div>
+          <?php endif; ?>
           <dl class="feature-info-grid mb-0">
-            <dt>Accession</dt>
+            <dt><?= gloss('accession', 'Accession') ?></dt>
             <dd><?= htmlspecialchars($assembly_info['genome_accession']) ?></dd>
-            <dt>Organism</dt>
+            <?php if (($genome_kind ?? '') === 'transcripts'): ?>
+            <dt><?= t('Assembly type') ?></dt>
+            <dd><?= t('Transcripts, one per gene — not a genome') ?></dd>
+            <?php endif; ?>
+            <dt><?= t('Organism') ?></dt>
             <?php /* Identical shape to the gene set page's Organism row: binomial in
                      .sci-name, common name after it in parentheses and NOT italic (a common
                      name is not a scientific name), then the external-link icon. The icon
@@ -122,21 +136,21 @@
                      the last page that named an organism without its common name. */ ?>
             <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em><?php if (!empty($organism_info['common_name'])): ?> (<?= htmlspecialchars($organism_info['common_name']) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
             <?php if (!empty($assembly_meta['source'])): ?>
-            <dt>Source</dt>
+            <dt><?= t('Source') ?></dt>
             <dd><?= htmlspecialchars($assembly_meta['source']) ?></dd>
             <?php endif; ?>
             <?php /* Where the data came from, written in the JSON on the compute box (copy2moop ships it;
                      an edit made on this server is overwritten by the next copy). Free text: URLs link. */ ?>
             <?php if (!empty($assembly_meta['provenance'])): ?>
-            <dt>Provenance</dt>
+            <dt><?= t('Provenance') ?></dt>
             <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$assembly_meta['provenance']) ?></dd>
             <?php endif; ?>
             <?php if (!empty($assembly_meta['date_added'])): ?>
-            <dt>Date added</dt>
+            <dt><?= t('Date added') ?></dt>
             <dd><?= htmlspecialchars($assembly_meta['date_added']) ?></dd>
             <?php endif; ?>
             <?php if (!empty($assembly_meta['note'])): ?>
-            <dt>Note</dt>
+            <dt><?= t('Note') ?></dt>
             <dd style="white-space: pre-line;"><?= moop_text_with_links((string)$assembly_meta['note']) ?></dd>
             <?php endif; ?>
             <?php /* Gene sets live HERE, in the overview, not in a full-width card of their
@@ -169,7 +183,7 @@
                   <span class="gene-set-chip-counts">
                     <strong class="feature-color-gene"><?= number_format($gs['gene_count']) ?></strong> genes
                     &middot;
-                    <strong class="feature-color-mrna"><?= number_format($gs['mrna_count']) ?></strong> transcripts
+                    <strong class="feature-color-mrna"><?= number_format($gs['mrna_count']) ?></strong> <?= t('transcripts') . "\n" ?>
                   </span>
                 </a>
               <?php endforeach; ?>
@@ -184,12 +198,22 @@
           ?>
           <div class="mt-4 pt-3 border-top">
             <h6 class="text-muted mb-3" style="font-weight: 600;">
-              Genome FASTA
+              <?php if (($genome_kind ?? '') === 'transcripts'): ?>
+              <?= t('Assembly FASTA (transcripts)') . "\n" ?>
+              <?= field_help(
+                  'The sequences this build uses in place of a genome: one assembled transcript '
+                  . 'per gene, as a FASTA file. It is not a genome -- there is no sequence between '
+                  . 'genes.',
+                  'Assembly FASTA'
+              ) ?>
+              <?php else: ?>
+              <?= t('Genome FASTA') . "\n" ?>
               <?= field_help(
                   'The assembled genome sequence for this build, as a FASTA file. It is the '
                   . 'sequence itself, without gene annotations -- those come from a gene set.',
                   'Genome FASTA'
               ) ?>
+              <?php endif; ?>
             </h6>
             <?php /* Labelled with the ASSEMBLY, not the file type. "Genome" told the user
                      what kind of thing it was, which the heading above now says; the name

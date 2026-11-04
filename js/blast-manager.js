@@ -30,19 +30,19 @@ function blastDownloadPost(content, filename, type) {
 
 function downloadResultsText() {
     const div = document.getElementById('pairwiseOutput');
-    if (!div) { alert('No BLAST results to download'); return; }
+    if (!div) { alert(moopT('No BLAST results to download')); return; }
     blastDownloadPost(div.textContent, 'blast_results_{date}.txt', 'txt');
 }
 
 function downloadResultsTabular() {
     const div = document.getElementById('tabularOutput');
-    if (!div) { alert('No tabular results to download'); return; }
+    if (!div) { alert(moopT('No tabular results to download')); return; }
     blastDownloadPost(div.textContent, 'blast_results_{date}.tsv', 'tsv');
 }
 
 function downloadResultsXML() {
     const div = document.getElementById('xmlOutput');
-    if (!div) { alert('No XML results to download'); return; }
+    if (!div) { alert(moopT('No XML results to download')); return; }
     blastDownloadPost(div.textContent, 'blast_results_{date}.xml', 'xml');
 }
 function clearBlastSourceFilters() {
@@ -57,7 +57,7 @@ function initializeBlastManager() {
         const selectionDiv = document.getElementById('currentSelection');
         const checked = document.querySelector('input[name="selected_source"]:checked');
         if (!checked) {
-            selectionDiv.innerHTML = '<span style="color: #999;">None selected</span>';
+            selectionDiv.innerHTML = '<span style="color: #999;">' + moopTh('None selected') + '</span>';
         }
     }
 
@@ -118,7 +118,7 @@ function initializeBlastManager() {
             const searchBtn = document.getElementById('searchBtn');
             if (searchBtn) {
                 searchBtn.disabled = true;
-                searchBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Running BLAST… (large databases can take a minute)';
+                searchBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>' + moopTh('Running BLAST… (large databases can take a minute)');
             }
             watchQueue(form, searchBtn);
         });
@@ -141,7 +141,10 @@ function initializeBlastManager() {
         field.value = ticket;
         if (!searchBtn) return;
 
+        // "3rd" is English; a page in another language gets the plain number (window.MOOP_I18N is
+        // set only there), so its translation can say "puesto 3".
         const ordinal = n => {
+            if (window.MOOP_I18N) return String(n);
             const teen = n % 100 >= 11 && n % 100 <= 13;
             return n + (teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'));
         };
@@ -151,10 +154,10 @@ function initializeBlastManager() {
             .then(r => r.ok ? r.json() : null)
             .then(st => {
                 if (st && st.state === 'waiting') {
-                    searchBtn.innerHTML = spin + 'Server busy: your search is ' + ordinal(st.position)
-                        + ' in line (' + st.running + ' running). It starts automatically.';
+                    searchBtn.innerHTML = spin + moopTh('Server busy: your search is %s in line (%s running). It starts automatically.',
+                                                      ordinal(st.position), st.running);
                 } else if (st && st.state === 'running') {
-                    searchBtn.innerHTML = spin + 'Running BLAST… (large databases can take a minute)';
+                    searchBtn.innerHTML = spin + moopTh('Running BLAST… (large databases can take a minute)');
                 }
             })
             .catch(() => {})

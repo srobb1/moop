@@ -14,16 +14,15 @@
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header py-2">
-        <h5 class="modal-title fw-bold" id="ann-types-modal-label">Annotation Types</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title fw-bold" id="ann-types-modal-label"><?= t('Annotation Types') ?></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= t('Close') ?>"></button>
       </div>
       <div class="modal-body">
 
         <p class="text-muted mb-4">
-          Each annotation carries a <strong>type</strong> — the kind of description it is, and
-          usually where it came from. Select only the types relevant to your query — for example,
-          choose <em>Gene Ontology</em> to find genes by GO term, or <em>Domains</em> to search
-          protein domain annotations.
+          <?= t_markup('Each annotation carries a %s — the kind of description it is, and usually where it came from.', '<strong>' . t('type') . '</strong>') . "\n" ?>
+          <?= t_markup('Select only the types relevant to your query — for example, choose %1$s to find genes by GO term, or %2$s to search protein domain annotations.',
+                       '<em>Gene Ontology</em>', '<em>Domains</em>') . "\n" ?>
         </p>
 
         <div class="row g-3">

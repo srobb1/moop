@@ -33,8 +33,14 @@ $bp_site = '/' . ($site ?? ConfigManager::getInstance()->getString('site'));
 // it. One string so the two cards close identically — a pointer phrased two ways
 // reads as two different promises.
 $bp_more = '<br><span class="d-inline-block mt-1 fw-semibold">'
-         . '<i class="fa fa-arrow-down me-1" aria-hidden="true"></i>See below for more info.'
+         . '<i class="fa fa-arrow-down me-1" aria-hidden="true"></i>' . t('See below for more info.')
          . '</span>';
+
+// Card text that carries markup (a program name in <code>, a glossary word) is written here as
+// ONE translatable sentence with the markup passed in: t_markup('%s — …', $c('BLASTn')). The
+// helper does not translate an 'html' card itself -- a translation is never trusted to carry
+// markup -- so the sentence is translated here, before it gets there.
+$c = fn(string $name) => '<code>' . htmlspecialchars($name) . '</code>';
 
 // One card per program. The query→database line carries the mechanical fact and
 // the sentence carries the judgement, so a reader scanning for "which one takes
@@ -45,9 +51,9 @@ foreach (blast_programs() as $prog) {
         'label' => $prog['label'],
         'color' => $prog['color'] ?? '',
         'html'  => true,
-        'text'  => '<code>' . htmlspecialchars($prog['query']) . ' &rarr; '
-                 . htmlspecialchars($prog['db']) . '</code><br>'
-                 . htmlspecialchars($prog['when']),
+        'text'  => '<code>' . t($prog['query']) . ' &rarr; '
+                 . t($prog['db']) . '</code><br>'
+                 . t($prog['when']),
     ];
 }
 
@@ -61,18 +67,16 @@ foreach (blast_programs() as $prog) {
 // repeats the cards above it is the duplication this modal keeps growing.
 $trouble_cards = [
     [
-        'label' => 'A program is greyed out',
+        'label' => 'A program is grayed out',
         'html'  => true,
-        'text'  => 'Not a missing database and not a permission — it wants the OTHER kind of '
-                 . 'sequence than the one you pasted. <code>tBLASTn</code> and '
-                 . '<code>BLASTp</code> need protein; the rest need DNA.',
+        'text'  => t('Not a missing database and not a permission — it wants the OTHER kind of sequence than the one you pasted.')
+                 . ' ' . t_markup('%1$s and %2$s need protein; the rest need DNA.', $c('tBLASTn'), $c('BLASTp')),
     ],
     [
         'label' => 'Fewer databases than I expected',
         'html'  => true,
-        'text'  => 'The list follows your program: <code>BLASTp</code> and <code>BLASTx</code> '
-                 . 'leave the protein databases, the rest leave the DNA ones. It is stopping you '
-                 . 'pairing them wrongly.',
+        'text'  => t_markup('The list follows your program: %1$s and %2$s leave the protein databases, the rest leave the DNA ones.', $c('BLASTp'), $c('BLASTx'))
+                 . ' ' . t('It is stopping you pairing them wrongly.'),
     ],
     [
         'label' => '"No compatible databases"',
@@ -114,52 +118,47 @@ echo help_modal(
                     'label' => 'Find my gene (nucleotide) in the SAME species',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => '<code>BLASTn</code> — both sides are DNA, and within a species '
-                             . 'the DNA still matches.',
+                    'text'  => t_markup('%s — both sides are DNA, and within a species the DNA still matches.', $c('BLASTn')),
                 ],
                 [
                     'label' => 'Find my gene (nucleotide) in ANOTHER species\' genome',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => '<code>tBLASTx</code> — your DNA and the genome are both '
-                             . 'translated, so the comparison happens in protein, where the '
-                             . 'similarity survives. Slow: narrow the database first.',
+                    'text'  => t_markup('%s — your DNA and the genome are both translated, so the comparison happens in protein, where the similarity survives.', $c('tBLASTx'))
+                             . ' ' . t('Slow: narrow the database first.'),
                 ],
                 [
                     'label' => 'Find my gene (amino acids) in ANOTHER species\' genome',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => '<code>tBLASTn</code> — much faster than tBLASTx and the better '
-                             . 'choice whenever the protein is to hand. Works on genomes with no '
-                             . 'gene annotation at all.',
+                    'text'  => t_markup('%s — much faster than tBLASTx and the better choice whenever the protein is to hand.', $c('tBLASTn'))
+                             . ' ' . t('Works on genomes with no gene annotation at all.'),
                 ],
                 [
                     'label' => 'Work out what my transcript codes for',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => '<code>BLASTx</code> — translates your DNA and searches proteins.',
+                    'text'  => t_markup('%s — translates your DNA and searches proteins.', $c('BLASTx')),
                 ],
                 [
                     'label' => 'Find relatives of a protein',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => '<code>BLASTp</code> against proteins, or <code>tBLASTn</code> '
-                             . 'against a genome if the protein set is missing or incomplete.',
+                    'text'  => t_markup('%1$s against proteins, or %2$s against a genome if the protein set is missing or incomplete.', $c('BLASTp'), $c('tBLASTn')),
                 ],
                 [
                     'label' => 'Locate a primer, probe or guide RNA',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => '<code>BLASTn-short</code> — anything under about 30 nt. The '
-                             . 'ordinary settings throw these away.'
+                    'text'  => t_markup('%s — anything under about 30 nt.', $c('BLASTn-short'))
+                             . ' ' . t('The ordinary settings throw these away.')
                              . $bp_more,
                 ],
                 [
                     'label' => 'Check a primer PAIR',
                     'color' => 'info',
                     'html'  => true,
-                    'text'  => 'Not this page — Primer BLAST pairs the hits and reports every '
-                             . 'product size for you.'
+                    'text'  => t('Not this page — Primer BLAST pairs the hits and reports every product size for you.')
                              . $bp_more,
                 ],
             ],
@@ -187,12 +186,10 @@ echo help_modal(
                     // Per program, not "both reasons": BLASTn seeds from 11 letters and DOES
                     // find a 20 nt match, then the 1e-3 default discards it; only Megablast
                     // (word 28) cannot seed it at all. Text review N8, 2026-11-02, measured.
-                    'text'  => 'A perfect 20 nt match can return ZERO hits on an ordinary search, '
-                             . 'for a different reason in each program. <strong>BLASTn</strong> finds '
-                             . 'it (it starts from 11 matching letters), then the default E-value of '
-                             . '1e-3 throws it away as not significant. <strong>Megablast</strong> '
-                             . 'never finds it: it needs 28 identical letters in a row, more than the '
-                             . 'query has. BLASTn-short fixes both.',
+                    'text'  => t('A perfect 20 nt match can return ZERO hits on an ordinary search, for a different reason in each program.')
+                             . ' ' . t_markup('%s finds it (it starts from 11 matching letters), then the default E-value of 1e-3 throws it away as not significant.', '<strong>BLASTn</strong>')
+                             . ' ' . t_markup('%s never finds it: it needs 28 identical letters in a row, more than the query has.', '<strong>Megablast</strong>')
+                             . ' ' . t('BLASTn-short fixes both.'),
                     'html'  => true,
                 ],
                 [
@@ -204,13 +201,13 @@ echo help_modal(
                     'label' => 'Checking a primer PAIR? Use Primer BLAST',
                     'color' => 'success',
                     'html'  => true,
-                    'text'  => 'It pairs the hits, keeps only those facing each other, reports '
-                             . 'every product size, searches genome and transcriptome together, '
-                             . 'and draws the products in the browser. It needs a PAIR — to '
-                             . 'locate a single oligo, stay on this page.<br>'
-                             . '<a href="' . htmlspecialchars($bp_site . '/tools/primer_blast.php')
-                             . '" class="btn btn-sm btn-tool-orange mt-2">'
-                             . '<i class="fa fa-vials me-1"></i>Open Primer BLAST</a>',
+                    'text'  => t('It pairs the hits, keeps only those facing each other, reports every product size, searches genome and transcriptome together, and draws the products in the browser.')
+                             . ' ' . t('It needs a PAIR — to locate a single oligo, stay on this page.')
+                             . (moop_tool_on('primer_blast')   // switched off: no button to it
+                                 ? '<br><a href="' . htmlspecialchars($bp_site . '/tools/primer_blast.php')
+                                   . '" class="btn btn-sm btn-tool-orange mt-2">'
+                                   . '<i class="fa fa-vials me-1"></i>' . t('Open Primer BLAST') . '</a>'
+                                 : ''),
                 ],
             ],
         ],

@@ -54,7 +54,7 @@ $render_problems = function (array $items, ?array $fix_cmds = null) use ($organi
             </details>
             <?php endif; ?>
             <?php if ($cmds): ?>
-            <div class="fix-command mb-0"><?php foreach ($cmds as $c): ?><?= htmlspecialchars($c) ?><br><?php endforeach; ?></div>
+            <?= adm_command($cmds) ?>
             <?php endif; ?>
         </div>
     <?php endforeach;
@@ -318,11 +318,7 @@ foreach ($grouped as $group_name => $items):
             <?php if ($fix_cmds): ?>
             <div class="mt-2">
                 <p class="mb-2"><strong>To fix, run:</strong></p>
-                <div class="fix-command">
-                    <?php foreach ($fix_cmds as $i => $cmd): ?>
-                    <?= htmlspecialchars($cmd) ?><?= $i < count($fix_cmds) - 1 ? ' && \\' : '' ?><br>
-                    <?php endforeach; ?>
-                </div>
+                <?= adm_command($fix_cmds) ?>
             </div>
             <?php endif; ?>
             <?php endif; ?>
@@ -359,11 +355,7 @@ foreach ($grouped as $group_name => $items):
         <?php if (!$consolidate && count($failing) > 1 && $group_cmds): ?>
         <div class="mt-3 pt-3 border-top">
             <p class="mb-2"><strong>Fix all <?= count($failing) ?> in this section at once:</strong></p>
-            <div class="fix-command">
-                <?php foreach ($group_cmds as $c): ?>
-                <?= htmlspecialchars($c) ?><br>
-                <?php endforeach; ?>
-            </div>
+            <?= adm_command($group_cmds) ?>
         </div>
         <?php endif; ?>
     </div>
@@ -376,13 +368,13 @@ foreach ($grouped as $group_name => $items):
         <p class="text-danger mb-3"><strong>⚠️ Some assembly subdirectories have permission issues:</strong></p>
         <?php $render_problems($assembly_subdir_issues, []); ?>
         <p class="mb-2"><strong>To fix all assembly directories, run:</strong></p>
-        <div class="fix-command">
-            <?php // NOT `chmod -R 2775`: that sets FILES to 775 (executable) too, which is how
-                  // executable organism.json/organism.sqlite files got created. Split dirs/files. ?>
-            sudo chgrp -R <?= htmlspecialchars($web_group) ?> <?= escapeshellarg($organism_data) ?><br>
-            sudo find <?= escapeshellarg($organism_data) ?> -type d -exec chmod 2775 {} +<br>
-            sudo find <?= escapeshellarg($organism_data) ?> -type f -exec chmod a-x {} +
-        </div>
+        <?php // NOT `chmod -R 2775`: that sets FILES to 775 (executable) too, which is how
+              // executable organism.json/organism.sqlite files got created. Split dirs/files. ?>
+        <?= adm_command([
+            'sudo chgrp -R ' . $web_group . ' ' . escapeshellarg($organism_data),
+            'sudo find ' . escapeshellarg($organism_data) . ' -type d -exec chmod 2775 {} +',
+            'sudo find ' . escapeshellarg($organism_data) . ' -type f -exec chmod a-x {} +',
+        ]) ?>
         <?php endif; ?>
 
         <?php if (!empty($fasta_file_issues)): ?>
@@ -390,8 +382,7 @@ foreach ($grouped as $group_name => $items):
         <p class="text-danger mb-3"><strong>⚠️ Some FASTA files have permission issues:</strong></p>
         <?php $render_problems($fasta_file_issues, []); ?>
         <p class="mb-2"><strong>To fix all FASTA files, run:</strong></p>
-        <div class="fix-command">
-            <?php
+        <?php
             $sequence_types = $config->getSequenceTypes();
             $patterns = [];
             foreach ($sequence_types as $seq_config) {
@@ -406,9 +397,10 @@ foreach ($grouped as $group_name => $items):
             <?php // NOT `chmod 644`: 644 is WORLD-readable, which is wrong for restricted gene
                   // sets. FASTA only needs to be group-readable, not world-writable, not executable.
                   // -exec …{} + instead of xargs: filenames here contain spaces and colons. ?>
-            sudo find <?= escapeshellarg($organism_data) ?> <?= $find_patterns ?> -exec chgrp <?= htmlspecialchars($web_group) ?> {} +<br>
-            sudo find <?= escapeshellarg($organism_data) ?> <?= $find_patterns ?> -exec chmod g+r,o-w,a-x {} +
-        </div>
+        <?= adm_command([
+            'sudo find ' . escapeshellarg($organism_data) . ' ' . $find_patterns . ' -exec chgrp ' . $web_group . ' {} +',
+            'sudo find ' . escapeshellarg($organism_data) . ' ' . $find_patterns . ' -exec chmod g+r,o-w,a-x {} +',
+        ]) ?>
         <?php endif; ?>
 
         <?php if (!empty($exec_file_issues)): ?>
@@ -416,12 +408,10 @@ foreach ($grouped as $group_name => $items):
         <p class="text-danger mb-3"><strong>⚠️ Data files carrying the execute bit:</strong></p>
         <?php $render_problems($exec_file_issues, []); ?>
         <p class="mb-2"><strong>To clear the execute bit from data files, run:</strong></p>
-        <div class="fix-command">
-            <?php // Files only: directories legitimately need the traverse bit, so -type f is
-                  // not optional here. This is the inverse of the `chmod -R 775` that usually
-                  // causes it. ?>
-            sudo find <?= escapeshellarg($organism_data) ?> -type f -perm /111 -exec chmod a-x {} +
-        </div>
+        <?php // Files only: directories legitimately need the traverse bit, so -type f is
+              // not optional here. This is the inverse of the `chmod -R 775` that usually
+              // causes it. ?>
+        <?= adm_command('sudo find ' . escapeshellarg($organism_data) . ' -type f -perm /111 -exec chmod a-x {} +') ?>
         <?php endif; ?>
 
         <?php if (empty($assembly_subdir_issues) && empty($fasta_file_issues) && empty($exec_file_issues)): ?>

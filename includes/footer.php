@@ -34,10 +34,10 @@ if (!isset($admin_email) || empty($admin_email)) {
         <!-- Center: Contact -->
         <div class="footer-section footer-center">
             <div class="footer-text">
-                <p>Questions, issues, requests, or missing/incorrect data?</p>
+                <p><?= t('Questions, issues, requests, or missing/incorrect data?') ?></p>
                 <p>
                     <a href="mailto:<?= htmlspecialchars($admin_email) ?>">
-                        <i class="fas fa-envelope"></i> Contact Administrator
+                        <i class="fas fa-envelope"></i> <?= t('Contact Administrator') . "\n" ?>
                     </a>
                 </p>
             </div>
@@ -50,7 +50,7 @@ if (!isset($admin_email) || empty($admin_email)) {
                     <?php if (!empty($link['label']) && !empty($link['url'])): ?>
                     <p>
                         <a href="<?= htmlspecialchars($link['url']) ?>" target="_blank" rel="noopener">
-                            <?= htmlspecialchars($link['label']) ?>
+                            <?= htmlspecialchars(t_plain($link['label'])) ?>
                         </a>
                     </p>
                     <?php endif; ?>
@@ -58,7 +58,7 @@ if (!isset($admin_email) || empty($admin_email)) {
                 <?php if ($_footer_license_name !== '' || $_footer_copyright_holder !== ''): ?>
                 <p>
                     <?php if ($_footer_license_name !== ''): ?>
-                        <span class="footer-meta">License:
+                        <span class="footer-meta"><?= t('License:') . "\n" ?>
                             <?php if ($_footer_license_url !== ''): ?>
                                 <a href="<?= htmlspecialchars($_footer_license_url) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($_footer_license_name) ?></a>
                             <?php else: ?>

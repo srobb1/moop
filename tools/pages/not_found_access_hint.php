@@ -7,8 +7,11 @@
  * may not open, so a hand-built link cannot be used to learn what restricted data exists. This
  * says how to see more without saying whether there is more.
  *
- * Needs: $site. Reads the viewer's level itself.
+ * Needs: $site. Reads the viewer's level itself -- and loads what that takes: page.php's
+ * not-found (a content page that does not exist) never loaded lib/functions_access.php, so the
+ * page died here, cut off after its first line (found 2026-11-04).
  */
+require_once __DIR__ . '/../../lib/functions_access.php';
 $__level = normalize_access_level(get_access_level());
 if ($__level === 'ADMIN' || $__level === 'IP_IN_RANGE') return;   // they already see everything
 

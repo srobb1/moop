@@ -75,6 +75,16 @@ if (!empty($organism_info['genus']) && !empty($organism_info['species'])) {
     $scientific_name = $organism_info['genus'] . ' ' . $organism_info['species'];
 }
 
+// A summary written in the visitor's language (Manage Organisms, 'summary_lang' in organism.json;
+// cuttingclass) replaces every other description. Plain text, a blank line between paragraphs.
+// English visitors, and every visitor on a one-language site, never reach this.
+$view_lang = moop_current_lang();
+$own_summary = $view_lang !== 'en' ? trim((string) ($organism_info['summary_lang'][$view_lang] ?? '')) : '';
+if ($own_summary !== '') {
+    $organism_info['html_p'] = array_map(fn($para) => ['text' => htmlspecialchars($para), 'class' => '', 'style' => ''],
+                                         preg_split('/\n\s*\n/', $own_summary, -1, PREG_SPLIT_NO_EMPTY));
+}
+
 // Fetch Wikipedia data once — used for both description and image fallback below
 $wiki_data = null;
 $needs_description = !isset($organism_info['html_p']) || !is_array($organism_info['html_p']) || count($organism_info['html_p']) === 0;
@@ -106,25 +116,32 @@ if ($needs_description) {
     // left in one <p>, HTML folds the newline into a space and the paragraphs run together;
     // nl2br keeps the break but not the paragraph spacing. Attribution is a separate line,
     // not text glued onto the last paragraph.
-    if (!empty($wiki_data['description'])) {
+    // In another language: the same article in that language when Wikipedia has one (found
+    // through the English article's language link), else the English.
+    $wiki_text = $wiki_data;
+    if ($view_lang !== 'en' && !empty($wiki_data['title'])) {
+        $wiki_local = moop_wikipedia_in_language($scientific_name !== '' ? $scientific_name : $organism_name, $wiki_data, $view_lang);
+        if (!empty($wiki_local['description'])) $wiki_text = $wiki_local;
+    }
+    if (!empty($wiki_text['description'])) {
         // No article for this species: the lookup fell back to the genus article. Say so
         // before the text, or the genus's description reads as this organism's.
-        if (($wiki_data['scope'] ?? '') === 'genus') {
+        if (($wiki_text['scope'] ?? '') === 'genus') {
             $html_p[] = [
-                'text'  => '<small>No Wikipedia article for this species. About the genus <i>' .
-                           htmlspecialchars(preg_replace('/\s*\(.*\)$/', '', $wiki_data['title'])) . '</i>:</small>',
+                'text'  => '<small>' . t_markup('No Wikipedia article for this species. About the genus %s:',
+                           '<i>' . htmlspecialchars(preg_replace('/\s*\(.*\)$/', '', $wiki_text['title'])) . '</i>') . '</small>',
                 'class' => 'text-muted mb-1',
                 'style' => ''
             ];
         }
         // Only the first paragraph shows; the rest sit behind "Read more" (user, 2026-10-22:
         // some intros run to four paragraphs and push the page's data far down).
-        foreach (preg_split('/\s*\n\s*/', trim($wiki_data['description']), -1, PREG_SPLIT_NO_EMPTY) as $i => $para) {
+        foreach (preg_split('/\s*\n\s*/', trim($wiki_text['description']), -1, PREG_SPLIT_NO_EMPTY) as $i => $para) {
             $html_p[] = ['text' => htmlspecialchars($para), 'class' => '', 'style' => '', 'more' => $i > 0];
         }
         $html_p[] = [
-            'text'  => '<small>Source: <a href="' . htmlspecialchars($wiki_data['wikipedia_url']) .
-                       '" target="_blank" rel="noopener">Wikipedia</a></small>',
+            'text'  => '<small>' . t_markup('Source: %s', '<a href="' . htmlspecialchars($wiki_text['wikipedia_url']) .
+                       '" target="_blank" rel="noopener">Wikipedia</a>') . '</small>',
             'class' => 'text-muted',
             'style' => ''
         ];
@@ -175,6 +192,9 @@ if ($gene_set_rows) {
 $data = [
     'organism_name' => $organism_name,
     'organism_info' => $organism_info,
+    // The template's "Groups this organism belongs to" reads it. It was never passed, so the
+    // template saw an undefined variable (a warning per view) and the groups file was read twice.
+    'group_data' => $group_data,
     'config' => $config,
     'site' => $site,
     'organism_data' => $organism_data,

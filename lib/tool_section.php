@@ -77,10 +77,10 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
     <div class="card-header bg-tools text-white py-2">
         <?php if (($context['page'] ?? '') === 'index'): ?>
             <span class="step-badge me-2">2</span>
-            <span class="fw-semibold" style="font-size:0.9rem;">Choose a tool — it runs on your selection</span>
+            <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Choose a tool — it runs on your selection') ?></span>
         <?php else: ?>
             <i class="fa fa-toolbox me-2"></i>
-            <span class="fw-semibold" style="font-size:0.9rem;">Toolbox</span>
+            <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Toolbox') ?></span>
         <?php endif; ?>
         <?php /* The (i) lives in the SHARED component, not on each page that includes it —
                  the toolbox appears on seven pages (index, organism, group, multi-organism,
@@ -103,7 +103,7 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
                 <?php /* No direction and no arrow: this block sits under the selection on a
                          narrow window and beside it on a wide one, so "above" was wrong half
                          the time and the arrow pointed at nothing. */ ?>
-                <i class="fa fa-exclamation-circle me-1"></i> Pick an organism first — then these tools run on your selection.
+                <i class="fa fa-exclamation-circle me-1"></i> <?= t('Pick an organism first — then these tools run on your selection.') . "\n" ?>
             </div>
         <?php endif; ?>
         <div class="d-flex flex-wrap gap-2">
@@ -111,19 +111,19 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
                 <?php if ($use_onclick_handler): ?>
                     <button
                        class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
-                       title="<?= htmlspecialchars($tool['description']) ?>"
+                       title="<?= htmlspecialchars(t_plain($tool['description'])) ?>"
                        id="tool-btn-<?= htmlspecialchars($tool_id) ?>"
                        data-tool-id="<?= htmlspecialchars($tool_id) ?>"
                        data-tool-path="<?= htmlspecialchars($tool['url_path']) ?>"
                        onclick="handleToolClick(<?= htmlspecialchars(json_encode($tool_id)) ?>)">
-                      <span><?= htmlspecialchars($tool['name']) ?></span>
+                      <span><?= htmlspecialchars(t_plain($tool['name'])) ?></span>
                     </button>
                 <?php else: ?>
                     <a href="<?= htmlspecialchars($tool['url']) ?>" 
                        target="_blank"
                        class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
-                       title="<?= htmlspecialchars($tool['description']) ?>">
-                        <span><?= htmlspecialchars($tool['name']) ?></span>
+                       title="<?= htmlspecialchars(t_plain($tool['description'])) ?>">
+                        <span><?= htmlspecialchars(t_plain($tool['name'])) ?></span>
                     </a>
                 <?php endif; ?>
             <?php endforeach; ?>
@@ -155,15 +155,22 @@ if (!defined('MOOP_TOOLBOX_HELP_EMITTED')) {
                 ],
                 [
                     'label' => 'From a gene page',
-                    'text'  => 'View in Genome Browser opens JBrowse at that gene\'s location, not at '
-                             . 'the start of the assembly. Sequence and download tools act on that feature.',
+                    // Without the genome browser (switched off, Admin -> Manage Tools) these name a
+                    // button the toolbox does not have, so the example changes with it.
+                    'text'  => (moop_tool_on('genome_browser')
+                                 ? 'View in Genome Browser opens JBrowse at that gene\'s location, not at '
+                                   . 'the start of the assembly. Sequence and download tools act on that feature.'
+                                 : 'Sequence and download tools act on that feature.'),
                 ],
                 [
                     'label'  => 'Which tools appear',
                     'accent' => true,
                     'text'   => 'The list changes with the page, because a tool only shows where it has '
-                              . 'enough context to run — View in Genome Browser needs a location, so it '
-                              . 'appears on a gene page and not on a group page.',
+                              . (moop_tool_on('genome_browser')
+                                  ? 'enough context to run — View in Genome Browser needs a location, so it '
+                                    . 'appears on a gene page and not on a group page.'
+                                  : 'enough context to run — a tool that needs a gene appears on a gene '
+                                    . 'page and not on a group page.'),
                 ],
             ],
         ]],

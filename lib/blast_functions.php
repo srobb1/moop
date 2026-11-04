@@ -1005,8 +1005,9 @@ function blast_programs(): array
             'db'      => 'DNA',
             'label'   => 'BLASTn',
             'summary' => 'DNA query vs DNA database',
-            'when'    => 'The everyday choice for DNA. Finds a gene, transcript or genomic '
-                       . 'region in an assembly, including from a related species.',
+            'when'    => 'DNA against DNA, for the SAME species: finds a gene, transcript or '
+                       . 'genomic region in its own assembly. Between species the DNA drifts '
+                       . 'long before the protein does, so BLASTx usually finds more there.',
             'task'    => 'blastn',
             'filter'  => true,
             'soft_masking' => true,
@@ -1039,8 +1040,9 @@ function blast_programs(): array
             'db'      => 'Protein',
             'label'   => 'BLASTx',
             'summary' => 'DNA query vs protein database (translated)',
-            'when'    => 'You have DNA and want to know what it CODES FOR. Translates your '
-                       . 'query in all six frames and searches proteins.',
+            'when'    => 'The default, and the best first search for DNA across species. '
+                       . 'Translates your query in all six frames and searches proteins, where '
+                       . 'the similarity survives. Also tells you what your DNA codes for.',
             'task'    => '',
             'filter'  => true,
             'soft_masking' => false,
@@ -1083,4 +1085,56 @@ function blast_programs(): array
         ],
     ];
 }
+}
+
+/**
+ * Below this many letters a DNA query is "short": BLASTn and Megablast lose it at their
+ * defaults and BLASTn-short is the right program. ONE value: the BLAST form's suggestion
+ * (js/modules/blast-short-nudge.js, passed in from tools/blast.php) and the zero-hit
+ * explanation below both read it, and the help ("anything under about 30 nt",
+ * includes/blast_short_help_modal.php) says the same.
+ */
+if (!defined('BLAST_SHORT_QUERY_NT')) define('BLAST_SHORT_QUERY_NT', 30);
+
+/**
+ * Why a short DNA query came back with zero hits, for the program that actually ran -- or
+ * '' when the query is not short or the program is not one that loses short queries.
+ *
+ * Per program, because the reasons differ (text review N8, measured 2026-11-02 on the
+ * Schmidtea mediterranea CDS): Megablast's 28-letter word cannot seed a 20 nt query at ANY
+ * E-value; BLASTn seeds from 11 and finds it, then a strict E-value discards it; BLASTx and
+ * tBLASTx translate it to under 7 amino acids, too few to score.
+ *
+ * @param string $program   blast_programs() key that ran
+ * @param int    $length    query length in letters
+ * @param array  $options   the options the search ran with (evalue, word_size)
+ * @return string  plain-text sentence (caller escapes), or ''
+ */
+function blast_short_query_reason(string $program, int $length, array $options): string
+{
+    if ($length <= 0 || $length >= BLAST_SHORT_QUERY_NT) return '';
+    if (!in_array($program, ['blastn', 'megablast', 'blastx', 'tblastx'], true)) return '';
+
+    $word   = (int)($options['word_size'] ?? 0);     // tools/blast.php sends 0 for "program default"
+    $evalue = trim((string)($options['evalue'] ?? ''));
+
+    if ($program === 'blastx' || $program === 'tblastx') {
+        $label = blast_programs()[$program]['label'] ?? $program;
+        $aa    = intdiv($length, 3);
+        return "This query is $length letters long, only $aa amino acids once translated -- "
+             . "too short for $label to score. To find where it sits in the DNA, use BLASTn-short.";
+    }
+    if ($word > 0) {
+        return "This query is $length letters long, which is short for this program.";
+    }
+    if ($program === 'megablast') {
+        return "This query is $length letters long. Megablast needs 28 identical letters in a "
+             . "row to start a match, so it cannot find a query this short at any E-value.";
+    }
+    if ($evalue !== '' && is_numeric($evalue) && (float)$evalue < 1000) {
+        return "This query is $length letters long. BLASTn can find a match this short, but at "
+             . "E-value $evalue it is discarded as not significant.";
+    }
+    return "This query is $length letters long. BLASTn-short's smaller word size (7) can find "
+         . "matches BLASTn misses.";
 }

@@ -29,6 +29,12 @@ jobs:
           php-version: '8.0'   # match the production runtime
           coverage: none
 
+      # The runtime Composer packages (composer.lock), as setup.php installs them on a server:
+      # lib/content_pages.php renders Markdown with erusev/parsedown, and its tests check the
+      # real converter, not a stand-in.
+      - name: Install runtime Composer packages
+        run: composer install --no-dev --no-interaction --no-progress
+
       - name: Lint every PHP file (php -l)
         run: |
           status=0
@@ -63,6 +69,11 @@ jobs:
         run: |
           php tests/primer_smoke_tests.php
           php tests/blast_alignment_tests.php
+
+      # Visitor text must go through t() (CLAUDE.md 7b) so a site in another language can
+      # translate it. A ratchet: fails only on text that is not in tests/i18n_unwrapped_baseline.json.
+      - name: Check for visitor text outside t()
+        run: php tests/i18n_unwrapped_check.php
 
       # js/vendor is excluded for the same reason ./vendor is above: third-party bundles
       # are not ours to fix, and a minified file's syntax is upstream's problem.
@@ -104,6 +115,12 @@ jobs:
         with:
           php-version: '8.3'
           coverage: none
+
+      # The runtime Composer packages (composer.lock), as setup.php installs them on a server:
+      # lib/content_pages.php renders Markdown with erusev/parsedown, and its tests check the
+      # real converter, not a stand-in.
+      - name: Install runtime Composer packages
+        run: composer install --no-dev --no-interaction --no-progress
 
       - name: Lint every PHP file under 8.3
         run: |

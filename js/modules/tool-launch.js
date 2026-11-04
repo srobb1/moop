@@ -18,7 +18,7 @@
  */
 function postSelectionToTool(toolId, organisms) {
     if (!organisms || organisms.length === 0) {
-        alert('Please select at least one organism');
+        alert(moopT('Please select at least one organism'));
         return;
     }
     const btn = document.getElementById(`tool-btn-${toolId}`);

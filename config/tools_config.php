@@ -9,6 +9,10 @@
  * - To disable a tool: Comment it out or remove it
  * - To change tool display: Edit name, icon, description, btn_class
  * - 'pages' controls where the tool shows up (omit = show everywhere)
+ * - 'menu_label' / 'menu_order' put it in the navbar's Tools menu (no menu_order = not in it);
+ *   'menu_divider_after' draws a line after it. 'name' is its toolbox label. A site can reorder
+ *   and rename both on Admin -> Manage Tools ('tools_layout' in config_editable.json); these
+ *   are the defaults, and they reproduce the menu as it was hand-written until 2026-11-03.
  * 
  * CONTEXT PARAMS: Available values from page context
  *   - organism: Current organism name
@@ -21,6 +25,8 @@
 return [
     'download_fasta' => [
         'id'              => 'download_fasta',
+        'menu_label'      => 'Retrieve Sequences',
+        'menu_order'      => 8,
         'name'            => 'Retrieve Sequences',
         'icon'            => 'fa-dna',
         'description'     => 'Search and download sequences',
@@ -32,6 +38,8 @@ return [
 
     'blast_search' => [
         'id'              => 'blast_search',
+        'menu_label'      => 'BLAST Search',
+        'menu_order'      => 5,
         'name'            => 'BLAST Search',
         'icon'            => 'fa-dna',
         'description'     => 'Search sequences against databases',
@@ -54,6 +62,8 @@ return [
 
     'downloads' => [
         'id'              => 'downloads',
+        'menu_label'      => 'Downloads',
+        'menu_order'      => 9,
         'name'            => 'Downloads',
         'icon'            => 'fa-download',
         'description'     => 'Browse and download genome files',
@@ -65,6 +75,9 @@ return [
 
     'genome_browser' => [
         'id'              => 'genome_browser',
+        'menu_label'      => 'Genome Browser',
+        'menu_order'      => 1,
+        'menu_divider_after' => true,
         'name'            => 'View in Genome Browser',
         'icon'            => 'fa-dna',
         'description'     => 'Open this feature in JBrowse2 genome browser',
@@ -77,6 +90,8 @@ return [
     
     'annotation_search' => [
         'id'             => 'annotation_search',
+        'menu_label'      => 'Annotation Search',
+        'menu_order'      => 2,
         'name'           => 'Annotation Search',
         'icon'           => 'fa-search',
         'description'    => 'Search annotations across organisms, assemblies, and gene sets',
@@ -89,6 +104,8 @@ return [
 
     'moopmart' => [
         'id'             => 'moopmart',
+        'menu_label'      => 'MOOPmart: Data Exporter',
+        'menu_order'      => 3,
         'name'           => 'MOOPmart: Data Exporter',
         'icon'           => 'fa-filter',
         'description'    => 'Filter features by annotation, coordinates, and gene set — download as TSV or FASTA',
@@ -101,6 +118,8 @@ return [
 
     'primer_blast' => [
         'id'             => 'primer_blast',
+        'menu_label'      => 'Primer BLAST',
+        'menu_order'      => 6,
         'name'           => 'Primer BLAST',
         'icon'           => 'fa-vials',
         'description'    => 'Check primer pairs against a genome and transcriptome — product sizes and how many places they amplify',
@@ -118,6 +137,8 @@ return [
 
     'expression' => [
         'id'              => 'expression',
+        'menu_label'      => 'Expression Explorer',
+        'menu_order'      => 4,
         'name'            => 'Expression Explorer',
         'icon'            => 'fa-th',
         'description'     => 'Compare a list of genes across expression experiments as a heatmap',
@@ -133,6 +154,8 @@ return [
 
     'primer_maker' => [
         'id'             => 'primer_maker',
+        'menu_label'      => 'Primer Maker',
+        'menu_order'      => 7,
         'name'           => 'Primer Maker',
         'icon'           => 'fa-magic',
         'description'    => 'Design PCR, qPCR, RT-PCR or sequencing primers from a sequence',

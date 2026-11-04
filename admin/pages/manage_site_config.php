@@ -40,11 +40,7 @@
                     </ul>
                     
                     <p><strong>To Fix:</strong> Run this command on the server:</p>
-                    <div style="background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd; margin: 10px 0;">
-                        <code style="word-break: break-all; display: block; font-size: 0.9em;">
-                            <?= htmlspecialchars($file_write_error['command']) ?>
-                        </code>
-                    </div>
+                    <?= adm_command($file_write_error['command']) ?>
                     
                     <p><small class="text-muted">After running the command, refresh this page.</small></p>
                 </div>
@@ -705,7 +701,7 @@
                                name="site_data_path"
                                class="form-control font-monospace"
                                value="<?= htmlspecialchars($editable_config['site_data_path']['current_value']) ?>"
-                               placeholder="/var/www/html/moop-site-data">
+                               placeholder="<?= htmlspecialchars(dirname($root_path) . '/' . $site . '-site-data') ?>">
                         <small class="form-text text-muted mt-1">
                             Must be an absolute path. Leave empty to disable backups.
                             To enable git version history: <code>cd /path/to/dir && git init -b main && git add -A && git commit -m "Initial snapshot"</code>
@@ -732,7 +728,7 @@
                                value="<?= htmlspecialchars($editable_config['cache_path']['current_value']) ?>"
                                placeholder="/var/www/moop-cache">
                         <small class="form-text text-muted mt-1">
-                            Must be an absolute path. Leave empty to store caches inside the organisms/ tree (legacy behaviour).
+                            Must be an absolute path. Leave empty to store caches inside the organisms/ tree (legacy behavior).
                         </small>
                     </div>
                 </div>

@@ -26,13 +26,13 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
   <div class="alert alert-info d-flex align-items-center py-2 mb-3">
     <i class="fas fa-filter me-2 flex-shrink-0"></i>
     <span class="me-3">
-      Filtered to:
+      <?= t('Filtered to:') . "\n" ?>
       <?php
         $parts = [];
         if (!empty($display_name)) {
             $parts[] = '<strong>' . htmlspecialchars($display_name) . '</strong>';
         } elseif (!empty($context_group)) {
-            $parts[] = 'group <strong>' . htmlspecialchars($context_group) . '</strong>';
+            $parts[] = t_markup('group %s', '<strong>' . htmlspecialchars($context_group) . '</strong>');
         } elseif (!empty($filter_organisms)) {
             $n = count($filter_organisms);
             if ($n === 1) {
@@ -41,18 +41,18 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                 $names = array_map(fn($o) => '<em>' . htmlspecialchars(str_replace('_', ' ', $o)) . '</em>', $filter_organisms);
                 $parts[] = implode(', ', $names);
             } else {
-                $parts[] = '<strong>' . $n . ' organisms</strong>';
+                $parts[] = '<strong>' . t('%d organisms', $n) . '</strong>';
             }
         } elseif (!empty($context_organism)) {
             $parts[] = '<strong><em>' . htmlspecialchars(str_replace('_', ' ', $context_organism)) . '</em></strong>';
         }
-        if (!empty($context_assembly)) $parts[] = 'assembly <strong>' . htmlspecialchars($context_assembly) . '</strong>';
-        if (!empty($context_gene_set)) $parts[] = 'gene set <strong>' . htmlspecialchars($context_gene_set) . '</strong>';
+        if (!empty($context_assembly)) $parts[] = t_markup('assembly %s', '<strong>' . htmlspecialchars($context_assembly) . '</strong>');
+        if (!empty($context_gene_set)) $parts[] = t_markup('gene set %s', '<strong>' . htmlspecialchars($context_gene_set) . '</strong>');
         echo implode(', ', $parts);
       ?>
     </span>
     <a href="<?= htmlspecialchars($clear_url) ?>" class="btn btn-sm btn-outline-secondary ms-auto flex-shrink-0">
-      <i class="fas fa-times me-1"></i>Clear filter
+      <i class="fas fa-times me-1"></i><?= t('Clear filter') . "\n" ?>
     </a>
   </div>
   <?php endif; ?>
@@ -60,8 +60,9 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
   <?php if (empty($download_tree)): ?>
     <div class="alert alert-info">
       <i class="fas fa-info-circle me-1"></i>
-      No downloadable files were found for your current access level
-      <?= !empty($context_organism) ? ' for ' . htmlspecialchars(str_replace('_', ' ', $context_organism)) : '' ?>.
+      <?= (!empty($context_organism)
+          ? t('No downloadable files were found for your current access level for %s.', str_replace('_', ' ', $context_organism))
+          : t('No downloadable files were found for your current access level.')) . "\n" ?>
     </div>
   <?php else: ?>
 
@@ -70,25 +71,25 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
     <?php if (count($download_tree) > 1): ?>
     <div class="col-md-4 col-lg-3">
       <input type="text" id="organism-filter" class="form-control form-control-sm"
-             placeholder="Filter organisms…" autocomplete="off">
+             placeholder="<?= t('Filter organisms…') ?>" autocomplete="off">
     </div>
     <?php endif; ?>
     <div class="col d-flex gap-2 flex-wrap">
       <button id="expand-all-btn" class="btn btn-sm btn-outline-secondary">
-        <i class="fas fa-chevron-down me-1"></i>Expand All
+        <i class="fas fa-chevron-down me-1"></i><?= t('Expand All') . "\n" ?>
       </button>
       <button id="collapse-all-btn" class="btn btn-sm btn-outline-secondary">
-        <i class="fas fa-chevron-right me-1"></i>Collapse All
+        <i class="fas fa-chevron-right me-1"></i><?= t('Collapse All') . "\n" ?>
       </button>
       <button id="select-all-btn" class="btn btn-sm btn-outline-secondary">
-        <i class="fas fa-check-square me-1"></i>Select All
+        <i class="fas fa-check-square me-1"></i><?= t('Select All') . "\n" ?>
       </button>
       <button id="deselect-all-btn" class="btn btn-sm btn-outline-secondary">
-        <i class="far fa-square me-1"></i>Deselect All
+        <i class="far fa-square me-1"></i><?= t('Deselect All') . "\n" ?>
       </button>
       <button id="download-selected-btn" class="btn btn-sm fw-semibold text-white btn-moop-action" disabled>
         <i class="fas fa-download me-1"></i>Download Selected
-        (<span id="selected-count">0</span> files<span id="selected-size-label"></span>)
+        (<span id="selected-count">0</span> <?= t('files') ?><span id="selected-size-label"></span>)
       </button>
     </div>
   </div>
@@ -207,7 +208,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
               <!-- Assembly-level files (the genome FASTA) — shared by every gene set below -->
               <div class="ps-3">
                 <div class="ps-2 pt-1">
-                  <div class="small text-muted px-2">Assembly files · shared by all gene sets</div>
+                  <div class="small text-muted px-2"><?= t('Assembly files · shared by all gene sets') ?></div>
                   <?php foreach ($asm_level['files'] as $fi => $file) {
                       $render_file_row($file, $asm_id . '_af' . $fi, $org_id, $asm_id, '', $organism, $assembly, '');
                   } ?>
@@ -232,7 +233,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                          for="cb-<?= $gs_id ?>"
                          style="cursor:pointer;"
                          onclick="event.stopPropagation()">
-                    <span class="badge bg-gene-set me-1" style="font-size:0.7rem;">Gene Set</span><?= htmlspecialchars($gene_set) ?>
+                    <span class="badge bg-gene-set me-1" style="font-size:0.7rem;"><?= t('Gene Set') ?></span><?= htmlspecialchars($gene_set) ?>
                   </label>
                   <small class="me-3 flex-shrink-0" style="opacity:0.8;">
                     <?= $asm_data['file_count'] ?> file<?= $asm_data['file_count'] !== 1 ? 's' : '' ?>,
@@ -272,7 +273,7 @@ echo help_modal(
     [[
         'heading' => '',
         'cards'   => [
-            ['label' => 'Browse the tree',    'text' => 'Files are organised organism → assembly → gene set. Expand a level to see what is inside.'],
+            ['label' => 'Browse the tree',    'text' => 'Files are organized organism → assembly → gene set. Expand a level to see what is inside.'],
             ['label' => 'Select at any level', 'text' => 'Tick individual files, or the box at an organism, assembly or gene-set level to take everything within it.'],
             ['label' => 'Download as a zip',   'text' => 'With files selected, Download Selected fetches them all at once in a single zip.'],
             ['label' => 'Find things fast',    'text' => 'Expand / Collapse All moves through large trees quickly, and the filter box narrows by organism name.'],

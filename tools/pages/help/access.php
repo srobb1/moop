@@ -22,7 +22,7 @@ $you = [
 
 $levels = [
     ['Not logged in', 'Browse and search the data that has been made public. No account needed.'],
-    ['On the institute network', 'Recognised by network address — all the data, without logging in.'],
+    ['On the institute network', 'Recognized by network address — all the data, without logging in.'],
     ['Collaborator', 'A login granted access to particular organisms or assemblies by the administrator.'],
     ['Administrator', 'Everything, plus the admin pages.'],
 ];
@@ -33,7 +33,7 @@ $levels = [
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center tool-header">
       <h1 class="text-uppercase fw-semibold mb-0 d-inline section-eyebrow">
-        <i class="fa fa-lock me-2"></i>Who can see what
+        <i class="fa fa-lock me-2"></i><?= t('Who can see what') . "\n" ?>
       </h1>
     </div>
     <div class="card-body p-4">
@@ -49,7 +49,7 @@ $levels = [
     <div><?= htmlspecialchars($you[1]) ?></div>
   </div>
 
-  <h2 class="h5 fw-semibold mb-3">The levels</h2>
+  <h2 class="h5 fw-semibold mb-3"><?= t('The levels') ?></h2>
   <div class="row g-3 mb-4">
     <?php foreach ($levels as [$label, $text]): ?>
       <div class="col-md-6 col-lg-3">
@@ -63,12 +63,12 @@ $levels = [
     <?php endforeach; ?>
   </div>
 
-  <h2 class="h5 fw-semibold mb-3">If something is missing</h2>
+  <h2 class="h5 fw-semibold mb-3"><?= t('If something is missing') ?></h2>
   <div class="row g-3 mb-4">
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-1">A page says “Not found”</h3>
+          <h3 class="h6 fw-semibold mb-1"><?= t('A page says “Not found”') ?></h3>
           <p class="text-muted small mb-0">
             Data you cannot open is treated exactly as if it did not exist — the site never says
             what is restricted. So a link someone sent you can say “Not found” for you and work
@@ -80,7 +80,7 @@ $levels = [
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-1">Getting access</h3>
+          <h3 class="h6 fw-semibold mb-1"><?= t('Getting access') ?></h3>
           <p class="text-muted small mb-0">
             Collaborator accounts are set up by the administrator.
             <?php if ($email !== '' && $email !== 'admin@example.com'): ?>

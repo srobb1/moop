@@ -53,7 +53,8 @@ $__example = function (string $id, array $k) use ($score_cfg): string {
     <?php if ($score_file_write_error): ?>
       <div class="alert alert-danger py-2">
         <code><?= htmlspecialchars($score_file) ?></code> is not writable by the web server, so changes cannot be saved.
-        Fix: <code><?= htmlspecialchars($score_file_write_error['command']) ?></code>
+        Fix:
+        <?= adm_command($score_file_write_error['command']) ?>
       </div>
     <?php elseif (!is_file($score_file)): ?>
       <div class="alert alert-light border py-2 small mb-3">

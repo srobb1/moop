@@ -14,12 +14,12 @@
     'use strict';
 
     const TYPE_STYLE = {
-        gene:        { bg: '#0891b2', label: 'gene' },
-        pseudogene:  { bg: '#64748b', label: 'pseudogene' },
+        gene:        { bg: '#0891b2', label: moopTh('gene') },
+        pseudogene:  { bg: '#64748b', label: moopTh('pseudogene') },
         mRNA:        { bg: '#0e7490', label: 'mRNA' },
-        transcript:  { bg: '#0e7490', label: 'transcript' },
-        protein:     { bg: '#0369a1', label: 'protein' },
-        polypeptide: { bg: '#0369a1', label: 'protein' },
+        transcript:  { bg: '#0e7490', label: moopTh('transcript') },
+        protein:     { bg: '#0369a1', label: moopTh('protein') },
+        polypeptide: { bg: '#0369a1', label: moopTh('protein') },
     };
 
     function typeChip(type) {
@@ -51,8 +51,11 @@
             // An exact-ID lookup finding nothing usually means the visitor typed a name or a
             // word ("BRCA1", "kinase"). Offer the search that handles those, term filled in.
             const site = sitePath;
-            wrap.innerHTML = '<div class="small mt-2 text-muted">No gene, transcript or protein has that exact ID. '
-                + (q ? `<a href="${site}/tools/search.php?q=${encodeURIComponent(q)}">Search annotations for “${escapeHtml(q)}” →</a>` : '')
+            // Annotation Search switched off on this site (includes/toolbar.php marks the page):
+            // no link into it.
+            const searchOn = !document.querySelector('[data-no-search="1"]');
+            wrap.innerHTML = '<div class="small mt-2 text-muted">' + moopTh('No gene, transcript or protein has that exact ID.') + ' '
+                + (q && searchOn ? `<a href="${site}/tools/search.php?q=${encodeURIComponent(q)}">${moopTh('Search annotations for “%s” →', q)}</a>` : '')
                 + '</div>';
             return;
         }
@@ -75,7 +78,7 @@
         const filterBar = results.length > 5
             ? `<div class="mt-2 mb-1">
                  <input type="text" class="form-control form-control-sm moop-input fs-filter"
-                        placeholder="Filter results…" autocomplete="off">
+                        placeholder="${moopTh('Filter results…')}" autocomplete="off">
                </div>`
             : '';
 
@@ -106,7 +109,7 @@
             .then(r => r.json())
             // Network failure or a non-JSON reply (a rate-limit page): one plain message,
             // not a JSON parser error.
-            .catch(() => { throw new Error('Search failed. Please try again.'); })
+            .catch(() => { throw new Error(moopT('Search failed. Please try again.')); })
             .then(data => {
                 if (data.error) throw new Error(data.error);
                 return data.results || [];
@@ -119,7 +122,7 @@
         const input = document.getElementById('fs-input');
         if (!input) return;
         const q = input.value.trim();
-        if (!q) { setStatus('Enter a feature ID to search.'); return; }
+        if (!q) { setStatus(moopT('Enter a feature ID to search.')); return; }
 
         const btn  = document.getElementById('fs-go');
         const wrap = document.getElementById('fs-results');
@@ -129,7 +132,7 @@
         const label = btn ? btn.innerHTML : '';
         if (btn)  { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>'; }
         if (wrap) wrap.innerHTML = '';
-        setStatus('Searching…');
+        setStatus(moopT('Searching…'));
 
         lookup(q)
             .then(results => { setStatus(''); if (wrap) renderInto(wrap, results, q, { target: '_blank' }); })

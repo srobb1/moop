@@ -151,7 +151,7 @@ $(document).ready(function () {
         }
 
         const countEl = document.getElementById('select-all-orgs-count');
-        if (countEl) countEl.textContent = boxes.length + (boxes.length === 1 ? ' gene set' : ' gene sets');
+        if (countEl) countEl.textContent = boxes.length === 1 ? moopT('%d gene set', 1) : moopT('%d gene sets', boxes.length);
         const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('select-all-orgs-modal'));
         $('#select-all-orgs-confirm').off('click.selall').on('click.selall', function () {
             modal.hide();
@@ -192,7 +192,7 @@ $(document).ready(function () {
 
         const checked = boxes.filter(':checked').toArray();
         if (!checked.length) {
-            el.textContent = 'Select at least one organism above';
+            el.textContent = moopT('Select at least one organism above');
             return;
         }
         const orgs = new Set(checked.map(c => c.dataset.org)).size;
@@ -479,7 +479,7 @@ $(document).ready(function () {
         if (countBadge) countBadge.textContent = selected.length;
 
         if (!selected.length) {
-            panel.innerHTML = '<div class="text-muted small p-2 fst-italic">No types selected</div>';
+            panel.innerHTML = '<div class="text-muted small p-2 fst-italic">' + moopTh('No types selected') + '</div>';
             return;
         }
 
@@ -528,11 +528,11 @@ $(document).ready(function () {
         // behaviour here; across 85 databases that is the single most expensive query the
         // site can issue, and nobody asked for it on purpose.
         if (!checkedOrgs.length) {
-            showSelectHint('Choose at least one organism in Step <span class="step-ref">2</span>.');
+            showSelectHint(moopTm('Choose at least one organism in Step %s.', '<span class="step-ref">2</span>'));
             return;
         }
         if ($('.source-cb:checked').length === 0) {
-            showSelectHint('Choose at least one annotation type in Step <span class="step-ref">3</span>.');
+            showSelectHint(moopTm('Choose at least one annotation type in Step %s.', '<span class="step-ref">3</span>'));
             return;
         }
 

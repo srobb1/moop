@@ -643,7 +643,7 @@
         <h6 class="mt-3">What matches what:</h6>
         <table class="table table-sm">
           <thead class="table-light">
-            <tr><th>Expected behaviour</th><th>Example</th></tr>
+            <tr><th>Expected behavior</th><th>Example</th></tr>
           </thead>
           <tbody>
             <tr><td>Plurals find singulars</td><td><code>kinases</code> finds <em>protein kinase domain</em></td></tr>
@@ -716,32 +716,34 @@
         <p><strong>Purpose:</strong> Find homologous sequences in a target assembly</p>
 
         <h6>BLAST Search Flow:</h6>
-        <pre class="bg-light p-3 rounded"><code>User uploads or pastes sequence
+        <?php /* Rewritten 2026-11-03 from tools/blast.php and lib/blast_functions.php (review N121):
+                 the old diagram said -evalue 1e-5 and -outfmt 6 and a SQLite lookup per hit, none of
+                 which the code does. Keep it in step with those two files. */ ?>
+        <pre class="bg-light p-3 rounded"><code>User pastes or uploads a sequence (FASTA, or bare sequence)
     ↓
-System validates sequence format (FASTA)
+Choose organism, assembly and gene set, then a database:
+  the genome, or the gene set's transcripts, CDS or proteins
     ↓
-Select target organism and assembly
+Server checks the user may open that assembly
     ↓
-System validates user has access to assembly
+Run BLAST (blastn, blastp, blastx, tblastn or tblastx; blastn-short for short DNA):
+  -evalue 1e-3            (the default; 1000 for blastn-short, which short queries need)
+  -outfmt 11              (an ASN.1 archive, kept so every output below comes from one run)
     ↓
-Run BLAST command:
-  blastn -db /path/to/assembly/genome.fa \
-         -query /tmp/user_sequence.fa \
-         -evalue 1e-5 \
-         -outfmt 6
-    ↓
-Parse BLAST results
+blast_formatter turns the archive into:
+  ├─ XML (-outfmt 5)      → the results page: hits, alignments, graphics
+  ├─ pairwise (-outfmt 0) → "Download alignments"
+  └─ tabular (-outfmt 6)  → "Download table"
     ↓
 For each hit:
-  ├─ Extract sequence coordinates
-  ├─ Query SQLite for feature at coordinates
-  └─ Link to feature detail page
+  ├─ Gene page link       (when the organism has a database)
+  └─ Genome Browser link  (position from the gene set's feature_coords.tsv)
     ↓
 Display results with:
   ├─ Subject sequence info
   ├─ E-value and bit score
   ├─ Query/subject coverage
-  └─ Links to feature pages</code></pre>
+  └─ Links to gene pages and the genome browser</code></pre>
 
         <h6 class="mt-3">Linking BLAST Hits to Features:</h6>
         <p class="text-muted small">BLAST hits are matched to features via <code>feature_coords.tsv</code> — a pre-built coordinate file generated when the gene set is registered in JBrowse. This avoids a slow coordinate query at search time.</p>

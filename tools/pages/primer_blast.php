@@ -162,15 +162,15 @@ $db_section_label = function ($key) {
 
     <?php if (empty($accessible_sources)): ?>
         <div class="alert alert-warning">
-            <strong>No accessible assemblies found.</strong>
-            <p class="mb-0">You do not have access to any organism assemblies, or the data directory is misconfigured.</p>
+            <strong><?= t('No accessible assemblies found.') ?></strong>
+            <p class="mb-0"><?= t('You do not have access to any organism assemblies, or the data directory is misconfigured.') ?></p>
         </div>
     <?php else: ?>
 
         <?php if (!empty($search_error)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert" id="primerSearchError">
-                <strong><i class="fa fa-exclamation-circle"></i> Error:</strong> <?= htmlspecialchars($search_error) ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <strong><i class="fa fa-exclamation-circle"></i> <?= t('Error:') ?></strong> <?= htmlspecialchars($search_error) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= t('Close') ?>"></button>
             </div>
         <?php endif; ?>
 
@@ -188,14 +188,14 @@ $db_section_label = function ($key) {
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">1</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Enter your primers</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Enter your primers') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <?php // One line for the whole step: it governs BOTH the textarea and the
                           // upload below it, so it sits above both rather than between them. ?>
                     <p class="mb-2">
-                        Paste your primers below, or upload a file.
-                        <span class="text-muted">Four formats are accepted and detected automatically.</span>
+                        <?= t('Paste your primers below, or upload a file.') . "\n" ?>
+                        <span class="text-muted"><?= t('Four formats are accepted and detected automatically.') ?></span>
                         <?= help_modal_trigger('primer-formats-help', 'Accepted formats', 'Accepted primer input formats') ?>
                     </p>
 
@@ -207,12 +207,11 @@ $db_section_label = function ($key) {
                         placeholder="&gt;TP53_F&#10;GCTTGAGCTGTTATCTGTGC&#10;&gt;TP53_R&#10;GCGGTGCTTCTGGGCTGAGT"
                     ><?= htmlspecialchars($primer_text) ?></textarea>
 
-                    <label for="primer_file" class="form-label mt-3">…or upload a file</label>
+                    <label for="primer_file" class="form-label mt-3"><?= t('…or upload a file') ?></label>
                     <input type="file" class="form-control" id="primer_file" name="primer_file"
                            accept=".fa,.fasta,.fas,.txt,.tsv,.csv">
                     <div class="form-text">
-                        The file's contents are loaded into the box above, where you can edit them
-                        before searching. Max 1 MB.
+                        <?= t("The file's contents are loaded into the box above, where you can edit them before searching.") ?> <?= t('Max 1 MB.') . "\n" ?>
                     </div>
 
                     <div class="alert alert-info py-2 px-3 mt-2 d-none" id="fileOverrideNotice">
@@ -227,7 +226,7 @@ $db_section_label = function ($key) {
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">2</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Select the assembly to check against</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select the assembly to check against') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <?php
@@ -237,9 +236,9 @@ $db_section_label = function ($key) {
                     include __DIR__ . '/../../includes/source-list.php';
                     ?>
                     <div class="mt-3 p-3 bg-light border rounded">
-                        <strong>Currently selected:</strong>
+                        <strong><?= t('Currently selected:') ?></strong>
                         <div id="primerCurrentSelection" style="margin-top:8px; font-size:14px;">
-                            <span class="text-muted">None selected</span>
+                            <span class="text-muted"><?= t('None selected') ?></span>
                         </div>
                     </div>
                 </div>
@@ -249,7 +248,7 @@ $db_section_label = function ($key) {
             <div class="card mb-3 shadow-sm">
                 <div class="card-header py-2 d-flex align-items-center tool-header">
                     <span class="step-badge me-2">3</span>
-                    <span class="fw-semibold" style="font-size:0.9rem;">Search options</span>
+                    <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Search options') ?></span>
                 </div>
                 <div class="card-body py-3">
                     <div class="row g-3">
@@ -261,7 +260,7 @@ $db_section_label = function ($key) {
                                     // the .form-check-inline radios that follow -- without this they
                                     // flow up onto the label's line. ?>
                               <label class="form-label d-block mb-2">
-                                <strong>PCR input</strong>
+                                <strong><?= t('PCR input') ?></strong>
                                 <?= help_modal_trigger('pcr-input-help', '', 'What each PCR input searches') ?>
                               </label>
                               <?php // Inline: only two mutually exclusive choices with short
@@ -283,12 +282,12 @@ $db_section_label = function ($key) {
                                 <div class="form-check form-check-inline">
                                   <input class="form-check-input" type="radio" name="search_mode" id="mode_genome"
                                          value="genome" <?= $search_mode === 'genome' ? 'checked' : '' ?>>
-                                  <label class="form-check-label" for="mode_genome">Genomic DNA</label>
+                                  <label class="form-check-label" for="mode_genome"><?= t('Genomic DNA') ?></label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                   <input class="form-check-input" type="radio" name="search_mode" id="mode_transcript"
                                          value="transcript" <?= $search_mode === 'transcript' ? 'checked' : '' ?>>
-                                  <label class="form-check-label" for="mode_transcript">cDNA</label>
+                                  <label class="form-check-label" for="mode_transcript"><?= t('cDNA') ?></label>
                                 </div>
                               </div>
                               <div class="form-text text-warning-emphasis mt-1 d-none" id="pcrInputNote"></div>
@@ -300,7 +299,7 @@ $db_section_label = function ($key) {
                           <div class="card h-100 border">
                             <div class="card-body py-3">
                               <label for="max_mismatch" class="form-label mb-2">
-                                <strong>Mismatches listed</strong>
+                                <strong><?= t('Mismatches listed') ?></strong>
                                 <?= field_help(
                                     'The search keeps every site with up to ' . PrimerBlast::SEARCH_MAX_MISMATCH . ' mismatches per '
                                     . 'primer, because a single mismatch, or a few toward the 5′ end, can still '
@@ -320,7 +319,7 @@ $db_section_label = function ($key) {
                           <div class="card h-100 border">
                             <div class="card-body py-3">
                               <label for="max_product" class="form-label mb-2">
-                                <strong>Largest product to report</strong>
+                                <strong><?= t('Largest product to report') ?></strong>
                                 <?= field_help(
                                     'Products bigger than this are counted but not listed. Standard PCR '
                                     . 'is dependable for products under ' . PrimerPairs::amplifiableKb() . ' kb; longer ones often amplify poorly '
@@ -343,12 +342,12 @@ $db_section_label = function ($key) {
 
             <div class="mb-4 d-flex align-items-center gap-2">
                 <button type="submit" class="btn btn-primary">
-                    <i class="fa fa-search"></i> Check primers
+                    <i class="fa fa-search"></i> <?= t('Check primers') . "\n" ?>
                 </button>
                 <button type="button" class="btn btn-outline-secondary" id="resetPrimerForm">
-                    <i class="fa fa-undo"></i> Clear form
+                    <i class="fa fa-undo"></i> <?= t('Clear form') . "\n" ?>
                 </button>
-                <span class="text-muted small">Clears the primers, the assembly, and the options.</span>
+                <span class="text-muted small"><?= t('Clears the primers, the assembly, and the options.') ?></span>
             </div>
         </form>
 
@@ -383,12 +382,12 @@ $db_section_label = function ($key) {
             ?>
             <div class="card shadow-sm mb-4">
                 <div class="card-header text-white d-flex align-items-center tool-header">
-                    <span class="fw-semibold">Results</span>
+                    <span class="fw-semibold"><?= t('Results') ?></span>
                     <?= help_modal_trigger('results-help', '', 'How to read these results') ?>
                     <span class="ms-auto small">
                         <?= htmlspecialchars(implode(' + ', array_map($db_label, array_keys($searched_dbs)))) ?>
-                        · listing up to <?= (int)$max_mismatch ?> mismatch<?= $max_mismatch === 1 ? '' : 'es' ?>
-                        and <?= number_format($max_product) ?> bp
+                        · <?= ($max_mismatch === 1 ? t('listing up to %1$d mismatch and %2$s bp', $max_mismatch, number_format($max_product))
+                                                   : t('listing up to %1$d mismatches and %2$s bp', $max_mismatch, number_format($max_product))) . "\n" ?>
                     </span>
                 </div>
                 <div class="card-body">
@@ -445,9 +444,9 @@ $db_section_label = function ($key) {
                     $reasons = [];
                     if ($amp_genes !== null && $amp_intended > 1) {
                         if (count($amp_genes) > 1) {
-                            $reasons[] = count($amp_genes) . ' different genes could amplify: '
-                                       . implode(', ', array_map($gene_word, array_slice(array_values($amp_genes), 0, 4)))
-                                       . (count($amp_genes) > 4 ? ', …' : '');
+                            $reasons[] = t_plain('%1$d different genes could amplify: %2$s', count($amp_genes),
+                                         implode(', ', array_map($gene_word, array_slice(array_values($amp_genes), 0, 4)))
+                                       . (count($amp_genes) > 4 ? ', …' : ''));
                         } else {
                             $sizes = array_values(array_unique(array_map(fn($pr) => (int)$pr['size'], $amp_products)));
                             sort($sizes);
@@ -459,15 +458,15 @@ $db_section_label = function ($key) {
                             ];
                         }
                     } elseif ($amp_intended > 1) {
-                        $reasons[] = $amp_intended . ' products on your template could amplify';
+                        $reasons[] = t_plain('%d products on your template could amplify', $amp_intended);
                     }
                     if ($amp_contam > 1) {
-                        $reasons[] = 'genomic DNA could give ' . $amp_contam . ' products, not just the one matching locus';
+                        $reasons[] = t_plain('genomic DNA could give %d products, not just the one matching locus', $amp_contam);
                     }
                     foreach ($r['by_db'] as $f) {
                         foreach ($amp($f) as $pr) {
                             if (!empty($pr['self_pairing'])) {
-                                $reasons[] = 'one primer amplifies on its own (self-pairing)';
+                                $reasons[] = t_plain('one primer amplifies on its own (self-pairing)');
                                 break 2;
                             }
                         }
@@ -487,13 +486,13 @@ $db_section_label = function ($key) {
                     $kb = PrimerPairs::amplifiableKb();
 
                     if ($total === 0 && $too_long) {
-                        $verdict = ['none', 'bg-secondary', 'no product under ' . $kb . ' kb'];
+                        $verdict = ['none', 'bg-secondary', t_plain('no product under %s kb', $kb)];
                     } elseif ($total === 0) {
-                        $verdict = ['none', 'bg-secondary', 'no product'];
+                        $verdict = ['none', 'bg-secondary', t_plain('no product')];
                     } elseif (!$reasons) {
-                        $verdict = ['specific', 'bg-success', 'specific'];
+                        $verdict = ['specific', 'bg-success', t_plain('specific')];
                     } else {
-                        $verdict = ['nonspecific', 'bg-warning text-dark', 'non-specific'];
+                        $verdict = ['nonspecific', 'bg-warning text-dark', t_plain('non-specific')];
                     }
                     ?>
                     <div class="pb-pair mb-4 pb-3 border-bottom">
@@ -513,21 +512,20 @@ $db_section_label = function ($key) {
                                 <?php if ($too_long):
                                     $sizes = array_map(fn($pr) => number_format($pr['size']) . ' bp', $too_long);
                                     $n     = count($too_long); ?>
-                                    <?= $n === 1 ? 'The product below is ' . $sizes[0]
-                                                 : 'The ' . $n . ' products below are ' . implode(', ', array_slice($sizes, 0, -1)) . ' and ' . end($sizes) ?>.
-                                    Standard PCR is dependable for products under <?= $kb ?> kb; longer ones often
-                                    amplify poorly or not at all, so <?= $n === 1 ? 'it is' : 'they are' ?> not counted.
+                                    <?= $n === 1 ? t('The product below is %s.', $sizes[0])
+                                                 : t('The %1$d products below are %2$s and %3$s.', $n, implode(', ', array_slice($sizes, 0, -1)), end($sizes)) ?>
+                                    <?= ($n === 1 ? t('Standard PCR is dependable for products under %s kb; longer ones often amplify poorly or not at all, so it is not counted.', $kb)
+                                                  : t('Standard PCR is dependable for products under %s kb; longer ones often amplify poorly or not at all, so they are not counted.', $kb)) . "\n" ?>
                                 <?php else: ?>
-                                    Nothing amplifies on your template at these settings.
+                                    <?= t('Nothing amplifies on your template at these settings.') . "\n" ?>
                                     <?php if ($intended_db === 'genome' && $search_mode !== 'transcript'): ?>
                                         <?php // The question this answer raises (user, 2026-10-29: "when I do
                                               // gDNA it says I don't have any alignments") — for primers made
                                               // on a transcript the answer is usually the good one. ?>
-                                        <br>Designed these on a transcript (an mRNA, an XM_/NM_ ID, or with
-                                        Primer Maker)? A primer that sits across an exon junction has no match in
-                                        genomic DNA — that is what makes it good for RT-PCR. Set
-                                        <strong>PCR input</strong> to <strong>cDNA</strong> to check it against
-                                        the transcripts.
+                                        <br><?= t('Designed these on a transcript (an mRNA, an XM_/NM_ ID, or with Primer Maker)?') . "\n" ?>
+                                        <?= t_markup('A primer that sits across an %s junction has no match in genomic DNA — that is what makes it good for RT-PCR.', gloss('exon')) . "\n" ?>
+                                        <?= t_markup('Set %1$s to %2$s to check it against the %3$s.', '<strong>' . t('PCR input') . '</strong>', '<strong>cDNA</strong>',
+                                                     gloss('transcript', 'transcripts')) . "\n" ?>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
@@ -535,15 +533,15 @@ $db_section_label = function ($key) {
                         <?php if ($isoforms_note): ?>
                             <div class="small mb-2">
                                 <i class="fa fa-check-circle text-success"></i>
-                                <span class="text-success-emphasis">One gene: <?= htmlspecialchars($isoforms_note['gene']) ?></span>
-                                <span class="text-muted">— the <?= (int)$isoforms_note['n'] ?> products are isoforms of the same gene
-                                (<?= htmlspecialchars(implode(', ', $isoforms_note['tx'])) ?>).
+                                <span class="text-success-emphasis"><?= t('One gene: %s', $isoforms_note['gene']) ?></span>
+                                <span class="text-muted"><?= t_markup('— the %1$d products are %2$s of the same gene (%3$s).', (string) (int)$isoforms_note['n'],
+                                                                      gloss('isoform', 'isoforms'), htmlspecialchars(implode(', ', $isoforms_note['tx']))) . "\n" ?>
                                 <?php if (count($isoforms_note['sizes']) === 1): ?>
-                                    All are <?= number_format($isoforms_note['sizes'][0]) ?> bp, so you will see one band.
-                                    The pair does not tell these isoforms apart.
+                                    <?= t('All are %s bp, so you will see one band.', number_format($isoforms_note['sizes'][0])) . "\n" ?>
+                                    <?= t('The pair does not tell these isoforms apart.') . "\n" ?>
                                 <?php else: ?>
-                                    Their sizes differ (<?= htmlspecialchars(implode(', ', array_map(fn($n) => number_format($n) . ' bp', $isoforms_note['sizes']))) ?>),
-                                    so expect <?= count($isoforms_note['sizes']) ?> bands if the isoforms are all expressed.
+                                    <?= t('Their sizes differ (%1$s), so expect %2$d bands if the isoforms are all expressed.',
+                                          implode(', ', array_map(fn($n) => number_format($n) . ' bp', $isoforms_note['sizes'])), count($isoforms_note['sizes'])) . "\n" ?>
                                 <?php endif; ?></span>
                             </div>
                         <?php endif; ?>
@@ -593,21 +591,21 @@ $db_section_label = function ($key) {
                         <?php if ($no_gdna): ?>
                             <div class="small mb-3">
                                 <i class="fa fa-check-circle text-success"></i>
-                                <span class="text-success-emphasis">No genomic product</span>
-                                <span class="text-muted">— genomic DNA in the sample would not amplify at
-                                all.
+                                <span class="text-success-emphasis"><?= t('No genomic product') ?></span>
+                                <span class="text-muted"><?= t('— genomic DNA in the sample would not amplify at all.') . "\n" ?>
                                 <?php if ($junction): ?>
-                                    The <?= htmlspecialchars($junction_p) ?> primer sits across an exon
-                                    junction, so that sequence exists only in spliced mRNA<?php
-                                    if (!empty($t_mapped['introns'])): ?>; on the genome the product spans
-                                    <?= (int)$t_mapped['introns'] ?> intron<?= $t_mapped['introns'] === 1 ? '' : 's' ?><?php endif; ?>.
+                                    <?= empty($t_mapped['introns'])
+                                        ? t('The %s primer sits across an exon junction, so that sequence exists only in spliced mRNA.', $junction_p)
+                                        : t_markup('The %1$s primer sits across an exon junction, so that sequence exists only in spliced mRNA; on the genome the product spans %2$s %3$s.',
+                                                   htmlspecialchars($junction_p), (string) (int)$t_mapped['introns'],
+                                                   gloss('intron', $t_mapped['introns'] === 1 ? 'intron' : 'introns')) ?>
                                 <?php else: ?>
-                                    Usually means a primer spans an exon junction.
+                                    <?= t('Usually means a primer spans an exon junction.') . "\n" ?>
                                 <?php endif; ?>
                                 <?php if ($g_near): ?>
-                                    The closest genomic site (<?= number_format($g_near['size']) ?> bp,
-                                    <?= (int)$g_near['max_mismatch'] ?> mismatch<?= (int)$g_near['max_mismatch'] === 1 ? '' : 'es' ?>)
-                                    would not prime.
+                                    <?= ((int)$g_near['max_mismatch'] === 1
+                                        ? t('The closest genomic site (%1$s bp, %2$d mismatch) would not prime.', number_format($g_near['size']), (int)$g_near['max_mismatch'])
+                                        : t('The closest genomic site (%1$s bp, %2$d mismatches) would not prime.', number_format($g_near['size']), (int)$g_near['max_mismatch'])) . "\n" ?>
                                 <?php endif; ?></span>
                             </div>
                         <?php endif; ?>
@@ -620,17 +618,16 @@ $db_section_label = function ($key) {
                             <div class="small mb-3">
                                 <?php if (!empty($t_mapped) && $t_mapped['introns'] > 0): ?>
                                     <i class="fa fa-info-circle text-success"></i>
-                                    <span class="text-success-emphasis">Spans <?= (int)$t_mapped['introns'] ?>
-                                        intron<?= $t_mapped['introns'] === 1 ? '' : 's' ?></span>
-                                    <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
+                                    <span class="text-success-emphasis"><?= $t_mapped['introns'] === 1 ? t('Spans %d intron', 1) : t('Spans %d introns', (int)$t_mapped['introns']) ?></span>
+                                    <span class="text-muted"><?= t('— cDNA %1$s bp vs gDNA %2$s bp', number_format($t_size), number_format($g_size)) ?></span>
                                 <?php elseif ($g_size > $t_size): ?>
                                     <i class="fa fa-info-circle text-success"></i>
-                                    <span class="text-success-emphasis">Likely spans an intron</span>
-                                    <span class="text-muted">— cDNA <?= number_format($t_size) ?> bp vs gDNA <?= number_format($g_size) ?> bp</span>
+                                    <span class="text-success-emphasis"><?= t('Likely spans an intron') ?></span>
+                                    <span class="text-muted"><?= t('— cDNA %1$s bp vs gDNA %2$s bp', number_format($t_size), number_format($g_size)) ?></span>
                                 <?php else: ?>
                                     <i class="fa fa-info-circle text-warning"></i>
-                                    <span class="text-warning-emphasis">No intron between the primers</span>
-                                    <span class="text-muted">— cDNA and gDNA products are both <?= number_format($t_size) ?> bp</span>
+                                    <span class="text-warning-emphasis"><?= t('No intron between the primers') ?></span>
+                                    <span class="text-muted"><?= t('— cDNA and gDNA products are both %s bp', number_format($t_size)) ?></span>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
@@ -663,19 +660,30 @@ $db_section_label = function ($key) {
                                 // missing results when it meant "nothing here would amplify".
                                 $hidden_amp = count(array_filter($found['products'], fn($pr) =>
                                     ($pr['size'] > $max_product || $pr['max_mismatch'] > $max_mismatch) && PrimerPairs::isAmplifiable($pr)));
+
+                                // "Not listed: ..." -- said in two places below (nothing shown / under the
+                                // table), built ONCE here so the two cannot drift. Whole phrases per
+                                // plural form, through t() (CLAUDE.md 7b).
+                                $__mm_forms = [['%1$d site where a primer has more than %2$d mismatch',  '%1$d site where a primer has more than %2$d mismatches'],
+                                               ['%1$d sites where a primer has more than %2$d mismatch', '%1$d sites where a primer has more than %2$d mismatches']];
+                                $not_listed_html = t('Not listed:') . "\n"
+                                    . htmlspecialchars(implode(', ', array_filter([
+                                        $over_mm ? t_plain($__mm_forms[$over_mm === 1 ? 0 : 1][$max_mismatch === 1 ? 0 : 1], $over_mm, $max_mismatch) : '',
+                                        $over_display ? t_plain('%1$s where the primers are more than %2$s bp apart', number_format($over_display), number_format($max_product)) : '',
+                                    ])))
+                                    . ($hidden_amp === 0
+                                        ? ' ' . t('— none of them would amplify.')
+                                        : '. ' . ($hidden_amp === 1
+                                            ? t_markup('%1$d of them could amplify — raise %2$s or the size limit to see it.', '1', '<strong>' . t('Mismatches listed') . '</strong>')
+                                            : t_markup('%1$d of them could amplify — raise %2$s or the size limit to see them.', (string) $hidden_amp, '<strong>' . t('Mismatches listed') . '</strong>')));
                                 ?>
                                 <?php if (empty($shown)): ?>
                                     <div class="text-muted small mb-1">
                                         <?php if ($over_display > 0 || $over_mm > 0): ?>
-                                            <?= $hidden_amp === 0 ? 'No product would amplify here.' : 'None shown.' ?>
-                                            Not listed:
-                                            <?= implode(', ', array_filter([
-                                                $over_mm ? $over_mm . ' site' . ($over_mm === 1 ? '' : 's') . ' where a primer has more than ' . $max_mismatch . ' mismatch' . ($max_mismatch === 1 ? '' : 'es') : '',
-                                                $over_display ? number_format($over_display) . ' where the primers are more than ' . number_format($max_product) . ' bp apart' : '',
-                                            ])) ?><?php if ($hidden_amp === 0): ?> — none of them would amplify.<?php else: ?>.
-                                                <?= $hidden_amp ?> of them could amplify — raise <strong>Mismatches listed</strong> or the size limit to see <?= $hidden_amp === 1 ? 'it' : 'them' ?>.<?php endif; ?>
+                                            <?= ($hidden_amp === 0 ? t('No product would amplify here.') : t('None shown.')) . "\n" ?>
+                                            <?= $not_listed_html . "\n" ?>
                                         <?php else: ?>
-                                            No products.
+                                            <?= t('No products.') . "\n" ?>
                                         <?php endif; ?>
                                     </div>
                                 <?php else: ?>
@@ -741,13 +749,13 @@ $db_section_label = function ($key) {
                                                     <?php endif; ?>
                                                 </td>
                                                 <td style="width:8rem;">
-                                                    <span class="text-muted small"><?= (int)$prod['max_mismatch'] ?> mismatch<?= $prod['max_mismatch'] === 1 ? '' : 'es' ?></span>
+                                                    <span class="text-muted small"><?= $prod['max_mismatch'] === 1 ? t('%d mismatch', 1) : t('%d mismatches', (int)$prod['max_mismatch']) ?></span>
                                                     <?php // Listed because it is a real match, but it does not count toward
                                                           // the grade — say so on the row, or a table of five products under
                                                           // "One gene … 2 products" reads as a contradiction. ?>
                                                     <?php if (!PrimerPairs::wouldPrime($prod)): ?>
                                                         <br><span class="small text-warning-emphasis"
-                                                                  title="A primer has 6 or more mismatches, or 2 or more in the last 5 bases of its 3′ end — it would not prime here.">would not prime</span>
+                                                                  title="<?= t('A primer has 6 or more mismatches, or 2 or more in the last 5 bases of its 3′ end — it would not prime here.') ?>"><?= t('would not prime') ?></span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td style="width:11rem;">
@@ -756,8 +764,8 @@ $db_section_label = function ($key) {
                                                               // implicit for normal products, so only this case is labelled,
                                                               // and compactly -- the loop icon carries the idea, the popover
                                                               // and the Results help carry the explanation. ?>
-                                                        <span class="badge bg-danger" title="<?= htmlspecialchars($prod['primers'][0]) ?> primer at both ends">
-                                                            <i class="fa fa-redo"></i> <?= htmlspecialchars($prod['primers'][0]) ?> self-pairing
+                                                        <span class="badge bg-danger" title="<?= t('%s primer at both ends', $prod['primers'][0]) ?>">
+                                                            <i class="fa fa-redo"></i> <?= t('%s self-pairing', $prod['primers'][0]) . "\n" ?>
                                                         </span>
                                                         <?= field_help(
                                                             'Both ends of this product use the SAME primer, not one of each. '
@@ -774,8 +782,8 @@ $db_section_label = function ($key) {
                                                               // it is invisible in the size and coordinates alone.
                                                               // Stated here so it does not depend on the reader
                                                               // opening the browser to notice. ?>
-                                                        <span class="badge bg-success" title="A primer sits across an exon-exon junction">
-                                                            <i class="fa fa-cut"></i> junction primer
+                                                        <span class="badge bg-success" title="<?= t('A primer sits across an exon-exon junction') ?>">
+                                                            <i class="fa fa-cut"></i> <?= t('junction primer') . "\n" ?>
                                                         </span>
                                                         <?= field_help(
                                                             'One of these primers sits across an exon-exon junction — half of it '
@@ -793,7 +801,8 @@ $db_section_label = function ($key) {
                                                     // once ExonMap has placed it -- which is what gives a
                                                     // junction-spanning primer a browser link at all.
                                                     $mapped_g = $prod['genomic'] ?? null;
-                                                    $can_link = !empty($result_organism) && !empty($result_assembly)
+                                                    $can_link = moop_tool_on('genome_browser')   // switched off: no Browser button
+                                                              && !empty($result_organism) && !empty($result_assembly)
                                                               && ($db_key === 'genome' || $mapped_g !== null)
                                                               // the browser can only open registered assemblies
                                                               && isJBrowseAssemblyRegistered($result_organism, $result_assembly);
@@ -824,7 +833,7 @@ $db_section_label = function ($key) {
                                                         ?>
                                                         <a href="<?= htmlspecialchars($jb) ?>" target="_blank" rel="noopener"
                                                            class="btn btn-sm btn-outline-secondary">
-                                                            <i class="fa fa-dna"></i> Browser
+                                                            <i class="fa fa-dna"></i> <?= t('Browser') . "\n" ?>
                                                         </a>
                                                     <?php endif; ?>
                                                 </td>
@@ -845,12 +854,7 @@ $db_section_label = function ($key) {
                                 ?>
                                 <?php if (($over_display > 0 || $over_mm > 0) && !empty($shown)): ?>
                                     <div class="text-muted" style="font-size:0.8rem;">
-                                        Not listed:
-                                        <?= implode(', ', array_filter([
-                                            $over_mm ? $over_mm . ' site' . ($over_mm === 1 ? '' : 's') . ' where a primer has more than ' . $max_mismatch . ' mismatch' . ($max_mismatch === 1 ? '' : 'es') : '',
-                                            $over_display ? number_format($over_display) . ' where the primers are more than ' . number_format($max_product) . ' bp apart' : '',
-                                        ])) ?><?php if ($hidden_amp === 0): ?> — none of them would amplify.<?php else: ?>.
-                                            <?= $hidden_amp ?> of them could amplify — raise <strong>Mismatches listed</strong> or the size limit to see <?= $hidden_amp === 1 ? 'it' : 'them' ?>.<?php endif; ?>
+                                        <?= $not_listed_html . "\n" ?>
                                     </div>
                                 <?php endif; ?>
 
@@ -862,7 +866,7 @@ $db_section_label = function ($key) {
                 <?php // Download built from the canonical rows collected above. ?>
                 <script type="application/json" id="primerExportData"><?= json_encode($export) ?></script>
                 <button type="button" class="btn btn-outline-primary btn-sm" id="downloadPrimerResults">
-                    <i class="fa fa-download"></i> Download results (TSV)
+                    <i class="fa fa-download"></i> <?= t('Download results (TSV)') . "\n" ?>
                 </button>
 
                 </div>
@@ -886,6 +890,14 @@ $ex = function (string $sample): string {
          . htmlspecialchars($sample) . '</pre>';
 };
 
+// The help cards below carry markup (bold terms, code, colour swatches), which help_modal() does
+// not translate -- a translation is never trusted to carry markup. So each card is written here as
+// whole translated sentences, the markup passed in as arguments (CLAUDE.md 7b).
+$b  = fn(string $text) => '<strong>' . t($text) . '</strong>';
+$c  = fn(string $code) => '<code>' . htmlspecialchars($code) . '</code>';
+$sw = fn(string $hex)  => '<span style="display:inline-block;width:0.8em;height:0.8em;background:'
+                        . htmlspecialchars($hex) . ';vertical-align:middle;border-radius:2px;"></span>';
+
 echo help_modal(
     'primer-formats-help',
     'Accepted primer formats',
@@ -895,35 +907,30 @@ echo help_modal(
             [
                 'label' => 'FASTA — one primer per record',
                 'html'  => true,
-                'text'  => 'Paired by name suffix: <code>_F</code>/<code>_R</code>, and also '
-                         . '<code>_fwd</code>/<code>_rev</code>, <code>_left</code>/<code>_right</code>, '
-                         . '<code>_forward</code>/<code>_reverse</code>. If the names carry no suffix, '
-                         . 'records are paired in the order given — 1st with 2nd, 3rd with 4th.'
+                'text'  => t_markup('Paired by name suffix: %1$s, and also %2$s, %3$s, %4$s.', $c('_F') . '/' . $c('_R'), $c('_fwd') . '/' . $c('_rev'), $c('_left') . '/' . $c('_right'), $c('_forward') . '/' . $c('_reverse'))
+                         . ' ' . t('If the names carry no suffix, records are paired in the order given — 1st with 2nd, 3rd with 4th.')
                          . $ex(">TP53_F\nGCTTGAGCTGTTATCTGTGC\n>TP53_R\nGCGGTGCTTCTGGGCTGAGT"),
             ],
             [
                 'label' => 'FASTA — both primers in one record',
                 'html'  => true,
-                'text'  => 'Separate the two primers with a run of <strong>three or more</strong> '
-                         . '<code>N</code>s. Shorter runs are left alone, so a single <code>N</code> '
-                         . 'stays a degenerate base rather than splitting your primer.'
+                'text'  => t_markup('Separate the two primers with a run of %1$s %2$ss.', $b('three or more'), $c('N'))
+                         . ' ' . t_markup('Shorter runs are left alone, so a single %s stays a degenerate base rather than splitting your primer.', $c('N'))
                          . $ex(">TP53\nGCTTGAGCTGTTATCTGTGCNNNNNNNNGCGGTGCTTCTGGGCTGAGT"),
             ],
             [
                 'label' => 'TSV or CSV',
                 'html'  => true,
-                'text'  => 'Include a header row. Columns are found by <em>name</em>, never by position, '
-                         . 'so their order does not matter. <code>forward</code> also accepts '
-                         . '<code>left</code> or <code>fwd</code>; <code>reverse</code> also accepts '
-                         . '<code>right</code> or <code>rev</code>.'
+                'text'  => t('Include a header row.')
+                         . ' ' . t_markup('Columns are found by %s, never by position, so their order does not matter.', '<em>' . t('name') . '</em>')
+                         . ' ' . t_markup('%1$s also accepts %2$s or %3$s; %4$s also accepts %5$s or %6$s.', $c('forward'), $c('left'), $c('fwd'), $c('reverse'), $c('right'), $c('rev'))
                          . $ex("name\tforward\treverse\nTP53\tGCTTGAGCTGTTATCTGTGC\tGCGGTGCTTCTGGGCTGAGT"),
             ],
             [
                 'label' => 'Plain sequences',
                 'html'  => true,
-                'text'  => 'One sequence per line, no names. They are paired in the order given and '
-                         . 'named for you. Position numbers and line wrapping are ignored, so a '
-                         . 'sequence copied out of a document still works.'
+                'text'  => t('One sequence per line, no names.') . ' ' . t('They are paired in the order given and named for you.')
+                         . ' ' . t('Position numbers and line wrapping are ignored, so a sequence copied out of a document still works.')
                          . $ex("GCTTGAGCTGTTATCTGTGC\nGCGGTGCTTCTGGGCTGAGT"),
             ],
         ],
@@ -947,18 +954,14 @@ echo help_modal(
             [
                 'label' => 'What is in the list',
                 'html'  => true,
-                'text'  => 'Every assembly you have access to, one row per gene set. The badges '
-                         . 'on each row read left to right as <strong>group</strong>, '
-                         . '<strong>organism</strong>, <strong>assembly</strong>, and '
-                         . '<strong>gene set</strong>.',
+                'text'  => t('Every assembly you have access to, one row per gene set.')
+                         . ' ' . t_markup('The badges on each row read left to right as %1$s, %2$s, %3$s, and %4$s.', $b('group'), $b('organism'), $b('assembly'), $b('gene set')),
             ],
             [
                 'label' => 'Filtering',
                 'html'  => true,
-                'text'  => 'The box above the list narrows it as you type, matching against all '
-                         . 'four of those at once — so a group name, a species, an accession or a '
-                         . 'gene set name all work. <strong>Clear Filters</strong> restores the '
-                         . 'full list.',
+                'text'  => t('The box above the list narrows it as you type, matching against all four of those at once — so a group name, a species, an accession or a gene set name all work.')
+                         . ' ' . t_markup('%s restores the full list.', $b('Clear Filters')),
             ],
             [
                 // 'color' is the API's badge form, for exactly this case: the card title
@@ -968,11 +971,10 @@ echo help_modal(
                 'label' => '!',
                 'color' => 'warning',
                 'html'  => true,
-                'text'  => '<strong>Not usable here.</strong> This tool needs the assembly\'s '
-                         . 'genome to say where a product lands, and some assemblies have none — '
-                         . 'they are transcriptome assemblies, so that is correct, not missing '
-                         . 'data. Most are still usable with <strong>PCR input</strong> set to '
-                         . '<strong>cDNA</strong>. Hover a marker for its own reason.',
+                'text'  => $b('Not usable here.')
+                         . ' ' . t("This tool needs the assembly's genome to say where a product lands, and some assemblies have none — they are transcriptome assemblies, so that is correct, not missing data.")
+                         . ' ' . t_markup('Most are still usable with %1$s set to %2$s.', $b('PCR input'), '<strong>cDNA</strong>')
+                         . ' ' . t('Hover a marker for its own reason.'),
             ],
         ],
     ]],
@@ -994,152 +996,122 @@ echo help_modal(
                 'label' => 'specific',
                 'color' => 'success',
                 'html'  => true,
-                'text'  => 'Exactly one product could amplify — one on your template, and nothing else. '
-                         . 'On cDNA this is counted by <strong>gene</strong>: isoforms of one gene give the same '
-                         . 'product, so a pair that amplifies several isoforms of one gene is still specific '
-                         . '(a note names them, and says whether their sizes differ). '
-                         . 'If your input is cDNA, genomic DNA gives only the one matching locus, which is '
-                         . 'expected: that is the same place with its introns included.',
+                'text'  => t('Exactly one product could amplify — one on your template, and nothing else.')
+                         . ' ' . t_markup('On cDNA this is counted by %s: isoforms of one gene give the same product, so a pair that amplifies several isoforms of one gene is still specific (a note names them, and says whether their sizes differ).', $b('gene'))
+                         . ' ' . t('If your input is cDNA, genomic DNA gives only the one matching locus, which is expected: that is the same place with its introns included.'),
             ],
             [
                 'label' => 'non-specific',
                 'color' => 'warning',
                 'html'  => true,
-                'text'  => 'More than one product could amplify. The reasons are listed under the name: '
-                         . 'more than one gene on your cDNA (or several products on genomic DNA), extra '
-                         . 'genomic products, or a self-pairing primer. Non-specific is not unusable — read the '
-                         . 'reasons and decide. A listed product marked <strong>would not prime</strong> does not count.',
+                'text'  => t('More than one product could amplify.')
+                         . ' ' . t('The reasons are listed under the name: more than one gene on your cDNA (or several products on genomic DNA), extra genomic products, or a self-pairing primer.')
+                         . ' ' . t('Non-specific is not unusable — read the reasons and decide.')
+                         . ' ' . t_markup('A listed product marked %s does not count.', $b('would not prime')),
             ],
             [
                 'label' => 'no product',
                 'color' => 'secondary',
                 'html'  => true,
-                'text'  => 'Nothing would amplify on your template: no place where both primers bind, '
-                         . 'facing each other, with ' . PrimerBlast::SEARCH_MAX_MISMATCH . ' or fewer mismatches each. The '
-                         . '<strong>Mismatches listed</strong> and <strong>Largest product to report</strong> boxes '
-                         . 'do not change this — they only decide what is listed.',
+                'text'  => t('Nothing would amplify on your template: no place where both primers bind, facing each other, with %d or fewer mismatches each.', PrimerBlast::SEARCH_MAX_MISMATCH)
+                         . ' ' . t_markup('The %1$s and %2$s boxes do not change this — they only decide what is listed.', $b('Mismatches listed'), $b('Largest product to report')),
             ],
             [
                 'label' => 'no product under ' . PrimerPairs::amplifiableKb() . ' kb',
                 'color' => 'secondary',
                 'html'  => true,
-                'text'  => 'A product is listed, but it is longer than ' . PrimerPairs::amplifiableKb() . ' kb. Standard PCR is '
-                         . 'dependable for products under ' . PrimerPairs::amplifiableKb() . ' kb; longer ones often amplify poorly or not at all, so it '
-                         . 'is not counted. A long-range polymerase may still amplify it.',
+                'text'  => t('A product is listed, but it is longer than %s kb.', PrimerPairs::amplifiableKb())
+                         . ' ' . t('Standard PCR is dependable for products under %s kb; longer ones often amplify poorly or not at all, so it is not counted.', PrimerPairs::amplifiableKb())
+                         . ' ' . t('A long-range polymerase may still amplify it.'),
             ],
             [
                 'label' => 'Only what would really amplify counts',
                 'accent' => true,
                 'html'  => true,
-                'text'  => 'A product counts when it is <strong>under ' . PrimerPairs::amplifiableKb() . ' kb</strong> (where standard PCR '
-                         . 'is dependable) and '
-                         . 'neither primer is blocked: fewer than 6 mismatches overall, and fewer than 2 '
-                         . 'within the <strong>last 5 bases of the 3′ end</strong>. Only those count toward '
-                         . 'the grade — one is specific, more than one is non-specific. Anything outside is still '
-                         . 'listed because it is real; it is just not expected to amplify.',
+                'text'  => t_markup('A product counts when it is %1$s (where standard PCR is dependable) and neither primer is blocked: fewer than 6 mismatches overall, and fewer than 2 within the %2$s.',
+                                  '<strong>' . t('under %s kb', PrimerPairs::amplifiableKb()) . '</strong>', $b("last 5 bases of the 3′ end"))
+                         . ' ' . t('Only those count toward the grade — one is specific, more than one is non-specific.')
+                         . ' ' . t('Anything outside is still listed because it is real; it is just not expected to amplify.'),
             ],
             [
                 'label' => 'The size limit does not change the grade',
                 'accent' => true,
                 'html'  => true,
-                'text'  => '<strong>Largest product to report</strong> controls what is LISTED, nothing '
-                         . 'more. The grade is always computed over amplifiable products, so lowering the '
-                         . 'limit hides rows without quietly turning a non-specific pair specific. A display '
-                         . 'control should never change a scientific conclusion.',
+                'text'  => t_markup('%s controls what is LISTED, nothing more.', $b('Largest product to report'))
+                         . ' ' . t('The grade is always computed over amplifiable products, so lowering the limit hides rows without quietly turning a non-specific pair specific.')
+                         . ' ' . t('A display control should never change a scientific conclusion.'),
             ],
             [
                 'label' => 'Viewing a product in the browser',
                 'html'  => true,
-                'text'  => '<strong>Browser</strong> opens the product in JBrowse with a track showing '
-                         . 'both binding sites as boxes, joined by a connector across the sequence '
-                         . 'between them. '
-                         . '<span style="display:inline-block;width:0.8em;height:0.8em;background:'
-                         . PRIMER_COLOR_FORWARD . ';vertical-align:middle;border-radius:2px;"></span> '
-                         . 'blue is the <strong>forward</strong> primer, '
-                         . '<span style="display:inline-block;width:0.8em;height:0.8em;background:'
-                         . PRIMER_COLOR_REVERSE . ';vertical-align:middle;border-radius:2px;"></span> '
-                         . 'orange the <strong>reverse</strong>. Only genomic products get a link — a '
-                         . 'cDNA product has no genomic coordinates to open.',
+                'text'  => t_markup('%s opens the product in JBrowse with a track showing both binding sites as boxes, joined by a connector across the sequence between them.', $b('Browser'))
+                         . ' ' . t_markup('%1$s blue is the %2$s primer, %3$s orange the %4$s.', $sw(PRIMER_COLOR_FORWARD), $b('forward'), $sw(PRIMER_COLOR_REVERSE), $b('reverse'))
+                         . ' ' . t('Only genomic products get a link — a cDNA product has no genomic coordinates to open.'),
             ],
             [
                 'label' => 'What counts as a product',
                 'html'  => true,
-                'text'  => 'Both primers must land on the <strong>same sequence</strong>, on '
-                         . '<strong>opposite strands</strong>, <strong>facing each other</strong>, and close '
-                         . 'enough to amplify between them. A primer that matches somewhere on its own '
-                         . 'makes nothing, so only products are listed.',
+                'text'  => t_markup('Both primers must land on the %1$s, on %2$s, %3$s, and close enough to amplify between them.', $b('same sequence'), $b('opposite strands'), $b('facing each other'))
+                         . ' ' . t('A primer that matches somewhere on its own makes nothing, so only products are listed.'),
             ],
             [
                 'label' => 'Mismatches listed',
                 'html'  => true,
-                'text'  => 'Up to ' . PrimerBlast::SEARCH_MAX_MISMATCH . ' mismatches per primer are kept, as NCBI '
-                         . 'Primer-BLAST does, because a single mismatch — or a few toward the 5′ end — can '
-                         . 'still amplify, and the verdict is judged on all of them. This box only changes '
-                         . 'which products are <strong>displayed</strong> in the results. Mismatches are '
-                         . 'counted over the <strong>whole primer</strong>: bases the alignment did not reach count too.',
+                'text'  => t('Up to %d mismatches per primer are kept, as NCBI Primer-BLAST does, because a single mismatch — or a few toward the 5′ end — can still amplify, and the verdict is judged on all of them.', PrimerBlast::SEARCH_MAX_MISMATCH)
+                         . ' ' . t_markup('This box only changes which products are %s in the results.', $b('displayed'))
+                         . ' ' . t_markup('Mismatches are counted over the %s: bases the alignment did not reach count too.', $b('whole primer')),
                 'accent' => true,
             ],
             [
                 'label' => 'Worked example',
                 'html'  => true,
-                'text'  => 'A pair with an off-target where the reverse primer has 2 mismatches near its 5′ '
-                         . 'end: it is graded <em>non-specific</em> at any setting, because that site would '
-                         . 'amplify. With <strong>Mismatches listed</strong> at 1 the off-target row is not '
-                         . 'listed — a note says so — and at 2 it is listed, marked "2 mismatches".',
+                'text'  => t_markup('A pair with an off-target where the reverse primer has 2 mismatches near its 5′ end: it is graded %s at any setting, because that site would amplify.', '<em>' . t('non-specific') . '</em>')
+                         . ' ' . t_markup('With %s at 1 the off-target row is not listed — a note says so — and at 2 it is listed, marked "2 mismatches".', $b('Mismatches listed')),
                 'accent' => true,
             ],
             [
                 'label' => 'Why 3′ position matters more than count',
                 'accent' => true,
                 'html'  => true,
-                'text'  => 'The polymerase extends from the 3′ end, so a mismatch in the last few bases '
-                         . 'all but stops extension while the same mismatch near the 5′ end is tolerated. '
-                         . 'Two primers with an identical mismatch <em>count</em> can therefore behave '
-                         . 'completely differently. These thresholds follow NCBI Primer-BLAST, which '
-                         . 'dismisses an unintended target when a primer carries 2 or more mismatches in '
-                         . 'its last 5 bases. The number in the table is the worse of the two primers.',
+                'text'  => t('The polymerase extends from the 3′ end, so a mismatch in the last few bases all but stops extension while the same mismatch near the 5′ end is tolerated.')
+                         . ' ' . t_markup('Two primers with an identical mismatch %s can therefore behave completely differently.', '<em>' . t('count') . '</em>')
+                         . ' ' . t('These thresholds follow NCBI Primer-BLAST, which dismisses an unintended target when a primer carries 2 or more mismatches in its last 5 bases.')
+                         . ' ' . t('The number in the table is the worse of the two primers.'),
             ],
             [
                 'label' => 'gDNA: N products',
                 'html'  => true,
-                'text'  => 'Appears when genomic DNA would give <strong>more than one</strong> product. '
-                         . 'Exactly one is expected — it is the same locus your cDNA product came from, '
-                         . 'just with the introns included. More than one means the primers also pair '
-                         . 'somewhere else in the genome, which the cDNA result alone cannot show you.',
+                'text'  => t_markup('Appears when genomic DNA would give %s product.', $b('more than one'))
+                         . ' ' . t('Exactly one is expected — it is the same locus your cDNA product came from, just with the introns included.')
+                         . ' ' . t('More than one means the primers also pair somewhere else in the genome, which the cDNA result alone cannot show you.'),
             ],
             [
                 'label' => 'Self-pairing',
                 'html'  => true,
-                'text'  => 'Marked <span class="badge bg-danger"><i class="fa fa-redo"></i> reverse self-pairing</span>. '
-                         . 'One primer can match twice on opposite strands, facing itself, and amplify the '
-                         . 'fragment between — so both ends of that product are the same oligo, and the other '
-                         . 'primer is not involved at all. A real source of unexpected bands, and one you '
-                         . 'would never predict by thinking about the pair. The badge names the primer '
-                         . 'responsible, and so does the TSV download.',
+                'text'  => t_markup('Marked %s.', '<span class="badge bg-danger"><i class="fa fa-redo"></i> ' . t('reverse self-pairing') . '</span>')
+                         . ' ' . t('One primer can match twice on opposite strands, facing itself, and amplify the fragment between — so both ends of that product are the same oligo, and the other primer is not involved at all.')
+                         . ' ' . t('A real source of unexpected bands, and one you would never predict by thinking about the pair.')
+                         . ' ' . t('The badge names the primer responsible, and so does the TSV download.'),
             ],
             [
                 'label' => 'No genomic product',
                 'html'  => true,
-                'text'  => 'The strongest result for RT-PCR: your cDNA product forms, and genomic DNA '
-                         . 'gives nothing at all — not a bigger band, no band. Usually it means a primer '
-                         . 'sits across an exon junction, so it has no continuous match in the genome to '
-                         . 'bind to. Such a pair also gets no <strong>Browser</strong> link, because there '
-                         . 'is no genomic product to show.',
+                'text'  => t('The strongest result for RT-PCR: your cDNA product forms, and genomic DNA gives nothing at all — not a bigger band, no band.')
+                         . ' ' . t('Usually it means a primer sits across an exon junction, so it has no continuous match in the genome to bind to.')
+                         . ' ' . t_markup('Such a pair also gets no %s link, because there is no genomic product to show.', $b('Browser')),
             ],
             [
                 'label' => 'Likely spans an intron',
                 'html'  => true,
-                'text'  => 'Shown when the gDNA product is larger than the cDNA one — the extra length is '
-                         . 'intron. It is <em>inferred</em> from the two sizes, not observed, hence '
-                         . '"likely". Equal sizes mean both primers sit in one exon, and the pair cannot '
-                         . 'tell cDNA from genomic DNA.',
+                'text'  => t('Shown when the gDNA product is larger than the cDNA one — the extra length is intron.')
+                         . ' ' . t_markup('It is %s from the two sizes, not observed, hence "likely".', '<em>' . t('inferred') . '</em>')
+                         . ' ' . t('Equal sizes mean both primers sit in one exon, and the pair cannot tell cDNA from genomic DNA.'),
             ],
             [
                 'label' => 'Products over the size limit',
                 'html'  => true,
-                'text'  => 'Counted but not listed, because very long products do not amplify under normal '
-                         . 'PCR. They are still real pairings, so the count is shown rather than hidden — '
-                         . 'raise <strong>Largest product to report</strong> to see them.',
+                'text'  => t('Counted but not listed, because very long products do not amplify under normal PCR.')
+                         . ' ' . t_markup('They are still real pairings, so the count is shown rather than hidden — raise %s to see them.', $b('Largest product to report')),
             ],
         ],
     ]],
@@ -1161,29 +1133,22 @@ echo help_modal(
             [
                 'label' => 'Genomic DNA',
                 'html'  => true,
-                'text'  => 'Searches the <strong>genome</strong> only, because that is your template. '
-                         . 'Products are reported at their genomic size — so if the pair happens to sit '
-                         . 'either side of an intron, the intron is part of the product and it will be '
-                         . 'larger than you might expect from the mRNA sequence.',
+                'text'  => t_markup('Searches the %s only, because that is your template.', $b('genome'))
+                         . ' ' . t('Products are reported at their genomic size — so if the pair happens to sit either side of an intron, the intron is part of the product and it will be larger than you might expect from the mRNA sequence.'),
             ],
             [
                 'label' => 'cDNA',
                 'html'  => true,
-                'text'  => 'Searches the <strong>transcriptome and the genome</strong> — both, always. '
-                         . 'The transcriptome gives the product you actually want, at its true cDNA size. '
-                         . 'The genome is searched as well because <em>any reaction on cDNA can carry '
-                         . 'over genomic DNA</em> — not just RT-PCR. It shows what that genomic DNA '
-                         . 'would amplify, and how big it would be.',
+                'text'  => t_markup('Searches the %s — both, always.', $b('transcriptome and the genome'))
+                         . ' ' . t('The transcriptome gives the product you actually want, at its true cDNA size.')
+                         . ' ' . t_markup('The genome is searched as well because %s — not just RT-PCR.', '<em>' . t('any reaction on cDNA can carry over genomic DNA') . '</em>')
+                         . ' ' . t('It shows what that genomic DNA would amplify, and how big it would be.'),
             ],
             [
                 'label' => 'Why cDNA still searches the genome',
                 'html'  => true,
-                'text'  => 'A transcript-only check cannot see genomic sites at all, so it would report a '
-                         . 'pair as clean while gDNA in the sample amplified something else entirely. '
-                         . 'Searching both is also what lets the tool tell you whether your pair '
-                         . '<strong>spans an intron</strong>: if the genomic product is bigger than the '
-                         . 'cDNA product, it does — and genomic DNA in the sample gives a different-sized '
-                         . 'band, or none at all.',
+                'text'  => t('A transcript-only check cannot see genomic sites at all, so it would report a pair as clean while gDNA in the sample amplified something else entirely.')
+                         . ' ' . t_markup('Searching both is also what lets the tool tell you whether your pair %s: if the genomic product is bigger than the cDNA product, it does — and genomic DNA in the sample gives a different-sized band, or none at all.', $b('spans an intron')),
             ],
         ],
     ]],

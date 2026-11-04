@@ -27,13 +27,7 @@
       <?php endif; ?>
       
       <p><strong>To Fix:</strong> Run <?php echo count($change_log_error['commands']) > 1 ? 'these commands' : 'this command'; ?> on the server:</p>
-      <div style="margin: 10px 0; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-        <?php foreach ($change_log_error['commands'] as $cmd): ?>
-          <code style="word-break: break-all; display: block; font-size: 0.9em; margin-bottom: 5px;">
-            <?= htmlspecialchars($cmd) ?>
-          </code>
-        <?php endforeach; ?>
-      </div>
+      <?= adm_command($change_log_error['commands']) ?>
       
       <p><small class="text-muted">After running the commands, refresh this page.</small></p>
     </div>
@@ -53,11 +47,7 @@
       </ul>
       
       <p><strong>To Fix:</strong> Run this command on the server:</p>
-      <div style="margin-top: 10px; background: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ddd;">
-        <code style="word-break: break-all; display: block;">
-          <?= htmlspecialchars($_SESSION['permission_error']['command']) ?>
-        </code>
-      </div>
+      <?= adm_command($_SESSION['permission_error']['command']) ?>
       
       <p class="mt-3"><small class="text-muted">After running the command, refresh this page to try again.</small></p>
     </div>
@@ -641,6 +631,20 @@
               <?php endforeach; ?>
             </div>
             <button type="button" class="btn btn-sm btn-primary mb-3" onclick="addParagraph(<?= htmlspecialchars(json_encode($desc['group_name'])) ?>)" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>+ Add Paragraph</button>
+<?php
+// The description in the site's other languages (Admin -> Manage Languages) -- only on a site
+// that has more than one, so a one-language site's editor is exactly as before. Plain text.
+$gl_langs = array_values(array_filter(ConfigManager::getInstance()->languages(), fn($l) => $l['code'] !== 'en'));
+if ($gl_langs): ?>
+            <h5 class="mt-2">Description in other languages</h5>
+            <p class="small text-muted mb-2">Plain text; a blank line starts a new paragraph. Shown instead of the paragraphs
+              above to visitors reading the site in that language. Left empty, they see the English.</p>
+<?php foreach ($gl_langs as $gl): $gl_id = 'gsum-' . md5($desc['group_name']) . '-' . htmlspecialchars($gl['code']); ?>
+            <label class="form-label" for="<?= $gl_id ?>">Description in <?= htmlspecialchars($gl['name']) ?> <span class="text-muted">(optional)</span></label>
+            <textarea class="form-control mb-3" id="<?= $gl_id ?>" name="summary_lang[<?= htmlspecialchars($gl['code']) ?>]" rows="5"
+                      lang="<?= htmlspecialchars($gl['code']) ?>"><?= htmlspecialchars((string) ($desc['summary_lang'][$gl['code']] ?? '')) ?></textarea>
+<?php endforeach; ?>
+<?php endif; ?>
             
             <div class="mt-3">
               <button type="submit" name="save_description" class="btn btn-success" <?= $desc_file_write_error ? 'disabled data-bs-toggle="modal" data-bs-target="#permissionModal"' : '' ?>>Save Changes</button>

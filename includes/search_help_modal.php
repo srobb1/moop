@@ -77,29 +77,29 @@ echo help_modal(
             'cards'   => [
                 [
                     'label' => 'One word',
-                    'text'  => 'Matches from the <strong>start</strong> of a word. '
-                             . '<code>wnt</code> finds <em>wnt8b</em>, but <code>transposase</code> '
-                             . 'will not find <em>retrotransposase</em> — never from the middle.',
+                    // Markup cards translated here; search examples stay as written (they are
+                    // search words, matching the English data).
+                    'text'  => t_markup('Matches from the %s of a word.', '<strong>' . t('start') . '</strong>')
+                             . ' ' . t_markup('%1$s finds %2$s, but %3$s will not find %4$s — never from the middle.',
+                                              '<code>wnt</code>', '<em>wnt8b</em>', '<code>transposase</code>', '<em>retrotransposase</em>'),
                     'html'  => true,
                 ],
                 [
                     'label' => 'Several words',
-                    'text'  => 'All of them must appear, in any order. '
-                             . '<code>kinase domain</code> finds records with both.',
+                    'text'  => t('All of them must appear, in any order.')
+                             . ' ' . t_markup('%s finds records with both.', '<code>kinase domain</code>'),
                     'html'  => true,
                 ],
                 [
                     'label' => 'Words together',
-                    'text'  => 'Put it in quotes. <code>"ABC transporter"</code> needs those words '
-                             . 'side by side, in that order — not scattered through the record.',
+                    'text'  => t('Put it in quotes.')
+                             . ' ' . t_markup('%s needs those words side by side, in that order — not scattered through the record.', '<code>"ABC transporter"</code>'),
                     'html'  => true,
                 ],
                 [
                     'label' => 'Word endings are handled',
-                    'text'  => '<code>kinases</code> also finds <em>kinase</em>, and '
-                             . '<code>transport</code> also finds <em>transporter</em>. '
-                             . 'Exact matches are listed first, so type the whole word if you '
-                             . 'get more than you expected.',
+                    'text'  => t_markup('%1$s also finds %2$s, and %3$s also finds %4$s.', '<code>kinases</code>', '<em>kinase</em>', '<code>transport</code>', '<em>transporter</em>')
+                             . ' ' . t('Exact matches are listed first, so type the whole word if you get more than you expected.'),
                     'html'  => true,
                 ],
             ],
@@ -117,9 +117,7 @@ echo help_modal(
                     // gloss() belongs in `text` with html=>true, never in `label` --
                     // help_modal() always escapes labels (lib/help_ui.php:136), so markup
                     // there renders as visible literal HTML.
-                    'text'  => 'If no identifier matches — or you typed more than one word — the '
-                             . 'search runs across ' . gloss('annotation', 'annotation') . ' '
-                             . 'descriptions and related fields.',
+                    'text'  => t_markup('If no identifier matches — or you typed more than one word — the search runs across %s descriptions and related fields.', gloss('annotation', 'annotation')),
                     'html'  => true,
                 ],
                 [

@@ -45,4 +45,8 @@ $header_img = $config->getString('header_img');
 $images_path = $config->getString('images_path');
 $site = $config->getString('site');
 
+// A tool the site switched off (Admin -> Manage Tools) answers 404 at its own address too.
+require_once __DIR__ . '/../lib/functions_tools.php';
+moop_tool_page_guard();
+
 ?>

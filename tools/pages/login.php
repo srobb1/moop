@@ -23,12 +23,12 @@
     <div class="col-md-8 col-lg-6">
       <div class="card h-100 shadow-sm border-0 rounded-3">
         <div class="card-body p-5">
-          <h2 class="card-title fw-bold text-dark mb-4 text-center">Login</h2>
+          <h2 class="card-title fw-bold text-dark mb-4 text-center"><?= t('Login') ?></h2>
 
           <?php if ($error): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
               <i class="fa fa-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= t('Close') ?>"></button>
             </div>
           <?php endif; ?>
 
@@ -38,15 +38,15 @@
               <input type="hidden" name="return_url" value="<?= htmlspecialchars($return_url) ?>">
             <?php endif; ?>
             <div class="mb-4">
-              <label for="username" class="form-label fw-semibold text-dark">Username</label>
+              <label for="username" class="form-label fw-semibold text-dark"><?= t('Username') ?></label>
               <input type="text" class="form-control form-control-lg" id="username" name="username" required>
             </div>
             <div class="mb-4">
-              <label for="password" class="form-label fw-semibold text-dark">Password</label>
+              <label for="password" class="form-label fw-semibold text-dark"><?= t('Password') ?></label>
               <input type="password" class="form-control form-control-lg" id="password" name="password" required>
             </div>
             <button type="submit" class="btn btn-primary btn-lg w-100">
-              <i class="fa fa-sign-in-alt"></i> Login
+              <i class="fa fa-sign-in-alt"></i> <?= t('Login') . "\n" ?>
             </button>
           </form>
         </div>
@@ -60,7 +60,7 @@
       <div class="card border-0 rounded-3 bg-info bg-opacity-10">
         <div class="card-body text-center">
           <p class="card-text text-muted mb-0">
-            <small>Need assistance? Contact the administrator for account access.</small>
+            <small><?= t('Need assistance? Contact the administrator for account access.') ?></small>
           </p>
         </div>
       </div>

@@ -42,7 +42,7 @@ function initializeSequenceRetrieval(options = {}) {
         const selectionDiv = document.getElementById('currentSelection');
         const checked = document.querySelector('input[name="selected_source"]:checked');
         if (!checked) {
-            selectionDiv.innerHTML = '<span style="color: #999;">None selected</span>';
+            selectionDiv.innerHTML = '<span style="color: #999;">' + moopTh('None selected') + '</span>';
         }
     }
     
@@ -133,8 +133,8 @@ function initializeSequenceRetrieval(options = {}) {
         // paste of thousands, before the server was even asked.
         const showMax = window.retrievalShowMax || 50;
         if (userInputIds.length > showMax) {
-            searchIdsDisplay.textContent = userInputIds.length.toLocaleString() + ' IDs entered. Lists of more than '
-                + showMax + ' IDs are available as a download only: retrieve to see how many were found.';
+            searchIdsDisplay.textContent = moopT('%1$s IDs entered. Lists of more than %2$s IDs are available as a download only: retrieve to see how many were found.',
+                                                 userInputIds.length.toLocaleString(), showMax);
             searchIdsDisplay.style.display = 'block';
             return;
         }
@@ -183,7 +183,7 @@ function initializeSequenceRetrieval(options = {}) {
         if (idsToDisplay.length === 0) {
             if (!rawIds) {
                 document.getElementById('searchIdsDisplay').innerHTML = 
-                    '<span style="color: #999;">Enter IDs above to see expanded list (including children)</span>';
+                    '<span style="color: #999;">' + moopTh('Enter IDs above to see expanded list (including children)') + '</span>';
                 searchIdsDisplay.style.display = 'block';
                 return;
             }
@@ -245,7 +245,7 @@ function initializeSequenceRetrieval(options = {}) {
         });
         
         document.getElementById('searchIdsDisplay').innerHTML = displayHtml || 
-            '<span style="color: #999;">No valid IDs entered</span>';
+            '<span style="color: #999;">' + moopTh('No valid IDs entered') + '</span>';
         searchIdsDisplay.style.display = 'block';
     }
     

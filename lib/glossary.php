@@ -73,13 +73,21 @@ function glossary_terms(): array {
 }
 
 /**
- * Render a glossary term inline: the word, dashed-underlined, its definition on
- * hover or keyboard focus. Falls back to the plain word if the term is unknown,
- * so a typo never leaves a dead affordance on the page.
- *
- * @param string      $term    Glossary key (case-insensitive), e.g. 'annotation'.
- * @param string|null $display Text to show, if different from the key (e.g. a plural).
+ * Lower-case key => the term as the glossary spells it ('fasta' => 'FASTA'), for the
+ * popover title. Callers look terms up in lower case, and a title built from that
+ * lookup key read "fasta", "busco", "e-value".
  */
+function glossary_spellings(): array {
+    static $names = null;
+    if ($names === null) {
+        $names = [];
+        foreach (array_keys(glossary_entries()) as $name) {
+            $names[strtolower($name)] = $name;
+        }
+    }
+    return $names;
+}
+
 /**
  * Gloss every known term inside a compound label, leaving the rest alone.
  *
@@ -98,6 +106,9 @@ function glossary_terms(): array {
  * slash and the species name pass through untouched.
  *
  * Everything not glossed is escaped, so this is safe wherever htmlspecialchars() was.
+ *
+ * First use per page (gloss_first): source names repeat on every annotation row, and a
+ * gene page underlined InterProScan 403 times.
  */
 function gloss_terms_in(string $text): string {
     $known = glossary_terms();
@@ -107,19 +118,45 @@ function gloss_terms_in(string $text): string {
     // Whole label first: a source that IS a term should gloss as one unit rather than be
     // taken apart (so "GO term" stays one popover, not "GO" plus "term").
     if (isset($known[strtolower($text)])) {
-        return gloss($text);
+        return gloss_first($text);
     }
     // Keep the delimiters so the label rebuilds exactly, punctuation and spacing intact.
     $parts = preg_split('/([()\/,]|\s+)/u', $text, -1, PREG_SPLIT_DELIM_CAPTURE);
     $out = '';
     foreach ($parts as $p) {
-        $out .= ($p !== '' && isset($known[strtolower($p)])) ? gloss($p) : htmlspecialchars($p);
+        $out .= ($p !== '' && isset($known[strtolower($p)])) ? gloss_first($p) : htmlspecialchars($p);
     }
     return $out;
 }
 
+/**
+ * gloss() for the first use of a term on the page, plain text after that.
+ *
+ * For components rendered many times per page — BLAST's hits table once per query, its
+ * HSP line once per alignment — where gloss() would put the same dotted underline on
+ * every copy. Convention is first occurrence per page; this keeps it without each caller
+ * counting.
+ */
+function gloss_first(string $term, ?string $display = null): string {
+    static $seen = [];
+    $key = strtolower($term);
+    if (isset($seen[$key])) {
+        return htmlspecialchars(moop_gloss_t($display ?? $term));
+    }
+    $seen[$key] = true;
+    return gloss($term, $display);
+}
+
+/**
+ * Render a glossary term inline: the word, dashed-underlined, its definition on
+ * hover or keyboard focus. Falls back to the plain word if the term is unknown,
+ * so a typo never leaves a dead affordance on the page.
+ *
+ * @param string      $term    Glossary key (case-insensitive), e.g. 'annotation'.
+ * @param string|null $display Text to show, if different from the key (e.g. a plural).
+ */
 function gloss(string $term, ?string $display = null): string {
-    $label = $display ?? $term;
+    $label = moop_gloss_t($display ?? $term);
     $def   = glossary_terms()[strtolower($term)] ?? '';
     if ($def === '') {
         return htmlspecialchars($label);
@@ -127,7 +164,19 @@ function gloss(string $term, ?string $display = null): string {
     return '<span class="gloss" tabindex="0" role="button"'
          . ' data-bs-toggle="popover" data-bs-trigger="hover focus"'
          . ' data-bs-placement="top"'
-         . ' data-bs-title="' . htmlspecialchars($term, ENT_QUOTES) . '"'
-         . ' data-bs-content="' . htmlspecialchars($def, ENT_QUOTES) . '">'
+         . ' data-bs-title="' . htmlspecialchars(moop_gloss_t(glossary_spellings()[strtolower($term)] ?? $term), ENT_QUOTES) . '"'
+         . ' data-bs-content="' . htmlspecialchars(moop_gloss_t($def), ENT_QUOTES) . '">'
          . htmlspecialchars($label) . '</span>';
+}
+
+/**
+ * A glossary word, title or definition in the visitor's language (cuttingclass step 5b). They
+ * go through the interface catalog like any other text, so the translators' spreadsheet holds
+ * them (Admin -> Manage Translations) and there is no second place to translate. Keyed by the
+ * English: change a definition on Manage Glossary and the old translation stops showing (it no
+ * longer matches) until the new wording is translated -- an out-of-date definition is never
+ * shown as if it were current. The English, unchanged, on a one-language site.
+ */
+function moop_gloss_t(string $text): string {
+    return function_exists('t_plain') ? t_plain($text) : $text;
 }

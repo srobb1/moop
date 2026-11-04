@@ -170,10 +170,10 @@
   <div class="card mb-3 shadow-sm">
     <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
       <span class="step-badge me-2">1</span>
-      <span class="fw-semibold" style="font-size:0.9rem;">Select organisms</span>
+      <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select organisms') ?></span>
       <?= help_modal_trigger('mm-scope-help', '', 'How to select organisms') ?>
       <button type="button" class="btn btn-sm btn-light py-0 ms-auto mm-toggle-all">
-        <span class="mm-toggle-all-label">Select all</span>
+        <span class="mm-toggle-all-label"><?= t('Select all') ?></span>
       </button>
     </div>
     <?php /* Two columns, mirroring Annotation Search: the list on the left, what you have
@@ -185,15 +185,15 @@
       <div class="col-lg-8 border-end d-flex flex-column">
     <div class="px-2 pt-2 pb-1 border-bottom d-flex align-items-center gap-2">
       <input type="text" class="form-control form-control-sm moop-input" id="mm-scope-filter"
-             placeholder="Filter by group, organism, assembly, gene set…" autocomplete="off">
+             placeholder="<?= t('Filter by group, organism, assembly, gene set…') ?>" autocomplete="off">
       <div class="form-check form-switch mb-0 flex-shrink-0">
         <input class="form-check-input" type="checkbox" role="switch" id="mm-scope-detail">
-        <label class="form-check-label small text-muted text-nowrap" for="mm-scope-detail">Details</label>
+        <label class="form-check-label small text-muted text-nowrap" for="mm-scope-detail"><?= t('Details') ?></label>
       </div>
     </div>
     <div style="overflow-y:auto; max-height:180px; background:#fff;" id="mm-scope-list" class="mm-scope-detail-hidden">
       <?php if (empty($scope_tree)): ?>
-        <p class="text-muted small p-3">No accessible organisms found.</p>
+        <p class="text-muted small p-3"><?= t('No accessible organisms found.') ?></p>
       <?php else:
         // How many gene-set rows each organism has, so a multi-gene-set organism shows one
         // row in the simple view (with a "N gene sets" note) instead of N identical-looking
@@ -263,7 +263,7 @@
       <div class="col-lg-4 d-flex flex-column">
         <div class="px-2 py-1 border-bottom d-flex justify-content-between align-items-center"
              style="background:#f8f9fa;">
-          <span class="small fw-semibold text-muted">Selected</span>
+          <span class="small fw-semibold text-muted"><?= t('Selected') ?></span>
           <span class="badge bg-secondary" id="mm-selected-count">0</span>
         </div>
         <?php /* Empty text says what to DO, not what will happen -- with nothing selected
@@ -271,13 +271,13 @@
                  wrong and an invitation to the query we least want run by accident. Same
                  wording as search.php for the same reason. */ ?>
         <div style="overflow-y:auto; max-height:180px; font-size:0.82rem;" id="mm-selected-panel">
-          <div class="text-muted small p-2 fst-italic">None yet — pick at least one organism</div>
+          <div class="text-muted small p-2 fst-italic"><?= t('None yet — pick at least one organism') ?></div>
         </div>
       </div>
     </div><!-- /row -->
 
     <div class="px-3 py-1 border-top" style="background:#f8f9fa; font-size:0.8rem;">
-      <span class="text-muted" id="mm-scope-counts">Select at least one organism above</span>
+      <span class="text-muted" id="mm-scope-counts"><?= t('Select at least one organism above') ?></span>
       <div id="mm-scope-names" class="text-muted mt-1" style="font-size:0.78rem; font-style:italic;"></div>
     </div>
   </div>
@@ -286,9 +286,9 @@
   <div class="card mb-3 shadow-sm">
     <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
       <span class="step-badge me-2">2</span>
-      <span class="fw-semibold" style="font-size:0.9rem;">Select Genes</span>
+      <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select Genes') ?></span>
       <?= help_modal_trigger('mm-build-help', '', 'How to build your list') ?>
-      <small class="ms-auto" style="color:rgba(255,255,255,0.75); font-size:0.78rem;">all sections optional</small>
+      <small class="ms-auto" style="color:rgba(255,255,255,0.75); font-size:0.78rem;"><?= t('all sections optional') ?></small>
     </div>
     <div class="card-body pt-2 pb-3">
       <p class="text-muted small mb-3">Fill any section to narrow your list — sections combine with AND, so a <?= gloss('feature') ?> must satisfy every filled section.</p>
@@ -303,7 +303,7 @@
                data-bs-toggle="collapse" data-bs-target="#mm-ids-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold section-eyebrow">By Feature IDs</span>
+              <span class="text-uppercase fw-semibold section-eyebrow"><?= t('By Feature IDs') ?></span>
             </span>
           </div>
           <div class="collapse" id="mm-ids-body">
@@ -330,7 +330,7 @@
                data-bs-toggle="collapse" data-bs-target="#mm-name-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold section-eyebrow">By Feature Name</span>
+              <span class="text-uppercase fw-semibold section-eyebrow"><?= t('By Feature Name') ?></span>
             </span>
           </div>
           <div class="collapse" id="mm-name-body">
@@ -339,7 +339,7 @@
                 <?= help_modal_trigger('exporter-text-help', '', 'How these text filters match') ?>
               </p>
               <input type="text" id="mm-gene-name" class="form-control moop-input"
-                     placeholder="e.g. BRCA1">
+                     placeholder="<?= t('e.g. BRCA1') ?>">
             </div>
           </div>
         </div>
@@ -351,7 +351,7 @@
                data-bs-toggle="collapse" data-bs-target="#mm-desc-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold section-eyebrow">By Feature Description</span>
+              <span class="text-uppercase fw-semibold section-eyebrow"><?= t('By Feature Description') ?></span>
             </span>
           </div>
           <div class="collapse" id="mm-desc-body">
@@ -360,7 +360,7 @@
                 <?= help_modal_trigger('exporter-text-help', '', 'How these text filters match') ?>
               </p>
               <input type="text" id="mm-gene-description" class="form-control moop-input"
-                     placeholder="e.g. kinase">
+                     placeholder="<?= t('e.g. kinase') ?>">
             </div>
           </div>
         </div>
@@ -388,17 +388,17 @@
                data-bs-toggle="collapse" data-bs-target="#mm-ann-filter-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold section-eyebrow">By Annotation</span>
+              <span class="text-uppercase fw-semibold section-eyebrow"><?= t('By Annotation') ?></span>
             </span>
           </div>
           <div class="collapse" id="mm-ann-filter-body">
             <div class="browse-select-panel">
               <p class="text-muted small mb-3">
                 Every <?= gloss('feature') ?> must satisfy <strong>all</strong> criteria (AND).
-                Each row filters by <?= gloss('annotation type') ?>, exact accession, or keyword — fill any combination.
+                Each row filters by <?= gloss('annotation type') ?>, exact <?= gloss('accession') ?>, or keyword — fill any combination.
                 <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
                         style="font-size:0.85rem; line-height:1; vertical-align:middle;"
-                        data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="About annotation types">
+                        data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="<?= t('About annotation types') ?>">
                   <i class="fa fa-info-circle"></i>
                 </button>
               </p>
@@ -406,7 +406,7 @@
               <!-- Column headers -->
               <div class="row g-2 mb-1 text-muted" style="font-size:0.75rem;">
                 <div class="col-sm-4"><?= gloss('annotation type', 'Annotation type') ?></div>
-                <div class="col-sm-4">Accession <span class="text-muted">(exact)</span></div>
+                <div class="col-sm-4"><?= t('Accession') ?> <span class="text-muted"><?= t('(exact)') ?></span></div>
                 <div class="col-sm-4">Keyword
                   <?= help_modal_trigger('exporter-text-help', '', 'How these text filters match') ?>
                 </div>
@@ -416,14 +416,14 @@
               <div id="mm-ann-criteria">
                 <div class="mm-ann-criterion row g-2 mb-2 align-items-center">
                   <div class="col-sm-4"><?= $ann_dropdown ?></div>
-                  <div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="e.g. GO:0006351"></div>
-                  <div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="e.g. transporter"></div>
+                  <div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="<?= t('e.g. GO:0006351') ?>"></div>
+                  <div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="<?= t('e.g. transporter') ?>"></div>
                   <div class="col-sm-1"></div>
                 </div>
               </div>
 
               <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="mm-add-criterion">
-                <i class="fa fa-plus me-1"></i> Add criterion
+                <i class="fa fa-plus me-1"></i> <?= t('Add criterion') . "\n" ?>
               </button>
             </div>
           </div>
@@ -438,7 +438,7 @@
                data-bs-toggle="collapse" data-bs-target="#mm-loc-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
-              <span class="text-uppercase fw-semibold section-eyebrow">By Chromosomal Location</span>
+              <span class="text-uppercase fw-semibold section-eyebrow"><?= t('By Chromosomal Location') ?></span>
             </span>
           </div>
           <div class="collapse" id="mm-loc-body">
@@ -447,7 +447,7 @@
                        (i) sits with the note instead of floating. updateCoordState() swaps the
                        note text but leaves the sibling (i) in place. */ ?>
               <div class="d-flex align-items-baseline gap-1 mb-2">
-                <span class="small text-muted fst-italic" id="mm-coord-note">Select exactly one <?= gloss('assembly') ?> in Step <span class="step-ref">1</span> to enable location search.</span>
+                <span class="small text-muted fst-italic" id="mm-coord-note">Select exactly one <?= gloss('assembly') ?> in Step <span class="step-ref">1</span> <?= t('to enable location search.') ?></span>
                 <?= field_help(
                     'Location search works on one assembly at a time. The chromosome and scaffold names '
                     . 'are read from that assembly\'s own reference sequences — they differ between '
@@ -457,17 +457,17 @@
               </div>
               <div class="row g-2">
                 <div class="col-sm-4">
-                  <label class="form-label small mb-1">Chr / scaffold</label>
+                  <label class="form-label small mb-1">Chr / <?= gloss('scaffold') ?></label>
                   <input type="text" id="mm-coord-chr" class="form-control form-control-sm moop-input"
-                         placeholder="e.g. CHR01" list="mm-chr-datalist" autocomplete="off" disabled>
+                         placeholder="<?= t('e.g. CHR01') ?>" list="mm-chr-datalist" autocomplete="off" disabled>
                   <datalist id="mm-chr-datalist"></datalist>
                 </div>
                 <div class="col-sm-4">
-                  <label class="form-label small mb-1">Start <span class="text-muted">(1-based)</span></label>
+                  <label class="form-label small mb-1"><?= t('Start') ?> <span class="text-muted"><?= t('(1-based)') ?></span></label>
                   <input type="number" id="mm-coord-start" class="form-control form-control-sm" placeholder="1" min="1" disabled>
                 </div>
                 <div class="col-sm-4">
-                  <label class="form-label small mb-1">End <span class="text-muted">(1-based)</span></label>
+                  <label class="form-label small mb-1"><?= t('End') ?> <span class="text-muted"><?= t('(1-based)') ?></span></label>
                   <input type="number" id="mm-coord-end" class="form-control form-control-sm" placeholder="1000000" min="1" disabled>
                 </div>
               </div>
@@ -490,7 +490,7 @@
       <div class="d-flex align-items-center gap-2 cursor-pointer"
            data-bs-toggle="collapse" data-bs-target="#mm-design-body" aria-expanded="false" aria-controls="mm-design-body">
         <span class="step-badge me-2">3</span>
-        <span class="fw-semibold" style="font-size:0.9rem;">Select Output Options</span>
+        <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select Output Options') ?></span>
       </div>
       <?= help_modal_trigger('mm-output-help', '', 'Output formats') ?>
       <i class="fa fa-chevron-down ms-auto cursor-pointer" style="font-size:0.75rem; opacity:0.8; transition:transform 0.2s;" id="mm-design-chevron"
@@ -501,12 +501,12 @@
 
       <!-- Format: segmented pill (TSV | FASTA) -->
       <div class="mb-4">
-        <div class="small fw-semibold text-muted mb-1">Output format</div>
-        <div class="btn-group btn-group-sm mm-seg" role="group" aria-label="Output format">
+        <div class="small fw-semibold text-muted mb-1"><?= t('Output format') ?></div>
+        <div class="btn-group btn-group-sm mm-seg" role="group" aria-label="<?= t('Output format') ?>">
           <input type="radio" class="btn-check" name="mm-format" id="mm-format-tsv" value="tsv" autocomplete="off" checked>
-          <label class="btn" for="mm-format-tsv"><i class="fa fa-file-alt me-1"></i>TSV</label>
+          <label class="btn" for="mm-format-tsv"><i class="fa fa-file-alt me-1"></i><?= t('TSV') ?></label>
           <input type="radio" class="btn-check" name="mm-format" id="mm-format-fasta" value="fasta" autocomplete="off">
-          <label class="btn" for="mm-format-fasta"><i class="fa fa-dna me-1"></i>FASTA</label>
+          <label class="btn" for="mm-format-fasta"><i class="fa fa-dna me-1"></i><?= t('FASTA') ?></label>
         </div>
       </div>
 
@@ -522,11 +522,11 @@
                 'Table layout'
             ) ?>
           </div>
-          <div class="btn-group btn-group-sm mm-seg" role="group" aria-label="Table layout">
+          <div class="btn-group btn-group-sm mm-seg" role="group" aria-label="<?= t('Table layout') ?>">
             <input type="radio" class="btn-check" name="mm-layout" id="mm-layout-long" value="long" autocomplete="off" checked>
-            <label class="btn" for="mm-layout-long">Long</label>
+            <label class="btn" for="mm-layout-long"><?= t('Long') ?></label>
             <input type="radio" class="btn-check" name="mm-layout" id="mm-layout-wide" value="wide" autocomplete="off">
-            <label class="btn" for="mm-layout-wide">Wide</label>
+            <label class="btn" for="mm-layout-wide"><?= t('Wide') ?></label>
           </div>
         </div>
 
@@ -560,9 +560,9 @@
               <span class="mm-col-label small"><?= $lbl ?></span>
               <div class="ms-auto d-flex" style="gap:2px;">
                 <button type="button" class="mm-col-up border-0 rounded p-0 lh-1 text-muted"
-                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="Move up">&#9650;</button>
+                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="<?= t('Move up') ?>">&#9650;</button>
                 <button type="button" class="mm-col-down border-0 rounded p-0 lh-1 text-muted"
-                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="Move down">&#9660;</button>
+                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="<?= t('Move down') ?>">&#9660;</button>
               </div>
             </div>
             <?php endforeach; ?>
@@ -650,9 +650,9 @@
               <span class="mm-col-label small"><?= $lbl ?></span>
               <div class="ms-auto d-flex" style="gap:2px;">
                 <button type="button" class="mm-col-up border-0 rounded p-0 lh-1 text-muted"
-                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="Move up">&#9650;</button>
+                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="<?= t('Move up') ?>">&#9650;</button>
                 <button type="button" class="mm-col-down border-0 rounded p-0 lh-1 text-muted"
-                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="Move down">&#9660;</button>
+                        style="background:none; font-size:0.7rem; width:1.4em; height:1.4em;" title="<?= t('Move down') ?>">&#9660;</button>
               </div>
             </div>
             <?php endforeach; ?>
@@ -664,15 +664,15 @@
         <?php if (!empty($annotation_source_types)): ?>
         <div>
           <div class="d-flex align-items-center gap-2 mb-2">
-            <div class="small fw-semibold text-muted">Annotation types to include in TSV</div>
+            <div class="small fw-semibold text-muted"><?= t('Annotation types to include in TSV') ?></div>
             <div class="d-flex gap-1 ms-auto">
-              <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-all">All</button>
-              <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-none">None</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-all"><?= t('All') ?></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-none"><?= t('None') ?></button>
             </div>
           </div>
           <div class="px-2 pb-1">
             <input type="text" class="form-control form-control-sm moop-input" id="mm-ann-filter"
-                   placeholder="Filter annotation types…" autocomplete="off">
+                   placeholder="<?= t('Filter annotation types…') ?>" autocomplete="off">
           </div>
           <div id="mm-ann-panel" style="overflow-y:auto; max-height:220px;" class="border rounded mt-1 p-2">
             <?php foreach ($annotation_source_types as $type => $type_data):
@@ -750,9 +750,9 @@
           <?php endforeach; ?>
         </div>
         <div id="mm-flank-wrap" class="d-none">
-          <label class="form-label small mb-1">Flank size (bp)</label>
+          <label class="form-label small mb-1"><?= t('Flank size (bp)') ?></label>
           <input type="number" id="mm-flank-bp" class="form-control form-control-sm moop-input"
-                 style="max-width:160px;" placeholder="e.g. 2000" min="1" max="100000">
+                 style="max-width:160px;" placeholder="<?= t('e.g. 2000') ?>" min="1" max="100000">
         </div>
       </div>
 
@@ -764,7 +764,7 @@
   <div class="card mb-3 shadow-sm">
     <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
       <span class="step-badge me-2">4</span>
-      <span class="fw-semibold" style="font-size:0.9rem;">Preview &amp; Download</span>
+      <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Preview & Download') ?></span>
       <?= field_help(
           'Preview shows the first 100 matching features so you can check your list. Download exports every matching feature, not just those 100.',
           'Preview & Download'
@@ -778,11 +778,11 @@
       <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
         <button type="button" class="btn mm-dl-secondary" id="mm-preview-btn">
           <span id="mm-count-spinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
-          <i class="fa fa-eye me-1"></i> Preview
+          <i class="fa fa-eye me-1"></i> <?= t('Preview') . "\n" ?>
         </button>
         <i class="fa fa-arrow-right mm-step-arrow" aria-hidden="true"></i>
         <button type="button" class="btn mm-dl-primary flex-grow-1" id="mm-dl-btn">
-          <i class="fa fa-download me-1"></i> <span id="mm-dl-label">Download TSV</span>
+          <i class="fa fa-download me-1"></i> <span id="mm-dl-label"><?= t('Download TSV') ?></span>
         </button>
       </div>
       <div id="mm-count-result" class="small text-muted"></div>
@@ -793,14 +793,16 @@
       <?php /* Shown only when the selection includes a gene set with expression data (moopmart.js).
                A heatmap is ONE gene set, so a list spanning several is split into one heatmap
                per gene set, and the gene sets without data are named as left out. */ ?>
+<?php if (moop_tool_on('expression')): ?>
       <div id="mm-expr-row" class="d-none mt-2 pt-2 border-top">
         <button type="button" class="btn btn-sm mm-dl-secondary" id="mm-expr-btn">
           <span id="mm-expr-spinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
-          <i class="fa fa-th me-1"></i> Send to Expression Explorer
+          <i class="fa fa-th me-1"></i> <?= t('Send to Expression Explorer') . "\n" ?>
         </button>
-        <span class="small text-muted ms-1">Heatmap of these genes, one gene set at a time.</span>
+        <span class="small text-muted ms-1"><?= t('Heatmap of these genes, one gene set at a time.') ?></span>
         <div id="mm-expr-result" class="small mt-2"></div>
       </div>
+<?php endif; ?>
     </div>
   </div>
 
@@ -808,8 +810,8 @@
   <div id="mm-results-section" class="d-none mt-3">
     <div class="card">
       <div class="card-header py-2 d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Preview <small id="mm-results-caption" class="text-muted fw-normal ms-1"></small></span>
-        <span class="text-muted small">Download exports the full result set.</span>
+        <span class="fw-semibold"><?= t('Preview') ?> <small id="mm-results-caption" class="text-muted fw-normal ms-1"></small></span>
+        <span class="text-muted small"><?= t('Download exports the full result set.') ?></span>
       </div>
       <div class="card-body p-2">
         <div class="table-responsive">
@@ -823,8 +825,8 @@
   <div id="mm-fasta-preview-section" class="d-none mt-3">
     <div class="card">
       <div class="card-header py-2 d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">FASTA Preview <small id="mm-fasta-caption" class="text-muted fw-normal ms-1"></small></span>
-        <span class="text-muted small">Showing first 10 sequences. Download exports all.</span>
+        <span class="fw-semibold"><?= t('FASTA Preview') ?> <small id="mm-fasta-caption" class="text-muted fw-normal ms-1"></small></span>
+        <span class="text-muted small"><?= t('Showing first 10 sequences. Download exports all.') ?></span>
       </div>
       <div class="card-body p-2">
         <pre id="mm-fasta-preview-text" class="mb-0" style="font-size:0.78rem; max-height:400px; overflow-y:auto; background:#f8f9fa; border-radius:4px; padding:0.75rem;"></pre>
@@ -841,15 +843,15 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-warning">
       <div class="modal-header bg-warning bg-opacity-10 py-2">
-        <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i>Select all organisms?</h5>
+        <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i><?= t('Select all organisms?') ?></h5>
       </div>
       <div class="modal-body">
-        This will select all <strong id="mm-select-all-count"></strong> across all organisms.
-        Searches across all organisms can take a while — consider selecting only the ones you need.
+        <?= t_markup('This will select all %s across all organisms.', '<strong id="mm-select-all-count"></strong>') . "\n" ?>
+        <?= t('Searches across all organisms can take a while — consider selecting only the ones you need.') . "\n" ?>
       </div>
       <div class="modal-footer py-2">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-warning" id="mm-select-all-confirm">Select all</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= t('Cancel') ?></button>
+        <button type="button" class="btn btn-warning" id="mm-select-all-confirm"><?= t('Select all') ?></button>
       </div>
     </div>
   </div>
@@ -860,16 +862,16 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-warning">
       <div class="modal-header bg-warning bg-opacity-10 py-2">
-        <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i>Export every feature?</h5>
+        <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i><?= t('Export every feature?') ?></h5>
       </div>
       <div class="modal-body">
-        No filters are set in Step 2, so this exports <strong>every feature</strong> across
-        <strong class="mm-be-orgs"></strong> organisms (<strong class="mm-be-gs"></strong> gene sets).
-        That can be a very large file. Preview first to see the total, or go ahead.
+        <?= t_markup('No filters are set in Step 2, so this exports %1$s across %2$s organisms (%3$s gene sets).',
+                     '<strong>' . t('every feature') . '</strong>', '<strong class="mm-be-orgs"></strong>', '<strong class="mm-be-gs"></strong>') . "\n" ?>
+        <?= t('That can be a very large file. Preview first to see the total, or go ahead.') . "\n" ?>
       </div>
       <div class="modal-footer py-2">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-warning mm-be-confirm">Download anyway</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= t('Cancel') ?></button>
+        <button type="button" class="btn btn-warning mm-be-confirm"><?= t('Download anyway') ?></button>
       </div>
     </div>
   </div>

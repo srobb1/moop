@@ -119,7 +119,7 @@ function housekeeping_task_registry(): array {
             'name'  => 'request_metrics_retention',
             'fn'    => 'housekeeping_request_metrics_retention',
             'label' => 'Request log: daily summaries + pruning',
-            'desc'  => 'Summarises each finished day of the System Monitor request log (for the 30-day view), then deletes logs and summaries older than 30 days (they hold usernames and addresses).',
+            'desc'  => 'Summarizes each finished day of the System Monitor request log (for the 30-day view), then deletes logs and summaries older than 30 days (they hold usernames and addresses).',
         ],
         [
             'name'  => 'error_log_retention',
@@ -250,6 +250,11 @@ function housekeeping_lock_acquire() {
 function housekeeping_is_due(): bool {
     $last = @filemtime(housekeeping_marker_file()) ?: 0;
     return (time() - $last) >= HOUSEKEEPING_MIN_INTERVAL;
+}
+
+/** When a full sweep was last requested (the marker's mtime), or null if never. */
+function housekeeping_requested_at(): ?int {
+    return @filemtime(housekeeping_marker_file()) ?: null;
 }
 
 /**
@@ -467,15 +472,23 @@ function housekeeping_ago(int $seconds): string {
  * Is housekeeping healthy? Read from the run records alone, so it is cheap and testable.
  *
  *   danger  a run died (or stopped with no lock held -- killed) and no full sweep has finished
- *           since; or no full sweep has finished for over twice the interval
+ *           since; or a full sweep was requested over 15 minutes ago and none has finished since
  *   warn    a run has been going for over 15 minutes; or the last full sweep had failed tasks
  *   ''      otherwise
  *
- * @param list<array> $runs     the 'housekeeping_runs' records, newest first
- * @param bool        $running  housekeeping_is_running()
+ * Staleness is measured from the last REQUEST (the marker's mtime), not from the clock.
+ * Housekeeping only runs while someone uses the admin pages, so "no run for 18 hours" after a
+ * quiet night is normal, not a failure -- until 2026-11-03 that alone turned the banner red
+ * every morning, and an alarm that cries wolf daily is ignored the day a run really dies. A
+ * request that produced no finished sweep within 15 minutes is the real failure (the child
+ * never started, or never wrote a record). With no request time known, fall back to age.
+ *
+ * @param list<array> $runs          the 'housekeeping_runs' records, newest first
+ * @param bool        $running       housekeeping_is_running()
+ * @param ?int        $requested_at  housekeeping_requested_at(): when a full sweep was last asked for
  * @return array{tone:string, badge:array{0:string,1:string}, headline:string, problems:list<string>}
  */
-function housekeeping_health(array $runs, bool $running, int $now, int $interval = HOUSEKEEPING_MIN_INTERVAL): array {
+function housekeeping_health(array $runs, bool $running, int $now, ?int $requested_at = null, int $interval = HOUSEKEEPING_MIN_INTERVAL): array {
     if (!$runs) {
         return ['tone' => '', 'badge' => [$running ? 'Running' : 'No run recorded yet', $running ? 'info' : 'secondary'],
                 'headline' => 'No run has been recorded yet.', 'problems' => []];
@@ -502,8 +515,13 @@ function housekeeping_health(array $runs, bool $running, int $now, int $interval
             : 'died' . (!empty($dead['died_in']) ? ' during ' . $dead['died_in'] : '') . ': ' . ($dead['message'] ?? '');
         $problems[] = 'The run that started ' . housekeeping_ago($now - (int)$dead['started_at']) . ' ' . $what;
     }
-    if (!$running && $now - $full_at > 2 * $interval) {
-        $problems[] = $full_at ? 'No full run has finished since ' . housekeeping_ago($now - $full_at) . ' (it should run hourly)'
+    if ($requested_at !== null) {
+        if (!$running && $requested_at > $full_at && $now - $requested_at > 900) {
+            $problems[] = 'A run was started ' . housekeeping_ago($now - $requested_at) . ' and none has finished since'
+                        . ($full_at ? ' (the last full run finished ' . housekeeping_ago($now - $full_at) . ')' : '');
+        }
+    } elseif (!$running && $now - $full_at > 2 * $interval) {
+        $problems[] = $full_at ? 'No full run has finished since ' . housekeeping_ago($now - $full_at)
                                : 'No full run has finished yet';
     }
     if ($problems) {
@@ -720,6 +738,16 @@ function housekeeping_snapshot_site_data() {
         $users_file                                             => 'users.json',
     ];
 
+    // Content pages (Admin -> Manage Pages, lib/content_pages.php): one file each, written by the
+    // web, so they are site data and must reach the private backup like the glossary does.
+    foreach (glob($config->getPath('metadata_path') . '/pages/*.json') ?: [] as $page_json) {
+        $files[$page_json] = 'metadata/pages/' . basename($page_json);
+    }
+    // Interface translations (Admin -> Manage Translations, lib/i18n.php): one catalog per language.
+    foreach (glob($config->getPath('metadata_path') . '/translations/*.json') ?: [] as $tr_json) {
+        $files[$tr_json] = 'metadata/translations/' . basename($tr_json);
+    }
+
     // Dynamically add all organism.json files from the organisms directory
     $organisms_dir = $config->getPath('organism_data');
     if (!empty($organisms_dir) && is_dir($organisms_dir)) {
@@ -855,6 +883,9 @@ README;
  * missing PHP extensions, missing JWT keys, unwritable directories,
  * missing CLI tools, missing composer dependencies.
  *
+ * A warning that has a fix to run carries it as 'command' (plain text, absolute paths), which
+ * the dashboard renders with a Copy button (adm_command()) -- not inside 'message'.
+ *
  * Results are stored in $_SESSION['env_warnings'] as an array of
  * ['level' => 'danger'|'warning', 'message' => string] entries, and persisted to
  * logs/.housekeeping_status.json so every session can be hydrated with it — see
@@ -889,7 +920,8 @@ function housekeeping_environment_check() {
         if (!extension_loaded($ext)) {
             $warnings[] = [
                 'level' => 'danger',
-                'message' => "PHP extension <code>$ext</code> is not loaded ($purpose). Install it: <code>sudo $pkg php-$ext && $restart_cmd</code>",
+                'message' => "PHP extension <code>$ext</code> is not loaded ($purpose). Install it:",
+                'command' => "sudo $pkg php-$ext && $restart_cmd",
             ];
         }
     }
@@ -903,12 +935,14 @@ function housekeeping_environment_check() {
     if (!file_exists($private_key) || !file_exists($public_key)) {
         $warnings[] = [
             'level' => 'danger',
-            'message' => "JWT keys missing in <code>certs/</code> — JBrowse2 track authentication will not work. Generate with: <code>openssl genrsa -out certs/$priv_basename 2048 && openssl rsa -in certs/$priv_basename -pubout -out certs/$pub_basename</code>",
+            'message' => "JWT keys missing in <code>certs/</code> — JBrowse2 track authentication will not work. Generate with:",
+            'command' => "cd $site_path && openssl genrsa -out certs/$priv_basename 2048 && openssl rsa -in certs/$priv_basename -pubout -out certs/$pub_basename",
         ];
     } elseif (!is_readable($private_key) || !is_readable($public_key)) {
         $warnings[] = [
             'level' => 'warning',
-            'message' => 'JWT keys in <code>certs/</code> are not readable by the web server — JBrowse2 track authentication will fail. Fix with: <code>sudo chgrp ' . htmlspecialchars(getWebServerUser()['group']) . ' certs/*.pem && sudo chmod 640 certs/*.pem</code>',
+            'message' => 'JWT keys in <code>certs/</code> are not readable by the web server — JBrowse2 track authentication will fail. Fix with:',
+            'command' => "cd $site_path && sudo chgrp " . getWebServerUser()['group'] . ' certs/*.pem && sudo chmod 640 certs/*.pem',
         ];
     }
 
@@ -947,12 +981,14 @@ function housekeeping_environment_check() {
         if ($hooks_path !== '.githooks') {
             $warnings[] = [
                 'level' => 'danger',
-                'message' => 'Git is not running MOOP\'s permission hooks — this clone is unprotected. Any checkout, merge or rebase that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with: <code>git config core.hooksPath .githooks</code>',
+                'message' => 'Git is not running MOOP\'s permission hooks — this clone is unprotected. Any checkout, merge or rebase that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with:',
+                'command' => "git -C $site_path config core.hooksPath .githooks",
             ];
         } elseif (!file_exists($hook_script)) {
             $warnings[] = [
                 'level' => 'danger',
-                'message' => 'Git is set to use <code>.githooks/</code> but the web server cannot see <code>moop-fix-web-perms</code> there — it is missing, or the directory is not traversable by the web user. Until it runs, a checkout that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with: <code>chmod 755 .githooks .githooks/*</code> (or restore the file from the repo).',
+                'message' => 'Git is set to use <code>.githooks/</code> but the web server cannot see <code>moop-fix-web-perms</code> there — it is missing, or the directory is not traversable by the web user. Until it runs, a checkout that writes a served <code>.php</code> leaves it mode 640 and 500s the whole site. Fix with this (or restore the file from the repo):',
+                'command' => "cd $site_path && chmod 755 .githooks .githooks/*",
             ];
         }
     }
@@ -998,10 +1034,10 @@ function housekeeping_environment_check() {
             $dir_mode = function_exists('moop_permission_dir_mode')
                 ? moop_permission_dir_mode($dir, $sensitive_paths)
                 : '2770';   // fail CLOSED: never advise widening when we cannot tell
-            $fix_cmd = "sudo chgrp " . $web_info['group'] . " " . htmlspecialchars($dir) . " && sudo chmod " . $dir_mode . " " . htmlspecialchars($dir);
             $warnings[] = [
                 'level' => 'warning',
-                'message' => "Directory <code>$label/</code> is not writable — admin changes may not save. Fix with: <code>$fix_cmd</code>",
+                'message' => "Directory <code>$label/</code> is not writable — admin changes may not save. Fix with:",
+                'command' => "sudo chgrp " . $web_info['group'] . " " . escapeshellarg($dir) . " && sudo chmod " . $dir_mode . " " . escapeshellarg($dir),
             ];
         }
     }
@@ -1050,10 +1086,10 @@ function housekeeping_environment_check() {
         $warnings[] = [
             'level'   => 'info',
             'message' => 'Primer design tool <code>primer3_core</code> is not installed — the '
-                       . 'primer designer will be unavailable. Install it with '
-                       . '<code>sudo bash scripts/install_primer3.sh</code>, which uses your '
-                       . 'distribution\'s package where there is one (Debian and Ubuntu have it) '
-                       . 'and builds from source otherwise.',
+                       . 'primer designer will be unavailable. Install it with the command below, '
+                       . 'which uses your distribution\'s package where there is one (Debian and '
+                       . 'Ubuntu have it) and builds from source otherwise.',
+            'command' => "sudo bash $site_path/scripts/install_primer3.sh",
         ];
     } elseif ($p3['problem'] === 'no_parameters') {
         $warnings[] = [
@@ -1062,9 +1098,9 @@ function housekeeping_environment_check() {
                        . htmlspecialchars($p3['binary']) . '</code> but its thermodynamic '
                        . 'parameters were not found in any known location. primer3 will fail on '
                        . 'every query with <code>PRIMER_ERROR=Unable to open file …</code>. Its '
-                       . 'own <code>make install</code> does not copy that directory — re-run '
-                       . '<code>scripts/install_primer3.sh</code>, or set '
-                       . '<code>primer3_config_path</code> if it is somewhere unusual.',
+                       . 'own <code>make install</code> does not copy that directory — re-run the '
+                       . 'installer below, or set <code>primer3_config_path</code> if it is somewhere unusual.',
+            'command' => "sudo bash $site_path/scripts/install_primer3.sh",
         ];
     }
 
@@ -1072,7 +1108,8 @@ function housekeeping_environment_check() {
     if (!is_dir($site_path . '/vendor')) {
         $warnings[] = [
             'level' => 'danger',
-            'message' => 'Composer dependencies not installed (<code>vendor/</code> missing). Run: <code>cd ' . htmlspecialchars($site_path) . ' && composer install --no-dev</code>',
+            'message' => 'Composer dependencies not installed (<code>vendor/</code> missing). Run:',
+            'command' => "cd $site_path && composer install --no-dev",
         ];
     }
 

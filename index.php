@@ -20,6 +20,29 @@ include_once __DIR__ . '/lib/home_examples.php';
 // Get configuration
 $config = ConfigManager::getInstance();
 
+// Which home (Admin -> Manage Pages): MOOP's own (default), a content page instead, or MOOP's own
+// with a content page above it. A page that no longer exists falls back to MOOP's home.
+// browse.php sets MOOP_BUILTIN_HOME: MOOP's own home at a permanent address of its own, so it stays
+// reachable (and linkable from the menu) when a site makes one of its pages the home.
+$home = defined('MOOP_BUILTIN_HOME') ? ['mode' => 'builtin', 'page' => ''] : $config->homeSetting();
+$home_intro_html = '';
+if ($home['mode'] !== 'builtin') {
+    require_once __DIR__ . '/lib/content_pages.php';
+    $home_page = moop_page_get($home['page']);
+    $hl = moop_current_lang();   // the visitor's language; English where the page has none
+    $pick = fn(string $part) => trim($home_page[$part][$hl] ?? '') !== '' ? $home_page[$part][$hl] : $home_page[$part]['en'];
+    if ($home_page !== null && $home['mode'] === 'page') {
+        echo render_display_page(__DIR__ . '/tools/pages/content_page.php', [
+            'page_title' => $pick('title'),
+            'page_html'  => moop_page_render($pick('body'), $home_page['format']),
+        ], $config->getString('siteTitle'));
+        exit;
+    }
+    if ($home_page !== null && $home['mode'] === 'intro') {
+        $home_intro_html = moop_page_render($pick('body'), $home_page['format']);
+    }
+}
+
 // Everything on this page is built from the entries THIS viewer may see, decided per
 // gene set (moop_visible_group_entries()). Building it from the raw group data and
 // filtering by organism -- three separate ways -- would show a private assembly of an
@@ -124,6 +147,7 @@ echo render_display_page(
         // (lib/home_examples.php) -- they were hard-coded IDs a public visitor could not.
         'examples'           => moop_home_examples($group_data),
         'cards_to_display'   => $cards_to_display,
+        'home_intro_html'    => $home_intro_html,   // a content page above the home (moop_markdown(): safe)
         'page_script'        => [
             "/$site/js/modules/taxonomy-tree.js",
             "/$site/js/modules/tool-launch.js",

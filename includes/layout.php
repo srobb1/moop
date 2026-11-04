@@ -138,6 +138,10 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
     // Get config instance for use in layout
     $config = ConfigManager::getInstance();
 
+    // Settle the language BEFORE any output: it may set the moop_lang cookie and the Vary /
+    // Content-Language headers. A one-language site (simrbase) gets 'en' and nothing else.
+    $page_lang = moop_current_lang();
+
     // Shared page-title component (page_title()) — available to every content file.
     require_once __DIR__ . '/page_header.php';
 
@@ -154,7 +158,7 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
     // Output complete HTML structure
     ?>
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="<?= htmlspecialchars($page_lang) ?>">
     <head>
         <title><?= htmlspecialchars($title) ?></title>
         <?php include_once __DIR__ . '/head-resources.php'; ?>
@@ -239,6 +243,12 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
              a help string carrying its own copy of the number goes stale silently the moment
              an admin changes the setting, and a wrong number in help is worse than none. -->
         <script>window.MOOP_SEARCH_RESULTS_LIMIT = <?= (int)moop_search_results_limit() ?>;</script>
+<?php /* The browser's translations for moopT() (js/modules/utilities.js), only on a page shown in
+         another language -- so a one-language site (simrbase) gets not one byte more. Before any
+         module, so text a module builds at load is already in the visitor's language. */
+if ($page_lang !== 'en'): require_once __DIR__ . '/../lib/i18n.php'; ?>
+        <script>window.MOOP_I18N = <?= json_encode((object) moop_i18n_js_catalog($page_lang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;<?= moop_i18n_show_gaps() ? ' window.MOOP_I18N_GAPS = true;' : '' ?></script>
+<?php endif; ?>
 
         <!-- Vendor JS — self-hosted, no external CDN dependency -->
         <script src="<?= moop_asset_url('js/vendor/jquery.min.js') ?>"></script>
@@ -271,6 +281,12 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
         <script src="<?= moop_asset_url('js/modules/feature-search.js') ?>"></script>
         <script src="<?= moop_asset_url('js/modules/navbar-id-search.js') ?>"></script>
         
+        <?php if (defined('MOOP_ADMIN_PAGE')): ?>
+        <!-- Every admin page: adm_command() Copy buttons (lib/functions_display.php). Loaded
+             here, not per page, so a page showing a command cannot forget it. -->
+        <script src="<?= moop_asset_url('js/modules/copy-to-clipboard.js') ?>"></script>
+        <?php endif; ?>
+
         <!-- Loading Indicator - Available to all pages for database scanning operations -->
         <script src="<?= moop_asset_url('js/loading-indicator.js') ?>"></script>
         

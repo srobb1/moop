@@ -4,7 +4,10 @@
  * Variables available: $siteTitle, $site, $organism_count, $assembly_count, $featured_groups, $cards_to_display
  * Scripts and their data (index.js, taxonomy-tree.js, userAccess, treeData, organismData)
  * come from index.php's page_script / inline_scripts, not from tags here.
+ * Interface text goes through t() (includes/config_init.php): English unless the site has more
+ * than one language, then the visitor's.
  */
+$home_count = fn($n) => '<strong style="font-weight:500;">' . (int) $n . '</strong>';
 ?>
 
 <div class="container py-3">
@@ -13,9 +16,14 @@
     <h1 class="index-site-title moop-tool-title"><?= htmlspecialchars($siteTitle) ?></h1>
     <hr class="mx-auto page-header-divider">
     <p class="mb-2" style="font-size:0.95rem;font-weight:300;color:rgba(8,145,178,0.7);letter-spacing:0.03em;">
-      Browse genes, genomes, and annotations<?php if (!empty($organism_count)): ?> across <strong style="font-weight:500;"><?= $organism_count ?></strong> organism<?= $organism_count !== 1 ? 's' : '' ?><?php if (!empty($assembly_count)): ?> and <strong style="font-weight:500;"><?= $assembly_count ?></strong> assembl<?= $assembly_count !== 1 ? 'ies' : 'y' ?><?php endif; ?><?php endif; ?>
+      <?= t('Browse genes, genomes, and annotations') ?><?php if (!empty($organism_count)): ?> <?= $organism_count !== 1 ? t_markup('across %s organisms', $home_count($organism_count)) : t_markup('across %s organism', $home_count($organism_count)) ?><?php if (!empty($assembly_count)): ?> <?= $assembly_count !== 1 ? t_markup('and %s assemblies', $home_count($assembly_count)) : t_markup('and %s assembly', $home_count($assembly_count)) ?><?php endif; ?><?php endif; ?>
     </p>
   </div>
+<?php if (!empty($home_intro_html)): /* Admin -> Manage Pages: a page shown above the home */ ?>
+  <div class="card shadow-sm mb-3 home-intro">
+    <div class="card-body content-page-body"><?= $home_intro_html ?></div>
+  </div>
+<?php endif; ?>
   <?php /* Declared, not shown: the tagline above already tells a visitor what is here,
            and live counts do it better than a second sentence would. This exists so the
            page still declares its PURPOSE for the router. */ ?>
@@ -26,12 +34,12 @@
     <ul class="nav nav-tabs justify-content-end" id="search-tabs" style="border-bottom:0;">
       <li class="nav-item">
         <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-quick" type="button">
-          <i class="fa fa-search me-1"></i>Organisms
+          <i class="fa fa-search me-1"></i><?= t('Organisms') . "\n" ?>
         </button>
       </li>
       <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-feature" type="button">
-          <i class="fa fa-search me-1"></i>Genes
+          <i class="fa fa-search me-1"></i><?= t('Genes') . "\n" ?>
         </button>
       </li>
     </ul>
@@ -52,10 +60,10 @@
                     <i class="fa fa-search"></i>
                   </span>
                   <input type="search" id="qs-input" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control border-start-0 border-end-0 ps-1 moop-input"
-                         placeholder="Search organisms, groups, assemblies, gene sets…"
-                         aria-label="Search organisms, groups, assemblies and gene sets"
+                         placeholder="<?= t('Search organisms, groups, assemblies, gene sets…') ?>"
+                         aria-label="<?= t('Search organisms, groups, assemblies and gene sets') ?>"
                          autocomplete="off" spellcheck="false">
-                  <button id="qs-go" class="btn btn-primary px-3" type="button">Go</button>
+                  <button id="qs-go" class="btn btn-primary px-3" type="button"><?= t('Go') ?></button>
                 </div>
                 <div id="qs-dropdown" class="qs-dropdown"></div>
               </div>
@@ -63,7 +71,7 @@
             </div>
             <?php if (!empty($examples['organisms'])): ?>
             <div class="qs-examples mt-2">
-              <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
+              <span class="text-muted me-1" style="font-size:0.62rem;"><?= t('e.g.') ?></span>
               <?php foreach ($examples['organisms'] as $ex): ?>
                 <button class="qs-example-chip<?= $ex['kind'] === 'organism' ? ' sci-name' : '' ?>" type="button" style="font-size:0.62rem;"><?= htmlspecialchars($ex['text']) ?></button>
               <?php endforeach; ?>
@@ -84,17 +92,17 @@
                     <i class="fa fa-search"></i>
                   </span>
                   <input type="search" id="fs-input" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control border-start-0 border-end-0 ps-1 moop-input"
-                         placeholder="Enter Accession ID…"
-                         aria-label="Find a gene, transcript, CDS or protein by its exact accession ID"
+                         placeholder="<?= t('Enter Accession ID…') ?>"
+                         aria-label="<?= t('Find a gene, transcript, CDS or protein by its exact accession ID') ?>"
                          autocomplete="off" spellcheck="false">
-                  <button id="fs-go" class="btn btn-primary px-3" type="button">Search</button>
+                  <button id="fs-go" class="btn btn-primary px-3" type="button"><?= t('Search') ?></button>
                 </div>
               </div>
               <?= help_modal_trigger('fs-help', '', 'Help: finding a gene by its ID') ?>
             </div>
             <?php if (!empty($examples['genes'])): ?>
             <div class="qs-examples mt-2">
-              <span class="text-muted me-1" style="font-size:0.62rem;">e.g.</span>
+              <span class="text-muted me-1" style="font-size:0.62rem;"><?= t('e.g.') ?></span>
               <?php foreach ($examples['genes'] as $ex): ?>
                 <button class="fs-example-chip qs-example-chip" type="button" style="font-size:0.62rem;"><?= htmlspecialchars($ex['text']) ?></button>
               <?php endforeach; ?>
@@ -113,7 +121,7 @@
   <!-- Featured groups -->
   <div class="mb-3 text-center pt-2">
     <div class="text-uppercase fw-semibold mb-2 section-eyebrow" style="color:var(--moop-tool-header);">
-      Focus Your Search by Group
+      <?= t('Focus Your Search by Group') . "\n" ?>
     </div>
     <hr class="mx-auto page-header-divider mb-3">
     <div class="d-flex justify-content-center flex-wrap gap-2">
@@ -126,7 +134,7 @@
       <button class="index-group-chip"
               style="background:#e2e8f0;color:#475569;border:none;cursor:pointer;"
               onclick="document.getElementById('browse-group-header').click()">
-        More&hellip;
+        <?= t('More') ?>&hellip;
       </button>
     </div>
   </div>
@@ -138,12 +146,12 @@
        role="button" aria-expanded="false" aria-controls="browse-group-body">
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
-      <span class="text-uppercase fw-semibold section-eyebrow">Search in a Group of Organisms</span>
+      <span class="text-uppercase fw-semibold section-eyebrow"><?= t('Search in a Group of Organisms') ?></span>
     </span>
   </div>
   <div class="collapse mb-3" id="browse-group-body">
     <div class="groups-strip">
-      <p class="text-muted small mb-2">Click a group to focus your searches on a curated set of organisms.</p>
+      <p class="text-muted small mb-2"><?= t('Click a group to focus your searches on a curated set of organisms.') ?></p>
       <div class="index-group-chip-list">
         <?php foreach ($cards_to_display as $card): ?>
           <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank"
@@ -165,7 +173,7 @@
        role="button" aria-expanded="false" aria-controls="browse-select-body">
     <span class="d-flex align-items-center gap-2">
       <i class="fas fa-chevron-down browse-select-chevron"></i>
-      <span class="text-uppercase fw-semibold section-eyebrow">Search in a Custom Selection of Organisms</span>
+      <span class="text-uppercase fw-semibold section-eyebrow"><?= t('Search in a Custom Selection of Organisms') ?></span>
     </span>
   </div>
 
@@ -243,11 +251,7 @@
   <!-- Browse & Select: selected organisms full-width top row, then step 1 + step 2 below -->
   <div class="collapse" id="browse-select-body">
   <div class="browse-select-panel">
-  <p class="text-muted small mb-2 px-1">Build a custom collection of organisms to focus your searches — complete
-    <span class="step-ref">1</span>
-    then
-    <span class="step-ref">2</span>
-    below.
+  <p class="text-muted small mb-2 px-1"><?= t_markup('Build a custom collection of organisms to focus your searches — complete %s then %s below.', '<span class="step-ref">1</span>', '<span class="step-ref">2</span>') . "\n" ?>
     <?php /* The (i) lives HERE, in the panel body, not on the collapse header above.
              The header bar is the collapse toggle, and Bootstrap 5 registers its delegated
              data-api in the CAPTURE phase — so a button anywhere inside that bar fires the
@@ -265,16 +269,16 @@
       <div class="card shadow-sm selection-empty" id="selected-organisms-card">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
           <span class="fw-semibold" style="font-size:0.9rem;">
-            Selected Organisms
+            <?= t('Selected Organisms') . "\n" ?>
             <span class="badge bg-light text-dark ms-1" id="selected-count">0</span>
           </span>
-          <button id="clear-all-organisms" class="btn btn-sm btn-outline-light py-0 px-2" style="display:none" title="Clear all">
-            <i class="fa fa-times me-1"></i>Clear all
+          <button id="clear-all-organisms" class="btn btn-sm btn-outline-light py-0 px-2" style="display:none" title="<?= t('Clear all') ?>">
+            <i class="fa fa-times me-1"></i><?= t('Clear all') . "\n" ?>
           </button>
         </div>
         <div class="card-body p-2">
           <div id="selected-organisms-list">
-            <div class="text-muted fst-italic small px-1">No organisms selected</div>
+            <div class="text-muted fst-italic small px-1"><?= t('No organisms selected') ?></div>
           </div>
         </div>
       </div>
@@ -285,23 +289,23 @@
       <div class="card shadow-sm">
         <div class="card-header bg-tools text-white py-2">
           <span class="step-badge me-2">1</span>
-          <span class="fw-semibold" style="font-size:0.9rem;">Select one or more organisms</span>
+          <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select one or more organisms') ?></span>
         </div>
         <div class="card-body p-2">
           <ul class="nav nav-tabs" id="organism-tabs" role="tablist">
             <li class="nav-item" role="presentation">
               <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-organism-select" type="button" role="tab">
-                <i class="fa fa-list me-1"></i> Organisms Select
+                <i class="fa fa-list me-1"></i> <?= t('Organisms Select') . "\n" ?>
               </button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-taxon-select" type="button" role="tab">
-                <i class="fa fa-sitemap me-1"></i> Taxon Select
+                <i class="fa fa-sitemap me-1"></i> <?= t('Taxon Select') . "\n" ?>
               </button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tree-select" type="button" role="tab">
-                <i class="fa fa-project-diagram me-1"></i> Tree Select
+                <i class="fa fa-project-diagram me-1"></i> <?= t('Tree Select') . "\n" ?>
               </button>
             </li>
           </ul>
@@ -310,30 +314,30 @@
 
             <!-- Tab 1: Organism Select -->
             <div class="tab-pane fade show active" id="tab-organism-select" role="tabpanel">
-              <p class="text-muted small mb-2">Filter by scientific name, common name, or group to find specific species. Select one or more to use with a tool.</p>
+              <p class="text-muted small mb-2"><?= t('Filter by scientific name, common name, or group to find specific species. Select one or more to use with a tool.') ?></p>
               <input type="search" autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control form-control-sm mb-2 moop-input" id="organism-select-filter"
-                     placeholder="Filter by name, common name, or group…">
+                     placeholder="<?= t('Filter by name, common name, or group…') ?>">
               <div id="organism-select-list" class="org-select-list"></div>
             </div>
 
             <!-- Tab 2: Taxon Select -->
             <div class="tab-pane fade" id="tab-taxon-select" role="tabpanel">
-              <p class="text-muted small mb-2">Each row shows the full taxonomic lineage — filter by any rank to find related species. Select one or more to use with a tool.</p>
+              <p class="text-muted small mb-2"><?= t('Each row shows the full taxonomic lineage — filter by any rank to find related species. Select one or more to use with a tool.') ?></p>
               <input type="search" autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control form-control-sm mb-2 moop-input" id="taxon-select-filter"
-                     placeholder="Filter by taxonomy, name, or common name…">
+                     placeholder="<?= t('Filter by taxonomy, name, or common name…') ?>">
               <div id="taxon-select-list" class="org-select-list"></div>
             </div>
 
             <!-- Tab 3: Tree Select -->
             <div class="tab-pane fade" id="tab-tree-select" role="tabpanel">
-              <p class="text-muted small mb-2">Click a branch to expand or collapse it. Use the <strong>+</strong> button on any row to add those organisms to your selection. Select one or more to use with a tool.</p>
+              <p class="text-muted small mb-2"><?= t_markup('Click a branch to expand or collapse it. Use the %s button on any row to add those organisms to your selection. Select one or more to use with a tool.', '<strong>+</strong>') ?></p>
               <div class="d-flex align-items-center justify-content-end mb-2">
                 <div class="d-flex gap-1">
-                  <button id="tree-expand-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Expand All</button>
-                  <button id="tree-collapse-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">Collapse All</button>
+                  <button id="tree-expand-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;"><?= t('Expand All') ?></button>
+                  <button id="tree-collapse-all" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;"><?= t('Collapse All') ?></button>
                 </div>
               </div>
-              <input type="search" autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control form-control-sm mb-2 moop-input" id="taxonomy-filter" placeholder="Filter by taxon or organism…">
+              <input type="search" autocomplete="off" data-1p-ignore data-lpignore="true" data-form-type="other" class="form-control form-control-sm mb-2 moop-input" id="taxonomy-filter" placeholder="<?= t('Filter by taxon or organism…') ?>">
               <div class="taxonomy-tree-scroll">
                 <div id="taxonomy-tree-container"></div>
               </div>

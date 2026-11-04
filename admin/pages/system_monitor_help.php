@@ -13,7 +13,7 @@ $sysmon_help = [
     'recs'      => 'What to act on, most serious first. “Nothing to act on” is the normal state. Each item says what it rests on, so you can check it.',
     'charts'    => 'How things moved over the chosen window. Look for long stretches high up, not short spikes. Hover or use the arrow keys for exact values.',
     'traffic'   => 'Every request the web server answered, including images and scripts — what kind of program sent it, and what it asked for. Each row is explained under “Traffic” in How this page works.',
-    'addresses' => 'The addresses that sent the most requests, labelled This server, Private network, Internal or Internet. Only Internet addresses are outside your network. A single Internet address far above the rest is usually a crawler.',
+    'addresses' => 'The addresses that sent the most requests, labeled This server, Private network, Internal or Internet. Only Internet addresses are outside your network. A single Internet address far above the rest is usually a crawler.',
     'usage'     => 'Which organisms, assemblies and gene sets people open, search, BLAST and download — your own people and the public counted separately.',
     'pages'     => 'What each page costs the server. Sort by any column. Big “Total time” = where the server spends its effort; big “Slowest 5%” = what feels slow to people.',
     'warmcold'  => 'Whether pages found their data already in RAM (warm, fast) or had to read it from disk (cold, slower). Many cold requests = the databases do not fit in RAM.',
@@ -59,7 +59,7 @@ $sysmon_guide = help_modal(
             ['label' => 'Search engines', 'text' => 'Google, Bing, Baidu, Yandex, DuckDuckGo, Apple and similar, indexing pages for search results. Respect robots.txt.'],
             ['label' => 'AI crawlers', 'text' => 'Bots that collect pages to train or feed AI: GPTBot/ChatGPT, ClaudeBot, Perplexity, CommonCrawl (CCBot), Bytespider, Amazonbot, Meta and others. Zero is normal on an internal-only site.'],
             ['label' => 'Scripts & automated tools', 'text' => 'Command-line tools and code: curl, wget, Python, Java, Go, Node, headless browsers used for testing, and anything calling itself a bot, crawler or spider. On this server most of it is MOOP’s own checks and tests — look at Busiest addresses to see where it came from.'],
-            ['label' => 'Unrecognised programs', 'text' => 'Sent a name that matches none of the rows above: unusual or old browsers, phone apps, link previewers (Slack, Teams), monitoring services. Usually small.'],
+            ['label' => 'Unrecognized programs', 'text' => 'Sent a name that matches none of the rows above: unusual or old browsers, phone apps, link previewers (Slack, Teams), monitoring services. Usually small.'],
             ['label' => 'Did not say what it is', 'text' => 'Sent no user agent at all. Every browser sends one, so this is a bare script, a health check or a port scanner. A handful is normal; thousands from Internet addresses are worth a look.'],
         ]],
         ['heading' => 'Traffic — what they asked for', 'cards' => [

@@ -18,15 +18,18 @@
  */
 function parseBlastResults($blast_xml) {
     $all_queries = [];
+    $search = [];
     
     // Parse XML
     try {
         $xml = simplexml_load_string($blast_xml);
         
         if ($xml === false) {
-            return ['error' => 'Failed to parse BLAST XML output', 'queries' => []];
+            return ['error' => t_plain('Failed to parse BLAST XML output'), 'queries' => []];
         }
         
+        $search = moop_blast_search_summary($xml);
+
         // Parse each iteration (each query gets one iteration)
         $iterations = $xml->xpath('//Iteration');
         
@@ -285,7 +288,40 @@ function parseBlastResults($blast_xml) {
         return ['error' => 'XML parsing error: ' . $e->getMessage(), 'queries' => []];
     }
     
-    return ['queries' => $all_queries, 'error' => ''];
+    return ['queries' => $all_queries, 'error' => '', 'search' => $search];
+}
+
+/**
+ * What BLAST itself recorded about the search: program and version, database, its size, and
+ * the scoring -- read from the XML, so the results page reports the search that actually ran.
+ * Only what the XML holds; a field it lacks is left out, never filled in.
+ *
+ * Until 2026-11-04 the page showed a block of placeholder values typed into the code (Database
+ * "protein.aa.fa", Posted Date "Nov 12, 2025 10:40 PM", 21,106,416 letters, BLOSUM62, gap 11/1,
+ * window 40, threshold 11) on every result, whatever was searched.
+ *
+ * @return array program, version, db (file name only -- the server's path stays private),
+ *               db_num, db_len, matrix, match, mismatch, gap_open, gap_extend; each optional
+ */
+function moop_blast_search_summary(SimpleXMLElement $xml): array {
+    $one = function (string $path) use ($xml): ?string {
+        $n = $xml->xpath($path);
+        return $n ? trim((string) $n[0]) : null;
+    };
+    $out = [
+        'program'    => $one('/BlastOutput/BlastOutput_program'),
+        'version'    => $one('/BlastOutput/BlastOutput_version'),
+        'db'         => ($db = $one('/BlastOutput/BlastOutput_db')) !== null && $db !== '' ? basename($db) : null,
+        'matrix'     => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_matrix'),
+        'match'      => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_sc-match'),
+        'mismatch'   => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_sc-mismatch'),
+        'gap_open'   => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_gap-open'),
+        'gap_extend' => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_gap-extend'),
+        // Database size: the same on every query; the first iteration's statistics say it.
+        'db_num'     => $one('(//Iteration_stat/Statistics/Statistics_db-num)[1]'),
+        'db_len'     => $one('(//Iteration_stat/Statistics/Statistics_db-len)[1]'),
+    ];
+    return array_filter($out, fn($v) => $v !== null && $v !== '');
 }
 
 /**
@@ -297,15 +333,16 @@ function parseBlastResults($blast_xml) {
  */
 function generateHitsSummaryTable($results, $query_num = 1) {
     $html = '<div class="blast-hits-summary mb-4">';
-    $html .= '<h6><i class="fa fa-table"></i> Hits Summary (' . $results['total_hits'] . ' hits found)</h6>';
+    $html .= '<h6><i class="fa fa-table"></i> ' . ($results['total_hits'] == 1 ? t('Hits Summary (%d hit found)', 1)
+                                                                           : t('Hits Summary (%d hits found)', $results['total_hits'])) . '</h6>';
     $html .= '<div style="overflow-x: auto;">';
     $html .= '<table class="table table-sm table-striped blast-hits-table">';
     $html .= '<thead class="table-light">';
     $html .= '<tr>';
     $html .= '<th style="width: 5%">#</th>';
-    $html .= '<th style="width: 45%">Hit ID / Description</th>';
-    $html .= '<th style="width: 20%">Query Coverage %</th>';
-    $html .= '<th style="width: 12%">E-value</th>';
+    $html .= '<th style="width: 45%">' . t('Hit ID / Description') . '</th>';
+    $html .= '<th style="width: 20%">' . gloss_first('coverage', 'Query Coverage') . ' %</th>';
+    $html .= '<th style="width: 12%">' . gloss_first('e-value', 'E-value') . '</th>';
     $html .= '<th style="width: 18%">HSPs</th>';
     $html .= '</tr>';
     $html .= '</thead>';
@@ -365,10 +402,10 @@ function generateHitsSummaryTable($results, $query_num = 1) {
 function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num = 1, $context = []) {
     $html = '<div class="blast-alignment-viewer mt-4">';
     $html .= '<h6><i class="fa fa-align-justify"></i> Detailed Alignments (HSPs)</h6>';
-    $html .= '<small class="text-muted d-block mb-3">Each Hit section contains one or more High-Scoring Segment Pairs (HSPs)</small>';
+    $html .= '<small class="text-muted d-block mb-3">' . t('Each Hit section contains one or more High-Scoring Segment Pairs (HSPs)') . '</small>';
 
     if (empty($results['hits'])) {
-        $html .= '<div class="alert alert-info"><small>No alignments to display</small></div>';
+        $html .= '<div class="alert alert-info"><small>' . t('No alignments to display') . '</small></div>';
         return $html . '</div>';
     }
 
@@ -398,15 +435,15 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
         $clean_hit_id = cleanBlastHitId($hit['id']);
         $html .= '<div id="query-' . $query_num . '-hit-' . $hit_num . '" style="padding: 15px; scroll-margin-top: 20px; background: #f0f7ff; margin-bottom: 15px;">';
         $html .= '<h5 style="margin-bottom: 4px; color: #007bff; font-family: monospace;">';
-        $html .= '<strong>Hit ' . $hit_num . ': ' . htmlspecialchars($clean_hit_id) . '</strong>';
+        $html .= '<strong>' . t('Hit %1$d: %2$s', $hit_num, $clean_hit_id) . '</strong>';
         $html .= '</h5>';
         $html .= '<div style="margin-bottom: 10px; color: #555; font-size: 0.9em;">' . htmlspecialchars($hit['subject']) . '</div>';
         $html .= '<small class="d-block" style="margin-bottom: 10px;">';
-        $html .= '<strong>Length:</strong> ' . $hit['length'] . ' ' . $unit . ' | ';
-        $html .= '<strong>Best E-value:</strong> ' . $evalue_display . ' | ';
+        $html .= '<strong>' . t('Length:') . '</strong> ' . $hit['length'] . ' ' . $unit . ' | ';
+        $html .= '<strong>' . t('Best E-value:') . '</strong> ' . $evalue_display . ' | ';
         $html .= '<strong>HSPs:</strong> ' . $hit['num_hsps'] . ' | ';
-        $html .= '<strong>Query Coverage:</strong> ' . $hit['query_coverage_percent'] . '% | ';
-        $html .= '<strong>Subject Coverage:</strong> ' . $hit['subject_cumulative_coverage_percent'] . '%';
+        $html .= '<strong>' . t('Query Coverage:') . '</strong> ' . $hit['query_coverage_percent'] . '% | ';
+        $html .= '<strong>' . t('Subject Coverage:') . '</strong> ' . $hit['subject_cumulative_coverage_percent'] . '%';
         $html .= '</small>';
         if (!empty($context)) {
             $linkout_html = buildBlastHitLinkouts($hit, $context);
@@ -423,9 +460,9 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
             $html .= '<div style="padding: 15px; border-bottom: 1px solid #dee2e6; margin-left: 15px; background: #ffffff; margin-bottom: 10px; border-left: 4px solid #28a745;">';
             $html .= '<h6 style="margin-bottom: 10px;"><strong>HSP ' . $hsp_num . '</strong></h6>';
             $html .= '<small class="text-muted d-block" style="margin-bottom: 10px;">';
-            $html .= 'E-value: ' . sprintf('%.2e', $hsp['evalue']) . ' | ';
-            $html .= 'Alignment length: ' . $hsp['alignment_length'] . ' | ';
-            $html .= 'Identity: ' . $hsp['identities'] . '/' . $hsp['alignment_length'] . ' (' . $hsp['percent_identity'] . '%) | ';
+            $html .= gloss_first('e-value', 'E-value') . ': ' . sprintf('%.2e', $hsp['evalue']) . ' | ';
+            $html .= t('Alignment length: %s', $hsp['alignment_length']) . ' | ';
+            $html .= gloss_first('percent identity', 'Identity') . ': ' . $hsp['identities'] . '/' . $hsp['alignment_length'] . ' (' . $hsp['percent_identity'] . '%) | ';
             $html .= 'Similarities: ' . $hsp['similarities'] . ' | ';
             $html .= 'Gaps: ' . $hsp['gaps'];
             if ($hsp['gaps'] > 0) {
@@ -436,9 +473,9 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
             // Query coverage information for this HSP
             $query_hsp_coverage = $results['query_length'] > 0 ? round((($hsp['query_to'] - $hsp['query_from'] + 1) / $results['query_length']) * 100, 2) : 0;
             $html .= '<small class="d-block" style="margin-bottom: 10px; background: #e7f3ff; padding: 8px; border-radius: 3px; border-left: 3px solid #007bff;">';
-            $html .= '<strong>Query Coverage (This HSP):</strong> ';
+            $html .= '<strong>' . t('Query Coverage (This HSP):') . '</strong> ';
             $html .= $query_hsp_coverage . '% (' . ($hsp['query_to'] - $hsp['query_from'] + 1) . '/' . $results['query_length'] . ') | ';
-            $html .= '<strong>Subject Coverage (This HSP):</strong> ';
+            $html .= '<strong>' . t('Subject Coverage (This HSP):') . '</strong> ';
             $html .= $hsp['subject_coverage_percent'] . '% (' . (abs($hsp['hit_to'] - $hsp['hit_from']) + 1) . '/' . $results['hits'][$hit_idx]['length'] . ')';
             $html .= '</small>';
 
@@ -650,13 +687,13 @@ function buildBlastHitLinkouts($hit, $context) {
 
             $hsp_count = count($hsps_to_use);
             if ($dropped > 0) {
-                $btn_label = 'View hit with ' . $hsp_count . ' of ' . $total_hsps . ' HSPs in browser';
+                $btn_label = t_plain('View hit with %1$d of %2$d HSPs in browser', $hsp_count, $total_hsps);
             } else {
-                $btn_label = 'View hit with ' . $hsp_count . ' ' . ($hsp_count === 1 ? 'HSP' : 'HSPs') . ' in browser';
+                $btn_label = $hsp_count === 1 ? t_plain('View hit with %d HSP in browser', 1) : t_plain('View hit with %d HSPs in browser', $hsp_count);
             }
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '
                    . 'class="btn btn-sm btn-outline-success me-1">'
-                   . $btn_label . '</a>';
+                   . htmlspecialchars($btn_label) . '</a>';
         }
     } else {
         // Feature BLAST (mRNA / CDS / protein): hit ID is a feature uniquename
@@ -729,12 +766,12 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     
     // Check for parsing errors
     if (!empty($parse_result['error'])) {
-        return '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> Error parsing results: ' . htmlspecialchars($parse_result['error']) . '</div>';
+        return '<div class="alert alert-danger"><i class="fa fa-exclamation-circle"></i> ' . t('Error parsing results: %s', $parse_result['error']) . '</div>';
     }
     
     $queries = $parse_result['queries'] ?? [];
     if (empty($queries)) {
-        return '<div class="alert alert-info"><i class="fa fa-info-circle"></i> No queries found in results</div>';
+        return '<div class="alert alert-info"><i class="fa fa-info-circle"></i> ' . t('No queries found in results') . '</div>';
     }
     
     $html = '<div class="blast-visualization">';
@@ -748,157 +785,135 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     // Search Parameters Section (moved up, collapsible)
     $html .= '<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">';
     $html .= '<div style="padding: 15px; cursor: pointer; background: #f8f9fa; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;" onclick="document.getElementById(\'search-params\').style.display = document.getElementById(\'search-params\').style.display === \'none\' ? \'block\' : \'none\'; this.querySelector(\'i\').style.transform = document.getElementById(\'search-params\').style.display === \'none\' ? \'rotate(0deg)\' : \'rotate(180deg)\';">';
-    $html .= '<h6 style="margin: 0; color: #333;"><i class="fa fa-cog"></i> Search Parameters</h6>';
+    $html .= '<h6 style="margin: 0; color: #333;"><i class="fa fa-cog"></i> ' . t('Search Parameters') . '</h6>';
     $html .= '<i class="fa fa-chevron-down" style="transition: transform 0.2s; transform: rotate(0deg);"></i>';
     $html .= '</div>';
     
     $html .= '<div id="search-params" style="display: none; padding: 15px;">';
     
-    // Original search parameters - first grid
-    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 15px;">';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Database</small><br>';
-    $html .= '<small>protein.aa.fa</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Posted Date</small><br>';
-    $html .= '<small>Nov 12, 2025 10:40 PM</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Database Size</small><br>';
-    $html .= '<small>21,106,416 letters | 54,384 sequences</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Program</small><br>';
-    $html .= '<small>' . strtoupper(htmlspecialchars($blast_program)) . '</small>';
-    $html .= '</div>';
-    
-    $html .= '</div>';
-    
-    // Original search parameters - second grid
-    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Matrix</small><br>';
-    $html .= '<small>BLOSUM62</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Gap Penalties</small><br>';
-    $html .= '<small>Existence: 11, Extension: 1</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Window for Multiple Hits</small><br>';
-    $html .= '<small>40</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Threshold</small><br>';
-    $html .= '<small>11</small>';
-    $html .= '</div>';
-    
-    $html .= '</div>';
-    
+    // What BLAST recorded about this search (moop_blast_search_summary(), read from its XML).
+    // Was a block of placeholder values typed into the code, the same on every result.
+    $sr = $parse_result['search'] ?? [];
+    $cell = fn(string $label, string $value_html) => '<div><small style="color: #666; font-weight: bold;">' . t($label)
+                                                    . '</small><br><small>' . $value_html . '</small></div>';
+    $facts = [];
+    $facts[] = $cell('Program', htmlspecialchars($sr['version'] ?? strtoupper($blast_program)));
+    if (isset($sr['db'])) $facts[] = $cell('Database', htmlspecialchars($sr['db']));
+    if (isset($sr['db_len'], $sr['db_num'])) {
+        // A protein database (blastp, blastx) is counted in residues, a nucleotide one in letters.
+        $facts[] = $cell('Database Size', in_array($blast_program, ['blastp', 'blastx'], true)
+            ? t('%1$s residues | %2$s sequences', number_format((float) $sr['db_len']), number_format((float) $sr['db_num']))
+            : t('%1$s letters | %2$s sequences', number_format((float) $sr['db_len']), number_format((float) $sr['db_num'])));
+    }
+    if (isset($sr['matrix'])) {
+        $facts[] = $cell('Matrix', htmlspecialchars($sr['matrix']));
+    } elseif (isset($sr['match'], $sr['mismatch'])) {
+        $facts[] = $cell('Match / Mismatch Scores', htmlspecialchars($sr['match'] . ' / ' . $sr['mismatch']));
+    }
+    if (isset($sr['gap_open'], $sr['gap_extend'])) {
+        // 0/0 is how BLAST reports megablast's linear (non-affine) gap costs, not "free gaps".
+        $facts[] = $cell('Gap Penalties', ((int) $sr['gap_open'] === 0 && (int) $sr['gap_extend'] === 0)
+            ? t('linear (megablast default)')
+            : t('Existence: %1$s, Extension: %2$s', $sr['gap_open'], $sr['gap_extend']));
+    }
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">'
+           . implode('', $facts) . '</div>';
+
     // New search parameters from form - third grid
     $html .= '<hr style="margin: 15px 0;">';
-    $html .= '<h6 style="color: #333; margin-bottom: 15px;"><i class="fa fa-sliders-h"></i> Form Parameters</h6>';
+    $html .= '<h6 style="color: #333; margin-bottom: 15px;"><i class="fa fa-sliders-h"></i> ' . t('Form Parameters') . '</h6>';
     $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">';
     
     // Basic parameters
     $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">E-value Threshold</small><br>';
+    $html .= '<small style="color: #666; font-weight: bold;">' . t('E-value Threshold') . '</small><br>';
     $html .= '<small>' . htmlspecialchars($blast_options['evalue'] ?? '1e-3') . '</small>';
     $html .= '</div>';
     
     $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Maximum Hits</small><br>';
+    $html .= '<small style="color: #666; font-weight: bold;">' . t('Maximum Hits') . '</small><br>';
     $html .= '<small>' . ($blast_options['max_hits'] ?? 10) . '</small>';
     $html .= '</div>';
     
     $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Scoring Matrix</small><br>';
+    $html .= '<small style="color: #666; font-weight: bold;">' . t('Scoring Matrix') . '</small><br>';
     $html .= '<small>' . htmlspecialchars($blast_options['matrix'] ?? 'BLOSUM62') . '</small>';
     $html .= '</div>';
     
     // Advanced parameters
     if (!empty($blast_options['word_size'])) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Word Size</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Word Size') . '</small><br>';
         $html .= '<small>' . htmlspecialchars($blast_options['word_size']) . '</small>';
         $html .= '</div>';
     }
     
     if (!empty($blast_options['gapopen'])) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Gap Open Penalty</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Gap Open Penalty') . '</small><br>';
         $html .= '<small>' . htmlspecialchars($blast_options['gapopen']) . '</small>';
         $html .= '</div>';
     }
     
     if (!empty($blast_options['gapextend'])) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Gap Extend Penalty</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Gap Extend Penalty') . '</small><br>';
         $html .= '<small>' . htmlspecialchars($blast_options['gapextend']) . '</small>';
         $html .= '</div>';
     }
     
     if (!empty($blast_options['max_hsps'])) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Max HSPs</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Max HSPs') . '</small><br>';
         $html .= '<small>' . htmlspecialchars($blast_options['max_hsps']) . '</small>';
         $html .= '</div>';
     }
     
     if (!empty($blast_options['perc_identity'])) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Percent Identity</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Percent Identity') . '</small><br>';
         $html .= '<small>' . htmlspecialchars($blast_options['perc_identity']) . '%</small>';
         $html .= '</div>';
     }
     
     if (!empty($blast_options['culling_limit'])) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Culling Limit</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Culling Limit') . '</small><br>';
         $html .= '<small>' . htmlspecialchars($blast_options['culling_limit']) . '</small>';
         $html .= '</div>';
     }
     
     if (!empty($blast_options['threshold'])) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Threshold</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Threshold') . '</small><br>';
         $html .= '<small>' . htmlspecialchars($blast_options['threshold']) . '</small>';
         $html .= '</div>';
     }
     
     if (!empty($blast_options['strand'])) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Strand</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Strand') . '</small><br>';
         $html .= '<small>' . htmlspecialchars($blast_options['strand']) . '</small>';
         $html .= '</div>';
     }
     
     if ($blast_options['soft_masking'] ?? false) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Soft Masking</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Soft Masking') . '</small><br>';
         $html .= '<small><i class="fa fa-check" style="color: green;"></i> Enabled</small>';
         $html .= '</div>';
     }
     
     if ($blast_options['filter'] ?? false) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Filter Low Complexity</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Filter Low Complexity') . '</small><br>';
         $html .= '<small><i class="fa fa-check" style="color: green;"></i> Enabled</small>';
         $html .= '</div>';
     }
     
     if ($blast_options['ungapped'] ?? false) {
         $html .= '<div>';
-        $html .= '<small style="color: #666; font-weight: bold;">Ungapped</small><br>';
+        $html .= '<small style="color: #666; font-weight: bold;">' . t('Ungapped') . '</small><br>';
         $html .= '<small><i class="fa fa-check" style="color: green;"></i> Enabled</small>';
         $html .= '</div>';
     }
@@ -915,10 +930,10 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     $html .= '<thead class="table-light">';
     $html .= '<tr>';
     $html .= '<th style="width: 5%">#</th>';
-    $html .= '<th style="width: 35%">Query Name</th>';
-    $html .= '<th style="width: 15%">Length</th>';
-    $html .= '<th style="width: 15%">Hits</th>';
-    $html .= '<th style="width: 30%">Best E-value</th>';
+    $html .= '<th style="width: 35%">' . t('Query Name') . '</th>';
+    $html .= '<th style="width: 15%">' . t('Length') . '</th>';
+    $html .= '<th style="width: 15%">' . t('Hits') . '</th>';
+    $html .= '<th style="width: 30%">' . t('Best E-value') . '</th>';
     $html .= '</tr>';
     $html .= '</thead>';
     $html .= '<tbody>';
@@ -964,15 +979,28 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         $html .= '<div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 12px; margin-bottom: 15px; border-radius: 4px;">';
         $html .= '<small>';
         if (!empty($query['query_desc'])) {
-            $html .= '<strong>Description:</strong> ' . htmlspecialchars($query['query_desc']) . '<br>';
+            $html .= '<strong>' . t('Description:') . '</strong> ' . htmlspecialchars($query['query_desc']) . '<br>';
         }
-        $html .= '<strong>Length:</strong> ' . $query['query_length'] . ' ' . $unit . ' | ';
-        $html .= '<strong>Total Hits:</strong> ' . $query['total_hits'];
+        $html .= '<strong>' . t('Length:') . '</strong> ' . $query['query_length'] . ' ' . $unit . ' | ';
+        $html .= '<strong>' . t('Total Hits:') . '</strong> ' . $query['total_hits'];
         $html .= '</small>';
         $html .= '</div>';
         
         if ($query['total_hits'] === 0) {
-            $html .= '<div class="alert alert-info"><small>No significant matches found for this query</small></div>';
+            // A short DNA query lost to the defaults gets the reason and a one-click re-run
+            // (js/modules/blast-short-nudge.js) -- a bare "no matches" reads as "not in this
+            // genome", which for a primer is usually false.
+            $short_reason = blast_short_query_reason((string)$blast_program, (int)$query['query_length'], $blast_options);
+            if ($short_reason !== '') {
+                $html .= '<div class="alert alert-warning blast-short-zero"><small>'
+                       . '<strong>' . t('No matches kept.') . '</strong> ' . htmlspecialchars($short_reason)
+                       . ' <button type="button" class="btn btn-sm btn-moop-teal text-white ms-1 blast-rerun-short">'
+                       . '<i class="fa fa-redo me-1"></i>' . t('Re-run with BLASTn-short') . '</button> '
+                       . help_modal_trigger('blast-short-help', '', 'Help: searching with primers and other short sequences')
+                       . '</small></div>';
+            } else {
+                $html .= '<div class="alert alert-info"><small>' . t('No significant matches found for this query') . '</small></div>';
+            }
         } else {
             // HSP visualization for this query
             $html .= generateHspVisualizationWithLines($query, $blast_program, $query_num);
@@ -1203,7 +1231,7 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
     $html .= '</div>';
     
     // Add description below the HSP visualization (outside the relative container so ticks don't overlap)
-    $html .= '<small class="text-muted" style="display: block; margin-top: 15px; margin-bottom: 30px; text-align: center;">Each color represents a different bit score range. Lines connect adjacent HSPs on the query sequence.</small>';
+    $html .= '<small class="text-muted" style="display: block; margin-top: 15px; margin-bottom: 30px; text-align: center;">' . t_markup('Each color represents a different %s range.', gloss_first('bit score')) . ' ' . t('Lines connect adjacent HSPs on the query sequence.') . '</small>';
     
     return $html;
 }
@@ -1369,7 +1397,7 @@ function generateQueryScoreLegend($query_length, $query_name = '') {
     
     // Score legend bar - discrete colored boxes (800px total width to match query)
     $output .= '<div style="display: flex; align-items: center; margin-bottom: 0;">';
-    $output .= '<div style="min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; text-align: right;">Score:</div>';
+    $output .= '<div style="min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; text-align: right;">' . t('Score:') . '</div>';
     $output .= '<div style="display: flex; gap: 0; width: 800px;">';
     
     $score_ranges = [
@@ -1393,7 +1421,7 @@ function generateQueryScoreLegend($query_length, $query_name = '') {
     // Query bar - 800px width (no margins or padding, directly touches everything)
     $output .= '<div style="display: flex; align-items: center; margin: 0; padding: 0;">';
     $output .= '<div style="min-width: 100px; padding-right: 15px; font-size: 11px; font-weight: bold; text-align: right;">';
-    $output .= 'Query:';
+    $output .= t('Query:');
     if (!empty($query_name)) {
         $output .= '<br><small style="font-weight: normal; color: #666;">' . htmlspecialchars(substr($query_name, 0, 20)) . '</small>';
     }
