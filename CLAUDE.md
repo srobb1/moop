@@ -246,6 +246,11 @@ catalog and spreadsheet in `lib/i18n.php`; plan in `notes/CUTTINGCLASS_PLAN.md` 
 - **`?>` eats the newline after it.** A line ending in `<?= t('x') ?>` loses its line break —
   write `<?= t('x') . "\n" ?>` there, and run `scripts/render_compare.php` to prove simrbase
   is byte-identical.
+- **CI checks it:** `php tests/i18n_unwrapped_check.php` lists visitor-template text not inside
+  `t()` and fails on anything not in `tests/i18n_unwrapped_baseline.json` (the known leftovers
+  of 2026-11-04, mostly the English-only sysadmin help). Wrap new text; if a piece truly must
+  stay as is, `--update` accepts it. The baseline should only shrink. It reads template HTML, not
+  strings inside PHP code or JavaScript.
 - **JavaScript:** `moopT('No matches found')` (plain), `moopTh()` (escaped, for HTML strings),
   `moopTm('Looking up %s…', html)` (markup as an argument) — `js/modules/utilities.js`. Same
   rules: a literal, whole sentences. The translations reach the browser only on a page in another
@@ -510,6 +515,7 @@ php  tests/smoke_tests.php      # access control, search-query building, cache i
 node tests/js_smoke_tests.js    # search-term rules + results-table highlighting
 php  tests/primer_smoke_tests.php    # primer input, products, specificity (Primer BLAST / Maker)
 php  tests/blast_alignment_tests.php # BLAST alignment coordinates
+php  tests/i18n_unwrapped_check.php  # no new visitor text outside t() (CLAUDE.md 7b)
 ```
 
 All are plain assertions with **no test framework** — same philosophy as the rest of the repo.
