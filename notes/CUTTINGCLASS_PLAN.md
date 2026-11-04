@@ -148,6 +148,26 @@ setting hides the Taxon and Tree tabs; absent → all three, as today.
 
 ---
 
+## Running on this host first (decided 2026-11-04)
+
+cuttingclass is installed HERE first, at `/var/www/html/cuttingclass` (with
+`/var/www/cuttingclass-site-data`, `-private`, `-cache` -- clean names from the start), reached at
+`simrbase-dev.stowers.org/cuttingclass/`, and moved to `cuttingclass.stowers.org` later. simrbase
+stays at `/var/www/html/moop` (renaming it: notes/SITE_LAYOUT_RENAME_PLAN.md, not scheduled).
+
+Needed before the second site goes up:
+1. **Login cookie per site.** Both sites use `MOOPSESS` with path `/` (includes/session_init.php),
+   so they would SHARE a session: a simrbase admin would be an admin on cuttingclass too. Name the
+   cookie per site; simrbase keeps `MOOPSESS` (opt-in rule). Same for `moop_lang`.
+2. **Link prefix setting**, separate from the folder name, so cuttingclass can drop `/cuttingclass`
+   at its own domain (`cuttingclass.stowers.org/tools/...`). Default = `/` + site: simrbase unchanged.
+3. nginx security rules for `/cuttingclass/` (the shipped ones are keyed on `/moop/`).
+4. Combined load: two BLAST queues share one php-fpm / RAM (capacity test: RAM breaks first).
+
+Move day: DNS + cert, nginx server block for `cuttingclass.stowers.org` rooted at its folder,
+`simrbase-dev.stowers.org/cuttingclass/*` -> 301 -> `https://cuttingclass.stowers.org/*`, the old
+Drupal addresses -> their new pages, prefix setting -> empty.
+
 ## Where site content is saved
 
 Custom pages AND the English/Spanish text catalog are **site data**, not app code (Sofia,
