@@ -332,14 +332,12 @@
           'heading' => '',
           'cards'   => [
               ['label' => 'Find them fast',
-               'text'  => 'Type in the box to filter by group, genus / species or common name, assembly, or '
-                        . gloss('gene set') . '.',
+               'text'  => t_markup('Type in the box to filter by group, genus / species or common name, assembly, or %s.', gloss('gene set')),
                'html'  => true],
               ['label' => 'Pick an organism',
                'text'  => 'Click a row to select it. One click takes all of that organism\'s gene sets — the usual case.'],
               ['label' => 'Or narrow with Details',
-               'text'  => 'Turn on the Details switch to expand each organism into its separate '
-                        . gloss('assembly', 'assemblies') . ' and gene sets, and pick individual ones.',
+               'text'  => t_markup('Turn on the Details switch to expand each organism into its separate %s and gene sets, and pick individual ones.', gloss('assembly', 'assemblies')),
                'html'  => true],
               ['label' => 'Pick at least one',
                'text'  => 'A search always runs against organisms you chose. Nothing selected means nothing to '

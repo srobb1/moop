@@ -220,6 +220,9 @@
                 // phrase by phrase re-scanned the popover HTML the previous phrase had inserted, and
                 // put an "exon junction" span inside RT-PCR's own definition attribute.
                 $gloss_phrases = function (string $text, array $phrases): string {
+                    // In the visitor's language first (the presets are defined in tools/primer_maker.php);
+                    // a term is glossed where the translated text still contains it.
+                    $text = t_plain($text);
                     usort($phrases, fn($a, $b) => strlen($b) - strlen($a));
                     $re = '/(?<![\w-])(' . implode('|', array_map(fn($p) => preg_quote($p, '/'), $phrases)) . ')(?![\w-])/i';
                     $out = ''; $pos = 0;
@@ -671,14 +674,14 @@
                             ) ?>
                         </label>
                         <select name="tail" id="tail" class="form-select">
-                            <option value="none" <?= $tail_selected ? '' : 'selected' ?>>No tag — plain primers</option>
+                            <option value="none" <?= $tail_selected ? '' : 'selected' ?>><?= t('No tag — plain primers') ?></option>
                             <?php foreach ($tail_catalogue as $entry): ?>
                                 <option value="<?= htmlspecialchars($entry['id']) ?>"
                                         <?= $tail_choice === $entry['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($entry['label']) ?>
                                 </option>
                             <?php endforeach; ?>
-                            <option value="custom" <?= $tail_choice === 'custom' ? 'selected' : '' ?>>Custom tag…</option>
+                            <option value="custom" <?= $tail_choice === 'custom' ? 'selected' : '' ?>><?= t('Custom tag…') ?></option>
                         </select>
 
                         <?php // Each adapter's own sequences and purpose, so choosing one
@@ -688,7 +691,7 @@
                             <div class="form-text tail-detail" data-tail="<?= htmlspecialchars($entry['id']) ?>"
                                  <?= $tail_choice === $entry['id'] ? '' : 'hidden' ?>>
                                 <?php if ($entry['note'] !== ''): ?>
-                                    <div class="mb-1"><?= htmlspecialchars($entry['note']) ?></div>
+                                    <div class="mb-1"><?= htmlspecialchars(t_plain($entry['note'])) ?></div>
                                 <?php endif; ?>
                                 <div style="font-family:monospace;">
                                     <?php if ($entry['forward'] !== ''): ?>
@@ -1192,12 +1195,11 @@
                          . 'several sequences at once if you name each one. Or arrive from a gene '
                          . 'page with the transcript already chosen.'],
                 ['num' => '2', 'label' => 'What are you making?',
-                 'text' => 'Standard PCR, qPCR, RT-PCR or sequencing. Each option shows the '
-                         . 'product size, Tm, GC and length it will hand Primer3, so you can see '
-                         . 'what you are choosing before you choose it. RT-PCR also needs to know '
-                         . 'where the exon junctions are: arriving from a gene page looks them up, '
-                         . 'and for a sequence you pasted you mark them yourself with '
-                         . '<code>|</code> in step 1.',
+                 // Markup cards are translated HERE, one sentence each, the markup as an argument
+                 // (the helper does not translate an 'html' card -- see blast_programs_help_modal.php).
+                 'text' => t('Standard PCR, qPCR, RT-PCR or sequencing.')
+                         . ' ' . t('Each option shows the product size, Tm, GC and length it will hand Primer3, so you can see what you are choosing before you choose it.')
+                         . ' ' . t_markup('RT-PCR also needs to know where the exon junctions are: arriving from a gene page looks them up, and for a sequence you pasted you mark them yourself with %s in step 1.', '<code>|</code>'),
                  'html' => true],
                 ['num' => '3', 'label' => 'Options',
                  'text' => 'The gray numbers in the boxes are the values for the type you picked '
@@ -1205,14 +1207,12 @@
                          . 'is used. Type in a box only to override it. How many pairs to return '
                          . 'starts at 5, and after a run the form keeps whatever you entered.'],
                 ['num' => '4', 'label' => '5′ primer tag',
-                 'text' => 'Optional. Adds a tag such as T4P to the sequence you would order. It '
-                         . 'is applied <strong>after</strong> design, so it never changes a Tm, GC '
-                         . 'or length figure &mdash; those describe the part that anneals.',
+                 'text' => t('Optional.') . ' ' . t('Adds a tag such as T4P to the sequence you would order.')
+                         . ' ' . t_markup('It is applied %s design, so it never changes a Tm, GC or length figure — those describe the part that anneals.', '<strong>' . t('after') . '</strong>'),
                  'html' => true],
                 ['label' => 'What you get',
-                 'text' => 'A table of pairs you can paste into a spreadsheet or download as TSV. '
-                         . '<strong>Check</strong> on any row sends that pair to Primer BLAST &mdash; '
-                         . 'without its tag, since the tag is not in the genome.',
+                 'text' => t('A table of pairs you can paste into a spreadsheet or download as TSV.')
+                         . ' ' . t_markup('%s on any row sends that pair to Primer BLAST — without its tag, since the tag is not in the genome.', '<strong>' . t('Check') . '</strong>'),
                  'html' => true],
             ],
         ]],
@@ -1246,11 +1246,10 @@
                      . 'primer to the end of the reverse primer.'],
             ['label' => 'Check',
              'html' => true,
-             'text' => 'Opens <strong>Primer BLAST</strong> in a new tab with this pair filled in. It searches '
-                     . 'the genome or transcripts for everywhere the pair could bind, and grades it: '
-                     . '<strong>specific</strong> (one product), <strong>non-specific</strong> (more than one) or '
-                     . '<strong>no product</strong>. Use it before ordering — Primer Maker only sees the sequence '
-                     . 'you pasted, not the rest of the genome.'],
+             'text' => t_markup('Opens %s in a new tab with this pair filled in.', '<strong>Primer BLAST</strong>')
+                     . ' ' . t_markup('It searches the genome or transcripts for everywhere the pair could bind, and grades it: %1$s (one product), %2$s (more than one) or %3$s.',
+                                      '<strong>' . t('specific') . '</strong>', '<strong>' . t('non-specific') . '</strong>', '<strong>' . t('no product') . '</strong>')
+                     . ' ' . t('Use it before ordering — Primer Maker only sees the sequence you pasted, not the rest of the genome.')],
         ];
         if ($has_tail) {
             $results_cards[] = ['label' => 'Forward / Reverse to order',

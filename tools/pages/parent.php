@@ -894,7 +894,7 @@ if (!empty($gene_model)) {
     // "How to read it" varies with whether genome sequence is actually present — otherwise the
     // help promises a click that does nothing.
     $gm_read_cards = [
-        ['label' => 'Always 5′ → 3′', 'html' => true,
+        ['label' => 'Always 5′ → 3′',
          'text'  => 'Drawn left to right in the direction of transcription. A reverse-strand gene is flipped, so the diagram reads the same way on either strand.'],
         ['label' => 'One row per isoform',
          'text'  => 'The gene spans the top; each mRNA below is one alternative transcript. Rows are aligned, so exon differences line up vertically.'],
@@ -928,7 +928,7 @@ if (!empty($gene_model)) {
                         'text'  => '<span style="display:inline-block;width:.75rem;height:.75rem;'
                                  . 'border-radius:3px;vertical-align:-1px;margin-right:.4rem;'
                                  . 'background:' . htmlspecialchars($l['hex']) . ';"></span>'
-                                 . htmlspecialchars($l['text']),
+                                 . t($l['text']),
                     ];
                 },
                 $gene_model_legend
@@ -939,9 +939,9 @@ if (!empty($gene_model)) {
                  'text'  => 'Use FASTA or GFF in the header of this box, or the Sequences section at the foot of the page.'],
             ], !moop_tool_on('moopmart') ? [] : [   // no Data Exporter on this site: no card pointing at it
                 ['label' => 'Many genes at once', 'html' => true,
-                 'text'  => 'For mRNA, CDS, protein, genomic or flanking sequence across many features, use <a href="/'
-                          . htmlspecialchars($config->getString('site', 'moop')) . '/tools/moopmart.php?organism='
-                          . urlencode($organism_name) . '">the Data Exporter</a>.'],
+                 'text'  => t_markup('For mRNA, CDS, protein, genomic or flanking sequence across many features, use %s.',
+                                     '<a href="/' . htmlspecialchars($config->getString('site', 'moop')) . '/tools/moopmart.php?organism='
+                                     . urlencode($organism_name) . '">' . t('the Data Exporter') . '</a>')],
             ])],
         ],
         ['intro' => 'Every isoform of this gene, drawn to scale against the genome.']
@@ -1062,7 +1062,7 @@ $annot_sections = [
         ['label' => 'A computed hit',
          'text'  => 'Not a curated statement about this gene — a result some analysis produced for this sequence.'],
         ['label' => 'Attached per transcript', 'html' => true,
-         'text'  => 'Annotations belong to an ' . gloss('mRNA') . ', not to the ' . gloss('gene') . ', which is why they are grouped under each isoform.'],
+         'text'  => t_markup('Annotations belong to an %1$s, not to the %2$s, which is why they are grouped under each isoform.', gloss('mRNA'), gloss('gene'))],
         ['label' => 'Only what exists',
          'text'  => 'A type with no results is not shown at all, so a missing section means no hits, not an error.'],
         ['label' => 'The number on each badge',
@@ -1076,7 +1076,7 @@ $annot_sections[] = ['heading' => 'Getting them out', 'cards' => [
     ['label' => 'Download All Annotations',
      'text'  => 'Every annotation for this gene, all types and all transcripts, as one CSV.'],
     ['label' => 'Per-table export', 'html' => true,
-     'text'  => 'Each table has its own <strong>Copy</strong>, <strong>CSV</strong> and <strong>Excel</strong> buttons for just that type.'],
+     'text'  => t_markup('Each table has its own %1$s, %2$s and %3$s buttons for just that type.', '<strong>' . t('Copy') . '</strong>', '<strong>CSV</strong>', '<strong>Excel</strong>')],
     ['label' => 'Search within a type',
      'text'  => 'The box beside those buttons filters that one table as you type.'],
 ]];

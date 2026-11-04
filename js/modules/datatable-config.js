@@ -1,4 +1,17 @@
 // DataTables Export/Download Configuration
+//
+// Every table's built-in wording ("Showing 1 to 10 of 50 entries", "Search:", "Next") in the
+// visitor's language -- ONLY on a page shown in another language (window.MOOP_I18N is set only
+// there), so English pages keep DataTables' own defaults untouched. CLAUDE.md 7b.
+if (window.MOOP_I18N && window.jQuery && jQuery.fn.dataTable) {
+    jQuery.extend(true, jQuery.fn.dataTable.defaults, { language: {
+        search: moopT('Search:'), lengthMenu: moopT('Show _MENU_ entries'),
+        info: moopT('Showing _START_ to _END_ of _TOTAL_ entries'), infoEmpty: moopT('Showing 0 to 0 of 0 entries'),
+        infoFiltered: moopT('(filtered from _MAX_ total entries)'), zeroRecords: moopT('No matching records found'),
+        emptyTable: moopT('No data available in table'), loadingRecords: moopT('Loading...'), processing: moopT('Processing...'),
+        paginate: { first: moopT('First'), last: moopT('Last'), next: moopT('Next'), previous: moopT('Previous') },
+    } });
+}
 // Centralized button and export settings for consistent behavior across all pages
 //
 // ---------------------------------------------------------------------------
@@ -58,7 +71,7 @@ const DataTableExportConfig = {
     buttonDefs: {
         copy: {
             extend: 'copy',
-            text: '<i class="far fa-copy"></i> Copy'
+            text: '<i class="far fa-copy"></i> ' + moopTh('Copy')
         },
         csv: {
             extend: 'csv',
@@ -125,7 +138,7 @@ const DataTableExportConfig = {
     requireSelectedRows: function(dt) {
         if (DataTableExportConfig.selectedRowNodes(dt).length > 0) return true;
         DataTableExportConfig.notify(dt,
-            'Select at least one row first — tick the boxes you want, or use <strong>Select All</strong>.');
+            moopTm('Select at least one row first — tick the boxes you want, or use %s.', '<strong>' + moopTh('Select All') + '</strong>'));
         return false;
     },
 
@@ -175,7 +188,7 @@ const DataTableExportConfig = {
         const organism    = (anchorId ? anchorId.replace('results-', '') : '') || window.currentOrganism;
 
         if (!organism) {
-            DataTableExportConfig.notify(dt, 'Could not tell which organism these rows belong to.');
+            DataTableExportConfig.notify(dt, moopTh('Could not tell which organism these rows belong to.'));
             return;
         }
 
@@ -193,15 +206,16 @@ const DataTableExportConfig = {
 
         const keys = Object.keys(groups).filter(k => groups[k].assembly !== '');
         if (keys.length === 0) {
-            DataTableExportConfig.notify(dt, 'Assembly information is not available for the selected rows.');
+            DataTableExportConfig.notify(dt, moopTh('Assembly information is not available for the selected rows.'));
             return;
         }
         if (keys.length > 1) {
             const labels = keys.map(k => groups[k].assembly + (groups[k].geneSet ? ' / ' + groups[k].geneSet : ''));
             DataTableExportConfig.notify(dt,
-                'Your selection spans ' + keys.length + ' assembly/gene-set combinations (' + labels.join(', ') + '). '
-                + 'FASTA is fetched from one at a time — switch on the <strong>Assembly</strong> and '
-                + '<strong>Gene Set</strong> columns and select rows from a single one.');
+                // The names are data: escaped (they were inserted into this HTML raw).
+                moopTh('Your selection spans %1$d assembly/gene-set combinations (%2$s).', keys.length, labels.join(', ')) + ' '
+                + moopTm('FASTA is fetched from one at a time — switch on the %1$s and %2$s columns and select rows from a single one.',
+                         '<strong>' + moopTh('Assembly') + '</strong>', '<strong>' + moopTh('Gene Set') + '</strong>'));
             return;
         }
 
@@ -210,11 +224,11 @@ const DataTableExportConfig = {
         const featureIds = DataTableExportConfig.extractFeatureIds(dt, groups[keys[0]].nodes);
 
         if (featureIds === null) {
-            DataTableExportConfig.notify(dt, 'Feature ID column not found in this table.');
+            DataTableExportConfig.notify(dt, moopTh('Feature ID column not found in this table.'));
             return;
         }
         if (featureIds.length === 0) {
-            DataTableExportConfig.notify(dt, 'No valid Feature IDs found in the selected rows.');
+            DataTableExportConfig.notify(dt, moopTh('No valid Feature IDs found in the selected rows.'));
             return;
         }
 
@@ -404,9 +418,9 @@ const DataTableExportConfig = {
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
         order: [[4, 'asc']],
         language: {
-            search: "Search:",
-            lengthMenu: "Show _MENU_ entries",
-            info: "Showing _START_ to _END_ of _TOTAL_ entries"
+            search: moopT("Search:"),
+            lengthMenu: moopT("Show _MENU_ entries"),
+            info: moopT("Showing _START_ to _END_ of _TOTAL_ entries")
         },
         columnDefs: [
             { targets: '_all', className: 'dt-body-left' },

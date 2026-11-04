@@ -25,7 +25,8 @@ echo help_modal(
              'text' => 'On the home page, use the Organisms tab to open that organism or group, then search from its page — results stay scoped to what you picked.'],
             ...(moop_tool_on('annotation_search') ? [   // switched off: no card pointing at it
             ['label' => 'Across everything, or your own list', 'html' => true,
-             'text' => 'Use the <a href="/' . htmlspecialchars($site) . '/tools/search.php">annotation search</a>, where you can search every organism at once or build a custom selection.'],
+             'text' => t_markup('Use the %s, where you can search every organism at once or build a custom selection.',
+                                '<a href="/' . htmlspecialchars($site) . '/tools/search.php">' . t('annotation search') . '</a>')],
             ] : []),
             ['label' => 'Not this box',
              'text' => 'A protein name, domain or GO term — "kinase", "zinc finger" — will not match here. This field compares accessions exactly.'],

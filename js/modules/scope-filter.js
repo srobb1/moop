@@ -46,7 +46,7 @@ class ScopeFilter {
                 this.showModal();
             },
             error: () => {
-                alert('Error loading organism scope data. Please try again.');
+                alert(moopT('Error loading organism scope data. Please try again.'));
             }
         });
     }
