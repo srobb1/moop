@@ -18,6 +18,7 @@
  */
 function parseBlastResults($blast_xml) {
     $all_queries = [];
+    $search = [];
     
     // Parse XML
     try {
@@ -27,6 +28,8 @@ function parseBlastResults($blast_xml) {
             return ['error' => 'Failed to parse BLAST XML output', 'queries' => []];
         }
         
+        $search = moop_blast_search_summary($xml);
+
         // Parse each iteration (each query gets one iteration)
         $iterations = $xml->xpath('//Iteration');
         
@@ -285,7 +288,40 @@ function parseBlastResults($blast_xml) {
         return ['error' => 'XML parsing error: ' . $e->getMessage(), 'queries' => []];
     }
     
-    return ['queries' => $all_queries, 'error' => ''];
+    return ['queries' => $all_queries, 'error' => '', 'search' => $search];
+}
+
+/**
+ * What BLAST itself recorded about the search: program and version, database, its size, and
+ * the scoring -- read from the XML, so the results page reports the search that actually ran.
+ * Only what the XML holds; a field it lacks is left out, never filled in.
+ *
+ * Until 2026-11-04 the page showed a block of placeholder values typed into the code (Database
+ * "protein.aa.fa", Posted Date "Nov 12, 2025 10:40 PM", 21,106,416 letters, BLOSUM62, gap 11/1,
+ * window 40, threshold 11) on every result, whatever was searched.
+ *
+ * @return array program, version, db (file name only -- the server's path stays private),
+ *               db_num, db_len, matrix, match, mismatch, gap_open, gap_extend; each optional
+ */
+function moop_blast_search_summary(SimpleXMLElement $xml): array {
+    $one = function (string $path) use ($xml): ?string {
+        $n = $xml->xpath($path);
+        return $n ? trim((string) $n[0]) : null;
+    };
+    $out = [
+        'program'    => $one('/BlastOutput/BlastOutput_program'),
+        'version'    => $one('/BlastOutput/BlastOutput_version'),
+        'db'         => ($db = $one('/BlastOutput/BlastOutput_db')) !== null && $db !== '' ? basename($db) : null,
+        'matrix'     => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_matrix'),
+        'match'      => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_sc-match'),
+        'mismatch'   => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_sc-mismatch'),
+        'gap_open'   => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_gap-open'),
+        'gap_extend' => $one('/BlastOutput/BlastOutput_param/Parameters/Parameters_gap-extend'),
+        // Database size: the same on every query; the first iteration's statistics say it.
+        'db_num'     => $one('(//Iteration_stat/Statistics/Statistics_db-num)[1]'),
+        'db_len'     => $one('(//Iteration_stat/Statistics/Statistics_db-len)[1]'),
+    ];
+    return array_filter($out, fn($v) => $v !== null && $v !== '');
 }
 
 /**
@@ -754,56 +790,34 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     
     $html .= '<div id="search-params" style="display: none; padding: 15px;">';
     
-    // Original search parameters - first grid
-    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 15px;">';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Database</small><br>';
-    $html .= '<small>protein.aa.fa</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Posted Date</small><br>';
-    $html .= '<small>Nov 12, 2025 10:40 PM</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Database Size</small><br>';
-    $html .= '<small>21,106,416 letters | 54,384 sequences</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Program</small><br>';
-    $html .= '<small>' . strtoupper(htmlspecialchars($blast_program)) . '</small>';
-    $html .= '</div>';
-    
-    $html .= '</div>';
-    
-    // Original search parameters - second grid
-    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Matrix</small><br>';
-    $html .= '<small>BLOSUM62</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Gap Penalties</small><br>';
-    $html .= '<small>Existence: 11, Extension: 1</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Window for Multiple Hits</small><br>';
-    $html .= '<small>40</small>';
-    $html .= '</div>';
-    
-    $html .= '<div>';
-    $html .= '<small style="color: #666; font-weight: bold;">Threshold</small><br>';
-    $html .= '<small>11</small>';
-    $html .= '</div>';
-    
-    $html .= '</div>';
-    
+    // What BLAST recorded about this search (moop_blast_search_summary(), read from its XML).
+    // Was a block of placeholder values typed into the code, the same on every result.
+    $sr = $parse_result['search'] ?? [];
+    $cell = fn(string $label, string $value_html) => '<div><small style="color: #666; font-weight: bold;">' . t($label)
+                                                    . '</small><br><small>' . $value_html . '</small></div>';
+    $facts = [];
+    $facts[] = $cell('Program', htmlspecialchars($sr['version'] ?? strtoupper($blast_program)));
+    if (isset($sr['db'])) $facts[] = $cell('Database', htmlspecialchars($sr['db']));
+    if (isset($sr['db_len'], $sr['db_num'])) {
+        // A protein database (blastp, blastx) is counted in residues, a nucleotide one in letters.
+        $facts[] = $cell('Database Size', in_array($blast_program, ['blastp', 'blastx'], true)
+            ? t('%1$s residues | %2$s sequences', number_format((float) $sr['db_len']), number_format((float) $sr['db_num']))
+            : t('%1$s letters | %2$s sequences', number_format((float) $sr['db_len']), number_format((float) $sr['db_num'])));
+    }
+    if (isset($sr['matrix'])) {
+        $facts[] = $cell('Matrix', htmlspecialchars($sr['matrix']));
+    } elseif (isset($sr['match'], $sr['mismatch'])) {
+        $facts[] = $cell('Match / Mismatch Scores', htmlspecialchars($sr['match'] . ' / ' . $sr['mismatch']));
+    }
+    if (isset($sr['gap_open'], $sr['gap_extend'])) {
+        // 0/0 is how BLAST reports megablast's linear (non-affine) gap costs, not "free gaps".
+        $facts[] = $cell('Gap Penalties', ((int) $sr['gap_open'] === 0 && (int) $sr['gap_extend'] === 0)
+            ? t('linear (megablast default)')
+            : t('Existence: %1$s, Extension: %2$s', $sr['gap_open'], $sr['gap_extend']));
+    }
+    $html .= '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">'
+           . implode('', $facts) . '</div>';
+
     // New search parameters from form - third grid
     $html .= '<hr style="margin: 15px 0;">';
     $html .= '<h6 style="color: #333; margin-bottom: 15px;"><i class="fa fa-sliders-h"></i> Form Parameters</h6>';
