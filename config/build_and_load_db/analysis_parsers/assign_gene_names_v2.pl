@@ -22,7 +22,7 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #       [--model-coverage model_coverage.tsv (scripts/interproscan_model_coverage.py)] \
 #       [--pfam-names moop/pfam/pfam_names.tsv (update_reference_data.sh pfam)] \
 #       [--human-curated-gene-names curated.moop.tsv ...] \
-#       [--closest-species 'tag=Nvec|species=Nematostella vectensis|label=sea anemone|oma_code=NEMVE|hits=FILE|diamond=DIR|rbh=DIR|use_for_names=0|same_species=0' ...] \
+#       [--closest-species 'tag=Nvec|species=Nematostella vectensis|label=sea anemone|oma_code=NEMVE|hits=FILE|diamond=DIR|rbh=DIR|use_for_names=0|same_species=0|copy_names=0' ...] \
 #       --out-names geneNames.tsv --out-dir DIR
 #
 # Closest human gene, strongest first (the tier is the Score of the moop table):
@@ -53,7 +53,8 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #   2 native name if informative; or the closest-species entry with use_for_names: its OMA 1:1
 #     or many:1 ortholog, else its full-length (FULL) reciprocal best hit, else -- not for
 #     same_species -- its best DIAMOND hit if that is full-length, else its hits file;
-#     "-like (label)" unless same_species
+#     "-like (label)" unless same_species; copy_names: another species whose names are kept, no "-like",
+#     only "(label)" after the description (e.g. a curated planarian naming other planarians: aligned names)
 #   3 OMA human ortholog (tier 1-2): 1:1 and many:1 "SYM: name" (every many:1 copy the same);
 #     a family "<HGNC group> family member", or -- no shared group -- straight to step 6
 #   4 transposable element: a TE Pfam domain -> "<class> transposase domain-containing protein"
@@ -403,7 +404,7 @@ sub main {
       if $species{tag} !~ /^[A-Za-z][A-Za-z0-9]*$/ or lc $species{tag} eq 'human';
     die "--closest-species needs oma_code, hits, diamond or rbh: $spec\n"
       unless grep { my $key = $_; $species{$key} } qw(oma_code hits diamond rbh);
-    foreach my $flag (qw(use_for_names same_species)) {
+    foreach my $flag (qw(use_for_names same_species copy_names)) {
       $species{$flag} = $species{$flag} ? 1 : 0;
     }
     die "--closest-species needs a label unless same_species: $spec\n" unless $species{same_species} or $species{label};
@@ -2490,15 +2491,30 @@ my %species_hit_source;            # tag -> the hits file's Annotation Source, e
 my (%species_rbh, %species_diamond);
 my %species_search_label;          # tag -> rbh|diamond -> the partner's label (db_version.txt)
 
-# a name from the naming species: plain for another annotation of this same species,
+# a name from the naming species: plain for another annotation of this same species; with
+# copy_names (another species whose names are kept, to align names across species) the symbol and
+# description as is, the description followed by "(label)" to say where the name came from;
 # otherwise "-like (label)", as for any other species' hit
 sub naming_species_text {
   my ($symbol, $description) = @_;
   return ($symbol ne '' ? "$symbol: $description" : $description) if $naming_species->{same_species};
+  if ($naming_species->{copy_names}) {
+    # a name the partner itself took from a third species ("Paramyosin-like (Taenia saginata)") reads
+    # "(via label)", so the bracket after it is not taken for a second species of origin
+    my $text = $description ne '' ? $description : $symbol;
+    my $via = $text =~ /\([A-Z][a-z]+ [a-z][a-z.-]*(?: [a-z][a-z.-]*)?\)$/ ? 'via ' : '';
+    my $labelled = "$text ($via$naming_species->{label})";
+    return $symbol ne '' ? "$symbol: $labelled" : $labelled;
+  }
   my $like_symbol = $symbol ne '' ? add_like_to_symbol($symbol) : '';
   my $like_description = add_like_to_description($description ne '' ? $description : $symbol)
                        . " ($naming_species->{label})";
   return $like_symbol ne '' ? "$like_symbol: $like_description" : $like_description;
+}
+
+# how a step 2 name was written, for the rule text
+sub naming_species_marking {
+  return $naming_species->{copy_names} ? 'name copied, labelled (copy_names)' : 'named after it, marked -like';
 }
 
 # naming step 2: the use_for_names species' OMA 1:1 / many:1 ortholog; else its full-length (FULL)
@@ -2521,7 +2537,7 @@ sub naming_species_name {
     my $partner = $parsed->{protein_ids}[0] // $candidate->{hit};
     my $rule = $naming_species->{same_species}
       ? "Same gene in another annotation of this species ($naming_species->{species} $partner; OMA, $candidate->{type})"
-      : "Ortholog of $naming_species->{species} $partner (OMA, $candidate->{type}); named after it, marked -like";
+      : "Ortholog of $naming_species->{species} $partner (OMA, $candidate->{type}); " . naming_species_marking();
     return { origin => { kind => 'ncbi', accession => $partner, step => 2, rule => $rule },
              desc => naming_species_text($symbol, $description),
              tag => [($naming_species->{same_species} ? 'SRC' : 'ISO'), relationship_tag($candidate->{type}), lc $tag],
@@ -2549,7 +2565,7 @@ sub naming_species_name {
     my $partner = "$naming_species->{species} $hit->{hit} (full-length $how, $species_search_label{$tag}{$kind}; " . coverage_text($hit) . ')';
     my $rule = $naming_species->{same_species}
       ? "Same gene in another annotation of this species: $partner"
-      : "$partner; named after it, marked -like";
+      : "$partner; " . naming_species_marking();
     return { origin => { kind => 'ncbi', accession => $hit->{hit}, step => 2, rule => $rule },
              desc => naming_species_text($symbol, $description),
              tag => [($naming_species->{same_species} ? 'SRC' : 'ISS'), ($kind eq 'rbh' ? 'rbh' : 'bh'), lc $tag],
@@ -2566,7 +2582,7 @@ sub naming_species_name {
       my $type = $naming_species->{same_species} ? 'Same_species' : 'Naming_species';
       my $rule = $naming_species->{same_species}
         ? "Same gene in another annotation of this species ($naming_species->{species} $hit->{hit}; best hit in $hit->{source}, E=" . e_value($hit->{evalue}) . ")"
-        : "Best hit $naming_species->{species} $hit->{hit} ($hit->{source}, E=" . e_value($hit->{evalue}) . "); named after it, marked -like";
+        : "Best hit $naming_species->{species} $hit->{hit} ($hit->{source}, E=" . e_value($hit->{evalue}) . "); " . naming_species_marking();
       return { origin => { kind => 'ncbi', accession => $hit->{hit}, step => 2, rule => $rule },
                desc => naming_species_text($symbol, $description),
                tag => [($naming_species->{same_species} ? 'SRC' : 'ISS'), lc $tag],
@@ -2835,9 +2851,14 @@ sub decide_name {
     return is_named($candidate->{$step});
   };
 
-  # a human-curated name is kept as is (never checked); then the naming species
-  foreach my $step (1, 2) {
-    return $step if $try->($step);
+  # a human-curated name is kept as is (never checked); then the naming species -- unless the
+  # naming species' name has no gene symbol (a family, domain or other species' name) and the
+  # gene's own OMA human ortholog is 1:1, the best human hit and the same PANTHER family
+  return 1 if $try->(1);
+  if ($try->(2)) {
+    my $kept = own_ortholog_over_naming_species($group, $candidate);
+    return 2 unless $kept;
+    $passed->{2} = $kept;
   }
 
   # a transposon family: many OMA many:1 copies of one human gene, each with a TE domain, are
@@ -2877,6 +2898,27 @@ sub decide_name {
     return $step if $try->($step);
   }
   return 0;
+}
+
+# Step 2 is passed over (user, 2026-11-04) when the naming species gives only a name without a gene
+# symbol -- "Bestrophins family member (Schmidtea mediterranea)": the partner's own analysis stopped at
+# the family -- while this gene's own OMA human ortholog is 1:1, backed by the best human hit (sim+)
+# and the same PANTHER family (pthr+): the specific name has the better evidence, and a family name is
+# nothing to align to. Not for same_species (another annotation of this species: the same gene).
+# Returns the passed-over text, or '' to use step 2.
+sub own_ortholog_over_naming_species {
+  my ($group, $candidate) = @_;
+  return '' if !$naming_species or $naming_species->{same_species};
+  return '' if ($candidate->{2}{desc} // '') =~ /^\S+: /;   # a gene symbol: aligned
+  my $own = $candidate->{3};
+  return '' unless is_named($own);
+  my %tag = map { my $flag = $_; ($flag => 1) } @{$own->{tag} // []};
+  return '' unless $tag{'1to1'} and $tag{'sim+'} and $tag{'pthr+'};
+  my $closest = $closest{$group};
+  return '' unless $closest and $closest->{tier} <= 2;
+  $stats{"name: $naming_species->{tag} passed over for an OMA 1:1 human ortholog"}++;
+  return "passed over: the $naming_species->{species} name has no gene symbol, and this gene's own OMA "
+       . 'human ortholog is 1:1, its best human hit and the same PANTHER family (step 3 names it)';
 }
 
 # naming step 1: a human-curated name (a person named these genes, e.g. Chamaeleo's Apollo

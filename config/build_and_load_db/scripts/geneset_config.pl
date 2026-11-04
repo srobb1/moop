@@ -23,7 +23,7 @@ use CPAN::Meta::YAML;
 # line -- so every file-level assignment has run before any work starts (a file-level "my %X =
 # (...)" below the work would still be EMPTY when a sub reads it; tests/check_perl_file_scope.pl).
 my %SETTINGS = map { my $setting = $_; ($setting => 1) } qw(human_curated_gene_names closest_species transcript_hits);
-my %CLOSEST = map { my $key = $_; ($key => 1) } qw(species tag label oma_code hits diamond rbh use_for_names same_species);
+my %CLOSEST = map { my $key = $_; ($key => 1) } qw(species tag label oma_code hits diamond rbh use_for_names same_species copy_names);
 # closest_species diamond: / rbh: -- the OUT_DIR of scripts/closest_species_diamond.sh / closest_species_rbh.sh
 my %SEARCH_RESULTS = (diamond => ['diamond_results.tsv.gz', 'diamond_results.tsv'], rbh => ['rbh_mmseq_results.tsv']);
 
@@ -120,7 +120,7 @@ sub check_geneset {
           push @errors, "$what: unknown key '$key' (known: " . join(', ', sort keys %CLOSEST) . ")" unless $CLOSEST{$key};
         }
         my %flag;
-        foreach my $key (qw(use_for_names same_species)) {
+        foreach my $key (qw(use_for_names same_species copy_names)) {
           my $value = $entry->{$key} // 'false';
           push @errors, "$what: $key must be true or false" unless $value =~ /^(?:true|false)$/;
           $flag{$key} = $value eq 'true' ? 1 : 0;
@@ -134,6 +134,8 @@ sub check_geneset {
           unless grep { my $key = $_; defined $entry->{$key} } qw(oma_code hits diamond rbh);
         push @errors, "$what: needs a label (or same_species: true)" unless $flag{same_species} or defined $entry->{label};
         push @errors, "$where: only one closest_species may have use_for_names: true" if $flag{use_for_names} and $naming++;
+        push @errors, "$what: copy_names: true needs use_for_names: true" if $flag{copy_names} and !$flag{use_for_names};
+        push @errors, "$what: copy_names and same_species: same_species already copies names as is" if $flag{copy_names} and $flag{same_species};
         foreach my $key (qw(species tag label oma_code)) {
           push @errors, "$what: $key may not contain | or =" if defined $entry->{$key} and $entry->{$key} =~ /[|=]/;
         }
@@ -148,7 +150,7 @@ sub check_geneset {
         }
         push @fields, 'hits=' . ($hits_ok ? $entry->{hits} // '' : ''),
                       (map { my $search = $_; "$search=" . ($search_ok{$search} ? $entry->{$search} : '') } qw(diamond rbh)),
-                      "use_for_names=$flag{use_for_names}", "same_species=$flag{same_species}";
+                      "use_for_names=$flag{use_for_names}", "same_species=$flag{same_species}", "copy_names=$flag{copy_names}";
         push @options, '--closest-species', join('|', @fields);
       }
     }

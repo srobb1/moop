@@ -427,6 +427,7 @@ write_file("$dir/panther_placements.tsv", "# test placements\n"
 #   G12: best DIAMOND hit partial (60%), a weaker hit full-length -> closest is the best normal hit; no name
 #   G16: a partial RBH (70% / 60%) -> closest rank 2 (normal filter), no name
 #   G9:  full-length RBH to a protein with no description -> closest rank 2 by id, no name
+#   G1:  full-length RBH to SMED1, a family name only; G1's own OMA 1:1 (sim+, pthr+) is kept instead
 my $smed_rbh = "$dir/closest_smed/rbh";
 my $smed_diamond = "$dir/closest_smed/diamond";
 write_file("$smed_rbh/db_version.txt", "Test Smed v1\tmd5:0\n");
@@ -434,6 +435,7 @@ write_file("$smed_diamond/db_version.txt", "Test Smed v1\tmd5:0\n");
 write_file("$smed_rbh/rbh_mmseq_results.tsv", join("\t", qw(query target pident alnlen mismatch gapopen qstart qend tstart tend evalue bits qlen tlen qcov tcov)) . "\n"
   . join('', map { my $fields = $_; join("\t", @$fields) . "\n" }
     ['T5.1', 'SMED5', 0.6, 95, 0, 0, 1, 95, 1, 95, '1e-40', 150, 100, 100, 0.95, 0.95],
+    ['T1.1', 'SMED1', 0.6, 290, 0, 0, 1, 290, 1, 290, '1e-90', 300, 300, 300, 0.97, 0.97],
     ['T16.1', 'SMED16', 0.4, 140, 0, 0, 1, 140, 1, 180, '1e-20', 80, 200, 300, 0.70, 0.60],
     ['T9.1', 'SMED9', 0.5, 110, 0, 0, 1, 110, 1, 110, '1e-40', 150, 120, 120, 0.92, 0.92]));
 my $smed_hit = sub { my ($q, $s, $title, $evalue, $bits, $qlen, $slen, $qcov, $scov) = @_;
@@ -443,10 +445,11 @@ write_file("$smed_diamond/diamond_results.tsv", join("\t", qw(qseqid sseqid stit
   . $smed_hit->('T8.1', 'SMED8', 'SMED8 wnt signalling protein', '1e-50', 200, 150, 150, 90, 90)
   . $smed_hit->('T12.1', 'SMED12', 'SMED12 frizzled receptor', '1e-30', 180, 150, 300, 60, 60)
   . $smed_hit->('T12.1', 'SMED12b', 'SMED12b frizzled-like receptor', '1e-20', 90, 150, 150, 85, 85)
-  . $smed_hit->('T9.1', 'SMED9', 'SMED9', '1e-40', 150, 120, 120, 92, 92));
-my $smed = sub { my ($names, $same) = @_;
+  . $smed_hit->('T9.1', 'SMED9', 'SMED9', '1e-40', 150, 120, 120, 92, 92)
+  . $smed_hit->('T1.1', 'SMED1', 'SMED1 Alpha synthases family member', '1e-90', 300, 300, 300, 97, 97));
+my $smed = sub { my ($names, $same, $copy) = @_;
   return ('--closest-species', "species=Schmidtea mediterranea|tag=Smed|label=planarian|diamond=$smed_diamond|rbh=$smed_rbh"
-                             . "|use_for_names=$names|same_species=$same"); };
+                             . "|use_for_names=$names|same_species=$same|copy_names=" . ($copy // 0)); };
 
 # ---- protein features and own-transcriptome hits (reported for unnamed genes, never used to name):
 # G57 (80 aa, no homology) is secreted, one helix, placed by a signal, and expressed; G37 has a DeepLoc
@@ -497,12 +500,13 @@ foreach my $seed (1, 2) {
                       . " --out-names \Q$out/geneNames.tsv\E --out-dir \Q$out\E > \Q$out.log\E 2>&1");
   check($status == 0, "assign_gene_names_v2.pl runs (seed $seed)", `tail -3 \Q$out.log\E`);
 }
-# the planarian as the naming species: for another species (-like), and as another annotation of this species
-foreach my $run (['names', 0], ['same', 1]) {
-  my ($label, $same) = @$run;
+# the planarian as the naming species: for another species (-like), as another annotation of this species,
+# and for another species with its names copied as is (copy_names)
+foreach my $run (['names', 0, 0], ['same', 1, 0], ['copy', 0, 1]) {
+  my ($label, $same, $copy) = @$run;
   my $out = "$dir/out_$label";
   system('mkdir', '-p', $out) == 0 or die;
-  my $status = system("\Q$^X\E \Q$script\E " . join(' ', map { my $argument = $_; "\Q$argument\E" } @arguments, $smed->(1, $same))
+  my $status = system("\Q$^X\E \Q$script\E " . join(' ', map { my $argument = $_; "\Q$argument\E" } @arguments, $smed->(1, $same, $copy))
                       . " --out-names \Q$out/geneNames.tsv\E --out-dir \Q$out\E > \Q$out.log\E 2>&1");
   check($status == 0, "assign_gene_names_v2.pl runs with a naming species ($label)", `tail -3 \Q$out.log\E`);
 }
@@ -984,7 +988,8 @@ check(($closest_smed{G8}[2] // '') eq 'SMED8' && scalar(($closest_smed{G8}[5] //
 check(($closest_smed{G12}[2] // '') eq 'SMED12', 'closest Smed G12: the best normal hit, not the weaker full-length one', join(' | ', @{$closest_smed{G12} // []}));
 check(($closest_smed{G16}[2] // '') eq 'SMED16' && ($closest_smed{G16}[4] // 'x') eq '',
       'closest Smed G16: a partial RBH passes the normal filter; no title, no description', join(' | ', @{$closest_smed{G16} // []}));
-check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', join(' | ', @{$closest_smed{G1} // []}));
+check(($closest_smed{G2}[2] // 'x') eq '', 'closest Smed G2: no hit, no entry', join(' | ', @{$closest_smed{G2} // []}));
+check(($closest_smed{G1}[2] // '') eq 'SMED1', 'closest Smed G1: its full-length RBH is its closest gene (even where the name is its own)', join(' | ', @{$closest_smed{G1} // []}));
 {
   my (%score, %label);
   foreach my $row (read_tsv("$out/closest_smed.moop.tsv")) {
@@ -1019,10 +1024,24 @@ check(($closest_smed{G1}[2] // 'x') eq '', 'closest Smed G1: no hit, no entry', 
   check(scalar(($decision{G9}{S2_naming_species} // '') =~ /full-length Schmidtea mediterranea hit SMED9 \(no description\) has no informative name/),
         'decision table G9: step 2 says the full-length hit is known only by its id', $decision{G9}{S2_naming_species});
   check(($named{G16} // '') !~ /planarian/, 'naming species G16: a partial RBH names nothing', $named{G16});
-  check(($named{G1} // '') eq 'ALPHA: alpha synthase [ISO|1to1|sim+|pthr+]', 'naming species: a gene it has no hit for keeps its name', $named{G1});
+  check(($named{G1} // '') eq 'ALPHA: alpha synthase [ISO|1to1|sim+|pthr+]',
+        'naming species G1: a family name (no symbol) does not replace an OMA 1:1, sim+, pthr+ name', $named{G1});
+  check(scalar(($decision{G1}{S2_naming_species} // '') =~ /^passed over: the Schmidtea mediterranea name has no gene symbol.*; would name: Alpha synthases family member-like \(planarian\)/),
+        'decision table G1: step 2 passed over, and what it would have named', $decision{G1}{S2_naming_species});
   my %same = map { my $row = $_; ($row->[2] => $row->[3]) } read_tsv("$dir/out_same/geneNames.tsv");
   check(($same{G5} // '') eq 'SmDELTA: smed delta kinase [SRC|rbh|smed]', 'same species G5: a full-length RBH copies the name as is', $same{G5});
   check(($same{G8} // '') eq 'None', 'same species G8: a DIAMOND best hit alone is not the same gene', $same{G8});
+  my %copy = map { my $row = $_; ($row->[2] => $row->[3]) } read_tsv("$dir/out_copy/geneNames.tsv");
+  my %copy_decision = read_decisions("$dir/out_copy/naming_decisions.tsv");
+  check(($copy{G5} // '') eq 'SmDELTA: smed delta kinase (planarian) [ISS|rbh|smed]',
+        'copy_names G5: a full-length RBH copies the name, no -like, labelled, still ISS', $copy{G5});
+  check(scalar(($copy{G8} // '') =~ /^[Ww]nt signalling protein \(planarian\) \[ISS\|bh\|smed\]$/),
+        'copy_names G8: unlike same_species, a full-length DIAMOND best hit of another species still names', $copy{G8});
+  check(($copy{G12} // '') eq 'None', 'copy_names G12: a partial best hit still names nothing', $copy{G12});
+  check(($copy{G1} // '') eq 'ALPHA: alpha synthase [ISO|1to1|sim+|pthr+]', 'copy_names G1: its own OMA 1:1 name kept over a family name', $copy{G1});
+  check(($same{G1} // '') eq 'Alpha synthases family member [SRC|rbh|smed]', 'same species G1: the same gene -- its name is copied, family or not', $same{G1});
+  check(scalar(($copy_decision{G5}{Reason} // '') =~ /name copied, labelled \(copy_names\)/),
+        'copy_names: the reason says the name was copied', $copy_decision{G5}{Reason});
 }
 
 # ---- the decision table's header names the reference proteome read (canonical peptide.fa.gz or the fallback)
