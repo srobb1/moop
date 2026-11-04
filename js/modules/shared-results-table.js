@@ -105,7 +105,10 @@ const RESULT_COLUMNS = [
     },
     {
         key: 'description', label: moopT('Description'), width: 300, variants: ['*'], wrap: true,
-        render: (r, ctx) => highlightSearchTerms(moopStripNamingTag(r.feature_description), ctx.keywords, moopRowHighlightText(r)) || '—'
+        // In the simple view (one row per feature) a "matched in" line follows when the row's
+        // own ID, name and description do not show why it matched -- moopMatchedInNote().
+        render: (r, ctx, item) => (highlightSearchTerms(moopStripNamingTag(r.feature_description), ctx.keywords, moopRowHighlightText(r)) || '—')
+                               + (item && item.annotations ? moopMatchedInNote(item, ctx.keywords) : '')
     },
     {
         key: 'ann_source', label: moopT('Annotation Source'), width: 300, variants: ['full'],
@@ -201,6 +204,58 @@ function moopStripNamingTag(text) {
 function moopRowHighlightText(r) {
     return [r.feature_name, moopStripNamingTag(r.feature_description), r.annotation_description]
         .filter(Boolean).join(' \0 ');
+}
+
+/**
+ * "matched in InterPro2GO: GO:0005524 (+3 more)" -- for the SIMPLE view, where a row stands
+ * for a feature and its matching annotations are hidden until "Expand All Matches"
+ * (tester review N52: an accession search listed 1,965 features and showed the accession
+ * nowhere).
+ *
+ * Shown ONLY when the row's own ID, name and description do not explain the match: a name
+ * search ("kinase", "BRCA1") is already highlighted in those cells, and a note on every row
+ * would repeat it. One annotation is named, the rest counted; Expand All Matches still shows
+ * them all. Pure: (item = { result, annotations }, keywords) -> HTML or ''.
+ *
+ * Source and accession are escaped here: the search endpoint sends them unescaped (only the
+ * two description fields are escaped server-side).
+ */
+function moopMatchedInNote(item, keywords) {
+    const anns  = (item && item.annotations) || [];
+    const trimmed = String(keywords || '').trim();
+    const terms = /^".+"$/.test(trimmed) ? [trimmed.slice(1, -1)] : moopHighlightableTerms(trimmed);
+    if (!terms.length || !anns.length) return '';
+    const found = (hay, term) => hay.indexOf(term.toLowerCase()) !== -1 || moopTermHighlight(hay, term, false) !== null;
+
+    const r = item.result || anns[0];
+    const visible = [r.feature_uniquename, r.feature_name, moopStripNamingTag(r.feature_description)]
+        .filter(Boolean).join(' \0 ').toLowerCase();
+    const unseen = terms.filter(t => !found(visible, t));
+    if (!unseen.length) return '';
+
+    const hits = anns.filter(a => {
+        const hay = [a.annotation_accession, a.annotation_description, a.annotation_source_name]
+            .filter(Boolean).join(' \0 ').toLowerCase();
+        return unseen.every(t => found(hay, t));
+    });
+    if (!hits.length) return '';
+
+    const first = hits[0];
+    const src   = '<span class="fw-semibold">' + escapeHtml(first.annotation_source_name || '') + '</span>';
+    const what  = first.annotation_accession
+        ? moopTm('matched in %1$s: %2$s', src, escapeHtml(first.annotation_accession))
+        : moopTm('matched in %s', src);
+    // "(+N more)" is the way in: it opens the expanded view filtered to THIS feature
+    // (initializeViewToggle() handles the click), not the whole table, which would lose the row.
+    const id    = escapeHtml(r.feature_uniquename || '');
+    const more  = hits.length > 1
+        ? ' <a href="#" class="moop-matched-more" data-feature="' + id + '" title="'
+          + moopTh('Show all %1$d matches for %2$s', hits.length, r.feature_uniquename || '') + '">'
+          + moopTh('(+%d more)', hits.length - 1) + '</a>'
+        : '';
+    // data-no-export: a hint on screen, not part of the Description a download holds
+    // (datatable-config.js drops it before reading the cell).
+    return '<div class="small text-muted moop-matched-in mt-1" data-no-export>' + what + more + '</div>';
 }
 
 function highlightSearchTerms(text, keywords, rowText) {
@@ -575,6 +630,38 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
         return;
     }
 
+    // The Feature ID filter box of the expanded table -- located through the column registry,
+    // never a hard-coded position (CLAUDE.md 9b).
+    const featureFilterInput = () => expandedContainer.querySelector(
+        `.column-filter-container[data-column-index="${resultColumnsFor('full').findIndex(c => c.key === 'feature_id')}"] input.column-search`);
+    let noteFilter = null;   // the feature a "(+N more)" click filtered to, cleared on the way back
+
+    // A simple-view row's "(+N more)" (moopMatchedInNote): open the expanded view showing just
+    // that feature's matches. Uses the column's own filter box, so the filter is visible and
+    // can be cleared by hand; "Show Simple View" clears it.
+    parentDiv.addEventListener('click', (e) => {
+        const link = e.target.closest('.moop-matched-more');
+        if (!link || !simpleContainer.contains(link)) return;
+        e.preventDefault();
+        const id = link.dataset.feature || '';
+        if (expandedContainer.style.display === 'none') toggleBtn.click();
+        let tries = 60;   // the expanded table is built and initialised just after the toggle
+        (function apply() {
+            const table = expandedContainer.querySelector('table');
+            const input = featureFilterInput();
+            if (!table || !input || !$.fn.dataTable.isDataTable(table)) {
+                if (tries-- > 0) setTimeout(apply, 50);
+                return;
+            }
+            input.value = id;
+            $(input).trigger('change');
+            noteFilter = id;
+            // The toggle button, centred: "Show Simple View" (the way back) stays in sight, the
+            // filtered rows just below it. 'nearest' left the button under the sticky navbar.
+            toggleBtn.scrollIntoView({ block: 'center' });
+        })();
+    });
+
     toggleBtn.addEventListener('click', (e) => {
         e.preventDefault();
 
@@ -602,6 +689,14 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
             simpleContainer.style.display = 'block';
             expandedContainer.style.display = 'none';
             toggleBtn.innerHTML = '<i class="fa fa-expand"></i> ' + moopTh('Expand All Matches');
+            // Leave nothing behind: a filter set by "(+N more)" would otherwise greet the next
+            // "Expand All Matches" with one feature and no reason why. One the reader typed stays.
+            const input = featureFilterInput();
+            if (noteFilter !== null && input && input.value === noteFilter) {
+                input.value = '';
+                $(input).trigger('change');
+            }
+            noteFilter = null;
         }
     });
 }

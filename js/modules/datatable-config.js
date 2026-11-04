@@ -291,6 +291,10 @@ const DataTableExportConfig = {
                     }
                     if (typeof data !== 'string') return data;
                     return data
+                        // Screen-only hints inside a cell (the simple view's "matched in ..."
+                        // line, shared-results-table.js) are not the cell's value. The marked
+                        // element holds no nested <div>, so the first </div> closes it.
+                        .replace(/<div\b[^>]*\bdata-no-export\b[^>]*>[\s\S]*?<\/div>/gi, '')
                         .replace(/<br\s*\/?>/gi, ' — ')
                         .replace(/<[^>]+>/g, '')
                         .replace(/\s+/g, ' ')

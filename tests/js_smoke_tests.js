@@ -40,7 +40,7 @@ for (const rel of MODULES) {
 const {
     moopSearchTerms, moopSearchInputIsUsable, moopHighlightableTerms,
     moopTermHighlight, highlightSearchTerms, moopRowHighlightText, moopStripNamingTag,
-    resultAssemblyLabel, moopT, moopTh, moopTm,
+    resultAssemblyLabel, moopT, moopTh, moopTm, moopMatchedInNote,
 } = sandbox;
 
 // ---------------------------------------------------------------------------- harness
@@ -163,6 +163,31 @@ eq(resultAssemblyLabel({ genome_name: 'NA', genome_accession: 'GCF_013753865.1' 
 eq(resultAssemblyLabel({ genome_name: 'n/a', genome_accession: 'X1' }), 'X1', 'case-insensitive');
 eq(resultAssemblyLabel({ genome_name: 'X1', genome_accession: 'X1' }), 'X1', 'name equal to the accession → bare accession');
 eq(resultAssemblyLabel({ genome_name: 'Nvec200', genome_accession: 'GCA_033964005.1' }), 'Nvec200 (GCA_033964005.1)', 'a real name keeps "Name (Accession)"');
+
+group('moopMatchedInNote — why a simple-view row matched (review N52)');
+{
+    const ann = (src, acc, desc) => ({ annotation_source_name: src, annotation_accession: acc, annotation_description: desc || '' });
+    const item = (name, desc, anns) => ({ result: { feature_uniquename: 'XM_1.1', feature_name: name, feature_description: desc }, annotations: anns });
+    const go = item('LOC1', 'uncharacterized protein', [ann('InterProScan (InterPro2GO)', 'GO:0005524', 'ATP binding'), ann('EggNOG (EggNOG2GO)', 'GO:0005524', 'ATP binding'), ann('Pfam', 'PF00069', 'Protein kinase domain')]);
+    const note = moopMatchedInNote(go, 'GO:0005524');
+    ok(note.includes('matched in') && note.includes('InterProScan (InterPro2GO)') && note.includes('GO:0005524') && note.includes('(+1 more)'),
+       'an accession search names the first matching annotation and counts the others (not the Pfam row that did not match)');
+    ok(note.includes('class="moop-matched-more" data-feature="XM_1.1"') && note.includes('title="Show all 2 matches for XM_1.1"'),
+       '"(+N more)" is a link to that feature\'s matches, saying how many');
+    ok(!moopMatchedInNote(item('LOC3', 'unknown', [ann('Pfam', '', 'cox2')]), 'cox2').includes('<a '),
+       'a single match has nothing more to open: no link');
+    eq(moopMatchedInNote(item('LOC2', 'serine/threonine kinase', [ann('Pfam', 'PF00069', 'Protein kinase domain')]), 'kinase'), '',
+       'the term is in the description already: no note (a name search looks as it did)');
+    eq(moopMatchedInNote(item('LOC2', 'protein kinase', [ann('Pfam', 'PF00069', 'kinases')]), 'kinases'), '',
+       'a stem the description already shows (kinases ~ kinase): no note');
+    eq(moopMatchedInNote(item('NV2g1', '', [ann('Pfam', 'PF00069', 'x')]), 'NV2g1'), '', 'an ID search: the ID column explains it');
+    ok(moopMatchedInNote(item('LOC3', 'unknown', [ann('Pfam', '', 'cytochrome c oxidase subunit cox2')]), 'cox2') === '<div class="small text-muted moop-matched-in mt-1" data-no-export>matched in <span class="fw-semibold">Pfam</span></div>',
+       'matched in an annotation description with no accession: names the source; marked so exports leave it out');
+    ok(moopMatchedInNote(item('LOC4', 'x', [ann('<b>evil</b>', '<i>', 'cox2')]), 'cox2').includes('&lt;b&gt;evil&lt;/b&gt;'),
+       'source and accession are escaped (the endpoint sends them raw)');
+    eq(moopMatchedInNote({ result: {}, annotations: [] }, 'cox2'), '', 'no annotations: no note');
+    eq(moopMatchedInNote(go, ''), '', 'no search words: no note');
+}
 
 group('moopT — interface text in the browser (the JS side of t(), CLAUDE.md 7b)');
 eq(moopT('No matches found'), 'No matches found', 'no catalog (a one-language site): the English, unchanged');
