@@ -98,6 +98,10 @@
 #       use_for_names: false              true = naming step 2 (default false)
 #       same_species: false               true = another annotation of THIS species: names
 #                                         copied as is, no "-like", no label needed
+#       copy_names: false                 with use_for_names: true, another species whose names are
+#                                         kept: no "-like", "(label)" after the description, so names
+#                                         stay aligned across species ("SMEDWI-1: Schmidtea
+#                                         mediterranea PIWI 1 (planarian)"); planarians named from S3h1
 #
 # File formats -- "moop TSV": optional "## " header lines, then 4 tab-separated columns.
 #   hits files (closest_species hits):
@@ -152,10 +156,58 @@ Acropora_millepora:
           oma_code: NEMVE
           use_for_names: false
 
+# Schmidtea mediterranea S3h1 (sexual strain): 209 curated names from published papers (2026-11-04;
+# list curated by Eric Ross (ejr) from published papers; descriptions + checks in dev/smr_dev/curated_smed_names/schMedS3h1_WBPS19/README.md)
+Schmidtea_mediterranea:
+  schMedS3h1:
+    schMedS3h1_WBPS19:
+      human_curated_gene_names: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/curated_smed_names/schMedS3h1_WBPS19/schMedS3h1_WBPS19.curated_names.moop.tsv
+  dd_v6:
+    ddv6:
+      # aligned to S3h1 (2026-11-04): same species, a full-length RBH copies the S3h1 name as is
+      closest_species:
+        - species: Schmidtea mediterranea
+          tag: Smed
+          diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/dd_v6/ddv6/diamond
+          rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/dd_v6/ddv6/rbh
+          use_for_names: true
+          same_species: true
+  schMedA2h1:
+    schMedA2h1_orig:
+      # aligned to S3h1 (2026-11-04): same species, a full-length RBH copies the S3h1 name as is
+      closest_species:
+        - species: Schmidtea mediterranea
+          tag: Smed
+          diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/schMedA2h1/schMedA2h1_orig/diamond
+          rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/schMedA2h1/schMedA2h1_orig/rbh
+          use_for_names: true
+          same_species: true
+  schMedA2h2:
+    schMedA2h2_orig:
+      # aligned to S3h1 (2026-11-04): same species, a full-length RBH copies the S3h1 name as is
+      closest_species:
+        - species: Schmidtea mediterranea
+          tag: Smed
+          diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/schMedA2h2/schMedA2h2_orig/diamond
+          rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/schMedA2h2/schMedA2h2_orig/rbh
+          use_for_names: true
+          same_species: true
+  smed_20140614:
+    smed_20140614:
+      # aligned to S3h1 (2026-11-04): same species, a full-length RBH copies the S3h1 name as is
+      closest_species:
+        - species: Schmidtea mediterranea
+          tag: Smed
+          diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/smed_20140614/smed_20140614/diamond
+          rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/smed_20140614/smed_20140614/rbh
+          use_for_names: true
+          same_species: true
+
 # ---- planarians: Schmidtea mediterranea schMedS3h1_WBPS19 (the sexual strain) as closest species (2026-11-02;
 # schMedA2h1, the asexual strain, was used earlier that day); partner = S3h1 proteins
 # titled with their MOOP names (scripts/make_named_partner_fasta.pl); searches by
-# build_and_load_db/v2/submit_smed_s3h1_closest_20261102.sh. Shown, not used to name.
+# build_and_load_db/v2/submit_smed_s3h1_closest_20261102.sh. Since 2026-11-04 USED to name (use_for_names +
+# copy_names): S3h1 names copied without -like, "(Schmidtea mediterranea)" after the description.
 
 Bipalium_kewense:
   bkew.kc1.ref:
@@ -163,10 +215,11 @@ Bipalium_kewense:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Bipalium_kewense/bkew.kc1.ref/bkew.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Bipalium_kewense/bkew.kc1.ref/bkew.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Bipalium_vagum:
   bvag.kc1.ref:
@@ -174,10 +227,11 @@ Bipalium_vagum:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Bipalium_vagum/bvag.kc1.ref/bvag.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Bipalium_vagum/bvag.kc1.ref/bvag.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Camerata_robusta:
   crob.kc3.ref:
@@ -185,10 +239,11 @@ Camerata_robusta:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Camerata_robusta/crob.kc3.ref/crob.kc3/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Camerata_robusta/crob.kc3.ref/crob.kc3/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Cura_foremanii:
   cfor.kc1.ref:
@@ -196,10 +251,11 @@ Cura_foremanii:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Cura_foremanii/cfor.kc1.ref/cfor.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Cura_foremanii/cfor.kc1.ref/cfor.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Cura_pinguis:
   cpin.kc1.ref:
@@ -207,10 +263,11 @@ Cura_pinguis:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Cura_pinguis/cpin.kc1.ref/cpin.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Cura_pinguis/cpin.kc1.ref/cpin.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Diversibipalium_multilineatum:
   dmul.kc1.ref:
@@ -218,10 +275,11 @@ Diversibipalium_multilineatum:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Diversibipalium_multilineatum/dmul.kc1.ref/dmul.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Diversibipalium_multilineatum/dmul.kc1.ref/dmul.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Girardia_dorotocephala:
   ddor_cc.ref:
@@ -229,10 +287,11 @@ Girardia_dorotocephala:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Girardia_dorotocephala/ddor_cc.ref/ddor_cc/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Girardia_dorotocephala/ddor_cc.ref/ddor_cc/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Girardia_sp:
   gsp_cc.ref:
@@ -240,10 +299,11 @@ Girardia_sp:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Girardia_sp/gsp_cc.ref/gsp_cc/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Girardia_sp/gsp_cc.ref/gsp_cc/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Obama_nungara:
   onun.kc3.ref:
@@ -251,10 +311,11 @@ Obama_nungara:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Obama_nungara/onun.kc3.ref/onun.kc3/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Obama_nungara/onun.kc3.ref/onun.kc3/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Phagocata_gracilis:
   pgra_cc.ref:
@@ -262,10 +323,11 @@ Phagocata_gracilis:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Phagocata_gracilis/pgra_cc.ref/pgra_cc/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Phagocata_gracilis/pgra_cc.ref/pgra_cc/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Phagocata_morgani:
   pmor.kc3.ref:
@@ -273,19 +335,21 @@ Phagocata_morgani:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Phagocata_morgani/pmor.kc3.ref/pmor.kc3/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Phagocata_morgani/pmor.kc3.ref/pmor.kc3/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
   pmor_cc.ref:
     pmor_cc:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Phagocata_morgani/pmor_cc.ref/pmor_cc/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Phagocata_morgani/pmor_cc.ref/pmor_cc/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Phagocata_velata:
   pvel.kc1.ref:
@@ -293,10 +357,11 @@ Phagocata_velata:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Phagocata_velata/pvel.kc1.ref/pvel.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Phagocata_velata/pvel.kc1.ref/pvel.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Procerodes_sp:
   prsp.kc1.ref:
@@ -304,10 +369,11 @@ Procerodes_sp:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Procerodes_sp/prsp.kc1.ref/prsp.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Procerodes_sp/prsp.kc1.ref/prsp.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Romankenkius_sp:
   Romankenkius_au23-003:
@@ -315,19 +381,21 @@ Romankenkius_sp:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Romankenkius_sp/Romankenkius_au23-003/ro03.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Romankenkius_sp/Romankenkius_au23-003/ro03.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
   Romankenkius_au23-39:
     ro39.kc1:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Romankenkius_sp/Romankenkius_au23-39/ro39.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Romankenkius_sp/Romankenkius_au23-39/ro39.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Schmidtea_polychroa:
   Spol_FtD1:
@@ -335,10 +403,11 @@ Schmidtea_polychroa:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_polychroa/Spol_FtD1/Spol_FtD1_geneset/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_polychroa/Spol_FtD1/Spol_FtD1_geneset/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
 
 Spathula_sp:
   spsp.kc1.ref:
@@ -346,7 +415,8 @@ Spathula_sp:
       closest_species:
         - species: Schmidtea mediterranea
           tag: Smed
-          label: planarian
+          label: Schmidtea mediterranea
           diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Spathula_sp/spsp.kc1.ref/spsp.kc1/diamond
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Spathula_sp/spsp.kc1.ref/spsp.kc1/rbh
-          use_for_names: false
+          use_for_names: true
+          copy_names: true
