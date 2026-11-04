@@ -14,7 +14,7 @@ $access_display = [
     'IP_IN_RANGE'  => 'Trusted Network',
     'ADMIN'        => 'Administrator',
 ];
-$access_text = $access_display[$access_level] ?? ucfirst(strtolower($access_level));
+$access_text = t_plain($access_display[$access_level] ?? ucfirst(strtolower($access_level)));
 $access_class = [
     'PUBLIC'       => 'badge bg-secondary',
     'COLLABORATOR' => 'badge bg-info',
@@ -28,7 +28,7 @@ $badge_class = $access_class[$access_level] ?? 'badge bg-secondary';
 // still say who you are -- a plain "Public" badge hid that you were an admin at all.
 $va_previewing = function_exists('moop_viewing_as_public') && moop_viewing_as_public();
 if ($va_previewing) {
-    $access_text = 'Admin · Public view';
+    $access_text = t_plain('Admin · Public view');
     $badge_class = 'badge bg-warning text-dark';
 }
 ?>
@@ -41,7 +41,7 @@ if ($va_previewing) {
 
     <button class="navbar-toggler" type="button"
             data-bs-toggle="collapse" data-bs-target="#collapsibleNavbar"
-            aria-controls="collapsibleNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            aria-controls="collapsibleNavbar" aria-expanded="false" aria-label="<?= t('Toggle navigation') ?>">
       <span class="navbar-toggler-icon"></span>
     </button>
 
@@ -59,7 +59,7 @@ foreach (ConfigManager::getInstance()->getMainMenu(moop_current_lang()) as $mb_i
 <?php if ($mb_item['type'] === 'tools'): ?>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
-             data-bs-toggle="dropdown" aria-expanded="false">Tools</a>
+             data-bs-toggle="dropdown" aria-expanded="false"><?= t('Tools') ?></a>
 <?php /* Built from the tool registry (ConfigManager::getToolsMenu()): order, labels and dividers
          are config/tools_config.php's defaults or the site's own (Admin -> Manage Tools), and a
          switched-off tool is left out. Until 2026-11-03 this was a second, hand-written list of
@@ -69,7 +69,7 @@ foreach (ConfigManager::getInstance()->getMainMenu(moop_current_lang()) as $mb_i
 <?php if ($tb_item['type'] === 'divider'): ?>
             <li><hr class="dropdown-divider"></li>
 <?php else: ?>
-            <li><a class="dropdown-item" href="/<?= $site ?><?= htmlspecialchars($tb_item['url_path']) ?>"><?= htmlspecialchars($tb_item['label']) ?></a></li>
+            <li><a class="dropdown-item" href="/<?= $site ?><?= htmlspecialchars($tb_item['url_path']) ?>"><?= htmlspecialchars(t_plain($tb_item['label'])) ?></a></li>
 <?php endif; ?>
 <?php endforeach; ?>
           </ul>
@@ -96,7 +96,7 @@ foreach (ConfigManager::getInstance()->getMainMenu(moop_current_lang()) as $mb_i
 <?php endforeach; ?>
         <?php if (is_logged_in() && moop_session_is_admin()): ?>
         <li class="nav-item">
-          <a id="admin_tools_link" class="nav-link" href="/<?= $site ?>/admin/admin.php"><i class="fa fa-tools me-1"></i> Admin Tools</a>
+          <a id="admin_tools_link" class="nav-link" href="/<?= $site ?>/admin/admin.php"><i class="fa fa-tools me-1"></i> <?= t('Admin Tools') ?></a>
         </li>
         <?php endif; ?>
       </ul>
@@ -109,7 +109,7 @@ foreach (ConfigManager::getInstance()->getMainMenu(moop_current_lang()) as $mb_i
 $lb_langs = ConfigManager::getInstance()->languages();
 if (count($lb_langs) > 1 && !defined('MOOP_ADMIN_PAGE')): $lb_now = moop_current_lang(); ?>
         <li class="nav-item">
-          <div class="btn-group btn-group-sm" role="group" aria-label="Language">
+          <div class="btn-group btn-group-sm" role="group" aria-label="<?= t('Language') ?>">
 <?php foreach ($lb_langs as $lb_l): ?>
             <a class="btn <?= $lb_l['code'] === $lb_now ? 'btn-light' : 'btn-outline-light' ?>" href="<?= htmlspecialchars(moop_lang_url($lb_l['code'])) ?>"
                hreflang="<?= htmlspecialchars($lb_l['code']) ?>" lang="<?= htmlspecialchars($lb_l['code']) ?>" title="<?= htmlspecialchars($lb_l['name']) ?>"<?= $lb_l['code'] === $lb_now ? ' aria-current="true"' : '' ?>><?= htmlspecialchars(strtoupper($lb_l['code'])) ?></a>
@@ -123,10 +123,10 @@ if (count($lb_langs) > 1 && !defined('MOOP_ADMIN_PAGE')): $lb_now = moop_current
           <form class="m-0" role="search" id="navIdSearch" autocomplete="off"<?= ConfigManager::getInstance()->isToolEnabled('annotation_search') ? '' : ' data-no-search="1"' ?>>
             <div class="d-flex align-items-center">
               <div class="input-group input-group-sm">
-                <input type="search" class="form-control" id="navIdInput" placeholder="Gene ID lookup"
-                       aria-label="Look up a gene, transcript or protein ID"
+                <input type="search" class="form-control" id="navIdInput" placeholder="<?= t('Gene ID lookup') ?>"
+                       aria-label="<?= t('Look up a gene, transcript or protein ID') ?>"
                        data-1p-ignore data-lpignore="true" data-form-type="other">
-                <button class="btn btn-outline-light" type="submit" title="Look up this ID"><i class="fa fa-search"></i></button>
+                <button class="btn btn-outline-light" type="submit" title="<?= t('Look up this ID') ?>"><i class="fa fa-search"></i></button>
               </div>
               <?php /* The same (i) and the same help as the index page's ID box. */ ?>
               <?= help_modal_trigger('fs-help', '', 'Help: finding a gene by its ID') ?>
@@ -161,9 +161,9 @@ if (count($lb_langs) > 1 && !defined('MOOP_ADMIN_PAGE')): $lb_now = moop_current
 
         <li class="nav-item">
           <?php if (get_access_level() === 'IP_IN_RANGE' || !is_logged_in()): ?>
-            <a id="login_link" class="nav-link" href="/<?= $site ?>/login.php">Log In <i class="fa fa-sign-in-alt"></i></a>
+            <a id="login_link" class="nav-link" href="/<?= $site ?>/login.php"><?= t('Log In') ?> <i class="fa fa-sign-in-alt"></i></a>
           <?php else: ?>
-            <a id="logout_link" class="nav-link" href="/<?= $site ?>/logout.php">Log Out <i class="fa fa-sign-out-alt"></i></a>
+            <a id="logout_link" class="nav-link" href="/<?= $site ?>/logout.php"><?= t('Log Out') ?> <i class="fa fa-sign-out-alt"></i></a>
           <?php endif; ?>
         </li>
       </ul>

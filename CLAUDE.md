@@ -223,6 +223,31 @@ promote them is in `notes/ADMIN_UI_FOLLOWUPS.md` §6.
 - Load page-specific JS via `page_script` in the `$data` array
 - All pages get: jQuery, Bootstrap, DataTables, and `js/modules/csrf.js` automatically
 
+### 7b. Visitor-facing text goes through t() — the rule for new code (2026-11-04)
+
+Any text a VISITOR can see — page text, buttons, placeholders, `title`/`aria-label`, messages —
+is written as `<?= t('Log In') ?>`, not typed bare into the template. That is what lets a site
+with more than one language (cuttingclass) show it in Spanish; on simrbase (English only) `t()`
+returns the same bytes, so nothing changes. Functions are in `includes/config_init.php`, the
+catalog and spreadsheet in `lib/i18n.php`; plan in `notes/CUTTINGCLASS_PLAN.md` §5b.
+
+- `t()` escapes (ENT_COMPAT) — use it in HTML text and double-quoted attributes. `t_plain()` does
+  not — for code that escapes for itself. `t_markup('across %s organisms', '<strong>85</strong>')`
+  for a sentence with markup inside: the markup is an argument, never part of the English.
+- **One whole sentence per call**, with sprintf placeholders for what varies
+  (`t('Showing %d of %d hits', $n, $total)`) — never glue fragments ("Showing " . $n . " of"),
+  which no translator can reorder. Plurals: two calls chosen by the count.
+- **The English must be a literal** (`t('…')`, not `t($var)`), or the source scan cannot list it.
+  Text from config (tool names, menu labels) goes through `t_plain()` where it is printed.
+- **Not wrapped:** admin pages (always English), and DATA (gene names, annotations, organism
+  descriptions) — that is never translated.
+- **Already done for you:** `field_help()`, `help_modal()`, `help_modal_trigger()` and
+  `page_purpose()` translate their own text. Pass plain English; don't wrap it again.
+- **`?>` eats the newline after it.** A line ending in `<?= t('x') ?>` loses its line break —
+  write `<?= t('x') . "\n" ?>` there, and run `scripts/render_compare.php` to prove simrbase
+  is byte-identical.
+- JavaScript-built text is not covered yet (it needs its own catalog).
+
 ### 8. Shell Command Safety
 
 All shell commands use `escapeshellarg()` on every argument. Examples:

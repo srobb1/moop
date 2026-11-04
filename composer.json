@@ -2,6 +2,8 @@
     "require": {
         "firebase/php-jwt": "^7.0",
         "erusev/parsedown": "^1.8",
-        "ezyang/htmlpurifier": "^4.17"
+        "ezyang/htmlpurifier": "^4.17",
+        "shuchkin/simplexlsx": "^1.1",
+        "shuchkin/simplexlsxgen": "^1.5"
     }
 }

@@ -80,6 +80,18 @@ RED on a deliberate one-character change before it is trusted.
 - Step 5 part 1, the visitor language switch: ?lang= > moop_lang cookie > Accept-Language >
   English; only on sites with 2+ languages, never on admin pages; Vary + Content-Language.
   Switches content pages, menu labels and the home now. NEXT: interface strings (t()).
+- Step 5b part 1 (2026-11-04): t() / t_plain() / t_markup() (includes/config_init.php), the
+  catalog + seen-on-the-site record + source scan + .xlsx export/checked import (lib/i18n.php,
+  shuchkin/simplexlsx + simplexlsxgen -- pure PHP, this host has no zip extension), Admin -> Manage
+  Translations (download / upload-check-save / show gaps), help helpers translate their own text,
+  navbar + home + toolbox wrapped. Rule for new code: CLAUDE.md §7b.
+- NEXT for 5b: wrap the remaining public pages (BLAST, gene search, Primer Maker, gene page,
+  about/help), JS-built text (own catalog), glossary Spanish column, pre-fill from the old site.
+- Organism summaries in other languages (Sofia, 2026-11-04): today one English summary per organism
+  -- written by an admin in organism.json (html_p) or fetched from English Wikipedia. Plan: per-
+  language summaries edited with language tabs (like pages), and for a Spanish visitor try
+  es.wikipedia.org first, then English. Group descriptions the same way. Opt-in: no other language
+  -> exactly today's summaries.
 - Still open from this list: tool labels per language (tools_layout labels are one string today),
   image upload for pages, simple mode, old-link redirects, optional taxonomy tabs.
 

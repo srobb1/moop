@@ -3738,6 +3738,77 @@ $_cprp->setValue($_cpcfg, $_cpsaved);
 exec('rm -rf ' . escapeshellarg($_cp));
 
 // ----------------------------------------------------------------------------
+group('Interface translations: t(), the catalog, the spreadsheet checks (cuttingclass step 5b)');
+// t() on a one-language site / the command line is the English, byte for byte -- simrbase's case.
+ok(t('Log In') === 'Log In' && t("MOOP's home") === "MOOP's home" && t_plain('a & b') === 'a & b',
+   't(): English passes through unchanged (an apostrophe stays an apostrophe)');
+ok(t('Search & browse "x"') === 'Search &amp; browse &quot;x&quot;' && t('<b>') === '&lt;b&gt;',
+   't(): HTML-escaped, so a translation can never break the page it is in');
+ok(t('Showing %d of %s', 3, '<i>') === 'Showing 3 of &lt;i&gt;' && t_plain('100%') === '100%',
+   't(): arguments are escaped too; a % with no arguments is left alone');
+ok(t_markup('across %s organisms', '<strong>85</strong>') === 'across <strong>85</strong> organisms',
+   't_markup(): the sentence escaped, the markup argument inserted as given');
+ok(moop_i18n_format('Hay %d de %d', [3], 'Showing %d', fn($s) => $s) === 'Showing 3',
+   'a translation whose placeholders do not fit falls back to the English instead of a 500');
+require_once "$BASE/lib/i18n.php";
+$_tr = sys_get_temp_dir() . '/moop_i18n_' . getmypid();
+mkdir($_tr, 0777, true);
+$_trcfg = ConfigManager::getInstance();
+$_trrp  = new ReflectionProperty($_trcfg, 'config'); $_trrp->setAccessible(true);
+$_trsaved = $_trrp->getValue($_trcfg);
+$_trc = $_trsaved; $_trc['metadata_path'] = $_tr; $_trc['cache_path'] = $_tr; $_trrp->setValue($_trcfg, $_trc);
+ok(moop_i18n_catalog('es') === [] && moop_i18n_lookup('es', 'Log In') === 'Log In', 'no catalog: the English');
+$_trs = moop_i18n_save('es', ['Log In' => ['text' => 'Iniciar sesión', 'status' => 'reviewed', 'notes' => '']], 'tester');
+ok($_trs['success'] && substr(sprintf('%o', fileperms("$_tr/translations/es.json")), -3) === '664' && !glob("$_tr/translations/.*.tmp"),
+   'the catalog saves as site data, 664, no temp file left behind');
+ok(!moop_i18n_save('en', [], 'x')['success'] && !moop_i18n_save('../x', [], 'x')['success'], 'only real, non-English codes are written');
+$_trdoc = json_decode(file_get_contents("$_tr/translations/es.json"), true);
+ok($_trdoc['strings']['Log In']['text'] === 'Iniciar sesión' && $_trdoc['strings']['Log In']['updated_by'] === 'tester',
+   'each line records who changed it and when');
+ok(moop_i18n_lookup('es', 'Log In') === 'Iniciar sesión', 'a save refreshes the catalog this request already read (it was read empty above)');
+moop_i18n_save('es', ['Tools' => ['text' => 'Herramientas', 'status' => 'reviewed', 'notes' => '']], 'tester');
+ok(count(moop_i18n_catalog('es', true)) === 2, 'a second save in the same request keeps the first one\'s lines');
+$_known = ['Log In' => 1, 'Showing %d of %d hits' => 1, 'Tools' => 1, 'Help' => 1];
+$_chk = moop_i18n_check_upload('es', [
+    ['English', 'Translation', 'Status', 'Keep these exactly', 'Where it appears', 'Notes'],
+    ['Showing %d of %d hits', 'Mostrando %d de %d resultados', 'reviewed', '%d %d', '', ''],
+    ['Tools', 'Herramientas', '', '', '', ''],
+    ['Help', 'Ayuda %s', 'machine draft', '', '', ''],
+    ['Log In', '', 'needs translation', '', '', ''],
+    ['Logn In', 'Entrar', '', '', '', ''],
+    ['Tools', 'Herramientas', 'perfect', '', '', ''],
+], $_known);
+ok(($_chk['changes']['Showing %d of %d hits']['status'] ?? '') === 'reviewed', 'import: a reviewed line with matching codes is accepted');
+ok(($_chk['changes']['Tools']['status'] ?? '') === 'machine draft', 'import: a translation with no status counts as a machine draft');
+ok(count(array_filter($_chk['refused'], fn($r) => $r[0] === 'Help')) === 1 && !isset($_chk['changes']['Help']),
+   'import: a translation that adds or drops a %s code is refused, not saved');
+ok($_chk['kept'] === 1 && !isset($_chk['changes']['Log In']), 'import: a blank cell never erases a translation already there');
+ok($_chk['unknown'] === ['Logn In'], 'import: English the site does not have (edited by mistake) is reported, not saved');
+ok(count(array_filter($_chk['refused'], fn($r) => strpos($r[1], 'perfect') !== false)) === 1, 'import: an unknown status is refused');
+ok(isset(moop_i18n_check_upload('es', [['Spanish', 'x']], $_known)['error']), 'import: a sheet without the English column is refused whole');
+ok(moop_i18n_placeholders('%1$s and %2$d, 50%% off') === ['%1$s', '%2$d'], 'placeholders: positional ones count, %% does not');
+// The source scan: t() and the help helpers' literal text, by PHP tokens.
+$_scan = array_column(moop_i18n_scan_source('<?php echo t(\'Log In\'); /* t(\'not me\') */ $x->t(\'nor me\');'
+    . ' echo field_help(\'One field\', \'Its title\'); echo help_modal_trigger(\'id\', \'\', \'Help: x\');'
+    . ' echo help_modal(\'m\', \'Modal title\', [[\'heading\' => \'Sec\', \'cards\' => [[\'label\' => \'L\', \'text\' => \'T\', \'color\' => \'info\']]]], [\'intro\' => \'In\']);'
+    . ' echo t($var); echo t("It\'s");'), 0);
+sort($_scan);
+ok($_scan === ['Help: x', 'In', "It's", 'L', 'Log In', 'Modal title', 'One field', 'Its title', 'Sec', 'T'] || $_scan == ['Help: x', 'In', "It's", 'Its title', 'L', 'Log In', 'Modal title', 'One field', 'Sec', 'T'],
+   'scan: t() and the help helpers\' text are found; comments, methods, variables and colours are not (' . implode('|', $_scan) . ')');
+// The spreadsheet itself, through the real libraries, with no zip extension.
+$_xl = "$_tr/t.xlsx";
+file_put_contents($_xl, moop_i18n_xlsx([MOOP_I18N_COLUMNS, ['=1+1', 'a & <b>x</b> "q" %d', 'reviewed', '%d', 'index.php', '']], 'Español'));
+$_back = moop_i18n_read_upload($_xl, 't.xlsx');
+ok(is_array($_back) && $_back[0] === MOOP_I18N_COLUMNS && $_back[1][0] === '=1+1' && $_back[1][1] === 'a & <b>x</b> "q" %d',
+   'xlsx round trip: text that looks like a formula or a tag comes back exactly as written');
+ok(is_string(moop_i18n_read_upload(__FILE__, 'smoke_tests.php')), 'an upload that is neither .xlsx nor .csv is refused with a message');
+// What the lookups above recorded is written at shutdown -- by then into the REAL cache_path, which
+// put a stray i18n_seen.json on the live site (2026-11-04). Forget it here: tests leave no trace.
+$GLOBALS['moop_i18n_seen_now'] = [];
+$_trrp->setValue($_trcfg, $_trsaved);
+exec('rm -rf ' . escapeshellarg($_tr));
+
+// ----------------------------------------------------------------------------
 group('Taxonomy tree: an unnamed species on a genus id keeps its own leaf');
 require_once "$BASE/lib/taxonomy_functions.php";
 $_lin = fn(...$l) => ['lineage' => array_map(fn($x) => ['rank' => $x[0], 'name' => $x[1]], $l)];

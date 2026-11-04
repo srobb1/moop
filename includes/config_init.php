@@ -255,3 +255,62 @@ function moop_lang_url(string $code): string {
     $query['lang'] = $code;
     return $path . '?' . http_build_query($query);
 }
+
+/**
+ * Interface text in the visitor's language -- cuttingclass step 5b (notes/CUTTINGCLASS_PLAN.md).
+ * Wrap the English as written: <?= t('Log In') ?>. The Spanish comes from the site's catalog
+ * (Admin -> Manage Translations, lib/i18n.php); text with no translation shows in English, so
+ * nothing ever renders blank. Placeholders are sprintf's: t('Showing %d of %d hits', $n, $total).
+ *
+ * On a one-language site (simrbase) and on admin pages this is the English, unchanged: no catalog
+ * is read, nothing is recorded.
+ *
+ *   t()        HTML-escaped (template and arguments) -- for page text and attributes.
+ *   t_plain()  not escaped -- for code that escapes for itself (the help helpers, JS via
+ *              json_encode, headers).
+ *   t_markup() the template escaped, the arguments inserted AS GIVEN -- for a sentence with
+ *              markup inside it ('across %s organisms' with a <strong>). The caller escapes them.
+ *
+ * Escaping uses ENT_COMPAT, not ENT_QUOTES: attributes here are double-quoted, and an
+ * apostrophe ("MOOP's") must come out as the same bytes it was before it was wrapped.
+ */
+function t(string $text, ...$args): string {
+    $e = fn($s) => htmlspecialchars((string) $s, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8');
+    return moop_i18n_format($e(moop_i18n_text($text)), array_map($e, $args), $text, $e);
+}
+
+function t_plain(string $text, ...$args): string {
+    return moop_i18n_format(moop_i18n_text($text), $args, $text, fn($s) => $s);
+}
+
+function t_markup(string $text, string ...$html_args): string {
+    $e = fn($s) => htmlspecialchars((string) $s, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8');
+    return moop_i18n_format($e(moop_i18n_text($text)), $html_args, $text, $e);
+}
+
+/** The text to show for $english: the catalog's, when this request is in another language. */
+function moop_i18n_text(string $english): string {
+    if (moop_current_lang() === 'en') {
+        // Still recorded on a multi-language site, so the spreadsheet can list what is shown.
+        if (count(ConfigManager::getInstance()->languageCodes()) > 1 && PHP_SAPI !== 'cli' && !defined('MOOP_ADMIN_PAGE')) {
+            require_once __DIR__ . '/../lib/i18n.php';
+            moop_i18n_seen($english);
+        }
+        return $english;
+    }
+    require_once __DIR__ . '/../lib/i18n.php';
+    return moop_i18n_lookup(moop_current_lang(), $english);
+}
+
+/**
+ * sprintf the arguments in. A translation whose placeholders do not fit (the import refuses those,
+ * but a hand-edited file could still have one) falls back to the English rather than a 500.
+ */
+function moop_i18n_format(string $template, array $args, string $english, callable $escape): string {
+    if (!$args) return $template;
+    try {
+        return vsprintf($template, $args);
+    } catch (\ValueError | \ArgumentCountError $e) {
+        return vsprintf($escape($english), $args);
+    }
+}

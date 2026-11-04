@@ -480,9 +480,12 @@ class ConfigManager
     private function menuLabel(array $item, string $lang): string
     {
         $label = $item['label'] ?? '';
-        if (is_string($label)) return $label;
-        $text = trim((string) ($label[$lang] ?? ''));
-        return $text !== '' ? $text : (string) ($label['en'] ?? '');
+        // The site's own label in this language when it has one; otherwise the English, through
+        // the interface catalog (t_plain()) -- so the default About / Help are translated there.
+        $en = is_string($label) ? $label : trim((string) ($label['en'] ?? ''));
+        $text = is_string($label) ? '' : trim((string) ($label[$lang] ?? ''));
+        if ($lang !== 'en' && $text !== '') return $text;
+        return $en !== '' && function_exists('t_plain') ? t_plain($en) : $en;
     }
 
     /** A link item resolved to ['type' => 'link', 'label', 'href', 'external'], or null. */

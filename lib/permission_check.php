@@ -80,6 +80,7 @@ function moop_permission_check_mode(string $name): string {
         'Taxonomy Lineage Cache'          => 1,  // metadata/taxonomy_lineage_cache.json
         'Metadata Directory'              => 1,
         'Content Pages Directory'         => 1,  // metadata/pages — Admin -> Manage Pages writes here
+        'Translations Directory'          => 1,  // metadata/translations — Admin -> Manage Translations
         'Metadata Backups Directory'      => 1,
         'Change Log Directory'            => 1,
         'JBrowse2 Track Config Directory' => 1,  // metadata/jbrowse2-configs
@@ -877,6 +878,19 @@ function moop_build_permission_items($config, array $ctx): array {
             'required_group' => $web_group,
             'reason' => 'Admins write pages here from the web',
             'why_write' => 'Manage Pages saves, replaces and deletes page files here',
+            'sgid_bit' => true,
+        ],
+        // Same shape: checked once it exists (a one-language site never creates it).
+        [
+            'name' => 'Translations Directory',
+            'description' => 'Interface text in other languages, saved on Admin -> Manage Translations',
+            'type' => 'directory',
+            'paths' => array_values(array_filter([$metadata_path . '/translations'], 'is_dir')),
+            'required_perms' => '2775',
+            'required_owner' => $moop_owner,
+            'required_group' => $web_group,
+            'reason' => 'Admins save translations here from the web',
+            'why_write' => 'Manage Translations rewrites one catalog file per language here',
             'sgid_bit' => true,
         ],
 

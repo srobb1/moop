@@ -743,6 +743,10 @@ function housekeeping_snapshot_site_data() {
     foreach (glob($config->getPath('metadata_path') . '/pages/*.json') ?: [] as $page_json) {
         $files[$page_json] = 'metadata/pages/' . basename($page_json);
     }
+    // Interface translations (Admin -> Manage Translations, lib/i18n.php): one catalog per language.
+    foreach (glob($config->getPath('metadata_path') . '/translations/*.json') ?: [] as $tr_json) {
+        $files[$tr_json] = 'metadata/translations/' . basename($tr_json);
+    }
 
     // Dynamically add all organism.json files from the organisms directory
     $organisms_dir = $config->getPath('organism_data');

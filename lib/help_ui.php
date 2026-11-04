@@ -68,10 +68,14 @@ function field_help(string $text, string $title = ''): string {
     if ($text === '') {
         return '';
     }
+    // In the visitor's language (t_plain(), includes/config_init.php): translated here, once, so
+    // no (i) on any page has to be wrapped. English on a one-language site, unchanged.
+    $text  = t_plain($text);
+    $title = $title !== '' ? t_plain($title) : '';
 
     // aria-label describes the control's purpose; the popover carries the content.
     // Without this a screen reader announces an icon button with no accessible name.
-    $aria = $title !== '' ? ('Help: ' . $title) : 'More information';
+    $aria = $title !== '' ? t_plain('Help: %s', $title) : t_plain('More information');
 
     $html  = '<button type="button" class="field-help"';
     $html .= ' data-bs-toggle="popover" data-bs-trigger="manual" data-bs-placement="top"';
@@ -101,6 +105,8 @@ function field_help(string $text, string $title = ''): string {
  *                         trigger is a bare icon.
  */
 function help_modal_trigger(string $modal_id, string $label = '', string $aria = 'Help'): string {
+    $label = $label !== '' ? t_plain($label) : '';
+    $aria  = t_plain($aria);
     $html  = '<button type="button" class="field-help"';
     $html .= ' data-bs-toggle="modal" data-bs-target="#' . htmlspecialchars($modal_id, ENT_QUOTES) . '"';
     $html .= ' aria-label="' . htmlspecialchars($aria, ENT_QUOTES) . '">';
@@ -154,6 +160,11 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
     $id    = htmlspecialchars($modal_id, ENT_QUOTES);
     $size  = $opts['size'] ?? 'modal-lg';
     $intro = trim((string)($opts['intro'] ?? ''));
+    // Every piece of text in the visitor's language -- title, intro, headings, notes, labels and
+    // plain card text (t_plain()). Card text with 'html' => true is left as written: it carries
+    // markup, and a translation from the spreadsheet is not trusted to carry markup.
+    $intro = $intro !== '' ? t_plain($intro) : '';
+    $title = t_plain($title);
 
     $h  = '<div class="modal fade help-modal" id="' . $id . '" tabindex="-1"';
     $h .= ' aria-labelledby="' . $id . '-label" aria-hidden="true">';
@@ -162,7 +173,7 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
 
     $h .= '<div class="modal-header py-2">';
     $h .= '<h5 class="modal-title fw-bold" id="' . $id . '-label">' . htmlspecialchars($title) . '</h5>';
-    $h .= '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>';
+    $h .= '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' . htmlspecialchars(t_plain('Close'), ENT_QUOTES) . '"></button>';
     $h .= '</div>';
 
     $h .= '<div class="modal-body">';
@@ -184,6 +195,7 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
         $h .= '<div class="help-modal-sec">';
 
         $heading = trim((string)($section['heading'] ?? ''));
+        if ($heading !== '') $heading = t_plain($heading);
         if ($heading !== '') {
             $h .= '<h6 class="help-modal-section">' . htmlspecialchars($heading) . '</h6>';
         }
@@ -191,6 +203,7 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
         // Optional one-line note under the heading — a caveat or scope statement that
         // applies to the whole section rather than any one card.
         $note = trim((string)($section['note'] ?? ''));
+        if ($note !== '') $note = t_plain($note);
         if ($note !== '') {
             $h .= '<p class="text-muted small mb-3">' . htmlspecialchars($note) . '</p>';
         }
@@ -202,6 +215,8 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
             if ($label === '' && $text === '') {
                 continue;
             }
+            if ($label !== '') $label = t_plain($label);
+            if ($text !== '' && empty($card['html'])) $text = t_plain($text);
             $body = !empty($card['html']) ? $text : htmlspecialchars($text);
 
             // An 'accent' card is set apart from its siblings — a worked example, a caveat —
@@ -274,6 +289,7 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
  * @param string $extra additional classes for spacing on a particular page
  */
 function page_purpose(string $text, string $extra = '', bool $html = false, bool $visible = true): string {
+    if (!$html) $text = t_plain($text);   // a sentence with markup is left as written (see help_modal())
     $body = $html ? $text : htmlspecialchars($text);
 
     // $visible = false: declared for extraction, but NOT shown.
