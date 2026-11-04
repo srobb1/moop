@@ -127,7 +127,7 @@
                     <div class="small text-muted mt-2">
                         <i class="fa fa-cut me-1"></i><?= t('Want part of a sequence? Add a range:') . "\n" ?>
                         <code><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span>:1-60</code>.
-                        <a href="#idInfoCollapse" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="idInfoCollapse">How IDs and ranges work</a>
+                        <a href="#idInfoCollapse" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="idInfoCollapse"><?= t('How IDs and ranges work') ?></a>
                     </div>
 
                     <div id="searchIdsDisplay" class="mt-3 p-3 bg-light border rounded" style="display:none;">
@@ -153,22 +153,24 @@
                                     <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span>:1..60</code> ·
                                     <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span> 1-60</code> ·
                                     <code class="text-nowrap"><span class="ex-tx"><?= htmlspecialchars($ex_tx) ?></span> 1..60</code></li>
-                                <li>The range applies to <em>every</em> sequence of that ID — protein, mRNA, CDS and genomic. On a gene ID, to all of its transcripts.</li>
-                                <li><strong>Positions count in each sequence's own units:</strong> amino acids in a protein, nucleotides in mRNA and CDS.
-                                    So <code>1-60</code> is amino acids 1–60 of the protein but only the first 60 nucleotides of the CDS, which encode amino acids 1–20.
-                                    For the CDS that matches amino acids 1–60, ask for <code>1-180</code>. On the genomic region, <code>1</code> is the first base of the gene or transcript, introns count.</li>
+                                <li><?= t_markup('The range applies to %s sequence of that ID — protein, mRNA, CDS and genomic.', '<em>' . t('every') . '</em>') ?> <?= t('On a gene ID, to all of its transcripts.') ?></li>
+                                <li><strong><?= t("Positions count in each sequence's own units:") ?></strong> <?= t('amino acids in a protein, nucleotides in mRNA and CDS.') . "\n" ?>
+                                    <?= t_markup('So %s is amino acids 1–60 of the protein but only the first 60 nucleotides of the CDS, which encode amino acids 1–20.', '<code>1-60</code>') . "\n" ?>
+                                    <?= t_markup('For the CDS that matches amino acids 1–60, ask for %s.', '<code>1-180</code>') ?> <?= t_markup('On the genomic region, %s is the first base of the gene or transcript, introns count.', '<code>1</code>') ?></li>
                                 <li><?= t('Want several pieces of one sequence? Put each range on its own line.') ?></li>
                                 <li><?= t('Positions start at 1, and the start cannot be after the end. A range running past the end of a sequence stops at its end.') ?></li>
                             </ul>
                             <p class="fw-semibold mb-1"><?= t('Genomic region and flanks') ?></p>
                             <ul class="mb-2 ps-3">
-                                <li>Every genomic sequence reads 5′ to 3′ along the gene: a gene on the minus <?= gloss('strand') ?> is reverse-complemented. The header gives the location and strand, e.g. <code>chr2:16003283-16019242(-)</code>.</li>
-                                <li>Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.
-                                    For a transcript, CDS or protein ID that is the isoform's own start and end; for a gene ID, the gene's.</li>
-                                <li>Genomic sequence needs the gene set to be placed on a genome; <?= gloss('transcriptome') ?>-only gene sets have none.</li>
+                                <li><?= t_markup('Every genomic sequence reads 5′ to 3′ along the gene: a gene on the minus %s is reverse-complemented.', gloss('strand')) ?> <?= t_markup('The header gives the location and strand, e.g. %s.', '<code>chr2:16003283-16019242(-)</code>') ?></li>
+                                <li><?= t('Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.') . "\n" ?>
+                                    <?= t("For a transcript, CDS or protein ID that is the isoform's own start and end; for a gene ID, the gene's.") ?></li>
+                                <li><?= t_markup('Genomic sequence needs the gene set to be placed on a genome; %s-only gene sets have none.', gloss('transcriptome')) ?></li>
                             </ul>
                             <p class="fw-semibold mb-1"><?= t('After you retrieve') ?></p>
-                            <p class="mb-0">The "IDs to search" box shows which IDs were found (<span style="background:#d4edda; padding:2px 4px; border-radius:2px;"><?= t('green') ?></span><?= t(') and which were not (') ?><span style="background:#f8d7da; padding:2px 4px; border-radius:2px;"><?= t('red') ?></span>).</p>
+                            <p class="mb-0"><?= t_markup('The "IDs to search" box shows which IDs were found (%1$s) and which were not (%2$s).',
+                                '<span style="background:#d4edda; padding:2px 4px; border-radius:2px;">' . t('green') . '</span>',
+                                '<span style="background:#f8d7da; padding:2px 4px; border-radius:2px;">' . t('red') . '</span>') ?></p>
                         </div>
                     </div>
                 </div>
@@ -229,16 +231,22 @@
             <div class="card shadow-sm mb-4" id="retrievalSummary">
                 <div class="card-body">
                     <p class="mb-2">
-                        <strong><?= number_format($retrieval_summary['ids']) ?> ID<?= $retrieval_summary['ids'] === 1 ? '' : 's' ?>:
-                        <?= number_format($rs_found) ?> found<?= $rs_missing ? ', ' . number_format(count($rs_missing)) . ' not found' : '' ?>.</strong>
+                        <strong><?php
+                        $__ids = number_format($retrieval_summary['ids']);
+                        if ($rs_missing) echo $retrieval_summary['ids'] === 1
+                            ? t('%1$s ID: %2$s found, %3$s not found.', $__ids, number_format($rs_found), number_format(count($rs_missing)))
+                            : t('%1$s IDs: %2$s found, %3$s not found.', $__ids, number_format($rs_found), number_format(count($rs_missing)));
+                        else echo $retrieval_summary['ids'] === 1
+                            ? t('%1$s ID: %2$s found.', $__ids, number_format($rs_found))
+                            : t('%1$s IDs: %2$s found.', $__ids, number_format($rs_found)); ?></strong>
                     </p>
                     <p class="small text-muted mb-3">
                         <?php if ($retrieval_summary['reason'] === 'count'): ?>
-                            Lists of more than <?= (int)$show_max_ids ?> IDs are available as a download only, so the page stays quick. Every ID is included.
+                            <?= t('Lists of more than %d IDs are available as a download only, so the page stays quick.', (int)$show_max_ids) ?> <?= t('Every ID is included.') . "\n" ?>
                         <?php else: ?>
-                            These sequences are too long to show on the page, so they are available as a download only. Every ID is included.
+                            <?= t('These sequences are too long to show on the page, so they are available as a download only.') ?> <?= t('Every ID is included.') . "\n" ?>
                         <?php endif; ?>
-                        Ranges and flanks apply to the download as they would on the page.
+                        <?= t('Ranges and flanks apply to the download as they would on the page.') . "\n" ?>
                     </p>
                     <div class="d-flex flex-wrap align-items-center gap-2" id="retrieveDownloads">
                         <span class="small text-muted me-1"><i class="fa fa-download me-1"></i><?= t('Download as FASTA:') ?></span>
@@ -255,7 +263,7 @@
                             <?= htmlspecialchars(implode(', ', array_slice($rs_missing, 0, $rs_shown))) ?><?= count($rs_missing) > $rs_shown ? ', …' : '' ?>
                             <?php if (count($rs_missing) > $rs_shown): ?>
                                 <details class="mt-2">
-                                    <summary>All <?= number_format(count($rs_missing)) ?> not found, to copy</summary>
+                                    <summary><?= t('All %s not found, to copy', number_format(count($rs_missing))) ?></summary>
                                     <textarea class="form-control form-control-sm font-monospace mt-2" rows="6" readonly><?= htmlspecialchars(implode("\n", $rs_missing)) ?></textarea>
                                 </details>
                             <?php endif; ?>

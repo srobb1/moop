@@ -45,7 +45,7 @@
                 <span class="badge-custom"><?= htmlspecialchars($id) ?></span>
             <?php endforeach; ?>
             <?php if (count($uniquenames) > 10): ?>
-                <span class="badge-custom">+<?= count($uniquenames) - 10 ?> more</span>
+                <span class="badge-custom"><?= t('+%d more', count($uniquenames) - 10) ?></span>
             <?php endif; ?>
         </div>
     </div>
@@ -57,8 +57,8 @@
         <div class="card shadow-sm mb-4" id="retrievalSummary">
             <div class="card-body">
                 <p class="small text-muted mb-3">
-                    Selections of more than <?= (int)$show_max_ids ?> features are available as a download only, so the page stays quick.
-                    Every feature is included.
+                    <?= t('Selections of more than %d features are available as a download only, so the page stays quick.', (int)$show_max_ids) . "\n" ?>
+                    <?= t('Every feature is included.') . "\n" ?>
                 </p>
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <span class="small text-muted me-1"><i class="fa fa-download me-1"></i><?= t('Download as FASTA:') ?></span>

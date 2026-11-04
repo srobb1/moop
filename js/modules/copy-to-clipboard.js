@@ -68,7 +68,7 @@ function initializeCopyTooltips() {
             // Create simple tooltip
             const tooltip = document.createElement("div");
             tooltip.id = "custom-copy-tooltip";
-            tooltip.textContent = "Click to copy";
+            tooltip.textContent = moopT('Click to copy');
             tooltip.style.cssText = `
                 position: fixed;
                 background-color: #000;

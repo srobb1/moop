@@ -26,13 +26,13 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
   <div class="alert alert-info d-flex align-items-center py-2 mb-3">
     <i class="fas fa-filter me-2 flex-shrink-0"></i>
     <span class="me-3">
-      Filtered to:
+      <?= t('Filtered to:') . "\n" ?>
       <?php
         $parts = [];
         if (!empty($display_name)) {
             $parts[] = '<strong>' . htmlspecialchars($display_name) . '</strong>';
         } elseif (!empty($context_group)) {
-            $parts[] = 'group <strong>' . htmlspecialchars($context_group) . '</strong>';
+            $parts[] = t_markup('group %s', '<strong>' . htmlspecialchars($context_group) . '</strong>');
         } elseif (!empty($filter_organisms)) {
             $n = count($filter_organisms);
             if ($n === 1) {
@@ -41,13 +41,13 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
                 $names = array_map(fn($o) => '<em>' . htmlspecialchars(str_replace('_', ' ', $o)) . '</em>', $filter_organisms);
                 $parts[] = implode(', ', $names);
             } else {
-                $parts[] = '<strong>' . $n . ' organisms</strong>';
+                $parts[] = '<strong>' . t('%d organisms', $n) . '</strong>';
             }
         } elseif (!empty($context_organism)) {
             $parts[] = '<strong><em>' . htmlspecialchars(str_replace('_', ' ', $context_organism)) . '</em></strong>';
         }
-        if (!empty($context_assembly)) $parts[] = 'assembly <strong>' . htmlspecialchars($context_assembly) . '</strong>';
-        if (!empty($context_gene_set)) $parts[] = 'gene set <strong>' . htmlspecialchars($context_gene_set) . '</strong>';
+        if (!empty($context_assembly)) $parts[] = t_markup('assembly %s', '<strong>' . htmlspecialchars($context_assembly) . '</strong>');
+        if (!empty($context_gene_set)) $parts[] = t_markup('gene set %s', '<strong>' . htmlspecialchars($context_gene_set) . '</strong>');
         echo implode(', ', $parts);
       ?>
     </span>
@@ -60,8 +60,9 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
   <?php if (empty($download_tree)): ?>
     <div class="alert alert-info">
       <i class="fas fa-info-circle me-1"></i>
-      No downloadable files were found for your current access level
-      <?= !empty($context_organism) ? ' for ' . htmlspecialchars(str_replace('_', ' ', $context_organism)) : '' ?>.
+      <?= (!empty($context_organism)
+          ? t('No downloadable files were found for your current access level for %s.', str_replace('_', ' ', $context_organism))
+          : t('No downloadable files were found for your current access level.')) . "\n" ?>
     </div>
   <?php else: ?>
 

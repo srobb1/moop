@@ -59,9 +59,8 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
         <?php if ($gsc_many): ?>
         <?php /* Guidance, not a verdict -- still no "best" badge, for the reason in the header. */ ?>
         <p class="small text-muted mb-2">
-          <strong>Not sure which to use?</strong> A higher <?= gloss('busco', 'BUSCO') ?> score and a higher share with a
-          <?= gloss('homolog') ?> usually mean a more complete gene set. If you are following a paper, use the
-          gene set it used.
+          <strong><?= t('Not sure which to use?') ?></strong> <?= t_markup('A higher %1$s score and a higher share with a %2$s usually mean a more complete gene set.', gloss('busco', 'BUSCO'), gloss('homolog')) . "\n" ?>
+          <?= t('If you are following a paper, use the gene set it used.') . "\n" ?>
         </p>
         <?php endif; ?>
         <div class="table-responsive">
@@ -133,21 +132,21 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
                     <?php /* No N50: the "genome" is one transcript per gene, so the figure is a
                              transcript length and would read as a very fragmented genome. */ ?>
                     <span class="badge text-bg-warning"><?= t('Not a genome') ?></span>
-                    <div class="small text-muted">one transcript per gene<?= $st ? ' &middot; ' . number_format($st['sequences']) . ' seqs' : '' ?></div>
+                    <div class="small text-muted"><?= t('one transcript per gene') ?><?= $st ? ' &middot; ' . t('%s seqs', number_format($st['sequences'])) : '' ?></div>
                   <?php elseif ($st): ?>
                     <?php $gsc_n50_tip = !empty($st['l50'])
-                        ? 'Half the genome is in ' . number_format($st['l50']) . ' sequence' . ($st['l50'] == 1 ? '' : 's')
-                          . ' of at least ' . moop_format_bp($st['n50'])
+                        ? ($st['l50'] == 1 ? t_plain('Half the genome is in %1$s sequence of at least %2$s', number_format($st['l50']), moop_format_bp($st['n50']))
+                                           : t_plain('Half the genome is in %1$s sequences of at least %2$s', number_format($st['l50']), moop_format_bp($st['n50'])))
                         : ''; ?>
                     <span<?= $gsc_n50_tip !== '' ? ' title="' . htmlspecialchars($gsc_n50_tip) . '"' : '' ?>><?= moop_format_bp($st['n50']) ?></span><?= ($gsc_top['n50'] !== null && $st['n50'] >= $gsc_top['n50']) ? $gsc_mark : '' ?>
                     <div class="small text-muted">
                       <?php if (!empty($st['l50'])): ?>L50 <?= number_format($st['l50']) ?> &middot; <?php endif; ?>
-                      <?= number_format($st['sequences']) ?> seqs &middot; <?= moop_format_bp($st['total_length']) ?>
+                      <?= t('%s seqs', number_format($st['sequences'])) ?> &middot; <?= moop_format_bp($st['total_length']) . "\n" ?>
                     </div>
                     <?php /* Contig, gap and GC figures exist only in the pipeline's assembly_stats.json
                              (a .fai has lengths alone); without it these lines are simply absent. */ ?>
                     <?php if (isset($st['contig_n50'])): ?>
-                    <div class="small text-muted">contig N50 <?= moop_format_bp($st['contig_n50']) ?></div>
+                    <div class="small text-muted"><?= t('contig N50 %s', moop_format_bp($st['contig_n50'])) ?></div>
                     <?php endif; ?>
                     <?php if (isset($st['gap_pct']) || isset($st['gc_pct'])): ?>
                     <div class="small text-muted">
@@ -167,8 +166,7 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
           </table>
         </div>
         <p class="small text-muted mb-0 mt-2">
-          A dash means the figure is not available yet — BUSCO results arrive with each gene set's
-          pipeline run, and the counts are refreshed in the background after the data changes.
+          <?= t("A dash means the figure is not available yet — BUSCO results arrive with each gene set's pipeline run, and the counts are refreshed in the background after the data changes.") . "\n" ?>
         </p>
       </div>
     </div>

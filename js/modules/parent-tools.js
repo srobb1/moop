@@ -67,11 +67,11 @@ $(document).ready(function () {
         });
 
         $btn.attr('data-state', collapsing ? 'collapsed' : 'expanded');
-        $btn.find('.label').text(collapsing ? 'Expand all' : 'Collapse all');
+        $btn.find('.label').text(collapsing ? moopT('Expand all') : moopT('Collapse all'));
         $btn.find('i').attr('class', collapsing ? 'fas fa-expand me-1' : 'fas fa-compress me-1');
         $btn.attr('title', collapsing
-            ? 'Expand every transcript again'
-            : 'Collapse every transcript so the list fits on one screen');
+            ? moopT('Expand every transcript again')
+            : moopT('Collapse every transcript so the list fits on one screen'));
     });
 });
 
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function () {
         { data: null, orderable: false, className: 'text-end', render: function (v, type, row) {
             if (type !== 'display' || row[1] === 0) return '';
             return '<button type="button" class="btn btn-sm moop-data-btn big-gene-load" data-transcript="'
-                 + esc(row[0]) + '">Show annotations</button>';
+                 + esc(row[0]) + '">' + moopTh('Show annotations') + '</button>';
         } }
     );
 
@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     var close = document.createElement('button');
                     close.type = 'button';
                     close.className = 'btn btn-sm moop-data-btn ms-auto';
-                    close.title = 'Close this transcript';
+                    close.title = moopT('Close this transcript');
                     close.innerHTML = '<i class="fas fa-times me-1"></i>Close';
                     close.addEventListener('click', function (ev) {
                         ev.stopPropagation();
@@ -300,14 +300,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     var body = wrap.querySelector('.annotation-card .card-body') || wrap;
                     window.moopDrawIsoform('annot_card_' + id.replace(/[^a-zA-Z0-9_]/g, '_'), body);
                 }
-                btn.textContent = 'Shown below ↓';
+                btn.textContent = moopT('Shown below ↓');
                 btn.disabled = false;
                 wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
             })
             .catch(function () {
                 btn.textContent = label;
                 btn.disabled = false;
-                window.alert('Could not load the annotations for ' + id + '.');
+                window.alert(moopT('Could not load the annotations for %s.', id));
             });
     });
 });

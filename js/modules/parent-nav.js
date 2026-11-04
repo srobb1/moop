@@ -126,12 +126,12 @@
       return '<ul class="pnav-list">' + list.map(function (n) {
         var hasKids = n.children.length > 0;
         var caret = hasKids
-          ? '<button class="pnav-caret" aria-expanded="true" aria-label="Toggle section" data-key="' + n.key + '">' + chevron + "</button>"
+          ? '<button class="pnav-caret" aria-expanded="true" aria-label="' + moopTh('Toggle section') + '" data-key="' + n.key + '">' + chevron + "</button>"
           : '<span class="pnav-spacer"></span>';
         var tagSlug = n.tag ? n.tag.toLowerCase().replace(/[^a-z0-9]+/g, "") : "";
         var tag = n.tag ? '<span class="pnav-tag pnav-tag--' + tagSlug + '">' + escapeHtml(n.tag) + "</span>" : "";
         var cnt = n.count
-          ? '<span class="pnav-count" aria-label="' + escapeHtml(n.count) + ' annotations">' + escapeHtml(n.count) + "</span>"
+          ? '<span class="pnav-count" aria-label="' + moopTh('%s annotations', n.count) + '">' + escapeHtml(n.count) + "</span>"
           : "";
         var link =
           '<a class="pnav-link lvl-' + n.lvl + '" href="#" data-key="' + n.key + '" title="' +
@@ -306,9 +306,9 @@
     function reflect() {
       var c = layout.classList.contains("pnav-collapsed");
       if (toggle) {
-        toggle.setAttribute("aria-label", c ? "Expand navigation" : "Collapse navigation");
+        toggle.setAttribute("aria-label", c ? moopT("Expand navigation") : moopT("Collapse navigation"));
         toggle.setAttribute("aria-expanded", c ? "false" : "true");
-        toggle.title = c ? "Show section navigation" : "Collapse (content goes full width)";
+        toggle.title = c ? moopT("Show section navigation") : moopT("Collapse (content goes full width)");
       }
     }
     if (toggle) {

@@ -118,16 +118,16 @@
         };
         const canSeq = (typeof genomeSequenceAvailable !== 'undefined') && genomeSequenceAvailable;
         if (canSeq && window.moopOpenFormatter) {
-            bar.appendChild(mkBtn('fa-palette', 'Format sequence', 'Open this isoform\'s sequence with each feature type highlighted',
+            bar.appendChild(mkBtn('fa-palette', moopT('Format sequence'), moopT("Open this isoform's sequence with each feature type highlighted"),
                 () => window.moopOpenFormatter(iso)));
         }
         const group = document.createElement('div');
         group.className = 'btn-group btn-group-sm';
         if (canSeq && !(typeof genomeIsTranscripts !== 'undefined' && genomeIsTranscripts)) {
-            group.appendChild(mkBtn('fa-download', 'FASTA', 'Download the genomic sequence — gene locus plus this isoform\'s span',
+            group.appendChild(mkBtn('fa-download', 'FASTA', moopT("Download the genomic sequence — gene locus plus this isoform's span"),
                 () => showGenomicModal(data.gene, data.isoforms)));
         }
-        group.appendChild(mkBtn('fa-download', 'GFF', 'Download GFF3 for the gene — all its isoforms and sub-features',
+        group.appendChild(mkBtn('fa-download', 'GFF', moopT('Download GFF3 for the gene — all its isoforms and sub-features'),
             () => showGffModal(data.gene)));
         bar.appendChild(group);
         box.appendChild(bar);
@@ -203,7 +203,7 @@
                 const bg = makeRect(0, gRowTop, VIRTUAL_WIDTH, ROW_HEIGHT + LABEL_HEIGHT, 'transparent', 0);
                 bg.setAttribute('class', 'iso-row-bg');
                 bg.style.cursor = 'pointer';
-                addRegionTitle(bg, 'Gene locus — download genomic sequence');
+                addRegionTitle(bg, moopT('Gene locus — download genomic sequence'));
                 bg.addEventListener('click', () => showGenomicModal(gene, isoforms));
                 gG.appendChild(bg);
 
@@ -216,7 +216,7 @@
                 gUp.setAttribute('stroke', COLOR_UPSTREAM_S);
                 gUp.setAttribute('stroke-width', '1');
                 gUp.style.cursor = 'pointer';
-                addRegionTitle(gUp, `Upstream flanking — ${gene.id || 'Gene'}`);
+                addRegionTitle(gUp, moopT('Upstream flanking — %s', gene.id || moopT('Gene')));
                 gUp.addEventListener('click', e => { e.stopPropagation(); fetchFlank(gene, 'upstream', 1000); });
                 gG.appendChild(gUp);
                 gG.appendChild(makeFlankLabel(gUpX + FLANK_W / 2, gCy, 'upstream', COLOR_UPSTREAM_S));
@@ -226,7 +226,7 @@
                 gDn.setAttribute('stroke', COLOR_DOWNSTREAM_S);
                 gDn.setAttribute('stroke-width', '1');
                 gDn.style.cursor = 'pointer';
-                addRegionTitle(gDn, `Downstream flanking — ${gene.id || 'Gene'}`);
+                addRegionTitle(gDn, moopT('Downstream flanking — %s', gene.id || moopT('Gene')));
                 gDn.addEventListener('click', e => { e.stopPropagation(); fetchFlank(gene, 'downstream', 1000); });
                 gG.appendChild(gDn);
                 gG.appendChild(makeFlankLabel(gDnX + FLANK_W / 2, gCy, 'downstream', COLOR_DOWNSTREAM_S));
@@ -356,7 +356,7 @@
                 upRect.setAttribute('stroke', COLOR_UPSTREAM_S);
                 upRect.setAttribute('stroke-width', '1');
                 upRect.style.cursor = 'pointer';
-                addRegionTitle(upRect, `Upstream flanking — ${iso.id}`);
+                addRegionTitle(upRect, moopT('Upstream flanking — %s', iso.id));
                 upRect.addEventListener('click', e => { e.stopPropagation(); fetchFlank(feat, 'upstream', 1000); });
                 g.appendChild(upRect);
                 g.appendChild(makeFlankLabel(upX + FLANK_W / 2, cy, 'upstream', COLOR_UPSTREAM_S));
@@ -366,7 +366,7 @@
                 dnRect.setAttribute('stroke', COLOR_DOWNSTREAM_S);
                 dnRect.setAttribute('stroke-width', '1');
                 dnRect.style.cursor = 'pointer';
-                addRegionTitle(dnRect, `Downstream flanking — ${iso.id}`);
+                addRegionTitle(dnRect, moopT('Downstream flanking — %s', iso.id));
                 dnRect.addEventListener('click', e => { e.stopPropagation(); fetchFlank(feat, 'downstream', 1000); });
                 g.appendChild(dnRect);
                 g.appendChild(makeFlankLabel(dnX + FLANK_W / 2, cy, 'downstream', COLOR_DOWNSTREAM_S));
@@ -374,7 +374,7 @@
 
             // Tooltip on the row background (navigate hint)
             const title = document.createElementNS(NS, 'title');
-            title.textContent = iso.anchor ? iso.id + ' — click to view annotations' : iso.id;
+            title.textContent = iso.anchor ? moopT('%s — click to view annotations', iso.id) : iso.id;
             g.appendChild(title);
 
             // Row click (label / backbone / bg area) → scroll to annotation section
@@ -449,8 +449,8 @@
         strandText.setAttribute('font-size', '11');
         strandText.setAttribute('fill', COLOR_LABEL);
         strandText.textContent = flip
-            ? '→ 5′ to 3′  (reverse strand, flipped)'
-            : '→ 5′ to 3′  (forward strand)';
+            ? moopT('→ 5′ to 3′  (reverse strand, flipped)')
+            : moopT('→ 5′ to 3′  (forward strand)');
         svg.appendChild(strandText);
     }
 
@@ -656,12 +656,14 @@
                 });
                 fasta = fasta.trimEnd();
 
-                const strandLabel = gene.strand === '-' ? '− (reverse complement shown)' : '+ (forward)';
+                const strandLabel = gene.strand === '-' ? moopTh('− (reverse complement shown)') : moopTh('+ (forward)');
                 document.getElementById('seq-region-meta').innerHTML = `
-                    <dt class="col-sm-3">Type</dt><dd class="col-sm-9"><strong>Genomic</strong></dd>
-                    <dt class="col-sm-3">Gene locus</dt><dd class="col-sm-9">${gene.seqname}:${gene.start.toLocaleString()}–${gene.end.toLocaleString()}</dd>
-                    <dt class="col-sm-3">Strand</dt><dd class="col-sm-9">${strandLabel}</dd>
-                    <dt class="col-sm-3">Sequences</dt><dd class="col-sm-9">${results.length} (gene locus + ${isoforms.length} isoform${isoforms.length !== 1 ? 's' : ''})</dd>`;
+                    <dt class="col-sm-3">${moopTh('Type')}</dt><dd class="col-sm-9"><strong>${moopTh('Genomic')}</strong></dd>
+                    <dt class="col-sm-3">${moopTh('Gene locus')}</dt><dd class="col-sm-9">${gene.seqname}:${gene.start.toLocaleString()}–${gene.end.toLocaleString()}</dd>
+                    <dt class="col-sm-3">${moopTh('Strand')}</dt><dd class="col-sm-9">${strandLabel}</dd>
+                    <dt class="col-sm-3">${moopTh('Sequences')}</dt><dd class="col-sm-9">${isoforms.length === 1
+                        ? moopTh('%1$d (gene locus + %2$d isoform)', results.length, 1)
+                        : moopTh('%1$d (gene locus + %2$d isoforms)', results.length, isoforms.length)}</dd>`;
 
                 document.getElementById('seq-region-sequence').textContent = fasta;
 
@@ -725,7 +727,7 @@
             .catch(err => {
                 document.getElementById('seq-region-loading').style.display = 'none';
                 const el = document.getElementById('seq-region-error');
-                el.textContent = 'Could not load GFF: ' + err.message;
+                el.textContent = moopT('Could not load GFF: %s', err.message);
                 el.style.display = 'block';
             });
     }
@@ -734,13 +736,13 @@
         currentRegion   = region;
         currentSequence = data.sequence;
 
-        const strandLabel = region.strand === '-' ? '− (reverse complement shown)' : '+ (forward)';
+        const strandLabel = region.strand === '-' ? moopTh('− (reverse complement shown)') : moopTh('+ (forward)');
         document.getElementById('seq-region-meta').innerHTML = `
-            <dt class="col-sm-3">Type</dt><dd class="col-sm-9"><strong>${region.type}</strong></dd>
-            <dt class="col-sm-3">Isoform</dt><dd class="col-sm-9">${region.isoform}</dd>
-            <dt class="col-sm-3">Region</dt><dd class="col-sm-9">${region.seqname}:${region.start.toLocaleString()}–${region.end.toLocaleString()}</dd>
-            <dt class="col-sm-3">Strand</dt><dd class="col-sm-9">${strandLabel}</dd>
-            <dt class="col-sm-3">Length</dt><dd class="col-sm-9">${data.length.toLocaleString()} bp</dd>`;
+            <dt class="col-sm-3">${moopTh('Type')}</dt><dd class="col-sm-9"><strong>${region.type}</strong></dd>
+            <dt class="col-sm-3">${moopTh('Isoform')}</dt><dd class="col-sm-9">${region.isoform}</dd>
+            <dt class="col-sm-3">${moopTh('Region')}</dt><dd class="col-sm-9">${region.seqname}:${region.start.toLocaleString()}–${region.end.toLocaleString()}</dd>
+            <dt class="col-sm-3">${moopTh('Strand')}</dt><dd class="col-sm-9">${strandLabel}</dd>
+            <dt class="col-sm-3">${moopTh('Length')}</dt><dd class="col-sm-9">${moopTh('%s bp', data.length.toLocaleString())}</dd>`;
 
         // Sequence as FASTA — matches the downloaded file exactly
         const seq    = data.sequence;
@@ -828,7 +830,7 @@
 
     function addRegionTitle(el, text) {
         const t = document.createElementNS(NS, 'title');
-        t.textContent = text + ' — click to view sequence';
+        t.textContent = moopT('%s — click to view sequence', text);
         el.appendChild(t);
     }
 

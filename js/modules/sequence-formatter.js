@@ -216,11 +216,11 @@
                   `<i class="fas ${s.visible ? 'fa-eye' : 'fa-eye-slash'} ${s.visible ? 'text-secondary' : 'text-muted'}"></i></button>` +
                 `</td>` +
                 `<td class="ps-1">` +
-                  `<span class="sf-ctrl" data-t="${t}" data-p="hl" title="Click to toggle highlight" ` +
+                  `<span class="sf-ctrl" data-t="${t}" data-p="hl" title="${moopTh('Click to toggle highlight')}" ` +
                   `style="cursor:pointer;padding:2px 9px;border-radius:12px;font-size:0.75rem;font-weight:600;letter-spacing:0.02em;white-space:nowrap;user-select:none;${s.hl ? `background:${m.swatch};color:#fff;` : 'background:#e9ecef;color:#333;'}">${m.label}</span>` +
                 `</td>` +
                 `<td><select class="form-select form-select-sm sf-ctrl" data-t="${t}" data-p="case" style="min-width:80px">` +
-                  `<option value="normal"${s.caseMode === 'normal' ? ' selected' : ''}>Original</option>` +
+                  `<option value="normal"${s.caseMode === 'normal' ? ' selected' : ''}>${moopTh('Original')}</option>` +
                   `<option value="upper"${s.caseMode === 'upper'   ? ' selected' : ''}>UPPER</option>` +
                   `<option value="lower"${s.caseMode === 'lower'   ? ' selected' : ''}>lower</option>` +
                 `</select></td>` +
@@ -254,7 +254,7 @@
             cfg[t].visible = !cfg[t].visible;
             const icon = el.querySelector('i');
             icon.className = `fas ${cfg[t].visible ? 'fa-eye text-secondary' : 'fa-eye-slash text-muted'}`;
-            el.title = cfg[t].visible ? 'Hide — cut from sequence' : 'Show';
+            el.title = cfg[t].visible ? moopT('Hide — cut from sequence') : moopT('Show');
             render(); return;
         }
         if (p === 'hl' && e.type === 'click') {
@@ -349,8 +349,8 @@
         const orig = btn.dataset.origHtml || btn.innerHTML;
         btn.dataset.origHtml = orig;
         btn.innerHTML = ok
-            ? '<i class="fas fa-check me-1"></i>Copied!'
-            : '<i class="fas fa-exclamation-triangle me-1"></i>Copy failed — select and press Ctrl+C';
+            ? '<i class="fas fa-check me-1"></i>' + moopTh('Copied!')
+            : '<i class="fas fa-exclamation-triangle me-1"></i>' + moopTh('Copy failed — select and press Ctrl+C');
         setTimeout(() => { btn.innerHTML = orig; }, ok ? 2000 : 4000);
     }
 
@@ -483,8 +483,8 @@
       </div>
       <div class="modal-body">
         <div id="sf-loading" class="text-center py-4">
-          <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading…</span></div>
-          <p class="text-muted mt-2 mb-0 small">Fetching sequence…</p>
+          <div class="spinner-border text-primary" role="status"><span class="visually-hidden">${moopTh('Loading…')}</span></div>
+          <p class="text-muted mt-2 mb-0 small">${moopTh('Fetching sequence…')}</p>
         </div>
         <div id="sf-error" class="alert alert-danger mb-0" style="display:none;"></div>
         <div id="sf-content" style="display:none;">
@@ -492,8 +492,8 @@
             <thead class="table-light">
               <tr>
                 <th></th>
-                <th class="ps-1">Type</th>
-                <th>Case</th>
+                <th class="ps-1">${moopTh('Type')}</th>
+                <th>${moopTh('Case')}</th>
                 <th class="text-center" style="min-width:32px">B</th>
                 <th class="text-center" style="min-width:32px">I</th>
                 <th class="text-center" style="min-width:32px">U</th>
@@ -504,23 +504,23 @@
           <pre id="sf-seq" style="font-family:monospace;font-size:0.85em;line-height:1.8;white-space:pre;overflow-x:auto;background:#f8f9fa;padding:14px;border-radius:4px;border:1px solid #dee2e6;margin-bottom:8px;"></pre>
           <div class="d-flex gap-2 align-items-center flex-wrap">
             <button class="btn btn-sm btn-outline-secondary" id="sf-copy-rich">
-              <i class="fas fa-paint-brush me-1"></i>Copy (rich text)
+              <i class="fas fa-paint-brush me-1"></i>${moopTh('Copy (rich text)')}
             </button>
             <button class="btn btn-sm btn-outline-secondary" id="sf-copy-plain">
-              <i class="fas fa-copy me-1"></i>Copy (plain text)
+              <i class="fas fa-copy me-1"></i>${moopTh('Copy (plain text)')}
             </button>
             <button class="btn btn-sm btn-outline-secondary ms-auto" id="sf-reset"
-                    title="Put every highlight, case and style control back to how it was when this opened">
-              <i class="fas fa-undo me-1"></i>Reset
+                    title="${moopTh('Put every highlight, case and style control back to how it was when this opened')}">
+              <i class="fas fa-undo me-1"></i>${moopTh('Reset')}
             </button>
-            <small class="text-muted ms-1">Rich text preserves highlight and style when pasting into Word or Google&nbsp;Docs.</small>
+            <small class="text-muted ms-1">${moopTm('Rich text preserves highlight and style when pasting into Word or %s.', 'Google&nbsp;Docs')}</small>
           </div>
         </div>
       </div>
       <!-- Footer Close as well as the header X — see the note in gene-model-viewer.js.
            This dialog is modal-xl and scrollable, so the X can be a whole screen away. -->
       <div class="modal-footer py-2">
-        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">${moopTh('Close')}</button>
       </div>
     </div>
   </div>
@@ -579,7 +579,7 @@
                 wireControls();
                 render();
             })
-            .catch(err => showError('Could not fetch sequence: ' + err.message));
+            .catch(err => showError(moopT('Could not fetch sequence: %s', err.message)));
     }
 
     // For the isoform diagrams drawn in a big gene's cards (gene-model-viewer.js).
