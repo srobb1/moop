@@ -3308,6 +3308,21 @@ foreach (['tx', 'gn', 'said'] as $_d) { array_map('unlink', glob("$_gk/$_d/gs/*"
 rmdir($_gk);
 
 // ----------------------------------------------------------------------------
+group('cache root -- with cache_path unset, a hidden organisms/.cache, never the organism tree itself');
+// cuttingclass, 2026-11-05: the fallback WAS the organism tree, so blast_queue/ and metrics/ sat
+// next to the organisms and Manage Groups listed blast_queue as an organism.
+require_once "$BASE/lib/cache_paths.php";
+$_cfg = ConfigManager::getInstance();
+$_rp = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['cache_path'] = ''; $_c['organism_data'] = '/srv/x/organisms/';
+$_rp->setValue($_cfg, $_c);
+ok(moop_cache_root() === '/srv/x/organisms/.cache', 'unset: organisms/.cache');
+$_c['cache_path'] = '/var/www/site-cache/'; $_rp->setValue($_cfg, $_c);
+ok(moop_cache_root() === '/var/www/site-cache', 'set: the configured folder, as before');
+$_rp->setValue($_cfg, $_saved);
+
+// ----------------------------------------------------------------------------
 group('BLAST queue: it cannot get stuck');
 // lib/blast_queue.php. State is flock()s, which the kernel drops when a process dies, so the
 // things to prove are: a free unit is always takeable, nothing is held half-way, a dead

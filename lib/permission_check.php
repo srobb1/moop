@@ -975,14 +975,14 @@ function moop_build_permission_items($config, array $ctx): array {
             'why_write' => 'getAccessibleGeneSets() (every tool page) refreshes this when an organism.sqlite mtime/size changes',
         ],
 
-        // Cache Directory - Write Required (only when cache_path is configured)
+        // Cache Directory - Write Required. With cache_path unset it is organisms/.cache
+        // (moop_cache_root()), which housekeeping creates -- not missing before then.
         [
             'name' => 'Cache Directory',
             'description' => 'Directory for generated caches (organism scan, annotation counts, chromosome names, annotated feature types). All contents are regenerable.',
             'type' => 'directory',
-            // Empty when cache_path is unset — the loop skips entries with no paths,
-            // and the in-tree caches are covered by the organism directory checks above.
-            'paths' => ($cache_path !== '' ? [$cache_path] : []),
+            'paths' => [$cache_path !== '' ? $cache_path : rtrim($organism_data, '/') . '/.cache'],
+            'created_on_demand' => $cache_path === '',
             'required_perms' => '2775',
             'required_owner' => 'apache',
             'required_group' => $web_group,

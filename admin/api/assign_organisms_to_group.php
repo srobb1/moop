@@ -22,14 +22,10 @@ $group_name = $_POST['group'] ?? 'New';
 $group_data = loadJsonFile($groups_file, []);
 
 // Get all organisms in system
-$organisms_in_system = [];
-if (is_dir($organism_data_dir)) {
-    foreach (scandir($organism_data_dir) as $item) {
-        if ($item !== '.' && $item !== '..' && is_dir("$organism_data_dir/$item")) {
-            $organisms_in_system[] = $item;
-        }
-    }
-}
+// moop_organism_dirs(): the one list of organism folders -- it skips dot-folders (.retired, .cache),
+// which this loop used to count as organisms.
+require_once __DIR__ . '/../../lib/functions_filesystem.php';
+$organisms_in_system = moop_organism_dirs($organism_data_dir);
 
 // Find organisms without ANY group assignments
 $unassigned_organisms = [];

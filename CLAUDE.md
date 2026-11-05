@@ -716,8 +716,9 @@ via `config_editable.json` — read it through ConfigManager, never from `site_c
 3. Run `composer install`
 4. Site-data backup directory is created automatically on first admin login
 5. **Cache directory** — the `cache_path` setting (Admin → Site Configuration) names where
-   the app writes regenerable caches. Leave it empty to keep caches inside `organisms/`
-   (works out of the box). Better: point it at a directory **outside the document root**
+   the app writes regenerable caches. Left empty, they go in a hidden `organisms/.cache/`
+   (works out of the box; until 2026-11-05 they went loose in `organisms/` itself, where
+   `blast_queue/` showed up as an organism). Better: point it at a directory **outside the document root**
    (e.g. `/var/www/moop-cache`), so `organisms/` holds shipped-in data only — regenerable
    caches do not belong in the data tree. On a hardened (SELinux) host that directory needs
    `apache:apache`, mode `2775`, and an `httpd_sys_rw_content_t` rule;

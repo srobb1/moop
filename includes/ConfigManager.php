@@ -1260,7 +1260,7 @@ class ConfigManager
             ],
             'cache_path' => [
                 'label' => 'Cache Directory',
-                'description' => 'Absolute filesystem path for generated caches (organism scan, annotation counts, chromosome names). All contents are regenerable. Leave empty to store caches inside the organisms/ data tree (legacy behavior).',
+                'description' => 'Absolute filesystem path for generated caches (organism scan, annotation counts, chromosome names). All contents are regenerable. Left empty, they go in a hidden .cache folder inside organisms/.',
                 'type' => 'text',
                 'current_value' => $this->getPath('cache_path', ''),
                 'note' => 'Pointing this outside the document root lets the organisms/ tree be read-only to the web server. The directory must exist and be writable by the web server (correct owner/permission and, on SELinux hosts, the httpd_sys_rw_content_t label) — it is auto-created on the next admin login if missing.',

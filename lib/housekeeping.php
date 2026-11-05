@@ -647,21 +647,15 @@ function housekeeping_error_log_retention() {
 /**
  * Ensure the configured cache directory exists.
  *
- * When 'cache_path' points outside the organisms/ tree, create it once here so the
- * first request doesn't pay the mkdir and so a broken configuration surfaces as a
- * logged error rather than silently disabling caching. When 'cache_path' is empty
- * the caches live in the organisms/ tree (which already exists) — nothing to do.
+ * Create the cache root (moop_cache_root(): 'cache_path', or organisms/.cache when it is
+ * empty) once here, so the first request doesn't pay the mkdir and a broken configuration
+ * surfaces as a logged error rather than silently disabling caching.
  */
 function housekeeping_ensure_cache_dir() {
-    $config     = ConfigManager::getInstance();
-    $cache_path = $config->getPath('cache_path');
-
-    if (empty($cache_path)) {
-        return; // legacy in-tree caching; no dedicated directory to create
-    }
-
-    if (!is_dir($cache_path) && !@mkdir($cache_path, 0775, true) && !is_dir($cache_path)) {
-        error_log("MOOP housekeeping: could not create cache dir: $cache_path");
+    require_once __DIR__ . '/cache_paths.php';
+    $cache_root = moop_cache_root();
+    if (!moop_ensure_cache_dir($cache_root)) {
+        error_log("MOOP housekeeping: could not create cache dir: $cache_root");
     }
 }
 

@@ -173,8 +173,7 @@ return [
     // lets the organisms/ data tree be read-only to the web server, which is
     // the more secure posture on a hardened host (see docs/SELINUX_AND_HARDENING.md).
     //
-    // Leave as '' to keep the legacy behaviour: caches are written inside the
-    // organisms/ tree, exactly where earlier versions put them.
+    // Leave as '' and they go in a hidden organisms/.cache/ folder (moop_cache_root()).
     'cache_path' => '',
 
     // ======== Time zone ========

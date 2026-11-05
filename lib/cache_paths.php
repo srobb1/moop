@@ -27,15 +27,20 @@
 /**
  * Root directory for all generated caches.
  *
- * Falls back to the organism data tree if 'cache_path' is unset, which preserves
- * the old behaviour for a deployment that has not configured it.
+ * With 'cache_path' unset it is organisms/.cache -- a hidden folder inside the organism tree,
+ * not the tree itself. It used to BE the tree, so a new site that left the setting empty wrote
+ * blast_queue/, metrics/ and the other caches next to its organisms, and every listing of
+ * organism folders (Manage Groups, Manage Organisms) showed blast_queue as an organism
+ * (cuttingclass, 2026-11-05). Dot-folders are skipped everywhere organisms are listed (.retired
+ * already relies on it), and nginx denies organisms/ to the web, so the caches stay private.
+ * A site that sets 'cache_path' -- the recommended setup -- is unaffected.
  */
 function moop_cache_root(): string
 {
     $config = ConfigManager::getInstance();
     $root   = $config->getPath('cache_path');
     if ($root === '') {
-        $root = $config->getPath('organism_data');
+        $root = rtrim($config->getPath('organism_data'), '/') . '/.cache';
     }
     return rtrim($root, '/');
 }
@@ -112,10 +117,8 @@ function moop_cache_dir_for(string $data_dir): string
 
 /**
  * The single site-wide organism cache.
- * Was: organisms/.organism_cache.json — same filename, new location. The name
- * is kept byte-for-byte so that with 'cache_path' unset the fallback resolves to
- * the exact path the app used before, i.e. no behaviour change for a deployment
- * that never configures a cache directory.
+ * Was: organisms/.organism_cache.json — same filename, now under the cache root
+ * (organisms/.cache/ when 'cache_path' is unset; it is rebuilt there on first use).
  */
 function moop_organism_cache_file(): string
 {
