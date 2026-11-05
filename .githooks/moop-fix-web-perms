@@ -23,7 +23,17 @@
 repo=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$repo" || exit 0
 
-git ls-files -z -- '*.php' '*.js' '*.css' \
+# Every kind of file a BROWSER loads, not only .php/.js/.css: the icon fonts, images, the genome
+# browser's HTML / JSON / WebAssembly, robots.txt. Until 2026-11-05 this listed only
+# .php/.js/.css, so a fresh clone (cuttingclass, the second MOOP on this host) served every icon
+# font as 403 -- no icons anywhere -- while setup-check reported all served files readable.
+# POSIX sh (this runs as #!/bin/sh -- dash on Debian/Ubuntu, so no bash arrays): the patterns
+# are the positional parameters, passed through as "$@".
+set -- '*.php' '*.js' '*.css' '*.map' '*.html' '*.json' '*.txt' '*.wasm' \
+       '*.woff' '*.woff2' '*.ttf' '*.eot' '*.otf' \
+       '*.svg' '*.png' '*.jpg' '*.jpeg' '*.gif' '*.ico' '*.webp'
+
+git ls-files -z -- "$@" \
     ':(exclude)tests/*' ':(exclude)testing/*' 2>/dev/null \
   | xargs -0 -r chmod o+r 2>/dev/null
 
@@ -34,7 +44,7 @@ git ls-files -z -- '*.php' '*.js' '*.css' \
 # modal; caught before commit).
 # `o+x` only -- enter, not list -- and only for directories on the path to a tracked web
 # file, every one of which is already served.
-git ls-files -- '*.php' '*.js' '*.css' \
+git ls-files -- "$@" \
     ':(exclude)tests/*' ':(exclude)testing/*' 2>/dev/null \
   | awk -F/ '{ p = ""; for (i = 1; i < NF; i++) { p = (p == "" ? $i : p "/" $i); print p } }' \
   | sort -u \

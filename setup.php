@@ -42,6 +42,25 @@ if (!file_exists($tokenFile)) {
     @chmod($tokenFile, 0600);
 }
 
+// The web server could not write the token: on an SELinux host the site folder itself is
+// read-only to it (only the labelled data folders are writable), so the write above fails
+// silently -- and the page used to say "cat .setup-token" about a file that did not exist, and
+// refuse every visit. Say so, and give the command that makes one (found 2026-11-05, the second
+// MOOP on this host). The token stays unreadable to the world either way.
+if (!file_exists($tokenFile)) {
+    http_response_code(503);
+    $dir = htmlspecialchars($base);
+    die('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>MOOP Setup</title>
+        <style>body{font-family:sans-serif;padding:40px;max-width:640px;margin:0 auto;}
+        pre{background:#f0f0f0;padding:12px;border-radius:4px;white-space:pre-wrap;}</style></head><body>
+        <h2>Create the setup token</h2>
+        <p>The web server cannot write the one-time setup token into <code>' . $dir . '</code>
+        (normal on an SELinux host: the site folder is read-only to it). Create it from a shell,
+        readable by the web server\'s group only, then reload this page:</p>
+        <pre>openssl rand -hex 16 &gt; ' . $dir . '/.setup-token &amp;&amp; chmod 640 ' . $dir . '/.setup-token</pre>
+        </body></html>');
+}
+
 $expectedToken = trim(@file_get_contents($tokenFile) ?: '');
 $providedToken = $_GET['token'] ?? '';
 

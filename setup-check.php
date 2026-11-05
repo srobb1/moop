@@ -696,9 +696,13 @@ section("Data-tree Execution Guard");
 $server_flavor = detectWebServer();
 
 // [deployed path, canonical file in the repo, reload command]
+// The deployed file is named per site (<site>-security.conf), so a second MOOP on this host is
+// checked against ITS OWN guard. This looked only at moop-security.conf, so a second site found
+// the first site's guard and reported "current" while its own was missing (found 2026-11-05).
+$guard_site = basename($base);
 $guard_targets = [
     'nginx'  => [
-        ['/etc/nginx/default.d/moop-security.conf'],
+        ["/etc/nginx/default.d/$guard_site-security.conf"],
         "$base/docs/nginx/moop-security.conf",
         'sudo nginx -t && sudo systemctl reload nginx',
     ],
@@ -725,13 +729,21 @@ if ($server_flavor === 'unknown') {
         warn("No canonical guard shipped for $server_flavor ($canonical)");
     } elseif ($deployed === null) {
         fail("Execution guard is not deployed ($server_flavor)",
-             "sudo cp $canonical $target && sudo chmod 644 $target\n" .
+             ($server_flavor === 'nginx'
+                 ? "sudo bash -c '$base/scripts/nginx_site_guard.sh $guard_site > $target' && sudo chmod 644 $target\n"
+                 : "sudo cp $canonical $target && sudo chmod 644 $target\n") .
              "         $reload\n" .
              "         (Without it, an uploaded .php in a served data tree will execute.)");
-    } elseif (md5_file($deployed) !== md5_file($canonical)) {
-        warn("Deployed guard differs from " . str_replace("$base/", '', $canonical),
+    } elseif (($expected = $server_flavor === 'nginx'
+                   ? (string) shell_exec('bash ' . escapeshellarg("$base/scripts/nginx_site_guard.sh") . ' ' . escapeshellarg($guard_site))
+                   : (string) file_get_contents($canonical)) === '' || md5((string) @file_get_contents($deployed)) !== md5($expected)) {
+        // nginx: this site's guard is the template re-keyed to its own prefix
+        // (scripts/nginx_site_guard.sh, the one definition shared with fix_moop_selinux.sh).
+        warn("Deployed guard differs from what this site needs (" . basename($deployed) . ")",
              "It may predate a rule that closes a hole. Re-deploy:\n" .
-             "         sudo cp $canonical $deployed && $reload");
+             ($server_flavor === 'nginx'
+                 ? "         sudo bash -c '$base/scripts/nginx_site_guard.sh $guard_site > $deployed' && $reload"
+                 : "         sudo cp $canonical $deployed && $reload"));
     } else {
         pass("Execution guard deployed and current ($server_flavor)");
     }
@@ -804,7 +816,11 @@ if (!is_dir("$base/.git")) {
     // directories traversable.
     $unreadable_files = 0; $untraversable_dirs = [];
     $tracked = [];
-    @exec('git -C ' . escapeshellarg($base) . " ls-files -- '*.php' '*.js' '*.css' ':(exclude)tests/*' ':(exclude)testing/*' 2>/dev/null", $tracked);
+    // The SAME file types as .githooks/moop-fix-web-perms: everything a browser loads. This checked
+    // only .php/.js/.css, so it passed a clone whose icon fonts were all 403 (2026-11-05).
+    $web_types = "'*.php' '*.js' '*.css' '*.map' '*.html' '*.json' '*.txt' '*.wasm' '*.woff' '*.woff2' '*.ttf' '*.eot' '*.otf' "
+               . "'*.svg' '*.png' '*.jpg' '*.jpeg' '*.gif' '*.ico' '*.webp'";
+    @exec('git -C ' . escapeshellarg($base) . " ls-files -- $web_types ':(exclude)tests/*' ':(exclude)testing/*' 2>/dev/null", $tracked);
     foreach ($tracked as $rel) {
         $path = "$base/$rel";
         if (is_file($path) && !(fileperms($path) & 0004)) $unreadable_files++;
@@ -815,7 +831,7 @@ if (!is_dir("$base/.git")) {
     }
     if (!(fileperms($base) & 0001)) $untraversable_dirs['.'] = true;
     if ($tracked && !$unreadable_files && !$untraversable_dirs) {
-        pass('Served files are readable by the web server (' . count($tracked) . ' tracked .php/.js/.css)');
+        pass('Served files are readable by the web server (' . count($tracked) . ' tracked pages, scripts, styles, fonts and images)');
     } elseif ($tracked) {
         fail("$unreadable_files served file(s) not world-readable, " . count($untraversable_dirs) . ' director' . (count($untraversable_dirs) === 1 ? 'y' : 'ies')
              . ' not traversable — the web server cannot load them (500/403). Typical after a clone under a 027 umask',

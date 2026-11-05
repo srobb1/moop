@@ -108,6 +108,12 @@ echo "== 0. Verify the nginx execution-layer guard =="
 # its repo filename — that one is per-checkout, not per-host.
 NGINX_GUARD="/etc/nginx/default.d/$GUARD_NAME"
 NGINX_CANON="$MOOP/docs/nginx/moop-security.conf"
+# What THIS site's guard must be: the template for "moop", re-keyed (and without the server-wide
+# rules) for any other site -- scripts/nginx_site_guard.sh, the one definition. Comparing against
+# the raw template only ever matched simrbase, and its "fix" (cp the /moop/ template in) gave a
+# second site no protection and a duplicate-location nginx error (found 2026-11-05).
+NGINX_GEN="$MOOP/scripts/nginx_site_guard.sh"
+DEPLOY_GUARD="sudo bash -c '$NGINX_GEN $SITE > $NGINX_GUARD' && sudo chmod 644 $NGINX_GUARD"
 
 if [[ "${SKIP_NGINX_CHECK:-0}" == "1" ]]; then
     echo "  SKIPPED (SKIP_NGINX_CHECK=1) — writable trees will NOT be protected from .php execution"
@@ -149,36 +155,35 @@ elif [[ ! -f "$NGINX_GUARD" ]]; then
   over HTTP, so without the guard a single file-write bug becomes a webshell
   (persistent remote code execution). Deploy it FIRST, then re-run this script:
 
-    sudo cp $NGINX_CANON $NGINX_GUARD
-    sudo chmod 644 $NGINX_GUARD
+    $DEPLOY_GUARD
     sudo nginx -t && sudo systemctl reload nginx
 
   Override with SKIP_NGINX_CHECK=1 only if you know exactly why.
 
 MSG
     exit 1
-elif ! diff -q "$NGINX_CANON" "$NGINX_GUARD" >/dev/null 2>&1; then
+elif ! diff -q <(bash "$NGINX_GEN" "$SITE") "$NGINX_GUARD" >/dev/null 2>&1; then
     cat >&2 <<MSG
 
   REFUSING TO RUN — the deployed nginx guard DIFFERS from the canonical copy.
 
     deployed:  $NGINX_GUARD
-    canonical: $NGINX_CANON
+    expected:  output of $NGINX_GEN $SITE (from $NGINX_CANON)
 
   The deployed copy may predate a rule that closes a real hole — the .php deny was
   extended to images/, jbrowse2/ and archived_gene_sets/ on 2026-07-16, and before
   that images/ was writable AND executing PHP. Re-deploy, then re-run:
 
-    sudo cp $NGINX_CANON $NGINX_GUARD && sudo nginx -t && sudo systemctl reload nginx
+    $DEPLOY_GUARD && sudo nginx -t && sudo systemctl reload nginx
 
   Override with SKIP_NGINX_CHECK=1 only if you know exactly why.
 
 MSG
     exit 1
 else
-    echo "  deployed, matches canonical: $NGINX_GUARD"
+    echo "  deployed, matches what this site needs: $NGINX_GUARD"
     # Deployed is not the same as IN FORCE — nginx only picks it up on reload.
-    if nginx -T 2>/dev/null | grep -q '/moop/organisms/'; then
+    if nginx -T 2>/dev/null | grep -qF "/$SITE/organisms/"; then
         echo "  in force (present in nginx's running config)"
     else
         echo "  WARN: on disk but NOT in nginx's running config — it has not been reloaded:"
