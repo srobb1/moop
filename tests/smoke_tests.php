@@ -989,6 +989,23 @@ ok(moop_apply_timezone('America/Chicago') === true && date_default_timezone_get(
 date_default_timezone_set($_tz_before);
 
 // ----------------------------------------------------------------------------
+group('permission checker — a cache not written yet is not a problem, and a missing file gets no chmod');
+require_once dirname(__DIR__) . '/lib/permission_check.php';
+// cuttingclass, 2026-11-05: .gene_set_identity.json did not exist yet (no gene set had been
+// resolved), and the page told the admin to chgrp + chmod it -- both fail on a missing file.
+$_gone = sys_get_temp_dir() . '/moop_no_such_cache_' . getmypid() . '.json';
+$_r = performPermissionCheck($_gone, ['name' => 'Gene Set Identity Cache', 'type' => 'file', 'created_on_demand' => true], 'apache');
+ok($_r['issues'] === [] && !empty($_r['note']), 'an on-demand cache that is not there yet passes, with a note');
+$_r = performPermissionCheck($_gone, ['name' => 'Something required', 'type' => 'file'], 'apache');
+ok($_r['issues'] === ['Path does not exist'], 'any other missing path is still reported');
+ok(moop_permission_fix_commands(['path' => $_gone, 'exists' => false, 'type' => 'file', 'check_mode' => 'writable',
+       'required_group' => 'apache', 'issues' => ['Path does not exist']], 'smr') === [],
+   'a missing FILE gets no chgrp/chmod advice');
+ok(moop_permission_fix_commands(['path' => $_gone, 'exists' => false, 'type' => 'directory', 'check_mode' => 'writable',
+       'required_group' => 'apache', 'issues' => ['Path does not exist']], 'smr')[0] === 'sudo mkdir -p ' . escapeshellarg($_gone),
+   'a missing directory is still created first');
+
+// ----------------------------------------------------------------------------
 group('permission checker — credentials must not be readable by other users');
 
 // On 2026-09-16 /var/www/moop-site-data/users.json was mode 664 in a world-traversable

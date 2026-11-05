@@ -209,7 +209,9 @@ function moop_permission_fix_commands(array $check, string $moop_owner): array {
     }
 
     if (empty($check['exists'])) {
-        if ($is_dir) $cmds[] = "sudo mkdir -p $q";
+        // A missing FILE has no group or mode to change: chgrp/chmod on it just fails.
+        if (!$is_dir) return $cmds;
+        $cmds[] = "sudo mkdir -p $q";
     }
     if ($mode === 'writable') {
         if ($group !== '' && (string)($check['current_group'] ?? '') !== $group) {
@@ -540,6 +542,14 @@ function performPermissionCheck($path, $item, $web_group = 'www-data') {
         'issues' => [],
     ];
 
+    // A cache the web writes the first time it is needed is not missing before then: on a new
+    // site (cuttingclass, 2026-11-05) .gene_set_identity.json does not exist until some page
+    // resolves a gene set, and this used to report it -- with chgrp/chmod advice for a file
+    // that is not there. Its directory is checked by its own rule.
+    if (!$result['exists'] && !empty($item['created_on_demand'])) {
+        $result['note'] = 'Not created yet -- the site writes it the first time it is needed';
+        return $result;
+    }
     if (!$result['exists']) {
         $result['issues'][] = 'Path does not exist';
         $result['severity'] = 'medium';
@@ -935,6 +945,7 @@ function moop_build_permission_items($config, array $ctx): array {
             'required_owner' => $moop_owner,
             'required_group' => $web_group,
             'reason' => 'Written by background cache refresh process run as web server user',
+            'created_on_demand' => true,
             'why_write' => 'The "Update Cache" background process (run as apache) must be able to overwrite this file',
         ],
 
@@ -960,6 +971,7 @@ function moop_build_permission_items($config, array $ctx): array {
             'required_owner' => $moop_owner,
             'required_group' => $web_group,
             'reason' => 'Rewritten by any web request whose organism database has changed',
+            'created_on_demand' => true,
             'why_write' => 'getAccessibleGeneSets() (every tool page) refreshes this when an organism.sqlite mtime/size changes',
         ],
 

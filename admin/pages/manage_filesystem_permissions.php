@@ -222,12 +222,13 @@ foreach ($grouped as $group_name => $items):
         $passing[$group_name] = $items;
         continue;
     }
-    // High-cardinality rules (one rule, many paths — organism.json x85, organism.sqlite x85)
-    // show ONLY what is wrong, consolidated: one block per distinct problem with its paths
+    // Show ONLY what is wrong, consolidated: one block per distinct problem with its paths
     // folded away, not a full grid/issue/fix/why block per file (18 bad organism.json files
-    // were 18 identical blocks). Small groups still list every path in full so a clean
-    // single check stays visible.
-    $consolidate = ($total > 5);
+    // were 18 identical blocks). Whenever MORE THAN ONE path fails -- not only in big
+    // sections: keyed on the section's size, a site with four organisms got four identical
+    // blocks (cuttingclass, 2026-11-05). A small section with at most one failure still
+    // lists every path in full, so a lone problem keeps its full detail.
+    $consolidate = ($total > 5 || count($failing) > 1);
     $to_show     = $consolidate ? [] : $items;
 ?>
 <div class="card mb-3">
@@ -242,7 +243,7 @@ foreach ($grouped as $group_name => $items):
             }
             ?>
             <?= htmlspecialchars($group_name) ?>
-            <?php if ($total > 5): ?>
+            <?php if ($consolidate): ?>
                 <small class="text-muted fw-normal">
                     — <?= $total ?> checked<?= $has_issues ? ', ' . count($failing) . ' with issues' : ', all clean' ?>
                 </small>
@@ -250,7 +251,7 @@ foreach ($grouped as $group_name => $items):
         </h6>
     </div>
     <div class="card-body">
-        <?php if ($total > 5 && !$has_issues): ?>
+        <?php if ($consolidate && !$has_issues): ?>
         <p class="mb-0 text-success"><i class="fa fa-check-circle"></i> All <?= $total ?> pass.</p>
         <?php elseif ($consolidate): ?>
         <?php $render_problems($failing); ?>
@@ -346,18 +347,6 @@ foreach ($grouped as $group_name => $items):
         <?php endif; ?>
         <?php endforeach; ?>
 
-        <?php
-        // Every fix in this section as one paste, so a 5-file problem is one command
-        // block instead of five copy-pastes. Mirrors the Assembly/FASTA sections below.
-        // Merged: the same chmod over several paths is one command naming them all.
-        $group_cmds = moop_permission_merged_fix_commands($failing, $moop_owner);
-        ?>
-        <?php if (!$consolidate && count($failing) > 1 && $group_cmds): ?>
-        <div class="mt-3 pt-3 border-top">
-            <p class="mb-2"><strong>Fix all <?= count($failing) ?> in this section at once:</strong></p>
-            <?= adm_command($group_cmds) ?>
-        </div>
-        <?php endif; ?>
     </div>
     
     <!-- Assembly Subdirectory Check -->
