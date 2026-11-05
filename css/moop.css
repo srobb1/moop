@@ -48,6 +48,15 @@
   --moop-action-hover:    #4f46e5;
   --moop-accent-amber:    #d97706;
   --moop-accent-slate:    #475569;
+
+  /* The rest of the main color's family (2026-11-05). Every hard-coded teal on the site now goes
+     through these or the two above, so a site's main color (Admin -> Site Configuration ->
+     Colors, moop_theme_palette()) repaints all of it. These are simrbase's values; a site
+     that sets a main color gets them recomputed from it, emitted after this file. */
+  --moop-main-rgb:        8, 145, 178;  /* the main color as r, g, b -- for rgba() washes */
+  --moop-main-dark:       #155e75;      /* text on a light main-color wash */
+  --moop-main-tint:       #e0f2f7;      /* pale solid tint (badges) */
+  --moop-main-lightest:   #ecfeff;      /* palest tint (nav, chips) */
 }
 
 /* Solid tool-page header: teal fill, white text. The card-header variant most tool pages use. */
@@ -78,7 +87,7 @@
    #14b8a6, and it is applied to the gene page's "View in Genome Browser" button — but from
    config/tools_config.php:71 via a `btn_class` key rendered in lib/tool_section.php:104, so no
    template contains the literal string and grepping the pages for it finds nothing.
-   Reusing the name silently repainted BOTH these buttons (#0891b2 -> #14b8a6) AND would have
+   Reusing the name silently repainted BOTH these buttons (var(--moop-tool-header) -> #14b8a6) AND would have
    repainted the genome-browser button. Caught because the computed-style check demanded zero
    visual change, and because config-driven class names do not show up in a template grep. */
 .btn-moop-teal {
@@ -407,7 +416,7 @@ footer .footer-meta {
   background: #fff;
   color: #212529;
   border: 1px solid #dee2e6;
-  border-top: 3px solid #0891b2;
+  border-top: 3px solid var(--moop-tool-header);
   border-radius: 6px;
   padding: 10px 12px;
   z-index: 1060;
@@ -651,13 +660,13 @@ footer .footer-meta {
 }
 .phylo-node:hover .phylo-select-btn {
   opacity: 1;
-  color: #0891b2;
-  border-color: #0891b2;
+  color: var(--moop-tool-header);
+  border-color: var(--moop-tool-header);
 }
 .phylo-select-btn:hover {
-  background: #0891b2;
+  background: var(--moop-tool-header);
   color: #fff !important;
-  border-color: #0891b2;
+  border-color: var(--moop-tool-header);
 }
 .phylo-node.selected .phylo-select-btn {
   opacity: 1;
@@ -667,8 +676,8 @@ footer .footer-meta {
 }
 .phylo-node.partial .phylo-select-btn {
   opacity: 1;
-  color: #0891b2;
-  border-color: #0891b2;
+  color: var(--moop-tool-header);
+  border-color: var(--moop-tool-header);
 }
 
 #selected-organisms-list .badge {
@@ -936,7 +945,7 @@ footer .footer-meta {
 /* Keyboard users must still see where they are — the popover opens on focus, so
    the ring is the only cue that the button itself is selected. */
 .field-help:focus-visible {
-  outline: 2px solid #0891b2;
+  outline: 2px solid var(--moop-tool-header);
   outline-offset: 2px;
   border-radius: 2px;
 }
@@ -967,9 +976,9 @@ footer .footer-meta {
 .help-modal .help-modal-section {
   margin: 0 0 0.9rem;
   padding: 0.5rem 0.75rem;
-  background: rgba(8, 145, 178, 0.07);
-  border-bottom: 1px solid rgba(8, 145, 178, 0.22);
-  border-left: 3px solid #0891b2;
+  background: rgba(var(--moop-main-rgb), 0.07);
+  border-bottom: 1px solid rgba(var(--moop-main-rgb), 0.22);
+  border-left: 3px solid var(--moop-tool-header);
   border-radius: 3px;
   color: #0f2b33;
   font-size: 1.02rem;
@@ -980,8 +989,8 @@ footer .footer-meta {
 /* Quiet cards — the content is the help, the card is only there to give the eye a
    boundary to land on. Deliberately flatter than the admin .adm-card. */
 .help-modal .help-card {
-  border: 1px solid rgba(8, 145, 178, 0.18);
-  background: rgba(8, 145, 178, 0.03);
+  border: 1px solid rgba(var(--moop-main-rgb), 0.18);
+  background: rgba(var(--moop-main-rgb), 0.03);
 }
 /* An accent card is different in KIND from its neighbours — a worked example, a caveat.
    A warm amber wash and left rule sets it apart from the teal cards without shouting; it
@@ -1010,8 +1019,8 @@ footer .footer-meta {
    eye away from the sentence. Inline code here marks a literal the user would type,
    so it needs to read as "type this", not as an alert. */
 .help-modal .help-card code {
-  color: #155e75;
-  background: rgba(8, 145, 178, 0.10);
+  color: var(--moop-main-dark);
+  background: rgba(var(--moop-main-rgb), 0.10);
   padding: 0.05em 0.3em;
   border-radius: 3px;
   /* Never break a literal across lines. These are things the user is meant to TYPE,

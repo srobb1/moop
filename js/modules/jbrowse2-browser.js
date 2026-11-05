@@ -85,7 +85,7 @@
         });
 
         row.classList.add('jb-selected');
-        row.style.background = 'rgba(8,145,178,0.08)';
+        row.style.background = 'rgba(var(--moop-main-rgb),0.08)';
         selectedOrg = row.dataset.org;
         selectedAsm = null;
 
@@ -137,9 +137,9 @@
         });
 
         row.classList.add('jb-selected');
-        row.style.background = 'rgba(8,145,178,0.08)';
+        row.style.background = 'rgba(var(--moop-main-rgb),0.08)';
         row.querySelector('.jb-asm-radio')?.setAttribute('class', 'fas fa-dot-circle small jb-asm-radio');
-        row.querySelector('.jb-asm-radio').style.color = '#0891b2';
+        row.querySelector('.jb-asm-radio').style.color = 'var(--moop-tool-header)';
 
         selectedAsm = asm;
 

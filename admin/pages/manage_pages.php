@@ -13,7 +13,7 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
 <div class="container-fluid my-4" style="max-width: 1400px;">
 
   <div class="d-flex align-items-center gap-3 mb-3">
-    <h3 class="mb-0"><i class="fa fa-file-alt me-2" style="color:#0891b2;"></i>Manage Pages</h3>
+    <h3 class="mb-0"><i class="fa fa-file-alt me-2" style="color:var(--moop-tool-header);"></i>Manage Pages</h3>
     <?php if ($mode === 'list'): ?>
       <a href="manage_pages.php?new=1" class="btn btn-primary btn-sm"><i class="fa fa-plus me-1"></i>New page</a>
     <?php else: ?>

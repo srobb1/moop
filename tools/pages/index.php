@@ -15,7 +15,7 @@ $home_count = fn($n) => '<strong style="font-weight:500;">' . (int) $n . '</stro
   <div class="text-center mb-3">
     <h1 class="index-site-title moop-tool-title"><?= htmlspecialchars($siteTitle) ?></h1>
     <hr class="mx-auto page-header-divider">
-    <p class="mb-2" style="font-size:0.95rem;font-weight:300;color:rgba(8,145,178,0.7);letter-spacing:0.03em;">
+    <p class="mb-2" style="font-size:0.95rem;font-weight:300;color:rgba(var(--moop-main-rgb),0.7);letter-spacing:0.03em;">
       <?= t('Browse genes, genomes, and annotations') ?><?php if (!empty($organism_count)): ?> <?= $organism_count !== 1 ? t_markup('across %s organisms', $home_count($organism_count)) : t_markup('across %s organism', $home_count($organism_count)) ?><?php if (!empty($assembly_count)): ?> <?= $assembly_count !== 1 ? t_markup('and %s assemblies', $home_count($assembly_count)) : t_markup('and %s assembly', $home_count($assembly_count)) ?><?php endif; ?><?php endif; ?>
     </p>
   </div>

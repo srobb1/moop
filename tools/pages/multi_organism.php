@@ -8,7 +8,7 @@
           <?= page_title('Multi-Organism Search') ?>
           <?php /* Declared, not shown — the heading already says where you are. */ ?>
           <?= page_purpose('Search genes across a set of organisms you choose yourself, rather than a curated group.', '', false, false) ?>
-          <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0891b2;"><?= t('search across selected organisms') ?></span>
+          <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:var(--moop-tool-header);"><?= t('search across selected organisms') ?></span>
         </div>
 
         <!-- Search Section -->

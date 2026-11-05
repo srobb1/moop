@@ -901,9 +901,9 @@
                     background: var(--moop-tool-header); }
 
 .mm-seg .btn { color: var(--moop-tool-header); border-color: var(--moop-tool-header); font-weight: 600; }
-.mm-seg .btn:hover { background: rgba(8,145,178,0.08); color: var(--moop-tool-header); }
+.mm-seg .btn:hover { background: rgba(var(--moop-main-rgb),0.08); color: var(--moop-tool-header); }
 .mm-seg .btn-check:checked + .btn { background: var(--moop-tool-header); border-color: var(--moop-tool-header); color: #fff; }
-.mm-seg .btn-check:focus-visible + .btn { box-shadow: 0 0 0 0.2rem rgba(8,145,178,0.35); }
+.mm-seg .btn-check:focus-visible + .btn { box-shadow: 0 0 0 0.2rem rgba(var(--moop-main-rgb),0.35); }
 /* Step 4: Download is the primary action, in the site's action-button indigo (var(--moop-action)) —
    the same colour as Run BLAST and Retrieve Sequences — so final actions read alike across
    tools. Teal is the section/accent colour, not the action colour.

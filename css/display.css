@@ -1499,7 +1499,7 @@ a:hover .link-icon {
 /* ── Index page: site title wordmark ─────────────────────────────────────── */
 
 .index-site-title {
-  color: #0891b2;
+  color: var(--moop-tool-header);
   margin-bottom: 8px;
 }
 
@@ -1546,14 +1546,14 @@ a:hover .link-icon {
 }
 .browse-select-panel {
   background: #f0fbfc;
-  border: 1px solid rgba(8, 145, 178, 0.18);
+  border: 1px solid rgba(var(--moop-main-rgb), 0.18);
   border-top: none;
   border-radius: 0 0 0.5rem 0.5rem;
   padding: 20px 16px 16px;
 }
 .groups-strip {
   background: #f0fbfc;
-  border: 1px solid rgba(8, 145, 178, 0.18);
+  border: 1px solid rgba(var(--moop-main-rgb), 0.18);
   border-top: none;
   border-radius: 0 0 0.5rem 0.5rem;
   padding: 12px 16px;
@@ -1599,7 +1599,7 @@ a:hover .link-icon {
 
 #search-tabs .nav-link:not(.active),
 #organism-tabs .nav-link:not(.active) {
-  color: #0891b2;
+  color: var(--moop-tool-header);
 }
 #search-tabs .nav-link:not(.active):hover,
 #organism-tabs .nav-link:not(.active):hover {
@@ -1613,7 +1613,7 @@ a:hover .link-icon {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: #0891b2;
+  background: var(--moop-tool-header);
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -1645,7 +1645,7 @@ a:hover .link-icon {
 }
 .qs-card {
   background: #e0f7fa;
-  border: 1px solid rgba(8, 145, 178, 0.18);
+  border: 1px solid rgba(var(--moop-main-rgb), 0.18);
   padding: 20px;
 }
 .qs-card .card-body {
@@ -1758,7 +1758,7 @@ a:hover .link-icon {
 .qs-example-chip:hover {
   background: none;
   border-color: transparent;
-  color: #0891b2;
+  color: var(--moop-tool-header);
 }
 
 
@@ -1792,7 +1792,7 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 .gsc-table th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; white-space: nowrap; }
 .gsc-table td { font-size: 0.9rem; }
 .gsc-busco-bar { width: 96px; height: 10px; flex: 0 0 96px; }
-.gsc-top-icon { color: #0891b2; font-size: 0.7rem; margin-left: 0.25rem; }
+.gsc-top-icon { color: var(--moop-tool-header); font-size: 0.7rem; margin-left: 0.25rem; }
 
 /* ── Assembly statistics card, assembly page (includes/assembly_stats_card.php) ──────────
    Headline numbers in the same voice as the gene set page's Feature Counts: a large figure, a

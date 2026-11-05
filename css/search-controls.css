@@ -33,16 +33,16 @@
 
 /* Search button styling */
 .btn-search {
-    background-color: #0891b2;
-    border-color: #0891b2;
+    background-color: var(--moop-tool-header);
+    border-color: var(--moop-tool-header);
     color: white;
 }
 
 .btn-search:hover,
 .btn-search:focus {
-    background-color: #0e7490;
-    border-color: #0e7490;
-    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.25);
+    background-color: var(--moop-tool-hover);
+    border-color: var(--moop-tool-hover);
+    box-shadow: 0 0 0 3px rgba(var(--moop-main-rgb), 0.25);
 }
 
 .btn-search-active {

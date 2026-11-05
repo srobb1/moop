@@ -162,7 +162,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #0891b2;
+    color: var(--moop-tool-header);
     opacity: 0.55;
     transition: opacity 0.2s ease, transform 0.2s ease;
 }

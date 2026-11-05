@@ -182,7 +182,7 @@ if (count($lb_langs) > 1 && !defined('MOOP_ADMIN_PAGE')): $lb_now = moop_current
 <div id="adminLoadingOverlay"
      style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(15,23,42,.78);
             align-items:center;justify-content:center;flex-direction:column;color:#fff;text-align:center;padding:1rem;">
-  <div class="spinner-border mb-3" role="status" style="width:3rem;height:3rem;color:#0891b2;"></div>
+  <div class="spinner-border mb-3" role="status" style="width:3rem;height:3rem;color:var(--moop-tool-header);"></div>
   <div style="font-size:1.1rem;">Loading admin dashboard…</div>
   <div style="font-size:.85rem;opacity:.75;margin-top:.4rem;">The first load after a data rebuild can take a moment.</div>
 </div>

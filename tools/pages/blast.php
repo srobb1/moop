@@ -190,7 +190,7 @@
                 <div id="advOptions" class="collapse mt-3">
                     <div class="card card-body">
                         <!-- blastn-short preset notice -->
-                        <div id="adv-short-notice" class="d-none mb-3 small fw-semibold" style="color:#0891b2;">
+                        <div id="adv-short-notice" class="d-none mb-3 small fw-semibold" style="color:var(--moop-tool-header);">
                             <i class="fa fa-check-circle me-1"></i><?= t('Optimized for short searches — highlighted parameters have been adjusted.') . "\n" ?>
                         </div>
                         <!-- Basic Parameters -->

@@ -35,7 +35,7 @@ $topic_card = function (array $t) use ($site) {
         <div class="card h-100 shadow-sm help-topic-card">
           <div class="card-body p-3">
             <h6 class="fw-semibold mb-1 text-body">
-              <i class="fa <?= htmlspecialchars($t['icon']) ?> me-2" style="color:#0891b2;"></i><?= $t['title'] ?>
+              <i class="fa <?= htmlspecialchars($t['icon']) ?> me-2" style="color:var(--moop-tool-header);"></i><?= $t['title'] ?>
             </h6>
             <p class="text-muted small mb-0"><?= $t['description'] ?></p>
           </div>
@@ -49,7 +49,7 @@ $topic_card = function (array $t) use ($site) {
 <div class="container mt-5">
 
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+    <div class="card-header text-white d-flex align-items-center" style="background-color:var(--moop-tool-header);">
       <?php /* h1, not a styled span — see the note on retrieve_sequences.php. */ ?>
       <h1 class="text-uppercase fw-semibold mb-0 d-inline" style="letter-spacing:0.1em; font-size:0.8rem;">
         <i class="fa fa-book me-2"></i><?= t('Help & Documentation') . "\n" ?>
@@ -58,7 +58,7 @@ $topic_card = function (array $t) use ($site) {
     <div class="card-body p-4">
       <p class="text-muted mb-0">
         Where to go, how the data fits together, and where it comes from. How to use a particular
-        page is on that page — look for its <i class="fa fa-info-circle" style="color:#0891b2;" aria-label="<?= t('information') ?>"></i>
+        page is on that page — look for its <i class="fa fa-info-circle" style="color:var(--moop-tool-header);" aria-label="<?= t('information') ?>"></i>
         <?= t('buttons. Setting up or maintaining a site instead? That is covered separately below.') . "\n" ?>
       </p>
     </div>
@@ -85,9 +85,9 @@ $topic_card = function (array $t) use ($site) {
   <div class="help-section" id="help-users">
   <div class="d-flex align-items-baseline justify-content-between mb-2">
     <h5 class="fw-semibold mb-0">
-      <i class="fa fa-user me-2" style="color:#0891b2;"></i>Using <?= htmlspecialchars($siteTitle) ?>
+      <i class="fa fa-user me-2" style="color:var(--moop-tool-header);"></i>Using <?= htmlspecialchars($siteTitle) ?>
       <span class="badge rounded-pill ms-2"
-            style="background-color:#e0f2f7; color:#0e7490;"><?= count($forUsers) ?></span>
+            style="background-color:var(--moop-main-tint); color:var(--moop-tool-hover);"><?= count($forUsers) ?></span>
     </h5>
   </div>
   <p class="text-muted small mb-3"><?= t('Finding data, running searches, and getting it back out.') ?></p>
@@ -186,5 +186,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <style>
   .help-topic-card { transition: border-color .12s ease, box-shadow .12s ease; border-color: rgba(0,0,0,.1); }
-  .help-topic-card:hover { border-color: #0891b2; box-shadow: 0 .25rem .6rem rgba(8,145,178,.15) !important; }
+  .help-topic-card:hover { border-color: var(--moop-tool-header); box-shadow: 0 .25rem .6rem rgba(var(--moop-main-rgb),.15) !important; }
 </style>

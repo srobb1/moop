@@ -68,7 +68,7 @@
             return `<tr data-search="${(r.organism + ' ' + r.type + ' ' + r.assembly + ' ' + r.gene_set).toLowerCase()}">
                <td style="line-height:1.2;">
                  <a href="${r.url}"${target}
-                    class="fw-semibold font-monospace" style="font-size:0.85rem;color:#0891b2;">${r.uniquename}</a>
+                    class="fw-semibold font-monospace" style="font-size:0.85rem;color:var(--moop-tool-header);">${r.uniquename}</a>
                  <div class="text-muted" style="font-size:0.75rem; margin-top:1px;">${secondary}</div>
                </td>
                <td class="text-end align-top" style="padding-top:6px;">${typeChip(r.type)}</td>
@@ -86,7 +86,7 @@
             `${filterBar}
              <div class="table-responsive mt-2">
                <table class="table table-sm table-hover mb-0 fs-table"
-                      style="border-top:2px solid #0891b2;">
+                      style="border-top:2px solid var(--moop-tool-header);">
                  <tbody>${results.map(rowHtml).join('')}</tbody>
                </table>
              </div>`;

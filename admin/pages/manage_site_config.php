@@ -403,6 +403,62 @@
                 </div>
                 
                 <!-- Auto-Login IP Ranges Card -->
+                <div class="card adm-card mb-3" id="pnav-colors" data-nav-label="Site Colors">
+                    <div class="card-header adm-head">
+                        <h5 class="mb-0"><i class="fa fa-palette"></i> <?= htmlspecialchars($editable_config['theme_colors']['label']) ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small"><?= htmlspecialchars($editable_config['theme_colors']['description']) ?></p>
+                        <?php
+                        // lib/theme_colors.php works the palette out; js/modules/site-colors.js asks
+                        // admin/api/theme_preview.php for it as the fields change (one implementation).
+                        $tc = (array) $editable_config['theme_colors']['current_value'];
+                        $tc_fields = [
+                            'main'     => ['Main color', 'Tool headers, buttons, links, washes, organism headers.'],
+                            'assembly' => ['Assembly color', 'Assembly and gene-set headers. Empty: worked out from the main color.'],
+                            'action'   => ['Action color', 'The main button on a tool page. Empty: worked out from the main color.'],
+                        ];
+                        ?>
+                        <div id="siteColors" class="row g-3">
+                            <div class="col-lg-6">
+                            <?php foreach ($tc_fields as $tc_key => [$tc_label, $tc_help]): $tc_val = (string) ($tc[$tc_key] ?? ''); ?>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold mb-1" for="tc-<?= $tc_key ?>"><?= htmlspecialchars($tc_label) ?></label>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <input type="color" class="form-control form-control-color tc-picker" data-for="tc-<?= $tc_key ?>"
+                                               value="<?= htmlspecialchars($tc_val !== '' ? $tc_val : ($tc_key === 'main' ? '#0891b2' : '#888888')) ?>" aria-label="<?= htmlspecialchars($tc_label) ?> picker">
+                                        <input type="text" class="form-control tc-hex" id="tc-<?= $tc_key ?>" name="theme_colors[<?= $tc_key ?>]"
+                                               value="<?= htmlspecialchars($tc_val) ?>" placeholder="<?= $tc_key === 'main' ? 'empty = MOOP teal' : 'empty = suggested' ?>"
+                                               pattern="#[0-9a-fA-F]{6}" maxlength="7" style="max-width: 10rem;">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary tc-clear" data-for="tc-<?= $tc_key ?>">Clear</button>
+                                    </div>
+                                    <div class="form-text"><?= htmlspecialchars($tc_help) ?></div>
+                                </div>
+                            <?php endforeach; ?>
+                                <div id="tcWarning" class="alert alert-warning small py-2 d-none"></div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="small fw-semibold mb-1">Preview</div>
+                                <div id="tcPreview" class="border rounded p-2">
+                                    <div class="rounded px-3 py-2 mb-2 text-white fw-semibold" style="background: var(--moop-tool-header);">Tool page header</div>
+                                    <div class="d-flex gap-2 mb-2">
+                                        <span class="btn btn-sm text-white" style="background: var(--moop-action);">Run search</span>
+                                        <span class="btn btn-sm text-white" style="background: var(--moop-tool-hover);">Hover</span>
+                                        <a href="#" class="small align-self-center" style="color: var(--moop-tool-header);" onclick="return false;">A link</a>
+                                    </div>
+                                    <div class="rounded px-3 py-2 mb-2 small" style="background: rgba(var(--moop-main-rgb), 0.07); border-left: 3px solid var(--moop-tool-header); color: var(--moop-main-dark);">A light wash, as on admin cards</div>
+                                    <div class="d-flex gap-2">
+                                        <div class="rounded px-3 py-2 text-white small flex-fill" style="background: var(--moop-organism-header);">Organism header</div>
+                                        <div class="rounded px-3 py-2 text-white small flex-fill" style="background: var(--moop-assembly-header);">Assembly header</div>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1 mt-2" id="tcSwatches"></div>
+                                </div>
+                                <div class="form-text">The page itself changes after you save.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card adm-card mb-3" id="pnav-ip-ranges" data-nav-label="Auto-Login IP Ranges">
                     <div class="card-header adm-head">
                         <h5 class="mb-0"><i class="fa fa-network-wired"></i> <?= htmlspecialchars($editable_config['auto_login_ip_ranges']['label']) ?></h5>

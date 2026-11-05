@@ -8,7 +8,7 @@
 <div class="container my-4" style="max-width: 1100px;">
 
   <div class="d-flex align-items-center gap-3 mb-3">
-    <h3 class="mb-0"><i class="fa fa-bars me-2" style="color:#0891b2;"></i>Manage Menu</h3>
+    <h3 class="mb-0"><i class="fa fa-bars me-2" style="color:var(--moop-tool-header);"></i>Manage Menu</h3>
     <a href="admin.php" class="btn btn-outline-secondary btn-sm ms-auto"><i class="fa fa-arrow-left me-1"></i>Back to Dashboard</a>
   </div>
 

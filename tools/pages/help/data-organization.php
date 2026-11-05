@@ -76,7 +76,7 @@ $levels = [
           <div class="card-body p-3">
             <h2 class="h6 fw-semibold mb-2 d-flex align-items-center gap-2">
               <span class="step-badge"><?= $lv['num'] ?></span>
-              <i class="fa <?= $lv['icon'] ?>" style="color:#0891b2;" aria-hidden="true"></i>
+              <i class="fa <?= $lv['icon'] ?>" style="color:var(--moop-tool-header);" aria-hidden="true"></i>
               <?= htmlspecialchars($lv['label']) ?>
             </h2>
             <p class="text-muted small mb-0"><?= htmlspecialchars($lv['text']) ?></p>
@@ -98,7 +98,7 @@ $levels = [
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-tags me-2" style="color:#0891b2;"></i><?= t('Annotations') ?></h3>
+          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-tags me-2" style="color:var(--moop-tool-header);"></i><?= t('Annotations') ?></h3>
           <p class="text-muted small mb-2"><?= htmlspecialchars($def('annotation')) ?></p>
           <p class="text-muted small mb-0">
             An annotation belongs to one <?= gloss('transcript') ?>, so a gene with several transcripts can carry
@@ -110,7 +110,7 @@ $levels = [
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-filter me-2" style="color:#0891b2;"></i><?= t('Annotation types') ?></h3>
+          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-filter me-2" style="color:var(--moop-tool-header);"></i><?= t('Annotation types') ?></h3>
           <p class="text-muted small mb-2"><?= htmlspecialchars($def('annotation type')) ?></p>
           <p class="text-muted small mb-0">
             Where each type comes from is listed under
@@ -123,7 +123,7 @@ $levels = [
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-map-marker-alt me-2" style="color:#0891b2;"></i><?= t('Gene sets without genome positions') ?></h3>
+          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-map-marker-alt me-2" style="color:var(--moop-tool-header);"></i><?= t('Gene sets without genome positions') ?></h3>
           <p class="text-muted small mb-0">
             <?= $no_genome ?> of the gene sets you can see <?= $no_genome === 1 ? 'is' : 'are' ?>
             sequences only, with no positions on a genome. Their genes are searchable and have
@@ -136,7 +136,7 @@ $levels = [
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-book-open me-2" style="color:#0891b2;"></i><?= t('More terms') ?></h3>
+          <h3 class="h6 fw-semibold mb-2"><i class="fa fa-book-open me-2" style="color:var(--moop-tool-header);"></i><?= t('More terms') ?></h3>
           <p class="text-muted small mb-0">
             CDS, GO term, Pfam and the rest are in the <a href="?topic=glossary">Glossary</a>.
           </p>

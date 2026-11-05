@@ -7,7 +7,7 @@
 <div class="container my-4">
 
   <div class="d-flex align-items-center gap-3 mb-3">
-    <h3 class="mb-0"><i class="fa fa-book me-2" style="color:#0891b2;"></i>Manage Glossary</h3>
+    <h3 class="mb-0"><i class="fa fa-book me-2" style="color:var(--moop-tool-header);"></i>Manage Glossary</h3>
     <?= help_modal_trigger('glossary-guide', 'How this page works') ?>
     <a href="admin.php" class="btn btn-outline-secondary btn-sm ms-auto">
       <i class="fa fa-arrow-left me-1"></i>Back to Dashboard
@@ -75,7 +75,7 @@
   <div class="card adm-card">
     <div class="card-header adm-head d-flex align-items-center justify-content-between">
       <h5 class="mb-0">Terms</h5>
-      <span class="badge rounded-pill" style="background-color:#e0f2f7; color:#0e7490;">
+      <span class="badge rounded-pill" style="background-color:var(--moop-main-tint); color:var(--moop-tool-hover);">
         <?= count($terms) ?>
       </span>
     </div>

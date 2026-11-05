@@ -19,10 +19,10 @@
    ========================================================================== */
 
 :root {
-    --adm-accent: #0891b2;          /* MOOP teal */
+    --adm-accent: var(--moop-tool-header);          /* MOOP teal */
     --adm-accent-strong: #067d94;
-    --adm-wash: rgba(8, 145, 178, 0.07);
-    --adm-border: rgba(8, 145, 178, 0.22);
+    --adm-wash: rgba(var(--moop-main-rgb), 0.07);
+    --adm-border: rgba(var(--moop-main-rgb), 0.22);
 }
 
 .adm-card {
@@ -98,7 +98,7 @@
 }
 
 .adm-head[data-bs-toggle="collapse"]:hover {
-    background: rgba(8, 145, 178, 0.12);
+    background: rgba(var(--moop-main-rgb), 0.12);
 }
 
 /* Data Health card (admin/pages/_data_health_card.php): a rule between stacked alerts,

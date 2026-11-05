@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu', 'languages', 'languages_retired', 'home'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -920,6 +920,16 @@ class ConfigManager
                     if (!$ok) return ['success' => false, 'message' => 'The home page setting is not valid; nothing was saved'];
                 }
 
+                if ($key === 'theme_colors') {
+                    $c = $data[$key];
+                    $ok = is_array($c) && !array_diff(array_keys($c), ['main', 'assembly', 'action']);
+                    foreach ($ok ? $c : [] as $v) {
+                        if (!is_string($v) || ($v !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $v))) { $ok = false; break; }
+                    }
+                    if (!$ok) return ['success' => false, 'message' => 'The colors are not valid (each must be #rrggbb or empty); nothing was saved'];
+                    $data[$key] = array_filter(array_map('strtolower', $c), fn($v) => $v !== '');
+                }
+
                 if ($key === 'main_menu') {
                     $problem = self::mainMenuProblem($data[$key]);
                     if ($problem !== null) {
@@ -985,7 +995,7 @@ class ConfigManager
                     }
                 }
 
-                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout' || $key === 'main_menu' || $key === 'languages' || $key === 'languages_retired' || $key === 'home') {
+                if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout' || $key === 'main_menu' || $key === 'languages' || $key === 'languages_retired' || $key === 'home' || $key === 'theme_colors') {
                     $editable_data[$key] = $data[$key];
                 } else {
                     $editable_data[$key] = trim($data[$key]);
@@ -1243,6 +1253,12 @@ class ConfigManager
                 'type' => 'text',
                 'current_value' => $this->getPath('cache_path', ''),
                 'note' => 'Pointing this outside the document root lets the organisms/ tree be read-only to the web server. The directory must exist and be writable by the web server (correct owner/permission and, on SELinux hosts, the httpd_sys_rw_content_t label) — it is auto-created on the next admin login if missing.',
+            ],
+            'theme_colors' => [
+                'label' => 'Site Colors',
+                'description' => 'The main color repaints the site: tool page headers, buttons, links, light washes and organism headers all follow it. Assembly and action colors are optional; left empty, they are worked out from the main color. Leave the main color empty for MOOP\'s own teal.',
+                'type' => 'theme_colors',
+                'current_value' => $this->getArray('theme_colors', []),
             ],
             'timezone' => [
                 'label' => 'Time Zone',

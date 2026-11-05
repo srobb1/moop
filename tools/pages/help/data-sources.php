@@ -86,7 +86,7 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
       <div class="col-6 col-md-3">
         <div class="card h-100 shadow-sm help-topic-card">
           <div class="card-body p-3">
-            <div class="h4 fw-semibold mb-0" style="color:#0891b2;"><?= $n ?></div>
+            <div class="h4 fw-semibold mb-0" style="color:var(--moop-tool-header);"><?= $n ?></div>
             <div class="small text-muted"><?= htmlspecialchars($origin_label[$src] ?? $src) ?></div>
           </div>
         </div>

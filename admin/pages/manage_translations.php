@@ -10,7 +10,7 @@ $st_badge = ['reviewed' => 'bg-success', 'machine draft' => 'bg-info text-dark',
 <div class="container my-4" style="max-width: 1000px;">
 
   <div class="d-flex align-items-center gap-3 mb-3">
-    <h3 class="mb-0"><i class="fa fa-language me-2" style="color:#0891b2;"></i>Manage Translations</h3>
+    <h3 class="mb-0"><i class="fa fa-language me-2" style="color:var(--moop-tool-header);"></i>Manage Translations</h3>
     <a href="admin.php" class="btn btn-outline-secondary btn-sm ms-auto"><i class="fa fa-arrow-left me-1"></i>Back to Dashboard</a>
   </div>
 

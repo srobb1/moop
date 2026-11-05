@@ -39,7 +39,7 @@
    darker teal so it reads as the gene's name and the description as what it is. */
 .feature-header .feature-symbol {
     font-style: italic;
-    color: #0e7490;
+    color: var(--moop-tool-hover);
     margin-right: 0.35rem;
 }
 
@@ -428,7 +428,7 @@ a.badge:hover {
    Toolbox above uses solid fills for the primary tools, and a second row of solid buttons
    would out-shout the diagram they sit over. */
 .moop-data-btn {
-  --moop-teal: #0891b2;
+  --moop-teal: var(--moop-tool-header);
   color: #0b6b80;
   background-color: #e6f5f9;
   border: 1px solid #cbe9f1;
@@ -511,9 +511,9 @@ a.badge:hover {
 
 /* The identical case is the notable one (about a third of multi-isoform genes),
    so it gets the teal accent; the differing case stays neutral grey. */
-.isoform-note-same             { border-left-color: #0891b2; }
+.isoform-note-same             { border-left-color: var(--moop-tool-header); }
 .isoform-note-same strong      { color: #0f5132; }
-.isoform-note-same .fas        { color: #0891b2; }
+.isoform-note-same .fas        { color: var(--moop-tool-header); }
 
 /* ── How this gene was named (overview card) ─────────────────────────────────
    The lead sentence (Identity, or why the gene has no name) sits directly under the
@@ -603,7 +603,7 @@ a.badge:hover {
 .expr-table tr:last-child td { border-bottom: 0; }
 .expr-exp { width: 55%; }
 .expr-cite { margin-left: .4rem; font-size: .75rem; color: #6c757d; text-decoration: none; white-space: nowrap; }
-.expr-cite:hover { color: #0891b2; text-decoration: underline; }
+.expr-cite:hover { color: var(--moop-tool-header); text-decoration: underline; }
 .expr-lvl-cell { width: 7rem; }
 .expr-level {
     display: inline-block; min-width: 4.5rem; padding: .1rem .5rem; border-radius: 999px;
@@ -622,6 +622,6 @@ a.badge:hover {
 .expr-bar-hit   { fill: transparent; }
 .expr-spark g:hover .expr-bar { fill: #0e5a6e; }
 .expr-bar-none  { fill: none; stroke: #c3cbd0; stroke-width: 1; stroke-dasharray: 2 2; }
-.expr-more-btn { font-size: .8rem; color: #0891b2; text-decoration: none; }
+.expr-more-btn { font-size: .8rem; color: var(--moop-tool-header); text-decoration: none; }
 .expr-more-btn[aria-expanded="true"]  .when-collapsed,
 .expr-more-btn[aria-expanded="false"] .when-expanded { display: none; }

@@ -452,8 +452,8 @@
             if (item.classList.contains('selected')) {
                 badge.textContent = n++;
                 badge.style.visibility = 'visible';
-                item.style.background = 'rgba(8,145,178,0.09)';
-                item.style.borderColor = '#0891b2';
+                item.style.background = 'rgba(var(--moop-main-rgb),0.09)';
+                item.style.borderColor = 'var(--moop-tool-header)';
                 label.style.color = '';
             } else {
                 badge.style.visibility = 'hidden';

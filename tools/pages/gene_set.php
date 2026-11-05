@@ -269,7 +269,7 @@
   <div class="row mb-5">
     <div class="col-12">
       <p class="text-muted small mb-0">
-        <i class="fas fa-lightbulb me-1" style="color:#0891b2;"></i>
+        <i class="fas fa-lightbulb me-1" style="color:var(--moop-tool-header);"></i>
         <strong><?= t('Tip:') ?></strong> <?= t_markup('To download some or all of the annotations for this gene set, visit %s.',
             '<a href="/' . $site . '/tools/moopmart.php?organism=' . urlencode($organism_name) . '&assembly=' . urlencode($genome_accession) . '&gene_set=' . urlencode($gene_set_name) . '">MOOPmart</a>') . "\n" ?>
         <?= t('Build a gene list from this gene set and then select the annotations you want to bulk download.') . "\n" ?>

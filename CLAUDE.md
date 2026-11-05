@@ -204,6 +204,16 @@ colours, so colour signalled nothing and the one genuinely broken-state card was
 If a card needs something the shared classes lack, **add it to `css/admin-cards.css`** so every page
 gets it — do not start a fifth idiom in a page-local stylesheet. That is how `cfg-head` happened.
 
+**Colors go through the palette variables — never a hex literal for the main color.** Since
+2026-11-05 a site can set its own colors (Site Configuration → Site Colors, `theme_colors`,
+`lib/theme_colors.php`): one main color recomputes `--moop-tool-header`, `--moop-tool-hover`,
+`--moop-organism-header`, `--moop-main-rgb` (use `rgba(var(--moop-main-rgb), 0.07)` for washes),
+`--moop-main-dark`, `--moop-main-tint`, `--moop-main-lightest`, plus assembly/action colors. Every
+teal on the site was moved onto these (simrbase proven identical: computed colors in a browser
+on 30 pages, and every changed file equal once the variables resolve). A new `#0891b2` in a page
+stays teal on a green site. DATA colors are deliberately not themed (expression scale, gene-type
+chips, result-count badges) — they mean the same thing on every MOOP site.
+
 **`tools/` pages are deliberately different** — solid teal fill with white text, bolder than the
 admin wash, because public pages announce while admin pages get out of the way. Do not "unify" the
 two. Note the tools colours are still 24 inline hex literals rather than shared classes; the plan to

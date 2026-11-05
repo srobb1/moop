@@ -72,3 +72,8 @@ $site = $config->getString('site');
 
     <!-- Font Awesome 5.7.0 — self-hosted -->
     <link rel="stylesheet" href="<?= moop_asset_url('css/fontawesome/all.css') ?>">
+<?php /* The site's own colors (Site Configuration -> Colors, lib/theme_colors.php): recomputes
+         css/moop.css's palette variables from them. Empty on a site that sets none (simrbase), so
+         nothing is added -- not even a blank line. */
+if (!function_exists('moop_theme_style_tag')) require_once __DIR__ . '/../lib/theme_colors.php';
+echo moop_theme_style_tag(); ?>

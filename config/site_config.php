@@ -525,6 +525,12 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // or broken one. Set on Admin -> Manage Pages.
     'home' => [],
 
+    // Site colors (Admin -> Site Configuration -> Colors; lib/theme_colors.php). Empty = MOOP's
+    // teal, exactly as css/moop.css defines it. 'main' sets the whole main-color family (hover,
+    // washes, tints, organism headers); 'assembly' and 'action' are optional -- empty means a
+    // color worked out from the main one. Each is '' or '#rrggbb'.
+    'theme_colors' => [],
+
     // ======== LANGUAGES ========
     // The languages this site writes its pages and menu labels in, English first (always: it is
     // the fallback for anything not translated). Each {code, name}: code is ISO 639-1, optionally

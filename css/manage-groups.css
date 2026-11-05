@@ -40,15 +40,15 @@
    "is a member", and a suggestion must never be mistakable for one at a glance. */
 .tag-chip.suggested {
   background: transparent;
-  color: #0e7490;
-  border: 1px dashed #0891b2;
+  color: var(--moop-tool-hover);
+  border: 1px dashed var(--moop-tool-header);
   font-style: italic;
   white-space: nowrap;   /* the Groups column is narrow; without this the × wraps
                             onto its own line inside the chip */
 }
 
 .tag-chip.suggested:hover {
-  background: #ecfeff;
+  background: var(--moop-main-lightest);
   border-style: solid;
 }
 

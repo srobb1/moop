@@ -399,6 +399,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['cache_path'] = trim($_POST['cache_path']);
         }
 
+        // Site colors (lib/theme_colors.php): '' or #rrggbb each; ConfigManager validates.
+        if (isset($_POST['theme_colors']) && is_array($_POST['theme_colors'])) {
+            $tc = $_POST['theme_colors'];
+            $data['theme_colors'] = [
+                'main'     => trim((string) ($tc['main'] ?? '')),
+                'assembly' => trim((string) ($tc['assembly'] ?? '')),
+                'action'   => trim((string) ($tc['action'] ?? '')),
+            ];
+        }
+
         // Parse time zone ('' = use PHP's own setting)
         if (isset($_POST['timezone'])) {
             $data['timezone'] = trim($_POST['timezone']);
@@ -551,7 +561,8 @@ $data = [
     'page_script' => [
         '/' . $site . '/js/admin-utilities.js',
         '/' . $site . '/js/modules/parent-nav.js',
-        '/' . $site . '/js/modules/manage-site-config.js'
+        '/' . $site . '/js/modules/manage-site-config.js',
+        '/' . $site . '/js/modules/site-colors.js'
     ],
 ];
 

@@ -3840,6 +3840,30 @@ ok(moop_cookie_name('MOOPSESS') === moop_cookie_name('MOOPSESS', basename($BASE)
    'without an argument the name comes from this checkout\'s own folder, never from settings');
 
 // ----------------------------------------------------------------------------
+group('Site colors: one main color, a worked-out palette, nothing for a site that sets none');
+require_once "$BASE/lib/theme_colors.php";
+ok(moop_theme_palette([]) === [] && moop_theme_palette(['main' => '']) === [] && moop_theme_palette(['main' => 'red']) === []
+   && moop_theme_style_tag() === '',
+   'no main color (simrbase): no palette and no <style> at all -- the teal in css/moop.css stands');
+$_pal = moop_theme_palette(['main' => '#339933']);
+ok(count($_pal) === 10 && $_pal['--moop-tool-header'] === '#339933' && $_pal['--moop-main-rgb'] === '51, 153, 51',
+   'a main color sets the whole family, including r,g,b for the washes');
+ok(moop_contrast_with_white($_pal['--moop-tool-hover']) > moop_contrast_with_white('#339933')
+   && moop_contrast_with_white($_pal['--moop-organism-header']) > moop_contrast_with_white($_pal['--moop-tool-hover']),
+   'hover is darker than the main color, organism headers darker still');
+ok(moop_contrast_with_white($_pal['--moop-assembly-header']) >= 4.5 && moop_contrast_with_white($_pal['--moop-action']) >= 4.5,
+   'suggested assembly and action colors carry white text at 4.5:1');
+ok(moop_theme_palette(['main' => '#339933', 'assembly' => '#AA0000'])['--moop-assembly-header'] === '#aa0000',
+   'a color the site chose is used as given');
+ok(moop_contrast_with_white('#ffffff') === 1.0 && moop_contrast_with_white('#000000') === 21.0,
+   'contrast: white on white 1:1, white on black 21:1');
+ok(moop_contrast_with_white(moop_accessible_shade('#339933')) >= 4.5 && moop_theme_contrast_warnings($_pal) === ['--moop-tool-header' => 3.66],
+   'a main color too light for white text is flagged, and the suggested shade passes');
+$_teal = moop_theme_palette(['main' => '#0891b2']);
+ok(moop_hex_rgb($_teal['--moop-tool-hover'])[2] < 178 && $_teal['--moop-main-tint'][0] === '#',
+   'worked out from MOOP\'s own teal, the family lands near the hand-picked shades');
+
+// ----------------------------------------------------------------------------
 group('Taxonomy tree: an unnamed species on a genus id keeps its own leaf');
 require_once "$BASE/lib/taxonomy_functions.php";
 $_lin = fn(...$l) => ['lineage' => array_map(fn($x) => ['rank' => $x[0], 'name' => $x[1]], $l)];

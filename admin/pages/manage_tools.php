@@ -15,7 +15,7 @@ $n_off = count(array_filter($enabled, fn($on) => !$on));
 <div class="container my-4">
 
   <div class="d-flex align-items-center gap-3 mb-3">
-    <h3 class="mb-0"><i class="fa fa-toolbox me-2" style="color:#0891b2;"></i>Manage Tools</h3>
+    <h3 class="mb-0"><i class="fa fa-toolbox me-2" style="color:var(--moop-tool-header);"></i>Manage Tools</h3>
     <a href="admin.php" class="btn btn-outline-secondary btn-sm ms-auto">
       <i class="fa fa-arrow-left me-1"></i>Back to Dashboard
     </a>

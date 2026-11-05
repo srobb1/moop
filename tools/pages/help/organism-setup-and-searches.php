@@ -19,7 +19,7 @@
   </div>
 
   <div class="card shadow-sm mb-4">
-    <div class="card-header text-white d-flex align-items-center" style="background-color:#0891b2;">
+    <div class="card-header text-white d-flex align-items-center" style="background-color:var(--moop-tool-header);">
       <span class="text-uppercase fw-semibold" style="letter-spacing:0.1em; font-size:0.8rem;"><i class="fa fa-cogs me-2"></i>Setup &amp; Searches (Technical)</span>
     </div>
     <div class="card-body py-2">

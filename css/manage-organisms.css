@@ -18,7 +18,7 @@
 .asm-tree .asm-line + .asm-line,
 .asm-tree .gs-line + .asm-line { margin-top: 0.35rem; }
 .asm-tree .asm-line:hover,
-.asm-tree .gs-line:hover { background: rgba(8, 145, 178, 0.08); }
+.asm-tree .gs-line:hover { background: rgba(var(--moop-main-rgb), 0.08); }
 .asm-tree .asm-line:hover .fw-semibold,
 .asm-tree .gs-line:hover { text-decoration: underline; }
 .asm-tree .badge { font-weight: 500; text-decoration: none; }
@@ -27,15 +27,15 @@
    a reference panel rather than more table chrome. */
 .org-key {
   padding: 0.45rem 0.75rem;
-  background: rgba(8, 145, 178, 0.07);
-  border-left: 3px solid #0891b2;
+  background: rgba(var(--moop-main-rgb), 0.07);
+  border-left: 3px solid var(--moop-tool-header);
   border-radius: 0.25rem;
   color: #334155;
 }
 .org-key .badge { font-weight: 500; }
 
 /* Gene-set card the modal was opened at (clicked from a gene-set line). */
-.gs-focus { box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.55); transition: box-shadow 0.4s; }
+.gs-focus { box-shadow: 0 0 0 3px rgba(var(--moop-main-rgb), 0.55); transition: box-shadow 0.4s; }
 
 /* Filter bar: pills in the same idiom as the tree's chips -- soft fill, thin border in
    the severity color -- rather than empty outline buttons. The selected filter takes

@@ -6,10 +6,10 @@
  * ==========================================================================*/
 
 :root{
-  --pnav-accent:#0891b2;
-  --pnav-accent-strong:#0e7490;
+  --pnav-accent:var(--moop-tool-header);
+  --pnav-accent-strong:var(--moop-tool-hover);
   --pnav-accent-ink:#075766;
-  --pnav-wash:#ecfeff;
+  --pnav-wash:var(--moop-main-lightest);
   --pnav-wash-2:#cbf3f8;
   --pnav-border:#dbe4ea;
   --pnav-muted:#5a6b7a;
@@ -109,7 +109,7 @@
   background:rgba(15,30,43,.06);padding:.05rem .32rem;border-radius:6px;
 }
 .pnav-link:hover .pnav-count,
-.pnav-link.is-active .pnav-count{color:var(--pnav-accent-strong);background:rgba(8,145,178,.14)}
+.pnav-link.is-active .pnav-count{color:var(--pnav-accent-strong);background:rgba(var(--moop-main-rgb),.14)}
 .pnav-link.is-active{background:var(--pnav-wash);border-left-color:var(--pnav-accent);
   color:var(--pnav-accent-ink);font-weight:700}
 /* ancestors get no highlight — only the current section lights up (kept subtle
