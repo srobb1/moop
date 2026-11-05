@@ -274,13 +274,14 @@
 
 <?php
 // The summary in the site's other languages (Admin -> Manage Languages) -- only on a site that has
-// more than one, so a one-language site's dialog is exactly as before. Plain text, not HTML.
+// more than one, so a one-language site's dialog is exactly as before. HTML allowed, cleaned (tools/organism.php).
 $sum_langs = array_values(array_filter(ConfigManager::getInstance()->languages(), fn($l) => $l['code'] !== 'en'));
 if ($sum_langs): ?>
         <div id="summary-lang-<?= $org_safe ?>" class="mb-4">
           <h5 class="mb-2"><i class="fa fa-language"></i> Summary in other languages</h5>
           <p class="small text-muted mb-2">
-            Plain text; a blank line starts a new paragraph. Shown instead of everything above to visitors
+            A blank line starts a new paragraph; lines that each start with <code>- </code> make a bulleted list.
+            HTML works as in the English paragraphs (<code>&lt;em&gt;</code> for a scientific name, links). Shown instead of everything above to visitors
             reading the site in that language. Left empty, they see the English paragraphs above — or, when there
             are none, that language's Wikipedia article (the English one if it has none).
           </p>
