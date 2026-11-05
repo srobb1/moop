@@ -47,7 +47,7 @@
     <div class="row g-3">
       <div class="col-lg-6">
         <div class="card h-100">
-          <div class="card-header" style="background-color:#0f766e; color:white;">
+          <div class="card-header" style="background-color:var(--moop-organism-header); color:white;">
             <strong>Organism</strong>
           </div>
           <div class="card-body">
@@ -208,7 +208,7 @@
 
     <!-- organism.json -->
     <div class="card mb-4">
-      <div class="card-header text-white" style="background-color:#0f766e;">
+      <div class="card-header text-white" style="background-color:var(--moop-organism-header);">
         <code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">organism.json</code>
         <span class="ms-2 small opacity-75">— organisms/Organism_Name/organism.json</span>
       </div>
@@ -326,7 +326,7 @@
     <p class="text-muted">Each organism has one SQLite database. The core tables are:</p>
 
     <div class="card mb-3">
-      <div class="card-header" style="background-color:#0f766e; color:white;"><code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">organism</code> — species metadata</div>
+      <div class="card-header" style="background-color:var(--moop-organism-header); color:white;"><code style="background:rgba(0,0,0,0.2);color:white;padding:2px 6px;border-radius:3px;">organism</code> — species metadata</div>
       <div class="card-body">
         <table class="table table-sm mb-1">
           <thead class="table-light"><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>

@@ -420,7 +420,7 @@ function organismHeaderHtml(organism, results, sitePath, imageUrl, linked) {
         : `<i class="fa fa-dna" style="margin-right: 8px;"></i>`;
 
     const name = linked
-        ? `<a href="${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}" style="text-decoration: none; color: #0f766e;"><em>${genus} ${species}</em> <i class="fa fa-external-link-alt" style="font-size: 0.8em; margin-left: 0.25rem;"></i></a>`
+        ? `<a href="${sitePath}/tools/organism.php?organism=${encodeURIComponent(organism)}" style="text-decoration: none; color: var(--moop-organism-header);"><em>${genus} ${species}</em> <i class="fa fa-external-link-alt" style="font-size: 0.8em; margin-left: 0.25rem;"></i></a>`
         : `<em>${genus} ${species}</em>`;
 
     return imageHtml + name + (commonName ? ` (${commonName})` : '');

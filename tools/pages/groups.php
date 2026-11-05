@@ -6,10 +6,10 @@
     <div class="col-lg-8">
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
-        <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:#0f766e;">
+        <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:var(--moop-organism-header);">
           <?= page_title($group_name) ?>
           <?php if (!empty($group_organisms)): ?>
-            <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;"><?= t('search limited to this group') ?></span>
+            <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:var(--moop-organism-header);"><?= t('search limited to this group') ?></span>
           <?php endif; ?>
         </div>
         <?php /* Declared, not shown — the group name and the "search limited to this group"
@@ -103,7 +103,7 @@
       
       <div class="<?= (!empty($group_info['images'][0]['file']) || !empty($group_info['wikipedia_image'])) ? 'col-md-8' : 'col-12' ?>">
         <div class="card shadow-sm">
-          <div class="card-header text-white" style="background-color:#0f766e;">
+          <div class="card-header text-white" style="background-color:var(--moop-organism-header);">
             <span class="text-uppercase fw-semibold section-eyebrow"><?= t('About %s', $group_name) ?></span>
           </div>
           <div class="card-body">
@@ -124,7 +124,7 @@
   <div class="row mb-5" id="organismsSection">
     <div class="col-12">
       <div class="card shadow-sm">
-        <div class="card-header text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color:#0f766e;">
+        <div class="card-header text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color:var(--moop-organism-header);">
           <div class="d-flex align-items-center gap-2">
             <span class="text-uppercase fw-semibold section-eyebrow"><?= t('Organisms in %s', $group_name) ?></span>
             <?php if (!empty($group_organisms)): ?>

@@ -23,7 +23,7 @@
 
 .breadcrumb > div a {
   display: inline-block;
-  background-color: #0f766e;
+  background-color: var(--moop-organism-header);
   color: white !important;
   text-decoration: none !important;
   padding: 6px 12px;
@@ -41,7 +41,7 @@
 .breadcrumb > div:not(:last-child)::after {
   content: '›';
   margin: 0 6px;
-  color: #0f766e;
+  color: var(--moop-organism-header);
   font-size: 1.2rem;
   font-weight: bold;
 }

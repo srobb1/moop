@@ -57,7 +57,7 @@
   <div class="row mb-5" id="organismsSection">
     <div class="col-12">
       <div class="card shadow-sm">
-        <div class="card-header text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color:#0f766e;">
+        <div class="card-header text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color:var(--moop-organism-header);">
           <div class="d-flex align-items-center gap-2">
             <span class="text-uppercase fw-semibold section-eyebrow"><?= t('Selected Organisms') ?></span>
             <span class="organism-count-badge"><span class="oc-n">0</span> <?= t('of') ?> <span class="oc-t">0</span></span>

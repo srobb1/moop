@@ -825,7 +825,7 @@ a:hover .link-icon {
   margin: 0;
   padding: 0.6rem 1.25rem;
   color: white;
-  background-color: #0f766e;
+  background-color: var(--moop-organism-header);
 }
 
 .organism-header-custom .feature-info-grid a:hover {
@@ -833,12 +833,12 @@ a:hover .link-icon {
 }
 
 .bg-organism {
-  background-color: #0f766e !important;
+  background-color: var(--moop-organism-header) !important;
   color: white !important;
 }
 
 .text-organism {
-  color: #0f766e;
+  color: var(--moop-organism-header);
 }
 
 .gene-set-header-custom {
