@@ -2522,8 +2522,10 @@ sub naming_species_marking {
 # "Homolog of human SMEDWI-1" -- the partner's symbol taken for a human gene (user, 2026-11-04).
 sub naming_species_source {
   my ($symbol, $description, $how, $from) = @_;
-  my $gene = $symbol ne '' ? $symbol : "\"$description\"";
-  return { subject => "$naming_species->{species} $gene", how => $how,
+  # a partner named by family or domain alone reads "a Schmidtea mediterranea PDZ domain-containing
+  # protein" (user, 2026-11-05: not the name in quotes)
+  my $subject = $symbol ne '' ? "$naming_species->{species} $symbol" : "a $naming_species->{species} $description";
+  return { subject => $subject, how => $how,
            from => (defined $from and $from ne '') ? $from : $naming_species->{species},
            same_species => $naming_species->{same_species} ? 1 : 0,
            copied => ($naming_species->{same_species} or $naming_species->{copy_names}) ? 1 : 0 };
