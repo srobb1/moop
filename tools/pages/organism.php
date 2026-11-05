@@ -306,14 +306,17 @@
                     </div>
                     <?= $__more_btn ?>
                   <?php endif; ?>
-                <p class="<?= htmlspecialchars($paragraph['class'] ?? '') ?>" 
-                   style="<?= htmlspecialchars($paragraph['style'] ?? '') ?>">
+<?php /* A paragraph that IS a list (cuttingclass's species facts) goes in a <div>: a <ul>
+         inside a <p> is invalid, and browsers close the <p> early. */ ?>
+<?php $__tag = preg_match('/^\s*<(ul|ol)\b/i', (string) $paragraph['text']) ? 'div' : 'p'; ?>
+                <?= "<$__tag class=\"" . htmlspecialchars($paragraph['class'] ?? '') . "\" \n                   style=\""
+                    . htmlspecialchars($paragraph['style'] ?? '') . "\">\n" ?>
                   <?= moop_italicise_binomial(
                         $paragraph['text'],
                         $organism_info['genus'] ?? '',
                         $organism_info['species'] ?? ''
                       ) ?>
-                </p>
+                <?= "</$__tag>\n" ?>
               <?php endforeach; ?>
               <?php if ($__more_open): ?></div><?= $__more_btn ?><?php endif; ?>
             </div>

@@ -76,13 +76,20 @@ if (!empty($organism_info['genus']) && !empty($organism_info['species'])) {
 }
 
 // A summary written in the visitor's language (Manage Organisms, 'summary_lang' in organism.json;
-// cuttingclass) replaces every other description. Plain text, a blank line between paragraphs.
+// cuttingclass) replaces every other description. Plain text, a blank line between paragraphs; a
+// paragraph whose every line starts with "- " is a bulleted list.
 // English visitors, and every visitor on a one-language site, never reach this.
 $view_lang = moop_current_lang();
 $own_summary = $view_lang !== 'en' ? trim((string) ($organism_info['summary_lang'][$view_lang] ?? '')) : '';
 if ($own_summary !== '') {
-    $organism_info['html_p'] = array_map(fn($para) => ['text' => htmlspecialchars($para), 'class' => '', 'style' => ''],
-                                         preg_split('/\n\s*\n/', $own_summary, -1, PREG_SPLIT_NO_EMPTY));
+    $organism_info['html_p'] = array_map(function ($para) {
+        $lines = preg_split('/\s*\n\s*/', trim($para));
+        $bullets = array_filter($lines, fn($l) => strncmp($l, '- ', 2) === 0);
+        $text = count($bullets) === count($lines)
+            ? '<ul class="mb-0">' . implode('', array_map(fn($l) => '<li>' . htmlspecialchars(substr($l, 2)) . '</li>', $lines)) . '</ul>'
+            : htmlspecialchars($para);
+        return ['text' => $text, 'class' => '', 'style' => ''];
+    }, preg_split('/\n\s*\n/', $own_summary, -1, PREG_SPLIT_NO_EMPTY));
 }
 
 // Fetch Wikipedia data once — used for both description and image fallback below
