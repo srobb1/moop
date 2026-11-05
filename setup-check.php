@@ -736,7 +736,12 @@ if ($server_flavor === 'unknown') {
              "         (Without it, an uploaded .php in a served data tree will execute.)");
     } elseif (($expected = $server_flavor === 'nginx'
                    ? (string) shell_exec('bash ' . escapeshellarg("$base/scripts/nginx_site_guard.sh") . ' ' . escapeshellarg($guard_site))
-                   : (string) file_get_contents($canonical)) === '' || md5((string) @file_get_contents($deployed)) !== md5($expected)) {
+                   : (string) file_get_contents($canonical)) === ''
+               // Rules only: comment and blank lines do not change what nginx does, and comparing
+               // them made a documentation edit to the template read as an outdated guard on every
+               // site until re-deployed as root (2026-11-05). The same rule is in fix_moop_selinux.sh.
+               || md5(preg_replace('/^[ \t]*(#.*)?\R/m', '', (string) @file_get_contents($deployed)))
+                  !== md5(preg_replace('/^[ \t]*(#.*)?\R/m', '', $expected))) {
         // nginx: this site's guard is the template re-keyed to its own prefix
         // (scripts/nginx_site_guard.sh, the one definition shared with fix_moop_selinux.sh).
         warn("Deployed guard differs from what this site needs (" . basename($deployed) . ")",

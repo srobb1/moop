@@ -36,9 +36,11 @@
 #        sed 's#<site>#cuttingclass#g' docs/nginx/moop-site.conf.example \
 #          | sudo tee /etc/nginx/default.d/cuttingclass-site.conf
 #
-#   2. The guard (separate file, same idea — see its own header):
-#        sed 's#/moop/#/cuttingclass/#g' docs/nginx/moop-security.conf \
-#          | sudo tee /etc/nginx/default.d/cuttingclass-security.conf
+#   2. The guard (separate file) -- GENERATED, never sed-copied: a second site must leave out the
+#      three server-wide rules the first site's guard already applies, or `nginx -t` fails on a
+#      duplicate `location = /users.json` (found installing cuttingclass, 2026-11-05):
+#        sudo bash -c 'scripts/nginx_site_guard.sh cuttingclass > /etc/nginx/default.d/cuttingclass-security.conf'
+#        sudo chmod 644 /etc/nginx/default.d/cuttingclass-security.conf
 #
 #   3. sudo nginx -t && sudo systemctl reload nginx
 #
@@ -80,11 +82,15 @@ location = /<site>/jbrowse2/index.html {
 
 # ── COMPRESSION ─────────────────────────────────────────────────────────────────────
 #
-# These are LIVE directives, not a comment — gzip is valid in `server` context, so they
-# work in this file as-is. A server-level setting OVERRIDES any http-level one rather than
-# colliding with it, so deploying this is safe even on a host that already sets gzip
-# globally. (Two `gzip on;` in the SAME context would be a duplicate-directive error and
-# `nginx -t` would fail — that only happens if you also paste these into nginx.conf.)
+# These are LIVE directives, not a comment. This file is included INSIDE the server block, so
+# they are server-level: they override an http-level gzip setting, but if nginx.conf already
+# sets gzip in the same server block, a second `gzip on;` is a duplicate-directive error and
+# `nginx -t` fails. CHECK FIRST:
+#
+#     grep -n 'gzip' /etc/nginx/nginx.conf /etc/nginx/conf.d/*.conf
+#
+# If the server block already has them (it does on the original host, and so for any SECOND
+# site there), deploy only the gateway rule above and leave out everything below.
 #
 # Worth doing because MOOP's pages are mostly repeated table markup — a gene page can carry
 # a thousand annotation rows of near-identical HTML — so they compress unusually hard.

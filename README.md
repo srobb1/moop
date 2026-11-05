@@ -293,25 +293,89 @@ this table and the help text together.
 
 Supported, and it needs less than you would expect. MOOP derives its filesystem paths and
 URL prefix from wherever the code lives, so a second clone at
-`/var/www/html/cuttingclass` is served at `/cuttingclass/` — **no new vhost, no
+`/var/www/html/cuttingclass` is served at `/cuttingclass/`: **no new vhost, no
 `server_name` change, no TLS work.** The existing server block's PHP handler already covers
-it.
+it. Its login and language cookies are named after its folder (`MOOPSESS_cuttingclass`), so
+being logged in to one site never logs you in to the other.
 
-Two things are per-site:
+The steps below are the ones that installing cuttingclass beside simrbase actually needed
+(2026-11-05). `cuttingclass` stands for your site's folder name throughout.
 
-1. **The web-server files** — deploy both under a *per-site filename*
-   (`cuttingclass-security.conf`, `cuttingclass-site.conf`). The templates carry the exact
-   `sed` commands. Reusing the first site's filename overwrites its guard and leaves both
-   sites protected by only one of them.
-2. **SELinux labels**, if enforcing — `scripts/fix_moop_selinux.sh` derives its paths from
-   its own location, so run the *second* site's copy.
+1. **Clone and opt in to the hooks**, as in [Quick Start](#quick-start) step 1, into
+   `/var/www/html/cuttingclass`.
+2. **Create the folders outside the document root, as root**, owned by the web server.
+   `/var/www` is root's, so neither you nor the web server can create them:
+
+   ```bash
+   sudo install -d -o apache -g apache -m 2770 /var/www/cuttingclass-private /var/www/cuttingclass-site-data
+   sudo install -d -o apache -g apache -m 2775 /var/www/cuttingclass-cache
+   ```
+3. **Make the folders the web server writes into group-writable**, and create the ones a
+   fresh clone does not have. git leaves directories `2750`, which the installer reports as
+   "Cannot write". Directories only, never `chmod -R`, which would make every data file
+   executable; `data/tracks` stays read-only:
+
+   ```bash
+   cd /var/www/html/cuttingclass
+   mkdir -p logs data/genomes data/tracks metadata/change_log metadata/jbrowse2-configs
+   chgrp -R apache config metadata images organisms logs data docs
+   chmod 2775 config metadata metadata/change_log metadata/jbrowse2-configs images organisms logs data/genomes docs
+   ```
+4. **SELinux labels**, if enforcing: `sudo scripts/fix_moop_selinux.sh`, run from the
+   *second* site's checkout (it derives every path from its own location). It labels the
+   folders from step 2 too.
+5. **From the shell, the steps the web server is not allowed to do under SELinux** (the
+   installer then reports them as already done):
+
+   ```bash
+   composer install --no-dev
+   openssl rand -hex 16 > .setup-token && chmod 640 .setup-token && chgrp apache .setup-token
+   ```
+
+   Generate the JWT key pair the same way if the installer cannot write `certs/`
+   (`setup-check.php` prints the command).
+6. **The web-server files, under per-site filenames.** Generate the guard, never copy it with
+   `sed`: a second site must leave out the three server-wide rules the first site's guard
+   already applies, or `nginx -t` fails on a duplicate `location = /users.json`:
+
+   ```bash
+   sudo bash -c 'scripts/nginx_site_guard.sh cuttingclass > /etc/nginx/default.d/cuttingclass-security.conf'
+   sudo chmod 644 /etc/nginx/default.d/cuttingclass-security.conf
+   ```
+
+   From `docs/nginx/moop-site.conf.example` deploy **only the JBrowse auth-gateway rule**
+   (`location = /cuttingclass/jbrowse2/index.html { ... }`) as
+   `/etc/nginx/default.d/cuttingclass-site.conf`. Its gzip lines repeat what the first site's
+   server block already sets, which is a duplicate-directive error. Then
+   `sudo nginx -t && sudo systemctl reload nginx`.
+7. **Run the installer** at `http://your-host/cuttingclass/setup.php` with the token from
+   step 5.
+8. **In Site Configuration**, set the cache folder to `/var/www/cuttingclass-cache` and the
+   site-data folder to `/var/www/cuttingclass-site-data`. (Left empty, caches go in a hidden
+   `organisms/.cache/`, which works but mixes them into the data tree.)
+9. **Do not run `install_monitor.sh` or `install_security_report.sh` for the second site.**
+   Each installs one host-wide timer that serves a single site: the System Monitor's collector
+   and its nginx files, and the daily security report, which lands in one site's cache folder.
+   Running either from the second checkout re-points it at the second site, and the first
+   site's dashboard loses it.
+
+**Keeping the sites on the same code.** Both checkouts come from the same repository, and
+neither is edited by hand: change one tree, commit and push, then update every site at once:
+
+```bash
+scripts/update_sites.sh            # pull, fix permissions, setup-check, every site
+scripts/update_sites.sh --check    # report only
+```
+
+It refuses to update a checkout with local changes, so a hand edit cannot be silently kept or
+lost.
 
 `setup.php` refuses to run if the config it loads describes a different directory than the
 one it is running in, which stops a second install writing into the first one's files.
 
 > ⚠️ For a site whose auth-gateway rewrite is already inline in `nginx.conf`, do **not**
-> also deploy `moop-site.conf` — duplicate `location` blocks fail `nginx -t` and a reload
-> takes down the site that was working. Each template opens with the check for this.
+> also deploy `cuttingclass-site.conf`: duplicate `location` blocks fail `nginx -t`, and a
+> reload takes down the site that was working. The template opens with the check for this.
 
 ---
 
