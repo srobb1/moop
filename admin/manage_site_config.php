@@ -159,8 +159,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'siteTitle' => $_POST['siteTitle'] ?? '',
             'admin_email' => $_POST['admin_email'] ?? '',
             'header_img' => $_POST['header_img'] ?? '',
-            'favicon_filename' => $_POST['favicon_filename'] ?? '',
         ];
+        // favicon_filename is NOT read from the form: the form has no such field, so
+        // `$_POST['favicon_filename'] ?? ''` saved an empty name on EVERY save and the
+        // uploaded favicon vanished the next time anything else on the page was saved
+        // (cuttingclass, 2026-11-05). It is set only by a successful upload, below; any
+        // other save keeps the stored value (saveEditableConfig() merges).
         
         // Parse sequence types from form
         if (isset($_POST['sequence_types']) && is_array($_POST['sequence_types'])) {
