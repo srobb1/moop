@@ -160,7 +160,9 @@ function moop_markdown(string $markdown): string {
 
 /**
  * HTML -> cleaned HTML (HTML Purifier). Keeps structure and styling -- block and inline text
- * elements, lists, tables, links, images, and class/style/title on any of them -- and removes
+ * elements, lists, tables, links, images, collapsible <details>/<summary> sections (long FAQs and
+ * protocols, cuttingclass 2026-11-05: they open and close with no script), and class/style/title on
+ * any of them -- and removes
  * everything that can run: <script>, on*= handlers, javascript: links, <iframe>, <form>, <style>.
  * With $removed passed, it is filled with what was taken out (for the editor's preview).
  */
@@ -172,14 +174,22 @@ function moop_html_clean(string $html, ?array &$removed = null): string {
     if (!isset($purifiers[$collect])) {
         $c = HTMLPurifier_Config::createDefault();
         $c->set('Cache.DefinitionImpl', null);   // no cache directory to keep writable; pages are small
-        $c->set('HTML.AllowedElements', ['div', 'span', 'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        $c->set('HTML.AllowedElements', ['details', 'summary', 'div', 'span', 'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
             'strong', 'b', 'em', 'i', 'u', 's', 'small', 'sub', 'sup', 'blockquote', 'pre', 'code',
             'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'a', 'img']);
-        $c->set('HTML.AllowedAttributes', ['*.class', '*.style', '*.title', 'a.href', 'a.target',
+        $c->set('HTML.AllowedAttributes', ['*.class', '*.style', '*.title', 'details.open', 'a.href', 'a.target',
             'img.src', 'img.alt', 'img.width', 'img.height', 'th.colspan', 'th.rowspan', 'td.colspan', 'td.rowspan']);
         $c->set('Attr.AllowedFrameTargets', ['_blank']);
         $c->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
         $c->set('Core.CollectErrors', $collect);
+        // HTML Purifier predates HTML5's <details>/<summary>: teach it the two elements. The
+        // definition id/rev name this addition (required for a custom definition; nothing is cached).
+        $c->set('HTML.DefinitionID', 'moop-content-pages');
+        $c->set('HTML.DefinitionRev', 1);
+        if ($def = $c->maybeGetRawHTMLDefinition()) {
+            $def->addElement('details', 'Block', 'Flow', 'Common', ['open' => 'Bool#open']);
+            $def->addElement('summary', 'Block', 'Flow', 'Common');
+        }
         $purifiers[$collect] = new HTMLPurifier($c);
     }
     $p = $purifiers[$collect];

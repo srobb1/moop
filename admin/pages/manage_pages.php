@@ -248,7 +248,8 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
     &lt;a class="btn btn-primary" href="/<?= htmlspecialchars($site) ?>/page.php?p=planarian-maintenance"&gt;Read&lt;/a&gt;
   &lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
 &lt;/div&gt;</pre>
-    Kept: headings, paragraphs, lists, tables, links, images, <code>div</code>/<code>span</code>, and
+    Kept: headings, paragraphs, lists, tables, links, images, <code>div</code>/<code>span</code>, collapsible
+    <code>&lt;details&gt;&lt;summary&gt;Question&lt;/summary&gt;…&lt;/details&gt;</code> sections, and
     <code>class</code>, <code>style</code> and <code>title</code> on any of them — so Bootstrap classes work. Removed:
     <code>&lt;script&gt;</code>, <code>onclick=</code>-style handlers, <code>javascript:</code> links,
     <code>&lt;iframe&gt;</code>, <code>&lt;form&gt;</code> and <code>&lt;style&gt;</code>. The preview lists anything removed.

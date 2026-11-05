@@ -3644,6 +3644,13 @@ ok(!preg_match('/<script|onclick|onerror|javascript:|<iframe|<form|<input|<style
 ok(count($_rm) >= 5 && (bool) array_filter($_rm, fn($m) => strpos($m, '<script>') !== false),
    'HTML: the preview is told what was removed, naming the tag');
 ok(strpos(moop_page_render('<b>x</b>', 'markdown'), '&lt;b&gt;') !== false, 'Markdown pages still show typed HTML as text');
+// Collapsible sections (cuttingclass FAQ and protocols, 2026-11-05): kept, and still cleaned inside.
+$_det = moop_page_render('<details class="card" open><summary class="h5">Q <em>x</em></summary><p>A</p></details>', 'html', $_rm);
+ok(strpos($_det, '<details class="card" open="open"><summary class="h5">Q <em>x</em></summary>') !== false && $_rm === [],
+   'HTML pages keep <details>/<summary>, their class and the open flag');
+$_det = moop_page_render('<details><summary onclick="x()">Q</summary><script>alert(1)</script><p>A</p></details>', 'html');
+ok(strpos($_det, 'onclick') === false && strpos($_det, '<script') === false && strpos($_det, '<summary>Q</summary>') !== false,
+   'inside <details>, scripts and on*= handlers are still removed');
 moop_page_save(['slug' => 'protocols', 'format' => 'html', 'title' => ['en' => 'Protocols'], 'body' => ['en' => $_card]]);
 ok(moop_page_get('protocols')['format'] === 'html', 'the format is saved with the page');
 ok(moop_page_delete('protocols')['ok'] && moop_page_get('protocols') === null && !moop_page_delete('protocols')['ok'],
