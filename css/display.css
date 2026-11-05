@@ -1644,7 +1644,7 @@ a:hover .link-icon {
   width: 100%;
 }
 .qs-card {
-  background: #e0f7fa;
+  background: var(--moop-search-wash);
   border: 1px solid rgba(var(--moop-main-rgb), 0.18);
   padding: 20px;
 }

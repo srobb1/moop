@@ -20,7 +20,7 @@
 
 :root {
     --adm-accent: var(--moop-tool-header);          /* MOOP teal */
-    --adm-accent-strong: #067d94;
+    --adm-accent-strong: var(--moop-main-strong);
     --adm-wash: rgba(var(--moop-main-rgb), 0.07);
     --adm-border: rgba(var(--moop-main-rgb), 0.22);
 }

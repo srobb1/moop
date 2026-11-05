@@ -3846,8 +3846,12 @@ ok(moop_theme_palette([]) === [] && moop_theme_palette(['main' => '']) === [] &&
    && moop_theme_style_tag() === '',
    'no main color (simrbase): no palette and no <style> at all -- the teal in css/moop.css stands');
 $_pal = moop_theme_palette(['main' => '#339933']);
-ok(count($_pal) === 10 && $_pal['--moop-tool-header'] === '#339933' && $_pal['--moop-main-rgb'] === '51, 153, 51',
+ok(count($_pal) === 12 && $_pal['--moop-tool-header'] === '#339933' && $_pal['--moop-main-rgb'] === '51, 153, 51',
    'a main color sets the whole family, including r,g,b for the washes');
+ok(!array_diff_key(MOOP_DEFAULT_PALETTE, $_pal) && !array_diff_key($_pal, MOOP_DEFAULT_PALETTE),
+   'the palette sets exactly the variables simrbase defines -- none left teal, none extra');
+ok($_pal['--moop-search-wash'] === '#f1f8f1',
+   'the home page search box is the admin header wash (7% of the main color on white), as a solid color');
 ok(moop_contrast_with_white($_pal['--moop-tool-hover']) > moop_contrast_with_white('#339933')
    && moop_contrast_with_white($_pal['--moop-organism-header']) > moop_contrast_with_white($_pal['--moop-tool-hover']),
    'hover is darker than the main color, organism headers darker still');

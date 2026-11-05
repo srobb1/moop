@@ -57,6 +57,8 @@
   --moop-main-dark:       #155e75;      /* text on a light main-color wash */
   --moop-main-tint:       #e0f2f7;      /* pale solid tint (badges) */
   --moop-main-lightest:   #ecfeff;      /* palest tint (nav, chips) */
+  --moop-main-strong:     #067d94;      /* deeper text accent (admin quick links, counts) */
+  --moop-search-wash:     #e0f7fa;      /* home page quick-search box */
 }
 
 /* Solid tool-page header: teal fill, white text. The card-header variant most tool pages use. */

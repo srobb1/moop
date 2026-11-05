@@ -4,7 +4,7 @@
  *
  * css/moop.css defines MOOP's palette as variables (--moop-tool-header, --moop-tool-hover,
  * --moop-main-rgb, --moop-main-dark, --moop-main-tint, --moop-main-lightest, --moop-organism-header,
- * --moop-assembly-header, --moop-action, --moop-action-hover), and every main-color use on the site
+ * --moop-main-strong, --moop-search-wash, --moop-assembly-header, --moop-action, --moop-action-hover), and every main-color use on the site
  * goes through them. A site that sets 'theme_colors' in Site Configuration gets those variables
  * RECOMPUTED from its colors, emitted after the stylesheets (moop_theme_style_tag()). A site that
  * sets nothing gets nothing emitted -- simrbase's teal, byte for byte.
@@ -101,6 +101,9 @@ function moop_theme_palette(array $colors): array {
         '--moop-main-dark'       => moop_hsl_hex($h, $s, min($l, 0.25)),
         '--moop-main-tint'       => moop_hsl_hex($h, min($s, 0.5), 0.92),
         '--moop-main-lightest'   => moop_hsl_hex($h, min($s, 0.8), 0.96),
+        '--moop-main-strong'     => moop_darken($main, 0.13),
+        // The admin header wash (rgba(main, 0.07)) as a solid color on white.
+        '--moop-search-wash'     => moop_rgb_hex(array_map(fn($v) => 255 - 0.07 * (255 - $v), moop_hex_rgb($main))),
         '--moop-assembly-header' => $assembly,
         '--moop-action'          => $action,
         '--moop-action-hover'    => moop_darken($action, 0.12),
@@ -132,7 +135,8 @@ function moop_accessible_shade(string $hex): string {
 const MOOP_DEFAULT_PALETTE = [
     '--moop-tool-header' => '#0891b2', '--moop-tool-hover' => '#0e7490', '--moop-organism-header' => '#0f766e',
     '--moop-main-rgb' => '8, 145, 178', '--moop-main-dark' => '#155e75', '--moop-main-tint' => '#e0f2f7',
-    '--moop-main-lightest' => '#ecfeff', '--moop-assembly-header' => '#e11d48', '--moop-action' => '#6366f1',
+    '--moop-main-lightest' => '#ecfeff', '--moop-main-strong' => '#067d94',
+    '--moop-search-wash' => '#e0f7fa', '--moop-assembly-header' => '#e11d48', '--moop-action' => '#6366f1',
     '--moop-action-hover' => '#4f46e5',
 ];
 
