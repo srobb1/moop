@@ -6,7 +6,11 @@
  */
 ?>
 <div class="container my-4 content-page" style="max-width: 900px;">
+<?php /* A page whose body brings its own main heading (cuttingclass's pages open with a banner and
+         an <h1>) would otherwise show its title twice. The browser tab keeps the title either way. */ ?>
+<?php if (stripos($page_html, '<h1') === false): ?>
   <h1 class="fw-bold mb-3"<?= !empty($title_lang) ? ' lang="' . htmlspecialchars($title_lang) . '"' : '' ?>><?= htmlspecialchars($page_title) ?></h1>
+<?php endif; ?>
   <div class="content-page-body"<?= !empty($body_lang) ? ' lang="' . htmlspecialchars($body_lang) . '"' : '' ?>>
     <?= $page_html ?>
   </div>
