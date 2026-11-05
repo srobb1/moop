@@ -232,6 +232,19 @@
                             $__kept_from = $__m[1];
                         }
                         $__moop_name = $__moop_name || $__s['kind'] === 'pipeline_name';
+                        // A name from a naming species (copied or "-like") or a curator is not from
+                        // HGNC: "Named by MOOP from HGNC release" was wrong for planarian names copied
+                        // from S. mediterranea S3h1 (user, 2026-11-04). The Identity statement says
+                        // where the name came from; the HGNC release dates MOOP's human evidence.
+                        if ($__s['kind'] === 'identity' && $__kept_from === null) {
+                            if (($__s['link_kind'] ?? '') === 'ncbi'
+                                && preg_match('/(?:name copied from (.+)|named after it \((.+)\), marked -like)$/', $__s['naming_text'], $__m)) {
+                                $__kept_from = $__m[1] !== '' ? $__m[1] : $__m[2];
+                            } elseif (str_starts_with($__s['naming_text'], 'Named by a curator')) {
+                                // (a curated Identity has no link: its link_kind is blank)
+                                $__kept_from = 'a curator';
+                            }
+                        }
                     }
                     $__release = htmlspecialchars($gene_naming['data_version']);
                 ?>

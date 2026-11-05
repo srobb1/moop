@@ -671,7 +671,7 @@ function getGeneNaming($feature_id, $dbFile): array {
             return $empty;
         }
         $stmt = $dbh->prepare(
-            "SELECT n.kind, n.sort_order, n.naming_text, n.accession, l.accession_url
+            "SELECT n.kind, n.link_kind, n.sort_order, n.naming_text, n.accession, l.accession_url
              FROM gene_naming n
              LEFT JOIN gene_naming_link l ON l.link_kind = n.link_kind
              WHERE n.feature_id = ? AND n.kind <> 'name_source'

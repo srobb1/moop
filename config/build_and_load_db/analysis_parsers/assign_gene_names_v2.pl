@@ -2517,6 +2517,18 @@ sub naming_species_marking {
   return $naming_species->{copy_names} ? 'name copied, labelled (copy_names)' : 'named after it, marked -like';
 }
 
+# what a step 2 name is about, for its Identity statement (identity_statement): the partner gene in the
+# naming species, how it was found, and the annotation the name comes from. Without it the statement read
+# "Homolog of human SMEDWI-1" -- the partner's symbol taken for a human gene (user, 2026-11-04).
+sub naming_species_source {
+  my ($symbol, $description, $how, $from) = @_;
+  my $gene = $symbol ne '' ? $symbol : "\"$description\"";
+  return { subject => "$naming_species->{species} $gene", how => $how,
+           from => (defined $from and $from ne '') ? $from : $naming_species->{species},
+           same_species => $naming_species->{same_species} ? 1 : 0,
+           copied => ($naming_species->{same_species} or $naming_species->{copy_names}) ? 1 : 0 };
+}
+
 # naming step 2: the use_for_names species' OMA 1:1 / many:1 ortholog; else its full-length (FULL)
 # reciprocal best hit; else -- for another species only -- its best DIAMOND hit, if that best hit is
 # full-length (a weaker full-length hit is never used instead, as for a human -like name); else its
@@ -2540,6 +2552,7 @@ sub naming_species_name {
       : "Ortholog of $naming_species->{species} $partner (OMA, $candidate->{type}); " . naming_species_marking();
     return { origin => { kind => 'ncbi', accession => $partner, step => 2, rule => $rule },
              desc => naming_species_text($symbol, $description),
+             species_source => naming_species_source($symbol, $description, "OMA $candidate->{type}"),
              tag => [($naming_species->{same_species} ? 'SRC' : 'ISO'), relationship_tag($candidate->{type}), lc $tag],
              selected => selected_id($group, $candidate->{id}),
              note => "OMA_pairwise_$code|Orthologs|" . strip_suffixes($candidate->{id}) . "|$candidate->{hit}|$candidate->{type}" };
@@ -2568,6 +2581,8 @@ sub naming_species_name {
       : "$partner; " . naming_species_marking();
     return { origin => { kind => 'ncbi', accession => $hit->{hit}, step => 2, rule => $rule },
              desc => naming_species_text($symbol, $description),
+             species_source => naming_species_source($symbol, $description, "full-length " . ($kind eq 'rbh' ? 'reciprocal best hit' : 'best hit'),
+                                                     $species_search_label{$tag}{$kind}),
              tag => [($naming_species->{same_species} ? 'SRC' : 'ISS'), ($kind eq 'rbh' ? 'rbh' : 'bh'), lc $tag],
              selected => selected_id($group, $hit->{id}),
              note => "$source|" . ($naming_species->{same_species} ? 'Same_species' : 'Naming_species') . '|'
@@ -2585,6 +2600,7 @@ sub naming_species_name {
         : "Best hit $naming_species->{species} $hit->{hit} ($hit->{source}, E=" . e_value($hit->{evalue}) . "); " . naming_species_marking();
       return { origin => { kind => 'ncbi', accession => $hit->{hit}, step => 2, rule => $rule },
                desc => naming_species_text($symbol, $description),
+               species_source => naming_species_source($symbol, $description, "best hit in $hit->{source}"),
                tag => [($naming_species->{same_species} ? 'SRC' : 'ISS'), lc $tag],
                selected => selected_id($group, $hit->{id}),
                note => "$hit->{source}|$type|" . strip_suffixes($hit->{id}) . "|$hit->{hit}|$hit->{score}" };
@@ -3395,7 +3411,10 @@ sub with_relationship {
     $stats{'caution: ' . ($caution =~ s/\d+/N/gr =~ s/ of \S+$/ of X/r)}++;
   }
   my $rule = $named->{origin}{rule};
-  $rule = "$RELATIONSHIP_LEAD{$relationship}: " . lcfirst($rule) if $RELATIONSHIP_LEAD{$relationship};
+  # a rule opening with a species name keeps its capital ("Schmidtea mediterranea h1SMcG0013999 ...")
+  my $species_first = $naming_species && index($rule, "$naming_species->{species} ") == 0;
+  $rule = "$RELATIONSHIP_LEAD{$relationship}: " . ($species_first ? $rule : lcfirst($rule))
+    if $RELATIONSHIP_LEAD{$relationship};
   $rule .= "; $agreement_note" if defined $agreement_note;
   $rule .= '; caution: ' . join('; ', @cautions) if @cautions;
   return { %$named, relationship => $relationship, cautions => \@cautions, origin => { %{$named->{origin}}, rule => $rule } };
@@ -4192,6 +4211,13 @@ sub name_subject {
 sub identity_statement {
   my ($group, $named) = @_;
   my $relationship = $named->{relationship} // 'none';
+  # a name from the naming species (step 2): about the partner gene there, not a human gene
+  if (my $source = $named->{species_source}) {
+    my $taken = $source->{copied} ? "name copied from $source->{from}" : "named after it ($source->{from}), marked -like";
+    return "Same gene in another annotation of this species ($source->{how}); $taken" if $source->{same_species};
+    return "Ortholog of $source->{subject} ($source->{how}); $taken" if $source->{how} =~ /^OMA /;
+    return "Homolog of $source->{subject} ($source->{how}); orthology not shown (may be a paralog); $taken";
+  }
   my $subject = $named->{subject} // name_subject($named->{desc}, $relationship);
   my %text = (
     'ortholog'          => "Ortholog of $subject",
@@ -4333,6 +4359,10 @@ sub gene_statements {
     my $text = @support ? 'Supported by ' . scalar(@support) . ' method' . (@support == 1 ? '' : 's') . ': ' . join(', ', @support) : '';
     $text .= ($text ne '' ? '; ' : 'Supported by ') . "the same PANTHER family ($same_family) as the human gene" . (@humans > 1 ? 's' : '')
       if defined $same_family;
+    # a name from the naming species (step 2) is not a human gene's name: the human gene these methods
+    # support is its closest human gene, and the statement says so (user, 2026-11-04)
+    $text = 'Closest human gene ' . join(', ', map { my $human = $_; human_label($human) } @humans) . ': ' . lcfirst($text)
+      if $text ne '' and $named->{species_source};
     $said{support} = $text if $text ne '';
   }
   # a name with no human gene behind it rests on a domain or a family match: that evidence is its Support
