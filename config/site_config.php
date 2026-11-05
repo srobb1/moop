@@ -184,6 +184,13 @@ return [
     // Set per site in Admin → Manage Site Configuration; applied in includes/config_init.php.
     'timezone' => '',
 
+    // ======== Technical panels ========
+    // 'show' (default): BUSCO, assembly statistics and the gene set comparison table appear as
+    // they always have. 'researchers': they are folded into a closed "For researchers" section --
+    // for a teaching site (cuttingclass) whose visitors are students. Nothing is removed.
+    // Set per site in Admin -> Manage Site Configuration; ConfigManager::technicalPanelsTucked().
+    'technical_panels' => 'show',
+
     // ======== OPTIONAL: IP-Based Auto-Login ========
     // IP ranges for automatic login with full access (e.g., institutional/campus networks)
     // Format: Array of ranges, each with 'start' and 'end' IP addresses (IPv4 only)

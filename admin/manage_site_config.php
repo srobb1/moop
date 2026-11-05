@@ -414,6 +414,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Parse time zone ('' = use PHP's own setting)
+        if (isset($_POST['technical_panels'])) {
+            $data['technical_panels'] = (string) $_POST['technical_panels'];
+        }
+
         if (isset($_POST['timezone'])) {
             $data['timezone'] = trim($_POST['timezone']);
         }

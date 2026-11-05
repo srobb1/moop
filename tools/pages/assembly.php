@@ -111,7 +111,19 @@
                  are; this exists so the page declares its PURPOSE for the router. */ ?>
         <?= page_purpose('Search genes within a single assembly, choosing which of its gene sets to search.', '', false, false) ?>
         <div class="feature-overview-body">
-          <?php if (($genome_kind ?? '') === 'transcripts'): ?>
+<?php /* On a site of transcriptomes only (cuttingclass) there is no genome to mistake this
+         for, so it is described, not warned about -- moop_site_is_transcriptomes(). */
+      $__tx_site = ($genome_kind ?? '') === 'transcripts' && moop_site_is_transcriptomes(); ?>
+          <?php if ($__tx_site): ?>
+          <div class="alert alert-light border d-flex gap-2 mb-3" role="note">
+            <i class="fa fa-info-circle mt-1" aria-hidden="true"></i>
+            <div>
+              <strong><?= t('A transcriptome.') ?></strong>
+              <?= t_markup('These are the gene sequences of this species, read from its RNA: one assembled %s per gene.', gloss('transcript')) . "\n" ?>
+              <?= t('There is no genome sequence here, so you will not find regions between or around genes.') . "\n" ?>
+            </div>
+          </div>
+          <?php elseif (($genome_kind ?? '') === 'transcripts'): ?>
           <div class="alert alert-warning d-flex gap-2 mb-3" role="note">
             <i class="fa fa-exclamation-triangle mt-1" aria-hidden="true"></i>
             <div>
@@ -126,7 +138,7 @@
             <dd><?= htmlspecialchars($assembly_info['genome_accession']) ?></dd>
             <?php if (($genome_kind ?? '') === 'transcripts'): ?>
             <dt><?= t('Assembly type') ?></dt>
-            <dd><?= t('Transcripts, one per gene — not a genome') ?></dd>
+            <dd><?= $__tx_site ? t('Transcriptome, one transcript per gene') : t('Transcripts, one per gene — not a genome') ?></dd>
             <?php endif; ?>
             <dt><?= t('Organism') ?></dt>
             <?php /* Identical shape to the gene set page's Organism row: binomial in
@@ -198,7 +210,13 @@
           ?>
           <div class="mt-4 pt-3 border-top">
             <h6 class="text-muted mb-3" style="font-weight: 600;">
-              <?php if (($genome_kind ?? '') === 'transcripts'): ?>
+              <?php if ($__tx_site): ?>
+              <?= t('Transcriptome FASTA') . "\n" ?>
+              <?= field_help(
+                  'All of this species\' assembled transcripts, one per gene, as a FASTA file.',
+                  'Transcriptome FASTA'
+              ) ?>
+              <?php elseif (($genome_kind ?? '') === 'transcripts'): ?>
               <?= t('Assembly FASTA (transcripts)') . "\n" ?>
               <?= field_help(
                   'The sequences this build uses in place of a genome: one assembled transcript '
@@ -234,6 +252,8 @@
     </div>
   </div>
 
+<?php $__tucked = (!empty($assembly_stats) || !empty($busco)) && ConfigManager::getInstance()->technicalPanelsTucked(); ?>
+<?php if ($__tucked) include __DIR__ . '/../../includes/researchers_open.php'; ?>
   <!-- Assembly statistics: contiguity, size, gaps, GC. -->
   <?php if (!empty($assembly_stats)) include __DIR__ . '/../../includes/assembly_stats_card.php'; ?>
 
@@ -243,6 +263,7 @@
       $busco_color   = '#d97706';
       include __DIR__ . '/../../includes/busco_card.php';
   endif; ?>
+<?php if ($__tucked) echo "</div></details>\n"; ?>
 
 </div>
 

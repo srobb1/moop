@@ -220,7 +220,10 @@
   <?php if (!empty($busco)):
       $busco_subject = 'gene set';
       $busco_color   = '#e11d48';
+      $__tucked = ConfigManager::getInstance()->technicalPanelsTucked();
+      if ($__tucked) include __DIR__ . '/../../includes/researchers_open.php';
       include __DIR__ . '/../../includes/busco_card.php';
+      if ($__tucked) echo "</div></details>\n";
   endif; ?>
 
   <!-- Annotation Summary -->

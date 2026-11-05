@@ -28,9 +28,9 @@
     <div class="col-lg-8">
       <div class="card shadow-sm h-100">
         <!-- Title Card -->
-        <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:#0f766e;">
+        <div class="card-header text-white d-flex align-items-center gap-3" style="background-color:var(--moop-organism-header);">
           <span class="fw-semibold" style="letter-spacing:0.03em; font-size:0.9rem;"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em></span>
-          <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:#0f766e;"><?= t('search limited to this organism') ?></span>
+          <span class="badge bg-white" style="font-size:0.65em; opacity:0.9; color:var(--moop-organism-header);"><?= t('search limited to this organism') ?></span>
         </div>
 
         <!-- Search Section -->
@@ -136,7 +136,7 @@
         <?= page_purpose('Search genes across all the assemblies and gene sets held for one organism, filtering both the sources searched and the results.', '', false, false) ?>
             <span class="badge bg-white text-organism ms-1" style="font-size:0.7em; vertical-align:middle; opacity:0.85;"><?= t('Organism') ?></span></h1>
         <div class="feature-overview-body">
-           <div class="fw-bold h4 mb-3" style="color: #0f766e;">
+           <div class="fw-bold h4 mb-3" style="color: var(--moop-organism-header);">
              <?= htmlspecialchars($organism_info['common_name'] ?? str_replace('_', ' ', $organism_name)) ?>
            </div>
 
@@ -212,6 +212,14 @@
             <div class="mt-4 pt-3 border-top">
               <h6 class="text-muted mb-3" style="font-weight: 600;">
                 <?= gloss('assembly', 'Assemblies') ?>
+<?php $__tx_site = moop_site_is_transcriptomes(); ?>
+<?php if ($__tx_site): ?>
+                <?= field_help(
+                    'Each chip is one transcriptome for this organism: its gene sequences, read from '
+                    . 'its RNA, one assembled transcript per gene. Click one to open it.',
+                    'Assemblies'
+                ) ?>
+<?php else: ?>
                 <?= field_help(
                     'Each chip is one genome build for this organism. A green tick means its '
                     . 'genome sequence is available to download and search; a gray cross means '
@@ -220,6 +228,7 @@
                     . 'or around genes. Click one to open it.',
                     'Assemblies'
                 ) ?>
+<?php endif; ?>
               </h6>
               <div class="chip-container">
                 <?php foreach ($accessible_assemblies as $assembly => $assembly_display):
@@ -229,7 +238,9 @@
                   <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>"
                      class="assembly-chip">
                     <?= htmlspecialchars($assembly_display) ?>
-                    <?php if ($is_transcripts): ?>
+                    <?php if ($is_transcripts && $__tx_site): ?>
+                      <span class="badge text-bg-light border ms-1"><?= t('Transcriptome') ?></span>
+<?php elseif ($is_transcripts): ?>
                       <span class="badge text-bg-warning ms-1" title="<?= t('One assembled transcript per gene, standing in for a genome') ?>"><?= t('Transcripts only, not a genome') ?></span>
                     <?php elseif ($has_genome_fa): ?>
                       <i class="fa fa-check-circle ms-1 text-success" title="<?= t('Genome FASTA available') ?>"></i>
@@ -256,7 +267,12 @@
            one does not mean opening each -- and the data comes before the prose, instead of
            sitting below an intro that can run to four paragraphs. Rendered whether or not
            there is an About text. */ ?>
-  <?php if (!empty($gene_set_rows)) include __DIR__ . '/../../includes/gene_set_comparison.php'; ?>
+  <?php if (!empty($gene_set_rows)):
+      $__tucked = ConfigManager::getInstance()->technicalPanelsTucked();
+      if ($__tucked) include __DIR__ . '/../../includes/researchers_open.php';
+      include __DIR__ . '/../../includes/gene_set_comparison.php';
+      if ($__tucked) echo "</div></details>\n";
+  endif; ?>
 
   <?php if (!empty($organism_info['html_p']) && is_array($organism_info['html_p'])): ?>
     <div class="row mb-4">

@@ -73,7 +73,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors'];
+    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -362,6 +362,13 @@ class ConfigManager
         }
         while ($items && end($items)['type'] === 'divider') array_pop($items);
         return $items;
+    }
+
+    /** True when Site Configuration puts the technical panels (BUSCO, assembly statistics, gene set
+     *  comparison) under a closed "For researchers" section -- a teaching site. Default false. */
+    public function technicalPanelsTucked(): bool
+    {
+        return ($this->config['technical_panels'] ?? 'show') === 'researchers';
     }
 
     /** The home page setting: ['mode' => 'builtin'|'page'|'intro', 'page' => slug|'']. */
@@ -973,6 +980,10 @@ class ConfigManager
                     }
                 }
 
+                if ($key === 'technical_panels' && !in_array($data[$key], ['show', 'researchers'], true)) {
+                    return ['success' => false, 'message' => 'The technical panels setting is not valid; nothing was saved'];
+                }
+
                 // Validate timezone: empty (use PHP's own setting) or a real identifier
                 if ($key === 'timezone') {
                     $tz = trim((string)$data[$key]);
@@ -1259,6 +1270,12 @@ class ConfigManager
                 'description' => 'The main color repaints the site: tool page headers, buttons, links, light washes and organism headers all follow it. Assembly and action colors are optional; left empty, they are worked out from the main color. Leave the main color empty for MOOP\'s own teal.',
                 'type' => 'theme_colors',
                 'current_value' => $this->getArray('theme_colors', []),
+            ],
+            'technical_panels' => [
+                'label' => 'Technical Panels',
+                'description' => 'BUSCO completeness, assembly statistics (N50, gaps, GC) and the gene set comparison table. Researchers want them; students meeting a genome page for the first time mostly do not. "For researchers" folds them into a closed section at the foot of the page, one click away.',
+                'type' => 'select',
+                'current_value' => $this->technicalPanelsTucked() ? 'researchers' : 'show',
             ],
             'timezone' => [
                 'label' => 'Time Zone',

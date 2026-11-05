@@ -789,6 +789,21 @@
                     </div>
                 </div>
 
+                <!-- Technical Panels (cuttingclass: a teaching site) -->
+                <div class="card adm-card mb-3" id="pnav-technical" data-nav-label="Technical Panels">
+                    <div class="card-header adm-head">
+                        <h5 class="mb-0"><i class="fa fa-microscope"></i> <?= htmlspecialchars($editable_config['technical_panels']['label']) ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small"><?= htmlspecialchars($editable_config['technical_panels']['description']) ?></p>
+                        <?php $tp_current = $editable_config['technical_panels']['current_value']; ?>
+                        <select id="technical_panels" name="technical_panels" class="form-select" style="max-width: 28rem;">
+                            <option value="show"<?= $tp_current === 'show' ? ' selected' : '' ?>>Show them (default)</option>
+                            <option value="researchers"<?= $tp_current === 'researchers' ? ' selected' : '' ?>>Put them under "For researchers"</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Time Zone -->
                 <div class="card adm-card mb-3" id="pnav-timezone" data-nav-label="Time Zone">
                     <div class="card-header adm-head">

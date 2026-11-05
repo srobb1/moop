@@ -409,7 +409,17 @@
                 <?php endif; ?>
                 <?php /* The legend drops Intron for these, but a one-block drawing with no note
                          reads as a broken or missing gene model. Say why there is nothing to draw. */ ?>
-                <?php if (!empty($genome_is_transcripts)): ?>
+                <?php if (!empty($genome_is_transcripts) && moop_site_is_transcriptomes()): ?>
+                <p class="small text-muted mb-0 mt-2">
+                    <?= t('Exons already joined: a transcriptome') . "\n" ?>
+                    <?= field_help(
+                        'This species\' gene sequences come from its RNA, where each gene is already a '
+                        . 'spliced transcript: the exons are joined and the introns are gone, so there '
+                        . 'are none to draw.',
+                        'Exons already joined'
+                    ) ?>
+                </p>
+<?php elseif (!empty($genome_is_transcripts)): ?>
                 <p class="small text-muted mb-0 mt-2">
                     <?= t('No introns: transcript assembly') . "\n" ?>
                     <?= field_help(

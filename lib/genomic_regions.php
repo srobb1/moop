@@ -441,6 +441,31 @@ function moop_genome_kind(string $assembly_dir): string {
 }
 
 /**
+ * True when this site's assemblies are ALL transcriptomes -- none is a real genome (cuttingclass,
+ * 2026-11-05: four planarian transcriptomes and nothing else).
+ *
+ * The "Not a genome: transcripts only" warnings exist to stop a transcript assembly being taken for
+ * a genome and compared with real ones. With no genome on the site there is nothing to mistake it
+ * for, and an amber warning on every page reads to a student as "something is broken" -- so those
+ * pages say "Transcriptome" calmly instead. A site with any genome (simrbase) keeps every warning.
+ *
+ * Every assembly directory on disk with a genome.fa.fai is asked, stopping at the first genome, so
+ * a genome site answers after one or two; assemblies with no genome.fa ('none') do not count.
+ */
+function moop_site_is_transcriptomes(): bool {
+    static $memo = null;
+    if ($memo !== null) return $memo;
+    $root = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/');
+    $any = false;
+    foreach (glob("$root/*/*/" . genome_fasta_filename() . '.fai') ?: [] as $fai) {
+        $kind = moop_genome_kind(dirname($fai));
+        if ($kind === 'genome') return $memo = false;
+        if ($kind === 'transcripts') $any = true;
+    }
+    return $memo = $any;
+}
+
+/**
  * Sequence Retrieval's genomic records: for every typed ID, its region (or the typed range
  * of it) and, when asked, its flanks -- each its own record, as the gene page and the Data
  * Exporter give them. Where the region comes from is moop_genomic_anchors().
