@@ -290,9 +290,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'organisms'                 => rtrim($config['organism_data'] ?? "$base/organisms", '/'),
     ];
 
+    // Directories the web server only READS once they exist, so read-only there is correct, not a
+    // failure: data/tracks (track data is placed by the admin, not written by MOOP), and certs/ once
+    // its key pair exists (keys are written once, here). Installing cuttingclass (2026-11-05) these
+    // two were reported as "Failed" on a correctly set-up host.
+    $keys = moop_jwt_key_paths();
+    $read_only_ok = ['data/tracks' => true, 'certs' => is_file($keys['private']) && is_file($keys['public'])];
+    $readOnly = 0;
+
     foreach ($dirs as $label => $path) {
         if (is_dir($path) && is_writable($path)) {
             $existed++;
+        } elseif (is_dir($path) && !empty($read_only_ok[$label]) && is_readable($path)) {
+            $existed++;
+            $readOnly++;
         } elseif (is_dir($path)) {
             // Exists but not writable — try to fix
             if (@chmod($path, 02775)) {
@@ -315,7 +326,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'success' => !$dirFailed,
         'message' => $dirFailed
             ? 'Failed: ' . implode('; ', $dirResults)
-            : "Created $created directories, $existed already existed",
+            : "Created $created directories, $existed already existed"
+              . ($readOnly ? " ($readOnly read-only, as they should be)" : ''),
     ];
 
     // ── Step 2: Copy .example Files ─────────────────────────────────────
@@ -445,10 +457,13 @@ HTACCESS;
                 'message' => 'Created data/tracks/.htaccess',
             ];
         } else {
-            $steps['htaccess'] = [
-                'success' => false,
-                'message' => 'Failed to write .htaccess — check data/tracks/ permissions',
-            ];
+            // On Nginx a .htaccess is never read, so not writing one is not a failure there.
+            $ngxProbe = []; $ngxProbeRet = 1;
+            @exec("which nginx 2>/dev/null", $ngxProbe, $ngxProbeRet);
+            $steps['htaccess'] = $ngxProbeRet === 0
+                ? ['success' => true, 'nginx_skip' => true,
+                   'message' => 'Not written (data/tracks/ is read-only) — and not needed: Nginx does not read .htaccess files']
+                : ['success' => false, 'message' => 'Failed to write .htaccess — check data/tracks/ permissions'];
         }
     }
 
@@ -456,7 +471,7 @@ HTACCESS;
     $ngxOutput = [];
     $ngxRet = 1;
     @exec("which nginx 2>/dev/null", $ngxOutput, $ngxRet);
-    if ($ngxRet === 0 && ($steps['htaccess']['success'] ?? false)) {
+    if ($ngxRet === 0 && ($steps['htaccess']['success'] ?? false) && empty($steps['htaccess']['nginx_skip'])) {
         $siteName = $config['site'] ?? 'moop';
         $steps['htaccess']['message'] .= ". Note: Nginx detected — .htaccess has no effect on Nginx. "
             . "Add a 'deny all' location block for /$siteName/data/tracks/ in your Nginx server config.";
@@ -471,7 +486,7 @@ HTACCESS;
         if (is_array($existingUsers) && isset($existingUsers[$username]) && ($existingUsers[$username]['role'] ?? '') === 'admin') {
             $steps['admin_user'] = [
                 'success' => true,
-                'message' => "Admin user '$username' already exists — skipped",
+                'message' => "Admin user '$username' already exists — kept as it is: its password was NOT changed, so log in with the one it already has",
             ];
         } else {
             // File exists but this user isn't admin — add them
@@ -756,7 +771,7 @@ $siteName = $config['site'] ?? 'moop';
         <div class="card-body text-center">
             <h4 class="text-success">Setup Complete!</h4>
             <p>Log in with your admin account to start configuring your site.</p>
-            <a href="/<?= htmlspecialchars($siteName) ?>/" class="btn btn-success btn-lg">Go to MOOP</a>
+            <a href="/<?= htmlspecialchars($siteName) ?>/" class="btn btn-success btn-lg">Go to your site</a>
         </div>
         <div class="card-body border-top">
             <h6 class="fw-bold">One manual step required — web server config</h6>
@@ -768,7 +783,7 @@ RewriteRule ^/<?= htmlspecialchars($siteName) ?>/jbrowse2/index\.html$ /<?= html
             <pre class="bg-light p-2 rounded small mt-1">location = /<?= htmlspecialchars($siteName) ?>/jbrowse2/index.html {
     rewrite ^ /<?= htmlspecialchars($siteName) ?>/auth_gateway.php last;
 }</pre>
-            <p class="mb-0 text-muted small">See the <a href="/<?= htmlspecialchars($siteName) ?>/README.md" target="_blank">README</a> step 10 for full details including security headers.</p>
+            <p class="mb-0 text-muted small">See the README's <a href="https://github.com/srobb1/moop#web-server-configuration" target="_blank">Web server configuration</a> section for full details, including security headers.</p>
         </div>
     </div>
 
@@ -795,6 +810,9 @@ document.getElementById('runSetup').addEventListener('click', async function() {
         alert('Password must be at least 8 characters.');
         return;
     }
+    // A new run starts clean: an earlier run's "Setup Complete" box must not sit beside this
+    // run's "Passwords do not match" (seen installing cuttingclass, 2026-11-05).
+    document.getElementById('successCard').style.display = 'none';
     if (password !== passwordConfirm) {
         document.getElementById('passwordConfirm').classList.add('is-invalid');
         return;
