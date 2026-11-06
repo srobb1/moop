@@ -926,7 +926,7 @@ if (!empty($gene_model)) {
     ];
     if (!empty($neighbor_nav)) {
         $gm_read_cards[] = ['label' => '« and » either side: the neighbouring genes',
-            'text' => '« goes to the gene page of the nearest gene upstream (the 5′ side, the left of the picture), » to the nearest one downstream, on the same sequence (for a gene with no strand: lower and higher positions). Hover to see which. Genes with no page of their own (non-coding RNAs, which are in the genome browser only) are skipped.'];
+            'text' => '« goes to the gene page of the nearest gene upstream (the 5′ side, the left of the picture), » to the nearest one downstream, on the same sequence (for a gene with no strand: lower and higher positions). Hover to see which. ' . (moop_tool_on('genome_browser') ? 'Genes with no page of their own (non-coding RNAs, which are in the genome browser only) are skipped.' : 'Genes with no page of their own (non-coding RNAs) are skipped.')];
     }
     if (!empty($genome_seq_available) && !empty($genome_is_transcripts)) {
         $gm_read_cards[] = ['label' => 'Click a feature',

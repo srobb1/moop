@@ -49,6 +49,25 @@ $tasks = [
     ['Find out which annotations an organism has', 'Every annotation source, by type, for the data you can see.',
      [['Where the data comes from', '/help.php?topic=data-sources']]],
 ];
+
+// Help follows the tool switches (Manage Tools; Sofia, 2026-11-06): a switched-off tool's page
+// answers 404, so no task or page card may send anyone there. A link is dropped, a task left with
+// no link is dropped, and a hint that names a switched-off tool in passing gets its shorter form.
+$tool_off = fn(string $href): bool => $href[0] === '/' && strpos($href, '/help.php') !== 0
+    && moop_disabled_tool_for_script($config, '/' . $site . strtok($href, '?#')) !== null;
+$hint_without = [
+    'Export a gene list with its annotations' => ['/tools/expression.php',
+        'Build the list by ID, name or annotation, across organisms, and download TSV or FASTA.'],
+    'Compare the expression of a list of genes' => ['/tools/moopmart.php',
+        'Paste genes and see them across experiments as a heatmap.'],
+];
+foreach ($tasks as $i => [$task, $hint, $links]) {
+    $links = array_values(array_filter($links, fn($l) => !$tool_off($l[1])));
+    if (!$links) { unset($tasks[$i]); continue; }
+    if (isset($hint_without[$task]) && $tool_off($hint_without[$task][0])) $hint = $hint_without[$task][1];
+    $tasks[$i] = [$task, $hint, $links];
+}
+$routes = array_values(array_filter($routes, fn($r) => empty($r['link']) || !$tool_off((string) $r['link'])));
 ?>
 
 <div class="container mt-5">

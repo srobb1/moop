@@ -134,8 +134,11 @@ echo help_modal(
                 ],
                 [
                     'label' => 'Follow a hit',
-                    'text'  => 'Where the hit is a known feature, it links to its gene page and '
-                             . 'into the genome browser at the matching coordinates.',
+                    // No genome browser promised where it is switched off (cuttingclass, 2026-11-06).
+                    'text'  => moop_tool_on('genome_browser')
+                             ? 'Where the hit is a known feature, it links to its gene page and '
+                               . 'into the genome browser at the matching coordinates.'
+                             : 'Where the hit is a known feature, it links to its gene page.',
                 ],
                 [
                     'label' => 'Nothing at all came back',

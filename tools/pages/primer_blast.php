@@ -1041,13 +1041,14 @@ echo help_modal(
                          . ' ' . t('The grade is always computed over amplifiable products, so lowering the limit hides rows without quietly turning a non-specific pair specific.')
                          . ' ' . t('A display control should never change a scientific conclusion.'),
             ],
-            [
+            // The browser link IS the genome browser: no item about it where that is switched off.
+            ...(!moop_tool_on('genome_browser') ? [] : [[
                 'label' => 'Viewing a product in the browser',
                 'html'  => true,
                 'text'  => t_markup('%s opens the product in JBrowse with a track showing both binding sites as boxes, joined by a connector across the sequence between them.', $b('Browser'))
                          . ' ' . t_markup('%1$s blue is the %2$s primer, %3$s orange the %4$s.', $sw(PRIMER_COLOR_FORWARD), $b('forward'), $sw(PRIMER_COLOR_REVERSE), $b('reverse'))
                          . ' ' . t('Only genomic products get a link — a cDNA product has no genomic coordinates to open.'),
-            ],
+            ]]),
             [
                 'label' => 'What counts as a product',
                 'html'  => true,

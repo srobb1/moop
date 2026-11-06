@@ -57,8 +57,8 @@
                        . 'whole search is done.'],
           ],
       ]],
-      ['intro' => 'Look features up by ID or annotation keyword across the organisms you choose. '
-                . 'To bulk-export many features rather than look them up, MOOPmart is the tool for that.']
+      ['intro' => 'Look features up by ID or annotation keyword across the organisms you choose.'
+                . (moop_tool_on('moopmart') ? ' To bulk-export many features rather than look them up, MOOPmart is the tool for that.' : '')]
   );
   ?>
 

@@ -109,8 +109,12 @@ echo help_modal(
                 ],
                 [
                     'label' => 'Open the full record',
-                    'text'  => 'Click any gene or annotation link for that feature\'s own page — all '
-                             . 'its annotations, its child features, and genome browser links.',
+                    // No genome browser promised where it is switched off (cuttingclass, 2026-11-06).
+                    'text'  => moop_tool_on('genome_browser')
+                             ? 'Click any gene or annotation link for that feature\'s own page — all '
+                               . 'its annotations, its child features, and genome browser links.'
+                             : 'Click any gene or annotation link for that feature\'s own page — all '
+                               . 'its annotations and its child features.',
                 ],
             ],
         ],

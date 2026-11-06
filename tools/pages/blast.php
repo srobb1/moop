@@ -129,7 +129,9 @@
 <?php if (moop_tool_on('primer_blast')): ?>
                         <div class="mt-2 pt-2 border-top">
                             <i class="fa fa-vials me-1"></i>
-                            <?= t_markup('Checking a primer %s?', '<strong>' . t('pair') . '</strong>') ?> <?= t_markup('%s pairs the hits for you, reports every product size, and shows the products in the genome browser.', '<a href="' . htmlspecialchars('/' . $site . '/tools/primer_blast.php') . '">Primer BLAST</a>') . "\n" ?>
+                            <?= t_markup('Checking a primer %s?', '<strong>' . t('pair') . '</strong>') ?> <?= (moop_tool_on('genome_browser')
+                                    ? t_markup('%s pairs the hits for you, reports every product size, and shows the products in the genome browser.', '<a href="' . htmlspecialchars('/' . $site . '/tools/primer_blast.php') . '">Primer BLAST</a>')
+                                    : t_markup('%s pairs the hits for you and reports every product size.', '<a href="' . htmlspecialchars('/' . $site . '/tools/primer_blast.php') . '">Primer BLAST</a>')) . "\n" ?>
                             <?= t_markup('This page is the right tool for locating a %s short sequence.', '<em>' . t('single') . '</em>') . "\n" ?>
                         </div>
 <?php endif; ?>
@@ -456,7 +458,7 @@ echo help_modal(
             ['num' => '2', 'label' => 'Select a BLAST program',         'text' => 'The program decides which databases you can search — blastn for nucleotide, blastp for protein, and so on.'],
             ['num' => '3', 'label' => 'Select organism and database',   'text' => 'Select an organism and one of its databases to search against.'],
             [              'label' => 'Advanced options (optional)',    'text' => 'E-value, maximum hits, scoring matrix and more. The defaults are fine for most searches.'],
-            ['num' => '4', 'label' => 'Run BLAST',                      'text' => 'Results list each hit with its alignment, and can link back to the gene page and genome browser.'],
+            ['num' => '4', 'label' => 'Run BLAST',                      'text' => moop_tool_on('genome_browser') ? 'Results list each hit with its alignment, and can link back to the gene page and genome browser.' : 'Results list each hit with its alignment, and can link back to its gene page.'],
         ],
     ]],
     ['intro' => 'Search genome assemblies by sequence similarity, in four steps.']

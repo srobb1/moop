@@ -163,7 +163,7 @@
                             <p class="fw-semibold mb-1"><?= t('Genomic region and flanks') ?></p>
                             <ul class="mb-2 ps-3">
                                 <li><?= t_markup('Every genomic sequence reads 5′ to 3′ along the gene: a gene on the minus %s is reverse-complemented.', gloss('strand')) ?> <?= t_markup('The header gives the location and strand, e.g. %s.', '<code>chr2:16003283-16019242(-)</code>') ?></li>
-                                <li><?= t('Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.') . "\n" ?>
+                                <li><?= (moop_tool_on('moopmart') ? t('Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page and the Data Exporter give.') : t('Set an upstream or downstream flank in step 3 to add that many bases before the 5′ end or after the 3′ end, each as its own sequence — the same sequences the gene page gives.')) . "\n" ?>
                                     <?= t("For a transcript, CDS or protein ID that is the isoform's own start and end; for a gene ID, the gene's.") ?></li>
                                 <li><?= t_markup('Genomic sequence needs the gene set to be placed on a genome; %s-only gene sets have none.', gloss('transcriptome')) ?></li>
                             </ul>

@@ -155,13 +155,14 @@ echo help_modal(
                              . 'products would actually amplify, using 3\'-end mismatch position '
                              . 'rather than a raw mismatch count.',
                 ],
-                [
+                // The drawing IS the genome browser: left out where that is switched off (2026-11-06).
+                ...(moop_tool_on('genome_browser') ? [[
                     'label' => 'And it draws the result',
                     'text'  => 'Each product links into the genome browser with both primer sites '
                              . 'marked. A primer sitting across an exon junction is drawn as two '
                              . 'blocks either side of the intron, which is the picture that shows '
                              . 'why it cannot amplify contaminating genomic DNA.',
-                ],
+                ]] : []),
                 [
                     'label' => 'When to stay here',
                     'text'  => 'Primer BLAST needs a PAIR. To locate a single primer, or to search '
