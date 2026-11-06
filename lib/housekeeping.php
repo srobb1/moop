@@ -693,6 +693,42 @@ function housekeeping_git_status(string $dir): array {
     ];
 }
 
+/**
+ * Move backup copies whose item is gone from the site into archived/ (2026-11-06). The backup
+ * used to copy and never remove, so a retired organism or a deleted page stayed in the main tree
+ * forever (simrbase: 100 organism.json in the backup for 36 organisms) and the backup looked like
+ * it covered more than the site does. Nothing is deleted: the file moves to archived/<same path>,
+ * with a date added if an earlier copy is already there.
+ *
+ * @param string $backup     the backup folder
+ * @param array  $wanted     relative paths the site has now (the snapshot's destinations)
+ * @param array  $kinds      glob (relative to $backup) => how many source files this run found.
+ *                           A kind with NONE is skipped: a briefly unreadable organisms folder must
+ *                           not sweep the whole backup into the archive.
+ * @return array ['archived' => [rel, ...], 'failed' => [rel, ...]]
+ */
+function housekeeping_archive_stale_backups(string $backup, array $wanted, array $kinds): array {
+    $wanted = array_flip($wanted);
+    $out = ['archived' => [], 'failed' => []];
+    foreach ($kinds as $glob => $sources_found) {
+        if ($sources_found < 1) continue;
+        foreach (glob("$backup/$glob") ?: [] as $path) {
+            $rel = substr($path, strlen($backup) + 1);
+            if (isset($wanted[$rel]) || strpos($rel, 'archived/') === 0) continue;
+            $to = "$backup/archived/$rel";
+            if (file_exists($to)) $to = preg_replace('/(\.[a-z]+)$/', '.' . date('Ymd-His') . '$1', $to);
+            if (!is_dir(dirname($to))) @mkdir(dirname($to), 0750, true);
+            if (@rename($path, $to)) {
+                $out['archived'][] = $rel;
+                @rmdir(dirname($path));   // an organism's folder, if now empty; fails harmlessly otherwise
+            } else {
+                $out['failed'][] = $rel;
+            }
+        }
+    }
+    return $out;
+}
+
 function housekeeping_snapshot_site_data() {
     $config = ConfigManager::getInstance();
     $site_data_path = $config->getPath('site_data_path');
@@ -793,6 +829,11 @@ access control configuration.
 - JBrowse2 track data — managed separately
 - Log files — ephemeral
 
+## archived/
+
+When an organism is retired or a page or translation is deleted, its copy here is
+moved to `archived/` (same path), not deleted. Move it back if you restore the item.
+
 ## Optional: Git version history
 
 If you initialize this directory as a git repo, MOOP will detect it and show
@@ -854,6 +895,21 @@ README;
         }
     }
 
+    // Copies of pages, translations and organisms the site no longer has go to archived/.
+    $count_src = function (string $prefix) use ($files): int {
+        return count(array_filter($files, fn($d) => strpos($d, $prefix) === 0));
+    };
+    $stale = housekeeping_archive_stale_backups($site_data_path, array_values($files), [
+        'metadata/pages/*.json'        => $count_src('metadata/pages/'),
+        'metadata/translations/*.json' => $count_src('metadata/translations/'),
+        'organisms/*/organism.json'    => $count_src('organisms/'),
+    ]);
+    if ($stale['archived']) {
+        $changed = true;
+        error_log('MOOP housekeeping: moved ' . count($stale['archived']) . " backup file(s) of items no longer on the site to $site_data_path/archived/");
+    }
+    $failed = array_merge($failed, $stale['failed']);
+
     $is_git = is_dir($site_data_path . '/.git');
 
     if ($changed) {
@@ -867,6 +923,7 @@ README;
         'git' => $is_git ? housekeeping_git_status($site_data_path) : null,
         'last_run' => date('Y-m-d H:i:s'),
         'files_copied' => $copied_count,
+        'files_archived' => $stale['archived'],
         // Surfaced so a write the web server cannot perform is visible on the dashboard
         // instead of hiding behind a success count. Empty is the normal case.
         'files_failed' => $failed,

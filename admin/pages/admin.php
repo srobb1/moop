@@ -605,7 +605,9 @@
     <?php else: ?>
       <p class="small mb-2">
         Last run <?= htmlspecialchars($site_data_backup['last_run']) ?>,
-        <?= (int) $site_data_backup['files_copied'] ?> file<?= $site_data_backup['files_copied'] == 1 ? '' : 's' ?> updated.
+        <?= (int) $site_data_backup['files_copied'] ?> file<?= $site_data_backup['files_copied'] == 1 ? '' : 's' ?> updated<?php
+          $_arch = count($site_data_backup['files_archived'] ?? []);
+          if ($_arch): ?>, <?= $_arch ?> moved to <code>archived/</code> (no longer on the site)<?php endif; ?>.
         <span class="d-block text-muted">Config, metadata and organism files are checked for changes with each
           housekeeping run and copied to <code><?= htmlspecialchars($site_data_backup['path']) ?></code>.</span>
       </p>

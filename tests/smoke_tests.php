@@ -484,6 +484,28 @@ ok(($_cs['success'] ?? false) && moop_result_column_overrides() === ['assembly' 
    'column overrides keep only real changes: unknown keys, non-booleans and same-as-default are dropped');
 $_rr->setValue(null, $_prev);
 
+// Site-data backup: copies of items no longer on the site move to archived/, never deleted (2026-11-06).
+require_once dirname(__DIR__) . '/lib/housekeeping.php';
+$_bk = sys_get_temp_dir() . '/moop_bk_' . getmypid();
+foreach (['organisms/Kept', 'organisms/Retired', 'metadata/pages', 'config'] as $_dd) @mkdir("$_bk/$_dd", 0750, true);
+foreach (['organisms/Kept/organism.json', 'organisms/Retired/organism.json', 'metadata/pages/welcome.json',
+          'metadata/pages/old.json', 'config/config_editable.json'] as $_ff) file_put_contents("$_bk/$_ff", '{}');
+$_wanted = ['organisms/Kept/organism.json', 'metadata/pages/welcome.json', 'config/config_editable.json'];
+$_r = housekeeping_archive_stale_backups($_bk, $_wanted, ['organisms/*/organism.json' => 1, 'metadata/pages/*.json' => 1]);
+sort($_r['archived']);
+ok($_r['archived'] === ['metadata/pages/old.json', 'organisms/Retired/organism.json'] && !$_r['failed'],
+   'backup: a retired organism and a deleted page move to archived/');
+ok(is_file("$_bk/archived/organisms/Retired/organism.json") && !is_dir("$_bk/organisms/Retired")
+   && is_file("$_bk/organisms/Kept/organism.json") && is_file("$_bk/config/config_editable.json"),
+   'backup: moved, not deleted; what the site still has stays put');
+file_put_contents("$_bk/metadata/pages/old.json", '{"again":1}');
+housekeeping_archive_stale_backups($_bk, $_wanted, ['metadata/pages/*.json' => 1]);
+ok(count(glob("$_bk/archived/metadata/pages/old*.json")) === 2, 'backup: a second archived copy gets a date, the first is kept');
+$_r = housekeeping_archive_stale_backups($_bk, [], ['organisms/*/organism.json' => 0]);
+ok($_r['archived'] === [] && is_file("$_bk/organisms/Kept/organism.json"),
+   'backup: when no organisms were found this run (folder unreadable), nothing is archived');
+exec('rm -rf ' . escapeshellarg($_bk));
+
 // Site Configuration stores only what differs from the shipped default (2026-11-06): saving the
 // form used to store every field it showed, freezing the defaults of the day into the site.
 $_d = $_tnew();
