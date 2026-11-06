@@ -26,6 +26,11 @@
 # The report lands in MOOP's cache_path (read from the site config). Re-run this script if
 # cache_path changes. Remove with: systemctl disable --now moop-security-report.timer
 #
+# EVERY SITE ON THE SERVER. One timer makes the report once and copies it into each site's cache
+# folder. Running this from a second site (cuttingclass beside simrbase) ADDS that site; it never
+# takes the report away from the first (until 2026-11-06 it did: the service named one folder).
+# The list is the service's ExecStart line; folders that no longer exist are dropped on a re-run.
+#
 # Usage: sudo scripts/install_security_report.sh
 set -euo pipefail
 
@@ -38,12 +43,24 @@ CACHE="$("$PHP" -r 'require $argv[1] . "/includes/config_init.php"; echo moop_ca
 [ -d "$CACHE" ] || { echo "Cache directory '$CACHE' does not exist" >&2; exit 1; }
 OUT="$CACHE/security_updates.txt"
 
+# Every site already served, from the existing service (one report path per argument), plus this
+# one. A path whose folder is gone (a removed site) is dropped.
+OUTS=()
+if [ -f /etc/systemd/system/moop-security-report.service ]; then
+  for p in $(sed -n 's|^ExecStart=/usr/local/sbin/moop-security-report||p' /etc/systemd/system/moop-security-report.service); do
+    [ -d "$(dirname "$p")" ] && [ "$p" != "$OUT" ] && OUTS+=("$p")
+  done
+fi
+OUTS+=("$OUT")
+
 cat > /usr/local/sbin/moop-security-report <<'EOF'
 #!/bin/bash
 # Writes MOOP's OS security-update report -- installed by MOOP's scripts/install_security_report.sh.
 # Uses the package manager's CACHED metadata only (dnf -C / apt's existing lists): the OS's own
 # timers keep that current, so this makes no network call of its own.
+# One argument per site: the report is made once, into the first, and copied to the others.
 set -uo pipefail
+[ $# -ge 1 ] || { echo "usage: $0 REPORT_FILE [REPORT_FILE ...]" >&2; exit 1; }
 OUT="$1"
 TMP="$(mktemp "${OUT}.XXXXXX")"
 {
@@ -66,6 +83,12 @@ TMP="$(mktemp "${OUT}.XXXXXX")"
 chmod 644 "$TMP"
 mv -f "$TMP" "$OUT"
 command -v restorecon >/dev/null && restorecon "$OUT" 2>/dev/null || true
+shift
+for other in "$@"; do
+  [ -d "$(dirname "$other")" ] || continue
+  T2="$(mktemp "${other}.XXXXXX")" && cp "$OUT" "$T2" && chmod 644 "$T2" && mv -f "$T2" "$other"
+  command -v restorecon >/dev/null && restorecon "$other" 2>/dev/null || true
+done
 EOF
 chmod 755 /usr/local/sbin/moop-security-report
 
@@ -75,7 +98,7 @@ Description=MOOP OS security-update report (read by the admin dashboard)
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/moop-security-report $OUT
+ExecStart=/usr/local/sbin/moop-security-report ${OUTS[*]}
 EOF
 
 cat > /etc/systemd/system/moop-security-report.timer <<'EOF'
@@ -114,9 +137,10 @@ elif command -v apt-get >/dev/null; then
   echo "DPkg::Post-Invoke { \"$HOOK_CMD || true\"; };" > /etc/apt/apt.conf.d/99moop-security-report
   echo "apt hook: the report refreshes after every dpkg run."
 fi
-/usr/local/sbin/moop-security-report "$OUT"
+/usr/local/sbin/moop-security-report "${OUTS[@]}"
 
-echo "Report written to $OUT:"
+echo "Report written for ${#OUTS[@]} site(s):"
+for p in "${OUTS[@]}"; do echo "  $p"; done
 head -6 "$OUT"
 echo "..."
 echo "Timer: $(systemctl list-timers moop-security-report.timer --no-legend | head -1)"

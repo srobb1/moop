@@ -24,6 +24,17 @@ set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "Run as root: sudo $0" >&2; exit 1; }
 
 MOOP="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# These nginx files serve every site on the server, and the System Monitor keeps them in step with
+# ONE site's settings (/etc/moop-monitor.conf). Written from another site, they would take that
+# site's exempt ranges for the whole server -- see install_monitor.sh. --move-here overrides.
+OWNER="$(sed -n 's/^SITE=//p' /etc/moop-monitor.conf 2>/dev/null || true)"
+if [ -n "$OWNER" ] && [ "$OWNER" != "$MOOP" ] && [[ " $* " != *" --move-here "* ]]; then
+    echo "Nothing changed: nginx's rate limits on this server follow $OWNER (its System Monitor)." >&2
+    echo "Running this from $MOOP would replace them with this site's settings for every site." >&2
+    echo "To do that on purpose: sudo $0 --move-here   (and move the monitor: install_monitor.sh --move-here)" >&2
+    exit 1
+fi
 HTTP_DST=/etc/nginx/conf.d/moop-ratelimit.conf
 SRV_DST=/etc/nginx/default.d/moop-ratelimit.conf
 STAMP=$(date +%Y%m%d-%H%M%S)
@@ -45,7 +56,7 @@ reload_or_restore() {
     fi
 }
 
-if [ "${1:-}" = "--remove" ]; then
+if [[ " $* " == *" --remove "* ]]; then
     backup "$HTTP_DST"; backup "$SRV_DST"
     rm -f "$HTTP_DST" "$SRV_DST"
     reload_or_restore

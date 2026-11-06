@@ -29,18 +29,46 @@
 # Re-run after pulling a new version of moop_monitor.py or the nginx templates.
 # Remove: sudo scripts/install_monitor.sh --remove   (leaves the rate limits in place)
 #
-# Usage: sudo scripts/install_monitor.sh [--remove]
+# ONE SITE PER SERVER. The collector, its nginx files and the rate-limit exemptions serve the one
+# site named in /etc/moop-monitor.conf. A second MOOP site on the same server (cuttingclass beside
+# simrbase) must NOT run this: on 2026-11-06 it re-pointed the monitor at the second site and
+# replaced nginx's exempt ranges with that site's (none), so internal users were rate-limited on
+# both. So this refuses when the monitor belongs to another site; --move-here moves it on purpose.
+#
+# Usage: sudo scripts/install_monitor.sh [--remove] [--move-here]
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "Run as root: sudo $0" >&2; exit 1; }
 
 SITE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REMOVE=0; MOVE=0
+for arg in "$@"; do
+    case "$arg" in
+        --remove)    REMOVE=1 ;;
+        --move-here) MOVE=1 ;;
+        *) echo "Unknown option: $arg (use --remove or --move-here)" >&2; exit 1 ;;
+    esac
+done
+OWNER="$(sed -n 's/^SITE=//p' /etc/moop-monitor.conf 2>/dev/null || true)"
+if [ -n "$OWNER" ] && [ "$OWNER" != "$SITE" ] && [ "$MOVE" != 1 ]; then
+    cat >&2 <<MSG
+Nothing changed: the System Monitor on this server belongs to $OWNER.
+
+It serves ONE site. Running this from $SITE would point the monitor here, stop
+$OWNER's System Monitor, and replace nginx's rate-limit exemptions with this
+site's auto-login ranges -- for every site on the server.
+
+A second site on the same server does not need it: the server is already watched.
+$( [ "$REMOVE" = 1 ] && echo "To remove it anyway:  sudo $0 --remove --move-here" || echo "To move the monitor to this site on purpose:  sudo $0 --move-here" )
+MSG
+    exit 1
+fi
 PHP="$(command -v php)"
 STAMP=$(date +%Y%m%d-%H%M%S)
 FPM_CONF=/etc/php-fpm.d/www.conf
 NGX_STATUS=/etc/nginx/default.d/moop-monitor.conf
 NGX_HEADERS=/etc/nginx/default.d/moop-headers.conf
 
-if [ "${1:-}" = "--remove" ]; then
+if [ "$REMOVE" = 1 ]; then
     systemctl disable --now moop-monitor.timer 2>/dev/null || true
     rm -f /etc/systemd/system/moop-monitor.service /etc/systemd/system/moop-monitor.timer
     systemctl daemon-reload
