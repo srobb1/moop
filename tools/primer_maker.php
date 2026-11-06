@@ -54,6 +54,7 @@ include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/primer/Primer3.php';
 include_once __DIR__ . '/../lib/primer/Primer3Design.php';
 include_once __DIR__ . '/../lib/primer/PrimerTails.php';
+include_once __DIR__ . '/../lib/primer/PrimerPresets.php';
 include_once __DIR__ . '/../lib/primer/PrimerNames.php';
 include_once __DIR__ . '/../lib/primer/SequenceMarkup.php';
 include_once __DIR__ . '/../lib/primer/ExonMap.php';
@@ -67,69 +68,16 @@ $siteTitle = $config->getString('siteTitle');
 
 // ------------------------------------------------------------------ presets
 //
-// What "kind of primer" actually means: a handful of Primer3 numbers. Kept in
-// one array so the selector, the help and the run all read the same values —
-// the alternative is a switch in the controller and a description in the view
-// that quietly disagree.
-//
-// ⚠️ THE BLURB SAYS WHY YOU WOULD PICK IT; THE NUMBERS ARE NOT REPEATED THERE.
-// Step 2 renders each preset's actual values as badges, derived from 'params'
-// merged over Primer3Design::DEFAULTS — so they cannot drift. Numbers written
-// out in prose here would be a SECOND source of truth for the same fact, and
-// they had already gone stale in two of the four: qPCR said "tighter Tm" without
-// saying tighter than what, and RT-PCR never mentioned its product range at all.
-$PRESETS = [
-    'standard' => [
-        'label'  => 'Standard PCR',
-        // 200-900 (was 100-400, 2026-11-03): a gel band is easiest to see between a few hundred bp
-        // and 1 kb; 100 bp runs near the primer-dimer smear. Also covers RNAi templates (with the
-        // T7 tag), so there is no separate RNAi preset.
-        'blurb'  => 'General-purpose primers — cloning, screening, checking a band on a gel. '
-                  . 'For an RNAi template, add the T7 promoter tag below.',
-        'params' => ['PRIMER_PRODUCT_SIZE_RANGE' => '200-900'],
-    ],
-    'qpcr' => [
-        'label'  => 'qPCR',
-        'blurb'  => 'Short products, which amplify efficiently enough to be measured in real time.',
-        'params' => [
-            'PRIMER_PRODUCT_SIZE_RANGE' => '70-150',
-            'PRIMER_OPT_TM'             => 60.0,
-            'PRIMER_MIN_TM'             => 58.0,
-            'PRIMER_MAX_TM'             => 62.0,
-        ],
-    ],
-    'rtpcr' => [
-        'label'  => 'RT-PCR (spans an exon junction)',
-        // "or pick a transcript below" was confusing (user, 2026-08-07): the
-        // transcript picker only exists when you arrived from a gene page whose
-        // gene has several isoforms. Anyone who pasted a sequence went looking
-        // for a control that was not on the page.
-        'blurb'  => 'Forces a primer across an exon junction, so the pair cannot amplify '
-                  . 'contaminating genomic DNA. Needs to know where the junctions are — arrive '
-                  . 'from a gene page and they are looked up for you.',
-        // 150-600 (2026-11-03): a clear gel band, kept below Standard because reverse
-        // transcription covers long stretches less reliably, especially from partly degraded RNA.
-        'params' => ['PRIMER_PRODUCT_SIZE_RANGE' => '150-600'],
-    ],
-    'sequencing' => [
-        'label'  => 'Sequencing',
-        'blurb'  => 'Longer products, for reading right through a region in one go.',
-        'params' => [
-            'PRIMER_PRODUCT_SIZE_RANGE' => '400-900',
-            'PRIMER_MIN_TM'             => 55.0,
-            'PRIMER_MAX_TM'             => 65.0,
-        ],
-    ],
-];
+// What "kind of primer" actually means: a handful of Primer3 numbers -- the "cards" of step 2. The
+// four shipped ones and the site's own (Admin -> Primer Maker) come from lib/primer/PrimerPresets.php,
+// so the selector, the help and the run all read the same values. $PRESETS is filled further down,
+// once the context is known: on a transcript assembly the RT-PCR card is not offered at all.
 
 // --------------------------------------------------------------------- input
 // GET too: the Sequences section on a gene page links here with the type
 // already chosen (a transcript means RT-PCR), and reading POST only made
 // that link silently fall back to Standard PCR.
-$primer_type = $_POST['primer_type'] ?? $_GET['primer_type'] ?? 'standard';
-if (!isset($PRESETS[$primer_type])) {
-    $primer_type = 'standard';
-}
+$requested_type = (string)($_POST['primer_type'] ?? $_GET['primer_type'] ?? '');
 
 $sequence_text = trim($_POST['sequence'] ?? '');
 $num_return    = max(1, min(20, (int)($_POST['num_return'] ?? 5)));
@@ -189,6 +137,22 @@ if ($context_organism !== '' || $context_assembly !== '' || $context_gene_set !=
 $JUNCTION_TYPES = ['rtpcr'];
 $context_is_transcripts = $context_organism !== '' && $context_assembly !== ''
     && moop_genome_kind($config->getPath('organism_data') . '/' . $context_organism . '/' . $context_assembly) === 'transcripts';
+
+// The cards this visitor is offered, and the one selected: the one asked for if it is offered, else
+// the site's default, else the first. As shipped (no 'primer_maker' saved) that is all four cards
+// with Standard PCR selected -- except that RT-PCR is left out on a transcript assembly, where it
+// could only fail (it used to arrive SELECTED there from a gene page's mRNA, 2026-11-06).
+$primer_settings = $config->getArray('primer_maker');
+$PRESETS     = PrimerPresets::forSite($primer_settings, moop_current_lang(), $context_is_transcripts);
+$primer_type = PrimerPresets::choose($PRESETS, $requested_type, $primer_settings);
+
+// A card can bring a tag (a site's "WISH probe" card selects T4P). Only on ARRIVAL -- a posted form
+// says what the visitor chose, including "no tag".
+if (!isset($_POST['tail']) && ($PRESETS[$primer_type]['tail'] ?? '') !== ''
+    && isset($tail_catalogue[$PRESETS[$primer_type]['tail']])) {
+    $tail_choice = $PRESETS[$primer_type]['tail'];
+    $tail = PrimerTails::resolve($tail_choice, $tail_custom_f, $tail_custom_r, $tail_catalogue);
+}
 
 $results       = [];
 $run_error     = null;

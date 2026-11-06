@@ -929,6 +929,68 @@ ok(!isset($untagged['product_sequence_tailed']),
    'with no tag there is no tagged product sequence to disagree with the bare one');
 
 // ----------------------------------------------------------------------------
+group('Primer Maker cards (PrimerPresets) — as shipped, switched off, a site card');
+require_once "$BASE/lib/primer/Primer3Design.php";
+require_once "$BASE/lib/primer/PrimerPresets.php";
+
+// As shipped: nothing saved means the four cards in the old order, Standard PCR selected.
+$shown = PrimerPresets::forSite(null);
+ok(array_keys($shown) === ['standard', 'qpcr', 'rtpcr', 'sequencing'], 'nothing saved: the four built-in cards, in the shipped order');
+ok(PrimerPresets::choose($shown, '', null) === 'standard', 'nothing saved: Standard PCR is selected');
+ok(PrimerPresets::choose($shown, 'rtpcr', null) === 'rtpcr', 'a gene-page link asking for RT-PCR still gets it on a genome');
+ok(PrimerPresets::choose($shown, 'bogus', null) === 'standard', 'an unknown requested card falls back, never errors');
+
+// Transcript assembly: RT-PCR is never offered (it arrived SELECTED there, 2026-11-06).
+$tx = PrimerPresets::forSite(null, 'en', true);
+ok(!isset($tx['rtpcr']), 'on a transcripts-only assembly the RT-PCR card is not offered');
+ok(PrimerPresets::choose($tx, 'rtpcr', null) === 'standard', 'the mRNA link asking for RT-PCR there gets Standard PCR');
+
+// A site card (cuttingclass): qPCR off, a WISH card first and default, with a tag.
+[$card, $err] = PrimerPresets::validateCard([
+    'label' => ['en' => 'WISH / RNAi probe', 'es' => 'Sonda WISH / ARNi'], 'blurb' => ['en' => 'Protocol settings'],
+    'size_range' => ' 1000 - 2500 ', 'size_min' => '20', 'size_opt' => '20', 'size_max' => '20',
+    'tm_min' => '54', 'tm_opt' => '56', 'tm_max' => '58', 'tail' => 't4p'], ['en', 'es'], ['t4p', 't7']);
+ok($err === [], 'the protocol card validates' . ($err ? ': ' . implode('; ', $err) : ''));
+ok(($card['size_range'] ?? '') === '1000-2500', 'product size is tidied to low-high');
+$card['id'] = 'c_wish_rnai_probe';
+$site = ['cards_off' => ['qpcr'], 'default' => 'c_wish_rnai_probe', 'order' => ['c_wish_rnai_probe'], 'custom' => [$card]];
+$cc = PrimerPresets::forSite($site, 'es', true);
+ok(array_keys($cc) === ['c_wish_rnai_probe', 'standard', 'sequencing'], 'site card first, qPCR off, RT-PCR hidden on transcripts');
+ok(PrimerPresets::choose($cc, '', $site) === 'c_wish_rnai_probe', 'the site default is selected when nothing is asked for');
+ok(PrimerPresets::choose($cc, 'qpcr', $site) === 'c_wish_rnai_probe', 'a switched-off card asked for by URL falls back to the default');
+$mid = ['default' => 'sequencing'];
+ok(PrimerPresets::choose(PrimerPresets::forSite($mid), '', $mid) === 'sequencing', 'a default that is not the first card is still the one selected');
+$offdef = ['default' => 'qpcr', 'cards_off' => ['qpcr']];
+ok(PrimerPresets::choose(PrimerPresets::forSite($offdef), '', $offdef) === 'standard', 'a default that is switched off falls back to the first card shown');
+ok($cc['c_wish_rnai_probe']['label'] === 'Sonda WISH / ARNi', 'the card shows its Spanish name on a Spanish page');
+ok(PrimerPresets::forSite($site, 'fr')['c_wish_rnai_probe']['label'] === 'WISH / RNAi probe', 'a language with no text falls back to English');
+ok($cc['c_wish_rnai_probe']['tail'] === 't4p', 'the card carries its tag');
+$p = $cc['c_wish_rnai_probe']['params'];
+ok($p['PRIMER_PRODUCT_SIZE_RANGE'] === '1000-2500' && $p['PRIMER_MIN_TM'] === 54.0 && $p['PRIMER_OPT_SIZE'] === 20,
+   'the card runs with its own numbers (as Primer3 tags)');
+ok(!isset($p['PRIMER_MIN_GC']), 'a blank field sets nothing, so the shipped default applies');
+
+// Every card off: never an empty form.
+$none = PrimerPresets::forSite(['cards_off' => ['standard', 'qpcr', 'rtpcr', 'sequencing']]);
+ok(array_keys($none) === ['standard'], 'everything switched off still offers Standard PCR');
+
+// Validation: the bounds and orderings Primer Maker itself enforces.
+$bad = fn(array $in) => PrimerPresets::validateCard($in + ['label' => ['en' => 'x'], 'size_range' => '100-200'], ['en'], ['t4p'])[1];
+ok($bad(['label' => ['en' => '']]) !== [], 'a card needs an English name');
+ok($bad(['size_range' => '500-100']) !== [], 'product size low must be below high');
+ok($bad(['size_range' => '']) !== [], 'a card needs a product size');
+ok($bad(['tm_min' => '62']) !== [], 'Tm minimum above the shipped optimum (60) is refused: min <= opt <= max on what will run');
+ok($bad(['size_max' => '40']) !== [], 'primer length above primer3\'s ceiling (36) is refused');
+ok($bad(['tail' => 'nope']) !== [], 'a tag Primer Maker does not offer is refused');
+ok($bad(['gc_min' => '70']) !== [], 'GC minimum above the maximum is refused');
+ok(PrimerPresets::newId('WISH / RNAi probe', ['c_wish_rnai_probe']) === 'c_wish_rnai_probe_2', 'new ids never collide');
+ok(!PrimerPresets::isCustomId('standard') && PrimerPresets::isCustomId('c_x'), 'a site card can never take a built-in id');
+
+// Saved settings that are not well-formed read as "as shipped", never an error.
+ok(array_keys(PrimerPresets::forSite('garbage')) === ['standard', 'qpcr', 'rtpcr', 'sequencing'], 'malformed settings mean the shipped cards');
+ok(count(PrimerPresets::all(['custom' => [['id' => 'standard', 'label' => 'x']]])) === 4, 'a saved card with a built-in id is ignored');
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Primer smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

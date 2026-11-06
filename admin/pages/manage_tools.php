@@ -72,6 +72,9 @@ $n_off = count(array_filter($enabled, fn($on) => !$on));
                   <strong><?= htmlspecialchars($tool['name'] ?? $id) ?></strong>
                   <span class="d-block small text-muted"><?= htmlspecialchars($tool['description'] ?? '') ?></span>
                 </label>
+                <?php if ($id === 'primer_maker'): ?>
+                  <a href="manage_primer_maker.php" class="small d-inline-block mt-1"><i class="fa fa-sliders-h me-1"></i>Choose its cards (PCR types)</a>
+                <?php endif; ?>
               </td>
               <td class="small"><?= htmlspecialchars($where($tool['pages'] ?? 'all')) ?></td>
               <td class="small"><code>/<?= htmlspecialchars($site . ($tool['url_path'] ?? '')) ?></code></td>

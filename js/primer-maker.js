@@ -116,11 +116,28 @@
         var ran = document.getElementById('primerMakerResults');
         if (ran && ran.dataset.ran === '1') ran.scrollIntoView({ block: 'start' });
 
+        // A site's own card can bring a tag (data-tail; Admin -> Primer Maker). Choosing the card
+        // selects it; leaving the card takes it off again -- but only if it is still the card's tag,
+        // so a tag the visitor chose themselves is never undone.
+        var tailSelect = document.getElementById('tail');
+        var checkedNow = document.querySelector('input[name="primer_type"]:checked');
+        var cardTail = checkedNow ? (checkedNow.dataset.tail || '') : '';
+
         document.querySelectorAll('input[name="primer_type"]').forEach(function (radio) {
             radio.addEventListener('change', syncOptionPlaceholders);
+            radio.addEventListener('change', function () {
+                if (!tailSelect) { return; }
+                var next = radio.dataset.tail || '';
+                if (next !== '' && tailSelect.querySelector('option[value="' + next + '"]')) {
+                    tailSelect.value = next;
+                } else if (cardTail !== '' && tailSelect.value === cardTail) {
+                    tailSelect.value = 'none';
+                }
+                cardTail = next;
+                syncTailFields();
+            });
         });
 
-        var tailSelect = document.getElementById('tail');
         if (tailSelect) {
             tailSelect.addEventListener('change', syncTailFields);
         }

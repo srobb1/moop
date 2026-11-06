@@ -162,7 +162,10 @@
                             <?= t_markup('%1$s keeps bases 5–8 in the %2$s.', '<code>ACGT<span class="fw-bold">[</span>ACGT<span class="fw-bold">]</span>ACGT</code>', gloss_first('amplicon')) . "\n" ?>
                             <?= t_markup('Same as the %s box below — use one or the other.', '<em>' . t('Region to include') . '</em>') . "\n" ?>
                         </div>
-                        <?php if ($context_feature): ?>
+<?php // Only where an RT-PCR card is offered: on a transcript assembly there are no junctions to look
+      // up, and the card is not shown (2026-11-06). Tags at column 0 print nothing: simrbase's page
+      // must stay byte-identical. ?>
+                        <?php if ($context_feature && isset($presets['rtpcr'])): ?>
                             <div class="mt-1">
                                 <i class="fa fa-check-circle text-success me-1"></i>
                                 <?= t_markup('You arrived from a gene page, so for %1$s the %2$s junctions are looked up for you — you do not need to mark them.',
@@ -242,10 +245,15 @@
                             <div class="form-check border rounded p-3 h-100">
                                 <input class="form-check-input" type="radio" name="primer_type"
                                        id="type_<?= htmlspecialchars($key) ?>" value="<?= htmlspecialchars($key) ?>"
-                                       <?= $primer_type === $key ? 'checked' : '' ?>>
+                                       <?= ($preset['tail'] ?? '') !== '' ? 'data-tail="' . htmlspecialchars($preset['tail']) . '" ' : '' ?><?= $primer_type === $key ? 'checked' : '' ?>>
                                 <label class="form-check-label" for="type_<?= htmlspecialchars($key) ?>">
+<?php if (!empty($preset['custom'])): /* the site's own card: its text is already in this language */ ?>
+                                    <strong><?= htmlspecialchars($preset['label']) ?></strong>
+                                    <?php if ($preset['blurb'] !== ''): ?><div class="small text-muted mt-1"><?= htmlspecialchars($preset['blurb']) ?></div><?php endif; ?>
+<?php else: ?>
                                     <strong><?= $gloss_phrases($preset['label'], $label_terms) ?></strong>
                                     <div class="small text-muted mt-1"><?= $gloss_phrases($preset['blurb'], $blurb_terms) ?></div>
+<?php endif; ?>
                                     <?php if (!empty($context_is_transcripts) && in_array($key, $junction_types ?? [], true)): ?>
                                     <div class="small text-danger mt-1">
                                         <i class="fa fa-exclamation-triangle me-1" aria-hidden="true"></i><?= t('Not available here: this assembly is transcripts only, so its exon junctions are not known.') . "\n" ?>
@@ -267,6 +275,12 @@
                                                 <?= t('+ must span an exon junction') . "\n" ?>
                                             </span>
                                         <?php endif; ?>
+<?php if (($preset['tail'] ?? '') !== '' && isset($tail_catalogue[$preset['tail']])): ?>
+                                            <span class="badge rounded-pill fw-normal"
+                                                  style="background-color:#fdeee0; color:#8a4b12; font-size:0.72rem;">
+                                                <?= t('+ %s tag', $tail_catalogue[$preset['tail']]['label']) . "\n" ?>
+                                            </span>
+<?php endif; ?>
                                     </div>
                                 </label>
                             </div>
