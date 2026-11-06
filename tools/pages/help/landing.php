@@ -20,8 +20,15 @@
 
 $topics    = include __DIR__ . '/topics.php';
 $site      = $config->getString('site');
-$forUsers  = array_values(array_filter($topics, fn($t) => $t['category'] === 'general'));
-$forAdmins = array_values(array_filter($topics, fn($t) => $t['category'] === 'technical'));
+// Setup and maintenance topics are for the site's administrators only (Sofia, 2026-11-06): a
+// visitor -- a student on cuttingclass, a biologist on simrbase -- never needs SELinux or backups.
+$is_admin  = has_access('ADMIN');
+// "Who can see what" explains logins and restricted data. On a site where every assembly is
+// public (cuttingclass) there is nothing to explain, so it is left out.
+$restricted = moop_site_has_restricted_data();
+$forUsers  = array_values(array_filter($topics, fn($t) => $t['category'] === 'general'
+                                                     && ($t['id'] !== 'access' || $restricted)));
+$forAdmins = $is_admin ? array_values(array_filter($topics, fn($t) => $t['category'] === 'technical')) : [];
 
 /** Render one topic card. */
 $topic_card = function (array $t) use ($site) {
@@ -59,7 +66,7 @@ $topic_card = function (array $t) use ($site) {
       <p class="text-muted mb-0">
         Where to go, how the data fits together, and where it comes from. How to use a particular
         page is on that page — look for its <i class="fa fa-info-circle" style="color:var(--moop-tool-header);" aria-label="<?= t('information') ?>"></i>
-        <?= t('buttons. Setting up or maintaining a site instead? That is covered separately below.') . "\n" ?>
+        <?= ($is_admin ? t('buttons. Setting up or maintaining a site instead? That is covered separately below.') : t('buttons.')) . "\n" ?>
       </p>
     </div>
   </div>
@@ -74,7 +81,7 @@ $topic_card = function (array $t) use ($site) {
       <div class="input-group">
         <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa fa-search"></i></span>
         <input type="search" id="help-filter" class="form-control border-start-0 moop-input"
-               placeholder="Filter topics — try &quot;BLAST&quot;, &quot;download&quot;, &quot;permissions&quot;…"
+               placeholder="<?= $is_admin ? 'Filter topics — try &quot;BLAST&quot;, &quot;download&quot;, &quot;permissions&quot;…' : 'Filter topics — try &quot;BLAST&quot;, &quot;download&quot;, &quot;glossary&quot;…' ?>"
                autocomplete="off" spellcheck="false" aria-label="<?= t('Filter help topics') ?>">
       </div>
       <div id="help-filter-msg" class="small text-muted mt-1" style="display:none;"></div>
@@ -98,6 +105,7 @@ $topic_card = function (array $t) use ($site) {
   </div><!-- /#help-users -->
 
   <!-- ── For administrators ────────────────────────────────────────────────── -->
+<?php if ($forAdmins): ?>
   <div class="card shadow-sm mt-4 mb-5 help-section" id="help-admins">
     <div class="card-body p-0">
       <button class="btn btn-link w-100 text-start text-decoration-none p-3 d-flex align-items-center justify-content-between"
@@ -127,6 +135,7 @@ $topic_card = function (array $t) use ($site) {
       </div>
     </div>
   </div>
+<?php endif; ?>
 
 </div>
 

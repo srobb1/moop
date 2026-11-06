@@ -30,6 +30,12 @@ if ($topic && preg_match('/^[a-z0-9\-]+$/', $topic)
     foreach (include __DIR__ . '/tools/pages/help/topics.php' as $t) {
         if ($t['id'] === $topic) {
             $page_title = html_entity_decode($t['title']) . ' - Help';
+            // Setup and maintenance topics are for administrators (2026-11-06); anyone else
+            // following an old link gets the help landing page.
+            if (($t['category'] ?? '') === 'technical' && !has_access('ADMIN')) {
+                $content_file = $landing;
+                $page_title   = 'Help & Documentation';
+            }
             break;
         }
     }
