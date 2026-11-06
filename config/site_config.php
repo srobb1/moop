@@ -256,6 +256,11 @@ return [
     // quoting a number the search no longer uses.
     'search_results_limit' => 2500,
 
+    // Which search-results columns show by default, ONLY where a site differs from the shipped
+    // defaults: ['assembly' => false]. Empty = as shipped. Edited in Site Configuration; the
+    // columns and their defaults are moop_result_columns() (includes/config_init.php).
+    'search_results_columns' => [],
+
     // ======== GENE MODELS GFF FILENAME ========
     // Filename of the gene-models GFF inside each gene_set directory:
     //   organisms/{organism}/{assembly}/{gene_set}/{this}

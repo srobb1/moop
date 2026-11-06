@@ -543,11 +543,12 @@
                 </div>
 
                 <!-- Search Results Limit -->
-                <div class="card adm-card mb-3" id="pnav-search-limit" data-nav-label="Search Results Limit">
+                <div class="card adm-card mb-3" id="pnav-search-limit" data-nav-label="Search Results">
                     <div class="card-header adm-head">
-                        <h5 class="mb-0"><i class="fa fa-list-ol"></i> <?= htmlspecialchars($editable_config['search_results_limit']['label']) ?></h5>
+                        <h5 class="mb-0"><i class="fa fa-list-ol"></i> Search Results</h5>
                     </div>
                     <div class="card-body">
+                        <h6 class="mb-1"><?= htmlspecialchars($editable_config['search_results_limit']['label']) ?></h6>
                         <p class="text-muted small"><?= htmlspecialchars($editable_config['search_results_limit']['description']) ?></p>
                         <div style="max-width: 160px;">
                             <input type="number"
@@ -559,6 +560,31 @@
                                    max="<?= (int)$editable_config['search_results_limit']['max'] ?>">
                         </div>
                         <small class="form-text text-muted"><?= htmlspecialchars($editable_config['search_results_limit']['note']) ?></small>
+
+                        <?php $col_over = moop_result_column_overrides(); ?>
+                        <h6 class="mt-4 mb-1">Columns shown by default</h6>
+                        <p class="text-muted small mb-2">
+                            Which columns the gene search results show when they open, on every search page.
+                            Visitors can still switch any column on with <strong>Column visibility</strong>, and
+                            downloads always include every column. <em>Select</em> and <em>Feature ID</em> are always shown.
+                        </p>
+                        <input type="hidden" name="search_results_columns_form" value="1">
+                        <div class="row g-1">
+                            <?php foreach (moop_result_columns() as $key => [$label, $default, $view]): ?>
+                                <?php $on = $col_over[$key] ?? $default; ?>
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="search_results_columns[]"
+                                               value="<?= htmlspecialchars($key) ?>" id="src-<?= htmlspecialchars($key) ?>" <?= $on ? 'checked' : '' ?>>
+                                        <label class="form-check-label" for="src-<?= htmlspecialchars($key) ?>">
+                                            <?= htmlspecialchars($label) ?>
+                                            <?php if ($view !== 'all'): ?><span class="text-muted small">(<?= htmlspecialchars($view) ?> view)</span><?php endif; ?>
+                                            <?php if ($on !== $default): ?><span class="badge bg-light text-dark border ms-1">changed</span><?php endif; ?>
+                                        </label>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                 </div>
 

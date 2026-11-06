@@ -208,6 +208,27 @@ eq(moopT('Untranslated'), '\u27E6Untranslated\u27E7', 'show gaps (admin only): u
 delete sandbox.MOOP_I18N; delete sandbox.MOOP_I18N_GAPS;
 eq(moopT('No matches found'), 'No matches found', 'catalog removed: English again');
 
+// ---------------------------------------------------------------------------- default columns per site
+// Site Configuration -> Search results: which columns show when the table opens (2026-11-06).
+{
+    const vis = (variant) => {
+        const defs = sandbox.resultsColumnDefs(variant);
+        const cols = sandbox.resultColumnsFor(variant);
+        return Object.fromEntries(cols.map((c, i) => [c.key, defs[i].visible !== false]));
+    };
+    let v = vis('simple');
+    eq([v.species, v.assembly, v.gene_set, v.type, v.name], [false, true, false, false, true], 'no site setting: the shipped defaults');
+    sandbox.MOOP_RESULT_COLUMNS = { assembly: false, species: true, feature_id: false, select: false, bogus: true };
+    v = vis('simple');
+    eq(v.assembly, false, 'a site can hide Assembly by default');
+    eq(v.species, true, 'a site can show Species by default');
+    eq([v.select, v.feature_id], [true, true], 'Select and Feature ID can never be hidden');
+    eq(v.name, true, 'columns the site did not mention keep their default');
+    eq(vis('full').ann_source, true, 'the per-annotation view keeps its columns too');
+    delete sandbox.MOOP_RESULT_COLUMNS;
+    eq(vis('simple').assembly, true, 'setting removed: shipped defaults again');
+}
+
 // ---------------------------------------------------------------------------- report
 console.log('\n' + '-'.repeat(60));
 console.log('JS smoke tests: ' + PASS + ' passed, ' + FAIL + ' failed');

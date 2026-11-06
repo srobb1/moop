@@ -242,7 +242,7 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
              quote it back to the user. Emitted here for the same reason as sitePath above:
              a help string carrying its own copy of the number goes stale silently the moment
              an admin changes the setting, and a wrong number in help is worse than none. -->
-        <script>window.MOOP_SEARCH_RESULTS_LIMIT = <?= (int)moop_search_results_limit() ?>;</script>
+        <script>window.MOOP_SEARCH_RESULTS_LIMIT = <?= (int)moop_search_results_limit() ?>;<?= ($moop_cols = moop_result_column_overrides()) ? ' window.MOOP_RESULT_COLUMNS = ' . json_encode($moop_cols) . ';' : '' ?></script>
 <?php /* The browser's translations for moopT() (js/modules/utilities.js), only on a page shown in
          another language -- so a one-language site (simrbase) gets not one byte more. Before any
          module, so text a module builds at load is already in the visitor's language. */

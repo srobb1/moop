@@ -464,6 +464,26 @@ ok(($_t1->saveEditableConfig(['tools_disabled' => ['moopmart', 'rm -rf']], $_td)
    && $_tnew()->getArray('tools_disabled') === ['moopmart', 'genome_browser'],
    'an unknown tool id is refused and nothing is saved');
 
+// Search-results columns: the admin page's list (moop_result_columns) must match the browser's
+// (RESULT_COLUMNS in js/modules/shared-results-table.js) -- same keys, same shipped defaults.
+$_js = (string) file_get_contents(dirname(__DIR__) . '/js/modules/shared-results-table.js');
+$_js = substr($_js, strpos($_js, 'const RESULT_COLUMNS = ['));
+$_js = substr($_js, 0, strpos($_js, "\n];"));
+$_jscols = [];
+foreach (preg_split("/\n    \{/", $_js) as $_blk) {
+    if (preg_match("/key: '([a-z_]+)'/", $_blk, $_m)) $_jscols[$_m[1]] = !preg_match('/hidden: true/', $_blk);
+}
+unset($_jscols['select'], $_jscols['feature_id']);
+$_phpcols = array_map(fn($c) => $c[1], moop_result_columns());
+ok($_jscols === $_phpcols, 'moop_result_columns() matches the JS column registry (keys, order and shipped defaults)'
+   . ($_jscols === $_phpcols ? '' : ': JS ' . json_encode($_jscols) . ' vs PHP ' . json_encode($_phpcols)));
+$_cs = $_tnew()->saveEditableConfig(['search_results_columns' => ['assembly' => false, 'species' => true, 'name' => true, 'bogus' => false, 'type' => 'no']], $_td);
+$_cm = $_tnew();
+$_rr = new ReflectionProperty(ConfigManager::class, 'instance'); $_rr->setAccessible(true); $_prev = $_rr->getValue(); $_rr->setValue(null, $_cm);
+ok(($_cs['success'] ?? false) && moop_result_column_overrides() === ['assembly' => false, 'species' => true],
+   'column overrides keep only real changes: unknown keys, non-booleans and same-as-default are dropped');
+$_rr->setValue(null, $_prev);
+
 // A structured setting not in saveEditableConfig's hand-kept list must still save. 'primer_maker'
 // (Admin -> Primer Maker) crashed every save with trim(array) on 2026-11-06.
 $_pm = ['cards_off' => ['qpcr'], 'default' => 'c_wish', 'order' => [], 'custom' => [['id' => 'c_wish', 'label' => ['en' => 'WISH'], 'size_range' => '1000-2500']]];

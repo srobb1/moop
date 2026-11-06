@@ -115,6 +115,42 @@ function moop_search_results_limit(): int {
 }
 
 /**
+ * The search-results columns a site may show or hide by default (Site Configuration -> Search
+ * results), each with its SHIPPED default: key => [label, shown by default, which view].
+ * Mirrors RESULT_COLUMNS in js/modules/shared-results-table.js -- the smoke tests fail if the two
+ * disagree. Select and Feature ID are not here: the row links and selections need them.
+ */
+function moop_result_columns(): array {
+    return [
+        'species'     => ['Species', false, 'all'],
+        'assembly'    => ['Assembly', true, 'all'],
+        'gene_set'    => ['Gene Set', false, 'all'],
+        'type'        => ['Type', false, 'all'],
+        'name'        => ['Name', true, 'all'],
+        'description' => ['Description', true, 'all'],
+        'ann_source'  => ['Annotation Source', true, 'one row per annotation'],
+        'ann_id'      => ['Annotation ID', true, 'one row per annotation'],
+        'ann_desc'    => ['Annotation Description', true, 'one row per annotation'],
+        'matches'     => ['Matches', true, 'one row per gene'],
+    ];
+}
+
+/**
+ * This site's changes to which columns show by default: [key => bool], only where it differs from
+ * the shipped default (Sofia, 2026-11-06: no Assembly column on cuttingclass). Empty = as shipped.
+ * Unknown keys and non-booleans are dropped, so a stale setting can never hide a column by accident.
+ */
+function moop_result_column_overrides(): array {
+    $saved = ConfigManager::getInstance()->getArray('search_results_columns', []);
+    $cols  = moop_result_columns();
+    $out   = [];
+    foreach (is_array($saved) ? $saved : [] as $key => $shown) {
+        if (isset($cols[$key]) && is_bool($shown) && $shown !== $cols[$key][1]) $out[$key] = $shown;
+    }
+    return $out;
+}
+
+/**
  * The SQL LIMIT for a capped search: one more row than the cap, so that
  * "more results exist" is detectable without a second COUNT query.
  */

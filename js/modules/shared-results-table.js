@@ -361,7 +361,12 @@ function resultsColumnDefs(variant) {
     return resultColumnsFor(variant).map((col, idx) => {
         const def = { targets: idx };
         if (col.orderable === false) def.orderable = false;
-        if (col.hidden)              def.visible   = false;
+        // The site may change which columns show by default (Site Configuration -> Search results;
+        // window.MOOP_RESULT_COLUMNS, only what differs). Select and Feature ID are never hidden.
+        const siteCols = globalThis.MOOP_RESULT_COLUMNS || {};   // window in a browser; also the test sandbox
+        const shown = (col.key in siteCols && col.key !== 'select' && col.key !== 'feature_id')
+            ? siteCols[col.key] === true : !col.hidden;
+        if (!shown)                  def.visible   = false;
 
         const classes = [];
         if (col.wrap)               classes.push('wrap-text');

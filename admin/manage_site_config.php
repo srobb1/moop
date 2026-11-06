@@ -253,6 +253,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Search-results columns shown by default. The marker says the boxes were on the form (an
+        // unticked box sends nothing, so without it "all unticked" and "not on this form" look the
+        // same). Saved as differences from the shipped defaults only, so a site that changes nothing
+        // keeps following them as they evolve.
+        if (isset($_POST['search_results_columns_form'])) {
+            $shown = array_map('strval', (array)($_POST['search_results_columns'] ?? []));
+            $cols  = [];
+            foreach (moop_result_columns() as $key => [, $default]) {
+                $on = in_array($key, $shown, true);
+                if ($on !== $default) $cols[$key] = $on;
+            }
+            $data['search_results_columns'] = $cols;
+        }
+
         // Parse Turnstile settings
         if (isset($_POST['turnstile']) && is_array($_POST['turnstile'])) {
             // No secret_key here: it lives only in config/secrets.php, and ConfigManager
