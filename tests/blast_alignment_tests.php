@@ -158,6 +158,27 @@ check('missing midline still renders', true,
         'query_from' => 1, 'query_to' => 3, 'hit_from' => 1, 'hit_to' => 3,
     ], 'blastn'), 'Query') === 0);
 
+echo "\n--- hit coverage (parseBlastResults) ---\n";
+// One query, one hit of length 100 with three HSPs on the subject: 1-40, 61-100 (minus strand,
+// written high-to-low) and 30-50 overlapping the first. Covered: 1-50 + 61-100 = 90 of 100.
+$hsp = fn($qf, $qt, $hf, $ht) => "<Hsp><Hsp_bit-score>50</Hsp_bit-score><Hsp_score>100</Hsp_score><Hsp_evalue>1e-10</Hsp_evalue>"
+    . "<Hsp_query-from>$qf</Hsp_query-from><Hsp_query-to>$qt</Hsp_query-to><Hsp_hit-from>$hf</Hsp_hit-from><Hsp_hit-to>$ht</Hsp_hit-to>"
+    . "<Hsp_query-frame>1</Hsp_query-frame><Hsp_hit-frame>1</Hsp_hit-frame><Hsp_identity>10</Hsp_identity><Hsp_positive>10</Hsp_positive>"
+    . "<Hsp_gaps>0</Hsp_gaps><Hsp_align-len>10</Hsp_align-len><Hsp_qseq>AAAAAAAAAA</Hsp_qseq><Hsp_hseq>AAAAAAAAAA</Hsp_hseq><Hsp_midline>AAAAAAAAAA</Hsp_midline></Hsp>";
+$xml = '<?xml version="1.0"?><BlastOutput><BlastOutput_program>blastn</BlastOutput_program><BlastOutput_iterations><Iteration>'
+    . '<Iteration_iter-num>1</Iteration_iter-num><Iteration_query-ID>q1</Iteration_query-ID><Iteration_query-def>q1</Iteration_query-def>'
+    . '<Iteration_query-len>200</Iteration_query-len><Iteration_hits>'
+    . '<Hit><Hit_num>1</Hit_num><Hit_id>s1</Hit_id><Hit_def>s1</Hit_def><Hit_accession>s1</Hit_accession><Hit_len>100</Hit_len><Hit_hsps>'
+    . $hsp(1, 40, 1, 40) . $hsp(101, 140, 100, 61) . $hsp(41, 61, 30, 50)
+    . '</Hit_hsps></Hit>'
+    . '<Hit><Hit_num>2</Hit_num><Hit_id>s2</Hit_id><Hit_def>s2</Hit_def><Hit_accession>s2</Hit_accession><Hit_len>50</Hit_len><Hit_hsps>'
+    . $hsp(1, 50, 1, 50)
+    . '</Hit_hsps></Hit></Iteration_hits></Iteration></BlastOutput_iterations></BlastOutput>';
+$parsed = parseBlastResults($xml);
+$hits = $parsed['queries'][0]['hits'] ?? [];
+check('first hit: subject coverage adds up its own HSPs (overlap counted once)', 90.0, (float)($hits[0]['subject_cumulative_coverage_percent'] ?? -1));
+check('second hit: one HSP over the whole subject is 100%', 100.0, (float)($hits[1]['subject_cumulative_coverage_percent'] ?? -1));
+
 echo "\n";
 echo "passed: $pass   failed: $fail\n";
 exit($fail === 0 ? 0 : 1);

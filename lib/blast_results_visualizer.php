@@ -237,17 +237,16 @@ function parseBlastResults($blast_xml) {
                     }
                     $query_coverage_percent = $query_result['query_length'] > 0 ? round(($total_covered / $query_result['query_length']) * 100, 2) : 0;
                     
-                    // Also calculate subject cumulative coverage for display
+                    // Subject cumulative coverage, from THIS hit's HSPs. It used to search
+                    // $query_result['hits'] for the hit -- which holds only the hits finished before
+                    // this one, so it never found it and every hit header said "Subject Coverage: 0%"
+                    // while each HSP below said 100% (found 2026-11-06).
                     $subject_cumulative_coverage = [];
-                    foreach ($query_result['hits'] as $hit_test) {
-                        if ($hit_test['subject'] === $hit_def_str) {
-                            foreach ($hit_test['hsps'] as $hsp_test) {
-                                $subject_cumulative_coverage[] = [
-                                    'from' => min($hsp_test['hit_from'], $hsp_test['hit_to']),
-                                    'to' => max($hsp_test['hit_from'], $hsp_test['hit_to'])
-                                ];
-                            }
-                        }
+                    foreach ($hsps_array as $hsp_test) {
+                        $subject_cumulative_coverage[] = [
+                            'from' => min($hsp_test['hit_from'], $hsp_test['hit_to']),
+                            'to' => max($hsp_test['hit_from'], $hsp_test['hit_to'])
+                        ];
                     }
                     usort($subject_cumulative_coverage, function($a, $b) { return $a['from'] - $b['from']; });
                     $merged_subject = [];
