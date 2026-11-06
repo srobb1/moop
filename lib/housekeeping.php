@@ -669,8 +669,12 @@ function housekeeping_ensure_cache_dir() {
  * @return array{uncommitted:int, has_upstream:bool, ahead:int, commits:int, last_commit:string, clean:bool}
  */
 function housekeeping_git_status(string $dir): array {
+    // -c safe.directory: the repository is usually set up from an admin's own account, so .git
+    // belongs to them while this runs as the web server -- and git then refuses to read it
+    // ("dubious ownership"), every command printing nothing. The card read that as "not pushed
+    // anywhere" right after a correct setup (cuttingclass, 2026-11-06). This folder is MOOP's own.
     $run = function (string $args) use ($dir): string {
-        $out = @shell_exec('git -C ' . escapeshellarg($dir) . ' ' . $args . ' 2>/dev/null');
+        $out = @shell_exec('git -c safe.directory=' . escapeshellarg($dir) . ' -C ' . escapeshellarg($dir) . ' ' . $args . ' 2>/dev/null');
         return $out === null ? '' : trim($out);
     };
     $porcelain     = $run('status --porcelain');
