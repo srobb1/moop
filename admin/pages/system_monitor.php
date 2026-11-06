@@ -35,7 +35,14 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <?php endif; ?>
   </p>
 
-  <?php if (!$collector_ok): ?>
+  <?php if (!empty($monitor_elsewhere)): ?>
+    <div class="alert alert-info">
+      <i class="fa fa-info-circle me-1"></i>
+      This server&rsquo;s System Monitor runs from another MOOP site on the same server:
+      <code><?= htmlspecialchars($monitor_elsewhere) ?></code>. It watches the whole server, so open
+      that site&rsquo;s System Monitor for CPU, memory and traffic. There is one per server; nothing to install here.
+    </div>
+  <?php elseif (!$collector_ok): ?>
     <div class="alert alert-warning">
       <i class="fa fa-exclamation-triangle me-1"></i>
       <?php if ($age === null): ?>

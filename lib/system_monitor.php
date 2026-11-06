@@ -73,9 +73,25 @@ function moop_monitor_class(string $script, array $heavy): string {
     return 'page';
 }
 
+/**
+ * The site this server's collector serves, when it is ANOTHER site -- else null. The collector and
+ * nginx's rate limits serve one site per server (/etc/moop-monitor.conf, written by
+ * scripts/install_monitor.sh). A second site on the same server (cuttingclass beside simrbase) has
+ * no figures of its own, and any monitor_*.json in its cache are leftovers, not a stopped timer.
+ */
+function moop_monitor_elsewhere(string $conf = '/etc/moop-monitor.conf'): ?string {
+    $text = @file_get_contents($conf);
+    if ($text === false || !preg_match('/^SITE=(.+)$/m', $text, $m)) return null;
+    $owner = trim($m[1]);
+    $here  = (string) ConfigManager::getInstance()->getPath('site_path');
+    $same  = (realpath($owner) ?: $owner) === (realpath($here) ?: $here);
+    return $same ? null : $owner;
+}
+
 /** One of the collector's published files, decoded, or null if absent/unreadable. */
 function moop_monitor_read(string $which): ?array {
     if (!in_array($which, ['now', '24h', '7d', '30d'], true)) return null;
+    if (moop_monitor_elsewhere() !== null) return null;   // leftovers from another site's collector
     $file = moop_cache_root() . "/monitor_$which.json";
     if (!is_readable($file)) return null;
     $data = json_decode((string) @file_get_contents($file), true);

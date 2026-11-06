@@ -150,6 +150,7 @@ echo render_display_page(
         'range'        => $range,
         'age'          => $age,
         'collector_ok' => $now_file !== null && $age !== null && $age < 300,
+        'monitor_elsewhere' => moop_monitor_elsewhere(),
         'sync'         => $sync,
         'tiles'        => $tiles,
         'now'          => $now,

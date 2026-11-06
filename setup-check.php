@@ -1005,7 +1005,12 @@ if (detectWebServer() === 'apache') {
     warn('Rate limits, security headers and the System Monitor are nginx configuration — not set up on Apache',
          'See notes/BOT_PROTECTION_PLAN.md; the Apache equivalents are not written yet.');
 } else {
-    if (!is_file($mon_timer) && !is_file($mon_now)) {
+    // One collector per server (/etc/moop-monitor.conf). On a second site it serves the first one:
+    // that is the design, not a fault -- and its leftovers in this cache are not a stopped timer.
+    $mon_owner = preg_match('/^SITE=(.+)$/m', (string) @file_get_contents('/etc/moop-monitor.conf'), $mo) ? trim($mo[1]) : '';
+    if ($mon_owner !== '' && (realpath($mon_owner) ?: $mon_owner) !== (realpath($base) ?: $base)) {
+        pass('System Monitor runs from ' . $mon_owner . ' (one per server; it watches this server too)');
+    } elseif (!is_file($mon_timer) && !is_file($mon_now)) {
         warn('System Monitor collector is not installed — no CPU/RAM/traffic figures, and the rate limits do not follow IP-range changes',
              $mon_cmd);
     } else {

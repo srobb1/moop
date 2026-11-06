@@ -353,11 +353,13 @@ The steps below are the ones that installing cuttingclass beside simrbase actual
 8. **In Site Configuration**, set the cache folder to `/var/www/cuttingclass-cache` and the
    site-data folder to `/var/www/cuttingclass-site-data`. (Left empty, caches go in a hidden
    `organisms/.cache/`, which works but mixes them into the data tree.)
-9. **Do not run `install_monitor.sh` or `install_security_report.sh` for the second site.**
-   Each installs one host-wide timer that serves a single site: the System Monitor's collector
-   and its nginx files, and the daily security report, which lands in one site's cache folder.
-   Running either from the second checkout re-points it at the second site, and the first
-   site's dashboard loses it.
+9. **Run `sudo scripts/install_security_report.sh` from the second site too** -- it adds that
+   site to the daily OS security report (made once, copied into every site's cache folder), so
+   both dashboards have it. **Do not run `install_monitor.sh` or `install_nginx_limits.sh`** for
+   the second site: the System Monitor and nginx's rate limits serve one site per server, and
+   running them from the second would re-point them, replacing the first site's rate-limit
+   exemptions for the whole server. Both scripts now refuse and say so; `--move-here` moves them
+   on purpose. The server is already watched from the first site's dashboard.
 
 **Keeping the sites on the same code.** Both checkouts come from the same repository, and
 neither is edited by hand: change one tree, commit and push, then update every site at once:
