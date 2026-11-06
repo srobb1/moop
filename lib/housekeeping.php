@@ -681,6 +681,8 @@ function housekeeping_git_status(string $dir): array {
         'uncommitted'  => $uncommitted,
         'has_upstream' => $has_upstream,
         'ahead'        => $ahead,
+        'has_remote'   => $run('remote') !== '',
+        'branch'       => $run('branch --show-current') ?: 'main',
         'commits'      => (int) $run('rev-list --count HEAD'),
         'last_commit'  => $run('log -1 --format=%cr') ?: 'no commits yet',
         'clean'        => $uncommitted === 0 && $ahead <= 0,

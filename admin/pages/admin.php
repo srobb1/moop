@@ -565,6 +565,11 @@
        way to tell stale from failed, is what made it live. -->
   <?php
     $g = null;
+    // Whether it is a git repository is checked LIVE too: the stored answer is from the last
+    // housekeeping run, so the setup steps below would linger for up to an hour after following them.
+    if ($site_data_backup !== null && !empty($site_data_backup['path'])) {
+        $site_data_backup['is_git'] = is_dir($site_data_backup['path'] . '/.git');
+    }
     if ($site_data_backup !== null && !empty($site_data_backup['is_git']) && function_exists('housekeeping_git_status')) {
         $g = housekeeping_git_status($site_data_backup['path']);
     }
@@ -574,7 +579,14 @@
         $_bk_badges = [['Failing', 'danger']]; $_bk_tone = 'danger';
     } else {
         $_bk_badges = [['Active', 'success']]; $_bk_tone = '';
-        if ($g && !$g['clean']) {
+        if (empty($site_data_backup['is_git'])) {
+            // Copied, but kept nowhere else: no history, no off-site copy (cuttingclass, 2026-11-06).
+            $_bk_badges[] = ['No version history', 'warning'];
+            $_bk_tone = 'warn';
+        } elseif ($g && !$g['has_upstream']) {
+            $_bk_badges[] = ['Not pushed anywhere', 'warning'];
+            $_bk_tone = 'warn';
+        } elseif ($g && !$g['clean']) {
             $_bits = [];
             if ($g['uncommitted'] > 0) $_bits[] = $g['uncommitted'] . ' to commit';
             if ($g['ahead'] > 0)       $_bits[] = $g['ahead'] . ' to push';
@@ -597,7 +609,46 @@
         <span class="d-block text-muted">Config, metadata and organism files are checked for changes with each
           housekeeping run and copied to <code><?= htmlspecialchars($site_data_backup['path']) ?></code>.</span>
       </p>
-      <?php if ($g): ?>
+      <?php
+        // Setting up version history, step by step, with THIS site's folder in every command
+        // (Sofia, 2026-11-06: cuttingclass's backup had none, and nothing said so). The folder
+        // belongs to the web server, so git must be told it is safe to use from your account, and
+        // the repository is group-shared so housekeeping (as the web server) can still read it.
+        $_bk_path = $site_data_backup['path'];
+        $_bk_repo = basename($_bk_path);
+        $_bk_remote_cmd = 'cd ' . $_bk_path . ' && git remote add origin git@github.com:YOUR-ACCOUNT/' . $_bk_repo . '.git'
+                        . ' && git push -u origin ' . ($g['branch'] ?? 'main');
+      ?>
+      <?php if (empty($site_data_backup['is_git'])): ?>
+        <div class="small border-top pt-2">
+          <span class="text-warning-emphasis"><i class="fa fa-code-branch"></i> <strong>No version history yet.</strong></span>
+          The files are copied here, but kept nowhere else and with no history of changes. To keep them in a private git repository:
+          <ol class="mt-2 mb-0 ps-3">
+            <li class="mb-2">On GitHub, create a new <strong>private</strong> repository, e.g. <code><?= htmlspecialchars($_bk_repo) ?></code>, empty
+              (no README). <strong>Never make it public:</strong> it holds the user accounts and API keys.</li>
+            <li class="mb-2">On this server, from your own account, start the history and make the first commit:
+              <?= adm_command('git config --global --add safe.directory ' . $_bk_path
+                  . ' && cd ' . $_bk_path . ' && git init -b main && git config core.sharedRepository group'
+                  . ' && git add -A && git commit -m "Site data backup"') ?></li>
+            <li class="mb-2">Connect it to the GitHub repository (put your account name in) and push:
+              <?= adm_command($_bk_remote_cmd) ?></li>
+          </ol>
+          <span class="text-muted d-block mt-1">After that this card shows what is waiting to be committed and pushed. MOOP never commits for you.</span>
+        </div>
+      <?php elseif ($g && !$g['has_upstream']): ?>
+        <div class="small border-top pt-2">
+          <span class="text-warning-emphasis"><i class="fa fa-code-branch"></i> <strong>Not pushed anywhere.</strong></span>
+          The history is kept on this server only.
+          <?php if (!$g['has_remote']): ?>
+            Create a <strong>private</strong> GitHub repository (empty, no README), then connect it and push (put your account name in):
+            <?= adm_command($_bk_remote_cmd) ?>
+          <?php else: ?>
+            A remote is set but this branch has never been pushed to it:
+            <?= adm_command('cd ' . $_bk_path . ' && git push -u origin ' . $g['branch']) ?>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
+      <?php if ($g && $g['has_upstream']): ?>
         <div class="small border-top pt-2">
           <?php if ($g['clean']): ?>
             <span class="text-success"><i class="fa fa-code-branch"></i>
