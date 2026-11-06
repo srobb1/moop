@@ -484,6 +484,25 @@ ok(($_cs['success'] ?? false) && moop_result_column_overrides() === ['assembly' 
    'column overrides keep only real changes: unknown keys, non-booleans and same-as-default are dropped');
 $_rr->setValue(null, $_prev);
 
+// Site Configuration stores only what differs from the shipped default (2026-11-06): saving the
+// form used to store every field it showed, freezing the defaults of the day into the site.
+$_d = $_tnew();
+ok($_d->isShippedDefault('blast_max_runtime', '150') && $_d->isShippedDefault('blast_max_runtime', 150)
+   && !$_d->isShippedDefault('blast_max_runtime', '151'), 'isShippedDefault: "150" and 150 are the shipped default, 151 is not');
+ok($_d->isShippedDefault('theme_colors', []) && $_d->isShippedDefault('technical_panels', 'show')
+   && !$_d->isShippedDefault('no_such_key', ''), 'empty list and text defaults match; a key that ships nothing never does');
+[$_keep, $_drop] = $_d->pruneShippedDefaults(['blast_max_runtime' => '150', 'blast_max_hits' => '2000',
+                                               'theme_colors' => [], 'turnstile' => $_d->getArray('turnstile')]);
+ok(array_keys($_keep) === ['blast_max_hits', 'turnstile'] && $_drop === ['blast_max_runtime', 'theme_colors'],
+   'prune: defaults dropped, real changes kept, merged settings (turnstile) never pruned');
+file_put_contents("$_td/config_editable.json", json_encode(['blast_max_runtime' => '150', 'blast_max_hits' => '2000', 'tools_disabled' => ['moopmart', 'genome_browser']]));
+$_d->saveEditableConfig($_keep, $_td, $_drop);
+$_onfile = json_decode((string) file_get_contents("$_td/config_editable.json"), true);
+ok(!array_key_exists('blast_max_runtime', $_onfile) && ($_onfile['blast_max_hits'] ?? '') === '2000'
+   && ($_onfile['tools_disabled'] ?? null) === ['moopmart', 'genome_browser'],
+   'save: a value back at its default leaves the file (follows the default again); other keys untouched');
+ok($_tnew()->getInt('blast_max_runtime', 0) === 150, 'and reading it gives the shipped default');
+
 // A structured setting not in saveEditableConfig's hand-kept list must still save. 'primer_maker'
 // (Admin -> Primer Maker) crashed every save with trim(array) on 2026-11-06.
 $_pm = ['cards_off' => ['qpcr'], 'default' => 'c_wish', 'order' => [], 'custom' => [['id' => 'c_wish', 'label' => ['en' => 'WISH'], 'size_range' => '1000-2500']]];

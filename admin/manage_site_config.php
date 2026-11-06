@@ -461,7 +461,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Save if no upload error
         if (empty($error)) {
-            $result = $config->saveEditableConfig($data, $config_dir);
+            // A value equal to the shipped default is not stored: the site keeps following the
+            // default as MOOP changes it, instead of freezing today's (ConfigManager).
+            [$data, $back_to_default] = $config->pruneShippedDefaults($data);
+            $result = $config->saveEditableConfig($data, $config_dir, $back_to_default);
             
             if ($result['success']) {
                 $message = $result['message'];

@@ -42,6 +42,15 @@ class ConfigManager
      */
     private $loaded = false;
 
+    /** site_config.php as shipped, before this site's settings are laid over it. */
+    private $shipped = [];
+
+    /**
+     * Settings that MERGE with their shipped value rather than replace it (see initialize()), so
+     * "equal to the default" is not a simple comparison for them: never pruned.
+     */
+    const MERGED_KEYS = ['sequence_types', 'jbrowse2', 'blast_linkouts', 'turnstile'];
+
     /**
      * Validation errors
      */
@@ -117,6 +126,7 @@ class ConfigManager
             $this->errors[] = "Site config must return an array";
             return false;
         }
+        $this->shipped = $this->config;
 
         // Load editable configuration (overrides defaults from site_config.php)
         $editable_config_path = dirname($site_config_path) . '/config_editable.json';
@@ -823,7 +833,50 @@ class ConfigManager
      * @param string $config_dir Directory containing config_editable.json
      * @return array ['success' => bool, 'message' => string]
      */
-    public function saveEditableConfig($data, $config_dir)
+    /**
+     * Is $value what site_config.php ships for $key? Numbers compare as numbers ("150" = 150), a
+     * map's key order does not matter, a list's does. A key that ships no value is never "default".
+     */
+    public function isShippedDefault(string $key, $value): bool
+    {
+        if (!array_key_exists($key, $this->shipped)) return false;
+        return self::normalisedSetting($this->shipped[$key]) === self::normalisedSetting($value);
+    }
+
+    private static function normalisedSetting($v)
+    {
+        if (is_array($v)) {
+            $out = [];
+            foreach ($v as $k => $x) $out[$k] = self::normalisedSetting($x);
+            if ($out && array_keys($out) !== range(0, count($out) - 1)) ksort($out);   // a map
+            return $out;
+        }
+        if (is_bool($v))    return $v ? 'true' : 'false';
+        if ($v === null)    return '';
+        if (is_numeric($v)) return (string) (0 + $v);
+        return (string) $v;
+    }
+
+    /**
+     * Split a save into what to store and what to drop: a value equal to the shipped default is not
+     * stored, so the site keeps FOLLOWING the default as it changes. Saving Site Configuration used
+     * to store every field it showed, which froze the defaults of the day into the site (found
+     * 2026-11-06: blast_* limits, technical_panels, theme_colors). Returns [$data, $remove].
+     */
+    public function pruneShippedDefaults(array $data): array
+    {
+        $remove = [];
+        foreach ($data as $key => $value) {
+            if (in_array($key, self::MERGED_KEYS, true)) continue;
+            if ($this->isShippedDefault((string) $key, $value)) {
+                $remove[] = $key;
+                unset($data[$key]);
+            }
+        }
+        return [$data, $remove];
+    }
+
+    public function saveEditableConfig($data, $config_dir, array $remove = [])
     {
         // Use the centralized whitelist of allowed editable keys
         $allowed_keys = $this->editableConfigKeys;
@@ -840,6 +893,11 @@ class ConfigManager
                     }
                 }
             }
+        }
+
+        // Keys this save takes back to the shipped default (pruneShippedDefaults()).
+        foreach ($remove as $key) {
+            if (in_array($key, $allowed_keys, true)) unset($editable_data[$key]);
         }
 
         // Overlay only the keys present in $data (from this save operation)

@@ -691,8 +691,9 @@ a new MOOP site from scratch. Site-specific data is versioned separately.
 - `composer.json` (but not `vendor/` or `composer.phar` — run `composer install`)
 
 **Site-data backup directory** (`site_data_path`; `site_config.php` ships
-`<parent of root_path>/<site>-site-data` — `/var/www/moop-site-data` here, which this deployment also sets explicitly
-via `config_editable.json` — read it through ConfigManager, never from `site_config.php`):
+`<parent of root_path>/<site>-site-data` — `/var/www/moop-site-data` here (the default; since 2026-11-06
+Site Configuration stores only values that differ from the shipped default) — read it through ConfigManager,
+never from `site_config.php`):
 - `config/config_editable.json` — admin-edited settings
 - `config/secrets.php` — API keys
 - `metadata/*.json` — groups, annotations, taxonomy tree
