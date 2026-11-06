@@ -183,7 +183,7 @@ filled directly from that mapping.
 
 1. Agree this note (both sides).
 2. Compute: write the two files for one gene set (cuttingclass *Girardia* sp., a handful of WISH images from the 2017 paper, as that paper's source)
-   images) and load it.
+   and load it.
 3. Web: `api/gene_image.php` + thumbnails, tested for access (a restricted gene set's image must 404
    for a public visitor) and for traversal.
 4. Web: the gene page section and nav entry; render_compare proves pages without images unchanged.
