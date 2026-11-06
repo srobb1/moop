@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $default = (string)($_POST['default'] ?? '');
         if ($default !== '' && !in_array($default, $on, true)) {
-            $flash_and_back('danger', 'Not saved: the card selected first must be one that is on.');
+            $flash_and_back('danger', 'Not saved: the card selected when the page opens must be one that is on.');
         }
         $settings['cards_off'] = array_values(array_diff(array_keys($all), $on));
         $settings['default']   = isset($all[$default]) ? $default : '';

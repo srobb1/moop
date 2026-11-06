@@ -72,7 +72,7 @@ $fv = fn($k) => htmlspecialchars((string)($form[$k] ?? ''));
         <input type="hidden" name="_action" value="save_cards">
         <table class="table table-sm align-middle mb-0">
           <thead class="table-light">
-            <tr><th class="ps-3" style="width:4rem;">On</th><th style="width:6rem;">Opens on</th><th>Card</th><th style="width:6rem;">Order</th><th style="width:9rem;"></th></tr>
+            <tr><th class="ps-3" style="width:4rem;">On</th><th style="width:8rem;">Selected when the page opens</th><th>Card</th><th style="width:6rem;">Order</th><th style="width:9rem;"></th></tr>
           </thead>
           <tbody>
           <?php $i = 0; foreach ($cards as $id => $c): $i++; ?>
@@ -115,8 +115,8 @@ $fv = fn($k) => htmlspecialchars((string)($form[$k] ?? ''));
           </tbody>
         </table>
         <div class="p-3 border-top d-flex align-items-center gap-3">
-          <button type="submit" class="btn btn-moop-teal" <?= $file_write_error ? 'disabled' : '' ?>><i class="fa fa-save me-1"></i>Save on/off and first card</button>
-          <span class="small text-muted">Order changes save at once.</span>
+          <button type="submit" class="btn btn-moop-teal text-nowrap flex-shrink-0" <?= $file_write_error ? 'disabled' : '' ?>><i class="fa fa-save me-1"></i>Save changes</button>
+          <span class="small text-muted"><strong>On</strong>: students see the card. <strong>Selected when the page opens</strong>: the card already chosen when Primer Maker opens. The arrows set the order and save at once.</span>
         </div>
       </form>
     </div>
