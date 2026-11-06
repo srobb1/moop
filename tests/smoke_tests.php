@@ -464,6 +464,15 @@ ok(($_t1->saveEditableConfig(['tools_disabled' => ['moopmart', 'rm -rf']], $_td)
    && $_tnew()->getArray('tools_disabled') === ['moopmart', 'genome_browser'],
    'an unknown tool id is refused and nothing is saved');
 
+// A structured setting not in saveEditableConfig's hand-kept list must still save. 'primer_maker'
+// (Admin -> Primer Maker) crashed every save with trim(array) on 2026-11-06.
+$_pm = ['cards_off' => ['qpcr'], 'default' => 'c_wish', 'order' => [], 'custom' => [['id' => 'c_wish', 'label' => ['en' => 'WISH'], 'size_range' => '1000-2500']]];
+$_pmsave = $_tnew()->saveEditableConfig(['primer_maker' => $_pm], $_td);
+ok(($_pmsave['success'] ?? false) && $_tnew()->getArray('primer_maker') === $_pm,
+   'a structured setting (primer_maker) saves and reads back unchanged');
+ok($_tnew()->getArray('tools_disabled') === ['moopmart', 'genome_browser'],
+   'saving one setting leaves the others as they were');
+
 // Menu and toolbox from the registry, ordered and labelled per site (cuttingclass step 1c).
 // OPT-IN: no tools_layout = today's menu exactly (the render comparison checks the HTML).
 $_t2 = $_tnew();   // tools_disabled = moopmart, genome_browser (saved above)

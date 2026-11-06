@@ -1008,8 +1008,14 @@ class ConfigManager
 
                 if ($key === 'sequence_types' || $key === 'auto_login_ip_ranges' || $key === 'sample_feature_ids' || $key === 'home_search_examples' || $key === 'blast_sample_sequences' || $key === 'blast_linkouts' || $key === 'turnstile' || $key === 'footer' || $key === 'rate_limit_heavy' || $key === 'tools_disabled' || $key === 'tools_layout' || $key === 'main_menu' || $key === 'languages' || $key === 'languages_retired' || $key === 'home' || $key === 'theme_colors') {
                     $editable_data[$key] = $data[$key];
+                } elseif (is_array($data[$key])) {
+                    // Any structured value is kept as it is. The list above is hand-kept, and a key
+                    // missing from it reached trim() and crashed the save with a TypeError -- the new
+                    // 'primer_maker' key did exactly that on 2026-11-06 (and 'tracks_server' /
+                    // 'jbrowse2' would too). Only text is trimmed.
+                    $editable_data[$key] = $data[$key];
                 } else {
-                    $editable_data[$key] = trim($data[$key]);
+                    $editable_data[$key] = trim((string)$data[$key]);
                 }
             }
         }
