@@ -26,7 +26,7 @@
                   // 32px, purely from line-height. ?>
             <?= page_title('Primer Maker', 'fa fa-magic') ?>
             <?= help_modal_trigger('pm-help', '', 'What Primer Maker does') ?>
-            <?= page_purpose('Design PCR, qPCR, RT-PCR or sequencing primers from a sequence, and get a table you can paste straight into a spreadsheet.', '', false, false) ?>
+            <?= moop_primer_maker_as_shipped() ? page_purpose('Design PCR, qPCR, RT-PCR or sequencing primers from a sequence, and get a table you can paste straight into a spreadsheet.', '', false, false) : page_purpose('Design primers from a sequence, and get a table you can paste straight into a spreadsheet.', '', false, false) ?>
         </div>
     </div>
 

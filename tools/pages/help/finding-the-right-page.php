@@ -68,6 +68,12 @@ foreach ($tasks as $i => [$task, $hint, $links]) {
     $tasks[$i] = [$task, $hint, $links];
 }
 $routes = array_values(array_filter($routes, fn($r) => empty($r['link']) || !$tool_off((string) $r['link'])));
+// Primer Maker's sentence names the four shipped cards; a site that changed them gets the generic one.
+foreach ($routes as $i => $r) {
+    if (($r['link'] ?? '') === '/tools/primer_maker.php' && !moop_primer_maker_as_shipped()) {
+        $routes[$i]['purpose'] = PrimerPresets::GENERIC_PURPOSE;
+    }
+}
 ?>
 
 <div class="container mt-5">

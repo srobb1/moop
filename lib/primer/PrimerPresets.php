@@ -105,6 +105,24 @@ class PrimerPresets
         return (bool)preg_match('/^' . self::CUSTOM_PREFIX . '[a-z0-9_]{1,40}$/', $id);
     }
 
+    /**
+     * Does this site show exactly the four shipped cards? The sentence describing Primer Maker names
+     * them ("Design PCR, qPCR, RT-PCR or sequencing primers..."), which is false on a site that
+     * changed them (cuttingclass: no qPCR or RT-PCR, plus a WISH card) -- it then uses
+     * PrimerPresets::GENERIC_PURPOSE, which is true everywhere and can be translated.
+     */
+    public static function shipsAsShipped($saved, bool $all_transcripts): bool
+    {
+        $ids = array_keys(self::forSite($saved, 'en', $all_transcripts));
+        sort($ids);
+        $shipped = array_keys(self::BUILTIN);
+        sort($shipped);
+        return $ids === $shipped;
+    }
+
+    const GENERIC_PURPOSE = 'Design primers from a sequence, and get a table you can paste straight into a spreadsheet.';
+    const GENERIC_DESCRIPTION = 'Design primers from a sequence';
+
     /** A new custom id from a label, unique among $taken. */
     public static function newId(string $label, array $taken): string
     {

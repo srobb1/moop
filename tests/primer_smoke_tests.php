@@ -970,6 +970,12 @@ ok($p['PRIMER_PRODUCT_SIZE_RANGE'] === '1000-2500' && $p['PRIMER_MIN_TM'] === 54
    'the card runs with its own numbers (as Primer3 tags)');
 ok(!isset($p['PRIMER_MIN_GC']), 'a blank field sets nothing, so the shipped default applies');
 
+// The sentence naming the four shipped cards is used only where a site shows exactly those four.
+ok(PrimerPresets::shipsAsShipped(null, false), 'nothing saved, a site with genomes: the four shipped cards');
+ok(!PrimerPresets::shipsAsShipped(null, true), 'a transcriptome-only site (no RT-PCR): not as shipped');
+ok(!PrimerPresets::shipsAsShipped($site, false), 'a site with its own card and qPCR off: not as shipped');
+ok(PrimerPresets::shipsAsShipped(['order' => ['sequencing', 'standard', 'rtpcr', 'qpcr']], false), 'reordering alone keeps the shipped wording');
+
 // Every card off: never an empty form.
 $none = PrimerPresets::forSite(['cards_off' => ['standard', 'qpcr', 'rtpcr', 'sequencing']]);
 ok(array_keys($none) === ['standard'], 'everything switched off still offers Standard PCR');

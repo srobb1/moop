@@ -34,6 +34,9 @@ function getAvailableTools($context = []) {
         if ($current_page && !_tool_visible_on_page($tool, $current_page)) {
             continue;
         }
+        if ($tool_id === 'primer_maker' && !moop_primer_maker_as_shipped()) {
+            $tool['description'] = PrimerPresets::GENERIC_DESCRIPTION;   // it names the shipped cards
+        }
         $url = _build_tool_url($tool, $context, $site);
         if ($url !== null) {
             $tools[$tool_id] = array_merge($tool, ['url' => $url, 'name' => $config->toolLabel((string) $tool_id, 'toolbox')]);
@@ -152,6 +155,20 @@ function createToolContext($page, $params = []) {
     }
 
     return $context;
+}
+
+/**
+ * Does Primer Maker show this site the four shipped cards (Admin -> Primer Maker)? When not, the
+ * sentences that name them use the generic wording instead (PrimerPresets::GENERIC_*).
+ */
+function moop_primer_maker_as_shipped(): bool {
+    static $memo = null;
+    if ($memo !== null) return $memo;
+    require_once __DIR__ . '/primer/Primer3Design.php';
+    require_once __DIR__ . '/primer/PrimerPresets.php';
+    require_once __DIR__ . '/genomic_regions.php';
+    return $memo = PrimerPresets::shipsAsShipped(ConfigManager::getInstance()->getArray('primer_maker'),
+                                                 moop_site_is_transcriptomes());
 }
 
 /**
