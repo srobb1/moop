@@ -143,7 +143,10 @@ $context_is_transcripts = $context_organism !== '' && $context_assembly !== ''
 // with Standard PCR selected -- except that RT-PCR is left out on a transcript assembly, where it
 // could only fail (it used to arrive SELECTED there from a gene page's mRNA, 2026-11-06).
 $primer_settings = $config->getArray('primer_maker');
-$PRESETS     = PrimerPresets::forSite($primer_settings, moop_current_lang(), $context_is_transcripts);
+// Opened from the Tools menu there is no assembly to ask, so the site answers: where EVERY assembly is
+// a transcriptome (cuttingclass) no sequence here has known junctions, and RT-PCR is left out too.
+$no_junctions = $context_assembly !== '' ? $context_is_transcripts : moop_site_is_transcriptomes();
+$PRESETS     = PrimerPresets::forSite($primer_settings, moop_current_lang(), $no_junctions);
 $primer_type = PrimerPresets::choose($PRESETS, $requested_type, $primer_settings);
 
 // A card can bring a tag (a site's "WISH probe" card selects T4P). Only on ARRIVAL -- a posted form
