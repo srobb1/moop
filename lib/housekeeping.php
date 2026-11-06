@@ -714,7 +714,8 @@ function housekeeping_archive_stale_backups(string $backup, array $wanted, array
         if ($sources_found < 1) continue;
         foreach (glob("$backup/$glob") ?: [] as $path) {
             $rel = substr($path, strlen($backup) + 1);
-            if (isset($wanted[$rel]) || strpos($rel, 'archived/') === 0) continue;
+            // Files only: images/* also matches folders (images/banners), which are never moved.
+            if (!is_file($path) || isset($wanted[$rel]) || strpos($rel, 'archived/') === 0) continue;
             $to = "$backup/archived/$rel";
             if (file_exists($to)) $to = preg_replace('/(\.[a-z]+)$/', '.' . date('Ymd-His') . '$1', $to);
             if (!is_dir(dirname($to))) @mkdir(dirname($to), 0750, true);
@@ -784,6 +785,22 @@ function housekeeping_snapshot_site_data() {
         $files[$tr_json] = 'metadata/translations/' . basename($tr_json);
     }
 
+    // The site's own images and files: page pictures and PDFs, banners, header image, favicon,
+    // uploaded organism photos (2026-11-06: none of it was backed up, and some of cuttingclass's
+    // came from the old site, which is being switched off). Not the two folders the site fills by
+    // itself from NCBI and Wikimedia -- those come back on their own.
+    $images_dir = rtrim((string) $config->getPath('absolute_images_path'), '/');
+    if ($images_dir !== '' && is_dir($images_dir)) {
+        $skip = ['ncbi_taxonomy', 'wikimedia'];
+        $it = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(
+            new RecursiveDirectoryIterator($images_dir, FilesystemIterator::SKIP_DOTS),
+            fn($f) => $f->getFilename()[0] !== '.'
+                      && !($f->isDir() && dirname($f->getPathname()) === $images_dir && in_array($f->getFilename(), $skip, true))));
+        foreach ($it as $img) {
+            if ($img->isFile()) $files[$img->getPathname()] = 'images/' . substr($img->getPathname(), strlen($images_dir) + 1);
+        }
+    }
+
     // Dynamically add all organism.json files from the organisms directory
     $organisms_dir = $config->getPath('organism_data');
     if (!empty($organisms_dir) && is_dir($organisms_dir)) {
@@ -829,6 +846,12 @@ access control configuration.
 - JBrowse2 track data — managed separately
 - Log files — ephemeral
 
+## images/
+
+The site's own images and files (page pictures and PDFs, banners, header image,
+favicon, uploaded organism photos). Not `ncbi_taxonomy/` or `wikimedia/`, which
+the site downloads again by itself.
+
 ## archived/
 
 When an organism is retired or a page or translation is deleted, its copy here is
@@ -867,7 +890,11 @@ README;
             @mkdir($dest_dir, 0750, true);
         }
 
-        // Only copy if content differs
+        // Only copy if content differs. Same size and same modification time is taken as unchanged
+        // without reading either file: images make this tens of MB, every housekeeping run.
+        if (is_file($dest) && @filesize($source) === @filesize($dest) && @filemtime($source) <= @filemtime($dest)) {
+            continue;
+        }
         $source_content = @file_get_contents($source);
         $dest_content = @file_get_contents($dest);
         if ($source_content !== false && $source_content !== $dest_content) {
@@ -903,6 +930,9 @@ README;
         'metadata/pages/*.json'        => $count_src('metadata/pages/'),
         'metadata/translations/*.json' => $count_src('metadata/translations/'),
         'organisms/*/organism.json'    => $count_src('organisms/'),
+        'images/*'                     => $count_src('images/'),
+        'images/*/*'                   => $count_src('images/'),
+        'images/*/*/*'                 => $count_src('images/'),
     ]);
     if ($stale['archived']) {
         $changed = true;

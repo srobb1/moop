@@ -504,6 +504,11 @@ ok(count(glob("$_bk/archived/metadata/pages/old*.json")) === 2, 'backup: a secon
 $_r = housekeeping_archive_stale_backups($_bk, [], ['organisms/*/organism.json' => 0]);
 ok($_r['archived'] === [] && is_file("$_bk/organisms/Kept/organism.json"),
    'backup: when no organisms were found this run (folder unreadable), nothing is archived');
+@mkdir("$_bk/images/banners", 0750, true);
+file_put_contents("$_bk/images/banners/gone.png", 'x'); file_put_contents("$_bk/images/banners/kept.png", 'x'); file_put_contents("$_bk/images/keep.png", 'x');
+$_r = housekeeping_archive_stale_backups($_bk, ['images/keep.png', 'images/banners/kept.png'], ['images/*' => 1, 'images/*/*' => 1]);
+ok($_r['archived'] === ['images/banners/gone.png'] && is_file("$_bk/images/keep.png") && is_file("$_bk/images/banners/kept.png"),
+   'backup: a removed image is archived; a folder is never moved, only files');
 exec('rm -rf ' . escapeshellarg($_bk));
 
 // Site Configuration stores only what differs from the shipped default (2026-11-06): saving the
