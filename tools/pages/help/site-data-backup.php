@@ -26,14 +26,14 @@ $backup_path = $config->getPath('site_data_path');
         <div class="card-body p-4">
           <h3 class="fw-bold text-dark mb-3">What Is the Site Data Backup?</h3>
           <p class="text-muted mb-3">
-            MOOP automatically snapshots your site-specific configuration and metadata on every
-            admin login. This keeps a safe copy of your settings <em>separate from the application
+            MOOP automatically snapshots your site-specific configuration and metadata in the
+            background, at most once an hour, while admins are using the admin pages. This keeps a safe copy of your settings <em>separate from the application
             code</em>, so you can update MOOP (or even reinstall it) without losing your
             customizations, user accounts, or organism metadata.
           </p>
           <p class="text-muted mb-0">
             The backup runs silently as part of the housekeeping system — no cron jobs or manual
-            steps required. Status is shown on the Admin Dashboard after each login.
+            steps required. Status is shown on the Admin Dashboard.
           </p>
         </div>
       </div>
@@ -84,9 +84,8 @@ $backup_path = $config->getPath('site_data_path');
           </p>
           <pre class="bg-light p-3 rounded mb-3"><?= htmlspecialchars($backup_path ?: '(not configured)') ?></pre>
           <p class="text-muted mb-0">
-            The directory is created automatically on first admin login if it does not exist.
-            To change the path, edit <code>site_data_path</code> in <code>config/site_config.php</code>
-            (or override it in <code>config/config_editable.json</code>).
+            The directory is created automatically the first time the backup runs if it does not exist.
+            To change the path, set <strong>Site Data Backup Path</strong> on Admin &rarr; Site Configuration.
             Set it to an empty string to disable backups entirely.
           </p>
         </div>
@@ -121,7 +120,7 @@ git push -u origin main</pre>
         <div class="card-body p-4">
           <h3 class="fw-bold text-dark mb-3">Checking Backup Status</h3>
           <p class="text-muted mb-3">
-            After each admin login, the Admin Dashboard shows a status banner:
+            The Admin Dashboard shows a status banner:
           </p>
           <ul class="text-muted mb-3">
             <li><strong class="text-success">Green — Site data backup active:</strong> The backup ran successfully. Shows how many files were updated and the timestamp.</li>
@@ -129,8 +128,9 @@ git push -u origin main</pre>
             <li><strong class="text-warning">Yellow warning:</strong> The backup directory could not be created or a file copy failed — check directory permissions.</li>
           </ul>
           <p class="text-muted mb-0">
-            The backup only runs once per admin session, so the count reflects changes since the
-            previous login.
+            The backup runs at most once an hour, so the count reflects changes since the previous
+            run. To back up right away, click <strong>Run housekeeping now</strong> in the Housekeeping
+            card at the bottom of the Admin Dashboard.
           </p>
         </div>
       </div>

@@ -153,7 +153,7 @@ return [
     // Directory where site-specific files (config, metadata, users) are
     // snapshotted for version history. This should be a git repo separate
     // from the app repo. Set to empty string to disable auto-snapshots.
-    // The housekeeping system copies changed files here on admin login.
+    // Housekeeping copies changed files here, at most once an hour while admins use the admin pages.
     //
     // It holds users.json and secrets.php, so it must be OUTSIDE the document root. Derived like
     // users_file: <parent of root_path>/<site>-site-data -- /var/www/moop-site-data for the

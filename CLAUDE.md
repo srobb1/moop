@@ -715,7 +715,7 @@ never from `site_config.php`):
 1. Clone the app repo
 2. Copy `.example` files → remove `.example` suffix, edit values
 3. Run `composer install`
-4. Site-data backup directory is created automatically on first admin login
+4. Site-data backup directory is created automatically on the first housekeeping run (first admin page visit)
 5. **Cache directory** — the `cache_path` setting (Admin → Site Configuration) names where
    the app writes regenerable caches. Left empty, they go in a hidden `organisms/.cache/`
    (works out of the box; until 2026-11-05 they went loose in `organisms/` itself, where

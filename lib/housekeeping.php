@@ -817,7 +817,8 @@ function housekeeping_snapshot_site_data() {
 # MOOP Site Data Backup
 
 This directory is automatically maintained by the MOOP housekeeping system.
-It snapshots site-specific configuration and metadata on each admin login,
+It snapshots site-specific configuration and metadata at most once an hour
+while admins use the admin pages (or on "Run housekeeping now"),
 keeping a copy of your settings separate from the application code.
 
 **KEEP THIS DIRECTORY PRIVATE** — it contains user accounts, API keys, and
@@ -867,7 +868,7 @@ commit and push changes:
     git init -b main
     git add -A && git commit -m "Initial snapshot"
 
-After each admin login MOOP copies changed files here. Run the commands above
+On each backup run MOOP copies changed files here. Run the commands above
 (or a push) whenever you want to version the snapshot.
 README;
         @file_put_contents($readme_path, $readme);
