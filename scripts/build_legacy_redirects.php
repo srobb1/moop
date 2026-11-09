@@ -1,0 +1,120 @@
+<?php
+/**
+ * Old-site redirects, answered by nginx alone -- no PHP, no database.
+ *
+ *   php scripts/build_legacy_redirects.php <site folder> <out dir>
+ *   e.g. php scripts/build_legacy_redirects.php /var/www/html/cuttingclass /tmp/out
+ *
+ * Reads <site>/metadata/legacy_redirects.json (site data, so it is backed up with the site) and
+ * writes two nginx files for root to install on the day the old address moves to this server:
+ *
+ *   legacy-map.conf     a `map` -- goes in the http {} context (/etc/nginx/conf.d/)
+ *   legacy-server.conf  `include` it inside that site's server {} block
+ *
+ * ⚠️ The block list and old_prefixes run on the NEW site's address space. Never list a name the
+ * new site uses itself: Drupal's /admin is MOOP's /admin (blocking it locks the admins out), and
+ * MOOP uses ?q= on its own pages. Check the site's top-level folders and *.php before adding one.
+ *
+ * WHY NGINX AND NOT PHP: the old address (a Drupal/Tripal site) is scanned by bots constantly.
+ * A PHP handler would spend a php-fpm worker on every scan; a 301 or 444 from nginx costs about
+ * what a 404 does. Known attack paths get 444 (connection closed, no reply), not a redirect --
+ * a redirect to the home page would invite the bot to render it.
+ *
+ * SAFETY: every target is a fixed string from the table. Nothing from the request is ever
+ * copied into a Location header, so this cannot become an open redirect. Targets must be paths
+ * on this site ("/…"); anything else is refused when building.
+ *
+ * Table format (all keys optional except home):
+ * {
+ *   "home": "/",                                  where everything unmatched goes
+ *   "lang_param": "lang",                         old /es/... adds ?lang=es (or &lang=es)
+ *   "languages": ["en", "es"],                    old language prefixes
+ *   "nodes":   { "121411": "/page.php?p=faq" },  /node/N, /en/node/N, /es/node/N
+ *   "aliases": { "faq": "/page.php?p=faq" },     /faq, /en/faq, /es/faq
+ *   "exact":   { "/pub/x.nt": "/tools/downloads.php" },   exact old paths, no language handling
+ *   "old_prefixes": ["node", "feature", ...],     anything under these goes home
+ *   "block": ["^/xmlrpc\\.php", ...]              regexes answered with 444
+ * }
+ */
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }
+[$_, $site, $out] = $argv + [null, null, null];
+if (!$site || !$out) { fwrite(STDERR, "usage: php build_legacy_redirects.php <site folder> <out dir>\n"); exit(2); }
+$table_file = rtrim($site, '/') . '/metadata/legacy_redirects.json';
+$t = json_decode((string) @file_get_contents($table_file), true);
+if (!is_array($t)) { fwrite(STDERR, "cannot read $table_file\n"); exit(1); }
+
+$name   = preg_replace('/[^a-z0-9_]/', '_', strtolower(basename(rtrim($site, '/'))));
+$var    = '$' . $name . '_legacy';
+$home   = (string) ($t['home'] ?? '/');
+$param  = (string) ($t['lang_param'] ?? 'lang');
+$langs  = $t['languages'] ?? ['en'];
+$first  = $langs[0] ?? 'en';
+
+$check = function (string $target, string $where) {
+    // A path on this site, plain characters only: no scheme, no host, no "//", no spaces or quotes.
+    if (!preg_match('#^/(?!/)[A-Za-z0-9._~/?&=%+-]*$#', $target)) {
+        fwrite(STDERR, "refused target for $where: " . json_encode($target) . "\n"); exit(1);
+    }
+    return $target;
+};
+$with_lang = fn(string $target, string $lang) =>
+    $lang === $first ? $target : $target . (strpos($target, '?') === false ? '?' : '&') . "$param=$lang";
+$esc = fn(string $path) => preg_quote($path, '#');
+
+$lines = [];
+$add = function (string $regex, string $target) use (&$lines) { $lines[] = sprintf('    %-52s %s;', '"~^' . $regex . '/?$"', $target); };
+
+foreach (($t['nodes'] ?? []) as $nid => $target) {
+    $check($target, "node $nid");
+    if (!ctype_digit((string) $nid)) { fwrite(STDERR, "node id must be digits: $nid\n"); exit(1); }
+    $add('/node/' . $nid, $target);
+    foreach ($langs as $l) $add("/$l/node/$nid", $with_lang($target, $l));
+}
+foreach (($t['aliases'] ?? []) as $alias => $target) {
+    $check($target, "alias $alias");
+    if (!preg_match('#^[a-z0-9_-]+(/[a-z0-9_-]+)*$#i', $alias)) { fwrite(STDERR, "bad alias: $alias\n"); exit(1); }
+    $add('/' . $esc($alias), $target);
+    foreach ($langs as $l) $add("/$l/" . $esc($alias), $with_lang($target, $l));
+}
+foreach (($t['exact'] ?? []) as $path => $target) {
+    $check($target, "exact $path");
+    $lines[] = sprintf('    %-52s %s;', '"~^' . $esc($path) . '$"', $target);
+}
+// Bare language roots: /en, /es -> home in that language.
+foreach ($langs as $l) $add("/$l", $with_lang($check($home, 'home'), $l));
+// Everything else under the old site's own paths -> home (in the right language).
+$prefixes = array_map($esc, $t['old_prefixes'] ?? []);
+if ($prefixes) {
+    $alt = implode('|', $prefixes);
+    foreach ($langs as $l) $lines[] = sprintf('    %-52s %s;', "\"~^/$l/\"", $with_lang($home, $l));
+    $lines[] = sprintf('    %-52s %s;', "\"~^/($alt)(/|\$)\"", $home);
+}
+
+$map  = "# Generated by scripts/build_legacy_redirects.php from $table_file -- do not edit; re-run.\n";
+$map .= "# http {} context. Pair: legacy-server.conf inside the site's server {} block.\n";
+$map .= "map \$uri $var {\n    default \"\";\n" . implode("\n", $lines) . "\n}\n";
+// Drupal's ?q=… addressing -- ONLY on its own entry points ("/", "/index.php"). MOOP itself uses
+// ?q= (tools/search.php, api/feature_search.php), so a blanket "any ?q=" rule would break it.
+$map .= "map \$request_uri {$var}_q {\n    default 0;\n    \"~^/(index\\.php)?\\?(.*&)?q=\" 1;\n}\n";
+
+$srv  = "# Generated by scripts/build_legacy_redirects.php -- include inside the site's server {} block.\n";
+// Attack paths are a MAP, checked first -- not `location` blocks. nginx runs server-level `if`s
+// before it picks a location, so a location 444 lost to the "everything under /en/ goes home"
+// redirect (/en/user/password was redirected, found by testing 2026-11-09).
+$block = [];
+foreach (($t['block'] ?? []) as $re) {
+    if (@preg_match('#' . $re . '#', '') === false || strpbrk($re, "\"'{};\n ") !== false) { fwrite(STDERR, "bad block regex: $re\n"); exit(1); }
+    $block[] = sprintf('    %-52s 1;', '"~*' . $re . '"');
+}
+$map .= "map \$uri {$var}_block {\n    default 0;\n" . implode("\n", $block) . "\n}\n";
+$srv .= "# Old-site attack paths: close the connection, no reply, no PHP (444 is nginx-only).\n";
+$srv .= "if ({$var}_block) { return 444; }\n";
+$srv .= "# Drupal's /?q=… addressing is used almost only by exploit kits (map: {$var}_q).\n";
+$srv .= "if ({$var}_q) { return 444; }\n";
+$srv .= "# Old addresses: fixed targets from the table, never built from the request.\n";
+$srv .= "if ($var) { return 301 $var; }\n";
+
+if (!is_dir($out) && !mkdir($out, 0755, true)) { fwrite(STDERR, "cannot create $out\n"); exit(1); }
+file_put_contents("$out/legacy-map.conf", $map);
+file_put_contents("$out/legacy-server.conf", $srv);
+echo "wrote $out/legacy-map.conf (" . count($lines) . " rules) and $out/legacy-server.conf\n";

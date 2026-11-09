@@ -50,10 +50,26 @@ that stops matching gives no error, it just stops protecting.**
       site's security rules must not shadow the other's.
 - [ ] **301 the old address** — `/moop/(.*)` → `/$1` (simrbase); for cuttingclass, the old
       `simrbase-dev…/cuttingclass/*` → `https://cuttingclass.stowers.org/*`, plus the Drupal map.
+- [ ] **Old-site redirects (cuttingclass)** — answered by nginx alone, no PHP:
+      `php scripts/build_legacy_redirects.php /var/www/html/cuttingclass <dir>` writes
+      `legacy-map.conf` (→ `/etc/nginx/conf.d/`) and `legacy-server.conf` (`include` inside the
+      cuttingclass server block, BEFORE its `location`s). Table: the site's
+      `metadata/legacy_redirects.json`. Old pages → new pages (language kept), other old paths →
+      home, Drupal attack paths and `/?q=` → 444. Tested 2026-11-09 on a private nginx (all 196
+      crawled addresses, MOOP's own `/admin/` and `?q=` pages pass through). Re-run the test the
+      same way after any table change: never block a name the new site uses.
 - [ ] **Set `link_prefix` to `"/"`** in that site's `config/config_editable.json` — same moment
       as the nginx reload.
 - [ ] **Tracks server CORS** — allow the new origin (`map $http_origin`), or JBrowse tracks fail.
-- [ ] **Turnstile** (if on) — add the host name.
+- [ ] **robots.txt** — written for `/moop/` and served to EVERY host from moop's copy
+      (`moop-ratelimit.conf`: `alias /var/www/html/moop/robots.txt`). Each site at its own
+      address needs its own, with its own paths (cuttingclass: `Disallow: /tools/parent.php` etc.).
+- [ ] **Turnstile human check — turn it ON for cuttingclass at launch** (built, off; add the host
+      name in Cloudflare). Measured 2026-11-09: a link-following bot finds only 50 of ~77,000
+      cuttingclass gene pages (all from the Primers page), so the Tripal-style crawl does not work;
+      a bot that takes IDs from a Downloads FASTA is held to 2 pages/s per address by nginx, but a
+      crawler spread over thousands of addresses (the pattern on the Tripal sites) is only stopped
+      by Turnstile. notes/BOT_PROTECTION_PLAN.md.
 - [ ] **CSP** — unchanged (all `'self'`), but re-check JBrowse tracks load (worker issues, CLAUDE.md).
 
 ## Verify after the switch
