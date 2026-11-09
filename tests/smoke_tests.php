@@ -4008,6 +4008,31 @@ $_l = $_leaves(build_tree_from_lineage_cache(['Spathula_sp' => ['taxon_id' => '7
 ok(($_l['Spathula_sp'] ?? '') === 'Dugesiidae/Spathula/Spathula sp.', 'a lone genus-id organism reads "Spathula sp.", under its genus');
 
 // ----------------------------------------------------------------------------
+group('BLAST failures: server paths never reach a visitor; input errors still do');
+// BLAST's stderr was shown to every visitor, and a missing database prints the full server
+// path. Input errors (BLAST labels them "query/options") must still reach the visitor.
+require_once "$BASE/lib/blast_functions.php";
+$_db_err = ['error' => 'BLAST execution failed with code 2',
+            'stderr' => 'BLAST Database error: No alias or index file found for protein database '
+                      . '[/var/www/html/moop/organisms/X/genome.fa] in search path [/tmp::].'];
+$_f = blast_failure_for_display($_db_err, false);
+ok(strpos($_f['message'], '/var/www') === false && strpos($_f['message'], 'Database error') === false,
+   'a database error shows a visitor no path and no BLAST detail');
+ok($_f['log'] === true, 'a database error is logged');
+$_f = blast_failure_for_display($_db_err, true);
+ok(strpos($_f['message'], '/var/www/html/moop/organisms/X/genome.fa') !== false, 'an admin sees the full BLAST detail');
+$_f = blast_failure_for_display(['error' => 'BLAST execution failed with code 127',
+                                 'stderr' => 'sh: /usr/local/bin/blastp: No such file or directory'], false);
+ok(strpos($_f['message'], '/usr/local') === false && $_f['log'] === true, 'a missing binary is a logged server error, path hidden');
+$_gap = 'BLAST query/options error: Gap existence and extension values of 3 and 3 not supported for BLOSUM62';
+$_f = blast_failure_for_display(['error' => 'BLAST execution failed with code 1', 'stderr' => $_gap], false);
+ok($_f['message'] === $_gap && $_f['log'] === false, 'an input error reaches the visitor verbatim and is not logged');
+$_f = blast_failure_for_display(['error' => 'x', 'stderr' => 'BLAST query/options error: cannot read [/var/www/q.fa]'], false);
+ok(strpos($_f['message'], '/var/www') === false && $_f['log'] === true, 'an input-labelled message carrying a path is still hidden');
+$_f = blast_failure_for_display(['error' => 'The BLAST queue is full', 'stderr' => ''], false);
+ok($_f['message'] === 'The BLAST queue is full' && $_f['log'] === false, "MOOP's own messages (no stderr) are shown unchanged");
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

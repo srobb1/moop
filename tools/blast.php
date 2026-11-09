@@ -25,6 +25,7 @@
 
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/functions_errorlog.php';
 include_once __DIR__ . '/../lib/blast_results_visualizer.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 include_once __DIR__ . '/../lib/feature_coords.php';
@@ -259,9 +260,17 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
                 $blast_result = executeBlastSearch($query_with_header, $selected_db_obj['path'], $blast_program, $blast_options);
 
                 if (!$blast_result['success']) {
-                    $search_error = $blast_result['error'];
-                    if (!empty($blast_result['stderr'])) {
-                        $search_error .= "\n\nDetails: " . $blast_result['stderr'];
+                    // BLAST's own stderr can name server paths: only input errors reach a
+                    // visitor verbatim; server faults are logged and detailed to admins only.
+                    $failure = blast_failure_for_display($blast_result, moop_session_is_admin());
+                    $search_error = $failure['message'];
+                    if ($failure['log']) {
+                        logError('BLAST run failed', 'blast', [
+                            'error'    => $blast_result['error'] ?? '',
+                            'stderr'   => $blast_result['stderr'] ?? '',
+                            'program'  => $blast_program,
+                            'database' => $selected_db_obj['path'],
+                        ]);
                     }
                 } elseif (!empty($blast_result['output'])) {
                     // Extract hit IDs for targeted feature_coords lookup — avoids loading

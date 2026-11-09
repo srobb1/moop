@@ -81,6 +81,62 @@ function getBlastDatabases($assembly_path) {
 }
 
 /**
+ * What a failed BLAST run may tell the visitor, and whether the failure belongs in the error log.
+ *
+ * BLAST's stderr mixes two kinds of failure. Some are the visitor's own input -- BLAST labels
+ * those "BLAST query/options error:" (e.g. gap costs the chosen matrix does not support) --
+ * and the visitor needs the message to fix it. Everything else is the server's fault (a
+ * missing database, a missing binary, a crash), and that text can carry full server paths
+ * ("No alias or index file found for protein database [/var/www/html/moop/organisms/...]"),
+ * which a visitor can do nothing with. A reviewer flagged it shown to everyone (2026-11-09).
+ *
+ * How much that leak was worth to an attacker, so nobody over- or under-rates it later:
+ * very little. The path layout (/var/www/html/moop/organisms/{organism}/{assembly}/...) is
+ * the documented default in the public repository, so it tells an attacker nothing they
+ * could not read on GitHub. The path also only names the database the visitor picked, and
+ * tools/blast.php checks assembly access BEFORE running BLAST, so a restricted organism or
+ * assembly can never surface this way. And knowing a path grants nothing: organism data
+ * is served through access-checked endpoints, the web server refuses to execute PHP in the
+ * writable trees (CLAUDE.md §11), and users.json lives outside the document root. What
+ * the leak could reveal is host detail that is NOT in the repo -- a custom data path, a
+ * BLAST install location, a temp directory (BLAST names its search path), the BLAST
+ * version's wording. Low severity, but that, plus "a visitor cannot act on it", is why it
+ * is hidden rather than left.
+ *
+ * So: input errors are shown as BLAST wrote them; server errors get a generic message, are
+ * logged in full, and only an admin sees the detail on the page. An input-labelled message
+ * that nonetheless contains an absolute path is treated as a server error -- the label is
+ * BLAST's, the guarantee about paths is ours.
+ *
+ * @param array $result   executeBlastSearch()'s result (uses 'error' and 'stderr')
+ * @param bool  $is_admin whether the viewer may see server detail
+ * @return array ['message' => string to show, 'log' => bool (server-side fault)]
+ */
+function blast_failure_for_display(array $result, bool $is_admin): array {
+    $error  = trim((string)($result['error'] ?? ''));
+    $stderr = trim((string)($result['stderr'] ?? ''));
+
+    // No stderr: the message is one MOOP wrote itself (queue full, timed out, output too
+    // large, missing parameters), none of which names a path. Shown as is, as before.
+    if ($stderr === '') {
+        return ['message' => $error, 'log' => false];
+    }
+
+    $is_input_error = preg_match('/^BLAST (query\/options|query|options) error:/', $stderr)
+                   && !preg_match('#(^|[\s\[(\'"=])/[A-Za-z0-9_.-]+/#', $stderr);
+    if ($is_input_error) {
+        return ['message' => $stderr, 'log' => false];
+    }
+
+    $message = t_plain('BLAST could not run against this database. This is a problem on our side, '
+                     . 'not with your sequence, and it has been logged.');
+    if ($is_admin) {
+        $message .= "\n\nDetails (shown to admins only): " . $error . "\n" . $stderr;
+    }
+    return ['message' => $message, 'log' => true];
+}
+
+/**
  * Execute BLAST search
  * Runs BLAST command with outfmt 11 (ASN.1), then converts using blast_formatter
  * 
