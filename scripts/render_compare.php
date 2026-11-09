@@ -34,7 +34,11 @@
 if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }
 
 $root = dirname(__DIR__);
-$site = basename($root);
+// The site's LINK PREFIX -- where its pages are served ("/moop", or "" at its domain's root) --
+// read from its config_editable.json like scripts/build_robots.php, default "/" + the folder.
+// (Not includes/config_init.php: this runs from any checkout, against that checkout's site.)
+$site = trim((string) ((json_decode((string) @file_get_contents("$root/config/config_editable.json"), true) ?: [])['link_prefix'] ?? ''));
+$site = $site === '' ? '/' . basename($root) : ($site === '/' ? '' : '/' . trim($site, '/'));
 
 $args = array_slice($argv, 1);
 $opts = [];
@@ -71,11 +75,12 @@ function host_ip(): string {
     return $ip !== '' ? $ip : '127.0.0.1';
 }
 
+/** $site is the link prefix with its leading slash ("/moop"), or "" for a site at its domain's root. */
 function viewer_base(string $viewer, string $site): string {
     switch ($viewer) {
-        case 'public':  return "http://127.0.0.1/$site";
-        case 'network': return 'http://' . host_ip() . "/$site";
-        case 'admin':   return 'https://' . host_ip() . "/$site";
+        case 'public':  return "http://127.0.0.1$site";
+        case 'network': return 'http://' . host_ip() . $site;
+        case 'admin':   return 'https://' . host_ip() . $site;
     }
     throw new RuntimeException("unknown viewer '$viewer'");
 }

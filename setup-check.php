@@ -302,6 +302,17 @@ if (is_readable($editable_file)) {
     }
 }
 
+// The site's LINK PREFIX ("/moop", or "" when served at its domain's root) -- where its pages
+// are, which is not always its folder name. Same rule as moop_url_base() in
+// includes/config_init.php (this script does not load it): "/" is the root, and anything that
+// is not plain path segments falls back to the folder.
+$sc_prefix = trim((string) ($config['link_prefix'] ?? ''));
+$sc_prefix = ($sc_prefix === '' ) ? '/' . trim((string) ($config['site'] ?? 'moop'), '/')
+           : ($sc_prefix === '/' ? '' : '/' . trim($sc_prefix, '/'));
+if ($sc_prefix !== '' && !preg_match('#^(/[A-Za-z0-9._~-]+)+$#', $sc_prefix)) {
+    $sc_prefix = '/' . preg_replace('/[^A-Za-z0-9._~-]/', '', (string) ($config['site'] ?? 'moop'));
+}
+
 $web = detectWebUser();
 $web_user  = $web['user'];
 $web_group = $web['group'];
@@ -862,10 +873,7 @@ if (!is_dir("$base/.git")) {
 
 section("Response Compression");
 
-// $site is not resolved until the summary further down, so read it here rather than
-// interpolating an undefined variable into the URL.
-$compress_site = $config['site'] ?? 'moop';
-$compress_url  = "http://127.0.0.1/$compress_site/";
+$compress_url  = "http://127.0.0.1$sc_prefix/";
 $compress_ctx = stream_context_create(['http' => [
     'method'        => 'GET',
     'header'        => "Accept-Encoding: gzip\r\n",
@@ -879,7 +887,7 @@ if ($compress_body === false) {
     // where the site is only reachable by its external name.
     warn("Could not fetch $compress_url to test compression",
          "Check by hand once the site serves:\n" .
-         "         curl -s -o /dev/null -D- -H 'Accept-Encoding: gzip' http://<host>/$compress_site/ | grep -i content-encoding");
+         "         curl -s -o /dev/null -D- -H 'Accept-Encoding: gzip' http://<host>$sc_prefix/ | grep -i content-encoding");
 } else {
     $compress_hdrs = implode("\n", $http_response_header ?? []);
     if (stripos($compress_hdrs, 'Content-Encoding: gzip') !== false
@@ -1142,15 +1150,13 @@ if (file_exists($htaccess)) {
 }
 
 if ($has_nginx && !$has_apache) {
-    $site = $config['site'] ?? 'moop';
     warn("Nginx detected — .htaccess files have no effect on Nginx",
          "Add this to your Nginx server block to protect track files:\n" .
-         "         location ~ ^/$site/data/tracks/ { deny all; return 403; }");
+         "         location ~ ^$sc_prefix/data/tracks/ { deny all; return 403; }");
 } elseif ($has_nginx && $has_apache) {
-    $site = $config['site'] ?? 'moop';
     warn("Both Apache and Nginx detected — if using Nginx, .htaccess has no effect",
          "Add this to your Nginx server block to protect track files:\n" .
-         "         location ~ ^/$site/data/tracks/ { deny all; return 403; }");
+         "         location ~ ^$sc_prefix/data/tracks/ { deny all; return 403; }");
 }
 
 // ── Section 8: Users File ───────────────────────────────────────────────────
@@ -1212,10 +1218,9 @@ if ($fails > 0) {
     echo "  php setup-check.php\n\n";
     exit(1);
 } else {
-    $site = $config['site'] ?? 'moop';
     echo C_GREEN . "All checks passed! MOOP is ready to run." . C_RESET . "\n\n";
     echo "Next steps:\n";
-    echo "  1. Visit " . C_CYAN . "http://your-server-hostname/$site/" . C_RESET . " in your browser\n";
+    echo "  1. Visit " . C_CYAN . "http://your-server-hostname$sc_prefix/" . C_RESET . " in your browser\n";
     echo "  2. Log in with your admin account\n";
     echo "  3. Go to Admin > Manage Site Configuration to customize your site\n\n";
     exit(0);

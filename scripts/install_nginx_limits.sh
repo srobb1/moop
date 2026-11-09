@@ -91,17 +91,21 @@ HEAVY=$(php -r '
             fwrite(STDERR, "skipping invalid heavy entry: " . json_encode($s) . "\n");
         }
     }
-    if ($ok) echo "    ~^/moop/(" . implode("|", $ok) . ")\\.php$   heavy;";
+    if ($ok) echo "    ~^" . str_replace(".", "\\.", moop_url_base()) . "/(" . implode("|", $ok) . ")\\.php$   heavy;";
 ' "$MOOP")
+
+# The link prefix ("/moop", or "" at the domain's root) for the @PREFIX@ rules; only "." is
+# special among the characters a prefix may hold -- the same rule as moop_monitor.py.
+PREFIX=$(php -r 'require $argv[1] . "/includes/config_init.php"; echo str_replace(".", "\\.", moop_url_base());' "$MOOP")
 
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
 # Replace each placeholder line with its value. Passed through ENVIRON, NOT awk -v: -v
 # interprets backslash escapes, which turned the heavy rule's \.php into .php (any character).
-MOOP_RANGES="$RANGES" MOOP_HEAVY="$HEAVY" awk '
+MOOP_RANGES="$RANGES" MOOP_HEAVY="$HEAVY" MOOP_PREFIX="$PREFIX" awk '
     /^[ \t]*@EXEMPT_RANGES@[ \t]*$/ { if (ENVIRON["MOOP_RANGES"] != "") print ENVIRON["MOOP_RANGES"]; next }
     /^[ \t]*@HEAVY_RULES@[ \t]*$/   { if (ENVIRON["MOOP_HEAVY"] != "") print ENVIRON["MOOP_HEAVY"]; next }
-    { print }' "$MOOP/docs/nginx/moop-ratelimit-http.conf" > "$TMP"
+    { i = index($0, "@PREFIX@"); if (i) $0 = substr($0, 1, i - 1) ENVIRON["MOOP_PREFIX"] substr($0, i + 8); print }' "$MOOP/docs/nginx/moop-ratelimit-http.conf" > "$TMP"
 
 backup "$HTTP_DST"; backup "$SRV_DST"
 install -m 644 "$TMP" "$HTTP_DST"

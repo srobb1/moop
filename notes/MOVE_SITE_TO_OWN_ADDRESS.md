@@ -27,21 +27,24 @@ Each of these is keyed on `/moop/` (or `/cuttingclass/`) INSIDE nginx or a scrip
 MOOP's PHP, so the code change could not do them. **The dangerous ones fail silently: a rule
 that stops matching gives no error, it just stops protecting.**
 
-- [ ] **Security rules** — `docs/nginx/moop-security.conf` (deployed:
+- [ ] **Security rules** — generate them: `scripts/nginx_site_guard.sh <folder>` now reads the
+      site's `link_prefix` (or take it as 2nd argument: `nginx_site_guard.sh cuttingclass /`); for a
+      site at the root it keeps the server-wide rules too (own server block). Code DONE 2026-11-09.
+      `docs/nginx/moop-security.conf` (deployed:
       `/etc/nginx/default.d/moop-security.conf`, `cuttingclass-security.conf`): 16 `location`
       lines denying `config/ logs/ metadata/ certs/ organisms/ data/genomes/` and blocking `.php`
       in the writable trees. Rewrite for the new address. **VERIFY each with a real file**
       (CLAUDE.md §11: a 404 proves nothing): a `.php` that would execute in a writable tree must
       NOT run; `config/config_editable.json` and `logs/…` must NOT download.
-- [ ] **Rate limits** — `docs/nginx/moop-ratelimit-http.conf` (`~^/moop/api/jbrowse2/`,
-      `~^/moop/api/`, `~^/moop/tools/(…)`), `moop-ratelimit.conf` (robots.txt alias).
-- [ ] **System Monitor collector** — `scripts/moop_monitor.py:416` writes
-      `~^/moop/(heavy…)\.php$`. Make it prefix-aware, re-run `sudo scripts/install_monitor.sh`.
-      `moop_monitor_class()` in `lib/system_monitor.php` mirrors the nginx map order — change
-      both together.
-- [ ] **`setup-check.php`** — reads config raw (no helper), checks nginx rules for `/$site/…`.
-      Make it compute the prefix from the merged config.
-- [ ] **`scripts/render_compare.php`** — builds page URLs as `/<site>`; use the prefix.
+- [x] **Rate limits** — code DONE 2026-11-09: the template says `@PREFIX@`, filled from the
+      link prefix by `install_nginx_limits.sh` and the collector (identical output for /moop).
+      Move day: re-run `sudo scripts/install_monitor.sh` so root's copies are the new ones.
+- [x] **System Monitor collector** — code DONE 2026-11-09: MOOP publishes `link_prefix` in
+      `nginx_wanted.json`; the collector checks it and fills the rules. (`moop_monitor_class()`
+      works on site-relative paths and needed no change.)
+- [x] **`setup-check.php`** — code DONE 2026-11-09: uses the link prefix (`$sc_prefix`); its
+      guard check calls `nginx_site_guard.sh`, which reads the prefix itself.
+- [x] **`scripts/render_compare.php`** — code DONE 2026-11-09: addresses use the link prefix.
 - [ ] **JBrowse auth gateway** — `cuttingclass-site.conf` rewrites
       `/cuttingclass/jbrowse2/index.html` → `auth_gateway.php`; same rule for the new address.
 - [ ] **The server block** — serve the folder at `/` for that host name (or `root` = the folder).

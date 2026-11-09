@@ -36,7 +36,8 @@ function moop_monitor_publish_wanted(?array $ranges = null, ?array $heavy = null
     }
     $cache = moop_cache_root();
     if (!moop_ensure_cache_dir($cache)) return false;
-    $json = json_encode(['generated' => time(), 'exempt_ranges' => $valid, 'heavy' => $heavy], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    $json = json_encode(['generated' => time(), 'exempt_ranges' => $valid, 'heavy' => $heavy,
+                         'link_prefix' => moop_url_base()], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     $tmp = tempnam($cache, '.nginx_wanted.');
     if ($tmp === false || @file_put_contents($tmp, $json . "\n") === false) {
         if ($tmp) @unlink($tmp);

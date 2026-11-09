@@ -373,6 +373,13 @@ def ip_int(s):
 
 
 HEAVY_RE = re.compile(r'(api|tools)/[a-z0-9_]+\.php')
+PREFIX_RE = re.compile(r'(/[A-Za-z0-9._~-]+)*')
+
+
+def prefix_regex(prefix):
+    """The link prefix as an nginx regex fragment. Of the characters a prefix may hold, only "."
+    is special -- the same rule as install_nginx_limits.sh, so both write identical files."""
+    return prefix.replace('.', '\\.')
 
 
 def read_wanted(cache, site):
@@ -401,19 +408,24 @@ def read_wanted(cache, site):
             if not HEAVY_RE.fullmatch(h) or not os.path.isfile(os.path.join(site, h)):
                 return None, f'invalid heavy entry in nginx_wanted.json: {h[:80]} — nothing applied'
             heavy.append(h[:-4])
-        return {'ranges': ranges, 'heavy': heavy}, None
+        # The site's link prefix (where its pages are served). Missing in a file written before
+        # 2026-11-09: then "/" + the site folder, which is what every rule said until then.
+        prefix = data.get('link_prefix', '/' + os.path.basename(site.rstrip('/')))
+        if not isinstance(prefix, str) or not PREFIX_RE.fullmatch(prefix):
+            return None, 'invalid link_prefix in nginx_wanted.json — nothing applied'
+        return {'ranges': ranges, 'heavy': heavy, 'prefix': prefix}, None
     except (ValueError, AttributeError, TypeError):
         return None, 'nginx_wanted.json is not valid — nothing applied'
 
 
-def render_http_conf(ranges, heavy):
+def render_http_conf(ranges, heavy, prefix='/moop'):
     """The template with its placeholders filled — byte-identical to install_nginx_limits.sh's
     output for the same inputs, so an unchanged config never triggers a reload."""
     with open(os.path.join(SHARE_DIR, 'moop-ratelimit-http.conf')) as fh:
-        template = fh.read()
+        template = fh.read().replace('@PREFIX@', prefix_regex(prefix))
     fill = {
         '@EXEMPT_RANGES@': '\n'.join(f'    {s}-{e} 1;' for s, e in ranges),
-        '@HEAVY_RULES@': f'    ~^/moop/({"|".join(heavy)})\\.php$   heavy;' if heavy else '',
+        '@HEAVY_RULES@': f'    ~^{prefix_regex(prefix)}/({"|".join(heavy)})\\.php$   heavy;' if heavy else '',
     }
     out = []
     for line in template.split('\n'):
@@ -432,7 +444,7 @@ def sync_nginx(cache, site, prev):
     if err:
         return {**(prev or {}), 'checked': now, 'state': 'waiting' if 'not published' in err else 'error', 'message': err}
     try:
-        want_http = render_http_conf(wanted['ranges'], wanted['heavy'])
+        want_http = render_http_conf(wanted['ranges'], wanted['heavy'], wanted['prefix'])
         with open(os.path.join(SHARE_DIR, 'moop-ratelimit.conf')) as fh:
             want_srv = fh.read()
     except OSError as e:
