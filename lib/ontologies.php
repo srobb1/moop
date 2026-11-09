@@ -26,7 +26,7 @@ require_once __DIR__ . '/cache_paths.php';
 /** An ontology id: PLANA:0000044, ECO:0001839, BSPO:0000055 (also BFO:, GO:, rdfs:subClassOf). */
 const MOOP_ONTOLOGY_ID_RE   = '/^[A-Za-z][A-Za-z0-9_]{0,30}:[A-Za-z0-9_.-]{1,60}$/';
 /** The only fields a terms file may carry (ontology/terms.rq in planosphere/PAGE). */
-const MOOP_ONTOLOGY_FIELDS  = ['label', 'definition', 'obsolete', 'replaced_by',
+const MOOP_ONTOLOGY_FIELDS  = ['type', 'label', 'definition', 'obsolete', 'replaced_by',
                                'exact_synonym', 'related_synonym', 'narrow_synonym', 'broad_synonym'];
 /** Downloads larger than this are refused (eco-closure.tsv is ~5 MB). */
 const MOOP_ONTOLOGY_MAX_BYTES = 100 * 1024 * 1024;
@@ -133,8 +133,10 @@ function moop_ontology_build_from_files(string $prefix, array $files, ?string $o
         $db = new PDO('sqlite:' . $tmp);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $db->exec('PRAGMA journal_mode = OFF; PRAGMA synchronous = OFF;');
-        $db->exec('CREATE TABLE term (id TEXT PRIMARY KEY, label TEXT, label_lc TEXT, definition TEXT,
-                                      obsolete INTEGER NOT NULL DEFAULT 0, replaced_by TEXT)');
+        // type: 'class' (an anatomy term, evidence code...) or 'relation' (BFO:0000050 "part of").
+        // Files made before the type row existed load with every term as a class.
+        $db->exec('CREATE TABLE term (id TEXT PRIMARY KEY, type TEXT NOT NULL DEFAULT \'class\', label TEXT,
+                                      label_lc TEXT, definition TEXT, obsolete INTEGER NOT NULL DEFAULT 0, replaced_by TEXT)');
         $db->exec('CREATE TABLE synonym (term_id TEXT NOT NULL, text TEXT NOT NULL, text_lc TEXT NOT NULL,
                                          kind TEXT NOT NULL, UNIQUE (term_id, text_lc, kind))');
         $db->exec('CREATE TABLE closure (subject TEXT NOT NULL, relation TEXT NOT NULL, object TEXT NOT NULL)');
@@ -155,9 +157,11 @@ function moop_ontology_build_from_files(string $prefix, array $files, ?string $o
             $value = trim($value);
             if (!preg_match(MOOP_ONTOLOGY_ID_RE, $id) || !in_array($field, MOOP_ONTOLOGY_FIELDS, true)
                 || $value === '' || strlen($value) > 4000) { $skipped++; continue; }
-            $terms[$id] = $terms[$id] ?? ['label' => null, 'definition' => null, 'obsolete' => 0, 'replaced_by' => null];
+            $terms[$id] = $terms[$id] ?? ['type' => 'class', 'label' => null, 'definition' => null, 'obsolete' => 0, 'replaced_by' => null];
             if (substr($field, -8) === '_synonym') {
                 $syn->execute([$id, $value, mb_strtolower($value), substr($field, 0, -8)]);
+            } elseif ($field === 'type') {
+                if ($value === 'class' || $value === 'relation') $terms[$id]['type'] = $value; else $skipped++;
             } elseif ($field === 'obsolete') {
                 $terms[$id]['obsolete'] = strtolower($value) === 'true' ? 1 : 0;
             } elseif ($field === 'replaced_by') {
@@ -168,9 +172,9 @@ function moop_ontology_build_from_files(string $prefix, array $files, ?string $o
             }
         }
         fclose($fh);
-        $ins = $db->prepare('INSERT INTO term (id, label, label_lc, definition, obsolete, replaced_by) VALUES (?, ?, ?, ?, ?, ?)');
+        $ins = $db->prepare('INSERT INTO term (id, type, label, label_lc, definition, obsolete, replaced_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
         foreach ($terms as $id => $t) {
-            $ins->execute([$id, $t['label'], $t['label'] === null ? null : mb_strtolower($t['label']),
+            $ins->execute([$id, $t['type'], $t['label'], $t['label'] === null ? null : mb_strtolower($t['label']),
                            $t['definition'], $t['obsolete'], $t['replaced_by']]);
         }
 
@@ -197,6 +201,7 @@ function moop_ontology_build_from_files(string $prefix, array $files, ?string $o
             'synonyms' => (int) $db->query('SELECT COUNT(*) FROM synonym')->fetchColumn(),
             'closure'  => (int) $db->query('SELECT COUNT(*) FROM closure')->fetchColumn(),
             'obsolete' => (int) $db->query('SELECT COUNT(*) FROM term WHERE obsolete = 1')->fetchColumn(),
+            'relations'=> (int) $db->query("SELECT COUNT(*) FROM term WHERE type = 'relation'")->fetchColumn(),
         ];
         $meta = $db->prepare('INSERT INTO meta (key, value) VALUES (?, ?)');
         foreach (['prefix' => $prefix, 'release' => (string) ($files['release'] ?? ''),
@@ -290,14 +295,14 @@ function moop_ontology_search_once(string $q, array $prefixes, int $limit): arra
                   SELECT t.id, t.label, CASE WHEN t.label_lc = :q THEN 0
                                              WHEN t.label_lc LIKE :pre ESCAPE '\\' THEN 3 ELSE 5 END AS rank,
                          '' AS matched, '' AS kind
-                    FROM term t WHERE t.obsolete = 0 AND t.id LIKE :own AND t.label_lc LIKE :any ESCAPE '\\'
+                    FROM term t WHERE t.obsolete = 0 AND t.type = 'class' AND t.id LIKE :own AND t.label_lc LIKE :any ESCAPE '\\'
                   UNION ALL
                   SELECT t.id, t.label, CASE WHEN s.text_lc = :q AND s.kind = 'exact' THEN 1
                                              WHEN s.text_lc = :q THEN 2
                                              WHEN s.text_lc LIKE :pre ESCAPE '\\' THEN 4 ELSE 6 END,
                          s.text, s.kind
                     FROM synonym s JOIN term t ON t.id = s.term_id
-                   WHERE t.obsolete = 0 AND t.id LIKE :own AND s.text_lc LIKE :any ESCAPE '\\')
+                   WHERE t.obsolete = 0 AND t.type = 'class' AND t.id LIKE :own AND s.text_lc LIKE :any ESCAPE '\\')
                 ORDER BY rank, length(label) LIMIT :lim";
         $st = $db->prepare($sql);
         $st->bindValue(':q', $q);
@@ -335,4 +340,23 @@ function moop_ontology_expand(string $prefix, string $term_id, array $relations)
     $ids = $st->fetchAll(PDO::FETCH_COLUMN);
     array_unshift($ids, $term_id);
     return array_values(array_unique($ids));
+}
+
+/**
+ * A term's or relationship's name from the given ontologies, e.g. moop_ontology_label('BFO:0000050',
+ * ['PLANA']) -> "part of" (PLANA imports the RO relations with their names). '' if unknown.
+ * "is a" is OWL's own relationship (rdfs:subClassOf), not defined by any ontology -- the one name
+ * that is built in.
+ */
+function moop_ontology_label(string $id, array $prefixes): string {
+    if ($id === 'rdfs:subClassOf') return 'is a';
+    foreach ($prefixes as $prefix) {
+        $db = moop_ontology_open($prefix);
+        if (!$db) continue;
+        $st = $db->prepare('SELECT label FROM term WHERE id = ?');
+        $st->execute([$id]);
+        $l = $st->fetchColumn();
+        if ($l !== false && $l !== null) return (string) $l;
+    }
+    return '';
 }

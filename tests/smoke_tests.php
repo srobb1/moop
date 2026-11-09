@@ -4044,7 +4044,8 @@ file_put_contents("$_od/terms.tsv", "term\tfield\tvalue\n"
     . "PLANA:0000036\tlabel\teye\nPLANA:0000017\tlabel\tphotoreceptor neuron\n"
     . "PLANA:0002092\tlabel\trhabdomere\nPLANA:0000037\tlabel\told eye\nPLANA:0000037\tobsolete\ttrue\n"
     . "PLANA:0000037\treplaced_by\thttp://purl.obolibrary.org/obo/PLANA_0000036\n"
-    . "BFO:0000050\tlabel\tpart of\n"
+    . "BFO:0000050\ttype\trelation\nBFO:0000050\tlabel\tpart of\nPLANA:0000044\ttype\tclass\n"
+    . "PLANA:0000500\ttype\trelation\nPLANA:0000500\tlabel\tbrainish relation\n"
     . "<script>\tlabel\tx\nPLANA:0000999\tcomment\tnot a field we take\nPLANA:0000998\tlabel\t\n");
 file_put_contents("$_od/closure.tsv", "subject\trelation\tobject\n"
     . "PLANA:0000017\tBFO:0000050\tPLANA:0000036\nPLANA:0002092\tBFO:0000050\tPLANA:0000017\n"
@@ -4052,7 +4053,7 @@ file_put_contents("$_od/closure.tsv", "subject\trelation\tobject\n"
     . "bad row\n");
 $_of = "$_od/plana.sqlite";
 $_r = moop_ontology_build_from_files('PLANA', ['terms' => "$_od/terms.tsv", 'closure' => "$_od/closure.tsv", 'release' => '2023-03-13'], $_of);
-ok($_r['ok'] && $_r['counts']['labelled'] === 8 && $_r['counts']['closure'] === 4,
+ok($_r['ok'] && $_r['counts']['labelled'] === 9 && $_r['counts']['relations'] === 2 && $_r['counts']['closure'] === 4,
    'build: terms and closure loaded (' . json_encode($_r['counts']) . ')');
 ok($_r['skipped'] === 4, 'build: a malformed id, an unknown field, an empty value and a broken closure row are skipped, not stored');
 $_odb = new PDO('sqlite:' . $_of, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
@@ -4082,6 +4083,10 @@ ok((moop_ontology_search('neurons', ['PLANA'])[0]['id'] ?? '') === 'PLANA:000009
 ok(!array_filter(moop_ontology_search('old eye', ['PLANA']), fn($x) => $x['id'] === 'PLANA:0000037'), 'search: obsolete terms are not offered');
 ok(!array_filter(moop_ontology_search('part', ['PLANA']), fn($x) => $x['id'] === 'BFO:0000050'), "search: only the ontology's own terms (not the BFO relations it imports)");
 ok(moop_ontology_search('b', ['PLANA']) === [] && moop_ontology_search("50%_\\", ['PLANA']) === [], 'search: one letter, and LIKE wildcards in the text, return nothing');
+ok(!array_filter(moop_ontology_search('brainish', ['PLANA']), fn($x) => $x['id'] === 'PLANA:0000500'),
+   'search: relationships are never offered as terms, even under the ontology prefix');
+ok(moop_ontology_label('BFO:0000050', ['PLANA']) === 'part of' && moop_ontology_label('rdfs:subClassOf', []) === 'is a'
+   && moop_ontology_label('RO:9999999', ['PLANA']) === '', 'label: relationship names come from the ontology; "is a" is the one built in');
 $_e = moop_ontology_expand('PLANA', 'PLANA:0000036', ['BFO:0000050']); sort($_e);
 ok($_e === ['PLANA:0000017', 'PLANA:0000036', 'PLANA:0002092'], 'expand: "part of the eye" = the eye + everything part of it, at any depth');
 $_e = moop_ontology_expand('PLANA', 'PLANA:0000099', []); sort($_e);
