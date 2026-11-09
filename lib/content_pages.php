@@ -164,8 +164,17 @@ function moop_markdown(string $markdown): string {
  * protocols, cuttingclass 2026-11-05: they open and close with no script), and class/style/title on
  * any of them -- and removes
  * everything that can run: <script>, on*= handlers, javascript: links, <iframe>, <form>, <style>.
+ *
+ * ONE iframe is allowed: a YouTube video from https://www.youtube-nocookie.com/embed/<id>
+ * (cuttingclass's HHMI film, 2026-11-09). Any other iframe source is still removed -- the
+ * pattern below is the whole allowlist. The privacy-enhanced youtube-nocookie host sets no
+ * cookie until the visitor presses play. The browser also needs the host in the CSP
+ * frame-src (docs/nginx/moop-headers.conf); without it the box shows blank.
  * With $removed passed, it is filled with what was taken out (for the editor's preview).
  */
+/** The only iframe a content page may carry: a YouTube video id on the no-cookie host. */
+const MOOP_PAGE_IFRAME_REGEXP = '%^https://www\.youtube-nocookie\.com/embed/[A-Za-z0-9_-]{11}(\?[A-Za-z0-9_=&;.-]*)?$%';
+
 function moop_html_clean(string $html, ?array &$removed = null): string {
     // Loaded here, not at the top: including this file must not need Composer.
     require_once __DIR__ . '/../vendor/autoload.php';
@@ -176,24 +185,32 @@ function moop_html_clean(string $html, ?array &$removed = null): string {
         $c->set('Cache.DefinitionImpl', null);   // no cache directory to keep writable; pages are small
         $c->set('HTML.AllowedElements', ['details', 'summary', 'div', 'span', 'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
             'strong', 'b', 'em', 'i', 'u', 's', 'small', 'sub', 'sup', 'blockquote', 'pre', 'code',
-            'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'a', 'img']);
+            'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'a', 'img', 'iframe']);
         $c->set('HTML.AllowedAttributes', ['*.class', '*.style', '*.title', 'details.open', 'a.href', 'a.target',
-            'img.src', 'img.alt', 'img.width', 'img.height', 'th.colspan', 'th.rowspan', 'td.colspan', 'td.rowspan']);
+            'img.src', 'img.alt', 'img.width', 'img.height', 'iframe.src', 'iframe.width', 'iframe.height',
+            'iframe.allowfullscreen', 'th.colspan', 'th.rowspan', 'td.colspan', 'td.rowspan']);
         $c->set('Attr.AllowedFrameTargets', ['_blank']);
         $c->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
+        $c->set('HTML.SafeIframe', true);
+        $c->set('URI.SafeIframeRegexp', MOOP_PAGE_IFRAME_REGEXP);
         $c->set('Core.CollectErrors', $collect);
         // HTML Purifier predates HTML5's <details>/<summary>: teach it the two elements. The
         // definition id/rev name this addition (required for a custom definition; nothing is cached).
         $c->set('HTML.DefinitionID', 'moop-content-pages');
-        $c->set('HTML.DefinitionRev', 1);
+        $c->set('HTML.DefinitionRev', 2);
         if ($def = $c->maybeGetRawHTMLDefinition()) {
             $def->addElement('details', 'Block', 'Flow', 'Common', ['open' => 'Bool#open']);
             $def->addElement('summary', 'Block', 'Flow', 'Common');
+            $def->addAttribute('iframe', 'allowfullscreen', 'Bool');
         }
         $purifiers[$collect] = new HTMLPurifier($c);
     }
     $p = $purifiers[$collect];
     $clean = $p->purify($html);
+    // HTML Purifier drops a disallowed iframe's src but keeps an empty <iframe></iframe>. Remove
+    // the husk, and tell the editor why (its error list does not mention it).
+    $husks = 0;
+    $clean = preg_replace('#<iframe(?![^>]*\ssrc=)[^>]*>\s*</iframe>#i', '', $clean, -1, $husks);
     if ($collect) {
         $removed = [];
         $errors = $p->context->get('ErrorCollector', true);
@@ -204,6 +221,7 @@ function moop_html_clean(string $html, ?array &$removed = null): string {
             if ($msg !== '' && stripos($msg, 'transformed') === false && strpos($msg, 'Unrecognized </') !== 0
                 && !in_array($msg, $removed, true)) $removed[] = $msg;
         }
+        if ($husks) $removed[] = 'A video from a site other than youtube-nocookie.com/embed/ removed';
     }
     return $clean;
 }

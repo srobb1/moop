@@ -3731,6 +3731,17 @@ $_bad = moop_page_render('<div onclick="x()"><script>alert(1)</script><iframe sr
        . '<a href="javascript:alert(2)">a</a><img src="/i.png" onerror="y()"><style>body{display:none}</style></div>', 'html', $_rm);
 ok(!preg_match('/<script|onclick|onerror|javascript:|<iframe|<form|<input|<style/i', $_bad),
    'HTML: script, on*= handlers, javascript: links, iframe, form and style are removed');
+$_yt = '<div class="ratio ratio-16x9"><iframe src="https://www.youtube-nocookie.com/embed/Bw1U7_Tk0H0" title="HHMI" allowfullscreen></iframe></div>';
+ok(strpos(moop_page_render($_yt, 'html'), '<iframe src="https://www.youtube-nocookie.com/embed/Bw1U7_Tk0H0" title="HHMI" allowfullscreen') !== false,
+   'HTML: a YouTube video from youtube-nocookie.com/embed/ is kept, with its title and full-screen button');
+foreach (['https://www.youtube.com/embed/Bw1U7_Tk0H0', 'https://www.youtube-nocookie.com.evil.example/embed/Bw1U7_Tk0H0',
+          'https://evil.example/?u=https://www.youtube-nocookie.com/embed/Bw1U7_Tk0H0', 'javascript:alert(1)',
+          'https://www.youtube-nocookie.com/embed/../../evil'] as $_src) {
+    ok(stripos(moop_page_render('<iframe src="' . $_src . '"></iframe>', 'html'), '<iframe') === false,
+       "HTML: an iframe from anywhere else is removed entirely ($_src)");
+}
+ok(strpos(moop_page_render('<iframe src="https://www.youtube-nocookie.com/embed/Bw1U7_Tk0H0" onload="x()" srcdoc="<b>"></iframe>', 'html'), 'onload') === false,
+   'HTML: the allowed video keeps no handler or srcdoc');
 ok(count($_rm) >= 5 && (bool) array_filter($_rm, fn($m) => strpos($m, '<script>') !== false),
    'HTML: the preview is told what was removed, naming the tag');
 ok(strpos(moop_page_render('<b>x</b>', 'markdown'), '&lt;b&gt;') !== false, 'Markdown pages still show typed HTML as text');
