@@ -150,7 +150,7 @@
             <p class="mb-2">The <code>organism.json</code> file contains metadata about your organism. You have two options to create it:</p>
             
             <div class="alert alert-info mb-3">
-              <i class="fa fa-lightbulb"></i> <strong>Easy Option:</strong> Use the <strong>Status</strong> button in <a href="manage_organisms.php" target="_blank"><strong>Manage Organisms</strong></a> (Step 3) to create and edit the organism.json file through an interactive interface. No manual file editing needed!
+              <i class="fa fa-lightbulb"></i> <strong>Easy Option:</strong> In <a href="manage_organisms.php" target="_blank"><strong>Manage Organisms</strong></a>, use the <strong>metadata button</strong> (<i class="fa fa-file-alt"></i> file icon) in the organism's Health column to create and edit organism.json in a form. No manual file editing needed.
             </div>
 
             <div class="alert alert-success mb-3">
