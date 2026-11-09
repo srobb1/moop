@@ -4033,6 +4033,63 @@ $_l = $_leaves(build_tree_from_lineage_cache(['Spathula_sp' => ['taxon_id' => '7
 ok(($_l['Spathula_sp'] ?? '') === 'Dugesiidae/Spathula/Spathula sp.', 'a lone genus-id organism reads "Spathula sp.", under its genus');
 
 // ----------------------------------------------------------------------------
+group('Ontologies: one read-only SQLite per ontology, built from checked TSVs');
+// lib/ontologies.php -- the PAGE search's terms. Built from small fixture files here; the real
+// ones come from planosphere/PAGE (ontology/). Ranking, expansion and the safety rules.
+require_once "$BASE/lib/ontologies.php";
+$_od = sys_get_temp_dir() . '/moop_onto_' . getmypid(); @mkdir($_od, 0777, true);
+file_put_contents("$_od/terms.tsv", "term\tfield\tvalue\n"
+    . "PLANA:0000044\tlabel\tcephalic ganglia\nPLANA:0000044\texact_synonym\tbrain\n"
+    . "PLANA:0000494\tlabel\tbrain commissure\nPLANA:0000099\tlabel\tneuron\n"
+    . "PLANA:0000036\tlabel\teye\nPLANA:0000017\tlabel\tphotoreceptor neuron\n"
+    . "PLANA:0002092\tlabel\trhabdomere\nPLANA:0000037\tlabel\told eye\nPLANA:0000037\tobsolete\ttrue\n"
+    . "PLANA:0000037\treplaced_by\thttp://purl.obolibrary.org/obo/PLANA_0000036\n"
+    . "BFO:0000050\tlabel\tpart of\n"
+    . "<script>\tlabel\tx\nPLANA:0000999\tcomment\tnot a field we take\nPLANA:0000998\tlabel\t\n");
+file_put_contents("$_od/closure.tsv", "subject\trelation\tobject\n"
+    . "PLANA:0000017\tBFO:0000050\tPLANA:0000036\nPLANA:0002092\tBFO:0000050\tPLANA:0000017\n"
+    . "PLANA:0002092\tBFO:0000050\tPLANA:0000036\nPLANA:0000017\trdfs:subClassOf\tPLANA:0000099\n"
+    . "bad row\n");
+$_of = "$_od/plana.sqlite";
+$_r = moop_ontology_build_from_files('PLANA', ['terms' => "$_od/terms.tsv", 'closure' => "$_od/closure.tsv", 'release' => '2023-03-13'], $_of);
+ok($_r['ok'] && $_r['counts']['labelled'] === 8 && $_r['counts']['closure'] === 4,
+   'build: terms and closure loaded (' . json_encode($_r['counts']) . ')');
+ok($_r['skipped'] === 4, 'build: a malformed id, an unknown field, an empty value and a broken closure row are skipped, not stored');
+$_odb = new PDO('sqlite:' . $_of, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
+ok($_odb->query("SELECT replaced_by FROM term WHERE id = 'PLANA:0000037'")->fetchColumn() === 'PLANA:0000036',
+   'build: a "replaced by" written as a full address is stored as PLANA:0000036');
+ok($_odb->query("SELECT value FROM meta WHERE key = 'release'")->fetchColumn() === '2023-03-13', 'build: the release is recorded');
+$_odb = null;
+$_before = md5_file($_of);
+$_r = moop_ontology_build_from_files('PLANA', ['terms' => "$_od/missing.tsv"], $_of);
+ok(!$_r['ok'] && md5_file($_of) === $_before && !glob("$_of.tmp-*"), 'build: a failed build leaves the previous file unchanged and no temp file');
+file_put_contents("$_od/empty.tsv", "term\tfield\tvalue\n");
+$_r = moop_ontology_build_from_files('PLANA', ['terms' => "$_od/empty.tsv"], $_of);
+ok(!$_r['ok'] && md5_file($_of) === $_before, 'build: a file with no named terms never replaces the live one');
+ok(strpos(moop_ontology_download('https://evil.example/plana-terms.tsv', "$_od/x"), 'refused') === 0
+   && strpos(moop_ontology_download('http://raw.githubusercontent.com/x', "$_od/x"), 'refused') === 0,
+   'download: only https from raw.githubusercontent.com');
+
+// Search and expand read the built file through the normal path (cache_path pointed at the temp dir).
+$_ocfg = ConfigManager::getInstance(); $_orp = new ReflectionProperty($_ocfg, 'config'); $_orp->setAccessible(true);
+$_osaved = $_orp->getValue($_ocfg); $_oc = $_osaved; $_oc['cache_path'] = $_od; $_orp->setValue($_ocfg, $_oc);
+@mkdir("$_od/ontologies"); rename($_of, "$_od/ontologies/plana.sqlite");
+$_s = moop_ontology_search('brain', ['PLANA']);
+ok(($_s[0]['id'] ?? '') === 'PLANA:0000044' && $_s[0]['matched'] === 'brain' && $_s[0]['kind'] === 'exact',
+   'search: "brain" finds cephalic ganglia FIRST, by its exact synonym, and says so');
+ok(($_s[1]['id'] ?? '') === 'PLANA:0000494', 'search: a name starting with the word comes after the exact synonym');
+ok((moop_ontology_search('neurons', ['PLANA'])[0]['id'] ?? '') === 'PLANA:0000099', 'search: a plural finds the singular');
+ok(!array_filter(moop_ontology_search('old eye', ['PLANA']), fn($x) => $x['id'] === 'PLANA:0000037'), 'search: obsolete terms are not offered');
+ok(!array_filter(moop_ontology_search('part', ['PLANA']), fn($x) => $x['id'] === 'BFO:0000050'), "search: only the ontology's own terms (not the BFO relations it imports)");
+ok(moop_ontology_search('b', ['PLANA']) === [] && moop_ontology_search("50%_\\", ['PLANA']) === [], 'search: one letter, and LIKE wildcards in the text, return nothing');
+$_e = moop_ontology_expand('PLANA', 'PLANA:0000036', ['BFO:0000050']); sort($_e);
+ok($_e === ['PLANA:0000017', 'PLANA:0000036', 'PLANA:0002092'], 'expand: "part of the eye" = the eye + everything part of it, at any depth');
+$_e = moop_ontology_expand('PLANA', 'PLANA:0000099', []); sort($_e);
+ok($_e === ['PLANA:0000017', 'PLANA:0000099'], 'expand: with no relation, the term and its subclasses');
+$_orp->setValue($_ocfg, $_osaved);
+exec('rm -rf ' . escapeshellarg($_od));
+
+// ----------------------------------------------------------------------------
 group('Link prefix: every link starts with moop_url_base(), never the folder name');
 // The folder name and the start of a link are different things. A site served at its domain's
 // root ("/") must produce "/tools/...", never "//tools/..." (a link to a HOST named "tools").

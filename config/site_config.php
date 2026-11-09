@@ -184,6 +184,26 @@ return [
     // Leave as '' and they go in a hidden organisms/.cache/ folder (moop_cache_root()).
     'cache_path' => '',
 
+    // ======== ONTOLOGIES (PAGE search: PLANA anatomy, BSPO spatial, ECO evidence) ========
+    // One read-only SQLite per ontology under <cache_path>/ontologies/, built by
+    // scripts/build_ontologies.php or housekeeping from files a GitHub Action in planosphere/PAGE
+    // keeps current (ontology/: reasoned closure + names/synonyms; see its README). A site uses
+    // them only once built -- nothing here changes a page by itself. 'search' => offered in the
+    // term search box. Addresses live HERE, not in an admin setting, on purpose (lib/ontologies.php).
+    'ontologies' => [
+        'PLANA' => ['name' => 'PLANA (planarian anatomy)', 'search' => true,
+                    'terms'    => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/plana-terms.tsv',
+                    'closure'  => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/plana-closure.tsv',
+                    'releases' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/releases.txt'],
+        'BSPO'  => ['name' => 'BSPO (spatial terms)', 'search' => true,
+                    'terms'    => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/bspo-terms.tsv',
+                    'releases' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/releases.txt'],
+        'ECO'   => ['name' => 'ECO (evidence)', 'search' => false,
+                    'terms'    => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/eco-terms.tsv',
+                    'closure'  => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/eco-closure.tsv',
+                    'releases' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/releases.txt'],
+    ],
+
     // ======== Time zone ========
     // The time zone MOOP shows dates and times in (an identifier such as
     // 'America/Chicago'). Leave as '' to use whatever PHP itself is configured with —

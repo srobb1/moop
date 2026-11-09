@@ -40,18 +40,38 @@ Haplotype 2 (`S2F19H2_WBPS19_*`) is **not** loaded in simrbase (open question 1)
 by roughly a third and tie its rebuilds to Rosetta Stone updates — against the lean-schema rule
 (CLAUDE.md §9). So:
 
-1. **`ontology.sqlite`** (site-wide; one per site) — PLANA, BSPO, ECO:
+1. **One SQLite file PER ONTOLOGY** (decided 2026-11-09, Sofia): `<cache>/ontologies/plana.sqlite`,
+   `bspo.sqlite`, `eco.sqlite`, + `sources/` (the downloaded TSVs). Site-wide, not per organism —
+   PLANA serves every planarian species; organisms connect through curations, not ontologies.
+   Each is built, checked and swapped alone (a bad ECO download cannot block PLANA), a big one
+   later (GO, UBERON) is just another file, removing one = deleting its file. A short config list
+   names the ontologies, their source files, and which the term search offers; adding one = one
+   entry. The search box queries the offered files and merges (same idea as the ATTACH batches
+   used for cross-organism ID lookup). Visitors open them READ-ONLY; builds run only in
+   housekeeping's background CLI run (the admin button just requests a run, takes no input);
+   sources are fixed GitHub addresses; every row validated (id shape, field whitelist, length)
+   before it is stored; all text HTML-escaped on display. Each file holds:
    `term(id, label, definition, obsolete, replaced_by, ontology)`,
    `synonym(term_id, text, kind)` (exact/related/narrow/broad),
    `closure(term_id, ancestor_id, relation)` — **every** inferred link, all depths, all
    relationships, computed once per release by a real OWL reasoner (this replaces **Owlery**),
    `meta(ontology, release, loaded_at)`.
-2. **`crosswalk.sqlite`** (per organism, next to organism.sqlite) — the Rosetta Stone:
+2. **`crosswalk.sqlite`** (per organism, next to organism.sqlite; name chosen 2026-11-09 — the
+   visible tool name is a per-site setting: "Rosetta Stone Transcript Mapper" on simrbase) —
+   **hub = schMedS3 h1 genes (`h1SMcG…`), AND h2 genes** (measured 2026-11-09: 1,063,847
+   accessions reach 17,288 h1 genes; 97.5% map to exactly one, ~23k to two, ~4k to 3+, all kept;
+   **17,901 accessions reach an h2 gene but no h1 gene** — `in-s-h2-not-s-h1` — so cross-mapping
+   goes through h1 OR h2, as the old page's `ref_source` did. Only h1 genes link to MOOP gene pages
+   until h2 is loaded (open question 1); h2 IDs link to WormBase ParaSite). Tables:
    `map(accession, accession_lc, source, ref_id, ref_set)` indexed on `accession_lc` and `ref_id`,
    plus `source(name, label, url_template)` (the link tables now hard-coded in the PHP page).
    Generic on purpose: cuttingclass's old Trinity IDs go in the same format (same pblat method,
    `planosphere/RosettaStone/code`).
-3. **`expression.sqlite`** (per organism) — PAGE curations as rows (all 9 columns, dates
+3. **`anatomy_expression.sqlite`** (per organism; named 2026-11-09 — not "expression", which is
+   MOOP's RNA-seq heatmap tool: this is WHERE a gene is expressed (anatomy term, from a paper), not
+   HOW MUCH; 21,005 curations are themselves RNA-seq evidence. Visitors see "PAGE: Planarian Anatomy
+   Gene Expression". Future phenotype (PLANP) curations get their own `phenotype.sqlite` — different
+   shape: perturbation -> phenotype) — PAGE curations as rows (all 9 columns, dates
    normalised), plus `curation_feature(curation_id, feature_uniquename)` resolved through the
    crosswalk at load, so a gene page lists its curations with one indexed lookup.
 
@@ -64,6 +84,8 @@ combined with R, chained relations, AND PLANA's logical definitions (defined cla
 subclasses nobody asserted). Hand-written traversal rules would miss the last part. So at load
 time run **ROBOT + ELK** (the OBO community's standard tools) over plana.owl and store every
 inferred link. Same answers as Owlery, no Owlery server. Step 4 proves it on real searches.
+
+**ECO closure too (2026-11-09, commit 74717f5):** `ontology/eco-closure.tsv`, 91,305 links, so the evidence filter's "any kind of in situ" (ECO:0001836 → colorimetric ECO:0001839 + FISH ECO:0001047) comes from ECO, not a hand list. The Action also rebuilds when an expected file is missing.
 
 **Option C — DONE 2026-11-09 (Sofia's idea):** live in planosphere/PAGE, first run green, `ontology/plana-closure.tsv` = 40,347 links for release 2023-03-13. Details: the reasoned file lives in a GitHub repo
 (PAGE repo, `ontology/`), produced by a **GitHub Actions** workflow that runs ROBOT +
@@ -129,7 +151,7 @@ Curations are **never rewritten**: a renamed or merged term is followed at query
 
 1. **ontology.sqlite + autocomplete** (PLANA, BSPO, ECO), update button, weekly check, a test page.
    First visible piece; fixes what is broken on Planosphere today.
-2. **expression.sqlite + PAGE search page + gene-page section**, with the review list.
+2. **anatomy_expression.sqlite + PAGE search page + gene-page section**, with the review list.
 3. **crosswalk.sqlite + Rosetta Stone page + search aliases + "Also known as"**.
 4. **Check against Planosphere** while it still runs: the same searches, same results (Owlery vs
    closure). Planosphere was unreachable on 2026-11-09; this step waits for it.
