@@ -82,7 +82,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['link_prefix', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'primer_maker', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels'];
+    private $editableConfigKeys = ['link_prefix', 'ontologies', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'primer_maker', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -880,6 +880,58 @@ class ConfigManager
         return [$data, $remove];
     }
 
+    /**
+     * The 'ontologies' setting (Site Configuration -> Ontologies), checked: the cleaned list, or
+     * a message saying what is wrong. Lock kept HERE, whatever the page sends: files only from
+     * https://raw.githubusercontent.com/ (lib/ontologies.php refuses any other host as well).
+     * One row per ontology, keyed by its prefix:
+     *   purpose   anatomy | phenotype | evidence | names
+     *   terms     terms TSV (required)      closure  link-tree TSV (optional)
+     *   releases  releases.txt (optional)   search   offered in the term box
+     *   relations relationship ids the search offers (anatomy/phenotype), e.g. BFO:0000050
+     */
+    public static function checkOntologyList($list)
+    {
+        if (!is_array($list)) return 'The ontology list is not valid';
+        if (count($list) > 30) return 'At most 30 ontologies';
+        $url_ok = function ($u, string $ext): bool {
+            return is_string($u) && strlen($u) <= 500
+                && preg_match('#^https://raw\.githubusercontent\.com/[A-Za-z0-9._/-]+\.' . $ext . '$#', $u)
+                && strpos($u, '..') === false;
+        };
+        $out = [];
+        foreach ($list as $prefix => $o) {
+            $prefix = strtoupper(trim((string) $prefix));
+            if (!preg_match('/^[A-Z][A-Z0-9]{1,15}$/', $prefix)) return "Ontology prefix '" . substr($prefix, 0, 20) . "' is not valid (letters and digits, e.g. PLANA)";
+            if (!is_array($o)) return "Ontology $prefix is not valid";
+            $purpose = (string) ($o['purpose'] ?? '');
+            if (!in_array($purpose, ['anatomy', 'phenotype', 'evidence', 'names'], true)) return "Ontology $prefix: choose its purpose";
+            if (!$url_ok($o['terms'] ?? '', 'tsv')) return "Ontology $prefix: the terms file must be a .tsv at https://raw.githubusercontent.com/";
+            foreach (['closure' => 'tsv', 'releases' => 'txt'] as $f => $ext) {
+                $v = trim((string) ($o[$f] ?? ''));
+                if ($v !== '' && !$url_ok($v, $ext)) return "Ontology $prefix: the $f file must be a .$ext at https://raw.githubusercontent.com/";
+                $o[$f] = $v;
+            }
+            $rel = [];
+            foreach ((array) ($o['relations'] ?? []) as $r) {
+                $r = trim((string) $r);
+                if ($r === '') continue;
+                if (!preg_match('/^[A-Za-z][A-Za-z0-9_]{0,30}:[A-Za-z0-9_.-]{1,60}$/', $r)) return "Ontology $prefix: '" . substr($r, 0, 40) . "' is not a relationship id (e.g. BFO:0000050)";
+                $rel[] = $r;
+            }
+            $out[$prefix] = [
+                'name'      => substr(trim(strip_tags((string) ($o['name'] ?? $prefix))), 0, 80) ?: $prefix,
+                'purpose'   => $purpose,
+                'terms'     => $o['terms'],
+                'closure'   => $o['closure'],
+                'releases'  => $o['releases'],
+                'search'    => !empty($o['search']),
+                'relations' => array_values(array_unique($rel)),
+            ];
+        }
+        return $out;
+    }
+
     public function saveEditableConfig($data, $config_dir, array $remove = [])
     {
         // Use the centralized whitelist of allowed editable keys
@@ -987,6 +1039,12 @@ class ConfigManager
                     $ok = is_array($h) && (!$h || (in_array($h['mode'] ?? '', ['builtin', 'page', 'intro'], true)
                           && (($h['mode'] ?? '') === 'builtin' || preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', (string) ($h['page'] ?? '')))));
                     if (!$ok) return ['success' => false, 'message' => 'The home page setting is not valid; nothing was saved'];
+                }
+
+                if ($key === 'ontologies') {
+                    $checked = self::checkOntologyList($data[$key]);
+                    if (is_string($checked)) return ['success' => false, 'message' => $checked . '; nothing was saved'];
+                    $data[$key] = $checked;
                 }
 
                 if ($key === 'theme_colors') {

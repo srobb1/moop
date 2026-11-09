@@ -4094,6 +4094,33 @@ ok($_e === ['PLANA:0000017', 'PLANA:0000099'], 'expand: with no relation, the te
 $_orp->setValue($_ocfg, $_osaved);
 exec('rm -rf ' . escapeshellarg($_od));
 
+// The Site Configuration list, checked on save (ConfigManager::checkOntologyList()).
+$_gh = 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/';
+$_good = ['plana' => ['name' => 'PLANA <b>x</b>', 'purpose' => 'anatomy', 'terms' => $_gh . 'plana-terms.tsv',
+                      'closure' => $_gh . 'plana-closure.tsv', 'releases' => $_gh . 'releases.txt', 'search' => '1',
+                      'relations' => ['rdfs:subClassOf', 'BFO:0000050', '']]];
+$_c = ConfigManager::checkOntologyList($_good);
+ok(is_array($_c) && isset($_c['PLANA']) && $_c['PLANA']['name'] === 'PLANA x' && $_c['PLANA']['search'] === true
+   && $_c['PLANA']['relations'] === ['rdfs:subClassOf', 'BFO:0000050'],
+   'settings: a good row is kept (prefix upper-cased, tags stripped from the name, blank relations dropped)');
+$_bad = [
+    'another host'         => ['terms' => 'https://evil.example/plana-terms.tsv'],
+    'plain http'           => ['terms' => 'http://raw.githubusercontent.com/x/plana-terms.tsv'],
+    'not a .tsv'           => ['terms' => $_gh . 'plana.owl'],
+    'a ".." path'          => ['terms' => 'https://raw.githubusercontent.com/a/../b/x.tsv'],
+    'closure elsewhere'    => ['closure' => 'https://evil.example/c.tsv'],
+    'releases not .txt'    => ['releases' => $_gh . 'releases.php'],
+    'no purpose'           => ['purpose' => ''],
+    'unknown purpose'      => ['purpose' => 'admin'],
+    'bad relation id'      => ['relations' => ['part of; DROP']],
+];
+foreach ($_bad as $_why => $_change) {
+    $_row = array_merge($_good['plana'], $_change);
+    ok(is_string(ConfigManager::checkOntologyList(['PLANA' => $_row])), "settings: refused -- $_why");
+}
+ok(is_string(ConfigManager::checkOntologyList(['bad prefix!' => $_good['plana']])) && is_string(ConfigManager::checkOntologyList('x')),
+   'settings: refused -- a bad prefix, or not a list at all');
+
 // ----------------------------------------------------------------------------
 group('Link prefix: every link starts with moop_url_base(), never the folder name');
 // The folder name and the start of a link are different things. A site served at its domain's

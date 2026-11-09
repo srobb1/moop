@@ -205,6 +205,7 @@ function moop_ontology_build_from_files(string $prefix, array $files, ?string $o
         ];
         $meta = $db->prepare('INSERT INTO meta (key, value) VALUES (?, ?)');
         foreach (['prefix' => $prefix, 'release' => (string) ($files['release'] ?? ''),
+                  'releases_sha' => (string) ($files['releases_sha'] ?? ''),
                   'built_at' => date('c'), 'skipped_rows' => (string) $skipped] + array_map('strval', $counts) as $k => $v) {
             $meta->execute([$k, $v]);
         }
@@ -253,6 +254,7 @@ function moop_ontology_build(string $prefix): array {
         @chmod($dest, 0664);
         if ($kind === 'closure') $files['closure'] = $dest;
         if ($kind === 'releases') {
+            $files['releases_sha'] = (string) @hash_file('sha256', $dest);
             foreach (file($dest, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
                 [$k, $v] = array_pad(preg_split('/\s+/', trim($line), 2), 2, '');
                 if ($k === $src['release_key'] && preg_match('/^[0-9-]{4,20}$/', $v)) $files['release'] = $v;
@@ -359,4 +361,55 @@ function moop_ontology_label(string $id, array $prefixes): string {
         if ($l !== false && $l !== null) return (string) $l;
     }
     return '';
+}
+
+/** Where an admin's "Rebuild now" leaves its request for the background run. */
+function moop_ontology_rebuild_marker(): string {
+    return moop_ontology_dir() . '/rebuild.requested';
+}
+
+/**
+ * Keep the built ontologies current. Called by housekeeping's background run.
+ *
+ * OPT-IN PER SITE: only ontologies that have been built here at least once are refreshed (plus
+ * all configured ones when an admin pressed "Rebuild now"). A site that never built one -- e.g.
+ * cuttingclass -- is left alone, and pays nothing.
+ *
+ * Refreshing costs one small download per source (releases.txt, a few bytes): an ontology is
+ * rebuilt only when that file changed since it was built -- a new release of the ontology, or a
+ * new recipe in the PAGE repo's Action -- or when a rebuild was requested. Each ontology is
+ * rebuilt on its own; a failure leaves its previous file in place and is reported.
+ *
+ * Returns [prefix => ['state' => built|current|failed|not_built, 'release', 'built_at', 'error', 'counts']].
+ */
+function moop_ontology_refresh(bool $force = false): array {
+    $marker = moop_ontology_rebuild_marker();
+    $force  = $force || is_file($marker);
+    $out    = [];
+    $seen   = [];   // releases.txt fingerprints, fetched once per address
+    foreach (moop_ontology_sources() as $prefix => $src) {
+        $meta = moop_ontology_meta($prefix);
+        if (!$meta && !$force) { $out[$prefix] = ['state' => 'not_built']; continue; }
+        $rebuild = $force || !$meta;
+        if (!$rebuild && !empty($src['releases'])) {
+            $url = $src['releases'];
+            if (!array_key_exists($url, $seen)) {
+                $tmp = moop_ontology_dir() . '/releases.check-' . getmypid();
+                $seen[$url] = moop_ontology_download($url, $tmp) === '' ? (string) hash_file('sha256', $tmp) : null;
+                @unlink($tmp);
+            }
+            // Unreachable (null): keep the current file, report nothing new -- try again next week.
+            $rebuild = $seen[$url] !== null && $seen[$url] !== ($meta['releases_sha'] ?? '');
+        }
+        if (!$rebuild) {
+            $out[$prefix] = ['state' => 'current', 'release' => $meta['release'] ?? '', 'built_at' => $meta['built_at'] ?? ''];
+            continue;
+        }
+        $r = moop_ontology_build($prefix);
+        $m = moop_ontology_meta($prefix);
+        $out[$prefix] = ['state' => $r['ok'] ? 'built' : 'failed', 'error' => $r['error'], 'counts' => $r['counts'],
+                         'release' => $m['release'] ?? '', 'built_at' => $m['built_at'] ?? ''];
+    }
+    if ($force) @unlink($marker);
+    return $out;
 }

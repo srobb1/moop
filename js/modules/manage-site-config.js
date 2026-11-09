@@ -350,3 +350,24 @@
         }
     });
 })();
+
+/**
+ * Ontologies card: "Rebuild now". Asks the server to rebuild every configured ontology in the
+ * background (admin/api/ontology_rebuild.php); the CSRF token is added by js/modules/csrf.js.
+ */
+(function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        const btn = document.getElementById('ontologyRebuildBtn');
+        const msg = document.getElementById('ontologyRebuildMsg');
+        if (!btn || !msg) return;
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            msg.textContent = 'Requesting…';
+            fetch((window.sitePath || '') + '/admin/api/ontology_rebuild.php', { method: 'POST' })
+                .then(r => r.json())
+                .then(d => { msg.textContent = d.message || (d.success ? 'Requested.' : 'Could not request a rebuild.'); })
+                .catch(() => { msg.textContent = 'Could not reach the server.'; })
+                .finally(() => { btn.disabled = false; });
+        });
+    });
+})();

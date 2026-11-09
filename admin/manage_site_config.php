@@ -267,6 +267,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['search_results_columns'] = $cols;
         }
 
+        // Ontologies (PAGE search). One row per ontology; a row with no prefix and no terms file
+        // is the empty "add one" row. ConfigManager::checkOntologyList() decides what is valid --
+        // including the lock that files may only come from https://raw.githubusercontent.com/.
+        if (!empty($_POST['ontologies_form']) && isset($_POST['ontologies']) && is_array($_POST['ontologies'])) {
+            $onto = [];
+            foreach ($_POST['ontologies'] as $row) {
+                if (!is_array($row)) continue;
+                $prefix = strtoupper(trim((string) ($row['prefix'] ?? '')));
+                if ($prefix === '' && trim((string) ($row['terms'] ?? '')) === '') continue;
+                $onto[$prefix] = [
+                    'name'      => (string) ($row['name'] ?? ''),
+                    'purpose'   => (string) ($row['purpose'] ?? ''),
+                    'terms'     => trim((string) ($row['terms'] ?? '')),
+                    'closure'   => trim((string) ($row['closure'] ?? '')),
+                    'releases'  => trim((string) ($row['releases'] ?? '')),
+                    'search'    => !empty($row['search']),
+                    'relations' => preg_split('/[\s,]+/', trim((string) ($row['relations'] ?? '')), -1, PREG_SPLIT_NO_EMPTY),
+                ];
+            }
+            $data['ontologies'] = $onto;
+        }
+
         // Parse Turnstile settings
         if (isset($_POST['turnstile']) && is_array($_POST['turnstile'])) {
             // No secret_key here: it lives only in config/secrets.php, and ConfigManager

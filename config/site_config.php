@@ -188,17 +188,23 @@ return [
     // One read-only SQLite per ontology under <cache_path>/ontologies/, built by
     // scripts/build_ontologies.php or housekeeping from files a GitHub Action in planosphere/PAGE
     // keeps current (ontology/: reasoned closure + names/synonyms; see its README). A site uses
-    // them only once built -- nothing here changes a page by itself. 'search' => offered in the
-    // term search box. Addresses live HERE, not in an admin setting, on purpose (lib/ontologies.php).
+    // them only once built -- nothing here changes a page by itself. These are the DEFAULTS:
+    // Admin -> Site Configuration -> Ontologies edits the list (checked by
+    // ConfigManager::checkOntologyList(); files only from https://raw.githubusercontent.com/).
+    // 'purpose': anatomy | phenotype | evidence | names -- code asks for "the anatomy ontologies",
+    // never for PLANA by name. 'search' => offered in the term search box.
     'ontologies' => [
-        'PLANA' => ['name' => 'PLANA (planarian anatomy)', 'search' => true,
+        'PLANA' => ['name' => 'PLANA (planarian anatomy)', 'purpose' => 'anatomy', 'search' => true,
+                    // The relationships the anatomy search offers ('is a' = rdfs:subClassOf). Names come
+                    // from the ontology itself (PLANA imports them from RO).
+                    'relations' => ['rdfs:subClassOf', 'BFO:0000050', 'RO:0001018', 'RO:0002202', 'RO:0001000'],
                     'terms'    => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/plana-terms.tsv',
                     'closure'  => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/plana-closure.tsv',
                     'releases' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/releases.txt'],
-        'BSPO'  => ['name' => 'BSPO (spatial terms)', 'search' => true,
+        'BSPO'  => ['name' => 'BSPO (spatial terms)', 'purpose' => 'anatomy', 'search' => true,
                     'terms'    => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/bspo-terms.tsv',
                     'releases' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/releases.txt'],
-        'ECO'   => ['name' => 'ECO (evidence)', 'search' => false,
+        'ECO'   => ['name' => 'ECO (evidence)', 'purpose' => 'evidence', 'search' => false,
                     'terms'    => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/eco-terms.tsv',
                     'closure'  => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/eco-closure.tsv',
                     'releases' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/releases.txt'],

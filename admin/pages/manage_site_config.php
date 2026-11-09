@@ -522,6 +522,70 @@
                     </div>
                 </div>
 
+                <!-- Ontologies (PAGE search) -->
+                <?php
+                require_once __DIR__ . '/../../lib/ontologies.php';
+                $onto_rows   = $config->getArray('ontologies', []);
+                $onto_status = ($_SESSION['ontologies']['ontologies'] ?? []);
+                $onto_check  = $_SESSION['ontologies']['checked_at'] ?? null;
+                $onto_purposes = ['anatomy' => 'Anatomy', 'phenotype' => 'Phenotype', 'evidence' => 'Evidence', 'names' => 'Extra names only'];
+                $onto_rows[''] = ['name' => '', 'purpose' => '', 'terms' => '', 'closure' => '', 'releases' => '', 'search' => false, 'relations' => []];
+                ?>
+                <div class="card adm-card mb-3" id="pnav-ontologies" data-nav-label="Ontologies">
+                    <div class="card-header adm-head">
+                        <h5 class="mb-0"><i class="fa fa-sitemap"></i> Ontologies</h5>
+                    </div>
+                    <div class="card-body">
+                        <input type="hidden" name="ontologies_form" value="1">
+                        <p class="text-muted small mb-2">The ontologies the PAGE search uses, by <strong>purpose</strong>: <em>Anatomy</em> (where a gene is expressed, life-cycle stages), <em>Phenotype</em>, <em>Evidence</em> (how it was observed), or <em>Extra names only</em> (to name terms from another ontology, e.g. a term an obsolete one was replaced by). Each needs a <strong>terms</strong> file, and anatomy, phenotype and evidence also a <strong>link-tree</strong> file, in the format of <a href="https://github.com/planosphere/PAGE/tree/master/ontology" target="_blank" rel="noopener">planosphere/PAGE ontology/</a> (made by its GitHub Action). Files are accepted only from <code>https://raw.githubusercontent.com/</code>.</p>
+                        <p class="text-muted small mb-3">Each ontology is a separate read-only file in the cache folder, rebuilt on its own: weekly when its <code>releases.txt</code> changes, or now with <strong>Rebuild now</strong>. Nothing is rebuilt on a site where none has been built yet.</p>
+                        <?php foreach ($onto_rows as $op => $o): $i = $op === '' ? 'new' : $op; $st = $op === '' ? [] : moop_ontology_meta($op); $hs = $onto_status[$op] ?? []; ?>
+                        <div class="border rounded p-2 mb-2<?= $op === '' ? ' bg-light' : '' ?>">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-sm-2"><label class="form-label small mb-0">Prefix</label>
+                                    <input type="text" class="form-control form-control-sm font-monospace" name="ontologies[<?= htmlspecialchars($i) ?>][prefix]" value="<?= htmlspecialchars($op) ?>" placeholder="<?= $op === '' ? 'add: e.g. PLANP' : '' ?>"></div>
+                                <div class="col-sm-4"><label class="form-label small mb-0">Name</label>
+                                    <input type="text" class="form-control form-control-sm" name="ontologies[<?= htmlspecialchars($i) ?>][name]" value="<?= htmlspecialchars((string) ($o['name'] ?? '')) ?>"></div>
+                                <div class="col-sm-3"><label class="form-label small mb-0">Purpose</label>
+                                    <select class="form-select form-select-sm" name="ontologies[<?= htmlspecialchars($i) ?>][purpose]">
+                                        <option value="">choose…</option>
+                                        <?php foreach ($onto_purposes as $pv => $pl): ?><option value="<?= $pv ?>"<?= ($o['purpose'] ?? '') === $pv ? ' selected' : '' ?>><?= $pl ?></option><?php endforeach; ?>
+                                    </select></div>
+                                <div class="col-sm-3"><div class="form-check mb-1">
+                                    <input class="form-check-input" type="checkbox" id="onto_search_<?= htmlspecialchars($i) ?>" name="ontologies[<?= htmlspecialchars($i) ?>][search]" value="1"<?= !empty($o['search']) ? ' checked' : '' ?>>
+                                    <label class="form-check-label small" for="onto_search_<?= htmlspecialchars($i) ?>">Offer in the term search box</label></div></div>
+                                <?php foreach (['terms' => 'Terms file (.tsv)', 'closure' => 'Link-tree file (.tsv)', 'releases' => 'releases.txt'] as $f => $fl): ?>
+                                <div class="col-sm-<?= $f === 'releases' ? 4 : 4 ?>"><label class="form-label small mb-0"><?= $fl ?></label>
+                                    <input type="url" class="form-control form-control-sm font-monospace" name="ontologies[<?= htmlspecialchars($i) ?>][<?= $f ?>]" value="<?= htmlspecialchars((string) ($o[$f] ?? '')) ?>" placeholder="https://raw.githubusercontent.com/…"></div>
+                                <?php endforeach; ?>
+                                <div class="col-12"><label class="form-label small mb-0">Relationships the search offers <span class="text-muted">(anatomy / phenotype; ids separated by commas -- <code>rdfs:subClassOf</code> = is a)</span></label>
+                                    <input type="text" class="form-control form-control-sm font-monospace" name="ontologies[<?= htmlspecialchars($i) ?>][relations]" value="<?= htmlspecialchars(implode(', ', (array) ($o['relations'] ?? []))) ?>">
+                                    <?php if ($op !== '' && !empty($o['relations'])): ?>
+                                        <small class="text-muted"><?= htmlspecialchars(implode(' · ', array_map(fn($r) => moop_ontology_label($r, array_keys($onto_rows)) ?: $r, $o['relations']))) ?></small>
+                                    <?php endif; ?></div>
+                                <?php if ($op !== ''): ?>
+                                <div class="col-12 small">
+                                    <?php if ($st): ?>
+                                        <i class="fa fa-check text-success me-1"></i>Built <?= htmlspecialchars(substr((string) ($st['built_at'] ?? ''), 0, 16)) ?> from release <strong><?= htmlspecialchars((string) ($st['release'] ?? '?')) ?></strong>:
+                                        <?= number_format((int) ($st['labelled'] ?? 0)) ?> terms, <?= number_format((int) ($st['synonyms'] ?? 0)) ?> synonyms, <?= number_format((int) ($st['closure'] ?? 0)) ?> links<?= (int) ($st['skipped_rows'] ?? 0) ? ', ' . (int) $st['skipped_rows'] . ' rows skipped' : '' ?>.
+                                    <?php else: ?>
+                                        <i class="fa fa-minus text-muted me-1"></i>Not built on this site.
+                                    <?php endif; ?>
+                                    <?php if (($hs['state'] ?? '') === 'failed'): ?>
+                                        <span class="text-danger ms-1"><i class="fa fa-exclamation-triangle me-1"></i>Last rebuild failed: <?= htmlspecialchars((string) ($hs['error'] ?? '')) ?> -- the previous file is still in use.</span>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                        <div class="d-flex align-items-center gap-2 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="ontologyRebuildBtn"><i class="fa fa-sync"></i> Rebuild now</button>
+                            <small class="text-muted" id="ontologyRebuildMsg"><?= $onto_check ? 'Last weekly check: ' . htmlspecialchars(substr((string) $onto_check, 0, 16)) . '.' : '' ?> Save your changes first; Rebuild uses the saved list.</small>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Cloudflare Turnstile -->
                 <div class="card adm-card mb-3" id="pnav-turnstile" data-nav-label="Cloudflare Turnstile">
                     <div class="card-header adm-head">

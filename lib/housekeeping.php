@@ -188,6 +188,12 @@ function housekeeping_task_registry(): array {
             'desc'  => 'Lists the third-party libraries the site ships (the front-end files in scripts/vendor_assets.txt and the Composer packages), verifies each file against its pinned checksum, and asks the OSV vulnerability database (osv.dev) about each exact version — at most once a week, or straight away when a version changes. Only package names and versions are sent.',
         ],
         [
+            'name'  => 'ontologies',
+            'fn'    => 'housekeeping_refresh_ontologies',
+            'label' => 'Ontologies (PAGE search)',
+            'desc'  => 'Keeps the ontology files (PLANA, BSPO, ECO -- Site Configuration -> Ontologies) current: once a week downloads each source\'s small releases.txt and rebuilds an ontology only when it changed, or when an admin pressed Rebuild now. Only ontologies already built on this site are refreshed, so a site that never used them pays nothing.',
+        ],
+        [
             'name'  => 'jbrowse_version',
             'fn'    => 'housekeeping_check_jbrowse_version',
             'label' => 'JBrowse2 version',
@@ -1963,6 +1969,22 @@ function moop_parse_apt_security(string $text): array {
  * leaves the previously known result in place rather than raising an alarm the admin cannot
  * act on. `latest` is simply absent until a check succeeds.
  */
+/**
+ * Ontology files (lib/ontologies.php): weekly release check, or now when an admin asked.
+ * Network at most once a week per source (releases.txt is a few bytes), and only in this
+ * background run -- never in a page request.
+ */
+function housekeeping_refresh_ontologies() {
+    require_once __DIR__ . '/ontologies.php';
+    $prev  = $_SESSION['ontologies'] ?? [];
+    $when  = $prev['checked_at'] ?? null;
+    $asked = is_file(moop_ontology_rebuild_marker());
+    if (!$asked && $when && (time() - (int) strtotime($when)) < 7 * 86400) return;
+    $result = ['checked_at' => date('c'), 'ontologies' => moop_ontology_refresh()];
+    $_SESSION['ontologies'] = $result;
+    housekeeping_persist_status('ontologies', $result);
+}
+
 function housekeeping_check_jbrowse_version() {
     $config    = ConfigManager::getInstance();
     $site_path = $config->getPath('site_path');
