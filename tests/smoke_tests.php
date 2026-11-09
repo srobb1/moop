@@ -4137,6 +4137,53 @@ ok(is_string(ConfigManager::checkOntologyList(['bad prefix!' => $_good['plana']]
    'settings: refused -- a bad prefix, or not a list at all');
 
 // ----------------------------------------------------------------------------
+group('PAGE curations: one read-only file per organism, nothing silently dropped');
+require_once "$BASE/lib/anatomy_expression.php";
+ok(moop_page_date('2021-06-16') === '2021-06-16' && moop_page_date('Wed Jun 16 18:34:23 2021') === '2021-06-16'
+   && moop_page_date('Thu Nov  4 11:33:20 2021') === '2021-11-04' && moop_page_date('soon') === '',
+   'dates: ISO and "Wed Jun 16 18:34:23 2021" both read as 2021-06-16; nonsense is not guessed');
+ok(moop_page_term_id('PLANA:0000016: pharynx (Synonym = foo') === 'PLANA:0000016' && moop_page_term_id('PLANA:0000044') === 'PLANA:0000044'
+   && moop_page_term_id('BSPO:0000063: dorsal side') === 'BSPO:0000063' && moop_page_term_id('pharynx') === '',
+   'term column: the id is taken, the free-text label ignored');
+$_pd = sys_get_temp_dir() . '/moop_page_' . getmypid(); @mkdir($_pd, 0777, true);
+$_h = implode("\t", MOOP_PAGE_COLUMNS) . "\n";
+$_row = fn($acc, $term, $eco = 'ECO:0001839', $pmid = '24737865', $date = '2021-06-16') =>
+        implode("\t", [$acc, $term, $eco, 'PLANA:0000024', 'PLANA:0004504', 'PLANA:0000136', '0000-0003-2569-1939', $pmid, $date]) . "\n";
+file_put_contents("$_pd/t.tsv", $_h
+    . $_row('DN293829', 'PLANA:0000016: pharynx')
+    . $_row('DN293829', 'PLANA:0000016: pharynx', 'ECO:0001839', '24737865', 'Wed Jun 16 18:34:23 2021')   // same curation, other date form
+    . $_row('SmedASXL_1', 'PLANA:0000418: head') . $_row('SmedASXL_1', 'PLANA:0000418: head region')        // relabelled term: same curation
+    . $_row('BK010975,', 'PLANA:0000105: secretory cell')
+    . $_row('26711341', 'PLANA:0000429: neoblast', 'ECO:0001839', '26711341')
+    . $_row('X1', 'PLANA:0000037: old eye') . $_row('X2', 'PLANA:0009999: made up') . $_row('X3', 'PLANA:0000016', 'Experimental Evidence')
+    . $_h . "too\tfew\tcolumns\n");
+$_known = ['PLANA:0000016' => ['obsolete' => 0, 'replaced_by' => null], 'PLANA:0000418' => ['obsolete' => 0, 'replaced_by' => null],
+           'PLANA:0000105' => ['obsolete' => 0, 'replaced_by' => null], 'PLANA:0000429' => ['obsolete' => 0, 'replaced_by' => null],
+           'PLANA:0000037' => ['obsolete' => 1, 'replaced_by' => 'PLANA:0000036']];
+$_pf = "$_pd/anatomy_expression.sqlite";
+$_r = moop_page_build_from_file('Test', "$_pd/t.tsv", $_known, ['24737865' => ['title' => 'T', 'authors' => 'A', 'journal' => 'J', 'year' => '2014']], 'test', $_pf);
+ok($_r['ok'] && $_r['counts']['rows_read'] === 9 && $_r['counts']['curations'] === 7,
+   'build: 9 rows read, the 2 entered-twice curations kept once (' . json_encode($_r['counts']) . ')');
+$_rv = $_r['review'];
+ok(isset($_rv['duplicate curation (kept once)']) && array_sum($_rv['duplicate curation (kept once)']) === 2,
+   'review: duplicates counted (a different date form or term label is still the same curation)');
+ok(isset($_rv['accession has punctuation or a space']['BK010975,']) && isset($_rv["accession is the paper's PMID (no sequence)"]['26711341']),
+   'review: a stray comma, and a PMID in the Accession column, are listed -- and still stored as curated');
+ok(isset($_rv['obsolete term (search follows its replacement)']['PLANA:0000037 -> PLANA:0000036']) && isset($_rv['term not in the anatomy ontologies']['PLANA:0009999'])
+   && isset($_rv['evidence is not an ECO code']['Experimental Evidence']) && isset($_rv['extra header line']) && isset($_rv['wrong number of columns']),
+   'review: obsolete and unknown terms, a non-ECO evidence code, a stray header and a short row are all listed');
+$_pdb = new PDO('sqlite:' . $_pf, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
+ok((int) $_pdb->query("SELECT copies FROM curation WHERE accession = 'DN293829'")->fetchColumn() === 2
+   && $_pdb->query("SELECT accession FROM curation WHERE accession LIKE 'BK010975%'")->fetchColumn() === 'BK010975,',
+   'build: the twice-entered curation says copies = 2; the comma is kept as curated (never "fixed")');
+$_pdb = null;
+$_before = md5_file($_pf);
+file_put_contents("$_pd/bad.tsv", "Accession\tTerm\n");
+ok(!moop_page_build_from_file('Test', "$_pd/bad.tsv", [], [], '', $_pf)['ok'] && md5_file($_pf) === $_before,
+   'build: a table without the 9 PAGE columns is refused; the previous file stays');
+exec('rm -rf ' . escapeshellarg($_pd));
+
+// ----------------------------------------------------------------------------
 group('Link prefix: every link starts with moop_url_base(), never the folder name');
 // The folder name and the start of a link are different things. A site served at its domain's
 // root ("/") must produce "/tools/...", never "//tools/..." (a link to a HOST named "tools").

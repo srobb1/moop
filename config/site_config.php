@@ -184,6 +184,16 @@ return [
     // Leave as '' and they go in a hidden organisms/.cache/ folder (moop_cache_root()).
     'cache_path' => '',
 
+    // ======== PAGE CURATIONS (where genes are expressed, by anatomy term) ========
+    // Per organism: the 9-column curation table in the PAGE repository. Built into
+    // organisms/<organism>/anatomy_expression.sqlite by scripts/build_anatomy_expression.php
+    // (lib/anatomy_expression.php). Files only from https://raw.githubusercontent.com/.
+    'anatomy_expression' => [
+        'Schmidtea_mediterranea' => [
+            'curations' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/curation/OUTPUT/term_annotations_2024-05-24.txt',
+        ],
+    ],
+
     // ======== ONTOLOGIES (PAGE search: PLANA anatomy, BSPO spatial, ECO evidence) ========
     // One read-only SQLite per ontology under <cache_path>/ontologies/, built by
     // scripts/build_ontologies.php or housekeeping from files a GitHub Action in planosphere/PAGE
