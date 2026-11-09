@@ -152,6 +152,25 @@ return [
         'pages'           => ['gene_set'],
     ],
 
+    'anatomy_search' => [
+        'id'              => 'anatomy_search',
+        'menu_label'      => 'Anatomical Expression Search',
+        'menu_order'      => 4.5,
+        'name'            => 'Anatomical Expression Search',
+        'icon'            => 'fa-microscope',
+        'description'     => 'Where genes were published as expressed: by body part, by paper, or by gene',
+        'btn_class'       => 'btn-tool-teal',
+        'url_path'        => '/tools/anatomy_search.php',
+        'context_params'  => ['organism'],
+        // Off on a site with no curated data (no organism has anatomy_expression.sqlite) --
+        // nothing in the menu, no toolbox button, its page a 404. Admin -> Manage Tools can still
+        // switch it off where there is data.
+        'available_if'    => 'moop_anatomical_expression_available',
+        // Toolbox: only on the organism page of an organism that HAS curations.
+        'required_params' => ['has_anatomical_expression'],
+        'pages'           => ['organism'],
+    ],
+
     'primer_maker' => [
         'id'             => 'primer_maker',
         'menu_label'      => 'Primer Maker',

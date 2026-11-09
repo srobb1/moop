@@ -225,6 +225,20 @@ function genome_fasta_filename(): string {
 // Defined HERE, not in lib/functions_tools.php: the navbar and the help modals that call it are
 // drawn on pages that never load that file (About, login). Defined there, it took both pages down
 // with a 500 for ~3 minutes on 2026-11-03. Every page loads this file before rendering anything.
+/**
+ * Does this site have curated anatomical expression data (lib/anatomy_expression.php)? The
+ * Anatomical Expression Search's 'available_if' -- file checks only, once per request.
+ */
+function moop_anatomical_expression_available(): bool {
+    static $yes = null;
+    if ($yes !== null) return $yes;
+    $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/');
+    foreach (array_keys(ConfigManager::getInstance()->getArray('anatomy_expression', [])) as $org) {
+        if (preg_match('/^[A-Za-z0-9_.-]+$/', (string) $org) && is_file("$base/$org/anatomy_expression.sqlite")) return $yes = true;
+    }
+    return $yes = false;
+}
+
 function moop_tool_on(string $tool_id): bool {
     return ConfigManager::getInstance()->isToolEnabled($tool_id);
 }

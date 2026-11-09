@@ -632,7 +632,20 @@ class ConfigManager
     public function isToolEnabled(string $tool_id): bool
     {
         $off = $this->config['tools_disabled'] ?? [];
-        return !(is_array($off) && in_array($tool_id, $off, true));
+        if (is_array($off) && in_array($tool_id, $off, true)) return false;
+        // 'available_if' (config/tools_config.php): a cheap check that this SITE has what the tool
+        // needs. A tool with nothing to show is off everywhere -- menu, toolbox, its own page --
+        // without anyone having to switch it off (cuttingclass changes stay opt-in).
+        $check = $this->tools[$tool_id]['available_if'] ?? null;
+        if (is_string($check) && function_exists($check) && !$check()) return false;
+        return true;
+    }
+
+    /** Switched off by an admin (Manage Tools), as opposed to unavailable for lack of data. */
+    public function isToolSwitchedOff(string $tool_id): bool
+    {
+        $off = $this->config['tools_disabled'] ?? [];
+        return is_array($off) && in_array($tool_id, $off, true);
     }
 
     /**
