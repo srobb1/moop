@@ -634,6 +634,81 @@
         </div>
     </div>
     <?php endif; ?>
+<?php if (!empty($page_section)):   /* at column 0, no blank line before: emits nothing at all when absent */
+        // PAGE: where this gene was published as expressed (curated, by anatomy term), and its ids in
+        // other transcriptomes. Built in tools/parent.php from anatomy_expression.sqlite + crosswalk.sqlite.
+        // A compact summary first (terms with counts); the records and the ids open on demand.
+        $__pc  = $page_section['curations'];
+        $__pl  = $page_section['labels'];
+        $__PL  = fn(?string $id) => $id === null || $id === '' ? '' : ($__pl[$id] ?? $id);
+        $__by_term = [];
+        foreach ($__pc as $__r) $__by_term[$__r['term_id']] = ($__by_term[$__r['term_id']] ?? 0) + 1;
+        arsort($__by_term);
+        $__papers = count(array_unique(array_column($__pc, 'pmid')));
+        $__aka_by = [];
+        foreach ($page_section['aka'] as $__m) $__aka_by[$__m['source']][] = $__m['accession'];
+    ?>
+    <!-- PAGE: curated anatomical expression -->
+    <div class="card shadow-sm mb-4" id="pnav-page" data-nav-label="Anatomical expression">
+        <div class="card-header d-flex align-items-center flex-wrap">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#pageSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Anatomical expression') ?>" title="<?= t('Show or hide Anatomical expression') ?>">
+                <i class="fas fa-microscope toggle-icon text-primary"></i>
+            </span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Anatomical expression') ?></span>
+            <span class="ms-2 text-muted small">
+                <?php if ($__pc): ?>
+                    <?= ($__papers !== 1 ? t('%1$d records in %2$d anatomy terms, from %3$d papers', count($__pc), count($__by_term), $__papers)
+                                         : t('%1$d records in %2$d anatomy terms, from %3$d paper', count($__pc), count($__by_term), $__papers)) . "\n" ?>
+                <?php else: ?>
+                    <?= t('no published expression records') . "\n" ?>
+                <?php endif; ?>
+            </span>
+        </div>
+        <div class="collapse show" id="pageSection">
+            <div class="card-body">
+                <?php if ($__pc): ?>
+                <p class="small text-muted mb-2"><?= t('Published as expressed in (curated by PAGE: Planarian Anatomy Gene Expression):') ?></p>
+                <div class="d-flex flex-wrap gap-1 mb-3">
+                    <?php foreach (array_slice($__by_term, 0, 40, true) as $__tid => $__n): ?>
+                        <a class="badge rounded-pill text-bg-light border text-decoration-none" href="<?= htmlspecialchars(moop_url('tools/anatomy_search.php') . '?' . http_build_query(['term' => $__tid, 'rel' => 'rdfs:subClassOf'])) ?>" title="<?= htmlspecialchars($__tid) ?>"><?= htmlspecialchars($__PL($__tid)) ?> <span class="text-muted"><?= (int) $__n ?></span></a>
+                    <?php endforeach; ?>
+                    <?php if (count($__by_term) > 40): ?><span class="small text-muted"><?= t('and %d more', count($__by_term) - 40) ?></span><?php endif; ?>
+                </div>
+                <details class="mb-3">
+                    <summary class="small"><?= t('Show all %d records', count($__pc)) ?></summary>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-striped align-middle small mb-0">
+                            <thead><tr><th><?= t('Expressed in') ?></th><th><?= t('Evidence') ?></th><th><?= t('Life stage') ?></th><th><?= t('Recorded on') ?></th><th><?= t('Paper') ?></th></tr></thead>
+                            <tbody>
+                            <?php foreach ($__pc as $__r): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($__PL($__r['term_id'])) ?></td>
+                                    <td><?= htmlspecialchars($__PL($__r['evidence_id'])) ?></td>
+                                    <td><?= htmlspecialchars($__PL($__r['stage_id'])) ?></td>
+                                    <td class="font-monospace"><?= htmlspecialchars($__r['accession']) ?></td>
+                                    <td><a href="https://pubmed.ncbi.nlm.nih.gov/<?= rawurlencode((string) $__r['pmid']) ?>/" target="_blank" rel="noopener" title="<?= htmlspecialchars((string) $__r['title']) ?>"><?= htmlspecialchars(trim(($__r['authors'] ?: 'PMID ' . $__r['pmid']) . ' ' . $__r['year'])) ?></a></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+                <?php endif; ?>
+                <?php if ($__aka_by): ?>
+                <details>
+                    <summary class="small"><?= t('Also known as: %1$d ids in %2$d other transcriptomes and datasets', count($page_section['aka']), count($__aka_by)) ?><?= $page_section['name'] !== '' ? ' <span class="text-muted">(' . htmlspecialchars(t_plain($page_section['name'])) . ')</span>' : '' ?></summary>
+                    <dl class="row small mb-0 mt-2">
+                        <?php foreach ($__aka_by as $__src => $__ids): ?>
+                            <dt class="col-sm-3 font-monospace"><?= htmlspecialchars($__src) ?></dt>
+                            <dd class="col-sm-9 font-monospace"><?= htmlspecialchars(implode(' ', array_slice(array_unique($__ids), 0, 50))) ?><?= count(array_unique($__ids)) > 50 ? ' …' : '' ?></dd>
+                        <?php endforeach; ?>
+                    </dl>
+                </details>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Annotations Section -->
     <div class="card shadow-sm mb-4" id="pnav-annotations" data-nav-label="Annotations">

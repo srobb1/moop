@@ -596,10 +596,39 @@ if ($download_expression && $__expr_data && $__expr_data['values']) {
     exit;
 }
 
+// PAGE: curated anatomical expression for this gene, and its ids elsewhere ("also known as").
+// The crosswalk (Rosetta Stone) finds every accession mapped to this gene or its transcripts;
+// curations recorded on any of them are listed. Only for organisms that have these files --
+// on any other organism this is two file checks and nothing more.
+require_once __DIR__ . '/../lib/anatomy_expression.php';
+require_once __DIR__ . '/../lib/crosswalk.php';
+$page_section = null;
+if (moop_crosswalk_open($organism_name) || moop_page_open($organism_name)) {
+    $__self    = array_merge([$feature_uniquename], array_column($children, 'feature_uniquename'));
+    // A page whose ids are crosswalk ACCESSIONS (a dd_v6 gene, say) first reaches its reference
+    // gene(s), so it shows the same records as that gene -- not only ones curated on its own ids.
+    $__refs    = [];
+    foreach (moop_crosswalk_genes($organism_name, $__self) as $__rows) $__refs = array_merge($__refs, array_column($__rows, 'ref_id'));
+    $__members = moop_crosswalk_members($organism_name, array_merge($__self, $__refs));
+    $__accs    = array_merge($__self, array_column($__members, 'accession'));
+    $__cur     = moop_page_for_accessions($organism_name, $__accs);
+    $__ids     = [];
+    foreach ($__cur as $__r) array_push($__ids, $__r['term_id'], $__r['stage_id']);
+    $page_section = [
+        'curations' => $__cur,
+        'labels'    => moop_ontology_labels($__ids, moop_ontology_by_purpose('anatomy'))
+                     + moop_ontology_labels(array_column($__cur, 'evidence_id'), moop_ontology_by_purpose('evidence')),
+        'aka'       => array_values(array_filter($__members, fn($m) => !in_array($m['accession'], $__self, true))),
+        'name'      => (string) (moop_crosswalk_sources()[$organism_name]['name'] ?? ''),
+    ];
+    if (!$page_section['curations'] && !$page_section['aka']) $page_section = null;
+}
+
 // Render page using layout system
 echo render_display_page(
     __DIR__ . '/pages/parent.php',
     [
+        'page_section' => $page_section,
         'organism_name' => $organism_name,
         'feature_id' => $feature_id,
         'feature_uniquename' => $feature_uniquename,

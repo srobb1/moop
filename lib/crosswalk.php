@@ -210,3 +210,22 @@ function moop_crosswalk_gene_links(string $organism, array $accessions): array {
     }
     return $out;
 }
+
+/**
+ * Reverse lookup for a gene page: every accession mapped to any of $ref_ids (the gene and its
+ * transcripts), [['accession', 'source', 'ref_id', 'hub'], ...] sorted by source then accession.
+ */
+function moop_crosswalk_members(string $organism, array $ref_ids): array {
+    $db = moop_crosswalk_open($organism);
+    $ids = array_values(array_unique(array_filter($ref_ids, 'strlen')));
+    if (!$db || !$ids) return [];
+    $out = [];
+    foreach (array_chunk($ids, 500) as $chunk) {
+        $st = $db->prepare('SELECT DISTINCT accession, source, ref_id, hub FROM map WHERE ref_id IN ('
+                           . implode(',', array_fill(0, count($chunk), '?')) . ')');
+        $st->execute($chunk);
+        $out = array_merge($out, $st->fetchAll(PDO::FETCH_ASSOC));
+    }
+    usort($out, fn($a, $b) => [$a['source'], $a['accession']] <=> [$b['source'], $b['accession']]);
+    return $out;
+}

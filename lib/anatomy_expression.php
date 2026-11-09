@@ -318,3 +318,21 @@ function moop_page_evidence_choices(string $organism): array {
     foreach ($used as $code => $n) $out[] = ['id' => $code, 'label' => $labels[$code] ?? $code, 'group' => false, 'count' => $n, 'members' => [$code]];
     return $out;
 }
+
+/** Curations recorded on any of $accessions (case-insensitive), with their papers. Read-only. */
+function moop_page_for_accessions(string $organism, array $accessions, int $limit = 2000): array {
+    $db = moop_page_open($organism);
+    $lc = array_values(array_unique(array_map('mb_strtolower', array_filter($accessions, 'strlen'))));
+    if (!$db || !$lc) return [];
+    $out = [];
+    foreach (array_chunk($lc, 500) as $chunk) {
+        $st = $db->prepare('SELECT c.accession, c.term_id, c.evidence_id, c.stage_id, c.specimen_id, c.pmid, c.curated_on,
+                                   p.title, p.authors, p.journal, p.year
+                              FROM curation c LEFT JOIN publication p ON p.pmid = c.pmid
+                             WHERE c.accession_lc IN (' . implode(',', array_fill(0, count($chunk), '?')) . ')');
+        $st->execute($chunk);
+        $out = array_merge($out, $st->fetchAll(PDO::FETCH_ASSOC));
+    }
+    usort($out, fn($a, $b) => [$b['year'], $a['term_id']] <=> [$a['year'], $b['term_id']]);
+    return array_slice($out, 0, $limit);
+}
