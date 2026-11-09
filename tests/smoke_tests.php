@@ -4091,6 +4091,21 @@ $_e = moop_ontology_expand('PLANA', 'PLANA:0000036', ['BFO:0000050']); sort($_e)
 ok($_e === ['PLANA:0000017', 'PLANA:0000036', 'PLANA:0002092'], 'expand: "part of the eye" = the eye + everything part of it, at any depth');
 $_e = moop_ontology_expand('PLANA', 'PLANA:0000099', []); sort($_e);
 ok($_e === ['PLANA:0000017', 'PLANA:0000099'], 'expand: with no relation, the term and its subclasses');
+// Purposes: code asks for "the anatomy ontologies", never PLANA by name; only offered relations count.
+$_oc['ontologies'] = ['PLANA' => ['purpose' => 'anatomy', 'search' => true, 'terms' => 'x', 'closure' => 'x',
+                                  'relations' => ['rdfs:subClassOf', 'BFO:0000050']],
+                      'ECO'   => ['purpose' => 'evidence', 'search' => false, 'terms' => 'x']];
+$_orp->setValue($_ocfg, $_oc);
+ok(moop_ontology_by_purpose('anatomy') === ['PLANA'] && moop_ontology_by_purpose('evidence') === ['ECO'],
+   'purpose: ontologies are found by what they are for');
+ok(moop_ontology_relations('anatomy') === ['rdfs:subClassOf' => 'is a', 'BFO:0000050' => 'part of'],
+   'purpose: the offered relationships, named from the ontology');
+$_e = moop_ontology_expand_in('anatomy', 'PLANA:0000036', ['BFO:0000050', 'RO:0002131']); sort($_e);
+ok($_e === ['PLANA:0000017', 'PLANA:0000036', 'PLANA:0002092'], 'expand_in: part of the eye, through the anatomy ontologies');
+ok(moop_ontology_expand_in('anatomy', 'PLANA:0000036', ['RO:0002131']) === ['PLANA:0000036'],
+   'expand_in: a relationship the search does not offer is ignored');
+ok(moop_ontology_labels(['PLANA:0000036', 'PLANA:0000017', 'nope'], ['PLANA']) == ['PLANA:0000036' => 'eye', 'PLANA:0000017' => 'photoreceptor neuron'],
+   'labels: many names at once; unknown ids are left out');
 $_orp->setValue($_ocfg, $_osaved);
 exec('rm -rf ' . escapeshellarg($_od));
 

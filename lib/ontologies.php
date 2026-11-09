@@ -413,3 +413,59 @@ function moop_ontology_refresh(bool $force = false): array {
     if ($force) @unlink($marker);
     return $out;
 }
+
+/** Prefixes of the configured ontologies with this purpose (anatomy, phenotype, evidence, names). */
+function moop_ontology_by_purpose(string $purpose, bool $search_only = false): array {
+    return array_keys(array_filter(moop_ontology_sources(), fn($o) => ($o['purpose'] ?? '') === $purpose
+                                   && (!$search_only || !empty($o['search']))));
+}
+
+/**
+ * The relationships a search of this purpose offers, [id => name], from the configured rows of
+ * that purpose; names come from the ontologies themselves ("is a" is the one built in).
+ */
+function moop_ontology_relations(string $purpose): array {
+    $prefixes = moop_ontology_by_purpose($purpose);
+    $out = [];
+    foreach ($prefixes as $p) {
+        foreach ((array) (moop_ontology_sources()[$p]['relations'] ?? []) as $rel) {
+            if (!isset($out[$rel])) $out[$rel] = moop_ontology_label($rel, $prefixes) ?: $rel;
+        }
+    }
+    return $out;
+}
+
+/**
+ * Expand a term within a purpose: the term, its subclasses, and everything related to it by
+ * $relations, at any depth -- from EVERY ontology of that purpose that has a link tree. A BSPO
+ * term ("dorsal side") expands through PLANA's tree, which includes the BSPO terms PLANA imports.
+ * Only relationships the purpose offers are used. Returns a list of ids.
+ */
+function moop_ontology_expand_in(string $purpose, string $term_id, array $relations): array {
+    $allowed = array_intersect($relations, array_keys(moop_ontology_relations($purpose)));
+    $ids = [$term_id];
+    foreach (moop_ontology_by_purpose($purpose) as $p) {
+        if (empty(moop_ontology_sources()[$p]['closure'])) continue;
+        $ids = array_merge($ids, moop_ontology_expand($p, $term_id, $allowed));
+    }
+    return array_values(array_unique($ids));
+}
+
+/** Names for many ids at once, [id => name], from the given ontologies (first that knows it). */
+function moop_ontology_labels(array $ids, array $prefixes): array {
+    $out  = [];
+    $want = array_values(array_unique(array_filter($ids, fn($i) => preg_match(MOOP_ONTOLOGY_ID_RE, (string) $i))));
+    foreach ($prefixes as $p) {
+        if (!$want) break;
+        $db = moop_ontology_open($p);
+        if (!$db) continue;
+        foreach (array_chunk($want, 500) as $chunk) {
+            $st = $db->prepare('SELECT id, label FROM term WHERE label IS NOT NULL AND id IN ('
+                               . implode(',', array_fill(0, count($chunk), '?')) . ')');
+            $st->execute($chunk);
+            foreach ($st->fetchAll(PDO::FETCH_KEY_PAIR) as $id => $l) $out[$id] = $l;
+        }
+        $want = array_values(array_diff($want, array_keys($out)));
+    }
+    return $out;
+}
