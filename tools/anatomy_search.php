@@ -8,6 +8,7 @@
  */
 include_once __DIR__ . '/tool_init.php';
 require_once __DIR__ . '/../lib/anatomy_expression.php';
+require_once __DIR__ . '/../lib/crosswalk.php';
 include_once __DIR__ . '/../includes/layout.php';
 
 $relations = moop_ontology_relations('anatomy');
@@ -27,7 +28,7 @@ if (!isset($relations[$rel])) $rel = isset($relations['BFO:0000050']) ? 'BFO:000
 $evidence_choices = $organism ? moop_page_evidence_choices($organism) : [];
 $ev = (string) ($_GET['ev'] ?? '');
 
-$result = null; $term_label = ''; $labels = []; $covered = 0;
+$result = null; $term_label = ''; $labels = []; $covered = 0; $genes = [];
 if ($organism && preg_match(MOOP_ONTOLOGY_ID_RE, $term)) {
     $ids     = moop_ontology_expand_in('anatomy', $term, [$rel]);
     $covered = count($ids) - 1;
@@ -39,11 +40,13 @@ if ($organism && preg_match(MOOP_ONTOLOGY_ID_RE, $term)) {
     $labels  = moop_ontology_labels($want, $anatomy)
              + moop_ontology_labels(array_column($result['rows'], 'evidence_id'), moop_ontology_by_purpose('evidence'));
     $term_label = $labels[$term] ?? $term;
+    // Each transcript's reference gene (Rosetta Stone / crosswalk), linked to its gene page.
+    $genes = moop_crosswalk_gene_links($organism, array_column($result['rows'], 'accession'));
 }
 
 echo render_display_page(__DIR__ . '/pages/anatomy_search.php', [
     'relations' => $relations, 'releases' => $releases, 'organism' => $organism,
     'term' => $term, 'term_label' => $term_label, 'rel' => $rel, 'ev' => $ev,
-    'evidence_choices' => $evidence_choices, 'result' => $result, 'labels' => $labels, 'covered' => $covered,
+    'evidence_choices' => $evidence_choices, 'result' => $result, 'labels' => $labels, 'covered' => $covered, 'genes' => $genes,
     'page_script' => [moop_url_base() . '/js/modules/ontology-term-box.js', moop_url_base() . '/js/anatomy-search.js'],
 ], 'PAGE: search by anatomy');

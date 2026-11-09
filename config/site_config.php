@@ -194,6 +194,25 @@ return [
         ],
     ],
 
+    // ======== CROSSWALK (ID mappings; simrbase: Planosphere's Rosetta Stone) ========
+    // Per organism: a folder of 3-column mapping files (seq_id, ref_id, seq_id_source) made on the
+    // compute side, and the HUBS -- reference gene sets every accession maps to. A hub with a
+    // 'gene_set' (and 'assembly') loaded in this MOOP links to gene pages. Built into
+    // organisms/<organism>/crosswalk.sqlite by scripts/build_crosswalk.php (lib/crosswalk.php).
+    'crosswalk' => [
+        'Schmidtea_mediterranea' => [
+            'name'   => 'Rosetta Stone Transcript Mapper',
+            'folder' => '/var/www/html/.planophere_notes/smr_reformat_for_blaze_load',
+            'hubs'   => [
+                'S2F19H1_WBPS19_genes' => ['file' => 'S2F19H1_WBPS19_genes.mapping', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19'],
+                'S2F19H2_WBPS19_genes' => ['file' => 'S2F19H2_WBPS19_genes.mapping'],   // haplotype 2: not loaded in simrbase
+                // SMED3 transcripts: some accessions reach one but no h1 gene (dd_Smed_v4_12_0_1 ->
+                // SMED30005911), so it is a hub too -- the old Rosetta page's smed_20140614 column.
+                'smed_20140614'        => ['file' => 'smed_20140614.mapping', 'assembly' => 'smed_20140614', 'gene_set' => 'smed_20140614'],
+            ],
+        ],
+    ],
+
     // ======== ONTOLOGIES (PAGE search: PLANA anatomy, BSPO spatial, ECO evidence) ========
     // One read-only SQLite per ontology under <cache_path>/ontologies/, built by
     // scripts/build_ontologies.php or housekeeping from files a GitHub Action in planosphere/PAGE

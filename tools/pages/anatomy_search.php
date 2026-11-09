@@ -2,7 +2,8 @@
 /**
  * PAGE search by anatomy -- content file (controller: tools/anatomy_search.php).
  * Variables: $relations [id => name], $releases [prefix => release], $organism, $term, $term_label,
- *            $rel, $ev, $evidence_choices, $result (null before a search), $labels [id => name], $covered
+ *            $rel, $ev, $evidence_choices, $result (null before a search), $labels [id => name], $covered,
+ *            $genes [accession_lc => ['show' => [[id, url, external]], 'all' => [ids]]] (crosswalk)
  */
 $L = fn(?string $id) => $id === null || $id === '' ? '' : ($labels[$id] ?? $id);
 ?>
@@ -93,13 +94,17 @@ $L = fn(?string $id) => $id === null || $id === '' ? '' : ($labels[$id] ?? $id);
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle" id="pageResults" style="width:100%">
           <thead><tr>
-            <th><?= t('Transcript') ?></th><th><?= t('Expressed in') ?></th><th><?= t('Evidence') ?></th>
+            <th><?= t('Transcript') ?></th><th><?= t('Gene') ?></th><th><?= t('Expressed in') ?></th><th><?= t('Evidence') ?></th>
             <th><?= t('Life stage') ?></th><th><?= t('Paper') ?></th><th><?= t('Curated') ?></th>
           </tr></thead>
           <tbody>
           <?php foreach ($result['rows'] as $r): ?>
             <tr>
               <td class="font-monospace small"><?= htmlspecialchars($r['accession']) ?></td>
+              <?php $g = $genes[mb_strtolower($r['accession'])] ?? null; ?>
+              <td class="font-monospace small"<?= $g && count($g['all']) > 1 ? ' title="' . htmlspecialchars(implode(' ', $g['all'])) . '"' : '' ?>>
+                <?php if (!$g): ?><span class="text-muted">&ndash;</span><?php else: foreach (array_slice($g['show'], 0, 2) as $i => $x): ?><?= $i ? ' ' : '' ?><a href="<?= htmlspecialchars($x['url']) ?>"<?= $x['external'] ? ' target="_blank" rel="noopener"' : '' ?>><?= htmlspecialchars($x['id']) ?></a><?php endforeach; ?><?= count($g['show']) > 2 ? ' <span class="text-muted">+' . (count($g['show']) - 2) . '</span>' : '' ?><?php endif; ?>
+              </td>
               <td><?= htmlspecialchars($L($r['term_id'])) ?> <span class="text-muted small font-monospace"><?= htmlspecialchars($r['term_id']) ?></span></td>
               <td class="small"><?= htmlspecialchars($L($r['evidence_id'])) ?></td>
               <td class="small"><?= htmlspecialchars($L($r['stage_id'])) ?></td>

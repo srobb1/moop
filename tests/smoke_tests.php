@@ -4184,6 +4184,42 @@ ok(!moop_page_build_from_file('Test', "$_pd/bad.tsv", [], [], '', $_pf)['ok'] &&
 exec('rm -rf ' . escapeshellarg($_pd));
 
 // ----------------------------------------------------------------------------
+group('Crosswalk (Rosetta Stone): any ID -> its reference gene, linked when the gene is in MOOP');
+require_once "$BASE/lib/crosswalk.php";
+$_xd = sys_get_temp_dir() . '/moop_xw_' . getmypid(); @mkdir($_xd, 0777, true);
+$_xh = "seq_id\tref_id\tseq_id_source\n";
+file_put_contents("$_xd/h1.mapping", $_xh . "DN293829\th1SMcG0000008\tncbi\nSMED30000001\th1SMcG0000008\tsmed_20140614\nX\t\"NA\"\tncbi\nbad row\n");
+file_put_contents("$_xd/h2.mapping", $_xh . "DN293829\th2SMcG0000005\tncbi\nOnlyH2\th2SMcG0000099\tncbi\n");
+file_put_contents("$_xd/smed.mapping", $_xh . "dd_Smed_v4_12_0_1\tSMED30005911\tdd_Smed_v4\n");
+$_xf = "$_xd/crosswalk.sqlite";
+$_r = moop_crosswalk_build_from_files('Test', ['H1' => "$_xd/h1.mapping", 'H2' => "$_xd/h2.mapping", 'SMED' => "$_xd/smed.mapping"], $_xf);
+ok($_r['ok'] && $_r['counts']['rows'] === 5 && $_r['skipped'] === 2, 'build: mappings loaded; "NA" and malformed rows skipped (' . json_encode($_r['counts']) . ')');
+$_before = md5_file($_xf);
+file_put_contents("$_xd/bad.mapping", "a\tb\n");
+ok(!moop_crosswalk_build_from_files('Test', ['H1' => "$_xd/bad.mapping"], $_xf)['ok'] && md5_file($_xf) === $_before,
+   'build: a file without the seq_id/ref_id/seq_id_source header is refused; the previous file stays');
+// Lookups through the normal path: organism_data -> the temp dir, a config naming the hubs.
+$_xc = ConfigManager::getInstance(); $_xrp = new ReflectionProperty($_xc, 'config'); $_xrp->setAccessible(true);
+$_xs = $_xrp->getValue($_xc); $_xn = $_xs; $_xn['organism_data'] = $_xd;
+$_xn['crosswalk'] = ['Test' => ['folder' => $_xd, 'hubs' => ['H1' => ['file' => 'h1.mapping', 'assembly' => 'asmH1', 'gene_set' => 'gsH1'],
+                                                             'SMED' => ['file' => 'smed.mapping', 'assembly' => 'smed', 'gene_set' => 'smed'],
+                                                             'H2' => ['file' => 'h2.mapping']]]];
+$_xrp->setValue($_xc, $_xn); @mkdir("$_xd/Test"); rename($_xf, "$_xd/Test/crosswalk.sqlite");
+$_g = moop_crosswalk_genes('Test', ['dn293829']);
+ok(count($_g['dn293829'] ?? []) === 2, 'lookup: case-insensitive, and an accession can reach several hubs');
+$_l = moop_crosswalk_gene_links('Test', ['DN293829', 'OnlyH2', 'dd_Smed_v4_12_0_1', 'nothing']);
+ok(($_l['dn293829']['show'][0]['id'] ?? '') === 'h1SMcG0000008' && count($_l['dn293829']['show']) === 1
+   && strpos($_l['dn293829']['show'][0]['url'], 'tools/parent.php?organism=Test&uniquename=h1SMcG0000008&assembly=asmH1&gene_set=gsH1') !== false,
+   'links: the preferred hub (h1) is shown, linked to its MOOP gene page');
+ok(($_l['dd_smed_v4_12_0_1']['show'][0]['id'] ?? '') === 'SMED30005911' && !$_l['dd_smed_v4_12_0_1']['show'][0]['external'],
+   'links: no h1 gene -> the SMED3 transcript, also a MOOP gene page');
+ok(($_l['onlyh2']['show'][0]['external'] ?? false) === true && strpos($_l['onlyh2']['show'][0]['url'], 'parasite.wormbase.org') !== false,
+   'links: a hub not loaded in MOOP (h2) links out to WormBase ParaSite');
+ok(!isset($_l['nothing']), 'links: an accession with no mapping gets none');
+$_xrp->setValue($_xc, $_xs);
+exec('rm -rf ' . escapeshellarg($_xd));
+
+// ----------------------------------------------------------------------------
 group('Link prefix: every link starts with moop_url_base(), never the folder name');
 // The folder name and the start of a link are different things. A site served at its domain's
 // root ("/") must produce "/tools/...", never "//tools/..." (a link to a HOST named "tools").
