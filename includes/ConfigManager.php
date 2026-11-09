@@ -152,6 +152,10 @@ class ConfigManager
                             // then overrode secrets.php — a rotated secret was silently ignored.
                             $ts = $editable_config[$key];
                             unset($ts['secret_key']);
+                            // An EMPTY site key saved from the form means "not set here" -- the same
+                            // rule as every other setting -- so a site key kept in secrets.php is not
+                            // blanked by an empty box (cuttingclass, 2026-11-09).
+                            if (trim((string) ($ts['site_key'] ?? '')) === '') unset($ts['site_key']);
                             $this->config[$key] = array_merge($this->config[$key] ?? [], $ts);
                         } else {
                             $this->config[$key] = $editable_config[$key];

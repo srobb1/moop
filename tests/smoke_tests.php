@@ -522,6 +522,20 @@ ok($_d->isShippedDefault('theme_colors', []) && $_d->isShippedDefault('technical
                                                'theme_colors' => [], 'turnstile' => $_d->getArray('turnstile')]);
 ok(array_keys($_keep) === ['blast_max_hits', 'turnstile'] && $_drop === ['blast_max_runtime', 'theme_colors'],
    'prune: defaults dropped, real changes kept, merged settings (turnstile) never pruned');
+// Turnstile: an EMPTY site key saved from the form must not blank one kept in secrets.php
+// (cuttingclass 2026-11-09: the key was in secrets.php, the saved box was "", and the empty value
+// won -- Turnstile would have checked no one once switched on). A key typed in the box still wins.
+$_tsav = file_get_contents("$_td/config_editable.json");
+file_put_contents("$_td/secrets.php", "<?php return ['turnstile' => ['site_key' => '0xFROMSECRETS', 'secret_key' => '0xSECRET']];");
+file_put_contents("$_td/config_editable.json", '{"turnstile":{"enabled":false,"site_key":""}}');
+$_tsc = $_tnew()->getArray('turnstile');
+ok(($_tsc['site_key'] ?? '') === '0xFROMSECRETS' && ($_tsc['secret_key'] ?? '') === '0xSECRET',
+   'Turnstile: an empty site-key box keeps the key from secrets.php');
+file_put_contents("$_td/config_editable.json", '{"turnstile":{"enabled":false,"site_key":"0xFROMBOX","secret_key":"0xSTALE"}}');
+$_tsc = $_tnew()->getArray('turnstile');
+ok(($_tsc['site_key'] ?? '') === '0xFROMBOX' && ($_tsc['secret_key'] ?? '') === '0xSECRET',
+   'Turnstile: a site key typed in the box wins; the secret only ever comes from secrets.php');
+unlink("$_td/secrets.php"); file_put_contents("$_td/config_editable.json", $_tsav);
 file_put_contents("$_td/config_editable.json", json_encode(['blast_max_runtime' => '150', 'blast_max_hits' => '2000', 'tools_disabled' => ['moopmart', 'genome_browser']]));
 $_d->saveEditableConfig($_keep, $_td, $_drop);
 $_onfile = json_decode((string) file_get_contents("$_td/config_editable.json"), true);

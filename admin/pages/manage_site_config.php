@@ -538,7 +538,46 @@
                         <input type="text" class="form-control form-control-sm font-monospace"
                                name="turnstile[site_key]" placeholder="0x4AAAA…"
                                value="<?= htmlspecialchars($editable_config['turnstile']['current_value']['site_key'] ?? '') ?>">
-                        <small class="text-muted d-block mt-1">The secret key is stored in <code>config/secrets.php</code> and is never shown here.</small>
+                        <?php
+                        // Where the keys actually come from, and whether they are set -- never their values.
+                        // The secret can only live in config/secrets.php (never in the browser or this form);
+                        // the site key may be here or there. lib/human_check.php switches the check OFF,
+                        // silently, unless both are set -- so say so when "enabled" is ticked without them.
+                        $ts_eff       = $config->getArray('turnstile', []);
+                        $ts_file      = rtrim($config->getPath('site_path'), '/') . '/config/secrets.php';
+                        $ts_file_ok   = is_file($ts_file);
+                        $ts_secret_ok = trim((string) ($ts_eff['secret_key'] ?? '')) !== '';
+                        $ts_site_ok   = trim((string) ($ts_eff['site_key'] ?? '')) !== '';
+                        $ts_site_here = trim((string) ($editable_config['turnstile']['current_value']['site_key'] ?? '')) !== '';
+                        ?>
+                        <ul class="list-unstyled small mt-3 mb-2">
+                            <li><i class="fa fa-<?= $ts_secret_ok ? 'check text-success' : 'times text-danger' ?> me-1"></i>
+                                <strong>Secret key</strong> <?= $ts_secret_ok ? 'is set' : 'is not set' ?> &mdash; it can only go in
+                                <code><?= htmlspecialchars($ts_file) ?></code><?= $ts_file_ok ? '' : ' (this file does not exist yet)' ?>. Never shown here.</li>
+                            <li><i class="fa fa-<?= $ts_site_ok ? 'check text-success' : 'times text-danger' ?> me-1"></i>
+                                <strong>Site key</strong> <?= $ts_site_ok ? ($ts_site_here ? 'is set in the box above' : 'is set in that file (the box above may be left empty)') : 'is not set &mdash; paste it in the box above' ?>.</li>
+                        </ul>
+                        <?php if (!empty($ts_eff['enabled']) && !($ts_secret_ok && $ts_site_ok)): ?>
+                            <div class="alert alert-warning small py-2 mb-2"><i class="fa fa-exclamation-triangle me-1"></i>
+                                Turnstile is switched on but a key is missing, so <strong>no visitor is being checked</strong>.</div>
+                        <?php endif; ?>
+                        <?php if (!$ts_secret_ok): ?>
+                            <details class="small">
+                                <summary>How to add the secret key</summary>
+                                <ol class="mt-2 mb-0">
+                                    <li>In the Cloudflare dashboard, open Turnstile and the widget for this site's host name, and copy its <strong>secret key</strong>.</li>
+                                    <?php if (!$ts_file_ok): ?>
+                                    <li>On the server, create the file from its template, readable by the web server only:
+                                        <pre class="bg-light p-2 rounded mt-1 mb-1">cd <?= htmlspecialchars(rtrim($config->getPath('site_path'), '/')) ?>
+
+cp config/secrets.php.example config/secrets.php
+chmod 640 config/secrets.php &amp;&amp; chgrp <?= htmlspecialchars(function_exists('getWebServerUser') ? (string) (getWebServerUser()['group'] ?? 'apache') : 'apache') ?> config/secrets.php</pre></li>
+                                    <?php endif; ?>
+                                    <li>Edit <code><?= htmlspecialchars($ts_file) ?></code> and paste it as <code>'secret_key' =&gt; '…'</code> under <code>'turnstile'</code>.</li>
+                                    <li>Reload this page: the line above turns green. The file is never committed to git, the web server refuses to serve it, and the site-data backup keeps a private copy.</li>
+                                </ol>
+                            </details>
+                        <?php endif; ?>
                     </div>
                 </div>
 
