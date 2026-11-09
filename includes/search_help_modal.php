@@ -109,8 +109,9 @@ echo help_modal(
             'cards'   => [
                 [
                     'label' => 'Gene and transcript IDs first',
-                    'text'  => 'A single term is checked against feature identifiers first. If it '
-                             . 'matches one, those are your results.',
+                    'text'  => 'A single word is first compared with gene and transcript IDs, and it '
+                             . 'matches anywhere in an ID, including the middle. If any ID contains it, '
+                             . 'those IDs are your results and annotations are not searched.',
                 ],
                 [
                     'label' => 'Then annotations',

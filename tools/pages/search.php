@@ -45,7 +45,11 @@
           'heading' => '',
           'cards'   => [
               ['num' => '1', 'label' => 'Type what you are looking for',
-               'text' => 'A gene or transcript ID, or a keyword from an annotation. Three characters minimum.'],
+               'text' => 'A gene or transcript ID, or a keyword from an annotation. Two characters minimum. '
+                       . 'A single word is checked against IDs first: if any ID contains it, you get those IDs '
+                       . 'and annotations are not searched.'
+                       . (moop_tool_on('moopmart') ? ' To search annotations only, without the ID check, use '
+                                                    . 'MOOPmart: Data Exporter and its By Annotation list.' : '')],
               ['num' => '2', 'label' => 'Choose organisms',
                'text' => 'Pick the organisms to look in. Searching is per organism, so choosing only the ones '
                        . 'you need is what keeps it fast.'],
