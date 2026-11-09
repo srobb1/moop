@@ -61,11 +61,19 @@ that stops matching gives no error, it just stops protecting.**
 - [ ] **Set `link_prefix` to `"/"`** in that site's `config/config_editable.json` — same moment
       as the nginx reload.
 - [ ] **Tracks server CORS** — allow the new origin (`map $http_origin`), or JBrowse tracks fail.
-- [ ] **robots.txt** — written for `/moop/` and served to EVERY host from moop's copy
-      (`moop-ratelimit.conf`: `alias /var/www/html/moop/robots.txt`). Each site at its own
-      address needs its own, with its own paths (cuttingclass: `Disallow: /tools/parent.php` etc.).
-- [ ] **Turnstile human check — turn it ON for cuttingclass at launch** (built, off; add the host
-      name in Cloudflare). Measured 2026-11-09: a link-following bot finds only 50 of ~77,000
+- [ ] **robots.txt** — belongs to a HOST, and today every host gets moop's copy
+      (`moop-ratelimit.conf`: `alias /var/www/html/moop/robots.txt`), written for `/moop/`.
+      Generate the host's file: `php scripts/build_robots.php /var/www/html/cuttingclass >
+      <file>` (several site folders for a host serving several sites), and point that host's
+      `location = /robots.txt` at it. The repo's robots.txt stays the one source of the rules.
+      Until then, `/cuttingclass/` on simrbase-dev has no robots rules at all (harmless while that
+      name only resolves inside Stowers).
+- [ ] **Turnstile human check — turn it ON for cuttingclass at launch** (built, off).
+      Cloudflare dashboard → Turnstile → a NEW widget for cuttingclass (its own keys; simrbase
+      keeps its own). Hostnames: `cuttingclass.stowers.org` (+ `simrbase-dev.stowers.org` only
+      to test before the move; remove after). Turnstile checks the HOST NAME, never the path, and
+      takes no IP addresses. Keys go in `cuttingclass/config/secrets.php` (`turnstile.site_key`,
+      `turnstile.secret_key`; the file does not exist yet), then `enabled` in Site Configuration. Measured 2026-11-09: a link-following bot finds only 50 of ~77,000
       cuttingclass gene pages (all from the Primers page), so the Tripal-style crawl does not work;
       a bot that takes IDs from a Downloads FASTA is held to 2 pages/s per address by nginx, but a
       crawler spread over thousands of addresses (the pattern on the Tripal sites) is only stopped

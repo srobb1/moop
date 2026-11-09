@@ -2,6 +2,10 @@
 #
 # Served at /robots.txt by nginx (docs/nginx/moop-ratelimit.conf), from this file in the repo.
 #
+# This file is ALSO the template for every other site and address: scripts/build_robots.php
+# rewrites "/moop/" to each site's link prefix (e.g. "/" for a site at its own domain) and can
+# combine several sites on one host. Write rules here, with /moop/, and regenerate.
+#
 # Bulk data: please do not crawl gene pages. Whole gene sets (FASTA, GFF, annotations) are on
 # the Downloads page, and the Data Exporter builds custom tables:
 #   /moop/tools/downloads.php
@@ -47,6 +51,7 @@ Allow: /moop/$
 Allow: /moop/index.php
 Allow: /moop/about.php
 Allow: /moop/help.php
+Allow: /moop/page.php
 Allow: /moop/tools/organism.php
 Allow: /moop/tools/groups.php
 Allow: /moop/tools/downloads.php
