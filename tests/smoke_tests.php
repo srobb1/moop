@@ -557,7 +557,7 @@ ok($_tnew()->getArray('tools_disabled') === ['moopmart', 'genome_browser'],
 // OPT-IN: no tools_layout = today's menu exactly (the render comparison checks the HTML).
 $_t2 = $_tnew();   // tools_disabled = moopmart, genome_browser (saved above)
 $_menu = fn($c) => array_map(fn($i) => $i['type'] === 'divider' ? '|' : $i['id'] . '=' . $i['label'], $c->getToolsMenu());
-ok($_t2->defaultToolsMenuOrder() === ['genome_browser', '|', 'annotation_search', 'moopmart', 'expression', 'blast_search',
+ok($_t2->defaultToolsMenuOrder() === ['genome_browser', '|', 'annotation_search', 'moopmart', 'expression', 'anatomy_search', 'blast_search',
                                       'primer_blast', 'primer_maker', 'download_fasta', 'downloads'],
    'default menu = the hand-written one it replaced: Genome Browser, a divider, then the rest in order');
 ok(($_menu($_t2)[0] ?? '') === 'annotation_search=Annotation Search' && !in_array('|', $_menu($_t2), true),
