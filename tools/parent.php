@@ -620,6 +620,8 @@ if (moop_crosswalk_open($organism_name) || moop_page_open($organism_name)) {
                      + moop_ontology_labels(array_column($__cur, 'evidence_id'), moop_ontology_by_purpose('evidence')),
         'aka'       => array_values(array_filter($__members, fn($m) => !in_array($m['accession'], $__self, true))),
         'name'      => (string) (moop_crosswalk_sources()[$organism_name]['name'] ?? ''),
+        'source'    => (string) (moop_page_sources()[$organism_name]['source'] ?? ''),
+        'source_url'=> (string) (moop_page_sources()[$organism_name]['source_url'] ?? ''),
     ];
     if (!$page_section['curations'] && !$page_section['aka']) $page_section = null;
 }

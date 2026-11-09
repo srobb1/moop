@@ -184,13 +184,17 @@ return [
     // Leave as '' and they go in a hidden organisms/.cache/ folder (moop_cache_root()).
     'cache_path' => '',
 
-    // ======== PAGE CURATIONS (where genes are expressed, by anatomy term) ========
+    // ======== ANATOMICAL EXPRESSION (curated: where genes are expressed, by anatomy term) ========
     // Per organism: the 9-column curation table in the PAGE repository. Built into
     // organisms/<organism>/anatomy_expression.sqlite by scripts/build_anatomy_expression.php
     // (lib/anatomy_expression.php). Files only from https://raw.githubusercontent.com/.
     'anatomy_expression' => [
         'Schmidtea_mediterranea' => [
-            'curations' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/curation/OUTPUT/term_annotations_2024-05-24.txt',
+            'curations'  => 'https://raw.githubusercontent.com/planosphere/PAGE/master/curation/OUTPUT/term_annotations_2024-05-24.txt',
+            // The DATA SOURCE, credited wherever these records appear. The tool itself is the general
+            // "Anatomical Expression Search"; another organism's curations carry their own project.
+            'source'     => 'PAGE: Planarian Anatomy Gene Expression',
+            'source_url' => 'https://github.com/planosphere/PAGE',
         ],
     ],
 

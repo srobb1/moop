@@ -648,7 +648,7 @@
         $__aka_by = [];
         foreach ($page_section['aka'] as $__m) $__aka_by[$__m['source']][] = $__m['accession'];
     ?>
-    <!-- PAGE: curated anatomical expression -->
+    <!-- Anatomical expression (curated; data source per organism, e.g. PAGE) -->
     <div class="card shadow-sm mb-4" id="pnav-page" data-nav-label="Anatomical expression">
         <div class="card-header d-flex align-items-center flex-wrap">
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#pageSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Anatomical expression') ?>" title="<?= t('Show or hide Anatomical expression') ?>">
@@ -667,7 +667,7 @@
         <div class="collapse show" id="pageSection">
             <div class="card-body">
                 <?php if ($__pc): ?>
-                <p class="small text-muted mb-2"><?= t('Published as expressed in (curated by PAGE: Planarian Anatomy Gene Expression):') ?></p>
+                <p class="small text-muted mb-2"><?= t('Published as expressed in:') ?><?php if ($page_section['source'] !== ''): ?> <span class="ms-1"><?= t('Data:') ?> <?= $page_section['source_url'] !== '' ? '<a href="' . htmlspecialchars($page_section['source_url']) . '" target="_blank" rel="noopener">' . htmlspecialchars($page_section['source']) . '</a>' : htmlspecialchars($page_section['source']) ?></span><?php endif; ?></p>
                 <div class="d-flex flex-wrap gap-1 mb-3">
                     <?php foreach (array_slice($__by_term, 0, 40, true) as $__tid => $__n): ?>
                         <a class="badge rounded-pill text-bg-light border text-decoration-none" href="<?= htmlspecialchars(moop_url('tools/anatomy_search.php') . '?' . http_build_query(['term' => $__tid, 'rel' => 'rdfs:subClassOf'])) ?>" title="<?= htmlspecialchars($__tid) ?>"><?= htmlspecialchars($__PL($__tid)) ?> <span class="text-muted"><?= (int) $__n ?></span></a>

@@ -4177,6 +4177,24 @@ ok((int) $_pdb->query("SELECT copies FROM curation WHERE accession = 'DN293829'"
    && $_pdb->query("SELECT accession FROM curation WHERE accession LIKE 'BK010975%'")->fetchColumn() === 'BK010975,',
    'build: the twice-entered curation says copies = 2; the comma is kept as curated (never "fixed")');
 $_pdb = null;
+// Search by publication: PMID, or words that must all appear (any author, accents optional).
+ok(moop_page_fold('Sánchez Alvarado, Cebrià, Núñez, Groß') === 'sanchez alvarado, cebria, nunez, gross',
+   'fold: lower case, accents dropped -- "sanchez" finds Sánchez');
+$_pcfg = ConfigManager::getInstance(); $_prp = new ReflectionProperty($_pcfg, 'config'); $_prp->setAccessible(true);
+$_psaved = $_prp->getValue($_pcfg); $_pc = $_psaved; $_pc['organism_data'] = $_pd; $_prp->setValue($_pcfg, $_pc);
+@mkdir("$_pd/Test"); copy($_pf, "$_pd/Test/anatomy_expression.sqlite");
+$_pubs = ['24737865' => ['title' => 'Pharynx genes', 'authors' => 'Adler CE et al.', 'authors_all' => 'Adler CE, Seidel CW, Sánchez Alvarado A, Pearson BJ', 'journal' => 'eLife', 'year' => '2014']];
+moop_page_build_from_file('Test', "$_pd/t.tsv", $_known, $_pubs, 'test', "$_pd/Test/anatomy_expression.sqlite");
+ok(count(moop_page_find_publications('Test', '24737865')) === 1 && count(moop_page_find_publications('Test', 'PMID 24737865')) === 1,
+   'publications: a PubMed ID finds its paper');
+ok(count(moop_page_find_publications('Test', 'sanchez alvarado')) === 1 && count(moop_page_find_publications('Test', 'pearson 2014')) === 1,
+   'publications: any author, not only the first; accents optional; year counts as a word');
+ok(moop_page_find_publications('Test', 'pearson 2019') === [] && moop_page_find_publications('Test', '50%_') === [],
+   'publications: every word must match; LIKE wildcards are plain text');
+$_s = moop_page_search('Test', null, ['pmid' => '24737865']);
+ok($_s['total'] === 6 && moop_page_search('Test', null, [])['total'] === 0,
+   'search: a paper alone is a search; no term and no paper is not');
+$_prp->setValue($_pcfg, $_psaved);
 $_before = md5_file($_pf);
 file_put_contents("$_pd/bad.tsv", "Accession\tTerm\n");
 ok(!moop_page_build_from_file('Test', "$_pd/bad.tsv", [], [], '', $_pf)['ok'] && md5_file($_pf) === $_before,

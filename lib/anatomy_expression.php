@@ -21,6 +21,25 @@
 
 require_once __DIR__ . '/ontologies.php';
 
+/**
+ * Lower-case and drop accents, for searching names: "Sánchez Alvarado" and "sanchez alvarado"
+ * match. An explicit table (this server has no intl extension, and iconv's transliteration
+ * depends on the locale -- it gave "S?nchez").
+ */
+function moop_page_fold(string $s): string {
+    static $map = null;
+    if ($map === null) {
+        $map = [];
+        foreach (['a' => 'àáâãäåāăą', 'c' => 'çćĉċč', 'd' => 'ďđ', 'e' => 'èéêëēĕėęě', 'g' => 'ĝğġģ', 'h' => 'ĥħ',
+                  'i' => 'ìíîïĩīĭįı', 'j' => 'ĵ', 'k' => 'ķ', 'l' => 'ĺļľŀł', 'n' => 'ñńņňŉ', 'o' => 'òóôõöøōŏő',
+                  'r' => 'ŕŗř', 's' => 'śŝşš', 't' => 'ţťŧ', 'u' => 'ùúûüũūŭůűų', 'w' => 'ŵ', 'y' => 'ýÿŷ', 'z' => 'źżž'] as $to => $from) {
+            foreach (preg_split('//u', $from, -1, PREG_SPLIT_NO_EMPTY) as $ch) $map[$ch] = $to;
+        }
+        $map += ['ß' => 'ss', 'æ' => 'ae', 'œ' => 'oe', 'þ' => 'th'];
+    }
+    return strtr(mb_strtolower($s), $map);
+}
+
 const MOOP_PAGE_COLUMNS = ['Accession', 'Term', 'Experimental Evidence', 'Biotype', 'Life Cycle Stage',
                            'Specimen', 'Curator (ORCID)', 'Pubmed ID', 'Date'];
 
@@ -95,7 +114,9 @@ function moop_page_build_from_file(string $organism, string $table, array $known
         $db->exec('CREATE TABLE curation (id INTEGER PRIMARY KEY, accession TEXT NOT NULL, accession_lc TEXT NOT NULL,
                      term_id TEXT NOT NULL, evidence_id TEXT, biotype_id TEXT, stage_id TEXT, specimen_id TEXT,
                      curator TEXT, pmid TEXT, curated_on TEXT, copies INTEGER NOT NULL DEFAULT 1)');
-        $db->exec('CREATE TABLE publication (pmid TEXT PRIMARY KEY, title TEXT, authors TEXT, journal TEXT, year TEXT)');
+        // authors = short form for display ("Currie KW et al."); authors_all = every author, for searching.
+        $db->exec('CREATE TABLE publication (pmid TEXT PRIMARY KEY, title TEXT, authors TEXT, authors_all TEXT, journal TEXT, year TEXT,
+                                             search_text TEXT)');   // folded title + all authors + journal + year
         $db->exec('CREATE TABLE review (kind TEXT NOT NULL, detail TEXT NOT NULL, rows INTEGER NOT NULL)');
         $db->exec('CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)');
         $db->beginTransaction();
@@ -132,8 +153,12 @@ function moop_page_build_from_file(string $organism, string $table, array $known
         }
         fclose($fh);
 
-        $pins = $db->prepare('INSERT OR REPLACE INTO publication (pmid, title, authors, journal, year) VALUES (?,?,?,?,?)');
-        foreach ($pubs as $pmid => $p) $pins->execute([(string) $pmid, $p['title'] ?? '', $p['authors'] ?? '', $p['journal'] ?? '', $p['year'] ?? '']);
+        $pins = $db->prepare('INSERT OR REPLACE INTO publication (pmid, title, authors, authors_all, journal, year, search_text) VALUES (?,?,?,?,?,?,?)');
+        foreach ($pubs as $pmid => $p) {
+            $all = $p['authors_all'] ?? ($p['authors'] ?? '');
+            $pins->execute([(string) $pmid, $p['title'] ?? '', $p['authors'] ?? '', $all, $p['journal'] ?? '', $p['year'] ?? '',
+                            moop_page_fold(implode(' ', [$p['title'] ?? '', $all, $p['journal'] ?? '', $p['year'] ?? '']))]);
+        }
         $rins = $db->prepare('INSERT INTO review (kind, detail, rows) VALUES (?,?,?)');
         foreach ($review as $kind => $details) foreach ($details as $d => $n) $rins->execute([$kind, (string) $d, $n]);
 
@@ -188,6 +213,7 @@ function moop_page_fetch_publications(array $pmids): array {
             $out[(string) $uid] = [
                 'title'   => mb_substr(trim((string) ($r['title'] ?? '')), 0, 500),
                 'authors' => mb_substr(count($authors) > 3 ? $authors[0] . ' et al.' : implode(', ', $authors), 0, 200),
+                'authors_all' => mb_substr(implode(', ', $authors), 0, 2000),
                 'journal' => mb_substr((string) ($r['source'] ?? ''), 0, 120),
                 'year'    => preg_match('/\d{4}/', (string) ($r['pubdate'] ?? ''), $m) ? $m[0] : '',
             ];
@@ -227,18 +253,26 @@ function moop_page_build(string $organism): array {
 }
 
 /**
- * Curations whose term is in $term_ids (an expanded term set), for one organism, newest papers
- * first. $filters: ['evidence' => [ECO ids]] (an expanded set), ['stage' => [PLANA ids]].
+ * Curations whose term is in $term_ids (an expanded term set; null = any term), for one organism,
+ * newest papers first. $filters: ['evidence' => [ECO ids]] (an expanded set), ['stage' => [PLANA
+ * ids]], ['pmid' => one paper] -- a paper alone is a search too (search by publication).
  * Obsolete terms are followed: a curation on a term whose replacement is in the set is included
  * (the ids to look for are the set plus every term replaced by one of them).
  * Returns ['rows' => [...], 'total' => n, 'capped' => bool]. Read-only.
  */
-function moop_page_search(string $organism, array $term_ids, array $filters = [], int $limit = 5000): array {
+function moop_page_search(string $organism, ?array $term_ids, array $filters = [], int $limit = 5000): array {
     $db = moop_page_open($organism);
-    if (!$db || !$term_ids) return ['rows' => [], 'total' => 0, 'capped' => false];
-    $term_ids = array_values(array_unique(array_merge($term_ids, moop_page_replaced_into($term_ids))));
-    $where  = ['c.term_id IN (' . implode(',', array_fill(0, count($term_ids), '?')) . ')'];
-    $params = $term_ids;
+    // A search needs something to look for: a term set, or a paper (filters['pmid']).
+    if (!$db || ($term_ids === null && empty($filters['pmid'])) || ($term_ids !== null && !$term_ids)) {
+        return ['rows' => [], 'total' => 0, 'capped' => false];
+    }
+    $where = []; $params = [];
+    if ($term_ids !== null) {
+        $term_ids = array_values(array_unique(array_merge($term_ids, moop_page_replaced_into($term_ids))));
+        $where[]  = 'c.term_id IN (' . implode(',', array_fill(0, count($term_ids), '?')) . ')';
+        $params   = $term_ids;
+    }
+    if (!empty($filters['pmid'])) { $where[] = 'c.pmid = ?'; $params[] = (string) $filters['pmid']; }
     foreach (['evidence' => 'c.evidence_id', 'stage' => 'c.stage_id'] as $f => $col) {
         if (!empty($filters[$f])) {
             $where[] = "$col IN (" . implode(',', array_fill(0, count($filters[$f]), '?')) . ')';
@@ -335,4 +369,59 @@ function moop_page_for_accessions(string $organism, array $accessions, int $limi
     }
     usort($out, fn($a, $b) => [$b['year'], $a['term_id']] <=> [$a['year'], $b['term_id']]);
     return array_slice($out, 0, $limit);
+}
+
+/**
+ * Papers matching $q -- a PMID, or words that must ALL appear in the title, authors or journal
+ * (any order, case-insensitive) -- with how many curations each has. Newest first. Read-only.
+ * Returns [['pmid', 'title', 'authors', 'journal', 'year', 'records'], ...].
+ */
+function moop_page_find_publications(string $organism, string $q, int $limit = 100): array {
+    $db = moop_page_open($organism);
+    $q  = trim(preg_replace('/\s+/', ' ', $q));
+    if (!$db || $q === '' || mb_strlen($q) > 200) return [];
+    $sql = 'SELECT c.pmid, p.title, p.authors, p.journal, p.year, COUNT(*) AS records
+              FROM curation c LEFT JOIN publication p ON p.pmid = c.pmid';
+    $params = [];
+    if (preg_match('/^(?:pmid:?\s*)?(\d{4,9})$/i', $q, $m)) {
+        $sql .= ' WHERE c.pmid = ?';
+        $params[] = $m[1];
+    } else {
+        $words = array_slice(array_filter(explode(' ', moop_page_fold($q)), fn($w) => mb_strlen($w) >= 2), 0, 8);
+        if (!$words) return [];
+        $conds = [];
+        foreach ($words as $w) {
+            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $w) . '%';
+            $conds[] = "p.search_text LIKE ? ESCAPE '\\'";
+            $params[] = $like;
+        }
+        $sql .= ' WHERE ' . implode(' AND ', $conds);
+    }
+    $sql .= ' GROUP BY c.pmid ORDER BY p.year DESC, c.pmid LIMIT ' . (int) $limit;
+    $st = $db->prepare($sql);
+    $st->execute($params);
+    return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Search by gene or transcript ID: any ids (h1 gene, SMED3, dd_v6, EST, array probe, symbol...)
+ * -> through the crosswalk to their reference genes -> every accession mapped to those genes ->
+ * their curations. So any id of a gene finds the records made under any other id of it.
+ * Returns ['rows' => curations, 'matched' => [input => [ref ids]], 'unknown' => [inputs]].
+ */
+function moop_page_search_ids(string $organism, array $ids, int $limit = 5000): array {
+    require_once __DIR__ . '/crosswalk.php';
+    $ids  = array_values(array_unique(array_filter(array_map('trim', $ids), 'strlen')));
+    $refs = moop_crosswalk_genes($organism, $ids);
+    $matched = []; $all_refs = [];
+    foreach ($ids as $in) {
+        $r = array_values(array_unique(array_column($refs[mb_strtolower($in)] ?? [], 'ref_id')));
+        if ($r) { $matched[$in] = $r; $all_refs = array_merge($all_refs, $r); }
+    }
+    $members = moop_crosswalk_members($organism, array_merge($ids, $all_refs));
+    $rows    = moop_page_for_accessions($organism, array_merge($ids, $all_refs, array_column($members, 'accession')), $limit);
+    // An id the crosswalk does not know may still have curations under exactly that id.
+    $direct  = array_flip(array_map('mb_strtolower', array_column($rows, 'accession')));
+    $unknown = array_values(array_filter($ids, fn($i) => !isset($matched[$i]) && !isset($direct[mb_strtolower($i)])));
+    return ['rows' => $rows, 'matched' => $matched, 'unknown' => $unknown];
 }
