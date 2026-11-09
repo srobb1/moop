@@ -77,7 +77,7 @@ $n_off = count(array_filter($enabled, fn($on) => !$on));
                 <?php endif; ?>
               </td>
               <td class="small"><?= htmlspecialchars($where($tool['pages'] ?? 'all')) ?></td>
-              <td class="small"><code>/<?= htmlspecialchars($site . ($tool['url_path'] ?? '')) ?></code></td>
+              <td class="small"><code><?= htmlspecialchars(moop_url_base() . ($tool['url_path'] ?? '')) ?></code></td>
             </tr>
           <?php endforeach; ?>
           </tbody>

@@ -53,5 +53,5 @@ echo render_display_page(__DIR__ . '/pages/error_log.php', [
     'filter_search' => $filter_search,
     'site'          => $site,
     'siteTitle'     => $siteTitle,
-    'page_script'   => '/' . $site . '/js/error-log.js',
+    'page_script'   => moop_url_base() . '/js/error-log.js',
 ], 'Error Log');

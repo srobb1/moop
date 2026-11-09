@@ -144,6 +144,15 @@ Never read `site_config.php` directly. Never use raw array access on config.
 Editable settings go through `config/config_editable.json` (managed via Admin UI),
 which is merged over `site_config.php` defaults at startup.
 
+### 3b. Links — always moop_url_base() / moop_url(), never the folder name
+
+Every link starts with `moop_url_base()` (`"/moop"`, or `""` for a site served at its domain's
+root) — `moop_url('tools/blast.php')`, or `<?= moop_url_base() ?>/tools/…` in a template. The
+`site` setting is the FOLDER name (cookies, caches, site-data dirs), NOT the start of a link;
+`"/$site/…"` breaks the moment a site moves to its own address (an empty one gave `//tools/…`).
+Folder paths still use `root_path`/`site_path`. Setting: `link_prefix` (2026-11-09). Moving a
+site: `notes/MOVE_SITE_TO_OWN_ADDRESS.md` — the nginx half is still to do there.
+
 ### 4. Access Control Model
 
 Levels (in order of privilege):

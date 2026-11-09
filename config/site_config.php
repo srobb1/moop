@@ -85,6 +85,14 @@ return [
     // These are STRUCTURAL and cannot be edited through the admin interface
     'root_path' => $root_path,
     'site' => $site,
+    // The start of every LINK this site writes: "/moop/tools/…". Separate from 'site' (the
+    // FOLDER name, which also names cookies, caches and the site-data directories) so a site
+    // can move to its own domain or to the root without renaming its folder: set it to "/" in
+    // config/config_editable.json, together with the nginx change that serves the folder at /.
+    // NOT "" -- ConfigManager ignores an empty override and would quietly keep "/moop".
+    // Read through moop_url_base() / moop_url() (includes/config_init.php), never built from
+    // 'site' -- an empty site gave "//tools/…", a protocol-relative link to a host named tools.
+    'link_prefix' => '/' . $site,
     'site_path' => $site_path,
     'organism_data' => "$site_path/organisms",
     
@@ -114,7 +122,7 @@ return [
     'banners_path' => "$site_path/images/banners",
     'favicon_filename' => 'favicon.ico',  // Changed in config_editable.json if customized
     'custom_css_path' => "$site_path/css/custom.css",  // Filesystem path (for file_exists check)
-    'custom_css_url'  => "/$site/css/custom.css",      // Web URL (for <link href>)
+    // Its link is built in includes/head-resources.php with moop_url(), so it follows link_prefix.
     
     // ======== OPTIONAL: Contact ========
     // EDITABLE in Admin Dashboard: Use "Manage Site Configuration" to change these
@@ -456,7 +464,6 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // JBrowse2 genome browser integration
     'jbrowse2' => [
         'enabled' => true,
-        'base_url' => "/$site/jbrowse2/",           // Relative to web root - works with any deployment
         'api_endpoint' => '/api/jbrowse2/assembly.php',
         'config_file' => "$site_path/jbrowse2/config.json",
         'data_directory' => "$site_path/data/genomes/",

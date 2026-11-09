@@ -95,7 +95,7 @@ function attachImageUploadHandler(imageItemElement) {
       uploadBtn.disabled = true;
       uploadBtn.textContent = 'Uploading...';
       
-      fetch('/' + sitePath.replace(/^\//, '') + '/admin/manage_groups.php', {
+      fetch(sitePath + '/admin/manage_groups.php', {
         method: 'POST',
         body: formData
       })
@@ -1036,7 +1036,7 @@ document.addEventListener('DOMContentLoaded', function () {
       fd.append('assembly', row.dataset.assembly);
       fd.append('gene_set', row.dataset.geneSet);
 
-      fetch('/' + sitePath.replace(/^\//, '') + '/admin/api/toggle_gene_set_public.php', {
+      fetch(sitePath + '/admin/api/toggle_gene_set_public.php', {
         method: 'POST',
         body: fd
       })

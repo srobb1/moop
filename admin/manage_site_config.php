@@ -580,14 +580,14 @@ $data = [
     'blast_queue_now' => $blast_queue_now,
     'page_styles' => [
         // parent-nav.css supplies the sticky section-nav; the same pair the gene page uses.
-        '/' . $site . '/css/parent-nav.css',
-        '/' . $site . '/css/manage-site-config.css'
+        moop_url_base() . '/css/parent-nav.css',
+        moop_url_base() . '/css/manage-site-config.css'
     ],
     'page_script' => [
-        '/' . $site . '/js/admin-utilities.js',
-        '/' . $site . '/js/modules/parent-nav.js',
-        '/' . $site . '/js/modules/manage-site-config.js',
-        '/' . $site . '/js/modules/site-colors.js'
+        moop_url_base() . '/js/admin-utilities.js',
+        moop_url_base() . '/js/modules/parent-nav.js',
+        moop_url_base() . '/js/modules/manage-site-config.js',
+        moop_url_base() . '/js/modules/site-colors.js'
     ],
 ];
 

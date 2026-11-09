@@ -356,10 +356,10 @@ $display_config = [
     'title' => 'BLAST Search',
     'content_file' => __DIR__ . '/pages/blast.php',
     'page_script' => [
-        '/' . $site . '/js/modules/collapse-handler.js',
-        '/' . $site . '/js/modules/source-list-manager.js',
-        '/' . $site . '/js/blast-manager.js',
-        '/' . $site . '/js/modules/blast-short-nudge.js'
+        moop_url_base() . '/js/modules/collapse-handler.js',
+        moop_url_base() . '/js/modules/source-list-manager.js',
+        moop_url_base() . '/js/blast-manager.js',
+        moop_url_base() . '/js/modules/blast-short-nudge.js'
     ],
     'inline_scripts' => [
         "const previouslySelectedDb = '" . addslashes($blast_db) . "';",
@@ -402,7 +402,7 @@ $data = [
     'max_hits_cap' => $max_hits_cap,
     'blast_options' => $blast_options,
     'page_styles' => [
-        '/' . $site . '/css/display.css',
+        moop_url_base() . '/css/display.css',
     ]
 ];
 

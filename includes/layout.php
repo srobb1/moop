@@ -236,7 +236,7 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
              Assigned as a window property, never `const sitePath`, because several pages still
              declare their own `const sitePath` via inline_scripts and re-declaring a top-level
              const is a SyntaxError that would take the whole page's JS down. -->
-        <script>window.sitePath = "/<?= htmlspecialchars($config->getString('site'), ENT_QUOTES) ?>";</script>
+        <script>window.sitePath = "<?= htmlspecialchars(moop_url_base(), ENT_QUOTES) ?>";</script>
 
         <!-- The per-organism search cap, from site configuration, for the JS that has to
              quote it back to the user. Emitted here for the same reason as sitePath above:

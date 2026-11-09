@@ -97,7 +97,7 @@ function moop_human_check_enforce(): void {
     if ($decision === null) return;
 
     $site   = ConfigManager::getInstance()->getString('site', 'moop');
-    $verify = '/' . $site . '/verify-human.php';
+    $verify = moop_url_base() . '/verify-human.php';
     if ($decision === 'redirect') {
         header('Location: ' . $verify . '?return=' . urlencode($_SERVER['REQUEST_URI'] ?? '/'), true, 302);
         exit;

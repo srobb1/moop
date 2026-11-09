@@ -244,9 +244,9 @@ if (!empty($display_name)) {
 $display_config = [
     'title'          => $page_title,
     'content_file'   => __DIR__ . '/pages/downloads.php',
-    'page_script'    => ['/' . $site . '/js/modules/downloads.js'],
+    'page_script'    => [moop_url_base() . '/js/modules/downloads.js'],
     'inline_scripts' => [
-        "const sitePath = '/$site';",
+        "const sitePath = '" . moop_url_base() . "';",
     ],
 ];
 

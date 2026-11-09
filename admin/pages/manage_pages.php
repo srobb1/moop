@@ -75,7 +75,7 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
       <form method="post">
         <?= csrf_input_field() ?>
         <input type="hidden" name="_action" value="save_home">
-        <p class="small text-muted mb-2">What visitors see at <code>/<?= htmlspecialchars($site) ?>/</code>. The address stays the same
+        <p class="small text-muted mb-2">What visitors see at <code><?= htmlspecialchars(moop_url_base()) ?>/</code>. The address stays the same
           whichever you choose; if the page you pick is ever deleted, MOOP's home comes back.</p>
         <?php foreach (['builtin' => 'MOOP\'s home — search, organisms and tools', 'intro' => 'MOOP\'s home, with a page above it (a welcome)',
                         'page' => 'One of your pages, instead of MOOP\'s home'] as $value => $label): ?>
@@ -96,8 +96,8 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
         </div>
         <?php if (!$pages): ?><p class="small text-muted mt-2 mb-0">Write a page first to use it here.</p><?php endif; ?>
         <p class="small text-muted mt-2 mb-0">MOOP's own home is always at
-          <a href="/<?= htmlspecialchars($site) ?>/browse.php" target="_blank"><code>/<?= htmlspecialchars($site) ?>/browse.php</code></a>.
-          <?php if ($home['mode'] === 'page'): ?><strong>Your page replaces it at <code>/<?= htmlspecialchars($site) ?>/</code></strong> — add it to the
+          <a href="<?= htmlspecialchars(moop_url_base()) ?>/browse.php" target="_blank"><code><?= htmlspecialchars(moop_url_base()) ?>/browse.php</code></a>.
+          <?php if ($home['mode'] === 'page'): ?><strong>Your page replaces it at <code><?= htmlspecialchars(moop_url_base()) ?>/</code></strong> — add it to the
           <a href="manage_menu.php">menu</a> (“MOOP's search &amp; browse page”) so visitors can still reach the search and tools.<?php endif; ?></p>
       </form>
     </div>
@@ -116,7 +116,7 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
       <div class="col-md-6">
         <label class="form-label mb-1 small fw-semibold" for="slug">Address</label>
         <div class="input-group input-group-sm">
-          <span class="input-group-text">/<?= htmlspecialchars($site) ?>/page.php?p=</span>
+          <span class="input-group-text"><?= htmlspecialchars(moop_url_base()) ?>/page.php?p=</span>
           <input type="text" class="form-control" id="slug" name="slug" required pattern="[a-z0-9][a-z0-9-]{0,59}"
                  value="<?= htmlspecialchars($page['slug']) ?>" <?= $mode === 'edit' ? 'readonly' : '' ?>
                  title="Lower-case letters, digits and hyphens">
@@ -202,10 +202,10 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
   <?php
   // Every address an editor can link to, ready to copy, in the page's format. Built from the live
   // site -- its pages, MOOP's own pages, its switched-on tools -- so it is never out of date.
-  $lk = [['Home page', "/$site/"], ["MOOP's search & browse page (always MOOP's home)", "/$site/browse.php"],
-         ['About', "/$site/about.php"], ['Help', "/$site/help.php"]];
+  $lk = [['Home page', moop_url_base() . "/"], ["MOOP's search & browse page (always MOOP's home)", moop_url_base() . "/browse.php"],
+         ['About', moop_url_base() . "/about.php"], ['Help', moop_url_base() . "/help.php"]];
   foreach ($pages as $lslug => $lp) $lk[] = ['Page: ' . $lp['title']['en'], moop_page_url($lslug)];
-  foreach ($tool_links ?? [] as $tl) if ($tl['type'] === 'tool') $lk[] = ['Tool: ' . $tl['label'], "/$site" . $tl['url_path']];
+  foreach ($tool_links ?? [] as $tl) if ($tl['type'] === 'tool') $lk[] = ['Tool: ' . $tl['label'], moop_url_base() . $tl['url_path']];
   ?>
   <details class="small mb-3" open>
     <summary class="fw-semibold">Links you can use — copy one into your text</summary>
@@ -232,7 +232,7 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
       <tr><td><code>**bold**</code>, <code>*italic*</code></td><td>emphasis</td></tr>
       <tr><td><code>- item</code> or <code>1. item</code></td><td>lists</td></tr>
       <tr><td><code>[link text](https://example.org)</code></td><td>a link</td></tr>
-      <tr><td><code>![description](/<?= htmlspecialchars($site) ?>/images/picture.jpg)</code></td><td>an image</td></tr>
+      <tr><td><code>![description](<?= htmlspecialchars(moop_url_base()) ?>/images/picture.jpg)</code></td><td>an image</td></tr>
       <tr><td><code>| A | B |</code> then <code>|---|---|</code></td><td>a table</td></tr>
       <tr><td>A blank line</td><td>starts a new paragraph</td></tr>
     </table>
@@ -245,7 +245,7 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
   &lt;div class="col-md-4"&gt;&lt;div class="card h-100"&gt;&lt;div class="card-body"&gt;
     &lt;h5 class="card-title"&gt;Planarian Maintenance&lt;/h5&gt;
     &lt;p&gt;Keeping your worms healthy.&lt;/p&gt;
-    &lt;a class="btn btn-primary" href="/<?= htmlspecialchars($site) ?>/page.php?p=planarian-maintenance"&gt;Read&lt;/a&gt;
+    &lt;a class="btn btn-primary" href="<?= htmlspecialchars(moop_url_base()) ?>/page.php?p=planarian-maintenance"&gt;Read&lt;/a&gt;
   &lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
 &lt;/div&gt;</pre>
     Kept: headings, paragraphs, lists, tables, links, images, <code>div</code>/<code>span</code>, collapsible

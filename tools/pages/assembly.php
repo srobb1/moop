@@ -146,7 +146,7 @@
                      name is not a scientific name), then the external-link icon. The icon
                      used to sit inside the <em>, so it was being italicised too. This was
                      the last page that named an organism without its common name. */ ?>
-            <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em><?php if (!empty($organism_info['common_name'])): ?> (<?= htmlspecialchars($organism_info['common_name']) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+            <dd><a href="<?= moop_url_base() ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em><?php if (!empty($organism_info['common_name'])): ?> (<?= htmlspecialchars($organism_info['common_name']) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
             <?php if (!empty($assembly_meta['source'])): ?>
             <dt><?= t('Source') ?></dt>
             <dd><?= htmlspecialchars($assembly_meta['source']) ?></dd>
@@ -189,7 +189,7 @@
             </h6>
             <div class="chip-container" id="assemblyGeneSets">
               <?php foreach ($gene_sets as $gs): ?>
-                <a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_info['genome_accession']) ?>&gene_set=<?= urlencode($gs['gene_set_name']) ?>"
+                <a href="<?= moop_url_base() ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_info['genome_accession']) ?>&gene_set=<?= urlencode($gs['gene_set_name']) ?>"
                    class="gene-set-chip">
                   <span class="fw-semibold"><?= htmlspecialchars($gs['gene_set_name']) ?></span>
                   <span class="gene-set-chip-counts">
@@ -239,7 +239,7 @@
                      thing that actually differs when an organism has several. Through
                      assembly_label() so it reads the same here as in the page title and
                      everywhere else an assembly is named. */ ?>
-            <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
+            <a href="<?= moop_url_base() ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
                class="btn btn-sm <?= $colorInfo['class'] ?> fw-semibold text-white"
                style="border-radius: 16px; <?= $colorInfo['style'] ?>"
                download>

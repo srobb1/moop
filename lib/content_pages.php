@@ -237,5 +237,5 @@ function moop_page_render(string $body, string $format, ?array &$removed = null)
 
 /** A page's public address. */
 function moop_page_url(string $slug): string {
-    return '/' . ConfigManager::getInstance()->getString('site') . '/page.php?p=' . rawurlencode($slug);
+    return moop_url_base() . '/page.php?p=' . rawurlencode($slug);
 }

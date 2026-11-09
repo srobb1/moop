@@ -49,9 +49,9 @@ if (!isset($sequence_types[$type])) {
 // Check access
 if (!has_assembly_access($organism, $assembly)) {
     if (!is_logged_in()) {
-        header("Location: /$site/login.php");
+        header("Location: " . moop_url_base() . "/login.php");
     } else {
-        header("Location: /$site/access_denied.php");
+        header("Location: " . moop_url_base() . "/access_denied.php");
     }
     exit;
 }

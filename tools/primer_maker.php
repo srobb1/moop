@@ -737,7 +737,7 @@ $data = [
     'tail_custom_r'    => $tail_custom_r,
 
     'page_styles'      => [
-        '/' . $site . '/css/display.css',
+        moop_url_base() . '/css/display.css',
     ],
 ];
 
@@ -749,8 +749,8 @@ $display_config = [
     // do). Without it the oligo FASTA block silently stops being clickable: it
     // still LOOKS copyable, cursor and all, because the classes are pure CSS.
     'page_script'  => [
-        '/' . $site . '/js/modules/copy-to-clipboard.js',
-        '/' . $site . '/js/primer-maker.js',
+        moop_url_base() . '/js/modules/copy-to-clipboard.js',
+        moop_url_base() . '/js/primer-maker.js',
     ],
     'inline_scripts' => [
         // Every primer type's fallback values, so switching the radio updates

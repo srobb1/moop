@@ -90,10 +90,10 @@ $display_config = [
     'title'        => htmlspecialchars($gene_set_name) . ' — ' . htmlspecialchars($genome_accession),
     'content_file' => __DIR__ . '/pages/gene_set.php',
     'page_script'  => [
-        "/$site/js/gene_set-display.js",
+        moop_url_base() . "/js/gene_set-display.js",
     ],
     'inline_scripts' => [
-        "const sitePath = '/$site';",
+        "const sitePath = '" . moop_url_base() . "';",
         "const assemblyAccession = '" . addslashes($genome_accession) . "';",
         "const geneSetName = '" . addslashes($gene_set_name) . "';",
         "const organismName = '" . addslashes($organism_name) . "';",

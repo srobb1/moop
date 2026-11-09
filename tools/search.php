@@ -110,17 +110,17 @@ $display_config = [
     'content_file' => __DIR__ . '/pages/search.php',
     'page_script'  => [
         // Before search-display.js, which calls initScopeSelectedPanel().
-        "/$site/js/modules/scope-selected-panel.js",
-        "/$site/js/search-display.js",
+        moop_url_base() . "/js/modules/scope-selected-panel.js",
+        moop_url_base() . "/js/search-display.js",
     ],
     'page_styles'  => [
-        "/$site/css/display.css",
-        "/$site/css/parent.css",
-        "/$site/css/advanced-search-filter.css",
-        "/$site/css/search-controls.css",
+        moop_url_base() . "/css/display.css",
+        moop_url_base() . "/css/parent.css",
+        moop_url_base() . "/css/advanced-search-filter.css",
+        moop_url_base() . "/css/search-controls.css",
     ],
     'inline_scripts' => [
-        "const sitePath = '/$site';",
+        "const sitePath = '" . moop_url_base() . "';",
         "const siteTitle = '" . addslashes($siteTitle) . "';",
         "const allOrganisms = "  . json_encode($all_organisms)  . ";",
         "const scopeTree = "     . json_encode($scope_tree)     . ";",

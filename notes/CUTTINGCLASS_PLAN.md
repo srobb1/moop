@@ -100,6 +100,36 @@ The published manuscript PDF and teachers' bookmarks point at `/en/node/121412`,
 `/es/node/121411`, `/en/faq`, `/en/planarians` … Map each to its new page and 301. Collect the
 full list from the Drupal site before it is switched off.
 
+**Collected 2026-11-09** (crawl of the live Drupal site after its Postgres crash/reboot; 78 pages;
+copies of every page's HTML in `/var/www/cuttingclass-private/old_drupal_site_2026-11-09/`).
+Every page answers at `/node/N`, `/en/node/N` and `/es/node/N`, plus the aliases below.
+Decided (Sofia, 2026-11-09): map these content pages one by one; send everything else, including
+every old gene page, to a "this site has moved" page. Gene IDs changed, so old gene pages cannot
+map; an old-ID -> new-ID mapping (aliases) is a later, shared piece of work with Planosphere's
+Rosetta Stone.
+
+| Old (node / aliases) | Title | New |
+|---|---|---|
+| 121395 `/`, `/en`, `/es`, `/index.php` | Welcome | home |
+| 121409 | Where Cutting Class is… | `about` (check) |
+| 154063 `/en/planarians`, `/planarians` | About our planarians | ? (page archived 11-06) |
+| 121442 `/en/anatomy` | Anatomy | `anatomy` (ported 2026-11-09) |
+| 121396 `/en/contact` | Contact Us | `about` (has the contact email + team) |
+| 121411 `/en/faq` | FAQ | `faq` |
+| 121398 | Glossary of Terms | `glossary` |
+| 121412 | Primers for WISH and RNAi Protocols | `primers` |
+| 121397 | Useful Links | `useful-links` |
+| 121413 / 121414 / 121415 / 121416 | Protocols 1-4 | `protocol-maintenance` / `-regeneration` / `-wish` / `-rnai` |
+| 121438 / 121434 / 121433 | Tutorials: search genes / similarity / primer design | `tutorial-search-genes` / `tutorial-blast` / `tutorial-primer-design` |
+| 154059 `/ddo` · 154060 `/gsp` · 154061 `/pgr` · 154062 `/pmo` | organism pages | organism page: Girardia_dorotocephala (was *Dugesia*) / Girardia_sp / Phagocata_gracilis / Phagocata_morgani |
+| `/en/find/genes`, `/find/genes` | Gene Search | search |
+| `/en/blast/…` | BLAST | BLAST |
+| `/pub/transcriptomes/{Ddorotocephala,GirardiaSp,Pgracilis,Pmorgani}.{nt,cds.nt,aa}` | FASTA downloads | Downloads (organism) |
+| gene pages: `/en/feature/<Genus>/<species>/mRNA/<ID>`, `/feature/<ID>`, `/node/<N>` | | "moved" page |
+| anything else under `/en`, `/es`, `/node`, `/feature`, `/organism`, `/analysis`, `/user` | | "moved" page |
+
+`/es/...` keeps Spanish: the same new page with `lang=es`.
+
 ### 5. Spanish interface (the largest piece)
 - **Visitor pages only.** Admin pages stay English.
 - Language: browser `Accept-Language` on first visit, an EN | ES switch that overrides and is

@@ -105,9 +105,9 @@
               <?php endif; ?>
               <dl class="feature-info-grid mb-0">
                 <dt><?= t('Assembly') ?></dt>
-                <dd><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>"><?= htmlspecialchars(assembly_label($genome_name, $genome_accession)) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                <dd><a href="<?= moop_url_base() ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>"><?= htmlspecialchars(assembly_label($genome_name, $genome_accession)) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                 <dt><?= t('Organism') ?></dt>
-                <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em><?php if (!empty($organism_info['common_name'])): ?> (<?= htmlspecialchars($organism_info['common_name']) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                <dd><a href="<?= moop_url_base() ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>"><em class="sci-name"><?= htmlspecialchars($organism_info['genus'] ?? '') ?> <?= htmlspecialchars($organism_info['species'] ?? '') ?></em><?php if (!empty($organism_info['common_name'])): ?> (<?= htmlspecialchars($organism_info['common_name']) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                 <?php if (!empty($gene_set_meta['source'])): ?>
                 <dt><?= t('Source') ?></dt>
                 <dd><?= htmlspecialchars($gene_set_meta['source']) ?></dd>
@@ -176,7 +176,7 @@
                 <?php foreach ($fasta_files as $f):
                     $colorInfo = getColorClassOrStyle($f['color'] ?? '');
                 ?>
-                <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>&type=<?= urlencode($f['seq_type']) ?>"
+                <a href="<?= moop_url_base() ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>&type=<?= urlencode($f['seq_type']) ?>"
                    class="btn btn-sm <?= $colorInfo['class'] ?> fw-semibold text-white"
                    style="border-radius: 16px; <?= $colorInfo['style'] ?>"
                    download>
@@ -184,7 +184,7 @@
                 </a>
                 <?php endforeach; ?>
                 <?php if ($has_gff): ?>
-                <a href="/<?= $site ?>/api/download_file.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>&filename=<?= urlencode(genes_gff_filename()) ?>"
+                <a href="<?= moop_url_base() ?>/api/download_file.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>&filename=<?= urlencode(genes_gff_filename()) ?>"
                    class="btn btn-sm fw-semibold text-white"
                    style="border-radius: 16px; background-color: #475569; border-color: #475569;"
                    download>
@@ -197,7 +197,7 @@
                 <?php /* Last, and labelled with the assembly, because it belongs to the
                          assembly rather than to this gene set -- the ordering says so
                          without needing a second heading. */ ?>
-                <a href="/<?= $site ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
+                <a href="<?= moop_url_base() ?>/lib/fasta_download_handler.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&genome_directory=<?= urlencode($genome_directory) ?>&gene_set=&type=<?= urlencode($genome_file['info']['seq_type'] ?? $genome_file['type']) ?>"
                    class="btn btn-sm <?= $gColor['class'] ?> fw-semibold text-white"
                    style="border-radius: 16px; <?= $gColor['style'] ?>"
                    title="The assembled genome sequence this gene set was called against"
@@ -274,7 +274,7 @@
       <p class="text-muted small mb-0">
         <i class="fas fa-lightbulb me-1" style="color:var(--moop-tool-header);"></i>
         <strong><?= t('Tip:') ?></strong> <?= t_markup('To download some or all of the annotations for this gene set, visit %s.',
-            '<a href="/' . $site . '/tools/moopmart.php?organism=' . urlencode($organism_name) . '&assembly=' . urlencode($genome_accession) . '&gene_set=' . urlencode($gene_set_name) . '">MOOPmart</a>') . "\n" ?>
+            '<a href="' . moop_url_base() . '/tools/moopmart.php?organism=' . urlencode($organism_name) . '&assembly=' . urlencode($genome_accession) . '&gene_set=' . urlencode($gene_set_name) . '">MOOPmart</a>') . "\n" ?>
         <?= t('Build a gene list from this gene set and then select the annotations you want to bulk download.') . "\n" ?>
       </p>
     </div>

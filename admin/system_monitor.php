@@ -166,8 +166,8 @@ echo render_display_page(
         'usage'        => $usage,
         'days_covered' => $days_covered,
         'site'         => $site,
-        'page_styles'  => ['/' . $site . '/css/system-monitor.css'],
-        'page_script'  => ['/' . $site . '/js/system-monitor.js'],
+        'page_styles'  => [moop_url_base() . '/css/system-monitor.css'],
+        'page_script'  => [moop_url_base() . '/js/system-monitor.js'],
         'inline_scripts' => [
             'window.MOOP_MONITOR = ' . json_encode(['range' => $range, 'series' => $series],
                 JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . ';',

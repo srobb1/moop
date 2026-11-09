@@ -90,14 +90,14 @@ if (!isset($data['site'])) {
 if (!isset($data['page_styles'])) {
     $site = $data['site'];
     $data['page_styles'] = [
-        '/' . $site . '/css/registry.css',
-        '/' . $site . '/css/display.css',
+        moop_url_base() . '/css/registry.css',
+        moop_url_base() . '/css/display.css',
     ];
 } else {
     // Merge with default registry styles if partial styles defined
     $site = $data['site'];
-    if (!in_array('/' . $site . '/css/registry.css', $data['page_styles'])) {
-        $data['page_styles'][] = '/' . $site . '/css/registry.css';
+    if (!in_array(moop_url_base() . '/css/registry.css', $data['page_styles'])) {
+        $data['page_styles'][] = moop_url_base() . '/css/registry.css';
     }
 }
 

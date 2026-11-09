@@ -507,6 +507,13 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
 
                 } else {
                     // CASE 3: MOOP internal paths → Route through local tracks.php with token
+                    //
+                    // The STORED uri starts with "/<folder>/" (e.g. "/moop/data/genomes/…"): that is a
+                    // marker meaning "this site", written at registration and kept that way on purpose
+                    // (lib/jbrowse/gene_set_functions.php, admin/api/jbrowse_register_assembly.php) so
+                    // the ~300 stored configs never need rewriting. So it is MATCHED by the folder name
+                    // and EMITTED with the link prefix (moop_url_base()) -- "/moop" today, "" for a site
+                    // served at its domain's root.
                     // Local filesystem paths always stay local — remote files are registered
                     // with their https:// URL directly and are handled by CASE 1.
                     if (preg_match("#^/{$site}/data/tracks/(.+)$#", $uri, $matches)) {
@@ -516,7 +523,7 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
                         }
                         // Token bound to THIS file.
                         $token = generateTrackToken($organism, $assembly, $file_path);
-                        $value['uri'] = "/{$site}/api/jbrowse2/tracks.php?file=" . urlencode($file_path) . '&token=' . urlencode($token);
+                        $value['uri'] = moop_url_base() . "/api/jbrowse2/tracks.php?file=" . urlencode($file_path) . '&token=' . urlencode($token);
 
                     } elseif (preg_match("#^/{$site}/data/genomes/(.+)$#", $uri, $matches)) {
                         // CASE 3b: genome data (sequence, gene track, trix index) -> genome_file.php,
@@ -527,13 +534,14 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
                             $file_path = substr($file_path, 0, $q);
                         }
                         $token = generateTrackToken($organism, $assembly, 'genomes/' . $file_path);
-                        $value['uri'] = "/{$site}/api/jbrowse2/genome_file.php?file=" . urlencode($file_path) . '&token=' . urlencode($token);
+                        $value['uri'] = moop_url_base() . "/api/jbrowse2/genome_file.php?file=" . urlencode($file_path) . '&token=' . urlencode($token);
 
                     } elseif (preg_match("#^/{$site}/#", $uri)) {
                         // CASE 4: Other MOOP paths served directly by MOOP.
                         // Token is decorative here (not routed through tracks.php); bind to the path.
                         $token = generateTrackToken($organism, $assembly, $uri);
                         $separator = strpos($uri, '?') !== false ? '&' : '?';
+                        $value['uri'] = moop_url_base() . substr($value['uri'], strlen("/{$site}"));
                         $value['uri'] .= $separator . 'token=' . urlencode($token);
                     }
                     // CASE 5: Other paths (relative, absolute) → Leave unchanged

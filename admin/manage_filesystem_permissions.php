@@ -59,9 +59,9 @@ $data = [
     'web_user' => $web_user,
     'web_group' => $web_group,
     'config' => $config,
-    'page_styles' => ['/' . $site . '/css/manage-filesystem-permissions.css'],
+    'page_styles' => [moop_url_base() . '/css/manage-filesystem-permissions.css'],
     'page_script' => [
-        '/' . $site . '/js/admin-utilities.js',
+        moop_url_base() . '/js/admin-utilities.js',
     ],
 ];
 

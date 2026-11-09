@@ -146,14 +146,14 @@ $data = [
     'config' => $config,
     'site' => $site,
     'page_styles' => [
-        '/' . $site . '/css/manage-taxonomy-tree.css'
+        moop_url_base() . '/css/manage-taxonomy-tree.css'
     ],
     'page_script' => [
-        '/' . $site . '/js/admin-utilities.js',
-        '/' . $site . '/js/modules/manage-taxonomy-tree.js'
+        moop_url_base() . '/js/admin-utilities.js',
+        moop_url_base() . '/js/modules/manage-taxonomy-tree.js'
     ],
     'inline_scripts' => [
-        "const sitePath = '/" . $site . "';",
+        "const sitePath = '" . moop_url_base() . "';",
         "const currentTree = " . json_encode($current_tree) . ";"
     ]
 ];

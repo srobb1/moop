@@ -59,7 +59,7 @@ function _build_tool_url($tool, $context, $site) {
         }
     }
 
-    $url      = "/$site" . $tool['url_path'];
+    $url      = moop_url_base() . $tool['url_path'];
     $params   = [];
     $organisms = [];
 
@@ -179,7 +179,7 @@ function moop_primer_maker_as_shipped(): bool {
  */
 function moop_disabled_tool_for_script(ConfigManager $config, string $script): ?string {
     $script = '/' . ltrim($script, '/');
-    $prefix = '/' . $config->getString('site');
+    $prefix = moop_url_base($config);
     foreach ($config->getAllTools(true) as $id => $tool) {
         $path = (string) ($tool['url_path'] ?? '');
         if ($path !== '' && $script === $prefix . $path && !$config->isToolEnabled((string) $id)) {

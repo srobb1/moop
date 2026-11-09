@@ -176,14 +176,14 @@ $display_config = [
     ),
     'content_file' => __DIR__ . '/pages/organism.php',
     'page_script' => [
-        '/' . $site . '/js/organism-display.js'
+        moop_url_base() . '/js/organism-display.js'
     ],
     // Counts for the note under the search box. Computed here rather than fetched, because
     // the note has to say what is being searched BEFORE the user opens the scope filter --
     // which is the only thing that would otherwise reveal that assemblies and gene sets
     // exist at all on a single-organism page.
     'inline_scripts' => [
-        "const sitePath = '/" . $site . "';",
+        "const sitePath = '" . moop_url_base() . "';",
         "const organismName = '" . addslashes($organism_name) . "';",
         "const scopeCounts = " . json_encode(countAccessibleScope([$organism_name])) . ";",
         "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
@@ -196,7 +196,7 @@ $display_config = [
 $accessible_assemblies = getOrganismAssemblies($organism_name, $organism_data);
 $gene_set_rows = moop_gene_set_comparison_rows($organism_name, $accessible_assemblies, $organism_data);
 if ($gene_set_rows) {
-    $display_config['page_script'][] = '/' . $site . '/js/gene-set-comparison.js';
+    $display_config['page_script'][] = moop_url_base() . '/js/gene-set-comparison.js';
 }
 
 // Prepare data for content file

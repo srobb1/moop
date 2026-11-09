@@ -47,7 +47,7 @@ if (is_string($organisms)) {
 }
 
 if (empty($organisms)) {
-    header("Location: /$site/index.php");
+    header("Location: " . moop_url_base() . "/index.php");
     exit;
 }
 
@@ -57,7 +57,7 @@ foreach ($organisms as $organism) {
     $has_organism_access = has_access('COLLABORATOR', $organism);
     
     if (!$has_organism_access && !$is_public) {
-        header("Location: /$site/access_denied.php");
+        header("Location: " . moop_url_base() . "/access_denied.php");
         exit;
     }
 }
@@ -68,12 +68,12 @@ $display_config = [
     'title' => 'Multi-Organism Search',
     'content_file' => __DIR__ . '/pages/multi_organism.php',
     'page_script' => [
-        "/$site/js/modules/organism-utils.js",
-        "/$site/js/modules/tool-launch.js",
-        "/$site/js/multi-organism-search.js"
+        moop_url_base() . "/js/modules/organism-utils.js",
+        moop_url_base() . "/js/modules/tool-launch.js",
+        moop_url_base() . "/js/multi-organism-search.js"
     ],
     'inline_scripts' => [
-        "const sitePath = '/$site';",
+        "const sitePath = '" . moop_url_base() . "';",
         "const allOrganisms = " . json_encode($organisms) . ";",
         "let selectedOrganisms = allOrganisms;",
         "const totalOrganisms = allOrganisms.length;",
@@ -91,11 +91,11 @@ $data = [
     'absolute_images_path' => $absolute_images_path,
     'inline_scripts' => $display_config['inline_scripts'],
     'page_styles' => [
-        "/$site/css/display.css",
-        "/$site/css/parent.css",
-        "/$site/css/advanced-search-filter.css",
-        "/$site/css/search-controls.css",
-        "/$site/css/groups.css"
+        moop_url_base() . "/css/display.css",
+        moop_url_base() . "/css/parent.css",
+        moop_url_base() . "/css/advanced-search-filter.css",
+        moop_url_base() . "/css/search-controls.css",
+        moop_url_base() . "/css/groups.css"
     ]
 ];
 

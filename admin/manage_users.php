@@ -310,10 +310,10 @@ $data = [
     'stale_entries_audit' => $stale_entries_audit,
     'config' => $config,
     'page_styles' => [
-        '/' . $site . '/css/manage-users.css'
+        moop_url_base() . '/css/manage-users.css'
     ],
     'page_script' => [
-        '/' . $site . '/js/admin-utilities.js',
+        moop_url_base() . '/js/admin-utilities.js',
     ],
     'inline_scripts' => [
         "const allOrganisms = " . json_encode($orgs_with_gene_sets) . ";",

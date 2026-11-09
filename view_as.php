@@ -42,7 +42,7 @@ function view_as_return_target($site) {
         }
     }
 
-    return '/' . $site . '/index.php';
+    return moop_url_base() . '/index.php';
 }
 
 $return_to = view_as_return_target($site);

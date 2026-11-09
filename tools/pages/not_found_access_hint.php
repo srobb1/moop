@@ -25,7 +25,7 @@ $__has_ip      = !empty($__config->getArray('auto_login_ip_ranges'));
         it<?= $__admin_email !== '' ? ' &mdash; ask <a href="mailto:' . htmlspecialchars($__admin_email) . '">' . htmlspecialchars($__admin_email) . '</a> for access' : ' &mdash; ask a site administrator for access' ?>.
     <?php else: ?>
         Expected to find something here? Not all data is public.
-        <a href="/<?= htmlspecialchars($site) ?>/login.php">Log in</a><?= $__has_ip ? ', or connect from the institute network,' : '' ?>
+        <a href="<?= htmlspecialchars(moop_url_base()) ?>/login.php">Log in</a><?= $__has_ip ? ', or connect from the institute network,' : '' ?>
         to see more.
     <?php endif; ?>
 </p>

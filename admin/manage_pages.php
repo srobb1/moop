@@ -126,6 +126,6 @@ $data = [
     'tool_links'  => $config->getToolsMenu(),
     'pages_dir'   => moop_pages_dir(),
     'flash'       => $flash,
-    'page_script' => ['/' . $config->getString('site') . '/js/modules/manage-pages.js'],
+    'page_script' => [moop_url_base() . '/js/modules/manage-pages.js'],
 ];
 echo render_display_page(__DIR__ . '/pages/manage_pages.php', $data, 'Manage Pages');

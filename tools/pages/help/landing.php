@@ -37,7 +37,7 @@ $topic_card = function (array $t) use ($site) {
              read rendered DOM text (which would also match the icon markup and the badge). */ ?>
     <div class="col-md-6 col-lg-4 mb-3 help-topic"
          data-search="<?= htmlspecialchars(strtolower(strip_tags($t['title'] . ' ' . $t['description'])), ENT_QUOTES) ?>">
-      <a href="/<?= htmlspecialchars($site) ?>/help.php?topic=<?= htmlspecialchars($t['id']) ?>"
+      <a href="<?= htmlspecialchars(moop_url_base()) ?>/help.php?topic=<?= htmlspecialchars($t['id']) ?>"
          class="text-decoration-none">
         <div class="card h-100 shadow-sm help-topic-card">
           <div class="card-body p-3">

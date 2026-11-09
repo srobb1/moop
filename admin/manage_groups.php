@@ -480,15 +480,15 @@ $data = [
     'gt_by_row' => $gt_by_row,
     'config' => $config,
     'page_styles' => [
-        '/' . $site . '/css/manage-groups.css'
+        moop_url_base() . '/css/manage-groups.css'
     ],
     'page_script' => [
-        '/' . $site . '/js/admin-utilities.js',
-        '/' . $site . '/js/modules/manage-groups.js',
-        '/' . $site . '/js/modules/group-taxonomy-suggestions.js'
+        moop_url_base() . '/js/admin-utilities.js',
+        moop_url_base() . '/js/modules/manage-groups.js',
+        moop_url_base() . '/js/modules/group-taxonomy-suggestions.js'
     ],
     'inline_scripts' => [
-        "const sitePath = '/" . $site . "';",
+        "const sitePath = '" . moop_url_base() . "';",
         "const isDescFileWriteError = " . ($desc_file_write_error ? 'true' : 'false') . ";",
         "const existingGroups = " . json_encode($all_existing_groups) . ";"
     ]

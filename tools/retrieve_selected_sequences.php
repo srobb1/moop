@@ -74,16 +74,16 @@ if ($gene_set_name === '' && count($available_gene_sets) === 1) {
 
 // Assembly MUST be specified - it's a security requirement
 if (empty($assembly_name)) {
-    header("Location: /$site/access_denied.php?error=assembly_required");
+    header("Location: " . moop_url_base() . "/access_denied.php?error=assembly_required");
     exit;
 }
 
 // Check access to the requested gene_set
 if (!has_gene_set_access($organism_name, $assembly_name, $gene_set_name)) {
     if (!is_logged_in()) {
-        header("Location: /$site/login.php");
+        header("Location: " . moop_url_base() . "/login.php");
     } else {
-        header("Location: /$site/access_denied.php");
+        header("Location: " . moop_url_base() . "/access_denied.php");
     }
     exit;
 }
@@ -207,8 +207,8 @@ $data = [
     'organism_data' => $organism_data,
     'available_sequences' => !empty($displayed_content) ? formatSequenceResults($displayed_content, $sequence_types) : [],
     'page_styles' => [
-        '/' . $site . '/css/display.css',
-        '/' . $site . '/css/retrieve-selected-sequences.css',
+        moop_url_base() . '/css/display.css',
+        moop_url_base() . '/css/retrieve-selected-sequences.css',
     ]
 ];
 

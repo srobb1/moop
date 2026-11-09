@@ -15,7 +15,7 @@
 (function () {
     'use strict';
 
-    const api = (typeof sitePath !== 'undefined' ? sitePath : '/moop') + '/admin/api/retire.php';
+    const api = (typeof sitePath !== 'undefined' ? sitePath : (window.sitePath || '')) + '/admin/api/retire.php';
 
     function post(fields) {
         const body = new FormData();

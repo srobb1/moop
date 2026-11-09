@@ -77,7 +77,7 @@ function initTracksTable() {
         processing: true,
         serverSide: true,
         ajax: {
-            url: `/${siteUrl}/admin/api/jbrowse_list_tracks.php`,
+            url: `${siteUrl}/admin/api/jbrowse_list_tracks.php`,
             type: 'POST',
             data: function(d) {
                 d.organism = $('#filterOrganism').val();
@@ -245,7 +245,7 @@ function rebuildGff(organism, assembly, buttonEl) {
                 fd.append('text_index', '1');
                 fd.append('attributes', attrs);
             }
-            return { url: `/${siteUrl}/admin/api/jbrowse_reprep_gff.php`, formData: fd };
+            return { url: `${siteUrl}/admin/api/jbrowse_reprep_gff.php`, formData: fd };
         },
         formatResult: (data) => {
             let log = data.output || '';
@@ -282,7 +282,7 @@ function indexTrackNames(trackId, organism, assembly, buttonEl) {
             fd.append('organism',   organism);
             fd.append('assembly',   assembly);
             fd.append('attributes', attrs);
-            return { url: `/${siteUrl}/admin/api/jbrowse_text_index.php`, formData: fd };
+            return { url: `${siteUrl}/admin/api/jbrowse_text_index.php`, formData: fd };
         },
         formatResult: (data) => {
             let log = `Attributes: ${data.attributes || ''}\n\n` + (data.output || '');
@@ -410,7 +410,7 @@ function deleteTracks(items) {
         formData.append('assembly', details.assembly);
         formData.append('type', details.type_dir);
         formData.append('fileId', details.file_id);
-        return fetch(`/${siteUrl}/admin/api/jbrowse_delete_tracks.php`, { method: 'POST', body: formData })
+        return fetch(`${siteUrl}/admin/api/jbrowse_delete_tracks.php`, { method: 'POST', body: formData })
             .then(response => response.json())
             .catch(error => ({ success: false, error: error.message }));
     });
@@ -447,7 +447,7 @@ function registerAssembly(organism, assembly, buttonEl) {
     formData.append('organism', organism);
     formData.append('assembly', assembly);
 
-    fetch(`/${siteUrl}/admin/api/jbrowse_register_assembly.php`, {
+    fetch(`${siteUrl}/admin/api/jbrowse_register_assembly.php`, {
         method: 'POST',
         body: formData
     })
@@ -502,7 +502,7 @@ function loadTracksServerConfig() {
     const formData = new FormData();
     formData.append('action', 'get_config');
 
-    fetch(`/${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
+    fetch(`${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if (!data.success) { console.error('get_config failed:', data.error); return; }
@@ -543,7 +543,7 @@ function testJWT() {
     const statusDiv = document.getElementById('jwtStatusDisplay');
     statusDiv.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Testing...';
 
-    fetch(`/${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
+    fetch(`${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
@@ -616,7 +616,7 @@ $(document).ready(function() {
         resultDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> Saving...</div>';
         resultDiv.style.display = 'block';
 
-        fetch(`/${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
+        fetch(`${siteUrl}/admin/api/jbrowse_tracks_server.php`, { method: 'POST', body: formData })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-            fetch(`/${siteUrl}/admin/api/unregister_assembly.php`, {
+            fetch(`${siteUrl}/admin/api/unregister_assembly.php`, {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-CSRF-Token': csrfToken }
@@ -711,7 +711,7 @@ document.addEventListener('DOMContentLoaded', function () {
 // ---------------------------------------------------------------------------
 (function () {
     const rows = (typeof jbrowseAssemblyRows !== 'undefined') ? jbrowseAssemblyRows : [];
-    const api = name => `/${siteUrl || sitePath}/admin/api/${name}`;
+    const api = name => `${siteUrl}/admin/api/${name}`;
     const rowKey = row => row.organism + '/' + row.assembly;
     const findRow = key => rows.find(row => rowKey(row) === key);
 

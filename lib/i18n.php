@@ -101,7 +101,7 @@ function moop_i18n_seen_all(): array {
 function moop_i18n_seen_flush(): void {
     $now = array_keys($GLOBALS['moop_i18n_seen_now'] ?? []);
     if (!$now) return;
-    $site = '/' . ConfigManager::getInstance()->getString('site');
+    $site = moop_url_base();
     $page = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
     if (strpos($page, $site . '/') === 0) $page = substr($page, strlen($site) + 1);
     if ($page === 'page.php' && isset($_GET['p'])) $page .= '?p=' . (string) $_GET['p'];

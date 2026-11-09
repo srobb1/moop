@@ -16,7 +16,7 @@ $fv = fn($k) => htmlspecialchars((string)($form[$k] ?? ''));
 
   <div class="d-flex align-items-center gap-3 mb-3">
     <h3 class="mb-0"><i class="fa fa-magic me-2" style="color:var(--moop-tool-header);"></i>Primer Maker</h3>
-    <a href="/<?= htmlspecialchars($site) ?>/tools/primer_maker.php" target="_blank" class="btn btn-outline-secondary btn-sm ms-auto">
+    <a href="<?= htmlspecialchars(moop_url_base()) ?>/tools/primer_maker.php" target="_blank" class="btn btn-outline-secondary btn-sm ms-auto">
       <i class="fa fa-external-link-alt me-1"></i>Open Primer Maker
     </a>
     <a href="manage_tools.php" class="btn btn-outline-secondary btn-sm">

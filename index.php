@@ -101,7 +101,7 @@ if (file_exists($desc_file)) {
         if (!empty($d['featured']) && isset($cards_to_display[$d['group_name']])) {
             $featured_groups[] = [
                 'name' => $d['group_name'],
-                'url'  => "/$site/tools/groups.php?group=" . urlencode($d['group_name']),
+                'url'  => moop_url_base() . "/tools/groups.php?group=" . urlencode($d['group_name']),
             ];
         }
     }
@@ -126,7 +126,7 @@ if (empty($featured_groups)) {
         if (isset($groups_with_public[$group_name])) {
             $featured_groups[] = [
                 'name' => $group_name,
-                'url'  => "/$site/tools/groups.php?group=" . urlencode($group_name),
+                'url'  => moop_url_base() . "/tools/groups.php?group=" . urlencode($group_name),
             ];
         }
     }
@@ -149,12 +149,12 @@ echo render_display_page(
         'cards_to_display'   => $cards_to_display,
         'home_intro_html'    => $home_intro_html,   // a content page above the home (moop_markdown(): safe)
         'page_script'        => [
-            "/$site/js/modules/taxonomy-tree.js",
-            "/$site/js/modules/tool-launch.js",
-            "/$site/js/index.js",
+            moop_url_base() . "/js/modules/taxonomy-tree.js",
+            moop_url_base() . "/js/modules/tool-launch.js",
+            moop_url_base() . "/js/index.js",
         ],
         'inline_scripts'     => [
-            "const sitePath = '/$site';",
+            "const sitePath = '" . moop_url_base() . "';",
             "const quickSearchData = " . json_encode($quick_search['items']) . ";",
             "const userAccess = " . json_encode($taxonomy_user_access) . ";",
             // Only the organisms this viewer may see -- see pruneTaxonomyTreeForAccess().

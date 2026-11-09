@@ -82,7 +82,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'primer_maker', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels'];
+    private $editableConfigKeys = ['link_prefix', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'primer_maker', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -214,7 +214,7 @@ class ConfigManager
             $site = $this->config['site'] ?? '';
             $images_dir = $this->config['images_dir'] ?? 'images';
             $favicon_filename = $this->config['favicon_filename'] ?? 'favicon.ico';
-            return "/$site/$images_dir/$favicon_filename";
+            return moop_url_base() . "/$images_dir/$favicon_filename";
         }
 
         if (array_key_exists($key, $this->config) || strpos($key, '.') === false) {
@@ -509,7 +509,7 @@ class ConfigManager
     private function menuLink(array $item, string $lang): ?array
     {
         $to    = (array) ($item['to'] ?? []);
-        $site  = '/' . $this->getString('site');
+        $site  = moop_url_base();
         $href  = null;
         $external = false;
         if (isset($to['builtin'])) {
@@ -646,7 +646,7 @@ class ConfigManager
         }
 
         $site = $this->getString('site', 'moop');
-        $url = "/$site" . $tool['url_path'];
+        $url = moop_url_base() . $tool['url_path'];
         $params = [];
 
         // Build query parameters from context

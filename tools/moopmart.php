@@ -151,11 +151,11 @@ echo render_display_page(
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
         // scope-selected-panel BEFORE moopmart.js: moopmart.js calls initScopeSelectedPanel().
-        'page_script'             => ["/$site/js/modules/scope-selected-panel.js",
-                                      "/$site/js/modules/moopmart.js"],
+        'page_script'             => [moop_url_base() . "/js/modules/scope-selected-panel.js",
+                                      moop_url_base() . "/js/modules/moopmart.js"],
         'inline_scripts'          => [
             'const annotationSources = ' . json_encode($annotation_source_names) . ';',
-            "const moopSite = '/$site';",
+            "const moopSite = '" . moop_url_base() . "';",
             "const siteTitle = '"        . addslashes($siteTitle)                . "';",
             'const scopeContext = '      . json_encode($scope_context)           . ';',
             'const expressionGeneSets = ' . json_encode($expression_gene_sets) . ';',

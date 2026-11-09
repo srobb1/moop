@@ -94,10 +94,10 @@ if (!isset($data['site'])) {
 if (!isset($data['page_styles'])) {
     $site = $data['site'];
     $data['page_styles'] = [
-        '/' . $site . '/css/parent.css',
-        '/' . $site . '/css/display.css',
-        '/' . $site . '/css/advanced-search-filter.css',
-        '/' . $site . '/css/search-controls.css',
+        moop_url_base() . '/css/parent.css',
+        moop_url_base() . '/css/display.css',
+        moop_url_base() . '/css/advanced-search-filter.css',
+        moop_url_base() . '/css/search-controls.css',
     ];
 }
 

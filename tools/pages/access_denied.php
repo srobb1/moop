@@ -40,7 +40,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= t('Close') ?>"></button>
           </div>
           
-          <a href="/<?= htmlspecialchars($site) ?>/index.php" class="btn btn-primary btn-lg w-100">
+          <a href="<?= htmlspecialchars(moop_url_base()) ?>/index.php" class="btn btn-primary btn-lg w-100">
             <i class="fa fa-home"></i> <?= t('Return to Home') . "\n" ?>
           </a>
         </div>

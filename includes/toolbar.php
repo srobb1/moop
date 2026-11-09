@@ -35,7 +35,7 @@ if ($va_previewing) {
 <nav class="navbar navbar-expand-md bg-dark navbar-dark sticky-top">
   <div class="container-fluid px-3">
 
-    <a class="navbar-brand" href="/<?= $site ?>/index.php">
+    <a class="navbar-brand" href="<?= moop_url_base() ?>/index.php">
       <img id="site_logo" src="<?= $favicon_path ?>" alt="Logo">
     </a>
 
@@ -50,7 +50,7 @@ if ($va_previewing) {
       <!-- Left nav items -->
       <ul class="navbar-nav me-auto">
         <li class="nav-item">
-          <a class="nav-link site-title" href="/<?= $site ?>/index.php"><?= htmlspecialchars($title) ?></a>
+          <a class="nav-link site-title" href="<?= moop_url_base() ?>/index.php"><?= htmlspecialchars($title) ?></a>
         </li>
 <?php /* The main bar after the site title: ConfigManager::getMainMenu() -- the site's own
          (Admin -> Manage Menu, or a page's "Show in menu") or the default Tools, About, Help,
@@ -69,7 +69,7 @@ foreach (ConfigManager::getInstance()->getMainMenu(moop_current_lang()) as $mb_i
 <?php if ($tb_item['type'] === 'divider'): ?>
             <li><hr class="dropdown-divider"></li>
 <?php else: ?>
-            <li><a class="dropdown-item" href="/<?= $site ?><?= htmlspecialchars($tb_item['url_path']) ?>"><?= htmlspecialchars(t_plain($tb_item['label'])) ?></a></li>
+            <li><a class="dropdown-item" href="<?= moop_url_base() ?><?= htmlspecialchars($tb_item['url_path']) ?>"><?= htmlspecialchars(t_plain($tb_item['label'])) ?></a></li>
 <?php endif; ?>
 <?php endforeach; ?>
           </ul>
@@ -96,7 +96,7 @@ foreach (ConfigManager::getInstance()->getMainMenu(moop_current_lang()) as $mb_i
 <?php endforeach; ?>
         <?php if (is_logged_in() && moop_session_is_admin()): ?>
         <li class="nav-item">
-          <a id="admin_tools_link" class="nav-link" href="/<?= $site ?>/admin/admin.php"><i class="fa fa-tools me-1"></i> <?= t('Admin Tools') ?></a>
+          <a id="admin_tools_link" class="nav-link" href="<?= moop_url_base() ?>/admin/admin.php"><i class="fa fa-tools me-1"></i> <?= t('Admin Tools') ?></a>
         </li>
         <?php endif; ?>
       </ul>
@@ -145,7 +145,7 @@ if (count($lb_langs) > 1 && !defined('MOOP_ADMIN_PAGE')): $lb_now = moop_current
           // A bare switch: the badge beside it says which view is on, so the long
           // "View as public" label only repeated it. The name is kept for screen readers. ?>
         <li class="nav-item">
-          <form method="post" action="/<?= $site ?>/view_as.php" class="m-0">
+          <form method="post" action="<?= moop_url_base() ?>/view_as.php" class="m-0">
             <?= csrf_input_field() ?>
             <input type="hidden" name="action" value="<?= $va_previewing ? 'leave' : 'enter' ?>">
             <input type="hidden" name="return" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '') ?>">
@@ -161,9 +161,9 @@ if (count($lb_langs) > 1 && !defined('MOOP_ADMIN_PAGE')): $lb_now = moop_current
 
         <li class="nav-item">
           <?php if (get_access_level() === 'IP_IN_RANGE' || !is_logged_in()): ?>
-            <a id="login_link" class="nav-link" href="/<?= $site ?>/login.php"><?= t('Log In') ?> <i class="fa fa-sign-in-alt"></i></a>
+            <a id="login_link" class="nav-link" href="<?= moop_url_base() ?>/login.php"><?= t('Log In') ?> <i class="fa fa-sign-in-alt"></i></a>
           <?php else: ?>
-            <a id="logout_link" class="nav-link" href="/<?= $site ?>/logout.php"><?= t('Log Out') ?> <i class="fa fa-sign-out-alt"></i></a>
+            <a id="logout_link" class="nav-link" href="<?= moop_url_base() ?>/logout.php"><?= t('Log Out') ?> <i class="fa fa-sign-out-alt"></i></a>
           <?php endif; ?>
         </li>
       </ul>

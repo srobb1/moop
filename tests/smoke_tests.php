@@ -4019,6 +4019,36 @@ $_l = $_leaves(build_tree_from_lineage_cache(['Spathula_sp' => ['taxon_id' => '7
 ok(($_l['Spathula_sp'] ?? '') === 'Dugesiidae/Spathula/Spathula sp.', 'a lone genus-id organism reads "Spathula sp.", under its genus');
 
 // ----------------------------------------------------------------------------
+group('Link prefix: every link starts with moop_url_base(), never the folder name');
+// The folder name and the start of a link are different things. A site served at its domain's
+// root ("/") must produce "/tools/...", never "//tools/..." (a link to a HOST named "tools").
+$_lpc  = ConfigManager::getInstance();
+$_lprp = new ReflectionProperty($_lpc, 'config'); $_lprp->setAccessible(true);
+$_lpsaved = $_lprp->getValue($_lpc);
+$_lpset = function ($v) use ($_lpc, $_lprp, $_lpsaved) { $c = $_lpsaved; $c['link_prefix'] = $v; $_lprp->setValue($_lpc, $c); };
+ok(($_lpsaved['link_prefix'] ?? null) === '/' . $_lpsaved['site'], 'the default prefix is "/" + the folder name, so an existing site changes nothing');
+foreach (['/moop' => '/moop', 'moop' => '/moop', '/moop/' => '/moop', '/cuttingclass' => '/cuttingclass', '/' => '', ' / ' => ''] as $_in => $_want) {
+    $_lpset($_in);
+    ok(moop_url_base() === $_want, "link_prefix " . json_encode($_in) . " -> base " . json_encode($_want));
+}
+$_lpfolder = '/' . $_lpsaved['site'];
+$_lpset('//evil.example');
+ok(moop_url_base() === '/evil.example', 'a leading "//" is tidied to one slash: never a link to another host');
+foreach (['/x"><script>alert(1)</script>', "/x'+alert(1)+'", '/a b', '/..', '/moop/../etc', '\\evil', 'javascript:alert(1)', "/x\r\nSet-Cookie: a=b"] as $_bad) {
+    $_lpset($_bad);
+    ok(moop_url_base() === $_lpfolder, 'a prefix that is not plain path segments falls back to the folder: ' . json_encode($_bad));
+}
+$_lpset('/');
+ok(moop_url('tools/blast.php') === '/tools/blast.php' && moop_url('/tools/blast.php') === '/tools/blast.php' && moop_url() === '/',
+   'at the root: "/tools/blast.php", and the home page is "/" -- never "//"');
+$_lpset('/moop');
+ok(moop_url('tools/blast.php') === '/moop/tools/blast.php' && moop_url() === '/moop/', 'under /moop: "/moop/tools/blast.php" and "/moop/"');
+$_lpset('/');
+ok(moop_disabled_tool_for_script($_lpc, '/tools/no_such_page.php') === null, 'at the root, a script that is no tool page is never turned away');
+$_lprp->setValue($_lpc, $_lpsaved);
+ok(moop_url_base() === $_lpsaved['link_prefix'], 'prefix restored after the test');
+
+// ----------------------------------------------------------------------------
 group('BLAST failures: server paths never reach a visitor; input errors still do');
 // BLAST's stderr was shown to every visitor, and a missing database prints the full server
 // path. Input errors (BLAST labels them "query/options") must still reach the visitor.

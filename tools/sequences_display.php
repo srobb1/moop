@@ -147,7 +147,7 @@ if (!empty($available_sequences) && array_reduce($available_sequences, function(
                                 $pd_links[] = [
                                     'id'  => $pd_id,
                                     'len' => $pd_len,
-                                    'url' => '/' . $config->getString('site') . '/tools/primer_maker.php?' . http_build_query([
+                                    'url' => moop_url_base() . '/tools/primer_maker.php?' . http_build_query([
                                         'organism' => $pd_ctx['organism'] ?? '',
                                         'assembly' => $pd_ctx['assembly'] ?? '',
                                         'gene_set' => $pd_ctx['gene_set'] ?? '',

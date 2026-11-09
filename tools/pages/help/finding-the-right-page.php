@@ -54,7 +54,7 @@ $tasks = [
 // answers 404, so no task or page card may send anyone there. A link is dropped, a task left with
 // no link is dropped, and a hint that names a switched-off tool in passing gets its shorter form.
 $tool_off = fn(string $href): bool => $href[0] === '/' && strpos($href, '/help.php') !== 0
-    && moop_disabled_tool_for_script($config, '/' . $site . strtok($href, '?#')) !== null;
+    && moop_disabled_tool_for_script($config, moop_url_base() . strtok($href, '?#')) !== null;
 $hint_without = [
     'Export a gene list with its annotations' => ['/tools/expression.php',
         'Build the list by ID, name or annotation, across organisms, and download TSV or FASTA.'],
@@ -149,7 +149,7 @@ foreach ($routes as $i => $r) {
             <p class="text-muted small flex-grow-1 mb-2"><?= htmlspecialchars($r['purpose']) ?></p>
             <?php if (!empty($r['linkable']) && !empty($r['link'])): ?>
               <a class="btn btn-sm btn-outline-moop align-self-start"
-                 href="/<?= htmlspecialchars($site) ?><?= htmlspecialchars($r['link']) ?>">
+                 href="<?= htmlspecialchars(moop_url_base()) ?><?= htmlspecialchars($r['link']) ?>">
                 Go to <?= htmlspecialchars($r['title']) ?> <i class="fa fa-arrow-right ms-1"></i>
               </a>
             <?php else: ?>
@@ -173,7 +173,7 @@ foreach ($routes as $i => $r) {
   </section>
 
   <p class="text-muted small">
-    Every page above can be reached from the <a href="/<?= htmlspecialchars($site) ?>/">home page</a>.
+    Every page above can be reached from the <a href="<?= htmlspecialchars(moop_url_base()) ?>/">home page</a>.
   </p>
 
 

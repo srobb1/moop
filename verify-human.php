@@ -55,7 +55,7 @@ echo render_display_page(
         'return'      => $return,
         'error'       => $error,
         'admin_email' => $config->getString('admin_email', ''),
-        'page_script' => ['/' . $site . '/js/verify-human.js'],
+        'page_script' => [moop_url_base() . '/js/verify-human.js'],
     ],
     'One moment - ' . $siteTitle
 );

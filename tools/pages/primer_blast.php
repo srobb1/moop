@@ -825,7 +825,7 @@ $db_section_label = function ($key) {
                                                         $track = $primer_session_track(
                                                             $prod, $pair['name'], $result_organism . '_' . $result_assembly
                                                         );
-                                                        $jb  = '/' . $site . '/jbrowse2.php?organism=' . urlencode($result_organism)
+                                                        $jb  = moop_url_base() . '/jbrowse2.php?organism=' . urlencode($result_organism)
                                                              . '&assembly=' . urlencode($result_assembly)
                                                              . '&loc=' . urlencode($loc)
                                                              . '&sessionTracks=' . urlencode(json_encode($track))

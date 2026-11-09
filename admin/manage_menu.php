@@ -50,7 +50,7 @@ $data = [
     'site'           => $config->getString('site'),
     'flash'          => $flash,
     'customised'     => (bool) $config->getArray('main_menu'),
-    'page_script'    => ['/' . $config->getString('site') . '/js/modules/manage-menu.js'],
+    'page_script'    => [moop_url_base() . '/js/modules/manage-menu.js'],
     'inline_scripts' => [
         'window.mmData = ' . json_encode(['menu' => $config->mainMenu(), 'pages' => $pages, 'languages' => $config->languages()], $flags) . ';',
     ],

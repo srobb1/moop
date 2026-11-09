@@ -47,7 +47,7 @@ $taxonomy_rank = $_GET['taxonomy_rank'] ?? '';
 $is_taxonomy_group = !empty($taxonomy_rank);
 
 if (empty($group_name) && empty($taxonomy_rank)) {
-    header("Location: /$site/index.php");
+    header("Location: " . moop_url_base() . "/index.php");
     exit;
 }
 
@@ -110,7 +110,7 @@ if ($is_taxonomy_group) {
     if (!groupNameExists($group_name, $group_data, $group_descriptions)) {
         $taxonomy_tree_data = loadJsonFile("$metadata_path/taxonomy_tree_config.json", []);
         if (taxonomyRankExists($group_name, $taxonomy_tree_data['tree'] ?? [])) {
-            header('Location: /' . $site . '/tools/groups.php?taxonomy_rank=' . urlencode($group_name), true, 302);
+            header('Location: ' . moop_url_base() . '/tools/groups.php?taxonomy_rank=' . urlencode($group_name), true, 302);
             exit;
         }
         // Nothing under that name. Fall through with an empty list; the view says so
@@ -153,9 +153,9 @@ if (!$is_taxonomy_group && empty($group_unknown) && !is_public_group($group_name
 
 // Configure display template
 $page_scripts = [
-    "/$site/js/modules/organism-utils.js",
-    "/$site/js/modules/tool-launch.js",
-    "/$site/js/groups-display.js"
+    moop_url_base() . "/js/modules/organism-utils.js",
+    moop_url_base() . "/js/modules/tool-launch.js",
+    moop_url_base() . "/js/groups-display.js"
 ];
 
 $display_config = [
@@ -163,7 +163,7 @@ $display_config = [
     'content_file' => __DIR__ . '/pages/groups.php',
     'page_script' => $page_scripts,
     'inline_scripts' => [
-        "const sitePath = '/$site';",
+        "const sitePath = '" . moop_url_base() . "';",
         "const groupName = '" . addslashes($group_name) . "';",
         "const groupOrganisms = " . json_encode(array_keys($group_organisms)) . ";",
         "const siteTitle = '" . addslashes($config->getString('siteTitle')) . "';"
@@ -188,8 +188,8 @@ $data = [
     'absolute_images_path' => $absolute_images_path,
     'organism_data' => $organism_data,
     'page_styles' => [
-        "/$site/css/groups.css",
-        "/$site/css/advanced-search-filter.css"
+        moop_url_base() . "/css/groups.css",
+        moop_url_base() . "/css/advanced-search-filter.css"
     ],
 ];
 

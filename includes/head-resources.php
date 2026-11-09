@@ -60,7 +60,7 @@ $site = $config->getString('site');
       // Custom CSS is optional; silently skip when the file is absent (a missing
       // optional override must not spam the error log on every page load).
       if (!empty($custom_css_path) && file_exists($custom_css_path)) {
-          $custom_css_url = $config->getString('custom_css_url');
+          $custom_css_url = moop_url('css/custom.css');   // a link, so it follows the link prefix
           echo '<link rel="stylesheet" href="' . htmlspecialchars($custom_css_url, ENT_QUOTES) . '">';
       }
     ?>

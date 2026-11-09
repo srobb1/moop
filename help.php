@@ -45,7 +45,7 @@ if ($topic && preg_match('/^[a-z0-9\-]+$/', $topic)
 $data = [
     'config' => $config,
     'siteTitle' => $config->getString('siteTitle'),
-    'page_script' => '/' . $config->getString('site') . '/js/modules/help-filter.js',
+    'page_script' => moop_url_base() . '/js/modules/help-filter.js',
 ];
 
 // Render page using layout system

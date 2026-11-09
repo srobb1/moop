@@ -268,7 +268,7 @@
                     <?php endforeach; ?>
                   </ul>
                 </div>
-                <p class="mb-0">Build the database with the loading pipeline. See the <a href="/<?= htmlspecialchars($site) ?>/help.php?topic=organism-data-organization#database-schema" target="_blank"><strong>Database Schema section</strong></a> for the file format and structure.</p>
+                <p class="mb-0">Build the database with the loading pipeline. See the <a href="<?= htmlspecialchars(moop_url_base()) ?>/help.php?topic=organism-data-organization#database-schema" target="_blank"><strong>Database Schema section</strong></a> for the file format and structure.</p>
               </div>
             <?php endif; ?>
 

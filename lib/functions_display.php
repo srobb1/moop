@@ -76,7 +76,7 @@ function getOrganismImagePath($organism_info, $images_path = 'moop/images', $abs
     if (!empty($organism_info['taxon_id'])) {
         $ncbi_image_file = "$absolute_images_path/ncbi_taxonomy/" . $organism_info['taxon_id'] . '.jpg';
         if (moop_is_real_image($ncbi_image_file)) {
-            return "/$site/images/ncbi_taxonomy/" . $organism_info['taxon_id'] . ".jpg";
+            return moop_url_base() . "/images/ncbi_taxonomy/" . $organism_info['taxon_id'] . ".jpg";
         }
     }
 
@@ -92,7 +92,7 @@ function getOrganismImagePath($organism_info, $images_path = 'moop/images', $abs
             foreach (['jpg', 'jpeg', 'png', 'gif', 'webp'] as $ext) {
                 $cached_file = "$wikimedia_dir/$name_variant.$ext";
                 if (moop_is_real_image($cached_file)) {
-                    return "/$site/images/wikimedia/" . rawurlencode("$name_variant.$ext");
+                    return moop_url_base() . "/images/wikimedia/" . rawurlencode("$name_variant.$ext");
                 }
             }
         }
@@ -382,7 +382,7 @@ function moop_not_found_page(string $message = ''): void {
 function setupOrganismDisplayContext($organism_name, $organism_data_dir, $check_access = true, $redirect_home = null) {
     if ($redirect_home === null) {
         $site = ConfigManager::getInstance()->getString('site');
-        $redirect_home = "/$site/index.php";
+        $redirect_home = moop_url_base() . "/index.php";
     }
 
     // Validate organism parameter
@@ -748,7 +748,7 @@ function downloadWikimediaImage($wiki_url, $cache_filename, $cache_directory = '
     $cache_file = $cache_directory . '/' . basename($cache_filename);
     
     if (file_exists($cache_file)) {
-        return "/$site/images/wikimedia/" . basename($cache_filename);
+        return moop_url_base() . "/images/wikimedia/" . basename($cache_filename);
     }
     
     $http_code  = 0;
@@ -768,7 +768,7 @@ function downloadWikimediaImage($wiki_url, $cache_filename, $cache_directory = '
     
     @chmod($cache_file, 0664);
     
-    return "/$site/images/wikimedia/" . basename($cache_filename);
+    return moop_url_base() . "/images/wikimedia/" . basename($cache_filename);
 }
 
 /**
@@ -795,7 +795,7 @@ function getGroupImagePath($group_info, $absolute_images_path = '') {
     foreach ($extensions as $ext) {
         $custom_image = $custom_image_dir . $safe_group_name . '.' . $ext;
         if (file_exists($custom_image)) {
-            return "/$site/images/groups/" . $safe_group_name . '.' . $ext;
+            return moop_url_base() . "/images/groups/" . $safe_group_name . '.' . $ext;
         }
     }
     
@@ -804,7 +804,7 @@ function getGroupImagePath($group_info, $absolute_images_path = '') {
     foreach ($extensions as $ext) {
         $wikimedia_image = $wikimedia_dir . $safe_group_name . '.' . $ext;
         if (file_exists($wikimedia_image)) {
-            return "/$site/images/wikimedia/" . $safe_group_name . '.' . $ext;
+            return moop_url_base() . "/images/wikimedia/" . $safe_group_name . '.' . $ext;
         }
     }
     

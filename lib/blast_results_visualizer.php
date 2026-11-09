@@ -678,7 +678,7 @@ function buildBlastHitLinkouts($hit, $context) {
             ]];
 
             $loc = $subject . ':' . ($parent_start + 1) . '-' . $parent_end;
-            $url = "/$site/jbrowse2.php?organism=" . urlencode($organism)
+            $url = moop_url_base() . "/jbrowse2.php?organism=" . urlencode($organism)
                  . '&assembly='      . urlencode($assembly)
                  . '&loc='           . urlencode($loc)
                  . '&sessionTracks=' . urlencode(json_encode($session_tracks))
@@ -700,7 +700,7 @@ function buildBlastHitLinkouts($hit, $context) {
         $gene_id = $entry ? $entry['gene_id'] : $hit_id;
 
         if (($linkout_config['gene_page'] ?? false) && $has_sqlite) {
-            $url  = "/$site/tools/parent.php?uniquename=" . urlencode($gene_id)
+            $url  = moop_url_base() . "/tools/parent.php?uniquename=" . urlencode($gene_id)
                   . '&organism=' . urlencode($organism)
                   . '&assembly=' . urlencode($assembly)
                   . (($context['gene_set'] ?? '') !== '' ? '&gene_set=' . urlencode($context['gene_set']) : '');
@@ -711,7 +711,7 @@ function buildBlastHitLinkouts($hit, $context) {
 
         if (($linkout_config['jbrowse'] ?? false) && $has_jbrowse && $entry) {
             $loc  = $entry['chr'] . ':' . $entry['start'] . '-' . $entry['end'];
-            $url  = "/$site/jbrowse2.php?organism=" . urlencode($organism)
+            $url  = moop_url_base() . "/jbrowse2.php?organism=" . urlencode($organism)
                   . '&assembly=' . urlencode($assembly)
                   . '&loc=' . urlencode($loc);
             $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" '

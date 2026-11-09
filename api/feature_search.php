@@ -131,7 +131,7 @@ function moop_feature_id_lookup(array $batches, string $needle, string $mode, ar
                 'organism'   => $row['organism'],
                 'assembly'   => $row['genome_accession'],
                 'gene_set'   => $row['gene_set_name'],
-                'url'        => "/$site/tools/parent.php"
+                'url'        => moop_url_base() . "/tools/parent.php"
                               . '?organism='  . urlencode($row['organism'])
                               . '&uniquename=' . urlencode($row['feature_uniquename'])
                               . '&assembly='  . urlencode($row['genome_accession'])
@@ -253,7 +253,7 @@ function moop_resolve_feature_search_hits(array $results, array $db_map, string 
                 'organism'   => $r['organism'],
                 'assembly'   => $r['assembly'],
                 'gene_set'   => $r['gene_set'],
-                'url'        => "/$site/tools/parent.php"
+                'url'        => moop_url_base() . "/tools/parent.php"
                               . '?organism='    . urlencode($r['organism'])
                               . '&uniquename='  . urlencode($target)
                               . '&assembly='    . urlencode($r['assembly'])

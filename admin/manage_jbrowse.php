@@ -241,12 +241,12 @@ $data = [
     'inline_scripts' => [
         'const jbrowseOrganisms = '        . json_encode($organisms)               . ';',
         'const jbrowseAssemblyNames = '   . json_encode($assembly_display_names)  . ';',
-        'const sitePath = "'              . $site                               . '";',
+        'const sitePath = '               . json_encode(moop_url_base())          . ';',   // "/moop" -- like every page; js/jbrowse-admin.js adds no slash of its own
         'const jbrowseAssemblyRows = '    . json_encode($assembly_rows)           . ';',
     ],
     'page_script' => [
-        '/' . $config->getString('site') . '/js/admin-utilities.js',
-        '/' . $config->getString('site') . '/js/jbrowse-admin.js',
+        moop_url_base() . '/js/admin-utilities.js',
+        moop_url_base() . '/js/jbrowse-admin.js',
     ],
 ];
 

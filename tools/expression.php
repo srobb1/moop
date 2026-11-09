@@ -123,7 +123,7 @@ if ($chosen && $typed && $selected) {
         }
         $heatmap = moop_expression_heatmap_svg($genes, $selected, $matrix, $mode,
                                                moop_expression_gene_symbols($genes, $db_file, $gs_id),
-                                               fn($g) => "/$site/tools/parent.php?" . http_build_query([
+                                               fn($g) => moop_url_base() . "/tools/parent.php?" . http_build_query([
                                                    'organism' => $chosen['organism'], 'uniquename' => $g,
                                                    'assembly' => $chosen['assembly'], 'gene_set' => $chosen['gene_set']]));
     }
@@ -134,7 +134,7 @@ $link = function (array $change) use ($chosen, $genes_text, $selected, $mode, $s
     $q = ['organism' => $chosen['organism'] ?? '', 'assembly' => $chosen['assembly'] ?? '', 'gene_set' => $chosen['gene_set'] ?? '',
           'genes' => $genes_text, 'experiments' => array_values(array_column($selected, 'slug')),
           'mode' => $mode, 'sort' => $sort, 'show' => 1];
-    return "/$site/tools/expression.php?" . http_build_query(array_merge($q, $change));
+    return moop_url_base() . "/tools/expression.php?" . http_build_query(array_merge($q, $change));
 };
 
 echo render_display_page(__DIR__ . '/pages/expression.php', [
@@ -157,5 +157,5 @@ echo render_display_page(__DIR__ . '/pages/expression.php', [
     'units_label'     => moop_expression_units_label($selected),
     'sort'            => $sort,
     'link'            => $link,
-    'page_styles'     => ["/$site/css/expression-tool.css"],
+    'page_styles'     => [moop_url_base() . "/css/expression-tool.css"],
 ], 'Expression Explorer');

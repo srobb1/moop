@@ -10,7 +10,7 @@ $filter_organisms      = $filter_organisms ?? [];
 $organism_common_names = $organism_common_names ?? [];
 $has_context = !empty($context_organism) || !empty($context_assembly)
             || !empty($context_group)    || !empty($filter_organisms);
-$clear_url   = '/' . $site . '/tools/downloads.php';
+$clear_url   = moop_url_base() . '/tools/downloads.php';
 ?>
 <div class="container mt-5">
 
@@ -101,7 +101,7 @@ $clear_url   = '/' . $site . '/tools/downloads.php';
   // data-gs-id, so downloads.js cascades it from the assembly checkbox only.
   $render_file_row = function (array $file, string $file_id, string $org_id, string $asm_id,
                                string $gs_id, string $organism, string $assembly, string $gene_set) use ($site) {
-      $dl_url = '/' . $site . '/api/download_file.php'
+      $dl_url = moop_url_base() . '/api/download_file.php'
               . '?organism=' . urlencode($organism)
               . '&assembly=' . urlencode($assembly)
               . ($gene_set !== '' ? '&gene_set=' . urlencode($gene_set) : '')

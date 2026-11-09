@@ -90,7 +90,7 @@ function validateOrganismParam($organism_name, $redirect_on_empty = null) {
     if (empty($organism_name)) {
         if ($redirect_on_empty === null) {
             $site = ConfigManager::getInstance()->getString('site');
-            $redirect_on_empty = "/$site/index.php";
+            $redirect_on_empty = moop_url_base() . "/index.php";
         }
         header("Location: $redirect_on_empty");
         exit;
@@ -110,7 +110,7 @@ function validateAssemblyParam($assembly, $redirect_on_empty = null) {
     if (empty($assembly)) {
         if ($redirect_on_empty === null) {
             $site = ConfigManager::getInstance()->getString('site');
-            $redirect_on_empty = "/$site/index.php";
+            $redirect_on_empty = moop_url_base() . "/index.php";
         }
         header("Location: $redirect_on_empty");
         exit;

@@ -57,7 +57,7 @@ ob_end_clean();
 $trying_public_access = !empty($_POST['assembly']) && !empty($_POST['organism']);
 if ($trying_public_access) {
     if (!has_assembly_access($_POST['organism'], $_POST['assembly'])) {
-        header("Location: /$site/login.php");
+        header("Location: " . moop_url_base() . "/login.php");
         exit;
     }
 }
@@ -322,9 +322,9 @@ $display_config = [
     'title' => 'Sequence Retrieval & Download',
     'content_file' => __DIR__ . '/pages/retrieve_sequences.php',
     'page_script' => [
-	'/' . $site . '/js/modules/utilities.js',
-        '/' . $site . '/js/modules/source-list-manager.js',
-	'/' . $site . '/js/sequence-retrieval.js'
+	moop_url_base() . '/js/modules/utilities.js',
+        moop_url_base() . '/js/modules/source-list-manager.js',
+	moop_url_base() . '/js/sequence-retrieval.js'
     ]
 ];
 
@@ -373,7 +373,7 @@ $data = [
     'examples' => moop_retrieval_examples($selected_organism, $selected_assembly_accession, $selected_gene_set),
     'parent_to_children' => $parent_to_children ?? [],
     'page_styles' => [
-        '/' . $site . '/css/display.css',
+        moop_url_base() . '/css/display.css',
     ]
 ];
 

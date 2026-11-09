@@ -87,10 +87,10 @@ $display_config = [
     'title' => htmlspecialchars($assembly_info['genome_name']),
     'content_file' => __DIR__ . '/pages/assembly.php',
     'page_script' => [
-        "/$site/js/assembly-display.js"
+        moop_url_base() . "/js/assembly-display.js"
     ],
     'inline_scripts' => [
-        "const sitePath = '/$site';",
+        "const sitePath = '" . moop_url_base() . "';",
         "const assemblyName = '" . addslashes($assembly_info['genome_name']) . "';",
         "const assemblyAccession = '" . addslashes($assembly_info['genome_accession'] ?? '') . "';",
         "const organismName = '" . addslashes($organism_name) . "';",

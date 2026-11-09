@@ -159,10 +159,10 @@ echo render_display_page(
         'site'                => $site,
         'dl_organism'         => $dl_organism,
         'dl_assembly'         => $dl_assembly,
-        'page_script'         => ["/$site/js/modules/jbrowse2-browser.js"],
-        'page_styles'         => ["/$site/css/jbrowse2.css"],
+        'page_script'         => [moop_url_base() . "/js/modules/jbrowse2-browser.js"],
+        'page_styles'         => [moop_url_base() . "/css/jbrowse2.css"],
         'inline_scripts'      => [
-            "const moopSite        = " . json_encode('/' . $site)                        . ";",
+            "const moopSite        = " . json_encode(moop_url_base())                        . ";",
             "const jbDlOrganism    = " . json_encode($dl_organism)                      . ";",
             "const jbDlAssembly    = " . json_encode($dl_assembly)                      . ";",
             "const jbDlLoc         = " . json_encode($dl_loc)                           . ";",

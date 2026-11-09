@@ -160,7 +160,7 @@ if (count($__holding) > 1) {
         $__choices["$accession/{$src['gene_set']}"] = [
             'assembly_label' => assembly_label($src['genome_name'] ?? '', $accession),
             'gene_set'       => $src['gene_set'],
-            'url'            => "/$site/tools/parent.php?organism=" . urlencode($organism_name)
+            'url'            => moop_url_base() . "/tools/parent.php?organism=" . urlencode($organism_name)
                               . '&uniquename=' . urlencode((string)$uniquename)
                               . '&assembly=' . urlencode($accession) . '&gene_set=' . urlencode($src['gene_set']),
         ];
@@ -652,19 +652,19 @@ echo render_display_page(
         ] : null,
         'genome_seq_available' => $genome_seq_available,
         'expression_summary' => $expression_summary,
-        'page_styles' => ["/$site/css/parent.css", "/$site/css/parent-nav.css"],
+        'page_styles' => [moop_url_base() . "/css/parent.css", moop_url_base() . "/css/parent-nav.css"],
         'page_script' => [
-            "/$site/js/modules/collapse-handler.js",
-            "/$site/js/modules/parent-tools.js",
-            "/$site/js/modules/gene-model-viewer.js",
-            "/$site/js/modules/sequence-formatter.js",
-            "/$site/js/modules/parent-nav.js",
-            "/$site/js/modules/isoform-minimap.js",
-            "/$site/js/modules/gene-neighbors.js",
+            moop_url_base() . "/js/modules/collapse-handler.js",
+            moop_url_base() . "/js/modules/parent-tools.js",
+            moop_url_base() . "/js/modules/gene-model-viewer.js",
+            moop_url_base() . "/js/modules/sequence-formatter.js",
+            moop_url_base() . "/js/modules/parent-nav.js",
+            moop_url_base() . "/js/modules/isoform-minimap.js",
+            moop_url_base() . "/js/modules/gene-neighbors.js",
             // Loaded here, not left to sequences_display.php: that include only runs when
             // there are sequences to show, so the overview Copy button would be dead on a
             // gene with none.
-            "/$site/js/modules/copy-to-clipboard.js"
+            moop_url_base() . "/js/modules/copy-to-clipboard.js"
         ],
         'inline_scripts' => [
             "const geneModelData = " . json_encode($gene_model, JSON_HEX_TAG) . ";",
@@ -673,7 +673,7 @@ echo render_display_page(
             "const moopOrganism = " . json_encode($organism_name, JSON_HEX_TAG) . ";",
             "const moopAssembly = " . json_encode($genome_accession, JSON_HEX_TAG) . ";",
             "const moopGeneSet = " . json_encode($gene_set_name, JSON_HEX_TAG) . ";",
-            "const moopSite = " . json_encode('/' . $site, JSON_HEX_TAG) . ";",
+            "const moopSite = " . json_encode(moop_url_base(), JSON_HEX_TAG) . ";",
             "const siteTitle = " . json_encode($siteTitle, JSON_HEX_TAG) . ";",
             "const genomeSequenceAvailable = " . ($genome_seq_available ? 'true' : 'false') . ";",
             // No flank blocks or "genomic" FASTA when the genome is assembled transcripts

@@ -82,9 +82,9 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
               $a    = $gsc_annot($c);
               $euk  = $r['busco_euk'];
               $st   = $r['assembly_stats'];
-              $gs_url  = "/$site/tools/gene_set.php?organism=" . urlencode($organism_name)
+              $gs_url  = moop_url_base() . "/tools/gene_set.php?organism=" . urlencode($organism_name)
                        . '&assembly=' . urlencode($r['assembly']) . '&gene_set=' . urlencode($r['gene_set']);
-              $asm_url = "/$site/tools/assembly.php?organism=" . urlencode($organism_name)
+              $asm_url = moop_url_base() . "/tools/assembly.php?organism=" . urlencode($organism_name)
                        . '&assembly=' . urlencode($r['assembly']);
             ?>
               <tr>

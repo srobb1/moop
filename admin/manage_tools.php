@@ -96,7 +96,7 @@ $data = [
                               ? ($all_tools[$id]['menu_label'] ?? $all_tools[$id]['name'] ?? $id)
                               : ($all_tools[$id]['name'] ?? $id)),
     'customised'       => (bool) ($config->getArray('tools_layout') ?? []),
-    'page_script'      => ['/' . $config->getString('site') . '/js/modules/manage-tools.js'],
+    'page_script'      => [moop_url_base() . '/js/modules/manage-tools.js'],
     'tools'            => $all_tools,
     'enabled'          => array_map(fn($id) => $config->isToolEnabled((string) $id), array_combine(array_keys($all_tools), array_keys($all_tools))),
     'flash'            => $flash,

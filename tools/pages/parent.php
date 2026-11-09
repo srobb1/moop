@@ -267,11 +267,11 @@
                 ?>
                 <dl class="feature-info-grid mb-0">
                     <dt><?= t('Organism') ?></dt>
-                    <dd><a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em class="sci-name"><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em><?php if ($common_name): ?> (<?= htmlspecialchars($common_name) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                    <dd><a href="<?= moop_url_base() ?>/tools/organism.php?organism=<?= urlencode($organism_name) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><em class="sci-name"><?= htmlspecialchars($genus) ?> <?= htmlspecialchars($species) ?></em><?php if ($common_name): ?> (<?= htmlspecialchars($common_name) ?>)<?php endif; ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                     <dt><?= t('Assembly') ?></dt>
-                    <dd><a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars(assembly_label($genome_name, $genome_accession)) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                    <dd><a href="<?= moop_url_base() ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&parent=<?= urlencode($feature_uniquename) ?>" class="link-light-bordered"><?= htmlspecialchars(assembly_label($genome_name, $genome_accession)) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                     <dt><?= t('Gene Set') ?></dt>
-                    <dd><a href="/<?= $site ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>" class="link-light-bordered"><?= htmlspecialchars($gene_set_name) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
+                    <dd><a href="<?= moop_url_base() ?>/tools/gene_set.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($genome_accession) ?>&gene_set=<?= urlencode($gene_set_name) ?>" class="link-light-bordered"><?= htmlspecialchars($gene_set_name) ?><i class="fa fa-external-link-alt link-icon"></i></a></dd>
                     <?php if (!empty($feature_loc)): ?>
                     <dt><?= t('Location') ?></dt>
                     <dd><?php
@@ -282,7 +282,7 @@
                             $loc_text .= ' (' . ($feature_loc['strand'] === '+' ? '+' : '&minus;') . ')';
                         }
                         if ($jbrowse_loc && moop_tool_on('genome_browser')) {  // switched-off tool: no link to it (moop_tool_on(), lib/functions_tools.php)
-                            $browser_url = '/' . $site . '/jbrowse2.php?organism=' . urlencode($organism_name)
+                            $browser_url = moop_url_base() . '/jbrowse2.php?organism=' . urlencode($organism_name)
                                 . '&assembly=' . urlencode($genome_accession)
                                 . '&loc=' . urlencode($feature_loc['loc_string']);
                             echo '<a href="' . $browser_url . '" target="_blank" class="link-light-bordered">' . $loc_text . ' <i class="fa fa-external-link-alt link-icon"></i></a>';
@@ -557,7 +557,7 @@
             <?php /* Into the Expression Explorer with this gene already in the list, to add others. */ ?>
 <?php if (moop_tool_on('expression')): ?>
             <a class="btn btn-sm btn-outline-secondary py-0 ms-auto"
-               href="/<?= htmlspecialchars($site) ?>/tools/expression.php?<?= htmlspecialchars(http_build_query([
+               href="<?= htmlspecialchars(moop_url_base()) ?>/tools/expression.php?<?= htmlspecialchars(http_build_query([
                    'organism' => $organism_name, 'assembly' => $genome_accession, 'gene_set' => $gene_set_name,
                    'genes' => $feature_uniquename])) ?>"
                title="Open the Expression Explorer with this gene, to compare it with others">

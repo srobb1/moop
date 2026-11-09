@@ -482,7 +482,7 @@ function buildHomeQuickSearch(array $visible_entries, array $organism_list, stri
             'type'      => 'organism',
             'label'     => $org_entry['display_name'],
             'secondary' => $org_entry['common_name'],
-            'url'       => "/$site/tools/organism.php?organism=" . urlencode($org_entry['organism']),
+            'url'       => moop_url_base() . "/tools/organism.php?organism=" . urlencode($org_entry['organism']),
             'search'    => strtolower(implode(' ', $search_parts)),
         ];
     }
@@ -502,7 +502,7 @@ function buildHomeQuickSearch(array $visible_entries, array $organism_list, stri
                 'type'      => 'group',
                 'label'     => $group,
                 'secondary' => '',
-                'url'       => "/$site/tools/groups.php?group=" . urlencode($group),
+                'url'       => moop_url_base() . "/tools/groups.php?group=" . urlencode($group),
                 'search'    => strtolower($group),
             ];
         }
@@ -514,7 +514,7 @@ function buildHomeQuickSearch(array $visible_entries, array $organism_list, stri
                 'type'      => 'assembly',
                 'label'     => $assembly,
                 'secondary' => $org_display,
-                'url'       => "/$site/tools/assembly.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly),
+                'url'       => moop_url_base() . "/tools/assembly.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly),
                 'search'    => strtolower(implode(' ', array_filter([$assembly, $org_display, $org]))),
             ];
         }
@@ -525,7 +525,7 @@ function buildHomeQuickSearch(array $visible_entries, array $organism_list, stri
                 'type'      => 'geneset',
                 'label'     => $gene_set,
                 'secondary' => $org_display . ' › ' . $assembly,
-                'url'       => "/$site/tools/gene_set.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly) . "&gene_set=" . urlencode($gene_set),
+                'url'       => moop_url_base() . "/tools/gene_set.php?organism=" . urlencode($org) . "&assembly=" . urlencode($assembly) . "&gene_set=" . urlencode($gene_set),
                 'search'    => strtolower(implode(' ', array_filter([$gene_set, $org_display, $org, $assembly]))),
             ];
         }

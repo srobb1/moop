@@ -433,14 +433,14 @@ $data = [
     'search_error'                => $search_error,
 
     'page_styles'                 => [
-        '/' . $site . '/css/display.css',
+        moop_url_base() . '/css/display.css',
     ],
 ];
 
 $display_config = [
     'title'        => 'Primer BLAST',
     'content_file' => __DIR__ . '/pages/primer_blast.php',
-    'page_script'  => '/' . $site . '/js/primer-blast.js',
+    'page_script'  => moop_url_base() . '/js/primer-blast.js',
 ];
 
 include_once __DIR__ . '/display-template.php';

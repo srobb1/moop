@@ -171,7 +171,7 @@
                          $badge = $count > 0 ? " <span class=\"badge\">$count</span>" : '';
                          
                          // Create link to groups page with taxonomy_rank parameter
-                         $taxonomy_url = "/$site/tools/groups.php?taxonomy_rank=" . urlencode($item['name']);
+                         $taxonomy_url = moop_url_base() . "/tools/groups.php?taxonomy_rank=" . urlencode($item['name']);
                          echo "<div><a href=\"$taxonomy_url\">$name$badge</a></div>";
                      }
                      ?>
@@ -194,7 +194,7 @@
               </h6>
               <div class="chip-container">
                 <?php foreach ($organism_groups as $group_name => $group_info): ?>
-                  <a href="/<?= $site ?>/tools/groups.php?group=<?= urlencode($group_name) ?>" 
+                  <a href="<?= moop_url_base() ?>/tools/groups.php?group=<?= urlencode($group_name) ?>" 
                      class="group-chip">
                     <?= htmlspecialchars($group_name) ?>
                     <span class="badge"><?= htmlspecialchars($group_info['count']) ?></span>
@@ -235,7 +235,7 @@
                     $has_genome_fa = file_exists("$organism_data/$organism_name/$assembly/" . genome_fasta_filename());
                     $is_transcripts = $has_genome_fa && moop_genome_kind("$organism_data/$organism_name/$assembly") === 'transcripts';
                 ?>
-                  <a href="/<?= $site ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>"
+                  <a href="<?= moop_url_base() ?>/tools/assembly.php?organism=<?= urlencode($organism_name) ?>&assembly=<?= urlencode($assembly) ?>"
                      class="assembly-chip">
                     <?= htmlspecialchars($assembly_display) ?>
                     <?php if ($is_transcripts && $__tx_site): ?>

@@ -371,16 +371,16 @@ $data = [
     // silently killed this page's reordering UI. The stylesheet is not vendored because the
     // page uses no `ui-` classes; its single live rule now lives in css/manage-annotations.css.
     'page_styles' => [
-        '/' . $site . '/css/manage-annotations.css'
+        moop_url_base() . '/css/manage-annotations.css'
     ],
     'inline_scripts' => [
         "window.allSections = " . json_encode($annotation_config['analysis_order']) . ";",
         "window.originalOrder = [...window.allSections];"
     ],
     'page_script' => [
-        '/' . $site . '/js/vendor/jquery-ui.min.js',
-        '/' . $site . '/js/admin-utilities.js',
-        '/' . $site . '/js/modules/manage-annotations.js'
+        moop_url_base() . '/js/vendor/jquery-ui.min.js',
+        moop_url_base() . '/js/admin-utilities.js',
+        moop_url_base() . '/js/modules/manage-annotations.js'
     ],
 ];
 

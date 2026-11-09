@@ -96,7 +96,7 @@
                     <span class="organism-selection-text"><span class="sel-on"><?= t('In search') ?></span><span class="sel-off"><?= t('Not in search') ?></span></span>
                   </label>
                   <!-- Clickable card that links to organism page -->
-                  <a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?>"
+                  <a href="<?= moop_url_base() ?>/tools/organism.php?organism=<?= urlencode($organism) ?>"
                      class="text-decoration-none organism-card-link">
                     <div class="card h-100 shadow-sm organism-card">
                       <div class="card-body text-center">

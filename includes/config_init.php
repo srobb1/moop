@@ -287,6 +287,35 @@ function moop_current_lang(): string {
     return $lang;
 }
 
+/**
+ * The start of every link this site writes: "/moop", or "" for a site served at its domain's
+ * root. Never ends in "/". Comes from the 'link_prefix' setting (default "/" + the folder name),
+ * NOT from 'site': the folder name and the link prefix are different things, and building links
+ * from the folder made a site at "/" impossible (an empty site gave "//tools/…").
+ *
+ *   moop_url_base() . '/tools/search.php'     "/moop/tools/search.php"  or  "/tools/search.php"
+ *   moop_url('tools/search.php')              the same, leading slash optional
+ */
+function moop_url_base(?ConfigManager $config = null): string {
+    $prefix = trim(($config ?? ConfigManager::getInstance())->getString('link_prefix', ''));
+    if ($prefix === '' || $prefix === '/') return '';
+    // Tolerate "moop" or "/moop/" written by hand. Then insist on plain path segments: this
+    // value is printed into HTML attributes, JavaScript strings and Location headers, often
+    // unescaped, so a quote, "<", a space, "//" or "\\" in it would be markup (or a link to
+    // another host). Anything else falls back to the folder name -- links keep working.
+    $prefix = '/' . trim($prefix, '/');
+    if (!preg_match('#^(/[A-Za-z0-9._~-]+)+$#', $prefix) || preg_match('#/\.\.?(/|$)#', $prefix)) {
+        $folder = preg_replace('/[^A-Za-z0-9._~-]/', '', ($config ?? ConfigManager::getInstance())->getString('site', ''));
+        return $folder === '' ? '' : '/' . $folder;
+    }
+    return $prefix;
+}
+
+/** A path on this site as a link: moop_url('tools/blast.php') -> "/moop/tools/blast.php". moop_url() -> "/moop/". */
+function moop_url(string $path = ''): string {
+    return moop_url_base() . '/' . ltrim($path, '/');
+}
+
 /** The current URL with ?lang=<code> set (for the language switch), other parameters kept. */
 function moop_lang_url(string $code): string {
     $path  = strtok((string) ($_SERVER['REQUEST_URI'] ?? '/'), '?');

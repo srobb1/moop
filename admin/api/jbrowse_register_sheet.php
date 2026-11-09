@@ -121,7 +121,7 @@ try {
             echo json_encode([
                 'success' => false,
                 'error'   => "Cannot create directory $dir — check that the web server has write access to metadata/jbrowse2-configs/. "
-                           . "Visit /$site/admin/manage_filesystem_permissions.php to diagnose and fix permissions.",
+                           . "Visit " . moop_url_base() . "/admin/manage_filesystem_permissions.php to diagnose and fix permissions.",
             ]);
             exit;
         }
@@ -130,7 +130,7 @@ try {
             echo json_encode([
                 'success' => false,
                 'error'   => "Directory $dir is not writable by the web server. "
-                           . "Visit /$site/admin/manage_filesystem_permissions.php to diagnose and fix permissions.",
+                           . "Visit " . moop_url_base() . "/admin/manage_filesystem_permissions.php to diagnose and fix permissions.",
             ]);
             exit;
         }
@@ -150,7 +150,7 @@ try {
             echo json_encode([
                 'success' => false,
                 'error'   => "Write failed for $sheetConfigPath even though the directory appears writable — check disk space and SELinux/AppArmor. "
-                           . "Visit /$site/admin/manage_filesystem_permissions.php for diagnostics.",
+                           . "Visit " . moop_url_base() . "/admin/manage_filesystem_permissions.php for diagnostics.",
             ]);
             exit;
         }

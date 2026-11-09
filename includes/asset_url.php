@@ -32,7 +32,7 @@ if (!function_exists('moop_asset_url')) {
         // is the web server's job to report; this helper must never be the thing that
         // breaks a page.
         $ver = @filemtime(dirname(__DIR__) . '/' . $rel);
-        return '/' . $site . '/' . htmlspecialchars($rel) . ($ver ? '?v=' . $ver : '');
+        return moop_url_base() . '/' . htmlspecialchars($rel) . ($ver ? '?v=' . $ver : '');
     }
 
     /**
@@ -43,7 +43,7 @@ if (!function_exists('moop_asset_url')) {
     function moop_asset_url_from_site_path(string $url): string
     {
         $site   = ConfigManager::getInstance()->getString('site');
-        $prefix = '/' . $site . '/';
+        $prefix = moop_url_base() . '/';
         if (strpos($url, $prefix) !== 0) {
             return htmlspecialchars($url);
         }

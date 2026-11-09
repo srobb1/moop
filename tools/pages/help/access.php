@@ -90,7 +90,7 @@ $levels = [
             <?php endif; ?>
             with the organism you need.
             <?php if (!is_logged_in()): ?>
-              Already have an account? <a href="/<?= htmlspecialchars($site) ?>/login.php">Log in</a>.
+              Already have an account? <a href="<?= htmlspecialchars(moop_url_base()) ?>/login.php">Log in</a>.
             <?php endif; ?>
           </p>
         </div>

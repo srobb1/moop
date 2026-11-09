@@ -49,8 +49,8 @@ $display_config = [
     'content_file' => __DIR__ . '/pages/manage_registry.php',
     'title' => 'Function Registry',
     'page_script' => [
-       '/' . $site . '/js/manage-registry.js',
-       '/' . $site . '/js/admin-utilities.js',
+       moop_url_base() . '/js/manage-registry.js',
+       moop_url_base() . '/js/admin-utilities.js',
      ]
 ];
 

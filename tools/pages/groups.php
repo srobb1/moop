@@ -164,9 +164,9 @@
               <?= t_markup('No organisms in %s yet.', '<strong>' . htmlspecialchars($group_name) . '</strong>') . "\n" ?>
               <div class="small text-muted mt-2">
                 <?= t('Nothing in %s is filed under that name.', $config->getString('siteTitle')) . "\n" ?>
-                <?php $__all = '<a href="/' . $site . '/index.php">' . t('all organisms and groups') . '</a>'; ?>
+                <?php $__all = '<a href="' . moop_url_base() . '/index.php">' . t('all organisms and groups') . '</a>'; ?>
                 <?= moop_tool_on('annotation_search')
-                    ? t_markup('Browse %1$s, or %2$s.', $__all, '<a href="/' . $site . '/tools/search.php">' . t('search across everything') . '</a>')
+                    ? t_markup('Browse %1$s, or %2$s.', $__all, '<a href="' . moop_url_base() . '/tools/search.php">' . t('search across everything') . '</a>')
                     : t_markup('Browse %s.', $__all) ?>
               </div>
             </div>
@@ -203,7 +203,7 @@
                     <span class="organism-selection-text"><span class="sel-on"><?= t('In search') ?></span><span class="sel-off"><?= t('Not in search') ?></span></span>
                      </label>
                      <!-- Clickable card that links to organism page -->
-<a href="/<?= $site ?>/tools/organism.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
+<a href="<?= moop_url_base() ?>/tools/organism.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
                      class="text-decoration-none organism-card-link">
                     <div class="card h-100 shadow-sm organism-card">
                       <div class="card-body text-center">

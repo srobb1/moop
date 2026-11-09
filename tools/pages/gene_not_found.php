@@ -11,7 +11,7 @@
  * Replaces a bare die() line with no navigation, sent as HTTP 200. That is what a tester following
  * an old or mistyped link landed on, and the raw ID in it was also a reflected-XSS hole (2026-10-13).
  */
-$search_url = '/' . $site . '/tools/search.php' . ($organism_name !== '' ? '?organisms=' . rawurlencode($organism_name) : '');
+$search_url = moop_url_base() . '/tools/search.php' . ($organism_name !== '' ? '?organisms=' . rawurlencode($organism_name) : '');
 ?>
 <div class="container mt-5" style="max-width: 760px;">
     <div class="card shadow-sm">
@@ -36,7 +36,7 @@ $search_url = '/' . $site . '/tools/search.php' . ($organism_name !== '' ? '?org
                 <i class="fa fa-search me-1"></i><?= $organism_label !== '' ? t('Search %s', $organism_label) : t('Search') ?>
             </a>
 <?php endif; ?>
-            <a class="btn btn-outline-secondary" href="/<?= htmlspecialchars($site) ?>/"><?= t('Home') ?></a>
+            <a class="btn btn-outline-secondary" href="<?= htmlspecialchars(moop_url_base()) ?>/"><?= t('Home') ?></a>
         </div>
     </div>
 </div>

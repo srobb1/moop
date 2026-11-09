@@ -310,15 +310,15 @@ $data = [
     'lineage_cache_generated' => $lineage_cache_generated,
     'retired' => moop_retired_list($config),   // lib/retire.php
     'page_styles' => [
-        '/' . $config->getString('site') . '/css/manage-organisms.css'
+        moop_url_base() . '/css/manage-organisms.css'
     ],
     'page_script' => [
-        '/' . $config->getString('site') . '/js/admin-utilities.js',
-        '/' . $config->getString('site') . '/js/modules/organism-management.js',
-        '/' . $config->getString('site') . '/js/modules/retire.js',
+        moop_url_base() . '/js/admin-utilities.js',
+        moop_url_base() . '/js/modules/organism-management.js',
+        moop_url_base() . '/js/modules/retire.js',
     ],
     'inline_scripts' => [
-        "const sitePath = '/" . $config->getString('site') . "';",
+        "const sitePath = '" . moop_url_base() . "';",
         "const existingGroups = " . json_encode($existing_groups) . ";",
         "(function(){
   function setAgeText(el) {

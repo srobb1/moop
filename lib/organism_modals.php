@@ -136,7 +136,7 @@ function organism_modal_metadata_data($organism, $data, $organism_data): array {
         $data['info'] = $file;
     }
     $config     = ConfigManager::getInstance();
-    $images_url = '/' . $config->getString('site') . '/images';
+    $images_url = moop_url_base() . '/images';
     $auto_image = empty($data['info']['images'])
         ? getOrganismImagePath(['images' => []] + ($data['info'] ?? []), ltrim($images_url, '/'), '', false)
         : '';

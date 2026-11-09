@@ -130,8 +130,8 @@
                         <div class="mt-2 pt-2 border-top">
                             <i class="fa fa-vials me-1"></i>
                             <?= t_markup('Checking a primer %s?', '<strong>' . t('pair') . '</strong>') ?> <?= (moop_tool_on('genome_browser')
-                                    ? t_markup('%s pairs the hits for you, reports every product size, and shows the products in the genome browser.', '<a href="' . htmlspecialchars('/' . $site . '/tools/primer_blast.php') . '">Primer BLAST</a>')
-                                    : t_markup('%s pairs the hits for you and reports every product size.', '<a href="' . htmlspecialchars('/' . $site . '/tools/primer_blast.php') . '">Primer BLAST</a>')) . "\n" ?>
+                                    ? t_markup('%s pairs the hits for you, reports every product size, and shows the products in the genome browser.', '<a href="' . htmlspecialchars(moop_url_base() . '/tools/primer_blast.php') . '">Primer BLAST</a>')
+                                    : t_markup('%s pairs the hits for you and reports every product size.', '<a href="' . htmlspecialchars(moop_url_base() . '/tools/primer_blast.php') . '">Primer BLAST</a>')) . "\n" ?>
                             <?= t_markup('This page is the right tool for locating a %s short sequence.', '<em>' . t('single') . '</em>') . "\n" ?>
                         </div>
 <?php endif; ?>
@@ -364,7 +364,7 @@
                              form.reset() restores the SUBMITTED values, not the defaults. A
                              clean GET is the only definition of "default" that cannot drift. */ ?>
                     <div class="text-center mt-2">
-                        <a href="<?= htmlspecialchars('/' . $site . '/tools/blast.php') ?>"
+                        <a href="<?= htmlspecialchars(moop_url_base() . '/tools/blast.php') ?>"
                            class="btn btn-sm btn-link text-secondary" id="resetBlastBtn">
                             <i class="fa fa-undo me-1"></i><?= t('Clear form and start over') . "\n" ?>
                         </a>

@@ -756,7 +756,7 @@
         <button type="submit" class="btn btn-primary" <?= $primer3_ok ? '' : 'disabled' ?>>
             <i class="fa fa-magic me-1"></i><?= t('Design primers') . "\n" ?>
         </button>
-        <a href="<?= htmlspecialchars('/' . $site . '/tools/primer_maker.php') ?>" class="btn btn-outline-secondary ms-2">Clear</a>
+        <a href="<?= htmlspecialchars(moop_url_base() . '/tools/primer_maker.php') ?>" class="btn btn-outline-secondary ms-2">Clear</a>
     </form>
 
     <?php // Where the page jumps to after a run (js/primer-maker.js): the output is below
@@ -1037,7 +1037,7 @@
                                                  . "\n>" . $row['right_name'] . "\n" . ($pair['right_sequence'] ?? '');
                                     ?>
 <?php if (moop_tool_on('primer_blast')): /* switched off: no Check button */ ?>
-                                    <form method="post" action="<?= htmlspecialchars('/' . $site . '/tools/primer_blast.php') ?>"
+                                    <form method="post" action="<?= htmlspecialchars(moop_url_base() . '/tools/primer_blast.php') ?>"
                                           target="_blank" class="d-inline">
                                         <?= csrf_input_field() ?>
                                         <input type="hidden" name="primers" value="<?= htmlspecialchars($chain_fasta) ?>">

@@ -68,11 +68,11 @@ $data = [
     // Per CLAUDE.md §6: JS logic belongs in js/modules/, not inline. (The organism-cache
     // widget below predates that rule.)
     'page_script' => [
-        '/' . $config->getString('site') . '/js/modules/housekeeping-rerun.js',
-        '/' . $config->getString('site') . '/js/modules/remember-collapse.js',
+        moop_url_base() . '/js/modules/housekeeping-rerun.js',
+        moop_url_base() . '/js/modules/remember-collapse.js',
     ],
     'inline_scripts' => [
-        "const sitePath = '/" . $config->getString('site') . "';",
+        "const sitePath = '" . moop_url_base() . "';",
         // Organism cache status widget for the dashboard. Polls the same GET status
         // endpoint used elsewhere (admin/api/refresh_organism_cache.php) and renders
         // an actual progress bar from its `progress: {current, total, step, organism}`

@@ -32,7 +32,7 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
   <?php if (!$gene_sets): ?>
     <div class="alert alert-light border"><?= t('No gene set you can see has expression data yet.') ?></div>
   <?php else: ?>
-  <form method="get" action="/<?= htmlspecialchars($site) ?>/tools/expression.php">
+  <form method="get" action="<?= htmlspecialchars(moop_url_base()) ?>/tools/expression.php">
     <div class="card mb-3 shadow-sm">
       <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
         <span class="step-badge me-2">1</span><span class="fw-semibold" style="font-size:0.9rem;"><?= t('Gene set') ?></span>
@@ -47,7 +47,7 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
           <?php foreach ($gene_sets as $gs):
               $on = $chosen && $chosen['organism'] === $gs['organism'] && $chosen['assembly'] === $gs['assembly'] && $chosen['gene_set'] === $gs['gene_set']; ?>
             <a class="btn btn-sm <?= $on ? 'btn-primary' : 'btn-outline-primary' ?> me-2 mb-2"
-               href="<?= htmlspecialchars("/$site/tools/expression.php?" . http_build_query(['organism' => $gs['organism'], 'assembly' => $gs['assembly'], 'gene_set' => $gs['gene_set']])) ?>">
+               href="<?= htmlspecialchars(moop_url_base() . "/tools/expression.php?" . http_build_query(['organism' => $gs['organism'], 'assembly' => $gs['assembly'], 'gene_set' => $gs['gene_set']])) ?>">
               <?= htmlspecialchars($gs_label($gs)) ?> <span class="badge bg-light text-dark"><?= (int)$gs['experiments'] ?></span></a>
           <?php endforeach; ?>
           <?php if ($chosen): ?>

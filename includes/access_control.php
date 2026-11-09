@@ -425,7 +425,7 @@ function require_access($required_level = 'COLLABORATOR', $resource_name = null)
     if (!has_access($required_level, $resource_name)) {
         $config = ConfigManager::getInstance();
         $site = $config->getString('site');
-        header("Location: /$site/access_denied.php");
+        header("Location: " . moop_url_base() . "/access_denied.php");
         exit;
     }
 }
