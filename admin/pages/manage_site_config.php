@@ -990,236 +990,60 @@
                 </div>
             </div>
 
+            <p class="small text-muted mt-3 mb-0"><i class="fa fa-lock"></i> The site's paths and directories are not set on this page.
+                <a href="#" data-bs-toggle="modal" data-bs-target="#structuralSettingsModal">Where they come from →</a></p>
+
               </div><!-- /.pnav-main -->
             </div><!-- /.pnav-layout -->
         </div>
     </div>
 
-<!-- Structural Settings Tutorial Modal -->
+<!-- Structural settings: where the paths come from. Opened from the link under Recent Changes.
+     No line numbers into site_config.php, on purpose: the old tutorial quoted four, every one
+     went stale when root_path/site became derived (2026-07-22), and it told admins to set
+     $site by hand -- the very edit that let one clone write into another site's users.json.
+     Describe the mechanism (derived from the folder, site_paths.php, env vars); never a line. -->
 <div class="modal fade" id="structuralSettingsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header cfg-head">
-                <h5 class="modal-title"><i class="fa fa-lock"></i> Structural Settings Tutorial</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header adm-head">
+                <h5 class="modal-title"><i class="fa fa-lock"></i> Where the site's paths come from</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small mb-4"><i class="fa fa-info-circle"></i> These settings control core system paths and structure. They are protected from the web interface to prevent accidental misconfigurations.</p>
+                <p class="text-muted small mb-3"><i class="fa fa-info-circle"></i> These paths are not settings on this page, and you should not edit <code>config/site_config.php</code> to change them: it is part of the code, so a local edit conflicts with every update. They follow from where the site's folder sits.</p>
 
-                <!-- Tabs for different settings -->
-                <ul class="nav nav-tabs mb-3" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="root-path-tab" data-bs-toggle="tab" data-bs-target="#root-path-content" type="button">Root Path</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="site-dir-tab" data-bs-toggle="tab" data-bs-target="#site-dir-content" type="button">Site Directory</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="organism-path-tab" data-bs-toggle="tab" data-bs-target="#organism-path-content" type="button">Organism Path</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="metadata-path-tab" data-bs-toggle="tab" data-bs-target="#metadata-path-content" type="button">Metadata Path</button>
-                    </li>
-                </ul>
-
-                <div class="tab-content">
-                    <!-- Root Path Tab -->
-                    <div class="tab-pane fade show active" id="root-path-content">
-                        <h6><strong>Root Path</strong></h6>
-                        <p class="text-muted small">The base directory where the application and all its data are stored on the server.</p>
-                        
-                        <div class="alert alert-light border mb-3">
-                            <p class="mb-1"><small class="text-muted"><strong>Currently set in your config file:</strong></small></p>
-                            <p class="mb-1"><code>$root_path = '<?= htmlspecialchars($root_path) ?>';</code></p>
-                            <p class="mb-0"><small class="text-muted"><code>config/site_config.php</code>, line 29</small></p>
-                        </div>
-
-                        <p><strong>How to Change:</strong></p>
-                        <ol class="small">
-                            <li>Connect to your server via SSH or file manager</li>
-                            <li>Open <code><?= htmlspecialchars($site_path) ?>/config/site_config.php</code></li>
-                            <li>Find line 29: <code>$root_path = '/var/www/html';</code></li>
-                            <li>Change the path to your desired root directory</li>
-                            <li>Save the file and verify all paths still point to valid locations</li>
-                        </ol>
-
-                        <div class="alert alert-warning small mb-0">
-                            <i class="fa fa-exclamation-triangle"></i> <strong>⚠️ Important:</strong> Changing the root path affects all derived paths. Ensure the new path exists and has proper permissions before changing.
-                        </div>
-                    </div>
-
-                    <!-- Site Directory Tab -->
-                    <div class="tab-pane fade" id="site-dir-content">
-                        <h6><strong>Site Directory</strong></h6>
-                        <p class="text-muted small">The subdirectory name where this specific MOOP installation lives. Useful for multi-site deployments.</p>
-                        
-                        <div class="alert alert-light border mb-3">
-                            <p class="mb-1"><small class="text-muted"><strong>Currently set in your config file:</strong></small></p>
-                            <p class="mb-1"><code class="text-dark">$site = '<?= htmlspecialchars($site) ?>';</code></p>
-                            <p class="mb-0"><small class="text-muted"><code>config/site_config.php</code>, line 30</small></p>
-                        </div>
-
-                        <p><strong>Example Use Cases:</strong></p>
-                        <ul class="small">
-                            <li><code>moop</code> - Default installation at <code>/var/www/html/moop</code></li>
-                            <li><code>simrbase</code> - Alternative installation at <code>/var/www/html/simrbase</code></li>
-                            <li><code>public_genomes</code> - Public genome repository at <code>/var/www/html/public_genomes</code></li>
-                        </ul>
-
-                        <p><strong>How to Change for Multi-Site Deployment:</strong></p>
-                        <ol class="small">
-                            <li>Connect to your server via SSH</li>
-                            <li>Open <code><?= htmlspecialchars($root_path) ?>/moop/config/site_config.php</code></li>
-                            <li>Find line 30: <code>$site = 'moop';</code></li>
-                            <li>Change to your new directory name (e.g., <code>'simrbase'</code>)</li>
-                            <li>Ensure the directory exists at <code><?= htmlspecialchars($root_path) ?>/your_directory</code></li>
-                            <li>Verify file permissions are correct (see Filesystem Permissions admin page)</li>
-                        </ol>
-
-                        <div class="cfg-note small mb-0">
-                            <i class="fa fa-lightbulb"></i> <strong>Tip:</strong> All URLs and paths will automatically update based on this setting. You can run multiple MOOP instances with different site directories on the same server.
-                        </div>
-                    </div>
-
-                    <!-- Organism Path Tab -->
-                    <div class="tab-pane fade" id="organism-path-content">
-                        <h6><strong>Organism Data Path</strong></h6>
-                        <p class="text-muted small">Directory containing all organism data: databases, FASTA files, and metadata.</p>
-                        
-                        <div class="alert alert-light border mb-3">
-                            <p class="mb-1"><small class="text-muted"><strong>Currently set in your config file:</strong></small></p>
-                            <p class="mb-1"><code class="text-dark">'organism_data' => '<?= htmlspecialchars($organism_data) ?>'</code></p>
-                            <p class="mb-0"><small class="text-muted"><code>config/site_config.php</code>, line 41</small></p>
-                        </div>
-
-                        <p><strong>What This Directory Contains:</strong></p>
-                        <ul class="small">
-                            <li><code>organisms/OrganismName/</code> - Subdirectory per organism</li>
-                            <li><code>organisms/OrganismName/organism.sqlite</code> - Gene/protein database</li>
-                            <li><code>organisms/OrganismName/assembly_name/</code> - Assembly subdirectories</li>
-                            <li><code>organisms/OrganismName/assembly_name/*.fa</code> - FASTA sequence files</li>
-                            <li><code>organisms/OrganismName/organism.json</code> - Organism metadata</li>
-                        </ul>
-
-                        <p><strong>How to Change:</strong></p>
-                        <ol class="small">
-                            <li>Connect to your server and create the new directory (e.g., <code><?= htmlspecialchars($root_path) ?>/organisms_v2</code>)</li>
-                            <li>Copy all organism data from the current location to the new location</li>
-                            <li>Open <code>config/site_config.php</code> and modify line 41</li>
-                            <li>Update the path in the derived path calculation or directly set: <code>'organism_data' => '<?= htmlspecialchars($root_path) ?>/organisms_v2'</code></li>
-                            <li>Verify file permissions using the Filesystem Permissions admin page</li>
-                        </ol>
-
-                        <div class="alert alert-warning small mb-0">
-                            <i class="fa fa-exclamation-triangle"></i> <strong>⚠️ Important:</strong> Changing this path will break the system if organism data isn't copied to the new location. Always backup before making changes.
-                        </div>
-                    </div>
-
-                    <!-- Metadata Path Tab -->
-                    <div class="tab-pane fade" id="metadata-path-content">
-                        <h6><strong>Metadata Path</strong></h6>
-                        <p class="text-muted small">Directory containing system configuration files like taxonomy, annotations, and group definitions.</p>
-                        
-                        <div class="alert alert-light border mb-3">
-                            <p class="mb-1"><small class="text-muted"><strong>Currently set in your config file:</strong></small></p>
-                            <p class="mb-1"><code class="text-dark">'metadata_path' => '<?= htmlspecialchars($metadata_path) ?>'</code></p>
-                            <p class="mb-0"><small class="text-muted"><code>config/site_config.php</code>, line 49</small></p>
-                        </div>
-
-                        <p><strong>What This Directory Contains:</strong></p>
-                        <ul class="small">
-                            <li><code>annotation_config.json</code> - Annotation settings and feature types</li>
-                            <li><code>taxonomy_tree_config.json</code> - Taxonomy tree configuration</li>
-                            <li><code>group_descriptions.json</code> - User group definitions</li>
-                            <li><code>organism_assembly_groups.json</code> - Organism-to-group mappings</li>
-                            <li><code>backups/</code> - Automatic configuration backups</li>
-                            <li><code>change_log/</code> - Audit trail of changes</li>
-                        </ul>
-
-                        <p><strong>How to Change:</strong></p>
-                        <ol class="small">
-                            <li>Create a new metadata directory (e.g., <code><?= htmlspecialchars($root_path) ?>/metadata_v2</code>)</li>
-                            <li>Copy all files from the current metadata directory to the new location</li>
-                            <li>Open <code>config/site_config.php</code> and modify line 49</li>
-                            <li>Update: <code>'metadata_path' => '<?= htmlspecialchars($root_path) ?>/metadata_v2'</code></li>
-                            <li>Verify permissions on the Filesystem Permissions admin page</li>
-                        </ol>
-
-                        <div class="cfg-note small mb-0">
-                            <i class="fa fa-lightbulb"></i> <strong>Tip:</strong> This directory should have SGID permissions (2775) so new backups and change logs automatically get the correct group ownership.
-                        </div>
-                    </div>
-                </div>
-
-                <hr class="my-4">
-
-                <h6 class="mb-3"><strong>All Changeable Configuration Variables</strong></h6>
-                <p class="text-muted small mb-3">Reference table of variables you can modify in <code>config/site_config.php</code></p>
-                
                 <div class="table-responsive mb-4">
                     <table class="table table-sm table-bordered small">
                         <thead class="table-light">
-                            <tr>
-                                <th style="width: 25%;">Variable</th>
-                                <th style="width: 25%;">Current Value</th>
-                                <th style="width: 50%;">Description</th>
-                            </tr>
+                            <tr><th style="width:20%;">Path</th><th style="width:35%;">Current value</th><th>Where it comes from</th></tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td><code>$root_path</code></td>
-                                <td><code><?= htmlspecialchars($root_path) ?></code></td>
-                                <td>Base directory where all application data is stored. Change if relocating the entire installation.</td>
-                            </tr>
-                            <tr>
-                                <td><code>$site</code></td>
-                                <td><code><?= htmlspecialchars($site) ?></code></td>
-                                <td>Subdirectory name for this installation. Change to deploy multiple MOOP instances on the same server.</td>
-                            </tr>
-                            <tr>
-                                <td><code>$site_path</code></td>
-                                <td><code><?= htmlspecialchars($site_path) ?></code></td>
-                                <td>Derived from root_path and site. Auto-calculated, no need to edit directly.</td>
-                            </tr>
-                            <tr>
-                                <td><code>organism_data</code></td>
-                                <td><code><?= htmlspecialchars($organism_data) ?></code></td>
-                                <td>Directory containing all organism databases and FASTA files. Change if moving organisms to a different location.</td>
-                            </tr>
-                            <tr>
-                                <td><code>metadata_path</code></td>
-                                <td><code><?= htmlspecialchars($metadata_path) ?></code></td>
-                                <td>Directory for system configs (taxonomy, annotations, groups). Change if using a separate storage location.</td>
-                            </tr>
-                            <tr>
-                                <td><code>images_dir</code></td>
-                                <td><code>images</code></td>
-                                <td>Name of the images subdirectory. Rarely changed unless you have a custom setup.</td>
-                            </tr>
-                            <tr>
-                                <td><code>docs_path</code></td>
-                                <td><code><?= htmlspecialchars($site_path) ?>/docs</code></td>
-                                <td>Directory for documentation and README files.</td>
-                            </tr>
-                            <tr>
-                                <td><code>users_file</code></td>
-                                <td><code><?= htmlspecialchars($config->getPath('users_file')) ?></code></td>
-                                <td>Path to the user credentials file. Kept <strong>outside</strong> the document root (it holds bcrypt hashes); set in <code>site_config.php</code>.</td>
-                            </tr>
+                            <tr><td><code>site_path</code></td><td><code><?= htmlspecialchars($site_path) ?></code></td><td>The folder this copy of MOOP is in.</td></tr>
+                            <tr><td><code>root_path</code></td><td><code><?= htmlspecialchars($root_path) ?></code></td><td>The folder above it.</td></tr>
+                            <tr><td><code>site</code></td><td><code><?= htmlspecialchars($site) ?></code></td><td>The folder's name. It is also the start of every URL (<code>/<?= htmlspecialchars($site) ?>/…</code>).</td></tr>
+                            <tr><td><code>organism_data</code></td><td><code><?= htmlspecialchars($organism_data) ?></code></td><td>Always <code>organisms/</code> inside the site folder.</td></tr>
+                            <tr><td><code>metadata_path</code></td><td><code><?= htmlspecialchars($metadata_path) ?></code></td><td>Always <code>metadata/</code> inside the site folder.</td></tr>
+                            <tr><td><code>users_file</code></td><td><code><?= htmlspecialchars($config->getPath('users_file')) ?></code></td><td>Kept <strong>outside</strong> the web root (it holds password hashes). The default is in <code>site_config.php</code>; a site can set its own with the <code>users_file</code> key in <code>config/config_editable.json</code>.</td></tr>
                         </tbody>
                     </table>
                 </div>
 
-                <hr class="my-4">
+                <h6><strong>Moving the site, or running a second one</strong></h6>
+                <p class="small">Move or clone the whole folder. The paths above follow it, with nothing to edit. A clone at <code><?= htmlspecialchars($root_path) ?>/cuttingclass</code> is the site <code>cuttingclass</code>, with its own <code>organisms/</code> and <code>metadata/</code>. The web server must also be told about the new folder.</p>
 
-                <h6 class="mb-3"><strong>General Tips for Changing Structural Settings</strong></h6>
+                <h6><strong>When the folder's location is not the real one</strong></h6>
+                <p class="small mb-2">With a symlinked web root or a container, the folder can sit somewhere other than where it is served from. Only then, set the location by hand, in either of these:</p>
                 <ul class="small">
-                    <li><strong>Backup First:</strong> Always backup <code>config/site_config.php</code> before making changes</li>
-                    <li><strong>One Change at a Time:</strong> Change one setting at a time and test thoroughly</li>
-                    <li><strong>Verify Permissions:</strong> Use the "Filesystem Permissions" admin page to ensure new paths have correct ownership and permissions</li>
-                    <li><strong>Test After Changes:</strong> Navigate the site and verify all functionality works after making changes</li>
-                    <li><strong>Check Logs:</strong> Review server logs and application logs for any errors after changes</li>
+                    <li><code>config/site_paths.php</code>: copy <code>config/site_paths.php.example</code> and set <code>root_path</code> and <code>site</code>. It is not part of the code, so updates never touch it.</li>
+                    <li>The environment variables <code>MOOP_ROOT_PATH</code> and <code>MOOP_SITE</code>, which win over that file.</li>
                 </ul>
+                <div class="alert alert-warning small">
+                    <i class="fa fa-exclamation-triangle"></i> <strong><code>root_path</code> + <code>site</code> must name the folder this copy actually lives in.</strong> Pointing them at another site's folder makes this copy read and write that site's data and users, including its admin accounts. <code>setup.php</code> refuses to run when they disagree.
+                </div>
+
+                <h6><strong>Organism data on another disk</strong></h6>
+                <p class="small mb-0">There is no setting for this. Leave <code>organisms</code> where it is and make it a symlink to the other disk. The new location needs the same owner and permissions as the folder it replaces and, on an SELinux host, the same label. <code>scripts/fix_moop_selinux.sh</code> labels <code><?= htmlspecialchars($organism_data) ?></code> by that path only, so the real folder needs its own <code>semanage fcontext</code> rule. Check the Filesystem Permissions page afterwards.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
