@@ -19,6 +19,9 @@
  * checks, rename; a failed build leaves the previous file).
  */
 
+/** docs/CROSSWALK_FORMAT.md -- a shipped file without this 'format' in meta is refused. */
+const MOOP_CROSSWALK_FORMAT = 'crosswalk/1';
+
 /** Organisms with a crosswalk configured: [organism => ['folder', 'hubs' => [hub => [file, gene_set?, assembly?]], 'name']]. */
 function moop_crosswalk_sources(): array {
     $out = [];
@@ -34,6 +37,10 @@ function moop_crosswalk_file(string $organism): string {
 }
 
 function moop_crosswalk_open(string $organism): ?PDO {
+    return moop_crosswalk_check($organism) === '' ? moop_crosswalk_connect($organism) : null;
+}
+
+function moop_crosswalk_connect(string $organism): ?PDO {
     $f = moop_crosswalk_file($organism);
     if (!is_file($f)) return null;
     try {
@@ -45,8 +52,35 @@ function moop_crosswalk_open(string $organism): ?PDO {
     }
 }
 
+/**
+ * Is this organism's crosswalk.sqlite in the format MOOP expects (docs/CROSSWALK_FORMAT.md)?
+ * '' = yes, or no file at all (nothing to use); otherwise the reason -- for the admin view.
+ * The compute pipeline usually builds the file, so this is the check that a shipped file is right.
+ * Remembered per request (pages ask once per row).
+ */
+function moop_crosswalk_check(string $organism): string {
+    static $seen = [];
+    if (isset($seen[$organism])) return $seen[$organism];
+    if (!is_file(moop_crosswalk_file($organism))) return $seen[$organism] = '';
+    $db = moop_crosswalk_connect($organism);
+    if (!$db) return $seen[$organism] = 'cannot be opened';
+    try {
+        $cols = array_column($db->query('PRAGMA table_info(map)')->fetchAll(PDO::FETCH_ASSOC), 'name');
+        foreach (['accession', 'accession_lc', 'source', 'ref_id', 'hub'] as $c) {
+            if (!in_array($c, $cols, true)) return $seen[$organism] = "table map has no column $c";
+        }
+        $idx = $db->query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'map'")->fetchAll(PDO::FETCH_COLUMN);
+        foreach (['m_acc', 'm_ref'] as $i) if (!in_array($i, $idx, true)) return $seen[$organism] = "index $i is missing (lookups would be slow)";
+        $fmt = $db->query("SELECT value FROM meta WHERE key = 'format'")->fetchColumn();
+        if ($fmt !== MOOP_CROSSWALK_FORMAT) return $seen[$organism] = "meta 'format' is " . var_export($fmt, true) . ', expected ' . MOOP_CROSSWALK_FORMAT;
+    } catch (PDOException $e) {
+        return $seen[$organism] = 'not a crosswalk file (' . $e->getMessage() . ')';
+    }
+    return $seen[$organism] = '';
+}
+
 function moop_crosswalk_meta(string $organism): array {
-    $db = moop_crosswalk_open($organism);
+    $db = moop_crosswalk_connect($organism);
     return $db ? $db->query('SELECT key, value FROM meta')->fetchAll(PDO::FETCH_KEY_PAIR) : [];
 }
 
@@ -96,7 +130,7 @@ function moop_crosswalk_build_from_files(string $organism, array $hubs, ?string 
         ];
         if ($counts['rows'] === 0) throw new RuntimeException('no mappings -- refusing to replace the live file');
         $meta = $db->prepare('INSERT INTO meta (key, value) VALUES (?, ?)');
-        foreach (['organism' => $organism, 'built_at' => date('c'), 'skipped_rows' => (string) $skipped,
+        foreach (['format' => MOOP_CROSSWALK_FORMAT, 'organism' => $organism, 'built_at' => date('c'), 'skipped_rows' => (string) $skipped,
                   'hubs' => json_encode($per_hub)] + array_map('strval', $counts) as $k => $v) $meta->execute([$k, $v]);
         if ((string) $db->query('PRAGMA integrity_check')->fetchColumn() !== 'ok') throw new RuntimeException('integrity check failed');
         $db = null;

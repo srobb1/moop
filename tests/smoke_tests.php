@@ -4216,6 +4216,13 @@ ok(($_l['dd_smed_v4_12_0_1']['show'][0]['id'] ?? '') === 'SMED30005911' && !$_l[
 ok(($_l['onlyh2']['show'][0]['external'] ?? false) === true && strpos($_l['onlyh2']['show'][0]['url'], 'parasite.wormbase.org') !== false,
    'links: a hub not loaded in MOOP (h2) links out to WormBase ParaSite');
 ok(!isset($_l['nothing']), 'links: an accession with no mapping gets none');
+ok(moop_crosswalk_check('Test') === '', 'check: a file in the documented format (docs/CROSSWALK_FORMAT.md) passes');
+@mkdir("$_xd/Bad"); copy("$_xd/Test/crosswalk.sqlite", "$_xd/Bad/crosswalk.sqlite");
+$_xdb = new PDO('sqlite:' . "$_xd/Bad/crosswalk.sqlite"); $_xdb->exec("DELETE FROM meta WHERE key = 'format'"); $_xdb = null;
+ok(strpos(moop_crosswalk_check('Bad'), "meta 'format'") === 0 && moop_crosswalk_open('Bad') === null,
+   'check: a shipped file without format crosswalk/1 is refused, with the reason');
+ok(moop_crosswalk_check('NoSuchOrganism') === '' && moop_crosswalk_open('NoSuchOrganism') === null,
+   'check: no file at all is not an error (nothing to use)');
 $_xrp->setValue($_xc, $_xs);
 exec('rm -rf ' . escapeshellarg($_xd));
 
