@@ -239,6 +239,17 @@ function moop_anatomical_expression_available(): bool {
     return $yes = false;
 }
 
+/** The ID translation tool's 'available_if' (Rosetta Stone): some organism has a crosswalk file. */
+function moop_crosswalk_available(): bool {
+    static $yes = null;
+    if ($yes !== null) return $yes;
+    $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/');
+    foreach (array_keys(ConfigManager::getInstance()->getArray('crosswalk', [])) as $org) {
+        if (preg_match('/^[A-Za-z0-9_.-]+$/', (string) $org) && is_file("$base/$org/crosswalk.sqlite")) return $yes = true;
+    }
+    return $yes = false;
+}
+
 function moop_tool_on(string $tool_id): bool {
     return ConfigManager::getInstance()->isToolEnabled($tool_id);
 }

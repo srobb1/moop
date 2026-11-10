@@ -206,13 +206,63 @@ return [
     'crosswalk' => [
         'Schmidtea_mediterranea' => [
             'name'   => 'Rosetta Stone Transcript Mapper',
+            // Only for building crosswalk.sqlite HERE (scripts/build_crosswalk.php). Once the compute
+            // side ships the built file (copy2moop), remove this line -- pages never read the folder.
             'folder' => '/var/www/html/.planophere_notes/smr_reformat_for_blaze_load',
             'hubs'   => [
-                'S2F19H1_WBPS19_genes' => ['file' => 'S2F19H1_WBPS19_genes.mapping', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19'],
-                'S2F19H2_WBPS19_genes' => ['file' => 'S2F19H2_WBPS19_genes.mapping'],   // haplotype 2: not loaded in simrbase
+                'S2F19H1_WBPS19_genes' => ['file' => 'S2F19H1_WBPS19_genes.mapping', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19',
+                                           'transcripts' => 'S2F19H1_WBPS19_transcripts'],
+                'S2F19H2_WBPS19_genes' => ['file' => 'S2F19H2_WBPS19_genes.mapping',    // haplotype 2: not loaded in simrbase
+                                           'transcripts' => 'S2F19H2_WBPS19_transcripts'],
                 // SMED3 transcripts: some accessions reach one but no h1 gene (dd_Smed_v4_12_0_1 ->
                 // SMED30005911), so it is a hub too -- the old Rosetta page's smed_20140614 column.
                 'smed_20140614'        => ['file' => 'smed_20140614.mapping', 'assembly' => 'smed_20140614', 'gene_set' => 'smed_20140614'],
+            ],
+            // The translation tool (tools/crosswalk.php): a column of these sources' ids beside every
+            // reference gene, whatever the visitor ticks (the old Rosetta page's smed_20140614 column).
+            'always_show' => ['smed_20140614'],
+            // The translator's source list, in these groups (in this order); a source without a group
+            // goes under "Other".
+            'source_groups' => ['site' => 'Gene sets on this site', 'models' => 'Other gene models', 'tx' => 'Transcriptomes',
+                                'array' => 'Microarrays', 'est' => 'ESTs and GenBank'],
+            // Every source in the mapping files: a name for people, its group, and where its ids open.
+            //   gene_set + assembly -> a MOOP gene page (the ids are features here);
+            //   url -> an outside page, {id} replaced by the id; about -> a page about the source.
+            // No link is better than a dead one: PlanMine's old portal links (planmine.mpi-cbg.de) and
+            // SmedGD answered 404 / nothing on 2026-11-10, so those ids are plain text until a working
+            // address is known. A source missing here is still listed, under its raw name.
+            'sources' => [
+                'S2F19H1_WBPS19_genes'       => ['group' => 'site', 'label' => 'Rink lab, H1 gene models (schMedS3 h1, WormBase ParaSite)', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19'],
+                'S2F19H1_WBPS19_transcripts' => ['group' => 'site', 'label' => 'Rink lab, H1 transcript models (schMedS3 h1, WormBase ParaSite)', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19'],
+                'S2F19H2_WBPS19_genes'       => ['group' => 'models', 'label' => 'Rink lab, H2 gene models (schMedS3 h2, WormBase ParaSite)', 'url' => 'https://parasite.wormbase.org/Multi/Search/Results?species=all;idx=;q={id}'],
+                'S2F19H2_WBPS19_transcripts' => ['group' => 'models', 'label' => 'Rink lab, H2 transcript models (schMedS3 h2, WormBase ParaSite)', 'url' => 'https://parasite.wormbase.org/Multi/Search/Results?species=all;idx=;q={id}'],
+                'smed_20140614'              => ['group' => 'site', 'label' => 'Sánchez Alvarado lab, smed_20140614 (SMED3), 2014', 'assembly' => 'smed_20140614', 'gene_set' => 'smed_20140614'],
+                'dd_Smed_v6'                 => ['group' => 'site', 'label' => 'Rink lab, Dresden v6 (PlanMine)', 'assembly' => 'dd_v6', 'gene_set' => 'ddv6'],
+                'dd_Smed_v4'                 => ['group' => 'tx', 'label' => 'Rink lab, Dresden v4 (PlanMine)'],
+                'dd_Smes_v1'                 => ['group' => 'tx', 'label' => 'Rink lab, SMES v1 (PlanMine)'],
+                'dd_Smes_v2'                 => ['group' => 'models', 'label' => 'Rink lab, SMES v2 gene models and transcripts (PlanMine)'],
+                'PRJNA12585.WBPS16'          => ['group' => 'models', 'label' => 'Asexual genome gene models, mk4 (WormBase ParaSite WBPS16)', 'url' => 'https://parasite.wormbase.org/Multi/Search/Results?species=all;idx=;q={id}'],
+                'ox_Smed_v2'                 => ['group' => 'tx', 'label' => 'Aboobaker lab, Kao et al. v5, 2013 (PlanMine)'],
+                'mu_Smed_v1'                 => ['group' => 'tx', 'label' => 'Bartscherer lab, Sandmann et al., 2011 (PlanMine)'],
+                'uc_Smed_v2'                 => ['group' => 'tx', 'label' => 'Newmark lab, Rouhana et al., 2012 (PlanMine)'],
+                'newmark_ests'               => ['group' => 'est', 'label' => 'Newmark lab ESTs, Rouhana et al., 2012'],
+                'GPL10652'                   => ['group' => 'array', 'label' => 'Newmark lab, NimbleGen 385k array, 2010', 'about' => 'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL10652'],
+                'GPL15192'                   => ['group' => 'array', 'label' => 'Newmark lab, Smed1 CombiMatrix array, Forsthoefel et al., 2012', 'about' => 'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL15192'],
+                'GPL15193'                   => ['group' => 'array', 'label' => 'Newmark lab, Smed2 CombiMatrix array, Forsthoefel et al., 2012', 'about' => 'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL15193'],
+                'SmedAsxl_pearson_GAKN01'    => ['group' => 'tx', 'label' => 'Pearson lab, Currie et al., 2013 (GAKN01)', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
+                'to_Smed_v2'                 => ['group' => 'tx', 'label' => 'Pearson lab, Labbé et al., 2012 (PlanMine)'],
+                'be_Smed_v2'                 => ['group' => 'tx', 'label' => 'Rajewsky lab, Adamidi et al., 2011 (PlanMine)'],
+                'bo_Smed_v1'                 => ['group' => 'tx', 'label' => 'Reddien lab, Srivastava et al., 2014 (PlanMine)'],
+                'GPL14150'                   => ['group' => 'array', 'label' => 'Reddien lab, microarray, Wenemoser et al., 2012', 'about' => 'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL14150'],
+                'GPL14150_gene_models'       => ['group' => 'models', 'label' => 'Reddien lab, gene models, Wenemoser et al., 2012'],
+                'SmedAsxl_ww_GCZZ01'         => ['group' => 'tx', 'label' => 'Sánchez Alvarado lab, asexual transcriptome GCZZ01, 2015', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
+                'SmedSxl_ww_GDAG01'          => ['group' => 'tx', 'label' => 'Sánchez Alvarado lab, sexual transcriptome GDAG01, 2015', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
+                'SmedSxl_ww_GDAG01.fsa_nt'   => ['group' => 'tx', 'label' => 'Sánchez Alvarado lab, sexual transcriptome GDAG01 (fsa_nt), 2015', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
+                'SMU'                        => ['group' => 'tx', 'label' => 'Sánchez Alvarado lab, unigenes, 2015'],
+                'GPL18465'                   => ['group' => 'array', 'label' => 'Sánchez Alvarado lab, Agilent smed_v2 array, 2014', 'about' => 'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL18465'],
+                'ka_Smed_v1'                 => ['group' => 'tx', 'label' => 'Sánchez Alvarado lab, PRJNA215411, 2013 (PlanMine)'],
+                'smed_ncbi_20240424'         => ['group' => 'est', 'label' => 'NCBI Nucleotide, S. mediterranea (2024-04-24)', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
+                'ncbi_smed_ests'             => ['group' => 'est', 'label' => 'NCBI S. mediterranea ESTs', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
             ],
         ],
     ],

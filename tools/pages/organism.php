@@ -60,6 +60,7 @@
           'display_name' => $organism_info['common_name'] ?? $organism_name,
           // The Anatomical Expression Search button: only for an organism with curations.
           'has_anatomical_expression' => is_file(rtrim($config->getPath('organism_data'), '/') . '/' . $organism_name . '/anatomy_expression.sqlite'),
+          'has_crosswalk' => is_file(rtrim($config->getPath('organism_data'), '/') . '/' . $organism_name . '/crosswalk.sqlite'),
       ]);
       $context['referrer_page'] = $_GET['referrer_page'] ?? '';
       include_once TOOL_SECTION_PATH;

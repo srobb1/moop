@@ -564,7 +564,7 @@ ok($_tnew()->getArray('tools_disabled') === ['moopmart', 'genome_browser'],
 // OPT-IN: no tools_layout = today's menu exactly (the render comparison checks the HTML).
 $_t2 = $_tnew();   // tools_disabled = moopmart, genome_browser (saved above)
 $_menu = fn($c) => array_map(fn($i) => $i['type'] === 'divider' ? '|' : $i['id'] . '=' . $i['label'], $c->getToolsMenu());
-ok($_t2->defaultToolsMenuOrder() === ['genome_browser', '|', 'annotation_search', 'moopmart', 'expression', 'anatomy_search', 'blast_search',
+ok($_t2->defaultToolsMenuOrder() === ['genome_browser', '|', 'annotation_search', 'moopmart', 'expression', 'anatomy_search', 'crosswalk', 'blast_search',
                                       'primer_blast', 'primer_maker', 'download_fasta', 'downloads'],
    'default menu = the hand-written one it replaced: Genome Browser, a divider, then the rest in order');
 ok(($_menu($_t2)[0] ?? '') === 'annotation_search=Annotation Search' && !in_array('|', $_menu($_t2), true),
@@ -4261,6 +4261,79 @@ ok(count(moop_crosswalk_search_hint('Test', 'SMED30000001', [['assembly' => 'asm
    'search hint: shown when its gene set is permitted');
 ok((moop_crosswalk_search_hint('Test', 'OnlyH2', [['assembly' => 'other', 'gene_set' => 'other']])[0]['external'] ?? false) === true,
    'search hint: a gene outside MOOP (public link-out) is shown to anyone');
+// The ID Translator (tools/crosswalk.php). Gene hubs = hubs with a 'transcripts' source.
+$_xn['crosswalk']['Test']['hubs']['H1']['transcripts'] = 'h1_tx';
+$_xn['crosswalk']['Test']['hubs']['H2']['transcripts'] = 'h2_tx';
+$_xn['crosswalk']['Test']['always_show'] = ['smed_20140614'];
+$_xn['crosswalk']['Test']['sources'] = ['smed_20140614' => ['label' => 'SMED3', 'assembly' => 'smed', 'gene_set' => 'smed'],
+                                        'ncbi' => ['label' => 'NCBI', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
+                                        'bad' => ['label' => 'Bad', 'url' => 'javascript:alert({id})']];
+$_xrp->setValue($_xc, $_xn);
+$_t = moop_crosswalk_translate('Test', ['DN293829', 'nothing'], ['smed_20140614'], null);
+ok(count($_t['rows']) === 1 && $_t['rows'][0]['ref_id'] === 'h1SMcG0000008' && $_t['rows'][0]['mapped']['id'] === 'SMED30000001'
+   && $_t['not_found'] === ['nothing'], 'translator: an id -> its gene -> the same gene\'s id in the ticked source; unknown ids listed');
+ok(($_t['rows'][0]['always']['smed_20140614'][0]['id'] ?? '') === 'SMED30000001', 'translator: the always-shown source is filled for every gene');
+$_t = moop_crosswalk_translate('Test', ['dn293829'], [], null);
+ok(array_column($_t['rows'], 'hub') === ['H1', 'H2'] && $_t['rows'][0]['query'] === 'DN293829',
+   'translator: nothing ticked -> one row per reference gene (h1 and h2), the id as stored');
+// An id reaching BOTH a gene hub and the SMED3 hub: only the gene appears (the SMED3 id is in the
+// always-shown column already). A second small crosswalk, since the first has no such id.
+@mkdir("$_xd/Test2");
+file_put_contents("$_xd/t2h1.mapping", $_xh . "EST1\th1G1\tncbi\nSMED1\th1G1\tsmed_20140614\n");
+file_put_contents("$_xd/t2smed.mapping", $_xh . "EST1\tSMED1\tncbi\n");
+moop_crosswalk_build_from_files('Test2', ['H1' => "$_xd/t2h1.mapping", 'SMED' => "$_xd/t2smed.mapping"], "$_xd/Test2/crosswalk.sqlite");
+$_xn['crosswalk']['Test2'] = ['hubs' => ['H1' => ['transcripts' => 'h1_tx'], 'SMED' => []]];
+$_xrp->setValue($_xc, $_xn);
+ok(array_column(moop_crosswalk_translate('Test2', ['EST1'], [], null)['rows'], 'ref_id') === ['h1G1'],
+   'translator: an id reaching a gene hub AND the SMED3 hub shows only the gene');
+$_t = moop_crosswalk_translate('Test', ['dd_Smed_v4_12_0_1'], [], null);
+ok(count($_t['rows']) === 1 && $_t['rows'][0]['hub'] === 'SMED', 'translator: an id reaching no gene hub falls back to the other hub (SMED3)');
+ok(moop_crosswalk_translate('Test', ['DN293829'], [], null, 1)['capped'] === true, 'translator: the row cap is reported, never silent');
+ok(moop_crosswalk_id_link('Test', 'smed_20140614', 'SMED30000001', [['assembly' => 'other', 'gene_set' => 'other']])['url'] === ''
+   && strpos(moop_crosswalk_id_link('Test', 'smed_20140614', 'SMED30000001', null)['url'], 'tools/parent.php') !== false,
+   'translator: a MOOP gene page is linked only when the viewer may see its gene set');
+ok(moop_crosswalk_id_link('Test', 'ncbi', 'A B', null)['url'] === 'https://www.ncbi.nlm.nih.gov/nuccore/A%20B'
+   && moop_crosswalk_id_link('Test', 'bad', 'x', null)['url'] === '' && moop_crosswalk_id_link('Test', 'unknown', 'x', null)['url'] === '',
+   'translator: outside links only over https, id escaped; unknown source = plain text');
+$_xn['crosswalk']['Test']['source_groups'] = ['est' => 'ESTs', 'site' => 'On this site', 'empty' => 'Nothing here'];
+$_xn['crosswalk']['Test']['sources']['ncbi']['group'] = 'est';
+$_xn['crosswalk']['Test']['sources']['smed_20140614']['group'] = 'site';
+$_xrp->setValue($_xc, $_xn);
+$_sg = moop_crosswalk_source_groups('Test');
+ok(array_column($_sg, 'key') === ['est', 'site', '_other'] && array_keys($_sg[2]['sources']) === ['dd_Smed_v4']
+   && $_sg[1]['sources'] === ['smed_20140614' => 'SMED3'],
+   'translator source list: configured groups in order, empty groups left out, unlisted sources under Other');
+// Admin -> Rosetta Stone saves 'crosswalk_display': what people see, never the hubs or the build folder.
+$_dc = moop_crosswalk_display_check(['Test' => ['name' => ' Rosetta ', 'source_groups' => ['est' => 'ESTs'],
+        'sources' => ['ncbi' => ['group' => 'est', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
+                      'smed_20140614' => ['assembly' => 'smed', 'gene_set' => 'smed']], 'always_show' => ['smed_20140614']]]);
+ok(is_array($_dc) && $_dc['Test']['name'] === 'Rosetta', 'Rosetta Stone settings: a valid set is accepted (and tidied)');
+foreach ([
+    'the hubs'          => ['Test' => ['hubs' => ['H1' => ['file' => '/etc/passwd']]]],
+    'the build folder'  => ['Test' => ['folder' => '/etc']],
+    'an http link'      => ['Test' => ['sources' => ['ncbi' => ['url' => 'http://x/{id}']]]],
+    'a link without {id}' => ['Test' => ['sources' => ['ncbi' => ['url' => 'https://x/']]]],
+    'a javascript link' => ['Test' => ['sources' => ['ncbi' => ['about' => 'javascript:alert(1)']]]],
+    'a gene page AND a link' => ['Test' => ['sources' => ['ncbi' => ['url' => 'https://x/{id}', 'assembly' => 'a', 'gene_set' => 'b']]]],
+    'a group that is gone' => ['Test' => ['source_groups' => ['a' => 'A'], 'sources' => ['ncbi' => ['group' => 'b']]]],
+    'a bad source name' => ['Test' => ['sources' => ['../x' => []]]],
+] as $_why => $_bad) {
+    ok(is_string(moop_crosswalk_display_check($_bad)), 'Rosetta Stone settings refused: ' . $_why);
+}
+$_xn['crosswalk_display'] = ['Test' => ['name' => 'Renamed', 'sources' => ['ncbi' => ['label' => 'GenBank']]]];
+$_xrp->setValue($_xc, $_xn);
+$_ov = moop_crosswalk_sources();
+ok(($_ov['Test']['name'] ?? '') === 'Renamed' && isset($_ov['Test']['hubs']['H1']) && moop_crosswalk_source_list('Test')['ncbi'] === 'GenBank',
+   'saved settings change what people see; the hubs stay as configured');
+$_xn['crosswalk_display']['Test']['folder'] = '/etc';   // a hand-edited file trying to set the build folder
+$_xrp->setValue($_xc, $_xn);
+ok(moop_crosswalk_sources()['Test']['folder'] === $_xd && (moop_crosswalk_sources()['Test']['name'] ?? '') !== 'Renamed',
+   'a saved value can never set the build folder: an invalid saved value is ignored whole (the admin page says so)');
+unset($_xn['crosswalk_display']);
+unset($_xn['crosswalk']['Test']['folder']); $_xrp->setValue($_xc, $_xn);
+ok(moop_crosswalk_build('Test')['ok'] === false && strpos(moop_crosswalk_build('Test')['error'], "no 'folder'") !== false
+   && isset(moop_crosswalk_sources()['Test']),
+   'a crosswalk without a build folder still works (built elsewhere); only a local build needs the folder');
 $_xrp->setValue($_xc, $_xs);
 exec('rm -rf ' . escapeshellarg($_xd));
 

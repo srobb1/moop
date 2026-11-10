@@ -82,7 +82,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['link_prefix', 'ontologies', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'primer_maker', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels'];
+    private $editableConfigKeys = ['link_prefix', 'ontologies', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'primer_maker', 'crosswalk_display', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -1052,6 +1052,13 @@ class ConfigManager
                     $ok = is_array($h) && (!$h || (in_array($h['mode'] ?? '', ['builtin', 'page', 'intro'], true)
                           && (($h['mode'] ?? '') === 'builtin' || preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', (string) ($h['page'] ?? '')))));
                     if (!$ok) return ['success' => false, 'message' => 'The home page setting is not valid; nothing was saved'];
+                }
+
+                if ($key === 'crosswalk_display') {
+                    require_once __DIR__ . '/../lib/crosswalk.php';
+                    $checked = moop_crosswalk_display_check($data[$key]);
+                    if (is_string($checked)) return ['success' => false, 'message' => 'The Rosetta Stone settings are not valid (' . $checked . '); nothing was saved'];
+                    $data[$key] = $checked;
                 }
 
                 if ($key === 'ontologies') {

@@ -171,6 +171,24 @@ return [
         'pages'           => ['organism'],
     ],
 
+    'crosswalk' => [
+        'id'              => 'crosswalk',
+        'menu_label'      => 'ID Translator',
+        'menu_order'      => 4.6,
+        'name'            => 'ID Translator',
+        'icon'            => 'fa-exchange-alt',
+        'description'     => 'Translate transcript, EST and array IDs into the same gene in other sources',
+        'btn_class'       => 'btn-tool-teal',
+        'url_path'        => '/tools/crosswalk.php',
+        'context_params'  => ['organism'],
+        // Off on a site with no crosswalk file (cuttingclass today): no menu entry, no toolbox
+        // button, its page a 404. The site's own name for it (simrbase: "Rosetta Stone Transcript
+        // Mapper") is shown on the page, from the crosswalk config.
+        'available_if'    => 'moop_crosswalk_available',
+        'required_params' => ['has_crosswalk'],
+        'pages'           => ['organism'],
+    ],
+
     'primer_maker' => [
         'id'             => 'primer_maker',
         'menu_label'      => 'Primer Maker',

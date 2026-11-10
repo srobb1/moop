@@ -22,11 +22,100 @@
 /** docs/CROSSWALK_FORMAT.md -- a shipped file without this 'format' in meta is refused. */
 const MOOP_CROSSWALK_FORMAT = 'crosswalk/1';
 
-/** Organisms with a crosswalk configured: [organism => ['folder', 'hubs' => [hub => [file, gene_set?, assembly?]], 'name']]. */
+/**
+ * Organisms with a crosswalk configured: [organism => ['hubs' => [hub => [file?, gene_set?, assembly?, transcripts?]],
+ * 'name', 'sources', 'always_show', 'folder'?]]. 'folder' (and each hub's 'file') is needed ONLY to build
+ * crosswalk.sqlite on this server (scripts/build_crosswalk.php); when the compute side ships the
+ * built file, leave it out -- the pages read only the .sqlite.
+ */
 function moop_crosswalk_sources(): array {
+    $cm = ConfigManager::getInstance();
+    // What people see -- title, groups, source names and links, the every-gene column -- can be
+    // edited on Admin -> Rosetta Stone (admin/manage_crosswalk.php), saved as 'crosswalk_display'.
+    // The hubs and build folder stay in site_config.php: they are server paths, never web-edited.
+    $display = moop_crosswalk_display_check($cm->getArray('crosswalk_display', []));
+    if (is_string($display)) $display = [];
     $out = [];
-    foreach (ConfigManager::getInstance()->getArray('crosswalk', []) as $org => $s) {
-        if (is_array($s) && !empty($s['folder']) && !empty($s['hubs']) && preg_match('/^[A-Za-z0-9_.-]+$/', (string) $org)) $out[$org] = $s;
+    foreach ($cm->getArray('crosswalk', []) as $org => $s) {
+        if (is_array($s) && !empty($s['hubs']) && preg_match('/^[A-Za-z0-9_.-]+$/', (string) $org)) {
+            $out[$org] = array_merge($s, $display[$org] ?? []);
+        }
+    }
+    return $out;
+}
+
+/** Keys of a crosswalk entry that Admin -> Rosetta Stone may change (everything else is site_config.php). */
+const MOOP_CROSSWALK_DISPLAY_KEYS = ['name', 'source_groups', 'sources', 'always_show'];
+
+/**
+ * Check a 'crosswalk_display' value: [organism => [name, source_groups, sources, always_show]].
+ * Returns the cleaned value, or a string saying what is wrong (nothing is saved then). Pure.
+ * Links: outside pages over https only, with {id}; a MOOP gene page by gene_set + assembly names.
+ */
+function moop_crosswalk_display_check($in) {
+    if (!is_array($in)) return 'not a list';
+    $name_re = '/^[A-Za-z0-9_.-]{1,100}$/';
+    $https   = fn($u) => is_string($u) && strlen($u) <= 400 && preg_match('#^https://[^\s"<>\\\\]+$#', $u);
+    $out = [];
+    foreach ($in as $org => $d) {
+        if (!preg_match($name_re, (string) $org) || !is_array($d)) return 'an organism name is not valid';
+        if (array_diff(array_keys($d), MOOP_CROSSWALK_DISPLAY_KEYS)) return "$org: only the title, groups, sources and the every-gene column can be set here";
+        $c = [];
+        if (array_key_exists('name', $d)) {
+            $n = trim((string) $d['name']);
+            if ($n === '' || mb_strlen($n) > 100) return "$org: the title must be 1 to 100 characters";
+            $c['name'] = $n;
+        }
+        if (array_key_exists('source_groups', $d)) {
+            if (!is_array($d['source_groups']) || count($d['source_groups']) > 30) return "$org: at most 30 groups";
+            $c['source_groups'] = [];
+            foreach ($d['source_groups'] as $k => $l) {
+                $l = trim((string) $l);
+                if (!preg_match('/^[a-z0-9_]{1,30}$/', (string) $k) || $k === '_other') return "$org: a group key is not valid";
+                if ($l === '' || mb_strlen($l) > 60) return "$org: every group needs a name of up to 60 characters";
+                $c['source_groups'][(string) $k] = $l;
+            }
+        }
+        if (array_key_exists('sources', $d)) {
+            if (!is_array($d['sources']) || count($d['sources']) > 500) return "$org: at most 500 sources";
+            $groups = $c['source_groups'] ?? null;
+            $c['sources'] = [];
+            foreach ($d['sources'] as $src => $x) {
+                if (!preg_match($name_re, (string) $src) || !is_array($x)) return "$org: a source name is not valid";
+                $e = [];
+                $label = trim((string) ($x['label'] ?? ''));
+                if (mb_strlen($label) > 200) return "$org, $src: the name is longer than 200 characters";
+                if ($label !== '') $e['label'] = $label;
+                $g = (string) ($x['group'] ?? '');
+                if ($g !== '') {
+                    if ($groups !== null && !isset($groups[$g])) return "$org, $src: its group no longer exists";
+                    $e['group'] = $g;
+                }
+                $gs = (string) ($x['gene_set'] ?? ''); $as = (string) ($x['assembly'] ?? '');
+                $url = (string) ($x['url'] ?? '');
+                if ($gs !== '' || $as !== '') {
+                    if (!preg_match($name_re, $gs) || !preg_match($name_re, $as)) return "$org, $src: the gene set is not valid";
+                    if ($url !== '') return "$org, $src: choose a gene page OR an outside link, not both";
+                    $e['gene_set'] = $gs; $e['assembly'] = $as;
+                }
+                if ($url !== '') {
+                    if (!$https($url) || strpos($url, '{id}') === false) return "$org, $src: an outside link must start with https:// and contain {id} where the ID goes";
+                    $e['url'] = $url;
+                }
+                $about = (string) ($x['about'] ?? '');
+                if ($about !== '') {
+                    if (!$https($about)) return "$org, $src: the \"about\" page must start with https://";
+                    $e['about'] = $about;
+                }
+                $c['sources'][(string) $src] = $e;
+            }
+        }
+        if (array_key_exists('always_show', $d)) {
+            if (!is_array($d['always_show']) || count($d['always_show']) > 5) return "$org: at most 5 every-gene columns";
+            foreach ($d['always_show'] as $src) if (!preg_match($name_re, (string) $src)) return "$org: an every-gene column is not valid";
+            $c['always_show'] = array_values(array_unique(array_map('strval', $d['always_show'])));
+        }
+        $out[(string) $org] = $c;
     }
     return $out;
 }
@@ -148,6 +237,7 @@ function moop_crosswalk_build_from_files(string $organism, array $hubs, ?string 
 function moop_crosswalk_build(string $organism): array {
     $src = moop_crosswalk_sources()[$organism] ?? null;
     if (!$src) return ['ok' => false, 'error' => "no crosswalk configured for $organism", 'counts' => [], 'skipped' => 0];
+    if (empty($src['folder'])) return ['ok' => false, 'error' => "no 'folder' configured for $organism: its crosswalk.sqlite is built elsewhere (compute side)", 'counts' => [], 'skipped' => 0];
     $hubs = [];
     foreach ($src['hubs'] as $hub => $h) {
         $file = basename((string) ($h['file'] ?? ''));   // a file NAME inside the folder, never a path
@@ -254,4 +344,141 @@ function moop_crosswalk_members(string $organism, array $ref_ids): array {
     }
     usort($out, fn($a, $b) => [$a['source'], $a['accession']] <=> [$b['source'], $b['accession']]);
     return $out;
+}
+
+/** The sources in this organism's crosswalk file, with the configured name: [source => label], config order first. */
+function moop_crosswalk_source_list(string $organism): array {
+    $db = moop_crosswalk_open($organism);
+    if (!$db) return [];
+    $have = $db->query('SELECT DISTINCT source FROM map')->fetchAll(PDO::FETCH_COLUMN);
+    $conf = moop_crosswalk_sources()[$organism]['sources'] ?? [];
+    $out = [];
+    foreach ($conf as $name => $c) if (in_array($name, $have, true)) $out[$name] = (string) ($c['label'] ?? $name);
+    $rest = array_diff($have, array_keys($out));
+    sort($rest, SORT_NATURAL | SORT_FLAG_CASE);
+    foreach ($rest as $name) $out[$name] = $name;
+    return $out;
+}
+
+/**
+ * The source list in its configured groups ('source_groups', in that order; a source with no or an
+ * unknown group goes under "Other", last): [['key', 'label', 'sources' => [name => label]], ...].
+ * Empty groups are left out.
+ */
+function moop_crosswalk_source_groups(string $organism): array {
+    $cfg    = moop_crosswalk_sources()[$organism] ?? [];
+    $labels = array_map('strval', (array) ($cfg['source_groups'] ?? []));
+    $out = [];
+    foreach ($labels as $k => $l) $out[$k] = ['key' => (string) $k, 'label' => $l, 'sources' => []];
+    $out['_other'] = ['key' => '_other', 'label' => 'Other', 'sources' => []];
+    foreach (moop_crosswalk_source_list($organism) as $name => $label) {
+        $g = (string) ($cfg['sources'][$name]['group'] ?? '');
+        $out[isset($out[$g]) && $g !== '_other' ? $g : '_other']['sources'][$name] = $label;
+    }
+    return array_values(array_filter($out, fn($g) => $g['sources']));
+}
+
+/**
+ * Where an id from a source opens: a MOOP gene page when the source's gene set is loaded here AND
+ * the viewer may see it ($permitted as moop_search_permitted_scope(): null = all open), else the
+ * source's outside 'url' ({id} replaced), else ''. Returns ['url', 'external'].
+ */
+function moop_crosswalk_id_link(string $organism, string $source, string $id, ?array $permitted): array {
+    $c = moop_crosswalk_sources()[$organism]['sources'][$source] ?? [];
+    if (!empty($c['gene_set'])) {
+        $ok = $permitted === null;
+        foreach ($permitted ?? [] as $p) if ($p['assembly'] === (string) ($c['assembly'] ?? '') && $p['gene_set'] === $c['gene_set']) $ok = true;
+        if ($ok) return ['url' => moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism, 'uniquename' => $id,
+                         'assembly' => (string) ($c['assembly'] ?? ''), 'gene_set' => (string) $c['gene_set']]), 'external' => false];
+        return ['url' => '', 'external' => false];
+    }
+    if (!empty($c['url']) && preg_match('#^https://#', (string) $c['url'])) {
+        return ['url' => str_replace('{id}', rawurlencode($id), (string) $c['url']), 'external' => true];
+    }
+    return ['url' => '', 'external' => false];
+}
+
+/**
+ * The translation tool: each typed id -> its reference gene(s) -> the ids of the same gene in the
+ * $into sources. One row per (typed id, its source, reference gene, mapped id); with no $into, one
+ * row per (typed id, source, reference gene). Every reference gene also carries its own transcripts
+ * (the hub's 'transcripts' source), the 'always_show' sources' ids, and its description from the
+ * organism database. Read-only. Returns ['rows', 'not_found' => [typed ids], 'capped' => bool].
+ */
+function moop_crosswalk_translate(string $organism, array $typed, array $into, ?array $permitted, int $max_rows = 5000): array {
+    $res = ['rows' => [], 'not_found' => [], 'capped' => false];
+    $db  = moop_crosswalk_open($organism);
+    if (!$db) return $res;
+    $typed = array_values(array_unique(array_filter(array_map('trim', $typed), 'strlen')));
+    $cfg   = moop_crosswalk_sources()[$organism];
+    $hubs  = $cfg['hubs'];
+    $always = array_values(array_filter((array) ($cfg['always_show'] ?? []), 'is_string'));
+    $into  = array_values(array_unique(array_filter($into, 'is_string')));
+
+    // 1. The typed ids, as stored (their source), and the reference genes they reach.
+    $query = [];   // lc => [[accession, source, ref_id, hub], ...]
+    foreach (array_chunk(array_map('mb_strtolower', $typed), 500) as $chunk) {
+        $st = $db->prepare('SELECT DISTINCT accession_lc, accession, source, ref_id, hub FROM map WHERE accession_lc IN ('
+                           . implode(',', array_fill(0, count($chunk), '?')) . ')');
+        $st->execute($chunk);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) $query[$r['accession_lc']][] = $r;
+    }
+    foreach ($typed as $t) if (!isset($query[mb_strtolower($t)])) $res['not_found'][] = $t;
+    if (!$query) return $res;
+    // Gene hubs (with a 'transcripts' source: h1, h2) are the reference genes. Another hub
+    // (smed_20140614) is used only for an id that reaches no gene hub -- that is why it is a hub;
+    // otherwise it would repeat what the always_show column already says.
+    $is_gene_hub = fn(string $hub) => !empty($hubs[$hub]['transcripts']);
+    foreach ($query as $lc => $rows) {
+        $genes = array_values(array_filter($rows, fn($r) => $is_gene_hub($r['hub'])));
+        if ($genes) $query[$lc] = $genes;
+    }
+
+    // 2. Everything else mapped to those reference genes.
+    $refs = [];
+    foreach ($query as $rows) foreach ($rows as $r) $refs[$r['ref_id']] = true;
+    $members = [];   // ref_id \t hub => source => [accessions]
+    foreach (moop_crosswalk_members($organism, array_keys($refs)) as $m) $members[$m['ref_id'] . "\t" . $m['hub']][$m['source']][] = $m['accession'];
+
+    // 3. Descriptions of the reference genes that are features here.
+    $desc = [];
+    $orgdb = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/' . $organism . '/organism.sqlite';
+    if (is_file($orgdb)) {
+        try {
+            $o = new PDO('sqlite:' . $orgdb, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
+            foreach (array_chunk(array_keys($refs), 500) as $chunk) {
+                $st = $o->prepare('SELECT feature_uniquename, feature_description FROM feature WHERE feature_uniquename IN ('
+                                  . implode(',', array_fill(0, count($chunk), '?')) . ')');
+                $st->execute($chunk);
+                // A "description" with no space is an id copied in by the loader
+                // (h1SMcG0008802 -> "h1SMcT0008802.2"), not a description.
+                foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) if (preg_match('/\S\s+\S/', (string) $r['feature_description'])) $desc[$r['feature_uniquename']] = trim((string) $r['feature_description']);
+            }
+        } catch (PDOException $e) { /* descriptions are a nicety: the table still works without them */ }
+    }
+
+    $link = fn(string $source, string $id) => ['id' => $id] + moop_crosswalk_id_link($organism, $source, $id, $permitted);
+    foreach ($typed as $t) {
+        foreach ($query[mb_strtolower($t)] ?? [] as $q) {
+            $key  = $q['ref_id'] . "\t" . $q['hub'];
+            $ts_src = (string) ($hubs[$q['hub']]['transcripts'] ?? '');
+            $base = [
+                'query' => $q['accession'], 'query_source' => $q['source'], 'query_link' => $link($q['source'], $q['accession']),
+                'ref_id' => $q['ref_id'], 'hub' => $q['hub'], 'ref_link' => $link($q['hub'], $q['ref_id']),
+                'transcripts' => $ts_src !== '' ? array_map(fn($a) => $link($ts_src, $a), $members[$key][$ts_src] ?? []) : [],
+                'always' => [],
+                'description' => $desc[$q['ref_id']] ?? '',
+            ];
+            foreach ($always as $s) $base['always'][$s] = array_map(fn($a) => $link($s, $a), $members[$key][$s] ?? []);
+            if (!$into) { $res['rows'][] = $base + ['mapped_source' => '', 'mapped' => null]; }
+            foreach ($into as $s) {
+                foreach ($members[$key][$s] ?? [] as $a) {
+                    if (count($res['rows']) >= $max_rows) { $res['capped'] = true; return $res; }
+                    $res['rows'][] = $base + ['mapped_source' => $s, 'mapped' => $link($s, $a)];
+                }
+            }
+            if (count($res['rows']) >= $max_rows) { $res['capped'] = true; return $res; }
+        }
+    }
+    return $res;
 }
