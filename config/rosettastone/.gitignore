@@ -1,0 +1,16 @@
+# Code only. The site's own config and anything a run writes stay out of git.
+# (examples/*/rosettastone.conf are tracked; only the top-level one is local.)
+/rosettastone.conf
+*.conf.used
+slurm-*.out
+# outputs go to OUT_DIR, but in case OUT_DIR points in here:
+refdb/
+alignments/
+probe_alignments/
+overlaps/
+mappings/
+filtered/
+aliases/
+*.sqlite
+*.mapping
+.crosswalk_work.*

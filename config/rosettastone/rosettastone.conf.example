@@ -1,0 +1,74 @@
+# RosettaStone configuration (one species). Copy to rosettastone.conf (git-ignored) and edit;
+# a worked example is examples/schmidtea_mediterranea/rosettastone.conf.
+# Bash syntax: KEY=value with no spaces around "="; REFERENCES is a bash array. Every script
+# takes the file with -c. A value set in the environment wins over this file (not REFERENCES),
+# so one config can serve many species:
+#   SPECIES_DIR=/n/sci/SCI-004223-SBGENOMES/genomes/v2/Danio_rerio ./run_pipeline.sh -c rosettastone.conf --plan
+# Names (references, hubs, sets) may contain only letters, digits, "_", "." and "-".
+# Check what a config resolves to with:  ./run_pipeline.sh -c rosettastone.conf --plan
+
+# ================================================================ from the genomes datastore
+# SPECIES_DIR/<assembly>/genome.fa + SPECIES_DIR/<assembly>/<geneset>/{metadata.yaml, genes.gtf
+# or genes.gff, transcript.nt.fa, transcript2gene.txt}. List a species' gene sets with
+#   scripts/list_genesets.sh <SPECIES_DIR>
+SPECIES_DIR=/n/sci/SCI-004223-SBGENOMES/genomes/v2/My_species
+# Gene set(s) to map onto: "<assembly>/<geneset>" or just "<geneset>", space-separated.
+# Empty = the species' only active gene set (an error if it has several).
+REFERENCE_GENESETS=""
+# Hub name for a reference in MOOP's crosswalk config, "geneset=hub ..." (default: geneset name)
+REFERENCE_HUBS=""
+# Gene sets whose transcripts are mapped onto the references: active (metadata.yaml says
+# active: true; the default) | all | none | a list. References are included too, which links
+# the references' genes to each other.
+MAP_GENESETS=active
+EXCLUDE_GENESETS=""
+
+# ================================================================ or / and: by hand
+# Extra references, one line each: "name | genome | gene models | hub [| transcript2gene]"
+# (FASTA and GFF3/GTF, gzipped or not; hub defaults to name).
+# REFERENCES=(
+#   "myref_v1 | /path/to/genome.fa.gz | /path/to/annotations.gff3.gz | myref_v1_genes"
+# )
+# Extra sets to map that are not in the datastore: one FASTA per set, <set>.nt. Transcripts,
+# ESTs, older assemblies... are aligned spliced (minimap2).
+QUERY_DIR=
+QUERY_EXCLUDE=""          # names in QUERY_DIR to skip (e.g. ones the datastore also provides)
+# Short unspliced sequences such as microarray probes (pblat), <set>.nt. Empty = none.
+PROBE_DIR=
+# Sets whose sequences are not reliably oriented: their overlaps ignore strand.
+UNSTRANDED_SETS=""
+
+# ================================================================ aliases (step 05)
+# Optional bash file of rules that derive other names from the FASTA headers
+# (see scripts/05_make_aliases.sh and examples/*/alias_rules.sh).
+ALIAS_RULES=
+# Space-separated list of ready-made alias tables: alias<TAB>accession<TAB>set<TAB>type
+ALIAS_TABLES=""
+# "old=new ..." renames the set column of aliases, e.g. "ncbi=ncbi_nucleotide_2024"
+ALIAS_SOURCE_RENAME=""
+
+# ================================================================ output
+# Everything the pipeline writes goes under OUT_DIR. With SPECIES_DIR you can instead set
+# OUT_ROOT; OUT_DIR is then OUT_ROOT/<species folder name>.
+OUT_DIR=
+OUT_ROOT=/path/to/rosettastone_output
+
+# ================================================================ crosswalk
+CROSSWALK_ORGANISM=        # MOOP organism folder; empty = the SPECIES_DIR folder name
+CROSSWALK_OUT=             # empty = $OUT_DIR/crosswalk/crosswalk.sqlite
+# Mapped sets to publish as hubs of their own, besides the references. Each ID inherits the
+# mappings of the reference gene it overlaps best (one per reference; ties all kept). Use it
+# for an older gene set that people still cite.
+TRANSFER_HUBS=""
+# Optional fallback for IDs the genome mapping misses: an older direct mapping onto a transfer
+# hub (seq_id<TAB>hub_id<TAB>set; header line allowed), used only for the IDs listed in
+# CROSSWALK_FALLBACK_IDS (one per line).
+CROSSWALK_FALLBACK_IDS=
+CROSSWALK_FALLBACK_MAPPING=
+CROSSWALK_FALLBACK_HUB=               # empty = the first of TRANSFER_HUBS
+CROSSWALK_FALLBACK_SET_RENAME=""      # "old=new ..." for set names in the fallback mapping
+
+# ================================================================ compute
+THREADS=16                 # submit_slurm.sh sets this from --cpus
+# Loaded with "module load" when the module command exists; empty = use what is on PATH.
+MODULES="minimap2/2.26 gffread/0.12.7 agat/1.2.0 pblat/2.5.1 bedops/2.4.40 bedtools/2.30.0"
