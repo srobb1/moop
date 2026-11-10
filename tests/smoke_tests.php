@@ -438,9 +438,16 @@ $_tnew = function () use ($_td) {
     return $c;
 };
 $_t0 = $_tnew();
-ok(count($_t0->getAllTools()) === count($_t0->getAllTools(true)) && count($_t0->getAllTools()) > 5
+// A tool with an 'available_if' check is hidden where the site lacks its data (the Anatomical
+// Expression Search without curations) -- that is not "switched off", and it depends on the host:
+// CI has no data, this server does. So: nothing switched off, and anything missing is missing for
+// lack of data only.
+$_tall = $_t0->getAllTools(true);
+$_tmissing = array_diff_key($_tall, $_t0->getAllTools());
+ok(count($_tall) > 5 && !array_filter(array_keys($_tall), fn($id) => $_t0->isToolSwitchedOff((string) $id))
+   && !array_filter($_tmissing, fn($t) => empty($t['available_if']))
    && $_t0->isToolEnabled('moopmart') && $_t0->isToolEnabled('genome_browser'),
-   'tools_disabled unset: every tool is offered, as shipped');
+   'tools_disabled unset: every tool is offered, as shipped (except one whose data this site lacks)');
 ok(moop_disabled_tool_for_script($_t0, '/' . $_t0->getString('site') . '/tools/moopmart.php') === null,
    'tools_disabled unset: no tool page is turned away');
 $_tsave = $_t0->saveEditableConfig(['tools_disabled' => ['moopmart', 'genome_browser', 'moopmart']], $_td);
