@@ -187,7 +187,7 @@ function moop_crosswalk_gene_url(string $organism, string $ref_id, string $hub):
  * For results tables: each accession's best reference genes, as display-ready links.
  * Order of preference = the order the hubs are configured (h1 genes, then smed_20140614, then h2):
  * the first hub with a match is shown; 'all' lists every match for a tooltip.
- * Returns [accession_lc => ['show' => [['id', 'url', 'external']...], 'all' => [ids]]].
+ * Returns [accession_lc => ['show' => [['id', 'url', 'external', 'hub']...], 'all' => [ids]]].
  */
 function moop_crosswalk_gene_links(string $organism, array $accessions): array {
     $hubs  = array_keys(moop_crosswalk_sources()[$organism]['hubs'] ?? []);
@@ -202,13 +202,39 @@ function moop_crosswalk_gene_links(string $organism, array $accessions): array {
             foreach (array_unique($by_hub[$hub]) as $id) {
                 $url = moop_crosswalk_gene_url($organism, $id, $hub);
                 $show[] = ['id' => $id, 'url' => $url ?: 'https://parasite.wormbase.org/Multi/Search/Results?species=all;idx=;q=' . rawurlencode($id),
-                           'external' => $url === ''];
+                           'external' => $url === '', 'hub' => $hub];
             }
             break;
         }
         $out[$acc] = ['show' => $show, 'all' => array_values(array_unique(array_column($rows, 'ref_id')))];
     }
     return $out;
+}
+
+/**
+ * The main search's fallback (annotation_search_ajax.php): a search that found NOTHING in an
+ * organism, for one ID-like word, may be an ID this crosswalk maps -- a transcript from a
+ * transcriptome MOOP does not load, a GenBank accession. Returns the gene(s) it maps to, as
+ * moop_crosswalk_gene_links() shows them, or [] (no crosswalk, not one word, no mapping).
+ *
+ * $permitted = moop_search_permitted_scope(): null = everything open, else the {assembly,
+ * gene_set} pairs this viewer may search. A hub whose gene set is NOT permitted is dropped, so the
+ * hint never names a gene the viewer could not open; a hub not loaded in MOOP (an outside link)
+ * is public data and stays.
+ */
+function moop_crosswalk_search_hint(string $organism, string $keywords, ?array $permitted): array {
+    $term = trim(trim($keywords), '"\'');
+    if (!isset(moop_crosswalk_sources()[$organism]) || strlen($term) < 3 || strlen($term) > 100
+        || preg_match('/\s/', $term)) return [];
+    $links = moop_crosswalk_gene_links($organism, [$term])[mb_strtolower($term)]['show'] ?? [];
+    if ($permitted === null) return $links;
+    $hubs = moop_crosswalk_sources()[$organism]['hubs'];
+    $ok = [];
+    foreach ($permitted as $p) $ok[$p['assembly'] . "\t" . $p['gene_set']] = true;
+    return array_values(array_filter($links, function ($l) use ($hubs, $ok) {
+        $h = $hubs[$l['hub']] ?? [];
+        return $l['external'] || isset($ok[($h['assembly'] ?? '') . "\t" . ($h['gene_set'] ?? '')]);
+    }));
 }
 
 /**

@@ -4248,6 +4248,19 @@ ok(strpos(moop_crosswalk_check('Bad'), "meta 'format'") === 0 && moop_crosswalk_
    'check: a shipped file without format crosswalk/1 is refused, with the reason');
 ok(moop_crosswalk_check('NoSuchOrganism') === '' && moop_crosswalk_open('NoSuchOrganism') === null,
    'check: no file at all is not an error (nothing to use)');
+// The main search's fallback: a word that found nothing may be an ID the crosswalk maps to a gene.
+$_hh = moop_crosswalk_search_hint('Test', ' SMED30000001 ', null);
+ok(count($_hh) === 1 && $_hh[0]['id'] === 'h1SMcG0000008' && !$_hh[0]['external'], 'search hint: a mapped ID names its gene (everything open)');
+ok((moop_crosswalk_search_hint('Test', '"smed30000001"', null)[0]['id'] ?? '') === 'h1SMcG0000008', 'search hint: quotes and case do not matter');
+ok(moop_crosswalk_search_hint('Test', 'SMED30000001 kinase', null) === [] && moop_crosswalk_search_hint('Test', 'ab', null) === [],
+   'search hint: only for ONE ID-like word');
+ok(moop_crosswalk_search_hint('NoSuchOrganism', 'SMED30000001', null) === [], 'search hint: no crosswalk, no hint');
+ok(moop_crosswalk_search_hint('Test', 'SMED30000001', [['assembly' => 'other', 'gene_set' => 'other']]) === [],
+   'search hint: a gene in a gene set the viewer may not search is never named');
+ok(count(moop_crosswalk_search_hint('Test', 'SMED30000001', [['assembly' => 'asmH1', 'gene_set' => 'gsH1']])) === 1,
+   'search hint: shown when its gene set is permitted');
+ok((moop_crosswalk_search_hint('Test', 'OnlyH2', [['assembly' => 'other', 'gene_set' => 'other']])[0]['external'] ?? false) === true,
+   'search hint: a gene outside MOOP (public link-out) is shown to anyone');
 $_xrp->setValue($_xc, $_xs);
 exec('rm -rf ' . escapeshellarg($_xd));
 

@@ -42,6 +42,7 @@ class AnnotationSearch {
 
         this.allResults = [];
         this.zeroResultOrganisms = [];
+        this.crosswalkHits = [];
         this.currentKeywords = '';
         this.cappedOrganisms = [];
         // null = no filter; [] = gene-only mode; [...] = specific sources
@@ -440,6 +441,7 @@ class AnnotationSearch {
 
         this.allResults = [];
         this.zeroResultOrganisms = [];
+        this.crosswalkHits = [];
         this.warnings = [];
         this.cappedOrganisms = [];
         this.cancelled = false;
@@ -537,6 +539,10 @@ class AnnotationSearch {
                             genus: data.genus || '',
                             species: data.species || ''
                         });
+                        // An ID the organism's crosswalk maps to a gene (tools/annotation_search_ajax.php).
+                        if (data.crosswalk_genes && data.crosswalk_genes.length > 0) {
+                            this.crosswalkHits.push({ genus: data.genus || '', species: data.species || '', genes: data.crosswalk_genes });
+                        }
                     }
                     // A capped response's warning IS the cap; the one cap message below says
                     // it for every organism at once. Told apart by the flag, not by the text --
@@ -636,8 +642,26 @@ class AnnotationSearch {
             warningsHtml += '</div>';
         }
 
+        // "X was not found, but it maps to gene Y" -- one line per organism whose crosswalk knew the word.
+        let crosswalkHtml = '';
+        if (this.crosswalkHits.length > 0) {
+            const word = `<strong>${escapeHtml(this.currentKeywords || '')}</strong>`;
+            crosswalkHtml = '<div class="alert alert-info mb-3">';
+            this.crosswalkHits.forEach((item, idx) => {
+                const genes = item.genes.map(g => `<a href="${escapeHtml(g.url)}"${g.external ? ' target="_blank" rel="noopener"' : ''}>${escapeHtml(g.id)}</a>`
+                    + (g.external ? ' <i class="fa fa-external-link-alt small" aria-hidden="true"></i>' : '')).join(', ');
+                const org = `<em>${escapeHtml((item.genus + ' ' + item.species).trim())}</em>`;
+                if (idx > 0) crosswalkHtml += '<br>';
+                crosswalkHtml += '<i class="fa fa-exchange-alt me-1" aria-hidden="true"></i>'
+                    + (item.genes.length === 1 ? moopTm('%1$s was not found, but in %2$s it maps to the gene %3$s.', word, org, genes)
+                                               : moopTm('%1$s was not found, but in %2$s it maps to the genes %3$s.', word, org, genes));
+            });
+            crosswalkHtml += '</div>';
+        }
+
         if (this.allResults.length === 0) {
-            $('#searchProgress').html(capMessageHtml + warningsHtml + '<div class="alert alert-warning">No results found. Try different search terms.</div>');
+            $('#searchProgress').html(capMessageHtml + warningsHtml + (crosswalkHtml
+                || '<div class="alert alert-warning">No results found. Try different search terms.</div>'));
         } else {
             const organismCounts = {};
             const uniqueFeatures = new Set();
@@ -678,6 +702,7 @@ class AnnotationSearch {
             $('#searchProgress').html(`
                 ${capMessageHtml}
                 ${warningsHtml}
+                ${crosswalkHtml}
                 ${jumpToHtml}
             `);
             $('#searchProgress').find('.download-all-results').on('click', () => this.downloadResults());

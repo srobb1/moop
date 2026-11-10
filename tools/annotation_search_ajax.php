@@ -125,7 +125,8 @@ $organism_image_path = $organism_data_result['image_path'];
 // What may be searched is decided here, not by the browser: its scope can only narrow the
 // gene sets this viewer may see (lib/functions_access.php). Unfiltered stays unfiltered when
 // everything in the database is open, so the fast path is kept.
-$narrowed = moop_search_narrow_scope(moop_search_permitted_scope($organism), $scope_pairs, $assembly, $gene_set);
+$permitted_scope = moop_search_permitted_scope($organism);
+$narrowed = moop_search_narrow_scope($permitted_scope, $scope_pairs, $assembly, $gene_set);
 $scope_pairs = $narrowed['pairs'];
 if ($narrowed['blocked']) {
     echo json_encode(['organism' => $organism, 'results' => [], 'count' => 0, 'capped' => false,
@@ -193,6 +194,17 @@ $result_count = count($formatted_results);
 $results_limit = moop_search_results_limit();
 $is_capped = $result_count >= $results_limit;
 
+// Nothing found, and this organism has a crosswalk: the word may be an ID from another source (a
+// transcriptome MOOP does not load, a GenBank accession) -- say which gene it maps to. Only on
+// zero results, so ordinary searches never pay for it (lib/crosswalk.php).
+$crosswalk_genes = [];
+if ($result_count === 0) {
+    require_once __DIR__ . '/../lib/crosswalk.php';
+    foreach (moop_crosswalk_search_hint($organism, $search_keywords, $permitted_scope) as $l) {
+        $crosswalk_genes[] = ['id' => $l['id'], 'url' => $l['url'], 'external' => $l['external']];
+    }
+}
+
 echo json_encode([
     'organism' => $organism,
     'genus' => $organism_data_result['organism_info']['genus'] ?? '',
@@ -206,5 +218,6 @@ echo json_encode([
     // Sent so the results UI and its help can state the real cap rather than a
     // number baked into the JavaScript, which would go stale the moment an admin
     // changes it in Site Configuration.
-    'results_limit' => $results_limit
+    'results_limit' => $results_limit,
+    'crosswalk_genes' => $crosswalk_genes
 ]);
