@@ -1,11 +1,20 @@
 #!/bin/bash
 # Print the nginx no-exec guard for ONE MOOP site -- the file to deploy as
-# /etc/nginx/default.d/<site>-security.conf.
+# /etc/nginx/default.d/$(scripts/nginx_site_guard.sh --deploy-name <site>).
 #
 #   scripts/nginx_site_guard.sh            # the site this checkout is (its folder name)
 #   scripts/nginx_site_guard.sh cuttingclass
-#   sudo bash -c 'scripts/nginx_site_guard.sh > /etc/nginx/default.d/cuttingclass-security.conf'
+#   scripts/nginx_site_guard.sh --deploy-name planosphere     # -> 00-planosphere-security.conf
+#   G=$(scripts/nginx_site_guard.sh --deploy-name cuttingclass)
+#   sudo bash -c "scripts/nginx_site_guard.sh cuttingclass > /etc/nginx/default.d/$G"
 #   scripts/nginx_site_guard.sh cuttingclass /      # explicit link prefix (else read from the site)
+#
+# THE FILE NAME MATTERS. nginx reads default.d/*.conf in name order and takes the FIRST matching
+# regex location, so the guard's `.php` deny must come before php.conf's `location ~ \.php`, or
+# php.conf runs the file and the guard does nothing -- while looking deployed and current. Found
+# 2026-11-11 setting up planosphere: "planosphere-security.conf" sorts after "php.conf" and a .php
+# in its images/ EXECUTED. --deploy-name is the one rule: "<site>-security.conf" when that sorts
+# before php.conf (moop, cuttingclass keep their names), else "00-<site>-security.conf".
 #
 # The rules are keyed on the site's LINK PREFIX (where its pages are served: "/moop/…"), not its
 # folder name. The prefix is the second argument, else the site's own config_editable.json
@@ -28,6 +37,18 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ "${1-}" == "--deploy-name" ]]; then
+    SITE="${2:-$(basename "$HERE")}"
+    [[ "$SITE" =~ ^[A-Za-z0-9_-]+$ ]] || { echo "nginx_site_guard.sh: not a site name: $SITE" >&2; exit 2; }
+    NAME="${SITE}-security.conf"
+    # Byte order (LC_ALL=C), the order glob() gives nginx under the C locale it runs in.
+    if [[ "$(printf '%s\n%s\n' "$NAME" php.conf | LC_ALL=C sort | head -1)" != "$NAME" ]]; then
+        NAME="00-${SITE}-security.conf"
+    fi
+    echo "$NAME"
+    exit 0
+fi
 SITE="${1:-$(basename "$HERE")}"
 TEMPLATE="$HERE/docs/nginx/moop-security.conf"
 

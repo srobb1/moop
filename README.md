@@ -352,9 +352,15 @@ The steps below are the ones that installing cuttingclass beside simrbase actual
    already applies, or `nginx -t` fails on a duplicate `location = /users.json`:
 
    ```bash
-   sudo bash -c 'scripts/nginx_site_guard.sh cuttingclass > /etc/nginx/default.d/cuttingclass-security.conf'
-   sudo chmod 644 /etc/nginx/default.d/cuttingclass-security.conf
+   G=/etc/nginx/default.d/$(scripts/nginx_site_guard.sh --deploy-name cuttingclass)
+   sudo bash -c "scripts/nginx_site_guard.sh cuttingclass > $G" && sudo chmod 644 $G
    ```
+
+   **Use that file name, never type your own.** nginx reads these files in name order and the
+   first `.php` rule wins, so a guard whose name sorts after `php.conf` protects nothing while
+   looking installed. `--deploy-name` gives `<site>-security.conf` when that sorts first and
+   `00-<site>-security.conf` otherwise (`planosphere` needs the `00-`). `setup-check.php` tests
+   it for real: it puts a `.php` in `images/`, requests it, and fails if it runs.
 
    From `docs/nginx/moop-site.conf.example` deploy **only the JBrowse auth-gateway rule**
    (`location = /cuttingclass/jbrowse2/index.html { ... }`) as

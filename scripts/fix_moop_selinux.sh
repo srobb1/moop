@@ -53,7 +53,9 @@ PRIVATE="${PRIVATE:-$_PARENT/${SITE}-private}"
 # NOT the small /tmp. Hidden (leading dot), so nginx's dot rule never serves it. Must match
 # moop_temp_dir_path() in lib/temp_dir.php -- /var/www/html/moop -> /var/www/html/.moop-tmp
 TEMP="${TEMP:-$(dirname "$MOOP")/.${SITE}-tmp}"
-GUARD_NAME="${GUARD_NAME:-${SITE}-security.conf}"
+# The deployed guard's name, from the one rule (nginx_site_guard.sh --deploy-name): it must sort
+# BEFORE php.conf, or php.conf's `location ~ \.php` wins and the guard blocks nothing (2026-11-11).
+GUARD_NAME="${GUARD_NAME:-$(bash "$MOOP/scripts/nginx_site_guard.sh" --deploy-name "$SITE")}"
 
 # Directories the web server (php-fpm as apache) must be able to WRITE.
 # organisms/ IS in this list, deliberately — see the note below it.
@@ -146,6 +148,22 @@ MSG
     fi
 elif [[ ! -f "$NGINX_CANON" ]]; then
     echo "  WARN: canonical copy missing ($NGINX_CANON) — cannot verify; continuing"
+elif [[ ! -f "$NGINX_GUARD" && "$GUARD_NAME" != "${SITE}-security.conf" && -f "/etc/nginx/default.d/${SITE}-security.conf" ]]; then
+    cat >&2 <<MSG
+
+  REFUSING TO RUN — the nginx guard is deployed under a name that does NOT protect anything.
+
+    deployed:  /etc/nginx/default.d/${SITE}-security.conf
+    needed:    $NGINX_GUARD
+
+  nginx reads default.d/ in name order and the first matching regex wins: "${SITE}-security.conf"
+  sorts after php.conf, so php.conf runs .php files before the guard can refuse them. Rename it:
+
+    sudo mv /etc/nginx/default.d/${SITE}-security.conf $NGINX_GUARD
+    sudo nginx -t && sudo systemctl reload nginx
+
+MSG
+    exit 1
 elif [[ ! -f "$NGINX_GUARD" ]]; then
     cat >&2 <<MSG
 

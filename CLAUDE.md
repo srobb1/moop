@@ -516,6 +516,13 @@ any new host; `setup-check.php` verifies it.
 - **php-fpm has `PrivateTmp`.** Anything exec'd from a web request gets its own `/tmp`,
   invisible from your shell. "It works in my terminal" proves nothing; pass an explicit
   temp/cache dir.
+- **The guard's FILE NAME decides whether it works.** nginx reads `default.d/*.conf` in name order
+  and the first matching regex wins: a guard named after `php.conf` (e.g. `planosphere-security.conf`)
+  never sees a `.php` request, and php.conf runs it -- while both checkers called it "deployed and
+  current" (2026-11-11). Always name it with `scripts/nginx_site_guard.sh --deploy-name <site>`
+  (`00-<site>-security.conf` when needed). setup-check now requests a real probe `.php` in
+  `images/` over HTTP and FAILs if it runs -- and that probe must not be a dot-name (the dotfile
+  rule 404s it first, so the first version of the test passed on the broken guard).
 - **A 404 never proves a deny rule works.** Files unreadable to the web user 404/403 by
   accident. Test with a real `.php` that *would* execute, plus a control copy in a normal
   location.

@@ -307,7 +307,9 @@ if (is_readable($editable_file)) {
 // includes/config_init.php (this script does not load it): "/" is the root, and anything that
 // is not plain path segments falls back to the folder.
 $sc_prefix = trim((string) ($config['link_prefix'] ?? ''));
-$sc_prefix = ($sc_prefix === '' ) ? '/' . trim((string) ($config['site'] ?? 'moop'), '/')
+// No 'site' yet (before setup): the folder, as moop_url_base() does -- not "moop", which pointed a
+// fresh planosphere checkout's checks at simrbase's pages (2026-11-11).
+$sc_prefix = ($sc_prefix === '' ) ? '/' . trim((string) ($config['site'] ?? basename(__DIR__)), '/')
            : ($sc_prefix === '/' ? '' : '/' . trim($sc_prefix, '/'));
 if ($sc_prefix !== '' && !preg_match('#^(/[A-Za-z0-9._~-]+)+$#', $sc_prefix)) {
     $sc_prefix = '/' . preg_replace('/[^A-Za-z0-9._~-]/', '', (string) ($config['site'] ?? 'moop'));
@@ -711,9 +713,15 @@ $server_flavor = detectWebServer();
 // checked against ITS OWN guard. This looked only at moop-security.conf, so a second site found
 // the first site's guard and reported "current" while its own was missing (found 2026-11-05).
 $guard_site = basename($base);
+// The deployed name must sort BEFORE php.conf (nginx reads default.d/ in name order; the first
+// matching regex wins), so it comes from the one rule in nginx_site_guard.sh --deploy-name.
+// "planosphere-security.conf" sorts after php.conf: its .php deny never ran (2026-11-11).
+$guard_name = trim((string) shell_exec('bash ' . escapeshellarg("$base/scripts/nginx_site_guard.sh")
+                                     . ' --deploy-name ' . escapeshellarg($guard_site)));
+if (!preg_match('/^[A-Za-z0-9_.-]+\.conf$/', $guard_name)) $guard_name = "$guard_site-security.conf";
 $guard_targets = [
     'nginx'  => [
-        ["/etc/nginx/default.d/$guard_site-security.conf"],
+        ["/etc/nginx/default.d/$guard_name"],
         "$base/docs/nginx/moop-security.conf",
         'sudo nginx -t && sudo systemctl reload nginx',
     ],
@@ -736,8 +744,14 @@ if ($server_flavor === 'unknown') {
     }
     $target = $deploy_paths[0];
 
+    $misnamed = $server_flavor === 'nginx' && $guard_name !== "$guard_site-security.conf"
+                && file_exists("/etc/nginx/default.d/$guard_site-security.conf");
     if (!file_exists($canonical)) {
         warn("No canonical guard shipped for $server_flavor ($canonical)");
+    } elseif ($deployed === null && $misnamed) {
+        fail("Execution guard is deployed under a name that protects nothing ($guard_site-security.conf)",
+             "nginx reads default.d/ in name order and php.conf's .php rule wins over a guard that sorts after it.\n" .
+             "         sudo mv /etc/nginx/default.d/$guard_site-security.conf $target && $reload");
     } elseif ($deployed === null) {
         fail("Execution guard is not deployed ($server_flavor)",
              ($server_flavor === 'nginx'
@@ -762,6 +776,43 @@ if ($server_flavor === 'unknown') {
                  : "         sudo cp $canonical $deployed && $reload"));
     } else {
         pass("Execution guard deployed and current ($server_flavor)");
+    }
+
+    // Does it actually WORK? Comparing the file proves nothing about what nginx does with it (a
+    // guard that sorted after php.conf compared "current" while .php ran). Put a .php that would
+    // print a random token into images/ (served AND web-writable), ask for it over HTTP, delete it.
+    // Plain http to 127.0.0.1: this machine is exempt from the https redirect. A site at its own
+    // domain's root is served by its own server block, which 127.0.0.1 may not reach -- skipped.
+    $probe_dir = "$base/images";
+    if ($sc_prefix === '') {
+        warn('Execution guard not tested over HTTP (this site is served at its own domain\'s root)',
+             "Test by hand: put a .php in images/ and request it -- it must NOT run (a 404 alone proves nothing).");
+    } elseif (is_dir($probe_dir) && is_writable($probe_dir) && function_exists('curl_init')) {
+        $tok   = bin2hex(random_bytes(8));
+        // NOT a dot-name: nginx's dotfile rule would answer 404 before the .php rule is reached,
+        // and the test would pass whatever the guard does (the first version did, 2026-11-11).
+        $probe = "$probe_dir/moop_guard_probe_$tok.php";
+        $probe_url = "http://127.0.0.1$sc_prefix/images/" . basename($probe);
+        register_shutdown_function(fn() => @unlink($probe));
+        if (@file_put_contents($probe, "<?php echo 'MOOP-GUARD-' . '$tok';") !== false) {
+            @chmod($probe, 0644);
+            $ch = curl_init($probe_url);
+            curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_FOLLOWLOCATION => false]);
+            $body = (string) curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            curl_close($ch);
+            @unlink($probe);
+            if (strpos($body, "MOOP-GUARD-$tok") !== false) {
+                fail("A .php file in images/ EXECUTES over HTTP -- the execution guard is not working",
+                     "The guard must come before php.conf in nginx's include order. Deploy it as:\n" .
+                     "         sudo bash -c '$base/scripts/nginx_site_guard.sh $guard_site > $target' && sudo chmod 644 $target\n" .
+                     "         (remove any other copy of this site's guard), then $reload");
+            } elseif ($code === 0) {
+                warn("Execution guard not tested over HTTP (no answer from 127.0.0.1)", "Test by hand: a .php in images/ must NOT run.");
+            } else {
+                pass("Execution guard tested: a .php in images/ does not run (HTTP $code)");
+            }
+        }
     }
 
     if ($server_flavor === 'apache' && file_exists($canonical)) {
