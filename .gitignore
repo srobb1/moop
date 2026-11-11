@@ -160,3 +160,6 @@ testing/
 # Reproducible diagnostic dumps (regenerate them rather than committing).
 status.*.log
 notes/bench/capacity_results/
+
+# A site's own stylesheet (config 'custom_css_path'): site data, backed up by housekeeping
+css/custom.css

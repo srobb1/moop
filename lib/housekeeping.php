@@ -779,6 +779,9 @@ function housekeeping_snapshot_site_data() {
         // copied in from the compute box; THIS file is the only web-side state, so it must be backed up.
         $site_path . '/metadata/expression_overrides.json'      => 'metadata/expression_overrides.json',
         $users_file                                             => 'users.json',
+        // The site's own stylesheet (head-resources.php loads it if present; planosphere's look,
+        // 2026-11-11). Site data, not code: git-ignored, so the backup is its only other copy.
+        $site_path . '/css/custom.css'                          => 'css/custom.css',
     ];
 
     // Content pages (Admin -> Manage Pages, lib/content_pages.php): one file each, written by the
