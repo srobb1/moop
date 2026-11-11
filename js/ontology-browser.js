@@ -29,13 +29,40 @@
     if (!term.is_a) {
       var rel = document.createElement("span"); rel.className = "ob-rel"; rel.textContent = term.relation; t.appendChild(rel);
     }
-    if (term.children > 0) {
-      var n = document.createElement("span"); n.className = "ob-n"; n.title = T("Terms directly below it");
-      n.textContent = term.children === 1 ? T("1 term") : T("%d terms").replace("%d", term.children); t.appendChild(n);
-    }
+    var c = document.createElement("span"); c.className = "ob-counts";
+    c.dataset.counts = JSON.stringify(term); t.appendChild(c); drawCounts(c, false);
     var d = document.createElement("span"); d.className = "ob-def"; d.textContent = term.definition || "";
     r.appendChild(t); r.appendChild(d); li.appendChild(r);
     return li;
+  }
+
+  // A row's two counts. CLOSED: the term and everything below it ("52 terms", "7,794 records").
+  // OPENED: its own share -- the terms directly below it by relationship ("6 part of"), and the
+  // records on the term itself -- because its children now show the rest.
+  var fmt = function (n) { return Number(n).toLocaleString(); };
+  function drawCounts(el, open) {
+    var d; try { d = JSON.parse(el.dataset.counts || "{}"); } catch (e) { return; }
+    el.textContent = "";
+    if (open) {
+      var parts = Object.keys(d.below || {}).map(function (k) { return fmt(d.below[k]) + " " + k; });
+      if (parts.length) badge(el, "ob-n ob-n-open", parts.join(" · "), T("Terms directly below it, by relationship"));
+    } else if (d.terms_all > 0) {
+      badge(el, "ob-n", d.terms_all === 1 ? T("1 term") : T("%s terms").replace("%s", fmt(d.terms_all)),
+            T("All the terms below it, at any depth"));
+    }
+    if (d.records_all === null || d.records_all === undefined) return;
+    var n = open ? d.records_own : d.records_all;
+    if (!n) { badge(el, "ob-rec-none", open ? T("no records on this term itself") : T("no records"), ""); return; }
+    var a = document.createElement("a"); a.className = "ob-rec" + (open ? " ob-rec-open" : ""); a.href = d.records_url;
+    a.title = open ? T("Records on this term itself; the terms below show theirs. Click for all of them.")
+                   : T("Published expression records on this term and everything below it");
+    var i = document.createElement("i"); i.className = "fa fa-microscope"; i.setAttribute("aria-hidden", "true"); a.appendChild(i);
+    a.appendChild(document.createTextNode(" " + (open ? T("%s on this term").replace("%s", fmt(n))
+                                                      : (n === 1 ? T("1 record") : T("%s records").replace("%s", fmt(n))))));
+    el.appendChild(a);
+  }
+  function badge(el, cls, text, title) {
+    var b = document.createElement("span"); b.className = cls; b.textContent = text; if (title) b.title = title; el.appendChild(b);
   }
 
   function depthOf(li) { var m = /ob-d(\d+)/.exec(li.className); return m ? parseInt(m[1], 10) : 1; }
@@ -44,8 +71,10 @@
     var li = btn.closest("li");
     var open = btn.getAttribute("aria-expanded") === "true";
     var sub = li.querySelector(":scope > ul");
-    if (open) { btn.setAttribute("aria-expanded", "false"); if (sub) sub.hidden = true; return; }
+    var counts = li.querySelector(":scope > .ob-row .ob-counts");
+    if (open) { btn.setAttribute("aria-expanded", "false"); if (sub) sub.hidden = true; if (counts) drawCounts(counts, false); return; }
     btn.setAttribute("aria-expanded", "true");
+    if (counts) drawCounts(counts, true);
     if (sub) { sub.hidden = false; return; }
     sub = document.createElement("ul"); sub.className = "ob-tree";
     var wait = document.createElement("li"); wait.className = "ob-loading ob-d" + (depthOf(li) + 1);
@@ -61,6 +90,8 @@
       })
       .catch(function () { wait.textContent = T("Could not load the terms below this one."); });
   }
+
+  document.querySelectorAll("#obTree .ob-counts").forEach(function (el) { drawCounts(el, false); });
 
   document.addEventListener("click", function (e) {
     var b = e.target.closest(".ob-toggle");

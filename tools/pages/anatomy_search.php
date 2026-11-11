@@ -154,7 +154,8 @@ $tabs = ['term' => t_plain('By anatomy term'), 'pub' => t_plain('By publication'
       <p class="mb-2">
         <?php if ($mode === 'term'): ?>
           <?= t_markup('%1$s expression records in %2$s', '<strong>' . number_format($result['total']) . '</strong>', '<strong>' . htmlspecialchars($term_label) . '</strong>') ?>
-          <?= $covered ? t('and %d terms related to it by "%s".', $covered, $relations[$rel] ?? $rel) : '' ?>
+          <?= $covered ? ($rel === MOOP_ONTOLOGY_ANY_REL ? t('and %d terms related to it by any of these relationships.', $covered)
+                                                         : t('and %d terms related to it by "%s".', $covered, $relations[$rel] ?? $rel)) : '' ?>
         <?php elseif ($mode === 'pub'): ?>
           <?= t_markup('%1$s expression records from %2$s', '<strong>' . number_format($result['total']) . '</strong>', '<strong>' . htmlspecialchars(trim(($paper['authors'] ?? '') . ' ' . ($paper['year'] ?? '')) ?: 'PMID ' . $pmid) . '</strong>') ?>
         <?php else: ?>

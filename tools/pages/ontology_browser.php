@@ -3,6 +3,8 @@
  * Ontology browser -- content file (controller: tools/ontology_browser.php).
  * Variables: $ontologies [prefix => name], $prefix, $parts, $relations [id => label], $release, $roots.
  * Rows: .ob-row = term | definition (one column for every depth: only the term indents).
+ * Each row's counts (.ob-counts, drawn by js/ontology-browser.js): closed = the term and everything
+ * below it; opened = its own share (terms directly below, by relationship; records on the term).
  */
 $self = moop_url('tools/ontology_browser.php');
 ?>
@@ -19,6 +21,7 @@ $self = moop_url('tools/ontology_browser.php');
       'cards'   => [
           ['label' => 'The tree', 'text' => 'Each row is a term and its definition. Open a row (the arrow) to see the terms directly below it; the number counts them.'],
           ['label' => 'Show parts too', 'text' => 'By default a branch holds the term\'s kinds (is a). Tick "show parts too" to also see its parts and what develops from it, marked with the relationship.'],
+          ['label' => 'The numbers', 'text' => 'A closed row counts the term and everything below it: how many terms, and how many published expression records (where this site has them). Open it and the numbers change to its own share -- the terms directly below it, by relationship, and the records on the term itself -- because the rows below now show the rest. The counts follow what the tree is showing: with "show parts too" off, only kinds (is a) count, so a system whose records are all on its parts shows none.'],
           ['label' => 'A term\'s page', 'text' => 'Click a term\'s name for its page: definition, synonyms, where it sits in the ontology, its parts, and any written description this site has for it.'],
           ['label' => 'Find a term', 'text' => 'Type a name or a synonym in the search box (brain finds cephalic ganglia) and pick it to open its page.'],
       ],
@@ -63,7 +66,7 @@ $self = moop_url('tools/ontology_browser.php');
         <div class="ob-row">
           <span class="ob-term">
             <?php if ($r['children'] > 0): ?><button type="button" class="ob-toggle" aria-expanded="false" aria-label="<?= t('Show the terms below %s', $r['label']) ?>"></button><?php else: ?><span class="ob-leaf"></span><?php endif; ?>
-            <a href="<?= htmlspecialchars(moop_ob_term_url($prefix, $r['id'])) ?>"><?= htmlspecialchars($r['label']) ?></a><?php if ($r['children'] > 0): ?><span class="ob-n" title="<?= t('Terms directly below it') ?>"><?= $r['children'] === 1 ? t('1 term') : t('%d terms', $r['children']) ?></span><?php endif; ?>
+            <a href="<?= htmlspecialchars(moop_ob_term_url($prefix, $r['id'])) ?>"><?= htmlspecialchars($r['label']) ?></a><span class="ob-counts" data-counts="<?= htmlspecialchars(json_encode(['terms_all' => $r['terms_all'], 'children' => $r['children'], 'below' => array_combine(array_map('t_plain', array_keys($r['below'])), array_values($r['below'])) ?: new stdClass(), 'records_all' => $r['records_all'], 'records_own' => $r['records_own'], 'records_url' => $r['records_url']])) ?>"></span>
           </span>
           <span class="ob-def"><?= htmlspecialchars($r['definition']) ?></span>
         </div>

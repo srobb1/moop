@@ -28,7 +28,9 @@
                         if (!d.count) { out.textContent = T('Covers %s only: no other term is related to it by "%s".', d.term.label || d.term.id, d.relation.label); return; }
                         const det = document.createElement('details');
                         const sum = document.createElement('summary');
-                        sum.textContent = T('Covers %s and %d terms related to it by "%s"', d.term.label || d.term.id, d.count, d.relation.label);
+                        sum.textContent = d.relation.id === 'any'
+                            ? T('Covers %s and %d terms related to it by any of these relationships', d.term.label || d.term.id, d.count)
+                            : T('Covers %s and %d terms related to it by "%s"', d.term.label || d.term.id, d.count, d.relation.label);
                         det.appendChild(sum);
                         const ul = document.createElement('ul');
                         ul.className = 'mb-0 mt-1';

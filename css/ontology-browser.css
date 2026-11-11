@@ -80,3 +80,7 @@ li.ob-d12 > .ob-row > .ob-term { padding-left: 246px; } li.ob-d12 > .ob-row > .o
 a.ob-rec:hover, a.ob-rec:focus { background: var(--moop-tool-header); color: #fff; }
 .ob-rec-none { margin-left: 8px; font-size: 0.72rem; color: #a3abb1; white-space: nowrap; }
 .ob-hcount { font-weight: 400; color: #8a949b; letter-spacing: 0; text-transform: none; }
+/* the tree's counts change as a row opens: totals when closed, the row's own share when opened */
+.ob-counts { display: inline; }
+.ob-n-open { border-style: dashed; }
+.ob-rec-open { background: rgba(var(--moop-main-rgb), 0.07); }

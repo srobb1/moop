@@ -31,6 +31,9 @@ $ids_text = trim((string) ($_GET['ids'] ?? ''));
 $papers = []; $paper = null; $id_result = null;
 $term = trim((string) ($_GET['term'] ?? ''));
 $rel  = (string) ($_GET['rel'] ?? 'BFO:0000050');
+// "any of these" (MOOP_ONTOLOGY_ANY_REL): every offered relationship at once -- what the Ontology
+// Browser's tree follows with "show parts too", so its record counts and this search agree.
+$relations[MOOP_ONTOLOGY_ANY_REL] = t_plain('any of these');
 if (!isset($relations[$rel])) $rel = isset($relations['BFO:0000050']) ? 'BFO:0000050' : (string) array_key_first($relations);
 $evidence_choices = $organism ? moop_page_evidence_choices($organism) : [];
 $ev = (string) ($_GET['ev'] ?? '');

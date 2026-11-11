@@ -178,3 +178,72 @@ function moop_ob_term_view(string $prefix, array $term): array {
     ];
 }
 
+
+/**
+ * Where this site has curated expression records for this ontology's terms (an anatomy ontology +
+ * lib/anatomy_expression.php data this visitor may see): that organism, else ''.
+ */
+function moop_ob_records_organism(string $prefix): string {
+    if ((moop_ontology_sources()[$prefix]['purpose'] ?? '') !== 'anatomy') return '';
+    require_once __DIR__ . '/anatomy_expression.php';
+    static $org = null;
+    return $org ??= moop_page_visible_organism();
+}
+
+/**
+ * A tree row's two numbers, both ways (the tree shows the totals while a row is closed and its
+ * own share once it is opened):
+ *   terms_all   -- every term below it (at any depth, by the tree's relations)
+ *   records_all -- records on it AND everything below it      (null: no records on this site)
+ *   records_own -- records on the term itself                  (null: no records on this site)
+ * $parts: the tree also follows the ontology's other relations ("show parts too").
+ */
+function moop_ob_rollup(string $prefix, string $id, bool $parts, string $org): array {
+    $purpose = (string) (moop_ontology_sources()[$prefix]['purpose'] ?? '');
+    $rels = $parts ? array_values(array_diff(array_keys(moop_ob_relations($prefix)), [MOOP_OB_ISA])) : [];
+    $ids  = moop_ontology_expand_in($purpose, $id, $rels);
+    $out  = ['terms_all' => count($ids) - 1, 'records_all' => null, 'records_own' => null];
+    if ($org !== '') {
+        require_once __DIR__ . '/anatomy_expression.php';
+        $spec = fn(array $t) => ['ok' => true, 'mode' => 'term', 'term_ids' => $t, 'filters' => [], 'accessions' => null, 'meta' => []];
+        $out['records_all'] = moop_page_records($org, $spec($ids), '', 'paper', 'desc', 0, 1)['total'];
+        $out['records_own'] = moop_page_records($org, $spec([$id]), '', 'paper', 'desc', 0, 1)['total'];
+    }
+    return $out;
+}
+
+/**
+ * How many terms sit DIRECTLY below $id, by relationship: [relation label => n], "is a" first.
+ * Explains a row's term count ("9 below: 3 is a, 6 part of").
+ */
+function moop_ob_direct_breakdown(string $prefix, string $id, array $relations): array {
+    $db = moop_ontology_open($prefix);
+    if (!$db || !$relations) return [];
+    $ph = implode(',', array_fill(0, count($relations), '?'));
+    $st = $db->prepare("SELECT e.relation, COUNT(DISTINCT e.subject) FROM edge e JOIN term t ON t.id = e.subject AND t.obsolete = 0
+                         WHERE e.object = ? AND e.relation IN ($ph) GROUP BY e.relation");
+    $st->execute(array_merge([$id], $relations));
+    $names = moop_ob_relations($prefix);
+    $out = [];
+    foreach ($relations as $r) $out[$r] = 0;
+    foreach ($st->fetchAll(PDO::FETCH_KEY_PAIR) as $r => $n) $out[$r] = (int) $n;
+    $named = [];
+    foreach (array_filter($out) as $r => $n) $named[$names[$r] ?? $r] = $n;
+    return $named;
+}
+
+/**
+ * Everything a tree row needs, for the API and the page's top level alike: the row, its two
+ * counts both ways (moop_ob_rollup), the breakdown of terms directly below it, and the link to its
+ * records in the Anatomical Expression Search (with the relationships the tree is following, so
+ * the number there is the number here: "is a" alone, or "any of these" with parts).
+ */
+function moop_ob_tree_row(string $prefix, array $r, bool $parts, string $org): array {
+    $rels = $parts ? array_keys(moop_ob_relations($prefix)) : [MOOP_OB_ISA];
+    $row  = $r + moop_ob_rollup($prefix, $r['id'], $parts, $org);
+    $row['below'] = moop_ob_direct_breakdown($prefix, $r['id'], $rels);
+    $row['records_url'] = $org === '' ? '' : moop_url('tools/anatomy_search.php') . '?' . http_build_query(
+        ['organism' => $org, 'term' => $r['id'], 'rel' => $parts ? MOOP_ONTOLOGY_ANY_REL : MOOP_OB_ISA]);
+    return $row;
+}
+

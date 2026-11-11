@@ -20,7 +20,7 @@ $relations  = $prefix !== '' ? moop_ob_relations($prefix) : [];
 echo render_display_page(__DIR__ . '/pages/ontology_browser.php', [
     'ontologies' => $ontologies, 'prefix' => $prefix, 'parts' => $parts, 'relations' => $relations,
     'release'    => (string) ($meta['release'] ?? ''),
-    'roots'      => $prefix !== '' ? moop_ob_roots($prefix) : [],
+    'roots'      => $prefix !== '' ? array_map(fn($r) => moop_ob_tree_row($prefix, $r, $parts, moop_ob_records_organism($prefix)), moop_ob_roots($prefix)) : [],
     'page_styles' => [moop_url_base() . '/css/ontology-browser.css'],
     'page_script' => [moop_url_base() . '/js/modules/ontology-term-box.js', moop_url_base() . '/js/ontology-browser.js'],
     'inline_scripts' => ['const obConfig = ' . json_encode(['prefix' => $prefix, 'parts' => $parts,

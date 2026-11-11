@@ -17,11 +17,12 @@ $purpose = in_array($_GET['purpose'] ?? 'anatomy', ['anatomy', 'phenotype', 'evi
 $term    = trim((string) ($_GET['term'] ?? ''));
 $rels    = moop_ontology_relations($purpose);
 $rel     = (string) ($_GET['rel'] ?? 'rdfs:subClassOf');
-if (!isset($rels[$rel])) $rel = 'rdfs:subClassOf';
+if (!isset($rels[$rel]) && $rel !== MOOP_ONTOLOGY_ANY_REL) $rel = 'rdfs:subClassOf';
+if ($rel === MOOP_ONTOLOGY_ANY_REL) $rels[$rel] = t_plain('any of these');
 if (!preg_match(MOOP_ONTOLOGY_ID_RE, $term)) { http_response_code(400); echo json_encode(['error' => 'no term']); exit; }
 
 $prefixes = moop_ontology_by_purpose($purpose);
-$ids      = moop_ontology_expand_in($purpose, $term, [$rel]);
+$ids      = moop_ontology_expand_in($purpose, $term, moop_ontology_rel_list($purpose, $rel));
 $labels   = moop_ontology_labels($ids, $prefixes);
 $terms    = [];
 foreach ($ids as $id) if ($id !== $term) $terms[] = ['id' => $id, 'label' => $labels[$id] ?? ''];

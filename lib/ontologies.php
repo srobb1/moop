@@ -462,6 +462,14 @@ function moop_ontology_relations(string $purpose): array {
     return $out;
 }
 
+/** The pseudo-relationship "any of these": every relationship the purpose offers, at once. */
+const MOOP_ONTOLOGY_ANY_REL = 'any';
+
+/** The relationships a choice stands for: [$rel], or every offered one for MOOP_ONTOLOGY_ANY_REL. */
+function moop_ontology_rel_list(string $purpose, string $rel): array {
+    return $rel === MOOP_ONTOLOGY_ANY_REL ? array_keys(moop_ontology_relations($purpose)) : [$rel];
+}
+
 /**
  * Expand a term within a purpose: the term, its subclasses, and everything related to it by
  * $relations, at any depth -- from EVERY ontology of that purpose that has a link tree. A BSPO

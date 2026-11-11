@@ -540,8 +540,8 @@ function moop_page_spec(string $organism, array $q): array {
     if (!preg_match(MOOP_ONTOLOGY_ID_RE, $term)) return $out;
     $relations = moop_ontology_relations('anatomy');
     $rel = (string) ($q['rel'] ?? 'BFO:0000050');
-    if (!isset($relations[$rel])) $rel = isset($relations['BFO:0000050']) ? 'BFO:0000050' : (string) array_key_first($relations);
-    $ids = moop_ontology_expand_in('anatomy', $term, [$rel]);
+    if (!isset($relations[$rel]) && $rel !== MOOP_ONTOLOGY_ANY_REL) $rel = isset($relations['BFO:0000050']) ? 'BFO:0000050' : (string) array_key_first($relations);
+    $ids = moop_ontology_expand_in('anatomy', $term, moop_ontology_rel_list('anatomy', $rel));
     $out['term_ids'] = $ids;
     $ev = (string) ($q['ev'] ?? '');
     foreach (moop_page_evidence_choices($organism) as $c) if ($c['id'] === $ev) $out['filters']['evidence'] = $c['members'];
