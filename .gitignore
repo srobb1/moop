@@ -37,6 +37,10 @@ metadata/*.json
 metadata/backups/
 metadata/jbrowse2-configs/
 metadata/change_log/
+# Content pages and interface translations: written by the admin UI, backed up by housekeeping
+# (found untracked in the cuttingclass and planosphere checkouts, 2026-11-11)
+metadata/pages/
+metadata/translations/
 # NCBI taxonomy dump — large binary, downloaded by sync_ncbi_taxonomy_dump.php
 metadata/ncbi_rankedlineage.dmp.gz
 metadata/.ncbi_taxonomy_meta.json
