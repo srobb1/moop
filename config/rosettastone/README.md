@@ -83,11 +83,13 @@ stops with that message.
 
 | Key | What |
 |---|---|
-| `SPECIES_DIR` | the species folder in the datastore |
+| `SPECIES_DIR` | the species folder in the datastore, or a MOOP build folder (`build_and_load_db/v2/data/<Species>`; see MOOP mode below) |
 | `REFERENCE_GENESETS` | reference gene sets, `assembly/geneset` or just `geneset`. Empty = the only active gene set on a real genome. |
 | `REFERENCE_HUBS` | `geneset=hub ...`: the name MOOP's crosswalk config uses for a reference (default: gene set name) |
+| `REFERENCE_TRANSCRIPT_SOURCES` | `geneset=name ...`: the source name for a reference's own transcripts (default: `<gene set>_transcripts`) |
 | `MAP_GENESETS`, `EXCLUDE_GENESETS` | which gene sets to map: `active` (default), `all`, `none` or a list; minus exclusions |
 | `REFERENCES` | extra references by hand (bash array of `"name \| genome \| gene models \| hub [\| transcript2gene]"`) |
+| `QUERY_FILES` | extra query sets by file, `name=path ...` (e.g. a gene set not loaded in MOOP) |
 | `QUERY_DIR`, `QUERY_EXCLUDE` | extra sets not in the datastore: `<set>.nt` per set; names to skip |
 | `PROBE_DIR` | probe sets (short, unspliced; pblat), `<set>.nt` |
 | `UNSTRANDED_SETS` | sets whose sequences aren't reliably oriented |
@@ -110,6 +112,16 @@ FASTA. They come from:
   FASTA headers (see `scripts/05_make_aliases.sh` and the example).
 
 `ALIAS_SOURCE_RENAME="old=new"` fixes up set names. An alias of an alias also resolves.
+
+**MOOP mode (recommended).** Point `SPECIES_DIR` at the organism's MOOP build folder (it holds
+`organism.sqlite`). Every gene set loaded in MOOP is then a gene set here, under MOOP's own name, and
+transcript->gene pairs are read from `organism.sqlite`, so every ID is exactly what MOOP loaded. Hubs and
+sources are named after their MOOP gene set (`<gene set>`, `<gene set>_transcripts`); `REFERENCE_HUBS` and
+`REFERENCE_TRANSCRIPT_SOURCES` are refused. Before a new crosswalk replaces the old one,
+`crosswalk/check_crosswalk.py` checks it against `organism.sqlite`: a hub or source whose IDs belong to a MOOP
+gene set but is named differently fails the run (the result is kept as `crosswalk.sqlite.failed`). A set that is
+not loaded in MOOP can still be added with `REFERENCES` / `QUERY_FILES`. The check can also be run by hand:
+`python3 crosswalk/check_crosswalk.py crosswalk.sqlite organism.sqlite`.
 
 **Transfer hubs.** List a mapped set in `TRANSFER_HUBS` when people still cite it as the
 reference (e.g. smed_20140614). Each of its IDs becomes a hub ID that inherits every mapping

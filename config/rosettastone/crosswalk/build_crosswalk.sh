@@ -25,7 +25,8 @@
 #
 # What it does (in SQL):
 #   1. Every sequence that overlaps a reference gene maps to that gene (one hub per reference).
-#      A target that is itself a reference transcript (t2g.tsv) is labelled <ref>_transcripts and
+#      A target that is itself a reference transcript (t2g.tsv) is labelled with the reference's
+#      transcripts source (REFERENCE_TRANSCRIPT_SOURCES "ref=label ...", default <ref>_transcripts) and
 #      also gives a gene-to-gene row (that reference's gene, labelled with its hub).
 #   2. An alias maps wherever its accession maps within the same set; aliases of aliases too.
 #   3. Fallback (optional): listed IDs that 1-2 do not reach are taken from the fallback
@@ -132,11 +133,15 @@ rm -f "$tmp"
 
 # Plain tab files for .import (no header lines). Reference number i = position in REFS.
 : > "$work/fm.tsv"; : > "$work/t2g.tsv"; : > "$work/refs.tsv"
+declare -A TXLABEL=()
+for kv in ${REFERENCE_TRANSCRIPT_SOURCES:-}; do TXLABEL[${kv%%=*}]=${kv#*=}; done
 i=0
 for x in "${REFS[@]}"; do
     i=$((i + 1))
     IFS='|' read -r name hub map t2g <<< "$x"
-    printf '%s\t%s\t%s\n' "$i" "$name" "$hub" >> "$work/refs.tsv"
+    tx=${TXLABEL[$name]:-${name}_transcripts}
+    [[ "$tx" =~ $NAME_RE ]] || die "bad transcripts source name: $tx"
+    printf '%s\t%s\t%s\t%s\n' "$i" "$name" "$hub" "$tx" >> "$work/refs.tsv"
     awk -F'\t' -v OFS='\t' -v i=$i '$1 == "gene_id" {next} {print i, $1, $2, $3, $4 + 0, $5 + 0}' "$map" >> "$work/fm.tsv"
     awk -F'\t' -v OFS='\t' -v i=$i 'NF >= 2 {print i, $1, $2}' "$t2g" >> "$work/t2g.tsv"
 done
@@ -162,7 +167,7 @@ sqlite3 "$tmp" >/dev/null <<SQL
 PRAGMA journal_mode = OFF;
 PRAGMA synchronous = OFF;
 PRAGMA temp_store = MEMORY;
-CREATE TEMP TABLE refs (run INT PRIMARY KEY, name TEXT, hub TEXT);
+CREATE TEMP TABLE refs (run INT PRIMARY KEY, name TEXT, hub TEXT, tx TEXT);
 CREATE TEMP TABLE fm (run INT, gene_id TEXT, target_id TEXT, transcriptome TEXT,
                       max_overlap INT, exon_overlap INT);
 CREATE TEMP TABLE t2g (run INT, id TEXT, gene TEXT);
@@ -183,7 +188,7 @@ CREATE TEMP TABLE bl (id TEXT, ref_id TEXT, bset TEXT);
 
 -- reference IDs: which reference each transcript/gene ID belongs to
 CREATE TEMP TABLE refid AS
-SELECT DISTINCT t.id, t.gene, r.name, r.hub, (t.id = t.gene) AS is_gene
+SELECT DISTINCT t.id, t.gene, r.name, r.hub, r.tx, (t.id = t.gene) AS is_gene
   FROM t2g t JOIN refs r ON r.run = t.run;
 CREATE INDEX temp.refid_id ON refid (id);
 
@@ -196,7 +201,7 @@ INSERT OR IGNORE INTO rel
 SELECT f.run, r.hub, f.gene_id,
        CASE WHEN i.id IS NULL THEN f.transcriptome
             WHEN i.is_gene THEN i.hub
-            ELSE i.name || '_transcripts' END,
+            ELSE i.tx END,
        f.target_id
   FROM fm f JOIN refs r ON r.run = f.run LEFT JOIN refid i ON i.id = f.target_id;
 -- a reference transcript as target also gives a gene-level row
@@ -305,6 +310,17 @@ if [ -n "$TSVDIR" ]; then
         } > "$TSVDIR/$hub.mapping"
         echo "wrote $TSVDIR/$hub.mapping"
     done
+fi
+
+# Names must be MOOP's: check against organism.sqlite before replacing the old crosswalk.
+# MOOP_DB is set by MOOP mode (SPECIES_DIR = a MOOP build folder) or by the config.
+if [ -n "${MOOP_DB:-}" ]; then
+    need python3
+    echo "checking names against $MOOP_DB"
+    if ! python3 "$RS_HOME/crosswalk/check_crosswalk.py" "$tmp" "$MOOP_DB"; then
+        mv "$tmp" "$out.failed"
+        die "crosswalk names do not match MOOP's gene sets (see above); kept as $out.failed, $out unchanged"
+    fi
 fi
 
 chmod 664 "$tmp"

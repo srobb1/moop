@@ -31,10 +31,29 @@ read_config() {
 # ---------------------------------------------------------------- datastore
 # Layout: SPECIES_DIR/<assembly>/genome.fa and SPECIES_DIR/<assembly>/<geneset>/ with
 # metadata.yaml, genes.gtf or genes.gff, transcript.nt.fa and transcript2gene.txt.
+#
+# MOOP mode: SPECIES_DIR may instead be a MOOP build folder (build_and_load_db/v2/data/<Species>,
+# recognised by its organism.sqlite). Then every <assembly>/<geneset>/ holding transcript.nt.fa
+# and gene models is a gene set (all of them loaded, so all "active"), the folder names are
+# MOOP's own assembly and gene set names, and transcript->gene pairs are read from
+# organism.sqlite. Every hub and source name is then MOOP's gene set name (overrides refused),
+# and the crosswalk step checks the result against organism.sqlite (crosswalk/check_crosswalk.py).
+
+# moop_mode: true when SPECIES_DIR is a MOOP build folder
+moop_mode() { [ -n "${SPECIES_DIR:-}" ] && [ -s "$SPECIES_DIR/organism.sqlite" ]; }
 
 # ds_genesets DIR: "<assembly>/<geneset><TAB><1 if active: true>" for every gene set in DIR
 ds_genesets() {
     local m gs
+    if [ -s "$1/organism.sqlite" ]; then
+        for m in "$1"/*/*/transcript.nt.fa; do
+            [ -e "$m" ] || continue
+            gs=${m%/transcript.nt.fa}
+            [ -s "$gs/genes.gtf" ] || [ -s "$gs/genes.gff" ] || continue
+            printf '%s\t1\n' "${gs#"$1"/}"
+        done
+        return 0
+    fi
     for m in "$1"/*/*/metadata.yaml; do
         [ -e "$m" ] || continue
         gs=${m%/metadata.yaml}; gs=${gs#"$1"/}
@@ -49,9 +68,9 @@ ds_genesets() {
 ds_genome_kind() {
     local gs=$SPECIES_DIR/$1 asm m v
     asm=$(dirname "$gs"); m=$gs/metadata.yaml
-    v=$(sed -n 's/^genome-type:[[:space:]]*\([A-Za-z]*\).*/\1/p' "$m" | head -1 | tr A-Z a-z)
+    v=$(sed -n 's/^genome-type:[[:space:]]*\([A-Za-z]*\).*/\1/p' "$m" 2>/dev/null | head -1 | tr A-Z a-z)
     case $v in transcriptome|placeholder) echo transcriptome; return ;; genome) echo genome; return ;; esac
-    v=$(sed -n 's/^genome:[[:space:]]*\([A-Za-z]*\).*/\1/p' "$m" | head -1 | tr A-Z a-z)
+    v=$(sed -n 's/^genome:[[:space:]]*\([A-Za-z]*\).*/\1/p' "$m" 2>/dev/null | head -1 | tr A-Z a-z)
     case $v in false|no) echo transcriptome; return ;; true|yes) echo genome; return ;; esac
     [ -s "$asm/genome.fa" ] && [ -s "$gs/transcript.nt.fa" ] || { echo genome; return; }
     { if [ -s "$asm/genome.fa.fai" ] && [ "$asm/genome.fa.fai" -nt "$asm/genome.fa" ]; then
@@ -68,7 +87,7 @@ ds_genome_kind() {
 # ds_resolve SPEC: "<assembly>/<geneset>" for SPEC given as either that or a unique <geneset>
 ds_resolve() {
     local spec=$1 hits
-    if [ -e "$SPECIES_DIR/$spec/metadata.yaml" ]; then echo "$spec"; return; fi
+    if [[ "$spec" == */* ]] && ds_genesets "$SPECIES_DIR" | cut -f1 | grep -qxF "$spec"; then echo "$spec"; return; fi
     hits=$(ds_genesets "$SPECIES_DIR" | cut -f1 | awk -F/ -v g="$spec" '$2 == g')
     [ -n "$hits" ] || die "gene set '$spec' not found in $SPECIES_DIR (try scripts/list_genesets.sh)"
     [ "$(echo "$hits" | wc -l)" -eq 1 ] || die "gene set '$spec' is ambiguous in $SPECIES_DIR: $(echo $hits)"
@@ -101,12 +120,21 @@ load_datastore() {
         [ ${#refs[@]} -eq 1 ] || die "set REFERENCE_GENESETS: $species has ${#refs[@]} active gene sets on real genomes ($(echo ${refs[*]}))"
     fi
     local -A hubmap=()
+    local t2g
+    if moop_mode; then
+        [ -z "${REFERENCE_HUBS:-}${REFERENCE_TRANSCRIPT_SOURCES:-}" ] \
+            || die "SPECIES_DIR is a MOOP build folder: hub and source names are MOOP's gene set names; remove REFERENCE_HUBS / REFERENCE_TRANSCRIPT_SOURCES"
+        [ -n "${OUT_DIR:-}" ] || die "OUT_DIR is not set"
+        MOOP_DB=${MOOP_DB:-$SPECIES_DIR/organism.sqlite}
+    fi
     for kv in ${REFERENCE_HUBS:-}; do hubmap[${kv%%=*}]=${kv#*=}; done
     for gs in "${refs[@]}"; do
         name=${gs#*/}; asm=${gs%%/*}
         annot=$SPECIES_DIR/$gs/genes.gtf; [ -s "$annot" ] || annot=$SPECIES_DIR/$gs/genes.gff
         hub=${hubmap[$name]:-$name}
-        REFERENCES+=("$name | $SPECIES_DIR/$asm/genome.fa | $annot | $hub | $SPECIES_DIR/$gs/transcript2gene.txt")
+        t2g=$SPECIES_DIR/$gs/transcript2gene.txt
+        moop_mode && t2g=$(moop_t2g "$name")
+        REFERENCES+=("$name | $SPECIES_DIR/$asm/genome.fa | $annot | $hub | $t2g")
     done
     # gene sets to map: MAP_GENESETS = active (default) | all | none | list; minus EXCLUDE_GENESETS
     case ${MAP_GENESETS:-active} in
@@ -121,6 +149,25 @@ load_datastore() {
         [ -z "${excl[$gs]:-}" ] || continue
         DS_QUERY+=("${gs#*/}|$SPECIES_DIR/$gs/transcript.nt.fa")
     done
+}
+
+# moop_t2g GENESET: write (if stale) and print $OUT_DIR/moop_t2g/GENESET.txt, transcript<TAB>gene
+# for that gene set, straight from organism.sqlite (the IDs exactly as MOOP loaded them)
+moop_t2g() {
+    local gs=$1 out=$OUT_DIR/moop_t2g/$1.txt
+    if [ ! -s "$out" ] || [ "$MOOP_DB" -nt "$out" ]; then
+        mkdir -p "$OUT_DIR/moop_t2g"
+        sqlite3 -separator $'\t' "file:$MOOP_DB?mode=ro" "
+            SELECT c.feature_uniquename, p.feature_uniquename
+              FROM feature c JOIN feature p ON p.feature_id = c.parent_feature_id
+              JOIN gene_set g ON g.gene_set_id = c.gene_set_id
+             WHERE g.gene_set_name = '$gs' AND p.feature_type = 'gene'
+               AND c.feature_type IN ('mRNA', 'transcript')
+             ORDER BY 2, 1" > "$out.tmp" || die "cannot read $MOOP_DB"
+        [ -s "$out.tmp" ] || die "$MOOP_DB has no transcripts for gene set $gs"
+        mv "$out.tmp" "$out"
+    fi
+    echo "$out"
 }
 
 # load_references: parse REFERENCES ("name | genome | gene models | hub [| transcript2gene]")
@@ -149,6 +196,10 @@ load_sets() {
     for x in "${DS_QUERY[@]}"; do
         name=${x%%|*}; fa=${x#*|}
         add_set QUERY "$name" "$fa"
+    done
+    for x in ${QUERY_FILES:-}; do
+        [[ "$x" == *=* ]] || die "QUERY_FILES: expected name=path, got '$x'"
+        add_set QUERY "${x%%=*}" "${x#*=}"
     done
     if [ -n "${QUERY_DIR:-}" ]; then
         [ -d "$QUERY_DIR" ] || die "QUERY_DIR $QUERY_DIR is not a directory"

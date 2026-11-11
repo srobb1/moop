@@ -13,10 +13,16 @@
 #   scripts/list_genesets.sh <SPECIES_DIR>
 SPECIES_DIR=/n/sci/SCI-004223-SBGENOMES/genomes/v2/My_species
 # Gene set(s) to map onto: "<assembly>/<geneset>" or just "<geneset>", space-separated.
+# SPECIES_DIR may also be a MOOP build folder (build_and_load_db/v2/data/<Species>): then gene sets,
+# names and transcript->gene pairs come from MOOP itself, every hub/source is named after its MOOP
+# gene set (REFERENCE_HUBS / REFERENCE_TRANSCRIPT_SOURCES are refused), and the crosswalk is
+# checked against organism.sqlite before it replaces the old one. Recommended.
 # Empty = the species' only active gene set (an error if it has several).
 REFERENCE_GENESETS=""
 # Hub name for a reference in MOOP's crosswalk config, "geneset=hub ..." (default: geneset name)
 REFERENCE_HUBS=""
+# Source name for a reference's own transcripts, "geneset=name ..." (default: <geneset>_transcripts)
+REFERENCE_TRANSCRIPT_SOURCES=""
 # Gene sets whose transcripts are mapped onto the references: active (metadata.yaml says
 # active: true; the default) | all | none | a list. References are included too, which links
 # the references' genes to each other.
@@ -31,6 +37,8 @@ EXCLUDE_GENESETS=""
 # )
 # Extra sets to map that are not in the datastore: one FASTA per set, <set>.nt. Transcripts,
 # ESTs, older assemblies... are aligned spliced (minimap2).
+# Extra query sets by file, "name=path ..." (FASTA; e.g. a gene set not loaded in MOOP).
+QUERY_FILES=""
 QUERY_DIR=
 QUERY_EXCLUDE=""          # names in QUERY_DIR to skip (e.g. ones the datastore also provides)
 # Short unspliced sequences such as microarray probes (pblat), <set>.nt. Empty = none.
