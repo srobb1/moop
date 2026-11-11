@@ -242,8 +242,21 @@ function moop_ob_tree_row(string $prefix, array $r, bool $parts, string $org): a
     $rels = $parts ? array_keys(moop_ob_relations($prefix)) : [MOOP_OB_ISA];
     $row  = $r + moop_ob_rollup($prefix, $r['id'], $parts, $org);
     $row['below'] = moop_ob_direct_breakdown($prefix, $r['id'], $rels);
-    $row['records_url'] = $org === '' ? '' : moop_url('tools/anatomy_search.php') . '?' . http_build_query(
-        ['organism' => $org, 'term' => $r['id'], 'rel' => $parts ? MOOP_ONTOLOGY_ANY_REL : MOOP_OB_ISA]);
+    $row['records_url'] = $org === '' ? '' : moop_ob_records_link($prefix, $org, $r['id'], $parts ? MOOP_ONTOLOGY_ANY_REL : MOOP_OB_ISA);
     return $row;
+}
+
+/**
+ * Where a term's records are listed: this site's Anatomical Expression Search when it is switched
+ * on here, else the site named by ontology_browser.<prefix>.records_url ({id}, {rel}) -- Planosphere
+ * counts its own copy of the curations but lists them on SIMRbase. '' = nowhere.
+ */
+function moop_ob_records_link(string $prefix, string $org, string $id, string $rel): string {
+    if (ConfigManager::getInstance()->isToolEnabled('anatomy_search')) {
+        return moop_url('tools/anatomy_search.php') . '?' . http_build_query(['organism' => $org, 'term' => $id, 'rel' => $rel]);
+    }
+    $tpl = (string) (ConfigManager::getInstance()->getArray('ontology_browser', [])[$prefix]['records_url'] ?? '');
+    if (!preg_match('#^https://[^\s"<>]+$#', $tpl) || strpos($tpl, '{id}') === false) return '';
+    return str_replace(['{id}', '{rel}'], [rawurlencode($id), rawurlencode($rel)], $tpl);
 }
 

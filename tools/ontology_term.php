@@ -10,6 +10,7 @@
 include_once __DIR__ . '/tool_init.php';
 require_once __DIR__ . '/../lib/ontology_browser.php';
 require_once __DIR__ . '/../lib/content_pages.php';
+require_once __DIR__ . '/../lib/anatomy_expression.php';
 include_once __DIR__ . '/../includes/layout.php';
 
 $ontologies = moop_ob_ontologies();
@@ -42,14 +43,12 @@ if ($view['written']) {
 // everything in it (is a + part of), like the Anatomical Expression Search's default.
 $records = null;
 if ((moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy') {
-    require_once __DIR__ . '/../lib/anatomy_expression.php';
-    foreach (array_keys(moop_page_sources()) as $org) {
-        if (!moop_page_meta($org) || !(moop_session_is_admin() || is_public_organism($org) || has_access('COLLABORATOR', $org))) continue;
+    $org = moop_ob_records_organism($prefix);
+    if ($org !== '') {
         $ids = moop_ontology_expand_in('anatomy', $term['id'], ['BFO:0000050']);
-        $res = moop_page_search($org, $ids, [], 1);
-        $records = ['organism' => $org, 'total' => (int) $res['total'],
-                    'url' => moop_url('tools/anatomy_search.php') . '?' . http_build_query(['organism' => $org, 'term' => $term['id'], 'rel' => 'BFO:0000050'])];
-        break;
+        $spec = ['ok' => true, 'mode' => 'term', 'term_ids' => $ids, 'filters' => [], 'accessions' => null, 'meta' => []];
+        $records = ['organism' => $org, 'total' => moop_page_records($org, $spec, '', 'paper', 'desc', 0, 1)['total'],
+                    'url' => moop_ob_records_link($prefix, $org, $term['id'], 'BFO:0000050')];
     }
 }
 
@@ -66,19 +65,16 @@ if ($records !== null) {
         }
         return $counted[$tid];
     };
-    $url_for = fn(string $tid) => moop_url('tools/anatomy_search.php') . '?' . http_build_query(['organism' => $org, 'term' => $tid, 'rel' => 'BFO:0000050']);
+    $url_for = fn(string $tid) => moop_ob_records_link($prefix, $org, $tid, 'BFO:0000050');
     foreach (['parents', 'kinds'] as $k)
         foreach ($view[$k] as &$r) { $r['records'] = $count_for($r['id']); $r['records_url'] = $url_for($r['id']); } unset($r);
     foreach (['outgoing', 'incoming'] as $k)
         foreach ($view[$k] as &$list) foreach ($list as &$r) { $r['records'] = $count_for($r['id']); $r['records_url'] = $url_for($r['id']); } unset($list, $r);
 }
 
-// No records here: the site may name where they are (ontology_browser.<prefix>.records_url).
-$records_elsewhere = '';
-if ($records === null) {
-    $tpl = (string) (ConfigManager::getInstance()->getArray('ontology_browser', [])[$prefix]['records_url'] ?? '');
-    if (preg_match('#^https://[^\s"<>]+$#', $tpl) && strpos($tpl, '{id}') !== false) $records_elsewhere = str_replace('{id}', rawurlencode($term['id']), $tpl);
-}
+// No records on this site at all: the site may still name where they are listed.
+$records_elsewhere = $records === null && (moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy'
+                   ? moop_ob_records_link($prefix, (string) array_key_first(moop_page_sources()), $term['id'], 'BFO:0000050') : '';
 
 $obo = preg_match('/^([A-Za-z]+):(\w+)$/', $term['id'], $m) ? $m[1] . '_' . $m[2] : '';
 echo render_display_page(__DIR__ . '/pages/ontology_term.php', [

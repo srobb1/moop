@@ -666,10 +666,19 @@ function moop_page_records_each(string $organism, array $spec, string $text, cal
     return $n;
 }
 
-/** The organism with curations this visitor may see ('' = none) -- the page, the table and the download agree. */
+/**
+ * The organism with curations this visitor may see ('' = none) -- the page, the table, the download
+ * and the ontology browser's counts agree. Where the site HAS that organism's genome data
+ * (organism.sqlite: SIMRbase) the organism's own access rules apply. Where it has only the
+ * curations (Planosphere, 2026-11-11: built from the same PAGE repository, no genomes) they are
+ * standalone published data, shown to everyone.
+ */
 function moop_page_visible_organism(): string {
+    $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/');
     foreach (array_keys(moop_page_sources()) as $o) {
-        if (moop_page_meta($o) && (moop_session_is_admin() || is_public_organism($o) || has_access('COLLABORATOR', $o))) return $o;
+        if (!moop_page_meta($o)) continue;
+        if (!is_file("$base/$o/organism.sqlite")) return $o;
+        if (moop_session_is_admin() || is_public_organism($o) || has_access('COLLABORATOR', $o)) return $o;
     }
     return '';
 }
