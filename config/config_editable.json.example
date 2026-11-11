@@ -26,9 +26,5 @@
     "header_img": "header_img.png",
     "favicon_filename": "favicon.ico",
     "auto_login_ip_ranges": [],
-    "sample_feature_ids": [],
-    "blast_sample_sequences": {
-        "protein": "",
-        "nucleotide": ""
-    }
+    "sample_feature_ids": []
 }
