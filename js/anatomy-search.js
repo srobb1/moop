@@ -2,7 +2,8 @@
  * PAGE search by anatomy (tools/anatomy_search.php).
  *  - Under the relationship choice: what the search covers (api/ontology_expand.php) -- one line,
  *    with the full list in a <details>. Refreshed when the term or relationship changes.
- *  - Results table: sortable / paged with DataTables (already on every page).
+ *  - Results table: DataTables in server-side mode (api/anatomy_records.php) -- every match is
+ *    reachable and filterable; the download (api/anatomy_records_download.php) follows the filter.
  * Text is set with textContent only.
  */
 (function () {
@@ -42,8 +43,23 @@
             document.querySelectorAll('#anatomyRelations input').forEach(r => r.addEventListener('change', show));
             show();
         }
-        if (window.jQuery && jQuery.fn.DataTable && document.getElementById('pageResults')) {
-            jQuery('#pageResults').DataTable({ pageLength: 25, order: [], autoWidth: false });
+        // Results: paged, sorted and filtered on the SERVER over every match (api/anatomy_records.php);
+        // the download link follows the filter box.
+        const table = document.getElementById('pageResults');
+        if (window.jQuery && jQuery.fn.DataTable && table) {
+            const dt = jQuery(table).DataTable({
+                serverSide: true, processing: true, pageLength: 25, autoWidth: false, searchDelay: 400,
+                order: [[6, 'desc']],
+                columnDefs: [{ targets: 1, orderable: false }],
+                ajax: { url: table.dataset.url, type: 'GET' },
+                language: { processing: T('Loading…') },
+            });
+            const dl = document.getElementById('pageDownload');
+            if (dl) dt.on('search.dt', function () {
+                const q = dt.search();
+                dl.href = dl.dataset.base + (q ? '&q=' + encodeURIComponent(q) : '');
+                dl.lastChild.textContent = q ? T('Download the filtered records (TSV)') : T('Download all records (TSV)');
+            });
         }
     });
 })();

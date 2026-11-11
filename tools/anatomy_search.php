@@ -35,42 +35,46 @@ if (!isset($relations[$rel])) $rel = isset($relations['BFO:0000050']) ? 'BFO:000
 $evidence_choices = $organism ? moop_page_evidence_choices($organism) : [];
 $ev = (string) ($_GET['ev'] ?? '');
 
-$result = null; $term_label = ''; $labels = []; $covered = 0; $genes = [];
+// One SPEC (what was asked) for the page's totals, the table (api/anatomy_records.php: paged,
+// sorted and filtered on the server over EVERY match) and the download -- the table used to get
+// at most 5,000 rows and could filter only those.
+$result = null; $term_label = ''; $covered = 0; $spec = null;
 if ($organism && $mode === 'pub') {
     if ($pq !== '') $papers = moop_page_find_publications($organism, $pq);
     if ($pmid !== '') {
-        $result = moop_page_search($organism, null, ['pmid' => $pmid]);
+        $spec = moop_page_spec($organism, ['mode' => 'pub', 'pmid' => $pmid]);
         foreach (moop_page_find_publications($organism, $pmid) as $p) $paper = $p;
     }
 } elseif ($organism && $mode === 'ids' && $ids_text !== '') {
-    $typed     = array_slice(preg_split('/[\s,;]+/', $ids_text, -1, PREG_SPLIT_NO_EMPTY), 0, 500);
-    $id_result = moop_page_search_ids($organism, $typed);
-    $result    = ['rows' => $id_result['rows'], 'total' => count($id_result['rows']), 'capped' => false];
+    $spec = moop_page_spec($organism, ['mode' => 'ids', 'ids' => $ids_text]);
+    // An id the crosswalk does not know may still have records under exactly that id.
+    $typed  = $spec['meta']['typed'] ?? [];
+    $direct = [];
+    if ($typed && ($pdb = moop_page_open($organism))) {
+        $st = $pdb->prepare('SELECT DISTINCT accession_lc FROM curation WHERE accession_lc IN (' . implode(',', array_fill(0, count($typed), '?')) . ')');
+        $st->execute(array_map('mb_strtolower', $typed));
+        $direct = array_flip($st->fetchAll(PDO::FETCH_COLUMN));
+    }
+    $id_result = ['matched' => $spec['meta']['matched'] ?? [],
+                  'unknown' => array_values(array_filter($typed, fn($i) => !isset(($spec['meta']['matched'] ?? [])[$i]) && !isset($direct[mb_strtolower($i)])))];
 } elseif ($organism && preg_match(MOOP_ONTOLOGY_ID_RE, $term)) {
-    $ids     = moop_ontology_expand_in('anatomy', $term, [$rel]);
-    $covered = count($ids) - 1;
-    $filters = [];
-    foreach ($evidence_choices as $c) if ($c['id'] === $ev) $filters['evidence'] = $c['members'];
-    $result  = moop_page_search($organism, $ids, $filters);
-    $want    = [$term];
-    foreach ($result['rows'] as $r) array_push($want, $r['term_id'], $r['stage_id'], $r['specimen_id']);
-    $labels  = moop_ontology_labels($want, $anatomy)
-             + moop_ontology_labels(array_column($result['rows'], 'evidence_id'), moop_ontology_by_purpose('evidence'));
-    $term_label = $labels[$term] ?? $term;
+    $spec       = moop_page_spec($organism, ['mode' => 'term', 'term' => $term, 'rel' => $rel, 'ev' => $ev]);
+    $covered    = (int) ($spec['meta']['covered'] ?? 0);
+    $term_label = moop_ontology_label($term, $anatomy) ?: $term;
 }
-if ($result !== null && $result['rows'] && $mode !== 'term') {
-    $want = [];
-    foreach ($result['rows'] as $r) array_push($want, $r['term_id'], $r['stage_id'], $r['specimen_id']);
-    $labels = moop_ontology_labels($want, $anatomy)
-            + moop_ontology_labels(array_column($result['rows'], 'evidence_id'), moop_ontology_by_purpose('evidence'));
+if ($spec && $spec['ok']) {
+    $result = ['total' => moop_page_records($organism, $spec, '', 'paper', 'desc', 0, 1)['total']];
 }
-// Each transcript's reference gene (Rosetta Stone / crosswalk), linked to its gene page.
-if ($result !== null) $genes = moop_crosswalk_gene_links($organism, array_column($result['rows'], 'accession'));
+// The query the table and the download repeat (only the parameters this mode uses).
+$records_query = $mode === 'pub' ? ['mode' => 'pub', 'pmid' => $pmid]
+               : ($mode === 'ids' ? ['mode' => 'ids', 'ids' => $ids_text] : ['mode' => 'term', 'term' => $term, 'rel' => $rel, 'ev' => $ev]);
 
 echo render_display_page(__DIR__ . '/pages/anatomy_search.php', [
     'relations' => $relations, 'releases' => $releases, 'organism' => $organism,
     'term' => $term, 'term_label' => $term_label, 'rel' => $rel, 'ev' => $ev,
-    'evidence_choices' => $evidence_choices, 'result' => $result, 'labels' => $labels, 'covered' => $covered, 'genes' => $genes,
+    'evidence_choices' => $evidence_choices, 'result' => $result, 'covered' => $covered,
+    'records_url'  => moop_url('api/anatomy_records.php') . '?' . http_build_query($records_query),
+    'download_url' => moop_url('api/anatomy_records_download.php') . '?' . http_build_query($records_query),
     'mode' => $mode, 'pq' => $pq, 'pmid' => $pmid, 'papers' => $papers, 'paper' => $paper,
     'ids_text' => $ids_text, 'id_result' => $id_result,
     'crosswalk_name' => (string) (moop_crosswalk_sources()[$organism]['name'] ?? ''),

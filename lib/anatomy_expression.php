@@ -499,3 +499,177 @@ function moop_page_terms_for_genes(string $organism, array $genes): array {
     }
     return $out;
 }
+
+// ============================================================================
+// The search's records, paged/sorted/filtered on the SERVER (2026-11-11). The table used to receive
+// at most 5,000 rows and filter only those ("Showing the first 5,000"), with no download. Now one
+// SPEC (what was asked) feeds the page's totals, the table (api/anatomy_records.php, DataTables
+// server-side) and the download (api/anatomy_records_download.php) -- all over every match.
+// ============================================================================
+
+/**
+ * What a search asks for, from its request parameters (the page's own: mode, term, rel, ev, pmid,
+ * ids). Returns ['ok', 'term_ids' (null = any), 'filters', 'accessions' (null = any), 'meta'].
+ */
+function moop_page_spec(string $organism, array $q): array {
+    require_once __DIR__ . '/crosswalk.php';
+    $mode = in_array($q['mode'] ?? '', ['term', 'pub', 'ids'], true) ? $q['mode'] : 'term';
+    $out  = ['ok' => false, 'mode' => $mode, 'term_ids' => null, 'filters' => [], 'accessions' => null, 'meta' => []];
+    if ($mode === 'pub') {
+        $pmid = preg_match('/^\d{4,9}$/', (string) ($q['pmid'] ?? '')) ? (string) $q['pmid'] : '';
+        if ($pmid === '') return $out;
+        $out['filters']['pmid'] = $pmid;
+        return ['ok' => true] + $out;
+    }
+    if ($mode === 'ids') {
+        $typed = array_slice(preg_split('/[\s,;]+/', trim((string) ($q['ids'] ?? '')), -1, PREG_SPLIT_NO_EMPTY), 0, 500);
+        if (!$typed) return $out;
+        $refs = moop_crosswalk_genes($organism, $typed);
+        $matched = []; $all_refs = [];
+        foreach ($typed as $in) {
+            $r = array_values(array_unique(array_column($refs[mb_strtolower($in)] ?? [], 'ref_id')));
+            if ($r) { $matched[$in] = $r; $all_refs = array_merge($all_refs, $r); }
+        }
+        $members = moop_crosswalk_members($organism, array_merge($typed, $all_refs));
+        $accs = array_values(array_unique(array_map('mb_strtolower', array_merge($typed, $all_refs, array_column($members, 'accession')))));
+        $out['accessions'] = $accs;
+        $out['meta'] = ['typed' => $typed, 'matched' => $matched];
+        return ['ok' => true] + $out;
+    }
+    $term = trim((string) ($q['term'] ?? ''));
+    if (!preg_match(MOOP_ONTOLOGY_ID_RE, $term)) return $out;
+    $relations = moop_ontology_relations('anatomy');
+    $rel = (string) ($q['rel'] ?? 'BFO:0000050');
+    if (!isset($relations[$rel])) $rel = isset($relations['BFO:0000050']) ? 'BFO:0000050' : (string) array_key_first($relations);
+    $ids = moop_ontology_expand_in('anatomy', $term, [$rel]);
+    $out['term_ids'] = $ids;
+    $ev = (string) ($q['ev'] ?? '');
+    foreach (moop_page_evidence_choices($organism) as $c) if ($c['id'] === $ev) $out['filters']['evidence'] = $c['members'];
+    $out['meta'] = ['term' => $term, 'rel' => $rel, 'covered' => count($ids) - 1, 'ev' => $ev];
+    return ['ok' => true] + $out;
+}
+
+/** The SQL behind a spec: [where list, params]. */
+function moop_page_spec_where(array $spec): array {
+    $where = []; $params = [];
+    if ($spec['term_ids'] !== null) {
+        $ids = array_values(array_unique(array_merge($spec['term_ids'], moop_page_replaced_into($spec['term_ids']))));
+        $where[] = 'c.term_id IN (' . implode(',', array_fill(0, max(1, count($ids)), '?')) . ')';
+        $params  = $ids ?: [''];
+    }
+    if ($spec['accessions'] !== null) {
+        $where[] = 'c.accession_lc IN (' . implode(',', array_fill(0, max(1, count($spec['accessions'])), '?')) . ')';
+        $params  = array_merge($params, $spec['accessions'] ?: ['']);
+    }
+    if (!empty($spec['filters']['pmid'])) { $where[] = 'c.pmid = ?'; $params[] = (string) $spec['filters']['pmid']; }
+    foreach (['evidence' => 'c.evidence_id', 'stage' => 'c.stage_id'] as $f => $col) {
+        if (!empty($spec['filters'][$f])) {
+            $where[] = "$col IN (" . implode(',', array_fill(0, count($spec['filters'][$f]), '?')) . ')';
+            $params  = array_merge($params, array_values($spec['filters'][$f]));
+        }
+    }
+    return [$where ?: ['1 = 0'], $params];
+}
+
+/**
+ * The table's filter box, over ALL matches: words in the term / evidence / stage / specimen names
+ * (looked up in the ontologies), the transcript or any id of its gene (crosswalk), authors, title,
+ * journal (accent-folded), year, PMID, curation date. Every word must match somewhere. [sql, params]
+ */
+function moop_page_text_filter(string $organism, string $text): array {
+    require_once __DIR__ . '/crosswalk.php';
+    $words = array_slice(array_values(array_filter(preg_split('/\s+/', trim($text)), fn($w) => mb_strlen($w) >= 2)), 0, 6);
+    $conds = []; $params = [];
+    $esc = fn($s) => str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $s);
+    $onto = array_merge(moop_ontology_by_purpose('anatomy'), moop_ontology_by_purpose('evidence'));
+    foreach ($words as $w) {
+        $lw = mb_strtolower($w);
+        $ids = [];
+        foreach ($onto as $p) {
+            $db = moop_ontology_open($p);
+            if (!$db) continue;
+            $st = $db->prepare("SELECT id FROM term WHERE label_lc LIKE ? ESCAPE '\\' LIMIT 3000");
+            $st->execute(['%' . $esc($lw) . '%']);
+            $ids = array_merge($ids, $st->fetchAll(PDO::FETCH_COLUMN));
+        }
+        // the word as a gene / transcript id: every accession of the same gene
+        $accs = [];
+        foreach (moop_crosswalk_genes($organism, [$w]) as $rows)
+            foreach (moop_crosswalk_members($organism, array_column($rows, 'ref_id')) as $m) $accs[] = mb_strtolower($m['accession']);
+        $accs = array_slice(array_values(array_unique($accs)), 0, 3000);
+        $c = ["c.accession_lc LIKE ? ESCAPE '\\'", "p.search_text LIKE ? ESCAPE '\\'", 'c.pmid = ?', 'p.year = ?', "c.curated_on LIKE ? ESCAPE '\\'"];
+        array_push($params, '%' . $esc($lw) . '%', '%' . $esc(moop_page_fold($w)) . '%', $w, $w, $esc($w) . '%');
+        if ($ids) {
+            $ph = implode(',', array_fill(0, count($ids), '?'));
+            foreach (['c.term_id', 'c.evidence_id', 'c.stage_id', 'c.specimen_id'] as $col) { $c[] = "$col IN ($ph)"; $params = array_merge($params, $ids); }
+        }
+        if ($accs) { $c[] = 'c.accession_lc IN (' . implode(',', array_fill(0, count($accs), '?')) . ')'; $params = array_merge($params, $accs); }
+        $conds[] = '(' . implode(' OR ', $c) . ')';
+    }
+    return [$conds ? implode(' AND ', $conds) : '', $params];
+}
+
+/** Columns the table can sort by: key => SQL (label columns are ordered by name, see below). */
+const MOOP_PAGE_ORDER = ['accession' => 'c.accession_lc', 'term' => 'c.term_id', 'evidence' => 'c.evidence_id',
+                         'stage' => 'c.stage_id', 'specimen' => 'c.specimen_id', 'paper' => 'p.year', 'curated' => 'c.curated_on'];
+
+/**
+ * One page of records: ['total' (all matches), 'filtered' (after the filter box), 'rows'].
+ * $order: a MOOP_PAGE_ORDER key; term/evidence/stage/specimen sort by NAME (the ids in the
+ * matches are few, so their names are fetched and turned into a CASE ranking).
+ */
+function moop_page_records(string $organism, array $spec, string $text = '', string $order = 'paper', string $dir = 'desc',
+                           int $start = 0, int $length = 25): array {
+    $db = moop_page_open($organism);
+    if (!$db || !$spec['ok']) return ['total' => 0, 'filtered' => 0, 'rows' => []];
+    [$where, $params] = moop_page_spec_where($spec);
+    $base = 'FROM curation c LEFT JOIN publication p ON p.pmid = c.pmid WHERE ' . implode(' AND ', $where);
+    $st = $db->prepare("SELECT COUNT(*) $base"); $st->execute($params); $total = (int) $st->fetchColumn();
+    [$fsql, $fparams] = moop_page_text_filter($organism, $text);
+    if ($fsql !== '') { $base .= " AND $fsql"; $params = array_merge($params, $fparams); }
+    $st = $db->prepare("SELECT COUNT(*) $base"); $st->execute($params); $filtered = (int) $st->fetchColumn();
+    $dir = strtolower($dir) === 'asc' ? 'ASC' : 'DESC';
+    $col = MOOP_PAGE_ORDER[$order] ?? 'p.year';
+    $order_sql = "$col $dir";
+    if (in_array($order, ['term', 'evidence', 'stage', 'specimen'], true)) {
+        $st = $db->prepare("SELECT DISTINCT $col $base"); $st->execute($params);
+        $ids = array_filter($st->fetchAll(PDO::FETCH_COLUMN), 'strlen');
+        $labels = moop_ontology_labels($ids, $order === 'evidence' ? moop_ontology_by_purpose('evidence') : moop_ontology_by_purpose('anatomy'));
+        $names = []; foreach ($ids as $i) $names[$i] = mb_strtolower($labels[$i] ?? $i);
+        asort($names, SORT_NATURAL);
+        if ($names) {
+            $case = 'CASE ' . $col; $rank = 0;
+            foreach (array_keys($names) as $i) { $case .= ' WHEN ' . $db->quote((string) $i) . ' THEN ' . (++$rank); }
+            $order_sql = "$case ELSE 999999 END $dir";
+        }
+    }
+    $sql = "SELECT c.accession, c.term_id, c.evidence_id, c.stage_id, c.specimen_id, c.biotype_id, c.pmid, c.curated_on,
+                   c.copies, p.title, p.authors, p.journal, p.year $base
+             ORDER BY $order_sql, p.year DESC, c.pmid, c.accession LIMIT " . max(1, min(5000, $length)) . ' OFFSET ' . max(0, $start);
+    $st = $db->prepare($sql); $st->execute($params);
+    return ['total' => $total, 'filtered' => $filtered, 'rows' => $st->fetchAll(PDO::FETCH_ASSOC)];
+}
+
+/** Every record of a spec (+ filter), in the table's default order, one at a time (the download). */
+function moop_page_records_each(string $organism, array $spec, string $text, callable $each): int {
+    $db = moop_page_open($organism);
+    if (!$db || !$spec['ok']) return 0;
+    [$where, $params] = moop_page_spec_where($spec);
+    $base = 'FROM curation c LEFT JOIN publication p ON p.pmid = c.pmid WHERE ' . implode(' AND ', $where);
+    [$fsql, $fparams] = moop_page_text_filter($organism, $text);
+    if ($fsql !== '') { $base .= " AND $fsql"; $params = array_merge($params, $fparams); }
+    $st = $db->prepare("SELECT c.accession, c.term_id, c.evidence_id, c.stage_id, c.specimen_id, c.pmid, c.curated_on,
+                               p.title, p.authors, p.journal, p.year $base ORDER BY p.year DESC, c.pmid, c.accession");
+    $st->execute($params);
+    $n = 0;
+    while ($r = $st->fetch(PDO::FETCH_ASSOC)) { $each($r); $n++; }
+    return $n;
+}
+
+/** The organism with curations this visitor may see ('' = none) -- the page, the table and the download agree. */
+function moop_page_visible_organism(): string {
+    foreach (array_keys(moop_page_sources()) as $o) {
+        if (moop_page_meta($o) && (moop_session_is_admin() || is_public_organism($o) || has_access('COLLABORATOR', $o))) return $o;
+    }
+    return '';
+}

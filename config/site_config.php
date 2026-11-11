@@ -694,6 +694,7 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'api/get_sequence.php', 'api/get_gff.php', 'api/galaxy_mafft_align.php',
         'tools/blast.php', 'tools/primer_blast.php', 'tools/retrieve_sequences.php',
         'tools/retrieve_selected_sequences.php', 'tools/sequences_display.php',
+        'api/anatomy_records_download.php',
     ],
 
     // ======== CLOUDFLARE TURNSTILE (bot protection) ========

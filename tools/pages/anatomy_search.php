@@ -4,10 +4,9 @@
  * (Sofia, 2026-11-09: people should not have to know "term here, ID there"): three tabs, one
  * results table (_page_results.php).
  * Variables: $mode (term|pub|ids), $relations, $releases, $organism, $term, $term_label, $rel, $ev,
- *            $evidence_choices, $result (null before a search), $labels, $covered, $genes,
+ *            $evidence_choices, $result (null before a search: ['total']), $covered, $records_url, $download_url,
  *            $pq, $pmid, $papers, $paper, $ids_text, $id_result, $crosswalk_name, $source, $source_url
  */
-$L    = fn(?string $id) => $id === null || $id === '' ? '' : ($labels[$id] ?? $id);
 $self = moop_url_base() . '/tools/anatomy_search.php';
 $tabs = ['term' => t_plain('By anatomy term'), 'pub' => t_plain('By publication'), 'ids' => t_plain('By gene or transcript ID')];
 ?>
@@ -161,9 +160,15 @@ $tabs = ['term' => t_plain('By anatomy term'), 'pub' => t_plain('By publication'
         <?php else: ?>
           <?= t_markup('%1$s expression records for %2$s matched IDs', '<strong>' . number_format($result['total']) . '</strong>', '<strong>' . count($id_result['matched'] ?? []) . '</strong>') ?>
         <?php endif; ?>
-        <?php if ($result['capped']): ?><span class="text-warning"><?= t('Showing the first %s.', number_format(count($result['rows']))) ?></span><?php endif; ?>
       </p>
+      <?php if ($result['total'] > 0): ?>
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <a class="btn btn-sm btn-outline-secondary" id="pageDownload" href="<?= htmlspecialchars($download_url) ?>"
+           data-base="<?= htmlspecialchars($download_url) ?>"><i class="fa fa-download me-1"></i><?= t('Download all records (TSV)') ?></a>
+        <span class="small text-muted" id="pageDownloadNote"><?= t('The filter box searches every record; the download follows it.') ?></span>
+      </div>
       <?php include __DIR__ . '/_page_results.php'; ?>
+      <?php endif; ?>
     </div>
   </div>
   <?php endif; ?>
