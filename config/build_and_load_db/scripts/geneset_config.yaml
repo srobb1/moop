@@ -202,6 +202,16 @@ Schmidtea_mediterranea:
           rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/smed_20140614/smed_20140614/rbh
           use_for_names: true
           same_species: true
+  schMedS3h2:
+    schMedS3h2_WBPS19:
+      # aligned to S3h1 (2026-11-10): same species, a full-length RBH copies the S3h1 name as is
+      closest_species:
+        - species: Schmidtea mediterranea
+          tag: Smed
+          diamond: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/schMedS3h2/schMedS3h2_WBPS19/diamond
+          rbh: /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/closest_species/Schmidtea_mediterranea/schMedS3h1_WBPS19/searches/Schmidtea_mediterranea/schMedS3h2/schMedS3h2_WBPS19/rbh
+          use_for_names: true
+          same_species: true
 
 # ---- planarians: Schmidtea mediterranea schMedS3h1_WBPS19 (the sexual strain) as closest species (2026-11-02;
 # schMedA2h1, the asexual strain, was used earlier that day); partner = S3h1 proteins
