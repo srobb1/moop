@@ -118,16 +118,11 @@ $organismChunks = function (string $org, array $org_data) use (
         if (!empty($src['gene_set_id'])) $sources_by_gs_id[$db . '|' . $src['gene_set_id']] = $src;
     }
 
-    // One PAGE of genes at a time (keyset, same order as unpaged), and each page's coordinates
+    // One PAGE of genes at a time (from one open query, same order), and each page's coordinates
     // read for that page only. Holding every gene of the organism and every coordinate first
     // cost ~1.8 KB per gene: a whole Schmidtea (5 gene sets, ~150k genes) died before writing a
     // line. Re-reading a gene set's feature_coords.tsv per page costs a fraction of a second.
-    $after = null;
-    do {
-        $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters, $after, MOOPMART_EXPORT_PAGE);
-        if (empty($features)) break;
-        $last  = end($features);
-        $after = [$last['uniquename'], $last['feature_id']];
+    foreach (moopmartQueryFeaturePages($gene_set_ids, $db, $org_filters, MOOPMART_EXPORT_PAGE) as $features) {
 
         $uniquenames_by_gs = [];
         foreach ($features as $f) $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
@@ -158,9 +153,8 @@ $organismChunks = function (string $org, array $org_data) use (
             }
             if ($rows) yield $db => $rows;
         }
-        $page_full = count($features) >= MOOPMART_EXPORT_PAGE;
         unset($features, $coords_by_gs);
-    } while ($page_full);
+    }
 };
 
 $ext      = $output_format === 'fasta' ? 'fa' : 'tsv';

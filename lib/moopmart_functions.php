@@ -349,18 +349,49 @@ function moopmartBuildTextConditions(string $raw, string $table, string $column,
  *                                     Each criterion generates its own EXISTS clause (AND between them).
  *                                     Empty src/acc/kw fields within a criterion are skipped.
  * }
- * @param array|null $after  Keyset paging: [uniquename, feature_id] of the previous page's last
- *                           row -- this page starts after it. With $limit, a caller can walk any
- *                           result in pages instead of holding it all (a whole Schmidtea, five gene
- *                           sets / ~150k genes, ran the export out of memory before its first line).
- * @param int        $limit  Rows per page; 0 = all.
  * @return array  Rows: feature_id, uniquename, name, description, type,
  *                      gene_set_id, gene_set_name, genome_accession, genome_name, organism_name
- *                Ordered by uniquename, then feature_id (one order, paged or not).
+ *                Ordered by uniquename, then feature_id.
  */
-function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filters = [], ?array $after = null, int $limit = 0): array
+function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filters = []): array
 {
     if (empty($gene_set_ids)) return [];
+    [$query, $params] = moopmartFeatureQuery($gene_set_ids, $filters);
+    return fetchData($query, $db_path, $params);
+}
+
+/**
+ * The same rows as moopmartQueryFeatures(), in the same order, handed out $page at a time from
+ * ONE open query -- so a caller never holds more than a page. Holding the whole result cost
+ * ~1.8 KB per gene: a whole Schmidtea (5 gene sets, 205k genes) ran the export out of memory
+ * before its first line, and the preview into a 502. Not LIMIT/OFFSET-style paging: each such
+ * page made SQLite re-sort every remaining row (14.5 s for Schmidtea against 0.7 s for one
+ * query). SQLite sorts once, in its own memory (not PHP's memory_limit).
+ *
+ * @return Generator<int, array> lists of at most $page rows
+ */
+function moopmartQueryFeaturePages(array $gene_set_ids, string $db_path, array $filters = [], int $page = 5000): Generator
+{
+    if (empty($gene_set_ids)) return;
+    [$query, $params] = moopmartFeatureQuery($gene_set_ids, $filters);
+    try {
+        $stmt = getDbConnection($db_path)->prepare($query);
+        $stmt->execute($params);
+    } catch (PDOException $e) {
+        die("Query failed: " . htmlspecialchars($e->getMessage()));   // as fetchData()
+    }
+    $rows = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $rows[] = $row;
+        if (count($rows) >= $page) { yield $rows; $rows = []; }
+    }
+    $stmt = null;
+    if ($rows) yield $rows;
+}
+
+/** SQL + parameters behind moopmartQueryFeatures() / moopmartQueryFeaturePages(). */
+function moopmartFeatureQuery(array $gene_set_ids, array $filters): array
+{
 
     $params       = [];
     $placeholders = implode(',', array_fill(0, count($gene_set_ids), '?'));
@@ -403,11 +434,6 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
         }
     }
 
-    if ($after !== null) {
-        $where[] = '(f.feature_uniquename > ? OR (f.feature_uniquename = ? AND f.feature_id > ?))';
-        array_push($params, (string)$after[0], (string)$after[0], (int)$after[1]);
-    }
-
     $where_sql = implode(' AND ', $where);
 
     $query = "SELECT DISTINCT
@@ -426,10 +452,9 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
               JOIN genome   g  ON gs.genome_id   = g.genome_id
               JOIN organism o  ON g.organism_id  = o.organism_id
               WHERE $where_sql
-              ORDER BY f.feature_uniquename, f.feature_id"
-           . ($limit > 0 ? ' LIMIT ' . (int)$limit : '');
+              ORDER BY f.feature_uniquename, f.feature_id";
 
-    return fetchData($query, $db_path, $params);
+    return [$query, $params];
 }
 
 // ============================================================
@@ -1023,32 +1048,34 @@ function moopmartCollectOrganismRows(string $org, array $org_sources, array $fil
         $org_filters['feature_ids'] = array_keys($id_reasons);
     }
 
-    // Paged, like the export: a page of genes and that page's coordinates at a time. Counts and
+    // Paged, like the export: a page of genes at a time. Counts and
     // the gene-id list cover every gene; only the first $row_cap genes are kept as rows. Loading
     // the whole organism first ran a five-gene-set Schmidtea preview out of memory (a 502).
     $gene_count = 0;
     $row_count  = 0;
     $genes      = [];
     $keep       = [];   // gene rows for the preview, at most $row_cap (null = all)
-    $after      = null;
-    do {
-        $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters, $after, MOOPMART_COLLECT_PAGE);
-        if (empty($features)) break;
-        $last  = end($features);
-        $after = [$last['uniquename'], $last['feature_id']];
 
-        $uniquenames_by_gs = [];
-        foreach ($features as $f) $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
-        $coords_by_gs = [];
+    // Coordinates are needed for EVERY gene only to apply a location filter; otherwise just for
+    // the rows kept (reading every gene's cost ~1.8 of the 3.3 s of a whole-Schmidtea preview).
+    $has_coord_filter = ($coord_filter['chr'] ?? '') !== '' || (int)($coord_filter['start'] ?? 0) > 0
+                     || (int)($coord_filter['end'] ?? 0) > 0;
+    $coords_for = function (array $rows) use ($org_sources): array {
+        $names = [];
+        foreach ($rows as $f) $names[$f['gene_set_id']][] = $f['uniquename'];
+        $out = [];
         foreach ($org_sources as $src) {
             $gs_id = $src['gene_set_id'];
-            if ($gs_id && isset($uniquenames_by_gs[$gs_id]) && !isset($coords_by_gs[$gs_id])) {
-                $coords_by_gs[$gs_id] = moop_feature_coords_by_gene($src['path'], $uniquenames_by_gs[$gs_id]);
+            if ($gs_id && isset($names[$gs_id]) && !isset($out[$gs_id])) {
+                $out[$gs_id] = moop_feature_coords_by_gene($src['path'], $names[$gs_id]);
             }
         }
-        $page_full = count($features) >= MOOPMART_COLLECT_PAGE;
-        $matched   = moopmartAttachCoords($features, $coords_by_gs, $coord_filter);
-        unset($features, $coords_by_gs, $uniquenames_by_gs);
+        return $out;
+    };
+
+    foreach (moopmartQueryFeaturePages($gene_set_ids, $db, $org_filters, MOOPMART_COLLECT_PAGE) as $features) {
+        $matched = $has_coord_filter ? moopmartAttachCoords($features, $coords_for($features), $coord_filter) : $features;
+        unset($features);
         if (!$matched) continue;
 
         // Total expanded rows, counted rather than built: expansion copies the whole gene row
@@ -1058,21 +1085,25 @@ function moopmartCollectOrganismRows(string $org, array $org_sources, array $fil
             $gene_count++;
             $row_count += max($child_counts[(int)$f['feature_id']] ?? 0, 1);
             $genes[]    = $f['uniquename'];
-            if ($row_cap !== null && count($keep) >= $row_cap) continue;
-            $f['organism_dir'] = $org;
-            $f['db_path']      = $db;
-            // "why included": ID resolution takes priority; fall back to filter description
-            if (!empty($id_reasons)) {
-                $reason = $id_reasons[$f['uniquename']] ?? '';
-                if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
-            } else {
-                $reason = $global_filter_reason;
-            }
-            $f['match_reason'] = $reason;
-            $keep[]            = $f;
+            if ($row_cap === null || count($keep) < $row_cap) $keep[] = $f;
         }
         unset($matched, $child_counts);
-    } while ($page_full);
+    }
+    if (!$has_coord_filter && $keep) $keep = moopmartAttachCoords($keep, $coords_for($keep), []);
+
+    foreach ($keep as &$f) {
+        $f['organism_dir'] = $org;
+        $f['db_path']      = $db;
+        // "why included": ID resolution takes priority; fall back to filter description
+        if (!empty($id_reasons)) {
+            $reason = $id_reasons[$f['uniquename']] ?? '';
+            if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
+        } else {
+            $reason = $global_filter_reason;
+        }
+        $f['match_reason'] = $reason;
+    }
+    unset($f);
 
     // Every gene yields at least one row, so the first $row_cap genes always supply $row_cap rows.
     $mrna_rows = moopmartExpandToMrnaRows($keep, $db);
