@@ -1807,3 +1807,13 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 .as-group { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 0.9rem; font-size: 0.9rem; }
 .as-group dt { font-weight: 400; color: #64748b; }
 .as-group dd { margin: 0; color: #1e293b; }
+
+/* An ontology term's picture beside its name (moop_term_icon(): life stage, specimen, evidence
+   in anatomical-expression records). The name is always printed too; the icon only helps scanning. */
+.moop-term-icon {
+    width: 22px;
+    height: 22px;
+    vertical-align: middle;
+    margin-right: 0.3rem;
+    border-radius: 3px;
+}

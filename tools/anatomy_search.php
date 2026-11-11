@@ -60,7 +60,7 @@ if ($organism && $mode === 'pub') {
 }
 if ($result !== null && $result['rows'] && $mode !== 'term') {
     $want = [];
-    foreach ($result['rows'] as $r) array_push($want, $r['term_id'], $r['stage_id']);
+    foreach ($result['rows'] as $r) array_push($want, $r['term_id'], $r['stage_id'], $r['specimen_id']);
     $labels = moop_ontology_labels($want, $anatomy)
             + moop_ontology_labels(array_column($result['rows'], 'evidence_id'), moop_ontology_by_purpose('evidence'));
 }

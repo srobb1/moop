@@ -678,13 +678,14 @@
                     <summary class="small"><?= t('Show all %d records', count($__pc)) ?></summary>
                     <div class="table-responsive mt-2">
                         <table class="table table-sm table-striped align-middle small mb-0">
-                            <thead><tr><th><?= t('Expressed in') ?></th><th><?= t('Evidence') ?></th><th><?= t('Life stage') ?></th><th><?= t('Recorded on') ?></th><th><?= t('Paper') ?></th></tr></thead>
+                            <thead><tr><th><?= t('Expressed in') ?></th><th><?= t('Evidence') ?></th><th><?= t('Life stage') ?></th><th><?= t('Specimen') ?></th><th><?= t('Recorded on') ?></th><th><?= t('Paper') ?></th></tr></thead>
                             <tbody>
                             <?php foreach ($__pc as $__r): ?>
                                 <tr>
                                     <td><?= htmlspecialchars($__PL($__r['term_id'])) ?></td>
-                                    <td><?= htmlspecialchars($__PL($__r['evidence_id'])) ?></td>
-                                    <td><?= htmlspecialchars($__PL($__r['stage_id'])) ?></td>
+                                    <?php foreach (['evidence_id', 'stage_id', 'specimen_id'] as $__col): $__v = (string) ($__r[$__col] ?? ''); ?>
+                                    <td><?= $__v === '' ? '' : moop_term_icon($__v, $__PL($__v)) . htmlspecialchars($__PL($__v)) ?></td>
+                                    <?php endforeach; ?>
                                     <td class="font-monospace"><?= htmlspecialchars($__r['accession']) ?></td>
                                     <td><a href="https://pubmed.ncbi.nlm.nih.gov/<?= rawurlencode((string) $__r['pmid']) ?>/" target="_blank" rel="noopener" title="<?= htmlspecialchars((string) $__r['title']) ?>"><?= htmlspecialchars(trim(($__r['authors'] ?: 'PMID ' . $__r['pmid']) . ' ' . $__r['year'])) ?></a></td>
                                 </tr>

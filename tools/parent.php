@@ -613,7 +613,7 @@ if (moop_crosswalk_open($organism_name) || moop_page_open($organism_name)) {
     $__accs    = array_merge($__self, array_column($__members, 'accession'));
     $__cur     = moop_page_for_accessions($organism_name, $__accs);
     $__ids     = [];
-    foreach ($__cur as $__r) array_push($__ids, $__r['term_id'], $__r['stage_id']);
+    foreach ($__cur as $__r) array_push($__ids, $__r['term_id'], $__r['stage_id'], $__r['specimen_id']);
     $page_section = [
         'curations' => $__cur,
         'labels'    => moop_ontology_labels($__ids, moop_ontology_by_purpose('anatomy'))

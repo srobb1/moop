@@ -469,3 +469,26 @@ function moop_ontology_labels(array $ids, array $prefixes): array {
     }
     return $out;
 }
+
+/**
+ * A small picture for an ontology term, if the site has one: images/term_icons/<ID with ":" as
+ * "_">.png (PLANA:0004504 -> PLANA_0004504.png). Named by TERM ID, never by label -- labels
+ * change between releases and other organisms' curations bring their own terms; adding an icon
+ * is dropping in a file (site data, under images/, so the site-data backup keeps it).
+ * Planosphere's PAGE icons (life stage, specimen, evidence) are the first set.
+ * Returns an <img> with the label as alt/title, or '' -- callers always print the label too,
+ * so a missing icon changes nothing else.
+ */
+function moop_term_icon(string $id, string $label = ''): string {
+    static $have = null;
+    if ($have === null) {
+        $have = [];
+        $dir  = rtrim((string) ConfigManager::getInstance()->getPath('absolute_images_path'), '/') . '/term_icons';
+        foreach (glob($dir . '/*.png') ?: [] as $f) $have[basename($f, '.png')] = true;
+    }
+    $file = str_replace(':', '_', $id);
+    if (!preg_match('/^[A-Za-z]+_[0-9]+$/', $file) || !isset($have[$file])) return '';
+    $text = htmlspecialchars($label !== '' ? $label : $id);
+    return '<img src="' . htmlspecialchars(moop_url('images/term_icons/' . $file . '.png')) . '" class="moop-term-icon" alt="'
+         . $text . '" title="' . $text . '" width="22" height="22">';
+}
