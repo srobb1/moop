@@ -84,6 +84,8 @@ foreach ($selected as $src) {
 // (~47 KB per gene, so 250 genes ≈ 12 MB); keeping it small is what lets a whole-organism
 // export finish inside PHP's 128M limit.
 const MOOPMART_EXPORT_GENE_CHUNK = 250;
+// Genes fetched from the database per query (each page is then written in GENE_CHUNKs).
+const MOOPMART_EXPORT_PAGE = 5000;
 
 $sources_by_gs_id = [];
 
@@ -112,45 +114,53 @@ $organismChunks = function (string $org, array $org_data) use (
         $org_filters['feature_ids'] = array_keys($id_reasons);
     }
 
-    $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters);
-    if (empty($features)) return;
-
-    // Coordinates come from a per-gene-set TSV, so load each one once for the whole gene
-    // set rather than re-reading it for every chunk.
-    $uniquenames_by_gs = [];
-    foreach ($features as $f) {
-        $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
-    }
-
-    $coords_by_gs = [];
     foreach ($sources as $src) {
-        $gs_id  = $src['gene_set_id'];
-        $gs_key = $db . '|' . $gs_id;
-        if ($gs_id && !isset($coords_by_gs[$gs_id])) {
-            $coords_by_gs[$gs_id]      = moop_feature_coords_by_gene($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
-            $sources_by_gs_id[$gs_key] = $src;
-        }
+        if (!empty($src['gene_set_id'])) $sources_by_gs_id[$db . '|' . $src['gene_set_id']] = $src;
     }
-    unset($uniquenames_by_gs);
 
-    foreach (array_chunk($features, MOOPMART_EXPORT_GENE_CHUNK) as $chunk) {
-        $rows = [];
-        // The coordinate filter can drop rows, so a chunk may come back empty.
-        foreach (moopmartAttachCoords($chunk, $coords_by_gs, $coord_filter) as $f) {
-            $f['organism_dir'] = $org;
-            $f['db_path']      = $db;
-            $f['gs_key']       = $db . '|' . $f['gene_set_id'];
-            if (!empty($id_reasons)) {
-                $reason = $id_reasons[$f['uniquename']] ?? '';
-                if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
-            } else {
-                $reason = $global_filter_reason;
+    // One PAGE of genes at a time (keyset, same order as unpaged), and each page's coordinates
+    // read for that page only. Holding every gene of the organism and every coordinate first
+    // cost ~1.8 KB per gene: a whole Schmidtea (5 gene sets, ~150k genes) died before writing a
+    // line. Re-reading a gene set's feature_coords.tsv per page costs a fraction of a second.
+    $after = null;
+    do {
+        $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters, $after, MOOPMART_EXPORT_PAGE);
+        if (empty($features)) break;
+        $last  = end($features);
+        $after = [$last['uniquename'], $last['feature_id']];
+
+        $uniquenames_by_gs = [];
+        foreach ($features as $f) $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
+        $coords_by_gs = [];
+        foreach ($sources as $src) {
+            $gs_id = $src['gene_set_id'];
+            if ($gs_id && isset($uniquenames_by_gs[$gs_id]) && !isset($coords_by_gs[$gs_id])) {
+                $coords_by_gs[$gs_id] = moop_feature_coords_by_gene($src['path'], $uniquenames_by_gs[$gs_id]);
             }
-            $f['match_reason'] = $reason;
-            $rows[]            = $f;
         }
-        if ($rows) yield $db => $rows;
-    }
+        unset($uniquenames_by_gs);
+
+        foreach (array_chunk($features, MOOPMART_EXPORT_GENE_CHUNK) as $chunk) {
+            $rows = [];
+            // The coordinate filter can drop rows, so a chunk may come back empty.
+            foreach (moopmartAttachCoords($chunk, $coords_by_gs, $coord_filter) as $f) {
+                $f['organism_dir'] = $org;
+                $f['db_path']      = $db;
+                $f['gs_key']       = $db . '|' . $f['gene_set_id'];
+                if (!empty($id_reasons)) {
+                    $reason = $id_reasons[$f['uniquename']] ?? '';
+                    if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
+                } else {
+                    $reason = $global_filter_reason;
+                }
+                $f['match_reason'] = $reason;
+                $rows[]            = $f;
+            }
+            if ($rows) yield $db => $rows;
+        }
+        $page_full = count($features) >= MOOPMART_EXPORT_PAGE;
+        unset($features, $coords_by_gs);
+    } while ($page_full);
 };
 
 $ext      = $output_format === 'fasta' ? 'fa' : 'tsv';
@@ -247,7 +257,7 @@ if ($output_format === 'tsv') {
 
             // Expand gene rows to one row per mRNA before streaming
             $expanded   = moopmartExpandToMrnaRows($chunk, $db_path);
-            $chunk_anns = moopmartGetAnnotationsForGenes(array_column($chunk, 'feature_id'), $db_path);
+            $chunk_anns = moopmartGetAnnotationsForGenes(array_column($chunk, 'feature_id'), $db_path, $source_cols);
             if (in_array(MOOPMART_ANATOMY_SOURCE, $source_cols, true)) {
                 $chunk_anns = moopmartAddAnatomyAnnotations($chunk_anns, $chunk, $db_path, $org);
             }

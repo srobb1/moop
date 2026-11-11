@@ -33,6 +33,8 @@ require_once __DIR__ . '/feature_types.php';        // moop_transcript_types()
 
 /** Max rows a preview endpoint materialises and returns. Counts stay exact regardless. */
 const MOOPMART_PREVIEW_ROW_CAP = 100;
+// Genes per query when collecting a preview (moopmartCollectOrganismRows) -- bounds its memory.
+const MOOPMART_COLLECT_PAGE = 5000;
 
 // ============================================================
 // ID RESOLUTION
@@ -347,10 +349,16 @@ function moopmartBuildTextConditions(string $raw, string $table, string $column,
  *                                     Each criterion generates its own EXISTS clause (AND between them).
  *                                     Empty src/acc/kw fields within a criterion are skipped.
  * }
+ * @param array|null $after  Keyset paging: [uniquename, feature_id] of the previous page's last
+ *                           row -- this page starts after it. With $limit, a caller can walk any
+ *                           result in pages instead of holding it all (a whole Schmidtea, five gene
+ *                           sets / ~150k genes, ran the export out of memory before its first line).
+ * @param int        $limit  Rows per page; 0 = all.
  * @return array  Rows: feature_id, uniquename, name, description, type,
  *                      gene_set_id, gene_set_name, genome_accession, genome_name, organism_name
+ *                Ordered by uniquename, then feature_id (one order, paged or not).
  */
-function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filters = []): array
+function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filters = [], ?array $after = null, int $limit = 0): array
 {
     if (empty($gene_set_ids)) return [];
 
@@ -395,6 +403,11 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
         }
     }
 
+    if ($after !== null) {
+        $where[] = '(f.feature_uniquename > ? OR (f.feature_uniquename = ? AND f.feature_id > ?))';
+        array_push($params, (string)$after[0], (string)$after[0], (int)$after[1]);
+    }
+
     $where_sql = implode(' AND ', $where);
 
     $query = "SELECT DISTINCT
@@ -413,7 +426,8 @@ function moopmartQueryFeatures(array $gene_set_ids, string $db_path, array $filt
               JOIN genome   g  ON gs.genome_id   = g.genome_id
               JOIN organism o  ON g.organism_id  = o.organism_id
               WHERE $where_sql
-              ORDER BY f.feature_uniquename";
+              ORDER BY f.feature_uniquename, f.feature_id"
+           . ($limit > 0 ? ' LIMIT ' . (int)$limit : '');
 
     return fetchData($query, $db_path, $params);
 }
@@ -479,38 +493,59 @@ function moopmartAnnotationCriterionClause(array $criterion): ?array
  *
  * Chunked in batches of 500 to avoid oversized IN clauses on large result sets.
  *
- * @param int[]  $gene_feature_ids
- * @param string $db_path
+ * Only the SOURCES asked for ($sources; null = every source, [] = none -> nothing fetched), and
+ * the rows are read one at a time. Fetching every source with fetchAll() held a chunk's raw rows
+ * AND the map built from them at once: ~60 MB transient for 250 Schmidtea genes (44k
+ * annotations), so a whole-gene-set export peaked at 99 MB of PHP's 128 MB -- with NO annotation
+ * column chosen, since the fetch ran regardless.
+ *
+ * @param int[]       $gene_feature_ids
+ * @param string      $db_path
+ * @param string[]|null $sources annotation_source_name values, matched exactly as stored
  * @return array [feature_id => [source_name => [accession => {accession, description}]]]
  */
-function moopmartGetAnnotationsForGenes(array $gene_feature_ids, string $db_path): array
+function moopmartGetAnnotationsForGenes(array $gene_feature_ids, string $db_path, ?array $sources = null): array
 {
-    if (empty($gene_feature_ids)) return [];
+    if (empty($gene_feature_ids) || $sources === []) return [];
 
     $transcript_types = array_flip(moop_transcript_types());
+    $src_sql    = '';
+    $src_params = [];
+    if ($sources !== null) {
+        $src_params = array_values(array_unique(array_map('strval', $sources)));
+        $src_sql    = ' AND ans.annotation_source_name IN (' . implode(',', array_fill(0, count($src_params), '?')) . ')';
+    }
     $result = [];
-    foreach (array_chunk($gene_feature_ids, 500) as $chunk) {
-        $ph     = implode(',', array_fill(0, count($chunk), '?'));
-        $select = "SELECT f.feature_id, f.parent_feature_id, LOWER(f.feature_type) AS type, %d AS is_child,
-                          ans.annotation_source_name, a.annotation_accession, a.annotation_description
-                   FROM feature            f
-                   JOIN feature_annotation fa  ON fa.feature_id          = f.feature_id
-                   JOIN annotation         a   ON fa.annotation_id       = a.annotation_id
-                   JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
-                   WHERE %s IN ($ph)";
-        $query  = sprintf($select, 0, 'f.feature_id') . ' UNION ALL ' . sprintf($select, 1, 'f.parent_feature_id')
-                . ' ORDER BY annotation_source_name, annotation_accession';
+    try {
+        $dbh = getDbConnection($db_path);
+        foreach (array_chunk($gene_feature_ids, 500) as $chunk) {
+            $ph     = implode(',', array_fill(0, count($chunk), '?'));
+            $select = "SELECT f.feature_id, f.parent_feature_id, LOWER(f.feature_type) AS type, %d AS is_child,
+                              ans.annotation_source_name, a.annotation_accession, a.annotation_description
+                       FROM feature            f
+                       JOIN feature_annotation fa  ON fa.feature_id          = f.feature_id
+                       JOIN annotation         a   ON fa.annotation_id       = a.annotation_id
+                       JOIN annotation_source  ans ON a.annotation_source_id = ans.annotation_source_id
+                       WHERE %s IN ($ph)$src_sql";
+            $query  = sprintf($select, 0, 'f.feature_id') . ' UNION ALL ' . sprintf($select, 1, 'f.parent_feature_id')
+                    . ' ORDER BY annotation_source_name, annotation_accession';
 
-        foreach (fetchData($query, $db_path, array_merge($chunk, $chunk)) as $row) {
-            $holder = ($row['is_child'] && isset($transcript_types[$row['type']]))
-                ? (int)$row['feature_id']          // an isoform's own
-                : (int)($row['is_child'] ? $row['parent_feature_id'] : $row['feature_id']);  // the gene's
-            $acc = $row['annotation_accession'];
-            $result[$holder][$row['annotation_source_name']][$acc] = [
-                'accession'   => $acc,
-                'description' => $row['annotation_description'],
-            ];
+            $stmt = $dbh->prepare($query);
+            $stmt->execute(array_merge($chunk, $src_params, $chunk, $src_params));
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $holder = ($row['is_child'] && isset($transcript_types[$row['type']]))
+                    ? (int)$row['feature_id']          // an isoform's own
+                    : (int)($row['is_child'] ? $row['parent_feature_id'] : $row['feature_id']);  // the gene's
+                $acc = $row['annotation_accession'];
+                $result[$holder][$row['annotation_source_name']][$acc] = [
+                    'accession'   => $acc,
+                    'description' => $row['annotation_description'],
+                ];
+            }
+            $stmt = null;
         }
+    } catch (PDOException $e) {
+        die("Query failed: " . htmlspecialchars($e->getMessage()));   // as fetchData()
     }
     return $result;
 }
@@ -988,57 +1023,65 @@ function moopmartCollectOrganismRows(string $org, array $org_sources, array $fil
         $org_filters['feature_ids'] = array_keys($id_reasons);
     }
 
-    $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters);
-    if (empty($features)) return $empty;
+    // Paged, like the export: a page of genes and that page's coordinates at a time. Counts and
+    // the gene-id list cover every gene; only the first $row_cap genes are kept as rows. Loading
+    // the whole organism first ran a five-gene-set Schmidtea preview out of memory (a 502).
+    $gene_count = 0;
+    $row_count  = 0;
+    $genes      = [];
+    $keep       = [];   // gene rows for the preview, at most $row_cap (null = all)
+    $after      = null;
+    do {
+        $features = moopmartQueryFeatures($gene_set_ids, $db, $org_filters, $after, MOOPMART_COLLECT_PAGE);
+        if (empty($features)) break;
+        $last  = end($features);
+        $after = [$last['uniquename'], $last['feature_id']];
 
-    $uniquenames_by_gs = [];
-    foreach ($features as $f) {
-        $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
-    }
-
-    $coords_by_gs = [];
-    foreach ($org_sources as $src) {
-        $gs_id = $src['gene_set_id'];
-        if ($gs_id && !isset($coords_by_gs[$gs_id])) {
-            $coords_by_gs[$gs_id] = moop_feature_coords_by_gene($src['path'], $uniquenames_by_gs[$gs_id] ?? []);
+        $uniquenames_by_gs = [];
+        foreach ($features as $f) $uniquenames_by_gs[$f['gene_set_id']][] = $f['uniquename'];
+        $coords_by_gs = [];
+        foreach ($org_sources as $src) {
+            $gs_id = $src['gene_set_id'];
+            if ($gs_id && isset($uniquenames_by_gs[$gs_id]) && !isset($coords_by_gs[$gs_id])) {
+                $coords_by_gs[$gs_id] = moop_feature_coords_by_gene($src['path'], $uniquenames_by_gs[$gs_id]);
+            }
         }
-    }
+        $page_full = count($features) >= MOOPMART_COLLECT_PAGE;
+        $matched   = moopmartAttachCoords($features, $coords_by_gs, $coord_filter);
+        unset($features, $coords_by_gs, $uniquenames_by_gs);
+        if (!$matched) continue;
 
-    $matched   = moopmartAttachCoords($features, $coords_by_gs, $coord_filter);
-    $gene_rows = [];
-    foreach ($matched as $f) {
-        $f['organism_dir'] = $org;
-        $f['db_path']      = $db;
-        // "why included": ID resolution takes priority; fall back to filter description
-        if (!empty($id_reasons)) {
-            $reason = $id_reasons[$f['uniquename']] ?? '';
-            if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
-        } else {
-            $reason = $global_filter_reason;
+        // Total expanded rows, counted rather than built: expansion copies the whole gene row
+        // once per transcript. Genes with no transcript children still render one row, hence max(n, 1).
+        $child_counts = moopmartCountChildRows(array_column($matched, 'feature_id'), $db);
+        foreach ($matched as $f) {
+            $gene_count++;
+            $row_count += max($child_counts[(int)$f['feature_id']] ?? 0, 1);
+            $genes[]    = $f['uniquename'];
+            if ($row_cap !== null && count($keep) >= $row_cap) continue;
+            $f['organism_dir'] = $org;
+            $f['db_path']      = $db;
+            // "why included": ID resolution takes priority; fall back to filter description
+            if (!empty($id_reasons)) {
+                $reason = $id_reasons[$f['uniquename']] ?? '';
+                if ($global_filter_reason) $reason .= ($reason ? ' + ' : '') . $global_filter_reason;
+            } else {
+                $reason = $global_filter_reason;
+            }
+            $f['match_reason'] = $reason;
+            $keep[]            = $f;
         }
-        $f['match_reason'] = $reason;
-        $gene_rows[]       = $f;
-    }
+        unset($matched, $child_counts);
+    } while ($page_full);
 
-    // Total expanded rows, counted rather than built: expansion copies the whole gene row
-    // once per transcript, which for a large genome is hundreds of MB the caller would only
-    // throw away. Genes with no transcript children still render one row, hence max(n, 1).
-    $child_counts = moopmartCountChildRows(array_column($gene_rows, 'feature_id'), $db);
-    $row_count    = 0;
-    foreach ($gene_rows as $f) {
-        $row_count += max($child_counts[(int)$f['feature_id']] ?? 0, 1);
-    }
-
-    // Expand only as far as the caller will read. Every gene yields at least one row, so the
-    // first $row_cap genes always supply at least $row_cap rows.
-    $to_expand = $row_cap === null ? $gene_rows : array_slice($gene_rows, 0, $row_cap);
-    $mrna_rows = moopmartExpandToMrnaRows($to_expand, $db);
+    // Every gene yields at least one row, so the first $row_cap genes always supply $row_cap rows.
+    $mrna_rows = moopmartExpandToMrnaRows($keep, $db);
     if ($row_cap !== null && count($mrna_rows) > $row_cap) {
         $mrna_rows = array_slice($mrna_rows, 0, $row_cap);
     }
 
-    return ['gene_count' => count($gene_rows), 'row_count' => $row_count, 'rows' => $mrna_rows,
-            'genes' => array_column($gene_rows, 'uniquename'), 'unresolved_ids' => $unresolved];
+    return ['gene_count' => $gene_count, 'row_count' => $row_count, 'rows' => $mrna_rows,
+            'genes' => $genes, 'unresolved_ids' => $unresolved];
 }
 
 /**
@@ -1080,7 +1123,7 @@ function moopmartBuildPreviewRows(array $preview, array $annotation_columns_sele
         }
         $anns_by_db = [];
         foreach ($gene_fids_by_db as $db_path => $fids) {
-            $anns_by_db[$db_path] = moopmartGetAnnotationsForGenes(array_keys($fids), $db_path);
+            $anns_by_db[$db_path] = moopmartGetAnnotationsForGenes(array_keys($fids), $db_path, $annotation_columns_selected);
         }
         // Curated anatomy terms (not in organism.sqlite): per database, from its organism's files
         if (in_array(MOOPMART_ANATOMY_SOURCE, $annotation_columns_selected, true)) {
