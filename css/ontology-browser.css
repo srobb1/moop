@@ -65,3 +65,9 @@ li.ob-d12 > .ob-row > .ob-term { padding-left: 246px; } li.ob-d12 > .ob-row > .o
 .ob-list { border: 1px solid #edf0f2; border-radius: 3px; margin-bottom: 4px; }
 .ob-list .ob-row:last-child { border-bottom: 0; }
 .ob-written img { max-width: 100%; height: auto; }
+/* the site's written page inside the Description card: its headings and text scaled to the card */
+.ob-written { font-size: 0.95rem; }
+.ob-written h1, .ob-written h2 { font-size: 1.25rem !important; margin: 1.4rem 0 0.6rem; padding-bottom: 4px; border-bottom: 1px solid #eef0f2; }
+.ob-written > h2:first-child, .ob-written > h1:first-child { margin-top: 0; }
+.ob-written h3 { font-size: 1.05rem !important; margin: 1rem 0 0.5rem; }
+.ob-written h4, .ob-written h5 { font-size: 0.95rem !important; }
