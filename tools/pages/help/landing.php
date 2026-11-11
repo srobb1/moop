@@ -63,10 +63,10 @@ $topic_card = function (array $t) use ($site) {
       </h1>
     </div>
     <div class="card-body p-4">
+      <?php $info_icon = '<i class="fa fa-info-circle" style="color:var(--moop-tool-header);" aria-label="' . t('information') . '"></i>'; ?>
       <p class="text-muted mb-0">
-        Where to go, how the data fits together, and where it comes from. How to use a particular
-        page is on that page — look for its <i class="fa fa-info-circle" style="color:var(--moop-tool-header);" aria-label="<?= t('information') ?>"></i>
-        <?= ($is_admin ? t('buttons. Setting up or maintaining a site instead? That is covered separately below.') : t('buttons.')) . "\n" ?>
+        <?= t_markup('Where to go, how the data fits together, and where it comes from. How to use a particular page is on that page — look for its %s buttons.', $info_icon) ?>
+        <?= ($is_admin ? t('Setting up or maintaining a site instead? That is covered separately below.') : '') . "\n" ?>
       </p>
     </div>
   </div>

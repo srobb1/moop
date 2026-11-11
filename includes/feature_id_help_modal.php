@@ -26,7 +26,7 @@ echo help_modal(
             ...(moop_tool_on('annotation_search') ? [   // switched off: no card pointing at it
             ['label' => 'Across everything, or your own list', 'html' => true,
              'text' => t_markup('Use the %s, where you can search every organism at once or build a custom selection.',
-                                '<a href="/' . htmlspecialchars($site) . '/tools/search.php">' . t('annotation search') . '</a>')],
+                                '<a href="' . htmlspecialchars(moop_url('tools/search.php')) . '">' . t('annotation search') . '</a>')],
             ] : []),
             ['label' => 'Not this box',
              'text' => 'A protein name, domain or GO term — "kinase", "zinc finger" — will not match here. This field compares accessions exactly.'],
