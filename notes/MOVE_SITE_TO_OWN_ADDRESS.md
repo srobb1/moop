@@ -10,6 +10,20 @@ Two moves may use this (2026-11-09: cuttingclass is fast-tracked; simrbase dropp
 
 Do each in ONE maintenance window, ideally together with the HTTPS cert, so the server changes once.
 
+**2026-11-11 — decided:** simrbase drops `/moop` and becomes `simrbase.stowers.org` (today the OLD
+Drupal/Tripal site on another server). Sofia will likely move **simrbase, cuttingclass and
+planosphere to this server at the same time**, so each gets its OWN server block by host name
+(`root` = the site folder, `link_prefix` `"/"`) -- the layout `nginx_site_guard.sh` and the
+rate-limit template already handle -- not a shared-block rewrite. Build the blocks ahead under the
+real names (DNS still points at the old servers, so only we reach them: test with
+`curl --resolve` / a browser host-resolver rule); have each 301 `/<folder>/…` → `/…` so the
+rehearsal works before `link_prefix` flips. Switch day: `link_prefix` "/", `install_https_redirect.sh`
+per name, simrbase-dev + the bare IP 301 to the new names, IT repoints DNS and opens the server,
+old-site link tables live. The switch waits on DATA (IT is ready). **Planosphere = a landing page**
+(decided 2026-11-11): its block serves a small page pointing at simrbase's planarian tools
+(Anatomical Expression Search, Rosetta Stone, Planarians group, BLAST), and old Planosphere
+addresses redirect to the matching simrbase tool -- no third MOOP.
+
 ## Already done in code (2026-11-09) — the "link prefix"
 
 - Setting `link_prefix` (default `/` + folder name → nothing changes until it is set).
