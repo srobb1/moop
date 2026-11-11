@@ -11,6 +11,10 @@ $rows = function (array $list) use ($prefix): string {
     foreach ($list as $r) {
         $h .= '<li class="ob-d1"><div class="ob-row"><span class="ob-term"><span class="ob-leaf"></span>'
             . '<a href="' . htmlspecialchars(moop_ob_term_url($prefix, $r['id'])) . '">' . htmlspecialchars($r['label']) . '</a>'
+            . (isset($r['records']) ? ($r['records'] > 0
+                ? '<a class="ob-rec" href="' . htmlspecialchars($r['records_url']) . '" title="' . t('Published expression records in %s or its parts', $r['label']) . '">'
+                  . number_format($r['records']) . '</a>'
+                : '<span class="ob-rec ob-rec-none" title="' . t('No published expression records') . '">0</span>') : '')
             . '</span><span class="ob-def">' . htmlspecialchars($r['definition']) . '</span></div></li>';
     }
     return $h . '</ul>';

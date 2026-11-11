@@ -53,6 +53,26 @@ if ((moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy') {
     }
 }
 
+// Each listed term's records too (the term + everything part of it, as above), linked to them.
+// A term page lists ~5-30 terms; each count is one expansion + one indexed COUNT (~0.04 s).
+if ($records !== null) {
+    $org = $records['organism'];
+    $counted = [];
+    $count_for = function (string $tid) use ($org, &$counted): int {
+        if (!isset($counted[$tid])) {
+            $spec = ['ok' => true, 'mode' => 'term', 'term_ids' => moop_ontology_expand_in('anatomy', $tid, ['BFO:0000050']),
+                     'filters' => [], 'accessions' => null, 'meta' => []];
+            $counted[$tid] = moop_page_records($org, $spec, '', 'paper', 'desc', 0, 1)['total'];
+        }
+        return $counted[$tid];
+    };
+    $url_for = fn(string $tid) => moop_url('tools/anatomy_search.php') . '?' . http_build_query(['organism' => $org, 'term' => $tid, 'rel' => 'BFO:0000050']);
+    foreach (['parents', 'kinds'] as $k)
+        foreach ($view[$k] as &$r) { $r['records'] = $count_for($r['id']); $r['records_url'] = $url_for($r['id']); } unset($r);
+    foreach (['outgoing', 'incoming'] as $k)
+        foreach ($view[$k] as &$list) foreach ($list as &$r) { $r['records'] = $count_for($r['id']); $r['records_url'] = $url_for($r['id']); } unset($list, $r);
+}
+
 // No records here: the site may name where they are (ontology_browser.<prefix>.records_url).
 $records_elsewhere = '';
 if ($records === null) {
