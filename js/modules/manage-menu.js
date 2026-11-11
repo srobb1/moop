@@ -15,6 +15,7 @@
 
     const menu  = JSON.parse(JSON.stringify(data.menu || []));
     const pages = data.pages || [];
+    const tools = data.tools || [];
     // The site's active languages, English first (Admin -> Manage Languages). A label in a retired
     // language is not shown here but stays in the item, so it is saved back untouched.
     const languages = data.languages && data.languages.length ? data.languages : [{ code: 'en', name: 'English' }];
@@ -62,8 +63,10 @@
         const opts = [['builtin:about', 'About'], ['builtin:help', 'Help'], ['builtin:home', 'Home page'],
                       ['builtin:browse', "MOOP's search & browse page"]]
             .concat(pages.map(p => ['page:' + p.slug, 'Page: ' + p.title]))
+            .concat(tools.map(t => ['tool:' + t.id, 'Tool: ' + t.label]))
             .concat([['url', 'An address…']]);
-        const now = item.to.builtin ? 'builtin:' + item.to.builtin : item.to.page ? 'page:' + item.to.page : 'url';
+        const now = item.to.builtin ? 'builtin:' + item.to.builtin : item.to.page ? 'page:' + item.to.page
+                  : item.to.tool ? 'tool:' + item.to.tool : 'url';
         opts.forEach(([v, t]) => { const o = el('option', { value: v, text: t }); if (v === now) o.selected = true; sel.appendChild(o); });
         if (item.to.page && !pages.some(p => p.slug === item.to.page)) {
             const o = el('option', { value: 'page:' + item.to.page, text: 'Page: ' + item.to.page + ' (deleted — not shown)' });
@@ -76,6 +79,7 @@
             const v = sel.value;
             if (v === 'url') { item.to = { url: url.value }; url.classList.remove('d-none'); }
             else if (v.startsWith('page:')) { item.to = { page: v.slice(5) }; url.classList.add('d-none'); }
+            else if (v.startsWith('tool:')) { item.to = { tool: v.slice(5) }; url.classList.add('d-none'); }
             else { item.to = { builtin: v.slice(8) }; url.classList.add('d-none'); }
         });
         url.addEventListener('input', () => { item.to = { url: url.value }; });

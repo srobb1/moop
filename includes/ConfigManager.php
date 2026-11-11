@@ -525,6 +525,13 @@ class ConfigManager
             if (preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $slug) && is_file($file)) {
                 $href = "$site/page.php?p=" . rawurlencode($slug);
             }
+        } elseif (isset($to['tool'])) {
+            // A tool from the registry: its address follows the link prefix, and the link is not
+            // shown where the tool is switched off or has no data (isToolEnabled).
+            $id = (string) $to['tool'];
+            if (isset($this->tools[$id]['url_path']) && $this->isToolEnabled($id)) {
+                $href = $site . $this->tools[$id]['url_path'];
+            }
         } elseif (isset($to['url'])) {
             $url = (string) $to['url'];
             if (preg_match('#^/[^/\\]#', $url)) {
@@ -554,6 +561,7 @@ class ConfigManager
             if (!$label_ok($item['label'] ?? null) || !is_array($to) || count($to) !== 1) return false;
             if (isset($to['builtin'])) return in_array($to['builtin'], ['about', 'help', 'home', 'browse'], true);
             if (isset($to['page']))    return is_string($to['page']) && (bool) preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $to['page']);
+            if (isset($to['tool']))    return is_string($to['tool']) && (bool) preg_match('/^[a-z0-9_]{1,40}$/', $to['tool']);
             if (isset($to['url']))     return is_string($to['url']) && mb_strlen($to['url']) <= 500
                                               && (preg_match('#^/[^/\\\\]#', $to['url']) || preg_match('#^https?://[^\s"\'<>]+$#i', $to['url']));
             return false;

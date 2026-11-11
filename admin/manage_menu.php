@@ -45,6 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pages = array_map(fn($p) => ['slug' => $p['slug'], 'title' => $p['title']['en']], array_values(moop_page_list()));
+// Tools a link can point at (the registry, by its menu label); their addresses follow the link prefix.
+$tools = [];
+foreach ($config->getAllTools() as $tid => $tool) {
+    if (!empty($tool['url_path'])) $tools[] = ['id' => $tid, 'label' => (string) ($tool['menu_label'] ?? $tool['name'] ?? $tid)];
+}
 $flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
 $data = [
     'site'           => $config->getString('site'),
@@ -52,7 +57,7 @@ $data = [
     'customised'     => (bool) $config->getArray('main_menu'),
     'page_script'    => [moop_url_base() . '/js/modules/manage-menu.js'],
     'inline_scripts' => [
-        'window.mmData = ' . json_encode(['menu' => $config->mainMenu(), 'pages' => $pages, 'languages' => $config->languages()], $flags) . ';',
+        'window.mmData = ' . json_encode(['menu' => $config->mainMenu(), 'pages' => $pages, 'tools' => $tools, 'languages' => $config->languages()], $flags) . ';',
     ],
 ];
 echo render_display_page(__DIR__ . '/pages/manage_menu.php', $data, 'Manage Menu');

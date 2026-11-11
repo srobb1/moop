@@ -567,6 +567,16 @@ $_menu = fn($c) => array_map(fn($i) => $i['type'] === 'divider' ? '|' : $i['id']
 ok($_t2->defaultToolsMenuOrder() === ['genome_browser', '|', 'annotation_search', 'moopmart', 'expression', 'anatomy_search', 'crosswalk', 'ontology_browser', 'blast_search',
                                       'primer_blast', 'primer_maker', 'download_fasta', 'downloads'],
    'default menu = the hand-written one it replaced: Genome Browser, a divider, then the rest in order');
+// A menu link can point at a TOOL (planosphere's "Our Tools" -> Ontology Browser, 2026-11-11): its
+// address comes from the registry, so it follows the link prefix; a malformed id is refused.
+ok(ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'Browse'], 'to' => ['tool' => 'ontology_browser']]]) === null
+   && ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'X'], 'to' => ['tool' => '../evil']]]) !== null,
+   'menu: a link to a tool is valid; a malformed tool id is refused');
+$_ml = new ReflectionMethod($_t2, 'menuLink'); $_ml->setAccessible(true);
+ok(($_ml->invoke($_t2, ['type' => 'link', 'label' => ['en' => 'B'], 'to' => ['tool' => 'blast_search']], 'en')['href'] ?? '') === moop_url_base() . '/tools/blast.php'
+   && $_ml->invoke($_t2, ['type' => 'link', 'label' => ['en' => 'M'], 'to' => ['tool' => 'moopmart']], 'en') === null
+   && $_ml->invoke($_t2, ['type' => 'link', 'label' => ['en' => 'N'], 'to' => ['tool' => 'no_such_tool']], 'en') === null,
+   'menu: a tool link resolves to its page; a switched-off or unknown tool is not shown');
 ok(($_menu($_t2)[0] ?? '') === 'annotation_search=Annotation Search' && !in_array('|', $_menu($_t2), true),
    'a switched-off tool leaves the menu, and its divider does not lead it');
 $_lsave = $_t2->saveEditableConfig(['tools_layout' => [
