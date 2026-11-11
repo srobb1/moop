@@ -48,11 +48,18 @@ if ((moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy') {
     }
 }
 
+// No records here: the site may name where they are (ontology_browser.<prefix>.records_url).
+$records_elsewhere = '';
+if ($records === null) {
+    $tpl = (string) (ConfigManager::getInstance()->getArray('ontology_browser', [])[$prefix]['records_url'] ?? '');
+    if (preg_match('#^https://[^\s"<>]+$#', $tpl) && strpos($tpl, '{id}') !== false) $records_elsewhere = str_replace('{id}', rawurlencode($term['id']), $tpl);
+}
+
 $obo = preg_match('/^([A-Za-z]+):(\w+)$/', $term['id'], $m) ? $m[1] . '_' . $m[2] : '';
 echo render_display_page(__DIR__ . '/pages/ontology_term.php', [
     'term' => $term, 'prefix' => $prefix, 'ontology_name' => $ontologies[$prefix],
     'release' => (string) (moop_ontology_meta($prefix)['release'] ?? ''), 'view' => $view, 'rels' => $rels,
-    'written_html' => $written_html, 'records' => $records,
+    'written_html' => $written_html, 'records' => $records, 'records_elsewhere' => $records_elsewhere,
     'links' => $obo === '' ? [] : [
         'OLS (EMBL-EBI)' => 'https://www.ebi.ac.uk/ols4/ontologies/' . strtolower($prefix) . '/classes?obo_id=' . rawurlencode($term['id']),
         'OBO PURL'       => 'http://purl.obolibrary.org/obo/' . $obo,

@@ -299,7 +299,11 @@ return [
     // sections of Planosphere's Molecular Fate Mapping Atlas.
     'ontology_browser' => [
         'PLANA' => ['roots' => ['UBERON:0000475', 'PLANA:0000114', 'PLANA:0000431', 'PLANA:0000113',
-                                'PLANA:0000499', 'UBERON:0005423', 'UBERON:0007567']],
+                                'PLANA:0000499', 'UBERON:0005423', 'UBERON:0007567'],
+                    // A site without the curated expression data itself (Planosphere) links a term
+                    // page to the search that has it; {id} = the term. A site WITH the data counts
+                    // and links its own records instead. Update the host when SIMRbase moves.
+                    'records_url' => 'https://simrbase-dev.stowers.org/moop/tools/anatomy_search.php?organism=Schmidtea_mediterranea&term={id}&rel=BFO:0000050'],
     ],
 
     // ======== Time zone ========

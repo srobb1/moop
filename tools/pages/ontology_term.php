@@ -3,7 +3,7 @@
  * Ontology term page -- content file (controller: tools/ontology_term.php). Laid out like the gene
  * page: the same section sidebar (js/modules/parent-nav.js lists every [data-nav-label] card).
  * Variables: $term (null = not found), $prefix, $ontology_name, $release, $view (paths, parents,
- * kinds, outgoing, incoming, written), $rels, $written_html, $records, $links.
+ * kinds, outgoing, incoming, written), $rels, $written_html, $records, $records_elsewhere, $links.
  */
 $browser = moop_url('tools/ontology_browser.php') . '?o=' . rawurlencode($prefix);
 $rows = function (array $list) use ($prefix): string {
@@ -128,6 +128,16 @@ $rows = function (array $list) use ($prefix): string {
         <?php else: ?>
           <p class="text-muted mb-0"><?= t('No published expression records for this term or its parts.') ?></p>
         <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($records === null && $records_elsewhere !== ''): ?>
+    <div class="card shadow-sm mb-4" id="pnav-records" data-nav-label="<?= t('Expression records') ?>">
+      <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Expression records') ?></h2></div>
+      <div class="card-body">
+        <p class="mb-2"><?= t('Published expression records for %s and its parts are searched on SIMRbase.', $term['label']) ?></p>
+        <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars($records_elsewhere) ?>"><?= t('See the expression records') ?></a>
       </div>
     </div>
     <?php endif; ?>
