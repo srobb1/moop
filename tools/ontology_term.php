@@ -31,6 +31,11 @@ if ($view['written']) {
     $lang = moop_current_lang();
     $body = trim((string) ($view['written']['body'][$lang] ?? '')) !== '' ? $view['written']['body'][$lang] : (string) ($view['written']['body']['en'] ?? '');
     $written_html = moop_page_render($body, (string) ($view['written']['format'] ?? 'html'));
+    // A content page's own addresses are relative to the site's root (images/..., page.php?p=...),
+    // right on page.php but one folder off here under tools/: anchor them to the root.
+    $root = moop_url_base() . '/';
+    $written_html = preg_replace_callback('/\b(src|href)="(?![a-z][a-z0-9+.-]*:|\/|#)([^"]*)"/i',
+        fn($m) => $m[1] . '="' . $root . $m[2] . '"', $written_html);
 }
 
 // Expression records (curated PAGE data) on THIS site for an anatomy term: the term and
