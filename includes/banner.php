@@ -22,6 +22,9 @@
 
 $config       = ConfigManager::getInstance();
 $images_path  = $config->getString('images_path');
+// Links go through moop_url() (CLAUDE.md 3b): images_path is "<site folder>/images", and a URL
+// built from the folder breaks once a site is served at its own domain's root (2026-11-11).
+$images_url   = moop_url(preg_replace('#^[^/]*/#', '', $images_path));
 $banners_path = $config->getString('banners_path');
 
 $header_images = [];
@@ -53,14 +56,14 @@ if ($_is_home && $header_img !== '' && in_array($header_img, $header_images, tru
 }
 
 if ($selected_image !== null) {
-    $url = "/$images_path/banners/" . rawurlencode($selected_image);
+    $url = "$images_url/banners/" . rawurlencode($selected_image);
     echo "<div class=\"moop-top\">";
     echo "  <div class=\"banner-blur\" style=\"background: url($url) center center no-repeat; background-size:cover;\"></div>";
     echo "  <div class=\"banner-image-wrapper\"><img class=\"banner-image\" src=\"$url\" alt=\"Banner\"></div>";
     echo "</div>";
 } elseif ($header_img !== '' && file_exists(dirname($banners_path) . '/' . $header_img)) {
     // Legacy location: a header_img sitting directly in images/ from before banners/ existed.
-    $url = "/$images_path/" . rawurlencode($header_img);
+    $url = "$images_url/" . rawurlencode($header_img);
     echo "<div class=\"moop-top\">";
     echo "  <div class=\"banner-blur\" style=\"background: url($url) center center no-repeat; background-size:cover;\"></div>";
     echo "  <div class=\"banner-image-wrapper\"><img class=\"banner-image\" src=\"$url\" alt=\"Banner\"></div>";
