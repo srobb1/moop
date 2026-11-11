@@ -30,7 +30,8 @@
       var rel = document.createElement("span"); rel.className = "ob-rel"; rel.textContent = term.relation; t.appendChild(rel);
     }
     if (term.children > 0) {
-      var n = document.createElement("span"); n.className = "ob-n"; n.textContent = term.children; t.appendChild(n);
+      var n = document.createElement("span"); n.className = "ob-n"; n.title = T("Terms directly below it");
+      n.textContent = term.children === 1 ? T("1 term") : T("%d terms").replace("%d", term.children); t.appendChild(n);
     }
     var d = document.createElement("span"); d.className = "ob-def"; d.textContent = term.definition || "";
     r.appendChild(t); r.appendChild(d); li.appendChild(r);

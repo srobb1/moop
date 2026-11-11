@@ -13,8 +13,9 @@ $rows = function (array $list) use ($prefix): string {
             . '<a href="' . htmlspecialchars(moop_ob_term_url($prefix, $r['id'])) . '">' . htmlspecialchars($r['label']) . '</a>'
             . (isset($r['records']) ? ($r['records'] > 0
                 ? '<a class="ob-rec" href="' . htmlspecialchars($r['records_url']) . '" title="' . t('Published expression records in %s or its parts', $r['label']) . '">'
-                  . number_format($r['records']) . '</a>'
-                : '<span class="ob-rec ob-rec-none" title="' . t('No published expression records') . '">0</span>') : '')
+                  . '<i class="fa fa-microscope" aria-hidden="true"></i> '
+                  . ($r['records'] === 1 ? t('%s record', number_format($r['records'])) : t('%s records', number_format($r['records']))) . '</a>'
+                : '<span class="ob-rec-none">' . t('no records') . '</span>') : '')
             . '</span><span class="ob-def">' . htmlspecialchars($r['definition']) . '</span></div></li>';
     }
     return $h . '</ul>';
@@ -89,9 +90,9 @@ $rows = function (array $list) use ($prefix): string {
           <?php endforeach; ?>
         </div>
         <?php endif; ?>
-        <h3 class="ob-h"><?= t('Is a') ?> <span class="ob-n"><?= count($view['parents']) ?></span></h3>
+        <h3 class="ob-h"><?= t('Is a') ?> <span class="ob-hcount">(<?= count($view['parents']) ?>)</span></h3>
         <?= $view['parents'] ? $rows($view['parents']) : '<p class="text-muted small">' . t('None: a top term.') . '</p>' ?>
-        <h3 class="ob-h mt-3"><?= t('Kinds of %s', $term['label']) ?> <span class="ob-n"><?= count($view['kinds']) ?></span></h3>
+        <h3 class="ob-h mt-3"><?= t('Kinds of %s', $term['label']) ?> <span class="ob-hcount">(<?= count($view['kinds']) ?>)</span></h3>
         <?= $view['kinds'] ? $rows($view['kinds']) : '<p class="text-muted small">' . t('None.') . '</p>' ?>
       </div>
     </div>
@@ -101,11 +102,11 @@ $rows = function (array $list) use ($prefix): string {
       <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Parts and relationships') ?></h2></div>
       <div class="card-body">
         <?php $__first = true; foreach ($view['outgoing'] as $label => $list): ?>
-          <h3 class="ob-h<?= $__first ? '' : ' mt-3' ?>"><?php $__first = false; ?><?= htmlspecialchars(ucfirst(t_plain($label))) ?> <span class="ob-n"><?= count($list) ?></span></h3>
+          <h3 class="ob-h<?= $__first ? '' : ' mt-3' ?>"><?php $__first = false; ?><?= htmlspecialchars(ucfirst(t_plain($label))) ?> <span class="ob-hcount">(<?= count($list) ?>)</span></h3>
           <?= $rows($list) ?>
         <?php endforeach; ?>
         <?php foreach ($view['incoming'] as $label => $list): ?>
-          <h3 class="ob-h mt-3"><?= t('Terms that are %s %s', t_plain($label), $term['label']) ?> <span class="ob-n"><?= count($list) ?></span></h3>
+          <h3 class="ob-h mt-3"><?= t('Terms that are %s %s', t_plain($label), $term['label']) ?> <span class="ob-hcount">(<?= count($list) ?>)</span></h3>
           <?= $rows($list) ?>
         <?php endforeach; ?>
       </div>

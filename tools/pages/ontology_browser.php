@@ -63,7 +63,7 @@ $self = moop_url('tools/ontology_browser.php');
         <div class="ob-row">
           <span class="ob-term">
             <?php if ($r['children'] > 0): ?><button type="button" class="ob-toggle" aria-expanded="false" aria-label="<?= t('Show the terms below %s', $r['label']) ?>"></button><?php else: ?><span class="ob-leaf"></span><?php endif; ?>
-            <a href="<?= htmlspecialchars(moop_ob_term_url($prefix, $r['id'])) ?>"><?= htmlspecialchars($r['label']) ?></a><?php if ($r['children'] > 0): ?><span class="ob-n"><?= (int) $r['children'] ?></span><?php endif; ?>
+            <a href="<?= htmlspecialchars(moop_ob_term_url($prefix, $r['id'])) ?>"><?= htmlspecialchars($r['label']) ?></a><?php if ($r['children'] > 0): ?><span class="ob-n" title="<?= t('Terms directly below it') ?>"><?= $r['children'] === 1 ? t('1 term') : t('%d terms', $r['children']) ?></span><?php endif; ?>
           </span>
           <span class="ob-def"><?= htmlspecialchars($r['definition']) ?></span>
         </div>
