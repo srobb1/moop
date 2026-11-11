@@ -372,6 +372,17 @@ sudo scripts/install_php_fpm_resilience.sh
 sudo scripts/install_nginx_timeouts.sh       # nginx only
 ```
 
+Then HTTPS (README, Quick Start step 10). Once the site's name answers over https with a valid
+certificate, send http:// visitors there. Without the redirect, logins and session cookies can
+cross the network in cleartext: the cookie is only marked Secure on an https request. The
+script adds a `return 301` to nginx's port-80 block. Requests from this machine stay on http,
+for the System Monitor. It backs up nginx.conf and restores it if `nginx -t` fails.
+`setup-check.php` checks it.
+
+```bash
+sudo scripts/install_https_redirect.sh your-name     # nginx only; safe to re-run
+```
+
 ---
 
 ## Related

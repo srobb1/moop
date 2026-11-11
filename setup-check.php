@@ -1047,6 +1047,22 @@ if (detectWebServer() === 'apache') {
     }
     $hdr ? pass('Security headers / Content-Security-Policy set in nginx')
          : warn('No Content-Security-Policy found in nginx (or its file is not readable to this check)', $mon_cmd);
+
+    // HTTPS: until http:// redirects, logins and session cookies can cross the network in
+    // cleartext (the cookie is Secure only on an https request -- includes/session_init.php).
+    $ngx = '';
+    foreach (array_merge(['/etc/nginx/nginx.conf'], glob('/etc/nginx/conf.d/*.conf') ?: [], glob('/etc/nginx/default.d/*.conf') ?: []) as $f) {
+        if (is_readable($f)) $ngx .= (string) file_get_contents($f) . "\n";
+    }
+    if (preg_match('~return\s+30[18]\s+https://([^\s$;/]+)~', $ngx, $hm)) {
+        pass('http:// redirects to https://' . $hm[1]);
+    } elseif (strpos($ngx, 'ssl_certificate') !== false) {
+        warn('HTTPS is configured, but http:// still serves pages — logins can cross the network in cleartext',
+             'Once https://<your name>/ answers with a valid certificate: sudo scripts/install_https_redirect.sh <your name>');
+    } else {
+        warn('No HTTPS in nginx (or its config is not readable to this check) — logins cross the network in cleartext',
+             'Add a certificate (docs/INSTALL.md), then: sudo scripts/install_https_redirect.sh <your name>');
+    }
 }
 
 section("Load Resilience");

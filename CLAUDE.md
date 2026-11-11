@@ -747,6 +747,8 @@ never from `site_config.php`):
    queued BLAST). Both lived only on this host until 2026-11-03; setup-check's "Load
    Resilience" section now checks them. A new *machine* (not a second site on this one) has
    more: README "A New Site on Another Machine".
+9. **HTTPS** — once the site's name answers over https with a valid certificate,
+   `sudo scripts/install_https_redirect.sh <hostname>` (README Quick Start step 10).
    **Anything new that a fresh install needs must land in
    this list, the README Quick Start, `docs/INSTALL.md` and `setup-check.php` together** —
    the CSP lived only in this host's nginx.conf until 2026-10-28, so a new install would have
@@ -760,20 +762,6 @@ Planning docs live in `notes/`. Verified against the tree on 2026-07-16 — seve
 long-standing entries here had already been fixed, and one contradicted §10 of this file.
 
 **Open:**
-- **High (blocked on IT, not on code): no usable HTTPS hostname, so real traffic is plain
-  `http://` — logins and session cookies cross the network in cleartext.** HTTPS *is*
-  configured and works: nginx listens on 443 with a valid GoDaddy `*.stowers.org` wildcard
-  cert (to 2026-10-14), and **both vhosts use `server_name _;`, so the server already answers
-  to any hostname — no vhost work is needed.** What is missing is DNS: the site is reached by
-  IP (`https://172.16.2.52` fails cert validation, since the wildcard covers names, not IPs),
-  and `simrbasenew.stowers.org` resolves only to `::1` from a local hosts entry. Consequently
-  the session cookie's `Secure` flag — set in `includes/session_init.php` — is deliberately
-  **conditional on `$_SERVER['HTTPS']` and therefore inactive for real users**. Do not "fix"
-  that by making it unconditional; that would silently log every http:// user out. The order
-  is: (1) IT creates an A record for the host, (2) confirm the cert validates under that name,
-  (3) add `return 301 https://$host$request_uri;` to the port-80 server block, (4) make
-  `Secure` unconditional. Steps 3–4 are ours and small. Until then, CSRF tokens — not the
-  cookie flags — are what actually protect the admin endpoints.
 - **Medium:** JWT tokens passed as URL query parameter in JBrowse track requests
   (visible in server logs) — architectural constraint from JBrowse2. Two routes exist:
   `notes/TRACKS_PROXY_PLAN.md` (simpler) and an `Authorization`-header variant.
@@ -800,12 +788,23 @@ long-standing entries here had already been fixed, and one contradicted §10 of 
   so it needs a cleanup pass first.
 
 **Done — do not re-open:**
+- **HTTPS (2026-11-11).** `simrbase-dev.stowers.org` (internal DNS) serves the renewed
+  `*.stowers.org` cert (to 2027-04-12, chain verifies); IT changed the tracks server's CORS to
+  accept both origins. Port 80 now 301s browsers to `https://simrbase-dev.stowers.org$request_uri`
+  — `scripts/install_https_redirect.sh <hostname>`; setup-check reports it. **This machine's own
+  addresses stay on http** (127.0.0.1, ::1, 172.16.2.52): the System Monitor's fpm-status,
+  `render_compare.php` and the page audit call `http://127.0.0.1/` — a 301 there would break them
+  silently. To test the redirect from here, use another loopback source:
+  `curl -sI --interface 127.0.0.2 -H 'Host: simrbase-dev.stowers.org' http://127.0.0.1/moop/`.
+  The session cookie stays **conditional** on HTTPS (`includes/session_init.php`) on purpose:
+  every browser request is now https, so it is Secure in practice, and making it unconditional
+  would silently break login on a new install that has no TLS yet. Still to do: HSTS (after the
+  redirect has run cleanly for a while — browsers cache it, hard to undo); Turnstile hostnames
+  at launch.
 - `page-setup.php` deleted (broken CSS URL + dual DataTables loading).
 - HTTP security headers in nginx (2026-07-08): `X-Frame-Options`, `X-Content-Type-Options`,
-  `Referrer-Policy`, `Permissions-Policy` enforced. HSTS is still **not** appropriate — not
-  because MOOP is "HTTP-only" (that claim was wrong; 443 works and serves a valid cert), but
-  because there is no DNS hostname yet, so http:// is still the working entry point and HSTS
-  would strand users. Revisit with the DNS item above.
+  `Referrer-Policy`, `Permissions-Policy` enforced. HSTS not yet — see the HTTPS entry above
+  (the hostname and redirect exist since 2026-11-11; add HSTS once the redirect has run cleanly).
 - Session cookie attributes (2026-07-21): `HttpOnly` + `SameSite=Lax` always, `Secure` when
   the request arrived over HTTPS. Set in **one** place — `includes/session_init.php`. Every
   entry point that starts a session must call `moop_session_start()`, never `session_start()`

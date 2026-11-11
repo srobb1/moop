@@ -154,7 +154,20 @@ Background: `notes/CAPACITY_TEST_2026-10-23.md`.
 search index. See [Node.js and the JBrowse CLI](docs/INSTALL.md#nodejs-and-the-jbrowse-cli);
 without it the genome browser works but its search box finds nothing.
 
-**10. Log in** at `http://your-host/moop/` with the admin account you just created.
+**10. Turn on HTTPS** once your site has a name with a certificate (nginx). Until then, logins
+and session cookies cross the network in cleartext. When `https://your-name/` answers with a
+valid certificate:
+
+```bash
+sudo scripts/install_https_redirect.sh your-name   # http:// visitors -> https://your-name (safe to re-run)
+```
+
+This machine itself stays on plain http, because the System Monitor calls `http://127.0.0.1/`.
+If you use a tracks server, it must allow `https://your-name` (CORS) before tracks load at
+that name.
+
+**11. Log in** at `https://your-name/moop/` (or `http://your-host/moop/` before step 10) with
+the admin account you just created.
 
 Then run `php setup-check.php` once more; it should come back clean.
 
