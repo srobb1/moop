@@ -221,13 +221,24 @@ function moop_ontology_build_from_files(string $prefix, array $files, ?string $o
         // by the same relation (X -R-> Z -R-> Y). Worked out once here, not per click: GO is ~45k
         // terms and the browser reads parents/children constantly.
         $db->exec('CREATE TABLE edge (subject TEXT NOT NULL, relation TEXT NOT NULL, object TEXT NOT NULL)');
+        // For a relation other than is-a ("part of"...), the closure also carries links that only
+        // follow through is-a: digestive system "part of" whole organism also gives "part of"
+        // anatomical structure, continuant, entity... Those are not direct either: a link X -R-> Y
+        // is dropped when a more specific target exists (X -R-> Z with Z -R-> Y or Z is-a Y), or
+        // when X only inherits it from a superclass (X is-a Z, Z -R-> Y).
+        $isa = $db->quote('rdfs:subClassOf');
         $db->exec("INSERT INTO edge (subject, relation, object)
                    SELECT c.subject, c.relation, c.object FROM closure c
                     WHERE c.subject <> c.object
                       AND NOT EXISTS (SELECT 1 FROM closure a JOIN closure b
-                                        ON b.subject = a.object AND b.relation = c.relation AND b.object = c.object
+                                        ON b.subject = a.object AND b.object = c.object
+                                       AND (b.relation = c.relation OR (c.relation <> $isa AND b.relation = $isa))
                                        WHERE a.subject = c.subject AND a.relation = c.relation
-                                         AND a.object <> c.object AND a.object <> c.subject)");
+                                         AND a.object <> c.object AND a.object <> c.subject)
+                      AND (c.relation = $isa OR NOT EXISTS (
+                             SELECT 1 FROM closure a JOIN closure b
+                                 ON b.subject = a.object AND b.relation = c.relation AND b.object = c.object
+                              WHERE a.subject = c.subject AND a.relation = $isa AND a.object <> c.subject))");
         $db->exec('CREATE INDEX edge_object ON edge (object, relation)');
         $db->exec('CREATE INDEX edge_subject ON edge (subject, relation)');
         $db->exec("INSERT INTO meta (key, value) VALUES ('edges', (SELECT COUNT(*) FROM edge))");

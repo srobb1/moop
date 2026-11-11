@@ -293,6 +293,15 @@ return [
                     'releases' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/releases.txt'],
     ],
 
+    // ======== Ontology browser (tools/ontology_browser.php) ========
+    // Where each ontology's tree starts. Without an entry, the tree starts at that ontology's own
+    // top terms (its terms with no is-a parent of the same prefix). PLANA starts at the seven
+    // sections of Planosphere's Molecular Fate Mapping Atlas.
+    'ontology_browser' => [
+        'PLANA' => ['roots' => ['UBERON:0000475', 'PLANA:0000114', 'PLANA:0000431', 'PLANA:0000113',
+                                'PLANA:0000499', 'UBERON:0005423', 'UBERON:0007567']],
+    ],
+
     // ======== Time zone ========
     // The time zone MOOP shows dates and times in (an identifier such as
     // 'America/Chicago'). Leave as '' to use whatever PHP itself is configured with —

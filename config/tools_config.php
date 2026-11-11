@@ -189,6 +189,21 @@ return [
         'pages'           => ['organism'],
     ],
 
+    'ontology_browser' => [
+        'id'              => 'ontology_browser',
+        'menu_label'      => 'Ontology Browser',
+        'menu_order'      => 4.7,
+        'name'            => 'Ontology Browser',
+        'icon'            => 'fa-sitemap',
+        'description'     => 'Explore an ontology as a tree, with a page for every term',
+        'btn_class'       => 'btn-tool-teal',
+        'url_path'        => '/tools/ontology_browser.php',
+        'context_params'  => [],
+        // Only where an ontology with a link tree is built (lib/ontologies.php): menu entry and page.
+        'available_if'    => 'moop_ontology_browser_available',
+        'pages'           => [],
+    ],
+
     'primer_maker' => [
         'id'             => 'primer_maker',
         'menu_label'      => 'Primer Maker',

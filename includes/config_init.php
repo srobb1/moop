@@ -239,6 +239,20 @@ function moop_anatomical_expression_available(): bool {
     return $yes = false;
 }
 
+/**
+ * The Ontology Browser's 'available_if': some configured ontology with a link tree (a 'closure'
+ * file) has been built here (lib/ontologies.php). File checks only, once per request.
+ */
+function moop_ontology_browser_available(): bool {
+    static $yes = null;
+    if ($yes !== null) return $yes;
+    require_once __DIR__ . '/../lib/ontologies.php';
+    foreach (moop_ontology_sources() as $prefix => $o) {
+        if (!empty($o['closure']) && is_file(moop_ontology_file($prefix))) return $yes = true;
+    }
+    return $yes = false;
+}
+
 /** The ID translation tool's 'available_if' (Rosetta Stone): some organism has a crosswalk file. */
 function moop_crosswalk_available(): bool {
     static $yes = null;

@@ -564,7 +564,7 @@ ok($_tnew()->getArray('tools_disabled') === ['moopmart', 'genome_browser'],
 // OPT-IN: no tools_layout = today's menu exactly (the render comparison checks the HTML).
 $_t2 = $_tnew();   // tools_disabled = moopmart, genome_browser (saved above)
 $_menu = fn($c) => array_map(fn($i) => $i['type'] === 'divider' ? '|' : $i['id'] . '=' . $i['label'], $c->getToolsMenu());
-ok($_t2->defaultToolsMenuOrder() === ['genome_browser', '|', 'annotation_search', 'moopmart', 'expression', 'anatomy_search', 'crosswalk', 'blast_search',
+ok($_t2->defaultToolsMenuOrder() === ['genome_browser', '|', 'annotation_search', 'moopmart', 'expression', 'anatomy_search', 'crosswalk', 'ontology_browser', 'blast_search',
                                       'primer_blast', 'primer_maker', 'download_fasta', 'downloads'],
    'default menu = the hand-written one it replaced: Genome Browser, a divider, then the rest in order');
 ok(($_menu($_t2)[0] ?? '') === 'annotation_search=Annotation Search' && !in_array('|', $_menu($_t2), true),
@@ -4113,6 +4113,51 @@ ok(moop_ontology_expand_in('anatomy', 'PLANA:0000036', ['RO:0002131']) === ['PLA
    'expand_in: a relationship the search does not offer is ignored');
 ok(moop_ontology_labels(['PLANA:0000036', 'PLANA:0000017', 'nope'], ['PLANA']) == ['PLANA:0000036' => 'eye', 'PLANA:0000017' => 'photoreceptor neuron'],
    'labels: many names at once; unknown ids are left out');
+
+// The ontology browser reads DIRECT links (the build's `edge` table) -- the closure holds every
+// inferred one. Fixture shaped like relation-graph output: organ <- eye <- camera eye (is a);
+// retina part of eye; rods part of retina; eye part of head. Inferred, NOT direct: camera eye
+// part of head (inherited from eye), rods part of eye (retina is more specific), retina part of
+// organ (follows only through is a), camera eye is a organ (transitive).
+require_once "$BASE/lib/ontology_browser.php";
+file_put_contents("$_od/t_terms.tsv", "term\tfield\tvalue\n"
+    . "TST:0000001\tlabel\torgan\nTST:0000002\tlabel\teye\nTST:0000002\texact_synonym\tocellus\n"
+    . "TST:0000003\tlabel\tcamera eye\nTST:0000004\tlabel\tretina\nTST:0000005\tlabel\thead\n"
+    . "TST:0000006\tlabel\trods\nTST:0000002\tdefinition\tAn organ of sight. [GO:x]\n"
+    . "BFO:0000050\ttype\trelation\nBFO:0000050\tlabel\tpart of\n");
+file_put_contents("$_od/t_closure.tsv", "subject\trelation\tobject\n"
+    . "TST:0000002\trdfs:subClassOf\tTST:0000001\nTST:0000003\trdfs:subClassOf\tTST:0000002\n"
+    . "TST:0000003\trdfs:subClassOf\tTST:0000001\nTST:0000004\tBFO:0000050\tTST:0000002\n"
+    . "TST:0000004\tBFO:0000050\tTST:0000001\nTST:0000002\tBFO:0000050\tTST:0000005\n"
+    . "TST:0000003\tBFO:0000050\tTST:0000005\nTST:0000006\tBFO:0000050\tTST:0000004\n"
+    . "TST:0000006\tBFO:0000050\tTST:0000002\n");
+$_r = moop_ontology_build_from_files('TST', ['terms' => "$_od/t_terms.tsv", 'closure' => "$_od/t_closure.tsv"], "$_od/ontologies/tst.sqlite");
+$_tdb = new PDO("sqlite:$_od/ontologies/tst.sqlite");
+$_edges = $_tdb->query("SELECT subject || ' ' || relation || ' ' || object FROM edge ORDER BY 1")->fetchAll(PDO::FETCH_COLUMN);
+$_tdb = null;
+ok($_r['ok'] && $_edges === ['TST:0000002 BFO:0000050 TST:0000005', 'TST:0000002 rdfs:subClassOf TST:0000001',
+                             'TST:0000003 rdfs:subClassOf TST:0000002', 'TST:0000004 BFO:0000050 TST:0000002',
+                             'TST:0000006 BFO:0000050 TST:0000004'],
+   'edges: only DIRECT links -- not transitive, not inherited from a superclass, not through is-a (' . implode(', ', $_edges) . ')');
+$_oc['ontologies']['TST'] = ['purpose' => 'anatomy', 'search' => true, 'terms' => 'x', 'closure' => 'x',
+                             'relations' => ['rdfs:subClassOf', 'BFO:0000050']];
+$_orp->setValue($_ocfg, $_oc);
+ok(isset(moop_ob_ontologies()['TST']) && !isset(moop_ob_ontologies()['ECO']),
+   'browser: an ontology is offered only when configured AND built');
+$_t = moop_ob_term('TST', 'TST:0000002');
+ok($_t['label'] === 'eye' && $_t['definition'] === 'An organ of sight.' && $_t['synonyms'] === ['exact' => ['ocellus']],
+   'browser: a term with its definition (reference list stripped) and synonyms by kind');
+ok(array_column(moop_ob_links('TST', 'TST:0000002', ['rdfs:subClassOf']), 'label') === ['camera eye']
+   && array_column(moop_ob_links('TST', 'TST:0000002', ['BFO:0000050']), 'label') === ['retina'],
+   'browser: kinds and parts directly below a term (rods sit under retina, not eye)');
+ok(array_column(moop_ob_links('TST', 'TST:0000003', ['rdfs:subClassOf', 'BFO:0000050'], 'up'), 'label') === ['eye'],
+   'browser: camera eye is an eye; it does NOT show "part of head" (inherited from eye)');
+ok((moop_ob_links('TST', 'TST:0000001', ['rdfs:subClassOf'])[0]['children'] ?? null) === 1,
+   'browser: each row counts the terms directly below it (eye: camera eye)');
+ok(array_map(fn($p) => implode(' > ', array_column($p, 'label')), moop_ob_paths('TST', 'TST:0000003')) === ['organ > eye > camera eye'],
+   'browser: the is-a path from the top down to the term');
+ok(moop_ob_term('TST', 'TST:9999999') === null && moop_ob_term('NOPE', 'TST:0000002') === null,
+   'browser: an unknown term or ontology is null, never an error');
 $_orp->setValue($_ocfg, $_osaved);
 exec('rm -rf ' . escapeshellarg($_od));
 
