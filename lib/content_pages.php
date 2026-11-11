@@ -186,7 +186,12 @@ function moop_html_clean(string $html, ?array &$removed = null): string {
         $c->set('HTML.AllowedElements', ['details', 'summary', 'div', 'span', 'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
             'strong', 'b', 'em', 'i', 'u', 's', 'small', 'sub', 'sup', 'blockquote', 'pre', 'code',
             'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'a', 'img', 'iframe']);
-        $c->set('HTML.AllowedAttributes', ['*.class', '*.style', '*.title', 'details.open', 'a.href', 'a.target',
+        // *.id: in-page links ("jump to Histology") on long pages (planosphere's Protocols, Crash
+        // Course, Atlas -- 2026-11-11). Every id is prefixed "pg-", so a page can never take an id the
+        // site's own markup or scripts use (DOM clobbering); its "#x" links are rewritten to match below.
+        $c->set('Attr.EnableID', true);
+        $c->set('Attr.IDPrefix', 'pg-');
+        $c->set('HTML.AllowedAttributes', ['*.id', '*.class', '*.style', '*.title', 'details.open', 'a.href', 'a.target',
             'img.src', 'img.alt', 'img.width', 'img.height', 'iframe.src', 'iframe.width', 'iframe.height',
             'iframe.allowfullscreen', 'th.colspan', 'th.rowspan', 'td.colspan', 'td.rowspan']);
         $c->set('Attr.AllowedFrameTargets', ['_blank']);
@@ -207,6 +212,9 @@ function moop_html_clean(string $html, ?array &$removed = null): string {
     }
     $p = $purifiers[$collect];
     $clean = $p->purify($html);
+    // In-page links follow the ids' "pg-" prefix (above), so an editor writes id="histology" and
+    // href="#histology" and both still meet.
+    $clean = preg_replace('/(<a\b[^>]*\shref=")#(?!pg-)([^"]+)"/i', '$1#pg-$2"', $clean);
     // HTML Purifier drops a disallowed iframe's src but keeps an empty <iframe></iframe>. Remove
     // the husk, and tell the editor why (its error list does not mention it).
     $husks = 0;
