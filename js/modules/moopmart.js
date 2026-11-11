@@ -172,6 +172,12 @@
                             b.classList.add('d-none');
                         }
                     });
+                    // A column from outside organism.sqlite (curated anatomical expression) has no
+                    // count: offer it when a selected organism has that data (data-orgs).
+                    document.querySelectorAll('.mm-ann-col[data-orgs]').forEach(cb => {
+                        const has = cb.dataset.orgs.split(',').some(o => orgs.includes(o));
+                        cb.closest('.mm-ann-item')?.classList.toggle('mm-ann-zerocount', !has);
+                    });
                     applyAnnVisibility();
                     if (summary) {
                         const n = data.total_sources || 0;

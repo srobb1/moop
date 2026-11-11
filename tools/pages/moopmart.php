@@ -622,6 +622,10 @@
                             'label' => 'Annotation Description',
                             'text'  => 'The human-readable text of the annotation.',
                         ],
+                        ...($anatomy_organisms ? [[
+                            'label' => 'Anatomical Expression',
+                            'text'  => 'Where a gene is reported to be expressed, as anatomy terms curated from published papers (ID = the term, Description = its name). Only for organisms that have these curations; the Anatomical Expression Search shows each record with its paper and evidence.',
+                        ]] : []),
                     ],
                 ],
             ],
@@ -696,7 +700,8 @@
                   <input type="checkbox" class="form-check-input flex-shrink-0 mm-ann-col mb-0"
                          id="<?= $safe_id ?>"
                          value="<?= htmlspecialchars($src_name) ?>"
-                         data-type="<?= htmlspecialchars($type) ?>">
+                         data-type="<?= htmlspecialchars($type) ?>"<?= ($src_name === MOOPMART_ANATOMY_SOURCE && $type === MOOPMART_ANATOMY_TYPE)
+                             ? ' data-orgs="' . htmlspecialchars(implode(',', $anatomy_organisms ?? [])) . '"' : '' ?>>
                   <label class="form-check-label mb-0" for="<?= $safe_id ?>"
                          style="cursor:pointer; font-size:0.82rem;">
                     <?= htmlspecialchars($src_name) ?>

@@ -425,3 +425,77 @@ function moop_page_search_ids(string $organism, array $ids, int $limit = 5000): 
     $unknown = array_values(array_filter($ids, fn($i) => !isset($matched[$i]) && !isset($direct[mb_strtolower($i)])));
     return ['rows' => $rows, 'matched' => $matched, 'unknown' => $unknown];
 }
+
+/**
+ * Anatomy terms for MANY genes at once (the Data Exporter's "Anatomical expression" column).
+ * $genes: [key => [ids of that gene: gene id, transcript ids, ...]]. Each gene's ids reach their
+ * reference genes through the crosswalk, then every accession mapped to those genes, then the
+ * curations on any of them -- the same path as the gene-page card, batched so a whole export
+ * chunk costs a handful of queries. Returns [key => [term_id => label]], terms sorted by label;
+ * a gene with no curations is absent. Read-only; [] for an organism without these files.
+ */
+function moop_page_terms_for_genes(string $organism, array $genes): array {
+    require_once __DIR__ . '/crosswalk.php';
+    require_once __DIR__ . '/ontologies.php';
+    $page = moop_page_open($organism);
+    if (!$genes || !$page) return [];
+    $lc = fn($s) => mb_strtolower((string) $s);
+
+    // Only accessions WITH a curation matter (~39k for Schmidtea). A gene's crosswalk can reach
+    // thousands of accessions, so the members are streamed and kept only if curated -- holding
+    // them all (moop_crosswalk_members) ran a 250-gene export chunk out of memory.
+    static $curated = [];
+    if (!isset($curated[$organism])) {
+        $curated[$organism] = array_flip($page->query('SELECT DISTINCT accession_lc FROM curation')->fetchAll(PDO::FETCH_COLUMN));
+    }
+    $is_curated = $curated[$organism];
+
+    $owners = [];   // own id / reference gene (lower case) -> [gene key => true]
+    $all    = [];
+    foreach ($genes as $key => $ids) {
+        foreach (array_filter($ids, 'strlen') as $id) { $owners[$lc($id)][$key] = true; $all[] = $id; }
+    }
+    // own ids -> their reference genes
+    $by_ref = [];   // ref_id (as stored) -> gene keys
+    foreach (moop_crosswalk_genes($organism, $all) as $acc_lc => $rows) {
+        foreach ($rows as $r) $by_ref[$r['ref_id']] = ($by_ref[$r['ref_id']] ?? []) + ($owners[$acc_lc] ?? []);
+    }
+    foreach ($all as $id) $by_ref[$id] = ($by_ref[$id] ?? []) + ($owners[$lc($id)] ?? []);
+
+    // curated accession -> gene keys: the gene's own ids, then every accession mapped to its refs
+    $hit = [];
+    foreach ($owners as $acc_lc => $keys) if (isset($is_curated[$acc_lc])) $hit[$acc_lc] = $keys;
+    $xw = moop_crosswalk_open($organism);
+    if ($xw) {
+        foreach (array_chunk(array_keys($by_ref), 500) as $chunk) {
+            $st = $xw->prepare('SELECT accession_lc, ref_id FROM map WHERE ref_id IN ('
+                               . implode(',', array_fill(0, count($chunk), '?')) . ')');
+            $st->execute(array_map('strval', $chunk));
+            while ($r = $st->fetch(PDO::FETCH_NUM)) {
+                if (isset($is_curated[$r[0]])) $hit[$r[0]] = ($hit[$r[0]] ?? []) + ($by_ref[$r[1]] ?? []);
+            }
+        }
+    }
+    if (!$hit) return [];
+
+    $terms = [];
+    foreach (array_chunk(array_keys($hit), 500) as $chunk) {
+        $st = $page->prepare('SELECT DISTINCT accession_lc, term_id FROM curation WHERE accession_lc IN ('
+                             . implode(',', array_fill(0, count($chunk), '?')) . ')');
+        $st->execute(array_map('strval', $chunk));
+        while ($r = $st->fetch(PDO::FETCH_NUM)) {
+            foreach (array_keys($hit[$r[0]] ?? []) as $key) $terms[$key][$r[1]] = true;
+        }
+    }
+    if (!$terms) return [];
+    $ids    = array_keys(array_merge(...array_values($terms)));
+    $labels = moop_ontology_labels($ids, moop_ontology_by_purpose('anatomy'));
+    $out = [];
+    foreach ($terms as $key => $set) {
+        $row = [];
+        foreach (array_keys($set) as $t) $row[$t] = $labels[$t] ?? $t;
+        asort($row, SORT_NATURAL | SORT_FLAG_CASE);
+        $out[$key] = $row;
+    }
+    return $out;
+}

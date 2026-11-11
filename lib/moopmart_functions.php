@@ -1082,6 +1082,17 @@ function moopmartBuildPreviewRows(array $preview, array $annotation_columns_sele
         foreach ($gene_fids_by_db as $db_path => $fids) {
             $anns_by_db[$db_path] = moopmartGetAnnotationsForGenes(array_keys($fids), $db_path);
         }
+        // Curated anatomy terms (not in organism.sqlite): per database, from its organism's files
+        if (in_array(MOOPMART_ANATOMY_SOURCE, $annotation_columns_selected, true)) {
+            $genes_by_db = [];
+            foreach ($preview as $f) {
+                if (!empty($f['db_path'])) $genes_by_db[$f['db_path']][(int)$f['feature_id']] = $f;
+            }
+            foreach ($genes_by_db as $db_path => $genes) {
+                $org = (string)(reset($genes)['organism_dir'] ?? '');
+                $anns_by_db[$db_path] = moopmartAddAnatomyAnnotations($anns_by_db[$db_path] ?? [], array_values($genes), $db_path, $org);
+            }
+        }
         foreach ($preview as $i => $f) {
             $row_anns[$i] = moopmartRowAnnotations($anns_by_db[$f['db_path'] ?? ''] ?? [], $f);
         }
@@ -1134,4 +1145,46 @@ function moopmartBuildPreviewRows(array $preview, array $annotation_columns_sele
     }
 
     return ['rows' => $rows, 'ann_col_headers' => $ann_col_headers];
+}
+
+// ============================================================
+// ANATOMICAL EXPRESSION (curated, e.g. PAGE) AS AN ANNOTATION COLUMN
+// ============================================================
+
+/** The column's source name, as it appears in the source list, headers and long-format rows. */
+const MOOPMART_ANATOMY_SOURCE = 'Anatomical expression';
+const MOOPMART_ANATOMY_TYPE   = 'Anatomical Expression';
+
+/**
+ * Add each gene's curated anatomy terms to $anns (moopmartGetAnnotationsForGenes() output) under
+ * MOOPMART_ANATOMY_SOURCE: accession = term id, description = term label. Not in organism.sqlite
+ * -- they come from the organism's anatomy_expression.sqlite through its crosswalk, exactly as the
+ * gene page's "Anatomical expression" card does, from the gene AND all its transcripts (fetched
+ * here, not taken from the rows, so a preview of some isoforms is still the file). Held on the
+ * GENE, so every isoform row of it carries the same terms. No files for the organism -> unchanged.
+ *
+ * @param array $gene_rows rows with feature_id + uniquename (the genes of one database)
+ */
+function moopmartAddAnatomyAnnotations(array $anns, array $gene_rows, string $db_path, string $organism): array
+{
+    require_once __DIR__ . '/anatomy_expression.php';
+    if (!$gene_rows || !moop_page_open($organism)) return $anns;
+    $ids = [];
+    foreach ($gene_rows as $g) $ids[(int)$g['feature_id']] = [(string)$g['uniquename']];
+    foreach (moopmartGetChildIds(array_keys($ids), $db_path) as $fid => $children) {
+        foreach ($children as $c) $ids[(int)$fid][] = (string)$c['mrna_id'];
+    }
+    foreach (moop_page_terms_for_genes($organism, $ids) as $fid => $terms) {
+        foreach ($terms as $term_id => $label) {
+            $anns[$fid][MOOPMART_ANATOMY_SOURCE][$term_id] = ['accession' => $term_id, 'description' => $label];
+        }
+    }
+    return $anns;
+}
+
+/** Of $organisms, those with curated anatomical expression (an anatomy_expression.sqlite). */
+function moopmartAnatomyOrganisms(array $organisms): array
+{
+    require_once __DIR__ . '/anatomy_expression.php';
+    return array_values(array_filter($organisms, fn($o) => moop_page_open((string)$o) !== null));
 }

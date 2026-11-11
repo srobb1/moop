@@ -126,6 +126,14 @@ uksort($annotation_source_types, function ($a, $b) use ($ann_order) {
 $annotation_source_names = array_keys($annotation_source_names);
 sort($annotation_source_names);
 
+// Curated anatomical expression (e.g. PAGE) is offered as one more annotation COLUMN for the
+// organisms that have it. Not a filter source ($annotation_source_names): the filters query
+// organism.sqlite, and these terms live in their own file.
+$anatomy_organisms = moopmartAnatomyOrganisms(array_keys($seen_orgs));
+if ($anatomy_organisms) {
+    $annotation_source_types[MOOPMART_ANATOMY_TYPE] = ['color' => 'success', 'sources' => [MOOPMART_ANATOMY_SOURCE]];
+}
+
 // Build organism → groups map for group chips in the flat organism list
 // Only the gene sets this visitor may see, like the home page: reading every entry put the names of
 // groups holding only private gene sets beside organisms the visitor can open.
@@ -148,6 +156,7 @@ echo render_display_page(
         'assembly_names'          => $assembly_names,
         'organism_groups'         => $organism_groups,
         'annotation_source_types'  => $annotation_source_types,
+        'anatomy_organisms'        => $anatomy_organisms,
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
         // scope-selected-panel BEFORE moopmart.js: moopmart.js calls initScopeSelectedPanel().

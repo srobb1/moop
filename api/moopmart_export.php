@@ -248,6 +248,9 @@ if ($output_format === 'tsv') {
             // Expand gene rows to one row per mRNA before streaming
             $expanded   = moopmartExpandToMrnaRows($chunk, $db_path);
             $chunk_anns = moopmartGetAnnotationsForGenes(array_column($chunk, 'feature_id'), $db_path);
+            if (in_array(MOOPMART_ANATOMY_SOURCE, $source_cols, true)) {
+                $chunk_anns = moopmartAddAnatomyAnnotations($chunk_anns, $chunk, $db_path, $org);
+            }
 
             foreach ($expanded as $f) {
                 $base     = array_map(fn($k) => ($feat_col_map[$k][1])($f), $active_feat);
