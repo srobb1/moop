@@ -72,6 +72,21 @@ if ($records !== null) {
         foreach ($view[$k] as &$list) foreach ($list as &$r) { $r['records'] = $count_for($r['id']); $r['records_url'] = $url_for($r['id']); } unset($list, $r);
 }
 
+// Images tagged with this term or any of its parts (gene images, lib/gene_images.php) -- the same reach
+// as the image gallery's term filter, which the card links to. Only images the visitor may see.
+$term_images = null;
+if ((moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy') {
+    require_once __DIR__ . '/../lib/gene_images.php';
+    foreach (glob(rtrim($config->getPath('organism_data'), '/') . '/*/gene_images.sqlite') ?: [] as $f) {
+        $org = basename(dirname($f));
+        $imgs = moop_images_for_terms($org, moop_ontology_expand_in('anatomy', $term['id'], array_keys(moop_ontology_relations('anatomy'))), 1000);
+        if (!$imgs) continue;
+        $term_images = ['organism' => $org, 'total' => count($imgs), 'sample' => array_slice($imgs, 0, 6),
+                        'url' => moop_url('tools/image_gallery.php') . '?' . http_build_query(['organism' => $org, 'term' => $term['id']])];
+        break;
+    }
+}
+
 // No records on this site at all: the site may still name where they are listed.
 $records_elsewhere = $records === null && (moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy'
                    ? moop_ob_records_link($prefix, (string) array_key_first(moop_page_sources()), $term['id'], 'BFO:0000050') : '';
@@ -81,6 +96,7 @@ echo render_display_page(__DIR__ . '/pages/ontology_term.php', [
     'term' => $term, 'prefix' => $prefix, 'ontology_name' => $ontologies[$prefix],
     'release' => (string) (moop_ontology_meta($prefix)['release'] ?? ''), 'view' => $view, 'rels' => $rels,
     'written_html' => $written_html, 'records' => $records, 'records_elsewhere' => $records_elsewhere,
+    'term_images' => $term_images,
     'links' => $obo === '' ? [] : [
         'OLS (EMBL-EBI)' => 'https://www.ebi.ac.uk/ols4/ontologies/' . strtolower($prefix) . '/classes?obo_id=' . rawurlencode($term['id']),
         'OBO PURL'       => 'http://purl.obolibrary.org/obo/' . $obo,

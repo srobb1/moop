@@ -137,6 +137,24 @@ $rows = function (array $list) use ($prefix): string {
     </div>
     <?php endif; ?>
 
+    <?php if (!empty($term_images)): ?>
+    <div class="card shadow-sm mb-4" id="pnav-term-images" data-nav-label="<?= t('Images') ?>">
+      <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Images') ?></h2></div>
+      <div class="card-body">
+        <p class="mb-2"><?= t_markup('%s images of %s or any of its parts.', '<strong>' . number_format($term_images['total']) . '</strong>', htmlspecialchars($term['label'])) ?></p>
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <?php foreach ($term_images['sample'] as $__im):
+              $__q = ['organism' => $term_images['organism'], 'file' => $__im['file'], 'size' => 'thumb'];
+              if ($__im['kind'] === 'movie') $__q['poster'] = 1;
+              if ($__im['kind'] === 'movie' && empty($__im['poster'])) continue; ?>
+            <?= '<a href="' . htmlspecialchars($term_images['url']) . '"><img src="' . htmlspecialchars(moop_url('api/gene_image.php') . '?' . http_build_query($__q)) . '" alt="" loading="lazy" width="120" height="90" style="object-fit:contain;background:#f8f9fa;border:1px solid #dee2e6;border-radius:4px"></a>' . "\n" ?>
+          <?php endforeach; ?>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars($term_images['url']) ?>"><?= t('See them in the image gallery') ?></a>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <?php if ($records === null && $records_elsewhere !== ''): ?>
     <div class="card shadow-sm mb-4" id="pnav-records" data-nav-label="<?= t('Expression records') ?>">
       <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Expression records') ?></h2></div>
