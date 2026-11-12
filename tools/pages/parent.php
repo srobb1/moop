@@ -788,6 +788,74 @@
         </div>
     </div>
 <?php endif; ?>
+<?php if (!empty($compgen_section)):
+    // Comparative genomics across MOOP organisms (OrthoFinder clades, lib/clade_homologs.php). Words
+    // fixed in docs/CLADE_HOMOLOGS_FORMAT.md: "Orthologs in <clade>" and "Gene family in <clade>",
+    // never plain "homologs" (that is the similarity annotation type below).
+    $__cl_labels = $compgen_section['labels'];
+    $__cl_link = function (string $org, array $o, string $gene) use ($__cl_labels): string {
+        $url = moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $org, 'uniquename' => $gene, 'assembly' => $o['assembly'], 'gene_set' => $o['gene_set']]);
+        $l = $__cl_labels[$org][$gene] ?? null;
+        $name = $l ? trim($l['name']) : '';
+        $tip  = $l ? trim($l['description']) : '';
+        return '<a class="font-monospace" href="' . htmlspecialchars($url) . '"' . ($tip !== '' ? ' title="' . htmlspecialchars($tip) . '"' : '') . '>'
+             . htmlspecialchars($gene) . '</a>' . ($name !== '' && $name !== $gene ? ' <span class="text-muted">' . htmlspecialchars($name) . '</span>' : '');
+    };
+    $__ncl = count($compgen_section['clades']);
+?>
+    <!-- Comparative genomics (OrthoFinder clades on this site) -->
+    <div class="card shadow-sm mb-4" id="pnav-compgen" data-nav-label="Comparative genomics">
+        <div class="card-header d-flex align-items-center flex-wrap">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#compgenSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Comparative genomics') ?>" title="<?= t('Show or hide Comparative genomics') ?>">
+                <i class="fas fa-code-branch toggle-icon text-primary"></i>
+            </span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Comparative genomics') ?></span>
+            <span class="ms-2 text-muted small"><?= ($__ncl !== 1 ? t('orthologs and gene family across %d clades on this site', $__ncl)
+                                                                  : t('orthologs and gene family across %d clade on this site', $__ncl)) . "\n" ?></span>
+        </div>
+        <div class="collapse show" id="compgenSection">
+            <div class="card-body">
+            <?php foreach ($compgen_section['clades'] as $__ci => $__c): ?>
+                <?= '<div class="compgen-clade' . ($__ci ? ' mt-4' : '') . '" id="pnav-compgen-' . (int) $__ci . '" data-nav-sub="' . htmlspecialchars($__c['label']) . '">' . "\n" ?>
+                    <h6 class="mb-1"><?= t('Orthologs in %s', $__c['label']) ?></h6>
+                    <p class="small text-muted mb-2"><?= t('OrthoFinder %1$s, gene trees across %2$d gene sets on this site. 1:1 = one gene on each side; 1:many / many:many = duplicated on one or both sides.', $__c['version'], $__c['gene_sets']) ?></p>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle small mb-2 compgen-table">
+                            <thead><tr><th><?= t('Organism') ?></th><th><?= t('Orthologs') ?></th><th><?= t('Rest of the gene family') ?></th></tr></thead>
+                            <tbody>
+                            <?php foreach ($__c['organisms'] as $__org => $__o): ?>
+                                <tr>
+                                    <td class="text-nowrap"><em><?= htmlspecialchars(str_replace('_', ' ', $__org)) ?></em><?php if ($__o['self']): ?> <span class="badge text-bg-light border"><?= t('this organism') ?></span><?php endif; ?></td>
+                                    <td>
+                                        <?php if ($__o['self']): ?><span class="text-muted"><?= t('(same species: see paralogs)') ?></span>
+                                        <?php elseif (!$__o['orthologs']): ?><span class="text-muted"><?= t('none') ?></span>
+                                        <?php else: foreach ($__o['orthologs'] as $__g): ?>
+                                            <div><span class="badge compgen-kind"><?= htmlspecialchars($__g['kind']) ?></span> <?= $__cl_link($__org, $__o, $__g['gene']) ?></div>
+                                        <?php endforeach; endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if (!$__o['family']): ?><span class="text-muted">&mdash;</span>
+                                        <?php else: ?>
+                                        <details>
+                                            <summary><?= count($__o['family']) !== 1 ? ($__o['self'] ? t('%d paralogs', count($__o['family'])) : t('%d more genes', count($__o['family'])))
+                                                                                       : ($__o['self'] ? t('%d paralog', 1) : t('%d more gene', 1)) ?></summary>
+                                            <?php foreach (array_slice($__o['family'], 0, 200) as $__g): ?><div><?= $__cl_link($__org, $__o, $__g) ?></div><?php endforeach; ?>
+                                            <?php if (count($__o['family']) > 200): ?><div class="text-muted"><?= t('and %d more', count($__o['family']) - 200) ?></div><?php endif; ?>
+                                        </details>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="small text-muted mb-0"><?= t('Gene family in %1$s: every gene descended from one ancestral gene in this clade, orthologs and paralogs (orthogroup %2$s).', $__c['label'], $__c['orthogroup']) ?></p>
+                </div>
+            <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
     <!-- Annotations Section -->
     <div class="card shadow-sm mb-4" id="pnav-annotations" data-nav-label="Annotations">

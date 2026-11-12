@@ -647,12 +647,32 @@ if (moop_images_open($organism_name)) {
     }
 }
 
+// Comparative genomics: OrthoFinder clades this gene's gene set belongs to (organisms/.clades/,
+// lib/clade_homologs.php). Orthologs in each clade + the rest of its gene family, only genes whose
+// own gene set the visitor may see. No clade files: one glob. docs/CLADE_HOMOLOGS_FORMAT.md.
+require_once __DIR__ . '/../lib/clade_homologs.php';
+$compgen_section = null;
+if (moop_clades_open()) {
+    $__gs_name = '';
+    foreach ($accessible_sources as $__src) {
+        if ((int) ($__src['gene_set_id'] ?? 0) === (int) ($accessible_gene_set_ids[0] ?? -1)) { $__gs_name = (string) $__src['gene_set']; break; }
+    }
+    if ($__gs_name !== '') {
+        // The clades list genes; an mRNA page asks for its gene.
+        foreach (array_unique(array_filter([$feature_uniquename, $ancestor_feature_uniquename ?? ''])) as $__g) {
+            $__cl = moop_clade_homologs_for_gene($organism_name, $__gs_name, (string) $__g);
+            if ($__cl) { $compgen_section = ['clades' => $__cl, 'labels' => moop_clade_gene_labels($__cl), 'gene' => (string) $__g]; break; }
+        }
+    }
+}
+
 // Render page using layout system
 echo render_display_page(
     __DIR__ . '/pages/parent.php',
     [
         'page_section' => $page_section,
         'image_section' => $image_section,
+        'compgen_section' => $compgen_section,
         'organism_name' => $organism_name,
         'feature_id' => $feature_id,
         'feature_uniquename' => $feature_uniquename,
