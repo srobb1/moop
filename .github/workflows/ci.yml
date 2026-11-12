@@ -14,10 +14,17 @@ on:
   push:
   pull_request:
 
+# A newer push to the same branch cancels any older run still queued or running: only
+# the newest commit needs testing, since it contains everything before it. Added
+# 2026-11-12 after nine runs sat "queued" for a day behind a runner outage.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-test:
     name: php + js lint and smoke tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # pinned: ubuntu-latest moves to 26 (2026-10-19); upgrade on purpose
 
     steps:
       - name: Checkout
@@ -104,7 +111,7 @@ jobs:
   #     no test reaches. Installed in a temp directory: a CI tool, never shipped.
   php-next:
     name: PHP 8.3 readiness
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # pinned: ubuntu-latest moves to 26 (2026-10-19); upgrade on purpose
 
     steps:
       - name: Checkout
@@ -178,14 +185,24 @@ jobs:
   #     not from a list's order (22 of 24 Nvec samples in two projects were mislabelled that way).
   pipeline:
     name: pipeline perl checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # pinned: ubuntu-latest moves to 26 (2026-10-19); upgrade on purpose
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       - name: Perl modules the pipeline loads
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq libdbi-perl libdbd-sqlite3-perl liburi-perl
+        # Retried: one Ubuntu mirror outage (exit 100) turned nine runs red on 2026-11-11.
+        run: |
+          for attempt in 1 2 3; do
+            if sudo apt-get update -qq && sudo apt-get install -y -qq libdbi-perl libdbd-sqlite3-perl liburi-perl; then
+              exit 0
+            fi
+            echo "apt attempt $attempt failed; retrying in $((attempt * 15))s"
+            sleep $((attempt * 15))
+          done
+          echo "::error::apt-get failed 3 times (package mirror unreachable?)"
+          exit 1
 
       - name: Compile every pipeline Perl file (perl -c)
         run: |
