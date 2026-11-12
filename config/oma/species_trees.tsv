@@ -1,0 +1,30 @@
+# Fixed OMA species trees for the 10-species reference set
+#   BRAFL CALMI CAPTE DROME HUMAN LEPOC LOTGI MONBE MOUSE NEMVE
+# one row per target lineage; TARGET is replaced by the target's OMA prefix.
+#
+# make_oma_db_files.pl looks up the target's ncbi-taxon-id (datastore metadata.yaml) in
+# /n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/ncbi_taxonomy/, walks up its NCBI lineage, and uses the first (most specific) row whose
+# taxid is an ancestor. Rows are matched by taxid only; their order here does not matter.
+#
+# Reference backbone (rooted on the choanoflagellate MONBE):
+#   (MONBE,(NEMVE,((DROME,(LOTGI,CAPTE)),(BRAFL,(CALMI,(LEPOC,(HUMAN,MOUSE)))))));
+#
+# tetrapod puts the target as sister to (HUMAN,MOUSE): right for reptiles, amphibians, birds and
+# non-Euarchontoglires mammals (bats, marsupials). A primate or rodent target sits inside
+# (HUMAN,MOUSE) and needs its own tree.
+# flatworm follows Platyhelminthes as sister to Mollusca+Annelida (Rouphozoa vs Lophotrochozoa).
+#
+# lineage	ncbi_taxids	ncbi_names	newick
+tetrapod	32523	Tetrapoda	(MONBE,(NEMVE,((DROME,(LOTGI,CAPTE)),(BRAFL,(CALMI,(LEPOC,(TARGET,(HUMAN,MOUSE))))))));
+ray_finned_fish	7898	Actinopterygii	(MONBE,(NEMVE,((DROME,(LOTGI,CAPTE)),(BRAFL,(CALMI,((LEPOC,TARGET),(HUMAN,MOUSE)))))));
+cartilaginous_fish	7777	Chondrichthyes	(MONBE,(NEMVE,((DROME,(LOTGI,CAPTE)),(BRAFL,((CALMI,TARGET),(LEPOC,(HUMAN,MOUSE)))))));
+cyclostome	1476529	Cyclostomata	(MONBE,(NEMVE,((DROME,(LOTGI,CAPTE)),(BRAFL,(TARGET,(CALMI,(LEPOC,(HUMAN,MOUSE))))))));
+tunicate	7712	Tunicata	(MONBE,(NEMVE,((DROME,(LOTGI,CAPTE)),(BRAFL,(TARGET,(CALMI,(LEPOC,(HUMAN,MOUSE))))))));
+cephalochordate	7735	Cephalochordata	(MONBE,(NEMVE,((DROME,(LOTGI,CAPTE)),((BRAFL,TARGET),(CALMI,(LEPOC,(HUMAN,MOUSE)))))));
+ambulacrarian	7586,10219	Echinodermata,Hemichordata	(MONBE,(NEMVE,((DROME,(LOTGI,CAPTE)),(TARGET,(BRAFL,(CALMI,(LEPOC,(HUMAN,MOUSE))))))));
+mollusc	6447	Mollusca	(MONBE,(NEMVE,((DROME,((LOTGI,TARGET),CAPTE)),(BRAFL,(CALMI,(LEPOC,(HUMAN,MOUSE)))))));
+annelid	6340	Annelida	(MONBE,(NEMVE,((DROME,(LOTGI,(CAPTE,TARGET))),(BRAFL,(CALMI,(LEPOC,(HUMAN,MOUSE)))))));
+flatworm	6157	Platyhelminthes	(MONBE,(NEMVE,((DROME,(TARGET,(LOTGI,CAPTE))),(BRAFL,(CALMI,(LEPOC,(HUMAN,MOUSE)))))));
+ecdysozoan	1206794	Ecdysozoa	(MONBE,(NEMVE,(((DROME,TARGET),(LOTGI,CAPTE)),(BRAFL,(CALMI,(LEPOC,(HUMAN,MOUSE)))))));
+cnidarian	6073	Cnidaria	(MONBE,((NEMVE,TARGET),((DROME,(LOTGI,CAPTE)),(BRAFL,(CALMI,(LEPOC,(HUMAN,MOUSE)))))));
+sponge	6040	Porifera	(MONBE,(TARGET,(NEMVE,((DROME,(LOTGI,CAPTE)),(BRAFL,(CALMI,(LEPOC,(HUMAN,MOUSE))))))));

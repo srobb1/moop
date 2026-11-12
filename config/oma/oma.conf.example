@@ -1,0 +1,15 @@
+# OMA settings (bash syntax). Copy to oma.conf next to the scripts (git-ignored) and edit,
+# or point OMA_CONF at another file. Read by every script in this folder.
+
+# Run folders: OMA_V2/<organism>/<genome>/<geneset> (they mirror the genome datastore)
+OMA_V2=/path/to/OMA_v2
+# Template runs (<template>/OMA.2.7.0, <template>/reference_run) and the setup/submit logs
+OMA_TEMPLATES=$OMA_V2/OMA_TEMPLATE_RUNS
+# The template new runs are copied from (a folder under OMA_TEMPLATES)
+DEFAULT_TEMPLATE=BRAFL_CALMI_CAPTE_DROME_HUMAN_LEPOC_LOTGI_MONBE_MOUSE_NEMVE
+# Genome datastore: <organism>/<genome>/<geneset>/{protein.aa.fa,protein2gene.txt,metadata.yaml}
+GENOMES=/path/to/genomes/v2
+# NCBI taxonomy (nodes.dmp, names.dmp) for the species-tree lookup
+TAXONOMY_DIR=/path/to/ncbi_taxonomy
+# OMA standalone's bin folder (oma-status)
+OMA_BIN=/path/to/OMA.2.7.0/bin
