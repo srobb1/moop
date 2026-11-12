@@ -328,3 +328,20 @@ mv "$tmp" "$out"
 trap 'rm -rf "$work"' EXIT
 sqlite3 "$out" "SELECT key || ': ' || value FROM meta WHERE key IN ('hubs','rows','accessions','genes','sources');"
 echo "wrote $out"
+
+# MOOP mode: also put it where copy2moop ships it, the organism's build folder ($SPECIES_DIR/crosswalk.sqlite
+# -> organisms/<Organism>/crosswalk.sqlite). Only a crosswalk that passed the name check above gets here.
+# A MOOP build of the organism copies its folder back from /scratch with rsync --delete, which would remove
+# or revert a file written meanwhile: take the build's lock first (wait up to 12 h). CROSSWALK_PUBLISH=0
+# skips this step.
+if [ -n "${MOOP_DB:-}" ] && [ "${CROSSWALK_PUBLISH:-1}" != 0 ] && [ -n "${SPECIES_DIR:-}" ]; then
+    pub="$SPECIES_DIR/crosswalk.sqlite"
+    if [ "$(readlink -f "$out")" != "$(readlink -f "$pub")" ]; then
+        exec 8>>"$SPECIES_DIR/.moop_build.lock"
+        echo "waiting for any MOOP build of $org to finish (lock $SPECIES_DIR/.moop_build.lock)"
+        flock -w 43200 8 || die "a MOOP build of $org held its lock for 12 h; $out NOT copied to $pub"
+        cp "$out" "$pub.tmp$$" && chmod 664 "$pub.tmp$$" && mv "$pub.tmp$$" "$pub"
+        flock -u 8
+        echo "copied to $pub (copy2moop ships it with $org)"
+    fi
+fi

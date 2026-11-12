@@ -3,11 +3,17 @@
 ## Publish built organism data to the live MOOP site.
 ##
 ##   copy2moop_v2.sh <organism> <assembly> <gene_set>   one gene set
-##   copy2moop_v2.sh --all                              every active gene set
+##   copy2moop_v2.sh --all                              every active gene set, then the clades
+##   copy2moop_v2.sh --clades                           only the clade homolog files
+##
+## Besides each gene set's files, an organism's crosswalk.sqlite (RosettaStone puts it in
+## data/<Organism>/) goes with it, and data/.clades/<clade>/homologs.sqlite (build_clade_homologs.py)
+## goes to organisms/.clades/<clade>/.
 ##
 ## Options:
 ##   --all         walk $GENOMES/*/*/*/metadata.yaml and copy every gene set marked
 ##                 `active: true`. Same detection as run_all_v2.sh, so the two agree.
+##   --clades      copy only data/.clades/*/homologs.sqlite (--all does these too).
 ##   --dry-run     report what WOULD be copied and change nothing on the far side.
 ##   --force       re-send every file even if the remote copy already matches.
 ##   --checksum    compare by content instead of size+mtime. Thorough and slow --
@@ -23,11 +29,12 @@
 set -u
 
 usage() {
-  sed -n '3,25p' "${BASH_SOURCE[0]}" | sed 's/^## \{0,1\}//'
+  awk 'NR > 2 && /^##/ { sub(/^## ?/, ""); print; next } NR > 2 { exit }' "${BASH_SOURCE[0]}"
   exit "${1:-1}"
 }
 
 ALL=false
+CLADES_ONLY=false
 DRY_RUN=false
 RSYNC_EXTRA=()
 POSITIONAL=()
@@ -35,6 +42,7 @@ POSITIONAL=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --all)      ALL=true ;;
+    --clades)   CLADES_ONLY=true ;;
     --dry-run)  DRY_RUN=true; RSYNC_EXTRA+=(--dry-run) ;;
     ## --ignore-times defeats the size+mtime quick check, which is exactly what
     ## "copy it again even though it looks fine" means.
@@ -329,8 +337,10 @@ copy_one_geneset() {
   fi
 
   ## Organism level (sqlite, json, cache all live at the organism dir, not geneset dir)
+  ## crosswalk.sqlite: RosettaStone's, when the organism has one (send() skips it otherwise)
   send "$REMOTE_ORG_PATH" \
-    "$ORG_DATA/organism.sqlite" "$ORG_DATA/organism.json" "$ORG_DATA/annotation_sources_cache.json"
+    "$ORG_DATA/organism.sqlite" "$ORG_DATA/organism.json" "$ORG_DATA/annotation_sources_cache.json" \
+    "$ORG_DATA/crosswalk.sqlite"
 
   ## Assembly level: genome.json + genome + fai + nucl BLAST index (genome-backed only)
   send "$REMOTE_ASSEMBLY_PATH" "$ASSEMBLY_DATA/genome.json"
@@ -408,7 +418,63 @@ copy_one_geneset() {
   return 0
 }
 
+## Clade homolog files (docs/CLADE_HOMOLOGS_FORMAT.md): data/.clades/<clade>/homologs.sqlite ->
+## organisms/.clades/<clade>/. A file without meta.format = clade_homologs/1, or one that fails
+## integrity_check, is not sent (the site would refuse it anyway). Sets CLADE_FAILED.
+copy_clades() {
+  CLADE_FAILED=0
+  local f clade fmt n=0
+  shopt -s nullglob
+  local files=("$DATA"/.clades/*/homologs.sqlite)
+  shopt -u nullglob
+  if [ "${#files[@]}" -eq 0 ]; then
+    log "CLADE none in $DATA/.clades"
+    return 0
+  fi
+  for f in "${files[@]}"; do
+    clade=$(basename "$(dirname "$f")")
+    FAILED=0; XFER=0
+    fmt=$(sqlite3 -readonly "$f" "SELECT value FROM meta WHERE key = 'format'" 2>/dev/null)
+    if [ "$fmt" != "clade_homologs/1" ] || [ "$(sqlite3 -readonly "$f" 'PRAGMA quick_check' 2>/dev/null)" != ok ]; then
+      log "FAIL  clade $clade — $f is not a valid clade_homologs/1 file; not sent"
+      CLADE_FAILED=$(( CLADE_FAILED + 1 )); continue
+    fi
+    ## same modes as the organism folders: directories 2775, files 664 (group apache comes from organisms/)
+    if ! retry "ssh mkdir $REMOTE_ROOT/.clades/$clade" \
+         "${SSH[@]}" "$REMOTE" "mkdir -p '$REMOTE_ROOT/.clades/$clade' && chmod 2775 '$REMOTE_ROOT/.clades' '$REMOTE_ROOT/.clades/$clade'"; then
+      log "FAIL  clade $clade — cannot create $REMOTE_ROOT/.clades/$clade on $REMOTE"
+      CLADE_FAILED=$(( CLADE_FAILED + 1 )); continue
+    fi
+    ## rsync writes to a temporary file and renames it into place (no --inplace), so a page reading
+    ## homologs.sqlite never sees a half-written one; --chmod gives it 664 whatever the local mode
+    RSYNC_EXTRA+=(--chmod=F664)
+    send "$REMOTE_ROOT/.clades/$clade" "$f"
+    unset 'RSYNC_EXTRA[${#RSYNC_EXTRA[@]}-1]'
+    if [ "$FAILED" -ne 0 ]; then
+      log "FAIL  clade $clade — copy incomplete"
+      CLADE_FAILED=$(( CLADE_FAILED + 1 ))
+    elif [ "$XFER" -eq 0 ]; then
+      log "SAME  clade $clade — remote already matches"
+    elif $DRY_RUN; then
+      log "WOULD clade $clade — homologs.sqlite differs"
+    else
+      log "OK    clade $clade — homologs.sqlite copied"
+    fi
+    n=$(( n + 1 ))
+  done
+  return 0
+}
+
 ## ---------------------------------------------------------------- drivers
+
+if $CLADES_ONLY; then
+  [ "${#POSITIONAL[@]}" -eq 0 ] && ! $ALL \
+    || { echo "--clades takes no other arguments (--all already includes the clades)" >&2; usage 1; }
+  log "==== copy2moop --clades$($DRY_RUN && echo ' [DRY RUN]')"
+  copy_clades
+  [ "$CLADE_FAILED" -eq 0 ] || exit 1
+  exit 0
+fi
 
 if $ALL; then
   [ "${#POSITIONAL[@]}" -eq 0 ] \
@@ -452,7 +518,10 @@ if $ALL; then
   log "     FAILED      : $n_fail"
   for f in ${FAILED_LIST+"${FAILED_LIST[@]}"}; do log "       $f"; done
 
-  [ "$n_fail" -eq 0 ] || exit 1
+  log "==== clades"
+  copy_clades
+
+  [ "$n_fail" -eq 0 ] && [ "$CLADE_FAILED" -eq 0 ] || exit 1
   exit 0
 fi
 
