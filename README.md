@@ -446,7 +446,8 @@ first host got by hand over time. Go through this list as well, in roughly this 
 6. **Cache directory outside the document root**: set `cache_path` (Admin → Site
    Configuration) to e.g. `/var/www/<site>-cache`. `scripts/fix_moop_selinux.sh` creates
    and labels it. Re-run `install_security_report.sh` and `install_monitor.sh` afterwards;
-   both write into the cache directory.
+   both write into the cache directory. The cache grows with use, so it belongs on the big disk;
+   if `/var/www` is on a small disk, see docs/INSTALL.md, "Cache on the big disk".
 7. **Site-data backup.** Housekeeping copies config, metadata and the users file into
    `site_data_path` on its own. Make that directory a git repository with a private remote
    if you want history off the machine. MOOP never commits; the dashboard shows the command.

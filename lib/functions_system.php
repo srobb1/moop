@@ -420,3 +420,29 @@ function moop_find_jbrowse_cli(): ?string {
     $found = moop_find_executable('jbrowse');
     return $cached = ($found !== '' ? $found : null);
 }
+
+/**
+ * Is the cache folder on a disk that will run out? '' if fine, else one sentence saying why.
+ *
+ * Caches grow with use (gene image thumbnails, BLAST queue, ontology files, request metrics), and
+ * on a host whose big disk is mounted at the web root (/var/www/html) a cache at its default
+ * place, /var/www/<site>-cache, lands on the small /var disk instead -- this host until
+ * 2026-11-12. Warns when the cache disk has under 5 GB free, or when it is a DIFFERENT disk from
+ * organisms/ with under a tenth of its free space. Fix: docs/INSTALL.md "Cache on the big disk"
+ * (scripts/move_cache_to_data_disk.sh keeps the path and moves the storage).
+ */
+function moop_cache_disk_problem(string $cache_dir, string $organism_dir): string {
+    if (!is_dir($cache_dir) || !is_dir($organism_dir)) return '';
+    $free_c = @disk_free_space($cache_dir);
+    $free_o = @disk_free_space($organism_dir);
+    if ($free_c === false) return '';
+    $gb = fn($b) => sprintf('%.1f GB', $b / 1073741824);
+    if ($free_c < 5 * 1073741824) {
+        return "the cache folder's disk has only " . $gb($free_c) . ' free';
+    }
+    $same = @stat($cache_dir)['dev'] === @stat($organism_dir)['dev'];
+    if (!$same && $free_o !== false && $free_c < $free_o / 10) {
+        return "the cache folder is on a smaller disk than organisms/ (" . $gb($free_c) . ' free vs ' . $gb($free_o) . ')';
+    }
+    return '';
+}

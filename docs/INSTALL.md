@@ -45,6 +45,7 @@ added afterwards; MOOP degrades feature-by-feature rather than failing to start.
 - [jq](#jq)
 - [Identifying your web server user](#identifying-your-web-server-user)
 - [Manual setup, without the installer](#manual-setup-without-the-installer)
+- [Cache on the big disk](#cache-on-the-big-disk)
 
 ---
 
@@ -384,6 +385,33 @@ for the System Monitor. It backs up nginx.conf and restores it if `nginx -t` fai
 ```bash
 sudo scripts/install_https_redirect.sh your-name     # nginx only; safe to re-run
 ```
+
+---
+
+## Cache on the big disk
+
+The cache folder (`cache_path`, default `/var/www/<site>-cache`) grows with use: gene image
+thumbnails, the BLAST queue, ontology files, request metrics. It belongs on the server's **big**
+disk. On most machines the default place is fine. On a machine whose big disk is mounted at the
+web root (`/var/www/html`) while `/var/www` sits on a small system disk, it is not.
+`setup-check.php` and the admin dashboard warn when the cache disk has under 5 GB free, or under a
+tenth of the free space of the disk holding `organisms/`.
+
+Fix it without changing any setting: move the files to the big disk and bind-mount them back at
+the same path. MOOP's `cache_path`, the System Monitor and the security-report timer keep working
+unchanged.
+
+```bash
+sudo scripts/move_cache_to_data_disk.sh /var/www/moop-cache /var/www/html/.site-caches
+df -h /var/www/moop-cache            # should now show the big disk
+sudo rm -rf /var/www/moop-cache.old-on-var    # once the site looks fine
+```
+
+Inside the web root the target folder **must start with a dot** (`.site-caches`): nginx refuses
+dot-paths, and the cache holds the per-request log with user names, so it must never be served.
+The script refuses a target that is not. It records the mount in `/etc/fstab`, adds the SELinux
+rule for the new place, and checks the web user can write there. Done on simrbase-dev for all
+three sites on 2026-11-12.
 
 ---
 

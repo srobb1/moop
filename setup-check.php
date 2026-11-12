@@ -657,6 +657,12 @@ if (!empty($config['cache_path'])) {
 if (!empty($config['site_data_path'])) {
     $writable_dirs['site_data_path'] = $config['site_data_path'];
 }
+// The cache grows with use (thumbnails, BLAST queue, ontology files): it belongs on the big disk.
+$__cache_dir = !empty($config['cache_path']) ? $config['cache_path'] : ($config['organism_data'] ?? "$base/organisms") . '/.cache';
+if ($__why = moop_cache_disk_problem($__cache_dir, $config['organism_data'] ?? "$base/organisms")) {
+    warn("Cache folder disk: $__why ($__cache_dir)",
+         "Move it to the big disk, keeping its path: sudo scripts/move_cache_to_data_disk.sh $__cache_dir <folder-on-the-big-disk> (docs/INSTALL.md, \"Cache on the big disk\")");
+}
 
 // Directories that must EXIST but are read-only to the web server. Verified 2026-07-16:
 // neither contains a single apache-owned file, the §55 writable table lists neither, and

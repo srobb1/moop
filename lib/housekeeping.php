@@ -1033,6 +1033,17 @@ function housekeeping_environment_check() {
         ];
     }
 
+    // 1c. The cache folder's disk (moop_cache_disk_problem): caches grow with use.
+    require_once __DIR__ . '/cache_paths.php';
+    $cache_root = moop_cache_root();
+    if ($why = moop_cache_disk_problem($cache_root, ConfigManager::getInstance()->getPath('organism_data'))) {
+        $warnings[] = [
+            'level' => 'warning',
+            'message' => 'Cache folder <code>' . htmlspecialchars($cache_root) . '</code>: ' . htmlspecialchars($why) . '. Move it to the big disk, keeping its path (docs/INSTALL.md, "Cache on the big disk"):',
+            'command' => 'sudo ' . ConfigManager::getInstance()->getPath('site_path') . '/scripts/move_cache_to_data_disk.sh ' . $cache_root . ' <folder-on-the-big-disk>',
+        ];
+    }
+
     // 2. JWT keys exist and readable -- the very files the signing code uses.
     require_once __DIR__ . '/jbrowse/track_token.php';
     $private_key = moop_jwt_key_paths()['private'];
