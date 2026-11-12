@@ -189,6 +189,13 @@
 
     // ---- expand any Bootstrap collapse hiding the target, then scroll ------
     function expandAncestors(el) {
+      // A section that starts closed (Annotations, Images, ...): going to it opens it, as going to
+      // anything inside it does.
+      var own = el.querySelector && el.querySelector(":scope > .collapse:not(.show)");
+      if (own) {
+        if (window.bootstrap && window.bootstrap.Collapse) window.bootstrap.Collapse.getOrCreateInstance(own).show();
+        else own.classList.add("show");
+      }
       var p = el.parentElement;
       while (p) {
         if (p.classList && p.classList.contains("collapse") && !p.classList.contains("show")) {

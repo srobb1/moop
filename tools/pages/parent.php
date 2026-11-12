@@ -651,10 +651,11 @@
     <!-- Anatomical expression (curated; data source per organism, e.g. PAGE) -->
     <div class="card shadow-sm mb-4" id="pnav-page" data-nav-label="Anatomical expression">
         <div class="card-header d-flex align-items-center flex-wrap">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#pageSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Anatomical expression') ?>" title="<?= t('Show or hide Anatomical expression') ?>">
-                <i class="fas fa-microscope toggle-icon text-primary"></i>
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#pageSection" aria-expanded="false" aria-controls="pageSection" role="button" aria-label="<?= t('Show or hide Anatomical expression') ?>" title="<?= t('Show or hide Anatomical expression') ?>">
+                <i class="fas fa-plus toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Anatomical expression') ?></span>
+            <?= help_modal_trigger('anatomy-expression-help', '', 'Help: anatomical expression') ?>
             <span class="ms-2 text-muted small">
                 <?php if ($__pc): ?>
                     <?= ($__papers !== 1 ? t('%1$d records in %2$d anatomy terms, from %3$d papers', count($__pc), count($__by_term), $__papers)
@@ -664,7 +665,7 @@
                 <?php endif; ?>
             </span>
         </div>
-        <div class="collapse show" id="pageSection">
+        <div class="collapse" id="pageSection">
             <div class="card-body">
                 <?php if ($__pc): ?>
                 <p class="small text-muted mb-2"><?= t('Published as expressed in:') ?><?php if ($page_section['source'] !== ''): ?> <span class="ms-1"><?= t('Data:') ?> <?= $page_section['source_url'] !== '' ? '<a href="' . htmlspecialchars($page_section['source_url']) . '" target="_blank" rel="noopener">' . htmlspecialchars($page_section['source']) . '</a>' : htmlspecialchars($page_section['source']) ?></span><?php endif; ?></p>
@@ -697,7 +698,7 @@
                 <?php endif; ?>
                 <?php if ($__aka_by): ?>
                 <details>
-                    <summary class="small"><?= t('Also known as: %1$d ids in %2$d other transcriptomes and datasets', count($page_section['aka']), count($__aka_by)) ?><?= $page_section['name'] !== '' ? ' <span class="text-muted">(' . htmlspecialchars(t_plain($page_section['name'])) . ')</span>' : '' ?></summary>
+                    <summary class="small"><?= t('Also known as: %1$d ids for this same gene in %2$d other transcriptomes and datasets of this species', count($page_section['aka']), count($__aka_by)) ?><?= $page_section['name'] !== '' ? ' <span class="text-muted">(' . htmlspecialchars(t_plain($page_section['name'])) . ')</span>' : '' ?></summary>
                     <dl class="row small mb-0 mt-2">
                         <?php foreach ($__aka_by as $__src => $__ids): ?>
                             <dt class="col-sm-3 font-monospace"><?= htmlspecialchars($__src) ?></dt>
@@ -732,14 +733,15 @@
     <!-- Gene images, by analysis -->
     <div class="card shadow-sm mb-4" id="pnav-images" data-nav-label="Images">
         <div class="card-header d-flex align-items-center flex-wrap">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#imagesSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Images') ?>" title="<?= t('Show or hide Images') ?>">
-                <i class="fas fa-images toggle-icon text-primary"></i>
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#imagesSection" aria-expanded="false" aria-controls="imagesSection" role="button" aria-label="<?= t('Show or hide Images') ?>" title="<?= t('Show or hide Images') ?>">
+                <i class="fas fa-plus toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Images') ?></span>
+            <?= help_modal_trigger('gene-images-help', '', 'Help: images') ?>
             <span class="ms-2 text-muted small"><?= ($__ng !== 1 ? t('%1$d images from %2$d analyses', $__still_total, $__ng)
                                                                  : t('%1$d images from %2$d analysis', $__still_total, $__ng)) . "\n" ?></span>
         </div>
-        <div class="collapse show" id="imagesSection">
+        <div class="collapse" id="imagesSection">
             <div class="card-body">
                 <?php foreach ($image_section['groups'] as $__gi => $__g): $__a = $__g['analysis']; ?>
                 <?= '<div class="gene-images-analysis' . ($__gi ? ' mt-4' : '') . '" id="pnav-images-' . (int) $__gi . '" data-nav-sub="' . htmlspecialchars($__a['title']) . '">' . "\n" ?>
@@ -884,14 +886,15 @@
     <!-- Comparative genomics (OrthoFinder clades on this site) -->
     <div class="card shadow-sm mb-4" id="pnav-compgen" data-nav-label="Comparative genomics">
         <div class="card-header d-flex align-items-center flex-wrap">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#compgenSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Comparative genomics') ?>" title="<?= t('Show or hide Comparative genomics') ?>">
-                <i class="fas fa-code-branch toggle-icon text-primary"></i>
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#compgenSection" aria-expanded="false" aria-controls="compgenSection" role="button" aria-label="<?= t('Show or hide Comparative genomics') ?>" title="<?= t('Show or hide Comparative genomics') ?>">
+                <i class="fas fa-plus toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Comparative genomics') ?></span>
+            <?= help_modal_trigger('compgen-help', '', 'Help: comparative genomics') ?>
             <span class="ms-2 text-muted small"><?= ($__ncl !== 1 ? t('orthologs and gene family across %d clades on this site', $__ncl)
                                                                   : t('orthologs and gene family across %d clade on this site', $__ncl)) . "\n" ?></span>
         </div>
-        <div class="collapse show" id="compgenSection">
+        <div class="collapse" id="compgenSection">
             <div class="card-body">
             <?php foreach ($compgen_section['clades'] as $__ci => $__c):
                 $__cur_aliases = $__c['aliases'] ?? [];
@@ -908,7 +911,7 @@
                     <?php // The same gene in this species' other gene sets, minus the one this page is on.
                     $__cur_aliases[$organism_name][$__c['self_gene']] = array_values(array_filter($__cur_aliases[$organism_name][$__c['self_gene']] ?? [], fn($a) => $a['gene_set'] !== $compgen_section['page_gene_set']));
                     if ($__cur_aliases[$organism_name][$__c['self_gene']]): ?>
-                    <p class="small mb-2"><?= t('The same gene in other gene sets:') ?><?= $__cl_also($organism_name, $__c['self_gene']) ?></p>
+                    <p class="small mb-2"><?= t('The same gene in other gene sets of this species:') ?><?= $__cl_also($organism_name, $__c['self_gene']) ?></p>
                     <?php endif; ?>
                     <?php if ($__others): ?>
                     <div class="table-responsive">
@@ -1409,6 +1412,47 @@ $annot_sections[] = ['heading' => 'Getting them out', 'cards' => [
     ['label' => 'Search within a type',
      'text'  => 'The box beside those buttons filters that one table as you type.'],
 ]];
+
+if (!empty($page_section)) echo help_modal('anatomy-expression-help', 'Anatomical expression', [
+    ['heading' => 'What it shows', 'cards' => [
+        ['label' => 'Published records', 'text' => 'Where this gene is reported to be expressed, by anatomy term, as recorded by hand from published papers: the kind of experiment (evidence), the life stage, the specimen and the paper.'],
+        ['label' => 'The anatomy terms', 'text' => 'Each badge is an anatomy term with its number of records. Click one to find every gene recorded there.'],
+    ]],
+    ['heading' => 'Why records made under other ids show here', 'cards' => [
+        ['label' => 'Same species, other ids', 'text' => 'Papers name a gene by whatever transcript or array id they used. The Rosetta Stone matches those ids to this gene by sequence, within this species only, so a record made under any of them appears here.'],
+        ['label' => 'Also known as', 'text' => 'This same gene\'s ids in the other transcriptomes and data sets of this species. These are not other species: genes in other species are under Comparative genomics.'],
+    ]],
+], ['intro' => 'Curated expression records for this gene, and the other names it goes by in this species.']);
+
+if (!empty($image_section)) echo help_modal('gene-images-help', 'Images', [
+    ['heading' => 'What it shows', 'cards' => [
+        ['label' => 'In situ images', 'text' => 'Where this gene is expressed in the embryo, one image per stage, from whole-mount in situ hybridization.'],
+        ['label' => 'Cluster map', 'text' => 'The first tile of a single-cell section names its cell clusters (for example Nb1 to Nb12). Read the plots after it against it.'],
+        ['label' => 'Feature plot', 'text' => 'Every cell on the cluster map, coloured by how much of this gene it expresses.'],
+        ['label' => 'Violin plot', 'text' => 'This gene\'s expression in each cluster: the wider the shape, the more cells at that level.'],
+    ]],
+    ['heading' => 'Movies and stage panels', 'cards' => [
+        ['label' => 'Not shown here', 'text' => 'Embryo movies mostly show several genes stained together, and stage panels summarise all stages. The line in each section counts them; View them opens them in the image gallery.'],
+    ]],
+    ['heading' => 'Where they come from', 'cards' => [
+        ['label' => 'Same species, other ids', 'text' => 'An image recorded under another id of this gene in this species (matched by sequence, the Rosetta Stone) is shown here too.'],
+        ['label' => 'Tap or click', 'text' => 'A thumbnail opens a larger view with its caption, genes, anatomy terms and credit.'],
+    ]],
+], ['intro' => 'Pictures of this gene\'s expression from published analyses.']);
+
+if (!empty($compgen_section)) echo help_modal('compgen-help', 'Comparative genomics', [
+    ['heading' => 'Across species on this site', 'cards' => [
+        ['label' => 'What it compares', 'text' => 'This gene with genes of other species on this site, from gene trees built from protein sequences, one gene set per species.'],
+        ['label' => 'Orthologs', 'text' => 'Genes in other species that descend from the same ancestral gene, separated when the species split.'],
+        ['label' => '1:1, 1:many, many:many', 'text' => '1:1 is one gene on each side, the clearest ortholog. 1:many means the gene was duplicated in the other species, many:1 in this one, many:many in both.'],
+        ['label' => 'Paralogs', 'text' => 'Copies of the gene within this species, from a duplication.'],
+        ['label' => 'Other family members', 'text' => 'Genes of the same family in another species that are not orthologs of this gene, for example copies of an older duplication.'],
+    ]],
+    ['heading' => 'Not the same as', 'cards' => [
+        ['label' => 'Rosetta Stone', 'text' => 'The same gene\'s ids in other gene sets of this species, matched by sequence. That is within one species; comparative genomics is across species.'],
+        ['label' => 'Annotations: Orthologs, Homologs', 'text' => 'Those compare this gene with reference species outside this site (OMA, eggNOG, BLAST). This card compares species on this site.'],
+    ]],
+], ['intro' => 'This gene across the species on this site: orthologs, paralogs and the gene family.']);
 
 echo help_modal('annotations-help', 'Annotations on this page', $annot_sections,
     ['intro' => 'What these results are, and where each one came from.']);
