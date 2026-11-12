@@ -117,7 +117,9 @@ if (isset($annotation_config['annotation_types'])) {
     foreach ($types as $key => $type_config) {
         if ($type_config['enabled'] ?? true) {
             $analysis_order[] = $key;
-            $analysis_desc[$key] = $type_config['description'] ?? '';
+            // Admin-written text, so through t_plain() where it is printed (CLAUDE.md 7b): on a site with
+            // more than one language it is recorded and lands in Manage Translations' spreadsheet.
+            $analysis_desc[$key] = ($type_config['description'] ?? '') !== '' ? t_plain((string) $type_config['description']) : '';
             $annotation_colors[$key] = $type_config['color'] ?? 'secondary';
             $annotation_labels[$key] = $type_config['display_label'] ?? $key;
         }

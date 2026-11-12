@@ -168,7 +168,7 @@ foreach ($aggregated_sources as $type => $sources_by_name) {
         $color = $annotation_config['annotation_types'][$type]['color'];
     }
     if (!empty($annotation_config['annotation_types'][$type]['description'])) {
-        $description = $annotation_config['annotation_types'][$type]['description'];
+        $description = t_plain((string) $annotation_config['annotation_types'][$type]['description']);   // translatable (CLAUDE.md 7b)
     }
     
     $sources = array_values($sources_by_name);
