@@ -206,17 +206,16 @@ return [
     'crosswalk' => [
         'Schmidtea_mediterranea' => [
             'name'   => 'Rosetta Stone Transcript Mapper',
-            // Only for building crosswalk.sqlite HERE (scripts/build_crosswalk.php). Once the compute
-            // side ships the built file (copy2moop), remove this line -- pages never read the folder.
-            'folder' => '/var/www/html/.planophere_notes/smr_reformat_for_blaze_load',
+            // Built on the compute side (RosettaStone, MOOP mode: hub and source names ARE MOOP gene set
+            // names, checked by crosswalk/check_crosswalk.py) and shipped as crosswalk.sqlite. No 'folder' /
+            // 'file' here: the mapping files are not on the web server (scripts/build_crosswalk.php needs them).
+            // A hub with assembly + gene_set links to MOOP gene pages; 'transcripts' = its transcript source.
             'hubs'   => [
-                'S2F19H1_WBPS19_genes' => ['file' => 'S2F19H1_WBPS19_genes.mapping', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19',
-                                           'transcripts' => 'S2F19H1_WBPS19_transcripts'],
-                'S2F19H2_WBPS19_genes' => ['file' => 'S2F19H2_WBPS19_genes.mapping',    // haplotype 2: not loaded in simrbase
-                                           'transcripts' => 'S2F19H2_WBPS19_transcripts'],
+                'schMedS3h1_WBPS19' => ['assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19', 'transcripts' => 'schMedS3h1_WBPS19_transcripts'],
+                'schMedS3h2_WBPS19' => ['assembly' => 'schMedS3h2', 'gene_set' => 'schMedS3h2_WBPS19', 'transcripts' => 'schMedS3h2_WBPS19_transcripts'],
                 // SMED3 transcripts: some accessions reach one but no h1 gene (dd_Smed_v4_12_0_1 ->
                 // SMED30005911), so it is a hub too -- the old Rosetta page's smed_20140614 column.
-                'smed_20140614'        => ['file' => 'smed_20140614.mapping', 'assembly' => 'smed_20140614', 'gene_set' => 'smed_20140614'],
+                'smed_20140614'     => ['assembly' => 'smed_20140614', 'gene_set' => 'smed_20140614'],
             ],
             // The translation tool (tools/crosswalk.php): a column of these sources' ids beside every
             // reference gene, whatever the visitor ticks (the old Rosetta page's smed_20140614 column).
@@ -232,12 +231,14 @@ return [
             // SmedGD answered 404 / nothing on 2026-11-10, so those ids are plain text until a working
             // address is known. A source missing here is still listed, under its raw name.
             'sources' => [
-                'S2F19H1_WBPS19_genes'       => ['group' => 'site', 'label' => 'Rink lab, H1 gene models (schMedS3 h1, WormBase ParaSite)', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19'],
-                'S2F19H1_WBPS19_transcripts' => ['group' => 'site', 'label' => 'Rink lab, H1 transcript models (schMedS3 h1, WormBase ParaSite)', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19'],
-                'S2F19H2_WBPS19_genes'       => ['group' => 'models', 'label' => 'Rink lab, H2 gene models (schMedS3 h2, WormBase ParaSite)', 'url' => 'https://parasite.wormbase.org/Multi/Search/Results?species=all;idx=;q={id}'],
-                'S2F19H2_WBPS19_transcripts' => ['group' => 'models', 'label' => 'Rink lab, H2 transcript models (schMedS3 h2, WormBase ParaSite)', 'url' => 'https://parasite.wormbase.org/Multi/Search/Results?species=all;idx=;q={id}'],
+                'schMedS3h1_WBPS19'             => ['group' => 'site', 'label' => 'Rink lab, H1 gene models (schMedS3 h1, WormBase ParaSite)', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19'],
+                'schMedS3h1_WBPS19_transcripts' => ['group' => 'site', 'label' => 'Rink lab, H1 transcript models (schMedS3 h1, WormBase ParaSite)', 'assembly' => 'schMedS3h1', 'gene_set' => 'schMedS3h1_WBPS19'],
+                'schMedS3h2_WBPS19'             => ['group' => 'site', 'label' => 'Rink lab, H2 gene models (schMedS3 h2, WormBase ParaSite)', 'assembly' => 'schMedS3h2', 'gene_set' => 'schMedS3h2_WBPS19'],
+                'schMedS3h2_WBPS19_transcripts' => ['group' => 'site', 'label' => 'Rink lab, H2 transcript models (schMedS3 h2, WormBase ParaSite)', 'assembly' => 'schMedS3h2', 'gene_set' => 'schMedS3h2_WBPS19'],
+                'schMedA2h1_orig'               => ['group' => 'site', 'label' => 'schMedA2 h1 gene models (GCA_057920485.1)', 'assembly' => 'GCA_057920485.1', 'gene_set' => 'schMedA2h1_orig'],
+                'schMedA2h2_orig'               => ['group' => 'site', 'label' => 'schMedA2 h2 gene models (GCA_057920495.1)', 'assembly' => 'GCA_057920495.1', 'gene_set' => 'schMedA2h2_orig'],
                 'smed_20140614'              => ['group' => 'site', 'label' => 'Sánchez Alvarado lab, smed_20140614 (SMED3), 2014', 'assembly' => 'smed_20140614', 'gene_set' => 'smed_20140614'],
-                'dd_Smed_v6'                 => ['group' => 'site', 'label' => 'Rink lab, Dresden v6 (PlanMine)', 'assembly' => 'dd_v6', 'gene_set' => 'ddv6'],
+                'ddv6'                       => ['group' => 'site', 'label' => 'Rink lab, Dresden v6 (PlanMine)', 'assembly' => 'dd_v6', 'gene_set' => 'ddv6'],
                 'dd_Smed_v4'                 => ['group' => 'tx', 'label' => 'Rink lab, Dresden v4 (PlanMine)'],
                 'dd_Smes_v1'                 => ['group' => 'tx', 'label' => 'Rink lab, SMES v1 (PlanMine)'],
                 'dd_Smes_v2'                 => ['group' => 'models', 'label' => 'Rink lab, SMES v2 gene models and transcripts (PlanMine)'],

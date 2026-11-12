@@ -27,7 +27,7 @@ CREATE TABLE map (
   accession_lc TEXT NOT NULL,   -- lower(seq_id): lookups are case-insensitive
   source       TEXT NOT NULL,   -- seq_id_source, e.g. dd_Smed_v4, GPL14150, smed_ncbi_20240424
   ref_id       TEXT NOT NULL,   -- the reference gene / transcript id
-  hub          TEXT NOT NULL    -- which hub file the row came from, e.g. S2F19H1_WBPS19_genes
+  hub          TEXT NOT NULL    -- which hub file the row came from, e.g. schMedS3h1_WBPS19
 );
 CREATE INDEX m_acc ON map (accession_lc);
 CREATE INDEX m_ref ON map (ref_id, hub);
@@ -41,13 +41,13 @@ CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 | `format` | `crosswalk/1` — MOOP refuses a file without it (a wrong file gives a clear error, not odd results) |
 | `organism` | the MOOP organism folder name, e.g. `Schmidtea_mediterranea` |
 | `built_at` | ISO 8601 time |
-| `hubs` | JSON object, hub -> rows loaded, e.g. `{"S2F19H1_WBPS19_genes":1104910}` |
+| `hubs` | JSON object, hub -> rows loaded, e.g. `{"schMedS3h1_WBPS19":1203019}` |
 | `rows`, `accessions`, `genes`, `sources` | counts (informational) |
 
 Hub names must match the organism's `crosswalk` entry in MOOP's configuration, which says which
 hubs link to MOOP gene pages (`gene_set`, `assembly`) and which link out. Schmidtea mediterranea:
-`S2F19H1_WBPS19_genes` (S3 h1 genes), `smed_20140614` (SMED3 transcripts),
-`S2F19H2_WBPS19_genes` (S3 h2 genes, not in simrbase).
+`schMedS3h1_WBPS19` (S3 h1 genes), `schMedS3h2_WBPS19` (S3 h2 genes), `smed_20140614` (SMED3
+transcripts). Since 2026-11-11 compute names every hub and source after its MOOP gene set.
 
 Build to a temporary name and move it into place only when complete (`PRAGMA integrity_check`
 = `ok`), so MOOP never opens a half-written file.
