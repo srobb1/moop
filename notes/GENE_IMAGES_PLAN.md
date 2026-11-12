@@ -1,5 +1,13 @@
 # Gene images: in situ, RNAi phenotypes and other pictures of a gene
 
+> **2026-11-12 — design changed; read `docs/ORGANISM_SIDE_FILES.md` §2–3 first.** The two-file
+> design below (a `gene_images.moop.tsv` loaded by the pipeline + a sidecar) is replaced by ONE
+> per-organism `images/images.tsv` → `gene_images.sqlite`, built on the web side like
+> `anatomy_expression.sqlite`, with every row naming its data set (organism/assembly/gene set,
+> optional analysis) for access. First data: Schmidtea, from the old Planosphere database — Davies
+> 2017 in situ images + movies (PLANA-tagged) and Zeng 2018 single-cell plots (~98,000). There are
+> no cuttingclass images yet. The serving, gene-page and checker sections below still apply.
+
 **Status:** PLAN, not started (written 2026-11-05). Nothing is built; nothing changes until a step
 below is done.
 

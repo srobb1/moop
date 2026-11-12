@@ -485,6 +485,33 @@ function has_gene_set_access($organism_name, $assembly_name, $gene_set) {
 }
 
 /**
+ * May this visitor see data that BELONGS TO a data set -- an image, a curation, an ID mapping,
+ * an analysis result? The one rule for every side file (docs/ORGANISM_SIDE_FILES.md §3):
+ * the data set must exist on this site (a retired gene set's directory is gone) and the visitor
+ * must have the gene set itself (has_gene_set_access(): public flag, collaborator list, admin,
+ * IP range). If any parent is private, so is the item.
+ *
+ * $analysis: reserved. No analysis-level rules exist yet; when they do, they go HERE, so every
+ * caller gets them at once. Today any analysis of a visible gene set is visible.
+ *
+ * Memoised per request: a gallery asks about the same few data sets many times.
+ */
+if (!function_exists('moop_dataset_visible')) {
+function moop_dataset_visible(string $organism, string $assembly, string $gene_set, string $analysis = ''): bool {
+    static $memo = [];
+    $key = "$organism\0$assembly\0$gene_set\0$analysis\0" . get_access_level() . "\0" . (get_username() ?? '');
+    if (isset($memo[$key])) return $memo[$key];
+    $ok = false;
+    $safe = '/^[A-Za-z0-9_.-]+$/';
+    if (preg_match($safe, $organism) && preg_match($safe, $assembly) && preg_match($safe, $gene_set)) {
+        $dir = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . "/$organism/$assembly/$gene_set";
+        $ok = is_dir($dir) && has_gene_set_access($organism, $assembly, $gene_set);
+    }
+    return $memo[$key] = $ok;
+}
+}
+
+/**
  * The collaborator half of has_gene_set_access(): does this logged-in user's own
  * access list grant the gene set? One definition, shared with
  * moop_visible_group_entries() so the two cannot drift.
