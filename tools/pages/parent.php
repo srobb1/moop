@@ -796,7 +796,18 @@
     $__cl_labels = $compgen_section['labels'];
     // A gene: its id (linked), then its symbol if it has a real one, then a short description --
     // so a reader can see when a listed gene is plainly something else (a zinc finger in a PARP family).
-    $__cl_link = function (string $org, array $o, string $gene) use ($__cl_labels): string {
+    $__cur_aliases = [];   // the clade being drawn: [organism => [gene => [['gene_set','assembly','gene'], ...]]] (format 2)
+    $__cl_also = function (string $org, string $gene) use (&$__cur_aliases): string {
+        $by = [];
+        foreach ($__cur_aliases[$org][$gene] ?? [] as $a) {
+            $u = moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $org, 'uniquename' => $a['gene'], 'assembly' => $a['assembly'], 'gene_set' => $a['gene_set']]);
+            $by[$a['gene_set']][] = '<a class="font-monospace" href="' . htmlspecialchars($u) . '">' . htmlspecialchars($a['gene']) . '</a>';
+        }
+        $h = '';
+        foreach ($by as $gs => $links) $h .= ' <span class="compgen-also">' . t_markup('also in %1$s: %2$s', htmlspecialchars($gs), implode(', ', $links)) . '</span>';
+        return $h;
+    };
+    $__cl_link = function (string $org, array $o, string $gene) use ($__cl_labels, $__cl_also): string {
         $url  = moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $org, 'uniquename' => $gene, 'assembly' => $o['assembly'], 'gene_set' => $o['gene_set']]);
         $l    = $__cl_labels[$org][$gene] ?? null;
         $name = $l ? trim($l['name']) : '';
@@ -807,7 +818,8 @@
         return '<a class="font-monospace" href="' . htmlspecialchars($url) . '"' . ($desc !== '' ? ' title="' . htmlspecialchars($desc) . '"' : '') . '>'
              . htmlspecialchars($gene) . '</a>'
              . (!$is_id ? ' <strong>' . htmlspecialchars($name) . '</strong>' : '')
-             . ($short !== '' ? ' <span class="text-muted">' . htmlspecialchars($short) . '</span>' : '');
+             . ($short !== '' ? ' <span class="text-muted">' . htmlspecialchars($short) . '</span>' : '')
+             . $__cl_also($org, $gene);
     };
     $__cl_list = function (string $org, array $o, array $genes, int $show, string $more_label) use ($__cl_link): string {
         $h = '';
@@ -842,12 +854,19 @@
         <div class="collapse show" id="compgenSection">
             <div class="card-body">
             <?php foreach ($compgen_section['clades'] as $__ci => $__c):
+                $__cur_aliases = $__c['aliases'] ?? [];
                 $__self = null; $__others = [];
                 foreach ($__c['organisms'] as $__org => $__o) { if ($__o['self']) $__self = [$__org, $__o]; else $__others[$__org] = $__o; }
             ?>
                 <?= '<div class="compgen-clade' . ($__ci ? ' mt-4' : '') . '" id="pnav-compgen-' . (int) $__ci . '" data-nav-sub="' . htmlspecialchars($__c['label']) . '">' . "\n" ?>
                     <h6 class="mb-1"><?= t('Orthologs in %s', $__c['label']) ?></h6>
-                    <p class="small text-muted mb-2"><?= t('OrthoFinder %1$s, gene trees across %2$d gene sets on this site. 1:1 = one gene on each side; 1:many / many:many = duplicated on one or both sides.', $__c['version'], $__c['gene_sets']) ?></p>
+                    <?php if (!empty($__c['via'])): ?>
+                    <p class="small mb-2 compgen-via"><?= t_markup('Orthology is computed on one gene set per species. This gene matches %1$s in %2$s by sequence (%3$s), so these are that gene\'s orthologs.',
+                        '<span class="font-monospace">' . htmlspecialchars($__c['via']['gene']) . '</span>', htmlspecialchars($__c['via']['gene_set']), htmlspecialchars($__c['via']['alias_method'] !== '' ? $__c['via']['alias_method'] : 'RosettaStone')) ?></p>
+                    <?php elseif (!empty($__c['aliases'][$organism_name][$__c['self_gene']])): ?>
+                    <p class="small mb-2"><?= t('This gene in other gene sets:') ?><?= $__cl_also($organism_name, $__c['self_gene']) ?></p>
+                    <?php endif; ?>
+                    <p class="small text-muted mb-2"><?= t('%1$s %2$s, gene trees across %3$d gene sets on this site (one per species). 1:1 = one gene on each side; 1:many / many:many = duplicated on one or both sides.', $__c['method'], $__c['version'], $__c['gene_sets']) ?></p>
                     <?php if ($__others): ?>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle small mb-2 compgen-table">
