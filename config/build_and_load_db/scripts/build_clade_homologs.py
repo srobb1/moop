@@ -206,24 +206,27 @@ def main():
             die(f"{m}: {n} genes in the results, members.tsv says {d['genes_expected']}")
 
     # --- HOGs
+    # OrthoFinder 3 builds its final orthogroups (Orthogroups.tsv) from the N0 HOGs and keeps no N0.tsv:
+    # Phylogenetic_Hierarchical_Orthogroups/ has N1.tsv, N2.tsv, ... only (a 2-species run has none).
+    # So N0, the whole clade, is the orthogroup: N0.HOG<n> for OG<n>. Deeper nodes are OrthoFinder's HOGs.
     hogs = []                                    # (member, gene, node, hog)
     hog_files = sorted(glob.glob(os.path.join(R, "Phylogenetic_Hierarchical_Orthogroups", "N*.tsv")))
-    if hog_files:
+    for f in hog_files:
+        node = os.path.basename(f)[:-4]
+        h, hrows = read_tsv(f)
+        for r in hrows:
+            for s, cell in zip(h[3:], r[3:]):
+                for g in split_genes(cell):
+                    hogs.append((s, g, node, r[0]))
+    if any(node == "N0" for _, _, node, _ in hogs):
         hog_source = "OrthoFinder HOGs"
-        for f in hog_files:
-            node = os.path.basename(f)[:-4]
-            h, hrows = read_tsv(f)
-            for r in hrows:
-                for s, cell in zip(h[3:], r[3:]):
-                    for g in split_genes(cell):
-                        hogs.append((s, g, node, r[0]))
-    elif len(members) == 2:
-        hog_source = "orthogroups (a 2-species run has one node and OrthoFinder writes no HOG files)"
+    else:
         for (s, g), og in genes.items():
             if og:
                 hogs.append((s, g, "N0", "N0.HOG" + og[2:]))
-    else:
-        die(f"no HOG files in {R}/Phylogenetic_Hierarchical_Orthogroups")
+        hog_source = ("N0 = the orthogroups (OrthoFinder 3 makes them from the N0 HOGs and writes no N0.tsv)"
+                      + (f"; {', '.join(sorted({n for _, _, n, _ in hogs if n != 'N0'}, key=lambda x: int(x[1:])))} "
+                         "= OrthoFinder HOGs" if hog_files else ""))
 
     # --- species tree nodes
     tree_file = os.path.join(R, "Species_Tree", "SpeciesTree_rooted_node_labels.txt")
@@ -238,6 +241,9 @@ def main():
         node_rows.append((n["node"], n["parent"], label))
 
     # --- pairs
+    # Collect the pairs first; the kind comes afterwards from the partner counts. A row of Orthologues/
+    # is not one orthology relation: OrthoFinder can list one gene's 13 orthologs as 13 rows of one gene
+    # each (Danio 100004171, a histone cluster), so a row's own gene counts would call each of them 1:1.
     pairs = {}                                   # (a member, a gene, b member, b gene) -> kind
     for f in glob.glob(os.path.join(R, "Orthologues", "*.tsv")):
         a_sp = os.path.basename(f)[:-4]
@@ -246,10 +252,9 @@ def main():
         h, prow = read_tsv(f)                    # Orthogroup, Species, <a_sp>, Orthologs
         for r in prow:
             b_sp, a_genes, b_genes = r[1], split_genes(r[2]), split_genes(r[3])
-            k = kind(len(a_genes), len(b_genes))
             for a in a_genes:
                 for b in b_genes:
-                    pairs[(a_sp, a, b_sp, b)] = k
+                    pairs[(a_sp, a, b_sp, b)] = None
     from_files = len(pairs)
     sc_file = os.path.join(R, "Orthogroups", "Orthogroups_SingleCopyOrthologues.txt")
     added_sc = 0
@@ -262,15 +267,27 @@ def main():
             for a_sp, a in og_genes[og]:
                 for b_sp, b in og_genes[og]:
                     if a_sp != b_sp and (a_sp, a, b_sp, b) not in pairs:
-                        pairs[(a_sp, a, b_sp, b)] = "1:1"
+                        pairs[(a_sp, a, b_sp, b)] = None
                         added_sc += 1
-    # mirror check: every a->b has b->a with the mirrored kind
-    mirror = {"1:1": "1:1", "1:many": "many:1", "many:1": "1:many", "many:many": "many:many"}
+    # every a->b also as b->a
     fixed = 0
-    for (a_sp, a, b_sp, b), k in list(pairs.items()):
+    for (a_sp, a, b_sp, b) in list(pairs):
         if (b_sp, b, a_sp, a) not in pairs:
-            pairs[(b_sp, b, a_sp, a)] = mirror[k]
+            pairs[(b_sp, b, a_sp, a)] = None
             fixed += 1
+    # kind of a->b, read from a's side: how many orthologs a has in b's species, and b in a's
+    n_partners = {}                              # (member, gene, other member) -> partner count
+    for (a_sp, a, b_sp, b) in pairs:
+        n_partners[(a_sp, a, b_sp)] = n_partners.get((a_sp, a, b_sp), 0) + 1
+    for key in pairs:
+        a_sp, a, b_sp, b = key
+        pairs[key] = kind(n_partners[(b_sp, b, a_sp)], n_partners[(a_sp, a, b_sp)])
+    # check: a gene's kinds agree with its partner count, and a->b mirrors b->a
+    mirror = {"1:1": "1:1", "1:many": "many:1", "many:1": "1:many", "many:many": "many:many"}
+    for (a_sp, a, b_sp, b), k in pairs.items():
+        many_right = k.endswith("many")
+        if many_right != (n_partners[(a_sp, a, b_sp)] > 1) or pairs[(b_sp, b, a_sp, a)] != mirror[k]:
+            die(f"pair kind check failed: {a_sp} {a} -> {b_sp} {b} is {k}")
     print(f"pairs: {from_files} from Orthologues/, {added_sc} 1:1 from single-copy orthogroups, "
           f"{fixed} added as mirrors; {len(pairs)} total")
     # diagnostic: species pairs that both have exactly one gene in an orthogroup but no pair row
@@ -337,7 +354,9 @@ CREATE INDEX p_a ON pair (gene_a);
         "clade": clade,
         "label": args.label or info.get("label") or clade,
         "taxon_id": info.get("taxon_id", ""),
-        "orthofinder_version": version or "",
+        "method": "OrthoFinder",
+        "method_version": version or "",
+        "orthofinder_version": version or "",   # kept: the site reads method/method_version, and still accepts this
         "run_date": run_date or "",
         "built_at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
         "genes": str(len(genes)),
