@@ -380,16 +380,28 @@ The steps below are the ones that installing cuttingclass beside simrbase actual
    exemptions for the whole server. Both scripts now refuse and say so; `--move-here` moves them
    on purpose. The server is already watched from the first site's dashboard.
 
-**Keeping the sites on the same code.** Both checkouts come from the same repository, and
-neither is edited by hand: change one tree, commit and push, then update every site at once:
+**Keeping the sites on the same code.** Every site's checkout comes from the same repository,
+and none is edited by hand: change one tree, commit and push, then update every site at once:
 
 ```bash
 scripts/update_sites.sh            # pull, fix permissions, setup-check, every site
 scripts/update_sites.sh --check    # report only
 ```
 
-It refuses to update a checkout with local changes, so a hand edit cannot be silently kept or
-lost.
+- **Which sites:** every MOOP checkout under `/var/www/html` — it finds them itself (on this
+  host: cuttingclass, planosphere, moop/simrbase). A new site needs no registering; once it is
+  cloned there, the next run includes it.
+- **Run it from any one site's folder, as the checkouts' owner** (not root, not `sudo`): git
+  and the permissions hook need the owner.
+- **Order:** the other sites first, simrbase (`moop`) last, so a bad update shows up on a
+  smaller site first. It stops at the first problem.
+- **Per site:** refuses if there are local changes (so a hand edit cannot be silently kept or
+  lost), `git pull --ff-only`, restores web-readable permissions, runs `setup-check.php` and
+  reports its FAIL count.
+- **Success** ends with `All N sites at the same commit.` and exit 0.
+
+A new script in `scripts/` (such as `reset_password.php`) reaches every site this way; run
+each site's own copy from that site's folder.
 
 `setup.php` refuses to run if the config it loads describes a different directory than the
 one it is running in, which stops a second install writing into the first one's files.

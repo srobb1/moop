@@ -648,6 +648,12 @@ the `users_file` key, `site_config.php` default overridable in `config_editable.
 Locked out / forgotten password: `sudo -u apache php scripts/reset_password.php <user>`
 (`--list`, `--unlock`); README §Troubleshooting.
 
+### Update every site on this host after a push
+`scripts/update_sites.sh` (as smr, not sudo; `--check` = report only). It finds every MOOP
+checkout under `/var/www/html` (cuttingclass, planosphere, moop — simrbase last), pulls
+`--ff-only`, fixes permissions, runs setup-check, and must end "All N sites at the same
+commit." Never hand-edit a site's checkout; it refuses to update one with local changes.
+
 ---
 
 ## Repo Structure: App vs. Site Data
