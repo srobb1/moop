@@ -634,7 +634,7 @@
         </div>
     </div>
     <?php endif; ?>
-<?php if (!empty($page_section)):   /* at column 0, no blank line before: emits nothing at all when absent */
+<?php if (!empty($page_section['curations'])):   /* at column 0, no blank line before: emits nothing at all when absent */
         // PAGE: where this gene was published as expressed (curated, by anatomy term), and its ids in
         // other transcriptomes. Built in tools/parent.php from anatomy_expression.sqlite + crosswalk.sqlite.
         // A compact summary first (terms with counts); the records and the ids open on demand.
@@ -645,8 +645,6 @@
         foreach ($__pc as $__r) $__by_term[$__r['term_id']] = ($__by_term[$__r['term_id']] ?? 0) + 1;
         arsort($__by_term);
         $__papers = count(array_unique(array_column($__pc, 'pmid')));
-        $__aka_by = [];
-        foreach ($page_section['aka'] as $__m) $__aka_by[$__m['source']][] = $__m['accession'];
     ?>
     <!-- Anatomical expression (curated; data source per organism, e.g. PAGE) -->
     <div class="card shadow-sm mb-4" id="pnav-page" data-nav-label="Anatomical expression">
@@ -694,17 +692,6 @@
                             </tbody>
                         </table>
                     </div>
-                </details>
-                <?php endif; ?>
-                <?php if ($__aka_by): ?>
-                <details>
-                    <summary class="small"><?= t('Also known as: %1$d ids for this same gene in %2$d other transcriptomes and datasets of this species', count($page_section['aka']), count($__aka_by)) ?><?= $page_section['name'] !== '' ? ' <span class="text-muted">(' . htmlspecialchars(t_plain($page_section['name'])) . ')</span>' : '' ?></summary>
-                    <dl class="row small mb-0 mt-2">
-                        <?php foreach ($__aka_by as $__src => $__ids): ?>
-                            <dt class="col-sm-3 font-monospace"><?= htmlspecialchars($__src) ?></dt>
-                            <dd class="col-sm-9 font-monospace"><?= htmlspecialchars(implode(' ', array_slice(array_unique($__ids), 0, 50))) ?><?= count(array_unique($__ids)) > 50 ? ' …' : '' ?></dd>
-                        <?php endforeach; ?>
-                    </dl>
                 </details>
                 <?php endif; ?>
             </div>
@@ -824,6 +811,86 @@
         </div>
     </div>
 <?php endif; ?>
+<?php if (!empty($page_section['aka'])):
+    // The Rosetta Stone: this gene under its other ids in THIS species (crosswalk.sqlite, matched by
+    // sequence). Its own card -- it serves the curations, the images and comparative genomics alike --
+    // placed right before Comparative genomics so "within this species" and "across species" sit side
+    // by side (Sofia, 2026-11-12). Ids of gene sets on this site link to their gene page.
+    $__aka_by = [];
+    foreach ($page_section['aka'] as $__m) $__aka_by[$__m['source']][] = $__m['accession'];
+    $__xs = moop_crosswalk_sources()[$organism_name]['sources'] ?? [];
+    uksort($__aka_by, fn($a, $b) => [empty($__xs[$a]['gene_set']), $__xs[$a]['label'] ?? $a] <=> [empty($__xs[$b]['gene_set']), $__xs[$b]['label'] ?? $b]);
+    $__n_ids = count(array_unique(array_column($page_section['aka'], 'accession')));
+    // One id: its gene page when its gene set is on this site, plus an outside link when the source has
+    // one (crosswalk sources' 'url', {id} filled in -- the same setting the ID Translator uses).
+    $__aka_fmt = function (array $c, string $id) use ($organism_name): string {
+        $h = '<span class="font-monospace">' . htmlspecialchars($id) . '</span>';
+        if (!empty($c['gene_set'])) {
+            $u = moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism_name, 'uniquename' => $id, 'assembly' => (string) ($c['assembly'] ?? ''), 'gene_set' => (string) $c['gene_set']]);
+            $h = '<a class="font-monospace" href="' . htmlspecialchars($u) . '">' . htmlspecialchars($id) . '</a>';
+        }
+        if (!empty($c['url']) && preg_match('#^https://#', (string) $c['url'])) {
+            $h .= ' <a class="small text-muted" href="' . htmlspecialchars(str_replace('{id}', rawurlencode($id), (string) $c['url'])) . '" target="_blank" rel="noopener" title="' . t('Open outside this site') . '"><i class="fa fa-external-link-alt"></i></a>';
+        }
+        return $h;
+    };
+    // A gene set's genes and its transcripts are one row (RS_101 + RS_101_transcripts): what a reader
+    // thinks of as one source. Rows: [label => [['kind', ids, cfg], ...]], gene sets on this site first.
+    // Grouped by GENE SET when the source is one on this site (its genes and its transcripts are
+    // separate crosswalk sources), else by source. The row is labelled by its genes' source; the words
+    // gene / transcript(s) only appear when a row has both.
+    $__aka_rows = [];
+    foreach ($__aka_by as $__src => $__ids) {
+        $__c = $__xs[$__src] ?? [];
+        $__key = !empty($__c['gene_set']) ? 'gs:' . $__c['gene_set'] : 'src:' . $__src;
+        $__is_tx = str_ends_with($__src, '_transcripts') || stripos((string) ($__c['label'] ?? ''), 'transcript model') !== false;
+        $__row = &$__aka_rows[$__key];
+        $__row['site'] = !empty($__c['gene_set']);
+        if (!isset($__row['label']) || !$__is_tx) $__row['label'] = preg_replace('/,\s*transcripts?$/i', '', (string) ($__c['label'] ?? $__src));
+        $__row['parts'][] = ['kind' => $__is_tx ? 'transcripts' : 'gene', 'ids' => array_values(array_unique($__ids)), 'cfg' => $__c];
+        unset($__row);
+    }
+    foreach ($__aka_rows as &$__row) {
+        usort($__row['parts'], fn($a, $b) => strcmp($a['kind'], $b['kind']));   // gene before transcripts
+        if (count($__row['parts']) === 1) $__row['parts'][0]['kind'] = '';
+    }
+    unset($__row);
+    uasort($__aka_rows, fn($a, $b) => [!$a['site'], $a['label']] <=> [!$b['site'], $b['label']]);
+?>
+    <!-- Same gene in this species (the Rosetta Stone) -->
+    <div class="card shadow-sm mb-4" id="pnav-samegene" data-nav-label="Same gene in this species">
+        <div class="card-header d-flex align-items-center flex-wrap">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#sameGeneSection" aria-expanded="false" aria-controls="sameGeneSection" role="button" aria-label="<?= t('Show or hide Same gene in this species') ?>" title="<?= t('Show or hide Same gene in this species') ?>">
+                <i class="fas fa-plus toggle-icon text-primary"></i>
+            </span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Same gene in this species') ?></span>
+            <?= help_modal_trigger('same-gene-help', '', 'Help: same gene in this species') ?>
+            <span class="ms-2 text-muted small"><?= t('%1$s in %2$s (Rosetta Stone)',
+                ($__n_ids !== 1 ? t_plain('%d other ids', $__n_ids) : t_plain('%d other id', 1)),
+                (count($__aka_by) !== 1 ? t_plain('%d gene sets and data sets', count($__aka_by)) : t_plain('%d gene set or data set', 1))) . "\n" ?></span>
+        </div>
+        <div class="collapse" id="sameGeneSection">
+            <div class="card-body">
+                <p class="small text-muted mb-2"><?= t('This gene under the names it has in other gene sets, transcriptomes, microarrays and EST collections of this species, matched by sequence. Genes in other species are in Comparative genomics.') ?></p>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle small mb-0">
+                        <thead><tr><th><?= t('Source') ?></th><th><?= t('Ids') ?></th></tr></thead>
+                        <tbody>
+                        <?php foreach ($__aka_rows as $__row): ?>
+                            <tr>
+                                <td><?= htmlspecialchars(t_plain($__row['label'])) ?><?= $__row['site'] ? ' <span class="badge text-bg-light border fw-normal">' . t('on this site') . '</span>' : '' ?></td>
+                                <td><?php foreach ($__row['parts'] as $__part): ?>
+                                    <div><?php if ($__part['kind'] === 'gene'): ?><span class="text-muted"><?= t('gene') ?></span> <?php elseif ($__part['kind'] === 'transcripts'): ?><span class="text-muted"><?= count($__part['ids']) !== 1 ? t('transcripts') : t('transcript') ?></span> <?php endif; ?><?= implode(', ', array_map(fn($id) => $__aka_fmt($__part['cfg'], (string) $id), array_slice($__part['ids'], 0, 50))) . (count($__part['ids']) > 50 ? ' …' : '') ?></div>
+                                <?php endforeach; ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 <?php if (!empty($compgen_section)):
     // Comparative genomics across MOOP organisms (OrthoFinder clades, lib/clade_homologs.php). Words
     // fixed in docs/CLADE_HOMOLOGS_FORMAT.md: "Orthologs in <clade>", "Paralogs in <species>" (same
@@ -907,11 +974,6 @@
                     <p class="small mb-2 compgen-via"><?= t_markup('Orthologs are computed on gene set %2$s. Within this species, this gene is the same gene as %1$s there (matched by sequence, the Rosetta Stone), so these are its orthologs in other species.',
                         '<a class="font-monospace" href="' . htmlspecialchars(moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism_name, 'uniquename' => $__c['via']['gene'], 'gene_set' => $__c['via']['gene_set']])) . '">' . htmlspecialchars($__c['via']['gene']) . '</a>',
                         htmlspecialchars($__c['via']['gene_set'])) ?></p>
-                    <?php endif; ?>
-                    <?php // The same gene in this species' other gene sets, minus the one this page is on.
-                    $__cur_aliases[$organism_name][$__c['self_gene']] = array_values(array_filter($__cur_aliases[$organism_name][$__c['self_gene']] ?? [], fn($a) => $a['gene_set'] !== $compgen_section['page_gene_set']));
-                    if ($__cur_aliases[$organism_name][$__c['self_gene']]): ?>
-                    <p class="small mb-2"><?= t('The same gene in other gene sets of this species:') ?><?= $__cl_also($organism_name, $__c['self_gene']) ?></p>
                     <?php endif; ?>
                     <?php if ($__others): ?>
                     <div class="table-responsive">
@@ -1413,16 +1475,28 @@ $annot_sections[] = ['heading' => 'Getting them out', 'cards' => [
      'text'  => 'The box beside those buttons filters that one table as you type.'],
 ]];
 
-if (!empty($page_section)) echo help_modal('anatomy-expression-help', 'Anatomical expression', [
+if (!empty($page_section['curations'])) echo help_modal('anatomy-expression-help', 'Anatomical expression', [
     ['heading' => 'What it shows', 'cards' => [
         ['label' => 'Published records', 'text' => 'Where this gene is reported to be expressed, by anatomy term, as recorded by hand from published papers: the kind of experiment (evidence), the life stage, the specimen and the paper.'],
         ['label' => 'The anatomy terms', 'text' => 'Each badge is an anatomy term with its number of records. Click one to find every gene recorded there.'],
     ]],
     ['heading' => 'Why records made under other ids show here', 'cards' => [
         ['label' => 'Same species, other ids', 'text' => 'Papers name a gene by whatever transcript or array id they used. The Rosetta Stone matches those ids to this gene by sequence, within this species only, so a record made under any of them appears here.'],
-        ['label' => 'Also known as', 'text' => 'This same gene\'s ids in the other transcriptomes and data sets of this species. These are not other species: genes in other species are under Comparative genomics.'],
     ]],
 ], ['intro' => 'Curated expression records for this gene, and the other names it goes by in this species.']);
+
+if (!empty($page_section['aka'])) echo help_modal('same-gene-help', 'Same gene in this species', [
+    ['heading' => 'Within one species: the Rosetta Stone', 'cards' => [
+        ['label' => 'What it lists', 'text' => 'This gene under the ids it has in other gene sets, transcriptomes, microarrays and EST collections of the same species.'],
+        ['label' => 'How they are matched', 'text' => 'By sequence: every source was aligned to this species\' reference transcripts, and ids that reach the same reference gene are the same gene.'],
+        ['label' => 'What it is used for', 'text' => 'It is how published expression records, images and comparative genomics made under an older id reach this gene page.'],
+        ['label' => 'On this site', 'text' => 'Ids from gene sets on this site open their own gene page. The others are names from older data sets.'],
+    ]],
+    ['heading' => 'Not the same as', 'cards' => [
+        ['label' => 'Comparative genomics', 'text' => 'Genes in other species (orthologs and the gene family) are in the next card. The Rosetta Stone never crosses species.'],
+        ['label' => 'ID Translator', 'text' => 'To translate many ids at once, use the ID Translator tool.'],
+    ]],
+], ['intro' => 'One gene, many names, one species.']);
 
 if (!empty($image_section)) echo help_modal('gene-images-help', 'Images', [
     ['heading' => 'What it shows', 'cards' => [

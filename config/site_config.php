@@ -273,8 +273,8 @@ return [
             'hubs'   => ['RS_2025_04' => ['assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04', 'transcripts' => 'RS_2025_04_transcripts']],
             'source_groups' => ['site' => 'Gene sets on this site'],
             'sources' => [
-                'RS_2025_04' => ['group' => 'site', 'label' => 'RefSeq RS_2025_04', 'assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04'],
-                'RS_2025_04_transcripts' => ['group' => 'site', 'label' => 'RefSeq RS_2025_04, transcripts', 'assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04'],
+                'RS_2025_04' => ['group' => 'site', 'label' => 'RefSeq RS_2025_04', 'assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04', 'url' => 'https://www.ncbi.nlm.nih.gov/gene/{id}'],
+                'RS_2025_04_transcripts' => ['group' => 'site', 'label' => 'RefSeq RS_2025_04, transcripts', 'assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
                 '20260404' => ['group' => 'site', 'label' => 'Ensembl 2026-04-04 gene set', 'assembly' => 'GCA_000002035.4', 'gene_set' => '20260404'],
             ],
         ],
@@ -283,8 +283,8 @@ return [
             'hubs'   => ['RS_101' => ['assembly' => 'GCF_932526225.1', 'gene_set' => 'RS_101', 'transcripts' => 'RS_101_transcripts']],
             'source_groups' => ['site' => 'Gene sets on this site'],
             'sources' => [
-                'RS_101' => ['group' => 'site', 'label' => 'RefSeq RS_101', 'assembly' => 'GCF_932526225.1', 'gene_set' => 'RS_101'],
-                'RS_101_transcripts' => ['group' => 'site', 'label' => 'RefSeq RS_101, transcripts', 'assembly' => 'GCF_932526225.1', 'gene_set' => 'RS_101'],
+                'RS_101' => ['group' => 'site', 'label' => 'RefSeq RS_101', 'assembly' => 'GCF_932526225.1', 'gene_set' => 'RS_101', 'url' => 'https://www.ncbi.nlm.nih.gov/gene/{id}'],
+                'RS_101_transcripts' => ['group' => 'site', 'label' => 'RefSeq RS_101, transcripts', 'assembly' => 'GCF_932526225.1', 'gene_set' => 'RS_101', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
                 'NV2' => ['group' => 'site', 'label' => 'NV2 gene models', 'assembly' => 'GCA_033964005.1', 'gene_set' => 'NV2'],
             ],
         ],
@@ -293,8 +293,8 @@ return [
             'hubs'   => ['RS_2025_08' => ['assembly' => 'GCF_048934315.1', 'gene_set' => 'RS_2025_08', 'transcripts' => 'RS_2025_08_transcripts']],
             'source_groups' => ['site' => 'Gene sets on this site'],
             'sources' => [
-                'RS_2025_08' => ['group' => 'site', 'label' => 'RefSeq RS_2025_08', 'assembly' => 'GCF_048934315.1', 'gene_set' => 'RS_2025_08'],
-                'RS_2025_08_transcripts' => ['group' => 'site', 'label' => 'RefSeq RS_2025_08, transcripts', 'assembly' => 'GCF_048934315.1', 'gene_set' => 'RS_2025_08'],
+                'RS_2025_08' => ['group' => 'site', 'label' => 'RefSeq RS_2025_08', 'assembly' => 'GCF_048934315.1', 'gene_set' => 'RS_2025_08', 'url' => 'https://www.ncbi.nlm.nih.gov/gene/{id}'],
+                'RS_2025_08_transcripts' => ['group' => 'site', 'label' => 'RefSeq RS_2025_08, transcripts', 'assembly' => 'GCF_048934315.1', 'gene_set' => 'RS_2025_08', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
                 'PM2023_newmodels-2023Nov' => ['group' => 'site', 'label' => 'PM2023 new models (Nov 2023)', 'assembly' => 'GCF_010993605.1', 'gene_set' => 'PM2023_newmodels-2023Nov'],
             ],
         ],
