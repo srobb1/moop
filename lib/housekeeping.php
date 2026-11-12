@@ -1023,6 +1023,16 @@ function housekeeping_environment_check() {
         }
     }
 
+    // 1b. gd: optional, but a site WITH gene images needs it, or every gallery sends full-size
+    // files (lib/gene_images.php). Warn only where images exist.
+    if (!extension_loaded('gd') && glob(rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/*/images/images.tsv')) {
+        $warnings[] = [
+            'level' => 'warning',
+            'message' => 'PHP extension <code>gd</code> is not loaded, and this site has gene images: thumbnails cannot be made, so pages send full-size images. Install it:',
+            'command' => "sudo $pkg php-gd && $restart_cmd",
+        ];
+    }
+
     // 2. JWT keys exist and readable -- the very files the signing code uses.
     require_once __DIR__ . '/jbrowse/track_token.php';
     $private_key = moop_jwt_key_paths()['private'];

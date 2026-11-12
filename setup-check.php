@@ -362,6 +362,16 @@ if (extension_loaded('posix')) {
          "\n         Used for accurate file ownership detection in permission management");
 }
 
+// gd is optional: image thumbnails (gene images, lib/gene_images.php). Without it pages
+// fall back to the full-size images -- slower, never broken.
+if (extension_loaded('gd')) {
+    pass("Extension: gd");
+} else {
+    warn("Extension: gd not loaded",
+         "Optional — install with: sudo $pkg php-gd (then restart php-fpm / the web server)" .
+         "\n         Makes thumbnails of gene images; without it pages send the full-size images");
+}
+
 // ── Section 2: CLI Tools ────────────────────────────────────────────────────
 
 section("CLI Tools");

@@ -53,10 +53,10 @@ added afterwards; MOOP degrades feature-by-feature rather than failing to start.
 ```bash
 # Ubuntu/Debian
 sudo apt-get update
-sudo apt-get install -y php php-cli php-sqlite3 php-mbstring php-json php-curl php-xml
+sudo apt-get install -y php php-cli php-sqlite3 php-mbstring php-json php-curl php-xml php-gd
 
 # RHEL/CentOS/Rocky
-sudo dnf install -y php php-cli php-pdo php-mbstring php-json php-curl php-xml
+sudo dnf install -y php php-cli php-pdo php-mbstring php-json php-curl php-xml php-gd
 
 php --version                                                       # 8.0 or higher
 php -m | grep -E "pdo_sqlite|sqlite3|mbstring|json|posix|openssl|curl"  # all seven should appear
@@ -67,6 +67,8 @@ php -m | grep -E "pdo_sqlite|sqlite3|mbstring|json|posix|openssl|curl"  # all se
 - `openssl` — JWT track authentication for JBrowse2. Usually bundled with PHP.
 - `curl` — Galaxy integration; on by default, disable in config if unused.
 - `posix` — file-permission reporting; scripts degrade gracefully without it.
+- `gd` (optional) — thumbnails of gene images (in situ images, plots). Without it, pages send the
+  full-size images: slower, not broken. Only matters on a site with images.
 
 See [SETUP/PHP_VERSION_SAFETY.md](SETUP/PHP_VERSION_SAFETY.md) before changing PHP versions
 on a running site.

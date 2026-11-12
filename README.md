@@ -182,6 +182,7 @@ individual features rather than failing to start.
 |---|---|
 | **PHP 8.0+** with `pdo_sqlite` `sqlite3` `mbstring` `json` `openssl` `curl` `posix` | everything |
 | **Apache** (`mod_rewrite`, `mod_headers`) or **nginx** + php-fpm | everything |
+| PHP `gd` (`php-gd`) | thumbnails of gene images (optional; without it, full-size images) |
 | **Composer** | JBrowse2 track authentication |
 | **samtools**, **bgzip**, **tabix** | genome and GFF indexing |
 | **Node.js 18+** and `@jbrowse/cli` | feature-name search (`jbrowse text-index`) |
