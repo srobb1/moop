@@ -561,6 +561,19 @@ is not active. On Apache, check `apachectl -M | grep rewrite` first — a missin
 **A logged-out visitor is immediately logged back in.** Auto-login by IP range. That is
 `auto_login_ip_ranges` doing its job; use "View as public" to see the visitor view.
 
+**Locked out of the web admin, or forgot the password.** Recover from a shell on the server,
+using the copy of the script in that site's folder (it finds the site's own users file):
+
+```bash
+sudo -u apache php scripts/reset_password.php --list             # usernames + roles
+sudo -u apache php scripts/reset_password.php <username>         # new password, asked twice, not echoed
+sudo -u apache php scripts/reset_password.php --unlock           # clear "too many attempts" lockouts
+```
+
+A lockout (10 failed attempts) also lifts by itself after 15 minutes. If a password that
+works on one address fails on another (the IP vs the site's name), check the browser's saved
+password first — to the browser those are two different sites.
+
 **Verifying the no-exec guard.** A 404 proves nothing — files the web user cannot read 404
 by accident. Use a file that *would* execute:
 

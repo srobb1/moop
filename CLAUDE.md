@@ -645,6 +645,8 @@ Admin Dashboard → Manage Site Configuration. Changes go to `config/config_edit
 Admin Dashboard → Manage Users. User data is stored in `/var/www/moop-private/users.json`
 (see the note at the top — it lives OUTSIDE the document root; the path is config-driven via
 the `users_file` key, `site_config.php` default overridable in `config_editable.json`).
+Locked out / forgotten password: `sudo -u apache php scripts/reset_password.php <user>`
+(`--list`, `--unlock`); README §Troubleshooting.
 
 ---
 
