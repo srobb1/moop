@@ -60,7 +60,9 @@ $site = $config->getString('site');
       // Custom CSS is optional; silently skip when the file is absent (a missing
       // optional override must not spam the error log on every page load).
       if (!empty($custom_css_path) && file_exists($custom_css_path)) {
-          $custom_css_url = moop_url('css/custom.css');   // a link, so it follows the link prefix
+          // Versioned by the file's own change time, like moop_asset_url(): the server lets browsers keep
+          // CSS for a day, so an unversioned link left every edit invisible to returning visitors.
+          $custom_css_url = moop_url('css/custom.css') . '?v=' . (int) @filemtime($custom_css_path);   // a link, so it follows the link prefix
           echo '<link rel="stylesheet" href="' . htmlspecialchars($custom_css_url, ENT_QUOTES) . '">';
       }
     ?>
