@@ -111,11 +111,13 @@ SQLite, named in a new table — format `clade_homologs/2`.
 
 ## What the site will do with it
 
-- **Gene-page card "Comparative genomics"**, one part per clade (`meta.label`), each with
-  *Orthologs in <label>* — one row per other organism, this gene's orthologs from `pair` (1:1 first,
-  with the kind shown) — and *Gene family in <label>*: "+ N more in the family" (the rest of this
-  gene's N0 HOG, paralogs included), expandable. A one-line note under each says the method
-  (OrthoFinder, gene trees) and the scope (N gene sets on this site). An 80-gene family across
+- **Gene-page card "Comparative genomics"** (built 2026-11-12), one part per clade (`meta.label`):
+  *Orthologs in <label>* — a table, one row per OTHER organism: "Orthologs of this gene" from `pair`
+  (1:1 first, then genes with a real symbol, then the rest; first 10 shown, kind badge each) and
+  "Other family members (not orthologs of this gene)" — the rest of the N0 HOG in that species —
+  expandable. Below it, "Paralogs in <this species>: N genes" (the page's own species' share of the
+  HOG), expandable. Each gene: id (linked), symbol if it has a real one, short description (an
+  id-only label is hidden). A note says the method and scope (N gene sets on this site). An 80-gene family across
   18 planarians reads as 18 short rows. Each gene links to its own gene page; the site builds the
   links (no URLs in the file).
 - **Permissions:** a gene is listed, and counted, only if the visitor may see **its own gene set**

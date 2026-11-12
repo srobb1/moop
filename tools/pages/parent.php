@@ -790,18 +790,44 @@
 <?php endif; ?>
 <?php if (!empty($compgen_section)):
     // Comparative genomics across MOOP organisms (OrthoFinder clades, lib/clade_homologs.php). Words
-    // fixed in docs/CLADE_HOMOLOGS_FORMAT.md: "Orthologs in <clade>" and "Gene family in <clade>",
-    // never plain "homologs" (that is the similarity annotation type below).
+    // fixed in docs/CLADE_HOMOLOGS_FORMAT.md: "Orthologs in <clade>", "Paralogs in <species>" (same
+    // species), "Other family members (not orthologs of this gene)" (other species) -- never plain
+    // "homologs" (that is the similarity annotation type below).
     $__cl_labels = $compgen_section['labels'];
+    // A gene: its id (linked), then its symbol if it has a real one, then a short description --
+    // so a reader can see when a listed gene is plainly something else (a zinc finger in a PARP family).
     $__cl_link = function (string $org, array $o, string $gene) use ($__cl_labels): string {
-        $url = moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $org, 'uniquename' => $gene, 'assembly' => $o['assembly'], 'gene_set' => $o['gene_set']]);
-        $l = $__cl_labels[$org][$gene] ?? null;
+        $url  = moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $org, 'uniquename' => $gene, 'assembly' => $o['assembly'], 'gene_set' => $o['gene_set']]);
+        $l    = $__cl_labels[$org][$gene] ?? null;
         $name = $l ? trim($l['name']) : '';
-        $tip  = $l ? trim($l['description']) : '';
-        return '<a class="font-monospace" href="' . htmlspecialchars($url) . '"' . ($tip !== '' ? ' title="' . htmlspecialchars($tip) . '"' : '') . '>'
-             . htmlspecialchars($gene) . '</a>' . ($name !== '' && $name !== $gene ? ' <span class="text-muted">' . htmlspecialchars($name) . '</span>' : '');
+        $desc = $l ? trim(preg_replace('/\s*\[[^\]]*\]\s*$/', '', $l['description'])) : '';   // drop the "[ISO|1to1|...]" evidence tag
+        $is_id = !moop_clade_has_symbol($name, $gene);
+        if ($desc !== '' && !moop_clade_has_symbol($desc, $gene)) $desc = '';     // a "description" that is only an id
+        $short = mb_strlen($desc) > 70 ? mb_substr($desc, 0, 68) . '…' : $desc;
+        return '<a class="font-monospace" href="' . htmlspecialchars($url) . '"' . ($desc !== '' ? ' title="' . htmlspecialchars($desc) . '"' : '') . '>'
+             . htmlspecialchars($gene) . '</a>'
+             . (!$is_id ? ' <strong>' . htmlspecialchars($name) . '</strong>' : '')
+             . ($short !== '' ? ' <span class="text-muted">' . htmlspecialchars($short) . '</span>' : '');
+    };
+    $__cl_list = function (string $org, array $o, array $genes, int $show, string $more_label) use ($__cl_link): string {
+        $h = '';
+        foreach (array_slice($genes, 0, $show) as $g) $h .= '<div>' . (is_array($g) ? '<span class="badge compgen-kind">' . htmlspecialchars($g['kind']) . '</span> ' . $__cl_link($org, $o, $g['gene']) : $__cl_link($org, $o, $g)) . '</div>';
+        if (count($genes) > $show) {
+            $h .= '<details><summary>' . htmlspecialchars($more_label) . '</summary>';
+            foreach (array_slice($genes, $show, 200) as $g) $h .= '<div>' . (is_array($g) ? '<span class="badge compgen-kind">' . htmlspecialchars($g['kind']) . '</span> ' . $__cl_link($org, $o, $g['gene']) : $__cl_link($org, $o, $g)) . '</div>';
+            if (count($genes) > $show + 200) $h .= '<div class="text-muted">' . t('and %d more', count($genes) - $show - 200) . '</div>';
+            $h .= '</details>';
+        }
+        return $h;
     };
     $__ncl = count($compgen_section['clades']);
+    // Within each organism: 1:1 first, then genes with a real gene symbol, then the rest -- so a
+    // named counterpart is not buried under unnamed gene models (PARP16 among 43 Scolanthus genes).
+    foreach ($compgen_section['clades'] as &$__c0) foreach ($__c0['organisms'] as $__org0 => &$__o0) {
+        $__named = fn(string $g) => moop_clade_has_symbol((string) ($__cl_labels[$__org0][$g]['name'] ?? ''), $g);
+        usort($__o0['orthologs'], fn($a, $b) => [$b['kind'] === '1:1', $__named($b['gene']), $a['gene']] <=> [$a['kind'] === '1:1', $__named($a['gene']), $b['gene']]);
+    }
+    unset($__c0, $__o0);
 ?>
     <!-- Comparative genomics (OrthoFinder clades on this site) -->
     <div class="card shadow-sm mb-4" id="pnav-compgen" data-nav-label="Comparative genomics">
@@ -815,40 +841,36 @@
         </div>
         <div class="collapse show" id="compgenSection">
             <div class="card-body">
-            <?php foreach ($compgen_section['clades'] as $__ci => $__c): ?>
+            <?php foreach ($compgen_section['clades'] as $__ci => $__c):
+                $__self = null; $__others = [];
+                foreach ($__c['organisms'] as $__org => $__o) { if ($__o['self']) $__self = [$__org, $__o]; else $__others[$__org] = $__o; }
+            ?>
                 <?= '<div class="compgen-clade' . ($__ci ? ' mt-4' : '') . '" id="pnav-compgen-' . (int) $__ci . '" data-nav-sub="' . htmlspecialchars($__c['label']) . '">' . "\n" ?>
                     <h6 class="mb-1"><?= t('Orthologs in %s', $__c['label']) ?></h6>
                     <p class="small text-muted mb-2"><?= t('OrthoFinder %1$s, gene trees across %2$d gene sets on this site. 1:1 = one gene on each side; 1:many / many:many = duplicated on one or both sides.', $__c['version'], $__c['gene_sets']) ?></p>
+                    <?php if ($__others): ?>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle small mb-2 compgen-table">
-                            <thead><tr><th><?= t('Organism') ?></th><th><?= t('Orthologs') ?></th><th><?= t('Rest of the gene family') ?></th></tr></thead>
+                            <thead><tr><th><?= t('Organism') ?></th><th><?= t('Orthologs of this gene') ?></th><th><?= t('Other family members (not orthologs of this gene)') ?></th></tr></thead>
                             <tbody>
-                            <?php foreach ($__c['organisms'] as $__org => $__o): ?>
+                            <?php foreach ($__others as $__org => $__o): $__no = count($__o['orthologs']); $__nf = count($__o['family']); ?>
                                 <tr>
-                                    <td class="text-nowrap"><em><?= htmlspecialchars(str_replace('_', ' ', $__org)) ?></em><?php if ($__o['self']): ?> <span class="badge text-bg-light border"><?= t('this organism') ?></span><?php endif; ?></td>
-                                    <td>
-                                        <?php if ($__o['self']): ?><span class="text-muted"><?= t('(same species: see paralogs)') ?></span>
-                                        <?php elseif (!$__o['orthologs']): ?><span class="text-muted"><?= t('none') ?></span>
-                                        <?php else: foreach ($__o['orthologs'] as $__g): ?>
-                                            <div><span class="badge compgen-kind"><?= htmlspecialchars($__g['kind']) ?></span> <?= $__cl_link($__org, $__o, $__g['gene']) ?></div>
-                                        <?php endforeach; endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if (!$__o['family']): ?><span class="text-muted">&mdash;</span>
-                                        <?php else: ?>
-                                        <details>
-                                            <summary><?= count($__o['family']) !== 1 ? ($__o['self'] ? t('%d paralogs', count($__o['family'])) : t('%d more genes', count($__o['family'])))
-                                                                                       : ($__o['self'] ? t('%d paralog', 1) : t('%d more gene', 1)) ?></summary>
-                                            <?php foreach (array_slice($__o['family'], 0, 200) as $__g): ?><div><?= $__cl_link($__org, $__o, $__g) ?></div><?php endforeach; ?>
-                                            <?php if (count($__o['family']) > 200): ?><div class="text-muted"><?= t('and %d more', count($__o['family']) - 200) ?></div><?php endif; ?>
-                                        </details>
-                                        <?php endif; ?>
-                                    </td>
+                                    <td class="text-nowrap"><em><?= htmlspecialchars(str_replace('_', ' ', $__org)) ?></em></td>
+                                    <td><?= $__no ? $__cl_list($__org, $__o, $__o['orthologs'], 10, t_plain('Show %d more orthologs', $__no - 10)) : '<span class="text-muted">' . t('none') . '</span>' ?></td>
+                                    <td><?= $__nf ? '<details><summary>' . ($__nf !== 1 ? t('%d genes', $__nf) : t('%d gene', 1)) . '</summary>' . $__cl_list($__org, $__o, $__o['family'], 200, '') . '</details>' : '<span class="text-muted">&mdash;</span>' ?></td>
                                 </tr>
                             <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
+                    <?php endif; ?>
+                    <?php if ($__self && $__self[1]['family']): $__np = count($__self[1]['family']); ?>
+                    <details class="small mb-2">
+                        <summary><?= $__np !== 1 ? t_markup('Paralogs in %1$s: %2$d genes', '<em>' . htmlspecialchars(str_replace('_', ' ', $__self[0])) . '</em>', $__np)
+                                                 : t_markup('Paralogs in %1$s: %2$d gene', '<em>' . htmlspecialchars(str_replace('_', ' ', $__self[0])) . '</em>', 1) ?></summary>
+                        <?= $__cl_list($__self[0], $__self[1], $__self[1]['family'], 200, '') . "\n" ?>
+                    </details>
+                    <?php endif; ?>
                     <p class="small text-muted mb-0"><?= t('Gene family in %1$s: every gene descended from one ancestral gene in this clade, orthologs and paralogs (orthogroup %2$s).', $__c['label'], $__c['orthogroup']) ?></p>
                 </div>
             <?php endforeach; ?>

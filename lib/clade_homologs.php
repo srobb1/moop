@@ -142,3 +142,13 @@ function moop_clade_gene_labels(array $clades): array {
     }
     return $out;
 }
+
+/**
+ * Is $label a real gene symbol / description, rather than an id? Many gene sets name an unnamed
+ * gene by its id (LOC107373014, NY_Scal100_v1.14367.1): showing that beside the id says nothing.
+ */
+function moop_clade_has_symbol(string $label, string $gene): bool {
+    $label = trim($label);
+    if ($label === '' || strcasecmp($label, $gene) === 0 || stripos($label, $gene) !== false || stripos($gene, $label) !== false) return false;
+    return !preg_match('/^(LOC\d+|NY_[A-Za-z0-9_.]+|[A-Za-z]{1,6}[_.]?\d{5,}[0-9._]*)$/', $label);
+}
