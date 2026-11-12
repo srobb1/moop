@@ -2514,7 +2514,7 @@ sub naming_species_text {
 
 # how a step 2 name was written, for the rule text
 sub naming_species_marking {
-  return $naming_species->{copy_names} ? 'name copied, labelled (copy_names)' : 'named after it, marked -like';
+  return $naming_species->{copy_names} ? 'name inferred as is, labelled (copy_names)' : 'named after it, marked -like';
 }
 
 # what a step 2 name is about, for its Identity statement (identity_statement): the partner gene in the
@@ -4215,7 +4215,8 @@ sub identity_statement {
   my $relationship = $named->{relationship} // 'none';
   # a name from the naming species (step 2): about the partner gene there, not a human gene
   if (my $source = $named->{species_source}) {
-    my $taken = $source->{copied} ? "name copied from $source->{from}" : "named after it ($source->{from}), marked -like";
+    # "inferred" (2026-11-12, user): the name is taken from the partner on sequence evidence, like ISS
+    my $taken = $source->{copied} ? "name inferred from $source->{from}" : "named after it ($source->{from}), marked -like";
     return "Same gene in another annotation of this species ($source->{how}); $taken" if $source->{same_species};
     return "Ortholog of $source->{subject} ($source->{how}); $taken" if $source->{how} =~ /^OMA /;
     return "Homolog of $source->{subject} ($source->{how}); orthology not shown (may be a paralog); $taken";

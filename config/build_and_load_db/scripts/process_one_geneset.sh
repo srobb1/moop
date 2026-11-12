@@ -1580,10 +1580,20 @@ fi
 ## (make_readable_gene_names.pl). geneNames.tsv stays as the pipeline's own file. Remade on every
 ## run (seconds); a failure warns and leaves no file, never stops the gene set. An OMA id in the
 ## evidence column is given as its external id (ENSP..., else XP_/NP_), read from the OMA run's DB/.
+## A name inferred from a closest_species partner says so, and how the partner was named there:
+## the closest_species entries of geneset_config.yaml, as the naming step gets them.
 if [ -s features.tsv ] && [ -s geneNames.tsv ]; then
   READABLE_OMA_DB=()
   [ -d "$OMA_SRC/DB" ] && READABLE_OMA_DB=("$OMA_SRC/DB")
-  perl "$REPO/analysis_parsers/make_readable_gene_names.pl" features.tsv geneNames.tsv "${READABLE_OMA_DB[@]}" > geneNames.readable.tsv.tmp \
+  READABLE_CLOSEST=()
+  if perl "$SCRIPTS/geneset_config.pl" "$SCRIPTS/geneset_config.yaml" "$THIS_ORG" "$ASSEMBLY" "$GENE_SET" > readable_config.args 2>/dev/null; then
+    mapfile -d '' -t READABLE_CONFIG < readable_config.args
+    for (( i = 0; i < ${#READABLE_CONFIG[@]}; i++ )); do
+      [ "${READABLE_CONFIG[$i]}" = --closest-species ] && READABLE_CLOSEST+=(--closest-species "${READABLE_CONFIG[$((i + 1))]}")
+    done
+  fi
+  rm -f readable_config.args
+  perl "$REPO/analysis_parsers/make_readable_gene_names.pl" "${READABLE_CLOSEST[@]}" features.tsv geneNames.tsv "${READABLE_OMA_DB[@]}" > geneNames.readable.tsv.tmp \
     && mv geneNames.readable.tsv.tmp geneNames.readable.tsv \
     || { rm -f geneNames.readable.tsv.tmp; echo "WARNING: geneNames.readable.tsv was not made" >&2; }
 fi

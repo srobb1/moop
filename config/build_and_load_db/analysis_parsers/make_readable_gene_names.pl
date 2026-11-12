@@ -2,7 +2,15 @@
 # geneNames.tsv for people (2026-10-29): one row per database feature, with its gene and type, the
 # name split into symbol and description, and where the name came from in words.
 #
-#   make_readable_gene_names.pl features.tsv geneNames.tsv [OMA_run/DB] > geneNames.readable.tsv
+#   make_readable_gene_names.pl [--closest-species SPEC ...] features.tsv geneNames.tsv [OMA_run/DB] > geneNames.readable.tsv
+#
+# --closest-species SPEC: the gene set's closest_species entries, as geneset_config.pl gives them to
+# assign_gene_names_v2.pl ("species=...|tag=...|rbh=...|diamond=...|hits=...|same_species=..."). A name
+# from one (geneNames.tsv source kind Same_species or Naming_species) was inferred from the partner gene:
+#   method    "Inferred from Schmidtea mediterranea schMedS3h1 (MOOP names, curated): same gene
+#              (MMseqs2 reciprocal best hit)" -- the partner gene set from the search's db_version.txt
+#   evidence  "h1SMcG0007581; named there by OMA HOG human ortholog ENSP00000364482.2" -- how the partner
+#              got the name, from its own geneNames.readable.tsv in the MOOP build folder
 #
 # geneNames.tsv itself is for the pipeline (updateFASTA.pl, updateGFF.pl and the loaders read it by
 # column; MAINID SELF marks the protein a gene was named from) and stays as it is. This file is the one
@@ -22,7 +30,8 @@
 # trap, tests/check_perl_file_scope.pl).
 use strict;
 use warnings;
-use File::Basename qw(dirname);
+use File::Basename qw(dirname basename);
+use Cwd qw(abs_path);
 
 my %TYPE_WORD = (gene => 'gene', mRNA => 'mRNA', transcript => 'mRNA', cds => 'CDS', CDS => 'CDS', protein => 'protein');
 
@@ -36,15 +45,94 @@ my %METHOD = (
   Pfam                => 'Pfam domain',
 );
 
+# --closest-species entries: tag -> {species, label, how ('' / rbh / diamond / hits), partner readable file}
+sub read_closest_species {
+  my ($specs, $data_root) = @_;
+  my %by_tag;
+  foreach my $spec (@$specs) {
+    my %field = map { my $pair = $_; my ($key, $value) = split /=/, $pair, 2; ($key, $value // '') } split /\|/, $spec;
+    my $tag = $field{tag} // next;
+    my $entry = { species => $field{species} // $tag, same_species => (($field{same_species} // '') =~ /^(1|true|yes)$/i ? 1 : 0) };
+    # the partner gene set: rbh/diamond searches live in closest_species/<Organism>/<gene set>/searches/...,
+    # with the search database named in db_version.txt
+    foreach my $kind (qw(rbh diamond)) {
+      my $dir = $field{$kind} // '';
+      next if $dir eq '';
+      if (!defined $entry->{label} and open my $version_fh, '<', "$dir/db_version.txt") {
+        my $line = <$version_fh> // '';
+        close $version_fh;
+        chomp $line;
+        my ($label) = split /\t/, $line;
+        $entry->{label} = $label if defined $label and $label ne '';
+      }
+      if (!defined $entry->{partner_readable} and $dir =~ m{/closest_species/([^/]+)/([^/]+)/searches/} and defined $data_root) {
+        my ($organism, $geneset) = ($1, $2);
+        my ($readable) = glob "$data_root/$organism/*/$geneset/geneNames.readable.tsv";
+        $entry->{partner_readable} = $readable if defined $readable and -s $readable;
+      }
+    }
+    # a ready-made hits file (RefSeq_jaNemVect1.RBBH.moop.tsv): its name says what it searched
+    if (!defined $entry->{label} and ($field{hits} // '') ne '') {
+      (my $searched = basename($field{hits})) =~ s/\.(?:RBBH|rbbh|hits)?\.?moop\.tsv$//;
+      $searched =~ s/\.(?:RBBH|rbbh)$//;
+      $entry->{label} = "$entry->{species} " . ($searched =~ tr/_/ /r);
+    }
+    $entry->{label} //= $entry->{species};
+    # a same-species partner without a search folder: another gene set of this organism in the build folder
+    $entry->{search_siblings} = 1 if $entry->{same_species} and !defined $entry->{partner_readable};
+    $by_tag{$tag} = $entry;
+  }
+  return \%by_tag;
+}
+
+# a partner gene set's geneNames.readable.tsv: id (gene, mRNA, protein ...) -> how that id was named
+sub read_partner_naming {
+  my ($files) = @_;
+  my %how;
+  foreach my $file (@$files) {
+    open my $fh, '<', $file or next;
+    while (my $line = <$fh>) {
+      chomp $line;
+      my ($gene, $type, $id, $symbol, $description, $name_from, $method, $evidence) = split /\t/, $line;
+      next if !defined $method or $gene eq 'gene_id';
+      my $text = $name_from eq 'none' ? 'no name there'
+               : $name_from ne 'MOOP' ? "named there by its source ($name_from)"
+               : 'named there by ' . $method . (($evidence // 'N/A') ne 'N/A' ? " $evidence" : '');
+      $how{$id} //= $text;
+      $how{$gene} //= $text;
+    }
+    close $fh;
+  }
+  return \%how;
+}
+
 # a naming note "Source|Kind|protein|accession|score" in words: (name_from, method, evidence)
 sub provenance {
-  my ($description, $note) = @_;
+  my ($description, $note, $closest, $partner_how) = @_;
   return ('none', '', '') if $description eq '' or $description eq 'None';
   # the source's own name ("RefSeq" in name_from): method "Source name retained", the same for every
   # source; no evidence (N/A, not blank)
   return ($note ne '' ? $note : 'the gene set', 'Source name retained', 'N/A') unless $note =~ /\|/;
   my ($source, $kind, undef, $accession) = split /\|/, $note;
   return ('none', '', '') if $source eq 'none';
+  # step 2: the name was inferred from a partner gene in a naming species (or another annotation of
+  # this species), not found by a search of Ensembl
+  if (($kind // '') eq 'Same_species' or ($kind // '') eq 'Naming_species') {
+    my ($tag) = $source =~ /_([A-Za-z0-9]+)$/;
+    my $entry = (defined $tag && $closest->{$tag}) ? $closest->{$tag}
+              : (keys %$closest == 1) ? (values %$closest)[0] : undef;
+    my $label = $entry ? $entry->{label} : ($source =~ tr/_/ /r);
+    my $how = $source =~ /^MMseqs2_RBH_/ ? 'MMseqs2 reciprocal best hit'
+            : $source =~ /^DIAMOND_/     ? 'DIAMOND best hit'
+            : $source =~ /RBBH|^RefSeq_|^Ensembl_/ ? 'reciprocal best hit'
+            : '';
+    my $method = $kind eq 'Same_species' ? "Inferred from $label: same gene" : "Inferred from the closest $label gene";
+    $method .= " ($how)" if $how ne '';
+    my $evidence = ($accession // '') eq '-' ? '' : $accession // '';
+    my $there = $evidence ne '' ? $partner_how->($entry, $evidence) : undef;
+    $evidence .= "; $there" if defined $there;
+    return ('MOOP', $method, $evidence);
+  }
   # a search says the program and what it searched: "DIAMOND BLASTP vs Ensembl Homo sapiens"
   my $method = $METHOD{$source};
   $method //= $source =~ /^Ensembl_(\w+)/       ? 'DIAMOND BLASTP vs Ensembl ' . species_words($1)
@@ -94,8 +182,34 @@ sub symbol_and_description {
 }
 
 sub main {
+  my @closest_specs;
+  while (@ARGV and $ARGV[0] eq '--closest-species') {
+    shift @ARGV;
+    push @closest_specs, shift @ARGV;
+  }
   my ($features_file, $names_file, $oma_db_dir) = @ARGV;
-  die "usage: $0 features.tsv geneNames.tsv [OMA_run/DB] > geneNames.readable.tsv\n" unless defined $names_file;
+  die "usage: $0 [--closest-species SPEC ...] features.tsv geneNames.tsv [OMA_run/DB] > geneNames.readable.tsv\n"
+    unless defined $names_file;
+
+  # the MOOP build folder this gene set is in (<data>/<organism>/<assembly>/<gene set>/features.tsv)
+  my $geneset_dir = abs_path(dirname($features_file));
+  my $data_root = dirname(dirname(dirname($geneset_dir)));
+  my $organism_dir = dirname(dirname($geneset_dir));
+  my $closest = read_closest_species(\@closest_specs, $data_root);
+  # how each partner gene was named there: read once per partner gene set, when first needed
+  my %partner_naming;
+  my $partner_how = sub {
+    my ($entry, $id) = @_;
+    return undef unless $entry;
+    my @files = defined $entry->{partner_readable} ? ($entry->{partner_readable})
+              : $entry->{search_siblings} ? grep { my $file = $_; dirname($file) ne $geneset_dir }
+                                              glob("$organism_dir/*/*/geneNames.readable.tsv")
+              : ();
+    return undef unless @files;
+    my $key = join "\t", @files;
+    $partner_naming{$key} //= read_partner_naming(\@files);
+    return $partner_naming{$key}{$id};
+  };
 
   # geneNames.tsv: each id's name and note; a gene's name from its own row, else from the row its
   # proteins were named by (own gene sets have no gene rows: GroupId is the gene, MAINID SELF the row)
@@ -156,7 +270,7 @@ sub main {
     (my $bare = $id) =~ s/:(?:cds|pep)$//;
     my $entry = $name_of{$id} // $name_of{$bare} // $gene_name{$gene} // ['', ''];
     my ($symbol, $description) = symbol_and_description($entry->[0]);
-    my @row = ($gene, $type_of{$id}, $id, $symbol, $description, provenance(@$entry));
+    my @row = ($gene, $type_of{$id}, $id, $symbol, $description, provenance(@$entry, $closest, $partner_how));
     if (defined $oma_db_dir and $row[7] =~ /^([A-Z0-9]{5})\d+$/) {
       my $code = $1;
       $oma_external{$code} //= read_oma_external_ids($oma_db_dir, $code);

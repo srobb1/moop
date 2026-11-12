@@ -1040,7 +1040,7 @@ check(($closest_smed{G1}[2] // '') eq 'SMED1', 'closest Smed G1: its full-length
   check(($copy{G12} // '') eq 'None', 'copy_names G12: a partial best hit still names nothing', $copy{G12});
   check(($copy{G1} // '') eq 'ALPHA: alpha synthase [ISO|1to1|sim+|pthr+]', 'copy_names G1: its own OMA 1:1 name kept over a family name', $copy{G1});
   check(($same{G1} // '') eq 'Alpha synthases family member [SRC|rbh|smed]', 'same species G1: the same gene -- its name is copied, family or not', $same{G1});
-  check(scalar(($copy_decision{G5}{Reason} // '') =~ /name copied, labelled \(copy_names\)/),
+  check(scalar(($copy_decision{G5}{Reason} // '') =~ /name inferred as is, labelled \(copy_names\)/),
         'copy_names: the reason says the name was copied', $copy_decision{G5}{Reason});
 }
 
