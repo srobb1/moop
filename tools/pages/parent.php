@@ -904,7 +904,7 @@
                 <?= '<div class="compgen-clade' . ($__ci ? ' mt-4' : '') . '" id="pnav-compgen-' . (int) $__ci . '" data-nav-sub="' . htmlspecialchars($__c['label']) . '">' . "\n" ?>
                     <h6 class="mb-1"><?= t('Orthologs in %s', $__c['label']) ?></h6>
                     <?php if (!empty($__c['via'])): ?>
-                    <p class="small mb-2 compgen-via"><?= t_markup('Orthologs are computed on gene set %2$s. This gene is the same gene as %1$s there (matched by sequence), so these are its orthologs.',
+                    <p class="small mb-2 compgen-via"><?= t_markup('Orthologs are computed on gene set %2$s. Within this species, this gene is the same gene as %1$s there (matched by sequence, the Rosetta Stone), so these are its orthologs in other species.',
                         '<a class="font-monospace" href="' . htmlspecialchars(moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism_name, 'uniquename' => $__c['via']['gene'], 'gene_set' => $__c['via']['gene_set']])) . '">' . htmlspecialchars($__c['via']['gene']) . '</a>',
                         htmlspecialchars($__c['via']['gene_set'])) ?></p>
                     <?php endif; ?>
