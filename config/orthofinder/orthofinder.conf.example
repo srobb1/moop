@@ -1,0 +1,10 @@
+# OrthoFinder clade-run settings (bash syntax). Copy to orthofinder.conf next to the scripts (git-ignored)
+# and edit, or point ORTHOFINDER_CONF at another file. Read by make_clade_set.py and run_orthofinder.sh.
+
+# Run folders (<clade>/), taxonomy/ (fetch_taxonomy.sh) and geneset_choices.tsv
+OF_ROOT=/path/to/orthofinder_v2
+# MOOP's build folder: organisms with organism.sqlite + protein.aa.fa, and where homologs.sqlite goes (.clades/)
+MOOP_DATA=/path/to/build_and_load_db/v2/data
+# RosettaStone configs (*_moop.conf): an organism's reference gene set is the one used in clade runs
+RS_CONFS=/path/to/rosettastone
+ORTHOFINDER_MODULE=orthofinder/3.1.2

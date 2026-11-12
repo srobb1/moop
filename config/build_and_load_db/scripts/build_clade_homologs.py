@@ -345,7 +345,7 @@ CREATE INDEX p_a ON pair (gene_a);
         "hogs_n0": str(hogs_n0),
         "pairs": str(len(pairs)),
         "hog_source": hog_source,
-        "orthofinder_results": R,
+        "orthofinder_results": f"{clade}/{os.path.basename(R.rstrip('/'))}",   # no cluster paths in a shipped file
     }
     con.executemany("INSERT INTO meta VALUES (?,?)", meta.items())
     con.commit()
