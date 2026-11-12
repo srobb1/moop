@@ -871,7 +871,6 @@
         </div>
         <div class="collapse" id="sameGeneSection">
             <div class="card-body">
-                <p class="small text-muted mb-2"><?= t('This gene under the names it has in other gene sets, transcriptomes, microarrays and EST collections of this species, matched by sequence. Genes in other species are in Comparative genomics.') ?></p>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle small mb-0">
                         <thead><tr><th><?= t('Source') ?></th><th><?= t('Ids') ?></th></tr></thead>
