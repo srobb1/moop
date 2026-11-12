@@ -24,10 +24,17 @@ function gene_image_404(): void {
 
 $organism = (string) ($_GET['organism'] ?? '');
 $file     = (string) ($_GET['file'] ?? '');
-if (!preg_match('/^[A-Za-z0-9_.-]+$/', $organism) || $file === '' || strpos($file, "\0") !== false) gene_image_404();
+$key      = (string) ($_GET['key'] ?? '');
+if (!preg_match('/^[A-Za-z0-9_.-]+$/', $organism) || ($file === '' && $key === '') || strpos($file . $key, "\0") !== false) gene_image_404();
 
-$row  = moop_image_visible_row($organism, $file);   // null if unlisted OR not visible to this visitor
-$path = $row ? moop_image_path($organism, $file) : null;
+if ($key !== '') {
+    // ?key=<analysis>: that analysis's key image (a cluster map) -- visible when one of its images is.
+    $path = moop_image_key_path($organism, $key);
+} else {
+    $row  = moop_image_visible_row($organism, $file);   // null if unlisted OR not visible to this visitor
+    // ?poster=1: the movie's still (its row's 'poster' file) -- same access check, same 404 when there is none.
+    $path = $row ? moop_image_path($organism, isset($_GET['poster']) ? (string) $row['poster'] : $file) : null;
+}
 if (!$path) gene_image_404();
 // Access is decided; release the session lock so a page's many images load in parallel.
 if (session_status() === PHP_SESSION_ACTIVE) session_write_close();

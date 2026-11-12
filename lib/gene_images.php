@@ -20,8 +20,12 @@
 require_once __DIR__ . '/ontologies.php';
 
 const MOOP_IMAGE_REQUIRED = ['file', 'kind', 'accession', 'assembly', 'gene_set'];
-const MOOP_IMAGE_OPTIONAL = ['analysis', 'stage', 'terms', 'caption', 'pmid', 'citation', 'credit', 'license'];
-const MOOP_IMAGE_KINDS    = ['in situ', 'movie', 'feature plot', 'violin plot', 'antibody', 'RNAi phenotype', 'live', 'other'];
+const MOOP_IMAGE_OPTIONAL = ['analysis', 'stage', 'terms', 'caption', 'pmid', 'citation', 'credit', 'license', 'poster'];   // poster: a still for a movie
+const MOOP_IMAGE_KINDS    = ['in situ', 'panel', 'movie', 'feature plot', 'violin plot', 'antibody', 'RNAi phenotype', 'live', 'other'];
+// Kinds a gene page does NOT show as thumbnails: a movie is usually a co-stain of several genes and a
+// panel a whole-stage summary -- they belong to the gallery (tools/image_gallery.php). The gene page
+// says how many there are and links there, filtered to the gene.
+const MOOP_IMAGE_GALLERY_ONLY = ['movie', 'panel'];
 const MOOP_IMAGE_EXTS     = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif',
                              'webp' => 'image/webp', 'm4v' => 'video/mp4', 'mp4' => 'video/mp4'];
 
@@ -74,18 +78,20 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
         $db->exec('PRAGMA journal_mode = OFF; PRAGMA synchronous = OFF;');
         $db->exec('CREATE TABLE image (id INTEGER PRIMARY KEY, file TEXT NOT NULL UNIQUE, kind TEXT NOT NULL,
                      assembly TEXT NOT NULL, gene_set TEXT NOT NULL, analysis TEXT, stage_id TEXT, caption TEXT,
-                     captions TEXT, pmid TEXT, citation TEXT, credit TEXT, license TEXT, bytes INTEGER)');
+                     captions TEXT, pmid TEXT, citation TEXT, credit TEXT, license TEXT, bytes INTEGER, poster TEXT)');
         $db->exec('CREATE TABLE image_accession (image_id INTEGER NOT NULL, accession TEXT NOT NULL, accession_lc TEXT NOT NULL)');
         $db->exec('CREATE TABLE image_term (image_id INTEGER NOT NULL, term_id TEXT NOT NULL)');
         // One row per analysis (images/analyses.tsv): what the gene page titles a section with. Also
         // the future home of analysis-level access rules (moop_dataset_visible's $analysis).
+        // key_image: one image that explains the analysis's other images (a single-cell cluster map),
+        // shown first on gene pages; served by api/gene_image.php?key=<analysis>.
         $db->exec('CREATE TABLE analysis (analysis TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT,
-                     pmid TEXT, citation TEXT, sort INTEGER NOT NULL DEFAULT 0)');
+                     pmid TEXT, citation TEXT, sort INTEGER NOT NULL DEFAULT 0, key_image TEXT, key_caption TEXT)');
         $db->exec('CREATE TABLE review (kind TEXT NOT NULL, detail TEXT NOT NULL, rows INTEGER NOT NULL)');
         $db->exec('CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)');
         $db->beginTransaction();
-        $ins  = $db->prepare('INSERT INTO image (file, kind, assembly, gene_set, analysis, stage_id, caption, captions, pmid, citation, credit, license, bytes)
-                              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');
+        $ins  = $db->prepare('INSERT INTO image (file, kind, assembly, gene_set, analysis, stage_id, caption, captions, pmid, citation, credit, license, bytes, poster)
+                              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
         $insA = $db->prepare('INSERT INTO image_accession (image_id, accession, accession_lc) VALUES (?,?,?)');
         $insT = $db->prepare('INSERT INTO image_term (image_id, term_id) VALUES (?,?)');
         $seen = []; $datasets = []; $rows = 0;
@@ -124,11 +130,13 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
             }
             $pmid = $get('pmid');
             if ($pmid !== '' && !ctype_digit($pmid)) $note('pmid is not a number (kept)', $pmid);
+            $poster = $get('poster');
+            if ($poster !== '' && !moop_image_path_under($dir, $poster)) { $note('poster missing (image kept, no still)', $poster); $poster = ''; }
             $caps = [];
             foreach ($langs as $l => $i) if (trim($c[$i] ?? '') !== '') $caps[$l] = trim($c[$i]);
             $ins->execute([$file, $kind, $asm, $gs, $get('analysis') ?: null, $stage ?: null, $get('caption') ?: null,
                            $caps ? json_encode($caps, JSON_UNESCAPED_UNICODE) : null, $pmid ?: null, $get('citation') ?: null,
-                           $get('credit') ?: null, $get('license') ?: null, filesize($real)]);
+                           $get('credit') ?: null, $get('license') ?: null, filesize($real), $poster ?: null]);
             $id = (int) $db->lastInsertId();
             foreach (array_unique($accs) as $a) $insA->execute([$id, $a, strtolower($a)]);
             foreach (array_unique($terms) as $t) $insT->execute([$id, $t]);
@@ -137,7 +145,7 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
         fclose($fh);
 
         // analyses.tsv (optional): analysis, title, description, pmid, citation. File order = page order.
-        $insAn = $db->prepare('INSERT OR REPLACE INTO analysis (analysis, title, description, pmid, citation, sort) VALUES (?,?,?,?,?,?)');
+        $insAn = $db->prepare('INSERT OR REPLACE INTO analysis (analysis, title, description, pmid, citation, sort, key_image, key_caption) VALUES (?,?,?,?,?,?,?,?)');
         $listed = [];
         if (is_file("$dir/analyses.tsv") && ($ah = fopen("$dir/analyses.tsv", 'r'))) {
             $ahead = array_flip(array_map('trim', explode("\t", rtrim((string) fgets($ah), "\r\n"))));
@@ -148,8 +156,10 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
                     $a = explode("\t", rtrim($l, "\r\n"));
                     $ag = fn(string $k) => isset($ahead[$k]) ? trim($a[$ahead[$k]] ?? '') : '';
                     if ($ag('analysis') === '') continue;
+                    $key = $ag('key_image');
+                    if ($key !== '' && !moop_image_path_under($dir, $key)) { $note('key image missing (analysis kept)', $key); $key = ''; }
                     $insAn->execute([$ag('analysis'), $ag('title') ?: $ag('analysis'), $ag('description') ?: null,
-                                     $ag('pmid') ?: null, $ag('citation') ?: null, $n++]);
+                                     $ag('pmid') ?: null, $ag('citation') ?: null, $n++, $key ?: null, $ag('key_caption') ?: null]);
                     $listed[$ag('analysis')] = true;
                 }
             }
@@ -157,7 +167,7 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
         }
         // Every analysis named by an image gets a row; one missing from analyses.tsv is titled by its id.
         foreach ($db->query('SELECT DISTINCT analysis FROM image WHERE analysis IS NOT NULL')->fetchAll(PDO::FETCH_COLUMN) as $an) {
-            if (!isset($listed[$an])) { $note('analysis not in analyses.tsv (titled by its id)', $an); $insAn->execute([$an, $an, null, null, null, 1000]); }
+            if (!isset($listed[$an])) { $note('analysis not in analyses.tsv (titled by its id)', $an); $insAn->execute([$an, $an, null, null, null, 1000, null, null]); }
         }
         $rins = $db->prepare('INSERT INTO review (kind, detail, rows) VALUES (?,?,?)');
         foreach ($review as $kind => $details) foreach ($details as $d => $n) $rins->execute([$kind, (string) $d, $n]);
@@ -217,8 +227,11 @@ function moop_image_visible_row(string $organism, string $file): ?array {
 
 /** Absolute path of an image file, only if it is inside images/ (no "..", no symlink out). */
 function moop_image_path(string $organism, string $file): ?string {
-    $base = realpath(moop_images_dir($organism));
-    $real = $base ? realpath("$base/$file") : false;
+    return moop_image_path_under(moop_images_dir($organism), $file);
+}
+function moop_image_path_under(string $dir, string $file): ?string {
+    $base = realpath($dir);
+    $real = ($base && $file !== '') ? realpath("$base/$file") : false;
     return ($real !== false && strpos($real, $base . '/') === 0 && is_file($real)) ? $real : null;
 }
 
@@ -280,7 +293,7 @@ function moop_images_by_analysis(string $organism, array $images): array {
     $groups = [];
     foreach ($images as $im) {
         $k = (string) $im['analysis'];
-        $groups[$k]['analysis'] = $meta[$k] ?? ['analysis' => $k, 'title' => $k, 'description' => null, 'pmid' => null, 'citation' => null, 'sort' => 2000];
+        $groups[$k]['analysis'] = $meta[$k] ?? ['analysis' => $k, 'title' => $k, 'description' => null, 'pmid' => null, 'citation' => null, 'sort' => 2000, 'key_image' => null, 'key_caption' => null];
         $groups[$k]['images'][] = $im;
     }
     uasort($groups, fn($a, $b) => [$a['analysis']['sort'], $a['analysis']['title']] <=> [$b['analysis']['sort'], $b['analysis']['title']]);
@@ -325,5 +338,50 @@ function moop_image_thumbnail(string $organism, string $path): ?string {
         @unlink($tmp); @touch("$out.orig"); return null;
     }
     if (!$ok || !@rename($tmp, $out)) { @unlink($tmp); return null; }
+    return $out;
+}
+
+/**
+ * An analysis's key image (analyses.tsv key_image), or null. Visible when at least one image of that
+ * analysis is: the key explains data the visitor can see, and is nothing on its own.
+ */
+function moop_image_key_path(string $organism, string $analysis): ?string {
+    $db = moop_images_open($organism);
+    if (!$db) return null;
+    $st = $db->prepare('SELECT key_image FROM analysis WHERE analysis = ?');
+    $st->execute([$analysis]);
+    $key = (string) $st->fetchColumn();
+    if ($key === '') return null;
+    $st = $db->prepare('SELECT DISTINCT assembly, gene_set FROM image WHERE analysis = ?');
+    $st->execute([$analysis]);
+    foreach ($st as $r) {
+        if (moop_dataset_visible($organism, $r['assembly'], $r['gene_set'], $analysis)) return moop_image_path($organism, $key);
+    }
+    return null;
+}
+
+/**
+ * Images of one analysis (optionally only some kinds), only from data sets the visitor may see.
+ * For the gallery page when no gene or term is given.
+ */
+function moop_images_for_analysis(string $organism, string $analysis, array $kinds = [], int $limit = 1000): array {
+    $db = moop_images_open($organism);
+    if (!$db || $analysis === '') return [];
+    $sql = 'SELECT * FROM image WHERE analysis = ?';
+    $args = [$analysis];
+    if ($kinds) { $sql .= ' AND kind IN (' . implode(',', array_fill(0, count($kinds), '?')) . ')'; $args = array_merge($args, $kinds); }
+    $st = $db->prepare($sql . ' LIMIT ' . (int) ($limit * 2));
+    $st->execute($args);
+    $rows = [];
+    foreach ($st as $r) $rows[$r['id']] = $r;
+    return moop_images_finish($db, $organism, $rows, $limit);
+}
+
+/** The analysis rows (title, description, paper, key image): [analysis => row]. */
+function moop_images_analyses(string $organism): array {
+    $db = moop_images_open($organism);
+    if (!$db) return [];
+    $out = [];
+    foreach ($db->query('SELECT * FROM analysis ORDER BY sort, title') as $r) $out[$r['analysis']] = $r;
     return $out;
 }

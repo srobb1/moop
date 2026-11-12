@@ -719,6 +719,15 @@
     $__img_url = fn(string $file, bool $thumb) => moop_url('api/gene_image.php') . '?'
         . http_build_query(['organism' => $organism_name, 'file' => $file] + ($thumb ? ['size' => 'thumb'] : []));
     $__ng = count($image_section['groups']);
+    // Stills are thumbnails here; movies and panels (MOOP_IMAGE_GALLERY_ONLY) are counted and linked to
+    // the gallery, filtered to this gene -- a gene page about one gene, not the embryo's architecture.
+    $__still_total = 0;
+    foreach ($image_section['groups'] as &$__gg) {
+        $__gg['stills'] = array_values(array_filter($__gg['images'], fn($i) => !in_array($i['kind'], MOOP_IMAGE_GALLERY_ONLY, true)));
+        $__gg['elsewhere'] = array_count_values(array_column(array_filter($__gg['images'], fn($i) => in_array($i['kind'], MOOP_IMAGE_GALLERY_ONLY, true)), 'kind'));
+        $__still_total += count($__gg['stills']);
+    }
+    unset($__gg);
 ?>
     <!-- Gene images, by analysis -->
     <div class="card shadow-sm mb-4" id="pnav-images" data-nav-label="Images">
@@ -727,8 +736,8 @@
                 <i class="fas fa-images toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Images') ?></span>
-            <span class="ms-2 text-muted small"><?= ($__ng !== 1 ? t('%1$d images from %2$d analyses', $image_section['total'], $__ng)
-                                                                 : t('%1$d images from %2$d analysis', $image_section['total'], $__ng)) . "\n" ?></span>
+            <span class="ms-2 text-muted small"><?= ($__ng !== 1 ? t('%1$d images from %2$d analyses', $__still_total, $__ng)
+                                                                 : t('%1$d images from %2$d analysis', $__still_total, $__ng)) . "\n" ?></span>
         </div>
         <div class="collapse show" id="imagesSection">
             <div class="card-body">
@@ -739,8 +748,31 @@
                         <?= $__a['description'] !== null ? htmlspecialchars($__a['description']) : '' ?>
                         <?php if ($__a['pmid']): ?><a href="https://pubmed.ncbi.nlm.nih.gov/<?= rawurlencode($__a['pmid']) ?>/" target="_blank" rel="noopener"><?= htmlspecialchars($__a['citation'] ?: 'PMID ' . $__a['pmid']) ?></a><?php endif; ?>
                     </p>
+                    <?php if ($__g['elsewhere']):
+                        $__parts = [];
+                        foreach ($__g['elsewhere'] as $__k => $__n) {
+                            $__parts[] = $__k === 'movie' ? ($__n !== 1 ? t('%d embryo movies', $__n) : t('%d embryo movie', 1))
+                                                          : ($__n !== 1 ? t('%d stage panels', $__n) : t('%d stage panel', 1));
+                        }
+                        $__gal = moop_url('tools/image_gallery.php') . '?' . http_build_query(['organism' => $organism_name, 'analysis' => $__a['analysis'],
+                                 'gene' => $feature_uniquename, 'kind' => implode(',', array_keys($__g['elsewhere']))]);
+                    ?>
+                    <p class="small mb-2 gene-images-elsewhere"><i class="fas fa-film me-1 text-muted"></i><?= t_markup('This gene also appears in %1$s. %2$s', count($__parts) === 2 ? t_plain('%1$s and %2$s', $__parts[0], $__parts[1]) : implode(', ', $__parts),
+                        '<a href="' . htmlspecialchars($__gal) . '">' . t('View them') . '</a>') ?></p>
+                    <?php endif; ?>
+                    <?php if ($__g['stills']): ?>
                     <div class="gene-images-grid">
-                        <?php foreach ($__g['images'] as $__im):
+                        <?php if (!empty($__a['key_image'])):
+                            // The analysis's key (a cluster map): first, so the plots after it can be read.
+                            $__key_url = moop_url('api/gene_image.php') . '?' . http_build_query(['organism' => $organism_name, 'key' => $__a['analysis']]);
+                            $__key_cap = (string) ($__a['key_caption'] ?: t_plain('Key'));
+                        ?>
+                        <?= '<button type="button" class="gene-image-tile gene-image-key" title="' . htmlspecialchars($__key_cap) . '" data-full="' . htmlspecialchars($__key_url) . '" data-movie="" data-title="' . htmlspecialchars($__key_cap) . '" data-caption="" data-genes="" data-terms="" data-credit="">' . "\n" ?>
+                            <?= '<img src="' . htmlspecialchars($__key_url . '&size=thumb') . '" alt="' . htmlspecialchars($__key_cap) . '" loading="lazy" decoding="async" width="160" height="120">' . "\n" ?>
+                            <span class="gene-image-label"><strong><?= t('Cluster map') ?></strong></span>
+                        </button>
+                        <?php endif; ?>
+                        <?php foreach ($__g['stills'] as $__im):
                             $__is_movie = $__im['kind'] === 'movie';
                             $__stage = $__IL($__im['stage_id']);
                             $__label = trim(($__stage !== '' ? $__stage . ' · ' : '') . t_plain($__im['kind']));
@@ -765,6 +797,7 @@
                         </button>
                         <?php endforeach; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
             </div>
