@@ -5,6 +5,7 @@ $__L   = fn(?string $id) => $id === null || $id === '' ? '' : ($labels[$id] ?? $
 $__url = fn(array $q) => moop_url('tools/image_gallery.php') . '?' . http_build_query(array_filter($q, fn($v) => $v !== '' && $v !== []));
 $__img = fn(string $file, array $extra = []) => moop_url('api/gene_image.php') . '?' . http_build_query(['organism' => $organism, 'file' => $file] + $extra);
 $__a   = $analysis !== '' ? $analyses[$analysis] : null;
+$__nm  = fn(string $id) => isset($names[$id]) ? "$id ({$names[$id]})" : $id;   // "SMED30007406 (SMEDWI-1)"
 $__kind_words = ['movie' => t_plain('movies'), 'panel' => t_plain('stage panels'), 'in situ' => t_plain('in situ images'),
                  'feature plot' => t_plain('feature plots'), 'violin plot' => t_plain('violin plots')];
 ?>
@@ -13,6 +14,7 @@ $__kind_words = ['movie' => t_plain('movies'), 'panel' => t_plain('stage panels'
     <?php if ($__a && ($__a['description'] || $__a['pmid'])): ?>
     <p class="text-muted mb-2"><?= htmlspecialchars((string) $__a['description']) ?>
         <?php if ($__a['pmid']): ?><a href="https://pubmed.ncbi.nlm.nih.gov/<?= rawurlencode($__a['pmid']) ?>/" target="_blank" rel="noopener"><?= htmlspecialchars($__a['citation'] ?: 'PMID ' . $__a['pmid']) ?></a><?php endif; ?>
+        <?php if (!empty($__a['link_url'])): ?><br><a href="<?= htmlspecialchars($__a['link_url']) ?>" target="_blank" rel="noopener"><?= htmlspecialchars(t_plain($__a['link_text'])) ?></a><?php endif; ?>
     </p>
     <?php endif; ?>
 
@@ -39,9 +41,9 @@ $__kind_words = ['movie' => t_plain('movies'), 'panel' => t_plain('stage panels'
     <div class="gene-images-grid">
         <?php foreach ($__imgs as $__im):
             $__movie = $__im['kind'] === 'movie';
-            $__title = trim(implode(', ', $__im['accessions']) . ' · ' . t_plain($__im['kind']));
+            $__title = trim(implode(', ', array_map($__nm, $__im['accessions'])) . ' · ' . t_plain($__im['kind']));
             $__data = ['full' => $__img($__im['file']), 'movie' => $__movie ? '1' : '', 'title' => $__title,
-                       'caption' => (string) $__im['caption'], 'genes' => implode(', ', $__im['accessions']),
+                       'caption' => (string) $__im['caption'], 'genes' => implode(', ', array_map($__nm, $__im['accessions'])),
                        'terms' => implode(', ', array_map($__L, $__im['terms'])), 'credit' => trim((string) $__im['credit'])];
             $__thumb = $__movie ? ($__im['poster'] ? $__img($__im['file'], ['poster' => 1, 'size' => 'thumb']) : '') : $__img($__im['file'], ['size' => 'thumb']);
         ?>
@@ -53,7 +55,7 @@ $__kind_words = ['movie' => t_plain('movies'), 'panel' => t_plain('stage panels'
             <span class="gene-image-movie" aria-hidden="true"><i class="fas fa-play"></i></span>
             <?php endif; ?>
             <?php if ($__movie && $__thumb !== ''): ?><span class="gene-image-play" aria-hidden="true"><i class="fas fa-play"></i></span><?php endif; ?>
-            <span class="gene-image-label"><?= htmlspecialchars(implode(', ', $__im['accessions'])) ?></span>
+            <span class="gene-image-label"><?php foreach ($__im['accessions'] as $__id): ?><span class="d-block"><span class="font-monospace"><?= htmlspecialchars($__id) ?></span><?= isset($names[$__id]) ? ' <strong>' . htmlspecialchars($names[$__id]) . '</strong>' : '' ?></span><?php endforeach; ?></span>
         </button>
         <?php endforeach; ?>
     </div>

@@ -643,6 +643,7 @@ if (moop_images_open($organism_name)) {
             'groups'   => moop_images_by_analysis($organism_name, $__imgs),
             'labels'   => moop_ontology_labels(array_values(array_unique($__tids)), moop_ontology_by_purpose('anatomy')),
             'total'    => count($__imgs),
+            'names'    => moop_images_gene_names($organism_name, array_merge(...array_map(fn($i) => $i['accessions'], $__imgs))),
         ];
     }
 }

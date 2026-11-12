@@ -56,6 +56,9 @@ $ids = [$term, $stage];
 foreach ($images as $i) { $ids[] = $i['stage_id']; $ids = array_merge($ids, $i['terms']); }
 $labels = moop_ontology_labels(array_values(array_unique(array_filter($ids))), moop_ontology_by_purpose('anatomy'));
 
+// Gene names for the ids on the tiles ("SMED30007406 SMEDWI-1").
+$names = $images ? moop_images_gene_names($organism, array_merge(...array_map(fn($i) => $i['accessions'], $images))) : [];
+
 // Group by stage (no stage last), in stage-id order (PLANA Stage 2 < Stage 3 ...).
 $by_stage = [];
 foreach ($images as $i) $by_stage[(string) $i['stage_id']][] = $i;
@@ -64,7 +67,7 @@ uksort($by_stage, fn($a, $b) => [$a === '', $a] <=> [$b === '', $b]);
 $tool_title = $analysis !== '' ? $analyses[$analysis]['title'] : 'Image gallery';
 echo render_display_page(__DIR__ . '/pages/image_gallery.php', [
     'organism' => $organism, 'analysis' => $analysis, 'analyses' => $analyses, 'kinds' => $kinds,
-    'gene' => $gene, 'term' => $term, 'stage' => $stage, 'labels' => $labels,
+    'gene' => $gene, 'term' => $term, 'stage' => $stage, 'labels' => $labels, 'names' => $names,
     'by_stage' => $by_stage, 'total' => count($images), 'capped' => count($images) >= $LIMIT,
     'page_styles' => [moop_url_base() . '/css/parent.css'],
     'page_script' => [moop_url_base() . '/js/modules/gene-images.js'],

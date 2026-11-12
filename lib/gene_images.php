@@ -86,7 +86,8 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
         // key_image: one image that explains the analysis's other images (a single-cell cluster map),
         // shown first on gene pages; served by api/gene_image.php?key=<analysis>.
         $db->exec('CREATE TABLE analysis (analysis TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT,
-                     pmid TEXT, citation TEXT, sort INTEGER NOT NULL DEFAULT 0, key_image TEXT, key_caption TEXT)');
+                     pmid TEXT, citation TEXT, sort INTEGER NOT NULL DEFAULT 0, key_image TEXT, key_caption TEXT,
+                     link_url TEXT, link_text TEXT)');   // link: e.g. the dataset's own explorer app
         $db->exec('CREATE TABLE review (kind TEXT NOT NULL, detail TEXT NOT NULL, rows INTEGER NOT NULL)');
         $db->exec('CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)');
         $db->beginTransaction();
@@ -145,7 +146,7 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
         fclose($fh);
 
         // analyses.tsv (optional): analysis, title, description, pmid, citation. File order = page order.
-        $insAn = $db->prepare('INSERT OR REPLACE INTO analysis (analysis, title, description, pmid, citation, sort, key_image, key_caption) VALUES (?,?,?,?,?,?,?,?)');
+        $insAn = $db->prepare('INSERT OR REPLACE INTO analysis (analysis, title, description, pmid, citation, sort, key_image, key_caption, link_url, link_text) VALUES (?,?,?,?,?,?,?,?,?,?)');
         $listed = [];
         if (is_file("$dir/analyses.tsv") && ($ah = fopen("$dir/analyses.tsv", 'r'))) {
             $ahead = array_flip(array_map('trim', explode("\t", rtrim((string) fgets($ah), "\r\n"))));
@@ -158,8 +159,11 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
                     if ($ag('analysis') === '') continue;
                     $key = $ag('key_image');
                     if ($key !== '' && !moop_image_path_under($dir, $key)) { $note('key image missing (analysis kept)', $key); $key = ''; }
+                    $link = $ag('link_url');
+                    if ($link !== '' && !preg_match('#^https://#', $link)) { $note('link is not https (dropped)', $link); $link = ''; }
                     $insAn->execute([$ag('analysis'), $ag('title') ?: $ag('analysis'), $ag('description') ?: null,
-                                     $ag('pmid') ?: null, $ag('citation') ?: null, $n++, $key ?: null, $ag('key_caption') ?: null]);
+                                     $ag('pmid') ?: null, $ag('citation') ?: null, $n++, $key ?: null, $ag('key_caption') ?: null,
+                                     $link ?: null, $link !== '' ? ($ag('link_text') ?: $link) : null]);
                     $listed[$ag('analysis')] = true;
                 }
             }
@@ -167,7 +171,7 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
         }
         // Every analysis named by an image gets a row; one missing from analyses.tsv is titled by its id.
         foreach ($db->query('SELECT DISTINCT analysis FROM image WHERE analysis IS NOT NULL')->fetchAll(PDO::FETCH_COLUMN) as $an) {
-            if (!isset($listed[$an])) { $note('analysis not in analyses.tsv (titled by its id)', $an); $insAn->execute([$an, $an, null, null, null, 1000, null, null]); }
+            if (!isset($listed[$an])) { $note('analysis not in analyses.tsv (titled by its id)', $an); $insAn->execute([$an, $an, null, null, null, 1000, null, null, null, null]); }
         }
         $rins = $db->prepare('INSERT INTO review (kind, detail, rows) VALUES (?,?,?)');
         foreach ($review as $kind => $details) foreach ($details as $d => $n) $rins->execute([$kind, (string) $d, $n]);
@@ -293,7 +297,7 @@ function moop_images_by_analysis(string $organism, array $images): array {
     $groups = [];
     foreach ($images as $im) {
         $k = (string) $im['analysis'];
-        $groups[$k]['analysis'] = $meta[$k] ?? ['analysis' => $k, 'title' => $k, 'description' => null, 'pmid' => null, 'citation' => null, 'sort' => 2000, 'key_image' => null, 'key_caption' => null];
+        $groups[$k]['analysis'] = $meta[$k] ?? ['analysis' => $k, 'title' => $k, 'description' => null, 'pmid' => null, 'citation' => null, 'sort' => 2000, 'key_image' => null, 'key_caption' => null, 'link_url' => null, 'link_text' => null];
         $groups[$k]['images'][] = $im;
     }
     uasort($groups, fn($a, $b) => [$a['analysis']['sort'], $a['analysis']['title']] <=> [$b['analysis']['sort'], $b['analysis']['title']]);
@@ -383,5 +387,50 @@ function moop_images_analyses(string $organism): array {
     if (!$db) return [];
     $out = [];
     foreach ($db->query('SELECT * FROM analysis ORDER BY sort, title') as $r) $out[$r['analysis']] = $r;
+    return $out;
+}
+
+/**
+ * Display names for image gene ids: [accession => name]. Preference: the name of the reference gene the
+ * id maps to through the crosswalk (curated, e.g. SMED30007406 -> h1SMcG0013999 "SMEDWI-1"), else the
+ * id's own gene in organism.sqlite (a transcript's parent gene), else nothing. A "name" that is only an
+ * id is dropped. One crosswalk query and one database query per call.
+ */
+function moop_images_gene_names(string $organism, array $accessions): array {
+    $accs = array_values(array_unique(array_filter(array_map('strval', $accessions), 'strlen')));
+    if (!$accs) return [];
+    require_once __DIR__ . '/crosswalk.php';
+    $is_name = fn(string $n, string $id) => $n !== '' && strcasecmp($n, $id) !== 0 && stripos($n, $id) === false && stripos($id, $n) === false
+                                            && !preg_match('/^(LOC\d+|[A-Za-z]{1,6}[_.]?\d{5,}[0-9._]*)$/', $n);
+    $refs = [];   // accession_lc => first reference gene
+    $hubs = array_keys(moop_crosswalk_sources()[$organism]['hubs'] ?? []);
+    foreach (moop_crosswalk_genes($organism, $accs) as $acc_lc => $rows) {
+        usort($rows, fn($a, $b) => array_search($a['hub'], $hubs) <=> array_search($b['hub'], $hubs));
+        $refs[$acc_lc] = $rows[0]['ref_id'];
+    }
+    $f = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/' . preg_replace('/[^A-Za-z0-9_.-]/', '', $organism) . '/organism.sqlite';
+    $names = [];   // uniquename => name (the feature's gene's name)
+    if (is_file($f)) {
+        try {
+            $db = new PDO('sqlite:' . $f, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
+            $want = array_values(array_unique(array_merge($accs, array_values($refs))));
+            foreach (array_chunk($want, 400) as $chunk) {
+                $st = $db->prepare('SELECT f.feature_uniquename u, f.feature_name n, p.feature_name pn FROM feature f
+                                    LEFT JOIN feature p ON p.feature_id = f.parent_feature_id
+                                    WHERE f.feature_uniquename IN (' . implode(',', array_fill(0, count($chunk), '?')) . ')');
+                $st->execute($chunk);
+                foreach ($st as $r) $names[$r['u']] = trim((string) ($r['n'] ?: $r['pn']));
+            }
+        } catch (Throwable $e) {
+            error_log("MOOP: image gene names for $organism: " . $e->getMessage());
+        }
+    }
+    $out = [];
+    foreach ($accs as $a) {
+        $ref = $refs[mb_strtolower($a)] ?? '';
+        foreach ([$ref !== '' ? ($names[$ref] ?? '') : '', $names[$a] ?? ''] as $n) {
+            if ($is_name($n, $a) && ($ref === '' || $is_name($n, $ref))) { $out[$a] = $n; break; }
+        }
+    }
     return $out;
 }

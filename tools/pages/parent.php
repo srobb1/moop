@@ -747,6 +747,7 @@
                     <p class="small text-muted mb-2">
                         <?= $__a['description'] !== null ? htmlspecialchars($__a['description']) : '' ?>
                         <?php if ($__a['pmid']): ?><a href="https://pubmed.ncbi.nlm.nih.gov/<?= rawurlencode($__a['pmid']) ?>/" target="_blank" rel="noopener"><?= htmlspecialchars($__a['citation'] ?: 'PMID ' . $__a['pmid']) ?></a><?php endif; ?>
+                        <?php if (!empty($__a['link_url'])): ?><br><a href="<?= htmlspecialchars($__a['link_url']) ?>" target="_blank" rel="noopener"><?= htmlspecialchars(t_plain($__a['link_text'])) ?></a><?php endif; ?>
                     </p>
                     <?php if ($__g['elsewhere']):
                         $__parts = [];
@@ -781,7 +782,7 @@
                                 'movie'   => $__is_movie ? '1' : '',
                                 'title'   => $__label,
                                 'caption' => (string) $__im['caption'],
-                                'genes'   => implode(', ', $__im['accessions']),
+                                'genes'   => implode(', ', array_map(fn($id) => isset($image_section['names'][$id]) ? "$id ({$image_section['names'][$id]})" : $id, $__im['accessions'])),
                                 'terms'   => implode(', ', array_map($__IL, $__im['terms'])),
                                 'credit'  => trim((string) $__im['credit']),
                             ];
