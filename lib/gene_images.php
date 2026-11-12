@@ -112,10 +112,13 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
             if (!$datasets["$asm/$gs"]) $note('data set not on this site (kept, shown to nobody until it is)', "$asm/$gs");
             $accs = array_values(array_filter(array_map('trim', explode(';', $get('accession'))), 'strlen'));
             if (!$accs) { $note('no gene or transcript ID', $file); continue; }
-            $stage = $get('stage');
-            $terms = array_values(array_filter(array_map('trim', explode(';', $get('terms'))), 'strlen'));
+            // A stage cell may list several stages (a movie across S3-S5): the first is the image's stage
+            // (how the gene page groups it); every one is also a term, so each stage's term page finds it.
+            $stages = array_values(array_filter(array_map('trim', explode(';', $get('stage'))), 'strlen'));
+            $stage  = $stages[0] ?? '';
+            $terms  = array_values(array_unique(array_merge(array_filter(array_map('trim', explode(';', $get('terms'))), 'strlen'), $stages)));
             if ($known_terms) {
-                foreach (array_merge($stage !== '' ? [$stage] : [], $terms) as $t) {
+                foreach ($terms as $t) {
                     if (!isset($known_terms[$t])) $note('term not in the ontologies (kept)', $t);
                 }
             }
