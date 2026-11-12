@@ -2,7 +2,7 @@
 /**
  * One gene image (in situ, plot, movie) from organisms/<organism>/images/, access-checked.
  *
- *   GET api/gene_image.php?organism=Schmidtea_mediterranea&file=davies_2017/SMED30001362_piwi-3_S3.png
+ *   GET api/gene_image.php?organism=Schmidtea_mediterranea&file=davies_2017/SMED30001362_piwi-3_S3.png[&size=thumb]
  *
  * organisms/ is denied to the web by nginx, so this is the only way an image leaves the server.
  * The file must be LISTED in that organism's gene_images.sqlite (built from images/images.tsv),
@@ -31,6 +31,10 @@ $path = $row ? moop_image_path($organism, $file) : null;
 if (!$path) gene_image_404();
 // Access is decided; release the session lock so a page's many images load in parallel.
 if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+
+// ?size=thumb: a small copy made once into the cache (moop_image_thumbnail); if it cannot be
+// made (no gd, a movie, already small) the original is sent instead.
+if (($_GET['size'] ?? '') === 'thumb' && ($thumb = moop_image_thumbnail($organism, $path))) $path = $thumb;
 
 $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 $type = MOOP_IMAGE_EXTS[$ext] ?? null;

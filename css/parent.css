@@ -625,3 +625,18 @@ a.badge:hover {
 .expr-more-btn { font-size: .8rem; color: var(--moop-tool-header); text-decoration: none; }
 .expr-more-btn[aria-expanded="true"]  .when-collapsed,
 .expr-more-btn[aria-expanded="false"] .when-expanded { display: none; }
+
+/* Gene page "Images" card (tools/pages/parent.php, js/modules/gene-images.js) */
+.gene-images-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.gene-image-tile {
+    display: flex; flex-direction: column; align-items: center; width: 172px; padding: 6px;
+    background: #fff; border: 1px solid #dee2e6; border-radius: 6px; cursor: zoom-in;
+}
+.gene-image-tile:hover, .gene-image-tile:focus-visible { border-color: var(--moop-tool-header); box-shadow: 0 0 0 2px rgba(var(--moop-main-rgb), 0.15); }
+.gene-image-tile img { width: 160px; height: 120px; object-fit: contain; background: #f8f9fa; }
+.gene-image-movie {
+    display: flex; align-items: center; justify-content: center; width: 160px; height: 120px;
+    background: #212529; color: #fff; font-size: 1.75rem; border-radius: 4px;
+}
+.gene-image-label { margin-top: 4px; font-size: 0.75rem; color: #495057; text-align: center; line-height: 1.2; }
+.gene-image-media { max-width: 100%; max-height: 70vh; }

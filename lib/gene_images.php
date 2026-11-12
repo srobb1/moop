@@ -77,6 +77,10 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
                      captions TEXT, pmid TEXT, citation TEXT, credit TEXT, license TEXT, bytes INTEGER)');
         $db->exec('CREATE TABLE image_accession (image_id INTEGER NOT NULL, accession TEXT NOT NULL, accession_lc TEXT NOT NULL)');
         $db->exec('CREATE TABLE image_term (image_id INTEGER NOT NULL, term_id TEXT NOT NULL)');
+        // One row per analysis (images/analyses.tsv): what the gene page titles a section with. Also
+        // the future home of analysis-level access rules (moop_dataset_visible's $analysis).
+        $db->exec('CREATE TABLE analysis (analysis TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT,
+                     pmid TEXT, citation TEXT, sort INTEGER NOT NULL DEFAULT 0)');
         $db->exec('CREATE TABLE review (kind TEXT NOT NULL, detail TEXT NOT NULL, rows INTEGER NOT NULL)');
         $db->exec('CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)');
         $db->beginTransaction();
@@ -128,6 +132,30 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
             $seen[$file] = true;
         }
         fclose($fh);
+
+        // analyses.tsv (optional): analysis, title, description, pmid, citation. File order = page order.
+        $insAn = $db->prepare('INSERT OR REPLACE INTO analysis (analysis, title, description, pmid, citation, sort) VALUES (?,?,?,?,?,?)');
+        $listed = [];
+        if (is_file("$dir/analyses.tsv") && ($ah = fopen("$dir/analyses.tsv", 'r'))) {
+            $ahead = array_flip(array_map('trim', explode("\t", rtrim((string) fgets($ah), "\r\n"))));
+            if (!isset($ahead['analysis'], $ahead['title'])) $note('analyses.tsv lacks analysis / title columns', 'analyses.tsv');
+            else {
+                $n = 0;
+                while (($l = fgets($ah)) !== false) {
+                    $a = explode("\t", rtrim($l, "\r\n"));
+                    $ag = fn(string $k) => isset($ahead[$k]) ? trim($a[$ahead[$k]] ?? '') : '';
+                    if ($ag('analysis') === '') continue;
+                    $insAn->execute([$ag('analysis'), $ag('title') ?: $ag('analysis'), $ag('description') ?: null,
+                                     $ag('pmid') ?: null, $ag('citation') ?: null, $n++]);
+                    $listed[$ag('analysis')] = true;
+                }
+            }
+            fclose($ah);
+        }
+        // Every analysis named by an image gets a row; one missing from analyses.tsv is titled by its id.
+        foreach ($db->query('SELECT DISTINCT analysis FROM image WHERE analysis IS NOT NULL')->fetchAll(PDO::FETCH_COLUMN) as $an) {
+            if (!isset($listed[$an])) { $note('analysis not in analyses.tsv (titled by its id)', $an); $insAn->execute([$an, $an, null, null, null, 1000]); }
+        }
         $rins = $db->prepare('INSERT INTO review (kind, detail, rows) VALUES (?,?,?)');
         foreach ($review as $kind => $details) foreach ($details as $d => $n) $rins->execute([$kind, (string) $d, $n]);
         $counts = [
@@ -236,4 +264,63 @@ function moop_images_finish(PDO $db, string $organism, array $rows, int $limit):
     foreach ($db->query("SELECT image_id, term_id FROM image_term WHERE image_id IN ($in)") as $r) $terms[$r['image_id']][] = $r['term_id'];
     foreach ($rows as &$r) { $r['accessions'] = $accs[$r['id']] ?? []; $r['terms'] = $terms[$r['id']] ?? []; }
     return $rows;
+}
+
+/**
+ * Images grouped by analysis, in analyses.tsv order: [['analysis' => row, 'images' => [...]], ...].
+ * Images with no analysis go last, under an untitled group.
+ */
+function moop_images_by_analysis(string $organism, array $images): array {
+    $db = moop_images_open($organism);
+    $meta = [];
+    if ($db) foreach ($db->query('SELECT * FROM analysis') as $r) $meta[$r['analysis']] = $r;
+    $groups = [];
+    foreach ($images as $im) {
+        $k = (string) $im['analysis'];
+        $groups[$k]['analysis'] = $meta[$k] ?? ['analysis' => $k, 'title' => $k, 'description' => null, 'pmid' => null, 'citation' => null, 'sort' => 2000];
+        $groups[$k]['images'][] = $im;
+    }
+    uasort($groups, fn($a, $b) => [$a['analysis']['sort'], $a['analysis']['title']] <=> [$b['analysis']['sort'], $b['analysis']['title']]);
+    return array_values($groups);
+}
+
+/**
+ * A thumbnail of an image file (max 320x240, so it stays sharp on high-density screens at the
+ * card's 160x120), made with PHP gd on first request into <cache>/gene_image_thumbs/<organism>/
+ * and reused after. The cache name includes the original's size and time, so a replaced image
+ * gets a new thumbnail. Returns the thumbnail path, or null when it cannot be made (no gd, not a
+ * still image, unreadable) -- the caller then sends the original: slower, never broken.
+ */
+function moop_image_thumbnail(string $organism, string $path): ?string {
+    if (!extension_loaded('gd')) return null;
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $open = ['png' => 'imagecreatefrompng', 'jpg' => 'imagecreatefromjpeg', 'jpeg' => 'imagecreatefromjpeg', 'gif' => 'imagecreatefromgif'][$ext] ?? null;
+    if (!$open || !function_exists($open)) return null;
+    require_once __DIR__ . '/cache_paths.php';
+    $dir = moop_cache_root() . '/gene_image_thumbs/' . preg_replace('/[^A-Za-z0-9_.-]/', '', $organism);
+    $out = $dir . '/' . sha1($path . '|' . filesize($path) . '|' . filemtime($path)) . ($ext === 'png' || $ext === 'gif' ? '.png' : '.jpg');
+    if (is_file($out)) return $out;
+    if (is_file("$out.orig")) return null;                    // decided before: the original is smaller
+    if (filesize($path) < 40000) return null;                 // small already: a thumbnail cannot save much
+    if (!moop_ensure_cache_dir($dir)) return null;
+    $src = @$open($path);
+    if (!$src) return null;
+    [$w, $h] = [imagesx($src), imagesy($src)];
+    $scale = min(1, 320 / $w, 240 / $h);
+    if ($scale >= 1) { imagedestroy($src); return null; }   // already small: the original is the thumbnail
+    [$tw, $th] = [max(1, (int) round($w * $scale)), max(1, (int) round($h * $scale))];
+    $dst = imagecreatetruecolor($tw, $th);
+    if (substr($out, -4) === '.png') { imagealphablending($dst, false); imagesavealpha($dst, true); }
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, $tw, $th, $w, $h);
+    // 256 colours: plots and stained images lose nothing visible at thumbnail size, and the file
+    // shrinks several-fold (a full-colour PNG thumbnail of a 96 KB plot was 64 KB).
+    if (substr($out, -4) === '.png') imagetruecolortopalette($dst, true, 256);
+    $tmp = $out . '.tmp-' . getmypid();
+    $ok = substr($out, -4) === '.png' ? imagepng($dst, $tmp, 6) : imagejpeg($dst, $tmp, 85);
+    imagedestroy($src); imagedestroy($dst);
+    if ($ok && filesize($tmp) >= filesize($path)) {          // e.g. a palette PNG: resampled is bigger
+        @unlink($tmp); @touch("$out.orig"); return null;
+    }
+    if (!$ok || !@rename($tmp, $out)) { @unlink($tmp); return null; }
+    return $out;
 }

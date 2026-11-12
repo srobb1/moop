@@ -626,11 +626,33 @@ if (moop_crosswalk_open($organism_name) || moop_page_open($organism_name)) {
     if (!$page_section['curations'] && !$page_section['aka']) $page_section = null;
 }
 
+// Gene images (in situ, single-cell plots, movies), grouped by ANALYSIS. Looked up on the same
+// id list as the anatomical expression above (this gene, its children, and every crosswalk
+// accession of it), so an image recorded on a SMED3 id also shows on the S3 h1 gene. Only data
+// sets the visitor may see (moop_dataset_visible). Organisms without gene_images.sqlite: one
+// file check. docs/ORGANISM_SIDE_FILES.md §2.
+require_once __DIR__ . '/../lib/gene_images.php';
+$image_section = null;
+if (moop_images_open($organism_name)) {
+    $__img_ids = $__accs ?? array_merge([$feature_uniquename], array_column($children, 'feature_uniquename'));
+    $__imgs    = moop_images_for_accessions($organism_name, $__img_ids, 200);
+    if ($__imgs) {
+        $__tids = [];
+        foreach ($__imgs as $__i) { $__tids = array_merge($__tids, $__i['terms']); if ($__i['stage_id']) $__tids[] = $__i['stage_id']; }
+        $image_section = [
+            'groups'   => moop_images_by_analysis($organism_name, $__imgs),
+            'labels'   => moop_ontology_labels(array_values(array_unique($__tids)), moop_ontology_by_purpose('anatomy')),
+            'total'    => count($__imgs),
+        ];
+    }
+}
+
 // Render page using layout system
 echo render_display_page(
     __DIR__ . '/pages/parent.php',
     [
         'page_section' => $page_section,
+        'image_section' => $image_section,
         'organism_name' => $organism_name,
         'feature_id' => $feature_id,
         'feature_uniquename' => $feature_uniquename,
@@ -696,7 +718,7 @@ echo render_display_page(
             // there are sequences to show, so the overview Copy button would be dead on a
             // gene with none.
             moop_url_base() . "/js/modules/copy-to-clipboard.js"
-        ],
+        ] + ($image_section ? [100 => moop_url_base() . "/js/modules/gene-images.js"] : []),
         'inline_scripts' => [
             "const geneModelData = " . json_encode($gene_model, JSON_HEX_TAG) . ";",
             // json_encode, not addslashes(): addslashes() leaves `</script>` and line breaks

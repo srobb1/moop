@@ -710,6 +710,84 @@
         </div>
     </div>
     <?php endif; ?>
+<?php if (!empty($image_section)):
+    // Gene images, one titled part per ANALYSIS (images/analyses.tsv). Thumbnails open a quick
+    // view (js/modules/gene-images.js); every file goes through api/gene_image.php, which
+    // re-checks access. docs/ORGANISM_SIDE_FILES.md §2.
+    $__il  = $image_section['labels'];
+    $__IL  = fn(?string $id) => $id === null || $id === '' ? '' : ($__il[$id] ?? $id);
+    $__img_url = fn(string $file, bool $thumb) => moop_url('api/gene_image.php') . '?'
+        . http_build_query(['organism' => $organism_name, 'file' => $file] + ($thumb ? ['size' => 'thumb'] : []));
+    $__ng = count($image_section['groups']);
+?>
+    <!-- Gene images, by analysis -->
+    <div class="card shadow-sm mb-4" id="pnav-images" data-nav-label="Images">
+        <div class="card-header d-flex align-items-center flex-wrap">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#imagesSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Images') ?>" title="<?= t('Show or hide Images') ?>">
+                <i class="fas fa-images toggle-icon text-primary"></i>
+            </span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Images') ?></span>
+            <span class="ms-2 text-muted small"><?= ($__ng !== 1 ? t('%1$d images from %2$d analyses', $image_section['total'], $__ng)
+                                                                 : t('%1$d images from %2$d analysis', $image_section['total'], $__ng)) . "\n" ?></span>
+        </div>
+        <div class="collapse show" id="imagesSection">
+            <div class="card-body">
+                <?php foreach ($image_section['groups'] as $__gi => $__g): $__a = $__g['analysis']; ?>
+                <?= '<div class="gene-images-analysis' . ($__gi ? ' mt-4' : '') . '" id="pnav-images-' . (int) $__gi . '" data-nav-sub="' . htmlspecialchars($__a['title']) . '">' . "\n" ?>
+                    <h6 class="mb-1"><?= htmlspecialchars($__a['title']) ?></h6>
+                    <p class="small text-muted mb-2">
+                        <?= $__a['description'] !== null ? htmlspecialchars($__a['description']) : '' ?>
+                        <?php if ($__a['pmid']): ?><a href="https://pubmed.ncbi.nlm.nih.gov/<?= rawurlencode($__a['pmid']) ?>/" target="_blank" rel="noopener"><?= htmlspecialchars($__a['citation'] ?: 'PMID ' . $__a['pmid']) ?></a><?php endif; ?>
+                    </p>
+                    <div class="gene-images-grid">
+                        <?php foreach ($__g['images'] as $__im):
+                            $__is_movie = $__im['kind'] === 'movie';
+                            $__stage = $__IL($__im['stage_id']);
+                            $__label = trim(($__stage !== '' ? $__stage . ' · ' : '') . t_plain($__im['kind']));
+                            $__data = [
+                                'full'    => $__img_url($__im['file'], false),
+                                'movie'   => $__is_movie ? '1' : '',
+                                'title'   => $__label,
+                                'caption' => (string) $__im['caption'],
+                                'genes'   => implode(', ', $__im['accessions']),
+                                'terms'   => implode(', ', array_map($__IL, $__im['terms'])),
+                                'credit'  => trim((string) $__im['credit']),
+                            ];
+                        ?>
+                        <?= '<button type="button" class="gene-image-tile" title="' . htmlspecialchars($__label) . '"'
+                            . implode('', array_map(fn($k, $v) => ' data-' . $k . '="' . htmlspecialchars($v) . '"', array_keys($__data), $__data)) . '>' . "\n" ?>
+                            <?php if ($__is_movie): ?>
+                            <span class="gene-image-movie" aria-hidden="true"><i class="fas fa-play"></i></span>
+                            <?php else: ?>
+                            <?= '<img src="' . htmlspecialchars($__img_url($__im['file'], true)) . '" alt="' . htmlspecialchars($__label) . '" loading="lazy" decoding="async" width="160" height="120">' . "\n" ?>
+                            <?php endif; ?>
+                            <span class="gene-image-label"><?= htmlspecialchars($__label) ?></span>
+                        </button>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="geneImageModal" tabindex="-1" aria-labelledby="geneImageModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="geneImageModalTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= t('Close') ?>"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="gene-image-full mb-3"></div>
+                    <dl class="row small text-start mb-0 gene-image-facts"></dl>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-sm btn-outline-secondary gene-image-open" href="#" target="_blank" rel="noopener"><?= t('Open full size') ?></a>
+                </div>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
     <!-- Annotations Section -->
     <div class="card shadow-sm mb-4" id="pnav-annotations" data-nav-label="Annotations">

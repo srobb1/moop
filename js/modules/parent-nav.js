@@ -114,6 +114,12 @@
           child.parent = node; node.children.push(child);
         });
       }
+      // Any other section can list its own parts: elements marked [data-nav-sub] inside it
+      // (the Images card titles each analysis this way).
+      el.querySelectorAll("[data-nav-sub]").forEach(function (sub) {
+        var leaf = mk(sub, sub.getAttribute("data-nav-sub"), 2);
+        leaf.parent = node; node.children.push(leaf);
+      });
     });
     if (!roots.length) return;
 
