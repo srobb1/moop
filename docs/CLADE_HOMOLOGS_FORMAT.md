@@ -1,10 +1,31 @@
-# homologs.sqlite — clade homolog groups, the format MOOP expects
+# homologs.sqlite — clade comparative genomics (OrthoFinder), the format MOOP expects
 
 **Status: agreed design, 2026-11-12. Nothing on the website reads it yet.** Compute builds to this
 format; the website side then adds `lib/clade_homologs.php` and the gene-page panel.
 
-One file per clade (one OrthoFinder run over MOOP gene sets) lets a gene page list every homologous
-gene in that clade at once, each linked to its own gene page. Decision **B** of
+One file per clade (one OrthoFinder run over MOOP gene sets) lets a gene page list its orthologs and
+its whole gene family in that clade at once, each linked to its own gene page.
+
+## Words — keep these apart (decided 2026-11-12)
+
+A gene page already has **annotation** types that sound the same but mean something else. Every
+place the clade data appears says what it is, how it was made, and what it is compared with:
+
+| On the page | What it is | Method | Compared with |
+|---|---|---|---|
+| Annotations → **Orthologs** | OMA pairwise / groups / HOGs, eggNOG | published orthology resources | reference species **outside** the site |
+| Annotations → **Homologs** | best sequence matches | BLAST / DIAMOND, one-way | Ensembl / UniProt proteomes **outside** the site |
+| Annotations → **RBBH Homolog** | reciprocal best hits | MMseqs2 | Ensembl proteomes **outside** the site |
+| **Comparative genomics** card → *Orthologs in <clade>* | OrthoFinder pairwise orthologs, with type 1:1 / 1:many / many:1 / many:many | gene trees | MOOP organisms **in the clade** |
+| **Comparative genomics** card → *Gene family in <clade>* | the rest of the orthogroup / N0 HOG: orthologs **and paralogs** descended from one ancestral gene | gene trees | MOOP organisms **in the clade** |
+
+- The clade data is **never** called plain "homologs" on a page (that word belongs to the
+  similarity annotations), and an orthogroup is never called "orthologs" (it includes paralogs).
+- It is its own card, not an annotation type, so it never mixes into the annotation tables.
+- A HOG / orthogroup id in search or exports reads "gene family (OrthoFinder, <clade>)".
+- The file name `homologs.sqlite` stays: visitors never see it, and compute already builds to it.
+- The annotation types' descriptions (`metadata/annotation_config.json`) were rewritten to say
+  method and scope the same way. Decision **B** of
 `MOOP_INTEGRATION_BRIEF.md`: one shared table per clade, not per-organism annotation copies, so a
 new run replaces one file and no `organism.sqlite` is rebuilt. Same pattern as `crosswalk.sqlite`
 (`docs/CROSSWALK_FORMAT.md`).
@@ -90,9 +111,11 @@ SQLite, named in a new table — format `clade_homologs/2`.
 
 ## What the site will do with it
 
-- **Gene-page panel "Homologs in <label>"**, one row per other organism:
-  its **orthologs of this gene** from `pair` (1:1 first, with the kind shown), then
-  "+ N more in the family" — the rest of this gene's N0 HOG — expandable. An 80-gene family across
+- **Gene-page card "Comparative genomics"**, one part per clade (`meta.label`), each with
+  *Orthologs in <label>* — one row per other organism, this gene's orthologs from `pair` (1:1 first,
+  with the kind shown) — and *Gene family in <label>*: "+ N more in the family" (the rest of this
+  gene's N0 HOG, paralogs included), expandable. A one-line note under each says the method
+  (OrthoFinder, gene trees) and the scope (N gene sets on this site). An 80-gene family across
   18 planarians reads as 18 short rows. Each gene links to its own gene page; the site builds the
   links (no URLs in the file).
 - **Permissions:** a gene is listed, and counted, only if the visitor may see **its own gene set**
@@ -102,7 +125,7 @@ SQLite, named in a new table — format `clade_homologs/2`.
   FASTA vs `member.protein_md5`; plus a sample of member gene IDs looked up in that organism's
   `organism.sqlite` (an md5 match proves the file is the same, not that the IDs still exist).
   Either failing → the dashboard names the clade and the gene set.
-- A gene in several clades (planarians ⊂ a larger flatworm run, say) gets one panel per clade.
+- A gene in several clades (planarians ⊂ a larger flatworm run, say) gets one part per clade.
 
 ## The HOG-ID annotation (optional, compute side, unchanged loader)
 

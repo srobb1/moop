@@ -4,7 +4,7 @@
             "display_name": "Orthologs",
             "color": "primary",
             "order": 1,
-            "description": "Genes in different species that evolved from a common ancestor by speciation.",
+            "description": "<strong>Orthologs</strong> are genes in different species that descend from one ancestral gene and were separated by speciation (genes separated by a duplication are <em>paralogs</em>). These come from published orthology resources &mdash; OMA (pairwise orthologs, OMA groups and hierarchical orthologous groups, HOGs) and eggNOG &mdash; and compare this gene with <strong>reference species outside this site</strong> (human, mouse, fly, lancelet, &hellip;). Orthologs among the organisms <em>on this site</em> (OrthoFinder) are shown separately, under <em>Comparative genomics</em>, where available.",
             "enabled": true
         },
         "GO": {
