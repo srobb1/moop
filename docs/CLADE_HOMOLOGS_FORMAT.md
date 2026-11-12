@@ -98,60 +98,37 @@ CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 
 | key | value |
 |---|---|
-| `format` | `clade_homologs/2` (or `/1`, still read) — the site refuses a file without one of these |
+| `format` | `clade_homologs/1` — the site refuses a file without it |
 | `clade` | same as the folder name |
 | `label` | display name, e.g. `Planarians (Tricladida)` |
 | `taxon_id` | NCBI taxon of the clade, if any |
-| `method`, `method_version` | e.g. `OrthoFinder` / `3.1.2`, or `FastOMA` / … (format 2; format 1 had only `orthofinder_version`, still read) |
-| `alias_method` | format 2: how other gene sets were matched, e.g. `RosettaStone (pblat, >= 95% identity)` |
+| `method`, `method_version` | e.g. `OrthoFinder` / `3.1.2`, or `FastOMA` / … — shown on the card. (Older files have only `orthofinder_version`; still read.) |
 | `run_date`, `built_at` | ISO 8601 |
 | `genes`, `orthogroups`, `hogs_n0`, `pairs` | counts (informational; the site checks they are > 0) |
 
 Gene trees are not part of format 1. If wanted later: a separate file per orthogroup beside the
 SQLite, named in a new table — format `clade_homologs/2`.
 
-## Format 2 (`clade_homologs/2`) — every gene set of a species, not only the reference
+## Other gene sets of a species — through the crosswalk (decided 2026-11-12)
 
-Orthology is computed on **one gene set per species** (the `member` table). Putting several gene sets
-of one species into the run would be wrong: copies of the same gene would become each other's
-"paralogs" and real 1:1 orthologs would turn into many:many. So the other gene sets of a member
-organism are attached by **sequence mapping** (RosettaStone, the same method as `crosswalk.sqlite`),
-in two more tables. Everything in format 1 is unchanged.
+Orthology is computed on **one gene set per species** (the `member` table), whatever the tool. Putting
+several gene sets of one species into a run would be wrong: copies of the same gene would become each
+other's "paralogs" and real 1:1 orthologs would turn into many:many.
 
-```sql
-CREATE TABLE alias_set (              -- one row per OTHER gene set of a member organism that is mapped
-  organism     TEXT NOT NULL,
-  assembly     TEXT NOT NULL,
-  gene_set     TEXT NOT NULL,         -- a MOOP gene set folder; NOT a member gene set
-  protein_md5  TEXT NOT NULL,         -- md5 of that gene set's protein FASTA as MOOP ships it (staleness)
-  genes        INTEGER NOT NULL,      -- genes of this set that map to a reference gene
-  PRIMARY KEY (organism, gene_set)
-);
+Every OTHER gene set of a member organism reaches the card through that organism's
+**`crosswalk.sqlite`** (RosettaStone; `docs/CROSSWALK_FORMAT.md`) — the same mapping the images and the
+anatomy search use. Nothing extra goes in the clade file. Requirements:
 
-CREATE TABLE alias (                  -- a gene of an alias_set gene set -> the reference gene(s) it matches
-  organism     TEXT NOT NULL,
-  gene_set     TEXT NOT NULL,         -- an alias_set row
-  gene         TEXT NOT NULL,         -- the GENE's feature_uniquename (what parent.php takes); a
-                                      -- per-transcript mapping is rolled up to its gene
-  gene_lc      TEXT NOT NULL,         -- lower(gene)
-  gene_id      INTEGER NOT NULL       -- gene.id of the reference gene it matches
-);
-CREATE INDEX a_gene ON alias (gene_lc, organism, gene_set);
-CREATE INDEX a_ref  ON alias (gene_id);
-```
+- the organism has a `crosswalk.sqlite` on the site, and the clade's member gene set is one of its
+  **hubs** (hub names are MOOP gene set names);
+- the other gene sets are crosswalk **sources** configured with `gene_set` + `assembly` (site config
+  `crosswalk[<organism>]['sources']`), so their ids can link to gene pages.
 
-- A gene may match more than one reference gene (and the reverse): one row per match.
-- Same organism only: an alias row never crosses species — that is orthology's job.
-- Unmapped genes simply have no row; their pages show no card (better than a guess).
-
-**What the site does with it:**
-- **On a gene page of an alias gene set** (e.g. Nematostella NV2), the card shows the reference
-  gene's orthologs and family, with a note: *"Orthology computed on <reference gene set>; this gene
-  matches <reference gene> by sequence (<alias_method>)."* Several matches: one part per reference gene.
-- **Every listed gene** (orthologs, family, paralogs) also shows its other gene sets' ids: *"also in
-  NV2: NV2g…"*, each linked.
-- Alias genes, like all genes, are listed only if the visitor may see their own gene set.
-- Staleness: `alias_set.protein_md5` is checked like `member.protein_md5`.
+On the page: a gene of another gene set gets the card of the reference gene it maps to, with *"Orthologs
+are computed on gene set X. This gene is the same gene as Y there (matched by sequence)."*, and every
+gene page with the card shows *"The same gene in other gene sets: …"*. Unmapped genes: no card.
+(A `clade_homologs/2` with alias tables was specified and dropped the same day — one mapping, used
+everywhere, is simpler.)
 
 ## What the site will do with it
 

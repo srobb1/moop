@@ -821,12 +821,18 @@
              . ($short !== '' ? ' <span class="text-muted">' . htmlspecialchars($short) . '</span>' : '')
              . $__cl_also($org, $gene);
     };
-    $__cl_list = function (string $org, array $o, array $genes, int $show, string $more_label) use ($__cl_link): string {
+    $__kind_tip = fn(string $k) => [
+        '1:1'       => t_plain('One gene on each side: the clearest ortholog.'),
+        '1:many'    => t_plain('This gene has several copies in the other species (duplicated there).'),
+        'many:1'    => t_plain('Several genes here share one counterpart in the other species (duplicated here).'),
+        'many:many' => t_plain('Duplicated in both species.'),
+    ][$k] ?? $k;
+    $__cl_list = function (string $org, array $o, array $genes, int $show, string $more_label) use ($__cl_link, $__kind_tip): string {
         $h = '';
-        foreach (array_slice($genes, 0, $show) as $g) $h .= '<div>' . (is_array($g) ? '<span class="badge compgen-kind">' . htmlspecialchars($g['kind']) . '</span> ' . $__cl_link($org, $o, $g['gene']) : $__cl_link($org, $o, $g)) . '</div>';
+        foreach (array_slice($genes, 0, $show) as $g) $h .= '<div>' . (is_array($g) ? '<span class="badge compgen-kind" title="' . htmlspecialchars($__kind_tip($g['kind'])) . '">' . htmlspecialchars($g['kind']) . '</span> ' . $__cl_link($org, $o, $g['gene']) : $__cl_link($org, $o, $g)) . '</div>';
         if (count($genes) > $show) {
             $h .= '<details><summary>' . htmlspecialchars($more_label) . '</summary>';
-            foreach (array_slice($genes, $show, 200) as $g) $h .= '<div>' . (is_array($g) ? '<span class="badge compgen-kind">' . htmlspecialchars($g['kind']) . '</span> ' . $__cl_link($org, $o, $g['gene']) : $__cl_link($org, $o, $g)) . '</div>';
+            foreach (array_slice($genes, $show, 200) as $g) $h .= '<div>' . (is_array($g) ? '<span class="badge compgen-kind" title="' . htmlspecialchars($__kind_tip($g['kind'])) . '">' . htmlspecialchars($g['kind']) . '</span> ' . $__cl_link($org, $o, $g['gene']) : $__cl_link($org, $o, $g)) . '</div>';
             if (count($genes) > $show + 200) $h .= '<div class="text-muted">' . t('and %d more', count($genes) - $show - 200) . '</div>';
             $h .= '</details>';
         }
@@ -861,12 +867,15 @@
                 <?= '<div class="compgen-clade' . ($__ci ? ' mt-4' : '') . '" id="pnav-compgen-' . (int) $__ci . '" data-nav-sub="' . htmlspecialchars($__c['label']) . '">' . "\n" ?>
                     <h6 class="mb-1"><?= t('Orthologs in %s', $__c['label']) ?></h6>
                     <?php if (!empty($__c['via'])): ?>
-                    <p class="small mb-2 compgen-via"><?= t_markup('Orthology is computed on one gene set per species. This gene matches %1$s in %2$s by sequence (%3$s), so these are that gene\'s orthologs.',
-                        '<span class="font-monospace">' . htmlspecialchars($__c['via']['gene']) . '</span>', htmlspecialchars($__c['via']['gene_set']), htmlspecialchars($__c['via']['alias_method'] !== '' ? $__c['via']['alias_method'] : 'RosettaStone')) ?></p>
-                    <?php elseif (!empty($__c['aliases'][$organism_name][$__c['self_gene']])): ?>
-                    <p class="small mb-2"><?= t('This gene in other gene sets:') ?><?= $__cl_also($organism_name, $__c['self_gene']) ?></p>
+                    <p class="small mb-2 compgen-via"><?= t_markup('Orthologs are computed on gene set %2$s. This gene is the same gene as %1$s there (matched by sequence), so these are its orthologs.',
+                        '<a class="font-monospace" href="' . htmlspecialchars(moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism_name, 'uniquename' => $__c['via']['gene'], 'gene_set' => $__c['via']['gene_set']])) . '">' . htmlspecialchars($__c['via']['gene']) . '</a>',
+                        htmlspecialchars($__c['via']['gene_set'])) ?></p>
                     <?php endif; ?>
-                    <p class="small text-muted mb-2"><?= t('%1$s %2$s, gene trees across %3$d gene sets on this site (one per species). 1:1 = one gene on each side; 1:many / many:many = duplicated on one or both sides.', $__c['method'], $__c['version'], $__c['gene_sets']) ?></p>
+                    <?php // The same gene in this species' other gene sets, minus the one this page is on.
+                    $__cur_aliases[$organism_name][$__c['self_gene']] = array_values(array_filter($__cur_aliases[$organism_name][$__c['self_gene']] ?? [], fn($a) => $a['gene_set'] !== $compgen_section['page_gene_set']));
+                    if ($__cur_aliases[$organism_name][$__c['self_gene']]): ?>
+                    <p class="small mb-2"><?= t('The same gene in other gene sets:') ?><?= $__cl_also($organism_name, $__c['self_gene']) ?></p>
+                    <?php endif; ?>
                     <?php if ($__others): ?>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle small mb-2 compgen-table">
@@ -890,7 +899,7 @@
                         <?= $__cl_list($__self[0], $__self[1], $__self[1]['family'], 200, '') . "\n" ?>
                     </details>
                     <?php endif; ?>
-                    <p class="small text-muted mb-0"><?= t('Gene family in %1$s: every gene descended from one ancestral gene in this clade, orthologs and paralogs (orthogroup %2$s).', $__c['label'], $__c['orthogroup']) ?></p>
+                    <p class="small text-muted mb-0"><?= t('Gene family: every gene in this group descended from one ancestral gene, orthologs and paralogs. Computed with %1$s %2$s on one gene set per species (%3$d gene sets); family %4$s.', $__c['method'], $__c['version'], $__c['gene_sets'], $__c['orthogroup']) ?></p>
                 </div>
             <?php endforeach; ?>
             </div>

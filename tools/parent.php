@@ -660,8 +660,8 @@ if (moop_clades_open()) {
     if ($__gs_name !== '') {
         // The clades list genes; an mRNA page asks for its gene.
         foreach (array_unique(array_filter([$feature_uniquename, $ancestor_feature_uniquename ?? ''])) as $__g) {
-            $__cl = moop_clade_homologs_for_gene($organism_name, $__gs_name, (string) $__g);
-            if ($__cl) { $compgen_section = ['clades' => $__cl, 'labels' => moop_clade_gene_labels($__cl), 'gene' => (string) $__g]; break; }
+            $__cl = moop_clade_homologs_for_gene($organism_name, $__gs_name, (string) $__g, array_column($children, 'feature_uniquename'));
+            if ($__cl) { $compgen_section = ['clades' => $__cl, 'labels' => moop_clade_gene_labels($__cl), 'gene' => (string) $__g, 'page_gene_set' => $__gs_name]; break; }
         }
     }
 }
