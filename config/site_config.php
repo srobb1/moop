@@ -266,6 +266,48 @@ return [
                 'ncbi_smed_ests'             => ['group' => 'est', 'label' => 'NCBI S. mediterranea ESTs', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
             ],
         ],
+        // Shipped by compute's RosettaStone (MOOP mode: names = MOOP gene set names), 2026-11-12. The hub is the
+        // gene set the OrthoFinder clades use; the other gene sets reach the comparative genomics card through it.
+        'Danio_rerio' => [
+            'name'   => 'Rosetta Stone',
+            'hubs'   => ['RS_2025_04' => ['assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04', 'transcripts' => 'RS_2025_04_transcripts']],
+            'source_groups' => ['site' => 'Gene sets on this site'],
+            'sources' => [
+                'RS_2025_04' => ['group' => 'site', 'label' => 'RefSeq RS_2025_04', 'assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04'],
+                'RS_2025_04_transcripts' => ['group' => 'site', 'label' => 'RefSeq RS_2025_04, transcripts', 'assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04'],
+                '20260404' => ['group' => 'site', 'label' => 'Ensembl 2026-04-04 gene set', 'assembly' => 'GCA_000002035.4', 'gene_set' => '20260404'],
+            ],
+        ],
+        'Nematostella_vectensis' => [
+            'name'   => 'Rosetta Stone',
+            'hubs'   => ['RS_101' => ['assembly' => 'GCF_932526225.1', 'gene_set' => 'RS_101', 'transcripts' => 'RS_101_transcripts']],
+            'source_groups' => ['site' => 'Gene sets on this site'],
+            'sources' => [
+                'RS_101' => ['group' => 'site', 'label' => 'RefSeq RS_101', 'assembly' => 'GCF_932526225.1', 'gene_set' => 'RS_101'],
+                'RS_101_transcripts' => ['group' => 'site', 'label' => 'RefSeq RS_101, transcripts', 'assembly' => 'GCF_932526225.1', 'gene_set' => 'RS_101'],
+                'NV2' => ['group' => 'site', 'label' => 'NV2 gene models', 'assembly' => 'GCA_033964005.1', 'gene_set' => 'NV2'],
+            ],
+        ],
+        'Petromyzon_marinus' => [
+            'name'   => 'Rosetta Stone',
+            'hubs'   => ['RS_2025_08' => ['assembly' => 'GCF_048934315.1', 'gene_set' => 'RS_2025_08', 'transcripts' => 'RS_2025_08_transcripts']],
+            'source_groups' => ['site' => 'Gene sets on this site'],
+            'sources' => [
+                'RS_2025_08' => ['group' => 'site', 'label' => 'RefSeq RS_2025_08', 'assembly' => 'GCF_048934315.1', 'gene_set' => 'RS_2025_08'],
+                'RS_2025_08_transcripts' => ['group' => 'site', 'label' => 'RefSeq RS_2025_08, transcripts', 'assembly' => 'GCF_048934315.1', 'gene_set' => 'RS_2025_08'],
+                'PM2023_newmodels-2023Nov' => ['group' => 'site', 'label' => 'PM2023 new models (Nov 2023)', 'assembly' => 'GCF_010993605.1', 'gene_set' => 'PM2023_newmodels-2023Nov'],
+            ],
+        ],
+        'Notamacropus_eugenii' => [
+            'name'   => 'Rosetta Stone',
+            'hubs'   => ['T2T_SIMR_ANNOT_geneset' => ['assembly' => 'T2T_SIMR_ANNOT', 'gene_set' => 'T2T_SIMR_ANNOT_geneset', 'transcripts' => 'T2T_SIMR_ANNOT_geneset_transcripts']],
+            'source_groups' => ['site' => 'Gene sets on this site'],
+            'sources' => [
+                'T2T_SIMR_ANNOT_geneset' => ['group' => 'site', 'label' => 'T2T SIMR annotation', 'assembly' => 'T2T_SIMR_ANNOT', 'gene_set' => 'T2T_SIMR_ANNOT_geneset'],
+                'T2T_SIMR_ANNOT_geneset_transcripts' => ['group' => 'site', 'label' => 'T2T SIMR annotation, transcripts', 'assembly' => 'T2T_SIMR_ANNOT', 'gene_set' => 'T2T_SIMR_ANNOT_geneset'],
+                'T2T_helixer' => ['group' => 'site', 'label' => 'Helixer gene models (Tammar female v7)', 'assembly' => 'Tammar_Female_v7_Final_Haploid_plus_Y', 'gene_set' => 'T2T_helixer'],
+            ],
+        ],
     ],
 
     // ======== ONTOLOGIES (PAGE search: PLANA anatomy, BSPO spatial, ECO evidence) ========
