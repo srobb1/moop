@@ -1466,12 +1466,16 @@ function getOrphanedJBrowseRegistrations(string $organism_data_path): array {
  */
 function moop_organism_cache_staleness(array $raw_cache, string $organism_data,
                                        string $taxonomy_tree_file, string $groups_file): array {
-    $out = ['stale' => false, 'format_outdated' => false, 'config_changed' => false,
+    $out = ['stale' => false, 'format_outdated' => false, 'checks_changed' => false, 'config_changed' => false,
             'changed' => [], 'deleted' => [], 'current_fps' => [], 'reasons' => []];
     if (!$raw_cache) return $out;
 
     $has_fps = isset($raw_cache['org_fingerprints'], $raw_cache['config_fingerprint']);
     $out['format_outdated'] = !$has_fps || ($raw_cache['schema_version'] ?? 0) !== ORGANISM_CACHE_SCHEMA_VERSION;
+    // The checks themselves changed (moop_organism_checks_version()): every stored result may be
+    // out of date even though no organism's files did.
+    $out['checks_changed']  = $has_fps && !$out['format_outdated']
+        && ($raw_cache['checks_version'] ?? '') !== moop_organism_checks_version();
     $out['config_changed']  = $has_fps
         && $raw_cache['config_fingerprint'] !== buildConfigFingerprint($taxonomy_tree_file, $groups_file);
 
@@ -1488,8 +1492,9 @@ function moop_organism_cache_staleness(array $raw_cache, string $organism_data,
     $out['current_fps'] = $current_fps;
 
     if ($out['format_outdated']) $out['reasons'][] = 'it was built by an older version of MOOP';
+    if ($out['checks_changed'])  $out['reasons'][] = 'the organism checks were updated since it was built';
     if ($out['config_changed'])  $out['reasons'][] = 'the groups or taxonomy config has changed since it was built';
-    $out['stale'] = $out['format_outdated'] || $out['config_changed'] || $out['changed'] || $out['deleted'];
+    $out['stale'] = $out['format_outdated'] || $out['checks_changed'] || $out['config_changed'] || $out['changed'] || $out['deleted'];
     return $out;
 }
 

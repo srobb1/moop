@@ -53,6 +53,27 @@ require_once __DIR__ . '/genomic_regions.php';   // moop_gene_set_seqname_gap()
 define('ORGANISM_CACHE_SCHEMA_VERSION', 9);
 
 /**
+ * The version of the CHECKS whose results this cache stores: a fingerprint of the code that
+ * computes each organism's entry (2026-11-13). The per-organism fingerprints only see DATA
+ * (file times and sizes), so a fix to a check never reached an organism whose files had not
+ * changed: Schmidtea's ".images" stayed on the dashboard as an orphaned assembly after the fix
+ * was live, and nothing said the result was old. A different version discards the cache like a
+ * schema change does -- the next background run (housekeeping or Refresh) rescans everything.
+ * Cost: one full rescan (~1 min, background) after an update that touches these files.
+ * A NEW file whose code feeds the per-organism scan belongs in this list.
+ */
+function moop_organism_checks_version(): string {
+    static $v = null;
+    if ($v !== null) return $v;
+    $parts = [];
+    foreach (['organism_cache.php', 'functions_data.php', 'functions_filesystem.php',
+              'functions_database.php', 'genomic_regions.php'] as $file) {
+        $parts[] = $file . ':' . (@md5_file(__DIR__ . "/$file") ?: 'missing');
+    }
+    return $v = md5(implode('|', $parts));
+}
+
+/**
  * Write organism cache atomically: write to a temp file then rename().
  * rename() is atomic on Linux — readers always see a complete file, never a partial write.
  */
@@ -90,7 +111,8 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     if (!$force_refresh && file_exists($cache_file)) {
         $cached = loadJsonFile($cache_file, []);
         if ($cached && isset($cached['org_fingerprints']) && isset($cached['config_fingerprint']) && isset($cached['data'])
-            && ($cached['schema_version'] ?? 0) === ORGANISM_CACHE_SCHEMA_VERSION) {
+            && ($cached['schema_version'] ?? 0) === ORGANISM_CACHE_SCHEMA_VERSION
+            && ($cached['checks_version'] ?? '') === moop_organism_checks_version()) {
             $cached_fingerprints = $cached['org_fingerprints'];
             $cached_config = $cached['config_fingerprint'];
             $cached_data = $cached['data'];
@@ -164,6 +186,7 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
             $cache_data = [
                 'generated'          => date('Y-m-d H:i:s'),
                 'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION,
+                'checks_version'     => moop_organism_checks_version(),
                 'config_fingerprint' => buildConfigFingerprint($taxonomy_tree_file, $groups_file),
                 'org_fingerprints'   => $current_fingerprints,
                 'data'               => $organisms_to_keep,
@@ -305,6 +328,7 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
     $cache_data = [
         'generated'          => date('Y-m-d H:i:s'),
         'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION,
+        'checks_version'     => moop_organism_checks_version(),
         'config_fingerprint' => buildConfigFingerprint($taxonomy_tree_file, $groups_file),
         'org_fingerprints'   => $current_fingerprints,
         'data'               => $all_organisms,

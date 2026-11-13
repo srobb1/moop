@@ -2837,7 +2837,8 @@ file_put_contents("$_sd/orgs/Alpha/organism.sqlite", 'a'); file_put_contents("$_
 file_put_contents("$_sd/tree.json", '{}'); file_put_contents("$_sd/groups.json", '[]');
 $_cache = ['config_fingerprint' => buildConfigFingerprint("$_sd/tree.json", "$_sd/groups.json"),
            'org_fingerprints'   => buildPerOrganismFingerprints("$_sd/orgs"),
-           'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION];
+           'schema_version'     => ORGANISM_CACHE_SCHEMA_VERSION,
+           'checks_version'     => moop_organism_checks_version()];
 $_st = fn($c) => moop_organism_cache_staleness($c, "$_sd/orgs", "$_sd/tree.json", "$_sd/groups.json");
 $_r = $_st($_cache);
 ok(!$_r['stale'] && $_r['changed'] === [] && $_r['deleted'] === [] && $_r['reasons'] === [], 'nothing changed: not stale');
@@ -2855,6 +2856,10 @@ ok($_r['stale'] && $_r['format_outdated'], 'a cache of an older format is stale 
 $_r = $_st(array_diff_key($_cache, ['config_fingerprint' => 1]));
 ok($_r['stale'] && $_r['format_outdated'] && $_r['changed'] === [], 'a cache with no fingerprints is stale, without listing every organism');
 ok($_st([])['stale'] === false, 'no cache at all is "not built", not stale -- callers say so in their own words');
+$_r = $_st(['checks_version' => 'built-by-older-checks'] + $_cache);
+ok($_r['stale'] && $_r['checks_changed'] && !$_st($_cache)['checks_changed'] && $_r['changed'] === $_st($_cache)['changed']
+   && in_array('the organism checks were updated since it was built', $_r['reasons'], true),
+   'checks updated since the cache was built: stale (with its own reason), without listing every organism as changed');
 exec('rm -rf ' . escapeshellarg($_sd));
 
 // ----------------------------------------------------------------------------
