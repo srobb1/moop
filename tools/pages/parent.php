@@ -730,8 +730,10 @@
         </div>
         <div class="collapse" id="imagesSection">
             <div class="card-body">
+                <?php /* Anchors are named by analysis (#pnav-images-zeng_2018_x1), so a link from another page lands
+                         on the same section whatever else this gene has. */ ?>
                 <?php foreach ($image_section['groups'] as $__gi => $__g): $__a = $__g['analysis']; ?>
-                <?= '<div class="gene-images-analysis' . ($__gi ? ' mt-4' : '') . '" id="pnav-images-' . (int) $__gi . '" data-nav-sub="' . htmlspecialchars($__a['title']) . '">' . "\n" ?>
+                <?= '<div class="gene-images-analysis' . ($__gi ? ' mt-4' : '') . '" id="pnav-images-' . htmlspecialchars(preg_replace('/[^A-Za-z0-9_-]/', '', (string) $__a['analysis'])) . '" data-nav-sub="' . htmlspecialchars($__a['title']) . '">' . "\n" ?>
                     <h6 class="mb-1"><?= htmlspecialchars($__a['title']) ?></h6>
                     <p class="small text-muted mb-2">
                         <?= $__a['description'] !== null ? htmlspecialchars($__a['description']) : '' ?>
