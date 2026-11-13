@@ -155,6 +155,10 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
         $dirs = array_diff(scandir($organism_data_dir), ['.', '..']);
         $dir_names = [];
         foreach ($dirs as $dir) {
+            // A dot-name is MOOP's own (.images gene images, .clades, .retired), never an
+            // assembly -- the rule every other organism-tree walk uses. Until 2026-11-13 this
+            // reported Schmidtea's .images as "an assembly directory with no genome row".
+            if ($dir[0] === '.') continue;
             $full_path = "$organism_data_dir/$dir";
             if (is_dir($full_path)) {
                 $dir_names[] = $dir;
@@ -369,7 +373,7 @@ function validateAssemblyFastaFiles($organism_dir, $sequence_types) {
     
     foreach ($dirs as $dir) {
         $full_path = "$organism_dir/$dir";
-        if (!is_dir($full_path)) {
+        if ($dir[0] === '.' || !is_dir($full_path)) {   // dot-names are MOOP's own, not assemblies
             continue;
         }
         
@@ -382,7 +386,7 @@ function validateAssemblyFastaFiles($organism_dir, $sequence_types) {
         // Collect gene_set subdirs within this assembly dir
         $gene_set_dirs = array_values(array_filter(
             array_diff(scandir($full_path), ['.', '..']),
-            fn($f) => is_dir("$full_path/$f")
+            fn($f) => $f[0] !== '.' && is_dir("$full_path/$f")
         ));
 
         // Check for each sequence type pattern — assembly-level first, then gene_set subdirs
