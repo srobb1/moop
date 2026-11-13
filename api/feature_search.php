@@ -58,7 +58,11 @@ foreach ($accessible as $src) {
 
 $db_entries    = array_values($db_map);
 $batches       = array_chunk($db_entries, 10);
-$feature_types = ['gene', 'mRNA', 'protein', 'polypeptide'];
+// No feature-type filter (2026-11-13): this is an exact-ID lookup, so ANY feature with that id is
+// the right hit, and moop_resolve_feature_search_hits() lifts it to its gene. It used to allow only
+// gene/mRNA/protein/polypeptide, written before gene sets that call their transcripts 'transcript'
+// (6 organisms, 307,926 features, e.g. smed_20140614's SMED30004304) and with CDS left out --
+// all invisible here, while the box's help promised "a gene, transcript, CDS or protein".
 
 /**
  * Run the cross-organism ID lookup for one needle, in one match mode.
@@ -77,7 +81,7 @@ $feature_types = ['gene', 'mRNA', 'protein', 'polypeptide'];
  * UNION ALLs across EVERY accessible database: a seek stays a seek 85 times over, a scan
  * becomes 85 full index scans. Do not "simplify" this to LIKE.
  */
-function moop_feature_id_lookup(array $batches, string $needle, string $mode, array $feature_types, string $site): array {
+function moop_feature_id_lookup(array $batches, string $needle, string $mode, string $site): array {
     $results = [];
 
     foreach ($batches as $batch) {
@@ -102,7 +106,6 @@ function moop_feature_id_lookup(array $batches, string $needle, string $mode, ar
             $ro_uri = 'file:' . $entry['path'] . '?mode=ro';
             $pdo->exec('ATTACH DATABASE ' . $pdo->quote($ro_uri) . " AS $alias");
 
-            $type_ph  = implode(',', array_fill(0, count($feature_types), '?'));
             $gs_ids   = implode(',', array_map('intval', $entry['gene_set_ids'] ?: [0]));
 
             $parts[] =
@@ -115,10 +118,9 @@ function moop_feature_id_lookup(array $batches, string $needle, string $mode, ar
                  JOIN   {$alias}.gene_set  gs ON f.gene_set_id = gs.gene_set_id
                  JOIN   {$alias}.genome    g  ON gs.genome_id  = g.genome_id
                  WHERE  f.feature_uniquename $match_sql
-                 AND    f.feature_type IN ($type_ph)
                  AND    f.gene_set_id  IN ($gs_ids)";
 
-            array_push($params, $entry['organism'], $match_val, ...$feature_types);
+            array_push($params, $entry['organism'], $match_val);
         }
 
         $stmt = $pdo->prepare(implode(' UNION ALL ', $parts));
@@ -161,21 +163,21 @@ function moop_feature_id_lookup(array $batches, string $needle, string $mode, ar
 //
 // Order matters: exact-as-typed always wins, so an ID that genuinely exists unversioned is
 // never shadowed by a versioned near-match.
-$results = moop_feature_id_lookup($batches, $q, 'exact', $feature_types, $site);
+$results = moop_feature_id_lookup($batches, $q, 'exact', $site);
 
 if (empty($results)) {
     // Typed unversioned, stored versioned: NV2t021704001 -> NV2t021704001.1
-    $results = moop_feature_id_lookup($batches, $q, 'version', $feature_types, $site);
+    $results = moop_feature_id_lookup($batches, $q, 'version', $site);
 }
 
 if (empty($results) && preg_match('/^(.+)\.\d+$/', $q, $m)) {
     // Typed versioned, stored unversioned or stored at a DIFFERENT version:
     // NV2t021704001.1 -> NV2t021704001, then -> NV2t021704001.<any>
     $base    = $m[1];
-    $results = moop_feature_id_lookup($batches, $base, 'exact', $feature_types, $site);
+    $results = moop_feature_id_lookup($batches, $base, 'exact', $site);
 
     if (empty($results)) {
-        $results = moop_feature_id_lookup($batches, $base, 'version', $feature_types, $site);
+        $results = moop_feature_id_lookup($batches, $base, 'version', $site);
     }
 }
 
