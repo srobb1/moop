@@ -38,6 +38,14 @@ for display.
     provenance.json        recommended
 ```
 
+**Exception — published values only (2026-11-13).** When the depositor released normalised values
+and no read counts (Davies 2017, GEO GSE82280: RPKM per embryo), the bundle has **no counts.tsv**,
+`tpm.tsv` holds those values as published, and `experiment.json` says what they are (`"unit": "RPKM"`).
+`provenance.json` must say why counts are absent and how they could be recovered (re-aligning the SRA
+reads). Never invent counts from normalised values. The pages read only experiment.json, samples.tsv
+and tpm.tsv, so nothing else changes. First case: `Schmidtea_mediterranea/smed_20140614/smed_20140614/
+expression/Davies_2017_embryogenesis` (built from `/home/smr/expression_import/smed_embryo_planosphere_2026-11-13`).
+
 - Names are exactly MOOP's: `Nematostella_vectensis/GCA_033964005.1/NV2/expression/…`.
 - `{experiment}` is a short, stable slug: letters, digits, `_ . -` only
   (`Dunn_development_timecourse`). It is an identifier — once published, never rename it.
