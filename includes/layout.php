@@ -318,8 +318,8 @@ if ($page_lang !== 'en'): require_once __DIR__ . '/../lib/i18n.php'; ?>
                     $data = [
                         'annotations' => $annotations,
                         'page_script' => [
-                            '/' . $config->getString('site') . '/js/vendor/jquery-ui.min.js',
-                            '/' . $config->getString('site') . '/js/modules/manage-annotations.js'
+                            moop_url('js/vendor/jquery-ui.min.js'),
+                            moop_url('js/modules/manage-annotations.js')
                         ],
                     ];
              

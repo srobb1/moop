@@ -771,7 +771,7 @@ $siteName = $config['site'] ?? 'moop';
         <div class="card-body text-center">
             <h4 class="text-success">Setup Complete!</h4>
             <p>Log in with your admin account to start configuring your site.</p>
-            <a href="/<?= htmlspecialchars($siteName) ?>/" class="btn btn-success btn-lg">Go to your site</a>
+            <a href="./" class="btn btn-success btn-lg">Go to your site</a>
         </div>
         <div class="card-body border-top">
             <h6 class="fw-bold">One manual step required — web server config</h6>

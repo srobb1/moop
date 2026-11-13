@@ -1076,7 +1076,7 @@
                     <i class="fas fa-compress me-1"></i><span class="label"><?= t('Collapse all') ?></span>
                 </button>
                 <?php endif; ?>
-                <a href="/<?= htmlspecialchars($config->getString('site', 'moop')) ?>/api/download_annotations.php?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($feature_uniquename) ?>"
+                <a href="<?= htmlspecialchars(moop_url('api/download_annotations.php')) ?>?organism=<?= urlencode($organism_name) ?>&uniquename=<?= urlencode($feature_uniquename) ?>"
                    class="btn btn-sm moop-data-btn" title="Download every annotation on this page as one CSV">
                     <i class="fas fa-download me-1"></i><?= t('Download all') . "\n" ?>
                 </a>
@@ -1349,7 +1349,7 @@ if (!empty($gene_model)) {
             ], !moop_tool_on('moopmart') ? [] : [   // no Data Exporter on this site: no card pointing at it
                 ['label' => 'Many genes at once', 'html' => true,
                  'text'  => t_markup('For mRNA, CDS, protein, genomic or flanking sequence across many features, use %s.',
-                                     '<a href="/' . htmlspecialchars($config->getString('site', 'moop')) . '/tools/moopmart.php?organism='
+                                     '<a href="' . htmlspecialchars(moop_url('tools/moopmart.php')) . '?organism='
                                      . urlencode($organism_name) . '">' . t('the Data Exporter') . '</a>')],
             ])],
         ],
