@@ -262,6 +262,11 @@ def load_orthofinder(R, members, tax):
     return genes, og_counts, hogs, hog_source, node_rows, pairs, note
 
 
+def num(x):
+    """1e-05 -> 1e-5, 0.5 -> 0.5: numbers as people write them, for meta and the rule sentence"""
+    return re.sub(r"e([+-])0*(\d)", lambda m: "e" + ("-" if m.group(1) == "-" else "") + m.group(2), f"{x:g}")
+
+
 def read_diamond(path):
     """DIAMOND tsv(.gz) from run_clade_diamond.sh -> (best bitscore per query,
     {(query, subject): (evalue, bitscore, query coverage, subject coverage, pident)} of the best-scoring HSP)"""
@@ -479,10 +484,10 @@ CREATE INDEX p_a ON pair (gene_a);
         meta["evidence_version"] = prog[1] if len(prog) > 1 else ""
         meta["evidence_mode"] = dinfo.get("mode", "")
         meta["evidence_search_evalue"] = dinfo.get("evalue", "")
-        meta["evidence_evalue"] = f"{args.max_evalue:g}"
-        meta["evidence_min_cov"] = f"{args.min_cov:g}"
+        meta["evidence_evalue"] = num(args.max_evalue)
+        meta["evidence_min_cov"] = num(args.min_cov)
         meta["evidence_rule"] = (
-            f"supported = E-value <= {args.max_evalue:g} and the alignment covers >= {args.min_cov * 100:g}% of "
+            f"supported = E-value <= {num(args.max_evalue)} and the alignment covers >= {num(args.min_cov * 100)}% of "
             f"both proteins (no identity cutoff); reciprocal_best = supported and each protein is the other's best "
             f"hit in that species; co_ortholog = supported, not reciprocal best; weak = a hit that is not "
             f"supported; no_hit = no DIAMOND hit (E <= {dinfo.get('evalue', '?')}) either way")
