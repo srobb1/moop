@@ -646,6 +646,15 @@ a.badge:hover {
 .compgen-kind { background: rgba(var(--moop-main-rgb), 0.12); color: var(--moop-main-dark); font-weight: 600; min-width: 4.2em; }
 .compgen-table details summary { cursor: pointer; }
 .compgen-also { color: #6c757d; font-size: 0.85em; }
+/* Sequence evidence of an ortholog pair (clade_homologs/2). DATA colours -- the same meaning on every
+   site, so not themed: green = reciprocal best, pale green = co-ortholog, grey = no sequence support. */
+.compgen-ev { font-weight: 500; font-size: 0.72em; vertical-align: 1px; cursor: help; }
+.compgen-ev-reciprocal_best { background: #d1e7dd; color: #0f5132; }
+.compgen-ev-co_ortholog     { background: #e8f3ec; color: #2d6a4f; }
+.compgen-ev-weak, .compgen-ev-no_hit { background: #eceff1; color: #5f6b73; }
+.compgen-unsupported { margin-top: 2px; }
+.compgen-unsupported summary { cursor: pointer; color: #6c757d; }
+.compgen-evidence { margin-top: 2px; }
 .compgen-via { background: rgba(var(--moop-main-rgb), 0.07); border-left: 3px solid var(--moop-tool-header); padding: 4px 8px; }
 .gene-image-key { border: 2px solid var(--moop-tool-header); }
 .gene-image-tile { position: relative; }

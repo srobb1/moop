@@ -4448,6 +4448,69 @@ $_f = blast_failure_for_display(['error' => 'The BLAST queue is full', 'stderr' 
 ok($_f['message'] === 'The BLAST queue is full' && $_f['log'] === false, "MOOP's own messages (no stderr) are shown unchanged");
 
 // ----------------------------------------------------------------------------
+group('Clade files: /1 reads as before, /2 carries sequence evidence per ortholog pair');
+require_once dirname(__DIR__) . '/lib/clade_homologs.php';
+$_SESSION = ['access_level' => 'ADMIN', 'access' => []];
+$_cd = sys_get_temp_dir() . '/moop_clade_test_' . getmypid();
+foreach (['OrgA/a1/gs1', 'OrgB/b1/gs2'] as $_d) @mkdir("$_cd/$_d", 0777, true);
+// A two-species clade: g1 (OrgA) has orthologs h1 (reciprocal best), h2 (weak), h3 (no hit) in OrgB.
+$_mk = function (string $file, int $v) {
+    @mkdir(dirname($file), 0777, true); @unlink($file);
+    $db = new PDO('sqlite:' . $file);
+    $ev = $v === 2 ? ', support TEXT NOT NULL, evalue REAL, bitscore REAL, pident REAL, cov_a REAL, cov_b REAL' : '';
+    $db->exec("CREATE TABLE member (organism TEXT, assembly TEXT, gene_set TEXT, protein_md5 TEXT, genes INTEGER);
+               CREATE TABLE gene (id INTEGER PRIMARY KEY, organism TEXT, gene_set TEXT, gene TEXT, gene_lc TEXT, orthogroup TEXT);
+               CREATE TABLE hog (gene_id INTEGER, node TEXT, hog TEXT);
+               CREATE TABLE node (node TEXT PRIMARY KEY, parent TEXT, label TEXT);
+               CREATE TABLE pair (gene_a INTEGER, gene_b INTEGER, kind TEXT$ev);
+               CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
+               INSERT INTO member VALUES ('OrgA','a1','gs1','x',1), ('OrgB','b1','gs2','y',3);
+               INSERT INTO gene VALUES (1,'OrgA','gs1','g1','g1','OG1'), (2,'OrgB','gs2','h1','h1','OG1'),
+                                       (3,'OrgB','gs2','h2','h2','OG1'), (4,'OrgB','gs2','h3','h3','OG1');
+               INSERT INTO hog VALUES (1,'N0','N0.HOG1'), (2,'N0','N0.HOG1'), (3,'N0','N0.HOG1'), (4,'N0','N0.HOG1');
+               INSERT INTO meta VALUES ('format','clade_homologs/$v'), ('label','Test clade'), ('method','OrthoFinder'), ('method_version','3.1.2');");
+    if ($v === 2) {
+        $db->exec("INSERT INTO pair VALUES (1,2,'1:many','reciprocal_best',1.8e-154,450,68,0.95,1.0), (1,3,'1:many','weak',2e-8,55,31,0.2,0.6),
+                                           (1,4,'1:many','no_hit',NULL,NULL,NULL,NULL,NULL);
+                   INSERT INTO meta VALUES ('evidence_rule','Supported = E <= 1e-5, 50% of both proteins.'), ('evidence_tool','DIAMOND'),
+                                           ('evidence_version','2.1.13'), ('evidence_evalue','1e-5'), ('evidence_min_cov','0.5');");
+    } else {
+        $db->exec("INSERT INTO pair VALUES (1,2,'1:many'), (1,3,'1:many'), (1,4,'1:many');");
+    }
+};
+$_mk("$_cd/.clades/one/homologs.sqlite", 1);
+$_mk("$_cd/.clades/two/homologs.sqlite", 2);
+$_mk("$_cd/.clades/three/homologs.sqlite", 2);
+(new PDO("sqlite:$_cd/.clades/three/homologs.sqlite"))->exec("UPDATE meta SET value = 'clade_homologs/3' WHERE key = 'format'");
+$_cfg = ConfigManager::getInstance();
+$_rp = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['organism_data'] = $_cd; $_rp->setValue($_cfg, $_c);
+$_open = moop_clades_open();
+ok(isset($_open['one'], $_open['two']) && !isset($_open['three']), 'format /1 and /2 are read; an unknown /3 is skipped');
+$_e1 = moop_clade_homologs_in($_open['one'], 'one', 'OrgA', 'g1', null)[0] ?? null;
+$_e2 = moop_clade_homologs_in($_open['two'], 'two', 'OrgA', 'g1', null)[0] ?? null;
+ok($_e1 && $_e1['evidence'] === null && !isset($_e1['organisms']['OrgB']['orthologs'][0]['support'])
+   && count($_e1['organisms']['OrgB']['orthologs']) === 3, 'a /1 file: three orthologs, no evidence (as before)');
+$_by = $_e2 ? array_column($_e2['organisms']['OrgB']['orthologs'], null, 'gene') : [];
+ok(($_by['h1']['support'] ?? '') === 'reciprocal_best' && ($_by['h2']['support'] ?? '') === 'weak' && ($_by['h3']['support'] ?? '') === 'no_hit',
+   'a /2 file: each ortholog carries its support label');
+ok(($_by['h1']['cov_self'] ?? null) == 0.95 && ($_by['h1']['cov_other'] ?? null) == 1.0 && array_key_exists('evalue', $_by['h3'] ?? []) && $_by['h3']['evalue'] === null,
+   'coverage is per side (this gene first); no_hit has no evalue');
+ok(($_e2['evidence']['rule'] ?? '') !== '' && ($_e2['evidence']['evalue'] ?? '') === '1e-5', 'the rule and cutoff come from the file');
+ok(moop_clade_supported($_by['h1'] ?? []) && !moop_clade_supported($_by['h2'] ?? []) && !moop_clade_supported($_by['h3'] ?? [])
+   && moop_clade_supported(['gene' => 'x', 'kind' => '1:1']), 'supported: reciprocal best / co-ortholog, and every /1 ortholog; not weak or no hit');
+$_tsv = $_e2 ? array_map(fn($l) => explode("\t", $l), explode("\n", trim(moop_clade_homologs_tsv(['gene' => 'g1', 'clades' => [$_e2 + ['aliases' => []]]])))) : [[]];
+$_h = array_flip($_tsv[0]);
+$_r1 = array_values(array_filter($_tsv, fn($r) => ($r[$_h['gene2_id'] ?? 0] ?? '') === 'h1'))[0] ?? [];
+ok(isset($_h['support'], $_h['gene1_coverage'], $_h['gene2_coverage'])
+   && ($_r1[$_h['support']] ?? '') === 'reciprocal_best' && ($_r1[$_h['gene1_coverage']] ?? '') === '0.95' && ($_r1[$_h['kind']] ?? '') === '1-to-many',
+   'the download carries support and both coverages; kind is Excel-safe');
+$_rp->setValue($_cfg, $_saved);
+foreach (['one', 'two', 'three'] as $_x) { @unlink("$_cd/.clades/$_x/homologs.sqlite"); @rmdir("$_cd/.clades/$_x"); }
+foreach (['OrgA/a1/gs1', 'OrgA/a1', 'OrgA', 'OrgB/b1/gs2', 'OrgB/b1', 'OrgB', '.clades', ''] as $_x) @rmdir("$_cd/$_x");
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

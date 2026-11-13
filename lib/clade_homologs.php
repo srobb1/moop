@@ -3,7 +3,10 @@
  * Clade comparative genomics (OrthoFinder runs over MOOP gene sets) for the gene page's
  * "Comparative genomics" card. One read-only file per clade, shipped by compute:
  *
- *     organisms/.clades/<clade>/homologs.sqlite      format clade_homologs/1
+ *     organisms/.clades/<clade>/homologs.sqlite      format clade_homologs/1 or /2
+ *
+ * /2 adds sequence evidence to every ortholog pair (DIAMOND: support, evalue, bitscore, pident,
+ * cov_a, cov_b) and the rule behind it in meta. A /1 file reads as before, with no evidence.
  *
  * Format, and the words the page must use: docs/CLADE_HOMOLOGS_FORMAT.md. In short: the card shows
  * "Orthologs in <clade>" (OrthoFinder pairwise, typed 1:1 / 1:many / many:1 / many:many) and
@@ -14,7 +17,18 @@
  * (moop_dataset_visible). A clade mixes many gene sets; any of them can be private.
  */
 
-const MOOP_CLADE_FORMATS = ['clade_homologs/1'];
+const MOOP_CLADE_FORMATS = ['clade_homologs/1', 'clade_homologs/2'];
+
+/** support values that count as a sequence-supported ortholog; the others (weak, no_hit) do not. */
+const MOOP_CLADE_SUPPORTED = ['reciprocal_best', 'co_ortholog'];
+
+/**
+ * Is this ortholog backed by sequence? A /2 pair: its support is reciprocal_best or co_ortholog.
+ * A /1 pair has no evidence and counts as supported -- the card shows it exactly as before.
+ */
+function moop_clade_supported(array $ortholog): bool {
+    return !isset($ortholog['support']) || in_array($ortholog['support'], MOOP_CLADE_SUPPORTED, true);
+}
 
 function moop_clades_dir(): string {
     return rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/.clades';
@@ -45,7 +59,10 @@ function moop_clades_open(): array {
  * The card's data for one gene: one entry per (clade, reference gene) it reaches.
  *   ['clade', 'label', 'method', 'version', 'gene_sets', 'orthogroup', 'family_total', 'self_gene',
  *    'via' => null | ['gene', 'gene_set']     (this page's gene set is not the clade's: matched through the crosswalk)
- *    'organisms' => [organism => ['assembly', 'gene_set', 'self', 'orthologs' => [['gene','kind'],..], 'family' => [gene,..]]],
+ *    'organisms' => [organism => ['assembly', 'gene_set', 'self', 'orthologs' => [['gene','kind', + evidence],..], 'family' => [gene,..]]],
+ *    'evidence'  => null (a /1 file) | ['rule', 'tool', 'version', 'evalue', 'min_cov']
+ *   An ortholog from a /2 file also has 'support' (reciprocal_best|co_ortholog|weak|no_hit), 'evalue',
+ *   'bitscore', 'pident', 'cov_self', 'cov_other' (coverage of this gene's / the ortholog's protein).
  *    'aliases'   => [organism => [gene => [['gene_set','assembly','gene'], ...]]]]   (its ids in other gene sets)
  *
  * Orthology is computed on ONE gene set per species (the clade's member gene sets). Every other gene
@@ -104,15 +121,22 @@ function moop_clade_homologs_in(PDO $db, string $clade, string $organism, string
         if (!isset($orgs[$org])) $orgs[$org] = ['assembly' => $members["$org/$gs"] ?? '', 'gene_set' => $gs,
                                                 'self' => $org === $organism, 'orthologs' => [], 'family' => []];
     };
-    // Orthologs: pairwise, stored both ways, so one indexed read from this gene's side.
-    $st = $db->prepare("SELECT g.organism, g.gene_set, g.gene, p.kind FROM pair p JOIN gene g ON g.id = p.gene_b
+    $meta = $db->query('SELECT key, value FROM meta')->fetchAll(PDO::FETCH_KEY_PAIR);
+    $v2   = ($meta['format'] ?? '') === 'clade_homologs/2';
+    // Orthologs: pairwise, stored both ways, so one indexed read from this gene's side. In a /2 file
+    // gene_a is this gene, so cov_a is this gene's protein and cov_b the ortholog's.
+    $ev = $v2 ? ', p.support, p.evalue, p.bitscore, p.pident, p.cov_a, p.cov_b' : '';
+    $st = $db->prepare("SELECT g.organism, g.gene_set, g.gene, p.kind$ev FROM pair p JOIN gene g ON g.id = p.gene_b
                         WHERE p.gene_a = ? ORDER BY (p.kind = '1:1') DESC, g.gene");
     $st->execute([$me['id']]);
     $listed = [];
     foreach ($st as $r) {
         if (!$visible($r['organism'], $r['gene_set'])) continue;
         $slot($r['organism'], $r['gene_set']);
-        $orgs[$r['organism']]['orthologs'][] = ['gene' => $r['gene'], 'kind' => $r['kind']];
+        $o = ['gene' => $r['gene'], 'kind' => $r['kind']];
+        if ($v2) $o += ['support' => (string) $r['support'], 'evalue' => $r['evalue'], 'bitscore' => $r['bitscore'],
+                        'pident' => $r['pident'], 'cov_self' => $r['cov_a'], 'cov_other' => $r['cov_b']];
+        $orgs[$r['organism']]['orthologs'][] = $o;
         $listed[$r['organism'] . "\0" . $r['gene']] = true;
     }
     // Gene family: everything else in this gene's whole-clade HOG (N0), paralogs included.
@@ -129,7 +153,6 @@ function moop_clade_homologs_in(PDO $db, string $clade, string $organism, string
     }
     if (!$orgs) return [];
     uksort($orgs, fn($a, $b) => [$a !== $organism, $a] <=> [$b !== $organism, $b]);
-    $meta = $db->query('SELECT key, value FROM meta')->fetchAll(PDO::FETCH_KEY_PAIR);
     return [[
         'clade'        => $clade,
         'label'        => (string) ($meta['label'] ?? $clade),
@@ -145,6 +168,9 @@ function moop_clade_homologs_in(PDO $db, string $clade, string $organism, string
         'organisms'    => $orgs,
         'aliases'      => [],
         'family_total' => $family_total,
+        'evidence'     => $v2 ? ['rule' => (string) ($meta['evidence_rule'] ?? ''), 'tool' => (string) ($meta['evidence_tool'] ?? 'DIAMOND'),
+                                 'version' => (string) ($meta['evidence_version'] ?? ''), 'evalue' => (string) ($meta['evidence_evalue'] ?? ''),
+                                 'min_cov' => (string) ($meta['evidence_min_cov'] ?? '')] : null,
     ]];
 }
 
@@ -237,7 +263,8 @@ function moop_clade_homologs_tsv(array $section): string {
     $cell  = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string) $s);
     $cols  = ['organism', 'assembly', 'gene_set', 'id', 'name', 'description'];
     $out   = implode("\t", array_merge(array_map(fn($c) => "gene1_$c", $cols), array_map(fn($c) => "gene2_$c", $cols),
-                                     ['relationship', 'kind', 'gene_family', 'clade', 'method'])) . "\n";
+                                     ['relationship', 'kind', 'support', 'evalue', 'bitscore', 'pident', 'gene1_coverage', 'gene2_coverage',
+                                      'gene_family', 'clade', 'method'])) . "\n";
     // Labels for every listed gene, plus each clade's own gene (gene1 -- not in its organism lists).
     $labels = moop_clade_gene_labels($section['clades'], null);
     foreach ($section['clades'] as $c) $labels[$c['organism']] = ($labels[$c['organism']] ?? []) + moop_gene_labels($c['organism'], [$c['self_gene']]);
@@ -253,11 +280,13 @@ function moop_clade_homologs_tsv(array $section): string {
         foreach ($c['organisms'] as $org => $o) {
             $rows = [];
             // "1:1" -> "1-to-1": Excel reads 1:1 as a time and shows 1:01 (Sofia, 2026-11-12).
-            if (!$o['self']) foreach ($o['orthologs'] as $g) $rows[] = ['ortholog', str_replace(':', '-to-', $g['kind']), $g['gene']];
-            foreach ($o['family'] as $g) $rows[] = [$o['self'] ? 'paralog' : 'family member (not ortholog)', '', $g];
-            foreach ($rows as [$rel, $kind, $gene]) {
+            // Evidence (a /2 file): support, evalue, bitscore, pident, coverage of gene1's and gene2's protein.
+            $ev = fn(array $g) => isset($g['support']) ? [$g['support'], $g['evalue'], $g['bitscore'], $g['pident'], $g['cov_self'], $g['cov_other']] : ['', '', '', '', '', ''];
+            if (!$o['self']) foreach ($o['orthologs'] as $g) $rows[] = ['ortholog', str_replace(':', '-to-', $g['kind']), $g['gene'], $ev($g)];
+            foreach ($o['family'] as $g) $rows[] = [$o['self'] ? 'paralog' : 'family member (not ortholog)', '', $g, $ev([])];
+            foreach ($rows as [$rel, $kind, $gene, $evidence]) {
                 $out .= implode("\t", array_map($cell, array_merge($g1, $describe($org, $o['assembly'], $o['gene_set'], $gene),
-                        [$rel, $kind, $c['orthogroup'], $c['label'], $method]))) . "\n";
+                        [$rel, $kind], $evidence, [$c['orthogroup'], $c['label'], $method]))) . "\n";
             }
         }
     }

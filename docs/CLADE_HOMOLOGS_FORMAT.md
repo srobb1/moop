@@ -1,7 +1,9 @@
 # homologs.sqlite — clade comparative genomics (OrthoFinder), the format MOOP expects
 
-**Status: agreed design, 2026-11-12. Nothing on the website reads it yet.** Compute builds to this
-format; the website side then adds `lib/clade_homologs.php` and the gene-page panel.
+**Status: format 1 live 2026-11-12 (`lib/clade_homologs.php`, the gene page's Comparative genomics
+card). Format 2 (sequence evidence per ortholog pair, §Format 2) read by the site since 2026-11-12;
+compute ships /2 files with `CLADE_FORMAT2_OK=1`.** A file without evidence is still written as /1 and
+reads exactly as before.
 
 One file per clade (one OrthoFinder run over MOOP gene sets) lets a gene page list its orthologs and
 its whole gene family in that clade at once, each linked to its own gene page.
@@ -64,7 +66,8 @@ CREATE TABLE gene (                   -- every gene in the run
   gene_set     TEXT NOT NULL,         -- must be a member row
   gene         TEXT NOT NULL,         -- feature.feature_uniquename of the GENE (what parent.php takes)
   gene_lc      TEXT NOT NULL,         -- lower(gene)
-  orthogroup   TEXT                   -- OG0001234; NULL if unassigned
+  orthogroup   TEXT,                  -- OG0001234; NULL if unassigned
+  protein      TEXT                   -- /2 only: the protein OrthoFinder and DIAMOND used for this gene
 );
 CREATE INDEX g_gene ON gene (gene_lc, organism);
 CREATE INDEX g_og   ON gene (orthogroup);
@@ -86,7 +89,15 @@ CREATE TABLE node (                   -- the species tree, so the page can say "
 CREATE TABLE pair (                   -- OrthoFinder pairwise orthologs (Orthologues/)
   gene_a       INTEGER NOT NULL,      -- gene.id
   gene_b       INTEGER NOT NULL,      -- gene.id, a DIFFERENT organism
-  kind         TEXT NOT NULL          -- '1:1' | '1:many' | 'many:1' | 'many:many', read from gene_a's side
+  kind         TEXT NOT NULL,         -- '1:1' | '1:many' | 'many:1' | 'many:many', read from gene_a's side,
+                                      -- FROM PARTNER COUNTS (build-time assertion since compute dc5d9bb3)
+  -- /2 only (§Format 2): sequence evidence for the pair
+  support      TEXT NOT NULL,         -- 'reciprocal_best' | 'co_ortholog' | 'weak' | 'no_hit'
+  evalue       REAL,                  -- best-scoring DIAMOND alignment of the two proteins, either direction;
+  bitscore     REAL,                  --   all four NULL for no_hit
+  pident       REAL,
+  cov_a        REAL,                  -- fraction of gene_a's protein in that alignment (0-1)
+  cov_b        REAL                   -- fraction of gene_b's protein
 );
 CREATE INDEX p_a ON pair (gene_a);
 -- Store BOTH directions (a->b and b->a, kind mirrored) so a lookup is one indexed read.
@@ -98,7 +109,7 @@ CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 
 | key | value |
 |---|---|
-| `format` | `clade_homologs/1` — the site refuses a file without it |
+| `format` | `clade_homologs/1` or `clade_homologs/2` — the site skips (and logs) any other value |
 | `clade` | same as the folder name |
 | `label` | display name, e.g. `Planarians (Tricladida)` |
 | `taxon_id` | NCBI taxon of the clade, if any |
@@ -106,8 +117,40 @@ CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 | `run_date`, `built_at` | ISO 8601 |
 | `genes`, `orthogroups`, `hogs_n0`, `pairs` | counts (informational; the site checks they are > 0) |
 
-Gene trees are not part of format 1. If wanted later: a separate file per orthogroup beside the
-SQLite, named in a new table — format `clade_homologs/2`.
+Gene trees are not part of format 1 or 2 (they stay in `results_path` on compute). If wanted later: a
+separate file per orthogroup beside the SQLite, named in a new table — format `clade_homologs/3`.
+
+## Format 2: sequence evidence per ortholog pair (agreed with compute 2026-11-12)
+
+OrthoFinder calls orthologs from gene trees; in big families it can pair genes that share little
+sequence (PARP16 in Nematostella: 43 Scolanthus "orthologs", 1 with a real match). Format 2 adds a
+DIAMOND check of every pair. **Nothing is deleted**: every pair stays, labelled, so the threshold can
+change by a rebuild, not a rerun.
+
+- `support` — "supported" = E ≤ `evidence_evalue` and the alignment covers ≥ `evidence_min_cov` of
+  BOTH proteins; no identity cutoff.
+  - `reciprocal_best` — supported, and each protein is the other's best hit in that species (ties count)
+  - `co_ortholog` — supported, not reciprocal best (a duplicated copy matches better: still an ortholog)
+  - `weak` — a hit, not supported
+  - `no_hit` — no hit at E ≤ `evidence_search_evalue` in either direction
+- Both directions stored, as before: the mirrored row swaps `cov_a`/`cov_b` and mirrors `kind`;
+  `support`, `evalue`, `bitscore`, `pident` are the same in both rows.
+
+Extra `meta` keys in /2:
+
+| key | example |
+|---|---|
+| `evidence_tool`, `evidence_version`, `evidence_mode` | `DIAMOND`, `2.1.13`, `blastp --sensitive -k 25` |
+| `evidence_search_evalue` | `1e-5` — the search cutoff; no hit at this E-value = `no_hit` |
+| `evidence_evalue`, `evidence_min_cov` | the "supported" cut, e.g. `1e-5` (or `1e-10`), `0.5` |
+| `evidence_rule` | one sentence explaining the labels — printed on the card as is |
+| `results_path` | the full OrthoFinder Results folder on compute (trees, raw tables: not shipped) |
+| `pairs_reciprocal_best`, `pairs_co_ortholog`, `pairs_weak`, `pairs_no_hit` | counts, both directions |
+
+On the site: `reciprocal_best` and `co_ortholog` are listed as orthologs, with a badge (tooltip:
+E-value, identity, coverage of each protein); `weak` and `no_hit` fold into "N without sequence
+support" under each species. The download (gene page, Comparative genomics) adds `support`, `evalue`,
+`bitscore`, `pident`, `gene1_coverage`, `gene2_coverage`. A /1 file has no badges and nothing folded.
 
 ## Other gene sets of a species — through the crosswalk (decided 2026-11-12)
 
@@ -127,8 +170,8 @@ anatomy search use. Nothing extra goes in the clade file. Requirements:
 On the page: a gene of another gene set gets the card of the reference gene it maps to, with *"Orthologs
 are computed on gene set X. This gene is the same gene as Y there (matched by sequence)."*, and every
 gene page with the card shows *"The same gene in other gene sets: …"*. Unmapped genes: no card.
-(A `clade_homologs/2` with alias tables was specified and dropped the same day — one mapping, used
-everywhere, is simpler.)
+(A format with alias tables was specified and dropped the same day — one mapping, used everywhere,
+is simpler. The name `clade_homologs/2` now means the evidence format above.)
 
 ## What the site will do with it
 

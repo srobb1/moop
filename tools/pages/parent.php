@@ -937,12 +937,27 @@
         'many:1'    => t_plain('Several genes here share one counterpart in the other species (duplicated here).'),
         'many:many' => t_plain('Duplicated in both species.'),
     ][$k] ?? $k;
-    $__cl_list = function (string $org, array $o, array $genes, int $show, string $more_label) use ($__cl_link, $__kind_tip): string {
+    // Sequence evidence of a /2 clade file (DIAMOND), as a small badge whose tooltip has the numbers.
+    $__ev_tip = function (array $g): string {
+        if ($g['evalue'] === null) return t_plain('No sequence match between the two proteins.');
+        return t_plain('E-value %1$s, %2$s%% identity, alignment covers %3$s%% of this protein and %4$s%% of the other.',
+            sprintf('%.1e', (float) $g['evalue']), round((float) $g['pident']), round(100 * (float) $g['cov_self']), round(100 * (float) $g['cov_other']));
+    };
+    $__ev_badge = function (array $g) use ($__ev_tip): string {
+        if (!isset($g['support'])) return '';
+        $label = ['reciprocal_best' => t_plain('reciprocal best'), 'co_ortholog' => t_plain('co-ortholog'),
+                  'weak' => t_plain('weak match'), 'no_hit' => t_plain('no match')][$g['support']] ?? $g['support'];
+        return ' <span class="badge compgen-ev compgen-ev-' . htmlspecialchars($g['support']) . '" title="' . htmlspecialchars($__ev_tip($g)) . '">' . htmlspecialchars($label) . '</span>';
+    };
+    $__cl_item = fn(string $org, array $o, $g) => '<div>' . (is_array($g)
+        ? '<span class="badge compgen-kind" title="' . htmlspecialchars($__kind_tip($g['kind'])) . '">' . htmlspecialchars($g['kind']) . '</span> ' . $__cl_link($org, $o, $g['gene']) . $__ev_badge($g)
+        : $__cl_link($org, $o, $g)) . '</div>';
+    $__cl_list = function (string $org, array $o, array $genes, int $show, string $more_label) use ($__cl_item): string {
         $h = '';
-        foreach (array_slice($genes, 0, $show) as $g) $h .= '<div>' . (is_array($g) ? '<span class="badge compgen-kind" title="' . htmlspecialchars($__kind_tip($g['kind'])) . '">' . htmlspecialchars($g['kind']) . '</span> ' . $__cl_link($org, $o, $g['gene']) : $__cl_link($org, $o, $g)) . '</div>';
+        foreach (array_slice($genes, 0, $show) as $g) $h .= $__cl_item($org, $o, $g);
         if (count($genes) > $show) {
             $h .= '<details><summary>' . htmlspecialchars($more_label) . '</summary>';
-            foreach (array_slice($genes, $show, 200) as $g) $h .= '<div>' . (is_array($g) ? '<span class="badge compgen-kind" title="' . htmlspecialchars($__kind_tip($g['kind'])) . '">' . htmlspecialchars($g['kind']) . '</span> ' . $__cl_link($org, $o, $g['gene']) : $__cl_link($org, $o, $g)) . '</div>';
+            foreach (array_slice($genes, $show, 200) as $g) $h .= $__cl_item($org, $o, $g);
             if (count($genes) > $show + 200) $h .= '<div class="text-muted">' . t('and %d more', count($genes) - $show - 200) . '</div>';
             $h .= '</details>';
         }
@@ -953,7 +968,8 @@
     // named counterpart is not buried under unnamed gene models (PARP16 among 43 Scolanthus genes).
     foreach ($compgen_section['clades'] as &$__c0) foreach ($__c0['organisms'] as $__org0 => &$__o0) {
         $__named = fn(string $g) => moop_clade_has_symbol((string) ($__cl_labels[$__org0][$g]['name'] ?? ''), $g);
-        usort($__o0['orthologs'], fn($a, $b) => [$b['kind'] === '1:1', $__named($b['gene']), $a['gene']] <=> [$a['kind'] === '1:1', $__named($a['gene']), $b['gene']]);
+        $__rb = fn(array $g) => ($g['support'] ?? '') === 'reciprocal_best';
+        usort($__o0['orthologs'], fn($a, $b) => [$__rb($b), $b['kind'] === '1:1', $__named($b['gene']), $a['gene']] <=> [$__rb($a), $a['kind'] === '1:1', $__named($a['gene']), $b['gene']]);
     }
     unset($__c0, $__o0);
 ?>
@@ -995,10 +1011,17 @@
                         <table class="table table-sm align-middle small mb-2 compgen-table">
                             <thead><tr><th><?= t('Organism') ?></th><th><?= t('Orthologs of this gene') ?></th><th><?= t('Other family members (not orthologs of this gene)') ?></th></tr></thead>
                             <tbody>
-                            <?php foreach ($__others as $__org => $__o): $__no = count($__o['orthologs']); $__nf = count($__o['family']); ?>
+                            <?php foreach ($__others as $__org => $__o):
+                                // A /2 file: orthologs without sequence support (weak, no match) fold away under the supported ones.
+                                $__sup = array_values(array_filter($__o['orthologs'], 'moop_clade_supported'));
+                                $__uns = array_values(array_filter($__o['orthologs'], fn($g) => !moop_clade_supported($g)));
+                                $__o['orthologs'] = $__sup;
+                                $__no = count($__sup); $__nf = count($__o['family']); $__nu = count($__uns); ?>
                                 <tr>
                                     <td class="text-nowrap"><em><?= htmlspecialchars(str_replace('_', ' ', $__org)) ?></em></td>
-                                    <td><?= $__no ? $__cl_list($__org, $__o, $__o['orthologs'], 10, t_plain('Show %d more orthologs', $__no - 10)) : '<span class="text-muted">' . t('none') . '</span>' ?></td>
+                                    <td><?= ($__no ? $__cl_list($__org, $__o, $__o['orthologs'], 10, t_plain('Show %d more orthologs', $__no - 10)) : '<span class="text-muted">' . ($__nu ? t('none with sequence support') : t('none')) . '</span>')
+                                          . ($__nu ? '<details class="compgen-unsupported"><summary>' . ($__nu !== 1 ? t('%d without sequence support', $__nu) : t('%d without sequence support', 1)) . '</summary>'
+                                                     . $__cl_list($__org, $__o, $__uns, 200, '') . '</details>' : '') ?></td>
                                     <td><?= $__nf ? '<details><summary>' . ($__nf !== 1 ? t('%d genes', $__nf) : t('%d gene', 1)) . '</summary>' . $__cl_list($__org, $__o, $__o['family'], 200, '') . '</details>' : '<span class="text-muted">&mdash;</span>' ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -1014,6 +1037,9 @@
                     </details>
                     <?php endif; ?>
                     <p class="small text-muted mb-0"><?= t('Gene family: every gene in this group descended from one ancestral gene, orthologs and paralogs. Computed with %1$s %2$s on one gene set per species (%3$d gene sets); family %4$s.', $__c['method'], $__c['version'], $__c['gene_sets'], $__c['orthogroup']) ?></p>
+                    <?php if (!empty($__c['evidence'])): ?>
+                    <p class="small text-muted mb-0 compgen-evidence"><?= t('Sequence evidence: %1$s %2$s.', $__c['evidence']['tool'], $__c['evidence']['version']) ?> <?= htmlspecialchars($__c['evidence']['rule']) ?></p>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
             </div>
@@ -1536,6 +1562,8 @@ if (!empty($compgen_section)) echo help_modal('compgen-help', 'Comparative genom
         ['label' => '1:1, 1:many, many:many', 'text' => '1:1 is one gene on each side, the clearest ortholog. 1:many means the gene was duplicated in the other species, many:1 in this one, many:many in both.'],
         ['label' => 'Paralogs', 'text' => 'Copies of the gene within this species, from a duplication.'],
         ['label' => 'Other family members', 'text' => 'Genes of the same family in another species that are not orthologs of this gene, for example copies of an older duplication.'],
+        ['label' => 'Reciprocal best, co-ortholog', 'text' => 'Where shown, each ortholog is checked against the protein sequences. Reciprocal best: the two proteins match well and are each other\'s best match. Co-ortholog: they match well, but a duplicated copy matches better. Hover a badge for the E-value, identity and coverage.'],
+        ['label' => 'Without sequence support', 'text' => 'Orthologs whose proteins match weakly or not at all are folded away under each species. Gene trees can group genes loosely in large families; these are the least certain.'],
     ]],
     ['heading' => 'Not the same as', 'cards' => [
         ['label' => 'Rosetta Stone', 'text' => 'The same gene\'s ids in other gene sets of this species, matched by sequence. That is within one species; comparative genomics is across species.'],
