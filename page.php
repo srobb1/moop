@@ -24,7 +24,7 @@ echo render_display_page(
     __DIR__ . '/tools/pages/content_page.php',
     [
         'page_title' => $title,
-        'page_html'  => moop_page_render($body, $page['format']),
+        'page_html'  => moop_page_mark_current(moop_page_render($body, $page['format']), $page['slug']),
         // English shown on a Spanish page says so, for screen readers and translators.
         'title_lang' => $title === $page['title']['en'] && $lang !== 'en' && trim($page['title'][$lang] ?? '') === '' ? 'en' : '',
         'body_lang'  => $body === $page['body']['en'] && $lang !== 'en' && trim($page['body'][$lang] ?? '') === '' ? 'en' : '',

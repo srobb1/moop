@@ -241,11 +241,75 @@ function moop_html_clean(string $html, ?array &$removed = null): string {
  */
 function moop_page_render(string $body, string $format, ?array &$removed = null): string {
     $body = moop_linked_sites_expand($body, $unknown);
-    if ($format !== 'html') { $removed = $unknown; return moop_markdown($body); }
-    if (func_num_args() <= 2) return moop_html_clean($body);
-    $html = moop_html_clean($body, $removed);
-    $removed = array_merge($unknown, (array) $removed);
-    return $html;
+    if ($format !== 'html') {
+        $html = moop_markdown($body);
+        $removed = $unknown;
+    } elseif (func_num_args() <= 2) {
+        $html = moop_html_clean($body);
+    } else {
+        $html = moop_html_clean($body, $removed);
+        $removed = array_merge($unknown, (array) $removed);
+    }
+    $html = moop_page_includes_expand($html, $missing);
+    if ($missing) $removed = array_merge((array) $removed, $missing);
+    return moop_linked_sites_new_tab($html);
+}
+
+/**
+ * A link to another of our sites ({simrbase}/..., Site Configuration -> Linked sites) opens in a
+ * new tab, so the visitor keeps their place on this one (2026-11-13). Applied to rendered, cleaned
+ * HTML -- the cleaner does not keep target= -- and only to <a> tags without a target already.
+ */
+function moop_linked_sites_new_tab(string $html): string {
+    $sites = moop_linked_sites();
+    if (!$sites || strpos($html, '<a ') === false) return $html;
+    $alt = implode('|', array_map(fn($u) => preg_quote($u, '#'), $sites));
+    return preg_replace_callback('#<a\s[^>]*\bhref="(?:' . $alt . ')(?:[/?\#"])[^>]*>#', function ($m) {
+        if (preg_match('#\starget=#', $m[0])) return $m[0];
+        return substr($m[0], 0, -1) . ' target="_blank" rel="noopener">';
+    }, $html) ?? $html;
+}
+
+/**
+ * {include:slug} -- another page's text, in place (2026-11-13). Lets one block that belongs on
+ * several pages -- Planosphere's embryogenesis "Explore" cards -- be written ONCE, as its own page
+ * (Manage Pages), instead of copied into each page and left to drift.
+ *
+ * Expanded AFTER the host page is rendered and cleaned: the placeholder is plain text that both
+ * Markdown and the cleaner pass through, and the included page is rendered by moop_page_render()
+ * itself -- its own format, its own cleaning -- so neither page's format matters to the other.
+ * One level only: a placeholder inside an included page is dropped, so pages that include each
+ * other cannot loop. In the visitor's language, English where the included page has none.
+ * A placeholder alone in a paragraph takes the paragraph with it (Markdown wraps it in <p>).
+ */
+function moop_page_includes_expand(string $html, ?array &$missing = null): string {
+    static $depth = 0;
+    $missing = [];
+    if (strpos($html, '{include:') === false) return $html;
+    $out = preg_replace_callback('#(?:<p>\s*)?\{include:([a-z0-9][a-z0-9-]*)\}(?:\s*</p>)?#i', function ($m) use (&$depth, &$missing) {
+        if ($depth > 0) return '';
+        $page = moop_page_get(strtolower($m[1]));
+        if ($page === null) {
+            $missing[] = 'Included page "' . $m[1] . '" does not exist, so {include:' . $m[1] . '} shows nothing';
+            return '';
+        }
+        $lang = function_exists('moop_current_lang') ? moop_current_lang() : 'en';
+        $body = trim($page['body'][$lang] ?? '') !== '' ? $page['body'][$lang] : ($page['body']['en'] ?? '');
+        $depth++;
+        try { return moop_page_render($body, $page['format']); } finally { $depth--; }
+    }, $html);
+    return $out ?? $html;
+}
+
+/**
+ * The visitor is ON this page: links to it (page.php?p=<slug>) get aria-current="page", so a
+ * shared block of links (an {include:} card set) can show "you are here" -- the stylesheet marks
+ * a[aria-current]. Run on rendered, cleaned HTML; adds one fixed attribute, nothing from input.
+ */
+function moop_page_mark_current(string $html, string $slug): string {
+    if (!moop_page_slug_ok($slug)) return $html;
+    $q = preg_quote($slug, '#');
+    return preg_replace('#<a(\s[^>]*?href="(?:[^"]*/)?page\.php\?p=' . $q . '")#', '<a aria-current="page"$1', $html) ?? $html;
 }
 
 /**

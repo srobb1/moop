@@ -4535,6 +4535,27 @@ ok(str_contains(moop_page_render('[BLAST]({simrbase}/tools/blast.php)', 'markdow
    'Markdown links work too');
 $_c['linked_sites'] = ['simrbase' => 'javascript:alert(1)']; $_rp->setValue($_cfg, $_c);
 ok(!str_contains(moop_page_render('<a href="{simrbase}/x">x</a>', 'html'), 'javascript'), 'a non-http address is never put into a link');
+
+group('Content pages: links to a linked site open in a new tab; {include:slug}; "you are here"');
+$_md = sys_get_temp_dir() . '/moop_inc_' . getmypid();
+@mkdir("$_md/pages", 0700, true);
+$_c = $_saved; $_c['linked_sites'] = ['simrbase' => 'https://simr.example.org/moop']; $_c['metadata_path'] = $_md;
+$_rp->setValue($_cfg, $_c);
+$_h = moop_page_render('<p><a href="{simrbase}/tools/blast.php">B</a> <a href="page.php?p=x">local</a> <a href="https://simr.example.org/moopx/y">lookalike</a></p>', 'html');
+ok(str_contains($_h, 'href="https://simr.example.org/moop/tools/blast.php" target="_blank" rel="noopener"'), 'a linked-site link opens in a new tab');
+ok(substr_count($_h, 'target=') === 1, 'own-site links, and an address that only starts like the linked site, do not');
+file_put_contents("$_md/pages/cards.json", json_encode(['slug' => 'cards', 'format' => 'html', 'title' => ['en' => 'C'],
+    'body' => ['en' => '<div class="ps-explore"><a href="page.php?p=one">One</a><a href="page.php?p=two">Two</a></div>{include:cards}']]));
+file_put_contents("$_md/pages/mdcards.json", json_encode(['slug' => 'mdcards', 'format' => 'markdown', 'title' => ['en' => 'M'], 'body' => ['en' => '**bold**']]));
+$_h = moop_page_render("<h2>Top</h2>\n<p>{include:cards}</p>\n<p>after</p>", 'html');
+ok(str_contains($_h, '<div class="ps-explore">') && !str_contains($_h, '{include:') && !str_contains($_h, '<p><div'),
+   'the included page replaces the placeholder (and its <p>); its own placeholder is dropped -- one level, no loop');
+ok(str_contains(moop_page_render("# T\n\n{include:mdcards}", 'markdown'), '<strong>bold</strong>'), 'a Markdown host, a Markdown include');
+$_rm = []; $_h = moop_page_render('<p>{include:nosuch}</p>', 'html', $_rm);
+ok(trim($_h) === '' && count(array_filter($_rm, fn($r) => str_contains($r, 'nosuch'))) === 1, 'a missing include shows nothing and is reported');
+$_h = moop_page_mark_current(moop_page_render('<p>{include:cards}</p>', 'html'), 'two');
+ok(substr_count($_h, 'aria-current="page"') === 1 && str_contains($_h, '<a aria-current="page" href="page.php?p=two"'), 'the link to the page you are on is marked, only that one');
+@unlink("$_md/pages/cards.json"); @unlink("$_md/pages/mdcards.json"); @rmdir("$_md/pages"); @rmdir($_md);
 $_rp->setValue($_cfg, $_saved);
 
 // ----------------------------------------------------------------------------
