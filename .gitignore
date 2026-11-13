@@ -167,3 +167,6 @@ notes/bench/capacity_results/
 
 # A site's own stylesheet (config 'custom_css_path'): site data, backed up by housekeeping
 css/custom.css
+
+# Large public download files (e.g. downloads/smedgd/): site data, not code. 2026-11-13
+downloads/

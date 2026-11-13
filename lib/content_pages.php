@@ -236,11 +236,51 @@ function moop_html_clean(string $html, ?array &$removed = null): string {
 
 /**
  * A page body as visitors see it, in its format. THE renderer: page.php, the home (index.php)
- * and the editor's preview all call this. $removed (HTML only) lists what the cleaner took out.
+ * and the editor's preview all call this (the term page's Description too). $removed lists what
+ * the cleaner took out (HTML only), and any link to a linked site this site does not know.
  */
 function moop_page_render(string $body, string $format, ?array &$removed = null): string {
-    if ($format !== 'html') { $removed = []; return moop_markdown($body); }
-    return func_num_args() > 2 ? moop_html_clean($body, $removed) : moop_html_clean($body);
+    $body = moop_linked_sites_expand($body, $unknown);
+    if ($format !== 'html') { $removed = $unknown; return moop_markdown($body); }
+    if (func_num_args() <= 2) return moop_html_clean($body);
+    $html = moop_html_clean($body, $removed);
+    $removed = array_merge($unknown, (array) $removed);
+    return $html;
+}
+
+/**
+ * The linked_sites setting (Site Configuration -> Linked sites): name => address, only the usable
+ * ones (name: letters, digits, hyphens; address: http(s)://, no trailing slash).
+ */
+function moop_linked_sites(): array {
+    $out = [];
+    foreach (ConfigManager::getInstance()->getArray('linked_sites', []) as $name => $url) {
+        $name = strtolower(trim((string) $name));
+        $url  = rtrim(trim((string) $url), '/');
+        if (preg_match('/^[a-z0-9][a-z0-9-]*$/', $name) && preg_match('#^https?://[^\s"\'<>]+$#i', $url)) $out[$name] = $url;
+    }
+    return $out;
+}
+
+/**
+ * Links to another site by name: href="{simrbase}/tools/blast.php" becomes that site's address
+ * from the setting, so a site that moves is one setting and not a rewrite of every link. Only a
+ * {name} that STARTS a link is touched -- right after a quote (HTML) or "(" (Markdown), and
+ * followed by / ? # or the end of the link -- never text that happens to have braces. An unknown
+ * name is left as written and reported in $unknown (the editor preview lists it).
+ */
+function moop_linked_sites_expand(string $body, ?array &$unknown = null): string {
+    $unknown = [];
+    if (strpos($body, '{') === false) return $body;
+    $sites = moop_linked_sites();
+    $out = preg_replace_callback('/(["\'(])\{([a-z0-9][a-z0-9-]*)\}(?=[\/?#"\')])/i', function ($m) use ($sites, &$unknown) {
+        $name = strtolower($m[2]);
+        if (isset($sites[$name])) return $m[1] . $sites[$name];
+        $unknown['{' . $m[2] . '}'] = 'A link to {' . $m[2] . '}, which is not a linked site here (Site Configuration -> Linked sites)';
+        return $m[0];
+    }, $body);
+    $unknown = array_values($unknown);
+    return $out ?? $body;
 }
 
 /** A page's public address. */

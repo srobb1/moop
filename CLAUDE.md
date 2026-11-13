@@ -161,7 +161,10 @@ Every link starts with `moop_url_base()` (`"/moop"`, or `""` for a site served a
 root) — `moop_url('tools/blast.php')`, or `<?= moop_url_base() ?>/tools/…` in a template. The
 `site` setting is the FOLDER name (cookies, caches, site-data dirs), NOT the start of a link;
 `"/$site/…"` breaks the moment a site moves to its own address (an empty one gave `//tools/…`).
-Folder paths still use `root_path`/`site_path`. Setting: `link_prefix` (2026-11-09). Moving a
+Folder paths still use `root_path`/`site_path`. Setting: `link_prefix` (2026-11-09).
+A content page linking to ANOTHER site writes `{name}/…` (e.g. `href="{simrbase}/tools/blast.php"`);
+the address comes from `linked_sites` (Site Configuration -> Linked sites), so that site moving is
+one setting (`moop_linked_sites_expand()`, lib/content_pages.php, 2026-11-13). Moving a
 site: `notes/MOVE_SITE_TO_OWN_ADDRESS.md` — the nginx half is still to do there.
 
 ### 4. Access Control Model

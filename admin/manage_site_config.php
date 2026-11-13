@@ -327,6 +327,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $data[$__k] = array_values(array_filter(array_map('trim', explode("\n", (string)$_POST[$__k])), 'strlen'));
             }
         }
+
+        // Linked sites (lib/content_pages.php): "name = https://address", one per line. Always
+        // set when the box was on the form, so clearing it saves an explicit empty list.
+        if (isset($_POST['linked_sites'])) {
+            $__sites = [];
+            foreach (preg_split('/\R/', (string) $_POST['linked_sites']) as $__line) {
+                if (trim($__line) === '') continue;
+                if (!preg_match('#^\s*([A-Za-z0-9][A-Za-z0-9-]*)\s*=\s*(https?://[^\s"\'<>]+)\s*$#', $__line, $__m)) {
+                    $error = 'Linked sites: write each line as name = https://address. Not understood: "' . trim($__line) . '". Nothing was saved.';
+                    break;
+                }
+                $__sites[strtolower($__m[1])] = rtrim($__m[2], '/');
+            }
+            $data['linked_sites'] = $__sites;
+        }
         
         // Handle file upload for header image
         if (isset($_FILES['header_upload']) && $_FILES['header_upload']['error'] == UPLOAD_ERR_OK) {

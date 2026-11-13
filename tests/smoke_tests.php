@@ -4515,6 +4515,28 @@ $_rp->setValue($_cfg, $_saved);
 foreach (['one', 'two', 'three'] as $_x) { @unlink("$_cd/.clades/$_x/homologs.sqlite"); @rmdir("$_cd/.clades/$_x"); }
 foreach (['OrgA/a1/gs1', 'OrgA/a1', 'OrgA', 'OrgB/b1/gs2', 'OrgB/b1', 'OrgB', '.clades', ''] as $_x) @rmdir("$_cd/$_x");
 
+group('Linked sites: {name} at the start of a page link becomes that site\'s address from the setting');
+require_once dirname(__DIR__) . '/lib/content_pages.php';
+$_cfg = ConfigManager::getInstance();
+$_rp = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['linked_sites'] = ['simrbase' => 'https://simr.example.org/moop/', 'Bad Name' => 'https://x.org', 'nohttp' => 'javascript:alert(1)'];
+$_rp->setValue($_cfg, $_c);
+ok(moop_linked_sites() === ['simrbase' => 'https://simr.example.org/moop'], 'only usable entries are kept, without the trailing slash');
+$_h = moop_page_render('<p><a href="{simrbase}/tools/blast.php">BLAST</a> <img src="{simrbase}/images/a.png" alt="a"></p>', 'html');
+ok(str_contains($_h, 'href="https://simr.example.org/moop/tools/blast.php"') && str_contains($_h, 'src="https://simr.example.org/moop/images/a.png"'),
+   'href and src starting with {simrbase} get the address');
+$_h = moop_page_render('<p>Text with {simrbase} in braces stays.</p>', 'html');
+ok(str_contains($_h, '{simrbase}'), 'braces in ordinary text are not touched');
+$_rm = null; $_h = moop_page_render('<p><a href="{nosuch}/x">x</a></p>', 'html', $_rm);
+ok(!str_contains($_h, 'example.org') && count(array_filter((array) $_rm, fn($r) => str_contains($r, '{nosuch}'))) === 1,
+   'an unknown name is left as written and reported to the editor preview');
+ok(str_contains(moop_page_render('[BLAST]({simrbase}/tools/blast.php)', 'markdown'), 'https://simr.example.org/moop/tools/blast.php'),
+   'Markdown links work too');
+$_c['linked_sites'] = ['simrbase' => 'javascript:alert(1)']; $_rp->setValue($_cfg, $_c);
+ok(!str_contains(moop_page_render('<a href="{simrbase}/x">x</a>', 'html'), 'javascript'), 'a non-http address is never put into a link');
+$_rp->setValue($_cfg, $_saved);
+
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";

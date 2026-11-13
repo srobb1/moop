@@ -82,7 +82,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['link_prefix', 'ontologies', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'primer_maker', 'crosswalk_display', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels'];
+    private $editableConfigKeys = ['link_prefix', 'ontologies', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'primer_maker', 'crosswalk_display', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels', 'linked_sites'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -1404,6 +1404,13 @@ class ConfigManager
                 'type' => 'sample_ids',
                 'current_value' => $this->getArray('home_search_examples', []),
                 'note' => 'Leave empty to choose automatically. Any term a viewer cannot open is skipped for that viewer.',
+            ],
+            'linked_sites' => [
+                'label' => 'Linked sites',
+                'description' => 'Other sites this site\'s content pages link to, by a short name. A page writes a link as {name}/the/rest, e.g. href="{simrbase}/tools/blast.php", and the address here is put in when the page is shown. When that site moves, change its address here and every link follows.',
+                'type' => 'linked_sites',
+                'current_value' => $this->getArray('linked_sites', []),
+                'note' => '',
             ],
             'site_data_path' => [
                 'label' => 'Site Data Backup Path',

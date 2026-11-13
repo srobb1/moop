@@ -869,6 +869,22 @@ chmod 640 config/secrets.php &amp;&amp; chgrp <?= htmlspecialchars(function_exis
                     </div>
                 </div>
 
+                <!-- Linked sites (lib/content_pages.php: moop_linked_sites_expand) -->
+                <div class="card adm-card mb-3" id="pnav-linked-sites" data-nav-label="Linked Sites">
+                    <div class="card-header adm-head">
+                        <h5 class="mb-0"><i class="fa fa-link"></i> <?= htmlspecialchars($editable_config['linked_sites']['label']) ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small"><?= htmlspecialchars($editable_config['linked_sites']['description']) ?></p>
+                        <label for="linked_sites" class="form-label"><strong>name = address (one per line)</strong></label>
+                        <textarea id="linked_sites" name="linked_sites" class="form-control font-monospace" rows="3"
+                                  placeholder="simrbase = https://simrbase.example.org"><?php
+                            foreach ((array) $editable_config['linked_sites']['current_value'] as $__n => $__u) echo htmlspecialchars($__n . ' = ' . $__u) . "\n";
+                        ?></textarea>
+                        <small class="form-text text-muted">A page link to a name that is not listed here stays as written, and the page editor's preview says so.</small>
+                    </div>
+                </div>
+
                 <!-- Site Data Backup Path -->
                 <div class="card adm-card mb-3" id="pnav-backup-path" data-nav-label="Site Data Backup Path">
                     <div class="card-header adm-head">

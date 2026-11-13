@@ -93,6 +93,11 @@ return [
     // Read through moop_url_base() / moop_url() (includes/config_init.php), never built from
     // 'site' -- an empty site gave "//tools/…", a protocol-relative link to a host named tools.
     'link_prefix' => '/' . $site,
+    // Other sites this site's content pages link to, by name: a page writes
+    // href="{simrbase}/tools/..." and the address comes from here (Site Configuration -> Linked
+    // sites), so when that site moves it is one setting, not a rewrite of every link
+    // (Planosphere had 1,321 links to simrbase, 2026-11-13). lib/content_pages.php.
+    'linked_sites' => [],
     'site_path' => $site_path,
     'organism_data' => "$site_path/organisms",
     
