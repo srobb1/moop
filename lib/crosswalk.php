@@ -484,21 +484,33 @@ function moop_crosswalk_translate(string $organism, array $typed, array $into, ?
 }
 
 /**
- * A moop_crosswalk_translate() result as TSV, with the ID Translator's own columns (Query source,
- * Query ID, Reference gene, Reference transcripts, each always-shown source, Description, Mapped
- * source, Mapped ID) -- so the gene page's "Same gene in this species" download and the tool's
- * read the same way. Ids only (no links); several ids in one cell are space-separated, as on screen.
+ * A moop_crosswalk_translate() result as TSV -- the ONE writer for both the ID Translator's download
+ * and the gene page's "Same gene in this species" download, so they never read differently:
+ *
+ *   organism, from_source, from_assembly, from_gene_set, from_id,
+ *   reference_assembly, reference_gene_set, reference_gene, reference_transcripts,
+ *   <each always-shown source>, description, to_source, to_assembly, to_gene_set, to_id
+ *
+ * from = the id asked about (typed into the tool, or the gene page's gene); to = the same gene in
+ * another source. A source's assembly + gene set are filled only when it is a gene set on this site
+ * (arrays, ESTs, old transcriptomes have none); the source code always says where an id comes from.
+ * Several ids in one cell are space-separated, as on screen. No to_ columns when nothing was mapped.
  */
-function moop_crosswalk_translate_tsv(array $result, array $always, bool $with_mapped): string {
+function moop_crosswalk_translate_tsv(string $organism, array $result, array $always, bool $with_mapped): string {
+    $cfg  = moop_crosswalk_sources()[$organism]['sources'] ?? [];
+    $site = fn(string $src) => !empty($cfg[$src]['gene_set']) ? [(string) ($cfg[$src]['assembly'] ?? ''), (string) $cfg[$src]['gene_set']] : ['', ''];
     $cell = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string) $s);
     $ids  = fn(array $links) => implode(' ', array_column($links, 'id'));
-    $out  = implode("\t", array_map($cell, array_merge(['Query source', 'Query ID', 'Reference gene', 'Reference transcripts'], $always,
-                    ['Description'], $with_mapped ? ['Mapped source', 'Mapped ID'] : []))) . "\n";
+    $out  = implode("\t", array_map($cell, array_merge(
+                ['organism', 'from_source', 'from_assembly', 'from_gene_set', 'from_id',
+                 'reference_assembly', 'reference_gene_set', 'reference_gene', 'reference_transcripts'],
+                $always, ['description'], $with_mapped ? ['to_source', 'to_assembly', 'to_gene_set', 'to_id'] : []))) . "\n";
     foreach ($result['rows'] as $r) {
-        $row = [$r['query_source'], $r['query'], $r['ref_id'], $ids($r['transcripts'])];
+        $row = array_merge([$organism, $r['query_source']], $site($r['query_source']), [$r['query']],
+                           $site($r['hub']), [$r['ref_id'], $ids($r['transcripts'])]);
         foreach ($always as $s) $row[] = $ids($r['always'][$s] ?? []);
         $row[] = $r['description'];
-        if ($with_mapped) array_push($row, $r['mapped_source'], $r['mapped']['id'] ?? '');
+        if ($with_mapped) $row = array_merge($row, [$r['mapped_source']], $site((string) $r['mapped_source']), [$r['mapped']['id'] ?? '']);
         $out .= implode("\t", array_map($cell, $row)) . "\n";
     }
     return $out;

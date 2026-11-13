@@ -681,7 +681,7 @@ if ($download_card === 'same_gene' && !empty($page_section['aka'])) {
     $__cw_scope  = moop_search_permitted_scope($organism_name);
     $__cw = moop_crosswalk_translate($organism_name, [$feature_uniquename], $__cw_into, $__cw_scope);
     if (!$__cw['rows']) $__cw = moop_crosswalk_translate($organism_name, array_column($children, 'feature_uniquename'), $__cw_into, $__cw_scope);
-    $__tsv = moop_crosswalk_translate_tsv($__cw, $__cw_always, true);
+    $__tsv = moop_crosswalk_translate_tsv($organism_name, $__cw, $__cw_always, true);
 } elseif ($download_card === 'compgen' && $compgen_section) {
     $__tsv = moop_clade_homologs_tsv($compgen_section);
 }

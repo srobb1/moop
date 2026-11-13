@@ -85,20 +85,7 @@
 
         const table = document.getElementById('cwResults');
         if (!table) return;
-        const dt = (window.jQuery && jQuery.fn.DataTable) ? jQuery(table).DataTable({ pageLength: 25, order: [], autoWidth: false }) : null;
-        const btn = document.getElementById('cwDownload');
-        if (!btn) return;
-        btn.addEventListener('click', function () {
-            const clean = s => s.replace(/\s+/g, ' ').trim();
-            const head = Array.from(table.querySelectorAll('thead th')).map(th => clean(th.textContent));
-            const rows = dt ? Array.from(dt.rows({ order: 'applied' }).nodes()) : Array.from(table.querySelectorAll('tbody tr'));
-            const lines = [head.join('\t')].concat(rows.map(tr => Array.from(tr.cells).map(td => clean(td.textContent)).join('\t')));
-            const blob = new Blob([lines.join('\n') + '\n'], { type: 'text/tab-separated-values' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'id_translator_' + new Date().toISOString().slice(0, 10) + '.tsv';
-            document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-        });
+        if (window.jQuery && jQuery.fn.DataTable) jQuery(table).DataTable({ pageLength: 25, order: [], autoWidth: false });
+        // Download TSV is a plain link: the server writes the file (tools/crosswalk.php ?download=tsv).
     });
 })();

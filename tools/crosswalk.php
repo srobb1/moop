@@ -32,6 +32,18 @@ if ($organism && $typed) {
     $result = moop_crosswalk_translate($organism, $typed, $into, moop_search_permitted_scope($organism), MOOP_CROSSWALK_MAX_ROWS);
 }
 $cfg = $organism ? moop_crosswalk_sources()[$organism] : [];
+
+// ?download=tsv: the same result as a file, written on the server by the one TSV writer the gene
+// page's "Same gene in this species" download also uses (organism, assembly, gene set columns; the
+// whole result, not the table's current page/sort; English headings in every language).
+if (($_GET['download'] ?? '') === 'tsv' && $result && $result['rows']) {
+    require_once __DIR__ . '/../lib/download_filename.php';
+    $__fn = moop_download_filename('id_translator', [$organism], 'tsv');
+    header('Content-Type: text/tab-separated-values; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . addcslashes($__fn, '"\\') . '"');
+    echo moop_crosswalk_translate_tsv($organism, $result, array_values(array_filter((array) ($cfg['always_show'] ?? []), 'is_string')), (bool) $into);
+    exit;
+}
 $tool_title = trim((string) ($cfg['name'] ?? '')) ?: 'ID Translator';
 
 echo render_display_page(__DIR__ . '/pages/crosswalk.php', [

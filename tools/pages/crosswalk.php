@@ -113,7 +113,7 @@ $src_cell = function (string $s) use ($sources, $source_about): string {
     <div class="card-header py-2 tool-header d-flex flex-wrap align-items-center gap-2">
       <span class="fw-semibold"><?= count($result['rows']) === 1 ? t('1 row') : t('%d rows', count($result['rows'])) ?></span>
       <?php if ($result['rows']): ?>
-        <button type="button" class="btn btn-sm btn-light ms-auto" id="cwDownload"><i class="fa fa-download me-1"></i><?= t('Download TSV') ?></button>
+        <a class="btn btn-sm btn-light ms-auto" id="cwDownload" href="<?= htmlspecialchars(moop_url('tools/crosswalk.php') . '?' . http_build_query(['organism' => $organism, 'ids' => $ids_text, 'into' => $into, 'download' => 'tsv'])) ?>"><i class="fa fa-download me-1"></i><?= t('Download TSV') ?></a>
       <?php endif; ?>
     </div>
     <div class="card-body">
@@ -132,11 +132,11 @@ $src_cell = function (string $s) use ($sources, $source_about): string {
       <div class="table-responsive">
         <table class="table table-sm table-striped align-middle" id="cwResults" style="width:100%">
           <thead><tr>
-            <th><?= t('Query source') ?></th><th><?= t('Query ID') ?></th><th><?= t('Reference gene') ?></th>
+            <th><?= t('From source') ?></th><th><?= t('From ID') ?></th><th><?= t('Reference gene') ?></th>
             <th><?= t('Reference transcripts') ?></th>
             <?php foreach ($always as $s): ?><th><?= htmlspecialchars($s) ?></th><?php endforeach; ?>
             <th><?= t('Description') ?></th>
-            <?php if ($into): ?><th><?= t('Mapped source') ?></th><th><?= t('Mapped ID') ?></th><?php endif; ?>
+            <?php if ($into): ?><th><?= t('To source') ?></th><th><?= t('To ID') ?></th><?php endif; ?>
           </tr></thead>
           <tbody>
           <?php foreach ($result['rows'] as $r): ?>
