@@ -178,12 +178,13 @@ function moop_clade_aliases(array $entry): array {
 /**
  * Names and descriptions for the genes the card lists, from each organism's own database:
  * [organism => [gene => ['name' => ..., 'description' => ...]]]. One query per organism.
+ * The card names the first 200 family members of each organism; the download ($family_cap null) all.
  */
-function moop_clade_gene_labels(array $clades): array {
+function moop_clade_gene_labels(array $clades, ?int $family_cap = 200): array {
     $want = [];
     foreach ($clades as $c) foreach ($c['organisms'] as $org => $o) {
         foreach ($o['orthologs'] as $g) $want[$org][$g['gene']] = true;
-        foreach (array_slice($o['family'], 0, 200) as $g) $want[$org][$g] = true;
+        foreach (array_slice($o['family'], 0, $family_cap) as $g) $want[$org][$g] = true;
     }
     $out = [];
     $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/');
@@ -213,4 +214,33 @@ function moop_clade_has_symbol(string $label, string $gene): bool {
     $label = trim($label);
     if ($label === '' || strcasecmp($label, $gene) === 0 || stripos($label, $gene) !== false || stripos($gene, $label) !== false) return false;
     return !preg_match('/^(LOC\d+|NY_[A-Za-z0-9_.]+|[A-Za-z]{1,6}[_.]?\d{5,}[0-9._]*)$/', $label);
+}
+
+/**
+ * The Comparative genomics card as a TSV, one row per gene: its orthologs in each clade, the other
+ * members of its gene family and its paralogs -- the WHOLE family (the card shows the first 200).
+ * $section is the page's compgen_section (moop_clade_homologs_for_gene() + its gene).
+ */
+function moop_clade_homologs_tsv(array $section): string {
+    $cell   = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string) $s);
+    $labels = moop_clade_gene_labels($section['clades'], null);
+    $out    = "gene\tclade\tmethod\tversion\tgene_family\torganism\trelationship\tkind\thomolog\tgene_set\tname\tdescription\talso_in\n";
+    foreach ($section['clades'] as $c) {
+        foreach ($c['organisms'] as $org => $o) {
+            $rows = [];
+            if (!$o['self']) foreach ($o['orthologs'] as $g) $rows[] = ['ortholog', $g['kind'], $g['gene']];
+            foreach ($o['family'] as $g) $rows[] = [$o['self'] ? 'paralog' : 'family member (not ortholog)', '', $g];
+            foreach ($rows as [$rel, $kind, $gene]) {
+                $l    = $labels[$org][$gene] ?? ['name' => '', 'description' => ''];
+                $name = moop_clade_has_symbol($l['name'], $gene) ? $l['name'] : '';
+                $desc = trim(preg_replace('/\s*\[[^\]]*\]\s*$/', '', $l['description']));
+                if ($desc !== '' && !moop_clade_has_symbol($desc, $gene)) $desc = '';   // only an id, as on the card
+                $also = [];
+                foreach ($c['aliases'][$org][$gene] ?? [] as $a) $also[] = $a['gene_set'] . ':' . $a['gene'];
+                $out .= implode("\t", array_map($cell, [$section['gene'], $c['label'], $c['method'], $c['version'], $c['orthogroup'],
+                        $org, $rel, $kind, $gene, $o['gene_set'], $name, $desc, implode(', ', $also)])) . "\n";
+            }
+        }
+    }
+    return $out;
 }

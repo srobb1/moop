@@ -482,3 +482,23 @@ function moop_crosswalk_translate(string $organism, array $typed, array $into, ?
     }
     return $res;
 }
+
+/**
+ * The gene page's "Same gene in this species" card as a TSV: one row per id this gene has in the
+ * organism's other gene sets and data sets (the Rosetta Stone). $aka = moop_crosswalk_members()
+ * rows minus the page's own ids. A source that is a gene set on this site names it and its assembly.
+ */
+function moop_crosswalk_aka_tsv(string $organism, string $gene, array $aka): string {
+    $cell    = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string) $s);
+    $sources = moop_crosswalk_sources()[$organism]['sources'] ?? [];
+    $out     = "gene\tsource\tsource_label\ton_this_site_gene_set\tassembly\tid\n";
+    $seen    = [];
+    foreach ($aka as $m) {
+        if (isset($seen[$m['source'] . "\t" . $m['accession']])) continue;
+        $seen[$m['source'] . "\t" . $m['accession']] = true;
+        $c = $sources[$m['source']] ?? [];
+        $out .= implode("\t", array_map($cell, [$gene, $m['source'], $c['label'] ?? $m['source'],
+                $c['gene_set'] ?? '', !empty($c['gene_set']) ? ($c['assembly'] ?? '') : '', $m['accession']])) . "\n";
+    }
+    return $out;
+}

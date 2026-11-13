@@ -131,10 +131,16 @@ $(document).ready(function () {
             if (target) window.moopOpenCollapsedAncestors(target);
         }, true);
 
-        // Arriving with a #hash that points inside a collapsed section.
+        // Arriving with a #hash that points inside a collapsed section -- or at a card itself
+        // (#pnav-images, the ids the section nav uses), which means "open that card": a link
+        // from another page can then land on a gene with, say, its Images showing.
         if (location.hash.length > 1) {
             var target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
-            if (target && target.closest('.collapse:not(.show)')) {
+            var body   = target && target.matches('[data-nav-label]') ? target.querySelector(':scope > .collapse') : null;
+            if (body && !body.classList.contains('show')) {
+                window.moopOpenCollapsedAncestors(body);
+                target.scrollIntoView({ block: 'start' });
+            } else if (target && target.closest('.collapse:not(.show)')) {
                 window.moopOpenCollapsedAncestors(target);
                 target.scrollIntoView({ block: 'start' });
             }

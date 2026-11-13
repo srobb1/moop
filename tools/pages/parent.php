@@ -868,6 +868,14 @@
             <span class="ms-2 text-muted small"><?= t('%1$s in %2$s (Rosetta Stone)',
                 ($__n_ids !== 1 ? t_plain('%d other ids', $__n_ids) : t_plain('%d other id', 1)),
                 (count($__aka_by) !== 1 ? t_plain('%d gene sets and data sets', count($__aka_by)) : t_plain('%d gene set or data set', 1))) . "\n" ?></span>
+            <form method="POST" action="" class="ms-auto">
+                <?= csrf_input_field() ?>
+                <input type="hidden" name="download_card" value="same_gene">
+                <button type="submit" class="btn btn-sm moop-data-btn"
+                        title="<?= t('Every other id of this gene in this species, one row per id (TSV)') ?>">
+                    <i class="fas fa-download me-1"></i><?= t('Download') . "\n" ?>
+                </button>
+            </form>
         </div>
         <div class="collapse" id="sameGeneSection">
             <div class="card-body">
@@ -959,6 +967,14 @@
             <?= help_modal_trigger('compgen-help', '', 'Help: comparative genomics') ?>
             <span class="ms-2 text-muted small"><?= ($__ncl !== 1 ? t('orthologs and gene family across %d clades on this site', $__ncl)
                                                                   : t('orthologs and gene family across %d clade on this site', $__ncl)) . "\n" ?></span>
+            <form method="POST" action="" class="ms-auto">
+                <?= csrf_input_field() ?>
+                <input type="hidden" name="download_card" value="compgen">
+                <button type="submit" class="btn btn-sm moop-data-btn"
+                        title="<?= t('Orthologs, the whole gene family and paralogs in every clade, one row per gene (TSV)') ?>">
+                    <i class="fas fa-download me-1"></i><?= t('Download') . "\n" ?>
+                </button>
+            </form>
         </div>
         <div class="collapse" id="compgenSection">
             <div class="card-body">

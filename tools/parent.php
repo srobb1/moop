@@ -41,9 +41,10 @@
 $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
 $sequence_type = trim($_POST['sequence_type'] ?? '');
 $download_expression = ($_POST['download_expression'] ?? '') === '1';
+$download_card       = (string) ($_POST['download_card'] ?? '');   // 'same_gene' | 'compgen': a card's TSV
 
 // Start output buffering if download is requested to prevent any stray output
-if ($download_file_flag || $download_expression) {
+if ($download_file_flag || $download_expression || $download_card !== '') {
     ob_start();
 }
 
@@ -667,6 +668,24 @@ if (moop_clades_open()) {
             if ($__cl) { $compgen_section = ['clades' => $__cl, 'labels' => moop_clade_gene_labels($__cl), 'gene' => (string) $__g, 'page_gene_set' => $__gs_name]; break; }
         }
     }
+}
+
+// A card's own download (its header button): the same rows the card shows, as TSV -- built from the
+// sections above, so it can never list a gene the visitor could not see on the page.
+if ($download_card === 'same_gene' && !empty($page_section['aka'])) {
+    $__tsv = moop_crosswalk_aka_tsv($organism_name, $feature_uniquename, $page_section['aka']);
+} elseif ($download_card === 'compgen' && $compgen_section) {
+    $__tsv = moop_clade_homologs_tsv($compgen_section);
+}
+if (isset($__tsv)) {
+    require_once __DIR__ . '/../lib/download_filename.php';
+    while (ob_get_level()) ob_end_clean();
+    $__fn = moop_download_filename($download_card === 'compgen' ? 'orthologs_gene_family' : 'same_gene_other_ids',
+        [$organism_name, $genome_accession, $gene_set_name, $feature_uniquename], 'tsv');
+    header('Content-Type: text/tab-separated-values; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . addcslashes($__fn, '"\\') . '"');
+    echo $__tsv;
+    exit;
 }
 
 // Render page using layout system
