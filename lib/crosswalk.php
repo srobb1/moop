@@ -484,21 +484,22 @@ function moop_crosswalk_translate(string $organism, array $typed, array $into, ?
 }
 
 /**
- * The gene page's "Same gene in this species" card as a TSV: one row per id this gene has in the
- * organism's other gene sets and data sets (the Rosetta Stone). $aka = moop_crosswalk_members()
- * rows minus the page's own ids. A source that is a gene set on this site names it and its assembly.
+ * A moop_crosswalk_translate() result as TSV, with the ID Translator's own columns (Query source,
+ * Query ID, Reference gene, Reference transcripts, each always-shown source, Description, Mapped
+ * source, Mapped ID) -- so the gene page's "Same gene in this species" download and the tool's
+ * read the same way. Ids only (no links); several ids in one cell are space-separated, as on screen.
  */
-function moop_crosswalk_aka_tsv(string $organism, string $gene, array $aka): string {
-    $cell    = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string) $s);
-    $sources = moop_crosswalk_sources()[$organism]['sources'] ?? [];
-    $out     = "gene\tsource\tsource_label\ton_this_site_gene_set\tassembly\tid\n";
-    $seen    = [];
-    foreach ($aka as $m) {
-        if (isset($seen[$m['source'] . "\t" . $m['accession']])) continue;
-        $seen[$m['source'] . "\t" . $m['accession']] = true;
-        $c = $sources[$m['source']] ?? [];
-        $out .= implode("\t", array_map($cell, [$gene, $m['source'], $c['label'] ?? $m['source'],
-                $c['gene_set'] ?? '', !empty($c['gene_set']) ? ($c['assembly'] ?? '') : '', $m['accession']])) . "\n";
+function moop_crosswalk_translate_tsv(array $result, array $always, bool $with_mapped): string {
+    $cell = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string) $s);
+    $ids  = fn(array $links) => implode(' ', array_column($links, 'id'));
+    $out  = implode("\t", array_map($cell, array_merge(['Query source', 'Query ID', 'Reference gene', 'Reference transcripts'], $always,
+                    ['Description'], $with_mapped ? ['Mapped source', 'Mapped ID'] : []))) . "\n";
+    foreach ($result['rows'] as $r) {
+        $row = [$r['query_source'], $r['query'], $r['ref_id'], $ids($r['transcripts'])];
+        foreach ($always as $s) $row[] = $ids($r['always'][$s] ?? []);
+        $row[] = $r['description'];
+        if ($with_mapped) array_push($row, $r['mapped_source'], $r['mapped']['id'] ?? '');
+        $out .= implode("\t", array_map($cell, $row)) . "\n";
     }
     return $out;
 }

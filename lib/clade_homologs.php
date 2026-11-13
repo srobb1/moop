@@ -140,6 +140,7 @@ function moop_clade_homologs_in(PDO $db, string $clade, string $organism, string
         'via'          => $via,
         'self_gene'    => (string) $me['gene'],
         'self_set'     => (string) $me['gene_set'],
+        'self_assembly'=> (string) ($members[$organism . '/' . $me['gene_set']] ?? ''),
         'organism'     => $organism,
         'organisms'    => $orgs,
         'aliases'      => [],
@@ -187,21 +188,30 @@ function moop_clade_gene_labels(array $clades, ?int $family_cap = 200): array {
         foreach (array_slice($o['family'], 0, $family_cap) as $g) $want[$org][$g] = true;
     }
     $out = [];
-    $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/');
     foreach ($want as $org => $genes) {
-        $f = "$base/$org/organism.sqlite";
-        if (!is_file($f)) continue;
-        try {
-            $db = new PDO('sqlite:' . $f, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
-            foreach (array_chunk(array_keys($genes), 400) as $chunk) {
-                $st = $db->prepare('SELECT feature_uniquename, feature_name, feature_description FROM feature WHERE feature_uniquename IN ('
-                                   . implode(',', array_fill(0, count($chunk), '?')) . ')');
-                $st->execute(array_map('strval', $chunk));
-                foreach ($st as $r) $out[$org][$r['feature_uniquename']] = ['name' => (string) $r['feature_name'], 'description' => (string) $r['feature_description']];
-            }
-        } catch (Throwable $e) {
-            error_log("MOOP: clade gene labels for $org: " . $e->getMessage());
+        if ($l = moop_gene_labels($org, array_keys($genes))) $out[$org] = $l;
+    }
+    return $out;
+}
+
+/**
+ * Names and descriptions of some genes of one organism, from its own database:
+ * [gene => ['name' => ..., 'description' => ...]]; genes it does not have are left out.
+ */
+function moop_gene_labels(string $organism, array $genes): array {
+    $f = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . "/$organism/organism.sqlite";
+    if (!$genes || !is_file($f)) return [];
+    $out = [];
+    try {
+        $db = new PDO('sqlite:' . $f, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
+        foreach (array_chunk(array_values(array_unique(array_map('strval', $genes))), 400) as $chunk) {
+            $st = $db->prepare('SELECT feature_uniquename, feature_name, feature_description FROM feature WHERE feature_uniquename IN ('
+                               . implode(',', array_fill(0, count($chunk), '?')) . ')');
+            $st->execute($chunk);
+            foreach ($st as $r) $out[$r['feature_uniquename']] = ['name' => (string) $r['feature_name'], 'description' => (string) $r['feature_description']];
         }
+    } catch (Throwable $e) {
+        error_log("MOOP: gene labels for $organism: " . $e->getMessage());
     }
     return $out;
 }
@@ -217,28 +227,37 @@ function moop_clade_has_symbol(string $label, string $gene): bool {
 }
 
 /**
- * The Comparative genomics card as a TSV, one row per gene: its orthologs in each clade, the other
- * members of its gene family and its paralogs -- the WHOLE family (the card shows the first 200).
+ * The Comparative genomics card as a TSV, one row per PAIR: gene1 (this gene, as the clade has it --
+ * the Rosetta Stone match when the page's gene set is not the clade's), then gene2 (an ortholog, a
+ * family member or a paralog), each fully described, then what the pair is. The WHOLE family (the
+ * card names the first 200). No score: OrthoFinder calls orthologs from gene trees and records none.
  * $section is the page's compgen_section (moop_clade_homologs_for_gene() + its gene).
  */
 function moop_clade_homologs_tsv(array $section): string {
-    $cell   = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string) $s);
+    $cell  = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string) $s);
+    $cols  = ['organism', 'assembly', 'gene_set', 'id', 'name', 'description'];
+    $out   = implode("\t", array_merge(array_map(fn($c) => "gene1_$c", $cols), array_map(fn($c) => "gene2_$c", $cols),
+                                     ['relationship', 'kind', 'gene_family', 'clade', 'method'])) . "\n";
+    // Labels for every listed gene, plus each clade's own gene (gene1 -- not in its organism lists).
     $labels = moop_clade_gene_labels($section['clades'], null);
-    $out    = "gene\tclade\tmethod\tversion\tgene_family\torganism\trelationship\tkind\thomolog\tgene_set\tname\tdescription\talso_in\n";
+    foreach ($section['clades'] as $c) $labels[$c['organism']] = ($labels[$c['organism']] ?? []) + moop_gene_labels($c['organism'], [$c['self_gene']]);
+    $describe = function (string $org, string $asm, string $gs, string $gene) use ($labels): array {
+        $l    = $labels[$org][$gene] ?? ['name' => '', 'description' => ''];
+        $desc = trim(preg_replace('/\s*\[[^\]]*\]\s*$/', '', $l['description']));   // drop the "[ISO|1to1|...]" evidence tag
+        if ($desc !== '' && !moop_clade_has_symbol($desc, $gene)) $desc = '';      // only an id, as on the card
+        return [$org, $asm, $gs, $gene, moop_clade_has_symbol($l['name'], $gene) ? $l['name'] : '', $desc];
+    };
     foreach ($section['clades'] as $c) {
+        $g1     = $describe($c['organism'], $c['self_assembly'] ?? '', $c['self_set'], $c['self_gene']);
+        $method = trim($c['method'] . ' ' . $c['version']);
         foreach ($c['organisms'] as $org => $o) {
             $rows = [];
-            if (!$o['self']) foreach ($o['orthologs'] as $g) $rows[] = ['ortholog', $g['kind'], $g['gene']];
+            // "1:1" -> "1-to-1": Excel reads 1:1 as a time and shows 1:01 (Sofia, 2026-11-12).
+            if (!$o['self']) foreach ($o['orthologs'] as $g) $rows[] = ['ortholog', str_replace(':', '-to-', $g['kind']), $g['gene']];
             foreach ($o['family'] as $g) $rows[] = [$o['self'] ? 'paralog' : 'family member (not ortholog)', '', $g];
             foreach ($rows as [$rel, $kind, $gene]) {
-                $l    = $labels[$org][$gene] ?? ['name' => '', 'description' => ''];
-                $name = moop_clade_has_symbol($l['name'], $gene) ? $l['name'] : '';
-                $desc = trim(preg_replace('/\s*\[[^\]]*\]\s*$/', '', $l['description']));
-                if ($desc !== '' && !moop_clade_has_symbol($desc, $gene)) $desc = '';   // only an id, as on the card
-                $also = [];
-                foreach ($c['aliases'][$org][$gene] ?? [] as $a) $also[] = $a['gene_set'] . ':' . $a['gene'];
-                $out .= implode("\t", array_map($cell, [$section['gene'], $c['label'], $c['method'], $c['version'], $c['orthogroup'],
-                        $org, $rel, $kind, $gene, $o['gene_set'], $name, $desc, implode(', ', $also)])) . "\n";
+                $out .= implode("\t", array_map($cell, array_merge($g1, $describe($org, $o['assembly'], $o['gene_set'], $gene),
+                        [$rel, $kind, $c['orthogroup'], $c['label'], $method]))) . "\n";
             }
         }
     }
