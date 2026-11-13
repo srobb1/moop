@@ -1,7 +1,7 @@
 # homologs.sqlite — clade comparative genomics (OrthoFinder), the format MOOP expects
 
-**Status: format 1 live 2026-11-12 (`lib/clade_homologs.php`, the gene page's Comparative genomics
-card). Format 2 (sequence evidence per ortholog pair, §Format 2) read by the site since 2026-11-12;
+**Status: format 1 live 2026-11-12 (`lib/clade_homologs.php`, the gene page's "Orthologs in related
+species" and "Gene family in related species" cards -- one card "Comparative genomics" until that day). Format 2 (sequence evidence per ortholog pair, §Format 2) read by the site since 2026-11-12;
 compute ships /2 files with `CLADE_FORMAT2_OK=1`.** A file without evidence is still written as /1 and
 reads exactly as before.
 
@@ -18,8 +18,8 @@ place the clade data appears says what it is, how it was made, and what it is co
 | Annotations → **Orthologs** | OMA pairwise / groups / HOGs, eggNOG | published orthology resources | reference species **outside** the site |
 | Annotations → **Homologs** | best sequence matches | BLAST / DIAMOND, one-way | Ensembl / UniProt proteomes **outside** the site |
 | Annotations → **RBBH Homolog** | reciprocal best hits | MMseqs2 | Ensembl proteomes **outside** the site |
-| **Comparative genomics** card → *Orthologs in <clade>* | OrthoFinder pairwise orthologs, with type 1:1 / 1:many / many:1 / many:many | gene trees | MOOP organisms **in the clade** |
-| **Comparative genomics** card → *Gene family in <clade>* | the rest of the orthogroup / N0 HOG: orthologs **and paralogs** descended from one ancestral gene | gene trees | MOOP organisms **in the clade** |
+| **Orthologs in related species** card, one part per clade | OrthoFinder pairwise orthologs, with type 1:1 / 1:many / many:1 / many:many | gene trees | MOOP organisms **in the clade** |
+| **Gene family in related species** card, one part per clade | the rest of the N0 HOG: **paralogs** (this species) and the other members (other species), descended from one ancestral gene | gene trees | MOOP organisms **in the clade** |
 
 - The clade data is **never** called plain "homologs" on a page (that word belongs to the
   similarity annotations), and an orthogroup is never called "orthologs" (it includes paralogs).
@@ -149,7 +149,7 @@ Extra `meta` keys in /2:
 
 On the site: `reciprocal_best` and `co_ortholog` are listed as orthologs, with a badge (tooltip:
 E-value, identity, coverage of each protein); `weak` and `no_hit` fold into "N without sequence
-support" under each species. The download (gene page, Comparative genomics) adds `support`, `evalue`,
+support" under each species. The orthologs download adds `support`, `evalue`,
 `bitscore`, `pident`, `gene1_coverage`, `gene2_coverage`. A /1 file has no badges and nothing folded.
 
 ## Other gene sets of a species — through the crosswalk (decided 2026-11-12)
@@ -175,12 +175,15 @@ is simpler. The name `clade_homologs/2` now means the evidence format above.)
 
 ## What the site will do with it
 
-- **Gene-page card "Comparative genomics"** (built 2026-11-12), one part per clade (`meta.label`):
-  *Orthologs in <label>* — a table, one row per OTHER organism: "Orthologs of this gene" from `pair`
-  (1:1 first, then genes with a real symbol, then the rest; first 10 shown, kind badge each) and
-  "Other family members (not orthologs of this gene)" — the rest of the N0 HOG in that species —
-  expandable. Below it, "Paralogs in <this species>: N genes" (the page's own species' share of the
-  HOG), expandable. Each gene: id (linked), symbol if it has a real one, short description (an
+- **Two gene-page cards** (built 2026-11-12 as one card, "Comparative genomics"; split and renamed
+  the same evening -- Sofia: the family column was awkward beside the orthologs). Each has one part
+  per clade (heading `meta.label`, anchor `#pnav-compgen-<clade>` / `#pnav-family-<clade>`) and its own
+  TSV download:
+  - **Orthologs in related species** (`#pnav-compgen`) — one row per OTHER organism, "Orthologs of this
+    gene" from `pair` (reciprocal best first, then 1:1, then genes with a real symbol; first 10 shown,
+    kind badge each; /2: evidence badge, unsupported ones folded).
+  - **Gene family in related species** (`#pnav-family`, only when there are any) — this species first
+    ("N paralogs"), then each other species ("N genes, not orthologs of this gene"), expandable. Each gene: id (linked), symbol if it has a real one, short description (an
   id-only label is hidden). A note says the method and scope (N gene sets on this site). An 80-gene family across
   18 planarians reads as 18 short rows. Each gene links to its own gene page; the site builds the
   links (no URLs in the file).

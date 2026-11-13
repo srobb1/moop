@@ -41,7 +41,7 @@
 $download_file_flag = isset($_POST['download_file']) && $_POST['download_file'] == '1';
 $sequence_type = trim($_POST['sequence_type'] ?? '');
 $download_expression = ($_POST['download_expression'] ?? '') === '1';
-$download_card       = (string) ($_POST['download_card'] ?? '');   // 'same_gene' | 'compgen': a card's TSV
+$download_card       = (string) ($_POST['download_card'] ?? '');   // 'same_gene' | 'compgen' | 'family': a card's TSV
 
 // Start output buffering if download is requested to prevent any stray output
 if ($download_file_flag || $download_expression || $download_card !== '') {
@@ -651,7 +651,7 @@ if (moop_images_open($organism_name)) {
     }
 }
 
-// Comparative genomics: OrthoFinder clades this gene's gene set belongs to (organisms/.clades/,
+// Orthologs + gene family in related species: OrthoFinder clades this gene's gene set belongs to (organisms/.clades/,
 // lib/clade_homologs.php). Orthologs in each clade + the rest of its gene family, only genes whose
 // own gene set the visitor may see. No clade files: one glob. docs/CLADE_HOMOLOGS_FORMAT.md.
 require_once __DIR__ . '/../lib/clade_homologs.php';
@@ -682,13 +682,13 @@ if ($download_card === 'same_gene' && !empty($page_section['aka'])) {
     $__cw = moop_crosswalk_translate($organism_name, [$feature_uniquename], $__cw_into, $__cw_scope);
     if (!$__cw['rows']) $__cw = moop_crosswalk_translate($organism_name, array_column($children, 'feature_uniquename'), $__cw_into, $__cw_scope);
     $__tsv = moop_crosswalk_translate_tsv($organism_name, $__cw, $__cw_always, true);
-} elseif ($download_card === 'compgen' && $compgen_section) {
-    $__tsv = moop_clade_homologs_tsv($compgen_section);
+} elseif (($download_card === 'compgen' || $download_card === 'family') && $compgen_section) {
+    $__tsv = moop_clade_homologs_tsv($compgen_section, $download_card === 'family' ? 'family' : 'orthologs');
 }
 if (isset($__tsv)) {
     require_once __DIR__ . '/../lib/download_filename.php';
     while (ob_get_level()) ob_end_clean();
-    $__fn = moop_download_filename($download_card === 'compgen' ? 'orthologs_gene_family' : 'same_gene_other_ids',
+    $__fn = moop_download_filename(['compgen' => 'orthologs_related_species', 'family' => 'gene_family_related_species'][$download_card] ?? 'same_gene_other_ids',
         [$organism_name, $genome_accession, $gene_set_name, $feature_uniquename], 'tsv');
     header('Content-Type: text/tab-separated-values; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . addcslashes($__fn, '"\\') . '"');

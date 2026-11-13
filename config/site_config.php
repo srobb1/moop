@@ -267,7 +267,7 @@ return [
             ],
         ],
         // Shipped by compute's RosettaStone (MOOP mode: names = MOOP gene set names), 2026-11-12. The hub is the
-        // gene set the OrthoFinder clades use; the other gene sets reach the comparative genomics card through it.
+        // gene set the OrthoFinder clades use; the other gene sets reach the orthologs cards through it.
         'Danio_rerio' => [
             'name'   => 'Rosetta Stone',
             'hubs'   => ['RS_2025_04' => ['assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04', 'transcripts' => 'RS_2025_04_transcripts']],

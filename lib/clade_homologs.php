@@ -1,7 +1,7 @@
 <?php
 /**
  * Clade comparative genomics (OrthoFinder runs over MOOP gene sets) for the gene page's
- * "Comparative genomics" card. One read-only file per clade, shipped by compute:
+ * "Orthologs in related species" and "Gene family in related species" cards. One read-only file per clade, shipped by compute:
  *
  *     organisms/.clades/<clade>/homologs.sqlite      format clade_homologs/1 or /2
  *
@@ -253,18 +253,23 @@ function moop_clade_has_symbol(string $label, string $gene): bool {
 }
 
 /**
- * The Comparative genomics card as a TSV, one row per PAIR: gene1 (this gene, as the clade has it --
- * the Rosetta Stone match when the page's gene set is not the clade's), then gene2 (an ortholog, a
- * family member or a paralog), each fully described, then what the pair is. The WHOLE family (the
- * card names the first 200). No score: OrthoFinder calls orthologs from gene trees and records none.
+ * A gene page card as a TSV, one row per PAIR: gene1 (this gene, as the clade has it -- the Rosetta
+ * Stone match when the page's gene set is not the clade's), then gene2, each fully described, then
+ * what the pair is.
+ *   $part 'orthologs' -- "Orthologs in related species": its orthologs, with kind and (a /2 file)
+ *                        the sequence evidence: support, evalue, bitscore, pident, both coverages.
+ *   $part 'family'    -- "Gene family in related species": paralogs and the other family members,
+ *                        the WHOLE family (the card names the first 200). No evidence: not pairs.
  * $section is the page's compgen_section (moop_clade_homologs_for_gene() + its gene).
  */
-function moop_clade_homologs_tsv(array $section): string {
+function moop_clade_homologs_tsv(array $section, string $part = 'orthologs'): string {
+    $orth  = $part !== 'family';
     $cell  = fn($s) => str_replace(["\t", "\r", "\n"], ' ', (string) $s);
     $cols  = ['organism', 'assembly', 'gene_set', 'id', 'name', 'description'];
     $out   = implode("\t", array_merge(array_map(fn($c) => "gene1_$c", $cols), array_map(fn($c) => "gene2_$c", $cols),
-                                     ['relationship', 'kind', 'support', 'evalue', 'bitscore', 'pident', 'gene1_coverage', 'gene2_coverage',
-                                      'gene_family', 'clade', 'method'])) . "\n";
+                                     $orth ? ['relationship', 'kind', 'support', 'evalue', 'bitscore', 'pident', 'gene1_coverage', 'gene2_coverage',
+                                              'gene_family', 'clade', 'method']
+                                           : ['relationship', 'gene_family', 'clade', 'method'])) . "\n";
     // Labels for every listed gene, plus each clade's own gene (gene1 -- not in its organism lists).
     $labels = moop_clade_gene_labels($section['clades'], null);
     foreach ($section['clades'] as $c) $labels[$c['organism']] = ($labels[$c['organism']] ?? []) + moop_gene_labels($c['organism'], [$c['self_gene']]);
@@ -282,11 +287,11 @@ function moop_clade_homologs_tsv(array $section): string {
             // "1:1" -> "1-to-1": Excel reads 1:1 as a time and shows 1:01 (Sofia, 2026-11-12).
             // Evidence (a /2 file): support, evalue, bitscore, pident, coverage of gene1's and gene2's protein.
             $ev = fn(array $g) => isset($g['support']) ? [$g['support'], $g['evalue'], $g['bitscore'], $g['pident'], $g['cov_self'], $g['cov_other']] : ['', '', '', '', '', ''];
-            if (!$o['self']) foreach ($o['orthologs'] as $g) $rows[] = ['ortholog', str_replace(':', '-to-', $g['kind']), $g['gene'], $ev($g)];
-            foreach ($o['family'] as $g) $rows[] = [$o['self'] ? 'paralog' : 'family member (not ortholog)', '', $g, $ev([])];
-            foreach ($rows as [$rel, $kind, $gene, $evidence]) {
+            if ($orth && !$o['self']) foreach ($o['orthologs'] as $g) $rows[] = ['ortholog', $g['gene'], [str_replace(':', '-to-', $g['kind'])], $ev($g)];
+            if (!$orth) foreach ($o['family'] as $g) $rows[] = [$o['self'] ? 'paralog' : 'family member (not ortholog)', $g, [], []];
+            foreach ($rows as [$rel, $gene, $kind, $evidence]) {
                 $out .= implode("\t", array_map($cell, array_merge($g1, $describe($org, $o['assembly'], $o['gene_set'], $gene),
-                        [$rel, $kind], $evidence, [$c['orthogroup'], $c['label'], $method]))) . "\n";
+                        [$rel], $kind, $evidence, [$c['orthogroup'], $c['label'], $method]))) . "\n";
             }
         }
     }

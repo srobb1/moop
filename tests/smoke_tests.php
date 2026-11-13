@@ -4466,8 +4466,8 @@ $_mk = function (string $file, int $v) {
                CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
                INSERT INTO member VALUES ('OrgA','a1','gs1','x',1), ('OrgB','b1','gs2','y',3);
                INSERT INTO gene VALUES (1,'OrgA','gs1','g1','g1','OG1'), (2,'OrgB','gs2','h1','h1','OG1'),
-                                       (3,'OrgB','gs2','h2','h2','OG1'), (4,'OrgB','gs2','h3','h3','OG1');
-               INSERT INTO hog VALUES (1,'N0','N0.HOG1'), (2,'N0','N0.HOG1'), (3,'N0','N0.HOG1'), (4,'N0','N0.HOG1');
+                                       (3,'OrgB','gs2','h2','h2','OG1'), (4,'OrgB','gs2','h3','h3','OG1'), (5,'OrgB','gs2','h5','h5','OG1');
+               INSERT INTO hog VALUES (1,'N0','N0.HOG1'), (2,'N0','N0.HOG1'), (3,'N0','N0.HOG1'), (4,'N0','N0.HOG1'), (5,'N0','N0.HOG1');
                INSERT INTO meta VALUES ('format','clade_homologs/$v'), ('label','Test clade'), ('method','OrthoFinder'), ('method_version','3.1.2');");
     if ($v === 2) {
         $db->exec("INSERT INTO pair VALUES (1,2,'1:many','reciprocal_best',1.8e-154,450,68,0.95,1.0), (1,3,'1:many','weak',2e-8,55,31,0.2,0.6),
@@ -4506,6 +4506,11 @@ $_r1 = array_values(array_filter($_tsv, fn($r) => ($r[$_h['gene2_id'] ?? 0] ?? '
 ok(isset($_h['support'], $_h['gene1_coverage'], $_h['gene2_coverage'])
    && ($_r1[$_h['support']] ?? '') === 'reciprocal_best' && ($_r1[$_h['gene1_coverage']] ?? '') === '0.95' && ($_r1[$_h['kind']] ?? '') === '1-to-many',
    'the download carries support and both coverages; kind is Excel-safe');
+ok(!in_array('h5', array_column($_tsv, $_h['gene2_id'] ?? 0), true), 'the orthologs download lists orthologs only (h5 is a family member)');
+$_ft = $_e2 ? array_map(fn($l) => explode("\t", $l), explode("\n", trim(moop_clade_homologs_tsv(['gene' => 'g1', 'clades' => [$_e2 + ['aliases' => []]]], 'family')))) : [[]];
+$_fh = array_flip($_ft[0]);
+ok(count($_ft) === 2 && !isset($_fh['kind']) && !isset($_fh['support']) && ($_ft[1][$_fh['gene2_id'] ?? 0] ?? '') === 'h5'
+   && ($_ft[1][$_fh['relationship'] ?? 0] ?? '') === 'family member (not ortholog)', 'the family download: h5 only, no ortholog columns');
 $_rp->setValue($_cfg, $_saved);
 foreach (['one', 'two', 'three'] as $_x) { @unlink("$_cd/.clades/$_x/homologs.sqlite"); @rmdir("$_cd/.clades/$_x"); }
 foreach (['OrgA/a1/gs1', 'OrgA/a1', 'OrgA', 'OrgB/b1/gs2', 'OrgB/b1', 'OrgB', '.clades', ''] as $_x) @rmdir("$_cd/$_x");

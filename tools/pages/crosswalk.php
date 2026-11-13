@@ -30,7 +30,7 @@ $src_cell = function (string $s) use ($sources, $source_about): string {
   echo help_modal('crosswalk-help', 'How the ID Translator works', [[
       'heading' => '',
       'cards'   => [
-          ['label' => 'Within one species', 'text' => 'Every source here is the organism you chose. The translator finds the same gene under its other names in that species. It never links genes of different species: for those, see Comparative genomics on a gene page.'],
+          ['label' => 'Within one species', 'text' => 'Every source here is the organism you chose. The translator finds the same gene under its other names in that species. It never links genes of different species: for those, see Orthologs in related species on a gene page.'],
           ['label' => 'What you can paste', 'text' => 'IDs of any kind, one or many: transcripts from older transcriptomes, ESTs, microarray probes, gene models, GenBank accessions. Upper or lower case both work.'],
           ['label' => 'How an ID is translated', 'text' => 'Every source was aligned to the reference transcriptome; an ID maps to a reference gene when it aligns at 95% identity or better. IDs that reach the same reference gene are treated as the same gene.'],
           ['label' => 'What the table shows', 'text' => 'For each ID: the source it comes from, its reference gene with that gene\'s transcripts and description, and the IDs of the same gene in the sources you ticked. Nothing ticked: just the reference genes.'],

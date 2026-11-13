@@ -813,8 +813,8 @@
 <?php endif; ?>
 <?php if (!empty($page_section['aka'])):
     // The Rosetta Stone: this gene under its other ids in THIS species (crosswalk.sqlite, matched by
-    // sequence). Its own card -- it serves the curations, the images and comparative genomics alike --
-    // placed right before Comparative genomics so "within this species" and "across species" sit side
+    // sequence). Its own card -- it serves the curations, the images and the orthologs alike --
+    // placed right before the orthologs so "within this species" and "across species" sit side
     // by side (Sofia, 2026-11-12). Ids of gene sets on this site link to their gene page.
     $__aka_by = [];
     foreach ($page_section['aka'] as $__m) $__aka_by[$__m['source']][] = $__m['accession'];
@@ -865,9 +865,8 @@
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Same gene in this species') ?></span>
             <?= help_modal_trigger('same-gene-help', '', 'Help: same gene in this species') ?>
-            <span class="ms-2 text-muted small"><?= t('%1$s in %2$s (Rosetta Stone)',
-                ($__n_ids !== 1 ? t_plain('%d other ids', $__n_ids) : t_plain('%d other id', 1)),
-                (count($__aka_by) !== 1 ? t_plain('%d gene sets and data sets', count($__aka_by)) : t_plain('%d gene set or data set', 1))) . "\n" ?></span>
+            <span class="ms-2 text-muted small"><?= ($__n_ids !== 1 ? t('%d ids in other assemblies, gene sets and data sets (Rosetta Stone)', $__n_ids)
+                                                                    : t('%d id in another assembly, gene set or data set (Rosetta Stone)', 1)) . "\n" ?></span>
             <form method="POST" action="" class="ms-auto">
                 <?= csrf_input_field() ?>
                 <input type="hidden" name="download_card" value="same_gene">
@@ -899,7 +898,7 @@
     </div>
 <?php endif; ?>
 <?php if (!empty($compgen_section)):
-    // Comparative genomics across MOOP organisms (OrthoFinder clades, lib/clade_homologs.php). Words
+    // Orthologs and gene family across MOOP organisms (OrthoFinder clades, lib/clade_homologs.php). Words
     // fixed in docs/CLADE_HOMOLOGS_FORMAT.md: "Orthologs in <clade>", "Paralogs in <species>" (same
     // species), "Other family members (not orthologs of this gene)" (other species) -- never plain
     // "homologs" (that is the similarity annotation type below).
@@ -973,34 +972,40 @@
     }
     unset($__c0, $__o0);
 ?>
-    <!-- Comparative genomics (OrthoFinder clades on this site) -->
-    <div class="card shadow-sm mb-4" id="pnav-compgen" data-nav-label="Comparative genomics">
+    <!-- Orthologs in related species (OrthoFinder clades on this site; until 2026-11-12 "Comparative genomics") -->
+    <?php
+        $__methods = array_values(array_unique(array_column($compgen_section['clades'], 'method')));
+        $__by = implode(', ', $__methods);
+        $__fam_any = false;
+        foreach ($compgen_section['clades'] as $__c) foreach ($__c['organisms'] as $__o) if ($__o['family']) $__fam_any = true;
+        $__dl = function (string $card, string $title): string {
+            return '<form method="POST" action="" class="ms-auto">' . csrf_input_field()
+                 . '<input type="hidden" name="download_card" value="' . htmlspecialchars($card) . '">'
+                 . '<button type="submit" class="btn btn-sm moop-data-btn" title="' . htmlspecialchars($title) . '">'
+                 . '<i class="fas fa-download me-1"></i>' . t('Download') . '</button></form>';
+        };
+        $__cl_id = fn(string $prefix, array $c) => $prefix . '-' . preg_replace('/[^A-Za-z0-9_-]/', '', (string) $c['clade']);
+        $__cl_foot = fn(array $c) => '<p class="small text-muted mb-0">' . t('Computed with %1$s %2$s on one gene set per species (%3$d gene sets); gene family %4$s.', $c['method'], $c['version'], $c['gene_sets'], $c['orthogroup']) . '</p>';
+    ?>
+    <div class="card shadow-sm mb-4" id="pnav-compgen" data-nav-label="Orthologs in related species">
         <div class="card-header d-flex align-items-center flex-wrap">
-            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#compgenSection" aria-expanded="false" aria-controls="compgenSection" role="button" aria-label="<?= t('Show or hide Comparative genomics') ?>" title="<?= t('Show or hide Comparative genomics') ?>">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#compgenSection" aria-expanded="false" aria-controls="compgenSection" role="button" aria-label="<?= t('Show or hide Orthologs in related species') ?>" title="<?= t('Show or hide Orthologs in related species') ?>">
                 <i class="fas fa-plus toggle-icon text-primary"></i>
             </span>
-            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Comparative genomics') ?></span>
-            <?= help_modal_trigger('compgen-help', '', 'Help: comparative genomics') ?>
-            <span class="ms-2 text-muted small"><?= ($__ncl !== 1 ? t('orthologs and gene family across %d clades on this site', $__ncl)
-                                                                  : t('orthologs and gene family across %d clade on this site', $__ncl)) . "\n" ?></span>
-            <form method="POST" action="" class="ms-auto">
-                <?= csrf_input_field() ?>
-                <input type="hidden" name="download_card" value="compgen">
-                <button type="submit" class="btn btn-sm moop-data-btn"
-                        title="<?= t('Orthologs, the whole gene family and paralogs in every clade, one row per gene (TSV)') ?>">
-                    <i class="fas fa-download me-1"></i><?= t('Download') . "\n" ?>
-                </button>
-            </form>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Orthologs in related species') ?></span>
+            <?= help_modal_trigger('compgen-help', '', 'Help: orthologs in related species') ?>
+            <span class="ms-2 text-muted small"><?= ($__ncl !== 1 ? t('across %1$d groups of species on this site, by %2$s', $__ncl, $__by)
+                                                                  : t('across %1$d group of species on this site, by %2$s', 1, $__by)) . "\n" ?></span>
+            <?= $__dl('compgen', t_plain('The orthologs in every group of species, one row per pair, with their sequence evidence where there is some (TSV)')) . "\n" ?>
         </div>
         <div class="collapse" id="compgenSection">
             <div class="card-body">
             <?php foreach ($compgen_section['clades'] as $__ci => $__c):
                 $__cur_aliases = $__c['aliases'] ?? [];
-                $__self = null; $__others = [];
-                foreach ($__c['organisms'] as $__org => $__o) { if ($__o['self']) $__self = [$__org, $__o]; else $__others[$__org] = $__o; }
+                $__others = array_filter($__c['organisms'], fn($o) => !$o['self']);
             ?>
-                <?= '<div class="compgen-clade' . ($__ci ? ' mt-4' : '') . '" id="pnav-compgen-' . (int) $__ci . '" data-nav-sub="' . htmlspecialchars($__c['label']) . '">' . "\n" ?>
-                    <h6 class="mb-1"><?= t('Orthologs in %s', $__c['label']) ?></h6>
+                <?= '<div class="compgen-clade' . ($__ci ? ' mt-4' : '') . '" id="' . htmlspecialchars($__cl_id('pnav-compgen', $__c)) . '" data-nav-sub="' . htmlspecialchars($__c['label']) . '">' . "\n" ?>
+                    <h6 class="mb-1"><?= htmlspecialchars($__c['label']) ?></h6>
                     <?php if (!empty($__c['via'])): ?>
                     <p class="small mb-2 compgen-via"><?= t_markup('Orthologs are computed on gene set %2$s. Within this species, this gene is the same gene as %1$s there (matched by sequence, the Rosetta Stone), so these are its orthologs in other species.',
                         '<a class="font-monospace" href="' . htmlspecialchars(moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism_name, 'uniquename' => $__c['via']['gene'], 'gene_set' => $__c['via']['gene_set']])) . '">' . htmlspecialchars($__c['via']['gene']) . '</a>',
@@ -1009,34 +1014,27 @@
                     <?php if ($__others): ?>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle small mb-2 compgen-table">
-                            <thead><tr><th><?= t('Organism') ?></th><th><?= t('Orthologs of this gene') ?></th><th><?= t('Other family members (not orthologs of this gene)') ?></th></tr></thead>
+                            <thead><tr><th><?= t('Organism') ?></th><th><?= t('Orthologs of this gene') ?></th></tr></thead>
                             <tbody>
                             <?php foreach ($__others as $__org => $__o):
                                 // A /2 file: orthologs without sequence support (weak, no match) fold away under the supported ones.
                                 $__sup = array_values(array_filter($__o['orthologs'], 'moop_clade_supported'));
                                 $__uns = array_values(array_filter($__o['orthologs'], fn($g) => !moop_clade_supported($g)));
-                                $__o['orthologs'] = $__sup;
-                                $__no = count($__sup); $__nf = count($__o['family']); $__nu = count($__uns); ?>
+                                $__no = count($__sup); $__nu = count($__uns); ?>
                                 <tr>
                                     <td class="text-nowrap"><em><?= htmlspecialchars(str_replace('_', ' ', $__org)) ?></em></td>
-                                    <td><?= ($__no ? $__cl_list($__org, $__o, $__o['orthologs'], 10, t_plain('Show %d more orthologs', $__no - 10)) : '<span class="text-muted">' . ($__nu ? t('none with sequence support') : t('none')) . '</span>')
+                                    <td><?= ($__no ? $__cl_list($__org, $__o, $__sup, 10, t_plain('Show %d more orthologs', $__no - 10)) : '<span class="text-muted">' . ($__nu ? t('none with sequence support') : t('none')) . '</span>')
                                           . ($__nu ? '<details class="compgen-unsupported"><summary>' . ($__nu !== 1 ? t('%d without sequence support', $__nu) : t('%d without sequence support', 1)) . '</summary>'
                                                      . $__cl_list($__org, $__o, $__uns, 200, '') . '</details>' : '') ?></td>
-                                    <td><?= $__nf ? '<details><summary>' . ($__nf !== 1 ? t('%d genes', $__nf) : t('%d gene', 1)) . '</summary>' . $__cl_list($__org, $__o, $__o['family'], 200, '') . '</details>' : '<span class="text-muted">&mdash;</span>' ?></td>
                                 </tr>
                             <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
+                    <?php else: ?>
+                    <p class="small text-muted mb-2"><?= t('No orthologs in the other species of this group.') ?></p>
                     <?php endif; ?>
-                    <?php if ($__self && $__self[1]['family']): $__np = count($__self[1]['family']); ?>
-                    <details class="small mb-2">
-                        <summary><?= $__np !== 1 ? t_markup('Paralogs in %1$s: %2$d genes', '<em>' . htmlspecialchars(str_replace('_', ' ', $__self[0])) . '</em>', $__np)
-                                                 : t_markup('Paralogs in %1$s: %2$d gene', '<em>' . htmlspecialchars(str_replace('_', ' ', $__self[0])) . '</em>', 1) ?></summary>
-                        <?= $__cl_list($__self[0], $__self[1], $__self[1]['family'], 200, '') . "\n" ?>
-                    </details>
-                    <?php endif; ?>
-                    <p class="small text-muted mb-0"><?= t('Gene family: every gene in this group descended from one ancestral gene, orthologs and paralogs. Computed with %1$s %2$s on one gene set per species (%3$d gene sets); family %4$s.', $__c['method'], $__c['version'], $__c['gene_sets'], $__c['orthogroup']) ?></p>
+                    <?= $__cl_foot($__c) . "\n" ?>
                     <?php if (!empty($__c['evidence'])): ?>
                     <p class="small text-muted mb-0 compgen-evidence"><?= t('Sequence evidence: %1$s %2$s.', $__c['evidence']['tool'], $__c['evidence']['version']) ?> <?= htmlspecialchars($__c['evidence']['rule']) ?></p>
                     <?php endif; ?>
@@ -1045,6 +1043,50 @@
             </div>
         </div>
     </div>
+
+    <?php if ($__fam_any): ?>
+    <!-- Gene family in related species: paralogs (this species) and the other members (other species). -->
+    <div class="card shadow-sm mb-4" id="pnav-family" data-nav-label="Gene family in related species">
+        <div class="card-header d-flex align-items-center flex-wrap">
+            <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#familySection" aria-expanded="false" aria-controls="familySection" role="button" aria-label="<?= t('Show or hide Gene family in related species') ?>" title="<?= t('Show or hide Gene family in related species') ?>">
+                <i class="fas fa-plus toggle-icon text-primary"></i>
+            </span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Gene family in related species') ?></span>
+            <?= help_modal_trigger('family-help', '', 'Help: gene family in related species') ?>
+            <span class="ms-2 text-muted small"><?= t('paralogs and other family members, by %s', $__by) . "\n" ?></span>
+            <?= $__dl('family', t_plain('Paralogs and the other family members in every group of species, one row per gene (TSV)')) . "\n" ?>
+        </div>
+        <div class="collapse" id="familySection">
+            <div class="card-body">
+            <?php $__fi = 0; foreach ($compgen_section['clades'] as $__c):
+                $__cur_aliases = $__c['aliases'] ?? [];
+                $__rows = array_filter($__c['organisms'], fn($o) => (bool) $o['family']);   // own species first (already ordered so)
+                if (!$__rows) continue;
+            ?>
+                <?= '<div class="compgen-clade' . ($__fi++ ? ' mt-4' : '') . '" id="' . htmlspecialchars($__cl_id('pnav-family', $__c)) . '" data-nav-sub="' . htmlspecialchars($__c['label']) . '">' . "\n" ?>
+                    <h6 class="mb-1"><?= htmlspecialchars($__c['label']) ?></h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle small mb-2 compgen-table">
+                            <thead><tr><th><?= t('Organism') ?></th><th><?= t('Family members') ?></th></tr></thead>
+                            <tbody>
+                            <?php foreach ($__rows as $__org => $__o): $__nf = count($__o['family']); ?>
+                                <tr>
+                                    <td class="text-nowrap"><em><?= htmlspecialchars(str_replace('_', ' ', $__org)) ?></em><?= $__o['self'] ? ' <span class="text-muted">' . t('(this species)') . '</span>' : '' ?></td>
+                                    <td><details><summary><?= $__o['self'] ? ($__nf !== 1 ? t('%d paralogs', $__nf) : t('%d paralog', 1))
+                                                                         : ($__nf !== 1 ? t('%d genes, not orthologs of this gene', $__nf) : t('%d gene, not an ortholog of this gene', 1)) ?></summary>
+                                        <?= $__cl_list($__org, $__o, $__o['family'], 200, '') ?></details></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?= $__cl_foot($__c) . "\n" ?>
+                </div>
+            <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 <?php endif; ?>
 
     <!-- Annotations Section -->
@@ -1528,13 +1570,13 @@ if (!empty($page_section['curations'])) echo help_modal('anatomy-expression-help
 
 if (!empty($page_section['aka'])) echo help_modal('same-gene-help', 'Same gene in this species', [
     ['heading' => 'Within one species: the Rosetta Stone', 'cards' => [
-        ['label' => 'What it lists', 'text' => 'This gene under the ids it has in other gene sets, transcriptomes, microarrays and EST collections of the same species.'],
+        ['label' => 'What it lists', 'text' => 'This gene under the ids it has in other assemblies, gene sets and data sets of the same species: other haplotypes and genome versions, older gene sets, transcriptomes, microarrays and EST collections.'],
         ['label' => 'How they are matched', 'text' => 'By sequence: every source was aligned to this species\' reference transcripts, and ids that reach the same reference gene are the same gene.'],
-        ['label' => 'What it is used for', 'text' => 'It is how published expression records, images and comparative genomics made under an older id reach this gene page.'],
+        ['label' => 'What it is used for', 'text' => 'It is how published expression records, images and orthologs found under another id reach this gene page.'],
         ['label' => 'On this site', 'text' => 'Ids from gene sets on this site open their own gene page. The others are names from older data sets.'],
     ]],
     ['heading' => 'Not the same as', 'cards' => [
-        ['label' => 'Comparative genomics', 'text' => 'Genes in other species (orthologs and the gene family) are in the next card. The Rosetta Stone never crosses species.'],
+        ['label' => 'Orthologs in related species', 'text' => 'Genes in other species (orthologs, and the gene family) are in the next cards. The Rosetta Stone never crosses species.'],
         ['label' => 'ID Translator', 'text' => 'To translate many ids at once, use the ID Translator tool.'],
     ]],
 ], ['intro' => 'One gene, many names, one species.']);
@@ -1555,21 +1597,27 @@ if (!empty($image_section)) echo help_modal('gene-images-help', 'Images', [
     ]],
 ], ['intro' => 'Pictures of this gene\'s expression from published analyses.']);
 
-if (!empty($compgen_section)) echo help_modal('compgen-help', 'Comparative genomics', [
-    ['heading' => 'Across species on this site', 'cards' => [
-        ['label' => 'What it compares', 'text' => 'This gene with genes of other species on this site, from gene trees built from protein sequences, one gene set per species.'],
+if (!empty($compgen_section)) echo help_modal('compgen-help', 'Orthologs in related species', [
+    ['heading' => 'Across related species on this site', 'cards' => [
+        ['label' => 'What it compares', 'text' => 'This gene with the genes of related species on this site, in groups such as planarians or sea anemones. Gene trees are built from the protein sequences (OrthoFinder), one gene set per species.'],
         ['label' => 'Orthologs', 'text' => 'Genes in other species that descend from the same ancestral gene, separated when the species split.'],
         ['label' => '1:1, 1:many, many:many', 'text' => '1:1 is one gene on each side, the clearest ortholog. 1:many means the gene was duplicated in the other species, many:1 in this one, many:many in both.'],
-        ['label' => 'Paralogs', 'text' => 'Copies of the gene within this species, from a duplication.'],
-        ['label' => 'Other family members', 'text' => 'Genes of the same family in another species that are not orthologs of this gene, for example copies of an older duplication.'],
         ['label' => 'Reciprocal best, co-ortholog', 'text' => 'Where shown, each ortholog is checked against the protein sequences. Reciprocal best: the two proteins match well and are each other\'s best match. Co-ortholog: they match well, but a duplicated copy matches better. Hover a badge for the E-value, identity and coverage.'],
         ['label' => 'Without sequence support', 'text' => 'Orthologs whose proteins match weakly or not at all are folded away under each species. Gene trees can group genes loosely in large families; these are the least certain.'],
     ]],
     ['heading' => 'Not the same as', 'cards' => [
-        ['label' => 'Rosetta Stone', 'text' => 'The same gene\'s ids in other gene sets of this species, matched by sequence. That is within one species; comparative genomics is across species.'],
-        ['label' => 'Annotations: Orthologs, Homologs', 'text' => 'Those compare this gene with reference species outside this site (OMA, eggNOG, BLAST). This card compares species on this site.'],
+        ['label' => 'Gene family', 'text' => 'Paralogs and the rest of the gene family are in the next card.'],
+        ['label' => 'Rosetta Stone', 'text' => 'The same gene\'s ids in other assemblies and gene sets of this species, matched by sequence. That is within one species; orthologs are across species.'],
+        ['label' => 'Annotations: Orthologs, Homologs', 'text' => 'Those compare this gene with reference species outside this site (OMA, eggNOG, BLAST). This card compares related species on this site.'],
     ]],
-], ['intro' => 'This gene across the species on this site: orthologs, paralogs and the gene family.']);
+], ['intro' => 'This gene\'s orthologs in related species on this site.']);
+if (!empty($compgen_section)) echo help_modal('family-help', 'Gene family in related species', [
+    ['heading' => 'One family, one ancestral gene', 'cards' => [
+        ['label' => 'Gene family', 'text' => 'Every gene in a group of related species that descends from one ancestral gene: orthologs, paralogs and the copies of older duplications.'],
+        ['label' => 'Paralogs', 'text' => 'Copies of the gene within this species, from a duplication.'],
+        ['label' => 'Other family members', 'text' => 'Genes of the same family in another species that are not orthologs of this gene, for example copies of an older duplication. Its orthologs are in the card above.'],
+    ]],
+], ['intro' => 'Paralogs of this gene, and the other members of its gene family in related species on this site.']);
 
 echo help_modal('annotations-help', 'Annotations on this page', $annot_sections,
     ['intro' => 'What these results are, and where each one came from.']);
