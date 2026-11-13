@@ -1,0 +1,20 @@
+# FastOMA clade-run settings (bash syntax). Copy to fastoma.conf next to the scripts (git-ignored) and edit,
+# or point FASTOMA_CONF at another file.
+
+# Run folders (<clade>/), the OMAmer database and the container cache
+FASTOMA_ROOT=/path/to/fastoma_v2
+# The OrthoFinder clade runs (orthofinder.conf OF_ROOT): FastOMA uses the same inputs, so the two compare
+OF_ROOT=/path/to/orthofinder_v2
+FASTOMA_VERSION=0.5.1
+# OMAmer database: Metazoa (3.4 GB) covers every animal clade; LUCA (9.9 GB) is FastOMA's default
+OMAMER_DB=$FASTOMA_ROOT/omamer/Metazoa.h5
+OMAMER_URL=https://omabrowser.org/All/Metazoa.h5
+NEXTFLOW_MODULE=nextflow/25.04.2
+# Nextflow's work folder (many small files): scratch, kept between runs for -resume
+WORK_ROOT=/scratch/$USER/fastoma_v2
+# FastOMA submits its own Slurm jobs: at most this many at once (each up to 6 CPUs)
+QUEUE_SIZE=40
+# conda module that builds the environment (fetch_fastoma.sh)
+CONDA_MODULE=conda/25.7.0
+# MOOP build folder: run_fastoma.sh writes .clades/<clade>_fastoma/homologs.sqlite there
+MOOP_DATA=/path/to/build_and_load_db/v2/data

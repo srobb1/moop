@@ -357,7 +357,13 @@ copy_one_geneset() {
       || log "WARN  $THIS_ORG  [$ASSEMBLY] — could not remove a stale assembly_stats.json on $REMOTE"
   fi
 
-  ## Gene-set level: geneset.json + GFF + coords (genome-backed), FASTAs + indexes (always)
+  ## Gene-set level: geneset.json + GFF (genome-backed), FASTAs + indexes (always)
+  ##
+  ## NOT feature_coords.tsv / exon_coords.tsv (2026-11-12, website): the site builds them from the genes.gff
+  ## shipped here, adding every ID without its gene-/rna-/cds-/id- prefix and each CDS's protein name, which
+  ## the database IDs (LOC..., XP_...) need to find their location. One producer per file: a copy from here
+  ## would replace those rows, and being newer than genes.gff it would pass the site's staleness check, so
+  ## the lookups would fail silently. A new genes.gff makes the site rebuild them (hourly housekeeping).
   ##
   ## The ".fai" entries are NOT covered by the BLAST globs and have to be named. Those
   ## globs are keyed on the BLAST database suffixes -- ".p*" catches .pdb/.phr/.pin/.psq
@@ -371,7 +377,7 @@ copy_one_geneset() {
   ## is ignored rather than trusted -- but that costs the speedup silently, so copy both.
   if $HAS_GENOME; then
     send "$REMOTE_GENESET_PATH" \
-      geneset.json genes.gff feature_coords.tsv \
+      geneset.json genes.gff \
       protein.aa.fa "protein.aa.fa.p*" protein.aa.fa.fai \
       transcript.nt.fa "transcript.nt.fa.n*" transcript.nt.fa.fai \
       cds.nt.fa "cds.nt.fa.n*" cds.nt.fa.fai
@@ -419,7 +425,7 @@ copy_one_geneset() {
 }
 
 ## Clade homolog files (docs/CLADE_HOMOLOGS_FORMAT.md): data/.clades/<clade>/homologs.sqlite ->
-## organisms/.clades/<clade>/. A file without meta.format = clade_homologs/1, or one that fails
+## organisms/.clades/<clade>/. A file without meta.format = clade_homologs/1 or /2, or one that fails
 ## integrity_check, is not sent (the site would refuse it anyway). Sets CLADE_FAILED.
 copy_clades() {
   CLADE_FAILED=0
@@ -435,8 +441,14 @@ copy_clades() {
     clade=$(basename "$(dirname "$f")")
     FAILED=0; XFER=0
     fmt=$(sqlite3 -readonly "$f" "SELECT value FROM meta WHERE key = 'format'" 2>/dev/null)
-    if [ "$fmt" != "clade_homologs/1" ] || [ "$(sqlite3 -readonly "$f" 'PRAGMA quick_check' 2>/dev/null)" != ok ]; then
-      log "FAIL  clade $clade — $f is not a valid clade_homologs/1 file; not sent"
+    ## clade_homologs/2 (pair evidence) goes only once the site reads it: CLADE_FORMAT2_OK=1 copy2moop_v2.sh ...
+    if [ "$fmt" = "clade_homologs/2" ] && [ "${CLADE_FORMAT2_OK:-0}" != 1 ]; then
+      log "FAIL  clade $clade — clade_homologs/2 file; not sent until the site reads it (set CLADE_FORMAT2_OK=1)"
+      CLADE_FAILED=$(( CLADE_FAILED + 1 )); continue
+    fi
+    if { [ "$fmt" != "clade_homologs/1" ] && [ "$fmt" != "clade_homologs/2" ]; } || \
+       [ "$(sqlite3 -readonly "$f" 'PRAGMA quick_check' 2>/dev/null)" != ok ]; then
+      log "FAIL  clade $clade — $f is not a valid clade_homologs/1 or /2 file; not sent"
       CLADE_FAILED=$(( CLADE_FAILED + 1 )); continue
     fi
     ## same modes as the organism folders: directories 2775, files 664 (group apache comes from organisms/)

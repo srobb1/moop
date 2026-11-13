@@ -88,6 +88,11 @@ log "copied to $dest ($(find "$dest" -type f | wc -l) files, $(du -sh "$dest" | 
 cd /
 rm -rf "$WORK"
 
+# Sequence evidence for each ortholog pair (OrthoFinder 3 keeps no search results): DIAMOND both ways
+# between every two members, kept in <run>/diamond/. Searches already there are skipped.
+log "DIAMOND evidence -> $OUT/diamond"
+bash "$HERE/run_clade_diamond.sh" "$OUT"
+
 # The file MOOP reads: data/.clades/<clade>/homologs.sqlite in the MOOP build folder, which copy2moop ships
 CLADE=$(basename "$OUT")
 log "building $MOOP_DATA/.clades/$CLADE/homologs.sqlite"

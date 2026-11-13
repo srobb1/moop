@@ -60,10 +60,16 @@ Whichever wins, the website file does not change shape: please write `meta.metho
 and `meta.method_version` instead of only `orthofinder_version`. The site will show the method in the card's
 note (spec will be updated to `method` with `orthofinder_version` still accepted).
 
-## Coming (pending Sofia's decision) -- all gene sets of a species
+## All gene sets of a species -- nothing new to build (decided 2026-11-12)
 
-The card should work on every gene set's gene pages, not only the reference set's (an NV2 page today shows
-nothing). Plan: orthology stays computed on one gene set per species; the other gene sets are attached by the
-RosettaStone sequence mapping you already compute. Proposed: a new table in `homologs.sqlite`
-(`clade_homologs/2`) mapping each other gene set's genes to the reference gene. **Do not build it yet** -- the
-spec update comes first.
+Simpler than first proposed: **do not** add alias tables to the clade file (the `clade_homologs/2` idea is
+dropped). The website reaches every other gene set of a species through that organism's **crosswalk.sqlite**,
+which RosettaStone already ships. So:
+
+- clade files stay `clade_homologs/1`, one gene set per species, plus `meta.method` / `meta.method_version`;
+- for each member organism with more than one gene set, ship its crosswalk, with the clade's member gene set
+  as a **hub** (e.g. Nematostella: hub RS_101, sources incl. NV2). Nematostella's crosswalk is the next one
+  needed (NV2 pages show nothing until then).
+
+Also: `.clades/hexacorallia/` and `.clades/planarians/` arrived on the server as EMPTY folders (14:22) -- a
+copy still running, or one that failed?
