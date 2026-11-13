@@ -689,6 +689,10 @@ never from `site_config.php`):
   to render a badge on the dashboard. Committing and pushing are manual, by design; the
   README it writes into the backup directory says so.
 - Status is stored in `$_SESSION['site_data_backup']` for the admin dashboard
+- **Edited site data by hand (a site's `css/custom.css`)? Back it up NOW:**
+  `php /var/www/html/<site>/scripts/backup_site_data.php` (as smr) — the same copy, immediately,
+  then commit in the backup repo. Copies are 660 in 2770 dirs so smr and apache can both write
+  them (2026-11-13; before that they were apache-only and an edit waited for the hourly run).
 
 **Setting up a new deployment:**
 1. Clone the app repo

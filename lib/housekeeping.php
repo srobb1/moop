@@ -736,7 +736,13 @@ function housekeeping_archive_stale_backups(string $backup, array $wanted, array
     return $out;
 }
 
-function housekeeping_snapshot_site_data() {
+/**
+ * @param bool $persist  false from scripts/backup_site_data.php (run as the site's owner, not the
+ *                       web server): report to the caller only, never rewrite the status file in
+ *                       logs/, which the web server must keep owning.
+ * @return array|null    the status record (null when no backup directory is configured)
+ */
+function housekeeping_snapshot_site_data(bool $persist = true) {
     $config = ConfigManager::getInstance();
     $site_data_path = $config->getPath('site_data_path');
 
@@ -747,7 +753,7 @@ function housekeeping_snapshot_site_data() {
 
     // Auto-create directory if missing
     if (!is_dir($site_data_path)) {
-        if (!@mkdir($site_data_path, 0750, true)) {
+        if (!@mkdir($site_data_path, 02770, true)) {
             error_log("MOOP housekeeping: could not create site data dir: $site_data_path");
             $status = [
                 'status' => 'error',
@@ -755,8 +761,8 @@ function housekeeping_snapshot_site_data() {
                 'path' => $site_data_path,
             ];
             $_SESSION['site_data_backup'] = $status;
-            housekeeping_persist_status('site_data_backup', $status);
-            return;
+            if ($persist) housekeeping_persist_status('site_data_backup', $status);
+            return $status;
         }
         error_log("MOOP housekeeping: created site data backup directory: $site_data_path");
     }
@@ -897,7 +903,11 @@ README;
 
         // Create subdirectory if needed
         if (!is_dir($dest_dir)) {
-            @mkdir($dest_dir, 0750, true);
+            // 2770 / 660 (2026-11-13): the web server AND the site's owner (in the web group) can
+            // both write here, so `scripts/backup_site_data.php` can back up an edit at once
+            // instead of waiting for the hourly run. Never world-readable: users.json is here.
+            @mkdir($dest_dir, 02770, true);
+            @chmod($dest_dir, 02770);
         }
 
         // Only copy if content differs. Same size and same modification time is taken as unchanged
@@ -927,6 +937,7 @@ README;
                         . "(it must be writable by the web server user)");
                 continue;
             }
+            @chmod($dest, 0660);   // fails harmlessly when another user owns it
             $changed = true;
             $copied_count++;
         }
@@ -970,7 +981,8 @@ README;
         'path' => $site_data_path,
     ];
     $_SESSION['site_data_backup'] = $status;
-    housekeeping_persist_status('site_data_backup', $status);
+    if ($persist) housekeeping_persist_status('site_data_backup', $status);
+    return $status;
 }
 
 /**
