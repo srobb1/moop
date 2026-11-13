@@ -25,7 +25,11 @@ module load "$MODULE"
 mkdir -p "$WORK" "$RUN/diamond"
 trap 'echo "ERROR: failed; scratch folder kept: $WORK"' ERR
 
-mapfile -t MEMBERS < <(cd "$RUN/input" && ls *.fa | sed 's/\.fa$//')
+# outgroups (outgroups.tsv, make_clade_set.py --outgroup) are in input/ for OrthoFinder only: no searches
+OUTGROUPS=()
+[ -f "$RUN/outgroups.tsv" ] && mapfile -t OUTGROUPS < <(tail -n +2 "$RUN/outgroups.tsv" | cut -f1)
+mapfile -t MEMBERS < <(cd "$RUN/input" && ls *.fa | sed 's/\.fa$//' | grep -vxF -f <(printf '%s\n' "${OUTGROUPS[@]}" ""))
+[ ${#OUTGROUPS[@]} -gt 0 ] && log "outgroups, not searched: ${OUTGROUPS[*]}"
 [ ${#MEMBERS[@]} -ge 2 ] || { echo "ERROR: fewer than 2 members in $RUN/input"; exit 1; }
 log "$(basename "$RUN"): ${#MEMBERS[@]} members, $CPUS threads, E <= $EVALUE"
 

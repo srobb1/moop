@@ -17,8 +17,15 @@ What goes in (all IDs are MOOP gene IDs, the FASTA headers of the run's input):
   node    the rooted species tree (Species_Tree/SpeciesTree_rooted_node_labels.txt); label = NCBI name of the
           lowest common taxon of the node's members (with --taxonomy), else NULL
   pair    Orthologues/<A>.tsv in both directions, kind read from A's side; plus 1:1 pairs for the orthogroups
-          that are single-copy in every member (OrthoFinder 3 leaves those out of Orthologues/)
+          that are single-copy in every member (OrthoFinder 3 leaves those out of Orthologues/), and for
+          orthogroups with no pairs there and one gene per member present (too small for a gene tree)
   meta    format, clade, label, taxon_id, orthofinder_version, run_date, built_at, counts
+
+Outgroups (the run's outgroups.tsv, make_clade_set.py --outgroup) were in the OrthoFinder run only to root it:
+their genes, HOGs, tree nodes and pairs are left out. The clade's own node in OrthoFinder's tree (the one with
+exactly the members under it, e.g. N1) becomes N0 here, and its HOGs N0.HOG<n> (same numbers as in OrthoFinder's
+N1.tsv); meta outgroups and orthofinder_clade_node record this. gene.orthogroup stays OrthoFinder's orthogroup,
+which then also spans the outgroup and can hold more than one N0 HOG.
 
 Built next to --out under a temporary name, checked (integrity_check = ok, counts > 0) and renamed into place.
 """
@@ -88,6 +95,16 @@ def read_members(run):
             "genes_expected": int(r[col["genes"]]),
         }
     return members
+
+
+def read_outgroups(run):
+    """outgroups.tsv (make_clade_set.py --outgroup): {name: scientific name}"""
+    path = os.path.join(run, "outgroups.tsv")
+    if not os.path.exists(path):
+        return {}
+    hdr, rows = read_tsv(path)
+    col = {h: i for i, h in enumerate(hdr)}
+    return {r[0]: r[col["taxon_name"]] or r[0] for r in rows}
 
 
 def parse_newick_nodes(text):
@@ -171,44 +188,99 @@ def orthofinder_version(R):
     return version, run_date
 
 
-def load_orthofinder(R, members, tax):
-    """OrthoFinder 3 results -> genes, og_counts, hogs, hog_source, node_rows, pairs, a note on the pairs"""
-    # --- genes and orthogroups
+def load_orthofinder(R, members, tax, outgroups):
+    """OrthoFinder 3 results -> genes, og_counts, hogs, hog_source, node_rows, pairs, a note on the pairs,
+    the clade's node in OrthoFinder's tree (renamed N0 here when there are outgroups)"""
+    # --- genes and orthogroups (members only: outgroup genes are left out)
     genes = {}                                   # (member, gene) -> orthogroup or None
     hdr, rows = read_tsv(os.path.join(R, "Orthogroups", "Orthogroups.tsv"))
     sp = hdr[1:]
-    unknown = set(sp) - set(members)
+    unknown = set(sp) - set(members) - set(outgroups)
     if unknown:
-        die(f"species in the results but not in members.tsv: {', '.join(sorted(unknown))}")
+        die(f"species in the results but not in members.tsv or outgroups.tsv: {', '.join(sorted(unknown))}")
+    missing_og = set(outgroups) - set(sp)
+    if missing_og:
+        die(f"outgroups.tsv names {', '.join(sorted(missing_og))}, which is not in the results")
     og_counts = {}
     for r in rows:
-        og_counts[r[0]] = {}
+        c = {}
         for s, cell in zip(sp, r[1:]):
+            if s not in members:
+                continue
             gl = split_genes(cell)
-            og_counts[r[0]][s] = len(gl)
+            c[s] = len(gl)
             for g in gl:
                 genes[(s, g)] = r[0]
+        if any(c.values()):                      # orthogroups of outgroup genes only are left out
+            og_counts[r[0]] = c
     ufile = os.path.join(R, "Orthogroups", "Orthogroups_UnassignedGenes.tsv")
     if os.path.exists(ufile):
         uh, urows = read_tsv(ufile)
         for r in urows:
             for s, cell in zip(uh[1:], r[1:]):
+                if s not in members:
+                    continue
                 for g in split_genes(cell):
                     genes.setdefault((s, g), None)
+
+    # --- species tree nodes; with outgroups only the clade's node and the nodes below it are kept,
+    # and the clade's node is called N0 (as it is in a run without outgroups)
+    tree_file = os.path.join(R, "Species_Tree", "SpeciesTree_rooted_node_labels.txt")
+    nodes = parse_newick_nodes(open(tree_file).read())
+    rename = {}
+    clade_node = "N0"
+    if outgroups:
+        top = [n for n in nodes if set(n["leaves"]) == set(members)]
+        if len(top) != 1:
+            die("with outgroups, OrthoFinder's rooted species tree must have one node with exactly the members "
+                f"under it; it has none (tree: {open(tree_file).read().strip()[:300]})")
+        clade_node = top[0]["node"]
+        nodes = [n for n in nodes if set(n["leaves"]) <= set(members)]
+        top[0]["parent"] = None
+        rename = {clade_node: "N0"}
+    kept_nodes = {n["node"] for n in nodes}
+
+    def hog_name(node, hog):
+        return ("N0" + hog[len(node):]) if node in rename else hog
     # --- HOGs
     # OrthoFinder 3 builds its final orthogroups (Orthogroups.tsv) from the N0 HOGs and keeps no N0.tsv:
     # Phylogenetic_Hierarchical_Orthogroups/ has N1.tsv, N2.tsv, ... only (a 2-species run has none).
     # So N0, the whole clade, is the orthogroup: N0.HOG<n> for OG<n>. Deeper nodes are OrthoFinder's HOGs.
     hogs = []                                    # (member, gene, node, hog)
     hog_files = sorted(glob.glob(os.path.join(R, "Phylogenetic_Hierarchical_Orthogroups", "N*.tsv")))
+    if outgroups:
+        hog_files = [f for f in hog_files if os.path.basename(f)[:-4] in kept_nodes]
+        if not any(os.path.basename(f)[:-4] == clade_node for f in hog_files):
+            die(f"no Phylogenetic_Hierarchical_Orthogroups/{clade_node}.tsv for the clade's node")
     for f in hog_files:
         node = os.path.basename(f)[:-4]
         h, hrows = read_tsv(f)
         for r in hrows:
+            if not r[0].startswith(node + "."):
+                die(f"{f}: HOG {r[0]} is not named after its node")
             for s, cell in zip(h[3:], r[3:]):
+                if s not in members:
+                    continue
                 for g in split_genes(cell):
-                    hogs.append((s, g, node, r[0]))
-    if any(node == "N0" for _, _, node, _ in hogs):
+                    hogs.append((s, g, rename.get(node, node), hog_name(node, r[0])))
+    if outgroups:
+        # OrthoFinder writes no HOG for an orthogroup without a gene tree (fewer than 4 genes, e.g. one gene per
+        # species): the members' genes of each such orthogroup become one N0 HOG, numbered after OrthoFinder's last
+        in_n0 = {(s, g) for s, g, node, _ in hogs if node == "N0"}
+        nums = [int(h[len("N0.HOG"):]) for _, _, node, h in hogs if node == "N0" and h[len("N0.HOG"):].isdigit()]
+        first = max(nums) + 1 if nums else 0
+        no_tree = {}
+        for (s, g), og in genes.items():
+            if og and (s, g) not in in_n0:
+                no_tree.setdefault(og, []).append((s, g))
+        for i, og in enumerate(sorted(no_tree)):
+            hogs.extend((s, g, "N0", f"N0.HOG{first + i:07d}") for s, g in sorted(no_tree[og]))
+        hog_source = (f"OrthoFinder HOGs; N0 = the clade's node, {clade_node} in OrthoFinder's tree, which is rooted "
+                      f"on the outgroups ({', '.join(sorted(outgroups.values()))})"
+                      + (f"; N0.HOG{first:07d} and up ({len(no_tree)}) are orthogroups too small for a gene tree, "
+                         "for which OrthoFinder writes no HOG: each is the members' genes of one orthogroup"
+                         if no_tree else ""))
+    elif any(node == "N0" for _, _, node, _ in hogs):
         hog_source = "OrthoFinder HOGs"
     else:
         for (s, g), og in genes.items():
@@ -218,16 +290,13 @@ def load_orthofinder(R, members, tax):
                       + (f"; {', '.join(sorted({n for _, _, n, _ in hogs if n != 'N0'}, key=lambda x: int(x[1:])))} "
                          "= OrthoFinder HOGs" if hog_files else ""))
 
-    # --- species tree nodes
-    tree_file = os.path.join(R, "Species_Tree", "SpeciesTree_rooted_node_labels.txt")
-    nodes = parse_newick_nodes(open(tree_file).read())
     node_rows = []
     for n in nodes:
         label = None
         if tax:
             t = lca([members[l]["taxon_id"] for l in n["leaves"]], tax[0])
             label = tax[1].get(t)
-        node_rows.append((n["node"], n["parent"], label))
+        node_rows.append((rename.get(n["node"], n["node"]), rename.get(n["parent"], n["parent"]), label))
 
     # --- pairs
     # Collect the pairs first; the kind comes afterwards from the partner counts. A row of Orthologues/
@@ -240,26 +309,48 @@ def load_orthofinder(R, members, tax):
             continue
         h, prow = read_tsv(f)                    # Orthogroup, Species, <a_sp>, Orthologs
         for r in prow:
+            if r[1] not in members:              # pairs with an outgroup
+                continue
             b_sp, a_genes, b_genes = r[1], split_genes(r[2]), split_genes(r[3])
             for a in a_genes:
                 for b in b_genes:
                     pairs[(a_sp, a, b_sp, b)] = None
     from_files = len(pairs)
+    og_genes = {}
+    for (s, g), og in genes.items():
+        if og:
+            og_genes.setdefault(og, []).append((s, g))
     sc_file = os.path.join(R, "Orthogroups", "Orthogroups_SingleCopyOrthologues.txt")
     added_sc = 0
     if os.path.exists(sc_file):
-        og_genes = {}
-        for (s, g), og in genes.items():
-            if og:
-                og_genes.setdefault(og, []).append((s, g))
         for og in (l.strip() for l in open(sc_file) if l.strip()):
-            for a_sp, a in og_genes[og]:
-                for b_sp, b in og_genes[og]:
+            for a_sp, a in og_genes.get(og, []):
+                for b_sp, b in og_genes.get(og, []):
                     if a_sp != b_sp and (a_sp, a, b_sp, b) not in pairs:
                         pairs[(a_sp, a, b_sp, b)] = None
                         added_sc += 1
-    note = f"{from_files} from Orthologues/, {added_sc} 1:1 from single-copy orthogroups"
-    return genes, og_counts, hogs, hog_source, node_rows, pairs, note
+    # Orthogroups without a gene tree (fewer than 4 genes) get no rows in Orthologues/ unless they are
+    # single-copy in every species of the run, outgroups included: e.g. one Danio + one Nothobranchius gene and
+    # no gar gene. When every member present has exactly one gene, those genes are 1:1 orthologs; an orthogroup
+    # with several genes of one member and no pairs is left without pairs (no tree to tell which is which).
+    with_pairs = {genes[(a_sp, a)] for (a_sp, a, _, _) in pairs}
+    added_small, skipped_small = 0, 0
+    for og, gl in og_genes.items():
+        if og in with_pairs or len({s for s, _ in gl}) < 2:
+            continue
+        if len({s for s, _ in gl}) != len(gl):
+            skipped_small += 1
+            continue
+        for a_sp, a in gl:
+            for b_sp, b in gl:
+                if a_sp != b_sp:
+                    pairs[(a_sp, a, b_sp, b)] = None
+                    added_small += 1
+    note = (f"{from_files} from Orthologues/, {added_sc} 1:1 from single-copy orthogroups, {added_small} 1:1 from "
+            f"orthogroups with no pairs in Orthologues/ and one gene per member"
+            + (f" ({skipped_small} such orthogroups with several genes of one member left without pairs)"
+               if skipped_small else ""))
+    return genes, og_counts, hogs, hog_source, node_rows, pairs, note, clade_node
 
 
 def num(x):
@@ -349,11 +440,20 @@ def main():
         die(f"--out must be .../{clade}/homologs.sqlite (the folder is the clade)")
     info = kv_file(os.path.join(run, "clade.tsv"))
     members = read_members(run)
+    outgroups = read_outgroups(run)
     R = pick_results(run, args.results)
-    print(f"clade {clade}: {len(members)} members, results {R}")
+    print(f"clade {clade}: {len(members)} members" + (f" + outgroups {', '.join(outgroups)}" if outgroups else "")
+          + f", results {R}")
 
     tax = load_taxonomy(args.taxonomy) if args.taxonomy else None
-    genes, og_counts, hogs, hog_source, node_rows, pairs, pair_note = load_orthofinder(R, members, tax)
+    genes, og_counts, hogs, hog_source, node_rows, pairs, pair_note, clade_node = \
+        load_orthofinder(R, members, tax, outgroups)
+    if outgroups:
+        in_n0 = {(s, g) for s, g, node, _ in hogs if node == "N0"}
+        no_hog = sum(1 for k, og in genes.items() if og and k not in in_n0)
+        if no_hog:
+            die(f"check failed: {no_hog} genes in an orthogroup but in no N0 HOG")
+        print(f"outgroups {', '.join(outgroups)} left out; clade node {clade_node} -> N0")
     method, (version, run_date) = "OrthoFinder", orthofinder_version(R)
     n_assigned = sum(1 for og in genes.values() if og)
     for m, d in members.items():
@@ -476,6 +576,9 @@ CREATE INDEX p_a ON pair (gene_a);
         "hog_source": hog_source,
         "results": f"{os.path.basename(run)}/{os.path.basename(R.rstrip('/'))}",   # no cluster paths in a shipped file
     }
+    if outgroups:
+        meta["outgroups"] = ", ".join(sorted(outgroups.values()))
+        meta["orthofinder_clade_node"] = clade_node
     if method == "OrthoFinder":
         meta["orthofinder_version"] = version or ""   # format 1 had only this; the site still reads it
     if evidence:

@@ -4,6 +4,8 @@
     make_clade_set.py Actinopterygii --label ray_finned_fish          # write the run folder
     make_clade_set.py Chiroptera --list                               # only show who is in it
     make_clade_set.py 9397 --label bats --exclude Pteropus_rufus      # a taxon ID works too
+    make_clade_set.py Hexacorallia --label hexacorallia --outgroup Turritopsis_dohrnii
+    make_clade_set.py Actinopterygii --label ray_finned_fish --outgroup Lepisosteus_oculatus=<proteins.fa>
 
 Members: every organism in MOOP's build folder (MOOP_DATA/<Organism>/organism.sqlite, taxon_id)
 whose NCBI lineage contains the clade. MOOP IDs only: nothing outside MOOP is added.
@@ -22,6 +24,14 @@ gene_protein.tsv records which protein stood in for each gene.
 Writes <ROOT>/<label>/: input/<Organism>.fa, members.tsv, gene_protein.tsv, species_tree.nwk (from
 the NCBI taxonomy, only when it is fully resolved; otherwise OrthoFinder infers the tree) and
 run_orthofinder.sbatch. Refuses to overwrite an existing input/ unless --force.
+
+Outgroups (--outgroup, repeatable): species just outside the clade. They go into OrthoFinder (input/ and the
+species tree) so it can root each gene tree and tell an old duplication from one inside the clade, but they are
+not members: they are listed in outgroups.tsv, not members.tsv, get no DIAMOND searches, and
+build_clade_homologs.py leaves them out of MOOP's file (meta 'outgroups' names them). An outgroup is either a
+MOOP organism folder (gene set chosen as for members, MOOP gene IDs) or Genus_species=<protein FASTA>
+(any FASTA, e.g. an OMA DB/<CODE>.fa; first word of the header = ID; an OMA <CODE>.splice next to it
+keeps the longest protein of each gene; taxon from the NCBI name).
 """
 import argparse
 import glob
@@ -212,6 +222,90 @@ def md5sum(path):
     return h.hexdigest()
 
 
+def longest_per_gene(seqs, gene_of):
+    """{gene: (protein, seq)} keeping the longest protein (ties: smallest ID); and the proteins with no gene"""
+    best, orphans = {}, 0
+    for pid, seq in seqs.items():
+        gene = gene_of.get(pid)
+        if gene is None:
+            orphans += 1
+            continue
+        key = (-len(seq), pid)
+        if gene not in best or key < best[gene][0]:
+            best[gene] = (key, pid, seq)
+    return {g: (pid, seq) for g, (_, pid, seq) in best.items()}, orphans
+
+
+def write_fasta(path, best):
+    with open(path, "w") as fa:
+        for gene in sorted(best):
+            seq = best[gene][1]
+            fa.write(f">{gene}\n")
+            for i in range(0, len(seq), 60):
+                fa.write(seq[i:i + 60] + "\n")
+
+
+def moop_fasta(org, gs):
+    fastas = glob.glob(os.path.join(MOOP_DATA, org, "*", gs, "protein.aa.fa"))
+    if len(fastas) != 1:
+        die(f"{org}/{gs}: expected one protein.aa.fa, found {len(fastas)}")
+    return fastas[0]
+
+
+def resolve_outgroups(specs, clade, moop, choices, refs, parent, merged, by_name):
+    """--outgroup values -> [(name, taxid, source fasta, {gene: (protein, seq)}, note)]"""
+    out = []
+    for spec in specs:
+        if "=" in spec:
+            name, fasta = spec.split("=", 1)
+            fasta = os.path.abspath(fasta)
+            if not os.path.exists(fasta):
+                die(f"--outgroup {name}: {fasta} not found")
+            hits = {t for t, cls in by_name.get(name.replace("_", " ").lower(), set()) if cls == "scientific name"}
+            if len(hits) != 1:
+                die(f"--outgroup {name}: not one NCBI scientific name '{name.replace('_', ' ')}' (found {len(hits)})")
+            taxid = hits.pop()
+            seqs = read_fasta(fasta)
+            splice = os.path.splitext(fasta)[0] + ".splice"
+            gene_of = {pid: pid for pid in seqs}
+            if os.path.exists(splice):            # OMA: one line per gene, its proteins joined by ';'
+                with open(splice) as fh:
+                    for line in fh:
+                        ids = [x for x in line.strip().split(";") if x]
+                        for pid in ids:
+                            gene_of[pid] = min(ids)
+            best, _ = longest_per_gene(seqs, gene_of)
+            note = f"{len(best)} genes from {len(seqs)} proteins" + (" (OMA .splice)" if os.path.exists(splice) else "")
+        else:
+            name = spec
+            if spec not in moop:
+                die(f"--outgroup {spec}: not a MOOP organism folder (or give Genus_species=<protein FASTA>)")
+            db, taxid, sets = moop[spec]
+            if taxid is None:
+                die(f"--outgroup {spec}: no taxon_id in organism.sqlite")
+            try:
+                picked = choose_geneset(spec, sets, choices, refs)
+            except NeedChoice as e:
+                die(f"--outgroup {spec}: {e}")
+            if len(picked) != 1:
+                die(f"--outgroup {spec}: several gene sets chosen in geneset_choices.tsv")
+            gs = picked[0][0]
+            fasta = moop_fasta(spec, gs)
+            best, _ = longest_per_gene(read_fasta(fasta), gene_of_proteins(db, gs))
+            note = f"MOOP {gs}, {len(best)} genes"
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+            die(f"--outgroup name '{name}' may contain only letters, digits, _ -")
+        taxid = merged.get(taxid, taxid)
+        if taxid not in parent:
+            die(f"--outgroup {name}: taxon {taxid} is not in the NCBI taxonomy")
+        if clade in lineage(taxid, parent):
+            die(f"--outgroup {name}: taxon {taxid} is inside the clade; add it as a member instead")
+        if not best:
+            die(f"--outgroup {name}: no proteins")
+        out.append((name, taxid, fasta, best, note))
+    return out
+
+
 def species_tree(members, parent):
     """Newick from the NCBI lineages, or (None, reason) when a node has more than two children."""
     children = {}
@@ -244,6 +338,8 @@ def main():
     ap.add_argument("--label", help="run folder name under orthofinder_v2 (required unless --list)")
     ap.add_argument("--list", action="store_true", help="show the members and gene sets; write nothing")
     ap.add_argument("--exclude", nargs="*", default=[], help="organism folders to leave out")
+    ap.add_argument("--outgroup", action="append", default=[], metavar="ORGANISM or Genus_species=FASTA",
+                    help="species just outside the clade, for rooting only (repeatable; see above)")
     ap.add_argument("--display-label", help='name shown in MOOP, e.g. "Planarians (Tricladida)" (clade.tsv)')
     ap.add_argument("--force", action="store_true", help="replace an existing input/ folder")
     ap.add_argument("--cpus", type=int, default=32)
@@ -272,7 +368,9 @@ def main():
 
     choices, refs = read_choices(), rs_references()
     members, skipped, undecided = [], [], []
+    moop = {}
     for org, db, taxid, sets in moop_organisms():
+        moop[org] = (db, taxid, sets)
         if taxid is None:
             skipped.append(f"{org}: no taxon_id in organism.sqlite")
             continue
@@ -305,6 +403,9 @@ def main():
         die("no MOOP organism in this clade")
     for name, _, _, taxid, gs, why, others in members:
         print(f"  {name:32s} {gs:28s} {why}" + (f"  (not used: {', '.join(others)})" if others else ""))
+    outgroups = resolve_outgroups(args.outgroup, clade, moop, choices, refs, parent, merged, by_name)
+    for name, taxid, _, _, note in outgroups:
+        print(f"  outgroup {name:23s} taxon {taxid:<10} {sci.get(taxid, '?')}: {note}")
     if args.list:
         return
     if undecided:
@@ -321,6 +422,9 @@ def main():
     os.makedirs(inp, exist_ok=True)
     for old in glob.glob(os.path.join(inp, "*.fa")):
         os.remove(old)
+    names = [m[0] for m in members] + [o[0] for o in outgroups]
+    if len(set(names)) != len(names):
+        die(f"a name is used twice: {', '.join(sorted({n for n in names if names.count(n) > 1}))}")
 
     with open(os.path.join(out, "members.tsv"), "w") as mt, \
             open(os.path.join(out, "gene_protein.tsv"), "w") as gp:
@@ -328,36 +432,33 @@ def main():
                  "proteins_without_gene\tprotein_fasta\tprotein_fasta_md5\n")
         gp.write("member\tgene\tprotein\tlength\n")
         for name, org, db, taxid, gs, why, _ in members:
-            fastas = glob.glob(os.path.join(MOOP_DATA, org, "*", gs, "protein.aa.fa"))
-            if len(fastas) != 1:
-                die(f"{org}/{gs}: expected one protein.aa.fa, found {len(fastas)}")
-            seqs = read_fasta(fastas[0])
-            gene_of = gene_of_proteins(db, gs)
-            best, orphans = {}, 0
-            for pid, seq in seqs.items():
-                gene = gene_of.get(pid)
-                if gene is None:
-                    orphans += 1
-                    continue
-                key = (-len(seq), pid)
-                if gene not in best or key < best[gene][0]:
-                    best[gene] = (key, pid, seq)
+            fasta = moop_fasta(org, gs)
+            seqs = read_fasta(fasta)
+            best, orphans = longest_per_gene(seqs, gene_of_proteins(db, gs))
             if not best:
-                die(f"{org}/{gs}: no protein in {fastas[0]} links to a MOOP gene")
-            with open(os.path.join(inp, f"{name}.fa"), "w") as fa:
-                for gene in sorted(best):
-                    _, pid, seq = best[gene]
-                    fa.write(f">{gene}\n")
-                    for i in range(0, len(seq), 60):
-                        fa.write(seq[i:i + 60] + "\n")
-                    gp.write(f"{name}\t{gene}\t{pid}\t{len(seq)}\n")
+                die(f"{org}/{gs}: no protein in {fasta} links to a MOOP gene")
+            write_fasta(os.path.join(inp, f"{name}.fa"), best)
+            for gene in sorted(best):
+                pid, seq = best[gene]
+                gp.write(f"{name}\t{gene}\t{pid}\t{len(seq)}\n")
             mt.write(f"{name}\t{org}\t{taxid}\t{gs}\t{why}\t{len(best)}\t{len(seqs)}\t{orphans}\t"
-                     f"{fastas[0]}\t{md5sum(fastas[0])}\n")
+                     f"{fasta}\t{md5sum(fasta)}\n")
             print(f"  wrote {name}.fa: {len(best)} genes (from {len(seqs)} proteins"
                   + (f", {orphans} without a MOOP gene" if orphans else "") + ")")
 
+    og_path = os.path.join(out, "outgroups.tsv")
+    if os.path.exists(og_path):
+        os.remove(og_path)
+    if outgroups:
+        with open(og_path, "w") as fh:
+            fh.write("outgroup\ttaxon_id\ttaxon_name\tgenes\tsource_fasta\tsource_fasta_md5\n")
+            for name, taxid, fasta, best, note in outgroups:
+                write_fasta(os.path.join(inp, f"{name}.fa"), best)
+                fh.write(f"{name}\t{taxid}\t{sci.get(taxid, '')}\t{len(best)}\t{fasta}\t{md5sum(fasta)}\n")
+                print(f"  wrote {name}.fa (outgroup): {note}")
+
     tree_path = os.path.join(out, "species_tree.nwk")
-    tree, why_not = species_tree([(m[0], m[3]) for m in members], parent)
+    tree, why_not = species_tree([(m[0], m[3]) for m in members] + [(o[0], o[1]) for o in outgroups], parent)
     if os.path.exists(tree_path):
         os.remove(tree_path)
     if tree:
@@ -371,7 +472,8 @@ def main():
     with open(os.path.join(out, "clade.tsv"), "w") as fh:
         fh.write(f"clade\t{args.label}\ntaxon_id\t{clade}\ntaxon_name\t{sci.get(clade, '')}\nlabel\t{label}\n")
     print(f"  label: {label} (clade.tsv)")
-    write_sbatch(out, args, f"{sci.get(clade, clade)} (taxon {clade}): {len(members)} MOOP gene sets")
+    write_sbatch(out, args, f"{sci.get(clade, clade)} (taxon {clade}): {len(members)} MOOP gene sets"
+                 + (f" + outgroup {', '.join(o[0] for o in outgroups)}" if outgroups else ""))
     print(f"\nready: {out}\n  submit: sbatch {out}/run_orthofinder.sbatch")
 
 

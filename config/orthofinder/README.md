@@ -19,6 +19,34 @@ or a taxon ID. Add `--display-label "Planarians (Tricladida)"` for the name show
 If a run stops after its searches (e.g. in its last steps), `RESUME=1 sbatch .../run_orthofinder.sbatch`
 redoes only the gene trees and final files from the orthogroups it found.
 
+## Outgroups
+
+An outgroup is a species just outside the clade. It goes into the OrthoFinder run, and into the species tree,
+so OrthoFinder can root each gene tree there and tell a duplication inside the clade (paralogs) from one
+before it (separate genes all along). It is not a member: no DIAMOND searches, and it is left out of MOOP's
+file (meta `outgroups` names it; the clade's node becomes N0).
+
+```bash
+make_clade_set.py Hexacorallia --label hexacorallia --outgroup Turritopsis_dohrnii            # a MOOP organism
+make_clade_set.py Teleostei --label ray_finned_fish \
+    --outgroup Lepisosteus_oculatus=<OMA_v2>/OMA_TEMPLATE_RUNS/<template>/OMA.2.7.0/DB/LEPOC.fa  # any protein FASTA
+```
+
+When to add one:
+- the clade has few members (2-4): OrthoFinder cannot root a gene tree well from so few species, and a
+  2-species run calls every within-species copy co-orthologous. Always add one here.
+- the clade's members share a whole-genome duplication (teleosts): the outgroup must be from before it.
+- many members (planarians, 18; bats): less needed; OrthoFinder roots well on its own.
+
+How to pick one:
+- outside the clade, but as close as you can get: the sister group, or the next branch out. Check
+  `make_clade_set.py <clade> --list` and the NCBI lineage; the script refuses one inside the clade.
+- a good, complete gene set (a RefSeq or an OMA reference proteome): a fragmented one adds noise.
+- one is enough; two from different branches is better when the closest is poor.
+- a MOOP organism keeps MOOP IDs; any other FASTA is fine too (an OMA `.splice` next to it keeps the
+  longest protein per gene). The clade must be the NCBI taxon the members share (Teleostei, not
+  Actinopterygii, when gar is the outgroup).
+
 ## Settings
 
 `orthofinder.conf` next to the scripts (not in git; copy `orthofinder.conf.example`), or the file
@@ -53,7 +81,9 @@ Anything else stops `make_clade_set.py`, which lists every organism that needs a
 | `members.tsv` | gene set, counts, source protein FASTA and its md5 (the md5 MOOP checks for staleness) |
 | `gene_protein.tsv` | which protein stood in for each gene |
 | `clade.tsv` | clade, NCBI taxon, display label |
-| `species_tree.nwk` | from the NCBI taxonomy, when it is fully resolved; otherwise OrthoFinder infers it |
+| `outgroups.tsv` | outgroups (`--outgroup`): taxon, source FASTA and its md5; their FASTAs are in `input/` too |
+| `diamond/` | DIAMOND evidence between members (`run_clade_diamond.sh`; outgroups skipped) |
+| `species_tree.nwk` | from the NCBI taxonomy (members + outgroups), when it is fully resolved; otherwise OrthoFinder infers it |
 | `run_orthofinder.sbatch` | runs `run_orthofinder.sh` |
 | `results/Results_<date>_<job>/` | OrthoFinder's tables; the one-file-per-orthogroup folders are in `per_group_files.tar.gz` |
 
