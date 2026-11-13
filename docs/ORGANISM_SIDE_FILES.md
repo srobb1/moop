@@ -10,7 +10,7 @@ organisms/<Organism>/
     crosswalk.sqlite             ID translation           docs/CROSSWALK_FORMAT.md
     anatomy_expression.sqlite    where genes are expressed, by anatomy term   §1 (BUILT)
     gene_images.sqlite           in situ images, plots, movies per gene       §2 (BEING BUILT)
-    images/                      the image files + images.tsv (their source list)
+    .images/                     the image files + images.tsv (their source list)
 ```
 
 Why separate files and not tables in `organism.sqlite`: that file is owned and rebuilt by the compute
@@ -69,7 +69,13 @@ Schmidtea mediterranea, built 2026-11-09: 80,789 rows read → 77,432 curations,
 
 ---
 
-## 2. `gene_images.sqlite` + `images/` — gene images (design 2026-11-12, being built)
+## 2. `gene_images.sqlite` + `.images/` — gene images (design 2026-11-12, being built)
+
+**Why the folder is hidden (`.images`, not `images`):** every subfolder of an organism folder is read
+as an assembly. As `images/` it showed up on Manage Groups as an unloaded assembly with gene sets
+`davies_2017` and `zeng_2018`. Hidden folders are skipped everywhere organisms and assemblies are
+listed (the `.retired`/`.cache` rule), and the files are only ever served through
+`api/gene_image.php`, so the dot changes nothing for visitors. Moved 2026-11-12.
 
 In situ images, single-cell plots and movies, attached to genes and (when tagged) to anatomy and stage
 terms. Shown on gene pages ("Images") and on Ontology Browser term pages (a gallery of images tagged
@@ -77,7 +83,7 @@ with the term or any of its parts).
 
 **Files:**
 ```
-organisms/<Organism>/images/
+organisms/<Organism>/.images/
     images.tsv            the source list — one row per image (editable; the truth)
     <collection>/...      the files, one folder per collection (davies_2017/, zeng_2018/x1/, ...)
 organisms/<Organism>/gene_images.sqlite    built from images.tsv
@@ -88,7 +94,7 @@ Thumbnails are made on first request into `cache_path` (regenerable → cache, n
 
 | column | example | notes |
 |---|---|---|
-| `file` | `davies_2017/SMED30001362_piwi-3_S3.png` | path under `images/` |
+| `file` | `davies_2017/SMED30001362_piwi-3_S3.png` | path under `.images/` |
 | `kind` | `in situ`, `feature plot`, `violin plot`, `movie` | |
 | `accession` | `SMED30001362` | gene/transcript ID as the source has it; reaches other gene sets through the crosswalk |
 | `assembly`, `gene_set` | `smed_20140614`, `smed_20140614` | **the data set the image belongs to — decides who may see it (§3)** |
@@ -109,7 +115,7 @@ Empty cell = "not recorded", never "none".
 
 **Serving:** `organisms/` is denied to the web by nginx, so images go through an access-checked
 endpoint (pattern: `api/jbrowse2/genome_file.php`, `lib/fasta_download_handler.php`): the file must be
-listed in `images.tsv`, `realpath()` under `images/`, and its data set visible (§3). Private and missing
+listed in `images.tsv`, `realpath()` under `.images/`, and its data set visible (§3). Private and missing
 both answer 404.
 
 ---

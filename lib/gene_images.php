@@ -3,9 +3,9 @@
  * Gene images -- in situ images, single-cell plots, movies -- as one read-only SQLite file per
  * organism, built from a plain list:
  *
- *     organisms/<organism>/images/images.tsv      the source (one row per image; the truth)
- *     organisms/<organism>/images/<files>         the images, paths relative to images/
- *     organisms/<organism>/gene_images.sqlite     built from images.tsv by scripts/build_gene_images.php
+ *     organisms/<organism>/.images/images.tsv      the source (one row per image; the truth)
+ *     organisms/<organism>/.images/<files>         the images, paths relative to .images/
+ *     organisms/<organism>/gene_images.sqlite      built from images.tsv by scripts/build_gene_images.php
  *
  * Format and rules: docs/ORGANISM_SIDE_FILES.md §2-3.
  *
@@ -33,7 +33,7 @@ function moop_images_org_dir(string $organism): string {
     return rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/'
          . preg_replace('/[^A-Za-z0-9_.-]/', '', $organism);
 }
-function moop_images_dir(string $organism): string  { return moop_images_org_dir($organism) . '/images'; }
+function moop_images_dir(string $organism): string  { return moop_images_org_dir($organism) . '/.images'; }
 function moop_images_file(string $organism): string { return moop_images_org_dir($organism) . '/gene_images.sqlite'; }
 
 function moop_images_open(string $organism): ?PDO {
@@ -49,7 +49,7 @@ function moop_images_open(string $organism): ?PDO {
 }
 
 /**
- * Build gene_images.sqlite from images/images.tsv. $known_terms = [term id => true] from the
+ * Build gene_images.sqlite from .images/images.tsv. $known_terms = [term id => true] from the
  * ontologies (empty = do not check terms). $out_file for tests.
  * Returns ['ok', 'error', 'counts', 'review'].
  */

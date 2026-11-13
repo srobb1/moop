@@ -1,8 +1,8 @@
 <?php
 /**
- * Build organisms/<Organism>/gene_images.sqlite from organisms/<Organism>/images/images.tsv
+ * Build organisms/<Organism>/gene_images.sqlite from organisms/<Organism>/.images/images.tsv
  * (lib/gene_images.php; format in docs/ORGANISM_SIDE_FILES.md §2).
- *   php scripts/build_gene_images.php [Organism ...]     (default: every organism with images/images.tsv)
+ *   php scripts/build_gene_images.php [Organism ...]     (default: every organism with .images/images.tsv)
  * Run as the files' owner. Prints the counts and the review list (what could not be used).
  */
 if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }
@@ -11,11 +11,11 @@ require_once __DIR__ . '/../lib/gene_images.php';
 
 $orgs = array_slice($argv, 1);
 if (!$orgs) {
-    foreach (glob(rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/*/images/images.tsv') ?: [] as $f) {
+    foreach (glob(rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/*/.images/images.tsv') ?: [] as $f) {
         $orgs[] = basename(dirname($f, 2));
     }
 }
-if (!$orgs) { echo "No organism has images/images.tsv\n"; exit(0); }
+if (!$orgs) { echo "No organism has .images/images.tsv\n"; exit(0); }
 
 $known  = moop_images_known_terms();
 if (!$known) echo "Note: no anatomy ontology built -- terms are not checked (scripts/build_ontologies.php)\n";

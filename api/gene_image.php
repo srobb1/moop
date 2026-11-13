@@ -1,11 +1,11 @@
 <?php
 /**
- * One gene image (in situ, plot, movie) from organisms/<organism>/images/, access-checked.
+ * One gene image (in situ, plot, movie) from organisms/<organism>/.images/, access-checked.
  *
  *   GET api/gene_image.php?organism=Schmidtea_mediterranea&file=davies_2017/SMED30001362_piwi-3_S3.png[&size=thumb]
  *
  * organisms/ is denied to the web by nginx, so this is the only way an image leaves the server.
- * The file must be LISTED in that organism's gene_images.sqlite (built from images/images.tsv),
+ * The file must be LISTED in that organism's gene_images.sqlite (built from .images/images.tsv),
  * resolve inside images/, and belong to a data set the visitor may see (moop_dataset_visible():
  * organism + assembly + gene set, same rule as the gene set itself). A private image and a
  * missing one both answer 404, so a private image cannot be shown to exist.
