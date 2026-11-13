@@ -987,7 +987,8 @@
                  . '<i class="fas fa-download me-1"></i>' . t('Download') . '</button></form>';
         };
         $__cl_id = fn(string $prefix, array $c) => $prefix . '-' . preg_replace('/[^A-Za-z0-9_-]/', '', (string) $c['clade']);
-        $__cl_foot = fn(array $c) => '<p class="small text-muted mb-0">' . t('Computed with %1$s %2$s on one gene set per species (%3$d gene sets); gene family %4$s.', $c['method'], $c['version'], $c['gene_sets'], $c['orthogroup']) . '</p>';
+        $__cl_foot = fn(array $c) => '<p class="small text-muted mb-0">' . t('Computed with %1$s %2$s on one gene set per species (%3$d gene sets); gene family %4$s.', $c['method'], $c['version'], $c['gene_sets'], $c['family'] ?? $c['orthogroup'])
+                   . (($c['outgroups'] ?? '') !== '' ? ' ' . t('Rooted with an outgroup: %s.', $c['outgroups']) : '') . '</p>';
     ?>
     <div class="card shadow-sm mb-4" id="pnav-compgen" data-nav-label="Orthologs in related species">
         <div class="card-header d-flex align-items-center flex-wrap">

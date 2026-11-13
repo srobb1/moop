@@ -4498,6 +4498,15 @@ ok(($_by['h1']['support'] ?? '') === 'reciprocal_best' && ($_by['h2']['support']
 ok(($_by['h1']['cov_self'] ?? null) == 0.95 && ($_by['h1']['cov_other'] ?? null) == 1.0 && array_key_exists('evalue', $_by['h3'] ?? []) && $_by['h3']['evalue'] === null,
    'coverage is per side (this gene first); no_hit has no evalue');
 ok(($_e2['evidence']['rule'] ?? '') !== '' && ($_e2['evidence']['evalue'] ?? '') === '1e-5', 'the rule and cutoff come from the file');
+// An outgroup run (compute, 2026-11-13): one orthogroup, two N0 HOGs -- the family is named by the HOG.
+$_mk("$_cd/.clades/four/homologs.sqlite", 2);
+(new PDO("sqlite:$_cd/.clades/four/homologs.sqlite"))->exec("UPDATE hog SET hog = 'N0.HOG2' WHERE gene_id = 5;
+    INSERT INTO meta VALUES ('outgroups', 'Lepisosteus oculatus'), ('orthofinder_clade_node', 'N1');");
+$_e4 = moop_clade_homologs_in(new PDO("sqlite:$_cd/.clades/four/homologs.sqlite"), 'four', 'OrgA', 'g1', null)[0] ?? null;
+ok(($_e4['family'] ?? '') === 'N0.HOG1' && ($_e4['orthogroup'] ?? '') === 'OG1' && ($_e4['outgroups'] ?? '') === 'Lepisosteus oculatus'
+   && !in_array('h5', $_e4['organisms']['OrgB']['family'] ?? ['h5'], true),
+   'outgroup run: the family is the N0 HOG (h5, same orthogroup but another HOG, is not in it), outgroups from meta');
+ok(($_e2['family'] ?? '') === 'N0.HOG1' && ($_e2['outgroups'] ?? 'x') === '', 'no outgroup: family is still the N0 HOG, outgroups empty');
 ok(moop_clade_supported($_by['h1'] ?? []) && !moop_clade_supported($_by['h2'] ?? []) && !moop_clade_supported($_by['h3'] ?? [])
    && moop_clade_supported(['gene' => 'x', 'kind' => '1:1']), 'supported: reciprocal best / co-ortholog, and every /1 ortholog; not weak or no hit');
 $_tsv = $_e2 ? array_map(fn($l) => explode("\t", $l), explode("\n", trim(moop_clade_homologs_tsv(['gene' => 'g1', 'clades' => [$_e2 + ['aliases' => []]]])))) : [[]];
@@ -4512,7 +4521,7 @@ $_fh = array_flip($_ft[0]);
 ok(count($_ft) === 2 && !isset($_fh['kind']) && !isset($_fh['support']) && ($_ft[1][$_fh['gene2_id'] ?? 0] ?? '') === 'h5'
    && ($_ft[1][$_fh['relationship'] ?? 0] ?? '') === 'family member (not ortholog)', 'the family download: h5 only, no ortholog columns');
 $_rp->setValue($_cfg, $_saved);
-foreach (['one', 'two', 'three'] as $_x) { @unlink("$_cd/.clades/$_x/homologs.sqlite"); @rmdir("$_cd/.clades/$_x"); }
+foreach (['one', 'two', 'three', 'four'] as $_x) { @unlink("$_cd/.clades/$_x/homologs.sqlite"); @rmdir("$_cd/.clades/$_x"); }
 foreach (['OrgA/a1/gs1', 'OrgA/a1', 'OrgA', 'OrgB/b1/gs2', 'OrgB/b1', 'OrgB', '.clades', ''] as $_x) @rmdir("$_cd/$_x");
 
 group('Linked sites: {name} at the start of a page link becomes that site\'s address from the setting');

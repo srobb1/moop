@@ -57,7 +57,7 @@ function moop_clades_open(): array {
 
 /**
  * The card's data for one gene: one entry per (clade, reference gene) it reaches.
- *   ['clade', 'label', 'method', 'version', 'gene_sets', 'orthogroup', 'family_total', 'self_gene',
+ *   ['clade', 'label', 'method', 'version', 'gene_sets', 'orthogroup', 'family' (N0 HOG id), 'outgroups', 'family_total', 'self_gene',
  *    'via' => null | ['gene', 'gene_set']     (this page's gene set is not the clade's: matched through the crosswalk)
  *    'organisms' => [organism => ['assembly', 'gene_set', 'self', 'orthologs' => [['gene','kind', + evidence],..], 'family' => [gene,..]]],
  *    'evidence'  => null (a /1 file) | ['rule', 'tool', 'version', 'evalue', 'min_cov']
@@ -144,6 +144,12 @@ function moop_clade_homologs_in(PDO $db, string $clade, string $organism, string
                         JOIN hog h ON h.hog = h0.hog AND h.node = 'N0' JOIN gene g ON g.id = h.gene_id
                         WHERE h0.gene_id = ? AND h0.node = 'N0' AND g.id != ? ORDER BY g.organism, g.gene");
     $st->execute([$me['id'], $me['id']]);
+    // The family's NAME is this N0 HOG, not the orthogroup: with an outgroup in the run (compute,
+    // 2026-11-13) one orthogroup spans the outgroup and can hold several N0 HOGs, so the orthogroup
+    // would name a bigger group than the one listed. Orthogroup only when the gene has no HOG.
+    $hq = $db->prepare("SELECT hog FROM hog WHERE gene_id = ? AND node = 'N0' LIMIT 1");
+    $hq->execute([$me['id']]);
+    $family_id = (string) ($hq->fetchColumn() ?: $me['orthogroup']);
     $family_total = 0;
     foreach ($st as $r) {
         if (isset($listed[$r['organism'] . "\0" . $r['gene']]) || !$visible($r['organism'], $r['gene_set'])) continue;
@@ -160,6 +166,8 @@ function moop_clade_homologs_in(PDO $db, string $clade, string $organism, string
         'version'      => (string) ($meta['method_version'] ?? $meta['orthofinder_version'] ?? ''),
         'gene_sets'    => count($members),
         'orthogroup'   => (string) $me['orthogroup'],
+        'family'       => $family_id,
+        'outgroups'    => (string) ($meta['outgroups'] ?? ''),
         'via'          => $via,
         'self_gene'    => (string) $me['gene'],
         'self_set'     => (string) $me['gene_set'],
@@ -291,7 +299,7 @@ function moop_clade_homologs_tsv(array $section, string $part = 'orthologs'): st
             if (!$orth) foreach ($o['family'] as $g) $rows[] = [$o['self'] ? 'paralog' : 'family member (not ortholog)', $g, [], []];
             foreach ($rows as [$rel, $gene, $kind, $evidence]) {
                 $out .= implode("\t", array_map($cell, array_merge($g1, $describe($org, $o['assembly'], $o['gene_set'], $gene),
-                        [$rel], $kind, $evidence, [$c['orthogroup'], $c['label'], $method]))) . "\n";
+                        [$rel], $kind, $evidence, [$c['family'] ?? $c['orthogroup'], $c['label'], $method]))) . "\n";
             }
         }
     }
