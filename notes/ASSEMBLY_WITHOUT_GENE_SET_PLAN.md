@@ -138,3 +138,34 @@ Per THE METHOD, verify against reality rather than trusting this note:
 - Whatever is chosen, `getUnrepresentedGeneSetTuples()` and `quick_add_group.php` must agree —
   they are two implementations of the same "which tuples exist" question, and that duplication
   is how they would drift apart again.
+
+---
+
+## 2026-11-13 — a real use: BLAST-only genomes (Sofia)
+
+Planosphere (and SIMRbase) want genomes that are offered **for BLAST only** — e.g. every
+*S. mediterranea* assembly, with no gene set loaded. This answers the open question above: an
+assembly without a gene set **is** a valid state to display and operate on, with a narrow purpose.
+Candidates (Sofia 2026-11-13; today offered as downloads only):
+- the **chromosome analysis assembly** — `planosphere/downloads/smed_chr_ref_v1.fa.gz` (220 MB), on Planosphere's
+  Chromosomes page;
+- **SmedSxl genome v3.1** — `moop/downloads/smedgd/SmedSxl_genome_v3.1.nt.gz` (258 MB), linked from Planosphere's
+  SmedGD pages. (v4.0 and SmedAsxl v1.1 sit beside it — same treatment if wanted later.)
+JBrowse: "maybe" (Sofia) — a sequence-only view so a BLAST hit can be seen in place; decide when building.
+
+**What it would be:** genome FASTA + BLAST index, nothing else. No gene search, gene pages or
+annotations. Optional: a small assembly page (source, size stats) and a JBrowse view with the
+sequence only. BLAST hits on it link to the JBrowse location, not a gene page — the one real
+behaviour change in BLAST results.
+
+**How:** option (A) above — "no gene set" as a first-class value, not the invented `v1` — and
+build it TOGETHER with the per-data-set permission layer (todo: data set = organism / assembly /
+gene set / analysis). A BLAST-only genome is a data set that stops at the assembly level; if the
+shared access check handles that from the start, groups, scope selector and BLAST follow from it.
+
+**Rejected:** a separate "extra BLAST databases" list in config. Quick, but it bypasses the
+organism tree, so access control, the scope selector and the Organism Checklist would each need
+a special case — another drifting second source of truth.
+
+**Before building:** make one on a scratch organism and drive manage_groups / BLAST as apache;
+the phantom-`v1` loop above is still derived from code, not reproduced.
