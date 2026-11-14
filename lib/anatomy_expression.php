@@ -468,11 +468,11 @@ function moop_page_terms_for_genes(string $organism, array $genes): array {
     $xw = moop_crosswalk_open($organism);
     if ($xw) {
         foreach (array_chunk(array_keys($by_ref), 500) as $chunk) {
-            $st = $xw->prepare('SELECT accession_lc, ref_id FROM map WHERE ref_id IN ('
+            $st = $xw->prepare('SELECT accession_lc, ref_id, hub, source FROM map WHERE ref_id IN ('
                                . implode(',', array_fill(0, count($chunk), '?')) . ')');
             $st->execute(array_map('strval', $chunk));
             while ($r = $st->fetch(PDO::FETCH_NUM)) {
-                if (isset($is_curated[$r[0]])) $hit[$r[0]] = ($hit[$r[0]] ?? []) + ($by_ref[$r[1]] ?? []);
+                if (isset($is_curated[$r[0]]) && moop_crosswalk_row_visible($organism, $r[2], $r[3])) $hit[$r[0]] = ($hit[$r[0]] ?? []) + ($by_ref[$r[1]] ?? []);
             }
         }
     }

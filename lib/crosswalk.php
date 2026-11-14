@@ -248,8 +248,44 @@ function moop_crosswalk_build(string $organism): array {
 }
 
 /**
+ * May the viewer see crosswalk rows reached through this hub or source? The ONE access rule for
+ * everything read from crosswalk.sqlite (notes/PERMISSIONS_PLAN.md step 1): a row is shown only when
+ * both its hub (the reference gene's gene set) and its source (where the id comes from) are visible.
+ *
+ * - A hub/source that is a gene set loaded on this site follows that gene set (moop_dataset_visible):
+ *   a private gene set's ids, and every mapping THROUGH a private reference gene, are left out --
+ *   not merely unlinked, since even an id or a mapping says the data set exists.
+ * - Anything else (ESTs, arrays, old transcriptomes, a gene set not loaded here) follows the organism:
+ *   visible when the organism has no genome data on this site (Planosphere: the crosswalk is
+ *   standalone published data), else when the viewer may see some of the organism.
+ *
+ * $c is the hub's or source's config entry ([] for a name the config does not know).
+ */
+function moop_crosswalk_entry_visible(string $organism, array $c): bool {
+    static $memo = [];
+    $gs  = (string) ($c['gene_set'] ?? '');
+    $asm = (string) ($c['assembly'] ?? '');
+    $key = "$organism\0$asm\0$gs\0" . get_access_level() . "\0" . (get_username() ?? '');
+    if (isset($memo[$key])) return $memo[$key];
+    $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/' . $organism;
+    $safe = '/^[A-Za-z0-9_.-]+$/';
+    if ($gs !== '' && preg_match($safe, $organism) && preg_match($safe, $asm) && preg_match($safe, $gs) && is_dir("$base/$asm/$gs")) {
+        return $memo[$key] = moop_dataset_visible($organism, $asm, $gs);
+    }
+    if (!is_file("$base/organism.sqlite")) return $memo[$key] = true;
+    return $memo[$key] = (moop_session_is_admin() || is_public_organism($organism) || has_access('COLLABORATOR', $organism));
+}
+
+/** A map row's visibility: its hub AND its source (moop_crosswalk_entry_visible). $source null = hub only. */
+function moop_crosswalk_row_visible(string $organism, string $hub, ?string $source = null): bool {
+    $cfg = moop_crosswalk_sources()[$organism] ?? [];
+    if (!moop_crosswalk_entry_visible($organism, (array) ($cfg['hubs'][$hub] ?? []))) return false;
+    return $source === null || moop_crosswalk_entry_visible($organism, (array) ($cfg['sources'][$source] ?? []));
+}
+
+/**
  * The reference genes each accession maps to: [accession_lc => [['ref_id', 'hub'], ...]].
- * Case-insensitive, like the old Rosetta page. Read-only.
+ * Case-insensitive, like the old Rosetta page. Read-only. Only rows the viewer may see.
  */
 function moop_crosswalk_genes(string $organism, array $accessions): array {
     $db = moop_crosswalk_open($organism);
@@ -257,10 +293,15 @@ function moop_crosswalk_genes(string $organism, array $accessions): array {
     if (!$db || !$lc) return [];
     $out = [];
     foreach (array_chunk($lc, 500) as $chunk) {
-        $st = $db->prepare('SELECT DISTINCT accession_lc, ref_id, hub FROM map WHERE accession_lc IN ('
+        $st = $db->prepare('SELECT DISTINCT accession_lc, ref_id, hub, source FROM map WHERE accession_lc IN ('
                            . implode(',', array_fill(0, count($chunk), '?')) . ') ORDER BY hub, ref_id');
         $st->execute($chunk);
-        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) $out[$r['accession_lc']][] = ['ref_id' => $r['ref_id'], 'hub' => $r['hub']];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            if (!moop_crosswalk_row_visible($organism, $r['hub'], $r['source'])) continue;
+            // DISTINCT included source: one accession under two sources must not repeat the gene.
+            $row = ['ref_id' => $r['ref_id'], 'hub' => $r['hub']];
+            if (!in_array($row, $out[$r['accession_lc']] ?? [], true)) $out[$r['accession_lc']][] = $row;
+        }
     }
     return $out;
 }
@@ -340,7 +381,7 @@ function moop_crosswalk_members(string $organism, array $ref_ids): array {
         $st = $db->prepare('SELECT DISTINCT accession, source, ref_id, hub FROM map WHERE ref_id IN ('
                            . implode(',', array_fill(0, count($chunk), '?')) . ')');
         $st->execute($chunk);
-        $out = array_merge($out, $st->fetchAll(PDO::FETCH_ASSOC));
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) if (moop_crosswalk_row_visible($organism, $r['hub'], $r['source'])) $out[] = $r;
     }
     usort($out, fn($a, $b) => [$a['source'], $a['accession']] <=> [$b['source'], $b['accession']]);
     return $out;
@@ -350,8 +391,10 @@ function moop_crosswalk_members(string $organism, array $ref_ids): array {
 function moop_crosswalk_source_list(string $organism): array {
     $db = moop_crosswalk_open($organism);
     if (!$db) return [];
-    $have = $db->query('SELECT DISTINCT source FROM map')->fetchAll(PDO::FETCH_COLUMN);
     $conf = moop_crosswalk_sources()[$organism]['sources'] ?? [];
+    // A private gene set's name is not even offered as a choice.
+    $have = array_values(array_filter($db->query('SELECT DISTINCT source FROM map')->fetchAll(PDO::FETCH_COLUMN),
+                         fn($s) => moop_crosswalk_entry_visible($organism, (array) ($conf[$s] ?? []))));
     $out = [];
     foreach ($conf as $name => $c) if (in_array($name, $have, true)) $out[$name] = (string) ($c['label'] ?? $name);
     $rest = array_diff($have, array_keys($out));
@@ -421,7 +464,7 @@ function moop_crosswalk_translate(string $organism, array $typed, array $into, ?
         $st = $db->prepare('SELECT DISTINCT accession_lc, accession, source, ref_id, hub FROM map WHERE accession_lc IN ('
                            . implode(',', array_fill(0, count($chunk), '?')) . ')');
         $st->execute($chunk);
-        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) $query[$r['accession_lc']][] = $r;
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) if (moop_crosswalk_row_visible($organism, $r['hub'], $r['source'])) $query[$r['accession_lc']][] = $r;
     }
     foreach ($typed as $t) if (!isset($query[mb_strtolower($t)])) $res['not_found'][] = $t;
     if (!$query) return $res;

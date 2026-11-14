@@ -4394,6 +4394,35 @@ unset($_xn['crosswalk']['Test']['folder']); $_xrp->setValue($_xc, $_xn);
 ok(moop_crosswalk_build('Test')['ok'] === false && strpos(moop_crosswalk_build('Test')['error'], "no 'folder'") !== false
    && isset(moop_crosswalk_sources()['Test']),
    'a crosswalk without a build folder still works (built elsewhere); only a local build needs the folder');
+// Access (notes/PERMISSIONS_PLAN.md step 1): a private gene set's ids, and every mapping through a
+// private reference gene, are LEFT OUT of every crosswalk read -- not merely unlinked. Gene set gsH1
+// (hub H1) is public; smed (hub SMED + source smed_20140614) belongs to a lab group only.
+$_xsess = $_SESSION ?? [];
+@mkdir("$_xd/meta"); @mkdir("$_xd/Test/asmH1/gsH1", 0777, true); @mkdir("$_xd/Test/smed/smed", 0777, true);
+touch("$_xd/Test/organism.sqlite");
+file_put_contents("$_xd/meta/organism_assembly_groups.json", json_encode([
+    ['organism' => 'Test', 'assembly' => 'asmH1', 'gene_set' => 'gsH1', 'groups' => ['PUBLIC']],
+    ['organism' => 'Test', 'assembly' => 'smed', 'gene_set' => 'smed', 'groups' => ['Lab']]]));
+$_xn['metadata_path'] = "$_xd/meta"; $_xrp->setValue($_xc, $_xn);
+$_SESSION = ['access_level' => 'PUBLIC'];
+ok(moop_crosswalk_genes('Test', ['dd_Smed_v4_12_0_1']) === [] && moop_crosswalk_search_hint('Test', 'dd_Smed_v4_12_0_1', null) === [],
+   'access: an id reaching only a private gene set maps to nothing (lookup and search hint)');
+$_t = moop_crosswalk_translate('Test', ['SMED30000001', 'DN293829'], [], null);
+ok($_t['not_found'] === ['SMED30000001'] && array_column($_t['rows'], 'hub') === ['H1', 'H2'] && ($_t['rows'][0]['always']['smed_20140614'] ?? null) === [],
+   'access: translator -- a private gene set\'s id reads as not found, and its ids leave the always-shown column');
+ok(array_column(moop_crosswalk_members('Test', ['h1SMcG0000008']), 'accession') === ['DN293829'],
+   'access: gene page "Same gene" list -- the private gene set\'s id is left out, the public EST stays');
+ok(!isset(moop_crosswalk_source_list('Test')['smed_20140614']), 'access: a private gene set is not offered as a source to translate into');
+file_put_contents("$_xd/meta/organism_assembly_groups.json", json_encode([
+    ['organism' => 'Test', 'assembly' => 'asmH1', 'gene_set' => 'gsH1', 'groups' => ['Lab']]]));
+$_SESSION = ['access_level' => 'PUBLIC', 'username' => 'fresh-memo'];
+ok(moop_crosswalk_genes('Test', ['OnlyH2', 'DN293829']) === [],
+   'access: with the whole organism private, outside data (ESTs, a hub not loaded here) is hidden too');
+$_SESSION = ['access_level' => 'ADMIN', 'username' => 'admin'];
+ok(count(moop_crosswalk_genes('Test', ['dd_Smed_v4_12_0_1', 'DN293829'])) === 2 && isset(moop_crosswalk_source_list('Test')['smed_20140614'])
+   && moop_crosswalk_translate('Test', ['SMED30000001'], [], null)['not_found'] === [],
+   'access: an admin sees every gene set');
+$_SESSION = $_xsess;
 $_xrp->setValue($_xc, $_xs);
 exec('rm -rf ' . escapeshellarg($_xd));
 

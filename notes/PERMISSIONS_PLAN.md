@@ -48,7 +48,9 @@ Named collaborators per page/analysis: **not in the first version.** Add only if
 - Expression experiments: own `access_level` in `experiment.json`
   (`organisms/{Org}/{Asm}/{GeneSet}/expression/{experiment}/`), level-only, narrows only.
 
-**Gaps (data that can leak once something goes private — nothing is private today, so no leak yet):**
+**Gaps** — ⚠️ "nothing is private today" was wrong: on simrbase only `smed_20140614` was PUBLIC among the
+Smed gene sets (S3 h1/h2, A2, ddv6 not yet marked), so the crosswalk readers below DID show their ids to
+the public. Closed by step 1 (2026-11-13); Sofia: all Smed gene sets are to be public, just not marked yet.
 - Rosetta Stone ID Translator (`tools/crosswalk.php:19`) and Anatomical Expression Search
   (`tools/anatomy_search.php:23`, `lib/anatomy_expression.php:681`): check only that the organism has
   *something* public.
@@ -117,7 +119,11 @@ next to each analysis where analyses are listed. One editor, two entry points, o
 
 ## 5. Work list, in order (one commit each, with tests)
 
-1. **Close the gaps** — translator, anatomy search, Same-gene card through `moop_dataset_visible()`.
+1. **Built 2026-11-13** — one rule in `lib/crosswalk.php` (`moop_crosswalk_entry_visible()` /
+   `moop_crosswalk_row_visible()`) applied where the crosswalk is read, so every reader gets it; the
+   anatomy search's one direct query too. Smoke tests proven red on the old code. PAGE curations
+   themselves (published literature) stay shown; only their gene links are filtered.
+   Original item: **Close the gaps** — translator, anatomy search, Same-gene card through `moop_dataset_visible()`.
    Needs each row's data set: crosswalk sources already carry assembly/gene set in the crosswalk
    config; a curation's accession reaches its source through the crosswalk. *Small; real leak risk.*
 2. **Pages:** `moop_page_visible()` + `access_rules.json` "pages"; check in all six readers;
