@@ -64,7 +64,7 @@ $dis    = $file_write_error ? ' disabled' : '';
     <div class="card adm-card mb-3">
       <div class="card-header adm-head"><h5 class="mb-0">Page title</h5></div>
       <div class="card-body">
-        <input type="text" class="form-control" name="name" maxlength="100" style="max-width:32rem;" value="<?= $h($cw['name'] ?? '') ?>" placeholder="ID Translator"<?= $dis ?>>
+        <input type="text" class="form-control" name="name" maxlength="100" style="max-width:32rem;" value="<?= $h($cw['name'] ?? '') ?>" placeholder="Rosetta Stone ID Translator"<?= $dis ?>>
         <div class="small text-muted mt-1">Shown at the top of the page. The menu and toolbox names are set in <a href="manage_tools.php">Manage Tools</a>.</div>
       </div>
     </div>

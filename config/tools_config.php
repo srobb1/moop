@@ -173,9 +173,9 @@ return [
 
     'crosswalk' => [
         'id'              => 'crosswalk',
-        'menu_label'      => 'ID Translator',
+        'menu_label'      => 'Rosetta Stone ID Translator',
         'menu_order'      => 4.6,
-        'name'            => 'ID Translator',
+        'name'            => 'Rosetta Stone ID Translator',
         'icon'            => 'fa-exchange-alt',
         'description'     => 'Translate transcript, EST and array IDs into the same gene in other sources',
         'btn_class'       => 'btn-tool-teal',

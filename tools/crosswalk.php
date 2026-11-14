@@ -44,7 +44,7 @@ if (($_GET['download'] ?? '') === 'tsv' && $result && $result['rows']) {
     echo moop_crosswalk_translate_tsv($organism, $result, array_values(array_filter((array) ($cfg['always_show'] ?? []), 'is_string')), (bool) $into);
     exit;
 }
-$tool_title = trim((string) ($cfg['name'] ?? '')) ?: 'ID Translator';
+$tool_title = trim((string) ($cfg['name'] ?? '')) ?: 'Rosetta Stone ID Translator';
 
 echo render_display_page(__DIR__ . '/pages/crosswalk.php', [
     'organism' => $organism, 'organisms' => $organisms, 'sources' => $sources, 'ids_text' => $ids_text,

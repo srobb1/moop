@@ -153,6 +153,8 @@ function help_modal_trigger(string $modal_id, string $label = '', string $aria =
  *                                               data-driven modal an injection risk.
  *                                               Cards using gloss() or <code> set this.
  * @param array  $opts     'intro' => string  one line above the sections, escaped
+ *                         'lead'  => string  a line about this page's data, above the intro;
+ *                                            ALREADY translated by the caller (t_plain + sprintf)
  *                         'size'  => string  modal-dialog size class, default 'modal-lg'
  * @return string HTML for the modal. Place it anywhere in the page body.
  */
@@ -165,6 +167,9 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
     // markup, and a translation from the spreadsheet is not trusted to carry markup.
     $intro = $intro !== '' ? t_plain($intro) : '';
     $title = t_plain($title);
+    // 'lead': a sentence about THIS page's data (a count), built by the caller with t_plain() and
+    // sprintf -- already in the visitor's language, so it is escaped here but not translated again.
+    $lead  = trim((string)($opts['lead'] ?? ''));
 
     $h  = '<div class="modal fade help-modal" id="' . $id . '" tabindex="-1"';
     $h .= ' aria-labelledby="' . $id . '-label" aria-hidden="true">';
@@ -177,6 +182,9 @@ function help_modal(string $modal_id, string $title, array $sections, array $opt
     $h .= '</div>';
 
     $h .= '<div class="modal-body">';
+    if ($lead !== '') {
+        $h .= '<p class="fw-semibold mb-2">' . htmlspecialchars($lead) . '</p>';
+    }
     if ($intro !== '') {
         $h .= '<p class="text-muted small mb-4">' . htmlspecialchars($intro) . '</p>';
     }

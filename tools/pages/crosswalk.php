@@ -1,6 +1,6 @@
 <?php
 /**
- * ID Translator -- content file (controller: tools/crosswalk.php).
+ * Rosetta Stone ID Translator -- content file (controller: tools/crosswalk.php).
  * Variables: $organism, $organisms, $sources [name => label], $source_groups (lib: moop_crosswalk_source_groups),
  *            $ids_text, $into, $result (null before
  *            a search), $too_many, $tool_title, $always [source names], $source_about [name => url],
@@ -22,17 +22,18 @@ $src_cell = function (string $s) use ($sources, $source_about): string {
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
       <?= page_title(t_plain($tool_title)) ?>
-      <?= help_modal_trigger('crosswalk-help', '', 'How the ID Translator works') ?>
+      <?= help_modal_trigger('crosswalk-help', '', 'How the Rosetta Stone ID Translator works') ?>
       <?= page_purpose('Translate IDs from older transcriptomes, ESTs and arrays into the same gene in other sources of the same species.', '', false, false) ?>
     </div>
   </div>
   <?php
-  echo help_modal('crosswalk-help', 'How the ID Translator works', [[
+  echo help_modal('crosswalk-help', 'How the Rosetta Stone ID Translator works', [[
       'heading' => '',
       'cards'   => [
           ['label' => 'Within one species', 'text' => 'Every source here is the organism you chose. The translator finds the same gene under its other names in that species. It never links genes of different species: for those, see Orthologs in related species on a gene page.'],
           ['label' => 'What you can paste', 'text' => 'IDs of any kind, one or many: transcripts from older transcriptomes, ESTs, microarray probes, gene models, GenBank accessions. Upper or lower case both work.'],
-          ['label' => 'How an ID is translated', 'text' => 'Every source was aligned to the reference transcriptome; an ID maps to a reference gene when it aligns at 95% identity or better. IDs that reach the same reference gene are treated as the same gene.'],
+          ['label' => 'How an ID is translated', 'text' => 'The sequences of every source were aligned to this species\' reference genome. An ID maps to a reference gene when its alignment overlaps one of that gene\'s exons (on the same strand, where the source has one) by at least 100 bases, or matches an exon exactly. IDs that reach the same reference gene are treated as the same gene.'],
+          ['label' => 'Microarray probes, older IDs', 'text' => 'Probes are too short for that: they map where they align at 95% identity or better and touch an exon. For some species, a few older IDs that do not align at all keep an earlier mapping onto a transcriptome.'],
           ['label' => 'What the table shows', 'text' => 'For each ID: the source it comes from, its reference gene with that gene\'s transcripts and description, and the IDs of the same gene in the sources you ticked. Nothing ticked: just the reference genes.'],
           ['label' => 'Links', 'text' => 'IDs of genes on this site open their gene page. IDs from NCBI and WormBase ParaSite open there. Other IDs are plain text: their old websites no longer answer.'],
       ],
@@ -40,7 +41,7 @@ $src_cell = function (string $s) use ($sources, $source_about): string {
   ?>
 
   <?php if (!$organism): ?>
-    <div class="alert alert-light border"><?= t('The ID Translator is not set up on this site yet.') ?></div>
+    <div class="alert alert-light border"><?= t('The Rosetta Stone ID Translator is not set up on this site yet.') ?></div>
   <?php else: ?>
 
   <form method="get" action="<?= htmlspecialchars($self) ?>" id="crosswalkForm">
