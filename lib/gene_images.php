@@ -123,7 +123,7 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
             if (!$datasets["$asm/$gs"]) $note('data set not on this site (kept, shown to nobody until it is)', "$asm/$gs");
             // The analysis name becomes part of its access key (images:<organism>/<analysis>), so it must be
             // a plain name -- one that is not would make every image of it unreachable, so say so instead.
-            if ($get('analysis') !== '' && !preg_match('/^[A-Za-z0-9_.-]+$/', $get('analysis'))) { $note('analysis name is not letters, digits, _ . - (image left out)', $get('analysis')); continue; }
+            if ($get('analysis') !== '' && !moop_plain_name($get('analysis'))) { $note('analysis name is not letters, digits, _ . - (image left out)', $get('analysis')); continue; }
             $accs = array_values(array_filter(array_map('trim', explode(';', $get('accession'))), 'strlen'));
             if (!$accs) { $note('no gene or transcript ID', $file); continue; }
             // A stage cell may list several stages (a movie across S3-S5): the first is the image's stage

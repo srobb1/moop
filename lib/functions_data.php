@@ -915,6 +915,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
         foreach ($data['assemblies'] as $assembly) {
             $gaps = $data['fasta_validation']['assemblies'][$assembly]['gaps']
                  ?? assembly_fasta_gaps($data['path'] . '/' . $assembly, $sequence_types);
+            if (!empty($gaps['blast_only'])) continue;   // a BLAST-only genome: no gene set by design
             if (!$gaps['gene_sets'] || array_filter($gaps['gene_sets'])) { $complete = false; break; }
         }
         $checks['gene_sets_complete'] = $complete;
@@ -930,15 +931,7 @@ function getOrganismOverallStatus($organism, $data, $groups_data, $taxonomy_tree
             // Use pre-computed blast validation if available (from cache)
             $blast_validation = $data['blast_validation'][$assembly] ?? null;
             if (!$blast_validation) {
-                $assembly_path = $data['path'] . '/' . $assembly;
-                // Aggregate across gene_set subdirs
-                $blast_validation = ['databases' => [], 'missing_count' => 0, 'total_count' => 0];
-                foreach (glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
-                    $bv = validateBlastIndexFiles($gs_dir, $sequence_types);
-                    $blast_validation['databases']     = array_merge($blast_validation['databases'], $bv['databases']);
-                    $blast_validation['missing_count'] += $bv['missing_count'];
-                    $blast_validation['total_count']   += $bv['total_count'];
-                }
+                $blast_validation = moop_assembly_blast_validation($data['path'] . '/' . $assembly, $sequence_types);
             }
 
             if (!empty($blast_validation['databases'])) {
@@ -1574,6 +1567,7 @@ function getGeneSetFastaGaps(array $cache_data, array $sequence_types): array
             // A cache written before per-gene-set gaps existed (schema < 6) carries none;
             // say so rather than report "every gene set complete" from no data.
             if ($gaps === null) { $out['unknown'] = true; continue; }
+            if (!empty($gaps['blast_only'])) continue;   // BLAST-only genome: no gene set by design
             if (empty($gaps['gene_sets'])) { $out['empty_assemblies'][] = "$org/$asm"; continue; }
             foreach ($gaps['gene_sets'] as $gs => $missing) {
                 if (!$missing) continue;

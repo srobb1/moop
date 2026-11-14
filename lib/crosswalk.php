@@ -37,7 +37,7 @@ function moop_crosswalk_sources(): array {
     if (is_string($display)) $display = [];
     $out = [];
     foreach ($cm->getArray('crosswalk', []) as $org => $s) {
-        if (is_array($s) && !empty($s['hubs']) && preg_match('/^[A-Za-z0-9_.-]+$/', (string) $org)) {
+        if (is_array($s) && !empty($s['hubs']) && moop_plain_name((string) $org)) {
             $out[$org] = array_merge($s, $display[$org] ?? []);
         }
     }
@@ -268,8 +268,7 @@ function moop_crosswalk_entry_visible(string $organism, array $c): bool {
     $key = "$organism\0$asm\0$gs\0" . get_access_level() . "\0" . (get_username() ?? '');
     if (isset($memo[$key])) return $memo[$key];
     $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/' . $organism;
-    $safe = '/^[A-Za-z0-9_.-]+$/';
-    if ($gs !== '' && preg_match($safe, $organism) && preg_match($safe, $asm) && preg_match($safe, $gs) && is_dir("$base/$asm/$gs")) {
+    if ($gs !== '' && moop_plain_name($organism) && moop_plain_name($asm) && moop_plain_name($gs) && is_dir("$base/$asm/$gs")) {
         return $memo[$key] = moop_dataset_visible($organism, $asm, $gs);
     }
     if (!is_file("$base/organism.sqlite")) return $memo[$key] = true;

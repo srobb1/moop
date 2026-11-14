@@ -27,17 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $organism = trim($_POST['organism'] ?? '');
 $assembly = trim($_POST['assembly'] ?? '');
-$gene_set = trim($_POST['gene_set'] ?? 'v1');
 
 if (empty($organism) || empty($assembly)) {
     echo json_encode(['success' => false, 'error' => 'Organism and assembly are required']);
     exit;
 }
 
-if (!preg_match('/^[A-Za-z0-9_\-\.]+$/', $organism)
- || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $assembly)
- || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $gene_set)) {
-    echo json_encode(['success' => false, 'error' => 'Invalid organism, assembly, or gene set name']);
+if (!moop_plain_name($organism) || !moop_plain_name($assembly)) {
+    echo json_encode(['success' => false, 'error' => 'Invalid organism or assembly name']);
     exit;
 }
 

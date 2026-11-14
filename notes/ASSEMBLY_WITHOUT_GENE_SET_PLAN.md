@@ -277,3 +277,17 @@ getAccessibleGeneSets() without the blast_only opt-in -> 404 "no assembly you ca
 registered; verified as PUBLIC in headless Chrome: opens, jumps to smed_chr2:1,000,000, a BLAST-hit
 sessionTrack draws. Leftover for item 9: jbrowse_register_assembly.php accepts a `gene_set` param (default v1)
 it never uses.
+**2026-11-14 — item 8 done.** `genome.json` `"blast_only": true` declares it (`moop_genome_declares_blast_only()`,
+new `lib/genome_meta.php` — no dependencies, read by access control and the organism checks alike).
+`moop_blast_only_genome()` now REQUIRES the declaration (an assembly mid-setup is no longer offered). Organism
+checks: not an `orphaned_assembly_directory`; `assembly_fasta_gaps()` carries `blast_only`, so it is neither
+Incomplete (`gene_sets_complete`) nor an "empty assembly"; `moop_assembly_blast_validation()` (one aggregation, was
+copied in organism_cache + getOrganismOverallStatus) counts the genome's own BLAST index; the checklist's Build
+button sends gene_set `blast_only` and `generateBlastIndexes()` resolves it to the assembly dir (declared only).
+API no longer defaults gene_set to `v1`; JS `|| 'v1'` gone. Also fixed: gene set `..` passed the `/` check.
+Cache schema 10; genome.json is in the per-organism fingerprint (an in-place edit never changed a dir mtime).
+Manage Organisms: "genome only (BLAST)", chip "Genome not BLAST-indexed" when it lacks one.
+Smed smed_chr_ref_v1 + SmedSxl_v3.1 got genome.json (simrbase); after a rescan both read "genome only (BLAST)",
+66/66 organisms Complete, checklist clean, BLAST + JBrowse unchanged.
+OPEN (Sofia): the public organism page lists gene sets only, so BLAST-only genomes do not appear there — add a
+"Genomes for BLAST" line? Then item 9.

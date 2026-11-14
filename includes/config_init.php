@@ -208,6 +208,16 @@ function sequence_type_blast_dbtype(string $type): string {
 }
 
 /**
+ * Is this a plain directory/file NAME -- letters, digits, _ . - and not '.' or '..'? THE check for an
+ * organism, assembly, gene-set or analysis name before it becomes part of a path. The regex alone was
+ * copied ~30 times and about a third of the copies let '..' through ('.' is an allowed character), so
+ * "organism .." named the directory above organism_data (2026-11-14).
+ */
+function moop_plain_name($name): bool {
+    return is_string($name) && $name !== '.' && $name !== '..' && preg_match('/^[A-Za-z0-9_.-]+$/', $name) === 1;
+}
+
+/**
  * Filename of the reference genome FASTA, which lives at the ASSEMBLY level and is shared
  * across that assembly's gene sets. Convenience wrapper — the genome is asked for far more
  * often than the other types, and it is the one whose location differs.
@@ -234,7 +244,7 @@ function moop_anatomical_expression_available(): bool {
     if ($yes !== null) return $yes;
     $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/');
     foreach (array_keys(ConfigManager::getInstance()->getArray('anatomy_expression', [])) as $org) {
-        if (preg_match('/^[A-Za-z0-9_.-]+$/', (string) $org) && is_file("$base/$org/anatomy_expression.sqlite")) return $yes = true;
+        if (moop_plain_name((string) $org) && is_file("$base/$org/anatomy_expression.sqlite")) return $yes = true;
     }
     return $yes = false;
 }
@@ -259,7 +269,7 @@ function moop_crosswalk_available(): bool {
     if ($yes !== null) return $yes;
     $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/');
     foreach (array_keys(ConfigManager::getInstance()->getArray('crosswalk', [])) as $org) {
-        if (preg_match('/^[A-Za-z0-9_.-]+$/', (string) $org) && is_file("$base/$org/crosswalk.sqlite")) return $yes = true;
+        if (moop_plain_name((string) $org) && is_file("$base/$org/crosswalk.sqlite")) return $yes = true;
     }
     return $yes = false;
 }

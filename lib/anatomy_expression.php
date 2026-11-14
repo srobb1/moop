@@ -47,7 +47,7 @@ const MOOP_PAGE_COLUMNS = ['Accession', 'Term', 'Experimental Evidence', 'Biotyp
 function moop_page_sources(): array {
     $out = [];
     foreach (ConfigManager::getInstance()->getArray('anatomy_expression', []) as $org => $s) {
-        if (is_array($s) && !empty($s['curations']) && preg_match('/^[A-Za-z0-9_.-]+$/', (string) $org)) $out[$org] = $s;
+        if (is_array($s) && !empty($s['curations']) && moop_plain_name((string) $org)) $out[$org] = $s;
     }
     return $out;
 }

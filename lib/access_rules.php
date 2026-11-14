@@ -79,9 +79,8 @@ function moop_access_rule_normalise(array $rule): array {
     $to = (string) ($rule['visible_to'] ?? '');
     if (!in_array($to, MOOP_ACCESS_SETTINGS, true)) return ['visible_to' => 'admins'];
     if ($to !== 'dataset') return ['visible_to' => $to];
-    $safe = '/^[A-Za-z0-9_.-]+$/';
     $org = (string) ($rule['organism'] ?? ''); $asm = (string) ($rule['assembly'] ?? ''); $gs = (string) ($rule['gene_set'] ?? '');
-    if (!preg_match($safe, $org) || !preg_match($safe, $asm) || ($gs !== '' && !preg_match($safe, $gs))) return ['visible_to' => 'admins'];
+    if (!moop_plain_name($org) || !moop_plain_name($asm) || ($gs !== '' && !moop_plain_name($gs))) return ['visible_to' => 'admins'];
     return ['visible_to' => 'dataset', 'organism' => $org, 'assembly' => $asm, 'gene_set' => $gs];
 }
 

@@ -753,6 +753,34 @@ function validateBlastIndexFiles($assembly_path, $sequence_types = []) {
 }
 
 /**
+ * BLAST index status for one ASSEMBLY: validateBlastIndexFiles() over each gene-set directory,
+ * aggregated -- plus, for a BLAST-only genome (genome.json "blast_only": true, no gene set), the
+ * genome's own index in the assembly directory, which is the only database it has. Shared by the
+ * organism cache and its uncached fallback in getOrganismOverallStatus(), which used to each walk
+ * gene-set dirs only, so a BLAST-only genome's missing index was never reported (item 8).
+ *
+ * @return array{databases: list<array>, missing_count: int, total_count: int}
+ */
+function moop_assembly_blast_validation(string $assembly_path, array $sequence_types): array {
+    require_once __DIR__ . '/genome_meta.php';
+    $out = ['databases' => [], 'missing_count' => 0, 'total_count' => 0];
+    $gs_dirs = glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [];
+    $dirs = $gs_dirs;
+    $types = $sequence_types;
+    if (!$gs_dirs && isset($sequence_types['genome']) && moop_genome_declares_blast_only($assembly_path)) {
+        $dirs  = [$assembly_path];
+        $types = ['genome' => $sequence_types['genome']];
+    }
+    foreach ($dirs as $dir) {
+        $bv = validateBlastIndexFiles($dir, $types);
+        $out['databases']      = array_merge($out['databases'], $bv['databases']);
+        $out['missing_count'] += $bv['missing_count'];
+        $out['total_count']   += $bv['total_count'];
+    }
+    return $out;
+}
+
+/**
  * Check if assembly directory and FASTA files are readable/writable by web server
  * This is more comprehensive than checkAssemblyWritableForBlast
  * 
@@ -870,14 +898,27 @@ function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_d
         return $result;
     }
 
-    // Prevent directory traversal attacks
-    if (strpos($organism, '/') !== false || strpos($assembly, '/') !== false
-     || strpos($fasta_filename, '/') !== false || strpos($gene_set, '/') !== false) {
-        $result['message'] = 'Invalid characters in parameters';
-        return $result;
+    // Prevent directory traversal attacks. '.' and '..' contain no '/' but still climb: gene set
+    // '..' used to index a FASTA sitting in the organism directory.
+    foreach ([$organism, $assembly, $fasta_filename, $gene_set] as $part) {
+        if (!moop_plain_name($part)) {
+            $result['message'] = 'Invalid characters in parameters';
+            return $result;
+        }
     }
 
-    $assembly_path = $organism_data_path . '/' . $organism . '/' . $assembly . '/' . $gene_set;
+    // A BLAST-only genome (genome.json "blast_only": true) has no gene-set directory: its one
+    // database, the genome, sits in the assembly directory (ASSEMBLY_WITHOUT_GENE_SET_PLAN item 8).
+    if ($gene_set === (defined('MOOP_BLAST_ONLY') ? MOOP_BLAST_ONLY : 'blast_only')) {
+        require_once __DIR__ . '/genome_meta.php';
+        $assembly_path = $organism_data_path . '/' . $organism . '/' . $assembly;
+        if (!moop_genome_declares_blast_only($assembly_path)) {
+            $result['message'] = 'This assembly is not declared BLAST-only (genome.json "blast_only": true)';
+            return $result;
+        }
+    } else {
+        $assembly_path = $organism_data_path . '/' . $organism . '/' . $assembly . '/' . $gene_set;
+    }
     $fasta_path = $assembly_path . '/' . $fasta_filename;
 
     // Verify paths exist

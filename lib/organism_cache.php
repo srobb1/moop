@@ -50,7 +50,9 @@ require_once __DIR__ . '/genomic_regions.php';   // moop_gene_set_seqname_gap()
 // v7: overall_status gains 'gene_sets_complete', so partial gene sets grade Incomplete.
 // v8: an assembly directory with no genome.json is checked against the database too.
 // v9: seqname_validation -- gene sets whose coordinates name chromosomes the genome lacks.
-define('ORGANISM_CACHE_SCHEMA_VERSION', 9);
+// v10: BLAST-only genomes (genome.json "blast_only": true) -- gaps carry 'blast_only', their
+// genome's own BLAST index is counted, and they are no longer orphaned assembly directories.
+define('ORGANISM_CACHE_SCHEMA_VERSION', 10);
 
 /**
  * The version of the CHECKS whose results this cache stores: a fingerprint of the code that
@@ -67,7 +69,7 @@ function moop_organism_checks_version(): string {
     if ($v !== null) return $v;
     $parts = [];
     foreach (['organism_cache.php', 'functions_data.php', 'functions_filesystem.php',
-              'functions_database.php', 'genomic_regions.php'] as $file) {
+              'functions_database.php', 'genomic_regions.php', 'genome_meta.php', 'blast_functions.php'] as $file) {
         $parts[] = $file . ':' . (@md5_file(__DIR__ . "/$file") ?: 'missing');
     }
     return $v = md5(implode('|', $parts));
@@ -267,21 +269,13 @@ function getCachedOrganismsInfo($organism_data_path, $sequence_types, $taxonomy_
             'json_validation' => validateOrganismJson("$org_path/organism.json")
         ];
         
-        // Pre-compute blast validation per assembly — aggregate across gene_set subdirs
+        // Pre-compute blast validation per assembly (gene-set subdirs; a BLAST-only genome's own index)
         if ($progress_callback) {
             $progress_callback($org_name, $current, $total_scan_count, 'checking BLAST indexes');
         }
         $blast_by_assembly = [];
         foreach ($org_info['assemblies'] as $assembly) {
-            $assembly_path = $org_path . '/' . $assembly;
-            $aggregated = ['databases' => [], 'missing_count' => 0, 'total_count' => 0];
-            foreach (glob($assembly_path . '/*', GLOB_ONLYDIR) ?: [] as $gs_dir) {
-                $bv = validateBlastIndexFiles($gs_dir, $sequence_types);
-                $aggregated['databases']     = array_merge($aggregated['databases'], $bv['databases']);
-                $aggregated['missing_count'] += $bv['missing_count'];
-                $aggregated['total_count']   += $bv['total_count'];
-            }
-            $blast_by_assembly[$assembly] = $aggregated;
+            $blast_by_assembly[$assembly] = moop_assembly_blast_validation($org_path . '/' . $assembly, $sequence_types);
         }
         $org_info['blast_validation'] = $blast_by_assembly;
 
@@ -396,6 +390,11 @@ function buildPerOrganismFingerprints($organism_data_path) {
         $parts[] = 'asm:' . count($assemblies);
         foreach ($assemblies as $asm) {
             $parts[] = 'asm_mtime:' . filemtime("$org_path/$asm");
+            // genome.json declares a BLAST-only genome; an edit in place does not touch the
+            // directory's mtime, so without this a new "blast_only" waited for an unrelated change.
+            if (is_file("$org_path/$asm/genome.json")) {
+                $parts[] = 'genome_json:' . filemtime("$org_path/$asm/genome.json") . ':' . filesize("$org_path/$asm/genome.json");
+            }
             // Gene_set subdirs sit one level below the assembly dir. On Linux, only direct
             // children affect a directory's mtime, so files changed inside a gene_set subdir
             // (e.g. BLAST indexes rebuilt) must be tracked here explicitly.

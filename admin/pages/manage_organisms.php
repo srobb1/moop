@@ -212,9 +212,14 @@
       foreach ($gaps['gene_sets'] as $gs => $missing) {
           $gene_sets[$gs] = ['missing' => array_map($label, $missing), 'unindexed' => $unindexed[$gs] ?? []];
       }
+      // A BLAST-only genome (genome.json "blast_only": true) has no gene set and no genome row by
+      // design; its one BLAST database is the genome itself, keyed here by the assembly dir name.
+      $blast_only = !empty($gaps['blast_only']);
       return [
           'display'    => $matched ? assembly_label($matched['genome_name'] ?? '', $matched['genome_accession'] ?? '') : $assembly,
-          'mismatch'   => $av && $matched === null,
+          'mismatch'   => $av && $matched === null && !$blast_only,
+          'blast_only' => $blast_only,
+          'genome_unindexed' => $blast_only && !empty($unindexed[$assembly]),
           'has_genome' => $gaps['has_genome'],
           'no_fai'     => $fai['genome_fa_exists'] && !$fai['fai_exists'],
           'gene_sets'  => $gene_sets,
@@ -446,7 +451,8 @@
                        $s = $asm_state($data, $assembly);
                        $asm_chips = [];
                        if ($s['mismatch'])   $asm_chips[] = ['Name not in DB', 'The directory name matches no genome record in the database'];
-                       if (!$s['gene_sets']) $asm_chips[] = ['No gene set',    'No gene-set directory with FASTA files -- no genes will show for this assembly'];
+                       if (!$s['gene_sets'] && !$s['blast_only']) $asm_chips[] = ['No gene set', 'No gene-set directory with FASTA files -- no genes will show for this assembly'];
+                       if ($s['genome_unindexed']) $asm_chips[] = ['Genome not BLAST-indexed', 'A BLAST-only genome with no BLAST index -- it cannot be searched. Build it from the Organism Checklist'];
                        if ($s['no_fai'])     $asm_chips[] = ['Genome not indexed (.fai)', 'genome.fa is present but genome.fa.fai is not -- the sequence viewer needs it'];
                        $asm_js = htmlspecialchars(json_encode($organism)) . ', ' . htmlspecialchars(json_encode($assembly));
                      ?>
@@ -457,6 +463,9 @@
                          <?php endforeach; ?>
                          <?php if (!$asm_chips): ?>
                            <i class="fa fa-check text-success" title="<?= $s['has_genome'] ? 'Genome FASTA and its .fai index present; name matches the database' : 'Name matches the database' ?>"></i>
+                         <?php endif; ?>
+                         <?php if ($s['blast_only']): ?>
+                           <small class="text-muted" title="genome.json declares this assembly BLAST-only: a genome offered for BLAST, with no gene set. A valid data shape, not an error.">genome only (BLAST)</small>
                          <?php endif; ?>
                          <?php if (!$s['has_genome'] && $s['gene_sets']): ?>
                            <small class="text-muted" title="No genome.fa -- transcriptome / proteome data only. A valid data shape, not an error.">no genome</small>

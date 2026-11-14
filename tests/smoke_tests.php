@@ -4825,6 +4825,10 @@ file_put_contents("$_bod/OrgB/asmIdx/genome.fa.nin", "x");          // FASTA rem
 file_put_contents("$_bod/OrgB/asmEmpty/other.fa", ">c1\nACGT\n");   // a FASTA, but not the genome
 file_put_contents("$_bod/OrgB/asmGenes/gs1/transcript.nt.fa", ">t1\nACGT\n");
 file_put_contents("$_bod/NoDb/asmFa/genome.fa", ">c1\nACGT\n");     // organism not on the site
+// genome.json declares each one BLAST-only (item 8) -- asmEmpty too, so it fails on its FASTA alone
+foreach (["OrgB/asmFa", "OrgB/asmIdx", "OrgB/asmEmpty", "OrgB/asmLab", "NoDb/asmFa"] as $_d) {
+    file_put_contents("$_bod/$_d/genome.json", '{"accession": "x", "blast_only": true}');
+}
 $_ge = fn($o, $a, $g, $grp) => ['organism' => $o, 'assembly' => $a, 'gene_set' => $g, 'groups' => [$grp]];
 file_put_contents("$_bmd/organism_assembly_groups.json", json_encode([
     $_ge('OrgB', 'asmFa', 'blast_only', 'PUBLIC'), $_ge('OrgB', 'asmIdx', 'blast_only', 'PUBLIC'), $_ge('OrgB', 'asmEmpty', 'blast_only', 'PUBLIC'),
@@ -4897,6 +4901,45 @@ ok(moop_blast_only_genome('OrgB', 'asmFa') === null
    && moop_assembly_dataset_units($_bod, 'OrgB', 'asmFa') === ['gsNew'],
    'adding a gene set ends the BLAST-only genome: its entry is stale and the gene set is offered instead');
 rmdir("$_bod/OrgB/asmFa/gsNew");
+// Item 8: the declaration is required -- a genome with no gene set that genome.json does not call
+// BLAST-only is an assembly mid-setup, not offered; "blast_only": "yes" is not true.
+@mkdir("$_bod/OrgB/asmSetup", 0700, true);
+file_put_contents("$_bod/OrgB/asmSetup/genome.fa", ">c1\nACGT\n");
+$_und = moop_blast_only_genome('OrgB', 'asmSetup') === null && moop_assembly_dataset_units($_bod, 'OrgB', 'asmSetup') === [];
+file_put_contents("$_bod/OrgB/asmSetup/genome.json", '{"blast_only": "yes"}');
+$_und = $_und && moop_blast_only_genome('OrgB', 'asmSetup') === null;
+file_put_contents("$_bod/OrgB/asmSetup/genome.json", '{"blast_only": true}');
+ok($_und && moop_blast_only_genome('OrgB', 'asmSetup') === "$_bod/OrgB/asmSetup",
+   'a genome-only assembly is BLAST-only only when genome.json declares "blast_only": true');
+ok(moop_plain_name('smed_chr_ref_v1') && moop_plain_name('SmedSxl_v3.1') && !moop_plain_name('..') && !moop_plain_name('.')
+   && !moop_plain_name('a/b') && !moop_plain_name('') && !moop_plain_name(null) && !moop_dataset_visible('OrgB', '..', 'OrgB'),
+   "moop_plain_name(): a name, never '.' or '..' (the regex alone let '..' climb out of organism_data)");
+// Item 8: the organism checks read the declaration -- not an orphaned directory, not an empty
+// assembly, and its own genome BLAST index is the one checked (and built).
+$_st8 = ['genome' => ['pattern' => 'genome.fa'], 'transcript' => ['pattern' => 'transcript.nt.fa']];
+$_mm8 = array_column(validateAssemblyDirectories("$_bod/OrgB/organism.sqlite", "$_bod/OrgB")['mismatches'], 'assembly_dir');
+@mkdir("$_bod/OrgB/asmStray", 0700, true);
+$_mm8s = array_column(validateAssemblyDirectories("$_bod/OrgB/organism.sqlite", "$_bod/OrgB")['mismatches'], 'assembly_dir');
+rmdir("$_bod/OrgB/asmStray");
+ok($_mm8 === ['asmBare'] && $_mm8s === ['asmBare', 'asmStray'], 'a declared BLAST-only assembly is not an orphaned directory; undeclared ones (asmBare, a stray) still are');
+$_g8 = assembly_fasta_gaps("$_bod/OrgB/asmFa", $_st8);
+ok($_g8['blast_only'] === true && assembly_fasta_gaps("$_bod/OrgB/asmGenes", $_st8)['blast_only'] === false,
+   "assembly_fasta_gaps() marks a declared BLAST-only genome");
+$_org8 = fn(array $gaps) => ['path' => "$_bod/OrgB", 'assemblies' => array_keys($gaps), 'has_db' => true,
+    'fasta_validation' => ['assemblies' => array_map(fn($g) => ['gaps' => $g, 'fasta_files' => []], $gaps)]];
+ok(getOrganismOverallStatus('OrgB', $_org8(['asmFa' => $_g8]), [], '', $_st8)['checks']['gene_sets_complete'] === true
+   && getGeneSetFastaGaps(['OrgB' => $_org8(['asmFa' => $_g8])], $_st8)['empty_assemblies'] === [],
+   'a BLAST-only genome is a complete shape: not Incomplete, not listed as an empty assembly');
+$_bv8 = moop_assembly_blast_validation("$_bod/OrgB/asmFa", $_st8);
+ok(count($_bv8['databases']) === 1 && $_bv8['databases'][0]['fasta_path'] === "$_bod/OrgB/asmFa/genome.fa"
+   && !$_bv8['databases'][0]['has_indexes'] && moop_assembly_blast_validation("$_bod/OrgB/asmGenes", $_st8)['databases'][0]['type'] === 'transcript',
+   "its genome's own BLAST index is checked (gene-set assemblies: still their gene sets only)");
+$_ci8 = organism_checklist_blast_issues(['OrgB' => ['blast_validation' => ['asmFa' => $_bv8]]]);
+ok(($_ci8[0]['gene_set'] ?? '') === 'blast_only', "the checklist's Build button names gene set blast_only, not the assembly dir");
+ok(generateBlastIndexes('OrgB', 'asmFa', 'genome.fa', $_bod, '..')['message'] === 'Invalid characters in parameters'
+   && str_contains(generateBlastIndexes('OrgB', 'asmGenes', 'genome.fa', $_bod, 'blast_only')['message'], 'not declared BLAST-only')
+   && generateBlastIndexes('OrgB', 'asmFa', 'genome.fa', $_bod, 'blast_only')['message'] !== 'Gene set directory does not exist',
+   "generateBlastIndexes(): blast_only = the declared assembly's dir; '..' refused");
 $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_bt));
 

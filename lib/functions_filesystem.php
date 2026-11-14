@@ -4,6 +4,8 @@
  * Directory validation, file operations, and assembly directory management
  */
 
+require_once __DIR__ . '/genome_meta.php';   // moop_genome_declares_blast_only()
+
 /**
  * The organism directories under organism_data, sorted: directories only, never a hidden one.
  *
@@ -295,6 +297,9 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
         }
         foreach ($dir_names as $dir) {
             if (isset($known_assembly_dirs[$dir])) continue;
+            // A BLAST-only genome (genome.json "blast_only": true) has no genome row by design:
+            // nothing about it is loaded into the database (ASSEMBLY_WITHOUT_GENE_SET_PLAN item 8).
+            if (moop_genome_declares_blast_only("$organism_data_dir/$dir")) continue;
             $result['valid'] = false;
             $result['mismatches'][] = [
                 'type'         => 'orphaned_assembly_directory',
@@ -323,7 +328,7 @@ function validateAssemblyDirectories($dbFile, $organism_data_dir) {
  *
  * @param string $assembly_path  Assembly directory
  * @param array  $sequence_types ConfigManager::getSequenceTypes()
- * @return array{has_genome: bool, gene_sets: array<string, list<string>>}
+ * @return array{has_genome: bool, gene_sets: array<string, list<string>>, blast_only: bool}
  *         gene_sets maps each gene-set dir name to the type KEYS it lacks (empty list =
  *         complete). No entries = the assembly holds no gene set at all.
  */
@@ -332,6 +337,7 @@ function assembly_fasta_gaps(string $assembly_path, array $sequence_types): arra
     $result = [
         'has_genome' => $genome_pattern !== '' && file_exists("$assembly_path/$genome_pattern"),
         'gene_sets'  => [],
+        'blast_only' => false,
     ];
     $entries = is_dir($assembly_path) ? array_diff(scandir($assembly_path), ['.', '..']) : [];
     sort($entries);
@@ -345,6 +351,10 @@ function assembly_fasta_gaps(string $assembly_path, array $sequence_types): arra
         }
         $result['gene_sets'][$gs] = $missing;
     }
+    // A BLAST-only genome (genome.json declares it) holds no gene set by design -- a complete
+    // shape, not an empty assembly. A declared one that has since gained a gene set is graded as
+    // that gene set's assembly (moop_blast_only_genome() agrees: the gene set takes over).
+    $result['blast_only'] = !$result['gene_sets'] && moop_genome_declares_blast_only($assembly_path);
     return $result;
 }
 

@@ -80,8 +80,8 @@ function organism_checklist_organisms(string $organism_data): array
 
 /**
  * FASTA files whose BLAST indexes are missing, read from the organism cache's
- * blast_validation (validateBlastIndexFiles(), aggregated across each assembly's gene
- * sets). Each row also carries whether the web server can build the index there --
+ * blast_validation (moop_assembly_blast_validation(): each assembly's gene sets, or a
+ * BLAST-only genome's own index). Each row also carries whether the web server can build the index there --
  * checked live, and only for the rows that need it -- so the page can offer
  * "Generate now" or explain why not.
  */
@@ -93,10 +93,13 @@ function organism_checklist_blast_issues(array $cache_data): array
             foreach ($bv['databases'] ?? [] as $db) {
                 if (!empty($db['has_indexes'])) continue;
                 $gs_fullpath = dirname($db['fasta_path']);
+                // The FASTA sits in the assembly directory only for a BLAST-only genome
+                // (moop_assembly_blast_validation()); its gene set is the word blast_only.
+                $at_assembly = basename($gs_fullpath) === $asm && basename(dirname($gs_fullpath)) === $org;
                 $blast_issues[] = [
                     'organism'    => $org,
                     'assembly'    => $asm,
-                    'gene_set'    => basename($gs_fullpath),
+                    'gene_set'    => $at_assembly ? MOOP_BLAST_ONLY : basename($gs_fullpath),
                     'fasta'       => $db['fasta'],
                     'missing'     => $db['missing_indexes'] ?? [],
                     'db_type'     => sequence_type_blast_dbtype($db['type'] ?? ''),

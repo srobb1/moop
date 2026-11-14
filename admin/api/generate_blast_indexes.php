@@ -16,11 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Get parameters
 $organism  = $_POST['organism']   ?? '';
 $assembly  = $_POST['assembly']   ?? '';
-$gene_set  = $_POST['gene_set']   ?? 'v1';
+$gene_set  = $_POST['gene_set']   ?? '';   // a gene-set dir, or 'blast_only' (the assembly's own genome)
 $fasta_file = $_POST['fasta_file'] ?? '';
 
-// Validate parameters
-if (empty($organism) || empty($assembly) || empty($fasta_file)) {
+// Validate parameters. No invented 'v1' when gene_set is absent: that indexed a gene set nobody named.
+if (empty($organism) || empty($assembly) || $gene_set === '' || empty($fasta_file)) {
     echo json_encode([
         'success' => false,
         'message' => 'Missing required parameters'

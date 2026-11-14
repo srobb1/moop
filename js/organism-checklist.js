@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       const organism = this.getAttribute('data-organism');
       const assembly = this.getAttribute('data-assembly');
-      const geneSet  = this.getAttribute('data-gene-set') || 'v1';
+      const geneSet  = this.getAttribute('data-gene-set');   // a gene-set dir, or 'blast_only'
       const fasta = this.getAttribute('data-fasta');
 
       if (!confirm(`Generate BLAST indexes for ${organism}/${assembly}/${geneSet}/${fasta}?\n\nThis may take a few minutes.`)) {

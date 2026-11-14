@@ -504,12 +504,11 @@ function moop_dataset_visible(string $organism, string $assembly, string $gene_s
     $key = "$organism\0$assembly\0$gene_set\0" . get_access_level() . "\0" . (get_username() ?? '');
     if (!isset($memo[$key])) {
         $ok = false;
-        $safe = '/^[A-Za-z0-9_.-]+$/';
         if ($gene_set === MOOP_BLAST_ONLY) {
             // The assembly itself, as a BLAST-only genome (moop_blast_only_genome()).
             $ok = moop_blast_only_genome($organism, $assembly) !== null
                && has_gene_set_access($organism, $assembly, MOOP_BLAST_ONLY);
-        } elseif (preg_match($safe, $organism) && preg_match($safe, $assembly) && preg_match($safe, $gene_set)) {
+        } elseif (moop_plain_name($organism) && moop_plain_name($assembly) && moop_plain_name($gene_set)) {
             $dir = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . "/$organism/$assembly/$gene_set";
             $ok = is_dir($dir) && has_gene_set_access($organism, $assembly, $gene_set);
         }
@@ -535,7 +534,9 @@ if (!defined('MOOP_BLAST_ONLY')) define('MOOP_BLAST_ONLY', 'blast_only');
  * step 6; notes/ASSEMBLY_WITHOUT_GENE_SET_PLAN.md). Valid only under an organism that is already
  * on the site (has organism.sqlite) and when the assembly directory holds the genome FASTA
  * (sequence_types.genome.pattern) or its BLAST index (the FASTA may be removed after indexing),
- * and no gene-set subdirectory (then it is that gene set's genome, not a BLAST-only one).
+ * no gene-set subdirectory (then it is that gene set's genome, not a BLAST-only one), and its
+ * genome.json declares it ("blast_only": true -- moop_genome_declares_blast_only(); item 8, so an
+ * assembly mid-setup, genome copied and gene set still coming, is not offered as one).
  *
  * Access is the ordinary gene-set rule with gene_set 'blast_only': the entry's own groups, a
  * user's {asm: true}, '*', or an explicit 'blast_only' in their list (moop_user_access_allows()).
@@ -544,10 +545,7 @@ if (!defined('MOOP_BLAST_ONLY')) define('MOOP_BLAST_ONLY', 'blast_only');
  */
 if (!function_exists('moop_blast_only_genome')) {
 function moop_blast_only_genome(string $organism, string $assembly): ?string {
-    $safe = '/^[A-Za-z0-9_.-]+$/';
-    if (!preg_match($safe, $organism) || !preg_match($safe, $assembly) || $assembly === '.' || $assembly === '..') {
-        return null;
-    }
+    if (!moop_plain_name($organism) || !moop_plain_name($assembly)) return null;
     $config  = ConfigManager::getInstance();
     $org_dir = rtrim($config->getPath('organism_data'), '/') . "/$organism";
     $asm_dir = "$org_dir/$assembly";
@@ -556,6 +554,8 @@ function moop_blast_only_genome(string $organism, string $assembly): ?string {
     // (getBlastDatabases() looks one level up); a leftover blast_only entry would list it twice, so
     // it goes stale instead and Manage Groups offers to delete it.
     if (glob("$asm_dir/*", GLOB_ONLYDIR)) return null;
+    require_once __DIR__ . '/../lib/genome_meta.php';
+    if (!moop_genome_declares_blast_only($asm_dir)) return null;
     $pattern = $config->getSequenceTypes()['genome']['pattern'] ?? 'genome.fa';
     return (is_file("$asm_dir/$pattern") || is_file("$asm_dir/$pattern.nin")) ? $asm_dir : null;
 }

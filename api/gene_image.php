@@ -25,7 +25,7 @@ function gene_image_404(): void {
 $organism = (string) ($_GET['organism'] ?? '');
 $file     = (string) ($_GET['file'] ?? '');
 $key      = (string) ($_GET['key'] ?? '');
-if (!preg_match('/^[A-Za-z0-9_.-]+$/', $organism) || ($file === '' && $key === '') || strpos($file . $key, "\0") !== false) gene_image_404();
+if (!moop_plain_name($organism) || ($file === '' && $key === '') || strpos($file . $key, "\0") !== false) gene_image_404();
 
 if ($key !== '') {
     // ?key=<analysis>: that analysis's key image (a cluster map) -- visible when one of its images is.
