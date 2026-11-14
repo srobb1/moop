@@ -21,12 +21,11 @@ include_once __DIR__ . '/../includes/layout.php';
 
 $organism_data = $config->getPath('organism_data');
 $site          = $config->getString('site');
-$user_level    = get_access_level();
 $req           = fn(string $k) => $_POST[$k] ?? $_GET[$k] ?? null;
 
 // 1. Gene set: only those with expression data this visitor may see. A request naming any other
 //    is treated as naming none -- the names never reach a path unchecked.
-$gene_sets = moop_expression_gene_sets($organism_data, $user_level);
+$gene_sets = moop_expression_gene_sets($organism_data);
 $chosen = null;
 foreach ($gene_sets as $gs) {
     if ($gs['organism'] === (string)$req('organism') && $gs['assembly'] === (string)$req('assembly')
@@ -41,7 +40,7 @@ if ($chosen) {
     $overrides = moop_expression_load_overrides(rtrim($config->getPath('metadata_path'), '/') . '/expression_overrides.json');
     $key       = "{$chosen['organism']}/{$chosen['assembly']}/{$chosen['gene_set']}/";
     $experiments = moop_expression_bundle_experiments(
-        moop_expression_bundle_dir($chosen['organism'], $chosen['assembly'], $chosen['gene_set']), $key, $user_level, $overrides);
+        moop_expression_bundle_dir($chosen['organism'], $chosen['assembly'], $chosen['gene_set']), $key, $overrides);
 }
 
 // 3. Experiments: the ticked ones -- or all of them when they were not chosen on this form (first

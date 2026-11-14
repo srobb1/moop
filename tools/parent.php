@@ -580,10 +580,9 @@ if ($download_file_flag && !empty($sequence_type)) {
 // set's expression bundles (plain files copied over from the compute box; this page only reads).
 // Spec: notes/EXPRESSION_BUNDLE_SPEC.md. No bundles → no section. Gene-set access is already
 // settled — this feature was loaded through $accessible_gene_set_ids — and each experiment's own
-// access level (with metadata/expression_overrides.json applied) is checked inside.
+// access (access_rules.json, else its bundle's access_level) is checked inside.
 require_once __DIR__ . '/../lib/expression_functions.php';
-$__expr_data = moop_expression_gene_data($organism_name, $genome_accession, $gene_set_name,
-                                         $feature_uniquename, get_access_level());
+$__expr_data = moop_expression_gene_data($organism_name, $genome_accession, $gene_set_name, $feature_uniquename);
 $expression_summary = $__expr_data
     ? moop_expression_summarize($__expr_data['experiments'], $__expr_data['values']) : null;
 

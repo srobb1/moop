@@ -98,7 +98,7 @@ Thumbnails are made on first request into `cache_path` (regenerable → cache, n
 | `kind` | `in situ`, `feature plot`, `violin plot`, `movie` | |
 | `accession` | `SMED30001362` | gene/transcript ID as the source has it; reaches other gene sets through the crosswalk |
 | `assembly`, `gene_set` | `smed_20140614`, `smed_20140614` | **the data set the image belongs to — decides who may see it (§3)** |
-| `analysis` | `Davies 2017 embryo staging` | optional; reserved for analysis-level access rules later |
+| `analysis` | `davies_2017` | optional; a plain name (letters, digits, `_ . -`, else the image is left out). Its access key is `images:<organism>/<analysis>` in `metadata/access_rules.json` — an analysis can be limited to logged-in / internal / admins, never wider than its gene set (`notes/PERMISSIONS_PLAN.md`) |
 | `stage` | `PLANA:0000003` | ontology ID |
 | `terms` | `PLANA:0004517;PLANA:0000023` | anatomy ontology IDs, `;`-separated |
 | `caption` | text | `caption_<lang>` columns for other languages |

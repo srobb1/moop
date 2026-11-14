@@ -568,7 +568,10 @@ function moop_expression_load_overrides(string $file): ?array
  * "keep the default". Unlike ConfigManager, a key outside the list is not silently dropped from
  * view: scripts/check_expression.php reports it (moop_expression_override_problems()).
  */
-const MOOP_EXPRESSION_OVERRIDABLE = ['label', 'access_level', 'detect_threshold', 'summary', 'citation', 'unit'];
+// access_level is NOT here: who may see an experiment is set in access_rules.json (lib/access_rules.php,
+// key "expression:{org}/{asm}/{gene_set}/{experiment}"), one place for every kind of analysis. An override
+// that still carries access_level makes its experiment admins-only until it is moved (never wider).
+const MOOP_EXPRESSION_OVERRIDABLE = ['label', 'detect_threshold', 'summary', 'citation', 'unit'];
 
 function moop_expression_apply_override(array $meta, array $override): array
 {
@@ -607,17 +610,19 @@ function moop_expression_override_problems(array $overrides, string $key_prefix,
 /**
  * The experiments of one gene set that this reader may see, in folder-name order.
  *
+ * Only the EXPERIMENT's own rule is checked here (moop_analysis_allows(): access_rules.json, else the
+ * bundle's access_level); callers have already settled the gene set itself.
+ *
  * Each needs experiment.json (with a label), samples.tsv and tpm.tsv whose header lists exactly the
  * samples in samples.tsv. Overrides for "{$key_prefix}{slug}" replace experiment.json fields.
  *
  * @param array|null $overrides from moop_expression_load_overrides(); null = fail closed
  * @return array<int, array> index => ['slug','label','access_level','detect_threshold','meta','samples','tpm_file','tpm_columns']
  */
-function moop_expression_bundle_experiments(string $dir, string $key_prefix, string $user_level, ?array $overrides): array
+function moop_expression_bundle_experiments(string $dir, string $key_prefix, ?array $overrides): array
 {
-    require_once __DIR__ . '/functions_access.php';
+    require_once __DIR__ . '/access_rules.php';
     if ($overrides === null || !is_dir($dir)) return [];
-    $granted = granted_access_level_value($user_level);
 
     $dirs = glob("$dir/*", GLOB_ONLYDIR) ?: [];
     sort($dirs, SORT_STRING);
@@ -632,9 +637,11 @@ function moop_expression_bundle_experiments(string $dir, string $key_prefix, str
             $meta = moop_expression_apply_override($meta, $ov);
             if (trim((string)($meta['label'] ?? '')) === '') throw new RuntimeException('experiment.json has no label');
 
-            // Access first: an experiment this reader may not see is not even opened.
-            $access = (string)($meta['access_level'] ?? '');
-            if ($granted < required_access_level_value($access)) continue;
+            // Access first: an experiment this reader may not see is not even opened. The bundle's level is
+            // only the default; an override still naming one fails closed (see MOOP_EXPRESSION_OVERRIDABLE).
+            $access  = (string)($meta['access_level'] ?? '');
+            $default = isset($ov['access_level']) ? 'admins' : moop_access_level_to_setting($access);
+            if (!moop_analysis_allows('expression:' . $key_prefix . $slug, $default)) continue;
 
             $tpm = "$d/tpm.tsv";
             $fh  = @fopen($tpm, 'r');
@@ -718,14 +725,14 @@ function moop_expression_bundle_values(array $experiment, array $features): arra
  * @return array|null ['experiments' => …, 'values' => id => vals]; null = no bundles, nothing
  *                    visible, or overrides unreadable (the page then shows no section)
  */
-function moop_expression_gene_data(string $organism, string $assembly, string $gene_set, string $gene, string $user_level): ?array
+function moop_expression_gene_data(string $organism, string $assembly, string $gene_set, string $gene): ?array
 {
     $dir = moop_expression_bundle_dir($organism, $assembly, $gene_set);
     if (!is_dir($dir)) return null;
     $overrides = moop_expression_load_overrides(
         rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/expression_overrides.json');
 
-    $experiments = moop_expression_bundle_experiments($dir, "$organism/$assembly/$gene_set/", $user_level, $overrides);
+    $experiments = moop_expression_bundle_experiments($dir, "$organism/$assembly/$gene_set/", $overrides);
     $values = [];
     foreach ($experiments as $i => $e) {
         try {
@@ -781,7 +788,7 @@ const MOOP_EXPRESSION_TOOL_MAX_GENES = 200;
  *
  * @return list<array{organism: string, assembly: string, gene_set: string, genome_name: string, experiments: int}>
  */
-function moop_expression_gene_sets(string $organism_data, string $user_level): array
+function moop_expression_gene_sets(string $organism_data): array
 {
     require_once __DIR__ . '/../includes/access_control.php';
     require_once __DIR__ . '/functions_access.php';   // getAssemblyInfo()
@@ -791,7 +798,7 @@ function moop_expression_gene_sets(string $organism_data, string $user_level): a
     foreach (glob(rtrim($organism_data, '/') . '/*/*/*/expression', GLOB_ONLYDIR) ?: [] as $dir) {
         [$organism, $assembly, $gene_set] = array_slice(explode('/', $dir), -4, 3);
         if (!has_gene_set_access($organism, $assembly, $gene_set)) continue;
-        $n = count(moop_expression_bundle_experiments($dir, "$organism/$assembly/$gene_set/", $user_level, $overrides));
+        $n = count(moop_expression_bundle_experiments($dir, "$organism/$assembly/$gene_set/", $overrides));
         if (!$n) continue;
         // The genome's name, for the shared gene-set label (gene_set_label()).
         [, $genome_name] = getAssemblyInfo($assembly, dirname($dir, 4) . "/$organism/organism.sqlite");

@@ -2055,24 +2055,33 @@ $_mk('g_typo', ['experiment.json' => '{"label":"Typo","access_level":"COLABORATO
     'samples.tsv' => "sample_id\tgroup\nS1\tx\n", 'tpm.tsv' => "gene_id\tS1\ng1\t5\n"]);
 $_p = 'Org/Asm/GS/';
 
-$_be = moop_expression_bundle_experiments($_root, $_p, 'PUBLIC', []);
+// Who sees an experiment comes from the session now (moop_analysis_allows), not an argument.
+$_bx = function (string $level, ?array $ov = []) use ($_root, $_p) {
+    $keep = $_SESSION ?? [];
+    $_SESSION = ['access_level' => $level, 'access' => [], 'username' => strtolower($level)];
+    $r = moop_expression_bundle_experiments($_root, $_p, $ov);
+    $_SESSION = $keep;
+    return $r;
+};
+$_be = $_bx('PUBLIC');
 ok(array_column($_be, 'slug') === ['a_dev', 'f_mixedcase'], 'bundles: PUBLIC sees the public, well-formed experiments ("Public" matches case-insensitively) — broken, unlabelled and half-copied ones are skipped');
-ok(array_column(moop_expression_bundle_experiments($_root, $_p, 'COLLABORATOR', []), 'slug') === ['a_dev', 'b_secret', 'f_mixedcase'], 'bundles: COLLABORATOR also sees the COLLABORATOR one');
-ok(!in_array('g_typo', array_column(moop_expression_bundle_experiments($_root, $_p, 'IP_IN_RANGE', []), 'slug'), true)
-   && in_array('g_typo', array_column(moop_expression_bundle_experiments($_root, $_p, 'ADMIN', []), 'slug'), true), 'bundles: a misspelled access level fails closed (ADMIN only)');
+ok(array_column($_bx('COLLABORATOR'), 'slug') === ['a_dev', 'b_secret', 'f_mixedcase'], 'bundles: COLLABORATOR also sees the COLLABORATOR one');
+ok(!in_array('g_typo', array_column($_bx('IP_IN_RANGE'), 'slug'), true)
+   && in_array('g_typo', array_column($_bx('ADMIN'), 'slug'), true), 'bundles: a misspelled access level fails closed (ADMIN only)');
 $_bv = moop_expression_bundle_values($_be[0], ['g1', 'g2', 'g9']);
 ok($_bv['g1'] === [2.0, 250.0], 'bundles: values come back in samples.tsv order (S2, S1), not tpm.tsv column order');
 ok($_bv['g2'] === [0.0, null] && !isset($_bv['g9']), 'bundles: NA is null, 0 is 0, an absent gene is absent');
 
-$_ov = [$_p . 'a_dev' => ['access_level' => 'COLLABORATOR']];
-ok(array_column(moop_expression_bundle_experiments($_root, $_p, 'PUBLIC', $_ov), 'slug') === ['f_mixedcase'], 'override: setting a PUBLIC experiment to COLLABORATOR hides it from PUBLIC');
-$_ov2 = [$_p . 'b_secret' => ['access_level' => 'PUBLIC', 'label' => 'Renamed', 'assay' => 'overridden']];
-$_be2 = moop_expression_bundle_experiments($_root, $_p, 'PUBLIC', $_ov2);
-ok(array_column($_be2, 'label') === ['Dev', 'Renamed', 'Mixed'], 'override: label and access_level replace the bundle\'s values');
+$_ov = [$_p . 'b_secret' => ['access_level' => 'PUBLIC']];
+ok(array_column($_bx('PUBLIC', $_ov), 'slug') === ['a_dev', 'f_mixedcase'] && in_array('b_secret', array_column($_bx('ADMIN', $_ov), 'slug'), true),
+   'override: access_level is no longer overridable (access_rules.json is) -- an override still naming it makes the experiment admins-only, never wider');
+$_ov2 = [$_p . 'b_secret' => ['label' => 'Renamed', 'assay' => 'overridden']];
+$_be2 = $_bx('COLLABORATOR', $_ov2);
+ok(array_column($_be2, 'label') === ['Dev', 'Renamed', 'Mixed'], 'override: label replaces the bundle\'s value');
 ok($_be2[1]['meta']['assay'] === 'bulk_rna', 'override: a field outside the allowlist (assay) changes nothing');
-ok(moop_expression_bundle_experiments($_root, $_p, 'PUBLIC', [$_p . 'a_dev' => ['access_level' => '', 'label' => null]])[0]['label'] === 'Dev',
+ok($_bx('PUBLIC', [$_p . 'a_dev' => ['label' => null]])[0]['label'] === 'Dev',
    'override: an empty value keeps the default (the config_editable.json convention)');
-ok(moop_expression_bundle_experiments($_root, $_p, 'ADMIN', null) === [], 'override: an unreadable overrides file shows NOTHING — fail closed, never back to the bundle default');
+ok($_bx('ADMIN', null) === [], 'override: an unreadable overrides file shows NOTHING — fail closed, never back to the bundle default');
 file_put_contents("$_xd/ov_bad.json", '{"not json');
 ok(moop_expression_load_overrides("$_xd/ov_bad.json") === null && moop_expression_load_overrides("$_xd/none.json") === [],
    'override: a corrupt file loads as null (fail closed); a missing file is simply no overrides');
@@ -3965,6 +3974,51 @@ $_as('PUBLIC', [], 'anon5'); $_v1 = moop_page_for_visitor('rnai') !== null;   //
 file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['Lab']]]));
 $_as('PUBLIC', [], 'anon6'); $_v2 = moop_page_for_visitor('rnai') === null;
 ok($_v1 && $_v2, 'pages: "same as a whole assembly" follows that assembly');
+
+// Analyses (step 4): a rule in access_rules.json "analyses", keyed kind:name, can only NARROW the data set.
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['PUBLIC']]]));
+$_ak = 'images:Org/davies';
+$_as('PUBLIC', [], 'an1');
+ok(moop_dataset_visible('Org', 'asm', 'gs', $_ak) && moop_analysis_rule($_ak) === ['visible_to' => 'dataset', 'set_here' => false],
+   'analyses: no rule = same as its data set (a public gene set shows its images to everyone)');
+ok(moop_analysis_rule_set($_ak, ['visible_to' => 'internal'])['ok'], 'analyses: a rule is saved');
+$_as('PUBLIC', [], 'an2');                                $_v1 = !moop_dataset_visible('Org', 'asm', 'gs', $_ak) && moop_dataset_visible('Org', 'asm', 'gs');
+$_as('COLLABORATOR', ['Org' => ['asm' => ['gs']]], 'an3'); $_v2 = !moop_dataset_visible('Org', 'asm', 'gs', $_ak);
+$_as('IP_IN_RANGE', [], 'an4');                           $_v3 = moop_dataset_visible('Org', 'asm', 'gs', $_ak);
+$_as('ADMIN', [], 'an5');                                 $_v4 = moop_dataset_visible('Org', 'asm', 'gs', $_ak);
+ok($_v1 && $_v2 && $_v3 && $_v4, 'analyses: "internal" hides the analysis (not its gene set) from the public and collaborators; internal network and admins see it');
+// Narrowest wins: a private gene set stays private whatever the analysis says.
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['Lab']]]));
+moop_analysis_rule_set($_ak, ['visible_to' => 'logged_in']);
+$_as('COLLABORATOR', ['Other' => ['x' => ['y']]], 'an6'); $_v1 = !moop_dataset_visible('Org', 'asm', 'gs', $_ak);
+$_as('COLLABORATOR', ['Org' => ['asm' => ['gs']]], 'an7'); $_v2 = moop_dataset_visible('Org', 'asm', 'gs', $_ak);
+ok($_v1 && $_v2, 'analyses: narrowest wins -- "logged in" on a private gene set is still only those with the gene set');
+ok(!moop_analysis_rule_set($_ak, ['visible_to' => 'everyone'])['ok'] && moop_analysis_rule($_ak)['visible_to'] === 'logged_in',
+   'analyses: "everyone" is refused (an analysis can never be opened wider than its data set)');
+file_put_contents(moop_access_rules_file(), json_encode(['analyses' => [$_ak => ['visible_to' => 'everyone']]]));
+ok(moop_analysis_rule($_ak)['visible_to'] === 'admins', 'analyses: a stored "everyone" (or anything unknown) reads as admins only');
+unlink(moop_access_rules_file());
+$_as('IP_IN_RANGE', [], 'an9');
+ok(!moop_dataset_visible('Org', 'asm', 'gs', 'images:../x') && !moop_dataset_visible('Org', 'asm', 'gs', 'nosuchkind:x')
+   && !moop_dataset_visible('Org', 'asm', 'gs', 'expression:Org/asm') && !moop_analysis_rule_set('images:a/../b', ['visible_to' => 'admins'])['ok'],
+   'analyses: a malformed key (traversal, unknown kind, wrong number of parts) fails closed and is never saved');
+// Expression: the bundle's access_level is the default; a rule replaces it; a rule equal to the default is not stored.
+@mkdir("$_cp/orgs/Org/asm/gs/expression/exp1", 0777, true);
+file_put_contents("$_cp/orgs/Org/asm/gs/expression/exp1/experiment.json", '{"label":"E","access_level":"COLLABORATOR"}');
+$_ek = 'expression:Org/asm/gs/exp1';
+ok(moop_analysis_default($_ek) === 'logged_in' && moop_analysis_default('expression:Org/asm/gs/none') === 'admins' && moop_analysis_default('clade:x') === 'dataset',
+   'analyses: expression\'s default is its bundle access_level (missing = admins); other kinds default to their data set');
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['PUBLIC']]]));
+$_as('PUBLIC', [], 'an10'); $_v1 = !moop_dataset_visible('Org', 'asm', 'gs', $_ek);
+moop_analysis_rule_set($_ek, ['visible_to' => 'dataset']);
+$_as('PUBLIC', [], 'an11'); $_v2 = moop_dataset_visible('Org', 'asm', 'gs', $_ek);
+moop_analysis_rule_set($_ek, ['visible_to' => 'logged_in']);
+ok($_v1 && $_v2 && !isset(moop_access_rules()['analyses'][$_ek]), 'analyses: an admin can open a bundle\'s COLLABORATOR experiment to its gene set\'s readers; setting it back to the bundle\'s own level stores nothing');
+file_put_contents(moop_access_rules_file(), '{broken');
+$_as('IP_IN_RANGE', [], 'an12');
+ok(!moop_dataset_visible('Org', 'asm', 'gs', 'clade:x') && moop_dataset_visible('Org', 'asm', 'gs'),
+   'analyses: an unreadable access_rules.json makes every analysis admins-only (fail closed); data sets are unaffected');
+unlink(moop_access_rules_file());
 $_SESSION = $_apsess;
 $_cprp->setValue($_cpcfg, $_cpsaved);
 exec('rm -rf ' . escapeshellarg($_cp));
@@ -4625,6 +4679,15 @@ $_ft = $_e2 ? array_map(fn($l) => explode("\t", $l), explode("\n", trim(moop_cla
 $_fh = array_flip($_ft[0]);
 ok(count($_ft) === 2 && !isset($_fh['kind']) && !isset($_fh['support']) && ($_ft[1][$_fh['gene2_id'] ?? 0] ?? '') === 'h5'
    && ($_ft[1][$_fh['relationship'] ?? 0] ?? '') === 'family member (not ortholog)', 'the family download: h5 only, no ortholog columns');
+// The card passes its analysis key (clade:<name>): a rule on one clade hides that clade's card only.
+require_once "$BASE/lib/access_rules.php";
+$_c['metadata_path'] = $_cd; $_rp->setValue($_cfg, $_c);
+moop_analysis_rule_set('clade:one', ['visible_to' => 'admins']);
+$_keep = $_SESSION; $_SESSION = ['access_level' => 'IP_IN_RANGE', 'access' => [], 'username' => 'ipclade'];
+$_v1 = moop_clade_homologs_in($_open['one'], 'one', 'OrgA', 'g1', null) === [] && moop_clade_homologs_in($_open['two'], 'two', 'OrgA', 'g1', null) !== [];
+$_SESSION = $_keep;
+ok($_v1 && moop_clade_homologs_in($_open['one'], 'one', 'OrgA', 'g1', null) !== [], 'clade rule: an admins-only clade shows no card to the internal network (other clades still do); an admin sees it');
+@unlink(moop_access_rules_file());
 $_rp->setValue($_cfg, $_saved);
 foreach (['one', 'two', 'three', 'four'] as $_x) { @unlink("$_cd/.clades/$_x/homologs.sqlite"); @rmdir("$_cd/.clades/$_x"); }
 foreach (['OrgA/a1/gs1', 'OrgA/a1', 'OrgA', 'OrgB/b1/gs2', 'OrgB/b1', 'OrgB', '.clades', ''] as $_x) @rmdir("$_cd/$_x");

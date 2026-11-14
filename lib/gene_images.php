@@ -33,6 +33,10 @@ function moop_images_org_dir(string $organism): string {
     return rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/'
          . preg_replace('/[^A-Za-z0-9_.-]/', '', $organism);
 }
+/** An image analysis's access key (lib/access_rules.php); '' for images with no analysis (data set only). */
+function moop_image_analysis_key(string $organism, string $analysis): string {
+    return $analysis === '' ? '' : "images:$organism/$analysis";
+}
 function moop_images_dir(string $organism): string  { return moop_images_org_dir($organism) . '/.images'; }
 function moop_images_file(string $organism): string { return moop_images_org_dir($organism) . '/gene_images.sqlite'; }
 
@@ -81,8 +85,8 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
                      captions TEXT, pmid TEXT, citation TEXT, credit TEXT, license TEXT, bytes INTEGER, poster TEXT)');
         $db->exec('CREATE TABLE image_accession (image_id INTEGER NOT NULL, accession TEXT NOT NULL, accession_lc TEXT NOT NULL)');
         $db->exec('CREATE TABLE image_term (image_id INTEGER NOT NULL, term_id TEXT NOT NULL)');
-        // One row per analysis (images/analyses.tsv): what the gene page titles a section with. Also
-        // the future home of analysis-level access rules (moop_dataset_visible's $analysis).
+        // One row per analysis (images/analyses.tsv): what the gene page titles a section with. Who may
+        // see an analysis is NOT here: access_rules.json, key moop_image_analysis_key() (lib/access_rules.php).
         // key_image: one image that explains the analysis's other images (a single-cell cluster map),
         // shown first on gene pages; served by api/gene_image.php?key=<analysis>.
         $db->exec('CREATE TABLE analysis (analysis TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT,
@@ -117,6 +121,9 @@ function moop_images_build(string $organism, array $known_terms = [], ?string $t
             if ($asm === '' || $gs === '') { $note('no data set (assembly / gene set)', $file); continue; }
             if (!isset($datasets["$asm/$gs"])) $datasets["$asm/$gs"] = is_dir("$org_dir/$asm/$gs");
             if (!$datasets["$asm/$gs"]) $note('data set not on this site (kept, shown to nobody until it is)', "$asm/$gs");
+            // The analysis name becomes part of its access key (images:<organism>/<analysis>), so it must be
+            // a plain name -- one that is not would make every image of it unreachable, so say so instead.
+            if ($get('analysis') !== '' && !preg_match('/^[A-Za-z0-9_.-]+$/', $get('analysis'))) { $note('analysis name is not letters, digits, _ . - (image left out)', $get('analysis')); continue; }
             $accs = array_values(array_filter(array_map('trim', explode(';', $get('accession'))), 'strlen'));
             if (!$accs) { $note('no gene or transcript ID', $file); continue; }
             // A stage cell may list several stages (a movie across S3-S5): the first is the image's stage
@@ -225,7 +232,7 @@ function moop_image_visible_row(string $organism, string $file): ?array {
     $st = $db->prepare('SELECT * FROM image WHERE file = ?');
     $st->execute([$file]);
     $row = $st->fetch(PDO::FETCH_ASSOC);
-    if (!$row || !moop_dataset_visible($organism, $row['assembly'], $row['gene_set'], (string) $row['analysis'])) return null;
+    if (!$row || !moop_dataset_visible($organism, $row['assembly'], $row['gene_set'], moop_image_analysis_key($organism, (string) $row['analysis']))) return null;
     return $row;
 }
 
@@ -273,7 +280,7 @@ function moop_images_for_terms(string $organism, array $term_ids, int $limit = 5
 
 /** Access filter + attach accessions/terms + stable order (stage, then file). */
 function moop_images_finish(PDO $db, string $organism, array $rows, int $limit): array {
-    $rows = array_filter($rows, fn($r) => moop_dataset_visible($organism, $r['assembly'], $r['gene_set'], (string) $r['analysis']));
+    $rows = array_filter($rows, fn($r) => moop_dataset_visible($organism, $r['assembly'], $r['gene_set'], moop_image_analysis_key($organism, (string) $r['analysis'])));
     usort($rows, fn($a, $b) => [(string) $a['stage_id'], $a['file']] <=> [(string) $b['stage_id'], $b['file']]);
     $rows = array_slice($rows, 0, $limit);
     if (!$rows) return [];
@@ -359,7 +366,7 @@ function moop_image_key_path(string $organism, string $analysis): ?string {
     $st = $db->prepare('SELECT DISTINCT assembly, gene_set FROM image WHERE analysis = ?');
     $st->execute([$analysis]);
     foreach ($st as $r) {
-        if (moop_dataset_visible($organism, $r['assembly'], $r['gene_set'], $analysis)) return moop_image_path($organism, $key);
+        if (moop_dataset_visible($organism, $r['assembly'], $r['gene_set'], moop_image_analysis_key($organism, $analysis))) return moop_image_path($organism, $key);
     }
     return null;
 }
@@ -381,12 +388,24 @@ function moop_images_for_analysis(string $organism, string $analysis, array $kin
     return moop_images_finish($db, $organism, $rows, $limit);
 }
 
-/** The analysis rows (title, description, paper, key image): [analysis => row]. */
+/**
+ * The analysis rows (title, description, paper, key image) THIS VISITOR may see: [analysis => row].
+ * An analysis is listed only if it has images in a data set the visitor may see and its own rule
+ * allows them -- a restricted analysis's title is not shown either (private reads as missing).
+ */
 function moop_images_analyses(string $organism): array {
     $db = moop_images_open($organism);
     if (!$db) return [];
+    $visible = [];
+    foreach ($db->query('SELECT DISTINCT analysis, assembly, gene_set FROM image WHERE analysis IS NOT NULL') as $r) {
+        if (!isset($visible[$r['analysis']]) && moop_dataset_visible($organism, $r['assembly'], $r['gene_set'], moop_image_analysis_key($organism, $r['analysis']))) {
+            $visible[$r['analysis']] = true;
+        }
+    }
     $out = [];
-    foreach ($db->query('SELECT * FROM analysis ORDER BY sort, title') as $r) $out[$r['analysis']] = $r;
+    foreach ($db->query('SELECT * FROM analysis ORDER BY sort, title') as $r) {
+        if (isset($visible[$r['analysis']])) $out[$r['analysis']] = $r;
+    }
     return $out;
 }
 

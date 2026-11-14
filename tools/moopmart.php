@@ -142,7 +142,7 @@ $organism_groups = moop_organism_groups_map(moop_visible_group_entries(getGroupD
 // Gene sets this visitor can open that have expression data, as "org|asm|gene_set" keys (the
 // source-key format). Step 4 offers "Send to Expression" only for these: a heatmap is one gene set.
 $expression_gene_sets = array_map(fn($gs) => "{$gs['organism']}|{$gs['assembly']}|{$gs['gene_set']}",
-    moop_expression_gene_sets($config->getPath('organism_data'), get_access_level()));
+    moop_expression_gene_sets($config->getPath('organism_data')));
 
 // Chr names are loaded dynamically via API when exactly one assembly is selected.
 // No pre-loading here — avoids reading N×M cache files on every page load.

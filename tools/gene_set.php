@@ -128,7 +128,7 @@ $data = [
         $dir = moop_expression_bundle_dir($organism_name, $genome_accession, $gene_set_name);
         if (!is_dir($dir)) return false;
         $ov = moop_expression_load_overrides(rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/expression_overrides.json');
-        return (bool)moop_expression_bundle_experiments($dir, "$organism_name/$genome_accession/$gene_set_name/", get_access_level(), $ov);
+        return (bool)moop_expression_bundle_experiments($dir, "$organism_name/$genome_accession/$gene_set_name/", $ov);
     })(),
     'organism_name'        => $organism_name,
     'organism_info'        => $organism_info,

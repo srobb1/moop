@@ -491,23 +491,30 @@ function has_gene_set_access($organism_name, $assembly_name, $gene_set) {
  * must have the gene set itself (has_gene_set_access(): public flag, collaborator list, admin,
  * IP range). If any parent is private, so is the item.
  *
- * $analysis: reserved. No analysis-level rules exist yet; when they do, they go HERE, so every
- * caller gets them at once. Today any analysis of a visible gene set is visible.
+ * $analysis: an analysis key, "kind:name" (lib/access_rules.php, MOOP_ANALYSIS_KINDS) -- e.g.
+ * "images:Schmidtea_mediterranea/davies_2017". The analysis's own rule can only NARROW: the visitor
+ * needs the data set AND the analysis. A key that is not well formed fails closed (admins only).
  *
- * Memoised per request: a gallery asks about the same few data sets many times.
+ * The data-set half is memoised per request (a gallery asks about the same few data sets many
+ * times); the analysis half is not -- its rule file is re-read only when it changes.
  */
 if (!function_exists('moop_dataset_visible')) {
 function moop_dataset_visible(string $organism, string $assembly, string $gene_set, string $analysis = ''): bool {
     static $memo = [];
-    $key = "$organism\0$assembly\0$gene_set\0$analysis\0" . get_access_level() . "\0" . (get_username() ?? '');
-    if (isset($memo[$key])) return $memo[$key];
-    $ok = false;
-    $safe = '/^[A-Za-z0-9_.-]+$/';
-    if (preg_match($safe, $organism) && preg_match($safe, $assembly) && preg_match($safe, $gene_set)) {
-        $dir = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . "/$organism/$assembly/$gene_set";
-        $ok = is_dir($dir) && has_gene_set_access($organism, $assembly, $gene_set);
+    $key = "$organism\0$assembly\0$gene_set\0" . get_access_level() . "\0" . (get_username() ?? '');
+    if (!isset($memo[$key])) {
+        $ok = false;
+        $safe = '/^[A-Za-z0-9_.-]+$/';
+        if (preg_match($safe, $organism) && preg_match($safe, $assembly) && preg_match($safe, $gene_set)) {
+            $dir = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . "/$organism/$assembly/$gene_set";
+            $ok = is_dir($dir) && has_gene_set_access($organism, $assembly, $gene_set);
+        }
+        $memo[$key] = $ok;
     }
-    return $memo[$key] = $ok;
+    if (!$memo[$key] || $analysis === '') return $memo[$key];
+    // An analysis can only narrow its data set (lib/access_rules.php): both must pass.
+    require_once __DIR__ . '/../lib/access_rules.php';
+    return moop_analysis_allows($analysis);
 }
 }
 

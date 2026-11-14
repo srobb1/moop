@@ -143,6 +143,8 @@ PRJNA189768.76	early blastula (7 hpf)	1	embryo, 7hpf early blastula	SRR765898	PR
 - `label` (required) — the experiment's name on the page.
 - `access_level` (required) — `PUBLIC`, `COLLABORATOR`, `IP_IN_RANGE` or `ADMIN`. Only ever narrows
   who sees it; the reader must already have access to the gene set. A misspelling fails closed (ADMIN only).
+  This is the experiment's DEFAULT: an admin's setting in `metadata/access_rules.json` (key
+  `expression:{organism}/{assembly}/{gene_set}/{experiment}`, `notes/PERMISSIONS_PLAN.md`) replaces it.
 - `assay` — `bulk_rna`, or `scrna` (single-cell: cell types as groups; its extra files and rules
   are in `EXPRESSION_SINGLE_CELL_SPEC.md`).
 - `unit` — what the values in `tpm.tsv` are: `TPM` for bulk RNA-seq, `CPM` for single-cell
@@ -188,12 +190,15 @@ like `organism_assembly_groups.json`):
 ```json
 // metadata/expression_overrides.json
 {
-  "Nematostella_vectensis/GCA_033964005.1/NV2/Lotan_heavy_metals": { "access_level": "COLLABORATOR" }
+  "Nematostella_vectensis/GCA_033964005.1/NV2/Lotan_heavy_metals": { "label": "Heavy metals (Lotan 2024)" }
 }
 ```
 
 - Key = `{organism}/{assembly}/{gene_set}/{experiment}`. Values replace the bundle's `experiment.json`
-  fields of the same name (`access_level`, `label`, `detect_threshold`, …).
+  fields of the same name (`label`, `detect_threshold`, `summary`, `citation`, `unit`).
+- **Not `access_level`** (since 2026-11-13): who may see an experiment is set in
+  `metadata/access_rules.json`, the one place for every analysis's access (`lib/access_rules.php`). An
+  override that still carries `access_level` makes that experiment admins-only until it is moved there.
 - The bundle's value is the default; the override wins. The bundle is never modified on the web server.
 - Future (user, 2026-10-09): an admin helper page edits this file, like the other admin JSON editors.
 - An override whose experiment no longer exists is reported by `check_expression.php`, not silently kept.

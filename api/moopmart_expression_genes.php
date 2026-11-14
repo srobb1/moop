@@ -49,7 +49,7 @@ foreach (flattenSourcesList(getAccessibleGeneSets()) as $src) {
 if (!$source) $fail(404, 'Gene set not found.');
 
 $organism_data = $config->getPath('organism_data');
-$with_expr = array_filter(moop_expression_gene_sets($organism_data, get_access_level()),
+$with_expr = array_filter(moop_expression_gene_sets($organism_data),
     fn($gs) => "{$gs['organism']}|{$gs['assembly']}|{$gs['gene_set']}" === $key);
 if (!$with_expr) $fail(404, 'That gene set has no expression data.');
 

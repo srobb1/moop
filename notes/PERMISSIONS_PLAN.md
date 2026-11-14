@@ -42,7 +42,7 @@ Named collaborators per page/analysis: **not in the first version.** Add only if
 
 **Built:**
 - `moop_dataset_visible($organism, $assembly, $gene_set, $analysis)` — `includes/access_control.php`.
-  Organism/assembly/gene set via `has_gene_set_access()`; `$analysis` accepted but ignored.
+  Organism/assembly/gene set via `has_gene_set_access()`; `$analysis` checked since step 4.
 - Used by: gene images (gene page, gallery, `api/gene_image.php`), ortholog + gene family cards
   (`lib/clade_homologs.php`).
 - Expression experiments: own `access_level` in `experiment.json`
@@ -139,7 +139,18 @@ next to each analysis where analyses are listed. One editor, two entry points, o
    (button class `js-access-edit`, data-kind/key/title/rule; posts `_action=save_access`) — reuse it for
    step 5. Data-set list = groups file, each assembly also on its own. Verified in a real browser.
    Original item: **Manage Pages:** filter box + "Visible to" column + Edit dialog.
-4. **Analyses:** analysis rules in `moop_dataset_visible()`; expression `access_level` folded in;
+4. **Built 2026-11-13** — `access_rules.json` "analyses", keyed `kind:name`
+   (`expression:{org}/{asm}/{gs}/{experiment}`, `images:{org}/{analysis}`, `clade:{clade}`; malformed = admins only).
+   Settings dataset / logged_in / internal / admins — never "everyone" (refused on save, read as admins if stored).
+   `moop_dataset_visible($org, $asm, $gs, $key)` = data set AND `moop_analysis_allows($key)`. Expression: the
+   bundle's `access_level` is the DEFAULT (`moop_analysis_default()`), a rule replaces it, a rule equal to the
+   default is not stored; `access_level` removed from the overridable fields of `expression_overrides.json`
+   (an override still naming it = admins only; no such file exists on any site). `$user_level` argument dropped
+   from the expression readers (session decides, like everywhere else). Images pass `moop_image_analysis_key()`;
+   the gallery's analysis list is filtered too (a restricted analysis's title was shown); the image build
+   rejects analysis names that cannot form a key. Clades pass `clade:<name>`. No admin UI yet — that is step 5
+   (`moop_analysis_rule()` gives the effective rule + `set_here`; `moop_analysis_rule_set()` saves).
+   Original item: **Analyses:** analysis rules in `moop_dataset_visible()`; expression `access_level` folded in;
    images and clades pass their analysis key.
 5. **Access overview page** (§4c), reusing the dialog.
 6. **BLAST-only genomes** — `gene_set = ''` path (separate note).

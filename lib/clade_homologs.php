@@ -106,9 +106,9 @@ function moop_clade_homologs_for_gene(string $organism, string $gene_set, string
 function moop_clade_homologs_in(PDO $db, string $clade, string $organism, string $gene, ?array $via): array {
     $members = [];   // organism/gene_set -> assembly
     foreach ($db->query('SELECT organism, assembly, gene_set FROM member') as $m) $members[$m['organism'] . '/' . $m['gene_set']] = $m['assembly'];
-    $visible = function (string $org, string $gs) use ($members): bool {
+    $visible = function (string $org, string $gs) use ($members, $clade): bool {
         $asm = $members["$org/$gs"] ?? null;
-        return $asm !== null && moop_dataset_visible($org, $asm, $gs);
+        return $asm !== null && moop_dataset_visible($org, $asm, $gs, "clade:$clade");
     };
     $st = $db->prepare('SELECT g.id, g.orthogroup, g.gene, g.gene_set FROM gene g JOIN member m ON m.organism = g.organism AND m.gene_set = g.gene_set
                         WHERE g.gene_lc = ? AND g.organism = ?');
