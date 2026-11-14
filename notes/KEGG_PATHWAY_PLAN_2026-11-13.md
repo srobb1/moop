@@ -101,7 +101,9 @@ For each gene set x pathway (pathway = its KOs in the snapshot):
 
 KEGG draws the maps; we only link to kegg.jp with the KOs to colour (no hosted images: no licensing problem).
 
-1. One pathway, one gene set: `https://www.kegg.jp/pathway/map00010+K00844+K01810+...` highlights those KOs.
+1. One pathway, one gene set: ~~`https://www.kegg.jp/pathway/map00010+K00844+K01810+...`~~ — **that form is a 404
+   (checked 2026-11-14).** Use `https://www.kegg.jp/kegg-bin/show_pathway?map=map00010&multi_query=K00844+%23ff6666%0AK01810+%23ff6666`
+   (one KO per line, each with its own colour; also covers point 2). Web plan: `notes/KEGG_GENE_PAGE_PLAN.md`.
    Built by the site from Part 2's `ko_list`, a link on every pathway row.
 2. Own colours (KEGG Color Mapper): a colour per KO. E.g. dark green = several genes, light green = one gene; or
    two gene sets on one map: this one only / the other only / both (blue / orange / purple), useful with the clades.
@@ -115,5 +117,7 @@ list per gene set (TSV, MOOP gene IDs).
 ### Not decided yet
 
 - Union of KOs over a gene's proteins, or the KOs of its longest protein only (union is the default above).
-- Table in organism.sqlite vs a TSV; the web agent should say which suits them.
+- ~~Table in organism.sqlite vs a TSV~~ — **web answer (2026-11-14): neither from the pipeline.** The site builds the
+  per-gene-set pathway table itself from the loaded annotations (cached file, 4 s per organism to build) and reads the
+  KEGG snapshot that `copy2moop_v2.sh --kegg` puts in `organisms/.kegg/`. Nothing more is needed from compute.
 - KofamScan: after Part 2, test on 3-4 gene sets against eggNOG and decide whether to add it as a second source.

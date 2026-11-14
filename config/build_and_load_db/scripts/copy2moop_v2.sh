@@ -5,15 +5,19 @@
 ##   copy2moop_v2.sh <organism> <assembly> <gene_set>   one gene set
 ##   copy2moop_v2.sh --all                              every active gene set, then the clades
 ##   copy2moop_v2.sh --clades                           only the clade homolog files
+##   copy2moop_v2.sh --kegg                             only the KEGG reference snapshot
 ##
 ## Besides each gene set's files, an organism's crosswalk.sqlite (RosettaStone puts it in
 ## data/<Organism>/) goes with it, and data/.clades/<clade>/homologs.sqlite (build_clade_homologs.py)
-## goes to organisms/.clades/<clade>/.
+## goes to organisms/.clades/<clade>/. The KEGG reference snapshot (fetch_kegg_reference.sh,
+## $REFERENCE_DATA/kegg/current/) goes to organisms/.kegg/: the site reads each pathway's full KO list
+## (coverage "38 of 120 KOs"), pathway names and classes, and the snapshot date from it.
 ##
 ## Options:
 ##   --all         walk $GENOMES/*/*/*/metadata.yaml and copy every gene set marked
 ##                 `active: true`. Same detection as run_all_v2.sh, so the two agree.
 ##   --clades      copy only data/.clades/*/homologs.sqlite (--all does these too).
+##   --kegg        copy only the KEGG reference snapshot (--all does it too).
 ##   --dry-run     report what WOULD be copied and change nothing on the far side.
 ##   --force       re-send every file even if the remote copy already matches.
 ##   --checksum    compare by content instead of size+mtime. Thorough and slow --
@@ -35,6 +39,7 @@ usage() {
 
 ALL=false
 CLADES_ONLY=false
+KEGG_ONLY=false
 DRY_RUN=false
 RSYNC_EXTRA=()
 POSITIONAL=()
@@ -43,6 +48,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --all)      ALL=true ;;
     --clades)   CLADES_ONLY=true ;;
+    --kegg)     KEGG_ONLY=true ;;
     --dry-run)  DRY_RUN=true; RSYNC_EXTRA+=(--dry-run) ;;
     ## --ignore-times defeats the size+mtime quick check, which is exactly what
     ## "copy it again even though it looks fine" means.
@@ -491,7 +497,52 @@ copy_clades() {
   return 0
 }
 
+## KEGG reference snapshot -> organisms/.kegg/ (notes/KEGG_GENE_PAGE_PLAN.md). The gene sets' KEGG
+## annotations carry the snapshot date in annotation_source_version, so the site can tell when the copy
+## here is a different snapshot from the one a gene set was loaded with. Sets KEGG_FAILED.
+KEGG_FILES=(info.txt pathway.tsv module.tsv ko_pathway.tsv ko_module.tsv pathway_classes.json)
+copy_kegg() {
+  KEGG_FAILED=0
+  local src=$REFERENCE_DATA/kegg/current f files=()
+  for f in "${KEGG_FILES[@]}"; do
+    if [ ! -s "$src/$f" ]; then
+      log "FAIL  kegg — $src/$f missing or empty (run fetch_kegg_reference.sh); not sent"
+      KEGG_FAILED=1; return 0
+    fi
+    files+=("$src/$f")
+  done
+  FAILED=0; XFER=0
+  if ! retry "ssh mkdir $REMOTE_ROOT/.kegg" \
+       "${SSH[@]}" "$REMOTE" "mkdir -p '$REMOTE_ROOT/.kegg' && chmod 2775 '$REMOTE_ROOT/.kegg'"; then
+    log "FAIL  kegg — cannot create $REMOTE_ROOT/.kegg on $REMOTE"
+    KEGG_FAILED=1; return 0
+  fi
+  ## send uses rsync -L, so current/ (a symlink to the dated snapshot) is followed; 664 like the clades
+  RSYNC_EXTRA+=(--chmod=F664)
+  send "$REMOTE_ROOT/.kegg" "${files[@]}"
+  unset 'RSYNC_EXTRA[${#RSYNC_EXTRA[@]}-1]'
+  if [ "$FAILED" -ne 0 ]; then
+    log "FAIL  kegg — copy incomplete"; KEGG_FAILED=1
+  elif [ "$XFER" -eq 0 ]; then
+    log "SAME  kegg — remote already matches ($(readlink "$src"))"
+  elif $DRY_RUN; then
+    log "WOULD kegg — snapshot $(readlink "$src") differs"
+  else
+    log "OK    kegg — snapshot $(readlink "$src") copied"
+  fi
+  return 0
+}
+
 ## ---------------------------------------------------------------- drivers
+
+if $KEGG_ONLY; then
+  [ "${#POSITIONAL[@]}" -eq 0 ] && ! $ALL && ! $CLADES_ONLY \
+    || { echo "--kegg takes no other arguments (--all already includes it)" >&2; usage 1; }
+  log "==== copy2moop --kegg$($DRY_RUN && echo ' [DRY RUN]')"
+  copy_kegg
+  [ "$KEGG_FAILED" -eq 0 ] || exit 1
+  exit 0
+fi
 
 if $CLADES_ONLY; then
   [ "${#POSITIONAL[@]}" -eq 0 ] && ! $ALL \
@@ -549,7 +600,10 @@ if $ALL; then
   log "==== clades"
   copy_clades
 
-  [ "$n_fail" -eq 0 ] && [ "$CLADE_FAILED" -eq 0 ] || exit 1
+  log "==== kegg"
+  copy_kegg
+
+  [ "$n_fail" -eq 0 ] && [ "$CLADE_FAILED" -eq 0 ] && [ "$KEGG_FAILED" -eq 0 ] || exit 1
   exit 0
 fi
 
