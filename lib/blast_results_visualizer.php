@@ -409,7 +409,6 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
     }
 
     // Extract context for per-HSP JBrowse buttons (genome BLAST only)
-    $ctx_site         = $context['site']          ?? '';
     $ctx_organism     = $context['organism']      ?? '';
     $ctx_assembly     = $context['assembly']      ?? '';
     $ctx_is_genome    = $context['is_genome_db']  ?? false;
@@ -479,7 +478,7 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
             $html .= '</small>';
 
             // Per-HSP JBrowse button (genome BLAST only)
-            if ($ctx_is_genome && $ctx_has_jbrowse && $ctx_jb_enabled && $ctx_site !== '') {
+            if ($ctx_is_genome && $ctx_has_jbrowse && $ctx_jb_enabled) {
                 $hsp_subject = cleanBlastHitId($hit['id'] ?? '');
                 $s = min((int)$hsp['hit_from'], (int)$hsp['hit_to']) - 1;
                 $e = max((int)$hsp['hit_from'], (int)$hsp['hit_to']);
@@ -500,7 +499,7 @@ function generateAlignmentViewer($results, $blast_program = 'blastn', $query_num
                     'adapter'       => ['type' => 'FromConfigAdapter', 'features' => $hsp_features],
                 ]];
                 $hsp_loc = $hsp_subject . ':' . ($s + 1) . '-' . $e;
-                $hsp_url = '/' . $ctx_site . '/jbrowse2.php?organism=' . urlencode($ctx_organism)
+                $hsp_url = moop_url_base() . '/jbrowse2.php?organism=' . urlencode($ctx_organism)
                          . '&assembly='      . urlencode($ctx_assembly)
                          . '&loc='           . urlencode($hsp_loc)
                          . '&sessionTracks=' . urlencode(json_encode($hsp_tracks))
