@@ -69,6 +69,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $go(['type' => 'success', 'msg' => 'Saved "' . htmlspecialchars($page['title']['en']) . '".'], 'manage_pages.php?edit=' . rawurlencode($slug));
     }
+    if ($action === 'save_access') {
+        // Who can see a page (the shared dialog, admin/pages/_access_rule_dialog.php; lib/access_rules.php).
+        $slug = (string) ($_POST['key'] ?? '');
+        $back = isset($_GET['edit']) ? 'manage_pages.php?edit=' . rawurlencode((string) $_GET['edit']) : 'manage_pages.php';
+        if (($_POST['kind'] ?? '') !== 'page' || moop_page_get($slug) === null) $go(['type' => 'danger', 'msg' => 'No such page.'], $back);
+        $rule = moop_access_rule_from_post($_POST);
+        $r = moop_page_rule_set($slug, $rule);
+        $go($r['ok'] ? ['type' => 'success', 'msg' => '"' . htmlspecialchars($slug) . '" is now visible to: ' . htmlspecialchars(moop_access_rule_label(moop_page_rule($slug))) . '.']
+                     : ['type' => 'danger', 'msg' => 'Not saved: ' . htmlspecialchars((string) $r['error'])], $back);
+    }
     if ($action === 'save_home') {
         $mode = (string) ($_POST['home_mode'] ?? 'builtin');
         $slug = (string) ($_POST['home_page'] ?? '');
@@ -126,6 +136,8 @@ $data = [
     'tool_links'  => $config->getToolsMenu(),
     'pages_dir'   => moop_pages_dir(),
     'flash'       => $flash,
-    'page_script' => [moop_url_base() . '/js/modules/manage-pages.js'],
+    'access_datasets' => moop_access_dataset_choices(),   // the "Who can see" dialog's data-set list
+    'access_ok'   => moop_access_rules()['ok'],           // false: access_rules.json unreadable -- say so
+    'page_script' => [moop_url_base() . '/js/modules/manage-pages.js', moop_url_base() . '/js/modules/access-rule-dialog.js'],
 ];
 echo render_display_page(__DIR__ . '/pages/manage_pages.php', $data, 'Manage Pages');

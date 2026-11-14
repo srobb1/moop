@@ -74,4 +74,24 @@
             slug.value = title.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
         });
     }
+
+    // The pages list: a filter box (title, address, languages, who can see it), like the other admin tables.
+    if (window.jQuery && jQuery.fn.DataTable && document.getElementById('pages-table')) {
+        jQuery('#pages-table').DataTable({
+            paging: false, info: false, order: [],
+            columnDefs: [{ orderable: false, targets: -1 }],
+            language: { search: 'Filter:', searchPlaceholder: 'title, address, language, who can see it' }
+        });
+    }
+
+    // Changing who can see a page reloads this page: typed, unsaved text would be lost, so ask first.
+    const pageForm = document.getElementById('page-form');
+    const accessForm = document.querySelector('#accessRuleModal form');
+    if (pageForm && accessForm) {
+        let dirty = false;
+        pageForm.addEventListener('input', function () { dirty = true; });
+        accessForm.addEventListener('submit', function (e) {
+            if (dirty && !window.confirm('This page has changes that are not saved yet. Saving who can see it reloads the page and loses them. Continue?')) e.preventDefault();
+        });
+    }
 })();

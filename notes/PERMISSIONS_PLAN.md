@@ -134,7 +134,11 @@ next to each analysis where analyses are listed. One editor, two entry points, o
    another page's HTML (e.g. home tiles) stay as links and 404 — they cannot be dropped generically.
    Original item: **Pages:** `moop_page_visible()` + `access_rules.json` "pages"; check in all six readers;
    private = 404; drop from menus, tiles and `{include:}` for those who can't see it.
-3. **Manage Pages:** filter box + "Visible to" column + Edit dialog.
+3. **Built 2026-11-13** — "Visible to" column + filter box (DataTables) in Manage Pages; the same button
+   in the page editor. ONE dialog, `admin/pages/_access_rule_dialog.php` + `js/modules/access-rule-dialog.js`
+   (button class `js-access-edit`, data-kind/key/title/rule; posts `_action=save_access`) — reuse it for
+   step 5. Data-set list = groups file, each assembly also on its own. Verified in a real browser.
+   Original item: **Manage Pages:** filter box + "Visible to" column + Edit dialog.
 4. **Analyses:** analysis rules in `moop_dataset_visible()`; expression `access_level` folded in;
    images and clades pass their analysis key.
 5. **Access overview page** (§4c), reusing the dialog.

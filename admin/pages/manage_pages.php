@@ -29,6 +29,21 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
     </div>
   <?php endif; ?>
 
+<?php if (!$access_ok): ?>
+    <div class="alert alert-danger"><strong><?= htmlspecialchars(basename(moop_access_rules_file())) ?> cannot be read.</strong>
+      Until it is fixed, every page is shown to admins only, and access cannot be changed here. File: <code><?= htmlspecialchars(moop_access_rules_file()) ?></code></div>
+  <?php endif; ?>
+<?php
+// The access button for one page: opens the shared dialog (js/modules/access-rule-dialog.js).
+$access_button = function (array $p, string $extra = '') {
+    $rule = moop_page_rule($p['slug']);
+    $open = ($rule['visible_to'] ?? '') === 'everyone';
+    return '<button type="button" class="btn btn-sm ' . ($open ? 'btn-outline-secondary' : 'btn-outline-warning') . ' js-access-edit ' . $extra . '"'
+         . ' data-kind="page" data-key="' . htmlspecialchars($p['slug']) . '" data-title="' . htmlspecialchars($p['title']['en']) . '"'
+         . ' data-rule="' . htmlspecialchars(json_encode($rule)) . '" title="Change who can see this page">'
+         . '<i class="fa ' . ($open ? 'fa-lock-open' : 'fa-lock') . ' me-1"></i>' . htmlspecialchars(moop_access_rule_label($rule)) . '</button>';
+};
+?>
 <?php if ($mode === 'list'): ?>
   <p class="text-muted">
     Pages you write yourself — About, protocols, FAQ — in <strong>Markdown</strong>, in English and
@@ -42,8 +57,8 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
       <?php if (!$pages): ?>
         <p class="text-muted small p-3 mb-0">No pages yet. <a href="manage_pages.php?new=1">Write the first one.</a></p>
       <?php else: ?>
-      <table class="table table-sm align-middle mb-0">
-        <thead class="table-light"><tr><th class="ps-3">Title</th><th>Address</th><?php if ($other_langs): ?><th>Translations</th><?php endif; ?><th>Last saved</th><th></th></tr></thead>
+      <table class="table table-sm align-middle mb-0" id="pages-table">
+        <thead class="table-light"><tr><th class="ps-3">Title</th><th>Address</th><?php if ($other_langs): ?><th>Translations</th><?php endif; ?><th>Visible to</th><th>Last saved</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($pages as $slug => $p): ?>
           <tr>
@@ -53,6 +68,7 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
             <?php if ($other_langs): ?><td class="small"><?php foreach ($other_langs as $code => $name): ?>
               <span class="badge <?= trim($p['body'][$code] ?? '') !== '' ? 'bg-success' : 'bg-light text-dark' ?>" title="<?= htmlspecialchars($name) ?>: <?= trim($p['body'][$code] ?? '') !== '' ? 'written' : 'not yet' ?>"><?= htmlspecialchars($code) ?></span>
             <?php endforeach; ?></td><?php endif; ?>
+            <td><?= $access_button($p) ?></td>
             <td class="small text-muted"><?= htmlspecialchars($p['updated_at'] !== '' ? substr($p['updated_at'], 0, 16) : '—') ?><?= $p['updated_by'] !== '' ? ' · ' . htmlspecialchars($p['updated_by']) : '' ?></td>
             <td class="text-end pe-3">
               <form method="post" class="d-inline" onsubmit="return confirm('Delete this page? Links to it will stop working.');">
@@ -137,6 +153,7 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
       </div>
       <div class="col-md-3 text-md-end">
         <?php if ($mode === 'edit'): ?>
+          <?= $access_button($page) ?>
           <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars(moop_page_url($page['slug'])) ?>" target="_blank">
             <i class="fa fa-external-link-alt me-1"></i>Open the page</a>
         <?php endif; ?>
@@ -256,3 +273,4 @@ $other_langs = array_diff_key($lang_names, ['en' => true]);
   </details>
 <?php endif; ?>
 </div>
+<?php include __DIR__ . '/_access_rule_dialog.php'; ?>

@@ -77,6 +77,43 @@ function moop_access_rule_allows(array $rule): bool {
     }
 }
 
+/** A rule in plain words, for the admin pages (English, like every admin page). */
+function moop_access_rule_label(array $rule): string {
+    switch ($rule['visible_to'] ?? 'admins') {
+        case 'everyone':  return 'Everyone';
+        case 'logged_in': return 'Logged in';
+        case 'internal':  return 'Internal network + admins';
+        case 'dataset':   return 'Same as data set: ' . implode(' / ', array_filter([$rule['organism'], $rule['assembly'], $rule['gene_set']], 'strlen'));
+        default:          return 'Admins only';
+    }
+}
+
+/**
+ * The data sets a "same as data set" rule can name, for the admin dialog: every organism / assembly /
+ * gene set in the groups file (where data sets get their access), plus each assembly on its own.
+ * [['value' => 'org|asm|gs', 'organism', 'label'], ...] sorted by organism.
+ */
+function moop_access_dataset_choices(): array {
+    $file = rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/organism_assembly_groups.json';
+    $out = [];
+    foreach ((array) json_decode((string) @file_get_contents($file), true) as $e) {
+        $org = (string) ($e['organism'] ?? ''); $asm = (string) ($e['assembly'] ?? ''); $gs = (string) ($e['gene_set'] ?? '');
+        if ($org === '' || $asm === '') continue;
+        $out["$org|$asm|"] = ['value' => "$org|$asm|", 'organism' => $org, 'label' => "$asm — whole assembly"];
+        if ($gs !== '') $out["$org|$asm|$gs"] = ['value' => "$org|$asm|$gs", 'organism' => $org, 'label' => "$asm / $gs"];
+    }
+    ksort($out, SORT_NATURAL | SORT_FLAG_CASE);
+    return array_values($out);
+}
+
+/** The dialog's posted fields -> a rule for moop_*_rule_set() (validated there). */
+function moop_access_rule_from_post(array $post): array {
+    $to = (string) ($post['visible_to'] ?? '');
+    if ($to !== 'dataset') return ['visible_to' => $to];
+    [$org, $asm, $gs] = array_pad(explode('|', (string) ($post['dataset'] ?? ''), 3), 3, '');
+    return ['visible_to' => 'dataset', 'organism' => $org, 'assembly' => $asm, 'gene_set' => $gs];
+}
+
 /** A content page's rule (the default, "everyone", when none is stored). */
 function moop_page_rule(string $slug): array {
     $rules = moop_access_rules();

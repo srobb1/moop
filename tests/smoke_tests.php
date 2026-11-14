@@ -3950,6 +3950,21 @@ unlink(moop_access_rules_file());
 moop_page_rule_set('about', ['visible_to' => 'admins']);
 moop_page_delete('about');
 ok(!isset(moop_access_rules()['pages']['about']), 'pages: deleting a page removes its rule, so a new page at that address starts public');
+// Manage Pages' dialog (step 3): posted fields -> a rule; plain words; the data-set list.
+ok(moop_access_rule_from_post(['visible_to' => 'dataset', 'dataset' => 'Org|asm|gs']) === ['visible_to' => 'dataset', 'organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs']
+   && moop_access_rule_from_post(['visible_to' => 'dataset', 'dataset' => 'Org|asm|'])['gene_set'] === ''
+   && moop_access_rule_from_post(['visible_to' => 'admins', 'dataset' => 'Org|asm|gs']) === ['visible_to' => 'admins'],
+   'dialog: the data set is read only for "same as data set"; a whole assembly has no gene set');
+ok(!moop_page_rule_set('rnai', moop_access_rule_from_post(['visible_to' => 'dataset', 'dataset' => '']))['ok'],
+   'dialog: "same as data set" with none chosen is refused, not saved as something else');
+ok(moop_access_rule_label(['visible_to' => 'dataset', 'organism' => 'Org', 'assembly' => 'asm', 'gene_set' => '']) === 'Same as data set: Org / asm'
+   && moop_access_rule_label(['visible_to' => 'internal']) === 'Internal network + admins', 'dialog: rules in plain words');
+ok(array_column(moop_access_dataset_choices(), 'value') === ['Org|asm|', 'Org|asm|gs'], 'dialog: data sets from the groups file, each assembly also on its own');
+moop_page_rule_set('rnai', ['visible_to' => 'dataset', 'organism' => 'Org', 'assembly' => 'asm', 'gene_set' => '']);
+$_as('PUBLIC', [], 'anon5'); $_v1 = moop_page_for_visitor('rnai') !== null;   // the groups file made asm/gs PUBLIC above
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['Lab']]]));
+$_as('PUBLIC', [], 'anon6'); $_v2 = moop_page_for_visitor('rnai') === null;
+ok($_v1 && $_v2, 'pages: "same as a whole assembly" follows that assembly');
 $_SESSION = $_apsess;
 $_cprp->setValue($_cpcfg, $_cpsaved);
 exec('rm -rf ' . escapeshellarg($_cp));
