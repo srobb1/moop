@@ -348,24 +348,15 @@ function moop_crosswalk_gene_links(string $organism, array $accessions): array {
  * transcriptome MOOP does not load, a GenBank accession. Returns the gene(s) it maps to, as
  * moop_crosswalk_gene_links() shows them, or [] (no crosswalk, not one word, no mapping).
  *
- * $permitted = moop_search_permitted_scope(): null = everything open, else the {assembly,
- * gene_set} pairs this viewer may search. A hub whose gene set is NOT permitted is dropped, so the
- * hint never names a gene the viewer could not open; a hub not loaded in MOOP (an outside link)
- * is public data and stays.
+ * Access: moop_crosswalk_gene_links() reads through moop_crosswalk_genes(), which drops every row
+ * whose hub or source the viewer may not see (moop_crosswalk_row_visible -> moop_dataset_visible),
+ * so the hint never names a gene the viewer could not open. One check, no caller-supplied scope.
  */
-function moop_crosswalk_search_hint(string $organism, string $keywords, ?array $permitted): array {
+function moop_crosswalk_search_hint(string $organism, string $keywords): array {
     $term = trim(trim($keywords), '"\'');
     if (!isset(moop_crosswalk_sources()[$organism]) || strlen($term) < 3 || strlen($term) > 100
         || preg_match('/\s/', $term)) return [];
-    $links = moop_crosswalk_gene_links($organism, [$term])[mb_strtolower($term)]['show'] ?? [];
-    if ($permitted === null) return $links;
-    $hubs = moop_crosswalk_sources()[$organism]['hubs'];
-    $ok = [];
-    foreach ($permitted as $p) $ok[$p['assembly'] . "\t" . $p['gene_set']] = true;
-    return array_values(array_filter($links, function ($l) use ($hubs, $ok) {
-        $h = $hubs[$l['hub']] ?? [];
-        return $l['external'] || isset($ok[($h['assembly'] ?? '') . "\t" . ($h['gene_set'] ?? '')]);
-    }));
+    return moop_crosswalk_gene_links($organism, [$term])[mb_strtolower($term)]['show'] ?? [];
 }
 
 /**
@@ -423,15 +414,14 @@ function moop_crosswalk_source_groups(string $organism): array {
 
 /**
  * Where an id from a source opens: a MOOP gene page when the source's gene set is loaded here AND
- * the viewer may see it ($permitted as moop_search_permitted_scope(): null = all open), else the
- * source's outside 'url' ({id} replaced), else ''. Returns ['url', 'external'].
+ * the viewer may see it (moop_crosswalk_entry_visible -- the same check every crosswalk read uses),
+ * else the source's outside 'url' ({id} replaced), else ''. Returns ['url', 'external'].
+ * The reads already drop a private source's ids; this check is the second wall, not the only one.
  */
-function moop_crosswalk_id_link(string $organism, string $source, string $id, ?array $permitted): array {
+function moop_crosswalk_id_link(string $organism, string $source, string $id): array {
     $c = moop_crosswalk_sources()[$organism]['sources'][$source] ?? [];
     if (!empty($c['gene_set'])) {
-        $ok = $permitted === null;
-        foreach ($permitted ?? [] as $p) if ($p['assembly'] === (string) ($c['assembly'] ?? '') && $p['gene_set'] === $c['gene_set']) $ok = true;
-        if ($ok) return ['url' => moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism, 'uniquename' => $id,
+        if (moop_crosswalk_entry_visible($organism, (array) $c)) return ['url' => moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism, 'uniquename' => $id,
                          'assembly' => (string) ($c['assembly'] ?? ''), 'gene_set' => (string) $c['gene_set']]), 'external' => false];
         return ['url' => '', 'external' => false];
     }
@@ -448,7 +438,7 @@ function moop_crosswalk_id_link(string $organism, string $source, string $id, ?a
  * (the hub's 'transcripts' source), the 'always_show' sources' ids, and its description from the
  * organism database. Read-only. Returns ['rows', 'not_found' => [typed ids], 'capped' => bool].
  */
-function moop_crosswalk_translate(string $organism, array $typed, array $into, ?array $permitted, int $max_rows = 5000): array {
+function moop_crosswalk_translate(string $organism, array $typed, array $into, int $max_rows = 5000): array {
     $res = ['rows' => [], 'not_found' => [], 'capped' => false];
     $db  = moop_crosswalk_open($organism);
     if (!$db) return $res;
@@ -500,7 +490,7 @@ function moop_crosswalk_translate(string $organism, array $typed, array $into, ?
         } catch (PDOException $e) { /* descriptions are a nicety: the table still works without them */ }
     }
 
-    $link = fn(string $source, string $id) => ['id' => $id] + moop_crosswalk_id_link($organism, $source, $id, $permitted);
+    $link = fn(string $source, string $id) => ['id' => $id] + moop_crosswalk_id_link($organism, $source, $id);
     foreach ($typed as $t) {
         foreach ($query[mb_strtolower($t)] ?? [] as $q) {
             $key  = $q['ref_id'] . "\t" . $q['hub'];

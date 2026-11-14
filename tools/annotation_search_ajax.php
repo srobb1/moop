@@ -200,7 +200,7 @@ $is_capped = $result_count >= $results_limit;
 $crosswalk_genes = [];
 if ($result_count === 0) {
     require_once __DIR__ . '/../lib/crosswalk.php';
-    foreach (moop_crosswalk_search_hint($organism, $search_keywords, $permitted_scope) as $l) {
+    foreach (moop_crosswalk_search_hint($organism, $search_keywords) as $l) {
         $crosswalk_genes[] = ['id' => $l['id'], 'url' => $l['url'], 'external' => $l['external']];
     }
 }

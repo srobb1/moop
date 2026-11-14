@@ -29,7 +29,7 @@ $typed    = array_slice($typed, 0, MOOP_CROSSWALK_MAX_IDS);
 
 $result = null;
 if ($organism && $typed) {
-    $result = moop_crosswalk_translate($organism, $typed, $into, moop_search_permitted_scope($organism), MOOP_CROSSWALK_MAX_ROWS);
+    $result = moop_crosswalk_translate($organism, $typed, $into, MOOP_CROSSWALK_MAX_ROWS);
 }
 $cfg = $organism ? moop_crosswalk_sources()[$organism] : [];
 

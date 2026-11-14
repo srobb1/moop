@@ -4434,18 +4434,12 @@ ok(strpos(moop_crosswalk_check('Bad'), "meta 'format'") === 0 && moop_crosswalk_
 ok(moop_crosswalk_check('NoSuchOrganism') === '' && moop_crosswalk_open('NoSuchOrganism') === null,
    'check: no file at all is not an error (nothing to use)');
 // The main search's fallback: a word that found nothing may be an ID the crosswalk maps to a gene.
-$_hh = moop_crosswalk_search_hint('Test', ' SMED30000001 ', null);
+$_hh = moop_crosswalk_search_hint('Test', ' SMED30000001 ');
 ok(count($_hh) === 1 && $_hh[0]['id'] === 'h1SMcG0000008' && !$_hh[0]['external'], 'search hint: a mapped ID names its gene (everything open)');
-ok((moop_crosswalk_search_hint('Test', '"smed30000001"', null)[0]['id'] ?? '') === 'h1SMcG0000008', 'search hint: quotes and case do not matter');
-ok(moop_crosswalk_search_hint('Test', 'SMED30000001 kinase', null) === [] && moop_crosswalk_search_hint('Test', 'ab', null) === [],
+ok((moop_crosswalk_search_hint('Test', '"smed30000001"')[0]['id'] ?? '') === 'h1SMcG0000008', 'search hint: quotes and case do not matter');
+ok(moop_crosswalk_search_hint('Test', 'SMED30000001 kinase') === [] && moop_crosswalk_search_hint('Test', 'ab') === [],
    'search hint: only for ONE ID-like word');
-ok(moop_crosswalk_search_hint('NoSuchOrganism', 'SMED30000001', null) === [], 'search hint: no crosswalk, no hint');
-ok(moop_crosswalk_search_hint('Test', 'SMED30000001', [['assembly' => 'other', 'gene_set' => 'other']]) === [],
-   'search hint: a gene in a gene set the viewer may not search is never named');
-ok(count(moop_crosswalk_search_hint('Test', 'SMED30000001', [['assembly' => 'asmH1', 'gene_set' => 'gsH1']])) === 1,
-   'search hint: shown when its gene set is permitted');
-ok((moop_crosswalk_search_hint('Test', 'OnlyH2', [['assembly' => 'other', 'gene_set' => 'other']])[0]['external'] ?? false) === true,
-   'search hint: a gene outside MOOP (public link-out) is shown to anyone');
+ok(moop_crosswalk_search_hint('NoSuchOrganism', 'SMED30000001') === [], 'search hint: no crosswalk, no hint');
 // The ID Translator (tools/crosswalk.php). Gene hubs = hubs with a 'transcripts' source.
 $_xn['crosswalk']['Test']['hubs']['H1']['transcripts'] = 'h1_tx';
 $_xn['crosswalk']['Test']['hubs']['H2']['transcripts'] = 'h2_tx';
@@ -4454,11 +4448,11 @@ $_xn['crosswalk']['Test']['sources'] = ['smed_20140614' => ['label' => 'SMED3', 
                                         'ncbi' => ['label' => 'NCBI', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
                                         'bad' => ['label' => 'Bad', 'url' => 'javascript:alert({id})']];
 $_xrp->setValue($_xc, $_xn);
-$_t = moop_crosswalk_translate('Test', ['DN293829', 'nothing'], ['smed_20140614'], null);
+$_t = moop_crosswalk_translate('Test', ['DN293829', 'nothing'], ['smed_20140614']);
 ok(count($_t['rows']) === 1 && $_t['rows'][0]['ref_id'] === 'h1SMcG0000008' && $_t['rows'][0]['mapped']['id'] === 'SMED30000001'
    && $_t['not_found'] === ['nothing'], 'translator: an id -> its gene -> the same gene\'s id in the ticked source; unknown ids listed');
 ok(($_t['rows'][0]['always']['smed_20140614'][0]['id'] ?? '') === 'SMED30000001', 'translator: the always-shown source is filled for every gene');
-$_t = moop_crosswalk_translate('Test', ['dn293829'], [], null);
+$_t = moop_crosswalk_translate('Test', ['dn293829'], []);
 ok(array_column($_t['rows'], 'hub') === ['H1', 'H2'] && $_t['rows'][0]['query'] === 'DN293829',
    'translator: nothing ticked -> one row per reference gene (h1 and h2), the id as stored');
 // An id reaching BOTH a gene hub and the SMED3 hub: only the gene appears (the SMED3 id is in the
@@ -4469,16 +4463,15 @@ file_put_contents("$_xd/t2smed.mapping", $_xh . "EST1\tSMED1\tncbi\n");
 moop_crosswalk_build_from_files('Test2', ['H1' => "$_xd/t2h1.mapping", 'SMED' => "$_xd/t2smed.mapping"], "$_xd/Test2/crosswalk.sqlite");
 $_xn['crosswalk']['Test2'] = ['hubs' => ['H1' => ['transcripts' => 'h1_tx'], 'SMED' => []]];
 $_xrp->setValue($_xc, $_xn);
-ok(array_column(moop_crosswalk_translate('Test2', ['EST1'], [], null)['rows'], 'ref_id') === ['h1G1'],
+ok(array_column(moop_crosswalk_translate('Test2', ['EST1'], [])['rows'], 'ref_id') === ['h1G1'],
    'translator: an id reaching a gene hub AND the SMED3 hub shows only the gene');
-$_t = moop_crosswalk_translate('Test', ['dd_Smed_v4_12_0_1'], [], null);
+$_t = moop_crosswalk_translate('Test', ['dd_Smed_v4_12_0_1'], []);
 ok(count($_t['rows']) === 1 && $_t['rows'][0]['hub'] === 'SMED', 'translator: an id reaching no gene hub falls back to the other hub (SMED3)');
-ok(moop_crosswalk_translate('Test', ['DN293829'], [], null, 1)['capped'] === true, 'translator: the row cap is reported, never silent');
-ok(moop_crosswalk_id_link('Test', 'smed_20140614', 'SMED30000001', [['assembly' => 'other', 'gene_set' => 'other']])['url'] === ''
-   && strpos(moop_crosswalk_id_link('Test', 'smed_20140614', 'SMED30000001', null)['url'], 'tools/parent.php') !== false,
-   'translator: a MOOP gene page is linked only when the viewer may see its gene set');
-ok(moop_crosswalk_id_link('Test', 'ncbi', 'A B', null)['url'] === 'https://www.ncbi.nlm.nih.gov/nuccore/A%20B'
-   && moop_crosswalk_id_link('Test', 'bad', 'x', null)['url'] === '' && moop_crosswalk_id_link('Test', 'unknown', 'x', null)['url'] === '',
+ok(moop_crosswalk_translate('Test', ['DN293829'], [], 1)['capped'] === true, 'translator: the row cap is reported, never silent');
+ok(strpos(moop_crosswalk_id_link('Test', 'smed_20140614', 'SMED30000001')['url'], 'tools/parent.php') !== false,
+   'translator: a source loaded here links to its MOOP gene page');
+ok(moop_crosswalk_id_link('Test', 'ncbi', 'A B')['url'] === 'https://www.ncbi.nlm.nih.gov/nuccore/A%20B'
+   && moop_crosswalk_id_link('Test', 'bad', 'x')['url'] === '' && moop_crosswalk_id_link('Test', 'unknown', 'x')['url'] === '',
    'translator: outside links only over https, id escaped; unknown source = plain text');
 $_xn['crosswalk']['Test']['source_groups'] = ['est' => 'ESTs', 'site' => 'On this site', 'empty' => 'Nothing here'];
 $_xn['crosswalk']['Test']['sources']['ncbi']['group'] = 'est';
@@ -4530,11 +4523,17 @@ file_put_contents("$_xd/meta/organism_assembly_groups.json", json_encode([
     ['organism' => 'Test', 'assembly' => 'smed', 'gene_set' => 'smed', 'groups' => ['Lab']]]));
 $_xn['metadata_path'] = "$_xd/meta"; $_xrp->setValue($_xc, $_xn);
 $_SESSION = ['access_level' => 'PUBLIC'];
-ok(moop_crosswalk_genes('Test', ['dd_Smed_v4_12_0_1']) === [] && moop_crosswalk_search_hint('Test', 'dd_Smed_v4_12_0_1', null) === [],
+ok(moop_crosswalk_genes('Test', ['dd_Smed_v4_12_0_1']) === [] && moop_crosswalk_search_hint('Test', 'dd_Smed_v4_12_0_1') === [],
    'access: an id reaching only a private gene set maps to nothing (lookup and search hint)');
-$_t = moop_crosswalk_translate('Test', ['SMED30000001', 'DN293829'], [], null);
+$_t = moop_crosswalk_translate('Test', ['SMED30000001', 'DN293829'], []);
 ok($_t['not_found'] === ['SMED30000001'] && array_column($_t['rows'], 'hub') === ['H1', 'H2'] && ($_t['rows'][0]['always']['smed_20140614'] ?? null) === [],
    'access: translator -- a private gene set\'s id reads as not found, and its ids leave the always-shown column');
+ok(moop_crosswalk_id_link('Test', 'smed_20140614', 'SMED30000001')['url'] === '',
+   'access: a private gene set\'s id is never linked to its gene page (the second wall behind the reads)');
+ok(moop_crosswalk_search_hint('Test', 'SMED30000001') === [],
+   'access: search hint -- an id known only through a private gene set names no gene');
+ok(count(moop_crosswalk_search_hint('Test', 'DN293829')) === 1 && (moop_crosswalk_search_hint('Test', 'OnlyH2')[0]['external'] ?? false) === true,
+   'access: search hint -- a public gene, and a gene outside MOOP (public link-out), are still named');
 ok(array_column(moop_crosswalk_members('Test', ['h1SMcG0000008']), 'accession') === ['DN293829'],
    'access: gene page "Same gene" list -- the private gene set\'s id is left out, the public EST stays');
 ok(!isset(moop_crosswalk_source_list('Test')['smed_20140614']), 'access: a private gene set is not offered as a source to translate into');
@@ -4545,7 +4544,7 @@ ok(moop_crosswalk_genes('Test', ['OnlyH2', 'DN293829']) === [],
    'access: with the whole organism private, outside data (ESTs, a hub not loaded here) is hidden too');
 $_SESSION = ['access_level' => 'ADMIN', 'username' => 'admin'];
 ok(count(moop_crosswalk_genes('Test', ['dd_Smed_v4_12_0_1', 'DN293829'])) === 2 && isset(moop_crosswalk_source_list('Test')['smed_20140614'])
-   && moop_crosswalk_translate('Test', ['SMED30000001'], [], null)['not_found'] === [],
+   && moop_crosswalk_translate('Test', ['SMED30000001'], [])['not_found'] === [],
    'access: an admin sees every gene set');
 $_SESSION = $_xsess;
 $_xrp->setValue($_xc, $_xs);

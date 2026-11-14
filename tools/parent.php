@@ -677,9 +677,8 @@ if ($download_card === 'same_gene' && !empty($page_section['aka'])) {
     // own id (only its transcripts are) asks with those.
     $__cw_always = array_values(array_filter((array) (moop_crosswalk_sources()[$organism_name]['always_show'] ?? []), 'is_string'));
     $__cw_into   = array_keys(moop_crosswalk_source_list($organism_name));
-    $__cw_scope  = moop_search_permitted_scope($organism_name);
-    $__cw = moop_crosswalk_translate($organism_name, [$feature_uniquename], $__cw_into, $__cw_scope);
-    if (!$__cw['rows']) $__cw = moop_crosswalk_translate($organism_name, array_column($children, 'feature_uniquename'), $__cw_into, $__cw_scope);
+    $__cw = moop_crosswalk_translate($organism_name, [$feature_uniquename], $__cw_into);
+    if (!$__cw['rows']) $__cw = moop_crosswalk_translate($organism_name, array_column($children, 'feature_uniquename'), $__cw_into);
     $__tsv = moop_crosswalk_translate_tsv($organism_name, $__cw, $__cw_always, true);
 } elseif (($download_card === 'compgen' || $download_card === 'family') && $compgen_section) {
     $__tsv = moop_clade_homologs_tsv($compgen_section, $download_card === 'family' ? 'family' : 'orthologs');
