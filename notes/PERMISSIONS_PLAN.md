@@ -126,7 +126,13 @@ next to each analysis where analyses are listed. One editor, two entry points, o
    Original item: **Close the gaps** — translator, anatomy search, Same-gene card through `moop_dataset_visible()`.
    Needs each row's data set: crosswalk sources already carry assembly/gene set in the crosswalk
    config; a curation's accession reaches its source through the crosswalk. *Small; real leak risk.*
-2. **Pages:** `moop_page_visible()` + `access_rules.json` "pages"; check in all six readers;
+2. **Built 2026-11-13** — `lib/access_rules.php` (`access_rules.json` "pages", fails closed: unknown setting
+   or unreadable file = admins only; a no-op clear never writes) + `moop_page_for_visitor()` in
+   `page.php`, home (falls back to MOOP's home), `{include:}`, the menu (`ConfigManager::menuLink`), the
+   ontology term page. Manage Languages/Menu/Pages are admin-only, so unchanged. Deleting a page drops its
+   rule. Snapshot list has `access_rules.json`. NOT done: links to a private page typed by hand inside
+   another page's HTML (e.g. home tiles) stay as links and 404 — they cannot be dropped generically.
+   Original item: **Pages:** `moop_page_visible()` + `access_rules.json` "pages"; check in all six readers;
    private = 404; drop from menus, tiles and `{include:}` for those who can't see it.
 3. **Manage Pages:** filter box + "Visible to" column + Edit dialog.
 4. **Analyses:** analysis rules in `moop_dataset_visible()`; expression `access_level` folded in;

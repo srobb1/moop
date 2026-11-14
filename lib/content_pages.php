@@ -28,6 +28,8 @@
  *             script, so this cleaning is what stops a page from carrying one.
  */
 
+require_once __DIR__ . '/access_rules.php';
+
 /** The languages a page is edited in: the site's active languages, English first. */
 function moop_page_langs(): array {
     return ConfigManager::getInstance()->languageCodes();
@@ -60,6 +62,16 @@ function moop_page_get(string $slug): ?array {
     if (!is_file($file)) return null;
     $page = json_decode((string) @file_get_contents($file), true);
     return is_array($page) ? moop_page_normalise($page + ['slug' => $slug]) : null;
+}
+
+/**
+ * A page as a VISITOR may see it: the page, or null when it does not exist OR the viewer may not see
+ * it (lib/access_rules.php) -- the two read the same, so a private page never confirms it exists.
+ * Every visitor-facing reader uses this; moop_page_get() is for the admin pages.
+ */
+function moop_page_for_visitor(string $slug): ?array {
+    $page = moop_page_get($slug);
+    return $page !== null && moop_page_visible($page['slug']) ? $page : null;
 }
 
 /** Every page, sorted by English title: [slug => page]. */
@@ -136,8 +148,10 @@ function moop_page_delete(string $slug): array {
     if (!moop_page_slug_ok($slug)) return ['ok' => false, 'error' => 'No such page.'];
     $file = moop_pages_dir() . "/$slug.json";
     if (!is_file($file)) return ['ok' => false, 'error' => 'No such page.'];
-    return @unlink($file) ? ['ok' => true, 'error' => null]
-                          : ['ok' => false, 'error' => 'Could not delete the page — the web server cannot write there.'];
+    if (!@unlink($file)) return ['ok' => false, 'error' => 'Could not delete the page — the web server cannot write there.'];
+    // Its access rule goes too: a new page at the same address starts from the default, not from a stale rule.
+    $r = moop_page_rule_set($slug, null);
+    return $r['ok'] ? ['ok' => true, 'error' => null] : ['ok' => true, 'error' => 'Deleted, but its access rule was not removed: ' . $r['error']];
 }
 
 /**
@@ -288,7 +302,7 @@ function moop_page_includes_expand(string $html, ?array &$missing = null): strin
     if (strpos($html, '{include:') === false) return $html;
     $out = preg_replace_callback('#(?:<p>\s*)?\{include:([a-z0-9][a-z0-9-]*)\}(?:\s*</p>)?#i', function ($m) use (&$depth, &$missing) {
         if ($depth > 0) return '';
-        $page = moop_page_get(strtolower($m[1]));
+        $page = moop_page_for_visitor(strtolower($m[1]));   // a page this viewer may not see is left out, like a missing one
         if ($page === null) {
             $missing[] = 'Included page "' . $m[1] . '" does not exist, so {include:' . $m[1] . '} shows nothing';
             return '';

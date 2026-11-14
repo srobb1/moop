@@ -1,7 +1,8 @@
 <?php
 /**
  * A content page: /<site>/page.php?p=<slug>. Written on Admin -> Manage Pages, stored as site
- * data (lib/content_pages.php). An unknown or malformed address answers the site's 404 page.
+ * data (lib/content_pages.php). An unknown or malformed address -- or a page this viewer may not
+ * see (lib/access_rules.php) -- answers the site's 404 page, the same for both.
  */
 include_once __DIR__ . '/includes/access_control.php';
 include_once __DIR__ . '/includes/layout.php';
@@ -9,7 +10,7 @@ require_once __DIR__ . '/lib/content_pages.php';
 require_once __DIR__ . '/lib/functions_display.php';
 
 $config = ConfigManager::getInstance();
-$page   = moop_page_get((string) ($_GET['p'] ?? ''));
+$page   = moop_page_for_visitor((string) ($_GET['p'] ?? ''));   // private reads as missing: the same 404
 if ($page === null) {
     moop_not_found_page('There is no page at this address.');
 }

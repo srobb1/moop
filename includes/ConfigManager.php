@@ -522,7 +522,9 @@ class ConfigManager
         } elseif (isset($to['page'])) {
             $slug = (string) $to['page'];
             $file = rtrim($this->getPath('metadata_path'), '/') . "/pages/$slug.json";
-            if (preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $slug) && is_file($file)) {
+            // A page this viewer may not see is left out of the menu (lib/access_rules.php).
+            require_once __DIR__ . '/../lib/access_rules.php';
+            if (preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $slug) && is_file($file) && moop_page_visible($slug)) {
                 $href = "$site/page.php?p=" . rawurlencode($slug);
             }
         } elseif (isset($to['tool'])) {

@@ -28,7 +28,7 @@ $home = defined('MOOP_BUILTIN_HOME') ? ['mode' => 'builtin', 'page' => ''] : $co
 $home_intro_html = '';
 if ($home['mode'] !== 'builtin') {
     require_once __DIR__ . '/lib/content_pages.php';
-    $home_page = moop_page_get($home['page']);
+    $home_page = moop_page_for_visitor($home['page']);   // private to this viewer: MOOP's own home, as for a missing page
     $hl = moop_current_lang();   // the visitor's language; English where the page has none
     $pick = fn(string $part) => trim($home_page[$part][$hl] ?? '') !== '' ? $home_page[$part][$hl] : $home_page[$part]['en'];
     if ($home_page !== null && $home['mode'] === 'page') {

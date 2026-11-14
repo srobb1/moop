@@ -784,6 +784,8 @@ function housekeeping_snapshot_site_data(bool $persist = true) {
         // Web-side overrides of expression bundles (access level etc.). The bundles themselves are
         // copied in from the compute box; THIS file is the only web-side state, so it must be backed up.
         $site_path . '/metadata/expression_overrides.json'      => 'metadata/expression_overrides.json',
+        // Who may see content pages (and later analyses): lib/access_rules.php, written by the web.
+        $site_path . '/metadata/access_rules.json'              => 'metadata/access_rules.json',
         $users_file                                             => 'users.json',
         // The site's own stylesheet (head-resources.php loads it if present; planosphere's look,
         // 2026-11-11). Site data, not code: git-ignored, so the backup is its only other copy.

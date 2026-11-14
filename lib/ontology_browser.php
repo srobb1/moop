@@ -146,7 +146,7 @@ function moop_ob_written_page(array $term): ?array {
     $names = array_merge([$term['label']], ...array_values($term['synonyms'] ?: [[]]));
     foreach ($names as $n) {
         $slug = moop_page_slugify((string) $n);
-        if ($slug !== '' && ($page = moop_page_get($slug))) return ['slug' => $slug] + $page;
+        if ($slug !== '' && ($page = moop_page_for_visitor($slug))) return ['slug' => $slug] + $page;
     }
     return null;
 }

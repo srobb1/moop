@@ -3895,6 +3895,62 @@ ok($_home([]) === ['mode' => 'builtin', 'page' => ''] && $_home(['mode' => 'nons
    "home: no setting (or a broken one) = MOOP's own home");
 ok($_home(['mode' => 'intro', 'page' => 'about']) === ['mode' => 'intro', 'page' => 'about'], 'home: a page above MOOP\'s home');
 $_c = $_cprp->getValue($_cpcfg); unset($_c['home']); $_cprp->setValue($_cpcfg, $_c);
+
+// Who may see a page (notes/PERMISSIONS_PLAN.md step 2, lib/access_rules.php). Private reads exactly
+// like missing (null -> page.php's 404), and every visitor-facing reader goes through the same check.
+$_apsess = $_SESSION ?? [];
+$_as = function (string $level, array $access = [], string $user = '') { $_SESSION = ['access_level' => $level, 'access' => $access, 'username' => $user ?: strtolower($level)]; };
+$_as('PUBLIC');
+ok(moop_page_for_visitor('rnai') !== null && moop_page_rule('rnai') === ['visible_to' => 'everyone'] && !is_file(moop_access_rules_file()),
+   'pages: no rule stored = everyone (a site that never restricts anything has no access_rules.json)');
+ok(moop_page_rule_set('rnai', ['visible_to' => 'admins'])['ok'], 'pages: a rule is saved');
+ok(moop_page_for_visitor('rnai') === null && moop_page_for_visitor('rnai') === moop_page_for_visitor('no-such-page'),
+   'pages: admins-only, seen by the public -> the same null as a page that does not exist (one 404)');
+$_as('ADMIN'); ok(moop_page_for_visitor('rnai') !== null, 'pages: an admin sees an admins-only page');
+moop_page_rule_set('rnai', ['visible_to' => 'logged_in']);
+$_as('PUBLIC');        $_v1 = moop_page_for_visitor('rnai') === null;
+$_as('COLLABORATOR');  $_v2 = moop_page_for_visitor('rnai') !== null;
+$_as('IP_IN_RANGE');   $_v3 = moop_page_for_visitor('rnai') !== null;
+ok($_v1 && $_v2 && $_v3, 'pages: "logged in" -- hidden from the public, shown to collaborators and the internal network');
+moop_page_rule_set('rnai', ['visible_to' => 'internal']);
+$_as('COLLABORATOR');  $_v1 = moop_page_for_visitor('rnai') === null;
+$_as('IP_IN_RANGE');   $_v2 = moop_page_for_visitor('rnai') !== null;
+ok($_v1 && $_v2, 'pages: "internal" -- not outside collaborators, yes the internal network');
+// "Same as a data set": follows that gene set (groups file + the collaborator's own list).
+@mkdir("$_cp/orgs/Org/asm/gs", 0777, true);
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['Lab']]]));
+$_c = $_cprp->getValue($_cpcfg); $_c['organism_data'] = "$_cp/orgs"; $_cprp->setValue($_cpcfg, $_c);
+moop_page_rule_set('rnai', ['visible_to' => 'dataset', 'organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs']);
+$_as('PUBLIC');                                          $_v1 = moop_page_for_visitor('rnai') === null;
+$_as('COLLABORATOR', ['Org' => ['asm' => ['gs']]], 'u1'); $_v2 = moop_page_for_visitor('rnai') !== null;
+$_as('COLLABORATOR', ['Other' => ['x' => ['y']]], 'u2');  $_v3 = moop_page_for_visitor('rnai') === null;
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['PUBLIC']]]));
+$_as('PUBLIC', [], 'anon2');                             $_v4 = moop_page_for_visitor('rnai') !== null;
+ok($_v1 && $_v2 && $_v3 && $_v4, 'pages: "same as data set" -- private while the gene set is, for whoever has it; public once it is');
+// Every visitor-facing reader: {include:}, the menu, the ontology term page's written page.
+moop_page_rule_set('rnai', ['visible_to' => 'admins']);
+$_as('PUBLIC', [], 'anon3');
+ok(moop_page_includes_expand('<p>{include:rnai}</p>') === '', 'pages: {include:} of a page the viewer may not see shows nothing');
+ok($_mm([['type' => 'link', 'label' => ['en' => 'RNAi'], 'to' => ['page' => 'rnai']], ['type' => 'tools']]) === ['TOOLS'],
+   'pages: the menu leaves out a page the viewer may not see');
+require_once "$BASE/lib/ontology_browser.php";
+ok(moop_ob_written_page(['label' => 'RNAi', 'synonyms' => []]) === null, 'pages: an ontology term page does not show a private written page');
+$_as('ADMIN');
+ok(str_contains(moop_page_includes_expand('<p>{include:rnai}</p>'), 'x') && count($_mm([['type' => 'link', 'label' => ['en' => 'RNAi'], 'to' => ['page' => 'rnai']]])) === 1
+   && moop_ob_written_page(['label' => 'RNAi', 'synonyms' => []]) !== null, 'pages: ...and all three show it to an admin');
+// Fail closed, and no silent loss.
+$_as('PUBLIC', [], 'anon4');
+ok(!moop_page_rule_set('rnai', ['visible_to' => 'nobody'])['ok'] && !moop_page_rule_set('rnai', ['visible_to' => 'dataset', 'organism' => '../x', 'assembly' => 'a'])['ok'],
+   'pages: an unknown setting or a bad data set is refused, not saved');
+ok(moop_access_rule_normalise(['visible_to' => 'nobody']) === ['visible_to' => 'admins'], 'pages: an unknown stored setting reads as admins only');
+file_put_contents(moop_access_rules_file(), '{not json');
+ok(moop_page_for_visitor('about') === null && !moop_page_rule_set('about', ['visible_to' => 'admins'])['ok'] && file_get_contents(moop_access_rules_file()) === '{not json',
+   'pages: an unreadable access_rules.json hides every page from the public (fail closed) and is never overwritten');
+unlink(moop_access_rules_file());
+moop_page_rule_set('about', ['visible_to' => 'admins']);
+moop_page_delete('about');
+ok(!isset(moop_access_rules()['pages']['about']), 'pages: deleting a page removes its rule, so a new page at that address starts public');
+$_SESSION = $_apsess;
 $_cprp->setValue($_cpcfg, $_cpsaved);
 exec('rm -rf ' . escapeshellarg($_cp));
 
