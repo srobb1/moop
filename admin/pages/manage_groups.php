@@ -86,7 +86,7 @@
     </thead>
     <tbody id="assemblies-tbody">
       <?php foreach ($groups_data_with_status as $index => $data): ?>
-        <?php $row_gs = htmlspecialchars($data['gene_set'] ?? 'v1'); ?>
+        <?php $row_gs = htmlspecialchars($data['gene_set'] ?? ''); ?>
         <?php $row_common_name = htmlspecialchars($organism_meta[$data['organism']]['common_name'] ?? ''); ?>
         <tr data-organism="<?= htmlspecialchars($data['organism']) ?>" data-assembly="<?= htmlspecialchars($data['assembly']) ?>" data-gene-set="<?= $row_gs ?>"
             style="<?= $data['_stale'] !== null ? 'background-color: #fff3cd;' : '' ?>">
@@ -268,7 +268,7 @@
           </thead>
           <tbody>
             <?php foreach ($stale_entries as $stale): ?>
-              <?php $stale_gs = htmlspecialchars($stale['gene_set'] ?? 'v1'); ?>
+              <?php $stale_gs = htmlspecialchars($stale['gene_set'] ?? ''); ?>
               <?php $stale_common_name = htmlspecialchars($organism_meta[$stale['organism']]['common_name'] ?? ''); ?>
               <tr data-organism="<?= htmlspecialchars($stale['organism']) ?>" data-assembly="<?= htmlspecialchars($stale['assembly']) ?>" data-gene-set="<?= $stale_gs ?>">
                 <td><?= htmlspecialchars($stale['organism']) ?></td>

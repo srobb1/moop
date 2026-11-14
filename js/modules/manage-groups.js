@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelButton = row.querySelector('.cancel-new-btn');
     const organism = row.getAttribute('data-organism');
     const assembly = row.getAttribute('data-assembly');
-    const geneSet  = row.getAttribute('data-gene-set') || 'v1';
+    const geneSet  = row.getAttribute('data-gene-set') || '';
     
     let selectedTags = [];
     
@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const row = button.closest('tr');
       const organism = row.getAttribute('data-organism');
       const assembly = row.getAttribute('data-assembly');
-      const geneSet  = row.getAttribute('data-gene-set') || 'v1';
+      const geneSet  = row.getAttribute('data-gene-set') || '';
 
       if (confirm(`Delete entry for ${organism} / ${assembly} / ${geneSet}? This cannot be undone.`)) {
         const form = document.createElement('form');
@@ -460,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cancelButton = row.querySelector('.cancel-btn');
     const organism = row.getAttribute('data-organism');
     const assembly = row.getAttribute('data-assembly');
-    const geneSet  = row.getAttribute('data-gene-set') || 'v1';
+    const geneSet  = row.getAttribute('data-gene-set') || '';
     
     // Get current tags from chip elements
     const chipElements = groupsSpan.querySelectorAll('.tag-chip');
@@ -658,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedGroupedAssemblies.push({
           organism: row.getAttribute('data-organism'),
           assembly: row.getAttribute('data-assembly'),
-          gene_set: row.getAttribute('data-gene-set') || 'v1',
+          gene_set: row.getAttribute('data-gene-set') || '',
         });
       });
     } else {
@@ -682,7 +682,7 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedUngroupedAssemblies.push({
           organism: row.getAttribute('data-organism'),
           assembly: row.getAttribute('data-assembly'),
-          gene_set: row.getAttribute('data-gene-set') || 'v1',
+          gene_set: row.getAttribute('data-gene-set') || '',
         });
       });
     } else {

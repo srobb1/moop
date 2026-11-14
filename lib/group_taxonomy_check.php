@@ -182,7 +182,7 @@ function moop_gt_compute(array $group_data, array $tree, array $exceptions = [])
         $rows[] = [
             'organism' => $org,
             'assembly' => $entry['assembly'] ?? '',
-            'gene_set' => $entry['gene_set'] ?? 'v1',
+            'gene_set' => $entry['gene_set'] ?? '',
             'groups'   => array_flip($groups),
         ];
         foreach ($groups as $g) {

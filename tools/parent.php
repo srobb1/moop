@@ -227,7 +227,13 @@ $genome_name      = $row['genome_name'];
 $feature_gene_set_id = $row['gene_set_id'];
 
 // Resolve gene_set name and directories first (needed for caching below)
-$gene_set_name    = $row['gene_set_name'] ?? 'v1';
+// Access already limited the row to an accessible gene set, so it always has a name; a row without one
+// is broken data -- shown as not found, never read as an invented 'v1'.
+$gene_set_name    = (string) ($row['gene_set_name'] ?? '');
+if ($gene_set_name === '') {
+    moop_gene_not_found((string)$uniquename, $organism_name,
+        trim(($organism_info['genus'] ?? '') . ' ' . ($organism_info['species'] ?? '')) ?: str_replace('_', ' ', $organism_name));
+}
 $assembly_dir_base = $config->getPath('organism_data') . '/' . $organism_name . '/' . $genome_accession;
 $gene_set_dir     = $assembly_dir_base . '/' . $gene_set_name;
 

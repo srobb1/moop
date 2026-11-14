@@ -407,7 +407,7 @@ function moop_accessible_gene_sets_all($specific_organism = null, $specific_asse
     foreach ($entries_to_process as $entry) {
         $org      = $entry['organism'];
         $assembly = $entry['assembly'];
-        $gene_set = $entry['gene_set'] ?? 'v1';
+        $gene_set = $entry['gene_set'] ?? '';
 
         // Access check — use has_gene_set_access which handles all levels
         if (!has_gene_set_access($org, $assembly, $gene_set)) {

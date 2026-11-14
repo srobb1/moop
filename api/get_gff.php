@@ -9,7 +9,7 @@
  *   organism   - Organism name (required)
  *   assembly   - Assembly accession (required)
  *   uniquename - Gene feature uniquename (required)
- *   gene_set   - Gene set name (optional, defaults to 'v1')
+ *   gene_set   - Gene set name (required)
  *
  * Returns: text/plain GFF3
  */
@@ -32,12 +32,12 @@ $organism_context = setupOrganismDisplayContext($_GET['organism'], $organism_dat
 $organism_name    = $organism_context['name'];
 
 $assembly   = preg_replace('/[^a-zA-Z0-9._\-]/', '', $_GET['assembly']);
-$gene_set   = preg_replace('/[^a-zA-Z0-9._\-]/', '', $_GET['gene_set'] ?? 'v1') ?: 'v1';
+$gene_set   = (string) ($_GET['gene_set'] ?? '');
 // escapeshellarg() stops shell injection; `-e` in front of it stops OPTION injection -- a
 // value like "-f/some/file" was otherwise read by grep as an option, not a pattern.
 $uniquename = trim($_GET['uniquename']);
 
-if (empty($assembly) || empty($uniquename)) {
+if (empty($assembly) || empty($uniquename) || !moop_plain_name($gene_set)) {
     http_response_code(400);
     echo "# Error: invalid parameter value\n";
     exit;

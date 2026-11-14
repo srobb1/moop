@@ -510,7 +510,7 @@
   }
 
   // ── Build one org row (chips + per-organism checkbox + count) ─────────
-  // assembliesDict: {assembly: [gene_sets]} — e.g. {HIv3: ['v1'], GCA_1: ['v1','v2']}
+  // assembliesDict: {assembly: [gene_sets]} — e.g. {HIv3: ['v1'], GCA_1: ['v1','v2'], SmedSxl_v3.1: ['blast_only']}
   // selectedAccess: {org: {assembly: ['*'] | [gene_sets]}}
   // asmRefreshRegistry: optional map keyed 'org::asm' → refreshFn, filled here
   function buildOrgSection(organism, assembliesDict, selectedAccess, onGroupRefresh, onUpdate, asmRefreshRegistry) {
@@ -557,7 +557,7 @@
     }
 
     assemblies.forEach(assembly => {
-      const geneSets  = assembliesDict[assembly] || ['v1'];
+      const geneSets  = assembliesDict[assembly] || [];
       const hasGeneSets = geneSets.length >= 1;
       const c             = orgColor(organism);
 
@@ -897,7 +897,7 @@
 
         // Resolve ['*'] to actual gene set names for display
         const displayGs = (geneSets.length === 1 && geneSets[0] === '*')
-          ? (allOrganisms[org]?.[asm] || ['v1'])
+          ? (allOrganisms[org]?.[asm] || [])
           : geneSets;
 
         const row = document.createElement('div');
@@ -927,7 +927,7 @@
         const gsWrap = document.createElement('span');
         gsWrap.className = 'd-flex flex-wrap gap-1 align-items-center';
         displayGs.forEach(gs => {
-          const allGs = allOrganisms[org]?.[asm] || ['v1'];
+          const allGs = allOrganisms[org]?.[asm] || [];
           const gsChip = document.createElement('span');
           gsChip.className = 'd-inline-flex align-items-center gap-1 badge rounded-pill';
           gsChip.style.cssText = `background:${orgColor(org)}; opacity:0.82; font-size:10px; font-weight:normal; padding:3px 7px;`;

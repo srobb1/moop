@@ -147,10 +147,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
     
+    // Every single-entry action names its gene set; none is invented (a missing one used to become 'v1').
+    // Delete alone accepts '' -- it removes a malformed entry with no gene_set (listed as stale "gone").
+    if ((isset($_POST['update']) || isset($_POST['add'])
+         || (isset($_POST['delete']) && ($_POST['gene_set'] ?? '') !== ''))
+        && !moop_plain_name($_POST['gene_set'] ?? null)) {
+        $_SESSION['error_message'] = 'No valid gene set was named, so nothing was changed.';
+        ob_end_clean();
+        header('Location: manage_groups.php');
+        exit();
+    }
+
     if (isset($_POST['update'])) {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
-        $gene_set = $_POST['gene_set'] ?? 'v1';
+        $gene_set = $_POST['gene_set'] ?? '';
         $groups_input = trim($_POST['groups']);
 
         if ($groups_input === '') {
@@ -162,7 +173,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Find old groups for logging
         $old_groups = [];
         foreach ($groups_data as &$data) {
-            if ($data['organism'] === $organism && $data['assembly'] === $assembly && ($data['gene_set'] ?? 'v1') === $gene_set) {
+            if ($data['organism'] === $organism && $data['assembly'] === $assembly && ($data['gene_set'] ?? '') === $gene_set) {
                 $old_groups = $data['groups'];
                 $data['groups'] = $groups;
                 break;
@@ -185,7 +196,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (isset($_POST['add'])) {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
-        $gene_set = $_POST['gene_set'] ?? 'v1';
+        $gene_set = $_POST['gene_set'] ?? '';
         $groups_input = trim($_POST['groups']);
         // Never publish a directory the database does not have (moop_split_unrepresented_by_db())
         if (moop_split_unrepresented_by_db([['organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gene_set]], $organism_data_path)['not_loaded']) {
@@ -225,12 +236,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (isset($_POST['delete'])) {
         $organism = $_POST['organism'];
         $assembly = $_POST['assembly'];
-        $gene_set = $_POST['gene_set'] ?? 'v1';
+        $gene_set = $_POST['gene_set'] ?? '';
 
         // Find and remove the entry
         $old_groups = [];
         foreach ($groups_data as $key => &$data) {
-            if ($data['organism'] === $organism && $data['assembly'] === $assembly && ($data['gene_set'] ?? 'v1') === $gene_set) {
+            if ($data['organism'] === $organism && $data['assembly'] === $assembly && ($data['gene_set'] ?? '') === $gene_set) {
                 $old_groups = $data['groups'];
                 unset($groups_data[$key]);
                 break;
@@ -283,7 +294,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         
     } elseif (isset($_POST['bulk_edit'])) {
         // Bulk edit: add and/or remove groups from existing assemblies
-        $assemblies = json_decode($_POST['assemblies'], true);
+        // Only tuples that name a gene set: a missing one is never read as 'v1'
+        $assemblies = array_values(array_filter(json_decode($_POST['assemblies'], true) ?: [],
+            fn($a) => is_array($a) && moop_plain_name($a['gene_set'] ?? null)));
         $groups_to_add = array_filter(array_map('trim', explode(',', trim($_POST['groups_add'] ?? ''))));
         $groups_to_remove = array_filter(array_map('trim', explode(',', trim($_POST['groups_remove'] ?? ''))));
         
@@ -293,11 +306,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         foreach ($assemblies as $assembly_data) {
             $organism = $assembly_data['organism'];
             $assembly = $assembly_data['assembly'];
-            $gene_set = $assembly_data['gene_set'] ?? 'v1';
+            $gene_set = $assembly_data['gene_set'];
 
             // Find the entry
             foreach ($groups_data as &$data) {
-                if ($data['organism'] === $organism && $data['assembly'] === $assembly && ($data['gene_set'] ?? 'v1') === $gene_set) {
+                if ($data['organism'] === $organism && $data['assembly'] === $assembly && ($data['gene_set'] ?? '') === $gene_set) {
                     $old_groups = $data['groups'];
                     $new_groups = $data['groups'];
 
@@ -360,11 +373,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     } elseif (isset($_POST['bulk_add'])) {
         // Bulk add: create new entries for ungrouped assemblies
-        $assemblies = json_decode($_POST['assemblies'], true);
+        $assemblies = array_values(array_filter(json_decode($_POST['assemblies'], true) ?: [],
+            fn($a) => is_array($a) && moop_plain_name($a['gene_set'] ?? null)));
         $groups = array_filter(array_map('trim', explode(',', trim($_POST['groups'] ?? ''))));
         // Never publish a directory the database does not have (moop_split_unrepresented_by_db())
         $_bulk = moop_split_unrepresented_by_db(array_map(fn($a) => ['organism' => $a['organism'], 'assembly' => $a['assembly'],
-                                                                      'gene_set' => $a['gene_set'] ?? 'v1'], $assemblies ?: []), $organism_data_path);
+                                                                      'gene_set' => $a['gene_set']], $assemblies), $organism_data_path);
         $assemblies = $_bulk['loaded'];
         if ($_bulk['not_loaded']) {
             $_SESSION['error_message'] = 'Not added, because they are not in their organism\'s database (their pages would fail): '
@@ -377,7 +391,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         foreach ($assemblies as $assembly_data) {
             $organism = $assembly_data['organism'];
             $assembly = $assembly_data['assembly'];
-            $gene_set = $assembly_data['gene_set'] ?? 'v1';
+            $gene_set = $assembly_data['gene_set'];
 
             // Add new entry
             $new_entry = [

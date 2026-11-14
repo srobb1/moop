@@ -884,7 +884,7 @@ function checkAssemblyWritableForBlast($assembly_path) {
  * @param string $organism_data_path Path to organism data directory
  * @return array Array with 'success' boolean, 'message', and 'output'
  */
-function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_data_path, $gene_set = 'v1') {
+function generateBlastIndexes($organism, $assembly, $fasta_filename, $organism_data_path, $gene_set) {
     $result = [
         'success' => false,
         'message' => '',

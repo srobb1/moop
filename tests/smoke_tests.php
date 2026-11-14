@@ -4886,6 +4886,18 @@ foreach (['admin/api/quick_add_group.php', 'admin/manage_users.php'] as $_f) {
     ok(strpos($_src, 'moop_assembly_dataset_units(') !== false && !preg_match("/\\[\\]\\s*=\\s*'v1'|=\\s*\\['v1'\\]/", $_src),
        "$_f takes an assembly's data sets from moop_assembly_dataset_units(), never an invented 'v1'");
 }
+// Item 9: no code reads a missing gene set as 'v1' -- not a `?? 'v1'`, `|| 'v1'`, `|| ['v1']` or a 'v1' parameter default
+$_v1 = [];
+foreach (['admin', 'api', 'lib', 'includes', 'tools', 'js/modules'] as $_d) {
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator("$BASE/$_d", FilesystemIterator::SKIP_DOTS)) as $_fi) {
+        if (!preg_match('/\.(php|js)$/', $_fi->getFilename())) continue;
+        foreach (file($_fi->getPathname()) as $_n => $_line) {
+            if (preg_match('#^\s*(//|\*|/\*|\#)#', $_line)) continue;   // a comment may tell the history
+            if (preg_match("/(\?\?|\|\|)\s*\[?\s*['\"]v1['\"]|\\$\w+\s*=\s*['\"]v1['\"]\s*[,)]/", $_line)) $_v1[] = substr($_fi->getPathname(), strlen($BASE) + 1) . ':' . ($_n + 1);
+        }
+    }
+}
+ok($_v1 === [], "no read-side 'v1' default for a missing gene set" . ($_v1 ? ': ' . implode(', ', $_v1) : ''));
 $_ctx = ['data' => $_bod, 'groups' => ['OrgB/asmLab/blast_only' => $_ge('OrgB', 'asmLab', 'blast_only', 'Lab'),
                                         'OrgB/asmEmpty/blast_only' => $_ge('OrgB', 'asmEmpty', 'blast_only', 'Lab')],
           'users' => ['ann' => ['role' => 'collaborator', 'access' => ['OrgB' => ['asmLab' => ['blast_only']]]]], 'users_ok' => true, 'audience' => []];

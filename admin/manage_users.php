@@ -33,7 +33,8 @@ $grouped_orgs = [];
 foreach ($group_data as $entry) {
     $org  = $entry['organism'];
     $asm  = $entry['assembly'];
-    $gs   = $entry['gene_set'] ?? 'v1';
+    $gs   = $entry['gene_set'] ?? '';
+    if ($gs === '') continue;   // a malformed entry names no data set; nothing to grant (never an invented 'v1')
     $grps = $entry['groups'] ?? [];
     if (!isset($organisms[$org]) || !in_array($asm, $organisms[$org])) continue;
     foreach ($grps as $g) {
@@ -60,7 +61,8 @@ $orgs_with_gene_sets = [];
 foreach ($group_data as $entry) {
     $org = $entry['organism'];
     $asm = $entry['assembly'];
-    $gs  = $entry['gene_set'] ?? 'v1';
+    $gs  = $entry['gene_set'] ?? '';
+    if ($gs === '') continue;
     if (!isset($organisms[$org]) || !in_array($asm, $organisms[$org])) continue;
     $orgs_with_gene_sets[$org][$asm][] = $gs;
 }

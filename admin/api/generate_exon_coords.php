@@ -18,11 +18,9 @@ header('Content-Type: application/json');
 
 $organism = trim($_POST['organism'] ?? '');
 $assembly = trim($_POST['assembly'] ?? '');
-$gene_set = trim($_POST['gene_set'] ?? 'v1');
+$gene_set = trim($_POST['gene_set'] ?? '');
 
-if (!preg_match('/^[A-Za-z0-9_\-\.]+$/', $organism)
- || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $assembly)
- || !preg_match('/^[A-Za-z0-9_\-\.]+$/', $gene_set)) {
+if (!moop_plain_name($organism) || !moop_plain_name($assembly) || !moop_plain_name($gene_set)) {
     echo json_encode(['success' => false, 'message' => 'Invalid organism, assembly, or gene set name.']);
     exit;
 }

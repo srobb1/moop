@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $organism   = trim($_POST['organism']   ?? '');
 $assembly   = trim($_POST['assembly']   ?? '');
-$gene_set   = trim($_POST['gene_set']   ?? 'v1');
+$gene_set   = trim($_POST['gene_set']   ?? '');
 $do_index   = !empty($_POST['text_index']);
 $attributes = trim($_POST['attributes'] ?? MOOP_JBROWSE_TEXT_INDEX_ATTRIBUTES);
 
@@ -35,7 +35,7 @@ if (empty($organism) || empty($assembly)) {
 }
 
 foreach (['organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gene_set] as $param => $val) {
-    if (!preg_match('/^[A-Za-z0-9_\-\.]+$/', $val)) {
+    if (!moop_plain_name($val)) {
         echo json_encode(['success' => false, 'error' => "Invalid $param: $val"]);
         exit;
     }

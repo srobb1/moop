@@ -291,3 +291,13 @@ Smed smed_chr_ref_v1 + SmedSxl_v3.1 got genome.json (simrbase); after a rescan b
 66/66 organisms Complete, checklist clean, BLAST + JBrowse unchanged.
 OPEN (Sofia): the public organism page lists gene sets only, so BLAST-only genomes do not appear there — add a
 "Genomes for BLAST" line? Then item 9.
+**2026-11-14 — item 9 done.** The visualizer link was already `moop_url_base()` (lib/blast_results_visualizer.php
+502/680/713). Every read-side `v1` invention removed (16 PHP + 9 JS): Manage Groups compares `gene_set ?? ''`
+(never matches a real one); update/add refuse a request naming no valid gene set ("nothing was changed"),
+delete accepts `''` only to remove a malformed entry (listed stale "gone"); bulk edit/add drop such tuples.
+Manage Users skips entries with no gene_set (nothing to grant); its JS `|| ['v1']` → `[]`. Collaborator
+visibility needs a named gene set. Gene page: a row without a gene-set name = not found. `api/get_gff.php`
+and the coords/reprep admin APIs require a `moop_plain_name()` gene set (400 / error) — their regex let `..`
+through. `generateBlastIndexes()` has no default. Smoke test: no `?? 'v1'` / `|| 'v1'` / `= 'v1'` default in
+admin, api, lib, includes, tools, js/modules (red on the previous revision). Checked live as admin: Manage
+Groups/Users 200, update without gene set refused with the groups file unchanged; gene page + GFF download 200.

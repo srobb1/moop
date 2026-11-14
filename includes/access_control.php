@@ -621,7 +621,8 @@ function moop_visible_group_entries(array $group_data) {
     return array_values(array_filter($group_data, function ($entry) use ($sees_all) {
         return $sees_all
             || entry_is_public($entry)
-            || moop_collaborator_allows($entry['organism'] ?? '', $entry['assembly'] ?? '', $entry['gene_set'] ?? 'v1');
+            || (($entry['gene_set'] ?? '') !== ''
+                && moop_collaborator_allows($entry['organism'] ?? '', $entry['assembly'] ?? '', $entry['gene_set']));
     }));
 }
 }
