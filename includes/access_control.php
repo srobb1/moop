@@ -534,7 +534,8 @@ if (!defined('MOOP_BLAST_ONLY')) define('MOOP_BLAST_ONLY', 'blast_only');
  * (MOOP_BLAST_ONLY) stands for the assembly itself -- a genome offered for BLAST with no gene set loaded (notes/PERMISSIONS_PLAN.md
  * step 6; notes/ASSEMBLY_WITHOUT_GENE_SET_PLAN.md). Valid only under an organism that is already
  * on the site (has organism.sqlite) and when the assembly directory holds the genome FASTA
- * (sequence_types.genome.pattern) or its BLAST index (the FASTA may be removed after indexing).
+ * (sequence_types.genome.pattern) or its BLAST index (the FASTA may be removed after indexing),
+ * and no gene-set subdirectory (then it is that gene set's genome, not a BLAST-only one).
  *
  * Access is the ordinary gene-set rule with gene_set 'blast_only': the entry's own groups, a
  * user's {asm: true}, '*', or an explicit 'blast_only' in their list (moop_user_access_allows()).
@@ -551,6 +552,10 @@ function moop_blast_only_genome(string $organism, string $assembly): ?string {
     $org_dir = rtrim($config->getPath('organism_data'), '/') . "/$organism";
     $asm_dir = "$org_dir/$assembly";
     if (!is_file("$org_dir/organism.sqlite") || !is_dir($asm_dir)) return null;
+    // Once the assembly has a gene set, that gene set's BLAST entry already offers this genome
+    // (getBlastDatabases() looks one level up); a leftover blast_only entry would list it twice, so
+    // it goes stale instead and Manage Groups offers to delete it.
+    if (glob("$asm_dir/*", GLOB_ONLYDIR)) return null;
     $pattern = $config->getSequenceTypes()['genome']['pattern'] ?? 'genome.fa';
     return (is_file("$asm_dir/$pattern") || is_file("$asm_dir/$pattern.nin")) ? $asm_dir : null;
 }

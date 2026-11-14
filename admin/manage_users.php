@@ -46,7 +46,10 @@ foreach ($group_data as $entry) {
 foreach ($organisms as $org => $assemblies) {
     if (!isset($grouped_orgs[$org])) {
         foreach ($assemblies as $asm) {
-            $organisms_by_group['Other'][$org][$asm][] = 'v1';
+            // Its real gene sets (or 'blast_only'); an invented 'v1' let an admin grant a gene set that did not exist
+            foreach (moop_assembly_dataset_units($organism_data_path, $org, $asm) as $gs) {
+                $organisms_by_group['Other'][$org][$asm][] = $gs;
+            }
         }
     }
 }
@@ -64,7 +67,8 @@ foreach ($group_data as $entry) {
 foreach ($organisms as $org => $assemblies) {
     foreach ($assemblies as $asm) {
         if (!isset($orgs_with_gene_sets[$org][$asm])) {
-            $orgs_with_gene_sets[$org][$asm] = ['v1'];
+            $units = moop_assembly_dataset_units($organism_data_path, $org, $asm);
+            if ($units) $orgs_with_gene_sets[$org][$asm] = $units;
         }
     }
 }

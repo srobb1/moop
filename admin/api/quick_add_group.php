@@ -48,14 +48,16 @@ foreach (scandir($org_path) as $assembly) {
     $asm_path = $org_path . '/' . $assembly;
     if (!is_dir($asm_path)) continue;
 
-    $gene_sets = array_map('basename', glob($asm_path . '/*', GLOB_ONLYDIR) ?: []);
-    if (empty($gene_sets)) $gene_sets = ['v1'];
+    // Its gene sets (or 'blast_only'), never an invented 'v1'; and, like Manage Groups' own add
+    // handlers, only the ones the database has (moop_split_unrepresented_by_db()).
+    $gene_sets = array_column(moop_split_unrepresented_by_db(array_map(
+        fn($gs) => ['organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gs],
+        moop_assembly_dataset_units($organism_data_path, $organism, $assembly)), $organism_data_path)['loaded'], 'gene_set');
 
     foreach ($gene_sets as $gene_set) {
         $found = false;
         foreach ($groups_data as &$entry) {
-            $entry_gs = $entry['gene_set'] ?? 'v1';
-            if ($entry['organism'] === $organism && $entry['assembly'] === $assembly && $entry_gs === $gene_set) {
+            if ($entry['organism'] === $organism && $entry['assembly'] === $assembly && ($entry['gene_set'] ?? null) === $gene_set) {
                 $found = true;
                 if (empty($entry['groups'])) {
                     $entry['groups'] = [$group_name];

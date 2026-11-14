@@ -574,6 +574,23 @@ function moop_search_narrow_scope(?array $permitted, array $client_pairs, string
 }
 
 /**
+ * The data sets an assembly directory holds, as the gene_set values a groups entry or a user's
+ * access list would name them: its gene-set subdirectories; or, with none, 'blast_only'
+ * (MOOP_BLAST_ONLY) when it is a valid BLAST-only genome (moop_blast_only_genome()); else nothing.
+ *
+ * Replaces three copies that invented a gene set called 'v1' for an assembly with no subdirectory
+ * -- a directory that never existed, so Manage Groups offered it and then flagged it stale
+ * (notes/ASSEMBLY_WITHOUT_GENE_SET_PLAN.md item 6).
+ *
+ * @return list<string>
+ */
+function moop_assembly_dataset_units(string $organism_data_path, string $organism, string $assembly): array {
+    $subdirs = glob("$organism_data_path/$organism/$assembly/*", GLOB_ONLYDIR) ?: [];
+    if ($subdirs) return array_map('basename', $subdirs);
+    return moop_blast_only_genome($organism, $assembly) !== null ? [MOOP_BLAST_ONLY] : [];
+}
+
+/**
  * Find (organism, assembly, gene_set) tuples that exist as directories on disk but
  * have no entry at all in organism_assembly_groups.json — i.e. nobody has access to
  * them yet. This is the gap that hides newly-added gene sets: adding a gene_set to
@@ -593,17 +610,14 @@ function moop_search_narrow_scope(?array $permitted, array $client_pairs, string
 function getUnrepresentedGeneSetTuples(array $all_organisms, string $organism_data_path, array $groups_data): array {
     $represented = [];
     foreach ($groups_data as $entry) {
-        $gs = $entry['gene_set'] ?? 'v1';
-        $represented[$entry['organism'] . '/' . $entry['assembly'] . '/' . $gs] = true;
+        if (!isset($entry['gene_set'])) continue;   // no such entry on any site (checked 2026-11-14)
+        $represented[$entry['organism'] . '/' . $entry['assembly'] . '/' . $entry['gene_set']] = true;
     }
 
     $unrepresented = [];
     foreach ($all_organisms as $organism => $assemblies) {
         foreach ($assemblies as $assembly) {
-            $asm_path  = $organism_data_path . '/' . $organism . '/' . $assembly;
-            $subdirs   = glob($asm_path . '/*', GLOB_ONLYDIR) ?: [];
-            $gene_sets = array_map('basename', $subdirs) ?: ['v1'];
-            foreach ($gene_sets as $gene_set) {
+            foreach (moop_assembly_dataset_units($organism_data_path, $organism, $assembly) as $gene_set) {
                 $key = $organism . '/' . $assembly . '/' . $gene_set;
                 if (!isset($represented[$key])) {
                     $unrepresented[] = ['organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gene_set];

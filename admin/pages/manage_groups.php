@@ -94,7 +94,7 @@
           <td><?= htmlspecialchars($data['organism']) ?></td>
           <td class="text-muted"><?= $row_common_name ?></td>
           <td><?= htmlspecialchars($data['assembly']) ?></td>
-          <td class="small text-muted"><?= $row_gs ?></td>
+          <td class="small text-muted"><?= $row_gs === MOOP_BLAST_ONLY ? '<span class="badge bg-secondary-subtle text-dark" title="blast_only: a genome offered for BLAST, with no gene set">genome only (BLAST)</span>' : $row_gs ?></td>
           <td>
             <span class="groups-display">
               <?php
@@ -225,7 +225,7 @@
               <td><?= htmlspecialchars($organism) ?></td>
               <td class="text-muted"><?= $ungrouped_common_name ?></td>
               <td><?= htmlspecialchars($assembly) ?></td>
-              <td class="small text-muted"><?= htmlspecialchars($gene_set) ?></td>
+              <td class="small text-muted"><?= $gene_set === MOOP_BLAST_ONLY ? '<span class="badge bg-secondary-subtle text-dark" title="blast_only: a genome offered for BLAST, with no gene set">genome only (BLAST)</span>' : htmlspecialchars($gene_set) ?></td>
               <td>
                 <span class="groups-display-new">(no groups)</span>
               </td>

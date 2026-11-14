@@ -111,7 +111,8 @@ function moop_access_overview_gene_set_audience(array &$ctx, string $org, string
     }
     sort($users, SORT_NATURAL | SORT_FLAG_CASE);
     return $ctx['audience'][$k] = [
-        'exists' => is_dir("{$ctx['data']}/$org/$asm/$gs"),
+        // A BLAST-only genome is the assembly itself -- there is no 'blast_only' directory
+        'exists' => $gs === MOOP_BLAST_ONLY ? moop_blast_only_genome($org, $asm) !== null : is_dir("{$ctx['data']}/$org/$asm/$gs"),
         'public' => $entry !== null && entry_is_public($entry),
         'groups' => array_values(array_filter((array) ($entry['groups'] ?? []), 'is_string')),
         'users'  => $users,
@@ -176,6 +177,14 @@ function moop_access_overview_gene_sets(array &$ctx): array {
         if (!is_file("{$ctx['data']}/$org/organism.sqlite") || !glob("$dir*.{gff,gff3,fa,fasta,gz}", GLOB_BRACE)) continue;
         $seen["$org/$asm/$gs"] ??= [$org, $asm, $gs];
     }
+    // ...and a genome-only assembly (no gene-set dir), as its BLAST-only data set
+    foreach (glob($ctx['data'] . '/*/*/', GLOB_ONLYDIR) ?: [] as $dir) {
+        [$org, $asm] = array_slice(explode('/', rtrim($dir, '/')), -2);
+        if ($org[0] === '.' || $asm[0] === '.' || !preg_match($safe, "$org$asm")) continue;
+        if (moop_assembly_dataset_units($ctx['data'], $org, $asm) === [MOOP_BLAST_ONLY]) {
+            $seen["$org/$asm/" . MOOP_BLAST_ONLY] ??= [$org, $asm, MOOP_BLAST_ONLY];
+        }
+    }
     ksort($seen, SORT_NATURAL | SORT_FLAG_CASE);
     $rows = [];
     foreach ($seen as [$org, $asm, $gs]) {
@@ -183,7 +192,7 @@ function moop_access_overview_gene_sets(array &$ctx): array {
         if (!$a['exists']) continue;   // in the groups file only: retired or not yet loaded, nothing to see
         $rows[] = [
             'kind' => 'gene_set', 'group' => 'data', 'organism' => $org,
-            'item' => $gs, 'detail' => "$org / $asm",
+            'item' => $gs === MOOP_BLAST_ONLY ? 'Genome only (BLAST)' : $gs, 'detail' => "$org / $asm",
             'who' => moop_access_overview_audience_words($a), 'restricted' => !$a['public'],
             'why' => $a['groups'] ? 'Groups: ' . implode(', ', $a['groups']) : 'In no group',
             'edit' => null,

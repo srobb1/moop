@@ -4860,6 +4860,43 @@ foreach ([['u1', ['asmLab' => true], true], ['u2', ['asmLab' => ['*']], true], [
 }
 $_SESSION = ['access_level' => 'ADMIN', 'access' => []];
 ok(isset($_bo_list(true)['OrgB/asmLab|blast_only']) && !isset($_bo_list(true)['NoDb/asmFa|blast_only']), 'an admin sees the private one, but never one under an organism not on the site');
+// Item 6: an assembly with no gene-set directory is never offered as an invented 'v1'
+@mkdir("$_bod/OrgB/asmBare", 0700, true);                        // no genome, no gene set
+ok(moop_assembly_dataset_units($_bod, 'OrgB', 'asmGenes') === ['gs1'] && moop_assembly_dataset_units($_bod, 'OrgB', 'asmFa') === ['blast_only']
+   && moop_assembly_dataset_units($_bod, 'OrgB', 'asmBare') === [] && moop_assembly_dataset_units($_bod, 'NoDb', 'asmFa') === [],
+   "an assembly's data sets: its gene-set dirs, else 'blast_only' for a valid genome, else nothing (never 'v1')");
+$_un = getUnrepresentedGeneSetTuples(['OrgB' => ['asmFa', 'asmGenes', 'asmBare', 'asmEmpty']], $_bod,
+                                     [$_ge('OrgB', 'asmGenes', 'gs1', 'PUBLIC')]);
+ok(array_map(fn($t) => "{$t['assembly']}/{$t['gene_set']}", $_un) === ['asmFa/blast_only'],
+   'Manage Groups offers an ungrouped genome-only assembly as blast_only, and no phantom v1 for the others');
+ok(moop_group_entry_stale_reason($_ge('OrgB', 'asmFa', 'blast_only', 'X'), $_bod, ['OrgB/asmFa' => true]) === null
+   && moop_group_entry_stale_reason($_ge('OrgB', 'asmEmpty', 'blast_only', 'X'), $_bod, []) === 'gone'
+   && moop_group_entry_stale_reason($_ge('OrgB', 'asmFa', '', 'X'), $_bod, []) === 'gone',
+   'a valid blast_only entry is not stale (no gene-set dir, no genome row: by design); an invalid one, or gene_set "", is');
+$_sp = moop_split_unrepresented_by_db([['organism' => 'OrgB', 'assembly' => 'asmFa', 'gene_set' => 'blast_only'],
+                                       ['organism' => 'NoDb', 'assembly' => 'asmFa', 'gene_set' => 'blast_only']], $_bod, ['OrgB/asmFa' => true], []);
+ok(array_column($_sp['loaded'], 'organism') === ['OrgB'] && array_column($_sp['not_loaded'], 'organism') === ['NoDb'],
+   'the add handlers accept a valid blast_only genome (not in the DB by design) and refuse one under an organism not on the site');
+foreach (['admin/api/quick_add_group.php', 'admin/manage_users.php'] as $_f) {
+    $_src = file_get_contents("$BASE/$_f");
+    ok(strpos($_src, 'moop_assembly_dataset_units(') !== false && !preg_match("/\\[\\]\\s*=\\s*'v1'|=\\s*\\['v1'\\]/", $_src),
+       "$_f takes an assembly's data sets from moop_assembly_dataset_units(), never an invented 'v1'");
+}
+$_ctx = ['data' => $_bod, 'groups' => ['OrgB/asmLab/blast_only' => $_ge('OrgB', 'asmLab', 'blast_only', 'Lab'),
+                                        'OrgB/asmEmpty/blast_only' => $_ge('OrgB', 'asmEmpty', 'blast_only', 'Lab')],
+          'users' => ['ann' => ['role' => 'collaborator', 'access' => ['OrgB' => ['asmLab' => ['blast_only']]]]], 'users_ok' => true, 'audience' => []];
+$_ovr = [];
+foreach (moop_access_overview_gene_sets($_ctx) as $_r) $_ovr[$_r['detail'] . '|' . $_r['item']] = $_r['who'];
+ok(array_keys($_ovr) === ['OrgB / asmFa|Genome only (BLAST)', 'OrgB / asmGenes|gs1', 'OrgB / asmIdx|Genome only (BLAST)', 'OrgB / asmLab|Genome only (BLAST)']
+   && str_contains($_ovr['OrgB / asmLab|Genome only (BLAST)'], 'ann'),
+   'Access overview lists BLAST-only genomes (grouped, and ungrouped on disk) with who can see them; not an invalid one');
+// A gene set added later: the genome is now that gene set's, so the blast_only entry goes stale (no double listing)
+@mkdir("$_bod/OrgB/asmFa/gsNew", 0700, true);
+ok(moop_blast_only_genome('OrgB', 'asmFa') === null
+   && moop_group_entry_stale_reason($_ge('OrgB', 'asmFa', 'blast_only', 'X'), $_bod, []) === 'gone'
+   && moop_assembly_dataset_units($_bod, 'OrgB', 'asmFa') === ['gsNew'],
+   'adding a gene set ends the BLAST-only genome: its entry is stale and the gene set is offered instead');
+rmdir("$_bod/OrgB/asmFa/gsNew");
 $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_bt));
 

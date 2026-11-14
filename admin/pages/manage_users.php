@@ -671,7 +671,7 @@
           gsChip.style.color      = initSel ? 'white' : c;
           gsChip.style.opacity    = initSel ? '1' : '0.45';
           gsChip.classList.toggle('selected', initSel);
-          gsChip.textContent = gs;
+          gsChip.textContent = gs === 'blast_only' ? 'genome only (BLAST)' : gs;
 
           gsChip.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -932,7 +932,7 @@
           gsChip.className = 'd-inline-flex align-items-center gap-1 badge rounded-pill';
           gsChip.style.cssText = `background:${orgColor(org)}; opacity:0.82; font-size:10px; font-weight:normal; padding:3px 7px;`;
           const gsLabel = document.createElement('span');
-          gsLabel.textContent = gs;
+          gsLabel.textContent = gs === 'blast_only' ? 'genome only (BLAST)' : gs;
           const gsRm = document.createElement('i');
           gsRm.className = 'fa fa-times';
           gsRm.style.cssText = 'cursor:pointer; opacity:0.7; font-size:9px;';

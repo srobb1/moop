@@ -248,3 +248,25 @@ string is truthy, so `|| 'v1'` no longer rewrites it; item 6 is now mostly the p
 on real data; the only live `v1`s are INVENTED (an assembly with no gene-set dir offered as `v1`). Remove them.
 **Item 8 DECIDED (Sofia): `genome.json` declares an assembly BLAST-only.** The organism page, checklist and
 Manage Organisms read that; the groups entry `blast_only` still carries access.
+
+**2026-11-14 — item 6 done.** `moop_assembly_dataset_units($data, $org, $asm)` (lib/functions_access.php) is the
+one answer to "what data sets does this assembly hold": its gene-set dirs; else `blast_only` when
+`moop_blast_only_genome()` passes; else nothing. It replaced the three `v1` inventions —
+`getUnrepresentedGeneSetTuples()`, `admin/api/quick_add_group.php`, `admin/manage_users.php` (both the "Other"
+group and allOrganisms). Also: `moop_group_entry_stale_reason()` and `moop_split_unrepresented_by_db()` accept a
+valid `blast_only` (no gene-set dir and no genome row, by design) — without that, Manage Groups would have flagged
+every BLAST-only entry "gone" and refused to add it. Quick-add now refuses unloaded gene sets like Manage Groups'
+own add handlers (it published any directory on disk — the 2026-10-27 leftover bug, one path still open).
+Access overview: lists BLAST-only genomes (grouped, and ungrouped on disk) — it had judged them by
+`is_dir(asm/blast_only)` and dropped them. Display: "genome only (BLAST)" in Manage Groups/Users.
+**Not yet driven in a browser with a real BLAST-only genome** — none exists on any site; do it when Sofia's two
+Smed assemblies land (Manage Groups add/save/delete, Manage Users grant). Read-side `?? 'v1'` defaults: item 9.
+⚠️ Until item 8, ANY genome-only assembly (e.g. mid-setup, gene set coming) is offered as `blast_only`; once
+genome.json declares it, `moop_blast_only_genome()` should require the declaration.
+**2026-11-14 — first two on disk (simrbase only):** `organisms/Schmidtea_mediterranea/smed_chr_ref_v1/` (from
+planosphere/downloads/smed_chr_ref_v1.fa.gz, 4 chromosomes) and `.../SmedSxl_v3.1/` (downloads/smedgd/
+SmedSxl_genome_v3.1.nt.gz, 43,295 scaffolds), each genome.fa unchanged + BLAST index (`-parse_seqids`) + .fai,
+built as smr. No groups entry yet (Sofia adds it in Manage Groups). Not on Planosphere: its Smed has no
+organism.sqlite (decision 2). Rule added: `moop_blast_only_genome()` requires NO gene-set subdir — once a gene
+set is added, that gene set's BLAST entry already offers the genome (getBlastDatabases looks one level up), so
+the old blast_only entry goes stale instead of listing it twice.

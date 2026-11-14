@@ -1627,8 +1627,11 @@ function moop_data_health_empty(): array {
  * @param array $orphaned_assemblies "organism/assembly" => true, from getOrphanedAssemblyTuples()
  */
 function moop_group_entry_stale_reason(array $entry, string $organism_data_path, array $orphaned_assemblies): ?string {
-    $gs = $entry['gene_set'] ?? 'v1';
-    if (!is_dir("$organism_data_path/{$entry['organism']}/{$entry['assembly']}/$gs")) return 'gone';
+    $gs = $entry['gene_set'] ?? '';
+    // A BLAST-only genome is the assembly itself: no gene-set directory and, by design, no genome
+    // row in the database -- its one rule is moop_blast_only_genome()
+    if ($gs === MOOP_BLAST_ONLY) return moop_blast_only_genome($entry['organism'], $entry['assembly']) !== null ? null : 'gone';
+    if ($gs === '' || !is_dir("$organism_data_path/{$entry['organism']}/{$entry['assembly']}/$gs")) return 'gone';
     if (isset($orphaned_assemblies[$entry['organism'] . '/' . $entry['assembly']])) return 'not_in_db';
     return null;
 }
@@ -1654,6 +1657,11 @@ function moop_split_unrepresented_by_db(array $tuples, string $organism_data_pat
     }
     $out = ['loaded' => [], 'not_loaded' => []];
     foreach ($tuples as $t) {
+        // A BLAST-only genome is not loaded into the database by design; its rule checks organism.sqlite
+        if ($t['gene_set'] === MOOP_BLAST_ONLY) {
+            $out[moop_blast_only_genome($t['organism'], $t['assembly']) !== null ? 'loaded' : 'not_loaded'][] = $t;
+            continue;
+        }
         $loaded = is_file("$organism_data_path/{$t['organism']}/organism.sqlite")
                && !isset($orphan_asm[$t['organism'] . '/' . $t['assembly']])
                && !isset($orphan_gs[$t['organism'] . '/' . $t['assembly'] . '/' . $t['gene_set']]);
