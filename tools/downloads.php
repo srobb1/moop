@@ -112,7 +112,7 @@ function _downloads_list_files(string $dir, array $excluded_exts, array $exclude
 }
 
 // Get accessible assemblies
-$sources_by_group   = getAccessibleGeneSets();
+$sources_by_group   = getAccessibleGeneSets(null, null, null, true);   // + BLAST-only genomes: their genome is downloadable
 $accessible_sources = flattenSourcesList($sources_by_group);
 
 // Handle organisms[] POSTed from groups page (same pattern as retrieve_sequences/blast)
@@ -174,7 +174,11 @@ foreach ($unique_sources as $source) {
 
     if (!is_dir($gene_set_path)) continue;
 
-    $files = _downloads_list_files($gene_set_path, $excluded_exts, $excluded_filenames, $ext_priority);
+    // A BLAST-only genome (gene_set ''): its path IS the assembly directory, and it has no
+    // gene-set files -- only the assembly-level ones below.
+    $blast_only = !empty($source['blast_only']);
+    $assembly_dir = $blast_only ? $gene_set_path : dirname($gene_set_path);
+    $files = $blast_only ? [] : _downloads_list_files($gene_set_path, $excluded_exts, $excluded_filenames, $ext_priority);
 
     // The genome FASTA lives one level up, at the ASSEMBLY, shared by every gene set
     // under it -- so a gene-set-only scan never offered it (the page listed no genome
@@ -184,7 +188,7 @@ foreach ($unique_sources as $source) {
     $asm_key = $organism . "\0" . $assembly;
     if (!isset($assembly_files_seen[$asm_key])) {
         $assembly_files_seen[$asm_key] = true;
-        $asm_files = _downloads_list_files(dirname($gene_set_path), $excluded_exts, $excluded_filenames, $ext_priority);
+        $asm_files = _downloads_list_files($assembly_dir, $excluded_exts, $excluded_filenames, $ext_priority);
         if (!empty($asm_files)) {
             $assembly_files[$organism][$assembly] = [
                 'files'       => $asm_files,
