@@ -169,3 +169,48 @@ a special case — another drifting second source of truth.
 
 **Before building:** make one on a scratch organism and drive manage_groups / BLAST as apache;
 the phantom-`v1` loop above is still derived from code, not reproduced.
+
+---
+
+## 2026-11-14 — decided (Sofia), and the work list (permissions plan step 6)
+
+**Decisions:** (1) BLAST-only **genomes** now; BLAST-only gene sets (FASTA not loaded in organism.sqlite,
+with or without a genome) next, same mechanism. (2) Only under organisms that already exist on the site
+(have organism.sqlite) — no BLAST-only organisms. (3) Hits link to a **sequence-only JBrowse** view.
+
+**Found 2026-11-14 (code read, still to reproduce on a scratch organism as apache):**
+- BLAST's database list comes from `getAccessibleGeneSets()` (lib/functions_access.php:328): groups-file
+  entries, `gene_set ?? 'v1'`, and it REQUIRES a gene-set dir with FASTA — so an assembly with no gene set
+  never appears. That is the one real blocker.
+- `getBlastDatabases($path)` already finds `genome.fa` (pattern from sequence_types), and genome hits already
+  link to JBrowse, not a gene page (tools/blast.php:291 `is_genome_db`, lib/blast_results_visualizer.php:482).
+- `moop_dataset_visible()` rejects `gene_set = ''` (regex) — must accept it as "the assembly itself".
+- `'v1'` inventions: 41 PHP + 8 JS lines (was 48 total on 07-20).
+- BUG to fix with it: lib/blast_results_visualizer.php:503 builds `'/' . $site . '/jbrowse2.php'` (CLAUDE.md §3b
+  — must be moop_url()).
+
+**Work list (one commit each, tests with each):**
+1. Reproduce first: scratch organism dir with genome.fa and no gene set; drive Manage Groups + BLAST as apache.
+2. Identity: a groups entry `{"organism","assembly","gene_set": ""}` = the assembly as a BLAST-only data set.
+   Valid only when the assembly dir has a genome FASTA (or its BLAST index) and the organism has organism.sqlite.
+3. Access: `is_public_gene_set` / `has_gene_set_access` / `moop_user_access_allows` with `''` (granted by
+   `{asm: true}`, `'*'`, or an explicit `''`); `moop_dataset_visible($org, $asm, '')` = assembly dir +
+   that access. `moop_jbrowse_can_open_assembly` must count it.
+4. `getAccessibleGeneSets()`: `''` -> path = assembly dir, needs the genome; identity from the DB's genome row if
+   present, else the assembly dir name; mark `blast_only`. Check every caller that assumes a DB gene set
+   (search scope `moop_search_permitted_scope`, MOOPmart, Primer tools, expression picker) skips it.
+5. Labels: `gene_set_label()` -> "<genome> — genome only (BLAST)"; scope selector + BLAST page.
+6. Admin: Manage Groups lists/creates `''` entries ("whole assembly — BLAST only"); `getUnrepresentedGeneSetTuples`,
+   `admin/api/quick_add_group.php`, `admin/manage_users.php` stop inventing `v1` (offer `''` for an assembly with
+   a genome and no gene set — kills the phantom loop). Access overview: a provider for BLAST-only genomes.
+7. JBrowse: register a sequence-only assembly (no gene track); confirm the genome-hit link opens it.
+8. Organism Checklist AND Manage Organisms: a BLAST-only assembly is "Genome only — BLAST", not broken.
+   Manage Organisms lists every subdir, so it already appears -- but today it would be misreported three ways:
+   (a) no genome row in organism.sqlite -> 'orphaned_assembly_directory' (lib/functions_filesystem.php:300),
+   organism marked invalid + dashboard "orphaned" pointer; (b) status graded on gene sets (`gene_sets_complete`)
+   -> Incomplete; (c) BLAST-index check walks gene-set subdirs only (lib/organism_cache.php:278) -> the
+   genome's own index at assembly level is not counted. Its own checks instead: genome FASTA, BLAST index, .fai.
+   OPEN (decide at start): how it is recognised -- `genome.json` declares it (lean: organism page/checklist
+   then need no groups file) vs. "its groups entry has gene_set ''". Bump ORGANISM_CACHE_SCHEMA_VERSION.
+9. Fix the visualizer link (§3b). Then the remaining read-side `?? 'v1'` defaults, one by one.
+First candidates: smed_chr_ref_v1 (Planosphere chromosomes), SmedSxl genome v3.1.
