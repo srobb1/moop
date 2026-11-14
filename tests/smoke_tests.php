@@ -4998,6 +4998,23 @@ ok($_kk === ['K04404' => ['genes' => 1, 'ambiguous' => true], 'K04427' => ['gene
 ok(moop_kegg_feature_kos($_kd, 1, 'g2') === ['K04427'] && moop_kegg_feature_kos($_kd, 1, 'other') === [],
    "one feature's KOs, within its own gene set only");
 @unlink($_kd);
+// The gene-set table: genes per pathway, KOs found only when IN the pathway by the reference, coverage needs it
+$_kref = ['names' => ['map00010' => 'Glycolysis'], 'classes' => ['map00010' => ['Metabolism', 'Carbohydrate metabolism']],
+          'kos' => ['map00010' => ['K00001' => true, 'K00002' => true, 'K00003' => true, 'K00004' => true]], 'date' => '', 'mtime' => 0];
+$_kpaths = [1 => ['map00010' => 1.0, 'map04668' => 1.0], 2 => ['map00010' => 2.0], 3 => ['map04668' => 1.0]];
+$_kkos   = [1 => ['K00001' => 1.0, 'K09999' => 1.0], 2 => ['K00002' => 2.0, 'K00003' => 2.0], 3 => ['K04404' => 1.0]];
+$_kdesc  = ['map04668' => 'TNF signaling pathway (Environmental Information Processing; Signal transduction)'];
+$_kt = moop_kegg_pathway_table($_kpaths, $_kkos, $_kdesc, $_kref);
+$_kby = array_column($_kt, null, 'pathway');
+ok($_kby['map00010']['genes'] === 2 && $_kby['map00010']['ambiguous_genes'] === 1
+   && $_kby['map00010']['kos_found'] === ['K00001', 'K00002', 'K00003'] && $_kby['map00010']['kos_total'] === 4
+   && $_kby['map00010']['name'] === 'Glycolysis' && $_kby['map00010']['class'] === 'Metabolism',
+   'KEGG gene-set table: genes and ambiguous genes per pathway; a KO not in the pathway (K09999) is not "found"');
+ok($_kby['map04668']['kos_total'] === null && $_kby['map04668']['kos_found'] === ['K00001', 'K04404', 'K09999']
+   && $_kby['map04668']['class'] === 'Environmental Information Processing' && $_kby['map04668']['sub'] === 'Signal transduction',
+   'KEGG gene-set table: a pathway the reference lacks keeps every KO, no coverage, class from the loaded name');
+ok(moop_kegg_pathway_table($_kpaths, $_kkos, $_kdesc, null)[0]['kos_total'] === null,
+   'KEGG gene-set table without the reference: no coverage anywhere');
 
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";

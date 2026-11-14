@@ -68,3 +68,14 @@ snapshot date in `info.txt` with each gene set's `annotation_source_version` and
 - Found on the way: `moop_plain_name()` accepted a trailing newline (PCRE `$`); now `\z`, test red on the old code.
   `moop_same_organism_hit_url()` built `'/' . site . '/tools/…'` (§3b) — now moop_url().
 Next: step 4 (gene-set Pathways table) once `organisms/.kegg/` arrives from compute (`copy2moop_v2.sh --kegg`).
+
+**2026-11-14 — step 4 built: gene-set page "KEGG Pathways" card.** One row per pathway: class/subclass, genes
+(per GENE — a transcript counts as its parent), ambiguous genes, KOs found (only KOs IN the pathway by
+`organisms/.kegg/ko_pathway.tsv`), KOs in pathway, coverage, Map (whole gene set coloured) and Genes (the search,
+KEGG pathway source only). Class filter + DataTables. Names/classes from the reference (pathway.tsv,
+pathway_classes.json), else split from the loaded description; without the reference, no coverage column.
+Cached per gene set (`{cache}/…/kegg_pathways.json`, keyed on organism.sqlite + reference mtimes): 0.6 s cold,
+0.15 s cached. Query is source-first (0.11 s vs 1.06 s gene-set-first). Nematostella NV2: 425 pathways; TNF 63 genes,
+39/97 KOs. `organisms/.kegg/` is on simrbase only (copy2moop targets it); planosphere and cuttingclass have no KEGG
+annotations, so no card there.
+Open: organism-level view (Sofia unsure); enrichment on gene lists (compute plan use 3).

@@ -91,6 +91,7 @@ $display_config = [
     'content_file' => __DIR__ . '/pages/gene_set.php',
     'page_script'  => [
         moop_url_base() . "/js/gene_set-display.js",
+        moop_url_base() . "/js/modules/kegg-pathways-table.js",
     ],
     'inline_scripts' => [
         "const sitePath = '" . moop_url_base() . "';",
@@ -117,6 +118,18 @@ $busco = moop_load_busco($gs_dir);
 // (one gene with both Pfam and InterPro is one Domains gene).
 $annot_type_totals = moop_load_gene_set_annotation_type_genes($organism_name, $genome_accession, $gene_set_name) ?? [];
 arsort($annot_type_totals);
+
+// KEGG pathways of this gene set (lib/kegg.php; notes/KEGG_GENE_PAGE_PLAN.md step 4). A read failure is said
+// on the page, never shown as "no pathways".
+require_once __DIR__ . '/../lib/kegg.php';
+$kegg = null;
+$kegg_error = false;
+try {
+    $kegg = moop_kegg_gene_set_pathways($db_path, (int)$gene_set_id, $gs_dir);
+} catch (PDOException $e) {
+    error_log("gene_set KEGG ($organism_name/$genome_accession/$gene_set_name): " . $e->getMessage());
+    $kegg_error = true;
+}
 
 $data = [
     'gene_set_info'        => $gene_set_info,
@@ -148,6 +161,8 @@ $data = [
     'absolute_images_path' => $config->getPath('absolute_images_path'),
     'annot_type_totals'    => $annot_type_totals,
     'busco'                => $busco,
+    'kegg'                 => $kegg,
+    'kegg_error'           => $kegg_error,
 ];
 
 include_once __DIR__ . '/display-template.php';
