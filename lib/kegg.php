@@ -31,6 +31,17 @@ const MOOP_KEGG_COLOURS = [
     'some_sets' => '#bfe8bf',
 ];
 
+/**
+ * The order KOs are SENT in, least important first. KEGG draws one box for several KOs (CTSB/L/S on map04612)
+ * and the LAST colour sent for any of them wins (checked in a browser 2026-11-14) -- sorted by KO number,
+ * cathepsin B's green hid the gene's own cathepsin L. So "this gene" goes last.
+ */
+function moop_kegg_ordered(array $ko_colours): array {
+    $rank = array_flip(['ambiguous', 'some_sets', 'one', 'many', 'all_sets', 'this_gene']);
+    uksort($ko_colours, fn($a, $b) => [$rank[$ko_colours[$a]] ?? -1, $a] <=> [$rank[$ko_colours[$b]] ?? -1, $b]);
+    return $ko_colours;
+}
+
 /** What each colour means, for the legend (each a literal, so the translation scan lists it). */
 function moop_kegg_colour_labels(): array {
     return [
@@ -149,7 +160,7 @@ function moop_kegg_ko_colours(array $kos, array $this_gene = []): array {
  */
 function moop_kegg_map_url(string $pathway, array $ko_colours): string {
     $lines = [];
-    foreach ($ko_colours as $ko => $key) {
+    foreach (moop_kegg_ordered($ko_colours) as $ko => $key) {
         if (!preg_match('/^K\d{5}\z/', $ko) || !isset(MOOP_KEGG_COLOURS[$key])) continue;
         $lines[] = $ko . '+' . rawurlencode(MOOP_KEGG_COLOURS[$key]) . ',black';
     }
@@ -168,7 +179,7 @@ function moop_kegg_map_url(string $pathway, array $ko_colours): string {
  */
 function moop_kegg_map_post(string $pathway, array $ko_colours): array {
     $lines = [];
-    foreach ($ko_colours as $ko => $key) {
+    foreach (moop_kegg_ordered($ko_colours) as $ko => $key) {
         if (!preg_match('/^K\d{5}\z/', $ko) || !isset(MOOP_KEGG_COLOURS[$key])) continue;
         $lines[] = $ko . ' ' . MOOP_KEGG_COLOURS[$key] . ',black';
     }

@@ -4976,8 +4976,11 @@ ok($_kc === ['K00001' => 'many', 'K00002' => 'one', 'K00003' => 'ambiguous', 'K0
    'KEGG colours: this gene first, then ambiguous, several genes, one gene');
 // The exact form KEGG documents -- without ",fg" and CR+LF it colours nothing, silently (seen in a browser 2026-11-14)
 ok(moop_kegg_map_url('map04668', ['K04404' => 'this_gene', 'K04427' => 'many', 'bad' => 'one', 'K00001' => 'nope'])
-     === 'https://www.kegg.jp/kegg-bin/show_pathway?map=map04668&multi_query=K04404+%23ff8c42,black%0d%0aK04427+%235cb85c,black',
+     === 'https://www.kegg.jp/kegg-bin/show_pathway?map=map04668&multi_query=K04427+%235cb85c,black%0d%0aK04404+%23ff8c42,black',
    'KEGG map link: "<KO>+<bg>,black" joined by %0d%0a on the reference map; malformed KOs and colours dropped');
+ok(array_keys(moop_kegg_ordered(['K00001' => 'this_gene', 'K00002' => 'many', 'K00003' => 'ambiguous', 'K00004' => 'one']))
+     === ['K00003', 'K00004', 'K00002', 'K00001'],
+   'KEGG colours are SENT least important first: on a box shared by several KOs the last one wins, so "this gene" goes last');
 $_kd = sys_get_temp_dir() . '/moop_kegg_' . getmypid() . '.sqlite';
 @unlink($_kd);
 $_kp = new PDO("sqlite:$_kd");
