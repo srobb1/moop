@@ -38,9 +38,13 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
 ?>
 <div class="row mb-4" id="geneSetComparison">
   <div class="col-12">
+    <?php /* Closed by default (Sofia, 2026-11-14), opened by its title or the page's sidebar */ ?>
     <div class="feature-header organism-header-custom shadow">
       <h2>
-        <?= $gsc_many ? 'Compare assemblies &amp; gene sets' : 'Assembly &amp; gene set at a glance' ?>
+        <button type="button" class="btn btn-link p-0 text-reset text-decoration-none kegg-card-toggle collapsed"
+                data-bs-toggle="collapse" data-bs-target="#geneSetComparisonBody" aria-expanded="false" aria-controls="geneSetComparisonBody">
+          <i class="fa fa-chevron-right kegg-chevron me-1" aria-hidden="true"></i><?= $gsc_many ? 'Compare assemblies &amp; gene sets' : 'Assembly &amp; gene set at a glance' ?>
+        </button>
         <?= field_help(
             'Each row is one gene set on one assembly. BUSCO: how many genes that almost every '
             . 'eukaryote carries were found complete (higher is better). It is measured against '
@@ -55,7 +59,7 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
             'Comparing gene sets'
         ) ?>
       </h2>
-      <div class="feature-overview-body">
+      <div class="feature-overview-body collapse" id="geneSetComparisonBody">
         <?php if ($gsc_many): ?>
         <?php /* Guidance, not a verdict -- still no "best" badge, for the reason in the header. */ ?>
         <p class="small text-muted mb-2">

@@ -266,16 +266,6 @@
 
   <!-- Description Section -->
   <div id="organismContent">
-  <?php /* Above About (user, 2026-10-22): every assembly + gene set side by side, so choosing
-           one does not mean opening each -- and the data comes before the prose, instead of
-           sitting below an intro that can run to four paragraphs. Rendered whether or not
-           there is an About text. */ ?>
-  <?php if (!empty($gene_set_rows)):
-      $__tucked = ConfigManager::getInstance()->technicalPanelsTucked();
-      if ($__tucked) include __DIR__ . '/../../includes/researchers_open.php';
-      include __DIR__ . '/../../includes/gene_set_comparison.php';
-      if ($__tucked) echo "</div></details>\n";
-  endif; ?>
 
   <?php if (!empty($organism_info['html_p']) && is_array($organism_info['html_p'])): ?>
     <div class="row mb-4">
@@ -340,6 +330,15 @@
       </div>
     </div>
   <?php endif; ?>
+
+  <?php /* Every assembly + gene set side by side, so choosing one does not mean opening each. Below
+           About and closed by default since 2026-11-14 (Sofia); it was above About from 2026-10-22. */ ?>
+  <?php if (!empty($gene_set_rows)):
+      $__tucked = ConfigManager::getInstance()->technicalPanelsTucked();
+      if ($__tucked) include __DIR__ . '/../../includes/researchers_open.php';
+      include __DIR__ . '/../../includes/gene_set_comparison.php';
+      if ($__tucked) echo "</div></details>\n";
+  endif; ?>
 
   <?php /* KEGG pathways across this organism's gene sets (lib/kegg.php). Genes per gene set, side by side:
            gene sets are usually annotations of the same genome, so a total would count genes twice. */ ?>

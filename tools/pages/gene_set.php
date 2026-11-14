@@ -272,10 +272,13 @@
       $kegg_ctx = ['organism' => $organism_name, 'assembly' => $genome_accession, 'gene_set' => $gene_set_name]; ?>
   <div class="row mb-5" id="keggPathways">
     <div class="col-12">
+      <?php /* Closed by default (Sofia, 2026-11-14): its title, or the sidebar, opens it */ ?>
       <div class="card shadow-sm">
         <div class="card-header d-flex align-items-center flex-wrap" style="background-color:#e11d48;">
-          <i class="fas fa-project-diagram me-2 text-white"></i>
-          <span class="text-uppercase fw-semibold text-white section-eyebrow"><?= t('KEGG Pathways') ?></span>
+          <button type="button" class="btn btn-link p-0 text-white text-decoration-none kegg-card-toggle collapsed"
+                  data-bs-toggle="collapse" data-bs-target="#keggPathwaysBody" aria-expanded="false" aria-controls="keggPathwaysBody">
+            <i class="fa fa-chevron-right kegg-chevron me-1" aria-hidden="true"></i><i class="fas fa-project-diagram me-2"></i><span class="text-uppercase fw-semibold section-eyebrow"><?= t('KEGG Pathways') ?></span>
+          </button>
           <?php if (!empty($kegg['rows'])): ?>
           <span class="ms-2 small text-white-50"><?= t('%d pathways', count($kegg['rows'])) ?></span>
           <?php endif; ?>
@@ -288,7 +291,7 @@
               'KEGG pathways'
           ) ?></span>
         </div>
-        <div class="card-body">
+        <div class="card-body collapse" id="keggPathwaysBody">
           <?php if ($kegg_error): ?>
             <div class="alert alert-warning mb-0"><?= t('The KEGG pathway data could not be read just now. Please try again later.') ?></div>
           <?php else: ?>

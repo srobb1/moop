@@ -188,25 +188,46 @@
     if (jbDd) wireCarets(jbDd);
 
     // ---- expand any Bootstrap collapse hiding the target, then scroll ------
+    // Returns the collapses it started opening. Bootstrap ANIMATES them open (height 0 -> full over
+    // ~350 ms), so a position measured right after this is wrong: the first click on a link inside a
+    // closed section measured the half-open page and landed at the very bottom; the second, with
+    // everything open, landed right (Sofia, 2026-11-14). goTo() waits for these to finish.
     function expandAncestors(el) {
+      var opened = [];
+      function open(c) {
+        if (window.bootstrap && window.bootstrap.Collapse) {
+          opened.push(c);
+          window.bootstrap.Collapse.getOrCreateInstance(c).show();
+        } else {
+          c.classList.add("show");
+        }
+      }
       // A section that starts closed (Annotations, Images, ...): going to it opens it, as going to
       // anything inside it does.
       var own = el.querySelector && el.querySelector(":scope > .collapse:not(.show)");
-      if (own) {
-        if (window.bootstrap && window.bootstrap.Collapse) window.bootstrap.Collapse.getOrCreateInstance(own).show();
-        else own.classList.add("show");
-      }
+      if (own) open(own);
       var p = el.parentElement;
       while (p) {
-        if (p.classList && p.classList.contains("collapse") && !p.classList.contains("show")) {
-          if (window.bootstrap && window.bootstrap.Collapse) {
-            window.bootstrap.Collapse.getOrCreateInstance(p).show();
-          } else {
-            p.classList.add("show");
-          }
-        }
+        if (p.classList && p.classList.contains("collapse") && !p.classList.contains("show")) open(p);
         p = p.parentElement;
       }
+      return opened;
+    }
+
+    // Run fn once every collapse in the list has finished opening (shown.bs.collapse), or after a
+    // safety timeout -- an event that never comes must not leave the click doing nothing.
+    function afterShown(list, fn) {
+      var pending = list.filter(function (c) { return !c.classList.contains("show") || c.classList.contains("collapsing"); });
+      if (!pending.length) { fn(); return; }
+      var done = false, left = pending.length;
+      function finish() { if (!done) { done = true; fn(); } }
+      pending.forEach(function (c) {
+        c.addEventListener("shown.bs.collapse", function h() {
+          c.removeEventListener("shown.bs.collapse", h);
+          if (--left === 0) finish();
+        });
+      });
+      setTimeout(finish, 1000);
     }
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // How close to the top of the document a target has to be before we go to the top
@@ -236,12 +257,12 @@
     function goTo(key) {
       var node = reg[key];
       if (!node) return;
-      expandAncestors(node.el);
-
-      var top = node.el.getBoundingClientRect().top + window.scrollY;
-      if (top <= TOP_SNAP_PX) top = 0;
-
-      window.scrollTo({ top: top, behavior: scrollBehaviorFor(top) });
+      // Measure only once the sections it opened have finished opening (see expandAncestors)
+      afterShown(expandAncestors(node.el), function () {
+        var top = node.el.getBoundingClientRect().top + window.scrollY;
+        if (top <= TOP_SNAP_PX) top = 0;
+        window.scrollTo({ top: top, behavior: scrollBehaviorFor(top) });
+      });
     }
 
     function wireLinks(root, isDropdown) {

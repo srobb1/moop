@@ -176,7 +176,7 @@ $display_config = [
     ),
     'content_file' => __DIR__ . '/pages/organism.php',
     'page_script' => [
-        moop_url_base() . '/js/organism-display.js'
+        moop_url_base() . '/js/organism-display.js',
     ],
     // Counts for the note under the search box. Computed here rather than fetched, because
     // the note has to say what is being searched BEFORE the user opens the scope filter --
