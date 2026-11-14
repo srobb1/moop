@@ -60,7 +60,7 @@
             foreach ($organisms as $organism => $assemblies): 
                 foreach ($assemblies as $source): 
                     $genome_name = $source['genome_name'] ?? $source['assembly'];
-                    $gene_set_label = $source['gene_set'] ?? '';
+                    $gene_set_label = !empty($source['blast_only']) ? t_plain('genome only') : ($source['gene_set'] ?? '');
                     $search_text = strtolower("$group_name $organism $source[assembly] $genome_name $gene_set_label");
                     
                     // Determine if this source should be hidden (filtered out)
@@ -128,6 +128,10 @@
                         <?php if (!empty($source['gene_set'])): ?>
                         <span class="badge badge-sm bg-light text-dark border">
                             <?= htmlspecialchars($source['gene_set']) ?>
+                        </span>
+                        <?php elseif (!empty($source['blast_only'])): /* a BLAST-only genome: no gene set loaded */ ?>
+                        <span class="badge badge-sm bg-light text-dark border">
+                            <?= t('genome only') ?>
                         </span>
                         <?php endif; ?>
                         <?php
