@@ -326,39 +326,64 @@ function moop_access_overview_tracks(array &$ctx): array {
     return $rows;
 }
 
-/** The ID Translator: no rule of its own -- each id follows the gene set it comes from. */
+/**
+ * The gene sets an organism's ID Translator maps, split by who may see them, and how many sources
+ * are outside data (ESTs, GenBank -- no gene set here: shown to whoever may see the organism).
+ * ['public' => [gene set, ...], 'restricted' => [...], 'outside' => int]
+ */
+function moop_access_overview_crosswalk_split(array &$ctx, string $org, array $cfg): array {
+    $sets = []; $outside = 0;
+    foreach ((array) ($cfg['hubs'] ?? []) as $c) {
+        if (is_array($c) && !empty($c['gene_set'])) $sets[($c['assembly'] ?? '') . '/' . $c['gene_set']] = [(string) ($c['assembly'] ?? ''), (string) $c['gene_set']];
+    }
+    foreach ((array) ($cfg['sources'] ?? []) as $c) {
+        if (is_array($c) && !empty($c['gene_set'])) $sets[($c['assembly'] ?? '') . '/' . $c['gene_set']] = [(string) ($c['assembly'] ?? ''), (string) $c['gene_set']];
+        else $outside++;
+    }
+    $out = ['public' => [], 'restricted' => [], 'outside' => $outside];
+    foreach ($sets as [$asm, $gs]) $out[moop_access_overview_gene_set_audience($ctx, $org, $asm, $gs)['public'] ? 'public' : 'restricted'][] = $gs;
+    return $out;
+}
+
+/** "Everyone" / "Everyone: IDs of a, b · Restricted: IDs of c (...)" -- which IDs reach whom. */
+function moop_access_overview_crosswalk_who(array $split, string $what = 'IDs'): string {
+    if (!$split['restricted']) return $split['public'] ? "Everyone ($what of " . implode(', ', $split['public']) . ')' : 'Everyone';
+    $r = "Restricted: $what of " . implode(', ', $split['restricted']) . ' — only to those who may see that gene set';
+    return $split['public'] ? "Everyone: $what of " . implode(', ', $split['public']) . ' · ' . $r : $r;
+}
+
+/** The ID Translator, one row per organism: no rule of its own -- each ID follows the gene set it comes from. */
 function moop_access_overview_crosswalk(array &$ctx): array {
     require_once __DIR__ . '/crosswalk.php';
     $rows = [];
     foreach (moop_crosswalk_sources() as $org => $cfg) {
         if (!is_file(moop_crosswalk_file($org))) continue;
-        $sets = [];
-        foreach (array_merge(array_values((array) ($cfg['hubs'] ?? [])), array_values((array) ($cfg['sources'] ?? []))) as $c) {
-            if (is_array($c) && !empty($c['gene_set'])) $sets[($c['assembly'] ?? '') . '/' . $c['gene_set']] = [(string) ($c['assembly'] ?? ''), (string) $c['gene_set']];
-        }
-        $private = [];
-        foreach ($sets as [$asm, $gs]) if (!moop_access_overview_gene_set_audience($ctx, $org, $asm, $gs)['public']) $private[] = $gs;
+        $split = moop_access_overview_crosswalk_split($ctx, $org, $cfg);
+        $n = count($split['public']) + count($split['restricted']);
         $rows[] = [
             'kind' => 'crosswalk', 'group' => 'data', 'organism' => $org,
-            'item' => (string) ($cfg['name'] ?? 'ID Translator'), 'detail' => count($sets) . ' gene sets mapped',
-            'who' => $private ? 'Each ID only to those who may see its gene set (' . count($private) . ' not public: ' . implode(', ', $private) . ')'
-                              : 'Everyone (every mapped gene set is public)',
-            'restricted' => (bool) $private, 'why' => 'Follows each gene set', 'edit' => null,
-            'links' => [['url' => 'manage_crosswalk.php', 'text' => 'ID Translator']],
+            'item' => str_replace('_', ' ', $org),
+            'detail' => '"' . (string) ($cfg['name'] ?? 'ID Translator') . '" — maps ' . $n . ($n === 1 ? ' gene set' : ' gene sets')
+                      . ($split['outside'] ? ' + ' . $split['outside'] . ' outside ' . ($split['outside'] === 1 ? 'source' : 'sources') . ' (ESTs, GenBank… — seen by anyone who may see the organism)' : ''),
+            'who' => moop_access_overview_crosswalk_who($split),
+            'restricted' => (bool) $split['restricted'], 'why' => 'Follows each gene set', 'edit' => null,
+            'links' => [['url' => 'manage_crosswalk.php?organism=' . rawurlencode($org), 'text' => 'ID Translator']],
         ];
     }
     return $rows;
 }
 
-/** Anatomy (PAGE) curations: no rule of their own -- each gene follows its gene set via the crosswalk. */
+/** Anatomy (PAGE) curations, one row per organism: each gene follows its gene set, reached through the ID Translator. */
 function moop_access_overview_curations(array &$ctx): array {
     require_once __DIR__ . '/anatomy_expression.php';
+    require_once __DIR__ . '/crosswalk.php';
     $rows = [];
     foreach (array_keys(moop_page_sources()) as $org) {
+        $split = moop_access_overview_crosswalk_split($ctx, $org, moop_crosswalk_sources()[$org] ?? []);
         $rows[] = [
             'kind' => 'curations', 'group' => 'data', 'organism' => $org,
-            'item' => 'Anatomy curations (PAGE)', 'detail' => $org,
-            'who' => 'Each gene only to those who may see its gene set', 'restricted' => false,
+            'item' => str_replace('_', ' ', $org), 'detail' => 'Anatomy curations (PAGE)',
+            'who' => moop_access_overview_crosswalk_who($split, 'genes'), 'restricted' => (bool) $split['restricted'],
             'why' => 'Follows each gene set (through the ID Translator)', 'edit' => null, 'links' => [],
         ];
     }

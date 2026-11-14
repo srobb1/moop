@@ -4067,6 +4067,10 @@ moop_page_rule_set('rnai', ['visible_to' => 'internal']);
 $_pg = array_values(array_filter(moop_access_overview()['rows'], fn($r) => $r['kind'] === 'page' && $r['edit']['key'] === 'rnai'));
 moop_page_rule_set('rnai', null);
 ok(count($_pg) === 1 && $_pg[0]['restricted'] && $_pg[0]['edit']['kind'] === 'page', 'overview: a restricted page is listed, editable through the same dialog');
+ok(moop_access_overview_crosswalk_who(['public' => ['a', 'b'], 'restricted' => [], 'outside' => 0]) === 'Everyone (IDs of a, b)'
+   && moop_access_overview_crosswalk_who(['public' => ['a'], 'restricted' => ['c'], 'outside' => 0]) === 'Everyone: IDs of a · Restricted: IDs of c — only to those who may see that gene set'
+   && str_starts_with(moop_access_overview_crosswalk_who(['public' => [], 'restricted' => ['c'], 'outside' => 0], 'genes'), 'Restricted: genes of c'),
+   'overview: ID Translator rows say which gene sets\' IDs reach everyone and which are restricted, by name');
 unlink("$_cp/users.json"); mkdir("$_cp/users.json");
 ok(!moop_access_overview()['users_ok'], 'overview: an unreadable users file is reported (the page warns), never read as "no collaborators" silently');
 rmdir("$_cp/users.json");
