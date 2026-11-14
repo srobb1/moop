@@ -1,7 +1,7 @@
 # KEGG pathway analysis for all gene sets: brainstorm (compute side, 2026-11-13)
 
-Status: ideas only, nothing built. The open question is the main goal (gene-page annotation, comparisons across
-species, or enrichment for expression results), which decides where to start.
+Status: plan, nothing built. **User's decision (2026-11-13): first KEGG annotations on the gene page, then a
+way to see how many genes of each pathway a gene set has.** See "Plan" at the end; the rest is the brainstorm.
 
 ## What we already have
 
@@ -58,3 +58,47 @@ It could become part of the annotation pipeline, or run on our side as the canon
 2. Install KofamScan. Test it on Danio, Acropora, Smed (S3h1) and one bat, against eggNOG's calls.
    Decide whether to run it on everything.
 3. Build the completeness matrix and enrichment from whichever source wins.
+
+## Plan (decided 2026-11-13)
+
+### Part 1: KEGG on the gene page (eggNOG's KOs, already computed)
+
+- **Reference snapshot** (once, dated; refreshed now and then): KEGG REST `list/ko`, `list/pathway`, `list/module`,
+  `link/pathway/ko`, `link/module/ko`, plus the pathway classes (`get br:br08901`), into
+  `reference_data/kegg/<date>/`. Record the date as the source version.
+- **Parser** (new, in `analysis_parsers/`): eggNOG `KEGG_ko` per protein -> per gene (the union over its proteins;
+  most genes have one KO).
+  - eggNOG lists each pathway twice (`ko00010` and `map00010`): keep `map`.
+  - Recompute the pathways and modules from the KOs with the snapshot, rather than taking eggNOG's columns, so
+    every gene set uses the same KEGG version.
+- **Into organism.sqlite** as annotation sources, like the other annotations:
+  - `KEGG Orthology (eggNOG)`: `K00844` "HK; hexokinase", linking to `https://www.kegg.jp/entry/K00844`
+  - `KEGG Pathway (eggNOG)`: `map00010` "Glycolysis / Gluconeogenesis", linking to `https://www.kegg.jp/pathway/map00010`
+  - `KEGG Module (eggNOG)`, optional
+  - "(eggNOG)" in the names keeps room for a later KofamScan source beside it.
+- **Web side:** a KEGG card or rows on the gene page. Links only: no hosted KEGG images (licensing).
+
+### Part 2: genes per pathway in each gene set
+
+For each gene set x pathway (pathway = its KOs in the snapshot):
+
+| column | meaning |
+|---|---|
+| pathway, name, class | `map00010`, "Glycolysis / Gluconeogenesis", "Metabolism; Carbohydrate metabolism" |
+| kos_total | KOs in the pathway (KEGG's reference) |
+| kos_found | of those, KOs with at least one gene in this gene set |
+| genes | genes in this gene set with any of those KOs |
+| coverage | kos_found / kos_total |
+| ko_list | the KOs found, so the site can build a KEGG Mapper link that colours them on KEGG's own map |
+
+- **Where:** a table in organism.sqlite (or a per-gene-set TSV), built at load time from the Part 1 annotations.
+  The web side lists it on the gene-set page, and each pathway links to its genes (an annotation search).
+- **Across gene sets:** the same table stacked gives the species x pathway matrix (later: comparisons, clades).
+- **Show beside it:** the gene set's BUSCO (low coverage in a fragmented set means "not annotated", not "absent").
+  Possibly also hide or mark pathway classes that don't apply (e.g. plant- or microbe-only maps for animals).
+
+### Not decided yet
+
+- Union of KOs over a gene's proteins, or the KOs of its longest protein only (union is the default above).
+- Table in organism.sqlite vs a TSV; the web agent should say which suits them.
+- KofamScan: after Part 2, test on 3-4 gene sets against eggNOG and decide whether to add it as a second source.
