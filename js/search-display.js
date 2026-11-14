@@ -234,6 +234,9 @@ $(document).ready(function () {
     // A type that appears when more organisms are added arrives ticked; one the user unticked
     // stays unticked.
     let sourceOverrides = {};
+    // ?source= (scopeContext.source): on the first list, tick ONLY that source, then run the search
+    // if a keyword is already there. Used once; after it the visitor's own ticks rule.
+    let onlySource = (typeof scopeContext !== 'undefined' && scopeContext && scopeContext.source) || '';
 
     // The gene sets ticked for each organism that is only PARTLY ticked, as
     // "organism/accession/gene_set" -- so the counts in Step 3 are the selection's own, not the
@@ -303,6 +306,17 @@ $(document).ready(function () {
             return;
         }
 
+        // ?source=: only that one, when this scope has it (an unknown name changes nothing)
+        let runNow = false;
+        if (onlySource) {
+            const all = Object.values(sourceTypes).flatMap(td => (td.sources || []).map(s => s.name));
+            if (all.includes(onlySource)) {
+                all.forEach(n => { sourceOverrides[n] = (n === onlySource); });
+                runNow = $('#searchKeywords').val().trim() !== '';
+            }
+            onlySource = '';
+        }
+
         // Type and source names come from the databases, so they are escaped like any other
         // data -- into text and into attributes alike.
         let html = '';
@@ -345,6 +359,7 @@ $(document).ready(function () {
         filterSources();
         updateSourcesSummary();
         updateAnnotTypesPanel();
+        if (runNow) $('#searchForm').trigger('submit');
     }
 
     function syncAllTypeRows() {

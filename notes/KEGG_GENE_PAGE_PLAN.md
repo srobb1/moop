@@ -59,7 +59,8 @@ snapshot date in `info.txt` with each gene set's `annotation_source_version` and
   no site has its own annotation_scores.json, so all three get it).
 - `lib/kegg.php` + `api/kegg_map.php`: the gene page's Pathways table has, above it, the pathways grouped by KEGG
   class (KEGG's order), an "ambiguous" badge (score > 1), "View on KEGG" and "Genes in this gene set"
-  (search.php?q=mapNNNNN scoped to the gene set — prefilled, the visitor clicks Search). The KEGG link goes through
+  (search.php?q=mapNNNNN&source=KEGG Pathway (eggNOG), scoped to the gene set: only that one source is ticked
+  and the search runs at once — `?source=` is new on the search page, 2026-11-14). The KEGG link goes through
   api/kegg_map.php (access-checked: private gene set = 404; ~70 ms) which redirects to the coloured map.
 - **KEGG's colour link, verified in a browser:** only the exact documented form colours anything:
   `show_pathway?map=map04668&multi_query=K04404+%23ff8c42,black%0d%0aK04427+...` — without `,black` and CR+LF

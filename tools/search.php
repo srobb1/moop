@@ -101,6 +101,13 @@ if ($ctx_organism) {
         }
     }
 }
+// ?source=<annotation source>: search ONLY that source (e.g. "KEGG Pathway (eggNOG)" from a gene page's KEGG
+// pathway), and run the search at once when the keyword is there too. The name is only matched against the
+// sources the panel lists for this scope, so an unknown one does nothing.
+$ctx_source = (string)($_GET['source'] ?? '');
+if ($scope_context && $ctx_source !== '' && strlen($ctx_source) <= 200 && !preg_match('/[\x00-\x1f]/', $ctx_source)) {
+    $scope_context['source'] = $ctx_source;
+}
 
 // Was read below but never set: the tab said "Search —" and siteTitle reached the JS empty.
 $siteTitle = ConfigManager::getInstance()->getString('siteTitle');
@@ -124,7 +131,7 @@ $display_config = [
         "const siteTitle = '" . addslashes($siteTitle) . "';",
         "const allOrganisms = "  . json_encode($all_organisms)  . ";",
         "const scopeTree = "     . json_encode($scope_tree)     . ";",
-        "const scopeContext = "  . json_encode($scope_context)  . ";",
+        "const scopeContext = "  . json_encode($scope_context, JSON_HEX_TAG | JSON_HEX_AMP) . ";",
         "const annTypeOrder = "  . json_encode(array_keys($ann_type_info)) . ";",
     ],
 ];

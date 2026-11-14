@@ -164,7 +164,7 @@ function moop_kegg_map_legend_html(array $keys = []): string {
 /**
  * The gene page's KEGG pathway summary, above the Pathways table: the pathways grouped by KEGG class,
  * each with "View on KEGG" (api/kegg_map.php: the gene set's KOs coloured, this gene's marked) and
- * "Genes in this gene set" (the search, prefilled and scoped). Modules stay in the table only.
+ * "Genes in this gene set" (the annotation search: this gene set, only the KEGG pathway source, run at once). Modules stay in the table only.
  *
  * @param array $rows     the Pathways rows of one feature (generateAnnotationTableHTML())
  * @param array $link_ctx organism / assembly / gene_set of the page
@@ -210,7 +210,8 @@ function moop_kegg_gene_pathways_html(array $rows, string $uniquename, array $li
                 }
                 if ($can_link) {
                     $map = moop_url('api/kegg_map.php?' . http_build_query($ctx + ['pathway' => $id, 'gene' => $uniquename]));
-                    $genes = moop_url('tools/search.php?' . http_build_query($ctx + ['q' => $id]));
+                    // The annotation search: this gene set, this pathway id, ONLY the KEGG pathway source, run at once
+                    $genes = moop_url('tools/search.php?' . http_build_query($ctx + ['q' => $id, 'source' => MOOP_KEGG_PATHWAY_SOURCE]));
                     $html .= ' <a href="' . htmlspecialchars($map) . '" target="_blank" rel="noopener">' . t('View on KEGG')
                            . ' <i class="fa fa-external-link-alt link-icon"></i></a>'
                            . ' · <a href="' . htmlspecialchars($genes) . '">' . t('Genes in this gene set') . '</a>';
