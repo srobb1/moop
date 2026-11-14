@@ -87,3 +87,9 @@ gene sets the visitor may see: genes PER GENE SET side by side (never summed —
 of the same genome), KOs found = union, coverage of the union, Map (KO in every gene set with KEGG data = dark,
 in some = light; `api/kegg_map.php?organism=&pathway=`), Genes (search over the organism, KEGG pathway source
 only). Built by merging the cached gene-set tables (0.5 s cold, 0.05 s after). Nematostella: 428 pathways.
+
+**2026-11-14 — later the same day.** Assembly page KEGG card (that assembly's gene sets; `includes/kegg_pathways_table.php`
+shared with the organism page). All three cards (organism, assembly, gene set) start CLOSED; no section sidebar on
+those pages (Sofia: too wide). Map links: KEGG answers 403 to a URL over ~2,000 characters, so a bigger pathway is
+POSTed (needs `form-action https://www.kegg.jp` in the live nginx CSP — root; docs/nginx/moop-headers.conf has it).
+Colours are sent least important first: on a box shared by several KOs the last colour wins.
