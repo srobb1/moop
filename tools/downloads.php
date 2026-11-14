@@ -174,7 +174,7 @@ foreach ($unique_sources as $source) {
 
     if (!is_dir($gene_set_path)) continue;
 
-    // A BLAST-only genome (gene_set ''): its path IS the assembly directory, and it has no
+    // A BLAST-only genome (gene_set 'blast_only'): its path IS the assembly directory, and it has no
     // gene-set files -- only the assembly-level ones below.
     $blast_only = !empty($source['blast_only']);
     $assembly_dir = $blast_only ? $gene_set_path : dirname($gene_set_path);

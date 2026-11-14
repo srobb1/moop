@@ -505,10 +505,10 @@ function moop_dataset_visible(string $organism, string $assembly, string $gene_s
     if (!isset($memo[$key])) {
         $ok = false;
         $safe = '/^[A-Za-z0-9_.-]+$/';
-        if ($gene_set === '') {
+        if ($gene_set === MOOP_BLAST_ONLY) {
             // The assembly itself, as a BLAST-only genome (moop_blast_only_genome()).
             $ok = moop_blast_only_genome($organism, $assembly) !== null
-               && has_gene_set_access($organism, $assembly, '');
+               && has_gene_set_access($organism, $assembly, MOOP_BLAST_ONLY);
         } elseif (preg_match($safe, $organism) && preg_match($safe, $assembly) && preg_match($safe, $gene_set)) {
             $dir = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . "/$organism/$assembly/$gene_set";
             $ok = is_dir($dir) && has_gene_set_access($organism, $assembly, $gene_set);
@@ -523,14 +523,21 @@ function moop_dataset_visible(string $organism, string $assembly, string $gene_s
 }
 
 /**
- * A BLAST-only GENOME: an organism_assembly_groups.json entry whose gene_set is '' stands for the
- * assembly itself -- a genome offered for BLAST with no gene set loaded (notes/PERMISSIONS_PLAN.md
+ * The gene_set value that marks a BLAST-only genome (below). A word, not '': it reads plainly in
+ * organism_assembly_groups.json and in a user's access list, and '' is falsy in JavaScript
+ * (`x || 'v1'` turned it into a gene set that does not exist). Never a real gene-set name.
+ */
+if (!defined('MOOP_BLAST_ONLY')) define('MOOP_BLAST_ONLY', 'blast_only');
+
+/**
+ * A BLAST-only GENOME: an organism_assembly_groups.json entry whose gene_set is 'blast_only'
+ * (MOOP_BLAST_ONLY) stands for the assembly itself -- a genome offered for BLAST with no gene set loaded (notes/PERMISSIONS_PLAN.md
  * step 6; notes/ASSEMBLY_WITHOUT_GENE_SET_PLAN.md). Valid only under an organism that is already
  * on the site (has organism.sqlite) and when the assembly directory holds the genome FASTA
  * (sequence_types.genome.pattern) or its BLAST index (the FASTA may be removed after indexing).
  *
- * Access is the ordinary gene-set rule with gene_set '': the entry's own groups, a user's
- * {asm: true}, '*', or an explicit '' in their list (moop_user_access_allows()).
+ * Access is the ordinary gene-set rule with gene_set 'blast_only': the entry's own groups, a
+ * user's {asm: true}, '*', or an explicit 'blast_only' in their list (moop_user_access_allows()).
  *
  * @return ?string the assembly directory, or null when this is not a valid BLAST-only genome
  */

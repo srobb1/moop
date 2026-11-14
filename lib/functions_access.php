@@ -328,8 +328,9 @@ function countAccessibleScope(array $organisms, ?string $assembly = null): array
 /**
  * The gene sets this viewer may see, by group then organism.
  *
- * $include_blast_only: also return BLAST-only genomes -- groups entries with gene_set '' that stand
- * for the assembly itself (moop_blast_only_genome()). They carry 'blast_only' => true, gene_set '',
+ * $include_blast_only: also return BLAST-only genomes -- groups entries with gene_set 'blast_only'
+ * (MOOP_BLAST_ONLY) that stand for the assembly itself (moop_blast_only_genome()). They carry
+ * 'blast_only' => true, gene_set 'blast_only',
  * and 'path' = the ASSEMBLY directory. OFF by default, because nearly every caller (search, MOOPmart,
  * downloads, Primer tools, expression) assumes a gene set loaded in organism.sqlite; only BLAST and
  * the genome browser's "may open this assembly" ask for them.
@@ -415,11 +416,14 @@ function moop_accessible_gene_sets_all($specific_organism = null, $specific_asse
 
         $assembly_path  = "$organism_data/$org/$assembly";
 
-        // gene_set '' = the assembly itself, a BLAST-only genome: valid only with its genome
-        // FASTA (or BLAST index) under an organism already on the site.
-        if ($gene_set === '') {
+        // gene_set 'blast_only' = the assembly itself, a BLAST-only genome: valid only with its
+        // genome FASTA (or BLAST index) under an organism already on the site.
+        // '' is not a gene set: its path would be the assembly directory and any *.fa in it
+        // would pass the test below -- how a '' entry once slipped through by accident.
+        if ($gene_set === '') continue;
+        if ($gene_set === MOOP_BLAST_ONLY) {
             if (moop_blast_only_genome($org, $assembly) !== null) {
-                $survivors[] = [$org, $assembly, '', $entry['groups'] ?? []];
+                $survivors[] = [$org, $assembly, MOOP_BLAST_ONLY, $entry['groups'] ?? []];
             }
             continue;
         }
@@ -456,7 +460,7 @@ function moop_accessible_gene_sets_all($specific_organism = null, $specific_asse
             $identity[$org] ?? [], "$organism_data/$org", $assembly, $gene_set
         );
         $actual_assembly_dir = $ids['assembly_dir'];
-        $blast_only = ($gene_set === '');
+        $blast_only = ($gene_set === MOOP_BLAST_ONLY);
 
         $accessible_sources[] = [
             'organism'         => $org,

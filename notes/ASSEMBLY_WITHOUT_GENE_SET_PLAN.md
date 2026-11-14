@@ -238,3 +238,13 @@ manage_users.php:36-67, lib/functions_data.php:1630. Verify in a browser (Manage
 **Item 8 also:** BLAST indexes for a BLAST-only genome — no prompt or button today (checklist walks gene-set
 dirs only); generateBlastIndexes() works with gene_set '' (path = asm dir) but the API defaults to 'v1'
 when the param is absent. The checklist row must offer Build BLAST Index / .fai.
+
+**2026-11-14 — Sofia: the marker is the word `blast_only`, not `''`** (`MOOP_BLAST_ONLY`,
+includes/access_control.php). Groups entry `{"organism","assembly","gene_set": "blast_only"}`; a user's
+access list grants it with `"blast_only"`, `'*'` or `{asm: true}`. `''` is now refused as a gene set
+outright (it slipped through as the assembly dir). This also removes item 6's JS bug at the root — the
+string is truthy, so `|| 'v1'` no longer rewrites it; item 6 is now mostly the phantom-v1 removal.
+**`v1`:** no groups entry on any site lacks gene_set (checked 11-14), so every `?? 'v1'` fallback is dead
+on real data; the only live `v1`s are INVENTED (an assembly with no gene-set dir offered as `v1`). Remove them.
+**Item 8 DECIDED (Sofia): `genome.json` declares an assembly BLAST-only.** The organism page, checklist and
+Manage Organisms read that; the groups entry `blast_only` still carries access.

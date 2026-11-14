@@ -125,13 +125,13 @@
                         <span class="badge badge-sm bg-info text-white">
                             <?= htmlspecialchars(assembly_label($source['genome_name'] ?? '', $source['assembly'])) ?>
                         </span>
-                        <?php if (!empty($source['gene_set'])): ?>
-                        <span class="badge badge-sm bg-light text-dark border">
-                            <?= htmlspecialchars($source['gene_set']) ?>
-                        </span>
-                        <?php elseif (!empty($source['blast_only'])): /* a BLAST-only genome: no gene set loaded */ ?>
+                        <?php if (!empty($source['blast_only'])): /* a BLAST-only genome: no gene set loaded */ ?>
                         <span class="badge badge-sm bg-light text-dark border">
                             <?= t('genome only') ?>
+                        </span>
+                        <?php elseif (!empty($source['gene_set'])): ?>
+                        <span class="badge badge-sm bg-light text-dark border">
+                            <?= htmlspecialchars($source['gene_set']) ?>
                         </span>
                         <?php endif; ?>
                         <?php

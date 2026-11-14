@@ -4807,7 +4807,7 @@ ok(substr_count($_h, 'aria-current="page"') === 1 && str_contains($_h, '<a aria-
 $_rp->setValue($_cfg, $_saved);
 
 // ----------------------------------------------------------------------------
-// BLAST-only genomes (PERMISSIONS_PLAN step 6): a groups entry with gene_set '' is the assembly
+// BLAST-only genomes (PERMISSIONS_PLAN step 6): a groups entry with gene_set 'blast_only' is the assembly
 // itself -- valid only with a genome FASTA or BLAST index under an organism already on the site,
 // and returned by getAccessibleGeneSets() only to a caller that asks (BLAST, the genome browser).
 $_bt = sys_get_temp_dir() . '/moop_blastonly_' . getmypid();
@@ -4827,8 +4827,9 @@ file_put_contents("$_bod/OrgB/asmGenes/gs1/transcript.nt.fa", ">t1\nACGT\n");
 file_put_contents("$_bod/NoDb/asmFa/genome.fa", ">c1\nACGT\n");     // organism not on the site
 $_ge = fn($o, $a, $g, $grp) => ['organism' => $o, 'assembly' => $a, 'gene_set' => $g, 'groups' => [$grp]];
 file_put_contents("$_bmd/organism_assembly_groups.json", json_encode([
-    $_ge('OrgB', 'asmFa', '', 'PUBLIC'), $_ge('OrgB', 'asmIdx', '', 'PUBLIC'), $_ge('OrgB', 'asmEmpty', '', 'PUBLIC'),
-    $_ge('OrgB', 'asmGenes', 'gs1', 'PUBLIC'), $_ge('OrgB', 'asmLab', '', 'Lab'), $_ge('NoDb', 'asmFa', '', 'PUBLIC'),
+    $_ge('OrgB', 'asmFa', 'blast_only', 'PUBLIC'), $_ge('OrgB', 'asmIdx', 'blast_only', 'PUBLIC'), $_ge('OrgB', 'asmEmpty', 'blast_only', 'PUBLIC'),
+    $_ge('OrgB', 'asmGenes', 'gs1', 'PUBLIC'), $_ge('OrgB', 'asmLab', 'blast_only', 'Lab'), $_ge('NoDb', 'asmFa', 'blast_only', 'PUBLIC'),
+    $_ge('OrgB', 'asmFa', '', 'PUBLIC'),   // '' is NOT the marker (it was, briefly): never offered
 ]));
 $_c = $_saved; $_c['organism_data'] = $_bod; $_c['metadata_path'] = $_bmd; $_rp->setValue($_cfg, $_c);
 $_bo_list = function (bool $with) {
@@ -4841,24 +4842,24 @@ $_bo_list = function (bool $with) {
 };
 $_SESSION = ['access_level' => 'PUBLIC', 'access' => [], 'logged_in' => false];
 $_bl = $_bo_list(true);
-ok(array_keys($_bl) === ['OrgB/asmFa|', 'OrgB/asmGenes|gs1', 'OrgB/asmIdx|'],
+ok(array_keys($_bl) === ['OrgB/asmFa|blast_only', 'OrgB/asmGenes|gs1', 'OrgB/asmIdx|blast_only'],
    'BLAST-only: a genome FASTA or its index qualifies; another FASTA, no organism.sqlite, or a private group does not');
 ok(array_keys($_bo_list(false)) === ['OrgB/asmGenes|gs1'], 'BLAST-only genomes are left out unless the caller asks (search, MOOPmart, downloads...)');
-ok(($_bl['OrgB/asmFa|']['path'] ?? '') === "$_bod/OrgB/asmFa" && ($_bl['OrgB/asmFa|']['blast_only'] ?? null) === true
+ok(($_bl['OrgB/asmFa|blast_only']['path'] ?? '') === "$_bod/OrgB/asmFa" && ($_bl['OrgB/asmFa|blast_only']['blast_only'] ?? null) === true
    && ($_bl['OrgB/asmGenes|gs1']['blast_only'] ?? null) === false,
    'its path is the ASSEMBLY directory (no trailing slash) and it is marked blast_only');
-ok(($_bl['OrgB/asmFa|']['genome_accession'] ?? '') === 'asmFa', 'with no genome row, its directory name is its accession');
-ok(array_column(getBlastDatabases($_bl['OrgB/asmFa|']['path']), 'seq_type') === ['genome'], 'BLAST finds its genome database');
-ok(moop_dataset_visible('OrgB', 'asmFa', '') && !moop_dataset_visible('OrgB', 'asmEmpty', '') && !moop_dataset_visible('OrgB', 'asmLab', ''),
-   "moop_dataset_visible(..., '') = a valid BLAST-only genome the visitor may see");
-foreach ([['u1', ['asmLab' => true], true], ['u2', ['asmLab' => ['*']], true], ['u3', ['asmLab' => ['']], true],
+ok(($_bl['OrgB/asmFa|blast_only']['genome_accession'] ?? '') === 'asmFa', 'with no genome row, its directory name is its accession');
+ok(array_column(getBlastDatabases($_bl['OrgB/asmFa|blast_only']['path']), 'seq_type') === ['genome'], 'BLAST finds its genome database');
+ok(moop_dataset_visible('OrgB', 'asmFa', 'blast_only') && !moop_dataset_visible('OrgB', 'asmEmpty', 'blast_only') && !moop_dataset_visible('OrgB', 'asmLab', 'blast_only'),
+   "moop_dataset_visible(..., 'blast_only') = a valid BLAST-only genome the visitor may see");
+foreach ([['u1', ['asmLab' => true], true], ['u2', ['asmLab' => ['*']], true], ['u3', ['asmLab' => ['blast_only']], true],
           ['u4', ['asmLab' => ['gs1']], false]] as [$_u, $_acc, $_want]) {
     $_SESSION = ['access_level' => 'COLLABORATOR', 'logged_in' => true, 'username' => $_u, 'access' => ['OrgB' => $_acc]];
-    ok(moop_dataset_visible('OrgB', 'asmLab', '') === $_want && isset($_bo_list(true)['OrgB/asmLab|']) === $_want,
+    ok(moop_dataset_visible('OrgB', 'asmLab', 'blast_only') === $_want && isset($_bo_list(true)['OrgB/asmLab|blast_only']) === $_want,
        "BLAST-only access for a collaborator with " . json_encode($_acc) . ': ' . ($_want ? 'granted' : 'denied'));
 }
 $_SESSION = ['access_level' => 'ADMIN', 'access' => []];
-ok(isset($_bo_list(true)['OrgB/asmLab|']) && !isset($_bo_list(true)['NoDb/asmFa|']), 'an admin sees the private one, but never one under an organism not on the site');
+ok(isset($_bo_list(true)['OrgB/asmLab|blast_only']) && !isset($_bo_list(true)['NoDb/asmFa|blast_only']), 'an admin sees the private one, but never one under an organism not on the site');
 $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_bt));
 
