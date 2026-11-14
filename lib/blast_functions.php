@@ -76,7 +76,19 @@ function getBlastDatabases($assembly_path) {
             }
         }
     }
-    
+
+    // A transcriptome's "genome" (genome_kind = transcripts: genome.fa is one assembled transcript per
+    // gene -- 21 assemblies, e.g. bkew.kc1.ref) holds the same sequences as the gene set's own transcript
+    // database, under ".ref" ids whose hits link to coordinates instead of gene pages. Offering both
+    // listed every sequence twice, the worse copy labelled "Genome". Dropped only when the gene set
+    // has its own nucleotide database, so nothing becomes unsearchable.
+    $nucleotide_own = array_filter($databases, fn($d) => $d['seq_type'] !== 'genome' && $d['type'] === 'nucleotide');
+    if ($nucleotide_own) {
+        require_once __DIR__ . '/genomic_regions.php';   // moop_genome_kind()
+        $databases = array_values(array_filter($databases, fn($d) =>
+            $d['seq_type'] !== 'genome' || moop_genome_kind(dirname($d['path'])) !== 'transcripts'));
+    }
+
     return $databases;
 }
 

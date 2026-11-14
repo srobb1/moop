@@ -4449,6 +4449,23 @@ ok(!moop_page_build_from_file('Test', "$_pd/bad.tsv", [], [], '', $_pf)['ok'] &&
 exec('rm -rf ' . escapeshellarg($_pd));
 
 // ----------------------------------------------------------------------------
+group('BLAST database list: a transcriptome\'s "genome" is not offered beside its own transcripts');
+require_once "$BASE/lib/blast_functions.php";
+$_bd = sys_get_temp_dir() . '/moop_bdb_' . getmypid();
+foreach (['tx/gs', 'tx/gsprot', 'real/gs'] as $_d) @mkdir("$_bd/$_d", 0777, true);
+foreach (['tx', 'real'] as $_a) { file_put_contents("$_bd/$_a/genome.fa", ">c1\nACGT\n"); file_put_contents("$_bd/$_a/genome.fa.fai", "c1\t4\t4\t4\t5\n"); }
+file_put_contents("$_bd/tx/genome.json", '{"genome_kind": "transcripts"}');
+file_put_contents("$_bd/real/genome.json", '{"genome_kind": "genome"}');
+file_put_contents("$_bd/tx/gs/transcript.nt.fa", ">t1\nACGT\n"); file_put_contents("$_bd/real/gs/transcript.nt.fa", ">t1\nACGT\n");
+file_put_contents("$_bd/tx/gsprot/protein.aa.fa", ">p1\nMK\n");
+$_bt = fn($p) => array_column(getBlastDatabases($p), 'seq_type');
+ok(!in_array('genome', $_bt("$_bd/tx/gs"), true) && in_array('transcript', $_bt("$_bd/tx/gs"), true),
+   'a transcriptome (genome_kind transcripts) with its own transcript database: the duplicate "Genome" is not listed');
+ok(in_array('genome', $_bt("$_bd/real/gs"), true), 'a real genome is still listed');
+ok(in_array('genome', $_bt("$_bd/tx/gsprot"), true), 'a transcriptome whose gene set has no nucleotide database keeps the genome copy (nothing becomes unsearchable)');
+exec('rm -rf ' . escapeshellarg($_bd));
+
+// ----------------------------------------------------------------------------
 group('Crosswalk (Rosetta Stone): any ID -> its reference gene, linked when the gene is in MOOP');
 require_once "$BASE/lib/crosswalk.php";
 $_xd = sys_get_temp_dir() . '/moop_xw_' . getmypid(); @mkdir($_xd, 0777, true);
