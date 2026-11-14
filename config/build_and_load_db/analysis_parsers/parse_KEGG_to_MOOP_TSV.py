@@ -5,13 +5,16 @@
         [--eggnog-version "emapper-2.1.12 DB_5.0.2"] [--keep-global] [--outdir .]
 
 Writes, in --outdir (rows per protein, as the other eggNOG files; the loader attaches them to the protein):
-  KEGG_Orthology.kegg.moop.tsv   protein  K00844    "HK; hexokinase [EC:2.7.1.1]"           "1 of 1"
-  KEGG_Pathway.kegg.moop.tsv     protein  map00010  "Glycolysis / Gluconeogenesis (Metabolism; ...)"  "via K00844"
-  KEGG_Module.kegg.moop.tsv      protein  M00001    "Glycolysis (Embden-Meyerhof pathway), ..."      "via K00844"
+  KEGG_Orthology.kegg.moop.tsv   protein  K00844    "HK; hexokinase [EC:2.7.1.1]"                     1
+  KEGG_Pathway.kegg.moop.tsv     protein  map00010  "Glycolysis / Gluconeogenesis (Metabolism; ...)"  1
+  KEGG_Module.kegg.moop.tsv      protein  M00001    "Glycolysis (Embden-Meyerhof pathway), ..."       1
+
+The score (feature_annotation.score is a number) is how many alternative KOs eggNOG gave the protein: 1 = one KO,
+4 = one of four. It is on the pathway and module rows too, so the site can mark all of them as ambiguous.
 
 - The KOs come from eggNOG (column KEGG_ko, "ko:K00844,ko:K12407"). eggNOG gives every KO of the matched eggNOG
-  family, so a protein with several KOs has alternatives, not several functions: the score says "1 of 4", and the
-  site can mark those as ambiguous. Such a protein gets only the pathways and modules that ALL its KOs are in
+  family, so a protein with several KOs has alternatives, not several functions: its score is 4 for "one of
+  four", and the site can mark those as ambiguous. Such a protein gets only the pathways and modules that ALL its KOs are in
   (true whichever KO is right); --all-alternatives gives it every pathway of any of its KOs.
 - Pathways and modules are worked out again from the KOs with the KEGG snapshot (fetch_kegg_reference.sh), not
   taken from eggNOG's columns, so every gene set uses the same KEGG version. Only the generic map pathways are
@@ -127,7 +130,7 @@ def main():
             n_ko_prot += 1
             n_multi += len(kos) > 1
             for k in kos:
-                ko_rows.append((prot, k, ko_name[k], f"1 of {len(kos)}"))
+                ko_rows.append((prot, k, ko_name[k], str(len(kos))))
             via_pw, via_md = {}, {}
             for k in kos:
                 for p in ko_pw.get(k, ()):
@@ -145,17 +148,17 @@ def main():
                     skipped_global += 1
                     continue
                 name = pw_name.get(p, p)
-                pw_rows.append((prot, p, f"{name} ({cls})" if cls else name, "via " + ", ".join(ks)))
+                pw_rows.append((prot, p, f"{name} ({cls})" if cls else name, str(len(kos))))
             for m, ks in sorted(via_md.items()):
-                md_rows.append((prot, m, md_name.get(m, m), "via " + ", ".join(ks)))
+                md_rows.append((prot, m, md_name.get(m, m), str(len(kos))))
 
     files = [
         ("KEGG_Orthology.kegg.moop.tsv", "KEGG Orthology (eggNOG)", "https://www.kegg.jp/entry/", "Gene Families",
-         ["KEGG_KO", "Description", "KOs_for_this_protein"], ko_rows),
+         ["KEGG_KO", "Description", "Alternative_KOs"], ko_rows),
         ("KEGG_Pathway.kegg.moop.tsv", "KEGG Pathway (eggNOG)", "https://www.kegg.jp/pathway/", "Pathways",
-         ["KEGG_Pathway", "Description", "Via_KO"], pw_rows),
+         ["KEGG_Pathway", "Description", "Alternative_KOs"], pw_rows),
         ("KEGG_Module.kegg.moop.tsv", "KEGG Module (eggNOG)", "https://www.kegg.jp/module/", "Pathways",
-         ["KEGG_Module", "Description", "Via_KO"], md_rows),
+         ["KEGG_Module", "Description", "Alternative_KOs"], md_rows),
     ]
     for name, source, acc_url, atype, cols, rows in files:
         path = os.path.join(args.outdir, name)
