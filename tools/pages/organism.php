@@ -341,6 +341,99 @@
     </div>
   <?php endif; ?>
 
+  <?php /* KEGG pathways across this organism's gene sets (lib/kegg.php). Genes per gene set, side by side:
+           gene sets are usually annotations of the same genome, so a total would count genes twice. */ ?>
+  <?php if (!empty($kegg_org_error) || !empty($kegg_org['rows'])): ?>
+  <div class="row mb-4" id="organismKeggPathways">
+    <div class="col-12">
+      <div class="feature-header organism-header-custom shadow">
+        <h2>
+          <button type="button" class="btn btn-link p-0 text-reset text-decoration-none kegg-card-toggle collapsed"
+                  data-bs-toggle="collapse" data-bs-target="#organismKeggBody" aria-expanded="false" aria-controls="organismKeggBody">
+            <i class="fa fa-chevron-right kegg-chevron me-1" aria-hidden="true"></i><?= t('KEGG pathways') ?>
+            <?php if (!empty($kegg_org['rows'])): ?><span class="small fw-normal ms-1">(<?= count($kegg_org['rows']) ?>)</span><?php endif; ?>
+          </button>
+          <?= field_help(
+              'Each row is a KEGG pathway with at least one gene of this organism in it, in any of its gene '
+              . 'sets you can see. The gene counts are per gene set and are not added up: gene sets are '
+              . 'usually different annotations of the same genome, so a total would count a gene twice. KOs '
+              . 'found: the pathway\'s KEGG Orthology groups this organism has in at least one gene set; '
+              . 'coverage is their share of the pathway. "Map" opens KEGG\'s drawing of the pathway with them '
+              . 'coloured; "Genes" searches all these gene sets for the pathway.',
+              'KEGG pathways'
+          ) ?>
+        </h2>
+        <div class="feature-overview-body collapse" id="organismKeggBody">
+        <?php if (!empty($kegg_org_error)): ?>
+          <div class="alert alert-warning mb-0"><?= t('The KEGG pathway data could not be read just now. Please try again later.') ?></div>
+        <?php else:
+            $kegg_multi = count($kegg_org['gene_sets']) > 1; ?>
+          <div class="small text-muted mb-2">
+            <?= t('"Map" colours this organism\'s KOs on KEGG\'s map:') ?>
+            <?= moop_kegg_map_legend_html($kegg_multi ? ['all_sets', 'some_sets'] : ['all_sets']) ?>
+            <?php if (!$kegg_org['has_reference']): ?>
+              <br><?= t('Coverage is not shown: this site has no copy of the KEGG pathway reference.') ?>
+            <?php elseif ($kegg_org['reference_date'] !== ''): ?>
+              <br><?= t('KEGG pathway reference of %s.', htmlspecialchars($kegg_org['reference_date'])) ?>
+            <?php endif; ?>
+          </div>
+          <div class="mb-2">
+            <label for="keggOrgClassFilter" class="small text-muted me-1"><?= t('Class:') ?></label>
+            <select id="keggOrgClassFilter" data-kegg-filter="keggOrgPathwaysTable" class="form-select form-select-sm d-inline-block w-auto">
+              <option value=""><?= t('All classes') ?></option>
+              <?php foreach (array_keys(moop_kegg_sort_classes(array_fill_keys(array_unique(array_column($kegg_org['rows'], 'class')), 1))) as $c): ?>
+              <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="table-responsive">
+          <table id="keggOrgPathwaysTable" class="table table-sm table-striped table-hover kegg-pathways-dt" style="width:100%;">
+            <thead><tr>
+              <th class="kegg-class-col"><?= t('Class') ?></th>
+              <th><?= t('Pathway') ?></th>
+              <?php foreach ($kegg_org['gene_sets'] as $gsk): [$__a, $__g] = explode('/', $gsk, 2); ?>
+              <th class="text-end" title="<?= htmlspecialchars($gsk) ?>"><?= t('Genes in %s', htmlspecialchars($__g)) ?></th>
+              <?php endforeach; ?>
+              <th class="text-end kegg-sort-col"><?= t('KOs found') ?></th>
+              <?php if ($kegg_org['has_reference']): ?>
+              <th class="text-end"><?= t('KOs in pathway') ?></th>
+              <th class="text-end"><?= t('Coverage') ?></th>
+              <?php endif; ?>
+              <th class="no-sort"><?= t('Links') ?></th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($kegg_org['rows'] as $r):
+                $found = count($r['kos_found']);
+                $cov   = $r['kos_total'] ? $found / $r['kos_total'] : null;
+                $map   = moop_url('api/kegg_map.php?' . http_build_query(['organism' => $organism_name, 'pathway' => $r['pathway']]));
+                $genes = moop_url('tools/search.php?' . http_build_query(['organism' => $organism_name, 'q' => $r['pathway'], 'source' => MOOP_KEGG_PATHWAY_SOURCE])); ?>
+              <tr>
+                <td data-search="<?= htmlspecialchars($r['class']) ?>"><?= htmlspecialchars($r['class']) ?><?php if ($r['sub'] !== ''): ?><div class="small text-muted"><?= htmlspecialchars($r['sub']) ?></div><?php endif; ?></td>
+                <td><?= htmlspecialchars($r['name']) ?> <span class="small text-muted"><?= htmlspecialchars($r['pathway']) ?></span></td>
+                <?php foreach ($kegg_org['gene_sets'] as $gsk): $n = $r['genes'][$gsk] ?? 0; ?>
+                <td class="text-end<?= $n ? '' : ' text-muted' ?>" data-order="<?= (int)$n ?>"><?= $n ? number_format($n) : '—' ?></td>
+                <?php endforeach; ?>
+                <td class="text-end"><?= $found ?></td>
+                <?php if ($kegg_org['has_reference']): ?>
+                <td class="text-end"><?= $r['kos_total'] === null ? '—' : (int)$r['kos_total'] ?></td>
+                <td class="text-end" data-order="<?= $cov === null ? -1 : round($cov, 4) ?>"><?= $cov === null ? '—' : round($cov * 100) . '%' ?></td>
+                <?php endif; ?>
+                <td class="text-nowrap">
+                  <a href="<?= htmlspecialchars($map) ?>" target="_blank" rel="noopener"><?= t('Map') ?> <i class="fa fa-external-link-alt link-icon"></i></a>
+                  · <a href="<?= htmlspecialchars($genes) ?>"><?= t('Genes') ?></a>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+          </div>
+        <?php endif; ?>
+        </div>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
   </div><!-- /#organismContent -->
 </div><!-- /.container -->
 

@@ -703,3 +703,6 @@ a.badge:hover {
 .kegg-pathway-list .kegg-sub { color: var(--moop-main-dark); font-weight: 600; margin-top: 0.25rem; }
 .kegg-pathway-list .kegg-pathway { padding-left: 0.75rem; }
 .kegg-ambiguous { background: #fff1a8; color: #5c4b00; font-weight: 500; }
+.kegg-card-toggle { font: inherit; }
+.kegg-card-toggle .kegg-chevron { transition: transform 0.2s; font-size: 0.8em; }
+.kegg-card-toggle:not(.collapsed) .kegg-chevron { transform: rotate(90deg); }

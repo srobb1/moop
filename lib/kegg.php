@@ -26,6 +26,9 @@ const MOOP_KEGG_COLOURS = [
     'many'      => '#5cb85c',
     'one'       => '#bfe8bf',
     'ambiguous' => '#fff1a8',
+    // organism map: a KO in every gene set with KEGG data / in only some of them
+    'all_sets'  => '#5cb85c',
+    'some_sets' => '#bfe8bf',
 ];
 
 /** What each colour means, for the legend (each a literal, so the translation scan lists it). */
@@ -35,6 +38,8 @@ function moop_kegg_colour_labels(): array {
         'many'      => t('several genes in the gene set'),
         'one'       => t('one gene in the gene set'),
         'ambiguous' => t('only ambiguous assignments (more than one KO)'),
+        'all_sets'  => t('in every gene set'),
+        'some_sets' => t('in some gene sets'),
     ];
 }
 
@@ -151,6 +156,28 @@ function moop_kegg_map_url(string $pathway, array $ko_colours): string {
     return 'https://www.kegg.jp/kegg-bin/show_pathway?map=' . rawurlencode($pathway)
          . '&multi_query=' . implode('%0d%0a', $lines);
 }
+
+/**
+ * The same map as a form POST (KEGG's Color tool posts too). A GET link carries only so many KOs: KEGG answers
+ * 403 to a URL over ~2,000 characters (2,021 OK, 2,136 refused -- length, not KO count; tested 2026-11-14),
+ * 414 over ~8 KB, and nginx refused our redirect header with a 502 well before that. The global Metabolic
+ * pathways map has 5,074 KOs. Posted, 205 KOs on map05022 all drew (checked in a browser 2026-11-14).
+ * Needs https://www.kegg.jp in the CSP's form-action (docs/nginx/moop-headers.conf).
+ *
+ * @return array{action:string, fields:array{map:string, multi_query:string}}
+ */
+function moop_kegg_map_post(string $pathway, array $ko_colours): array {
+    $lines = [];
+    foreach ($ko_colours as $ko => $key) {
+        if (!preg_match('/^K\d{5}\z/', $ko) || !isset(MOOP_KEGG_COLOURS[$key])) continue;
+        $lines[] = $ko . ' ' . MOOP_KEGG_COLOURS[$key] . ',black';
+    }
+    return ['action' => 'https://www.kegg.jp/kegg-bin/show_pathway',
+            'fields' => ['map' => $pathway, 'multi_query' => implode("\r\n", $lines)]];
+}
+
+/** Longest map link sent as a plain redirect; above it, the POST page (moop_kegg_map_post()). */
+const MOOP_KEGG_MAX_GET = 1900;
 
 /** The colour key, for beside a map link. $keys limits it (a gene-set table has no "this gene"). */
 function moop_kegg_map_legend_html(array $keys = []): string {
@@ -371,4 +398,85 @@ function moop_kegg_gene_set_pathways(string $db_path, int $gene_set_id, string $
         else @unlink($tmp);
     }
     return $data;
+}
+
+// ---------------------------------------------------------------- organism level
+
+/**
+ * The organism's gene sets this visitor may see, with what the KEGG table needs:
+ * list of ['assembly', 'gene_set', 'gene_set_id', 'dir']. Directory: the accession, else the genome name
+ * (the rule of moop_gene_set_comparison_rows()). A gene set the visitor cannot see never appears, so it
+ * never adds genes, KOs or colour.
+ */
+function moop_kegg_visible_gene_sets(string $organism, string $db_path): array {
+    $org_dir = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . "/$organism";
+    $dbh = getDbConnection($db_path);
+    $out = [];
+    $rows = $dbh->query('SELECT gs.gene_set_id, gs.gene_set_name, g.genome_accession, g.genome_name
+                           FROM gene_set gs JOIN genome g ON g.genome_id = gs.genome_id
+                          ORDER BY g.genome_accession, gs.gene_set_name')->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows as $r) {
+        $asm = (string)$r['genome_accession'];
+        $gs  = (string)$r['gene_set_name'];
+        if (!moop_plain_name($asm) || !moop_plain_name($gs) || !has_gene_set_access($organism, $asm, $gs)) continue;
+        $asm_dir = is_dir("$org_dir/$asm") ? $asm
+                 : (($r['genome_name'] ?? '') !== '' && is_dir("$org_dir/{$r['genome_name']}") ? $r['genome_name'] : $asm);
+        if (!is_dir("$org_dir/$asm_dir/$gs")) continue;   // retired / not on this site
+        $out[] = ['assembly' => $asm, 'gene_set' => $gs, 'gene_set_id' => (int)$r['gene_set_id'], 'dir' => "$org_dir/$asm_dir/$gs"];
+    }
+    return $out;
+}
+
+/**
+ * Merge per-gene-set tables into one organism table. Pure. Genes are NOT summed: an organism's gene sets are
+ * usually annotations of the same genome, so a sum would count one gene twice. Each gene set keeps its own
+ * count ('genes' keyed by "assembly/gene_set"); the KOs are the union ("the organism has this KO in some
+ * annotation"), and coverage is the union's share. Only gene sets with KEGG data take part.
+ *
+ * @param array<string,list> $tables "assembly/gene_set" => moop_kegg_pathway_table() rows
+ * @return list<array{pathway:string,name:string,class:string,sub:string,genes:array<string,int>,
+ *                    kos_found:list<string>,kos_in_all:list<string>,kos_total:?int}>
+ */
+function moop_kegg_merge_gene_sets(array $tables): array {
+    $tables = array_filter($tables);
+    $n_sets = count($tables);
+    $by = [];
+    foreach ($tables as $key => $rows) {
+        foreach ($rows as $r) {
+            $p = $r['pathway'];
+            $by[$p] ??= ['pathway' => $p, 'name' => $r['name'], 'class' => $r['class'], 'sub' => $r['sub'],
+                         'genes' => [], 'ko_sets' => [], 'kos_total' => $r['kos_total']];
+            $by[$p]['genes'][$key] = $r['genes'];
+            foreach ($r['kos_found'] as $ko) $by[$p]['ko_sets'][$ko][$key] = true;
+        }
+    }
+    $out = [];
+    foreach ($by as $p => $row) {
+        ksort($row['ko_sets']);
+        $row['kos_found']  = array_keys($row['ko_sets']);
+        $row['kos_in_all'] = array_keys(array_filter($row['ko_sets'], fn($sets) => count($sets) === $n_sets));
+        unset($row['ko_sets']);
+        $out[] = $row;
+    }
+    usort($out, fn($a, $b) => [count($b['kos_found']), $a['pathway']] <=> [count($a['kos_found']), $b['pathway']]);
+    return $out;
+}
+
+/**
+ * The organism's pathway table: each visible gene set's cached table, merged.
+ *
+ * @return array{rows:list, gene_sets:list<string>, has_reference:bool, reference_date:string}
+ * @throws PDOException
+ */
+function moop_kegg_organism_pathways(string $organism, string $db_path): array {
+    $tables = [];
+    $ref_date = ''; $has_ref = false;
+    foreach (moop_kegg_visible_gene_sets($organism, $db_path) as $g) {
+        $t = moop_kegg_gene_set_pathways($db_path, $g['gene_set_id'], $g['dir']);
+        $tables["{$g['assembly']}/{$g['gene_set']}"] = $t['rows'];
+        $has_ref = $t['has_reference']; $ref_date = $t['reference_date'];
+    }
+    $tables = array_filter($tables);
+    return ['rows' => moop_kegg_merge_gene_sets($tables), 'gene_sets' => array_keys($tables),
+            'has_reference' => $has_ref, 'reference_date' => $ref_date];
 }

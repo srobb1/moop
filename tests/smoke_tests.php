@@ -5015,6 +5015,21 @@ ok($_kby['map04668']['kos_total'] === null && $_kby['map04668']['kos_found'] ===
    'KEGG gene-set table: a pathway the reference lacks keeps every KO, no coverage, class from the loaded name');
 ok(moop_kegg_pathway_table($_kpaths, $_kkos, $_kdesc, null)[0]['kos_total'] === null,
    'KEGG gene-set table without the reference: no coverage anywhere');
+// Organism level: genes per gene set, never summed; KOs a union; "in all" only across gene sets WITH data
+$_km = moop_kegg_merge_gene_sets([
+    'A/gs1' => [['pathway' => 'map00010', 'name' => 'Glycolysis', 'class' => 'Metabolism', 'sub' => 'Carb', 'genes' => 5,
+                 'ambiguous_genes' => 0, 'kos_found' => ['K00001', 'K00002'], 'kos_total' => 4]],
+    'B/gs2' => [['pathway' => 'map00010', 'name' => 'Glycolysis', 'class' => 'Metabolism', 'sub' => 'Carb', 'genes' => 4,
+                 'ambiguous_genes' => 0, 'kos_found' => ['K00002', 'K00003'], 'kos_total' => 4],
+                ['pathway' => 'map04668', 'name' => 'TNF', 'class' => 'EIP', 'sub' => 'ST', 'genes' => 1,
+                 'ambiguous_genes' => 0, 'kos_found' => ['K04404'], 'kos_total' => 97]],
+    'C/empty' => [],
+]);
+$_kmb = array_column($_km, null, 'pathway');
+ok($_kmb['map00010']['genes'] === ['A/gs1' => 5, 'B/gs2' => 4] && $_kmb['map00010']['kos_found'] === ['K00001', 'K00002', 'K00003']
+   && $_kmb['map00010']['kos_in_all'] === ['K00002'] && $_kmb['map04668']['kos_in_all'] === []
+   && $_km[0]['pathway'] === 'map00010',
+   'KEGG organism table: genes per gene set (not summed), KOs a union, "in every gene set" ignores a gene set with no KEGG data');
 
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";

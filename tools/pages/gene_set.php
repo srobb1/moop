@@ -303,7 +303,7 @@
             </div>
             <div class="mb-2">
               <label for="keggClassFilter" class="small text-muted me-1"><?= t('Class:') ?></label>
-              <select id="keggClassFilter" class="form-select form-select-sm d-inline-block w-auto">
+              <select id="keggClassFilter" data-kegg-filter="keggPathwaysTable" class="form-select form-select-sm d-inline-block w-auto">
                 <option value=""><?= t('All classes') ?></option>
                 <?php foreach (array_keys(moop_kegg_sort_classes(array_fill_keys(array_unique(array_column($kegg['rows'], 'class')), 1))) as $c): ?>
                 <option value="<?= htmlspecialchars($c) ?>"><?= htmlspecialchars($c) ?></option>
@@ -311,11 +311,11 @@
               </select>
             </div>
             <div class="table-responsive">
-            <table id="keggPathwaysTable" class="table table-sm table-striped table-hover" style="width:100%;">
+            <table id="keggPathwaysTable" class="table table-sm table-striped table-hover kegg-pathways-dt" style="width:100%;">
               <thead><tr>
                 <th class="kegg-class-col"><?= t('Class') ?></th>
                 <th><?= t('Pathway') ?></th>
-                <th class="text-end kegg-genes-col"><?= t('Genes') ?></th>
+                <th class="text-end kegg-sort-col"><?= t('Genes') ?></th>
                 <th class="text-end" title="<?= t('Genes eggNOG gave more than one KO') ?>"><?= t('Ambiguous') ?></th>
                 <th class="text-end"><?= t('KOs found') ?></th>
                 <?php if ($kegg['has_reference']): ?>

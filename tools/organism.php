@@ -199,6 +199,24 @@ if ($gene_set_rows) {
     $display_config['page_script'][] = moop_url_base() . '/js/gene-set-comparison.js';
 }
 
+// KEGG pathways across the organism's visible gene sets (lib/kegg.php): each gene set's cached table, merged.
+// Genes are per gene set, never summed. A read failure is said on the page, never shown as "no pathways".
+require_once __DIR__ . '/../lib/kegg.php';
+$kegg_org = null;
+$kegg_org_error = false;
+$__kegg_db = organism_db_path($organism_name);
+if (is_file($__kegg_db)) {
+    try {
+        $kegg_org = moop_kegg_organism_pathways($organism_name, $__kegg_db);
+    } catch (PDOException $e) {
+        error_log("organism KEGG ($organism_name): " . $e->getMessage());
+        $kegg_org_error = true;
+    }
+}
+if ($kegg_org_error || !empty($kegg_org['rows'])) {
+    $display_config['page_script'][] = moop_url_base() . '/js/modules/kegg-pathways-table.js';
+}
+
 // Prepare data for content file
 $data = [
     'organism_name' => $organism_name,
@@ -215,6 +233,8 @@ $data = [
     'siteTitle' => $config->getString('siteTitle'),
     'accessible_assemblies' => $accessible_assemblies,
     'gene_set_rows' => $gene_set_rows,
+    'kegg_org' => $kegg_org,
+    'kegg_org_error' => $kegg_org_error,
 ];
 
 // Use generic template to render

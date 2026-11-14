@@ -1,5 +1,15 @@
 # GO Enrichment Analysis Tool - Implementation Plan
 
+> **2026-11-14 — decided with Sofia: ONE enrichment tool for GO terms AND KEGG pathways.** The user makes a gene
+> list (paste, a search or MOOPmart result, later an expression experiment or a clade comparison) and the tool
+> tests which GO terms and which KEGG pathways are over-represented in it, with the same method: Fisher's exact
+> test per term/pathway, multiple-testing correction (Benjamini-Hochberg), and the background = the gene set's
+> genes that carry ANY annotation of that kind (any GO term / any KO), not all genes. Build KEGG into it when GO
+> is tackled, not as a separate tool. The KEGG inputs already exist: per gene, its pathways
+> (`KEGG Pathway (eggNOG)`) in organism.sqlite, the reference snapshot in `organisms/.kegg/`, and
+> `lib/kegg.php` (gene → pathway rows source-first, ~0.1 s per gene set). A result row's map link can colour the
+> LIST's KOs on KEGG's map (`api/kegg_map.php` / `moop_kegg_map_url()`). See notes/KEGG_GENE_PAGE_PLAN.md.
+
 ## Overview
 Create a web-based GO (Gene Ontology) enrichment analysis tool for statistical enrichment analysis. This tool will allow users to submit a study gene set and perform analysis against population data with associated GO terms.
 

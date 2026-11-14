@@ -78,4 +78,12 @@ Cached per gene set (`{cache}/…/kegg_pathways.json`, keyed on organism.sqlite 
 0.15 s cached. Query is source-first (0.11 s vs 1.06 s gene-set-first). Nematostella NV2: 425 pathways; TNF 63 genes,
 39/97 KOs. `organisms/.kegg/` is on simrbase only (copy2moop targets it); planosphere and cuttingclass have no KEGG
 annotations, so no card there.
-Open: organism-level view (Sofia unsure); enrichment on gene lists (compute plan use 3).
+Open: enrichment on gene lists — **decided 2026-11-14: part of the GO enrichment tool, one tool for both**
+(notes/GO_ENRICHMENT_TOOL_PLAN.md, top). Idea parked (Sofia): MOOPmart preset per pathway — Step 2 = mapNNNNN,
+output = KEGG Orthology column → a gene→KO list for KEGG Mapper.
+
+**2026-11-14 — organism level built (organism page "KEGG pathways" card).** One row per pathway across the
+gene sets the visitor may see: genes PER GENE SET side by side (never summed — gene sets are usually annotations
+of the same genome), KOs found = union, coverage of the union, Map (KO in every gene set with KEGG data = dark,
+in some = light; `api/kegg_map.php?organism=&pathway=`), Genes (search over the organism, KEGG pathway source
+only). Built by merging the cached gene-set tables (0.5 s cold, 0.05 s after). Nematostella: 428 pathways.

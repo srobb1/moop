@@ -748,7 +748,9 @@ long-standing entries here had already been fixed, and one contradicted §10 of 
   until fixed the same day. Use Chrome's `Audits.issueAdded` (CDP), not page console messages.
   Allowed outside hosts: `challenges.cloudflare.com` (Turnstile, script + frame),
   `upload.wikimedia.org` (img fallback), `tracks.stowers.org:8080` (connect),
-  `www.youtube-nocookie.com` (frame: content-page video, the only iframe `lib/content_pages.php` keeps).
+  `www.youtube-nocookie.com` (frame: content-page video, the only iframe `lib/content_pages.php` keeps),
+  `www.kegg.jp` (form-action: `api/kegg_map.php` POSTs a big pathway's KOs to KEGG's map, 2026-11-14 -- a GET
+  link over ~2,000 characters is refused by KEGG).
 - **Low:** The Apache no-exec guard (`docs/apache/moop-security.conf`) ships **unverified** —
   written against a working nginx deployment, never run on Apache. Its VERIFY block has the
   exec test; settle it on the first Apache host.
