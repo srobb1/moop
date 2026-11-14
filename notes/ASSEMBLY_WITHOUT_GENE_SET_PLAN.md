@@ -270,3 +270,10 @@ built as smr. No groups entry yet (Sofia adds it in Manage Groups). Not on Plano
 organism.sqlite (decision 2). Rule added: `moop_blast_only_genome()` requires NO gene-set subdir — once a gene
 set is added, that gene set's BLAST entry already offers the genome (getBlastDatabases looks one level up), so
 the old blast_only entry goes stale instead of listing it twice.
+**2026-11-14 — item 7 done (almost no code).** Registering needs only genome.fa (gene sets optional, logged);
+a sheet needs only the registered assembly; config.php and track access already use
+moop_jbrowse_viewer_gene_sets() (blast_only since item 4). The one gap: jbrowse2.php built its picker from
+getAccessibleGeneSets() without the blast_only opt-in -> 404 "no assembly you can open". Fixed. smed_chr_ref_v1
+registered; verified as PUBLIC in headless Chrome: opens, jumps to smed_chr2:1,000,000, a BLAST-hit
+sessionTrack draws. Leftover for item 9: jbrowse_register_assembly.php accepts a `gene_set` param (default v1)
+it never uses.

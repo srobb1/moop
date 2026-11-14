@@ -23,7 +23,8 @@ moop_tool_page_guard();
 $organism_data = $config->getPath('organism_data');
 
 // Build organism → assemblies map from accessible sources
-$raw_sources     = flattenSourcesList(getAccessibleGeneSets());
+// BLAST-only genomes too: a sequence-only assembly opens like any other (step 6 item 7)
+$raw_sources     = flattenSourcesList(getAccessibleGeneSets(null, null, null, true));
 $scope_tree      = [];   // [organism] = [assembly, ...]
 $organism_info   = [];   // [organism] = {genus, species, common_name}
 $organism_groups = [];   // [organism] = [group, ...]
