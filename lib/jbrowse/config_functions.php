@@ -227,7 +227,7 @@ function parseAssemblyName($full_name)
  */
 function loadSyntenyTracks($assembly1, $assembly2, $user_access_level)
 {
-    $tracks_dir = __DIR__ . '/../../metadata/jbrowse2-configs/tracks/synteny';
+    $tracks_dir = rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/jbrowse2-configs/tracks/synteny';
     
     if (!is_dir($tracks_dir)) {
         return []; // No synteny tracks exist yet
@@ -282,7 +282,7 @@ function loadSyntenyTracks($assembly1, $assembly2, $user_access_level)
 
         // COLLABORATOR check: Must have access to at least one of the assemblies
         if (normalize_access_level($user_access_level) === 'COLLABORATOR' && $track_level_value >= 2) {
-            $user_access = $_SESSION['access'] ?? [];
+            $user_access = get_user_access();   // not $_SESSION directly: honours "view as public"
             
             // Parse assembly names
             list($org1, $asm1) = parseAssemblyName($assembly1);
@@ -349,7 +349,7 @@ function generateDualAssemblyConfig($assembly1, $assembly2, $user_access_level)
     }
 
     // Load assembly definitions
-    $metadata_path = __DIR__ . '/../../metadata/jbrowse2-configs/assemblies';
+    $metadata_path = rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/jbrowse2-configs/assemblies';
     $assembly1_file = "$metadata_path/{$organism1}_{$asm1}.json";
     $assembly2_file = "$metadata_path/{$organism2}_{$asm2}.json";
     

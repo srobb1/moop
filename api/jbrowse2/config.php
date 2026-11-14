@@ -135,7 +135,7 @@ if ($assembly1 && $assembly2) {
  * @return void - Outputs JSON and exits
  */
 function generateAssemblyList($user_access_level) {
-    $metadata_path = __DIR__ . '/../../metadata/jbrowse2-configs/assemblies';
+    $metadata_path = rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/jbrowse2-configs/assemblies';
     
     if (!is_dir($metadata_path)) {
         http_response_code(500);
@@ -209,7 +209,7 @@ function generateAssemblyConfig($organism, $assembly, $user_access_level) {
     }
 
     // 2. LOAD ASSEMBLY DEFINITION
-    $metadata_path = __DIR__ . '/../../metadata';
+    $metadata_path = rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/');
     $assemblies_dir = "$metadata_path/jbrowse2-configs/assemblies";
     $assembly_def_file = "$assemblies_dir/{$organism}_{$assembly}.json";
 
@@ -276,7 +276,7 @@ function generateAssemblyConfig($organism, $assembly, $user_access_level) {
  * @return array - Array of full track configurations with JWT tokens
  */
 function loadFilteredTracks($organism, $assembly, $user_access_level) {
-    $tracks_dir = __DIR__ . "/../../metadata/jbrowse2-configs/tracks";
+    $tracks_dir = rtrim(ConfigManager::getInstance()->getPath('metadata_path'), '/') . '/jbrowse2-configs/tracks';
     
     // Load tracks from hierarchical structure: tracks/organism/assembly/type/*.json
     // (A "flat structure" fallback used to load tracks/*.json -- every assembly's -- when this
@@ -323,7 +323,7 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
 
         // COLLABORATOR-SPECIFIC CHECK: Must have explicit assembly access
         if (normalize_access_level($user_access_level) === 'COLLABORATOR' && $track_level_value >= 2) {
-            $user_access = $_SESSION['access'] ?? [];
+            $user_access = get_user_access();   // not $_SESSION directly: honours "view as public"
             if (!isset($user_access[$organism][$assembly])) {
                 continue;
             }
