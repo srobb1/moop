@@ -528,7 +528,17 @@ function moop_collaborator_allows($organism_name, $assembly_name, $gene_set) {
     if (!has_access('COLLABORATOR')) {
         return false;
     }
-    $user_access = get_user_access();
+    return moop_user_access_allows(get_user_access(), $organism_name, $assembly_name, $gene_set);
+}
+}
+
+/**
+ * Does ONE user's access list (users.json "access") grant this gene set? Pure, so the login check
+ * above and the admin Access overview (who can see each gene set) read users.json the same way.
+ */
+if (!function_exists('moop_user_access_allows')) {
+function moop_user_access_allows($user_access, $organism_name, $assembly_name, $gene_set): bool {
+    if (!is_array($user_access) || !is_array($user_access[$organism_name] ?? null)) return false;
     $allowed = $user_access[$organism_name][$assembly_name] ?? [];
 
     // users.json carries TWO access shapes (admin/manage_users.php:277 handles both):

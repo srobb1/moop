@@ -152,7 +152,19 @@ next to each analysis where analyses are listed. One editor, two entry points, o
    (`moop_analysis_rule()` gives the effective rule + `set_here`; `moop_analysis_rule_set()` saves).
    Original item: **Analyses:** analysis rules in `moop_dataset_visible()`; expression `access_level` folded in;
    images and clades pass their analysis key.
-5. **Access overview page** (§4c), reusing the dialog.
+5. **Built 2026-11-14** — **Access overview page** (§4c): `admin/access_overview.php`, rows from
+   `lib/access_overview.php` (read-only; asks the site's own checks). ONE PROVIDER PER KIND
+   (`moop_access_overview_providers()`): gene sets, expression, image analyses, clades, JBrowse tracks
+   (read-only, per assembly — their level lives in the track sheet, edit there), ID Translator and anatomy
+   curations (no rule of their own: follow each gene set), pages. A new kind (single-cell, BLAST-only) =
+   one provider function + one line. Edits pages and analyses through the shared dialog, which gained an
+   analysis variant (no "Everyone", no data-set choice, default marked). Save of an analysis only for a key
+   the overview lists, with that row's default (choosing the default clears the rule). Collaborators listed
+   from users.json via `moop_user_access_allows()` — extracted from `moop_collaborator_allows()` so the
+   login check and the overview read users.json one way. Same session: `$permitted` removed from
+   `moop_crosswalk_search_hint/translate/id_link` — the rows were already filtered by `moop_dataset_visible`;
+   `id_link` now asks `moop_crosswalk_entry_visible` (one source of truth). `moop_clades_open()` memo keyed
+   by folder (a once-per-process memo leaked between test configs).
 6. **BLAST-only genomes** — `gene_set = ''` path (separate note).
 
 Tests (`tests/smoke_tests.php`): for each layer, the same item as PUBLIC / COLLABORATOR with and

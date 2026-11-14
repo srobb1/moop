@@ -4019,6 +4019,57 @@ $_as('IP_IN_RANGE', [], 'an12');
 ok(!moop_dataset_visible('Org', 'asm', 'gs', 'clade:x') && moop_dataset_visible('Org', 'asm', 'gs'),
    'analyses: an unreadable access_rules.json makes every analysis admins-only (fail closed); data sets are unaffected');
 unlink(moop_access_rules_file());
+
+// Access overview (step 5, lib/access_overview.php): read-only; every answer from the site's own checks.
+require_once "$BASE/lib/access_overview.php";
+ok(moop_user_access_allows(['Org' => ['asm' => ['gs2']]], 'Org', 'asm', 'gs2') && !moop_user_access_allows(['Org' => ['asm' => ['gs2']]], 'Org', 'asm', 'gs')
+   && moop_user_access_allows(['Org' => ['asm' => true]], 'Org', 'asm', 'gs') && moop_user_access_allows(['Org' => ['asm' => ['*']]], 'Org', 'asm', 'gs')
+   && !moop_user_access_allows(['Org' => ['asm']], 'Org', 'asm', 'gs') && !moop_user_access_allows(['Org' => true], 'Org', 'asm', 'gs')
+   && !moop_user_access_allows(null, 'Org', 'asm', 'gs'),
+   'overview: users.json access lists read like the login check (list, whole assembly, *, old shape denied, junk denied)');
+@mkdir("$_cp/orgs/Org/asm/gs2", 0777, true); @mkdir("$_cp/orgs/Org/asm/gs3", 0777, true);
+touch("$_cp/orgs/Org/organism.sqlite"); touch("$_cp/orgs/Org/asm/gs3/cds.nt.fa");
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([
+    ['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs',  'groups' => ['PUBLIC']],
+    ['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs2', 'groups' => ['Lab']],
+    ['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gone', 'groups' => ['PUBLIC']]]));   // retired: no directory
+file_put_contents("$_cp/users.json", json_encode([
+    'alice' => ['role' => 'user', 'access' => ['Org' => ['asm' => ['gs2']]]],
+    'bob'   => ['role' => 'user', 'access' => ['Org' => ['asm' => true]]],
+    'carol' => ['role' => 'user', 'access' => ['Org' => ['asm']]],
+    'root'  => ['role' => 'admin', 'access' => []]]));
+$_c = $_cprp->getValue($_cpcfg); $_c['users_file'] = "$_cp/users.json"; $_cprp->setValue($_cpcfg, $_c);
+$_as('ADMIN', [], 'ov1');
+$_ov = moop_access_overview();
+$_by = []; foreach ($_ov['rows'] as $_r) $_by[$_r['kind'] . ':' . $_r['item']] = $_r;
+ok($_ov['users_ok'] && $_ov['rules_ok'] && !$_ov['errors'], 'overview: reads cleanly');
+ok(($_by['gene_set:gs']['who'] ?? '') === 'Everyone' && !$_by['gene_set:gs']['restricted'] && !isset($_by['gene_set:gone']),
+   'overview: a PUBLIC gene set reads "Everyone"; one in the groups file with no directory is not listed');
+ok(($_by['gene_set:gs2']['who'] ?? '') === 'Internal network + admins + 2 collaborators (alice, bob)' && $_by['gene_set:gs2']['restricted']
+   && $_by['gene_set:gs2']['why'] === 'Groups: Lab',
+   'overview: a private gene set names the collaborators users.json grants it (not the old-shape one, not admins)');
+ok(($_by['gene_set:gs3']['why'] ?? '') === 'In no group' && $_by['gene_set:gs3']['who'] === 'Internal network + admins + 1 collaborator (bob)',
+   'overview: a gene set on disk but in no group is listed -- restricted, and why');
+$_e = $_by['expression:E'] ?? [];
+ok(($_e['who'] ?? '') === 'Logged in' && $_e['restricted'] && ($_e['edit']['default'] ?? '') === 'logged_in' && $_e['edit']['kind'] === 'analysis'
+   && str_starts_with($_e['why'], 'Default'),
+   'overview: an expression experiment shows its bundle default, editable, with that default carried to the save');
+moop_analysis_rule_set('expression:Org/asm/gs/exp1', ['visible_to' => 'admins'], 'logged_in');
+$_ov2 = array_values(array_filter(moop_access_overview()['rows'], fn($r) => $r['kind'] === 'expression'));
+ok(($_ov2[0]['who'] ?? '') === 'Admins only' && $_ov2[0]['why'] === 'Set here', 'overview: a stored analysis rule reads "Set here"');
+moop_analysis_rule_set('expression:Org/asm/gs/exp1', ['visible_to' => 'logged_in'], 'logged_in');
+ok(moop_access_rules()['analyses'] === [], 'overview: choosing the default again leaves nothing stored');
+$_ovctx = moop_access_overview_context(); $_priv = moop_access_overview_gene_set_audience($_ovctx, 'Org', 'asm', 'gs2');
+ok(moop_access_overview_narrowed('logged_in', $_priv)['who'] === moop_access_overview_audience_words($_priv)
+   && moop_access_overview_narrowed('dataset', $_priv)['restricted'] && moop_access_overview_narrowed('internal', null)['who'] === 'Internal network + admins',
+   'overview: an analysis never reads wider than its data set ("logged in" on a private gene set = that gene set\'s readers)');
+moop_page_rule_set('rnai', ['visible_to' => 'internal']);
+$_pg = array_values(array_filter(moop_access_overview()['rows'], fn($r) => $r['kind'] === 'page' && $r['edit']['key'] === 'rnai'));
+moop_page_rule_set('rnai', null);
+ok(count($_pg) === 1 && $_pg[0]['restricted'] && $_pg[0]['edit']['kind'] === 'page', 'overview: a restricted page is listed, editable through the same dialog');
+unlink("$_cp/users.json"); mkdir("$_cp/users.json");
+ok(!moop_access_overview()['users_ok'], 'overview: an unreadable users file is reported (the page warns), never read as "no collaborators" silently');
+rmdir("$_cp/users.json");
 $_SESSION = $_apsess;
 $_cprp->setValue($_cpcfg, $_cpsaved);
 exec('rm -rf ' . escapeshellarg($_cp));

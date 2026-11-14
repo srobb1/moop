@@ -36,10 +36,13 @@ function moop_clades_dir(): string {
 
 /** Every valid clade file: [clade => PDO]. A file without the expected format is skipped (and logged). */
 function moop_clades_open(): array {
-    static $open = null;
-    if ($open !== null) return $open;
+    // Memo per folder, not per process: a cached answer for one organism_data must never be handed
+    // out for another (the smoke tests switch it; a once-only memo leaked an empty list between them).
+    static $memo = [];
+    $dir = moop_clades_dir();
+    if (isset($memo[$dir])) return $memo[$dir];
     $open = [];
-    foreach (glob(moop_clades_dir() . '/*/homologs.sqlite') ?: [] as $f) {
+    foreach (glob($dir . '/*/homologs.sqlite') ?: [] as $f) {
         $clade = basename(dirname($f));
         if (!preg_match('/^[A-Za-z0-9_-]+$/', $clade)) continue;
         try {
@@ -52,7 +55,7 @@ function moop_clades_open(): array {
             error_log("MOOP: cannot open $f: " . $e->getMessage());
         }
     }
-    return $open;
+    return $memo[$dir] = $open;
 }
 
 /**
