@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/annotation_scores.php';
+require_once __DIR__ . '/kegg.php';
 
 /**
  * From this many direct transcripts up, the gene page lists them and loads each one's
@@ -400,12 +401,13 @@ const MOOP_SAME_ORGANISM_ANNOTATION_TYPES = ['Paralogs'];
  */
 function moop_same_organism_hit_url(array $ctx, string $accession): ?string {
     if (($ctx['site'] ?? '') === '' || ($ctx['organism'] ?? '') === '' || trim($accession) === '') return null;
-    return '/' . $ctx['site'] . '/tools/parent.php?' . http_build_query(array_filter([
+    // moop_url(), not '/' . site: the site setting is the folder name, not the start of a link (CLAUDE.md §3b)
+    return moop_url('tools/parent.php?' . http_build_query(array_filter([
         'organism'   => $ctx['organism'],
         'assembly'   => $ctx['assembly'] ?? '',
         'gene_set'   => $ctx['gene_set'] ?? '',
         'uniquename' => trim($accession),
-    ], 'strlen'));
+    ], 'strlen')));
 }
 
 /**
@@ -490,6 +492,9 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
         $html .= '</div>';
     }
     
+    // KEGG pathways: grouped by class with links to KEGG's coloured map, above the full table (lib/kegg.php)
+    $html .= moop_kegg_gene_pathways_html($results, (string)$uniquename, $link_ctx);
+
     // Table with DataTables
     $html .= "<div class=\"table-responsive\">";
     $html .= "<table id=\"" . htmlspecialchars($table_id) . "\" class=\"table table-sm table-striped table-hover substring-search\" style=\"width:100%;\">";

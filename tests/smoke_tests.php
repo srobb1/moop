@@ -4956,6 +4956,50 @@ $_rp->setValue($_cfg, $_saved);
 exec('rm -rf ' . escapeshellarg($_bt));
 
 // ----------------------------------------------------------------------------
+echo "\nKEGG pathways (lib/kegg.php)\n";
+require_once "$BASE/lib/kegg.php";
+ok(moop_kegg_split_pathway_name('TNF signaling pathway (Environmental Information Processing; Signal transduction)')
+     === ['TNF signaling pathway', 'Environmental Information Processing', 'Signal transduction']
+   && moop_kegg_split_pathway_name('Citrate cycle (TCA cycle) (Metabolism; Carbohydrate metabolism)')
+     === ['Citrate cycle (TCA cycle)', 'Metabolism', 'Carbohydrate metabolism']
+   && moop_kegg_split_pathway_name('V-type ATPase, eukaryotes') === ['V-type ATPase, eukaryotes', '', ''],
+   'KEGG pathway name: the class is the LAST "(A; B)"; a name without one comes back whole');
+ok(array_keys(moop_kegg_sort_classes(['Human Diseases' => 1, 'Zzz' => 1, 'Metabolism' => 1, 'Organismal Systems' => 1]))
+     === ['Metabolism', 'Organismal Systems', 'Human Diseases', 'Zzz'], "KEGG classes in KEGG's own order, unknown ones last");
+ok(moop_kegg_valid_pathway('map04668') && !moop_kegg_valid_pathway('ko04668') && !moop_kegg_valid_pathway('map0466')
+   && !moop_kegg_valid_pathway("map04668\n"), 'KEGG pathway id: mapNNNNN only');
+ok(moop_plain_name('NV2') && !moop_plain_name("NV2\n") && !moop_plain_name('..') && !moop_plain_name(''),
+   'moop_plain_name(): a trailing newline is not a plain name (PCRE $ matched before it)');
+$_kc = moop_kegg_ko_colours(['K00001' => ['genes' => 3, 'ambiguous' => false], 'K00002' => ['genes' => 1, 'ambiguous' => false],
+                             'K00003' => ['genes' => 2, 'ambiguous' => true],  'K00004' => ['genes' => 1, 'ambiguous' => false]], ['K00004', 'K00009']);
+ok($_kc === ['K00001' => 'many', 'K00002' => 'one', 'K00003' => 'ambiguous', 'K00004' => 'this_gene', 'K00009' => 'this_gene'],
+   'KEGG colours: this gene first, then ambiguous, several genes, one gene');
+// The exact form KEGG documents -- without ",fg" and CR+LF it colours nothing, silently (seen in a browser 2026-11-14)
+ok(moop_kegg_map_url('map04668', ['K04404' => 'this_gene', 'K04427' => 'many', 'bad' => 'one', 'K00001' => 'nope'])
+     === 'https://www.kegg.jp/kegg-bin/show_pathway?map=map04668&multi_query=K04404+%23ff8c42,black%0d%0aK04427+%235cb85c,black',
+   'KEGG map link: "<KO>+<bg>,black" joined by %0d%0a on the reference map; malformed KOs and colours dropped');
+$_kd = sys_get_temp_dir() . '/moop_kegg_' . getmypid() . '.sqlite';
+@unlink($_kd);
+$_kp = new PDO("sqlite:$_kd");
+$_kp->exec("CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_uniquename TEXT, gene_set_id INTEGER);
+  CREATE TABLE annotation_source (annotation_source_id INTEGER PRIMARY KEY, annotation_source_name TEXT);
+  CREATE TABLE annotation (annotation_id INTEGER PRIMARY KEY, annotation_source_id INTEGER, annotation_accession TEXT, annotation_description TEXT);
+  CREATE TABLE feature_annotation (feature_id INTEGER, annotation_id INTEGER, score REAL);
+  INSERT INTO annotation_source VALUES (1, 'KEGG Pathway (eggNOG)'), (2, 'KEGG Orthology (eggNOG)');
+  INSERT INTO annotation VALUES (1, 1, 'map04668', ''), (2, 2, 'K04404', ''), (3, 2, 'K12793', ''), (4, 2, 'K04427', '');
+  INSERT INTO feature VALUES (1, 'g1', 1), (2, 'g2', 1), (3, 'g3', 1), (4, 'other', 2);
+  -- g1: ambiguous (K04404 + K12793); g2 + g3: K04427 cleanly; 'other' is in gene set 2 and must not count
+  INSERT INTO feature_annotation VALUES (1, 1, 2), (1, 2, 2), (1, 3, 2), (2, 1, 1), (2, 4, 1), (3, 1, 1), (3, 4, 1), (4, 1, 1), (4, 2, 1);");
+$_kp = null;
+$_kk = moop_kegg_gene_set_pathway_kos($_kd, 1, 'map04668');
+ok($_kk === ['K04404' => ['genes' => 1, 'ambiguous' => true], 'K04427' => ['genes' => 2, 'ambiguous' => false],
+             'K12793' => ['genes' => 1, 'ambiguous' => true]],
+   "a gene set's KOs in a pathway: genes per KO, ambiguous only when every holder got it with score > 1, other gene sets excluded");
+ok(moop_kegg_feature_kos($_kd, 1, 'g2') === ['K04427'] && moop_kegg_feature_kos($_kd, 1, 'other') === [],
+   "one feature's KOs, within its own gene set only");
+@unlink($_kd);
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

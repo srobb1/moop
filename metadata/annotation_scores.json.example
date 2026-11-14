@@ -40,6 +40,13 @@
       "unit_plural": "species",
       "explanation": "How many species share this gene duplication: 1 means it happened in this species only; more species means an older duplication (they are named in the description)."
     },
+    "kegg_kos": {
+      "label": "KEGG KOs given",
+      "display": "count",
+      "unit": "KO",
+      "unit_plural": "KOs",
+      "explanation": "How many KEGG KOs eggNOG gave the gene. 1 KO: one clear assignment. 2 KOs or more: ambiguous -- the gene matched several KOs and each is listed; on a pathway or module it is the count for the KOs that pathway came from."
+    },
     "oma_relation": {
       "label": "OMA relationship",
       "display": "words",
@@ -190,6 +197,10 @@
     {
       "type": "Gene Families",
       "kind": "evalue"
+    },
+    {
+      "source": "KEGG ",
+      "kind": "kegg_kos"
     }
   ]
 }

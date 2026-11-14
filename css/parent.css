@@ -691,3 +691,15 @@ a.badge:hover {
 
 /* Assembly · gene set under each species in the ortholog and family tables. */
 .compgen-org-sets { font-size: 0.75rem; }
+
+/* KEGG pathways above the Pathways table (lib/kegg.php). Swatch colours are DATA colours (the same
+   ones KEGG draws on the map), so they are not themed. */
+.kegg-pathways { font-size: 0.875rem; }
+.kegg-legend-item { display: inline-flex; align-items: center; gap: 0.25rem; margin-right: 0.75rem; white-space: nowrap; }
+.kegg-swatch { display: inline-block; width: 0.85rem; height: 0.85rem; border: 1px solid rgba(0,0,0,0.25); border-radius: 2px; }
+.kegg-class { margin-bottom: 0.25rem; }
+.kegg-class > summary { cursor: pointer; }
+.kegg-pathway-list { list-style: none; padding-left: 1rem; margin: 0.25rem 0 0.5rem; }
+.kegg-pathway-list .kegg-sub { color: var(--moop-main-dark); font-weight: 600; margin-top: 0.25rem; }
+.kegg-pathway-list .kegg-pathway { padding-left: 0.75rem; }
+.kegg-ambiguous { background: #fff1a8; color: #5c4b00; font-weight: 500; }

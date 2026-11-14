@@ -51,3 +51,19 @@ snapshot date in `info.txt` with each gene set's `annotation_source_version` and
 ## Order
 
 1 (score label) → 2 + 3 (gene page) → 4 (gene-set table, once `organisms/.kegg/` has arrived) → 5 throughout.
+
+## Progress
+
+**2026-11-14 — steps 1–3 built.**
+- Score label: `kegg_kos` kind in `metadata/annotation_scores.json.example` ("1 KO" / "2 KOs" + explanation;
+  no site has its own annotation_scores.json, so all three get it).
+- `lib/kegg.php` + `api/kegg_map.php`: the gene page's Pathways table has, above it, the pathways grouped by KEGG
+  class (KEGG's order), an "ambiguous" badge (score > 1), "View on KEGG" and "Genes in this gene set"
+  (search.php?q=mapNNNNN scoped to the gene set — prefilled, the visitor clicks Search). The KEGG link goes through
+  api/kegg_map.php (access-checked: private gene set = 404; ~70 ms) which redirects to the coloured map.
+- **KEGG's colour link, verified in a browser:** only the exact documented form colours anything:
+  `show_pathway?map=map04668&multi_query=K04404+%23ff8c42,black%0d%0aK04427+...` — without `,black` and CR+LF
+  the map loads with NOTHING coloured, silently. `map…` (reference) not `ko…`: a KO the gene set lacks stays white.
+- Found on the way: `moop_plain_name()` accepted a trailing newline (PCRE `$`); now `\z`, test red on the old code.
+  `moop_same_organism_hit_url()` built `'/' . site . '/tools/…'` (§3b) — now moop_url().
+Next: step 4 (gene-set Pathways table) once `organisms/.kegg/` arrives from compute (`copy2moop_v2.sh --kegg`).

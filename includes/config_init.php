@@ -214,7 +214,7 @@ function sequence_type_blast_dbtype(string $type): string {
  * "organism .." named the directory above organism_data (2026-11-14).
  */
 function moop_plain_name($name): bool {
-    return is_string($name) && $name !== '.' && $name !== '..' && preg_match('/^[A-Za-z0-9_.-]+$/', $name) === 1;
+    return is_string($name) && $name !== '.' && $name !== '..' && preg_match('/^[A-Za-z0-9_.-]+\z/', $name) === 1;
 }
 
 /**
