@@ -274,7 +274,8 @@ db_is_complete() {
   [ "$n" = "2" ]
 }
 
-## Returns 0 published/current, 1 failed, 2 nothing publishable built locally.
+## Returns 0 published/current, 1 failed, 2 nothing publishable built locally,
+## 3 not built yet (no annotation run or no OMA run).
 copy_one_geneset() {
   local THIS_ORG="$1" ASSEMBLY="$2" GENE_SET="$3"
 
@@ -302,6 +303,19 @@ copy_one_geneset() {
   ## 36 files copied, "OK" logged, and the live site still serving a three-week-old
   ## database. For the one file the site actually serves, absent is a failure.
   if [ ! -s "$ORG_DATA/organism.sqlite" ]; then
+    ## A gene set whose inputs do not exist yet was never meant to be built: say so in
+    ## one quiet line (return 3) and keep the loud warning below for the real problem,
+    ## a gene set that has its inputs but no database. Same tests as ready_to_build.sh.
+    local RUN_DIR="$ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET"
+    local OMA_DIR="$OMA_BASE/$THIS_ORG/$ASSEMBLY/$GENE_SET"
+    if [ ! -d "$RUN_DIR" ]; then
+      log "WAIT  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — not built yet: no annotation run ($RUN_DIR)"
+      return 3
+    fi
+    if [ ! -e "$OMA_DIR/REFERENCE_GENOME.txt" ] && [ ! -d "$OMA_DIR/Output" ]; then
+      log "WAIT  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — not built yet: no OMA run ($OMA_DIR)"
+      return 3
+    fi
     log "SKIP  $THIS_ORG  [$ASSEMBLY/$GENE_SET] — no organism.sqlite in $ORG_DATA"
     log "      Nothing published. The build did not leave a database where the copy"
     log "      step looks for it (REPO=$REPO). This gene set needs a build, not a copy."
@@ -506,7 +520,7 @@ if $ALL; then
 
   log "==== copy2moop --all: ${#TASKS[@]} active gene set(s)$($DRY_RUN && echo ' [DRY RUN]')"
 
-  n_ok=0; n_same=0; n_nobuild=0; n_fail=0
+  n_ok=0; n_same=0; n_nobuild=0; n_wait=0; n_fail=0
   FAILED_LIST=()
   for task in "${TASKS[@]}"; do
     IFS=$'\t' read -r ORG ASM GS <<<"$task"
@@ -516,6 +530,7 @@ if $ALL; then
     case $? in
       0) if [ "$XFER" -eq 0 ]; then n_same=$(( n_same + 1 )); else n_ok=$(( n_ok + 1 )); fi ;;
       2) n_nobuild=$(( n_nobuild + 1 )) ;;
+      3) n_wait=$(( n_wait + 1 )) ;;
       *) n_fail=$(( n_fail + 1 )); FAILED_LIST+=("$ORG $ASM $GS") ;;
     esac
   done
@@ -526,7 +541,8 @@ if $ALL; then
   ## when it should not be.
   log "     $($DRY_RUN && echo 'would copy ' || echo 'copied     ') : $n_ok"
   log "     already ok  : $n_same"
-  log "     not publishable : $n_nobuild   (missing or incomplete database — needs a build, not a copy)"
+  log "     not built yet   : $n_wait   (no annotation run or no OMA run yet — expected)"
+  log "     not publishable : $n_nobuild   (inputs ready but database missing or incomplete — needs a build, not a copy)"
   log "     FAILED      : $n_fail"
   for f in ${FAILED_LIST+"${FAILED_LIST[@]}"}; do log "       $f"; done
 
