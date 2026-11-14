@@ -97,6 +97,21 @@ For each gene set x pathway (pathway = its KOs in the snapshot):
 - **Show beside it:** the gene set's BUSCO (low coverage in a fragmented set means "not annotated", not "absent").
   Possibly also hide or mark pathway classes that don't apply (e.g. plant- or microbe-only maps for animals).
 
+### Part 3: coloured pathway maps per gene set (user, 2026-11-13: "color all the pieces an organism, assembly, gene set has")
+
+KEGG draws the maps; we only link to kegg.jp with the KOs to colour (no hosted images: no licensing problem).
+
+1. One pathway, one gene set: `https://www.kegg.jp/pathway/map00010+K00844+K01810+...` highlights those KOs.
+   Built by the site from Part 2's `ko_list`, a link on every pathway row.
+2. Own colours (KEGG Color Mapper): a colour per KO. E.g. dark green = several genes, light green = one gene; or
+   two gene sets on one map: this one only / the other only / both (blue / orange / purple), useful with the clades.
+3. Whole gene set at once (KEGG Mapper Reconstruct): takes the full gene<TAB>KO list and shows every pathway and
+   module with counts and coloured maps. Offer the gene set's gene-KO list as a download to paste there; a direct
+   button (form post to KEGG) to be tested -- KEGG may not accept posts from another site.
+
+Data side: Part 1 gives the per-gene KOs; Part 2 keeps the KOs found per pathway; add an export of the gene-KO
+list per gene set (TSV, MOOP gene IDs).
+
 ### Not decided yet
 
 - Union of KOs over a gene's proteins, or the KOs of its longest protein only (union is the default above).
