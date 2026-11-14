@@ -5,7 +5,7 @@
  * GET organism, assembly, gene_set, pathway (mapNNNNN), gene (optional: a feature whose KOs are marked
  * "this gene"). Built on click, not on the gene page: one pathway is ~30 ms, a gene can have 126.
  *
- * Organism view: organism + pathway only (no assembly, no gene_set). Every gene set the visitor may see,
+ * Organism view: organism + pathway (+ assembly for the assembly page), no gene_set. Every gene set the visitor may see,
  * from the cached tables (moop_kegg_organism_pathways()): a KO in every gene set with KEGG data is
  * "all_sets", in only some "some_sets".
  *
@@ -53,8 +53,10 @@ $gene_set = (string)($_GET['gene_set'] ?? '');
 $pathway  = (string)($_GET['pathway']  ?? '');
 $gene     = (string)($_GET['gene']     ?? '');
 
-$organism_view = $assembly === '' && $gene_set === '' && $gene === '';
+// Organism view: no gene set (and no gene); with an assembly, only that assembly's gene sets
+$organism_view = $gene_set === '' && $gene === '';
 if (!moop_plain_name($organism) || !moop_kegg_valid_pathway($pathway)
+    || ($organism_view && $assembly !== '' && !moop_plain_name($assembly))
     || (!$organism_view && (!moop_plain_name($assembly) || !moop_plain_name($gene_set) || strlen($gene) > 200))) {
     kegg_map_fail(400, 'Invalid parameters.');
 }
@@ -62,7 +64,7 @@ if ($organism_view) {
     $db = organism_db_path($organism);
     if (!is_file($db)) kegg_map_fail(404, 'Not found.');
     try {
-        $t = moop_kegg_organism_pathways($organism, $db);
+        $t = moop_kegg_organism_pathways($organism, $db, $assembly);
     } catch (PDOException $e) {
         error_log('kegg_map organism: ' . $e->getMessage());
         kegg_map_fail(500, 'The KEGG data could not be read.');

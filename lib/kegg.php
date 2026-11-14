@@ -419,7 +419,7 @@ function moop_kegg_gene_set_pathways(string $db_path, int $gene_set_id, string $
  * (the rule of moop_gene_set_comparison_rows()). A gene set the visitor cannot see never appears, so it
  * never adds genes, KOs or colour.
  */
-function moop_kegg_visible_gene_sets(string $organism, string $db_path): array {
+function moop_kegg_visible_gene_sets(string $organism, string $db_path, string $assembly = ''): array {
     $org_dir = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . "/$organism";
     $dbh = getDbConnection($db_path);
     $out = [];
@@ -429,6 +429,7 @@ function moop_kegg_visible_gene_sets(string $organism, string $db_path): array {
     foreach ($rows as $r) {
         $asm = (string)$r['genome_accession'];
         $gs  = (string)$r['gene_set_name'];
+        if ($assembly !== '' && $asm !== $assembly) continue;   // the assembly page: its own gene sets only
         if (!moop_plain_name($asm) || !moop_plain_name($gs) || !has_gene_set_access($organism, $asm, $gs)) continue;
         $asm_dir = is_dir("$org_dir/$asm") ? $asm
                  : (($r['genome_name'] ?? '') !== '' && is_dir("$org_dir/{$r['genome_name']}") ? $r['genome_name'] : $asm);
@@ -474,15 +475,16 @@ function moop_kegg_merge_gene_sets(array $tables): array {
 }
 
 /**
- * The organism's pathway table: each visible gene set's cached table, merged.
+ * The organism's pathway table: each visible gene set's cached table, merged. With $assembly, only that
+ * assembly's gene sets (the assembly page).
  *
  * @return array{rows:list, gene_sets:list<string>, has_reference:bool, reference_date:string}
  * @throws PDOException
  */
-function moop_kegg_organism_pathways(string $organism, string $db_path): array {
+function moop_kegg_organism_pathways(string $organism, string $db_path, string $assembly = ''): array {
     $tables = [];
     $ref_date = ''; $has_ref = false;
-    foreach (moop_kegg_visible_gene_sets($organism, $db_path) as $g) {
+    foreach (moop_kegg_visible_gene_sets($organism, $db_path, $assembly) as $g) {
         $t = moop_kegg_gene_set_pathways($db_path, $g['gene_set_id'], $g['dir']);
         $tables["{$g['assembly']}/{$g['gene_set']}"] = $t['rows'];
         $has_ref = $t['has_reference']; $ref_date = $t['reference_date'];

@@ -265,6 +265,43 @@
   endif; ?>
 <?php if ($__tucked) echo "</div></details>\n"; ?>
 
+  <!-- KEGG pathways across this assembly's gene sets (lib/kegg.php). Closed by default; its title opens it. -->
+  <?php if (!empty($kegg_asm_error) || !empty($kegg_asm['rows'])): ?>
+  <div class="row mb-4" id="assemblyKeggPathways">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex align-items-center flex-wrap" style="background-color:#d97706;">
+          <button type="button" class="btn btn-link p-0 text-white text-decoration-none kegg-card-toggle collapsed"
+                  data-bs-toggle="collapse" data-bs-target="#assemblyKeggBody" aria-expanded="false" aria-controls="assemblyKeggBody">
+            <i class="fa fa-chevron-right kegg-chevron me-1" aria-hidden="true"></i><i class="fas fa-project-diagram me-2"></i><span class="text-uppercase fw-semibold section-eyebrow"><?= t('KEGG Pathways') ?></span>
+          </button>
+          <?php if (!empty($kegg_asm['rows'])): ?>
+          <span class="ms-2 small text-white-50"><?= t('%d pathways', count($kegg_asm['rows'])) ?></span>
+          <?php endif; ?>
+          <span class="ms-2"><?= field_help(
+              'Each row is a KEGG pathway with at least one gene of this assembly in it, in any of its gene sets '
+              . 'you can see. The gene counts are per gene set and are not added up: gene sets on one assembly are '
+              . 'different annotations of the same genome, so a total would count a gene twice. KOs found: the '
+              . 'pathway\'s KEGG Orthology groups found in at least one of these gene sets; coverage is their share '
+              . 'of the pathway. "Map" opens KEGG\'s drawing of the pathway with them coloured; "Genes" searches '
+              . 'this assembly\'s gene sets for the pathway.',
+              'KEGG pathways'
+          ) ?></span>
+        </div>
+        <div class="card-body collapse" id="assemblyKeggBody">
+        <?php if (!empty($kegg_asm_error)): ?>
+          <div class="alert alert-warning mb-0"><?= t('The KEGG pathway data could not be read just now. Please try again later.') ?></div>
+        <?php else:
+            $kegg_tbl = ['data' => $kegg_asm, 'id' => 'keggAsmPathwaysTable',
+                         'scope' => ['organism' => $organism_name, 'assembly' => $assembly_accession]];
+            include __DIR__ . '/../../includes/kegg_pathways_table.php';
+        endif; ?>
+        </div>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
 </div>
 
 <?php /* Shared results help — ONE home for the explanation, included by every page

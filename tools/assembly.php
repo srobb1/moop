@@ -122,6 +122,21 @@ $assembly_stats = moop_assembly_stats_or_fallback($asm_dir);
 // genome_kind, else detected). The page and its statistics say so.
 $genome_kind = moop_genome_kind($asm_dir);
 
+// KEGG pathways across THIS assembly's visible gene sets (lib/kegg.php): the gene sets' cached tables,
+// merged. A read failure is said on the page, never shown as "no pathways".
+require_once __DIR__ . '/../lib/kegg.php';
+$kegg_asm = null;
+$kegg_asm_error = false;
+try {
+    $kegg_asm = moop_kegg_organism_pathways($organism_name, $db_path, (string)($assembly_info['genome_accession'] ?? ''));
+} catch (PDOException $e) {
+    error_log("assembly KEGG ($organism_name/{$assembly_info['genome_accession']}): " . $e->getMessage());
+    $kegg_asm_error = true;
+}
+if ($kegg_asm_error || !empty($kegg_asm['rows'])) {
+    $display_config['page_script'][] = moop_url_base() . '/js/modules/kegg-pathways-table.js';
+}
+
 // Data to pass to content file
 $data = [
     'assembly_info'        => $assembly_info,
@@ -140,6 +155,8 @@ $data = [
     'inline_scripts'       => $display_config['inline_scripts'],
     'busco'                => $busco,
     'assembly_stats'       => $assembly_stats,
+    'kegg_asm'             => $kegg_asm,
+    'kegg_asm_error'       => $kegg_asm_error,
 ];
 
 // Use generic display template
