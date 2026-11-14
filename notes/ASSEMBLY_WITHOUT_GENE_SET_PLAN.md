@@ -224,3 +224,17 @@ public flag) already granted `''`. `moop_dataset_visible()` did reject it. Now: 
 returns them only to callers that ask — `tools/blast.php` and `moop_jbrowse_viewer_gene_sets()`; every
 other caller (search, MOOPmart, downloads, Primer, expression) is unchanged by construction, so the
 per-caller audit in item 4 is not needed. Session cache key bumped to `_v2`. Next: item 5 (labels).
+
+**2026-11-14 later — item 5 done + Downloads.** Downloads page opts in (b2966a2a's next commit): a BLAST-only
+genome's genome.fa is offered at its assembly. Source list badge "genome only" (BLAST page). `gene_set_label()`
+left alone: its only caller (expression) never receives BLAST-only genomes.
+**Item 6 scoped:** the real breakage is JS `getAttribute('data-gene-set') || 'v1'` — '' is falsy, so a
+BLAST-only row is saved/deleted as v1 (js/modules/manage-groups.js:231,371,463,661,685;
+admin/pages/manage_users.php:560,900,930). PHP `$_POST['gene_set'] ?? 'v1'` is fine with an explicit ''.
+`getUnrepresentedGeneSetTuples()` (lib/functions_access.php:589): no subdirs -> offer '' only when
+moop_blast_only_genome() passes, else nothing (kills the phantom v1). Then quick_add_group.php:52,
+manage_users.php:36-67, lib/functions_data.php:1630. Verify in a browser (Manage Groups add/save/delete of a
+'' row, Manage Users grant).
+**Item 8 also:** BLAST indexes for a BLAST-only genome — no prompt or button today (checklist walks gene-set
+dirs only); generateBlastIndexes() works with gene_set '' (path = asm dir) but the API defaults to 'v1'
+when the param is absent. The checklist row must offer Build BLAST Index / .fai.
