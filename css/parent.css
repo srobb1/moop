@@ -35,6 +35,30 @@
     margin: 0.2rem 0 0.55rem;
     padding: 0;
 }
+/* The species, above the gene title: bold italic, with the organism's own picture. */
+.feature-header .feature-species {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--moop-main-dark);
+    text-decoration: none;
+    margin-top: 0.15rem;
+}
+.feature-header .feature-species:hover em { text-decoration: underline; }
+.feature-header .feature-species img {
+    width: 2.25rem;
+    height: 2.25rem;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1px solid rgba(var(--moop-main-rgb), 0.3);
+}
+.feature-header .feature-species-common {
+    font-weight: 400;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
 /* Gene symbol before the description: italic, the convention for gene symbols, in the site's
    darker teal so it reads as the gene's name and the description as what it is. */
 .feature-header .feature-symbol {
@@ -664,3 +688,6 @@ a.badge:hover {
     display: flex; align-items: center; justify-content: center; font-size: 1rem; pointer-events: none;
 }
 .gene-images-elsewhere { color: #495057; }
+
+/* Assembly · gene set under each species in the ortholog and family tables. */
+.compgen-org-sets { font-size: 0.75rem; }

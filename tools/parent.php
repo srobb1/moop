@@ -713,6 +713,13 @@ echo render_display_page(
         'species' => $species,
         'species_subtype' => $species_subtype,
         'common_name' => $common_name,
+        // A small picture of the species beside its name, so two orthologs' pages tell apart at a
+        // glance (Sofia 2026-11-13). Never fetched here: only an image the organism already has.
+        'organism_thumb' => (function () use ($organism_info, $config) {
+            if (empty($organism_info) || !is_array($organism_info)) return '';
+            require_once __DIR__ . '/../lib/functions_display.php';
+            return (string) getOrganismImagePath($organism_info, $config->getString('images_path'), $config->getPath('absolute_images_path'), false);
+        })(),
         'genome_accession' => $genome_accession,
         'genome_name' => $genome_name,
         'gene_set_name' => $gene_set_name,

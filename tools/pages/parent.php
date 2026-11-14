@@ -168,6 +168,12 @@
                 </span>
             </div>
             <div class="feature-overview-body">
+                <?php /* Which species, first: hopping between orthologs, two gene pages otherwise
+                         look alike until the details list far below. */ ?>
+                <a class="feature-species" href="<?= htmlspecialchars(moop_url('tools/organism.php') . '?' . http_build_query(['organism' => $organism_name])) ?>">
+                    <?php if (!empty($organism_thumb)): ?><img src="<?= htmlspecialchars($organism_thumb) ?>" alt="" loading="lazy"><?php endif; ?>
+                    <em><?= htmlspecialchars(trim($genus . ' ' . $species) ?: str_replace('_', ' ', $organism_name)) ?></em><?php if (trim((string) $common_name) !== ''): ?> <span class="feature-species-common"><?= htmlspecialchars($common_name) ?></span><?php endif; ?>
+                </a>
                 <h1 class="feature-title">
                     <?php if ($gene_symbol !== ''): ?>
                         <span class="feature-symbol" title="<?= t('Gene symbol') ?>"><?= htmlspecialchars($gene_symbol) ?></span>
@@ -1001,6 +1007,20 @@
                  . '<button type="submit" class="btn btn-sm moop-data-btn" title="' . htmlspecialchars($title) . '">'
                  . '<i class="fas fa-download me-1"></i>' . t('Download') . '</button></form>';
         };
+        // The organism cell of the ortholog and family tables: the species, its assembly and gene set,
+        // each a link to its own page on this site (Sofia 2026-11-13: link out to more than genes).
+        $__cl_org = function (string $org, array $o): string {
+            $q = ['organism' => $org];
+            $h = '<a class="fst-italic" href="' . htmlspecialchars(moop_url('tools/organism.php') . '?' . http_build_query($q)) . '">' . htmlspecialchars(str_replace('_', ' ', $org)) . '</a>';
+            $asm = (string) ($o['assembly'] ?? ''); $gs = (string) ($o['gene_set'] ?? '');
+            if ($asm !== '') {
+                $h .= '<div class="compgen-org-sets text-muted">'
+                    . '<a class="link-secondary" href="' . htmlspecialchars(moop_url('tools/assembly.php') . '?' . http_build_query($q + ['assembly' => $asm])) . '" title="' . t('Assembly') . '">' . htmlspecialchars($asm) . '</a>';
+                if ($gs !== '') $h .= ' &middot; <a class="link-secondary" href="' . htmlspecialchars(moop_url('tools/gene_set.php') . '?' . http_build_query($q + ['assembly' => $asm, 'gene_set' => $gs])) . '" title="' . t('Gene set') . '">' . htmlspecialchars($gs) . '</a>';
+                $h .= '</div>';
+            }
+            return $h;
+        };
         $__cl_id = fn(string $prefix, array $c) => $prefix . '-' . preg_replace('/[^A-Za-z0-9_-]/', '', (string) $c['clade']);
         $__cl_foot = fn(array $c) => '<p class="small text-muted mb-0">' . t('Computed with %1$s %2$s on one gene set per species (%3$d gene sets); gene family %4$s.', $c['method'], $c['version'], $c['gene_sets'], $c['family'] ?? $c['orthogroup'])
                    . (($c['outgroups'] ?? '') !== '' ? ' ' . t('Rooted with an outgroup: %s.', $c['outgroups']) : '') . '</p>';
@@ -1039,7 +1059,7 @@
                                 $__uns = array_values(array_filter($__o['orthologs'], fn($g) => !moop_clade_supported($g)));
                                 $__no = count($__sup); $__nu = count($__uns); ?>
                                 <tr>
-                                    <td class="text-nowrap"><em><?= htmlspecialchars(str_replace('_', ' ', $__org)) ?></em></td>
+                                    <td class="text-nowrap"><?= $__cl_org($__org, $__o) ?></td>
                                     <td><?= ($__no ? $__cl_list($__org, $__o, $__sup, 10, t_plain('Show %d more orthologs', $__no - 10)) : '<span class="text-muted">' . ($__nu ? t('none with sequence support') : t('none')) . '</span>')
                                           . ($__nu ? '<details class="compgen-unsupported"><summary>' . ($__nu !== 1 ? t('%d without sequence support', $__nu) : t('%d without sequence support', 1)) . '</summary>'
                                                      . $__cl_list($__org, $__o, $__uns, 200, '') . '</details>' : '') ?></td>
@@ -1088,7 +1108,7 @@
                             <tbody>
                             <?php foreach ($__rows as $__org => $__o): $__nf = count($__o['family']); ?>
                                 <tr>
-                                    <td class="text-nowrap"><em><?= htmlspecialchars(str_replace('_', ' ', $__org)) ?></em><?= $__o['self'] ? ' <span class="text-muted">' . t('(this species)') . '</span>' : '' ?></td>
+                                    <td class="text-nowrap"><?= $__cl_org($__org, $__o) ?><?= $__o['self'] ? ' <span class="text-muted">' . t('(this species)') . '</span>' : '' ?></td>
                                     <td><details><summary><?= $__o['self'] ? ($__nf !== 1 ? t('%d paralogs', $__nf) : t('%d paralog', 1))
                                                                          : ($__nf !== 1 ? t('%d genes, not orthologs of this gene', $__nf) : t('%d gene, not an ortholog of this gene', 1)) ?></summary>
                                         <?= $__cl_list($__org, $__o, $__o['family'], 200, '') ?></details></td>
@@ -1528,10 +1548,14 @@ echo help_modal(
 );
 
 // Annotation-type cards are generated from $annotation_labels / $analysis_desc — the same
-// arrays that colour the badges on this page — so the help lists exactly the types this
-// site has configured, in the admin's own order, and cannot describe a type that is gone.
+// arrays that colour the badges on this page — in the admin's own order. Only the types that
+// have results on THIS page (Sofia 2026-11-13: the help titled "Annotations on this page"
+// listed every type on the site, so a reader looked for sections that were not there).
+$__types_here = [];
+foreach ($all_annotations as $__per_type) foreach ($__per_type as $__t => $__rows) if (!empty($__rows)) $__types_here[$__t] = true;
 $annot_cards = [];
 foreach ($analysis_order as $__t) {
+    if (!isset($__types_here[$__t])) continue;
     $__desc = trim((string)($analysis_desc[$__t] ?? ''));
     if ($__desc === '') continue;
     // These descriptions are ADMIN-SUPPLIED (metadata/annotation_config.json) and some
@@ -1564,7 +1588,7 @@ $annot_sections = [
     ]],
 ];
 if ($annot_cards) {
-    $annot_sections[] = ['heading' => 'The types on this site', 'cards' => $annot_cards];
+    $annot_sections[] = ['heading' => 'The types on this page', 'cards' => $annot_cards];
 }
 $annot_sections[] = ['heading' => 'Getting them out', 'cards' => [
     ['label' => 'Download All Annotations',
