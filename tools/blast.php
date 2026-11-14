@@ -41,7 +41,7 @@ $context = parseContextParameters();
 $display_name = $context['display_name'];
 
 // Get ALL accessible assemblies early (needed for source selection)
-$sources_by_group = getAccessibleGeneSets();
+$sources_by_group = getAccessibleGeneSets(null, null, null, true);   // + BLAST-only genomes (gene_set '')
 $accessible_sources = flattenSourcesList($sources_by_group);
 
 // Get organisms for filtering - support both array and comma-separated string formats

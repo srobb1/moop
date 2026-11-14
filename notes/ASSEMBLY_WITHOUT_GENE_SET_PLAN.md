@@ -214,3 +214,13 @@ with or without a genome) next, same mechanism. (2) Only under organisms that al
    then need no groups file) vs. "its groups entry has gene_set ''". Bump ORGANISM_CACHE_SCHEMA_VERSION.
 9. Fix the visualizer link (§3b). Then the remaining read-side `?? 'v1'` defaults, one by one.
 First candidates: smed_chr_ref_v1 (Planosphere chromosomes), SmedSxl genome v3.1.
+
+**2026-11-14 — items 1–4 done.** Reproduced hermetically (temp organism tree, mocked session): the
+"one real blocker" above was WRONG — an explicit `gene_set: ""` entry already passed
+`getAccessibleGeneSets()` (the `?? 'v1'` never fires on `''`), but only by accident: path `asm/`
+with a trailing slash, ANY `*.fa` qualified, `genome_accession` null; access (`{asm:true}`, `'*'`,
+public flag) already granted `''`. `moop_dataset_visible()` did reject it. Now: `moop_blast_only_genome()`
+(includes/access_control.php) is the one validity rule; `getAccessibleGeneSets(..., $include_blast_only)`
+returns them only to callers that ask — `tools/blast.php` and `moop_jbrowse_viewer_gene_sets()`; every
+other caller (search, MOOPmart, downloads, Primer, expression) is unchanged by construction, so the
+per-caller audit in item 4 is not needed. Session cache key bumped to `_v2`. Next: item 5 (labels).

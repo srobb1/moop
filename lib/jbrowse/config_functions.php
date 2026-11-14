@@ -27,7 +27,8 @@ function moop_jbrowse_viewer_gene_sets(): array {
     static $memo = null;
     if ($memo !== null) return $memo;
     $memo = [];
-    foreach (flattenSourcesList(getAccessibleGeneSets()) as $src) {
+    // BLAST-only genomes count (gene_set ''): a genome hit opens a sequence-only view of the assembly.
+    foreach (flattenSourcesList(getAccessibleGeneSets(null, null, null, true)) as $src) {
         foreach (array_unique(array_filter([$src['genome_accession'] ?? '', $src['assembly'] ?? ''])) as $asm) {
             $memo[$src['organism']][$asm][$src['gene_set']] = true;
         }

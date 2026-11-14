@@ -325,7 +325,31 @@ function countAccessibleScope(array $organisms, ?string $assembly = null): array
     return ['assemblies' => count($assemblies), 'gene_sets' => count($gene_sets)];
 }
 
-function getAccessibleGeneSets($specific_organism = null, $specific_assembly = null, $specific_gene_set = null) {
+/**
+ * The gene sets this viewer may see, by group then organism.
+ *
+ * $include_blast_only: also return BLAST-only genomes -- groups entries with gene_set '' that stand
+ * for the assembly itself (moop_blast_only_genome()). They carry 'blast_only' => true, gene_set '',
+ * and 'path' = the ASSEMBLY directory. OFF by default, because nearly every caller (search, MOOPmart,
+ * downloads, Primer tools, expression) assumes a gene set loaded in organism.sqlite; only BLAST and
+ * the genome browser's "may open this assembly" ask for them.
+ */
+function getAccessibleGeneSets($specific_organism = null, $specific_assembly = null, $specific_gene_set = null, bool $include_blast_only = false) {
+    $result = moop_accessible_gene_sets_all($specific_organism, $specific_assembly, $specific_gene_set);
+    if ($include_blast_only) return $result;
+    foreach ($result as $group => &$by_org) {
+        foreach ($by_org as $org => $sources) {
+            $kept = array_values(array_filter($sources, fn($s) => empty($s['blast_only'])));
+            if ($kept) $by_org[$org] = $kept; else unset($by_org[$org]);
+        }
+        if (!$by_org) unset($result[$group]);
+    }
+    unset($by_org);
+    return $result;
+}
+
+/** getAccessibleGeneSets() with BLAST-only genomes included; the session cache holds this form. */
+function moop_accessible_gene_sets_all($specific_organism = null, $specific_assembly = null, $specific_gene_set = null) {
     $config = ConfigManager::getInstance();
     $organism_data = $config->getPath('organism_data');
     $metadata_path = $config->getPath('metadata_path');
@@ -340,7 +364,7 @@ function getAccessibleGeneSets($specific_organism = null, $specific_assembly = n
     $use_cache = ($specific_organism === null && $specific_assembly === null && $specific_gene_set === null
                   && session_status() === PHP_SESSION_ACTIVE);
     if ($use_cache) {
-        $cache_key = 'accessible_assemblies_cache';
+        $cache_key = 'accessible_assemblies_cache_v2';   // v2: includes BLAST-only genomes
         $groups_mtime = file_exists($groups_file) ? filemtime($groups_file) : 0;
         $access_level = get_access_level();
 
@@ -390,6 +414,15 @@ function getAccessibleGeneSets($specific_organism = null, $specific_assembly = n
         }
 
         $assembly_path  = "$organism_data/$org/$assembly";
+
+        // gene_set '' = the assembly itself, a BLAST-only genome: valid only with its genome
+        // FASTA (or BLAST index) under an organism already on the site.
+        if ($gene_set === '') {
+            if (moop_blast_only_genome($org, $assembly) !== null) {
+                $survivors[] = [$org, $assembly, '', $entry['groups'] ?? []];
+            }
+            continue;
+        }
         $gene_set_path  = "$assembly_path/$gene_set";
 
         if (!is_dir($assembly_path) || !is_dir($gene_set_path)) {
@@ -423,17 +456,20 @@ function getAccessibleGeneSets($specific_organism = null, $specific_assembly = n
             $identity[$org] ?? [], "$organism_data/$org", $assembly, $gene_set
         );
         $actual_assembly_dir = $ids['assembly_dir'];
+        $blast_only = ($gene_set === '');
 
         $accessible_sources[] = [
             'organism'         => $org,
             'assembly'         => $actual_assembly_dir,
             'gene_set'         => $gene_set,
             'genome_name'      => $ids['genome_name'],
-            'genome_accession' => $ids['genome_accession'],
-            'path'             => "$organism_data/$org/$actual_assembly_dir/$gene_set",
+            // A BLAST-only genome may have no genome row yet: its directory name is its identity.
+            'genome_accession' => $ids['genome_accession'] ?? ($blast_only ? $actual_assembly_dir : null),
+            'path'             => "$organism_data/$org/$actual_assembly_dir" . ($blast_only ? '' : "/$gene_set"),
             'groups'           => $entry_groups,
             'genome_id'        => $ids['genome_id'],
             'gene_set_id'      => $ids['gene_set_id'],
+            'blast_only'       => $blast_only,
         ];
     }
 
