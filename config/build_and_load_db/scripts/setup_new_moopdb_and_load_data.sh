@@ -192,6 +192,7 @@ load_files "*.iprscan.moop.tsv" "Domains and IPRSCAN2GO and PANTHER2GO"
 load_files "*.domains.moop.tsv" "SignalP / DeepTMHMM domains"
 load_files "protnlm.moop.tsv" "Protnlm"
 load_files "EggNOG2GO.eggnog.reduced.moop.tsv" "Eggnog2GO"
+load_files "*.kegg.moop.tsv" "KEGG Orthology, Pathway and Module (from eggNOG's KOs)"
 load_files "*OMA2GO.moop.tsv" "OMA2GO"
 
 ## The whole-database steps -- annotation_sources_cache.json, the FTS index rebuild

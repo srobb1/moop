@@ -42,14 +42,43 @@ source "$(dirname "${BASH_SOURCE[0]}")/paths.sh"
 GENESET_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY/$GENE_SET
 GENOME_DIR=$GENOMES/$THIS_ORG/$ASSEMBLY
 ANALYSIS_DIR=$ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET
-## DIAMOND results: our own rerun against the canonical-only Ensembl proteins when this gene set has one
-## (DIAMOND_ANNOTATIONS, run_diamond_all.sh with make_canonical_peptide_dbs.sh), else the annotation
-## run's. The reference databases there hold every isoform (2026-10-29), which crowds a gene's hits
-## with one partner gene's isoforms. DIAMOND_ANNOTATIONS= (empty) uses the annotation run's alone.
+## DIAMOND results, searched against Ensembl proteomes cut to one protein per gene (all isoforms crowd a
+## gene's hits with one partner gene's isoforms, 2026-10-29). First choice that exists:
+##   1. the annotation run's own: diamond/ENS_<species>_1PerGene (the annotation pipeline, from 2026-11-12;
+##      same hits and E-values as 2., checked on 1,021 files 2026-11-13). Used through a folder of links named
+##      as MOOP expects (ENS_<species>, UNIPROT_sprot), so the homolog sources and the naming step see the
+##      usual names. A plain ENS_<species> with no _1PerGene twin (E. coli, yeast: one protein per gene) is
+##      used as it is.
+##   2. our own rerun (DIAMOND_ANNOTATIONS, run_diamond_all.sh with make_canonical_peptide_dbs.sh), for gene
+##      sets the pipeline has not searched that way yet
+##   3. the annotation run's diamond/ as it is
+## DIAMOND_SOURCE=ours skips 1.; DIAMOND_ANNOTATIONS= (empty) skips 2.
 : "${DIAMOND_ANNOTATIONS=/n/sci/SCI-004223-SBGENOMES/dev/smr_dev/moop/annotations/SBGENOMES_canonical_diamond_20261029}"
+: "${DIAMOND_SOURCE:=pipeline}"
+pipeline_diamond_links() {
+  local src=$ANALYSIS_DIR/diamond out=$REPO/diamond_links/$THIS_ORG/$ASSEMBLY/$GENE_SET/diamond d name
+  compgen -G "$src/ENS_*_1PerGene/.done" > /dev/null || return 1
+  rm -rf "$out" && mkdir -p "$out" || return 1
+  for d in "$src"/ENS_*/ "$src"/UNIPROT_sprot/; do
+    d=${d%/}; name=$(basename "$d")
+    [ -d "$d" ] || continue
+    if [ ! -e "$d/.done" ]; then
+      echo "WARNING: $d has no .done: not used" >&2
+      continue
+    fi
+    case $name in
+      *_1PerGene) ln -s "$d" "$out/${name%_1PerGene}" ;;
+      *) [ -d "$src/${name}_1PerGene" ] || ln -s "$d" "$out/$name" ;;
+    esac
+  done
+  echo "$out"
+}
 DIAMOND_DIR=$ANALYSIS_DIR/diamond
-[ -n "$DIAMOND_ANNOTATIONS" ] && [ -d "$DIAMOND_ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET/diamond" ] \
-  && DIAMOND_DIR=$DIAMOND_ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET/diamond
+if [ "$DIAMOND_SOURCE" != ours ] && links=$(pipeline_diamond_links); then
+  DIAMOND_DIR=$links
+elif [ -n "$DIAMOND_ANNOTATIONS" ] && [ -d "$DIAMOND_ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET/diamond" ]; then
+  DIAMOND_DIR=$DIAMOND_ANNOTATIONS/$THIS_ORG/$ASSEMBLY/$GENE_SET/diamond
+fi
 ## the GFF everything below is built from: the source, or MOOP's versioned copy of an
 ## Ensembl GFF (genes.versioned.gff, add_id_versions.pl; set after the GFF format is known)
 SRC_GFF=$GENESET_DIR/genes.gff
@@ -515,6 +544,27 @@ make_eggnog_moop() {
 ## does not bring the full 3 GB EggNOG2GO.eggnog.moop.tsv back to /n/sci
 has_data EggNOG2GO.eggnog.reduced.moop.tsv \
   || { echo "Building EggNOG moop files"; make_eggnog_moop; }
+
+# ── KEGG (from eggNOG's KOs) ──────────────────────────────────────────────────
+## KEGG Orthology, Pathway and Module annotations from eggNOG-mapper's KEGG_ko column, with pathways and modules
+## worked out again from a dated KEGG snapshot (fetch_kegg_reference.sh -> $REFERENCE_DATA/kegg/current), so every
+## gene set uses the same KEGG version. See analysis_parsers/parse_KEGG_to_MOOP_TSV.py and
+## notes/KEGG_PATHWAY_PLAN_2026-11-13.md. KEGG_DIR= (empty) skips it.
+: "${KEGG_DIR=$REFERENCE_DATA/kegg/current}"
+make_kegg_moop() {
+  local EDIR="$ANALYSIS_DIR/eggnog_mapper" VERSION_FILE RESULTS EVERSION
+  [ -n "$KEGG_DIR" ] || { echo "KEGG_DIR is empty: KEGG skipped"; return 0; }
+  [ -s "$KEGG_DIR/ko.tsv" ] || { echo "No KEGG snapshot at $KEGG_DIR (run scripts/fetch_kegg_reference.sh) -- KEGG skipped"; return 0; }
+  RESULTS=$(result_file "$EDIR/eggnog_mapper_results.tsv") \
+    || { echo "No EggNOG results at $EDIR -- KEGG skipped"; return 0; }
+  VERSION_FILE="$EDIR/eggnog_mapper_version.txt"
+  [ -s "$VERSION_FILE" ] || VERSION_FILE="$EDIR/db_version.txt"
+  EVERSION="$(grep -m1 emapper "$VERSION_FILE" 2>/dev/null | perl -pe 's/.*?(emapper-\S+).*/$1/') DB_$(grep -m1 'eggNOG DB version:' "$VERSION_FILE" 2>/dev/null | perl -pe 's/.*?eggNOG DB version: (\S+).*/$1/')"
+  python3 -I "$REPO/analysis_parsers/parse_KEGG_to_MOOP_TSV.py" "$RESULTS" --kegg "$KEGG_DIR" \
+    --eggnog-version "$EVERSION" --outdir .
+}
+has_data KEGG_Orthology.kegg.moop.tsv \
+  || { echo "Building KEGG moop files"; make_kegg_moop; }
 
 # ── InterProScan ──────────────────────────────────────────────────────────────
 make_interproscan_moop() {
