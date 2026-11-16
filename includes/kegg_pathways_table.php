@@ -9,8 +9,8 @@
 $kid = htmlspecialchars($kegg_tbl['id']);
 ?>
 <div class="small text-muted mb-2">
-  <?= t('"Map" colours these KOs on KEGG\'s map:') ?>
-  <?= moop_kegg_map_legend_html(count($kegg_tbl['data']['gene_sets']) > 1 ? ['all_sets', 'some_sets'] : ['all_sets']) ?>
+  <?= t('"Map" opens KEGG\'s map with the boxes coloured:') ?>
+  <?= moop_kegg_map_legend_html([isset($kegg_tbl['scope']['assembly']) ? 'in_assembly' : 'in_organism']) ?>
   <?php if (!$kegg_tbl['data']['has_reference']): ?>
     <br><?= t('Coverage is not shown: this site has no copy of the KEGG pathway reference.') ?>
   <?php elseif ($kegg_tbl['data']['reference_date'] !== ''): ?>

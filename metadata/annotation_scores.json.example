@@ -45,7 +45,7 @@
       "display": "count",
       "unit": "KO",
       "unit_plural": "KOs",
-      "explanation": "How many KEGG KOs eggNOG gave the gene. 1 KO: one clear assignment. 2 KOs or more: ambiguous -- the gene matched several KOs and each is listed; on a pathway or module it is the count for the KOs that pathway came from."
+      "explanation": "How many possible KEGG KOs (gene functions) eggNOG gave the gene. 1 KO: one clear assignment. 2 KOs or more: eggNOG could not settle on one, so each is listed, and a pathway or module may come from any of them."
     },
     "oma_relation": {
       "label": "OMA relationship",

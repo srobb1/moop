@@ -6,8 +6,10 @@
  * "this gene"). Built on click, not on the gene page: one pathway is ~30 ms, a gene can have 126.
  *
  * Organism view: organism + pathway (+ assembly for the assembly page), no gene_set. Every gene set the visitor may see,
- * from the cached tables (moop_kegg_organism_pathways()): a KO in every gene set with KEGG data is
- * "all_sets", in only some "some_sets".
+ * from the cached tables (moop_kegg_organism_pathways()): a KO in any of them is coloured.
+ *
+ * Gene-set view: this gene set's KOs, then (other colour) KOs only another visible gene set of the species
+ * has -- this gene set wins when both have it -- then this gene's KOs.
  *
  * A gene set the visitor cannot see is a 404, the same as a missing one (notes/PERMISSIONS_PLAN.md):
  * its KOs would otherwise leak into the colouring.
@@ -74,7 +76,7 @@ if ($organism_view) {
     $colours = [];
     foreach ($t['rows'] as $r) {
         if ($r['pathway'] !== $pathway) continue;
-        foreach ($r['kos_found'] as $ko) $colours[$ko] = in_array($ko, $r['kos_in_all'], true) ? 'all_sets' : 'some_sets';
+        foreach ($r['kos_found'] as $ko) $colours[$ko] = $assembly !== '' ? 'in_assembly' : 'in_organism';
     }
     ksort($colours);
     kegg_map_go($pathway, $colours);
@@ -95,10 +97,15 @@ try {
     if ($gene_set_id === false) kegg_map_fail(404, 'Not found.');
     $kos  = moop_kegg_gene_set_pathway_kos($db, (int)$gene_set_id, $pathway);
     $mine = $gene !== '' ? moop_kegg_feature_kos($db, (int)$gene_set_id, $gene) : [];
+    // The species' other gene sets the visitor may see (cached tables; this gene set's own KOs win anyway)
+    $others = [];
+    foreach (moop_kegg_organism_pathways($organism, $db)['rows'] as $r) {
+        if ($r['pathway'] === $pathway) { $others = $r['kos_found']; break; }
+    }
 } catch (PDOException $e) {
     error_log('kegg_map: ' . $e->getMessage());
     kegg_map_fail(500, 'The KEGG data could not be read.');
 }
 
 // No KO in this gene set for the pathway: KEGG's plain map, nothing coloured, is still the right answer.
-kegg_map_go($pathway, moop_kegg_ko_colours($kos, $mine));
+kegg_map_go($pathway, moop_kegg_ko_colours($kos, $mine, $others));

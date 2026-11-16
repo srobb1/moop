@@ -203,8 +203,9 @@
         }
       }
       // A section that starts closed (Annotations, Images, ...): going to it opens it, as going to
-      // anything inside it does.
-      var own = el.querySelector && el.querySelector(":scope > .collapse:not(.show)");
+      // anything inside it does. Only a whole card ([data-nav-label]): an annotation type section's
+      // own first .collapse is its (i) help, which must stay closed (Sofia, 2026-11-16).
+      var own = el.matches && el.matches("[data-nav-label]") && el.querySelector(":scope > .collapse:not(.show)");
       if (own) open(own);
       var p = el.parentElement;
       while (p) {

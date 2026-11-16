@@ -93,3 +93,14 @@ shared with the organism page). All three cards (organism, assembly, gene set) s
 those pages (Sofia: too wide). Map links: KEGG answers 403 to a URL over ~2,000 characters, so a bigger pathway is
 POSTed (needs `form-action https://www.kegg.jp` in the live nginx CSP — root; docs/nginx/moop-headers.conf has it).
 Colours are sent least important first: on a box shared by several KOs the last colour wins.
+
+## 2026-11-16 — colours and wording changed (with Sofia)
+
+Replaces the colours in step 5 and the "ambiguous" wording above. A box on the map takes the first that fits:
+**this gene** (orange) → **in this gene set** (green) → **only in another gene set of this species** (blue-grey,
+from the visible gene sets' cached tables) → white = not found. Organism / assembly maps: one colour, "found in this
+organism / assembly" (whether a KO is in *every* gene set was dropped: gene sets mostly annotate the same genome, so
+it says little). The "several genes / one gene" shades and the yellow "ambiguous" colour are gone. "Ambiguous" meant
+eggNOG gave the gene more than one possible KO (not more than one pathway, which is normal); the gene page now says
+"(from one of N possible KOs)" and the gene-set column is "With several KOs". The key has an (i) explaining KO vs
+pathway. Code: MOOP_KEGG_COLOURS / moop_kegg_ko_colours() in lib/kegg.php.

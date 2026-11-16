@@ -4,7 +4,8 @@
  *
  * The data are three annotation sources loaded by the pipeline (notes/KEGG_PATHWAY_PLAN_2026-11-13.md):
  * "KEGG Orthology (eggNOG)" (type Gene Families), "KEGG Pathway (eggNOG)" and "KEGG Module (eggNOG)" (type
- * Pathways). feature_annotation.score = how many KOs eggNOG gave the gene (1 = one; more = ambiguous).
+ * Pathways). feature_annotation.score = how many KOs eggNOG gave the gene (1 = one; more = eggNOG offered
+ * several possible KOs and a pathway may come from any of them).
  * Web plan: notes/KEGG_GENE_PAGE_PLAN.md.
  *
  * Maps are LINKED, never hosted: KEGG's pathway images may not be republished without a licence. KEGG draws
@@ -22,14 +23,17 @@ const MOOP_KEGG_KO_SOURCE      = 'KEGG Orthology (eggNOG)';
  * the two cannot disagree.
  */
 const MOOP_KEGG_COLOURS = [
-    'this_gene' => '#ff8c42',
-    'many'      => '#5cb85c',
-    'one'       => '#bfe8bf',
-    'ambiguous' => '#fff1a8',
-    // organism map: a KO in every gene set with KEGG data / in only some of them
-    'all_sets'  => '#5cb85c',
-    'some_sets' => '#bfe8bf',
+    'this_gene'   => '#ff8c42',
+    // a KO of this gene set; a KO only another gene set of the species has (this gene set wins when both do)
+    'this_set'    => '#5cb85c',
+    'other_set'   => '#9fb7d4',
+    // organism / assembly map: a KO in any of its visible gene sets
+    'in_organism' => '#5cb85c',
+    'in_assembly' => '#5cb85c',
 ];
+
+/** The legend's last entry: a box KEGG leaves white (the KO is not found). Never sent to KEGG. */
+const MOOP_KEGG_NOT_FOUND = '#ffffff';
 
 /**
  * The order KOs are SENT in, least important first. KEGG draws one box for several KOs (CTSB/L/S on map04612)
@@ -37,7 +41,7 @@ const MOOP_KEGG_COLOURS = [
  * cathepsin B's green hid the gene's own cathepsin L. So "this gene" goes last.
  */
 function moop_kegg_ordered(array $ko_colours): array {
-    $rank = array_flip(['ambiguous', 'some_sets', 'one', 'many', 'all_sets', 'this_gene']);
+    $rank = array_flip(['other_set', 'in_assembly', 'in_organism', 'this_set', 'this_gene']);
     uksort($ko_colours, fn($a, $b) => [$rank[$ko_colours[$a]] ?? -1, $a] <=> [$rank[$ko_colours[$b]] ?? -1, $b]);
     return $ko_colours;
 }
@@ -45,12 +49,11 @@ function moop_kegg_ordered(array $ko_colours): array {
 /** What each colour means, for the legend (each a literal, so the translation scan lists it). */
 function moop_kegg_colour_labels(): array {
     return [
-        'this_gene' => t('this gene'),
-        'many'      => t('several genes in the gene set'),
-        'one'       => t('one gene in the gene set'),
-        'ambiguous' => t('only ambiguous assignments (more than one KO)'),
-        'all_sets'  => t('in every gene set'),
-        'some_sets' => t('in some gene sets'),
+        'this_gene'   => t('this gene'),
+        'this_set'    => t('in this gene set'),
+        'other_set'   => t('only in another gene set of this species'),
+        'in_organism' => t('found in this organism'),
+        'in_assembly' => t('found in this assembly'),
     ];
 }
 
@@ -88,8 +91,7 @@ function moop_kegg_valid_pathway(string $id): bool {
 }
 
 /**
- * The KOs a gene set has in one pathway: [KO => ['genes' => n, 'ambiguous' => bool]].
- * 'ambiguous' = every feature holding that KO got it with score > 1 (eggNOG offered several KOs).
+ * The KOs a gene set has in one pathway: [KO => ['genes' => n]].
  *
  * A feature with KOs A and B whose pathway came through A also brings B; KEGG simply does not draw a KO
  * that is not on the map, so the link is unaffected. (With organisms/.kegg/ko_pathway.tsv on the site
@@ -99,8 +101,7 @@ function moop_kegg_valid_pathway(string $id): bool {
  */
 function moop_kegg_gene_set_pathway_kos(string $db_file, int $gene_set_id, string $pathway): array {
     $sql = "SELECT ak.annotation_accession AS ko,
-                   COUNT(DISTINCT fk.feature_id) AS genes,
-                   MIN(COALESCE(fk.score, 1)) AS min_score
+                   COUNT(DISTINCT fk.feature_id) AS genes
               FROM annotation ap
               JOIN annotation_source sp ON sp.annotation_source_id = ap.annotation_source_id
               JOIN feature_annotation fp ON fp.annotation_id = ap.annotation_id
@@ -116,7 +117,7 @@ function moop_kegg_gene_set_pathway_kos(string $db_file, int $gene_set_id, strin
     $st->execute([MOOP_KEGG_PATHWAY_SOURCE, $pathway, MOOP_KEGG_KO_SOURCE, $gene_set_id]);
     $out = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
-        $out[$r['ko']] = ['genes' => (int)$r['genes'], 'ambiguous' => (float)$r['min_score'] > 1];
+        $out[$r['ko']] = ['genes' => (int)$r['genes']];
     }
     return $out;
 }
@@ -135,19 +136,19 @@ function moop_kegg_feature_kos(string $db_file, int $gene_set_id, string $unique
 }
 
 /**
- * The colour of each KO: this gene's first, then many / one / ambiguous. Pure, so it is tested directly.
+ * The colour of each KO: this gene, else this gene set, else only another gene set of the species. Pure, so
+ * it is tested directly.
  *
- * @param array $kos       moop_kegg_gene_set_pathway_kos()
+ * @param array $kos       moop_kegg_gene_set_pathway_kos() (this gene set)
  * @param array $this_gene KOs to mark as "this gene"
+ * @param array $other_kos KOs any other visible gene set of the species has in the pathway
  * @return array<string,string> KO => colour key of MOOP_KEGG_COLOURS
  */
-function moop_kegg_ko_colours(array $kos, array $this_gene = []): array {
+function moop_kegg_ko_colours(array $kos, array $this_gene = [], array $other_kos = []): array {
     $out = [];
-    foreach ($kos as $ko => $k) {
-        $out[$ko] = in_array($ko, $this_gene, true) ? 'this_gene'
-                  : ($k['ambiguous'] ? 'ambiguous' : ($k['genes'] > 1 ? 'many' : 'one'));
-    }
-    foreach ($this_gene as $ko) $out[$ko] ??= 'this_gene';
+    foreach ($other_kos as $ko) $out[$ko] = 'other_set';
+    foreach (array_keys($kos) as $ko) $out[$ko] = 'this_set';
+    foreach ($this_gene as $ko) $out[$ko] = 'this_gene';
     ksort($out);
     return $out;
 }
@@ -190,21 +191,35 @@ function moop_kegg_map_post(string $pathway, array $ko_colours): array {
 /** Longest map link sent as a plain redirect; above it, the POST page (moop_kegg_map_post()). */
 const MOOP_KEGG_MAX_GET = 1900;
 
-/** The colour key, for beside a map link. $keys limits it (a gene-set table has no "this gene"). */
-function moop_kegg_map_legend_html(array $keys = []): string {
+/**
+ * The colour key, for beside a map link: $keys (in that order), then white = not found, then an (i) that says
+ * what a box on the map is.
+ */
+function moop_kegg_map_legend_html(array $keys): string {
+    $labels = moop_kegg_colour_labels();
     $html = '<span class="kegg-legend">';
-    foreach (moop_kegg_colour_labels() as $key => $label) {
-        if ($keys && !in_array($key, $keys, true)) continue;
+    foreach ($keys as $key) {
+        if (!isset($labels[$key], MOOP_KEGG_COLOURS[$key])) continue;
         $html .= '<span class="kegg-legend-item"><span class="kegg-swatch" style="background:' . MOOP_KEGG_COLOURS[$key] . '"></span>'
-               . $label . '</span>';
+               . $labels[$key] . '</span>';
     }
+    $html .= '<span class="kegg-legend-item"><span class="kegg-swatch" style="background:' . MOOP_KEGG_NOT_FOUND . '"></span>'
+           . t('not found') . '</span>';
+    $html .= field_help(
+        'Each box on a KEGG pathway map is a KO (KEGG Orthology, e.g. K01365): a gene function, the group of '
+        . 'orthologous genes that do the same job. eggNOG-mapper gives each gene a KO, and a KO can sit on many '
+        . 'pathway maps (e.g. map04612), so one gene can be in many pathways. The map colours each box by where '
+        . 'that KO is found. Some genes were given more than one possible KO; each of them is coloured.',
+        'Colours on the KEGG map'
+    );
     return $html . '</span>';
 }
 
 /**
  * The gene page's KEGG pathway summary, above the Pathways table: the pathways grouped by KEGG class,
  * each with "View on KEGG" (api/kegg_map.php: the gene set's KOs coloured, this gene's marked) and
- * "Genes in this gene set" (the annotation search: this gene set, only the KEGG pathway source, run at once). Modules stay in the table only.
+ * "Genes in this gene set" (the annotation search: this gene set, only the KEGG pathway source, run at once), and
+ * "Genes in this organism" (the same search over every gene set of the species the visitor may see) when there are several. Modules stay in the table only.
  *
  * @param array $rows     the Pathways rows of one feature (generateAnnotationTableHTML())
  * @param array $link_ctx organism / assembly / gene_set of the page
@@ -218,7 +233,7 @@ function moop_kegg_gene_pathways_html(array $rows, string $uniquename, array $li
         $id = (string)($r['annotation_accession'] ?? '');
         if (!moop_kegg_valid_pathway($id)) continue;
         [$name, $top, $sub] = moop_kegg_split_pathway_name((string)($r['annotation_description'] ?? ''));
-        $by_class[$top !== '' ? $top : 'Other'][$sub][$id] = ['name' => $name, 'ambiguous' => (float)($r['score'] ?? 1) > 1];
+        $by_class[$top !== '' ? $top : 'Other'][$sub][$id] = ['name' => $name, 'kos' => (int)($r['score'] ?? 1)];
         $n++;
     }
     if ($n === 0) return '';
@@ -227,16 +242,24 @@ function moop_kegg_gene_pathways_html(array $rows, string $uniquename, array $li
     $ctx = array_filter(['organism' => $link_ctx['organism'] ?? '', 'assembly' => $link_ctx['assembly'] ?? '',
                          'gene_set' => $link_ctx['gene_set'] ?? ''], 'strlen');
     $can_link = count($ctx) === 3;
-    // Many pathways (one Nematostella gene has 126): classes start closed, the counts say what is inside.
-    $open = $n <= 12;
+    // "Genes in this organism" too, when the visitor can see more than this one gene set of the species
+    $org_link = false;
+    if ($can_link) {
+        try {
+            $org_link = count(moop_kegg_visible_gene_sets($ctx['organism'], organism_db_path($ctx['organism']))) > 1;
+        } catch (PDOException $e) {
+            error_log('KEGG gene page, gene sets of ' . $ctx['organism'] . ': ' . $e->getMessage());
+        }
+    }
+    // Classes start closed (one Nematostella gene has 126 pathways); the counts say what is inside.
 
     $html = '<div class="kegg-pathways mb-2">';
     $html .= '<div class="small text-muted mb-1">'
-           . t('KEGG pathways by class. "View on KEGG" opens KEGG\'s map with this gene and the rest of the gene set coloured:')
-           . ' ' . moop_kegg_map_legend_html() . '</div>';
+           . t('KEGG pathways by class. "View on KEGG" opens KEGG\'s map with the boxes coloured:')
+           . ' ' . moop_kegg_map_legend_html(['this_gene', 'this_set', 'other_set']) . '</div>';
     foreach ($by_class as $top => $subs) {
         $count = array_sum(array_map('count', $subs));
-        $html .= '<details class="kegg-class"' . ($open ? ' open' : '') . '><summary><strong>' . htmlspecialchars($top)
+        $html .= '<details class="kegg-class"><summary><strong>' . htmlspecialchars($top)
                . '</strong> <span class="badge bg-light text-dark">' . $count . '</span></summary><ul class="kegg-pathway-list">';
         ksort($subs);
         foreach ($subs as $sub => $paths) {
@@ -244,9 +267,9 @@ function moop_kegg_gene_pathways_html(array $rows, string $uniquename, array $li
             uasort($paths, fn($a, $b) => strcasecmp($a['name'], $b['name']));
             foreach ($paths as $id => $p) {
                 $html .= '<li class="kegg-pathway">' . htmlspecialchars($p['name']) . ' <span class="text-muted small">' . htmlspecialchars($id) . '</span>';
-                if ($p['ambiguous']) {
-                    $html .= ' <span class="badge kegg-ambiguous" title="' . t('This gene was given more than one KO; this pathway comes from one of them.') . '">'
-                           . t('ambiguous') . '</span>';
+                if ($p['kos'] > 1) {
+                    $html .= ' <span class="small text-muted" title="' . t('eggNOG could not settle on one KO for this gene; this pathway comes from one of them.') . '">'
+                           . t('(from one of %d possible KOs)', $p['kos']) . '</span>';
                 }
                 if ($can_link) {
                     $map = moop_url('api/kegg_map.php?' . http_build_query($ctx + ['pathway' => $id, 'gene' => $uniquename]));
@@ -255,6 +278,10 @@ function moop_kegg_gene_pathways_html(array $rows, string $uniquename, array $li
                     $html .= ' <a href="' . htmlspecialchars($map) . '" target="_blank" rel="noopener">' . t('View on KEGG')
                            . ' <i class="fa fa-external-link-alt link-icon"></i></a>'
                            . ' · <a href="' . htmlspecialchars($genes) . '">' . t('Genes in this gene set') . '</a>';
+                    if ($org_link) {
+                        $org_genes = moop_url('tools/search.php?' . http_build_query(['organism' => $ctx['organism'], 'q' => $id, 'source' => MOOP_KEGG_PATHWAY_SOURCE]));
+                        $html .= ' · <a href="' . htmlspecialchars($org_genes) . '">' . t('Genes in this organism') . '</a>';
+                    }
                 }
                 $html .= '</li>';
             }

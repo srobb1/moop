@@ -4970,16 +4970,16 @@ ok(moop_kegg_valid_pathway('map04668') && !moop_kegg_valid_pathway('ko04668') &&
    && !moop_kegg_valid_pathway("map04668\n"), 'KEGG pathway id: mapNNNNN only');
 ok(moop_plain_name('NV2') && !moop_plain_name("NV2\n") && !moop_plain_name('..') && !moop_plain_name(''),
    'moop_plain_name(): a trailing newline is not a plain name (PCRE $ matched before it)');
-$_kc = moop_kegg_ko_colours(['K00001' => ['genes' => 3, 'ambiguous' => false], 'K00002' => ['genes' => 1, 'ambiguous' => false],
-                             'K00003' => ['genes' => 2, 'ambiguous' => true],  'K00004' => ['genes' => 1, 'ambiguous' => false]], ['K00004', 'K00009']);
-ok($_kc === ['K00001' => 'many', 'K00002' => 'one', 'K00003' => 'ambiguous', 'K00004' => 'this_gene', 'K00009' => 'this_gene'],
-   'KEGG colours: this gene first, then ambiguous, several genes, one gene');
+$_kc = moop_kegg_ko_colours(['K00001' => ['genes' => 3], 'K00002' => ['genes' => 1], 'K00004' => ['genes' => 1]],
+                            ['K00004', 'K00009'], ['K00001', 'K00004', 'K00005']);
+ok($_kc === ['K00001' => 'this_set', 'K00002' => 'this_set', 'K00004' => 'this_gene', 'K00005' => 'other_set', 'K00009' => 'this_gene'],
+   'KEGG colours: this gene, else this gene set, else only another gene set (this gene set wins when both have it)');
 // The exact form KEGG documents -- without ",fg" and CR+LF it colours nothing, silently (seen in a browser 2026-11-14)
-ok(moop_kegg_map_url('map04668', ['K04404' => 'this_gene', 'K04427' => 'many', 'bad' => 'one', 'K00001' => 'nope'])
+ok(moop_kegg_map_url('map04668', ['K04404' => 'this_gene', 'K04427' => 'this_set', 'bad' => 'this_set', 'K00001' => 'nope'])
      === 'https://www.kegg.jp/kegg-bin/show_pathway?map=map04668&multi_query=K04427+%235cb85c,black%0d%0aK04404+%23ff8c42,black',
    'KEGG map link: "<KO>+<bg>,black" joined by %0d%0a on the reference map; malformed KOs and colours dropped');
-ok(array_keys(moop_kegg_ordered(['K00001' => 'this_gene', 'K00002' => 'many', 'K00003' => 'ambiguous', 'K00004' => 'one']))
-     === ['K00003', 'K00004', 'K00002', 'K00001'],
+ok(array_keys(moop_kegg_ordered(['K00001' => 'this_gene', 'K00002' => 'this_set', 'K00003' => 'other_set']))
+     === ['K00003', 'K00002', 'K00001'],
    'KEGG colours are SENT least important first: on a box shared by several KOs the last one wins, so "this gene" goes last');
 $_kd = sys_get_temp_dir() . '/moop_kegg_' . getmypid() . '.sqlite';
 @unlink($_kd);
@@ -4995,9 +4995,8 @@ $_kp->exec("CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_unique
   INSERT INTO feature_annotation VALUES (1, 1, 2), (1, 2, 2), (1, 3, 2), (2, 1, 1), (2, 4, 1), (3, 1, 1), (3, 4, 1), (4, 1, 1), (4, 2, 1);");
 $_kp = null;
 $_kk = moop_kegg_gene_set_pathway_kos($_kd, 1, 'map04668');
-ok($_kk === ['K04404' => ['genes' => 1, 'ambiguous' => true], 'K04427' => ['genes' => 2, 'ambiguous' => false],
-             'K12793' => ['genes' => 1, 'ambiguous' => true]],
-   "a gene set's KOs in a pathway: genes per KO, ambiguous only when every holder got it with score > 1, other gene sets excluded");
+ok($_kk === ['K04404' => ['genes' => 1], 'K04427' => ['genes' => 2], 'K12793' => ['genes' => 1]],
+   "a gene set's KOs in a pathway: genes per KO, other gene sets excluded");
 ok(moop_kegg_feature_kos($_kd, 1, 'g2') === ['K04427'] && moop_kegg_feature_kos($_kd, 1, 'other') === [],
    "one feature's KOs, within its own gene set only");
 @unlink($_kd);

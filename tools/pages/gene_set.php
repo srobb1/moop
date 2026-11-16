@@ -296,8 +296,8 @@
             <div class="alert alert-warning mb-0"><?= t('The KEGG pathway data could not be read just now. Please try again later.') ?></div>
           <?php else: ?>
             <div class="small text-muted mb-2">
-              <?= t('"Map" colours the gene set\'s KOs on KEGG\'s map:') ?>
-              <?= moop_kegg_map_legend_html(['many', 'one', 'ambiguous']) ?>
+              <?= t('"Map" opens KEGG\'s map with the boxes coloured:') ?>
+              <?= moop_kegg_map_legend_html(['this_set', 'other_set']) ?>
               <?php if (!$kegg['has_reference']): ?>
                 <br><?= t('Coverage is not shown: this site has no copy of the KEGG pathway reference.') ?>
               <?php elseif ($kegg['reference_date'] !== ''): ?>
@@ -319,7 +319,7 @@
                 <th class="kegg-class-col"><?= t('Class') ?></th>
                 <th><?= t('Pathway') ?></th>
                 <th class="text-end kegg-sort-col"><?= t('Genes') ?></th>
-                <th class="text-end" title="<?= t('Genes eggNOG gave more than one KO') ?>"><?= t('Ambiguous') ?></th>
+                <th class="text-end" title="<?= t('Genes eggNOG gave more than one possible KO; the pathway may come from any of them') ?>"><?= t('With several KOs') ?></th>
                 <th class="text-end"><?= t('KOs found') ?></th>
                 <?php if ($kegg['has_reference']): ?>
                 <th class="text-end"><?= t('KOs in pathway') ?></th>
