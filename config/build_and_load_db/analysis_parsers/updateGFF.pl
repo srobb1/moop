@@ -136,7 +136,7 @@ while (my $line = <GFF>){
          $line .= ";namesrc=$source";
        }
 		}
-	}elsif($line =~ /\tmRNA\t/){
+	}elsif($line =~ /\t(?:mRNA|transcript)\t/){ # transcript: Trinity/make_fake_genome_from_t2g.pl, smed_20140614, Turritopsis
     my ($id) = $line =~ /ID=([^;]+)/;
 		if (exists $names{$id}){
        my $name = $names{$id}{name};
@@ -175,7 +175,7 @@ while (my $line = <GFF>){
   if ($line =~ /\tgene\t/ and $line !~ /Name=/){
     $line =~ s/ID=([^;]+)/ID=$1;Name=$1/;
   }
-  if ($line =~ /\tmRNA\t/ and $line !~ /Name=/){
+  if ($line =~ /\t(?:mRNA|transcript)\t/ and $line !~ /Name=/){
     $line =~ s/ID=([^;]+)/ID=$1;Name=$1/;
   }
   $line =~ s/;+/;/g;
