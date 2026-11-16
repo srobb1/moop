@@ -1401,7 +1401,6 @@ a:hover .link-icon {
    every checkbox escape the clip and extend the document's scrollable overflow down to
    its own static position, which shows up as a tall blank tail below the footer. */
 .org-select-list,
-#mm-scope-list,
 #scope-org-list,
 #sourcesPanel {
   position: relative;
@@ -1762,11 +1761,22 @@ a:hover .link-icon {
 }
 
 
-/* Filter-match highlight inside a scope row's detail text (organism → assembly → gene set).
-   Shared: Annotation Search and MOOPmart both highlight the matched substring, which is what
-   makes a force-revealed row legible — in simple view the detail text is hidden, so without
-   this a matched row appears with no visible reason. Was inline in tools/pages/search.php
-   until 2026-08-05; moved here rather than copied into MOOPmart. */
+/* ── Organism scope selector (includes/scope_selector.php, js/modules/scope-selector.js) ──
+   Simple view (.scope-detail-hidden): ONE row per organism -- hide the per-gene-set detail
+   text and the secondary rows, and show the "N gene sets" note in their place; otherwise an
+   organism with four gene sets renders as four rows that look identical. Detail view reveals
+   every gene-set row and drops the now-redundant count. */
+#scope-org-list.scope-detail-hidden .scope-row-detail     { display: none; }
+#scope-org-list.scope-detail-hidden .scope-row-secondary  { display: none; }
+#scope-org-list:not(.scope-detail-hidden) .scope-gs-count { display: none; }
+/* The filter matched text simple view hides: reveal that row's detail so the visitor sees what
+   matched, and drop its "N gene sets" note -- the row now stands for one gene set. */
+#scope-org-list.scope-detail-hidden .scope-row.scope-detail-forced .scope-row-detail { display: inline; }
+#scope-org-list.scope-detail-hidden .scope-row.scope-detail-forced .scope-gs-count   { display: none; }
+
+/* Filter-match highlight inside a scope row's detail text -- what makes a force-revealed row
+   legible: in simple view the detail text is hidden, so without it a matched row appears with
+   no visible reason. */
 mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; padding: 0 1px; color: inherit; }
 
 /* ── BUSCO completeness card (includes/busco_card.php) ─────────────────────────────────

@@ -1,5 +1,33 @@
 # Extract ONE shared organism/gene-set scope selector
 
+## ✅ PHASE 1 DONE 2026-11-16 — Search + Data Exporter share one selector
+
+- `lib/scope_selector.php` — `moop_scope_selector_data()` (tree, names, groups) and
+  `moop_scope_context_from_request()` (?organism= [&assembly= &gene_set=], ?group=,
+  ?organisms[]= / ?organisms=A,B — names the visitor cannot see are dropped).
+- `includes/scope_selector.php` — the card, its help window and the select-all warning.
+  Page passes `$scope_opts` (step, title, help intro, "pick at least one" text).
+- `js/modules/scope-selector.js` (was scope-selected-panel.js) — `initScopeSelector({context,
+  onChange})`. Every selection path ends in one changed() → onChange; pages only react.
+- One vocabulary: `#scope-org-list`, `.scope-row`, `.scope-gs-cb`, `#scope-*`. CSS in display.css.
+
+Verified by a behaviour probe run before and after on both pages (row clicks, collapse,
+panel ×, four filters + highlight, Details, select-all modal, context URLs): identical, except
+the fixes below. Fixed on the way: the Data Exporter ignored ?organism/assembly/gene_set/group
+(the gene-set page's MOOPmart link opened empty); Search's "Deselect all" was never translated;
+Search's warning read "select all 77 gene sets organisms"; the counts line was glued English.
+Dropped: the Data Exporter's organism-names line under the counts (the Selected panel shows them).
+
+**Not dead, not touched:** `js/modules/scope-filter.js` (`ScopeFilter`, loaded site-wide by
+includes/layout.php) is a FOURTH selector -- the "narrow scope" modal tree AnnotationSearch
+opens on pages without `noScopeFilter` (organism, group, multi-organism pages). Decide in
+Phase 2 whether it becomes the shared component in a modal or stays.
+
+**Next: Phase 2** (single mode → Retrieve Sequences) and **Phase 3** (evaluate BLAST), below.
+Everything under this line is history.
+
+---
+
 ⚠️⚠️ **RE-VERIFIED AGAINST THE LIVE PAGES 2026-08-05, AND THE "WHICH PAGE IS AHEAD"
 SECTIONS BELOW ARE STALE. Do not act on them without re-checking.**
 

@@ -22,6 +22,17 @@
         "or": 1,
         "page, or run from the command line:": 1
     },
+    "includes/scope_selector.php": {
+        "\" data-asm-display=\"": 1,
+        "\" data-asm=\"": 1,
+        "\" data-cn=\"": 1,
+        "\" data-gs=\"": 1,
+        "\" data-label=\"": 1,
+        "\" data-search-detail=\"": 1,
+        "\" data-search-simple=\"": 1,
+        "\" data-search=\"": 1,
+        "\" title=\"": 1
+    },
     "includes/source-list.php": {
         "\" data-assembly=\"": 1,
         "\" data-gene-set=\"": 1,
@@ -521,7 +532,6 @@
         "\" class=\"text-decoration-none\">": 1,
         "Deeper technical references — installation, SELinux and hardening, resource planning — live in the": 1,
         "Using": 1,
-        "Where to go, how the data fits together, and where it comes from. How to use a particular page is on that page — look for its": 1,
         "directory of the MOOP repository.": 1
     },
     "tools/pages/help/organism-data-organization.php": {
@@ -2005,14 +2015,6 @@
         "title=\"Filter the track list by technique, experiment, tissue, stage, source&hellip; (JBrowse's faceted track selector)\"": 1
     },
     "tools/pages/moopmart.php": {
-        "\" data-asm-display=\"": 1,
-        "\" data-asm=\"": 1,
-        "\" data-cn=\"": 1,
-        "\" data-gs=\"": 1,
-        "\" data-label=\"": 1,
-        "\" data-search-detail=\"": 1,
-        "\" data-search-simple=\"": 1,
-        "\" data-search=\"": 1,
         "\" data-type=\"": 1,
         ", exact": 1,
         ", or keyword — fill any combination.": 1,
@@ -2032,7 +2034,6 @@
         "all": 1,
         "criteria (AND). Each row filters by": 1,
         "description field. Matches words from their start, like Search.": 1,
-        "gene sets": 1,
         "in Step": 1,
         "must satisfy": 1,
         "must satisfy every filled section.": 1,
@@ -2082,17 +2083,6 @@
     },
     "tools/pages/retrieve_sequences.php": {
         "\" style=\"width:9rem;\">": 2
-    },
-    "tools/pages/search.php": {
-        "\" data-asm-display=\"": 1,
-        "\" data-asm=\"": 1,
-        "\" data-cn=\"": 1,
-        "\" data-gs=\"": 1,
-        "\" data-label=\"": 1,
-        "\" data-search-detail=\"": 1,
-        "\" data-search-simple=\"": 1,
-        "\" data-search=\"": 1,
-        "\" title=\"": 1
     },
     "tools/pages/verify_human.php": {
         "Have an account?": 1,

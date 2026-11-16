@@ -4,7 +4,7 @@
  * Requires globals injected via inline_scripts:
  *   annotationSources — [source_name, ...]
  *   moopSite          — '/moop' (no trailing slash)
- *   scopeContext      — {organisms:[...]} | null
+ *   scopeContext      — {organisms:[...], assembly?, gene_set?} | null (lib/scope_selector.php)
  */
 
 (function () {
@@ -29,44 +29,14 @@
     // Step 1 — Organism scope (flat list)
     // -------------------------------------------------------
 
-    // Handle for the shared Selected panel (js/modules/scope-selected-panel.js).
-    let scopePanel = null;
-
-    function updateScopeSummary() {
-        const el        = document.getElementById('mm-scope-counts');
-        const namesEl   = document.getElementById('mm-scope-names');
-        // Re-render the panel FIRST, and outside the `if (!el)` guard below, so it stays in
-        // step even on a page variant without the counts bar. Called from here rather than
-        // relying on the module's own change listener because row clicks tick the checkbox
-        // PROGRAMMATICALLY, and assigning .checked fires no change event.
-        if (scopePanel) scopePanel.render();
+    // The list, filter, Details, select-all, Selected panel and counts are the shared
+    // component (js/modules/scope-selector.js, also Annotation Search's). This page only
+    // reacts to a changed selection: Step 3's availability counts, the Send-to-Expression
+    // gate, and the location filter (single assembly only).
+    function onScopeChange() {
         updateExprState();
-        if (!el) return;
-        refreshAnnotationCounts();   // keep Step 3 availability counts in sync with the selection
-        // Toggle label states its next action (and thus the current all-selected state).
-        const allBoxes = document.querySelectorAll('.mm-gs-cb');
-        const allOn = allBoxes.length > 0 && Array.from(allBoxes).every(cb => cb.checked);
-        const toggleLabel = document.querySelector('.mm-toggle-all-label');
-        if (toggleLabel) toggleLabel.textContent = allOn ? moopT('Deselect all') : moopT('Select all');
-        const checked = Array.from(document.querySelectorAll('.mm-gs-cb:checked'));
-        if (!checked.length) {
-            el.textContent = moopT('Select at least one organism above');
-            if (namesEl) namesEl.textContent = '';
-            return;
-        }
-        const orgs = new Set(checked.map(c => c.dataset.org)).size;
-        const asms = new Set(checked.map(c => c.dataset.org + '|' + c.dataset.asm)).size;
-        const gs   = checked.length;
-        el.textContent = `${orgs} organism${orgs !== 1 ? 's' : ''}, ${asms} assembl${asms !== 1 ? 'ies' : 'y'}, ${gs} gene set${gs !== 1 ? 's' : ''} selected`;
-
-        if (namesEl) {
-            const orgNames = [...new Map(checked.map(c => [
-                c.dataset.org,
-                c.closest('.mm-scope-row')?.querySelector('em')?.textContent || c.dataset.org.replace(/_/g, ' ')
-            ])).values()];
-            const MAX = 6;
-            namesEl.textContent = orgNames.slice(0, MAX).join(', ') + (orgNames.length > MAX ? ` + ${orgNames.length - MAX} more` : '');
-        }
+        refreshAnnotationCounts();
+        updateCoordState();
     }
 
     // -------------------------------------------------------
@@ -211,161 +181,6 @@
         });
     }
 
-    function initScopeList() {
-        const list = document.getElementById('mm-scope-list');
-        if (!list) return;
-
-        // Shared Selected panel — one implementation, also used by Annotation Search.
-        if (typeof initScopeSelectedPanel === 'function') {
-            scopePanel = initScopeSelectedPanel({
-                checkbox: '.mm-gs-cb',
-                row:      '.mm-scope-row',
-                panel:    'mm-selected-panel',
-                count:    'mm-selected-count',
-                // The × in the panel unticks an organism, which must feed back into the
-                // counts bar, Step 3's annotation availability, and the location filter's
-                // single-assembly gate — exactly as unticking in the list does.
-                onChange: () => { updateScopeSummary(); updateCoordState(); },
-            });
-        }
-
-        // Row click → toggle selection.
-        // In SIMPLE view a row stands for a whole organism (the per-gene-set rows are
-        // collapsed to one), so clicking it selects or deselects ALL of that organism's
-        // gene sets together — which is what the help promises and what removes the
-        // "same organism listed twice" confusion. In DETAIL view each row is its own
-        // gene set and toggles just itself.
-        list.addEventListener('click', function (e) {
-            const row = e.target.closest('.mm-scope-row');
-            if (!row) return;
-            const cb = row.querySelector('.mm-gs-cb');
-            if (!cb || e.target === cb) return;
-
-            const detailOn = document.getElementById('mm-scope-detail')?.checked;
-            if (!detailOn) {
-                const org = cb.dataset.org;
-                const orgCbs = Array.from(list.querySelectorAll('.mm-gs-cb'))
-                    .filter(c => c.dataset.org === org);
-                // Toggle off only when every one of the organism's gene sets is already on;
-                // from a partial state (some picked in Detail view) a click selects them all.
-                const allOn = orgCbs.every(c => c.checked);
-                orgCbs.forEach(c => {
-                    c.checked = !allOn;
-                    c.closest('.mm-scope-row')?.classList.toggle('selected', !allOn);
-                });
-            } else {
-                cb.checked = !cb.checked;
-                row.classList.toggle('selected', cb.checked);
-            }
-            updateScopeSummary();
-            updateCoordState();
-        });
-        list.addEventListener('change', function (e) {
-            if (e.target.classList.contains('mm-gs-cb')) {
-                e.target.closest('.mm-scope-row')?.classList.toggle('selected', e.target.checked);
-                updateScopeSummary();
-                updateCoordState();
-            }
-        });
-
-        // Filter input. Always matches the FULL search text — organism, common name,
-        // group, assembly AND gene set — because that is what the placeholder promises.
-        // A match in the assembly/gene-set part is otherwise invisible in simple view
-        // (that text and the secondary rows are hidden), so a matched row is force-shown
-        // and, when the hit is only in the hidden detail, its detail is revealed. This is
-        // the behaviour the Annotation Search selector already had; MOOPmart lacked it.
-        document.getElementById('mm-scope-filter')?.addEventListener('input', function () {
-            const q        = this.value.toLowerCase().trim();
-            const detailOn = document.getElementById('mm-scope-detail')?.checked;
-            list.querySelectorAll('.mm-scope-row').forEach(row => {
-                row.classList.remove('mm-scope-detail-forced');
-                // hl(): the shared filter-match highlight, same as Annotation Search. Clearing
-                // it on every non-matching branch matters as much as setting it — a stale
-                // <mark> from a previous keystroke would highlight text the current query
-                // never matched.
-                const hl = (query) => highlightScopeDetail(row, query, '.mm-scope-row-detail');
-                if (!q) {
-                    row.style.display = '';   // back to CSS (secondary rows hidden in simple)
-                    hl('');
-                    return;
-                }
-                const all    = row.dataset.search || '';
-                const simple = row.dataset.searchSimple || all;
-                const detail = row.dataset.searchDetail || '';
-                if (!all.includes(q)) {
-                    row.style.display = 'none';
-                    hl('');
-                    return;
-                }
-                const detailMatch = detail.includes(q);
-                const detailOnly  = detailMatch && !simple.includes(q);
-                if (detailOn) {
-                    row.style.display = '';   // detail view: every gene-set row shows normally
-                    hl(detailMatch ? q : '');
-                    return;
-                }
-                // Simple view. The representative row shows on any match. A SECONDARY row
-                // shows only when the query hit its own assembly/gene set (detail-only) —
-                // so searching an organism name keeps the collapse and does not re-expose
-                // the very duplicate rows the collapse hid.
-                if (row.classList.contains('mm-scope-row-secondary') && !detailOnly) {
-                    row.style.display = 'none';
-                    hl('');
-                    return;
-                }
-                row.style.display = 'flex';
-                if (detailOnly) row.classList.add('mm-scope-detail-forced');
-                hl(detailMatch ? q : '');
-            });
-        });
-
-        // Detail toggle
-        document.getElementById('mm-scope-detail')?.addEventListener('change', function () {
-            list.classList.toggle('mm-scope-detail-hidden', !this.checked);
-            // Re-run filter with new search field
-            document.getElementById('mm-scope-filter')?.dispatchEvent(new Event('input'));
-        });
-
-        // One toggle instead of an All / None pair. Its label states what it will do next,
-        // so it doubles as a readout of whether everything is selected. Deselect is
-        // immediate; select-all still routes through the "this can take a while" warning.
-        function clearAllSources() {
-            list.querySelectorAll('.mm-gs-cb').forEach(cb => {
-                cb.checked = false;
-                cb.closest('.mm-scope-row')?.classList.remove('selected');
-            });
-            updateScopeSummary();
-            updateCoordState();
-        }
-        function selectAllSources() {
-            list.querySelectorAll('.mm-gs-cb').forEach(cb => {
-                cb.checked = true;
-                cb.closest('.mm-scope-row')?.classList.add('selected');
-            });
-            updateScopeSummary();
-            updateCoordState();
-        }
-        document.querySelector('.mm-toggle-all')?.addEventListener('click', function () {
-            const boxes = list.querySelectorAll('.mm-gs-cb');
-            const allOn = boxes.length > 0 && Array.from(boxes).every(cb => cb.checked);
-            if (allOn) {
-                clearAllSources();
-                return;
-            }
-            // Selecting all — confirm first, because searching every organism can be slow.
-            const countEl = document.getElementById('mm-select-all-count');
-            if (countEl) countEl.textContent = boxes.length + (boxes.length === 1 ? ' gene set' : ' gene sets');
-            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('mm-select-all-modal'));
-            document.getElementById('mm-select-all-confirm').onclick = function () {
-                modal.hide();
-                selectAllSources();
-            };
-            modal.show();
-        });
-
-        updateScopeSummary();
-    }
-
     // -------------------------------------------------------
     // Step 1 — Coordinate filter (single-assembly only)
     // -------------------------------------------------------
@@ -374,7 +189,7 @@
 
     function getSelectedAssemblies() {
         const seen = new Set();
-        document.querySelectorAll('.mm-gs-cb:checked').forEach(cb => {
+        document.querySelectorAll('.scope-gs-cb:checked').forEach(cb => {
             seen.add(cb.dataset.org + '|' + cb.dataset.asm);
         });
         return Array.from(seen);
@@ -399,7 +214,7 @@
         if (!single) { lastChrSource = null; return; }
 
         // Load chr names for the selected assembly
-        const cb = Array.from(document.querySelectorAll('.mm-gs-cb:checked'))[0];
+        const cb = Array.from(document.querySelectorAll('.scope-gs-cb:checked'))[0];
         const key = cb ? `${cb.dataset.org}|${cb.dataset.asm}|${cb.dataset.gs}` : null;
         if (!key || key === lastChrSource) return;
         lastChrSource = key;
@@ -638,7 +453,7 @@
     // -------------------------------------------------------
 
     function getSelectedSources() {
-        return Array.from(document.querySelectorAll('.mm-gs-cb:checked'))
+        return Array.from(document.querySelectorAll('.scope-gs-cb:checked'))
             .map(c => `${c.dataset.org}|${c.dataset.asm}|${c.dataset.gs}`);
     }
 
@@ -648,7 +463,7 @@
     // A fully ticked organism is left out, so a broad selection keeps the URL short.
     function partialGeneSets() {
         const byOrg = {};
-        document.querySelectorAll('.mm-gs-cb').forEach(cb => (byOrg[cb.dataset.org] ??= []).push(cb));
+        document.querySelectorAll('.scope-gs-cb').forEach(cb => (byOrg[cb.dataset.org] ??= []).push(cb));
         const out = [];
         Object.values(byOrg).forEach(boxes => {
             const on = boxes.filter(cb => cb.checked);
@@ -661,7 +476,7 @@
 
     function getSelectedOrganisms() {
         const seen = new Set();
-        document.querySelectorAll('.mm-gs-cb:checked').forEach(c => seen.add(c.dataset.org));
+        document.querySelectorAll('.scope-gs-cb:checked').forEach(c => seen.add(c.dataset.org));
         return Array.from(seen);
     }
 
@@ -1082,7 +897,7 @@
     // Selected gene-set checkboxes, split by whether their gene set has expression data.
     function exprSplitSelection() {
         const withData = new Set(typeof expressionGeneSets !== 'undefined' ? expressionGeneSets : []);
-        const on = Array.from(document.querySelectorAll('.mm-gs-cb:checked'));
+        const on = Array.from(document.querySelectorAll('.scope-gs-cb:checked'));
         const key = cb => `${cb.dataset.org}|${cb.dataset.asm}|${cb.dataset.gs}`;
         return { send: on.filter(cb => withData.has(key(cb))), without: on.filter(cb => !withData.has(key(cb))) };
     }
@@ -1173,38 +988,23 @@
     }
 
     // -------------------------------------------------------
-    // Scope context (pre-select when launched from toolbox)
-    // -------------------------------------------------------
-
-    function applyContextScope(ctx) {
-        if (!ctx) return;
-        const keepOrgs = new Set(ctx.organisms || (ctx.organism ? [ctx.organism] : []));
-        if (!keepOrgs.size) return;
-        document.querySelectorAll('.mm-gs-cb').forEach(cb => {
-            const on = keepOrgs.has(cb.dataset.org);
-            cb.checked = on;
-            cb.closest('.mm-scope-row')?.classList.toggle('selected', on);
-        });
-        updateScopeSummary();
-        updateCoordState();
-    }
-
-    // -------------------------------------------------------
     // Init
     // -------------------------------------------------------
 
     document.addEventListener('DOMContentLoaded', function () {
-        initScopeList();
+        // Pre-selects from the page the visitor came from (?organism= / ?assembly= /
+        // ?gene_set= / ?group= / ?organisms[]=), then reports every change to onScopeChange.
+        initScopeSelector({
+            context:  typeof scopeContext !== 'undefined' ? scopeContext : null,
+            onChange: onScopeChange,
+        });
         initAnnCriteria();
         initColList();
         initAccordionHeaders();
         initWideLongSwitch();
         initFormatToggle();
         initAnnSources();
-
-        if (typeof scopeContext !== 'undefined' && scopeContext) {
-            applyContextScope(scopeContext);
-        }
+        onScopeChange();   // Step 3 counts etc. for the pre-selection, now the steps exist
 
         // Field-level help is now field_help(), initialised once globally by
         // js/modules/field-help.js, and the how-to help is help_modal() which needs no

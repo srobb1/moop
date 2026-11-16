@@ -23,84 +23,12 @@ if (file_exists($ann_config_file)) {
     }
 }
 
-// Read context parameters passed from toolbox links (organism, assembly, gene_set, group)
-$context      = parseContextParameters();
-$ctx_organism = $context['organism'];
-$ctx_assembly = $context['assembly'];
-$ctx_gene_set = $context['gene_set'];
-$ctx_group    = $context['group'];
-
-// Build scope tree: organism → assembly → [gene_sets]
-// Also collect organism display info (genus/species/common_name)
-$sources_by_group = getAccessibleGeneSets();   // once: the group context below reuses it
-$raw_sources    = flattenSourcesList($sources_by_group);
-$scope_tree     = [];   // [organism][assembly] = [gene_set, ...]
-$organism_groups = [];  // [organism] = [group, ...] -- set here so a visitor who can see no
-                        // organism at all gets an empty list, not an undefined variable
-$organism_info  = [];   // [organism] = ['genus'=>..., 'species'=>..., 'common_name'=>...]
-$assembly_names = [];   // [organism][assembly] = genome_name (human-readable name if set)
-
-foreach ($raw_sources as $src) {
-    $org = $src['organism'];
-    $asm = $src['assembly'];
-    $gs  = $src['gene_set'] ?? '';
-
-    if (!isset($scope_tree[$org]))          $scope_tree[$org]       = [];
-    if (!isset($scope_tree[$org][$asm]))    $scope_tree[$org][$asm] = [];
-    if ($gs !== '' && !in_array($gs, $scope_tree[$org][$asm])) {
-        $scope_tree[$org][$asm][] = $gs;
-    }
-
-    if (!isset($organism_info[$org])) {
-        $info = loadOrganismInfo($org, $organism_data) ?: [];
-        $organism_info[$org] = [
-            'genus'       => $info['genus']       ?? '',
-            'species'     => $info['species']     ?? '',
-            'common_name' => $info['common_name'] ?? '',
-        ];
-    }
-
-    if (!isset($assembly_names[$org][$asm])) {
-        $gn = $src['genome_name'] ?? '';
-        $assembly_names[$org][$asm] = genome_display_name($gn, $asm);   // '' for none / "NA"
-    }
-
-}
-$organism_groups = moop_organism_groups_map($raw_sources);   // sorted, one order site-wide
-
-// Sort tree: organisms alphabetically, assemblies alphabetically, gene_sets alphabetically
-ksort($scope_tree);
-foreach ($scope_tree as $org => &$asms) {
-    ksort($asms);
-    foreach ($asms as $asm => &$gene_sets) {
-        sort($gene_sets);
-    }
-}
-unset($asms, $gene_sets);
-
-$all_organisms = array_keys($scope_tree);
-
-// Build scope context for JS pre-filtering.
-// Passed as null when no context — JS leaves all nodes checked.
-$scope_context = null;
-if ($ctx_organism) {
-    $scope_context = ['organism' => $ctx_organism];
-    if ($ctx_assembly) $scope_context['assembly'] = $ctx_assembly;
-    if ($ctx_gene_set) $scope_context['gene_set'] = $ctx_gene_set;
-} elseif ($ctx_group) {
-    $group_organisms    = array_keys($sources_by_group[$ctx_group] ?? []);
-    if (!empty($group_organisms)) {
-        $scope_context = ['organisms' => $group_organisms];
-    }
-} else {
-    $incoming = $_POST['organisms'] ?? $_GET['organisms'] ?? null;
-    if (!empty($incoming)) {
-        $org_result = parseOrganismParameter($incoming);
-        if (!empty($org_result['organisms'])) {
-            $scope_context = ['organisms' => $org_result['organisms']];
-        }
-    }
-}
+// The organism selector: tree, display info and what to pre-select from where the visitor came
+// (organism / assembly / gene set / group / organisms[]). Shared with the Data Exporter.
+require_once __DIR__ . '/../lib/scope_selector.php';
+$scope         = moop_scope_selector_data();
+$all_organisms = array_keys($scope['tree']);
+$scope_context = moop_scope_context_from_request($scope);
 // ?source=<annotation source>: search ONLY that source (e.g. "KEGG Pathway (eggNOG)" from a gene page's KEGG
 // pathway), and run the search at once when the keyword is there too. The name is only matched against the
 // sources the panel lists for this scope, so an unknown one does nothing.
@@ -116,8 +44,8 @@ $display_config = [
     'title'        => 'Search',
     'content_file' => __DIR__ . '/pages/search.php',
     'page_script'  => [
-        // Before search-display.js, which calls initScopeSelectedPanel().
-        moop_url_base() . "/js/modules/scope-selected-panel.js",
+        // Before search-display.js, which calls initScopeSelector().
+        moop_url_base() . "/js/modules/scope-selector.js",
         moop_url_base() . "/js/search-display.js",
     ],
     'page_styles'  => [
@@ -130,7 +58,6 @@ $display_config = [
         "const sitePath = '" . moop_url_base() . "';",
         "const siteTitle = '" . addslashes($siteTitle) . "';",
         "const allOrganisms = "  . json_encode($all_organisms)  . ";",
-        "const scopeTree = "     . json_encode($scope_tree)     . ";",
         "const scopeContext = "  . json_encode($scope_context, JSON_HEX_TAG | JSON_HEX_AMP) . ";",
         "const annTypeOrder = "  . json_encode(array_keys($ann_type_info)) . ";",
     ],
@@ -139,10 +66,7 @@ $display_config = [
 $data = [
     'site'          => $site,
     'siteTitle'     => $siteTitle,
-    'scope_tree'      => $scope_tree,
-    'organism_info'   => $organism_info,
-    'assembly_names'  => $assembly_names,
-    'organism_groups' => $organism_groups,
+    'scope'           => $scope,
     'all_organisms'   => $all_organisms,
     'ann_type_info'   => $ann_type_info,
     'inline_scripts' => $display_config['inline_scripts'],

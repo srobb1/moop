@@ -4,7 +4,7 @@
  * Expects PHP-injected globals:
  *   sitePath    — e.g. '/moop'
  *   allOrganisms — flat array of all accessible organism names
- *   scopeTree   — {organism: {assembly: [gene_set, ...]}}
+ *   scopeContext — what to pre-select (lib/scope_selector.php), or null
  */
 
 $(document).ready(function () {
@@ -23,151 +23,13 @@ $(document).ready(function () {
     // Don't call init() — we handle form submit ourselves to inject scope + sources first.
     // Still want search-instructions handler wired up.
 
-    // ── Scope tree ──────────────────────────────────────────────────────────
-
-    // Row click — toggle selection (no visible checkbox; whole row is the target).
-    //
-    // In SIMPLE view a row stands for a whole organism (its per-gene-set rows are collapsed
-    // into one), so clicking it selects or deselects ALL of that organism's gene sets — which
-    // is what the help promises and what makes the collapse honest. In DETAIL view each row
-    // is its own gene set and toggles just itself. Mirrors MOOPmart's initScopeList().
-    $(document).on('click', '.scope-gs-full-row', function (e) {
-        const cb = $(this).find('.scope-gs-cb')[0];
-        if (!cb || e.target === cb) return;
-
-        if ($('#scope-show-detail').is(':checked')) {
-            cb.checked = !cb.checked;
-            $(this).toggleClass('selected', cb.checked);
-        } else {
-            const org    = cb.dataset.org;
-            const orgCbs = $('.scope-gs-cb').filter(function () { return this.dataset.org === org; });
-            // Toggle off only when every one of the organism's gene sets is already on; from a
-            // partial state (some picked in Detail view) a click selects them all.
-            const allOn = orgCbs.toArray().every(c => c.checked);
-            orgCbs.each(function () {
-                this.checked = !allOn;
-                $(this).closest('.scope-gs-full-row').toggleClass('selected', !allOn);
-            });
-        }
-        onScopeChange();
-    });
-
-    // Gene-set checkbox change, the Selected panel and its × are all handled by the shared
-    // module (js/modules/scope-selected-panel.js), which MOOPmart uses too. This page used to
-    // carry its own copy; MOOPmart had none, and the two selectors drifted far enough apart
-    // that notes/SHARED_SCOPE_SELECTOR_PLAN.md recorded the wrong page as the more advanced
-    // one. One implementation is the point.
-    let scopePanel = null;
-    if (typeof initScopeSelectedPanel === 'function') {
-        scopePanel = initScopeSelectedPanel({
-            checkbox: '.scope-gs-cb',
-            row:      '.scope-gs-full-row',
-            panel:    'scope-selected-panel',
-            count:    'scope-selected-count',
-            onChange: () => onScopeChange(),
-        });
-    }
-
-    // Programmatic ticks (row clicks, select-all) assign .checked and fire no change event,
-    // so the panel is re-rendered from onScopeChange() rather than left to the listener.
-    function updateSearchSelectedPanel() {
-        if (scopePanel) scopePanel.render();
-    }
-
-    // Delegates to the shared helper (js/modules/scope-selected-panel.js) so MOOPmart's
-    // filter highlights identically. The original-HTML capture moved in there with it.
-    function highlightInDetail($row, query) {
-        highlightScopeDetail($row[0], query, '.scope-row-detail');
-    }
-
-    // Scope filter — show/hide rows; if the match is in hidden detail, force-reveal + highlight
-    // the exact text. Always matches the FULL search text (organism, common name, group,
-    // assembly AND gene set) because that is what the placeholder promises.
-    function runScopeFilter() {
-        const q           = $('#scope-filter').val().trim().toLowerCase();
-        const detailHidden = !$('#scope-show-detail').is(':checked');
-
-        $('.scope-gs-full-row').each(function () {
-            const $row = $(this);
-            if (!q) {
-                // Back to the stylesheet's decision — which in simple view keeps the secondary
-                // rows hidden. Setting .show() here would defeat the collapse.
-                this.style.display = '';
-                $row.removeClass('scope-detail-forced scope-detail-matched');
-                highlightInDetail($row, '');
-                return;
-            }
-            const all    = String($row.data('search') || '');
-            const simple = String($row.data('search-simple') || all);
-            const detail = String($row.data('search-detail') || '');
-
-            if (!all.includes(q)) {
-                this.style.display = 'none';
-                $row.removeClass('scope-detail-forced scope-detail-matched');
-                highlightInDetail($row, '');
-                return;
-            }
-
-            const detailMatch = detail.includes(q);
-            const detailOnly  = detailMatch && !simple.includes(q);
-
-            // Simple view: a SECONDARY row shows only when the query hit its own assembly or
-            // gene set. Filtering by an organism name must not re-expose the very duplicate
-            // rows the collapse hid.
-            if (detailHidden && $row.hasClass('scope-row-secondary') && !detailOnly) {
-                this.style.display = 'none';
-                $row.removeClass('scope-detail-forced scope-detail-matched');
-                highlightInDetail($row, '');
-                return;
-            }
-
-            this.style.display = 'flex';
-            $row.toggleClass('scope-detail-forced scope-detail-matched', detailHidden && detailOnly);
-            highlightInDetail($row, detailMatch ? q : '');
-        });
-    }
-
-    $('#scope-filter').on('input', runScopeFilter);
-
-    // Detail toggle switch
-    $('#scope-show-detail').on('change', function () {
-        $('#scope-org-list').toggleClass('scope-detail-hidden', !this.checked);
-        runScopeFilter(); // re-evaluate forced reveals
-    });
-
-    // One toggle instead of an All / None pair. Its label states what the click will do, so it
-    // doubles as a readout of whether everything is selected. Deselecting is immediate;
-    // selecting all still routes through the "this can take a while" warning, because an
-    // every-organism search is the one query we most want people to choose deliberately.
-    $('.scope-toggle-all').on('click', function () {
-        const boxes = $('.scope-gs-cb');
-        const allOn = boxes.length > 0 && boxes.toArray().every(cb => cb.checked);
-
-        if (allOn) {
-            boxes.prop('checked', false);
-            $('.scope-gs-full-row').removeClass('selected');
-            onScopeChange();
-            return;
-        }
-
-        const countEl = document.getElementById('select-all-orgs-count');
-        if (countEl) countEl.textContent = boxes.length === 1 ? moopT('%d gene set', 1) : moopT('%d gene sets', boxes.length);
-        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('select-all-orgs-modal'));
-        $('#select-all-orgs-confirm').off('click.selall').on('click.selall', function () {
-            modal.hide();
-            boxes.prop('checked', true);
-            $('.scope-gs-full-row').addClass('selected');
-            onScopeChange();
-        });
-        modal.show();
-    });
-
-    // Called whenever any scope checkbox changes
+    // ── Organism selector ───────────────────────────────────────────────────
+    // The list, filter, Details, select-all, Selected panel and counts are the shared
+    // component (js/modules/scope-selector.js, also the Data Exporter's). This page only
+    // reacts: a changed selection changes which annotation types exist (Step 3).
     let sourcesLoadTimer = null;
     function onScopeChange() {
         clearSelectHint();   // they just did the thing the hint asked for
-        updateScopeSummary();
-        updateSearchSelectedPanel();
         clearTimeout(sourcesLoadTimer);
         sourcesLoadTimer = setTimeout(loadAnnotationSources, 300);
     }
@@ -176,31 +38,6 @@ $(document).ready(function () {
         const seen = new Set();
         $('.scope-gs-cb:checked').each(function () { seen.add($(this).data('org')); });
         return Array.from(seen);
-    }
-
-    // The counts line under the list, plus the toggle's label. Says organisms / assemblies /
-    // gene sets in full rather than a bare number, because those three are exactly what a
-    // click can change without the list making it obvious — selecting one organism row in
-    // simple view can take four gene sets with it. Same readout as MOOPmart's #mm-scope-counts.
-    function updateScopeSummary() {
-        const boxes = $('.scope-gs-cb');
-        const allOn = boxes.length > 0 && boxes.toArray().every(cb => cb.checked);
-        $('.scope-toggle-all-label').text(allOn ? 'Deselect all' : 'Select all');
-
-        const el = document.getElementById('scope-counts');
-        if (!el) return;
-
-        const checked = boxes.filter(':checked').toArray();
-        if (!checked.length) {
-            el.textContent = moopT('Select at least one organism above');
-            return;
-        }
-        const orgs = new Set(checked.map(c => c.dataset.org)).size;
-        const asms = new Set(checked.map(c => c.dataset.org + '|' + c.dataset.asm)).size;
-        const gs   = checked.length;
-        el.textContent = `${orgs} organism${orgs !== 1 ? 's' : ''}, `
-                       + `${asms} assembl${asms !== 1 ? 'ies' : 'y'}, `
-                       + `${gs} gene set${gs !== 1 ? 's' : ''} selected`;
     }
 
     // Build selectedScope object for AnnotationSearch from current tree state.
@@ -566,36 +403,15 @@ $(document).ready(function () {
 
     // ── Init ─────────────────────────────────────────────────────────────────
 
-    // Pre-filter scope tree when launched from a context page (organism/assembly/gene_set/group)
-    function applyContextScope(ctx) {
-        if (!ctx) return;
-
-        const keepOrgs = new Set(ctx.organisms || (ctx.organism ? [ctx.organism] : []));
-        if (!keepOrgs.size) return;
-
-        $('.scope-gs-cb').each(function () {
-            let keep = keepOrgs.has(this.dataset.org);
-            if (keep && ctx.assembly) keep = (this.dataset.asm === ctx.assembly);
-            if (keep && ctx.gene_set) keep = (this.dataset.gs  === ctx.gene_set);
-            this.checked = keep;
-        });
-
-        // Sync flat row highlights after context is applied
-        $('.scope-gs-full-row').each(function () {
-            $(this).toggleClass('selected', $(this).find('.scope-gs-cb').is(':checked'));
-        });
-        updateSearchSelectedPanel();
-        onScopeChange();
-    }
-
     $('#search-cancel-btn, #search-cancel-progress-btn').on('click', () => searchManager.cancel());
 
-    applyContextScope(typeof scopeContext !== 'undefined' ? scopeContext : null);
-    updateScopeSummary();
-    // Only load annotation types for pre-selected organisms; otherwise wait for user to select.
-    // applyContextScope() above already scheduled this load through onScopeChange(); cancel that
-    // and load once, now -- otherwise every page opened with a context requested it twice.
-    clearTimeout(sourcesLoadTimer);
+    // Pre-selects from the page the visitor came from (scopeContext), then hands every later
+    // change to onScopeChange. The context does not go through onScopeChange: Step 3 loads
+    // once, here, rather than once scheduled plus once now.
+    initScopeSelector({
+        context:  typeof scopeContext !== 'undefined' ? scopeContext : null,
+        onChange: onScopeChange,
+    });
     loadAnnotationSources();
 
     document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));

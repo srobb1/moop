@@ -17,60 +17,12 @@ require_once __DIR__ . '/../lib/expression_functions.php';
 $organism_data = $config->getPath('organism_data');
 $siteTitle     = $config->getString('siteTitle');
 
-$all_accessible = flattenSourcesList(getAccessibleGeneSets());
-
-// Build scope tree with deduplication: organism => assembly => [gene_sets]
-$scope_tree     = [];
-$organism_info  = [];
-$assembly_names = [];  // [organism][assembly] = human-readable name if set
-
-foreach ($all_accessible as $src) {
-    $org = $src['organism'];
-    $asm = $src['assembly'];
-    $gs  = $src['gene_set'] ?? '';
-
-    if (!isset($scope_tree[$org]))       $scope_tree[$org]       = [];
-    if (!isset($scope_tree[$org][$asm])) $scope_tree[$org][$asm] = [];
-    if ($gs !== '' && !in_array($gs, $scope_tree[$org][$asm], true)) {
-        $scope_tree[$org][$asm][] = $gs;
-    }
-
-    if (!isset($organism_info[$org])) {
-        $info = loadOrganismInfo($org, $organism_data) ?: [];
-        $organism_info[$org] = [
-            'genus'       => $info['genus']       ?? '',
-            'species'     => $info['species']     ?? '',
-            'common_name' => $info['common_name'] ?? '',
-        ];
-    }
-
-    if (!isset($assembly_names[$org][$asm])) {
-        $gn = $src['genome_name'] ?? '';
-        $assembly_names[$org][$asm] = genome_display_name($gn, $asm);   // '' for none / "NA"
-    }
-}
-
-ksort($scope_tree);
-foreach ($scope_tree as $org => &$asms) {
-    ksort($asms);
-    foreach ($asms as $asm => &$gene_sets) {
-        sort($gene_sets);
-    }
-}
-unset($asms, $gene_sets);
-
-// Pre-filter to incoming organisms when launched from a toolbox
-$scope_context = null;
-$incoming_orgs = $_POST['organisms'] ?? $_GET['organisms'] ?? null;
-if (!empty($incoming_orgs)) {
-    $incoming_orgs = array_values(array_filter(
-        is_array($incoming_orgs) ? $incoming_orgs : [$incoming_orgs],
-        fn($o) => isset($scope_tree[$o])
-    ));
-    if (!empty($incoming_orgs)) {
-        $scope_context = ['organisms' => $incoming_orgs];
-    }
-}
+// The organism selector: tree, display info and what to pre-select from where the visitor came
+// (organism / assembly / gene set / group / organisms[]). Shared with Annotation Search.
+require_once __DIR__ . '/../lib/scope_selector.php';
+$scope          = moop_scope_selector_data();
+$scope_context  = moop_scope_context_from_request($scope);
+$all_accessible = flattenSourcesList($scope['sources_by_group']);
 
 // Load annotation type colors and descriptions from config
 $metadata_path   = $config->getPath('metadata_path');
@@ -134,11 +86,6 @@ if ($anatomy_organisms) {
     $annotation_source_types[MOOPMART_ANATOMY_TYPE] = ['color' => 'success', 'sources' => [MOOPMART_ANATOMY_SOURCE]];
 }
 
-// Build organism → groups map for group chips in the flat organism list
-// Only the gene sets this visitor may see, like the home page: reading every entry put the names of
-// groups holding only private gene sets beside organisms the visitor can open.
-$organism_groups = moop_organism_groups_map(moop_visible_group_entries(getGroupData()));   // sorted, one order site-wide
-
 // Gene sets this visitor can open that have expression data, as "org|asm|gene_set" keys (the
 // source-key format). Step 4 offers "Send to Expression" only for these: a heatmap is one gene set.
 $expression_gene_sets = array_map(fn($gs) => "{$gs['organism']}|{$gs['assembly']}|{$gs['gene_set']}",
@@ -151,22 +98,19 @@ echo render_display_page(
     __DIR__ . '/pages/moopmart.php',
     [
         'ann_type_info'           => $ann_type_info,
-        'scope_tree'              => $scope_tree,
-        'organism_info'           => $organism_info,
-        'assembly_names'          => $assembly_names,
-        'organism_groups'         => $organism_groups,
+        'scope'                   => $scope,
         'annotation_source_types'  => $annotation_source_types,
         'anatomy_organisms'        => $anatomy_organisms,
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
-        // scope-selected-panel BEFORE moopmart.js: moopmart.js calls initScopeSelectedPanel().
-        'page_script'             => [moop_url_base() . "/js/modules/scope-selected-panel.js",
+        // scope-selector BEFORE moopmart.js: moopmart.js calls initScopeSelector().
+        'page_script'             => [moop_url_base() . "/js/modules/scope-selector.js",
                                       moop_url_base() . "/js/modules/moopmart.js"],
         'inline_scripts'          => [
             'const annotationSources = ' . json_encode($annotation_source_names) . ';',
             "const moopSite = '" . moop_url_base() . "';",
             "const siteTitle = '"        . addslashes($siteTitle)                . "';",
-            'const scopeContext = '      . json_encode($scope_context)           . ';',
+            'const scopeContext = '      . json_encode($scope_context, JSON_HEX_TAG | JSON_HEX_AMP) . ';',
             'const expressionGeneSets = ' . json_encode($expression_gene_sets) . ';',
             'const expressionMaxGenes = ' . MOOP_EXPRESSION_TOOL_MAX_GENES      . ';',
         ],

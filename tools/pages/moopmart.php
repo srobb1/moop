@@ -1,7 +1,7 @@
 <?php
 /**
  * MOOPmart — Data Exporter
- * Variables: $scope_tree, $organism_info, $organism_groups,
+ * Variables: $scope (lib/scope_selector.php),
  *            $annotation_source_names, $annotation_source_types
  */
 
@@ -141,146 +141,16 @@
   ?>
 
 
-  <?php
-  // Step 1 help, opened by the (i) on the header. Covers the whole selection mechanic —
-  // the filter, that an organism means all its gene sets, what the Details toggle narrows
-  // to, and the one-selection minimum. Grew past a single popover as the user added points,
-  // so it is a card modal like the other step overviews.
-  echo help_modal(
-      'mm-scope-help',
-      'How to select organisms',
-      [[
-          'heading' => '',
-          'cards'   => [
-              ['label' => 'Find them fast',
-               'text'  => 'Type in the box to filter by group, genus / species or common name, assembly, or gene set.'],
-              ['label' => 'Pick an organism',
-               'text'  => 'Selecting an organism includes all of its gene sets — the usual case.'],
-              ['label' => 'Or narrow with Details',
-               'text'  => 'Turn on the Details switch to expand each organism and choose a specific assembly or gene set instead.'],
-              ['label' => 'Pick at least one',
-               'text'  => 'You need at least one selection before the steps below will do anything.'],
-          ],
-      ]],
-      ['intro' => 'Choose which organisms — or specific gene sets — to pull features from.']
-  );
-  ?>
-
   <!-- ① Select Organisms -->
-  <div class="card mb-3 shadow-sm">
-    <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
-      <span class="step-badge me-2">1</span>
-      <span class="fw-semibold" style="font-size:0.9rem;"><?= t('Select organisms') ?></span>
-      <?= help_modal_trigger('mm-scope-help', '', 'How to select organisms') ?>
-      <button type="button" class="btn btn-sm btn-light py-0 ms-auto mm-toggle-all">
-        <span class="mm-toggle-all-label"><?= t('Select all') ?></span>
-      </button>
-    </div>
-    <?php /* Two columns, mirroring Annotation Search: the list on the left, what you have
-             actually picked on the right. Both capped at 180px so the pair reads as ONE
-             rectangle rather than a ragged pair -- the same reasoning (and the same number)
-             as search.php. The list height itself is deliberate; see .org-select-list in
-             css/display.css. */ ?>
-    <div class="row g-0">
-      <div class="col-lg-8 border-end d-flex flex-column">
-    <div class="px-2 pt-2 pb-1 border-bottom d-flex align-items-center gap-2">
-      <input type="text" class="form-control form-control-sm moop-input" id="mm-scope-filter"
-             placeholder="<?= t('Filter by group, organism, assembly, gene set…') ?>" autocomplete="off">
-      <div class="form-check form-switch mb-0 flex-shrink-0">
-        <input class="form-check-input" type="checkbox" role="switch" id="mm-scope-detail">
-        <label class="form-check-label small text-muted text-nowrap" for="mm-scope-detail"><?= t('Details') ?></label>
-      </div>
-    </div>
-    <div style="overflow-y:auto; max-height:180px; background:#fff;" id="mm-scope-list" class="mm-scope-detail-hidden">
-      <?php if (empty($scope_tree)): ?>
-        <p class="text-muted small p-3"><?= t('No accessible organisms found.') ?></p>
-      <?php else:
-        // How many gene-set rows each organism has, so a multi-gene-set organism shows one
-        // row in the simple view (with a "N gene sets" note) instead of N identical-looking
-        // rows — the extra rows only distinguish themselves once Details is on. See the
-        // representative-row logic below and the simple-view CSS at the bottom of the file.
-        $orgGsCount = [];
-        foreach ($scope_tree as $o => $asmList) {
-            $orgGsCount[$o] = array_sum(array_map('count', $asmList));
-        }
-        $seenOrg = [];
-        $rowIdx = 0;
-        foreach ($scope_tree as $organism => $assemblies):
-          $info   = $organism_info[$organism] ?? [];
-          $label  = trim(($info['genus'] ?? '') . ' ' . ($info['species'] ?? '')) ?: str_replace('_', ' ', $organism);
-          $cn     = $info['common_name'] ?? '';
-          $groups = $organism_groups[$organism] ?? [];
-          foreach ($assemblies as $asm => $gene_sets):
-            $an           = $assembly_names[$organism][$asm] ?? '';
-            $asmDisplay   = $an ? $an : $asm;
-            $asmAccession = $an ? $asm : '';
-            foreach ($gene_sets as $gs):
-              $rowIdx++;
-              $gsid = 'mm_gs_' . $rowIdx;
-              $searchSimple = strtolower("$label $cn " . implode(' ', $groups));
-              $searchDetail = strtolower("$asm $an $gs");
-              $search = $searchSimple . ' ' . $searchDetail;
-              // First row for this organism is the representative shown in simple view; the
-              // rest are hidden there and revealed by Details.
-              $isRep   = !isset($seenOrg[$organism]);
-              $seenOrg[$organism] = true;
-              $gsCount = $orgGsCount[$organism] ?? 1;
-      ?>
-      <div class="org-select-row mm-scope-row<?= $isRep ? '' : ' mm-scope-row-secondary' ?>"
-           data-org="<?= htmlspecialchars($organism) ?>"
-           data-search="<?= htmlspecialchars($search) ?>"
-           data-search-simple="<?= htmlspecialchars($searchSimple) ?>"
-           data-search-detail="<?= htmlspecialchars($searchDetail) ?>">
-        <?php /* label / cn / asm-display are already rendered as visible text in this row;
-                 they are repeated here so the Selected panel can be built from the checkboxes
-                 alone, without scraping sibling DOM. Same attribute set as search.php. */ ?>
-        <input type="checkbox" class="mm-gs-cb visually-hidden"
-               id="<?= $gsid ?>"
-               data-org="<?= htmlspecialchars($organism) ?>"
-               data-asm="<?= htmlspecialchars($asm) ?>"
-               data-gs="<?= htmlspecialchars($gs) ?>"
-               data-label="<?= htmlspecialchars($label) ?>"
-               data-cn="<?= htmlspecialchars($cn) ?>"
-               data-asm-display="<?= htmlspecialchars($asmDisplay) ?>">
-        <span class="org-groups flex-shrink-0">
-          <?php foreach ($groups as $g): ?>
-          <span class="org-group-chip" style="background:<?= moop_group_color($g) ?>"><?= htmlspecialchars($g) ?></span>
-          <?php endforeach; ?>
-        </span>
-        <span class="flex-grow-1 text-truncate" style="min-width:0;">
-          <em><?= htmlspecialchars($label) ?></em>
-          <?php if ($cn): ?><span class="text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($cn) ?></span><?php endif; ?>
-          <?php if ($isRep && $gsCount > 1): ?><span class="mm-scope-gs-count text-muted" style="font-size:0.78em;"> · <?= (int)$gsCount ?> gene sets</span><?php endif; ?>
-          <span class="mm-scope-row-detail text-muted" style="font-size:0.8em;"> · <?= htmlspecialchars($asmDisplay) ?><?php if ($asmAccession): ?> <span style="font-size:0.9em;">(<?= htmlspecialchars($asmAccession) ?>)</span><?php endif; ?> › <?= htmlspecialchars($gs ?: '(default)') ?></span>
-        </span>
-        <span class="org-check flex-shrink-0"><i class="fas fa-check text-success"></i></span>
-      </div>
-      <?php endforeach; endforeach; endforeach; ?>
-      <?php endif; ?>
-    </div>
-      </div><!-- /col-lg-8 -->
-
-      <div class="col-lg-4 d-flex flex-column">
-        <div class="px-2 py-1 border-bottom d-flex justify-content-between align-items-center"
-             style="background:#f8f9fa;">
-          <span class="small fw-semibold text-muted"><?= t('Selected') ?></span>
-          <span class="badge bg-secondary" id="mm-selected-count">0</span>
-        </div>
-        <?php /* Empty text says what to DO, not what will happen -- with nothing selected
-                 MOOPmart cannot build a list at all, so "none = all organisms" would be both
-                 wrong and an invitation to the query we least want run by accident. Same
-                 wording as search.php for the same reason. */ ?>
-        <div style="overflow-y:auto; max-height:180px; font-size:0.82rem;" id="mm-selected-panel">
-          <div class="text-muted small p-2 fst-italic"><?= t('None yet — pick at least one organism') ?></div>
-        </div>
-      </div>
-    </div><!-- /row -->
-
-    <div class="px-3 py-1 border-top" style="background:#f8f9fa; font-size:0.8rem;">
-      <span class="text-muted" id="mm-scope-counts"><?= t('Select at least one organism above') ?></span>
-      <div id="mm-scope-names" class="text-muted mt-1" style="font-size:0.78rem; font-style:italic;"></div>
-    </div>
-  </div>
+  <?php
+  $scope_opts = [
+      'step'       => '1',
+      'title'      => t('Select organisms'),
+      'help_intro' => 'Choose which organisms — or specific gene sets — to pull features from.',
+      'help_need'  => 'You need at least one selection before the steps below will do anything.',
+  ];
+  include __DIR__ . '/../../includes/scope_selector.php';
+  ?>
 
   <!-- ② Build Your List -->
   <div class="card mb-3 shadow-sm">
@@ -843,25 +713,6 @@
 
 <?php include_once __DIR__ . '/../../includes/ann_types_modal.php'; ?>
 
-<!-- Select-all-organisms warning modal -->
-<div class="modal fade" id="mm-select-all-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-warning">
-      <div class="modal-header bg-warning bg-opacity-10 py-2">
-        <h5 class="modal-title fw-bold"><i class="fa fa-exclamation-triangle text-warning me-2"></i><?= t('Select all organisms?') ?></h5>
-      </div>
-      <div class="modal-body">
-        <?= t_markup('This will select all %s across all organisms.', '<strong id="mm-select-all-count"></strong>') . "\n" ?>
-        <?= t('Searches across all organisms can take a while — consider selecting only the ones you need.') . "\n" ?>
-      </div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><?= t('Cancel') ?></button>
-        <button type="button" class="btn btn-warning" id="mm-select-all-confirm"><?= t('Select all') ?></button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Large-unfiltered-export warning: no Step 2 filter across many organisms -->
 <div class="modal fade" id="mm-big-export-modal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -883,19 +734,6 @@
 </div>
 
 <style>
-/* Simple/detail toggle for organism scope list.
-   Simple view (detail-hidden): one row per organism — hide the per-gene-set detail text
-   and the secondary rows, show the "N gene sets" note so the collapse is legible.
-   Detail view: reveal every gene-set row and its detail, hide the now-redundant count. */
-#mm-scope-list.mm-scope-detail-hidden .mm-scope-row-detail    { display: none; }
-#mm-scope-list.mm-scope-detail-hidden .mm-scope-row-secondary { display: none; }
-#mm-scope-list:not(.mm-scope-detail-hidden) .mm-scope-gs-count { display: none; }
-/* Filter matched the hidden assembly/gene-set text: reveal that one row's detail even in
-   simple view, so the user sees what their query matched. And when a representative row is
-   force-showing a specific gene set, hide its "N gene sets" note — the user filtered to one
-   gene set, so it should read as that single gene set, not as the collapsed organism. */
-#mm-scope-list.mm-scope-detail-hidden .mm-scope-row.mm-scope-detail-forced .mm-scope-row-detail { display: inline; }
-#mm-scope-list.mm-scope-detail-hidden .mm-scope-row.mm-scope-detail-forced .mm-scope-gs-count  { display: none; }
 /* Darker border on FASTA type radio buttons */
 #mm-fasta-options .form-check-input[type="radio"] { border-color: #6c757d; }
 /* Segmented pill toggles (Output format, Table layout) — the selected side fills teal.
