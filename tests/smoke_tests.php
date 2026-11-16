@@ -577,6 +577,19 @@ ok(($_ml->invoke($_t2, ['type' => 'link', 'label' => ['en' => 'B'], 'to' => ['to
    && $_ml->invoke($_t2, ['type' => 'link', 'label' => ['en' => 'M'], 'to' => ['tool' => 'moopmart']], 'en') === null
    && $_ml->invoke($_t2, ['type' => 'link', 'label' => ['en' => 'N'], 'to' => ['tool' => 'no_such_tool']], 'en') === null,
    'menu: a tool link resolves to its page; a switched-off or unknown tool is not shown');
+// A menu link can name another site the way content pages do ({simrbase}/...), so that site moving is
+// one setting (2026-11-16: planosphere's Ontology Browser link was a typed-out simrbase-dev address).
+$_tls = $_tnew(); $_tls->saveEditableConfig(['linked_sites' => ['simrbase' => 'https://sb.example.org/moop/']], $_td);
+$_tls = $_tnew();
+ok(ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'O'], 'to' => ['url' => '{simrbase}/tools/ontology_browser.php?o=PLANA']]]) === null
+   && ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'O'], 'to' => ['url' => '{simrbase}']]]) === null
+   && ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'O'], 'to' => ['url' => '{sim rbase}/x']]]) !== null
+   && ConfigManager::mainMenuProblem([['type' => 'link', 'label' => ['en' => 'O'], 'to' => ['url' => '{simrbase}x']]]) !== null,
+   'menu: a {site} link is valid only as {name} then / ? # or nothing');
+$_lk = $_ml->invoke($_tls, ['type' => 'link', 'label' => ['en' => 'O'], 'to' => ['url' => '{SimrBase}/tools/ontology_browser.php?o=PLANA']], 'en');
+ok(($_lk['href'] ?? '') === 'https://sb.example.org/moop/tools/ontology_browser.php?o=PLANA' && $_lk['external'] === true
+   && $_ml->invoke($_tls, ['type' => 'link', 'label' => ['en' => 'X'], 'to' => ['url' => '{nosuch}/x']], 'en') === null,
+   'menu: {simrbase} becomes the Linked sites address (trailing slash dropped); an unknown site drops the link');
 ok(($_menu($_t2)[0] ?? '') === 'annotation_search=Annotation Search' && !in_array('|', $_menu($_t2), true),
    'a switched-off tool leaves the menu, and its divider does not lead it');
 $_lsave = $_t2->saveEditableConfig(['tools_layout' => [

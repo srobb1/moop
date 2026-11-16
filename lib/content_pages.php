@@ -328,11 +328,12 @@ function moop_page_mark_current(string $html, string $slug): string {
 
 /**
  * The linked_sites setting (Site Configuration -> Linked sites): name => address, only the usable
- * ones (name: letters, digits, hyphens; address: http(s)://, no trailing slash).
+ * ones (name: letters, digits, hyphens; address: http(s)://, no trailing slash). $raw: that setting as a
+ * given ConfigManager holds it (the menu passes its own), else the site's.
  */
-function moop_linked_sites(): array {
+function moop_linked_sites(?array $raw = null): array {
     $out = [];
-    foreach (ConfigManager::getInstance()->getArray('linked_sites', []) as $name => $url) {
+    foreach ($raw ?? ConfigManager::getInstance()->getArray('linked_sites', []) as $name => $url) {
         $name = strtolower(trim((string) $name));
         $url  = rtrim(trim((string) $url), '/');
         if (preg_match('/^[a-z0-9][a-z0-9-]*$/', $name) && preg_match('#^https?://[^\s"\'<>]+$#i', $url)) $out[$name] = $url;

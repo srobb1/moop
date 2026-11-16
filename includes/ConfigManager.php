@@ -541,6 +541,17 @@ class ConfigManager
             } elseif (preg_match('#^https?://#i', $url)) {
                 $href = $url;
                 $external = true;
+            } elseif (preg_match('#^\{([a-z0-9][a-z0-9-]*)\}([/?\#].*)?$#i', $url, $m)) {
+                // Another MOOP site by name, as content pages write it: {simrbase}/tools/... The address comes
+                // from Site Configuration -> Linked sites, so that site moving is one setting. An unknown name
+                // drops the link (lib/content_pages.php moop_linked_sites()).
+                require_once __DIR__ . '/../lib/content_pages.php';
+                $sites = moop_linked_sites($this->getArray('linked_sites', []));
+                $name  = strtolower($m[1]);
+                if (isset($sites[$name])) {
+                    $href = $sites[$name] . ($m[2] ?? '');
+                    $external = true;
+                }
             }
         }
         $label = $this->menuLabel($item, $lang);
@@ -565,7 +576,8 @@ class ConfigManager
             if (isset($to['page']))    return is_string($to['page']) && (bool) preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', $to['page']);
             if (isset($to['tool']))    return is_string($to['tool']) && (bool) preg_match('/^[a-z0-9_]{1,40}$/', $to['tool']);
             if (isset($to['url']))     return is_string($to['url']) && mb_strlen($to['url']) <= 500
-                                              && (preg_match('#^/[^/\\\\]#', $to['url']) || preg_match('#^https?://[^\s"\'<>]+$#i', $to['url']));
+                                              && (preg_match('#^/[^/\\\\]#', $to['url']) || preg_match('#^https?://[^\s"\'<>]+$#i', $to['url'])
+                                                  || preg_match('#^\{[a-z0-9][a-z0-9-]*\}([/?\#][^\s"\'<>]*)?$#i', $to['url']));
             return false;
         };
         $keys = [];

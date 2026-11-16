@@ -73,7 +73,7 @@
             o.selected = true; sel.appendChild(o);
         }
         const url = el('input', { type: 'text', class: 'form-control form-control-sm' + (now === 'url' ? '' : ' d-none'),
-                                  placeholder: '/moop/… or https://…', 'aria-label': 'Address', style: 'max-width: 20rem;' });
+                                  placeholder: '/moop/…, https://… or {simrbase}/…', 'aria-label': 'Address', style: 'max-width: 20rem;' });
         url.value = item.to.url || '';
         sel.addEventListener('change', () => {
             const v = sel.value;
