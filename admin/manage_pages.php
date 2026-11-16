@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($original !== '' && $original !== $slug) {
             $go(['type' => 'danger', 'msg' => 'A page keeps its address once created.'], 'manage_pages.php?edit=' . rawurlencode($original));
         }
+        $before = $original !== '' ? moop_page_get($original) : null;   // its titles before this save (menu labels)
         $r = moop_page_save($page);
         if (!$r['ok']) {
             $_SESSION['pages_draft'] = $page;
@@ -59,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // and a label built from those dropped a retired language's menu label (found 2026-11-03 --
         // the page kept its Spanish, its menu entry lost it).
         $stored = moop_page_get($slug);
-        $new   = moop_menu_set_page($menu, $slug, $place, $stored['title'] ?? $page['title']);
+        $new   = moop_menu_set_page($menu, $slug, $place, $stored['title'] ?? $page['title'], $before['title'] ?? null);
         if ($new != $menu) {
             $m = moop_menu_save($new);
             if (empty($m['success'])) {

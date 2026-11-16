@@ -50,18 +50,30 @@ function moop_menu_without_page(array $menu, string $slug): array {
  * Put a page where its editor says: 'none' takes it out; 'top' or 'dd:<key>' keeps it where it
  * already is if it is already there (so its place within the menu is not lost on every save),
  * otherwise moves it to the END of the menu bar or of that drop-down. The link's label follows
- * the page title, in every language the page has one.
+ * the page title, in every language the page has one -- except a label changed on Manage Menu: with
+ * $old_titles (the page's titles BEFORE this save), a label that no longer equals the old title was
+ * written by hand and is kept. Without that, saving a page wiped Planosphere's indented labels
+ * ("  - Crash Course" -> "Crash Course", 2026-11-16).
  */
-function moop_menu_set_page(array $menu, string $slug, string $where, array $titles): array {
+function moop_menu_set_page(array $menu, string $slug, string $where, array $titles, ?array $old_titles = null): array {
     $label = array_filter(array_map('strval', $titles), fn($t) => trim($t) !== '');
+    $relabel = function ($now) use ($label, $old_titles): array {
+        if ($old_titles === null || !is_array($now)) return $label;
+        $out = $label;
+        foreach ($now as $lang => $text) {
+            $text = (string) $text;
+            if (trim($text) !== '' && $text !== (string) ($old_titles[$lang] ?? '')) $out[$lang] = $text;   // hand-written
+        }
+        return $out;
+    };
     $here  = moop_menu_page_place($menu, $slug);
     if ($where === $here && $where !== 'none') {
         // Same place: refresh the label only.
         foreach ($menu as &$item) {
-            if (($item['type'] ?? '') === 'link' && ($item['to']['page'] ?? null) === $slug) $item['label'] = $label;
+            if (($item['type'] ?? '') === 'link' && ($item['to']['page'] ?? null) === $slug) $item['label'] = $relabel($item['label'] ?? null);
             if (($item['type'] ?? '') === 'dropdown') {
                 foreach ($item['items'] as &$child) {
-                    if (($child['to']['page'] ?? null) === $slug) $child['label'] = $label;
+                    if (($child['to']['page'] ?? null) === $slug) $child['label'] = $relabel($child['label'] ?? null);
                 }
                 unset($child);
             }

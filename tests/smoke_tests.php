@@ -3899,6 +3899,11 @@ moop_page_save(['slug' => 'about', 'title' => ['en' => 'About'], 'body' => ['en'
 $_mlab = moop_menu_set_page([['type' => 'link', 'label' => ['en' => 'About us', 'es' => 'Acerca de'], 'to' => ['page' => 'about']]],
                             'about', 'top', moop_page_get('about')['title']);
 ok(($_mlab[0]['label'] ?? []) === ['en' => 'About', 'es' => 'Acerca de'], 'and its menu label keeps the retired Spanish title too');
+// A label changed on Manage Menu survives a page save; one still equal to the old title follows the new title.
+$_mhand = [['type' => 'link', 'label' => ['en' => '  - Crash Course', 'es' => 'Curso'], 'to' => ['page' => 'cc']]];
+ok((moop_menu_set_page($_mhand, 'cc', 'top', ['en' => 'Crash Course 2', 'es' => 'Curso 2'], ['en' => 'Crash Course', 'es' => 'Curso'])[0]['label'] ?? [])
+       === ['en' => '  - Crash Course', 'es' => 'Curso 2'],
+   'page save: a hand-written menu label is kept; one equal to the old title follows the new title');
 $_c = $_cprp->getValue($_cpcfg); unset($_c['languages'], $_c['languages_retired']); $_cprp->setValue($_cpcfg, $_c);
 
 // The visitor's language from their browser (cuttingclass step 5). Pure: header + the site's codes.
