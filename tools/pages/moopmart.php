@@ -251,17 +251,23 @@
             $ann_dropdown .= '</optgroup>';
         endforeach;
         $ann_dropdown .= '</select>';
+        // The first row may arrive filled in from a link (?annotation=...&annotation_source=...).
+        $_pf = $prefill_annotation ?? ['acc' => '', 'src' => ''];
+        $_pf_open = $_pf['acc'] !== '' || $_pf['src'] !== '';
+        $ann_dropdown_first = $_pf['src'] === '' ? $ann_dropdown
+            : str_replace('<option value="' . htmlspecialchars($_pf['src']) . '">',
+                          '<option value="' . htmlspecialchars($_pf['src']) . '" selected>', $ann_dropdown);
         ?>
         <div>
           <div class="browse-select-header browse-select-header--light mb-0" id="mm-ann-filter-header" role="button"
-               aria-expanded="false" aria-controls="mm-ann-filter-body"
+               aria-expanded="<?= $_pf_open ? 'true' : 'false' ?>" aria-controls="mm-ann-filter-body"
                data-bs-toggle="collapse" data-bs-target="#mm-ann-filter-body">
             <span class="d-flex align-items-center gap-2 w-100">
               <i class="fas fa-chevron-down browse-select-chevron"></i>
               <span class="text-uppercase fw-semibold section-eyebrow"><?= t('By Annotation') ?></span>
             </span>
           </div>
-          <div class="collapse" id="mm-ann-filter-body">
+          <div class="collapse<?= $_pf_open ? ' show' : '' ?>" id="mm-ann-filter-body">
             <div class="browse-select-panel">
               <p class="text-muted small mb-3">
                 Every <?= gloss('feature') ?> must satisfy <strong>all</strong> criteria (AND).
@@ -285,8 +291,8 @@
               <!-- Criteria rows -->
               <div id="mm-ann-criteria">
                 <div class="mm-ann-criterion row g-2 mb-2 align-items-center">
-                  <div class="col-sm-4"><?= $ann_dropdown ?></div>
-                  <div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="<?= t('e.g. GO:0006351') ?>"></div>
+                  <div class="col-sm-4"><?= $ann_dropdown_first ?></div>
+                  <div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="<?= t('e.g. GO:0006351') ?>" value="<?= htmlspecialchars($_pf['acc']) ?>"></div>
                   <div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="<?= t('e.g. transporter') ?>"></div>
                   <div class="col-sm-1"></div>
                 </div>

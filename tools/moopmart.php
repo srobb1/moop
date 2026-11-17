@@ -78,6 +78,16 @@ uksort($annotation_source_types, function ($a, $b) use ($ann_order) {
 $annotation_source_names = array_keys($annotation_source_names);
 sort($annotation_source_names);
 
+// A link can pre-fill the first annotation criterion: ?annotation=GO:0006629[&annotation_source=...]
+// (a GO term page sends visitors here). Only a plain accession, and only a source this page
+// lists; anything else is ignored, never echoed.
+$prefill_annotation = ['acc' => '', 'src' => ''];
+$_acc = trim((string) ($_GET['annotation'] ?? ''));
+if (preg_match('/^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/', $_acc)) $prefill_annotation['acc'] = $_acc;
+$_src = (string) ($_GET['annotation_source'] ?? '');
+if ($_src !== '' && in_array($_src, $annotation_source_names, true)) $prefill_annotation['src'] = $_src;
+unset($_acc, $_src);
+
 // Curated anatomical expression (e.g. PAGE) is offered as one more annotation COLUMN for the
 // organisms that have it. Not a filter source ($annotation_source_names): the filters query
 // organism.sqlite, and these terms live in their own file.
@@ -101,6 +111,7 @@ echo render_display_page(
         'scope'                   => $scope,
         'annotation_source_types'  => $annotation_source_types,
         'anatomy_organisms'        => $anatomy_organisms,
+        'prefill_annotation'       => $prefill_annotation,
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
         // scope-selector BEFORE moopmart.js: moopmart.js calls initScopeSelector().
