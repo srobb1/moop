@@ -765,7 +765,7 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'tools/retrieve_selected_sequences.php', 'tools/sequences_display.php',
         'api/anatomy_records_download.php', 'api/go_term_genes.php', 'api/v1/download.php', 'api/v1/annotations.php',
         'api/v1/go_term_genes.php', 'api/v1/region.php', 'api/v1/orthologs.php',
-        'api/v1/domain_genes.php', 'api/v1/pathway_genes.php', 'api/v1/gene_annotations.php',
+        'api/v1/domain_genes.php', 'api/v1/pathway_genes.php', 'api/v1/gene_annotations.php', 'api/v1/sequences.php',
     ],
 
     // ======== CLOUDFLARE TURNSTILE (bot protection) ========

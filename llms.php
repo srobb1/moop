@@ -54,17 +54,36 @@ Rules:
 - Plain GET requests, no login, no token. JSON unless a link says otherwise (format=md, format=tsv).
 - Start with the catalog: every other call takes `organism`, `assembly` and `gene_set` values from it.
   Never guess them.
-- 404 means "not found or not public" -- the same answer either way, on purpose. Do not retry it.
+- 404 means "not found or not public" -- the same answer either way, on purpose. Do not retry it, and do
+  not try other names to find out what exists.
 - Lists are capped and say so (a total next to the items shown). Report the cap; do not page around it.
-- Be gentle: requests are rate-limited per address, the downloads and gene-list calls most of all
-  (about 20 a minute). On HTTP 429, wait and slow down. Do not crawl the web pages.
 - Cite the site, and the data source the record names, when you use the data.
 - These api/v1 links are stable: they will not be renamed or removed.
+
+## Please be polite
+
+This is a research group's server, shared with the people using it in a browser. Use it the way a careful
+person would:
+
+- One request at a time. Wait for each answer before sending the next; never send requests in parallel.
+- Ask for what the person asked for -- not the whole site. Do not crawl, mirror or harvest.
+- Use the list calls: one request with up to 200 IDs, not 200 requests with one ID each.
+- For a whole gene set or genome, download its FASTA or GFF file once (links in the catalog) instead of
+  asking gene by gene.
+- Keep what you fetched; do not ask for the same thing twice in one task.
+- Stay well inside the limits: the downloads, sequences and gene-list calls allow about 20 requests a
+  minute per address, the other calls about 10 a second. On HTTP 429, stop and wait at least a minute.
+- Send a User-Agent that names your tool; a script should include a contact address.
+- Never try to get around a limit or a login (other addresses, other names, guessing IDs).
 
 ## Start here
 
 - [Catalog]({$api('catalog.php')}): every organism, assembly and gene set you may open, with complete links to each page and every download (genome, protein, transcript and CDS FASTA, GFF).
 - [Help for people]({$page('help.php?topic=ai-assistants')}): the same, written for the person using the assistant, with example questions.
+
+## Assemblies
+
+- [Assembly statistics]({$api('assembly.php?organism={organism}')}): for each assembly (or `assembly=` one): kind (genome or assembled transcripts), size, sequences, N50/L50, N90, longest, contig N50, GC and gap share; and per gene set the gene and transcript counts and BUSCO completeness.
 
 ## Genes
 
@@ -83,6 +102,7 @@ Rules:
 
 ## Sequences
 
+- [Sequences for a list of IDs]({$api('sequences.php?organism={organism}&ids={id1},{id2}:1-60&type=protein')}): FASTA (or `format=json`) for up to 200 IDs; `type=protein`, `transcript`, `cds` or `genomic`. A range `ID:start-end` gives a piece (1-based; amino acids on a protein). A gene gives its transcripts' (or proteins') sequences. `type=genomic` with `upstream=500&downstream=500` adds the flanks (up to 100,000 bp each, read 5'->3' along the gene); `flanks_only=1` gives only the flanks. Not on assemblies of transcripts (the assembly call says `kind`). At most 20 MB per call.
 - [Download a file]({$api('download.php?organism={organism}&assembly={assembly}&gene_set={gene_set}&filename=protein.aa.fa')}): a whole FASTA or GFF file. Take these links from the catalog rather than building them.
 - [Genome region]({$api('region.php?organism={organism}&assembly={assembly}&seqname={scaffold}&start={start}&end={end}')}): a piece of the genome sequence; `strand=-` for the reverse complement. Gene records give the coordinates.
 

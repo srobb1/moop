@@ -123,3 +123,9 @@ positional arrays). The gene-list GO endpoint, when built, takes go_sources from
   protein_features|all, go_sources=). First three list calls are heavy. Accession-first CROSS JOIN:
   the planner's own order took 10.8 s (walked the gene set), pinned it is 0.01 s.
   Still to build: sequences for an ID list, assembly stats/BUSCO, search paging.
+- 2026-11-17 night: `api/v1/sequences` (ID list, ID:start-end, type protein|transcript|cds|genomic,
+  upstream/downstream/flanks_only; Sequence Retrieval's own moop_retrieval_stream / moop_retrieve_genomic;
+  20 MB cap, heavy) and `api/v1/assembly` (assembly_stats.json or .fai fallback, kind, gene/transcript
+  counts, BUSCO). llms.txt gained "Please be polite". Permission test of every new endpoint, anonymous:
+  Tonatia (restricted) and Petromyzon's restricted gene set -> 404 / not_found, identical to a
+  nonexistent ID; admin sees them. Still to build: search paging.

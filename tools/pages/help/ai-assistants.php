@@ -18,7 +18,8 @@ $examples = [
     ['fa-tags',         t('Genes with a GO term'), t('Which genes in the newest Schmidtea mediterranea gene set are annotated with axon guidance (GO:0007411), including more specific terms?')],
     ['fa-puzzle-piece', t('Protein domains'),     t('Which genes in Schmidtea mediterranea and zebrafish have a thioredoxin domain? And which protein domains do these genes have: …')],
     ['fa-project-diagram', t('KEGG pathways'),    t('List the genes in the lysosome pathway in the newest Schmidtea mediterranea gene set. Which pathways is this gene in?')],
-    ['fa-file-alt',     t('Sequences'),           t('Give me the genome sequence 200 bases upstream of this gene.')],
+    ['fa-file-alt',     t('Sequences'),           t('Give me the protein sequences of these genes, and the 500 bases upstream of each.')],
+    ['fa-chart-bar',    t('Assemblies'),          t('How complete are the Schmidtea mediterranea gene sets (BUSCO), and what is each assembly’s N50?')],
 ];
 ?>
 
@@ -105,7 +106,7 @@ $examples = [
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
           <h3 class="h6 fw-semibold mb-1"><?= t('For scripts and pipelines') ?></h3>
-          <p class="text-muted small mb-0"><?= t('The guide lists the same plain web addresses that return JSON or tables, so a script can use them too. Requests are limited per address; for whole genomes or gene sets, download the files rather than asking gene by gene.') ?></p>
+          <p class="text-muted small mb-0"><?= t('The guide lists the same plain web addresses that return JSON or tables, so a script can use them too. Please be polite: one request at a time, gene lists in one request rather than one per gene, and whole genomes or gene sets as one file download. Requests are limited per address.') ?></p>
         </div>
       </div>
     </div>

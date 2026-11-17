@@ -18,7 +18,7 @@ require_once __DIR__ . '/functions_database.php';
 require_once __DIR__ . '/kegg.php';
 
 /**
- * The gene sets a call covers, each ['organism','assembly','gene_set','gene_set_id','db'].
+ * The gene sets a call covers, each ['organism','assembly','gene_set','gene_set_id','db','dir' (the gene set's folder)].
  * Organisms the visitor cannot open, or without a database, give nothing -- the same as a name that
  * does not exist. assembly / gene_set narrow only when exactly one organism is asked for.
  */
@@ -38,7 +38,7 @@ function moop_v1_scope(array $organisms, string $assembly = '', string $gene_set
         foreach ($sets as $s) {
             if ($one && $gene_set !== '' && $s['gene_set'] !== $gene_set) continue;
             $out[] = ['organism' => $org, 'assembly' => $s['assembly'], 'gene_set' => $s['gene_set'],
-                      'gene_set_id' => $s['gene_set_id'], 'db' => $db];
+                      'gene_set_id' => $s['gene_set_id'], 'db' => $db, 'dir' => $s['dir']];
         }
     }
     return $out;
