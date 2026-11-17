@@ -366,9 +366,22 @@ function moop_accessible_gene_sets_all($specific_organism = null, $specific_asse
         $cache_key = 'accessible_assemblies_cache_v2';   // v2: includes BLAST-only genomes
         $groups_mtime = file_exists($groups_file) ? filemtime($groups_file) : 0;
         $access_level = get_access_level();
+        // The cached list holds each gene set's DATABASE ids (gene_set_id, genome_id), and a
+        // pipeline reload renumbers them. Keyed on groups + level alone, a session that began
+        // before a reload kept the old ids and the ID search found nothing in that organism
+        // (Smed, reloaded 2026-11-16: SMED30002742 "not found" for a logged-in admin, 11-17).
+        // So the key also carries every organism.sqlite's mtime+size -- one stat each, cached
+        // by the kernel; the per-organism identity file cache uses the same fingerprint.
+        $dbs_fingerprint = '';
+        foreach (array_unique(array_column($groups_data, 'organism')) as $__org) {
+            $__st = @stat($config->getPath('organism_data') . "/$__org/organism.sqlite");
+            $dbs_fingerprint .= $__org . ':' . ($__st ? $__st['mtime'] . '.' . $__st['size'] : '-') . ';';
+        }
+        $dbs_fingerprint = md5($dbs_fingerprint);
 
         if (isset($_SESSION[$cache_key]) &&
             $_SESSION[$cache_key]['groups_mtime'] === $groups_mtime &&
+            ($_SESSION[$cache_key]['dbs_fingerprint'] ?? null) === $dbs_fingerprint &&
             $_SESSION[$cache_key]['access_level'] === $access_level) {
             return $_SESSION[$cache_key]['data'];
         }
@@ -504,8 +517,9 @@ function moop_accessible_gene_sets_all($specific_organism = null, $specific_asse
 
     if ($use_cache) {
         $_SESSION[$cache_key] = [
-            'groups_mtime' => $groups_mtime,
-            'access_level' => $access_level,
+            'groups_mtime'    => $groups_mtime,
+            'dbs_fingerprint' => $dbs_fingerprint,
+            'access_level'    => $access_level,
             'data'         => $organized,
         ];
     }
