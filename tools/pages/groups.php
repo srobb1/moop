@@ -208,8 +208,8 @@
                   $show_image = !empty($image_src);
                 ?>
                 <div class="col-md-6 col-lg-4 organism-card-col" data-filter-text="<?= htmlspecialchars(strtolower($organism . ' ' . $genus . ' ' . $species . ' ' . $common_name)) ?>">
-                   <?php /* Browse-only: "Refine selection" above decides the search. */ ?>
-                   <div class="organism-selector-card browse-only position-relative" data-organism="<?= htmlspecialchars($organism) ?>">
+                   <?php /* Browse-only (opens the organism): "Refine selection" above decides the search. */ ?>
+                   <div class="organism-selector-card position-relative" data-organism="<?= htmlspecialchars($organism) ?>">
                      <!-- Clickable card that links to organism page -->
 <a href="<?= moop_url_base() ?>/tools/organism.php?organism=<?= urlencode($organism) ?>&group=<?= urlencode($group_name) ?>" 
                      class="text-decoration-none organism-card-link">

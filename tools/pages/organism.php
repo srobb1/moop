@@ -48,6 +48,25 @@
               </div>
             </div>
           </form>
+          <?php if (($scope_gene_sets ?? 0) > 1): ?>
+          <?php /* "Refine selection", as on the group page, counting gene sets: closed, all
+                   selected, opening in Details so each gene set is a row. Replaces the pop-up
+                   tree (2026-11-16). */ ?>
+          <div class="mt-3">
+          <?php
+          $scope_opts = [
+              'title'        => t('Refine selection'),
+              'collapsible'  => true,
+              'start_all'    => true,
+              'details'      => true,
+              'summary_unit' => 'gene_set',
+              'help_intro'   => 'Choose which of this organism\'s gene sets the search looks in.',
+              'help_need'    => 'A search runs against what is selected here. Every gene set starts selected.',
+          ];
+          include __DIR__ . '/../../includes/scope_selector.php';
+          ?>
+          </div>
+          <?php endif; ?>
         </div>
       </div>
     </div>

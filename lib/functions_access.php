@@ -291,15 +291,13 @@ function resolveSourceSelection($organism, $assembly, $accessible_sources, $gene
 /**
  * How many assemblies and gene sets a search over these organisms would actually cover.
  *
- * For the note under the search box, which has to say what is being searched BEFORE the
- * user opens anything. The scope filter learns this from get_organism_hierarchy.php over
- * AJAX, so its numbers do not exist at page load -- but the page can compute them, and
- * cheaply, since getAccessibleGeneSets() is already session-cached.
+ * For the note under the search box, which has to say what is being searched before the
+ * user opens anything. Cheap: getAccessibleGeneSets() is already session-cached.
  *
- * Derived from getAccessibleGeneSets() -- the SAME source the scope modal reads -- and
- * deduplicated on accession|gene_set exactly as that endpoint does, because one gene set
+ * Derived from getAccessibleGeneSets() -- the same source the organism selector reads
+ * (lib/scope_selector.php) -- and deduplicated on accession|gene_set, because one gene set
  * appears once per group it belongs to. Counting the raw rows would announce more gene
- * sets than the modal then lists, and a note that disagrees with the control it points at
+ * sets than the selector lists, and a note that disagrees with the control it points at
  * is worse than no note.
  *
  * @param  array       $organisms organism names

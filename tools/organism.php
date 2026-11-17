@@ -217,8 +217,20 @@ if ($kegg_org_error || !empty($kegg_org['rows'])) {
     $display_config['page_script'][] = moop_url_base() . '/js/modules/kegg-pathways-table.js';
 }
 
+// "Refine selection" under the search box when this organism has more than one gene set the
+// visitor can open (includes/scope_selector.php); with one there is nothing to narrow.
+require_once __DIR__ . '/../lib/scope_selector.php';
+$scope = moop_scope_restrict(moop_scope_selector_data(), [$organism_name => true]);
+$scope_gene_sets = array_sum(array_map('count', $scope['tree'][$organism_name] ?? []));
+if ($scope_gene_sets > 1) {
+    array_unshift($display_config['page_script'], moop_url_base() . '/js/modules/scope-selector.js');
+}
+$display_config['inline_scripts'][] = 'const organismRefine = ' . ($scope_gene_sets > 1 ? 'true' : 'false') . ';';
+
 // Prepare data for content file
 $data = [
+    'scope' => $scope,
+    'scope_gene_sets' => $scope_gene_sets,
     'organism_name' => $organism_name,
     'organism_info' => $organism_info,
     // The template's "Groups this organism belongs to" reads it. It was never passed, so the

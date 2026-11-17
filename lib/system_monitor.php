@@ -70,7 +70,7 @@ function moop_monitor_class(string $script, array $heavy): string {
     if (in_array($script, $heavy, true)) return 'heavy';
     if (strpos($script, 'api/jbrowse2/') === 0) return 'jbrowse';
     if (strpos($script, 'api/') === 0) return 'api';
-    if (preg_match('#^tools/(annotation_search_ajax|get_annotation_sources_grouped|get_organism_hierarchy)\.php$#', $script)) return 'api';
+    if (preg_match('#^tools/(annotation_search_ajax|get_annotation_sources_grouped)\.php$#', $script)) return 'api';
     return 'page';
 }
 

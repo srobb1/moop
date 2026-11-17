@@ -64,11 +64,16 @@ foreach ($organisms as $organism) {
 
 // Configure display template
 $organism_list = implode(', ', array_map('htmlspecialchars', $organisms));
+
+// "Refine selection": the shared organism selector, limited to these organisms
+// (includes/scope_selector.php). It decides what the search covers; the cards are for browsing.
+require_once __DIR__ . '/../lib/scope_selector.php';
+$scope = moop_scope_restrict(moop_scope_selector_data(), array_fill_keys($organisms, true));
 $display_config = [
     'title' => 'Multi-Organism Search',
     'content_file' => __DIR__ . '/pages/multi_organism.php',
     'page_script' => [
-        moop_url_base() . "/js/modules/organism-utils.js",
+        moop_url_base() . "/js/modules/scope-selector.js",
         moop_url_base() . "/js/modules/tool-launch.js",
         moop_url_base() . "/js/multi-organism-search.js"
     ],
@@ -85,6 +90,7 @@ $display_config = [
 $data = [
     'organisms' => $organisms,
     'organism_list' => $organism_list,
+    'scope' => $scope,
     'config' => $config,
     'site' => $site,
     'images_path' => $images_path,

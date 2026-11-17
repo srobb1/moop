@@ -19,6 +19,8 @@
  *                        start_all   => true: every row starts selected
  *                        collapsible => true: a light bar (title + "Searching all N organisms"),
  *                                       closed by default, instead of the teal step header
+ *                        summary_unit => 'gene_set': the bar counts gene sets (one-organism page)
+ *                        details     => true: open in Details (each gene set its own row)
  *                single: mode => 'single'
  *                        selected     => 'org|asm|gs' to pre-select ('' for none)
  *                        filter       => text to pre-fill the filter with ('' for none)
@@ -219,7 +221,7 @@ echo help_modal(
             data-bs-toggle="collapse" data-bs-target="#scope-body" aria-expanded="false" aria-controls="scope-body">
       <i class="fa fa-chevron-down collapse-chevron"></i>
       <span class="fw-semibold small text-uppercase section-eyebrow"><?= $scope_opts['title'] ?></span>
-      <span class="text-muted small" id="scope-summary"></span>
+      <span class="text-muted small" id="scope-summary" data-unit="<?= htmlspecialchars((string)($scope_opts['summary_unit'] ?? 'organism')) ?>"></span>
     </button>
     <?= help_modal_trigger('scope-info-modal', '', 'How to select organisms') ?>
   <?php else: ?>
@@ -241,11 +243,11 @@ echo help_modal(
 
     <!-- Left: organism list -->
     <div class="col-lg-8 border-end d-flex flex-column">
-      <?php $scope_filter_row('', false); ?>
+      <?php $scope_details = !empty($scope_opts['details']); $scope_filter_row('', $scope_details); ?>
       <?php /* 180px is deliberate (feedback_scope_list_height_deliberate): a compact page, and
                the Selected panel beside it is capped at the same height so the card is one
                rectangle. */ ?>
-      <div style="overflow-y:auto; max-height:180px;" id="scope-org-list" class="scope-detail-hidden">
+      <div style="overflow-y:auto; max-height:180px;" id="scope-org-list" class="<?= $scope_details ? '' : 'scope-detail-hidden' ?>">
         <?php $scope_render_rows(); ?>
       </div>
     </div>

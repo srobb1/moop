@@ -136,6 +136,12 @@ function initScopeSelector(opts = {}) {
     function renderSummary(all, on) {
         const el = document.getElementById('scope-summary');
         if (!el) return;
+        if (el.dataset.unit === 'gene_set') {   // one organism: count its gene sets
+            el.textContent = !on.length ? moopT('Nothing selected — pick at least one gene set')
+                : on.length === all.length ? moopT('Searching all %d gene sets', all.length)
+                : moopT('Searching %d of %d gene sets', on.length, all.length);
+            return;
+        }
         const total = new Set(all.map((c) => c.dataset.org)).size;
         const n     = new Set(on.map((c) => c.dataset.org)).size;
         el.textContent = !n ? moopT('Nothing selected — pick at least one organism')

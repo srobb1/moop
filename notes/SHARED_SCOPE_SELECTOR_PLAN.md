@@ -41,7 +41,19 @@ Phase 2 whether it becomes the shared component in a modal or stays.
 - Verified with before/after probes per page (arrivals, picks, constraints, Reset, a real run each):
   identical except fewer rows (no per-group duplicates).
 
-Open: `js/modules/scope-filter.js` (the pop-up narrow-scope tree) is still its own selector.
+## ✅ PHASE 4 DONE 2026-11-16 — group, multi-organism and organism pages
+
+"Refine selection" (multi mode, `collapsible` + `start_all`) under the search box, closed by
+default, summary "Searching all N organisms" (organism page: `summary_unit => gene_set`, opens in
+Details, only when the organism has more than one gene set). `moop_scope_restrict()` limits it to
+the page's organisms (group: the assemblies the group holds). Its `scope()` / `organisms()` feed
+AnnotationSearch (`selectedScope`, `organismsVar`) and the toolbox. Organism cards are browse-only.
+Removed: js/modules/scope-filter.js (the pop-up tree), tools/get_organism_hierarchy.php,
+js/modules/organism-utils.js, the pop-up code in annotation-search.js.
+
+**One organism selector site-wide now.** Left over: the nginx rate-limit map and
+lib/system_monitor.php still name get_organism_hierarchy.php (harmless; change both together);
+groups.css still has the "In search" bar rules, now unused.
 Everything under this line is history.
 
 ---

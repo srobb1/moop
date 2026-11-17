@@ -25,16 +25,16 @@ class AnnotationSearch {
             scrollToResults: config.scrollToResults || false,
             extraAjaxParams: config.extraAjaxParams || {},
             noReadMoreButton: config.noReadMoreButton || false,
+            // Kept so existing callers need no change: the scope pop-up it switched off no
+            // longer exists (2026-11-16).
             noScopeFilter: config.noScopeFilter || false,
             // No "Searching N organisms. Narrow by ..." line under the box: the page shows what
             // is searched itself (the group page's "Refine selection" bar).
             noOrganismNote: config.noOrganismNote || false,
-            // {assemblies, gene_sets} from PHP, or null. The scope filter fetches the same
-            // hierarchy over AJAX, so this is the only source available before it is opened.
+            // {assemblies, gene_sets} from PHP, or null: what the note counts before anything is narrowed.
             scopeCounts: config.scopeCounts || null,
-            // Where "narrow by gene set" should send the user. Defaults to opening the
-            // scope modal; pages with noScopeFilter give an on-page anchor instead, so the
-            // link never offers a control that page does not have.
+            // An on-page anchor for "See the gene sets below" (assembly / gene-set pages);
+            // without one the note names what is searched and offers no link.
             scopeNoteTarget: config.scopeNoteTarget || null,
             // What the page is scoped to, for the single-gene-set wording. The assembly
             // page said "this organism's only gene set", which is wrong there -- the
@@ -81,13 +81,9 @@ class AnnotationSearch {
             // controls that behave the same look like they behave differently. The
             // filter button already shows a count badge when a filter is applied, so
             // the state is visible without a second icon to explain it.
-            const scopeBtn = this.config.noScopeFilter ? '' : `
-                    <!-- Scope filter button (organisms / assemblies / gene sets) -->
-                    <button type="button" class="btn btn-icon btn-scope-filter btn-outline-secondary"
-                            title="Scope Filter (Organisms / Assemblies / Gene Sets)"
-                            data-bs-toggle="tooltip" data-bs-placement="bottom">
-                        <i class="fa fa-sitemap"></i>
-                    </button>`;
+            // The scope pop-up (sitemap icon) is gone: every page narrows with the shared
+            // organism selector instead (js/modules/scope-selector.js, 2026-11-16).
+            const scopeBtn = '';
 
             const buttonGroup = `
                 <div class="search-controls d-flex gap-2 align-items-center ms-2">
@@ -106,9 +102,6 @@ class AnnotationSearch {
 
             form.find('.btn-advanced-filter').on('click', () => this.showFilterModal());
 
-            if (!this.config.noScopeFilter) {
-                form.find('.btn-scope-filter').on('click', () => this.showScopeFilterModal());
-            }
 
             const tooltipTriggerList = [].slice.call(form.find('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
@@ -137,13 +130,14 @@ class AnnotationSearch {
         // search box on every results page, so length here is a tax on every search.
         // "gene set" is a live link -- it opens the same modal the icon does, which is the
         // only affordance telling a first-time user that icon exists.
-        const narrow = moopTm('Narrow by %s or %s.', '<a href="#organismsSection">' + moopTh('organism') + '</a>',
-                              '<a href="#" class="scope-note-link">' + moopTh('gene set') + '</a>');
+        // The "narrow by organism / gene set" links opened the scope pop-up, which is gone; the
+        // pages that show this note narrow with their own on-page selector.
+        const narrow = '';
         // On a single-organism page there is no organism list to jump to, so offer only
         // the control that exists.
         const narrowGeneSetOnly = this.config.scopeNoteTarget
             ? moopTm('See the %s below.', `<a href="${this.config.scopeNoteTarget}">${moopTh('gene sets')}</a>`)
-            : moopTm('Narrow by %s.', '<a href="#" class="scope-note-link">' + moopTh('gene set') + '</a>');
+            : '';
 
         if (n > 1) {
             note.html(moopTm('Searching %s organisms.', `<strong>${n}</strong>`) + ' ' + narrow);
@@ -187,12 +181,6 @@ class AnnotationSearch {
             }
         }
 
-        // Delegated once per note render; .off() first so repeated renders do not stack
-        // handlers and open the modal N times.
-        note.off('click.scopeNote').on('click.scopeNote', '.scope-note-link', (e) => {
-            e.preventDefault();
-            this.showScopeFilterModal();
-        });
     }
 
     /**
@@ -289,21 +277,7 @@ class AnnotationSearch {
         filter.show();
     }
 
-    // ── Scope filter ─────────────────────────────────────────────────────────
-
-    showScopeFilterModal() {
-        const filter = new ScopeFilter({
-            sitePath: this.config.sitePath,
-            organisms: this.config.organismsVar,
-            selectedScope: this.selectedScope,
-            onApply: (selectedScope) => {
-                this.selectedScope = selectedScope;
-                this.updateScopeButtonState();
-                this.updateOrganismNote();   // the note counts scoped organisms now
-            }
-        });
-        filter.show();
-    }
+    // ── Scope (from the page's organism selector, as selectedScope) ─────────────
 
     /**
      * Gene sets currently in scope, as {included, total}.
@@ -326,27 +300,6 @@ class AnnotationSearch {
             }
         }
         return { included, total };
-    }
-
-    updateScopeButtonState() {
-        const form     = $(this.config.formSelector);
-        const scopeBtn = form.find('.btn-scope-filter');
-        if (!scopeBtn.length) return;
-
-        const { included, total } = this.countScopedGeneSets();
-        // "Filtered" means something is excluded. Everything-selected is the same as no
-        // filter at all, so the button stays in its resting state rather than claiming
-        // 49/49 is a filter.
-        if (total > 0 && included < total) {
-            scopeBtn.removeClass('btn-outline-secondary').addClass('btn-primary');
-            // Badge is tiny -- the bare number only. The "of N" lives in the tooltip.
-            scopeBtn.attr('title', `Scope Filter — searching ${included} of ${total} gene sets`);
-            scopeBtn.html(`<i class="fa fa-sitemap"></i><span class="badge badge-filter">${included}</span>`);
-        } else {
-            scopeBtn.removeClass('btn-primary').addClass('btn-outline-secondary');
-            scopeBtn.attr('title', 'Scope Filter (Organisms / Assemblies / Gene Sets)');
-            scopeBtn.html('<i class="fa fa-sitemap"></i>');
-        }
     }
 
     /**

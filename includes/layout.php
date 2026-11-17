@@ -277,7 +277,6 @@ if ($page_lang !== 'en'): require_once __DIR__ . '/../lib/i18n.php'; ?>
         <script src="<?= moop_asset_url('js/modules/field-help.js') ?>"></script>
         <script src="<?= moop_asset_url('js/modules/annotation-search.js') ?>"></script>
         <script src="<?= moop_asset_url('js/modules/advanced-search-filter.js') ?>"></script>
-        <script src="<?= moop_asset_url('js/modules/scope-filter.js') ?>"></script>
         <script src="<?= moop_asset_url('js/modules/feature-search.js') ?>"></script>
         <script src="<?= moop_asset_url('js/modules/navbar-id-search.js') ?>"></script>
         

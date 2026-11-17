@@ -26,6 +26,23 @@
               </div>
             </div>
           </form>
+          <?php if (!empty($scope['tree'])): ?>
+          <?php /* "Refine selection", just under the search box -- same as the group page:
+                   closed by default, every organism selected. Replaces the cards' "In search"
+                   bars and the pop-up tree (2026-11-16). */ ?>
+          <div class="mt-3">
+          <?php
+          $scope_opts = [
+              'title'       => t('Refine selection'),
+              'collapsible' => true,
+              'start_all'   => true,
+              'help_intro'  => 'Choose which of these organisms — or which of their gene sets — the search looks in.',
+              'help_need'   => 'A search runs against what is selected here. Every organism starts selected.',
+          ];
+          include __DIR__ . '/../../includes/scope_selector.php';
+          ?>
+          </div>
+          <?php endif; ?>
         </div>
       </div>
     </div>
@@ -59,19 +76,14 @@
       <div class="card shadow-sm">
         <div class="card-header text-white d-flex align-items-center justify-content-between flex-wrap gap-2" style="background-color:var(--moop-organism-header);">
           <div class="d-flex align-items-center gap-2">
-            <span class="text-uppercase fw-semibold section-eyebrow"><?= t('Selected Organisms') ?></span>
-            <span class="organism-count-badge"><span class="oc-n">0</span> <?= t('of') ?> <span class="oc-t">0</span></span>
+            <span class="text-uppercase fw-semibold section-eyebrow"><?= t('Organisms') ?></span>
             <?= field_help(
-                'Each card says whether that organism is In search or Not in search — click the bar to switch it. '
-                . 'Clicking the card itself opens that organism\'s own page instead.',
-                'Selected organisms'
+                'Click an organism to open its own page. To choose what the search covers, use Refine selection above.',
+                'Organisms'
             ) ?>
           </div>
           <div class="d-flex gap-2 align-items-center flex-wrap">
             <input type="text" id="organismFilter" class="form-control form-control-sm" placeholder="<?= t('Filter organisms...') ?>" style="width:180px; font-size:0.8rem;">
-            <button type="button" class="btn btn-sm btn-light toggleAllOrganisms" style="font-size:0.75rem;">
-              <span class="toggle-all-label"><?= t('Deselect all') ?></span>
-            </button>
           </div>
         </div>
         <div class="card-body">
@@ -88,13 +100,8 @@
                 $common_name = $organism_info['common_name'] ?? '';
             ?>
               <div class="col-md-6 col-lg-4 organism-card-col" data-filter-text="<?= htmlspecialchars(strtolower($organism . ' ' . $genus . ' ' . $species . ' ' . $common_name)) ?>">
+                <?php /* Browse-only (opens the organism): "Refine selection" above decides the search. */ ?>
                 <div class="organism-selector-card position-relative" data-organism="<?= htmlspecialchars($organism) ?>">
-                  <!-- Selection bar with checkbox -->
-                  <label class="organism-selection-bar">
-                    <input type="checkbox" class="organism-checkbox" data-organism="<?= htmlspecialchars($organism) ?>" checked>
-                    <span class="organism-selection-icon"></span>
-                    <span class="organism-selection-text"><span class="sel-on"><?= t('In search') ?></span><span class="sel-off"><?= t('Not in search') ?></span></span>
-                  </label>
                   <!-- Clickable card that links to organism page -->
                   <a href="<?= moop_url_base() ?>/tools/organism.php?organism=<?= urlencode($organism) ?>"
                      class="text-decoration-none organism-card-link">

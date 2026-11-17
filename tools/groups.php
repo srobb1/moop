@@ -195,7 +195,6 @@ $data = [
     'absolute_images_path' => $absolute_images_path,
     'organism_data' => $organism_data,
     'page_styles' => [
-        moop_url_base() . "/css/display.css",   // the organism selector's styles
         moop_url_base() . "/css/groups.css",
         moop_url_base() . "/css/advanced-search-filter.css"
     ],
