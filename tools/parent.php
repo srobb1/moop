@@ -88,16 +88,6 @@ $organism_info = $organism_context['info'];
 // Verify and get database path
 $db = verifyOrganismDatabase($organism_name, $organism_data);
 
-// Get accessible gene_sets for permission-based DB filtering
-$sources_by_group      = getAccessibleGeneSets($organism_name);
-$accessible_sources    = flattenSourcesList($sources_by_group);
-$accessible_gene_set_ids = array_values(array_filter(array_column($accessible_sources, 'gene_set_id')));
-
-// Security: Verify user has access to at least one gene_set for this organism
-if (empty($accessible_gene_set_ids)) {
-    die("Error: No accessible gene sets found for this organism.");
-}
-
 // Load annotation configuration using helper
 $annotation_config_file = "$metadata_path/annotation_config.json";
 $annotation_config = loadJsonFileRequired($annotation_config_file, "Missing annotation_config.json");
@@ -129,88 +119,28 @@ if (isset($annotation_config['annotation_types'])) {
     die("Error: annotation_config.json must use the new 'annotation_types' format. Legacy format is no longer supported.");
 }
 
-// Define parent types from organism.json feature_types, fallback to defaults
-$parents = ['gene', 'pseudogene'];
-if (!empty($organism_info['feature_types']['parents'])) {
-    $parents = $organism_info['feature_types']['parents'];
+// Which gene, for this visitor: access, the gene set, the gene above the ID asked for. One
+// function shared with the gene record (api/v1/gene.php), so the two can never disagree.
+require_once __DIR__ . '/../lib/gene_lookup.php';
+$__lookup = moop_gene_lookup($organism_name, (string)$uniquename,
+    (string)($_GET['assembly'] ?? ''), (string)($_GET['gene_set'] ?? ''));
+if ($__lookup['status'] === 'no_gene_sets') {
+    die("Error: No accessible gene sets found for this organism.");
 }
-
-// Which gene set. A link may name one (assembly + gene_set: search results, BLAST, the home
-// page ID search); without it, an ID found in more than one gene set the viewer can open is
-// ASKED about, never guessed -- before 2026-10-20 the page silently took whichever row came
-// first and ignored the parameters the links already sent.
-$req_assembly = (string)($_GET['assembly'] ?? '');
-$req_gene_set = (string)($_GET['gene_set'] ?? '');
-if ($req_assembly !== '' || $req_gene_set !== '') {
-    $scoped = array_filter($accessible_sources, fn($src) =>
-        // the accession, or the assembly's directory name (they differ for a few assemblies)
-        ($req_assembly === '' || in_array($req_assembly, [$src['genome_accession'] ?? null, $src['assembly'] ?? null], true))
-        && ($req_gene_set === '' || ($src['gene_set'] ?? '') === $req_gene_set));
-    $accessible_gene_set_ids = array_values(array_unique(array_filter(array_column($scoped, 'gene_set_id'))));
-}
-$__label = trim(($organism_info['genus'] ?? '') . ' ' . ($organism_info['species'] ?? '')) ?: str_replace('_', ' ', $organism_name);
-$__holding = moop_feature_gene_set_ids((string)$uniquename, $db, $accessible_gene_set_ids);
-if (!$__holding) {
-    // Not in any gene set the viewer may open (or not in the one named): the same 404 either
-    // way, so a link cannot be used to learn what a restricted gene set holds.
-    moop_gene_not_found((string)$uniquename, $organism_name, $__label);
-}
-if (count($__holding) > 1) {
-    $__choices = [];
-    foreach ($accessible_sources as $src) {
-        if (!in_array((int)($src['gene_set_id'] ?? 0), $__holding, true)) continue;
-        $accession = $src['genome_accession'] ?? $src['assembly'];
-        $__choices["$accession/{$src['gene_set']}"] = [
-            'assembly_label' => assembly_label($src['genome_name'] ?? '', $accession),
-            'gene_set'       => $src['gene_set'],
-            'url'            => moop_url_base() . "/tools/parent.php?organism=" . urlencode($organism_name)
-                              . '&uniquename=' . urlencode((string)$uniquename)
-                              . '&assembly=' . urlencode($accession) . '&gene_set=' . urlencode($src['gene_set']),
-        ];
-    }
+if ($__lookup['status'] === 'choose') {
     echo render_display_page(__DIR__ . '/pages/gene_choose_gene_set.php', [
-        'uniquename' => (string)$uniquename, 'organism_label' => $__label,
-        'choices' => array_values($__choices), 'site' => $site,
+        'uniquename' => (string)$uniquename, 'organism_label' => $__lookup['label'],
+        'choices' => $__lookup['choices'], 'site' => $site,
     ], 'Choose a gene set');
     exit;
 }
-$accessible_gene_set_ids = $__holding;   // the one gene set; everything below reads only it
-
-// Get ancestors for the feature
-$ancestors = getAncestors($uniquename, $db, $accessible_gene_set_ids);
-
-// Save the highest ancestor with type in $parents in these variables
-[$ancestor_feature_id, $ancestor_feature_uniquename, $ancestor_feature_type] = ['', '', ''];
-
-if (count($ancestors) == 1) {
-    // self only, no parents
-    $ancestor = $ancestors[0];
-    $ancestor_feature_id = $ancestor['feature_id'];
-    $ancestor_feature_type = $ancestor['feature_type'];
-    $ancestor_feature_uniquename = $ancestor['feature_uniquename'];
-    $ancestor_parent_feature_id = $ancestor['parent_feature_id'];
-} elseif (count($ancestors) > 1) {
-    // self, plus at least one ancestor
-    foreach ($ancestors as $ancestor) {
-        $ancestor_feature_id = $ancestor['feature_id'];
-        $ancestor_feature_type = $ancestor['feature_type'];
-        $ancestor_feature_uniquename = $ancestor['feature_uniquename'];
-        $ancestor_parent_feature_id = $ancestor['parent_feature_id'];
-        if (in_array($ancestor_feature_type, $parents)) {
-            // Stop: we reached our valid parent type for a page
-            break;
-        }
-    }
+if ($__lookup['status'] !== 'ok') {
+    moop_gene_not_found((string)$uniquename, $organism_name, $__lookup['label'] ?? '');
 }
-
-// Performing SQL query to get info associated with found Parent ID
-$row = getFeatureById($ancestor_feature_id, $db, $accessible_gene_set_ids);
-
-// Get all info about Highest Parent
-if (empty($row)) {
-    moop_gene_not_found((string)$uniquename, $organism_name,
-        trim(($organism_info['genus'] ?? '') . ' ' . ($organism_info['species'] ?? '')) ?: str_replace('_', ' ', $organism_name));
-}
+$row                         = $__lookup['row'];
+$accessible_gene_set_ids     = $__lookup['gene_set_ids'];
+$accessible_sources          = $__lookup['accessible_sources'];
+$ancestor_feature_uniquename = $__lookup['ancestor_uniquename'];
 
 $feature_id = $row['feature_id'];
 $feature_uniquename = $row['feature_uniquename'];
@@ -610,29 +540,8 @@ if ($download_expression && $__expr_data && $__expr_data['values']) {
 // on any other organism this is two file checks and nothing more.
 require_once __DIR__ . '/../lib/anatomy_expression.php';
 require_once __DIR__ . '/../lib/crosswalk.php';
-$page_section = null;
-if (moop_crosswalk_open($organism_name) || moop_page_open($organism_name)) {
-    $__self    = array_merge([$feature_uniquename], array_column($children, 'feature_uniquename'));
-    // A page whose ids are crosswalk ACCESSIONS (a dd_v6 gene, say) first reaches its reference
-    // gene(s), so it shows the same records as that gene -- not only ones curated on its own ids.
-    $__refs    = [];
-    foreach (moop_crosswalk_genes($organism_name, $__self) as $__rows) $__refs = array_merge($__refs, array_column($__rows, 'ref_id'));
-    $__members = moop_crosswalk_members($organism_name, array_merge($__self, $__refs));
-    $__accs    = array_merge($__self, array_column($__members, 'accession'));
-    $__cur     = moop_page_for_accessions($organism_name, $__accs);
-    $__ids     = [];
-    foreach ($__cur as $__r) array_push($__ids, $__r['term_id'], $__r['stage_id'], $__r['specimen_id']);
-    $page_section = [
-        'curations' => $__cur,
-        'labels'    => moop_ontology_labels($__ids, moop_ontology_by_purpose('anatomy'))
-                     + moop_ontology_labels(array_column($__cur, 'evidence_id'), moop_ontology_by_purpose('evidence')),
-        'aka'       => array_values(array_filter($__members, fn($m) => !in_array($m['accession'], $__self, true))),
-        'name'      => (string) (moop_crosswalk_sources()[$organism_name]['name'] ?? ''),
-        'source'    => (string) (moop_page_sources()[$organism_name]['source'] ?? ''),
-        'source_url'=> (string) (moop_page_sources()[$organism_name]['source_url'] ?? ''),
-    ];
-    if (!$page_section['curations'] && !$page_section['aka']) $page_section = null;
-}
+// One function, shared with the gene record (api/v1/gene.php): lib/anatomy_expression.php.
+[$page_section, $__accs] = moop_gene_page_section($organism_name, $feature_uniquename, array_column($children, 'feature_uniquename'));
 
 // Gene images (in situ, single-cell plots, movies), grouped by ANALYSIS. Looked up on the same
 // id list as the anatomical expression above (this gene, its children, and every crosswalk

@@ -705,3 +705,6 @@ a.badge:hover {
 .kegg-card-toggle { font: inherit; }
 .kegg-card-toggle .kegg-chevron { transition: transform 0.2s; font-size: 0.8em; }
 .kegg-card-toggle:not(.collapsed) .kegg-chevron { transform: rotate(90deg); }
+
+/* The gene record menu (Download, beside Copy): normal text, not the ID bar's monospace. */
+.feature-header-id .dropdown-menu { font-family: var(--bs-body-font-family); font-size: 0.9rem; }

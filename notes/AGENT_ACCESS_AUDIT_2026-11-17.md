@@ -58,3 +58,17 @@ typed ID as "Not found").
 6. **Search JSON is one organism per call** and up to ~1.4 MB at the cap; no `limit`/`offset`.
 7. **BLAST / Primer BLAST**: POST + queue. Out of scope for v1 — guide points to the page.
 8. **Turnstile** (off until launch) must not cover the documented links when it goes on.
+
+## Built (step 2, 2026-11-17)
+
+| api/v1 | What | Rate class |
+|---|---|---|
+| `catalog.php` | what this visitor can open, with complete links | api |
+| `download.php` | a gene-set / assembly file (= download_file.php) | heavy |
+| `gene.php?organism&id[&assembly&gene_set][&format=md][&download=1]` | the gene record: gene, location, transcripts + proteins, naming, annotations (merged across transcripts, capped 100/type), expression calls, orthologs + family, PAGE anatomy, also-known-as | api (~0.1 s) |
+| `annotations.php?organism&uniquename` | full annotation CSV (= download_annotations.php) | heavy |
+
+Gene record shares its lookup (`lib/gene_lookup.php`, `moop_gene_lookup()`) and PAGE section
+(`moop_gene_page_section()`, lib/anatomy_expression.php) with the gene page -- both moved out of
+tools/parent.php; 39 gene-page renders (public / network / admin) byte-identical before and after.
+The gene page's overview has a Download menu (Markdown / JSON). Gaps 4–6 above still open.

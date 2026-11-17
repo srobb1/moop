@@ -161,6 +161,19 @@
                             title="Copy this summary as plain text, ready to paste into notes">
                         <i class="fa fa-copy"></i> <span class="copy-label"><?= t('Copy') ?></span>
                     </button>
+                    <?php // The gene record (api/v1/gene.php): this page as a file, for notes or for an agent.
+                    $__rec = moop_url('api/v1/gene.php?' . http_build_query(['organism' => $organism_name,
+                        'id' => $feature_uniquename, 'assembly' => $genome_accession, 'gene_set' => $gene_set_name, 'download' => 1])); ?>
+                    <span class="dropdown">
+                        <button type="button" class="feature-header-copy dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"
+                                title="<?= t('Download this gene\'s record: everything on this page, as one file') ?>">
+                            <i class="fa fa-download"></i> <?= t('Download') ?>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="<?= htmlspecialchars($__rec . '&format=md') ?>"><?= t('Gene record (Markdown, to read)') ?></a></li>
+                            <li><a class="dropdown-item" href="<?= htmlspecialchars($__rec) ?>"><?= t('Gene record (JSON, for scripts and AI agents)') ?></a></li>
+                        </ul>
+                    </span>
                     <?= help_modal_trigger('gene-page-help', '', 'Help: what this page shows') ?>
                     <?php /* Declared, not shown — the title bar already says which gene this is;
                              this exists so the page declares its PURPOSE for the router. */ ?>

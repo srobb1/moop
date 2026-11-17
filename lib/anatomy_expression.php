@@ -682,3 +682,38 @@ function moop_page_visible_organism(): string {
     }
     return '';
 }
+
+/**
+ * A gene's PAGE section: curated anatomical expression and its ids elsewhere ("also known as"), from
+ * the crosswalk (Rosetta Stone) and the PAGE curations. Shared by the gene page (tools/parent.php,
+ * where it was built inline until 2026-11-17) and the gene record (api/v1/gene.php).
+ *
+ * The crosswalk finds every accession mapped to this gene or its transcripts; curations recorded on
+ * any of them are listed. A gene whose ids are crosswalk ACCESSIONS (a dd_v6 gene, say) first reaches
+ * its reference gene(s), so it shows the same records as that gene -- not only ones curated on its
+ * own ids. Organisms without these files: two file checks and nothing more.
+ *
+ * @return array{0: ?array, 1: ?array}  [the section (null when it has nothing), every accession
+ *         looked at (null when the organism has neither file) -- the gene images use the same list]
+ */
+function moop_gene_page_section(string $organism, string $gene_id, array $child_ids): array {
+    if (!moop_crosswalk_open($organism) && !moop_page_open($organism)) return [null, null];
+    $self = array_merge([$gene_id], $child_ids);
+    $refs = [];
+    foreach (moop_crosswalk_genes($organism, $self) as $rows) $refs = array_merge($refs, array_column($rows, 'ref_id'));
+    $members = moop_crosswalk_members($organism, array_merge($self, $refs));
+    $accs    = array_merge($self, array_column($members, 'accession'));
+    $cur     = moop_page_for_accessions($organism, $accs);
+    $ids     = [];
+    foreach ($cur as $r) array_push($ids, $r['term_id'], $r['stage_id'], $r['specimen_id']);
+    $section = [
+        'curations' => $cur,
+        'labels'    => moop_ontology_labels($ids, moop_ontology_by_purpose('anatomy'))
+                     + moop_ontology_labels(array_column($cur, 'evidence_id'), moop_ontology_by_purpose('evidence')),
+        'aka'       => array_values(array_filter($members, fn($m) => !in_array($m['accession'], $self, true))),
+        'name'      => (string) (moop_crosswalk_sources()[$organism]['name'] ?? ''),
+        'source'    => (string) (moop_page_sources()[$organism]['source'] ?? ''),
+        'source_url'=> (string) (moop_page_sources()[$organism]['source_url'] ?? ''),
+    ];
+    return [(!$section['curations'] && !$section['aka']) ? null : $section, $accs];
+}
