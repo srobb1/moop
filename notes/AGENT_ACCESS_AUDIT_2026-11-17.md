@@ -92,3 +92,14 @@ New:
 - [ ] Data Exporter as a capped GET
 
 Then step 3: generated llms.txt (+ llm.txt), help page for people, thin SKILL.md, {simrbase} pointers.
+
+## GO sources (2026-11-17)
+
+Four GO sources in every organism checked: EggNOG2GO, PANTHER2GO, OMA2GO, InterPro2GO. One list,
+`lib/go_sources.php` (keys eggnog / panther / oma / interpro, label, meaning). API only -- the website
+stays as it is (Sofia). `go_sources=panther` (or a comma list) on `api/v1/gene.php` and
+`api/v1/go_term_genes.php`; every GO term / gene is flagged with its `sources`. The gene record lists a
+GO term ONCE with all its sources (was once per source). `moop_go_term_gene_list()` gained optional
+source filter + flag; without them its SQL is unchanged (website output byte-identical, checked).
+`api/v1/go_term_genes.php` is now a real endpoint with named fields (was a wrapper returning
+positional arrays). The gene-list GO endpoint, when built, takes go_sources from the start.

@@ -265,37 +265,52 @@ function moop_go_counts_by_gene_set(string $term, array $scope = []): array {
  * $gs_row: the gene set's row from getAccessibleGeneSets() -- the caller has checked access.
  * Returns ['genes' => [[uniquename, name, description, [matched GO ids, up to $show], n matched], ...],
  *          'labels' => [GO id => name], 'total' => n] or ['error' => ...]. Read-only.
+ *
+ * $source_names (api/v1, lib/go_sources.php): only annotations from these annotation_source_name
+ * values; [] matches nothing. $with_sources: each gene row gets a 6th element, the source names its
+ * matching annotations came from. With neither, the query is exactly the term page's.
  */
-function moop_go_term_gene_list(array $gs_row, string $term, bool $sub, int $show = 3): array {
+function moop_go_term_gene_list(array $gs_row, string $term, bool $sub, int $show = 3,
+                                ?array $source_names = null, bool $with_sources = false): array {
     require_once __DIR__ . '/moopmart_functions.php';
     if (!preg_match('/^GO:\d{7}$/', $term)) return ['error' => 'not a GO term'];
     $db_file = organism_db_path($gs_row['organism']);
     if (!is_file($db_file)) return ['error' => 'no database for this organism'];
     $ids = json_encode($sub ? moopmartMoreSpecificTerms($term) : [$term]);
     // The gene's own annotations and its direct children's -- two halves so each keeps its index.
+    // Source: joined only when asked for (filter or flag), so the term page's query is unchanged.
+    $by_src  = $source_names !== null || $with_sources;
+    $src_col = $by_src ? ', ans.annotation_source_name AS src' : '';
+    $src_jn  = $by_src ? ' JOIN annotation_source ans ON ans.annotation_source_id = a.annotation_source_id' : '';
+    $src_wh  = $source_names !== null ? ' AND ans.annotation_source_name IN (SELECT value FROM json_each(?))' : '';
     $sql = "WITH hit AS (
-                SELECT f.feature_id AS gene, a.annotation_accession AS acc FROM feature f
-                  JOIN feature_annotation fa ON fa.feature_id = f.feature_id JOIN annotation a ON a.annotation_id = fa.annotation_id
-                 WHERE f.gene_set_id = ? AND f.feature_type IN ('gene', 'pseudogene') AND a.annotation_accession IN (SELECT value FROM json_each(?))
+                SELECT f.feature_id AS gene, a.annotation_accession AS acc$src_col FROM feature f
+                  JOIN feature_annotation fa ON fa.feature_id = f.feature_id JOIN annotation a ON a.annotation_id = fa.annotation_id$src_jn
+                 WHERE f.gene_set_id = ? AND f.feature_type IN ('gene', 'pseudogene') AND a.annotation_accession IN (SELECT value FROM json_each(?))$src_wh
                 UNION
-                SELECT f.feature_id, a.annotation_accession FROM feature f JOIN feature c ON c.parent_feature_id = f.feature_id
-                  JOIN feature_annotation fa ON fa.feature_id = c.feature_id JOIN annotation a ON a.annotation_id = fa.annotation_id
-                 WHERE f.gene_set_id = ? AND f.feature_type IN ('gene', 'pseudogene') AND a.annotation_accession IN (SELECT value FROM json_each(?)))
-            SELECT f.feature_uniquename, f.feature_name, f.feature_description, group_concat(DISTINCT hit.acc)
+                SELECT f.feature_id, a.annotation_accession$src_col FROM feature f JOIN feature c ON c.parent_feature_id = f.feature_id
+                  JOIN feature_annotation fa ON fa.feature_id = c.feature_id JOIN annotation a ON a.annotation_id = fa.annotation_id$src_jn
+                 WHERE f.gene_set_id = ? AND f.feature_type IN ('gene', 'pseudogene') AND a.annotation_accession IN (SELECT value FROM json_each(?))$src_wh)
+            SELECT f.feature_uniquename, f.feature_name, f.feature_description, group_concat(DISTINCT hit.acc)"
+         . ($with_sources ? ", group_concat(DISTINCT hit.src)" : '') . "
               FROM hit JOIN feature f ON f.feature_id = hit.gene GROUP BY hit.gene ORDER BY f.feature_uniquename";
     try {
         $db = new PDO('sqlite:' . $db_file, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
         $st = $db->prepare($sql);
         $gid = (int) $gs_row['gene_set_id'];
-        $st->execute([$gid, $ids, $gid, $ids]);
+        $src_ids = $source_names !== null ? json_encode(array_values($source_names)) : null;
+        $st->execute($source_names !== null ? [$gid, $ids, $src_ids, $gid, $ids, $src_ids] : [$gid, $ids, $gid, $ids]);
         $genes = [];
         $used  = [];
-        foreach ($st->fetchAll(PDO::FETCH_NUM) as [$id, $name, $desc, $accs]) {
+        foreach ($st->fetchAll(PDO::FETCH_NUM) as $r) {
+            [$id, $name, $desc, $accs] = $r;
             $accs = explode(',', (string) $accs);
             sort($accs);
             $keep = array_slice($accs, 0, $show);
             foreach ($keep as $a) $used[$a] = true;
-            $genes[] = [$id, (string) $name, (string) $desc, $keep, count($accs)];
+            $g = [$id, (string) $name, (string) $desc, $keep, count($accs)];
+            if ($with_sources) { $src = explode(',', (string) ($r[4] ?? '')); sort($src); $g[] = $src; }
+            $genes[] = $g;
         }
         return ['genes' => $genes, 'labels' => moop_ontology_labels(array_keys($used), ['GO']), 'total' => count($genes)];
     } catch (Throwable $e) {

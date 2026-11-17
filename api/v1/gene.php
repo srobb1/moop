@@ -8,6 +8,8 @@
  *                above it (also accepted: uniquename, the gene page's name for it)
  *     assembly, gene_set  (optional) when the ID is in more than one gene set
  *     format     json (default) | md
+ *     go_sources (optional) only GO terms from these sources: eggnog | panther | oma | interpro,
+ *                comma-separated (lib/go_sources.php). Each GO term is listed once with 'sources'.
  *
  * Answers: 200 the record; 404 not found (also for anything this visitor may not open -- the same
  * answer, so the endpoint never confirms that restricted data exists); 300 the ID is in more than
@@ -23,7 +25,7 @@
 
 include_once __DIR__ . '/../../tools/tool_init.php';
 foreach (['parent_functions', 'gene_lookup', 'gff_gene_model', 'fasta_index', 'extract_search_helpers',
-          'expression_functions', 'clade_homologs', 'crosswalk', 'anatomy_expression', 'functions_display'] as $__lib) {
+          'expression_functions', 'clade_homologs', 'crosswalk', 'anatomy_expression', 'functions_display', 'go_sources'] as $__lib) {
     require_once __DIR__ . "/../../lib/$__lib.php";
 }
 
@@ -55,6 +57,10 @@ $fail = function (int $code, string $message, array $extra = []) use ($format) {
 };
 
 if ($organism === '' || $id === '') $fail(400, 'organism and id are required.');
+$go_src = moop_go_sources_param((string) ($_GET['go_sources'] ?? ''));   // lib/go_sources.php
+if ($go_src['unknown']) {
+    $fail(400, 'Unknown go_sources: ' . implode(', ', $go_src['unknown']) . '. Use: ' . implode(', ', array_keys(moop_go_sources())) . '.');
+}
 
 $L = moop_gene_lookup($organism, $id, $assembly, $gene_set);
 if ($L['status'] === 'choose') {
@@ -121,15 +127,25 @@ $annotations = [];
 foreach (getAllAnnotationsForFeatures($ann_ids, $db) as $by_type) {
     foreach ($by_type as $type => $rows) {
         foreach ($rows as $a) {
-            $acc = (string) $a['annotation_accession'];
-            $key = $a['annotation_source_name'] . "\x1f" . $acc;
+            $acc   = (string) $a['annotation_accession'];
+            $is_go = (bool) preg_match('/^GO:\d{7}$/', $acc);
+            // A GO term is ONE entry however many sources assign it, flagged with each (go_sources=
+            // keeps only some). Everything else: one entry per (source, accession), as before.
+            $go_key = $is_go ? (moop_go_source_key((string) $a['annotation_source_name']) ?? (string) $a['annotation_source_name']) : null;
+            if ($is_go && $go_src['keys'] !== null && !in_array($go_key, $go_src['keys'], true)) continue;
+            $key = $is_go ? $acc : $a['annotation_source_name'] . "\x1f" . $acc;
+            if ($is_go && isset($annotations[$type][$key]) && !in_array($go_key, $annotations[$type][$key]['sources'], true)) {
+                $annotations[$type][$key]['sources'][] = $go_key;
+                $annotations[$type][$key]['source']   .= '; ' . $a['annotation_source_name'];
+            }
             if (!isset($annotations[$type][$key])) {
                 $base = trim((string) $a['annotation_accession_url']);
                 $item = ['source' => $a['annotation_source_name'], 'accession' => $acc,
                          'description' => $a['annotation_description'],
                          'score' => is_numeric($a['score']) ? $a['score'] + 0 : $a['score'],
                          'url' => $base !== '' ? $base . urlencode($acc) : null, 'on' => []];
-                if (preg_match('/^GO:\d{7}$/', $acc)) {
+                if ($is_go) {
+                    $item['sources']   = [$go_key];
                     $item['term_page'] = moop_public_url('tools/ontology_term.php?' . $q(['o' => 'GO', 'id' => $acc]));
                 }
                 $annotations[$type][$key] = $item;
@@ -207,6 +223,7 @@ $record = [
     'naming'      => $naming,
     'transcripts' => $transcripts,
     'annotations' => (object) $ann_out,
+    'go_sources'  => ['applied' => $go_src['keys'] ?? 'all', 'legend' => moop_go_sources_legend()],
     'expression'  => $expression,
     'orthologs_related_species'   => $cap($orthologs, 'orthologs'),
     'gene_family_related_species' => $cap($family, 'gene_family'),
