@@ -688,7 +688,7 @@ sub protein_features_text {
     # the location and the sorting signal are separate DeepLoc 2 outputs: said apart, so a signal for one
     # place ("nuclear localization signal") does not read as the reason for another ("cytoplasm")
     my @signals = map { my $signal = $_; lc $signal } split /\|/, $where->{signals};
-    push @parts, 'location: ' . join(' or ', map { my $place = $_; lc $place } split /\|/, $where->{places}) . ' (DeepLoc 2)';
+    push @parts, 'location: ' . join(' and ', map { my $place = $_; lc $place } split /\|/, $where->{places}) . ' (DeepLoc 2)';
     push @parts, (@signals == 1 ? 'sorting signal: ' : 'sorting signals: ') . join(', ', @signals) . ' (DeepLoc 2)';
   }
   return join('; ', @parts);
