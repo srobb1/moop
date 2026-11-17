@@ -833,7 +833,7 @@ check(($source{G8}[3] // '') eq 'none' && ($source{G8}[0] // '') eq 'None' && ($
       'unnamed G8: a "none" provenance row -- it has hits (a DUF domain) that no step could use', $p->('G8'));
 check(($name{G57} // '') eq 'None' && ($source{G57}[1] // '') eq 'None: no hits (no similarity hit in any database searched, no OMA ortholog in any species, '
       . 'no InterProScan homology match); a short protein, 80 aa; expressed: a transcript matches it in adult gill (Trinity) (99% identity over 100% of the protein); in veliger larvae (97% identity over 98% of the protein); '
-      . 'predicted: signal peptide (SignalP 6); 1 transmembrane helix (DeepTMHMM); location cell membrane (DeepLoc 2: signal peptide, transmembrane domain)',
+      . 'predicted: signal peptide (SignalP 6); 1 transmembrane helix (DeepTMHMM); location: cell membrane (DeepLoc 2); sorting signals: signal peptide, transmembrane domain (DeepLoc 2)',
       'unnamed G57: short, expressed, and its predicted features (no name from them)', $p->('G57'));
 {
   my %decision = read_decisions("$out/naming_decisions.tsv");

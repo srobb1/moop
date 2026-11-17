@@ -675,8 +675,8 @@ sub longest_member {
   return $longest;
 }
 
-# "signal peptide (SignalP 6); 2 transmembrane helices (DeepTMHMM); located: extracellular (DeepLoc 2: signal
-# peptide)" -- what is predicted, positives only; '' when nothing is
+# "signal peptide (SignalP 6); 2 transmembrane helices (DeepTMHMM); location: extracellular (DeepLoc 2);
+# sorting signal: signal peptide (DeepLoc 2)" -- what is predicted, positives only; '' when nothing is
 sub protein_features_text {
   my ($group) = @_;
   my $protein = longest_member($group) // return '';
@@ -685,8 +685,11 @@ sub protein_features_text {
   push @parts, "$tm_helices{$protein} transmembrane " . ($tm_helices{$protein} == 1 ? 'helix' : 'helices') . ' (DeepTMHMM)'
     if $tm_helices{$protein};
   if (my $where = $location{$protein}) {
-    push @parts, 'location ' . join(' or ', map { my $place = $_; lc $place } split /\|/, $where->{places})
-               . ' (DeepLoc 2: ' . join(', ', map { my $signal = $_; lc $signal } split /\|/, $where->{signals}) . ')';
+    # the location and the sorting signal are separate DeepLoc 2 outputs: said apart, so a signal for one
+    # place ("nuclear localization signal") does not read as the reason for another ("cytoplasm")
+    my @signals = map { my $signal = $_; lc $signal } split /\|/, $where->{signals};
+    push @parts, 'location: ' . join(' or ', map { my $place = $_; lc $place } split /\|/, $where->{places}) . ' (DeepLoc 2)';
+    push @parts, (@signals == 1 ? 'sorting signal: ' : 'sorting signals: ') . join(', ', @signals) . ' (DeepLoc 2)';
   }
   return join('; ', @parts);
 }
