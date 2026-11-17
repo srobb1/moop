@@ -18,10 +18,8 @@ the fixes below. Fixed on the way: the Data Exporter ignored ?organism/assembly/
 Search's warning read "select all 77 gene sets organisms"; the counts line was glued English.
 Dropped: the Data Exporter's organism-names line under the counts (the Selected panel shows them).
 
-**Not dead, not touched:** `js/modules/scope-filter.js` (`ScopeFilter`, loaded site-wide by
-includes/layout.php) is a FOURTH selector -- the "narrow scope" modal tree AnnotationSearch
-opens on pages without `noScopeFilter` (organism, group, multi-organism pages). Decide in
-Phase 2 whether it becomes the shared component in a modal or stays.
+(The pop-up "narrow scope" tree, `js/modules/scope-filter.js`, was a fourth selector; replaced
+and removed in Phase 4, below.)
 
 ## ✅ PHASES 2 + 3 DONE 2026-11-16 — Retrieve Sequences, BLAST, Primer BLAST on single mode
 
@@ -51,9 +49,14 @@ AnnotationSearch (`selectedScope`, `organismsVar`) and the toolbox. Organism car
 Removed: js/modules/scope-filter.js (the pop-up tree), tools/get_organism_hierarchy.php,
 js/modules/organism-utils.js, the pop-up code in annotation-search.js.
 
-**One organism selector site-wide now.** Left over: the nginx rate-limit map and
-lib/system_monitor.php still name get_organism_hierarchy.php (harmless; change both together);
-groups.css still has the "In search" bar rules, now unused.
+**One organism selector site-wide now. Nothing left over:** the endpoint is out of the nginx
+rate-limit map and moop_monitor_class() (live config re-installed 2026-11-16), and groups.css
+lost the "In search" strip rules (cards' computed styles identical).
+
+Deliberately NOT part of this: the Downloads page's file tree (organism → assembly → gene set →
+file checkboxes) — a different job, kept as its own component (see "The actual landscape" below).
+
+## ✅ PLAN COMPLETE 2026-11-16 (155ed173, a67b2a2e, e8d3e83f, 57274e7e)
 Everything under this line is history.
 
 ---
@@ -108,7 +111,7 @@ side currently wins.
       highlights text the current query never matched.
       **The two selectors are now behaviourally identical.** Verified in a browser on both:
       "GCA_0339" → 1 row / 1 mark, "NV2" → 1 row / 1 mark, cleared → 85 rows / 0 marks.
-- [ ] **Class + markup unification.** The panel is shared; everything around it is not, so
+- [x] **Class + markup unification — DONE in Phase 1 (155ed173).** The panel is shared; everything around it is not, so
       the drift can continue. Eight paired names for the same things
       (`.mm-scope-row`/`.scope-gs-full-row`, `.mm-gs-cb`/`.scope-gs-cb`, …), and the row
       markup is duplicated INLINE — 65 lines in moopmart.php, 68 in search.php, neither an
@@ -120,7 +123,7 @@ side currently wins.
 
 ---
 
-Status: **recommended, not built.** Raised by the user 2026-07-23: "should we break out
+Status (2026-07-23, history): recommended, not built. Raised by the user 2026-07-23: "should we break out
 the code and use it in both places?" Yes — and the evidence is that a fix just had to be
 made twice and one copy was missed.
 
