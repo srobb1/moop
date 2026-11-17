@@ -72,3 +72,22 @@ Gene record shares its lookup (`lib/gene_lookup.php`, `moop_gene_lookup()`) and 
 (`moop_gene_page_section()`, lib/anatomy_expression.php) with the gene page -- both moved out of
 tools/parent.php; 39 gene-page renders (public / network / admin) byte-identical before and after.
 The gene page's overview has a Download menu (Markdown / JSON). Gaps 4–6 above still open.
+
+## Still to build (task list, 2026-11-17)
+
+Quick -- a thin api/v1 name over a GET endpoint that already works:
+- [ ] ID search (`api/feature_search.php`)
+- [ ] Rosetta Stone / ID translation (`tools/crosswalk.php … download=tsv`)
+- [ ] genes with a GO term (`api/go_term_genes.php`)
+- [ ] ontology term search + children (`api/ontology_terms.php`, `api/ontology_children.php`)
+- [ ] genome region sequence (`api/get_sequence.php`)
+
+New:
+- [ ] keyword / annotation-ID search across organisms, with limit/offset
+- [ ] gene LISTS: GO terms, orthologs, annotations for many genes at once (capped) -- the biggest gap
+- [ ] sequences for a list of IDs, and subsequences (`ID:1-60`), GET, capped
+- [ ] assembly statistics + BUSCO (assembly_stats.json, busco.json)
+- [ ] KEGG pathways: for a gene, for a gene list, genes in a pathway
+- [ ] Data Exporter as a capped GET
+
+Then step 3: generated llms.txt (+ llm.txt), help page for people, thin SKILL.md, {simrbase} pointers.
