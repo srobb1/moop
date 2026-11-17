@@ -16,6 +16,8 @@ $examples = [
     ['fa-exchange-alt', t('Translate IDs'),       t('Translate these Schmidtea mediterranea IDs into the other assemblies and transcriptomes, as a table: …')],
     ['fa-sitemap',      t('Orthologs'),           t('For this list of genes, which have orthologs in human or mouse, and what are they called?')],
     ['fa-tags',         t('Genes with a GO term'), t('Which genes in the newest Schmidtea mediterranea gene set are annotated with axon guidance (GO:0007411), including more specific terms?')],
+    ['fa-puzzle-piece', t('Protein domains'),     t('Which genes in Schmidtea mediterranea and zebrafish have a thioredoxin domain? And which protein domains do these genes have: …')],
+    ['fa-project-diagram', t('KEGG pathways'),    t('List the genes in the lysosome pathway in the newest Schmidtea mediterranea gene set. Which pathways is this gene in?')],
     ['fa-file-alt',     t('Sequences'),           t('Give me the genome sequence 200 bases upstream of this gene.')],
 ];
 ?>
@@ -29,7 +31,7 @@ $examples = [
       </h1>
     </div>
     <div class="card-body p-4">
-      <p class="mb-2"><?= t('An AI assistant that can read web pages (Claude, ChatGPT, Perplexity and others) can look things up here for you: genes, their annotations, orthologs, ID translations and sequences.') ?></p>
+      <p class="mb-2"><?= t('An AI assistant that can read web pages (Claude, ChatGPT, Perplexity and others) can look things up here for you: genes, their annotations, protein domains, KEGG pathways, orthologs, ID translations and sequences.') ?></p>
       <p class="text-muted mb-0"><?= t('It reads a short guide written for assistants, which tells it how to ask the site for data instead of reading whole web pages.') ?></p>
     </div>
   </div>

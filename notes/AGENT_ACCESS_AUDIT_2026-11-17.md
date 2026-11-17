@@ -117,3 +117,9 @@ positional arrays). The gene-list GO endpoint, when built, takes go_sources from
   has none yet).
 - Still to add to both when built: gene-list annotations (domains, GO, DeepLoc), sequences for a
   list, assembly stats/BUSCO, KEGG, search paging.
+- 2026-11-17 late: domains + KEGG (lib/annotation_genes.php): `api/v1/domain_genes` (domains= / name=,
+  match=any|all, several organisms), `api/v1/pathway_genes` (pathway= / name=), `api/v1/pathways`
+  (gene set or organism table, cached), `api/v1/gene_annotations` (gene list, type=domains|pathways|go|
+  protein_features|all, go_sources=). First three list calls are heavy. Accession-first CROSS JOIN:
+  the planner's own order took 10.8 s (walked the gene set), pinned it is 0.01 s.
+  Still to build: sequences for an ID list, assembly stats/BUSCO, search paging.

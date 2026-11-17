@@ -74,6 +74,13 @@ Rules:
 - [Translate IDs]({$api('translate.php?organism={organism}&ids={id1},{id2}')}): the same genes under their other IDs (other assemblies, older transcriptomes, array probes). Gene or transcript IDs; a gene ID is translated through its transcripts (`via` says which). Up to 500 IDs; `format=tsv`. With `organism` alone: which ID sources exist.
 - [Orthologs for a gene list]({$api('orthologs.php?organism={organism}&ids={id1},{id2}')}): orthologs in related species, up to 200 IDs; `family=1` adds the rest of each gene family; `format=tsv`.
 
+## Protein domains and KEGG pathways
+
+- [Annotations for a gene list]({$api('gene_annotations.php?organism={organism}&ids={id1},{id2}&type=domains')}): chosen kinds of annotation for up to 200 genes: `type=domains`, `pathways`, `go`, `protein_features` (DeepLoc's predicted location IN THE CELL, signal peptides, transmembrane helices -- not tissue), or `all`; comma-separate several. `go_sources=` as for the gene record; `format=tsv`.
+- [Genes with protein domains]({$api('domain_genes.php?organism={organism}&domains={PF00085}')}): genes carrying any of the domains (Pfam PF..., InterPro IPR..., SMART, CDD, PROSITE; up to 50). `name=thioredoxin` finds domains by name instead. `match=all` keeps genes with every listed domain. `organism` takes up to 20 names, comma-separated; with one organism, `assembly` and `gene_set` narrow it. At most 2,000 genes per gene set; `format=tsv`.
+- [KEGG pathways of a gene set]({$api('pathways.php?organism={organism}&assembly={assembly}&gene_set={gene_set}')}): every pathway with its gene count and KOs; find a pathway's id by name here. Without `gene_set`: every gene set of the organism, counts per gene set.
+- [Genes in a KEGG pathway]({$api('pathway_genes.php?organism={organism}&assembly={assembly}&gene_set={gene_set}&pathway={map04142}')}): genes in the pathway(s) or module(s) (`04142`, `ko04142` and `map04142` all work; modules `M00001`). `name=lysosome` finds pathways by name. Same options as domain_genes. KEGG assignments come from eggNOG; `score` above 1 means eggNOG offered several KOs for the gene.
+
 ## Sequences
 
 - [Download a file]({$api('download.php?organism={organism}&assembly={assembly}&gene_set={gene_set}&filename=protein.aa.fa')}): a whole FASTA or GFF file. Take these links from the catalog rather than building them.
