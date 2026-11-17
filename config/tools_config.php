@@ -198,12 +198,12 @@ return [
         'description'     => 'Explore an ontology as a tree, with a page for every term',
         'btn_class'       => 'btn-tool-teal',
         'url_path'        => '/tools/ontology_browser.php',
-        // From an organism / assembly / gene set page it opens GO with the gene counts limited to
+        // From an organism / assembly / gene set / group page it opens GO with the gene counts limited to
         // that data (moop_ob_scope(), lib/ontology_browser.php).
-        'context_params'  => ['organism', 'assembly', 'gene_set'],
+        'context_params'  => ['organism', 'assembly', 'gene_set', 'group'],
         // Only where an ontology with a link tree is built (lib/ontologies.php): menu entry and page.
         'available_if'    => 'moop_ontology_browser_available',
-        'pages'           => ['organism', 'assembly', 'gene_set'],
+        'pages'           => ['organism', 'assembly', 'gene_set', 'group'],
     ],
 
     'primer_maker' => [

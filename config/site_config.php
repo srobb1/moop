@@ -362,7 +362,7 @@ return [
                     // its own copy of the curations, the search is switched off) lists a term's records;
                     // {id} = the term, {rel} = the relationships the count followed. A site with the
                     // search switched on links its own. Update the host when SIMRbase moves.
-                    'records_url' => 'https://simrbase-dev.stowers.org/moop/tools/anatomy_search.php?organism=Schmidtea_mediterranea&term={id}&rel={rel}'],
+                    'records_url' => '{simrbase}/tools/anatomy_search.php?organism=Schmidtea_mediterranea&term={id}&rel={rel}'],
     ],
 
     // ======== Time zone ========

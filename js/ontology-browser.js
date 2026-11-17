@@ -84,7 +84,10 @@
   // The organism / assembly / gene set the GO counts are limited to (moop_ob_scope()), kept on every request.
   function scopeQuery() {
     var sc = obConfig.scope || {}, q = "";
-    Object.keys(sc).forEach(function (k) { q += "&" + encodeURIComponent(k) + "=" + encodeURIComponent(sc[k]); });
+    Object.keys(sc).forEach(function (k) {
+      if (Array.isArray(sc[k])) sc[k].forEach(function (v) { q += "&" + encodeURIComponent(k + "[]") + "=" + encodeURIComponent(v); });
+      else q += "&" + encodeURIComponent(k) + "=" + encodeURIComponent(sc[k]);
+    });
     return q;
   }
 

@@ -162,11 +162,12 @@ function moop_ob_browser_url(string $prefix, array $extra = []): string {
 }
 
 /**
- * The data the gene counts are limited to: ?organism=X[&assembly=Y[&gene_set=Z]] -- the context
- * the organism, assembly and gene set pages hand their tools (config/tools_config.php). Checked
+ * The data the gene counts are limited to: ?organism=X[&assembly=Y[&gene_set=Z]] or ?group=G -- the
+ * context the organism, assembly, gene set and group pages hand their tools (config/tools_config.php). Checked
  * against the gene sets THIS visitor may see; anything else is dropped, so a scope can never reveal
  * or select hidden data. [] = everything the visitor can see.
- * Returns ['organism', 'assembly', 'gene_set', 'label'] (assembly / gene_set '' when not narrowed).
+ * Returns ['group', 'organism', 'assembly', 'gene_set', 'label'] ('' when not narrowed); a group scope
+ * also has 'keys' = [organism => [assembly/gene_set => true]], its gene sets.
  * Every tree and term link carries it (moop_ob_term_url), so browsing stays inside it.
  */
 function moop_ob_scope(): array {
@@ -174,6 +175,33 @@ function moop_ob_scope(): array {
     if ($scope !== null) return $scope;
     $scope = [];
     $org = trim((string) ($_GET['organism'] ?? ''));
+    // A group page: that group's gene sets (groups are set per assembly / gene set, so a group can
+    // hold only some of an organism's gene sets -- the access list keyed by group says which).
+    $group = trim((string) ($_GET['group'] ?? ''));
+    // The home, group and multi-organism pages send their tools the visitor's current selection
+    // as organisms[] (POST, js/modules/tool-launch.js -- "Refine selection" included); links keep it
+    // as GET organisms[]=. Names the visitor cannot see are dropped.
+    $list = $_POST['organisms'] ?? $_GET['organisms'] ?? [];
+    $list = array_values(array_unique(array_filter(array_map('trim', is_array($list) ? $list : explode(',', (string) $list)))));
+    if ($org === '' && $list) {
+        $all = [];
+        foreach (getAccessibleGeneSets() as $by_org) foreach ($by_org as $o => $rows) foreach ($rows as $r) $all[$o][$r['assembly'] . '/' . $r['gene_set']] = true;
+        $keys = array_intersect_key($all, array_flip($list));
+        if (!$keys) return $scope;
+        ksort($keys);
+        $names = array_map(fn($o) => str_replace('_', ' ', $o), array_keys($keys));
+        $label = count($names) <= 3 ? implode(', ', $names) : t_plain('%d organisms', count($names));
+        if ($group !== '') $label = $group . ' (' . $label . ')';
+        return $scope = ['group' => $group, 'organisms' => array_keys($keys), 'organism' => '', 'assembly' => '', 'gene_set' => '',
+                         'label' => $label, 'keys' => $keys];
+    }
+    if ($org === '' && $group !== '') {
+        $rows = getAccessibleGeneSets()[$group] ?? [];
+        if (!$rows) return $scope;
+        $keys = [];
+        foreach ($rows as $o => $list) foreach ($list as $r) $keys[$o][$r['assembly'] . '/' . $r['gene_set']] = true;
+        return $scope = ['group' => $group, 'organism' => '', 'assembly' => '', 'gene_set' => '', 'label' => $group, 'keys' => $keys];
+    }
     if ($org === '' || !preg_match('/^[A-Za-z0-9_.-]+$/', $org)) return $scope;
     $asm = trim((string) ($_GET['assembly'] ?? ''));
     $gs  = trim((string) ($_GET['gene_set'] ?? ''));
@@ -187,14 +215,15 @@ function moop_ob_scope(): array {
     $label = str_replace('_', ' ', $org);
     if ($asm !== '') $label .= ' › ' . (($first['genome_name'] ?? '') !== '' ? $first['genome_name'] : $asm);
     if ($gs !== '')  $label .= ' › ' . $gs;
-    return $scope = ['organism' => $org, 'assembly' => $asm, 'gene_set' => $gs, 'label' => $label];
+    return $scope = ['group' => '', 'organism' => $org, 'assembly' => $asm, 'gene_set' => $gs, 'label' => $label];
 }
 
-/** The scope as link parameters (only the set ones). */
+/** The scope as link parameters (only the set ones; 'organisms' is a list -> organisms[]=). */
 function moop_ob_scope_params(): array {
     $s = moop_ob_scope();
-    return array_filter(['organism' => $s['organism'] ?? '', 'assembly' => $s['assembly'] ?? '', 'gene_set' => $s['gene_set'] ?? ''],
-                        fn($v) => $v !== '');
+    return array_filter(['organisms' => $s['organisms'] ?? [], 'group' => $s['group'] ?? '', 'organism' => $s['organism'] ?? '',
+                         'assembly' => $s['assembly'] ?? '', 'gene_set' => $s['gene_set'] ?? ''],
+                        fn($v) => $v !== '' && $v !== []);
 }
 
 /**
@@ -297,6 +326,13 @@ function moop_ob_records_link(string $prefix, string $org, string $id, string $r
         return moop_url('tools/anatomy_search.php') . '?' . http_build_query(['organism' => $org, 'term' => $id, 'rel' => $rel]);
     }
     $tpl = (string) (ConfigManager::getInstance()->getArray('ontology_browser', [])[$prefix]['records_url'] ?? '');
+    // "{simrbase}/tools/..." -- the address comes from Site Configuration -> Linked sites, so a site
+    // moving is one setting there (lib/content_pages.php), not an address typed into this template.
+    if (preg_match('/^\{([a-z0-9][a-z0-9-]*)\}(\/.*)$/i', $tpl, $m)) {
+        require_once __DIR__ . '/content_pages.php';
+        $base = moop_linked_sites()[strtolower($m[1])] ?? '';
+        $tpl  = $base === '' ? '' : rtrim($base, '/') . $m[2];
+    }
     if (!preg_match('#^https://[^\s"<>]+$#', $tpl) || strpos($tpl, '{id}') === false) return '';
     return str_replace(['{id}', '{rel}'], [rawurlencode($id), rawurlencode($rel)], $tpl);
 }
@@ -338,7 +374,8 @@ function moop_ob_gene_counts_missing(): int {
     $orgs = [];
     foreach (getAccessibleGeneSets() as $by_org) foreach (array_keys($by_org) as $org) $orgs[$org] = true;
     $scope = moop_ob_scope();
-    if ($scope) $orgs = isset($orgs[$scope['organism']]) ? [$scope['organism'] => true] : [];
+    if ($scope) $orgs = $scope['group'] !== '' ? array_intersect_key($orgs, $scope['keys'])
+                                               : (isset($orgs[$scope['organism']]) ? [$scope['organism'] => true] : []);
     foreach (array_keys($orgs) as $org) {
         if (is_file("$data/$org/organism.sqlite") && !is_file(moop_go_counts_file($org))) $n++;
     }

@@ -175,7 +175,7 @@ function moop_go_counts_refresh(string $organism_data, int $budget_seconds = 240
 
 /**
  * The gene sets counted for this visitor: organism => [assembly/gene_set => accessible row], limited
- * to $scope (['organism', 'assembly', 'gene_set'], '' = not narrowed; moop_ob_scope()) when given.
+ * to $scope (['organism', 'assembly', 'gene_set'], '' = not narrowed, or a group's 'keys'; moop_ob_scope()).
  */
 function moop_go_counts_visible(array $scope = []): array {
     $visible = [];
@@ -183,6 +183,7 @@ function moop_go_counts_visible(array $scope = []): array {
         foreach ($by_org as $org => $rows) {
             if (($scope['organism'] ?? '') !== '' && $org !== $scope['organism']) continue;
             foreach ($rows as $r) {
+                if (isset($scope['keys']) && empty($scope['keys'][$org][($r['assembly'] ?? '') . '/' . ($r['gene_set'] ?? '')])) continue;   // a group
                 if (($scope['assembly'] ?? '') !== '' && ($r['assembly'] ?? '') !== $scope['assembly']) continue;
                 if (($scope['gene_set'] ?? '') !== '' && ($r['gene_set'] ?? '') !== $scope['gene_set']) continue;
                 $visible[$org][($r['assembly'] ?? '') . '/' . ($r['gene_set'] ?? '')] = $r;

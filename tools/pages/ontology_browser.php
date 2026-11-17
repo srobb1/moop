@@ -44,7 +44,7 @@ $self = moop_url('tools/ontology_browser.php');
         <?php endforeach; ?>
       </select>
       <?php if ($parts): ?><input type="hidden" name="parts" value="1"><?php endif; ?>
-      <?php foreach (moop_ob_scope_params() as $_k => $_v): ?><input type="hidden" name="<?= htmlspecialchars($_k) ?>" value="<?= htmlspecialchars($_v) ?>"><?php endforeach; ?>
+      <?php foreach (moop_ob_scope_params() as $_k => $_v): foreach ((array) $_v as $_one): ?><input type="hidden" name="<?= htmlspecialchars($_k . (is_array($_v) ? '[]' : '')) ?>" value="<?= htmlspecialchars($_one) ?>"><?php endforeach; endforeach; ?>
     </form>
     <?php endif; ?>
     <div class="ob-search flex-grow-1">
@@ -56,7 +56,7 @@ $self = moop_url('tools/ontology_browser.php');
     </div>
     <form method="get" action="<?= htmlspecialchars($self) ?>" class="ob-parts form-check mb-1">
       <input type="hidden" name="o" value="<?= htmlspecialchars($prefix) ?>">
-      <?php foreach (moop_ob_scope_params() as $_k => $_v): ?><input type="hidden" name="<?= htmlspecialchars($_k) ?>" value="<?= htmlspecialchars($_v) ?>"><?php endforeach; ?>
+      <?php foreach (moop_ob_scope_params() as $_k => $_v): foreach ((array) $_v as $_one): ?><input type="hidden" name="<?= htmlspecialchars($_k . (is_array($_v) ? '[]' : '')) ?>" value="<?= htmlspecialchars($_one) ?>"><?php endforeach; endforeach; ?>
       <input class="form-check-input" type="checkbox" id="obParts" name="parts" value="1"<?= $parts ? ' checked' : '' ?>>
       <label class="form-check-label small" for="obParts"><?= t('Show parts too') ?></label>
     </form>
