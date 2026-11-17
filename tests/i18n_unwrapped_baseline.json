@@ -25,21 +25,23 @@
     "includes/scope_selector.php": {
         "\" data-asm-display=\"": 1,
         "\" data-asm=\"": 1,
+        "\" data-assembly=\"": 1,
         "\" data-cn=\"": 1,
+        "\" data-gene-set=\"": 1,
+        "\" data-gs-display=\"": 1,
         "\" data-gs=\"": 1,
         "\" data-label=\"": 1,
+        "\" data-organism=\"": 1,
         "\" data-search-detail=\"": 1,
         "\" data-search-simple=\"": 1,
         "\" data-search=\"": 1,
-        "\" title=\"": 1
-    },
-    "includes/source-list.php": {
-        "\" data-assembly=\"": 1,
-        "\" data-gene-set=\"": 1,
         "\" data-unavailable-reason=\"": 1,
         "\" data-usable-mode=\"": 1,
+        "\" title=\"": 1,
         "data-available=\"": 1,
-        "data-has-genome=\"": 1
+        "data-has-genome=\"": 1,
+        "data-org=\"": 1,
+        "name=\"selected_source\" value=\"": 1
     },
     "includes/toolbar.php": {
         "\" data-1p-ignore data-lpignore=\"true\" data-form-type=\"other\">": 1,

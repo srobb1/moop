@@ -932,23 +932,9 @@ a:hover .link-icon {
   margin-bottom: 20px;
 }
 
-.fasta-source-selector {
-  margin-bottom: 20px;
-}
-
-.fasta-source-filter {
-  margin-bottom: 10px;
-}
-
-.fasta-source-list {
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  max-height: 150px;
-  overflow-y: auto;
-  padding: 8px;
-  background-color: #fafafa;
-}
-
+/* .fasta-source-line: one radio row -- BLAST's Database list. (The old organism source list
+   that also used it was replaced by the shared selector, includes/scope_selector.php, on
+   2026-11-16.) */
 .fasta-source-line {
   display: flex;
   gap: 2px;
@@ -1773,6 +1759,9 @@ a:hover .link-icon {
    matched, and drop its "N gene sets" note -- the row now stands for one gene set. */
 #scope-org-list.scope-detail-hidden .scope-row.scope-detail-forced .scope-row-detail { display: inline; }
 #scope-org-list.scope-detail-hidden .scope-row.scope-detail-forced .scope-gs-count   { display: none; }
+/* Single mode, arrived with an organisms list: only those, until "Show all" drops .scope-limited.
+   !important: the filter sets an inline display on matching rows. */
+#scope-org-list.scope-limited .scope-row-outside { display: none !important; }
 
 /* Filter-match highlight inside a scope row's detail text -- what makes a force-revealed row
    legible: in simple view the detail text is hidden, so without it a matched row appears with

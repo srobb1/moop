@@ -147,16 +147,17 @@
                 </div>
                 <div class="card-body py-3">
                     <?php
-                    $clear_filter_function = 'clearBlastSourceFilters';
-                    $on_change_function = 'updateDatabaseList';
-                    include __DIR__ . '/../../includes/source-list.php';
+                    // The shared organism selector, single mode (includes/scope_selector.php):
+                    // one gene set or BLAST-only genome, as a radio named selected_source.
+                    // The Database list below follows it (updateDatabaseList()).
+                    $scope_opts = [
+                        'mode'     => 'single',
+                        'selected' => $scope_state['selected'],
+                        'filter'   => $scope_state['filter'],
+                        'only'         => $scope_state['only'],
+                    ];
+                    include __DIR__ . '/../../includes/scope_selector.php';
                     ?>
-                    <div class="mt-3 p-3 bg-light border rounded">
-                        <strong><?= t('Currently selected:') ?></strong>
-                        <div id="currentSelection" style="margin-top:8px; font-size:14px;">
-                            <span style="color:#999;"><?= t('None selected') ?></span>
-                        </div>
-                    </div>
                     <div class="mt-3" id="databaseSelector">
                         <label class="form-label fw-semibold"><?= t('Database') ?></label>
                         <div id="databaseBadges" style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -186,7 +187,8 @@
                             <i class="fa fa-check-circle me-1"></i><?= t('Adjusted for short sequences') . "\n" ?>
                         </span>
                     </span>
-                    <i class="fa fa-chevron-down adv-chevron" style="font-size:0.8rem; transition:transform 0.2s;"></i>
+                    <?php // The shared arrow (css/moop.css): follows aria-expanded, no JavaScript. ?>
+                    <i class="fa fa-chevron-down collapse-chevron"></i>
                 </button>
                 
                 <div id="advOptions" class="collapse mt-3">
@@ -466,101 +468,5 @@ echo help_modal(
 ?>
 
 <style>
-.adv-chevron { transition: transform 0.2s; }
-#advOptions.show ~ * .adv-chevron,
-.adv-chevron.open { transform: rotate(180deg); }
 .blast-short-highlight { color: var(--moop-tool-header) !important; }
 </style>
-<script>
-document.getElementById('advOptions')?.addEventListener('show.bs.collapse', function () {
-    document.querySelector('.adv-chevron')?.classList.add('open');
-});
-document.getElementById('advOptions')?.addEventListener('hide.bs.collapse', function () {
-    document.querySelector('.adv-chevron')?.classList.remove('open');
-});
-
-// Whether the BLASTn-short preset currently owns the advanced values, so that switching
-// away can put them back. Initialised from what the server rendered, so a page returning
-// from a short search knows the preset is in effect.
-let blastShortPresetApplied = <?= $blast_program === 'blastn-short' ? 'true' : 'false' ?>;
-
-// Each program's own BLAST defaults for the two checkboxes, from blast_programs() -- the
-// list the dropdown is rendered from -- so a program change sets them where BLAST itself
-// would. They were left wherever the last click put them: off on a fresh page, on after
-// leaving BLASTn-short.
-const blastProgramDefaults = <?= json_encode(array_map(fn($p) => ['filter' => $p['filter'], 'soft_masking' => $p['soft_masking']], blast_programs())) ?>;
-
-function applyBlastProgramDefaults(program) {
-    const defaults = blastProgramDefaults[program];
-    if (defaults) {
-        const f = document.getElementById('filter_seq');
-        const m = document.getElementById('soft_masking');
-        if (f) f.checked = defaults.filter;
-        if (m) m.checked = defaults.soft_masking;
-    }
-    const notice    = document.getElementById('blastn-short-notice');
-    const advNotice = document.getElementById('adv-short-notice');
-    const badge     = document.getElementById('adv-modified-badge');
-    const isShort   = program === 'blastn-short';
-
-    notice?.classList.toggle('d-none', !isShort);
-    advNotice?.classList.toggle('d-none', !isShort);
-    // The collapsed bar carries the signal instead of the panel being forced open.
-    badge?.classList.toggle('d-none', !isShort);
-    document.querySelectorAll('.adv-short-param').forEach(el => {
-        el.classList.toggle('blast-short-highlight', isShort);
-    });
-
-    if (isShort) {
-        // Advanced Options stays CLOSED on purpose. It used to spring open here so the
-        // user could "see what was set", which meant a first-time user picking a primer
-        // search was immediately faced with a dozen controls they had not asked for. The
-        // badge in the bar says the values changed; anyone who wants the detail opens it,
-        // and the changed fields are still highlighted when they do.
-
-        // Pre-fill advanced fields
-        const wordSize  = document.getElementById('word_size');
-        const evalue    = document.getElementById('evalue');
-        const gapopen   = document.getElementById('gapopen');
-        const gapextend = document.getElementById('gapextend');
-        if (wordSize)  wordSize.value   = '7';
-        // 1000, not 10. blastn-short's own default IS 1000 (`blastn -help`); passing 10
-        // overrode it and cut a real 20nt primer from 566 hits to 26. The notice below
-        // has always SAID 1000 -- only the code disagreed.
-        if (evalue)    evalue.value     = '1000';
-        // DUST off -- set above from blastProgramDefaults (`no` for blastn-short upstream).
-        // Left on, it silently returns ZERO hits for any primer with a simple repeat.
-        if (gapopen)   gapopen.value    = '5';
-        if (gapextend) gapextend.value  = '2';
-        // Auto-select genome database if available
-        const dbBadges = document.getElementById('databaseBadges');
-        if (dbBadges) {
-            const radios = dbBadges.querySelectorAll('input[type="radio"][name="blast_db"]');
-            let genomeRadio = null;
-            radios.forEach(r => {
-                const label = dbBadges.querySelector('label[for="' + r.id + '"]');
-                if (label && /genome/i.test(label.textContent)) genomeRadio = r;
-            });
-            if (genomeRadio) genomeRadio.checked = true;
-        }
-    } else if (blastShortPresetApplied) {
-        // Switching AWAY from the short preset must put the values back, or the user runs
-        // an ordinary blastn at E-value 1000 with word size 7 and no filter, with nothing
-        // on screen saying so -- the badge has just been hidden.
-        //
-        // This was harmless until 2026-08-03 only because word_size and friends were never
-        // passed to BLAST at all. Now that they are, leaving them behind is a real wrong
-        // result. Blank means "use the program default" on the server side.
-        const wordSize  = document.getElementById('word_size');
-        const evalue    = document.getElementById('evalue');
-        const gapopen   = document.getElementById('gapopen');
-        const gapextend = document.getElementById('gapextend');
-        if (wordSize)  wordSize.value   = '';
-        if (evalue)    evalue.value     = '1e-3';
-        if (gapopen)   gapopen.value    = '';
-        if (gapextend) gapextend.value  = '';
-    }
-
-    blastShortPresetApplied = isShort;
-}
-</script>

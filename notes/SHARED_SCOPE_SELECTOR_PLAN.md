@@ -23,7 +23,25 @@ includes/layout.php) is a FOURTH selector -- the "narrow scope" modal tree Annot
 opens on pages without `noScopeFilter` (organism, group, multi-organism pages). Decide in
 Phase 2 whether it becomes the shared component in a modal or stays.
 
-**Next: Phase 2** (single mode → Retrieve Sequences) and **Phase 3** (evaluate BLAST), below.
+## ✅ PHASES 2 + 3 DONE 2026-11-16 — Retrieve Sequences, BLAST, Primer BLAST on single mode
+
+- `$scope_opts['mode'] = 'single'`: the partial renders filter + list + "Selected:" line for the
+  page's own card/form; rows are radios named `selected_source` = "org|asm|gs" (what the pages
+  already submitted). Options: selected, filter, has_genome (Retrieve flanks), availability
+  (Primer BLAST "!" + constraints), help_id.
+- JS `initScopeSelector({mode:'single', onChange})`: a click MOVES the one selection; a collapsed
+  organism with several gene sets turns on Details instead; organism row stays highlighted in
+  simple view.
+- `moop_scope_single_state($scope, $fallback, $auto_first)`: submitted choice kept after a run;
+  group / organisms list = filter, nothing selected; organism context = filter by its name;
+  otherwise the page's choice, else the first gene set in GROUP order (old default kept).
+  Primer BLAST passes auto_first=false (it always started empty).
+- `moop_scope_selector_data(true)` adds BLAST-only genomes ("genome only") — BLAST only.
+- Deleted: includes/source-list.php, js/modules/source-list-manager.js.
+- Verified with before/after probes per page (arrivals, picks, constraints, Reset, a real run each):
+  identical except fewer rows (no per-group duplicates).
+
+Open: `js/modules/scope-filter.js` (the pop-up narrow-scope tree) is still its own selector.
 Everything under this line is history.
 
 ---

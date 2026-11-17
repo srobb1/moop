@@ -4,10 +4,6 @@
  * filtering, copy-to-clipboard functionality, and search ID display
  */
 
-function clearSourceFilter() {
-    clearSourceFilters('sourceFilter', 'selected_source', 'fasta-source-line', null, 'downloadForm');
-}
-
 /**
  * Flanks can only be cut from a genome: show the flank boxes for a gene set that sits on one
  * (data-has-genome="1", from tools/retrieve_sequences.php) and hide them otherwise. Hidden
@@ -37,43 +33,26 @@ function initializeSequenceRetrieval(options = {}) {
         }
     }
     
-    function updateCurrentSelectionDisplay() {
-        window.updateCurrentSelectionDisplay('currentSelection', 'fasta-source-line', true);
-        const selectionDiv = document.getElementById('currentSelection');
-        const checked = document.querySelector('input[name="selected_source"]:checked');
-        if (!checked) {
-            selectionDiv.innerHTML = '<span style="color: #999;">' + moopTh('None selected') + '</span>';
+    // The organism list is the shared selector in single mode (js/modules/scope-selector.js):
+    // radios named selected_source, the readout under the list, pre-selection from the server.
+    // This page only reacts to the chosen gene set: the hidden fields the form submits, the
+    // sample IDs for that gene set, and the flank boxes (shown only where there is a genome).
+    function onSourceChange() {
+        const radio = document.querySelector('input[name="selected_source"]:checked');
+        if (!radio) return;
+        const hint = document.getElementById('retrieve-select-hint');
+        if (hint) hint.style.display = 'none';   // they just did what it asked
+        if (form) {
+            form.querySelector('input[name="organism"]').value = radio.dataset.organism;
+            form.querySelector('input[name="assembly"]').value = radio.dataset.assembly;
+            form.querySelector('input[name="gene_set"]').value = radio.dataset.geneSet || '';
         }
+        refreshSampleIds(radio);
+        updateFlankControls(radio);
     }
-    
-    // Use centralized source selector initialization
-    initializeSourceSelector({
-        formId: 'downloadForm',
-        filterId: 'sourceFilter',
-        radioName: 'selected_source',
-        sourceListClass: 'fasta-source-line',
-        shouldAutoSelect: typeof window.shouldAutoSelect !== 'undefined' ? window.shouldAutoSelect : true,
-        onSelectionChange: function(radio) {
-            // Update hidden form fields when selection changes
-            if (form) {
-                form.querySelector('input[name="organism"]').value = radio.dataset.organism;
-                form.querySelector('input[name="assembly"]').value = radio.dataset.assembly;
-                form.querySelector('input[name="gene_set"]').value = radio.dataset.geneSet || '';
-            }
-            refreshSampleIds(radio);
-            updateFlankControls(radio);
-            // Update display text
-            updateCurrentSelectionDisplay();
-        },
-        onFilterChange: function() {
-            updateCurrentSelectionDisplay();
-        }
-    });
-    
-    // Update display on page load
-    updateCurrentSelectionDisplay();
-    updateFlankControls(document.querySelector('input[name="selected_source"]:checked'));
-    
+    initScopeSelector({ mode: 'single', onChange: onSourceChange });
+    onSourceChange();   // the server's pre-selection, if any
+
     // Dismiss error alert on form submission
     if (form) {
         form.addEventListener('submit', function() {

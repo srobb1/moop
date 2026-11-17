@@ -19,8 +19,15 @@
  * Reads everything it needs from the CHECKBOXES (data-org / -asm / -gs / -label / -cn /
  * -asm-display), never from sibling DOM (CLAUDE.md §9b).
  *
+ * SINGLE mode (Retrieve Sequences, BLAST, Primer BLAST -- tools that work on exactly one gene
+ * set): the inputs are radios named selected_source; a click MOVES the one selection; clicking a
+ * collapsed organism that has several gene sets turns on Details instead, so the exact gene set
+ * is picked; the readout is one line ("Selected: organism › assembly › gene set"). What to
+ * pre-select comes checked from the server (includes/scope_selector.php), not from `context`.
+ *
  * @param {Object}   [opts]
- * @param {Object}   [opts.context]   {organisms: [...], assembly?, gene_set?} from
+ * @param {string}   [opts.mode]      'multi' (default) or 'single'
+ * @param {Object}   [opts.context]   multi mode: {organisms: [...], assembly?, gene_set?} from
  *                                    moop_scope_context_from_request(), or null
  * @param {Function} [opts.onChange]  called after every change of selection, including the
  *                                    context's, with no arguments
@@ -34,7 +41,9 @@ function initScopeSelector(opts = {}) {
     const countsEl = document.getElementById('scope-counts');
     const filterEl = document.getElementById('scope-filter');
     const detailEl = document.getElementById('scope-show-detail');
+    const deselectEl = document.getElementById('scope-deselect');   // single mode only
     const onChange = opts.onChange || (() => {});
+    const single   = opts.mode === 'single';
 
     const boxes   = () => Array.from(list.querySelectorAll('.scope-gs-cb'));
     const checked = () => boxes().filter((cb) => cb.checked);
@@ -43,6 +52,40 @@ function initScopeSelector(opts = {}) {
     function tick(cb, on) {
         cb.checked = on;
         cb.closest('.scope-row')?.classList.toggle('selected', on);
+    }
+
+    // Single mode: make cb the one selection.
+    function selectOnly(cb) {
+        boxes().forEach((c) => tick(c, c === cb));
+    }
+
+    // Single mode, simple view: the chosen gene set may sit in a hidden secondary row, so its
+    // organism's visible row carries the highlight instead.
+    function syncSingleHighlight() {
+        if (!single) return;
+        const on = checked()[0];
+        list.querySelectorAll('.scope-row').forEach((row) => {
+            const cb = row.querySelector('.scope-gs-cb');
+            const own = cb === on;
+            const viaOrg = !detailOn() && on && !row.classList.contains('scope-row-secondary')
+                && row.dataset.org === on.dataset.org;
+            row.classList.toggle('selected', own || !!viaOrg);
+        });
+    }
+
+    function setDetails(on) {
+        if (!detailEl) return;
+        detailEl.checked = on;
+        list.classList.toggle('scope-detail-hidden', !on);
+        runFilter();
+        syncSingleHighlight();
+    }
+
+    // Scroll the list (not the page) so a row sits in the middle of it.
+    function scrollToRow(row) {
+        if (!row) return;
+        list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top
+            - (list.clientHeight - row.offsetHeight) / 2;
     }
 
     function changed() {
@@ -54,6 +97,17 @@ function initScopeSelector(opts = {}) {
     function render() {
         const all = boxes();
         const on  = all.filter((cb) => cb.checked);
+        if (single) {
+            syncSingleHighlight();
+            if (!countsEl) return;
+            const cb = on[0];
+            deselectEl?.classList.toggle('d-none', !cb);
+            if (!cb) { countsEl.textContent = moopT('None selected'); return; }
+            countsEl.innerHTML = moopTm('Selected: %s',
+                '<em>' + escapeHtml(cb.dataset.label) + '</em> › ' + escapeHtml(cb.dataset.asmDisplay || cb.dataset.asm)
+                + ' › ' + escapeHtml(cb.dataset.gsDisplay || cb.dataset.gs));
+            return;
+        }
         renderPanel(on);
 
         const allOn = all.length > 0 && on.length === all.length;
@@ -122,7 +176,19 @@ function initScopeSelector(opts = {}) {
         if (!row) return;
         const cb = row.querySelector('.scope-gs-cb');
         if (!cb || e.target === cb) return;
-        if (detailOn()) {
+        if (single) {
+            const orgCbs = boxes().filter((c) => c.dataset.org === cb.dataset.org);
+            if (!detailOn() && orgCbs.length > 1) {
+                // An organism with several gene sets: show them, and let the visitor pick one.
+                setDetails(true);
+                scrollToRow(orgCbs.find((c) => c.checked)?.closest('.scope-row') || orgCbs[0].closest('.scope-row'));
+                return;
+            }
+            // Clicking the chosen row again deselects it (nothing chosen: each tool refuses to run
+            // and says so). It used to do nothing, which on a page that arrived filtered to a
+            // one-gene-set organism left no way to clear the choice (Sofia, 2026-11-16).
+            if (cb.checked) tick(cb, false); else selectOnly(cb);
+        } else if (detailOn()) {
             tick(cb, !cb.checked);
         } else {
             const orgCbs = boxes().filter((c) => c.dataset.org === cb.dataset.org);
@@ -134,7 +200,7 @@ function initScopeSelector(opts = {}) {
     // A checkbox reached by keyboard / label.
     list.addEventListener('change', (e) => {
         if (!e.target.classList.contains('scope-gs-cb')) return;
-        tick(e.target, e.target.checked);
+        if (single) selectOnly(e.target); else tick(e.target, e.target.checked);
         changed();
     });
 
@@ -200,14 +266,36 @@ function initScopeSelector(opts = {}) {
             show('flex', simpleView && detailOnly, detailMatch ? q : '');
         });
     }
-    filterEl?.addEventListener('input', runFilter);
+    filterEl?.addEventListener('input', () => {
+        runFilter();
+        // Single mode: emptying the filter brings the whole list back -- show where the
+        // chosen row is in it.
+        if (single && !filterEl.value.trim()) scrollToRow(list.querySelector('.scope-row.selected'));
+    });
+
+    // "Show all", beside the filter on every page: clears the filter, and in single mode lifts an
+    // organisms-list limit ("chosen on the previous page") too.
+    function showAll() {
+        list.classList.remove('scope-limited');
+        document.getElementById('scope-only-note')?.remove();
+        if (filterEl && filterEl.value) { filterEl.value = ''; runFilter(); }
+        if (single) scrollToRow(list.querySelector('.scope-row.selected'));
+    }
+    document.getElementById('scope-show-all')?.addEventListener('click', showAll);
+
+    // Single mode: the Deselect button beside the readout.
+    deselectEl?.addEventListener('click', () => {
+        boxes().forEach((c) => tick(c, false));
+        changed();
+    });
     detailEl?.addEventListener('change', () => {
         list.classList.toggle('scope-detail-hidden', !detailEl.checked);
         runFilter();   // force-reveals depend on the view
+        syncSingleHighlight();
     });
 
     // ── Context: arrived from an organism / assembly / gene-set / group page ────────────
-    const ctx = opts.context;
+    const ctx = single ? null : opts.context;
     if (ctx && ctx.organisms && ctx.organisms.length) {
         const keep = new Set(ctx.organisms);
         boxes().forEach((cb) => {
@@ -218,6 +306,8 @@ function initScopeSelector(opts = {}) {
         });
     }
     render();   // context or not: the read-outs start in step with the boxes
+    if (filterEl && filterEl.value.trim()) runFilter();   // a filter pre-filled by the server
+    if (single) scrollToRow(list.querySelector('.scope-row.selected'));
 
     return { checked, refresh: changed };
 }

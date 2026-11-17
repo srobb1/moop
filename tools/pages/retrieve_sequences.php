@@ -78,15 +78,17 @@
                 </div>
                 <div class="card-body py-3">
                     <?php
-                    $clear_filter_function = 'clearSourceFilter';
-                    include __DIR__ . '/../../includes/source-list.php';
+                    // The shared organism selector, single mode: one gene set, radios named
+                    // selected_source inside this form (includes/scope_selector.php).
+                    $scope_opts = [
+                        'mode'       => 'single',
+                        'selected'   => $scope_state['selected'],
+                        'filter'     => $scope_state['filter'],
+                        'only'         => $scope_state['only'],
+                        'has_genome' => $source_has_genome,   // flanks only where there is a genome
+                    ];
+                    include __DIR__ . '/../../includes/scope_selector.php';
                     ?>
-                    <div class="mt-3 p-3 bg-light border rounded">
-                        <strong><?= t('Currently selected:') ?></strong>
-                        <div id="currentSelection" style="margin-top:8px; font-size:14px;">
-                            <span style="color:#999;"><?= t('None selected') ?></span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -211,7 +213,7 @@
                     <div id="retrieve-select-hint" class="tools-select-hint small mt-2" style="display:none;">
                         <?php /* Step number, not a direction — see the note on the same hint
                                  in blast.php. */ ?>
-                        <i class="fa fa-exclamation-circle me-1"></i> <?= t('Choose an organism and assembly in step 1 before retrieving.') . "\n" ?>
+                        <i class="fa fa-exclamation-circle me-1"></i> <?= t('Choose an organism in step 1 before retrieving.') . "\n" ?>
                     </div>
                 </div>
             </div>
@@ -341,6 +343,4 @@ window.parentToChildren = <?= json_encode($parent_to_children ?? []) ?>;
 
 // Longer lists are a download only; the ID box shows a count instead of every ID (same limit)
 window.retrievalShowMax = <?= (int)$show_max_ids ?>;
-// Pass auto-select flag to JavaScript
-window.shouldAutoSelect = <?= json_encode($should_auto_select ?? true) ?>;
 </script>

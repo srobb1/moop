@@ -112,6 +112,14 @@ $selected_assembly_accession = $source_selection['selected_assembly_accession'];
 $selected_assembly_name      = $source_selection['selected_assembly_name'];
 $should_auto_select          = $source_selection['should_auto_select'];
 
+// The organism list: the shared selector in single mode (includes/scope_selector.php). Which
+// gene set starts selected and what the filter starts with follow one rule for every
+// single-select tool (moop_scope_single_state()): a finished retrieval keeps its gene set,
+// a group arrival filters and selects nothing.
+require_once __DIR__ . '/../lib/scope_selector.php';
+$scope       = moop_scope_selector_data();
+$scope_state = moop_scope_single_state($scope, $selected_source);
+
 // Extract gene_set from 3-part selected_source (organism|assembly|gene_set)
 $source_parts        = explode('|', $selected_source);
 $selected_gene_set   = $source_parts[2] ?? '';
@@ -323,7 +331,7 @@ $display_config = [
     'content_file' => __DIR__ . '/pages/retrieve_sequences.php',
     'page_script' => [
 	moop_url_base() . '/js/modules/utilities.js',
-        moop_url_base() . '/js/modules/source-list-manager.js',
+        moop_url_base() . '/js/modules/scope-selector.js',
 	moop_url_base() . '/js/sequence-retrieval.js'
     ]
 ];
@@ -357,6 +365,8 @@ $data = [
     'should_auto_select' => $should_auto_select,
     'filter_organisms' => $filter_organisms,
     'sources_by_group' => $sources_by_group,
+    'scope'       => $scope,
+    'scope_state' => $scope_state,
     'download_error_msg' => $download_error_msg,
     // A long list is summarised, not drawn, so the ID box gets nothing to colour (the JS shows
     // a count instead, at the same MOOP_RETRIEVAL_SHOW_MAX_IDS).

@@ -128,12 +128,11 @@
    is invisible precisely when it is collapsed.
 
    Driven entirely by aria-expanded, which Bootstrap maintains on the toggle, so
-   the arrow cannot disagree with the panel and no JavaScript is involved. Two
-   idioms for this already existed and neither was reusable: blast.php rotates
-   `.adv-chevron` from a page-local <style> plus two JS listeners, and
+   the arrow cannot disagree with the panel and no JavaScript is involved.
    display.css keys `.browse-select-chevron` off aria-expanded but names it after
-   one specific header. This is the second, generalised — reach for it rather
-   than starting a third.
+   one specific header; this is the generalised one -- reach for it rather than
+   starting another. (blast.php had its own `.adv-chevron` with JS listeners that
+   never fired under collapse-handler.js; it uses this since 2026-11-16.)
 
    The direct-child selector is listed first for the common case; the descendant
    form covers a chevron nested inside a span. */

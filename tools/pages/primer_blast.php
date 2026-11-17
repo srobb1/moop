@@ -230,17 +230,19 @@ $db_section_label = function ($key) {
                 </div>
                 <div class="card-body py-3">
                     <?php
-                    $clear_filter_function = 'clearPrimerSourceFilters';
-                    $on_change_function    = 'updatePrimerSelection';
-                    $source_list_help_id   = 'source-list-help';
-                    include __DIR__ . '/../../includes/source-list.php';
+                    // The shared organism selector, single mode (includes/scope_selector.php).
+                    // availability marks the gene sets this tool cannot fully use ("!", with
+                    // the reason on hover) and drives applySourceConstraints().
+                    $scope_opts = [
+                        'mode'         => 'single',
+                        'selected'     => $scope_state['selected'],
+                        'filter'       => $scope_state['filter'],
+                        'only'         => $scope_state['only'],
+                        'availability' => $source_availability,
+                        'help_id'      => 'source-list-help',
+                    ];
+                    include __DIR__ . '/../../includes/scope_selector.php';
                     ?>
-                    <div class="mt-3 p-3 bg-light border rounded">
-                        <strong><?= t('Currently selected:') ?></strong>
-                        <div id="primerCurrentSelection" style="margin-top:8px; font-size:14px;">
-                            <span class="text-muted"><?= t('None selected') ?></span>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -348,6 +350,12 @@ $db_section_label = function ($key) {
                     <i class="fa fa-undo"></i> <?= t('Clear form') . "\n" ?>
                 </button>
                 <span class="text-muted small"><?= t('Clears the primers, the assembly, and the options.') ?></span>
+            </div>
+            <?php /* Same inline hint as BLAST and Retrieve Sequences. Without it, checking primers
+                     with no organism chosen reloaded the page and said nothing. "Organism", not
+                     "assembly" or "gene set": it is what each row shows. */ ?>
+            <div id="primer-select-hint" class="tools-select-hint small mb-4" style="display:none;">
+                <i class="fa fa-exclamation-circle me-1"></i> <?= t('Choose an organism in step 2 before running Primer BLAST.') . "\n" ?>
             </div>
         </form>
 
@@ -954,14 +962,14 @@ echo help_modal(
             [
                 'label' => 'What is in the list',
                 'html'  => true,
-                'text'  => t('Every assembly you have access to, one row per gene set.')
-                         . ' ' . t_markup('The badges on each row read left to right as %1$s, %2$s, %3$s, and %4$s.', $b('group'), $b('organism'), $b('assembly'), $b('gene set')),
+                'text'  => t('Every organism you have access to, with its group badges.')
+                         . ' ' . t_markup('An organism with several gene sets is one row; turn on %s to see each assembly and gene set and pick one.', $b('Details')),
             ],
             [
                 'label' => 'Filtering',
                 'html'  => true,
-                'text'  => t('The box above the list narrows it as you type, matching against all four of those at once — so a group name, a species, an accession or a gene set name all work.')
-                         . ' ' . t_markup('%s restores the full list.', $b('Clear Filters')),
+                'text'  => t('The box above the list narrows it as you type — a group name, a species, an accession or a gene set name all work.')
+                         . ' ' . t('Empty the box to see the full list again; your choice stays selected.'),
             ],
             [
                 // 'color' is the API's badge form, for exactly this case: the card title
@@ -978,7 +986,7 @@ echo help_modal(
             ],
         ],
     ]],
-    ['intro' => 'One row per gene set, filtered live as you type.']
+    ['intro' => 'One row per organism, filtered live as you type. Details shows each gene set.']
 );
 
 /**

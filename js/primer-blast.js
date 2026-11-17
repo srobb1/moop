@@ -1,60 +1,21 @@
 /**
- * Primer BLAST page — source-list filtering and selection feedback.
+ * Primer BLAST page -- selection feedback, primer file loading, reset.
  *
- * includes/source-list.php calls these two by name (it renders
- * onclick/onchange attributes), so the names are a contract with that partial.
+ * The organism list is the shared selector in single mode (includes/scope_selector.php,
+ * js/modules/scope-selector.js): radios named selected_source, its own filter and readout.
+ * This page reacts to the chosen gene set through updatePrimerSelection().
  */
 
-/** Filter the source list by the text box, matching each line's data-search. */
-function filterPrimerSources() {
-    var box = document.getElementById('sourceFilter');
-    if (!box) { return; }
-
-    var term = box.value.trim().toLowerCase();
-
-    document.querySelectorAll('.fasta-source-line').forEach(function (line) {
-        var hay = (line.getAttribute('data-search') || '').toLowerCase();
-        line.style.display = (term === '' || hay.indexOf(term) !== -1) ? '' : 'none';
-    });
-}
-
-/** Clear button on the source filter. */
-function clearPrimerSourceFilters() {
-    var box = document.getElementById('sourceFilter');
-    if (box) {
-        box.value = '';
-    }
-    filterPrimerSources();
-}
+/** Handle from initScopeSelector(), for Reset. */
+var primerScope = null;
 
 /**
- * Selection changed. Read only within this page's own source list — never a
- * document-wide query — so a page rendering the component more than once cannot
- * read another instance's state.
+ * Selection changed: keep the PCR input consistent with what the chosen gene set can answer.
+ * Read within the selector's own list, never document-wide.
  */
 function updatePrimerSelection() {
-    var chosen = document.querySelector('.fasta-source-selector input[name="selected_source"]:checked');
-    var target = document.getElementById('primerCurrentSelection');
-    if (!target) { return; }
-
-    if (!chosen) {
-        target.innerHTML = '<span class="text-muted">None selected</span>';
-        applySourceConstraints(null);
-        return;
-    }
-
-    applySourceConstraints(chosen);
-
-    var organism = chosen.getAttribute('data-organism') || '';
-    var assembly = chosen.getAttribute('data-assembly') || '';
-    var geneSet  = chosen.getAttribute('data-gene-set') || '';
-
-    var label = organism.replace(/_/g, ' ') + ' — ' + assembly;
-    if (geneSet !== '') {
-        label += ' — ' + geneSet;
-    }
-
-    target.textContent = label;
+    var chosen = document.querySelector('#scope-org-list input[name="selected_source"]:checked');
+    applySourceConstraints(chosen || null);
 }
 
 /**
@@ -192,17 +153,30 @@ document.addEventListener('DOMContentLoaded', function () {
     var ran = document.getElementById('primerResults');
     if (ran && ran.dataset.ran === '1') ran.scrollIntoView({ block: 'start' });
 
-    var box = document.getElementById('sourceFilter');
-    if (box) {
-        box.addEventListener('input', filterPrimerSources);
-        // Apply the pre-filled context on load too, as BLAST does. Run only on typing,
-        // the list arrived narrowed to the ORGANISM (server-side) while the box already
-        // named the assembly -- both Nematostella assemblies showed for "Nvec200".
-        // Only when there IS text: an empty box would un-hide what the server hid for
-        // a multi-organism context (?organisms[]=...), turning 7 rows into 96.
-        if (box.value.trim() !== '') filterPrimerSources();
+    primerScope = initScopeSelector({
+        mode: 'single',
+        onChange: function () {
+            updatePrimerSelection();
+            var hint = document.getElementById('primer-select-hint');
+            if (hint) { hint.style.display = 'none'; }   // they just did what it asked
+        },
+    });
+    updatePrimerSelection();   // the server's pre-selection, if any
+
+    // No organism chosen: say so instead of submitting. The server runs nothing without
+    // one, so the page used to reload silently.
+    var primerForm = document.getElementById('primerBlastForm');
+    if (primerForm) {
+        primerForm.addEventListener('submit', function (e) {
+            if (document.querySelector('#scope-org-list input[name="selected_source"]:checked')) { return; }
+            e.preventDefault();
+            var hint = document.getElementById('primer-select-hint');
+            if (hint) {
+                hint.style.display = 'flex';
+                hint.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
     }
-    updatePrimerSelection();
 
     var file = document.getElementById('primer_file');
     if (file) {
@@ -254,16 +228,18 @@ function resetPrimerForm() {
 
     clearPrimerFile();
 
-    // Deselect the assembly, and clear the filter that may be hiding most of the list.
+    // Deselect the assembly, and clear the filter that may be hiding most of the list. Through
+    // the selector, so its readout and row highlight follow (refresh() also calls
+    // updatePrimerSelection()).
     form.querySelectorAll('input[name="selected_source"]:checked').forEach(function (radio) {
         radio.checked = false;
     });
-    var filter = document.getElementById('sourceFilter');
+    var filter = document.getElementById('scope-filter');
     if (filter) {
         filter.value = '';
+        filter.dispatchEvent(new Event('input'));
     }
-    filterPrimerSources();
-    updatePrimerSelection();
+    if (primerScope) { primerScope.refresh(); } else { updatePrimerSelection(); }
 
     var mismatch = document.getElementById('max_mismatch');
     if (mismatch) {

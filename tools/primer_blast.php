@@ -109,7 +109,7 @@ $context_assembly = $context['assembly'];
 $context_gene_set = $context['gene_set'];
 $context_group    = $context['group'];
 
-// The radio in includes/source-list.php posts 'selected_source' directly, so take
+// The selector's radio (includes/scope_selector.php) posts 'selected_source' directly, so take
 // it when present rather than depending on JS to mirror it into hidden
 // organism/assembly fields the way tools/blast.php does. It is still only a
 // LOOKUP KEY: the filesystem path is resolved below from the access-checked
@@ -128,6 +128,12 @@ if ($posted_source !== '') {
 //
 // One stat per source; the list is ~95 entries, so this is cheap enough to run
 // per page load, unlike the scans that CLAUDE.md §10 pushes into housekeeping.
+// The organism list: the shared selector in single mode. Opened directly it starts with nothing
+// chosen, as this tool always has; a finished run keeps its gene set (moop_scope_single_state()).
+require_once __DIR__ . '/../lib/scope_selector.php';
+$scope       = moop_scope_selector_data();
+$scope_state = moop_scope_single_state($scope, $selected_source, false);
+
 $source_availability = [];
 foreach ($accessible_sources as $source) {
     $key = $source['organism'] . '|' . $source['assembly'] . '|' . ($source['gene_set'] ?? '');
@@ -415,6 +421,8 @@ $data = [
     'filter_organisms_string'     => $filter_organisms_string,
     'selected_source'             => $selected_source,
     'source_availability'         => $source_availability,
+    'scope'                       => $scope,
+    'scope_state'                 => $scope_state,
     'result_organism'             => $result_organism ?? '',
     'result_assembly'             => $result_assembly ?? '',
     'selected_organism'           => $selected_organism,
@@ -440,7 +448,8 @@ $data = [
 $display_config = [
     'title'        => 'Primer BLAST',
     'content_file' => __DIR__ . '/pages/primer_blast.php',
-    'page_script'  => moop_url_base() . '/js/primer-blast.js',
+    'page_script'  => [moop_url_base() . '/js/modules/scope-selector.js',
+                       moop_url_base() . '/js/primer-blast.js'],
 ];
 
 include_once __DIR__ . '/display-template.php';

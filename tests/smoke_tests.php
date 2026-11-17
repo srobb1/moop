@@ -679,17 +679,19 @@ foreach (array_merge($protein_progs ?? [], $nucleotide_progs ?? []) as $pid) {
     ok(isset($programs[$pid]), "JS list entry '$pid' is a program the page actually offers");
 }
 
-// A SECOND partition, in updateDatabaseList(), splits the same programs by the kind of
+// A SECOND partition, in updateDatabaseList() (js/blast-manager.js), splits the same programs by the kind of
 // DATABASE they can search — which is not the same split as the query type above
 // (tblastn takes a protein query but a nucleotide database, and sits on opposite sides
 // of the two lists). Its fallback is `return true`, so a program in neither list is not
 // disabled: it silently offers every database including the incompatible ones. That
 // fails quietly rather than loudly, which is why it is worth asserting.
+// updateDatabaseList() lives in js/blast-manager.js (moved from utilities.js 2026-11-16).
+$blast_mgr = file_get_contents(dirname(__DIR__) . '/js/blast-manager.js');
 $db_protein = null; $db_nucleotide = null;
-if (preg_match('/\[([^\]]*)\]\.includes\(program\)\)\s*return db\.type === \x27protein\x27/', $utils, $m)) {
+if (preg_match('/\[([^\]]*)\]\.includes\(program\)\)\s*return db\.type === \x27protein\x27/', $blast_mgr, $m)) {
     $db_protein = array_map(fn($s) => trim($s, " \t'\""), explode(',', $m[1]));
 }
-if (preg_match('/\[([^\]]*)\]\.includes\(program\)\)\s*return db\.type === \x27nucleotide\x27/', $utils, $m)) {
+if (preg_match('/\[([^\]]*)\]\.includes\(program\)\)\s*return db\.type === \x27nucleotide\x27/', $blast_mgr, $m)) {
     $db_nucleotide = array_map(fn($s) => trim($s, " \t'\""), explode(',', $m[1]));
 }
 

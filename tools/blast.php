@@ -116,6 +116,13 @@ $selected_organism = $source_selection['selected_organism'];
 $selected_assembly_accession = $source_selection['selected_assembly_accession'];
 $selected_assembly_name = $source_selection['selected_assembly_name'];
 
+// The organism list: the shared selector in single mode, BLAST-only genomes included (they
+// have a genome database and nothing else). Which gene set starts selected -- the one a
+// finished search used, a group arrival nothing -- follows moop_scope_single_state().
+require_once __DIR__ . '/../lib/scope_selector.php';
+$scope       = moop_scope_selector_data(true);
+$scope_state = moop_scope_single_state($scope, $selected_source);
+
 // Extract context values for backward compatibility
 $context_organism = $context['organism'];
 $context_assembly = $context['assembly'];
@@ -357,16 +364,18 @@ $display_config = [
     'content_file' => __DIR__ . '/pages/blast.php',
     'page_script' => [
         moop_url_base() . '/js/modules/collapse-handler.js',
-        moop_url_base() . '/js/modules/source-list-manager.js',
+        moop_url_base() . '/js/modules/scope-selector.js',
         moop_url_base() . '/js/blast-manager.js',
         moop_url_base() . '/js/modules/blast-short-nudge.js'
     ],
     'inline_scripts' => [
         "const previouslySelectedDb = '" . addslashes($blast_db) . "';",
-        "const previouslySelectedSource = '" . addslashes($selected_source) . "';",
         "const sampleSequences = " . json_encode($config->getArray('blast_sample_sequences', [])) . ";",
         "const databasesByAssembly = " . json_encode($client_databasesByAssembly) . ";",
-        "const blastShortQueryNt = " . (int) BLAST_SHORT_QUERY_NT . ";"
+        "const blastShortQueryNt = " . (int) BLAST_SHORT_QUERY_NT . ";",
+        // For applyBlastProgramDefaults() (js/blast-manager.js). `let`: the preset flag changes.
+        "let blastShortPresetApplied = " . ($blast_program_selected === 'blastn-short' ? 'true' : 'false') . ";",
+        "const blastProgramDefaults = " . json_encode(array_map(fn($p) => ['filter' => $p['filter'], 'soft_masking' => $p['soft_masking']], blast_programs())) . ";",
     ]
 ];
 
@@ -377,6 +386,8 @@ $data = [
     'config' => $config,
     'accessible_sources' => $accessible_sources,
     'sources_by_group' => $sources_by_group,
+    'scope'       => $scope,
+    'scope_state' => $scope_state,
     'context_organism' => $context_organism,
     'context_assembly' => $context_assembly,
     'context_gene_set' => $context_gene_set,

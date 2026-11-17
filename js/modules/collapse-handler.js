@@ -39,8 +39,11 @@
                             this.setAttribute('aria-expanded', shown ? 'true' : 'false');
                             this.classList.toggle('collapsed', !shown);
 
-                            // Toggle the icon if present
-                            var icon = this.querySelector('.toggle-icon, .fa-chevron-down, .fa-minus, .fa-plus');
+                            // Toggle a plus/minus icon if present. NOT a .collapse-chevron: that
+                            // arrow turns by CSS on the aria-expanded set above (css/moop.css), and
+                            // adding fa-minus / fa-plus to it turned BLAST's Advanced Options arrow
+                            // into a minus, then a plus, never an arrow again (fixed 2026-11-16).
+                            var icon = this.querySelector('.toggle-icon, .fa-chevron-down:not(.collapse-chevron), .fa-minus, .fa-plus');
                             if (icon) {
                                 if (element.classList.contains('show')) {
                                     icon.classList.remove('fa-plus');
