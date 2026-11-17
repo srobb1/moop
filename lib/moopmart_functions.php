@@ -148,7 +148,7 @@ function buildMoopmartFilterReason(array $filters, array $coord_filter): string
     foreach ($filters['annotation_criteria'] ?? [] as $crit) {
         $ann = [];
         if (!empty($crit['src'])) $ann[] = $crit['src'];
-        if (!empty($crit['acc'])) $ann[] = $crit['acc'];
+        if (!empty($crit['acc'])) $ann[] = $crit['acc'] . (!empty($crit['sub']) ? ' and more specific terms' : '');
         if (!empty($crit['kw']))  $ann[] = 'keyword: "' . $crit['kw'] . '"';
         if ($ann) $parts[] = 'Annotation: ' . implode(', ', $ann);
     }
@@ -345,7 +345,7 @@ function moopmartBuildTextConditions(string $raw, string $table, string $column,
  *   feature_id?:            string    Exact match on feature_uniquename
  *   gene_name?:             string    Search-style match on feature_name (moopmartBuildTextConditions)
  *   gene_description?:      string    Search-style match on feature_description
- *   annotation_criteria?:   array     Each element: ['src'=>'', 'acc'=>'', 'kw'=>'']
+ *   annotation_criteria?:   array     Each element: ['src'=>'', 'acc'=>'', 'kw'=>'', 'sub'=>bool]
  *                                     Each criterion generates its own EXISTS clause (AND between them).
  *                                     Empty src/acc/kw fields within a criterion are skipped.
  * }
@@ -462,12 +462,27 @@ function moopmartFeatureQuery(array $gene_set_ids, array $filters): array
 // ============================================================
 
 /**
+ * A GO term and every more specific term: those below it by "is a" or "part of" -- the SAME rule
+ * the GO gene counts use (MOOP_GO_PROPAGATE, lib/go_gene_counts.php), so a count on a term page
+ * equals the genes its exporter link finds. Anything that is not a GO id, or a site without GO
+ * built, gets just the accession itself.
+ */
+function moopmartMoreSpecificTerms(string $acc): array
+{
+    if (!preg_match('/^GO:\d{7}$/', $acc)) return [$acc];
+    require_once __DIR__ . '/go_gene_counts.php';
+    $rels = array_values(array_diff(MOOP_GO_PROPAGATE, ['rdfs:subClassOf']));
+    return moop_ontology_meta('GO') ? moop_ontology_expand('GO', $acc, $rels) : [$acc];
+}
+
+/**
  * SQL for one annotation criterion: the gene matches if the annotation is stored on the
  * gene itself OR on one of its children. Most loaders attach annotations to the mRNA, but a
  * gene with no transcript level (Bradyrhizobium: 117,552 annotations on genes) carries them
  * itself — a children-only test reported "No features matched" for every such filter.
  *
- * @param array $criterion ['src' => source name (exact), 'acc' => accession, 'kw' => keywords]
+ * @param array $criterion ['src' => source name (exact), 'acc' => accession, 'kw' => keywords,
+ *                          'sub' => also the more specific terms (GO; moopmartMoreSpecificTerms())]
  * @return array|null ['sql' => string, 'params' => array], or null if the criterion is empty
  */
 function moopmartAnnotationCriterionClause(array $criterion): ?array
@@ -479,8 +494,16 @@ function moopmartAnnotationCriterionClause(array $criterion): ?array
         $crit_params[] = $criterion['src'];
     }
     if (!empty($criterion['acc'])) {
-        $crit_where[]  = 'a.annotation_accession = ?';
-        $crit_params[] = $criterion['acc'];
+        $accs = !empty($criterion['sub']) ? moopmartMoreSpecificTerms($criterion['acc']) : [$criterion['acc']];
+        if (count($accs) === 1) {
+            $crit_where[]  = 'a.annotation_accession = ?';
+            $crit_params[] = $accs[0];
+        } else {
+            // One JSON parameter, not one ? per term: "biological process" has ~30k terms below it,
+            // past SQLite's parameter limit.
+            $crit_where[]  = 'a.annotation_accession IN (SELECT value FROM json_each(?))';
+            $crit_params[] = json_encode($accs);
+        }
     }
     if (!empty($criterion['kw'])) {
         $parsed = moopmartBuildTextConditions($criterion['kw'], 'feature_annotation_search', 'annotation_description', '+fa2.feature_annotation_id');
@@ -964,6 +987,7 @@ function moopmartParsePreviewRequest(array $post): array {
     $crit_srcs = $post['ann_criteria_src'] ?? [];
     $crit_accs = $post['ann_criteria_acc'] ?? [];
     $crit_kws  = $post['ann_criteria_kw']  ?? [];
+    $crit_subs = $post['ann_criteria_sub'] ?? [];
     $criteria  = [];
     foreach (array_keys((array)$crit_srcs) as $i) {
         // The source name exactly as listed: never trimmed. Names are matched as stored, and eight
@@ -972,7 +996,7 @@ function moopmartParsePreviewRequest(array $post): array {
         $acc = trim($crit_accs[$i] ?? '');
         $kw  = trim($crit_kws[$i]  ?? '');
         if ($src !== '' || $acc !== '' || $kw !== '') {
-            $criteria[] = ['src' => $src, 'acc' => $acc, 'kw' => $kw];
+            $criteria[] = ['src' => $src, 'acc' => $acc, 'kw' => $kw, 'sub' => ($crit_subs[$i] ?? '') === '1'];
         }
     }
     if (!empty($criteria)) $filters['annotation_criteria'] = $criteria;

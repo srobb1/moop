@@ -87,6 +87,38 @@ if ((moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy') {
     }
 }
 
+// GO: the genes carrying this term or a more specific one, per gene set the visitor may see
+// (lib/go_gene_counts.php), each row linked straight to those genes in the Data Exporter with its
+// gene set already chosen and "more specific terms" ticked -- the same rule, so the numbers match.
+$gene_rows = null;
+$genes_missing = 0;
+if ($prefix === 'GO') {
+    require_once __DIR__ . '/../lib/go_gene_counts.php';
+    $gene_rows = moop_go_counts_by_gene_set($term['id']);
+    $genes_missing = moop_ob_gene_counts_missing();
+    $mart = moop_url('tools/moopmart.php');
+    foreach ($gene_rows as &$g) {
+        $g['url'] = $mart . '?' . http_build_query(['organism' => $g['organism'], 'assembly' => $g['assembly'],
+                     'gene_set' => $g['gene_set'], 'annotation' => $term['id'], 'annotation_sub' => 1,
+                     'annotation_columns' => [MOOP_GO_ANNOTATION_TYPE]]);
+    }
+    unset($g);
+}
+// The same selection as a TSV straight from the exporter's download (api/moopmart_export.php, a
+// POST with the CSRF token): one row per gene ('wide'), each GO source's terms as columns.
+$gene_download = null;
+if ($gene_rows) {
+    $go_sources = [];
+    foreach (array_unique(array_column($gene_rows, 'organism')) as $o) {
+        foreach ((moop_load_annotation_sources_cache($o) ?? [])[MOOP_GO_ANNOTATION_TYPE] ?? [] as $src) $go_sources[$src['name']] = true;
+    }
+    $gene_download = ['action' => moop_url('api/moopmart_export.php'), 'fields' => [
+        'output_format' => 'tsv', 'ann_format' => 'wide',
+        'ann_criteria_src[]' => '', 'ann_criteria_acc[]' => $term['id'], 'ann_criteria_kw[]' => '', 'ann_criteria_sub[]' => '1',
+        'annotation_columns[]' => array_keys($go_sources)]];
+    foreach ($gene_rows as &$g) $g['source_key'] = $g['organism'] . '|' . $g['assembly'] . '|' . $g['gene_set'];
+    unset($g);
+}
 // No records on this site at all: the site may still name where they are listed.
 $records_elsewhere = $records === null && (moop_ontology_sources()[$prefix]['purpose'] ?? '') === 'anatomy'
                    ? moop_ob_records_link($prefix, (string) array_key_first(moop_page_sources()), $term['id'], 'BFO:0000050') : '';
@@ -96,11 +128,11 @@ echo render_display_page(__DIR__ . '/pages/ontology_term.php', [
     'term' => $term, 'prefix' => $prefix, 'ontology_name' => $ontologies[$prefix],
     'release' => (string) (moop_ontology_meta($prefix)['release'] ?? ''), 'view' => $view, 'rels' => $rels,
     'written_html' => $written_html, 'records' => $records, 'records_elsewhere' => $records_elsewhere,
-    'term_images' => $term_images,
+    'term_images' => $term_images, 'gene_rows' => $gene_rows, 'genes_missing' => $genes_missing, 'gene_download' => $gene_download,
     'links' => $obo === '' ? [] : [
         'OLS (EMBL-EBI)' => 'https://www.ebi.ac.uk/ols4/ontologies/' . strtolower($prefix) . '/classes?obo_id=' . rawurlencode($term['id']),
         'OBO PURL'       => 'http://purl.obolibrary.org/obo/' . $obo,
     ],
     'page_styles' => [moop_url_base() . '/css/parent-nav.css', moop_url_base() . '/css/ontology-browser.css'],
-    'page_script' => [moop_url_base() . '/js/modules/parent-nav.js'],
+    'page_script' => [moop_url_base() . '/js/modules/parent-nav.js', moop_url_base() . '/js/ontology-term.js'],
 ], $term['label'] . ' (' . $term['id'] . ')');

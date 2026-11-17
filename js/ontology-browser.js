@@ -50,6 +50,7 @@
       badge(el, "ob-n", d.terms_all === 1 ? T("1 term") : T("%s terms").replace("%s", fmt(d.terms_all)),
             T("All the terms below it, at any depth"));
     }
+    drawGenes(el, d, open);
     if (d.records_all === null || d.records_all === undefined) return;
     var n = open ? d.records_own : d.records_all;
     if (!n) { badge(el, "ob-rec-none", open ? T("no records on this term itself") : T("no records"), ""); return; }
@@ -60,6 +61,22 @@
     a.appendChild(document.createTextNode(" " + (open ? T("%s on this term").replace("%s", fmt(n))
                                                       : (n === 1 ? T("1 record") : T("%s records").replace("%s", fmt(n))))));
     el.appendChild(a);
+  }
+  // GO: genes carrying the term. CLOSED = the term or a more specific one; OPENED = the term itself.
+  function drawGenes(el, d, open) {
+    if (d.genes_all === null || d.genes_all === undefined) return;
+    var n = open ? d.genes_own : d.genes_all;
+    if (!n) { badge(el, "ob-rec-none", open ? T("no genes on this term itself") : T("no genes"), ""); return; }
+    // Linked to the term page's Genes table (per gene set, each linked to the Data Exporter).
+    var b = document.createElement(d.url ? "a" : "span"); b.className = "ob-rec" + (open ? " ob-rec-open" : "");
+    if (d.url) b.href = d.url + "#pnav-genes";
+    b.title = open ? T("Genes annotated to this term itself; the terms below show theirs.")
+                   : (d.gene_organisms === 1 ? T("Genes annotated to this term or a more specific one, in 1 organism")
+                      : T("Genes annotated to this term or a more specific one, in %s organisms").replace("%s", fmt(d.gene_organisms)));
+    var i = document.createElement("i"); i.className = "fa fa-dna"; i.setAttribute("aria-hidden", "true"); b.appendChild(i);
+    b.appendChild(document.createTextNode(" " + (open ? T("%s on this term").replace("%s", fmt(n))
+                                                      : (n === 1 ? T("1 gene") : T("%s genes").replace("%s", fmt(n))))));
+    el.appendChild(b);
   }
   function badge(el, cls, text, title) {
     var b = document.createElement("span"); b.className = cls; b.textContent = text; if (title) b.title = title; el.appendChild(b);

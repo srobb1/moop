@@ -3,7 +3,10 @@
  * Ontology term page -- content file (controller: tools/ontology_term.php). Laid out like the gene
  * page: the same section sidebar (js/modules/parent-nav.js lists every [data-nav-label] card).
  * Variables: $term (null = not found), $prefix, $ontology_name, $release, $view (paths, parents,
- * kinds, outgoing, incoming, written), $rels, $written_html, $records, $records_elsewhere, $links.
+ * kinds, outgoing, incoming, written), $rels, $written_html, $records, $records_elsewhere, $links,
+ * $gene_rows (GO: one row per visible gene set, else null), $genes_missing, $gene_download.
+ * Genes are opened or downloaded ONE gene set at a time, by design: an all-organisms export of a
+ * broad term would be enormous (Sofia, 2026-11-17).
  */
 $browser = moop_url('tools/ontology_browser.php') . '?o=' . rawurlencode($prefix);
 $rows = function (array $list) use ($prefix): string {
@@ -120,6 +123,58 @@ $rows = function (array $list) use ($prefix): string {
         <a class="ms-auto small" href="<?= htmlspecialchars(moop_page_url($view['written']['slug'])) ?>"><?= t('Open as its own page') ?></a>
       </div>
       <div class="card-body content-page-body ob-written"><?= $written_html ?></div>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($gene_rows !== null): ?>
+    <?php $_orgs = count(array_unique(array_column($gene_rows, 'organism'))); ?>
+    <div class="card shadow-sm mb-4" id="pnav-genes" data-nav-label="<?= t('Genes') ?>">
+      <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Genes') ?> <span class="ob-hcount">(<?= number_format(count($gene_rows)) ?>)</span></h2></div>
+      <div class="card-body">
+        <?php if ($gene_rows): ?>
+          <p class="mb-3"><?= $_orgs === 1
+              ? t('Genes annotated to %s or a more specific term (is a, part of), in 1 organism. Every GO source counts; a gene counts once. Click a number for those genes in the Data Exporter, or the arrow beside it to download them.', $term['label'])
+              : t('Genes annotated to %s or a more specific term (is a, part of), in %d organisms. Every GO source counts; a gene counts once. Click a number for those genes in the Data Exporter, or the arrow beside it to download them.', $term['label'], $_orgs) ?></p>
+          <?php
+          // A TSV of these genes straight from the exporter: hidden fields + the gene sets ($keys).
+          $dl_form = function (array $keys, string $label, string $cls) use ($gene_download): string {
+              $h = '<form method="post" action="' . htmlspecialchars($gene_download['action']) . '" class="d-inline">' . csrf_input_field();
+              foreach ($gene_download['fields'] as $k => $v) {
+                  foreach ((array) $v as $one) $h .= '<input type="hidden" name="' . htmlspecialchars($k) . '" value="' . htmlspecialchars($one) . '">';
+              }
+              foreach ($keys as $key) $h .= '<input type="hidden" name="sources[]" value="' . htmlspecialchars($key) . '">';
+              return $h . '<button type="submit" class="' . $cls . '" title="' . t('Download these genes with their GO terms (TSV)') . '">'
+                   . '<i class="fa fa-download" aria-hidden="true"></i>' . $label . '</button></form>';
+          };
+          ?>
+
+          <table class="table table-sm table-hover align-middle w-100 ob-genes" id="obGenes">
+            <thead><tr>
+              <th><?= t('Organism') ?></th><th><?= t('Assembly') ?></th><th><?= t('Gene set') ?></th>
+              <th class="text-end" title="<?= t('Genes annotated to this term or a more specific one') ?>"><?= t('Genes') ?></th>
+              <th class="text-end" title="<?= t('Genes annotated to this term itself') ?>"><?= t('On this term') ?></th>
+            </tr></thead>
+            <tbody>
+            <?php foreach ($gene_rows as $g): ?>
+              <tr>
+                <td><em><?= htmlspecialchars(str_replace('_', ' ', $g['organism'])) ?></em></td>
+                <td><?= htmlspecialchars($g['genome_name'] !== '' ? $g['genome_name'] . ' (' . $g['assembly'] . ')' : $g['assembly']) ?></td>
+                <td><?= htmlspecialchars($g['gene_set']) ?></td>
+                <td class="text-end text-nowrap" data-order="<?= $g['genes'] ?>"><a class="ob-rec" href="<?= htmlspecialchars($g['url']) ?>" title="<?= t('These genes in the Data Exporter') ?>"><i class="fa fa-dna" aria-hidden="true"></i> <?= number_format($g['genes']) ?></a> <?= $dl_form([$g['source_key']], '', 'btn btn-sm btn-link p-0 ms-1 ob-dl') ?></td>
+                <td class="text-end" data-order="<?= $g['direct'] ?>"><?= number_format($g['direct']) ?></td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        <?php else: ?>
+          <p class="text-muted mb-0"><?= t('No genes you can see are annotated to this term or a more specific one.') ?></p>
+        <?php endif; ?>
+        <?php if ($genes_missing > 0): ?>
+          <p class="small text-muted mt-2 mb-0"><i class="fa fa-hourglass-half" aria-hidden="true"></i>
+            <?= $genes_missing === 1 ? t('Gene counts are still being prepared for 1 organism, so some numbers are lower than they will be.')
+                                     : t('Gene counts are still being prepared for %d organisms, so some numbers are lower than they will be.', $genes_missing) ?></p>
+        <?php endif; ?>
+      </div>
     </div>
     <?php endif; ?>
 

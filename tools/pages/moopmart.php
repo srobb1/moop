@@ -252,7 +252,7 @@
         endforeach;
         $ann_dropdown .= '</select>';
         // The first row may arrive filled in from a link (?annotation=...&annotation_source=...).
-        $_pf = $prefill_annotation ?? ['acc' => '', 'src' => ''];
+        $_pf = $prefill_annotation ?? ['acc' => '', 'src' => '', 'sub' => false];
         $_pf_open = $_pf['acc'] !== '' || $_pf['src'] !== '';
         $ann_dropdown_first = $_pf['src'] === '' ? $ann_dropdown
             : str_replace('<option value="' . htmlspecialchars($_pf['src']) . '">',
@@ -292,7 +292,8 @@
               <div id="mm-ann-criteria">
                 <div class="mm-ann-criterion row g-2 mb-2 align-items-center">
                   <div class="col-sm-4"><?= $ann_dropdown_first ?></div>
-                  <div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="<?= t('e.g. GO:0006351') ?>" value="<?= htmlspecialchars($_pf['acc']) ?>"></div>
+                  <div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="<?= t('e.g. GO:0006351') ?>" value="<?= htmlspecialchars($_pf['acc']) ?>">
+                    <label class="form-check small mt-1 mb-0" title="<?= t('A GO term also finds the genes annotated to the terms below it (is a, part of) -- the genes the Ontology Browser counts.') ?>"><input type="checkbox" class="form-check-input mm-ann-sub"<?= !empty($_pf['sub']) ? ' checked' : '' ?>> <span class="form-check-label"><?= t('and more specific GO terms') ?></span></label></div>
                   <div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="<?= t('e.g. transporter') ?>"></div>
                   <div class="col-sm-1"></div>
                 </div>
@@ -304,8 +305,6 @@
             </div>
           </div>
         </div>
-
-        <script>const mmAnnDropdownHtml = <?= json_encode($ann_dropdown) ?>;</script>
 
         <!-- By Chromosomal Location -->
         <div>
@@ -561,8 +560,9 @@
             ?>
             <div class="mm-ann-group mb-2">
               <div class="d-flex align-items-center px-1 py-1 rounded mb-1" style="background:#f1f3f5;">
+                <?php $_on = in_array($type, $prefill_ann_types ?? [], true) ? ' checked' : ''; ?>
                 <input type="checkbox" class="form-check-input me-2 mb-0 mm-ann-type-cb flex-shrink-0"
-                       id="<?= $type_safe ?>" data-type="<?= htmlspecialchars($type) ?>">
+                       id="<?= $type_safe ?>" data-type="<?= htmlspecialchars($type) ?>"<?= $_on ?>>
                 <label for="<?= $type_safe ?>" class="form-check-label fw-semibold mb-0 me-auto"
                        style="cursor:pointer; font-size:0.88rem;">
                   <span class="badge bg-<?= $color ?> me-1"><?= htmlspecialchars($type) ?></span>
@@ -576,7 +576,7 @@
                   <input type="checkbox" class="form-check-input flex-shrink-0 mm-ann-col mb-0"
                          id="<?= $safe_id ?>"
                          value="<?= htmlspecialchars($src_name) ?>"
-                         data-type="<?= htmlspecialchars($type) ?>"<?= ($src_name === MOOPMART_ANATOMY_SOURCE && $type === MOOPMART_ANATOMY_TYPE)
+                         data-type="<?= htmlspecialchars($type) ?>"<?= $_on ?><?= ($src_name === MOOPMART_ANATOMY_SOURCE && $type === MOOPMART_ANATOMY_TYPE)
                              ? ' data-orgs="' . htmlspecialchars(implode(',', $anatomy_organisms ?? [])) . '"' : '' ?>>
                   <label class="form-check-label mb-0" for="<?= $safe_id ?>"
                          style="cursor:pointer; font-size:0.82rem;">

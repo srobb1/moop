@@ -8,6 +8,7 @@
  *   ann_criteria_src[]   - annotation source name per criterion (empty = any)
  *   ann_criteria_acc[]   - exact accession per criterion (empty = skip)
  *   ann_criteria_kw[]    - keyword per criterion (empty = skip); criteria are AND'd
+ *   ann_criteria_sub[]   - '1' = the accession's more specific terms too (GO: is a + part of)
  *   coord_chr / coord_start / coord_end - coordinate range filter
  *   output_format        - 'tsv' | 'fasta'  (default: tsv)
  *   fasta_mode           - 'gene'|'upstream'|'downstream'|'exons'|'protein'|'transcript'|'cds'

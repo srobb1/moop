@@ -242,13 +242,16 @@
         if (!container) return;
 
         document.getElementById('mm-add-criterion')?.addEventListener('click', function () {
-            const newRow = document.createElement('div');
-            newRow.className = 'mm-ann-criterion row g-2 mb-2 align-items-center';
-            newRow.innerHTML =
-                '<div class="col-sm-4">' + mmAnnDropdownHtml + '</div>' +
-                '<div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="e.g. GO:0006351"></div>' +
-                '<div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="e.g. transporter"></div>' +
-                '<div class="col-sm-1 text-end"><button type="button" class="btn btn-sm btn-outline-danger py-0 mm-remove-criterion" title="Remove"><i class="fa fa-times"></i></button></div>';
+            // A copy of the first row, emptied -- one source for the row's markup (translated, and
+            // it cannot drift from the server's), plus a remove button.
+            const newRow = container.querySelector('.mm-ann-criterion').cloneNode(true);
+            newRow.querySelectorAll('select').forEach(sel => { sel.value = ''; sel.querySelectorAll('option').forEach(o => o.removeAttribute('selected')); });
+            newRow.querySelectorAll('input[type=text]').forEach(inp => { inp.value = ''; inp.removeAttribute('value'); });
+            newRow.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; cb.removeAttribute('checked'); });
+            const last = newRow.lastElementChild;
+            last.className = 'col-sm-1 text-end';
+            last.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger py-0 mm-remove-criterion"><i class="fa fa-times"></i></button>';
+            last.firstChild.title = moopT('Remove');
             container.appendChild(newRow);
             // The cloned dropdown starts label-less; give it the counts already computed for
             // the current organism selection so it matches the rows above it.
@@ -515,10 +518,12 @@
             const src = row.querySelector('.mm-ann-src-select')?.value || '';
             const acc = row.querySelector('.mm-ann-accession')?.value?.trim() || '';
             const kw  = row.querySelector('.mm-ann-keyword')?.value?.trim() || '';
+            const sub = row.querySelector('.mm-ann-sub')?.checked ? '1' : '0';
             if (src || acc || kw) {
                 fd.append('ann_criteria_src[]', src);
                 fd.append('ann_criteria_acc[]', acc);
                 fd.append('ann_criteria_kw[]',  kw);
+                fd.append('ann_criteria_sub[]', sub);
             }
         });
 

@@ -194,6 +194,12 @@ function housekeeping_task_registry(): array {
             'desc'  => 'Keeps the ontology files (PLANA, BSPO, ECO -- Site Configuration -> Ontologies) current: once a week downloads each source\'s small releases.txt and rebuilds an ontology only when it changed, or when an admin pressed Rebuild now. Only ontologies already built on this site are refreshed, so a site that never used them pays nothing.',
         ],
         [
+            'name'  => 'go_gene_counts',
+            'fn'    => 'housekeeping_refresh_go_gene_counts',
+            'label' => 'GO gene counts',
+            'desc'  => 'Counts, per gene set, the genes under each GO term (all GO sources together; carried up is a and part of, GO\'s own rule) for the Ontology Browser. Recounts an organism only when its database or the GO file changed -- about 10 s each, in the background run only, about four minutes per run, the rest on the next. Nothing to do on a site without GO built. docs/ONTOLOGIES.md',
+        ],
+        [
             'name'  => 'jbrowse_version',
             'fn'    => 'housekeeping_check_jbrowse_version',
             'label' => 'JBrowse2 version',
@@ -2021,6 +2027,27 @@ function housekeeping_refresh_ontologies() {
     $result = ['checked_at' => date('c'), 'ontologies' => moop_ontology_refresh()];
     $_SESSION['ontologies'] = $result;
     housekeeping_persist_status('ontologies', $result);
+}
+
+/**
+ * GO gene counts (lib/go_gene_counts.php): recount organisms whose database or go.sqlite changed.
+ * Seconds per organism, so ONLY in the background CLI run, within a budget -- after a GO release or
+ * a full pipeline reload every organism is stale at once, and the rest wait for the next run.
+ */
+function housekeeping_refresh_go_gene_counts() {
+    if (PHP_SAPI !== 'cli') return;
+    require_once __DIR__ . '/go_gene_counts.php';
+    $organism_data = ConfigManager::getInstance()->getPath('organism_data');
+    $r = moop_go_counts_refresh($organism_data, 240);
+    if (!$r['go']) return;                                   // GO not built here: nothing to count
+    $result = ['checked_at' => date('c'), 'counted' => count($r['built']), 'current' => $r['current'],
+               'left' => $r['left'], 'failed' => $r['failed']];
+    $_SESSION['go_gene_counts'] = $result;
+    housekeeping_persist_status('go_gene_counts', $result);
+    if ($r['built'] || $r['left'] || $r['failed']) {
+        error_log('MOOP housekeeping: GO gene counts for ' . count($r['built']) . ' organism(s), ' . $r['left']
+                  . ' left for the next run' . ($r['failed'] ? ', FAILED: ' . implode(', ', array_keys($r['failed'])) : ''));
+    }
 }
 
 function housekeeping_check_jbrowse_version() {

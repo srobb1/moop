@@ -1,7 +1,8 @@
 <?php
 /**
  * Ontology browser -- content file (controller: tools/ontology_browser.php).
- * Variables: $ontologies [prefix => name], $prefix, $parts, $relations [id => label], $release, $roots.
+ * Variables: $ontologies [prefix => name], $prefix, $parts, $relations [id => label], $release, $roots,
+ *            $genes_missing (GO: visible organisms whose gene counts are not built yet).
  * Rows: .ob-row = term | definition (one column for every depth: only the term indents).
  * Each row's counts (.ob-counts, drawn by js/ontology-browser.js): closed = the term and everything
  * below it; opened = its own share (terms directly below, by relationship; records on the term).
@@ -22,6 +23,7 @@ $self = moop_url('tools/ontology_browser.php');
           ['label' => 'The tree', 'text' => 'Each row is a term and its definition. Open a row (the arrow) to see the terms directly below it; the number counts them.'],
           ['label' => 'Show parts too', 'text' => 'By default a branch holds the term\'s kinds (is a). Tick "show parts too" to also see its parts and what develops from it, marked with the relationship.'],
           ['label' => 'The numbers', 'text' => 'A closed row counts the term and everything below it: how many terms, and how many published expression records (where this site has them). Open it and the numbers change to its own share -- the terms directly below it, by relationship, and the records on the term itself -- because the rows below now show the rest. The counts follow what the tree is showing: with "show parts too" off, only kinds (is a) count, so a system whose records are all on its parts shows none.'],
+          ['label' => 'Gene counts (GO)', 'text' => 'In GO, a closed row shows how many genes carry the term or a more specific one, across the organisms you can see; open it and the number becomes the genes annotated to the term itself. Every GO source is counted together, and a gene counts once. A gene is carried up by "is a" and "part of" only -- GO\'s own rule -- whatever the tree is showing.'],
           ['label' => 'A term\'s page', 'text' => 'Click a term\'s name for its page: definition, synonyms, where it sits in the ontology, its parts, and any written description this site has for it.'],
           ['label' => 'Find a term', 'text' => 'Type a name or a synonym in the search box (brain finds cephalic ganglia) and pick it to open its page.'],
       ],
@@ -57,6 +59,11 @@ $self = moop_url('tools/ontology_browser.php');
     </form>
   </div>
   <p class="small text-muted mb-2"><?= htmlspecialchars(t_plain($ontologies[$prefix])) ?><?= $release !== '' ? ' &middot; ' . t('release %s', $release) : '' ?></p>
+  <?php if ($genes_missing > 0): ?>
+    <p class="small text-muted mb-2"><i class="fa fa-hourglass-half" aria-hidden="true"></i>
+      <?= $genes_missing === 1 ? t('Gene counts are still being prepared for 1 organism, so some numbers are lower than they will be.')
+                               : t('Gene counts are still being prepared for %d organisms, so some numbers are lower than they will be.', $genes_missing) ?></p>
+  <?php endif; ?>
 
   <div class="ob-tree-card">
     <div class="ob-head"><span><?= t('Term') ?></span><span><?= t('Definition') ?></span></div>
@@ -66,7 +73,7 @@ $self = moop_url('tools/ontology_browser.php');
         <div class="ob-row">
           <span class="ob-term">
             <?php if ($r['children'] > 0): ?><button type="button" class="ob-toggle" aria-expanded="false" aria-label="<?= t('Show the terms below %s', $r['label']) ?>"></button><?php else: ?><span class="ob-leaf"></span><?php endif; ?>
-            <a href="<?= htmlspecialchars(moop_ob_term_url($prefix, $r['id'])) ?>"><?= htmlspecialchars($r['label']) ?></a><span class="ob-counts" data-counts="<?= htmlspecialchars(json_encode(['terms_all' => $r['terms_all'], 'children' => $r['children'], 'below' => array_combine(array_map('t_plain', array_keys($r['below'])), array_values($r['below'])) ?: new stdClass(), 'records_all' => $r['records_all'], 'records_own' => $r['records_own'], 'records_url' => $r['records_url']])) ?>"></span>
+            <a href="<?= htmlspecialchars(moop_ob_term_url($prefix, $r['id'])) ?>"><?= htmlspecialchars($r['label']) ?></a><span class="ob-counts" data-counts="<?= htmlspecialchars(json_encode(['terms_all' => $r['terms_all'], 'children' => $r['children'], 'below' => array_combine(array_map('t_plain', array_keys($r['below'])), array_values($r['below'])) ?: new stdClass(), 'records_all' => $r['records_all'], 'records_own' => $r['records_own'], 'records_url' => $r['records_url'], 'genes_all' => $r['genes_all'], 'genes_own' => $r['genes_own'], 'gene_organisms' => $r['gene_organisms'], 'url' => moop_ob_term_url($prefix, $r['id'])])) ?>"></span>
           </span>
           <span class="ob-def"><?= htmlspecialchars($r['definition']) ?></span>
         </div>

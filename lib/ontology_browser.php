@@ -260,3 +260,44 @@ function moop_ob_records_link(string $prefix, string $org, string $id, string $r
     return str_replace(['{id}', '{rel}'], [rawurlencode($id), rawurlencode($rel)], $tpl);
 }
 
+
+/**
+ * GO gene counts on tree rows (lib/go_gene_counts.php), looked up for ALL the rows at once so each
+ * organism's counts file is opened once per request, not once per row. Adds to each row:
+ *   genes_all       -- genes annotated to the term or a more specific one (is a + part of, GO's rule)
+ *   genes_own       -- genes annotated to the term itself
+ *   gene_organisms  -- how many organisms those genes come from
+ * Only the gene sets this visitor may see are counted. null for an ontology without gene counts.
+ * Unlike the records counts these do NOT follow "show parts too": a gene's GO term is carried up
+ * by GO's own rule whatever the tree is showing.
+ */
+function moop_ob_add_gene_counts(string $prefix, array $rows): array {
+    if ($prefix !== 'GO' || !$rows) {
+        return array_map(fn($r) => $r + ['genes_all' => null, 'genes_own' => null, 'gene_organisms' => 0], $rows);
+    }
+    require_once __DIR__ . '/go_gene_counts.php';
+    $c = moop_go_counts_for_terms(array_column($rows, 'id'));
+    foreach ($rows as &$r) {
+        $r['genes_all']      = (int) ($c[$r['id']]['genes'] ?? 0);
+        $r['genes_own']      = (int) ($c[$r['id']]['direct'] ?? 0);
+        $r['gene_organisms'] = count($c[$r['id']]['organisms'] ?? []);
+    }
+    unset($r);
+    return $rows;
+}
+
+/**
+ * Visible organisms whose GO counts are not built yet (so the tree's gene numbers are short of the
+ * truth until housekeeping catches up). Cheap: one is_file per organism, no database opened.
+ */
+function moop_ob_gene_counts_missing(): int {
+    require_once __DIR__ . '/go_gene_counts.php';
+    $data = ConfigManager::getInstance()->getPath('organism_data');
+    $n = 0;
+    $orgs = [];
+    foreach (getAccessibleGeneSets() as $by_org) foreach (array_keys($by_org) as $org) $orgs[$org] = true;
+    foreach (array_keys($orgs) as $org) {
+        if (is_file("$data/$org/organism.sqlite") && !is_file(moop_go_counts_file($org))) $n++;
+    }
+    return $n;
+}

@@ -143,11 +143,32 @@ at build time), `meta` (release, built_at, counts).
 | Term search box | those with `search` | `api/ontology_terms.php`, `js/modules/ontology-term-box.js` |
 | Ontology Browser + term pages | every ontology with a closure | `tools/ontology_browser.php`, `tools/ontology_term.php`, `api/ontology_children.php` |
 | Help "Where the data comes from" | every built one | `tools/pages/help/data-sources.php` |
-| Data Exporter link from a term page | GO | `tools/moopmart.php?annotation=GO:…[&annotation_source=…]` prefills a criterion |
-| *Planned:* exporter "include more specific terms" | GO | expands a term through is a + part of before matching |
-| *Planned:* GO gene counts per term (term pages, tree badges) | GO | all GO sources combined; recounted only when an organism database or the GO file changes |
+| Data Exporter link from a term page | GO | `tools/moopmart.php?annotation=GO:…[&annotation_source=…][&annotation_sub=1][&annotation_columns[]=Gene Ontology]` prefills a criterion, ticks "and more specific GO terms" and the GO annotation columns |
+| Exporter "and more specific GO terms" | GO | `moopmartMoreSpecificTerms()`: the term plus everything below it by is a + part of (`MOOP_GO_PROPAGATE`, the counts' rule -- verified equal to the counts) |
+| GO gene counts per term | GO | `lib/go_gene_counts.php`: one `<cache>/go_counts/<Organism>.sqlite` per organism, counts PER GENE SET; read with `moop_go_counts_for_terms()`, which sums only the gene sets the visitor may see. Shown as tree badges (closed: term + more specific; opened: on the term itself) and in the term page's Genes table: one row per gene set, its number opens the exporter for that gene set, the arrow beside it downloads the same genes as TSV. One gene set at a time by design -- no all-organisms export of a broad term |
 
-## 5. Adding another ontology
+## 5. GO gene counts
+
+For each GO term and gene set: the genes annotated to the term or to a more specific one (is a +
+part of, `MOOP_GO_PROPAGATE`), every GO source together, a gene counted once. Also kept: genes
+annotated to the term itself (`direct`) and genes with any GO term per gene set (`genes_with_go`).
+
+- **Built by** housekeeping's `go_gene_counts` task, in the background run only, about four
+  minutes per run (the rest on the next run), or by hand:
+
+      php scripts/build_go_gene_counts.php                      # every stale organism
+      php scripts/build_go_gene_counts.php Acropora_millepora   # one, recounted now
+      php scripts/build_go_gene_counts.php --force              # all
+
+- **Recounted only when needed:** an organism's file records the size and time of its
+  `organism.sqlite` and the build time of `go.sqlite`; when either changes it is counted again.
+  Files of organisms that are gone are removed.
+- **Cost (2026-11-17):** ~10 s and ~160 MB per organism (*Acropora millepora*: 726k GO links,
+  20,107 genes with GO, 20,005 terms); a 470 KB file. All 66 organisms: three background runs.
+- **Permissions:** counts are stored per gene set and summed at read time over the visitor's own
+  `getAccessibleGeneSets()`, so a restricted gene set never adds to a number someone else sees.
+
+## 6. Adding another ontology
 
 1. In the PAGE workflow add its prefix to the download loop, the closure loop (if it needs a tree)
    and the terms loop, to the "missing files" list and to `git add`. Push, then run the workflow.

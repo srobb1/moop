@@ -79,14 +79,19 @@ $annotation_source_names = array_keys($annotation_source_names);
 sort($annotation_source_names);
 
 // A link can pre-fill the first annotation criterion: ?annotation=GO:0006629[&annotation_source=...]
+// [&annotation_sub=1 -- and its more specific terms]
 // (a GO term page sends visitors here). Only a plain accession, and only a source this page
 // lists; anything else is ignored, never echoed.
-$prefill_annotation = ['acc' => '', 'src' => ''];
+$prefill_annotation = ['acc' => '', 'src' => '', 'sub' => !empty($_GET['annotation_sub'])];
 $_acc = trim((string) ($_GET['annotation'] ?? ''));
 if (preg_match('/^[A-Za-z][A-Za-z0-9_.:-]{0,63}$/', $_acc)) $prefill_annotation['acc'] = $_acc;
 $_src = (string) ($_GET['annotation_source'] ?? '');
 if ($_src !== '' && in_array($_src, $annotation_source_names, true)) $prefill_annotation['src'] = $_src;
 unset($_acc, $_src);
+// ...and tick annotation types for the TSV's annotation columns: ?annotation_columns[]=Gene Ontology
+// (a GO term page sends its genes WITH their GO terms). Only types this page lists.
+$prefill_ann_types = array_values(array_intersect(array_map('strval', (array) ($_GET['annotation_columns'] ?? [])),
+                                                  array_keys($annotation_source_types)));
 
 // Curated anatomical expression (e.g. PAGE) is offered as one more annotation COLUMN for the
 // organisms that have it. Not a filter source ($annotation_source_names): the filters query
@@ -112,6 +117,7 @@ echo render_display_page(
         'annotation_source_types'  => $annotation_source_types,
         'anatomy_organisms'        => $anatomy_organisms,
         'prefill_annotation'       => $prefill_annotation,
+        'prefill_ann_types'        => $prefill_ann_types,
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
         // scope-selector BEFORE moopmart.js: moopmart.js calls initScopeSelector().
