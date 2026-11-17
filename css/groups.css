@@ -146,8 +146,14 @@
 .organism-selector-card:not(.selected) .organism-selection-text {
     color: #94a3b8;
 }
-.organism-selector-card:not(.selected) .organism-card {
+.organism-selector-card:not(.selected):not(.browse-only) .organism-card {
     opacity: 0.62;
+}
+/* Browse-only cards (the group page since 2026-11-16: "Refine selection" decides the search,
+   the cards only open an organism). No selection state, so they keep the selected look
+   rather than the faded "not in search" one. */
+.organism-selector-card.browse-only .organism-card {
+    background-color: #e8f4f8;
 }
 
 /* The card's destination, stated on the card itself. Always present so the

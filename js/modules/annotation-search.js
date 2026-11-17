@@ -26,6 +26,9 @@ class AnnotationSearch {
             extraAjaxParams: config.extraAjaxParams || {},
             noReadMoreButton: config.noReadMoreButton || false,
             noScopeFilter: config.noScopeFilter || false,
+            // No "Searching N organisms. Narrow by ..." line under the box: the page shows what
+            // is searched itself (the group page's "Refine selection" bar).
+            noOrganismNote: config.noOrganismNote || false,
             // {assemblies, gene_sets} from PHP, or null. The scope filter fetches the same
             // hierarchy over AJAX, so this is the only source available before it is opened.
             scopeCounts: config.scopeCounts || null,
@@ -117,6 +120,7 @@ class AnnotationSearch {
      * Called on init and whenever the organism selection changes.
      */
     updateOrganismNote() {
+        if (this.config.noOrganismNote) return;
         const form = $(this.config.formSelector);
         const parent = form.parent();
         let note = parent.find('.search-org-note');

@@ -151,9 +151,15 @@ if (!$is_taxonomy_group && empty($group_unknown) && !is_public_group($group_name
     require_access('COLLABORATOR', $group_name);
 }
 
+// "Refine selection": the shared organism selector, limited to the group's organisms and the
+// assemblies the group holds (includes/scope_selector.php). It decides what the group search
+// covers; the organism cards below are for browsing.
+require_once __DIR__ . '/../lib/scope_selector.php';
+$scope = moop_scope_restrict(moop_scope_selector_data(), $group_organisms);
+
 // Configure display template
 $page_scripts = [
-    moop_url_base() . "/js/modules/organism-utils.js",
+    moop_url_base() . "/js/modules/scope-selector.js",
     moop_url_base() . "/js/modules/tool-launch.js",
     moop_url_base() . "/js/groups-display.js"
 ];
@@ -175,6 +181,7 @@ $data = [
     'group_name' => $group_name,
     'group_info' => $group_info,
     'group_organisms' => $group_organisms,
+    'scope' => $scope,
     'organisms_list' => array_keys($group_organisms),  // For tool context
     'is_taxonomy_group' => $is_taxonomy_group,
     // True when nothing at all is filed under this name — as opposed to a real group
@@ -188,6 +195,7 @@ $data = [
     'absolute_images_path' => $absolute_images_path,
     'organism_data' => $organism_data,
     'page_styles' => [
+        moop_url_base() . "/css/display.css",   // the organism selector's styles
         moop_url_base() . "/css/groups.css",
         moop_url_base() . "/css/advanced-search-filter.css"
     ],

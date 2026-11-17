@@ -16,6 +16,9 @@
  * Expects:
  *   $scope       moop_scope_selector_data()
  *   $scope_opts  multi:  step, title (translated HTML), help_intro, help_need (plain English)
+ *                        start_all   => true: every row starts selected
+ *                        collapsible => true: a light bar (title + "Searching all N organisms"),
+ *                                       closed by default, instead of the teal step header
  *                single: mode => 'single'
  *                        selected     => 'org|asm|gs' to pre-select ('' for none)
  *                        filter       => text to pre-fill the filter with ('' for none)
@@ -36,6 +39,7 @@ $scope_asm_names = $scope['assembly_names'] ?? [];
 $scope_groups    = $scope['organism_groups'] ?? [];
 $scope_blast_only = $scope['blast_only'] ?? [];
 $scope_single    = ($scope_opts['mode'] ?? 'multi') === 'single';
+$scope_start_all = !$scope_single && !empty($scope_opts['start_all']);
 $scope_selected  = $scope_single ? (string)($scope_opts['selected'] ?? '') : '';
 $scope_has_genome   = $scope_opts['has_genome'] ?? null;
 $scope_availability = $scope_opts['availability'] ?? null;
@@ -52,7 +56,8 @@ if ($scope_selected !== '') {
 // One row per gene set. In simple view an organism with several gene sets shows as ONE row
 // (the first, with a "N gene sets" note); the others (.scope-row-secondary) appear with Details.
 $scope_render_rows = function () use ($scope_tree, $scope_info, $scope_asm_names, $scope_groups, $scope_blast_only,
-                                      $scope_single, $scope_selected, $scope_has_genome, $scope_availability, $scope_only) {
+                                      $scope_single, $scope_selected, $scope_has_genome, $scope_availability, $scope_only,
+                                      $scope_start_all) {
     if (empty($scope_tree)) {
         echo '<p class="text-muted small p-3">' . t('No accessible organisms found.') . '</p>';
         return;
@@ -80,7 +85,7 @@ $scope_render_rows = function () use ($scope_tree, $scope_info, $scope_asm_names
                 $seenOrg[$organism] = true;
                 $gsCount = $orgGsCount[$organism] ?? 1;
                 $tooltip = $label . ($cn ? ' · ' . $cn : '') . ' · ' . $asmDisplay . ($asmAccession ? ' (' . $asmAccession . ')' : '') . ' › ' . $gsDisplay;
-                $isSel   = $scope_single && $key === $scope_selected;
+                $isSel   = ($scope_single && $key === $scope_selected) || $scope_start_all;
                 $avail   = $scope_availability[$key] ?? null;
 ?>
         <div class="org-select-row scope-row<?= $isRep ? '' : ' scope-row-secondary' ?><?= $isSel ? ' selected' : '' ?><?= $scope_only && !isset($scope_only[$organism]) ? ' scope-row-outside' : '' ?>"
@@ -102,6 +107,7 @@ $scope_render_rows = function () use ($scope_tree, $scope_info, $scope_asm_names
                  data-unavailable-reason="<?= htmlspecialchars($avail['reason'] ?? '') ?>"
                  data-usable-mode="<?= htmlspecialchars($avail['usable_mode'] ?? '') ?>"<?php endif; ?>
                  <?= $isSel ? 'checked' : '' ?>
+                 <?php elseif ($isSel): ?><?= 'checked' ?>
                  <?php endif; ?>
                  data-org="<?= htmlspecialchars($organism) ?>"
                  data-asm="<?= htmlspecialchars($asm) ?>"
@@ -203,11 +209,25 @@ echo help_modal(
     ['intro' => $scope_opts['help_intro']]
 );
 ?>
+<?php $scope_collapsible = !empty($scope_opts['collapsible']); ?>
 <div class="card mb-3 shadow-sm">
+  <?php if ($scope_collapsible): ?>
+  <?php /* A light bar, closed by default: the search already covers everything selected, so
+           the list only needs opening to narrow it. The summary says what is searched. */ ?>
+  <div class="card-header py-2 d-flex align-items-center gap-2 bg-transparent">
+    <button type="button" class="btn btn-link p-0 text-reset text-decoration-none d-flex align-items-center gap-2 collapsed"
+            data-bs-toggle="collapse" data-bs-target="#scope-body" aria-expanded="false" aria-controls="scope-body">
+      <i class="fa fa-chevron-down collapse-chevron"></i>
+      <span class="fw-semibold small text-uppercase section-eyebrow"><?= $scope_opts['title'] ?></span>
+      <span class="text-muted small" id="scope-summary"></span>
+    </button>
+    <?= help_modal_trigger('scope-info-modal', '', 'How to select organisms') ?>
+  <?php else: ?>
   <div class="card-header py-2 d-flex align-items-center gap-2 tool-header">
-    <span class="step-badge me-2"><?= htmlspecialchars((string)$scope_opts['step']) ?></span>
+    <?php if (($scope_opts['step'] ?? '') !== ''): ?><span class="step-badge me-2"><?= htmlspecialchars((string)$scope_opts['step']) ?></span><?php endif; ?>
     <span class="fw-semibold" style="font-size:0.9rem;"><?= $scope_opts['title'] ?></span>
     <?= help_modal_trigger('scope-info-modal', '', 'How to select organisms') ?>
+  <?php endif; ?>
     <?php /* One toggle, not an All/None pair: its label states what the click will do, so it
              doubles as a readout of whether everything is selected. Deselect is immediate;
              select-all routes through the "this can take a while" warning below. */ ?>
@@ -216,6 +236,7 @@ echo help_modal(
     </button>
   </div>
 
+  <div<?= $scope_collapsible ? ' class="collapse" id="scope-body"' : '' ?>>
   <div class="row g-0" style="min-height:200px;">
 
     <!-- Left: organism list -->
@@ -250,6 +271,7 @@ echo help_modal(
   <div class="px-3 py-1 border-top" style="background:#f8f9fa; font-size:0.8rem;">
     <span class="text-muted" id="scope-counts"><?= t('Select at least one organism above') ?></span>
   </div>
+  </div><?php /* /#scope-body or plain wrapper */ ?>
 </div>
 
 <!-- Select-all warning -->

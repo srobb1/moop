@@ -109,6 +109,7 @@ function initScopeSelector(opts = {}) {
             return;
         }
         renderPanel(on);
+        renderSummary(all, on);
 
         const allOn = all.length > 0 && on.length === all.length;
         const toggleLabel = document.querySelector('.scope-toggle-all-label');
@@ -129,6 +130,17 @@ function initScopeSelector(opts = {}) {
             orgs === 1 ? moopT('%d organism', orgs) : moopT('%d organisms', orgs),
             asms === 1 ? moopT('%d assembly', asms) : moopT('%d assemblies', asms),
             gs   === 1 ? moopT('%d gene set', gs)   : moopT('%d gene sets', gs));
+    }
+
+    // The closed "Refine selection" bar (collapsible multi mode) says what the search covers.
+    function renderSummary(all, on) {
+        const el = document.getElementById('scope-summary');
+        if (!el) return;
+        const total = new Set(all.map((c) => c.dataset.org)).size;
+        const n     = new Set(on.map((c) => c.dataset.org)).size;
+        el.textContent = !n ? moopT('Nothing selected — pick at least one organism')
+            : (n === total && on.length === all.length) ? moopT('Searching all %d organisms', total)
+            : moopT('Searching %d of %d organisms', n, total);
     }
 
     function renderPanel(on) {
@@ -309,7 +321,26 @@ function initScopeSelector(opts = {}) {
     if (filterEl && filterEl.value.trim()) runFilter();   // a filter pre-filled by the server
     if (single) scrollToRow(list.querySelector('.scope-row.selected'));
 
-    return { checked, refresh: changed };
+    // The organisms with at least one gene set selected.
+    function organisms() {
+        return [...new Set(checked().map((c) => c.dataset.org))];
+    }
+
+    // The selection as AnnotationSearch's selectedScope: {organism: {assembly: {gene_set: bool}}}
+    // for the selected organisms, or null when nothing is excluded (= no gene-set filter).
+    function scope() {
+        const on = organisms();
+        const out = {};
+        let excluded = false;
+        boxes().forEach((cb) => {
+            if (!on.includes(cb.dataset.org)) return;
+            ((out[cb.dataset.org] ??= {})[cb.dataset.asm] ??= {})[cb.dataset.gs] = cb.checked;
+            if (!cb.checked) excluded = true;
+        });
+        return excluded ? out : null;
+    }
+
+    return { checked, organisms, scope, refresh: changed };
 }
 
 /**

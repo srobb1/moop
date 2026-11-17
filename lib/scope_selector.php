@@ -199,3 +199,25 @@ function moop_scope_single_state(array $scope, string $fallback = '', bool $auto
     }
     return ['selected' => $selected, 'filter' => $filter, 'only' => $only];
 }
+
+/**
+ * Narrow the selector's data to a set of organisms -- and, where given, to some of their
+ * assemblies (a group can hold only some of an organism's assemblies). For the group page,
+ * whose search is limited to the group: rows outside it are not rendered at all.
+ *
+ * @param array $organisms  [organism => [assembly, ...]] (getAccessibleOrganismsInGroup()), or
+ *                          [organism => true] for every assembly of that organism
+ */
+function moop_scope_restrict(array $scope, array $organisms): array {
+    $tree = [];
+    foreach ($scope['tree'] as $org => $asms) {
+        if (!isset($organisms[$org])) continue;
+        $keep = $organisms[$org];
+        foreach ($asms as $asm => $gss) {
+            if (is_array($keep) && $keep && !in_array($asm, $keep, true)) continue;
+            $tree[$org][$asm] = $gss;
+        }
+    }
+    $scope['tree'] = $tree;
+    return $scope;
+}
