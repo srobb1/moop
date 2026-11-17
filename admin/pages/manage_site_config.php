@@ -885,6 +885,26 @@ chmod 640 config/secrets.php &amp;&amp; chgrp <?= htmlspecialchars(function_exis
                     </div>
                 </div>
 
+                <!-- AI assistant guide (includes/config_init.php: moop_ai_guide) -->
+                <div class="card adm-card mb-3" id="pnav-ai-guide" data-nav-label="AI Assistant Guide">
+                    <div class="card-header adm-head">
+                        <h5 class="mb-0"><i class="fa fa-robot"></i> <?= htmlspecialchars($editable_config['ai_guide']['label']) ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small"><?= htmlspecialchars($editable_config['ai_guide']['description']) ?></p>
+                        <?php $__g = (string) $editable_config['ai_guide']['current_value']; ?>
+                        <label for="ai_guide" class="form-label"><strong>Guide</strong></label>
+                        <select id="ai_guide" name="ai_guide" class="form-select" style="max-width:24rem;">
+                            <option value=""<?= $__g === '' ? ' selected' : '' ?>>Off</option>
+                            <option value="here"<?= $__g === 'here' ? ' selected' : '' ?>>This site</option>
+                            <?php foreach (array_keys((array) $editable_config['linked_sites']['current_value']) as $__n): ?>
+                                <option value="<?= htmlspecialchars($__n) ?>"<?= $__g === $__n ? ' selected' : '' ?>>The linked site <?= htmlspecialchars($__n) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted">A linked site is listed once it is saved in Linked sites above.</small>
+                    </div>
+                </div>
+
                 <!-- Site Data Backup Path -->
                 <div class="card adm-card mb-3" id="pnav-backup-path" data-nav-label="Site Data Backup Path">
                     <div class="card-header adm-head">

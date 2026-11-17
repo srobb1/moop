@@ -342,6 +342,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $data['linked_sites'] = $__sites;
         }
+
+        // AI assistant guide (moop_ai_guide()): off, this site, or one of the linked sites above.
+        if (isset($_POST['ai_guide'])) {
+            $__g = strtolower(trim((string) $_POST['ai_guide']));
+            $__linked = $data['linked_sites'] ?? $config->getArray('linked_sites', []);
+            if ($__g === '' || $__g === 'here' || isset($__linked[$__g])) {
+                $data['ai_guide'] = $__g;
+            } else {
+                $error = 'AI assistant guide: "' . $__g . '" is not one of the linked sites. Nothing was saved.';
+            }
+        }
         
         // Handle file upload for header image
         if (isset($_FILES['header_upload']) && $_FILES['header_upload']['error'] == UPLOAD_ERR_OK) {

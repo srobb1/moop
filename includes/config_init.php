@@ -381,6 +381,24 @@ function moop_public_url(string $path = ''): string {
     return $base . moop_url($path);
 }
 
+/**
+ * The guide to using the data with an AI assistant (setting 'ai_guide', 2026-11-17), or null when this
+ * site has none. 'here': this site's help topic and llms.txt. A Linked sites name: that site's --
+ * Planosphere and Cutting Class point to SIMRbase, which holds the data an assistant would use.
+ * Returns ['here' => bool, 'help' => link to the help page, 'llms' => complete link to llms.txt].
+ */
+function moop_ai_guide(): ?array {
+    $v = strtolower(trim(ConfigManager::getInstance()->getString('ai_guide', '')));
+    if ($v === '') return null;
+    if ($v === 'here') {
+        return ['here' => true, 'help' => moop_url('help.php?topic=ai-assistants'), 'llms' => moop_public_url('llms.txt')];
+    }
+    require_once __DIR__ . '/../lib/content_pages.php';
+    $base = moop_linked_sites()[$v] ?? '';
+    if ($base === '') return null;
+    return ['here' => false, 'help' => $base . '/help.php?topic=ai-assistants', 'llms' => $base . '/llms.txt'];
+}
+
 /** The current URL with ?lang=<code> set (for the language switch), other parameters kept. */
 function moop_lang_url(string $code): string {
     $path  = strtok((string) ($_SERVER['REQUEST_URI'] ?? '/'), '?');

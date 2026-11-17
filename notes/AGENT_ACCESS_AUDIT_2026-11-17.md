@@ -103,3 +103,17 @@ GO term ONCE with all its sources (was once per source). `moop_go_term_gene_list
 source filter + flag; without them its SQL is unchanged (website output byte-identical, checked).
 `api/v1/go_term_genes.php` is now a real endpoint with named fields (was a wrapper returning
 positional arrays). The gene-list GO endpoint, when built, takes go_sources from the start.
+
+## Step 3 — the guide (2026-11-17)
+
+- `llms.php` → served as `llms.txt` (nginx `docs/nginx/moop-llms.conf`, root installs; at the move
+  the server blocks need `location = /llms.txt` instead). Documents api/v1 only; complete links via
+  `moop_public_url()`.
+- Help topic `ai-assistants` (tools/pages/help/ai-assistants.php) — the people's version; keep it
+  and llms.php in step.
+- Footer line + help-landing card. All three opt-in per site: setting `ai_guide` (Site
+  Configuration → AI Assistant Guide): off / this site / a linked site. simrbase = here;
+  Planosphere and Cutting Class = `simrbase` (needs `simrbase` in their Linked sites; Cutting Class
+  has none yet).
+- Still to add to both when built: gene-list annotations (domains, GO, DeepLoc), sequences for a
+  list, assembly stats/BUSCO, KEGG, search paging.

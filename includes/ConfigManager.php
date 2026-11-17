@@ -82,7 +82,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['link_prefix', 'public_url', 'ontologies', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'rate_limit_heavy_added', 'rate_limit_heavy_removed', 'tools_disabled', 'tools_layout', 'primer_maker', 'crosswalk_display', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels', 'linked_sites'];
+    private $editableConfigKeys = ['link_prefix', 'public_url', 'ontologies', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'rate_limit_heavy_added', 'rate_limit_heavy_removed', 'tools_disabled', 'tools_layout', 'primer_maker', 'crosswalk_display', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels', 'linked_sites', 'ai_guide'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -1430,6 +1430,13 @@ class ConfigManager
                 'description' => 'Other sites this site\'s content pages link to, by a short name. A page writes a link as {name}/the/rest, e.g. href="{simrbase}/tools/blast.php", and the address here is put in when the page is shown. When that site moves, change its address here and every link follows.',
                 'type' => 'linked_sites',
                 'current_value' => $this->getArray('linked_sites', []),
+                'note' => '',
+            ],
+            'ai_guide' => [
+                'label' => 'AI assistant guide',
+                'description' => 'Where visitors learn to use the data with an AI assistant (a help page, the agent guide llms.txt, and a line in the footer). Off: none of them. This site: this site holds the guide. A linked site: the footer and help point to that site\'s guide.',
+                'type' => 'ai_guide',
+                'current_value' => $this->getString('ai_guide', ''),
                 'note' => '',
             ],
             'site_data_path' => [

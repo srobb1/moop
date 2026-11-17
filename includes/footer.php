@@ -40,6 +40,15 @@ if (!isset($admin_email) || empty($admin_email)) {
                         <i class="fas fa-envelope"></i> <?= t('Contact Administrator') . "\n" ?>
                     </a>
                 </p>
+                <?php $_footer_ai = moop_ai_guide(); /* opt-in per site: setting ai_guide */ ?>
+                <?php if ($_footer_ai): ?>
+                <p>
+                    <a href="<?= htmlspecialchars($_footer_ai['help']) ?>"<?= $_footer_ai['here'] ? '' : ' target="_blank" rel="noopener"' ?>>
+                        <i class="fas fa-robot"></i> <?= ($_footer_ai['here'] ? t('Use this site with an AI assistant') : t('Use our data with an AI assistant')) . "\n" ?>
+                    </a>
+                </p>
+                <?php endif; ?>
+
             </div>
         </div>
 

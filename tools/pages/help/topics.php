@@ -50,6 +50,14 @@ return [
         'category'    => 'general',
     ],
     [
+        'id'          => 'ai-assistants',
+        'title'       => 'Using the data with an AI assistant',
+        'description' => 'What to ask an assistant such as Claude or ChatGPT, what it can see, and the '
+                       . 'agent guide (llms.txt) it reads.',
+        'icon'        => 'fa-robot',
+        'category'    => 'general',
+    ],
+    [
         'id'          => 'glossary',
         'title'       => 'Glossary',
         'description' => 'Every term the site defines, in one list — the same definitions you see when '

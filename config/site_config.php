@@ -103,6 +103,11 @@ return [
     // sites), so when that site moves it is one setting, not a rewrite of every link
     // (Planosphere had 1,321 links to simrbase, 2026-11-13). lib/content_pages.php.
     'linked_sites' => [],
+    // The guide to using this site's data with an AI assistant: the help topic 'ai-assistants', the
+    // agent guide llms.txt (llms.php) and a line in the footer. '' = off (the default: each site opts
+    // in); 'here' = this site holds the guide; a Linked sites name (e.g. 'simrbase') = the footer and
+    // help point to that site's guide. moop_ai_guide() (includes/config_init.php).
+    'ai_guide' => '',
     'site_path' => $site_path,
     'organism_data' => "$site_path/organisms",
     

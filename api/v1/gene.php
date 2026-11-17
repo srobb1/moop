@@ -146,6 +146,12 @@ foreach (getAllAnnotationsForFeatures($ann_ids, $db) as $by_type) {
                          'url' => $base !== '' ? $base . urlencode($acc) : null, 'on' => []];
                 if ($is_go) {
                     $item['sources']   = [$go_key];
+                    // The term's name alone: GO descriptions carry the whole definition
+                    // ('protein binding: "Binding to a protein." [GOC:curators]'), which the
+                    // Markdown leaves out -- 133 definitions crowded out the rest of the record.
+                    $item['name'] = preg_match('/^(.*?): "/s', (string) $a['annotation_description'], $m) ? $m[1] : (string) $a['annotation_description'];
+                    // GO terms: ID + name, no definition (Sofia 2026-11-17) -- the term page has it.
+                    unset($item['description'], $item['score']);
                     $item['term_page'] = moop_public_url('tools/ontology_term.php?' . $q(['o' => 'GO', 'id' => $acc]));
                 }
                 $annotations[$type][$key] = $item;
@@ -184,7 +190,11 @@ foreach ($page['curations'] ?? [] as $c) {
                   'evidence' => $lab($c['evidence_id']), 'accession' => $c['accession'], 'pmid' => $c['pmid'],
                   'reference' => trim("{$c['authors']} ({$c['year']}) {$c['title']} {$c['journal']}")];
 }
-$aka = array_map(fn($m) => ['accession' => $m['accession'], 'source' => $m['source']], $page['aka'] ?? []);
+// One entry per (id, source): the crosswalk returns a row per path to each id (via each transcript and
+// reference gene), so MACF1 came back as 3,907 rows of 29 ids. The gene page de-duplicates as it groups.
+$aka = [];
+foreach ($page['aka'] ?? [] as $m) $aka[$m['source'] . "\x1f" . $m['accession']] = ['accession' => $m['accession'], 'source' => $m['source']];
+$aka = array_values($aka);
 
 // Links.
 $links = ['gene_page' => moop_public_url('tools/parent.php?' . $q(['organism' => $organism, 'uniquename' => $gene_id] + ['assembly' => $asm, 'gene_set' => $gs])),
@@ -278,35 +288,71 @@ if ($transcripts) {
     $md .= "\n## Transcripts\n\n" . $table(['Transcript', 'Type', 'Protein', 'Length (aa)'], array_map(fn($t) =>
         [$cell($t['id']), $cell($t['type']), $cell($t['protein']['id'] ?? ''), (string) ($t['protein']['length_aa'] ?? '')], $transcripts));
 }
-foreach ($ann_out as $type => $block) {
-    $md .= "\n## $type\n\n";
-    if ($block['total'] > count($block['items'])) $md .= "{$block['total']} in all; first " . count($block['items']) . " shown. Full table: <{$links['annotations_csv']}>\n\n";
-    $md .= $table(['Accession', 'Description', 'Source', 'Score'], array_map(fn($a) =>
-        [$link($a['accession'], $a['term_page'] ?? $a['url']), $cell($a['description']), $cell($a['source']), $cell($a['score'])], $block['items']));
-}
+// Order for a reader that stops early (an assistant reading the first ~15,000 characters): the
+// short sections first -- expression, the annotation types (domains, orthologs, location ...),
+// orthologs in related species -- then the long ones: curated anatomy, other IDs, and GO last.
+// GO terms by name only (see 'name' above): 133 definitions crowded out the rest of the record.
+// Homolog descriptions from Ensembl are raw FASTA headers ("ENSACAP... pep primary_assembly:AnoCar2.0v2:
+// GL343481.1:... gene:ENSACAG... gene_biotype:protein_coding ... gene_symbol:MACF1 description:..."):
+// in Markdown, the symbol and description alone, or the gene ID when it has neither.
+$ens_desc = function ($d) {
+    $d = (string) $d;
+    if (!preg_match('/\spep\s+\S+:\S+.*\bgene:(\S+)/', $d, $g)) return $d;
+    $sym  = preg_match('/\bgene_symbol:(\S+)/', $d, $m) ? $m[1] : '';
+    $desc = preg_match('/\bdescription:(.*?)(?:\s*\[Source:.*)?$/', $d, $m) ? trim($m[1]) : '';
+    return trim($sym . ($sym !== '' && $desc !== '' ? ' -- ' : '') . $desc) ?: 'gene ' . $g[1];
+};
+$ann_md = function (bool $go) use ($ann_out, $table, $link, $cell, $links, $ens_desc): string {
+    $out = '';
+    foreach ($ann_out as $type => $block) {
+        if ((stripos($type, 'gene ontology') !== false) !== $go) continue;
+        $out .= "\n## $type\n\n";
+        if ($block['total'] > count($block['items'])) $out .= "{$block['total']} in all; first " . count($block['items']) . " shown. Full table: <{$links['annotations_csv']}>\n\n";
+        $out .= $go
+            ? $table(['GO ID', 'Name', 'Source'], array_map(fn($a) =>
+                [$link($a['accession'], $a['term_page'] ?? $a['url']), $cell($a['name']), $cell($a['source'])], $block['items']))
+            : $table(['Accession', 'Description', 'Source', 'Score'], array_map(fn($a) =>
+                [$link($a['accession'], $a['url']), $cell($ens_desc($a['description'])), $cell($a['source']), $cell($a['score'])], $block['items']));
+    }
+    return $out;
+};
 if ($expression) {
     $md .= "\n## Expression\n\n" . $table(['Experiment', 'Expressed?', 'Level', 'Highest in', 'Mean', 'Reference'], array_map(fn($x) =>
         [$cell($x['label'] ?? ''), $cell($x['call'] ?? ''), $cell($x['level'] ?? ''), $cell($x['top_group'] ?? ''),
          isset($x['top_mean']) ? round((float) $x['top_mean'], 2) . ' ' . $cell($x['unit'] ?? '') : '', $cell($x['citation'] ?? '')], $expression));
 }
-foreach (['orthologs_related_species' => 'Orthologs in related species', 'gene_family_related_species' => 'Gene family in related species'] as $k => $title) {
+$md .= $ann_md(false);
+// The Markdown is read by assistants with a limited read (~15,000 characters, 2026-11-17 test), so
+// its long lists stop at MD_CAP rows and point to the call that returns all of them; the JSON keeps
+// GENE_V1_CAPS. References shortened to "First author et al. (year)" -- the full title repeated on
+// every anatomy row was most of that section.
+$MD_CAP  = 20;
+$more    = fn(array $b, int $shown, string $where) => $b['total'] > $shown ? "{$b['total']} in all; first $shown shown. All: <$where>\n\n" : '';
+$short_ref = fn($r) => preg_match('/^(.*?\(\d{4}\))/', (string) $r, $m) ? $m[1] : (string) $r;
+$v1 = fn(string $ep, array $p) => moop_public_url('api/v1/' . $ep . '?' . $q($p + $where));
+foreach (['orthologs_related_species' => ['Orthologs in related species', []], 'gene_family_related_species' => ['Gene family in related species', ['family' => 1]]] as $k => [$title, $extra]) {
     $b = $record[$k];
     if (!$b['total']) continue;
-    $md .= "\n## $title\n\n" . ($b['total'] > count($b['items']) ? "{$b['total']} in all; first " . count($b['items']) . " shown.\n\n" : '');
+    $rows = array_slice($b['items'], 0, $MD_CAP);
+    $md .= "\n## $title\n\n" . $more($b, count($rows), $v1('orthologs.php', ['organism' => $organism, 'ids' => $gene_id] + $extra + ['format' => 'tsv']));
     $md .= $table(['Organism', 'Gene', 'Name', 'Relationship', 'Clade'], array_map(fn($r) =>
         [$cell(str_replace('_', ' ', $r['gene2_organism'] ?? '')), $cell($r['gene2_id'] ?? ''), $cell($r['gene2_name'] ?? ''),
-         $cell($r['relationship'] ?? ''), $cell($r['clade'] ?? '')], $b['items']));
+         $cell($r['relationship'] ?? ''), $cell($r['clade'] ?? '')], $rows));
 }
 if ($record['anatomy_expression']['total']) {
     $b = $record['anatomy_expression'];
-    $md .= "\n## Anatomical expression (curated)\n\n" . $table(['Where', 'Stage', 'Evidence', 'Reference'], array_map(fn($a) =>
+    $rows = array_slice($b['items'], 0, $MD_CAP);
+    $md .= "\n## Anatomical expression (curated)\n\n" . $more($b, count($rows), $links['gene_page']);
+    $md .= $table(['Where', 'Stage', 'Evidence', 'Reference'], array_map(fn($a) =>
         [$cell($a['term']['label'] ?? $a['term']['id'] ?? ''), $cell($a['stage']['label'] ?? ''), $cell($a['evidence']['label'] ?? ''),
-         $a['pmid'] ? $link($a['reference'], 'https://pubmed.ncbi.nlm.nih.gov/' . rawurlencode($a['pmid']) . '/') : $cell($a['reference'])], $b['items']));
+         $a['pmid'] ? $link($short_ref($a['reference']), 'https://pubmed.ncbi.nlm.nih.gov/' . rawurlencode($a['pmid']) . '/') : $cell($short_ref($a['reference']))], $rows));
 }
 if ($record['also_known_as']['total']) {
     $b = $record['also_known_as'];
-    $md .= "\n## Also known as\n\n" . ($b['total'] > count($b['items']) ? "{$b['total']} in all; first " . count($b['items']) . " shown.\n\n" : '');
-    $md .= implode(', ', array_map(fn($a) => $cell($a['accession']) . ' (' . $cell($a['source']) . ')', $b['items'])) . "\n";
+    $rows = array_slice($b['items'], 0, $MD_CAP);
+    $md .= "\n## Also known as\n\n" . $more($b, count($rows), $links['gene_page']);
+    $md .= implode(', ', array_map(fn($a) => $cell($a['accession']) . ' (' . $cell($a['source']) . ')', $rows)) . "\n";
 }
-$md .= "\n---\n" . implode("\n", array_map(fn($n) => "_{$n}_", $record['notes'])) . "\nJSON: <{$links['record_json']}>\n";
+$md .= $ann_md(true);
+$md .= "\n---\n" . implode("\n", array_map(fn($n) => '_' . str_replace('links.annotations_csv', "<{$links['annotations_csv']}>", $n) . '_', $record['notes'])) . "\nJSON: <{$links['record_json']}>\n";
 echo $md;
