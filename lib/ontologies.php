@@ -441,7 +441,7 @@ function moop_ontology_refresh(bool $force = false): array {
     return $out;
 }
 
-/** Prefixes of the configured ontologies with this purpose (anatomy, phenotype, evidence, names). */
+/** Prefixes of the configured ontologies with this purpose (anatomy, phenotype, evidence, function, names). */
 function moop_ontology_by_purpose(string $purpose, bool $search_only = false): array {
     return array_keys(array_filter(moop_ontology_sources(), fn($o) => ($o['purpose'] ?? '') === $purpose
                                    && (!$search_only || !empty($o['search']))));

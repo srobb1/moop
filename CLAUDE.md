@@ -633,6 +633,12 @@ assembly or gene set stays in `organism.sqlite` until the pipeline rebuilds with
 hidden meanwhile because every scope, search included, is built from groups + directories.
 There is no web "delete" for data, by design. `lib/retire.php`, `notes/RETIRE_DATA_PLAN.md`.
 
+### Add or refresh an ontology (PLANA, BSPO, ECO, GO)
+Read `docs/ONTOLOGIES.md`. The reasoning runs in the planosphere/PAGE GitHub Action (a push does
+NOT run it — run it by hand); MOOP only loads its TSVs into `<cache>/ontologies/*.sqlite`. Building
+is opt-in per site: a new config row does nothing until **Rebuild now** /
+`scripts/build_ontologies.php PREFIX`. GO genes propagate up is a + part of only (2026-11-17).
+
 ### Add a new tool to the tool menu
 Edit `config/tools_config.php` — each entry defines which pages the tool
 appears on, its URL path, and what context parameters it accepts.

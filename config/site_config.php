@@ -322,7 +322,7 @@ return [
     // them only once built -- nothing here changes a page by itself. These are the DEFAULTS:
     // Admin -> Site Configuration -> Ontologies edits the list (checked by
     // ConfigManager::checkOntologyList(); files only from https://raw.githubusercontent.com/).
-    // 'purpose': anatomy | phenotype | evidence | names -- code asks for "the anatomy ontologies",
+    // 'purpose': anatomy | phenotype | evidence | function | names -- code asks for "the anatomy ontologies",
     // never for PLANA by name. 'search' => offered in the term search box.
     'ontologies' => [
         'PLANA' => ['name' => 'PLANA (planarian anatomy)', 'purpose' => 'anatomy', 'search' => true,
@@ -338,6 +338,16 @@ return [
         'ECO'   => ['name' => 'ECO (evidence)', 'purpose' => 'evidence', 'search' => false,
                     'terms'    => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/eco-terms.tsv',
                     'closure'  => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/eco-closure.tsv',
+                    'releases' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/releases.txt'],
+        // GO (2026-11-17): the Ontology Browser, and the organisms' GO annotations counted per term.
+        // All nine relationships the closure holds; genes are counted up 'is a' and 'part of' only
+        // (GO's own rule) -- see docs/ONTOLOGIES.md. Not in the term search box: that box is for
+        // anatomy.
+        'GO'    => ['name' => 'GO (Gene Ontology)', 'purpose' => 'function', 'search' => false,
+                    'relations' => ['rdfs:subClassOf', 'BFO:0000050', 'BFO:0000051', 'RO:0002211', 'RO:0002213',
+                                    'RO:0002212', 'BFO:0000066', 'RO:0002092', 'RO:0002093'],
+                    'terms'    => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/go-terms.tsv',
+                    'closure'  => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/go-closure.tsv',
                     'releases' => 'https://raw.githubusercontent.com/planosphere/PAGE/master/ontology/releases.txt'],
     ],
 

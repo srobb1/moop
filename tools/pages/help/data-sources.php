@@ -134,6 +134,44 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
     <?php endforeach; ?>
   </div>
 
+  <?php
+  // Ontologies built on THIS site (lib/ontologies.php; docs/ONTOLOGIES.md): name, release, when
+  // built. Read from the built files themselves, so an ontology appears only once it is usable.
+  require_once __DIR__ . '/../../../lib/ontologies.php';
+  $onto_built = [];
+  foreach (moop_ontology_sources() as $_p => $_o) {
+      $_m = moop_ontology_meta($_p);
+      if ($_m) $onto_built[$_p] = ['name' => (string) ($_o['name'] ?? $_p),
+                                   'release' => (string) ($_m['release'] ?? ''), 'built' => substr((string) ($_m['built_at'] ?? ''), 0, 10)];
+  }
+  ?>
+  <?php if ($onto_built): ?>
+  <h2 class="h5 fw-semibold mb-3"><?= t('Ontologies') ?></h2>
+  <p class="text-muted small mb-3">
+    <?= t('Anatomy terms, evidence codes and other controlled vocabularies come from these published ontologies. Each is checked for a new release once a week and rebuilt here when one appears.') . "\n" ?>
+    <?php if (moop_ontology_browser_available()): ?>
+      <a href="<?= moop_url('tools/ontology_browser.php') ?>"><?= t('Browse them in the Ontology Browser.') ?></a>
+    <?php endif; ?>
+  </p>
+  <div class="row g-3 mb-4">
+    <?php foreach ($onto_built as $_p => $_ob): ?>
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm help-topic-card">
+          <div class="card-body p-3 small">
+            <h3 class="h6 fw-semibold mb-1"><?= htmlspecialchars($_ob['name']) ?></h3>
+            <?php if ($_ob['release'] !== ''): ?>
+              <div><?= t('Release %s', htmlspecialchars($_ob['release'])) ?></div>
+            <?php endif; ?>
+            <?php if ($_ob['built'] !== ''): ?>
+              <div class="text-muted"><?= t('Built on this site %s', htmlspecialchars($_ob['built'])) ?></div>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+
   <h2 class="h5 fw-semibold mb-3"><?= t('Citing what you use') ?></h2>
   <div class="row g-3 mb-4">
     <div class="col-md-6">

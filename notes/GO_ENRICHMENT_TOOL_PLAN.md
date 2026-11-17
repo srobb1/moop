@@ -1,5 +1,11 @@
 # GO Enrichment Analysis Tool - Implementation Plan
 
+> **2026-11-17 — GO is now loaded:** `<cache_path>/ontologies/go.sqlite` (tables term, synonym,
+> closure, edge; `lib/ontologies.php`), built from the PAGE repo's Action — see docs/ONTOLOGIES.md.
+> Paths such as `/data/moop/metadata/ontologies/go.sqlite`, `OntologyManager` and
+> `annotation_source_name = 'Gene Ontology'` below are from the January draft and do not exist.
+> Propagation rule agreed with Sofia: is a + part of only (GO convention), all GO sources combined.
+
 > **2026-11-14 — decided with Sofia: ONE enrichment tool for GO terms AND KEGG pathways.** The user makes a gene
 > list (paste, a search or MOOPmart result, later an expression experiment or a clade comparison) and the tool
 > tests which GO terms and which KEGG pathways are over-represented in it, with the same method: Fisher's exact

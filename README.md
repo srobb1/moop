@@ -256,6 +256,7 @@ repo, committing stays manual by design.
 | Upgrade JBrowse2 | [Upgrading JBrowse2](docs/JBrowse2/UPGRADING.md) |
 | Add or upgrade a front-end library (JS/CSS) | Add or edit its line in `scripts/vendor_assets.txt`, run `scripts/fetch_vendor_assets.sh --force` — see below |
 | Install pending OS security updates | Admin → System Status → OS Security Updates shows the command |
+| Add or refresh an ontology (PLANA, GO, …) | Admin → Site Configuration → Ontologies → Rebuild now — [how ontologies get here](docs/ONTOLOGIES.md) |
 
 **Third-party libraries** — jQuery, Bootstrap, DataTables, Font Awesome and the rest are
 self-hosted, and **every one must have a line in `scripts/vendor_assets.txt`**: its path, the URL
@@ -650,6 +651,7 @@ and is returned to where they were going, instead of a load error.
 - [Organism setup and searches](tools/pages/help/organism-setup-and-searches.php)
 - [Data organization](tools/pages/help/organism-data-organization.php) — layout and formats
 - [moop-dbtools](https://github.com/MOOPGDB/moop-dbtools) — building the SQLite databases
+- [Ontologies](docs/ONTOLOGIES.md) — PLANA, BSPO, ECO, GO: the GitHub Action, building, what uses them
 
 **Development**
 - [CLAUDE.md](CLAUDE.md) — architecture, conventions, and the traps worth knowing

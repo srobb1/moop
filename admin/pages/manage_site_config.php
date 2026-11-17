@@ -528,7 +528,7 @@
                 $onto_rows   = $config->getArray('ontologies', []);
                 $onto_status = ($_SESSION['ontologies']['ontologies'] ?? []);
                 $onto_check  = $_SESSION['ontologies']['checked_at'] ?? null;
-                $onto_purposes = ['anatomy' => 'Anatomy', 'phenotype' => 'Phenotype', 'evidence' => 'Evidence', 'names' => 'Extra names only'];
+                $onto_purposes = ['anatomy' => 'Anatomy', 'phenotype' => 'Phenotype', 'evidence' => 'Evidence', 'function' => 'Gene function (GO)', 'names' => 'Extra names only'];
                 $onto_rows[''] = ['name' => '', 'purpose' => '', 'terms' => '', 'closure' => '', 'releases' => '', 'search' => false, 'relations' => []];
                 ?>
                 <div class="card adm-card mb-3" id="pnav-ontologies" data-nav-label="Ontologies">
@@ -537,7 +537,7 @@
                     </div>
                     <div class="card-body">
                         <input type="hidden" name="ontologies_form" value="1">
-                        <p class="text-muted small mb-2">The ontologies the PAGE search uses, by <strong>purpose</strong>: <em>Anatomy</em> (where a gene is expressed, life-cycle stages), <em>Phenotype</em>, <em>Evidence</em> (how it was observed), or <em>Extra names only</em> (to name terms from another ontology, e.g. a term an obsolete one was replaced by). Each needs a <strong>terms</strong> file, and anatomy, phenotype and evidence also a <strong>link-tree</strong> file, in the format of <a href="https://github.com/planosphere/PAGE/tree/master/ontology" target="_blank" rel="noopener">planosphere/PAGE ontology/</a> (made by its GitHub Action). Files are accepted only from <code>https://raw.githubusercontent.com/</code>.</p>
+                        <p class="text-muted small mb-2">The ontologies the PAGE search and the Ontology Browser use, by <strong>purpose</strong>: <em>Anatomy</em> (where a gene is expressed, life-cycle stages), <em>Phenotype</em>, <em>Evidence</em> (how it was observed), <em>Gene function (GO)</em> (browsed, and matched against the organisms' GO annotations), or <em>Extra names only</em> (to name terms from another ontology, e.g. a term an obsolete one was replaced by). Each needs a <strong>terms</strong> file, and all but extra names also a <strong>link-tree</strong> file, in the format of <a href="https://github.com/planosphere/PAGE/tree/master/ontology" target="_blank" rel="noopener">planosphere/PAGE ontology/</a> (made by its GitHub Action). Files are accepted only from <code>https://raw.githubusercontent.com/</code>. How it all fits together: <code>docs/ONTOLOGIES.md</code>.</p>
                         <p class="text-muted small mb-3">Each ontology is a separate read-only file in the cache folder, rebuilt on its own: weekly when its <code>releases.txt</code> changes, or now with <strong>Rebuild now</strong>. Nothing is rebuilt on a site where none has been built yet.</p>
                         <?php foreach ($onto_rows as $op => $o): $i = $op === '' ? 'new' : $op; $st = $op === '' ? [] : moop_ontology_meta($op); $hs = $onto_status[$op] ?? []; ?>
                         <div class="border rounded p-2 mb-2<?= $op === '' ? ' bg-light' : '' ?>">
@@ -558,7 +558,7 @@
                                 <div class="col-sm-<?= $f === 'releases' ? 4 : 4 ?>"><label class="form-label small mb-0"><?= $fl ?></label>
                                     <input type="url" class="form-control form-control-sm font-monospace" name="ontologies[<?= htmlspecialchars($i) ?>][<?= $f ?>]" value="<?= htmlspecialchars((string) ($o[$f] ?? '')) ?>" placeholder="https://raw.githubusercontent.com/…"></div>
                                 <?php endforeach; ?>
-                                <div class="col-12"><label class="form-label small mb-0">Relationships the search offers <span class="text-muted">(anatomy / phenotype; ids separated by commas -- <code>rdfs:subClassOf</code> = is a)</span></label>
+                                <div class="col-12"><label class="form-label small mb-0">Relationships the search offers <span class="text-muted">(anatomy / phenotype / gene function -- also the ones the Ontology Browser shows; ids separated by commas -- <code>rdfs:subClassOf</code> = is a)</span></label>
                                     <input type="text" class="form-control form-control-sm font-monospace" name="ontologies[<?= htmlspecialchars($i) ?>][relations]" value="<?= htmlspecialchars(implode(', ', (array) ($o['relations'] ?? []))) ?>">
                                     <?php if ($op !== '' && !empty($o['relations'])): ?>
                                         <small class="text-muted"><?= htmlspecialchars(implode(' · ', array_map(fn($r) => moop_ontology_label($r, array_keys($onto_rows)) ?: $r, $o['relations']))) ?></small>

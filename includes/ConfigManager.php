@@ -920,7 +920,7 @@ class ConfigManager
      * a message saying what is wrong. Lock kept HERE, whatever the page sends: files only from
      * https://raw.githubusercontent.com/ (lib/ontologies.php refuses any other host as well).
      * One row per ontology, keyed by its prefix:
-     *   purpose   anatomy | phenotype | evidence | names
+     *   purpose   anatomy | phenotype | evidence | function | names
      *   terms     terms TSV (required)      closure  link-tree TSV (optional)
      *   releases  releases.txt (optional)   search   offered in the term box
      *   relations relationship ids the search offers (anatomy/phenotype), e.g. BFO:0000050
@@ -940,7 +940,7 @@ class ConfigManager
             if (!preg_match('/^[A-Z][A-Z0-9]{1,15}$/', $prefix)) return "Ontology prefix '" . substr($prefix, 0, 20) . "' is not valid (letters and digits, e.g. PLANA)";
             if (!is_array($o)) return "Ontology $prefix is not valid";
             $purpose = (string) ($o['purpose'] ?? '');
-            if (!in_array($purpose, ['anatomy', 'phenotype', 'evidence', 'names'], true)) return "Ontology $prefix: choose its purpose";
+            if (!in_array($purpose, ['anatomy', 'phenotype', 'evidence', 'function', 'names'], true)) return "Ontology $prefix: choose its purpose";
             if (!$url_ok($o['terms'] ?? '', 'tsv')) return "Ontology $prefix: the terms file must be a .tsv at https://raw.githubusercontent.com/";
             foreach (['closure' => 'tsv', 'releases' => 'txt'] as $f => $ext) {
                 $v = trim((string) ($o[$f] ?? ''));

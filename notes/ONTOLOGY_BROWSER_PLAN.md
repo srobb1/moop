@@ -1,5 +1,11 @@
 # Ontology Browser Tool - Feature Plan
 
+> **2026-11-17 — superseded where it differs.** The browser was built (2026-11-11) on per-ontology
+> SQLite files made from the PAGE repo's GitHub Action, not from an OBO import or goatools, and GO
+> was added the same way on 2026-11-17 (all nine closure relations; genes counted up is a + part of
+> only, all GO sources combined). The current workflow is **docs/ONTOLOGIES.md**; the data layout,
+> API names and phases below are the January draft.
+
 **Date:** January 27, 2026  
 **Status:** Planning Phase  
 **Priority:** Medium (useful for advanced analysis, not blocking)
