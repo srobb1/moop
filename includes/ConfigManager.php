@@ -82,7 +82,7 @@ class ConfigManager
      * Adding a setting to the admin UI therefore means adding it HERE too, or the new
      * control does nothing and looks like it worked.
      */
-    private $editableConfigKeys = ['link_prefix', 'ontologies', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'tools_disabled', 'tools_layout', 'primer_maker', 'crosswalk_display', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels', 'linked_sites'];
+    private $editableConfigKeys = ['link_prefix', 'public_url', 'ontologies', 'siteTitle', 'admin_email', 'sequence_types', 'header_img', 'favicon_filename', 'auto_login_ip_ranges', 'sample_feature_ids', 'home_search_examples', 'blast_sample_sequences', 'blast_num_threads', 'blast_memory_budget_mb', 'blast_max_concurrent', 'blast_queue_max_wait', 'blast_max_runtime', 'blast_max_output_mb', 'blast_max_hits', 'search_results_limit', 'search_results_columns', 'blast_linkouts', 'tracks_server', 'jbrowse2', 'site_data_path', 'cache_path', 'users_file', 'turnstile', 'footer', 'timezone', 'rate_limit_heavy', 'rate_limit_heavy_added', 'rate_limit_heavy_removed', 'tools_disabled', 'tools_layout', 'primer_maker', 'crosswalk_display', 'main_menu', 'languages', 'languages_retired', 'home', 'theme_colors', 'technical_panels', 'linked_sites'];
 
     /**
      * Private constructor - use getInstance() instead
@@ -872,6 +872,12 @@ class ConfigManager
      * @param string $config_dir Directory containing config_editable.json
      * @return array ['success' => bool, 'message' => string]
      */
+    /** What site_config.php ships for $key, before this site's settings ($default when it ships none). */
+    public function getShipped(string $key, $default = null)
+    {
+        return array_key_exists($key, $this->shipped) ? $this->shipped[$key] : $default;
+    }
+
     /**
      * Is $value what site_config.php ships for $key? Numbers compare as numbers ("150" = 150), a
      * map's key order does not matter, a list's does. A key that ships no value is never "default".

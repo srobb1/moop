@@ -47,9 +47,38 @@ function moop_monitor_publish_wanted(?array $ranges = null, ?array $heavy = null
     return @rename($tmp, "$cache/nginx_wanted.json");
 }
 
-/** The heavy group as configured (Admin -> System Monitor; default in site_config.php). */
+/**
+ * The heavy group: the SHIPPED list (site_config.php 'rate_limit_heavy') plus this site's
+ * additions, minus its removals (Admin -> System Monitor).
+ *
+ * A site stores only its CHANGES ('rate_limit_heavy_added' / '_removed'), so a script added to the
+ * shipped list later reaches every site. Until 2026-11-17 a save stored the whole list, which froze
+ * it: simrbase never got api/anatomy_records_download.php or api/go_term_genes.php and ran them on the
+ * lighter api limit. Such an old full list ('rate_limit_heavy' in config_editable.json) still counts --
+ * as additions only. A shipped entry missing from it arrived after the snapshot; nobody removed it.
+ */
 function moop_monitor_heavy_list(): array {
-    return array_values(array_map('strval', ConfigManager::getInstance()->getArray('rate_limit_heavy', [])));
+    $config  = ConfigManager::getInstance();
+    $str     = fn($v) => array_values(array_map('strval', is_array($v) ? $v : []));
+    $shipped = $str($config->getShipped('rate_limit_heavy', []));
+    $legacy  = $str($config->getArray('rate_limit_heavy', []));   // = $shipped unless a site saved a full list
+    $added   = $str($config->getArray('rate_limit_heavy_added', []));
+    $removed = $str($config->getArray('rate_limit_heavy_removed', []));
+    $list = array_values(array_unique(array_merge($shipped, $legacy, $added)));
+    return array_values(array_diff($list, $removed));
+}
+
+/**
+ * Save the heavy group as changes against the shipped list (moop_monitor_heavy_list()), dropping any
+ * old full list. Returns saveEditableConfig()'s result.
+ */
+function moop_monitor_save_heavy(array $list, string $config_dir): array {
+    $config  = ConfigManager::getInstance();
+    $shipped = array_values(array_map('strval', (array) $config->getShipped('rate_limit_heavy', [])));
+    return $config->saveEditableConfig([
+        'rate_limit_heavy_added'   => array_values(array_diff($list, $shipped)),
+        'rate_limit_heavy_removed' => array_values(array_diff($shipped, $list)),
+    ], $config_dir, ['rate_limit_heavy']);
 }
 
 /**
@@ -57,7 +86,7 @@ function moop_monitor_heavy_list(): array {
  * exist — the same rule the root collector applies before anything reaches nginx.
  */
 function moop_monitor_valid_heavy($script, ?string $root = null): bool {
-    return is_string($script) && preg_match('#^(api|tools)/[a-z0-9_]+\.php$#', $script)
+    return is_string($script) && preg_match('#^(api|tools)/([a-z0-9_]+/)?[a-z0-9_]+\.php$#', $script)   // one subfolder: api/v1/download.php -- same shape as HEAVY_RE in scripts/moop_monitor.py
         && is_file(($root ?? dirname(__DIR__)) . '/' . $script);
 }
 

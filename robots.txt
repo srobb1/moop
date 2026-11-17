@@ -16,7 +16,6 @@
 
 # AI training and AI-answer crawlers: nothing here, please.
 User-agent: GPTBot
-User-agent: ChatGPT-User
 User-agent: OAI-SearchBot
 User-agent: ClaudeBot
 User-agent: Claude-Web
@@ -25,11 +24,9 @@ User-agent: Google-Extended
 User-agent: Applebot-Extended
 User-agent: CCBot
 User-agent: PerplexityBot
-User-agent: Perplexity-User
 User-agent: Bytespider
 User-agent: Amazonbot
 User-agent: meta-externalagent
-User-agent: meta-externalfetcher
 User-agent: FacebookBot
 User-agent: cohere-ai
 User-agent: cohere-training-data-crawler
@@ -44,10 +41,32 @@ User-agent: Ai2Bot-Dolma
 User-agent: PetalBot
 Disallow: /
 
+# Assistants fetching a page because ONE PERSON asked them to (not crawling, not training):
+# the agent guide and the stable JSON API, plus the descriptive pages. Bulk use is still limited
+# by the per-address rate limits; restricted data needs a login whoever asks.
+# Guide: /moop/llms.txt -- notes/AGENT_ACCESS_AUDIT_2026-11-17.md.
+User-agent: ChatGPT-User
+User-agent: Claude-User
+User-agent: Perplexity-User
+User-agent: MistralAI-User
+User-agent: meta-externalfetcher
+Allow: /moop/llms.txt
+Allow: /moop/api/v1/
+Allow: /moop/$
+Allow: /moop/index.php
+Allow: /moop/about.php
+Allow: /moop/help.php
+Allow: /moop/page.php
+Allow: /moop/tools/organism.php
+Allow: /moop/tools/groups.php
+Allow: /moop/tools/downloads.php
+Disallow: /moop/
+
 # Everyone else (search engines): the descriptive pages, so the site can be found —
 # not the generated ones (gene pages, search, BLAST, exports, downloads, genome browser).
 User-agent: *
 Allow: /moop/$
+Allow: /moop/llms.txt
 Allow: /moop/index.php
 Allow: /moop/about.php
 Allow: /moop/help.php

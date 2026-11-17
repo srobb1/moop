@@ -365,6 +365,22 @@ function moop_url(string $path = ''): string {
     return moop_url_base() . '/' . ltrim($path, '/');
 }
 
+/**
+ * A COMPLETE link (scheme + host + moop_url()), for text read outside a page: the agent guide
+ * (llms.txt) and api/v1/. From the 'public_url' setting; when that is empty or malformed, from the
+ * request's own host -- checked to be a plain host name, since it is printed into the response.
+ */
+function moop_public_url(string $path = ''): string {
+    $base = rtrim(trim(ConfigManager::getInstance()->getString('public_url', '')), '/');
+    if (!preg_match('#^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$#', $base)) {
+        $host   = (string) ($_SERVER['HTTP_HOST'] ?? '');
+        if (!preg_match('/^[A-Za-z0-9.-]+(:[0-9]{1,5})?$/', $host)) $host = 'localhost';
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $base   = "$scheme://$host";
+    }
+    return $base . moop_url($path);
+}
+
 /** The current URL with ?lang=<code> set (for the language switch), other parameters kept. */
 function moop_lang_url(string $code): string {
     $path  = strtok((string) ($_SERVER['REQUEST_URI'] ?? '/'), '?');

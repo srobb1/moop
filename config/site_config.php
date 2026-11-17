@@ -93,6 +93,11 @@ return [
     // Read through moop_url_base() / moop_url() (includes/config_init.php), never built from
     // 'site' -- an empty site gave "//tools/…", a protocol-relative link to a host named tools.
     'link_prefix' => '/' . $site,
+    // The site's public address, scheme + host only, no path: "https://simrbase.stowers.org".
+    // Used where a link must be COMPLETE because it leaves the browser -- the agent guide
+    // (llms.txt) and the api/v1/ JSON, which agents read outside any page. Empty = the address
+    // the request came in on. Set it in config/config_editable.json; moop_public_url().
+    'public_url' => '',
     // Other sites this site's content pages link to, by name: a page writes
     // href="{simrbase}/tools/..." and the address comes from here (Site Configuration -> Linked
     // sites), so when that site moves it is one setting, not a rewrite of every link

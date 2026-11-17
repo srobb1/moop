@@ -23,9 +23,10 @@ if (!is_logged_in()) {
     $is_public = $organism && $assembly && is_public_assembly($organism, $assembly);
 
     if (!$is_public) {
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $return_url = $scheme . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-        header('Location: /moop/login.php?return=' . urlencode($return_url));
+        // The path alone: login.php returns to a same-site path (no Host header involved), and the
+        // login link follows link_prefix (CLAUDE.md 3b) -- it was a hardcoded /moop/ until 2026-11-17.
+        $return_url = (string) ($_SERVER['REQUEST_URI'] ?? '/');
+        header('Location: ' . moop_url('login.php') . '?return=' . urlencode($return_url));
         exit;
     }
 }

@@ -8,7 +8,8 @@
  *     lib/system_monitor.php;
  *   - MOOP's own request log (lib/request_metrics.php): per page, time and peak memory, and who.
  *
- * The one thing it changes is the heavy group (rate_limit_heavy in config_editable.json), from
+ * The one thing it changes is the heavy group (changes to the shipped rate_limit_heavy, kept as
+ * rate_limit_heavy_added / _removed in config_editable.json -- moop_monitor_heavy_list()), from
  * the Add / Remove buttons. MOOP then publishes it and the root collector applies it to nginx
  * within a minute. Nothing here runs a command or touches nginx itself.
  */
@@ -31,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['
         $list = array_values(array_diff($list, [$script]));
     }
     $config_dir = $config->getPath('root_path') . '/' . $site . '/config';
-    $result = $config->saveEditableConfig(['rate_limit_heavy' => $list], $config_dir);
+    $result = moop_monitor_save_heavy($list, $config_dir);
     $published = $result['success'] && moop_monitor_publish_wanted(null, $list);
     $_SESSION['sysmon_flash'] = $published
         ? ['ok', ($_POST['action'] === 'heavy_add' ? 'Added ' : 'Removed ') . $script . ' — nginx will follow within a minute.']

@@ -3101,8 +3101,14 @@ ok(moop_monitor_fmt_ms(850) === '850 ms' && moop_monitor_fmt_ms(4200) === '4.2 s
 // ----------------------------------------------------------------------------
 group('System Monitor: heavy group, capacity, recommendations');
 ok(moop_monitor_valid_heavy('api/moopmart_export.php', $BASE) && !moop_monitor_valid_heavy('api/../config/x.php', $BASE)
-   && !moop_monitor_valid_heavy('api/no_such_script.php', $BASE) && !moop_monitor_valid_heavy('admin/admin.php', $BASE),
+   && !moop_monitor_valid_heavy('api/no_such_script.php', $BASE) && !moop_monitor_valid_heavy('admin/admin.php', $BASE)
+   && moop_monitor_valid_heavy('api/v1/download.php', $BASE) && !moop_monitor_valid_heavy('api/v1/x/download.php', $BASE)
+   && !moop_monitor_valid_heavy('api/../v1/download.php', $BASE),
    'a heavy entry must be api/ or tools/, plain name, and an existing file');
+$_shipped = array_map('strval', (array) ConfigManager::getInstance()->getShipped('rate_limit_heavy', []));
+ok($_shipped && !array_diff($_shipped, moop_monitor_heavy_list())
+   && in_array('api/go_term_genes.php', $_shipped, true),
+   'every shipped heavy script is in the heavy group (a site stores changes, not a frozen copy)');
 $_hv = ['tools/blast.php'];
 ok(moop_monitor_class('tools/blast.php', $_hv) === 'heavy' && moop_monitor_class('api/jbrowse2/config.php', $_hv) === 'jbrowse'
    && moop_monitor_class('api/feature_search.php', $_hv) === 'api' && moop_monitor_class('tools/annotation_search_ajax.php', $_hv) === 'api'

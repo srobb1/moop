@@ -372,7 +372,10 @@ def ip_int(s):
     return (a << 24) | (b << 16) | (c << 8) | d
 
 
-HEAVY_RE = re.compile(r'(api|tools)/[a-z0-9_]+\.php')
+# One optional subfolder (api/v1/download.php, 2026-11-17). Same shape as moop_monitor_valid_heavy() in
+# lib/system_monitor.php: if MOOP accepts an entry this rejects, NOTHING is applied -- change both together,
+# and re-run install_monitor.sh before any site lists a subfolder script.
+HEAVY_RE = re.compile(r'(api|tools)/([a-z0-9_]+/)?[a-z0-9_]+\.php')
 PREFIX_RE = re.compile(r'(/[A-Za-z0-9._~-]+)*')
 
 
