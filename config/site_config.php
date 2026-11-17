@@ -759,6 +759,7 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'tools/blast.php', 'tools/primer_blast.php', 'tools/retrieve_sequences.php',
         'tools/retrieve_selected_sequences.php', 'tools/sequences_display.php',
         'api/anatomy_records_download.php', 'api/go_term_genes.php', 'api/v1/download.php', 'api/v1/annotations.php',
+        'api/v1/go_term_genes.php', 'api/v1/region.php', 'api/v1/orthologs.php',
     ],
 
     // ======== CLOUDFLARE TURNSTILE (bot protection) ========

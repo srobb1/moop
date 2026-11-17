@@ -308,3 +308,32 @@ function moop_clade_homologs_tsv(array $section, string $part = 'orthologs'): st
     }
     return $out;
 }
+
+/**
+ * A gene's orthologs and gene family in related species, as rows (column => value) -- exactly the
+ * rows of the gene page cards' TSV downloads (moop_clade_homologs_tsv()), so every place that
+ * hands them out agrees: the gene record (api/v1/gene.php) and the ortholog download
+ * (api/v1/orthologs.php). Only genes whose own gene set the visitor may see.
+ *
+ * @param string[] $gene_ids   the gene to ask for, then fallbacks (an mRNA page asks for its gene);
+ *                             the first one in a clade wins, as on the gene page
+ * @param string[] $child_ids  the gene's transcript / protein IDs (clades may list those)
+ * @return array{orthologs: list<array<string,string>>, family: list<array<string,string>>}
+ */
+function moop_clade_rows(string $organism, string $gene_set, array $gene_ids, array $child_ids): array {
+    $rows = function (string $tsv): array {
+        $lines = array_values(array_filter(explode("\n", $tsv), fn($l) => $l !== ''));
+        if (count($lines) < 2) return [];
+        $head = explode("\t", array_shift($lines));
+        return array_map(fn($l) => array_combine($head, array_pad(explode("\t", $l), count($head), '')), $lines);
+    };
+    if (!moop_clades_open()) return ['orthologs' => [], 'family' => []];
+    foreach (array_unique(array_filter(array_map('strval', $gene_ids))) as $g) {
+        $cl = moop_clade_homologs_for_gene($organism, $gene_set, $g, $child_ids);
+        if (!$cl) continue;
+        $sec = ['clades' => $cl, 'labels' => moop_clade_gene_labels($cl), 'gene' => $g, 'page_gene_set' => $gene_set];
+        return ['orthologs' => $rows(moop_clade_homologs_tsv($sec, 'orthologs')),
+                'family'    => $rows(moop_clade_homologs_tsv($sec, 'family'))];
+    }
+    return ['orthologs' => [], 'family' => []];
+}

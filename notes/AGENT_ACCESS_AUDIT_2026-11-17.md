@@ -76,11 +76,12 @@ The gene page's overview has a Download menu (Markdown / JSON). Gaps 4–6 above
 ## Still to build (task list, 2026-11-17)
 
 Quick -- a thin api/v1 name over a GET endpoint that already works:
-- [ ] ID search (`api/feature_search.php`)
-- [ ] Rosetta Stone / ID translation (`tools/crosswalk.php … download=tsv`)
-- [ ] genes with a GO term (`api/go_term_genes.php`)
-- [ ] ontology term search + children (`api/ontology_terms.php`, `api/ontology_children.php`)
-- [ ] genome region sequence (`api/get_sequence.php`)
+- [x] ID search → `api/v1/id_search.php`
+- [x] Rosetta Stone → `api/v1/translate.php` (JSON or TSV; always data, never the page)
+- [x] genes with a GO term → `api/v1/go_term_genes.php` (heavy, ~3 s)
+- [x] ontology → `api/v1/ontology_search.php`, `api/v1/ontology_children.php`
+- [x] genome region → `api/v1/region.php` (heavy)
+- [x] orthologs (+ family=1) for a gene LIST → `api/v1/orthologs.php` (JSON / TSV, 200 IDs, heavy; rows = gene page card TSV via `moop_clade_rows()`)
 
 New:
 - [ ] keyword / annotation-ID search across organisms, with limit/offset

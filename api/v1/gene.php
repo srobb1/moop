@@ -155,24 +155,9 @@ if ($__e) {
     }
 }
 
-// Orthologs and gene family in related species: the rows of the page cards' own TSV downloads.
-$tsv_rows = function (string $tsv): array {
-    $lines = array_values(array_filter(explode("\n", $tsv), fn($l) => $l !== ''));
-    if (count($lines) < 2) return [];
-    $head = explode("\t", array_shift($lines));
-    return array_map(fn($l) => array_combine($head, array_pad(explode("\t", $l), count($head), '')), $lines);
-};
-$orthologs = $family = [];
-if (moop_clades_open()) {
-    foreach (array_unique(array_filter([$gene_id, $L['ancestor_uniquename']])) as $g) {
-        $cl = moop_clade_homologs_for_gene($organism, $gs, (string) $g, $child_ids);
-        if (!$cl) continue;
-        $sec = ['clades' => $cl, 'labels' => moop_clade_gene_labels($cl), 'gene' => (string) $g, 'page_gene_set' => $gs];
-        $orthologs = $tsv_rows(moop_clade_homologs_tsv($sec, 'orthologs'));
-        $family    = $tsv_rows(moop_clade_homologs_tsv($sec, 'family'));
-        break;
-    }
-}
+// Orthologs and gene family in related species: the rows of the page cards' own TSV downloads
+// (moop_clade_rows(), shared with api/v1/orthologs.php).
+['orthologs' => $orthologs, 'family' => $family] = moop_clade_rows($organism, $gs, [$gene_id, $L['ancestor_uniquename']], $child_ids);
 
 // Curated anatomical expression (PAGE) and the gene's ids in other sources.
 [$page, ] = moop_gene_page_section($organism, $gene_id, $child_ids);
