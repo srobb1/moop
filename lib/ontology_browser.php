@@ -153,7 +153,48 @@ function moop_ob_written_page(array $term): ?array {
 
 /** The browser's address for a term page. */
 function moop_ob_term_url(string $prefix, string $id): string {
-    return moop_url('tools/ontology_term.php') . '?' . http_build_query(['o' => $prefix, 'id' => $id]);
+    return moop_url('tools/ontology_term.php') . '?' . http_build_query(['o' => $prefix, 'id' => $id] + moop_ob_scope_params());
+}
+
+/** The tree page, keeping the scope. */
+function moop_ob_browser_url(string $prefix, array $extra = []): string {
+    return moop_url('tools/ontology_browser.php') . '?' . http_build_query(['o' => $prefix] + $extra + moop_ob_scope_params());
+}
+
+/**
+ * The data the gene counts are limited to: ?organism=X[&assembly=Y[&gene_set=Z]] -- the context
+ * the organism, assembly and gene set pages hand their tools (config/tools_config.php). Checked
+ * against the gene sets THIS visitor may see; anything else is dropped, so a scope can never reveal
+ * or select hidden data. [] = everything the visitor can see.
+ * Returns ['organism', 'assembly', 'gene_set', 'label'] (assembly / gene_set '' when not narrowed).
+ * Every tree and term link carries it (moop_ob_term_url), so browsing stays inside it.
+ */
+function moop_ob_scope(): array {
+    static $scope = null;
+    if ($scope !== null) return $scope;
+    $scope = [];
+    $org = trim((string) ($_GET['organism'] ?? ''));
+    if ($org === '' || !preg_match('/^[A-Za-z0-9_.-]+$/', $org)) return $scope;
+    $asm = trim((string) ($_GET['assembly'] ?? ''));
+    $gs  = trim((string) ($_GET['gene_set'] ?? ''));
+    $rows = [];
+    foreach (getAccessibleGeneSets($org) as $by_org) foreach ($by_org[$org] ?? [] as $r) $rows[] = $r;
+    if (!$rows) return $scope;
+    $match = array_filter($rows, fn($r) => ($asm === '' || $r['assembly'] === $asm) && ($gs === '' || $r['gene_set'] === $gs));
+    if (!$match) { $asm = ''; $gs = ''; $match = $rows; }       // a stale assembly / gene set: the organism
+    if ($asm === '') $gs = '';                                  // a gene set names nothing without its assembly
+    $first = reset($match);
+    $label = str_replace('_', ' ', $org);
+    if ($asm !== '') $label .= ' › ' . (($first['genome_name'] ?? '') !== '' ? $first['genome_name'] : $asm);
+    if ($gs !== '')  $label .= ' › ' . $gs;
+    return $scope = ['organism' => $org, 'assembly' => $asm, 'gene_set' => $gs, 'label' => $label];
+}
+
+/** The scope as link parameters (only the set ones). */
+function moop_ob_scope_params(): array {
+    $s = moop_ob_scope();
+    return array_filter(['organism' => $s['organism'] ?? '', 'assembly' => $s['assembly'] ?? '', 'gene_set' => $s['gene_set'] ?? ''],
+                        fn($v) => $v !== '');
 }
 
 /**
@@ -276,7 +317,7 @@ function moop_ob_add_gene_counts(string $prefix, array $rows): array {
         return array_map(fn($r) => $r + ['genes_all' => null, 'genes_own' => null, 'gene_organisms' => 0], $rows);
     }
     require_once __DIR__ . '/go_gene_counts.php';
-    $c = moop_go_counts_for_terms(array_column($rows, 'id'));
+    $c = moop_go_counts_for_terms(array_column($rows, 'id'), moop_ob_scope());
     foreach ($rows as &$r) {
         $r['genes_all']      = (int) ($c[$r['id']]['genes'] ?? 0);
         $r['genes_own']      = (int) ($c[$r['id']]['direct'] ?? 0);
@@ -296,6 +337,8 @@ function moop_ob_gene_counts_missing(): int {
     $n = 0;
     $orgs = [];
     foreach (getAccessibleGeneSets() as $by_org) foreach (array_keys($by_org) as $org) $orgs[$org] = true;
+    $scope = moop_ob_scope();
+    if ($scope) $orgs = isset($orgs[$scope['organism']]) ? [$scope['organism'] => true] : [];
     foreach (array_keys($orgs) as $org) {
         if (is_file("$data/$org/organism.sqlite") && !is_file(moop_go_counts_file($org))) $n++;
     }

@@ -50,7 +50,7 @@
       badge(el, "ob-n", d.terms_all === 1 ? T("1 term") : T("%s terms").replace("%s", fmt(d.terms_all)),
             T("All the terms below it, at any depth"));
     }
-    drawGenes(el, d, open);
+    drawGenes(el, d);
     if (d.records_all === null || d.records_all === undefined) return;
     var n = open ? d.records_own : d.records_all;
     if (!n) { badge(el, "ob-rec-none", open ? T("no records on this term itself") : T("no records"), ""); return; }
@@ -62,24 +62,30 @@
                                                       : (n === 1 ? T("1 record") : T("%s records").replace("%s", fmt(n))))));
     el.appendChild(a);
   }
-  // GO: genes carrying the term. CLOSED = the term or a more specific one; OPENED = the term itself.
-  function drawGenes(el, d, open) {
+  // GO: genes annotated to the term or a more specific one -- the same number open or closed (the
+  // term page's Genes table has the switch for "this term itself").
+  function drawGenes(el, d) {
     if (d.genes_all === null || d.genes_all === undefined) return;
-    var n = open ? d.genes_own : d.genes_all;
-    if (!n) { badge(el, "ob-rec-none", open ? T("no genes on this term itself") : T("no genes"), ""); return; }
+    var n = d.genes_all;
+    if (!n) { badge(el, "ob-rec-none", T("no genes"), ""); return; }
     // Linked to the term page's Genes table (per gene set, each linked to the Data Exporter).
-    var b = document.createElement(d.url ? "a" : "span"); b.className = "ob-rec" + (open ? " ob-rec-open" : "");
+    var b = document.createElement(d.url ? "a" : "span"); b.className = "ob-rec";
     if (d.url) b.href = d.url + "#pnav-genes";
-    b.title = open ? T("Genes annotated to this term itself; the terms below show theirs.")
-                   : (d.gene_organisms === 1 ? T("Genes annotated to this term or a more specific one, in 1 organism")
-                      : T("Genes annotated to this term or a more specific one, in %s organisms").replace("%s", fmt(d.gene_organisms)));
+    b.title = d.gene_organisms === 1 ? T("Genes annotated to this term or a more specific one, in 1 organism")
+              : T("Genes annotated to this term or a more specific one, in %s organisms").replace("%s", fmt(d.gene_organisms));
     var i = document.createElement("i"); i.className = "fa fa-dna"; i.setAttribute("aria-hidden", "true"); b.appendChild(i);
-    b.appendChild(document.createTextNode(" " + (open ? T("%s on this term").replace("%s", fmt(n))
-                                                      : (n === 1 ? T("1 gene") : T("%s genes").replace("%s", fmt(n))))));
+    b.appendChild(document.createTextNode(" " + (n === 1 ? T("1 gene") : T("%s genes").replace("%s", fmt(n)))));
     el.appendChild(b);
   }
   function badge(el, cls, text, title) {
     var b = document.createElement("span"); b.className = cls; b.textContent = text; if (title) b.title = title; el.appendChild(b);
+  }
+
+  // The organism / assembly / gene set the GO counts are limited to (moop_ob_scope()), kept on every request.
+  function scopeQuery() {
+    var sc = obConfig.scope || {}, q = "";
+    Object.keys(sc).forEach(function (k) { q += "&" + encodeURIComponent(k) + "=" + encodeURIComponent(sc[k]); });
+    return q;
   }
 
   function depthOf(li) { var m = /ob-d(\d+)/.exec(li.className); return m ? parseInt(m[1], 10) : 1; }
@@ -97,7 +103,7 @@
     var wait = document.createElement("li"); wait.className = "ob-loading ob-d" + (depthOf(li) + 1);
     wait.textContent = T("Loading…"); sub.appendChild(wait); li.appendChild(sub);
     var url = obConfig.api + "?o=" + encodeURIComponent(obConfig.prefix) + "&id=" + encodeURIComponent(li.dataset.id)
-            + (obConfig.parts ? "&parts=1" : "");
+            + (obConfig.parts ? "&parts=1" : "") + scopeQuery();
     fetch(url, { credentials: "same-origin" })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (data) {
@@ -120,6 +126,6 @@
   });
   var box = document.getElementById("obSearch");
   if (box) box.addEventListener("onto:pick", function (e) {
-    window.location.href = obConfig.termUrl + "?o=" + encodeURIComponent(obConfig.prefix) + "&id=" + encodeURIComponent(e.detail.id);
+    window.location.href = obConfig.termUrl + "?o=" + encodeURIComponent(obConfig.prefix) + "&id=" + encodeURIComponent(e.detail.id) + scopeQuery();
   });
 })();

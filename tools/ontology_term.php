@@ -94,13 +94,16 @@ $gene_rows = null;
 $genes_missing = 0;
 if ($prefix === 'GO') {
     require_once __DIR__ . '/../lib/go_gene_counts.php';
-    $gene_rows = moop_go_counts_by_gene_set($term['id']);
+    $gene_rows = moop_go_counts_by_gene_set($term['id'], moop_ob_scope());
     $genes_missing = moop_ob_gene_counts_missing();
     $mart = moop_url('tools/moopmart.php');
     foreach ($gene_rows as &$g) {
         $g['url'] = $mart . '?' . http_build_query(['organism' => $g['organism'], 'assembly' => $g['assembly'],
                      'gene_set' => $g['gene_set'], 'annotation' => $term['id'], 'annotation_sub' => 1,
                      'annotation_columns' => [MOOP_GO_ANNOTATION_TYPE]]);
+        // The table's switch "Include more specific terms" off: the term itself only (exact match).
+        $g['url_own'] = $mart . '?' . http_build_query(['organism' => $g['organism'], 'assembly' => $g['assembly'],
+                     'gene_set' => $g['gene_set'], 'annotation' => $term['id'], 'annotation_columns' => [MOOP_GO_ANNOTATION_TYPE]]);
     }
     unset($g);
 }
@@ -114,7 +117,7 @@ if ($gene_rows) {
     }
     $gene_download = ['action' => moop_url('api/moopmart_export.php'), 'fields' => [
         'output_format' => 'tsv', 'ann_format' => 'wide',
-        'ann_criteria_src[]' => '', 'ann_criteria_acc[]' => $term['id'], 'ann_criteria_kw[]' => '', 'ann_criteria_sub[]' => '1',
+        'ann_criteria_src[]' => '', 'ann_criteria_acc[]' => $term['id'], 'ann_criteria_kw[]' => '',   // + ann_criteria_sub[] per button
         'annotation_columns[]' => array_keys($go_sources)]];
     foreach ($gene_rows as &$g) $g['source_key'] = $g['organism'] . '|' . $g['assembly'] . '|' . $g['gene_set'];
     unset($g);
@@ -128,7 +131,7 @@ echo render_display_page(__DIR__ . '/pages/ontology_term.php', [
     'term' => $term, 'prefix' => $prefix, 'ontology_name' => $ontologies[$prefix],
     'release' => (string) (moop_ontology_meta($prefix)['release'] ?? ''), 'view' => $view, 'rels' => $rels,
     'written_html' => $written_html, 'records' => $records, 'records_elsewhere' => $records_elsewhere,
-    'term_images' => $term_images, 'gene_rows' => $gene_rows, 'genes_missing' => $genes_missing, 'gene_download' => $gene_download,
+    'term_images' => $term_images, 'scope' => $prefix === 'GO' ? moop_ob_scope() : [], 'gene_rows' => $gene_rows, 'genes_missing' => $genes_missing, 'gene_download' => $gene_download,
     'links' => $obo === '' ? [] : [
         'OLS (EMBL-EBI)' => 'https://www.ebi.ac.uk/ols4/ontologies/' . strtolower($prefix) . '/classes?obo_id=' . rawurlencode($term['id']),
         'OBO PURL'       => 'http://purl.obolibrary.org/obo/' . $obo,

@@ -4,6 +4,8 @@
  * directly below (api/ontology_children.php); its name opens the term page (ontology_term.php).
  *   ?o=PLANA            which ontology (default: the first that can be browsed)
  *   &parts=1            also open branches by the ontology's other relations (part of, contained in...)
+ *   &organism=X[&assembly=Y[&gene_set=Z]]  GO gene counts for that data only (moop_ob_scope());
+ *                       the organism / assembly / gene set pages open it this way (tools_config)
  * Data: lib/ontology_browser.php. Registry: 'ontology_browser' (only where an ontology is built).
  */
 include_once __DIR__ . '/tool_init.php';
@@ -12,6 +14,9 @@ include_once __DIR__ . '/../includes/layout.php';
 
 $ontologies = moop_ob_ontologies();
 $prefix     = strtoupper((string) ($_GET['o'] ?? ''));
+// Opened from an organism / assembly / gene set page (its tools pass the scope, no ontology):
+// GO, the one with gene counts to narrow.
+if (!isset($ontologies[$prefix]) && moop_ob_scope() && isset($ontologies['GO'])) $prefix = 'GO';
 if (!isset($ontologies[$prefix])) $prefix = (string) array_key_first($ontologies);
 $parts      = !empty($_GET['parts']);
 $meta       = $prefix !== '' ? moop_ontology_meta($prefix) : [];
@@ -24,6 +29,7 @@ echo render_display_page(__DIR__ . '/pages/ontology_browser.php', [
     'genes_missing' => $prefix === 'GO' ? moop_ob_gene_counts_missing() : 0,
     'page_styles' => [moop_url_base() . '/css/ontology-browser.css'],
     'page_script' => [moop_url_base() . '/js/modules/ontology-term-box.js', moop_url_base() . '/js/ontology-browser.js'],
-    'inline_scripts' => ['const obConfig = ' . json_encode(['prefix' => $prefix, 'parts' => $parts,
+    'scope'      => $prefix === 'GO' ? moop_ob_scope() : [],
+    'inline_scripts' => ['const obConfig = ' . json_encode(['prefix' => $prefix, 'parts' => $parts, 'scope' => moop_ob_scope_params(),
         'api' => moop_url('api/ontology_children.php'), 'termUrl' => moop_url('tools/ontology_term.php')], JSON_HEX_TAG | JSON_HEX_AMP) . ';'],
 ], 'Ontology Browser');

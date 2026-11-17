@@ -174,20 +174,33 @@ function moop_go_counts_refresh(string $organism_data, int $budget_seconds = 240
 }
 
 /**
- * Gene counts for these GO terms, over the gene sets THIS visitor may see.
- * Returns [term => ['genes' => total, 'direct' => total, 'organisms' => [org => genes]]];
- * a term no visible gene carries is left out. Read-only; nothing is built here.
+ * The gene sets counted for this visitor: organism => [assembly/gene_set => accessible row], limited
+ * to $scope (['organism', 'assembly', 'gene_set'], '' = not narrowed; moop_ob_scope()) when given.
  */
-function moop_go_counts_for_terms(array $terms): array {
-    $terms = array_values(array_unique(array_filter($terms, fn($t) => preg_match('/^GO:\d{7}$/', (string) $t))));
-    if (!$terms) return [];
-    // Visible gene sets, as organism => [assembly/gene_set => true].
+function moop_go_counts_visible(array $scope = []): array {
     $visible = [];
     foreach (getAccessibleGeneSets() as $by_org) {
         foreach ($by_org as $org => $rows) {
-            foreach ($rows as $r) $visible[$org][($r['assembly'] ?? '') . '/' . ($r['gene_set'] ?? '')] = true;
+            if (($scope['organism'] ?? '') !== '' && $org !== $scope['organism']) continue;
+            foreach ($rows as $r) {
+                if (($scope['assembly'] ?? '') !== '' && ($r['assembly'] ?? '') !== $scope['assembly']) continue;
+                if (($scope['gene_set'] ?? '') !== '' && ($r['gene_set'] ?? '') !== $scope['gene_set']) continue;
+                $visible[$org][($r['assembly'] ?? '') . '/' . ($r['gene_set'] ?? '')] = $r;
+            }
         }
     }
+    return $visible;
+}
+
+/**
+ * Gene counts for these GO terms, over the gene sets THIS visitor may see (within $scope).
+ * Returns [term => ['genes' => total, 'direct' => total, 'organisms' => [org => genes]]];
+ * a term no visible gene carries is left out. Read-only; nothing is built here.
+ */
+function moop_go_counts_for_terms(array $terms, array $scope = []): array {
+    $terms = array_values(array_unique(array_filter($terms, fn($t) => preg_match('/^GO:\d{7}$/', (string) $t))));
+    if (!$terms) return [];
+    $visible = moop_go_counts_visible($scope);
     $out = [];
     $in  = implode(',', array_fill(0, count($terms), '?'));
     foreach ($visible as $org => $keys) {
@@ -213,18 +226,13 @@ function moop_go_counts_for_terms(array $terms): array {
 }
 
 /**
- * One GO term's gene counts, one row per gene set THIS visitor may see (the term page's table):
+ * One GO term's gene counts, one row per gene set THIS visitor may see within $scope (the term page's table):
  * [['organism', 'assembly', 'genome_name', 'gene_set', 'genes', 'direct', 'genes_with_go'], ...],
  * biggest first. Gene sets with no gene on the term are left out. Read-only.
  */
-function moop_go_counts_by_gene_set(string $term): array {
+function moop_go_counts_by_gene_set(string $term, array $scope = []): array {
     if (!preg_match('/^GO:\d{7}$/', $term)) return [];
-    $visible = [];   // organism => [assembly/gene_set => accessible row]
-    foreach (getAccessibleGeneSets() as $by_org) {
-        foreach ($by_org as $org => $rows) {
-            foreach ($rows as $r) $visible[$org][($r['assembly'] ?? '') . '/' . ($r['gene_set'] ?? '')] = $r;
-        }
-    }
+    $visible = moop_go_counts_visible($scope);
     $out = [];
     foreach ($visible as $org => $keys) {
         $file = moop_go_counts_file($org);
