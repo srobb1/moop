@@ -151,10 +151,18 @@ $rows = function (array $list) use ($prefix): string {
               return $h . '<button type="submit" class="btn btn-sm btn-link p-0 ms-1 ob-dl" title="' . t('Download these genes with their GO terms (TSV)') . '">'
                    . '<i class="fa fa-download" aria-hidden="true"></i></button></form>';
           };
+          // data-* attributes from [name => value], escaped (values are data and links).
+          $attrs = function (array $a): string {
+              $h = '';
+              foreach ($a as $k => $v) $h .= ' data-' . $k . '="' . htmlspecialchars((string) $v) . '"';
+              return $h;
+          };
           // One Genes cell: the number (-> the Data Exporter) and the download arrow; a plain 0 when none.
+          // The number opens the gene list below the table (js/ontology-term.js); its href is the
+          // Data Exporter, for a new tab or without JavaScript.
           $cell = function (int $n, string $url, string $key, bool $sub) use ($dl_form): string {
               if ($n === 0) return '<span class="text-muted">0</span>';
-              return '<a class="ob-rec" href="' . htmlspecialchars($url) . '" title="' . t('These genes in the Data Exporter') . '">'
+              return '<a class="ob-rec ob-genes-open" href="' . htmlspecialchars($url) . '" data-sub="' . ($sub ? 1 : 0) . '" title="' . t('Show these genes') . '">'
                    . '<i class="fa fa-dna" aria-hidden="true"></i> ' . number_format($n) . '</a> ' . $dl_form($key, $sub);
           };
           ?>
@@ -180,7 +188,9 @@ $rows = function (array $list) use ($prefix): string {
             </tr></thead>
             <tbody>
             <?php foreach ($gene_rows as $g): ?>
-              <tr>
+              <tr<?= $attrs([
+                  'organism' => $g['organism'], 'assembly' => $g['assembly'], 'gene-set' => $g['gene_set'],
+                  'label' => str_replace('_', ' ', $g['organism']) . ' › ' . ($g['genome_name'] !== '' ? $g['genome_name'] : $g['assembly']) . ' › ' . $g['gene_set']]) ?>>
                 <td><em><?= htmlspecialchars(str_replace('_', ' ', $g['organism'])) ?></em></td>
                 <td><?= htmlspecialchars($g['genome_name'] !== '' ? $g['genome_name'] . ' (' . $g['assembly'] . ')' : $g['assembly']) ?></td>
                 <td><?= htmlspecialchars($g['gene_set']) ?></td>
@@ -190,6 +200,18 @@ $rows = function (array $list) use ($prefix): string {
             <?php endforeach; ?>
             </tbody>
           </table>
+          <!-- One gene set's genes, opened from its number (js/ontology-term.js, api/go_term_genes.php).
+               Opens by itself when the table has a single gene set. -->
+          <div class="ob-gene-list mt-3" id="obGeneList" hidden<?= $attrs([
+                   'api' => moop_url('api/go_term_genes.php'), 'term' => $term['id'],
+                   'gene-url' => moop_url('tools/parent.php'), 'term-url' => moop_url('tools/ontology_term.php')]) ?>>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+              <h3 class="h6 mb-0 me-auto" id="obGeneListTitle"></h3>
+              <span id="obGeneListActions" class="d-inline-flex align-items-center gap-2"></span>
+              <button type="button" class="btn-close" id="obGeneListClose" aria-label="<?= t('Close the gene list') ?>"></button>
+            </div>
+            <div id="obGeneListBody"></div>
+          </div>
         <?php else: ?>
           <p class="text-muted mb-0"><?= !empty($scope) ? t('No genes here are annotated to this term or a more specific one.')
                                                        : t('No genes you can see are annotated to this term or a more specific one.') ?></p>
