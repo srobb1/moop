@@ -536,7 +536,7 @@ class ConfigManager
             }
         } elseif (isset($to['url'])) {
             $url = (string) $to['url'];
-            if (preg_match('#^/[^/\\]#', $url)) {
+            if (preg_match('#^/[^/\\\\]#', $url)) {
                 $href = $url;
             } elseif (preg_match('#^https?://#i', $url)) {
                 $href = $url;
