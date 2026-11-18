@@ -11,15 +11,22 @@
 $guide = moop_ai_guide();
 $llms  = $guide['llms'] ?? moop_public_url('llms.txt');
 
+$smed = '<em>Schmidtea mediterranea</em>';
 $examples = [
-    ['fa-dna',          t('A gene'),             t('What is the gene SMED30002742 in Schmidtea mediterranea? What does it do, which GO terms and protein domains does it have, and where in the cell is its protein predicted to be?')],
-    ['fa-exchange-alt', t('Translate IDs'),       t('Translate these Schmidtea mediterranea IDs into the other assemblies and transcriptomes, as a table: …')],
+    ['fa-dna',          t('A gene'),             t_markup('What is the gene SMED30002742 in %s? What does it do, which GO terms and protein domains does it have, and where in the cell is its protein predicted to be?', $smed)],
+    ['fa-exchange-alt', t('Translate IDs'),       t_markup('Translate these %s IDs into the other assemblies and transcriptomes, as a table: …', $smed)],
     ['fa-sitemap',      t('Orthologs'),           t('For this list of genes, which have orthologs in human or mouse, and what are they called?')],
-    ['fa-tags',         t('Genes with a GO term'), t('Which genes in the newest Schmidtea mediterranea gene set are annotated with axon guidance (GO:0007411), including more specific terms?')],
-    ['fa-puzzle-piece', t('Protein domains'),     t('Which genes in Schmidtea mediterranea and zebrafish have a thioredoxin domain? And which protein domains do these genes have: …')],
-    ['fa-project-diagram', t('KEGG pathways'),    t('List the genes in the lysosome pathway in the newest Schmidtea mediterranea gene set. Which pathways is this gene in?')],
+    ['fa-tags',         t('Genes with a GO term'), t_markup('Which genes in the %s gene set schMedS3h1_WBPS19 are annotated with axon guidance (GO:0007411), including more specific terms?', $smed)],
+    ['fa-puzzle-piece', t('Protein domains'),     t_markup('Which genes in %s and zebrafish have a thioredoxin domain? And which protein domains do these genes have: …', $smed)],
+    ['fa-project-diagram', t('KEGG pathways'),    t_markup('List the genes in the lysosome pathway in the %s gene set schMedS3h1_WBPS19. Which pathways is this gene in?', $smed)],
+    ['fa-search',       t('Find genes'),          t_markup('Find the piwi genes in %s and list them with their names and descriptions.', $smed)],
+    ['fa-user',         t('From human genes'),    t_markup('Which %s genes correspond to human PIWIL1, PCNA and SOX2? Say whether each is an ortholog or only similar.', $smed)],
+    ['fa-arrows-alt-h', t('Neighbouring genes'),  t('What are the five genes upstream and downstream of this gene in the genome: …')],
+    ['fa-microscope',   t('Expressed in a tissue'), t_markup('Which %s genes have been reported as expressed in the pharynx, and in which papers?', $smed)],
+    ['fa-chart-line',   t('RNA-seq'),             t_markup('Which %s genes mark embryo stage 6, expressed there more than at any other stage?', $smed)],
+    ['fa-table',        t('Annotate a gene list'), t('For these genes, make a table with their protein domains, GO terms and closest human gene: …')],
     ['fa-file-alt',     t('Sequences'),           t('Give me the protein sequences of these genes, and the 500 bases upstream of each.')],
-    ['fa-chart-bar',    t('Assemblies'),          t('How complete are the Schmidtea mediterranea gene sets (BUSCO), and what is each assembly’s N50?')],
+    ['fa-chart-bar',    t('Assemblies'),          t_markup('How complete are the %s gene sets (BUSCO), and what is each assembly’s N50?', $smed)],
 ];
 ?>
 
@@ -65,8 +72,10 @@ $examples = [
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
-          <h3 class="h6 fw-semibold mb-1"><?= t('It sees the public data only') ?></h3>
-          <p class="text-muted small mb-0"><?= t('The assistant fetches pages from its own servers, not from your computer, so it is never logged in as you and never on the institute network. Data that needs a login is invisible to it, even when you can see it.') ?></p>
+          <h3 class="h6 fw-semibold mb-1"><?= t('What it sees depends on how it connects') ?></h3>
+          <p class="text-muted small mb-2"><?= t('Most assistants fetch pages from their own servers, so they see only the public data: never logged in as you, never on the institute network.') ?></p>
+          <p class="text-muted small mb-2"><?= t('An assistant that works through your own browser or computer (a browser extension, an AI browser, a desktop app’s built-in browser, or a coding agent on your machine) sees what you see. That includes data that needs your login, and on the institute network it includes data opened by the network itself.') ?></p>
+          <p class="text-muted small mb-0"><?= t('Be careful with unpublished data in those tools: whatever the assistant reads ends up in your chat with it.') ?></p>
         </div>
       </div>
     </div>
@@ -112,6 +121,6 @@ $examples = [
     </div>
   </div>
 
-  <p class="text-muted small mb-5"><?= t_markup('Please cite %s and the data sources a record names when you use the data.', htmlspecialchars($siteTitle)) ?></p>
+  <p class="text-muted small mb-5"><?= t_markup('When you use this data, please cite %s and the original sources, such as InterPro or UniProt. Each gene record lists where its data came from.', htmlspecialchars($siteTitle)) ?></p>
 
 </div>

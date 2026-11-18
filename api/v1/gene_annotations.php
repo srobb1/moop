@@ -7,11 +7,15 @@
  *
  * GET organism  (required)
  *     ids       (required) gene, transcript or protein IDs, space / comma separated, up to 200 (also: id)
- *     type      domains | pathways | go | protein_features | all -- comma-separated for several
- *               (default domains). protein_features holds DeepLoc's predicted location IN THE CELL, not tissue.
+ *     type      domains | pathways | go | protein_features | closest_genes | orthologs | all -- comma-
+ *               separated for several (default domains). protein_features holds DeepLoc's predicted location
+ *               IN THE CELL, not tissue. closest_genes: the closest human gene (ortholog or homolog -- its
+ *               text says which) and closest gene in this species' other gene sets; orthologs: OMA / eggNOG
+ *               calls in every species (long).
  *     assembly, gene_set  (optional) when an ID is in more than one gene set
  *     go_sources (optional, with go) eggnog | panther | oma | interpro -- only GO terms from these
- *     format    json (default) | tsv (one row per gene x annotation)
+ *     format    json (default) | tsv (one row per gene x annotation) | wide (one row per gene, a column per
+ *               type -- the Data Exporter's shape, for a gene list built with search / domain / GO calls)
  *
  * Each ID resolves to its gene (moop_gene_lookup(), the gene page's rule); annotations of the gene and its
  * transcripts are merged, one entry per (source, accession), with 'on' = the features carrying it. GO terms
@@ -23,10 +27,13 @@ foreach (['parent_functions', 'gene_lookup', 'go_sources'] as $__lib) require_on
 
 const V1_GENE_ANN_MAX_IDS = 200;
 const V1_GENE_ANN_TYPES = ['domains' => 'Domains', 'pathways' => 'Pathways', 'go' => 'Gene Ontology',
-                           'protein_features' => 'Protein Features'];
+                           'protein_features' => 'Protein Features',
+                           // The closest human gene (and closest gene in this species' other gene sets),
+                           // and the ortholog calls (OMA, eggNOG) in every species -- the long one.
+                           'closest_genes' => 'Closest Gene', 'orthologs' => 'Orthologs'];
 
 header('Cache-Control: private, no-store');
-$format   = ($_GET['format'] ?? '') === 'tsv' ? 'tsv' : 'json';
+$format   = in_array($_GET['format'] ?? '', ['tsv', 'wide'], true) ? $_GET['format'] : 'json';
 $organism = trim((string) ($_GET['organism'] ?? ''));
 $ids      = array_values(array_unique(preg_split('/[\s,;]+/', trim((string) ($_GET['ids'] ?? $_GET['id'] ?? '')), -1, PREG_SPLIT_NO_EMPTY)));
 $too_many = count($ids) > V1_GENE_ANN_MAX_IDS;
@@ -77,7 +84,8 @@ foreach ($ids as $id) {
             }
         }
     }
-    $results[] = ['asked_for' => $id, 'gene' => $row['feature_uniquename'], 'name' => (string) ($row['feature_name'] ?? ''),
+    $results[] = ['asked_for' => $id, 'gene' => $row['feature_uniquename'], 'name' => moop_gene_symbol($row['feature_name'] ?? '', $row['feature_uniquename'], array_column($kids, 'feature_uniquename')),
+                  'description' => (string) ($row['feature_description'] ?? ''),
                   'assembly' => $row['genome_accession'], 'gene_set' => $row['gene_set_name']]
                + array_map('array_values', $out);
 }
@@ -88,6 +96,23 @@ $notes = array_values(array_filter([
     isset($types['protein_features']) ? 'protein_features: DeepLoc gives the predicted location of the protein in the cell, not the tissue where the gene is expressed.' : null,
 ]));
 
+if ($format === 'wide') {
+    // One row per gene, one column per kind asked for -- a MOOPmart-style table for a gene list.
+    // Cells: "ACCESSION name" entries joined with " | " (GO: ID name).
+    header('Content-Type: text/tab-separated-values; charset=utf-8');
+    $cell = fn($v) => str_replace(["\t", "\r", "\n", ' | '], [' ', ' ', ' ', ' / '], (string) $v);
+    echo implode("\t", array_merge(['asked_for', 'gene', 'name', 'description', 'assembly', 'gene_set'], array_keys($types))) . "\n";
+    foreach ($results as $r) {
+        $row = [$r['asked_for'], $r['gene'], $r['name'], $r['description'], $r['assembly'], $r['gene_set']];
+        foreach (array_keys($types) as $key) {
+            $row[] = implode(' | ', array_map(fn($e) => $cell(trim($e['accession'] . ' ' . ($e['name'] ?? $e['description']))), $r[$key]));
+        }
+        echo implode("\t", array_map(fn($v) => str_replace(["\t", "\r", "\n"], ' ', (string) $v), $row)) . "\n";
+    }
+    foreach ($notes as $n) echo "# $n\n";
+    foreach ($not_found as $n) echo "# not found: $n\n";
+    exit;
+}
 if ($format === 'tsv') {
     header('Content-Type: text/tab-separated-values; charset=utf-8');
     $cell = fn($v) => str_replace(["\t", "\r", "\n"], ' ', (string) $v);

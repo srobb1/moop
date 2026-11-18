@@ -176,3 +176,40 @@ function moop_feature_coords_genes_beside(string $gene_set_dir, string $gene_id)
         'right' => array_slice($on_seq, $at + 1),
     ];
 }
+
+/**
+ * Every gene's locus, grouped by sequence and sorted by start: [chr => [[start, end, strand, gene], ...]].
+ * For "the genes next to this one" and "the genes in this region" (api/v1/nearby_genes). The TSV is up
+ * to 1.1 M rows; the gene-only result (one row per distinct gene_id) is cached beside the other gene set
+ * caches and rebuilt when feature_coords.tsv is newer. [] when there is no TSV (a gene set never
+ * registered with JBrowse) -- the caller says so.
+ */
+function moop_gene_loci(string $gene_set_dir): array {
+    $tsv = moop_feature_coords_file($gene_set_dir);
+    if (!is_file($tsv)) return [];
+    require_once __DIR__ . '/cache_paths.php';
+    $dir   = moop_cache_dir_for($gene_set_dir);
+    $cache = $dir !== '' ? "$dir/gene_loci.json" : '';
+    if ($cache !== '' && is_file($cache) && filemtime($cache) >= filemtime($tsv)) {
+        $data = json_decode((string) @file_get_contents($cache), true);
+        if (is_array($data)) return $data;
+    }
+    $loci = [];
+    $seen = [];
+    $fh = @fopen($tsv, 'r');
+    if (!$fh) return [];
+    while (($line = fgets($fh)) !== false) {
+        $r = moop_feature_coords_parse($line);
+        if ($r === null || isset($seen[$r['gene_id']])) continue;
+        $seen[$r['gene_id']] = true;
+        $loci[$r['chr']][] = [$r['start'], $r['end'], $r['strand'], $r['gene_id']];
+    }
+    fclose($fh);
+    foreach ($loci as &$genes) usort($genes, fn($a, $b) => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
+    unset($genes);
+    if ($cache !== '') {
+        $tmp = "$cache." . getmypid() . '.tmp';
+        if (@file_put_contents($tmp, json_encode($loci)) !== false) @rename($tmp, $cache); else @unlink($tmp);
+    }
+    return $loci;
+}

@@ -16,6 +16,7 @@
  */
 require_once __DIR__ . '/functions_database.php';
 require_once __DIR__ . '/kegg.php';
+require_once __DIR__ . '/functions_display.php';   // moop_gene_name_sql(), moop_gene_symbol()
 
 /**
  * The gene sets a call covers, each ['organism','assembly','gene_set','gene_set_id','db','dir' (the gene set's folder)].
@@ -93,8 +94,8 @@ function moop_annotation_type_genes(string $db_file, int $gene_set_id, string $t
     $total = count($by_gene);
     if (!$by_gene) return ['total' => 0, 'genes' => []];
 
-    $st = $dbh->prepare("SELECT feature_id, feature_uniquename, feature_name, feature_description FROM feature
-                          WHERE feature_id IN (SELECT value FROM json_each(?))");
+    $st = $dbh->prepare("SELECT f.feature_id, f.feature_uniquename, " . moop_gene_name_sql('f') . " AS feature_name, f.feature_description
+                           FROM feature f WHERE f.feature_id IN (SELECT value FROM json_each(?))");
     $st->execute([json_encode(array_keys($by_gene))]);
     $info = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $f) $info[(int) $f['feature_id']] = $f;
@@ -104,7 +105,7 @@ function moop_annotation_type_genes(string $db_file, int $gene_set_id, string $t
         if (!$f) continue;
         $hits = array_values($hits);
         usort($hits, fn($a, $b) => [$a['accession'], $a['source']] <=> [$b['accession'], $b['source']]);
-        $genes[] = ['gene' => $f['feature_uniquename'], 'name' => (string) $f['feature_name'],
+        $genes[] = ['gene' => $f['feature_uniquename'], 'name' => moop_gene_symbol($f['feature_name'], $f['feature_uniquename']),
                     'description' => (string) $f['feature_description'], 'hits' => $hits];
     }
     usort($genes, fn($a, $b) => strcmp($a['gene'], $b['gene']));
@@ -131,6 +132,74 @@ function moop_annotation_type_search(string $db_file, string $type, string $text
 }
 
 /**
+ * How many genes in one gene set carry each accession -- the counts behind name= without accessions, so a
+ * caller can choose the accession before asking for genes.
+ * @return array<string,int> accession => genes
+ * @throws PDOException
+ */
+function moop_annotation_type_gene_counts(string $db_file, int $gene_set_id, string $type, array $accessions): array {
+    $accessions = array_values(array_unique(array_filter(array_map('strval', $accessions), 'strlen')));
+    if (!$accessions) return [];
+    $dbh = getDbConnection($db_file);
+    // Same join order as moop_annotation_type_genes(), for the same reason.
+    $st  = $dbh->prepare("SELECT a.annotation_accession, COUNT(DISTINCT COALESCE(f.parent_feature_id, f.feature_id))
+                            FROM json_each(?) j
+                           CROSS JOIN annotation a          ON a.annotation_accession = j.value
+                           CROSS JOIN annotation_source s   ON s.annotation_source_id = a.annotation_source_id
+                           CROSS JOIN feature_annotation fa ON fa.annotation_id = a.annotation_id
+                           CROSS JOIN feature f             ON f.feature_id = fa.feature_id
+                           WHERE s.annotation_type = ? AND f.gene_set_id = ?
+                           GROUP BY a.annotation_accession");
+    $st->execute([json_encode($accessions), $type, $gene_set_id]);
+    $out = [];
+    foreach ($st->fetchAll(PDO::FETCH_NUM) as $r) $out[$r[0]] = (int) $r[1];
+    return $out;
+}
+
+/**
+ * name= alone: the accessions whose name matches, each with its gene count per gene set -- NOT the genes.
+ * One word ("thioredoxin") matches superfamilies and loose relatives too (55 domains), and sending all their
+ * genes at once was 1.3 MB; the caller picks the accession(s) and asks again with them.
+ */
+function moop_v1_annotation_name_matches(array $o, array $scope, string $name, string $format): void {
+    $matches = [];
+    $search  = [];
+    foreach ($scope as $g) {
+        $where = "{$g['organism']}/{$g['assembly']}/{$g['gene_set']}";
+        try {
+            $search[$g['db']] ??= moop_annotation_type_search($g['db'], $o['type'], $name, 200);
+            foreach ($search[$g['db']] as $m) $matches[$m['accession']] ??= $m + ['total_genes' => 0, 'genes' => []];
+            $counts = moop_annotation_type_gene_counts($g['db'], $g['gene_set_id'], $o['type'], array_column($search[$g['db']], 'accession'));
+        } catch (Throwable $e) {
+            error_log("api/v1 {$o['label']} name {$g['organism']}: " . $e->getMessage());
+            $counts = [];
+        }
+        foreach ($counts as $acc => $n) {
+            $matches[$acc]['genes'][$where] = $n;
+            $matches[$acc]['total_genes'] += $n;
+        }
+    }
+    $matches = array_values(array_filter($matches, fn($m) => $m['total_genes'] > 0));
+    usort($matches, fn($a, $b) => [$b['total_genes'], $a['accession']] <=> [$a['total_genes'], $b['accession']]);
+    $capped = count($matches) >= 200;
+    $note = "These are the matching {$o['label_plural']}, not genes. Pick the accession(s) that mean what the person asked "
+          . "and ask again with {$o['param']}=. A name catches broader and looser entries too.";
+    if ($format === 'tsv') {
+        header('Content-Type: text/tab-separated-values; charset=utf-8');
+        $cell = fn($v) => str_replace(["\t", "\r", "\n"], ' ', (string) $v);
+        echo "accession\tname\tsource\torganism/assembly/gene_set\tgenes\n";
+        foreach ($matches as $m) foreach ($m['genes'] as $where => $n) echo implode("\t", array_map($cell, [$m['accession'], $m['name'], $m['source'], $where, $n])) . "\n";
+        echo "# $note\n" . ($capped ? "# Only the first 200 matches were counted; use a more specific name.\n" : '');
+        exit;
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['api_version' => 1, 'type' => $o['type'], 'name' => $name, 'matches' => $matches,
+                      'notes' => array_values(array_filter([$note, $capped ? 'Only the first 200 matches were counted; use a more specific name.' : null]))],
+        JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
+}
+
+/**
  * The whole GET call behind api/v1/domain_genes and api/v1/pathway_genes: parse, scope, query each gene set,
  * answer JSON or TSV. $o: type (annotation type), param (the accession parameter's name), normalise (callable
  * or null), max_acc, by_name (bool: name= allowed), cap (genes per gene set), label (for messages).
@@ -154,6 +223,7 @@ function moop_v1_annotation_genes_endpoint(array $o): void {
     }
     $scope = moop_v1_scope($orgs, (string) ($_GET['assembly'] ?? ''), (string) ($_GET['gene_set'] ?? ''));
     if (!$scope) $fail(404, 'No gene set that you can open for ' . implode(', ', $orgs) . '.');
+    if ($name !== '' && !$accs) moop_v1_annotation_name_matches($o, $scope, $name, $format);
 
     $results = [];
     $matched = [];
