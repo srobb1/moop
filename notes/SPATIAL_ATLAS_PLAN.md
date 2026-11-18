@@ -5,9 +5,15 @@ of an animal: a mesh you can rotate, coloured per vertex by predicted expression
 EndoAtlas**, the first (and so far only) dataset. Any later atlas (mesh + one value per vertex per
 gene) is another data file; there is no new code to write.
 
-Status: **step 1 DONE 2026-11-18** (bundle, build script, reader; file built and checked against the
-authors' data). Next: step 2, the card. Decided with the user 2026-11-18: general tool, rounded values
-(below), cite the paper on the card.
+Status (2026-11-18): **steps 1-4 BUILT.** Tool page `tools/spatial_atlas.php?atlas=endoatlas` recreates the
+authors' app (their figure + abstract as they have them, cited); gene-page card "Spatial expression" (closed,
+`#pnav-atlas-<name>` opens it; found through the crosswalk, so RefSeq pages show it too); one viewer
+`js/modules/spatial-atlas.js` for both; data via `api/spatial_atlas.php`; plotly.js 2.35.2 gl3d bundle vendored
+(works under the site CSP, no eval -- tested); access kind `atlas` + a row on Access overview; EndoAtlas content
+page in the Research menu with Lbx/Uncx links. The atlas's own logo/figure/abstract are in the file (`asset`
+table, atlas.json `paper_title`/`abstract`/`default_gene`). Not done: smoke tests (step 3), docs (step 5).
+The 3-D drawing could not be checked on the server (headless Chrome's software WebGL lacks a framebuffer
+plotly needs); everything around it renders without WebGL. Check in a real browser.
 
 ## The first dataset: EndoAtlas
 

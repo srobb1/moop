@@ -4046,6 +4046,118 @@ ok(!moop_dataset_visible('Org', 'asm', 'gs', 'clade:x') && moop_dataset_visible(
    'analyses: an unreadable access_rules.json makes every analysis admins-only (fail closed); data sets are unaffected');
 unlink(moop_access_rules_file());
 
+// Spatial atlas (lib/spatial_atlas.php, notes/SPATIAL_ATLAS_PLAN.md): values rounded per gene and decoded back;
+// the build checks a bundle and lists what it cannot use; access is kind 'atlas' and fails closed.
+echo "\nSpatial atlas (lib/spatial_atlas.php)\n";
+require_once "$BASE/lib/spatial_atlas.php";
+$_sv = [0.0, 1e-6, 2.5e-5, 6.3e-5, 3.1e-5, 1.91e-9];
+$_span = max($_sv) - min($_sv);
+$_err = function (array $a, array $b) { $m = 0; foreach ($a as $i => $v) $m = max($m, abs($v - $b[$i])); return $m; };
+[$_lo, $_hi, $_blob] = moop_atlas_encode($_sv, 'uint8');
+ok($_lo == min($_sv) && $_hi == max($_sv) && strlen($_blob) === count($_sv)
+   && $_err($_sv, moop_atlas_decode($_blob, $_lo, $_hi, 'uint8')) <= $_span / 510 + 1e-18,
+   'atlas: uint8 keeps each gene\'s own min/max and decodes within half a step (1/510 of its range)');
+[$_lo, $_hi, $_blob] = moop_atlas_encode($_sv, 'uint16');
+ok(strlen($_blob) === 2 * count($_sv) && $_err($_sv, moop_atlas_decode($_blob, $_lo, $_hi, 'uint16')) <= $_span / 131070 + 1e-18,
+   'atlas: uint16 is 2 bytes a value and 256x finer');
+[$_lo, $_hi, $_blob] = moop_atlas_encode($_sv, 'float32');
+ok($_err($_sv, moop_atlas_decode($_blob, $_lo, $_hi, 'float32')) <= 1e-12, 'atlas: float32 stores the numbers themselves');
+[$_lo, $_hi, $_blob] = moop_atlas_encode([4.0, 4.0, 4.0], 'uint8');
+ok($_lo == 4.0 && $_hi == 4.0 && $_blob === "\0\0\0" && moop_atlas_decode($_blob, $_lo, $_hi, 'uint8') === [4.0, 4.0, 4.0],
+   'atlas: a gene whose values are all equal stores min = max and zero codes, and decodes back flat');
+
+// A tiny bundle: 4 vertices, a quad (fanned to 2 triangles) + a triangle in "a//c" form.
+$_bd = "$_cp/orgs/Org/asm/gs/spatial_atlas/source/tiny";
+@mkdir("$_bd/assets", 0777, true);
+$_mf = function (array $extra = []) use ($_bd) {
+    file_put_contents("$_bd/atlas.json", json_encode($extra + ['name' => 'tiny', 'title' => 'Tiny', 'organism' => 'Org', 'assembly' => 'asm',
+        'gene_set' => 'gs', 'citation' => 'Someone 2023', 'axis_map' => ['z', 'x', 'y'], 'image_analysis' => 'tiny_insitu']));
+};
+$_mf();
+file_put_contents("$_bd/mesh.obj", "# x\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 1\nvn 0 0 1\nf 1/1/1 2/2/1 3/3/1 4/4/1\nf 1//1 3//1 4//1\n");
+file_put_contents("$_bd/overlay.obj", "v 0.5 0.5 0.5\n");
+file_put_contents("$_bd/values.tsv", "gene_id\tvalues\ng1\t0,1,2,3\ng2\t0,1,2\ng3\t0,1,x,3\ngX\t1,1,1,1\n");
+file_put_contents("$_bd/genes.tsv", "gene_id\tname\ng1\tAlpha\ng5\t\n");
+file_put_contents("$_bd/correlated.tsv", "gene_id\tother_id\tr\ng1\tg5\t0.9\ng1\tg2\t0.5\n");
+file_put_contents("$_bd/regions.tsv", "vertex\tregion\n1\t1_5\n4\t2_1\n9\tbad\n");
+$_im = imagecreatetruecolor(2, 2); imagepng($_im, "$_bd/assets/figure.png"); imagedestroy($_im);
+file_put_contents("$_bd/assets/notes.txt", 'x');
+$_known = ['g1' => true, 'g2' => true, 'g3' => true, 'g5' => true];
+$_ab = moop_atlas_build($_bd, 'uint8', null, $_known);
+$_af = moop_atlas_file('Org', 'asm', 'gs', 'tiny');
+ok($_ab['ok'] && $_ab['file'] === $_af && is_file($_af), 'atlas: a bundle builds into <gene set>/spatial_atlas/<name>.sqlite');
+$_c = $_ab['counts'];
+ok($_c['vertex_count'] === 4 && $_c['face_count'] === 3 && $_c['overlay_count'] === 1 && $_c['genes_with_values'] === 1
+   && $_c['genes_without_values'] === 1 && $_c['correlated_pairs'] === 2 && $_c['regions_labelled'] === 2 && $_c['assets'] === 1,
+   'atlas: quads are fanned into triangles; only usable rows are counted (a similar gene only needs to be in the gene set)');
+$_rk = array_keys($_ab['review']);
+ok(in_array('values row does not have 4 numbers (skipped)', $_rk, true) && in_array('values row has a non-number (skipped)', $_rk, true)
+   && in_array('ID not in the gene set (skipped)', $_rk, true)
+   && in_array('regions: vertex not in 1..4 (skipped)', $_rk, true) && in_array('assets: not logo/figure .png/.jpg (skipped)', $_rk, true),
+   'atlas: what the build cannot use is on the review list, never dropped silently');
+$_adb = moop_atlas_open($_af);
+$_g1 = moop_atlas_gene($_adb, ['nope', 'g1']);
+$_g5 = moop_atlas_gene($_adb, ['g5']);
+$_am = moop_atlas_meta($_adb);
+ok($_g1['name'] === 'Alpha' && moop_atlas_decode($_g1['vals'], $_g1['vmin'], $_g1['vmax'], $_am['value_encoding']) == [0.0, 1.0, 2.0, 3.0]
+   && $_g5 !== null && $_g5['vals'] === null && moop_atlas_gene($_adb, ['g2', 'gX']) === null,
+   'atlas: a gene is found under any of its IDs; "in the study, not expressed" has no values; skipped rows are absent');
+ok($_am['value_encoding'] === 'uint8' && $_am['axis_map'] === ['z', 'x', 'y'] && moop_atlas_image_analysis($_am) === 'tiny_insitu'
+   && $_am['build_review'] !== [] && moop_atlas_asset($_adb, 'figure')['mime'] === 'image/png' && moop_atlas_asset($_adb, 'logo') === null,
+   'atlas: meta records the encoding, the manifest and the review counts; assets are served by name');
+ok(array_column(moop_atlas_correlated($_adb, 'g1'), 'other_id') === ['g5', 'g2'] && array_column(moop_atlas_search($_adb, 'alp'), 'gene_id') === ['g1']
+   && moop_atlas_search($_adb, '%') === [] && moop_atlas_resolve($_adb, ['x', 'g5']) === 'g5',
+   'atlas: similar genes, the picker search (a % is literal, not a wildcard) and ID resolution');
+$_mesh = moop_atlas_mesh($_adb);
+ok(strlen($_mesh['vertices']) === 4 * 12 && array_values(unpack('V*', $_mesh['faces'])) === [0, 1, 2, 0, 2, 3, 0, 2, 3],
+   'atlas: the mesh is stored as delivered (axes not swapped), faces 0-based');
+$_adb = null;
+// A failed build leaves the previous file; bad input stops the build.
+$_before = md5_file($_af);
+file_put_contents("$_bd/values.tsv", "gene_id\tvalues\ng1\t0,1,2,3\ng1\t3,2,1,0\n");
+$_ab2 = moop_atlas_build($_bd, 'uint8', null, $_known);
+ok(!$_ab2['ok'] && strpos($_ab2['error'], 'listed twice') !== false && md5_file($_af) === $_before && !glob("$_af.tmp-*"),
+   'atlas: a duplicate gene stops the build, the previous file stays, no temp file is left');
+file_put_contents("$_bd/values.tsv", "gene_id\tvalues\ng1\t0,1,2,3\n");
+file_put_contents("$_bd/mesh.obj", "v 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 1\nf 1 2 9\n");
+ok(!moop_atlas_build($_bd, 'uint8', null, $_known)['ok'], 'atlas: a face pointing at no vertex stops the build');
+$_mf(['name' => '../evil']);
+ok(!moop_atlas_build($_bd, 'uint8', null, $_known)['ok'] && !moop_atlas_build($_bd, 'int3', null, $_known)['ok'],
+   'atlas: an unsafe atlas name or an unknown encoding is refused');
+$_mf();
+// Access: kind 'atlas', key organism/assembly/gene set/name; narrows, never widens; fails closed.
+$_atk = moop_atlas_analysis_key('Org', 'asm', 'gs', 'tiny');
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['PUBLIC']]]));
+$_as('PUBLIC', [], 'at1'); $_v1 = moop_atlas_visible('Org', 'asm', 'gs', 'tiny') && count(moop_atlases_for_organism('Org')) === 1
+                                 && (moop_atlas_by_name('tiny')['gene_set'] ?? '') === 'gs';
+moop_analysis_rule_set($_atk, ['visible_to' => 'internal']);
+$_as('PUBLIC', [], 'at2'); $_v2 = !moop_atlas_visible('Org', 'asm', 'gs', 'tiny') && moop_atlases_for_organism('Org') === [];
+$_as('IP_IN_RANGE', [], 'at3'); $_v3 = moop_atlas_visible('Org', 'asm', 'gs', 'tiny');
+unlink(moop_access_rules_file());
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['Lab']]]));
+$_as('PUBLIC', [], 'at4'); $_v4 = !moop_atlas_visible('Org', 'asm', 'gs', 'tiny');
+ok(moop_analysis_key_valid($_atk) && !moop_analysis_key_valid('atlas:Org/asm/gs') && !moop_analysis_key_valid('atlas:Org/asm/../tiny'),
+   'atlas: the access key has four plain parts');
+ok($_v1 && $_v2 && $_v3 && $_v4, 'atlas: public with its gene set; an "internal" rule hides it from the public; a private gene set hides it');
+$_as('ADMIN', [], 'at5');
+ok(!moop_atlas_visible('Org', 'asm', 'gs', '../tiny') && !moop_atlas_visible('../Org', 'asm', 'gs', 'tiny') && moop_atlas_by_name('no-such') === null,
+   'atlas: a malformed name fails closed even for an admin');
+file_put_contents("$_cp/organism_assembly_groups.json", json_encode([['organism' => 'Org', 'assembly' => 'asm', 'gene_set' => 'gs', 'groups' => ['PUBLIC']]]));
+exec('rm -rf ' . escapeshellarg("$_cp/orgs/Org/asm/gs/spatial_atlas"));
+
+// Crosswalk: a transcript the crosswalk lists also reaches its GENE (moop_crosswalk_parent_genes), so data
+// filed under a gene ID (EndoAtlas in situs on NV2g ids) shows on the other gene sets' pages.
+require_once "$BASE/lib/crosswalk.php";
+@mkdir("$_cp/orgs/Cw", 0777, true);
+$_cw = new PDO("sqlite:$_cp/orgs/Cw/organism.sqlite");
+$_cw->exec("CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_uniquename TEXT, feature_type TEXT, parent_feature_id INTEGER)");
+$_cw->exec("INSERT INTO feature VALUES (1,'G1','gene',NULL),(2,'T1','mRNA',1),(3,'P1','protein',2),(4,'G2','gene',NULL)");
+$_cw = null;
+ok(moop_crosswalk_parent_genes('Cw', ['T1', 'G2', 'nope']) === ['G1'] && moop_crosswalk_parent_genes('Cw', ['P1']) === []
+   && moop_crosswalk_parent_genes('NoSuchOrg', ['T1']) === [],
+   'crosswalk: a transcript reaches its gene; a gene, an unknown ID, a non-gene parent or a missing organism add nothing');
+exec('rm -rf ' . escapeshellarg("$_cp/orgs/Cw"));
+
 // Access overview (step 5, lib/access_overview.php): read-only; every answer from the site's own checks.
 require_once "$BASE/lib/access_overview.php";
 ok(moop_user_access_allows(['Org' => ['asm' => ['gs2']]], 'Org', 'asm', 'gs2') && !moop_user_access_allows(['Org' => ['asm' => ['gs2']]], 'Org', 'asm', 'gs')

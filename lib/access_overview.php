@@ -13,7 +13,7 @@
  * list; the page, filters and dialog need no change.
  *
  * A row: [
- *   'kind'       => 'gene_set' | 'expression' | 'images' | 'clade' | 'tracks' | 'crosswalk' | 'curations' | 'page',
+ *   'kind'       => 'gene_set' | 'expression' | 'images' | 'clade' | 'atlas' | 'tracks' | 'crosswalk' | 'curations' | 'page',
  *   'group'      => 'data' | 'analysis' | 'page'     (the page's kind filter)
  *   'organism'   => '' when the item spans organisms or has none (a clade, a page)
  *   'item'       => its name,  'detail' => where it lives (org / asm / gene set), plain text
@@ -37,6 +37,7 @@ function moop_access_overview_providers(): array {
         'moop_access_overview_expression',
         'moop_access_overview_images',
         'moop_access_overview_clades',
+        'moop_access_overview_atlases',
         'moop_access_overview_tracks',
         'moop_access_overview_crosswalk',
         'moop_access_overview_curations',
@@ -50,6 +51,7 @@ const MOOP_ACCESS_OVERVIEW_KINDS = [
     'expression' => 'Expression experiment',
     'images'     => 'Image analysis',
     'clade'      => 'Ortholog run (clade)',
+    'atlas'      => 'Spatial atlas',
     'tracks'     => 'JBrowse tracks',
     'crosswalk'  => 'ID Translator',
     'curations'  => 'Anatomy curations',
@@ -288,6 +290,30 @@ function moop_access_overview_clades(array &$ctx): array {
         $rows[] = [
             'kind' => 'clade', 'group' => 'analysis', 'organism' => '',
             'item' => $title, 'detail' => count($members) . ' gene sets' . ($private ? ", $private not public" : ''),
+            'who' => $n['who'], 'restricted' => $n['restricted'],
+            'why' => moop_access_overview_analysis_why($rule, 'none'),
+            'edit' => moop_access_overview_analysis_edit($key, $title, $rule, 'dataset'), 'links' => [],
+        ];
+    }
+    return $rows;
+}
+
+/** Spatial atlases: one per <gene set>/spatial_atlas/<name>.sqlite (lib/spatial_atlas.php). */
+function moop_access_overview_atlases(array &$ctx): array {
+    require_once __DIR__ . '/spatial_atlas.php';
+    $rows = [];
+    foreach (glob($ctx['data'] . '/*/*/*/spatial_atlas/*.sqlite') ?: [] as $f) {
+        [$org, $asm, $gs] = array_slice(explode('/', $f), -5, 3);
+        $name = basename($f, '.sqlite');
+        $key  = moop_atlas_analysis_key($org, $asm, $gs, $name);
+        if (!moop_analysis_key_valid($key)) continue;
+        $db    = moop_atlas_open($f);
+        $title = $db ? (string) ($db->query("SELECT value FROM meta WHERE key = 'title'")->fetchColumn() ?: $name) : $name;
+        $rule  = moop_analysis_rule($key);
+        $n     = moop_access_overview_narrowed($rule['visible_to'], moop_access_overview_gene_set_audience($ctx, $org, $asm, $gs));
+        $rows[] = [
+            'kind' => 'atlas', 'group' => 'analysis', 'organism' => $org,
+            'item' => $title, 'detail' => "$org / $asm / $gs",
             'who' => $n['who'], 'restricted' => $n['restricted'],
             'why' => moop_access_overview_analysis_why($rule, 'none'),
             'edit' => moop_access_overview_analysis_edit($key, $title, $rule, 'dataset'), 'links' => [],

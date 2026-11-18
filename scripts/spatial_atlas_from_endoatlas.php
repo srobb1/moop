@@ -16,6 +16,7 @@
  *   obj/segmentation grid_no_top_dot.obj     the surface (value n = n-th v line) -> mesh.obj
  *   obj/segmentation grid_grid_only3.obj     the segment grid, drawn as dots     -> overlay.obj
  *   obj/20210120_predicted_sig_top10_correlation_by_bin_51markers.csv            -> correlated.tsv
+ *   assets/logo.png, assets/intro.png, the abstract in application.py -> assets/logo.png, assets/figure.png, atlas.json
  *   obj/20220116_vertex_dict.json            {"x_y_z": "segment_position"}       -> regions.tsv
  *   obj/insitu_list.txt + assets/<id>.png  -> the organism's GENE IMAGES (.images/endoatlas/), not the bundle
  */
@@ -136,10 +137,22 @@ foreach (['images.tsv' => $img_hdr . implode("\n", $rows) . "\n", 'analyses.tsv'
 }
 printf("images: %d -> %s/endoatlas (then: php scripts/build_gene_images.php %s)\n", count($rows), $img_root, $organism);
 
+// --- the app's own intro: logo, figure, abstract (shown as they are, on the atlas's tool page) ------
+if (!is_dir("$out/assets") && !mkdir("$out/assets", 02775, true)) fail("cannot create $out/assets");
+copy("$app/assets/logo.png", "$out/assets/logo.png") || fail('copy logo');
+copy("$app/assets/intro.png", "$out/assets/figure.png") || fail('copy intro figure');
+// The abstract is the one html.P("During early animal evolution ...") in application.py.
+if (!preg_match('/html\.P\("(During early animal evolution[^"]+)"\)/', (string) file_get_contents("$app/application.py"), $am)) {
+    fail('cannot find the project description in application.py');
+}
+$abstract = preg_replace('/\s+/', ' ', trim($am[1]));
+
 // --- manifest -------------------------------------------------------------------------------------
 $manifest = [
     'name'        => 'endoatlas',
-    'title'       => 'EndoAtlas',
+    'title'       => 'Endo-Atlas',
+    'paper_title' => 'Spatial transcriptomics reveals a cnidarian segment polarity program in Nematostella vectensis',
+    'abstract'    => $abstract,                  // the app's "Project description", as the authors wrote it
     'description' => 'Predicted 3-D expression in the endomesoderm of the Nematostella larva',
     'organism'    => 'Nematostella_vectensis', 'assembly' => 'GCA_033964005.1', 'gene_set' => 'NV2',
     'citation'    => 'He S, et al. Spatial transcriptomics reveals a cnidarian segment polarity program in Nematostella vectensis. Current Biology 2023.',
@@ -152,6 +165,7 @@ $manifest = [
     'camera'      => ['eye' => [0, 1, 1.2]],
     'aspect'      => [1, 1, 0.8],
     'colorscale'  => 'Viridis',
+    'default_gene'=> 'NV2g017667000.1',         // Lbx: what the authors' app opens on
     'source'      => 'endo_atlas_dash_app_20230331.zip (authors\' Dash app), converted by scripts/spatial_atlas_from_endoatlas.php on ' . date('Y-m-d'),
 ];
 file_put_contents("$out/atlas.json", json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");

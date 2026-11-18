@@ -43,6 +43,86 @@ function moop_atlas_names(string $organism, string $assembly, string $gene_set):
     return $out;
 }
 
+/** Access key (lib/access_rules.php kind 'atlas'): atlas:<organism>/<assembly>/<gene set>/<name>. */
+function moop_atlas_analysis_key(string $organism, string $assembly, string $gene_set, string $name): string {
+    return "atlas:$organism/$assembly/$gene_set/$name";
+}
+
+/** May this visitor see this atlas? The gene set must be visible AND the atlas's own rule pass. */
+function moop_atlas_visible(string $organism, string $assembly, string $gene_set, string $name): bool {
+    foreach ([$organism, $assembly, $gene_set, $name] as $p) if (!moop_plain_name($p)) return false;
+    return moop_dataset_visible($organism, $assembly, $gene_set, moop_atlas_analysis_key($organism, $assembly, $gene_set, $name));
+}
+
+/**
+ * Every atlas of an organism this visitor may see: [['organism','assembly','gene_set','name','file'], ...].
+ * An organism without atlases costs one glob.
+ */
+function moop_atlases_for_organism(string $organism): array {
+    if (!moop_plain_name($organism)) return [];
+    $base = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/' . $organism;
+    $out = [];
+    foreach (glob("$base/*/*/spatial_atlas/*.sqlite") ?: [] as $f) {
+        [$asm, $gs] = array_slice(explode('/', $f), -4, 2);
+        $name = basename($f, '.sqlite');
+        if (moop_atlas_visible($organism, $asm, $gs, $name)) {
+            $out[] = ['organism' => $organism, 'assembly' => $asm, 'gene_set' => $gs, 'name' => $name, 'file' => $f];
+        }
+    }
+    return $out;
+}
+
+/** Find an atlas by its name alone (e.g. the Research menu link): its one file, or null if none or several. */
+function moop_atlas_by_name(string $name): ?array {
+    if (!preg_match('/^[a-z0-9_-]+$/', $name)) return null;
+    $root  = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/');
+    $found = glob("$root/*/*/*/spatial_atlas/$name.sqlite") ?: [];
+    if (count($found) !== 1) return null;
+    [$org, $asm, $gs] = array_slice(explode('/', $found[0]), -5, 3);
+    return ['organism' => $org, 'assembly' => $asm, 'gene_set' => $gs, 'name' => $name, 'file' => $found[0]];
+}
+
+/**
+ * The atlas's ID for a gene known by any of $ids (a gene page's own ID, its transcripts, and what the
+ * crosswalk links it to -- so a RefSeq gene page finds the NV2 gene). null = not in the atlas.
+ */
+function moop_atlas_resolve(PDO $db, array $ids): ?string {
+    $row = moop_atlas_gene($db, array_values(array_unique(array_filter(array_map('strval', $ids), 'strlen'))));
+    return $row ? $row['gene_id'] : null;
+}
+
+/** A gene ID plus everything the crosswalk links it to (and their genes), for moop_atlas_resolve(). */
+function moop_atlas_candidate_ids(string $organism, string $gene_id, array $child_ids = []): array {
+    require_once __DIR__ . '/crosswalk.php';
+    $self = array_merge([$gene_id], $child_ids);
+    if (!moop_crosswalk_open($organism)) return $self;
+    $refs = [];
+    foreach (moop_crosswalk_genes($organism, $self) as $rows) $refs = array_merge($refs, array_column($rows, 'ref_id'));
+    $members = array_column(moop_crosswalk_members($organism, array_merge($self, $refs)), 'accession');
+    return array_values(array_unique(array_merge($self, $refs, $members, moop_crosswalk_parent_genes($organism, $members))));
+}
+
+/** The atlas's own pictures (logo, figure), stored in the file: ['mime','data'] or null. */
+function moop_atlas_asset(PDO $db, string $name): ?array {
+    $st = $db->prepare('SELECT mime, data FROM asset WHERE name = ?');
+    $st->execute([$name]);
+    return $st->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+/** Atlas genes matching a name or ID (for the gene picker): [['gene_id','name'], ...], names first. */
+function moop_atlas_search(PDO $db, string $q, int $limit = 20): array {
+    $q = trim($q);
+    if ($q === '') return [];
+    $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%';
+    $st = $db->prepare("SELECT gene_id, name FROM gene
+                         WHERE name LIKE :l ESCAPE '\\' OR gene_id LIKE :l ESCAPE '\\'
+                         ORDER BY (lower(name) = lower(:q)) DESC, (lower(name) LIKE lower(:p) ESCAPE '\\') DESC,
+                                  (name IS NULL), name COLLATE NOCASE, gene_id
+                         LIMIT " . max(1, min(100, $limit)));
+    $st->execute([':l' => $like, ':q' => $q, ':p' => str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q) . '%']);
+    return $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
 function moop_atlas_open(string $file): ?PDO {
     if (!is_file($file)) return null;
     try {
@@ -292,6 +372,9 @@ function moop_atlas_build(string $bundle, string $encoding = 'uint8', ?string $o
         $db->exec('CREATE TABLE correlated (gene_id TEXT NOT NULL, rank INTEGER NOT NULL, other_id TEXT NOT NULL, r REAL NOT NULL,
                                             PRIMARY KEY (gene_id, rank))');
         $db->exec('CREATE TABLE region (vertex INTEGER PRIMARY KEY, region TEXT NOT NULL)');
+        // The atlas's own pictures (assets/logo.png, assets/figure.png): shown on its tool page. Gene
+        // pictures are NOT here -- they are gene images (moop_atlas_image_analysis()).
+        $db->exec('CREATE TABLE asset (name TEXT PRIMARY KEY, mime TEXT NOT NULL, data BLOB NOT NULL)');
         $db->beginTransaction();
 
         $st = $db->prepare('INSERT INTO mesh (id, vertices, faces, overlay) VALUES (1, ?, ?, ?)');
@@ -378,6 +461,21 @@ function moop_atlas_build(string $bundle, string $encoding = 'uint8', ?string $o
             }
         }
         $counts['regions_labelled'] = $labelled;
+
+        // --- assets (optional): assets/<name>.png|jpg, name = logo | figure ---
+        $assets = 0;
+        $st = $db->prepare('INSERT INTO asset (name, mime, data) VALUES (?, ?, ?)');
+        foreach (glob("$bundle/assets/*") ?: [] as $f) {
+            if (!preg_match('/^(logo|figure)\.(png|jpe?g)$/i', basename($f), $mm)) { $note('assets: not logo/figure .png/.jpg (skipped)', basename($f)); continue; }
+            $info = @getimagesize($f);
+            if (!$info || !in_array($info['mime'], ['image/png', 'image/jpeg'], true)) { $note('assets: not a readable PNG/JPEG (skipped)', basename($f)); continue; }
+            $st->bindValue(1, strtolower($mm[1]));
+            $st->bindValue(2, $info['mime']);
+            $st->bindValue(3, file_get_contents($f), PDO::PARAM_LOB);
+            $st->execute();
+            $assets++;
+        }
+        $counts['assets'] = $assets;
 
         // --- meta ---
         $meta = $m;

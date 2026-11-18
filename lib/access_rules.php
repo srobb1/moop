@@ -35,7 +35,7 @@ const MOOP_ACCESS_SETTINGS = ['everyone', 'logged_in', 'internal', 'admins', 'da
  *   images      {organism}/{analysis}     (gene_images.sqlite's analysis column; one file per organism)
  *   clade       {clade}                   (an OrthoFinder run; spans organisms, each row still needs its data set)
  */
-const MOOP_ANALYSIS_KINDS    = ['expression', 'images', 'clade'];
+const MOOP_ANALYSIS_KINDS    = ['expression', 'images', 'clade', 'atlas'];
 const MOOP_ANALYSIS_SETTINGS = ['dataset', 'logged_in', 'internal', 'admins'];
 
 function moop_access_rules_file(): string {
@@ -176,7 +176,7 @@ function moop_analysis_key_valid(string $key): bool {
     if (!in_array($m[1], MOOP_ANALYSIS_KINDS, true)) return false;
     foreach (explode('/', $m[2]) as $part) if ($part === '' || $part === '.' || $part === '..') return false;
     $parts = substr_count($m[2], '/') + 1;
-    return ['expression' => 4, 'images' => 2, 'clade' => 1][$m[1]] === $parts;
+    return ['expression' => 4, 'images' => 2, 'clade' => 1, 'atlas' => 4][$m[1]] === $parts;   // atlas: organism/assembly/gene set/name (lib/spatial_atlas.php)
 }
 
 /**

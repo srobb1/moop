@@ -565,6 +565,33 @@ if (moop_images_open($organism_name)) {
     }
 }
 
+// Spatial atlases (3-D predicted expression, e.g. EndoAtlas): a card per atlas this gene is in. Looked up on
+// the same id list as the images (this gene, its transcripts, every crosswalk accession and their genes), so
+// a RefSeq gene page finds its NV2 gene. The viewer loads its data on opening (js/modules/spatial-atlas.js).
+// Organisms without an atlas: one glob. lib/spatial_atlas.php, notes/SPATIAL_ATLAS_PLAN.md.
+require_once __DIR__ . '/../lib/spatial_atlas.php';
+$atlas_section = [];
+foreach (moop_atlases_for_organism($organism_name) as $__at) {
+    $__adb = moop_atlas_open($__at['file']);
+    if (!$__adb) continue;
+    $__ids = $__accs ?? array_merge([$feature_uniquename], array_column($children, 'feature_uniquename'));
+    $__agene = moop_atlas_resolve($__adb, $__ids);
+    if ($__agene === null) continue;
+    $__am = moop_atlas_meta($__adb);
+    $__aq = ['organism' => $__at['organism'], 'assembly' => $__at['assembly'], 'gene_set' => $__at['gene_set'], 'atlas' => $__at['name']];
+    $atlas_section[] = [
+        'name' => $__at['name'], 'title' => (string) ($__am['title'] ?? $__at['name']), 'gene' => $__agene,
+        'citation' => (string) ($__am['citation'] ?? ''), 'pmid' => (string) ($__am['pmid'] ?? ''), 'data_url' => (string) ($__am['data_url'] ?? ''),
+        'tool_url' => moop_url('tools/spatial_atlas.php') . '?' . http_build_query($__aq + ['gene' => $__agene]),
+        'opts' => $__aq + [
+            'api' => moop_url('api/spatial_atlas.php'), 'plotlyUrl' => moop_url('js/vendor/plotly-gl3d.min.js'),
+            'geneUrl' => moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism_name]) . '&uniquename=',
+            'toolUrl' => moop_url('tools/spatial_atlas.php') . '?' . http_build_query($__aq) . '&gene=',
+            'gene' => $__agene, 'mode' => 'card',
+        ],
+    ];
+}
+
 // Orthologs + gene family in related species: OrthoFinder clades this gene's gene set belongs to (organisms/.clades/,
 // lib/clade_homologs.php). Orthologs in each clade + the rest of its gene family, only genes whose
 // own gene set the visitor may see. No clade files: one glob. docs/CLADE_HOMOLOGS_FORMAT.md.
@@ -615,6 +642,7 @@ echo render_display_page(
     [
         'page_section' => $page_section,
         'image_section' => $image_section,
+        'atlas_section' => $atlas_section,
         'compgen_section' => $compgen_section,
         'organism_name' => $organism_name,
         'feature_id' => $feature_id,
@@ -675,7 +703,8 @@ echo render_display_page(
         ] : null,
         'genome_seq_available' => $genome_seq_available,
         'expression_summary' => $expression_summary,
-        'page_styles' => [moop_url_base() . "/css/parent.css", moop_url_base() . "/css/parent-nav.css"],
+        'page_styles' => array_merge([moop_url_base() . "/css/parent.css", moop_url_base() . "/css/parent-nav.css"],
+                                     $atlas_section ? [moop_url_base() . "/css/spatial-atlas.css"] : []),
         'page_script' => [
             moop_url_base() . "/js/modules/collapse-handler.js",
             moop_url_base() . "/js/modules/parent-tools.js",
@@ -688,7 +717,8 @@ echo render_display_page(
             // there are sequences to show, so the overview Copy button would be dead on a
             // gene with none.
             moop_url_base() . "/js/modules/copy-to-clipboard.js"
-        ] + ($image_section ? [100 => moop_url_base() . "/js/modules/gene-images.js"] : []),
+        ] + ($image_section ? [100 => moop_url_base() . "/js/modules/gene-images.js"] : [])
+          + ($atlas_section ? [101 => moop_url_base() . "/js/modules/spatial-atlas.js", 102 => moop_url_base() . "/js/modules/spatial-atlas-card.js"] : []),
         'inline_scripts' => [
             "const geneModelData = " . json_encode($gene_model, JSON_HEX_TAG) . ";",
             // json_encode, not addslashes(): addslashes() leaves `</script>` and line breaks

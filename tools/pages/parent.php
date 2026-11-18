@@ -832,6 +832,37 @@
         </div>
     </div>
 <?php endif; ?>
+<?php foreach ($atlas_section ?? [] as $__at):
+    // A spatial atlas (EndoAtlas ...): 3-D predicted expression, in situ, similar genes. Closed by default;
+    // the viewer (js/modules/spatial-atlas-card.js) loads plotly and the data only when opened.
+    // #pnav-atlas-<name> in a link opens it (js/modules/parent-tools.js).
+    $__aid = preg_replace('/[^a-z0-9_-]/', '', $__at['name']); ?>
+    <?= '<div class="card shadow-sm mb-4" id="pnav-atlas-' . $__aid . '" data-nav-label="' . htmlspecialchars($__at['title']) . '">' . "\n" ?>
+        <div class="card-header d-flex align-items-center flex-wrap">
+            <?= '<span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#atlasSection-' . $__aid . '" aria-expanded="false" aria-controls="atlasSection-' . $__aid
+                . '" role="button" aria-label="' . t('Show or hide Spatial expression') . '" title="' . t('Show or hide Spatial expression') . '">' . "\n" ?>
+                <i class="fas fa-plus toggle-icon text-primary"></i>
+            </span>
+            <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Spatial expression') ?></span>
+            <span class="ms-2 text-muted small"><?= htmlspecialchars($__at['title']) ?></span>
+        </div>
+        <?= '<div class="collapse sa-card-body" id="atlasSection-' . $__aid . '" data-atlas="' . htmlspecialchars(json_encode($__at['opts'], JSON_UNESCAPED_SLASHES)) . '">' . "\n" ?>
+            <div class="card-body">
+                <p class="small text-muted mb-2">
+                    <?= t('Where this gene is predicted to be expressed, on a 3-D model of the animal. Drag to turn it, scroll to zoom.') ?>
+                    <a href="<?= htmlspecialchars($__at['tool_url']) ?>"><?= htmlspecialchars(t_plain('Open in %s', $__at['title'])) ?></a>
+                </p>
+                <div class="sa-mount"></div>
+                <p class="small text-muted mt-2 mb-0">
+                    <?= htmlspecialchars($__at['citation']) ?>
+                    <?php if ($__at['pmid'] !== ''): ?><a href="https://pubmed.ncbi.nlm.nih.gov/<?= rawurlencode($__at['pmid']) ?>/" target="_blank" rel="noopener"><?= t('PubMed %s', $__at['pmid']) ?></a><?php endif; ?>
+                    <?php if ($__at['data_url'] !== ''): ?> &middot; <a href="<?= htmlspecialchars($__at['data_url']) ?>" target="_blank" rel="noopener"><?= t('Sequencing data (GEO)') ?></a><?php endif; ?>
+                    &middot; <?= t('Values are rounded for display.') ?>
+                </p>
+            </div>
+        </div>
+    </div>
+<?php endforeach; ?>
 <?php if (!empty($page_section['aka'])):
     // The Rosetta Stone: this gene under its other ids in THIS species (crosswalk.sqlite, matched by
     // sequence). Its own card -- it serves the curations, the images and the orthologs alike --
