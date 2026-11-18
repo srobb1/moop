@@ -5,7 +5,8 @@ of an animal: a mesh you can rotate, coloured per vertex by predicted expression
 EndoAtlas**, the first (and so far only) dataset. Any later atlas (mesh + one value per vertex per
 gene) is another data file; there is no new code to write.
 
-Status: **planned, nothing built.** Decided with the user 2026-11-18: general tool, rounded values
+Status: **step 1 DONE 2026-11-18** (bundle, build script, reader; file built and checked against the
+authors' data). Next: step 2, the card. Decided with the user 2026-11-18: general tool, rounded values
 (below), cite the paper on the card.
 
 ## The first dataset: EndoAtlas
@@ -14,8 +15,10 @@ Status: **planned, nothing built.** Decided with the user 2026-11-18: general to
   Nematostella vectensis.* Current Biology 2023. PMID 37315559, GEO GSE173786. Gibson Lab, Stowers.
 - Single-cell RNA-seq of larval endomesoderm, placed on a 3-D larva model with novoSpaRc.
 - Source: the authors' Dash app, `/var/www/html/.simrbase_notes/endo_atlas_dash_app_20230331.zip`.
-  **This zip is the only durable copy**; the unpacked copy used in testing on 11-18 was in a session
-  scratchpad. Before building, copy the build input into the site data so it can be rebuilt.
+  The zip stays there (user, 11-18). The data we use is converted into a bundle IN THE GENE SET
+  FOLDER (user, 11-18; not site data -- that is a git repo on /var with 2.2 GB free):
+  `NV2/spatial_atlas/source/endoatlas/` (196 MB), by `scripts/spatial_atlas_from_endoatlas.php`.
+  `organisms/` is denied over HTTP, and the pipeline's copy step writes only named files.
 - What is in it:
   - `PREDDICTION` table: ID, GENENAME, PREDIC (comma-separated floats, **one per mesh vertex,
     8,993 per gene**) for **15,542 genes**. All IDs match the **NV2** gene set on simrbase.
@@ -42,7 +45,7 @@ file check and draws nothing (same as gene images and anatomy expression).
 
 1. **The file's existence turns it on.** `scripts/build_spatial_atlas.php` (CLI only; temp file,
    checks, rename; a failed build leaves the previous file, same as `lib/anatomy_expression.php`)
-   turns the source into one read-only SQLite file: per-gene values, mesh, image list,
+   turns the source into one read-only SQLite file: per-gene values, mesh,
    correlated genes, and a `meta` table (atlas name, citation, PMID, GEO, source, value scale).
    No site_config switch to keep in step.
 2. **Lives in the gene set's folder** it is keyed to:
@@ -75,7 +78,13 @@ Read from `application.py` in the zip, 2026-11-18:
 - A gene in `id_to_name.json` but not in PREDDICTION shows an all-zero mesh and "is not expressed
   in this study". A gene in neither is "Invalid gene name".
 - In situ image: `assets/<gene id>.png` for the genes in `obj/insitu_list.txt`; otherwise
-  `assets/insitu_NA.png` (we show nothing instead).
+  `assets/insitu_NA.png` (we show nothing instead). **On MOOP these 87 pictures are ordinary gene
+  images** (decided 11-18): `organisms/Nematostella_vectensis/.images/endoatlas/`, analysis
+  `endoatlas` in `images.tsv` + `analyses.tsv` (lib/gene_images.php). So they also show on the gene
+  page's Images card, can be tagged with anatomy terms later, and are served by
+  `api/gene_image.php` after its access check. The atlas card asks that analysis for the gene's
+  picture (`atlas.json` `image_analysis`). Retiring NV2 does not move them (gene images are per
+  organism), but their rows name gene set NV2, so they are shown to nobody once it is gone.
 - Correlated genes: `obj/20210120_predicted_sig_top10_correlation_by_bin_51markers.csv`, columns
   `"Var1","top_genes","top_cor"` = query gene, similar gene, Pearson r; 10 rows per gene.
 - Not used by the app: `obj/20220116_vertex_dict.json` (key `"x_y_z"` coordinates → region
@@ -97,7 +106,6 @@ All text is UTF-8, tab-separated, one header line, `.gz` allowed on any TSV.
   overlay.obj         points drawn as dots on top (optional; only `v` lines read)
   correlated.tsv      gene_id <TAB> other_id <TAB> r   (optional; order in file = rank)
   regions.tsv         vertex <TAB> region     (optional; vertex = 1-based OBJ index)
-  images/<gene_id>.png|jpg   one picture per gene (optional), e.g. in situ
 ```
 
 `atlas.json` (the `//` comments are explanation here only; the real file is plain JSON):
@@ -110,7 +118,8 @@ All text is UTF-8, tab-separated, one header line, `.gz` allowed on any TSV.
   "citation": "He S, et al. Spatial transcriptomics reveals a cnidarian segment polarity program in Nematostella vectensis. Current Biology 2023.",
   "pmid": "37315559", "data_url": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE173786",
   "value_label": "Expression prediction",
-  "image_label": "In situ hybridisation",
+  "image_label": "In situ hybridization",
+  "image_analysis": "endoatlas",             // gene-images analysis whose picture the card shows (optional)
   "axis_map": ["z", "x", "y"],               // plotted x,y,z taken from these OBJ axes
   "camera": {"eye": [0, 1, 1.2]}, "aspect": [1, 1, 0.8],
   "colorscale": "Viridis"
@@ -172,15 +181,7 @@ CREATE TABLE correlated (
   PRIMARY KEY (gene_id, rank)
 );
 
--- Pictures for a gene (in situ etc.), stored in the file so the atlas is ONE file: it moves with the
--- gene set on retire, and every picture is served through PHP after the access check.
-CREATE TABLE image (
-  gene_id TEXT PRIMARY KEY,
-  mime    TEXT NOT NULL,          -- image/png | image/jpeg
-  width   INTEGER, height INTEGER,
-  data    BLOB NOT NULL
-);
-
+-- (No image table: pictures are gene images -- see "In situ image" above.)
 -- Optional: which region each vertex is in (EndoAtlas: segment labels from vertex_dict.json).
 CREATE TABLE region (
   vertex INTEGER PRIMARY KEY,     -- 0-based, same order as mesh.vertices
@@ -188,7 +189,10 @@ CREATE TABLE region (
 );
 ```
 
-Size for EndoAtlas: gene ≈ 15,542 × 8,993 B ≈ 140 MB (uint8), images 14 MB, the rest under 2 MB.
+Size for EndoAtlas: gene ≈ 15,542 × 8,993 B ≈ 140 MB (uint8), the rest under 2 MB (pictures are
+gene images, 14 MB, not in this file). **Built: 152 MB** with `page_size = 65536` (a 9 KB row in 16 KB pages leaves one row per page: 267 MB).
+Measured on the build: 24,526 genes (15,542 with values, 8,984 "not expressed"), values 1.9e-9..5.5e-4,
+every ID in NV2, 17,856 triangles (the OBJ faces are quads), all 8,993 vertices labelled (52 regions).
 
 Notes:
 - Gene IDs are stored as delivered. EndoAtlas uses NV2 transcript-style IDs (`NV2g017667000.1`);
