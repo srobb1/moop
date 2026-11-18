@@ -58,11 +58,17 @@ while (my $line = <NAMES>){
   $name =~ s/=/\%3D/g;
   $name =~ s/;/\%3B/g;
   
-	if (!$sym or $sym eq 'None'){
-    $sym = $id;
+  # No symbol or no description: left empty, and the line gets no Name= / Note= (2026-11-17).
+  # It used to be filled with this row's id -- for a gene, its main TRANSCRIPT's id, so the
+  # database showed "A2h1T0002261.3" as the name of gene A2h1G0002261 (64 gene sets, ~70% of
+  # genes in the Trinity/SIMR ones) and, with no description, as its description too. An
+  # unnamed feature has a blank name in the database (load_genes_sqlite.pl) and JBrowse labels
+  # it by its ID.
+	if (!$sym or $sym eq 'None' or $sym eq $id){
+    $sym = '';
 	}
-	if (!$name or $name eq 'None'){
-		$name = $id;
+	if (!$name or $name eq 'None' or $name eq $id){
+		$name = '';
 	}
   my $gid = $groupid;
   # The gene's own row (ID = GroupId: RefSeq/Ensembl geneNames.tsv) names the gene, as it does in
@@ -111,56 +117,12 @@ while (my $line = <GFF>){
 	  my ($gid) = $line =~ /ID=([^;]+)/;
 		if (exists $names{$gid}{isGene}){
        $main_tid = $names{$gid}{isGene};
-			 my $name = $names{$main_tid}{name};
-			 $name = $name eq $gid ? $gid : $name;
-			 my $note = $names{$main_tid}{note};
-			 $note = $note eq $gid ? $gid : $note;
-			 my $source = $names{$main_tid}{source};
-       if ($line =~ /\tApollo\t.*Name=/){ # if it already has a name, don't add a new one
-			   $line .= ";auto_name=$name";  #auto_note=$note;auto_namesrc=$source";
-       }elsif($line =~ /;Name=([^;]*)/){
-         $line =~ s/;Name=$1/;Name=$name/;
-       }else{
-			   $line .= ";Name=$name"; #Note=$note;namesrc=$source";
-       }
-       if ($line =~ /\tApollo\t.*Note=/){
-         $line .= ";auto_note=$note"; #auto_namesrc=$source";
-       }elsif($line =~ /;Note=([^;]*)/){
-         $line =~ s/;Note=$1/;Note=$note/;
-       }else{
-         $line .= ";Note=$note";# ;namesrc=$source";
-       }
-       if ($line =~ /\tApollo\t.*namesrc=/){
-         $line .= ";auto_namesrc=$source";
-       }else{
-         $line .= ";namesrc=$source";
-       }
+			 $line = add_name_note($line, $names{$main_tid});
 		}
 	}elsif($line =~ /\t(?:mRNA|transcript)\t/){ # transcript: Trinity/make_fake_genome_from_t2g.pl, smed_20140614, Turritopsis
     my ($id) = $line =~ /ID=([^;]+)/;
 		if (exists $names{$id}){
-       my $name = $names{$id}{name};
-       my $note = $names{$id}{note};
-       my $source = $names{$id}{source};
-       if ($line =~ /\tApollo\t.*Name=/){ # if it already has a name, don't add a new one
-         $line .= ";auto_name=$name"; #auto_note=$note;auto_namesrc=$source";
-       }elsif($line =~ /;Name=([^;]*)/){
-         $line =~ s/;Name=$1/;Name=$name/;
-       }else{
-         $line .= ";Name=$name" ; #Note=$note;namesrc=$source";
-       }
-       if ($line =~ /\tApollo\t.*Note=/){
-         $line .= ";auto_note=$note"; #auto_namesrc=$source";
-       }elsif($line =~ /;Note=([^;]*)/){
-         $line =~ s/;Note=$1/;Note=$note/;
-       }else{
-         $line .= ";Note=$note";# ;namesrc=$source";
-       }
-       if ($line =~ /\tApollo\t.*namesrc=/){
-         $line .= ";auto_namesrc=$source";
-       }else{
-         $line .= ";namesrc=$source";
-       }
+       $line = add_name_note($line, $names{$id});
 		}
 	}
   if ($keep_source_names and defined $source_name and $line !~ /\tApollo\t/){
@@ -172,12 +134,7 @@ while (my $line = <GFF>){
       $line =~ s/((?:\t|;)Name=)\Q$new_name\E(;|$)/$1$source_name$2/;
     }
   }
-  if ($line =~ /\tgene\t/ and $line !~ /Name=/){
-    $line =~ s/ID=([^;]+)/ID=$1;Name=$1/;
-  }
-  if ($line =~ /\t(?:mRNA|transcript)\t/ and $line !~ /Name=/){
-    $line =~ s/ID=([^;]+)/ID=$1;Name=$1/;
-  }
+  # (a gene or transcript with no name keeps no Name=: no Name=<ID> fallback, 2026-11-17)
   $line =~ s/;+/;/g;
   $line =~ s/\s*;/;/g;
 	print $line,"\n";
@@ -189,3 +146,28 @@ while (my $line = <GFF>){
   }
 }
 
+
+# Name=, Note= and namesrc= for one gene or transcript line, from its geneNames.tsv row. An empty
+# name or description adds nothing (no Name= / Note=). An Apollo line that already has a Name= or
+# Note= keeps it, and the pipeline's value goes in auto_name= / auto_note= beside it.
+sub add_name_note {
+  my ($line, $row) = @_;
+  foreach my $pair (['Name', 'auto_name', $row->{name}], ['Note', 'auto_note', $row->{note}]) {
+    my ($tag, $auto_tag, $value) = @$pair;
+    next if !defined $value or $value eq '';
+    if ($line =~ /\tApollo\t.*\b$tag=/){
+      $line .= ";$auto_tag=$value";
+    }elsif($line =~ /;$tag=([^;]*)/){
+      my $old = $1;
+      $line =~ s/;$tag=\Q$old\E/;$tag=$value/;
+    }else{
+      $line .= ";$tag=$value";
+    }
+  }
+  if ($line =~ /\tApollo\t.*namesrc=/){
+    $line .= ";auto_namesrc=$row->{source}";
+  }else{
+    $line .= ";namesrc=$row->{source}";
+  }
+  return $line;
+}

@@ -56,7 +56,8 @@ use OmaHogOrthologs qw(read_hog_orthologs parse_oma_header read_id_map target_id
 #     "-like (label)" unless same_species; copy_names: another species whose names are kept, no "-like",
 #     only "(label)" after the description (e.g. a curated planarian naming other planarians: aligned names)
 #   3 OMA human ortholog (tier 1-2): 1:1 and many:1 "SYM: name" (every many:1 copy the same);
-#     a family "<HGNC group> family member", or -- no shared group -- straight to step 6
+#     a family "<HGNC group> family member", else "<PANTHER family> family member"; neither -- steps
+#     5-7 are skipped (they would pick one member) and step 8 or 9 names it
 #   4 transposable element: a TE Pfam domain -> "<class> transposase domain-containing protein"
 #     (before 5 and 6, which would name it after a gene domesticated from such an element)
 #   5 PANTHER tree placement: a trusted TreeGrafter placement with exactly one human ortholog, which
@@ -3752,7 +3753,7 @@ sub ortholog_name {
   my $shared = shared_hgnc_group(\@humans);
   if (!defined $shared) {
     # no HGNC group they share is a family by descent: the PANTHER family they all belong to, and
-    # the gene matches, names them; else step 6
+    # the gene matches, names them; else no name here, and decide_name skips steps 5-7 (to step 8/9)
     my $family = shared_panther_family($group, \@humans)
       or return not_named("co-ortholog of " . scalar(@humans) . " human genes that share no HGNC group that is a family by descent, "
                           . "and no PANTHER family the gene matches as a whole member");

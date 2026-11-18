@@ -87,6 +87,10 @@ sub load_gene_names {
         if (defined $desc && $desc =~ /^(\S+):\s*(.*)$/) {
             ($sym, $description) = ($1, $2);
         }
+        # "None" is the naming pipeline's "no name" (assign_gene_names_v2.pl), not a description: it
+        # reached the database as the text "None" for 22,412 RefSeq/Ensembl genes (2026-11-17)
+        $sym         = '' if $sym eq 'None';
+        $description = '' if $description eq 'None';
         $names{$id} = { name => $sym, desc => $description };
     }
     close $fh;

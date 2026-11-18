@@ -1,7 +1,7 @@
 # Gene naming and closest-gene assignment — Methods
 
-Draft for publication. Describes `assign_gene_names_v2.pl` as of 2026-10-06 (branch
-`ensembl-id-versions`). The rules on two pages: [NAMING_QUICK_REFERENCE.md](NAMING_QUICK_REFERENCE.md). Every threshold below is quoted from the code; if the code changes, change
+Draft for publication. Describes `assign_gene_names_v2.pl` as of 2026-11-17 (checked against
+the code that day). The rules on two pages: [NAMING_QUICK_REFERENCE.md](NAMING_QUICK_REFERENCE.md). Every threshold below is quoted from the code; if the code changes, change
 this file with it. Items marked **[TODO]** are facts this document cannot state from the
 code alone.
 
@@ -239,10 +239,12 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
   - `ISS` — **I**nferred from **S**equence **S**imilarity: a `-like` name
   - `ISM` — **I**nferred from **S**equence **M**odel: a PANTHER family, InterPro domain or transposon domain
   - `TAS` — **T**raceable **A**uthor **S**tatement: a curator's name
-  - `SRC` — **S**ou**RC**e: the gene set's own (RefSeq/Ensembl) name (our code; not GO)
+  - `SRC` — **S**ou**RC**e: the gene set's own (RefSeq/Ensembl) name, or a name copied from another annotation of the same species (step 2, `same_species`) (our code; not GO)
 - **What kind:**
-  - `1to1` one-to-one · `Nto1` N genes here carry this human gene's name · `fam` family (co-orthologs) — the OMA relationship
-  - `rbh` **r**eciprocal **b**est **h**it · `bh` **b**est **h**it
+  - `1to1` one-to-one · `Nto1` N genes here carry this human gene's name · `mto1` many-to-one, one copy named · `fam` family (co-orthologs) — the OMA relationship
+  - `tree` the PANTHER tree placement (step 5), followed by how the closest human gene agrees: `rbh`, `via` (another species' ortholog) or `bh`
+  - `rbh` **r**eciprocal **b**est **h**it · `bh` **b**est **h**it · `sp` a **S**wiss-**P**rot protein of another species (step 7)
+  - the naming species' tag, lower case (`smed`, `nvec`): a step-2 name from that species
   - `tie-rbh` a paralog tie decided by the reciprocal best hit · `tie-grp` a paralog tie named for the HGNC **gr**ou**p**
   - `pthr` **P**AN**TH**E**R** family · `rpt` re**p**ea**t** · `ipr` **I**nter**Pr**o domain · `te` **t**ransposable **e**lement
 - **Support:**
@@ -260,7 +262,7 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
 |---|---|---|---|---|
 | 1 | **Human-curated names** | a curator's file lists the gene | exactly as given — the only step not checked for informativeness | `TAS` |
 | 2 | **Native name** | RefSeq/Ensembl gene sets | the source's own name, kept unless uninformative | `SRC` |
-| 2 | **Naming species** (optional, per gene set) | its OMA 1:1 or many:1 ortholog; else its full-length (≥ 80% of both proteins) reciprocal best hit; else, for another species only, its DIAMOND best hit if that hit is full-length; else its hits file; informative | `NAME` for another annotation of the same species; otherwise `NAME-like (label)` | `SRC` / `ISO` / `ISS` |
+| 2 | **Naming species** (optional, per gene set) | its OMA 1:1 or many:1 ortholog; else its full-length (≥ 80% of both proteins) reciprocal best hit; else, for another species only, its DIAMOND best hit if that hit is full-length; else its hits file; informative | `same_species` (another annotation of this species): the partner's name as is, `SYM: name`; `copy_names` (a curated species naming its relatives, e.g. S3h1 for the planarians): `SYM: name (label)`, no `-like`; otherwise `SYM-like: name-like (label)`. Passed over (2026-11-04, not for `same_species`) when the partner's name has no symbol (a family or domain name) and the gene's own OMA human ortholog is 1:1 with `sim+` and `pthr+`: step 3 names it | `SRC` (same species) / `ISO` (OMA) / `ISS` (a hit), then the relationship (`1to1`, `Nto1`, `rbh`, `bh`) and the species tag (`smed`) |
 | 3 | **OMA orthology to human** | closest human gene from OMA (§6, tier 1 or 2), supported (§5.2) | see below | `ISO` |
 | 4 | **Transposable element** | a transposable-element Pfam domain (see below) | `<class> transposase domain-containing protein` | `ISM\|te` |
 | 5 | **PANTHER tree placement** | a trusted placement joins the gene to exactly one human gene at a speciation node, and that gene is also its closest human gene by similarity (§6, tiers 3–5) | `SYMBOL: approved name` | `ISO\|tree` |
@@ -268,7 +270,7 @@ Every name ends in an evidence tag, e.g. `[ISO|1to1|sim+|pthr+]` (full list in �
 | 7 | **Swiss-Prot protein of another species** | the gene's best Swiss-Prot hit is a protein of another species, full-length (≥ 80% of both proteins), informative, and no human gene scores higher | `name-like (species)`, no symbol | `ISS\|bh\|sp` |
 | 8 | **PANTHER family** | the match covers ≥ 75% of the family model's positions (≥ 80% by protein residues when there is no InterProScan JSON); informative | `<family> family member`; a repeat-built family: `<repeat>-containing protein` | `ISM\|pthr`, `ISM\|rpt` |
 | 9 | **InterPro domain** | the gene's best InterPro *Domain* or *Repeat* entry, informative | `<domain> domain-containing protein` | `ISM\|ipr` |
-| – | — | nothing above | `None` (the gene keeps its own transcript id as name and description); the Gene Name Source table says which kind: **None: no hits** (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match) or **None: hits did not pass the naming tests** (with the kinds of evidence found) | — |
+| – | — | nothing above | `None` in `geneNames.tsv`; the gene then has no name and no description (no `Name=`/`Note=` in `genes.gff`, blank in the database; until 2026-11-17 its main transcript's id filled both); the Gene Name Source table says which kind: **None: no hits** (no similarity hit in any database searched, no OMA ortholog in any species, no InterProScan homology match) or **None: hits did not pass the naming tests** (with the kinds of evidence found) | — |
 
 The steps are tried in this order; the step number is the Score of the Gene Name Source table.
 
@@ -567,10 +569,12 @@ protein`; `1,2-lyase` is untouched) and `-containing protein` appended when the 
 ends in domain or repeat. When the gene has a human homolog that could not name it (partial),
 the provenance says so and the tag carries `sim~`.
 
-**Hits to other species never name a gene.** A transferred name may belong to a
-lineage-specific paralog (`solute carrier family 37 member 4a` in fish), which cannot be
-detected and would be wrong in the new organism. Other-species hits remain available as
-homolog tables in the database.
+**Other species name a gene only in two ways:** a reviewed Swiss-Prot protein, with its species in
+the name (step 7), and a naming species chosen per gene set (step 2). Hits to Ensembl or RefSeq
+proteins of other species never name a gene: a transferred name may belong to a lineage-specific
+paralog (`solute carrier family 37 member 4a` in fish), which cannot be detected and would be
+wrong in the new organism, and the symbol of a `-like` name is always the human gene's HGNC symbol.
+Other-species hits remain available as homolog tables in the database.
 
 ### 5.1 Confidence and evidence tags
 
@@ -603,9 +607,9 @@ what kind of claim the name is before why:
 |---|---|---|
 | ortholog | OMA 1:1, or one human gene on the PANTHER tree | "Ortholog of human X ..." |
 | co-ortholog | one of several copies here named after one human gene ("(1 of N)"), or several human genes (OMA 1:many, many:many) | "Co-ortholog of ..." |
-| homolog | `-like` (step 6) | "Homolog, orthology not shown (may be a paralog): similar to human X ..." |
-| family homolog | a PANTHER family or HGNC group name (steps 6 tie, 7) | "Family homolog, orthology not shown: member of ..." |
-| domain homolog | a domain, repeat or transposon-domain name (steps 4, 7 repeat, 8) | "Domain homolog: contains ..." |
+| homolog | `-like` (steps 6 and 7) | "Homolog, orthology not shown (may be a paralog): similar to human X ..." |
+| family homolog | a PANTHER family or HGNC group name (step 6 tie, step 8) | "Family homolog, orthology not shown: member of ..." |
+| domain homolog | a domain, repeat or transposon-domain name (step 4, step 8 repeat-built family, step 9) | "Domain homolog: contains ..." |
 | curated / source annotation / none | steps 1, 2 / no name | -- |
 
 Orthology is claimed only where a method tested it (OMA, the PANTHER tree): similarity alone shows homology, and the
@@ -669,6 +673,8 @@ contains no colon. The full reasoning is in the Gene Name Source table (§7).
 | `1to1`, `Nto1`, `mto1`, `fam` | OMA relationship: one-to-one; N genes of this gene set carry the human gene's name (counted after naming); many-to-one, one copy named; co-ortholog family |
 | `tree` (on `ISO`) | orthology from the PANTHER tree placement (step 5), followed by how the closest human gene agrees: `rbh`, `via` (another species' ortholog) or `bh` |
 | `rbh`, `bh` | the `-like` hit is a reciprocal best hit, or a best hit |
+| `sp` | the step-7 hit is a Swiss-Prot protein of another species |
+| `smed`, `nvec`, ... | step 2: the name comes from this naming species (its config `tag`, lower case) |
 | `tie-rbh`, `tie-grp` | a paralog tie decided by a reciprocal best hit, or named for the group |
 | `pthr`, `rpt`, `ipr`, `te` | PANTHER family; repeat-built family; InterPro domain; transposable element |
 | `sim+`, `sim~`, `sim-` | the named human gene is the protein's best human hit; a hit but not the best; no hit (E ≤ 1e-5). On an `ISM` name, `sim~`: the gene has only a partial human homolog |
@@ -910,7 +916,13 @@ then, for another species only, the DIAMOND best hit, if that best hit is itself
 weaker full-length hit is never used instead, as for a human `-like` name, §5 step 6); then the
 hits file. Another annotation of the same species (`same_species`) copies a name only from OMA,
 a full-length reciprocal best hit, or the hits file: a best hit alone does not make two
-proteins the same gene. The decision table records, for every gene, the name the steps would
+proteins the same gene. Only one species per gene set may have `use_for_names`. The name is
+written three ways: as is for `same_species` (tag `SRC`); `SYM: name (label)` with no `-like` for
+`copy_names` (a curated species naming its relatives: S3h1 names the other planarians, so names
+stay aligned across species); otherwise `SYM-like: name-like (label)`. A partner name that has no
+symbol (the partner's own naming stopped at a family or domain) is passed over when the gene's own
+OMA human ortholog is 1:1, its best human hit and in the same PANTHER family (2026-11-04; not for
+`same_species`). The decision table records, for every gene, the name the steps would
 give without the naming species (`Pipeline_name`, present in every run), so its effect can be judged before it
 is trusted.
 
@@ -918,8 +930,8 @@ is trusted.
 
 | File | Content |
 |---|---|
-| `geneNames.tsv` | `ID MAINID GroupId Desc Note`; Desc is the name with its evidence tag; Note records the source, evidence type, ids and score of the name. A gene with no name keeps its own transcript id as name and description |
-| `gene_name_source.<kind>.moop.tsv` | database annotation type "Gene Name Source" — the provenance of every name, one row per gene and isoform. Accession = what the name came from, description = why, in words (`Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)`), score = the naming step (1–8; 0 for no name). One source per kind of accession link: HGNC gene, HGNC gene group, Ensembl gene, PANTHER family, InterPro domain, Pfam (transposable element), naming species (NCBI), human-curated, the gene set's own name — and `Gene name source: none` for genes with no name (accession `None`; the description says "None: no hits" or "None: hits did not pass the naming tests") |
+| `geneNames.tsv` | `ID MAINID GroupId Desc Note`; Desc is the name with its evidence tag; Note records the source, evidence type, ids and score of the name. A gene with no name has Desc `None`; `updateGFF.pl` and `parse_GFF3_to_MOOP_TSV.pl` read it as no name and no description (until 2026-11-17 the GFF and the database got the main transcript's id, and RefSeq/Ensembl gene sets the text "None") |
+| `gene_name_source.<kind>.moop.tsv` | database annotation type "Gene Name Source" — the provenance of every name, one row per gene and isoform. Accession = what the name came from, description = why, in words (`Ortholog of human ALPHA (OMA, 1:1); ALPHA is its best human similarity hit; same PANTHER family (PTHR00001)`), score = the naming step (1–9; 0 for no name). One source per kind of accession link: HGNC gene, HGNC gene group, Ensembl gene, PANTHER family, InterPro domain, Pfam (transposable element), naming species (NCBI), human-curated, the gene set's own name — and `Gene name source: none` for genes with no name (accession `None`; the description says "None: no hits" or "None: hits did not pass the naming tests") |
 | `closest_<species>.tsv` | per id: gene id, symbol, description, evidence |
 | `closest_<species>[.ensembl\|.family].moop.tsv` | database annotation type "Closest Gene", one source per file so each has one link: human — `Closest human gene (HGNC)` (genenames.org), `Closest human gene (Ensembl, no HGNC record)` (Ensembl), `Closest human gene family` (no link); other species — `Closest <species> gene`, `Closest <species> gene family`. A row for the gene and each isoform; score = tier (human) or rank (other species: 1 OMA, 2 reciprocal best hit, 3 DIAMOND best hit, 4 hits file) |
 | `gene_model_flags.tsv` | for people to read, not loaded: every gene whose best human hit has the shape of a fragment (≥ 80% of this protein on < 50% of the human one) or a fusion (≥ 80% of the human protein within < 50% of this one) — candidates for mender |
