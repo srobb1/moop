@@ -81,7 +81,7 @@ sub load_gene_names {
     while (my $line = <$fh>) {
         chomp $line;
         next unless length $line;
-        my ($id, undef, undef, $desc) = split /\t/, $line;
+        my ($id, undef, $group_id, $desc) = split /\t/, $line;
         next unless defined $id;
         my ($sym, $description) = ('', $desc // '');
         if (defined $desc && $desc =~ /^(\S+):\s*(.*)$/) {
@@ -91,6 +91,11 @@ sub load_gene_names {
         # reached the database as the text "None" for 22,412 RefSeq/Ensembl genes (2026-11-17)
         $sym         = '' if $sym eq 'None';
         $description = '' if $description eq 'None';
+        # A gene with no symbol has its gene ID written as the symbol ("ENSDARG00000093412.2: SERTA ..."):
+        # 237 Danio mRNA + 237 CDS were named after their gene (2026-11-18). An ID is not a name.
+        # GroupId (the gene) only: RefSeq mitochondrial rows are keyed by their symbol (ID column
+        # "ATP6", GroupId 17046618), and comparing the ID column would blank ATP6, COX1, ...
+        $sym = q{} if defined $group_id && $sym eq $group_id;
         $names{$id} = { name => $sym, desc => $description };
     }
     close $fh;
@@ -132,7 +137,9 @@ sub emit_ensembl {
                 $desc = uri_unescape($raw_desc);
                 $desc =~ s/\s*\[Source:[^\]]+\]//g;
             }
-            $gene_name{$gn_id} = $name // $gn_id;
+            # No Name= -> no name (blank is the DB convention). An ID fallback was copied onto the
+            # mRNA, CDS and protein rows, where the loader cannot tell it is an ID (2026-11-18).
+            $gene_name{$gn_id} = $name // q{};
             $gene_desc{$gn_id} = $desc;
         }
         elsif ($type eq 'mRNA') {
@@ -161,7 +168,7 @@ sub emit_ensembl {
         next unless defined $gn_id;
         next if $printed{$prot_id}++;
 
-        my $name   = $gene_name{$gn_id} // $gn_id;
+        my $name   = $gene_name{$gn_id} // q{};
         my $note   = $gene_desc{$gn_id} // '';
         my $cds_id = "CDS:$prot_id";
 
@@ -325,7 +332,10 @@ sub emit_generic {
         next unless $type eq 'gene' || $type eq 'mRNA' || $type eq 'transcript';
         my ($name) = $attrs =~ /\bName=([^;]+)/;
         my ($note) = $attrs =~ /\bNote=([^;]+)/;
-        $name //= $id;
+        # No Name= -> no name. $name is reused for the cds and protein rows below, and the
+        # loader blanks a name only when it equals the row's OWN id, so an $id fallback left
+        # 1.1M cds + 1.1M protein rows named after their transcript (2026-11-18).
+        $name //= q{};
         $note //= '';
         print join("\t", $id, $type, $parent_id, $parent_type, $name, $note), "\n";
 
