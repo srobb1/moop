@@ -377,6 +377,36 @@ function moop_crosswalk_members(string $organism, array $ref_ids): array {
     return $out;
 }
 
+/**
+ * The parent GENE ids of the given accessions that are transcripts in organism.sqlite.
+ *
+ * Why: a crosswalk may map a gene set through its TRANSCRIPTS (Nematostella NV2: 29,034 NV2t ids, no
+ * NV2g ids), while data about that gene set -- pictures, curations -- can be filed under its GENE id
+ * (the 87 EndoAtlas in situs are on NV2g ids). Without this step, the RefSeq gene page reached
+ * NV2t017667001.1 but never its gene NV2g017667000.1, and showed no picture (2026-11-18).
+ * Accessions that are not transcripts here (other sources' ids, genes) add nothing.
+ */
+function moop_crosswalk_parent_genes(string $organism, array $accessions): array {
+    $ids = array_values(array_unique(array_filter($accessions, 'strlen')));
+    $f = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/'
+       . preg_replace('/[^A-Za-z0-9_.-]/', '', $organism) . '/organism.sqlite';
+    if (!$ids || !is_file($f)) return [];
+    $out = [];
+    try {
+        $db = new PDO('sqlite:' . $f, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        foreach (array_chunk($ids, 500) as $chunk) {
+            $st = $db->prepare("SELECT DISTINCT p.feature_uniquename FROM feature c JOIN feature p ON p.feature_id = c.parent_feature_id
+                                 WHERE p.feature_type = 'gene' AND c.feature_uniquename IN (" . implode(',', array_fill(0, count($chunk), '?')) . ')');
+            $st->execute($chunk);
+            foreach ($st->fetchAll(PDO::FETCH_COLUMN) as $g) $out[$g] = true;
+        }
+    } catch (PDOException $e) {
+        return [];   // organism.sqlite unreadable: the transcript ids are still looked up as they are
+    }
+    return array_keys($out);
+}
+
 /** The sources in this organism's crosswalk file, with the configured name: [source => label], config order first. */
 function moop_crosswalk_source_list(string $organism): array {
     $db = moop_crosswalk_open($organism);

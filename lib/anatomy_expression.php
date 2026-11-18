@@ -703,6 +703,10 @@ function moop_gene_page_section(string $organism, string $gene_id, array $child_
     foreach (moop_crosswalk_genes($organism, $self) as $rows) $refs = array_merge($refs, array_column($rows, 'ref_id'));
     $members = moop_crosswalk_members($organism, array_merge($self, $refs));
     $accs    = array_merge($self, array_column($members, 'accession'));
+    // ...and the GENE ids of those that are transcripts: a crosswalk can map a gene set by transcript
+    // while its pictures/curations are filed by gene (lib/crosswalk.php moop_crosswalk_parent_genes).
+    // Looked up, not shown: 'aka' stays the crosswalk's own list.
+    $accs    = array_values(array_unique(array_merge($accs, moop_crosswalk_parent_genes($organism, array_column($members, 'accession')))));
     $cur     = moop_page_for_accessions($organism, $accs);
     $ids     = [];
     foreach ($cur as $r) array_push($ids, $r['term_id'], $r['stage_id'], $r['specimen_id']);
