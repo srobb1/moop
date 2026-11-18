@@ -32,6 +32,9 @@
  *   "nodes":   { "121411": "/page.php?p=faq" },  /node/N, /en/node/N, /es/node/N
  *   "aliases": { "faq": "/page.php?p=faq" },     /faq, /en/faq, /es/faq
  *   "exact":   { "/pub/x.nt": "/tools/downloads.php" },   exact old paths, no language handling
+ *   "elsewhere": { "feature": "https://simrbase.stowers.org/tools/organism.php?organism=X" },
+ *                                                  anything under these goes to ANOTHER site: a fixed
+ *                                                  https address (checked before old_prefixes)
  *   "old_prefixes": ["node", "feature", ...],     anything under these goes home
  *   "block": ["^/xmlrpc\\.php", ...]              regexes answered with 444
  * }
@@ -79,6 +82,16 @@ foreach (($t['aliases'] ?? []) as $alias => $target) {
 foreach (($t['exact'] ?? []) as $path => $target) {
     $check($target, "exact $path");
     $lines[] = sprintf('    %-52s %s;', '"~^' . $esc($path) . '$"', $target);
+}
+// Old prefixes whose pages now live on ANOTHER site (Planosphere's gene pages -> SIMRbase).
+// Still a fixed string: an https address with a plain host, never anything from the request.
+foreach (($t['elsewhere'] ?? []) as $pre => $target) {
+    if (!preg_match('#^[a-z0-9_-]+(/[a-z0-9_-]+)*$#i', $pre)) { fwrite(STDERR, "bad elsewhere prefix: $pre\n"); exit(1); }
+    if (!preg_match('#^https://[a-z0-9-]+(\.[a-z0-9-]+)+/[A-Za-z0-9._~/?&=%+-]*$#', $target)) {
+        fwrite(STDERR, "refused target for elsewhere $pre: " . json_encode($target) . "\n"); exit(1);
+    }
+    $lines[] = sprintf('    %-52s %s;', '"~^/' . $esc($pre) . '(/|$)"', $target);
+    foreach ($langs as $l) $lines[] = sprintf('    %-52s %s;', "\"~^/$l/" . $esc($pre) . '(/|$)"', $target);
 }
 // Bare language roots: /en, /es -> home in that language.
 foreach ($langs as $l) $add("/$l", $with_lang($check($home, 'home'), $l));

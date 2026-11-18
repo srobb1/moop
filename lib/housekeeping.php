@@ -792,7 +792,10 @@ function housekeeping_snapshot_site_data(bool $persist = true) {
         $site_path . '/metadata/expression_overrides.json'      => 'metadata/expression_overrides.json',
         // Who may see content pages (and later analyses): lib/access_rules.php, written by the web.
         $site_path . '/metadata/access_rules.json'              => 'metadata/access_rules.json',
-        $users_file                                             => 'users.json',
+        // Old-site address table (hand-built, the source of the nginx redirects:
+        // scripts/build_legacy_redirects.php). Missing until 2026-11-18 -- never backed up.
+        $site_path . '/metadata/legacy_redirects.json'          => 'metadata/legacy_redirects.json',
+        $users_file                                            => 'users.json',
         // The site's own stylesheet (head-resources.php loads it if present; planosphere's look,
         // 2026-11-11). Site data, not code: git-ignored, so the backup is its only other copy.
         $site_path . '/css/custom.css'                          => 'css/custom.css',
