@@ -29,6 +29,8 @@ echo render_display_page(
         // English shown on a Spanish page says so, for screen readers and translators.
         'title_lang' => $title === $page['title']['en'] && $lang !== 'en' && trim($page['title'][$lang] ?? '') === '' ? 'en' : '',
         'body_lang'  => $body === $page['body']['en'] && $lang !== 'en' && trim($page['body'][$lang] ?? '') === '' ? 'en' : '',
+        // A <table class="moop-table"> becomes searchable and downloadable (js/content-page.js).
+        'page_script' => [moop_url_base() . '/js/content-page.js'],
     ],
     $title . ' - ' . $config->getString('siteTitle')
 );
