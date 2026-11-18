@@ -18,6 +18,7 @@
  */
 require_once __DIR__ . '/ontologies.php';
 require_once __DIR__ . '/cache_paths.php';
+require_once __DIR__ . '/functions_display.php';   // moop_gene_name_sql()
 
 /** The relations a gene's GO annotation is carried up through. GO convention: is a + part of. */
 const MOOP_GO_PROPAGATE = ['rdfs:subClassOf', 'BFO:0000050'];
@@ -291,7 +292,7 @@ function moop_go_term_gene_list(array $gs_row, string $term, bool $sub, int $sho
                 SELECT f.feature_id, a.annotation_accession$src_col FROM feature f JOIN feature c ON c.parent_feature_id = f.feature_id
                   JOIN feature_annotation fa ON fa.feature_id = c.feature_id JOIN annotation a ON a.annotation_id = fa.annotation_id$src_jn
                  WHERE f.gene_set_id = ? AND f.feature_type IN ('gene', 'pseudogene') AND a.annotation_accession IN (SELECT value FROM json_each(?))$src_wh)
-            SELECT f.feature_uniquename, f.feature_name, f.feature_description, group_concat(DISTINCT hit.acc)"
+            SELECT f.feature_uniquename, " . moop_gene_name_sql('f') . " AS feature_name, f.feature_description, group_concat(DISTINCT hit.acc)"
          . ($with_sources ? ", group_concat(DISTINCT hit.src)" : '') . "
               FROM hit JOIN feature f ON f.feature_id = hit.gene GROUP BY hit.gene ORDER BY f.feature_uniquename";
     try {

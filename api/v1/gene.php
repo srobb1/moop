@@ -216,8 +216,10 @@ $record = [
     'site'        => $config->getString('siteTitle', ''),
     'gene' => [
         'id'          => $gene_id,
+        // name = symbol: '' when there is none -- never an ID (a transcript ID stood in the name field
+        // of 56k Smed genes; an agent read it as a name, 2026-11-17).
         'symbol'      => moop_gene_symbol($row['feature_name'], $gene_id, $child_ids),
-        'name'        => $row['feature_name'],
+        'name'        => moop_gene_symbol($row['feature_name'], $gene_id, $child_ids),
         'description' => $row['feature_description'],
         'type'        => $row['feature_type'],
         'asked_for'   => $id,

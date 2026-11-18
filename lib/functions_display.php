@@ -871,6 +871,19 @@ function moop_gene_symbol(?string $name, string $uniquename, array $child_ids = 
 }
 
 /**
+ * SQL for a gene's name with "names" that are really IDs blanked: '' when feature_name is the ID of
+ * any feature in the same gene set (a transcript's, as on 56k schMedA2h1 genes in Nov 2026) -- the
+ * part of moop_gene_symbol() a list query cannot do without each gene's children. Pass the result
+ * through moop_gene_symbol() for the rest (own-ID prefix, LOC123). Uses the (gene_set_id,
+ * feature_uniquename) unique index. $f: the gene's table alias.
+ */
+function moop_gene_name_sql(string $f = 'f'): string
+{
+    return "CASE WHEN EXISTS (SELECT 1 FROM feature x_id WHERE x_id.gene_set_id = $f.gene_set_id"
+         . " AND x_id.feature_uniquename = $f.feature_name) THEN '' ELSE $f.feature_name END";
+}
+
+/**
  * A command for the admin to run on the server, with a Copy button. Selecting a command by
  * hand drops or adds characters -- "dnf clean package" for "packages" (2026-11-03) -- so a
  * command an admin page tells you to run is copied from the server-built string instead.

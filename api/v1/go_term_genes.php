@@ -55,7 +55,7 @@ if (isset($out['error'])) $json(500, ['error' => $out['error']]);
 
 $genes = array_map(function ($g) {
     $keys = array_values(array_unique(array_map(fn($n) => moop_go_source_key($n) ?? $n, $g[5] ?? [])));
-    return ['gene' => $g[0], 'name' => $g[1], 'description' => $g[2], 'terms' => $g[3], 'n_terms' => $g[4], 'sources' => $keys];
+    return ['gene' => $g[0], 'name' => moop_gene_symbol($g[1], $g[0]), 'description' => $g[2], 'terms' => $g[3], 'n_terms' => $g[4], 'sources' => $keys];
 }, $out['genes']);
 
 $json(200, [
