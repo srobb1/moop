@@ -190,8 +190,11 @@ send() {
   ## which is the status of the `!` -- always 0. Every transport failure logged
   ## "returned 0", which is precisely the message that sends you looking at the data
   ## instead of the network. retry() captures the real status.
+  ## --chmod=Fa-x: files on /n/sci inherit group rwx from the default ACL and -a copied that
+  ## mode, so data files arrived as 770 (2026-11-19, from the web side); now 660. Directories
+  ## keep their mode. Before RSYNC_EXTRA, so the clades' --chmod=F664 still applies after it.
   if ! retry "rsync to $dest" \
-       rsync -azL --partial-dir=.rsync-partial --timeout=120 --itemize-changes "${RSYNC_EXTRA[@]}" \
+       rsync -azL --chmod=Fa-x --partial-dir=.rsync-partial --timeout=120 --itemize-changes "${RSYNC_EXTRA[@]}" \
          -e "ssh ${SSH_OPTS[*]}" \
          "${to_send[@]}" "$REMOTE:$dest/" >"$out"; then
     logerr "      files: ${to_send[*]}"
