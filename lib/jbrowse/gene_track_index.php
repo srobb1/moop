@@ -165,12 +165,18 @@ function gene_track_build_index(string $gff, string $label, array &$log): bool {
     };
     $cleanup();
 
+    // sort spills to $TMPDIR (default /tmp) -- a 4 GB volume on this host, and php-fpm's private
+    // /tmp lives on it. A 1.2 GB GFF (Danio_rerio RS_2025_04, 2026-11-18) failed with "No space
+    // left on device". Spill beside the target instead: same disk as the output, which we already
+    // write to. TMPDIR also reaches the sort that `jbrowse sort-gff` runs underneath.
+    $env = 'export TMPDIR=' . escapeshellarg(dirname($gff)) . '; set -o pipefail; ';
+
     // Headers first, then features sorted by seqid and start -- what tabix requires.
     $sorted = '(grep "^#" ' . escapeshellarg($gff)
             . '; grep -v "^#" ' . escapeshellarg($gff)
             . ' | sort -t"$(printf \'\\t\')" -k1,1 -k4,4n)';
     $out = []; $rc = 1;
-    exec('/bin/bash -c ' . escapeshellarg('set -o pipefail; ' . $sorted . ' | ' . escapeshellarg($bgzip)
+    exec('/bin/bash -c ' . escapeshellarg($env . $sorted . ' | ' . escapeshellarg($bgzip)
          . ' > ' . escapeshellarg($tmp)) . ' 2>&1', $out, $rc);
 
     if ($rc !== 0 || !moop_bgzf_is_complete($tmp)) {
@@ -178,7 +184,7 @@ function gene_track_build_index(string $gff, string $label, array &$log): bool {
         $jb = moop_find_jbrowse_cli();
         if ($jb) {
             $out = []; $rc = 1;
-            exec('/bin/bash -c ' . escapeshellarg('set -o pipefail; ' . escapeshellarg($jb) . ' sort-gff '
+            exec('/bin/bash -c ' . escapeshellarg($env . escapeshellarg($jb) . ' sort-gff '
                  . escapeshellarg($gff) . ' | ' . escapeshellarg($bgzip) . ' > ' . escapeshellarg($tmp))
                  . ' 2>&1', $out, $rc);
             $log[] = $rc === 0 ? "$label: sorted with jbrowse sort-gff" : "$label: jbrowse sort-gff also failed";
