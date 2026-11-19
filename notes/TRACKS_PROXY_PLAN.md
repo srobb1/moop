@@ -1,7 +1,14 @@
 # Tracks Reverse-Proxy Plan
 
-Status: **designed + validated, NOT deployed** (2026-07-09). PHP foundation staged and dormant;
-no nginx block live. Nothing in production behaves differently yet.
+Status: **LIVE on simrbase.stowers.org since 2026-11-19** (a visitor in Austria could not load any
+remote track: outside, tracks.stowers.org:8080 does not answer). Path is `/api/jbrowse2/tracks-proxy/`
+(NOT /moop/tracks-proxy/ as below: under /api/jbrowse2/ the rate-limit map classes it "jbrowse",
+burst 300 -- elsewhere it is a "page", burst 30, and a genome view would 429). nginx:
+`/etc/nginx/moop-sites/moop/tracks-proxy.conf`, included in the simrbase server block; setting
+`tracks_server.proxy_path = "api/jbrowse2/tracks-proxy"`. The July staged PHP was lost; rewritten in
+`api/jbrowse2/config.php` (addTokenToAdapterUrls). Verified: same bytes as direct, bad token 403, no
+token 401, /data/tracks/ 403; headless genome view 37/37 track requests via proxy, 0 direct.
+Off switch: empty `proxy_path`. The text below is the July design, kept for the reasoning.
 
 ## Problem this solves
 

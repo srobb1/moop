@@ -446,6 +446,9 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
     $tracks_server_cfg = $config->get('tracks_server', []);
     $tracks_server_enabled = !empty($tracks_server_cfg['enabled']);
     $tracks_server_url = isset($tracks_server_cfg['url']) ? rtrim($tracks_server_cfg['url'], '/') : '';
+    // e.g. "tracks-proxy" -> "/tracks-proxy" (or "/moop/tracks-proxy" on a folder-served site); '' = off
+    $tracks_proxy_path = trim((string)($tracks_server_cfg['proxy_path'] ?? ''), '/');
+    $tracks_proxy_base = $tracks_proxy_path === '' ? '' : moop_url_base() . '/' . $tracks_proxy_path;
 
     foreach ($adapter as $key => &$value) {
         if (is_array($value)) {
@@ -483,6 +486,16 @@ function addTokenToAdapterUrls($adapter, $organism, $assembly, $track_access_lev
                             $token = generateTrackToken($organism, $assembly, $uri);
                             $separator = strpos($uri, '?') !== false ? '&' : '?';
                             $value['uri'] .= $separator . 'token=' . urlencode($token);
+                        }
+
+                        // Tracks proxy (notes/TRACKS_PROXY_PLAN.md): the browser fetches the tracks
+                        // server's files through THIS site (nginx forwards them over the inside
+                        // network), so a visitor outside the institute never needs to reach the tracks
+                        // server itself. Only the browser-facing start of the address changes; the
+                        // trust check above ran against the real URL and the token is untouched.
+                        if ($tracks_proxy_base !== '' && $tracks_server_url !== ''
+                            && strpos($value['uri'], $tracks_server_url . '/') === 0) {
+                            $value['uri'] = $tracks_proxy_base . substr($value['uri'], strlen($tracks_server_url));
                         }
 
                     } else {

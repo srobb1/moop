@@ -786,6 +786,10 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'validate_jwt' => true,                                    // Require JWT tokens for track access
         'sync_method' => 'manual',                                 // 'manual', 'rsync', 'nfs'
         'sync_schedule' => '',                                     // e.g., 'daily', 'weekly'
+        // Path on THIS site that nginx forwards to the tracks server (e.g. 'tracks-proxy'), so
+        // visitors outside the network never contact the tracks server directly. '' = off.
+        // Set it ONLY after the nginx location exists -- see notes/TRACKS_PROXY_PLAN.md.
+        'proxy_path' => '',
         'notes' => 'Reference genomes (/data/genomes/) always stay on MOOP server. 
                     Track data (/data/tracks/) can be synced to remote server for performance.',
     ],

@@ -17,9 +17,14 @@ Order of work, and why:
 ---
 
 ## 0. The move (in progress)
-- [ ] IT: outside access to simrbase.stowers.org (firewall NAT) — the firewall contact is working on it
-- [ ] Phase B when outside access works — `/home/smr/move_day/PHASE_B.txt`, then I walk the 3 names
-      and grep for leftover `/moop/` links
+- [x] IT: outside access to simrbase.stowers.org + cuttingclass.stowers.org (161.129.22.133) — works 11-19
+- [x] Phase B for simrbase + cuttingclass (11-19): links have no folder name, public_url set, simrbase-dev
+      forwards, rate limits republished. No folder links on either home page; no-exec guard probed on both
+      new names (`.php` in images/ blocked, control ran). Old internal `172.16.2.52/moop/` now loads unstyled.
+- [ ] **IT: internal DNS (10.0.51.5)** has `cuttingclass.stowers.org` -> 13.89.4.68 (old); needs 172.16.2.52
+      (simrbase is already 172.16.2.52 inside). Also planosphere inside -> 172.16.2.52.
+- [ ] **IT: public DNS** `planosphere.stowers.org` -> 172.202.37.180 (old); needs 161.129.22.133 / CNAME simrbase
+- [ ] Then Planosphere's Phase B line (PHASE_B.txt step 1, planosphere) + recheck its guard (differs until then)
 - [ ] Keep `172.16.2.31 tracks.stowers.org` in `/etc/hosts` through IT's DNS changes
 
 ## 1. Wrong or surprising answers — fix first
@@ -142,6 +147,15 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [x] **Remote tracks did not load from outside Stowers** (user in Austria, 11-19) -> tracks proxy LIVE
+      (notes/TRACKS_PROXY_PLAN.md). Ask the user to hard-reload. Manage JBrowse's save no longer drops it.
+- [ ] **smoke_tests.php is not hermetic:** 4 link/menu tests read the LIVE link_prefix and fail on any
+      site served at its root (simrbase since 11-19). Pin link_prefix in the test. **S**
+- [ ] **setup-check guard check is wrong for a site with its own server block** (found 11-19 after Phase B):
+      it compares `default.d/<site>-security.conf` to a ROOT-keyed guard once link_prefix is "/", and says
+      "Re-deploy". That file still guards the old `/moop/` address — re-deploying would UNGUARD it. It should
+      compare `/etc/nginx/moop-sites/<site>/guard.conf` (the new server block's include) instead, and probe
+      over HTTPS on public_url. **S–M**
 - [ ] **Double-check, then delete Planosphere's duplicate anatomy file** —
       `/var/www/html/planosphere/organisms/Schmidtea_mediterranea/anatomy_expression.sqlite`. Unused since
       53162efc (Planosphere = static pages on SIMRbase data; its anatomy tool + API are off). Identical to

@@ -66,12 +66,15 @@ switch ($action) {
 
         $editable = loadJsonFile($config_file, []);
 
-        $editable['tracks_server'] = [
+        // Merge, don't replace: this form edits only these fields. Replacing the whole setting
+        // silently dropped the rest -- e.g. proxy_path, without which outside visitors lose every
+        // remote track (notes/TRACKS_PROXY_PLAN.md).
+        $editable['tracks_server'] = array_merge((array)($editable['tracks_server'] ?? []), [
             'enabled'      => $enabled,
             'url'          => $url,
             'validate_jwt' => true,
             'sync_method'  => 'manual',
-        ];
+        ]);
 
         // Also keep trusted_tracks_servers in sync with the configured URL
         if ($enabled && $url !== '') {
