@@ -142,5 +142,11 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Double-check, then delete Planosphere's duplicate anatomy file** —
+      `/var/www/html/planosphere/organisms/Schmidtea_mediterranea/anatomy_expression.sqlite`. Unused since
+      53162efc (Planosphere = static pages on SIMRbase data; its anatomy tool + API are off). Identical to
+      SIMRbase's copy (77,432 records, same contents; only the build date differs). Before deleting, check
+      nothing on Planosphere still opens it: no page/API reads it, and setup-check/housekeeping/the admin
+      Organisms page don't complain once it is gone (move it aside first, look, then delete). **S** (11-19)
 - [x] DONE 11-19: **"no gene" hover is wrong for 170 dd_Smed_v6 GENE IDs** — their transcripts are in `unlinked`, but the hover says "not in the reference data"; `moop_crosswalk_unlinked()` should fall back to the gene's transcripts. **S** (found 11-19)
 - 
