@@ -31,8 +31,8 @@ Order of work, and why:
       "genomes" have no gene level) or a join that drops the gene? Then decide how to show them. **M**
 - [ ] **Downloads (menu → Download):** clicking the chevron and clicking the name do different things.
       Both should open the whole group of files. **S**
-- [ ] **Ontology Browser:** remove ECO from the drop-down (GO + PLANA only); a link from Planosphere
-      opens with PLANA already selected. **S**
+- [x] **Ontology Browser:** remove ECO from the drop-down (GO + PLANA only); a link from Planosphere
+      opens with PLANA already selected. **S** — DONE 11-18 3b4d43de (Planosphere links already passed ?o=PLANA)
 - [ ] **Old Planosphere video tutorials:** remove the ones that teach the OLD website. Keep the PLANA
       and general PAGE ones. **S** (Sofia picks which)
 - [ ] **Question: the UCNE BLAT track** — are those the other species' regions, aligned to this genome?
@@ -69,7 +69,7 @@ SIMRbase
 - [ ] Ontology term page — **stage terms** have old/ugly formatting; bring to the new style. **M**
 
 Planosphere
-- [ ] Index — **bold** the sentence saying some links go to SIMRbase. **S**
+- [x] Index — **bold** the sentence saying some links go to SIMRbase. **S** — DONE 11-18 (site data)
 - [ ] **Tools page** → the square-tile layout of the welcome/index page. **M**
 - [ ] **Molecular fate mapping** page — items not centred like the other pages. **S**
 - [ ] **Movie page** — items not centred. **S**
