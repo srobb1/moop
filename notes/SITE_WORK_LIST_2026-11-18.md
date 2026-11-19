@@ -42,7 +42,7 @@ Order of work, and why:
       config); pass it via jbrowse2.php's track parameter. Note: `sessionTrackId=track_<md5 of path>` breaks
       silently when a path changes (see todo_research_menu memory) -- prefer a `tracks=` param by management
       track name. **M**
-- [ ] **WHEN compute's `unlinked` table arrives: list every curated ID missing from all our FASTAs** —
+- [x] **WHEN compute's `unlinked` table arrives: list every curated ID missing from all our FASTAs** — DONE 11-19: 688 IDs, `notes/CURATED_IDS_MISSING_FROM_ALL_FASTAS_2026-11-19.md` (+ .tsv, `scripts/curated_ids_missing_report.py`) —
       in neither `map` nor `unlinked`; grouped by paper and by ID set (dd_Smed_v4, OX_Smed, SmedASXL,
       Contig...), with counts, so Sofia knows which files to find. (Sofia asked 11-19.) **S**
 - [ ] **Sofia: find the missing ox_Smed_v2 sequences** — Kao 2013's `OX_Smed_1.0.N` IDs whose numbers
@@ -142,4 +142,5 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **"no gene" hover is wrong for 170 dd_Smed_v6 GENE IDs** — their transcripts are in `unlinked`, but the hover says "not in the reference data"; `moop_crosswalk_unlinked()` should fall back to the gene's transcripts. **S** (found 11-19)
 - 
