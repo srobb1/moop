@@ -52,7 +52,7 @@ Order of work, and why:
       though its description says "ENAH/VASPs family member"; many bat RefSeq VASP genes have no name
       while EVL/ENAH in the same species do. Pipeline side → write a note for compute (web doesn't
       touch the naming code). **S** (note) / compute fixes
-- [ ] **Gene card "copy" — does it copy too much?** Look at what it puts on the clipboard; decide. **S**
+- [x] **Gene card "copy" — does it copy too much?** — DONE 11-19: sections + indented evidence + link (Sofia chose). Look at what it puts on the clipboard; decide. **S**
 
 ## 2. Showing the site to someone — TALK
 - [ ] **A demo route.** One linear path through the site, written down: e.g. home → search a gene →

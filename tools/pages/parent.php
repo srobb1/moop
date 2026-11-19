@@ -111,44 +111,48 @@
                 $protein_length_text = 'Protein: ' . number_format($protein_lengths[$longest_protein]) . ' aa'
                     . ($n_prot > 1 ? ' (longest of ' . $n_prot . ')' : '');
             }
-            $copy_lines = [$feature_uniquename];
-            $copy_lines[] = trim($gene_symbol . ($gene_symbol !== '' && $overview_title !== '' ? ' — ' : '') . $overview_title);
-            $badges = htmlspecialchars_decode(strip_tags($type));
+            // The copy button: plain text in short labelled sections with blank lines between, the
+            // naming evidence indented under its heading, and a link back (Sofia, 2026-11-19: it was
+            // one 17-line block). Assembly and gene set stay LABELLED -- on 19 of 92 gene sets they
+            // are near identical ("bvag.kc1 (bvag.kc1.ref)" over "bvag.kc1"), unreadable later unlabelled.
+            $__title = trim($gene_symbol . ($gene_symbol !== '' && $overview_title !== '' ? ' — ' : '') . $overview_title);
+            $__head  = [$feature_uniquename . ($__title !== '' ? ' — ' . $__title : ''),
+                        trim($genus . ' ' . $species . ($common_name ? " ($common_name)" : ''))];
+
+            $__kind = htmlspecialchars_decode(strip_tags($type));
             if (!empty($children_hierarchical)) {
                 $n = count($children_hierarchical);
                 $__ct = $children_hierarchical[0]['feature_type'] ?? 'mRNA';
-                $badges .= ' ' . ($n > 1 ? t_plain('%1$d %2$s children', $n, $__ct) : t_plain('%1$d %2$s child', $n, $__ct));
+                $__kind .= ', ' . ($n > 1 ? t_plain('%1$d %2$s children', $n, $__ct) : t_plain('%1$d %2$s child', $n, $__ct));
             }
-            $copy_lines[] = $badges;
-            $copy_lines[] = trim($genus . ' ' . $species . ($common_name ? " ($common_name)" : ''));
-            // Assembly and gene set are LABELLED; the rest are not.
-            //
-            // The other lines say what they are from their content — an accession, a
-            // species name, a genomic range. These two are bare identifiers whose meaning
-            // comes entirely from their position, and on 19 of 92 gene sets they are near
-            // identical: "bvag.kc1 (bvag.kc1.ref)" sits directly above "bvag.kc1". Pasted
-            // into notes unlabelled, those are indistinguishable later. It is the whole
-            // in-house .kc1 family, not an edge case.
-            $copy_lines[] = 'Assembly: ' . assembly_label($genome_name, $genome_accession);
-            $copy_lines[] = 'Gene set: ' . $gene_set_name;
+            if ($longest_protein !== '') $__kind .= '; ' . lcfirst($protein_length_text);
+            $__where = ['Assembly:  ' . assembly_label($genome_name, $genome_accession),
+                        'Gene set:  ' . $gene_set_name];
             if (!empty($feature_loc)) {
-                $copy_lines[] = $feature_loc['seqname'] . ':' . number_format($feature_loc['start'])
-                              . '-' . number_format($feature_loc['end'])
-                              . (in_array($feature_loc['strand'], ['+','-'], true) ? ' (' . $feature_loc['strand'] . ')' : '');
+                $__where[] = 'Location:  ' . $feature_loc['seqname'] . ':' . number_format($feature_loc['start'])
+                           . '-' . number_format($feature_loc['end'])
+                           . (in_array($feature_loc['strand'], ['+','-'], true) ? ' (' . $feature_loc['strand'] . ')' : '');
             }
-            if ($longest_protein !== '') {
-                $copy_lines[] = $protein_length_text;
-            }
-            // The naming statements, after the rest: the lead sentence, then one labelled
-            // line per statement, in the card's order (user, 2026-10-06).
+            $__where[] = 'Type:      ' . $__kind;
+
+            // The naming statements, after the rest: the lead sentence, then one labelled line per
+            // statement, in the card's order (user, 2026-10-06) -- indented under it.
+            $__name = [];
             if ($naming_lead !== null) {
-                $copy_lines[] = $naming_lead['naming_text']
+                $__name[] = 'Name: ' . $naming_lead['naming_text']
                     . (!empty($naming_lead['accession']) ? ' (' . $naming_lead['accession'] . ')' : '');
             }
             foreach ($naming_list as $__s) {
-                $copy_lines[] = moop_gene_naming_label($__s['kind']) . ': ' . $__s['naming_text'];
+                $__name[] = ($__name ? '  - ' : '') . moop_gene_naming_label($__s['kind']) . ': ' . $__s['naming_text'];
             }
-            $copy_text = implode("\n", array_filter($copy_lines, fn($l) => trim((string)$l) !== ''));
+
+            $__link = moop_public_url('tools/parent.php') . '?' . http_build_query(array_filter([
+                'organism' => $organism_name, 'uniquename' => $feature_uniquename,
+                'assembly' => $genome_accession, 'gene_set' => $gene_set_name], 'strlen'));
+
+            $__clean = fn(array $lines) => array_values(array_filter($lines, fn($l) => trim((string) $l) !== ''));
+            $copy_text = implode("\n\n", array_map(fn($b) => implode("\n", $b),
+                array_filter([$__clean($__head), $__clean($__where), $__clean($__name), [$__link]])));
             ?>
             <div class="feature-header-id">
                 <span><?= htmlspecialchars($feature_uniquename) ?></span>
