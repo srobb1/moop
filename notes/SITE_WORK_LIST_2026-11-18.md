@@ -44,10 +44,13 @@ Order of work, and why:
       Both should open the whole group of files. **S** — DONE 11-19 (name was the checkbox label; now opens, checkbox selects)
 - [x] **Ontology Browser:** remove ECO from the drop-down (GO + PLANA only); a link from Planosphere
       opens with PLANA already selected. **S** — DONE 11-18 3b4d43de (Planosphere links already passed ?o=PLANA)
-- [ ] **Old Planosphere video tutorials:** remove the ones that teach the OLD website. Keep the PLANA
-      and general PAGE ones. **S** (Sofia picks which)
-- [ ] **Question: the UCNE BLAT track** — are those the other species' regions, aligned to this genome?
-      Answer it, then say so in the track's description. **S**
+- [x] **Old Planosphere video tutorials:** DONE 11-19 — 6 removed (Sofia's list), 7 kept; tutorials/page-database/tutorial pages (site data, backed up).
+- [ ] **UCNE track is drawn in the WRONG place (Nvec; check Scolanthus too).** UCNE 80 is at chr1:1,918,153-1,918,259
+      (paper table on the nematostella-ucne page, 107/107) = where UCNE BLAT draws it; the UCNE track draws
+      ucne.chr1.1917354.1917461, 799 bp early. Check UCNE 58 (chr1:2,674,734): constant shift or not.
+      Fix: remake the UCNE GFF from the page's table (Nvec200 coords) or drop it. Also add track
+      descriptions + fix "Elemements" typo (Manage JBrowse / track sheet). Sofia made the files (cerebro
+      .../aligned/ucne/). **M**
 - [ ] **Empty gene names** (from the AI test): S. mediterranea Ena/VASP has an empty `gene_name`
       though its description says "ENAH/VASPs family member"; many bat RefSeq VASP genes have no name
       while EVL/ENAH in the same species do. Pipeline side → write a note for compute (web doesn't
