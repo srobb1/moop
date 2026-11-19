@@ -32,11 +32,15 @@ $labels = moop_ontology_labels($ids, moop_ontology_by_purpose('anatomy'))
 $L = fn(?string $id) => $id === null || $id === '' ? '' : ($labels[$id] ?? $id);
 $genes = moop_crosswalk_gene_links($organism, array_column($res['rows'], 'accession'));
 $h = fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
+// Records whose id reaches no gene: say why (and where it aligned) instead of a bare dash (2026-11-19).
+$unlinked = moop_crosswalk_unlinked($organism, array_filter(array_column($res['rows'], 'accession'),
+                                    fn($a) => !isset($genes[mb_strtolower((string) $a)])));
 
 $data = [];
 foreach ($res['rows'] as $r) {
     $g = $genes[mb_strtolower($r['accession'])] ?? null;
-    $gene = '<span class="text-muted">&ndash;</span>';
+    $gene = '';
+    $no_gene = $g ? '' : moop_crosswalk_no_gene_html($organism, $unlinked[mb_strtolower($r['accession'])] ?? null);
     if ($g) {
         $gene = '';
         foreach (array_slice($g['show'], 0, 2) as $i => $x)
@@ -46,7 +50,7 @@ foreach ($res['rows'] as $r) {
     $cell = fn(string $col) => $r[$col] === null || $r[$col] === '' ? '' : moop_term_icon($r[$col], $L($r[$col])) . $h($L($r[$col]));
     $data[] = [
         '<span class="font-monospace small">' . $h($r['accession']) . '</span>',
-        '<span class="font-monospace small">' . $gene . '</span>',
+        $no_gene !== '' ? '<span class="small">' . $no_gene . '</span>' : '<span class="font-monospace small">' . $gene . '</span>',
         $h($L($r['term_id'])) . ' <span class="text-muted small font-monospace">' . $h($r['term_id']) . '</span>',
         '<span class="small">' . $cell('evidence_id') . '</span>',
         '<span class="small">' . $cell('stage_id') . '</span>',

@@ -5184,6 +5184,17 @@ ok($_names(moop_drop_hits_whose_child_is_shown([$_m, $_g], $_lv, 'dd_Smed_v6_252
    && $_names(moop_drop_hits_whose_child_is_shown([$_g, $_o], $_lv, 'x')) === ['dd_Smed_v6_2529_0', 'other_gene'],
    'ID search: gene + its own transcript -> one row (typed ID wins, else the transcript); unmatched-children genes kept');
 
+// "no gene" reasons (crosswalk `unlinked`, 2026-11-19): absent -> not in the reference data;
+// a located row names its position and gets a genome-browser link; an unlocated one does not.
+$_loc = ['reason' => 'no_gene_at_locus', 'assembly' => 'asm1', 'seqid' => 'chr2', 'start' => 1000, 'end' => 2000, 'strand' => '-'];
+$_dna = ['reason' => 'did_not_align', 'assembly' => null, 'seqid' => null, 'start' => null, 'end' => null, 'strand' => null];
+ok(strpos(moop_crosswalk_unlinked_reason(null), 'not in the reference data') !== false
+   && strpos(moop_crosswalk_unlinked_reason($_loc), 'chr2:1,000-2,000 (-)') !== false
+   && strpos(moop_crosswalk_no_gene_html('Org', $_loc), 'jbrowse2.php') !== false
+   && strpos(moop_crosswalk_no_gene_html('Org', $_dna), 'jbrowse2.php') === false
+   && strpos(moop_crosswalk_unlinked_reason($_dna), 'did not align') !== false,
+   'crosswalk no-gene: reason text per case; genome link only when the id aligned');
+
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";

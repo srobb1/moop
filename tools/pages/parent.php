@@ -1070,8 +1070,24 @@
             return $h;
         };
         $__cl_id = fn(string $prefix, array $c) => $prefix . '-' . preg_replace('/[^A-Za-z0-9_-]/', '', (string) $c['clade']);
-        $__cl_foot = fn(array $c) => '<p class="small text-muted mb-0">' . t('Computed with %1$s %2$s on one gene set per species (%3$d gene sets); gene family %4$s.', $c['method'], $c['version'], $c['gene_sets'], $c['family'] ?? $c['orthogroup'])
-                   . (($c['outgroups'] ?? '') !== '' ? ' ' . t('Rooted with an outgroup: %s.', $c['outgroups']) : '') . '</p>';
+        // How the card was computed: one short line + an (i), not a paragraph of method text on the card
+        // (Sofia, 2026-11-19). The (i) holds the method, the gene family, the outgroup and -- when the
+        // clade file has it -- the sequence-evidence rule, one category per line. The rule is compute's
+        // own text (data), only laid out: "a = b; c = d" -> one "a: b" line each, <= as ≤.
+        $__cl_foot = function (array $c): string {
+            $txt = t_plain('Computed with %1$s %2$s on one gene set per species (%3$d gene sets); gene family %4$s.', $c['method'], $c['version'], $c['gene_sets'], $c['family'] ?? $c['orthogroup']);
+            if (($c['outgroups'] ?? '') !== '') $txt .= ' ' . t_plain('Rooted with an outgroup: %s.', $c['outgroups']);
+            if (!empty($c['evidence'])) {
+                $txt .= "\n\n" . t_plain('Sequence evidence: %1$s %2$s.', $c['evidence']['tool'], $c['evidence']['version']);
+                foreach (preg_split('/;\s*/', (string) $c['evidence']['rule']) as $part) {
+                    $part = trim($part);
+                    if ($part === '') continue;
+                    if (preg_match('/^([a-z_]+)\s*=\s*(.*)$/s', $part, $m)) $part = '• ' . str_replace('_', ' ', $m[1]) . ': ' . $m[2];
+                    $txt .= "\n" . str_replace(['<=', '>='], ['≤', '≥'], $part);
+                }
+            }
+            return '<p class="small text-muted mb-0">' . t('How this was computed') . ' ' . field_help($txt, t_plain('How this was computed'), true) . '</p>';
+        };
     ?>
     <div class="card shadow-sm mb-4" id="pnav-compgen" data-nav-label="Orthologs in related species">
         <div class="card-header d-flex align-items-center flex-wrap">
@@ -1120,9 +1136,6 @@
                     <p class="small text-muted mb-2"><?= t('No orthologs in the other species of this group.') ?></p>
                     <?php endif; ?>
                     <?= $__cl_foot($__c) . "\n" ?>
-                    <?php if (!empty($__c['evidence'])): ?>
-                    <p class="small text-muted mb-0 compgen-evidence"><?= t('Sequence evidence: %1$s %2$s.', $__c['evidence']['tool'], $__c['evidence']['version']) ?> <?= htmlspecialchars($__c['evidence']['rule']) ?></p>
-                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
             </div>

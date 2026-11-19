@@ -63,7 +63,7 @@
  * @param string $title Optional popover heading. Omit for a bare definition.
  * @return string HTML for the button.
  */
-function field_help(string $text, string $title = ''): string {
+function field_help(string $text, string $title = '', bool $lines = false): string {
     $text = trim($text);
     if ($text === '') {
         return '';
@@ -79,6 +79,9 @@ function field_help(string $text, string $title = ''): string {
 
     $html  = '<button type="button" class="field-help"';
     $html .= ' data-bs-toggle="popover" data-bs-trigger="manual" data-bs-placement="top"';
+    // $lines: keep the text's line breaks in the popover (css/moop.css .field-help-lines), for a
+    // short list such as a method's rules. Off by default, so every existing (i) is unchanged.
+    if ($lines) $html .= ' data-bs-custom-class="field-help-lines"';
     if ($title !== '') {
         $html .= ' data-bs-title="' . htmlspecialchars($title, ENT_QUOTES) . '"';
     }

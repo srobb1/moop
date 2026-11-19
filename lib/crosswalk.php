@@ -305,6 +305,79 @@ function moop_crosswalk_genes(string $organism, array $accessions): array {
     return $out;
 }
 
+/**
+ * WHY ids reach no gene, from the crosswalk's `unlinked` table (compute, 2026-11-19): [accession_lc =>
+ * ['accession', 'source', 'reason', 'assembly', 'seqid', 'start', 'end', 'strand']] -- one row per id,
+ * the one with a genome location first, on the first hub's assembly first. An id in neither `map` nor
+ * `unlinked` is absent here: the caller says "not in the reference data". Same access rule as `map`:
+ * the source must be visible, and the assembly the alignment is on (via the hub there, else the
+ * organism). An older crosswalk without the table returns [].
+ */
+function moop_crosswalk_unlinked(string $organism, array $accessions): array {
+    $db = moop_crosswalk_open($organism);
+    $lc = array_values(array_unique(array_map('mb_strtolower', array_filter(array_map('strval', $accessions), 'strlen'))));
+    if (!$db || !$lc) return [];
+    try {
+        if (!$db->query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='unlinked'")->fetchColumn()) return [];
+    } catch (PDOException $e) { return []; }
+    $cfg  = moop_crosswalk_sources()[$organism] ?? [];
+    $hub_on = [];   // assembly => hub config, first hub wins
+    foreach ((array) ($cfg['hubs'] ?? []) as $h) if (!empty($h['assembly']) && !isset($hub_on[$h['assembly']])) $hub_on[$h['assembly']] = $h;
+    $rank = array_flip(array_keys($hub_on));
+    $out = [];
+    foreach (array_chunk($lc, 500) as $chunk) {
+        $st = $db->prepare('SELECT accession, accession_lc, source, reason, assembly, seqid, start, "end", strand FROM unlinked WHERE accession_lc IN ('
+                           . implode(',', array_fill(0, count($chunk), '?')) . ')');
+        $st->execute($chunk);
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            if (!moop_crosswalk_entry_visible($organism, (array) ($cfg['sources'][$r['source']] ?? []))) continue;
+            $asm = (string) ($r['assembly'] ?? '');
+            if ($asm !== '' && !moop_crosswalk_entry_visible($organism, $hub_on[$asm] ?? ['assembly' => $asm])) continue;
+            $score = [($r['seqid'] ?? '') === '' ? 1 : 0, $rank[$asm] ?? 99];
+            $k = $r['accession_lc'];
+            if (!isset($out[$k]) || $score < $out[$k]['_score']) $out[$k] = $r + ['_score' => $score];
+        }
+    }
+    foreach ($out as &$r) unset($r['_score']);
+    return $out;
+}
+
+/** The plain-English reason an id reaches no gene ($row from moop_crosswalk_unlinked, or null). */
+function moop_crosswalk_unlinked_reason(?array $row): string {
+    $why = [
+        'no_gene_at_locus'  => t_plain('It aligns to the genome where no gene is annotated.'),
+        'not_coding'        => t_plain('It looks non-coding; only protein-coding genes are linked.'),
+        'did_not_align'     => t_plain('It did not align to the genome.'),
+        'cds_overlap_short' => t_plain('Its coding sequence overlaps a gene by less than 100 bp.'),
+        'no_cds'            => t_plain('It aligns over exons or UTR only, with no coding sequence.'),
+        'cds_not_aligned'   => t_plain('Its coding sequence did not align to the genome.'),
+    ];
+    if ($row === null) return t_plain('It is not in the reference data used to link IDs to genes.');
+    $text = $why[$row['reason']] ?? t_plain('It does not map to a gene in the current reference genomes.');
+    if (($row['seqid'] ?? '') !== '' && $row['start'] !== null) {
+        $text .= ' ' . t_plain('Aligned at %s.', $row['seqid'] . ':' . number_format((int) $row['start']) . '-' . number_format((int) $row['end'])
+                               . (in_array($row['strand'], ['+', '-'], true) ? ' (' . $row['strand'] . ')' : ''));
+    }
+    return $text;
+}
+
+/**
+ * "no gene ⓘ" (reason on hover) and, when the id aligned, a genome-browser link to that spot.
+ * Shared by the anatomy table and the Rosetta Stone page. Returns HTML.
+ */
+function moop_crosswalk_no_gene_html(string $organism, ?array $row): string {
+    $h = fn($x) => htmlspecialchars((string) $x, ENT_QUOTES);
+    $html = '<span class="text-muted text-nowrap" style="cursor:help" title="' . $h(moop_crosswalk_unlinked_reason($row)) . '">'
+          . $h(t_plain('no gene')) . ' <i class="fa fa-info-circle small"></i></span>';
+    if ($row && ($row['seqid'] ?? '') !== '' && ($row['assembly'] ?? '') !== '' && $row['start'] !== null) {
+        $url = moop_url('jbrowse2.php') . '?' . http_build_query(['organism' => $organism, 'assembly' => $row['assembly'],
+               'loc' => $row['seqid'] . ':' . (int) $row['start'] . '-' . (int) $row['end']]);
+        $html .= ' <a class="small text-nowrap" href="' . $h($url) . '" title="' . $h(t_plain('See where it aligns in the genome browser')) . '">'
+               . '<i class="fa fa-map-marker-alt"></i> ' . $h(t_plain('genome')) . '</a>';
+    }
+    return $html;
+}
+
 /** A reference gene as a link target: gene page if its hub's genes are in this MOOP, else ''. */
 function moop_crosswalk_gene_url(string $organism, string $ref_id, string $hub): string {
     $h = moop_crosswalk_sources()[$organism]['hubs'][$hub] ?? [];

@@ -126,7 +126,10 @@ $src_cell = function (string $s) use ($sources, $source_about): string {
       <?php endif; ?>
       <?php if ($result['not_found']): ?>
         <div class="alert alert-light border py-2 small">
-          <?= t('Not found in any source:') ?> <span class="font-monospace"><?= htmlspecialchars(implode(' ', $result['not_found'])) ?></span>
+          <div class="mb-1"><?= t('These IDs do not reach a gene (point at the ⓘ to see why):') ?></div>
+          <?php foreach ($result['not_found'] as $__nf): ?>
+          <div><span class="font-monospace me-2"><?= htmlspecialchars($__nf) ?></span><?= moop_crosswalk_no_gene_html($organism, $not_found_why[mb_strtolower($__nf)] ?? null) ?></div>
+          <?php endforeach; ?>
         </div>
       <?php endif; ?>
       <?php if ($result['rows']): ?>

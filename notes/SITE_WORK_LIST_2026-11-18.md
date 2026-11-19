@@ -32,9 +32,16 @@ Order of work, and why:
 - [ ] **Anatomy records: a `Contig…` ID can show a gene from the WRONG assembly.** Same name in up to 4
       crosswalk sources mapping to different genes (Contig1038). Needs a paper → source table from compute;
       then look each record up in its own source. `notes/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md` §5. **M**
-- [ ] **Anatomy records with no gene: say why, link to where it aligns.** Generic "no gene ⓘ" now;
-      reason + genome-browser link once compute ships an `unlinked` table in crosswalk.sqlite
-      (`notes/CROSSWALK_UNLINKED_IDS_REQUEST_2026-11-19.md`). **S** now / **M** later
+- [x] **Anatomy records with no gene: say why, link to where it aligns.** DONE 11-19 — "no gene ⓘ" + reason
+      + genome link, on the anatomy table AND the Rosetta Stone page (lib/crosswalk.php moop_crosswalk_unlinked /
+      _reason / _no_gene_html), from compute's `unlinked` table.
+- [ ] **Sofia: load the transcript-alignment tracks** (the sources' transcripts aligned to S3h1 — dd_Smed_v4,
+      SmedASXL, ox_Smed_v2, ddv6, ... — so a "no gene" ID can be SEEN in the browser).
+- [ ] **THEN: the "no gene" genome links open with that ID's source track turned on** (today they open at the
+      right position with the default tracks only). Needs: source -> track name mapping (track sheet /
+      config); pass it via jbrowse2.php's track parameter. Note: `sessionTrackId=track_<md5 of path>` breaks
+      silently when a path changes (see todo_research_menu memory) -- prefer a `tracks=` param by management
+      track name. **M**
 - [ ] **WHEN compute's `unlinked` table arrives: list every curated ID missing from all our FASTAs** —
       in neither `map` nor `unlinked`; grouped by paper and by ID set (dd_Smed_v4, OX_Smed, SmedASXL,
       Contig...), with counts, so Sofia knows which files to find. (Sofia asked 11-19.) **S**
@@ -76,6 +83,12 @@ Order of work, and why:
 
 ## 4. Visual fixes — batch them
 SIMRbase
+- [x] Gene page — **orthologs / gene-family cards: move the method footnote into an (i).** DONE 11-19: "How this was computed (i)", rule one bullet per category. The grey text under
+      the card ("Computed with OrthoFinder 3.1.2 on one gene set per species ...; gene family N0.HOG...; Rooted
+      with an outgroup ...; Sequence evidence: DIAMOND ... supported = E-value <= 1e-5 ...") is a block of
+      technical text on the card. Put it behind an (i) (help_modal / popover). tools/pages/parent.php ~1073
+      ($__cl_foot) and ~1124 (compgen-evidence). Also: the rule reads as code (`reciprocal_best =`,
+      `no_hit`) -- write it as plain words in the (i). (Sofia, 11-19) **S**
 - [ ] Gene page — **Pathways card:** make the tree and the link-out stand out; one line is easy to miss. **S**
 - [ ] Gene page — **Feature Hierarchy** icon doesn't match the other cards. **S**
 - [ ] Ontology Browser — **chevrons too small;** a reviewer didn't know they were clickable. **S**

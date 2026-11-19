@@ -50,6 +50,8 @@ echo render_display_page(__DIR__ . '/pages/crosswalk.php', [
     'organism' => $organism, 'organisms' => $organisms, 'sources' => $sources, 'ids_text' => $ids_text,
     'source_groups' => $organism ? moop_crosswalk_source_groups($organism) : [],
     'into' => $into, 'result' => $result, 'too_many' => $too_many, 'tool_title' => $tool_title,
+    // Why each untranslated id reaches no gene, and where it aligned (crosswalk `unlinked`, 2026-11-19).
+    'not_found_why' => ($result && $result['not_found']) ? moop_crosswalk_unlinked($organism, $result['not_found']) : [],
     'always' => array_values(array_filter((array) ($cfg['always_show'] ?? []), 'is_string')),
     'source_about' => array_map(fn($c) => (string) ($c['about'] ?? ''), (array) ($cfg['sources'] ?? [])),
     'max_ids' => MOOP_CROSSWALK_MAX_IDS, 'max_rows' => MOOP_CROSSWALK_MAX_ROWS,

@@ -1070,3 +1070,6 @@ footer .footer-meta {
   border: 1px solid #f6d28b;
   border-left: 4px solid var(--moop-accent-amber);
 }
+
+/* field_help(..., lines: true): a popover whose text is a short list keeps its line breaks (2026-11-19). */
+.field-help-lines .popover-body { white-space: pre-line; }
