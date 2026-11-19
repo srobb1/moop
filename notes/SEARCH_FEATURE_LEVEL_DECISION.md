@@ -219,3 +219,14 @@ Measured after the search-page change:
 Petromyzon keeps 2 by design: the term matches the gene `PM00915` *and* the mRNA
 `PM00915.1`, and a gene cannot be lifted to mRNA because mRNA is its DESCENDANT, not its
 ancestor. Both rows are genuine literal matches at different levels.
+
+## 2026-11-19 — "keeps 2 by design" REVERSED
+
+Sofia, on the group page: `SMED30003001` listed the transcript AND `gene-SMED30003001` (smed_20140614,
+public since 11-13 — every gene there is `gene-` + its transcript's id, so every ID search doubled),
+while the menu-bar box gave one result. Now a gene and its own (direct) transcript that both matched
+become ONE row: the one whose id is exactly what was typed (case ignored); if neither, the transcript.
+So typing `dd_Smed_v6_2529_0` shows the gene, not its mRNA `dd_Smed_v6_2529_0_1`. A gene whose
+transcripts did not match is never dropped. `moop_drop_hits_whose_child_is_shown()` in
+lib/database_queries.php; smoke test proven red against a copy without the typed-ID rule.
+Same day: the menu-bar box (api/feature_search.php) got a last, case-insensitive rung.

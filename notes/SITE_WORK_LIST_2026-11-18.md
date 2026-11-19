@@ -23,7 +23,7 @@ Order of work, and why:
 - [ ] Keep `172.16.2.31 tracks.stowers.org` in `/etc/hosts` through IT's DNS changes
 
 ## 1. Wrong or surprising answers — fix first
-- [ ] **ID search is case-sensitive, and the lowercase search returns 2 rows.** `SMED30003001` works;
+- [x] **ID search is case-sensitive, and the lowercase search returns 2 rows.** — DONE 11-19: menu bar ignores case; search shows the typed ID's row (gene OR transcript), one row. `SMED30003001` works;
       `smed30003001` returns both the transcript `SMED30003001` and the gene `gene-SMED30003001`.
       Expected: case shouldn't matter, and one ID should give one result (or a clear "gene + its
       transcript"). Investigate the exact-ID path vs the text path. **M**

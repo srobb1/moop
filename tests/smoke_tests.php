@@ -5171,6 +5171,19 @@ ok($_kmb['map00010']['genes'] === ['A/gs1' => 5, 'B/gs2' => 4] && $_kmb['map0001
    && $_km[0]['pathway'] === 'map00010',
    'KEGG organism table: genes per gene set (not summed), KOs a union, "in every gene set" ignores a gene set with no KEGG data');
 
+// One row for a gene and its own transcript when both match an ID search (2026-11-19):
+// the typed ID wins; otherwise the transcript. A gene whose transcripts did not match stays.
+$_lv = ['mrna' => 0, 'transcript' => 1];
+$_g  = ['feature_uniquename' => 'dd_Smed_v6_2529_0',   'feature_type' => 'gene', 'feature_id' => 10, 'parent_feature_id' => null];
+$_m  = ['feature_uniquename' => 'dd_Smed_v6_2529_0_1', 'feature_type' => 'mRNA', 'feature_id' => 11, 'parent_feature_id' => 10];
+$_o  = ['feature_uniquename' => 'other_gene',          'feature_type' => 'gene', 'feature_id' => 20, 'parent_feature_id' => null];
+$_names = fn($rows) => array_column($rows, 'feature_uniquename');
+ok($_names(moop_drop_hits_whose_child_is_shown([$_m, $_g], $_lv, 'dd_Smed_v6_2529_0')) === ['dd_Smed_v6_2529_0']
+   && $_names(moop_drop_hits_whose_child_is_shown([$_m, $_g], $_lv, 'DD_SMED_V6_2529_0_1')) === ['dd_Smed_v6_2529_0_1']
+   && $_names(moop_drop_hits_whose_child_is_shown([$_m, $_g], $_lv, 'Smed_v6_2529')) === ['dd_Smed_v6_2529_0_1']
+   && $_names(moop_drop_hits_whose_child_is_shown([$_g, $_o], $_lv, 'x')) === ['dd_Smed_v6_2529_0', 'other_gene'],
+   'ID search: gene + its own transcript -> one row (typed ID wins, else the transcript); unmatched-children genes kept');
+
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";

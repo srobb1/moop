@@ -1249,7 +1249,7 @@ function searchFeaturesByUniquenameForSearch($search_term, $dbFile, $organism_na
         $query .= " ORDER BY f.feature_uniquename";
     }
 
-    return moop_resolve_hits_to_level(fetchData($query, $dbFile, $params), $dbFile, $organism_name);
+    return moop_resolve_hits_to_level(fetchData($query, $dbFile, $params), $dbFile, $organism_name, (string) $search_term);
 }
 
 // Required outright rather than relied on transitively: moop_resolve_hits_to_level()'s
@@ -1300,11 +1300,14 @@ require_once __DIR__ . '/parent_functions.php';
  *
  * See notes/SEARCH_FEATURE_LEVEL_DECISION.md.
  */
-function moop_resolve_hits_to_level(array $rows, $dbFile, $organism_name = '') {
+function moop_resolve_hits_to_level(array $rows, $dbFile, $organism_name = '', string $typed = '') {
     if (count($rows) < 2) return $rows;
 
     $levels   = moop_annotation_levels($dbFile, $organism_name);
     $at_level = array_flip(array_map('strtolower', $levels));
+    $drop_parents = function (array $rows) use ($at_level, $typed) {
+        return moop_drop_hits_whose_child_is_shown($rows, $at_level, $typed);
+    };
 
     // Which hits need lifting? Anything not already at the target level.
     $need = [];
@@ -1317,7 +1320,7 @@ function moop_resolve_hits_to_level(array $rows, $dbFile, $organism_name = '') {
     // The shared walker does the climb and the cycle guarding; this only decides the STOP
     // condition (nearest ancestor of an accepted type) and the display shape.
     $lift = moop_hierarchy_nearest_of_type(array_keys($need), $dbFile, $levels);
-    if (empty($lift)) return $rows;
+    if (empty($lift)) return $drop_parents($rows);
 
     // Fetch full display rows for lift targets not already present in the result set.
     $have = [];
@@ -1368,7 +1371,50 @@ function moop_resolve_hits_to_level(array $rows, $dbFile, $organism_name = '') {
             $out[$key]['matched_uniquename'] = '';
         }
     }
-    return array_values($out);
+    return $drop_parents(array_values($out));
+}
+
+/**
+ * One row for a gene and its own transcript when both matched -- both open the same gene page.
+ * WHICH row: the one whose ID is exactly what was typed (case ignored); if neither, the
+ * transcript (the annotation level). So typing a gene ID shows the gene: dd_Smed_v6_2529_0
+ * would otherwise show only its mRNA dd_Smed_v6_2529_0_1, which also matched. 2026-11-19, Sofia: the group page listed SMED30003001 (transcript) AND
+ * gene-SMED30003001 (gene) for one ID, while the menu-bar box gave one result. The gene's id
+ * contains the transcript's, so both match; a gene cannot be lifted DOWN, so the climb above
+ * kept both (notes/SEARCH_FEATURE_LEVEL_DECISION.md, "Petromyzon keeps 2 by design" -- reversed).
+ *
+ * Never loses a gene: a gene whose children did NOT match stays. Direct children only (gene ->
+ * mRNA, the shape every gene set here has). Rows without feature_id/parent_feature_id are kept.
+ */
+function moop_drop_hits_whose_child_is_shown(array $rows, array $at_level, string $typed = ''): array {
+    $typed  = strtolower(trim($typed, " \t\n\"'"));
+    $is_typed = fn($r) => $typed !== '' && strtolower((string)($r['feature_uniquename'] ?? '')) === $typed;
+    $at     = fn($r) => isset($at_level[strtolower((string)($r['feature_type'] ?? ''))]);
+
+    // Genes (above the level) in the results, by feature_id; and which were typed exactly.
+    $genes = [];
+    foreach ($rows as $r) {
+        $id = (string)($r['feature_id'] ?? '');
+        if (!$at($r) && $id !== '') $genes[$id] = $is_typed($r);
+    }
+    if (!$genes) return $rows;
+
+    $drop_gene = [];   // gene feature_id => true: its typed child is shown instead
+    $drop_row  = [];   // row index => true: a child whose gene was typed
+    foreach ($rows as $i => $r) {
+        if (!$at($r)) continue;
+        $p = (string)($r['parent_feature_id'] ?? '');
+        if ($p === '' || $p === 'NULL' || !isset($genes[$p])) continue;
+        if ($genes[$p] && !$is_typed($r)) $drop_row[$i] = true;   // typed the gene: keep the gene
+        else                              $drop_gene[$p] = true;  // otherwise: keep the transcript
+    }
+    $out = [];
+    foreach ($rows as $i => $r) {
+        if (isset($drop_row[$i])) continue;
+        if (!$at($r) && isset($drop_gene[(string)($r['feature_id'] ?? '')])) continue;
+        $out[] = $r;
+    }
+    return $out;
 }
 
 

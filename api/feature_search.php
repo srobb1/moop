@@ -93,8 +93,9 @@ function moop_feature_id_lookup(array $batches, string $needle, string $mode, st
         $parts  = [];
         $params = [];
 
-        // Both branches bind a single placeholder, so the parameter list is identical.
-        $match_sql = ($mode === 'version') ? 'GLOB ?' : '= ?';
+        // Every branch binds a single placeholder, so the parameter list is identical.
+        // 'nocase' cannot use the BINARY index (see above) -- it scans; it is the LAST rung.
+        $match_sql = ['version' => 'GLOB ?', 'nocase' => '= ? COLLATE NOCASE'][$mode] ?? '= ?';
         $match_val = ($mode === 'version') ? $needle . '.*' : $needle;
 
         foreach ($batch as $i => $entry) {
@@ -179,6 +180,15 @@ if (empty($results) && preg_match('/^(.+)\.\d+$/', $q, $m)) {
     if (empty($results)) {
         $results = moop_feature_id_lookup($batches, $base, 'version', $site);
     }
+}
+
+if (empty($results)) {
+    // Typed in a different case: smed30003001 -> SMED30003001 (2026-11-19). The menu-bar box
+    // missed it and fell through to the full search. Last rung, because it SCANS each database's
+    // feature_uniquename index instead of seeking it: ~1.6 s warm over 82 databases, measured.
+    // It runs only when every exact rung found nothing -- i.e. when the slower full search is
+    // the alternative anyway. Not combined with the version rungs (that would be a LIKE scan too).
+    $results = moop_feature_id_lookup($batches, $q, 'nocase', $site);
 }
 
 // Collapse to one row per gene, exactly as the search page does — same shared walker, same
