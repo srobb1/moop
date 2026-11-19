@@ -140,16 +140,25 @@ $(document).ready(function () {
     // Keep chevron icons in sync with Bootstrap collapse state
     $(document).on('shown.bs.collapse hidden.bs.collapse', '#download-tree .collapse', function () {
         const isOpen  = $(this).hasClass('show');
-        const trigger = $('[data-bs-target="#' + this.id + '"]');
+        const trigger = $('[data-bs-target="#' + this.id + '"], [data-collapse-target="#' + this.id + '"]');
         trigger.find('.toggle-icon')
             .toggleClass('fa-chevron-down', isOpen)
             .toggleClass('fa-chevron-right', !isOpen);
     });
 
+    // Opening an organism opens everything under it (assemblies, gene sets, their files); opening
+    // an assembly opens its gene sets. One click shows the whole list, so a first-time visitor sees
+    // what is there (Sofia, 2026-11-19). Closing leaves the inner state; it re-opens fully next time.
+    $(document).on('show.bs.collapse', '.organism-block > .collapse, .assembly-block > .collapse', function (e) {
+        if (e.target !== this) return;   // nested collapses bubble this event up
+        $(this).find('.collapse').addClass('show');
+        updateAllToggleIcons();
+    });
+
     function updateAllToggleIcons() {
         $('#download-tree .collapse').each(function () {
             const isOpen  = $(this).hasClass('show');
-            const trigger = $('[data-bs-target="#' + this.id + '"]');
+            const trigger = $('[data-bs-target="#' + this.id + '"], [data-collapse-target="#' + this.id + '"]');
             trigger.find('.toggle-icon')
                 .toggleClass('fa-chevron-down', isOpen)
                 .toggleClass('fa-chevron-right', !isOpen);
