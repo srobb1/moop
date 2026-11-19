@@ -312,8 +312,12 @@ function moop_crosswalk_genes(string $organism, array $accessions): array {
  * `unlinked` is absent here: the caller says "not in the reference data". Same access rule as `map`:
  * the source must be visible, and the assembly the alignment is on (via the hub there, else the
  * organism). An older crosswalk without the table returns [].
+ * A GENE id here (dd_Smed_v6_101_0) whose transcripts are unlinked gets its best transcript's row, with
+ * 'via' => that transcript -- the crosswalk aligns transcripts, so a gene id is never in the table
+ * itself; without this 170 Smed anatomy genes were called "not in the reference data" (2026-11-19).
+ * Mirrors moop_crosswalk_gene_links(), which does the same for `map`.
  */
-function moop_crosswalk_unlinked(string $organism, array $accessions): array {
+function moop_crosswalk_unlinked(string $organism, array $accessions, bool $via_transcripts = true): array {
     $db = moop_crosswalk_open($organism);
     $lc = array_values(array_unique(array_map('mb_strtolower', array_filter(array_map('strval', $accessions), 'strlen'))));
     if (!$db || !$lc) return [];
@@ -338,6 +342,19 @@ function moop_crosswalk_unlinked(string $organism, array $accessions): array {
             if (!isset($out[$k]) || $score < $out[$k]['_score']) $out[$k] = $r + ['_score' => $score];
         }
     }
+    if ($via_transcripts && ($missing = array_values(array_filter(array_map('strval', $accessions), fn($a) => $a !== '' && !isset($out[mb_strtolower($a)]))))) {
+        $kids = moop_crosswalk_child_transcripts($organism, $missing);
+        $tx   = $kids ? moop_crosswalk_unlinked($organism, array_merge(...array_values($kids)), false) : [];
+        foreach ($kids as $gene => $list) {
+            foreach ($list as $t) {
+                $r = $tx[mb_strtolower($t)] ?? null;
+                if ($r === null) continue;
+                $k = mb_strtolower((string) $gene);
+                $score = [($r['seqid'] ?? '') === '' ? 1 : 0, $rank[(string) ($r['assembly'] ?? '')] ?? 99];
+                if (!isset($out[$k]) || $score < $out[$k]['_score']) $out[$k] = ['via' => $r['accession']] + $r + ['_score' => $score];
+            }
+        }
+    }
     foreach ($out as &$r) unset($r['_score']);
     return $out;
 }
@@ -354,6 +371,7 @@ function moop_crosswalk_unlinked_reason(?array $row): string {
     ];
     if ($row === null) return t_plain('It is not in the reference data used to link IDs to genes.');
     $text = $why[$row['reason']] ?? t_plain('It does not map to a gene in the current reference genomes.');
+    if (($row['via'] ?? '') !== '') $text = t_plain('Its transcript %s reaches no gene.', $row['via']) . ' ' . $text;
     if (($row['seqid'] ?? '') !== '' && $row['start'] !== null) {
         $text .= ' ' . t_plain('Aligned at %s.', $row['seqid'] . ':' . number_format((int) $row['start']) . '-' . number_format((int) $row['end'])
                                . (in_array($row['strand'], ['+', '-'], true) ? ' (' . $row['strand'] . ')' : ''));

@@ -142,5 +142,5 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
-- [ ] **"no gene" hover is wrong for 170 dd_Smed_v6 GENE IDs** — their transcripts are in `unlinked`, but the hover says "not in the reference data"; `moop_crosswalk_unlinked()` should fall back to the gene's transcripts. **S** (found 11-19)
+- [x] DONE 11-19: **"no gene" hover is wrong for 170 dd_Smed_v6 GENE IDs** — their transcripts are in `unlinked`, but the hover says "not in the reference data"; `moop_crosswalk_unlinked()` should fall back to the gene's transcripts. **S** (found 11-19)
 - 

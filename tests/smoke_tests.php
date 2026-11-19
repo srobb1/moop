@@ -4691,6 +4691,23 @@ $_sg = moop_crosswalk_source_groups('Test');
 ok(array_column($_sg, 'key') === ['est', 'site', '_other'] && array_keys($_sg[2]['sources']) === ['dd_Smed_v4']
    && $_sg[1]['sources'] === ['smed_20140614' => 'SMED3'],
    'translator source list: configured groups in order, empty groups left out, unlisted sources under Other');
+// "no gene" for a GENE id: the crosswalk aligns transcripts, so a gene id is never in `unlinked` itself;
+// its transcripts' row is used (170 Smed anatomy genes were "not in the reference data", 2026-11-19).
+$_xdb = new PDO('sqlite:' . "$_xd/Test/crosswalk.sqlite");
+$_xdb->exec('CREATE TABLE unlinked (accession TEXT NOT NULL, accession_lc TEXT NOT NULL, source TEXT NOT NULL, reason TEXT NOT NULL,
+             assembly TEXT, seqid TEXT, start INTEGER, "end" INTEGER, strand TEXT)');
+$_xdb->exec("INSERT INTO unlinked VALUES ('GeneA_1', 'genea_1', 'ncbi', 'not_coding', NULL, NULL, NULL, NULL, NULL),
+             ('GeneA_2', 'genea_2', 'ncbi', 'no_gene_at_locus', '', 'chr7', 500, 900, '+'),
+             ('Direct', 'direct', 'ncbi', 'did_not_align', NULL, NULL, NULL, NULL, NULL)"); $_xdb = null;
+$_odb = new PDO('sqlite:' . "$_xd/Test/organism.sqlite");
+$_odb->exec('CREATE TABLE feature (feature_id INTEGER PRIMARY KEY, feature_uniquename TEXT, feature_type TEXT, parent_feature_id INTEGER)');
+$_odb->exec("INSERT INTO feature VALUES (1, 'GeneA', 'gene', NULL), (2, 'GeneA_1', 'mRNA', 1), (3, 'GeneA_2', 'mRNA', 1),
+             (4, 'GeneB', 'gene', NULL), (5, 'GeneB_1', 'mRNA', 4)"); $_odb = null;
+$_u = moop_crosswalk_unlinked('Test', ['GeneA', 'Direct', 'GeneB']);
+ok(($_u['genea']['via'] ?? '') === 'GeneA_2' && $_u['genea']['seqid'] === 'chr7'
+   && strpos(moop_crosswalk_unlinked_reason($_u['genea']), 'Its transcript GeneA_2') === 0
+   && ($_u['direct']['reason'] ?? '') === 'did_not_align' && !isset($_u['direct']['via']) && !isset($_u['geneb']),
+   'crosswalk no-gene: a gene id takes its transcript\'s unlinked row (located one first, named); direct ids unchanged; no row -> absent');
 // Admin -> Rosetta Stone saves 'crosswalk_display': what people see, never the hubs or the build folder.
 $_dc = moop_crosswalk_display_check(['Test' => ['name' => ' Rosetta ', 'source_groups' => ['est' => 'ESTs'],
         'sources' => ['ncbi' => ['group' => 'est', 'url' => 'https://www.ncbi.nlm.nih.gov/nuccore/{id}'],
