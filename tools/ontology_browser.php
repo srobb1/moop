@@ -12,7 +12,11 @@ include_once __DIR__ . '/tool_init.php';
 require_once __DIR__ . '/../lib/ontology_browser.php';
 include_once __DIR__ . '/../includes/layout.php';
 
-$ontologies = moop_ob_ontologies();
+// Not in this page's list: evidence ontologies (ECO). Genes are not tagged with them, so there is
+// nothing for a visitor to browse there (Sofia, 2026-11-18). Their term pages still work
+// (ontology_term.php uses the full moop_ob_ontologies()).
+$ontologies = array_filter(moop_ob_ontologies(),
+    fn($p) => (moop_ontology_sources()[$p]['purpose'] ?? '') !== 'evidence', ARRAY_FILTER_USE_KEY);
 $prefix     = strtoupper((string) ($_GET['o'] ?? ''));
 // Opened from an organism / assembly / gene set page (its tools pass the scope, no ontology):
 // GO, the one with gene counts to narrow.
