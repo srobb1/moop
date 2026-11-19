@@ -174,16 +174,19 @@ function moop_primer_maker_as_shipped(): bool {
 /**
  * The id of the switched-off tool whose page $script is, or null. Pure -- the decision
  * moop_tool_page_guard() acts on, kept apart so it can be tested without sending a 404.
- * Matches the script against each tool's url_path; scripts that are no tool's page (AJAX
- * endpoints, help) are never matched.
+ * Matches the script against each tool's url_path and its 'also_paths' (the tool's other scripts:
+ * term pages, its AJAX/download endpoints -- 2026-11-19, Planosphere still served anatomy records and
+ * term pages by address with both tools off). Scripts that belong to no tool are never matched.
  */
 function moop_disabled_tool_for_script(ConfigManager $config, string $script): ?string {
     $script = '/' . ltrim($script, '/');
     $prefix = moop_url_base($config);
     foreach ($config->getAllTools(true) as $id => $tool) {
-        $path = (string) ($tool['url_path'] ?? '');
-        if ($path !== '' && $script === $prefix . $path && !$config->isToolEnabled((string) $id)) {
-            return (string) $id;
+        $paths = array_merge([(string) ($tool['url_path'] ?? '')], array_map('strval', (array) ($tool['also_paths'] ?? [])));
+        foreach ($paths as $path) {
+            if ($path !== '' && $script === $prefix . $path && !$config->isToolEnabled((string) $id)) {
+                return (string) $id;
+            }
         }
     }
     return null;

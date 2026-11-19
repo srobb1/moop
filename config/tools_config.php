@@ -161,6 +161,8 @@ return [
         'description'     => 'Where genes were published as expressed: by body part, by paper, or by gene',
         'btn_class'       => 'btn-tool-teal',
         'url_path'        => '/tools/anatomy_search.php',
+        // Its other scripts: switched off with the tool, so its data is not still served by address.
+        'also_paths'      => ['/api/anatomy_records.php', '/api/anatomy_records_download.php'],
         'context_params'  => ['organism'],
         // Off on a site with no curated data (no organism has anatomy_expression.sqlite) --
         // nothing in the menu, no toolbox button, its page a 404. Admin -> Manage Tools can still
@@ -198,6 +200,7 @@ return [
         'description'     => 'Explore an ontology as a tree, with a page for every term',
         'btn_class'       => 'btn-tool-teal',
         'url_path'        => '/tools/ontology_browser.php',
+        'also_paths'      => ['/tools/ontology_term.php', '/api/ontology_children.php'],
         // From an organism / assembly / gene set / group page it opens GO with the gene counts limited to
         // that data (moop_ob_scope(), lib/ontology_browser.php).
         'context_params'  => ['organism', 'assembly', 'gene_set', 'group'],

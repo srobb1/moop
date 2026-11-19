@@ -28,6 +28,12 @@ $stage    = moop_ontology_normalise_id((string) ($_GET['stage'] ?? ''));
 $LIMIT    = 1000;
 
 $analyses = $organism !== '' ? moop_images_analyses($organism) : [];
+// No images for this organism on this site (Planosphere: none -- it links to SIMRbase's gallery): say so
+// with a 404 rather than an empty gallery. Every link here carries an organism that has images.
+if (!$analyses) {
+    require_once __DIR__ . '/../lib/functions_display.php';
+    moop_not_found_page(t_plain('There are no gene images for this organism on this site.'));
+}
 if ($analysis !== '' && !isset($analyses[$analysis])) $analysis = '';
 
 $images = [];

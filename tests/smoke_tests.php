@@ -463,6 +463,14 @@ $_tsite = '/' . $_t1->getString('site');
 ok(moop_disabled_tool_for_script($_t1, "$_tsite/tools/moopmart.php") === 'moopmart'
    && moop_disabled_tool_for_script($_t1, "$_tsite/jbrowse2.php") === 'genome_browser',
    "a switched-off tool's own page is turned away (404)");
+$_t2 = $_tnew(); $_t0->saveEditableConfig(['tools_disabled' => ['anatomy_search', 'ontology_browser']], $_td); $_t2 = $_tnew();
+ok(moop_disabled_tool_for_script($_t2, "$_tsite/api/anatomy_records.php") === 'anatomy_search'
+   && moop_disabled_tool_for_script($_t2, "$_tsite/api/anatomy_records_download.php") === 'anatomy_search'
+   && moop_disabled_tool_for_script($_t2, "$_tsite/tools/ontology_term.php") === 'ontology_browser'
+   && moop_disabled_tool_for_script($_t2, "$_tsite/api/ontology_children.php") === 'ontology_browser'
+   && moop_disabled_tool_for_script($_t1, "$_tsite/tools/ontology_term.php") === null,
+   "a switched-off tool's other scripts (also_paths: its API, term pages) are turned away too; on where it is on");
+$_t0->saveEditableConfig(['tools_disabled' => ['moopmart', 'genome_browser']], $_td);
 ok(moop_disabled_tool_for_script($_t1, "$_tsite/tools/blast.php") === null
    && moop_disabled_tool_for_script($_t1, "$_tsite/api/moopmart_export.php") === null
    && moop_disabled_tool_for_script($_t1, "/elsewhere/tools/moopmart.php") === null,
