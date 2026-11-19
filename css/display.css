@@ -1763,6 +1763,18 @@ a:hover .link-icon {
    !important: the filter sets an inline display on matching rows. */
 #scope-org-list.scope-limited .scope-row-outside { display: none !important; }
 
+/* A row's text WRAPS instead of ending in "…": with Details on, a row reads organism · common name ·
+   assembly (accession) › gene set, and the part that told two gene sets apart was the part cut off
+   (22 of 89 rows on Search/MOOPmart at a 1366px laptop, more on a narrow or zoomed window -- Sofia,
+   2026-11-19). A row that fits stays one line, so the list looks the same until it would have been
+   cut. !important: the markup carries an inline white-space:nowrap. */
+#scope-org-list .scope-row .text-truncate {
+  white-space: normal !important;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
 /* Filter-match highlight inside a scope row's detail text -- what makes a force-revealed row
    legible: in simple view the detail text is hidden, so without it a matched row appears with
    no visible reason. */
