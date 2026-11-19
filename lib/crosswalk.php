@@ -322,6 +322,21 @@ function moop_crosswalk_gene_url(string $organism, string $ref_id, string $hub):
 function moop_crosswalk_gene_links(string $organism, array $accessions): array {
     $hubs  = array_keys(moop_crosswalk_sources()[$organism]['hubs'] ?? []);
     $found = moop_crosswalk_genes($organism, $accessions);
+    // An id the crosswalk does not know may be a GENE here whose TRANSCRIPTS it maps: Plass 2018's
+    // anatomy records name dd_v6 genes (dd_Smed_v6_100_0) while the crosswalk maps dd_v6 by
+    // transcript (dd_Smed_v6_100_0_1) -- 172 gut records showed no gene (2026-11-19).
+    $missing = array_values(array_filter($accessions, fn($a) => !isset($found[mb_strtolower((string) $a)])));
+    if ($missing) {
+        $kids = moop_crosswalk_child_transcripts($organism, $missing);
+        if ($kids) {
+            $via = moop_crosswalk_genes($organism, array_merge(...array_values($kids)));
+            foreach ($kids as $gene => $tx) {
+                $rows = [];
+                foreach ($tx as $t) foreach ($via[mb_strtolower($t)] ?? [] as $r) $rows[$r['hub'] . "\t" . $r['ref_id']] = $r;
+                if ($rows) $found[mb_strtolower($gene)] = array_values($rows);
+            }
+        }
+    }
     $out   = [];
     foreach ($found as $acc => $rows) {
         $by_hub = [];
@@ -405,6 +420,32 @@ function moop_crosswalk_parent_genes(string $organism, array $accessions): array
         return [];   // organism.sqlite unreadable: the transcript ids are still looked up as they are
     }
     return array_keys($out);
+}
+
+/**
+ * The transcripts of the given accessions that are GENES in organism.sqlite: [gene id as given =>
+ * [transcript ids]]. The reverse of moop_crosswalk_parent_genes(), for a crosswalk that maps a gene
+ * set by its transcripts while a record names the gene. Accessions that are not genes add nothing.
+ */
+function moop_crosswalk_child_transcripts(string $organism, array $accessions): array {
+    $ids = array_values(array_unique(array_filter(array_map('strval', $accessions), 'strlen')));
+    $f = rtrim(ConfigManager::getInstance()->getPath('organism_data'), '/') . '/'
+       . preg_replace('/[^A-Za-z0-9_.-]/', '', $organism) . '/organism.sqlite';
+    if (!$ids || !is_file($f)) return [];
+    $out = [];
+    try {
+        $db = new PDO('sqlite:' . $f, null, null, [PDO::SQLITE_ATTR_OPEN_FLAGS => PDO::SQLITE_OPEN_READONLY]);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        foreach (array_chunk($ids, 500) as $chunk) {
+            $st = $db->prepare("SELECT p.feature_uniquename, c.feature_uniquename FROM feature p JOIN feature c ON c.parent_feature_id = p.feature_id
+                                 WHERE p.feature_type = 'gene' AND p.feature_uniquename IN (" . implode(',', array_fill(0, count($chunk), '?')) . ')');
+            $st->execute($chunk);
+            foreach ($st->fetchAll(PDO::FETCH_NUM) as [$g, $t]) $out[$g][] = $t;
+        }
+    } catch (PDOException $e) {
+        return [];
+    }
+    return $out;
 }
 
 /** The sources in this organism's crosswalk file, with the configured name: [source => label], config order first. */
