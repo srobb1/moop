@@ -438,7 +438,7 @@ function moop_crosswalk_child_transcripts(string $organism, array $accessions): 
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         foreach (array_chunk($ids, 500) as $chunk) {
             $st = $db->prepare("SELECT p.feature_uniquename, c.feature_uniquename FROM feature p JOIN feature c ON c.parent_feature_id = p.feature_id
-                                 WHERE p.feature_type = 'gene' AND p.feature_uniquename IN (" . implode(',', array_fill(0, count($chunk), '?')) . ')');
+                                 WHERE +p.feature_type = 'gene' AND p.feature_uniquename IN (" . implode(',', array_fill(0, count($chunk), '?')) . ')');
             $st->execute($chunk);
             foreach ($st->fetchAll(PDO::FETCH_NUM) as [$g, $t]) $out[$g][] = $t;
         }
@@ -447,6 +447,8 @@ function moop_crosswalk_child_transcripts(string $organism, array $accessions): 
     }
     return $out;
 }
+// The unary + above keeps SQLite off feature_type_idx: without it the planner walked EVERY gene by
+// type (0.08 s for 3 ids on Schmidtea) instead of seeking the few named ones (0.00 s).
 
 /** The sources in this organism's crosswalk file, with the configured name: [source => label], config order first. */
 function moop_crosswalk_source_list(string $organism): array {

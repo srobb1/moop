@@ -27,10 +27,13 @@ Order of work, and why:
       `smed30003001` returns both the transcript `SMED30003001` and the gene `gene-SMED30003001`.
       Expected: case shouldn't matter, and one ID should give one result (or a clear "gene + its
       transcript"). Investigate the exact-ID path vs the text path. **M**
-- [ ] **Anatomy search "gut" lists transcripts that have no gene.** Why — data (13 transcriptome
+- [~] **Anatomy search "gut" lists transcripts that have no gene.** — 11-19: 157 fixed (d5657132, dd_v6 gene ids); rest = ids not in crosswalk -> questions for compute; open: show "no current gene" instead of "–"? Why — data (13 transcriptome
       "genomes" have no gene level) or a join that drops the gene? Then decide how to show them. **M**
-- [ ] **Downloads (menu → Download):** clicking the chevron and clicking the name do different things.
-      Both should open the whole group of files. **S**
+- [ ] **Anatomy records: a `Contig…` ID can show a gene from the WRONG assembly.** Same name in up to 4
+      crosswalk sources mapping to different genes (Contig1038). Needs a paper → source table from compute;
+      then look each record up in its own source. `notes/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md` §5. **M**
+- [x] **Downloads (menu → Download):** clicking the chevron and clicking the name do different things.
+      Both should open the whole group of files. **S** — DONE 11-19 (name was the checkbox label; now opens, checkbox selects)
 - [x] **Ontology Browser:** remove ECO from the drop-down (GO + PLANA only); a link from Planosphere
       opens with PLANA already selected. **S** — DONE 11-18 3b4d43de (Planosphere links already passed ?o=PLANA)
 - [ ] **Old Planosphere video tutorials:** remove the ones that teach the OLD website. Keep the PLANA

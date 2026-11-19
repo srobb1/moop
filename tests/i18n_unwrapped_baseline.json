@@ -84,7 +84,7 @@
         "\" data-organism=\"": 1,
         "\" data-size=\"": 1,
         "\" download=\"": 1,
-        "\" onclick=\"event.stopPropagation()\">": 3,
+        "\" onclick=\"event.stopPropagation()\" title=\"": 3,
         "Download Selected (": 1,
         "assembl": 1,
         "data-download-url=\"": 1,
@@ -531,7 +531,6 @@
         "uses, in one list. These are the same definitions you see when you point at a dashed-underlined word anywhere on the site.": 1
     },
     "tools/pages/help/landing.php": {
-        "\" class=\"text-decoration-none\">": 1,
         "Deeper technical references — installation, SELinux and hardening, resource planning — live in the": 1,
         "Using": 1,
         "directory of the MOOP repository.": 1

@@ -155,13 +155,12 @@ $clear_url   = moop_url_base() . '/tools/downloads.php';
                class="form-check-input me-2 flex-shrink-0 org-checkbox"
                id="cb-<?= $org_id ?>"
                data-org-id="<?= $org_id ?>"
-               onclick="event.stopPropagation()">
-        <label class="form-check-label fw-bold me-auto mb-0 user-select-none"
-               for="cb-<?= $org_id ?>"
-               style="cursor:pointer;"
-               onclick="event.stopPropagation()">
+               onclick="event.stopPropagation()"
+               title="<?= t('Select every file in this group') ?>">
+        <span class="form-check-label fw-bold me-auto mb-0 user-select-none"
+               style="cursor:pointer;">
           <em><?= htmlspecialchars($org_display) ?></em><?php if ($show_common): ?><small class="text-muted fw-normal"> · <?= htmlspecialchars($org_common_name) ?></small><?php endif; ?>
-        </label>
+        </span>
         <small class="text-muted me-3 flex-shrink-0">
           <?= count($assemblies) ?> assembl<?= count($assemblies) !== 1 ? 'ies' : 'y' ?>
         </small>
@@ -189,13 +188,12 @@ $clear_url   = moop_url_base() . '/tools/downloads.php';
                      id="cb-<?= $asm_id ?>"
                      data-org-id="<?= $org_id ?>"
                      data-asm-id="<?= $asm_id ?>"
-                     onclick="event.stopPropagation()">
-              <label class="form-check-label fw-semibold me-auto mb-0 user-select-none text-white"
-                     for="cb-<?= $asm_id ?>"
-                     style="cursor:pointer;"
-                     onclick="event.stopPropagation()">
+                     onclick="event.stopPropagation()"
+               title="<?= t('Select every file in this group') ?>">
+              <span class="form-check-label fw-semibold me-auto mb-0 user-select-none text-white"
+                     style="cursor:pointer;">
                 <?= htmlspecialchars($assembly_labels[$organism][$assembly] ?? $assembly) ?>
-              </label>
+              </span>
               <small class="me-3 flex-shrink-0" style="opacity:0.8;">
                 <?= $asm_total_files ?> file<?= $asm_total_files !== 1 ? 's' : '' ?>
               </small>
@@ -228,13 +226,12 @@ $clear_url   = moop_url_base() . '/tools/downloads.php';
                          data-org-id="<?= $org_id ?>"
                          data-asm-id="<?= $asm_id ?>"
                          data-gs-id="<?= $gs_id ?>"
-                         onclick="event.stopPropagation()">
-                  <label class="form-check-label fw-semibold me-auto mb-0 user-select-none text-white"
-                         for="cb-<?= $gs_id ?>"
-                         style="cursor:pointer;"
-                         onclick="event.stopPropagation()">
+                         onclick="event.stopPropagation()"
+               title="<?= t('Select every file in this group') ?>">
+                  <span class="form-check-label fw-semibold me-auto mb-0 user-select-none text-white"
+                         style="cursor:pointer;">
                     <span class="badge bg-gene-set me-1" style="font-size:0.7rem;"><?= t('Gene Set') ?></span><?= htmlspecialchars($gene_set) ?>
-                  </label>
+                  </span>
                   <small class="me-3 flex-shrink-0" style="opacity:0.8;">
                     <?= $asm_data['file_count'] ?> file<?= $asm_data['file_count'] !== 1 ? 's' : '' ?>,
                     <?= htmlspecialchars($asm_data['total_label']) ?>

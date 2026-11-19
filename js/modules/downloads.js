@@ -116,9 +116,11 @@ $(document).ready(function () {
         $('#download-selected-btn').prop('disabled', count === 0);
     }
 
-    // Gene-set header collapse toggle (manual — avoids Bootstrap eating checkbox clicks)
+    // Gene-set header collapse toggle (manual — avoids Bootstrap eating checkbox clicks).
+    // The NAME opens the group like the chevron does (2026-11-19: it used to be the checkbox's
+    // label, so clicking it selected every file instead); only the checkbox selects.
     $(document).on('click', '.gs-header', function (e) {
-        if ($(e.target).closest('input, label').length) return;
+        if ($(e.target).closest('input').length) return;
         const targetId = $(this).data('collapse-target');
         if (targetId) $(targetId).collapse('toggle');
     });
