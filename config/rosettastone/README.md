@@ -30,7 +30,8 @@ rosettastone/
 │   ├── minimap2_sam2gff.pl       minimap2 SAM -> GFF for step 02 (AGAT's converter, identity cut optional)
 │   ├── 03_overlaps.sh            bedtools intersect with each reference's CDS (probes: exons) + count_overlaps.py
 │   ├── count_overlaps.py         longest overlap and exact-exon matches per gene/sequence
-│   ├── 04_filter_mappings.sh     -> filtered/<ref>_mappings.txt
+│   ├── 04_filter_mappings.sh     -> filtered/<ref>_mappings.txt, <ref>_unlinked.txt
+│   ├── unlinked_status.py        why each sequence step 04 does not keep did not map, where it aligned
 │   └── 05_make_aliases.sh        -> aliases/aliases.txt
 ├── crosswalk/
 │   └── build_crosswalk.sh        mappings + aliases -> crosswalk.sqlite
@@ -149,6 +150,7 @@ is used only for the IDs in `CROSSWALK_FALLBACK_IDS` that the genome mapping doe
 | `probe_alignments/<ref>/<set>.psl`, `.bed` | 02a |
 | `overlaps/<ref>/…`, `mappings/<ref>/<set>.{stranded,unstranded,probe}.overlaps.txt` | 03 |
 | `filtered/<ref>_mappings.txt`: gene_id, target_id, transcriptome (set), max_overlap, exon_overlap | 04 |
+| `filtered/<ref>_unlinked.txt` (per set in `<ref>_unlinked/`): set, id, reason, seqid, start, end, strand | 04 |
 | `aliases/aliases.txt` | 05 |
 | `crosswalk/crosswalk.sqlite` | crosswalk |
 | `rosettastone.plan.txt`, `runs/<timestamp>/` | what was run; SLURM logs |
@@ -172,6 +174,26 @@ Options override the config, so it can also run without one (`--ref NAME HUB MAP
 `--transfer-hub`, `--probe-set`, `--aliases`, `-o`, `--organism`; see its `--help`). There is
 one hub per reference plus one per transfer hub, and hub names must match MOOP's crosswalk
 config. `--tsv-dir DIR` also writes each hub as a TSV.
+
+**`unlinked` table** (2026-11-19). Every sequence of a mapped set that reaches no gene, with why
+and where it aligned, so MOOP can say "no gene" with a reason and a genome-browser link instead
+of a blank. Columns: `accession, accession_lc, source` (as in `map`), `reason`, `assembly`
+(the reference's MOOP assembly folder), `seqid, start, end, strand` (primary alignment, 1-based
+inclusive; NULL when it did not align). Index `u_acc (accession_lc, source)`. One row per source +
+ID: the reason closest to a link, then the first reference. Aliases get their accession's row. An
+ID with a row in `map` under the same source has none here; an ID in neither table was not in
+the input.
+
+| reason | meaning |
+|---|---|
+| `did_not_align` | no alignment to the reference genome |
+| `not_coding` | the transcript has no CDS (the crosswalk holds coding genes only) |
+| `cds_not_aligned` | aligned, but not over its CDS (only UTR aligned) |
+| `no_gene_at_locus` | aligned where the reference has no gene |
+| `no_cds` | aligned over a gene's exons but not its CDS (UTR, or a non-coding gene) |
+| `cds_overlap_short` | overlaps a gene's CDS by < 100 bp, with no exact CDS exon |
+
+Probes have `did_not_align` or `no_gene_at_locus` only (any exon overlap maps a probe).
 
 ## Origin and changes from RosettaStone v2
 
@@ -203,10 +225,10 @@ What changed:
   CDS alone fixed that but lost the UTRs' anchoring: lamprey RefSeq transcripts landed on the
   wrong copy of duplicated genes (1,693 mapped only to another gene, against 858 before). So
   whole transcripts are aligned and then trimmed to their CDS, against the reference's CDS.
-  Nematostella NV2: transcripts mapped to more than one RS_101 gene 979 -> 212; links with no
-  protein support 2,776 -> 358. Lamprey RefSeq on itself: wrong-gene-only 857 (the remaining
-  ones are identical copies), own + another gene 256 -> 14. Non-coding transcripts and genes
-  are no longer mapped.
+  Nematostella NV2: transcripts mapped to more than one RS_101 gene 979 -> 212; of 14,196 NV2
+  transcripts with an OMA ortholog in RS_101, 95% map to that gene and 2% only to another.
+  Lamprey RefSeq on itself: mapped only to another gene 253 of 22,314 (mostly identical copies;
+  aligning the CDS alone gave 885). Non-coding transcripts and genes are no longer mapped.
 - **Own SAM-to-GFF converter** (02; 2026-11-18). AGAT's agat_convert_minimap2_bam2gff.pl has
   a fixed 90% identity cut (NM over aligned bases, so every indel base counts) that dropped
   near-identical alignments: 1,232 of 35,763 NV2 transcripts, 307 of 32,301 NV2 CDS.

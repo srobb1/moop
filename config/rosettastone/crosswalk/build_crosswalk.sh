@@ -37,6 +37,8 @@
 #      it overlaps best (most exact exon matches, then longest overlap; ties all kept), per
 #      reference, plus its own fallback mappings.
 #   Every hub ID also maps to itself.
+#   5. unlinked: the sequences that map nowhere, with why and where they aligned, from step 04's
+#      <ref>_unlinked.txt next to each mappings file (skipped when absent). See README.
 # Output: the crosswalk/1 format (MOOP docs/CROSSWALK_FORMAT.md). Hub names must match MOOP's
 # 'crosswalk' configuration. Needs bash, awk and sqlite3 >= 3.25. Builds next to the output and
 # moves it into place only when complete.
@@ -46,6 +48,7 @@ source "$(dirname "$0")/../scripts/lib.sh"
 CONF=; org=; out=; ALIASES=; TSVDIR=; NOFB=
 FB_IDS=; FB_MAP=; FB_HUB=; FB_RENAME=
 CLI_REFS=(); THUBS=(); PROBES=()
+declare -A ASMOF=()    # reference -> its MOOP assembly folder (config mode), for the unlinked table
 usage() { sed -n '2,/^set -/p' "$0" | sed '$d; s/^# \{0,1\}//' >&2; exit 2; }
 while [ $# -gt 0 ]; do
     case $1 in
@@ -76,6 +79,7 @@ if [ -n "$CONF" ]; then
         [ -n "${OUT_DIR:-}" ] || die "$CONF: OUT_DIR is not set"
         for r in "${REF_NAMES[@]}"; do
             REFS+=("$r|${REF_HUB[$r]}|$OUT_DIR/filtered/${r}_mappings.txt|$OUT_DIR/refdb/$r/t2g.tsv")
+            ASMOF[$r]=$(basename "$(dirname "${REF_GENOME[$r]}")")
         done
     fi
     if [ -n "${OUT_DIR:-}" ]; then
@@ -134,7 +138,7 @@ trap 'rm -rf "$tmp" "$work"' EXIT
 rm -f "$tmp"
 
 # Plain tab files for .import (no header lines). Reference number i = position in REFS.
-: > "$work/fm.tsv"; : > "$work/t2g.tsv"; : > "$work/refs.tsv"
+: > "$work/fm.tsv"; : > "$work/t2g.tsv"; : > "$work/refs.tsv"; : > "$work/ul.tsv"
 declare -A TXLABEL=()
 for kv in ${REFERENCE_TRANSCRIPT_SOURCES:-}; do TXLABEL[${kv%%=*}]=${kv#*=}; done
 i=0
@@ -146,6 +150,9 @@ for x in "${REFS[@]}"; do
     printf '%s\t%s\t%s\t%s\n' "$i" "$name" "$hub" "$tx" >> "$work/refs.tsv"
     awk -F'\t' -v OFS='\t' -v i=$i '$1 == "gene_id" {next} {print i, $1, $2, $3, $4 + 0, $5 + 0}' "$map" >> "$work/fm.tsv"
     awk -F'\t' -v OFS='\t' -v i=$i 'NF >= 2 {print i, $1, $2}' "$t2g" >> "$work/t2g.tsv"
+    # step 04's sequences that did not map (set id reason seqid start end strand), if it wrote them
+    ul=${map%_mappings.txt}_unlinked.txt
+    [ -r "$ul" ] && awk -F'\t' -v OFS='\t' -v i=$i -v a="${ASMOF[$name]:-}" 'NF >= 3 {print i, a, $1, $2, $3, $4, $5, $6, $7}' "$ul" >> "$work/ul.tsv"
 done
 printf '%s\n' "${THUBS[@]}" | sed '/^$/d' > "$work/th.tsv"
 printf '%s\n' "${PROBES[@]}" | sed '/^$/d' > "$work/probes.tsv"
@@ -178,6 +185,7 @@ CREATE TEMP TABLE probes (sset TEXT);
 CREATE TEMP TABLE al (alias TEXT, acc TEXT, aset TEXT);
 CREATE TEMP TABLE pg (id TEXT);
 CREATE TEMP TABLE bl (id TEXT, ref_id TEXT, bset TEXT);
+CREATE TEMP TABLE ul (run INT, asm TEXT, sset TEXT, id TEXT, reason TEXT, seqid TEXT, s TEXT, e TEXT, strand TEXT);
 .mode tabs
 .import '$work/refs.tsv' refs
 .import '$work/fm.tsv' fm
@@ -187,6 +195,7 @@ CREATE TEMP TABLE bl (id TEXT, ref_id TEXT, bset TEXT);
 .import '$work/al.tsv' al
 .import '$work/pg.tsv' pg
 .import '$work/bl.tsv' bl
+.import '$work/ul.tsv' ul
 
 -- reference IDs: which reference each transcript/gene ID belongs to
 CREATE TEMP TABLE refid AS
@@ -287,6 +296,43 @@ SELECT seq_id, lower(seq_id), source, ref_id, hub FROM outrows
  ORDER BY hub, ref_id, source, seq_id;
 CREATE INDEX m_acc ON map (accession_lc);
 CREATE INDEX m_ref ON map (ref_id, hub);
+
+-- unlinked: sequences of the mapped sets that reach no gene, with why and where they aligned
+-- (step 04's <ref>_unlinked.txt). Sources are named as in map (a reference's own transcripts and
+-- genes get their map labels); aliases inherit their accession's row. One row per source + ID:
+-- the reason closest to a link, then the first reference. IDs in map under that source are left out.
+CREATE TEMP TABLE u0 AS
+SELECT u.run, u.asm,
+       CASE WHEN i.id IS NOT NULL THEN CASE WHEN i.is_gene THEN i.hub ELSE i.tx END
+            WHEN r.tx IS NOT NULL THEN r.tx      -- a reference's own transcript that MOOP lacks (e.g. XR_)
+            ELSE u.sset END AS source,
+       u.id, u.reason, nullif(u.seqid, '') AS seqid, CAST(nullif(u.s, '') AS INTEGER) AS s,
+       CAST(nullif(u.e, '') AS INTEGER) AS e, nullif(u.strand, '') AS strand
+  FROM ul u LEFT JOIN (SELECT id, max(is_gene) AS is_gene, max(hub) AS hub, max(tx) AS tx FROM refid GROUP BY id) i
+         ON i.id = u.id
+       LEFT JOIN (SELECT name, max(tx) AS tx FROM refs GROUP BY name) r ON r.name = u.sset;
+CREATE INDEX temp.u0_sid ON u0 (source, id);
+CREATE TEMP VIEW ualias AS
+SELECT u.run, u.asm, u.source, a.alias, u.reason, u.seqid, u.s, u.e, u.strand
+  FROM al a JOIN u0 u ON u.source = a.aset AND u.id = a.acc
+ WHERE NOT EXISTS (SELECT 1 FROM u0 x WHERE x.source = a.aset AND x.id = a.alias);
+INSERT INTO u0 SELECT * FROM ualias;
+INSERT INTO u0 SELECT * FROM ualias;
+CREATE TABLE unlinked (accession TEXT NOT NULL, accession_lc TEXT NOT NULL, source TEXT NOT NULL,
+                       reason TEXT NOT NULL, assembly TEXT, seqid TEXT, start INTEGER, "end" INTEGER,
+                       strand TEXT);
+INSERT INTO unlinked
+SELECT id, lower(id), source, reason, CASE WHEN seqid IS NULL THEN NULL ELSE nullif(asm, '') END,
+       seqid, s, e, strand
+  FROM (SELECT u.*, row_number() OVER (PARTITION BY lower(u.id), u.source ORDER BY
+               CASE u.reason WHEN 'cds_overlap_short' THEN 1 WHEN 'no_cds' THEN 2
+                    WHEN 'cds_not_aligned' THEN 3 WHEN 'no_gene_at_locus' THEN 4
+                    WHEN 'not_coding' THEN 5 ELSE 6 END, u.run) AS k
+          FROM u0 u
+         WHERE NOT EXISTS (SELECT 1 FROM map m WHERE m.accession_lc = lower(u.id) AND m.source = u.source))
+ WHERE k = 1
+ ORDER BY source, id;
+CREATE INDEX u_acc ON unlinked (accession_lc, source);
 ANALYZE;
 INSERT INTO meta (key, value) VALUES
   ('format', 'crosswalk/1'),
@@ -297,7 +343,8 @@ INSERT INTO meta (key, value) VALUES
   ('rows', (SELECT COUNT(*) FROM map)),
   ('accessions', (SELECT COUNT(DISTINCT accession_lc) FROM map)),
   ('genes', (SELECT COUNT(DISTINCT ref_id) FROM map)),
-  ('sources', (SELECT COUNT(DISTINCT source) FROM map));
+  ('sources', (SELECT COUNT(DISTINCT source) FROM map)),
+  ('unlinked', (SELECT COUNT(*) FROM unlinked));
 SQL
 sqlite3 "$tmp" 'VACUUM;'
 
@@ -328,7 +375,7 @@ fi
 chmod 664 "$tmp"
 mv "$tmp" "$out"
 trap 'rm -rf "$work"' EXIT
-sqlite3 "$out" "SELECT key || ': ' || value FROM meta WHERE key IN ('hubs','rows','accessions','genes','sources');"
+sqlite3 "$out" "SELECT key || ': ' || value FROM meta WHERE key IN ('hubs','rows','accessions','genes','sources','unlinked');"
 echo "wrote $out"
 
 # MOOP mode: also put it where copy2moop ships it, the organism's build folder ($SPECIES_DIR/crosswalk.sqlite
