@@ -464,6 +464,12 @@ ok(moop_disabled_tool_for_script($_t1, "$_tsite/tools/moopmart.php") === 'moopma
    && moop_disabled_tool_for_script($_t1, "$_tsite/jbrowse2.php") === 'genome_browser',
    "a switched-off tool's own page is turned away (404)");
 $_t2 = $_tnew(); $_t0->saveEditableConfig(['tools_disabled' => ['anatomy_search', 'ontology_browser']], $_td); $_t2 = $_tnew();
+// "On where it is on" must not depend on this host's data: both tools with also_paths also carry
+// an 'available_if' data check, and on a bare checkout (CI) there are no ontologies, so the tool
+// is off for lack of data and its scripts are rightly turned away. Drop the data check on $_t1 so
+// the case tests what it names -- switched on -> served. (The data gate is tested above.)
+$_tprop = new ReflectionProperty('ConfigManager', 'tools'); $_tprop->setAccessible(true);
+$_tlist = $_tprop->getValue($_t1); unset($_tlist['ontology_browser']['available_if']); $_tprop->setValue($_t1, $_tlist);
 ok(moop_disabled_tool_for_script($_t2, "$_tsite/api/anatomy_records.php") === 'anatomy_search'
    && moop_disabled_tool_for_script($_t2, "$_tsite/api/anatomy_records_download.php") === 'anatomy_search'
    && moop_disabled_tool_for_script($_t2, "$_tsite/tools/ontology_term.php") === 'ontology_browser'

@@ -21,10 +21,11 @@ Order of work, and why:
 - [x] Phase B for simrbase + cuttingclass (11-19): links have no folder name, public_url set, simrbase-dev
       forwards, rate limits republished. No folder links on either home page; no-exec guard probed on both
       new names (`.php` in images/ blocked, control ran). Old internal `172.16.2.52/moop/` now loads unstyled.
-- [ ] **IT: internal DNS (10.0.51.5)** has `cuttingclass.stowers.org` -> 13.89.4.68 (old); needs 172.16.2.52
-      (simrbase is already 172.16.2.52 inside). Also planosphere inside -> 172.16.2.52.
-- [ ] **IT: public DNS** `planosphere.stowers.org` -> 172.202.37.180 (old); needs 161.129.22.133 / CNAME simrbase
-- [ ] Then Planosphere's Phase B line (PHASE_B.txt step 1, planosphere) + recheck its guard (differs until then)
+- [x] IT: planosphere public DNS -> 161.129.22.133 (11-19 evening); Planosphere Phase B run: 0 folder links
+      (was 38), tool links -> simrbase.stowers.org, guard identical + probe blocked. Internal DNS: Sofia says fine.
+- [x] smedgd.stowers.org (alias of planosphere) showed the Red Hat test page -> 302 to Planosphere's SmedGD
+      page (/etc/nginx/conf.d/moop-smedgd.conf; staged in /home/smr/move_day/nginx/). Make it 301 once settled.
+- [x] CI red since 53162efc: also_paths test assumed ontology data; fixed in tests/smoke_tests.php.
 - [ ] Keep `172.16.2.31 tracks.stowers.org` in `/etc/hosts` through IT's DNS changes
 
 ## 1. Wrong or surprising answers — fix first
