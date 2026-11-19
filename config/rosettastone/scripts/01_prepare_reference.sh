@@ -8,11 +8,14 @@
 #   genome.mmi      minimap2 index
 #   anno.gtf        gene models as GTF (gffread; GFF3 or GTF input, gzipped or not)
 #   junctions.bed   splice junctions for minimap2 --junc-bed
-#   exons.gtf       exons only, gene_id only, sorted: the overlap target for step 03
+#   exons.gtf       exons only, gene_id only, sorted: the overlap target for probes (step 03)
+#   cds.gtf         the same for CDS lines: the overlap target for transcript sets (step 03).
+#                   CDS, not exons: exons include UTRs, and a long UTR overlapping a neighbour's
+#                   UTR linked unrelated genes (Nematostella NV2 sox-3 to NOXRED1, 2026-11-18)
 #   t2g.tsv         id<TAB>gene for every transcript and gene of the reference (a gene maps
 #                   to itself): the reference's transcript2gene file if it has one (the
 #                   datastore's, i.e. MOOP's IDs), else from the gene models' hierarchy.
-# With a transcript2gene file, exons.gtf uses its gene IDs too (see below).
+# With a transcript2gene file, exons.gtf and cds.gtf use its gene IDs too (see below).
 # Each file is skipped when it is newer than its input.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
@@ -50,7 +53,9 @@ for ref in "${REF_NAMES[@]}"; do
         paftools.js gff2bed "$R/anno.gtf" > "$R/junctions.bed.tmp"; finish "$R/junctions.bed.tmp" "$R/junctions.bed"
     fi
     t2gfile=${REF_T2G[$ref]:-}; [ -r "$t2gfile" ] || t2gfile=
-    if ! uptodate "$R/exons.gtf" "$R/anno.gtf" ${t2gfile:+"$t2gfile"}; then
+    for feat in exon CDS; do
+    out=$R/exons.gtf; [ $feat = CDS ] && out=$R/cds.gtf
+    if ! uptodate "$out" "$R/anno.gtf" ${t2gfile:+"$t2gfile"}; then
         # exon lines, transcript_id dropped, one line per distinct exon of each gene.
         # De-duplicate whole lines: RosettaStone v2 used "sort -u -k1,1 -k4,4n -k5,5n", which
         # keeps one line per coordinate, so a gene sharing an exon with another gene lost it.
@@ -58,7 +63,7 @@ for ref in "${REF_NAMES[@]}"; do
         # renamed to that file's: gene models often use other IDs (RefSeq "gene-X"/"rna-X",
         # Ensembl "gene:X" without the version). Matched via the transcript, ignoring such
         # prefixes and a ".N" version; genes that are not in the file (so not in MOOP) are dropped.
-        awk -F'\t' -v OFS='\t' -v t2g="$t2gfile" -v rep="$R/exons.rename.log" '
+        awk -F'\t' -v OFS='\t' -v t2g="$t2gfile" -v want="$feat" -v rep="$out.rename.log" '
             function key(x) { sub(/^(transcript|gene|mRNA|rna|cds)[:-]/, "", x); sub(/\.[0-9]+$/, "", x); return x }
             function val(s, k,   re) {
                 re = k " \"[^\"]+\""
@@ -67,7 +72,7 @@ for ref in "${REF_NAMES[@]}"; do
             BEGIN { if (t2g != "") while ((getline line < t2g) > 0) {
                         split(line, f, "\t"); if (f[2] == "") continue
                         tg[key(f[1])] = f[2]; gg[key(f[2])] = f[2] } }
-            $3 != "exon" { next }
+            $3 != want { next }
             t2g == "" { sub(/transcript_id [^;]*; /, "", $9); print; next }
             {   t = val($9, "transcript_id"); g = val($9, "gene_id")
                 if (key(t) in tg) new = tg[key(t)]
@@ -78,10 +83,12 @@ for ref in "${REF_NAMES[@]}"; do
             END { if (t2g != "") {
                     for (g in kept) nk++; for (g in dropped) nd++
                     printf "gene IDs from %s: %d genes kept; %d gene-model genes not in it, dropped\n", t2g, nk, nd > rep } }' \
-            "$R/anno.gtf" | LC_ALL=C sort -k1,1 -k4,4n -k5,5n | uniq > "$R/exons.gtf.tmp"
-        finish "$R/exons.gtf.tmp" "$R/exons.gtf"
-        [ -s "$R/exons.rename.log" ] && log "$ref: $(cat "$R/exons.rename.log")"
+            "$R/anno.gtf" | LC_ALL=C sort -k1,1 -k4,4n -k5,5n | uniq > "$out.tmp"
+        [ $feat = exon ] || [ -s "$out.tmp" ] || die "$ref: no CDS lines in $R/anno.gtf"
+        finish "$out.tmp" "$out"
+        [ -s "$out.rename.log" ] && log "$ref: $feat: $(cat "$out.rename.log")"
     fi
+    done
     if ! uptodate "$R/t2g.tsv" "$annot" ${t2gfile:+"$t2gfile"}; then
         if [ -n "$t2gfile" ]; then
             # the gene set's own transcript2gene: the IDs MOOP uses

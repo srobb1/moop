@@ -3,7 +3,8 @@
 #
 #   03_overlaps.sh -c rosettastone.conf [set ...]
 #
-# Reads  $OUT_DIR/refdb/<ref>/exons.gtf (step 01), alignments (steps 02, 02a)
+# Reads  $OUT_DIR/refdb/<ref>/cds.gtf (transcript sets: their CDS against the reference's CDS,
+#        so UTRs never link two genes) and exons.gtf (probes) from step 01, alignments (02, 02a)
 # Writes $OUT_DIR/overlaps/<ref>/{stranded,unstranded,probe}/<set>.overlap.bed
 #        $OUT_DIR/mappings/<ref>/<set>.{stranded,unstranded,probe}.overlaps.txt
 #          gene_id  target_id  transcriptome  max_overlap  exon_overlap
@@ -19,8 +20,9 @@ load_modules
 need bedtools python3
 
 for ref in "${REF_NAMES[@]}"; do
-    exons=$OUT_DIR/refdb/$ref/exons.gtf
+    exons=$OUT_DIR/refdb/$ref/exons.gtf; cds=$OUT_DIR/refdb/$ref/cds.gtf
     [ -s "$exons" ] || die "$exons missing; run step 01"
+    [ -s "$cds" ] || die "$cds missing; run step 01"
     O=$OUT_DIR/overlaps/$ref; P=$OUT_DIR/mappings/$ref
     mkdir -p "$O/stranded" "$O/unstranded" "$O/probe" "$P"
 
@@ -31,10 +33,10 @@ for ref in "${REF_NAMES[@]}"; do
         for mode in stranded unstranded; do
             bed=$O/$mode/$set.overlap.bed
             txt=$P/$set.$mode.overlaps.txt
-            if ! uptodate "$bed" "$gff" "$exons"; then
+            if ! uptodate "$bed" "$gff" "$cds"; then
                 log "$ref $set: $mode overlaps"
                 flag=; [ $mode = stranded ] && flag=-s
-                bedtools intersect $flag -wo -a "$exons" -b "$gff" > "$bed.tmp"
+                bedtools intersect $flag -wo -a "$cds" -b "$gff" > "$bed.tmp"
                 finish "$bed.tmp" "$bed"
             fi
             if ! uptodate "$txt" "$bed"; then

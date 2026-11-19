@@ -24,6 +24,8 @@
 #   --tsv-dir DIR        also write <hub>.mapping files (seq_id, ref_id, seq_id_source) to DIR
 #
 # What it does (in SQL):
+#   Coding genes only: the mappings come from CDS-to-CDS overlaps (steps 02-04; probes overlap
+#   exons), so non-coding transcripts and reference genes with no CDS never reach the crosswalk.
 #   1. Every sequence that overlaps a reference gene maps to that gene (one hub per reference).
 #      A target that is itself a reference transcript (t2g.tsv) is labelled with the reference's
 #      transcripts source (REFERENCE_TRANSCRIPT_SOURCES "ref=label ...", default <ref>_transcripts) and

@@ -227,6 +227,17 @@ add_set() {   # add_set QUERY|PROBE NAME FASTA
     else PROBE_NAMES+=("$name"); PROBE_FASTA[$name]=$fa; fi
 }
 
+# query_cds NAME: the cds.nt.fa next to query set NAME's transcript.nt.fa, or nothing when it
+# has none. Step 02 aligns the whole transcripts (their UTRs anchor each one to the right copy
+# of a duplicated gene) and then trims the alignments to this CDS (clip_to_cds.py), so only
+# coding sequence is compared with the reference's CDS in step 03 (2026-11-18).
+query_cds() {
+    local tx=${QUERY_FASTA[$1]} cds
+    cds=$(dirname "$tx")/cds.nt.fa
+    [ "$(basename "$tx")" = transcript.nt.fa ] && [ -s "$cds" ] && echo "$cds"
+    return 0
+}
+
 # load_config FILE: read_config, then check what the pipeline needs.
 load_config() {
     local r

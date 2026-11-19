@@ -76,7 +76,11 @@ CROSSWALK_FALLBACK_MAPPING=
 CROSSWALK_FALLBACK_HUB=               # empty = the first of TRANSFER_HUBS
 CROSSWALK_FALLBACK_SET_RENAME=""      # "old=new ..." for set names in the fallback mapping
 
+# Step 02 drops an alignment below this identity (%, minimap2 NM over aligned bases, so every
+# indel base counts as a mismatch). 0 = keep all: the CDS overlap decides. AGAT used 90.
+ALIGN_MIN_IDENTITY=0
+
 # ================================================================ compute
 THREADS=16                 # submit_slurm.sh sets this from --cpus
 # Loaded with "module load" when the module command exists; empty = use what is on PATH.
-MODULES="minimap2/2.26 gffread/0.12.7 agat/1.2.0 pblat/2.5.1 bedops/2.4.40 bedtools/2.30.0"
+MODULES="minimap2/2.26 gffread/0.12.7 pblat/2.5.1 bedops/2.4.40 bedtools/2.30.0"

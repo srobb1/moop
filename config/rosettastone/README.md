@@ -5,6 +5,12 @@ models, microarray probes, ...) onto the gene models of one or more reference ge
 builds MOOP's `crosswalk.sqlite`, so that a MOOP search for any of those IDs, or their aliases,
 finds the gene.
 
+**Coding genes only.** Whole transcripts are aligned (their UTRs place each one on the right
+copy of a duplicated gene), but only their coding sequence (CDS) is compared with the
+reference's CDS: UTRs never link two genes. Non-coding transcripts, and reference genes with
+no CDS, are dropped: they are not in the crosswalk at all. (Probes are the one exception: they
+are matched to exons.) See "Coding sequence only" below for why.
+
 Code only, and organism-neutral: everything comes from a config file, and nothing is written
 here. It reads the genomes datastore directly (`genomes/v2/<Species>/<assembly>/<geneset>/`).
 `examples/schmidtea_mediterranea/` is a complete worked example.
@@ -17,10 +23,12 @@ rosettastone/
 ├── scripts/
 │   ├── list_genesets.sh          a species' gene sets: active? real genome or placeholder?
 │   ├── lib.sh                    shared helpers (config, datastore, references, skip-if-done)
-│   ├── 01_prepare_reference.sh   per reference: genome index, gene models, exons, transcript->gene
+│   ├── 01_prepare_reference.sh   per reference: genome index, gene models, exons + CDS, transcript->gene
 │   ├── 02_align_transcripts.sh   query sets -> every reference (minimap2 splice:hq) -> sorted GFF
 │   ├── 02a_align_probes.sh       probe sets -> every reference (pblat, >=95% identity) -> BED
-│   ├── 03_overlaps.sh            bedtools intersect with each reference's exons + count_overlaps.py
+│   ├── clip_to_cds.py            trims step 02's transcript alignments to each transcript's CDS
+│   ├── minimap2_sam2gff.pl       minimap2 SAM -> GFF for step 02 (AGAT's converter, identity cut optional)
+│   ├── 03_overlaps.sh            bedtools intersect with each reference's CDS (probes: exons) + count_overlaps.py
 │   ├── count_overlaps.py         longest overlap and exact-exon matches per gene/sequence
 │   ├── 04_filter_mappings.sh     -> filtered/<ref>_mappings.txt
 │   └── 05_make_aliases.sh        -> aliases/aliases.txt
@@ -34,7 +42,8 @@ rosettastone/
 
 One run covers one species. You choose the **reference** gene set(s): the genomes and gene
 models everything is mapped onto. Every other **active** gene set of that species is then
-**mapped** onto them, using its `transcript.nt.fa`. So are any extra sets from `QUERY_DIR` and
+**mapped** onto them: its `transcript.nt.fa` is aligned, and the alignments are trimmed to its
+`cds.nt.fa` (a set without one is compared whole). So are any extra sets from `QUERY_DIR` and
 `PROBE_DIR`. The references' own transcripts are mapped too, which links two references' genes
 to each other (e.g. two haplotypes).
 
@@ -135,7 +144,7 @@ is used only for the IDs in `CROSSWALK_FALLBACK_IDS` that the genome mapping doe
 
 | Path | Step |
 |---|---|
-| `refdb/<ref>/` `genome.fa` (link) `.mmi`, `anno.gtf`, `junctions.bed`, `exons.gtf`, `t2g.tsv` | 01 |
+| `refdb/<ref>/` `genome.fa` (link) `.mmi`, `anno.gtf`, `junctions.bed`, `exons.gtf`, `cds.gtf`, `t2g.tsv` | 01 |
 | `alignments/<ref>/<set>.sam`, `.sorted.gff` | 02 |
 | `probe_alignments/<ref>/<set>.psl`, `.bed` | 02a |
 | `overlaps/<ref>/…`, `mappings/<ref>/<set>.{stranded,unstranded,probe}.overlaps.txt` | 03 |
@@ -144,11 +153,19 @@ is used only for the IDs in `CROSSWALK_FALLBACK_IDS` that the genome mapping doe
 | `crosswalk/crosswalk.sqlite` | crosswalk |
 | `rosettastone.plan.txt`, `runs/<timestamp>/` | what was run; SLURM logs |
 
-A mapping is kept when the aligned sequence overlaps an exon of the gene by >=100 bp or
-matches at least one exon exactly. All probe overlaps are kept. Very short sequences (under
+Transcript sets are compared CDS to CDS. Step 02 aligns whole transcripts, then trims each
+aligned block to the transcript's CDS (`scripts/clip_to_cds.py`; the CDS is found by locating
+`cds.nt.fa` in `transcript.nt.fa`, CDS IDs mapped to transcripts as `<tx>:cds` or through the
+CDS lines' `Parent=` in `genes.gff`). Step 03 intersects those blocks with the reference's CDS
+(`cds.gtf`). A mapping is kept when they overlap by >=100 bp or match at least one CDS segment
+exactly. Non-coding transcripts and non-coding reference genes therefore get no mapping. Probes are compared with
+exons (`exons.gtf`), since they sit mostly in 3' UTRs. All probe overlaps are kept. Very short sequences (under
 ~100 bp, e.g. tRNAs) rarely align with minimap2; give them as probe sets instead.
 
 ## The crosswalk on its own
+
+The crosswalk holds coding genes only: every mapping in it is a CDS-to-CDS overlap (probes
+aside), so a non-coding transcript or a reference gene with no CDS has no row.
 
 `crosswalk/build_crosswalk.sh -c rosettastone.conf` reads everything from `OUT_DIR`.
 Options override the config, so it can also run without one (`--ref NAME HUB MAPPINGS T2G`,
@@ -179,6 +196,23 @@ What changed:
 - **Non-coding reference transcripts** (crosswalk). Reference transcripts that gffread drops
   (WormBase `nontranslating_CDS`) are still recognised, and now get a gene-level row.
   Because gffread drops them, they are still not overlap targets.
+- **Coding sequence only** (01, 02, 03; 2026-11-18). Whole transcripts against exons linked
+  genes through their UTRs: Nematostella NV2t015027001.1 (sox-3) has an 8.4 kb single exon whose
+  UTR runs into the 3' end of NOXRED1, so it mapped to both (1,558 bp of UTR overlap beat
+  1,438 bp with sox-3), and the gene page showed two unrelated ortholog groups. Aligning the
+  CDS alone fixed that but lost the UTRs' anchoring: lamprey RefSeq transcripts landed on the
+  wrong copy of duplicated genes (1,693 mapped only to another gene, against 858 before). So
+  whole transcripts are aligned and then trimmed to their CDS, against the reference's CDS.
+  Nematostella NV2: transcripts mapped to more than one RS_101 gene 979 -> 212; links with no
+  protein support 2,776 -> 358. Lamprey RefSeq on itself: wrong-gene-only 857 (the remaining
+  ones are identical copies), own + another gene 256 -> 14. Non-coding transcripts and genes
+  are no longer mapped.
+- **Own SAM-to-GFF converter** (02; 2026-11-18). AGAT's agat_convert_minimap2_bam2gff.pl has
+  a fixed 90% identity cut (NM over aligned bases, so every indel base counts) that dropped
+  near-identical alignments: 1,232 of 35,763 NV2 transcripts, 307 of 32,301 NV2 CDS.
+  `scripts/minimap2_sam2gff.pl` is that script (GPL-3, credited) with the cut as an option
+  (`ALIGN_MIN_IDENTITY`, default 0); at 90 its output is identical to AGAT's. AGAT is no
+  longer needed.
 - **Published names** (05). Space-separated alias tables were dropped. Now read.
 - **Transfer-hub IDs overlapping several genes.** v2 took whichever gene sorted last. Now the
   best-overlapping gene, ties kept, and the ID's own fallback mappings are kept too.
@@ -188,5 +222,5 @@ What changed:
   `finished_*` marker files. Step 04 is awk, so R/tidyverse is no longer needed. Only the sets
   now in `QUERY_DIR`/`PROBE_DIR` are combined. The crosswalk needs sqlite3 >= 3.25.
 
-Needs: minimap2, gffread, paftools.js (k8), AGAT, pblat, bedops (psl2bed), bedtools, perl
+Needs: minimap2, gffread, paftools.js (k8), pblat, bedops (psl2bed), bedtools, perl
 (example alias rules), python3, awk, sqlite3. Module names are set in `MODULES`.
