@@ -32,6 +32,14 @@ Order of work, and why:
 - [ ] **Anatomy records: a `Contig…` ID can show a gene from the WRONG assembly.** Same name in up to 4
       crosswalk sources mapping to different genes (Contig1038). Needs a paper → source table from compute;
       then look each record up in its own source. `notes/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md` §5. **M**
+- [ ] **Anatomy records with no gene: say why, link to where it aligns.** Generic "no gene ⓘ" now;
+      reason + genome-browser link once compute ships an `unlinked` table in crosswalk.sqlite
+      (`notes/CROSSWALK_UNLINKED_IDS_REQUEST_2026-11-19.md`). **S** now / **M** later
+- [ ] **WHEN compute's `unlinked` table arrives: list every curated ID missing from all our FASTAs** —
+      in neither `map` nor `unlinked`; grouped by paper and by ID set (dd_Smed_v4, OX_Smed, SmedASXL,
+      Contig...), with counts, so Sofia knows which files to find. (Sofia asked 11-19.) **S**
+- [ ] **Sofia: find the missing ox_Smed_v2 sequences** — Kao 2013's `OX_Smed_1.0.N` IDs whose numbers
+      are not in the ox_Smed_v2 FASTA compute ran (21,411 of up to 23,545), e.g. `OX_Smed_1.0.00005`.
 - [x] **Downloads (menu → Download):** clicking the chevron and clicking the name do different things.
       Both should open the whole group of files. **S** — DONE 11-19 (name was the checkbox label; now opens, checkbox selects)
 - [x] **Ontology Browser:** remove ECO from the drop-down (GO + PLANA only); a link from Planosphere

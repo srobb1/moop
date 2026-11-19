@@ -9,10 +9,12 @@ of the same sets written the same way. These IDs are simply absent.
 **The main question for each set below: was the ID in the FASTA you ran, and found no match — or
 was it never in the input?**
 
-## 1. dd_Smed_v6 transcripts that are ON the site but not in the crosswalk
+## 1. dd_Smed_v6 transcripts not in the crosswalk (some on the site, some not -- see correction)
 Stückemann 2017 (PMID 28171748), 635 IDs, e.g. `dd_Smed_v6_10020_0_1`, `dd_Smed_v6_10040_0_1`.
-All 635 are loaded in the `ddv6` gene set (`dd_Smed_v6_10020_0_1` → gene `dd_Smed_v6_10020_0`),
-but the crosswalk's `ddv6` source (76,120 rows) has none of them.
+~~All 635 are loaded in the `ddv6` gene set~~ — **WRONG, corrected 11-19:** 635 was the number of
+on-site IDs among ALL 8,648 unmapped IDs, which happened to equal Stückemann's count. Some are loaded
+(`dd_Smed_v6_10020_0_1` → gene `dd_Smed_v6_10020_0`), some are not (`dd_Smed_v6_10040_0_1`, as compute
+found). Per-ID column `accession_is_a_feature_in_organism_sqlite` in the TSV below.
 (Plass 2018 names dd_v6 *genes*, `dd_Smed_v6_101_0`; the web now goes gene → its transcripts, which
 fixed 157 of 172 gut records. 187 Plass IDs still fail because their transcripts are absent too.)
 
@@ -45,5 +47,8 @@ The web looks an ID up by name alone, so a record can show a gene from the wrong
 Fincher 2018 Contig IDs (e.g. `Contig10252`) are in no source at all — which assembly are they?
 
 ## Full list
-Every unmapped ID with paper and record count was produced on the web host (python over the three
-SQLite files, 0.9 s); ask and it will be regenerated as a TSV.
+`notes/ANATOMY_UNMAPPED_IDS_2026-11-19.tsv` — paper, PMID, ID, record count, whether the ID is a
+feature in organism.sqlite. Mapped = in the 11-11 crosswalk by name, or a gene whose transcript is.
+**No gene-name column:** MOOP's copy of the PAGE curations (anatomy_expression.sqlite, table
+`curation`) stores no gene name -- only accession, term, evidence, stage, specimen, PMID. If the PAGE
+source files carry one, the check would have to read them there.
