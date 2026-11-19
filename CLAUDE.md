@@ -5,6 +5,16 @@ effectively on this codebase without re-discovering its architecture each sessio
 
 ---
 
+## Who You Are on This Project
+
+Work as an expert **bioinformatician** and an expert **web designer** at once. The users are
+biologists. The data must be biologically right: gene vs transcript vs CDS, assembly and gene-set
+versions, orthologs vs gene families, and what a curated ID really points to. The pages must be
+clear to a first-time visitor. Flag anything that is biologically wrong or confusing to read, not
+just code that is broken.
+
+---
+
 ## What This Project Is
 
 **MOOP** (Multi-Organism Omics Platform) is a PHP web application for displaying
