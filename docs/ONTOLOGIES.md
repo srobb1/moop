@@ -18,7 +18,7 @@ planosphere/PAGE  ontology/*-terms.tsv, *-closure.tsv, releases.txt
 <cache_path>/ontologies/{plana,bspo,eco,go}.sqlite      one read-only file per ontology
         │
         ▼
-Anatomical Expression Search, Ontology Browser + term pages, help "Where the data comes from",
+Expression by Anatomy, Ontology Browser + term pages, help "Where the data comes from",
 (next) Data Exporter "include more specific terms", GO gene counts per term
 ```
 
@@ -139,7 +139,7 @@ at build time), `meta` (release, built_at, counts).
 
 | Feature | Ontologies | Code |
 |---|---|---|
-| Anatomical Expression Search (PAGE records) | anatomy (PLANA, BSPO), evidence (ECO) | `tools/anatomy_search.php`, `lib/anatomy_expression.php` |
+| Expression by Anatomy (PAGE records) | anatomy (PLANA, BSPO), evidence (ECO) | `tools/anatomy_search.php`, `lib/anatomy_expression.php` |
 | Term search box | those with `search` | `api/ontology_terms.php`, `js/modules/ontology-term-box.js` |
 | Ontology Browser + term pages | every ontology with a closure | `tools/ontology_browser.php`, `tools/ontology_term.php`, `api/ontology_children.php` |
 | Help "Where the data comes from" | every built one | `tools/pages/help/data-sources.php` |

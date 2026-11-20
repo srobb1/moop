@@ -187,7 +187,7 @@ individual features rather than failing to start.
 | **samtools**, **bgzip**, **tabix** | genome and GFF indexing |
 | **Node.js 18+** and `@jbrowse/cli` | feature-name search (`jbrowse text-index`) |
 | **BLAST+** | the BLAST tool |
-| **bigWigSummary** (UCSC kent) | Expression Explorer |
+| **bigWigSummary** (UCSC kent) | RNA-seq Expression Explorer |
 | **primer3** (`scripts/install_primer3.sh`) | the primer designer |
 | **Linux/Unix**, 50GB+ disk | POSIX functions; storage scales with organism count |
 

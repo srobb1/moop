@@ -401,6 +401,47 @@ footer .footer-meta {
   font-size: 14px;
 }
 
+/* Grouped Tools menu (a site that turned it on in Manage Tools; includes/toolbar.php): a heading
+   per group and one line of text under each tool, in a menu wide enough for that line on a desktop
+   (it wraps on a phone). */
+.tools-menu-grouped {
+  width: 31rem;
+  max-width: calc(100vw - 2rem);
+  padding-top: 0.25rem;
+}
+.tools-menu-grouped .dropdown-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--moop-main-dark);
+  padding-top: 0.5rem;
+  padding-bottom: 0.1rem;
+}
+.tools-menu-grouped li:not(:first-child) > .dropdown-header {
+  border-top: 1px solid rgba(var(--moop-main-rgb), 0.15);
+  margin-top: 0.3rem;
+}
+.tools-menu-grouped .dropdown-item {
+  white-space: normal;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+}
+.tools-menu-name {
+  display: block;
+  font-weight: 500;
+}
+.tools-menu-blurb {
+  display: block;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  color: var(--bs-secondary-color, #6c757d);
+}
+.tools-menu-grouped .dropdown-item:hover .tools-menu-blurb,
+.tools-menu-grouped .dropdown-item:focus .tools-menu-blurb {
+  color: inherit;
+}
+
 .fa-sign-out-alt,
 .fa-sign-in-alt {
   font-size: 16px;
@@ -1073,3 +1114,15 @@ footer .footer-meta {
 
 /* field_help(..., lines: true): a popover whose text is a short list keeps its line breaks (2026-11-19). */
 .field-help-lines .popover-body { white-space: pre-line; }
+
+/* A tool page's one-line description, in a band under its teal header bar -- the same line the
+   grouped Tools menu shows (tool_page_blurb(), lib/help_ui.php). Only on a site that turned the
+   lines on in Manage Tools. */
+.tool-page-blurb {
+  padding: 0.45rem 1rem;
+  font-size: 0.92rem;
+  color: var(--moop-main-dark);
+  background: rgba(var(--moop-main-rgb), 0.07);
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}

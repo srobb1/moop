@@ -25,7 +25,7 @@ added afterwards; MOOP degrades feature-by-feature rather than failing to start.
 | BLAST+ | the BLAST tool | yes — that tool is unavailable |
 | samtools, bgzip, tabix | genome/GFF indexing for JBrowse2 | yes — no genome browser |
 | Node.js 18+ / `@jbrowse/cli` | `jbrowse text-index` feature search | yes — no feature-name search |
-| bigWigSummary | Expression Explorer | yes — that feature is unavailable |
+| bigWigSummary | RNA-seq Expression Explorer | yes — that feature is unavailable |
 | primer3 | the primer designer | yes — that tool is unavailable |
 | jq | convenience for editing JSON by hand | yes |
 

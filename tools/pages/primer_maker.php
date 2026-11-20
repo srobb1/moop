@@ -28,6 +28,7 @@
             <?= help_modal_trigger('pm-help', '', 'What Primer Maker does') ?>
             <?= moop_primer_maker_as_shipped() ? page_purpose('Design PCR, qPCR, RT-PCR or sequencing primers from a sequence, and get a table you can paste straight into a spreadsheet.', '', false, false) : page_purpose('Design primers from a sequence, and get a table you can paste straight into a spreadsheet.', '', false, false) ?>
         </div>
+        <?= tool_page_blurb('primer_maker', moop_primer_maker_as_shipped() ? null : 'Design primers for a sequence') ?>
     </div>
 
     <?php // primer3 missing is an ADMIN problem, and the user can do nothing about

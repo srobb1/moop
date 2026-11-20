@@ -23,8 +23,9 @@ $src_cell = function (string $s) use ($sources, $source_about): string {
     <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
       <?= page_title(t_plain($tool_title)) ?>
       <?= help_modal_trigger('crosswalk-help', '', 'How the Rosetta Stone ID Translator works') ?>
-      <?= page_purpose('Translate IDs from older transcriptomes, ESTs and arrays into the same gene in other sources of the same species.', '', false, false) ?>
+      <?= page_purpose('Translate IDs between the transcriptomes, gene sets, ESTs and arrays of one species, to the same gene in each.', '', false, false) ?>
     </div>
+    <?= tool_page_blurb('crosswalk') ?>
   </div>
   <?php
   echo help_modal('crosswalk-help', 'How the Rosetta Stone ID Translator works', [[

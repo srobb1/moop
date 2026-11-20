@@ -15,6 +15,7 @@
       <?= help_modal_trigger('mm-help', '', 'What MOOPmart does') ?>
         <?= page_purpose('Export annotation data or sequences.', '', false, false) ?>
     </div>
+    <?= tool_page_blurb('moopmart') ?>
   </div>
 
   <?php
@@ -499,7 +500,7 @@
                         ],
                         ...($anatomy_organisms ? [[
                             'label' => 'Anatomical Expression',
-                            'text'  => 'Where a gene is reported to be expressed, as anatomy terms curated from published papers (ID = the term, Description = its name). Only for organisms that have these curations; the Anatomical Expression Search shows each record with its paper and evidence.',
+                            'text'  => 'Where a gene is reported to be expressed, as anatomy terms curated from published papers (ID = the term, Description = its name). Only for organisms that have these curations; Expression by Anatomy shows each record with its paper and evidence.',
                         ]] : []),
                     ],
                 ],
@@ -678,7 +679,7 @@
       <div id="mm-expr-row" class="d-none mt-2 pt-2 border-top">
         <button type="button" class="btn btn-sm mm-dl-secondary" id="mm-expr-btn">
           <span id="mm-expr-spinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
-          <i class="fa fa-th me-1"></i> <?= t('Send to Expression Explorer') . "\n" ?>
+          <i class="fa fa-th me-1"></i> <?= t('Send to RNA-seq Expression Explorer') . "\n" ?>
         </button>
         <span class="small text-muted ms-1"><?= t('Heatmap of these genes, one gene set at a time.') ?></span>
         <div id="mm-expr-result" class="small mt-2"></div>

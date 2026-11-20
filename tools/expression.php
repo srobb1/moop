@@ -157,4 +157,4 @@ echo render_display_page(__DIR__ . '/pages/expression.php', [
     'sort'            => $sort,
     'link'            => $link,
     'page_styles'     => [moop_url_base() . "/css/expression-tool.css"],
-], 'Expression Explorer');
+], 'RNA-seq Expression Explorer');

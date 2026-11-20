@@ -27,6 +27,7 @@
         <?= help_modal_trigger('blast-help', '', 'How to use BLAST') ?>
           <?= page_purpose('Search genome assemblies by sequence similarity. Paste a DNA or protein sequence, select a program and database, and run.', '', false, false) ?>
       </div>
+      <?= tool_page_blurb('blast_search') ?>
     </div>
 
     <?php if (empty($accessible_sources)): ?>

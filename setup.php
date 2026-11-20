@@ -216,7 +216,7 @@ function checkEnvironment($base, $config) {
         'bgzip'           => ['required' => true],
         'sqlite3'         => ['required' => true],
         'jbrowse'         => ['required' => false, 'detail' => 'Optional — required for JBrowse text-index (gene name search in browser)'],
-        'bigWigSummary'   => ['required' => false, 'detail' => 'Optional — required for Expression Explorer'],
+        'bigWigSummary'   => ['required' => false, 'detail' => 'Optional — required for the RNA-seq Expression Explorer'],
         'jq'              => ['required' => false],
     ];
 

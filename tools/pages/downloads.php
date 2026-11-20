@@ -20,6 +20,7 @@ $clear_url   = moop_url_base() . '/tools/downloads.php';
       <?= help_modal_trigger('downloads-help', '', 'How to use Downloads') ?>
         <?= page_purpose('Browse and download genome sequence and annotation files for organisms you have access to.', '', false, false) ?>
     </div>
+    <?= tool_page_blurb('downloads') ?>
   </div>
 
   <?php if ($has_context): ?>

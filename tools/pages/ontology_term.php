@@ -231,7 +231,7 @@ $rows = function (array $list) use ($prefix): string {
       <div class="card-body">
         <?php if ($records['total'] > 0): ?>
           <p class="mb-2"><?= t_markup('%s published expression records in %s or any of its parts.', '<strong>' . number_format($records['total']) . '</strong>', htmlspecialchars($term['label'])) ?></p>
-          <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars($records['url']) ?>"><?= t('See them in the Anatomical Expression Search') ?></a>
+          <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars($records['url']) ?>"><?= t('See them in Expression by Anatomy') ?></a>
         <?php else: ?>
           <p class="text-muted mb-0"><?= t('No published expression records for this term or its parts.') ?></p>
         <?php endif; ?>

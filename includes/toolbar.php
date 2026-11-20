@@ -64,10 +64,18 @@ foreach (ConfigManager::getInstance()->getMainMenu(moop_current_lang()) as $mb_i
          are config/tools_config.php's defaults or the site's own (Admin -> Manage Tools), and a
          switched-off tool is left out. Until 2026-11-03 this was a second, hand-written list of
          tools; the defaults reproduce it byte-for-byte. */ ?>
-          <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
-<?php foreach (ConfigManager::getInstance()->getToolsMenu() as $tb_item): ?>
+<?php /* A site that turned on the grouped menu (Manage Tools) gets headings and a line of text
+         under each tool, in a wider menu; one that did not gets exactly the plain list. */
+$tb_items = ConfigManager::getInstance()->getToolsMenu();
+$tb_grouped = (bool) array_filter($tb_items, fn($i) => $i['type'] === 'heading' || ($i['blurb'] ?? '') !== ''); ?>
+          <ul class="dropdown-menu<?= $tb_grouped ? ' tools-menu-grouped' : '' ?>" aria-labelledby="toolsDropdown">
+<?php foreach ($tb_items as $tb_item): ?>
 <?php if ($tb_item['type'] === 'divider'): ?>
             <li><hr class="dropdown-divider"></li>
+<?php elseif ($tb_item['type'] === 'heading'): ?>
+            <li><h6 class="dropdown-header"><?= htmlspecialchars(t_plain($tb_item['label'])) ?></h6></li>
+<?php elseif ($tb_item['blurb'] !== ''): ?>
+            <li><a class="dropdown-item" href="<?= moop_url_base() ?><?= htmlspecialchars($tb_item['url_path']) ?>"><span class="tools-menu-name"><?= htmlspecialchars(t_plain($tb_item['label'])) ?></span><span class="tools-menu-blurb"><?= htmlspecialchars(t_plain($tb_item['blurb'])) ?></span></a></li>
 <?php else: ?>
             <li><a class="dropdown-item" href="<?= moop_url_base() ?><?= htmlspecialchars($tb_item['url_path']) ?>"><?= htmlspecialchars(t_plain($tb_item['label'])) ?></a></li>
 <?php endif; ?>

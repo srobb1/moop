@@ -84,4 +84,4 @@ echo render_display_page(__DIR__ . '/pages/anatomy_search.php', [
     'source'         => (string) (moop_page_sources()[$organism]['source'] ?? ''),
     'source_url'     => (string) (moop_page_sources()[$organism]['source_url'] ?? ''),
     'page_script' => [moop_url_base() . '/js/modules/ontology-term-box.js', moop_url_base() . '/js/anatomy-search.js'],
-], 'Anatomical Expression Search');
+], 'Expression by Anatomy');

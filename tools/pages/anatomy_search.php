@@ -13,13 +13,14 @@ $tabs = ['term' => t_plain('By anatomy term'), 'pub' => t_plain('By publication'
 <div class="container py-3">
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
-      <?= page_title('Anatomical Expression Search') ?>
-      <?= help_modal_trigger('anatomy-search-help', '', 'How the Anatomical Expression Search works') ?>
+      <?= page_title('Expression by Anatomy') ?>
+      <?= help_modal_trigger('anatomy-search-help', '', 'How Expression by Anatomy works') ?>
       <?= page_purpose('Find where planarian genes were published as expressed: by body part, by paper, or by gene.', '', false, false) ?>
     </div>
+    <?= tool_page_blurb('anatomy_search') ?>
   </div>
   <?php
-  echo help_modal('anatomy-search-help', 'How the Anatomical Expression Search works', [[
+  echo help_modal('anatomy-search-help', 'How Expression by Anatomy works', [[
       'heading' => '',
       'cards'   => [
           ['label' => 'By anatomy term', 'text' => 'Type a body part, cell type or region (synonyms work: brain finds cephalic ganglia), choose how far the search reaches -- part of the eye also covers the optic cup and everything else in the eye, at any depth -- and optionally the kind of evidence.'],
@@ -31,7 +32,7 @@ $tabs = ['term' => t_plain('By anatomy term'), 'pub' => t_plain('By publication'
   ?>
 
   <?php if (!$releases || !$organism): ?>
-    <div class="alert alert-light border"><?= t('The Anatomical Expression Search is not set up on this site yet.') ?></div>
+    <div class="alert alert-light border"><?= t('Expression by Anatomy is not set up on this site yet.') ?></div>
   <?php else: ?>
 
   <?php if ($source !== ''): ?>

@@ -1,4 +1,4 @@
-# Tools menu reorganisation + Nematostella anatomy idea (2026-11-18, ideas only — nothing decided)
+# Tools menu reorganisation + Nematostella anatomy idea (2026-11-18; decisions 1-3 MADE + BUILT 2026-11-19)
 
 Written at the user's request before lunch. Pick up from "Decisions to make".
 
@@ -70,6 +70,10 @@ So the Anatomical Expression Search could cover Nematostella too, and the Endo-A
   OLS); reuse beats a home-made one, and PAGE curations need stable term IDs.
 
 ## Decisions to make
+
+**2026-11-19 (Sofia):** 1 = RNA-seq Expression Explorer + Expression by Anatomy; 2 = yes, the four groups
+above, one line of text per tool, single wide list (not a mega-menu); 3 = Endo-Atlas stays in Research only.
+Built opt-in: `#Heading` entries in `tools_layout.menu`, `tools_layout.menu_blurbs`, registry `menu_group`/`menu_blurb`.
 
 1. New tool names (table above)?
 2. Headings in the Tools menu: yes/no, and the groups.

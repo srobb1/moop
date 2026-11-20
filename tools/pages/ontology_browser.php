@@ -17,6 +17,7 @@ $self = moop_url('tools/ontology_browser.php');
       <?= help_modal_trigger('ob-help', '', 'How the Ontology Browser works') ?>
       <?= page_purpose('Explore an ontology as a tree: every term with its definition, and a page for each term.', '', false, false) ?>
     </div>
+    <?= tool_page_blurb('ontology_browser') ?>
   </div>
   <?= help_modal('ob-help', 'How the Ontology Browser works', [[
       'heading' => '',

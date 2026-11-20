@@ -13,6 +13,7 @@
       <?= page_purpose('Find genes across one or more organisms by what is known about them — a keyword, an annotation term, or an ID.', '', false, false) ?>
       <?= help_modal_trigger('search-page-help', '', 'What this page does') ?>
     </div>
+    <?= tool_page_blurb('annotation_search') ?>
   </div>
 
   <?php

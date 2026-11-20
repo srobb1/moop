@@ -2,8 +2,8 @@
 /**
  * MANAGE TOOLS — content (no <html>/<body>; rendered via layout.php).
  * Variables from $data: $site, $tools, $enabled, $flash, $file_write_error, $config_file,
- * $menu_rows, $box_rows, $label_of(id, where), $default_label_of(id, where), $customised.
- * Reordering: js/modules/manage-tools.js (up/down, add/remove divider).
+ * $menu_rows, $box_rows, $menu_blurbs, $grouped_preview, $has_headings, $label_of(id, where), $default_label_of(id, where), $customised.
+ * Reordering: js/modules/manage-tools.js (up/down, add/remove divider or heading).
  */
 $where = function ($pages): string {
     if ($pages === 'all' || $pages === null) return 'every page';
@@ -94,6 +94,15 @@ $n_off = count(array_filter($enabled, fn($on) => !$on));
         $moves = '<div class="btn-group btn-group-sm">'
                . '<button type="button" class="btn btn-outline-secondary mt-up" title="Move up" aria-label="Move up"' . $dis . '><i class="fa fa-arrow-up"></i></button>'
                . '<button type="button" class="btn btn-outline-secondary mt-down" title="Move down" aria-label="Move down"' . $dis . '><i class="fa fa-arrow-down"></i></button></div>';
+        if (($heading = ConfigManager::toolsMenuHeading($row['id'])) !== null) {
+            static $hn = 0; $key = 'h' . (++$hn);
+            return '<tr class="mt-heading table-light"><td class="ps-3">' . $moves
+                 . '<input type="hidden" name="menu_order[]" value="#' . $key . '"></td>'
+                 . '<td><span class="small fw-semibold text-uppercase"><i class="fa fa-heading me-1"></i>heading</span></td>'
+                 . '<td><input type="text" class="form-control form-control-sm fw-semibold" maxlength="40" name="menu_heading[' . $key . ']"'
+                 . ' value="' . htmlspecialchars($heading) . '" aria-label="Heading text"' . $dis . '></td>'
+                 . '<td class="text-end pe-3"><button type="button" class="btn btn-sm btn-outline-danger mt-remove"' . $dis . '>Remove</button></td></tr>';
+        }
         if ($row['id'] === '|') {
             return '<tr class="mt-divider table-light"><td class="ps-3">' . $moves
                  . '<input type="hidden" name="menu_order[]" value="|"></td>'
@@ -121,7 +130,17 @@ $n_off = count(array_filter($enabled, fn($on) => !$on));
       <div class="card-header adm-head"><h5 class="mb-0">Tools menu in the navigation bar</h5></div>
       <div class="card-body p-0">
         <p class="small text-muted px-3 pt-3 mb-2">Ticked tools appear in the <strong>Tools</strong> menu, top to
-          bottom in this order, with the label you give them. A divider draws a line between groups.</p>
+          bottom in this order, with the label you give them. A <strong>heading</strong> names the group of tools
+          under it; a divider is just a line. A heading with no tool under it is not shown.</p>
+        <?php if ($grouped_preview): ?>
+          <div class="alert alert-info small mx-3 py-2 mb-2"><i class="fa fa-info-circle me-1"></i>The menu below is
+            laid out in the suggested groups. Look it over, then <strong>Save</strong> to use it &mdash; or
+            <a href="manage_tools.php">go back to the saved menu</a>.</div>
+        <?php elseif (!$has_headings): ?>
+          <p class="small px-3 mb-2"><a href="manage_tools.php?grouped=1"><i class="fa fa-layer-group me-1"></i>Use the
+            suggested groups</a> <span class="text-muted">(Browse &amp; search, Expression, Sequences, Export &mdash;
+            you can change them before saving)</span></p>
+        <?php endif; ?>
         <table class="table table-sm align-middle mb-0 mt-list" data-list="menu">
           <thead class="table-light"><tr><th class="ps-3" style="width:7rem;">Order</th><th>Show</th><th>Label in the menu</th><th></th></tr></thead>
           <tbody>
@@ -129,8 +148,15 @@ $n_off = count(array_filter($enabled, fn($on) => !$on));
           </tbody>
         </table>
         <div class="px-3 py-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="mt-add-heading" <?= $file_write_error ? 'disabled' : '' ?>>
+            <i class="fa fa-plus me-1"></i>Add a heading</button>
           <button type="button" class="btn btn-sm btn-outline-secondary" id="mt-add-divider" <?= $file_write_error ? 'disabled' : '' ?>>
             <i class="fa fa-plus me-1"></i>Add a divider</button>
+          <div class="form-check mt-2 mb-0">
+            <input class="form-check-input" type="checkbox" name="menu_blurbs" value="1" id="menu_blurbs"<?= ($menu_blurbs || $grouped_preview) ? ' checked' : '' ?><?= $file_write_error ? ' disabled' : '' ?>>
+            <label class="form-check-label small" for="menu_blurbs">Show a line of text under each tool saying what it is
+              for <span class="text-muted">(written in <code>config/tools_config.php</code>, <code>menu_blurb</code>)</span></label>
+          </div>
         </div>
       </div>
     </div>

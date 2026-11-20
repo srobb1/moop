@@ -39,6 +39,7 @@
         <?= help_modal_trigger('retrieve-help', '', 'How to use Sequence Retrieval') ?>
           <?= page_purpose('Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs — whole, or a range of positions — and retrieve their protein, mRNA, CDS and genomic sequences, with flanking sequence if you want it.', '', false, false) ?>
       </div>
+      <?= tool_page_blurb('download_fasta') ?>
     </div>
 
     <?php if (empty($accessible_sources)): ?>

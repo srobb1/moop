@@ -60,7 +60,7 @@
             <tr><td><strong>samtools</strong>, <strong>bgzip</strong>, <strong>tabix</strong></td><td>genome and GFF indexing</td></tr>
             <tr><td><strong>Node.js 18+</strong> and <code>@jbrowse/cli</code></td><td>gene-name search in the genome browser (<code>jbrowse text-index</code>)</td></tr>
             <tr><td><strong>NCBI BLAST+</strong></td><td>the BLAST tool and sequence retrieval</td></tr>
-            <tr><td><strong>bigWigSummary</strong> (UCSC kent)</td><td>Expression Explorer</td></tr>
+            <tr><td><strong>bigWigSummary</strong> (UCSC kent)</td><td>RNA-seq Expression Explorer</td></tr>
             <tr><td><strong>primer3</strong></td><td>the primer designer</td></tr>
             <tr><td><strong>Linux/Unix</strong>, 50&nbsp;GB+ disk</td><td>POSIX functions; storage grows with the number of organisms</td></tr>
           </tbody>

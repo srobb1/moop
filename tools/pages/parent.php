@@ -577,13 +577,13 @@
                 <?php endif; ?>
             </span>
             <?php if ($__ex['with_data'] > 0): ?>
-            <?php /* Into the Expression Explorer with this gene already in the list, to add others. */ ?>
+            <?php /* Into the RNA-seq Expression Explorer with this gene already in the list, to add others. */ ?>
 <?php if (moop_tool_on('expression')): ?>
             <a class="btn btn-sm btn-outline-secondary py-0 ms-auto"
                href="<?= htmlspecialchars(moop_url_base()) ?>/tools/expression.php?<?= htmlspecialchars(http_build_query([
                    'organism' => $organism_name, 'assembly' => $genome_accession, 'gene_set' => $gene_set_name,
                    'genes' => $feature_uniquename])) ?>"
-               title="Open the Expression Explorer with this gene, to compare it with others">
+               title="<?= t('Open the RNA-seq Expression Explorer with this gene, to compare it with others') ?>">
                 <i class="fa fa-th"></i> <?= t('Compare genes') ?></a>
 <?php endif; ?>
             <form method="POST" action="" class="ms-1">

@@ -31,7 +31,7 @@ be lost when the pipeline reloads an organism. (CLAUDE.md §9 — keep the pipel
 ## 1. `anatomy_expression.sqlite` — curated anatomical expression (PAGE)
 
 Where a gene is expressed, by anatomy term, from published papers (in situ, RNA-seq, single-cell…).
-Not to be confused with the **Expression Explorer** (RNA-seq heatmaps: *how much*); this is *where*.
+Not to be confused with the **RNA-seq Expression Explorer** (RNA-seq heatmaps: *how much*); this is *where*.
 
 | | |
 |---|---|
@@ -41,7 +41,7 @@ Not to be confused with the **Expression Explorer** (RNA-seq heatmaps: *how much
 | Source | the 9-column PAGE table, downloaded from `raw.githubusercontent.com` only (`curation/OUTPUT/term_annotations_2024-05-24.txt` in planosphere/PAGE) into `<cache>/ontologies/sources/page-<Organism>.tsv` |
 | Needs | the anatomy ontologies built first (`scripts/build_ontologies.php`) — for term checks and expansion |
 | Network | PubMed E-utilities at build time only (paper titles); unreachable → build still succeeds, PMIDs shown |
-| Used by | Anatomical Expression Search (`tools/anatomy_search.php`: by term / publication / gene IDs), gene page "Anatomical expression" card (`tools/parent.php`), Ontology Browser term counts |
+| Used by | Expression by Anatomy (`tools/anatomy_search.php`: by term / publication / gene IDs), gene page "Anatomical expression" card (`tools/parent.php`), Ontology Browser term counts |
 
 **Source columns (header must match exactly):**
 `Accession, Term, Experimental Evidence, Biotype, Life Cycle Stage, Specimen, Curator (ORCID), Pubmed ID, Date`
@@ -128,7 +128,7 @@ a gene set may get its own permission.
 
 - Images: each row names its `assembly`/`gene_set`; checked when served, listed on a gene page, and
   counted on a term page.
-- ⚠️ **Gap, to fix next:** the Anatomical Expression Search (`tools/anatomy_search.php`) and the
+- ⚠️ **Gap, to fix next:** the Expression by Anatomy (`tools/anatomy_search.php`) and the
   Rosetta Stone translator (`tools/crosswalk.php`) check only that the organism has *something*
   public. A private gene set's IDs would be listed. One shared per-data-set check, built with the
   images, then applied to both.

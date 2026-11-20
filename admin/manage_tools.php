@@ -41,8 +41,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$file_write_error) {
     // changes nothing keeps following config/tools_config.php as it evolves.
     $menu_show = array_map('strval', (array) ($_POST['menu_show'] ?? []));
     $box_show  = array_map('strval', (array) ($_POST['toolbox_show'] ?? []));
-    $menu    = array_values(array_filter(array_map('strval', (array) ($_POST['menu_order'] ?? [])),
-                                         fn($x) => $x === '|' || in_array($x, $menu_show, true)));
+    // A heading row sends '#h<n>' in menu_order[] and its text as menu_heading[h<n>] -- matched
+    // by that key, never by position. It is saved as '#' + text; an empty one is dropped.
+    $headings = array_map(fn($t) => trim(preg_replace('/\s+/', ' ', (string) $t)), (array) ($_POST['menu_heading'] ?? []));
+    $menu = [];
+    foreach (array_map('strval', (array) ($_POST['menu_order'] ?? [])) as $x) {
+        if ($x === '|' || in_array($x, $menu_show, true)) $menu[] = $x;
+        elseif (preg_match('/^#(h\d{1,4})$/', $x, $hm) && ($headings[$hm[1]] ?? '') !== '') $menu[] = '#' . mb_substr($headings[$hm[1]], 0, 40);
+    }
     $toolbox = array_values(array_filter(array_map('strval', (array) ($_POST['toolbox_order'] ?? [])),
                                          fn($x) => in_array($x, $box_show, true)));
     $labels = [];
@@ -57,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$file_write_error) {
     if ($menu !== $config->defaultToolsMenuOrder()) $layout['menu']    = $menu;
     if ($toolbox !== $config->defaultToolboxOrder()) $layout['toolbox'] = $toolbox;
     if ($labels)                                     $layout['labels']  = $labels;
+    if (!empty($_POST['menu_blurbs']))               $layout['menu_blurbs'] = true;
 
     $result = $config->saveEditableConfig(['tools_disabled' => $off, 'tools_layout' => $layout], $config_dir);
     $_SESSION['tools_flash'] = !empty($result['success'])
@@ -74,11 +81,14 @@ unset($_SESSION['tools_flash']);
 // Rows for the two ordering lists: what the site shows now, in order, then every other tool
 // (unticked) so it can be added. The menu keeps its dividers.
 $menu_rows = [];
-foreach ($config->toolsMenuOrder() as $id) {
-    if ($id === '|' || isset($all_tools[$id])) $menu_rows[] = ['id' => $id, 'show' => true];
+// "Use the suggested groups" (?grouped=1) lays the rows out in ConfigManager::suggestedGroupedMenuOrder()
+// for the admin to look over -- nothing is saved until they press Save.
+$menu_now = !empty($_GET['grouped']) ? $config->suggestedGroupedMenuOrder() : $config->toolsMenuOrder();
+foreach ($menu_now as $id) {
+    if ($id === '|' || isset($all_tools[$id]) || ConfigManager::toolsMenuHeading($id) !== null) $menu_rows[] = ['id' => $id, 'show' => true];
 }
 foreach (array_keys($all_tools) as $id) {
-    if (!in_array((string) $id, $config->toolsMenuOrder(), true)) $menu_rows[] = ['id' => (string) $id, 'show' => false];
+    if (!in_array((string) $id, $menu_now, true)) $menu_rows[] = ['id' => (string) $id, 'show' => false];
 }
 $box_now   = $config->toolboxOrder() ?? $config->defaultToolboxOrder();
 $box_rows  = [];
@@ -90,6 +100,9 @@ foreach (array_keys($all_tools) as $id) {
 $data = [
     'site'             => $config->getString('site'),
     'menu_rows'        => $menu_rows,
+    'menu_blurbs'      => $config->toolsMenuBlurbs(),
+    'grouped_preview'  => !empty($_GET['grouped']),
+    'has_headings'     => (bool) array_filter($config->toolsMenuOrder(), fn($x) => ConfigManager::toolsMenuHeading((string) $x) !== null),
     'box_rows'         => $box_rows,
     'label_of'         => fn(string $id, string $where) => $config->toolLabel($id, $where),
     'default_label_of' => fn(string $id, string $where) => (string) ($where === 'menu'

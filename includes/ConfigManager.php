@@ -352,30 +352,82 @@ class ConfigManager
     }
 
     /**
-     * The navbar's Tools menu, in order: ['type' => 'tool', 'id', 'label', 'url_path'] or
-     * ['type' => 'divider']. From the site's saved 'tools_layout.menu' when it has one, else
-     * from the registry's menu_order / menu_divider_after -- which reproduce the menu as it was
-     * hand-written in includes/toolbar.php until 2026-11-03. Switched-off tools are left out,
-     * and a divider never leads, trails or doubles (one beside a switched-off tool would).
+     * The navbar's Tools menu, in order: ['type' => 'tool', 'id', 'label', 'url_path', 'blurb'],
+     * ['type' => 'divider'] or ['type' => 'heading', 'label']. From the site's saved
+     * 'tools_layout.menu' when it has one, else from the registry's menu_order /
+     * menu_divider_after -- which reproduce the menu as it was hand-written in
+     * includes/toolbar.php until 2026-11-03. Switched-off tools are left out, a divider never
+     * leads, trails or doubles (one beside a switched-off tool would), and a heading with no tool
+     * under it is dropped. 'blurb' (the registry's one-line menu_blurb) is filled only when the
+     * site turned 'tools_layout.menu_blurbs' on, so a site that never did gets today's menu.
      * Here, not in lib/functions_tools.php: the navbar is drawn on pages that never load that.
      */
     public function getToolsMenu(): array
     {
         if (!$this->ensureLoaded()) return [];
-        $order = $this->toolsMenuOrder();
+        $blurbs = $this->toolsMenuBlurbs();
         $items = [];
-        foreach ($order as $id) {
+        foreach ($this->toolsMenuOrder() as $id) {
             $id = (string) $id;
             if ($id === '|') {
-                if ($items && end($items)['type'] !== 'divider') $items[] = ['type' => 'divider'];
+                if ($items && end($items)['type'] === 'tool') $items[] = ['type' => 'divider'];
+                continue;
+            }
+            if (($heading = self::toolsMenuHeading($id)) !== null) {
+                // A heading replaces a divider just before it, and a heading left with no tool
+                // under it (all switched off) gives way to the next one.
+                while ($items && end($items)['type'] !== 'tool') array_pop($items);
+                $items[] = ['type' => 'heading', 'label' => $heading];
                 continue;
             }
             if (!isset($this->tools[$id]) || !$this->isToolEnabled($id)) continue;
             $items[] = ['type' => 'tool', 'id' => $id, 'label' => $this->toolLabel($id, 'menu'),
-                        'url_path' => (string) ($this->tools[$id]['url_path'] ?? '')];
+                        'url_path' => (string) ($this->tools[$id]['url_path'] ?? ''),
+                        'blurb' => $blurbs ? (string) ($this->tools[$id]['menu_blurb'] ?? '') : ''];
         }
-        while ($items && end($items)['type'] === 'divider') array_pop($items);
+        while ($items && end($items)['type'] !== 'tool') array_pop($items);
         return $items;
+    }
+
+    /** A heading in a saved menu order is '#' + its text ('#Sequences'); null for anything else. */
+    public static function toolsMenuHeading(string $entry): ?string
+    {
+        if ($entry === '' || $entry[0] !== '#') return null;
+        $text = trim(substr($entry, 1));
+        return $text === '' ? null : $text;
+    }
+
+    /** Does the site show each tool's one-line menu_blurb under its name in the Tools menu? Default no. */
+    public function toolsMenuBlurbs(): bool
+    {
+        return !empty($this->config['tools_layout']['menu_blurbs']);
+    }
+
+    /** The groups for a headed Tools menu, in order: registry 'menu_group' key => heading. */
+    public const TOOLS_MENU_GROUPS = [
+        'browse'     => 'Browse & search',
+        'expression' => 'Expression',
+        'sequences'  => 'Sequences',
+        'export'     => 'Export',
+    ];
+
+    /**
+     * The menu sorted into TOOLS_MENU_GROUPS with a heading over each: what Manage Tools'
+     * "Use the suggested groups" fills in. A tool with no menu_group goes last, under no heading.
+     * Never applied on its own -- a site has headings only once it saves them.
+     */
+    public function suggestedGroupedMenuOrder(): array
+    {
+        $plain = array_values(array_filter($this->defaultToolsMenuOrder(), fn($x) => $x !== '|'));
+        $order = [];
+        foreach (self::TOOLS_MENU_GROUPS as $group => $heading) {
+            $in = array_values(array_filter($plain, fn($id) => ($this->tools[$id]['menu_group'] ?? '') === $group));
+            if ($in) array_push($order, '#' . $heading, ...$in);
+        }
+        foreach ($plain as $id) {
+            if (!isset(self::TOOLS_MENU_GROUPS[$this->tools[$id]['menu_group'] ?? ''])) $order[] = $id;
+        }
+        return $order;
     }
 
     /** True when Site Configuration puts the technical panels (BUSCO, assembly statistics, gene set
@@ -1040,17 +1092,21 @@ class ConfigManager
                     $data[$key] = array_values(array_unique($data[$key]));
                 }
 
-                // tools_layout: menu = tool ids and '|' dividers; toolbox = tool ids; labels =
-                // {id: {menu, toolbox}} short plain strings. Anything else is refused whole.
+                // tools_layout: menu = tool ids, '|' dividers and '#Text' headings (1-40 plain
+                // characters); toolbox = tool ids; labels = {id: {menu, toolbox}} short plain
+                // strings; menu_blurbs = true. Anything else is refused whole.
                 if ($key === 'tools_layout') {
                     $known = array_keys($this->tools ?? []);
                     $v = $data[$key];
-                    $ok = is_array($v) && !array_diff(array_keys($v), ['menu', 'toolbox', 'labels']);
+                    $ok = is_array($v) && !array_diff(array_keys($v), ['menu', 'toolbox', 'labels', 'menu_blurbs']);
+                    if ($ok && isset($v['menu_blurbs'])) $ok = $v['menu_blurbs'] === true;
+                    $is_heading = fn($x) => is_string($x) && preg_match('/^#[^\x00-\x1f<>]{1,40}$/u', $x) && self::toolsMenuHeading($x) !== null;
                     foreach (['menu', 'toolbox'] as $list) {
                         if (!$ok || !isset($v[$list])) continue;
+                        if (!is_array($v[$list])) { $ok = false; break; }
+                        $tools_in = $list === 'menu' ? array_filter($v[$list], fn($x) => $x !== '|' && !$is_heading($x)) : $v[$list];
                         $allowed = $list === 'menu' ? array_merge($known, ['|']) : $known;
-                        $ok = is_array($v[$list]) && !array_diff($v[$list], $allowed)
-                            && count(array_filter($v[$list], fn($x) => $x !== '|')) === count(array_unique(array_filter($v[$list], fn($x) => $x !== '|')));
+                        $ok = !array_diff($tools_in, $allowed) && count($tools_in) === count(array_unique($tools_in));
                     }
                     if ($ok && isset($v['labels'])) {
                         $ok = is_array($v['labels']) && !array_diff(array_keys($v['labels']), $known);

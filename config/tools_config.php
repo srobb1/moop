@@ -10,7 +10,10 @@
  * - To change tool display: Edit name, icon, description, btn_class
  * - 'pages' controls where the tool shows up (omit = show everywhere)
  * - 'menu_label' / 'menu_order' put it in the navbar's Tools menu (no menu_order = not in it);
- *   'menu_divider_after' draws a line after it. 'name' is its toolbox label. A site can reorder
+ *   'menu_divider_after' draws a line after it. 'menu_group' (a ConfigManager::TOOLS_MENU_GROUPS
+ *   key) and 'menu_blurb' (one short line saying what it is for) serve a site that turned on the
+ *   grouped menu in Manage Tools; a site that did not never sees them. The same line shows in a
+ *   box under the tool page's header (tool_page_blurb(), lib/help_ui.php) -- one text, two places. 'name' is its toolbox label. A site can reorder
  *   and rename both on Admin -> Manage Tools ('tools_layout' in config_editable.json); these
  *   are the defaults, and they reproduce the menu as it was hand-written until 2026-11-03.
  * 
@@ -27,6 +30,8 @@ return [
         'id'              => 'download_fasta',
         'menu_label'      => 'Retrieve Sequences',
         'menu_order'      => 8,
+        'menu_group'      => 'sequences',
+        'menu_blurb'      => 'Get protein, mRNA, CDS or genomic sequence for a list of gene IDs',
         'name'            => 'Retrieve Sequences',
         'icon'            => 'fa-dna',
         'description'     => 'Search and download sequences',
@@ -40,6 +45,8 @@ return [
         'id'              => 'blast_search',
         'menu_label'      => 'BLAST Search',
         'menu_order'      => 5,
+        'menu_group'      => 'sequences',
+        'menu_blurb'      => 'Find sequences similar to yours in our genomes, transcripts and proteins',
         'name'            => 'BLAST Search',
         'icon'            => 'fa-dna',
         'description'     => 'Search sequences against databases',
@@ -64,6 +71,8 @@ return [
         'id'              => 'downloads',
         'menu_label'      => 'Downloads',
         'menu_order'      => 9,
+        'menu_group'      => 'export',
+        'menu_blurb'      => 'Download whole genome, protein and annotation files',
         'name'            => 'Downloads',
         'icon'            => 'fa-download',
         'description'     => 'Browse and download genome files',
@@ -77,6 +86,8 @@ return [
         'id'              => 'genome_browser',
         'menu_label'      => 'Genome Browser',
         'menu_order'      => 1,
+        'menu_group'      => 'browse',
+        'menu_blurb'      => 'See genes, transcripts and data tracks along the genome',
         'menu_divider_after' => true,
         'name'            => 'View in Genome Browser',
         'icon'            => 'fa-dna',
@@ -92,6 +103,8 @@ return [
         'id'             => 'annotation_search',
         'menu_label'      => 'Annotation Search',
         'menu_order'      => 2,
+        'menu_group'      => 'browse',
+        'menu_blurb'      => 'Find genes by name, ID, protein domain or GO term',
         'name'           => 'Annotation Search',
         'icon'           => 'fa-search',
         'description'    => 'Search annotations across organisms, assemblies, and gene sets',
@@ -106,6 +119,8 @@ return [
         'id'             => 'moopmart',
         'menu_label'      => 'MOOPmart: Data Exporter',
         'menu_order'      => 3,
+        'menu_group'      => 'export',
+        'menu_blurb'      => 'Build a table of genes and their annotations to download',
         'name'           => 'MOOPmart: Data Exporter',
         'icon'           => 'fa-filter',
         'description'    => 'Filter features by annotation, coordinates, and gene set — download as TSV or FASTA',
@@ -120,6 +135,8 @@ return [
         'id'             => 'primer_blast',
         'menu_label'      => 'Primer BLAST',
         'menu_order'      => 6,
+        'menu_group'      => 'sequences',
+        'menu_blurb'      => 'Check where a primer pair binds and what it amplifies',
         'name'           => 'Primer BLAST',
         'icon'           => 'fa-vials',
         'description'    => 'Check primer pairs against a genome and transcriptome — product sizes and how many places they amplify',
@@ -137,9 +154,11 @@ return [
 
     'expression' => [
         'id'              => 'expression',
-        'menu_label'      => 'Expression Explorer',
+        'menu_label'      => 'RNA-seq Expression Explorer',
         'menu_order'      => 4,
-        'name'            => 'Expression Explorer',
+        'menu_group'      => 'expression',
+        'menu_blurb'      => 'Compare RNA-seq levels for a list of genes as a heatmap',
+        'name'            => 'RNA-seq Expression Explorer',
         'icon'            => 'fa-th',
         'description'     => 'Compare a list of genes across expression experiments as a heatmap',
         'btn_class'       => 'btn-tool-teal',
@@ -154,9 +173,11 @@ return [
 
     'anatomy_search' => [
         'id'              => 'anatomy_search',
-        'menu_label'      => 'Anatomical Expression Search',
+        'menu_label'      => 'Expression by Anatomy',
         'menu_order'      => 4.5,
-        'name'            => 'Anatomical Expression Search',
+        'menu_group'      => 'expression',
+        'menu_blurb'      => 'Where genes are expressed, curated from papers — search by body part, paper or gene',
+        'name'            => 'Expression by Anatomy',
         'icon'            => 'fa-microscope',
         'description'     => 'Where genes were published as expressed: by body part, by paper, or by gene',
         'btn_class'       => 'btn-tool-teal',
@@ -177,6 +198,8 @@ return [
         'id'              => 'crosswalk',
         'menu_label'      => 'Rosetta Stone ID Translator',
         'menu_order'      => 4.6,
+        'menu_group'      => 'browse',
+        'menu_blurb'      => 'Translate IDs between a species\' transcriptomes, gene sets, ESTs and arrays',
         'name'            => 'Rosetta Stone ID Translator',
         'icon'            => 'fa-exchange-alt',
         'description'     => 'Translate transcript, EST and array IDs into the same gene in other sources',
@@ -195,6 +218,8 @@ return [
         'id'              => 'ontology_browser',
         'menu_label'      => 'Ontology Browser',
         'menu_order'      => 4.7,
+        'menu_group'      => 'browse',
+        'menu_blurb'      => 'Explore anatomy and Gene Ontology terms as a tree',
         'name'            => 'Ontology Browser',
         'icon'            => 'fa-sitemap',
         'description'     => 'Explore an ontology as a tree, with a page for every term',
@@ -213,6 +238,8 @@ return [
         'id'             => 'primer_maker',
         'menu_label'      => 'Primer Maker',
         'menu_order'      => 7,
+        'menu_group'      => 'sequences',
+        'menu_blurb'      => 'Design PCR, qPCR, RT-PCR or sequencing primers for a sequence',
         'name'           => 'Primer Maker',
         'icon'           => 'fa-magic',
         'description'    => 'Design PCR, qPCR, RT-PCR or sequencing primers from a sequence',

@@ -11,13 +11,14 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
 <div class="container py-3">
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
-      <?= page_title('Expression Explorer') ?>
-      <?= help_modal_trigger('expr-tool-help', '', 'What the Expression Explorer does') ?>
+      <?= page_title('RNA-seq Expression Explorer') ?>
+      <?= help_modal_trigger('expr-tool-help', '', 'What the RNA-seq Expression Explorer does') ?>
       <?= page_purpose('Compare a list of genes across expression experiments as a heatmap.', '', false, false) ?>
     </div>
+    <?= tool_page_blurb('expression') ?>
   </div>
   <?php
-  echo help_modal('expr-tool-help', 'What the Expression Explorer does', [[
+  echo help_modal('expr-tool-help', 'What the RNA-seq Expression Explorer does', [[
       'heading' => '',
       'cards'   => [
           ['num' => '1', 'label' => 'Gene set', 'text' => 'Only gene sets with expression data are listed.'],

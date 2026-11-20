@@ -158,6 +158,7 @@ $db_section_label = function ($key) {
         <?= page_title('Primer BLAST', 'fa fa-vials') ?>
           <?= page_purpose_info('Check primer pairs against a genome and transcriptome: how many products they would amplify, where those land, and how big each one is.') ?>
       </div>
+      <?= tool_page_blurb('primer_blast') ?>
     </div>
 
     <?php if (empty($accessible_sources)): ?>

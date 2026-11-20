@@ -625,6 +625,22 @@ foreach ([['menu' => ['no_such_tool']], ['menu' => ['blast_search', 'blast_searc
        'tools_layout refused: ' . json_encode($_bad));
 }
 ok($_menu($_tnew()) === ['blast_search=BLAST', '|', 'primer_maker=Primer Maker'], 'and a refused layout changed nothing');
+// Grouped menu (2026-11-19): '#Text' headings + a line of text per tool, both OPT-IN. A heading
+// with nothing under it (its tools switched off) is dropped, and replaces a divider just before it.
+$_menu2 = fn($c) => array_map(fn($i) => $i['type'] === 'divider' ? '|' : ($i['type'] === 'heading' ? '#' . $i['label'] : $i['id'] . ($i['blurb'] !== '' ? '+' : '')), $c->getToolsMenu());
+ok(!array_filter($_t3->getToolsMenu(), fn($i) => ($i['blurb'] ?? '') !== '' || $i['type'] === 'heading'),
+   'grouped menu: a site that never turned it on gets no headings and no lines of text');
+$_gsave = $_t3->saveEditableConfig(['tools_layout' => ['menu_blurbs' => true,
+    'menu' => ['#Browse', 'genome_browser', 'moopmart', '|', '#Sequences', 'blast_search', '#Empty', '#Export', 'downloads']]], $_td);
+ok(($_gsave['success'] ?? false) && $_menu2($_tnew()) === ['#Sequences', 'blast_search+', '#Export', 'downloads+'],
+   'grouped menu: headings and lines of text; a heading whose tools are all off (Browse, Empty) is dropped, and so is the divider before a heading');
+ok(count($_tnew()->suggestedGroupedMenuOrder()) > 0 && ($_tnew()->suggestedGroupedMenuOrder()[0] ?? '') === '#Browse & search'
+   && !array_diff(array_filter($_t2->defaultToolsMenuOrder(), fn($x) => $x !== '|'), $_tnew()->suggestedGroupedMenuOrder()),
+   'suggested groups start with a heading and keep every tool of the default menu');
+foreach ([['menu' => ['#']], ['menu' => ['#' . str_repeat('x', 41)]], ['menu' => ['#<b>x</b>']], ['menu_blurbs' => 'yes'], ['toolbox' => ['#Seq']]] as $_bad) {
+    ok(($_t3->saveEditableConfig(['tools_layout' => $_bad], $_td)['success'] ?? true) === false,
+       'tools_layout refused: ' . json_encode($_bad));
+}
 $_t3->saveEditableConfig(['tools_layout' => []], $_td);
 $_t4 = $_tnew();
 ok($_t4->toolsMenuOrder() === $_t4->defaultToolsMenuOrder() && $_t4->toolboxOrder() === null,

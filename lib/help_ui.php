@@ -345,3 +345,17 @@ function page_purpose(string $text, string $extra = '', bool $html = false, bool
 function page_purpose_info(string $text): string {
     return page_purpose($text, '', false, false) . field_help($text, 'About this page');
 }
+
+/**
+ * The tool's one-line menu_blurb (config/tools_config.php) in a box under its page header -- the
+ * same line the Tools menu shows under the tool's name, so the two cannot drift. Only on a site
+ * that turned the lines on (Manage Tools, tools_layout.menu_blurbs); elsewhere nothing at all.
+ * $instead replaces the line where the page knows better (Primer Maker with the site's own cards).
+ */
+function tool_page_blurb(string $tool_id, ?string $instead = null): string {
+    $config = ConfigManager::getInstance();
+    if (!$config->toolsMenuBlurbs()) return '';
+    $line = $instead ?? (string) ($config->getAllTools(true)[$tool_id]['menu_blurb'] ?? '');
+    if ($line === '') return '';
+    return '<div class="tool-page-blurb">' . htmlspecialchars(t_plain($line)) . '</div>';
+}
