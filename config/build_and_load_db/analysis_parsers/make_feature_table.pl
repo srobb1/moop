@@ -1,6 +1,9 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
+use GenomeName qw(genome_name_from_metadata);
 
 #perl ~/sciproj/SBGENOMES/dev/smr_dev/make_feature_table.pl ../genomic.gff ../metadata.yaml gene mRNA > features.tsv
 
@@ -49,14 +52,14 @@ while (my $line = <METADATA>){
     $taxon_id = $1;
   }elsif($line =~ /accession: (\S+)/){
     $genome_accession = $1;
-  }elsif($line =~ /simrbase-prefix: (\S+)/){
-    $genome_name = $1;
   }elsif($line =~ /source: (\S+)/){
     $source = $1
   }elsif($line =~ /details: (.+)$/){
     $details = $1;
   }
 }
+# genome name: see GenomeName.pm (genome-name, else assembly dir; never simrbase-prefix)
+$genome_name = genome_name_from_metadata($metadata);
 print "## Genus: $genus 
 ## Species: $species
 ## Common Name: $commonname

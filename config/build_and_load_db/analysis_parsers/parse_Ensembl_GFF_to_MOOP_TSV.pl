@@ -1,6 +1,9 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
+use GenomeName qw(genome_name_from_metadata);
 use URI::Escape;
 
 # perl parse_Ensembl_GFF_to_MOOP_TSV.pl genomic.gff metadata.yaml > features.tsv
@@ -29,11 +32,12 @@ while (my $line = <METADATA>) {
     elsif ($line =~ /common-name: (.+)$/)    { $commonname       = $1 }
     elsif ($line =~ /ncbi-taxon-id: (\S+)/)  { $taxon_id         = $1 }
     elsif ($line =~ /accession: (\S+)/)      { $genome_accession = $1 }
-    elsif ($line =~ /simrbase-prefix: (\S+)/)  { $genome_name      = $1 }
     elsif ($line =~ /source: (\S+)/)         { $source           = $1 }
     elsif ($line =~ /details: (.+)$/)        { $details          = $1 }
 }
 close METADATA;
+# genome name: see GenomeName.pm (genome-name, else assembly dir; never simrbase-prefix)
+$genome_name = genome_name_from_metadata($metadata);
 
 print "## Genus: $genus 
 ## Species: $species

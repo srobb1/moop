@@ -1,6 +1,9 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
+use GenomeName qw(genome_name_from_metadata);
 use URI::Escape;
 
 # Unified feature-table builder. Auto-detects GFF format from gene-line attributes:
@@ -39,14 +42,12 @@ while (my $line = <$META>) {
     elsif ($line =~ /common-name: (.+)$/)     { $commonname       = $1 }
     elsif ($line =~ /ncbi-taxon-id: (\S+)/)   { $taxon_id         = $1 }
     elsif ($line =~ /^genome-accession:\s*(\S+)/) { $genome_accession = $1 }
-    # "NA" is the metadata's placeholder for no value, never a name: Acropora and Danio GRCz11 have
-    # "simrbase-prefix: NA" beside a real genome-name, and the database got genome_name 'NA'
-    elsif ($line =~ /^simrbase-prefix:\s*(\S+)/)  { $genome_name      = $1 unless $1 eq 'NA' }
-    elsif ($line =~ /^genome-name:\s*(\S+)/)       { $genome_name    ||= $1 unless $1 eq 'NA' }
     elsif ($line =~ /source: (\S+)/)          { $source           = $1 }
     elsif ($line =~ /details: (.+)$/)         { $details          = $1 }
 }
 close $META;
+# genome name: see GenomeName.pm (genome-name, else assembly dir; never simrbase-prefix; NA = no name)
+$genome_name = genome_name_from_metadata($metadata);
 
 print "## Genus: $genus
 ## Species: $species

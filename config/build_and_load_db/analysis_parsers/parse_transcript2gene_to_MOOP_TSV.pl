@@ -1,6 +1,9 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use FindBin;
+use lib "$FindBin::Bin";
+use GenomeName qw(genome_name_from_metadata);
 
 # Build features.tsv for transcriptome-only genesets (no genome, no GFF).
 # Uses transcript2gene.txt for gene/transcript structure and geneNames.tsv for names.
@@ -42,12 +45,12 @@ while (my $line = <$META>) {
     elsif ($line =~ /^common-name:\s+(.+)$/)    { $commonname        = $1 }
     elsif ($line =~ /^ncbi-taxon-id:\s+(\S+)/)  { $taxon_id          = $1 }
     elsif ($line =~ /^genome-accession:\s+(\S+)/)   { $genome_accession = $1 }
-    elsif ($line =~ /^simrbase-prefix:\s+(\S+)/){ $genome_name       = $1 }
-    elsif ($line =~ /^genome-name:\s+(\S+)/)    { $genome_name     ||= $1 }
     elsif ($line =~ /^source:\s+(\S+)/)         { $source            = $1 }
     elsif ($line =~ /^details:\s+(.+)$/)        { $details           = $1 }
 }
 close $META;
+# genome name: see GenomeName.pm (genome-name, else assembly dir; never simrbase-prefix)
+$genome_name = genome_name_from_metadata($meta_file);
 
 print "## Genus: $genus\n";
 print "## Species: $species\n";
