@@ -27,6 +27,7 @@ User-agent: PerplexityBot
 User-agent: Bytespider
 User-agent: Amazonbot
 User-agent: meta-externalagent
+User-agent: meta-webindexer
 User-agent: FacebookBot
 User-agent: cohere-ai
 User-agent: cohere-training-data-crawler

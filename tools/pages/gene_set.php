@@ -344,7 +344,7 @@
                   <td class="text-end" data-order="<?= $cov === null ? -1 : round($cov, 4) ?>"><?= $cov === null ? '—' : round($cov * 100) . '%' ?></td>
                   <?php endif; ?>
                   <td class="text-nowrap">
-                    <a href="<?= htmlspecialchars($map) ?>" target="_blank" rel="noopener"><?= t('Map') ?> <i class="fa fa-external-link-alt link-icon"></i></a>
+                    <a href="<?= htmlspecialchars($map) ?>" target="_blank" rel="noopener nofollow"><?= t('Map') ?> <i class="fa fa-external-link-alt link-icon"></i></a>
                     · <a href="<?= htmlspecialchars($genes) ?>"><?= t('Genes') ?></a>
                   </td>
                 </tr>

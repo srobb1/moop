@@ -275,7 +275,7 @@ function moop_kegg_gene_pathways_html(array $rows, string $uniquename, array $li
                     $map = moop_url('api/kegg_map.php?' . http_build_query($ctx + ['pathway' => $id, 'gene' => $uniquename]));
                     // The annotation search: this gene set, this pathway id, ONLY the KEGG pathway source, run at once
                     $genes = moop_url('tools/search.php?' . http_build_query($ctx + ['q' => $id, 'source' => MOOP_KEGG_PATHWAY_SOURCE]));
-                    $html .= ' <a href="' . htmlspecialchars($map) . '" target="_blank" rel="noopener">' . t('View on KEGG')
+                    $html .= ' <a href="' . htmlspecialchars($map) . '" target="_blank" rel="noopener nofollow">' . t('View on KEGG')
                            . ' <i class="fa fa-external-link-alt link-icon"></i></a>'
                            . ' · <a href="' . htmlspecialchars($genes) . '">' . t('Genes in this gene set') . '</a>';
                     if ($org_link) {
