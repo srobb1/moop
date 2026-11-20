@@ -186,9 +186,18 @@ Planosphere
       8 s each during the DNS outage, mostly crawler hits). Now: our own text from group_descriptions.json
       first (Cnidaria, Mollusca...), else Wikipedia through a saved copy (moop_wikipedia_taxon(), ~30 days).
       Photo was already saved locally (getGroupImagePath).
-- [ ] **Crawlers:** Meta range 57.141.x.x ran ~2,150 searches + 2,150 KEGG maps on 11-19 from 259 addresses;
-      rotating scrapers (145.223.x.x, 660 addresses, one organism page each). Turnstile is OFF -- add
-      simrbase.stowers.org to the Cloudflare key's hostnames before turning it on. **TALK**
+- [x] DONE 11-20: **Crawlers.** Turnstile ON (11-19 eve). 11-20 by 07:00: 24k requests (was ~1k/day) --
+      Meta `meta-webindexer` ~9k (10k KEGG maps, all 403 by our human check, never reached KEGG), rotating
+      scrapers 145.223.x.x (1,302 addresses) + 84.75.x.x, Azure 20.245/172.184; 3,924 challenges, 2 passed.
+      Server fine (CPU peak 32%, fpm 19/28, 15 x 429). Fixed: meta-webindexer in robots.txt, nofollow on KEGG
+      map links (f97a4a30); api/v1 exempt from the human check -- it had 403'd every assistant (a6d5fa16);
+      heavy-group advice counts only internet requests. Watch: fpm busy peak 19 of 28.
+- [ ] **Filesystem Permissions page takes ~106 s to load** (admin/manage_filesystem_permissions.php: all 14
+      loads over 7 days, 172.16.x admins; found 11-20 from the System Monitor). Likely the full permission
+      scan runs live in the request -- CLAUDE.md §10 says that scan is housekeeping's job. Check what it
+      does per load; show the housekeeping result + a "Re-check now" button (run in background) instead.
+      Same look for Manage Organisms (up to 117 s, 3 of 17 loads) -- may be the DNS lookups above. Also
+      needs session_write_close() (see the long-admin-jobs item). **M**
 - [ ] **Old SIMRbase addresses printed in papers need redirects** (Sofia 11-19). Published papers cite
       URLs on the old Drupal SIMRbase -- e.g. `simrbase.stowers.org/bats` may be one -- that now land on
       MOOP and likely 404. Find them: (1) search the old SIMRbase Drupal **Postgres dump** for typed

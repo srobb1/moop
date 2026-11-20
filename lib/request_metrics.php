@@ -33,6 +33,7 @@ const MOOP_METRICS_COLUMNS_V1 = 10;   // before org/asm/gs
 const MOOP_METRICS_COLUMNS_V2 = 13;   // before db/disk/params
 
 const MOOP_METRICS_SLOW_MS = 2000;    // slower than this, or a 5xx: parameters recorded
+const MOOP_METRICS_BIG_MB  = 64;      // more peak memory than this = a costly request (heavy-group advice)
 const MOOP_METRICS_COLD_KB = 64;      // read more than this from disk = a cold request
 // Safety cap: the log lives on /var (4 GB here). Past either limit, ordinary fast requests are
 // only COUNTED (skipped-YYYY-MM-DD.cnt, one byte each), never written; slow and failed ones still
@@ -227,6 +228,13 @@ function moop_metrics_summarise(iterable $rows, int $slowest_n = 0): array {
         $s['max_mb'] = max($s['max_mb'] ?? 0, $r['peak_mb']);
         $s['errors'] = ($s['errors'] ?? 0) + ($r['status'] >= 500 ? 1 : 0);
         $s['times'][] = $r['ms'];
+        // Costly requests by address: the heavy-group advice only counts the ones the nginx rate
+        // limits would actually meet (not this server, not the auto-login ranges). [count, last ts]
+        if ($r['ms'] >= MOOP_METRICS_SLOW_MS || $r['peak_mb'] >= MOOP_METRICS_BIG_MB) {
+            $c = &$s['costly'][$r['ip']];
+            $c = [($c[0] ?? 0) + 1, max($c[1] ?? 0, (float) $r['ts'])];
+            unset($c);
+        }
         $s['db_ms'] = ($s['db_ms'] ?? 0) + ($r['db_ms'] ?? 0);
         $s['db_n'] = ($s['db_n'] ?? 0) + ($r['db_n'] ?? 0);
         $cold = ($r['disk_kb'] ?? null) !== null && $r['disk_kb'] > MOOP_METRICS_COLD_KB;

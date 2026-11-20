@@ -375,12 +375,33 @@ function moop_monitor_recommendations(array $cap, array $pages7, array $heavy, ?
     foreach ($pages7['by_script'] ?? [] as $script => $s) {
         $cls = moop_monitor_class($script, $heavy);
         if ($cls === 'heavy' || $cls === 'jbrowse' || !moop_monitor_valid_heavy($script) || $s['count'] < 5) continue;
-        if ($s['p95_ms'] >= 2000 || $s['max_mb'] >= 64) {
-            $add('warning', "Add {$script} to the heavy group?",
-                "Over 7 days: {$s['count']} requests, slowest 5% took " . moop_monitor_fmt_ms($s['p95_ms']) . ", peak memory {$s['max_mb']} MB. "
-                . 'In the heavy group one address may run it 20 times a minute (3 at once) instead of 2 a second.',
-                ['type' => 'heavy_add', 'script' => $script]);
+        if ($s['p95_ms'] < MOOP_METRICS_SLOW_MS && $s['max_mb'] < MOOP_METRICS_BIG_MB) continue;
+        $cost = "Over 7 days: {$s['count']} requests, slowest 5% took " . moop_monitor_fmt_ms($s['p95_ms']) . ", peak memory {$s['max_mb']} MB.";
+        $limit = 'In the heavy group one address may run it 20 times a minute (3 at once) instead of 2 a second.';
+        if (!isset($s['costly'])) {   // a summary without per-address detail: judge on cost alone
+            $add('warning', "Add {$script} to the heavy group?", "$cost $limit", ['type' => 'heavy_add', 'script' => $script]);
+            continue;
         }
+        // Rate limits never apply to this server or the auto-login ranges, so only costly requests
+        // from outside are a reason to add it. Until 2026-11-20 internal use alone (an admin, the
+        // page audit's curl) produced this advice, where adding the script would change nothing.
+        $net = ['n' => 0, 'ips' => 0, 'last' => 0];
+        $own = 0;
+        foreach ($s['costly'] as $ip => [$n, $last]) {
+            $o = moop_monitor_ip_origin((string) $ip, $ranges, $self);
+            if ($o === 'internet') { $net['n'] += $n; $net['ips']++; $net['last'] = max($net['last'], $last); }
+            else $own += $n;
+        }
+        if ($net['n'] === 0) continue;
+        $who = "Of its slow or memory-hungry requests, {$net['n']} came from " . ($net['ips'] === 1 ? '1 address' : "{$net['ips']} addresses")
+            . ' on the internet, the last on ' . date('M j, H:i', (int) $net['last']) . '.'
+            . ($own ? " The other {$own} came from your own network or this server, which the rate limits never touch." : '')
+            . ($net['ips'] >= 5 && $net['n'] <= 2 * $net['ips']
+                ? ' That is one or two requests per address, which a per-address limit would not have slowed; the human check is what stops a crawler spread that thin.' : '');
+        $stale = time() - $net['last'] > 2 * 86400
+            ? ' If the page has been made faster since then, this advice clears by itself once those requests are 7 days old.' : '';
+        $add('warning', "Add {$script} to the heavy group?", "$cost $who $limit$stale",
+            ['type' => 'heavy_add', 'script' => $script]);
     }
 
     // ── Errors ──

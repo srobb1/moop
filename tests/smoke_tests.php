@@ -3168,6 +3168,20 @@ $_titles = implode(' | ', array_column($_recs, 'title'));
 $_adds = array_filter(array_column($_recs, 'action'));
 ok(count($_adds) === 1 && array_values($_adds)[0]['script'] === 'tools/parent.php',
    'heavy candidate: slow + enough requests + not already heavy; never the genome browser, never on 2 requests');
+// Only costly requests from the internet make a heavy candidate: rate limits never meet the
+// auto-login ranges or this server (2026-11-20: four suggestions were all internal use).
+$_rgh = [['start' => '172.16.0.0', 'end' => '172.16.255.255']];
+$_slow = ['count' => 40, 'p95_ms' => 2500, 'max_mb' => 20, 'errors' => 0];
+$_ph = ['by_script' => [
+    'tools/parent.php'   => $_slow + ['costly' => ['172.16.5.5' => [9, time()], '127.0.0.1' => [16, time()]]],
+    'tools/organism.php' => $_slow + ['costly' => ['172.16.5.5' => [2, time()], '8.8.8.8' => [3, time() - 60]]],
+]];
+$_rh = moop_monitor_recommendations($_cap, $_ph, $_hv, ['mem_total_mb' => 16000, 'disks' => []], $_tr0, null, 50, false, $_rgh);
+$_ah = array_values(array_filter(array_column($_rh, 'action')));
+$_dh = implode(' ', array_column(array_filter($_rh, fn($r) => $r['action']), 'detail'));
+ok(count($_ah) === 1 && $_ah[0]['script'] === 'tools/organism.php'
+   && strpos($_dh, '3 came from 1 address on the internet') !== false && strpos($_dh, 'The other 2 came from your own network') !== false,
+   'heavy candidate: only costly INTERNET requests count; internal or this-server use alone suggests nothing');
 ok($_recs[0]['level'] === 'critical' && strpos($_recs[0]['title'], 'All PHP workers were busy') === 0 && strpos($_recs[0]['detail'], 'raise pm.max_children toward 96') !== false,
    'saturation is first, and says workers can be raised when RAM allows');
 ok(strpos($_titles, 'tools/organism.php failed 1 time') !== false, '5xx errors are reported per page');
