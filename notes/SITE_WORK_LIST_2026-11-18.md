@@ -189,4 +189,12 @@ Planosphere
 - [ ] **Crawlers:** Meta range 57.141.x.x ran ~2,150 searches + 2,150 KEGG maps on 11-19 from 259 addresses;
       rotating scrapers (145.223.x.x, 660 addresses, one organism page each). Turnstile is OFF -- add
       simrbase.stowers.org to the Cloudflare key's hostnames before turning it on. **TALK**
+- [ ] **Old SIMRbase addresses printed in papers need redirects** (Sofia 11-19). Published papers cite
+      URLs on the old Drupal SIMRbase -- e.g. `simrbase.stowers.org/bats` may be one -- that now land on
+      MOOP and likely 404. Find them: (1) search the old SIMRbase Drupal **Postgres dump** for typed
+      paths -- `url_alias` (path aliases), `menu_links`, node bodies with `simrbase.stowers.org/...`;
+      (2) ask Sofia for the papers she knows of; (3) check the request log for 404s on old-looking
+      paths (`{cache}/metrics/requests-*.tsv`). Then write `metadata/legacy_redirects.json` for simrbase
+      and build the nginx rules with `scripts/build_legacy_redirects.php` (as cuttingclass does; simrbase
+      has no list yet). ⚠️ Never redirect a path MOOP uses itself (/admin, /tools, ...). **M**
 
