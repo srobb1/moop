@@ -56,6 +56,11 @@ function moop_human_check_decision(bool $enabled, bool $logged_in, bool $verifie
     if (in_array($script, ['verify-human.php', 'login.php', 'logout.php'], true)) return null;
 
     $path   = parse_url($uri, PHP_URL_PATH) ?? '';
+    // The agent API (api/v1/, advertised in llms.txt) is for assistants fetching on one person's
+    // behalf -- they cannot pass a browser challenge. Its expensive endpoints are in the nginx
+    // 'heavy' rate-limit group (rate_limit_heavy); the cheap lookups get the api limit. Restricted
+    // data still needs a login. Gating it here broke the API when Turnstile went on (2026-11-19).
+    if (preg_match('#/api/v1/#', $path)) return null;
     $xhr    = strcasecmp($headers['X-Requested-With'] ?? '', 'XMLHttpRequest') === 0;
     $accept = $headers['Accept'] ?? '';
     $is_api = (bool) preg_match('#/(api|admin/api)/#', $path);

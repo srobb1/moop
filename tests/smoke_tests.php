@@ -3051,6 +3051,10 @@ ok($_hd(true, false, false, 'verify-human.php', 'GET', '/moop/verify-human.php',
    'the challenge page and login are never themselves challenged (no redirect loop; account holders get in)');
 ok($_hd(true, false, false, 'moopmart_export.php', 'GET', '/moop/api/moopmart_export.php', $_html) === 'deny',
    'api/ gets a JSON 403, not a 302 to an HTML page a script cannot follow');
+ok($_hd(true, false, false, 'catalog.php', 'GET', '/moop/api/v1/catalog.php', ['Accept' => '*/*']) === null
+   && $_hd(true, false, false, 'search.php', 'GET', '/api/v1/search.php?q=x', []) === null
+   && $_hd(true, false, false, 'kegg_map.php', 'GET', '/api/kegg_map.php', ['Accept' => '*/*']) === 'deny',
+   'the agent API (api/v1/) is open to assistants, under any link prefix; the rest of api/ stays gated');
 ok($_hd(true, false, false, 'search.php', 'GET', '/moop/tools/search.php', ['X-Requested-With' => 'XMLHttpRequest']) === 'deny'
    && $_hd(true, false, false, 'blast.php', 'POST', '/moop/tools/blast.php', $_html) === 'deny',
    'AJAX and POSTs from an unverified session are denied, not redirected');
