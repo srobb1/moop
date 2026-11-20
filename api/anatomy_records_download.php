@@ -19,13 +19,15 @@ $text = (string) ($_GET['q'] ?? '');
 $ids = []; $evs = []; $accs = [];
 moop_page_records_each($organism, $spec, $text, function ($r) use (&$ids, &$evs, &$accs) {
     $ids[$r['term_id']] = 1; $ids[(string) $r['stage_id']] = 1; $ids[(string) $r['specimen_id']] = 1;
-    $evs[(string) $r['evidence_id']] = 1; $accs[$r['accession']] = 1;
+    $evs[(string) $r['evidence_id']] = 1;
+    $accs[moop_crosswalk_record_key((string) $r['accession'], $r['pmid'])] = ['accession' => $r['accession'], 'pmid' => $r['pmid']];
 });
 $labels = moop_ontology_labels(array_keys($ids), moop_ontology_by_purpose('anatomy'))
         + moop_ontology_labels(array_keys($evs), moop_ontology_by_purpose('evidence'));
 $genes = [];
-foreach (array_chunk(array_keys($accs), 2000) as $chunk)
-    foreach (moop_crosswalk_genes($organism, $chunk) as $acc_lc => $rows) $genes[$acc_lc] = implode(';', array_unique(array_column($rows, 'ref_id')));
+// Per record (accession + paper): an ambiguous id (Contig…) is looked up in its own paper's assembly.
+foreach (array_chunk(array_values($accs), 2000) as $chunk)
+    foreach (moop_crosswalk_record_genes($organism, $chunk) as $key => $rows) $genes[$key] = implode(';', array_unique(array_column($rows, 'ref_id')));
 
 $what = $spec['mode'] === 'term' ? ($spec['meta']['term'] ?? 'term') : ($spec['mode'] === 'pub' ? 'PMID' . $spec['filters']['pmid'] : 'ids');
 $name = function_exists('moop_download_filename')
@@ -40,7 +42,7 @@ fwrite($out, implode("\t", ['accession', 'reference_genes', 'term_id', 'term', '
                             'specimen_id', 'specimen', 'pmid', 'authors', 'year', 'title', 'journal', 'curated_on']) . "\n");
 moop_page_records_each($organism, $spec, $text, function ($r) use ($out, $labels, $genes, $clean) {
     $L = fn($i) => $i === null || $i === '' ? '' : ($labels[$i] ?? $i);
-    fwrite($out, implode("\t", array_map($clean, [$r['accession'], $genes[mb_strtolower($r['accession'])] ?? '',
+    fwrite($out, implode("\t", array_map($clean, [$r['accession'], $genes[moop_crosswalk_record_key((string) $r['accession'], $r['pmid'])] ?? '',
         $r['term_id'], $L($r['term_id']), $r['evidence_id'], $L($r['evidence_id']), $r['stage_id'], $L($r['stage_id']),
         $r['specimen_id'], $L($r['specimen_id']), $r['pmid'], $r['authors'], $r['year'], $r['title'], $r['journal'], $r['curated_on']])) . "\n");
 });

@@ -464,7 +464,11 @@ function moop_page_terms_for_genes(string $organism, array $genes): array {
 
     // curated accession -> gene keys: the gene's own ids, then every accession mapped to its refs
     $hit = [];
-    foreach ($owners as $acc_lc => $keys) if (isset($is_curated[$acc_lc])) $hit[$acc_lc] = $keys;
+    $via = [];   // accession_lc => gene key => [crosswalk source => true] ('*' = the gene's own id)
+    foreach ($owners as $acc_lc => $keys) if (isset($is_curated[$acc_lc])) {
+        $hit[$acc_lc] = $keys;
+        foreach (array_keys($keys) as $k) $via[$acc_lc][$k]['*'] = true;
+    }
     $xw = moop_crosswalk_open($organism);
     if ($xw) {
         foreach (array_chunk(array_keys($by_ref), 500) as $chunk) {
@@ -472,19 +476,28 @@ function moop_page_terms_for_genes(string $organism, array $genes): array {
                                . implode(',', array_fill(0, count($chunk), '?')) . ')');
             $st->execute(array_map('strval', $chunk));
             while ($r = $st->fetch(PDO::FETCH_NUM)) {
-                if (isset($is_curated[$r[0]]) && moop_crosswalk_row_visible($organism, $r[2], $r[3])) $hit[$r[0]] = ($hit[$r[0]] ?? []) + ($by_ref[$r[1]] ?? []);
+                if (isset($is_curated[$r[0]]) && moop_crosswalk_row_visible($organism, $r[2], $r[3])) {
+                    $hit[$r[0]] = ($hit[$r[0]] ?? []) + ($by_ref[$r[1]] ?? []);
+                    foreach (array_keys($by_ref[$r[1]] ?? []) as $k) $via[$r[0]][$k][$r[3]] = true;
+                }
             }
         }
     }
     if (!$hit) return [];
 
     $terms = [];
+    $excl  = [];   // accession_lc => gene key => pmids to skip (memo)
     foreach (array_chunk(array_keys($hit), 500) as $chunk) {
-        $st = $page->prepare('SELECT DISTINCT accession_lc, term_id FROM curation WHERE accession_lc IN ('
+        $st = $page->prepare('SELECT DISTINCT accession_lc, term_id, pmid FROM curation WHERE accession_lc IN ('
                              . implode(',', array_fill(0, count($chunk), '?')) . ')');
         $st->execute(array_map('strval', $chunk));
         while ($r = $st->fetch(PDO::FETCH_NUM)) {
-            foreach (array_keys($hit[$r[0]] ?? []) as $key) $terms[$key][$r[1]] = true;
+            foreach (array_keys($hit[$r[0]] ?? []) as $key) {
+                // An ambiguous id (Contig…) reached through one assembly: not the other assembly's papers.
+                $x = $excl[$r[0]][$key] ??= moop_crosswalk_excluded_papers($organism, (string) $r[0], array_keys($via[$r[0]][$key] ?? ['*' => true]));
+                if ($x && in_array((string) $r[2], $x, true)) continue;
+                $terms[$key][$r[1]] = true;
+            }
         }
     }
     if (!$terms) return [];
@@ -533,6 +546,8 @@ function moop_page_spec(string $organism, array $q): array {
         $members = moop_crosswalk_members($organism, array_merge($typed, $all_refs));
         $accs = array_values(array_unique(array_map('mb_strtolower', array_merge($typed, $all_refs, array_column($members, 'accession')))));
         $out['accessions'] = $accs;
+        // Ambiguous ids (Contig…) reached through one assembly: not the other assembly's papers' records.
+        $out['exclude'] = moop_crosswalk_exclusions($organism, $members, $typed);
         $out['meta'] = ['typed' => $typed, 'matched' => $matched];
         return ['ok' => true] + $out;
     }
@@ -560,6 +575,10 @@ function moop_page_spec_where(array $spec): array {
     if ($spec['accessions'] !== null) {
         $where[] = 'c.accession_lc IN (' . implode(',', array_fill(0, max(1, count($spec['accessions'])), '?')) . ')';
         $params  = array_merge($params, $spec['accessions'] ?: ['']);
+    }
+    foreach ($spec['exclude'] ?? [] as $acc_lc => $pmids) {   // moop_page_spec(), ids mode
+        $where[] = "NOT (c.accession_lc = ? AND COALESCE(c.pmid, '') IN (" . implode(',', array_fill(0, count($pmids), '?')) . '))';
+        $params  = array_merge($params, [(string) $acc_lc], array_values($pmids));
     }
     if (!empty($spec['filters']['pmid'])) { $where[] = 'c.pmid = ?'; $params[] = (string) $spec['filters']['pmid']; }
     foreach (['evidence' => 'c.evidence_id', 'stage' => 'c.stage_id'] as $f => $col) {
@@ -593,10 +612,13 @@ function moop_page_text_filter(string $organism, string $text): array {
             $ids = array_merge($ids, $st->fetchAll(PDO::FETCH_COLUMN));
         }
         // the word as a gene / transcript id: every accession of the same gene
-        $accs = [];
+        $accs = []; $members = [];
         foreach (moop_crosswalk_genes($organism, [$w]) as $rows)
-            foreach (moop_crosswalk_members($organism, array_column($rows, 'ref_id')) as $m) $accs[] = mb_strtolower($m['accession']);
+            foreach (moop_crosswalk_members($organism, array_column($rows, 'ref_id')) as $m) { $accs[] = mb_strtolower($m['accession']); $members[] = $m; }
         $accs = array_slice(array_values(array_unique($accs)), 0, 3000);
+        // Ambiguous ids (Contig…) reached through one assembly: not the other assembly's papers' records.
+        $excl = moop_crosswalk_exclusions($organism, $members, [$w]);
+        $accs = array_values(array_filter($accs, fn($a) => !isset($excl[$a])));
         $c = ["c.accession_lc LIKE ? ESCAPE '\\'", "p.search_text LIKE ? ESCAPE '\\'", 'c.pmid = ?', 'p.year = ?', "c.curated_on LIKE ? ESCAPE '\\'"];
         array_push($params, '%' . $esc($lw) . '%', '%' . $esc(moop_page_fold($w)) . '%', $w, $w, $esc($w) . '%');
         if ($ids) {
@@ -604,6 +626,10 @@ function moop_page_text_filter(string $organism, string $text): array {
             foreach (['c.term_id', 'c.evidence_id', 'c.stage_id', 'c.specimen_id'] as $col) { $c[] = "$col IN ($ph)"; $params = array_merge($params, $ids); }
         }
         if ($accs) { $c[] = 'c.accession_lc IN (' . implode(',', array_fill(0, count($accs), '?')) . ')'; $params = array_merge($params, $accs); }
+        foreach ($excl as $acc_lc => $pmids) {
+            $c[] = "(c.accession_lc = ? AND COALESCE(c.pmid, '') NOT IN (" . implode(',', array_fill(0, count($pmids), '?')) . '))';
+            $params = array_merge($params, [(string) $acc_lc], array_values($pmids));
+        }
         $conds[] = '(' . implode(' OR ', $c) . ')';
     }
     return [$conds ? implode(' AND ', $conds) : '', $params];
@@ -708,6 +734,10 @@ function moop_gene_page_section(string $organism, string $gene_id, array $child_
     // Looked up, not shown: 'aka' stays the crosswalk's own list.
     $accs    = array_values(array_unique(array_merge($accs, moop_crosswalk_parent_genes($organism, array_column($members, 'accession')))));
     $cur     = moop_page_for_accessions($organism, $accs);
+    // An ambiguous id (Contig…) reached through one assembly's sources must not bring the records of
+    // papers that used the other assembly -- there it is a different gene (lib/crosswalk.php).
+    $excl    = moop_crosswalk_exclusions($organism, $members, $self);
+    if ($excl) $cur = array_values(array_filter($cur, fn($r) => !in_array((string) $r['pmid'], $excl[mb_strtolower((string) $r['accession'])] ?? [], true)));
     $ids     = [];
     foreach ($cur as $r) array_push($ids, $r['term_id'], $r['stage_id'], $r['specimen_id']);
     $section = [

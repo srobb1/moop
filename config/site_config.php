@@ -235,6 +235,27 @@ return [
             // The translation tool (tools/crosswalk.php): a column of these sources' ids beside every
             // reference gene, whatever the visitor ticks (the old Rosetta page's smed_20140614 column).
             'always_show' => ['smed_20140614'],
+            // `Contig…` ids name DIFFERENT sequences in two EST assemblies (compute,
+            // notes/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md §5: same number, a different gene, 0 agree).
+            // A curated record means the assembly its PAPER used, so it is looked up in those sources
+            // only (lib/crosswalk.php moop_crosswalk_record_sources). Papers placed from the data, 2026-11-20:
+            // B-papers never cite a number above 7727 (B's last) and their ids are B-only 162:0 and
+            // 590:109; A-papers cite up to Contig55943 and are A-only 212:0, 919:87, 3684:118.
+            // A paper not listed here is looked up by name, as before.
+            'ambiguous_ids' => [
+                'pattern'    => '/^contig\d+$/i',
+                'assemblies' => [
+                    'newmark_ests' => ['newmark_ests', 'uc_Smed_v2'],             // Newmark ESTs, Contig1-55949
+                    'se3'          => ['GPL10652', 'GPL15192', 'GPL15193'],      // "SE3" array assembly, Contig1-7727
+                ],
+                'papers' => [
+                    '20844018' => 'se3',
+                    '23079596' => 'se3',
+                    '27612384' => 'newmark_ests',
+                    '28434803' => 'newmark_ests',
+                    '29674431' => 'newmark_ests',
+                ],
+            ],
             // The translator's source list, in these groups (in this order); a source without a group
             // goes under "Other".
             'source_groups' => ['site' => 'Gene sets on this site', 'models' => 'Other gene models', 'tx' => 'Transcriptomes',

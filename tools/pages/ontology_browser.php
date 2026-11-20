@@ -20,7 +20,20 @@ $self = moop_url('tools/ontology_browser.php');
     <?= tool_page_blurb('ontology_browser') ?>
   </div>
   <?= help_modal('ob-help', 'How the Ontology Browser works', [[
-      'heading' => '',
+      // For someone new to the site and to tools like this (Sofia, work list 2026-11-18).
+      'heading' => 'New to this?',
+      'cards'   => [
+          ['label' => 'What an ontology is', 'text' => 'A shared vocabulary for biology. Each term -- pharynx, neoblast, cell division -- has an ID and a definition, and sits under broader terms: the pharynx is part of the digestive system. Researchers use the same terms, so their data can be compared and searched.'],
+          ['label' => 'Why it is on this site', 'text' => 'Published expression records are tagged with PLANA terms, and genes with GO terms. Find a body part, cell type or process here, and see which records or genes carry it -- including those on its more specific terms.'],
+          ['label' => 'The icons on each row', 'html' => true, 'text' =>
+              '<i class="fa fa-microscope" aria-hidden="true"></i> <strong>' . t('records') . '</strong> &mdash; '
+              . t('published expression records (where a gene was seen, for example by in situ hybridization) on the term and the terms below it. Once you open a row, the count is for that term itself; the rows below show their own. Click to list them.')
+              . '<br><i class="fa fa-dna" aria-hidden="true"></i> <strong>' . t('genes') . '</strong> &mdash; '
+              . t('genes annotated with the term or a more specific one (GO). Click for the gene table.')],
+          ['label' => 'Which ontology', 'text' => 'PLANA describes planarian anatomy and life stages. GO (Gene Ontology) describes what genes do: their molecular functions, the processes they take part in, and where in the cell they act.'],
+      ],
+  ], [
+      'heading' => 'Using the browser',
       'cards'   => [
           ['label' => 'The tree', 'text' => 'Each row is a term and its definition. Open a row (the arrow) to see the terms directly below it; the number counts them.'],
           ['label' => 'Show parts too', 'text' => 'By default a branch holds the term\'s kinds (is a). Tick "show parts too" to also see its parts and what develops from it, marked with the relationship.'],

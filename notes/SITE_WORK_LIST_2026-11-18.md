@@ -35,7 +35,7 @@ Order of work, and why:
       transcript"). Investigate the exact-ID path vs the text path. **M**
 - [~] **Anatomy search "gut" lists transcripts that have no gene.** — 11-19: 157 fixed (d5657132, dd_v6 gene ids); rest = ids not in crosswalk -> questions for compute; open: show "no current gene" instead of "–"? Why — data (13 transcriptome
       "genomes" have no gene level) or a join that drops the gene? Then decide how to show them. **M**
-- [ ] **Anatomy records: a `Contig…` ID can show a gene from the WRONG assembly.** Same name in up to 4
+- [x] DONE 11-20 (A): records looked up in their paper's assembly (site_config crosswalk 'ambiguous_ids': 5 papers placed from the data; lib/crosswalk.php moop_crosswalk_record_*/exclusions; records table, download, gene card, ID search, filter box, Data Exporter). Compute's per-paper check (B) on hold. **Anatomy records: a `Contig…` ID can show a gene from the WRONG assembly.** 11-20: compute ANSWERED (`notes/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md` §5: look up by source+ID; Contig >7727 = newmark_ests; ≤7727 needs their per-paper check) — web not done yet. Same name in up to 4
       crosswalk sources mapping to different genes (Contig1038). Needs a paper → source table from compute;
       then look each record up in its own source. `notes/ANATOMY_IDS_FOR_COMPUTE_2026-11-19.md` §5. **M**
 - [x] **Anatomy records with no gene: say why, link to where it aligns.** DONE 11-19 — "no gene ⓘ" + reason
@@ -64,7 +64,7 @@ Order of work, and why:
       Fix: remake the UCNE GFF from the page's table (Nvec200 coords) or drop it. Also add track
       descriptions + fix "Elemements" typo (Manage JBrowse / track sheet). Sofia made the files (cerebro
       .../aligned/ucne/). **M**
-- [ ] **Empty gene names** (from the AI test): S. mediterranea Ena/VASP has an empty `gene_name`
+- [x] NOT A BUG (Sofia 11-20): a short name is given only for a very confident hit; otherwise the best hit's description is kept ("…-like"), and there is no short name to give when the hit has none. **Empty gene names** (from the AI test): S. mediterranea Ena/VASP has an empty `gene_name`
       though its description says "ENAH/VASPs family member"; many bat RefSeq VASP genes have no name
       while EVL/ENAH in the same species do. Pipeline side → write a note for compute (web doesn't
       touch the naming code). **S** (note) / compute fixes
@@ -126,7 +126,7 @@ Planosphere
 - [x] **Example search terms** DONE 11-20 — chosen from the data (moop_curated_examples(), lib/home_examples.php, the same system as the home page): the most-curated gene (Smed: EU296635 = sFRP-1) under its other IDs, and the three most-curated papers. Click fills the box (Anatomy also runs it). Cached; never shows crosswalk rows the viewer may not see.
 - [x] DONE 11-20: Rosetta Stone page 0.96 s -> 0.01 s and every Smed gene page ~0.5 s faster: `SELECT DISTINCT source FROM map` (3.7M rows) ran on each load; now cached on the file's date (moop_crosswalk_sources_present()).
 - [ ] **Neoblast cluster page (Planosphere)** — the "translate IDs" text is confusing; rewrite. **S**
-- [ ] **Ontology Browser help:** an (i) with more text — it's about genes and the terms they're tagged
+- [x] DONE 11-20 (D): "New to this?" section in the ⓘ (what an ontology is, why here, the 🔬/🧬 icons, PLANA vs GO); a new NAME still to talk about. **Ontology Browser help:** an (i) with more text — it's about genes and the terms they're tagged
       with; maybe a clearer name; a picture of the microscope icon explaining what it means. Written
       for someone new to the site and to tools like this. **M** (name = TALK)
 - [ ] **MOOPmart:** the two annotation selectors (gene-list builder, output builder) are too long to
@@ -212,7 +212,7 @@ Planosphere
       which pick a gene set. **S–M**
 - [ ] **Sofia: stage pages — more sequences than in situ genes** (see §4 SIMRbase stage-terms entry, 11-20). Decide
       whether the old FASTA was meant to be wider or the tables lost rows in the port. **TALK**
-- [ ] **Sofia: Planosphere Tools page "PLANA Ontology" tile** links to obofoundry.org — switch to SIMRbase's
+- [x] DONE 11-20 (E): tile -> SIMRbase Ontology Browser. **Sofia: Planosphere Tools page "PLANA Ontology" tile** links to obofoundry.org — switch to SIMRbase's
       Ontology Browser (`{simrbase}/tools/ontology_browser.php?o=PLANA`)? **S** once decided
 - [ ] **Sofia (root): SIMRbase site-data backup can't be written by smr** — old copies are 644 apache, so
       `scripts/backup_site_data.php` fails (housekeeping still copies hourly). One-time fix:

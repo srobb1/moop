@@ -285,8 +285,10 @@ function moop_crosswalk_row_visible(string $organism, string $hub, ?string $sour
 /**
  * The reference genes each accession maps to: [accession_lc => [['ref_id', 'hub'], ...]].
  * Case-insensitive, like the old Rosetta page. Read-only. Only rows the viewer may see.
+ * $only_sources: use only these crosswalk sources (a record whose id is ambiguous across assemblies,
+ * moop_crosswalk_record_sources()); null = every source.
  */
-function moop_crosswalk_genes(string $organism, array $accessions): array {
+function moop_crosswalk_genes(string $organism, array $accessions, ?array $only_sources = null): array {
     $db = moop_crosswalk_open($organism);
     $lc = array_values(array_unique(array_map('mb_strtolower', array_filter($accessions, 'strlen'))));
     if (!$db || !$lc) return [];
@@ -297,6 +299,7 @@ function moop_crosswalk_genes(string $organism, array $accessions): array {
         $st->execute($chunk);
         foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
             if (!moop_crosswalk_row_visible($organism, $r['hub'], $r['source'])) continue;
+            if ($only_sources !== null && !in_array($r['source'], $only_sources, true)) continue;
             // DISTINCT included source: one accession under two sources must not repeat the gene.
             $row = ['ref_id' => $r['ref_id'], 'hub' => $r['hub']];
             if (!in_array($row, $out[$r['accession_lc']] ?? [], true)) $out[$r['accession_lc']][] = $row;
@@ -410,14 +413,14 @@ function moop_crosswalk_gene_url(string $organism, string $ref_id, string $hub):
  * the first hub with a match is shown; 'all' lists every match for a tooltip.
  * Returns [accession_lc => ['show' => [['id', 'url', 'external', 'hub']...], 'all' => [ids]]].
  */
-function moop_crosswalk_gene_links(string $organism, array $accessions): array {
+function moop_crosswalk_gene_links(string $organism, array $accessions, ?array $only_sources = null): array {
     $hubs  = array_keys(moop_crosswalk_sources()[$organism]['hubs'] ?? []);
-    $found = moop_crosswalk_genes($organism, $accessions);
+    $found = moop_crosswalk_genes($organism, $accessions, $only_sources);
     // An id the crosswalk does not know may be a GENE here whose TRANSCRIPTS it maps: Plass 2018's
     // anatomy records name dd_v6 genes (dd_Smed_v6_100_0) while the crosswalk maps dd_v6 by
     // transcript (dd_Smed_v6_100_0_1) -- 172 gut records showed no gene (2026-11-19).
     $missing = array_values(array_filter($accessions, fn($a) => !isset($found[mb_strtolower((string) $a)])));
-    if ($missing) {
+    if ($missing && $only_sources === null) {
         $kids = moop_crosswalk_child_transcripts($organism, $missing);
         if ($kids) {
             $via = moop_crosswalk_genes($organism, array_merge(...array_values($kids)));
@@ -462,6 +465,110 @@ function moop_crosswalk_search_hint(string $organism, string $keywords): array {
     if (!isset(moop_crosswalk_sources()[$organism]) || strlen($term) < 3 || strlen($term) > 100
         || preg_match('/\s/', $term)) return [];
     return moop_crosswalk_gene_links($organism, [$term])[mb_strtolower($term)]['show'] ?? [];
+}
+
+// ============================================================================
+// IDs that name DIFFERENT sequences in different sources (2026-11-20). Schmidtea's `Contig…` ids come
+// from two EST assemblies: "Contig1038" is one gene in the Newmark ESTs and another in the SE3
+// microarray assembly (they agree on 0 genes for the same name). A name-only lookup gave a record
+// both genes, and listed a record on the wrong gene's page. Which assembly a RECORD means follows
+// from its paper: config 'crosswalk' -> organism -> 'ambiguous_ids' (config/site_config.php).
+// The crosswalk itself is right -- every row carries its source; only the lookup by name was not.
+// ============================================================================
+
+/** The organism's ambiguous-id rule, or null: ['pattern', 'assemblies' => [name => [sources]], 'papers' => [pmid => name]]. */
+function moop_crosswalk_ambiguous_rule(string $organism): ?array {
+    $r = moop_crosswalk_sources()[$organism]['ambiguous_ids'] ?? null;
+    if (!is_array($r) || empty($r['pattern']) || empty($r['assemblies']) || empty($r['papers'])) return null;
+    return $r;
+}
+
+/**
+ * The crosswalk sources a RECORD's accession may be looked up in: null = any (not an ambiguous id, or
+ * a paper the rule does not place), else the sources of the assembly the record's paper used.
+ */
+function moop_crosswalk_record_sources(string $organism, string $accession, $pmid): ?array {
+    $r = moop_crosswalk_ambiguous_rule($organism);
+    if (!$r || !preg_match($r['pattern'], $accession)) return null;
+    $asm = $r['papers'][(string) $pmid] ?? null;
+    return $asm !== null ? array_values($r['assemblies'][$asm] ?? []) : null;
+}
+
+/** One record's key in the moop_crosswalk_record_* results: lower-cased accession, tab, pmid. */
+function moop_crosswalk_record_key(string $accession, $pmid): string {
+    return mb_strtolower($accession) . "\t" . (string) $pmid;
+}
+
+/**
+ * moop_crosswalk_gene_links() for RECORDS ([['accession', 'pmid'], ...]): each looked up in its own
+ * paper's sources when its id is ambiguous. Returns [record key => links] for records that reach a gene.
+ */
+function moop_crosswalk_record_gene_links(string $organism, array $rows): array {
+    $groups = [];   // sources (json) => [accession => [keys]]
+    foreach ($rows as $row) {
+        $src = moop_crosswalk_record_sources($organism, (string) $row['accession'], $row['pmid'] ?? '');
+        $groups[json_encode($src)][(string) $row['accession']][] = moop_crosswalk_record_key((string) $row['accession'], $row['pmid'] ?? '');
+    }
+    $out = [];
+    foreach ($groups as $src => $accs) {
+        $links = moop_crosswalk_gene_links($organism, array_map('strval', array_keys($accs)), json_decode($src, true));
+        foreach ($accs as $acc => $keys) {
+            $l = $links[mb_strtolower((string) $acc)] ?? null;
+            if ($l) foreach ($keys as $k) $out[$k] = $l;
+        }
+    }
+    return $out;
+}
+
+/** moop_crosswalk_genes() for RECORDS, as moop_crosswalk_record_gene_links(): [record key => [['ref_id', 'hub'], ...]]. */
+function moop_crosswalk_record_genes(string $organism, array $rows): array {
+    $groups = [];
+    foreach ($rows as $row) {
+        $src = moop_crosswalk_record_sources($organism, (string) $row['accession'], $row['pmid'] ?? '');
+        $groups[json_encode($src)][(string) $row['accession']][] = moop_crosswalk_record_key((string) $row['accession'], $row['pmid'] ?? '');
+    }
+    $out = [];
+    foreach ($groups as $src => $accs) {
+        $genes = moop_crosswalk_genes($organism, array_map('strval', array_keys($accs)), json_decode($src, true));
+        foreach ($accs as $acc => $keys) {
+            $g = $genes[mb_strtolower((string) $acc)] ?? null;
+            if ($g) foreach ($keys as $k) $out[$k] = $g;
+        }
+    }
+    return $out;
+}
+
+/**
+ * The other direction -- a gene's records. An accession reached from a gene THROUGH some crosswalk
+ * sources ($reached; '*' = it is the gene's own or the typed id) must not bring the records of papers
+ * that used another assembly. Returns those papers' pmids ([] = keep every record of $accession).
+ */
+function moop_crosswalk_excluded_papers(string $organism, string $accession, array $reached): array {
+    $r = moop_crosswalk_ambiguous_rule($organism);
+    if (!$r || in_array('*', $reached, true) || !preg_match($r['pattern'], $accession)) return [];
+    $ok = [];
+    foreach ($r['assemblies'] as $asm => $sources) if (array_intersect($reached, $sources)) $ok[$asm] = true;
+    $out = [];
+    foreach ($r['papers'] as $pmid => $asm) if (!isset($ok[$asm])) $out[] = (string) $pmid;
+    return $out;
+}
+
+/**
+ * For the gene -> records paths: [accession_lc => [pmids to exclude]] from crosswalk member rows
+ * (moop_crosswalk_members) plus the ids that count as the gene's own ($own: never excluded).
+ * Only accessions with something to exclude are returned.
+ */
+function moop_crosswalk_exclusions(string $organism, array $members, array $own = []): array {
+    if (!moop_crosswalk_ambiguous_rule($organism)) return [];
+    $reached = [];
+    foreach ($own as $id) $reached[mb_strtolower((string) $id)]['*'] = true;
+    foreach ($members as $m) $reached[mb_strtolower((string) $m['accession'])][(string) $m['source']] = true;
+    $out = [];
+    foreach ($reached as $acc => $src) {
+        $x = moop_crosswalk_excluded_papers($organism, (string) $acc, array_keys($src));
+        if ($x) $out[$acc] = $x;
+    }
+    return $out;
 }
 
 /**

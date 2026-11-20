@@ -30,15 +30,16 @@ foreach ($res['rows'] as $r) array_push($ids, $r['term_id'], $r['stage_id'], $r[
 $labels = moop_ontology_labels($ids, moop_ontology_by_purpose('anatomy'))
         + moop_ontology_labels(array_column($res['rows'], 'evidence_id'), moop_ontology_by_purpose('evidence'));
 $L = fn(?string $id) => $id === null || $id === '' ? '' : ($labels[$id] ?? $id);
-$genes = moop_crosswalk_gene_links($organism, array_column($res['rows'], 'accession'));
+// Each record in its own paper's sources: an ambiguous id (Contig…) means the assembly its paper used.
+$genes = moop_crosswalk_record_gene_links($organism, $res['rows']);
 $h = fn($s) => htmlspecialchars((string) $s, ENT_QUOTES);
 // Records whose id reaches no gene: say why (and where it aligned) instead of a bare dash (2026-11-19).
-$unlinked = moop_crosswalk_unlinked($organism, array_filter(array_column($res['rows'], 'accession'),
-                                    fn($a) => !isset($genes[mb_strtolower((string) $a)])));
+$unlinked = moop_crosswalk_unlinked($organism, array_column(array_filter($res['rows'],
+                                    fn($r) => !isset($genes[moop_crosswalk_record_key((string) $r['accession'], $r['pmid'])])), 'accession'));
 
 $data = [];
 foreach ($res['rows'] as $r) {
-    $g = $genes[mb_strtolower($r['accession'])] ?? null;
+    $g = $genes[moop_crosswalk_record_key((string) $r['accession'], $r['pmid'])] ?? null;
     $gene = '';
     $no_gene = $g ? '' : moop_crosswalk_no_gene_html($organism, $unlinked[mb_strtolower($r['accession'])] ?? null);
     if ($g) {
