@@ -171,7 +171,7 @@ Planosphere
       "Re-deploy". That file still guards the old `/moop/` address — re-deploying would UNGUARD it. It should
       compare `/etc/nginx/moop-sites/<site>/guard.conf` (the new server block's include) instead, and probe
       over HTTPS on public_url. **S–M**
-- [ ] **Double-check, then delete Planosphere's duplicate anatomy file** —
+- [x] DONE 11-20 (G): deleted after checks (same data, built_at only; last read 11-19 10:59, before 53162efc went live; pages, admin, setup-check fine without it). **Double-check, then delete Planosphere's duplicate anatomy file** —
       `/var/www/html/planosphere/organisms/Schmidtea_mediterranea/anatomy_expression.sqlite`. Unused since
       53162efc (Planosphere = static pages on SIMRbase data; its anatomy tool + API are off). Identical to
       SIMRbase's copy (77,432 records, same contents; only the build date differs). Before deleting, check
