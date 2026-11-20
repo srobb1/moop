@@ -130,6 +130,12 @@ function initScopeSelector(opts = {}) {
             orgs === 1 ? moopT('%d organism', orgs) : moopT('%d organisms', orgs),
             asms === 1 ? moopT('%d assembly', asms) : moopT('%d assemblies', asms),
             gs   === 1 ? moopT('%d gene set', gs)   : moopT('%d gene sets', gs));
+        // Simple view and an organism brought several gene sets: say how to take just one.
+        // Without this the Details switch was the only way, and easy to miss (Sofia, 2026-11-20).
+        if (!detailOn() && detailEl && gs > orgs) {
+            countsEl.insertAdjacentHTML('beforeend', ' · <button type="button" class="btn btn-link btn-sm p-0 align-baseline scope-pick-single">'
+                + moopTh('Pick single gene sets') + '</button>');
+        }
     }
 
     // The closed "Refine selection" bar (collapsible multi mode) says what the search covers.
@@ -206,7 +212,10 @@ function initScopeSelector(opts = {}) {
             // and says so). It used to do nothing, which on a page that arrived filtered to a
             // one-gene-set organism left no way to clear the choice (Sofia, 2026-11-16).
             if (cb.checked) tick(cb, false); else selectOnly(cb);
-        } else if (detailOn()) {
+        } else if (detailOn() || row.classList.contains('scope-detail-forced')) {
+            // A row the filter revealed for its assembly / gene set ("S3h1") SHOWS one gene
+            // set, so a click means that one -- taking the whole organism here selected six
+            // gene sets behind a row naming one (Sofia, 2026-11-20).
             tick(cb, !cb.checked);
         } else {
             const orgCbs = boxes().filter((c) => c.dataset.org === cb.dataset.org);
@@ -310,6 +319,15 @@ function initScopeSelector(opts = {}) {
         list.classList.toggle('scope-detail-hidden', !detailEl.checked);
         runFilter();   // force-reveals depend on the view
         syncSingleHighlight();
+        if (!single) render();   // the counts line's "Pick single gene sets" belongs to simple view
+    });
+    // The counts line's "Pick single gene sets": Details on, and the list scrolled to the first
+    // selected gene set, so the rows to untick are in sight.
+    countsEl?.addEventListener('click', (e) => {
+        if (!e.target.closest('.scope-pick-single')) return;
+        setDetails(true);
+        render();
+        scrollToRow(checked()[0]?.closest('.scope-row'));
     });
 
     // ── Context: arrived from an organism / assembly / gene-set / group page ────────────

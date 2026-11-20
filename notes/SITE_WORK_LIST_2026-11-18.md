@@ -206,7 +206,7 @@ Planosphere
       and build the nginx rules with `scripts/build_legacy_redirects.php` (as cuttingclass does; simrbase
       has no list yet). ⚠️ Never redirect a path MOOP uses itself (/admin, /tools, ...). **M**
 
-- [ ] **Annotation Search: cannot limit to ONE gene set of an organism** (Sofia 11-20). Picking an
+- [x] DONE 11-20 (search was right; the selector hid it): filter-revealed row now = that gene set; counts line offers "Pick single gene sets" (turns Details on). **Annotation Search: cannot limit to ONE gene set of an organism** (Sofia 11-20). Picking an
       organism searches all of its gene sets; there is no way to pick just one (e.g. only S3h1 for Smed).
       Check the scope selector's mode on that page (multi-select at organism level?) vs Retrieve/BLAST,
       which pick a gene set. **S–M**
