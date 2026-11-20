@@ -175,13 +175,12 @@ Planosphere
       nothing on Planosphere still opens it: no page/API reads it, and setup-check/housekeeping/the admin
       Organisms page don't complain once it is gone (move it aside first, look, then delete). **S** (11-19)
 - [x] DONE 11-19: **"no gene" hover is wrong for 170 dd_Smed_v6 GENE IDs** — their transcripts are in `unlinked`, but the hover says "not in the reference data"; `moop_crosswalk_unlinked()` should fall back to the gene's transcripts. **S** (found 11-19)
-- [ ] **Long admin jobs lock up every other page for that admin** (found 11-19 ~21:54): Manage JBrowse
-      re-prep GFF / register assembly took 112–172 s each (dashboard 166 s), and none of them, nor
-      admin.php / manage_jbrowse.php, calls `session_write_close()` -- so PHP's session lock queued all of
-      Sofia's other tabs behind them ("no page will load"); other visitors were fine. Fix: release the
-      session right after the admin + CSRF check in each long endpoint (check none writes $_SESSION after).
-      Then see why the jobs take minutes -- real index building vs the 8 s-per-lookup DNS problem
-      (10.0.51.5/6 blocked from this server since the move; IT ticket). **S–M**
+- [x] DONE 11-20: **Long admin jobs locked up every other page for that admin** (found 11-19 ~21:54).
+      jbrowse_register_assembly.php + jbrowse_reprep_gff.php now call session_write_close() after
+      admin_init (neither writes $_SESSION). Proven: dashboard 0.09 s while a re-prep ran in the same
+      session. The minutes-long jobs were ~9 s each of real work queued one behind another via the
+      lock, + the 11-19 DNS timeouts (DNS answers in 5-35 ms again on 11-20). Other admin endpoints
+      are all under 30 s; release the lock the same way if a new long one appears.
 - [x] DONE 11-19: **Taxonomy group pages asked Wikipedia live on EVERY load** (groups.php?taxonomy_rank=;
       8 s each during the DNS outage, mostly crawler hits). Now: our own text from group_descriptions.json
       first (Cnidaria, Mollusca...), else Wikipedia through a saved copy (moop_wikipedia_taxon(), ~30 days).
@@ -192,12 +191,9 @@ Planosphere
       Server fine (CPU peak 32%, fpm 19/28, 15 x 429). Fixed: meta-webindexer in robots.txt, nofollow on KEGG
       map links (f97a4a30); api/v1 exempt from the human check -- it had 403'd every assistant (a6d5fa16);
       heavy-group advice counts only internet requests. Watch: fpm busy peak 19 of 28.
-- [ ] **Filesystem Permissions page takes ~106 s to load** (admin/manage_filesystem_permissions.php: all 14
-      loads over 7 days, 172.16.x admins; found 11-20 from the System Monitor). Likely the full permission
-      scan runs live in the request -- CLAUDE.md §10 says that scan is housekeeping's job. Check what it
-      does per load; show the housekeeping result + a "Re-check now" button (run in background) instead.
-      Same look for Manage Organisms (up to 117 s, 3 of 17 loads) -- may be the DNS lookups above. Also
-      needs session_write_close() (see the long-admin-jobs item). **M**
+- [x] NOT A PROBLEM 11-20: **Filesystem Permissions page "106 s"** -- normally ~4 s (live re-check by
+      design, CLAUDE.md §10). The 106 s loads (3, all 11-19 21:05) and Manage Organisms' 117 s were the
+      session-lock queue above, now fixed.
 - [ ] **Old SIMRbase addresses printed in papers need redirects** (Sofia 11-19). Published papers cite
       URLs on the old Drupal SIMRbase -- e.g. `simrbase.stowers.org/bats` may be one -- that now land on
       MOOP and likely 404. Find them: (1) search the old SIMRbase Drupal **Postgres dump** for typed

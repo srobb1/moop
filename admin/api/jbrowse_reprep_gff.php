@@ -16,6 +16,13 @@
 require_once __DIR__ . '/../../admin/admin_init.php';
 require_once __DIR__ . '/../../lib/jbrowse/gene_set_functions.php';
 
+// Release the session lock now: this job runs for minutes, and PHP holds the session file
+// locked for the whole request, so every other page this admin opened (dashboard, other tabs,
+// the next register/re-prep in a batch) waited behind it -- 2026-11-19 21:03-21:06, a batch of
+// 10 queued jobs made the permissions page take 106 s and the dashboard 166 s. Nothing below
+// writes $_SESSION (reading it still works after this).
+session_write_close();
+
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
