@@ -145,7 +145,7 @@ class AdvancedSearchFilter {
                 <div class="mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="d-flex align-items-center">
-                            <span class="badge bg-${escapeHtml(color)} fs-6">${escapeHtml(type)}</span>
+                            <span class="badge bg-${escapeHtml(color)} fs-6">${escapeHtml(typeData.label || type)}</span>
                             ${infoIcon}
                         </div>
                         <div>

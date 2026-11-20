@@ -245,7 +245,7 @@
         $ann_dropdown = '<select class="form-select form-select-sm moop-input mm-ann-src-select">'
                       . '<option value="">Any annotation type</option>';
         foreach ($annotation_source_types as $_type => $_td):
-            $ann_dropdown .= '<optgroup label="' . htmlspecialchars($_type) . '" data-type="' . htmlspecialchars($_type, ENT_QUOTES) . '">';
+            $ann_dropdown .= '<optgroup label="' . htmlspecialchars(moop_annotation_type_label($_type)) . '" data-type="' . htmlspecialchars($_type, ENT_QUOTES) . '" data-label="' . htmlspecialchars(moop_annotation_type_label($_type), ENT_QUOTES) . '">';
             foreach ($_td['sources'] as $_src):
                 $ann_dropdown .= '<option value="' . htmlspecialchars($_src) . '">' . htmlspecialchars($_src) . '</option>';
             endforeach;
@@ -566,7 +566,7 @@
                        id="<?= $type_safe ?>" data-type="<?= htmlspecialchars($type) ?>"<?= $_on ?>>
                 <label for="<?= $type_safe ?>" class="form-check-label fw-semibold mb-0 me-auto"
                        style="cursor:pointer; font-size:0.88rem;">
-                  <span class="badge bg-<?= $color ?> me-1"><?= htmlspecialchars($type) ?></span>
+                  <span class="badge bg-<?= $color ?> me-1"><?= htmlspecialchars(moop_annotation_type_label($type)) ?></span>
                 </label>
               </div>
               <div class="ps-3">

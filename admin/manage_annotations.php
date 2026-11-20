@@ -276,13 +276,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !$file_write_error) {
     
     if (isset($_POST['_form_action']) && $_POST['_form_action'] === 'update_display_label') {
         $type_name = trim($_POST['type_name'] ?? '');
-        $display_label = trim($_POST['display_label'] ?? '');
-        
+        // Free text (it was a pick from the type's synonyms): what visitors see for this type.
+        // The database name stays the key; empty = show it as stored.
+        $display_label = trim(preg_replace('/\s+/', ' ', strip_tags((string) ($_POST['display_label'] ?? ''))));
+        $display_label = mb_substr($display_label, 0, 60);
+
         if (!empty($type_name) && isset($annotation_config['annotation_types'][$type_name])) {
-            $annotation_config['annotation_types'][$type_name]['display_label'] = $display_label;
-            saveJsonFile($config_file, $annotation_config);
-            $message = "Updated display label for '$type_name'";
-            $messageType = "success";
+            if ($display_label === '' || $display_label === $type_name) {
+                unset($annotation_config['annotation_types'][$type_name]['display_label']);
+                $shown = $type_name;
+            } else {
+                $annotation_config['annotation_types'][$type_name]['display_label'] = $display_label;
+                $shown = $display_label;
+            }
+            if (saveJsonFile($config_file, $annotation_config)) {
+                $message = "Pages now call '$type_name' \"$shown\"";
+                $messageType = "success";
+            } else {
+                $message = "Could not save annotation_config.json -- the name was NOT changed";
+                $messageType = "danger";
+            }
         }
     }
     

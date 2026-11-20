@@ -112,7 +112,7 @@ if (isset($annotation_config['annotation_types'])) {
             // more than one language it is recorded and lands in Manage Translations' spreadsheet.
             $analysis_desc[$key] = ($type_config['description'] ?? '') !== '' ? t_plain((string) $type_config['description']) : '';
             $annotation_colors[$key] = $type_config['color'] ?? 'secondary';
-            $annotation_labels[$key] = $type_config['display_label'] ?? $key;
+            $annotation_labels[$key] = moop_annotation_type_label($key);
         }
     }
 } else {

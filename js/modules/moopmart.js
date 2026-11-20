@@ -58,12 +58,13 @@
     function applyAnnDropdownCounts() {
         document.querySelectorAll('.mm-ann-src-select').forEach(sel => {
             sel.querySelectorAll('optgroup').forEach(og => {
-                const type = og.dataset.type || og.label;
+                const type  = og.dataset.type || og.label;    // the database name: the key
+                const label = og.dataset.label || type;      // what the page calls it
                 if (lastAnnTypeTotals) {
                     const t = lastAnnTypeTotals[type] || 0;
-                    og.label = `${type} (${t.toLocaleString()} gene${t !== 1 ? 's' : ''})`;
+                    og.label = `${label} (${t.toLocaleString()} gene${t !== 1 ? 's' : ''})`;
                 } else {
-                    og.label = type;   // cleared — no selection
+                    og.label = label;   // cleared — no selection
                 }
                 og.querySelectorAll('option').forEach(opt => {
                     const src = opt.value;

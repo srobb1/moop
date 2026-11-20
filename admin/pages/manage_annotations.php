@@ -121,26 +121,25 @@
             <div class="row mb-3">
               <!-- Display Label -->
               <div class="col-md-6">
-                <h6>Display Label</h6>
+                <h6>Name shown on pages</h6>
                 <form method="post" action="manage_annotations.php" class="d-flex gap-2 mb-2" onsubmit="event.stopPropagation(); this.querySelector('input[name=\'_form_action\']').value = 'update_display_label';">
                   <?= csrf_input_field() ?>
                   <input type="hidden" name="_form_action" value="">
                   <input type="hidden" name="type_name" value="<?= htmlspecialchars($type_name) ?>">
-                  <select class="form-select form-select-sm" name="display_label" required>
-                    <option value="<?= htmlspecialchars($type_name) ?>" <?= ($type_config['display_label'] ?? $type_name) === $type_name ? 'selected' : '' ?>>
-                      <?= htmlspecialchars($type_name) ?>
-                    </option>
+                  <?php $dl_id = 'dl-label-' . preg_replace('/[^A-Za-z0-9_-]/', '_', $type_name); ?>
+                  <input type="text" class="form-control form-control-sm" name="display_label" maxlength="60"
+                         value="<?= htmlspecialchars(($type_config['display_label'] ?? '') !== $type_name ? ($type_config['display_label'] ?? '') : '') ?>"
+                         placeholder="<?= htmlspecialchars($type_name) ?>" list="<?= $dl_id ?>">
+                  <datalist id="<?= $dl_id ?>">
                     <?php foreach (($type_config['synonyms'] ?? []) as $synonym): ?>
-                    <option value="<?= htmlspecialchars($synonym) ?>" <?= ($type_config['display_label'] ?? $type_name) === $synonym ? 'selected' : '' ?>>
-                      <?= htmlspecialchars($synonym) ?>
-                    </option>
+                    <option value="<?= htmlspecialchars($synonym) ?>">
                     <?php endforeach; ?>
-                  </select>
+                  </datalist>
                   <button type="submit" class="btn btn-sm btn-primary" <?= $file_write_error ? 'disabled' : '' ?>>
                     <i class="fa fa-save"></i>
                   </button>
                 </form>
-                <small class="text-muted">Choose which name displays in the UI</small>
+                <small class="text-muted">What visitors see for <code><?= htmlspecialchars($type_name) ?></code>, the name in the database. Empty = show the database name. Filters, links and downloads keep using the database name.</small>
               </div>
               
               <!-- Database Info -->

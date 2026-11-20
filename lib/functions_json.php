@@ -316,6 +316,28 @@ function consolidateSynonym(&$annotation_config, $canonical_name, $synonym_name)
 }
 
 /**
+ * What pages call an annotation type: its display_label in annotation_config.json (Admin ->
+ * Manage Annotations -> the type -> "Name shown on pages"), else the name as stored in the
+ * database. The database name stays the KEY everywhere (filters, URLs, data-type, the API);
+ * only the visible text goes through here. display_name is deliberately NOT a fallback: on
+ * some sites it differs from the key and was never shown, so using it would rename types
+ * nobody asked to rename. A synonym resolves to its canonical type's label.
+ */
+function moop_annotation_type_label(string $type): string {
+    static $labels = null;
+    if ($labels === null) {
+        $labels = [];
+        $file = ConfigManager::getInstance()->getPath('metadata_path') . '/annotation_config.json';
+        $cfg  = is_file($file) ? loadJsonFile($file, []) : [];
+        foreach (getAnnotationTypeMapping($cfg) as $name => $canonical) {
+            $label = trim((string) ($cfg['annotation_types'][$canonical]['display_label'] ?? ''));
+            if ($label !== '' && $label !== $name) $labels[$name] = $label;
+        }
+    }
+    return t_plain($labels[$type] ?? $type);
+}
+
+/**
  * Get display label for an annotation type from database
  * Resolves through synonym mapping and returns configured display_label
  * 

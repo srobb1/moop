@@ -35,7 +35,7 @@
             <div class="card h-100 border-0 shadow-sm">
               <div class="card-body">
                 <h6 class="card-title mb-2">
-                  <span class="badge bg-<?= $color ?>"><?= htmlspecialchars($type) ?></span>
+                  <span class="badge bg-<?= $color ?>"><?= htmlspecialchars(moop_annotation_type_label($type)) ?></span>
                 </h6>
                 <p class="card-text small text-muted mb-0"><?= $desc ?></p>
               </div>

@@ -181,6 +181,7 @@ foreach ($aggregated_sources as $type => $sources_by_name) {
         'sources' => $sources,
         'genes' => $counts_known ? ($type_genes[$type] ?? 0) : null,
         'color' => $color,
+        'label' => moop_annotation_type_label($type),   // visible name; the key stays $type
         'description' => $description
     ];
 }
