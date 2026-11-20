@@ -327,7 +327,7 @@ $available_types = getAvailableSequenceTypesForDisplay($accessible_sources, $seq
 
 // Configure display template
 $display_config = [
-    'title' => 'Sequence Retrieval & Download',
+    'title' => 'Retrieve Sequences',
     'content_file' => __DIR__ . '/pages/retrieve_sequences.php',
     'page_script' => [
 	moop_url_base() . '/js/modules/utilities.js',

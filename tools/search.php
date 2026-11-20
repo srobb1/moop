@@ -41,7 +41,7 @@ if ($scope_context && $ctx_source !== '' && strlen($ctx_source) <= 200 && !preg_
 $siteTitle = ConfigManager::getInstance()->getString('siteTitle');
 
 $display_config = [
-    'title'        => 'Search',
+    'title'        => 'Annotation Search',
     'content_file' => __DIR__ . '/pages/search.php',
     'page_script'  => [
         // Before search-display.js, which calls initScopeSelector().

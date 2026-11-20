@@ -3830,6 +3830,17 @@ $_bad = moop_page_render('<div onclick="x()"><script>alert(1)</script><iframe sr
 ok(!preg_match('/<script|onclick|onerror|javascript:|<iframe|<form|<input|<style/i', $_bad),
    'HTML: script, on*= handlers, javascript: links, iframe, form and style are removed');
 $_yt = '<div class="ratio ratio-16x9"><iframe src="https://www.youtube-nocookie.com/embed/Bw1U7_Tk0H0" title="HHMI" allowfullscreen></iframe></div>';
+// {admin_email} in a page = the site's contact address (Site Configuration), never a typed copy.
+$_aecfg = ConfigManager::getInstance(); $_aerp = new ReflectionProperty($_aecfg, 'config'); $_aerp->setAccessible(true);
+$_aesaved = $_aerp->getValue($_aecfg);
+$_aeset = function ($v) use ($_aecfg, $_aerp, $_aesaved) { $c = $_aesaved; $c['admin_email'] = $v; $_aerp->setValue($_aecfg, $c); };
+$_aeset('help@example.org');
+ok(strpos(moop_page_render('[Email us](mailto:{admin_email})', 'markdown'), 'href="mailto:help@example.org"') !== false,
+   'a page: {admin_email} becomes the site\'s contact address');
+$_aeset('x" onmouseover="alert(1)');
+ok(strpos(moop_page_render('[Email us](mailto:{admin_email})', 'markdown'), 'onmouseover') === false,
+   'a page: an address that is not a valid email is never put in');
+$_aerp->setValue($_aecfg, $_aesaved);
 ok(strpos(moop_page_render($_yt, 'html'), '<iframe src="https://www.youtube-nocookie.com/embed/Bw1U7_Tk0H0" title="HHMI" allowfullscreen') !== false,
    'HTML: a YouTube video from youtube-nocookie.com/embed/ is kept, with its title and full-screen button');
 foreach (['https://www.youtube.com/embed/Bw1U7_Tk0H0', 'https://www.youtube-nocookie.com.evil.example/embed/Bw1U7_Tk0H0',

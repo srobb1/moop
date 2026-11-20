@@ -77,7 +77,7 @@ Order of work, and why:
       Becomes the skeleton of the tutorials in §7. **TALK, then M**
 
 ## 3. First impressions
-- [ ] **Welcome text on the SIMRbase home page:** "Welcome to the new SIMRbase. SIMRbase MOOP —
+- [x] **Welcome text on the SIMRbase home page:** DONE 11-19: content page `welcome` shown above the home (Manage Pages -> home = intro), + "Email us for a walkthrough" via {admin_email}. Edit it any time in Manage Pages; a pop-up was considered and NOT chosen (Turnstile already interrupts once). "Welcome to the new SIMRbase. SIMRbase MOOP —
       *moop* is a Scots word meaning to associate closely; SIMRbase MOOP does that with all of our
       organisms. Many organisms, one platform." (Wording to settle; goes through `t()`.) **S**
 - [ ] **Way back to Planosphere from SIMRbase:** Planosphere's favicon/link in the SIMRbase menu bar,
@@ -89,7 +89,7 @@ Order of work, and why:
       stays in Research only (decided). Ideas: `notes/TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18.md`.
       + the same line in a band under each tool page's header (tool_page_blurb(); one text, two places).
       Rosetta wording: never "old/older" (some IDs are just not the main ones).
-- [ ] **Page titles differ from menu names:** "Search Features by Annotation" (menu: Annotation Search),
+- [x] **Page titles differ from menu names:** DONE 11-19 (Annotation Search, Retrieve Sequences; tab titles too). "Search Features by Annotation" (menu: Annotation Search),
       "Sequence Retrieval" (menu: Retrieve Sequences). Pick one name each. **S**
 - [x] DONE 11-19 (all 6 = tests typed "/moop"; now moop_url_base() + shipped defaults): **smoke_tests read the LIVE config:** 4 tests fail on this host since the move to "/" (link prefix,
       main menu hrefs assume "/moop"); CI passes only because it has no config_editable.json. Make them
@@ -108,8 +108,8 @@ SIMRbase
       `no_hit`) -- write it as plain words in the (i). (Sofia, 11-19) **S**
 - [ ] Gene page — **Pathways card:** make the tree and the link-out stand out; one line is easy to miss. **S**
 - [ ] Gene page — **Feature Hierarchy** icon doesn't match the other cards. **S**
-- [ ] Ontology Browser — **chevrons too small;** a reviewer didn't know they were clickable. **S**
-- [ ] Term pages — **buttons don't stand out;** give them colour. **S**
+- [x] Ontology Browser — **chevrons too small;** DONE 11-19 (filled teal circle). a reviewer didn't know they were clickable. **S**
+- [x] Term pages — **buttons don't stand out;** DONE 11-19 (solid main colour; link-outs outlined). give them colour. **S**
 - [ ] Ontology term page — **stage terms** have old/ugly formatting; bring to the new style. **M**
 
 Planosphere

@@ -20,8 +20,8 @@ $home_count = fn($n) => '<strong style="font-weight:500;">' . (int) $n . '</stro
     </p>
   </div>
 <?php if (!empty($home_intro_html)): /* Admin -> Manage Pages: a page shown above the home */ ?>
-  <div class="card shadow-sm mb-3 home-intro">
-    <div class="card-body content-page-body"><?= $home_intro_html ?></div>
+  <div class="home-intro mb-4">
+    <div class="home-intro-body content-page-body"><?= $home_intro_html ?></div>
   </div>
 <?php endif; ?>
   <?php /* Declared, not shown: the tagline above already tells a visitor what is here,

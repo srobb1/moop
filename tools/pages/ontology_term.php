@@ -231,7 +231,7 @@ $rows = function (array $list) use ($prefix): string {
       <div class="card-body">
         <?php if ($records['total'] > 0): ?>
           <p class="mb-2"><?= t_markup('%s published expression records in %s or any of its parts.', '<strong>' . number_format($records['total']) . '</strong>', htmlspecialchars($term['label'])) ?></p>
-          <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars($records['url']) ?>"><?= t('See them in Expression by Anatomy') ?></a>
+          <a class="btn btn-sm ot-action" href="<?= htmlspecialchars($records['url']) ?>"><?= t('See them in Expression by Anatomy') ?></a>
         <?php else: ?>
           <p class="text-muted mb-0"><?= t('No published expression records for this term or its parts.') ?></p>
         <?php endif; ?>
@@ -252,7 +252,7 @@ $rows = function (array $list) use ($prefix): string {
             <?= '<a href="' . htmlspecialchars($term_images['url']) . '"><img src="' . htmlspecialchars(moop_url('api/gene_image.php') . '?' . http_build_query($__q)) . '" alt="" loading="lazy" width="120" height="90" style="object-fit:contain;background:#f8f9fa;border:1px solid #dee2e6;border-radius:4px"></a>' . "\n" ?>
           <?php endforeach; ?>
         </div>
-        <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars($term_images['url']) ?>"><?= t('See them in the image gallery') ?></a>
+        <a class="btn btn-sm ot-action" href="<?= htmlspecialchars($term_images['url']) ?>"><?= t('See them in the image gallery') ?></a>
       </div>
     </div>
     <?php endif; ?>
@@ -262,7 +262,7 @@ $rows = function (array $list) use ($prefix): string {
       <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Expression records') ?></h2></div>
       <div class="card-body">
         <p class="mb-2"><?= t('Published expression records for %s and its parts are searched on SIMRbase.', $term['label']) ?></p>
-        <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars($records_elsewhere) ?>"><?= t('See the expression records') ?></a>
+        <a class="btn btn-sm ot-action" href="<?= htmlspecialchars($records_elsewhere) ?>"><?= t('See the expression records') ?></a>
       </div>
     </div>
     <?php endif; ?>
@@ -272,7 +272,7 @@ $rows = function (array $list) use ($prefix): string {
       <div class="card-header ob-card-head"><h2 class="h5 mb-0"><?= t('Links') ?></h2></div>
       <div class="card-body">
         <?php foreach ($links as $name => $url): ?>
-          <a class="btn btn-sm btn-outline-secondary me-2 mb-1" href="<?= htmlspecialchars($url) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($name) ?></a>
+          <a class="btn btn-sm ot-action-outline me-2 mb-1" href="<?= htmlspecialchars($url) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($name) ?></a>
         <?php endforeach; ?>
       </div>
     </div>

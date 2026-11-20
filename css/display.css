@@ -1628,6 +1628,52 @@ a:hover .link-icon {
 .qs-wrap {
   width: 100%;
 }
+
+/* The welcome above the home page (Admin -> Manage Pages, home = "a page above MOOP's home"):
+   a banner in the site's colours, not a plain card. Styled here rather than in the page text,
+   so whatever an admin writes there later looks right. Headings are kept in proportion to the
+   site title above; a mailto link becomes a button ("Email us for a walkthrough"). */
+.home-intro {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  background: linear-gradient(135deg, rgba(var(--moop-main-rgb), 0.10), rgba(var(--moop-main-rgb), 0.03));
+  border: 1px solid rgba(var(--moop-main-rgb), 0.18);
+  border-left: 5px solid var(--moop-tool-header);
+  border-radius: 10px;
+}
+.home-intro-body {
+  padding: 1.1rem 1.5rem;
+  color: #334155;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+.home-intro-body h1, .home-intro-body h2, .home-intro-body h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--moop-main-dark);
+  margin: 0 0 0.45rem;
+}
+.home-intro-body p { margin-bottom: 0.6rem; }
+.home-intro-body > :last-child { margin-bottom: 0; }
+.home-intro-body a[href^="mailto:"] {
+  display: inline-block;
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  background: var(--moop-tool-header);
+  color: #fff;
+  font-weight: 500;
+  text-decoration: none;
+}
+.home-intro-body a[href^="mailto:"]::before { content: "\2709"; margin-right: 0.4rem; }
+.home-intro-body a[href^="mailto:"]:hover, .home-intro-body a[href^="mailto:"]:focus {
+  background: var(--moop-tool-hover);
+  color: #fff;
+}
+@media (max-width: 576px) {
+  .home-intro-body { padding: 0.9rem 1rem; }
+  .home-intro-body h1, .home-intro-body h2, .home-intro-body h3 { font-size: 1.15rem; }
+}
 .qs-card {
   background: var(--moop-search-wash);
   border: 1px solid rgba(var(--moop-main-rgb), 0.18);

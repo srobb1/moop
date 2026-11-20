@@ -15,10 +15,16 @@ li:has(> .ob-row > .ob-term > .ob-toggle[aria-expanded="true"]) > .ob-row { back
 .ob-term { position: relative; font-size: 0.93rem; }
 .ob-term a { color: #24292e; text-decoration: none; }
 .ob-term a:hover, .ob-term a:focus { color: var(--moop-tool-header); text-decoration: underline; }
-.ob-toggle { position: absolute; top: 1px; width: 18px; height: 18px; padding: 0; border: 0; background: none; cursor: pointer;
-             color: var(--moop-tool-header); font-size: 0.85rem; line-height: 18px; }
-.ob-toggle::before { content: "\25B8"; }
-.ob-toggle[aria-expanded="true"]::before { content: "\25BE"; }
+/* The open/close control: a filled circle, not a bare triangle -- a reviewer did not know the small
+   triangle was clickable (work list 11-18). Stays inside the 20px indent step per level. */
+.ob-toggle { position: absolute; top: 0; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%;
+             background: rgba(var(--moop-main-rgb), 0.14); cursor: pointer;
+             color: var(--moop-main-dark); font-size: 0.8rem; line-height: 20px; text-align: center;
+             transition: background-color 0.15s, color 0.15s; }
+.ob-toggle:hover, .ob-toggle:focus-visible { background: var(--moop-tool-header); color: #fff; }
+.ob-toggle[aria-expanded="true"] { background: rgba(var(--moop-main-rgb), 0.28); }
+.ob-toggle::before { content: "\25B6"; font-size: 0.62rem; position: relative; left: 1px; top: -1px; }
+.ob-toggle[aria-expanded="true"]::before { content: "\25BC"; left: 0; }
 .ob-leaf { position: absolute; top: 0; width: 18px; text-align: center; color: #c5ccd1; }
 .ob-leaf::before { content: "\2022"; }
 .ob-n { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 3px; border: 1px solid #d5dbdf; background: #fff;
@@ -27,18 +33,18 @@ li:has(> .ob-row > .ob-term > .ob-toggle[aria-expanded="true"]) > .ob-row { back
           color: var(--moop-main-dark, #0e7490); font-size: 0.7rem; line-height: 1.6; vertical-align: 1px; }
 .ob-def { font-size: 0.86rem; line-height: 1.45; color: #4a5560; }
 .ob-loading { padding: 6px 16px; color: #6c757d; font-size: 0.85rem; font-style: italic; }
-li.ob-d1 > .ob-row > .ob-term { padding-left: 26px; } li.ob-d1 > .ob-row > .ob-term > .ob-toggle, li.ob-d1 > .ob-row > .ob-term > .ob-leaf { left: 4px; } li.ob-loading.ob-d1 { padding-left: 42px; }
-li.ob-d2 > .ob-row > .ob-term { padding-left: 46px; } li.ob-d2 > .ob-row > .ob-term > .ob-toggle, li.ob-d2 > .ob-row > .ob-term > .ob-leaf { left: 24px; } li.ob-loading.ob-d2 { padding-left: 62px; }
-li.ob-d3 > .ob-row > .ob-term { padding-left: 66px; } li.ob-d3 > .ob-row > .ob-term > .ob-toggle, li.ob-d3 > .ob-row > .ob-term > .ob-leaf { left: 44px; } li.ob-loading.ob-d3 { padding-left: 82px; }
-li.ob-d4 > .ob-row > .ob-term { padding-left: 86px; } li.ob-d4 > .ob-row > .ob-term > .ob-toggle, li.ob-d4 > .ob-row > .ob-term > .ob-leaf { left: 64px; } li.ob-loading.ob-d4 { padding-left: 102px; }
-li.ob-d5 > .ob-row > .ob-term { padding-left: 106px; } li.ob-d5 > .ob-row > .ob-term > .ob-toggle, li.ob-d5 > .ob-row > .ob-term > .ob-leaf { left: 84px; } li.ob-loading.ob-d5 { padding-left: 122px; }
-li.ob-d6 > .ob-row > .ob-term { padding-left: 126px; } li.ob-d6 > .ob-row > .ob-term > .ob-toggle, li.ob-d6 > .ob-row > .ob-term > .ob-leaf { left: 104px; } li.ob-loading.ob-d6 { padding-left: 142px; }
-li.ob-d7 > .ob-row > .ob-term { padding-left: 146px; } li.ob-d7 > .ob-row > .ob-term > .ob-toggle, li.ob-d7 > .ob-row > .ob-term > .ob-leaf { left: 124px; } li.ob-loading.ob-d7 { padding-left: 162px; }
-li.ob-d8 > .ob-row > .ob-term { padding-left: 166px; } li.ob-d8 > .ob-row > .ob-term > .ob-toggle, li.ob-d8 > .ob-row > .ob-term > .ob-leaf { left: 144px; } li.ob-loading.ob-d8 { padding-left: 182px; }
-li.ob-d9 > .ob-row > .ob-term { padding-left: 186px; } li.ob-d9 > .ob-row > .ob-term > .ob-toggle, li.ob-d9 > .ob-row > .ob-term > .ob-leaf { left: 164px; } li.ob-loading.ob-d9 { padding-left: 202px; }
-li.ob-d10 > .ob-row > .ob-term { padding-left: 206px; } li.ob-d10 > .ob-row > .ob-term > .ob-toggle, li.ob-d10 > .ob-row > .ob-term > .ob-leaf { left: 184px; } li.ob-loading.ob-d10 { padding-left: 222px; }
-li.ob-d11 > .ob-row > .ob-term { padding-left: 226px; } li.ob-d11 > .ob-row > .ob-term > .ob-toggle, li.ob-d11 > .ob-row > .ob-term > .ob-leaf { left: 204px; } li.ob-loading.ob-d11 { padding-left: 242px; }
-li.ob-d12 > .ob-row > .ob-term { padding-left: 246px; } li.ob-d12 > .ob-row > .ob-term > .ob-toggle, li.ob-d12 > .ob-row > .ob-term > .ob-leaf { left: 224px; } li.ob-loading.ob-d12 { padding-left: 262px; }
+li.ob-d1 > .ob-row > .ob-term { padding-left: 30px; } li.ob-d1 > .ob-row > .ob-term > .ob-toggle, li.ob-d1 > .ob-row > .ob-term > .ob-leaf { left: 4px; } li.ob-loading.ob-d1 { padding-left: 42px; }
+li.ob-d2 > .ob-row > .ob-term { padding-left: 50px; } li.ob-d2 > .ob-row > .ob-term > .ob-toggle, li.ob-d2 > .ob-row > .ob-term > .ob-leaf { left: 24px; } li.ob-loading.ob-d2 { padding-left: 62px; }
+li.ob-d3 > .ob-row > .ob-term { padding-left: 70px; } li.ob-d3 > .ob-row > .ob-term > .ob-toggle, li.ob-d3 > .ob-row > .ob-term > .ob-leaf { left: 44px; } li.ob-loading.ob-d3 { padding-left: 82px; }
+li.ob-d4 > .ob-row > .ob-term { padding-left: 90px; } li.ob-d4 > .ob-row > .ob-term > .ob-toggle, li.ob-d4 > .ob-row > .ob-term > .ob-leaf { left: 64px; } li.ob-loading.ob-d4 { padding-left: 102px; }
+li.ob-d5 > .ob-row > .ob-term { padding-left: 110px; } li.ob-d5 > .ob-row > .ob-term > .ob-toggle, li.ob-d5 > .ob-row > .ob-term > .ob-leaf { left: 84px; } li.ob-loading.ob-d5 { padding-left: 122px; }
+li.ob-d6 > .ob-row > .ob-term { padding-left: 130px; } li.ob-d6 > .ob-row > .ob-term > .ob-toggle, li.ob-d6 > .ob-row > .ob-term > .ob-leaf { left: 104px; } li.ob-loading.ob-d6 { padding-left: 142px; }
+li.ob-d7 > .ob-row > .ob-term { padding-left: 150px; } li.ob-d7 > .ob-row > .ob-term > .ob-toggle, li.ob-d7 > .ob-row > .ob-term > .ob-leaf { left: 124px; } li.ob-loading.ob-d7 { padding-left: 162px; }
+li.ob-d8 > .ob-row > .ob-term { padding-left: 170px; } li.ob-d8 > .ob-row > .ob-term > .ob-toggle, li.ob-d8 > .ob-row > .ob-term > .ob-leaf { left: 144px; } li.ob-loading.ob-d8 { padding-left: 182px; }
+li.ob-d9 > .ob-row > .ob-term { padding-left: 190px; } li.ob-d9 > .ob-row > .ob-term > .ob-toggle, li.ob-d9 > .ob-row > .ob-term > .ob-leaf { left: 164px; } li.ob-loading.ob-d9 { padding-left: 202px; }
+li.ob-d10 > .ob-row > .ob-term { padding-left: 210px; } li.ob-d10 > .ob-row > .ob-term > .ob-toggle, li.ob-d10 > .ob-row > .ob-term > .ob-leaf { left: 184px; } li.ob-loading.ob-d10 { padding-left: 222px; }
+li.ob-d11 > .ob-row > .ob-term { padding-left: 230px; } li.ob-d11 > .ob-row > .ob-term > .ob-toggle, li.ob-d11 > .ob-row > .ob-term > .ob-leaf { left: 204px; } li.ob-loading.ob-d11 { padding-left: 242px; }
+li.ob-d12 > .ob-row > .ob-term { padding-left: 250px; } li.ob-d12 > .ob-row > .ob-term > .ob-toggle, li.ob-d12 > .ob-row > .ob-term > .ob-leaf { left: 224px; } li.ob-loading.ob-d12 { padding-left: 262px; }
 @media (max-width: 767px) {
   .ob-head { display: none; }
   .ob-row { grid-template-columns: 1fr; gap: 2px; }
@@ -84,3 +90,10 @@ a.ob-rec:hover, a.ob-rec:focus { background: var(--moop-tool-header); color: #ff
 .ob-counts { display: inline; }
 .ob-n-open { border-style: dashed; }
 .ob-rec-open { background: rgba(var(--moop-main-rgb), 0.07); }
+
+/* Term page actions ("See them in ..."): solid in the site's main colour so they stand out from the
+   text around them; link-outs to other sites (OLS, OBO PURL) in the same colour, outlined. */
+.ot-action { background: var(--moop-tool-header); border: 1px solid var(--moop-tool-header); color: #fff; font-weight: 500; }
+.ot-action:hover, .ot-action:focus { background: var(--moop-tool-hover); border-color: var(--moop-tool-hover); color: #fff; }
+.ot-action-outline { border: 1px solid var(--moop-tool-header); color: var(--moop-main-dark); background: #fff; }
+.ot-action-outline:hover, .ot-action-outline:focus { background: rgba(var(--moop-main-rgb), 0.1); color: var(--moop-main-dark); }

@@ -254,6 +254,13 @@ function moop_html_clean(string $html, ?array &$removed = null): string {
  * the cleaner took out (HTML only), and any link to a linked site this site does not know.
  */
 function moop_page_render(string $body, string $format, ?array &$removed = null): string {
+    // {admin_email}: the site's contact address (Site Configuration, the footer's "Contact
+    // Administrator"), so a page asking visitors to write in never holds a copy that goes stale.
+    // Only a valid address is put in; otherwise the placeholder stays, visibly unfilled.
+    if (strpos($body, '{admin_email}') !== false) {
+        $email = ConfigManager::getInstance()->getString('admin_email', '');
+        if (filter_var($email, FILTER_VALIDATE_EMAIL)) $body = str_replace('{admin_email}', $email, $body);
+    }
     $body = moop_linked_sites_expand($body, $unknown);
     if ($format !== 'html') {
         $html = moop_markdown($body);

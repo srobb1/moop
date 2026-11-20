@@ -35,8 +35,8 @@
         <?php /* This page's title, and the document had none at all until audit #9 --
                  which was then fixed by writing the eyebrow classes out by hand here.
                  page_title() emits the same markup from one place; measured identical. */ ?>
-        <?= page_title('Sequence Retrieval', 'fa fa-dna') ?>
-        <?= help_modal_trigger('retrieve-help', '', 'How to use Sequence Retrieval') ?>
+        <?= page_title('Retrieve Sequences', 'fa fa-dna') ?>
+        <?= help_modal_trigger('retrieve-help', '', 'How to use Retrieve Sequences') ?>
           <?= page_purpose('Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs — whole, or a range of positions — and retrieve their protein, mRNA, CDS and genomic sequences, with flanking sequence if you want it.', '', false, false) ?>
       </div>
       <?= tool_page_blurb('download_fasta') ?>
@@ -314,7 +314,7 @@
 // and ranges work"), next to where they are used and with the selected gene set's own IDs.
 echo help_modal(
     'retrieve-help',
-    'How to use Sequence Retrieval',
+    'How to use Retrieve Sequences',
     [
         [
             'heading' => 'Steps',
