@@ -91,7 +91,7 @@ Order of work, and why:
       Rosetta wording: never "old/older" (some IDs are just not the main ones).
 - [ ] **Page titles differ from menu names:** "Search Features by Annotation" (menu: Annotation Search),
       "Sequence Retrieval" (menu: Retrieve Sequences). Pick one name each. **S**
-- [ ] **smoke_tests read the LIVE config:** 4 tests fail on this host since the move to "/" (link prefix,
+- [x] DONE 11-19 (all 6 = tests typed "/moop"; now moop_url_base() + shipped defaults): **smoke_tests read the LIVE config:** 4 tests fail on this host since the move to "/" (link prefix,
       main menu hrefs assume "/moop"); CI passes only because it has no config_editable.json. Make them
       hermetic. Also 2 failing on HEAD before 11-19: "gene sets of one organism can share IDs",
       "a paralog with no link pattern links to its gene page". **S**

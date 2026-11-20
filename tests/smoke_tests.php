@@ -135,7 +135,9 @@ ok($_hk_err === '', 'housekeeping: the annotation-cache task runs to the end ove
 group('gene page: paralogs link to their own gene page on MOOP');
 require_once "$BASE/lib/parent_functions.php";
 $_ctx = ['site' => 'moop', 'organism' => 'Danio_rerio', 'assembly' => 'GCF_049306965.2', 'gene_set' => 'RS_2025_04'];
-ok(moop_same_organism_hit_url($_ctx, ' NP_570983.2 ') === '/moop/tools/parent.php?organism=Danio_rerio&assembly=GCF_049306965.2&gene_set=RS_2025_04&uniquename=NP_570983.2',
+// Links start with moop_url_base() -- this site's prefix ("" at a domain's root, "/moop" under it),
+// never a typed "/moop": the test must pass wherever the checkout is served (2026-11-19).
+ok(moop_same_organism_hit_url($_ctx, ' NP_570983.2 ') === moop_url_base() . '/tools/parent.php?organism=Danio_rerio&assembly=GCF_049306965.2&gene_set=RS_2025_04&uniquename=NP_570983.2',
    'same organism, assembly and gene set as the page — gene sets of one organism can share IDs');
 ok(moop_same_organism_hit_url([], 'NP_1') === null && moop_same_organism_hit_url($_ctx, ' ') === null,
    'no context or no ID → no link (plain text, as before)');
@@ -144,7 +146,7 @@ $_par = [['annotation_accession' => 'NP_570983.2', 'annotation_description' => '
          ['annotation_accession' => 'PF00505', 'annotation_description' => 'HMG box', 'score' => '', 'annotation_source_name' => 'InterProScan (Pfam)',
           'annotation_accession_url' => null, 'annotation_type' => 'Domains']];
 $_html = generateAnnotationTableHTML($_par, 'NM_213118.1', 'mRNA', 1, 'Paralogs', '', 'warning', 'Danio_rerio', 'Paralogs', $_ctx);
-ok(strpos($_html, 'href="/moop/tools/parent.php?organism=Danio_rerio&amp;assembly=GCF_049306965.2&amp;gene_set=RS_2025_04&amp;uniquename=NP_570983.2"') !== false
+ok(strpos($_html, 'href="' . moop_url_base() . '/tools/parent.php?organism=Danio_rerio&amp;assembly=GCF_049306965.2&amp;gene_set=RS_2025_04&amp;uniquename=NP_570983.2"') !== false
    && strpos($_html, 'target="_blank">NP_570983.2') === false,
    'a paralog with no link pattern links to its gene page, in the same tab');
 ok(strpos($_html, '>PF00505</a>') === false, 'other sections with no link pattern stay plain text');
@@ -3863,7 +3865,7 @@ $_mm = function (array $menu) use ($_cpcfg, $_cprp) {
         : $i['label'] . '[' . implode(',', array_map(fn($c) => $c['type'] === 'divider' ? '|' : $c['label'], $i['items'])) . ']'),
         $_cpcfg->getMainMenu());
 };
-$_site = '/' . $_cpcfg->getString('site');
+$_site = moop_url_base($_cpcfg);   // the site's own link prefix, not '/' + folder (they differ at a domain's root)
 ok($_mm([]) === ['TOOLS', "About>$_site/about.php", "Help>$_site/help.php"], 'no saved menu: Tools, About, Help -- the bar it replaced');
 $_dd = ['type' => 'dropdown', 'key' => 'protocols', 'label' => ['en' => 'Protocols', 'es' => 'Protocolos'], 'items' => [
          ['type' => 'divider'], ['type' => 'link', 'label' => ['en' => 'RNAi'], 'to' => ['page' => 'rnai']], ['type' => 'divider'], ['type' => 'divider'],
@@ -4815,7 +4817,9 @@ $_lpc  = ConfigManager::getInstance();
 $_lprp = new ReflectionProperty($_lpc, 'config'); $_lprp->setAccessible(true);
 $_lpsaved = $_lprp->getValue($_lpc);
 $_lpset = function ($v) use ($_lpc, $_lprp, $_lpsaved) { $c = $_lpsaved; $c['link_prefix'] = $v; $_lprp->setValue($_lpc, $c); };
-ok(($_lpsaved['link_prefix'] ?? null) === '/' . $_lpsaved['site'], 'the default prefix is "/" + the folder name, so an existing site changes nothing');
+$_lpbase_before = moop_url_base();
+$_lpshipped = include "$BASE/config/site_config.php";   // the shipped defaults, not this host's settings
+ok(($_lpshipped['link_prefix'] ?? null) === '/' . ($_lpshipped['site'] ?? ''), 'the default prefix is "/" + the folder name, so an existing site changes nothing');
 foreach (['/moop' => '/moop', 'moop' => '/moop', '/moop/' => '/moop', '/cuttingclass' => '/cuttingclass', '/' => '', ' / ' => ''] as $_in => $_want) {
     $_lpset($_in);
     ok(moop_url_base() === $_want, "link_prefix " . json_encode($_in) . " -> base " . json_encode($_want));
@@ -4835,7 +4839,7 @@ ok(moop_url('tools/blast.php') === '/moop/tools/blast.php' && moop_url() === '/m
 $_lpset('/');
 ok(moop_disabled_tool_for_script($_lpc, '/tools/no_such_page.php') === null, 'at the root, a script that is no tool page is never turned away');
 $_lprp->setValue($_lpc, $_lpsaved);
-ok(moop_url_base() === $_lpsaved['link_prefix'], 'prefix restored after the test');
+ok(moop_url_base() === $_lpbase_before, 'prefix restored after the test');
 
 // ----------------------------------------------------------------------------
 group('BLAST failures: server paths never reach a visitor; input errors still do');
