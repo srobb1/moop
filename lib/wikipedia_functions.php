@@ -30,7 +30,8 @@ function moop_wikipedia_clean_extract(string $text): string {
  * @param string $rank_name Name of taxonomic rank (e.g., 'Primates', 'Mammalia')
  * @return array Array with 'description' (HTML), 'image_url', 'wikipedia_url', 'source'
  */
-function getWikipediaTaxonomyData($rank_name) {
+function getWikipediaTaxonomyData($rank_name, &$reached = null) {
+    $reached = false;
     $result = [
         'description' => '',
         'image_url' => '',
@@ -61,6 +62,7 @@ function getWikipediaTaxonomyData($rank_name) {
     if ($response === false) {
         return $result;
     }
+    $reached = true;
 
     $data = json_decode($response, true);
 
@@ -74,7 +76,7 @@ function getWikipediaTaxonomyData($rank_name) {
 
     if (!isset($page['pageid'])) {
         // Page not found, try search instead
-        return getWikipediaTaxonomyDataFromSearch($rank_name);
+        return getWikipediaTaxonomyDataFromSearch($rank_name, $reached);
     }
     
     // Determine the actual title (in case of redirects)
@@ -113,7 +115,7 @@ function getWikipediaTaxonomyData($rank_name) {
  * @param string $rank_name Name of taxonomic rank
  * @return array Array with description, image, and Wikipedia URL
  */
-function getWikipediaTaxonomyDataFromSearch($rank_name) {
+function getWikipediaTaxonomyDataFromSearch($rank_name, &$reached = null) {
     $result = [
         'description' => '',
         'image_url' => '',
@@ -133,6 +135,7 @@ function getWikipediaTaxonomyDataFromSearch($rank_name) {
     $response = moop_curl_get($search_url);
 
     if ($response === false) {
+        $reached = false;
         return $result;
     }
 
@@ -263,6 +266,44 @@ function getWikipediaOrganismData($scientific_name, $common_name = '') {
             json_encode(['v' => 2, 'fetched_at' => time(), 'name' => $scientific_name, 'data' => $data]),
             LOCK_EX
         );
+    }
+    return $data;
+}
+
+/**
+ * getWikipediaTaxonomyData() with the organism pages' saved copy: a taxonomy group page
+ * (groups.php?taxonomy_rank=) used to ask Wikipedia live on EVERY load -- 8 s each while this
+ * server's DNS was broken on 2026-11-19, and crawlers follow the lineage links to these pages.
+ * Saved under the cache's wikipedia/ as "taxon.<rank>.json"; refreshed after ~30 days (7 when
+ * nothing was found); a stale copy beats nothing when Wikipedia cannot be reached, and a failed
+ * fetch is never saved, so it is asked again later rather than remembered as "no article".
+ * The photo needs nothing here: getGroupImagePath() (lib/functions_display.php) already saves it
+ * once into images/wikimedia/<rank>.<ext> and serves it from there.
+ * Manage Groups' "fetch from Wikipedia" button keeps calling getWikipediaTaxonomyData() live.
+ */
+function moop_wikipedia_taxon(string $rank): array {
+    $rank = moop_wikipedia_normalise_name($rank);
+    if ($rank === '') return moop_wikipedia_empty_result();
+    $file = function_exists('moop_wikipedia_cache_file') ? moop_wikipedia_cache_file('taxon.' . $rank) : '';
+
+    $cached = null; $fresh = false;
+    if ($file && is_readable($file)) {
+        $c = json_decode((string) @file_get_contents($file), true);
+        if (is_array($c) && ($c['v'] ?? 0) === 1 && isset($c['fetched_at'], $c['data']) && is_array($c['data'])) {
+            $cached = $c['data'] + moop_wikipedia_empty_result();
+            $base   = $cached['description'] === '' ? 7 * 86400 : 30 * 86400;
+            $spread = 0.8 + 0.4 * ((crc32($rank) % 1000) / 1000);
+            $fresh  = (time() - (int) $c['fetched_at']) < $base * $spread;
+        }
+    }
+    if ($cached !== null && $fresh) return $cached;
+
+    $reached = false;
+    $data = getWikipediaTaxonomyData($rank, $reached) + moop_wikipedia_empty_result();
+    if (!$reached) return $cached ?? moop_wikipedia_empty_result();
+
+    if ($file) {
+        @file_put_contents($file, json_encode(['v' => 1, 'fetched_at' => time(), 'name' => $rank, 'data' => $data]), LOCK_EX);
     }
     return $data;
 }

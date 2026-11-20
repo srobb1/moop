@@ -64,31 +64,46 @@ if ($is_taxonomy_group) {
     $taxonomy_tree_data = loadJsonFile("$metadata_path/taxonomy_tree_config.json", []);
     $group_organisms = getOrganismsAtTaxonomyLevel($taxonomy_rank, $taxonomy_tree_data['tree'], $group_data);
     
-    // Fetch Wikipedia data for this taxonomic rank
-    $wiki_data = getWikipediaTaxonomyData($taxonomy_rank);
-    
-    // Create synthetic group info for taxonomy groups with Wikipedia content
-    $group_info = [
-        'name' => $taxonomy_rank,
-        'group_name' => $taxonomy_rank,
-        'type' => 'taxonomy',
-        'wikipedia_url' => $wiki_data['wikipedia_url'],
-        'wikipedia_image' => $wiki_data['image_url']
-    ];
-    
-    // Add HTML paragraph if we have a description
-    if (!empty($wiki_data['description'])) {
-        $group_info['html_p'] = [
-            [
-                'text' => htmlspecialchars($wiki_data['description']) . 
-                         '<br><br><small class="text-muted">' . t_markup('Source: %s', '<a href="' . htmlspecialchars($wiki_data['wikipedia_url']) .
-                         '" target="_blank">Wikipedia</a>') . '</small>',
-                'class' => '',
-                'style' => ''
-            ]
-        ];
+    // The text: OUR description first. A rank that has an entry in group_descriptions.json with
+    // text (Manage Groups -- Cnidaria, Mollusca, ...) uses it, image included, whether or not that
+    // curated group is in use. Only a rank we wrote nothing for goes to Wikipedia, and then through
+    // the saved copy (moop_wikipedia_taxon()): until 2026-11-19 every load asked Wikipedia live.
+    $own = null;
+    foreach ($group_descriptions as $desc) {
+        $text = trim(implode(' ', array_map(fn($p) => strip_tags((string) ($p['text'] ?? '')), (array) ($desc['html_p'] ?? []))));
+        if (($desc['group_name'] ?? '') === $taxonomy_rank && $text !== '') { $own = $desc; break; }
     }
-    
+
+    if ($own) {
+        $group_info = ['name' => $taxonomy_rank, 'group_name' => $taxonomy_rank, 'type' => 'taxonomy',
+                       'html_p' => $own['html_p'], 'images' => $own['images'] ?? []];
+        $own_summary = moop_current_lang() !== 'en' ? trim((string) ($own['summary_lang'][moop_current_lang()] ?? '')) : '';
+        if ($own_summary !== '') {
+            $group_info['html_p'] = array_map(fn($para) => ['text' => htmlspecialchars($para), 'class' => '', 'style' => ''],
+                                              preg_split('/\n\s*\n/', $own_summary, -1, PREG_SPLIT_NO_EMPTY));
+        }
+    } else {
+        $wiki_data = moop_wikipedia_taxon($taxonomy_rank);
+        $group_info = [
+            'name' => $taxonomy_rank,
+            'group_name' => $taxonomy_rank,
+            'type' => 'taxonomy',
+            'wikipedia_url' => $wiki_data['wikipedia_url'],
+            'wikipedia_image' => $wiki_data['image_url']
+        ];
+        if (!empty($wiki_data['description'])) {
+            $group_info['html_p'] = [
+                [
+                    'text' => htmlspecialchars($wiki_data['description']) .
+                             '<br><br><small class="text-muted">' . t_markup('Source: %s', '<a href="' . htmlspecialchars($wiki_data['wikipedia_url']) .
+                             '" target="_blank">Wikipedia</a>') . '</small>',
+                    'class' => '',
+                    'style' => ''
+                ]
+            ];
+        }
+    }
+
     // Use taxonomy_rank as the display name everywhere (replaces $group_name in template)
     $group_name = $taxonomy_rank;
 } else {

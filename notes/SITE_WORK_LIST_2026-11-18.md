@@ -82,8 +82,19 @@ Order of work, and why:
       organisms. Many organisms, one platform." (Wording to settle; goes through `t()`.) **S**
 - [ ] **Way back to Planosphere from SIMRbase:** Planosphere's favicon/link in the SIMRbase menu bar,
       for someone whose Planosphere click landed them on SIMRbase and whose tab is gone. **S–M**
-- [ ] **Tools menu is too long and confusing.** Regroup, wider, a line of text per tool.
-      Ideas already in `notes/TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18.md`. **TALK, then M**
+- [x] **Tools menu is too long and confusing.** Regroup, wider, a line of text per tool.
+      DONE 11-19: headings (Browse & search / Expression / Sequences / Export) + one line per tool,
+      opt-in per site (Manage Tools: "Use the suggested groups", headings, "Show a line of text");
+      ON for simrbase only. Renamed: RNA-seq Expression Explorer, Expression by Anatomy. Endo-Atlas
+      stays in Research only (decided). Ideas: `notes/TOOLS_MENU_AND_ATLAS_IDEAS_2026-11-18.md`.
+      + the same line in a band under each tool page's header (tool_page_blurb(); one text, two places).
+      Rosetta wording: never "old/older" (some IDs are just not the main ones).
+- [ ] **Page titles differ from menu names:** "Search Features by Annotation" (menu: Annotation Search),
+      "Sequence Retrieval" (menu: Retrieve Sequences). Pick one name each. **S**
+- [ ] **smoke_tests read the LIVE config:** 4 tests fail on this host since the move to "/" (link prefix,
+      main menu hrefs assume "/moop"); CI passes only because it has no config_editable.json. Make them
+      hermetic. Also 2 failing on HEAD before 11-19: "gene sets of one organism can share IDs",
+      "a paralog with no link pattern links to its gene page". **S**
 - [ ] **Links that open a new tab:** list every one on SIMRbase (we likely do it too often), then
       decide which keep it — usually only links that leave the site. **S** (list) / **M** (fix)
 
@@ -164,4 +175,18 @@ Planosphere
       nothing on Planosphere still opens it: no page/API reads it, and setup-check/housekeeping/the admin
       Organisms page don't complain once it is gone (move it aside first, look, then delete). **S** (11-19)
 - [x] DONE 11-19: **"no gene" hover is wrong for 170 dd_Smed_v6 GENE IDs** — their transcripts are in `unlinked`, but the hover says "not in the reference data"; `moop_crosswalk_unlinked()` should fall back to the gene's transcripts. **S** (found 11-19)
-- 
+- [ ] **Long admin jobs lock up every other page for that admin** (found 11-19 ~21:54): Manage JBrowse
+      re-prep GFF / register assembly took 112–172 s each (dashboard 166 s), and none of them, nor
+      admin.php / manage_jbrowse.php, calls `session_write_close()` -- so PHP's session lock queued all of
+      Sofia's other tabs behind them ("no page will load"); other visitors were fine. Fix: release the
+      session right after the admin + CSRF check in each long endpoint (check none writes $_SESSION after).
+      Then see why the jobs take minutes -- real index building vs the 8 s-per-lookup DNS problem
+      (10.0.51.5/6 blocked from this server since the move; IT ticket). **S–M**
+- [x] DONE 11-19: **Taxonomy group pages asked Wikipedia live on EVERY load** (groups.php?taxonomy_rank=;
+      8 s each during the DNS outage, mostly crawler hits). Now: our own text from group_descriptions.json
+      first (Cnidaria, Mollusca...), else Wikipedia through a saved copy (moop_wikipedia_taxon(), ~30 days).
+      Photo was already saved locally (getGroupImagePath).
+- [ ] **Crawlers:** Meta range 57.141.x.x ran ~2,150 searches + 2,150 KEGG maps on 11-19 from 259 addresses;
+      rotating scrapers (145.223.x.x, 660 addresses, one organism page each). Turnstile is OFF -- add
+      simrbase.stowers.org to the Cloudflare key's hostnames before turning it on. **TALK**
+
