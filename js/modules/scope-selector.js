@@ -114,6 +114,8 @@ function initScopeSelector(opts = {}) {
         const allOn = all.length > 0 && on.length === all.length;
         const toggleLabel = document.querySelector('.scope-toggle-all-label');
         if (toggleLabel) toggleLabel.textContent = allOn ? moopT('Deselect all') : moopT('Select all');
+        const toggleIcon = document.querySelector('.scope-toggle-all-icon');
+        if (toggleIcon) toggleIcon.className = 'fas me-1 scope-toggle-all-icon ' + (allOn ? 'fa-times' : 'fa-check-double');
 
         if (!countsEl) return;
         if (!on.length) {
@@ -317,8 +319,8 @@ function initScopeSelector(opts = {}) {
         if (single && !filterEl.value.trim()) scrollToRow(list.querySelector('.scope-row.selected'));
     });
 
-    // "Show all", beside the filter on every page: clears the filter, and in single mode lifts an
-    // organisms-list limit ("chosen on the previous page") too.
+    // "Show all organisms", in the "chosen on the previous page" note (single mode): lifts that
+    // limit and clears the filter. Clearing the filter alone is the search box's own ✕.
     function showAll() {
         list.classList.remove('scope-limited');
         document.getElementById('scope-only-note')?.remove();

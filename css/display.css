@@ -1874,3 +1874,18 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
     margin-right: 0.3rem;
     border-radius: 3px;
 }
+
+/* Scope selector: the Select all / Deselect all toggle in the card header. A light wash of the
+   main colour so it is seen on both the solid tool header and the light "Refine selection" bar
+   (as btn-light it was missed, Sofia 2026-11-20). Palette variables: themed sites recolour it. */
+.scope-toggle-all {
+    background: var(--moop-main-tint);
+    color: var(--moop-main-dark);
+    border: 1px solid rgba(var(--moop-main-rgb), 0.45);
+    font-weight: 600;
+}
+.scope-toggle-all:hover, .scope-toggle-all:focus-visible {
+    background: var(--moop-main-lightest);
+    color: var(--moop-main-dark);
+    border-color: rgba(var(--moop-main-rgb), 0.7);
+}

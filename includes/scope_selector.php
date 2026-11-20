@@ -144,15 +144,15 @@ $scope_render_rows = function () use ($scope_tree, $scope_info, $scope_asm_names
 $scope_filter_row = function (string $value, bool $details_on, string $help_id = '') {
 ?>
       <div class="px-2 pt-2 pb-1 border-bottom d-flex align-items-center gap-2">
-        <input type="text" class="form-control form-control-sm moop-input" id="scope-filter"
+        <?php /* type="search": the browser draws its own ✕ to clear the box (Chrome, Safari,
+                 Edge) -- that replaced a separate "Show all" button (Sofia, 2026-11-20). */ ?>
+        <input type="search" class="form-control form-control-sm moop-input" id="scope-filter"
                placeholder="<?= t('Filter by group, organism, assembly, gene set…') ?>" autocomplete="off"
                value="<?= htmlspecialchars($value) ?>">
         <div class="form-check form-switch mb-0 flex-shrink-0">
           <input class="form-check-input" type="checkbox" role="switch" id="scope-show-detail"<?= $details_on ? ' checked' : '' ?>>
           <label class="form-check-label small text-muted text-nowrap" for="scope-show-detail"><?= t('Details') ?></label>
         </div>
-        <?php /* Always there: clears the filter and any "chosen on the previous page" limit. */ ?>
-        <button type="button" class="btn btn-sm btn-outline-secondary py-0 flex-shrink-0 text-nowrap" id="scope-show-all"><?= t('Show all') ?></button>
         <?php if ($help_id !== ''): ?><?= help_modal_trigger($help_id, '', 'About this list') ?><?php endif; ?>
       </div>
 <?php
@@ -167,6 +167,7 @@ if ($scope_single): ?>
     <?= count($scope_only) === 1
         ? t('Showing the organism you chose on the previous page.')
         : t('Showing the %d organisms you chose on the previous page.', count($scope_only)) ?>
+    <button type="button" class="btn btn-link btn-sm p-0 align-baseline" id="scope-show-all"><?= t('Show all organisms') ?></button>
   </div>
   <?php endif; ?>
   <?php /* 180px: the same deliberate height as the multi list (feedback_scope_list_height_deliberate). */ ?>
@@ -233,8 +234,10 @@ echo help_modal(
     <?php /* One toggle, not an All/None pair: its label states what the click will do, so it
              doubles as a readout of whether everything is selected. Deselect is immediate;
              select-all routes through the "this can take a while" warning below. */ ?>
-    <button type="button" class="btn btn-sm btn-light py-0 ms-auto scope-toggle-all">
-      <span class="scope-toggle-all-label"><?= t('Select all') ?></span>
+    <?php /* Lightly coloured (css/display.css) so it is seen -- as a plain light button it was
+             missed (Sofia, 2026-11-20). The icon flips with the label. */ ?>
+    <button type="button" class="btn btn-sm py-0 ms-auto scope-toggle-all">
+      <i class="fas fa-check-double me-1 scope-toggle-all-icon" aria-hidden="true"></i><span class="scope-toggle-all-label"><?= t('Select all') ?></span>
     </button>
   </div>
 
