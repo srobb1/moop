@@ -119,8 +119,7 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
                       <span><?= htmlspecialchars(t_plain($tool['name'])) ?></span>
                     </button>
                 <?php else: ?>
-                    <a href="<?= htmlspecialchars($tool['url']) ?>" 
-                       target="_blank"
+                    <a href="<?= htmlspecialchars($tool['url']) ?>"
                        class="btn <?= htmlspecialchars($tool['btn_class']) ?> btn-sm"
                        title="<?= htmlspecialchars(t_plain($tool['description'])) ?>">
                         <span><?= htmlspecialchars(t_plain($tool['name'])) ?></span>

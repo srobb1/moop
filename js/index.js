@@ -139,7 +139,7 @@ function updateSelectedList() {
         return `<div class="selected-org-item d-flex align-items-center justify-content-between">
             <span class="selected-org-name">${name}${common}</span>
             <span class="selected-org-actions ms-2 flex-shrink-0 text-nowrap">
-                <a href="${pageUrl}" target="_blank" class="btn btn-link btn-sm p-0 me-1" title="${moopTh('Open organism page')}">
+                <a href="${pageUrl}" class="btn btn-link btn-sm p-0 me-1" title="${moopTh('Open organism page')}">
                     <i class="fas fa-external-link-alt text-info"></i>
                 </a>
                 <button class="btn btn-link btn-sm p-0 text-danger remove-org-btn"
@@ -159,7 +159,7 @@ function updateSelectedList() {
 function handleToolClick(toolId) {
     if (toolId === 'taxonomy_search' && selectedOrganisms.size === 1) {
         const [org] = selectedOrganisms;
-        window.open(`${sitePath}/tools/organism.php?organism=${encodeURIComponent(org)}`, '_blank');
+        window.open(`${sitePath}/tools/organism.php?organism=${encodeURIComponent(org)}`, '_blank');  // like the other selection tools: Back would lose the ticks
         return;
     }
     postSelectionToTool(toolId, Array.from(selectedOrganisms));

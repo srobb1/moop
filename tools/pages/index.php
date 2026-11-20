@@ -126,7 +126,7 @@ $home_count = fn($n) => '<strong style="font-weight:500;">' . (int) $n . '</stro
     <hr class="mx-auto page-header-divider mb-3">
     <div class="d-flex justify-content-center flex-wrap gap-2">
       <?php foreach ($featured_groups as $fg): ?>
-        <a href="<?= htmlspecialchars($fg['url']) ?>" target="_blank" class="index-group-chip text-decoration-none"
+        <a href="<?= htmlspecialchars($fg['url']) ?>" class="index-group-chip text-decoration-none"
            data-group="<?= htmlspecialchars($fg['name']) ?>">
           <?= htmlspecialchars($fg['name']) ?>
         </a>
@@ -154,7 +154,7 @@ $home_count = fn($n) => '<strong style="font-weight:500;">' . (int) $n . '</stro
       <p class="text-muted small mb-2"><?= t('Click a group to focus your searches on a curated set of organisms.') ?></p>
       <div class="index-group-chip-list">
         <?php foreach ($cards_to_display as $card): ?>
-          <a href="<?= htmlspecialchars($card['link']) ?>" target="_blank"
+          <a href="<?= htmlspecialchars($card['link']) ?>"
              class="index-group-chip text-decoration-none"
              data-group="<?= htmlspecialchars($card['title']) ?>">
             <?= htmlspecialchars($card['title']) ?>

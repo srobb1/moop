@@ -96,7 +96,7 @@ Order of work, and why:
       main menu hrefs assume "/moop"); CI passes only because it has no config_editable.json. Make them
       hermetic. Also 2 failing on HEAD before 11-19: "gene sets of one organism can share IDs",
       "a paralog with no link pattern links to its gene page". **S**
-- [ ] **Links that open a new tab:** list every one on SIMRbase (we likely do it too often), then
+- [x] 11-20 (F): DONE -- home chips, tool links, organism icon now same tab; LISTED in notes/NEW_TAB_LINKS_2026-11-20.md (140 off-site keep; 62 on-site: change home chips, tool buttons, organism picker; keep results lists) -- waiting for Sofia. **Links that open a new tab:** list every one on SIMRbase (we likely do it too often), then
       decide which keep it — usually only links that leave the site. **S** (list) / **M** (fix)
 
 ## 4. Visual fixes — batch them
