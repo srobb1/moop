@@ -130,12 +130,6 @@ function initScopeSelector(opts = {}) {
             orgs === 1 ? moopT('%d organism', orgs) : moopT('%d organisms', orgs),
             asms === 1 ? moopT('%d assembly', asms) : moopT('%d assemblies', asms),
             gs   === 1 ? moopT('%d gene set', gs)   : moopT('%d gene sets', gs));
-        // Simple view and an organism brought several gene sets: say how to take just one.
-        // Without this the Details switch was the only way, and easy to miss (Sofia, 2026-11-20).
-        if (!detailOn() && detailEl && gs > orgs) {
-            countsEl.insertAdjacentHTML('beforeend', ' · <button type="button" class="btn btn-link btn-sm p-0 align-baseline scope-pick-single">'
-                + moopTh('Pick single gene sets') + '</button>');
-        }
     }
 
     // The closed "Refine selection" bar (collapsible multi mode) says what the search covers.
@@ -155,14 +149,20 @@ function initScopeSelector(opts = {}) {
             : moopT('Searching %d of %d organisms', n, total);
     }
 
+    // "assembly › gene set" as the panel prints it.
+    const gsText = (cb) => (cb.dataset.asmDisplay || cb.dataset.asm) + ' › ' + (cb.dataset.gsDisplay || cb.dataset.gs);
+
     function renderPanel(on) {
         if (!panelEl) return;
         // Grouped by organism, in list order, so the panel reads like the list beside it.
+        // An organism with several gene sets lists ALL of them, each with a checkbox, so one can
+        // be dropped or added back here without the Details switch (Sofia, 2026-11-20). One with
+        // a single gene set keeps a plain line: a checkbox there would only repeat the ×.
         const byOrg = {};
         on.forEach((cb) => {
             const org = cb.dataset.org;
-            byOrg[org] ??= { label: cb.dataset.label || String(org).replace(/_/g, ' '), cn: cb.dataset.cn || '', rows: [] };
-            byOrg[org].rows.push((cb.dataset.asmDisplay || cb.dataset.asm) + ' › ' + cb.dataset.gs);
+            byOrg[org] ??= { label: cb.dataset.label || String(org).replace(/_/g, ' '), cn: cb.dataset.cn || '',
+                             all: boxes().filter((c) => c.dataset.org === org) };
         });
         const orgs = Object.keys(byOrg);
         if (countEl) countEl.textContent = orgs.length;
@@ -185,7 +185,12 @@ function initScopeSelector(opts = {}) {
                           data-org="${escapeHtml(org)}" title="${moopTh('Remove')}"
                           aria-label="${moopTh('Remove %s from selection', d.label)}"><i class="fas fa-times"></i></button>
                 </div>
-                ${d.rows.map((r) => `<div class="text-muted ps-2" style="font-size:0.75rem;">› ${escapeHtml(r)}</div>`).join('')}
+                ${d.all.length === 1
+                    ? `<div class="text-muted ps-2" style="font-size:0.75rem;">› ${escapeHtml(gsText(d.all[0]))}</div>`
+                    : d.all.map((c) => `<label class="d-flex align-items-start gap-1 ps-2 mb-0 ${c.checked ? '' : 'text-muted'}" style="font-size:0.75rem; cursor:pointer;">
+                        <input type="checkbox" class="form-check-input mt-0 flex-shrink-0 scope-panel-gs"
+                               data-org="${escapeHtml(org)}" data-asm="${escapeHtml(c.dataset.asm)}" data-gs="${escapeHtml(c.dataset.gs)}"${c.checked ? ' checked' : ''}>
+                        <span>${escapeHtml(gsText(c))}</span></label>`).join('')}
               </div>`;
         }).join('');
     }
@@ -228,6 +233,18 @@ function initScopeSelector(opts = {}) {
     list.addEventListener('change', (e) => {
         if (!e.target.classList.contains('scope-gs-cb')) return;
         if (single) selectOnly(e.target); else tick(e.target, e.target.checked);
+        changed();
+    });
+
+    // A gene-set checkbox in the panel ticks the same gene set in the list. Unticking an
+    // organism's last one drops the organism from the panel, as the × does.
+    panelEl?.addEventListener('change', (e) => {
+        const box = e.target.closest('.scope-panel-gs');
+        if (!box) return;
+        const cb = boxes().find((c) => c.dataset.org === box.dataset.org
+            && c.dataset.asm === box.dataset.asm && c.dataset.gs === box.dataset.gs);
+        if (!cb) return;
+        tick(cb, box.checked);
         changed();
     });
 
@@ -319,15 +336,6 @@ function initScopeSelector(opts = {}) {
         list.classList.toggle('scope-detail-hidden', !detailEl.checked);
         runFilter();   // force-reveals depend on the view
         syncSingleHighlight();
-        if (!single) render();   // the counts line's "Pick single gene sets" belongs to simple view
-    });
-    // The counts line's "Pick single gene sets": Details on, and the list scrolled to the first
-    // selected gene set, so the rows to untick are in sight.
-    countsEl?.addEventListener('click', (e) => {
-        if (!e.target.closest('.scope-pick-single')) return;
-        setDetails(true);
-        render();
-        scrollToRow(checked()[0]?.closest('.scope-row'));
     });
 
     // ── Context: arrived from an organism / assembly / gene-set / group page ────────────
