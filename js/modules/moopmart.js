@@ -55,31 +55,66 @@
     // choosing an empty one silently shrinks their list, which is the whole reason for this.
     // Options keep their value (the source name); only the visible text changes, and a
     // zero-count source is disabled so it cannot be chosen unknowingly (unless already picked).
+    // The full type -> sources list, read once from the page's markup (the server's labels and
+    // order). Each row's source list is rebuilt from it, never from another row's current state.
+    let annModel = null;
+    function getAnnModel() {
+        if (annModel) return annModel;
+        annModel = [];
+        const sel = document.querySelector('.mm-ann-src-select');
+        sel?.querySelectorAll('optgroup').forEach(og => annModel.push({
+            type: og.dataset.type || og.label,
+            sources: Array.from(og.querySelectorAll('option')).map(o => ({ value: o.value, label: o.dataset.label || o.value })),
+        }));
+        return annModel;
+    }
+
+    // A row's source list: only the chosen type's sources, and once the organisms are known only
+    // those they have (a source already picked stays, so a choice never vanishes under the user).
+    // No type chosen = no source list: "any annotation type" needs no second choice.
+    function rebuildSourceSelect(row) {
+        const typeSel = row.querySelector('.mm-ann-type-select');
+        const srcSel  = row.querySelector('.mm-ann-src-select');
+        if (!typeSel || !srcSel) return;
+        const keep  = srcSel.value;
+        const entry = getAnnModel().find(e => e.type === typeSel.value);
+        srcSel.innerHTML = '';
+        const any = document.createElement('option');
+        any.value = ''; any.textContent = moopT('Any source');
+        srcSel.appendChild(any);
+        if (!entry) { srcSel.value = ''; srcSel.hidden = true; return; }
+        entry.sources.forEach(src => {
+            const n = lastAnnCounts ? (lastAnnCounts[src.value] || 0) : null;
+            if (n === 0 && src.value !== keep) return;
+            const opt = document.createElement('option');
+            opt.value = src.value;   // the stored name, exactly (never trimmed)
+            opt.textContent = n === null ? src.label : `${src.label} (${n.toLocaleString()})`;
+            srcSel.appendChild(opt);
+        });
+        srcSel.value = Array.from(srcSel.options).some(o => o.value === keep) ? keep : '';
+        srcSel.hidden = false;
+    }
+
+    // Gene counts on the type list for the organisms picked in Step 1; a type they lack is
+    // disabled (unless already chosen) so it cannot be picked unknowingly. Then every row's
+    // source list follows.
     function applyAnnDropdownCounts() {
-        document.querySelectorAll('.mm-ann-src-select').forEach(sel => {
-            sel.querySelectorAll('optgroup').forEach(og => {
-                const type  = og.dataset.type || og.label;    // the database name: the key
-                const label = og.dataset.label || type;      // what the page calls it
+        document.querySelectorAll('.mm-ann-type-select').forEach(sel => {
+            sel.querySelectorAll('option').forEach(opt => {
+                if (!opt.value) return;                     // "Any annotation type"
+                const label = opt.dataset.label || opt.value;
                 if (lastAnnTypeTotals) {
-                    const t = lastAnnTypeTotals[type] || 0;
-                    og.label = `${label} (${t.toLocaleString()} gene${t !== 1 ? 's' : ''})`;
+                    const t = lastAnnTypeTotals[opt.value] || 0;
+                    opt.textContent = t === 1 ? moopT('%s (1 gene)').replace('%s', label)
+                                              : moopT('%s (%d genes)').replace('%s', label).replace('%d', t.toLocaleString());
+                    opt.disabled = (t === 0 && !opt.selected);
                 } else {
-                    og.label = label;   // cleared — no selection
+                    opt.textContent = label;
+                    opt.disabled = false;
                 }
-                og.querySelectorAll('option').forEach(opt => {
-                    const src = opt.value;
-                    if (!src) return;                       // leave "Any annotation type"
-                    if (lastAnnCounts) {
-                        const n = lastAnnCounts[src] || 0;
-                        opt.textContent = `${src} (${n.toLocaleString()})`;
-                        opt.disabled = (n === 0 && !opt.selected);
-                    } else {
-                        opt.textContent = src;              // cleared
-                        opt.disabled = false;
-                    }
-                });
             });
         });
+        document.querySelectorAll('.mm-ann-criterion').forEach(rebuildSourceSelect);
     }
 
     // Update the per-source count badges in Step 3 to reflect the organisms selected
@@ -263,6 +298,16 @@
             const btn = e.target.closest('.mm-remove-criterion');
             if (btn) btn.closest('.mm-ann-criterion').remove();
         });
+        // A new type: its own sources, starting from "Any source".
+        container.addEventListener('change', function (e) {
+            if (!e.target.classList.contains('mm-ann-type-select')) return;
+            const row = e.target.closest('.mm-ann-criterion');
+            const src = row.querySelector('.mm-ann-src-select');
+            if (src) src.value = '';
+            rebuildSourceSelect(row);
+        });
+        getAnnModel();   // before any row is rebuilt
+        container.querySelectorAll('.mm-ann-criterion').forEach(rebuildSourceSelect);
     }
 
     // -------------------------------------------------------
@@ -516,11 +561,13 @@
         document.querySelectorAll('.mm-ann-criterion').forEach(row => {
             // The source name exactly as listed -- not trimmed: a name is matched as stored, and
             // eight databases told two sources apart only by a trailing space.
-            const src = row.querySelector('.mm-ann-src-select')?.value || '';
+            const src  = row.querySelector('.mm-ann-src-select')?.value || '';
+            const type = row.querySelector('.mm-ann-type-select')?.value || '';
             const acc = row.querySelector('.mm-ann-accession')?.value?.trim() || '';
             const kw  = row.querySelector('.mm-ann-keyword')?.value?.trim() || '';
             const sub = row.querySelector('.mm-ann-sub')?.checked ? '1' : '0';
-            if (src || acc || kw) {
+            if (src || type || acc || kw) {
+                fd.append('ann_criteria_type[]', type);
                 fd.append('ann_criteria_src[]', src);
                 fd.append('ann_criteria_acc[]', acc);
                 fd.append('ann_criteria_kw[]',  kw);
@@ -1043,6 +1090,7 @@
             if (document.getElementById('mm-coord-chr')?.value?.trim()) return true;
             return Array.from(document.querySelectorAll('.mm-ann-criterion')).some(row =>
                 (row.querySelector('.mm-ann-src-select')?.value?.trim()) ||
+                (row.querySelector('.mm-ann-type-select')?.value) ||
                 (row.querySelector('.mm-ann-accession')?.value?.trim()) ||
                 (row.querySelector('.mm-ann-keyword')?.value?.trim()));
         }

@@ -242,22 +242,39 @@
         // data-type on each optgroup preserves the pristine type name: the JS availability
         // counter rewrites the optgroup label to "Type (N)", so it needs the original to
         // build from rather than re-parsing its own output.
-        $ann_dropdown = '<select class="form-select form-select-sm moop-input mm-ann-src-select">'
-                      . '<option value="">Any annotation type</option>';
+        // Type first, then source (work list 2026-11-18: one dropdown of every source ran to 185
+        // entries). The type list is short; the source list holds only the chosen type's sources --
+        // js/modules/moopmart.js rebuilds it from this markup, keeping only those found in the
+        // organisms picked. Values stay the database names; only the visible text is relabelled.
+        $_pf = $prefill_annotation ?? ['acc' => '', 'src' => '', 'sub' => false];
+        $_pf_type = '';
+        foreach ($annotation_source_types as $_type => $_td) {
+            if ($_pf['src'] !== '' && in_array($_pf['src'], $_td['sources'], true)) { $_pf_type = $_type; break; }
+        }
+        $ann_type_select = '<select class="form-select form-select-sm moop-input mm-ann-type-select" aria-label="'
+                         . htmlspecialchars(t_plain('Annotation type')) . '">'
+                         . '<option value="">' . htmlspecialchars(t_plain('Any annotation type')) . '</option>';
         foreach ($annotation_source_types as $_type => $_td):
-            $ann_dropdown .= '<optgroup label="' . htmlspecialchars(moop_annotation_type_label($_type)) . '" data-type="' . htmlspecialchars($_type, ENT_QUOTES) . '" data-label="' . htmlspecialchars(moop_annotation_type_label($_type), ENT_QUOTES) . '">';
+            $_lbl = moop_annotation_type_label($_type);
+            $ann_type_select .= '<option value="' . htmlspecialchars($_type, ENT_QUOTES) . '" data-label="' . htmlspecialchars($_lbl, ENT_QUOTES) . '"'
+                              . ($_type === $_pf_type ? ' selected' : '') . '>' . htmlspecialchars($_lbl) . '</option>';
+        endforeach;
+        $ann_type_select .= '</select>';
+        // data-type on each optgroup is the type's database name, which the type select matches.
+        $ann_dropdown = '<select class="form-select form-select-sm moop-input mm-ann-src-select mt-1" aria-label="'
+                      . htmlspecialchars(t_plain('Source')) . '"' . ($_pf_type === '' ? ' hidden' : '') . '>'
+                      . '<option value="">' . htmlspecialchars(t_plain('Any source')) . '</option>';
+        foreach ($annotation_source_types as $_type => $_td):
+            $ann_dropdown .= '<optgroup label="' . htmlspecialchars(moop_annotation_type_label($_type)) . '" data-type="' . htmlspecialchars($_type, ENT_QUOTES) . '">';
             foreach ($_td['sources'] as $_src):
-                $ann_dropdown .= '<option value="' . htmlspecialchars($_src) . '">' . htmlspecialchars($_src) . '</option>';
+                $_slbl = moop_annotation_source_label($_src);
+                $ann_dropdown .= '<option value="' . htmlspecialchars($_src) . '" data-label="' . htmlspecialchars($_slbl, ENT_QUOTES) . '"'
+                               . ($_src === $_pf['src'] ? ' selected' : '') . '>' . htmlspecialchars($_slbl) . '</option>';
             endforeach;
             $ann_dropdown .= '</optgroup>';
         endforeach;
         $ann_dropdown .= '</select>';
-        // The first row may arrive filled in from a link (?annotation=...&annotation_source=...).
-        $_pf = $prefill_annotation ?? ['acc' => '', 'src' => '', 'sub' => false];
         $_pf_open = $_pf['acc'] !== '' || $_pf['src'] !== '';
-        $ann_dropdown_first = $_pf['src'] === '' ? $ann_dropdown
-            : str_replace('<option value="' . htmlspecialchars($_pf['src']) . '">',
-                          '<option value="' . htmlspecialchars($_pf['src']) . '" selected>', $ann_dropdown);
         ?>
         <div>
           <div class="browse-select-header browse-select-header--light mb-0" id="mm-ann-filter-header" role="button"
@@ -292,7 +309,7 @@
               <!-- Criteria rows -->
               <div id="mm-ann-criteria">
                 <div class="mm-ann-criterion row g-2 mb-2 align-items-center">
-                  <div class="col-sm-4"><?= $ann_dropdown_first ?></div>
+                  <div class="col-sm-4"><?= $ann_type_select ?><?= $ann_dropdown ?></div>
                   <div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="<?= t('e.g. GO:0006351') ?>" value="<?= htmlspecialchars($_pf['acc']) ?>">
                     <label class="form-check small mt-1 mb-0" title="<?= t('A GO term also finds the genes annotated to the terms below it (is a, part of) -- the genes the Ontology Browser counts.') ?>"><input type="checkbox" class="form-check-input mm-ann-sub"<?= !empty($_pf['sub']) ? ' checked' : '' ?>> <span class="form-check-label"><?= t('and more specific GO terms') ?></span></label></div>
                   <div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="<?= t('e.g. transporter') ?>"></div>

@@ -129,8 +129,13 @@ Planosphere
 - [x] DONE 11-20 (D): "New to this?" section in the ⓘ (what an ontology is, why here, the 🔬/🧬 icons, PLANA vs GO); a new NAME still to talk about. **Ontology Browser help:** an (i) with more text — it's about genes and the terms they're tagged
       with; maybe a clearer name; a picture of the microscope icon explaining what it means. Written
       for someone new to the site and to tools like this. **M** (name = TALK)
-- [ ] **MOOPmart:** the two annotation selectors (gene-list builder, output builder) are too long to
+- [~] 11-20 (H): gene-list side DONE (type first, then only the sources in the organisms picked; OMA reference species written out; types renamed BLAST homologs + Reciprocal best hits). LEFT: same for the output side ("Annotation types to include in TSV") + a page explainer. **MOOPmart:** the two annotation selectors (gene-list builder, output builder) are too long to
       scroll — needs a search/grouped picker; and new text explaining the page. **TALK, then L**
+- [ ] **Manage Annotations: 13 saves report success even when the file was not written** (found 11-20) --
+      every `saveJsonFile()` in `admin/manage_annotations.php` except the display-label one ignores its
+      return value (colour, order, synonyms, ...). The silent-write-failure pattern. Check each, say so. **S**
+- [ ] **"Use this site with an AI assistant" -- make it more prominent** (Sofia 11-20): also put it in
+      the Tools menu, the menu bar, or on the home page; KEEP it where it is now (footer). Pick which. **S**
 - [ ] **Planosphere "how to curate" tutorial** — rewrite for the new site. **M**
 - [ ] **Text updates Sofia wants** — places on the site (list to add here). **?**
 

@@ -338,6 +338,24 @@ function moop_annotation_type_label(string $type): string {
 }
 
 /**
+ * A source name as a visitor reads it: the OMA reference species' UniProt codes written out --
+ * "OMA HOG orthologs (NEMVE)" -> "OMA HOG orthologs (Nematostella vectensis, NEMVE)". Visible text
+ * only; the stored name stays the value everywhere. The 10 species are OMA's fixed reference set
+ * (config/oma/OMA_SET_AND_NAMING.md); a code not listed here is left as it is.
+ */
+function moop_annotation_source_label(string $source): string {
+    static $species = [
+        'BRAFL' => 'Branchiostoma floridae', 'CALMI' => 'Callorhinchus milii',
+        'CAPTE' => 'Capitella teleta',       'DROME' => 'Drosophila melanogaster',
+        'HUMAN' => 'Homo sapiens',           'LEPOC' => 'Lepisosteus oculatus',
+        'LOTGI' => 'Lottia gigantea',        'MONBE' => 'Monosiga brevicollis',
+        'MOUSE' => 'Mus musculus',           'NEMVE' => 'Nematostella vectensis',
+    ];
+    return preg_replace_callback('/\(([A-Z]{5})\)\s*$/', fn($m) => isset($species[$m[1]])
+        ? '(' . $species[$m[1]] . ', ' . $m[1] . ')' : $m[0], $source);
+}
+
+/**
  * Get display label for an annotation type from database
  * Resolves through synonym mapping and returns configured display_label
  * 

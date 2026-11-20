@@ -5,7 +5,8 @@
  * POST parameters:
  *   sources[]            - "organism|assembly|gene_set" strings (empty = all accessible)
  *   feature_types[]      - feature types to include (empty = all)
- *   ann_criteria_src[]   - annotation source name per criterion (empty = any)
+ *   ann_criteria_type[]  - annotation type per criterion (database name; empty = any)
+ *   ann_criteria_src[]   - annotation source name per criterion (empty = any of the type's)
  *   ann_criteria_acc[]   - exact accession per criterion (empty = skip)
  *   ann_criteria_kw[]    - keyword per criterion (empty = skip); criteria are AND'd
  *   ann_criteria_sub[]   - '1' = the accession's more specific terms too (GO: is a + part of)

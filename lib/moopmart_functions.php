@@ -147,7 +147,8 @@ function buildMoopmartFilterReason(array $filters, array $coord_filter): string
     if (!empty($filters['gene_description'])) $parts[] = 'Description: ' . $filters['gene_description'];
     foreach ($filters['annotation_criteria'] ?? [] as $crit) {
         $ann = [];
-        if (!empty($crit['src'])) $ann[] = $crit['src'];
+        if (!empty($crit['src']))      $ann[] = $crit['src'];
+        elseif (!empty($crit['type'])) $ann[] = moop_annotation_type_label($crit['type']) . ' (any source)';
         if (!empty($crit['acc'])) $ann[] = $crit['acc'] . (!empty($crit['sub']) ? ' and more specific terms' : '');
         if (!empty($crit['kw']))  $ann[] = 'keyword: "' . $crit['kw'] . '"';
         if ($ann) $parts[] = 'Annotation: ' . implode(', ', $ann);
@@ -481,7 +482,8 @@ function moopmartMoreSpecificTerms(string $acc): array
  * gene with no transcript level (Bradyrhizobium: 117,552 annotations on genes) carries them
  * itself — a children-only test reported "No features matched" for every such filter.
  *
- * @param array $criterion ['src' => source name (exact), 'acc' => accession, 'kw' => keywords,
+ * @param array $criterion ['type' => annotation type (database name; any of its sources),
+ *                          'src' => source name (exact), 'acc' => accession, 'kw' => keywords,
  *                          'sub' => also the more specific terms (GO; moopmartMoreSpecificTerms())]
  * @return array|null ['sql' => string, 'params' => array], or null if the criterion is empty
  */
@@ -492,6 +494,10 @@ function moopmartAnnotationCriterionClause(array $criterion): ?array
     if (!empty($criterion['src'])) {
         $crit_where[]  = 'ans.annotation_source_name = ?';
         $crit_params[] = $criterion['src'];
+    } elseif (!empty($criterion['type'])) {
+        // A type with "any source": the source is the narrower test, so it wins when both are set.
+        $crit_where[]  = 'ans.annotation_type = ?';
+        $crit_params[] = $criterion['type'];
     }
     if (!empty($criterion['acc'])) {
         $accs = !empty($criterion['sub']) ? moopmartMoreSpecificTerms($criterion['acc']) : [$criterion['acc']];
@@ -984,7 +990,8 @@ function moopmartParsePreviewRequest(array $post): array {
     if (!empty($post['gene_name']))         $filters['gene_name']        = trim($post['gene_name']);
     if (!empty($post['gene_description']))  $filters['gene_description'] = trim($post['gene_description']);
 
-    $crit_srcs = $post['ann_criteria_src'] ?? [];
+    $crit_srcs  = $post['ann_criteria_src']  ?? [];
+    $crit_types = $post['ann_criteria_type'] ?? [];   // annotation type (database name); empty = any
     $crit_accs = $post['ann_criteria_acc'] ?? [];
     $crit_kws  = $post['ann_criteria_kw']  ?? [];
     $crit_subs = $post['ann_criteria_sub'] ?? [];
@@ -992,11 +999,12 @@ function moopmartParsePreviewRequest(array $post): array {
     foreach (array_keys((array)$crit_srcs) as $i) {
         // The source name exactly as listed: never trimmed. Names are matched as stored, and eight
         // databases told an RBBH source from a Homologs one only by a trailing space.
-        $src = (string)($crit_srcs[$i] ?? '');
-        $acc = trim($crit_accs[$i] ?? '');
-        $kw  = trim($crit_kws[$i]  ?? '');
-        if ($src !== '' || $acc !== '' || $kw !== '') {
-            $criteria[] = ['src' => $src, 'acc' => $acc, 'kw' => $kw, 'sub' => ($crit_subs[$i] ?? '') === '1'];
+        $src  = (string)($crit_srcs[$i] ?? '');
+        $type = trim((string)($crit_types[$i] ?? ''));
+        $acc  = trim($crit_accs[$i] ?? '');
+        $kw   = trim($crit_kws[$i]  ?? '');
+        if ($src !== '' || $type !== '' || $acc !== '' || $kw !== '') {
+            $criteria[] = ['type' => $type, 'src' => $src, 'acc' => $acc, 'kw' => $kw, 'sub' => ($crit_subs[$i] ?? '') === '1'];
         }
     }
     if (!empty($criteria)) $filters['annotation_criteria'] = $criteria;
