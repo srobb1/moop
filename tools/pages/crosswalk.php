@@ -67,6 +67,7 @@ $src_cell = function (string $s) use ($sources, $source_about): string {
         <label class="visually-hidden" for="cwIds"><?= t('IDs to translate') ?></label>
         <textarea class="form-control font-monospace" name="ids" id="cwIds" rows="5" style="max-width:40rem;"
                   placeholder="<?= t('One or more IDs, separated by spaces, commas or new lines') ?>"><?= htmlspecialchars($ids_text) ?></textarea>
+        <?= moop_example_chips_html($examples, '#cwIds', false, t_plain('Try one gene under different IDs:')) ?>
         <div class="small text-muted mt-1"><?= t('Up to %d IDs at a time.', $max_ids) ?></div>
       </div>
     </div>

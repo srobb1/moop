@@ -100,6 +100,7 @@ $tabs = ['term' => t_plain('By anatomy term'), 'pub' => t_plain('By publication'
       <div class="flex-grow-1" style="max-width:36rem;">
         <label class="form-label small mb-1" for="pubQuery"><?= t('PubMed ID, or words from the title, an author or the journal') ?></label>
         <input type="text" class="form-control" id="pubQuery" name="q" placeholder="<?= t('e.g. 27034770, Currie, sanchez alvarado 2018, neoblast') ?>" value="<?= htmlspecialchars($pq) ?>">
+        <?= moop_example_chips_html($examples['pubs'], '#pubQuery', true, t_plain('Try:')) ?>
       </div>
       <button type="submit" class="btn btn-primary"><i class="fa fa-search me-1"></i><?= t('Find papers') ?></button>
     </div>
@@ -135,6 +136,7 @@ $tabs = ['term' => t_plain('By anatomy term'), 'pub' => t_plain('By publication'
     <div class="card-body">
       <label class="form-label small mb-1" for="pageIds"><?= t('Gene or transcript IDs, one per line or separated by spaces or commas (up to 500)') ?></label>
       <textarea class="form-control font-monospace" id="pageIds" name="ids" rows="4" placeholder="<?= t('e.g. h1SMcG0021890, SMED30018592, dd_Smed_v6_48430_0_1, ovo') ?>"><?= htmlspecialchars($ids_text) ?></textarea>
+      <?= moop_example_chips_html($examples['ids'], '#pageIds', true, t_plain('Try one gene under different IDs:')) ?>
       <div class="d-flex align-items-center gap-2 mt-2">
         <button type="submit" class="btn btn-primary"><i class="fa fa-search me-1"></i><?= t('Search') ?></button>
         <?php if ($crosswalk_name !== ''): ?><span class="small text-muted"><?= t('IDs are matched across transcriptomes with the %s.', t_plain($crosswalk_name)) ?></span><?php endif; ?>

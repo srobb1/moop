@@ -542,12 +542,43 @@ function moop_crosswalk_child_transcripts(string $organism, array $accessions): 
 // type (0.08 s for 3 ids on Schmidtea) instead of seeking the few named ones (0.00 s).
 
 /** The sources in this organism's crosswalk file, with the configured name: [source => label], config order first. */
+/**
+ * Every source name in the crosswalk's map, for ANY viewer (callers filter by visibility), or null
+ * without a crosswalk. `SELECT DISTINCT source` reads all ~3.7M rows (~0.5 s, no index on source),
+ * and it ran on every Smed gene page and twice per Rosetta Stone load; the list changes only when
+ * the file is rebuilt, so it is kept in the cache directory keyed on the file's date (2026-11-20).
+ *
+ * @return list<string>|null
+ */
+function moop_crosswalk_sources_present(string $organism): ?array {
+    static $memo = [];
+    if (array_key_exists($organism, $memo)) return $memo[$organism];
+    $file = moop_crosswalk_file($organism);
+    $db   = moop_crosswalk_open($organism);
+    if (!$db || !is_file($file)) return $memo[$organism] = null;
+    require_once __DIR__ . '/cache_paths.php';
+    require_once __DIR__ . '/functions_json.php';
+    $cache_file = moop_cache_root() . '/crosswalk_sources.json';
+    $stamp      = (string) filemtime($file);
+    $cached     = is_file($cache_file) ? loadJsonFile($cache_file, []) : [];
+    if (($cached[$organism]['stamp'] ?? null) === $stamp && is_array($cached[$organism]['sources'] ?? null)) {
+        return $memo[$organism] = array_values(array_map('strval', $cached[$organism]['sources']));
+    }
+    $all = array_map('strval', $db->query('SELECT DISTINCT source FROM map')->fetchAll(PDO::FETCH_COLUMN));
+    // A cache we cannot write is a performance problem, never a correctness one.
+    $cached[$organism] = ['stamp' => $stamp, 'sources' => $all];
+    if (moop_ensure_cache_dir(dirname($cache_file))) {
+        @file_put_contents($cache_file, json_encode($cached, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    }
+    return $memo[$organism] = $all;
+}
+
 function moop_crosswalk_source_list(string $organism): array {
-    $db = moop_crosswalk_open($organism);
-    if (!$db) return [];
+    $all = moop_crosswalk_sources_present($organism);
+    if ($all === null) return [];
     $conf = moop_crosswalk_sources()[$organism]['sources'] ?? [];
     // A private gene set's name is not even offered as a choice.
-    $have = array_values(array_filter($db->query('SELECT DISTINCT source FROM map')->fetchAll(PDO::FETCH_COLUMN),
+    $have = array_values(array_filter($all,
                          fn($s) => moop_crosswalk_entry_visible($organism, (array) ($conf[$s] ?? []))));
     $out = [];
     foreach ($conf as $name => $c) if (in_array($name, $have, true)) $out[$name] = (string) ($c['label'] ?? $name);

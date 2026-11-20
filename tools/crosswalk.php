@@ -9,6 +9,7 @@
 include_once __DIR__ . '/tool_init.php';
 require_once __DIR__ . '/../lib/crosswalk.php';
 include_once __DIR__ . '/../includes/layout.php';
+require_once __DIR__ . '/../lib/home_examples.php';
 
 const MOOP_CROSSWALK_MAX_IDS  = 500;
 const MOOP_CROSSWALK_MAX_ROWS = 5000;
@@ -55,5 +56,6 @@ echo render_display_page(__DIR__ . '/pages/crosswalk.php', [
     'always' => array_values(array_filter((array) ($cfg['always_show'] ?? []), 'is_string')),
     'source_about' => array_map(fn($c) => (string) ($c['about'] ?? ''), (array) ($cfg['sources'] ?? [])),
     'max_ids' => MOOP_CROSSWALK_MAX_IDS, 'max_rows' => MOOP_CROSSWALK_MAX_ROWS,
-    'page_script' => [moop_url_base() . '/js/crosswalk.js'],
+    'examples'    => $organism ? moop_curated_examples($organism)['ids'] : [],
+    'page_script' => [moop_url_base() . '/js/crosswalk.js', moop_url_base() . '/js/modules/example-fill.js'],
 ], $tool_title);

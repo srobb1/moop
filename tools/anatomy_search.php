@@ -11,6 +11,7 @@ include_once __DIR__ . '/tool_init.php';
 require_once __DIR__ . '/../lib/anatomy_expression.php';
 require_once __DIR__ . '/../lib/crosswalk.php';
 include_once __DIR__ . '/../includes/layout.php';
+require_once __DIR__ . '/../lib/home_examples.php';
 
 $relations = moop_ontology_relations('anatomy');
 $anatomy   = moop_ontology_by_purpose('anatomy');
@@ -83,5 +84,6 @@ echo render_display_page(__DIR__ . '/pages/anatomy_search.php', [
     'crosswalk_name' => (string) (moop_crosswalk_sources()[$organism]['name'] ?? ''),
     'source'         => (string) (moop_page_sources()[$organism]['source'] ?? ''),
     'source_url'     => (string) (moop_page_sources()[$organism]['source_url'] ?? ''),
-    'page_script' => [moop_url_base() . '/js/modules/ontology-term-box.js', moop_url_base() . '/js/anatomy-search.js'],
+    'examples'    => $organism ? moop_curated_examples($organism) : ['ids' => [], 'pubs' => []],
+    'page_script' => [moop_url_base() . '/js/modules/ontology-term-box.js', moop_url_base() . '/js/anatomy-search.js', moop_url_base() . '/js/modules/example-fill.js'],
 ], 'Expression by Anatomy');

@@ -488,7 +488,7 @@
     <div class="card shadow-sm mb-4" id="pnav-hierarchy" data-nav-label="Feature Hierarchy">
         <div class="card-header d-flex align-items-center">
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#hierarchySection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Feature Hierarchy') ?>" title="<?= t('Show or hide Feature Hierarchy') ?>">
-                <i class="fas fa-sitemap toggle-icon text-primary"></i>
+                <i class="fas fa-minus toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Feature Hierarchy') ?></span>
             <?= help_modal_trigger('hierarchy-help', '', 'Help: reading the feature hierarchy') ?>
@@ -562,7 +562,7 @@
     <div class="card shadow-sm mb-4" id="pnav-expression" data-nav-label="Expression">
         <div class="card-header d-flex align-items-center flex-wrap">
             <span class="collapse-section" data-bs-toggle="collapse" data-bs-target="#expressionSection" aria-expanded="true" role="button" aria-label="<?= t('Show or hide Expression') ?>" title="<?= t('Show or hide Expression') ?>">
-                <i class="fas fa-chart-bar toggle-icon text-primary"></i>
+                <i class="fas fa-minus toggle-icon text-primary"></i>
             </span>
             <span class="ms-2 text-uppercase fw-semibold section-eyebrow"><?= t('Expression') ?></span>
             <span class="ms-2 text-muted small">

@@ -80,7 +80,8 @@ Order of work, and why:
 - [x] **Welcome text on the SIMRbase home page:** DONE 11-19: content page `welcome` shown above the home (Manage Pages -> home = intro), + "Email us for a walkthrough" via {admin_email}. Edit it any time in Manage Pages; a pop-up was considered and NOT chosen (Turnstile already interrupts once). "Welcome to the new SIMRbase. SIMRbase MOOP —
       *moop* is a Scots word meaning to associate closely; SIMRbase MOOP does that with all of our
       organisms. Many organisms, one platform." (Wording to settle; goes through `t()`.) **S**
-- [ ] **Way back to Planosphere from SIMRbase:** Planosphere's favicon/link in the SIMRbase menu bar,
+- [x] DONE 11-20: "Planosphere" link after Help in SIMRbase's main menu (config main_menu; opens a new tab like every off-site link). Favicon NOT added (needs an icon field in Manage Menu + a CSP img-src entry).
+      **Way back to Planosphere from SIMRbase:** Planosphere's favicon/link in the SIMRbase menu bar,
       for someone whose Planosphere click landed them on SIMRbase and whose tab is gone. **S–M**
 - [x] **Tools menu is too long and confusing.** Regroup, wider, a line of text per tool.
       DONE 11-19: headings (Browse & search / Expression / Sequences / Export) + one line per tool,
@@ -106,22 +107,24 @@ SIMRbase
       technical text on the card. Put it behind an (i) (help_modal / popover). tools/pages/parent.php ~1073
       ($__cl_foot) and ~1124 (compgen-evidence). Also: the rule reads as code (`reciprocal_best =`,
       `no_hit`) -- write it as plain words in the (i). (Sofia, 11-19) **S**
-- [ ] Gene page — **Pathways card:** make the tree and the link-out stand out; one line is easy to miss. **S**
-- [ ] Gene page — **Feature Hierarchy** icon doesn't match the other cards. **S**
+- [x] Gene page — **Pathways card:** DONE 11-20 — tree in a tinted panel, class rows are teal bands with a turning chevron, "View on KEGG" an outlined button (lib/kegg.php, css/parent.css).
+- [x] Gene page — **Feature Hierarchy** icon: DONE 11-20 — it (and Expression's) started as a sitemap/chart icon, and the toggle script then added minus/plus ON TOP of it; both now start as the minus like every other open card.
 - [x] Ontology Browser — **chevrons too small;** DONE 11-19 (filled teal circle). a reviewer didn't know they were clickable. **S**
 - [x] Term pages — **buttons don't stand out;** DONE 11-19 (solid main colour; link-outs outlined). give them colour. **S**
-- [ ] Ontology term page — **stage terms** have old/ugly formatting; bring to the new style. **M**
+- [x] Ontology term page — **stage terms:** DONE 11-20 (site data, metadata/pages/stage-1..8.json) — fake "▻" table of contents and "back to top" links removed, in situ table + collapsible symbols list styled, Stage 1's empty Overview filled with the PLANA definition, and the raw FASTA dump (up to 170 KB, a 52,000 px page) replaced by "Get these N sequences" -> Retrieve Sequences with the same IDs (smed_20140614).
+- [ ] **Sofia: stage pages listed more sequences than in situ genes** (Stage 5: 83 transcripts vs 28 genes in the table; every stage the same pattern, and some IDs' in situ images are from OTHER stages, e.g. SMED30000139 S3-S4 in Stage 5). Was the old page's FASTA deliberately wider, or did the table lose rows in the port? The new text says only what is true ("listed 83 transcripts ... including the 28 genes in the table"). **TALK**
 
 Planosphere
 - [x] Index — **bold** the sentence saying some links go to SIMRbase. **S** — DONE 11-18 (site data)
-- [ ] **Tools page** → the square-tile layout of the welcome/index page. **M**
-- [ ] **Molecular fate mapping** page — items not centred like the other pages. **S**
-- [ ] **Movie page** — items not centred. **S**
+- [x] **Tools page** → home-page tiles: DONE 11-20 (wrapped in ps-home2 + ps-hero). Note: its PLANA Ontology tile still links to obofoundry.org, not SIMRbase's Ontology Browser (?o=PLANA) -- Sofia to decide.
+- [x] **Molecular fate mapping** page centred: DONE 11-20 (wrapped in ps-paper; section boxes now match their tables' width).
+- [x] **Movie page** centred: DONE 11-20 (ps-paper; buttons now Planosphere's ps-btn, not Bootstrap blue).
 - [ ] **Image gallery** — larger section headers + a side menu to jump to a section (like the SIMRbase
       gene page). **M**
 
 ## 5. Help text and examples
-- [ ] **Example search terms** for the Rosetta Stone, and Anatomy Search's publication and ID searches. **S**
+- [x] **Example search terms** DONE 11-20 — chosen from the data (moop_curated_examples(), lib/home_examples.php, the same system as the home page): the most-curated gene (Smed: EU296635 = sFRP-1) under its other IDs, and the three most-curated papers. Click fills the box (Anatomy also runs it). Cached; never shows crosswalk rows the viewer may not see.
+- [x] DONE 11-20: Rosetta Stone page 0.96 s -> 0.01 s and every Smed gene page ~0.5 s faster: `SELECT DISTINCT source FROM map` (3.7M rows) ran on each load; now cached on the file's date (moop_crosswalk_sources_present()).
 - [ ] **Neoblast cluster page (Planosphere)** — the "translate IDs" text is confusing; rewrite. **S**
 - [ ] **Ontology Browser help:** an (i) with more text — it's about genes and the terms they're tagged
       with; maybe a clearer name; a picture of the microscope icon explaining what it means. Written
@@ -203,3 +206,14 @@ Planosphere
       and build the nginx rules with `scripts/build_legacy_redirects.php` (as cuttingclass does; simrbase
       has no list yet). ⚠️ Never redirect a path MOOP uses itself (/admin, /tools, ...). **M**
 
+- [ ] **Annotation Search: cannot limit to ONE gene set of an organism** (Sofia 11-20). Picking an
+      organism searches all of its gene sets; there is no way to pick just one (e.g. only S3h1 for Smed).
+      Check the scope selector's mode on that page (multi-select at organism level?) vs Retrieve/BLAST,
+      which pick a gene set. **S–M**
+- [ ] **Sofia: stage pages — more sequences than in situ genes** (see §4 SIMRbase stage-terms entry, 11-20). Decide
+      whether the old FASTA was meant to be wider or the tables lost rows in the port. **TALK**
+- [ ] **Sofia: Planosphere Tools page "PLANA Ontology" tile** links to obofoundry.org — switch to SIMRbase's
+      Ontology Browser (`{simrbase}/tools/ontology_browser.php?o=PLANA`)? **S** once decided
+- [ ] **Sofia (root): SIMRbase site-data backup can't be written by smr** — old copies are 644 apache, so
+      `scripts/backup_site_data.php` fails (housekeeping still copies hourly). One-time fix:
+      `sudo find '/var/www/moop-site-data' -path '*/.git' -prune -o -type d -exec chmod 2770 {} + -o -type f -exec chmod 660 {} +` **S**

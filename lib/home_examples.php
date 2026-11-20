@@ -373,3 +373,151 @@ function moop_home_examples_id_visible(string $id, array $entries, array $cache)
     }
     return false;
 }
+
+// ---------------------------------------------------------------- curated-data examples
+
+/**
+ * Examples for the pages built on an organism's CURATED data -- Expression by Anatomy (its
+ * publication and ID searches) and the Rosetta Stone. Chosen from the data, same as the home page
+ * (2026-11-20; they were placeholders typed into the templates, which only fit S. mediterranea).
+ *
+ * THE RULES. One gene carries the story, so the chips teach what the pages are for -- one gene,
+ * many IDs:
+ *   - the gene: the curated accession recorded by the most papers (then the most records, then
+ *     alphabetical, so the chips are STABLE between loads -- tours depend on it);
+ *   - its IDs: that accession, the reference gene it maps to, then the other accessions the
+ *     curators used for the same gene, most-used first, at most one per ID source (a GenBank
+ *     protein next to its own mRNA teaches nothing). Five at most;
+ *   - the papers: the three with the most records, as a PubMed ID, an author, and an author with a
+ *     year -- each kept only if the publication search really finds it.
+ * Never relaxed: crosswalk rows the viewer may not see are never used (moop_crosswalk_genes()).
+ * Without a crosswalk the gene is the accession alone; without anatomy data there are no papers
+ * and the gene comes from nothing -- the page keeps its placeholder.
+ *
+ * Cached in the cache directory (~100 ms to compute: a grouping over ~77k curations, then the
+ * crosswalk's visibility checks), keyed on both files' dates and on the viewer's access, since what
+ * the crosswalk shows depends on who is looking.
+ *
+ * @return array{ids: list<array{text:string, title:string}>, pubs: list<string>}
+ */
+function moop_curated_examples(string $organism): array {
+    static $memo = [];
+    if (isset($memo[$organism])) return $memo[$organism];
+    require_once __DIR__ . '/anatomy_expression.php';
+    require_once __DIR__ . '/crosswalk.php';
+    $out = ['ids' => [], 'pubs' => []];
+    if ($organism === '' || !is_file(moop_page_file($organism))) return $memo[$organism] = $out;
+
+    require_once __DIR__ . '/cache_paths.php';
+    require_once __DIR__ . '/functions_json.php';
+    $cw_file    = moop_crosswalk_file($organism);
+    $cache_file = moop_cache_root() . '/curated_examples.json';
+    $key        = $organism . '|' . get_access_level() . '|' . (get_username() ?? '');
+    $stamp      = filemtime(moop_page_file($organism)) . '|' . (is_file($cw_file) ? filemtime($cw_file) : 0) . '|' . MOOP_EXAMPLES_RULES_VERSION;
+    $cached     = is_file($cache_file) ? loadJsonFile($cache_file, []) : [];
+    if (($cached[$key]['stamp'] ?? null) === $stamp) return $memo[$organism] = $cached[$key]['examples'];
+    $memo[$organism] = $out = moop_curated_examples_compute($organism);
+
+    // A cache we cannot write is a performance problem, never a correctness one. One entry per
+    // organism and viewer; the oldest go first past 200 (collaborators are few, but never unbounded).
+    unset($cached[$key]);
+    $cached[$key] = ['stamp' => $stamp, 'examples' => $out];
+    $cached = array_slice($cached, -200, null, true);
+    if (moop_ensure_cache_dir(dirname($cache_file))) {
+        @file_put_contents($cache_file, json_encode($cached, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    }
+    return $out;
+}
+
+/** moop_curated_examples() without the cache. */
+function moop_curated_examples_compute(string $organism): array {
+    $out = ['ids' => [], 'pubs' => []];
+    try {
+        $page = moop_page_open($organism);
+        if (!$page) return $out;
+
+        // The papers
+        $top = $page->query("SELECT c.pmid, p.authors, p.year, COUNT(*) AS n FROM curation c
+                               LEFT JOIN publication p ON p.pmid = c.pmid
+                              WHERE c.pmid IS NOT NULL AND c.pmid <> ''
+                              GROUP BY c.pmid ORDER BY n DESC, c.pmid LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+        $surname = fn($r) => preg_match('/^\s*([^\s,]+)/u', (string) ($r['authors'] ?? ''), $m) ? $m[1] : '';
+        $pubs = [$top[0]['pmid'] ?? '', isset($top[1]) ? $surname($top[1]) : '',
+                 isset($top[2]) && $surname($top[2]) !== '' ? trim($surname($top[2]) . ' ' . ($top[2]['year'] ?? '')) : ''];
+        foreach ($pubs as $q) {
+            if ($q !== '' && !in_array($q, $out['pubs'], true) && moop_page_find_publications($organism, $q, 1)) $out['pubs'][] = $q;
+        }
+
+        // The gene: the most-studied curated accession that reaches a gene the viewer may see
+        $curated = $page->query("SELECT MIN(accession) AS accession, accession_lc, COUNT(*) AS n
+                                   FROM curation GROUP BY accession_lc
+                                  ORDER BY COUNT(DISTINCT pmid) DESC, n DESC, accession_lc LIMIT 25")->fetchAll(PDO::FETCH_ASSOC);
+        if (!$curated) return $out;
+        $cw = moop_crosswalk_open($organism);
+        if (!$cw) {
+            $out['ids'][] = ['text' => $curated[0]['accession'], 'title' => ''];
+            return $out;
+        }
+        $hub_order = array_flip(array_keys((array) (moop_crosswalk_sources()[$organism]['hubs'] ?? [])));
+        foreach ($curated as $c) {
+            $genes = moop_crosswalk_genes($organism, [$c['accession']])[$c['accession_lc']] ?? [];
+            if (!$genes) continue;
+            usort($genes, fn($a, $b) => ($hub_order[$a['hub']] ?? 99) <=> ($hub_order[$b['hub']] ?? 99));
+            ['ref_id' => $ref, 'hub' => $hub] = $genes[0];
+
+            // Every visible accession of that gene, with its source
+            $st = $cw->prepare('SELECT DISTINCT accession, accession_lc, source FROM map WHERE ref_id = ? AND hub = ?');
+            $st->execute([$ref, $hub]);
+            $src_of = [];
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                if (moop_crosswalk_row_visible($organism, $hub, $r['source'])) $src_of[$r['accession_lc']] ??= [$r['accession'], $r['source']];
+            }
+            if (!isset($src_of[$c['accession_lc']])) continue;
+
+            // The curated ones, most-used first
+            $lc = array_keys($src_of);
+            $q  = $page->prepare('SELECT accession_lc, COUNT(*) AS n FROM curation WHERE accession_lc IN ('
+                                 . implode(',', array_fill(0, count($lc), '?')) . ') GROUP BY accession_lc ORDER BY n DESC, accession_lc');
+            $q->execute($lc);
+            $order = array_column($q->fetchAll(PDO::FETCH_ASSOC), 'accession_lc');
+
+            $cfg   = moop_crosswalk_sources()[$organism] ?? [];
+            $label = fn($src) => (string) ($cfg['sources'][$src]['label'] ?? $cfg['hubs'][$src]['label'] ?? $src);
+            $pick  = [[$c['accession'], $label($src_of[$c['accession_lc']][1])], [$ref, $label($hub)]];
+            $used  = [$src_of[$c['accession_lc']][1] => true, $hub => true];
+            foreach ($order as $a) {
+                [$acc, $src] = $src_of[$a];
+                if (count($pick) >= 5) break;
+                if (isset($used[$src]) || strcasecmp($acc, $ref) === 0) continue;
+                $used[$src] = true;
+                $pick[] = [$acc, $label($src)];
+            }
+            foreach ($pick as [$text, $title]) $out['ids'][] = ['text' => $text, 'title' => $title];
+            break;
+        }
+    } catch (Throwable $e) {
+        error_log('curated examples: ' . $organism . ': ' . $e->getMessage());
+    }
+    return $out;
+}
+
+/**
+ * The example row under a search box: "e.g. a · b · c", each a button that puts its text into
+ * $target (a CSS selector) and, with $submit, sends the form (js/modules/example-fill.js). Same look
+ * as the home page's examples (.qs-examples, css/display.css).
+ *
+ * @param list<array{text:string, title?:string}|string> $items
+ * @param string $lead already translated ("e.g." or a sentence)
+ */
+function moop_example_chips_html(array $items, string $target, bool $submit, string $lead): string {
+    if (!$items) return '';
+    $html = '<div class="qs-examples mt-1"><span class="text-muted me-1 small">' . htmlspecialchars($lead) . '</span>';
+    foreach ($items as $it) {
+        $text  = is_array($it) ? (string) $it['text'] : (string) $it;
+        $title = is_array($it) ? (string) ($it['title'] ?? '') : '';
+        $html .= '<button type="button" class="qs-example-chip" data-example-fill="' . htmlspecialchars($target) . '"'
+               . ($submit ? ' data-example-submit' : '') . ($title !== '' ? ' title="' . htmlspecialchars($title) . '"' : '')
+               . ' data-value="' . htmlspecialchars($text) . '">' . htmlspecialchars($text) . '</button>';
+    }
+    return $html . '</div>';
+}

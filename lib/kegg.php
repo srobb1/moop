@@ -259,7 +259,7 @@ function moop_kegg_gene_pathways_html(array $rows, string $uniquename, array $li
            . ' ' . moop_kegg_map_legend_html(['this_gene', 'this_set', 'other_set']) . '</div>';
     foreach ($by_class as $top => $subs) {
         $count = array_sum(array_map('count', $subs));
-        $html .= '<details class="kegg-class"><summary><strong>' . htmlspecialchars($top)
+        $html .= '<details class="kegg-class"><summary><i class="fas fa-chevron-right kegg-chev" aria-hidden="true"></i><strong>' . htmlspecialchars($top)
                . '</strong> <span class="badge bg-light text-dark">' . $count . '</span></summary><ul class="kegg-pathway-list">';
         ksort($subs);
         foreach ($subs as $sub => $paths) {
@@ -275,7 +275,7 @@ function moop_kegg_gene_pathways_html(array $rows, string $uniquename, array $li
                     $map = moop_url('api/kegg_map.php?' . http_build_query($ctx + ['pathway' => $id, 'gene' => $uniquename]));
                     // The annotation search: this gene set, this pathway id, ONLY the KEGG pathway source, run at once
                     $genes = moop_url('tools/search.php?' . http_build_query($ctx + ['q' => $id, 'source' => MOOP_KEGG_PATHWAY_SOURCE]));
-                    $html .= ' <a href="' . htmlspecialchars($map) . '" target="_blank" rel="noopener nofollow">' . t('View on KEGG')
+                    $html .= ' <a class="kegg-map-link" href="' . htmlspecialchars($map) . '" target="_blank" rel="noopener nofollow">' . t('View on KEGG')
                            . ' <i class="fa fa-external-link-alt link-icon"></i></a>'
                            . ' · <a href="' . htmlspecialchars($genes) . '">' . t('Genes in this gene set') . '</a>';
                     if ($org_link) {
