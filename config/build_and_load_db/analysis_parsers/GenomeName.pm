@@ -15,6 +15,7 @@ our @EXPORT_OK = qw(genome_name_from_metadata);
 #
 # Order:
 #   1. genome-name: from metadata.yaml (whole value, so a name may contain spaces), unless empty or NA.
+#      A genome-name equal to genome-accession counts as no name: empty, no fall-through to 2 (2026-11-20).
 #   2. the assembly directory name (GENOMES/<org>/<assembly>/<geneset>/metadata.yaml),
 #      but only when it differs from genome-accession.
 #   3. empty. The web shows the accession alone when the name is empty; writing the
@@ -33,6 +34,8 @@ sub genome_name_from_metadata {
     close $META;
     $name      =~ s/^(["'])(.*)\1$/$2/;
     $accession =~ s/^(["'])(.*)\1$/$2/;
+    # A name equal to the accession is no name: the web would print it twice ("X (X)").
+    return '' if $name ne '' and $name eq $accession;
     return $name if $name ne '' and $name ne 'NA';
 
     my $full = File::Spec->rel2abs($metadata_path);    # no symlink resolving: the path the build used
