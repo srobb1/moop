@@ -46,7 +46,7 @@ Every source needs the two sides made to agree, and each source disagrees differ
   (`lcl|NC_...._cds_XP_..._1`). `rename_RefSeq_cds_fasta.pl` joins them on `protein_id`
   and rewrites the header.
 - **Ensembl** — `rename_Ensembl_cds_fasta.pl` builds `CDS:<protein_id>` to match what
-  `parse_Ensembl_GFF_to_MOOP_TSV.pl` emits.
+  `parse_GFF3_to_MOOP_TSV.pl` emits for Ensembl GFFs.
 - **Generic GFF** — `rename_generic_fasta.pl` appends `:cds` / `:pep` only where the ID
   would otherwise collide with a transcript ID.
 - **transcript2gene (T2G)** — all three FASTAs share one identifier, so the type is

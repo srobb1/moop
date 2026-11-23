@@ -26,3 +26,6 @@ runs/
 # check_status.sh's own listing. Separate from the above on purpose: it used to share
 # active_genesets.tsv with run_all_v2.sh and truncated it out from under live jobs.
 status_genesets.tsv
+
+# Retired scripts, kept on disk for reference only (2026-11-23). Not versioned.
+old/

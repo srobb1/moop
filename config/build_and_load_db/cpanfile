@@ -24,7 +24,7 @@ requires 'perl', '5.026';
 ## Not part of Perl -- needed on every machine
 requires 'DBI';                 # data_loaders/load_annotations_sqlite.pl, load_genes_sqlite.pl
 requires 'DBD::SQLite';         # the driver behind DBI->connect("dbi:SQLite:...") -- a use-scan misses it
-requires 'URI::Escape';         # analysis_parsers/get_names_from_ensembl_gff.pl (5 files)
+requires 'URI::Escape';         # analysis_parsers/parse_GFF3_to_MOOP_TSV.pl, get_names_from_gff.pl, updateGFF.pl (4 files)
 
 ## Part of Perl, but separate packages on RHEL (see above)
 requires 'JSON::PP';            # analysis_parsers/parse_BUSCO_to_MOOP_JSON.pl
