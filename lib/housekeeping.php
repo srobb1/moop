@@ -826,6 +826,9 @@ function housekeeping_snapshot_site_data(bool $persist = true) {
         // scripts/build_legacy_redirects.php). Missing until 2026-11-18 -- never backed up.
         $site_path . '/metadata/legacy_redirects.json'          => 'metadata/legacy_redirects.json',
         $users_file                                            => 'users.json',
+        // Messages from visitors (tools/feedback.php, lib/feedback.php): next to users.json, may hold
+        // email addresses. Missing until the first message -- the snapshot skips absent files.
+        dirname($users_file) . '/feedback.json'                => 'feedback.json',
         // The site's own stylesheet (head-resources.php loads it if present; planosphere's look,
         // 2026-11-11). Site data, not code: git-ignored, so the backup is its only other copy.
         $site_path . '/css/custom.css'                          => 'css/custom.css',

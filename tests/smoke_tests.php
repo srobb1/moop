@@ -5384,6 +5384,27 @@ ok(strpos(moop_crosswalk_unlinked_reason(null), 'not in the reference data') !==
    && strpos(moop_crosswalk_unlinked_reason($_dna), 'did not align') !== false,
    'crosswalk no-gene: reason text per case; genome link only when the id aligned');
 
+// Messages from visitors (lib/feedback.php, 2026-11-23): validation, save, status, cap, and never
+// overwriting a file it could not read.
+require_once __DIR__ . '/../lib/feedback.php';
+$_fbd = sys_get_temp_dir() . '/moop_fb_' . getmypid(); @mkdir($_fbd); $_fbf = "$_fbd/feedback.json";
+[$_fm, $_fe] = moop_feedback_validate(['kind' => 'evil', 'message' => "  hi\x07 there ", 'email' => 'nope', 'from' => '//evil.example/x']);
+ok($_fm['kind'] === 'other' && $_fm['message'] === 'hi there' && $_fm['page'] === '' && $_fe === ['email'],
+   'feedback: unknown kind -> other, control characters removed, off-site page dropped, bad email refused');
+[$_fm, $_fe] = moop_feedback_validate(['kind' => 'data', 'message' => 'Please add Dugesia', 'email' => 'a@b.org', 'from' => '/tools/organism.php?organism=X']);
+ok($_fe === [] && $_fm['page'] === '/tools/organism.php?organism=X', 'feedback: a good message passes with its page');
+ok(moop_feedback_add($_fm, ['user' => '', 'level' => 'PUBLIC'], $_fbf) === 'ok' && moop_feedback_new_count($_fbf) === 1
+   && (fileperms($_fbf) & 0007) === 0, 'feedback: saved, counted as new, never world-readable');
+$_fid = moop_feedback_all($_fbf)[0]['id'];
+ok(moop_feedback_set_status($_fid, 'done', $_fbf) && moop_feedback_new_count($_fbf) === 0 && !moop_feedback_set_status($_fid, 'bogus', $_fbf),
+   'feedback: status change saved; an unknown status is refused');
+file_put_contents($_fbf, '{broken');
+ok(moop_feedback_add($_fm, [], $_fbf) === 'error' && file_get_contents($_fbf) === '{broken',
+   'feedback: an unreadable file is an error and is left exactly as it was');
+file_put_contents($_fbf, json_encode(array_fill(0, MOOP_FEEDBACK_DAY_CAP, ['id' => 'x', 'ts' => time(), 'status' => 'done'])));
+ok(moop_feedback_add($_fm, [], $_fbf) === 'cap', 'feedback: the site-wide daily cap holds');
+array_map('unlink', glob("$_fbd/*")); @rmdir($_fbd);
+
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";

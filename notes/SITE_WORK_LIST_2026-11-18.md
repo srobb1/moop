@@ -167,6 +167,10 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [x] **"Send us a message" form (11-23):** footer link on every page -> tools/feedback.php (question /
+      request / problem, optional email, page they came from). Inbox: Admin -> Messages
+      (admin/manage_feedback.php); dashboard banner counts new ones. Stored in the private folder next to
+      users.json and backed up. Email notice of new messages waits for email (notes/EMAIL_ALERTS_PLAN.md #14).
 - [ ] **Cutting Class paper PDF is missing (Sofia to find it, 11-23):** About and FAQ (en + es) link to
       `https://cuttingclass.stowers.org/pub/pdfs/cuttingclass.pdf`, which is not on this server, so the link
       lands on the home page. Once found: put it in the site (or link the published paper) and fix the 4 links

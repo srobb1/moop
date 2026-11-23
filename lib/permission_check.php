@@ -1165,6 +1165,8 @@ function moop_build_permission_items($config, array $ctx): array {
             'sensitive' => true,
             'paths' => array_values(array_filter(array_unique(array_filter([
                 $config->getPath('users_file'),               // Manage Users writes this
+                dirname((string) $config->getPath('users_file')) . '/feedback.json',   // visitor messages (lib/feedback.php)
+                $site_data_path === '' ? '' : $site_data_path . '/feedback.json',
                 $site_data_path === '' ? '' : $site_data_path . '/users.json',
                 $site_data_path === '' ? '' : $site_data_path . '/config/secrets.php',
             ])), 'file_exists')),

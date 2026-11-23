@@ -64,6 +64,15 @@
   </div>
   <?php endif; ?>
 
+  <?php require_once __DIR__ . '/../../lib/feedback.php'; $_fb_new = moop_feedback_new_count(); ?>
+  <?php if ($_fb_new > 0): ?>
+  <div class="alert alert-info d-flex align-items-center gap-2 py-2" role="status">
+    <i class="fa fa-comment-dots"></i>
+    <div><strong><?= $_fb_new ?> new message<?= $_fb_new === 1 ? '' : 's' ?> from visitors.</strong>
+      <a href="manage_feedback.php" class="alert-link">Read <?= $_fb_new === 1 ? 'it' : 'them' ?></a></div>
+  </div>
+  <?php endif; ?>
+
   <div class="adm-group-label">Data</div>
   <!-- Data Health (shared partial -- the same card on the Manage Organisms page). It renders
        nothing when there is nothing to report, so the clean state is drawn here. -->
