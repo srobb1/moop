@@ -214,7 +214,7 @@ Planosphere
       kc_isoseq, wien_nvec200_v1, nv2g_blastx_20231129/...). MOOP's NV2 genes.gff has added names/notes, so it is not
       the cited file. Copy the originals (from $GENOMES / the old server) to a served "published files" place, then
       change the redirect `prefixes` rule for that folder to point at them instead of the Downloads page. **M**
-- [x] **DONE inside Stowers 11-23 (SELinux http_port_t 8888, firewalld 8888/tcp, /etc/nginx/conf.d/moop-endoatlas-8888.conf; curl -> 301 -> Endo-Atlas 200). LEFT: phone test from outside; if it times out, IT opens 8888 inbound.** **EndoAtlas old address http://simrbase.stowers.org:8888/ (He et al. 2023) (11-23):** a redirect works, but
+- [x] **DONE inside Stowers 11-23 (SELinux http_port_t 8888, firewalld 8888/tcp, /etc/nginx/conf.d/moop-endoatlas-8888.conf; curl -> 301 -> Endo-Atlas 200). LEFT: phone test FAILED 11-23 -- Stowers edge (public 161.129.22.133 -> 172.16.2.52) passes only 80/443; Sofia asking IT to open 8888 inbound.** **EndoAtlas old address http://simrbase.stowers.org:8888/ (He et al. 2023) (11-23):** a redirect works, but
       something must ANSWER on 8888 first -- a browser connects to port 8888 directly, so nginx on 80/443 never
       sees the request. Needs (root): an nginx block
       `server { listen 8888; listen [::]:8888; server_name simrbase.stowers.org;

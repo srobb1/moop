@@ -53,6 +53,10 @@ $data = [
     'siteTitle' => $config->getString('siteTitle'),
     'page_script' => moop_url_base() . '/js/modules/help-filter.js',
 ];
+// The AI assistants topic has Copy buttons (data-copy-text); the helper loads on admin pages only.
+if ($topic === 'ai-assistants') {
+    $data['page_script'] = [$data['page_script'], moop_url_base() . '/js/modules/copy-to-clipboard.js'];
+}
 
 // Render page using layout system
 echo render_display_page(

@@ -28,6 +28,12 @@ $examples = [
     ['fa-file-alt',     t('Sequences'),           t('Give me the protein sequences of these genes, and the 500 bases upstream of each.')],
     ['fa-chart-bar',    t('Assemblies'),          t_markup('How complete are the %s gene sets (BUSCO), and what is each assembly’s N50?', $smed)],
 ];
+
+// What a person pastes into the assistant: the guide, then the question. Examples are HTML (t_markup), so
+// the copy is their plain text. Example "…" stays as is: the person fills in their own genes there.
+$prompt_for = fn(string $html) => t_plain('Read %s first, then answer my question: %s', $llms,
+    html_entity_decode(strip_tags($html), ENT_QUOTES, 'UTF-8'));
+$sample_prompt = $prompt_for($examples[6][2]);   // "Find the piwi genes in …"
 ?>
 
 <div class="container mt-5">
@@ -39,16 +45,24 @@ $examples = [
       </h1>
     </div>
     <div class="card-body p-4">
-      <p class="mb-2"><?= t('An AI assistant that can read web pages (Claude, ChatGPT, Perplexity and others) can look things up here for you: genes, their annotations, protein domains, KEGG pathways, orthologs, ID translations and sequences.') ?></p>
-      <p class="text-muted mb-0"><?= t('It reads a short guide written for assistants, which tells it how to ask the site for data instead of reading whole web pages.') ?></p>
+      <p class="mb-2"><?= t('An AI assistant can look things up here for you: genes, their annotations, protein domains, KEGG pathways, orthologs, ID translations and sequences.') ?></p>
+      <p class="text-muted mb-0"><?= t('It first reads a short guide written for assistants, which tells it how to ask the site for data. This works best with a coding agent on your computer, such as Claude Code.') ?></p>
     </div>
   </div>
 
   <h2 class="h5 fw-semibold mb-3"><?= t('How to start') ?></h2>
   <div class="card shadow-sm mb-4">
     <div class="card-body p-4">
-      <p class="mb-2"><?= t('Start your chat by giving the assistant the guide, then ask your question:') ?></p>
-      <pre class="bg-light border rounded p-3 mb-3 text-wrap"><code><?= t('Read %s and use it to answer: …', $llms) ?></code></pre>
+      <ol class="mb-3 ps-3">
+        <li class="mb-2"><?= t_markup('Open a coding agent on your computer, such as Claude Code (%s).', '<a href="#coding-agent">' . t('why') . '</a>') ?></li>
+        <li class="mb-2"><?= t('Paste in the line below. It tells the assistant to read the guide first, then answer your question. Replace the example question with your own.') ?>
+          <div class="d-flex flex-column flex-sm-row align-items-start gap-2 mt-2">
+            <pre class="bg-light border rounded p-3 mb-0 flex-grow-1 w-100 text-wrap text-break"><code><?= htmlspecialchars($sample_prompt) ?></code></pre>
+            <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap" data-copy-text="<?= htmlspecialchars($sample_prompt, ENT_QUOTES) ?>"><i class="fa fa-copy me-1"></i><span class="copy-label"><?= t('Copy') ?></span></button>
+          </div>
+        </li>
+        <li><?= t('Or pick a question below. Its Copy button copies the guide line and the question together, ready to paste.') ?></li>
+      </ol>
       <p class="text-muted small mb-0"><?= t_markup('The guide itself: %s', '<a href="' . htmlspecialchars($llms) . '">' . htmlspecialchars($llms) . '</a>') ?></p>
     </div>
   </div>
@@ -60,7 +74,8 @@ $examples = [
         <div class="card h-100 shadow-sm help-topic-card">
           <div class="card-body p-3">
             <h3 class="h6 fw-semibold mb-1"><i class="fa <?= $icon ?> me-2" style="color:var(--moop-tool-header);"></i><?= $label ?></h3>
-            <p class="text-muted small mb-0">“<?= $text ?>”</p>
+            <p class="text-muted small mb-2">“<?= $text ?>”</p>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0" data-copy-text="<?= htmlspecialchars($prompt_for($text), ENT_QUOTES) ?>"><i class="fa fa-copy me-1"></i><span class="copy-label"><?= t('Copy') ?></span></button>
           </div>
         </div>
       </div>
@@ -82,7 +97,7 @@ $examples = [
     <?php /* Added 2026-11-23: a visitor's Claude (desktop app + Claude in Chrome) stopped at the
              human check; the request log showed it. llms.txt and api/v1 are exempt now, but a
              browser-driving assistant still meets the check on ordinary pages. */ ?>
-    <div class="col-md-6">
+    <div class="col-md-6" id="coding-agent">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
           <h3 class="h6 fw-semibold mb-1"><?= t('Works best with a coding agent (such as Claude Code)') ?></h3>
