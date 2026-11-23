@@ -35,6 +35,10 @@
  *   "elsewhere": { "feature": "https://simrbase.stowers.org/tools/organism.php?organism=X" },
  *                                                  anything under these goes to ANOTHER site: a fixed
  *                                                  https address (checked before old_prefixes)
+ *   "ontology_terms": { "path": "ontology", "target": "/tools/ontology_term.php?id=" },
+ *                                                  /ontology/PLANA_0002063 -> target + PLANA:0002063. The
+ *                                                  ONLY rule that copies part of the request, and only a
+ *                                                  term id: 2-10 capital letters, "_", 4-8 digits
  *   "old_prefixes": ["node", "feature", ...],     anything under these goes home
  *   "block": ["^/xmlrpc\\.php", ...]              regexes answered with 444
  * }
@@ -67,6 +71,20 @@ $esc = fn(string $path) => preg_quote($path, '#');
 $lines = [];
 $add = function (string $regex, string $target) use (&$lines) { $lines[] = sprintf('    %-52s %s;', '"~^' . $regex . '/?$"', $target); };
 
+// Old ontology term pages (/ontology/PLANA_0002063, Drupal's tripal_cv) -> the term's page here.
+// The id is copied from the request, so the capture is limited to [A-Z]{2,10} and [0-9]{4,8}:
+// nothing else can reach the Location header. First in the map, so no broader rule shadows it.
+if (!empty($t['ontology_terms'])) {
+    $ot = $t['ontology_terms'];
+    $opath = (string) ($ot['path'] ?? 'ontology');
+    $otarget = $check((string) ($ot['target'] ?? ''), 'ontology_terms');
+    if (!preg_match('#^[a-z0-9_-]+$#i', $opath) || substr($otarget, -1) !== '=') {
+        fwrite(STDERR, "ontology_terms needs a plain path and a target ending in '='\n"); exit(1);
+    }
+    $lalt = implode('|', array_map($esc, $langs));
+    $lines[] = sprintf('    %-52s %s;', '"~^/(?:(?:' . $lalt . ')/)?' . $esc($opath) . '/(?<ont_prefix>[A-Z]{2,10})_(?<ont_num>[0-9]{4,8})/?$"',
+                       $otarget . '$ont_prefix:$ont_num');
+}
 foreach (($t['nodes'] ?? []) as $nid => $target) {
     $check($target, "node $nid");
     if (!ctype_digit((string) $nid)) { fwrite(STDERR, "node id must be digits: $nid\n"); exit(1); }

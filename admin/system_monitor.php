@@ -166,6 +166,18 @@ $recs    = moop_monitor_recommendations($cap, $pages7, $heavy, $now, $traffic, $
                                          ['24h' => 'in the last 24 hours', '7d' => 'in the last 7 days', '30d' => 'in the last 30 days'][$range],
                                          $self_ips);
 
+// Downloadable reports (2026-11-23): ?report=it (server, for IT) or ?report=usage (who, where, what --
+// counts only, no addresses or names). A standalone HTML file that prints to PDF.
+$report = $_GET['report'] ?? '';
+if ($report === 'it' || $report === 'usage') {
+    $file = preg_replace('/[^a-z0-9]+/', '-', strtolower($siteTitle)) . '-'
+          . ($report === 'it' ? 'server' : 'usage') . '-report-' . $range . '-' . date('Y-m-d') . '.html';
+    header('Content-Type: text/html; charset=utf-8');
+    if (!empty($_GET['download'])) header('Content-Disposition: attachment; filename="' . $file . '"');
+    include __DIR__ . '/pages/system_monitor_report.php';
+    exit;
+}
+
 echo render_display_page(
     __DIR__ . '/pages/system_monitor.php',
     [

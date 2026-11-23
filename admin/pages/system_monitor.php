@@ -62,6 +62,21 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <a class="btn btn-sm <?= $range === '24h' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?view=<?= $h($view) ?>&amp;range=24h">Last 24 hours</a>
     <a class="btn btn-sm <?= $range === '7d' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?view=<?= $h($view) ?>&amp;range=7d">Last 7 days</a>
     <a class="btn btn-sm <?= $range === '30d' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?view=<?= $h($view) ?>&amp;range=30d">Last 30 days</a>
+    <span class="dropdown ms-2">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa fa-file-arrow-down me-1"></i>Reports
+      </button>
+      <ul class="dropdown-menu">
+        <li><h6 class="dropdown-header">For the time range chosen here</h6></li>
+        <li><a class="dropdown-item" href="?report=it&amp;range=<?= $h($range) ?>" target="_blank" rel="noopener">Server report — for IT
+          <div class="small text-muted">Load, capacity, what was refused, busiest addresses, security</div></a></li>
+        <li><a class="dropdown-item" href="?report=usage&amp;range=<?= $h($range) ?>" target="_blank" rel="noopener">Usage report — to share
+          <div class="small text-muted">How many people, where, what they used and looked for. No addresses or names</div></a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item small" href="?report=it&amp;range=<?= $h($range) ?>&amp;download=1">Download server report (.html)</a></li>
+        <li><a class="dropdown-item small" href="?report=usage&amp;range=<?= $h($range) ?>&amp;download=1">Download usage report (.html)</a></li>
+      </ul>
+    </span>
     <?php if ($range === '30d' && $days_covered !== null && $days_covered < 30): ?>
       <span class="small text-muted align-self-center">Page and visitor figures cover <?= (int) $days_covered ?> day(s) so far — the log started 2026-10-28.</span>
     <?php endif; ?>
