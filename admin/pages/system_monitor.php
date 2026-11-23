@@ -172,6 +172,70 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     </div>
   </div>
 
+  <!-- Who got in: allowed vs turned away, and who the people were -->
+  <?php
+    $g = ($visitors['gate'] ?? []) + ['people' => 0, 'search' => 0, 'agents' => 0, 'turned_away' => 0, 'challenge' => 0, 'other' => 0];
+    $s429 = (int) ($traffic['s429'] ?? 0);
+    $let_in = $g['people'] + $g['search'] + $g['agents'] + $g['other'];
+    $refused = $g['turned_away'] + $g['challenge'] + $s429;
+    $all_req = $let_in + $refused;
+    $mix = ['public' => 0, 'COLLABORATOR' => 0, 'ADMIN' => 0, 'internal' => 0];
+    foreach (($visitors['people'] ?? []) as $p) {
+        $k = $p['kind'] === 'human' ? 'public' : ($p['kind'] === 'internal' ? 'internal' : (($p['level'] ?? '') === 'ADMIN' ? 'ADMIN' : 'COLLABORATOR'));
+        $mix[$k]++;
+    }
+    $mix_total = array_sum($mix);
+    // Categorical slots 1-4 (validated for colour-blind separation); each segment is also labelled.
+    $mix_meta = ['public' => ['Public visitors', '#2a78d6', 'passed the human check'],
+                 'COLLABORATOR' => ['Collaborators', '#eb6834', 'signed in'],
+                 'ADMIN' => ['Admins', '#1baf7a', 'signed in'],
+                 'internal' => ['Institute network', '#eda100', 'logged in automatically']];
+    $tile = function ($num, $label, $sub) use ($h) {
+        return '<div class="col-6 col-md-4 col-xl-2"><div class="border rounded p-2 h-100 text-center"><div class="fs-4 fw-semibold">'
+             . number_format($num) . '</div><div class="small">' . $h($label) . '</div><div class="small text-muted">' . $h($sub) . '</div></div></div>';
+    };
+  ?>
+  <div class="card adm-card my-4" id="sysmon-gate">
+    <div class="card-header adm-head"><h5 class="mb-0">Who got in, <?= $span ?> <?= $sysmon_i('gate') ?></h5></div>
+    <div class="card-body">
+      <p class="mb-3">
+        <span class="fs-3 fw-semibold"><?= $all_req ? round(100 * $refused / $all_req) : 0 ?>%</span>
+        of requests were turned away — <strong><?= number_format($refused) ?></strong> refused,
+        <strong><?= number_format($let_in) ?></strong> let in.
+        <span class="small text-muted d-block">Requests to MOOP's pages, from outside this server. Static files (styles, scripts, images) are not counted.</span>
+      </p>
+      <h6 class="mb-2">Let in</h6>
+      <div class="row g-2 mb-3">
+        <?= $tile($g['people'], 'By people', 'public, collaborators, admins, institute') ?>
+        <?= $tile($g['search'], 'Search engines', 'Google, Bing, DuckDuckGo — verified') ?>
+        <?= $tile($g['agents'], 'Agent API', 'AI assistants and scripts (api/v1)') ?>
+        <?php if ($g['other']): ?><?= $tile($g['other'], 'Anonymous, unchecked', 'the login page, and everything before the human check went on (19–20 Nov)') ?><?php endif; ?>
+      </div>
+      <h6 class="mb-2">Turned away</h6>
+      <div class="row g-2 mb-3">
+        <?= $tile($g['turned_away'], 'By the human check', 'from ' . number_format(count($visitors['away_ips'] ?? [])) . ' addresses') ?>
+        <?= $tile($g['challenge'], 'Challenge never solved', '“are you human” page shown') ?>
+        <?= $tile($s429, 'Rate limits', 'refused by the web server before MOOP') ?>
+      </div>
+
+      <h6 class="mb-1">The people: <?= number_format($mix_total) ?></h6>
+      <?php if ($mix_total): ?>
+      <div class="sysmon-mix mb-2" role="img" aria-label="<?= $h(implode(', ', array_map(fn($k) => $mix[$k] . ' ' . $mix_meta[$k][0], array_keys($mix)))) ?>">
+        <?php foreach ($mix as $k => $n): if (!$n) continue; ?>
+          <div style="flex-grow: <?= $n ?>; background: <?= $mix_meta[$k][1] ?>" title="<?= $h($mix_meta[$k][0]) ?>: <?= $n ?> (<?= round(100 * $n / $mix_total) ?>%)"></div>
+        <?php endforeach; ?>
+      </div>
+      <div class="d-flex flex-wrap gap-3 small">
+        <?php foreach ($mix as $k => $n): ?>
+          <span><span class="sysmon-swatch" style="background: <?= $mix_meta[$k][1] ?>"></span>
+            <strong><?= $h($mix_meta[$k][0]) ?></strong> <?= number_format($n) ?> (<?= $mix_total ? round(100 * $n / $mix_total) : 0 ?>%)
+            <span class="text-muted"><?= $h($mix_meta[$k][2]) ?></span></span>
+        <?php endforeach; ?>
+      </div>
+      <?php else: ?><p class="small text-muted">No people in this period.</p><?php endif; ?>
+    </div>
+  </div>
+
   <!-- Visitors: people, not programs (lib/request_metrics.php moop_metrics_visitors) -->
   <?php
     $people   = $visitors['people'] ?? [];

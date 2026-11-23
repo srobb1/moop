@@ -3155,6 +3155,17 @@ ok(count($_vv['errors']) === 1 && $_vv['errors'][0]['who'] === '7.7.7.7',
 ok(moop_metrics_agent_name('Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ChatGPT-User/1.0; +https://openai.com/bot)') === 'ChatGPT'
    && moop_metrics_agent_name('Claude-User/1.0') === 'Claude' && moop_metrics_agent_name('python-requests/2.31') === 'Python script'
    && moop_metrics_agent_name('') === 'No name given', 'assistants and scripts are named from the User-Agent');
+$_g = moop_metrics_visitors([
+    $_vr(1, 'tools/organism.php', 'GET', 302, '9.9.9.9', 'PUBLIC', '', 'turned_away'),
+    $_vr(2, 'verify-human.php', 'GET', 200, '9.9.9.9'),
+    $_vr(3, 'tools/search.php', 'GET', 403, '8.8.8.1'),                         // old line: turned away
+    $_vr(4, 'tools/parent.php', 'GET', 200, '6.6.6.6', 'PUBLIC', '', 'human'),
+    $_vr(5, 'index.php', 'GET', 200, '66.249.66.1', 'PUBLIC', '', 'google'),
+    $_vr(6, 'api/v1/gene.php', 'GET', 200, '20.1.1.1') + ['agent' => 'Claude-User/1.0', 'ms' => 5, 'peak_mb' => 2],
+    $_vr(7, 'login.php', 'GET', 200, '20.1.1.2'),
+])['gate'];
+ok($_g === ['people' => 1, 'search' => 1, 'agents' => 1, 'turned_away' => 2, 'challenge' => 1, 'other' => 1],
+   'every request is counted once: let in (people, search engines, agent API) or turned away (check, unsolved challenge)');
 $_ag = moop_metrics_visitors(array_map(fn($i) => $_vr(60 * 1000 + $i, 'api/v1/gene.php', 'GET', 200, '20.1.1.1') + ['agent' => 'ChatGPT-User/1.0', 'ms' => 10, 'peak_mb' => 2],
                                        range(1, 5)))['agents'];
 ok(($_ag['by_agent']['ChatGPT']['requests'] ?? 0) === 5 && ($_ag['by_endpoint']['gene']['burst'] ?? 0) === 5 && ($_ag['by_endpoint']['gene']['outside'] ?? 0) === 5,

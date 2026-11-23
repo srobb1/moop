@@ -96,3 +96,9 @@
 .sysmon-pd-n, .sysmon-pd-d { font-size: .7rem; text-align: center; line-height: 1.1; color: var(--bs-secondary-color, #6c757d); }
 .sysmon-pd-n { color: inherit; }
 .sysmon-swatch { display: inline-block; width: .8em; height: .8em; border-radius: 2px; vertical-align: -0.05em; }
+
+/* Who got in: one segmented bar of people by kind (2px surface gaps, rounded ends) */
+.sysmon-mix { display: flex; gap: 2px; height: 22px; }
+.sysmon-mix > div { min-width: 4px; }
+.sysmon-mix > div:first-child { border-radius: 4px 0 0 4px; }
+.sysmon-mix > div:last-child { border-radius: 0 4px 4px 0; }

@@ -37,6 +37,7 @@ const MOOP_METRICS_COLUMNS_V4 = 18;   // before sid/nav
 // -- enough to follow one browser from page to page, useless for taking over its session; nav = '1'
 // for a page the browser navigated to (GET, asks for HTML, not AJAX), '' for everything else.
 // visitor (added 2026-11-23): 'human' = an anonymous visitor who passed the human check;
+// 'turned_away' = the human check sent it to the challenge or refused it;
 // 'google' / 'bing' / 'duckduckgo' = a verified search crawler (lib/crawler_verify.php); '' otherwise
 // (logged-in and institute-network visitors are told apart by `level`).
 
@@ -146,7 +147,7 @@ function moop_metrics_record(): void {
         'db_n'    => class_exists('MoopDbTimer', false) ? (string) MoopDbTimer::$n : '',
         'disk_kb' => $disk === null ? '' : (string) (int) round($disk / 1024),
         'params'  => $notable ? moop_metrics_params($_GET + $_POST) : '',
-        'visitor' => (string) ($GLOBALS['moop_verified_crawler']
+        'visitor' => isset($GLOBALS['moop_human_check_outcome']) ? 'turned_away' : (string) ($GLOBALS['moop_verified_crawler']
                      ?? (function_exists('moop_human_verified') && session_status() === PHP_SESSION_ACTIVE
                          && empty($_SESSION['logged_in']) && moop_human_verified() ? 'human' : '')),
         'sid'     => session_status() === PHP_SESSION_ACTIVE && session_id() !== '' ? substr(sha1(session_id()), 0, 12) : '',
@@ -446,10 +447,27 @@ function moop_metrics_visitors(iterable $rows): array {
     $errors = [];
     $passed = [];   // legacy rule: address => true once it POSTed verify-human.php
     $trail = [];    // browser (sid, else person) => [[ts, label, org, person key], ...] page loads
+    $gate = ['people' => 0, 'search' => 0, 'agents' => 0, 'turned_away' => 0, 'challenge' => 0, 'other' => 0];
+    $away_ips = [];
     foreach ($rows as $r) {
         if (!$r || $r['ip'] === '127.0.0.1' || $r['ip'] === '::1') continue;
-        if (strpos($r['script'], 'api/v1/') === 0 || $r['script'] === 'llms.php') moop_metrics_agent_add($agents, $r);
+        $is_api = strpos($r['script'], 'api/v1/') === 0 || $r['script'] === 'llms.php';
+        if ($is_api) moop_metrics_agent_add($agents, $r);
         $v = $r['visitor'] ?? '';
+        if ($r['script'] === 'verify-human.php' && $r['method'] === 'POST') $passed[$r['ip']] = true;
+        $person = in_array($r['level'], ['ADMIN', 'COLLABORATOR', 'IP_IN_RANGE'], true) || $v === 'human' || isset($passed[$r['ip']]);
+        // Allowed vs turned away (the "Who got in" card). Lines from before 'turned_away' was
+        // recorded: an anonymous non-person answered 302/403 (not the challenge page, login or api/v1).
+        if ($person) $gate['people']++;
+        elseif (in_array($v, ['google', 'bing', 'duckduckgo'], true)) $gate['search']++;
+        elseif ($v === 'turned_away' || ($v === '' && !$is_api && in_array($r['status'], [302, 403], true)
+                && !in_array($r['script'], ['verify-human.php', 'login.php', 'logout.php'], true))) {
+            $gate['turned_away']++;
+            $away_ips[$r['ip']] = true;
+        }
+        elseif ($r['script'] === 'verify-human.php') $gate['challenge']++;
+        elseif ($is_api) $gate['agents']++;
+        else $gate['other']++;
         if (in_array($v, ['google', 'bing', 'duckduckgo'], true)) {
             $c = &$crawlers[$v];
             $c['requests'] = ($c['requests'] ?? 0) + 1;
@@ -457,7 +475,6 @@ function moop_metrics_visitors(iterable $rows): array {
             unset($c);
             continue;
         }
-        if ($r['script'] === 'verify-human.php' && $r['method'] === 'POST') $passed[$r['ip']] = true;
         if (in_array($r['level'], ['ADMIN', 'COLLABORATOR'], true) && $r['user'] !== '') {
             $kind = 'user'; $key = 'user:' . $r['user'];
         } elseif ($r['level'] === 'IP_IN_RANGE') {
@@ -474,7 +491,7 @@ function moop_metrics_visitors(iterable $rows): array {
         }
         if ($r['script'] === 'verify-human.php' || $r['status'] >= 400) continue;
         $p = &$people[$key];
-        $p = $p ?? ['kind' => $kind, 'ip' => $r['ip'], 'user' => $kind === 'user' ? $r['user'] : '',
+        $p = $p ?? ['kind' => $kind, 'ip' => $r['ip'], 'user' => $kind === 'user' ? $r['user'] : '', 'level' => $r['level'],
                     'requests' => 0, 'orgs' => [], 'first' => $r['ts'], 'last' => $r['ts']];
         $p['requests']++;
         $p['first'] = min($p['first'], $r['ts']);
@@ -489,7 +506,8 @@ function moop_metrics_visitors(iterable $rows): array {
         }
     }
     return ['people' => moop_metrics_visitors_locate($people), 'crawlers' => $crawlers,
-            'visits' => moop_metrics_split_visits($trail, $people), 'errors' => $errors, 'agents' => $agents];
+            'visits' => moop_metrics_split_visits($trail, $people), 'errors' => $errors, 'agents' => $agents,
+            'gate' => $gate, 'away_ips' => array_keys($away_ips)];
 }
 
 const MOOP_METRICS_VISIT_GAP = 1800;   // 30 minutes without a page = the visit ended (the usual web-analytics rule)
@@ -678,12 +696,15 @@ function moop_metrics_visitors_locate(array $people): array {
 
 /** Combine several moop_metrics_visitors() results (days). A person on several days counts once. */
 function moop_metrics_visitors_merge(array $list): array {
-    $out = ['people' => [], 'crawlers' => [], 'visits' => [], 'errors' => [], 'agents' => []];
+    $out = ['people' => [], 'crawlers' => [], 'visits' => [], 'errors' => [], 'agents' => [], 'gate' => []];
     $agents = [];
+    $away = [];
     foreach ($list as $v) {
         $out['visits'] = array_merge($out['visits'], $v['visits'] ?? []);
         $out['errors'] = array_merge($out['errors'], $v['errors'] ?? []);
         $agents[] = $v['agents'] ?? [];
+        foreach (($v['gate'] ?? []) as $k => $n) $out['gate'][$k] = ($out['gate'][$k] ?? 0) + $n;
+        foreach (($v['away_ips'] ?? []) as $ip) $away[$ip] = true;
         foreach (($v['people'] ?? []) as $k => $p) {
             $t = &$out['people'][$k];
             if ($t === null) { $t = $p; unset($t); continue; }
@@ -703,6 +724,7 @@ function moop_metrics_visitors_merge(array $list): array {
         }
     }
     $out['agents'] = moop_metrics_agents_merge($agents);
+    $out['away_ips'] = array_keys($away);
     usort($out['visits'], fn($a, $b) => $b['start'] <=> $a['start']);
     usort($out['errors'], fn($a, $b) => $b['ts'] <=> $a['ts']);
     return $out;
@@ -763,9 +785,9 @@ function moop_metrics_build_daily(?int $now = null, ?string $dir = null): int {
     foreach (glob("$dir/requests-*.tsv") ?: [] as $log) {
         if (!preg_match('/requests-(\d{4}-\d{2}-\d{2})\.tsv$/', $log, $m) || $m[1] >= $today) continue;
         $out = "$dir/daily-{$m[1]}.json";
-        // v2 (2026-11-23) added 'visitors', v3 visits/errors/agents; older summaries are rebuilt once, while their log is kept.
+        // v2 (2026-11-23) added 'visitors', v3 visits/errors/agents, v4 gate + person level; older summaries are rebuilt once, while their log is kept.
         if (is_file($out) && filemtime($out) >= filemtime($log)
-            && (json_decode((string) file_get_contents($out), true)['v'] ?? 1) >= 3) continue;
+            && (json_decode((string) file_get_contents($out), true)['v'] ?? 1) >= 4) continue;
         $rows = function () use ($log) {
             $fh = fopen($log, 'r');
             while ($fh && ($line = fgets($fh)) !== false) {
@@ -777,7 +799,7 @@ function moop_metrics_build_daily(?int $now = null, ?string $dir = null): int {
         $summary['usage'] = moop_metrics_usage($rows());
         $summary['visitors'] = moop_metrics_visitors($rows());
         unset($summary['visitors']['agents']['_burst']);
-        $summary['v'] = 3;
+        $summary['v'] = 4;
         $summary['date'] = $m[1];
         $summary['skipped'] = moop_metrics_skipped($m[1], $dir);
         $tmp = tempnam($dir, '.daily.');

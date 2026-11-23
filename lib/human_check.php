@@ -113,6 +113,7 @@ function moop_human_check_enforce(): void {
         }
     }
 
+    $GLOBALS['moop_human_check_outcome'] = $decision;   // the request log records it as turned away
     $site   = ConfigManager::getInstance()->getString('site', 'moop');
     $verify = moop_url_base() . '/verify-human.php';
     if ($decision === 'redirect') {
