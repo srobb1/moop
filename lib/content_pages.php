@@ -248,6 +248,19 @@ function moop_html_clean(string $html, ?array &$removed = null): string {
     return $clean;
 }
 
+/** [organisms, assemblies] this visitor may see -- BLAST-only genomes included, as the home page counts them. */
+function moop_page_visible_counts(): array {
+    require_once __DIR__ . '/functions_access.php';
+    $orgs = $asms = [];
+    foreach (getAccessibleGeneSets(null, null, null, true) as $by_org) {
+        foreach ($by_org as $org => $sources) {
+            $orgs[$org] = true;
+            foreach ($sources as $s) $asms[$org . '|' . ($s['assembly'] ?? '')] = true;
+        }
+    }
+    return [count($orgs), count($asms)];
+}
+
 /**
  * A page body as visitors see it, in its format. THE renderer: page.php, the home (index.php)
  * and the editor's preview all call this (the term page's Description too). $removed lists what
@@ -260,6 +273,12 @@ function moop_page_render(string $body, string $format, ?array &$removed = null)
     if (strpos($body, '{admin_email}') !== false) {
         $email = ConfigManager::getInstance()->getString('admin_email', '');
         if (filter_var($email, FILTER_VALIDATE_EMAIL)) $body = str_replace('{admin_email}', $email, $body);
+    }
+    // {organism_count} / {assembly_count}: what THIS visitor may see, as on the home page, so a
+    // page never holds a number that goes stale or counts restricted data (2026-11-23, "What changed").
+    if (strpos($body, '{organism_count}') !== false || strpos($body, '{assembly_count}') !== false) {
+        [$n_org, $n_asm] = moop_page_visible_counts();
+        $body = str_replace(['{organism_count}', '{assembly_count}'], [number_format($n_org), number_format($n_asm)], $body);
     }
     $body = moop_linked_sites_expand($body, $unknown);
     if ($format !== 'html') {
