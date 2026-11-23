@@ -188,7 +188,12 @@
     // Both tables open sorted by total time (pages: column 3, who: column 3).
     if (window.jQuery && jQuery.fn.DataTable) {
       jQuery('#sysmon-pages').DataTable({order: [[3, 'desc']], pageLength: 25, autoWidth: false});
-      jQuery('#sysmon-who').DataTable({order: [[3, 'desc']], pageLength: 10, autoWidth: false});
+      jQuery('#sysmon-who').DataTable({order: [[4, 'desc']], pageLength: 10, autoWidth: false});
+      jQuery('.sysmon-vis-dt').each(function () {
+        var col = parseInt(this.getAttribute('data-order-col') || '1', 10);
+        // data-order-col="-1": keep the server's order (already least-used first)
+        jQuery(this).DataTable({order: col < 0 ? [] : [[col, 'desc']], pageLength: 25, autoWidth: false});
+      });
     }
   });
 })();

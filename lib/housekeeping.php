@@ -200,6 +200,18 @@ function housekeeping_task_registry(): array {
             'desc'  => 'Counts, per gene set, the genes under each GO term (all GO sources together; carried up is a and part of, GO\'s own rule) for the Ontology Browser. Recounts an organism only when its database or the GO file changed -- about 10 s each, in the background run only, about four minutes per run, the rest on the next. Nothing to do on a site without GO built. docs/ONTOLOGIES.md',
         ],
         [
+            'name'  => 'geoip_update',
+            'fn'    => 'housekeeping_geoip_update',
+            'label' => 'Visitor locations (DB-IP)',
+            'desc'  => 'Keeps the local country/region database the System Monitor uses to say where visitors are. Downloads DB-IP\'s free monthly file (about 85 MB) when the copy is over 35 days old -- background run only, about a minute. Addresses are looked up locally; none is ever sent out. lib/geoip.php',
+        ],
+        [
+            'name'  => 'crawler_lists',
+            'fn'    => 'housekeeping_crawler_lists',
+            'label' => 'Search-engine crawler list',
+            'desc'  => 'Refreshes DuckDuckGo\'s published crawler addresses weekly (Google and Bing are checked by DNS instead), and clears day-old per-address checks. Verified search engines may read pages past the human check, so the site can be found in search results. lib/crawler_verify.php',
+        ],
+        [
             'name'  => 'jbrowse_version',
             'fn'    => 'housekeeping_check_jbrowse_version',
             'label' => 'JBrowse2 version',
@@ -627,6 +639,24 @@ function housekeeping_request_metrics_retention() {
     if ($deleted > 0) {
         error_log("MOOP housekeeping: pruned $deleted request log file(s) older than " . MOOP_METRICS_RETENTION_DAYS . ' days');
     }
+}
+
+/** Visitor-location database (lib/geoip.php): monthly, background run only (big download). */
+function housekeeping_geoip_update() {
+    if (PHP_SAPI !== 'cli') return;
+    require_once __DIR__ . '/geoip.php';
+    $built = moop_geoip_built_at();
+    if ($built !== null && time() - $built < MOOP_GEOIP_MAX_AGE) return;
+    $r = moop_geoip_update();
+    if (!$r['ok']) throw new RuntimeException('visitor-location database: ' . $r['error']);
+    error_log("MOOP housekeeping: visitor-location database rebuilt ({$r['ranges']} ranges from {$r['source']})");
+}
+
+/** Search-engine crawler verification (lib/crawler_verify.php): DuckDuckGo list weekly. */
+function housekeeping_crawler_lists() {
+    require_once __DIR__ . '/crawler_verify.php';
+    $r = moop_crawler_refresh_lists();
+    if ($r['error']) throw new RuntimeException($r['error']);
 }
 
 function housekeeping_error_log_retention() {

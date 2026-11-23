@@ -18,6 +18,7 @@ include_once __DIR__ . '/admin_init.php';
 include_once __DIR__ . '/../includes/layout.php';
 require_once __DIR__ . '/../lib/system_monitor.php';
 require_once __DIR__ . '/../lib/request_metrics.php';
+require_once __DIR__ . '/../lib/geoip.php';
 
 $siteTitle = $config->getString('siteTitle');
 $site      = $config->getString('site');
@@ -119,6 +120,7 @@ foreach ($points as $p) {
 }
 
 $traffic = moop_monitor_traffic($points, $ranges, $self_ips);
+$today_vis = null;
 if ($range === '30d') {
     // 29 finished days from housekeeping's daily summaries + today, read live. Re-reading a month
     // of request lines on every page load would not scale with traffic.
@@ -126,15 +128,28 @@ if ($range === '30d') {
     $daily = moop_metrics_daily(29);
     $pages = moop_metrics_merge(array_merge($daily, [moop_metrics_summarise($today_rows(), 20) + ['skipped' => moop_metrics_skipped(date('Y-m-d'))]]));
     $usage = moop_metrics_usage_merge(array_merge(array_column($daily, 'usage'), [moop_metrics_usage($today_rows())]));
+    $today_vis = moop_metrics_visitors($today_rows());
+    $visitors = moop_metrics_visitors_merge(array_merge(array_column($daily, 'visitors'), [$today_vis]));
     $days_covered = count($daily) + 1;
 } else {
     $pages = moop_metrics_summarise(moop_metrics_rows_since($seconds), 20);
     $usage = moop_metrics_usage(moop_metrics_rows_since($seconds));
+    $visitors = moop_metrics_visitors(moop_metrics_rows_since($seconds));
     $days_covered = null;
     // Requests the safety cap counted but did not log, over the dates this window touches.
     $pages['skipped'] = 0;
     for ($d = time() - $seconds; $d <= time() + 60; $d += 86400) $pages['skipped'] += moop_metrics_skipped(date('Y-m-d', $d));
 }
+// People per day and "data nobody used" always look at 30 days, whatever window is shown.
+$daily30 = $range === '30d' ? $daily : moop_metrics_daily(29);
+$today_vis = $today_vis ?? moop_metrics_visitors(moop_metrics_rows(date('Y-m-d')));
+$people_daily = [];
+foreach ($daily30 as $d) $people_daily[$d['date']] = array_count_values(array_column($d['visitors']['people'] ?? [], 'kind'));
+$people_daily[date('Y-m-d')] = array_count_values(array_column($today_vis['people'], 'kind'));
+$usage30 = $range === '30d' ? $usage
+    : moop_metrics_usage_merge(array_merge(array_column($daily30, 'usage'), [moop_metrics_usage(moop_metrics_rows(date('Y-m-d')))]));
+$unused = moop_monitor_unused_data($usage30);
+
 // Recommendations judge pages on 7 days whatever window is shown: a day is too little evidence.
 $pages7  = $range === '7d' ? $pages : moop_metrics_summarise(moop_metrics_rows_since(7 * 86400));
 $heavy   = moop_monitor_heavy_list();
@@ -165,6 +180,9 @@ echo render_display_page(
         'recs'         => $recs,
         'flash'        => $flash,
         'usage'        => $usage,
+        'visitors'     => $visitors,
+        'people_daily' => $people_daily,
+        'unused'       => $unused,
         'days_covered' => $days_covered,
         'site'         => $site,
         'page_styles'  => [moop_url_base() . '/css/system-monitor.css'],

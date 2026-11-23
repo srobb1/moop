@@ -222,3 +222,13 @@ Planosphere
 - [ ] **Sofia (root): SIMRbase site-data backup can't be written by smr** — old copies are 644 apache, so
       `scripts/backup_site_data.php` fails (housekeeping still copies hourly). One-time fix:
       `sudo find '/var/www/moop-site-data' -path '*/.git' -prune -o -type d -exec chmod 2770 {} + -o -type f -exec chmod 660 {} +` **S**
+- [ ] **Email from the site** (Sofia, 11-23). This host cannot send mail today (no sendmail/postfix,
+      no SMTP settings in MOOP). Worth having for: an alert when a REAL person (passed the human check,
+      signed in, or institute network) hits a server error -- for now the System Monitor shows these in
+      red; a weekly "who used the site" digest; housekeeping failures; password-reset / account-request
+      mail. Needs: IT's SMTP relay host (Stowers), a small mail helper (lib/), an admin address setting,
+      and setup-check + INSTALL.md entries. Rate-limit alerts (at most one per hour per kind). **M**
+- [ ] **Outside links that 404** (11-23): old Tripal SIMRbase/Planosphere URLs in papers and bookmarks.
+      nginx logs the referrer; the PHP log never sees missing files. Needs scripts/moop_monitor.py to keep
+      internet 404s with their referrer (then root re-runs install_monitor.sh) + a monitor card listing
+      them, so we know which redirects to add. **M**

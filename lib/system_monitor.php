@@ -463,3 +463,38 @@ function moop_monitor_why_slow(array $r): ?string {
     if ($cold) return 'Reading files from disk';
     return 'PHP / other';
 }
+
+/**
+ * Every gene set on the site with how much it was used in the window $usage covers (normally 30
+ * days, from moop_metrics_usage_merge): visitor-days inside (signed in / institute network) and
+ * outside (anonymous). Organisms nobody used at all come first -- candidates to check, refresh,
+ * advertise, or retire. "Used" = viewed, searched, BLASTed or downloaded (moop_metrics_usage_kind).
+ */
+function moop_monitor_unused_data(array $usage): array {
+    $sum = function (string $level, string $name) use ($usage): array {
+        $in = $out = 0;
+        foreach ($usage as $kind => $levels) {
+            $c = $levels[$level][$name] ?? null;
+            if ($c) { $in += $c['in_v']; $out += $c['out_v']; }
+        }
+        return [$in, $out];
+    };
+    $rows = [];
+    foreach (getAccessibleGeneSets() as $by_org) {
+        foreach ($by_org as $org => $sets) {
+            foreach ($sets as $gs) {
+                $key = $org . '/' . $gs['assembly'] . '/' . $gs['gene_set'];
+                if (isset($rows[$key])) continue;
+                [$oi, $oo] = $sum('organism', $org);
+                [$gi, $go] = $sum('gene_set', $key);
+                $rows[$key] = ['organism' => $org, 'assembly' => $gs['assembly'], 'gene_set' => $gs['gene_set'],
+                               'public' => is_public_assembly($org, $gs['assembly']),
+                               'org_in' => $oi, 'org_out' => $oo, 'gs_in' => $gi, 'gs_out' => $go];
+            }
+        }
+    }
+    uasort($rows, fn($a, $b) => [$a['org_in'] + $a['org_out'], $a['gs_in'] + $a['gs_out'], $a['organism']]
+                                <=> [$b['org_in'] + $b['org_out'], $b['gs_in'] + $b['gs_out'], $b['organism']]);
+    return array_values($rows);
+}
+

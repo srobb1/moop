@@ -86,3 +86,13 @@
 /* Usage tables: one per row, kept to a readable width (names left, four number columns) */
 .sysmon-usage-table { max-width: 60rem; }
 .sysmon-usage-table td:first-child { min-width: 16rem; }
+
+/* People per day (Visitors card): one stacked column per day */
+.sysmon-pd { display: flex; align-items: flex-end; gap: 3px; height: 120px; }
+.sysmon-pd-col { flex: 1 1 0; min-width: 6px; display: flex; flex-direction: column; align-items: stretch; height: 100%; }
+.sysmon-pd-stack { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-end; }
+.sysmon-pd-stack > div { min-height: 2px; }
+.sysmon-pd-stack > div:first-child { border-radius: 2px 2px 0 0; }
+.sysmon-pd-n, .sysmon-pd-d { font-size: .7rem; text-align: center; line-height: 1.1; color: var(--bs-secondary-color, #6c757d); }
+.sysmon-pd-n { color: inherit; }
+.sysmon-swatch { display: inline-block; width: .8em; height: .8em; border-radius: 2px; vertical-align: -0.05em; }

@@ -3069,6 +3069,98 @@ ok($_sr('//evil.com/x') === '/moop/' && $_sr('/\\evil.com') === '/moop/' && $_sr
    'protocol-relative, backslash, absolute, relative, header-injection and empty returns all go home');
 
 // ----------------------------------------------------------------------------
+group('Search-engine crawlers: claimed by User-Agent, proven by DNS or published list');
+require_once "$BASE/lib/crawler_verify.php";
+ok(moop_crawler_claimed('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)') === 'google'
+   && moop_crawler_claimed('Mozilla/5.0 (compatible; bingbot/2.0)') === 'bing'
+   && moop_crawler_claimed('DuckDuckBot/1.1; (+http://duckduckgo.com/duckduckbot.html)') === 'duckduckgo'
+   && moop_crawler_claimed('Mozilla/5.0 (Windows NT 10.0) Chrome/131') === null,
+   'only a User-Agent naming Googlebot, bingbot or DuckDuckBot is ever checked');
+ok(moop_crawler_host_ok('google', 'crawl-66-249-66-1.googlebot.com.') && moop_crawler_host_ok('google', 'rate-limited-proxy-66-249-90-77.google.com')
+   && moop_crawler_host_ok('bing', 'msnbot-157-55-39-1.search.msn.com'),
+   "the engines' documented reverse-DNS domains pass");
+ok(!moop_crawler_host_ok('google', 'googlebot.com.evil.net') && !moop_crawler_host_ok('google', 'evilgooglebot.com')
+   && !moop_crawler_host_ok('bing', 'crawl-1.googlebot.com') && !moop_crawler_host_ok('duckduckgo', 'x.duckduckgo.com'),
+   'look-alike names, a name ending in the domain without the dot, and the wrong engine all fail');
+ok(moop_crawler_in_cidr('20.191.45.212', '20.191.45.212/32') && moop_crawler_in_cidr('40.88.21.9', '40.88.21.0/24')
+   && !moop_crawler_in_cidr('40.88.22.9', '40.88.21.0/24') && moop_crawler_in_cidr('10.1.2.3', '10.0.0.0/9')
+   && !moop_crawler_in_cidr('10.200.0.1', '10.0.0.0/9') && moop_crawler_in_cidr('2a01:4f8::1', '2a01:4f8::/32')
+   && !moop_crawler_in_cidr('1.2.3.4', '2a01:4f8::/32'),
+   'address-in-range works for whole and partial bytes, IPv4 and IPv6, and never across families');
+$_d = moop_human_check_decision(true, false, false, 'kegg_map.php', 'GET', '/moop/api/kegg_map.php', ['Accept' => '*/*']);
+ok($_d === 'deny', "a crawler is only ever let past a 'redirect' (a page), so API/AJAX/downloads stay closed to it");
+
+// ----------------------------------------------------------------------------
+group('Visitor locations: address keys, and people (not programs) from the request log');
+require_once "$BASE/lib/geoip.php";
+ok(moop_geoip_key('1.0.0.1') === ['v4', 16777217] && moop_geoip_key('::ffff:1.0.0.1') === ['v4', 16777217]
+   && moop_geoip_key('2001:db8::1') === ['v6', '20010db8000000000000000000000001'] && moop_geoip_key('nope') === null,
+   'IPv4 as an integer, IPv4-mapped IPv6 as IPv4, IPv6 as 32 hex digits');
+ok(moop_geoip_next('v6', '0000000000000000000000000000ffff') === '00000000000000000000000000010000'
+   && moop_geoip_next('v4', 255) === 256, 'the next address carries across bytes (ranges merge only when adjacent)');
+ok(moop_geoip_is_private('172.16.2.52') && moop_geoip_is_private('127.0.0.1') && !moop_geoip_is_private('132.66.42.126'),
+   'private and loopback addresses have no place on the map');
+ok(moop_geoip_country_name('US') === 'United States' && moop_geoip_country_name('IL') === 'Israel' && moop_geoip_country_name('QQ') === 'QQ',
+   'country codes become names; an unknown code is shown as itself');
+$_vr = function ($ts, $script, $method, $status, $ip, $level = 'PUBLIC', $user = '', $visitor = '', $org = '') {
+    return ['ts' => $ts, 'script' => $script, 'method' => $method, 'status' => $status, 'ip' => $ip, 'level' => $level,
+            'user' => $user, 'visitor' => $visitor, 'org' => $org];
+};
+$_v = moop_metrics_visitors([
+    $_vr(1, 'tools/organism.php', 'GET', 302, '9.9.9.9'),                                    // scraper: never passes
+    $_vr(2, 'verify-human.php', 'GET', 200, '9.9.9.9'),
+    $_vr(3, 'tools/organism.php', 'GET', 302, '5.5.5.5'),                                    // old-format person
+    $_vr(4, 'verify-human.php', 'POST', 302, '5.5.5.5'),
+    $_vr(5, 'tools/organism.php', 'GET', 200, '5.5.5.5', 'PUBLIC', '', '', 'Schmidtea_mediterranea'),
+    $_vr(6, 'tools/parent.php', 'GET', 200, '6.6.6.6', 'PUBLIC', '', 'human', 'Schmidtea_mediterranea'),
+    $_vr(7, 'tools/parent.php', 'GET', 200, '7.7.7.7', 'PUBLIC', '', 'human', 'Danio_rerio'),
+    $_vr(8, 'index.php', 'GET', 200, '66.249.66.1', 'PUBLIC', '', 'google'),
+    $_vr(9, 'tools/organism.php', 'GET', 200, '172.16.2.52', 'IP_IN_RANGE', 'IP_USER_172.16.2.52', '', 'Danio_rerio'),
+    $_vr(10, 'index.php', 'GET', 200, '8.8.4.4', 'COLLABORATOR', 'alice'),
+    $_vr(11, 'index.php', 'GET', 200, '127.0.0.1'),
+]);
+ok(count($_v['people']) === 5 && !isset($_v['people']['9.9.9.9']) && !isset($_v['people']['127.0.0.1']),
+   'people = passed the check (old and new log lines), signed in, institute network; scrapers and this server are not');
+ok(($_v['people']['user:alice']['kind'] ?? '') === 'user' && ($_v['people']['172.16.2.52']['kind'] ?? '') === 'internal'
+   && ($_v['crawlers']['google']['requests'] ?? 0) === 1, 'users keyed by name, the institute network by address, crawlers apart');
+ok(($_v['people']['5.5.5.5']['orgs'] ?? []) === ['Schmidtea_mediterranea' => 1] && ($_v['people']['5.5.5.5']['requests'] ?? 0) === 1,
+   "the challenge page itself is not counted as a request; organism views are");
+$_m = moop_metrics_visitors_merge([$_v, ['people' => ['6.6.6.6' => $_v['people']['6.6.6.6']]]]);
+ok(count($_m['people']) === 5 && $_m['people']['6.6.6.6']['requests'] === 2, 'across days, a person counts once; requests add up');
+$_vo = moop_metrics_visitor_organisms($_v['people']);
+ok($_vo[0]['organism'] === 'Danio_rerio' || $_vo[0]['organism'] === 'Schmidtea_mediterranea', 'organisms by location lists each organism');
+ok(array_sum(array_column($_vo, 'people')) === 4, 'each person counts once per organism they used');
+$_nav = function ($ts, $script, $ip, $sid, $org = '') use ($_vr) { return $_vr($ts, $script, 'GET', 200, $ip, 'PUBLIC', '', 'human', $org) + ['sid' => $sid, 'nav' => '1']; };
+$_vv = moop_metrics_visitors([
+    $_nav(1000, 'index.php', '6.6.6.6', 'aaa'),
+    $_nav(1030, 'tools/organism.php', '6.6.6.6', 'aaa', 'Danio_rerio'),
+    $_vr(1031, 'tools/annotation_search_ajax.php', 'GET', 200, '6.6.6.6', 'PUBLIC', '', 'human', 'Danio_rerio') + ['sid' => 'aaa', 'nav' => ''],
+    $_nav(1150, 'tools/parent.php', '6.6.6.6', 'aaa', 'Danio_rerio'),
+    $_nav(9000, 'index.php', '6.6.6.6', 'aaa'),                       // > 30 min later: a second visit
+    $_nav(1010, 'index.php', '7.7.7.7', 'bbb'),
+    $_vr(1020, 'tools/parent.php', 'GET', 500, '7.7.7.7', 'PUBLIC', '', 'human') + ['sid' => 'bbb', 'nav' => '1', 'params' => 'name=X'],
+    $_vr(1040, 'tools/parent.php', 'GET', 500, '9.9.9.9') + ['sid' => '', 'nav' => '1', 'params' => ''],  // scraper error: not shown
+]);
+ok(count($_vv['visits']) === 3, 'a gap of more than 30 minutes starts a new visit; each browser has its own');
+$_first = array_values(array_filter($_vv['visits'], fn($v) => $v['who'] === '6.6.6.6' && $v['start'] == 1000))[0] ?? null;
+ok($_first && array_column($_first['pages'], 1) === ['Home', 'Organism', 'Gene'],
+   'a visit is the pages in order, named for people; AJAX calls are not pages');
+$_st = moop_metrics_visit_stats($_vv['visits']);
+ok($_st['pages']['Home']['median_s'] == 30 && $_st['pages']['Organism']['median_s'] == 120 && $_st['pages']['Gene']['median_s'] === null,
+   'time on a page runs to the next page; the last page of a visit has no time');
+ok(($_st['steps']['Home → Organism'] ?? 0) === 1 && ($_st['paths']['Home → Organism → Gene'] ?? 0) === 1 && $_st['one_page'] === 2,
+   'next-page steps, opening paths and one-page visits are counted');
+ok(count($_vv['errors']) === 1 && $_vv['errors'][0]['who'] === '7.7.7.7',
+   "a server error a real person met is listed; a scraper's is not");
+ok(moop_metrics_agent_name('Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ChatGPT-User/1.0; +https://openai.com/bot)') === 'ChatGPT'
+   && moop_metrics_agent_name('Claude-User/1.0') === 'Claude' && moop_metrics_agent_name('python-requests/2.31') === 'Python script'
+   && moop_metrics_agent_name('') === 'No name given', 'assistants and scripts are named from the User-Agent');
+$_ag = moop_metrics_visitors(array_map(fn($i) => $_vr(60 * 1000 + $i, 'api/v1/gene.php', 'GET', 200, '20.1.1.1') + ['agent' => 'ChatGPT-User/1.0', 'ms' => 10, 'peak_mb' => 2],
+                                       range(1, 5)))['agents'];
+ok(($_ag['by_agent']['ChatGPT']['requests'] ?? 0) === 5 && ($_ag['by_endpoint']['gene']['burst'] ?? 0) === 5 && ($_ag['by_endpoint']['gene']['outside'] ?? 0) === 5,
+   'agent calls are counted per assistant and endpoint, with the busiest minute per address');
+
+// ----------------------------------------------------------------------------
 group('System Monitor request log: lines, summary, retention');
 require_once "$BASE/lib/request_metrics.php";
 $_row = ['ts' => '1793219250.734', 'script' => 'tools/parent.php', 'method' => 'GET', 'status' => '200', 'ms' => '120',

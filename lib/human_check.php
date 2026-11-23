@@ -101,6 +101,18 @@ function moop_human_check_enforce(): void {
     );
     if ($decision === null) return;
 
+    // Genuine Google / Bing / DuckDuckGo crawlers may fetch PAGES (not API, AJAX or downloads), so
+    // the site can be found in search results. Proven by DNS or published list, never by
+    // User-Agent alone -- lib/crawler_verify.php. robots.txt still says which pages.
+    if ($decision === 'redirect') {
+        require_once __DIR__ . '/crawler_verify.php';
+        $bot = moop_crawler_verified((string) ($_SERVER['REMOTE_ADDR'] ?? ''), (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+        if ($bot !== null) {
+            $GLOBALS['moop_verified_crawler'] = $bot;   // the request log records it (request_metrics.php)
+            return;
+        }
+    }
+
     $site   = ConfigManager::getInstance()->getString('site', 'moop');
     $verify = moop_url_base() . '/verify-human.php';
     if ($decision === 'redirect') {

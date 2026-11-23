@@ -3,7 +3,8 @@
  * SYSTEM MONITOR - Content File. Controller: admin/system_monitor.php.
  *
  * Variables: $range ('24h'|'7d'), $age, $collector_ok, $sync, $tiles, $now, $traffic, $pages,
- *            $max_children, $ranges, $heavy, $cap, $recs, $flash, $usage, $days_covered, $site
+ *            $max_children, $ranges, $heavy, $cap, $recs, $flash, $usage, $visitors, $people_daily, $unused,
+ *            $days_covered, $site
  * Charts are drawn by js/system-monitor.js from window.MOOP_MONITOR.series; every chart has the
  * same numbers in the data table below it, so nothing is hover-only.
  */
@@ -171,6 +172,306 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     </div>
   </div>
 
+  <!-- Visitors: people, not programs (lib/request_metrics.php moop_metrics_visitors) -->
+  <?php
+    $people   = $visitors['people'] ?? [];
+    $n_kind   = array_count_values(array_column($people, 'kind'));
+    $outside  = array_filter($people, fn($p) => $p['kind'] !== 'internal');
+    $by_cc    = moop_metrics_visitor_places($outside, 'country');
+    $by_rg    = moop_metrics_visitor_places($outside, 'region');
+    $by_org   = moop_metrics_visitor_organisms($people);
+    $org_name = fn($o) => '<i>' . $h(str_replace('_', ' ', $o)) . '</i>';
+    $org_list = function (array $orgs, int $top = 4) use ($h, $org_name) {
+        if (!$orgs) return '<span class="text-muted">—</span>';
+        $out = [];
+        foreach (array_slice($orgs, 0, $top, true) as $o => $n) $out[] = $org_name($o) . ' <span class="text-muted">' . (int) $n . '</span>';
+        $more = count($orgs) - $top;
+        $all = implode(', ', array_map(fn($o, $n) => str_replace('_', ' ', $o) . " ($n)", array_keys($orgs), $orgs));
+        return implode(', ', $out) . ($more > 0 ? ' <span class="text-muted" title="' . $h($all) . '">+' . $more . ' more</span>' : '');
+    };
+    $kind_word = ['human' => 'Visitor', 'user' => 'Signed in', 'internal' => 'Institute network'];
+    $engines   = ['google' => 'Google', 'bing' => 'Bing', 'duckduckgo' => 'DuckDuckGo'];
+  ?>
+  <div class="card adm-card my-4" id="sysmon-visitors">
+    <div class="card-header adm-head"><h5 class="mb-0">Visitors — people, not programs, <?= $span ?> <?= $sysmon_i('visitors') ?></h5></div>
+    <div class="card-body">
+      <p class="small text-muted mb-3">
+        A <strong>person</strong> is an outside visitor who passed the “are you human” check, someone signed in, or an
+        address on the institute network. Counted by address (signed-in users by name), so one person on two
+        networks counts twice and a shared office address counts once. Scrapers that never pass the check are
+        not visitors and are left out; search engines are listed separately. <?= moop_geoip_attribution() ?>
+        <?php if (!moop_geoip_built_at()): ?><br><span class="text-danger">No location database yet — run <code>php scripts/update_geoip.php</code> (housekeeping also fetches it monthly).</span><?php endif; ?>
+      </p>
+      <?php $perrs = $visitors['errors'] ?? []; if ($perrs): ?>
+        <div class="alert alert-danger small" role="alert">
+          <strong><i class="fa fa-times-circle" aria-hidden="true"></i> Real people hit <?= count($perrs) ?> server error<?= count($perrs) === 1 ? '' : 's' ?> <?= $span ?>.</strong>
+          These are visitors who passed the human check, signed-in users or the institute network — not scrapers.
+          The full error is in Admin → Error Logs and the php-fpm log.
+          <ul class="mb-0 mt-1">
+            <?php foreach (array_slice($perrs, 0, 8) as $e): ?>
+              <li><?= date('M j, H:i', (int) $e['ts']) ?> — <code><?= $h($e['script']) ?></code> (<?= (int) $e['status'] ?>),
+                <?= $h(strpos($e['who'], 'user:') === 0 ? substr($e['who'], 5) : $e['who']) ?>
+                <?php if ($e['params'] !== ''): ?><small class="text-muted"><?= $h(mb_strimwidth($e['params'], 0, 120, '…')) ?></small><?php endif; ?></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
+      <?php
+        $pd_max = max(1, ...array_map(fn($k) => array_sum($k), array_values($people_daily) ?: [[0]]));
+        $pd_colors = ['human' => 'var(--sm-series)', 'user' => '#7c3aed', 'internal' => '#94a3b8'];
+      ?>
+      <h6 class="mb-1">People per day, last 30 days</h6>
+      <p class="small text-muted mb-1">
+        <span class="sysmon-swatch" style="background: var(--sm-series)"></span> outside visitors
+        <span class="sysmon-swatch ms-2" style="background: #7c3aed"></span> signed in
+        <span class="sysmon-swatch ms-2" style="background: #94a3b8"></span> institute network
+        · the human check went on 11-19, so earlier outside visitors cannot be told from scrapers and are not shown.
+      </p>
+      <div class="sysmon-pd mb-3" role="img" aria-label="People per day, last 30 days">
+        <?php foreach ($people_daily as $date => $k): $tot = array_sum($k); ?>
+          <div class="sysmon-pd-col" title="<?= $h(date('D M j', strtotime($date))) ?>: <?= (int) ($k['human'] ?? 0) ?> outside, <?= (int) ($k['user'] ?? 0) ?> signed in, <?= (int) ($k['internal'] ?? 0) ?> institute">
+            <div class="sysmon-pd-stack">
+              <?php foreach (['internal', 'user', 'human'] as $kk): if (!empty($k[$kk])): ?>
+                <div style="height: <?= round(100 * $k[$kk] / $pd_max, 1) ?>%; background: <?= $pd_colors[$kk] ?>"></div>
+              <?php endif; endforeach; ?>
+            </div>
+            <div class="sysmon-pd-n"><?= $tot ?: '' ?></div>
+            <div class="sysmon-pd-d"><?= date('j', strtotime($date)) ?></div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <div class="row g-3 mb-3 text-center">
+        <?php foreach ([
+            [$n_kind['human'] ?? 0, 'Outside visitors', 'passed the human check'],
+            [$n_kind['user'] ?? 0, 'Signed-in users', 'collaborators and admins'],
+            [$n_kind['internal'] ?? 0, 'Institute network', 'addresses, logged in automatically'],
+            [count(array_filter($by_cc, fn($r) => !in_array($r['label'], ['Unknown', 'Institute network'], true))), 'Countries', 'outside visitors and users'],
+          ] as [$num, $label, $sub]): ?>
+          <div class="col-6 col-lg-3"><div class="border rounded p-2 h-100">
+            <div class="fs-3 fw-semibold"><?= number_format($num) ?></div>
+            <div class="small"><?= $h($label) ?></div><div class="small text-muted"><?= $h($sub) ?></div>
+          </div></div>
+        <?php endforeach; ?>
+      </div>
+      <p class="small mb-3"><strong>Search engines</strong> (verified, pages only):
+        <?php foreach ($engines as $e => $word): $c = $visitors['crawlers'][$e] ?? null; ?>
+          <span class="me-3"><?= $word ?> <?= $c ? number_format($c['requests']) . ' requests from ' . count($c['addresses']) . ' address' . (count($c['addresses']) === 1 ? '' : 'es') : '—' ?></span>
+        <?php endforeach; ?>
+      </p>
+
+      <ul class="nav nav-tabs" role="tablist">
+        <?php foreach (['country' => 'By country', 'region' => 'By state / region', 'organism' => 'Organisms by location', 'people' => 'Each person'] as $k => $label): ?>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link<?= $k === 'country' ? ' active' : '' ?>" data-bs-toggle="tab" data-bs-target="#sysmon-vis-<?= $k ?>" type="button" role="tab"><?= $label ?></button>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+      <div class="tab-content pt-3">
+        <?php foreach (['country' => $by_cc, 'region' => $by_rg] as $k => $rows): ?>
+        <div class="tab-pane fade<?= $k === 'country' ? ' show active' : '' ?>" id="sysmon-vis-<?= $k ?>" role="tabpanel">
+          <p class="small text-muted">Outside visitors and signed-in users (the institute network is left out). Organisms: how many of these people
+            viewed, searched, BLASTed or downloaded from each.</p>
+          <div class="table-responsive">
+          <table class="table table-sm table-hover sysmon-num sysmon-vis-dt">
+            <thead><tr><th><?= $k === 'country' ? 'Country' : 'State / region' ?></th><th class="text-end">People</th><th class="text-end">Requests</th><th>Organisms (people)</th></tr></thead>
+            <tbody>
+            <?php foreach ($rows as $r): ?>
+              <tr><td><?= $h($r['label']) ?></td><td class="text-end"><?= number_format($r['people']) ?></td>
+                  <td class="text-end"><?= number_format($r['requests']) ?></td><td class="small"><?= $org_list($r['orgs']) ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+          </div>
+          <?php if (!$rows): ?><p class="text-muted small">No outside visitors in this period.</p><?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+
+        <div class="tab-pane fade" id="sysmon-vis-organism" role="tabpanel">
+          <p class="small text-muted">Each organism someone viewed, searched, BLASTed or downloaded from, and where those people were
+            (people per place). Includes the institute network.</p>
+          <div class="table-responsive">
+          <table class="table table-sm table-hover sysmon-num sysmon-vis-dt">
+            <thead><tr><th>Organism</th><th class="text-end">People</th><th class="text-end">Uses</th><th>Where from (people)</th></tr></thead>
+            <tbody>
+            <?php foreach ($by_org as $r): ?>
+              <tr><td data-order="<?= $h($r['organism']) ?>"><?= $org_name($r['organism']) ?></td><td class="text-end"><?= number_format($r['people']) ?></td>
+                  <td class="text-end"><?= number_format($r['uses']) ?></td>
+                  <td class="small"><?= implode(', ', array_map(fn($pl, $n) => $h($pl) . ' <span class="text-muted">' . (int) $n . '</span>', array_keys($r['places']), $r['places'])) ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+          </div>
+        </div>
+
+        <div class="tab-pane fade" id="sysmon-vis-people" role="tabpanel">
+          <div class="table-responsive">
+          <table class="table table-sm table-hover sysmon-num sysmon-vis-dt" data-order-col="5">
+            <thead><tr><th>Who</th><th>Kind</th><th>Location</th><th class="text-end">Requests</th><th>Organisms (uses)</th><th>Last seen</th></tr></thead>
+            <tbody>
+            <?php foreach ($people as $p): arsort($p['orgs']); ?>
+              <tr><td><?= $p['kind'] === 'user' ? $h($p['user']) : '<code>' . $h($p['ip']) . '</code>' ?></td>
+                  <td><small><?= $h($kind_word[$p['kind']] ?? $p['kind']) ?></small></td>
+                  <td><small><?= $h(($p['region'] ?? '') !== '' ? $p['region'] . ', ' . $p['country'] : $p['country']) ?></small></td>
+                  <td class="text-end"><?= number_format($p['requests']) ?></td>
+                  <td class="small"><?= $org_list($p['orgs']) ?></td>
+                  <td data-order="<?= (int) $p['last'] ?>"><small><?= date('M j, H:i', (int) $p['last']) ?></small></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visits: paths and time on pages (moop_metrics_visit_stats) -->
+  <?php
+    $visits_all = ($_GET['visits'] ?? '') === 'all';
+    $visit_list = array_values(array_filter($visitors['visits'] ?? [], fn($v) => $visits_all || $v['kind'] === 'human'));
+    $vs = moop_metrics_visit_stats($visit_list); $fmt_s = fn($x) => $x === null ? '—' : ($x < 60 ? round($x) . ' s' : ($x < 3600 ? round($x / 60, 1) . ' min' : round($x / 3600, 1) . ' h')); ?>
+  <div class="card adm-card my-4" id="sysmon-visits">
+    <div class="card-header adm-head"><h5 class="mb-0">Visits — paths and time on pages, <?= $span ?> <?= $sysmon_i('visits') ?></h5></div>
+    <div class="card-body">
+      <p class="small text-muted">
+        <strong><?= number_format($vs['visits']) ?></strong> visits by <?= $visits_all ? 'everyone (outside visitors, signed-in users and the institute network)' : 'outside visitors' ?>
+        (<a href="?range=<?= $h($range) ?>&amp;visits=<?= $visits_all ? 'outside' : 'all' ?>#sysmon-visits"><?= $visits_all ? 'outside visitors only' : 'include staff and signed-in users' ?></a>) ·
+        typical visit <?= $fmt_s($vs['median_visit_s']) ?> ·
+        <?= $vs['visits'] ? round(100 * $vs['one_page'] / $vs['visits']) : 0 ?>% saw only one page.
+        A visit ends after 30 minutes with no new page. Time on a page = until the next page opened, so the LAST page of each
+        visit has no time (no tool can know when someone closes a tab). Recorded from 23 Nov 2026 on; earlier visits are
+        rebuilt from address alone.
+      </p>
+      <ul class="nav nav-tabs" role="tablist">
+        <?php foreach (['pages' => 'Time on pages', 'paths' => 'Common paths', 'steps' => 'Next page', 'each' => 'Each visit'] as $k => $label): ?>
+          <li class="nav-item" role="presentation"><button class="nav-link<?= $k === 'pages' ? ' active' : '' ?>" data-bs-toggle="tab" data-bs-target="#sysmon-visits-<?= $k ?>" type="button" role="tab"><?= $label ?></button></li>
+        <?php endforeach; ?>
+      </ul>
+      <div class="tab-content pt-3">
+        <div class="tab-pane fade show active" id="sysmon-visits-pages" role="tabpanel">
+          <div class="table-responsive"><table class="table table-sm table-hover sysmon-num sysmon-vis-dt">
+            <thead><tr><th>Page</th><th class="text-end">Views</th><th class="text-end">Visits started here</th><th class="text-end">Visits ended here</th><th class="text-end">Typical time</th><th class="text-end">Long end (9 in 10 under)</th></tr></thead>
+            <tbody>
+            <?php foreach ($vs['pages'] as $label => $p): ?>
+              <tr><td><?= $h($label) ?></td><td class="text-end"><?= number_format($p['views']) ?></td>
+                  <td class="text-end"><?= number_format($p['entrances']) ?></td><td class="text-end"><?= number_format($p['exits']) ?></td>
+                  <td class="text-end" data-order="<?= (float) ($p['median_s'] ?? -1) ?>"><?= $fmt_s($p['median_s']) ?></td>
+                  <td class="text-end" data-order="<?= (float) ($p['p90_s'] ?? -1) ?>"><?= $fmt_s($p['p90_s']) ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table></div>
+        </div>
+        <div class="tab-pane fade" id="sysmon-visits-paths" role="tabpanel">
+          <p class="small text-muted">How visits began: the first four different pages, in order.</p>
+          <table class="table table-sm sysmon-num">
+            <thead><tr><th>Path</th><th class="text-end">Visits</th></tr></thead>
+            <tbody><?php foreach ($vs['paths'] as $path => $n): ?><tr><td><?= $h($path) ?></td><td class="text-end"><?= number_format($n) ?></td></tr><?php endforeach; ?></tbody>
+          </table>
+        </div>
+        <div class="tab-pane fade" id="sysmon-visits-steps" role="tabpanel">
+          <p class="small text-muted">Where people went next, from one page to the following one.</p>
+          <table class="table table-sm sysmon-num">
+            <thead><tr><th>From → to</th><th class="text-end">Times</th></tr></thead>
+            <tbody><?php foreach ($vs['steps'] as $step => $n): ?><tr><td><?= $h($step) ?></td><td class="text-end"><?= number_format($n) ?></td></tr><?php endforeach; ?></tbody>
+          </table>
+        </div>
+        <div class="tab-pane fade" id="sysmon-visits-each" role="tabpanel">
+          <div class="table-responsive"><table class="table table-sm table-hover sysmon-vis-dt" data-order-col="1">
+            <thead><tr><th>Who</th><th>Started</th><th class="text-end">Length</th><th class="text-end">Pages</th><th>Pages in order (time spent)</th></tr></thead>
+            <tbody>
+            <?php foreach (array_slice($visit_list, 0, 500) as $v):
+                $pp = $visitors['people'][$v['who']] ?? null;
+                $loc = $pp ? (($pp['region'] ?? '') !== '' ? $pp['region'] . ', ' . $pp['country'] : ($pp['country'] ?? '')) : '';
+                $steps_html = [];
+                foreach ($v['pages'] as $i => [$ts, $label, $org]) {
+                    $dt = isset($v['pages'][$i + 1]) ? ' <span class="text-muted">' . $fmt_s($v['pages'][$i + 1][0] - $ts) . '</span>' : '';
+                    $steps_html[] = $h($label) . ($org !== '' ? ' <i class="text-muted">' . $h(str_replace('_', ' ', $org)) . '</i>' : '') . $dt;
+                } ?>
+              <tr><td><small><?= $h(strpos($v['who'], 'user:') === 0 ? substr($v['who'], 5) : $v['who']) ?><br><span class="text-muted"><?= $h($loc) ?></span></small></td>
+                  <td data-order="<?= (int) $v['start'] ?>"><small><?= date('M j, H:i', (int) $v['start']) ?></small></td>
+                  <td class="text-end" data-order="<?= (int) ($v['end'] - $v['start']) ?>"><small><?= $fmt_s($v['end'] - $v['start']) ?></small></td>
+                  <td class="text-end"><?= count($v['pages']) ?></td>
+                  <td class="small"><?= implode(' → ', $steps_html) ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI assistants and scripts using the agent API (api/v1/, llms.txt) -->
+  <?php $ag = $visitors['agents'] ?? []; ?>
+  <div class="card adm-card my-4" id="sysmon-agents">
+    <div class="card-header adm-head"><h5 class="mb-0">AI assistants and the agent API, <?= $span ?> <?= $sysmon_i('agents') ?></h5></div>
+    <div class="card-body">
+      <p class="small text-muted">What assistants and scripts <em>do</em> on the site (api/v1/ and llms.txt) — never what their users asked.
+        <strong>Busiest minute</strong> is the most calls one address made to one endpoint in one minute: a high number means an
+        assistant is looping gene by gene, which a bulk endpoint (or a lower limit) would serve better. Outside = not
+        logged in and not on the institute network.</p>
+      <?php if (empty($ag['by_agent'])): ?>
+        <p class="text-muted small mb-0">No assistant or script used the agent API in this period.</p>
+      <?php else: ?>
+      <div class="row g-4">
+        <div class="col-xl-5">
+          <h6>Who</h6>
+          <table class="table table-sm sysmon-num">
+            <thead><tr><th>Assistant / program</th><th class="text-end">Calls</th><th class="text-end">Outside</th><th class="text-end">Addresses</th><th>Mostly</th></tr></thead>
+            <tbody>
+            <?php foreach ($ag['by_agent'] as $name => $a): arsort($a['endpoints']); ?>
+              <tr><td><?= $h($name) ?></td><td class="text-end"><?= number_format($a['requests']) ?></td><td class="text-end"><?= number_format($a['outside']) ?></td>
+                  <td class="text-end"><?= count($a['addresses']) ?></td><td class="small"><?= $h(implode(', ', array_slice(array_keys($a['endpoints']), 0, 3))) ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+        <div class="col-xl-7">
+          <h6>What they called</h6>
+          <div class="table-responsive"><table class="table table-sm sysmon-num">
+            <thead><tr><th>Endpoint</th><th class="text-end">Calls</th><th class="text-end">Outside</th><th class="text-end">Average</th><th class="text-end">Slowest</th><th class="text-end">Memory</th><th class="text-end">Errors</th><th class="text-end">Busiest minute</th><th>Organisms</th></tr></thead>
+            <tbody>
+            <?php foreach ($ag['by_endpoint'] as $ep => $e): arsort($e['orgs']); ?>
+              <tr><td><code><?= $h($ep) ?></code></td><td class="text-end"><?= number_format($e['n']) ?></td><td class="text-end"><?= number_format($e['outside']) ?></td>
+                  <td class="text-end"><?= moop_monitor_fmt_ms((int) round($e['ms'] / max(1, $e['n']))) ?></td><td class="text-end"><?= moop_monitor_fmt_ms($e['max_ms']) ?></td>
+                  <td class="text-end"><?= $h($e['max_mb']) ?> MB</td>
+                  <td class="text-end<?= $e['errors'] ? ' text-danger fw-semibold' : '' ?>"><?= number_format($e['errors']) ?></td>
+                  <td class="text-end<?= $e['burst'] >= 30 ? ' text-danger fw-semibold' : '' ?>"><?= number_format($e['burst']) ?></td>
+                  <td class="small"><?= $h(implode(', ', array_map(fn($o) => str_replace('_', ' ', $o), array_slice(array_keys($e['orgs']), 0, 3)))) ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <!-- Data nobody used (moop_monitor_unused_data), always 30 days -->
+  <?php $unused_none = array_filter($unused, fn($r) => $r['org_in'] + $r['org_out'] === 0);
+        $unused_inonly = array_filter($unused, fn($r) => $r['org_out'] === 0 && $r['org_in'] > 0 && $r['public']); ?>
+  <div class="card adm-card my-4" id="sysmon-unused">
+    <div class="card-header adm-head"><h5 class="mb-0">Data use by gene set, last 30 days <?= $sysmon_i('unused') ?></h5></div>
+    <div class="card-body">
+      <p class="small text-muted">
+        Every gene set on the site and how many visitor-days used its organism and the gene set itself (viewed, searched,
+        BLASTed or downloaded). Least used first. <strong><?= count(array_unique(array_column($unused_none, 'organism'))) ?></strong>
+        organisms were not used at all; <strong><?= count(array_unique(array_column($unused_inonly, 'organism'))) ?></strong> public
+        organisms were used only from inside. Unused is not wrong — it is a list to check: is it findable, current, still needed?
+      </p>
+      <div class="table-responsive"><table class="table table-sm table-hover sysmon-num sysmon-vis-dt" data-order-col="-1">
+        <thead><tr><th>Organism</th><th>Assembly</th><th>Gene set</th><th>Public</th><th class="text-end">Organism: outside</th><th class="text-end">Organism: inside</th><th class="text-end">Gene set: outside</th><th class="text-end">Gene set: inside</th></tr></thead>
+        <tbody>
+        <?php foreach ($unused as $r): ?>
+          <tr><td><i><?= $h(str_replace('_', ' ', $r['organism'])) ?></i></td><td><small><?= $h($r['assembly']) ?></small></td><td><small><?= $h($r['gene_set']) ?></small></td>
+              <td><small><?= $r['public'] ? 'Yes' : 'No' ?></small></td>
+              <td class="text-end"><?= (int) $r['org_out'] ?></td><td class="text-end"><?= (int) $r['org_in'] ?></td>
+              <td class="text-end"><?= (int) $r['gs_out'] ?></td><td class="text-end"><?= (int) $r['gs_in'] ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
   <div class="row g-4">
     <!-- Traffic -->
     <div class="col-xl-6">
@@ -231,7 +532,8 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
             <thead><tr><th>Address</th><th></th><th class="text-end">Requests</th></tr></thead>
             <tbody>
             <?php foreach ($traffic['ips'] as $ip => $n): ?>
-              <tr><td><code><?= $h($ip) ?></code></td>
+              <tr><td><code><?= $h($ip) ?></code>
+                    <?php $loc = moop_geoip_label(moop_geoip_lookup((string) $ip)); if ($loc !== '' && $loc !== 'Institute network'): ?><br><small class="text-muted"><?= $h($loc) ?></small><?php endif; ?></td>
                   <?php $o = moop_monitor_ip_origin((string) $ip, $ranges, $self_ips); [$o_word, $o_why] = $origin_words[$o]; ?>
                   <td><span class="badge <?= $o === 'internet' ? 'bg-warning-subtle text-dark border border-warning' : 'bg-light text-dark border' ?>"
                             title="<?= $h($o_why) ?>"><?= $h($o_word) ?></span></td>
@@ -384,13 +686,15 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
       <div class="card adm-card h-100">
         <div class="card-header adm-head"><h5 class="mb-0">Who, <?= $span ?> <?= $sysmon_i('who') ?></h5></div>
         <div class="card-body">
-          <p class="small text-muted">Logged-in users by name; everyone else by address. PHP requests only. Kept 30 days.</p>
+          <p class="small text-muted">Logged-in users by name; everyone else by address. PHP requests only. Kept 30 days.
+            Location is from the address (for a logged-in user, their latest one); <?= moop_geoip_attribution() ?>.</p>
           <div class="table-responsive">
           <table class="table table-sm table-hover sysmon-num sysmon-dt" id="sysmon-who">
-            <thead><tr><th>User / address</th><th>Access</th><th class="text-end">Requests</th><th class="text-end">Total time</th><th class="text-end">Memory, peak</th></tr></thead>
+            <thead><tr><th>User / address</th><th>Access</th><th>Location</th><th class="text-end">Requests</th><th class="text-end">Total time</th><th class="text-end">Memory, peak</th></tr></thead>
             <tbody>
             <?php foreach ($pages['by_who'] as $who => $w): ?>
               <tr><td><?= $h($who) ?></td><td><small><?= $h($w['level']) ?></small></td>
+                <td><small><?= $h($w['ip'] === '127.0.0.1' || $w['ip'] === '::1' ? 'This server' : moop_geoip_label(moop_geoip_lookup((string) $w['ip']))) ?></small></td>
                 <td class="text-end"><?= number_format($w['count']) ?></td>
                 <td class="text-end" data-order="<?= (int) $w['total_ms'] ?>"><?= moop_monitor_fmt_ms($w['total_ms']) ?></td>
                 <td class="text-end"><?= $h($w['max_mb']) ?> MB</td></tr>
