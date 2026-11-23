@@ -1846,9 +1846,15 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
 .busco-role { background: #eef2ff; color: #3730a3; font-weight: 600; font-size: 0.7rem; }
 
 /* ── Gene set comparison, organism page (includes/gene_set_comparison.php) ──────────── */
-.gsc-table th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; white-space: nowrap; }
+/* Room between columns, plain-case headings (uppercase ate the width and the sort arrows ran into the
+   next heading), small lines kept whole, BUSCO figure above its bar (Sofia, 2026-11-23). */
+.gsc-table th { font-size: 0.8rem; font-weight: 600; color: #334155; white-space: nowrap; vertical-align: bottom; }
+.gsc-table > :not(caption) > * > * { padding: 0.6rem 0.9rem; }
+.gsc-table thead th.dt-orderable-asc, .gsc-table thead th.dt-orderable-desc, .gsc-table thead th.sorting { padding-right: 1.6rem !important; }  /* beats DataTables own th padding */
 .gsc-table td { font-size: 0.9rem; }
-.gsc-busco-bar { width: 96px; height: 10px; flex: 0 0 96px; }
+.gsc-table td .small { white-space: nowrap; }
+.gsc-table tbody tr:nth-child(even) > td { background: rgba(var(--moop-main-rgb), 0.03); }
+.gsc-busco-bar { width: 120px; height: 10px; margin-top: 4px; }
 .gsc-top-icon { color: var(--moop-tool-header); font-size: 0.7rem; margin-left: 0.25rem; }
 
 /* ── Assembly statistics card, assembly page (includes/assembly_stats_card.php) ──────────

@@ -637,22 +637,23 @@ class AnnotationSearch {
             $('#searchProgress').html(capMessageHtml + warningsHtml + (crosswalkHtml
                 || '<div class="alert alert-warning">No results found. Try different search terms.</div>'));
         } else {
-            const organismCounts = {};
-            const uniqueFeatures = new Set();
+            // Count RESULTS (transcripts / genes), as the summary table and its badge do -- the rows
+            // are annotations, and 1,075 "matches" for 7 transcripts read as 1,075 hits (2026-11-23).
+            const organismFeatures = {};
             this.allResults.forEach(r => {
-                if (!organismCounts[r.organism]) {
-                    organismCounts[r.organism] = 0;
-                }
-                organismCounts[r.organism]++;
-                uniqueFeatures.add(r.feature_uniquename);
+                (organismFeatures[r.organism] = organismFeatures[r.organism] || new Set()).add(r.feature_uniquename);
             });
+            const organismCounts = Object.fromEntries(Object.entries(organismFeatures).map(([o, set]) => [o, set.size]));
 
             let jumpToHtml = '<div class="alert alert-info mb-3 d-flex justify-content-between align-items-start gap-3">';
             jumpToHtml += '<div>';
-            const nA = this.allResults.length, nF = uniqueFeatures.size;
-            jumpToHtml += '<strong>' + (nA === 1 ? moopTh('Found %d matching annotation across %d feature:', nA, nF)
-                                     : nF === 1 ? moopTh('Found %d matching annotations across %d feature:', nA, nF)
-                                                : moopTh('Found %d matching annotations across %d features:', nA, nF)) + '</strong> ';
+            const nA = this.allResults.length.toLocaleString();
+            const nF = Object.values(organismCounts).reduce((a, b) => a + b, 0);
+            const noun = moopRowNoun(this.allResults);
+            const what = nF === 1 ? noun[0] : noun[1];
+            jumpToHtml += '<strong>' + (this.allResults.length === 1
+                ? moopTh('Found %1$s %2$s, with %3$s annotation:', nF.toLocaleString(), what, nA)
+                : moopTh('Found %1$s %2$s, with %3$s annotations:', nF.toLocaleString(), what, nA)) + '</strong> ';
 
             Object.keys(organismCounts).forEach((org, idx) => {
                 const anchorId = 'results-' + org.replace(/[^a-zA-Z0-9]/g, '_');

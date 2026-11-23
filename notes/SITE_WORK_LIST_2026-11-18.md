@@ -167,6 +167,12 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Organism page: tidy the "Compare assemblies and gene sets" card (Sofia, 11-23):** the table's
+      columns run into each other; the BUSCO "%" reads as part of the BUSCO bar; the "Assemblies:" label is
+      too long. Mockups first (tmp/home-mockups/), then build. **M**
+- [ ] **Home page version 2 (B+C v2, chosen 11-23):** search first, then "Getting started" (tour / what
+      changed / send a message) beside "What's new" (permission-aware news, admin-managed, hides when stale).
+      Then retake tour step 1 (1-home.png) and delete tmp/home-mockups/. **M**
 - [x] **"Send us a message" form (11-23):** footer link on every page -> tools/feedback.php (question /
       request / problem, optional email, page they came from). Inbox: Admin -> Messages
       (admin/manage_feedback.php); dashboard banner counts new ones. Stored in the private folder next to

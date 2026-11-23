@@ -43,7 +43,7 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
       <h2>
         <button type="button" class="btn btn-link p-0 text-reset text-decoration-none kegg-card-toggle collapsed"
                 data-bs-toggle="collapse" data-bs-target="#geneSetComparisonBody" aria-expanded="false" aria-controls="geneSetComparisonBody">
-          <i class="fa fa-chevron-right kegg-chevron me-1" aria-hidden="true"></i><?= $gsc_many ? 'Compare assemblies &amp; gene sets' : 'Assembly &amp; gene set at a glance' ?>
+          <i class="fa fa-chevron-right kegg-chevron me-1" aria-hidden="true"></i><?= $gsc_many ? t('Compare assemblies & gene sets') : t('Assembly & gene set at a glance') ?>
         </button>
         <?= field_help(
             'Each row is one gene set on one assembly. BUSCO: how many genes that almost every '
@@ -99,26 +99,33 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
                      title="<?= htmlspecialchars(implode("\n", $r['warnings'])) ?>"></i>
                   <span class="visually-hidden"><?= htmlspecialchars(implode(' ', $r['warnings'])) ?></span>
                   <?php endif; ?>
-                  <?php /* Labelled, because a gene set name and an assembly name look alike
-                           ("NV2" over "Nvec200 (GCA_...)") and readers could not tell which was which. */ ?>
-                  <div class="small text-muted">Assembly: <a href="<?= htmlspecialchars($asm_url) ?>" class="text-muted"><?= htmlspecialchars($r['assembly_label']) ?></a></div>
+                  <?php /* "on <assembly>", because a gene set name and an assembly name look alike
+                           ("NV2" over "Nvec200") and readers could not tell which was which. The
+                           accession is in the hover, not the line: "Assembly: Nvec200 (GCA_...)"
+                           wrapped onto two lines in a narrow column (Sofia, 2026-11-23). */
+                     [$gsc_asm_name, $gsc_asm_acc] = preg_match('/^(.*?)\s*\(([^()]*)\)$/', $r['assembly_label'], $gsc_m)
+                         ? [$gsc_m[1], $gsc_m[2]] : [$r['assembly_label'], ''];
+                     $gsc_asm_tip = $gsc_asm_acc !== '' ? t_plain('Assembly %1$s (%2$s)', $gsc_asm_name, $gsc_asm_acc) : t_plain('Assembly %s', $gsc_asm_name); ?>
+                  <div class="small text-muted text-nowrap"><?= t_markup('on %s', '<a href="' . htmlspecialchars($asm_url) . '" class="text-muted" title="' . htmlspecialchars($gsc_asm_tip) . '">' . htmlspecialchars($gsc_asm_name) . '</a>') ?></div>
                 </td>
                 <td><?= $r['source'] !== '' ? htmlspecialchars($r['source']) : '<span class="text-muted">—</span>' ?></td>
                 <td class="text-end" data-order="<?= $c ? $c['genes'] : -1 ?>">
                   <?php if ($c): ?>
                     <?= number_format($c['genes']) ?>
-                    <div class="small text-muted"><?= number_format($c['transcripts']) ?> transcripts</div>
+                    <div class="small text-muted"><?= t('%s transcripts', number_format($c['transcripts'])) ?></div>
                   <?php else: ?><span class="text-muted">—</span><?php endif; ?>
                 </td>
                 <td class="text-end" data-order="<?= $a ? round($a['pct'], 1) : -1 ?>">
                   <?php if ($a): ?>
                     <?= $gsc_pct($a['pct']) ?><?= ($gsc_top['annot'] !== null && round($a['pct'], 1) >= $gsc_top['annot']) ? $gsc_mark : '' ?>
-                    <div class="small text-muted">of <?= $a['of'] ?></div>
+                    <div class="small text-muted"><?= t('of %s', $a['of']) ?></div>
                   <?php else: ?><span class="text-muted">—</span><?php endif; ?>
                 </td>
                 <td data-order="<?= $euk ? $euk['complete'] : -1 ?>" class="gsc-busco">
                   <?php if ($euk): ?>
-                    <div class="d-flex align-items-center gap-2">
+                    <?php /* The figure ABOVE the bar, with "complete": beside it, it read as part of the bar. */ ?>
+                    <div class="text-nowrap"><strong><?= $gsc_pct($euk['complete']) ?></strong><?= ($gsc_top['busco'] !== null && $euk['complete'] >= $gsc_top['busco']) ? $gsc_mark : '' ?> <span class="small text-muted"><?= t('complete') ?></span></div>
+                    <div>
                       <div class="busco-bar gsc-busco-bar" role="img"
                            aria-label="<?= htmlspecialchars('eukaryota: ' . moop_busco_notation($euk)) ?>"
                            title="<?= htmlspecialchars(moop_busco_notation($euk)) ?>">
@@ -127,7 +134,6 @@ $gsc_mark = '<i class="fa fa-arrow-up gsc-top-icon" title="Highest of these" ari
                         <div class="busco-seg busco-seg-<?= $k ?>" style="flex-grow:<?= $euk[$k] ?>;"></div>
                         <?php endforeach; ?>
                       </div>
-                      <span class="text-nowrap"><strong><?= $gsc_pct($euk['complete']) ?></strong><?= ($gsc_top['busco'] !== null && $euk['complete'] >= $gsc_top['busco']) ? $gsc_mark : '' ?></span>
                     </div>
                   <?php else: ?><span class="text-muted">—</span><?php endif; ?>
                 </td>
