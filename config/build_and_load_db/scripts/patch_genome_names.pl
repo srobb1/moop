@@ -31,100 +31,105 @@ use FindBin qw($Bin);
 use lib "$Bin/../analysis_parsers";
 use GenomeName qw(genome_name_from_metadata);
 
-my $apply = 0;
-my @only;
-for my $arg (@ARGV) {
-    if    ($arg eq '--apply')                { $apply = 1 }
-    elsif ($arg eq '-h' or $arg eq '--help') { print_usage(); exit 0 }
-    elsif ($arg =~ /^-/)                     { die "Unknown option $arg\n" }
-    else                                     { push @only, $arg }
-}
+main();
+exit 0;
 
-my $GENOMES = $ENV{GENOMES} // '/n/sci/SCI-004223-SBGENOMES/genomes/v2';
-## data/ comes from REPO, else the current directory -- NOT from $Bin: scripts/ is a symlink into the
-## git checkout and FindBin resolves it, which walks out of the v2 tree (same trap as copy2moop_v2.sh).
-my $REPO    = $ENV{REPO} // '.';
-my $DATA    = "$REPO/data";
--d $GENOMES or die "No GENOMES dir $GENOMES\n";
--d $DATA    or die "No data dir $DATA: run from build_and_load_db/v2 or set REPO\n";
-
-my @orgs = @only ? @only
-         : sort map { basename(dirname($_)) } glob("$DATA/*/organism.sqlite");
-
-my @rows;        # [org, accession, old, new, status]
-my %count;
-for my $org (@orgs) {
-    my $db_path = "$DATA/$org/organism.sqlite";
-    unless (-f $db_path) { push @rows, [$org, '-', '-', '-', 'no organism.sqlite']; $count{missing}++; next }
-
-    open my $LOCK, '>>', "$DATA/$org/.moop_build.lock" or die "Can't open lock for $org: $!\n";
-    unless (flock($LOCK, LOCK_EX | LOCK_NB)) {
-        push @rows, [$org, '-', '-', '-', 'SKIPPED: build running (lock held)'];
-        $count{locked}++;
-        close $LOCK;
-        next;
+sub main {
+    my $apply = 0;
+    my @only;
+    for my $arg (@ARGV) {
+        if    ($arg eq '--apply')                { $apply = 1 }
+        elsif ($arg eq '-h' or $arg eq '--help') { print_usage(); exit 0 }
+        elsif ($arg =~ /^-/)                     { die "Unknown option $arg\n" }
+        else                                     { push @only, $arg }
     }
 
-    my $want = names_for_organism($org);    # accession -> {name => ..., error => ...}
+    my $GENOMES = $ENV{GENOMES} // '/n/sci/SCI-004223-SBGENOMES/genomes/v2';
+    ## data/ comes from REPO, else the current directory -- NOT from $Bin: scripts/ is a symlink into the
+    ## git checkout and FindBin resolves it, which walks out of the v2 tree (same trap as copy2moop_v2.sh).
+    my $REPO    = $ENV{REPO} // '.';
+    my $DATA    = "$REPO/data";
+    -d $GENOMES or die "No GENOMES dir $GENOMES\n";
+    -d $DATA    or die "No data dir $DATA: run from build_and_load_db/v2 or set REPO\n";
 
-    my $dbh = DBI->connect("dbi:SQLite:dbname=$db_path", '', '',
-                           { RaiseError => 1, AutoCommit => 1, sqlite_open_flags => 0 });
-    $dbh->do('PRAGMA busy_timeout = 30000');
-    my $genomes = $dbh->selectall_arrayref(
-        'SELECT genome_id, genome_accession, genome_name FROM genome ORDER BY genome_id');
+    my @orgs = @only ? @only
+             : sort map { basename(dirname($_)) } glob("$DATA/*/organism.sqlite");
 
-    my @updates;
-    for my $genome (@$genomes) {
-        my ($id, $acc, $old) = @$genome;
-        my $info = $want->{$acc};
-        if (!$info) {
-            push @rows, [$org, $acc, $old, '?', 'no assembly in GENOMES for this accession'];
-            $count{unmatched}++;
-        } elsif ($info->{error}) {
-            push @rows, [$org, $acc, $old, '?', $info->{error}];
-            $count{conflict}++;
-        } elsif ($info->{name} eq $old) {
-            push @rows, [$org, $acc, $old, $old, 'same'];
-            $count{same}++;
-        } else {
-            push @rows, [$org, $acc, $old, $info->{name}, $apply ? 'UPDATED' : 'would update'];
-            push @updates, [$info->{name}, $id];
-            $count{change}++;
+    my @rows;        # [org, accession, old, new, status]
+    my %count;
+    for my $org (@orgs) {
+        my $db_path = "$DATA/$org/organism.sqlite";
+        unless (-f $db_path) { push @rows, [$org, '-', '-', '-', 'no organism.sqlite']; $count{missing}++; next }
+
+        open my $LOCK, '>>', "$DATA/$org/.moop_build.lock" or die "Can't open lock for $org: $!\n";
+        unless (flock($LOCK, LOCK_EX | LOCK_NB)) {
+            push @rows, [$org, '-', '-', '-', 'SKIPPED: build running (lock held)'];
+            $count{locked}++;
+            close $LOCK;
+            next;
+        }
+
+        my $want = names_for_organism($GENOMES, $org);    # accession -> {name => ..., error => ...}
+
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$db_path", '', '',
+                               { RaiseError => 1, AutoCommit => 1, sqlite_open_flags => 0 });
+        $dbh->do('PRAGMA busy_timeout = 30000');
+        my $genomes = $dbh->selectall_arrayref(
+            'SELECT genome_id, genome_accession, genome_name FROM genome ORDER BY genome_id');
+
+        my @updates;
+        for my $genome (@$genomes) {
+            my ($id, $acc, $old) = @$genome;
+            my $info = $want->{$acc};
+            if (!$info) {
+                push @rows, [$org, $acc, $old, '?', 'no assembly in GENOMES for this accession'];
+                $count{unmatched}++;
+            } elsif ($info->{error}) {
+                push @rows, [$org, $acc, $old, '?', $info->{error}];
+                $count{conflict}++;
+            } elsif ($info->{name} eq $old) {
+                push @rows, [$org, $acc, $old, $old, 'same'];
+                $count{same}++;
+            } else {
+                push @rows, [$org, $acc, $old, $info->{name}, $apply ? 'UPDATED' : 'would update'];
+                push @updates, [$info->{name}, $id];
+                $count{change}++;
+            }
+        }
+
+        if ($apply and @updates) {
+            $dbh->begin_work;
+            my $sth = $dbh->prepare('UPDATE genome SET genome_name = ? WHERE genome_id = ?');
+            for my $update (@updates) { $sth->execute(@$update) }
+            $dbh->commit;
+        }
+        $dbh->disconnect;
+        close $LOCK;
+    }
+
+    ## report
+    my @head = ('organism', 'genome_accession', 'genome_name now', 'genome_name new', 'status');
+    my @width = map { length $_ } @head;
+    for my $row (@rows) {
+        for my $i (0 .. $#$row) {
+            my $len = length($row->[$i] eq '' ? '(empty)' : $row->[$i]);
+            $width[$i] = $len if $len > $width[$i];
         }
     }
-
-    if ($apply and @updates) {
-        $dbh->begin_work;
-        my $sth = $dbh->prepare('UPDATE genome SET genome_name = ? WHERE genome_id = ?');
-        for my $update (@updates) { $sth->execute(@$update) }
-        $dbh->commit;
-    }
-    $dbh->disconnect;
-    close $LOCK;
+    my $fmt = join('  ', map { "%-${_}s" } @width) . "\n";
+    printf $fmt, @head;
+    printf $fmt, map { '-' x $_ } @width;
+    for my $row (@rows) { printf $fmt, map { $_ eq '' ? '(empty)' : $_ } @$row }
+    print "\n";
+    printf "%s: %d changed, %d already right, %d skipped (build running), %d conflicting names, %d unmatched rows, %d missing dbs\n",
+        ($apply ? 'APPLIED' : 'DRY RUN'), map { $count{$_} // 0 } qw(change same locked conflict unmatched missing);
+    print "Nothing written. Rerun with --apply to write these changes.\n" if !$apply and $count{change};
+    print "Now run copy2moop to put the changed organism.sqlite files live.\n" if $apply and $count{change};
 }
-
-## report
-my @head = ('organism', 'genome_accession', 'genome_name now', 'genome_name new', 'status');
-my @width = map { length $_ } @head;
-for my $row (@rows) {
-    for my $i (0 .. $#$row) {
-        my $len = length($row->[$i] eq '' ? '(empty)' : $row->[$i]);
-        $width[$i] = $len if $len > $width[$i];
-    }
-}
-my $fmt = join('  ', map { "%-${_}s" } @width) . "\n";
-printf $fmt, @head;
-printf $fmt, map { '-' x $_ } @width;
-for my $row (@rows) { printf $fmt, map { $_ eq '' ? '(empty)' : $_ } @$row }
-print "\n";
-printf "%s: %d changed, %d already right, %d skipped (build running), %d conflicting names, %d unmatched rows, %d missing dbs\n",
-    ($apply ? 'APPLIED' : 'DRY RUN'), map { $count{$_} // 0 } qw(change same locked conflict unmatched missing);
-print "Nothing written. Rerun with --apply to write these changes.\n" if !$apply and $count{change};
-print "Now run copy2moop to put the changed organism.sqlite files live.\n" if $apply and $count{change};
 
 ## accession (as data_assembly() in paths.sh names the assembly) -> wanted genome_name
 sub names_for_organism {
-    my ($org) = @_;
+    my ($GENOMES, $org) = @_;
     my %by_acc;
     for my $asm_dir (sort grep { -d $_ } glob("$GENOMES/$org/*")) {
         my $asm = basename($asm_dir);

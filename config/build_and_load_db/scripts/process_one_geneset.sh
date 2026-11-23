@@ -712,7 +712,7 @@ make_rbbh_moop() {
       if [ "${#FASTA[@]}" -gt 0 ]; then
         echo "Building RBBH desc.txt for $TARGET_ORG from ${FASTA[0]}"
         { [[ "${FASTA[0]}" == *.gz ]] && zcat "${FASTA[0]}" || cat "${FASTA[0]}"; } \
-          | perl "$REPO/analysis_parsers/rbbh/getDesc_ENS_FA.pl" /dev/stdin > "$TARGET_ORG.desc.txt" \
+          | perl "$SCRIPTS/getDesc_ENS_FA.pl" /dev/stdin > "$TARGET_ORG.desc.txt" \
           && DESC="$TARGET_ORG.desc.txt"
       else
         echo "WARNING: no peptide FASTA under $REF_DIR — $TARGET_ORG RBBH descriptions will be blank" >&2
