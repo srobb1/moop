@@ -176,9 +176,8 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
   <?php
     $people   = $visitors['people'] ?? [];
     $n_kind   = array_count_values(array_column($people, 'kind'));
-    $outside  = array_filter($people, fn($p) => $p['kind'] !== 'internal');
-    $by_cc    = moop_metrics_visitor_places($outside, 'country');
-    $by_rg    = moop_metrics_visitor_places($outside, 'region');
+    $by_cc    = moop_metrics_visitor_places($people, 'country');
+    $by_rg    = moop_metrics_visitor_places($people, 'region');
     $by_org   = moop_metrics_visitor_organisms($people);
     $org_name = fn($o) => '<i>' . $h(str_replace('_', ' ', $o)) . '</i>';
     $org_list = function (array $orgs, int $top = 4) use ($h, $org_name) {
@@ -246,7 +245,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
             [$n_kind['human'] ?? 0, 'Outside visitors', 'passed the human check'],
             [$n_kind['user'] ?? 0, 'Signed-in users', 'collaborators and admins'],
             [$n_kind['internal'] ?? 0, 'Institute network', 'addresses, logged in automatically'],
-            [count(array_filter($by_cc, fn($r) => !in_array($r['label'], ['Unknown', 'Institute network'], true))), 'Countries', 'outside visitors and users'],
+            [count(array_filter($by_cc, fn($r) => !in_array($r['label'], ['Unknown', 'Institute network'], true))), 'Countries', 'outside visitors and users (not counting the institute)'],
           ] as [$num, $label, $sub]): ?>
           <div class="col-6 col-lg-3"><div class="border rounded p-2 h-100">
             <div class="fs-3 fw-semibold"><?= number_format($num) ?></div>
@@ -270,8 +269,8 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
       <div class="tab-content pt-3">
         <?php foreach (['country' => $by_cc, 'region' => $by_rg] as $k => $rows): ?>
         <div class="tab-pane fade<?= $k === 'country' ? ' show active' : '' ?>" id="sysmon-vis-<?= $k ?>" role="tabpanel">
-          <p class="small text-muted">Outside visitors and signed-in users (the institute network is left out). Organisms: how many of these people
-            viewed, searched, BLASTed or downloaded from each.</p>
+          <p class="small text-muted">Everyone counted as a person above. Staff on the institute network (logged in automatically, or signed in
+            at work) are one row, <em>Institute network</em>. Organisms: how many of these people viewed, searched, BLASTed or downloaded from each.</p>
           <div class="table-responsive">
           <table class="table table-sm table-hover sysmon-num sysmon-vis-dt">
             <thead><tr><th><?= $k === 'country' ? 'Country' : 'State / region' ?></th><th class="text-end">People</th><th class="text-end">Requests</th><th>Organisms (people)</th></tr></thead>
