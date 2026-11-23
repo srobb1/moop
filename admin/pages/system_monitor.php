@@ -199,7 +199,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     $by_org   = moop_metrics_visitor_organisms($people);
     $org_name = fn($o) => '<i>' . $h(str_replace('_', ' ', $o)) . '</i>';
     $org_list = function (array $orgs, int $top = 4) use ($h, $org_name) {
-        if (!$orgs) return '<span class="text-muted">—</span>';
+        if (!$orgs) return '<span class="text-muted" title="No organism, gene, search, BLAST or download pages in this period -- only home, help, admin and similar pages">none used</span>';
         $out = [];
         foreach (array_slice($orgs, 0, $top, true) as $o => $n) $out[] = $org_name($o) . ' <span class="text-muted">' . (int) $n . '</span>';
         $more = count($orgs) - $top;
