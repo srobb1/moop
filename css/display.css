@@ -1895,3 +1895,24 @@ mark.scope-hl { background: rgba(254, 240, 138, 0.9); border-radius: 2px; paddin
     color: var(--moop-main-dark);
     border-color: rgba(var(--moop-main-rgb), 0.7);
 }
+
+/* Home: Getting started + What's new under the search (lib/home_panel.php, 2026-11-23).
+   Getting started is a tinted box of links; What's new a white box of dated lines. One column on a
+   phone; Getting started alone (no recent news) sits centred at a reading width. */
+.home-panel { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1.25fr; gap: 0.9rem; }
+.home-panel-single { grid-template-columns: 1fr; max-width: 560px; }
+@media (max-width: 760px) { .home-panel { grid-template-columns: 1fr; } }
+.home-panel-box { border: 1px solid rgba(var(--moop-main-rgb), 0.2); border-radius: 10px; background: #fff; padding: 0.8rem 1rem; }
+.home-panel-start { background: rgba(var(--moop-main-rgb), 0.06); }
+.home-panel-h { font-size: 0.76rem; letter-spacing: 0.08em; text-transform: uppercase; color: #64748b; margin: 0 0 0.45rem; font-weight: 700; }
+.home-panel-link { display: grid; grid-template-columns: 1.8rem 1fr; column-gap: 0.4rem; padding: 0.4rem 0.3rem; border-radius: 6px; text-decoration: none; color: #334155; }
+.home-panel-link + .home-panel-link { border-top: 1px solid rgba(var(--moop-main-rgb), 0.12); }
+.home-panel-link:hover, .home-panel-link:focus-visible { background: rgba(var(--moop-main-rgb), 0.08); color: #334155; }
+.home-panel-link i { grid-row: 1 / 3; font-size: 1.15rem; color: var(--moop-tool-header); align-self: center; }
+.home-panel-title { color: var(--moop-main-dark); font-weight: 600; font-size: 0.95rem; }
+.home-panel-sub { font-size: 0.83rem; }
+.home-panel-news { list-style: none; padding: 0; margin: 0 0 0.3rem; }
+.home-panel-news li { font-size: 0.9rem; color: #334155; padding: 0.35rem 0; border-bottom: 1px solid #eef2f5; display: grid; grid-template-columns: 3.6rem 1fr; }
+.home-panel-news time { color: #64748b; font-size: 0.8rem; padding-top: 0.1rem; }
+.home-panel-all { font-size: 0.85rem; }
+.home-panel-news-page li { grid-template-columns: 6.5rem 1fr; font-size: 0.95rem; padding: 0.55rem 0; }

@@ -83,10 +83,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save_home') {
         $mode = (string) ($_POST['home_mode'] ?? 'builtin');
         $slug = (string) ($_POST['home_page'] ?? '');
-        if ($mode !== 'builtin' && moop_page_get($slug) === null) {
+        if (!in_array($mode, ['builtin', 'intro', 'page', 'panel'], true)) $mode = 'builtin';
+        if (in_array($mode, ['intro', 'page'], true) && moop_page_get($slug) === null) {
             $go(['type' => 'danger', 'msg' => 'Choose which page to use for the home page.'], 'manage_pages.php');
         }
-        $value = $mode === 'builtin' ? [] : ['mode' => $mode, 'page' => $slug];
+        $old_name = mb_substr(trim(strip_tags((string) ($_POST['old_site_name'] ?? ''))), 0, 60);
+        $value = $mode === 'builtin' ? []
+               : ($mode === 'panel' ? ['mode' => 'panel', 'old_site_name' => $old_name] : ['mode' => $mode, 'page' => $slug]);
         $dir = $config->getPath('root_path') . '/' . $config->getString('site') . '/config';
         $r = $config->saveEditableConfig(['home' => $value], $dir);
         $go(!empty($r['success']) ? ['type' => 'success', 'msg' => 'Saved the home page.']

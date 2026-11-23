@@ -93,13 +93,27 @@ $access_button = function (array $p, string $extra = '') {
         <input type="hidden" name="_action" value="save_home">
         <p class="small text-muted mb-2">What visitors see at <code><?= htmlspecialchars(moop_url_base()) ?>/</code>. The address stays the same
           whichever you choose; if the page you pick is ever deleted, MOOP's home comes back.</p>
-        <?php foreach (['builtin' => 'MOOP\'s home — search, organisms and tools', 'intro' => 'MOOP\'s home, with a page above it (a welcome)',
+        <?php foreach (['builtin' => 'MOOP\'s home — search, organisms and tools',
+                        'panel' => 'MOOP\'s home, with <strong>Getting started</strong> and <strong>What\'s new</strong> boxes under the search',
+                        'intro' => 'MOOP\'s home, with a page above it (a welcome)',
                         'page' => 'One of your pages, instead of MOOP\'s home'] as $value => $label): ?>
           <div class="form-check">
             <input class="form-check-input" type="radio" name="home_mode" id="home_<?= $value ?>" value="<?= $value ?>"
-                   <?= $home['mode'] === $value ? 'checked' : '' ?> <?= $value !== 'builtin' && !$pages ? 'disabled' : '' ?>>
+                   <?= $home['mode'] === $value ? 'checked' : '' ?> <?= in_array($value, ['intro', 'page'], true) && !$pages ? 'disabled' : '' ?>>
             <label class="form-check-label" for="home_<?= $value ?>"><?= $label ?></label>
           </div>
+          <?php if ($value === 'panel'): ?>
+          <div class="ms-4 mb-2 small text-muted">
+            Getting started links to the pages <code>tour</code> and <code>what-changed</code> when they exist, the AI guide
+            when it is on, and the message form. What's new is kept on <a href="manage_news.php">News</a>.
+            <div class="d-flex gap-2 align-items-center mt-1">
+              <label for="old_site_name" class="text-nowrap">Name of the site this one replaced:</label>
+              <input type="text" class="form-control form-control-sm" style="max-width: 12rem;" id="old_site_name" name="old_site_name"
+                     maxlength="60" placeholder="e.g. SIMRbase" value="<?= htmlspecialchars($home['old_site_name'] ?? '') ?>">
+              <span>("Used the old … ?"; empty = "What changed?")</span>
+            </div>
+          </div>
+          <?php endif; ?>
         <?php endforeach; ?>
         <div class="d-flex gap-2 align-items-center mt-2">
           <select class="form-select form-select-sm" name="home_page" style="max-width: 22rem;" <?= !$pages ? 'disabled' : '' ?>>

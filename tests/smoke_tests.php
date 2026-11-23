@@ -5401,6 +5401,30 @@ ok(moop_feedback_set_status($_fid, 'done', $_fbf) && moop_feedback_new_count($_f
 file_put_contents($_fbf, '{broken');
 ok(moop_feedback_add($_fm, [], $_fbf) === 'error' && file_get_contents($_fbf) === '{broken',
    'feedback: an unreadable file is an error and is left exactly as it was');
+
+// ---- Home: What's new (lib/home_panel.php, 2026-11-23)
+require_once __DIR__ . '/../lib/home_panel.php';
+$_nf = sys_get_temp_dir() . '/moop_news_test_' . getmypid() . '.json';
+@unlink($_nf);
+ok(moop_news_all($_nf) === [], 'news: no file = no news');
+ok(moop_news_put(null, ['date' => '2026-11-20', 'text' => 'Public item', 'groups' => []], $_nf)
+   && moop_news_put(null, ['date' => '2026-11-22', 'text' => 'Bats only', 'groups' => ['Bats']], $_nf)
+   && moop_news_put(null, ['date' => '2025-01-01', 'text' => 'Old item', 'groups' => []], $_nf), 'news: three items saved');
+$_na = moop_news_all($_nf);
+ok(array_column($_na, 'text') === ['Bats only', 'Public item', 'Old item'], 'news: newest first');
+$_now = strtotime('2026-11-23');
+ok(array_column(moop_news_for_visitor($_na, ['Cnidaria'], null, null, $_now), 'text') === ['Public item', 'Old item'],
+   'news: an item for a group the visitor cannot see is hidden (private genome news never reaches the public)');
+ok(array_column(moop_news_for_visitor($_na, ['Bats'], null, null, $_now), 'text') === ['Bats only', 'Public item', 'Old item'], 'news: visible group shows its item');
+ok(array_column(moop_news_for_visitor($_na, ['Bats'], 3, 180, $_now), 'text') === ['Bats only', 'Public item'], 'news: the home leaves out stale items');
+ok(count(moop_news_for_visitor($_na, ['Bats'], 1, null, $_now)) === 1, 'news: the home limit');
+ok(moop_news_put($_na[0]['id'], null, $_nf) && count(moop_news_all($_nf)) === 2, 'news: delete by id');
+[$_ni, $_ne] = moop_news_validate(['date' => '2026-02-30', 'text' => '', 'groups' => ['Bats', 'Nope']], ['Bats']);
+ok(count($_ne) === 2 && $_ni['groups'] === ['Bats'], 'news: bad date and empty text refused; unknown groups dropped');
+file_put_contents($_nf, '{broken');
+ok(moop_news_all($_nf) === null && !moop_news_put(null, ['date' => '2026-11-23', 'text' => 'x', 'groups' => []], $_nf) && file_get_contents($_nf) === '{broken',
+   'news: an unreadable file is an error and is never overwritten');
+@unlink($_nf); @unlink($_nf . '.lock');
 file_put_contents($_fbf, json_encode(array_fill(0, MOOP_FEEDBACK_DAY_CAP, ['id' => 'x', 'ts' => time(), 'status' => 'done'])));
 ok(moop_feedback_add($_fm, [], $_fbf) === 'cap', 'feedback: the site-wide daily cap holds');
 array_map('unlink', glob("$_fbd/*")); @rmdir($_fbd);

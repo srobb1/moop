@@ -117,6 +117,31 @@ $home_count = fn($n) => '<strong style="font-weight:500;">' . (int) $n . '</stro
     </div>
   </div>
 
+<?php if (!empty($home_panel)): /* lib/home_panel.php: Getting started + What's new */
+  $hp_news = $home_panel['news']; ?>
+  <div class="home-panel mb-4<?= $hp_news ? '' : ' home-panel-single' ?>">
+    <nav class="home-panel-box home-panel-start" aria-labelledby="hp-start-h">
+      <h2 class="home-panel-h" id="hp-start-h"><?= t('Getting started') ?></h2>
+      <?php foreach ($home_panel['start'] as [$icon, $title, $sub, $url]): ?>
+      <a class="home-panel-link" href="<?= htmlspecialchars($url) ?>">
+        <i class="fa <?= $icon ?>" aria-hidden="true"></i><span class="home-panel-title"><?= htmlspecialchars($title) ?></span><span class="home-panel-sub"><?= htmlspecialchars($sub) ?></span>
+      </a>
+      <?php endforeach; ?>
+    </nav>
+    <?php if ($hp_news): ?>
+    <section class="home-panel-box" aria-labelledby="hp-news-h">
+      <h2 class="home-panel-h" id="hp-news-h"><?= t("What's new") ?></h2>
+      <ul class="home-panel-news">
+        <?php foreach ($hp_news as $n): $ts = strtotime($n['date']); ?>
+        <li><time datetime="<?= htmlspecialchars($n['date']) ?>"><?= htmlspecialchars(date('j M', $ts)) ?></time> <span><?= moop_news_html($n['text']) ?></span></li>
+        <?php endforeach; ?>
+      </ul>
+      <a class="home-panel-all" href="<?= htmlspecialchars(moop_url('tools/news.php')) ?>"><?= t('All news') ?> &rarr;</a>
+    </section>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
+
   <?php if (!empty($featured_groups)): ?>
   <!-- Featured groups -->
   <div class="mb-3 text-center pt-2">

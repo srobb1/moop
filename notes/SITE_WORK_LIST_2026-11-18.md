@@ -167,12 +167,24 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **🔴 Old SIMRbase links cited in papers (11-23):** SIMRbase has NO metadata/legacy_redirects.json (cuttingclass
+      + planosphere do). Find the SIMRbase URLs printed in the Nematostella genome, Endo-Atlas, lamprey and bat papers,
+      test each, build the table (scripts/build_legacy_redirects.php), root installs. **M**
+- [ ] **About page: "About SIMRbase" + "About MOOP" (Sofia, 11-23):** site section = an editable content page shown at
+      the top of the built-in About (each site its own); MOOP section rewritten. SIMRbase: since 2012; easy search,
+      sharing with collaborators, published data; one-organism vs related-species searches; pipeline by Sukha Malladi
+      (main developer), Eric Ross + Sofia (directors/advisors); naming rule (good RefSeq/Ensembl or curated name kept,
+      else from annotations); how to cite; contact. MOOP: built from scratch by Sofia; cite JBrowse 2 (+CLI, MAF
+      plugin), BLAST+, Primer3, samtools faidx, bgzip/tabix (htslib), Plotly.js; data credits KEGG, GO, PLANA, NCBI
+      Taxonomy, Wikipedia. NOT MAFFT (not used now). Pipeline sources loaded (Nvec DB): InterProScan 5.78, eggNOG-mapper
+      / eggNOG 5.0, OMA 2.7, DIAMOND + MMseqs2 RBH vs Ensembl 113 + Swiss-Prot, HGNC, DeepLoc 2.0, DeepTMHMM, SignalP,
+      BUSCO, TransDecoder -- Sukha to confirm. **M**
+- [ ] **More news items (11-23):** suggested KEGG (11-14), Endo-Atlas (11-18), search View summary/matches (11-23),
+      Expression Explorer (10-22). Admin -> News. **S**
+- [x] **Home page version 2 (11-23):** Getting started + What's new (Admin -> News), opt-in home mode 'panel'.
 - [ ] **Organism page: tidy the "Compare assemblies and gene sets" card (Sofia, 11-23):** the table's
       columns run into each other; the BUSCO "%" reads as part of the BUSCO bar; the "Assemblies:" label is
       too long. Mockups first (tmp/home-mockups/), then build. **M**
-- [ ] **Home page version 2 (B+C v2, chosen 11-23):** search first, then "Getting started" (tour / what
-      changed / send a message) beside "What's new" (permission-aware news, admin-managed, hides when stale).
-      Then retake tour step 1 (1-home.png) and delete tmp/home-mockups/. **M**
 - [x] **"Send us a message" form (11-23):** footer link on every page -> tools/feedback.php (question /
       request / problem, optional email, page they came from). Inbox: Admin -> Messages
       (admin/manage_feedback.php); dashboard banner counts new ones. Stored in the private folder next to

@@ -780,6 +780,9 @@ function moop_build_permission_items($config, array $ctx): array {
                 // Seeded from .example by setup.php: a MISSING path is reported as a
                 // medium issue here, so it must exist rather than appear on first use.
                 $metadata_path . '/group_taxon_exceptions.json',
+                // Admin -> News (lib/home_panel.php). Optional: only sites showing news have it,
+                // so it is checked once it exists rather than reported missing everywhere.
+                ...array_filter([$metadata_path . '/news.json'], 'file_exists'),
             ],
             'required_perms' => '664',
             'required_owner' => $moop_owner,

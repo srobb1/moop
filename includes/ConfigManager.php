@@ -437,12 +437,17 @@ class ConfigManager
         return ($this->config['technical_panels'] ?? 'show') === 'researchers';
     }
 
-    /** The home page setting: ['mode' => 'builtin'|'page'|'intro', 'page' => slug|'']. */
+    /**
+     * The home page setting: ['mode' => 'builtin'|'page'|'intro'|'panel', 'page' => slug|'',
+     * 'old_site_name' => string]. 'panel' = MOOP's home with the Getting started and What's new
+     * boxes (lib/home_panel.php); old_site_name fills "Used the old <name>?".
+     */
     public function homeSetting(): array
     {
         $h = $this->config['home'] ?? [];
         $mode = is_array($h) ? (string) ($h['mode'] ?? 'builtin') : 'builtin';
-        if (!in_array($mode, ['page', 'intro'], true)) return ['mode' => 'builtin', 'page' => ''];
+        if (!in_array($mode, ['page', 'intro', 'panel'], true)) return ['mode' => 'builtin', 'page' => ''];
+        if ($mode === 'panel') return ['mode' => 'panel', 'page' => '', 'old_site_name' => (string) ($h['old_site_name'] ?? '')];
         return ['mode' => $mode, 'page' => (string) ($h['page'] ?? '')];
     }
 
@@ -1133,8 +1138,9 @@ class ConfigManager
 
                 if ($key === 'home') {
                     $h = $data[$key];
-                    $ok = is_array($h) && (!$h || (in_array($h['mode'] ?? '', ['builtin', 'page', 'intro'], true)
-                          && (($h['mode'] ?? '') === 'builtin' || preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', (string) ($h['page'] ?? '')))));
+                    $ok = is_array($h) && (!$h || (in_array($h['mode'] ?? '', ['builtin', 'page', 'intro', 'panel'], true)
+                          && (in_array($h['mode'] ?? '', ['builtin', 'panel'], true) || preg_match('/^[a-z0-9][a-z0-9-]{0,59}$/', (string) ($h['page'] ?? '')))
+                          && (($h['mode'] ?? '') !== 'panel' || (is_string($h['old_site_name'] ?? '') && mb_strlen($h['old_site_name'] ?? '') <= 60))));
                     if (!$ok) return ['success' => false, 'message' => 'The home page setting is not valid; nothing was saved'];
                 }
 

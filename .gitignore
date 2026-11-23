@@ -33,6 +33,7 @@ config/site_paths.php
 # ── Site-specific metadata (managed by admin UI) ─────────────
 # Keep .example templates and README, ignore actual data files
 metadata/*.json
+metadata/*.json.lock
 !metadata/*.json.example
 metadata/backups/
 metadata/jbrowse2-configs/

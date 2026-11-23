@@ -43,6 +43,18 @@ if ($home['mode'] !== 'builtin') {
     }
 }
 
+// Getting started + What's new under the search (home mode 'panel', opt-in per site).
+$home_panel = null;
+if ($home['mode'] === 'panel') {
+    require_once __DIR__ . '/lib/home_panel.php';
+    $news_all = moop_news_all() ?? [];   // an unreadable file shows no news here; Admin -> News reports it
+    $home_panel = [
+        'start' => moop_home_getting_started($home['old_site_name'] ?? ''),
+        'news'  => moop_news_for_visitor($news_all, moop_news_visible_groups(), MOOP_NEWS_HOME_MAX, MOOP_NEWS_HOME_DAYS),
+        'more'  => count(moop_news_for_visitor($news_all, moop_news_visible_groups())) > 0,
+    ];
+}
+
 // Everything on this page is built from the entries THIS viewer may see, decided per
 // gene set (moop_visible_group_entries()). Building it from the raw group data and
 // filtering by organism -- three separate ways -- would show a private assembly of an
@@ -148,6 +160,7 @@ echo render_display_page(
         'examples'           => moop_home_examples($group_data),
         'cards_to_display'   => $cards_to_display,
         'home_intro_html'    => $home_intro_html,   // a content page above the home (moop_markdown(): safe)
+        'home_panel'         => $home_panel,        // Getting started + What's new (lib/home_panel.php), or null
         'page_script'        => [
             moop_url_base() . "/js/modules/taxonomy-tree.js",
             moop_url_base() . "/js/modules/tool-launch.js",
