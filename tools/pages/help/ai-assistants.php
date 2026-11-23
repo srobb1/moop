@@ -79,6 +79,27 @@ $examples = [
         </div>
       </div>
     </div>
+    <?php /* Added 2026-11-23: a visitor's Claude (desktop app + Claude in Chrome) stopped at the
+             human check; the request log showed it. llms.txt and api/v1 are exempt now, but a
+             browser-driving assistant still meets the check on ordinary pages. */ ?>
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm help-topic-card">
+        <div class="card-body p-3">
+          <h3 class="h6 fw-semibold mb-1"><?= t('Works best with a coding agent (such as Claude Code)') ?></h3>
+          <p class="text-muted small mb-2"><?= t('The assistant has to open web addresses it builds itself, one per question. A coding agent on your computer, such as Claude Code, can do that.') ?></p>
+          <p class="text-muted small mb-0"><?= t('Many chat apps, such as the Claude desktop and web app, only open addresses that are already in the chat, so they get stuck after reading the guide. If yours says so, switch to a coding agent.') ?></p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm help-topic-card">
+        <div class="card-body p-3">
+          <h3 class="h6 fw-semibold mb-1"><?= t('Using a browser extension (such as Claude in Chrome)') ?></h3>
+          <p class="text-muted small mb-2"><?= t('Let the extension use this site when it asks, or allow the site in the extension’s settings.') ?></p>
+          <p class="text-muted small mb-0"><?= t('If a “Verify you are human” box appears, click it yourself. Assistants will not answer these checks, so it stops and waits. Once you have passed it, the assistant can carry on.') ?></p>
+        </div>
+      </div>
+    </div>
     <div class="col-md-6">
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">

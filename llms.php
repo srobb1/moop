@@ -49,6 +49,13 @@ echo <<<TXT
 This guide is for an AI assistant working for a person. Use the JSON API below rather than the web
 pages: a gene page is ~0.5 MB of HTML, its record here is a few KB.
 
+Can you use it? You need to open addresses you build yourself (filling in the {organism} and {id}
+parts below) -- for example with curl or a short script. A coding agent on the person's computer (such
+as Claude Code) can. Many chat apps cannot: they only open addresses already in the conversation. If
+that is you, tell the person now, plainly: to work with {$title} they should switch to a coding agent
+such as Claude Code; meanwhile they can paste a full address here, or open the gene page, choose
+Download, save the gene as Markdown and attach it. Do not guess answers in place of the data.
+
 Rules:
 
 - Plain GET requests, no login, no token. JSON unless a link says otherwise (format=md, format=tsv).

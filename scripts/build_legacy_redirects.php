@@ -32,6 +32,7 @@
  *   "nodes":   { "121411": "/page.php?p=faq" },  /node/N, /en/node/N, /es/node/N
  *   "aliases": { "faq": "/page.php?p=faq" },     /faq, /en/faq, /es/faq
  *   "exact":   { "/pub/x.nt": "/tools/downloads.php" },   exact old paths, no language handling
+ *   "prefixes": { "jb_pub": "/jbrowse2.php" },   anything under these goes to that page on this site
  *   "elsewhere": { "feature": "https://simrbase.stowers.org/tools/organism.php?organism=X" },
  *                                                  anything under these goes to ANOTHER site: a fixed
  *                                                  https address (checked before old_prefixes)
@@ -100,6 +101,13 @@ foreach (($t['aliases'] ?? []) as $alias => $target) {
 foreach (($t['exact'] ?? []) as $path => $target) {
     $check($target, "exact $path");
     $lines[] = sprintf('    %-52s %s;', '"~^' . $esc($path) . '$"', $target);
+}
+// Old prefixes whose contents all moved to ONE page here (a paper's data-file folder -> that gene
+// set's Downloads). Checked before old_prefixes, so a longer folder can beat a generic "files".
+foreach (($t['prefixes'] ?? []) as $pre => $target) {
+    $check($target, "prefix $pre");
+    if (!preg_match('#^[a-z0-9_-]+(/[a-z0-9_.-]+)*$#i', $pre)) { fwrite(STDERR, "bad prefix: $pre\n"); exit(1); }
+    $lines[] = sprintf('    %-52s %s;', '"~^/' . $esc($pre) . '(/|$)"', $target);
 }
 // Old prefixes whose pages now live on ANOTHER site (Planosphere's gene pages -> SIMRbase).
 // Still a fixed string: an https address with a plain host, never anything from the request.

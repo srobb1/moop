@@ -54,6 +54,14 @@ function moop_human_check_decision(bool $enabled, bool $logged_in, bool $verifie
     // The challenge page itself, and the way in for people who have an account (login.php has
     // its own brute-force protection).
     if (in_array($script, ['verify-human.php', 'login.php', 'logout.php'], true)) return null;
+    // The Not found page: nginx serves it (error_page 404) for EVERY unknown address -- typically a
+    // first visit from an old link in a paper. A redirect cannot happen inside an error page, so
+    // gating it showed those visitors a blank 404 (2026-11-23). It shows a sentence and a Home button.
+    if ($script === 'not_found.php') return null;
+    // The assistants' guide (llms.txt -> llms.php): the first thing an assistant reads, before it uses
+    // api/v1/. Gated, Claude's own fetcher got a 403 and Claude in Chrome a challenge it will not solve
+    // (both in the request log 2026-11-20), so the open API behind it was unreachable. Static text, cheap.
+    if ($script === 'llms.php') return null;
 
     $path   = parse_url($uri, PHP_URL_PATH) ?? '';
     // The agent API (api/v1/, advertised in llms.txt) is for assistants fetching on one person's

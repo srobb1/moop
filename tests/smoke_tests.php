@@ -3049,6 +3049,11 @@ ok($_hd(true, false, false, 'parent.php', 'GET', '/moop/tools/parent.php', $_htm
 ok($_hd(true, false, false, 'verify-human.php', 'GET', '/moop/verify-human.php', $_html) === null
    && $_hd(true, false, false, 'login.php', 'POST', '/moop/login.php') === null,
    'the challenge page and login are never themselves challenged (no redirect loop; account holders get in)');
+ok($_hd(true, false, false, 'not_found.php', 'GET', '/starletseaanemone/old/link', $_html) === null,
+   'the Not found page (nginx error_page for any unknown address) is never challenged -- it would be a blank 404');
+ok($_hd(true, false, false, 'llms.php', 'GET', '/llms.txt', ['Accept' => '*/*']) === null
+   && $_hd(true, false, false, 'llms.php', 'GET', '/llms.txt', $_html) === null,
+   'the assistants\' guide (llms.txt) is never challenged -- assistants cannot pass the check, and api/v1 needs it first');
 ok($_hd(true, false, false, 'moopmart_export.php', 'GET', '/moop/api/moopmart_export.php', $_html) === 'deny',
    'api/ gets a JSON 403, not a 302 to an HTML page a script cannot follow');
 ok($_hd(true, false, false, 'catalog.php', 'GET', '/moop/api/v1/catalog.php', ['Accept' => '*/*']) === null

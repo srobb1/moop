@@ -134,7 +134,7 @@ Planosphere
 - [ ] **Manage Annotations: 13 saves report success even when the file was not written** (found 11-20) --
       every `saveJsonFile()` in `admin/manage_annotations.php` except the display-label one ignores its
       return value (colour, order, synonyms, ...). The silent-write-failure pattern. Check each, say so. **S**
-- [ ] **"Use this site with an AI assistant" -- make it more prominent** (Sofia 11-20): also put it in
+- [x] DONE (home Getting started has "Ask an AI assistant", checked 11-23). **"Use this site with an AI assistant" -- make it more prominent** (Sofia 11-20): also put it in
       the Tools menu, the menu bar, or on the home page; KEEP it where it is now (footer). Pick which. **S**
 - [ ] **Planosphere "how to curate" tutorial** — rewrite for the new site. **M**
 - [ ] **Text updates Sofia wants** — places on the site (list to add here). **?**
@@ -167,10 +167,63 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
-- [ ] **🔴 Old SIMRbase links cited in papers (11-23):** SIMRbase has NO metadata/legacy_redirects.json (cuttingclass
-      + planosphere do). Find the SIMRbase URLs printed in the Nematostella genome, Endo-Atlas, lamprey and bat papers,
-      test each, build the table (scripts/build_legacy_redirects.php), root installs. **M**
-- [ ] **About page: "About SIMRbase" + "About MOOP" (Sofia, 11-23):** site section = an editable content page shown at
+- [ ] **🔴 Old SIMRbase links cited in papers (11-23) — TABLE BUILT, ROOT TO INSTALL:** metadata/legacy_redirects.json
+      (73 rules: the Drupal dump url_alias table + the System Monitor outside-404 list; all 2,185 old addresses tested -> 301 -> 17 pages, all 200). Tested on a
+      private nginx: every old address -> its page, attack paths 444, MOOP's own paths untouched. Builder gained
+      `prefixes` (old folder -> one page here). **Root install:**
+      1. `php scripts/build_legacy_redirects.php /var/www/html/moop /tmp/moop-legacy` (as smr), then
+         `sudo install -m644 /tmp/moop-legacy/legacy-*.conf /etc/nginx/moop-sites/moop/`
+      2. `/etc/nginx/conf.d/moop-sites.conf`: add `include /etc/nginx/moop-sites/moop/legacy-map.conf;` next to the
+         other two map includes, and `include /etc/nginx/moop-sites/moop/legacy-server.conf;` in the
+         simrbase.stowers.org 443 block right after the add_header lines (before the /moop 308).
+      3. Themed 404 for every unknown address (Sofia 11-23): in EACH of the three 443 server blocks add
+         `error_page 404 /tools/not_found.php;` (server level). PHP's own 404 pages ("Gene not found") still pass
+         through, because php.conf's location sets its own error_page (5xx only). Missing *.php files still show
+         php-fpm's "File not found." -- old Drupal links never end in .php, so left alone.
+      4. `sudo nginx -t && sudo systemctl reload nginx`; check `curl -sI https://simrbase.stowers.org/starletseaanemone`.
+         Then `curl -s https://simrbase.stowers.org/no-such-page | grep -o '<title>[^<]*'` -> Not found — SIMRbase.
+      **Still open:** (a) Endo-Atlas was cited as `http://simrbase.stowers.org:8888/` (He et al. 2023 Curr Biol) —
+      nothing listens on 8888 now; catching it needs an nginx `listen 8888` block returning 301 to
+      /tools/spatial_atlas.php?atlas=endoatlas AND the port opened (firewalld + IT perimeter). (b) Bats (0/48) and
+      killifish are NOT public on MOOP but were on old SIMRbase and are cited — Sofia to decide. (c) Old
+      NV2g.20240221.* files -> NV2 Downloads, but MOOP's genes.gff carries added names/notes, so it is not the
+      cited file byte-for-byte. (d) /analysis/N: only 304/341/342 known; others -> home. Re-check the monitor's
+      404 list in a week and add what shows up. **M**
+- [ ] (PARKED 11-23 -- Sofia chose: llms.txt tells the assistant to send the person to Claude Code; help page says the same) **SIMRbase connector (MCP server) for the Claude app / other chat apps (Sofia, 11-23):** a visitor using Claude
+      desktop (chat, not Code) + Claude in Chrome could not use the API: (1) llms.txt was behind the human check
+      (Claude-User 403 + Chrome 302 in the request log, 11-20) -- FIXED 11-23, llms.php exempt like api/v1;
+      (2) chat-app web fetch only opens addresses already in the conversation, so it cannot fill in the guide's
+      {organism}/{id} templates ("Claude can't write the scripts" without Code). Fix: /mcp endpoint (MCP over
+      streamable HTTP, JSON-RPC) exposing the api/v1 functions as tools (search, gene, annotations, orthologs,
+      sequences, translate, catalog...); later the polite BLAST. Public data only (no login through it at first).
+      Help page + llms.txt: "add the connector" steps. Enterprise plans may need an admin to allow custom
+      connectors (IT). Rate limits: api class. **M-L**
+- [ ] **Agent API: run BLAST politely (Sofia, 11-23):** api/v1 endpoint so an AI agent can submit a BLAST and
+      collect the result -- through the SAME blast_queue.php queue (flock, bounded, never stuck), submit returns a
+      job id + "check back in N s", poll endpoint, small per-client limits (one running job, max query length /
+      sequences / max_target_seqs), results as JSON + Markdown. Document it in llms.txt + help topic ai-assistants.
+      Must sit in rate_limit_heavy (CLAUDE.md bot protection). **M**
+- [ ] **Make the bats public (Sofia, 11-23):** 0 of 48 bat assemblies are public on MOOP, but old SIMRbase had them
+      open, the Bats group text says "all 50 publicly available bat genomes", and the Camacho et al. 2024 links
+      (/bats, /bats/data, /node/2060027) now redirect to the Bats group -- an outside visitor sees an empty list
+      until this is done. Admin -> Groups/Manage Organisms: add PUBLIC (or public: true) to each Bats entry. **S**
+- [ ] **Sofia: review killifish access (11-23):** Nothobranchius furzeri (GCF_043380555.1, RS_2024_12) is not public;
+      old SIMRbase listed killifish as public, and /killifish now redirects to its organism page. Decide. **TALK**
+- [ ] **Copy the original published Nvec files in, for history (Sofia, 11-23):** papers cite
+      /files/pub/nematostella/Nvec/genomes/Nvec200/... (NV2g.20240221.gff/.gff.gz/.transcripts.fa, Nvec200.fasta,
+      kc_isoseq, wien_nvec200_v1, nv2g_blastx_20231129/...). MOOP's NV2 genes.gff has added names/notes, so it is not
+      the cited file. Copy the originals (from $GENOMES / the old server) to a served "published files" place, then
+      change the redirect `prefixes` rule for that folder to point at them instead of the Downloads page. **M**
+- [x] **DONE inside Stowers 11-23 (SELinux http_port_t 8888, firewalld 8888/tcp, /etc/nginx/conf.d/moop-endoatlas-8888.conf; curl -> 301 -> Endo-Atlas 200). LEFT: phone test from outside; if it times out, IT opens 8888 inbound.** **EndoAtlas old address http://simrbase.stowers.org:8888/ (He et al. 2023) (11-23):** a redirect works, but
+      something must ANSWER on 8888 first -- a browser connects to port 8888 directly, so nginx on 80/443 never
+      sees the request. Needs (root): an nginx block
+      `server { listen 8888; listen [::]:8888; server_name simrbase.stowers.org;
+                return 301 https://simrbase.stowers.org/tools/spatial_atlas.php?atlas=endoatlas; }`
+      + SELinux `semanage port -a -t http_port_t -p tcp 8888` (if 8888 is not already an http port)
+      + `firewall-cmd --permanent --add-port=8888/tcp && firewall-cmd --reload`
+      + IT: allow 8888 inbound at the Stowers firewall (it worked before, so it may still be open).
+      Test: `curl -sI http://simrbase.stowers.org:8888/` -> 301. **S** (root + IT)
+- [x] DONE 11-23 (about.php + Admin -> Pages slug "about"; Sukha to confirm the tool list). **About page: "About SIMRbase" + "About MOOP" (Sofia, 11-23):** site section = an editable content page shown at
       the top of the built-in About (each site its own); MOOP section rewritten. SIMRbase: since 2012; easy search,
       sharing with collaborators, published data; one-organism vs related-species searches; pipeline by Sukha Malladi
       (main developer), Eric Ross + Sofia (directors/advisors); naming rule (good RefSeq/Ensembl or curated name kept,
@@ -179,7 +232,7 @@ Planosphere
       Taxonomy, Wikipedia. NOT MAFFT (not used now). Pipeline sources loaded (Nvec DB): InterProScan 5.78, eggNOG-mapper
       / eggNOG 5.0, OMA 2.7, DIAMOND + MMseqs2 RBH vs Ensembl 113 + Swiss-Prot, HGNC, DeepLoc 2.0, DeepTMHMM, SignalP,
       BUSCO, TransDecoder -- Sukha to confirm. **M**
-- [ ] **More news items (11-23):** suggested KEGG (11-14), Endo-Atlas (11-18), search View summary/matches (11-23),
+- [x] DONE 11-23 (4 added). **More news items (11-23):** suggested KEGG (11-14), Endo-Atlas (11-18), search View summary/matches (11-23),
       Expression Explorer (10-22). Admin -> News. **S**
 - [x] **Home page version 2 (11-23):** Getting started + What's new (Admin -> News), opt-in home mode 'panel'.
 - [ ] **Organism page: tidy the "Compare assemblies and gene sets" card (Sofia, 11-23):** the table's
