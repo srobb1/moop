@@ -41,7 +41,7 @@ if (!isset($admin_email) || empty($admin_email)) {
                     <a href="<?= htmlspecialchars(moop_url('tools/feedback.php') . ($_fb_from !== '' ? '?from=' . rawurlencode($_fb_from . (isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] !== '' ? '?' . $_SERVER['QUERY_STRING'] : '')) : '')) ?>">
                         <i class="fas fa-comment-dots"></i> <?= t('Send us a message') . "\n" ?>
                     </a>
-                    <span class="footer-meta">· <a href="mailto:<?= htmlspecialchars($admin_email) ?>"><?= t('or email') ?></a></span>
+                    <span class="footer-meta"><a href="mailto:<?= htmlspecialchars($admin_email) ?>"><?= t('or email') ?></a></span>
                 </p>
                 <?php $_footer_ai = moop_ai_guide(); /* opt-in per site: setting ai_guide */ ?>
                 <?php if ($_footer_ai): ?>

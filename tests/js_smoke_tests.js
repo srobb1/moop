@@ -229,6 +229,31 @@ eq(moopT('No matches found'), 'No matches found', 'catalog removed: English agai
     eq(vis('simple').assembly, true, 'setting removed: shipped defaults again');
 }
 
+// Summary | Matching text (2026-11-23): where the words were found, what a row is, and row order.
+group('Matching text — Found in, row noun, order');
+{
+    const { moopFoundIn, moopRowNoun, moopRowsInSummaryOrder } = sandbox;
+    const row = (desc, annDesc, extra = {}) => Object.assign({ feature_uniquename: 'NV2t1.1', feature_name: '',
+        feature_description: desc, annotation_source_name: 'EggNOG', annotation_accession: 'X1', annotation_description: annDesc }, extra);
+    eq(moopFoundIn(row('forkhead box protein A2-A [SRC|1to1|nvec]', 'FOXA1: forkhead box protein A1'), '"forkhead box protein A2"'), ['Description'],
+       'a quoted phrase must appear as written: FOXA1 is not "forkhead box protein A2" (the 513-row bug)');
+    eq(moopFoundIn(row('forkhead box protein A2-A', 'forkhead box protein A2'), '"forkhead box protein A2"'), ['Description', 'Annotation'],
+       'both places named when both hold the phrase');
+    eq(moopFoundIn(row('unknown', 'Protein kinase domain'), 'kinases'), ['Annotation'], 'one word still finds its stem (kinases -> kinase)');
+    eq(moopFoundIn(row('protein kinase', 'ATP binding'), 'kinase ATP'), ['Description', 'Annotation'],
+       'words split across places: each place holding one is named');
+    eq(moopFoundIn(row('protein kinase', 'protein kinase ATP binding'), 'kinase ATP'), ['Annotation'],
+       'several words: the place holding ALL of them wins over one holding some');
+    eq(moopFoundIn(row('x', 'y'), 'NV2t1.1'), ['Name'], 'an ID search is found in the name/ID');
+    eq(moopFoundIn(row('x', 'y'), ''), [], 'no words: nothing claimed');
+    eq(moopRowNoun([{ feature_type: 'mRNA' }, { feature_type: 'mRNA' }]), ['transcript', 'transcripts'], 'mRNA rows are transcripts');
+    eq(moopRowNoun([{ feature_type: 'gene' }]), ['gene', 'genes'], 'annotations on the gene: rows are genes, never called transcripts');
+    eq(moopRowNoun([{ feature_type: 'mRNA' }, { feature_type: 'gene' }]), ['sequence', 'sequences'], 'mixed: the neutral word');
+    const r = (f, n) => ({ feature_uniquename: f, n });
+    eq(moopRowsInSummaryOrder([r('A', 1), r('B', 2), r('A', 3), r('C', 4), r('B', 5)]).map(x => x.n), [1, 3, 2, 5, 4],
+       'Matching text keeps the Summary order, one block per result, ranking kept inside each');
+}
+
 // ---------------------------------------------------------------------------- report
 console.log('\n' + '-'.repeat(60));
 console.log('JS smoke tests: ' + PASS + ' passed, ' + FAIL + ' failed');

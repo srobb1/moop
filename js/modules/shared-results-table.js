@@ -15,7 +15,7 @@
  *
  * It used to be otherwise, and that is why this exists. The table was hand-written
  * three times — the full table, the "simple" unique-feature table, and a third copy
- * built inline when the user clicks "Expand All Matches" — each with its own <th>
+ * built inline when the user clicks Matching text (once "Expand All Matches") — each with its own <th>
  * block, its own <td> block, its own hardcoded `data-column-index="6"` and its own
  * `columnDefs: [{ targets: 6 }]`. Column identity was POSITIONAL, so inserting a
  * column meant renumbering every column after it, in three copies, by hand. The
@@ -100,6 +100,14 @@ const RESULT_COLUMNS = [
             `<a href="${resultFeatureUrl(ctx, r.feature_uniquename, r)}" target="_blank">${r.feature_uniquename}</a>`
     },
     {
+        // Matching text view: where in this row the search words were found (moopFoundIn()).
+        // Added 2026-11-23: a transcript whose own description matches returns EVERY one of its
+        // annotations (the search index repeats the description on each feature x annotation
+        // row), so most rows match through the description, not the annotation beside it.
+        key: 'found_in', label: moopT('Found in'), width: 140, variants: ['full'],
+        render: (r, ctx) => moopFoundIn(r, ctx.keywords).map(w => escapeHtml(w)).join(', ') || '—'
+    },
+    {
         key: 'name', label: moopT('Name'), width: 180, variants: ['*'],
         render: (r, ctx) => highlightSearchTerms(r.feature_name, ctx.keywords, moopRowHighlightText(r)) || '—'
     },
@@ -123,7 +131,9 @@ const RESULT_COLUMNS = [
         render: (r, ctx) => highlightSearchTerms(r.annotation_description, ctx.keywords, moopRowHighlightText(r)) || ''
     },
     {
-        key: 'matches', label: moopT('Matches'), width: 120, variants: ['simple'],
+        // How many annotation rows the search returned for this row -- not all contain the
+        // words (see found_in), so it is labelled what it is.
+        key: 'matches', label: moopT('Annotations'), width: 120, variants: ['simple'],
         render: (r, ctx, item) =>
             `<span class="badge bg-secondary">${item.annotations ? item.annotations.length : 0}</span>`
     }
@@ -207,14 +217,56 @@ function moopRowHighlightText(r) {
 }
 
 /**
+ * Where a result row's search words were found: any of moopT('Name'), moopT('Description'),
+ * moopT('Annotation'), in that order, or [] when none can be shown (an FTS stem match the
+ * highlighter cannot place). The same test as moopMatchedInNote(): literal, or a stem variant.
+ * Pure: (row, keywords) -> array of translated labels.
+ */
+function moopFoundIn(r, keywords) {
+    const trimmed = String(keywords || '').trim();
+    const terms = /^".+"$/.test(trimmed) ? [trimmed.slice(1, -1)] : moopHighlightableTerms(trimmed);
+    if (!terms.length || !r) return [];
+    // A phrase must appear as written. The stem test trims a term's END until it matches, which is
+    // right for one word (`proteins` -> `protein`) and wrong for a phrase: "forkhead box protein A2"
+    // trimmed to "forkhead box protein A" claimed every FOXA1 annotation (513 of 1,075 rows, found
+    // testing 2026-11-23, when 18 held the phrase).
+    const found = (hay, term) => hay.indexOf(term.toLowerCase()) !== -1
+        || (!/\s/.test(term) && moopTermHighlight(hay, term, false) !== null);
+    const places = [
+        [moopT('Name'),        [r.feature_uniquename, r.feature_name]],
+        [moopT('Description'), [moopStripNamingTag(r.feature_description)]],
+        [moopT('Annotation'),  [r.annotation_accession, r.annotation_description, r.annotation_source_name]],
+    ].map(([label, parts]) => [label, parts.filter(Boolean).join(' \0 ').toLowerCase()]);
+    // Several words: name the places holding ALL of them. When the words are split across places
+    // (one in the description, one in the annotation), name each place holding any of them.
+    const all = places.filter(([, hay]) => hay !== '' && terms.every(t => found(hay, t)));
+    const use = all.length ? all : places.filter(([, hay]) => hay !== '' && terms.some(t => found(hay, t)));
+    return use.map(([label]) => label);
+}
+
+/**
+ * What one Summary row stands for, from the rows' feature_type: 'transcript', 'gene' or
+ * 'sequence' (mixed or unknown). Annotations attach to the mRNA on most organisms but to the
+ * gene on some, so the view's subtitle must not promise "transcript" for a gene row.
+ * Returns [singular, plural], both translated.
+ */
+function moopRowNoun(results) {
+    const types = new Set((results || []).map(r => String(r.feature_type || '').toLowerCase()));
+    const tx = ['mrna', 'transcript', 'ncrna', 'lnc_rna'];
+    if (types.size && [...types].every(t => tx.includes(t))) return [moopT('transcript'), moopT('transcripts')];
+    if (types.size === 1 && types.has('gene'))                 return [moopT('gene'), moopT('genes')];
+    return [moopT('sequence'), moopT('sequences')];
+}
+
+/**
  * "matched in InterPro2GO: GO:0005524 (+3 more)" -- for the SIMPLE view, where a row stands
- * for a feature and its matching annotations are hidden until "Expand All Matches"
+ * for a feature and its matching annotations are hidden until Matching text
  * (tester review N52: an accession search listed 1,965 features and showed the accession
  * nowhere).
  *
  * Shown ONLY when the row's own ID, name and description do not explain the match: a name
  * search ("kinase", "BRCA1") is already highlighted in those cells, and a note on every row
- * would repeat it. One annotation is named, the rest counted; Expand All Matches still shows
+ * would repeat it. One annotation is named, the rest counted; Matching text still shows
  * them all. Pure: (item = { result, annotations }, keywords) -> HTML or ''.
  *
  * Source and accession are escaped here: the search endpoint sends them unescaped (only the
@@ -531,6 +583,17 @@ function groupResultsByFeature(results) {
 }
 
 /**
+ * The rows for Matching text, in the Summary's order: every row of the first result, then the
+ * second, and so on. The search sends rows best-match-first ACROSS results, so one transcript's
+ * rows arrived in several blocks (FoxA2: 7 transcripts in 20 blocks) and switching views looked
+ * like a reshuffle (Sofia, 2026-11-23). Within a result the search's ranking is kept, so the rows
+ * whose annotation itself matched still come first. Pure.
+ */
+function moopRowsInSummaryOrder(results) {
+    return groupResultsByFeature(results || []).flatMap(([, data]) => data.annotations);
+}
+
+/**
  * Creates the 'simple' results table — one row per unique feature, with a match count.
  */
 function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 'tools/parent.php', imageUrl = '', searchKeywords = '') {
@@ -542,6 +605,7 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
     const grouped = groupResultsByFeature(results);
     const items   = grouped.map(([, data]) => ({ result: data.feature, annotations: data.annotations }));
     const uniqueFeatureCount = grouped.length;
+    const noun = moopRowNoun(results);
 
     const html = `
         <div class="organism-results" id="${anchorId}">
@@ -549,25 +613,29 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
                 <span style="display: flex; align-items: center; gap: 0.5rem;">
                     ${organismHeaderHtml(organism, results, sitePath, imageUrl, true)}
                 </span>
-                <span class="badge results_feature_count">${uniqueFeatureCount === 1 ? moopTh('%d feature', 1) : moopTh('%d features', uniqueFeatureCount)}</span>
-                <span class="badge results_annotation_count">${results.length === 1 ? moopTh('%d annotation match', 1) : moopTh('%d annotation matches', results.length)}</span>
-                <button type="button" class="btn btn-sm toggle-view-btn" data-organism="${selectId}" data-view="simple" title="${moopTh('Toggle between simple and detailed view')}" style="margin-left: auto;">
-                    <i class="fa fa-expand"></i> ${moopTh('Expand All Matches')}
-                </button>
+                <span class="badge results_feature_count">${escapeHtml(uniqueFeatureCount.toLocaleString() + ' ' + (uniqueFeatureCount === 1 ? noun[0] : noun[1]))}</span>
+                <span class="badge results_annotation_count">${results.length === 1 ? moopTh('%d annotation', 1) : moopTh('%s annotations', results.length.toLocaleString())}</span>
+                <span class="moop-view-bar">
+                    <span class="moop-view-switch" role="group" aria-label="${moopTh('View results')}" data-organism="${selectId}">
+                        <button type="button" class="btn moop-view-btn active" data-view="simple" aria-pressed="true"
+                                title="${moopTh('One row per %s', noun[0])}">
+                            <i class="fa fa-list" aria-hidden="true"></i> ${moopTh('View summary')}
+                        </button>
+                        <button type="button" class="btn moop-view-btn" data-view="full" aria-pressed="false"
+                                title="${moopTh('One row per annotation, with where your words were found')}">
+                            <i class="fa fa-highlighter" aria-hidden="true"></i> ${moopTh('View matches')}
+                        </button>
+                    </span>
+                    <button type="button" class="btn btn-link p-0 info-icon-btn" data-info-id="info-${selectId}"
+                            aria-controls="info-${selectId}" title="${moopTh('What do these views show?')}" aria-label="${moopTh('What do these views show?')}">
+                        <i class="fa fa-info-circle" aria-hidden="true"></i>
+                    </button>
+                </span>
             </h5>
             <div class="info-box mb-3" id="info-${selectId}" style="display: none; background-color: #d1ecf1; border: 1px solid #bee5eb; border-radius: 0.25rem; padding: 0.75rem 1.25rem;">
-                <p><strong>${moopTh('Simple View:')}</strong> ${moopTh('Displays a unique list of feature/sequence IDs that have matches to your search terms. Providing an overview of all features found without duplication.')}</p>
-
-                <p><strong>${moopTh('What Gets Matched:')}</strong> ${moopTh('Your search terms are matched against:')}</p>
-                <ul style="margin-bottom: 0.5rem;">
-                    <li><strong>${moopTh('Sequence Name:')}</strong> ${moopTh('The name of the sequence')}</li>
-                    <li><strong>${moopTh('Sequence Description:')}</strong> ${moopTh('The description of the sequence')}</li>
-                    <li><strong>${moopTh('Annotations:')}</strong> ${moopTh('Matches from comparative analyses like BLAST, which compare these sequences against sequences in other organisms')}</li>
-                </ul>
-
-                <p style="margin-bottom: 0.5rem;"><strong>${moopTh('Why Different Results:')}</strong> ${moopTh('A feature/sequence may have a name and description different from what matched your search. This means one of its annotations (from analyses like BLAST) matched your search terms, not the sequence name or description itself.')}</p>
-
-                <p style="margin-bottom: 0;"><strong>${moopTh('View All Matches:')}</strong> ${moopTh('Click "Expand All Matches" to see all matching annotations for each sequence. This shows exactly which search terms were found and where they were found (name, description, or specific annotation).')}</p>
+                <p><strong>${moopTh('View summary:')}</strong> ${moopTh('One row for each %s that matched your search, each listed once.', noun[0])}</p>
+                <p><strong>${moopTh('View matches:')}</strong> ${moopTh('One row for each annotation of those results, with your words highlighted. The Found in column says where they were found: the name, the description, or the annotation. When the description matched, every annotation of that result is listed, so related ones (orthologs, domains) can be read too.')}</p>
+                <p style="margin-bottom: 0;"><strong>${moopTh('Where we look:')}</strong> ${moopTh('Your words are searched in each result\'s ID, name and description, and in its annotations — BLAST hits, orthologs, protein domains, GO terms and more. A result can match through an annotation alone; in the summary, a “matched in” line under its description says which.')}</p>
             </div>
             <div class="simple-view-container" data-organism="${selectId}" style="background-color: #f0f8f0; padding: 0.75rem; border-radius: 0.25rem;">
                 <div class="table-responsive" style="overflow-x: auto; width: 100%; background-color: #f0f8f0; border-radius: 0.25rem;">
@@ -594,8 +662,8 @@ function createSimpleResultsTable(organism, results, sitePath, linkBasePath = 't
  * Initialize simple results table with DataTables and toggle functionality
  */
 function initializeSimpleResultsTable(tableId, selectId, organism, results, sitePath, searchKeywords = '', linkBasePath = 'tools/parent.php') {
-    // Wire the toggle first: a failure in the DataTable setup below must not
-    // leave the "Expand All Matches" button without its click handler.
+    // Wire the view switch first: a failure in the DataTable setup below must not
+    // leave Summary | Matching text without its click handlers.
     initializeViewToggle(organism, results, sitePath, selectId, searchKeywords, linkBasePath);
 
     initResultsDataTable('#' + tableId, 'simple', resultsSelectAllId(selectId, 'simple'));
@@ -626,12 +694,13 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
         return;
     }
 
-    const toggleBtn        = parentDiv.querySelector('.toggle-view-btn');
+    const switchEl         = parentDiv.querySelector('.moop-view-switch');
+    const viewBtns         = parentDiv.querySelectorAll('.moop-view-btn');
     const simpleContainer  = parentDiv.querySelector(`.simple-view-container[data-organism="${selectId}"]`);
     const expandedContainer = parentDiv.querySelector(`.expanded-view-container[data-organism="${selectId}"]`);
 
-    if (!toggleBtn || !simpleContainer || !expandedContainer) {
-        console.warn(`initializeViewToggle: missing toggle button or view containers for "${selectId}"`);
+    if (!switchEl || viewBtns.length !== 2 || !simpleContainer || !expandedContainer) {
+        console.warn(`initializeViewToggle: missing view switch or view containers for "${selectId}"`);
         return;
     }
 
@@ -643,13 +712,13 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
 
     // A simple-view row's "(+N more)" (moopMatchedInNote): open the expanded view showing just
     // that feature's matches. Uses the column's own filter box, so the filter is visible and
-    // can be cleared by hand; "Show Simple View" clears it.
+    // can be cleared by hand; "Summary" clears it.
     parentDiv.addEventListener('click', (e) => {
         const link = e.target.closest('.moop-matched-more');
         if (!link || !simpleContainer.contains(link)) return;
         e.preventDefault();
         const id = link.dataset.feature || '';
-        if (expandedContainer.style.display === 'none') toggleBtn.click();
+        if (expandedContainer.style.display === 'none') showView('full');
         let tries = 60;   // the expanded table is built and initialised just after the toggle
         (function apply() {
             const table = expandedContainer.querySelector('table');
@@ -661,16 +730,15 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
             input.value = id;
             $(input).trigger('change');
             noteFilter = id;
-            // The toggle button, centred: "Show Simple View" (the way back) stays in sight, the
-            // filtered rows just below it. 'nearest' left the button under the sticky navbar.
-            toggleBtn.scrollIntoView({ block: 'center' });
+            // The switch, centred: "Summary" (the way back) stays in sight, the filtered rows
+            // just below it. 'nearest' left it under the sticky navbar.
+            switchEl.scrollIntoView({ block: 'center' });
         })();
     });
 
-    toggleBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-
-        if (expandedContainer.style.display === 'none') {
+    // Summary | Matching text (2026-11-23; was one "Expand All Matches" / "Show Simple View" toggle).
+    function showView(view) {
+        if (view === 'full') {
             if (expandedContainer.querySelector('table') === null) {
                 const tableId = 'resultsTable_' + organism.replace(/[^a-zA-Z0-9]/g, '_');
                 const ctx     = { sitePath, linkBasePath, organism, keywords: searchKeywords };
@@ -679,7 +747,7 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
                     <div class="table-responsive" style="overflow-x: auto; width: 100%;">
                         <table id="${tableId}" class="table table-sm table-striped table-hover results-table">
                             ${buildResultsThead('full', resultsSelectAllId(selectId, 'expanded'))}
-                            ${buildResultsTbody('full', resultItems(results), ctx)}
+                            ${buildResultsTbody('full', resultItems(moopRowsInSummaryOrder(results)), ctx)}
                         </table>
                     </div>`;
 
@@ -689,13 +757,11 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
             }
             simpleContainer.style.display = 'none';
             expandedContainer.style.display = 'block';
-            toggleBtn.innerHTML = '<i class="fa fa-compress"></i> ' + moopTh('Show Simple View');
         } else {
             simpleContainer.style.display = 'block';
             expandedContainer.style.display = 'none';
-            toggleBtn.innerHTML = '<i class="fa fa-expand"></i> ' + moopTh('Expand All Matches');
             // Leave nothing behind: a filter set by "(+N more)" would otherwise greet the next
-            // "Expand All Matches" with one feature and no reason why. One the reader typed stays.
+            // visit to Matching text with one feature and no reason why. One the reader typed stays.
             const input = featureFilterInput();
             if (noteFilter !== null && input && input.value === noteFilter) {
                 input.value = '';
@@ -703,5 +769,14 @@ function initializeViewToggle(organism, results, sitePath, selectId, searchKeywo
             }
             noteFilter = null;
         }
-    });
+        viewBtns.forEach(btn => {
+            const on = btn.dataset.view === view;
+            btn.classList.toggle('active', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+    }
+    viewBtns.forEach(btn => btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!btn.classList.contains('active')) showView(btn.dataset.view);
+    }));
 }

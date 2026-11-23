@@ -30,20 +30,15 @@ echo help_modal(
             'heading' => 'Reading your results',
             'cards'   => [
                 [
-                    'label' => 'Feature count',
-                    'text'  => 'How many unique sequences matched — genes, mRNAs or proteins. '
-                             . 'Each one is a single row in Simple view.',
+                    'label' => 'The two counts',
+                    'text'  => 'The first badge counts the transcripts (or genes) that matched — the rows in '
+                             . 'View summary. The second counts the annotations shown in View matches.',
                 ],
                 [
-                    'label' => 'Annotation match count',
-                    'text'  => 'How many annotations matched. A feature with three matching '
-                             . 'annotations adds three, which is why this number is usually the '
-                             . 'larger of the two.',
-                ],
-                [
-                    'label' => 'Why the two differ',
-                    'text'  => 'Find 5 genes where one has 3 matching annotations and another has '
-                             . '2, and you see 5 features and 7 annotation matches.',
+                    'label' => 'Why the second is so much larger',
+                    'text'  => 'When a transcript\'s own name or description matches, ALL of its annotations '
+                             . 'are listed, not only those containing your words, so related ones (orthologs, '
+                             . 'domains) can be read too. Found in tells the two kinds apart.',
                 ],
                 [
                     'label' => 'Result limit',
@@ -80,8 +75,8 @@ echo help_modal(
             'cards'   => [
                 [
                     'label' => 'Sorted by significance',
-                    'text'  => 'By default the best matches come first: name and description '
-                             . 'matches rank above annotation matches, exact above partial, and '
+                    'text'  => 'By default the best matches come first: matches in a name or description '
+                             . 'rank above matches in an annotation, exact above partial, and '
                              . 'the start of a word above the middle of one.',
                 ],
                 [
@@ -95,17 +90,16 @@ echo help_modal(
             'heading' => 'Seeing more detail',
             'cards'   => [
                 [
-                    'label' => 'Simple view',
-                    'text'  => 'One row per matching feature — what matched, with nothing repeated.',
+                    'label' => 'View summary',
+                    'text'  => 'One row per matching transcript (or gene), each listed once. Where its '
+                             . 'own name and description do not show why it matched, a "matched in" line '
+                             . 'names the annotation that did.',
                 ],
                 [
-                    'label' => 'Expanded view',
-                    'text'  => 'Every matching annotation for each feature, with your search terms '
-                             . 'highlighted so you can see why it matched.',
-                ],
-                [
-                    'label' => 'Expand all matches',
-                    'text'  => 'Opens every row at once, rather than one at a time.',
+                    'label' => 'View matches',
+                    'text'  => 'Every annotation of those results, in the same order, with your words '
+                             . 'highlighted. The Found in column says where they were found: the name, '
+                             . 'the description, or the annotation itself.',
                 ],
                 [
                     'label' => 'Open the full record',

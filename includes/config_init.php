@@ -126,12 +126,13 @@ function moop_result_columns(): array {
         'assembly'    => ['Assembly', true, 'all'],
         'gene_set'    => ['Gene Set', false, 'all'],
         'type'        => ['Type', false, 'all'],
+        'found_in'    => ['Found in', true, 'View matches'],
         'name'        => ['Name', true, 'all'],
         'description' => ['Description', true, 'all'],
-        'ann_source'  => ['Annotation Source', true, 'one row per annotation'],
-        'ann_id'      => ['Annotation ID', true, 'one row per annotation'],
-        'ann_desc'    => ['Annotation Description', true, 'one row per annotation'],
-        'matches'     => ['Matches', true, 'one row per gene'],
+        'ann_source'  => ['Annotation Source', true, 'View matches'],
+        'ann_id'      => ['Annotation ID', true, 'View matches'],
+        'ann_desc'    => ['Annotation Description', true, 'View matches'],
+        'matches'     => ['Annotations', true, 'View summary'],
     ];
 }
 

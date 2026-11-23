@@ -210,15 +210,22 @@ A search box is found at the top of every group, organism, and assembly page. Se
 - Shows percentage of searches completed (e.g., if searching 4 organism databases and 1 is complete: 25% (1/4) completed)
 
 **Result summary:**
-Once complete, you'll see:
-- Total number of features found across all searched organisms
-- Count of annotations matched
-- Breakdown by organism (if searching a group)
+Once complete, you'll see, for each organism:
+- How many transcripts (or genes) matched, and how many annotations they carry
+- A breakdown by organism (if searching a group)
+
+**Two views** (buttons at the right of each organism's heading; the (i) beside them explains both):
+
+- **View summary** (the default) - one row per matching transcript or gene. When its own name and
+  description do not show why it matched, a "matched in" line names the annotation that did.
+- **View matches** - every annotation of those results, in the same order, with your words
+  highlighted. The **Found in** column says where they were found: the name, the description, or
+  the annotation. When a transcript's description matches, all its annotations are listed, so this
+  count is usually much larger than the number of transcripts.
 
 **Exploring results:**
 
 - **Jump to organism** - click to view results from a specific organism in the group
-- **Expand details** - click to see detailed annotation information with search terms highlighted
 - **View sequences** - click a feature to see its full sequence and location
 
 ### Managing Results

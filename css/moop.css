@@ -24,6 +24,28 @@
   background-color: #67e8f9 !important;
 }
 
+/* Search results: View summary | View matches (js/modules/shared-results-table.js, 2026-11-23).
+   Two real buttons, right-aligned in the organism heading; the chosen one is filled. What each
+   shows is in its tooltip and in the (i) box -- the buttons themselves stay short. */
+.moop-view-bar { margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; }
+.moop-view-switch { display: inline-flex; gap: 0.5rem; }
+.moop-view-switch .moop-view-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.35rem 0.9rem; font-size: 0.9rem; font-weight: 600; line-height: 1.2;
+  border: 1px solid var(--moop-tool-header); border-radius: 8px;
+  color: var(--moop-main-dark); background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.moop-view-switch .moop-view-btn:hover { background: rgba(var(--moop-main-rgb), 0.08); }
+.moop-view-switch .moop-view-btn.active {
+  background: var(--moop-tool-header); color: #fff; box-shadow: 0 2px 6px rgba(var(--moop-main-rgb), 0.35);
+}
+.moop-view-switch .moop-view-btn:focus-visible { outline: 2px solid var(--moop-main-dark); outline-offset: 2px; }
+@media (max-width: 576px) {
+  .moop-view-bar { margin-left: 0; width: 100%; }
+  .moop-view-switch { flex: 1; }
+  .moop-view-switch .moop-view-btn { flex: 1 1 50%; justify-content: center; }
+}
+
 /* ========== TOOL-PAGE PALETTE ==========
    The six colours the public tool pages actually use, in ONE place.
    
@@ -1126,3 +1148,8 @@ footer .footer-meta {
   border-bottom-left-radius: inherit;
   border-bottom-right-radius: inherit;
 }
+
+/* Content pages (Admin -> Manage Pages): a picture is never wider than the page. Markdown images
+   carry no class, so a full-width screenshot overflowed sideways, on a phone too (the tour, 2026-11-23).
+   Only shrinks an image that would overflow; a small one keeps its size. */
+.content-page-body img { max-width: 100%; height: auto; }
