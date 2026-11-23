@@ -102,3 +102,15 @@
 .sysmon-mix > div { min-width: 4px; }
 .sysmon-mix > div:first-child { border-radius: 4px 0 0 4px; }
 .sysmon-mix > div:last-child { border-radius: 0 4px 4px 0; }
+
+/* The three views: a summary box each, which is also the way in */
+.sysmon-views { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .75rem; }
+.sysmon-view { display: block; border: 1px solid var(--bs-border-color, #dee2e6); border-radius: .5rem; padding: .6rem .9rem;
+               text-decoration: none; color: inherit; background: var(--bs-body-bg, #fff); }
+.sysmon-view:hover { border-color: var(--sm-series); background: var(--sm-series-wash); }
+.sysmon-view.active { border: 2px solid var(--sm-series); background: var(--sm-series-wash); padding: calc(.6rem - 1px) calc(.9rem - 1px); }
+.sysmon-view-title { display: block; font-weight: 600; }
+.sysmon-view-line { display: block; font-size: .85rem; color: var(--bs-secondary-color, #6c757d); }
+
+.sysmon-rec-why > summary { cursor: pointer; list-style-position: outside; }
+.sysmon-rec-why[open] > summary { margin-bottom: .25rem; }

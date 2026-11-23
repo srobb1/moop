@@ -30,7 +30,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <?= help_modal_trigger('sysmon-guide', 'How this page works') ?>
   </div>
   <p class="text-muted mb-3">
-    What the server is doing: resources, traffic, the heaviest pages and who is using them.
+    Who is using the site and what they look for, what keeps bots out, and how the server is coping.
     <?php if ($collector_ok): ?>
       Last sample <?= (int) $age ?> s ago.
     <?php endif; ?>
@@ -57,33 +57,16 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     </div>
   <?php endif; ?>
 
-  <!-- One filter row, above everything it scopes -->
+  <!-- One filter row, above everything it scopes (the view is kept) -->
   <div class="sysmon-filters mb-3" role="group" aria-label="Time range">
-    <a class="btn btn-sm <?= $range === '24h' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?range=24h">Last 24 hours</a>
-    <a class="btn btn-sm <?= $range === '7d' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?range=7d">Last 7 days</a>
-    <a class="btn btn-sm <?= $range === '30d' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?range=30d">Last 30 days</a>
+    <a class="btn btn-sm <?= $range === '24h' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?view=<?= $h($view) ?>&amp;range=24h">Last 24 hours</a>
+    <a class="btn btn-sm <?= $range === '7d' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?view=<?= $h($view) ?>&amp;range=7d">Last 7 days</a>
+    <a class="btn btn-sm <?= $range === '30d' ? 'btn-primary' : 'btn-outline-primary' ?>" href="?view=<?= $h($view) ?>&amp;range=30d">Last 30 days</a>
     <?php if ($range === '30d' && $days_covered !== null && $days_covered < 30): ?>
       <span class="small text-muted align-self-center">Page and visitor figures cover <?= (int) $days_covered ?> day(s) so far — the log started 2026-10-28.</span>
     <?php endif; ?>
   </div>
 
-  <!-- Right now -->
-  <?php if ($tiles): ?>
-  <h2 class="h6 text-muted mb-2">Right now <span class="fw-normal">— the latest one-minute sample (CPU: average over that
-    minute; the rest: at that moment). Averages and peaks are in the charts and under Capacity.</span></h2>
-  <div class="sysmon-tiles mb-4">
-    <?php foreach ($tiles as $t): ?>
-      <div class="sysmon-tile">
-        <div class="sysmon-tile-label"><?= $h($t['label']) ?> <?= $sysmon_i(strpos($t['label'], 'Disk filling') === 0 ? 'Data disk used' : $t['label']) ?></div>
-        <div class="sysmon-tile-value"><?= $h($t['value']) ?></div>
-        <div class="sysmon-tile-sub"><?= $h($t['sub']) ?></div>
-        <div class="sysmon-status sysmon-<?= $h($t['level']) ?>">
-          <i class="fa fa-<?= $level_icon[$t['level']] ?>" aria-hidden="true"></i> <?= $level_word[$t['level']] ?>
-        </div>
-      </div>
-    <?php endforeach; ?>
-  </div>
-  <?php endif; ?>
 
   <?php if (($pages['skipped'] ?? 0) > 0): ?>
     <div class="alert alert-warning small">
@@ -98,81 +81,6 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
   <?php if ($flash): ?>
     <div class="alert <?= $flash[0] === 'ok' ? 'alert-success' : 'alert-danger' ?>"><?= $h($flash[1]) ?></div>
   <?php endif; ?>
-
-  <!-- Recommendations: what to act on, most serious first -->
-  <?php
-    $worst = $recs ? $recs[0]['level'] : null;
-    $rec_head = $worst === 'critical' ? 'adm-head-danger' : ($worst === 'warning' ? 'adm-head-warn' : 'adm-head');
-  ?>
-  <div class="card adm-card mb-4" id="sysmon-recs">
-    <div class="card-header <?= $rec_head ?>"><h5 class="mb-0">Recommendations <?= $sysmon_i('recs') ?></h5></div>
-    <div class="card-body">
-      <?php if (!$recs): ?>
-        <span class="sysmon-status sysmon-good"><i class="fa fa-check-circle" aria-hidden="true"></i> Nothing to act on.</span>
-        <span class="small text-muted">Resources, workers, errors and rate-limit settings all look fine for the <?= $span ?>
-          (pages judged on the last 7 days).</span>
-      <?php else: ?>
-        <ul class="list-unstyled mb-0 sysmon-recs">
-        <?php foreach ($recs as $r): ?>
-          <li class="sysmon-rec">
-            <div class="sysmon-status sysmon-<?= $h($r['level']) ?>">
-              <i class="fa fa-<?= $level_icon[$r['level']] ?? 'info-circle' ?>" aria-hidden="true"></i>
-              <?= $r['level'] === 'critical' ? 'Act now' : ($r['level'] === 'warning' ? 'Worth doing' : 'Note') ?>
-            </div>
-            <div class="sysmon-rec-body">
-              <strong><?= $h($r['title']) ?></strong>
-              <div class="small text-muted"><?= $h($r['detail']) ?></div>
-              <?php if (($r['action']['type'] ?? '') === 'heavy_add'): ?>
-                <form method="post" action="system_monitor.php<?= $range !== '24h' ? '?range=' . $h($range) : '' ?>" class="mt-1">
-                  <?= csrf_input_field() ?>
-                  <input type="hidden" name="action" value="heavy_add">
-                  <input type="hidden" name="script" value="<?= $h($r['action']['script']) ?>">
-                  <button type="submit" class="btn btn-sm btn-outline-primary">Add to heavy group</button>
-                </form>
-              <?php endif; ?>
-            </div>
-          </li>
-        <?php endforeach; ?>
-        </ul>
-      <?php endif; ?>
-    </div>
-  </div>
-
-  <!-- Charts: one measure each (never two y-axes) -->
-  <div class="card adm-card mb-4">
-    <div class="card-header adm-head"><h5 class="mb-0">Over the <?= $span ?> <?= $sysmon_i('charts') ?></h5></div>
-    <div class="card-body">
-      <div class="sysmon-charts">
-        <figure class="sysmon-chart" data-key="cpu" data-unit="%" data-max="100">
-          <figcaption>CPU used</figcaption><div class="sysmon-plot"></div>
-        </figure>
-        <figure class="sysmon-chart" data-key="mem" data-unit="%" data-max="100">
-          <figcaption>Memory used</figcaption><div class="sysmon-plot"></div>
-        </figure>
-        <figure class="sysmon-chart" data-key="req" data-unit=" requests">
-          <figcaption>Requests per <?= $per ?></figcaption><div class="sysmon-plot"></div>
-        </figure>
-        <figure class="sysmon-chart" data-key="fpm" data-unit=" busy"<?= $max_children ? ' data-max="' . (int) $max_children . '"' : '' ?>>
-          <figcaption>PHP workers busy<?= $max_children ? ' (of ' . (int) $max_children . ')' : '' ?></figcaption><div class="sysmon-plot"></div>
-        </figure>
-        <figure class="sysmon-chart" data-key="iowait" data-unit="%">
-          <figcaption>Waiting on disk (iowait) — high means cold database reads</figcaption><div class="sysmon-plot"></div>
-        </figure>
-        <figure class="sysmon-chart" data-key="dread" data-unit=" MB/s">
-          <figcaption>Reads from the database disk</figcaption><div class="sysmon-plot"></div>
-        </figure>
-        <figure class="sysmon-chart" data-key="s429" data-unit=" refused">
-          <figcaption>Requests refused by rate limits (429) per <?= $per ?></figcaption><div class="sysmon-plot"></div>
-        </figure>
-      </div>
-      <details class="mt-2">
-        <summary class="small text-muted">Show these numbers as a table</summary>
-        <div class="sysmon-table-wrap"><table class="table table-sm sysmon-num" id="sysmon-series-table"></table></div>
-      </details>
-    </div>
-  </div>
-
-  <!-- Who got in: allowed vs turned away, and who the people were -->
   <?php
     $g = ($visitors['gate'] ?? []) + ['people' => 0, 'search' => 0, 'agents' => 0, 'turned_away' => 0, 'challenge' => 0, 'other' => 0];
     $s429 = (int) ($traffic['s429'] ?? 0);
@@ -195,47 +103,93 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
              . number_format($num) . '</div><div class="small">' . $h($label) . '</div><div class="small text-muted">' . $h($sub) . '</div></div></div>';
     };
   ?>
-  <div class="card adm-card my-4" id="sysmon-gate">
-    <div class="card-header adm-head"><h5 class="mb-0">Who got in, <?= $span ?> <?= $sysmon_i('gate') ?></h5></div>
-    <div class="card-body">
-      <p class="mb-3">
-        <span class="fs-3 fw-semibold"><?= $all_req ? round(100 * $refused / $all_req) : 0 ?>%</span>
-        of requests were turned away — <strong><?= number_format($refused) ?></strong> refused,
-        <strong><?= number_format($let_in) ?></strong> let in.
-        <span class="small text-muted d-block">Requests to MOOP's pages, from outside this server. Static files (styles, scripts, images) are not counted.</span>
-      </p>
-      <h6 class="mb-2">Let in</h6>
-      <div class="row g-2 mb-3">
-        <?= $tile($g['people'], 'By people', 'public, collaborators, admins, institute') ?>
-        <?= $tile($g['search'], 'Search engines', 'Google, Bing, DuckDuckGo — verified') ?>
-        <?= $tile($g['agents'], 'Agent API', 'AI assistants and scripts (api/v1)') ?>
-        <?php if ($g['other']): ?><?= $tile($g['other'], 'Anonymous, unchecked', 'the login page, and everything before the human check went on (19–20 Nov)') ?><?php endif; ?>
-      </div>
-      <h6 class="mb-2">Turned away</h6>
-      <div class="row g-2 mb-3">
-        <?= $tile($g['turned_away'], 'By the human check', 'from ' . number_format(count($visitors['away_ips'] ?? [])) . ' addresses') ?>
-        <?= $tile($g['challenge'], 'Challenge never solved', '“are you human” page shown') ?>
-        <?= $tile($s429, 'Rate limits', 'refused by the web server before MOOP') ?>
-      </div>
 
-      <h6 class="mb-1">The people: <?= number_format($mix_total) ?></h6>
-      <?php if ($mix_total): ?>
-      <div class="sysmon-mix mb-2" role="img" aria-label="<?= $h(implode(', ', array_map(fn($k) => $mix[$k] . ' ' . $mix_meta[$k][0], array_keys($mix)))) ?>">
-        <?php foreach ($mix as $k => $n): if (!$n) continue; ?>
-          <div style="flex-grow: <?= $n ?>; background: <?= $mix_meta[$k][1] ?>" title="<?= $h($mix_meta[$k][0]) ?>: <?= $n ?> (<?= round(100 * $n / $mix_total) ?>%)"></div>
+  <!-- Three views, each summarised in one line; the box is also the way in -->
+  <?php
+    $worst_tile = 'good';
+    foreach ($tiles as $t) { if (array_search($t['level'], ['good', 'unknown', 'warning', 'critical']) > array_search($worst_tile, ['good', 'unknown', 'warning', 'critical'])) $worst_tile = $t['level']; }
+    $n_people = count($visitors['people'] ?? []);
+    $n_outside = count(array_filter($visitors['people'] ?? [], fn($p) => $p['kind'] === 'human'));
+    $views = [
+        'visitors'   => ['Visitors & use', 'fa-users', number_format($n_people) . ' people (' . number_format($n_outside) . ' from outside) · '
+                          . number_format(count($misses)) . ' search' . (count($misses) === 1 ? '' : 'es') . ' found nothing'],
+        'protection' => ['Protection', 'fa-shield-alt', ($all_req ? round(100 * $refused / $all_req) : 0) . '% of requests turned away · '
+                          . number_format($s429) . ' rate-limited'],
+        'server'     => ['Server health', 'fa-server', ($tiles ? ($level_word[$worst_tile] ?? 'OK') . ' right now' : 'no collector data')
+                          . ' · ' . (($n_act = count(array_filter($recs, fn($r) => $r['level'] === 'critical'))) ? $n_act . ' to act on now, ' : '')
+                          . count(array_filter($recs, fn($r) => $r['level'] !== 'critical')) . ' worth doing'],
+    ];
+  ?>
+  <nav class="sysmon-views mb-4" aria-label="System Monitor sections">
+    <?php foreach ($views as $k => [$label, $icon, $line]): ?>
+      <a class="sysmon-view<?= $view === $k ? ' active' : '' ?>" href="?view=<?= $k ?>&amp;range=<?= $h($range) ?>"<?= $view === $k ? ' aria-current="page"' : '' ?>>
+        <span class="sysmon-view-title"><i class="fa <?= $icon ?> me-1" aria-hidden="true"></i><?= $h($label) ?></span>
+        <span class="sysmon-view-line"><?= $h($line) ?></span>
+      </a>
+    <?php endforeach; ?>
+  </nav>
+
+  <!-- Needs attention: errors real people met, then recommendations, most serious first -->
+      <?php $perrs = $visitors['errors'] ?? []; if ($perrs): ?>
+        <div class="alert alert-danger small" role="alert">
+          <strong><i class="fa fa-times-circle" aria-hidden="true"></i> Real people hit <?= count($perrs) ?> server error<?= count($perrs) === 1 ? '' : 's' ?> <?= $span ?>.</strong>
+          These are visitors who passed the human check, signed-in users or the institute network — not scrapers.
+          The full error is in Admin → Error Logs and the php-fpm log.
+          <ul class="mb-0 mt-1">
+            <?php foreach (array_slice($perrs, 0, 8) as $e): ?>
+              <li><?= date('M j, H:i', (int) $e['ts']) ?> — <code><?= $h($e['script']) ?></code> (<?= (int) $e['status'] ?>),
+                <?= $h(strpos($e['who'], 'user:') === 0 ? substr($e['who'], 5) : $e['who']) ?>
+                <?php if ($e['params'] !== ''): ?><small class="text-muted"><?= $h(mb_strimwidth($e['params'], 0, 120, '…')) ?></small><?php endif; ?></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
+
+
+  <!-- Recommendations: what to act on, most serious first -->
+  <?php
+    $worst = $recs ? $recs[0]['level'] : null;
+    $rec_head = $worst === 'critical' ? 'adm-head-danger' : ($worst === 'warning' ? 'adm-head-warn' : 'adm-head');
+  ?>
+  <div class="card adm-card mb-4" id="sysmon-recs">
+    <div class="card-header <?= $rec_head ?>"><h5 class="mb-0">Needs attention <?= $sysmon_i('recs') ?></h5></div>
+    <div class="card-body">
+      <?php if (!$recs): ?>
+        <span class="sysmon-status sysmon-good"><i class="fa fa-check-circle" aria-hidden="true"></i> Nothing to act on.</span>
+        <span class="small text-muted">Resources, workers, errors and rate-limit settings all look fine for the <?= $span ?>
+          (pages judged on the last 7 days).</span>
+      <?php else: ?>
+        <ul class="list-unstyled mb-0 sysmon-recs">
+        <?php foreach ($recs as $r): ?>
+          <li class="sysmon-rec">
+            <div class="sysmon-status sysmon-<?= $h($r['level']) ?>">
+              <i class="fa fa-<?= $level_icon[$r['level']] ?? 'info-circle' ?>" aria-hidden="true"></i>
+              <?= $r['level'] === 'critical' ? 'Act now' : ($r['level'] === 'warning' ? 'Worth doing' : 'Note') ?>
+            </div>
+            <div class="sysmon-rec-body">
+              <details class="sysmon-rec-why">
+                <summary><strong><?= $h($r['title']) ?></strong> <span class="small text-muted ms-1">Why</span></summary>
+                <div class="small text-muted"><?= $h($r['detail']) ?></div>
+              </details>
+              <?php if (($r['action']['type'] ?? '') === 'heavy_add'): ?>
+                <form method="post" action="system_monitor.php?view=<?= $h($view) ?>&amp;range=<?= $h($range) ?>" class="mt-1">
+                  <?= csrf_input_field() ?>
+                  <input type="hidden" name="action" value="heavy_add">
+                  <input type="hidden" name="script" value="<?= $h($r['action']['script']) ?>">
+                  <button type="submit" class="btn btn-sm btn-outline-primary">Add to heavy group</button>
+                </form>
+              <?php endif; ?>
+            </div>
+          </li>
         <?php endforeach; ?>
-      </div>
-      <div class="d-flex flex-wrap gap-3 small">
-        <?php foreach ($mix as $k => $n): ?>
-          <span><span class="sysmon-swatch" style="background: <?= $mix_meta[$k][1] ?>"></span>
-            <strong><?= $h($mix_meta[$k][0]) ?></strong> <?= number_format($n) ?> (<?= $mix_total ? round(100 * $n / $mix_total) : 0 ?>%)
-            <span class="text-muted"><?= $h($mix_meta[$k][2]) ?></span></span>
-        <?php endforeach; ?>
-      </div>
-      <?php else: ?><p class="small text-muted">No people in this period.</p><?php endif; ?>
+        </ul>
+      <?php endif; ?>
     </div>
   </div>
 
+
+
+  <?php if ($view === 'visitors'): ?>
   <!-- Visitors: people, not programs (lib/request_metrics.php moop_metrics_visitors) -->
   <?php
     $people   = $visitors['people'] ?? [];
@@ -265,20 +219,6 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
         not visitors and are left out; search engines are listed separately. <?= moop_geoip_attribution() ?>
         <?php if (!moop_geoip_built_at()): ?><br><span class="text-danger">No location database yet — run <code>php scripts/update_geoip.php</code> (housekeeping also fetches it monthly).</span><?php endif; ?>
       </p>
-      <?php $perrs = $visitors['errors'] ?? []; if ($perrs): ?>
-        <div class="alert alert-danger small" role="alert">
-          <strong><i class="fa fa-times-circle" aria-hidden="true"></i> Real people hit <?= count($perrs) ?> server error<?= count($perrs) === 1 ? '' : 's' ?> <?= $span ?>.</strong>
-          These are visitors who passed the human check, signed-in users or the institute network — not scrapers.
-          The full error is in Admin → Error Logs and the php-fpm log.
-          <ul class="mb-0 mt-1">
-            <?php foreach (array_slice($perrs, 0, 8) as $e): ?>
-              <li><?= date('M j, H:i', (int) $e['ts']) ?> — <code><?= $h($e['script']) ?></code> (<?= (int) $e['status'] ?>),
-                <?= $h(strpos($e['who'], 'user:') === 0 ? substr($e['who'], 5) : $e['who']) ?>
-                <?php if ($e['params'] !== ''): ?><small class="text-muted"><?= $h(mb_strimwidth($e['params'], 0, 120, '…')) ?></small><?php endif; ?></li>
-            <?php endforeach; ?>
-          </ul>
-        </div>
-      <?php endif; ?>
       <?php
         $pd_max = max(1, ...array_map(fn($k) => array_sum($k), array_values($people_daily) ?: [[0]]));
         $pd_colors = ['human' => 'var(--sm-series)', 'user' => '#7c3aed', 'internal' => '#94a3b8'];
@@ -303,6 +243,22 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
           </div>
         <?php endforeach; ?>
       </div>
+
+      <h6 class="mb-1 mt-2">Who the people were: <?= number_format($mix_total) ?></h6>
+      <?php if ($mix_total): ?>
+      <div class="sysmon-mix mb-2" role="img" aria-label="<?= $h(implode(', ', array_map(fn($k) => $mix[$k] . ' ' . $mix_meta[$k][0], array_keys($mix)))) ?>">
+        <?php foreach ($mix as $k => $n): if (!$n) continue; ?>
+          <div style="flex-grow: <?= $n ?>; background: <?= $mix_meta[$k][1] ?>" title="<?= $h($mix_meta[$k][0]) ?>: <?= $n ?> (<?= round(100 * $n / $mix_total) ?>%)"></div>
+        <?php endforeach; ?>
+      </div>
+      <div class="d-flex flex-wrap gap-3 small">
+        <?php foreach ($mix as $k => $n): ?>
+          <span><span class="sysmon-swatch" style="background: <?= $mix_meta[$k][1] ?>"></span>
+            <strong><?= $h($mix_meta[$k][0]) ?></strong> <?= number_format($n) ?> (<?= $mix_total ? round(100 * $n / $mix_total) : 0 ?>%)
+            <span class="text-muted"><?= $h($mix_meta[$k][2]) ?></span></span>
+        <?php endforeach; ?>
+      </div>
+      <?php else: ?><p class="small text-muted">No people in this period.</p><?php endif; ?>
 
       <div class="row g-3 mb-3 text-center">
         <?php foreach ([
@@ -398,7 +354,7 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     <div class="card-body">
       <p class="small text-muted">
         <strong><?= number_format($vs['visits']) ?></strong> visits by <?= $visits_all ? 'everyone (outside visitors, signed-in users and the institute network)' : 'outside visitors' ?>
-        (<a href="?range=<?= $h($range) ?>&amp;visits=<?= $visits_all ? 'outside' : 'all' ?>#sysmon-visits"><?= $visits_all ? 'outside visitors only' : 'include staff and signed-in users' ?></a>) ·
+        (<a href="?view=visitors&amp;range=<?= $h($range) ?>&amp;visits=<?= $visits_all ? 'outside' : 'all' ?>#sysmon-visits"><?= $visits_all ? 'outside visitors only' : 'include staff and signed-in users' ?></a>) ·
         typical visit <?= $fmt_s($vs['median_visit_s']) ?> ·
         <?= $vs['visits'] ? round(100 * $vs['one_page'] / $vs['visits']) : 0 ?>% saw only one page.
         A visit ends after 30 minutes with no new page. Time on a page = until the next page opened, so the LAST page of each
@@ -463,6 +419,168 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     </div>
   </div>
 
+
+  <!-- What people looked for and did not find, and how they arrived -->
+  <?php
+    $nf_rows = $traffic['not_found'] ?? [];
+    arsort($nf_rows);
+    $refs = $visitors['referrers'] ?? [];
+    uasort($refs, fn($a, $b) => count($b['people']) <=> count($a['people']) ?: $b['n'] <=> $a['n']);
+    $miss_words = [];
+    foreach ($misses as $m) { $k = mb_strtolower($m['words']); $miss_words[$k]['n'] = ($miss_words[$k]['n'] ?? 0) + 1; $miss_words[$k]['last'] = max($miss_words[$k]['last'] ?? 0, $m['ts']); $miss_words[$k]['words'] = $m['words']; $miss_words[$k]['who'][$m['who']] = true; $miss_words[$k]['maps_to'] = ($miss_words[$k]['maps_to'] ?? false) || $m['maps_to']; }
+    uasort($miss_words, fn($a, $b) => $b['n'] <=> $a['n'] ?: $b['last'] <=> $a['last']);
+  ?>
+  <div class="card adm-card my-4" id="sysmon-find">
+    <div class="card-header adm-head"><h5 class="mb-0">What people could not find, and how they arrived, <?= $span ?> <?= $sysmon_i('find') ?></h5></div>
+    <div class="card-body">
+      <ul class="nav nav-tabs" role="tablist">
+        <?php foreach (['misses' => 'Searches with no results (' . count($misses) . ')', 'refs' => 'How people arrived (' . count($refs) . ' sites)',
+                        'nf' => 'Outside links that 404 (' . count($nf_rows) . ')'] as $k => $label): ?>
+          <li class="nav-item" role="presentation"><button class="nav-link<?= $k === 'misses' ? ' active' : '' ?>" data-bs-toggle="tab" data-bs-target="#sysmon-find-<?= $k ?>" type="button" role="tab"><?= $h($label) ?></button></li>
+        <?php endforeach; ?>
+      </ul>
+      <div class="tab-content pt-3">
+        <div class="tab-pane fade show active" id="sysmon-find-misses" role="tabpanel">
+          <p class="small text-muted">Annotation searches that found nothing in any organism searched — the clearest sign of a gene name,
+            ID style or organism people expect and the site does not have. Only searches with <em>no</em> results are recorded (words
+            included), kept 30 days, admins only. Recorded from 23 Nov 2026.</p>
+          <?php if (!$miss_words): ?><p class="small text-muted mb-0">None in this period.</p><?php else: ?>
+          <div class="table-responsive"><table class="table table-sm table-hover sysmon-vis-dt" data-order-col="1">
+            <thead><tr><th>Searched for</th><th class="text-end">Times</th><th class="text-end">People</th><th>Last</th><th>Note</th></tr></thead>
+            <tbody>
+            <?php foreach ($miss_words as $w): ?>
+              <tr><td><code><?= $h($w['words']) ?></code></td><td class="text-end"><?= (int) $w['n'] ?></td><td class="text-end"><?= count($w['who']) ?></td>
+                  <td data-order="<?= (int) $w['last'] ?>"><small><?= date('M j, H:i', (int) $w['last']) ?></small></td>
+                  <td><small class="text-muted"><?= $w['maps_to'] ? 'the ID translator knew it (shown as “maps to”)' : '' ?></small></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table></div>
+          <?php endif; ?>
+        </div>
+        <div class="tab-pane fade" id="sysmon-find-refs" role="tabpanel">
+          <p class="small text-muted">Other sites whose links brought people here (a search engine, a paper, a course page, Planosphere…),
+            and the pages people landed on. Browsers often send only the site name, not the exact page. Recorded from 23 Nov 2026.</p>
+          <?php if (!$refs): ?><p class="small text-muted mb-0">None in this period.</p><?php else: ?>
+          <div class="table-responsive"><table class="table table-sm table-hover sysmon-vis-dt">
+            <thead><tr><th>From</th><th class="text-end">People</th><th class="text-end">Arrivals</th><th>Landed on</th><th>Linking pages</th></tr></thead>
+            <tbody>
+            <?php foreach ($refs as $host => $r): arsort($r['landed']); arsort($r['pages']); ?>
+              <tr><td><?= $h($host) ?></td><td class="text-end"><?= count($r['people']) ?></td><td class="text-end"><?= (int) $r['n'] ?></td>
+                  <td class="small"><?= $h(implode(', ', array_map(fn($l, $n) => "$l ($n)", array_keys(array_slice($r['landed'], 0, 4, true)), array_slice($r['landed'], 0, 4, true)))) ?></td>
+                  <td class="small text-muted"><?= $h(implode(', ', array_slice(array_keys($r['pages']), 0, 3))) ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table></div>
+          <?php endif; ?>
+        </div>
+        <div class="tab-pane fade" id="sysmon-find-nf" role="tabpanel">
+          <p class="small text-muted">Addresses on this server that outside visitors asked for and that do not exist, with the page that
+            linked them — old Tripal addresses from papers and bookmarks show up here, and each is a candidate for a redirect. Probes
+            for things the site never had (wp-login.php, .env) are bots and can be ignored. From the web server's log, so all sites
+            on this server are together.</p>
+          <?php if (!$nf_rows): ?>
+            <p class="small text-muted mb-0"><?= $nf_measured ? 'None in this period.' : 'Not collected yet: root needs to re-run the collector install once, then it fills in within a minute:' ?></p>
+            <?php if (!$nf_measured): ?><?= adm_command('sudo ' . ConfigManager::getInstance()->getPath('site_path') . '/scripts/install_monitor.sh') ?><?php endif; ?>
+          <?php else: ?>
+          <div class="table-responsive"><table class="table table-sm table-hover sysmon-vis-dt" data-order-col="2">
+            <thead><tr><th>Missing address</th><th>Linked from</th><th class="text-end">Times</th></tr></thead>
+            <tbody>
+            <?php foreach (array_slice($nf_rows, 0, 300, true) as $k => $n): [$path, $ref] = explode("\t", $k, 2) + ['', '']; ?>
+              <tr><td><code><?= $h($path) ?></code></td><td class="small"><?= $ref !== '' ? $h($ref) : '<span class="text-muted">no link (typed, bookmark, or a bot)</span>' ?></td>
+                  <td class="text-end"><?= number_format($n) ?></td></tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table></div>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- What people use: organisms, assemblies, gene sets -->
+  <?php
+    $vis = $range === '30d' ? 'visitor-days' : 'visitors';
+    $usage_table = function (array $rows, string $label) use ($h, $vis) {
+        uasort($rows, fn($a, $b) => ($b['in'] + $b['out']) <=> ($a['in'] + $a['out']));
+        $rows = array_slice($rows, 0, 15, true);
+        ob_start(); ?>
+        <table class="table table-sm sysmon-num mb-0">
+          <thead>
+            <tr><th rowspan="2"><?= $h($label) ?></th><th colspan="2" class="text-center">Internal</th><th colspan="2" class="text-center">Public</th></tr>
+            <tr><th class="text-end">Requests</th><th class="text-end"><?= ucfirst($vis) ?></th><th class="text-end">Requests</th><th class="text-end"><?= ucfirst($vis) ?></th></tr>
+          </thead>
+          <tbody>
+          <?php foreach ($rows as $name => $c): ?>
+            <?php $parts = explode('/', $name); $parts[0] = str_replace('_', ' ', $parts[0]); /* organism only: accessions keep their underscores */ ?>
+            <tr><td><?= $h(implode(' / ', $parts)) ?></td>
+              <td class="text-end"><?= number_format($c['in']) ?></td><td class="text-end"><?= number_format($c['in_v']) ?></td>
+              <td class="text-end"><?= number_format($c['out']) ?></td><td class="text-end"><?= number_format($c['out_v']) ?></td></tr>
+          <?php endforeach; ?>
+          <?php if (!$rows): ?><tr><td colspan="5" class="text-muted">Nothing recorded yet.</td></tr><?php endif; ?>
+          </tbody>
+        </table>
+        <?php return ob_get_clean();
+    };
+  ?>
+  <div class="card adm-card my-4" id="sysmon-usage">
+    <div class="card-header adm-head"><h5 class="mb-0">What people use, <?= $span ?> <?= $sysmon_i('usage') ?></h5></div>
+    <div class="card-body">
+      <p class="small text-muted">Which organisms, assemblies and gene sets people open, search, BLAST and download — top 15 of
+        each. <em>Internal</em> = your own people (institute network, VPN, and collaborators who log in);
+        <em>public</em> = everyone else. <?= $range === '30d'
+          ? 'Over 30 days, visitors are counted per day (someone who came on 3 days counts 3).'
+          : 'Visitors are distinct people or addresses, so one busy visitor or crawler cannot make something look popular.' ?>
+        Search words are never recorded — only which organisms a search covered.</p>
+      <ul class="nav nav-tabs" role="tablist">
+        <?php $tabs = ['view' => 'Viewed', 'search' => 'Searched', 'blast' => 'BLAST', 'download' => 'Downloaded']; $first = true; ?>
+        <?php foreach ($tabs as $k => $label): ?>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link<?= $first ? ' active' : '' ?>" data-bs-toggle="tab" data-bs-target="#sysmon-usage-<?= $k ?>" type="button" role="tab"><?= $label ?></button>
+          </li>
+        <?php $first = false; endforeach; ?>
+      </ul>
+      <div class="tab-content pt-3">
+        <?php $first = true; foreach ($tabs as $k => $label): ?>
+          <div class="tab-pane fade<?= $first ? ' show active' : '' ?>" id="sysmon-usage-<?= $k ?>" role="tabpanel">
+            <div class="row g-4">
+              <div class="col-12 sysmon-usage-table"><div class="table-responsive"><?= $usage_table($usage[$k]['organism'] ?? [], 'Organism') ?></div></div>
+              <?php if ($k !== 'search'): ?>
+              <div class="col-12 sysmon-usage-table"><div class="table-responsive"><?= $usage_table($usage[$k]['assembly'] ?? [], 'Assembly') ?></div></div>
+              <div class="col-12 sysmon-usage-table"><div class="table-responsive"><?= $usage_table($usage[$k]['gene_set'] ?? [], 'Gene set') ?></div></div>
+              <?php endif; ?>
+            </div>
+          </div>
+        <?php $first = false; endforeach; ?>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data nobody used (moop_monitor_unused_data), always 30 days -->
+  <?php $unused_none = array_filter($unused, fn($r) => $r['org_in'] + $r['org_out'] === 0);
+        $unused_inonly = array_filter($unused, fn($r) => $r['org_out'] === 0 && $r['org_in'] > 0 && $r['public']); ?>
+  <div class="card adm-card my-4" id="sysmon-unused">
+    <div class="card-header adm-head"><h5 class="mb-0">Data use by gene set, last 30 days <?= $sysmon_i('unused') ?></h5></div>
+    <div class="card-body">
+      <p class="small text-muted">
+        Every gene set on the site and how many visitor-days used its organism and the gene set itself (viewed, searched,
+        BLASTed or downloaded). Least used first. <strong><?= count(array_unique(array_column($unused_none, 'organism'))) ?></strong>
+        organisms were not used at all; <strong><?= count(array_unique(array_column($unused_inonly, 'organism'))) ?></strong> public
+        organisms were used only from inside. Unused is not wrong — it is a list to check: is it findable, current, still needed?
+      </p>
+      <div class="table-responsive"><table class="table table-sm table-hover sysmon-num sysmon-vis-dt" data-order-col="-1">
+        <thead><tr><th>Organism</th><th>Assembly</th><th>Gene set</th><th>Public</th><th class="text-end">Organism: outside</th><th class="text-end">Organism: inside</th><th class="text-end">Gene set: outside</th><th class="text-end">Gene set: inside</th></tr></thead>
+        <tbody>
+        <?php foreach ($unused as $r): ?>
+          <tr><td><i><?= $h(str_replace('_', ' ', $r['organism'])) ?></i></td><td><small><?= $h($r['assembly']) ?></small></td><td><small><?= $h($r['gene_set']) ?></small></td>
+              <td><small><?= $r['public'] ? 'Yes' : 'No' ?></small></td>
+              <td class="text-end"><?= (int) $r['org_out'] ?></td><td class="text-end"><?= (int) $r['org_in'] ?></td>
+              <td class="text-end"><?= (int) $r['gs_out'] ?></td><td class="text-end"><?= (int) $r['gs_in'] ?></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
   <!-- AI assistants and scripts using the agent API (api/v1/, llms.txt) -->
   <?php $ag = $visitors['agents'] ?? []; ?>
   <div class="card adm-card my-4" id="sysmon-agents">
@@ -509,29 +627,30 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     </div>
   </div>
 
-  <!-- Data nobody used (moop_monitor_unused_data), always 30 days -->
-  <?php $unused_none = array_filter($unused, fn($r) => $r['org_in'] + $r['org_out'] === 0);
-        $unused_inonly = array_filter($unused, fn($r) => $r['org_out'] === 0 && $r['org_in'] > 0 && $r['public']); ?>
-  <div class="card adm-card my-4" id="sysmon-unused">
-    <div class="card-header adm-head"><h5 class="mb-0">Data use by gene set, last 30 days <?= $sysmon_i('unused') ?></h5></div>
+  <?php elseif ($view === 'protection'): ?>
+  <div class="card adm-card my-4" id="sysmon-gate">
+    <div class="card-header adm-head"><h5 class="mb-0">Who got in, <?= $span ?> <?= $sysmon_i('gate') ?></h5></div>
     <div class="card-body">
-      <p class="small text-muted">
-        Every gene set on the site and how many visitor-days used its organism and the gene set itself (viewed, searched,
-        BLASTed or downloaded). Least used first. <strong><?= count(array_unique(array_column($unused_none, 'organism'))) ?></strong>
-        organisms were not used at all; <strong><?= count(array_unique(array_column($unused_inonly, 'organism'))) ?></strong> public
-        organisms were used only from inside. Unused is not wrong — it is a list to check: is it findable, current, still needed?
+      <p class="mb-3">
+        <span class="fs-3 fw-semibold"><?= $all_req ? round(100 * $refused / $all_req) : 0 ?>%</span>
+        of requests were turned away — <strong><?= number_format($refused) ?></strong> refused,
+        <strong><?= number_format($let_in) ?></strong> let in.
+        <span class="small text-muted d-block">Requests to MOOP's pages, from outside this server. Static files (styles, scripts, images) are not counted.</span>
       </p>
-      <div class="table-responsive"><table class="table table-sm table-hover sysmon-num sysmon-vis-dt" data-order-col="-1">
-        <thead><tr><th>Organism</th><th>Assembly</th><th>Gene set</th><th>Public</th><th class="text-end">Organism: outside</th><th class="text-end">Organism: inside</th><th class="text-end">Gene set: outside</th><th class="text-end">Gene set: inside</th></tr></thead>
-        <tbody>
-        <?php foreach ($unused as $r): ?>
-          <tr><td><i><?= $h(str_replace('_', ' ', $r['organism'])) ?></i></td><td><small><?= $h($r['assembly']) ?></small></td><td><small><?= $h($r['gene_set']) ?></small></td>
-              <td><small><?= $r['public'] ? 'Yes' : 'No' ?></small></td>
-              <td class="text-end"><?= (int) $r['org_out'] ?></td><td class="text-end"><?= (int) $r['org_in'] ?></td>
-              <td class="text-end"><?= (int) $r['gs_out'] ?></td><td class="text-end"><?= (int) $r['gs_in'] ?></td></tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table></div>
+      <h6 class="mb-2">Let in</h6>
+      <div class="row g-2 mb-3">
+        <?= $tile($g['people'], 'By people', 'public, collaborators, admins, institute') ?>
+        <?= $tile($g['search'], 'Search engines', 'Google, Bing, DuckDuckGo — verified') ?>
+        <?= $tile($g['agents'], 'Agent API', 'AI assistants and scripts (api/v1)') ?>
+        <?php if ($g['other']): ?><?= $tile($g['other'], 'Anonymous, unchecked', 'the login page, and everything before the human check went on (19–20 Nov)') ?><?php endif; ?>
+      </div>
+      <h6 class="mb-2">Turned away</h6>
+      <div class="row g-2 mb-3">
+        <?= $tile($g['turned_away'], 'By the human check', 'from ' . number_format(count($visitors['away_ips'] ?? [])) . ' addresses') ?>
+        <?= $tile($g['challenge'], 'Challenge never solved', '“are you human” page shown') ?>
+        <?= $tile($s429, 'Rate limits', 'refused by the web server before MOOP') ?>
+      </div>
+
     </div>
   </div>
 
@@ -615,60 +734,155 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     </div>
   </div>
 
-  <!-- What people use: organisms, assemblies, gene sets -->
-  <?php
-    $vis = $range === '30d' ? 'visitor-days' : 'visitors';
-    $usage_table = function (array $rows, string $label) use ($h, $vis) {
-        uasort($rows, fn($a, $b) => ($b['in'] + $b['out']) <=> ($a['in'] + $a['out']));
-        $rows = array_slice($rows, 0, 15, true);
-        ob_start(); ?>
-        <table class="table table-sm sysmon-num mb-0">
-          <thead>
-            <tr><th rowspan="2"><?= $h($label) ?></th><th colspan="2" class="text-center">Internal</th><th colspan="2" class="text-center">Public</th></tr>
-            <tr><th class="text-end">Requests</th><th class="text-end"><?= ucfirst($vis) ?></th><th class="text-end">Requests</th><th class="text-end"><?= ucfirst($vis) ?></th></tr>
-          </thead>
-          <tbody>
-          <?php foreach ($rows as $name => $c): ?>
-            <?php $parts = explode('/', $name); $parts[0] = str_replace('_', ' ', $parts[0]); /* organism only: accessions keep their underscores */ ?>
-            <tr><td><?= $h(implode(' / ', $parts)) ?></td>
-              <td class="text-end"><?= number_format($c['in']) ?></td><td class="text-end"><?= number_format($c['in_v']) ?></td>
-              <td class="text-end"><?= number_format($c['out']) ?></td><td class="text-end"><?= number_format($c['out_v']) ?></td></tr>
-          <?php endforeach; ?>
-          <?php if (!$rows): ?><tr><td colspan="5" class="text-muted">Nothing recorded yet.</td></tr><?php endif; ?>
-          </tbody>
-        </table>
-        <?php return ob_get_clean();
-    };
-  ?>
-  <div class="card adm-card my-4" id="sysmon-usage">
-    <div class="card-header adm-head"><h5 class="mb-0">What people use, <?= $span ?> <?= $sysmon_i('usage') ?></h5></div>
+  <!-- Heavy group -->
+  <div class="card adm-card mb-4" id="sysmon-heavy">
+    <div class="card-header adm-head"><h5 class="mb-0">Heavy group (strictest rate limit) <?= $sysmon_i('heavy') ?></h5></div>
     <div class="card-body">
-      <p class="small text-muted">Which organisms, assemblies and gene sets people open, search, BLAST and download — top 15 of
-        each. <em>Internal</em> = your own people (institute network, VPN, and collaborators who log in);
-        <em>public</em> = everyone else. <?= $range === '30d'
-          ? 'Over 30 days, visitors are counted per day (someone who came on 3 days counts 3).'
-          : 'Visitors are distinct people or addresses, so one busy visitor or crawler cannot make something look popular.' ?>
-        Search words are never recorded — only which organisms a search covered.</p>
-      <ul class="nav nav-tabs" role="tablist">
-        <?php $tabs = ['view' => 'Viewed', 'search' => 'Searched', 'blast' => 'BLAST', 'download' => 'Downloaded']; $first = true; ?>
-        <?php foreach ($tabs as $k => $label): ?>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link<?= $first ? ' active' : '' ?>" data-bs-toggle="tab" data-bs-target="#sysmon-usage-<?= $k ?>" type="button" role="tab"><?= $label ?></button>
-          </li>
-        <?php $first = false; endforeach; ?>
-      </ul>
-      <div class="tab-content pt-3">
-        <?php $first = true; foreach ($tabs as $k => $label): ?>
-          <div class="tab-pane fade<?= $first ? ' show active' : '' ?>" id="sysmon-usage-<?= $k ?>" role="tabpanel">
-            <div class="row g-4">
-              <div class="col-12 sysmon-usage-table"><div class="table-responsive"><?= $usage_table($usage[$k]['organism'] ?? [], 'Organism') ?></div></div>
-              <?php if ($k !== 'search'): ?>
-              <div class="col-12 sysmon-usage-table"><div class="table-responsive"><?= $usage_table($usage[$k]['assembly'] ?? [], 'Assembly') ?></div></div>
-              <div class="col-12 sysmon-usage-table"><div class="table-responsive"><?= $usage_table($usage[$k]['gene_set'] ?? [], 'Gene set') ?></div></div>
-              <?php endif; ?>
-            </div>
-          </div>
-        <?php $first = false; endforeach; ?>
+      <p class="small text-muted">Exports, downloads and other expensive scripts: one address may run these at most 20 times a
+        minute (burst 10, 3 at once). Changes reach nginx within a minute; nothing to re-run.
+        Recommendations above suggest additions from what pages measurably cost.</p>
+      <div class="sysmon-heavy-list">
+        <?php foreach ($heavy as $s): ?>
+          <form method="post" action="system_monitor.php<?= $range !== '24h' ? '?range=' . $h($range) : '' ?>" class="sysmon-heavy-item">
+            <?= csrf_input_field() ?>
+            <input type="hidden" name="action" value="heavy_remove">
+            <input type="hidden" name="script" value="<?= $h($s) ?>">
+            <code><?= $h($s) ?></code>
+            <button type="submit" class="btn btn-link btn-sm p-0 ms-1 text-muted" title="Remove from the heavy group"
+                    aria-label="Remove <?= $h($s) ?> from the heavy group"><i class="fa fa-times" aria-hidden="true"></i></button>
+          </form>
+        <?php endforeach; ?>
+        <?php if (!$heavy): ?><span class="small text-muted">Empty — every script gets the ordinary page or AJAX limit.</span><?php endif; ?>
+      </div>
+    </div>
+  </div>
+
+  <!-- nginx rate-limit sync -->
+  <?php if ($sync): ?>
+  <div class="card adm-card mb-5">
+    <div class="card-header <?= ($sync['state'] ?? '') === 'error' ? 'adm-head-danger' : 'adm-head' ?>"><h5 class="mb-0">Rate-limit settings <?= $sysmon_i('sync') ?></h5></div>
+    <div class="card-body small">
+      <?php $st = $sync['state'] ?? 'unknown'; $lv = $st === 'in_sync' ? 'good' : ($st === 'error' ? 'critical' : 'warning'); ?>
+      <span class="sysmon-status sysmon-<?= $lv ?>"><i class="fa fa-<?= $level_icon[$lv] ?>" aria-hidden="true"></i>
+        <?= $st === 'in_sync' ? 'In step with MOOP' : ($st === 'error' ? 'Not applied' : 'Waiting') ?></span>
+      — <?= $h($sync['message'] ?? '') ?>.
+      <?php if (!empty($sync['ranges'])): ?><br>Never limited (auto-login ranges): <?= $h($sync['ranges']) ?><?php endif; ?>
+      <?php if (!empty($sync['changed'])): ?><br>Last changed <?= date('Y-m-d H:i', (int) $sync['changed']) ?>.<?php endif; ?>
+      <br>Change the ranges in <a href="manage_site_config.php">Site Configuration</a>; nginx follows within a minute.
+    </div>
+  </div>
+  <?php endif; ?>
+  <?php else: ?>
+  <!-- Right now -->
+  <?php if ($tiles): ?>
+  <h2 class="h6 text-muted mb-2">Right now <span class="fw-normal">— the latest one-minute sample (CPU: average over that
+    minute; the rest: at that moment). Averages and peaks are in the charts and under Capacity.</span></h2>
+  <div class="sysmon-tiles mb-4">
+    <?php foreach ($tiles as $t): ?>
+      <div class="sysmon-tile">
+        <div class="sysmon-tile-label"><?= $h($t['label']) ?> <?= $sysmon_i(strpos($t['label'], 'Disk filling') === 0 ? 'Data disk used' : $t['label']) ?></div>
+        <div class="sysmon-tile-value"><?= $h($t['value']) ?></div>
+        <div class="sysmon-tile-sub"><?= $h($t['sub']) ?></div>
+        <div class="sysmon-status sysmon-<?= $h($t['level']) ?>">
+          <i class="fa fa-<?= $level_icon[$t['level']] ?>" aria-hidden="true"></i> <?= $level_word[$t['level']] ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+  <!-- Charts: one measure each (never two y-axes) -->
+  <div class="card adm-card mb-4">
+    <div class="card-header adm-head"><h5 class="mb-0">Over the <?= $span ?> <?= $sysmon_i('charts') ?></h5></div>
+    <div class="card-body">
+      <div class="sysmon-charts">
+        <figure class="sysmon-chart" data-key="cpu" data-unit="%" data-max="100">
+          <figcaption>CPU used</figcaption><div class="sysmon-plot"></div>
+        </figure>
+        <figure class="sysmon-chart" data-key="mem" data-unit="%" data-max="100">
+          <figcaption>Memory used</figcaption><div class="sysmon-plot"></div>
+        </figure>
+        <figure class="sysmon-chart" data-key="req" data-unit=" requests">
+          <figcaption>Requests per <?= $per ?></figcaption><div class="sysmon-plot"></div>
+        </figure>
+        <figure class="sysmon-chart" data-key="fpm" data-unit=" busy"<?= $max_children ? ' data-max="' . (int) $max_children . '"' : '' ?>>
+          <figcaption>PHP workers busy<?= $max_children ? ' (of ' . (int) $max_children . ')' : '' ?></figcaption><div class="sysmon-plot"></div>
+        </figure>
+        <figure class="sysmon-chart" data-key="iowait" data-unit="%">
+          <figcaption>Waiting on disk (iowait) — high means cold database reads</figcaption><div class="sysmon-plot"></div>
+        </figure>
+        <figure class="sysmon-chart" data-key="dread" data-unit=" MB/s">
+          <figcaption>Reads from the database disk</figcaption><div class="sysmon-plot"></div>
+        </figure>
+        <figure class="sysmon-chart" data-key="s429" data-unit=" refused">
+          <figcaption>Requests refused by rate limits (429) per <?= $per ?></figcaption><div class="sysmon-plot"></div>
+        </figure>
+      </div>
+      <details class="mt-2">
+        <summary class="small text-muted">Show these numbers as a table</summary>
+        <div class="sysmon-table-wrap"><table class="table table-sm sysmon-num" id="sysmon-series-table"></table></div>
+      </details>
+    </div>
+  </div>
+
+  <!-- Capacity: when to add RAM or CPUs, and PHP workers -->
+  <div class="card adm-card mb-4" id="sysmon-capacity">
+    <div class="card-header adm-head"><h5 class="mb-0">Capacity — RAM, CPUs and PHP workers <?= $sysmon_i('capacity') ?></h5></div>
+    <div class="card-body">
+      <?php if ($cap['samples'] < 60 || ($pages['requests'] ?? 0) < 500): ?>
+        <p class="small text-muted"><i class="fa fa-info-circle" aria-hidden="true"></i>
+          These figures firm up after a few days of real use — so far <?= number_format($cap['samples']) ?> samples and
+          <?= number_format($pages['requests']) ?> logged requests in this window.</p>
+      <?php endif; ?>
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <table class="table table-sm sysmon-num mb-0">
+            <tbody>
+              <tr><th>CPU, average / peak</th><td class="text-end"><?= $h($cap['cpu_avg'] ?? '—') ?>% / <?= $h($cap['cpu_peak'] ?? '—') ?>%</td></tr>
+              <tr><th>Share of time CPU was above 80%</th><td class="text-end"><?= $h($cap['cpu_busy_share'] ?? '—') ?>%</td></tr>
+              <tr><th>Memory, peak used</th><td class="text-end"><?= $h($cap['mem_peak'] ?? '—') ?>% of <?= round($cap['total_mb'] / 1024, 1) ?> GB</td></tr>
+              <tr><th>Swap, peak</th><td class="text-end"><?= (int) $cap['swap_peak_mb'] ?> MB</td></tr>
+              <tr><th>Waiting on disk (iowait), average / peak</th><td class="text-end"><?= $h($cap['iowait_avg'] ?? '—') ?>% / <?= $h($cap['iowait_peak'] ?? '—') ?>%</td></tr>
+              <tr><th>Databases / RAM caching files</th><td class="text-end"><?= isset($now['db_total_mb']) ? round($now['db_total_mb'] / 1024, 1) . ' GB / ' . round($now['cache_mb'] / 1024, 1) . ' GB' : '—' ?></td></tr>
+              <tr><th>Requests that went cold</th><td class="text-end"><?= ($pages['io']['measured'] ?? 0) ? round(100 * $pages['io']['cold'] / $pages['io']['measured']) . '%' : '—' ?></td></tr>
+              <tr><th>Times every PHP worker was busy</th><td class="text-end"><?= (int) $cap['workers_reached'] ?></td></tr>
+              <tr><th>Memory per busy worker (typical-heavy request + worker)</th><td class="text-end"><?= $h($cap['per_worker_mb']) ?> MB</td></tr>
+              <tr><th>PHP workers allowed now (pm.max_children)</th><td class="text-end"><?= $max_children ?? '—' ?></td></tr>
+              <tr><th>…if all were busy at once, PHP would need</th><td class="text-end"><?= $cap['php_worst_mb'] !== null ? round($cap['php_worst_mb'] / 1024, 1) . ' GB' : '—' ?></td></tr>
+              <?php foreach (moop_monitor_disks($now['disks'] ?? []) as $d): ?>
+              <tr><th>Disk: <?= $h($d['label']) ?> <span class="fw-normal small text-muted d-block"><?= $h($d['role']) ?></span></th>
+                <td class="text-end"><?= $h($d['used_pct']) ?>% · <?= $h($d['free_gb']) ?> GB free of <?= $h($d['size_gb']) ?></td></tr>
+              <?php endforeach; ?>
+              <tr><th>Workers that fit in 60% of RAM</th><td class="text-end"><?= $cap['suggested_max_children'] ?? '—' ?></td></tr>
+              <tr><th>Largest single request seen</th><td class="text-end"><?= $h($cap['largest_mb']) ?> MB</td></tr>
+              <tr><td colspan="2" class="small text-muted">The estimate uses a typical-heavy request (95th percentile), not the
+                largest. Many large exports at once would need more — the heavy group's limit of 3 at once per address is what
+                keeps that in check.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="col-lg-6 small">
+          <h6>When is it time to add…</h6>
+          <ul>
+            <li><strong>RAM</strong> — many requests going cold with high disk wait (the databases no longer fit in the cache), memory
+              regularly above ~85–90% used, <em>any</em> swapping, or “every PHP worker busy”
+              while RAM has no room for more workers. RAM runs out first on this server (capacity test, 2026-10-23), and it
+              also holds the page cache that keeps the databases fast, so it is the usual first upgrade.</li>
+            <li><strong>CPUs</strong> — CPU above 80% for long stretches (not short spikes), while memory is fine. Check the
+              busiest addresses first: a crawler can look exactly like “we need more CPUs”.</li>
+            <li><strong>PHP workers</strong> — “every PHP worker busy” keeps appearing <em>and</em> the row above says more
+              workers fit in RAM.</li>
+          </ul>
+          <h6>How to change the number of PHP workers</h6>
+          <ol>
+            <li>Edit <code>/etc/php-fpm.d/www.conf</code> (as root) and set <code>pm.max_children</code>. Keep it at or below
+              “workers that fit in 60% of RAM”.</li>
+            <li>Check and apply (a reload finishes the requests in progress; nobody is cut off):
+              <?= adm_command('sudo php-fpm -t && sudo systemctl reload php-fpm') ?></li>
+            <li>Come back here after a few days: “every PHP worker busy” should fall to 0 without memory climbing.</li>
+          </ol>
+          <p class="mb-0 text-muted">More workers only help if the server has the memory for them; past that point they make
+            things worse, because the server starts swapping.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -709,45 +923,11 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     </div>
   </div>
 
-  <!-- Databases: warm or cold -->
-  <?php $io = $pages['io'] ?? ['measured' => 0, 'cold' => 0, 'disk_kb' => 0]; ?>
-  <div class="card adm-card mb-4" id="sysmon-warmcold">
-    <div class="card-header adm-head"><h5 class="mb-0">Databases: warm or cold, <?= $span ?> <?= $sysmon_i('warmcold') ?></h5></div>
-    <div class="card-body">
-      <p class="small text-muted">A request is <em>warm</em> when everything it needed was already in RAM, and <em>cold</em> when it
-        had to read from disk (more than <?= MOOP_METRICS_COLD_KB ?> KB). Cold requests are the slow ones on this site. The
-        organisms below are where the disk reads go: together they are the part of the
-        <?= isset($now['db_total_mb']) ? round($now['db_total_mb'] / 1024, 1) . ' GB of databases' : 'databases' ?> that people
-        actually use — the <em>working set</em> — and that is what the RAM cache
-        (<?= isset($now['cache_mb']) ? round($now['cache_mb'] / 1024, 1) . ' GB now' : '—' ?>) has to hold for the site to stay warm.</p>
-      <?php if ($io['measured'] > 0): ?>
-        <?php $cold_pct = round(100 * $io['cold'] / $io['measured']); ?>
-        <p class="mb-2">Of <?= number_format($io['measured']) ?> requests: <strong><?= 100 - $cold_pct ?>% warm</strong>,
-          <strong><?= $cold_pct ?>% cold</strong> · <?= moop_monitor_fmt_bytes($io['disk_kb'] * 1024) ?> read from disk in total.</p>
-        <div class="table-responsive sysmon-usage-table">
-        <table class="table table-sm sysmon-num mb-0">
-          <thead><tr><th>Organism</th><th class="text-end">Requests</th><th class="text-end">Warm (from RAM)</th><th class="text-end">Cold (from disk)</th><th class="text-end">Read from disk</th></tr></thead>
-          <tbody>
-          <?php foreach (array_slice($pages['by_org_disk'] ?? [], 0, 20, true) as $org => $o): ?>
-            <tr><td><?= $h(str_replace('_', ' ', $org)) ?></td><td class="text-end"><?= number_format($o['requests']) ?></td>
-              <?php $cp = round(100 * $o['cold'] / max(1, $o['requests'])); ?>
-              <td class="text-end"><?= 100 - $cp ?>%</td><td class="text-end"><?= $cp ?>%</td>
-              <td class="text-end"><?= moop_monitor_fmt_bytes($o['disk_kb'] * 1024) ?></td></tr>
-          <?php endforeach; ?>
-          </tbody>
-        </table>
-        </div>
-      <?php else: ?>
-        <p class="small text-muted mb-0">No measurements yet in this window (recorded from 2026-10-28).</p>
-      <?php endif; ?>
-    </div>
-  </div>
-
   <div class="row g-4 mb-4">
     <!-- Who -->
     <div class="col-12">
       <div class="card adm-card h-100">
-        <div class="card-header adm-head"><h5 class="mb-0">Who, <?= $span ?> <?= $sysmon_i('who') ?></h5></div>
+        <div class="card-header adm-head"><h5 class="mb-0">Heaviest users of the server, <?= $span ?> <?= $sysmon_i('who') ?></h5></div>
         <div class="card-body">
           <p class="small text-muted">Logged-in users by name; everyone else by address. PHP requests only. Kept 30 days.
             Location is from the address (for a logged-in user, their latest one); <?= moop_geoip_attribution() ?>.</p>
@@ -816,106 +996,40 @@ $cls_words = ['page' => 'Pages', 'api' => 'AJAX / API', 'jbrowse' => 'Genome bro
     </div>
   </div>
 
-  <!-- Capacity: when to add RAM or CPUs, and PHP workers -->
-  <div class="card adm-card mb-4" id="sysmon-capacity">
-    <div class="card-header adm-head"><h5 class="mb-0">Capacity — RAM, CPUs and PHP workers <?= $sysmon_i('capacity') ?></h5></div>
+  <!-- Databases: warm or cold -->
+  <?php $io = $pages['io'] ?? ['measured' => 0, 'cold' => 0, 'disk_kb' => 0]; ?>
+  <div class="card adm-card mb-4" id="sysmon-warmcold">
+    <div class="card-header adm-head"><h5 class="mb-0">Databases: warm or cold, <?= $span ?> <?= $sysmon_i('warmcold') ?></h5></div>
     <div class="card-body">
-      <?php if ($cap['samples'] < 60 || ($pages['requests'] ?? 0) < 500): ?>
-        <p class="small text-muted"><i class="fa fa-info-circle" aria-hidden="true"></i>
-          These figures firm up after a few days of real use — so far <?= number_format($cap['samples']) ?> samples and
-          <?= number_format($pages['requests']) ?> logged requests in this window.</p>
+      <p class="small text-muted">A request is <em>warm</em> when everything it needed was already in RAM, and <em>cold</em> when it
+        had to read from disk (more than <?= MOOP_METRICS_COLD_KB ?> KB). Cold requests are the slow ones on this site. The
+        organisms below are where the disk reads go: together they are the part of the
+        <?= isset($now['db_total_mb']) ? round($now['db_total_mb'] / 1024, 1) . ' GB of databases' : 'databases' ?> that people
+        actually use — the <em>working set</em> — and that is what the RAM cache
+        (<?= isset($now['cache_mb']) ? round($now['cache_mb'] / 1024, 1) . ' GB now' : '—' ?>) has to hold for the site to stay warm.</p>
+      <?php if ($io['measured'] > 0): ?>
+        <?php $cold_pct = round(100 * $io['cold'] / $io['measured']); ?>
+        <p class="mb-2">Of <?= number_format($io['measured']) ?> requests: <strong><?= 100 - $cold_pct ?>% warm</strong>,
+          <strong><?= $cold_pct ?>% cold</strong> · <?= moop_monitor_fmt_bytes($io['disk_kb'] * 1024) ?> read from disk in total.</p>
+        <div class="table-responsive sysmon-usage-table">
+        <table class="table table-sm sysmon-num mb-0">
+          <thead><tr><th>Organism</th><th class="text-end">Requests</th><th class="text-end">Warm (from RAM)</th><th class="text-end">Cold (from disk)</th><th class="text-end">Read from disk</th></tr></thead>
+          <tbody>
+          <?php foreach (array_slice($pages['by_org_disk'] ?? [], 0, 20, true) as $org => $o): ?>
+            <tr><td><?= $h(str_replace('_', ' ', $org)) ?></td><td class="text-end"><?= number_format($o['requests']) ?></td>
+              <?php $cp = round(100 * $o['cold'] / max(1, $o['requests'])); ?>
+              <td class="text-end"><?= 100 - $cp ?>%</td><td class="text-end"><?= $cp ?>%</td>
+              <td class="text-end"><?= moop_monitor_fmt_bytes($o['disk_kb'] * 1024) ?></td></tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+        </div>
+      <?php else: ?>
+        <p class="small text-muted mb-0">No measurements yet in this window (recorded from 2026-10-28).</p>
       <?php endif; ?>
-      <div class="row g-4">
-        <div class="col-lg-6">
-          <table class="table table-sm sysmon-num mb-0">
-            <tbody>
-              <tr><th>CPU, average / peak</th><td class="text-end"><?= $h($cap['cpu_avg'] ?? '—') ?>% / <?= $h($cap['cpu_peak'] ?? '—') ?>%</td></tr>
-              <tr><th>Share of time CPU was above 80%</th><td class="text-end"><?= $h($cap['cpu_busy_share'] ?? '—') ?>%</td></tr>
-              <tr><th>Memory, peak used</th><td class="text-end"><?= $h($cap['mem_peak'] ?? '—') ?>% of <?= round($cap['total_mb'] / 1024, 1) ?> GB</td></tr>
-              <tr><th>Swap, peak</th><td class="text-end"><?= (int) $cap['swap_peak_mb'] ?> MB</td></tr>
-              <tr><th>Waiting on disk (iowait), average / peak</th><td class="text-end"><?= $h($cap['iowait_avg'] ?? '—') ?>% / <?= $h($cap['iowait_peak'] ?? '—') ?>%</td></tr>
-              <tr><th>Databases / RAM caching files</th><td class="text-end"><?= isset($now['db_total_mb']) ? round($now['db_total_mb'] / 1024, 1) . ' GB / ' . round($now['cache_mb'] / 1024, 1) . ' GB' : '—' ?></td></tr>
-              <tr><th>Requests that went cold</th><td class="text-end"><?= ($pages['io']['measured'] ?? 0) ? round(100 * $pages['io']['cold'] / $pages['io']['measured']) . '%' : '—' ?></td></tr>
-              <tr><th>Times every PHP worker was busy</th><td class="text-end"><?= (int) $cap['workers_reached'] ?></td></tr>
-              <tr><th>Memory per busy worker (typical-heavy request + worker)</th><td class="text-end"><?= $h($cap['per_worker_mb']) ?> MB</td></tr>
-              <tr><th>PHP workers allowed now (pm.max_children)</th><td class="text-end"><?= $max_children ?? '—' ?></td></tr>
-              <tr><th>…if all were busy at once, PHP would need</th><td class="text-end"><?= $cap['php_worst_mb'] !== null ? round($cap['php_worst_mb'] / 1024, 1) . ' GB' : '—' ?></td></tr>
-              <?php foreach (moop_monitor_disks($now['disks'] ?? []) as $d): ?>
-              <tr><th>Disk: <?= $h($d['label']) ?> <span class="fw-normal small text-muted d-block"><?= $h($d['role']) ?></span></th>
-                <td class="text-end"><?= $h($d['used_pct']) ?>% · <?= $h($d['free_gb']) ?> GB free of <?= $h($d['size_gb']) ?></td></tr>
-              <?php endforeach; ?>
-              <tr><th>Workers that fit in 60% of RAM</th><td class="text-end"><?= $cap['suggested_max_children'] ?? '—' ?></td></tr>
-              <tr><th>Largest single request seen</th><td class="text-end"><?= $h($cap['largest_mb']) ?> MB</td></tr>
-              <tr><td colspan="2" class="small text-muted">The estimate uses a typical-heavy request (95th percentile), not the
-                largest. Many large exports at once would need more — the heavy group's limit of 3 at once per address is what
-                keeps that in check.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="col-lg-6 small">
-          <h6>When is it time to add…</h6>
-          <ul>
-            <li><strong>RAM</strong> — many requests going cold with high disk wait (the databases no longer fit in the cache), memory
-              regularly above ~85–90% used, <em>any</em> swapping, or “every PHP worker busy”
-              while RAM has no room for more workers. RAM runs out first on this server (capacity test, 2026-10-23), and it
-              also holds the page cache that keeps the databases fast, so it is the usual first upgrade.</li>
-            <li><strong>CPUs</strong> — CPU above 80% for long stretches (not short spikes), while memory is fine. Check the
-              busiest addresses first: a crawler can look exactly like “we need more CPUs”.</li>
-            <li><strong>PHP workers</strong> — “every PHP worker busy” keeps appearing <em>and</em> the row above says more
-              workers fit in RAM.</li>
-          </ul>
-          <h6>How to change the number of PHP workers</h6>
-          <ol>
-            <li>Edit <code>/etc/php-fpm.d/www.conf</code> (as root) and set <code>pm.max_children</code>. Keep it at or below
-              “workers that fit in 60% of RAM”.</li>
-            <li>Check and apply (a reload finishes the requests in progress; nobody is cut off):
-              <?= adm_command('sudo php-fpm -t && sudo systemctl reload php-fpm') ?></li>
-            <li>Come back here after a few days: “every PHP worker busy” should fall to 0 without memory climbing.</li>
-          </ol>
-          <p class="mb-0 text-muted">More workers only help if the server has the memory for them; past that point they make
-            things worse, because the server starts swapping.</p>
-        </div>
-      </div>
     </div>
   </div>
 
-  <!-- Heavy group -->
-  <div class="card adm-card mb-4" id="sysmon-heavy">
-    <div class="card-header adm-head"><h5 class="mb-0">Heavy group (strictest rate limit) <?= $sysmon_i('heavy') ?></h5></div>
-    <div class="card-body">
-      <p class="small text-muted">Exports, downloads and other expensive scripts: one address may run these at most 20 times a
-        minute (burst 10, 3 at once). Changes reach nginx within a minute; nothing to re-run.
-        Recommendations above suggest additions from what pages measurably cost.</p>
-      <div class="sysmon-heavy-list">
-        <?php foreach ($heavy as $s): ?>
-          <form method="post" action="system_monitor.php<?= $range !== '24h' ? '?range=' . $h($range) : '' ?>" class="sysmon-heavy-item">
-            <?= csrf_input_field() ?>
-            <input type="hidden" name="action" value="heavy_remove">
-            <input type="hidden" name="script" value="<?= $h($s) ?>">
-            <code><?= $h($s) ?></code>
-            <button type="submit" class="btn btn-link btn-sm p-0 ms-1 text-muted" title="Remove from the heavy group"
-                    aria-label="Remove <?= $h($s) ?> from the heavy group"><i class="fa fa-times" aria-hidden="true"></i></button>
-          </form>
-        <?php endforeach; ?>
-        <?php if (!$heavy): ?><span class="small text-muted">Empty — every script gets the ordinary page or AJAX limit.</span><?php endif; ?>
-      </div>
-    </div>
-  </div>
-
-  <!-- nginx rate-limit sync -->
-  <?php if ($sync): ?>
-  <div class="card adm-card mb-5">
-    <div class="card-header <?= ($sync['state'] ?? '') === 'error' ? 'adm-head-danger' : 'adm-head' ?>"><h5 class="mb-0">Rate-limit settings <?= $sysmon_i('sync') ?></h5></div>
-    <div class="card-body small">
-      <?php $st = $sync['state'] ?? 'unknown'; $lv = $st === 'in_sync' ? 'good' : ($st === 'error' ? 'critical' : 'warning'); ?>
-      <span class="sysmon-status sysmon-<?= $lv ?>"><i class="fa fa-<?= $level_icon[$lv] ?>" aria-hidden="true"></i>
-        <?= $st === 'in_sync' ? 'In step with MOOP' : ($st === 'error' ? 'Not applied' : 'Waiting') ?></span>
-      — <?= $h($sync['message'] ?? '') ?>.
-      <?php if (!empty($sync['ranges'])): ?><br>Never limited (auto-login ranges): <?= $h($sync['ranges']) ?><?php endif; ?>
-      <?php if (!empty($sync['changed'])): ?><br>Last changed <?= date('Y-m-d H:i', (int) $sync['changed']) ?>.<?php endif; ?>
-      <br>Change the ranges in <a href="manage_site_config.php">Site Configuration</a>; nginx follows within a minute.
-    </div>
-  </div>
   <?php endif; ?>
 </div>
 

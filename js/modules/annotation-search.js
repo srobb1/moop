@@ -567,6 +567,22 @@ class AnnotationSearch {
         $('#progressText').html('<span class="text-warning"><i class="fa fa-ban me-1"></i>Search canceled.</span>');
     }
 
+    /**
+     * Tell the site a search found nothing (api/search_miss.php), so admins can see what people
+     * look for and do not find. Only searches with NO results are ever reported; fire and forget.
+     */
+    reportMiss() {
+        if (this.cancelled || !this.currentKeywords) return;
+        try {
+            $.post(this.config.sitePath + '/api/search_miss.php', {
+                words: this.currentKeywords,
+                organisms: this.organismsInScope().length,
+                maps_to: this.crosswalkHits.length > 0 ? '1' : '0',
+                page: window.location.pathname
+            });
+        } catch (e) { /* never let reporting break the search page */ }
+    }
+
     finishSearch() {
         $('#search-cancel-btn').hide();
         $('#searchBtn').prop('disabled', false).removeClass('btn-searching').html('<i class="fa fa-search"></i>');
@@ -617,6 +633,7 @@ class AnnotationSearch {
         }
 
         if (this.allResults.length === 0) {
+            this.reportMiss();
             $('#searchProgress').html(capMessageHtml + warningsHtml + (crosswalkHtml
                 || '<div class="alert alert-warning">No results found. Try different search terms.</div>'));
         } else {

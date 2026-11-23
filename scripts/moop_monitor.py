@@ -63,7 +63,8 @@ UA_KINDS = [
                           r'HeadlessChrome|PhantomJS|node-fetch|axios|Scrapy|httpx|bot|crawl|spider', re.I)),
     ('browser', re.compile(r'Mozilla/.*(Chrome|Firefox|Safari|Edg)')),
 ]
-LOG_RE = re.compile(r'^(\S+) \S+ \S+ \[[^\]]+\] "(?:\S+) (\S+)[^"]*" (\d{3}) (\d+|-) "[^"]*" "([^"]*)"')
+LOG_RE = re.compile(r'^(\S+) \S+ \S+ \[[^\]]+\] "(?:\S+) (\S+)[^"]*" (\d{3}) (\d+|-) "([^"]*)" "([^"]*)"')
+NOT_FOUND_PER_MINUTE = 30   # internet 404s kept per minute: [path, referrer, count] (outside links that 404)
 
 
 def load_conf():
@@ -311,11 +312,12 @@ def summarise_access(lines, classes, ranges):
            'internet': {'req': 0, 'ua': {}}}
     ips = {}
     net_ips = {}
+    nf = {}
     for line in lines:
         m = LOG_RE.match(line)
         if not m:
             continue
-        ip, uri, status, size, ua = m.groups()
+        ip, uri, status, size, ref, ua = m.groups()
         out['req'] += 1
         out['bytes'] += int(size) if size != '-' else 0
         sc = status[0] + 'xx'
@@ -327,13 +329,28 @@ def summarise_access(lines, classes, ranges):
         k = ua_kind(ua)
         out['ua'][k] = out['ua'].get(k, 0) + 1
         ips[ip] = ips.get(ip, 0) + 1
+        if status == '404' and from_internet(ip, ranges):
+            # Which missing addresses outside visitors ask for, and the page that linked them
+            # (old Tripal URLs in papers and bookmarks). Path only -- the query string can hold a
+            # search; referrer cut to scheme+host+path for the same reason.
+            key = (uri.split('?', 1)[0][:200], '' if ref == '-' else ref.split('?', 1)[0][:200])
+            nf[key] = nf.get(key, 0) + 1
         if from_internet(ip, ranges):
             out['internet']['req'] += 1
             out['internet']['ua'][k] = out['internet']['ua'].get(k, 0) + 1
             net_ips[ip] = net_ips.get(ip, 0) + 1
     out['top_ips'] = sorted(ips.items(), key=lambda kv: -kv[1])[:TOP_IPS_PER_MINUTE]
     out['internet']['top_ips'] = sorted(net_ips.items(), key=lambda kv: -kv[1])[:TOP_IPS_PER_MINUTE]
+    out['not_found'] = [[p, r, n] for (p, r), n in sorted(nf.items(), key=lambda kv: -kv[1])[:NOT_FOUND_PER_MINUTE]]
     return out
+
+
+def rollup_not_found(records, keep=100):
+    agg = {}
+    for rec in records:
+        for p, r, n in rec.get('not_found', []) or []:
+            agg[(p, r)] = agg.get((p, r), 0) + n
+    return [[p, r, n] for (p, r), n in sorted(agg.items(), key=lambda kv: -kv[1])[:keep]]
 
 
 def rollup_internet(records):
@@ -530,6 +547,7 @@ def rollup_hour(minutes):
         for ip, n in m.get('top_ips', []):
             ips[ip] = ips.get(ip, 0) + n
     h['top_ips'] = sorted(ips.items(), key=lambda kv: -kv[1])[:20]
+    h['not_found'] = rollup_not_found(minutes)
     if any('internet' in m for m in minutes):
         h['internet'] = rollup_internet(minutes)
     return h
@@ -563,6 +581,7 @@ def rollup_day(hours):
         for ip, n in h.get('top_ips', []):
             ips[ip] = ips.get(ip, 0) + n
     d['top_ips'] = sorted(ips.items(), key=lambda kv: -kv[1])[:20]
+    d['not_found'] = rollup_not_found(hours, keep=200)
     if any('internet' in h for h in hours):
         d['internet'] = rollup_internet(hours)
     return d

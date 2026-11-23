@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($_POST['action'] ?? '', ['
     $_SESSION['sysmon_flash'] = $published
         ? ['ok', ($_POST['action'] === 'heavy_add' ? 'Added ' : 'Removed ') . $script . ' — nginx will follow within a minute.']
         : ['error', 'Not saved: ' . ($result['success'] ? 'could not write nginx_wanted.json to the cache directory' : $result['message'])];
-    $back = in_array($_GET['range'] ?? '', ['7d', '30d'], true) ? '?range=' . $_GET['range'] : '';
+    $back = '?view=protection' . (in_array($_GET['range'] ?? '', ['7d', '30d'], true) ? '&range=' . $_GET['range'] : '');
     header('Location: system_monitor.php' . $back . '#sysmon-heavy');
     exit;
 }
@@ -149,6 +149,13 @@ $people_daily[date('Y-m-d')] = array_count_values(array_column($today_vis['peopl
 $usage30 = $range === '30d' ? $usage
     : moop_metrics_usage_merge(array_merge(array_column($daily30, 'usage'), [moop_metrics_usage(moop_metrics_rows(date('Y-m-d')))]));
 $unused = moop_monitor_unused_data($usage30);
+// Searches that found nothing (api/search_miss.php), over the window shown.
+$misses = moop_metrics_search_misses(time() - ['24h' => 86400, '7d' => 7 * 86400, '30d' => 30 * 86400][$range]);
+// Outside 404s need collector v3 (scripts/moop_monitor.py); older records have no not_found key.
+$nf_measured = false;
+foreach ($points as $p) { if (array_key_exists('not_found', $p)) { $nf_measured = true; break; } }
+// Three views of one page (2026-11-23): who uses the site / what keeps bots out / server health.
+$view = in_array($_GET['view'] ?? '', ['visitors', 'protection', 'server'], true) ? $_GET['view'] : 'visitors';
 
 // Recommendations judge pages on 7 days whatever window is shown: a day is too little evidence.
 $pages7  = $range === '7d' ? $pages : moop_metrics_summarise(moop_metrics_rows_since(7 * 86400));
@@ -183,6 +190,9 @@ echo render_display_page(
         'visitors'     => $visitors,
         'people_daily' => $people_daily,
         'unused'       => $unused,
+        'misses'       => $misses,
+        'nf_measured'  => $nf_measured,
+        'view'         => $view,
         'days_covered' => $days_covered,
         'site'         => $site,
         'page_styles'  => [moop_url_base() . '/css/system-monitor.css'],

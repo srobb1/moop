@@ -28,11 +28,14 @@ const MOOP_METRICS_RETENTION_DAYS = 30;
 // cache do not count, so 0 = warm, megabytes = cold); and, for SLOW or FAILED requests only, the
 // request's parameters from an allowlist, so the request can be opened again exactly as it ran.
 const MOOP_METRICS_COLUMNS = ['ts', 'script', 'method', 'status', 'ms', 'peak_mb', 'user', 'level', 'ip', 'agent', 'org', 'asm', 'gs',
-                              'db_ms', 'db_n', 'disk_kb', 'params', 'visitor', 'sid', 'nav'];
+                              'db_ms', 'db_n', 'disk_kb', 'params', 'visitor', 'sid', 'nav', 'ref'];
 const MOOP_METRICS_COLUMNS_V1 = 10;   // before org/asm/gs
 const MOOP_METRICS_COLUMNS_V2 = 13;   // before db/disk/params
 const MOOP_METRICS_COLUMNS_V3 = 17;   // before visitor
 const MOOP_METRICS_COLUMNS_V4 = 18;   // before sid/nav
+const MOOP_METRICS_COLUMNS_V5 = 20;   // before ref
+// ref (added 2026-11-23): for a page load whose Referer is ANOTHER site, that page as host + path
+// (query dropped: a search engine's query is someone's search) -- how people arrive.
 // sid/nav (added 2026-11-23, for visits and paths): sid = the first 12 hex digits of sha1(session id)
 // -- enough to follow one browser from page to page, useless for taking over its session; nav = '1'
 // for a page the browser navigated to (GET, asks for HTML, not AJAX), '' for everything else.
@@ -154,8 +157,19 @@ function moop_metrics_record(): void {
         'nav'     => ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET'
                      && strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '', 'XMLHttpRequest') !== 0
                      && stripos($_SERVER['HTTP_ACCEPT'] ?? '', 'text/html') !== false ? '1' : '',
+        'ref'     => moop_metrics_referrer((string) ($_SERVER['HTTP_REFERER'] ?? ''), (string) ($_SERVER['HTTP_HOST'] ?? '')),
     ] + moop_metrics_context($_GET + $_POST));
     @file_put_contents($file, $line, FILE_APPEND);
+}
+
+/** Another site's page that linked here, as "host/path" (no query, no scheme); '' for this site or none. */
+function moop_metrics_referrer(string $ref, string $own_host): string {
+    $u = $ref !== '' ? parse_url($ref) : false;
+    if (!$u || empty($u['host'])) return '';
+    $host = strtolower($u['host']);
+    if ($host === strtolower(preg_replace('/:\d+$/', '', $own_host))) return '';
+    $host = preg_replace('/^www\./', '', $host);
+    return substr($host . rtrim($u['path'] ?? '', '/'), 0, 150);
 }
 
 /**
@@ -194,7 +208,7 @@ function moop_metrics_line(array $row): string {
 /** Parse one line back into a row, or null if it is not a complete line. */
 function moop_metrics_parse(string $line): ?array {
     $f = explode("\t", rtrim($line, "\n"));
-    $old = in_array(count($f), [MOOP_METRICS_COLUMNS_V1, MOOP_METRICS_COLUMNS_V2, MOOP_METRICS_COLUMNS_V3, MOOP_METRICS_COLUMNS_V4], true);
+    $old = in_array(count($f), [MOOP_METRICS_COLUMNS_V1, MOOP_METRICS_COLUMNS_V2, MOOP_METRICS_COLUMNS_V3, MOOP_METRICS_COLUMNS_V4, MOOP_METRICS_COLUMNS_V5], true);
     if ($old) {
         $f = array_merge($f, array_fill(0, count(MOOP_METRICS_COLUMNS) - count($f), ''));
     }
@@ -342,8 +356,9 @@ function moop_metrics_prune(int $days = MOOP_METRICS_RETENTION_DAYS, ?int $now =
     $dir = $dir ?? moop_metrics_dir();
     $cutoff = date('Y-m-d', ($now ?? time()) - $days * 86400);
     $deleted = 0;
-    foreach (array_merge(glob("$dir/requests-*.tsv") ?: [], glob("$dir/daily-*.json") ?: [], glob("$dir/skipped-*.cnt") ?: []) as $file) {
-        if (preg_match('/(?:requests|daily|skipped)-(\d{4}-\d{2}-\d{2})\.(?:tsv|json|cnt)$/', $file, $m) && $m[1] < $cutoff && @unlink($file)) {
+    foreach (array_merge(glob("$dir/requests-*.tsv") ?: [], glob("$dir/daily-*.json") ?: [], glob("$dir/skipped-*.cnt") ?: [],
+                         glob("$dir/search-misses-*.tsv") ?: []) as $file) {
+        if (preg_match('/(?:requests|daily|skipped|search-misses)-(\d{4}-\d{2}-\d{2})\.(?:tsv|json|cnt)$/', $file, $m) && $m[1] < $cutoff && @unlink($file)) {
             $deleted++;
         }
     }
@@ -447,6 +462,7 @@ function moop_metrics_visitors(iterable $rows): array {
     $errors = [];
     $passed = [];   // legacy rule: address => true once it POSTed verify-human.php
     $trail = [];    // browser (sid, else person) => [[ts, label, org, person key], ...] page loads
+    $refs = [];     // referring site => [n, people => [key => true], pages => [ref => n], landed => [label => n]]
     $gate = ['people' => 0, 'search' => 0, 'agents' => 0, 'turned_away' => 0, 'challenge' => 0, 'other' => 0];
     $away_ips = [];
     foreach ($rows as $r) {
@@ -500,6 +516,13 @@ function moop_metrics_visitors(iterable $rows): array {
             foreach (explode(',', $r['org']) as $o) $p['orgs'][$o] = ($p['orgs'][$o] ?? 0) + 1;
         }
         unset($p);
+        if (($r['ref'] ?? '') !== '') {
+            $host = explode('/', $r['ref'], 2)[0];
+            $refs[$host]['n'] = ($refs[$host]['n'] ?? 0) + 1;
+            $refs[$host]['people'][$key] = true;
+            $refs[$host]['pages'][$r['ref']] = ($refs[$host]['pages'][$r['ref']] ?? 0) + 1;
+            $refs[$host]['landed'][moop_metrics_page_label($r['script'])] = ($refs[$host]['landed'][moop_metrics_page_label($r['script'])] ?? 0) + 1;
+        }
         if (($r['nav'] ?? '') === '1' && $r['status'] < 300) {
             $trail[($r['sid'] ?? '') !== '' ? 's:' . $r['sid'] : 'p:' . $key][] =
                 [round($r['ts'], 1), moop_metrics_page_label($r['script']), explode(',', $r['org'])[0], $key];
@@ -507,7 +530,7 @@ function moop_metrics_visitors(iterable $rows): array {
     }
     return ['people' => moop_metrics_visitors_locate($people), 'crawlers' => $crawlers,
             'visits' => moop_metrics_split_visits($trail, $people), 'errors' => $errors, 'agents' => $agents,
-            'gate' => $gate, 'away_ips' => array_keys($away_ips)];
+            'gate' => $gate, 'away_ips' => array_keys($away_ips), 'referrers' => $refs];
 }
 
 const MOOP_METRICS_VISIT_GAP = 1800;   // 30 minutes without a page = the visit ended (the usual web-analytics rule)
@@ -705,6 +728,13 @@ function moop_metrics_visitors_merge(array $list): array {
         $agents[] = $v['agents'] ?? [];
         foreach (($v['gate'] ?? []) as $k => $n) $out['gate'][$k] = ($out['gate'][$k] ?? 0) + $n;
         foreach (($v['away_ips'] ?? []) as $ip) $away[$ip] = true;
+        foreach (($v['referrers'] ?? []) as $host => $r) {
+            $t = &$out['referrers'][$host];
+            $t['n'] = ($t['n'] ?? 0) + $r['n'];
+            $t['people'] = ($t['people'] ?? []) + $r['people'];
+            foreach (['pages', 'landed'] as $f) foreach ($r[$f] as $k => $n) $t[$f][$k] = ($t[$f][$k] ?? 0) + $n;
+            unset($t);
+        }
         foreach (($v['people'] ?? []) as $k => $p) {
             $t = &$out['people'][$k];
             if ($t === null) { $t = $p; unset($t); continue; }
@@ -787,7 +817,7 @@ function moop_metrics_build_daily(?int $now = null, ?string $dir = null): int {
         $out = "$dir/daily-{$m[1]}.json";
         // v2 (2026-11-23) added 'visitors', v3 visits/errors/agents, v4 gate + person level; older summaries are rebuilt once, while their log is kept.
         if (is_file($out) && filemtime($out) >= filemtime($log)
-            && (json_decode((string) file_get_contents($out), true)['v'] ?? 1) >= 4) continue;
+            && (json_decode((string) file_get_contents($out), true)['v'] ?? 1) >= 5) continue;
         $rows = function () use ($log) {
             $fh = fopen($log, 'r');
             while ($fh && ($line = fgets($fh)) !== false) {
@@ -799,7 +829,7 @@ function moop_metrics_build_daily(?int $now = null, ?string $dir = null): int {
         $summary['usage'] = moop_metrics_usage($rows());
         $summary['visitors'] = moop_metrics_visitors($rows());
         unset($summary['visitors']['agents']['_burst']);
-        $summary['v'] = 4;
+        $summary['v'] = 5;
         $summary['date'] = $m[1];
         $summary['skipped'] = moop_metrics_skipped($m[1], $dir);
         $tmp = tempnam($dir, '.daily.');
@@ -887,3 +917,21 @@ function moop_metrics_daily(int $days, ?int $now = null): array {
     }
     return $out;
 }
+
+/** Searches that found nothing (api/search_miss.php) since $since: newest first. */
+function moop_metrics_search_misses(int $since): array {
+    $out = [];
+    for ($d = $since - 86400; $d <= time() + 60; $d += 86400) {
+        $f = moop_metrics_dir() . '/search-misses-' . date('Y-m-d', $d) . '.tsv';
+        if (!is_readable($f)) continue;
+        foreach (file($f, FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+            $c = explode("\t", $line);
+            if (count($c) < 7 || (int) $c[0] < $since) continue;
+            $out[] = ['ts' => (int) $c[0], 'who' => $c[1], 'level' => $c[2], 'organisms' => (int) $c[3],
+                      'maps_to' => $c[4] === '1', 'page' => $c[5], 'words' => $c[6]];
+        }
+    }
+    usort($out, fn($a, $b) => $b['ts'] <=> $a['ts']);
+    return $out;
+}
+

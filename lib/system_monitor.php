@@ -196,7 +196,11 @@ function moop_monitor_traffic(array $points, array $ranges = [], array $self = [
           // with no client breakdown), and 'measured' turns false. A window mixing old and new
           // records — the first day after an upgrade — is therefore never undercounted to zero.
           'internet' => ['measured' => true, 'req' => 0, 'ua' => [], 'ips' => []]];
+    $t['not_found'] = [];   // "path\treferrer" => n -- internet 404s (collector v3, 2026-11-23)
     foreach ($points as $p) {
+        foreach (($p['not_found'] ?? []) as $nf) {
+            if (is_array($nf) && count($nf) === 3) $t['not_found'][$nf[0] . "\t" . $nf[1]] = ($t['not_found'][$nf[0] . "\t" . $nf[1]] ?? 0) + (int) $nf[2];
+        }
         foreach (['req', 'bytes', 's429', 'fpm_max_children_reached'] as $k) $t[$k] += (int) ($p[$k] ?? 0);
         foreach (['cls', 'status', 'ua', 'limited'] as $k) {
             foreach (($p[$k] ?? []) as $name => $n) $t[$k][$name] = ($t[$k][$name] ?? 0) + (int) $n;
