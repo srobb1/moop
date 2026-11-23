@@ -346,12 +346,17 @@ function moop_monitor_recommendations(array $cap, array $pages7, array $heavy, ?
             . ($fits ? "RAM allows more workers: raise pm.max_children toward {$cap['suggested_max_children']} (see “How to change the number of PHP workers” below)."
                      : 'RAM does not allow more workers at the measured memory per request — this is the point to add RAM (or to limit the heaviest pages).'));
     }
-    if (($cap['mem_peak'] ?? 0) >= 90 || $cap['swap_peak_mb'] > 256) {
+    // Judge memory by how much is IN USE (MemAvailable), not by swap. Swap here is an amount, not
+    // activity: Linux moves idle pages to disk even with plenty free (2026-11-23: 491 MB swapped at
+    // 40% used called for "add RAM" -- wrong, and the IT report repeated it). Swap is mentioned
+    // only alongside real memory pressure.
+    $swap_note = $cap['swap_peak_mb'] > 0 ? ' and ' . $cap['swap_peak_mb'] . ' MB sat in swap' : '';
+    if (($cap['mem_peak'] ?? 0) >= 90) {
         $add('critical', 'Memory ran short — time to add RAM',
-            'Memory reached ' . $cap['mem_peak'] . '% used' . ($cap['swap_peak_mb'] > 0 ? ' and the server swapped ' . $cap['swap_peak_mb'] . ' MB to disk' : '')
-            . '. Swapping makes every page slow. More RAM is the fix; lowering pm.max_children trades it for queueing.');
+            'Memory reached ' . $cap['mem_peak'] . '% used' . $swap_note
+            . '. Near-full memory pushes pages to disk and makes every page slow. More RAM is the fix; lowering pm.max_children trades it for queueing.');
     } elseif (($cap['mem_peak'] ?? 0) >= 80) {
-        $add('warning', 'Memory is getting tight', 'Memory peaked at ' . $cap['mem_peak'] . '% used. Watch it; at 90% or any swapping, add RAM.');
+        $add('warning', 'Memory is getting tight', 'Memory peaked at ' . $cap['mem_peak'] . '% used' . $swap_note . '. Watch it; at 90%, add RAM.');
     }
     if ($cap['php_worst_mb'] !== null && $cap['total_mb'] > 0 && $cap['php_worst_mb'] > 0.7 * $cap['total_mb']) {
         $add('warning', 'Too many PHP workers for this much RAM',
@@ -433,7 +438,9 @@ function moop_monitor_recommendations(array $cap, array $pages7, array $heavy, ?
                 $from . ' ' . number_format($auto) . ' of them came from scripts or AI crawlers ('
                 . number_format($net['ua']['ai'] ?? 0) . ' AI). '
                 . 'To stop them: Admin → Site Configuration → Turnstile. Logged-in and internal users never see the check.');
-        } else {
+        } elseif (!$turnstile_on) {
+            // With the human check on, the site is public on purpose: nothing to report here
+            // (Who got in, on the Protection view, shows the outside traffic).
             $add('warning', 'The site is reachable from the internet',
                 $from . ($auto !== null ? ' ' . number_format($auto) . ' came from scripts or AI crawlers.' : '')
                 . ' If the site should be internal-only, ask IT why these addresses can reach it. '

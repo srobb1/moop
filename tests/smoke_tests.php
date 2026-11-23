@@ -3303,8 +3303,14 @@ $_local['internet'] = ['measured' => true, 'req' => 0, 'ua' => [], 'ips' => []];
 ok(strpos($_exp($_local), 'internet') === false, 'measured: no internet requests, no exposure warning');
 $_crawl = ['ips' => [], 'ua' => ['ai' => 1500], 'internet' => ['measured' => true, 'req' => 1600, 'ua' => ['ai' => 1500, 'browser' => 100], 'ips' => ['8.8.8.8' => 1600]]];
 ok(strpos($_exp($_crawl), 'Crawlers on the internet are reaching the site') !== false, 'internet crawlers over 1,000 → turn on the browser check');
-ok(strpos($_exp($_crawl, true), 'Crawlers on the internet') === false && strpos($_exp($_crawl, true), 'The site is reachable from the internet') !== false,
-   'with Turnstile on, still say the site is reachable — just not "turn it on"');
+ok(strpos($_exp($_crawl, true), 'Crawlers on the internet') === false && strpos($_exp($_crawl, true), 'reachable from the internet') === false,
+   'with Turnstile on the site is public on purpose: no exposure item at all (2026-11-23)');
+// Memory is judged by % in use, never by swap alone: Linux parks idle pages in swap with RAM to spare.
+$_mem = fn($pct, $swap) => implode(' | ', array_column(moop_monitor_recommendations(array_merge($_cap, ['mem_peak' => $pct, 'swap_peak_mb' => $swap]),
+                                ['by_script' => []], [], ['disks' => []], ['ips' => [], 'ua' => []], null, 50, true, $_rg2), 'title'));
+ok(strpos($_mem(40.3, 491), 'Memory') === false, '491 MB in swap at 40% used is not a memory shortage (the 2026-11-23 false "add RAM")');
+ok(strpos($_mem(85, 491), 'Memory is getting tight') !== false && strpos($_mem(93, 0), 'Memory ran short') !== false,
+   'memory pressure is still reported: 80% → tight, 90% → add RAM');
 $_few = ['ips' => [], 'ua' => [], 'internet' => ['measured' => true, 'req' => 3, 'ua' => ['browser' => 3], 'ips' => ['8.8.8.8' => 3]]];
 $_few_r = moop_monitor_recommendations($_cap, ['by_script' => []], [], ['disks' => []], $_few, null, 50, false, $_rg2, 'in the last 24 hours');
 $_few_d = implode(' ', array_column($_few_r, 'detail'));
