@@ -167,6 +167,10 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Cutting Class paper PDF is missing (Sofia to find it, 11-23):** About and FAQ (en + es) link to
+      `https://cuttingclass.stowers.org/pub/pdfs/cuttingclass.pdf`, which is not on this server, so the link
+      lands on the home page. Once found: put it in the site (or link the published paper) and fix the 4 links
+      in cuttingclass metadata/pages/about.json + faq.json. **S**
 - [x] **Remote tracks did not load from outside Stowers** (user in Austria, 11-19) -> tracks proxy LIVE
       (notes/TRACKS_PROXY_PLAN.md). Ask the user to hard-reload. Manage JBrowse's save no longer drops it.
 - [ ] **smoke_tests.php is not hermetic:** 4 link/menu tests read the LIVE link_prefix and fail on any
