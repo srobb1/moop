@@ -64,7 +64,7 @@ Order of work, and why:
       scripts/ tests/ vendor/ lib/ includes/ (code should never be reachable by URL); docs/ + notes/ optional.
 
 ## 1. Wrong or surprising answers — fix first
-- [ ] **IMPORTANT (Sofia, 11-24): are ALL Nematostella RNA-seq tracks visible to PUBLIC visitors?** Someone
+- [x] **IMPORTANT (Sofia, 11-24): are ALL Nematostella RNA-seq tracks visible to PUBLIC visitors?** Someone — **DONE 11-24:** checked by Sofia, they are fine.
       reported they were not; Sofia sees them from her phone. Check carefully, track by track, as a real
       anonymous visitor from OUTSIDE (not an internal IP, which auto-logs in; not an admin's cookie): the
       assembly's groups, each track's access level, the JBrowse config served to PUBLIC, the tracks-proxy
@@ -224,6 +224,14 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [x] **DONE 11-24 (for the record):** Primer BLAST counts every scaffold (blastn default of 500 subjects dropped
+      hits on 74/95 genomes) + 1 GB heap cap + queue cost (1978a40a); permissions page shows cache subdirs (planosphere
+      geoip 2750 fixed); 21 written PLANA term pages on SIMRbase cleaned (table restyled, Accession column dropped,
+      sequence dumps -> "Get the N transcript sequences"); Planosphere atlas cut to the 21 annotated terms + PLANA
+      browser / curated genes links; boxed intro (.ps-lede) on 11 Planosphere pages; Retrieve Sequences ID chips grey
+      until a retrieval runs, page-text scrape removed (1473f556). Open from this: boxed intros for figure-first and
+      paper pages (Sofia unsure); 3 fake "- " sub-links under PLANA in Our Tools; SIMRbase Research menu entry for
+      Embryogenesis; Zeng "type a gene" box not wanted; failed DB search in Primer BLAST still reads "no product".
 - [ ] **Old SmedGD mk4 IDs in the Rosetta Stone (Sofia, 11-24):** if we can get the file that maps old SmedGD (mk4.) IDs to current genes, add it to the Rosetta Stone ID translator so people can paste these old IDs. First: find the mapping file (old server / $GENOMES / SmedGD dump). **M**
 - [x] DONE 11-23 (root installed; checked 11-24: /bats -> 301 -> bat-genomes page). **🔴 Old SIMRbase links cited in papers (11-23) — TABLE BUILT, ROOT TO INSTALL:** metadata/legacy_redirects.json
       (73 rules: the Drupal dump url_alias table + the System Monitor outside-404 list; all 2,185 old addresses tested -> 301 -> 17 pages, all 200). Tested on a
@@ -400,17 +408,17 @@ Planosphere
       nginx logs the referrer; the PHP log never sees missing files. Needs scripts/moop_monitor.py to keep
       internet 404s with their referrer (then root re-runs install_monitor.sh) + a monitor card listing
       them, so we know which redirects to add. **M**
-- [ ] **Planosphere Protocols page** (`page.php?p=protocols`) — restyle to match the new site (the
+- [x] **Planosphere Protocols page** (`page.php?p=protocols`) — restyle to match the new site (the — **DONE 11-24:** paper layout, section buttons, boxed intro; text unchanged.
       paper/card look of the other Planosphere pages). **S–M** (Sofia 11-24)
-- [ ] **One Embryogenesis home page (Planosphere)** — gather ALL the embryogenesis tools and pages
+- [x] **One Embryogenesis home page (Planosphere)** — gather ALL the embryogenesis tools and pages — **DONE 11-24:** landing page rebuilt (boxed intro, stages, about, refs) + an Embryogenesis SIDE LIST on all 10 section pages (shared page explore-embryogenesis, current page marked); nav card grids removed; 5 fake "- " sub-links removed from Publications menu (via Manage Menu). Pages NOT merged/retired (staging, movies, heatmap, davies-2017 stay).
       (Davies 2017 gallery, movies, crash course, embryo expression, explore page, ...) onto the main
       Embryogenesis page. **M** (Sofia 11-24)
 - [ ] **SIMRbase Research menu** — list that Embryogenesis page there (after the item above). **S** (Sofia 11-24)
-- [ ] **Planosphere "Movies" page shows no movies** (`page.php?p=movies`, Sofia 11-24) — it only describes
+- [x] **Planosphere "Movies" page shows no movies** (`page.php?p=movies`, Sofia 11-24) — it only describes — **DONE 11-24:** menu link removed; side list links "Images and movies" to the SIMRbase gallery (pick Movies with the new chips). The movies page itself still exists, reachable only by old links.
       them and links to the SIMRbase gallery (`kind=movie`). Idea: point the menu item straight at the
       gallery (movies only, or the whole Davies 2017 gallery) and drop or fold in the page. Fits with the
       "One Embryogenesis home page" item above. **S**
-- [ ] **Gallery: choose images or movies on the page** (Sofia 11-24) — buttons/chips next to the filter box:
+- [x] **Gallery: choose images or movies on the page** (Sofia 11-24) — buttons/chips next to the filter box: — **DONE 11-24:** kind chips with counts, links (?kind=), 6f379f31.
       All · In situ images · Movies · Stage panels (the kinds present), counts on each; the page already
       takes `?kind=movie` from a link but has no control for it. Then the Planosphere menu can link to the
       gallery with Movies picked (item above). **S**
@@ -462,7 +470,7 @@ Planosphere
       cause in /var/log/php-fpm/www-error.log (root) first. Also worth a warning BEFORE the search for
       low-complexity primers (PrimerInput could flag runs / low entropy). **S-M**
       DECIDED (Sofia 11-24): the ceiling + "repetitive" answer, plus the warning before the search.
-- [ ] **Can a collaborator edit their own account? (Sofia 11-24).** Check what a logged-in COLLABORATOR can
+- [ ] (ON HOLD, Sofia 11-24) **Can a collaborator edit their own account? (Sofia 11-24).** Check what a logged-in COLLABORATOR can
       change themselves -- name, email, password -- versus only an admin in Manage Users. Read the code
       (login/profile pages, Manage Users, users.json writes), then try it as a test collaborator. If there is
       no self-service: decide what to offer (at least change own password, with the current one required;
