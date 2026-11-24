@@ -49,9 +49,13 @@
     // How many annotations sit behind a nav row. Read from the attribute the PHP writes
     // (data-annot-count on a type section, data-annot-total on a child card) rather than
     // scraped from the badge text, so rewording a badge cannot silently blank the nav.
+    // A section that counts something other than annotations (the image gallery's stages)
+    // writes data-nav-count plus data-nav-count-words, the whole phrase already translated
+    // by the page ("30 images"), so this script never has to know the noun.
     function countFor(el) {
       if (!el) return "";
-      var v = el.getAttribute("data-annot-count");
+      var v = el.getAttribute("data-nav-count");
+      if (v === null) v = el.getAttribute("data-annot-count");
       if (v === null) v = el.getAttribute("data-annot-total");
       if (v === null) return "";
       var n = parseInt(v, 10);
@@ -60,6 +64,8 @@
     function mk(el, label, lvl, tag) {
       var node = { key: "pn" + kc++, el: el, label: label, lvl: lvl, tag: tag || "",
                    count: countFor(el), children: [], parent: null };
+      var words = el ? el.getAttribute("data-nav-count-words") : null;
+      node.countWords = words !== null ? words : (node.count ? moopT('%s annotations', node.count) : "");
       reg[node.key] = node;
       return node;
     }
@@ -137,11 +143,11 @@
         var tagSlug = n.tag ? n.tag.toLowerCase().replace(/[^a-z0-9]+/g, "") : "";
         var tag = n.tag ? '<span class="pnav-tag pnav-tag--' + tagSlug + '">' + escapeHtml(n.tag) + "</span>" : "";
         var cnt = n.count
-          ? '<span class="pnav-count" aria-label="' + moopTh('%s annotations', n.count) + '">' + escapeHtml(n.count) + "</span>"
+          ? '<span class="pnav-count" aria-label="' + escapeHtml(n.countWords) + '">' + escapeHtml(n.count) + "</span>"
           : "";
         var link =
           '<a class="pnav-link lvl-' + n.lvl + '" href="#" data-key="' + n.key + '" title="' +
-          escapeHtml(n.label) + (n.count ? " — " + n.count + " annotations" : "") + '">' +
+          escapeHtml(n.label) + (n.count ? " — " + escapeHtml(n.countWords) : "") + '">' +
           tag + '<span class="pnav-label">' + escapeHtml(n.label) + "</span>" + cnt + "</a>";
         var sub = hasKids ? '<div class="pnav-sub">' + renderList(n.children) + "</div>" : "";
         return '<li class="pnav-item"><div class="pnav-row">' + caret + link + "</div>" + sub + "</li>";
@@ -159,6 +165,30 @@
         var k = a.getAttribute("data-key");
         (linkMap[k] = linkMap[k] || []).push(a);
       });
+    });
+
+    // ---- refresh on request ---------------------------------------------------
+    // A page that filters its own sections (the image gallery's filter box) changes their
+    // counts and hides some, then fires "moop:nav-refresh" on document. Each row re-reads its
+    // own section -- count, words, hidden -- so rows stay tied to sections by key, not position.
+    document.addEventListener("moop:nav-refresh", function () {
+      Object.keys(reg).forEach(function (k) {
+        var n = reg[k];
+        var count = countFor(n.el);
+        var words = n.el.getAttribute("data-nav-count-words");
+        (linkMap[k] || []).forEach(function (a) {
+          var li = a.closest(".pnav-item");
+          if (li) li.hidden = n.el.hidden;
+          var pill = a.querySelector(".pnav-count");
+          if (pill) {
+            pill.textContent = count;
+            pill.hidden = count === "";
+            if (words !== null) pill.setAttribute("aria-label", words);
+          }
+          if (words !== null) a.title = n.label + (count ? " — " + words : "");
+        });
+      });
+      onScroll();
     });
 
     // ---- caret expand / collapse -------------------------------------------
@@ -255,12 +285,27 @@
       return distance > SMOOTH_MAX_PX * window.innerHeight ? "instant" : "smooth";
     }
 
+    // How much of the window top is covered by bars that stay put while scrolling: the site's
+    // sticky navbar, and on narrow screens the sticky "Jump to" bar. A section scrolled to y=0
+    // sat its first 56px under the navbar -- its own heading hidden -- on every page using this.
+    function coveredTop() {
+      var bottom = 0;
+      document.querySelectorAll("nav.navbar, .pnav-jumpbar").forEach(function (el) {
+        var cs = getComputedStyle(el);
+        if ((cs.position === "sticky" || cs.position === "fixed") && el.getClientRects().length) {
+          // where it pins (its CSS top) + its height = how far down the window it covers
+          bottom = Math.max(bottom, (parseFloat(cs.top) || 0) + el.getBoundingClientRect().height);
+        }
+      });
+      return bottom ? bottom + 8 : 0;
+    }
+
     function goTo(key) {
       var node = reg[key];
       if (!node) return;
       // Measure only once the sections it opened have finished opening (see expandAncestors)
       afterShown(expandAncestors(node.el), function () {
-        var top = node.el.getBoundingClientRect().top + window.scrollY;
+        var top = node.el.getBoundingClientRect().top + window.scrollY - coveredTop();
         if (top <= TOP_SNAP_PX) top = 0;
         window.scrollTo({ top: top, behavior: scrollBehaviorFor(top) });
       });

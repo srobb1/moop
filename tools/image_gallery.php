@@ -75,6 +75,6 @@ echo render_display_page(__DIR__ . '/pages/image_gallery.php', [
     'organism' => $organism, 'analysis' => $analysis, 'analyses' => $analyses, 'kinds' => $kinds,
     'gene' => $gene, 'term' => $term, 'stage' => $stage, 'labels' => $labels, 'names' => $names,
     'by_stage' => $by_stage, 'total' => count($images), 'capped' => count($images) >= $LIMIT,
-    'page_styles' => [moop_url_base() . '/css/parent.css'],
-    'page_script' => [moop_url_base() . '/js/modules/gene-images.js'],
+    'page_styles' => [moop_url_base() . '/css/parent.css', moop_url_base() . '/css/parent-nav.css'],
+    'page_script' => [moop_url_base() . '/js/modules/gene-images.js', moop_url_base() . '/js/modules/parent-nav.js', moop_url_base() . '/js/image-gallery.js'],
 ], $tool_title);

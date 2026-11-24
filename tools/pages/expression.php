@@ -145,8 +145,8 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
                so it cannot be read as help for "As pasted / Highest first". */ ?>
       <span class="d-inline-flex align-items-center gap-1 ms-auto me-2">
       <div class="btn-group btn-group-sm" role="group" aria-label="<?= t('Shading') ?>">
-        <a class="btn btn-light<?= $mode === 'level' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['mode' => 'level'])) ?>">Level</a>
-        <a class="btn btn-light<?= $mode === 'pattern' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['mode' => 'pattern'])) ?>">Pattern</a>
+        <a class="btn btn-light<?= $mode === 'level' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['mode' => 'level'])) ?>"><?= t('Level') ?></a>
+        <a class="btn btn-light<?= $mode === 'pattern' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['mode' => 'pattern'])) ?>"><?= t('Pattern') ?></a>
       </div>
       <?= field_help(
           'Level: one scale for every gene, so you can compare genes with each other (darker = more). '
@@ -156,8 +156,8 @@ $gs_label = fn(array $gs, bool $html = false) => gene_set_label($gs['organism'],
       ) ?>
       </span>
       <div class="btn-group btn-group-sm" role="group" aria-label="<?= t('Order') ?>">
-        <a class="btn btn-light<?= $sort === 'input' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['sort' => 'input'])) ?>">As pasted</a>
-        <a class="btn btn-light<?= $sort === 'level' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['sort' => 'level'])) ?>">Highest first</a>
+        <a class="btn btn-light<?= $sort === 'input' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['sort' => 'input'])) ?>"><?= t('As pasted') ?></a>
+        <a class="btn btn-light<?= $sort === 'level' ? ' active' : '' ?>" href="<?= htmlspecialchars($link(['sort' => 'level'])) ?>"><?= t('Highest first') ?></a>
       </div>
       <a class="btn btn-sm btn-light" href="<?= htmlspecialchars($link(['download' => 'tsv'])) ?>"><i class="fa fa-download me-1"></i><?= t('TSV') ?></a>
     </div>

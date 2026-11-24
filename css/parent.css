@@ -650,6 +650,25 @@ a.badge:hover {
 .expr-more-btn[aria-expanded="true"]  .when-collapsed,
 .expr-more-btn[aria-expanded="false"] .when-expanded { display: none; }
 
+/* Image gallery (tools/pages/image_gallery.php): one section per stage, each a "Jump to" entry. */
+.gallery-stage { margin-top: 1.75rem; }
+/* The filter box hides tiles and stages with [hidden]; the tile's display:flex would beat it. */
+.gallery-stage[hidden], .gene-image-tile[hidden] { display: none; }
+.gallery-filter { max-width: 32rem; }
+.gallery-stage-head {
+    display: flex; align-items: baseline; gap: 0.75rem; margin: 0 0 0.75rem; padding: 0.45rem 0.75rem;
+    font-size: 1.25rem; font-weight: 600; color: var(--moop-main-dark);
+    background: rgba(var(--moop-main-rgb), 0.07); border-left: 4px solid var(--moop-tool-header); border-radius: 4px;
+}
+/* The count bubble of the gene page (.annot-count-badge), sitting inline after the stage name. */
+.gallery-stage-count {
+    align-self: center; min-width: 26px; height: 24px; padding: 0 0.45rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1;
+    color: var(--moop-main-dark); background: #fff; border: 1px solid currentColor; border-radius: 999px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+
 /* Gene page "Images" card (tools/pages/parent.php, js/modules/gene-images.js) */
 .gene-images-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .gene-image-tile {

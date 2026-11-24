@@ -120,8 +120,13 @@ Planosphere
 - [x] **Tools page** → home-page tiles: DONE 11-20 (wrapped in ps-home2 + ps-hero). Note: its PLANA Ontology tile still links to obofoundry.org, not SIMRbase's Ontology Browser (?o=PLANA) -- Sofia to decide.
 - [x] **Molecular fate mapping** page centred: DONE 11-20 (wrapped in ps-paper; section boxes now match their tables' width).
 - [x] **Movie page** centred: DONE 11-20 (ps-paper; buttons now Planosphere's ps-btn, not Bootstrap blue).
-- [ ] **Image gallery** — larger section headers + a side menu to jump to a section (like the SIMRbase
+- [x] DONE 11-24: "Jump to" side menu (the gene page's, one row per stage with its count bubble), larger
+      stage headers, and a filter box (gene ID / name / anatomy term or PLANA ID; no match -> look the ID up
+      under all the gene's IDs). Jump-to now lands below the sticky navbar on every page that uses it.
+      **Image gallery** — larger section headers + a side menu to jump to a section (like the SIMRbase
       gene page). **M**
+- [ ] **Gallery stage filter** (`?stage=`) also matches images that only carry the stage as a TERM, so
+      "Stage 3" shows tiles from Stages 2–8. Decide: stage_id only, or keep and say so. **S** (found 11-24)
 
 ## 5. Help text and examples
 - [x] **Example search terms** DONE 11-20 — chosen from the data (moop_curated_examples(), lib/home_examples.php, the same system as the home page): the most-curated gene (Smed: EU296635 = sFRP-1) under its other IDs, and the three most-curated papers. Click fills the box (Anatomy also runs it). Cached; never shows crosswalk rows the viewer may not see.

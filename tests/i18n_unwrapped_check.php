@@ -82,7 +82,11 @@ function moop_unwrapped_text(string $src): array {
         }
         $lt = strrpos($html, '<');
         $gt = strrpos($html, '>');
-        $in_tag = $lt !== false && ($gt === false || $lt > $gt) && strpos(substr($html, $lt, 4), '<!--') !== 0;
+        // A chunk with neither '<' nor '>' (`" data-x="` between two echoes in one tag) changes
+        // nothing: still inside the tag if we were. Resetting here read attribute names as text.
+        if ($lt !== false || $gt !== false) {
+            $in_tag = $lt !== false && ($gt === false || $lt > $gt) && strpos(substr($html, $lt, 4), '<!--') !== 0;
+        }
     }
     return $found;
 }
