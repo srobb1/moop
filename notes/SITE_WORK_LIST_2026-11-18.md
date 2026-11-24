@@ -228,7 +228,7 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
-- [ ] **Walkthrough step 7: fix the genome browser screenshot (Sofia 11-24, do 11-25).** images/pages/tour/jbrowse.png.
+- [x] DONE 11-24 (Sofia: "it is working now" -- was a cached copy). **Walkthrough step 7: fix the genome browser screenshot.** images/pages/tour/jbrowse.png.
       Live version = track drawer closed + loc re-entered. Ask Sofia what is still wrong (hard-reload first); likely:
       empty space under the view, track label over the gene, cursor left in the location box. JBrowse is in
       #jb-iframe; never shrink the window (it collapses) -- crop. **S**
