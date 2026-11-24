@@ -1153,3 +1153,33 @@ footer .footer-meta {
    carry no class, so a full-width screenshot overflowed sideways, on a phone too (the tour, 2026-11-23).
    Only shrinks an image that would overflow; a small one keeps its size. */
 .content-page-body img { max-width: 100%; height: auto; }
+
+/* Written PLANA term pages (tissues, organ systems, Stages 1-8 -- ported from the old Planosphere):
+   metadata/pages/<term>.json bodies wrap in .tp-page. Shown on the term page and as their own page. */
+.tp-page h2 {
+    font-size: 1.15rem; font-weight: 600; color: var(--moop-main-dark);
+    margin: 1.75rem 0 0.75rem; padding-bottom: 0.35rem; border-bottom: 2px solid rgba(var(--moop-main-rgb), 0.25);
+}
+.tp-page > h2:first-child, .tp-page > span:first-child + h2 { margin-top: 0; }
+.tp-page h3 { font-size: 1rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+.tp-page p { line-height: 1.6; }
+.tp-page .ps-figure { margin: 1rem 0 1.5rem; text-align: center; }
+.tp-page .ps-figure img { max-width: 100%; max-height: 640px; border: 1px solid #e5e7eb; border-radius: 6px; }
+.tp-page .ps-figure > :not(a):not(img) { text-align: left; }
+.tp-page .ps-caption, .tp-page .ps-figure p { text-align: left; font-size: 0.875rem; color: #4b5563; margin-top: 0.5rem; }
+.tp-page .tp-genes { font-size: 0.875rem; }
+.tp-page .tp-genes thead th {
+    background: rgba(var(--moop-main-rgb), 0.07); color: var(--moop-main-dark);
+    font-weight: 600; vertical-align: bottom;
+}
+.tp-page .tp-genes img { width: 170px; max-width: none; height: auto; border-radius: 4px; }
+.tp-page .tp-genes td:last-child { width: 170px; }
+.tp-page .tp-stages { min-width: 6.5rem; max-width: 8rem; }
+.tp-page .tp-genes td:nth-child(5) { min-width: 10rem; }
+.tp-page .tp-stage {
+    display: inline-block; padding: 0 6px; margin: 1px 0; border-radius: 999px; font-size: 0.75rem;
+    background: rgba(var(--moop-main-rgb), 0.1); color: var(--moop-main-dark); text-decoration: none;
+}
+.tp-page .tp-stage:hover { background: rgba(var(--moop-main-rgb), 0.2); }
+.tp-page img[src$="excel-xls-icon-2.png"] { width: 56px; height: auto; border: 0; }
+.tp-page .tp-seqs .small { display: block; margin-top: 0.35rem; overflow-wrap: anywhere; }

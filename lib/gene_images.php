@@ -389,6 +389,25 @@ function moop_images_for_analysis(string $organism, string $analysis, array $kin
 }
 
 /**
+ * How many images of each kind an analysis has, counting only data sets THIS VISITOR may see:
+ * [kind => n], in MOOP_IMAGE_KINDS order. For the gallery's kind chips -- exact, where a fetched
+ * list is capped (Zeng 2018 alone has ~98k plots).
+ */
+function moop_images_kind_counts(string $organism, string $analysis): array {
+    $db = moop_images_open($organism);
+    if (!$db || $analysis === '') return [];
+    $st = $db->prepare('SELECT kind, assembly, gene_set, COUNT(*) AS n FROM image WHERE analysis = ? GROUP BY kind, assembly, gene_set');
+    $st->execute([$analysis]);
+    $key = moop_image_analysis_key($organism, $analysis);
+    $counts = [];
+    foreach ($st as $r) {
+        if (!moop_dataset_visible($organism, $r['assembly'], $r['gene_set'], $key)) continue;
+        $counts[$r['kind']] = ($counts[$r['kind']] ?? 0) + (int) $r['n'];
+    }
+    return array_intersect_key(array_replace(array_flip(MOOP_IMAGE_KINDS), $counts), $counts);
+}
+
+/**
  * The analysis rows (title, description, paper, key image) THIS VISITOR may see: [analysis => row].
  * An analysis is listed only if it has images in a data set the visitor may see and its own rule
  * allows them -- a restricted analysis's title is not shown either (private reads as missing).

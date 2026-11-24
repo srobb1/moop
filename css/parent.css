@@ -655,6 +655,16 @@ a.badge:hover {
 /* The filter box hides tiles and stages with [hidden]; the tile's display:flex would beat it. */
 .gallery-stage[hidden], .gene-image-tile[hidden] { display: none; }
 .gallery-filter { max-width: 32rem; }
+/* Kind chips (All · In situ images · Movies ...): outline pills, the chosen one filled. */
+.gallery-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.gallery-kind {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 999px;
+    border: 1px solid var(--moop-tool-header); color: var(--moop-tool-header); background: #fff;
+    font-size: 0.875rem; text-decoration: none;
+}
+.gallery-kind:hover { background: rgba(var(--moop-main-rgb), 0.08); color: var(--moop-tool-header); }
+.gallery-kind.active { background: var(--moop-tool-header); color: #fff; }
+.gallery-kind-count { font-size: 0.78rem; opacity: 0.75; }
 .gallery-stage-head {
     display: flex; align-items: baseline; gap: 0.75rem; margin: 0 0 0.75rem; padding: 0.45rem 0.75rem;
     font-size: 1.25rem; font-weight: 600; color: var(--moop-main-dark);

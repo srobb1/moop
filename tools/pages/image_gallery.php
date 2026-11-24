@@ -45,8 +45,18 @@ $__heading = $__a ? $__a['title'] : t_plain('Image gallery');
     </p>
     <?php endif; ?>
 
+    <?php if (count($kind_counts) > 1): /* Kind chips: links, so a menu can open the gallery on Movies. */ ?>
+    <nav class="gallery-kinds mb-2" aria-label="<?= t('Kind of image') ?>">
+        <?php $__q = ['organism' => $organism, 'analysis' => $analysis, 'gene' => $gene, 'term' => $term, 'stage' => $stage]; ?>
+        <a class="gallery-kind<?= $kinds ? '' : ' active' ?>" href="<?= htmlspecialchars($__url($__q)) ?>"<?= $kinds ? '' : ' aria-current="page"' ?>><?= t('All') ?> <span class="gallery-kind-count"><?= number_format($all_count) ?></span></a>
+        <?php foreach ($kind_counts as $__k => $__n): $__on = $kinds === [$__k]; ?>
+        <a class="gallery-kind<?= $__on ? ' active' : '' ?>" href="<?= htmlspecialchars($__url($__q + ['kind' => $__k])) ?>"<?= $__on ? ' aria-current="page"' : '' ?>><?= htmlspecialchars(ucfirst($__kind_words[$__k] ?? t_plain($__k))) ?> <span class="gallery-kind-count"><?= number_format($__n) ?></span></a>
+        <?php endforeach; ?>
+    </nav>
+    <?php endif; ?>
+
     <p class="mb-3">
-        <?php if ($kinds): ?><span class="badge text-bg-light border"><?= htmlspecialchars(implode(', ', array_map(fn($k) => $__kind_words[$k] ?? $k, $kinds))) ?></span><?php endif; ?>
+        <?php if ($kinds && count($kind_counts) <= 1): ?><span class="badge text-bg-light border"><?= htmlspecialchars(implode(', ', array_map(fn($k) => $__kind_words[$k] ?? $k, $kinds))) ?></span><?php endif; ?>
         <?php if ($gene !== ''): ?>
             <span class="badge text-bg-light border"><?= t('gene') ?>
                 <a class="font-monospace" href="<?= htmlspecialchars(moop_url('tools/parent.php') . '?' . http_build_query(['organism' => $organism, 'uniquename' => $gene])) ?>"><?= htmlspecialchars($gene) ?></a></span>
