@@ -117,10 +117,15 @@ $assembly_path = dirname($gene_set_path);
                 // to that size, so bounding the SEARCH by the display setting would
                 // let "Largest product to report" silently change the verdict --
                 // a display control quietly altering a scientific conclusion.
+                // A repetitive primer (PrimerBlast::MAX_SITES_PER_PRIMER) has no stored
+                // sites: products from the other primer alone would be a wrong, smaller
+                // answer, so none are worked out and the verdict says why.
+                $repetitive = array_filter($blast['repetitive'][$i] ?? []);
                 $found = PrimerPairs::findProducts(
-                    $blast['hits'][$i] ?? [],
+                    $repetitive ? [] : ($blast['hits'][$i] ?? []),
                     ['max_product' => max($max_product, PrimerPairs::AMPLIFIABLE_MAX)]
                 );
+                $found['repetitive']    = $repetitive;   // side => exact site count; [] = normal
                 // Per pair, not the run-wide total: every pair would otherwise
                 // report the same number as soon as more than one was searched.
                 $found['below_floor']   = $blast['discards'][$i]['below_floor'] ?? 0;
@@ -297,6 +302,22 @@ function primer_blast_verdict(array $r, string $search_mode, int $max_product): 
         }
     }
 
+    // A primer matching thousands of places (PrimerBlast::MAX_SITES_PER_PRIMER) had no
+    // products worked out, so the counts above are 0 -- which must NOT read as "no product".
+    // It is non-specific: such a primer primes all over the template (or the genomic DNA).
+    $repetitive = [];
+    foreach ($r['by_db'] as $db_key => $f) {
+        foreach ($f['repetitive'] ?? [] as $side => $n) {
+            $where = $db_key === 'transcript' ? t_plain('the transcripts') : t_plain('the genome');
+            $reasons[] = $side === 'forward'
+                ? t_plain('the forward primer matches %1$s places in %2$s (up to %3$d mismatches): it lies in a repeated sequence, so products were not worked out',
+                          number_format($n), $where, PrimerBlast::SEARCH_MAX_MISMATCH)
+                : t_plain('the reverse primer matches %1$s places in %2$s (up to %3$d mismatches): it lies in a repeated sequence, so products were not worked out',
+                          number_format($n), $where, PrimerBlast::SEARCH_MAX_MISMATCH);
+            $repetitive[$db_key][$side] = $n;
+        }
+    }
+
     $total = $amp_intended;
 
     // Products on the template that would amplify but for their LENGTH: they
@@ -310,7 +331,9 @@ function primer_blast_verdict(array $r, string $search_mode, int $max_product): 
                 && PrimerPairs::isAmplifiable(array_merge($pr, ['size' => 0]))));
     $kb = PrimerPairs::amplifiableKb();
 
-    if ($total === 0 && $too_long) {
+    if ($repetitive) {
+        $verdict = ['nonspecific', 'bg-warning text-dark', t_plain('non-specific')];
+    } elseif ($total === 0 && $too_long) {
         $verdict = ['none', 'bg-secondary', t_plain('no product under %s kb', $kb)];
     } elseif ($total === 0) {
         $verdict = ['none', 'bg-secondary', t_plain('no product')];
@@ -322,7 +345,8 @@ function primer_blast_verdict(array $r, string $search_mode, int $max_product): 
 
     return ['key' => $verdict[0], 'badge' => $verdict[1], 'label' => $verdict[2], 'reasons' => $reasons,
             'isoforms_note' => $isoforms_note, 'intended_db' => $intended_db, 'amplifiable' => $total,
-            'amp_contam' => $amp_contam, 'too_long' => $too_long, 'kb' => $kb];
+            'amp_contam' => $amp_contam, 'too_long' => $too_long, 'kb' => $kb,
+            'repetitive' => $repetitive];
 }
 
 /** A gene as a reader names it: "name (id)", or the id when it has no other name. */

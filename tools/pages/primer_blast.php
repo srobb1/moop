@@ -436,7 +436,7 @@ $db_section_label = function ($key) {
                             <?= help_modal_trigger('results-help', '', 'What specific and non-specific mean') ?>
                         </div>
 
-                        <?php if ($total === 0): ?>
+                        <?php if ($total === 0 && empty($v['repetitive'])): ?>
                             <?php // Say this even when there are reasons: otherwise "no product"
                                   // sits above a note about a self-pairing gDNA product and reads
                                   // as a contradiction. ?>
@@ -609,7 +609,9 @@ $db_section_label = function ($key) {
                                 ?>
                                 <?php if (empty($shown)): ?>
                                     <div class="text-muted small mb-1">
-                                        <?php if ($over_display > 0 || $over_mm > 0): ?>
+                                        <?php if (!empty($found['repetitive'])): ?>
+                                            <?= t('Not worked out: a primer matches too many places here (see above).') . "\n" ?>
+                                        <?php elseif ($over_display > 0 || $over_mm > 0): ?>
                                             <?= ($hidden_amp === 0 ? t('No product would amplify here.') : t('None shown.')) . "\n" ?>
                                             <?= $not_listed_html . "\n" ?>
                                         <?php else: ?>

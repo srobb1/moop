@@ -447,7 +447,12 @@ Planosphere
       PUBLIC on GitHub). Write it to /var/www/moop-private/ (outside the docroot, 2770), share with Sofia
       only, delete once accounts are settled. Stream the dump (zcat | grep the user-table COPY blocks);
       never unpack 24 GB. **S-M**
-- [ ] **A repetitive primer pair crashes Primer BLAST (found 11-24).** A poly-A pair
+- [x] **DONE 11-24.** Cause confirmed: 876,050 blastn rows read into PHP's 128 MB
+      (105 MB as lines alone). Now streamed from a file; a primer over 5,000 sites (PrimerBlast::MAX_SITES_PER_PRIMER,
+      measured: normal 20-mers keep 45-914, repeat-family ones 6k-47k, poly-A 106k) is called repetitive -> pair
+      non-specific with the exact count; PrimerInput warns on runs >5 / dinucleotide repeats. Page + API 200 in 28 s.
+      Still true and NOT fixed: blastn itself uses 1-2.6 GB RAM per primer check on big genomes (any primer).
+      **A repetitive primer pair crashes Primer BLAST (found 11-24).** A poly-A pair
       (AAAAAAAAAAAAAAAAAAAA / TTTTTTTTTTTTTTTTTTTT) against Acropora_millepora: the page returns nginx
       "temporarily unavailable" (502) after ~25 s -- old code and new alike, and api/v1/primer_blast.php the
       same. Likely PrimerBlast::run(): blastn-short with no -max_target_seqs/-max_hsps, every output line read

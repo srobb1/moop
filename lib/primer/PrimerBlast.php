@@ -58,6 +58,26 @@ class PrimerBlast
     const DISPLAY_MISMATCH_DEFAULT = 2;
 
     /**
+     * A primer that matches more places than this (within SEARCH_MAX_MISMATCH) is called
+     * REPETITIVE: its sites stop being stored (they are still counted, so the number reported
+     * is exact) and no products are worked out for its pair.
+     *
+     * Measured 2026-11-24, random 20-mers: normal ones keep 45-914 sites (Acropora, Smed,
+     * wallaby genomes -- mostly 3-5 mismatches, which are listed but rarely prime); one in a
+     * repeat family kept 6,042 (Smed), a wallaby SINE-like one 46,861, poly-A 106,144 per primer.
+     * Without a ceiling poly-A crashed the page: 876,050 blastn lines read into PHP's 128 MB,
+     * and pairing 106k x 106k sites could never finish anyway. A plain BLAST cap
+     * (-max_target_seqs) would instead UNDERCOUNT silently and could call such a pair specific.
+     */
+    const MAX_SITES_PER_PRIMER = 5000;
+
+    /**
+     * Sites stored across the whole run (all pairs). Bounds memory when many pairs each sit
+     * just under MAX_SITES_PER_PRIMER; past it the run fails with a message, never a crash.
+     */
+    const MAX_SITES_PER_RUN = 60000;
+
+    /**
      * Run both primers of every pair against one BLAST database.
      *
      * @param array  $pairs        From PrimerInput::parse()['pairs'].
@@ -74,6 +94,9 @@ class PrimerBlast
      *                                Reporting the run-wide total against each pair would
      *                                show every pair the same number, which is wrong the
      *                                moment more than one pair is searched.
+     *     @type array  $repetitive   PER PAIR index => ['forward'=>n,'reverse'=>n]: the exact
+     *                                site count of a primer over MAX_SITES_PER_PRIMER, else 0.
+     *                                Such a primer's hits list is EMPTY -- not its real sites.
      * }
      */
     public static function run(array $pairs, $db, array $options = [])
@@ -85,6 +108,7 @@ class PrimerBlast
             'below_floor'   => 0,
             'over_mismatch' => 0,
             'discards'      => [],
+            'repetitive'    => [],
         ];
 
         if (empty($pairs)) {
@@ -130,6 +154,16 @@ class PrimerBlast
         }
         file_put_contents($query_file, $fasta);
 
+        // blastn writes its table to a FILE, read back one line at a time. Collecting stdout
+        // with exec() held every line in PHP memory: a poly-A pair gave 876,050 lines (47 MB of
+        // text, 105 MB as a PHP array) and killed the request before a verdict was reached.
+        $out_file = tempnam(moop_temp_dir(), 'moop_primer_o');
+        if ($out_file === false) {
+            @unlink($query_file);
+            $result['error'] = 'Could not create a temporary output file.';
+            return $result;
+        }
+
         $cmd = escapeshellarg($blastn)
              . ' -task blastn-short'
              . ' -evalue ' . escapeshellarg(self::EVALUE)
@@ -142,7 +176,8 @@ class PrimerBlast
              // stops extension, while the same mismatch at the 5' end is tolerated --
              // and plain outfmt 6 gives only a total, which cannot express that.
              . ' -outfmt ' . escapeshellarg('6 qseqid sseqid length mismatch gapopen qstart qend sstart send btop')
-             . ' 2>&1';
+             . ' -out ' . escapeshellarg($out_file)
+             . ' 2>&1';   // what is left on stdout/stderr is BLAST's own messages
 
         // Through the BLAST queue like every other search, and under the same run-time cap.
         require_once __DIR__ . '/../blast_queue.php';
@@ -157,31 +192,40 @@ class PrimerBlast
         );
         @unlink($query_file);
 
-        if (!$queued['ran']) {
-            $result['error'] = $queued['error'];
+        $fail = function ($message) use (&$result, $out_file) {
+            @unlink($out_file);
+            $result['error'] = $message;
             return $result;
+        };
+        if (!$queued['ran']) {
+            return $fail($queued['error']);
         }
         if (blast_queue_timed_out($return_code)) {
-            $result['error'] = blast_queue_timeout_message();
-            return $result;
+            return $fail(blast_queue_timeout_message());
         }
         if ($return_code !== 0) {
             // A non-zero exit with an empty .blastout is exactly the failure mode
             // that made the original scripts report a header-only table as success.
-            $result['error'] = 'BLAST failed (exit ' . $return_code . '): '
-                . trim(implode(' ', array_slice($output, 0, 3)));
-            return $result;
+            return $fail('BLAST failed (exit ' . $return_code . '): '
+                . trim(implode(' ', array_slice($output, 0, 3))));
+        }
+        $fh = fopen($out_file, 'r');
+        if ($fh === false) {
+            return $fail('Could not read the BLAST output.');
         }
 
         foreach ($pairs as $i => $pair) {
-            $result['hits'][$i]     = ['forward' => [], 'reverse' => []];
-            $result['discards'][$i] = ['below_floor' => 0, 'over_mismatch' => 0];
+            $result['hits'][$i]       = ['forward' => [], 'reverse' => []];
+            $result['discards'][$i]   = ['below_floor' => 0, 'over_mismatch' => 0];
+            $result['repetitive'][$i] = ['forward' => 0, 'reverse' => 0];
         }
+        $kept   = [];   // qid => sites passing both filters, counted past the ceiling
+        $stored = 0;    // sites held in memory, whole run
 
-        foreach ($output as $line) {
-            $f = explode("\t", $line);
+        while (($line = fgets($fh)) !== false) {
+            $f = explode("\t", rtrim($line, "\r\n"));
             if (count($f) < 9) {
-                continue;   // BLAST warnings on stderr land here; they are not rows
+                continue;   // not a table row
             }
 
             list($qid, $sid, $length, $mismatch, $gapopen, $qstart, $qend, $sstart, $send) = $f;
@@ -224,6 +268,25 @@ class PrimerBlast
             list($sstart, $send) = self::fullFootprint((int)$sstart, (int)$send, $qstart, $qend, $qlength);
 
             $meta = $id_map[$qid];
+
+            // Past the ceiling the primer is repetitive: keep COUNTING (the number shown is
+            // exact) but drop its stored sites -- a partial list would make products and the
+            // verdict look like a real, smaller answer.
+            $kept[$qid] = ($kept[$qid] ?? 0) + 1;
+            if ($kept[$qid] > self::MAX_SITES_PER_PRIMER) {
+                if ($kept[$qid] === self::MAX_SITES_PER_PRIMER + 1) {
+                    $stored -= count($result['hits'][$meta['index']][$meta['side']]);
+                    $result['hits'][$meta['index']][$meta['side']] = [];
+                }
+                $result['repetitive'][$meta['index']][$meta['side']] = $kept[$qid];
+                continue;
+            }
+            if (++$stored > self::MAX_SITES_PER_RUN) {
+                fclose($fh);
+                return $fail('These primers match too many places in total to check at once. '
+                    . 'Check fewer pairs at a time.');
+            }
+
             $result['hits'][$meta['index']][$meta['side']][] = [
                 'subject'  => $sid,
                 // In -outfmt 6 the subject strand is IMPLIED by coordinate order.
@@ -247,6 +310,9 @@ class PrimerBlast
                 ),
             ];
         }
+
+        fclose($fh);
+        @unlink($out_file);
 
         $result['success'] = true;
         return $result;

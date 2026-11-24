@@ -1077,6 +1077,85 @@ ok(primer_maker_export_rows($lone, $none) === [], 'one sequence that is the whol
 ok(substr_count(moop_rows_to_tsv($rows), "\n") === 3, 'header + 2 rows');
 
 // ----------------------------------------------------------------------------
+group('Repetitive primers — warned before the search, called non-specific after it');
+// Poly-A against Acropora (2026-11-24) gave 876,050 blastn rows and crashed the page (502).
+ok(PrimerInput::lowComplexity(str_repeat('A', 20)) === 'has a run of 20 A', 'poly-A: a run of 20 A');
+ok(PrimerInput::lowComplexity('GCTAGCAAAAAACGTTGCAG') === 'has a run of 6 A', 'a run of 6 is past Primer3\'s poly-X limit of 5');
+ok(PrimerInput::lowComplexity('GCTAGCAAAAACGTTGCAGT') === null, 'a run of 5 is allowed');
+ok(PrimerInput::lowComplexity('GCATATATATATCGTTGCAG') === 'is a simple repeat (AT × 5)', 'ATATATATAT: a simple repeat');
+ok(PrimerInput::lowComplexity('GCATATATATCGTTGCAGTC') === null, 'AT × 4 is not');
+ok(PrimerInput::lowComplexity('TGTGTTATTGTTTTTCGCCA') === null, 'an ordinary primer: nothing to say');
+$pr = PrimerInput::parse("name\tforward\treverse\npA\t" . str_repeat('A', 20) . "\tGCTAGCATCGTTGCAGTCAA");
+ok(count($pr['pairs']) === 1 && count(array_filter($pr['warnings'], fn($w) => strpos($w, 'low-complexity') !== false)) === 1,
+   'parse() warns once, for the forward primer only, and still keeps the pair');
+
+// The verdict: a repetitive primer's products were not worked out, so 0 must not read "no product".
+$rep = $found(['forward' => [], 'reverse' => [hit('chr1', 1300, 1319, '-')]]);
+$rep['repetitive'] = ['forward' => 106144];
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['genome' => $rep]], 'genome', 10000);
+ok($v['key'] === 'nonspecific' && $v['repetitive'] === ['genome' => ['forward' => 106144]],
+   'repetitive forward primer: non-specific, not "no product"');
+ok(count($v['reasons']) === 1 && strpos($v['reasons'][0], 'the forward primer matches 106,144 places in the genome') === 0,
+   'the reason names the primer, the exact count and the template');
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['transcript' => $one, 'genome' => $rep]], 'transcript', 10000);
+ok($v['key'] === 'nonspecific' && strpos(implode(' ', $v['reasons']), 'in the genome') !== false,
+   'cDNA mode: a primer repetitive in genomic DNA still makes the pair non-specific (gDNA in the prep)');
+
+// PrimerBlast::run() itself, with a stand-in blastn that writes N forward rows and 3 reverse rows:
+// past MAX_SITES_PER_PRIMER the forward primer is counted exactly, its sites dropped, and the
+// output is streamed (200,000 rows held in memory was what crashed the page).
+// ConfigManager only, for the BLAST queue's paths -- not the whole site bootstrap, which starts a
+// session and declares the real t_plain() over this suite's stand-in.
+require_once "$BASE/lib/functions_json.php";
+require_once "$BASE/includes/ConfigManager.php";
+require_once "$BASE/lib/cache_paths.php";
+ConfigManager::getInstance()->initialize("$BASE/config/site_config.php", "$BASE/config/tools_config.php");
+$stub_dir = null;
+foreach ([sys_get_temp_dir(), __DIR__] as $cand) {   // /tmp is noexec on some hosts
+    $try = $cand . '/.primer_blastn_stub_' . getmypid();
+    file_put_contents($try, "#!/bin/sh\necho ok\n");
+    chmod($try, 0700);
+    $out = @shell_exec(escapeshellarg($try) . ' 2>/dev/null');
+    unlink($try);
+    if (trim((string)$out) === 'ok') { $stub_dir = $cand; break; }
+}
+if ($stub_dir === null) {
+    echo "  SKIP: no temp directory here can run a script\n";
+} else {
+    $stub = $stub_dir . '/.primer_blastn_stub_' . getmypid();
+    file_put_contents($stub, '#!/bin/sh
+while [ $# -gt 0 ]; do [ "$1" = "-out" ] && out="$2"; shift; done
+awk -v n="$STUB_N" \'BEGIN{for(i=1;i<=n;i++) printf "q0f\tchr1\t20\t0\t0\t1\t20\t%d\t%d\t20\n", i*100, i*100+19;
+  for(i=1;i<=3;i++) printf "q0r\tchr1\t20\t0\t0\t1\t20\t%d\t%d\t20\n", i*100+319, i*100+300}\' > "$out"
+echo "Warning: a BLAST message, not a row"
+');
+    chmod($stub, 0700);
+    $db_dir = sys_get_temp_dir() . '/primer_blast_db_' . getmypid();
+    @mkdir($db_dir);
+    touch("$db_dir/db.nsq");
+    $pA = [['name' => 'p', 'forward' => str_repeat('A', 20), 'reverse' => str_repeat('T', 20)]];
+    $run_n = function ($n) use ($pA, $db_dir, $stub) {
+        putenv("STUB_N=$n");
+        return PrimerBlast::run($pA, "$db_dir/db", ['blastn' => $stub]);
+    };
+    $cap = PrimerBlast::MAX_SITES_PER_PRIMER;
+    $r = $run_n($cap);
+    ok($r['success'] && count($r['hits'][0]['forward']) === $cap && $r['repetitive'][0] === ['forward' => 0, 'reverse' => 0],
+       "exactly $cap sites: all kept, not repetitive");
+    $r = $run_n($cap + 1);
+    ok($r['success'] && $r['hits'][0]['forward'] === [] && $r['repetitive'][0]['forward'] === $cap + 1
+       && count($r['hits'][0]['reverse']) === 3, 'one over: forward repetitive (exact count), its sites dropped; reverse untouched');
+    $mem0 = memory_get_usage();
+    $r = $run_n(200000);
+    ok($r['success'] && $r['repetitive'][0]['forward'] === 200000 && memory_get_usage() - $mem0 < 20e6,
+       '200,000 rows: counted exactly, streamed (under 20 MB held)');
+    putenv('STUB_N');
+    unlink($stub);
+    unlink("$db_dir/db.nsq");
+    @rmdir($db_dir);
+}
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Primer smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

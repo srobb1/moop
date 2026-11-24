@@ -416,6 +416,36 @@ class PrimerInput
         return $base !== '' ? $base : $a;
     }
 
+    /** Longest single-base run allowed (Primer3's PRIMER_MAX_POLY_X default). */
+    const MAX_POLY_X = 5;
+
+    /** Fewest repeat units of a two-base motif (ATATATAT...) that counts as a simple repeat. */
+    const MIN_DINUC_REPEATS = 5;
+
+    /**
+     * Describe a primer's low-complexity stretch ("has a run of 9 A"), or null when it has none.
+     * Public so the test suite can pin the rule.
+     */
+    public static function lowComplexity($seq)
+    {
+        // Longest run of one base.
+        if (preg_match_all('/(A+|C+|G+|T+|U+)/', $seq, $m)) {
+            $longest = '';
+            foreach ($m[0] as $run) {
+                if (strlen($run) > strlen($longest)) $longest = $run;
+            }
+            if (strlen($longest) > self::MAX_POLY_X) {
+                return 'has a run of ' . strlen($longest) . ' ' . $longest[0];
+            }
+        }
+        // A two-base motif repeated back to back (two DIFFERENT bases; AAAA is the case above).
+        $min = self::MIN_DINUC_REPEATS - 1;
+        if (preg_match('/(([ACGTU])(?!\2)[ACGTU])\1{' . $min . ',}/', $seq, $m)) {
+            return 'is a simple repeat (' . $m[1] . ' × ' . (strlen($m[0]) / 2) . ')';
+        }
+        return null;
+    }
+
     /**
      * Validate both sequences and record the pair.
      */
@@ -441,6 +471,15 @@ class PrimerInput
             } elseif ($len > self::LEN_WARN_MAX) {
                 $result['warnings'][] = "\"$name\" ($label) is {$len} nt — longer than "
                     . self::LEN_WARN_MAX . ' nt, which usually needs extra purification when ordered.';
+            }
+
+            // Low complexity: such a primer tends to match thousands of places, and the
+            // search then calls it repetitive (PrimerBlast::MAX_SITES_PER_PRIMER). Saying so
+            // up front explains the result before the reader meets it.
+            $simple = self::lowComplexity($seq);
+            if ($simple !== null) {
+                $result['warnings'][] = "\"$name\" ($label) $simple — low-complexity primers "
+                    . 'often match many places in a genome.';
             }
         }
 

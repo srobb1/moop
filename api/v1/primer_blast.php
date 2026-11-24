@@ -119,7 +119,9 @@ foreach ($check['results'] as $r) {
             'products'   => $listed,
             'not_listed' => count($hidden) + (int) ($found['over_max'] ?? 0),
             'not_listed_that_could_amplify' => count(array_filter($hidden, ['PrimerPairs', 'isAmplifiable'])),
-        ];
+        ] + (!empty($found['repetitive'])
+            // Products were NOT worked out here: an empty list must not read as "none".
+            ? ['repetitive_primer_sites' => $found['repetitive'], 'products_not_worked_out' => true] : []);
     }
     $iso = $v['isoforms_note'];
     $pairs_out[] = [
@@ -147,7 +149,8 @@ $body = [
     'how_to_read' => 'A product would amplify when it is under ' . PrimerPairs::amplifiableKb() . ' kb, each primer has fewer than 6 '
                    . 'mismatches, and fewer than 2 in its last 5 bases at the 3\' end (NCBI Primer-BLAST\'s thresholds). '
                    . 'specific = one such product on the template (or isoforms of one gene); nonspecific = more, see reasons; '
-                   . 'none = nothing would amplify. In cdna mode, introns_spanned > 0 on the cDNA product means genomic DNA '
+                   . 'none = nothing would amplify. A primer matching over ' . number_format(PrimerBlast::MAX_SITES_PER_PRIMER)
+                   . ' places is repetitive: the pair is nonspecific and its products are not worked out. In cdna mode, introns_spanned > 0 on the cDNA product means genomic DNA '
                    . 'cannot give the same band.',
     'download' => 'format=tsv gives the listed products as the page\'s "Download results" file.',
 ];
@@ -161,7 +164,8 @@ if ($format === 'md') {
         foreach ($p['reasons'] as $why) $md .= "- $why\n";
         if (isset($p['one_gene_several_isoforms'])) $md .= "- One gene, several isoforms: {$p['one_gene_several_isoforms']}\n";
         foreach ($p['templates'] as $tpl => $t) {
-            $md .= "\n$tpl: " . ($t['products'] ? '' : 'no product listed') . "\n";
+            $md .= "\n$tpl: " . (!empty($t['products_not_worked_out']) ? 'products not worked out (repetitive primer, see above)'
+                                   : ($t['products'] ? '' : 'no product listed')) . "\n";
             foreach ($t['products'] as $pr) {
                 $md .= "- {$pr['product_size']} bp at {$pr['subject']}:{$pr['start']}-{$pr['end']}, {$pr['max_mismatch']} mismatch(es)"
                      . ($pr['gene'] !== '' ? ", gene {$pr['gene']}" . ($pr['gene_name'] !== '' ? " ({$pr['gene_name']})" : '') : '')
