@@ -36,4 +36,4 @@ echo render_display_page(__DIR__ . '/pages/ontology_browser.php', [
     'scope'      => $prefix === 'GO' ? moop_ob_scope() : [],
     'inline_scripts' => ['const obConfig = ' . json_encode(['prefix' => $prefix, 'parts' => $parts, 'scope' => moop_ob_scope_params(),
         'api' => moop_url('api/ontology_children.php'), 'termUrl' => moop_url('tools/ontology_term.php')], JSON_HEX_TAG | JSON_HEX_AMP) . ';'],
-], 'Ontology Browser');
+], 'Anatomy & Gene Function');

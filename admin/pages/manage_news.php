@@ -36,7 +36,7 @@ $cutoff = date('Y-m-d', time() - MOOP_NEWS_HOME_DAYS * 86400);
           <div class="col-sm-9">
             <label class="form-label fw-semibold" for="news-text">What is new</label>
             <textarea class="form-control" id="news-text" name="text" rows="2" maxlength="<?= MOOP_NEWS_MAX_TEXT ?>" required
-                      placeholder="[GO terms](tools/ontology_browser.php) in the Ontology Browser, with the genes for each term."><?= $h($form['text']) ?></textarea>
+                      placeholder="[GO terms](tools/ontology_browser.php) in Anatomy &amp; Gene Function, with the genes for each term."><?= $h($form['text']) ?></textarea>
             <div class="form-text">One or two sentences. Markdown: <code>[link text](tools/blast.php)</code>, <code>**bold**</code>. Put details on a page and link to it.</div>
           </div>
           <div class="col-12">

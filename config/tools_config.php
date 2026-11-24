@@ -216,13 +216,15 @@ return [
 
     'ontology_browser' => [
         'id'              => 'ontology_browser',
-        'menu_label'      => 'Ontology Browser',
+        // Renamed 2026-11-24 from "Ontology Browser": newcomers don't know the word; the subtitle
+        // (menu_blurb, also shown under the page header) names the two ontologies for specialists.
+        'menu_label'      => 'Anatomy & Gene Function',
         'menu_order'      => 4.7,
         'menu_group'      => 'browse',
-        'menu_blurb'      => 'Explore anatomy and Gene Ontology terms as a tree',
-        'name'            => 'Ontology Browser',
+        'menu_blurb'      => 'Find genes by anatomy term or GO term',
+        'name'            => 'Anatomy & Gene Function',
         'icon'            => 'fa-sitemap',
-        'description'     => 'Explore an ontology as a tree, with a page for every term',
+        'description'     => 'Find genes by anatomy term or GO term, in a tree with a page for every term',
         'btn_class'       => 'btn-tool-teal',
         'url_path'        => '/tools/ontology_browser.php',
         'also_paths'      => ['/tools/ontology_term.php', '/api/ontology_children.php'],

@@ -311,7 +311,7 @@
                 <div class="mm-ann-criterion row g-2 mb-2 align-items-center">
                   <div class="col-sm-4"><?= $ann_type_select ?><?= $ann_dropdown ?></div>
                   <div class="col-sm-4"><input type="text" class="form-control form-control-sm moop-input mm-ann-accession" placeholder="<?= t('e.g. GO:0006351') ?>" value="<?= htmlspecialchars($_pf['acc']) ?>">
-                    <label class="form-check small mt-1 mb-0" title="<?= t('A GO term also finds the genes annotated to the terms below it (is a, part of) -- the genes the Ontology Browser counts.') ?>"><input type="checkbox" class="form-check-input mm-ann-sub"<?= !empty($_pf['sub']) ? ' checked' : '' ?>> <span class="form-check-label"><?= t('and more specific GO terms') ?></span></label></div>
+                    <label class="form-check small mt-1 mb-0" title="<?= t('A GO term also finds the genes annotated to the terms below it (is a, part of) -- the genes Anatomy & Gene Function counts.') ?>"><input type="checkbox" class="form-check-input mm-ann-sub"<?= !empty($_pf['sub']) ? ' checked' : '' ?>> <span class="form-check-label"><?= t('and more specific GO terms') ?></span></label></div>
                   <div class="col-sm-3"><input type="text" class="form-control form-control-sm moop-input mm-ann-keyword" placeholder="<?= t('e.g. transporter') ?>"></div>
                   <div class="col-sm-1"></div>
                 </div>

@@ -29,7 +29,7 @@ $rows = function (array $list) use ($prefix): string {
 <div class="container py-4">
   <div class="alert alert-light border">
     <h1 class="h5"><?= t('Term not found') ?></h1>
-    <p class="mb-0"><?= t('There is no term with that ID in this ontology.') ?> <a href="<?= htmlspecialchars($browser) ?>"><?= t('Open the Ontology Browser') ?></a></p>
+    <p class="mb-0"><?= t('There is no term with that ID in this ontology.') ?> <a href="<?= htmlspecialchars($browser) ?>"><?= t('Open Anatomy & Gene Function') ?></a></p>
   </div>
 </div>
 <?php return; endif; ?>
@@ -61,7 +61,7 @@ $rows = function (array $list) use ($prefix): string {
         <div class="ob-term-meta">
           <span class="ob-id"><?= htmlspecialchars($term['id']) ?></span>
           <span><?= htmlspecialchars(t_plain($ontology_name)) ?><?= $release !== '' ? ' &middot; ' . t('release %s', $release) : '' ?></span>
-          <a class="ob-back" href="<?= htmlspecialchars($browser) ?>"><?= t('Ontology Browser') ?></a>
+          <a class="ob-back" href="<?= htmlspecialchars($browser) ?>"><?= t('Anatomy & Gene Function') ?></a>
         </div>
       </div>
       <div class="card-body">

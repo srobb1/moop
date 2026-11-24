@@ -150,7 +150,7 @@ $n_org = count(array_unique(array_column($mine, 'organism')));
   <p class="text-muted small mb-3">
     <?= t('Anatomy terms, evidence codes and other controlled vocabularies come from these published ontologies. Each is checked for a new release once a week and rebuilt here when one appears.') . "\n" ?>
     <?php if (moop_ontology_browser_available()): ?>
-      <a href="<?= moop_url('tools/ontology_browser.php') ?>"><?= t('Browse them in the Ontology Browser.') ?></a>
+      <a href="<?= moop_url('tools/ontology_browser.php') ?>"><?= t('Browse them in Anatomy & Gene Function.') ?></a>
     <?php endif; ?>
   </p>
   <div class="row g-3 mb-4">

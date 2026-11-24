@@ -4,6 +4,9 @@ How ontology terms (PLANA, BSPO, ECO, GO) get from their publishers into MOOP, w
 and how to add or refresh one. Code: `lib/ontologies.php` (files and builds),
 `lib/ontology_browser.php` (tree and term pages).
 
+"Ontology Browser" is the code's name; visitors have seen it as **Anatomy & Gene Function** (subtitle
+"Find genes by anatomy term or GO term") since 2026-11-24 -- `config/tools_config.php`. The address is unchanged.
+
 ## The whole path at a glance
 
 ```

@@ -97,3 +97,14 @@ a.ob-rec:hover, a.ob-rec:focus { background: var(--moop-tool-header); color: #ff
 .ot-action:hover, .ot-action:focus { background: var(--moop-tool-hover); border-color: var(--moop-tool-hover); color: #fff; }
 .ot-action-outline { border: 1px solid var(--moop-tool-header); color: var(--moop-main-dark); background: #fff; }
 .ot-action-outline:hover, .ot-action-outline:focus { background: rgba(var(--moop-main-rgb), 0.1); color: var(--moop-main-dark); }
+
+/* Where the terms come from (curated PLANA vs predicted GO), under the page header -- 2026-11-24. */
+.ob-sources {
+  padding: 0.55rem 1rem 0.6rem;
+  font-size: 0.9rem;
+  color: #374151;
+  border-top: 1px solid rgba(var(--moop-main-rgb), 0.15);
+}
+.ob-sources p { margin: 0.15rem 0; }
+.ob-sources .fa { color: var(--moop-main-dark); width: 1.1em; text-align: center; margin-right: 0.2rem; }
+.ob-sources .ob-howto { font-weight: 600; color: var(--moop-main-dark); margin-bottom: 0.3rem; }

@@ -13,18 +13,31 @@ $self = moop_url('tools/ontology_browser.php');
 <div class="container py-3 ob-page">
   <div class="card shadow-sm mb-4">
     <div class="card-header text-white d-flex align-items-center gap-2 tool-header">
-      <?= page_title('Ontology Browser') ?>
-      <?= help_modal_trigger('ob-help', '', 'How the Ontology Browser works') ?>
-      <?= page_purpose('Explore an ontology as a tree: every term with its definition, and a page for each term.', '', false, false) ?>
+      <?= page_title('Anatomy & Gene Function') ?>
+      <?= help_modal_trigger('ob-help', '', 'How Anatomy & Gene Function works') ?>
+      <?= page_purpose('Find genes by anatomy term or GO term: a tree of terms with their definitions, and a page for each term.', '', false, false) ?>
     </div>
-    <?= tool_page_blurb('ontology_browser') ?>
+    <?php // The subtitle (2026-11-24): always shown, and it names GO only where GO is offered. ?>
+    <div class="tool-page-blurb"><?= isset($ontologies['GO']) ? t('Find genes by anatomy term or GO term') : t('Find genes by anatomy term') ?></div>
+    <?php // Where each kind of term comes from (Sofia 2026-11-24): curated vs predicted is the first thing a
+          // biologist needs to weigh a hit. GO sources checked 2026-11-24: all 82 organisms carry exactly
+          // OMA2GO, EggNOG2GO, PANTHER2GO, InterPro2GO -- no curated GO anywhere. Update this if that changes. ?>
+    <div class="ob-sources">
+      <p class="ob-howto"><i class="fa fa-search" aria-hidden="true"></i> <?= t('Type the term you want in the search box, or browse the expandable tree below.') ?></p>
+      <?php if (isset($ontologies['PLANA'])): ?>
+      <p><i class="fa fa-microscope" aria-hidden="true"></i> <?= t_markup('%s are linked to genes by hand, from the literature: each record is a gene that a published paper reports as expressed in that body part, cell type or stage.', '<strong>' . t('Anatomy terms (PLANA)') . '</strong>') ?></p>
+      <?php endif; ?>
+      <?php if (isset($ontologies['GO'])): ?>
+      <p><i class="fa fa-dna" aria-hidden="true"></i> <?= t_markup('%s are linked to genes by computer, not by hand: carried over from orthologs in other species (OMA, eggNOG) and from protein families and domains found by InterProScan (PANTHER, InterPro).', '<strong>' . t('GO terms') . '</strong>') ?></p>
+      <?php endif; ?>
+    </div>
   </div>
-  <?= help_modal('ob-help', 'How the Ontology Browser works', [[
+  <?= help_modal('ob-help', 'How Anatomy & Gene Function works', [[
       // For someone new to the site and to tools like this (Sofia, work list 2026-11-18).
       'heading' => 'New to this?',
       'cards'   => [
           ['label' => 'What an ontology is', 'text' => 'A shared vocabulary for biology. Each term -- pharynx, neoblast, cell division -- has an ID and a definition, and sits under broader terms: the pharynx is part of the digestive system. Researchers use the same terms, so their data can be compared and searched.'],
-          ['label' => 'Why it is on this site', 'text' => 'Published expression records are tagged with PLANA terms, and genes with GO terms. Find a body part, cell type or process here, and see which records or genes carry it -- including those on its more specific terms.'],
+          ['label' => 'Why it is on this site', 'text' => 'Published expression records are tagged with PLANA terms (by hand, from papers), and genes with GO terms (by computer). Find a body part, cell type or process here, and see which records or genes carry it -- including those on its more specific terms.'],
           ['label' => 'The icons on each row', 'html' => true, 'text' =>
               '<i class="fa fa-microscope" aria-hidden="true"></i> <strong>' . t('records') . '</strong> &mdash; '
               . t('published expression records (where a gene was seen, for example by in situ hybridization) on the term and the terms below it. Once you open a row, the count is for that term itself; the rows below show their own. Click to list them.')
