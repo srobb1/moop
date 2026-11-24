@@ -237,7 +237,8 @@ Planosphere
       (cnidarians have PaxA-D, no Pax6). Sofia checks the RefSeq name. Scan Pax/Hox/Wnt/Sox/Fox/T-box. Naming itself
       is compute's. **ongoing**
 - [ ] **Found by the public tour check (11-24), each to verify before fixing:**
-      (a) Search "sFRP-1" in Smed took ~21 s (twice); "noggin" in Nvec 0.2 s -- measure cold/warm, find why. **M**
+      (a) Search "sFRP-1" in Smed took ~21 s (twice); "noggin" in Nvec 0.2 s -- measure cold/warm, find why. Lead (11-24): the search JSON carries one row per
+          MATCHING ANNOTATION, not per transcript ("noggin-1": 2,174 rows for 12 transcripts, 1,650 of them EggNOG GO). **M**
       (b) Gene page help says orthologs are "in the next cards", but a PUBLIC visitor gets no "Orthologs in related
           species" card for h1SMcG0012012 (inside: 19) -- text or access wrong? **S-M**
       (c) "Rosetta Stone Transcript Mapper" (page heading) vs "ID Translator" (menu) -- one name. **S**
