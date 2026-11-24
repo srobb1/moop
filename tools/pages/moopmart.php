@@ -526,9 +526,81 @@
         );
         ?>
 
+        <!-- Annotation types panel. Type first, like the By Annotation filter in Step 2: 11 type rows,
+             each closed; ticking a type takes all its sources, opening it picks single ones. Until
+             2026-11-24 all ~185 sources were listed open at once. Sources the organisms picked in
+             Step 1 lack are hidden by js/modules/moopmart.js and never sent (in the wide layout each
+             sent source becomes two columns, empty or not). -->
+        <?php if (!empty($annotation_source_types)): ?>
+        <div class="mb-3">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <div class="small fw-semibold text-muted"><?= t('Annotation types to include') ?>
+              <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-muted"
+                      style="font-size:0.85rem; line-height:1; vertical-align:middle;"
+                      data-bs-toggle="modal" data-bs-target="#ann-types-modal" title="<?= t('About annotation types') ?>">
+                <i class="fa fa-info-circle"></i>
+              </button>
+            </div>
+            <span class="small text-muted" id="mm-ann-selected"></span>
+            <div class="d-flex gap-1 ms-auto">
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-all"><?= t('All') ?></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-none"><?= t('None') ?></button>
+            </div>
+          </div>
+          <p class="small text-muted mb-2"><?= t('Tick a type to include all of its sources, or open it to pick single sources. Only the types your organisms have are listed.') ?></p>
+          <div class="mb-1">
+            <input type="search" class="form-control form-control-sm moop-input" id="mm-ann-filter"
+                   placeholder="<?= t('Find a type or source, e.g. Pfam or Homo sapiens') ?>" autocomplete="off">
+          </div>
+          <div id="mm-ann-panel" style="overflow-y:auto; max-height:360px;" class="border rounded p-1">
+            <?php foreach ($annotation_source_types as $type => $type_data):
+              $type_safe = 'mm-atype-' . preg_replace('/[^a-z0-9]/i', '_', $type);
+              $color     = htmlspecialchars($type_data['color']);
+              $_on       = in_array($type, $prefill_ann_types ?? [], true) ? ' checked' : '';
+            ?>
+            <div class="mm-ann-group" data-type="<?= htmlspecialchars($type) ?>">
+              <div class="d-flex align-items-center gap-2 px-2 py-1 rounded mm-ann-type-row">
+                <input type="checkbox" class="form-check-input mb-0 mm-ann-type-cb flex-shrink-0"
+                       id="<?= $type_safe ?>" data-type="<?= htmlspecialchars($type) ?>"<?= $_on ?>>
+                <label for="<?= $type_safe ?>" class="form-check-label mb-0" style="cursor:pointer;">
+                  <span class="badge bg-<?= $color ?>"><?= htmlspecialchars(moop_annotation_type_label($type)) ?></span>
+                  <span class="small text-muted mm-ann-type-genes"></span>
+                </label>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-auto text-muted text-decoration-none small mm-ann-open-btn"
+                        aria-expanded="false">
+                  <span class="mm-ann-nsrc"></span> <i class="fa fa-chevron-down" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div class="ps-4 pb-1 mm-ann-sources d-none">
+                <?php foreach ($type_data['sources'] as $src_name):
+                  $safe_id = 'mm-ann-' . preg_replace('/[^a-z0-9]/i', '_', $src_name);
+                ?>
+                <div class="d-flex align-items-center gap-1 px-1 py-0 mm-ann-item">
+                  <input type="checkbox" class="form-check-input flex-shrink-0 mm-ann-col mb-0"
+                         id="<?= $safe_id ?>"
+                         value="<?= htmlspecialchars($src_name) ?>"
+                         data-type="<?= htmlspecialchars($type) ?>"<?= $_on ?><?= ($src_name === MOOPMART_ANATOMY_SOURCE && $type === MOOPMART_ANATOMY_TYPE)
+                             ? ' data-orgs="' . htmlspecialchars(implode(',', $anatomy_organisms ?? [])) . '"' : '' ?>>
+                  <label class="form-check-label mb-0" for="<?= $safe_id ?>"
+                         style="cursor:pointer; font-size:0.82rem;">
+                    <?= htmlspecialchars(moop_annotation_source_label($src_name)) ?>
+                  </label>
+                  <span class="badge bg-secondary ms-1 mm-ann-count d-none" style="font-size:0.68rem;"
+                        data-src="<?= htmlspecialchars($src_name) ?>"
+                        title="<?= t('Genes in the selected organisms that carry this source') ?>"></span>
+                </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+            <?php endforeach; ?>
+          </div>
+          <div class="small text-muted mt-1" id="mm-ann-counts"></div>
+        </div>
+        <?php endif; ?>
+
         <!-- Annotation columns -->
         <div class="mb-3">
-          <div class="small fw-semibold text-muted mb-2">Annotation columns to include in TSV if Annotation types (below) are selected
+          <div class="small fw-semibold text-muted mb-2"><?= t('Annotation columns (used when an annotation type above is ticked)') ?>
             <?= help_modal_trigger('mm-cols-help', '', 'About the TSV columns') ?>
           </div>
           <div id="mm-ann-col-list" style="max-width:320px;">
@@ -556,62 +628,6 @@
           </div>
           <div class="small text-muted mt-1" style="font-size:0.75rem;">Click to include/exclude &middot; arrows to reorder</div>
         </div>
-
-        <!-- Annotation sources panel -->
-        <?php if (!empty($annotation_source_types)): ?>
-        <div>
-          <div class="d-flex align-items-center gap-2 mb-2">
-            <div class="small fw-semibold text-muted"><?= t('Annotation types to include in TSV') ?></div>
-            <div class="d-flex gap-1 ms-auto">
-              <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-all"><?= t('All') ?></button>
-              <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="mm-ann-none"><?= t('None') ?></button>
-            </div>
-          </div>
-          <div class="px-2 pb-1">
-            <input type="text" class="form-control form-control-sm moop-input" id="mm-ann-filter"
-                   placeholder="<?= t('Filter annotation types…') ?>" autocomplete="off">
-          </div>
-          <div id="mm-ann-panel" style="overflow-y:auto; max-height:220px;" class="border rounded mt-1 p-2">
-            <?php foreach ($annotation_source_types as $type => $type_data):
-              $type_safe = 'mm-atype-' . preg_replace('/[^a-z0-9]/i', '_', $type);
-              $color     = htmlspecialchars($type_data['color']);
-            ?>
-            <div class="mm-ann-group mb-2">
-              <div class="d-flex align-items-center px-1 py-1 rounded mb-1" style="background:#f1f3f5;">
-                <?php $_on = in_array($type, $prefill_ann_types ?? [], true) ? ' checked' : ''; ?>
-                <input type="checkbox" class="form-check-input me-2 mb-0 mm-ann-type-cb flex-shrink-0"
-                       id="<?= $type_safe ?>" data-type="<?= htmlspecialchars($type) ?>"<?= $_on ?>>
-                <label for="<?= $type_safe ?>" class="form-check-label fw-semibold mb-0 me-auto"
-                       style="cursor:pointer; font-size:0.88rem;">
-                  <span class="badge bg-<?= $color ?> me-1"><?= htmlspecialchars(moop_annotation_type_label($type)) ?></span>
-                </label>
-              </div>
-              <div class="ps-3">
-                <?php foreach ($type_data['sources'] as $src_name):
-                  $safe_id = 'mm-ann-' . preg_replace('/[^a-z0-9]/i', '_', $src_name);
-                ?>
-                <div class="d-flex align-items-center gap-1 px-1 py-1 mm-ann-item">
-                  <input type="checkbox" class="form-check-input flex-shrink-0 mm-ann-col mb-0"
-                         id="<?= $safe_id ?>"
-                         value="<?= htmlspecialchars($src_name) ?>"
-                         data-type="<?= htmlspecialchars($type) ?>"<?= $_on ?><?= ($src_name === MOOPMART_ANATOMY_SOURCE && $type === MOOPMART_ANATOMY_TYPE)
-                             ? ' data-orgs="' . htmlspecialchars(implode(',', $anatomy_organisms ?? [])) . '"' : '' ?>>
-                  <label class="form-check-label mb-0" for="<?= $safe_id ?>"
-                         style="cursor:pointer; font-size:0.82rem;">
-                    <?= htmlspecialchars($src_name) ?>
-                  </label>
-                  <span class="badge bg-secondary ms-1 mm-ann-count d-none" style="font-size:0.68rem;"
-                        data-src="<?= htmlspecialchars($src_name) ?>"
-                        title="Annotations available in the selected organisms (across all their genes)"></span>
-                </div>
-                <?php endforeach; ?>
-              </div>
-            </div>
-            <?php endforeach; ?>
-          </div>
-          <div class="small text-muted mt-1" id="mm-ann-counts"></div>
-        </div>
-        <?php endif; ?>
 
       </div><!-- /mm-tsv-options -->
 
@@ -785,6 +801,8 @@
 /* The arrow carries the order (preview THEN download). Muted so it guides without competing
    with either button. */
 .mm-step-arrow { color: #a5b4fc; font-size: 0.85rem; }
+.mm-ann-type-row { background: #f6f7f8; margin-bottom: 2px; }
+.mm-ann-open-btn { white-space: nowrap; }
 /* .step-ref (the inline "Step N" badge) now lives in css/display.css — Annotation Search
    needed it too, so it moved to the shared sheet rather than being copied. */
 </style>

@@ -134,6 +134,7 @@
                 document.querySelectorAll('.mm-ann-item').forEach(it => it.classList.remove('mm-ann-zerocount'));
                 lastAnnCounts = null; lastAnnTypeTotals = null;
                 applyAnnDropdownCounts();   // reset dropdowns to plain source names
+                applyAnnTypeGenes();
                 applyAnnVisibility();
                 if (summary) summary.textContent = '';
                 return;
@@ -184,37 +185,70 @@
                         const has = cb.dataset.orgs.split(',').some(o => orgs.includes(o));
                         cb.closest('.mm-ann-item')?.classList.toggle('mm-ann-zerocount', !has);
                     });
+                    applyAnnTypeGenes();
                     applyAnnVisibility();
+                    // The source total is in the heading (updateAnnSummary); this line only says what
+                    // the numbers mean, or that there is nothing.
                     if (summary) {
-                        const n = data.total_sources || 0;
-                        summary.textContent = n === 0
+                        summary.textContent = (data.total_sources || 0) === 0
                             ? moopT('No annotations for the selected organisms')
-                            : (orgs.length === 1
-                                ? nT(n, '%s annotation source for the selected organism', '%s annotation sources for the selected organism', n.toLocaleString())
-                                : nT(n, '%s annotation source for the selected organisms', '%s annotation sources for the selected organisms', n.toLocaleString()))
-                              + (known ? ' ' + moopT('— the number beside each is how many genes carry it') : '');
+                            : (known ? moopT('Numbers are genes in the selected organisms that carry each type or source.') : '');
                     }
                 })
                 .catch(() => { if (summary) summary.textContent = ''; /* keep prior badges */ });
         }, 250);
     }
 
-    // Show an annotation source only when it passes the text filter AND has annotations
-    // for the current organism selection (marked via .mm-ann-zerocount). Groups with no
-    // visible sources are hidden. Shared by the text filter and the count refresh so the
-    // two never fight over the same d-none class.
-    function applyAnnVisibility() {
-        const q = (document.getElementById('mm-ann-filter')?.value || '').toLowerCase();
+    // In-scope = the organisms picked in Step 1 have it (.mm-ann-zerocount marks the rest). Only
+    // in-scope sources are listed, ticked by a type, counted, or sent -- in the wide layout every
+    // sent source is two columns, so an out-of-scope one would be an empty pair.
+    function inScopeSources(type) {
+        const sel = type ? `.mm-ann-col[data-type="${CSS.escape(type)}"]` : '.mm-ann-col';
+        return Array.from(document.querySelectorAll(sel))
+            .filter(cb => !cb.closest('.mm-ann-item')?.classList.contains('mm-ann-zerocount'));
+    }
+
+    // "(N genes)" beside each type, from the same count the Step 2 type list shows.
+    function applyAnnTypeGenes() {
         document.querySelectorAll('.mm-ann-group').forEach(group => {
-            let anyVisible = false;
-            group.querySelectorAll('.mm-ann-item').forEach(item => {
-                const passText = !q || (item.querySelector('label')?.textContent.toLowerCase() || '').includes(q);
-                const show = passText && !item.classList.contains('mm-ann-zerocount');
-                item.classList.toggle('d-none', !show);
-                if (show) anyVisible = true;
-            });
-            group.classList.toggle('d-none', !anyVisible);
+            const el = group.querySelector('.mm-ann-type-genes');
+            if (!el) return;
+            const t = lastAnnTypeTotals ? (lastAnnTypeTotals[group.dataset.type] || 0) : null;
+            el.textContent = (t === null || t === 0) ? ''
+                : (t === 1 ? moopT('1 gene') : moopT('%d genes').replace('%d', t.toLocaleString()));
         });
+    }
+
+    // Types are listed closed (11 rows, not ~185). A source shows when it is in scope and passes
+    // the text filter; a type shows when any source does. While a filter is typed, the types
+    // with a matching SOURCE open so the match is visible; a match on the type name alone does
+    // not open it. Clearing the filter returns each type to the state the user left it in.
+    function applyAnnVisibility() {
+        const q = (document.getElementById('mm-ann-filter')?.value || '').trim().toLowerCase();
+        document.querySelectorAll('.mm-ann-group').forEach(group => {
+            const typeText = (group.querySelector('.mm-ann-type-row label')?.textContent || '').toLowerCase();
+            const typeHit  = q !== '' && typeText.includes(q);
+            let inScope = 0, srcHit = false;
+            group.querySelectorAll('.mm-ann-item').forEach(item => {
+                const ok = !item.classList.contains('mm-ann-zerocount');
+                if (ok) inScope++;
+                const passText = !q || typeHit || (item.querySelector('label')?.textContent.toLowerCase() || '').includes(q);
+                if (ok && q && !typeHit && passText) srcHit = true;
+                item.classList.toggle('d-none', !(ok && passText));
+            });
+            group.classList.toggle('d-none', inScope === 0 || (q !== '' && !typeHit && !srcHit));
+            const nsrc = group.querySelector('.mm-ann-nsrc');
+            if (nsrc) nsrc.textContent = inScope === 1 ? moopT('1 source') : moopT('%d sources').replace('%d', inScope);
+            const open = group.classList.contains('mm-ann-open') || srcHit;
+            group.querySelector('.mm-ann-sources')?.classList.toggle('d-none', !open);
+            const btn = group.querySelector('.mm-ann-open-btn');
+            if (btn) {
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                btn.querySelector('i')?.classList.toggle('fa-rotate-180', open);
+            }
+            syncAnnTypeCb(group.dataset.type);
+        });
+        updateAnnSummary();
     }
 
     // -------------------------------------------------------
@@ -445,20 +479,21 @@
     // Step 3 — Annotation sources panel
     // -------------------------------------------------------
 
+    // "3 of 24 sources" beside the heading. Its own element: the line under the panel belongs to
+    // the availability count (refreshAnnotationCounts), and the two used to overwrite each other.
     function updateAnnSummary() {
-        const el      = document.getElementById('mm-ann-counts');
+        const el = document.getElementById('mm-ann-selected');
         if (!el) return;
-        const total   = document.querySelectorAll('.mm-ann-col').length;
-        const checked = document.querySelectorAll('.mm-ann-col:checked').length;
-        if (!total) { el.textContent = ''; return; }
-        el.textContent = checked === total
-            ? moopT('— all %d selected', total)
-            : moopT('— %1$d of %2$d selected', checked, total);
+        const srcs    = inScopeSources();
+        const checked = srcs.filter(c => c.checked).length;
+        el.textContent = !srcs.length ? ''
+            : (checked === 0 ? moopT('none ticked')
+               : moopT('%1$d of %2$d sources ticked', checked, srcs.length));
     }
 
     function syncAnnTypeCb(type) {
-        const sources = Array.from(document.querySelectorAll(`.mm-ann-col[data-type="${type}"]`));
-        const typeCb  = document.querySelector(`.mm-ann-type-cb[data-type="${type}"]`);
+        const sources = inScopeSources(type);
+        const typeCb  = document.querySelector(`.mm-ann-type-cb[data-type="${CSS.escape(type)}"]`);
         if (!typeCb || !sources.length) return;
         const allOn  = sources.every(c => c.checked);
         const allOff = sources.every(c => !c.checked);
@@ -473,17 +508,25 @@
         panel.addEventListener('change', function (e) {
             const cb = e.target;
             if (cb.classList.contains('mm-ann-type-cb')) {
-                document.querySelectorAll(`.mm-ann-col[data-type="${cb.dataset.type}"]`)
-                    .forEach(c => { c.checked = cb.checked; c.indeterminate = false; });
+                inScopeSources(cb.dataset.type).forEach(c => { c.checked = cb.checked; });
+                cb.indeterminate = false;
             } else if (cb.classList.contains('mm-ann-col')) {
                 syncAnnTypeCb(cb.dataset.type);
             }
             updateAnnSummary();
         });
 
+        // Open / close one type's source list
+        panel.addEventListener('click', function (e) {
+            const btn = e.target.closest('.mm-ann-open-btn');
+            if (!btn) return;
+            btn.closest('.mm-ann-group')?.classList.toggle('mm-ann-open');
+            applyAnnVisibility();
+        });
+
         document.getElementById('mm-ann-all')?.addEventListener('click', () => {
-            document.querySelectorAll('.mm-ann-col').forEach(c => c.checked = true);
-            document.querySelectorAll('.mm-ann-type-cb').forEach(c => { c.checked = true; c.indeterminate = false; });
+            inScopeSources().forEach(c => c.checked = true);
+            document.querySelectorAll('.mm-ann-type-cb').forEach(c => syncAnnTypeCb(c.dataset.type));
             updateAnnSummary();
         });
         document.getElementById('mm-ann-none')?.addEventListener('click', () => {
@@ -493,8 +536,7 @@
 
         document.getElementById('mm-ann-filter')?.addEventListener('input', applyAnnVisibility);
 
-        document.querySelectorAll('.mm-ann-type-cb').forEach(cb => syncAnnTypeCb(cb.dataset.type));
-        updateAnnSummary();
+        applyAnnVisibility();
     }
 
     // -------------------------------------------------------
@@ -590,7 +632,7 @@
         document.querySelectorAll('#mm-ann-col-list .mm-col-item.selected').forEach(item => fd.append('ann_columns[]', item.dataset.col));
 
         // Annotation sources
-        document.querySelectorAll('.mm-ann-col:checked').forEach(c => fd.append('annotation_columns[]', c.value));
+        inScopeSources().filter(c => c.checked).forEach(c => fd.append('annotation_columns[]', c.value));
 
         Object.entries(extra).forEach(([k, v]) => fd.append(k, v));
         return fd;
