@@ -9,8 +9,8 @@ Notes for review (not part of the page):
   as an inside user: search, gene page (Images, Expression, Orthologs, KEGG map04350), GO term, Expression and
   Primer Maker pre-filled, Downloads all load. STILL TO CHECK as a PUBLIC visitor (view-as) before it goes live
   — the Smed check found the "Orthologs in related species" card hidden for public.
-- New screenshots needed: 3 (search), 4 (gene page), and 7–11. Take them AFTER next week's RNA-seq work (work
-  list Inbox item), so the expression card is current. Until then the new steps go live without pictures, or wait.
+- Screenshots taken 11-24 as a PUBLIC visitor (view-as, preview badge and banner removed): search-noggin, gene-noggin,
+  go-term, expression, jbrowse, primers, rosetta. Retake expression (and gene) if new RNA-seq data lands (work list).
 - Rosetta Stone step uses a PLANARIAN ID on purpose: for Nvec the crosswalk only links NV2 and RefSeq, which
   the gene page already shows; planarian papers are where old IDs really bite.
 - No numbers that will change (TPM values, term counts) are written into the text.
@@ -41,9 +41,9 @@ An organism can have more than one **assembly** (a version of the genome sequenc
 
 The search box on the organism page searches that organism's genes by ID, name, or any word in their annotations. Put a phrase in quotes to find those words together: [`"noggin-1"`](tools/search.php?q=%22noggin-1%22&organism=Nematostella_vectensis) fills in the box — click **Search** and it finds *noggin-1* in both gene sets.
 
-`[screenshot to take: 3-search.png]`
+![Search results for "noggin-1": 12 transcripts in Nematostella vectensis, listed with their assembly, ID and the description noggin-1, with Copy, CSV, Excel and FASTA buttons above](images/pages/tour/search-noggin.png)
 
-Each row is one transcript — a gene with four isoforms appears four times. Click an ID to open its gene. Tick rows to download their sequences, or export the whole table as CSV, Excel or FASTA. To search several organisms at once, use the **Genes** tab on the home page.
+Each row is one transcript: *noggin-1* has six isoforms in the RefSeq gene set and four in NV2, so it fills several rows. Click an ID to open its gene. Tick rows to download their sequences, or export the whole table as CSV, Excel or FASTA. To search several organisms at once, use the **Genes** tab on the home page.
 
 ### 4. The gene page
 
@@ -55,27 +55,27 @@ Each row is one transcript — a gene with four isoforms appears four times. Cli
 - its **orthologs in related species** and its gene family;
 - its **expression** in RNA-seq experiments, and an **in situ** picture of where it is expressed in the animal.
 
-`[screenshot to take: 4-gene.png]`
+![The gene page for NV2g007394000.1, noggin-1: the naming evidence (best human hit NOG, the Noggin domain, a signal peptide), its location chr13:5,579,481-5,593,290, the list of sections on the left and the Toolbox on the right](images/pages/tour/gene-noggin.png)
 
 The list on the left jumps to each section. The **Toolbox** on the right opens the gene in the genome browser, runs BLAST with its sequence, or designs primers for it — the next steps below.
 
 ### 5. What does the gene do? Follow a GO term
 
-Each GO term on the gene page links to that term's page. [*Negative regulation of BMP signaling pathway*](tools/ontology_term.php?o=GO&id=GO%3A0030514) shows how many genes in each gene set carry it; click a number to list them — *noggin-1* is among *Nematostella*'s. It is the quickest way from one gene to others that may do the same job. **Anatomy & Gene Function** in the Tools menu browses these terms from the top.
+Each GO term on the gene page links to that term's page. [*Negative regulation of BMP signaling pathway*](tools/ontology_term.php?o=GO&id=GO%3A0030514) shows how many genes in each gene set carry it, in every organism here. Type *Nematostella* in its Search box, then click a number to list those genes — *noggin-1* is one of them. It is the quickest way from one gene to others that may do the same job. **Anatomy & Gene Function** in the Tools menu browses these terms from the top.
 
-`[screenshot to take: 5-go-term.png]`
+![The GO term page for negative regulation of BMP signaling pathway: its Genes table filtered to Nematostella, 44 genes in each of its two gene sets](images/pages/tour/go-term.png)
 
 ### 6. When and where is it expressed?
 
-The [RNA-seq Expression Explorer](tools/expression.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&genes=NV2g007394000.1) opens with *noggin-1* already in it: its expression across each experiment's samples, as a heatmap. Add more gene IDs to compare them side by side.
+The [RNA-seq Expression Explorer](tools/expression.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&genes=NV2g007394000.1) opens with *noggin-1* already filled in and all three *Nematostella* experiments ticked. Click **Show heatmap** to see its level in each condition, from zygote to polyp. Add more gene IDs to compare them side by side.
 
-`[screenshot to take: 6-expression.png]`
+![The RNA-seq Expression Explorer: a heatmap row for NV2g007394000.1 across three experiments — a development time course, heavy-metal exposure, and gastrula, planula and adult](images/pages/tour/expression.png)
 
 ### 7. See it in the genome
 
-**Genome browser** in the gene page's Toolbox opens [the gene in JBrowse](jbrowse2.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1): its exons and isoforms on the chromosome, with its neighbours. Drag to move, scroll to zoom, and add tracks from the track list.
+**Genome browser** in the gene page's Toolbox opens [the gene in JBrowse](jbrowse2.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&loc=chr13:5579481-5593290): its exons and isoforms on the chromosome, with its neighbours. Drag to move, scroll to zoom, and add tracks from the track list.
 
-`[screenshot to take: 7-jbrowse.png]`
+![The genome browser at chr13:5,579,475-5,593,284 on Nvec200, showing the noggin-1 gene model in the Genes (NV2) track, with the list of available tracks on the right](images/pages/tour/jbrowse.png)
 
 ### 8. BLAST
 
@@ -85,15 +85,15 @@ The [RNA-seq Expression Explorer](tools/expression.php?organism=Nematostella_vec
 
 ### 9. Design primers
 
-[Primer Maker](tools/primer_maker.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&feature=NV2g007394000.1) opens with *noggin-1*'s transcript filled in: choose what the primers are for (RT-PCR, qPCR, cloning) and get primer pairs. Then **Primer BLAST** checks a pair against the whole genome, to see whether it would bind anywhere else.
+[Primer Maker](tools/primer_maker.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&feature=NV2g007394000.1) opens with *noggin-1* chosen: pick one of its four transcripts, click **Load this sequence**, choose what the primers are for (PCR, qPCR, RT-PCR or sequencing), then **Design primers** for a table of primer pairs. Then **Primer BLAST** checks a pair against the whole genome, to see whether it would bind anywhere else.
 
-`[screenshot to take: 9-primers.png]`
+![Primer Maker results: five primer pairs for transcript NV2t007394002.1, with each primer's sequence, length, melting temperature, GC content and the product size](images/pages/tour/primers.png)
 
 ### 10. Got an ID from a paper?
 
-Papers use IDs from many older gene sets. The **Rosetta Stone** (Tools menu) tells you which current gene an ID belongs to. Planarians are where this matters most: [paste `EU296635`](tools/crosswalk.php?organism=Schmidtea_mediterranea&ids=EU296635), a GenBank ID from a 2008 paper, and it finds the current gene. The gene page's **Same gene in this species** section lists every other ID a gene is known by.
+Papers use IDs from many older gene sets. The **Rosetta Stone** (Tools menu) tells you which current gene an ID belongs to. Planarians are where this matters most: [paste `EU296635`](tools/crosswalk.php?organism=Schmidtea_mediterranea&ids=EU296635), a GenBank ID, click **Translate**, and it finds the current gene. The gene page's **Same gene in this species** section lists every other ID a gene is known by.
 
-`[screenshot to take: 10-rosetta.png]`
+![The Rosetta Stone: EU296635 translated to the current genes h1SMcG0012012 and h2SMcG0012220 (one on each haplotype of the genome), with the older ID SMED30022468](images/pages/tour/rosetta.png)
 
 ### 11. Download the data
 
