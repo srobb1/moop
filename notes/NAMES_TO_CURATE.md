@@ -11,7 +11,11 @@ compute/Sofia decide the fix.
 
 | Organism / gene set | Gene | Shown name | Why it misleads | Suggested / curated name | Status |
 |---|---|---|---|---|---|
-| Nematostella vectensis / NV2 | NV2g003593000.1 | paired box protein Pax-6 [SRC\|1to1\|nvec] | Pax6 is a bilaterian gene; cnidarians have PaxA–D, none a 1:1 Pax6. The paired domain makes PAX6 the best hit. Also: why is it called `1to1`? | One of PaxA–D — check orthologs / Matus et al. 2007 (https://pubmed.ncbi.nlm.nih.gov/?term=Matus+Pax+Nematostella+2007) | Sofia checking RefSeq name (11-24) |
+| Nematostella vectensis / NV2 | NV2g003593000.1 | paired box protein Pax-6 [SRC\|1to1\|nvec] | Not a Pax gene: the protein has a homeodomain and NO paired domain; InterPro IPR052488 and PANTHER PTHR46639 = Dmbx (diencephalon/mesencephalon homeobox); best human hit DMBX1; the 2 neighbouring genes are Dmbx too. The name is RefSeq's (XP_048589240.1), copied as `SRC`; `1to1` = NV2 vs RefSeq gene (OMA), NOT vs human PAX6. (Also: cnidarians have PaxA-D, no Pax6.) | Dmbx-like -- check the published Nvec homeobox names | Checked 11-24: RefSeq name confirmed as the source |
+
+**Pipeline question (compute):** a `SRC` name is kept even when the gene's OWN evidence (PANTHER family,
+InterPro, best human hit) points to a different family. Should step 2 check a source name against that evidence and
+flag or drop a clash? This one would have been caught.
 
 **Families to scan for the same problem** (lineage-specific splits, name by best hit): Pax, Hox/ParaHox,
 Wnt, Sox, Fox, T-box, nuclear receptors — in cnidarians, planarians and other non-model organisms.

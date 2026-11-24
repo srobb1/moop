@@ -48,7 +48,11 @@ $tag_md .= "\nOne name per gene: the evidence of all its isoforms is pooled and 
          . "evidence won (not always the longest; a curator's chosen isoform if there is one). The gene and every isoform\n"
          . "carry that same name, so do not read an isoform's name as evidence about that isoform alone.\n";
 $tag_md .= "\nStrong: ISO with nothing against it. Moderate: ISO with one check against it (sim~, sim-, pthrC, treeC), or\n"
-         . "ISS|rbh with no tie. Weak: ISO with two or more against it; any other ISS; any ISM.\n";
+         . "ISS|rbh with no tie. Weak: ISO with two or more against it; any other ISS; any ISM.\n"
+         . "SRC is not graded: it is the source's own name (e.g. RefSeq), kept unchecked. Before relying on it, compare it\n"
+         . "with the gene's own evidence (domains, PANTHER family, best human hit in the naming field); if they point to a\n"
+         . "different gene, say so. In [SRC|1to1|nvec] the 1to1 is to the same gene in another annotation of this species,\n"
+         . "NOT a human ortholog.\n";
 $tag_md = rtrim($tag_md);
 
 header('Content-Type: text/plain; charset=utf-8');

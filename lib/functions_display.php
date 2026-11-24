@@ -882,7 +882,10 @@ function moop_naming_tag_key(): array
                 'Hox2/3a: homeobox 2/3a [TAS]'],
             ['SRC', 'Source', 'From the source',
                 'The name came with the gene set (RefSeq, Ensembl or the authors), or from another annotation of '
-                . 'the same species. The tag does not judge it.',
+                . 'the same species. The tag does not judge it: the name is kept as given, even when the gene\'s own '
+                . 'evidence (its protein family and domains) points to a different gene, so check that evidence before '
+                . 'relying on the name. When a code follows SRC (1to1, rbh, bh), it describes the match to the gene in '
+                . 'that other annotation, not to a human gene.',
                 'KICSTOR complex protein SZT2 [SRC]'],
             ['ISO', 'Inferred from Sequence Orthology', 'Ortholog',
                 'Named from an orthology call (OMA, or the PANTHER tree) to a human gene: the strongest evidence '
@@ -900,7 +903,9 @@ function moop_naming_tag_key(): array
         ],
         // What follows: how the call was made.
         'details' => [
-            ['1to1', 'one to one', 'This gene and the human gene are each other\'s only ortholog.'],
+            ['1to1', 'one to one', 'After ISO: this gene and the human gene are each other\'s only ortholog. After SRC: '
+                . 'this gene and the gene in the other annotation it was named from are the same gene, matched one to '
+                . 'one -- it says nothing about a human gene.'],
             ['3to1, 7to1, ...', 'N to one', 'That many genes in this gene set are orthologs of one human gene and '
                 . 'share its name, numbered "(1 of 3)".'],
             ['mto1', 'many to one', 'Several genes here are orthologs of one human gene, but only one carries its name.'],
@@ -919,8 +924,8 @@ function moop_naming_tag_key(): array
             ['rpt', 'repeat', 'Named for a family defined by a repeated domain.'],
             ['ipr', 'InterPro', 'Named for an InterPro domain.'],
             ['te', 'transposable element', 'A transposable-element domain. After ISO: the ortholog carries one.'],
-            ['smed, nvec', '', 'The name was taken from a related species\' genes: smed = Schmidtea mediterranea, '
-                . 'nvec = Nematostella vectensis.'],
+            ['smed, nvec', '', 'The species whose genes the name was taken from -- this species (another annotation of '
+                . 'it) or a related one: smed = Schmidtea mediterranea, nvec = Nematostella vectensis.'],
         ],
         // Checks on the name. Each compares the gene with the human gene it is NAMED after, not with
         // whatever it matches best. In the data (2026-11-24): sim and pthr only on ISO (sim~ also on
