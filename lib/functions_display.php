@@ -849,6 +849,109 @@ function moop_strip_naming_tag(string $text): string
 }
 
 /**
+ * What each part of a naming tag means -- the ONE copy, read by the help topic
+ * (tools/pages/help/gene-names.php) and the agent guide (llms.php), so the two cannot drift.
+ *
+ * Source: the naming script itself, config/build_and_load_db/analysis_parsers/assign_gene_names_v2.pl
+ * (sub tagged and its comment block, oma_support(), relationship_tag(), swissprot_name(); compute
+ * side owns it), with notes/GENE_NAMING_METHODS.md "Evidence tags". Checked against every gene
+ * description in every organism.sqlite on 2026-11-24: 1.67M tagged genes, none with a code missing
+ * here. Facts that are easy to get wrong:
+ *   - sim and pthr are written ONLY by oma_support(), i.e. on names from a human OMA ortholog (ISO);
+ *     plus sim~ on an ISM name (a partial human homolog). Never on a -like name.
+ *   - pthr+ compares the gene's own PANTHER family (InterProScan) with the family of the human gene
+ *     the name comes from (Swiss-Prot) -- not with the gene's top similarity hit.
+ * If the pipeline adds a code, add it here.
+ *
+ * English only, like the methods notes; the help page prints it through t_plain().
+ *
+ * @return array{kinds: list<array{0:string,1:string,2:string,3:string,4:string}>,
+ *               details: list<array{0:string,1:string,2:string}>, support: list<array{0:string,1:string,2:string}>,
+ *               marks: list<array{0:string,1:string}>}
+ *         kinds: [code, the words it stands for, short label, meaning, a real example];
+ *         details/support: [code, the words it stands for ('' when it is a plain word), meaning]
+ */
+function moop_naming_tag_key(): array
+{
+    return [
+        // The first code: what kind of evidence named the gene. Modelled on the Gene Ontology's
+        // evidence codes (ISO, ISS, ISM, TAS are GO codes; SRC is MOOP's own).
+        'kinds' => [
+            ['TAS', 'Traceable Author Statement', 'Curated',
+                'A person chose the name, usually from published work. It is used as given.',
+                'Hox2/3a: homeobox 2/3a [TAS]'],
+            ['SRC', 'Source', 'From the source',
+                'The name came with the gene set (RefSeq, Ensembl or the authors), or from another annotation of '
+                . 'the same species. The tag does not judge it.',
+                'KICSTOR complex protein SZT2 [SRC]'],
+            ['ISO', 'Inferred from Sequence Orthology', 'Ortholog',
+                'Named from an orthology call (OMA, or the PANTHER tree) to a human gene: the strongest evidence '
+                . 'that this is the same gene. The name is the human one, with no "-like" (or, for a family of '
+                . 'co-orthologs, the family\'s name).',
+                'FANCE: FA complementation group E [ISO|1to1|sim+|pthr+|tree+|hog]'],
+            ['ISS', 'Inferred from Sequence Similarity', 'Similar (homolog)',
+                'The name ends in "-like": the protein aligns along most of its length to the named protein, '
+                . 'human or of another species, but orthology is not shown. It may be a paralog.',
+                'PARP14-like: poly(ADP-ribose) polymerase family member 14-like [ISS|rbh]'],
+            ['ISM', 'Inferred from Sequence Model', 'Family or domain',
+                'The name says "family member" or "domain-containing protein": the evidence stops at a protein '
+                . 'family or domain and does not point to one gene.',
+                'Reverse transcriptase domain-containing protein [ISM|ipr]'],
+        ],
+        // What follows: how the call was made.
+        'details' => [
+            ['1to1', 'one to one', 'This gene and the human gene are each other\'s only ortholog.'],
+            ['3to1, 7to1, ...', 'N to one', 'That many genes in this gene set are orthologs of one human gene and '
+                . 'share its name, numbered "(1 of 3)".'],
+            ['mto1', 'many to one', 'Several genes here are orthologs of one human gene, but only one carries its name.'],
+            ['fam', 'family', 'Several genes here and several human genes form one ortholog family; the gene is named '
+                . 'for the family.'],
+            ['tree', '', 'Orthology from the PANTHER tree, which places the gene with exactly one human gene. Followed '
+                . 'by how the closest human gene was found: rbh, via or bh.'],
+            ['rbh', 'reciprocal best hit', 'Each protein is the other\'s best match.'],
+            ['bh', 'best hit', 'The named protein is this one\'s best match; the match is not reciprocal.'],
+            ['via', '', 'Through another species: this gene\'s ortholog there is an ortholog of the human gene.'],
+            ['sp', 'Swiss-Prot', 'The match is a reviewed Swiss-Prot protein of another species, named in brackets '
+                . 'after the name.'],
+            ['tie-rbh', 'tie, reciprocal best hit', 'Human paralogs scored almost the same; the reciprocal best hit decided.'],
+            ['tie-grp', 'tie, group', 'Human paralogs scored almost the same; the gene is named for their group.'],
+            ['pthr', 'PANTHER', 'Named for a PANTHER protein family.'],
+            ['rpt', 'repeat', 'Named for a family defined by a repeated domain.'],
+            ['ipr', 'InterPro', 'Named for an InterPro domain.'],
+            ['te', 'transposable element', 'A transposable-element domain. After ISO: the ortholog carries one.'],
+            ['smed, nvec', '', 'The name was taken from a related species\' genes: smed = Schmidtea mediterranea, '
+                . 'nvec = Nematostella vectensis.'],
+        ],
+        // Checks on the name. Each compares the gene with the human gene it is NAMED after, not with
+        // whatever it matches best. In the data (2026-11-24): sim and pthr only on ISO (sim~ also on
+        // ISM); tree+ also on ISS; the oma marks on every kind (a later rule named the gene).
+        'support' => [
+            ['sim+', 'similarity agrees', 'The named human gene is this protein\'s best human match.'],
+            ['sim~', 'similarity partly agrees', 'The named gene matches, but another human gene matches better -- '
+                . 'common for close paralogs, and not a contradiction by itself. On a family or domain name (ISM): '
+                . 'the gene has only a partial human match.'],
+            ['sim-', 'no similarity', 'No match to the named gene.'],
+            ['pthr+', 'PANTHER agrees', 'The gene\'s own PANTHER family is the same as that of the human gene it is named after.'],
+            ['pthrC', 'PANTHER Conflicts', 'The gene\'s own PANTHER family differs from that of the human gene it is named after.'],
+            ['tree+', 'tree agrees', 'The PANTHER tree places the gene with the named human gene.'],
+            ['treeC', 'tree Conflicts', 'The PANTHER tree places the gene with other human genes.'],
+            ['hog', 'Hierarchical Orthologous Group', 'OMA\'s gene family grouping agrees.'],
+            ['omaX', 'OMA eXcluded', 'OMA called a human ortholog, but nothing else supported it, so it was set aside '
+                . 'and a later rule named the gene.'],
+            ['omaC', 'OMA Conflict', 'OMA\'s human ortholog was not used: the gene\'s best human match is another gene '
+                . 'AND its PANTHER family differs.'],
+            ['omaR', 'OMA Rejected', 'OMA paired many genes here with one human gene and fewer than half passed the '
+                . 'checks; none is named after it.'],
+        ],
+        // The last character of a check, one meaning everywhere.
+        'marks' => [
+            ['+', 'agrees'], ['~', 'partly: similar, but not the best'], ['C', 'Conflicts: the evidence points elsewhere'],
+            ['-', 'no evidence'], ['X', 'eXcluded: set aside'], ['R', 'Rejected: a whole pairing'],
+        ],
+    ];
+}
+
+/**
  * The gene's short name (symbol) for display — HIVEP3, trp-1 — or '' when it has none.
  *
  * The loader stores it in feature_name, already split from the description upstream. But that

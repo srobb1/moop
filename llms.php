@@ -30,6 +30,24 @@ if (!$guide['here']) {
     exit;
 }
 
+// The key to the evidence tag that ends a pipeline-named description -- the same copy the help topic
+// 'gene-names' shows (moop_naming_tag_key(), lib/functions_display.php).
+require_once __DIR__ . '/lib/functions_display.php';
+$tag_key = moop_naming_tag_key();
+$tag_md  = "First code -- the kind of evidence (after the Gene Ontology's evidence codes):\n";
+foreach ($tag_key['kinds'] as [$c, $words, $label, $text, $eg]) {
+    $tag_md .= "- `$c` ($words) $label. $text Example: `$eg`\n";
+}
+$tag_md .= "\nAfter it -- how the call was made:\n";
+foreach ($tag_key['details'] as [$c, $words, $text]) $tag_md .= "- `$c`" . ($words !== '' ? " ($words)" : '') . " $text\n";
+$tag_md .= "\nChecks -- each compares the gene with the human gene it is NAMED after, not with its best match. sim and pthr\n"
+         . "appear only on ISO names (sim~ also on ISM); tree and the oma marks can follow any name.\n";
+foreach ($tag_key['support'] as [$c, $words, $text]) $tag_md .= "- `$c` ($words) $text\n";
+$tag_md .= "\nThe last character of a check: " . implode('; ', array_map(fn($m) => "`$m[0]` $m[1]", $tag_key['marks'])) . ".\n";
+$tag_md .= "\nStrong: ISO with nothing against it. Moderate: ISO with one check against it (sim~, sim-, pthrC, treeC), or\n"
+         . "ISS|rbh with no tie. Weak: ISO with two or more against it; any other ISS; any ISM.\n";
+$tag_md = rtrim($tag_md);
+
 header('Content-Type: text/plain; charset=utf-8');
 header('Cache-Control: public, max-age=3600');
 
@@ -74,6 +92,10 @@ Rules:
   was inferred from a human gene. Two genes can share a name (zebrafish `txn` and `TXN` are two
   co-orthologs of human TXN). Identify genes by ID; the gene record's naming field says where each name
   came from.
+- Most descriptions end with an evidence tag in square brackets, `[ISO|1to1|sim+|pthr+]`. Read it before
+  you describe a gene: `ISO` is an ortholog, `ISS` (a "-like" name) a homolog that may be a paralog, `ISM`
+  only a protein family or domain. Never call an `ISS` or `ISM` gene "the ortholog of" the gene it is
+  named after. Key: "The tag at the end of a description", below.
 - When you use the data, cite this site and the original sources (InterPro, UniProt, ...). Each record
   gives the source of every annotation.
 - These api/v1 links are stable: they will not be renamed or removed.
@@ -146,5 +168,12 @@ person would:
 - [Search]({$page('tools/search.php')}): the same keyword search, for a person to browse and filter.
 - [BLAST]({$page('tools/blast.php')}): sequence similarity search (queued; runs in the browser).
 - [Gene page]({$page('tools/parent.php?organism={organism}&uniquename={id}')}): the gene, for a person to read; the gene record links to it.
+
+## The tag at the end of a description
+
+The site's pages leave the tag out and say it in words; the API keeps it. The same key for a person:
+[How genes are named]({$page('help.php?topic=gene-names')}).
+
+{$tag_md}
 
 TXT;

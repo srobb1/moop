@@ -43,6 +43,14 @@ return [
         'category'    => 'general',
     ],
     [
+        'id'          => 'gene-names',
+        'title'       => 'How genes are named',
+        'description' => 'What a gene name tells you — ortholog, "-like" homolog, family or domain — and '
+                       . 'the key to the tag in square brackets at the end of a description.',
+        'icon'        => 'fa-tag',
+        'category'    => 'general',
+    ],
+    [
         'id'          => 'access',
         'title'       => 'Who can see what',
         'description' => 'Why an organism may be missing for you, and how to get access to more.',

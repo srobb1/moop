@@ -125,7 +125,7 @@ Planosphere
 ## 5. Help text and examples
 - [x] **Example search terms** DONE 11-20 — chosen from the data (moop_curated_examples(), lib/home_examples.php, the same system as the home page): the most-curated gene (Smed: EU296635 = sFRP-1) under its other IDs, and the three most-curated papers. Click fills the box (Anatomy also runs it). Cached; never shows crosswalk rows the viewer may not see.
 - [x] DONE 11-20: Rosetta Stone page 0.96 s -> 0.01 s and every Smed gene page ~0.5 s faster: `SELECT DISTINCT source FROM map` (3.7M rows) ran on each load; now cached on the file's date (moop_crosswalk_sources_present()).
-- [ ] **Neoblast cluster page (Planosphere)** — the "translate IDs" text is confusing; rewrite. **S**
+- [x] DONE (checked 11-24: page rewritten, links to the Rosetta Stone as "Which gene is my ID?"). **Neoblast cluster page (Planosphere)** — the "translate IDs" text is confusing; rewrite. **S**
 - [x] DONE 11-20 (D): "New to this?" section in the ⓘ (what an ontology is, why here, the 🔬/🧬 icons, PLANA vs GO); a new NAME still to talk about. **Ontology Browser help:** an (i) with more text — it's about genes and the terms they're tagged
       with; maybe a clearer name; a picture of the microscope icon explaining what it means. Written
       for someone new to the site and to tools like this. **M** (name = TALK)
@@ -136,12 +136,12 @@ Planosphere
       return value (colour, order, synonyms, ...). The silent-write-failure pattern. Check each, say so. **S**
 - [x] DONE (home Getting started has "Ask an AI assistant", checked 11-23). **"Use this site with an AI assistant" -- make it more prominent** (Sofia 11-20): also put it in
       the Tools menu, the menu bar, or on the home page; KEEP it where it is now (footer). Pick which. **S**
-- [ ] **Planosphere "how to curate" tutorial** — rewrite for the new site. **M**
+- [ ] (ON HOLD, Sofia 11-24) **Planosphere "how to curate" tutorial** — rewrite for the new site. **M**
 - [ ] **Text updates Sofia wants** — places on the site (list to add here). **?**
 
 ## 6. AI guide (llms.txt) and the API
-- [ ] **llms.txt overview:** what SIMRbase is for, and what MOOP means. **S**
-- [ ] **Key for the naming tags** in descriptions — `[ISO|1to1|sim+|pthr+|tree+|hog]`,
+- [x] DONE (checked 11-24: opening paragraph says what the site holds + who sees what). **llms.txt overview:** what SIMRbase is for, and what MOOP means. **S**
+- [x] DONE 11-24: help topic gene-names + llms.txt section, one key moop_naming_tag_key() (lib/functions_display.php), checked against all 1.67M tagged genes. **Key for the naming tags** in descriptions — `[ISO|1to1|sim+|pthr+|tree+|hog]`,
       `[ISS|rbh|smed]` — so an assistant can tell a strong 1:1 ortholog from a weak similarity hit. **S**
 - [ ] **Are we missing good questions?** Review the help page's task list against what people
       actually ask; add tasks. **M**
@@ -198,6 +198,18 @@ Planosphere
       sequences, translate, catalog...); later the polite BLAST. Public data only (no login through it at first).
       Help page + llms.txt: "add the connector" steps. Enterprise plans may need an admin to allow custom
       connectors (IT). Rate limits: api class. **M-L**
+- [ ] **JBrowse gene tracks: link back to our gene pages (Sofia, 11-23) -- TALK first.** Clicking a gene/mRNA
+      feature in JBrowse should offer "Open gene page" -> tools/parent.php for that feature. Things to settle:
+      which ID the link uses (the GFF ID vs the database uniquename -- see the GFF/FASTA/DB ID alignment plan);
+      gene vs transcript features; how the link reaches the track config (track builder / config.php, per
+      gene set, organism + assembly in the URL); remote tracks on the tracks server; respecting access
+      (the gene page already checks it); moop_url() so it survives a site move. **TALK, then M**
+- [ ] **For compute (found 11-24): step-7 names after the gene's OWN species' Swiss-Prot entry.** Step 7 is
+      "another species' protein", but Danio_rerio has 48 of 123 `[ISS|bh|sp]` names "X-like (Danio rerio)"
+      (also Nematostella 5, Petromyzon 6, Amphimedon 2, Notamacropus 1). Code: swissprot_name() (assign_gene_names_v2.pl ~3120) excludes only human hits, not the gene's own
+      species, though its comment says "another species". If that Swiss-Prot entry IS this gene,
+      "-like" understates it; if a paralog, the species label is fine. Tell compute; web does nothing. **S (compute)**
+- [ ] **Agent API: Primer Maker too (Sofia, 11-24):** after the BLAST endpoint, same shape (submit -> job id -> poll, small limits). **M**
 - [ ] **Agent API: run BLAST politely (Sofia, 11-23):** api/v1 endpoint so an AI agent can submit a BLAST and
       collect the result -- through the SAME blast_queue.php queue (flock, bounded, never stuck), submit returns a
       job id + "check back in N s", poll endpoint, small per-client limits (one running job, max query length /
@@ -235,7 +247,7 @@ Planosphere
 - [x] DONE 11-23 (4 added). **More news items (11-23):** suggested KEGG (11-14), Endo-Atlas (11-18), search View summary/matches (11-23),
       Expression Explorer (10-22). Admin -> News. **S**
 - [x] **Home page version 2 (11-23):** Getting started + What's new (Admin -> News), opt-in home mode 'panel'.
-- [ ] **Organism page: tidy the "Compare assemblies and gene sets" card (Sofia, 11-23):** the table's
+- [x] DONE af394b40 (11-23). **Organism page: tidy the "Compare assemblies and gene sets" card (Sofia, 11-23):** the table's
       columns run into each other; the BUSCO "%" reads as part of the BUSCO bar; the "Assemblies:" label is
       too long. Mockups first (tmp/home-mockups/), then build. **M**
 - [x] **"Send us a message" form (11-23):** footer link on every page -> tools/feedback.php (question /

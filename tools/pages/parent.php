@@ -1594,7 +1594,14 @@ echo help_modal(
              'text'  => 'A transcript, CDS or protein ID all land here. The page always opens at the ' . htmlspecialchars(moop_type_word($type)) . ' they belong to.'],
         ]],
         ['heading' => 'The sections', 'cards' => $page_sections],
-        ['heading' => 'Worth knowing', 'cards' => [
+        ['heading' => 'Worth knowing', 'cards' => array_merge($naming_lead === null ? [] : [
+            // Only on a pipeline-named gene: the sentence under the title says where its name came
+            // from; the help topic says what a plain / -like / family name means (Sofia 2026-11-24:
+            // inside an existing (i), not a new one -- the busiest page).
+            ['label' => 'Where the name comes from', 'html' => true,
+             'text'  => t_markup('The sentence under the gene\'s name says how it was named and on what evidence. A "-like" name means a similar gene that may be a paralog; "family member" or "domain-containing" means only a family or domain is known. More: %s.',
+                                 '<a href="' . htmlspecialchars(moop_url('help.php?topic=gene-names')) . '">' . t('How genes are named') . '</a>')],
+        ], [
             ['label' => 'Annotations belong to the transcript',
              'text'  => 'Not to the ' . htmlspecialchars(moop_type_word($type)) . '. That is why they are listed separately under each one, even when they match.'],
             ['label' => 'Use the list on the left',
@@ -1603,7 +1610,7 @@ echo help_modal(
              'text'  => 'Click a section heading to collapse it, and again to reopen. Nothing is lost — it is only hidden.'],
             ['label' => 'Collapse all transcripts',
              'text'  => 'The button by Annotations folds every transcript at once, which on a long gene turns the whole page into one screen.'],
-        ]],
+        ])],
     ],
     ['intro' => 'A long page — this is what is on it and in what order.']
 );
