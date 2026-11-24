@@ -22,6 +22,7 @@ A short walk through SIMRbase, using the starlet sea anemone *Nematostella vecte
 straight to the page it describes, already filled in.
 
 ### 1. Find your organism
+**Page:** the home page · [`/`](./)
 
 Start typing in the search box on the [home page](./): a species name (*Nematostella*), a common name (sea anemone), a group (Cnidaria) or an assembly accession. Pick the organism from the list to open its page.
 
@@ -30,6 +31,7 @@ Start typing in the search box on the [home page](./): a species name (*Nematost
 **Know the gene ID already?** Type it into **Gene ID lookup** at the top right of every page and go straight to the gene.
 
 ### 2. The organism page
+**Page:** the organism page (pick *Nematostella vectensis* on the home page) · [`/tools/organism.php?organism=Nematostella_vectensis`](tools/organism.php?organism=Nematostella_vectensis)
 
 [Everything about one species](tools/organism.php?organism=Nematostella_vectensis): its assemblies and gene sets, where it sits in the tree of life, and the **Toolbox** of things you can do with its data.
 
@@ -38,6 +40,7 @@ Start typing in the search box on the [home page](./): a species name (*Nematost
 An organism can have more than one **assembly** (a version of the genome sequence), and each assembly has one or more **gene sets** (a set of gene predictions on it). *Nematostella* has two: the RefSeq assembly jaNemVect1.1 with gene set RS_101, and Nvec200 with gene set NV2.
 
 ### 3. Search for a gene
+**Page:** **Tools → Annotation Search** (or the search box on the organism page) · [`/tools/search.php?q="noggin-1"&organism=Nematostella_vectensis`](tools/search.php?q=%22noggin-1%22&organism=Nematostella_vectensis)
 
 The search box on the organism page searches that organism's genes by ID, name, or any word in their annotations. Put a phrase in quotes to find those words together: [`"noggin-1"`](tools/search.php?q=%22noggin-1%22&organism=Nematostella_vectensis) fills in the box — click **Search** and it finds *noggin-1* in both gene sets.
 
@@ -46,6 +49,7 @@ The search box on the organism page searches that organism's genes by ID, name, 
 Each row is one transcript: *noggin-1* has six isoforms in the RefSeq gene set and four in NV2, so it fills several rows. Click an ID to open its gene. Tick rows to download their sequences, or export the whole table as CSV, Excel or FASTA. To search several organisms at once, use the **Genes** tab on the home page.
 
 ### 4. The gene page
+**Page:** the gene page (click a gene ID in the search results) · [`/tools/parent.php?organism=Nematostella_vectensis&uniquename=NV2g007394000.1`](tools/parent.php?organism=Nematostella_vectensis&uniquename=NV2g007394000.1)
 
 [One gene](tools/parent.php?organism=Nematostella_vectensis&uniquename=NV2g007394000.1) and everything we know about it. Noggin is a secreted protein that binds BMPs and blocks their signal; this page shows what that looks like in the data:
 
@@ -60,42 +64,49 @@ Each row is one transcript: *noggin-1* has six isoforms in the RefSeq gene set a
 The list on the left jumps to each section. The **Toolbox** on the right opens the gene in the genome browser, runs BLAST with its sequence, or designs primers for it — the next steps below.
 
 ### 5. What does the gene do? Follow a GO term
+**Page:** a GO term page, part of **Tools → Anatomy & Gene Function** · [`/tools/ontology_term.php?o=GO&id=GO:0030514`](tools/ontology_term.php?o=GO&id=GO%3A0030514)
 
-Each GO term on the gene page links to that term's page. [*Negative regulation of BMP signaling pathway*](tools/ontology_term.php?o=GO&id=GO%3A0030514) shows how many genes in each gene set carry it, in every organism here. Type *Nematostella* in its Search box, then click a number to list those genes — *noggin-1* is one of them. It is the quickest way from one gene to others that may do the same job. **Anatomy & Gene Function** in the Tools menu browses these terms from the top.
+On *noggin-1*'s gene page, open **Annotations → Gene Ontology** and click a term — or go to **Tools → Anatomy & Gene Function**, choose GO, and search for the term. Each GO term has its own page: [*Negative regulation of BMP signaling pathway*](tools/ontology_term.php?o=GO&id=GO%3A0030514) shows how many genes in each gene set carry it, in every organism here. Type *Nematostella* in its Search box, then click a number to list those genes — *noggin-1* is one of them. It is the quickest way from one gene to others that may do the same job. From **Anatomy & Gene Function** you can also browse the terms from the top, or find genes by body part.
 
 ![The GO term page for negative regulation of BMP signaling pathway: its Genes table filtered to Nematostella, 44 genes in each of its two gene sets](images/pages/tour/go-term.png)
 
 ### 6. When and where is it expressed?
+**Page:** **Tools → RNA-seq Expression Explorer** · [`/tools/expression.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&genes=NV2g007394000.1`](tools/expression.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&genes=NV2g007394000.1)
 
 The [RNA-seq Expression Explorer](tools/expression.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&genes=NV2g007394000.1) opens with *noggin-1* already filled in and all three *Nematostella* experiments ticked. Click **Show heatmap** to see its level in each condition, from zygote to polyp. Add more gene IDs to compare them side by side.
 
 ![The RNA-seq Expression Explorer: a heatmap row for NV2g007394000.1 across three experiments — a development time course, heavy-metal exposure, and gastrula, planula and adult](images/pages/tour/expression.png)
 
 ### 7. See it in the genome
+**Page:** **Tools → Genome Browser** (or **View in Genome Browser** in the gene page's Toolbox) · [`/jbrowse2.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&loc=chr13:5579481-5593290`](jbrowse2.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&loc=chr13:5579481-5593290)
 
 **Genome browser** in the gene page's Toolbox opens [the gene in JBrowse](jbrowse2.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&loc=chr13:5579481-5593290): its exons and isoforms on the chromosome, with its neighbours. Drag to move, scroll to zoom, and add tracks from the track list.
 
 ![The genome browser at chr13:5,579,475-5,593,284 on Nvec200, showing the noggin-1 gene model in the Genes (NV2) track, with the list of available tracks on the right](images/pages/tour/jbrowse.png)
 
 ### 8. BLAST
+**Page:** **Tools → BLAST Search** · [`/tools/blast.php?organism=Nematostella_vectensis`](tools/blast.php?organism=Nematostella_vectensis)
 
 [Find sequences like yours](tools/blast.php?organism=Nematostella_vectensis): paste a DNA or protein sequence, choose a BLAST program, then choose which organisms and which database (genome, transcripts or proteins) to search. **Sample Protein** and **Sample Nucleotide** fill in an example so you can try it. From a gene page, the Toolbox's **BLAST** fills in that gene's sequence for you.
 
 ![The BLAST page: step 1 paste a sequence, step 2 choose a BLAST program, step 3 choose the organism and database](images/pages/tour/5-blast.png)
 
 ### 9. Design primers
+**Page:** **Tools → Primer Maker**, then **Tools → Primer BLAST** · [`/tools/primer_maker.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&feature=NV2g007394000.1`](tools/primer_maker.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&feature=NV2g007394000.1)
 
 [Primer Maker](tools/primer_maker.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&feature=NV2g007394000.1) opens with *noggin-1* chosen: pick one of its four transcripts, click **Load this sequence**, choose what the primers are for (PCR, qPCR, RT-PCR or sequencing), then **Design primers** for a table of primer pairs. Then **Primer BLAST** checks a pair against the whole genome, to see whether it would bind anywhere else.
 
 ![Primer Maker results: five primer pairs for transcript NV2t007394002.1, with each primer's sequence, length, melting temperature, GC content and the product size](images/pages/tour/primers.png)
 
 ### 10. Got an ID from a paper?
+**Page:** **Tools → Rosetta Stone ID Translator** · [`/tools/crosswalk.php?organism=Schmidtea_mediterranea&ids=EU296635`](tools/crosswalk.php?organism=Schmidtea_mediterranea&ids=EU296635)
 
 Papers use IDs from many older gene sets. The **Rosetta Stone** (Tools menu) tells you which current gene an ID belongs to. Planarians are where this matters most: [paste `EU296635`](tools/crosswalk.php?organism=Schmidtea_mediterranea&ids=EU296635), a GenBank ID, click **Translate**, and it finds the current gene. The gene page's **Same gene in this species** section lists every other ID a gene is known by.
 
 ![The Rosetta Stone: EU296635 translated to the current genes h1SMcG0012012 and h2SMcG0012220 (one on each haplotype of the genome), with the older ID SMED30022468](images/pages/tour/rosetta.png)
 
 ### 11. Download the data
+**Page:** **Tools → Downloads**, and **Tools → MOOPmart: Data Exporter** · [`/tools/downloads.php?organism=Nematostella_vectensis`](tools/downloads.php?organism=Nematostella_vectensis)
 
 [Downloads](tools/downloads.php?organism=Nematostella_vectensis) has every assembly's genome and every gene set's proteins, coding sequences (CDS), transcripts and gene models (GFF). Open an organism, tick what you want, and download several files at once.
 
@@ -104,6 +115,7 @@ Papers use IDs from many older gene sets. The **Rosetta Stone** (Tools menu) tel
 For many genes at once — a list of IDs with their annotations, orthologs or sequences — use the **Data Exporter** in the Tools menu.
 
 ### 12. Ask an AI assistant
+**Page:** **Use this site with an AI assistant**, at the bottom of every page · [`/help.php?topic=ai-assistants`](help.php?topic=ai-assistants)
 
 An AI assistant can look things up on this site for you: "which *Nematostella* genes are in the TGF-beta pathway?", "design primers for noggin-1". [How to set one up](help.php?topic=ai-assistants).
 
