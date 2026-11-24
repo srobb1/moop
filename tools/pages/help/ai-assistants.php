@@ -29,6 +29,12 @@ $examples = [
     ['fa-chart-bar',    t('Assemblies'),          t_markup('How complete are the %s gene sets (BUSCO), and what is each assembly’s N50?', $smed)],
     // Both answered from the catalog alone (api/v1/catalog.php): organisms, gene sets, expression_experiments, download links.
     ['fa-globe',        t('What is here'),        t('Which organisms are on this site, and which of their gene sets have RNA-seq data or GO terms?')],
+    // Added 2026-11-24, each tried against the live API first: nearby_genes with coordinates,
+    // orthologs family=1, id_search, gene_annotations type=protein_features.
+    ['fa-map-marker-alt', t('Genes in a region'), t_markup('In the %s assembly schMedS3h1, which genes lie on 2_h1 between 185,800,000 and 186,000,000?', $smed)],
+    ['fa-users',        t('Gene family'),         t_markup('Which genes are in the same gene family as SMEDWI-1 (h1SMcG0013999), in %s and in related species?', $smed)],
+    ['fa-question-circle', t('Where an ID is from'), t('Which organism, assembly and gene set does this ID come from: …')],
+    ['fa-sign-out-alt', t('Secreted or membrane'), t('Which of these genes are predicted to make secreted or membrane proteins: …')],
     ['fa-download',     t('Download links'),      t_markup('Give me the download links for the %s genome, its proteins and its GFF.', $smed)],
 ];
 

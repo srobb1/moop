@@ -149,16 +149,19 @@ Planosphere
 - [x] DONE (checked 11-24: opening paragraph says what the site holds + who sees what). **llms.txt overview:** what SIMRbase is for, and what MOOP means. **S**
 - [x] DONE 11-24 (95d11637 + 9a5ca6a6, which adds: one name per gene, from the isoform whose evidence won): help topic gene-names + llms.txt section, one key moop_naming_tag_key() (lib/functions_display.php), checked against all 1.67M tagged genes. **Key for the naming tags** in descriptions — `[ISO|1to1|sim+|pthr+|tree+|hog]`,
       `[ISS|rbh|smed]` — so an assistant can tell a strong 1:1 ortholog from a weak similarity hit. **S**
-- [ ] **Are we missing good questions?** Review the help page's task list against what people
-      actually ask; add tasks. **M**
+- [x] DONE 11-24 (b8c26951 + next commit): **Are we missing good questions?** Help tasks 10 -> 15 (from page use +
+      search misses: GO term, human gene, Rosetta Stone, body part, KEGG); AI page 14 -> 20 questions, each tried
+      on the live API first (What is here, Download links, Genes in a region, Gene family, Where an ID is from,
+      Secreted or membrane). Help task text now through t(). Next questions come with the BLAST/primer APIs (Inbox).
 - [ ] **"All organisms" in one call:** `domain_genes` requires `organism` and takes ≤20, so "all" took
       8 calls. Add `organism=all` (or omit = all) where it's safe, with paging. **M**
 - [ ] **Name lookup took >45 s** across 4 batches — measure (cold vs warm), then fix. **M**
 - [ ] **More API functions** as the task review turns them up. **L**
 
 ## 7. Tutorials (big)
-- [ ] **Picture + text tutorials** for the same questions as the AI help page — screenshots of each
-      step, one page per question. Built on the demo route (§2). After §3–§5, so the pictures don't go
+- [ ] **Picture + text tutorials** (Sofia, re-asked 11-24): a STEP-BY-STEP tutorial, screenshots + text, so a
+      person can do each AI-page question by hand on the site's own pages — one page per question, linked from
+      that question's card on the AI page (and from the matching Help task). Built on the demo route (§2). After §3–§5, so the pictures don't go
       stale straight away. **L**
 
 ## 8. Technical leftovers (mine)
@@ -215,13 +218,31 @@ Planosphere
       (also Nematostella 5, Petromyzon 6, Amphimedon 2, Notamacropus 1). Code: swissprot_name() (assign_gene_names_v2.pl ~3120) excludes only human hits, not the gene's own
       species, though its comment says "another species". If that Swiss-Prot entry IS this gene,
       "-like" understates it; if a paralog, the species label is fine. Tell compute; web does nothing. **S (compute)**
-- [ ] **Agent API: Primer Maker too (Sofia, 11-24):** after the BLAST endpoint, same shape (submit -> job id -> poll, small limits). **M**
+- [ ] **Agent API: Primer Maker AND Primer BLAST (the primer checker) too (Sofia, 11-24):** after the BLAST endpoint,
+      same shape (submit -> job id -> poll, small limits). Each new endpoint also gets: its AI-page question(s),
+      its llms.txt entry, and rate_limit_heavy. **M each**
 - [ ] **Agent API: run BLAST politely (Sofia, 11-23):** api/v1 endpoint so an AI agent can submit a BLAST and
       collect the result -- through the SAME blast_queue.php queue (flock, bounded, never stuck), submit returns a
       job id + "check back in N s", poll endpoint, small per-client limits (one running job, max query length /
       sequences / max_target_seqs), results as JSON + Markdown. Document it in llms.txt + help topic ai-assistants.
       Must sit in rate_limit_heavy (CLAUDE.md bot protection). **M**
-- [ ] **Make the bats public (Sofia, 11-23):** 0 of 48 bat assemblies are public on MOOP, but old SIMRbase had them
+      **Sofia's requirements for the BLAST, Primer Maker and Primer BLAST APIs (11-24):**
+      - **Same downloads as the page, byte for byte** -- so what the agent hands a person is what they would get from
+        the page themselves, and nothing about it is confusing (Sofia's reason). BLAST: the page's TXT (pairwise, outfmt 0), TSV and XML
+        (outfmt 5) all come from the server's ASN.1 archive via blast_formatter (lib/blast_functions.php) -- the API
+        returns links to THOSE files, not its own format. Primer Maker / Primer BLAST: the page's TSV is built in the
+        BROWSER (js/primer-maker.js downloadTsv, js/primer-blast.js downloadPrimerResults; header = the row objects'
+        keys). The API must emit the same rows through the same rule; prove it with a test that runs both serialisers
+        (the JS one loaded into the vm, as tests/js_smoke_tests.js does) on the same rows and compares the bytes.
+      - **The agent must know how to get the output and offer it for download:** submit -> job id -> poll -> result
+        with download links (TXT/TSV/XML for BLAST, TSV for primers), written into llms.txt and the AI help page.
+      - **Efficient: measure grouped vs one by one (cold AND warm, CLAUDE.md §9).** BLAST: 5 queries in ONE run
+        (database read once) vs 5 jobs; primer3 takes many records in one Boulder-IO input (one process); Primer BLAST
+        can check every primer in one blastn. Pick the faster per tool and document the limit it implies.
+- [ ] **Idea, not a plan (Sofia, 11-24): genes under a peak or QTL.** MOOP holds no peaks or QTLs; nearby_genes only
+      takes coordinates the person types. Could an agent read the JBrowse track data (e.g. a peaks BED/bigBed) to find
+      the regions? Unknown -- needs a look at what tracks exist and what the track server allows. **TALK**
+- [x] DONE 11-24 (checked: 48 of 48 Bats assemblies `public: true`; an anonymous visitor's catalog lists them): **Make the bats public (Sofia, 11-23):** 0 of 48 bat assemblies are public on MOOP, but old SIMRbase had them
       open, the Bats group text says "all 50 publicly available bat genomes", and the Camacho et al. 2024 links
       (/bats, /bats/data, /node/2060027) now redirect to the Bats group -- an outside visitor sees an empty list
       until this is done. Admin -> Groups/Manage Organisms: add PUBLIC (or public: true) to each Bats entry. **S**

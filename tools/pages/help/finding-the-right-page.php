@@ -27,36 +27,36 @@ $routes = $data['routes'] ?? [];
 // but each line says only WHERE to go and what makes that page the right one — how to use
 // the page is that page's own (i) help, never restated here.
 $tasks = [
-    ['Find genes by name, keyword or GO term', 'Across several organisms at once. Group, organism, assembly and gene set pages each have their own search box too — see Every page below.',
-     [['Annotation Search', '/tools/search.php'], ['Every page', '#every-page']]],
-    ['Find every gene with a GO term, including more specific terms', 'Pick a term from the tree; its page lists the genes annotated with it or with any term below it.',
-     [['Anatomy & Gene Function', '/tools/ontology_browser.php']]],
-    ['See everything about one gene', 'Search for its ID, then click it in the results to open the gene page.',
-     [['Annotation Search', '/tools/search.php']]],
-    ['Find the genes that match a human gene', 'Search for the human gene symbol, such as PIWIL1. Genes whose closest human gene or ortholog has that name come up; each gene page says how strong the match is.',
-     [['Annotation Search', '/tools/search.php']]],
-    ['Translate an ID into the other assemblies and transcriptomes', 'Paste IDs from a paper or another data set; get the same gene under its IDs in the other transcriptomes, gene sets, ESTs and arrays of that species.',
-     [['Rosetta Stone ID Translator', '/tools/crosswalk.php']]],
-    ['Find where a sequence matches', 'Paste DNA or protein and choose the assemblies to search.',
-     [['BLAST', '/tools/blast.php']]],
-    ['Check a primer pair, or design new primers', 'Check where a pair binds, or design primers for a sequence.',
-     [['Primer BLAST', '/tools/primer_blast.php'], ['Primer Maker', '/tools/primer_maker.php']]],
-    ['Get sequences for a list of gene IDs', 'Protein, mRNA, CDS or genomic sequence for the IDs you paste — whole, or a range of positions.',
-     [['Retrieve Sequences', '/tools/retrieve_sequences.php']]],
-    ['Export a gene list with its annotations', 'Build the list by ID, name or annotation, across organisms, and download TSV or FASTA — or send it to the RNA-seq Expression Explorer.',
-     [['MOOPmart (Data Exporter)', '/tools/moopmart.php']]],
-    ['Compare the expression of a list of genes', 'Paste genes and see them across experiments as a heatmap. Or build the list in MOOPmart and send it — each gene set with expression data gets its own heatmap.',
-     [['RNA-seq Expression Explorer', '/tools/expression.php'], ['MOOPmart (Data Exporter)', '/tools/moopmart.php']]],
-    ['Find genes reported as expressed in a body part', 'Planarian expression published in papers, by body part, by paper or by gene.',
-     [['Expression by Anatomy', '/tools/anatomy_search.php'], ['Anatomy & Gene Function', '/tools/ontology_browser.php']]],
-    ['Download a whole genome, gene set or GFF', 'Complete files, per assembly and gene set.',
-     [['Downloads', '/tools/downloads.php']]],
-    ['See a gene in its place on the genome', 'Genes, data tracks and sequence, interactively.',
-     [['Genome Browser', '/jbrowse2.php']]],
-    ['Find out which annotations an organism has', 'Every annotation source, by type, for the data you can see.',
-     [['Where the data comes from', '/help.php?topic=data-sources']]],
-    ['List the genes in a KEGG pathway', 'Open a gene set page: its KEGG Pathways card lists each pathway with its genes, and opens KEGG\'s map with them coloured.',
-     [['Gene set page', '#every-page']]],
+    [t_plain('Find genes by name, keyword or GO term'), t_plain('Across several organisms at once. Group, organism, assembly and gene set pages each have their own search box too — see Every page below.'),
+     [[t_plain('Annotation Search'), '/tools/search.php'], [t_plain('Every page'), '#every-page']]],
+    [t_plain('Find every gene with a GO term, including more specific terms'), t_plain('Pick a term from the tree; its page lists the genes annotated with it or with any term below it.'),
+     [[t_plain('Anatomy & Gene Function'), '/tools/ontology_browser.php']]],
+    [t_plain('See everything about one gene'), t_plain('Search for its ID, then click it in the results to open the gene page.'),
+     [[t_plain('Annotation Search'), '/tools/search.php']]],
+    [t_plain('Find the genes that match a human gene'), t_plain('Search for the human gene symbol, such as PIWIL1. Genes whose closest human gene or ortholog has that name come up; each gene page says how strong the match is.'),
+     [[t_plain('Annotation Search'), '/tools/search.php']]],
+    [t_plain('Translate an ID into the other assemblies and transcriptomes'), t_plain('Paste IDs from a paper or another data set; get the same gene under its IDs in the other transcriptomes, gene sets, ESTs and arrays of that species.'),
+     [[t_plain('Rosetta Stone ID Translator'), '/tools/crosswalk.php']]],
+    [t_plain('Find where a sequence matches'), t_plain('Paste DNA or protein and choose the assemblies to search.'),
+     [[t_plain('BLAST'), '/tools/blast.php']]],
+    [t_plain('Check a primer pair, or design new primers'), t_plain('Check where a pair binds, or design primers for a sequence.'),
+     [[t_plain('Primer BLAST'), '/tools/primer_blast.php'], [t_plain('Primer Maker'), '/tools/primer_maker.php']]],
+    [t_plain('Get sequences for a list of gene IDs'), t_plain('Protein, mRNA, CDS or genomic sequence for the IDs you paste — whole, or a range of positions.'),
+     [[t_plain('Retrieve Sequences'), '/tools/retrieve_sequences.php']]],
+    [t_plain('Export a gene list with its annotations'), t_plain('Build the list by ID, name or annotation, across organisms, and download TSV or FASTA — or send it to the RNA-seq Expression Explorer.'),
+     [[t_plain('MOOPmart (Data Exporter)'), '/tools/moopmart.php']]],
+    [t_plain('Compare the expression of a list of genes'), t_plain('Paste genes and see them across experiments as a heatmap. Or build the list in MOOPmart and send it — each gene set with expression data gets its own heatmap.'),
+     [[t_plain('RNA-seq Expression Explorer'), '/tools/expression.php'], [t_plain('MOOPmart (Data Exporter)'), '/tools/moopmart.php']]],
+    [t_plain('Find genes reported as expressed in a body part'), t_plain('Planarian expression published in papers, by body part, by paper or by gene.'),
+     [[t_plain('Expression by Anatomy'), '/tools/anatomy_search.php'], [t_plain('Anatomy & Gene Function'), '/tools/ontology_browser.php']]],
+    [t_plain('Download a whole genome, gene set or GFF'), t_plain('Complete files, per assembly and gene set.'),
+     [[t_plain('Downloads'), '/tools/downloads.php']]],
+    [t_plain('See a gene in its place on the genome'), t_plain('Genes, data tracks and sequence, interactively.'),
+     [[t_plain('Genome Browser'), '/jbrowse2.php']]],
+    [t_plain('Find out which annotations an organism has'), t_plain('Every annotation source, by type, for the data you can see.'),
+     [[t_plain('Where the data comes from'), '/help.php?topic=data-sources']]],
+    [t_plain('List the genes in a KEGG pathway'), t_plain('Open a gene set page: its KEGG Pathways card lists each pathway with its genes, and opens KEGG\'s map with them coloured.'),
+     [[t_plain('Gene set page'), '#every-page']]],
 ];
 
 // Help follows the tool switches (Manage Tools; Sofia, 2026-11-06): a switched-off tool's page
@@ -65,10 +65,10 @@ $tasks = [
 $tool_off = fn(string $href): bool => $href[0] === '/' && strpos($href, '/help.php') !== 0
     && moop_disabled_tool_for_script($config, moop_url_base() . strtok($href, '?#')) !== null;
 $hint_without = [
-    'Export a gene list with its annotations' => ['/tools/expression.php',
-        'Build the list by ID, name or annotation, across organisms, and download TSV or FASTA.'],
-    'Compare the expression of a list of genes' => ['/tools/moopmart.php',
-        'Paste genes and see them across experiments as a heatmap.'],
+    t_plain('Export a gene list with its annotations') => ['/tools/expression.php',
+        t_plain('Build the list by ID, name or annotation, across organisms, and download TSV or FASTA.')],
+    t_plain('Compare the expression of a list of genes') => ['/tools/moopmart.php',
+        t_plain('Paste genes and see them across experiments as a heatmap.')],
 ];
 foreach ($tasks as $i => [$task, $hint, $links]) {
     $links = array_values(array_filter($links, fn($l) => !$tool_off($l[1])));
@@ -95,16 +95,14 @@ foreach ($routes as $i => $r) {
     </div>
     <div class="card-body p-4">
       <p class="text-muted mb-0">
-        Common tasks and where to do them, then every page of <?= htmlspecialchars($siteTitle) ?> in
-        one sentence. Each page's own (i) button explains how to use it.
+        <?= t('Common tasks and where to do them, then every page of %s in one sentence. Each page\'s own (i) button explains how to use it.', $siteTitle) . "\n" ?>
       </p>
     </div>
   </div>
 
   <?php if (empty($routes)): ?>
     <div class="alert alert-warning">
-      No page list found. Regenerate it with
-      <code>php scripts/extract_page_purposes.php --write</code>.
+      <?= t('No page list found.') ?> <?= t_markup('Regenerate it with %s.', '<code>php scripts/extract_page_purposes.php --write</code>') . "\n" ?>
     </div>
   <?php else: ?>
 
@@ -114,8 +112,8 @@ foreach ($routes as $i => $r) {
         <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa fa-search"></i></span>
         <input type="search" class="form-control border-start-0 moop-input"
                data-help-filter=".task-card, .route-card" data-filter-msg="route-filter-msg"
-               data-filter-noun="match" data-filter-nouns="matches"
-               placeholder="What do you want to do? — try &quot;download&quot;, &quot;sequence&quot;, &quot;annotation&quot;…"
+               data-filter-noun="<?= t('match') ?>" data-filter-nouns="<?= t('matches') ?>"
+               placeholder="<?= t('What do you want to do? — try "download", "sequence", "annotation"…') ?>"
                autocomplete="off" spellcheck="false" aria-label="<?= t('Filter tasks and pages') ?>">
       </div>
       <div id="route-filter-msg" class="small text-muted mt-1" style="display:none;"></div>
@@ -150,6 +148,10 @@ foreach ($routes as $i => $r) {
   <h2 class="h5 fw-semibold mb-3 mt-2" id="every-page"><?= t('Every page') ?></h2>
   <div class="row" id="route-list">
     <?php foreach ($routes as $r): ?>
+      <?php // Route text comes from docs/page_purposes.json (English). The purposes are each page's own
+            // page_purpose() sentence, already in the catalog; titles and routes come from the extractor
+            // (scripts/, which the catalog scan does not read), so they translate only once listed.
+            $r['title'] = t_plain((string) $r['title']); $r['purpose'] = t_plain((string) $r['purpose']); ?>
       <?php $search = strtolower($r['title'] . ' ' . $r['purpose']); ?>
       <div class="col-md-6 mb-3 route-card" data-search="<?= htmlspecialchars($search, ENT_QUOTES) ?>">
         <div class="card h-100 shadow-sm help-topic-card">
@@ -159,7 +161,7 @@ foreach ($routes as $i => $r) {
             <?php if (!empty($r['linkable']) && !empty($r['link'])): ?>
               <a class="btn btn-sm btn-outline-moop align-self-start"
                  href="<?= htmlspecialchars(moop_url_base()) ?><?= htmlspecialchars($r['link']) ?>">
-                Go to <?= htmlspecialchars($r['title']) ?> <i class="fa fa-arrow-right ms-1"></i>
+                <?= t('Go to %s', $r['title']) ?> <i class="fa fa-arrow-right ms-1"></i>
               </a>
             <?php else: ?>
               <?php /* No link on purpose — see the header comment. The route is written PER
@@ -169,7 +171,7 @@ foreach ($routes as $i => $r) {
                        when two pages were combined. */ ?>
               <?php foreach ((array)($r['reached_by'] ?? []) as $how): ?>
                 <span class="small text-muted align-self-start d-block">
-                  <i class="fa fa-info-circle me-1"></i><?= htmlspecialchars($how) ?>
+                  <i class="fa fa-info-circle me-1"></i><?= htmlspecialchars(t_plain((string) $how)) ?>
                 </span>
               <?php endforeach; ?>
             <?php endif; ?>
@@ -182,7 +184,7 @@ foreach ($routes as $i => $r) {
   </section>
 
   <p class="text-muted small">
-    Every page above can be reached from the <a href="<?= htmlspecialchars(moop_url_base()) ?>/">home page</a>.
+    <?= t_markup('Every page above can be reached from the %s.', '<a href="' . htmlspecialchars(moop_url_base()) . '/">' . t('home page') . '</a>') . "\n" ?>
   </p>
 
 

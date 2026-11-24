@@ -1,16 +1,12 @@
 {
     "includes/busco_card.php": {
-        ";\" title=\"": 1,
         "complete of": 1,
         "genes": 1,
         "· BUSCO": 1
     },
     "includes/gene_set_comparison.php": {
-        "Assembly:": 1,
         "GC": 1,
-        "gaps": 1,
-        "of": 1,
-        "transcripts": 1
+        "gaps": 1
     },
     "includes/loading-indicator.php": {
         "Admin Dashboard": 1,
@@ -22,52 +18,12 @@
         "or": 1,
         "page, or run from the command line:": 1
     },
-    "includes/scope_selector.php": {
-        "\" data-asm-display=\"": 1,
-        "\" data-asm=\"": 1,
-        "\" data-assembly=\"": 1,
-        "\" data-cn=\"": 1,
-        "\" data-gene-set=\"": 1,
-        "\" data-gs-display=\"": 1,
-        "\" data-gs=\"": 1,
-        "\" data-label=\"": 1,
-        "\" data-organism=\"": 1,
-        "\" data-search-detail=\"": 1,
-        "\" data-search-simple=\"": 1,
-        "\" data-search=\"": 1,
-        "\" data-unavailable-reason=\"": 1,
-        "\" data-usable-mode=\"": 1,
-        "\" title=\"": 1,
-        "data-available=\"": 1,
-        "data-has-genome=\"": 1,
-        "data-org=\"": 1,
-        "name=\"selected_source\" value=\"": 1
-    },
     "includes/toolbar.php": {
-        "\" data-1p-ignore data-lpignore=\"true\" data-form-type=\"other\">": 1,
-        "\" hreflang=\"": 1,
-        "\" lang=\"": 1,
-        "\" title=\"": 1,
         "Loading admin dashboard…": 1,
         "The first load after a data rebuild can take a moment.": 1
     },
-    "lib/tool_section.php": {
-        "\" data-tool-id=\"": 1,
-        "\" data-tool-path=\"": 1,
-        "\" id=\"tool-btn-": 1,
-        "\" onclick=\"handleToolClick(": 1,
-        "btn-sm\" title=\"": 1
-    },
     "tools/pages/assembly.php": {
-        "\" class=\"btn btn-sm": 1,
-        "\" class=\"gene-set-chip\">": 1,
-        "\" download>": 1,
-        "&assembly=": 2,
-        "&gene_set=": 1,
-        "&gene_set=&type=": 1,
-        "&genome_directory=": 1,
         "Search Results": 1,
-        "fw-semibold text-white\" style=\"border-radius: 16px;": 1,
         "genes ·": 1
     },
     "tools/pages/blast.php": {
@@ -76,26 +32,11 @@
         "Custom": 1
     },
     "tools/pages/downloads.php": {
-        "\" data-asm-id=\"": 3,
-        "\" data-assembly=\"": 1,
-        "\" data-filename=\"": 1,
-        "\" data-gene-set=\"": 1,
-        "\" data-gs-id=\"": 1,
-        "\" data-organism=\"": 1,
-        "\" data-size=\"": 1,
-        "\" download=\"": 1,
-        "\" onclick=\"event.stopPropagation()\" title=\"": 3,
         "Download Selected (": 1,
         "assembl": 1,
-        "data-download-url=\"": 1,
-        "data-gs-id=\"": 1,
         "file": 2
     },
     "tools/pages/expression.php": {
-        "\">As pasted": 1,
-        "\">Highest first": 1,
-        "\">Level": 1,
-        "\">Pattern": 1,
         "(the TSV lists them in": 1,
         ", average of each condition's samples": 1,
         "ID": 1,
@@ -121,24 +62,9 @@
         "is in": 1
     },
     "tools/pages/gene_set.php": {
-        "\" class=\"btn btn-sm": 2,
-        "\" class=\"btn btn-sm fw-semibold text-white\" style=\"border-radius: 16px; background-color: #475569; border-color: #475569;\" download>": 1,
-        "\" download>": 1,
-        "\" title=\"The assembled genome sequence this gene set was called against\" download>": 1,
-        "&assembly=": 4,
-        "&filename=": 1,
-        "&gene_set=": 2,
-        "&gene_set=&type=": 1,
-        "&genome_directory=": 1,
-        "&type=": 1,
-        "Search Results": 1,
-        "fw-semibold text-white\" style=\"border-radius: 16px;": 2
+        "Search Results": 1
     },
     "tools/pages/groups.php": {
-        "\" class=\"card-img-top\" alt=\"": 1,
-        "\" class=\"organism-card-image\" onerror=\"this.style.display='none'; this.nextElementSibling.style.display='flex';\">": 1,
-        "\" class=\"text-decoration-none organism-card-link\">": 1,
-        "&group=": 1,
         "Search Results": 1
     },
     "tools/pages/help/access.php": {
@@ -182,14 +108,6 @@
         "more": 1,
         "organism": 1,
         "runs on MOOP. To cite it, cite the": 1
-    },
-    "tools/pages/help/finding-the-right-page.php": {
-        "Common tasks and where to do them, then every page of": 1,
-        "Every page above can be reached from the": 1,
-        "Go to": 1,
-        "No page list found. Regenerate it with": 1,
-        "home page": 1,
-        "in one sentence. Each page's own (i) button explains how to use it.": 1
     },
     "tools/pages/help/function-registry-management.php": {
         ". If not, run the generation scripts from the command line.": 1,
@@ -2007,19 +1925,12 @@
         "— the organism databases": 1,
         "❌ NO full genome reference (genome.fa)": 1
     },
-    "tools/pages/index.php": {
-        "\" autocomplete=\"off\" spellcheck=\"false\">": 2
-    },
     "tools/pages/jbrowse2.php": {
-        "\" data-groups=\"": 1,
-        "\" data-search=\"": 1,
         "title=\"Filter the track list by technique, experiment, tissue, stage, source&hellip; (JBrowse's faceted track selector)\"": 1
     },
     "tools/pages/moopmart.php": {
-        "\" data-type=\"": 1,
         ", exact": 1,
         ", or keyword — fill any combination.": 1,
-        "Annotation columns to include in TSV if Annotation types (below) are selected": 1,
         "Chr /": 1,
         "Click to include/exclude · arrows to reorder": 2,
         "Every": 1,
@@ -2042,8 +1953,6 @@
         "or": 1
     },
     "tools/pages/multi_organism.php": {
-        "\" class=\"organism-card-image\" loading=\"lazy\" onerror=\"this.style.display='none'; this.nextElementSibling.style.display='flex';\">": 1,
-        "\" class=\"text-decoration-none organism-card-link\">": 1,
         "Search Results": 1
     },
     "tools/pages/not_found_access_hint.php": {
@@ -2053,36 +1962,19 @@
         "to see more.": 1
     },
     "tools/pages/organism.php": {
-        "\" class=\"assembly-chip\">": 1,
-        "\" class=\"group-chip\">": 1,
-        "&assembly=": 1,
         "About": 1,
         "Search Results": 1
     },
     "tools/pages/parent.php": {
-        "\" aria-label=\"": 2,
-        "\" class=\"btn btn-sm moop-data-btn\" title=\"Download every annotation on this page as one CSV\">": 1,
-        "\" class=\"link-light-bordered\">": 3,
-        "\" data-gene-set=\"": 1,
-        "\" data-uniquename=\"": 1,
-        "\" title=\"": 3,
-        "&assembly=": 2,
-        "&gene_set=": 1,
-        "&parent=": 2,
-        "&uniquename=": 1,
         "PMID": 1,
         "its annotations": 1
     },
     "tools/pages/primer_blast.php": {
-        "\" data-default-mode=\"genome\">": 1,
         "bp": 1
     },
     "tools/pages/primer_maker.php": {
         "Clear": 1,
         "set": 1
-    },
-    "tools/pages/retrieve_sequences.php": {
-        "\" style=\"width:9rem;\">": 2
     },
     "tools/pages/verify_human.php": {
         "Have an account?": 1,
