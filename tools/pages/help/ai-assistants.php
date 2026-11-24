@@ -27,6 +27,9 @@ $examples = [
     ['fa-table',        t('Annotate a gene list'), t('For these genes, make a table with their protein domains, GO terms and closest human gene: …')],
     ['fa-file-alt',     t('Sequences'),           t('Give me the protein sequences of these genes, and the 500 bases upstream of each.')],
     ['fa-chart-bar',    t('Assemblies'),          t_markup('How complete are the %s gene sets (BUSCO), and what is each assembly’s N50?', $smed)],
+    // Both answered from the catalog alone (api/v1/catalog.php): organisms, gene sets, expression_experiments, download links.
+    ['fa-globe',        t('What is here'),        t('Which organisms are on this site, and which of their gene sets have RNA-seq data or GO terms?')],
+    ['fa-download',     t('Download links'),      t_markup('Give me the download links for the %s genome, its proteins and its GFF.', $smed)],
 ];
 
 // What a person pastes into the assistant: the guide, then the question. Examples are HTML (t_markup), so

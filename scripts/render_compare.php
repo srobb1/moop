@@ -42,13 +42,10 @@
 if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }
 
 $root = dirname(__DIR__);
-// The site's LINK PREFIX -- where its pages are served ("/moop", or "" at its domain's root) --
-// read from its config_editable.json like scripts/build_robots.php, default "/" + the folder.
-// (Not includes/config_init.php: this runs from any checkout, against that checkout's site.)
-$site = trim((string) ((json_decode((string) @file_get_contents("$root/config/config_editable.json"), true) ?: [])['link_prefix'] ?? ''));
-$site = $site === '' ? '/' . basename($root) : ($site === '/' ? '' : '/' . trim($site, '/'));
-// The site's own host name, from public_url ("https://simrbase.stowers.org"); '' = none set.
-$PUBLIC_HOST = (string) (parse_url(trim((string) ((json_decode((string) @file_get_contents("$root/config/config_editable.json"), true) ?: [])['public_url'] ?? '')), PHP_URL_HOST) ?? '');
+// The site's link prefix + public_url host, host_ip(), http(), viewer_login() -- shared with
+// scripts/extract_page_purposes.php, which has to reach the pages the same way.
+require_once __DIR__ . '/lib/site_viewer.php';
+[$site, $PUBLIC_HOST] = site_viewer_target($root);
 
 $args = array_slice($argv, 1);
 $opts = [];
@@ -80,56 +77,6 @@ function usage(): void {
     exit(2);
 }
 
-function host_ip(): string {
-    $ip = trim((string) shell_exec("hostname -I 2>/dev/null | awk '{print $1}'"));
-    return $ip !== '' ? $ip : '127.0.0.1';
-}
-
-/** $site is the link prefix with its leading slash ("/moop"), or "" for a site at its domain's root. */
-function viewer_base(string $viewer, string $site): string {
-    global $PUBLIC_HOST;
-    if ($PUBLIC_HOST !== '') return "https://$PUBLIC_HOST$site";   // connected by viewer_from()
-    switch ($viewer) {
-        case 'public':  return 'https://' . host_ip() . $site;   // logged in, then previewing
-        case 'network': return 'http://' . host_ip() . $site;
-        case 'admin':   return 'https://' . host_ip() . $site;
-    }
-    throw new RuntimeException("unknown viewer '$viewer'");
-}
-
-/** The address the requests come from (and go to): the host IP, inside auto_login_ip_ranges --
- *  which also exempts them from nginx's rate limits (from 127.0.0.1 a second run got 429s).
- *  public is the admin's preview, so its address does not change what it sees. */
-function viewer_from(string $viewer): string {
-    return host_ip();
-}
-
-/** One HTTP request; returns [status, body]. Cookies persist per viewer in $jar.
- *  $from: with a public_url, connect to this machine at that address instead of the name's DNS. */
-function http(string $url, string $jar, ?array $post = null, string $from = ''): array {
-    global $PUBLIC_HOST;
-    $ch = curl_init($url);
-    if ($PUBLIC_HOST !== '' && $from !== '') curl_setopt($ch, CURLOPT_RESOLVE, ["$PUBLIC_HOST:443:$from"]);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => 120,
-        CURLOPT_COOKIEJAR => $jar, CURLOPT_COOKIEFILE => $jar,
-        CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => 0,   // the host IP is not on the cert
-    ]);
-    if ($post !== null) {
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post));
-    }
-    $body = curl_exec($ch);
-    if ($body === false) { $err = curl_error($ch); curl_close($ch); throw new RuntimeException("$url: $err"); }
-    $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    curl_close($ch);
-    return [$status, $body];
-}
-
-function csrf_from(string $html): string {
-    return preg_match('/name="csrf-token" content="([^"]+)"/', $html, $m) ? $m[1] : '';
-}
-
 function normalise(string $body, array $rules): string {
     foreach ($rules as $patterns) {
         foreach ($patterns as $re) $body = preg_replace($re, '$1<blanked>', $body);
@@ -148,20 +95,7 @@ function capture(string $dir, string $pages_file, string $login_file, string $si
         $jar = tempnam(sys_get_temp_dir(), 'rc_jar_');
         $jars[$viewer] = $jar;
         if ($viewer === 'admin' || $viewer === 'public') {
-            $lines = is_readable($login_file) ? file($login_file, FILE_IGNORE_NEW_LINES) : [];
-            if (count($lines) < 2) throw new RuntimeException("$viewer viewer needs $login_file (username, password)");
-            $base = viewer_base($viewer, $site); $from = viewer_from($viewer);
-            [, $login_page] = http("$base/login.php", $jar, null, $from);
-            preg_match('/name="csrf_token" value="([^"]+)"/', $login_page, $m);
-            http("$base/login.php", $jar, ['username' => trim($lines[0]), 'password' => $lines[1], 'csrf_token' => $m[1] ?? ''], $from);
-            [$st, $dash] = http("$base/admin/admin.php", $jar, null, $from);
-            if ($st !== 200) throw new RuntimeException("admin login failed (dashboard answered $st)");
-            if ($viewer === 'public') {
-                // Into the PUBLIC preview: what an anonymous visitor sees, minus the human check.
-                http("$base/view_as.php", $jar, ['action' => 'enter', 'csrf_token' => csrf_from($dash)], $from);
-                [, $home] = http("$base/index.php", $jar, null, $from);
-                if (stripos($home, 'name="action" value="leave"') === false) throw new RuntimeException('could not enter the "view as PUBLIC" preview');
-            }
+            viewer_login($viewer, $jar, $site, $login_file);
         }
         return $jar;
     };

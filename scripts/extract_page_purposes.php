@@ -13,8 +13,11 @@
  * after a refactor — and source-grep has produced several confidently wrong answers in this
  * codebase (CLAUDE.md §12b). If the page does not serve the sentence, it does not have one.
  *
- * ⚠️ Requests go to 127.0.0.1, which is OUTSIDE auto_login_ip_ranges, so this sees the page
- * as an ANONYMOUS visitor — the audience the router is written for. A page whose purpose
+ * ⚠️ Pages are fetched as the admin's "view as PUBLIC" preview (scripts/lib/site_viewer.php,
+ * the same route as render_compare.php), so this sees each page as an ANONYMOUS visitor — the
+ * audience the router is written for. It needs the login file (~/.moop-claude-admin, or
+ * --login-file=FILE). Until 2026-11-24 it asked 127.0.0.1 as a plain anonymous visitor; since the
+ * human check (Turnstile) and the move to the site's own name, that gets 403 on every page. A page whose purpose
  * only appears once you are logged in would show up here as missing, which is the correct
  * signal, not a bug in this script.
  *
@@ -23,7 +26,20 @@
  *   php scripts/extract_page_purposes.php --json     # machine-readable
  */
 
-$base = 'http://127.0.0.1/moop';
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }
+require_once __DIR__ . '/lib/site_viewer.php';
+[$site, $PUBLIC_HOST] = site_viewer_target(dirname(__DIR__));
+$login_file = getenv('HOME') . '/.moop-claude-admin';
+foreach ($argv as $a) if (strpos($a, '--login-file=') === 0) $login_file = substr($a, 13);
+$jar = tempnam(sys_get_temp_dir(), 'pp_jar_');
+register_shutdown_function(fn() => @unlink($jar));
+try {
+    viewer_login('public', $jar, $site, $login_file);
+} catch (RuntimeException $e) {
+    fwrite(STDERR, $e->getMessage() . "\n"); exit(2);
+}
+$base = viewer_base('public', $site);
+$from = viewer_from('public');
 
 // Pages a visitor can land on. Data pages need real ids in the query string or they
 // redirect; these are resolved from the first accessible organism at runtime.
@@ -42,6 +58,9 @@ $pages = [
     'expression'         => '/tools/expression.php',
     'downloads'          => '/tools/downloads.php',
     'retrieve_sequences' => '/tools/retrieve_sequences.php',
+    'crosswalk'          => '/tools/crosswalk.php',
+    'anatomy_search'     => '/tools/anatomy_search.php',
+    'ontology_browser'   => '/tools/ontology_browser.php',
     'groups'             => '/tools/groups.php?group=Cnidaria',
     // Data pages need real ids or they redirect. These use the first PUBLIC assembly, so the
     // check keeps working for an anonymous visitor — which is who the router is written for.
@@ -67,6 +86,9 @@ $meta = [
     'expression'         => ['title' => 'RNA-seq Expression Explorer', 'link' => '/tools/expression.php',     'linkable' => true],
     'downloads'          => ['title' => 'Downloads',          'link' => '/tools/downloads.php',       'linkable' => true],
     'retrieve_sequences' => ['title' => 'Retrieve Sequences', 'link' => '/tools/retrieve_sequences.php', 'linkable' => true],
+    'crosswalk'          => ['title' => 'Rosetta Stone ID Translator', 'link' => '/tools/crosswalk.php',   'linkable' => true],
+    'anatomy_search'     => ['title' => 'Expression by Anatomy', 'link' => '/tools/anatomy_search.php',    'linkable' => true],
+    'ontology_browser'   => ['title' => 'Anatomy & Gene Function', 'link' => '/tools/ontology_browser.php', 'linkable' => true],
     // reached_by: written per route, not a generic line appended to whatever has no link.
     // These pages sit in a chain — organism -> assembly -> gene set — and saying "pick an
     // organism first" on the gene-set card is simply wrong. Each says the step that actually
@@ -99,15 +121,11 @@ $write = in_array('--write', $argv, true);
 $rows  = [];
 
 foreach ($pages as $name => $path) {
-    $ch = curl_init($base . $path);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 20,
-        CURLOPT_FOLLOWLOCATION => true,
-    ]);
-    $html   = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    try {
+        [$status, $html] = http($base . $path, $jar, null, $from);
+    } catch (RuntimeException $e) {
+        [$status, $html] = [0, false];
+    }
 
     $purpose = '';
     // Matches either form page_purpose() emits: a visible <p>, or a hidden <span> on a page

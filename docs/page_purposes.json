@@ -1,5 +1,5 @@
 {
-    "generated": "2026-10-23T14:26:41+00:00",
+    "generated": "2026-11-24T17:45:47+00:00",
     "routes": [
         {
             "page": "index",
@@ -69,7 +69,7 @@
         },
         {
             "page": "expression",
-            "title": "Expression Explorer",
+            "title": "RNA-seq Expression Explorer",
             "link": "/tools/expression.php",
             "linkable": true,
             "reached_by": [],
@@ -99,6 +99,39 @@
             "url": "/tools/retrieve_sequences.php",
             "status": 200,
             "purpose": "Look up sequences by feature ID across any accessible assembly. Enter gene or transcript IDs \u2014 whole, or a range of positions \u2014 and retrieve their protein, mRNA, CDS and genomic sequences, with flanking sequence if you want it."
+        },
+        {
+            "page": "crosswalk",
+            "title": "Rosetta Stone ID Translator",
+            "link": "/tools/crosswalk.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/crosswalk.php",
+            "status": 200,
+            "purpose": "Translate IDs between the transcriptomes, gene sets, ESTs and arrays of one species, to the same gene in each."
+        },
+        {
+            "page": "anatomy_search",
+            "title": "Expression by Anatomy",
+            "link": "/tools/anatomy_search.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/anatomy_search.php",
+            "status": 200,
+            "purpose": "Find where planarian genes were published as expressed: by body part, by paper, or by gene."
+        },
+        {
+            "page": "ontology_browser",
+            "title": "Anatomy & Gene Function",
+            "link": "/tools/ontology_browser.php",
+            "linkable": true,
+            "reached_by": [],
+            "combine": "",
+            "url": "/tools/ontology_browser.php",
+            "status": 200,
+            "purpose": "Find genes by anatomy term or GO term: a tree of terms with their definitions, and a page for each term."
         },
         {
             "page": "groups",

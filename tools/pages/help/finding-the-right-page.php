@@ -19,7 +19,6 @@
  * Available: $config, $siteTitle
  */
 
-$site = $config->getString('site');
 $file = __DIR__ . '/../../../docs/page_purposes.json';
 $data = function_exists('loadJsonFile') ? loadJsonFile($file, []) : [];
 $routes = $data['routes'] ?? [];
@@ -30,8 +29,14 @@ $routes = $data['routes'] ?? [];
 $tasks = [
     ['Find genes by name, keyword or GO term', 'Across several organisms at once. Group, organism, assembly and gene set pages each have their own search box too — see Every page below.',
      [['Annotation Search', '/tools/search.php'], ['Every page', '#every-page']]],
+    ['Find every gene with a GO term, including more specific terms', 'Pick a term from the tree; its page lists the genes annotated with it or with any term below it.',
+     [['Anatomy & Gene Function', '/tools/ontology_browser.php']]],
     ['See everything about one gene', 'Search for its ID, then click it in the results to open the gene page.',
      [['Annotation Search', '/tools/search.php']]],
+    ['Find the genes that match a human gene', 'Search for the human gene symbol, such as PIWIL1. Genes whose closest human gene or ortholog has that name come up; each gene page says how strong the match is.',
+     [['Annotation Search', '/tools/search.php']]],
+    ['Translate an ID into the other assemblies and transcriptomes', 'Paste IDs from a paper or another data set; get the same gene under its IDs in the other transcriptomes, gene sets, ESTs and arrays of that species.',
+     [['Rosetta Stone ID Translator', '/tools/crosswalk.php']]],
     ['Find where a sequence matches', 'Paste DNA or protein and choose the assemblies to search.',
      [['BLAST', '/tools/blast.php']]],
     ['Check a primer pair, or design new primers', 'Check where a pair binds, or design primers for a sequence.',
@@ -42,12 +47,16 @@ $tasks = [
      [['MOOPmart (Data Exporter)', '/tools/moopmart.php']]],
     ['Compare the expression of a list of genes', 'Paste genes and see them across experiments as a heatmap. Or build the list in MOOPmart and send it — each gene set with expression data gets its own heatmap.',
      [['RNA-seq Expression Explorer', '/tools/expression.php'], ['MOOPmart (Data Exporter)', '/tools/moopmart.php']]],
+    ['Find genes reported as expressed in a body part', 'Planarian expression published in papers, by body part, by paper or by gene.',
+     [['Expression by Anatomy', '/tools/anatomy_search.php'], ['Anatomy & Gene Function', '/tools/ontology_browser.php']]],
     ['Download a whole genome, gene set or GFF', 'Complete files, per assembly and gene set.',
      [['Downloads', '/tools/downloads.php']]],
     ['See a gene in its place on the genome', 'Genes, data tracks and sequence, interactively.',
      [['Genome Browser', '/jbrowse2.php']]],
     ['Find out which annotations an organism has', 'Every annotation source, by type, for the data you can see.',
      [['Where the data comes from', '/help.php?topic=data-sources']]],
+    ['List the genes in a KEGG pathway', 'Open a gene set page: its KEGG Pathways card lists each pathway with its genes, and opens KEGG\'s map with them coloured.',
+     [['Gene set page', '#every-page']]],
 ];
 
 // Help follows the tool switches (Manage Tools; Sofia, 2026-11-06): a switched-off tool's page
@@ -125,7 +134,7 @@ foreach ($routes as $i => $r) {
               <p class="text-muted small flex-grow-1 mb-2"><?= htmlspecialchars($hint) ?></p>
               <div class="d-flex flex-wrap gap-2">
                 <?php foreach ($links as [$label, $href]): ?>
-                  <a class="btn btn-sm btn-outline-moop" href="<?= $href[0] === '#' ? '' : '/' . htmlspecialchars($site) ?><?= htmlspecialchars($href) ?>">
+                  <a class="btn btn-sm btn-outline-moop" href="<?= $href[0] === '#' ? '' : htmlspecialchars(moop_url_base()) ?><?= htmlspecialchars($href) ?>">
                     <?= htmlspecialchars($label) ?> <i class="fa fa-arrow-right ms-1"></i>
                   </a>
                 <?php endforeach; ?>
