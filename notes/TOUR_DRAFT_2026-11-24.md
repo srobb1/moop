@@ -75,6 +75,8 @@ On the gene page, click **Pathways** in the Jump to list on the left, then open 
 
 ![The gene list for the TGF-beta signaling pathway (map04350) in gene set NV2: transcripts such as SMAD4-like, noggin and chordin, each matched in KEGG Pathway, with Copy, CSV, Excel and FASTA buttons](images/pages/tour/kegg-list.png)
 
+*Pathway data and maps: KEGG, Kanehisa Laboratories — Kanehisa M, et al. (2025) KEGG: biological systems database as a model of the real world. Nucleic Acids Research 53(D1):D672–D677. [doi:10.1093/nar/gkae909](https://doi.org/10.1093/nar/gkae909). Genes were assigned to KEGG Orthology (KO) groups with eggNOG-mapper — Cantalapiedra CP, et al. (2021) eggNOG-mapper v2. Molecular Biology and Evolution 38(12):5825–5829. [doi:10.1093/molbev/msab293](https://doi.org/10.1093/molbev/msab293).*
+
 Every pathway of a gene set, with its **Map** and **Genes** links, is in the **KEGG Pathways** table on the gene set's own page: [NV2's pathways](tools/gene_set.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2).
 
 Gene Ontology (GO) terms work in a similar way: in **Tools → Anatomy & Gene Function**, choose **GO (Gene Ontology)**, search for a term, and its page counts the genes that carry it in every organism here — for example [*negative regulation of BMP signaling pathway*](tools/ontology_term.php?o=GO&id=GO%3A0030514).
