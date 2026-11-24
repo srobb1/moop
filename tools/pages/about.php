@@ -42,6 +42,11 @@ $data_sources = [
     ['KEGG', t_plain('Pathway maps and KEGG Orthology'),
      'Kanehisa M, et al. (2025) KEGG: biological systems database as a model of the real world. Nucleic Acids Research 53(D1):D672–D677.',
      'https://doi.org/10.1093/nar/gkae909'],
+    // eggNOG-mapper is what places our genes in KEGG Orthology groups and pathways (lib/kegg.php), and the
+    // source of the "EggNOG (EggNOG2GO)" GO terms -- credited next to KEGG because the maps depend on it.
+    ['eggNOG-mapper', t_plain('Places genes in KEGG Orthology groups and pathways, and adds GO terms'),
+     'Cantalapiedra CP, et al. (2021) eggNOG-mapper v2: functional annotation, orthology assignments, and domain prediction at the metagenomic scale. Molecular Biology and Evolution 38(12):5825–5829.',
+     'https://doi.org/10.1093/molbev/msab293'],
     ['Gene Ontology', t_plain('GO terms and the ontology browser'),
      'Ashburner M, et al. (2000) Gene Ontology: tool for the unification of biology. Nature Genetics 25:25–29. — The Gene Ontology Consortium (2023) The Gene Ontology knowledgebase in 2023. Genetics 224(1):iyad031.',
      'https://doi.org/10.1093/genetics/iyad031'],
