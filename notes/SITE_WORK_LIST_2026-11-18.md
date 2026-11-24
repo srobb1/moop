@@ -228,6 +228,11 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Gene page GO IDs link only to AmiGO, never to our own GO term page (Sofia 11-24).** 684 GO links on
+      NV2g007394000.1, all https://amigo.geneontology.org/...; the URL is stored with each annotation by the
+      pipeline. Our term page (tools/ontology_term.php?o=GO&id=...) shows genes in OUR organisms; api/v1/gene.php:155
+      already adds it as term_page. Proposal: term name/ID -> our term page, small external icon -> AmiGO.
+      Same check for other pages listing GO (search results, MOOPmart). Tour step 5 worded around it. **S-M** (TALK)
 - [ ] **Term page "Where it sits" is overwhelming for some terms (Sofia 11-24).** e.g.
       https://simrbase.stowers.org/tools/ontology_term.php?o=GO&id=GO:0030514 (negative regulation of BMP
       signaling pathway): 88 term links (18 distinct terms, repeated across paths) -- GO terms have many parents, so the section lists every path up to the root. Ideas to
