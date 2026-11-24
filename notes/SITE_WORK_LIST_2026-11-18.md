@@ -56,6 +56,12 @@ Order of work, and why:
       fails CI on a missing one (proven red). STILL TO DO: deny those paths in the guard template (docs/nginx/moop-security.conf
       -> scripts/nginx_site_guard.sh, root reload; setup-check probe for one of them) + a CLI guard line in every
       script. TALK (what of docs/ is meant to be public?), then **S-M (root)**
+      11-24 REFRAMED: all 69 docs/ + 138 notes/ files (and CLAUDE.md) are in the PUBLIC GitHub repo srobb1/moop,
+      so a web deny hides nothing -- it is tidiness, not secrecy. Secret scan of the tracked repo: none (only
+      placeholders and examples). No visitor page links into docs/ (help links INSTALL.md on GitHub); the
+      admin dashboard links ../docs/JBrowse2/UPGRADING.md -> switch it to the GitHub copy before any deny.
+      The function_registry.json files are read server-side (admin), not over HTTP. Still worth denying
+      scripts/ tests/ vendor/ lib/ includes/ (code should never be reachable by URL); docs/ + notes/ optional.
 
 ## 1. Wrong or surprising answers — fix first
 - [ ] **IMPORTANT (Sofia, 11-24): are ALL Nematostella RNA-seq tracks visible to PUBLIC visitors?** Someone
@@ -68,7 +74,7 @@ Order of work, and why:
       the 47 hidden are all access_level COLLABORATOR in the track sheet: Gibson Lab "hox shRNA knockdown"
       (32 expression + 14 aligned reads) and the "TCSv2 genes" gene-model track. GCF_932526225.1: 1 of 1.
       Remote tracks stream to an outside address through the proxy (206). ASK SOFIA: were the hox knockdown
-      tracks meant to be public (published?) -- if yes, change access_level in the sheet and re-sync.
+      tracks meant to be public? -> NO (Sofia 11-24): hox knockdown stays COLLABORATOR, as it is now.
       Sofia's example foxA "WT_48hpf_2" (+/-, reads, both foxAp4 combos): PUBLIC, listed for public, and every
       file streams to an outside address with no login (11-24). Still to do: a real outside browser (phone
       off Wi-Fi) opening one; ask the reporter WHICH track and from where.
@@ -421,3 +427,22 @@ Planosphere
       for the internal (IP_IN_RANGE) viewer, so check it as PUBLIC (view-as-PUBLIC preview) and read
       $__cl_also; find which data row is a string, fix the reader, add a smoke test with that shape. A crash =
       a visitor gets a broken gene page. **S-M**
+- [ ] **Review docs/ (Sofia 11-24: "too many for me to remember").** 69 files (+ CLAUDE.md, README, 138 notes),
+      all public on GitHub. Plan: one table, each doc -> KEEP (current, say for whom: visitor / admin /
+      installer / developer) / UPDATE (what is stale) / MERGE (into which) / ARCHIVE / DELETE, checked against
+      the CODE, not memory (feedback_read_code_not_just_docs). Seen 11-24: docs/archive (5), JBrowse2 has 13 +
+      7 sub-docs with ~5 overlapping security docs (SECURITY.md 80 KB, SECURITY_SUMMARY, SECURITY_QUICKSTART,
+      SECURITY_FLOW_DIAGRAM, TODO_URL_WHITELIST_SECURITY), several *_PLAN.md that may be done, two 2-MB function
+      registries. UPGRADING.md was stale 11-24 (fixed). Output: the table for Sofia to decide, then a short
+      docs/README.md index of what is left. Also decide: should internal 172.16 addresses / IT setup notes be
+      in a public repo at all (9 notes, TRACKS_SERVER_IT_SETUP.md)? **M (helper agent for the reading)**
+- [ ] **Old SIMRbase user accounts -> list of all collaborators (Sofia 11-24).** From the Drupal dump
+      /var/www/html/.simrbase_notes/drupal-20261117-0430.sql.gz (23.9 GB; the 11-18 review counted the user
+      tables but copied no rows -- .simrbase_notes/review/REPORT.md). Pull users + their roles (Drupal
+      users / users_roles / role; Tripal/organism permissions if any) -> one table: username, name, email,
+      role(s), what they could see, created, last login, blocked or active. Then Sofia decides who gets a
+      MOOP collaborator account (Manage Users) and for which organisms/assemblies.
+      ⚠️ PERSONAL DATA: names + emails. The list must NOT go in notes/ or anywhere in the repo (srobb1/moop is
+      PUBLIC on GitHub). Write it to /var/www/moop-private/ (outside the docroot, 2770), share with Sofia
+      only, delete once accounts are settled. Stream the dump (zcat | grep the user-table COPY blocks);
+      never unpack 24 GB. **S-M**
