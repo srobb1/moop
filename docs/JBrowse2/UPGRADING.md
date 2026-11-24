@@ -103,29 +103,27 @@ chmod -R a+rX jbrowse2/          # readable by any web server user, still not wr
 
 ## Plugins
 
-Plugins are declared in `config/jbrowse2_plugins.json`:
+Plugins are declared in `config/jbrowse2_plugins.json` (`name`, `url`, `description`, `enabled`).
+Only entries with `"enabled": true` are emitted into the generated config. A `url` without a
+scheme or leading slash is a file this site serves itself; `lib/jbrowse/PluginLoader.php` turns
+it into `moop_url(...)?v=<mtime>`. Both plugins are self-hosted on purpose: the enforced
+Content-Security-Policy allows scripts from `'self'` only.
 
-```json
-[
-  {
-    "name": "MafViewer",
-    "url": "https://jbrowse.org/plugins/jbrowse-plugin-mafviewer/dist/jbrowse-plugin-mafviewer.umd.production.min.js",
-    "description": "Multiple Alignment Format (MAF) viewer for comparative genomics",
-    "enabled": true
-  }
-]
-```
+| Plugin | File | What it does |
+|---|---|---|
+| MafViewer | `js/vendor/jbrowse-plugin-mafviewer.umd.production.min.js` (pinned in `scripts/vendor_assets.txt`) | MAF alignment tracks |
+| MoopGenePage | `js/jbrowse-plugin-moop-gene-page.js` (ours, no build step) | "Open gene page" in a gene's right-click menu |
 
-Only entries with `"enabled": true` are emitted into the generated config. A plugin built
-against an older JBrowse can stop working after an upgrade — if a view breaks immediately
-after upgrading, disabling plugins one at a time is the fastest way to isolate it.
+A plugin built against an older JBrowse can stop working after an upgrade — if a view breaks
+immediately after upgrading, disabling plugins one at a time is the fastest way to isolate it.
 
-> ⚠️ **These URLs are external.** The MafViewer plugin above is fetched from `jbrowse.org` at
-> runtime, which means an air-gapped host cannot load it, and enforcing a
-> `script-src 'self'` Content-Security-Policy will block it. MOOP's CSP is currently
-> Report-Only, so this works today — but it is a live dependency to remember when the CSP is
-> enforced. Self-hosting the plugin file and pointing the URL at your own path avoids both
-> problems.
+**After every upgrade, check the gene-page link both ways** (open any gene set's genome browser):
+1. Click a gene: the Feature details panel has a **Gene page** line (the track's `formatDetails`,
+   served by `moop_jbrowse_gene_page_details()` — documented JBrowse config, should survive).
+2. Right-click (Mac: Control-click) a gene: the menu ends with **Open gene page**. This one wraps
+   `LinearBasicDisplay.contextMenuItems()` through `Core-extendPluggableElement`; if JBrowse
+   renames the display or that view, the item silently disappears (JBrowse's own menu is
+   unaffected) — fix the plugin, the panel link still works meanwhile.
 
 ---
 

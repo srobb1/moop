@@ -304,6 +304,10 @@ function loadFilteredTracks($organism, $assembly, $user_access_level) {
         $track_gene_set = (string)($track_def['metadata']['gene_set'] ?? '');
         if ($track_gene_set !== '') {
             if (!moop_jbrowse_can_open_gene_set($organism, $assembly, $track_gene_set)) continue;
+            // Clicking a gene offers its gene page (details panel + right-click menu, the latter
+            // via js/jbrowse-plugin-moop-gene-page.js). Added here, not stored, so the address
+            // follows a site move without re-registering any track.
+            $track_def['formatDetails'] = moop_jbrowse_gene_page_details($organism, $assembly, $track_gene_set);
             $track_with_tokens = addTokensToTrack($track_def, $organism, $assembly);
             if ($track_with_tokens) $filtered_tracks[] = $track_with_tokens;
             continue;

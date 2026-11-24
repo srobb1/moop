@@ -30,13 +30,16 @@ function loadJBrowse2Plugins() {
     // (js/vendor/, pinned in scripts/vendor_assets.txt) and resolves under the site prefix.
     // Self-hosted on purpose: the Content-Security-Policy allows scripts from 'self' only,
     // and an unversioned third-party URL changes under us without notice.
-    $site = ConfigManager::getInstance()->getString('site', 'moop');
+    // Links start with moop_url() (CLAUDE.md 3b), never "/$site": the folder name is not the link
+    // prefix once a site has its own address. ?v= = the file's mtime, so an edited plugin reaches
+    // browsers that cached the old copy.
     $enabledPlugins = [];
     foreach ($plugins as $plugin) {
         if (isset($plugin['enabled']) && $plugin['enabled'] === true) {
             $url = (string) $plugin['url'];
             if (!preg_match('#^(https?:)?//|^/#', $url)) {
-                $url = '/' . trim($site, '/') . '/' . $url;
+                $file = __DIR__ . '/../../' . $url;
+                $url  = moop_url($url) . (is_file($file) ? '?v=' . filemtime($file) : '');
             }
             $enabledPlugins[] = [
                 'name' => $plugin['name'],

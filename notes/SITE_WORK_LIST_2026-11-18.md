@@ -30,6 +30,12 @@ Order of work, and why:
 - [ ] Keep `172.16.2.31 tracks.stowers.org` in `/etc/hosts` through IT's DNS changes
 
 ## 1. Wrong or surprising answers — fix first
+- [ ] **IMPORTANT (Sofia, 11-24): are ALL Nematostella RNA-seq tracks visible to PUBLIC visitors?** Someone
+      reported they were not; Sofia sees them from her phone. Check carefully, track by track, as a real
+      anonymous visitor from OUTSIDE (not an internal IP, which auto-logs in; not an admin's cookie): the
+      assembly's groups, each track's access level, the JBrowse config served to PUBLIC, the tracks-proxy
+      path (remote tracks on tracks.stowers.org), and the token per file. Phone = maybe a cached session or
+      the internal Wi-Fi. **M**
 - [x] **ID search is case-sensitive, and the lowercase search returns 2 rows.** — DONE 11-19: menu bar ignores case; search shows the typed ID's row (gene OR transcript), one row. `SMED30003001` works;
       `smed30003001` returns both the transcript `SMED30003001` and the gene `gene-SMED30003001`.
       Expected: case shouldn't matter, and one ID should give one result (or a clear "gene + its
@@ -207,7 +213,7 @@ Planosphere
       sequences, translate, catalog...); later the polite BLAST. Public data only (no login through it at first).
       Help page + llms.txt: "add the connector" steps. Enterprise plans may need an admin to allow custom
       connectors (IT). Rate limits: api class. **M-L**
-- [ ] **JBrowse gene tracks: link back to our gene pages (Sofia, 11-23) -- TALK first.** Clicking a gene/mRNA
+- [x] DONE 11-24 (ID = GFF ID = DB uniquename in all 93 gene sets; details-panel "Gene page" line + right-click "Open gene page" plugin; non-coding genes get "This gene has no gene page" from feature_coords.tsv). **JBrowse gene tracks: link back to our gene pages (Sofia, 11-23) -- TALK first.** Clicking a gene/mRNA
       feature in JBrowse should offer "Open gene page" -> tools/parent.php for that feature. Things to settle:
       which ID the link uses (the GFF ID vs the database uniquename -- see the GFF/FASTA/DB ID alignment plan);
       gene vs transcript features; how the link reaches the track config (track builder / config.php, per

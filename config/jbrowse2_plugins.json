@@ -4,5 +4,11 @@
     "url": "js/vendor/jbrowse-plugin-mafviewer.umd.production.min.js",
     "description": "Multiple Alignment Format (MAF) viewer for comparative genomics",
     "enabled": true
+  },
+  {
+    "name": "MoopGenePage",
+    "url": "js/jbrowse-plugin-moop-gene-page.js",
+    "description": "MOOP: 'Open gene page' in a gene's right-click menu (reads the link from the gene track's formatDetails)",
+    "enabled": true
   }
 ]

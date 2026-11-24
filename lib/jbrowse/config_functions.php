@@ -48,14 +48,35 @@ function moop_jbrowse_can_open_gene_set(string $organism, string $assembly, stri
 }
 
 /**
- * Parse assembly name into organism and assembly components
- * 
- * Format: Organism_Assembly (e.g., Nematostella_vectensis_GCA_033964005.1)
- * Returns: [organism, assembly]
- * 
- * @param string $full_name - Full assembly name
- * @return array - [organism, assembly] or [null, null] if invalid
+ * A gene track's "formatDetails": one extra line, "Gene page", in the panel JBrowse opens when a
+ * visitor clicks a gene -- a link to tools/parent.php for the clicked feature.
+ *
+ * The GFF ID IS the gene page's ID: all 93 gene sets checked 2026-11-24 -- every gene and mRNA
+ * uniquename in organism.sqlite is an ID= in genes.gff. The reverse is not true: ~190k non-coding
+ * genes are in the GFF only (decision: JBrowse-only), and their link lands on the gene page's
+ * "in the genome browser only" message (tools/pages/gene_not_found.php).
+ *
+ * The anchor carries data-moop-gene-page and a title: the right-click menu item
+ * (js/jbrowse-plugin-moop-gene-page.js) reads its address and label from this same result, so
+ * the URL is built in one place. Jexl has no URL-encoding function; the IDs here are
+ * [A-Za-z0-9._:|-] apart from two mitochondrial rRNAs with a space, which a browser encodes.
+ * formatDetails is a FeatureTrack slot in JBrowse 4.3's schema (an unknown key rejects the
+ * whole config).
  */
+function moop_jbrowse_gene_page_details(string $organism, string $assembly, string $gene_set): array {
+    $prefix = moop_url('tools/parent.php') . '?' . http_build_query([
+        'organism' => $organism, 'assembly' => $assembly, 'gene_set' => $gene_set,
+    ]) . '&uniquename=';
+    // Values go into single-quoted jexl strings: escape \ and ' for jexl, the rest for HTML.
+    $js = function (string $s): string { return addcslashes($s, "\\'"); };
+    $open = '<a data-moop-gene-page="1" target="_blank" rel="noopener" title="'
+          . htmlspecialchars(t_plain('Open gene page'), ENT_QUOTES) . '" href="' . htmlspecialchars($prefix, ENT_QUOTES);
+    return [
+        'feature' => "jexl:{'" . $js(t_plain('Gene page')) . "': '" . $js($open)
+                   . "' + feature.id + '\">' + feature.id + '</a>'}",
+    ];
+}
+
 /**
  * A track's metadata as the BROWSER should see it: what describes the data, flattened so
  * JBrowse can filter on it. The stored track JSON is left as it is.
@@ -196,6 +217,15 @@ function moop_jbrowse_order_tracks(array $tracks, array $category_order = []): a
     return array_column($keyed, 5);
 }
 
+/**
+ * Parse assembly name into organism and assembly components
+ * 
+ * Format: Organism_Assembly (e.g., Nematostella_vectensis_GCA_033964005.1)
+ * Returns: [organism, assembly]
+ * 
+ * @param string $full_name - Full assembly name
+ * @return array - [organism, assembly] or [null, null] if invalid
+ */
 function parseAssemblyName($full_name)
 {
     // Assembly IDs typically start with GCA_ or GCF_

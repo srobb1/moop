@@ -63,14 +63,38 @@ $siteTitle = $config->getString('siteTitle');
 
 // A real page, sent as 404, for a gene that is not there -- in place of a bare die() line with
 // no way back (and, until 2026-10-13, the raw ID echoed unescaped: reflected XSS).
-function moop_gene_not_found(string $uniquename, string $organism_name = '', string $organism_label = ''): void {
+function moop_gene_not_found(string $uniquename, string $organism_name = '', string $organism_label = '',
+                             ?array $browser_only = null): void {
     global $site;
     http_response_code(404);
     echo render_display_page(__DIR__ . '/pages/gene_not_found.php', [
         'uniquename' => $uniquename, 'organism_name' => $organism_name,
-        'organism_label' => $organism_label, 'site' => $site,
+        'organism_label' => $organism_label, 'site' => $site, 'browser_only' => $browser_only,
     ], 'Gene not found');
     exit;
+}
+
+// A gene that is in the genome browser but has no gene page: the non-coding genes (lncRNA, tRNA,
+// rRNA...) are in genes.gff and JBrowse only, by design -- ~190k of 2.5M on 2026-11-24. JBrowse's
+// "Open gene page" link (moop_jbrowse_gene_page_details()) names organism, assembly and gene set,
+// so look the ID up in that gene set's feature_coords.tsv (written from the GFF). Only for a gene
+// set this visitor may open, so the message never confirms a hidden gene exists.
+// Returns [chr, start, end, browser_url|null] or null.
+function moop_gene_browser_only(string $organism, string $assembly, string $gene_set, string $id): ?array {
+    if ($organism === '' || $assembly === '' || $gene_set === '' || $id === '') return null;
+    require_once __DIR__ . '/../lib/jbrowse/config_functions.php';
+    require_once __DIR__ . '/../lib/feature_coords.php';
+    // The access list holds only real names, so this is also the path check.
+    if (!moop_jbrowse_can_open_gene_set($organism, $assembly, $gene_set)) return null;
+    $dir = ConfigManager::getInstance()->getPath('organism_data') . "/$organism/$assembly/$gene_set";
+    $row = moop_feature_coords_find($dir, $id);
+    if (!$row) return null;
+    $url = moop_tool_on('genome_browser')
+        ? moop_url('jbrowse2.php') . '?' . http_build_query([
+            'organism' => $organism, 'assembly' => $assembly,
+            'loc' => $row['chr'] . ':' . $row['start'] . '-' . $row['end']])
+        : null;
+    return ['chr' => $row['chr'], 'start' => $row['start'], 'end' => $row['end'], 'browser_url' => $url];
 }
 
 // Validate required parameters
@@ -135,7 +159,9 @@ if ($__lookup['status'] === 'choose') {
     exit;
 }
 if ($__lookup['status'] !== 'ok') {
-    moop_gene_not_found((string)$uniquename, $organism_name, $__lookup['label'] ?? '');
+    moop_gene_not_found((string)$uniquename, $organism_name, $__lookup['label'] ?? '',
+        moop_gene_browser_only($organism_name, (string)($_GET['assembly'] ?? ''),
+                               (string)($_GET['gene_set'] ?? ''), (string)$uniquename));
 }
 $row                         = $__lookup['row'];
 $accessible_gene_set_ids     = $__lookup['gene_set_ids'];
