@@ -447,3 +447,19 @@ Planosphere
       PUBLIC on GitHub). Write it to /var/www/moop-private/ (outside the docroot, 2770), share with Sofia
       only, delete once accounts are settled. Stream the dump (zcat | grep the user-table COPY blocks);
       never unpack 24 GB. **S-M**
+- [ ] **A repetitive primer pair crashes Primer BLAST (found 11-24).** A poly-A pair
+      (AAAAAAAAAAAAAAAAAAAA / TTTTTTTTTTTTTTTTTTTT) against Acropora_millepora: the page returns nginx
+      "temporarily unavailable" (502) after ~25 s -- old code and new alike, and api/v1/primer_blast.php the
+      same. Likely PrimerBlast::run(): blastn-short with no -max_target_seqs/-max_hsps, every output line read
+      into memory by exec(), so millions of hits exhaust PHP. Fix options: stream the output to a file and stop
+      at a hit ceiling, then say "too many sites -- this primer is repetitive" (verdict non-specific, which is
+      the truth) rather than counting them; a plain BLAST cap would silently undercount products. Confirm the
+      cause in /var/log/php-fpm/www-error.log (root) first. Also worth a warning BEFORE the search for
+      low-complexity primers (PrimerInput could flag runs / low entropy). **S-M**
+      DECIDED (Sofia 11-24): the ceiling + "repetitive" answer, plus the warning before the search.
+- [ ] **Can a collaborator edit their own account? (Sofia 11-24).** Check what a logged-in COLLABORATOR can
+      change themselves -- name, email, password -- versus only an admin in Manage Users. Read the code
+      (login/profile pages, Manage Users, users.json writes), then try it as a test collaborator. If there is
+      no self-service: decide what to offer (at least change own password, with the current one required;
+      email change may need confirming), CSRF on the form, and the users.json write goes through the same
+      locked path as Manage Users (SELinux rw label, /var/www/moop-private). **S to check, M to build**

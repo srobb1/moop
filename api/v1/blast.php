@@ -101,8 +101,14 @@ if (!isset($programs[$program])) $fail(400, "Unknown program $program.", ['progr
 $prog = $programs[$program];
 
 // The sources this visitor may BLAST: the same list the BLAST page offers (BLAST-only genomes included).
-$sources = array_values(array_filter(flattenSourcesList(getAccessibleGeneSets(null, null, null, true)),
-                                     fn($s) => $s['organism'] === $organism));
+// One entry per gene set: flattenSourcesList() repeats a gene set for every group it is in, and the
+// repeats made an organism in two groups answer 300 "more than one gene set" forever -- even with
+// assembly and gene_set given (2026-11-24, Acropora_millepora).
+$sources = [];
+foreach (flattenSourcesList(getAccessibleGeneSets(null, null, null, true)) as $s) {
+    if ($s['organism'] === $organism) $sources[$s['assembly'] . '|' . ($s['gene_set'] ?? '')] ??= $s;
+}
+$sources = array_values($sources);
 if (!$sources) $fail(404, "No organism $organism that you can open (names are as in api/v1/catalog).");
 foreach (['assembly', 'gene_set'] as $k) {
     if (($v = $param($k)) !== '') $sources = array_values(array_filter($sources, fn($s) => ($s[$k] ?? '') === $v));

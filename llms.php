@@ -96,6 +96,8 @@ Rules:
   for each -- assembly, `kind` (genome or transcripts), number of genes, `percent_of_genes_with` (GO,
   domains, orthologs, KEGG) and BUSCO -- in a short table. Do not pick one from its name or ID. If the
   person wants all of them, answer per gene set.
+- A 300 answer means the call needs a choice (an assembly, a gene set, a transcript): its `choices` or
+  `transcripts` list the options. Put them to the person and ask; never take the first one yourself.
 - 404 means "not found or not public" -- the same answer either way, on purpose. Do not retry it, and do
   not try other names to find out what exists.
 - Lists are capped and say so (a total next to the items shown). Report the cap; do not page around it.
@@ -179,9 +181,17 @@ BLAST runs in the background, in the same queue as the BLAST page: submit, then 
 - To BLAST a gene from this site against another organism, fetch its sequence with the sequences call (`type=protein`) and submit that FASTA unchanged as `query` -- all its proteins in one job. For orthologs already computed, the orthologs call is faster and says ortholog or only similar; BLAST gives similarity, not orthology.
 Which program -- match the query to the database, then the question:
 
-{$blast_choice}- A protein from another species: `blastp` against `protein`. A DNA sequence from another species: `blastx` against `protein` (finds more than `blastn`). Its gene in a genome without gene models: `tblastn` against `genome`. A primer or any DNA under ~30 bases: `blastn-short`. A sequence from the same species: `blastn` (or `megablast`, faster, near-identical only).
+{$blast_choice}- A protein from another species: `blastp` against `protein`. A DNA sequence from another species: `blastx` against `protein` (finds more than `blastn`). Its gene in a genome without gene models: `tblastn` against `genome`. Any DNA under ~30 bases: `blastn-short` -- but for a primer PAIR use the primer check below, which says whether the pair makes one product. A sequence from the same species: `blastn` (or `megablast`, faster, near-identical only).
 - A wrong pairing is refused before it runs, with the programs that fit.
 - One unfinished job per person or address at a time: a second submit gets 429 with the job to wait for.
+
+## Primers
+
+Both answer at once (no job): Primer Maker designs pairs with Primer3, Primer BLAST says whether a pair amplifies only its target. The same runs as the two pages, so a person checking your answer on the page gets the same primers and the same verdict.
+
+- [Design primers]({$api('primer_maker.php?organism={organism}&gene={id}&primer_type=qpcr')}): from a gene or transcript ID (`organism` + `gene`; a gene with several transcripts answers 300 with them -- ask the person which, isoforms differ in exactly what matters here; `seq_type=cds` for the CDS) or from `sequence` (FASTA, POST for long ones; up to 50 records). `primer_type`: `standard`, `qpcr`, `rtpcr` (a primer spans an exon junction, looked up for a transcript of this site, so it cannot amplify genomic DNA), `sequencing` -- a wrong one lists this site's. Optional `num_return` (default 5), `size_range` (`150-400`), `tail` (a 5' tag: `t4p`, `t7`, or `custom` with `tail_forward` / `tail_reverse`; added after design, so Tm and GC are for the bare primer and `left_tailed` / `right_tailed` are what to order), and the page's design options (`tm_opt`, `gc_min`, ... -- out of range is a 400). Answers `pairs` (names, sequences, Tm, GC, positions, product size and sequence), `failures` (a sequence that gave no pair, with Primer3's reason: say it to the person), and `check_primers`, ready to send to Primer BLAST. `format=md` or `format=tsv` (the page's download).
+- [Check primers]({$api('primer_blast.php?organism={organism}&forward={seq}&reverse={seq}')}): `organism`, and `forward` + `reverse` for one pair or `primers` for up to 20 (a table with a header row `name, forward, reverse` -- `check_primers` from the design call). `mode=genome` (default; genomic DNA template) or `mode=cdna` (RT-PCR / qPCR: products on the transcripts, and on the genome too, since genomic DNA left in an RNA prep can amplify). `assembly` / `gene_set` when there is more than one (300). Per pair a `verdict`: `specific`, `nonspecific` (with `reasons`, e.g. which other genes amplify) or `none`, and the products per template with size, place, mismatches, gene and introns spanned. `format=md` or `format=tsv` (the page's download).
+- Design, then always check: a designed pair is only as specific as the genome allows. A pair that also amplifies a second copy of the gene is worth telling the person plainly.
 
 ## Ontologies and GO
 
@@ -193,6 +203,7 @@ Which program -- match the query to the database, then the question:
 
 - [Search]({$page('tools/search.php')}): the same keyword search, for a person to browse and filter.
 - [BLAST]({$page('tools/blast.php')}): the same BLAST for a person, with the alignments drawn.
+- [Primer Maker]({$page('tools/primer_maker.php')}) and [Primer BLAST]({$page('tools/primer_blast.php')}): the same primer design and check for a person, with each product drawn in the genome browser.
 - [Gene page]({$page('tools/parent.php?organism={organism}&uniquename={id}')}): the gene, for a person to read; the gene record links to it.
 
 ## The tag at the end of a description

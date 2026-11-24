@@ -74,18 +74,10 @@
     function downloadTsv(rows, filename) {
         if (!rows || !rows.length) { return; }
 
-        var header = Object.keys(rows[0]);
-        var lines = [header.join('\t')];
+        // One serialiser site-wide (moopRowsToTsv, js/modules/utilities.js), the same rules as the API's TSV.
+        var tsv = moopRowsToTsv(rows);
 
-        rows.forEach(function (row) {
-            lines.push(header.map(function (key) {
-                var cell = row[key];
-                return (cell === null || cell === undefined ? '' : String(cell))
-                    .replace(/[\t\r\n]/g, ' ');
-            }).join('\t'));
-        });
-
-        var blob = new Blob([lines.join('\n') + '\n'], { type: 'text/tab-separated-values' });
+        var blob = new Blob([tsv], { type: 'text/tab-separated-values' });
         var url = URL.createObjectURL(blob);
         var link = document.createElement('a');
 

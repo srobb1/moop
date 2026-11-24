@@ -414,95 +414,18 @@ $db_section_label = function ($key) {
                     $g_near = isset($r['by_db']['genome'])     ? PrimerPairs::primaryProduct($r['by_db']['genome']) : null;
                     $t_size = $t_prod['size'] ?? null;
                     $g_size = $g_prod['size'] ?? null;
-                    // Specificity is judged against the INTENDED template only. Summing
-                    // across databases counts one amplicon twice -- the cDNA product and
-                    // the genomic product are the same fragment seen against two
-                    // templates -- and a perfectly specific pair then reads "2 products".
-                    $intended_db = ($search_mode === 'transcript' && isset($r['by_db']['transcript']))
-                        ? 'transcript' : 'genome';
-
-                    // ONE quality call, with the reasons it is not clean. Counts alone made
-                    // the reader do this arithmetic themselves, and "specific — 1 product"
-                    // beside "gDNA: 2 products" read as a contradiction.
-                    // THE RULE: a product counts when PrimerPairs::isAmplifiable() says it
-                    // would amplify -- under AMPLIFIABLE_MAX (3 kb since 2026-10-13), fewer than
-                    // 6 mismatches per primer, and fewer than 2 in the last 5 bases at the 3'
-                    // end (NCBI Primer-BLAST's thresholds). The search keeps every site up to
-                    // PrimerBlast::SEARCH_MAX_MISMATCH, so this sees all of them whatever the
-                    // "Mismatches listed" box says. One is clean, more than one is ambiguous.
-                    // Everything else is still LISTED -- it is real -- it just does not count.
-                    $amp = function (array $found) {
-                        return array_values(array_filter($found['products'] ?? [],
-                            ['PrimerPairs', 'isAmplifiable']));
-                    };
-                    $amp_intended = count($amp($r['by_db'][$intended_db] ?? []));
-                    $amp_contam   = ($intended_db === 'transcript' && isset($r['by_db']['genome']))
-                        ? count($amp($r['by_db']['genome'])) : 0;
-
-                    // Specificity is about GENES. On cDNA each product carries its gene
-                    // (tools/primer_blast.php); isoforms of one gene are one target, not
-                    // several. When any product's gene is unknown, count products as before.
-                    $amp_products = $amp($r['by_db'][$intended_db] ?? []);
-                    $amp_genes = [];
-                    foreach ($amp_products as $pr) {
-                        if (!isset($pr['gene'])) { $amp_genes = null; break; }
-                        $amp_genes[$pr['gene']['id']] = $pr['gene'];
-                    }
-                    $gene_word = fn(array $g) => $g['name'] !== '' && $g['name'] !== $g['id'] ? $g['name'] . ' (' . $g['id'] . ')' : $g['id'];
-                    $isoforms_note = null;   // one gene, several transcripts: say so, it is not a warning
-                    $reasons = [];
-                    if ($amp_genes !== null && $amp_intended > 1) {
-                        if (count($amp_genes) > 1) {
-                            $reasons[] = t_plain('%1$d different genes could amplify: %2$s', count($amp_genes),
-                                         implode(', ', array_map($gene_word, array_slice(array_values($amp_genes), 0, 4)))
-                                       . (count($amp_genes) > 4 ? ', …' : ''));
-                        } else {
-                            $sizes = array_values(array_unique(array_map(fn($pr) => (int)$pr['size'], $amp_products)));
-                            sort($sizes);
-                            $isoforms_note = [
-                                'gene'  => $gene_word(reset($amp_genes)),
-                                'n'     => $amp_intended,
-                                'tx'    => array_map(fn($pr) => PrimerBlast::cleanSubjectId($pr['subject']), $amp_products),
-                                'sizes' => $sizes,
-                            ];
-                        }
-                    } elseif ($amp_intended > 1) {
-                        $reasons[] = t_plain('%d products on your template could amplify', $amp_intended);
-                    }
-                    if ($amp_contam > 1) {
-                        $reasons[] = t_plain('genomic DNA could give %d products, not just the one matching locus', $amp_contam);
-                    }
-                    foreach ($r['by_db'] as $f) {
-                        foreach ($amp($f) as $pr) {
-                            if (!empty($pr['self_pairing'])) {
-                                $reasons[] = t_plain('one primer amplifies on its own (self-pairing)');
-                                break 2;
-                            }
-                        }
-                    }
-
-                    $total = $amp_intended;
-
-                    // Products on the template that would amplify but for their LENGTH: they
-                    // are listed in the table (anything up to "Largest product to report"),
-                    // yet the verdict counts only those under AMPLIFIABLE_MAX. Without naming that, the
-                    // badge said "no product" above a perfect 3,733 bp genomic product
-                    // (Congeria COKUS1KC_0031865-RA, pair 5 across two introns).
-                    $too_long = array_values(array_filter($r['by_db'][$intended_db]['products'] ?? [],
-                        fn($pr) => $pr['size'] > PrimerPairs::AMPLIFIABLE_MAX
-                                && $pr['size'] <= $max_product
-                                && PrimerPairs::isAmplifiable(array_merge($pr, ['size' => 0]))));
-                    $kb = PrimerPairs::amplifiableKb();
-
-                    if ($total === 0 && $too_long) {
-                        $verdict = ['none', 'bg-secondary', t_plain('no product under %s kb', $kb)];
-                    } elseif ($total === 0) {
-                        $verdict = ['none', 'bg-secondary', t_plain('no product')];
-                    } elseif (!$reasons) {
-                        $verdict = ['specific', 'bg-success', t_plain('specific')];
-                    } else {
-                        $verdict = ['nonspecific', 'bg-warning text-dark', t_plain('non-specific')];
-                    }
+                    // The verdict -- ONE quality call and the reasons it is not clean -- is
+                    // primer_blast_verdict() (lib/primer/PrimerBlastRun.php), shared with the API.
+                    $v = primer_blast_verdict($r, $search_mode, $max_product);
+                    $verdict       = [$v['key'], $v['badge'], $v['label']];
+                    $reasons       = $v['reasons'];
+                    $isoforms_note = $v['isoforms_note'];
+                    $intended_db   = $v['intended_db'];
+                    $total         = $v['amplifiable'];
+                    $amp_contam    = $v['amp_contam'];
+                    $too_long      = $v['too_long'];
+                    $kb            = $v['kb'];
+                    $gene_word     = 'primer_blast_gene_word';
                     ?>
                     <div class="pb-pair mb-4 pb-3 border-bottom">
 
@@ -653,9 +576,7 @@ $db_section_label = function ($key) {
                                 // is unaffected by either.
                                 // Size and mismatches are both DISPLAY limits; a product hidden by
                                 // either still counted toward the verdict.
-                                $shown = array_values(array_filter($found['products'], function ($pr) use ($max_product, $max_mismatch) {
-                                    return $pr['size'] <= $max_product && $pr['max_mismatch'] <= $max_mismatch;
-                                }));
+                                $shown = primer_blast_shown_products($found, $max_product, $max_mismatch);
                                 // Each hidden product is counted ONCE: by size if it is too large,
                                 // otherwise by mismatches.
                                 $over_mm = count(array_filter($found['products'],
@@ -703,49 +624,9 @@ $db_section_label = function ($key) {
                                             <?php
                                             $subject = $clean_id($prod['subject']);
 
-                                            // The intron facts the page shows as text and a badge.
-                                            // A download has neither, so without these columns the
-                                            // single most important property of an RT-PCR pair --
-                                            // that it cannot amplify gDNA -- survives only as the
-                                            // absence of a genomic row, which reads as missing data.
-                                            //
-                                            // '' means NOT DETERMINED (a genomic row, or a gene set
-                                            // with no exon index); 0 and 'none' are real answers.
-                                            // Collapsing the two would make "no intron here" and
-                                            // "we could not tell" the same cell.
-                                            $mapped_x = $prod['genomic'] ?? null;
-                                            $introns  = $mapped_x ? (int)$mapped_x['introns'] : '';
-                                            $junction = '';
-                                            if ($mapped_x) {
-                                                $which = [];
-                                                foreach ($mapped_x['hits'] as $h) {
-                                                    if (!empty($h['spliced'])) $which[] = $h['primer'];
-                                                }
-                                                $junction = $which ? implode('+', array_unique($which)) : 'none';
-                                            }
-
-                                            // Keyed by NAME, and the download derives its header from
-                                            // these keys. The header used to be a separate hardcoded
-                                            // list in js/primer-blast.js, so the two files had to agree
-                                            // on column ORDER with nothing checking that they did.
-                                            $export[] = [
-                                                'pair'            => $pair['name'],
-                                                'forward'         => $pair['forward'],
-                                                'reverse'         => $pair['reverse'],
-                                                'template'        => $db_key === 'genome' ? 'genomic' : 'cDNA',
-                                                'subject'         => $subject,
-                                                'start'           => $prod['start'],
-                                                'end'             => $prod['end'],
-                                                'product_size'    => $prod['size'],
-                                                'max_mismatch'    => $prod['max_mismatch'],
-                                                // Name WHICH primer: a downloaded row has no badge to
-                                                // hover, so "self-pairing" alone loses the fact.
-                                                'formed_by'       => $prod['self_pairing']
-                                                    ? $prod['primers'][0] . ' self-pairing'
-                                                    : 'forward+reverse',
-                                                'introns_spanned' => $introns,
-                                                'junction_primer' => $junction,
-                                            ];
+                                            // One builder for the page's download and the API's
+                                            // (primer_blast_export_row()); its keys are the file's header.
+                                            $export[] = primer_blast_export_row($pair, $db_key, $prod, $verdict[0]);
                                             ?>
                                             <tr>
                                                 <td class="fw-bold" style="width:7rem; white-space:nowrap;">

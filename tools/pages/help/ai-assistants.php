@@ -39,6 +39,9 @@ $examples = [
     ['fa-dna',          t('BLAST'),               t_markup('BLAST this protein against the %s proteins and give me the best hits with links to their gene pages, and the result files to download: …', $smed)],
     // Sequences -> BLAST, tried live 11-24: Smed pcna (h1SMcG0023103) protein -> zebrafish pcna, 56% identity.
     ['fa-exchange-alt', t('Same gene in another species'), t_markup('Take the protein of %s pcna (h1SMcG0023103) and BLAST it against the zebrafish proteins. Which zebrafish gene is the best hit?', $smed)],
+    // Added 2026-11-24 with api/v1/primer_maker.php + primer_blast.php, tried live: qPCR pairs for pcna
+    // amplify BOTH pcna copies (h1SMcG0023103 and h1SMcG0023099), which the check says by name.
+    ['fa-vial',         t('Primers'),             t_markup('Design qPCR primers for %s pcna (h1SMcG0023103) and check that they amplify only that gene.', $smed)],
     ['fa-download',     t('Download links'),      t_markup('Give me the download links for the %s genome, its proteins and its GFF.', $smed)],
 ];
 
@@ -148,7 +151,7 @@ $sample_prompt = $prompt_for($examples[6][2]);   // "Find the piwi genes in …"
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
           <h3 class="h6 fw-semibold mb-1"><?= t('Some things need the web page') ?></h3>
-          <p class="text-muted small mb-0"><?= t('Primer BLAST, keyword search and the genome browser run in your browser. The assistant can tell you which page to use and what to put in it.') ?></p>
+          <p class="text-muted small mb-0"><?= t('Keyword search and the genome browser run in your browser. The assistant can tell you which page to use and what to put in it.') ?></p>
         </div>
       </div>
     </div>

@@ -784,78 +784,9 @@
     $entries = array_values(array_filter($results, fn($e) => !empty($e['pairs'])));
     $multi   = count($entries) > 1;
 
-    // ONE table of columns, with where each one appears.
-    //
-    // ⭐ THE SCREEN SHOWS A SUBSET OF THE FILE (user, 2026-08-18): the screen is
-    // for judging a pair — name, sequence, length, Tm, GC, product size — while
-    // the file is for keeping, so it also carries each primer's start position
-    // and the pair penalty. Declaring that ONCE, as 'file' versus 'both', is what
-    // stops the two drifting; two hand-written lists is how the other results
-    // table grew four silent defects (CLAUDE.md §9b).
-    //
-    // Each primer's NAME travels with it in both. Same string in the table, the
-    // TSV, the FASTA below and the pair handed to Primer BLAST — all from
-    // PrimerNames::primer(), so a row cannot be called one thing on screen and
-    // another in the file you order from.
-    //
-    // 📍 START ONLY, AND ALWAYS THE LOWEST COORDINATE (user). primer3 reports the
-    // reverse primer by its 5' end, which is its HIGHEST coordinate — the opposite
-    // convention from the forward primer, in the same column of the same table.
-    // parseOutput already computes right_start as the lowest base, so both
-    // columns mean "where this primer begins in the sequence you pasted".
-    $column_spec = [
-        // On screen only when there IS more than one sequence — with one, the card
-        // header already names it and the column would repeat that on every row.
-        // Always in the file: it is what lets a sequence that produced NO primers
-        // occupy a row, and what lets a spreadsheet group rows by sequence without
-        // parsing a primer name.
-        'sequence'      => ['Sequence',        $multi ? 'both' : 'file'],
-        'rank'          => ['#',               'both'],
-        'left_name'     => ['Forward name',    'both'],
-        'left_sequence' => ['Forward primer',  'both'],
-        'left_tailed'   => ['Forward to order', ($tail['forward'] ?? '') !== '' ? 'both' : 'no'],
-        'left_length'   => ['F len',           'both'],
-        'left_tm'       => ['F Tm',            'both'],
-        'left_gc'       => ['F GC%',           'both'],
-        'left_start'    => ['F start',         'file'],
-        'right_name'     => ['Reverse name',   'both'],
-        'right_sequence' => ['Reverse primer', 'both'],
-        'right_tailed'   => ['Reverse to order', ($tail['reverse'] ?? '') !== '' ? 'both' : 'no'],
-        'right_length'   => ['R len',          'both'],
-        'right_tm'       => ['R Tm',           'both'],
-        'right_gc'       => ['R GC%',          'both'],
-        'right_start'    => ['R start',        'file'],
-        'product_size'   => ['Product (bp)',   'both'],
-        // The band you actually see on a gel: the insert plus both tails. The
-        // workflow this replaces only ever reported the first number, which is
-        // the one you do NOT measure.
-        'product_size_tailed' => ['Product + tags', $has_tail ? 'both' : 'no'],
-        'pair_penalty'  => ['Penalty',         'file'],
-        // Empty on every designed row; on a failure row it is the whole point.
-        'note'          => ['Note',            'file'],
-
-        // ⭐ THE AMPLICONS GO LAST (user, 2026-08-19), after even the penalty and
-        // the note. They are the two widest columns in the file by an order of
-        // magnitude — hundreds of characters where nothing else reaches twenty —
-        // so any column placed after them is one a reader has to scroll past
-        // them to reach. Everything short enough to read at a glance comes
-        // first; these two sit at the end, where their width costs nothing.
-        //
-        // ⭐ FILE-ONLY, for the same reason turned around: a 300 bp string cannot
-        // be read in a table cell and would push every other column off the
-        // screen. It is what gets pasted into a synthesis order, a restriction
-        // map or an alignment — work done in the file, not on the page.
-        // Single-line by construction (substr of a template already stripped of
-        // whitespace), and downloadTsv() strips tabs and newlines from every
-        // cell besides, so a stray break cannot split one row into two.
-        'product_sequence' => ['Product sequence', 'file'],
-        // The band that actually comes out of the tube once the tags are on it —
-        // paired with 'Product + tags' for the same reason that column exists,
-        // and gated the same way so it never appears as a copy of the untagged
-        // sequence.
-        'product_sequence_tailed' => ['Product sequence + tags', $has_tail ? 'file' : 'no'],
-    ];
-
+    // ONE table of columns, with where each one appears ('both' | 'file' | 'no'): primer_maker_column_spec(),
+    // shared with api/v1/primer_maker.php so the API's file has the page's columns.
+    $column_spec = primer_maker_column_spec($tail, $multi);
     $columns = [];          // on screen
     $export_columns = [];   // in the file
     foreach ($column_spec as $key => list($label, $where)) {
@@ -977,26 +908,9 @@
                         <?php foreach ($entries as $entry): ?>
                         <?php foreach ($entry['pairs'] as $pair): ?>
                             <?php
-                            $pair['left_name']  = PrimerNames::primer($entry['id'], $pair['rank'] ?? 0, 'left');
-                            $pair['right_name'] = PrimerNames::primer($entry['id'], $pair['rank'] ?? 0, 'right');
-                            $pair['sequence']   = $entry['id'];
-                            $pair['note']       = '';
-                            // Built over the FILE's columns, which are the superset;
-                            // the screen then renders the ones marked for it. One
-                            // pass, so a value cannot be formatted one way in the
-                            // table and another in the download.
-                            $row = [];
-                            foreach (array_keys($export_columns) as $key) {
-                                $v = $pair[$key] ?? '';
-                                // Trim primer3's float padding — 59.972000 is not
-                                // more accurate than 60.0, it is just wider.
-                                if (in_array($key, ['left_tm','right_tm','left_gc','right_gc'], true) && $v !== '') {
-                                    $v = number_format((float)$v, 1);
-                                } elseif ($key === 'pair_penalty' && $v !== '') {
-                                    $v = number_format((float)$v, 3);
-                                }
-                                $row[$key] = $v;
-                            }
+                            // One row builder for the page and the API (primer_maker_row()): built over the
+                            // FILE's columns, the superset; the screen renders the ones marked for it.
+                            $row = primer_maker_row($pair, $entry['id'], array_keys($export_columns));
                             $export[] = $row;
                             ?>
                             <tr>
@@ -1127,12 +1041,7 @@
     $show_failures = $failures && !($run_error !== null && count($failures) === 1);
 
     foreach ($failures as $failure) {
-        $row = [];
-        foreach (array_keys($export_columns) as $key) {
-            $row[$key] = '';
-        }
-        $row['sequence'] = $failure['name'];
-        $row['note']     = $failure['reason'];
+        $row = primer_maker_failure_row($failure, array_keys($export_columns));
         if ($show_failures) {
             $export[] = $row;
         }

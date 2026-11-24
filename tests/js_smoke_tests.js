@@ -40,7 +40,7 @@ for (const rel of MODULES) {
 const {
     moopSearchTerms, moopSearchInputIsUsable, moopHighlightableTerms,
     moopTermHighlight, highlightSearchTerms, moopRowHighlightText, moopStripNamingTag,
-    resultAssemblyLabel, moopT, moopTh, moopTm, moopMatchedInNote,
+    resultAssemblyLabel, moopT, moopTh, moopTm, moopMatchedInNote, moopRowsToTsv,
 } = sandbox;
 
 // ---------------------------------------------------------------------------- harness
@@ -252,6 +252,33 @@ group('Matching text — Found in, row noun, order');
     const r = (f, n) => ({ feature_uniquename: f, n });
     eq(moopRowsInSummaryOrder([r('A', 1), r('B', 2), r('A', 3), r('C', 4), r('B', 5)]).map(x => x.n), [1, 3, 2, 5, 4],
        'Matching text keeps the Summary order, one block per result, ranking kept inside each');
+}
+
+// ---------------------------------------------------------------------------- TSV: browser = API
+// The primer pages build their download in the browser (moopRowsToTsv) from rows the server
+// embedded as JSON; api/v1/primer_*.php writes the same rows on the server (moop_rows_to_tsv,
+// lib/rows_tsv.php). One set of awkward rows through BOTH, compared byte for byte.
+group('TSV — browser download = API file');
+{
+    const { execFileSync } = require('child_process');
+    let fx = null;
+    try {
+        fx = JSON.parse(execFileSync('php', [path.join(__dirname, 'rows_tsv_fixture.php')], { encoding: 'utf8' }));
+    } catch (e) {
+        ok(false, 'TSV twin: could not run tests/rows_tsv_fixture.php with php (' + e.message.split('\n')[0] + ')');
+    }
+    if (fx) {
+        const js = moopRowsToTsv(JSON.parse(fx.json));
+        ok(js === fx.tsv, 'TSV twin: the browser download and the API file are the same bytes');
+        if (js !== fx.tsv) {
+            const a = js.split('\n'), b = fx.tsv.split('\n');
+            for (let i = 0; i < Math.max(a.length, b.length); i++) {
+                if (a[i] !== b[i]) { console.log('    line ' + (i + 1) + '\n      js : ' + JSON.stringify(a[i]) + '\n      php: ' + JSON.stringify(b[i])); break; }
+            }
+        }
+        ok(moopRowsToTsv([]) === '', 'TSV: no rows is an empty file, not a lone newline');
+        eq(js.split('\n')[0].split('\t').length, 18, 'TSV: header from the first row only (a later extra key is dropped)');
+    }
 }
 
 // ---------------------------------------------------------------------------- report

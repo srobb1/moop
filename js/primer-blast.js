@@ -296,21 +296,12 @@ function downloadPrimerResults() {
     }
     if (!rows || !rows.length) { return; }
 
-    // The header comes from the DATA, not from a list kept here. It used to be
-    // hardcoded, which meant this file and tools/pages/primer_blast.php had to
-    // agree on column ORDER with nothing enforcing it -- add a column in one
-    // and every heading after it silently labels the wrong values.
-    var header = Object.keys(rows[0]);
+    // Header from the DATA's keys, one serialiser site-wide (moopRowsToTsv, js/modules/utilities.js),
+    // byte-for-byte the same as the API's TSV (moop_rows_to_tsv). Never a column list kept here:
+    // that is how a heading once silently labelled the wrong values.
+    var tsv = moopRowsToTsv(rows);
 
-    var tsv = [header.join('\t')];
-    rows.forEach(function (r) {
-        tsv.push(header.map(function (k) {
-            var c = r[k];
-            return (c === null || c === undefined ? '' : String(c)).replace(/[\t\r\n]/g, ' ');
-        }).join('\t'));
-    });
-
-    var blob = new Blob([tsv.join('\n') + '\n'], {type: 'text/tab-separated-values'});
+    var blob = new Blob([tsv], {type: 'text/tab-separated-values'});
     var url  = URL.createObjectURL(blob);
     var a    = document.createElement('a');
     a.href = url;

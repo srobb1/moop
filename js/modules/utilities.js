@@ -82,6 +82,31 @@ function escapeRegExp(text) {
 }
 
 /**
+ * Rows of objects -> TSV text: a header from the FIRST row's keys, one line per row, "\n" endings.
+ *
+ * The header comes from the DATA's keys, so it cannot drift from the table that produced it.
+ * null/undefined become empty cells; tabs and line breaks inside a value become spaces -- a stray
+ * one would shift every later column of that row, the corruption nobody notices until the numbers
+ * are wrong. The SAME rules as moop_rows_to_tsv() (lib/rows_tsv.php), which writes the API's TSV;
+ * tests/js_smoke_tests.js runs both on the same rows and fails if they differ by a byte.
+ *
+ * @param {Object[]} rows
+ * @returns {string} '' for no rows
+ */
+function moopRowsToTsv(rows) {
+    if (!rows || !rows.length) { return ''; }
+    var header = Object.keys(rows[0]);
+    var lines = [header.join('\t')];
+    rows.forEach(function (row) {
+        lines.push(header.map(function (key) {
+            var cell = row[key];
+            return (cell === null || cell === undefined ? '' : String(cell)).replace(/[\t\r\n]/g, ' ');
+        }).join('\t'));
+    });
+    return lines.join('\n') + '\n';
+}
+
+/**
  * Detect if a sequence is protein or nucleotide
  * 
  * @param {string} sequence - The input sequence (FASTA or raw)

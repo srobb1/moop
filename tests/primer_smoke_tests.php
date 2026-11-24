@@ -16,6 +16,7 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 
 $BASE = dirname(__DIR__);
 require_once "$BASE/lib/primer/PrimerInput.php";
+require_once "$BASE/lib/rows_tsv.php";
 
 // ----------------------------------------------------------------------------
 // Tiny test harness (same shape as tests/smoke_tests.php)
@@ -996,6 +997,84 @@ ok(!PrimerPresets::isCustomId('standard') && PrimerPresets::isCustomId('c_x'), '
 // Saved settings that are not well-formed read as "as shipped", never an error.
 ok(array_keys(PrimerPresets::forSite('garbage')) === ['standard', 'qpcr', 'rtpcr', 'sequencing'], 'malformed settings mean the shipped cards');
 ok(count(PrimerPresets::all(['custom' => [['id' => 'standard', 'label' => 'x']]])) === 4, 'a saved card with a built-in id is ignored');
+
+// ----------------------------------------------------------------------------
+// The verdict and the download rows -- moved out of the page into lib/primer/ on 2026-11-24 so
+// api/v1/primer_blast.php and primer_maker.php judge and write exactly what the pages do.
+// ----------------------------------------------------------------------------
+if (!function_exists('t_plain')) {   // the page's translator; English here
+    function t_plain($s, ...$a) { return $a ? vsprintf($s, $a) : $s; }
+}
+require_once "$BASE/lib/primer/PrimerBlastRun.php";
+require_once "$BASE/lib/primer/PrimerMakerRun.php";
+
+group('primer_blast_verdict — one call per pair, the same for page and API');
+$pairX = ['name' => 'px', 'forward' => $F, 'reverse' => $R];
+$found = fn(array $hits) => PrimerPairs::findProducts($hits, $BIG);
+$one  = $found(['forward' => [hit('chr1', 1000, 1019, '+')], 'reverse' => [hit('chr1', 1300, 1319, '-')]]);
+$two  = $found(['forward' => [hit('chr1', 1000, 1019, '+'), hit('chr5', 5000, 5019, '+')],
+                'reverse' => [hit('chr1', 1300, 1319, '-'), hit('chr5', 5400, 5419, '-')]]);
+$far  = $found(['forward' => [hit('chr1', 1000, 1019, '+')], 'reverse' => [hit('chr1', 6000, 6019, '-')]]);
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['genome' => $one]], 'genome', 10000);
+ok($v['key'] === 'specific' && $v['amplifiable'] === 1 && !$v['reasons'], 'one product on the genome: specific');
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['genome' => $two]], 'genome', 10000);
+ok($v['key'] === 'nonspecific' && $v['reasons'] === ['2 products on your template could amplify'], 'two loci: non-specific, and says how many');
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['genome' => $far]], 'genome', 10000);
+ok($v['key'] === 'none' && $v['label'] === 'no product under ' . PrimerPairs::amplifiableKb() . ' kb',
+   'only a 5 kb product: "no product under 3 kb", not a bare "no product"');
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['genome' => $found(['forward' => [], 'reverse' => []])]], 'genome', 10000);
+ok($v['key'] === 'none' && $v['label'] === 'no product', 'nothing at all: no product');
+
+// cDNA: two transcripts. Same gene = isoforms, one target; different genes = non-specific, by name.
+$tx = $found(['forward' => [hit('tx1', 100, 119, '+'), hit('tx2', 100, 119, '+')],
+              'reverse' => [hit('tx1', 300, 319, '-'), hit('tx2', 330, 349, '-')]]);
+$with_genes = function (array $f, array $genes) {
+    foreach ($f['products'] as $i => $p) $f['products'][$i]['gene'] = $genes[$p['subject']];
+    return $f;
+};
+$same = $with_genes($tx, ['tx1' => ['id' => 'G1', 'name' => 'pcna'], 'tx2' => ['id' => 'G1', 'name' => 'pcna']]);
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['transcript' => $same, 'genome' => $one]], 'transcript', 10000);
+ok($v['key'] === 'specific' && $v['isoforms_note']['gene'] === 'pcna (G1)' && $v['isoforms_note']['sizes'] === [220, 250],
+   'two isoforms of ONE gene: specific, with the isoforms named and both sizes');
+$diff = $with_genes($tx, ['tx1' => ['id' => 'G1', 'name' => 'pcna'], 'tx2' => ['id' => 'G2', 'name' => 'G2']]);
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['transcript' => $diff, 'genome' => $one]], 'transcript', 10000);
+ok($v['key'] === 'nonspecific' && $v['reasons'] === ['2 different genes could amplify: pcna (G1), G2'],
+   'two different genes: non-specific, each gene named (an unnamed gene by its id alone)');
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['transcript' => $same, 'genome' => $two]], 'transcript', 10000);
+ok($v['key'] === 'nonspecific' && in_array('genomic DNA could give 2 products, not just the one matching locus', $v['reasons'], true),
+   'cDNA mode still weighs genomic DNA left in the prep');
+
+group('primer_blast_export_row — the download columns, by name');
+$row = primer_blast_export_row($pairX, 'transcript', $same['products'][0], 'specific');
+ok(array_keys($row) === ['pair', 'forward', 'reverse', 'pair_verdict', 'template', 'subject', 'start', 'end', 'product_size',
+                         'max_mismatch', 'formed_by', 'gene', 'gene_name', 'introns_spanned', 'junction_primer'],
+   'the columns, in order (the file header is these keys)');
+ok($row['template'] === 'cDNA' && $row['gene'] === 'G1' && $row['gene_name'] === 'pcna' && $row['pair_verdict'] === 'specific',
+   'a cDNA row carries its gene and the pair verdict');
+ok($row['introns_spanned'] === '' && $row['junction_primer'] === '', 'no exon map: introns NOT DETERMINED (empty), never 0');
+$row = primer_blast_export_row($pairX, 'genome', $one['products'][0], 'specific');
+ok($row['template'] === 'genomic' && $row['gene'] === '' && $row['gene_name'] === '', 'a genomic row has no gene');
+ok(count(primer_blast_shown_products($two, 100000, 0)) === 2 && count(primer_blast_shown_products($far, 1000, 5)) === 0,
+   'listing limits trim the list (size), and keep what fits');
+
+group('primer_maker_export_rows — the page\'s file, for the API');
+$tailT = ['id' => 't4p', 'label' => 'T4P', 'forward' => 'GGG', 'reverse' => 'CCC', 'note' => '', 'errors' => []];
+$none  = ['id' => 'none', 'label' => '', 'forward' => '', 'reverse' => '', 'note' => '', 'errors' => []];
+$pmPair = ['rank' => 1, 'left_sequence' => $F, 'right_sequence' => $R, 'left_tm' => '59.972', 'right_tm' => '60.04',
+           'left_gc' => '50', 'right_gc' => '55', 'left_length' => 20, 'right_length' => 20, 'left_start' => 10, 'right_start' => 200,
+           'product_size' => 210, 'pair_penalty' => '0.12345', 'product_sequence' => 'ACGT'];
+$run = ['results' => [['id' => 'seqA', 'pairs' => [$pmPair]]], 'failures' => [['name' => 'seqB', 'reason' => 'Too short.']],
+        'run_error' => null];
+$rows = primer_maker_export_rows($run, $none);
+ok(count($rows) === 2 && $rows[0]['left_name'] === 'seqA_p1_F' && $rows[0]['left_tm'] === '60.0' && $rows[0]['pair_penalty'] === '0.123',
+   'a designed row: named, Tm to 1 decimal, penalty to 3');
+ok($rows[1]['sequence'] === 'seqB' && $rows[1]['note'] === 'Too short.' && $rows[1]['left_sequence'] === '',
+   'a sequence that gave nothing is a row too, with its reason');
+ok(!isset($rows[0]['left_tailed']) && array_key_last($rows[0]) === 'product_sequence', 'no tag: no tag columns; the amplicon is the last column');
+ok(array_key_last(primer_maker_export_rows($run, $tailT)[0]) === 'product_sequence_tailed', 'with a tag: the tagged amplicon closes the row');
+$lone = ['results' => [], 'failures' => [['name' => 'x', 'reason' => 'Too short.']], 'run_error' => 'Too short.'];
+ok(primer_maker_export_rows($lone, $none) === [], 'one sequence that is the whole error: no file row (as on the page)');
+ok(substr_count(moop_rows_to_tsv($rows), "\n") === 3, 'header + 2 rows');
 
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
