@@ -228,6 +228,9 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Firefox makes the site look ugly (Sofia 11-24) -- find out why.** All checks so far use Chrome (puppeteer).
+      First: Sofia says which pages/what looks wrong (screenshot), Firefox version + OS; then compare computed styles
+      Chrome vs Firefox (puppeteer can drive Firefox) on home, gene page, a tool page. **M**
 - [ ] **Gene page GO IDs link only to AmiGO, never to our own GO term page (Sofia 11-24).** 684 GO links on
       NV2g007394000.1, all https://amigo.geneontology.org/...; the URL is stored with each annotation by the
       pipeline. Our term page (tools/ontology_term.php?o=GO&id=...) shows genes in OUR organisms; api/v1/gene.php:155
@@ -509,3 +512,7 @@ Planosphere
       no self-service: decide what to offer (at least change own password, with the current one required;
       email change may need confirming), CSRF on the form, and the users.json write goes through the same
       locked path as Manage Users (SELinux rw label, /var/www/moop-private). **S to check, M to build**
+- [ ] **(TALK, low priority) Consolidate the gene page (Sofia 11-24).** Each isoform repeats a near-identical
+      annotation block (noggin-1: 4 mRNAs x ~215 annotations; Pathways, GO, domains shown once per isoform). Most
+      isoforms carry the same annotations; scores may differ. Idea to discuss: one gene-level table, with a column
+      or marker for which isoforms carry each row (and differing scores), instead of one block per isoform. **discussion**

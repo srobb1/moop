@@ -63,12 +63,21 @@ Each row is one transcript: *noggin-1* has six isoforms in the RefSeq gene set a
 
 The list on the left jumps to each section. The **Toolbox** on the right opens the gene in the genome browser, runs BLAST with its sequence, or designs primers for it — the next steps below.
 
-### 5. What does the gene do? Follow a GO term
-**Page:** a GO term page, part of **Tools → Anatomy & Gene Function** · [`/tools/ontology_term.php?o=GO&id=GO:0030514`](tools/ontology_term.php?o=GO&id=GO%3A0030514)
+### 5. Which pathway is it in? Follow KEGG
+**Page:** the gene page's **Pathways** section (click **Pathways** in its Jump to list) · [`/tools/parent.php?organism=Nematostella_vectensis&uniquename=NV2g007394000.1`](tools/parent.php?organism=Nematostella_vectensis&uniquename=NV2g007394000.1)
 
-Go to **Tools → Anatomy & Gene Function**, choose **GO (Gene Ontology)** in its list, and type a term from the gene page's **Gene Ontology** section into the search box. Each GO term has its own page: [*Negative regulation of BMP signaling pathway*](tools/ontology_term.php?o=GO&id=GO%3A0030514) shows how many genes in each gene set carry it, in every organism here. Type *Nematostella* in its Search box, then click a number to list those genes — *noggin-1* is one of them. It is the quickest way from one gene to others that may do the same job. From **Anatomy & Gene Function** you can also browse the terms from the top, or find genes by body part.
+On the gene page, click **Pathways** in the Jump to list on the left, then open **Environmental Information Processing**: *noggin-1* is in the **TGF-beta signaling pathway**, where BMPs belong. Two links sit beside it:
 
-![The GO term page for negative regulation of BMP signaling pathway: its Genes table filtered to Nematostella, 44 genes in each of its two gene sets](images/pages/tour/go-term.png)
+- **View on KEGG** opens KEGG's own map of the pathway, on KEGG's website, with its boxes coloured: orange for *noggin-1*, green for the pathway's other genes in this gene set, blue-grey for genes found only in the species' other gene set, and white for genes not found. [Open noggin-1's coloured map](api/kegg_map.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&pathway=map04350&gene=NV2t007394002.1)
+- **Genes in this gene set** gives you the pathway's gene list: it opens a search that lists every gene in the pathway — BMPs, their receptors, the SMADs, other BMP blockers such as chordin, and *noggin-1* itself. Tick genes, or export the whole list as CSV, Excel or FASTA. **Genes in this organism** does the same across all of *Nematostella*'s gene sets. [Open the list](tools/search.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&q=map04350&source=KEGG+Pathway+%28eggNOG%29)
+
+![The gene page's Pathways section for noggin-1: a colour legend (this gene, in this gene set, only in another gene set of this species, not found), then TGF-beta signaling pathway with View on KEGG, Genes in this gene set and Genes in this organism](images/pages/tour/pathways.png)
+
+![The gene list for the TGF-beta signaling pathway (map04350) in gene set NV2: transcripts such as SMAD4-like, noggin and chordin, each matched in KEGG Pathway, with Copy, CSV, Excel and FASTA buttons](images/pages/tour/kegg-list.png)
+
+Every pathway of a gene set, with its **Map** and **Genes** links, is in the **KEGG Pathways** table on the gene set's own page: [NV2's pathways](tools/gene_set.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2).
+
+Gene Ontology (GO) terms work in a similar way: in **Tools → Anatomy & Gene Function**, choose **GO (Gene Ontology)**, search for a term, and its page counts the genes that carry it in every organism here — for example [*negative regulation of BMP signaling pathway*](tools/ontology_term.php?o=GO&id=GO%3A0030514).
 
 ### 6. When and where is it expressed?
 **Page:** **Tools → RNA-seq Expression Explorer** · [`/tools/expression.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&genes=NV2g007394000.1`](tools/expression.php?organism=Nematostella_vectensis&assembly=GCA_033964005.1&gene_set=NV2&genes=NV2g007394000.1)
