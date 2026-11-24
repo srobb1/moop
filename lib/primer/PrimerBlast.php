@@ -66,10 +66,35 @@ class PrimerBlast
      * wallaby genomes -- mostly 3-5 mismatches, which are listed but rarely prime); one in a
      * repeat family kept 6,042 (Smed), a wallaby SINE-like one 46,861, poly-A 106,144 per primer.
      * Without a ceiling poly-A crashed the page: 876,050 blastn lines read into PHP's 128 MB,
-     * and pairing 106k x 106k sites could never finish anyway. A plain BLAST cap
-     * (-max_target_seqs) would instead UNDERCOUNT silently and could call such a pair specific.
+     * and pairing 106k x 106k sites could never finish anyway. A BLAST cap on what it reports
+     * would instead UNDERCOUNT silently and could call such a pair specific -- see MAX_TARGET_SEQS.
      */
     const MAX_SITES_PER_PRIMER = 5000;
+
+    /**
+     * -max_target_seqs: report EVERY subject sequence a primer matches.
+     *
+     * Left unset until 2026-11-24, blastn used its default of 500 subjects -- so on a
+     * scaffold-level assembly (74 of 95 genomes then had more than 500 sequences) matches
+     * past the 500 best-scoring scaffolds were silently dropped. GAPDH primers on Carollia
+     * (1.9 M scaffolds): 500/500 subjects vs 2,031/2,614 real; 79/84 kept sites vs 166/333,
+     * 327 of the dropped ones with ONE mismatch -- exactly what decides "specific". Lifting it
+     * cost 62 MB of heap there. Above any assembly's sequence count; memory is bounded by
+     * HEAP_LIMIT_MB, not by under-reporting.
+     */
+    const MAX_TARGET_SEQS = 100000000;
+
+    /**
+     * blastn's heap allowance per run, in MB (prlimit --data: private writable memory only,
+     * so the memory-mapped database -- shared page cache -- does not count against it).
+     *
+     * Measured 2026-11-24: a normal pair needs 8-430 MB of heap (wallaby, two runs at once
+     * the high end). Poly-A against the wallaby genome took 5.2 GB and 75 s for 1.9 M hits --
+     * two at once could exhaust this host. Over the allowance blastn stops ("BLAST ran out of
+     * memory", exit 134) and the pair is reported repetitive (see run()). Also the run's cost
+     * in the BLAST queue: the most one check can hold.
+     */
+    const HEAP_LIMIT_MB = 1024;
 
     /**
      * Sites stored across the whole run (all pairs). Bounds memory when many pairs each sit
@@ -97,6 +122,10 @@ class PrimerBlast
      *     @type array  $repetitive   PER PAIR index => ['forward'=>n,'reverse'=>n]: the exact
      *                                site count of a primer over MAX_SITES_PER_PRIMER, else 0.
      *                                Such a primer's hits list is EMPTY -- not its real sites.
+     *     @type array  $out_of_memory PER PAIR index => bool: blastn ran past HEAP_LIMIT_MB on
+     *                                this pair alone -- a primer so repetitive that even
+     *                                counting its matches is too costly. Hits are EMPTY and
+     *                                which primer it is, is not known.
      * }
      */
     public static function run(array $pairs, $db, array $options = [])
@@ -109,6 +138,7 @@ class PrimerBlast
             'over_mismatch' => 0,
             'discards'      => [],
             'repetitive'    => [],
+            'out_of_memory' => [],
         ];
 
         if (empty($pairs)) {
@@ -164,11 +194,20 @@ class PrimerBlast
             return $result;
         }
 
-        $cmd = escapeshellarg($blastn)
+        // The heap cap (HEAP_LIMIT_MB). --core=0: a capped blastn aborts, and would otherwise
+        // leave a core dump the size of its heap. SOFT limits only ("N:"): changing a HARD
+        // limit needs SELinux process:setrlimit, which php-fpm may lack -- and blastn never
+        // raises its own. No prlimit: run uncapped, as before.
+        $prlimit = moop_find_executable('prlimit');
+        $cap     = $prlimit === '' ? ''
+                 : escapeshellarg($prlimit) . ' --data=' . (self::HEAP_LIMIT_MB * 1048576) . ': --core=0: -- ';
+
+        $cmd = $cap . escapeshellarg($blastn)
              . ' -task blastn-short'
              . ' -evalue ' . escapeshellarg(self::EVALUE)
              . ' -word_size ' . escapeshellarg(self::WORD_SIZE)
              . ' -dust no'
+             . ' -max_target_seqs ' . escapeshellarg(self::MAX_TARGET_SEQS)
              . ' -db ' . escapeshellarg($db)
              . ' -query ' . escapeshellarg($query_file)
              // btop carries WHERE the mismatches are. Position dominates count for
@@ -187,7 +226,11 @@ class PrimerBlast
             function () use ($cmd, &$output, &$return_code) {
                 exec(blast_queue_wrap_command($cmd), $output, $return_code);
             },
-            blast_queue_cost_units('blastn', $db),
+            // The heap cap, not blast_queue_cost_units()' 1.2x the .nsq: that counts the
+            // memory-mapped database, which is shared page cache, and missed the heap -- a
+            // poly-A check was charged ~1 GB on wallaby and took 5.2 GB.
+            $prlimit === '' ? blast_queue_cost_units('blastn', $db)
+                            : max(1, (int)ceil(self::HEAP_LIMIT_MB / BLAST_QUEUE_UNIT_MB)),
             blast_queue_ticket(null)
         );
         @unlink($query_file);
@@ -202,6 +245,25 @@ class PrimerBlast
         }
         if (blast_queue_timed_out($return_code)) {
             return $fail(blast_queue_timeout_message());
+        }
+        if (self::ranOutOfMemory($return_code, $output)) {
+            @unlink($out_file);
+            // One run holds every pair, so the cap says only that SOME primer is too
+            // repetitive. Calling every pair non-specific would be wrong, so with several
+            // pairs each is searched alone (only in this rare case) to find the one.
+            if (count($pairs) > 1) {
+                return self::runEachPairAlone($pairs, $db, $options, $result);
+            }
+            // A failed search here used to leave the pair with no products on this template,
+            // which the verdict read as "no product". It is the opposite: non-specific.
+            foreach ($pairs as $i => $pair) {
+                $result['hits'][$i]          = ['forward' => [], 'reverse' => []];
+                $result['discards'][$i]      = ['below_floor' => 0, 'over_mismatch' => 0];
+                $result['repetitive'][$i]    = ['forward' => 0, 'reverse' => 0];
+                $result['out_of_memory'][$i] = true;
+            }
+            $result['success'] = true;
+            return $result;
         }
         if ($return_code !== 0) {
             // A non-zero exit with an empty .blastout is exactly the failure mode
@@ -218,6 +280,7 @@ class PrimerBlast
             $result['hits'][$i]       = ['forward' => [], 'reverse' => []];
             $result['discards'][$i]   = ['below_floor' => 0, 'over_mismatch' => 0];
             $result['repetitive'][$i] = ['forward' => 0, 'reverse' => 0];
+            $result['out_of_memory'][$i] = false;
         }
         $kept   = [];   // qid => sites passing both filters, counted past the ceiling
         $stored = 0;    // sites held in memory, whole run
@@ -314,6 +377,57 @@ class PrimerBlast
         fclose($fh);
         @unlink($out_file);
 
+        $result['success'] = true;
+        return $result;
+    }
+
+    /**
+     * Did blastn stop at HEAP_LIMIT_MB? It prints "BLAST ran out of memory" and aborts
+     * (exit 134, measured 2026-11-24); under a tighter cap it can segfault instead (139).
+     *
+     * @param int   $return_code Exit status of the command.
+     * @param array $output      Its stdout/stderr lines.
+     */
+    public static function ranOutOfMemory($return_code, array $output)
+    {
+        if ($return_code === 0) {
+            return false;
+        }
+        $text = implode("\n", $output);
+        return stripos($text, 'out of memory') !== false
+            || stripos($text, 'bad_alloc') !== false
+            || in_array($return_code, [134, 139], true);
+    }
+
+    /**
+     * Search each pair on its own and merge the answers under the original pair indexes --
+     * used only when a run of several pairs hit the heap cap, to find which pair did.
+     *
+     * @param array $pairs   The pairs of the capped run.
+     * @param array $result  The run's empty result, filled in here.
+     */
+    private static function runEachPairAlone(array $pairs, $db, array $options, array $result)
+    {
+        $stored = 0;
+        foreach ($pairs as $i => $pair) {
+            $one = self::run([$pair], $db, $options);
+            if (!$one['success']) {
+                $result['error'] = $one['error'];
+                return $result;
+            }
+            foreach (['hits', 'discards', 'repetitive', 'out_of_memory'] as $key) {
+                $result[$key][$i] = $one[$key][0];
+            }
+            $result['below_floor']   += $one['below_floor'];
+            $result['over_mismatch'] += $one['over_mismatch'];
+            $stored += count($one['hits'][0]['forward']) + count($one['hits'][0]['reverse']);
+            // The same whole-run bound as one combined search.
+            if ($stored > self::MAX_SITES_PER_RUN) {
+                $result['error'] = 'These primers match too many places in total to check at once. '
+                    . 'Check fewer pairs at a time.';
+                return $result;
+            }
+        }
         $result['success'] = true;
         return $result;
     }

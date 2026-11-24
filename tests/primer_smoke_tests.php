@@ -1101,6 +1101,14 @@ $v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['transcript' => $one, '
 ok($v['key'] === 'nonspecific' && strpos(implode(' ', $v['reasons']), 'in the genome') !== false,
    'cDNA mode: a primer repetitive in genomic DNA still makes the pair non-specific (gDNA in the prep)');
 
+// A failed search left the template empty, which the verdict read as "no product".
+$oom = $found(['forward' => [], 'reverse' => []]);
+$oom['repetitive'] = ['either' => null];
+$v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['genome' => $oom]], 'genome', 10000);
+ok($v['key'] === 'nonspecific' && count($v['reasons']) === 1
+   && strpos($v['reasons'][0], 'one of the primers matches so many places in the genome') === 0,
+   'out of memory: non-specific, and the reason says the count is unknown');
+
 // PrimerBlast::run() itself, with a stand-in blastn that writes N forward rows and 3 reverse rows:
 // past MAX_SITES_PER_PRIMER the forward primer is counted exactly, its sites dropped, and the
 // output is streamed (200,000 rows held in memory was what crashed the page).
@@ -1150,6 +1158,38 @@ echo "Warning: a BLAST message, not a row"
     ok($r['success'] && $r['repetitive'][0]['forward'] === 200000 && memory_get_usage() - $mem0 < 20e6,
        '200,000 rows: counted exactly, streamed (under 20 MB held)');
     putenv('STUB_N');
+
+    // A stand-in that records its arguments, and aborts the way a heap-capped blastn does
+    // ("BLAST ran out of memory", exit 134) whenever its query holds a poly-A primer.
+    $stub2 = $stub_dir . '/.primer_blastn_stub2_' . getmypid();
+    $args_file = $db_dir . '/args';
+    file_put_contents($stub2, '#!/bin/sh
+echo "$@" > ' . escapeshellarg($args_file) . '
+while [ $# -gt 0 ]; do [ "$1" = "-out" ] && out="$2"; [ "$1" = "-query" ] && q="$2"; shift; done
+if grep -q AAAAAAAAAAAAAAAAAAAA "$q"; then echo "BLAST ran out of memory"; exit 134; fi
+printf "q0f\tchr1\t20\t0\t0\t1\t20\t100\t119\t20\nq0r\tchr1\t20\t0\t0\t1\t20\t419\t400\t20\n" > "$out"
+');
+    chmod($stub2, 0700);
+    $normal = ['name' => 'n', 'forward' => 'GCTAGCATCGTTGCAGTCAA', 'reverse' => 'TTGACTGCAACGATGCTAGC'];
+
+    // Carollia (1.9 M scaffolds), 2026-11-24: blastn's default of 500 subjects dropped 336
+    // kept sites of a GAPDH pair, 327 of them with one mismatch.
+    $r = PrimerBlast::run([$normal], "$db_dir/db", ['blastn' => $stub2]);
+    $args = (string)@file_get_contents($args_file);
+    ok($r['success'] && preg_match('/-max_target_seqs\s+(\d+)/', $args, $m) && (int)$m[1] >= 10000000,
+       'every subject is reported: -max_target_seqs set far above any assembly (default 500 dropped hits)');
+    ok($r['out_of_memory'] === [0 => false] && count($r['hits'][0]['forward']) === 1, 'a normal pair: not out of memory, its site kept');
+
+    $r = PrimerBlast::run([$pA[0]], "$db_dir/db", ['blastn' => $stub2]);
+    ok($r['success'] && $r['out_of_memory'][0] === true && $r['hits'][0] === ['forward' => [], 'reverse' => []],
+       'heap cap hit on one pair: a result (out of memory, no sites), not a failed search');
+
+    $r = PrimerBlast::run([$normal, $pA[0]], "$db_dir/db", ['blastn' => $stub2]);
+    ok($r['success'] && $r['out_of_memory'] === [0 => false, 1 => true] && count($r['hits'][0]['forward']) === 1,
+       'heap cap hit with two pairs: each searched alone, only the repetitive pair marked');
+
+    @unlink($args_file);
+    unlink($stub2);
     unlink($stub);
     unlink("$db_dir/db.nsq");
     @rmdir($db_dir);

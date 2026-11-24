@@ -121,6 +121,11 @@ $assembly_path = dirname($gene_set_path);
                 // sites: products from the other primer alone would be a wrong, smaller
                 // answer, so none are worked out and the verdict says why.
                 $repetitive = array_filter($blast['repetitive'][$i] ?? []);
+                // Past blastn's heap cap (PrimerBlast::HEAP_LIMIT_MB) not even the count is
+                // known, nor which primer: 'either' => null.
+                if (!empty($blast['out_of_memory'][$i])) {
+                    $repetitive = ['either' => null];
+                }
                 $found = PrimerPairs::findProducts(
                     $repetitive ? [] : ($blast['hits'][$i] ?? []),
                     ['max_product' => max($max_product, PrimerPairs::AMPLIFIABLE_MAX)]
@@ -309,11 +314,14 @@ function primer_blast_verdict(array $r, string $search_mode, int $max_product): 
     foreach ($r['by_db'] as $db_key => $f) {
         foreach ($f['repetitive'] ?? [] as $side => $n) {
             $where = $db_key === 'transcript' ? t_plain('the transcripts') : t_plain('the genome');
-            $reasons[] = $side === 'forward'
+            $reasons[] = $side === 'either'
+                ? t_plain('one of the primers matches so many places in %s that the search stopped before it could count them: it lies in a repeated sequence, so products were not worked out',
+                          $where)
+                : ($side === 'forward'
                 ? t_plain('the forward primer matches %1$s places in %2$s (up to %3$d mismatches): it lies in a repeated sequence, so products were not worked out',
                           number_format($n), $where, PrimerBlast::SEARCH_MAX_MISMATCH)
                 : t_plain('the reverse primer matches %1$s places in %2$s (up to %3$d mismatches): it lies in a repeated sequence, so products were not worked out',
-                          number_format($n), $where, PrimerBlast::SEARCH_MAX_MISMATCH);
+                          number_format($n), $where, PrimerBlast::SEARCH_MAX_MISMATCH));
             $repetitive[$db_key][$side] = $n;
         }
     }

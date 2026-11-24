@@ -18,7 +18,11 @@ include_once __DIR__ . '/../lib/permission_check.php';
 
 // Run all permission checks (shared collector — same numbers the dashboard shows).
 $collected              = moop_collect_permission_checks($config);
-$checks                 = $collected['checks'];
+// Cache SUBDIRECTORY findings join the main checks: they carry name 'Cache Directory', so
+// they land in that card with fix commands. Left out until 2026-11-24, the dashboard counted
+// them (moop_permission_findings) while this page said all clean -- planosphere's geoip/ at
+// 2750 read "1 issue" on the dashboard and nothing here.
+$checks                 = array_merge($collected['checks'], $collected['cache_dir_issues'] ?? []);
 $assembly_subdir_issues = $collected['assembly_subdir_issues'];
 $fasta_file_issues      = $collected['fasta_file_issues'];
 // The dashboard counts these (moop_permission_findings uses exec_file_issues), so this

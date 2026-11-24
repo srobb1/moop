@@ -150,7 +150,8 @@ $body = [
                    . 'mismatches, and fewer than 2 in its last 5 bases at the 3\' end (NCBI Primer-BLAST\'s thresholds). '
                    . 'specific = one such product on the template (or isoforms of one gene); nonspecific = more, see reasons; '
                    . 'none = nothing would amplify. A primer matching over ' . number_format(PrimerBlast::MAX_SITES_PER_PRIMER)
-                   . ' places is repetitive: the pair is nonspecific and its products are not worked out. In cdna mode, introns_spanned > 0 on the cDNA product means genomic DNA '
+                   . ' places is repetitive: the pair is nonspecific and its products are not worked out; repetitive_primer_sites gives the count per primer, '
+                   . 'or {"either": null} when the primer matched too many places to count. In cdna mode, introns_spanned > 0 on the cDNA product means genomic DNA '
                    . 'cannot give the same band.',
     'download' => 'format=tsv gives the listed products as the page\'s "Download results" file.',
 ];
