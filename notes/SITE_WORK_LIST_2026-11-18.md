@@ -228,6 +228,11 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Term page "Where it sits" is overwhelming for some terms (Sofia 11-24).** e.g.
+      https://simrbase.stowers.org/tools/ontology_term.php?o=GO&id=GO:0030514 (negative regulation of BMP
+      signaling pathway): 88 term links (18 distinct terms, repeated across paths) -- GO terms have many parents, so the section lists every path up to the root. Ideas to
+      weigh (TALK): show the direct parents only, with "show all paths" to open the rest; or one shortest path
+      + a count. Check PLANA terms too (fewer parents, probably fine). Linked from tour step 5. **S-M**
 - [ ] **Navbar Gene ID lookup: also find crosswalk-linked IDs (Sofia 11-24).** Today the box (js/modules/navbar-id-search.js
       -> api/feature_search.php) finds only loaded features; on no match it offers "Search annotations", and only THAT
       search shows the crosswalk "maps to" hint (tools/annotation_search_ajax.php:197). Show "EU296635 -> h1SMcG0012012"
