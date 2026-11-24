@@ -418,7 +418,7 @@ Planosphere
       always carry ts (parsed at line 217), so probably a smoke-test row built without it -- check which test
       feeds it, then either give the fixture a ts or make line 271 tolerate a row without one (and say which
       in the commit). Not user-visible; it is noise that could hide a real warning. **S**
-- [ ] **PHP crash on a gene page (error log, Sofia 11-24): "Uncaught TypeError: Cannot access offset of type
+- [x] NOT A LIVE BUG (11-24): logged twice on 11-13 18:29, 12 s apart, while the gene page was being edited in the live tree (commit 03ef1e1c landed 18:36; at the time line 989 was $__cl_foot); never since (0 parent.php crashes 11-14..11-24); the page loads as PUBLIC now (200, 6 ortholog cards). No code change. **PHP crash on a gene page (error log, Sofia 11-24): "Uncaught TypeError: Cannot access offset of type
       string on string", tools/pages/parent.php:989.** Page: Nematostella_vectensis 116618285, assembly
       GCF_932526225.1, gene set RS_101, anonymous, from 127.0.0.1 (a local tool: the System Monitor / page
       audit asks http://127.0.0.1/moop/...). Line 989 is the `$__cl_also($org, $gene)` call that ends the
