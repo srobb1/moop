@@ -120,7 +120,7 @@ Order of work, and why:
 - [x] **Gene card "copy" — does it copy too much?** — DONE 11-19: sections + indented evidence + link (Sofia chose). Look at what it puts on the clipboard; decide. **S**
 
 ## 2. Showing the site to someone — TALK
-- [ ] **A demo route.** One linear path through the site, written down: e.g. home → search a gene →
+- [x] **DONE 11-24: tour PUBLISHED** (page.php?p=tour, 12 steps, Nvec noggin-1, 7 new PUBLIC screenshots; text in notes/TOUR_DRAFT_2026-11-24.md). **A demo route.** One linear path through the site, written down: e.g. home → search a gene →
       gene page cards → JBrowse → BLAST → MOOPmart → Planosphere link → AI guide. Each stop: what to
       click, the one sentence to say. Something to follow (or hand someone) instead of improvising.
       Becomes the skeleton of the tutorials in §7. **TALK, then M**
