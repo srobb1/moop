@@ -228,6 +228,22 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Navbar Gene ID lookup: also find crosswalk-linked IDs (Sofia 11-24).** Today the box (js/modules/navbar-id-search.js
+      -> api/feature_search.php) finds only loaded features; on no match it offers "Search annotations", and only THAT
+      search shows the crosswalk "maps to" hint (tools/annotation_search_ajax.php:197). Show "EU296635 -> h1SMcG0012012"
+      in the box itself (moop_crosswalk_search_hint()). Also consider: an ID that matches an OLD gene set (SMED30022468)
+      could say which current gene it is. **S-M**
+- [ ] **Running list of names that need a human: notes/NAMES_TO_CURATE.md (Sofia 11-24).** First row: NV2 "Pax-6"
+      (cnidarians have PaxA-D, no Pax6). Sofia checks the RefSeq name. Scan Pax/Hox/Wnt/Sox/Fox/T-box. Naming itself
+      is compute's. **ongoing**
+- [ ] **Found by the public tour check (11-24), each to verify before fixing:**
+      (a) Search "sFRP-1" in Smed took ~21 s (twice); "noggin" in Nvec 0.2 s -- measure cold/warm, find why. **M**
+      (b) Gene page help says orthologs are "in the next cards", but a PUBLIC visitor gets no "Orthologs in related
+          species" card for h1SMcG0012012 (inside: 19) -- text or access wrong? **S-M**
+      (c) "Rosetta Stone Transcript Mapper" (page heading) vs "ID Translator" (menu) -- one name. **S**
+      (d) Vertebrate-only GO terms carried onto invertebrate genes via orthologs (Smed SFRP-a: ossification
+          GO:0001503, visual perception GO:0007601) -- question for compute. **TALK**
+      (e) Smed curated name "SFRP-a" vs the papers' "sFRP-1" -- a visitor searching the paper name lands oddly. **TALK**
 - [ ] **IF Sofia adds more RNA-seq expression data (planned week of 11-30): update the tour/tutorial
       screenshots** (sFRP-1 expression card, Expression Explorer). Only if that data actually lands. **S**
 - [x] **DONE 11-24 (for the record):** Primer BLAST counts every scaffold (blastn default of 500 subjects dropped
