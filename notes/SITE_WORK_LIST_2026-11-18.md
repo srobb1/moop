@@ -412,3 +412,12 @@ Planosphere
       always carry ts (parsed at line 217), so probably a smoke-test row built without it -- check which test
       feeds it, then either give the fixture a ts or make line 271 tolerate a row without one (and say which
       in the commit). Not user-visible; it is noise that could hide a real warning. **S**
+- [ ] **PHP crash on a gene page (error log, Sofia 11-24): "Uncaught TypeError: Cannot access offset of type
+      string on string", tools/pages/parent.php:989.** Page: Nematostella_vectensis 116618285, assembly
+      GCF_932526225.1, gene set RS_101, anonymous, from 127.0.0.1 (a local tool: the System Monitor / page
+      audit asks http://127.0.0.1/moop/...). Line 989 is the `$__cl_also($org, $gene)` call that ends the
+      ortholog-card row closure -- the crash is inside $__cl_also, which indexes something it expects to be an
+      array but is a string (a clade/"also in" entry of an unexpected shape). 11-24: the same URL answers 200
+      for the internal (IP_IN_RANGE) viewer, so check it as PUBLIC (view-as-PUBLIC preview) and read
+      $__cl_also; find which data row is a string, fix the reader, add a smoke test with that shape. A crash =
+      a visitor gets a broken gene page. **S-M**
