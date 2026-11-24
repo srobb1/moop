@@ -125,7 +125,7 @@ Planosphere
       under all the gene's IDs). Jump-to now lands below the sticky navbar on every page that uses it.
       **Image gallery** — larger section headers + a side menu to jump to a section (like the SIMRbase
       gene page). **M**
-- [ ] **Gallery stage filter** (`?stage=`) also matches images that only carry the stage as a TERM, so
+- [x] KEEP as is (Sofia 11-24: "that is fine"). **Gallery stage filter** (`?stage=`) also matches images that only carry the stage as a TERM, so
       "Stage 3" shows tiles from Stages 2–8. Decide: stage_id only, or keep and say so. **S** (found 11-24)
 
 ## 5. Help text and examples
@@ -173,7 +173,7 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
-- [ ] **🔴 Old SIMRbase links cited in papers (11-23) — TABLE BUILT, ROOT TO INSTALL:** metadata/legacy_redirects.json
+- [x] DONE 11-23 (root installed; checked 11-24: /bats -> 301 -> bat-genomes page). **🔴 Old SIMRbase links cited in papers (11-23) — TABLE BUILT, ROOT TO INSTALL:** metadata/legacy_redirects.json
       (73 rules: the Drupal dump url_alias table + the System Monitor outside-404 list; all 2,185 old addresses tested -> 301 -> 17 pages, all 200). Tested on a
       private nginx: every old address -> its page, attack paths 444, MOOP's own paths untouched. Builder gained
       `prefixes` (old folder -> one page here). **Root install:**
@@ -266,7 +266,7 @@ Planosphere
       in cuttingclass metadata/pages/about.json + faq.json. **S**
 - [x] **Remote tracks did not load from outside Stowers** (user in Austria, 11-19) -> tracks proxy LIVE
       (notes/TRACKS_PROXY_PLAN.md). Ask the user to hard-reload. Manage JBrowse's save no longer drops it.
-- [ ] **smoke_tests.php is not hermetic:** 4 link/menu tests read the LIVE link_prefix and fail on any
+- [x] DONE (checked 11-24: link_prefix is pinned in the test; suite passes on simrbase served at its root). **smoke_tests.php is not hermetic:** 4 link/menu tests read the LIVE link_prefix and fail on any
       site served at its root (simrbase since 11-19). Pin link_prefix in the test. **S**
 - [ ] **setup-check guard check is wrong for a site with its own server block** (found 11-19 after Phase B):
       it compares `default.d/<site>-security.conf` to a ROOT-keyed guard once link_prefix is "/", and says
@@ -299,7 +299,7 @@ Planosphere
 - [x] NOT A PROBLEM 11-20: **Filesystem Permissions page "106 s"** -- normally ~4 s (live re-check by
       design, CLAUDE.md §10). The 106 s loads (3, all 11-19 21:05) and Manage Organisms' 117 s were the
       session-lock queue above, now fixed.
-- [ ] **Old SIMRbase addresses printed in papers need redirects** (Sofia 11-19). Published papers cite
+- [x] DONE 11-23 (see the legacy-redirects item above). **Old SIMRbase addresses printed in papers need redirects** (Sofia 11-19). Published papers cite
       URLs on the old Drupal SIMRbase -- e.g. `simrbase.stowers.org/bats` may be one -- that now land on
       MOOP and likely 404. Find them: (1) search the old SIMRbase Drupal **Postgres dump** for typed
       paths -- `url_alias` (path aliases), `menu_links`, node bodies with `simrbase.stowers.org/...`;
@@ -326,7 +326,21 @@ Planosphere
       red; a weekly "who used the site" digest; housekeeping failures; password-reset / account-request
       mail. Needs: IT's SMTP relay host (Stowers), a small mail helper (lib/), an admin address setting,
       and setup-check + INSTALL.md entries. Rate-limit alerts (at most one per hour per kind). **M**
-- [ ] **Outside links that 404** (11-23): old Tripal SIMRbase/Planosphere URLs in papers and bookmarks.
+- [x] DONE 11-23 (collector v3 keeps internet 404s with referrer; System Monitor lists them). **Outside links that 404** (11-23): old Tripal SIMRbase/Planosphere URLs in papers and bookmarks.
       nginx logs the referrer; the PHP log never sees missing files. Needs scripts/moop_monitor.py to keep
       internet 404s with their referrer (then root re-runs install_monitor.sh) + a monitor card listing
       them, so we know which redirects to add. **M**
+- [ ] **Planosphere Protocols page** (`page.php?p=protocols`) — restyle to match the new site (the
+      paper/card look of the other Planosphere pages). **S–M** (Sofia 11-24)
+- [ ] **One Embryogenesis home page (Planosphere)** — gather ALL the embryogenesis tools and pages
+      (Davies 2017 gallery, movies, crash course, embryo expression, explore page, ...) onto the main
+      Embryogenesis page. **M** (Sofia 11-24)
+- [ ] **SIMRbase Research menu** — list that Embryogenesis page there (after the item above). **S** (Sofia 11-24)
+- [ ] **Planosphere "Movies" page shows no movies** (`page.php?p=movies`, Sofia 11-24) — it only describes
+      them and links to the SIMRbase gallery (`kind=movie`). Idea: point the menu item straight at the
+      gallery (movies only, or the whole Davies 2017 gallery) and drop or fold in the page. Fits with the
+      "One Embryogenesis home page" item above. **S**
+- [ ] **Gallery: choose images or movies on the page** (Sofia 11-24) — buttons/chips next to the filter box:
+      All · In situ images · Movies · Stage panels (the kinds present), counts on each; the page already
+      takes `?kind=movie` from a link but has no control for it. Then the Planosphere menu can link to the
+      gallery with Movies picked (item above). **S**
