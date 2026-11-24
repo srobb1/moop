@@ -82,7 +82,7 @@ Order of work, and why:
       `smed30003001` returns both the transcript `SMED30003001` and the gene `gene-SMED30003001`.
       Expected: case shouldn't matter, and one ID should give one result (or a clear "gene + its
       transcript"). Investigate the exact-ID path vs the text path. **M**
-- [~] **Anatomy search "gut" lists transcripts that have no gene.** — 11-19: 157 fixed (d5657132, dd_v6 gene ids); rest = ids not in crosswalk -> questions for compute; open: show "no current gene" instead of "–"? Why — data (13 transcriptome
+- [x] DONE (checked 11-24: answered by "no gene ⓘ" + reason + genome link, below, 11-19) **Anatomy search "gut" lists transcripts that have no gene.** — 11-19: 157 fixed (d5657132, dd_v6 gene ids); rest = ids not in crosswalk -> questions for compute; open: show "no current gene" instead of "–"? Why — data (13 transcriptome
       "genomes" have no gene level) or a join that drops the gene? Then decide how to show them. **M**
 - [x] DONE 11-20 (A): records looked up in their paper's assembly (site_config crosswalk 'ambiguous_ids': 5 papers placed from the data; lib/crosswalk.php moop_crosswalk_record_*/exclusions; records table, download, gene card, ID search, filter box, Data Exporter). Compute's per-paper check (B) on hold. **Anatomy records: a `Contig…` ID can show a gene from the WRONG assembly.** 11-20: compute ANSWERED (`notes/ANATOMY_IDS_FROM_COMPUTE_2026-11-19.md` §5: look up by source+ID; Contig >7727 = newmark_ests; ≤7727 needs their per-paper check) — web not done yet. Same name in up to 4
       crosswalk sources mapping to different genes (Contig1038). Needs a paper → source table from compute;
@@ -124,6 +124,10 @@ Order of work, and why:
       gene page cards → JBrowse → BLAST → MOOPmart → Planosphere link → AI guide. Each stop: what to
       click, the one sentence to say. Something to follow (or hand someone) instead of improvising.
       Becomes the skeleton of the tutorials in §7. **TALK, then M**
+      **DECIDED 11-24 (Sofia):** SELF-GUIDED tour for an OUTSIDE user (a page on the site, linked from
+      Getting started; each stop = what to click / what you see / why; links open each stop pre-filled).
+      Gene: sFRP-1 (Smed). Live demos reuse the same page. 11 stops: home, search, gene page, Rosetta Stone,
+      JBrowse, BLAST, Primer Maker/BLAST, Anatomy & Gene Function, Data Exporter, AI assistant, Planosphere.
 
 ## 3. First impressions
 - [x] **Welcome text on the SIMRbase home page:** DONE 11-19: content page `welcome` shown above the home (Manage Pages -> home = intro), + "Email us for a walkthrough" via {admin_email}. Edit it any time in Manage Pages; a pop-up was considered and NOT chosen (Turnstile already interrupts once). "Welcome to the new SIMRbase. SIMRbase MOOP —
@@ -161,7 +165,7 @@ SIMRbase
 - [x] Ontology Browser — **chevrons too small;** DONE 11-19 (filled teal circle). a reviewer didn't know they were clickable. **S**
 - [x] Term pages — **buttons don't stand out;** DONE 11-19 (solid main colour; link-outs outlined). give them colour. **S**
 - [x] Ontology term page — **stage terms:** DONE 11-20 (site data, metadata/pages/stage-1..8.json) — fake "▻" table of contents and "back to top" links removed, in situ table + collapsible symbols list styled, Stage 1's empty Overview filled with the PLANA definition, and the raw FASTA dump (up to 170 KB, a 52,000 px page) replaced by "Get these N sequences" -> Retrieve Sequences with the same IDs (smed_20140614).
-- [ ] **Sofia: stage pages listed more sequences than in situ genes** (Stage 5: 83 transcripts vs 28 genes in the table; every stage the same pattern, and some IDs' in situ images are from OTHER stages, e.g. SMED30000139 S3-S4 in Stage 5). Was the old page's FASTA deliberately wider, or did the table lose rows in the port? The new text says only what is true ("listed 83 transcripts ... including the 28 genes in the table"). **TALK**
+- [x] DONE (Sofia 11-24) **Sofia: stage pages listed more sequences than in situ genes** (Stage 5: 83 transcripts vs 28 genes in the table; every stage the same pattern, and some IDs' in situ images are from OTHER stages, e.g. SMED30000139 S3-S4 in Stage 5). Was the old page's FASTA deliberately wider, or did the table lose rows in the port? The new text says only what is true ("listed 83 transcripts ... including the 28 genes in the table"). **TALK**
 
 Planosphere
 - [x] Index — **bold** the sentence saying some links go to SIMRbase. **S** — DONE 11-18 (site data)
@@ -224,6 +228,8 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **IF Sofia adds more RNA-seq expression data (planned week of 11-30): update the tour/tutorial
+      screenshots** (sFRP-1 expression card, Expression Explorer). Only if that data actually lands. **S**
 - [x] **DONE 11-24 (for the record):** Primer BLAST counts every scaffold (blastn default of 500 subjects dropped
       hits on 74/95 genomes) + 1 GB heap cap + queue cost (1978a40a); permissions page shows cache subdirs (planosphere
       geoip 2750 fixed); 21 written PLANA term pages on SIMRbase cleaned (table restyled, Accession column dropped,
@@ -390,7 +396,7 @@ Planosphere
       organism searches all of its gene sets; there is no way to pick just one (e.g. only S3h1 for Smed).
       Check the scope selector's mode on that page (multi-select at organism level?) vs Retrieve/BLAST,
       which pick a gene set. **S–M**
-- [ ] **Sofia: stage pages — more sequences than in situ genes** (see §4 SIMRbase stage-terms entry, 11-20). Decide
+- [x] DONE (Sofia 11-24) **Sofia: stage pages — more sequences than in situ genes** (see §4 SIMRbase stage-terms entry, 11-20). Decide
       whether the old FASTA was meant to be wider or the tables lost rows in the port. **TALK**
 - [x] DONE 11-20 (E): tile -> SIMRbase Ontology Browser. **Sofia: Planosphere Tools page "PLANA Ontology" tile** links to obofoundry.org — switch to SIMRbase's
       Ontology Browser (`{simrbase}/tools/ontology_browser.php?o=PLANA`)? **S** once decided

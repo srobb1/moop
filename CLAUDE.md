@@ -192,11 +192,23 @@ get_access_level()                     // 'PUBLIC' | 'COLLABORATOR' | 'ADMIN' | 
 has_access('COLLABORATOR')             // bool — checks level hierarchy
 has_assembly_access($organism, $asm)   // bool — checks groups + user access list
 require_access('COLLABORATOR')         // exits/redirects if not met
-is_public_assembly($organism, $asm)    // bool — checks organism_assembly_groups.json
+is_public_assembly($organism, $asm)    // bool — any of its gene sets public ("public": true or PUBLIC group)
 ```
 
 Assembly visibility is controlled by `metadata/organism_assembly_groups.json`.
-The special group name `PUBLIC` makes an assembly visible to unauthenticated users.
+Each entry in that file is ONE GENE SET (`organism`, `assembly`, `gene_set`, `groups`, and an
+optional `public`). An entry is public — visible to anyone, no login — when it has
+`"public": true` (how entries are marked today; set with the public toggle on Admin → Manage
+Groups, `admin/api/toggle_gene_set_public.php`) OR its `groups` include the legacy name `PUBLIC`
+(`entry_is_public()`). Groups themselves (`Planaria`, ...) only decide which COLLABORATORS see
+what; a group name does not make anything public. Roll-ups: `is_public_assembly()` /
+`is_public_organism()` are true if ANY of their gene sets is public; `is_public_gene_set()` is the
+exact one. Below the gene set, an analysis (expression experiment, image set) or content page can
+only NARROW visibility, via `metadata/access_rules.json` (`moop_dataset_visible()`).
+
+⚠️ Do not judge "is this public?" by grepping the file for `PUBLIC`: on 2026-11-24 that found 1
+public entry where 62 of 95 are public (it nearly sent a tour back to the drawing board). Ask the
+code (`is_public_assembly()` etc. from the CLI), or Admin → Manage Groups.
 
 ### 5. CSRF Protection
 
