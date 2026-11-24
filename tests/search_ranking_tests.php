@@ -1,4 +1,5 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }   // never run from a URL (CLAUDE.md §8b)
 /**
  * MOOP search RANKING tests — does the right gene come first? And WHAT MATCHES: is it found
  * at all (word endings, word starts, quotes) — see the section near the end.

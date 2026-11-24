@@ -1,4 +1,5 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }   // never run from a URL (CLAUDE.md §8b)
 /**
  * Visitor text that is not inside t() -- a RATCHET, not a zero-tolerance check (CLAUDE.md 7b).
  *

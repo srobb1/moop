@@ -1,4 +1,5 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }   // never run from a URL (CLAUDE.md §8b)
 /**
  * MOOP smoke tests — fast, dependency-free assertions over the critical paths.
  *
@@ -5433,6 +5434,26 @@ ok(moop_news_all($_nf) === null && !moop_news_put(null, ['date' => '2026-11-23',
 file_put_contents($_fbf, json_encode(array_fill(0, MOOP_FEEDBACK_DAY_CAP, ['id' => 'x', 'ts' => time(), 'status' => 'done'])));
 ok(moop_feedback_add($_fm, [], $_fbf) === 'cap', 'feedback: the site-wide daily cap holds');
 array_map('unlink', glob("$_fbd/*")); @rmdir($_fbd);
+
+// ----------------------------------------------------------------------------
+group('Command-line PHP never runs from a URL (CLAUDE.md §8b)');
+// scripts/ and tests/ are inside the document root: nginx runs any .php there for anyone who
+// asks (probed 2026-11-24). Every file with PHP code must refuse a non-CLI SAPI near its top.
+$_cli_root = dirname(__DIR__);
+$_cli_missing = [];
+foreach (['scripts', 'tests'] as $_cli_dir) {
+    $_it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator("$_cli_root/$_cli_dir", FilesystemIterator::SKIP_DOTS));
+    foreach ($_it as $_f) {
+        if ($_f->getExtension() !== 'php') continue;
+        $_src = file_get_contents($_f->getPathname());
+        if (strpos($_src, '<?php') === false) continue;   // static HTML page, nothing to run
+        if (!preg_match('/PHP_SAPI|php_sapi_name\(\)/', substr($_src, 0, 4000))) {
+            $_cli_missing[] = substr($_f->getPathname(), strlen($_cli_root) + 1);
+        }
+    }
+}
+ok($_cli_missing === [], 'every PHP file in scripts/ and tests/ refuses to run from a URL'
+   . ($_cli_missing ? ' -- missing: ' . implode(', ', $_cli_missing) : ''));
 
 // ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";

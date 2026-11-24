@@ -1,4 +1,5 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }   // never run from a URL (CLAUDE.md §8b)
 /**
  * Test page for SSH tunnel access
  * Access via: http://localhost:8000/moop/jbrowse2-test-ssh.php

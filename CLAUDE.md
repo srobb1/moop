@@ -311,6 +311,22 @@ exec($cmd, $output, $return_code);
 ```
 Never interpolate user input directly into shell strings.
 
+### 8b. Every command-line PHP file starts with the CLI-only line
+
+`scripts/` and `tests/` sit inside the document root, and nginx runs any `.php` there for anyone
+who asks for its address (probed with a real file on all 3 sites, 2026-11-24). So every PHP file
+meant for the command line has, as its first statement after `<?php` (after a `declare()` if any):
+
+```php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }
+```
+
+Until 2026-11-24, 15 files lacked it, including `strip_auto_public_access.php` and
+`adopt_archived_gene_sets.php` (they change access and move data). They were safe from the web only
+because `$argv` does not exist there and they crashed before writing — safe by accident.
+`tests/smoke_tests.php` fails CI if any PHP file in `scripts/` or `tests/` lacks the line. A
+command-line script anywhere else needs it too (the test does not look there).
+
 ### 9. Database Queries — Always Use Prepared Statements
 
 ```php

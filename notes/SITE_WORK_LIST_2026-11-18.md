@@ -17,6 +17,12 @@ Order of work, and why:
 ---
 
 ## 0. The move (in progress)
+- [ ] **TODAY 11-24, before Sofia logs off: apply the critical system updates.** Report of 11-24 00:19
+      (/var/www/moop-cache/security_updates.txt): **Critical** php 8.0.30-8.el9_9.2 (php, -fpm, -cli, -common,
+      -gd, -mbstring, -opcache, -pdo, -xml); Important: kernel 741.27.1, podman, containernetworking-plugins;
+      Moderate: openssh. `sudo dnf update --security`, then `sudo systemctl restart php-fpm` (and a reboot
+      for the kernel). Afterwards: setup-check on all 3 sites, open a gene page + a .css on each (CLAUDE.md
+      §11), run a BLAST. **S (root)**
 - [x] IT: outside access to simrbase.stowers.org + cuttingclass.stowers.org (161.129.22.133) — works 11-19
 - [x] Phase B for simrbase + cuttingclass (11-19): links have no folder name, public_url set, simrbase-dev
       forwards, rate limits republished. No folder links on either home page; no-exec guard probed on both
@@ -28,6 +34,28 @@ Order of work, and why:
       page (/etc/nginx/conf.d/moop-smedgd.conf; staged in /home/smr/move_day/nginx/). Make it 301 once settled.
 - [x] CI red since 53162efc: also_paths test assumed ontology data; fixed in tests/smoke_tests.php.
 - [ ] Keep `172.16.2.31 tracks.stowers.org` in `/etc/hosts` through IT's DNS changes
+- [~] **Close out the move checklist (Sofia, 11-24).** notes/MOVE_SITE_TO_OWN_ADDRESS.md was last edited 11-11
+      and never ticked after move day. Seen live 11-24: link_prefix "/" + Turnstile on (3 sites), /moop/ -> 308,
+      host robots.txt without /moop/, Planosphere guard renamed 00-, no /moop/ links on the 3 home pages.
+      PROVEN 11-24: (a) security rules, all 3 sites, real files: config/, logs/, metadata/, organisms/*.sqlite,
+      data/genomes/ not served; a .php in images/, data/, docs/ does not run, control in the root does.
+      (b) tracks: only simrbase has remote tracks (cuttingclass/planosphere: tracks server off, 0 remote);
+      a public visitor's remote track streams through the proxy from an outside address (206).
+      smedgd: targets FINAL (Sofia 11-24) -> docs/nginx/moop-smedgd.conf now 301 + answers smedgd.org/www;
+      ROOT: install it (cp to /etc/nginx/conf.d/, chmod 644, restorecon, nginx -t, reload). smedgd.org is at
+      easyDNS URL forwarding (-> Planosphere HOME, path kept, no https): ask whoever holds easyDNS to point
+      smedgd.org + www A records at 161.129.22.133. STILL OPEN: the "Verify after the switch"
+      walk (render_compare's 52 pages ran OK 11-24 -- covers most of it); README + docs/INSTALL.md say nothing
+      about serving a site at its own address (link_prefix "/"). Then tick the file. **S-M**
+- [ ] **SECURITY (found 11-24): code and notes folders are served to the internet.** A .php placed in scripts/,
+      tests/, vendor/, lib/, includes/ RUNS from a URL on all 3 sites (probed with a real file); notes/*.md,
+      CLAUDE.md, README.md, composer.json/.lock, vendor/composer/installed.json download (9 notes name internal
+      172.16 addresses). 12 scripts/tests have no CLI-only guard -- incl. strip_auto_public_access.php and
+      adopt_archived_gene_sets.php -- and are safe from the web only because $argv is missing there (they die
+      before writing): safe by accident. DONE 11-24: CLI-only line in all 15 (CLAUDE.md §8b) + smoke test
+      fails CI on a missing one (proven red). STILL TO DO: deny those paths in the guard template (docs/nginx/moop-security.conf
+      -> scripts/nginx_site_guard.sh, root reload; setup-check probe for one of them) + a CLI guard line in every
+      script. TALK (what of docs/ is meant to be public?), then **S-M (root)**
 
 ## 1. Wrong or surprising answers — fix first
 - [ ] **IMPORTANT (Sofia, 11-24): are ALL Nematostella RNA-seq tracks visible to PUBLIC visitors?** Someone
@@ -36,6 +64,14 @@ Order of work, and why:
       assembly's groups, each track's access level, the JBrowse config served to PUBLIC, the tracks-proxy
       path (remote tracks on tracks.stowers.org), and the token per file. Phone = maybe a cached session or
       the internal Wi-Fi. **M**
+      11-24 FIRST PASS: as PUBLIC (admin's view-as-PUBLIC preview) GCA_033964005.1 serves 1,326 of 1,373 tracks;
+      the 47 hidden are all access_level COLLABORATOR in the track sheet: Gibson Lab "hox shRNA knockdown"
+      (32 expression + 14 aligned reads) and the "TCSv2 genes" gene-model track. GCF_932526225.1: 1 of 1.
+      Remote tracks stream to an outside address through the proxy (206). ASK SOFIA: were the hox knockdown
+      tracks meant to be public (published?) -- if yes, change access_level in the sheet and re-sync.
+      Sofia's example foxA "WT_48hpf_2" (+/-, reads, both foxAp4 combos): PUBLIC, listed for public, and every
+      file streams to an outside address with no login (11-24). Still to do: a real outside browser (phone
+      off Wi-Fi) opening one; ask the reporter WHICH track and from where.
 - [x] **ID search is case-sensitive, and the lowercase search returns 2 rows.** — DONE 11-19: menu bar ignores case; search shows the typed ID's row (gene OR transcript), one row. `SMED30003001` works;
       `smed30003001` returns both the transcript `SMED30003001` and the gene `gene-SMED30003001`.
       Expected: case shouldn't matter, and one ID should give one result (or a clear "gene + its
@@ -371,3 +407,8 @@ Planosphere
       All · In situ images · Movies · Stage panels (the kinds present), counts on each; the page already
       takes `?kind=movie` from a link but has no control for it. Then the Planosphere menu can link to the
       gallery with Movies picked (item above). **S**
+- [ ] **PHP warning in the request metrics (found 11-24): "Undefined array key ts", lib/request_metrics.php:271**
+      (the costly-requests-by-address tally). Shows in every `php tests/smoke_tests.php` run. Real log rows
+      always carry ts (parsed at line 217), so probably a smoke-test row built without it -- check which test
+      feeds it, then either give the fixture a ts or make line 271 tolerate a row without one (and say which
+      in the commit). Not user-visible; it is noise that could hide a real warning. **S**

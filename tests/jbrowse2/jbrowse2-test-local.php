@@ -1,4 +1,5 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }   // never run from a URL (CLAUDE.md §8b)
 /**
  * Local test page - Access via http://127.0.0.1:8888/jbrowse2-test-local.php
  * This version is designed to work with the PHP dev server on port 8888

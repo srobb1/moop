@@ -1,4 +1,5 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit("CLI only\n"); }   // never run from a URL (CLAUDE.md §8b)
 /**
  * Baseline harness for the four hierarchy walkers.
  * Run BEFORE and AFTER the consolidation; the two outputs must be byte-identical.
