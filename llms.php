@@ -44,6 +44,9 @@ $tag_md .= "\nChecks -- each compares the gene with the human gene it is NAMED a
          . "appear only on ISO names (sim~ also on ISM); tree and the oma marks can follow any name.\n";
 foreach ($tag_key['support'] as [$c, $words, $text]) $tag_md .= "- `$c` ($words) $text\n";
 $tag_md .= "\nThe last character of a check: " . implode('; ', array_map(fn($m) => "`$m[0]` $m[1]", $tag_key['marks'])) . ".\n";
+$tag_md .= "\nOne name per gene: the evidence of all its isoforms is pooled and the name comes from the isoform whose\n"
+         . "evidence won (not always the longest; a curator's chosen isoform if there is one). The gene and every isoform\n"
+         . "carry that same name, so do not read an isoform's name as evidence about that isoform alone.\n";
 $tag_md .= "\nStrong: ISO with nothing against it. Moderate: ISO with one check against it (sim~, sim-, pthrC, treeC), or\n"
          . "ISS|rbh with no tie. Weak: ISO with two or more against it; any other ISS; any ISM.\n";
 $tag_md = rtrim($tag_md);

@@ -74,6 +74,12 @@ $code = fn(string $c): string => '<code class="text-nowrap">' . htmlspecialchars
     </ol>
   </div></div>
 
+  <h2 class="h5 fw-semibold mb-3"><?= t('One name per gene, from one isoform') ?></h2>
+  <div class="card shadow-sm mb-4"><div class="card-body p-4">
+    <p class="small mb-2"><?= t('The evidence from all of a gene\'s isoforms is pooled, and the rules are applied once for the whole gene. The name comes from the isoform whose evidence won: for example, the one with the best match to the human protein. That is not always the longest isoform.') ?></p>
+    <p class="small mb-0"><?= t('That one name is then given to the gene and to every one of its isoforms, so all transcripts of a gene carry the same name, even an isoform that on its own would have matched less well, or matched another gene. Where a curator chose an isoform for a gene, the name is taken from that one.') ?></p>
+  </div></div>
+
   <h2 class="h5 fw-semibold mb-3"><?= t('How much to trust a name') ?></h2>
   <div class="card shadow-sm mb-4"><div class="card-body p-4">
     <ul class="small mb-0">
