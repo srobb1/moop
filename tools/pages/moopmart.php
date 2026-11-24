@@ -15,7 +15,11 @@
       <?= help_modal_trigger('mm-help', '', 'What MOOPmart does') ?>
         <?= page_purpose('Export annotation data or sequences.', '', false, false) ?>
     </div>
-    <?= tool_page_blurb('moopmart') ?>
+    <?php /* Page explainer (work list H, 2026-11-24), in place of the Tools-menu blurb, which said
+             "table" only: what you can add, named, and that sequences come out too. The steps are
+             in the (i) beside the title (mm-help), so they are not repeated here. Always shown --
+             not tied to the menu_blurbs setting -- and written as a literal so the i18n scan sees it. */ ?>
+    <div class="tool-page-blurb"><?= t('Build a table of genes and add annotations such as GO terms, orthologs, KEGG pathways or protein domains — or download their sequences.') ?></div>
   </div>
 
   <?php

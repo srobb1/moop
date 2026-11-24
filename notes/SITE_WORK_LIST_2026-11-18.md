@@ -23,6 +23,7 @@ Order of work, and why:
       new names (`.php` in images/ blocked, control ran). Old internal `172.16.2.52/moop/` now loads unstyled.
 - [x] IT: planosphere public DNS -> 161.129.22.133 (11-19 evening); Planosphere Phase B run: 0 folder links
       (was 38), tool links -> simrbase.stowers.org, guard identical + probe blocked. Internal DNS: Sofia says fine.
+- [x] DONE 11-24 (90f61eb0): scripts/render_compare.php works again since the sites moved to their own names (public_url host resolved to this machine's IP; public view = admin's "view as PUBLIC" preview, past Turnstile).
 - [x] smedgd.stowers.org (alias of planosphere) showed the Red Hat test page -> 302 to Planosphere's SmedGD
       page (/etc/nginx/conf.d/moop-smedgd.conf; staged in /home/smr/move_day/nginx/). Make it 301 once settled.
 - [x] CI red since 53162efc: also_paths test assumed ontology data; fixed in tests/smoke_tests.php.
@@ -126,10 +127,10 @@ Planosphere
 - [x] **Example search terms** DONE 11-20 — chosen from the data (moop_curated_examples(), lib/home_examples.php, the same system as the home page): the most-curated gene (Smed: EU296635 = sFRP-1) under its other IDs, and the three most-curated papers. Click fills the box (Anatomy also runs it). Cached; never shows crosswalk rows the viewer may not see.
 - [x] DONE 11-20: Rosetta Stone page 0.96 s -> 0.01 s and every Smed gene page ~0.5 s faster: `SELECT DISTINCT source FROM map` (3.7M rows) ran on each load; now cached on the file's date (moop_crosswalk_sources_present()).
 - [x] DONE (checked 11-24: page rewritten, links to the Rosetta Stone as "Which gene is my ID?"). **Neoblast cluster page (Planosphere)** — the "translate IDs" text is confusing; rewrite. **S**
-- [x] DONE 11-20 (D): "New to this?" section in the ⓘ (what an ontology is, why here, the 🔬/🧬 icons, PLANA vs GO); a new NAME still to talk about. **Ontology Browser help:** an (i) with more text — it's about genes and the terms they're tagged
+- [x] DONE 11-20 (D): "New to this?" section in the ⓘ (what an ontology is, why here, the 🔬/🧬 icons, PLANA vs GO). NAME DONE 11-24 (2e5817ca): "Anatomy & Gene Function", subtitle "Find genes by anatomy term or GO term" + a note on where the terms come from (PLANA by hand from papers, GO by computer); Planosphere menu label renamed too; URL unchanged. **Ontology Browser help:** an (i) with more text — it's about genes and the terms they're tagged
       with; maybe a clearer name; a picture of the microscope icon explaining what it means. Written
       for someone new to the site and to tools like this. **M** (name = TALK)
-- [~] 11-20 (H): gene-list side DONE (type first, then only the sources in the organisms picked; OMA reference species written out; types renamed BLAST homologs + Reciprocal best hits). LEFT: same for the output side ("Annotation types to include in TSV") + a page explainer. **MOOPmart:** the two annotation selectors (gene-list builder, output builder) are too long to
+- [x] 11-20 (H): gene-list side DONE (type first, then only the sources in the organisms picked; OMA reference species written out; types renamed BLAST homologs + Reciprocal best hits). Output side DONE 11-24 (70dfce32): 11 closed type rows, readable source names, find box, only in-scope sources ticked/sent (wide layout had up to 370 empty columns); long + wide downloads tested. Explainer DONE 11-24: one line under the title ("Build a table of genes and add annotations such as GO terms, orthologs, KEGG pathways or protein domains — or download their sequences."); the steps stay in the (i). **MOOPmart:** the two annotation selectors (gene-list builder, output builder) are too long to
       scroll — needs a search/grouped picker; and new text explaining the page. **TALK, then L**
 - [ ] **Manage Annotations: 13 saves report success even when the file was not written** (found 11-20) --
       every `saveJsonFile()` in `admin/manage_annotations.php` except the display-label one ignores its
@@ -141,7 +142,7 @@ Planosphere
 
 ## 6. AI guide (llms.txt) and the API
 - [x] DONE (checked 11-24: opening paragraph says what the site holds + who sees what). **llms.txt overview:** what SIMRbase is for, and what MOOP means. **S**
-- [x] DONE 11-24: help topic gene-names + llms.txt section, one key moop_naming_tag_key() (lib/functions_display.php), checked against all 1.67M tagged genes. **Key for the naming tags** in descriptions — `[ISO|1to1|sim+|pthr+|tree+|hog]`,
+- [x] DONE 11-24 (95d11637 + 9a5ca6a6, which adds: one name per gene, from the isoform whose evidence won): help topic gene-names + llms.txt section, one key moop_naming_tag_key() (lib/functions_display.php), checked against all 1.67M tagged genes. **Key for the naming tags** in descriptions — `[ISO|1to1|sim+|pthr+|tree+|hog]`,
       `[ISS|rbh|smed]` — so an assistant can tell a strong 1:1 ortholog from a weak similarity hit. **S**
 - [ ] **Are we missing good questions?** Review the help page's task list against what people
       actually ask; add tasks. **M**
