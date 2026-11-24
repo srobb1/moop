@@ -5456,6 +5456,62 @@ ok($_cli_missing === [], 'every PHP file in scripts/ and tests/ refuses to run f
    . ($_cli_missing ? ' -- missing: ' . implode(', ', $_cli_missing) : ''));
 
 // ----------------------------------------------------------------------------
+group('BLAST jobs: saved files are BLAST\'s bytes; a dead worker reads "failed", never "running"');
+require_once "$BASE/lib/blast_jobs.php";
+$_bj = sys_get_temp_dir() . '/moop_bj_' . getmypid();
+@mkdir($_bj, 0777, true);
+$_cfg = ConfigManager::getInstance();
+$_rp = new ReflectionProperty($_cfg, 'config'); $_rp->setAccessible(true);
+$_saved = $_rp->getValue($_cfg);
+$_c = $_saved; $_c['cache_path'] = $_bj; $_rp->setValue($_cfg, $_c);
+
+// The page's download files: exactly the text BLAST produced -- no indentation, no CRLF (the
+// old hidden-<div> + form-post round trip added both).
+$_txt = "BLASTP 2.16.0+\n\nQuery= q1\n";
+$_id = blast_job_store_page_result(['pairwise' => $_txt, 'tabular' => "# qseqid\nq1\th1\n", 'output' => '<?xml?>'], ['organism' => 'O']);
+ok(blast_job_valid_id($_id), 'a page result gets a 32-hex id');
+$_f = blast_job_file($_id, 'txt');
+ok($_f !== null && file_get_contents($_f['path']) === $_txt, 'the TXT download is byte for byte what BLAST wrote');
+ok(preg_match('/^blast_results_\d{4}-\d\d-\d\d\.txt$/', $_f['filename'] ?? '') === 1, 'download keeps the page\'s file name');
+ok(blast_job_available_formats($_id) === ['txt', 'tsv', 'xml'], 'all three formats offered');
+ok(blast_job_file($_id, 'exe') === null && blast_job_file('../../etc', 'txt') === null, 'unknown format / malformed id -> nothing');
+$_id2 = blast_job_store_page_result(['pairwise' => 'x', 'tabular' => '', 'output' => 'y'], []);
+ok(blast_job_available_formats($_id2) === ['txt', 'xml'], 'a TSV BLAST did not produce is absent, not an empty file');
+
+// The job states, with no worker process at all.
+[$_jid, $_jdir] = blast_job_create(['client' => 'c1']);
+file_put_contents("$_jdir/request.json", '{}');
+ok(blast_job_state($_jid)['state'] === 'starting', 'just submitted, no worker yet -> starting');
+ok(blast_jobs_active_for('c1') === [$_jid] && blast_jobs_active_for('c2') === [], 'an unfinished job counts against its own client only');
+$_lk = fopen("$_jdir/worker.lock", 'c'); flock($_lk, LOCK_EX);
+ok(blast_job_state($_jid)['state'] !== 'failed', 'worker holding its lock -> alive (waiting/running)');
+flock($_lk, LOCK_UN); fclose($_lk);   // the worker "dies": the kernel drops its lock
+$_m = json_decode(file_get_contents("$_jdir/meta.json"), true); $_m['created'] -= BLAST_JOB_START_GRACE + 5;
+file_put_contents("$_jdir/meta.json", json_encode($_m));
+ok(blast_job_state($_jid)['state'] === 'failed', 'worker gone, no result, past the grace -> failed (never stuck "running")');
+ok(blast_jobs_active_for('c1') === [], 'a dead job no longer blocks its client');
+blast_job_save_failure($_jdir, 'bad');
+ok(blast_job_state($_jid) ['state'] === 'failed' && blast_job_file($_jid, 'txt') === null, 'a failed job serves no files');
+
+// The 24-hour sweep: old folders go, fresh ones and live workers stay.
+touch("$_jdir", time() - BLAST_JOB_KEEP_SECONDS - 10);
+touch(blast_job_dir($_id2), time() - BLAST_JOB_KEEP_SECONDS - 10);
+$_lk = fopen(blast_job_dir($_id2) . '/worker.lock', 'c'); flock($_lk, LOCK_EX);
+ok(blast_jobs_sweep() === 1 && !is_dir($_jdir) && is_dir(blast_job_dir($_id2)) && is_dir(blast_job_dir($_id)),
+   'sweep deletes only old folders, never one whose worker is alive');
+flock($_lk, LOCK_UN); fclose($_lk);
+ok(blast_query_limit_error(str_repeat(">s\nMKT\n", 10)) === '', 'query limits: 10 sequences pass');
+ok(str_contains(blast_query_limit_error(str_repeat(">s\nMKT\n", 11)), 'at most 10'), 'query limits: 11 sequences refused, saying the limit');
+ok(blast_query_limit_error(str_repeat('A', 100000)) === '' && blast_query_limit_error(str_repeat('A', 100001)) !== '',
+   'query limits: 100,000 letters pass, one more is refused (bare sequence, no header)');
+ok(blast_query_limit_error(">a long header that is not sequence " . str_repeat('x', 200000) . "\nMKT") === '',
+   'query limits: header text is not counted as sequence');
+ok(blast_program_presets('blastn-short')['evalue'] === '1000' && blast_program_presets('blastp') === [],
+   'blastn-short presets (E 1000, filter off) shared by page and API; others none');
+$_rp->setValue($_cfg, $_saved);
+exec('rm -rf ' . escapeshellarg($_bj));
+
+// ----------------------------------------------------------------------------
 echo "\n" . str_repeat('-', 60) . "\n";
 echo "Smoke tests: $PASS passed, $FAIL failed\n";
 if ($FAIL > 0) {

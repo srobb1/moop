@@ -556,6 +556,12 @@ AATGCGTCCACAACAGTTATCAATCAA',
     // that then crashed the page.
     'blast_max_output_mb'    => 5,    // larger results are refused with a reason (PHP memory)
     'blast_max_hits'         => 1000, // Maximum Hits ceiling; bigger searches belong on BLAST+ locally
+    // One search's query, on the BLAST page AND api/v1/blast.php (blast_query_limit_error()).
+    // Grouping is cheaper than separate runs (5 queries: 1.6 s vs 2.6 s blastp, 17.7 vs 32 s tblastn,
+    // 2026-11-24), but a whole transcriptome pasted in would hold the queue until blast_max_runtime
+    // kills it. Bigger jobs belong on BLAST+ locally with the downloadable FASTA.
+    'blast_max_query_seqs'    => 10,
+    'blast_max_query_letters' => 100000,
 
     // ======== PRIMER3 TOOL PATHS ========
     // Same convention as blast_tools above: bare name means "on the system PATH",
@@ -788,7 +794,7 @@ AATGCGTCCACAACAGTTATCAATCAA',
         'api/v1/go_term_genes.php', 'api/v1/region.php', 'api/v1/orthologs.php',
         'api/v1/domain_genes.php', 'api/v1/pathway_genes.php', 'api/v1/gene_annotations.php', 'api/v1/sequences.php',
         'api/v1/search.php', 'api/v1/human_genes.php', 'api/v1/nearby_genes.php', 'api/v1/anatomy_genes.php',
-        'api/v1/expression_genes.php',
+        'api/v1/expression_genes.php', 'api/v1/blast.php',
     ],
 
     // ======== CLOUDFLARE TURNSTILE (bot protection) ========

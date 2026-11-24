@@ -59,6 +59,15 @@ $title  = $config->getString('siteTitle', 'MOOP');
 $api    = fn(string $path) => moop_public_url('api/v1/' . $path);
 $page   = fn(string $path) => moop_public_url($path);
 
+// Choosing a BLAST program: the same "when" advice the BLAST page shows under its program menu
+// (blast_programs()), so the agent and the person read one text.
+require_once __DIR__ . '/lib/blast_functions.php';
+$blast_choice = '';
+foreach (blast_programs() as $key => $p) {
+    $blast_choice .= "- `$key`: {$p['query']} query, {$p['db']} database (" . ($p['db'] === 'Protein' ? '`protein`' : '`transcript`, `cds`, `genome`')
+                   . "). {$p['when']}\n";
+}
+
 echo <<<TXT
 # {$title}
 
@@ -160,6 +169,20 @@ person would:
 - [Download a file]({$api('download.php?organism={organism}&assembly={assembly}&gene_set={gene_set}&filename=protein.aa.fa')}): a whole FASTA or GFF file. Take these links from the catalog rather than building them.
 - [Genome region]({$api('region.php?organism={organism}&assembly={assembly}&seqname={scaffold}&start={start}&end={end}')}): a piece of the genome sequence; `strand=-` for the reverse complement. Gene records give the coordinates.
 
+## BLAST
+
+BLAST runs in the background, in the same queue as the BLAST page: submit, then check back.
+
+- [Submit]({$api('blast.php')}): POST (or GET for a short query) `organism`, `database` (`protein`, `transcript`, `cds` or `genome` -- a wrong one lists what this gene set has), `program` (`blastp`, `blastx`, `blastn`, `megablast`, `blastn-short` for primers and other short DNA, `tblastn`, `tblastx`) and `query` (FASTA). `assembly` and `gene_set` when the organism has more than one (a 300 lists them; for `genome` only the assembly matters). Optional `evalue` (default 1e-3) and `max_hits` (default 50). Put up to 10 sequences (100,000 letters) in ONE job: one run of 5 is about twice as fast as 5 runs. Answers 202 with a `job` id and `check_back_seconds`.
+- [Status and result]({$api('blast.php?job={job}')}): `state` is starting, waiting (with `position_in_line`), running, done or failed (with `error`). Poll no more often than `check_back_seconds`. When done: per query the top hits (`top=` up to 50; each with identity, length, E-value, bit score, coordinates, and for gene-set databases the `gene` and its `gene_page`) and `downloads`. `format=md` gives a Markdown table.
+- Downloads: `downloads.txt` (the alignments), `downloads.tsv` (one line per hit) and `downloads.xml` -- the very files the BLAST page gives a person, kept 24 hours. Offer these links to the person; do not rewrite them in another format.
+- To BLAST a gene from this site against another organism, fetch its sequence with the sequences call (`type=protein`) and submit that FASTA unchanged as `query` -- all its proteins in one job. For orthologs already computed, the orthologs call is faster and says ortholog or only similar; BLAST gives similarity, not orthology.
+Which program -- match the query to the database, then the question:
+
+{$blast_choice}- A protein from another species: `blastp` against `protein`. A DNA sequence from another species: `blastx` against `protein` (finds more than `blastn`). Its gene in a genome without gene models: `tblastn` against `genome`. A primer or any DNA under ~30 bases: `blastn-short`. A sequence from the same species: `blastn` (or `megablast`, faster, near-identical only).
+- A wrong pairing is refused before it runs, with the programs that fit.
+- One unfinished job per person or address at a time: a second submit gets 429 with the job to wait for.
+
 ## Ontologies and GO
 
 - [Search terms]({$api('ontology_search.php?o=GO&q={text}')}): find ontology terms by name or ID (GO, PLANA, ...; `o=GO,PLANA` for several).
@@ -169,7 +192,7 @@ person would:
 ## Not in the API -- send the person to the page
 
 - [Search]({$page('tools/search.php')}): the same keyword search, for a person to browse and filter.
-- [BLAST]({$page('tools/blast.php')}): sequence similarity search (queued; runs in the browser).
+- [BLAST]({$page('tools/blast.php')}): the same BLAST for a person, with the alignments drawn.
 - [Gene page]({$page('tools/parent.php?organism={organism}&uniquename={id}')}): the gene, for a person to read; the gene record links to it.
 
 ## The tag at the end of a description

@@ -224,6 +224,7 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Old SmedGD mk4 IDs in the Rosetta Stone (Sofia, 11-24):** if we can get the file that maps old SmedGD (mk4.) IDs to current genes, add it to the Rosetta Stone ID translator so people can paste these old IDs. First: find the mapping file (old server / $GENOMES / SmedGD dump). **M**
 - [x] DONE 11-23 (root installed; checked 11-24: /bats -> 301 -> bat-genomes page). **🔴 Old SIMRbase links cited in papers (11-23) — TABLE BUILT, ROOT TO INSTALL:** metadata/legacy_redirects.json
       (73 rules: the Drupal dump url_alias table + the System Monitor outside-404 list; all 2,185 old addresses tested -> 301 -> 17 pages, all 200). Tested on a
       private nginx: every old address -> its page, attack paths 444, MOOP's own paths untouched. Builder gained
@@ -269,7 +270,7 @@ Planosphere
 - [ ] **Agent API: Primer Maker AND Primer BLAST (the primer checker) too (Sofia, 11-24):** after the BLAST endpoint,
       same shape (submit -> job id -> poll, small limits). Each new endpoint also gets: its AI-page question(s),
       its llms.txt entry, and rate_limit_heavy. **M each**
-- [ ] **Agent API: run BLAST politely (Sofia, 11-23):** api/v1 endpoint so an AI agent can submit a BLAST and
+- [ ] **BLAST part BUILT 11-24 (api/v1/blast.php + lib/blast_jobs.php + scripts/blast_job.php; Primer Maker + Primer BLAST still to do).** Background worker in the same blast_queue; page AND API save TXT/TSV/XML in {cache}/blast_jobs/<id> (24 h) and serve the same files (page downloads were NOT BLAST's bytes: TXT had template indentation, all three CRLF from the form post -- fixed). Measured: 5 queries in one run 1.6 s vs 2.6 s (blastp), 17.7 vs 32 s (tblastn genome), cold = warm -> limit 10 seqs / 100k letters per job, 1 active job per client. **Agent API: run BLAST politely (Sofia, 11-23):** api/v1 endpoint so an AI agent can submit a BLAST and
       collect the result -- through the SAME blast_queue.php queue (flock, bounded, never stuck), submit returns a
       job id + "check back in N s", poll endpoint, small per-client limits (one running job, max query length /
       sequences / max_target_seqs), results as JSON + Markdown. Document it in llms.txt + help topic ai-assistants.

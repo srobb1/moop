@@ -68,7 +68,8 @@
                         required
                         placeholder="<?= t('Enter sequence in FASTA format or plain text') ?>"
                     ><?= htmlspecialchars($search_query) ?></textarea>
-                    <small class="form-text text-muted"><?= t_markup('%s format (with >) or plain sequence.', gloss('fasta', 'FASTA')) ?></small>
+                    <small class="form-text text-muted"><?= t_markup('%s format (with >) or plain sequence.', gloss('fasta', 'FASTA')) ?>
+                        <?= t('Up to %s sequences and %s letters per search.', number_format(max(1, $config->getInt('blast_max_query_seqs', 10))), number_format(max(1, $config->getInt('blast_max_query_letters', 100000)))) ?></small>
                     <div class="mt-2 d-flex gap-2">
                         <button type="button" class="btn btn-sm fw-semibold text-white btn-moop-teal" onclick="loadSampleSequence('protein')">
                             <i class="fa fa-flask me-1"></i><?= t('Sample Protein') . "\n" ?>
@@ -395,36 +396,26 @@
                     <?= help_modal_trigger('blast-results-help', '', 'Help: reading and tuning your results') ?>
                 </div>
                 <div class="card-body">
+                    <?php $blast_dl = $blast_job_id !== '' ? blast_job_available_formats($blast_job_id) : []; ?>
+                    <?php if ($blast_dl): ?>
+                    <?php /* Plain links to the files BLAST wrote, saved on the server for 24 hours
+                             (lib/blast_jobs.php) -- the same files api/v1/blast.php hands out. */ ?>
                     <div class="mb-4 d-flex gap-2 flex-wrap">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsText();">
-                            <i class="fa fa-download"></i> <?= t('Download as TXT') . "\n" ?>
-                        </button>
-                        <?php if (!empty($blast_result['tabular'])): ?>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsTabular();">
-                            <i class="fa fa-table"></i> <?= t('Download as TSV') . "\n" ?>
-                        </button>
+                        <?php foreach (['txt' => ['fa-download', t('Download as TXT')], 'tsv' => ['fa-table', t('Download as TSV')], 'xml' => ['fa-code', t('Download as XML')]] as $fmt => [$icon, $label]): ?>
+                        <?php if (in_array($fmt, $blast_dl, true)): ?>
+                        <a class="btn btn-sm btn-outline-secondary" href="<?= htmlspecialchars(blast_job_download_url($blast_job_id, $fmt)) ?>">
+                            <i class="fa <?= $icon ?>"></i> <?= $label . "\n" ?>
+                        </a>
                         <?php endif; ?>
-                        <?php if (!empty($blast_result['output'])): ?>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="downloadResultsXML();">
-                            <i class="fa fa-code"></i> <?= t('Download as XML') . "\n" ?>
-                        </button>
-                        <?php endif; ?>
+                        <?php endforeach; ?>
                     </div>
+                    <?php elseif (!empty($blast_result['success'])): ?>
+                    <div class="alert alert-warning mb-4"><?= t('The results are shown below, but the download files could not be saved on the server. This has been logged.') ?></div>
+                    <?php endif; ?>
 
                     <?= getToggleQuerySectionScript() ?>
                     <?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? [], $blast_linkout_context ?? []) ?>
 
-                    <?php if (isset($blast_result['pairwise'])): ?>
-                        <div id="pairwiseOutput" style="display: none;">
-                            <?= htmlspecialchars($blast_result['pairwise']) ?>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($blast_result['tabular'])): ?>
-                        <div id="tabularOutput" style="display: none;"><?= htmlspecialchars($blast_result['tabular']) ?></div>
-                    <?php endif; ?>
-                    <?php if (!empty($blast_result['output'])): ?>
-                        <div id="xmlOutput" style="display: none;"><?= htmlspecialchars($blast_result['output']) ?></div>
-                    <?php endif; ?>
                 </div>
             </div>
         <?php endif; ?>

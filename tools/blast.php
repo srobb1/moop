@@ -25,6 +25,7 @@
 
 include_once __DIR__ . '/tool_init.php';
 include_once __DIR__ . '/../lib/blast_functions.php';
+include_once __DIR__ . '/../lib/blast_jobs.php';
 include_once __DIR__ . '/../lib/functions_errorlog.php';
 include_once __DIR__ . '/../lib/blast_results_visualizer.php';
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
@@ -72,22 +73,9 @@ $_POST['task'] = $programs[$blast_program_selected]['task'] ?? '';
 // flag, and an explicit flag beats the task's own default -- which is exactly how the
 // old '10' here defeated blastn-short's built-in E-value of 1000 and cut a real 20nt
 // primer from 566 hits to 26.
-if ($blast_program_selected === 'blastn-short') {
-    // 1000 is blastn-short's own default (`blastn -help`). A 20nt perfect match scores
-    // ~40 bits, which is not significant at E=10 against a whole gene set, so the real
-    // hit is discarded. Short queries need the threshold RAISED, not lowered.
-    $_POST['evalue']    = $_POST['evalue']    ?? '1000';
-    $_POST['word_size'] = $_POST['word_size'] ?? '7';
-    $_POST['gapopen']   = $_POST['gapopen']   ?? '5';
-    $_POST['gapextend'] = $_POST['gapextend'] ?? '2';
-    // Low-complexity filtering OFF, matching blastn-short upstream (-dust no). Left on,
-    // a primer containing a simple repeat is masked to nothing and returns ZERO hits
-    // with no warning: ATATATATATATATATATAT goes 202 -> 0, poly-A 2236 -> 0.
-    //
-    // This used to read `if (!isset($_POST['filter_seq'])) unset($_POST['filter_seq']);`
-    // which is a no-op in both directions -- it unset the key only when it was already
-    // absent. The comment claimed filtering was off by default; nothing made it so.
-    unset($_POST['filter_seq']);
+foreach (blast_program_presets($blast_program_selected) as $opt => $val) {
+    if ($opt === 'filter') { if (!$val) unset($_POST['filter_seq']); continue; }   // the checkbox: absent = off
+    $_POST[$opt] = $_POST[$opt] ?? (string) $val;
 }
 
 // Get the assembly parameter from URL/POST (could be name or accession)
@@ -161,6 +149,7 @@ $search_error  = null;
 $blast_result  = null;
 $blast_options = [];
 $blast_hit_ids = [];  // Hit uniquenames, used for targeted feature_coords lookup
+$blast_job_id  = '';  // the saved result files the download links point at (lib/blast_jobs.php)
 
 // If search is submitted
 if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
@@ -224,8 +213,11 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
         } else {
             // Validate sequence
             $validation = validateBlastSequence($search_query);
+            $too_big    = blast_query_limit_error($search_query);
             if (!$validation['valid']) {
                 $search_error = "Invalid sequence: " . $validation['error'];
+            } elseif ($too_big !== '') {
+                $search_error = $too_big;   // same limits as api/v1/blast.php
             } else {
                 // If validation passed, ensure sequence has header
                 $query_with_header = $search_query;
@@ -280,6 +272,13 @@ if (!empty($search_query) && !empty($blast_db) && !empty($selected_source)) {
                         ]);
                     }
                 } elseif (!empty($blast_result['output'])) {
+                    // Save the TXT/TSV/XML exactly as BLAST wrote them; the download links serve
+                    // these files -- the same ones api/v1/blast.php hands out.
+                    $blast_job_id = blast_job_store_page_result($blast_result, [
+                        'organism' => $selected_organism, 'assembly' => $selected_assembly,
+                        'gene_set' => $selected_gene_set, 'database' => $selected_db_obj['seq_type'] ?? '',
+                        'program'  => $blast_program_selected,
+                    ]);
                     // Extract hit IDs for targeted feature_coords lookup — avoids loading
                     // entire (potentially 80MB+) coords file into the 128MB memory limit.
                     preg_match_all('/<Hit_id>(.*?)<\/Hit_id>/', $blast_result['output'], $hit_id_matches);
@@ -406,6 +405,7 @@ $data = [
     'blast_db' => $blast_db,
     'search_error' => $search_error,
     'blast_result'          => $blast_result,
+    'blast_job_id'          => $blast_job_id,
     'blast_linkout_context' => $blast_linkout_context,
     'evalue' => $evalue,
     'evalue_custom' => $evalue_custom,

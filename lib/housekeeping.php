@@ -612,6 +612,10 @@ function housekeeping_clean_temp_files() {
         }
     }
 
+    // Saved BLAST results (page downloads + API jobs), kept 24 h -- lib/blast_jobs.php.
+    require_once __DIR__ . '/blast_jobs.php';
+    $deleted += blast_jobs_sweep();
+
     if ($deleted > 0) {
         error_log("MOOP housekeeping: cleaned up $deleted stale temp file(s)");
     }

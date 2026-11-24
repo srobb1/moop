@@ -35,6 +35,10 @@ $examples = [
     ['fa-users',        t('Gene family'),         t_markup('Which genes are in the same gene family as SMEDWI-1 (h1SMcG0013999), in %s and in related species?', $smed)],
     ['fa-question-circle', t('Where an ID is from'), t('Which organism, assembly and gene set does this ID come from: …')],
     ['fa-sign-out-alt', t('Secreted or membrane'), t('Which of these genes are predicted to make secreted or membrane proteins: …')],
+    // Added 2026-11-24 with api/v1/blast.php (tried on the live API: submit, poll, downloads).
+    ['fa-dna',          t('BLAST'),               t_markup('BLAST this protein against the %s proteins and give me the best hits with links to their gene pages, and the result files to download: …', $smed)],
+    // Sequences -> BLAST, tried live 11-24: Smed pcna (h1SMcG0023103) protein -> zebrafish pcna, 56% identity.
+    ['fa-exchange-alt', t('Same gene in another species'), t_markup('Take the protein of %s pcna (h1SMcG0023103) and BLAST it against the zebrafish proteins. Which zebrafish gene is the best hit?', $smed)],
     ['fa-download',     t('Download links'),      t_markup('Give me the download links for the %s genome, its proteins and its GFF.', $smed)],
 ];
 
@@ -144,7 +148,7 @@ $sample_prompt = $prompt_for($examples[6][2]);   // "Find the piwi genes in …"
       <div class="card h-100 shadow-sm help-topic-card">
         <div class="card-body p-3">
           <h3 class="h6 fw-semibold mb-1"><?= t('Some things need the web page') ?></h3>
-          <p class="text-muted small mb-0"><?= t('BLAST, Primer BLAST, keyword search and the genome browser run in your browser. The assistant can tell you which page to use and what to put in it.') ?></p>
+          <p class="text-muted small mb-0"><?= t('Primer BLAST, keyword search and the genome browser run in your browser. The assistant can tell you which page to use and what to put in it.') ?></p>
         </div>
       </div>
     </div>

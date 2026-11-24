@@ -103,45 +103,6 @@ function updateDatabaseList() {
     }
 }
 
-function blastDownloadPost(content, filename, type) {
-    const date = new Date().toISOString().slice(0, 10);
-    const form = document.createElement('form');
-    form.method = 'POST';
-    const site = (typeof sitePath !== 'undefined') ? sitePath : ('/' + window.location.pathname.split('/')[1]);
-    form.action = site + '/api/blast_download.php';
-
-    const fields = { content, filename: filename.replace('{date}', date), type };
-    for (const [name, value] of Object.entries(fields)) {
-        const inp = document.createElement('input');
-        inp.type = 'hidden';
-        inp.name = name;
-        inp.value = value;
-        form.appendChild(inp);
-    }
-
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
-}
-
-function downloadResultsText() {
-    const div = document.getElementById('pairwiseOutput');
-    if (!div) { alert(moopT('No BLAST results to download')); return; }
-    blastDownloadPost(div.textContent, 'blast_results_{date}.txt', 'txt');
-}
-
-function downloadResultsTabular() {
-    const div = document.getElementById('tabularOutput');
-    if (!div) { alert(moopT('No tabular results to download')); return; }
-    blastDownloadPost(div.textContent, 'blast_results_{date}.tsv', 'tsv');
-}
-
-function downloadResultsXML() {
-    const div = document.getElementById('xmlOutput');
-    if (!div) { alert(moopT('No XML results to download')); return; }
-    blastDownloadPost(div.textContent, 'blast_results_{date}.xml', 'xml');
-}
-
 function initializeBlastManager() {
     const form = document.getElementById('blastForm');
 

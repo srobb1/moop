@@ -623,6 +623,30 @@ function extractSequencesFromBlastDb($blast_db, $sequence_ids, $organism = '', $
 }
 
 /**
+ * '' if a query is within the site's limits (blast_max_query_seqs / blast_max_query_letters),
+ * else the sentence saying which and by how much. ONE rule for the BLAST page and api/v1/blast.php.
+ */
+function blast_query_limit_error(string $fasta): string {
+    $config      = ConfigManager::getInstance();
+    $max_seqs    = max(1, $config->getInt('blast_max_query_seqs', 10));
+    $max_letters = max(1, $config->getInt('blast_max_query_letters', 100000));
+    $fasta = trim(str_replace("\r", '', $fasta));
+    if ($fasta !== '' && $fasta[0] !== '>') $fasta = ">q\n$fasta";
+    $records = preg_split('/^>/m', $fasta, -1, PREG_SPLIT_NO_EMPTY);
+    $letters = 0;
+    foreach ($records as $r) $letters += strlen(preg_replace('/[^A-Za-z*]/', '', substr($r, strcspn($r, "\n"))));
+    if (count($records) > $max_seqs) {
+        return t_plain('You sent %s sequences; one search takes at most %s. Split them into several searches, or run BLAST+ on your own computer with the downloadable FASTA.',
+                       number_format(count($records)), number_format($max_seqs));
+    }
+    if ($letters > $max_letters) {
+        return t_plain('Your query is %s letters long; one search takes at most %s. Split it into several searches, or run BLAST+ on your own computer with the downloadable FASTA.',
+                       number_format($letters), number_format($max_letters));
+    }
+    return '';
+}
+
+/**
  * Validate BLAST sequence input
  * Checks if input is valid FASTA format
  * 
@@ -1075,6 +1099,19 @@ function reverseComplement(string $seq): string
 {
     return strrev(strtr(strtoupper($seq), ['A' => 'T', 'T' => 'A', 'C' => 'G', 'G' => 'C']));
 }
+}
+
+/**
+ * Options a program sets for itself unless the person chose otherwise -- today only
+ * blastn-short's, which must be EXPLICIT flags (an explicit -evalue 10 once beat its built-in
+ * 1000 and cut a real 20 nt primer from 566 hits to 26). One list for the BLAST page and
+ * api/v1/blast.php. 'filter' => false: low-complexity filtering off, as upstream (-dust no) --
+ * left on, ATATATATATATATATATAT goes 202 -> 0 hits with no warning.
+ */
+function blast_program_presets(string $program): array
+{
+    if ($program !== 'blastn-short') return [];
+    return ['evalue' => '1000', 'word_size' => 7, 'gapopen' => 5, 'gapextend' => 2, 'filter' => false];
 }
 
 /**
