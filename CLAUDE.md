@@ -782,5 +782,6 @@ long-standing entries here had already been fixed, and one contradicted §10 of 
 **Done — do not re-open:** HTTPS + redirect (2026-11-11; this machine's own addresses stay on http), security headers, session cookie attributes + per-site cookie names (`moop_session_start()`, `moop_cookie_name()`), admin API CSRF, BLAST temp cleanup, vendored libraries/SRI, users.json move. Details and reasons: `docs/CLAUDE_HISTORY.md` §Done.
 
 ⚠️ **This machine's own addresses stay on http** (127.0.0.1, ::1, 172.16.2.52): the System
-Monitor's fpm-status, `render_compare.php` and the page audit call `http://127.0.0.1/` — a 301
-there breaks them silently. Only the site's hostname redirects to https.
+Monitor's fpm-status and the page audit call `http://127.0.0.1/` — a 301 there breaks them
+silently. (`render_compare.php` asks for a site with a `public_url` by NAME, connected to this
+machine's IP, and its public viewer is the admin's "view as PUBLIC" preview, past Turnstile — 2026-11-24.) Only the site's hostname redirects to https.
