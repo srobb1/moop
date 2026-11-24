@@ -372,6 +372,7 @@ $data = [
     // a count instead, at the same MOOP_RETRIEVAL_SHOW_MAX_IDS).
     'uniquenames' => empty($retrieval_summary) ? $uniquenames : [],
     'found_ids' => $found_ids,
+    'retrieval_ran' => !empty($sequence_ids_provided),   // IDs only pre-filled (a link): nothing looked up yet
     'retrieval_summary' => $retrieval_summary ?? null,
     'show_max_ids' => MOOP_RETRIEVAL_SHOW_MAX_IDS,
     'should_scroll_to_results' => $should_scroll_to_results,

@@ -69,7 +69,7 @@
             <input type="hidden" name="context_gene_set" value="<?= htmlspecialchars($context_gene_set ?? '') ?>">
             <input type="hidden" name="context_group" value="<?= htmlspecialchars($context_group) ?>">
             <input type="hidden" id="expandedUniqueames" value="<?= htmlspecialchars(json_encode($uniquenames ?? [])) ?>">
-            <input type="hidden" id="foundIds" value="<?= htmlspecialchars(json_encode($found_ids ?? [])) ?>">
+            <input type="hidden" id="foundIds" value="<?= htmlspecialchars(json_encode($found_ids ?? [])) ?>" data-ran="<?= !empty($retrieval_ran) ? '1' : '0' ?>">
 
             <!-- Step 1: Select organism -->
             <div class="card mb-3 shadow-sm">
@@ -335,9 +335,6 @@ echo help_modal(
 <script>
 // Make sample feature IDs available to JavaScript
 window.sampleFeatureIds = <?= json_encode(array_values($examples['ids'])) ?>;
-
-// Pass found IDs to JavaScript for coloring
-window.foundIds = <?= json_encode($found_ids ?? []) ?>;
 
 // Pass parent-to-children mapping for display
 window.parentToChildren = <?= json_encode($parent_to_children ?? []) ?>;

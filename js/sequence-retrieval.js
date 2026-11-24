@@ -118,31 +118,23 @@ function initializeSequenceRetrieval(options = {}) {
             return;
         }
 
-        // Get found IDs from server (IDs that were actually returned by blastdbcmd)
+        // Green = found, red = not found -- but only once a retrieval has RUN. IDs pre-filled by a
+        // link (a term page's "Get the sequences") have not been looked up, and painting them all
+        // red read as "none of these exist" (Sofia, 2026-11-24). Until then, neutral grey.
+        const retrievalRan = !!(foundIdsField && foundIdsField.dataset.ran === '1');
+        const chipColor = (isFound) => !retrievalRan ? '#e9ecef' : (isFound ? '#d4edda' : '#f8d7da');
+
+        // Found IDs: the server's list (#foundIds), taken from the FASTA headers it returned -- the one
+        // source. Until 2026-11-24 an empty list fell back to window.foundIds (the same data again) and
+        // then to scraping every ">token" out of the whole page's text, which could count any ">" on
+        // the page as a found ID.
         let foundIds = [];
-        if (foundIdsField && foundIdsField.value) {
+        if (retrievalRan && foundIdsField && foundIdsField.value) {
             try {
                 foundIds = JSON.parse(foundIdsField.value);
             } catch (e) {
-                // If field has JSON, try to use it
                 foundIds = [];
             }
-        }
-        // Also check window.foundIds as fallback
-        if (!Array.isArray(foundIds) || foundIds.length === 0) {
-            foundIds = (window.foundIds && Array.isArray(window.foundIds)) ? window.foundIds : [];
-        }
-        
-        // If still empty, try to extract from displayed FASTA sequences on the page
-        if (foundIds.length === 0) {
-            // Look for FASTA headers (lines starting with >) in the sequence display areas
-            const fastaRegex = />([^\s]+)/g;
-            const displayContent = document.body.textContent;
-            let match;
-            while ((match = fastaRegex.exec(displayContent)) !== null) {
-                foundIds.push(match[1]);
-            }
-            foundIds = [...new Set(foundIds)]; // Remove duplicates
         }
         
         // First check if server sent expanded uniquenames (after form submission)
@@ -183,7 +175,7 @@ function initializeSequenceRetrieval(options = {}) {
             if (processedIds.has(id)) return;
             
             const isFound = foundIds.some(foundId => foundId === id || foundId.startsWith(id + ':') || foundId.startsWith(id + ' '));
-            const bgColor = isFound ? '#d4edda' : '#f8d7da';  // Green=found, Red=not found
+            const bgColor = chipColor(isFound);
             
             displayHtml += `<div style="padding: 4px 0;">
                 <span style="background: ${bgColor}; padding: 2px 6px; border-radius: 3px; font-weight: bold;">${escapeHtml(id)}</span>`;
@@ -196,7 +188,7 @@ function initializeSequenceRetrieval(options = {}) {
                     if (processedIds.has(childId)) return;
                     
                     const childFound = foundIds.some(foundId => foundId === childId || foundId.startsWith(childId + ':') || foundId.startsWith(childId + ' '));
-                    const childBgColor = childFound ? '#d4edda' : '#f8d7da';
+                    const childBgColor = chipColor(childFound);
                     
                     displayHtml += `<div style="padding: 4px 0; margin-left: 20px; border-left: 2px solid #ccc; padding-left: 8px;">
                         <span style="background: ${childBgColor}; padding: 2px 6px; border-radius: 3px;">${escapeHtml(childId)}</span>
@@ -214,7 +206,7 @@ function initializeSequenceRetrieval(options = {}) {
             if (processedIds.has(id)) return;
             
             const isFound = foundIds.some(foundId => foundId === id || foundId.startsWith(id + ':') || foundId.startsWith(id + ' '));
-            const bgColor = isFound ? '#d4edda' : '#f8d7da';
+            const bgColor = chipColor(isFound);
             
             displayHtml += `<div style="padding: 4px 0;">
                 <span style="background: ${bgColor}; padding: 2px 6px; border-radius: 3px;">${escapeHtml(id)}</span>
