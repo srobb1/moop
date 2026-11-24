@@ -228,6 +228,14 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **KEGG "Genes" links -> MOOPmart instead of Annotation Search (Sofia 11-24).** Today "Genes in this gene
+      set" / "Genes in this organism" (gene page Pathways) and "Genes" (gene-set/organism KEGG tables,
+      includes/kegg_pathways_table.php:49) open tools/search.php?q=mapNNNNN -- one row per transcript, the pathway
+      hit only. MOOPmart gives a gene list WITH chosen columns: add KEGG Orthology (the KO = which box on the map),
+      gene name/description, maybe pathway. Already there: MOOPmart prefill ?annotation=&annotation_source=
+      &annotation_columns[] (tools/moopmart.php:85-93), the GO term page already links its counts to MOOPmart;
+      KO data loaded (Nvec: "KEGG Orthology (eggNOG)", 7,066). Then update tour step 5 + its kegg-list screenshot.
+      Check: gene vs transcript rows (pathway is on mRNAs). **S-M**
 - [ ] **Firefox makes the site look ugly (Sofia 11-24) -- find out why.** All checks so far use Chrome (puppeteer).
       First: Sofia says which pages/what looks wrong (screenshot), Firefox version + OS; then compare computed styles
       Chrome vs Firefox (puppeteer can drive Firefox) on home, gene page, a tool page. **M**
