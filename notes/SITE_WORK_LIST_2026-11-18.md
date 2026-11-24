@@ -228,6 +228,10 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Walkthrough step 7: fix the genome browser screenshot (Sofia 11-24, do 11-25).** images/pages/tour/jbrowse.png.
+      Live version = track drawer closed + loc re-entered. Ask Sofia what is still wrong (hard-reload first); likely:
+      empty space under the view, track label over the gene, cursor left in the location box. JBrowse is in
+      #jb-iframe; never shrink the window (it collapses) -- crop. **S**
 - [ ] **Link to the tour from more places (Sofia 11-24).** UPDATE 11-24: two pages now -- short `tour` (6 steps,
       home "two-minute tour") and long `gene-walkthrough` (12 steps, noggin-1), linked to each other. Next: a Help
       landing card for the walkthrough (tools/pages/help/topics.php; a card with `href` opens a NEW TAB today --
