@@ -1,4 +1,10 @@
-# DRAFT — "A quick tour of SIMRbase", extended (2026-11-24)
+# "Follow one gene through the site" (page gene-walkthrough), 2026-11-24
+
+PUBLISHED 11-24 as its own content page `gene-walkthrough` (title "Follow one gene through the site"; the intro on the
+live page says "Twelve steps, about fifteen minutes" and links back to the short tour). The short 6-step `tour` was
+restored as it was (the home page calls it "a two-minute tour") with a "Want more?" link here.
+
+(Original heading: DRAFT — "A quick tour of SIMRbase", extended)
 
 Replaces the body of the content page `tour` (metadata/pages/tour.json, Manage Pages) once Sofia approves it.
 Steps 1–2 and the closing "Questions?" are the existing text, unchanged. Steps 3–6 are rewritten around

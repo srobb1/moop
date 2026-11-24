@@ -228,7 +228,10 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
-- [ ] **Link to the tour from more places (Sofia 11-24).** Today page.php?p=tour is linked only from the home
+- [ ] **Link to the tour from more places (Sofia 11-24).** UPDATE 11-24: two pages now -- short `tour` (6 steps,
+      home "two-minute tour") and long `gene-walkthrough` (12 steps, noggin-1), linked to each other. Next: a Help
+      landing card for the walkthrough (tools/pages/help/topics.php; a card with `href` opens a NEW TAB today --
+      needs same-tab for on-site pages; show only if moop_page_for_visitor() finds the page, other sites lack it). Today page.php?p=tour is linked only from the home
       page's Getting started panel (lib/home_panel.php) and the What changed page. NOT from Help, the Help menu,
       About, the footer, or the main menu. Candidates: Help menu / Help page top ("New here? Take the tour"),
       footer, and the first-visit welcome. Pick 1-2, do not scatter it everywhere. **S**
