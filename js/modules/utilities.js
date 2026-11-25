@@ -247,3 +247,15 @@ function updateSequenceTypeInfo(message, containerElementId, messageElementId) {
     }
 }
 
+
+// Navbar "view as public" switch (includes/toolbar.php, admins only): flipping it submits
+// its little form. Was onchange="this.form.submit()" until 2026-11-25; delegated so it needs
+// nothing from the page (utilities.js is loaded on every page that draws the navbar).
+// (Guarded: tests/js_smoke_tests.js loads this file where there is no document.)
+if (typeof document !== 'undefined') {
+    document.addEventListener('change', function (e) {
+        if (e.target && e.target.id === 'viewAsToggle' && e.target.form) {
+            e.target.form.submit();
+        }
+    });
+}

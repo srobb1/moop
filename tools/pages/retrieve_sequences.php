@@ -117,10 +117,10 @@
                     <?php // Always rendered: sequence-retrieval.js refills it when the selected source changes. ?>
                     <div id="sampleIdsRow" class="mt-2 d-flex gap-2 align-items-center flex-wrap"<?= empty($examples['ids']) ? ' style="display:none;"' : '' ?>>
                         <small class="text-muted"><?= t('Examples:') ?> <span id="sampleIdsText"><?= htmlspecialchars(implode(' · ', $examples['ids'])) ?></span></small>
-                        <button type="button" class="btn btn-sm fw-semibold text-white ms-auto btn-moop-teal" onclick="loadSampleIds()">
+                        <button type="button" class="btn btn-sm fw-semibold text-white ms-auto btn-moop-teal" id="loadSampleIdsBtn">
                             <i class="fa fa-bookmark me-1"></i><?= t('Load examples') . "\n" ?>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearFeatureIds()">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clearFeatureIdsBtn">
                             <i class="fa fa-times me-1"></i><?= t('Clear') . "\n" ?>
                         </button>
                     </div>

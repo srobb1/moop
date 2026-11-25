@@ -116,10 +116,14 @@ $(document).ready(function () {
         $('#download-selected-btn').prop('disabled', count === 0);
     }
 
-    // Gene-set header collapse toggle (manual — avoids Bootstrap eating checkbox clicks).
-    // The NAME opens the group like the chevron does (2026-11-19: it used to be the checkbox's
-    // label, so clicking it selected every file instead); only the checkbox selects.
-    $(document).on('click', '.gs-header', function (e) {
+    // Group headers (organism, assembly, gene set) open and close by hand, not by Bootstrap's
+    // data-bs-toggle: Bootstrap listens for that click on document in the CAPTURE phase, before
+    // the checkbox inside the header could stop it, so ticking or unticking an organism or
+    // assembly box also opened or closed the group. The old onclick="event.stopPropagation()" on
+    // those boxes never prevented it (found 2026-11-25); only the gene-set level, already manual,
+    // behaved. The NAME opens the group like the chevron does (2026-11-19: it used to be the
+    // checkbox's label, so clicking it selected every file instead); only the checkbox selects.
+    $(document).on('click', '#download-tree [data-collapse-target]', function (e) {
         if ($(e.target).closest('input').length) return;
         const targetId = $(this).data('collapse-target');
         if (targetId) $(targetId).collapse('toggle');

@@ -160,7 +160,7 @@ if (count($lb_langs) > 1 && !defined('MOOP_ADMIN_PAGE')): $lb_now = moop_current
             <div class="form-check form-switch m-0 d-flex align-items-center"
                  title="<?= $va_previewing ? 'Back to admin view' : 'View as public -- see this page as a visitor who is not logged in' ?>">
               <input class="form-check-input" type="checkbox" role="switch" id="viewAsToggle"
-                     <?= $va_previewing ? 'checked' : '' ?> onchange="this.form.submit()">
+                     <?= $va_previewing ? 'checked' : '' ?>>
               <label class="visually-hidden" for="viewAsToggle"><?= $va_previewing ? 'Back to admin view' : 'View as public' ?></label>
             </div>
           </form>

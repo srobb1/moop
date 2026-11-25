@@ -364,7 +364,7 @@ function generateHitsSummaryTable($results, $query_num = 1) {
             $coverage_color = '#dc3545'; // Red - low coverage
         }
         
-        $html .= '<tr style="cursor: pointer;" onclick="const elem = document.getElementById(\'query-' . $query_num . '-hit-' . $hit_num . '\'); elem.scrollIntoView({behavior: \'smooth\', block: \'start\'}); highlightHitElement(elem);">';
+        $html .= '<tr style="cursor: pointer;" data-blast-goto="query-' . $query_num . '-hit-' . $hit_num . '" data-blast-highlight="1">';
         $html .= '<td><strong>' . $hit_num . '</strong></td>';
         $clean_id = cleanBlastHitId($hit['id']);
         $html .= '<td>';
@@ -782,7 +782,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
     
     // Search Parameters Section (moved up, collapsible)
     $html .= '<div style="background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px;">';
-    $html .= '<div style="padding: 15px; cursor: pointer; background: #f8f9fa; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;" onclick="document.getElementById(\'search-params\').style.display = document.getElementById(\'search-params\').style.display === \'none\' ? \'block\' : \'none\'; this.querySelector(\'i\').style.transform = document.getElementById(\'search-params\').style.display === \'none\' ? \'rotate(0deg)\' : \'rotate(180deg)\';">';
+    $html .= '<div style="padding: 15px; cursor: pointer; background: #f8f9fa; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;" data-blast-toggle="search-params">';
     $html .= '<h6 style="margin: 0; color: #333;"><i class="fa fa-cog"></i> ' . t('Search Parameters') . '</h6>';
     $html .= '<i class="fa fa-chevron-down" style="transition: transform 0.2s; transform: rotate(0deg);"></i>';
     $html .= '</div>';
@@ -942,7 +942,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         $best_evalue = $query['total_hits'] > 0 ? $query['hits'][0]['best_evalue'] : PHP_FLOAT_MAX;
         $best_evalue_display = $best_evalue < PHP_FLOAT_MAX ? sprintf('%.2e', $best_evalue) : 'N/A';
         
-        $html .= '<tr style="cursor: pointer;" onclick="document.getElementById(\'query-' . $query_num . '\').scrollIntoView({behavior: \'smooth\', block: \'start\'});">';
+        $html .= '<tr style="cursor: pointer;" data-blast-goto="query-' . $query_num . '">';
         $html .= '<td><strong>' . $query_num . '</strong></td>';
         $html .= '<td><small>' . $query_name . '</small></td>';
         $html .= '<td>' . $query['query_length'] . ' ' . $unit . '</td>';
@@ -965,7 +965,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
         $html .= '<div id="query-' . $query_num . '" style="background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 20px; scroll-margin-top: 20px;">';
         
         // Query header (collapsible)
-        $html .= '<div id="query-' . $query_num . '-header" style="padding: 15px; cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;" onclick="toggleQuerySection(\'query-' . $query_num . '-content\', this);">';
+        $html .= '<div id="query-' . $query_num . '-header" style="padding: 15px; cursor: pointer; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;" data-blast-toggle="query-' . $query_num . '-content">';
         $html .= '<h5 style="margin: 0;"><i class="fa fa-dna"></i> Query ' . $query_num . ': ' . $query_name . '</h5>';
         $html .= '<i class="fa fa-chevron-down" style="transition: transform 0.2s; transform: rotate(0deg);"></i>';
         $html .= '</div>';
@@ -1022,7 +1022,7 @@ function generateCompleteBlastVisualization($blast_result, $query_seq, $blast_pr
 /**
  * Generate HSP visualization with connecting lines
  * Displays HSPs as colored segments with lines connecting adjacent HSPs
- * Original MOOP implementation using HTML/CSS flexbox and inline JavaScript
+ * Original MOOP implementation using HTML/CSS flexbox (click behaviour in js/modules/blast-results.js)
  * (not Canvas or SVG as used in other implementations)
  * 
  * @param array $results Parsed BLAST results
@@ -1061,31 +1061,7 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
     $html .= '.hsp-row:hover { background-color: rgba(100, 150, 255, 0.1); }';
     $html .= '</style>';
     
-     // Add JavaScript for hit navigation and highlighting
-     $html .= '<script>';
-     $html .= 'function jumpToHit(hitIndex, queryNum) {';
-     $html .= '  if (queryNum === undefined) queryNum = 1;';
-     $html .= '  const hitId = "query-" + queryNum + "-hit-" + (hitIndex + 1);';
-     $html .= '  const element = document.getElementById(hitId);';
-     $html .= '  if (element) {';
-     $html .= '    element.scrollIntoView({ behavior: "smooth", block: "start" });';
-     $html .= '    highlightHitElement(element);';
-     $html .= '  }';
-     $html .= '}';
-     $html .= 'function highlightHitElement(element) {';
-     $html .= '  if (!element) return;';
-     $html .= '  element.classList.remove("hit-highlighted");';
-     $html .= '  void element.offsetWidth;';
-     $html .= '  element.classList.add("hit-highlighted");';
-     $html .= '  setTimeout(() => {';
-     $html .= '    element.classList.remove("hit-highlighted");';
-     $html .= '  }, 3500);';
-     $html .= '}';
-     $html .= 'function highlightHit(hitIndex, queryNum) {';
-     $html .= '  if (queryNum === undefined) queryNum = 1;';
-     $html .= '  jumpToHit(hitIndex, queryNum);';
-     $html .= '}';
-     $html .= '</script>';
+    // Click behaviour (jump to a hit, highlight it): js/modules/blast-results.js
     
     $html .= '<div style="margin-top: 15px; margin: 0 auto; width: 1000px; text-align: center;">';
 
@@ -1154,7 +1130,7 @@ function generateHspVisualizationWithLines($results, $blast_program = 'blastn', 
         
         // Build HTML row
         $hit_clean_id = cleanBlastHitId($hit['id']);
-        $html .= '<div class="hsp-row" style="cursor: pointer;" onclick="jumpToHit(' . $hit_idx . ', ' . $query_num . '); highlightHit(' . $hit_idx . ', ' . $query_num . ');">';
+        $html .= '<div class="hsp-row" style="cursor: pointer;" data-blast-goto="query-' . $query_num . '-hit-' . $hit_num . '" data-blast-highlight="1">';
         $html .= '<div class="hsp-label" title="' . htmlspecialchars($hit['subject']) . '">' . htmlspecialchars($hit_clean_id) . '</div>';
         $html .= '<div class="hsp-segments">';
 
@@ -1499,25 +1475,3 @@ function generateQueryScaleTicks($query_length) {
     return $output;
 }
 
-/**
- * JavaScript function for toggling query sections (embedded in PHP output)
- * Called onclick from query section headers
- */
-function getToggleQuerySectionScript() {
-    return <<<'JS'
-<script>
-function toggleQuerySection(contentId, headerElement) {
-    const content = document.getElementById(contentId);
-    const chevron = headerElement.querySelector('i');
-    
-    if (content.style.display === 'none') {
-        content.style.display = 'block';
-        chevron.style.transform = 'rotate(180deg)';
-    } else {
-        content.style.display = 'none';
-        chevron.style.transform = 'rotate(0deg)';
-    }
-}
-</script>
-JS;
-}

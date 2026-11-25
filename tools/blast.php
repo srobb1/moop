@@ -365,7 +365,8 @@ $display_config = [
         moop_url_base() . '/js/modules/collapse-handler.js',
         moop_url_base() . '/js/modules/scope-selector.js',
         moop_url_base() . '/js/blast-manager.js',
-        moop_url_base() . '/js/modules/blast-short-nudge.js'
+        moop_url_base() . '/js/modules/blast-short-nudge.js',
+        moop_url_base() . '/js/modules/blast-results.js'   // results view clicks
     ],
     'inline_scripts' => [
         "const previouslySelectedDb = '" . addslashes($blast_db) . "';",

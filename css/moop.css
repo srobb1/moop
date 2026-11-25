@@ -140,6 +140,10 @@
   border-color: var(--moop-tool-hover);
   color: #fff;
 }
+/* BLAST's "Try a sample: protein · nucleotide" -- quiet links in the site colour, so they are not
+   mistaken for the search button (they were teal buttons until 2026-11-25). */
+.blast-sample-link { color: var(--moop-main-dark); vertical-align: baseline; }
+.blast-sample-link:hover, .blast-sample-link:focus-visible { color: var(--moop-tool-hover); }
 
 /* An optional, secondary control on a tool page — BLAST's "Advanced Options" collapse.
    Outline in the tool teal rather than Bootstrap's grey: it is a real affordance, and

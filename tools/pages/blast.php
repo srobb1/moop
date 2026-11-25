@@ -70,13 +70,13 @@
                     ><?= htmlspecialchars($search_query) ?></textarea>
                     <small class="form-text text-muted"><?= t_markup('%s format (with >) or plain sequence.', gloss('fasta', 'FASTA')) ?>
                         <?= t('Up to %s sequences and %s letters per search.', number_format(max(1, $config->getInt('blast_max_query_seqs', 10))), number_format(max(1, $config->getInt('blast_max_query_letters', 100000)))) ?></small>
-                    <div class="mt-2 d-flex gap-2">
-                        <button type="button" class="btn btn-sm fw-semibold text-white btn-moop-teal" onclick="loadSampleSequence('protein')">
-                            <i class="fa fa-flask me-1"></i><?= t('Sample Protein') . "\n" ?>
-                        </button>
-                        <button type="button" class="btn btn-sm fw-semibold text-white btn-moop-teal" onclick="loadSampleSequence('nucleotide')">
-                            <i class="fa fa-flask me-1"></i><?= t('Sample Nucleotide') . "\n" ?>
-                        </button>
+                    <?php // Quiet links, not buttons: visitors took the old teal "Sample" buttons for the
+                          // search button and replaced their own sequence with the sample (2026-11-25). ?>
+                    <div class="mt-1 small text-muted">
+                        <?= t('No sequence to hand? Try a sample:') . "\n" ?>
+                        <button type="button" class="btn btn-link btn-sm p-0 align-baseline blast-sample-link" data-sample="protein"><?= t('protein') ?></button>
+                        &middot;
+                        <button type="button" class="btn btn-link btn-sm p-0 align-baseline blast-sample-link" data-sample="nucleotide"><?= t('nucleotide') ?></button>
                     </div>
                 </div>
             </div>
@@ -98,7 +98,7 @@
                     <div id="sequenceTypeInfo" class="sequence-type-info mb-2" style="display:none;">
                         <small id="sequenceTypeMessage"></small>
                     </div>
-                    <select id="blast_program" name="blast_program" class="form-select" onchange="updateDatabaseList(); applyBlastProgramDefaults(this.value);">
+                    <select id="blast_program" name="blast_program" class="form-select">
                         <?php
                         // Rendered from blast_programs(), the same array the help modal builds
                         // its cards from. Written out six times by hand before, so the option
@@ -203,7 +203,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <label for="evalue" class="form-label adv-short-param"><strong><?= t('E-value Threshold') ?></strong></label>
-                                <select id="evalue" name="evalue" class="form-select" onchange="toggleEvalueCustom()">
+                                <select id="evalue" name="evalue" class="form-select">
                                     <option value="1000" <?= $evalue === '1000' ? 'selected' : '' ?>>1000 (short queries / primers)</option>
                                     <option value="10" <?= $evalue === '10' ? 'selected' : '' ?>>10</option>
                                     <option value="1" <?= $evalue === '1' ? 'selected' : '' ?>>1</option>
@@ -413,7 +413,6 @@
                     <div class="alert alert-warning mb-4"><?= t('The results are shown below, but the download files could not be saved on the server. This has been logged.') ?></div>
                     <?php endif; ?>
 
-                    <?= getToggleQuerySectionScript() ?>
                     <?= generateCompleteBlastVisualization($blast_result, $search_query, $blast_program, $blast_options ?? [], $blast_linkout_context ?? []) ?>
 
                 </div>

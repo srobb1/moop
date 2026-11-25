@@ -150,13 +150,11 @@ $clear_url   = moop_url_base() . '/tools/downloads.php';
       <!-- Organism header -->
       <div class="card-header d-flex align-items-center py-2 organism-header"
            style="cursor:pointer;"
-           data-bs-toggle="collapse"
-           data-bs-target="#<?= $org_id ?>">
+           data-collapse-target="#<?= $org_id ?>">
         <input type="checkbox"
                class="form-check-input me-2 flex-shrink-0 org-checkbox"
                id="cb-<?= $org_id ?>"
                data-org-id="<?= $org_id ?>"
-               onclick="event.stopPropagation()"
                title="<?= t('Select every file in this group') ?>">
         <span class="form-check-label fw-bold me-auto mb-0 user-select-none"
                style="cursor:pointer;">
@@ -182,14 +180,12 @@ $clear_url   = moop_url_base() . '/tools/downloads.php';
             <!-- Assembly header -->
             <div class="d-flex align-items-center px-2 rounded dl-asm-bar"
                  style="cursor:pointer; background:#d97706; color:white; padding-top:2px; padding-bottom:2px;"
-                 data-bs-toggle="collapse"
-                 data-bs-target="#<?= $asm_id ?>">
+                 data-collapse-target="#<?= $asm_id ?>">
               <input type="checkbox"
                      class="form-check-input me-2 flex-shrink-0 asm-checkbox"
                      id="cb-<?= $asm_id ?>"
                      data-org-id="<?= $org_id ?>"
                      data-asm-id="<?= $asm_id ?>"
-                     onclick="event.stopPropagation()"
                title="<?= t('Select every file in this group') ?>">
               <span class="form-check-label fw-semibold me-auto mb-0 user-select-none text-white"
                      style="cursor:pointer;">
@@ -227,7 +223,6 @@ $clear_url   = moop_url_base() . '/tools/downloads.php';
                          data-org-id="<?= $org_id ?>"
                          data-asm-id="<?= $asm_id ?>"
                          data-gs-id="<?= $gs_id ?>"
-                         onclick="event.stopPropagation()"
                title="<?= t('Select every file in this group') ?>">
                   <span class="form-check-label fw-semibold me-auto mb-0 user-select-none text-white"
                          style="cursor:pointer;">

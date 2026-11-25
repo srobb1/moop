@@ -226,18 +226,38 @@ function initializeBlastManager() {
         }
     }
     
-    // Toggle custom evalue input visibility
-    window.toggleEvalueCustom = function() {
-        const select = document.getElementById('evalue');
-        const customContainer = document.getElementById('evalue_custom_container');
-        if (select.value === 'custom') {
-            customContainer.style.display = 'block';
-            document.getElementById('evalue_custom').focus();
-        } else {
-            customContainer.style.display = 'none';
-            document.getElementById('evalue_custom').value = '';
-        }
-    };
+    // Custom E-value box shows only when "custom" is picked
+    const evalueSelect = document.getElementById('evalue');
+    if (evalueSelect) {
+        evalueSelect.addEventListener('change', function() {
+            const customContainer = document.getElementById('evalue_custom_container');
+            if (this.value === 'custom') {
+                customContainer.style.display = 'block';
+                document.getElementById('evalue_custom').focus();
+            } else {
+                customContainer.style.display = 'none';
+                document.getElementById('evalue_custom').value = '';
+            }
+        });
+    }
+
+    // Program dropdown: databases for the program, then its own default settings.
+    // Registered here, before blast-short-nudge.js adds its listener -- the same order the
+    // inline onchange had.
+    const programSelect = document.getElementById('blast_program');
+    if (programSelect) {
+        programSelect.addEventListener('change', function() {
+            updateDatabaseList();
+            applyBlastProgramDefaults(this.value);
+        });
+    }
+
+    // Sample sequence buttons (data-sample="protein" | "nucleotide")
+    document.querySelectorAll('button[data-sample]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            loadSampleSequence(this.dataset.sample);
+        });
+    });
 }
 
 // Scroll to the results when the page comes back with them. Never worked before: it looked
@@ -252,7 +272,7 @@ function autoScrollToResults() {
 
 // ── Program defaults and the blastn-short preset ─────────────────────────────────────
 // Was an inline <script> in tools/pages/blast.php until 2026-11-16 (CLAUDE.md §7: page logic
-// in a JS file, only PHP values inline). Called from the program dropdown's onchange.
+// in a JS file, only PHP values inline). Called from the program dropdown's change listener.
 // Globals from tools/blast.php's inline_scripts:
 //   blastShortPresetApplied -- whether the preset owns the advanced values (true when the
 //                              page comes back from a blastn-short search), so switching
@@ -345,6 +365,16 @@ function loadSampleSequence(type) {
     
     if (!queryField) {
         console.error('query field not found');
+        return;
+    }
+
+    // Never wipe a visitor's own sequence without asking (someone took the sample control for
+    // the search button and lost what they had pasted, 2026-11-25).
+    // Compare without whitespace: the textarea turns the sample's \r\n into \n.
+    const squash = v => String(v).replace(/\s+/g, '');
+    const current = squash(queryField.value);
+    const isSample = Object.values(sampleSequences || {}).some(s => squash(s) === current);
+    if (current !== '' && !isSample && !confirm(moopT('Replace your sequence with the sample?'))) {
         return;
     }
     

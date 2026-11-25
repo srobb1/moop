@@ -300,6 +300,18 @@ function loadSampleIds() {
     featureIds.focus();
 }
 
+// Example-ID buttons (were inline onclick until 2026-11-25)
+function wireSampleIdButtons() {
+    document.getElementById('loadSampleIdsBtn')?.addEventListener('click', loadSampleIds);
+    document.getElementById('clearFeatureIdsBtn')?.addEventListener('click', clearFeatureIds);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wireSampleIdButtons);
+} else {
+    wireSampleIdButtons();
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         const shouldScroll = typeof scrollToResults !== 'undefined' ? scrollToResults : false;
