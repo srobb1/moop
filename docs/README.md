@@ -1,202 +1,68 @@
-# MOOP Documentation
+# MOOP documentation
 
-**Last Updated:** February 18, 2026  
-**Organization:** Categorized by purpose (current, planning, overview)
+**Last updated:** 2026-11-25 (review: 22 outdated or duplicate docs moved to `archive/`, the
+security docs merged, the system overview cut to a short map). Every current doc is listed
+below; if a doc is not here, it is in `archive/` and is history, not instructions.
 
----
+Start with [overview/SYSTEM_OVERVIEW.md](overview/SYSTEM_OVERVIEW.md) -- one page on what the
+pieces are and which doc covers each. The working rules for changing the code are in
+`CLAUDE.md` at the repository root.
 
-## 🗺️ Quick Navigation
+## Set up, secure, maintain
 
-| I want to... | Go to... |
-|--------------|----------|
-| **Configure the system** | [current/admin/CONFIG_GUIDE.md](current/admin/CONFIG_GUIDE.md) |
-| **Manage permissions** | [current/admin/PERMISSIONS_GUIDE.md](current/admin/PERMISSIONS_GUIDE.md) |
-| **Understand security** | [current/admin/SECURITY_GUIDE.md](current/admin/SECURITY_GUIDE.md) |
-| **Help end users** | [current/user/USER_GUIDE.md](current/user/USER_GUIDE.md) |
-| **Learn about BLAST** | [current/features/BLAST_FLOW_CHART.md](current/features/BLAST_FLOW_CHART.md) |
-| **Use JBrowse2** | [JBrowse2/README.md](JBrowse2/README.md) |
-| **Integrate Galaxy tools** | [Galaxy/GALAXY_INTEGRATION.md](Galaxy/GALAXY_INTEGRATION.md) |
-| **Plan future features** | [planning/](planning/) |
-| **Get system overview** | [overview/SYSTEM_OVERVIEW.md](overview/SYSTEM_OVERVIEW.md) |
+| Doc | What it covers |
+|---|---|
+| [INSTALL.md](INSTALL.md) | A new host or site, step by step (then run `setup-check.php`) |
+| [SELINUX_AND_HARDENING.md](SELINUX_AND_HARDENING.md) | SELinux labels, permissions, the web-server no-exec guard |
+| [SETUP/PHP_VERSION_SAFETY.md](SETUP/PHP_VERSION_SAFETY.md) | Running on PHP 8.0 and getting ready for 8.3 |
+| [current/admin/CONFIG_GUIDE.md](current/admin/CONFIG_GUIDE.md) | How settings work (defaults + Site Configuration) |
+| [current/admin/PERMISSIONS_GUIDE.md](current/admin/PERMISSIONS_GUIDE.md) | Who can see which organisms and gene sets |
+| [current/admin/SECURITY_GUIDE.md](current/admin/SECURITY_GUIDE.md) | Logins, sessions, CSRF, the Content-Security-Policy, the guard, bot protection |
 
----
+## Data formats and sources
 
-## 📚 Documentation Structure
+| Doc | What it covers |
+|---|---|
+| [ORGANISM_SIDE_FILES.md](ORGANISM_SIDE_FILES.md) | The files beside each organism's database |
+| [CROSSWALK_FORMAT.md](CROSSWALK_FORMAT.md) | The Rosetta Stone ID translator's file |
+| [CLADE_HOMOLOGS_FORMAT.md](CLADE_HOMOLOGS_FORMAT.md) | Orthologs and gene families in related species |
+| [ONTOLOGIES.md](ONTOLOGIES.md) | PLANA, BSPO, ECO, GO: where they come from and how to refresh them |
+| [BLAST_LINKOUTS.md](BLAST_LINKOUTS.md) | Links from BLAST hits to other sites |
+| [current/features/BLAST_FLOW_CHART.md](current/features/BLAST_FLOW_CHART.md) | How a BLAST search runs |
+| [current/features/PHYLO_TREE_MANAGER.md](current/features/PHYLO_TREE_MANAGER.md) | The taxonomy tree (page parked) |
 
-```
-docs/
-├── README.md                          ← You are here
-│
-├── current/                           ← Production system docs
-│   ├── admin/
-│   │   ├── CONFIG_GUIDE.md           - System configuration
-│   │   ├── PERMISSIONS_GUIDE.md      - Access control
-│   │   └── SECURITY_GUIDE.md         - Security implementation
-│   ├── user/
-│   │   └── USER_GUIDE.md             - End user walkthrough
-│   ├── features/
-│   │   ├── BLAST_FLOW_CHART.md       - BLAST search system
-│   │   └── PHYLO_TREE_MANAGER.md     - Phylogenetic tree features
-│                                      (attribution lives in notes/THIRD_PARTY_LICENSES.md)
-│
-├── planning/                          ← Future features & ideas
-│   └── SEQUENCE_ALIGNER.md           - Galaxy UI integration (pending)
-│
-├── overview/                          ← High-level system docs
-│   ├── SYSTEM_OVERVIEW.md            - Complete system documentation
-│   ├── PRESENTATION.md               - Presentation outlines
-│   ├── GOALS.md                      - System goals & vision
-│   └── RESOURCE_PLANNING.md          - Infrastructure planning
-│
-├── Galaxy/                            ← Galaxy integration (COMPLETE)
-│   ├── GALAXY_INTEGRATION.md         - Setup & usage guide
-│   ├── GALAXY_INTEGRATION_STATUS.md  - Implementation status
-│   ├── GALAXY_INTEGRATION_PLAN.md    - Architecture details
-│   └── GALAXY_MAFFT_TEST.md          - Testing documentation
-│
-├── JBrowse2/                          ← Genome browser (COMPLETE)
-│   ├── README.md                     - Start here for JBrowse2
-│   ├── USER_GUIDE.md                 - For end users
-│   ├── ADMIN_GUIDE.md                - For administrators
-│   ├── DEVELOPER_GUIDE.md            - For developers
-│   ├── SETUP_NEW_ORGANISM.md         - Adding organisms
-│   ├── SYNTENY_AND_COMPARATIVE.md    - Comparative genomics
-│   ├── reference/                    - Track formats & API
-│   ├── technical/                    - Security & deployment
-│   └── workflows/                    - Google Sheets integration
-│
-└── SETUP/                             ← System installation
-    └── ...
-```
+## Genome browser (JBrowse 2)
 
----
+| Doc | What it covers |
+|---|---|
+| [JBrowse2/README.md](JBrowse2/README.md) | Start here |
+| [JBrowse2/ADMIN_GUIDE.md](JBrowse2/ADMIN_GUIDE.md) | Managing assemblies and tracks |
+| [JBrowse2/SETUP_NEW_ORGANISM.md](JBrowse2/SETUP_NEW_ORGANISM.md) | Adding an organism to the browser |
+| [JBrowse2/workflows/GOOGLE_SHEETS_WORKFLOW.md](JBrowse2/workflows/GOOGLE_SHEETS_WORKFLOW.md) | Registering tracks from the track sheet |
+| [JBrowse2/GENE_TRACK_INDEXES.md](JBrowse2/GENE_TRACK_INDEXES.md) | The gene track, coordinate files and search index (read before touching them) |
+| [JBrowse2/UPGRADING.md](JBrowse2/UPGRADING.md) | Upgrading the JBrowse app |
+| [JBrowse2/USER_GUIDE.md](JBrowse2/USER_GUIDE.md) | Using the browser |
+| [JBrowse2/DEVELOPER_GUIDE.md](JBrowse2/DEVELOPER_GUIDE.md) | How the browser integration is built |
+| [JBrowse2/technical/SECURITY.md](JBrowse2/technical/SECURITY.md) | Track access: signed tokens, the tracks server |
+| [JBrowse2/technical/TRACKS_SERVER_IT_SETUP.md](JBrowse2/technical/TRACKS_SERVER_IT_SETUP.md) | Setting up the tracks server (for IT) |
+| [JBrowse2/SYNTENY_AND_COMPARATIVE.md](JBrowse2/SYNTENY_AND_COMPARATIVE.md), [JBrowse2/reference/SYNTENY_TRACKS_GUIDE.md](JBrowse2/reference/SYNTENY_TRACKS_GUIDE.md) | Synteny tracks (plan: `notes/SYNTENY_PLAN.md`) |
+| [JBrowse2/reference/TRACK_FORMATS_REFERENCE.md](JBrowse2/reference/TRACK_FORMATS_REFERENCE.md), [JBrowse2/reference/API_REFERENCE.md](JBrowse2/reference/API_REFERENCE.md) | Track formats; the browser API endpoints |
 
-## 📖 Documentation by Audience
+## For visitors
 
-### For System Administrators
+- [current/user/USER_GUIDE.md](current/user/USER_GUIDE.md) -- using the site. (Most visitor help is
+  on the site itself: Help, and the info buttons on each page.)
 
-**Essential:**
-- [CONFIG_GUIDE.md](current/admin/CONFIG_GUIDE.md) - All configuration files
-- [PERMISSIONS_GUIDE.md](current/admin/PERMISSIONS_GUIDE.md) - Managing user access
-- [SECURITY_GUIDE.md](current/admin/SECURITY_GUIDE.md) - Security implementation
+## Galaxy (backend built, page not yet)
 
-**JBrowse2:**
-- [JBrowse2/ADMIN_GUIDE.md](JBrowse2/ADMIN_GUIDE.md) - Managing genome browser
-- [JBrowse2/SETUP_NEW_ORGANISM.md](JBrowse2/SETUP_NEW_ORGANISM.md) - Adding organisms
+- [Galaxy/GALAXY_INTEGRATION.md](Galaxy/GALAXY_INTEGRATION.md) -- start here;
+  [Galaxy/GALAXY_INTEGRATION_STATUS.md](Galaxy/GALAXY_INTEGRATION_STATUS.md) -- where it stopped;
+  [Galaxy/GALAXY_INTEGRATION_PLAN.md](Galaxy/GALAXY_INTEGRATION_PLAN.md),
+  [Galaxy/GALAXY_MAFFT_TEST.md](Galaxy/GALAXY_MAFFT_TEST.md),
+  [planning/SEQUENCE_ALIGNER.md](planning/SEQUENCE_ALIGNER.md) -- the alignment page it was for.
 
-**Galaxy:**
-- [Galaxy/GALAXY_INTEGRATION.md](Galaxy/GALAXY_INTEGRATION.md) - Galaxy setup
+## History
 
-### For End Users
-
-- [current/user/USER_GUIDE.md](current/user/USER_GUIDE.md) - Complete user walkthrough
-- [JBrowse2/USER_GUIDE.md](JBrowse2/USER_GUIDE.md) - Using genome browser
-
-### For Developers
-
-**Core System:**
-- [overview/SYSTEM_OVERVIEW.md](overview/SYSTEM_OVERVIEW.md) - Complete architecture
-- [current/admin/SECURITY_GUIDE.md](current/admin/SECURITY_GUIDE.md) - Security patterns
-
-**JBrowse2:**
-- [JBrowse2/DEVELOPER_GUIDE.md](JBrowse2/DEVELOPER_GUIDE.md) - Architecture & API
-- [JBrowse2/technical/SECURITY.md](JBrowse2/technical/SECURITY.md) - JWT & auth
-
-**Features:**
-- [current/features/BLAST_FLOW_CHART.md](current/features/BLAST_FLOW_CHART.md) - BLAST system
-- [current/features/PHYLO_TREE_MANAGER.md](current/features/PHYLO_TREE_MANAGER.md) - Taxonomy tree
-
-**Planning:**
-- [planning/SEQUENCE_ALIGNER.md](planning/SEQUENCE_ALIGNER.md) - Pending UI integration
-
-### For Presentations
-
-- [overview/PRESENTATION.md](overview/PRESENTATION.md) - Presentation outlines
-- [overview/SYSTEM_OVERVIEW.md](overview/SYSTEM_OVERVIEW.md) - Comprehensive overview
-- [overview/GOALS.md](overview/GOALS.md) - Vision & goals
-
----
-
-## ✅ Implementation Status
-
-### Production Features (Documented)
-
-| Feature | Documentation | Status |
-|---------|---------------|--------|
-| **Core System** | current/admin/ | ✅ Production |
-| **JBrowse2** | JBrowse2/ | ✅ Production |
-| **Galaxy Backend** | Galaxy/ | ✅ Production |
-| **BLAST Search** | current/features/ | ✅ Production |
-| **Phylo Tree** | current/features/ | ✅ Production |
-| **Permissions** | current/admin/ | ✅ Production |
-| **Security** | current/admin/ | ✅ Production |
-
-### Planned Features
-
-| Feature | Documentation | Status |
-|---------|---------------|--------|
-| **Sequence Aligner UI** | planning/SEQUENCE_ALIGNER.md | ⏳ Backend done, UI pending |
-
----
-
-## 📝 Documentation Standards
-
-### Categories
-
-- **current/** - Production system documentation (keep up-to-date)
-- **planning/** - Future features and ideas (move to current/ when implemented)
-- **overview/** - High-level system documentation (update quarterly)
-
-### Status Indicators
-
-- ✅ Complete and tested
-- ⚠️ In progress / needs testing
-- ⏳ Not started / needs implementation
-- 📋 Planning/design phase
-
-### Maintenance
-
-**When adding a feature:**
-1. Plan in `planning/` directory
-2. Implement feature
-3. Move doc to appropriate `current/` subdirectory
-4. Delete old planning doc
-5. Update this README
-
-**When removing a feature:**
-1. Delete from `current/` directory
-2. Update this README
-3. No need to archive (use git history)
-
----
-
-## 🔍 Finding Documentation
-
-**Search by keyword:**
-```bash
-cd /data/moop/docs
-grep -r "keyword" .
-```
-
-**List all docs:**
-```bash
-find /data/moop/docs -name "*.md" | sort
-```
-
-**Check recent changes:**
-```bash
-cd /data/moop/docs
-git log --oneline --all -- .
-```
-
----
-
-## 📦 External Resources
-
-- **JBrowse2 Official:** https://jbrowse.org/jb2/
-- **Galaxy Project:** https://galaxyproject.org/
-- **UseGalaxy.org:** https://usegalaxy.org/
-
----
-
-**Questions?** Start with the Quick Navigation table above or browse by category.
+- [CLAUDE_HISTORY.md](CLAUDE_HISTORY.md) -- the longer stories behind rules in `CLAUDE.md`.
+- [archive/](archive/README.md) -- outdated docs kept for the record.
+- Planning notes (work list, plans, notes for compute) are in `notes/`, not here.

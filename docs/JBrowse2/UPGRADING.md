@@ -129,7 +129,7 @@ immediately after upgrading, disabling plugins one at a time is the fastest way 
 
 ## Related
 
-- [Documentation index](_DOCUMENTATION_INDEX.md)
+- [JBrowse 2 docs](README.md)
 - [Admin guide](ADMIN_GUIDE.md) — tracks, assemblies, permissions
 - [Setting up a new organism](SETUP_NEW_ORGANISM.md)
 - [JBrowse2 release notes](https://jbrowse.org/jb2/docs/) — upstream

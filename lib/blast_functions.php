@@ -1097,7 +1097,14 @@ function moop_fasta_read_at($fh, array $entry, int $start, int $end): ?string
 if (!function_exists('reverseComplement')) {
 function reverseComplement(string $seq): string
 {
-    return strrev(strtr(strtoupper($seq), ['A' => 'T', 'T' => 'A', 'C' => 'G', 'G' => 'C']));
+    // The IUPAC ambiguity codes complement too (R=A/G <-> Y=C/T, K <-> M, B <-> V, D <-> H; S, W, N
+    // are their own complement). Until 2026-11-25 only A/C/G/T were swapped, so a minus-strand
+    // sequence from a genome that carries codes (bat consensus genomes, a Danio assembly) came
+    // back with e.g. R where the other strand has Y.
+    return strrev(strtr(strtoupper($seq), [
+        'A' => 'T', 'T' => 'A', 'C' => 'G', 'G' => 'C', 'U' => 'A',
+        'R' => 'Y', 'Y' => 'R', 'K' => 'M', 'M' => 'K', 'B' => 'V', 'V' => 'B', 'D' => 'H', 'H' => 'D',
+    ]));
 }
 }
 

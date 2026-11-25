@@ -180,6 +180,12 @@ $hits = $parsed['queries'][0]['hits'] ?? [];
 check('first hit: subject coverage adds up its own HSPs (overlap counted once)', 90.0, (float)($hits[0]['subject_cumulative_coverage_percent'] ?? -1));
 check('second hit: one HSP over the whole subject is 100%', 100.0, (float)($hits[1]['subject_cumulative_coverage_percent'] ?? -1));
 
+// Reverse complement: the IUPAC ambiguity codes complement too (fixed 2026-11-25; R stayed R).
+require_once dirname(__DIR__) . '/lib/blast_functions.php';
+check('reverse complement of plain DNA', 'NACGT', reverseComplement('acgtn'));
+check('reverse complement swaps IUPAC codes (R<->Y, K<->M, B<->V, D<->H; S, W, N unchanged)',
+      'NBDHVWSKMRYTT', reverseComplement('AARYKMSWBDHVN'));
+
 echo "\n";
 echo "passed: $pass   failed: $fail\n";
 exit($fail === 0 ? 0 : 1);

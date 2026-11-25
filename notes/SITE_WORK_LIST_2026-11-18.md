@@ -242,6 +242,9 @@ Planosphere
 - [x] DONE 11-25 (15969c4a). **Amber = attention color (Sofia 11-25):** --moop-attention-* + .btn-attention, Site Colors ->
       Attention (empty = MOOP amber, not tied to the main color); every amber use moved onto it (Expand column, MOOPmart
       prefill, stale chips, Primer Maker callout). Genome browser: amber "New window" button with a label.
+- [ ] **Login answers faster for an unknown username (found 11-25, docs review).** `login.php:58` runs
+      `password_verify()` only when the username exists, so timing could reveal which usernames exist. Fix:
+      verify against a dummy hash when the user is unknown (~3 lines + a test). Low risk, low effort. **S**
 - [ ] **For compute (found 11-25; Sofia: task for the week of 11-30): 73 identity lines treat a gene as a FAMILY.**
       | Gene | Identity line now | Should read |
       |---|---|---|
@@ -638,7 +641,7 @@ Planosphere
       annotation block (noggin-1: 4 mRNAs x ~215 annotations; Pathways, GO, domains shown once per isoform). Most
       isoforms carry the same annotations; scores may differ. Idea to discuss: one gene-level table, with a column
       or marker for which isoforms carry each row (and differing scores), instead of one block per isoform. **discussion**
-- [ ] **Function review: are we duplicating functions? (Sofia 11-25).** Early on the same job was often written
+- [x] **Function review: are we duplicating functions? (Sofia 11-25).** Early on the same job was often written
       twice under different names. The registry only catches the SAME name in two files; it cannot see two
       differently-named functions doing one job. Plan: group the ~1,560 PHP + ~590 JS functions by what they do
       (category, parameters, the tables/files they touch, similar bodies), list likely look-alikes, then read
@@ -646,6 +649,14 @@ Planosphere
       (scripts/reset_password.php, scripts/spatial_atlas_from_endoatlas.php, setup-check.php); escapeHtml-style
       helpers in many JS files (36 JS names are defined in more than one file). Dead code was cleared 11-25
       (65 functions + js/modules/manage-registry.js), so what is left is all in use. **M-L**
+      DONE 11-25 (scan of 1,603 PHP functions by normalised body + same names; JS by name). One real bug:
+      reverseComplement() (lib/blast_functions.php) did not complement IUPAC codes (R stayed R) -- minus-strand
+      sequence from genomes that carry them (2 bat consensus genomes, a Danio assembly in a 40-genome sample)
+      was wrong at those bases; fixed + test (red on old). PrimerTails' copy is deliberate (tails are A/C/G/T).
+      No harmful drift otherwise: track-type classes' per-type methods differ only by extension
+      (extractSheetsMetadata already delegates to GoogleSheetsParser); exact twins BEDTrack/VCFTrack::generate,
+      BamTrack::getBamStats/CRAMTrack::getCramStats, setup-check/setup.php toolExists -- tidy-only, low value.
+      Galaxy client.php/mafft.php overlap (getJobStatus, waitForCompletion): fold when Galaxy resumes.
 - [x] **Co-orthologs: show the other genes** (Sofia 11-25: "if a gene is called a co-ortholog, other genes in
       this data set are orthologs to the same human gene -- can we see those other genes?"). TODAY: the gene
       page's naming list has a "Copies" statement ("One of 3 genes in this genome named after it (the others:

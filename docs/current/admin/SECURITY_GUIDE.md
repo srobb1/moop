@@ -1,10 +1,13 @@
 # MOOP Security Guide
 
-**Last Updated:** March 2026
+**Last Updated:** 2026-11-25 (merged in the old `AUTHENTICATION_FLOW_DIAGRAM.md`; added the
+Content-Security-Policy nonce, the web-server guard and bot protection)
 
 This document covers the security architecture implemented in MOOP, including
 access control, CSRF protection, session security, brute-force prevention,
-input validation, and XSS prevention.
+input validation, XSS prevention, the Content-Security-Policy, the web-server guard and bot
+protection. Hardening the host itself (SELinux, permissions, the no-exec guard's file name):
+`docs/SELINUX_AND_HARDENING.md`.
 
 ---
 
@@ -258,6 +261,67 @@ Pass PHP values to JavaScript via the `inline_scripts` key in the `$data` array
 
 ---
 
+## Passwords and user accounts
+
+- Accounts live in `users.json` **outside the document root** (`/var/www/moop-private/users.json`
+  here; the `users_file` setting). Passwords are stored as `password_hash(..., PASSWORD_DEFAULT)`
+  (bcrypt, `$2y$...`) and checked with `password_verify()` in `login.php`.
+- Created and changed on Admin -> Manage Users. Locked out or forgotten:
+  `sudo -u apache php scripts/reset_password.php <user>` (`--list`, `--unlock`).
+- ⚠️ Known gap (2026-11-25): `login.php` runs `password_verify()` only when the username exists,
+  so a wrong username answers slightly faster than a wrong password -- in principle a way to test
+  which usernames exist. (The old flow diagram called login "timing-attack resistant"; it is not.)
+  Fix: verify against a dummy hash when the user is unknown.
+
+## Who gets what -- the four kinds of visitor
+
+| Visitor | How they get in | What they see |
+|---|---|---|
+| Public | nothing | public gene sets only (`is_public_assembly()`) |
+| Inside the institute | address in `auto_login_ip_ranges` -> `IP_IN_RANGE` | all data, no admin pages |
+| Collaborator | logs in | public data plus what their account and groups allow |
+| Administrator | logs in, role admin | everything, plus the admin pages |
+
+## Content-Security-Policy (CSP)
+
+Two policies are sent and the browser enforces BOTH:
+- nginx's (`/etc/nginx/nginx.conf`, template `docs/nginx/moop-headers.conf`): the allowed outside
+  hosts for scripts, styles, images, connections and frames.
+- PHP's (`includes/csp.php`, sent from `config_init.php` on every page since 2026-11-25): a strict
+  `script-src 'self' 'nonce-...'`. An inline `<script>` runs only with the per-request nonce:
+  write `<script<?= moop_nonce_attr() ?>>` (`layout.php`'s `inline_scripts` already do).
+- So: no inline `on*=` handlers and no `javascript:` links -- they can never carry a nonce.
+  `js/modules/utilities.js` handles the common cases declaratively (`data-confirm`,
+  `data-click`, `data-action="reload"`, `img data-fallback`); CLAUDE.md section 7.
+- A new outside script host goes in both policies.
+
+## Web-server guard -- what the web never serves
+
+`docs/nginx/moop-security.conf` (per site: `scripts/nginx_site_guard.sh <site> [prefix]`) is deployed
+twice per site on this host: `/etc/nginx/moop-sites/<site>/guard.conf` (the site's own address,
+prefix `/`) and `/etc/nginx/default.d/<deploy-name>` (the machine's address, prefix `/<folder>`).
+It refuses to run `.php` in data/cache trees, and since 2026-11-25 returns 404 for `scripts/`,
+`tests/`, `vendor/`, `notes/`, `docs/`, `lib/` and `includes/` (except
+`lib/fasta_download_handler.php`), and `CLAUDE.md`, `README.md`, `composer.*`, `phpcompat.xml`.
+`setup-check.php` compares both deployed copies with the script's output.
+
+## Bot protection
+
+nginx per-address rate limits by request class (`docs/nginx/moop-ratelimit*.conf`; the heavy
+group and the exempt ranges are MOOP settings applied by the System Monitor's collector) and a
+Cloudflare Turnstile human check (`lib/human_check.php`). Plan: `notes/BOT_PROTECTION_PLAN.md`.
+
+## Troubleshooting logins
+
+- "Invalid username or password" with the right password: the account may be locked
+  (`scripts/reset_password.php --list`), or the hash is not `$2y$...` (reset it).
+- Logged out on every page: the session cookie is per site (`moop_cookie_name()`) and `Secure` on
+  https -- check the site is reached by its https name, not mixed http/https.
+- Inside-the-institute auto-login not working: the visitor's address must be in
+  `auto_login_ip_ranges`; behind a proxy MOOP sees the proxy's address (it logs a warning).
+
+---
+
 ## Security Checklist for Code Review
 
 When reviewing or writing MOOP code:
@@ -289,6 +353,11 @@ When reviewing or writing MOOP code:
 | `lib/fasta_download_handler.php` | Path traversal prevention |
 | `api/jbrowse2/tracks.php` | JWT validation for track access |
 | `lib/jbrowse/track_token.php` | JWT token generation and verification |
+| `includes/csp.php` | Per-request nonce + strict script-src policy |
+| `includes/session_init.php` | Session cookie (per-site name, HttpOnly, SameSite=Lax, Secure on https) |
+| `lib/human_check.php` | Turnstile human check |
+| `docs/nginx/moop-security.conf`, `scripts/nginx_site_guard.sh` | Web-server guard (no-exec + denied folders) |
+| `scripts/reset_password.php` | Unlock / reset an account from the command line |
 
 ---
 

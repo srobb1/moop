@@ -537,7 +537,7 @@ Full checklist: **[Upgrading JBrowse2](docs/JBrowse2/UPGRADING.md)**.
 
 ### JBrowse2 documentation
 
-- [Documentation index](docs/JBrowse2/_DOCUMENTATION_INDEX.md) — start here; there is a lot
+- [JBrowse 2 docs](docs/JBrowse2/README.md) — start here
 - [Admin guide](docs/JBrowse2/ADMIN_GUIDE.md) — tracks, assemblies, permissions
 - [Upgrading JBrowse2](docs/JBrowse2/UPGRADING.md) — what survives an upgrade, and what to check after
 - [User guide](docs/JBrowse2/USER_GUIDE.md) — for the people using the browser
@@ -655,5 +655,5 @@ and is returned to where they were going, instead of a load error.
 
 **Development**
 - [CLAUDE.md](CLAUDE.md) — architecture, conventions, and the traps worth knowing
-- [System overview](docs/overview/SYSTEM_OVERVIEW.md)
+- [System overview](docs/overview/SYSTEM_OVERVIEW.md) — one page; all docs: [docs/README.md](docs/README.md)
 - [Galaxy integration](docs/Galaxy/GALAXY_INTEGRATION.md)
