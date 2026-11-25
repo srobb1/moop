@@ -111,12 +111,19 @@ Order of work, and why:
 - [x] **Ontology Browser:** remove ECO from the drop-down (GO + PLANA only); a link from Planosphere
       opens with PLANA already selected. **S** — DONE 11-18 3b4d43de (Planosphere links already passed ?o=PLANA)
 - [x] **Old Planosphere video tutorials:** DONE 11-19 — 6 removed (Sofia's list), 7 kept; tutorials/page-database/tutorial pages (site data, backed up).
-- [ ] **UCNE track is drawn in the WRONG place (Nvec; check Scolanthus too).** UCNE 80 is at chr1:1,918,153-1,918,259
+- [x] **UCNE track is drawn in the WRONG place (Nvec; check Scolanthus too).** UCNE 80 is at chr1:1,918,153-1,918,259
       (paper table on the nematostella-ucne page, 107/107) = where UCNE BLAT draws it; the UCNE track draws
       ucne.chr1.1917354.1917461, 799 bp early. Check UCNE 58 (chr1:2,674,734): constant shift or not.
       Fix: remake the UCNE GFF from the page's table (Nvec200 coords) or drop it. Also add track
       descriptions + fix "Elemements" typo (Manage JBrowse / track sheet). Sofia made the files (cerebro
       .../aligned/ucne/). **M**
+      SETTLED 11-25: the UCNE (find_ucne, 2021) GFF is on the PRE-GenBank Nvec200 build -- the GenBank assembly
+      (GCA_033964005.1) has 381 extra 200-N gaps; +200 bp per such gap puts 71/146 elements exactly on the BLAT
+      hit (rest within 1 kb, cluster pieces). UCNE BLAT is right: 12 sequences cut at BLAT positions all hit
+      Scolanthus full length at 94-97% (old-coordinate controls: 5/12, partial, 81-92%). The page's table = the
+      BLAT files exactly (Nvec 180/180, Scal 609/609). Scolanthus tracks agree (offset 0). Sofia re-registers the
+      Nvec tracks (BLAT as "UCNE", drop the old one, fix "Elemements"). Optional: table heading "Location
+      (Nvec200, GCA_033964005.1)".
 - [x] NOT A BUG (Sofia 11-20): a short name is given only for a very confident hit; otherwise the best hit's description is kept ("…-like"), and there is no short name to give when the hit has none. **Empty gene names** (from the AI test): S. mediterranea Ena/VASP has an empty `gene_name`
       though its description says "ENAH/VASPs family member"; many bat RefSeq VASP genes have no name
       while EVL/ENAH in the same species do. Pipeline side → write a note for compute (web doesn't
