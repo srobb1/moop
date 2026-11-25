@@ -211,10 +211,6 @@
     "type": null,
     "value": null
   },
-  "feature_types": {
-    "parents": ["gene"],
-    "children": ["mRNA", "transcript"]
-  },
   "html_p": [
     {
       "text": "Humans are primates of the family Hominidae...",
@@ -224,7 +220,6 @@
   ]
 }</code></pre>
         <p class="text-muted small mt-2">
-          <code>feature_types</code> controls which feature types appear as top-level entries on feature detail pages (<code>parents</code>) vs as children beneath them (<code>children</code>).
           <code>html_p</code> is optional — if present, the text is shown in an "About" card on the organism page.
           Edit via <strong>Admin → Manage Organisms</strong> rather than manually.
         </p>

@@ -8,11 +8,9 @@
  * TODO: Refactor to load utilities.js as shared module instead of duplicating
  */
 
-function fixDatabasePermissions(event, organism) {
-    event.preventDefault();
+function fixDatabasePermissions(button, organism) {
     
     const resultDiv = document.getElementById('fixResult' + organism);
-    const button = event.target.closest('button');
     
     button.disabled = true;
     button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Fixing...';
@@ -63,12 +61,11 @@ function fixDatabasePermissions(event, organism) {
     });
 }
 
-function saveMetadata(event, organism) {
-    event.preventDefault();
-    
+function saveMetadata(button, organism) {
+    // (The button is passed in. It used to be event.target -- a click on the save icon made
+    // that the <i>, so the icon, not the button, was disabled and relabelled.)
     const form = document.getElementById('metadataForm' + organism);
     const resultDiv = document.getElementById('saveResult' + organism);
-    const button = event.target;
     
     if (!form.checkValidity()) {
         form.reportValidity();
@@ -105,16 +102,6 @@ function saveMetadata(event, organism) {
         }
     });
     
-    // Collect feature types data
-    const parentFeatures = [];
-    const childFeatures = [];
-    document.querySelectorAll('#parents-' + organism + ' .feature-tag').forEach(tag => {
-        parentFeatures.push(tag.getAttribute('data-feature'));
-    });
-    document.querySelectorAll('#children-' + organism + ' .feature-tag').forEach(tag => {
-        childFeatures.push(tag.getAttribute('data-feature'));
-    });
-    
     // Prepare form data
     const formData = new FormData(form);
     const data = new URLSearchParams();
@@ -133,8 +120,6 @@ function saveMetadata(event, organism) {
         summaryBox.querySelectorAll('.summary-lang').forEach(t => { summaries[t.dataset.lang] = t.value; });
         data.append('summary_lang_json', JSON.stringify(summaries));
     }
-    data.append('parents_json', JSON.stringify(parentFeatures));
-    data.append('children_json', JSON.stringify(childFeatures));
     
     button.disabled = true;
     button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving...';
@@ -154,13 +139,13 @@ function saveMetadata(event, organism) {
         let alertClass = response.success ? 'alert-success' : 'alert-danger';
         let html = '<div class="alert ' + alertClass + ' mt-3">';
         html += '<strong>' + (response.success ? '✓ Success!' : '✗ Failed!') + '</strong><br>';
-        html += '<p>' + response.message + '</p>';
+        html += '<p>' + escapeHtml(response.message || '') + '</p>';
         
         if (response.error) {
             html += '<p class="mt-2 mb-2"><strong>Current Status:</strong></p>';
             html += '<ul class="mb-3">';
             html += '<li>File owner: <code>' + escapeHtml(response.error.owner) + '</code></li>';
-            html += '<li>Current permissions: <code>' + response.error.perms + '</code></li>';
+            html += '<li>Current permissions: <code>' + escapeHtml(String(response.error.perms)) + '</code></li>';
             html += '<li>Web server user: <code>' + escapeHtml(response.error.web_user) + '</code></li>';
             if (response.error.web_group) {
                 html += '<li>Web server group: <code>' + escapeHtml(response.error.web_group) + '</code></li>';
@@ -192,7 +177,7 @@ function saveMetadata(event, organism) {
     .catch(error => {
         button.disabled = false;
         button.innerHTML = '<i class="fa fa-save"></i> Save Metadata';
-        resultDiv.innerHTML = '<div class="alert alert-danger mt-3">Error: ' + error + '</div>';
+        resultDiv.innerHTML = '<div class="alert alert-danger mt-3">Error: ' + escapeHtml(String(error)) + '</div>';
     });
 }
 
@@ -204,7 +189,7 @@ function addMetadataImage(organism) {
     
     const html = `
       <div class="image-item" data-index="${newIndex}" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataImage(${escapeHtml(JSON.stringify(organism))}, ${newIndex})" style="float: right;">Remove</button>
+        <button type="button" class="btn btn-sm btn-danger remove-btn" data-action="meta-remove-image" style="float: right;">Remove</button>
         <div class="form-group mb-3">
           <label>Image File</label>
           <div class="input-group">
@@ -228,11 +213,13 @@ function addMetadataImage(organism) {
     attachImageUploadHandler(newItem, organism);
 }
 
-function removeMetadataImage(organism, index) {
-    const container = document.getElementById('images-container-' + organism);
-    const items = container.querySelectorAll('.image-item');
-    if (items.length > 1) {
-        items[index].remove();
+// Remove the entry the clicked button sits in. These took a position number fixed when the
+// entry was drawn; after one removal the numbers no longer matched, so Remove took out the
+// WRONG entry (or threw, past the end of the list).
+function removeMetadataImage(button) {
+    const item = button.closest('.image-item');
+    if (item.parentElement.querySelectorAll('.image-item').length > 1) {
+        item.remove();
     } else {
         alert('At least one image entry must remain (it can be empty).');
     }
@@ -244,7 +231,7 @@ function addMetadataParagraph(organism) {
     
     const html = `
       <div class="paragraph-item" data-index="${newIndex}" style="border: 1px solid #dee2e6; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #f8f9fa;">
-        <button type="button" class="btn btn-sm btn-danger remove-btn" onclick="removeMetadataParagraph(${escapeHtml(JSON.stringify(organism))}, ${newIndex})" style="float: right;">Remove</button>
+        <button type="button" class="btn btn-sm btn-danger remove-btn" data-action="meta-remove-para" style="float: right;">Remove</button>
         <div class="form-group mb-3">
           <label>Text (HTML allowed)</label>
           <textarea class="form-control para-text" rows="4"></textarea>
@@ -269,25 +256,24 @@ function addMetadataParagraph(organism) {
     container.insertAdjacentHTML('beforeend', html);
 }
 
-function removeMetadataParagraph(organism, index) {
-    const container = document.getElementById('paragraphs-container-' + organism);
-    const items = container.querySelectorAll('.paragraph-item');
-    if (items.length > 1) {
-        items[index].remove();
+function removeMetadataParagraph(button) {
+    const item = button.closest('.paragraph-item');
+    if (item.parentElement.querySelectorAll('.paragraph-item').length > 1) {
+        item.remove();
     } else {
         alert('At least one paragraph entry must remain (it can be empty).');
     }
 }
 
-function renameAssemblyDirectory(event, organism, safeAsmId) {
-    event.preventDefault();
+// (button, ...) rather than (event, ...): event.target was the <i> icon when the click landed
+// on it, so the icon -- not the button -- got disabled and relabelled.
+function renameAssemblyDirectory(button, organism, safeAsmId) {
     
     const elementId = safeAsmId || organism;
     
     const oldDir = document.getElementById('oldDirName' + elementId).value;
     const newDir = document.getElementById('newDirName' + elementId).value;
     const resultDiv = document.getElementById('renameResult' + elementId);
-    const button = event.target;
     
     if (!oldDir || !newDir) {
         resultDiv.innerHTML = '<div class="alert alert-warning">Please select both current and new directory names</div>';
@@ -300,7 +286,14 @@ function renameAssemblyDirectory(event, organism, safeAsmId) {
         resultDiv.classList.remove('d-none');
         return;
     }
-    
+
+    // It moves real data on disk at once -- ask first (2026-11-25).
+    if (!confirm('Rename the assembly folder of ' + organism + '?\n\n  ' + oldDir + '  ->  ' + newDir +
+                 '\n\nThe folder is renamed on disk straight away. Only the folder changes: anything that ' +
+                 'still refers to the old name is not updated.')) {
+        return;
+    }
+
     button.disabled = true;
     button.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Renaming...';
     resultDiv.classList.add('d-none');
@@ -354,13 +347,11 @@ function renameAssemblyDirectory(event, organism, safeAsmId) {
     });
 }
 
-function renameGeneSetDirectory(event, organism, assembly, safeId) {
-    event.preventDefault();
+function renameGeneSetDirectory(button, organism, assembly, safeId) {
 
     const oldDir = document.getElementById('gsOldDirName' + safeId).value;
     const newDir = document.getElementById('gsNewDirName' + safeId).value;
     const resultDiv = document.getElementById('gsRenameResult' + safeId);
-    const button = event.target;
 
     if (!oldDir || !newDir) {
         resultDiv.innerHTML = '<div class="alert alert-warning">Please select a current directory name</div>';
@@ -371,6 +362,13 @@ function renameGeneSetDirectory(event, organism, assembly, safeId) {
     if (oldDir === newDir) {
         resultDiv.innerHTML = '<div class="alert alert-warning">Current and new names are the same</div>';
         resultDiv.classList.remove('d-none');
+        return;
+    }
+
+    // It moves real data on disk at once -- ask first (2026-11-25).
+    if (!confirm('Rename the gene set folder of ' + organism + ' (assembly ' + assembly + ')?\n\n  ' + oldDir + '  ->  ' + newDir +
+                 '\n\nThe folder is renamed on disk straight away. Only the folder changes: anything that ' +
+                 'still refers to the old name is not updated.')) {
         return;
     }
 
@@ -422,39 +420,6 @@ function renameGeneSetDirectory(event, organism, assembly, safeId) {
         resultDiv.innerHTML = '<div class="alert alert-danger">Error: ' + error + '</div>';
         resultDiv.classList.remove('d-none');
     });
-}
-
-function addFeatureTag(organism, type) {
-    const inputId = type + '-feature-input-' + organism;
-    const containerId = type + '-features-' + organism;
-    const input = document.getElementById(inputId);
-    const container = document.getElementById(containerId);
-    
-    const feature = input.value.trim();
-    if (!feature) {
-        alert('Please enter a feature type');
-        return;
-    }
-    
-    // Check if already exists
-    const existing = Array.from(container.querySelectorAll('.feature-tag')).map(t => t.getAttribute('data-feature'));
-    if (existing.includes(feature)) {
-        alert('This feature type is already added');
-        return;
-    }
-    
-    const badge = document.createElement('span');
-    badge.className = 'badge me-2 mb-2 feature-tag';
-    badge.className += type === 'parent' ? ' bg-primary' : ' bg-info';
-    badge.setAttribute('data-feature', feature);
-    badge.innerHTML = `${escapeHtml(feature)} <i class="fa fa-times" style="cursor: pointer;" onclick="removeFeatureTag(this, ${escapeHtml(JSON.stringify(organism))})"></i>`;
-    
-    container.appendChild(badge);
-    input.value = '';
-}
-
-function removeFeatureTag(element, organism) {
-    element.closest('.feature-tag').remove();
 }
 
 // Uses escapeHtml from utilities.js (loaded globally in layout.php)
@@ -874,3 +839,33 @@ document.addEventListener('click', function (e) {
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Enter' && e.target.id === 'quickAddGroupName') submitQuickAddGroup();
 });
+
+// ── Metadata dialog (inline onclick= handlers until 2026-11-25) ─────────────────
+// The dialog is loaded into the page later, so this listens on the document. The form says
+// WHICH organism (form.metadata-form[data-organism]); each control says WHAT (data-action).
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('[data-action^="meta-"]');
+  const form = btn && btn.closest('form.metadata-form[data-organism]');
+  if (!form) return;
+  const organism = form.dataset.organism;
+  switch (btn.dataset.action) {
+    case 'meta-add-image':    addMetadataImage(organism); break;
+    case 'meta-remove-image': removeMetadataImage(btn); break;
+    case 'meta-add-para':     addMetadataParagraph(organism); break;
+    case 'meta-remove-para':  removeMetadataParagraph(btn); break;
+    case 'meta-save':         saveMetadata(btn, organism); break;
+  }
+});
+// Database / assembly dialog buttons: each carries its own organism (and assembly / id).
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('[data-action^="org-"][data-organism]');
+  if (!btn) return;
+  e.preventDefault();
+  const d = btn.dataset;
+  switch (d.action) {
+    case 'org-fix-db-perms':    fixDatabasePermissions(btn, d.organism); break;
+    case 'org-rename-assembly': renameAssemblyDirectory(btn, d.organism, d.safeId); break;
+    case 'org-rename-geneset':  renameGeneSetDirectory(btn, d.organism, d.assembly, d.safeId); break;
+  }
+});
+

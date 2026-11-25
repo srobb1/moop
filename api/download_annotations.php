@@ -20,6 +20,7 @@ include_once __DIR__ . '/../lib/moop_functions.php';
 // API endpoint was written from parent.php's body without parent.php's include list.
 include_once __DIR__ . '/../lib/extract_search_helpers.php';
 require_once __DIR__ . '/../lib/download_filename.php';
+require_once __DIR__ . '/../lib/feature_types.php';   // moop_gene_page_types()
 
 if (empty($_GET['organism']) || empty($_GET['uniquename'])) {
     http_response_code(400);
@@ -50,9 +51,7 @@ $feature_id = null;
 $feature_uniquename = $uniquename;
 
 $organism_info = $organism_context['info'];
-$parents = !empty($organism_info['feature_types']['parents'])
-    ? $organism_info['feature_types']['parents']
-    : ['gene', 'pseudogene'];
+$parents = moop_gene_page_types();
 
 foreach ($ancestors as $ancestor) {
     $feature_id         = $ancestor['feature_id'];

@@ -224,10 +224,6 @@
   "subclassification": {
     "type": null,
     "value": null
-  },
-  "feature_types": {
-    "parents": ["gene"],
-    "children": ["mRNA", "transcript"]
   }
 }</code></pre>
           </div>
@@ -240,8 +236,6 @@
                 <tr><td><code>common_name</code></td><td>Shown in parentheses alongside the scientific name</td></tr>
                 <tr><td><code>taxon_id</code></td><td>NCBI Taxonomy ID — used to fetch the taxonomy tree node and Wikipedia image</td></tr>
                 <tr><td><code>subclassification</code></td><td>Optional strain or subspecies info (<code>type</code>: label, <code>value</code>: the value)</td></tr>
-                <tr><td><code>feature_types.parents</code></td><td>Feature types shown as top-level entries on feature detail pages (typically <code>"gene"</code>)</td></tr>
-                <tr><td><code>feature_types.children</code></td><td>Feature types shown as children under a parent (typically <code>"mRNA"</code>, <code>"transcript"</code>)</td></tr>
               </tbody>
             </table>
           </div>

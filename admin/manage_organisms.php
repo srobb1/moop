@@ -146,8 +146,6 @@ handleAdminAjax(function($action) use ($organisms) {
         $taxon_id = $_POST['taxon_id'] ?? '';
         $images_json = $_POST['images_json'] ?? '[]';
         $html_p_json = $_POST['html_p_json'] ?? '[]';
-        $parents_json = $_POST['parents_json'] ?? '["gene"]';
-        $children_json = $_POST['children_json'] ?? '["mRNA", "transcript"]';
         
         // Validate inputs
         if (empty($genus) || empty($species) || empty($common_name) || empty($taxon_id)) {
@@ -168,8 +166,6 @@ handleAdminAjax(function($action) use ($organisms) {
         // Parse JSON fields safely
         $images = decodeJsonString($images_json);
         $html_p = decodeJsonString($html_p_json);
-        $parents = decodeJsonString($parents_json);
-        $children = decodeJsonString($children_json);
         
         // Build the metadata array
         $metadata = [
@@ -179,14 +175,6 @@ handleAdminAjax(function($action) use ($organisms) {
             'taxon_id' => $taxon_id
         ];
         
-        
-        // Add feature types if provided
-        if (!empty($parents) || !empty($children)) {
-            $metadata['feature_types'] = [
-                'parents' => $parents ?: ['gene'],
-                'children' => $children ?: ['mRNA', 'transcript']
-            ];
-        }
         
         // Merge with existing data to preserve other fields
         $metadata = loadAndMergeJson($organism_json_path, $metadata);

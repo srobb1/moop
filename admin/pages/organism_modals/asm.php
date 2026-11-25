@@ -98,7 +98,7 @@
                   </select>
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
-                  <button class="btn btn-info btn-sm w-100" onclick="renameAssemblyDirectory(event, <?= htmlspecialchars(json_encode($organism)) ?>, <?= htmlspecialchars(json_encode($safe_asm_id)) ?>)">
+                  <button type="button" class="btn btn-info btn-sm w-100" data-action="org-rename-assembly" data-organism="<?= htmlspecialchars($organism) ?>" data-safe-id="<?= htmlspecialchars($safe_asm_id) ?>">
                     <i class="fa fa-exchange-alt"></i> Rename
                   </button>
                 </div>

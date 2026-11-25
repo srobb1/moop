@@ -182,11 +182,9 @@
                   <strong>Leave it out and MOOP writes the description itself</strong>: a summary built from
                   the organism's taxonomic lineage (from <code>taxon_id</code>), plus the Wikipedia extract,
                   credited with a link back to the article. Supply this field only to override that.</li>
-              <li><code>feature_types</code> - Which feature types are treated as parents and children,
-                  e.g. <code>{"parents":["gene"],"children":["mRNA","transcript","protein"]}</code>.
-                  Controls what the gene page treats as the top-level feature. Omit it and MOOP falls back
-                  to <code>["gene","pseudogene"]</code> as parents. Every organism on this deployment has it,
-                  because the loader writes it.</li>
+              <li><code>feature_types</code> - <strong>No longer used</strong> (2026-11-25). The loader still
+                  writes it; the site ignores it. Gene pages are for <code>gene</code> and <code>pseudogene</code>
+                  features, set in code (<code>moop_gene_page_types()</code>).</li>
               <li><code>subclassification</code> - Optional grouping shown on the organism page, e.g.
                   <code>{"type":"strain","value":"CC7"}</code>. Written as
                   <code>{"type":null,"value":null}</code> when unused.</li>
@@ -201,9 +199,8 @@
 }</pre>
             <small class="text-muted d-block mb-3">
               That is genuinely all you need. MOOP writes the description and finds an image itself
-              (see above), and the loader adds <code>feature_types</code> and
-              <code>subclassification</code> — every organism on this deployment has those two, but
-              you do not type them by hand.
+              (see above), and the loader adds <code>subclassification</code> (and the unused
+              <code>feature_types</code>) — you do not type them by hand.
             </small>
 
             <p class="mb-2">

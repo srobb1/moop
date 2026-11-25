@@ -12,6 +12,17 @@
  * lib/gff_gene_model.php: there any *RNA type under a gene is drawn as an isoform.)
  */
 
+/**
+ * The feature types that get a GENE page: an ID below one (transcript, CDS, protein) opens the
+ * page of the gene above it. Defined in code, not per organism: the organism.json
+ * "feature_types" setting dates from when this was a general "parent page", and another kind
+ * of feature would get its own page rather than reuse this one (Sofia, 2026-11-25). Every
+ * gene set's top-level features are genes (all 82 databases, 2026-11-25).
+ */
+function moop_gene_page_types(): array {
+    return ['gene', 'pseudogene'];
+}
+
 /** Lowercase transcript feature types, as stored in feature.feature_type (compare with LOWER()). */
 function moop_transcript_types(): array {
     return ['mrna', 'transcript', 'lnc_rna', 'ncrna', 'pre_mirna', 'rrna', 'trna',

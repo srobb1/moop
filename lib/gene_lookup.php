@@ -14,11 +14,12 @@
  *   'choose'       the ID is in more than one of them, and no assembly / gene_set narrowed it --
  *                  asked about, never guessed ('choices': assembly_label, assembly, gene_set, url)
  *   'ok'           'row' (getFeatureById(): the gene -- the highest ancestor whose type is a page
- *                  type, organism.json feature_types.parents, default gene / pseudogene),
+ *                  type, moop_gene_page_types()),
  *                  'gene_set_ids' (the one gene set), 'accessible_sources', 'ancestor_uniquename'
  *
  * Every status but 'no_organism' also carries 'label' ("Genus species"), for a not-found message.
  */
+require_once __DIR__ . '/feature_types.php';   // moop_gene_page_types()
 
 /**
  * @param string $assembly  optional: the genome accession or the assembly's directory name
@@ -76,7 +77,7 @@ function moop_gene_lookup(string $organism, string $id, string $assembly = '', s
     $gene_set_ids = $holding;   // the one gene set; everything below reads only it
 
     // The gene: walk up from the ID to the highest ancestor whose type gets a page.
-    $parents = !empty($info['feature_types']['parents']) ? $info['feature_types']['parents'] : ['gene', 'pseudogene'];
+    $parents = moop_gene_page_types();
     $ancestors = getAncestors($id, $db, $gene_set_ids);
     $ancestor_id = '';
     $ancestor_uniquename = '';
