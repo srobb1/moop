@@ -220,5 +220,5 @@ $title = ($report === 'it' ? 'Server report' : 'Usage report') . ' — ' . $site
 <?php // Self-contained on purpose: the report is also DOWNLOADED and opened from disk, where the
       // site's JS files are not reachable. A <script> block, not an inline onclick, so it can carry
       // the CSP nonce when the site gives inline scripts one (served copy); offline it just runs. ?>
-<script>document.querySelector('[data-action="print"]').addEventListener('click', function () { window.print(); });</script>
+<script<?= moop_nonce_attr() ?>>document.querySelector('[data-action="print"]').addEventListener('click', function () { window.print(); });</script>
 </main></body></html>

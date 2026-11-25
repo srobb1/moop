@@ -794,10 +794,13 @@ long-standing entries here had already been fixed, and one contradicted §10 of 
   (visible in server logs) — architectural constraint from JBrowse2. Two routes exist:
   `notes/TRACKS_PROXY_PLAN.md` (simpler) and an `Authorization`-header variant.
 - **Medium:** `Content-Security-Policy` is **ENFORCED since 2026-10-28** (in `/etc/nginx/nginx.conf`,
-  both server blocks) but still allows `'unsafe-inline'`. The inline event handlers are GONE (last
-  ones 2026-11-25; never add one -- §7); what still needs it is the inline `<script>` blocks
-  (`inline_scripts`, three in `layout.php`, the monitor report's print script), which need a
-  per-request nonce before root can drop `'unsafe-inline'` from the policy. Anything that
+  both server blocks) and still lists `'unsafe-inline'` -- but since 2026-11-25 every PHP response
+  also sends a SECOND, strict `script-src` with a per-request nonce (`includes/csp.php`, sent from
+  `config_init.php`). A browser enforces both, so inline scripts run only with the nonce: write
+  `<script<?= moop_nonce_attr() ?>>` (layout.php's `inline_scripts` already do). No inline `on*=`
+  handlers or `javascript:` links -- they can never carry a nonce (§7). A new outside script host
+  goes in BOTH policies (nginx's and `moop_csp_send()`). Root may drop `'unsafe-inline'` from
+  nginx's copy as a tidy-up; it changes nothing a browser runs. Anything that
   loads from another host must be added there by root — and **a CSP check must listen inside web
   workers**: JBrowse's worker fetches its WebAssembly decompressor from a `data:` URL, which the
   page console never shows; enforcing without `data:` in `connect-src` broke every JBrowse track

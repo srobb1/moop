@@ -38,7 +38,7 @@ function kegg_map_go(string $pathway, array $colours): void {
        . '<textarea name="multi_query" hidden>' . $h($post['fields']['multi_query']) . '</textarea>'
        . '<p>Opening KEGG map ' . $h($pathway) . ' with ' . count($colours) . ' KOs coloured&hellip;</p>'
        . '<button type="submit">Open the KEGG map</button></form>'
-       . '<script>document.getElementById("kegg").submit();</script></body></html>';
+       . '<script' . moop_nonce_attr() . '>document.getElementById("kegg").submit();</script></body></html>';
     exit;
 }
 

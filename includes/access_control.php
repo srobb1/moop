@@ -778,7 +778,8 @@ function csrf_protect($json_response = false) {
         echo '<!DOCTYPE html><html><body>';
         echo '<h2>Security Error</h2>';
         echo '<p>Your form submission could not be verified. This can happen if your session expired or the page was open in multiple tabs.</p>';
-        echo '<p><a href="javascript:history.back()">Go back and try again</a></p>';
+        // A real link, not javascript:history.back() -- a strict CSP blocks javascript: URLs.
+        echo '<p>Use your browser\'s Back button and try again, or <a href="' . htmlspecialchars(moop_url_base() . '/') . '">go to the home page</a>.</p>';
         echo '</body></html>';
         exit;
     }

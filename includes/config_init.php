@@ -33,6 +33,11 @@ require_once __DIR__ . '/../lib/functions_json.php';
 // Here at the same early choke point so every entry path is covered.
 require_once __DIR__ . '/deprecation_log.php';
 
+// Strict script policy with a per-request nonce (includes/csp.php). Sent here, at the choke point
+// every web entry path hits before any output, so no page can forget it.
+require_once __DIR__ . '/csp.php';
+moop_csp_send();
+
 // Cache path helpers (moop_cache_dir_for, moop_organism_cache_file, ...). Loaded
 // here at the single early choke point so every entry path — tools, admin, api,
 // and standalone scripts (all of which include config_init) — can resolve where

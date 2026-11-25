@@ -236,18 +236,18 @@ function render_display_page($content_file, $data = [], $title = '', $options = 
              Assigned as a window property, never `const sitePath`, because several pages still
              declare their own `const sitePath` via inline_scripts and re-declaring a top-level
              const is a SyntaxError that would take the whole page's JS down. -->
-        <script>window.sitePath = "<?= htmlspecialchars(moop_url_base(), ENT_QUOTES) ?>";</script>
+        <script<?= moop_nonce_attr() ?>>window.sitePath = "<?= htmlspecialchars(moop_url_base(), ENT_QUOTES) ?>";</script>
 
         <!-- The per-organism search cap, from site configuration, for the JS that has to
              quote it back to the user. Emitted here for the same reason as sitePath above:
              a help string carrying its own copy of the number goes stale silently the moment
              an admin changes the setting, and a wrong number in help is worse than none. -->
-        <script>window.MOOP_SEARCH_RESULTS_LIMIT = <?= (int)moop_search_results_limit() ?>;<?= ($moop_cols = moop_result_column_overrides()) ? ' window.MOOP_RESULT_COLUMNS = ' . json_encode($moop_cols) . ';' : '' ?></script>
+        <script<?= moop_nonce_attr() ?>>window.MOOP_SEARCH_RESULTS_LIMIT = <?= (int)moop_search_results_limit() ?>;<?= ($moop_cols = moop_result_column_overrides()) ? ' window.MOOP_RESULT_COLUMNS = ' . json_encode($moop_cols) . ';' : '' ?></script>
 <?php /* The browser's translations for moopT() (js/modules/utilities.js), only on a page shown in
          another language -- so a one-language site (simrbase) gets not one byte more. Before any
          module, so text a module builds at load is already in the visitor's language. */
 if ($page_lang !== 'en'): require_once __DIR__ . '/../lib/i18n.php'; ?>
-        <script>window.MOOP_I18N = <?= json_encode((object) moop_i18n_js_catalog($page_lang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;<?= moop_i18n_show_gaps() ? ' window.MOOP_I18N_GAPS = true;' : '' ?></script>
+        <script<?= moop_nonce_attr() ?>>window.MOOP_I18N = <?= json_encode((object) moop_i18n_js_catalog($page_lang), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;<?= moop_i18n_show_gaps() ? ' window.MOOP_I18N_GAPS = true;' : '' ?></script>
 <?php endif; ?>
 
         <!-- Vendor JS — self-hosted, no external CDN dependency -->
@@ -292,7 +292,7 @@ if ($page_lang !== 'en'): require_once __DIR__ . '/../lib/i18n.php'; ?>
         <!-- Inline scripts - Page-specific variable definitions (must load before page_script) -->
         <?php
         if (isset($inline_scripts) && is_array($inline_scripts)) {
-            echo '<script>' . "\n";
+            echo '<script' . moop_nonce_attr() . '>' . "\n";
             foreach ($inline_scripts as $script) {
                 echo $script . "\n";
             }

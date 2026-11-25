@@ -194,18 +194,5 @@ if (count($lb_langs) > 1 && !defined('MOOP_ADMIN_PAGE')): $lb_now = moop_current
   <div style="font-size:1.1rem;">Loading admin dashboard…</div>
   <div style="font-size:.85rem;opacity:.75;margin-top:.4rem;">The first load after a data rebuild can take a moment.</div>
 </div>
-<script>
-(function () {
-  var link = document.getElementById('admin_tools_link');
-  var overlay = document.getElementById('adminLoadingOverlay');
-  if (!link || !overlay) return;
-  link.addEventListener('click', function (e) {
-    // Skip modified clicks (open-in-new-tab etc.) — the current page isn't navigating away.
-    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    overlay.style.display = 'flex';
-    link.style.pointerEvents = 'none';
-    link.classList.add('disabled');
-  });
-})();
-</script>
+<?php // Click behaviour: js/modules/utilities.js (admin_tools_link). ?>
 <?php endif; ?>

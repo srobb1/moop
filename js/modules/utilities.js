@@ -259,6 +259,19 @@ if (typeof document !== 'undefined') {
         }
     });
 
+    // Navbar "Admin tools" link (admins only): show the loading overlay while the dashboard,
+    // which can be slow after a data rebuild, loads. Was an inline <script> in toolbar.php.
+    document.addEventListener('click', function (e) {
+        var link = e.target.closest && e.target.closest('#admin_tools_link');
+        var overlay = document.getElementById('adminLoadingOverlay');
+        if (!link || !overlay) return;
+        // Skip modified clicks (open-in-new-tab etc.) -- the current page isn't navigating away.
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        overlay.style.display = 'flex';
+        link.style.pointerEvents = 'none';
+        link.classList.add('disabled');
+    });
+
     // ── Declarative behaviours: the site-wide replacements for inline on* handlers ─────────
     // (2026-11-25, so the CSP can drop 'unsafe-inline'). The markup says what it wants:
     //   <form data-confirm="Question?">        asks before submitting

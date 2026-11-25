@@ -57,6 +57,10 @@ $data = [
 if ($topic === 'ai-assistants') {
     $data['page_script'] = [$data['page_script'], moop_url_base() . '/js/modules/copy-to-clipboard.js'];
 }
+// The landing page's topic filter (it also opens the collapsed admin section while filtering).
+if ($content_file === $landing) {
+    $data['page_script'] = array_merge((array) $data['page_script'], [moop_url_base() . '/js/help-landing.js']);
+}
 
 // Render page using layout system
 echo render_display_page(

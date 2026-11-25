@@ -18,6 +18,10 @@
  *   8. Creates config_editable.json (this disables the installer)
  */
 
+// Strict script policy + nonce (includes/csp.php): this page loads no bootstrap, so it sends its own.
+require_once __DIR__ . '/includes/csp.php';
+moop_csp_send();
+
 // ── Security Gate ───────────────────────────────────────────────────────────
 
 $base = __DIR__;
@@ -789,7 +793,7 @@ RewriteRule ^/<?= htmlspecialchars($siteName) ?>/jbrowse2/index\.html$ /<?= html
 
 </div>
 
-<script>
+<script<?= moop_nonce_attr() ?>>
 function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
