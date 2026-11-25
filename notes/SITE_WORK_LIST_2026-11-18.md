@@ -235,11 +235,18 @@ Planosphere
 - [x] DONE 11-25 (15969c4a). **Amber = attention color (Sofia 11-25):** --moop-attention-* + .btn-attention, Site Colors ->
       Attention (empty = MOOP amber, not tied to the main color); every amber use moved onto it (Expand column, MOOPmart
       prefill, stale chips, Primer Maker callout). Genome browser: amber "New window" button with a label.
-- [ ] **For compute (found 11-25): 73 identity lines read "Co-ortholog of the human genes of the ALDH2: aldehyde
-      dehydrogenase 2 family member..."** (ALDH2, MCL1, TEF, ARVCF, PALS2, AGR2/3; bats, chameleons, zebrafish,
-      killifish, wallaby) instead of "Co-ortholog of human ALDH2; by ...". Looks like a second template (gene-group
-      text pasted in). Web copes (co-ortholog list no longer depends on the wording; symbol parsed from either).
-      Tell compute. **S** (note)
+- [ ] **For compute (found 11-25; Sofia: task for the week of 11-30): 73 identity lines treat a gene as a FAMILY.**
+      | Gene | Identity line now | Should read |
+      |---|---|---|
+      | zebrafish ENSDARG00000008363.10 (HGNC:6943) | Co-ortholog of the human genes of the MCL1: MCL1 apoptosis regulator, BCL2 family; by OMA human ortholog | Co-ortholog of human MCL1; by OMA human ortholog |
+      | Artibeus 119040455 (HGNC:404) | Co-ortholog of the human genes of the ALDH2: aldehyde dehydrogenase 2 family; by OMA human ortholog | Co-ortholog of human ALDH2; by OMA human ortholog |
+      | Chamaeleo CCA3g000487000.1 (HGNC:11722) | Co-ortholog of the human genes of the TEF: TEF transcription factor, PAR bZIP family; by OMA human ortholog | Co-ortholog of human TEF; by OMA human ortholog |
+      Likely cause (inferred from output; pipeline code not read -- compute's): the HGNC names end in "family member"
+      ("MCL1 apoptosis regulator, BCL2 family member"); the pipeline sees "family", switches to its gene-family
+      template ("the human genes of the ... family"), pastes the full name and drops "member". These are single
+      genes (one HGNC id). Affects MCL1, ALDH2, TEF, ARVCF, PALS2, AGR2/AGR3 in bats, chameleons, zebrafish,
+      killifish, wallaby. Find them: gene_naming kind='identity' AND naming_text LIKE 'Co-ortholog of the human genes of the %'.
+      Web copes meanwhile (co-ortholog list is wording-free, 78ef65bd; symbol parsed from either wording). **S** (note)
 - [x] DONE 11-25. **News: 7 items for 11-24/11-25** (tour + walkthrough, Davies 2017 gallery, Anatomy & Gene Function,
       genome browser gene click, AI BLAST/primers, gene names, ID lookup + Rosetta Stone) via Admin -> News.
       HELD: "old SIMRbase links now redirect" -- post after mk4/TCS + Nvec v1g IDs are in the crosswalk.

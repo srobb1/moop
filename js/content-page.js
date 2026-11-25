@@ -19,10 +19,17 @@
             paging: false,
             order: [],                    // keep the order the page was written in
             dom: '<"d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2"Bf>rti',
-            buttons: [
-                { extend: 'csvHtml5',   text: moopT('Download CSV'),   filename: name, className: 'btn btn-sm btn-outline-secondary' },
-                { extend: 'excelHtml5', text: moopT('Download Excel'), filename: name, className: 'btn btn-sm btn-outline-secondary' },
-            ],
+            // dom.button.className REPLACES DataTables' default "btn btn-secondary". A per-button
+            // className is ADDED to it, so these were btn-secondary + btn-outline-secondary: grey
+            // text on a grey fill, unreadable (2026-11-25). btn-outline-moop = the site's quiet
+            // secondary control (css/moop.css), in the site colour.
+            buttons: {
+                dom: { button: { className: 'btn btn-sm btn-outline-moop' } },
+                buttons: [
+                    { extend: 'csvHtml5',   text: moopT('Download CSV'),   filename: name },
+                    { extend: 'excelHtml5', text: moopT('Download Excel'), filename: name },
+                ],
+            },
         });
     });
 })();
