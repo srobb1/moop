@@ -1046,7 +1046,8 @@ ok($v['key'] === 'nonspecific' && in_array('genomic DNA could give 2 products, n
 
 // A FAILED search counted nothing: it must say so, never "no product" (found 11-24, fixed 11-25).
 $v = primer_blast_verdict(['pair' => $pairX, 'by_db' => [], 'failed' => ['genome' => 'BLAST failed (exit 2)']], 'genome', 10000);
-ok($v['key'] === 'failed' && $v['label'] === 'search failed' && $v['amplifiable'] === null && count($v['reasons']) === 1,
+ok($v['key'] === 'failed' && $v['label'] === 'search failed' && $v['amplifiable'] === null && count($v['reasons']) === 1
+   && strpos($v['reasons'][0], 'see the message above') !== false,
    'genome search failed: "search failed", not "no product"');
 $v = primer_blast_verdict(['pair' => $pairX, 'by_db' => ['genome' => $one], 'failed' => ['transcript' => 'BLAST failed']], 'transcript', 10000);
 ok($v['key'] === 'failed' && $v['intended_db'] === 'transcript',

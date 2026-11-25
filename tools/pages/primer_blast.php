@@ -921,7 +921,7 @@ echo help_modal(
                 'color' => 'danger',
                 'html'  => true,
                 'text'  => t('The search of your template did not finish, so the pair was not checked — this is not the same as no product.')
-                         . ' ' . t('The message at the top of the results says what went wrong. Try again; if it keeps failing, tell the site administrator.'),
+                         . ' ' . t('The message at the top of the results says what went wrong and what to do: a busy server needs only another try a minute later, a search that ran too long needs fewer pairs at a time, and a broken database needs the site administrator.'),
             ],
             [
                 'label' => 'Only what would really amplify counts',

@@ -147,7 +147,7 @@ class PrimerBlast
         }
 
         if (!self::databaseExists($db)) {
-            $result['error'] = 'BLAST database not found: ' . basename($db);
+            $result['error'] = 'The sequence database for this search is missing (' . basename($db) . ').' . ' This needs the site administrator; trying again will not help.';
             return $result;
         }
 
@@ -157,7 +157,7 @@ class PrimerBlast
         require_once __DIR__ . '/../functions_system.php';
         $blastn       = $options['blastn'] ?? moop_tool('blastn', 'blast_tools');
         if ($blastn === '') {
-            $result['error'] = "blastn is not installed or not on the web server's PATH.";
+            $result['error'] = "blastn is not installed or not on the web server's PATH." . ' This needs the site administrator; trying again will not help.';
             return $result;
         }
 
@@ -179,7 +179,7 @@ class PrimerBlast
         require_once __DIR__ . '/../temp_dir.php';
         $query_file = tempnam(moop_temp_dir(), 'moop_primer_q');
         if ($query_file === false) {
-            $result['error'] = 'Could not create a temporary query file.';
+            $result['error'] = 'The server could not create a temporary file for the search.' . ' Try again; if it happens again, tell the site administrator.';
             return $result;
         }
         file_put_contents($query_file, $fasta);
@@ -190,7 +190,7 @@ class PrimerBlast
         $out_file = tempnam(moop_temp_dir(), 'moop_primer_o');
         if ($out_file === false) {
             @unlink($query_file);
-            $result['error'] = 'Could not create a temporary output file.';
+            $result['error'] = 'The server could not create a temporary file for the search.' . ' Try again; if it happens again, tell the site administrator.';
             return $result;
         }
 
@@ -244,7 +244,10 @@ class PrimerBlast
             return $fail($queued['error']);
         }
         if (blast_queue_timed_out($return_code)) {
-            return $fail(blast_queue_timeout_message());
+            // Not blast_queue_timeout_message(): that one is BLAST's ("a stricter E-value") and
+            // Primer BLAST has no E-value box. What helps here is fewer pairs per run.
+            return $fail('The search ran past the ' . blast_queue_settings()['max_runtime'] . '-second limit and was stopped. '
+                . 'Check fewer pairs at a time; a primer that sits in a repeated sequence can also make the search very slow.');
         }
         if (self::ranOutOfMemory($return_code, $output)) {
             @unlink($out_file);
@@ -268,12 +271,17 @@ class PrimerBlast
         if ($return_code !== 0) {
             // A non-zero exit with an empty .blastout is exactly the failure mode
             // that made the original scripts report a header-only table as success.
-            return $fail('BLAST failed (exit ' . $return_code . '): '
+            // Trying again will not help (a missing or damaged index, a broken install): say so,
+            // and keep the raw exit and output for the administrator, not the page (2026-11-25).
+            error_log('primer_blast: blastn failed on ' . $db . ' (exit ' . $return_code . '): '
                 . trim(implode(' ', array_slice($output, 0, 3))));
+            return $fail('The search could not run against this sequence database. '
+                . 'This needs the site administrator; trying again will not help.');
         }
         $fh = fopen($out_file, 'r');
         if ($fh === false) {
-            return $fail('Could not read the BLAST output.');
+            return $fail('Something went wrong on the server while reading the search results. '
+                . 'Try again; if it happens again, tell the site administrator.');
         }
 
         foreach ($pairs as $i => $pair) {

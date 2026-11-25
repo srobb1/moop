@@ -259,9 +259,12 @@ function primer_blast_verdict(array $r, string $search_mode, int $max_product): 
     // no verdict to give. Until 2026-11-25 this read "no product" -- an answer, and a wrong one.
     if (isset($r['failed'][$intended_db])) {
         return ['key' => 'failed', 'badge' => 'bg-danger', 'label' => t_plain('search failed'),
+                // What went wrong and what to do differs by cause (busy server: try again; too
+                // slow: fewer pairs; broken index: the administrator) -- the message at the top
+                // of the results says which, so this line points there instead of guessing.
                 'reasons' => [$intended_db === 'transcript'
-                    ? t_plain('the search of the transcripts failed, so this pair was not checked; try again, and if it keeps failing tell the site administrator')
-                    : t_plain('the search of the genome failed, so this pair was not checked; try again, and if it keeps failing tell the site administrator')],
+                    ? t_plain('the search of the transcripts did not finish (see the message above), so this pair was not checked')
+                    : t_plain('the search of the genome did not finish (see the message above), so this pair was not checked')],
                 'isoforms_note' => null, 'intended_db' => $intended_db, 'amplifiable' => null,
                 'amp_contam' => 0, 'too_long' => [], 'kb' => PrimerPairs::amplifiableKb(), 'repetitive' => []];
     }
