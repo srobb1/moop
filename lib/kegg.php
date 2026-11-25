@@ -18,6 +18,48 @@ require_once __DIR__ . '/cache_paths.php';
 const MOOP_KEGG_PATHWAY_SOURCE = 'KEGG Pathway (eggNOG)';
 const MOOP_KEGG_KO_SOURCE      = 'KEGG Orthology (eggNOG)';
 
+const MOOP_KEGG_MODULE_SOURCE  = 'KEGG Module (eggNOG)';
+/** The columns a pathway's gene list carries: the KO (which box on the map), then all of its pathways and modules. */
+const MOOP_KEGG_GENE_COLUMNS   = [MOOP_KEGG_KO_SOURCE, MOOP_KEGG_PATHWAY_SOURCE, MOOP_KEGG_MODULE_SOURCE];
+
+/**
+ * The genes behind one pathway, as a MOOPmart list: genes of $scope (organism [+ assembly + gene_set])
+ * annotated with $pathway, with the KEGG columns ticked. One row per gene with columns, where the
+ * annotation search gave one row per transcript and the hit only.
+ */
+function moop_kegg_genes_url(array $scope, string $pathway): string {
+    return moop_url('tools/moopmart.php?' . http_build_query($scope + [
+        'annotation' => $pathway, 'annotation_source' => MOOP_KEGG_PATHWAY_SOURCE,
+        'annotation_column_sources' => MOOP_KEGG_GENE_COLUMNS]));
+}
+
+/**
+ * The same genes as a TSV straight from MOOPmart's exporter (api/moopmart_export.php, a POST with the CSRF
+ * token): a small download button. The gene sets are the ones of $scope this visitor may see; '' if none.
+ */
+function moop_kegg_genes_download_html(array $scope, string $pathway): string {
+    static $by_scope = [];                     // a pathway table calls this once per row
+    $sk = json_encode($scope);
+    if (!isset($by_scope[$sk])) {
+        $by_scope[$sk] = [];
+        foreach (getAccessibleGeneSets($scope['organism'] ?? null, $scope['assembly'] ?? null, $scope['gene_set'] ?? null) as $by_org) {
+            foreach ($by_org as $org => $rows) foreach ($rows as $r) $by_scope[$sk][$org . '|' . $r['assembly'] . '|' . $r['gene_set']] = true;
+        }
+    }
+    $keys = $by_scope[$sk];
+    if (!$keys) return '';
+    $fields = ['output_format' => 'tsv', 'ann_format' => 'wide', 'sources[]' => array_keys($keys),
+               'ann_criteria_type[]' => '', 'ann_criteria_src[]' => MOOP_KEGG_PATHWAY_SOURCE, 'ann_criteria_acc[]' => $pathway,
+               'ann_criteria_kw[]' => '', 'ann_criteria_sub[]' => '0', 'annotation_columns[]' => MOOP_KEGG_GENE_COLUMNS];
+    $h = '<form method="post" action="' . htmlspecialchars(moop_url('api/moopmart_export.php')) . '" class="d-inline">' . csrf_input_field();
+    foreach ($fields as $k => $v) {
+        foreach ((array) $v as $one) $h .= '<input type="hidden" name="' . htmlspecialchars($k) . '" value="' . htmlspecialchars((string) $one) . '">';
+    }
+    $title = t('Download these genes with their KEGG Orthology, pathways and modules (TSV)');
+    return $h . '<button type="submit" class="btn btn-sm btn-link p-0 ms-1 align-baseline" title="' . $title . '" aria-label="' . $title . '">'
+              . '<i class="fa fa-download" aria-hidden="true"></i></button></form>';
+}
+
 /**
  * Map colours, one meaning each. The legend beside the link (moop_kegg_map_legend_html()) reads this, so
  * the two cannot disagree.
@@ -273,14 +315,16 @@ function moop_kegg_gene_pathways_html(array $rows, string $uniquename, array $li
                 }
                 if ($can_link) {
                     $map = moop_url('api/kegg_map.php?' . http_build_query($ctx + ['pathway' => $id, 'gene' => $uniquename]));
-                    // The annotation search: this gene set, this pathway id, ONLY the KEGG pathway source, run at once
-                    $genes = moop_url('tools/search.php?' . http_build_query($ctx + ['q' => $id, 'source' => MOOP_KEGG_PATHWAY_SOURCE]));
+                    // MOOPmart: the genes of this gene set in this pathway, each with its KO
+                    $genes = moop_kegg_genes_url($ctx, $id);
                     $html .= ' <a class="kegg-map-link" href="' . htmlspecialchars($map) . '" target="_blank" rel="noopener nofollow">' . t('View on KEGG')
                            . ' <i class="fa fa-external-link-alt link-icon"></i></a>'
-                           . ' · <a href="' . htmlspecialchars($genes) . '">' . t('Genes in this gene set') . '</a>';
+                           . ' · <a href="' . htmlspecialchars($genes) . '">' . t('Genes in this gene set') . '</a>'
+                           . moop_kegg_genes_download_html($ctx, $id);
                     if ($org_link) {
-                        $org_genes = moop_url('tools/search.php?' . http_build_query(['organism' => $ctx['organism'], 'q' => $id, 'source' => MOOP_KEGG_PATHWAY_SOURCE]));
-                        $html .= ' · <a href="' . htmlspecialchars($org_genes) . '">' . t('Genes in this organism') . '</a>';
+                        $org_genes = moop_kegg_genes_url(['organism' => $ctx['organism']], $id);
+                        $html .= ' · <a href="' . htmlspecialchars($org_genes) . '">' . t('Genes in this organism') . '</a>'
+                               . moop_kegg_genes_download_html(['organism' => $ctx['organism']], $id);
                     }
                 }
                 $html .= '</li>';

@@ -228,6 +228,10 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [ ] **Term page redesign: two columns (Sofia 11-25).** Genes (gene-set table + gene list) LEFT, term boxes (name/definition,
+      Where it sits, Parts and relationships, Description) RIGHT; drop the Jump-to navigator. Claude's view 11-25: works -- see that
+      session's answer (wide screens only; stacks on phones with the term first; full width when a term has no genes). Mock up
+      in the live page first (feedback_visual_mockups_in_browser). **M**
 - [x] DONE 11-24 (Sofia: "it is working now" -- was a cached copy). **Walkthrough step 7: fix the genome browser screenshot.** images/pages/tour/jbrowse.png.
       Live version = track drawer closed + loc re-entered. Ask Sofia what is still wrong (hard-reload first); likely:
       empty space under the view, track label over the gene, cursor left in the location box. JBrowse is in
@@ -247,7 +251,10 @@ Planosphere
       (https://www.kegg.jp/feedback/ or https://www.kegg.jp/feedback/copyright.html) -- Claude can draft the
       message; also ask whether Stowers needs the service-provider licence; (2) if yes: screenshot + caption +
       citation (Kanehisa 2025, doi:10.1093/nar/gkae909). Until then the tour links to the live map. **S** (waits on KEGG)
-- [ ] **KEGG "Genes" links -> MOOPmart instead of Annotation Search (Sofia 11-24).** Today "Genes in this gene
+- [x] **DONE 11-25** **KEGG "Genes" links -> MOOPmart instead of Annotation Search (Sofia 11-24).** Today "Genes in this gene
+      DONE 11-25: all 4 places (gene page x2, gene set, organism/assembly table) -> MOOPmart with KO + Pathway + Module columns ticked (?annotation_column_sources[], moop_kegg_genes_url), plus a download button = the same MOOPmart TSV (moop_kegg_genes_download_html). TSV rows are per mRNA (MOOPmart's normal shape). Tour step 5 text + kegg-list.png updated 11-25
+      (pathways.png kept: it lacks only the new download arrow). MOOPmart shows a 'filled in from the link you followed' note +
+      Go to Preview button whenever a link pre-fills it (GO term page too).
       set" / "Genes in this organism" (gene page Pathways) and "Genes" (gene-set/organism KEGG tables,
       includes/kegg_pathways_table.php:49) open tools/search.php?q=mapNNNNN -- one row per transcript, the pathway
       hit only. MOOPmart gives a gene list WITH chosen columns: add KEGG Orthology (the KO = which box on the map),
@@ -255,20 +262,24 @@ Planosphere
       &annotation_columns[] (tools/moopmart.php:85-93), the GO term page already links its counts to MOOPmart;
       KO data loaded (Nvec: "KEGG Orthology (eggNOG)", 7,066). Then update tour step 5 + its kegg-list screenshot.
       Check: gene vs transcript rows (pathway is on mRNAs). **S-M**
-- [ ] **Firefox makes the site look ugly (Sofia 11-24) -- find out why.** All checks so far use Chrome (puppeteer).
+- [x] **DONE 11-25** **Firefox makes the site look ugly (Sofia 11-24) -- find out why.** All checks so far use Chrome (puppeteer).
+      Sofia 11-25: looks OK to her; the complaint she acts on is JBrowse too small. DONE 11-25: frame = window height less its toolbar (page scrolls the 300px banner away; title card hidden while open; min 500px). 1366x768: 600->721px; 1920x1080: 637->1033px.
       First: Sofia says which pages/what looks wrong (screenshot), Firefox version + OS; then compare computed styles
       Chrome vs Firefox (puppeteer can drive Firefox) on home, gene page, a tool page. **M**
-- [ ] **Gene page GO IDs link only to AmiGO, never to our own GO term page (Sofia 11-24).** 684 GO links on
+- [x] **DONE 11-25** **Gene page GO IDs link only to AmiGO, never to our own GO term page (Sofia 11-24).** 684 GO links on
+      DONE 11-25: GO ID -> our term page, small icon -> AmiGO (lib/parent_functions.php, only when GO is built). No other page builds GO links. The term page opens narrowed to the gene's organism (Show all organisms link there).
       NV2g007394000.1, all https://amigo.geneontology.org/...; the URL is stored with each annotation by the
       pipeline. Our term page (tools/ontology_term.php?o=GO&id=...) shows genes in OUR organisms; api/v1/gene.php:155
       already adds it as term_page. Proposal: term name/ID -> our term page, small external icon -> AmiGO.
       Same check for other pages listing GO (search results, MOOPmart). Tour step 5 worded around it. **S-M** (TALK)
-- [ ] **Term page "Where it sits" is overwhelming for some terms (Sofia 11-24).** e.g.
+- [x] **DONE 11-25** **Term page "Where it sits" is overwhelming for some terms (Sofia 11-24).** e.g.
+      DONE 11-25: shortest path (BFS, moop_ob_shortest_path) shown, the rest folded under "Show N more paths".
       https://simrbase.stowers.org/tools/ontology_term.php?o=GO&id=GO:0030514 (negative regulation of BMP
       signaling pathway): 88 term links (18 distinct terms, repeated across paths) -- GO terms have many parents, so the section lists every path up to the root. Ideas to
       weigh (TALK): show the direct parents only, with "show all paths" to open the rest; or one shortest path
       + a count. Check PLANA terms too (fewer parents, probably fine). Linked from tour step 5. **S-M**
-- [ ] **Navbar Gene ID lookup: also find crosswalk-linked IDs (Sofia 11-24).** Today the box (js/modules/navbar-id-search.js
+- [x] **DONE 11-25** **Navbar Gene ID lookup: also find crosswalk-linked IDs (Sofia 11-24).** Today the box (js/modules/navbar-id-search.js
+      DONE 11-25 (crosswalk part): api/feature_search.php returns crosswalk matches on zero hits; menu box + home box show "X is not loaded here; it maps to <gene>" + ID Translator link. Old-gene-set part not done.
       -> api/feature_search.php) finds only loaded features; on no match it offers "Search annotations", and only THAT
       search shows the crosswalk "maps to" hint (tools/annotation_search_ajax.php:197). Show "EU296635 -> h1SMcG0012012"
       in the box itself (moop_crosswalk_search_hint()). Also consider: an ID that matches an OLD gene set (SMED30022468)
@@ -279,9 +290,19 @@ Planosphere
 - [ ] **Found by the public tour check (11-24), each to verify before fixing:**
       (a) Search "sFRP-1" in Smed took ~21 s (twice); "noggin" in Nvec 0.2 s -- measure cold/warm, find why. Lead (11-24): the search JSON carries one row per
           MATCHING ANNOTATION, not per transcript ("noggin-1": 2,174 rows for 12 transcripts, 1,650 of them EggNOG GO). **M**
+          FOUND 11-25: not rows, not disk (cold = warm, 21 s). buildFtsMatchExpr (lib/database_queries.php:382) adds * to every
+          word, so "sFRP-1" -> sfrp + 1* = every indexed word starting with "1" (42,795 words, 6.1M rows), 1.9 s per pass,
+          x11 passes (10 annotation types + top-up arm, :1012-1033). Any one-character word does it ("histone deacetylase 1" 21 s).
+          Fix 1: no * on a one-character word (~3 lines; 21 s -> 0.01 s, same 32 rows; also stops sFRP-1 matching sFRP-10;
+          check js/modules/search-terms.js highlighting + add a smoke test). Fix 2: run the top-up arm first, skip the type arms
+          when it returns fewer than the pool (11 passes -> 1 for specific searches).
+          DONE 11-25: Fix 1 (Sofia: never prefix-expand a single character). sFRP-1 21 s -> 0.11 s live, same 22 KB; 4 smoke tests
+          (red on the old code). Fix 2 not done -- only worth it if another slow search turns up.
       (b) Gene page help says orthologs are "in the next cards", but a PUBLIC visitor gets no "Orthologs in related
           species" card for h1SMcG0012012 (inside: 19) -- text or access wrong? **S-M**
-      (c) "Rosetta Stone Transcript Mapper" (page heading) vs "ID Translator" (menu) -- one name. **S**
+          11-25: access is right -- 17 of 18 planarian clade gene sets are unpublished genomes, so nothing is left for PUBLIC.
+          ON HOLD (Sofia): she will talk to someone about which species can be public; keep hidden, leave the help text.
+      (c) DONE 11-25: "Rosetta Stone ID Translator" everywhere (site_config crosswalk name).
       (d) Vertebrate-only GO terms carried onto invertebrate genes via orthologs (Smed SFRP-a: ossification
           GO:0001503, visual perception GO:0007601) -- question for compute. **TALK**
       (e) Smed curated name "SFRP-a" vs the papers' "sFRP-1" -- a visitor searching the paper name lands oddly. **TALK**

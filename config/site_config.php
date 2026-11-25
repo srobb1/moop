@@ -220,7 +220,7 @@ return [
     // organisms/<organism>/crosswalk.sqlite by scripts/build_crosswalk.php (lib/crosswalk.php).
     'crosswalk' => [
         'Schmidtea_mediterranea' => [
-            'name'   => 'Rosetta Stone Transcript Mapper',
+            'name'   => 'Rosetta Stone ID Translator',
             // Built on the compute side (RosettaStone, MOOP mode: hub and source names ARE MOOP gene set
             // names, checked by crosswalk/check_crosswalk.py) and shipped as crosswalk.sqlite. No 'folder' /
             // 'file' here: the mapping files are not on the web server (scripts/build_crosswalk.php needs them).

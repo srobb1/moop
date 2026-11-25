@@ -561,6 +561,19 @@ function generateAnnotationTableHTML($results, $uniquename, $type, $count, $anno
             $annotation_accession_url = htmlspecialchars(trim($raw_accession_url));
             $hit_id_link = $annotation_accession_url . urlencode(trim($row['annotation_accession']));
             $hit_id_cell = "<a href=\"" . htmlspecialchars($hit_id_link) . "\" target=\"_blank\">" . $hit_id . "</a>";
+            // A GO term: the ID opens OUR term page (its genes in this site's organisms, where it sits in GO),
+            // the stored outside page (AmiGO) moves to a small icon. Only when GO is built on this site.
+            $acc = trim((string) $row['annotation_accession']);
+            if (preg_match('/^GO:\d{7}$/', $acc) && moop_go_term_page_available()) {
+                // Narrowed to this gene's organism (Sofia, 2026-11-25); the term page offers the way out to all.
+                $term_org = (string) ($link_ctx['organism'] ?? $organism);
+                $term_url = moop_url('tools/ontology_term.php') . '?' . http_build_query(['o' => 'GO', 'id' => $acc]
+                          + ($term_org !== '' ? ['organism' => $term_org] : []));
+                $hit_id_cell = '<a href="' . htmlspecialchars($term_url) . '" title="' . t('Open this GO term on this site') . '">' . $hit_id . '</a>'
+                             . ' <a href="' . htmlspecialchars($hit_id_link) . '" target="_blank" rel="noopener" class="text-muted"'
+                             . ' title="' . t('Open this GO term in AmiGO') . '" aria-label="' . t('Open this GO term in AmiGO') . '">'
+                             . '<i class="fa fa-external-link-alt link-icon" aria-hidden="true"></i></a>';
+            }
         }
 
         $html .= "<tr>";
@@ -1029,4 +1042,15 @@ function generateChildAnnotationCards($child, $all_annotations, $analysis_order,
     
     return $html;
 }
+
+/** Whether this site has GO built for the term pages (tools/ontology_term.php?o=GO); asked once per request. */
+function moop_go_term_page_available(): bool {
+    static $ok = null;
+    if ($ok === null) {
+        require_once __DIR__ . '/ontology_browser.php';
+        $ok = isset(moop_ob_ontologies()['GO']);
+    }
+    return $ok;
+}
+
 ?>

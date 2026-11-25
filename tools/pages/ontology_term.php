@@ -89,9 +89,17 @@ $rows = function (array $list) use ($prefix): string {
       <div class="card-body">
         <?php if ($view['paths']): ?>
         <div class="ob-paths">
-          <?php foreach ($view['paths'] as $path): ?>
+          <?php $__more = count($view['paths']) - 1; ?>
+          <?php foreach ($view['paths'] as $__pi => $path): ?>
+            <?php if ($__pi === 1): ?>
+            <details class="ob-more-paths">
+              <summary class="small"><?= $view['paths_capped']
+                    ? t('Show %d more paths (not all of them: this term has more)', $__more)
+                    : ($__more === 1 ? t('Show 1 more path') : t('Show %d more paths', $__more)) ?></summary>
+            <?php endif; ?>
             <div class="ob-path"><?php foreach ($path as $i => $step): ?><?= $i ? '<span class="ob-sep">&rsaquo;</span>' : '' ?><?php if ($step['id'] === $term['id']): ?><strong><?= htmlspecialchars($step['label']) ?></strong><?php else: ?><a href="<?= htmlspecialchars(moop_ob_term_url($prefix, $step['id'])) ?>"><?= htmlspecialchars($step['label']) ?></a><?php endif; ?><?php endforeach; ?></div>
           <?php endforeach; ?>
+          <?php if ($__more > 0): ?></details><?php endif; ?>
         </div>
         <?php endif; ?>
         <h3 class="ob-h"><?= t('Is a') ?> <span class="ob-hcount">(<?= count($view['parents']) ?>)</span></h3>

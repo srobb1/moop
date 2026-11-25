@@ -92,6 +92,10 @@ unset($_acc, $_src);
 // (a GO term page sends its genes WITH their GO terms). Only types this page lists.
 $prefill_ann_types = array_values(array_intersect(array_map('strval', (array) ($_GET['annotation_columns'] ?? [])),
                                                   array_keys($annotation_source_types)));
+// ...or single sources, when a whole type would be too much: ?annotation_column_sources[]=KEGG Orthology (eggNOG)
+// (KEGG pathway links send the KO only, not every gene-family source). Only sources this page lists.
+$prefill_ann_sources = array_values(array_intersect(array_map('strval', (array) ($_GET['annotation_column_sources'] ?? [])),
+                                                    $annotation_source_names));
 
 // Curated anatomical expression (e.g. PAGE) is offered as one more annotation COLUMN for the
 // organisms that have it. Not a filter source ($annotation_source_names): the filters query
@@ -118,6 +122,7 @@ echo render_display_page(
         'anatomy_organisms'        => $anatomy_organisms,
         'prefill_annotation'       => $prefill_annotation,
         'prefill_ann_types'        => $prefill_ann_types,
+        'prefill_ann_sources'      => $prefill_ann_sources,
         'annotation_source_names'  => $annotation_source_names,
         'siteTitle'               => $siteTitle,
         // scope-selector BEFORE moopmart.js: moopmart.js calls initScopeSelector().

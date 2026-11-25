@@ -244,6 +244,11 @@ ok(buildFtsMatchExpr('wnt8b', false) === '"wnt8b"*',           'single term beco
 ok(buildFtsMatchExpr('hox gene', false) === '"hox"* AND "gene"*','multiple terms AND together as prefixes');
 ok(buildFtsMatchExpr('hox gene', true) === '"hox gene"',        'quoted search is a phrase (no prefix star)');
 ok(buildFtsMatchExpr('a"b', true) === '"a""b"',                 'embedded double-quote is escaped ("")');
+// A one-character last word is exact, never a prefix: "1"* expanded to 42,795 words and took 21 s (2026-11-25).
+ok(buildFtsMatchExpr('sFRP-1', false) === '"sFRP-1"',           'one-character last word (sFRP-1) is exact, no prefix star');
+ok(buildFtsMatchExpr('histone deacetylase 1', false) === '"histone"* AND "deacetylase"* AND "1"', 'a lone one-character term is exact');
+ok(buildFtsMatchExpr('sFRP-12', false) === '"sFRP-12"*',        'a two-character last word keeps the prefix star');
+ok(buildFtsMatchExpr('Pax-6a', false) === '"Pax-6a"*',          'last word 6a (two characters) keeps the prefix star');
 ok(buildFtsMatchExpr('!!!', false) === '',                      'punctuation-only term yields empty (no FTS injection)');
 ok(buildFtsMatchExpr('   ', true) === '',                       'blank quoted search yields empty');
 ok(ftsPrimaryTerm('hox gene', false) === 'hox',                 'primary ranking term is the first token');

@@ -6,8 +6,8 @@
 ?>
 <div class="container-fluid py-3 px-3">
 
-  <!-- Header -->
-  <div class="card shadow-sm mb-4">
+  <!-- Header (hidden while the browser is open, so JBrowse gets the height -- js/modules/jbrowse2-browser.js) -->
+  <div class="card shadow-sm mb-4" id="jb-title-card">
     <div class="card-header text-white d-flex align-items-center tool-header">
       <?= page_title('Genome Browser') ?>
       <?= page_purpose_info('Explore an assembly in the JBrowse genome browser: genes, data tracks and sequence, interactively.') ?>

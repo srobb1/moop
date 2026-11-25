@@ -137,6 +137,34 @@ function moop_ob_paths(string $prefix, string $id, int $max = 12): array {
 }
 
 /**
+ * One shortest is-a path from a top term down to $id (breadth-first up the parents, so it is truly
+ * shortest -- the capped walk in moop_ob_paths() can stop before reaching it). [] if unknown.
+ */
+function moop_ob_shortest_path(string $prefix, string $id): array {
+    $t = moop_ob_term($prefix, $id);
+    if (!$t) return [];
+    $label = [$id => $t['label']];
+    $child = [$id => null];                    // id -> the term below it on the way back to $id
+    $queue = [$id];
+    while ($queue) {
+        $tid = array_shift($queue);
+        $ups = moop_ob_links($prefix, $tid, [MOOP_OB_ISA], 'up');
+        if (!$ups) {                           // a top term: walk back down to $id
+            $path = [];
+            for ($n = $tid; $n !== null; $n = $child[$n]) $path[] = ['id' => $n, 'label' => $label[$n]];
+            return $path;
+        }
+        foreach ($ups as $u) {
+            if (array_key_exists($u['id'], $child)) continue;
+            $child[$u['id']] = $tid;
+            $label[$u['id']] = $u['label'];
+            $queue[] = $u['id'];
+        }
+    }
+    return [];
+}
+
+/**
  * The site's own written page about this term, if it has one: a content page whose address is
  * the term's name or one of its synonyms ("digestive system" -> page "digestive-system").
  * No configuration: name a page after the term and it appears on the term page.
@@ -238,8 +266,18 @@ function moop_ob_term_view(string $prefix, array $term): array {
         foreach ($rows as $r) $out[$rels[$r['relation']] ?? $r['relation']][] = $r;
         return $out;
     };
+    // Shortest path first, then the others (the walk's own copy of it removed). GO terms have many
+    // parents: GO:0030514 had 12 paths, 88 links, so the page shows the first and folds the rest.
+    $max      = 12;
+    $walked   = moop_ob_paths($prefix, $term['id'], $max);
+    $capped   = count($walked) >= $max;
+    $shortest = moop_ob_shortest_path($prefix, $term['id']);
+    $key      = fn(array $p) => implode('>', array_column($p, 'id'));
+    $paths    = $shortest ? [$shortest] : [];
+    foreach ($walked as $p) if (!$shortest || $key($p) !== $key($shortest)) $paths[] = $p;
     return [
-        'paths'    => moop_ob_paths($prefix, $term['id']),
+        'paths'    => $paths,
+        'paths_capped' => $capped,                                                  // the walk stopped at $max
         'parents'  => moop_ob_links($prefix, $term['id'], [MOOP_OB_ISA], 'up'),
         'kinds'    => moop_ob_links($prefix, $term['id'], [MOOP_OB_ISA], 'down'),
         'outgoing' => $group(moop_ob_links($prefix, $term['id'], $other, 'up')),     // part of X, develops from Y

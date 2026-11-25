@@ -536,6 +536,17 @@
 
         document.getElementById('mm-ann-filter')?.addEventListener('input', applyAnnVisibility);
 
+        // "Go to Preview" in the filled-in-from-a-link note: bring the Preview button into view and press it.
+        document.getElementById('mm-prefill-go')?.addEventListener('click', () => {
+            const btn = document.getElementById('mm-preview-btn');
+            if (!btn) return;
+            btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            btn.focus({ preventScroll: true });
+            btn.click();
+        });
+
+        // A link may pre-tick single sources (?annotation_column_sources[]=): show their type as part-ticked.
+        document.querySelectorAll('.mm-ann-type-cb').forEach(c => syncAnnTypeCb(c.dataset.type));
         applyAnnVisibility();
     }
 

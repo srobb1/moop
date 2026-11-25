@@ -54,7 +54,20 @@
             // Annotation Search switched off on this site (includes/toolbar.php marks the page):
             // no link into it.
             const searchOn = !document.querySelector('[data-no-search="1"]');
-            wrap.innerHTML = '<div class="small mt-2 text-muted">' + moopTh('No gene, transcript or protein has that exact ID.') + ' '
+            // ...unless the ID Translator maps it (an ID from a source this site does not load, e.g. a
+            // GenBank accession): name the gene it is, first (api/feature_search.php 'crosswalk').
+            const cw = results.crosswalk || [];
+            const cwHtml = cw.map(c => {
+                const ext = c.external ? ' target="_blank" rel="noopener"' : target;
+                return `<div class="mt-2">${moopTm('%1$s is not loaded here; it maps to %2$s',
+                            `<strong>${escapeHtml(q)}</strong>`,
+                            `<a href="${escapeHtml(c.url)}"${ext} class="fw-semibold font-monospace">${escapeHtml(c.id)}</a>`
+                            + (c.external ? ' <i class="fa fa-external-link-alt link-icon"></i>' : ''))}
+                          <span class="text-muted">(<em>${escapeHtml(c.organism.replace(/_/g, ' '))}</em>)</span>
+                          · <a href="${escapeHtml(c.translator)}"${target}>${moopTh('Open in the ID Translator')}</a></div>`;
+            }).join('');
+            wrap.innerHTML = (cwHtml ? `<div class="small">${cwHtml}</div>` : '')
+                + '<div class="small mt-2 text-muted">' + moopTh('No gene, transcript or protein has that exact ID.') + ' '
                 + (q && searchOn ? `<a href="${site}/tools/search.php?q=${encodeURIComponent(q)}">${moopTh('Search annotations for “%s” →', q)}</a>` : '')
                 + '</div>';
             return;
@@ -112,7 +125,9 @@
             .catch(() => { throw new Error(moopT('Search failed. Please try again.')); })
             .then(data => {
                 if (data.error) throw new Error(data.error);
-                return data.results || [];
+                const results = data.results || [];
+                results.crosswalk = data.crosswalk || [];   // only set when results is empty
+                return results;
             });
     }
 

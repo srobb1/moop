@@ -51,8 +51,13 @@
     function resizeViewer() {
         const wrap = document.getElementById('jb-iframe-wrap');
         if (!wrap || wrap.closest('#jb-viewer')?.style.display === 'none') return;
-        const top = wrap.getBoundingClientRect().top + window.scrollY;
-        wrap.style.height = (window.innerHeight - top - 8) + 'px';
+        // The whole window less the viewer's own toolbar row: launch() scrolls the viewer to the top, so
+        // the site banner (300px on simrbase) and the navbar scroll away instead of eating the height.
+        // Visitors said it was too small (2026-11-25): it used to fill only what was left below them.
+        // Never under 500px, so tracks stay readable on a short screen.
+        const bar = wrap.previousElementSibling;
+        const barH = bar ? bar.getBoundingClientRect().height + 8 : 0;
+        wrap.style.height = Math.max(500, window.innerHeight - barH - 8) + 'px';
     }
 
     // ── Launch iframe ─────────────────────────────────────────────────────────
@@ -62,8 +67,10 @@
         const iframe   = document.getElementById('jb-iframe');
         const label    = document.getElementById('jb-viewer-label');
         const footer   = document.querySelector('footer');
+        const title    = document.getElementById('jb-title-card');
 
         if (selector) selector.style.display = 'none';
+        if (title)    title.style.display    = 'none';   // the viewer's own label says what is open
         if (viewer)   viewer.style.display   = '';
         if (footer)   footer.style.display   = 'none';
         if (label)    label.textContent       = `${organism.replace(/_/g, ' ')} — ${assembly}`;
@@ -71,6 +78,8 @@
 
         resizeViewer();
         window.addEventListener('resize', resizeViewer);
+        // Bring the viewer (toolbar + frame) to the top of the window.
+        if (viewer) window.scrollTo({ top: viewer.getBoundingClientRect().top + window.scrollY - 4 });
     }
 
     // ── Organism / assembly selector ──────────────────────────────────────────
@@ -292,6 +301,8 @@
                 const viewer   = document.getElementById('jb-viewer');
                 const footer   = document.querySelector('footer');
                 if (selector) selector.style.display = '';
+                const title = document.getElementById('jb-title-card');
+                if (title)    title.style.display    = '';
                 if (viewer)   viewer.style.display   = 'none';
                 if (footer)   footer.style.display   = '';
                 if (iframe)   iframe.src              = '';

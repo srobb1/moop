@@ -1,6 +1,6 @@
 <?php
 /**
- * ID Translator (simrbase: "Rosetta Stone Transcript Mapper") -- paste ids of any kind (older
+ * ID Translator (simrbase: "Rosetta Stone ID Translator") -- paste ids of any kind (older
  * transcriptomes, ESTs, array probes, gene models) and get the reference gene each maps to, plus
  * the ids of that same gene in the sources you pick. Data: the organism's crosswalk.sqlite
  * (lib/crosswalk.php, format docs/CROSSWALK_FORMAT.md). Plan: notes/PLANOSPHERE_PAGE_ROSETTA_PLAN.md

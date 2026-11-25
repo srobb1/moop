@@ -22,6 +22,23 @@
     <div class="tool-page-blurb"><?= t('Build a table of genes and add annotations such as GO terms, orthologs, KEGG pathways or protein domains — or download their sequences.') ?></div>
   </div>
 
+  <?php if (($prefill_annotation['acc'] ?? '') !== ''): ?>
+  <?php /* A link filled this page in (KEGG "Genes", a GO term page): say so, and what to do next -- the
+           Preview button is far down the page, below steps 1-3 (Sofia, 2026-11-25). In the page, not a
+           browser pop-up, which browsers block. */ ?>
+  <div class="alert alert-info alert-dismissible d-flex align-items-start gap-2 mb-4" role="status" id="mm-prefill-note">
+    <i class="fa fa-info-circle mt-1" aria-hidden="true"></i>
+    <div>
+      <?= t_markup('This page was filled in from the link you followed: genes with %s, with their annotation columns ticked.',
+                   '<strong>' . htmlspecialchars($prefill_annotation['acc']) . '</strong>'
+                   . (($prefill_annotation['src'] ?? '') !== '' ? ' (' . htmlspecialchars(moop_annotation_source_label($prefill_annotation['src'])) . ')' : '')) ?>
+      <?= t('Change anything you like below, then press Preview to check the genes, and Download to get the file.') ?>
+      <div class="mt-2"><button type="button" class="btn btn-sm btn-primary" id="mm-prefill-go"><i class="fa fa-eye me-1" aria-hidden="true"></i><?= t('Go to Preview') ?></button></div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= t('Close') ?>"></button>
+  </div>
+  <?php endif; ?>
+
   <?php
   // MOOPmart help modals, converted from two hand-built modals of <ul>/<h6> prose to the
   // shared card modal (help_modal). They gain the consistent card treatment used across the
@@ -583,7 +600,7 @@
                   <input type="checkbox" class="form-check-input flex-shrink-0 mm-ann-col mb-0"
                          id="<?= $safe_id ?>"
                          value="<?= htmlspecialchars($src_name) ?>"
-                         data-type="<?= htmlspecialchars($type) ?>"<?= $_on ?><?= ($src_name === MOOPMART_ANATOMY_SOURCE && $type === MOOPMART_ANATOMY_TYPE)
+                         data-type="<?= htmlspecialchars($type) ?>"<?= ($_on || in_array($src_name, $prefill_ann_sources ?? [], true)) ? ' checked' : '' ?><?= ($src_name === MOOPMART_ANATOMY_SOURCE && $type === MOOPMART_ANATOMY_TYPE)
                              ? ' data-orgs="' . htmlspecialchars(implode(',', $anatomy_organisms ?? [])) . '"' : '' ?>>
                   <label class="form-check-label mb-0" for="<?= $safe_id ?>"
                          style="cursor:pointer; font-size:0.82rem;">

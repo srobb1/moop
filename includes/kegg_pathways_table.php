@@ -46,7 +46,7 @@ $kid = htmlspecialchars($kegg_tbl['id']);
       $found = count($r['kos_found']);
       $cov   = $r['kos_total'] ? $found / $r['kos_total'] : null;
       $map   = moop_url('api/kegg_map.php?' . http_build_query($kegg_tbl['scope'] + ['pathway' => $r['pathway']]));
-      $genes = moop_url('tools/search.php?' . http_build_query($kegg_tbl['scope'] + ['q' => $r['pathway'], 'source' => MOOP_KEGG_PATHWAY_SOURCE])); ?>
+      $genes = moop_kegg_genes_url($kegg_tbl['scope'], $r['pathway']); ?>
     <tr>
       <td data-search="<?= htmlspecialchars($r['class']) ?>"><?= htmlspecialchars($r['class']) ?><?php if ($r['sub'] !== ''): ?><div class="small text-muted"><?= htmlspecialchars($r['sub']) ?></div><?php endif; ?></td>
       <td><?= htmlspecialchars($r['name']) ?> <span class="small text-muted"><?= htmlspecialchars($r['pathway']) ?></span></td>
@@ -60,7 +60,7 @@ $kid = htmlspecialchars($kegg_tbl['id']);
       <?php endif; ?>
       <td class="text-nowrap">
         <a href="<?= htmlspecialchars($map) ?>" target="_blank" rel="noopener nofollow"><?= t('Map') ?> <i class="fa fa-external-link-alt link-icon"></i></a>
-        · <a href="<?= htmlspecialchars($genes) ?>"><?= t('Genes') ?></a>
+        · <a href="<?= htmlspecialchars($genes) ?>"><?= t('Genes') ?></a><?= moop_kegg_genes_download_html($kegg_tbl['scope'], $r['pathway']) ?>
       </td>
     </tr>
   <?php endforeach; ?>

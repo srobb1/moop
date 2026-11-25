@@ -379,7 +379,14 @@ function buildFtsMatchExpr($search_term, $is_quoted_search) {
     $exprs = [];
     foreach (preg_split('/\s+/', trim($search_term)) as $term) {
         if ($term === '' || !preg_match('/[\p{L}\p{N}]/u', $term)) continue;
-        $exprs[] = $as_fts_string($term) . '*';   // prefix query, e.g. "wnt8b"*
+        // Prefix query, e.g. "wnt8b"* -- EXCEPT when the term's LAST word (what the * applies to, after the
+        // index splits "sFRP-1" into sfrp + 1) is one character. "1"* means every indexed word starting
+        // with 1: 42,795 words / 6.1M rows in Smed, 1.9 s per pass, 11 passes = 21 s for "sFRP-1"
+        // (2026-11-25). Exact is also what the visitor meant: sFRP-1 is not sFRP-10, "histone
+        // deacetylase 1" is not HDAC 11. A one-character word is never expanded (Sofia, 2026-11-25).
+        $words = preg_split('/[^\p{L}\p{N}]+/u', $term, -1, PREG_SPLIT_NO_EMPTY);
+        $last  = (string) end($words);
+        $exprs[] = $as_fts_string($term) . (mb_strlen($last) === 1 ? '' : '*');
     }
     return implode(' AND ', $exprs);
 }

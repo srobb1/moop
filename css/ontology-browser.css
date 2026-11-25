@@ -108,3 +108,5 @@ a.ob-rec:hover, a.ob-rec:focus { background: var(--moop-tool-header); color: #ff
 .ob-sources p { margin: 0.15rem 0; }
 .ob-sources .fa { color: var(--moop-main-dark); width: 1.1em; text-align: center; margin-right: 0.2rem; }
 .ob-sources .ob-howto { font-weight: 600; color: var(--moop-main-dark); margin-bottom: 0.3rem; }
+/* Term page: the other is-a paths, folded under the shortest one */
+.ob-more-paths summary { color: var(--moop-tool-header); cursor: pointer; margin: 2px 0 4px; }

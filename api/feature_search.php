@@ -202,7 +202,28 @@ if (empty($results)) {
 // only decides WHERE the helper is called, not whether it can be.
 $results = moop_resolve_feature_search_hits($results, $db_map, $site);
 
-echo json_encode(['results' => $results]);
+// No feature has this ID: it may be one the ID Translator (crosswalk) maps -- a transcriptome MOOP does
+// not load, a GenBank accession, an older gene set. Say which gene it is, as Annotation Search does on
+// zero hits (moop_crosswalk_search_hint). Only on zero results, so ordinary lookups never pay for it.
+// Only organisms this visitor can open, and gene links only into gene sets they can open.
+$crosswalk = [];
+if (empty($results)) {
+    require_once __DIR__ . '/../lib/crosswalk.php';
+    $visible_gs = [];
+    foreach ($accessible as $src) $visible_gs[$src['organism'] . '|' . ($src['gene_set'] ?? '')] = true;
+    $hubs_cfg = moop_crosswalk_sources();
+    foreach (array_unique(array_column($accessible, 'organism')) as $org) {
+        if (!isset($hubs_cfg[$org])) continue;
+        foreach (moop_crosswalk_search_hint($org, $q) as $l) {
+            $gs = (string) ($hubs_cfg[$org]['hubs'][$l['hub']]['gene_set'] ?? '');
+            if (!$l['external'] && !isset($visible_gs[$org . '|' . $gs])) continue;
+            $crosswalk[] = ['organism' => $org, 'id' => $l['id'], 'url' => $l['url'], 'external' => $l['external'],
+                            'translator' => moop_url('tools/crosswalk.php') . '?' . http_build_query(['organism' => $org, 'ids' => $q])];
+        }
+    }
+}
+
+echo json_encode(['results' => $results] + ($crosswalk ? ['crosswalk' => $crosswalk] : []));
 
 /**
  * Lift ID-search hits to one row per gene, per organism.

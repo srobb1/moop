@@ -13,8 +13,7 @@ if (!function_exists('moop_viewing_as_public') || !moop_viewing_as_public()) {
 }
 
 $vab_config = ConfigManager::getInstance();
-$vab_site   = $vab_config->getString('site');
-$vab_return = $_SERVER['REQUEST_URI'] ?? ('/' . $vab_site . '/index.php');
+$vab_return = $_SERVER['REQUEST_URI'] ?? moop_url('index.php');
 ?>
 <div class="alert alert-warning border-0 rounded-0 mb-0 py-2" role="status"
      style="border-bottom: 3px solid #d97706 !important;">
@@ -26,7 +25,7 @@ $vab_return = $_SERVER['REQUEST_URI'] ?? ('/' . $vab_site . '/index.php');
         You are seeing only gene sets marked <strong>Public</strong> — your administrator access is paused.
       </span>
     </div>
-    <form method="post" action="/<?= htmlspecialchars($vab_site) ?>/view_as.php" class="m-0">
+    <form method="post" action="<?= moop_url_base() ?>/view_as.php" class="m-0">
       <?= csrf_input_field() ?>
       <input type="hidden" name="action" value="leave">
       <input type="hidden" name="return" value="<?= htmlspecialchars($vab_return) ?>">
