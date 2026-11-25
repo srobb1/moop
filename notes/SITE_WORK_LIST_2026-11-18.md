@@ -228,6 +228,12 @@ Planosphere
 - Adding features.
 
 ## Inbox — new items go here
+- [x] DONE 11-25 (15969c4a). **Amber = attention color (Sofia 11-25):** --moop-attention-* + .btn-attention, Site Colors ->
+      Attention (empty = MOOP amber, not tied to the main color); every amber use moved onto it (Expand column, MOOPmart
+      prefill, stale chips, Primer Maker callout). Genome browser: amber "New window" button with a label.
+- [x] DONE 11-25. **News: 7 items for 11-24/11-25** (tour + walkthrough, Davies 2017 gallery, Anatomy & Gene Function,
+      genome browser gene click, AI BLAST/primers, gene names, ID lookup + Rosetta Stone) via Admin -> News.
+      HELD: "old SIMRbase links now redirect" -- post after mk4/TCS + Nvec v1g IDs are in the crosswalk.
 - [x] DONE 11-25. **Account activity on Manage Users (Sofia 11-25):** Created / Last login /
       Logins (30 d / all) columns. lib/user_activity.php keeps {private}/user_activity.json (NOT users.json: Manage
       Users rewrites that unlocked); login.php records, Manage Users records create / forgets delete; backup +
@@ -246,7 +252,7 @@ Planosphere
       update the tables to our names, keep theirs as published, or show both. Ask Davies which names are current /
       preferred before changing anything. Not yet listed: which genes differ and how (a side-by-side would help the talk).
       **Leaning (Sofia 11-25): change the tables to our names -- but ON HOLD, do not change yet.** **TALK**
-- [ ] **Term page redesign vs ANATOMY terms (PLANA) (Sofia 11-25).** The two-column layout + full-width header
+- [ ] **Term page redesign vs ANATOMY terms (PLANA) (Sofia 11-25).** PROGRESS 11-25 (e2ed6a06): Description moved to the LEFT column with Jump to In situ data / Sequences, Expression records first, amber Expand column (left column full width); stage terms now find their records. Still to decide: is that enough for anatomy terms, or sidebar / other split? Open small item: move the Images card up under Expression records. The two-column layout + full-width header
       (11-25) was designed around GO genes. Anatomy terms have little in the data column (records + images) and a long
       term column (Parts and relationships), and Sofia found the old Jump-to sidebar good there. Review PLANA term
       pages (e.g. eye PLANA:0000036, a big region like head) and decide: sidebar back for anatomy only, different
