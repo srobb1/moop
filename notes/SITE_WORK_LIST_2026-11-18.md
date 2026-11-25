@@ -47,7 +47,7 @@ Order of work, and why:
       smedgd.org + www A records at 161.129.22.133. STILL OPEN: the "Verify after the switch"
       walk (render_compare's 52 pages ran OK 11-24 -- covers most of it); README + docs/INSTALL.md say nothing
       about serving a site at its own address (link_prefix "/"). Then tick the file. **S-M**
-- [ ] **SECURITY (found 11-24): code and notes folders are served to the internet.** A .php placed in scripts/,
+- [x] (code DONE e2da7c81; ROOT must redeploy the 3 guard.conf) **SECURITY (found 11-24): code and notes folders are served to the internet.** A .php placed in scripts/,
       tests/, vendor/, lib/, includes/ RUNS from a URL on all 3 sites (probed with a real file); notes/*.md,
       CLAUDE.md, README.md, composer.json/.lock, vendor/composer/installed.json download (9 notes name internal
       172.16 addresses). 12 scripts/tests have no CLI-only guard -- incl. strip_auto_public_access.php and
@@ -193,7 +193,7 @@ Planosphere
       for someone new to the site and to tools like this. **M** (name = TALK)
 - [x] 11-20 (H): gene-list side DONE (type first, then only the sources in the organisms picked; OMA reference species written out; types renamed BLAST homologs + Reciprocal best hits). Output side DONE 11-24 (70dfce32): 11 closed type rows, readable source names, find box, only in-scope sources ticked/sent (wide layout had up to 370 empty columns); long + wide downloads tested. Explainer DONE 11-24: one line under the title ("Build a table of genes and add annotations such as GO terms, orthologs, KEGG pathways or protein domains — or download their sequences."); the steps stay in the (i). **MOOPmart:** the two annotation selectors (gene-list builder, output builder) are too long to
       scroll — needs a search/grouped picker; and new text explaining the page. **TALK, then L**
-- [ ] **Manage Annotations: 13 saves report success even when the file was not written** (found 11-20) --
+- [x] (DONE 946396fa) **Manage Annotations: 13 saves report success even when the file was not written** (found 11-20) --
       every `saveJsonFile()` in `admin/manage_annotations.php` except the display-label one ignores its
       return value (colour, order, synonyms, ...). The silent-write-failure pattern. Check each, say so. **S**
 - [x] DONE (home Getting started has "Ask an AI assistant", checked 11-23). **"Use this site with an AI assistant" -- make it more prominent** (Sofia 11-20): also put it in
@@ -249,7 +249,7 @@ Planosphere
 - [x] **Inline JavaScript left in templates — DONE 11-25:** manage_blast_linkouts -> js/manage-blast-linkouts.js
       (perDbOptions via inline_scripts), retrieve_sequences values -> controller inline_scripts, manage_groups
       deleteGroup() -> js/modules/manage-groups.js. parent.php had none left (only a JSON data island, which is fine).
-- [ ] **Inline on* handlers (~125 in PHP templates, 11-25 count)** keep 'unsafe-inline' in the CSP. Biggest:
+- [x] (DONE 57915f50 + nonces a429e762) **Inline on* handlers (~125 in PHP templates, 11-25 count)** keep 'unsafe-inline' in the CSP. Biggest:
       manage_annotations 16, manage_organisms 13, manage_registry 12, manage_js_registry 10, manage_groups 10,
       organism_modals/metadata 9, manage_jbrowse 9. Recipe: id/data-* + addEventListener, data-confirm + one
       delegated submit listener (js/manage-users.js). **L**

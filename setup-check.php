@@ -729,6 +729,13 @@ $server_flavor = detectWebServer();
 // checked against ITS OWN guard. This looked only at moop-security.conf, so a second site found
 // the first site's guard and reported "current" while its own was missing (found 2026-11-05).
 $guard_site = basename($base);
+// The default.d copy serves this site under the machine's own address (http://<ip>/<folder>/),
+// so it is keyed to the folder even when the site itself is served at its domain's root -- that
+// root copy is moop-sites/<site>/guard.conf, checked further down. Until 2026-11-25 the check
+// and its fix command used the site's link prefix ("/"), which would write root rules into the
+// shared default server (wrong paths; a duplicate /users.json location fails nginx -t).
+$default_d_prefix = '/' . $guard_site;   // the folder: /var/www/html/<folder> is http://<ip>/<folder>/
+$guard_cmd = "$base/scripts/nginx_site_guard.sh $guard_site $default_d_prefix";
 // The deployed name must sort BEFORE php.conf (nginx reads default.d/ in name order; the first
 // matching regex wins), so it comes from the one rule in nginx_site_guard.sh --deploy-name.
 // "planosphere-security.conf" sorts after php.conf: its .php deny never ran (2026-11-11).
@@ -771,12 +778,12 @@ if ($server_flavor === 'unknown') {
     } elseif ($deployed === null) {
         fail("Execution guard is not deployed ($server_flavor)",
              ($server_flavor === 'nginx'
-                 ? "sudo bash -c '$base/scripts/nginx_site_guard.sh $guard_site > $target' && sudo chmod 644 $target\n"
+                 ? "sudo bash -c '$guard_cmd > $target' && sudo chmod 644 $target\n"
                  : "sudo cp $canonical $target && sudo chmod 644 $target\n") .
              "         $reload\n" .
              "         (Without it, an uploaded .php in a served data tree will execute.)");
     } elseif (($expected = $server_flavor === 'nginx'
-                   ? (string) shell_exec('bash ' . escapeshellarg("$base/scripts/nginx_site_guard.sh") . ' ' . escapeshellarg($guard_site))
+                   ? (string) shell_exec('bash ' . escapeshellarg("$base/scripts/nginx_site_guard.sh") . ' ' . escapeshellarg($guard_site) . ' ' . escapeshellarg($default_d_prefix))
                    : (string) file_get_contents($canonical)) === ''
                // Rules only: comment and blank lines do not change what nginx does, and comparing
                // them made a documentation edit to the template read as an outdated guard on every
@@ -788,7 +795,7 @@ if ($server_flavor === 'unknown') {
         warn("Deployed guard differs from what this site needs (" . basename($deployed) . ")",
              "It may predate a rule that closes a hole. Re-deploy:\n" .
              ($server_flavor === 'nginx'
-                 ? "         sudo bash -c '$base/scripts/nginx_site_guard.sh $guard_site > $deployed' && $reload"
+                 ? "         sudo bash -c '$guard_cmd > $deployed' && $reload"
                  : "         sudo cp $canonical $deployed && $reload"));
     } else {
         pass("Execution guard deployed and current ($server_flavor)");

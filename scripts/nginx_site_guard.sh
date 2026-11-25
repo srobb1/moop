@@ -36,7 +36,10 @@
 # Reads only the template; writes nothing. Safe to run as root (it runs no MOOP code).
 set -euo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# pwd -P: the REAL path. Reached through a symlink (/home/smr/moop -> /var/www/html/moop) a plain
+# pwd made the sibling sites /home/smr/<site>, so another site's link_prefix was never read and
+# its guard came out keyed to "/<site>/" (found 2026-11-25 on planosphere).
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
 if [[ "${1-}" == "--deploy-name" ]]; then
     SITE="${2:-$(basename "$HERE")}"

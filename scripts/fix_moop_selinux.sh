@@ -115,7 +115,10 @@ NGINX_CANON="$MOOP/docs/nginx/moop-security.conf"
 # the raw template only ever matched simrbase, and its "fix" (cp the /moop/ template in) gave a
 # second site no protection and a duplicate-location nginx error (found 2026-11-05).
 NGINX_GEN="$MOOP/scripts/nginx_site_guard.sh"
-DEPLOY_GUARD="sudo bash -c '$NGINX_GEN $SITE > $NGINX_GUARD' && sudo chmod 644 $NGINX_GUARD"
+# The default.d copy serves the site under the machine's address, http://<ip>/<folder>/, so it is
+# keyed to the folder even for a site at its own domain's root (that copy is moop-sites/<site>/
+# guard.conf). Without the argument the script reads link_prefix ("/") -- wrong here (2026-11-25).
+DEPLOY_GUARD="sudo bash -c '$NGINX_GEN $SITE /$SITE > $NGINX_GUARD' && sudo chmod 644 $NGINX_GUARD"
 
 if [[ "${SKIP_NGINX_CHECK:-0}" == "1" ]]; then
     echo "  SKIPPED (SKIP_NGINX_CHECK=1) — writable trees will NOT be protected from .php execution"
@@ -182,13 +185,13 @@ MSG
     exit 1
 # Rules only (comment and blank lines ignored), as setup-check.php compares: a comment edit in the
 # template must not make every deployed guard read as outdated.
-elif ! diff -q <(bash "$NGINX_GEN" "$SITE" | grep -Ev '^[[:space:]]*(#|$)') <(grep -Ev '^[[:space:]]*(#|$)' "$NGINX_GUARD") >/dev/null 2>&1; then
+elif ! diff -q <(bash "$NGINX_GEN" "$SITE" "/$SITE" | grep -Ev '^[[:space:]]*(#|$)') <(grep -Ev '^[[:space:]]*(#|$)' "$NGINX_GUARD") >/dev/null 2>&1; then
     cat >&2 <<MSG
 
   REFUSING TO RUN — the deployed nginx guard DIFFERS from the canonical copy.
 
     deployed:  $NGINX_GUARD
-    expected:  output of $NGINX_GEN $SITE (from $NGINX_CANON)
+    expected:  output of $NGINX_GEN $SITE /$SITE (from $NGINX_CANON)
 
   The deployed copy may predate a rule that closes a real hole — the .php deny was
   extended to images/, jbrowse2/ and archived_gene_sets/ on 2026-07-16, and before
