@@ -258,4 +258,73 @@ if (typeof document !== 'undefined') {
             e.target.form.submit();
         }
     });
+
+    // ── Declarative behaviours: the site-wide replacements for inline on* handlers ─────────
+    // (2026-11-25, so the CSP can drop 'unsafe-inline'). The markup says what it wants:
+    //   <form data-confirm="Question?">        asks before submitting
+    //   <button|a data-confirm="Question?">    asks before its click does anything
+    //   data-action="reload"                   location.reload()
+    //   data-click="#id"                       clicking it clicks that element
+    //   <img data-fallback="next">             if it fails to load: hidden, next sibling shown (flex)
+    //   <img data-fallback="#id">              if it fails: hidden, #id shown; if it loads: #id hidden
+    // ONE copy of each: error-log.js, manage-users.js and manage-annotations.js each had their
+    // own data-confirm listener until this; on a page with two, every question came twice.
+    // The questions are asked in the CAPTURE phase, i.e. before any listener on the button or
+    // form itself runs -- a page's own click listener (taxonomy "Force re-fetch") must not start
+    // the work and then ask. "Cancel" stops the event there.
+    document.addEventListener('submit', function (e) {
+        var form = e.target.closest && e.target.closest('form[data-confirm]');
+        if (form && !window.confirm(form.getAttribute('data-confirm'))) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+    document.addEventListener('click', function (e) {
+        var asker = e.target.closest && e.target.closest('button[data-confirm], a[data-confirm], input[type="submit"][data-confirm]');
+        if (asker && !asker.disabled && !window.confirm(asker.getAttribute('data-confirm'))) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest) return;
+        if (e.target.closest('[data-action="reload"]')) {
+            window.location.reload();
+            return;
+        }
+        var proxy = e.target.closest('[data-click]');
+        if (proxy) {
+            var target = document.querySelector(proxy.dataset.click);
+            if (target) target.click();
+        }
+    });
+
+    // Image fallbacks. 'error'/'load' do not bubble, so listen in the capture phase; and an image
+    // that already failed before this script ran is caught by the sweep at DOMContentLoaded.
+    var fallbackOf = function (img) {
+        var f = img.getAttribute('data-fallback');
+        return f === 'next' ? img.nextElementSibling : (f ? document.querySelector(f) : null);
+    };
+    var imgFailed = function (img) {
+        var alt = fallbackOf(img);
+        img.style.display = 'none';
+        if (alt) alt.style.display = img.getAttribute('data-fallback') === 'next' ? 'flex' : 'inline';
+    };
+    document.addEventListener('error', function (e) {
+        if (e.target && e.target.tagName === 'IMG' && e.target.hasAttribute('data-fallback')) imgFailed(e.target);
+    }, true);
+    document.addEventListener('load', function (e) {
+        var img = e.target;
+        if (img && img.tagName === 'IMG' && img.hasAttribute('data-fallback') && img.getAttribute('data-fallback') !== 'next') {
+            var alt = fallbackOf(img);
+            if (alt) alt.style.display = 'none';
+        }
+    }, true);
+    var sweepFailedImages = function () {
+        document.querySelectorAll('img[data-fallback]').forEach(function (img) {
+            if (img.complete && img.naturalWidth === 0 && img.getAttribute('src')) imgFailed(img);
+        });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sweepFailedImages);
+    else sweepFailedImages();
 }

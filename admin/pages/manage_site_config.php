@@ -445,7 +445,7 @@
                                     <div class="d-flex gap-2 mb-2">
                                         <span class="btn btn-sm text-white" style="background: var(--moop-action);">Run search</span>
                                         <span class="btn btn-sm text-white" style="background: var(--moop-tool-hover);">Hover</span>
-                                        <a href="#" class="small align-self-center" style="color: var(--moop-tool-header);" onclick="return false;">A link</a>
+                                        <a class="small align-self-center text-decoration-underline" style="color: var(--moop-tool-header);" role="link" aria-disabled="true">A link</a>
                                     </div>
                                     <div class="rounded px-3 py-2 mb-2 small" style="background: rgba(var(--moop-main-rgb), 0.07); border-left: 3px solid var(--moop-tool-header); color: var(--moop-main-dark);">A light wash, as on admin cards</div>
                                     <div class="d-flex gap-2">

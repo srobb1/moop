@@ -123,7 +123,7 @@
       <div class="d-flex align-items-center gap-2 flex-shrink-0">
         <button id="dashRefreshBtn"
                 class="btn btn-sm <?= (!$generated || $stale) ? 'btn-warning' : 'btn-outline-secondary' ?>"
-                onclick="startOrganismCacheRefresh(this)"
+                data-action="refresh-organism-cache"
                 <?= $refreshing ? 'disabled' : '' ?>>
           <i class="fa fa-sync-alt"></i> <?= $refreshing ? 'Refreshing…' : 'Update Cache' ?>
         </button>
@@ -198,9 +198,10 @@
           <?php endif; ?>
           <?php if ($jb_age): ?><span class="text-muted">(checked <?= htmlspecialchars($jb_age) ?>)</span><?php endif; ?>
         </div>
-        <a href="<?= $jb_old ? '../docs/JBrowse2/UPGRADING.md' : 'https://github.com/GMOD/jbrowse-components/releases' ?>"
+        <?php // docs/ is not served (nginx guard, 2026-11-25): the upgrade guide is read on GitHub. ?>
+        <a href="<?= $jb_old ? 'https://github.com/srobb1/moop/blob/main/docs/JBrowse2/UPGRADING.md' : 'https://github.com/GMOD/jbrowse-components/releases' ?>"
            class="btn btn-sm <?= $jb_old ? 'btn-warning' : 'btn-outline-secondary' ?> flex-shrink-0"
-           <?= $jb_old ? '' : 'target="_blank" rel="noopener"' ?>>
+           target="_blank" rel="noopener">
           <i class="fa fa-book"></i> <?= $jb_old ? 'How to upgrade' : 'Release notes' ?>
         </a>
       </div>

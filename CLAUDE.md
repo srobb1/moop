@@ -273,6 +273,11 @@ promote them is in `notes/ADMIN_UI_FOLLOWUPS.md` §6.
 
 - JS goes in `js/modules/` (per-feature) or `js/` (page-specific)
 - Never embed JS logic in PHP files — use inline_scripts only for PHP→JS variable passing
+- **No inline `on*=` handlers** (onclick, onsubmit, onerror...) in templates or JS-built HTML — they
+  keep `'unsafe-inline'` in the CSP. Page logic: a listener in the page's JS file. The common cases
+  are declarative and handled site-wide by `js/modules/utilities.js`: `data-confirm="Question?"`
+  on a form/button/link (asked in the capture phase, before the page's own listeners),
+  `data-action="reload"`, `data-click="#id"`, `<img data-fallback="next|#id">`.
 - Pass PHP values to JS via `inline_scripts` in the `$data` array:
   ```php
   'inline_scripts' => [
@@ -789,8 +794,10 @@ long-standing entries here had already been fixed, and one contradicted §10 of 
   (visible in server logs) — architectural constraint from JBrowse2. Two routes exist:
   `notes/TRACKS_PROXY_PLAN.md` (simpler) and an `Authorization`-header variant.
 - **Medium:** `Content-Security-Policy` is **ENFORCED since 2026-10-28** (in `/etc/nginx/nginx.conf`,
-  both server blocks) but still allows `'unsafe-inline'`, pending a refactor of ~154 inline event
-  handlers (`onclick`/`onchange`/...) to `addEventListener` + per-request nonces. Anything that
+  both server blocks) but still allows `'unsafe-inline'`. The inline event handlers are GONE (last
+  ones 2026-11-25; never add one -- §7); what still needs it is the inline `<script>` blocks
+  (`inline_scripts`, three in `layout.php`, the monitor report's print script), which need a
+  per-request nonce before root can drop `'unsafe-inline'` from the policy. Anything that
   loads from another host must be added there by root — and **a CSP check must listen inside web
   workers**: JBrowse's worker fetches its WebAssembly decompressor from a `data:` URL, which the
   page console never shows; enforcing without `data:` in `connect-src` broke every JBrowse track

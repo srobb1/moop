@@ -220,7 +220,7 @@
                             <img src="<?= $image_src ?>" 
                                  alt="<?= htmlspecialchars($organism) ?>"
                                  class="organism-card-image"
-                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                 data-fallback="next">
                           <?php endif; ?>
                           <div class="organism-card-icon <?= $show_image ? 'display-none' : '' ?>" style="display: <?= $show_image ? 'none' : 'flex' ?>;">
                             <i class="fa fa-dna fa-4x text-primary"></i>

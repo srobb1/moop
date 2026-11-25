@@ -70,68 +70,11 @@ $data = [
     'page_script' => [
         moop_url_base() . '/js/modules/housekeeping-rerun.js',
         moop_url_base() . '/js/modules/remember-collapse.js',
+        moop_url_base() . '/js/admin-dashboard.js',   // organism cache card
     ],
     'inline_scripts' => [
         "const sitePath = '" . moop_url_base() . "';",
-        // Organism cache status widget for the dashboard. Polls the same GET status
-        // endpoint used elsewhere (admin/api/refresh_organism_cache.php) and renders
-        // an actual progress bar from its `progress: {current, total, step, organism}`
-        // field, instead of a static "in progress" label with no detail. Also polls
-        // on page load (not just after clicking the button) — a refresh can already
-        // be running when the page loads because housekeeping launches it in the
-        // background on its own schedule, not only in response to a button click.
-        "function pollOrganismCacheStatus() {
-          const ep = sitePath + '/admin/api/refresh_organism_cache.php';
-          const bar  = document.getElementById('dashCacheProgressBar');
-          const text = document.getElementById('dashCacheProgressText');
-          const wrap = document.getElementById('dashCacheProgressWrap');
-          if (!bar || !text || !wrap) return;
-          wrap.style.display = 'block';
-          const poll = setInterval(() => {
-            fetch(ep + '?status=1').then(r => r.json()).then(s => {
-              if (s.progress) {
-                const p = s.progress;
-                const pct = p.total > 0 ? Math.round((p.current / p.total) * 100) : 0;
-                bar.style.width = pct + '%';
-                bar.textContent = pct + '%';
-                text.textContent = '[' + p.current + '/' + p.total + '] ' + p.step + ': ' + p.organism;
-              } else {
-                text.textContent = 'Starting…';
-              }
-              if (s.status === 'idle') {
-                clearInterval(poll);
-                bar.style.width = '100%';
-                bar.textContent = '100%';
-                text.textContent = 'Done — reloading…';
-                setTimeout(() => window.location.reload(), 800);
-              }
-            }).catch(() => {
-              clearInterval(poll);
-              text.textContent = 'Could not check status — reload the page to check manually.';
-            });
-          }, 1500);
-        }
-        function startOrganismCacheRefresh(btn) {
-          const ep = sitePath + '/admin/api/refresh_organism_cache.php';
-          const tok = document.querySelector('meta[name=\"csrf-token\"]')?.content || '';
-          if (btn) { btn.disabled = true; btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Starting…'; }
-          fetch(ep, { method: 'POST', headers: { 'X-CSRF-Token': tok } })
-            .then(r => r.json())
-            .then(d => {
-              if (d.error) {
-                if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\"fa fa-sync-alt\"></i> Update Cache'; }
-                alert('Error: ' + d.error);
-                return;
-              }
-              if (btn) btn.innerHTML = '<i class=\"fa fa-spinner fa-spin\"></i> Refreshing…';
-              pollOrganismCacheStatus();
-            })
-            .catch(e => {
-              if (btn) { btn.disabled = false; btn.innerHTML = '<i class=\"fa fa-sync-alt\"></i> Update Cache'; }
-              alert('Failed: ' + e);
-            });
-        }
-        " . ($cache_info['refreshing'] ? "document.addEventListener('DOMContentLoaded', pollOrganismCacheStatus);" : ""),
+        "const dashCacheRefreshing = " . ($cache_info['refreshing'] ? 'true' : 'false') . ";",   // js/admin-dashboard.js polls when true
     ],
 ] + $_health;   // the health card's data, whole -- moop_data_health_empty() gives its shape
 

@@ -102,7 +102,7 @@
           </div>
         </div>
         <div class="card-footer text-center">
-          <button onclick="window.location.reload()" class="btn btn-success btn-lg">
+          <button type="button" data-action="reload" class="btn btn-success btn-lg">
             <i class="fa fa-sync"></i> Check Again
           </button>
         </div>

@@ -158,7 +158,7 @@ $home_count = fn($n) => '<strong style="font-weight:500;">' . (int) $n . '</stro
       <?php endforeach; ?>
       <button class="index-group-chip"
               style="background:#e2e8f0;color:#475569;border:none;cursor:pointer;"
-              onclick="document.getElementById('browse-group-header').click()">
+              data-click="#browse-group-header">
         <?= t('More') ?>&hellip;
       </button>
     </div>

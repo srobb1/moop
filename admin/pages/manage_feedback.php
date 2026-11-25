@@ -56,7 +56,7 @@ $status_label = ['new' => ['New', 'warning'], 'answered' => ['Answered', 'succes
             <input type="hidden" name="id" value="<?= $h($m['id'] ?? '') ?>"><input type="hidden" name="status" value="<?= $st ?>">
             <button class="btn btn-sm btn-outline-secondary"><?= $lbl ?></button></form>
         <?php endforeach; ?>
-        <form method="post" class="d-inline ms-auto" onsubmit="return confirm('Delete this message for good?');"><?= csrf_input_field() ?>
+        <form method="post" class="d-inline ms-auto" data-confirm="Delete this message for good?"><?= csrf_input_field() ?>
           <input type="hidden" name="id" value="<?= $h($m['id'] ?? '') ?>"><input type="hidden" name="status" value="delete">
           <button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash me-1"></i>Delete</button></form>
       </div>

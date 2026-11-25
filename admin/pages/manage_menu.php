@@ -47,7 +47,7 @@
   </form>
 
   <?php if ($customised): ?>
-  <form method="post" class="mt-3" onsubmit="return confirm('Put the menu back to Tools, About, Help? Your drop-downs and links will be removed (the pages themselves are kept).');">
+  <form method="post" class="mt-3" data-confirm="Put the menu back to Tools, About, Help? Your drop-downs and links will be removed (the pages themselves are kept).">
     <?= csrf_input_field() ?>
     <input type="hidden" name="_action" value="reset">
     <button type="submit" class="btn btn-sm btn-outline-danger">Back to the default menu</button>

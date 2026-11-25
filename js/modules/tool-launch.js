@@ -40,3 +40,13 @@ function postSelectionToTool(toolId, organisms) {
     form.submit();
     document.body.removeChild(form);
 }
+
+// The toolbox buttons (lib/tool_section.php, pages with an organism selection) say which tool in
+// data-tool-id; each page's handleToolClick() decides what selection to send. Was an inline
+// onclick on every button until 2026-11-25 (CSP 'unsafe-inline').
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest && e.target.closest('button[data-tool-id]');
+    // A disabled button (no organism ticked yet) does nothing -- a click on its label still reaches
+    // this page-wide listener, which the old onclick on the button itself never saw.
+    if (btn && !btn.disabled && typeof handleToolClick === 'function') handleToolClick(btn.dataset.toolId);
+});

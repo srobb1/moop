@@ -143,7 +143,7 @@ if ($has_health_issues):
         Re-cache recommended — the orphan/drift checks below read the cache, so they can be out of date until you refresh.
       </div>
       <button class="btn btn-sm btn-warning flex-shrink-0"
-              onclick="var f=window.startOrganismCacheRefresh||window.rescanOrganisms; if(f) f(this);">
+              data-action="refresh-organism-cache">
         <i class="fa fa-sync-alt"></i> Update Cache
       </button>
     </div>

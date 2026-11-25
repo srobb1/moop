@@ -863,10 +863,6 @@
     if (resetBtn) resetBtn.addEventListener('click', function () { window.resetCreateForm(); });
   });
 
-  // A form with data-confirm asks first (the stale-reference removals; were inline onsubmit handlers).
-  document.addEventListener('submit', function (e) {
-    const form = e.target.closest('form[data-confirm]');
-    if (form && !window.confirm(form.getAttribute('data-confirm'))) e.preventDefault();
-  });
+  // Forms with data-confirm (the stale-reference removals) ask via utilities.js, site-wide.
 
 })();

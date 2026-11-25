@@ -189,7 +189,7 @@
                         </ul>
                     </div>
                     
-                    <button class="btn btn-primary" id="rebuildTreeBtn" onclick="rebuildTaxonomyTree(false)" <?= $file_write_error ? 'disabled' : '' ?>>
+                    <button class="btn btn-primary" id="rebuildTreeBtn" <?= $file_write_error ? 'disabled' : '' ?>>
                         <i class="fa fa-sync-alt"></i> Rebuild Tree
                     </button>
                     <span id="rebuildTreeStatus" class="ms-2 text-muted small" style="display:none;"></span>
@@ -201,7 +201,7 @@
                     <hr class="my-3">
 
                     <button class="btn btn-outline-secondary btn-sm" id="forceRefetchBtn" <?= $file_write_error ? 'disabled' : '' ?>
-                        onclick="if(confirm('Re-fetch lineage from NCBI for all <?= count($organisms) ?> organisms. Continue?')) rebuildTaxonomyTree(true)">
+                        data-confirm="Re-fetch lineage from NCBI for all <?= count($organisms) ?> organisms. Continue?">
                         <i class="fa fa-cloud-download-alt"></i> Force Re-fetch from NCBI
                     </button>
                     <span id="forceRefetchStatus" class="ms-2 text-muted small" style="display:none;"></span>

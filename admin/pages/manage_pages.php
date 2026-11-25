@@ -71,7 +71,7 @@ $access_button = function (array $p, string $extra = '') {
             <td><?= $access_button($p) ?></td>
             <td class="small text-muted"><?= htmlspecialchars($p['updated_at'] !== '' ? substr($p['updated_at'], 0, 16) : '—') ?><?= $p['updated_by'] !== '' ? ' · ' . htmlspecialchars($p['updated_by']) : '' ?></td>
             <td class="text-end pe-3">
-              <form method="post" class="d-inline" onsubmit="return confirm('Delete this page? Links to it will stop working.');">
+              <form method="post" class="d-inline" data-confirm="Delete this page? Links to it will stop working.">
                 <?= csrf_input_field() ?>
                 <input type="hidden" name="_action" value="delete">
                 <input type="hidden" name="slug" value="<?= htmlspecialchars($slug) ?>">

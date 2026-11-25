@@ -68,3 +68,8 @@ function rebuildTaxonomyTree(force) {
     refreshOrganismCache(btn, statusEl, force, label);
 }
 
+
+// Rebuild buttons (inline onclick until 2026-11-25). The force button's data-confirm question is
+// asked by utilities.js first; a "Cancel" stops the click before it reaches this listener.
+document.getElementById('rebuildTreeBtn')?.addEventListener('click', () => rebuildTaxonomyTree(false));
+document.getElementById('forceRefetchBtn')?.addEventListener('click', () => rebuildTaxonomyTree(true));

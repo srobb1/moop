@@ -53,5 +53,5 @@ echo render_display_page(__DIR__ . '/pages/error_log.php', [
     'filter_search' => $filter_search,
     'site'          => $site,
     'siteTitle'     => $siteTitle,
-    'page_script'   => moop_url_base() . '/js/error-log.js',
+    // Its forms' data-confirm questions are asked by utilities.js (site-wide); no page script.
 ], 'Error Log');

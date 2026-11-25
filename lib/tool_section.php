@@ -114,8 +114,7 @@ $use_onclick_handler = !empty($context['use_onclick_handler']);
                        title="<?= htmlspecialchars(t_plain($tool['description'])) ?>"
                        id="tool-btn-<?= htmlspecialchars($tool_id) ?>"
                        data-tool-id="<?= htmlspecialchars($tool_id) ?>"
-                       data-tool-path="<?= htmlspecialchars($tool['url_path']) ?>"
-                       onclick="handleToolClick(<?= htmlspecialchars(json_encode($tool_id)) ?>)">
+                       data-tool-path="<?= htmlspecialchars($tool['url_path']) ?>">
                       <span><?= htmlspecialchars(t_plain($tool['name'])) ?></span>
                     </button>
                 <?php else: ?>

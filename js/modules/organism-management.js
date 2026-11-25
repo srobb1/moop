@@ -823,6 +823,10 @@ document.addEventListener('click', function (e) {
     if (top.id === 'quickAddSubmitBtn') submitQuickAddGroup();
     return;
   }
+  // The health card's "Update Cache" (admin/pages/_data_health_card.php, shared with the dashboard,
+  // where js/admin-dashboard.js answers the same attribute)
+  const cacheBtn = e.target.closest('[data-action="refresh-organism-cache"]');
+  if (cacheBtn) { rescanOrganisms(cacheBtn); return; }
   const btn = e.target.closest('[data-action]');
   const row = btn && btn.closest('tr[data-organism]');
   if (!row) return;
